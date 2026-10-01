@@ -158,6 +158,7 @@ Add demo timeline marker
 Add Entry
 Add friend
 Add friends by entering their name below or by clicking their name in the player list.
+Add function
 Add Group
 Add Item
 Add latency for antiping (0 to disable)
@@ -168,7 +169,6 @@ Add to %s
 Add to blocked words
 Add to category
 Add to queue
-Add typed command
 Add war clan:
 Add war name:
 Add/remove Client-IDs to spectate them exclusively (-1 to reset)
@@ -716,7 +716,6 @@ Command is not available on solo servers
 Command to run when joining server
 Command:
 Commands
-Commands cannot contain a line break.
 Commands run in the console
 Common key bindings
 Communities
@@ -884,6 +883,7 @@ Custom aspect ratio
 Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)
 Custom color
 Custom colors
+Custom command
 Custom community list fetch URL (must be https, leave empty to disable)
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
@@ -1787,7 +1787,6 @@ Hookable/unhookable tile outline width
 Hooking L/R: %.0f%%/%.0f%%
 Horizontal position
 Hostname of DNSBL provider for IP verification
-Hover a key to inspect its bind, then click to edit it.
 Hover for tooltip
 How far the plasma gun tracks a tee
 How far the tractor tracks a tee
@@ -1899,6 +1898,7 @@ Invalid Axiom API response
 Invalid bound name
 Invalid client id to kick
 Invalid client id to move to spectators
+Invalid command or parameters.
 Invalid Demo
 Invalid ID
 Invalid map file or filename.
@@ -2586,6 +2586,7 @@ Opens the spectator menu (this does not work with binds).
 Opt out of spectator count and hide auth status to non-authed players (1 = hidden, 0 = shown)
 Optimistic prediction along stable direction
 Option color
+Optional
 Optional authentication key for the DNSBL provider
 Or visit DDNet.org
 Original
@@ -3311,7 +3312,6 @@ Search main asset
 Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 Search online fonts…
-Search or type a console command
 Search settings by title, feature, or keyword
 Search, filter, and manage skins
 Searching

@@ -479,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == 以下の名前入力欄にフレンドの名前を入力するか、プレイヤーリストで名前をクリックしてフレンドを追加します。
 
+Add function
+== 機能を追加
+
 Add Group
 == グループを追加
 
@@ -1551,7 +1554,7 @@ Bounce
 == バウンス
 
 Bound functions
-== バインド済みの機能
+== 割り当て済みの機能
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 括弧内の称号の色：0 = サーバーに従う、1 = 単色、2 = 虹色
@@ -2274,7 +2277,7 @@ Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
 Configure keyboard, mouse, wheel, and modifier bindings
-== キーボード、マウス、ホイール、修飾キーのバインドを設定
+== キーボード、マウス、ホイール、修飾キーの割り当てを設定
 
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
@@ -2656,6 +2659,9 @@ Custom color
 
 Custom colors
 == カスタムカラー
+
+Custom command
+== カスタムコマンド
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == カスタムコミュニティリスト取得 URL（https 必須、空欄で無効）
@@ -5708,6 +5714,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == 観戦に移動するクライアントIDが無効です
 
+Invalid command or parameters.
+== コマンドまたは引数が無効です。
+
 Invalid Demo
 == 無効なデモ
 
@@ -7341,7 +7350,7 @@ No filter
 == 指定なし
 
 No functions bound
-== バインドされた機能はありません
+== 機能が割り当てられていません
 
 No input device available
 == 利用可能な入力デバイスがありません
@@ -7777,6 +7786,9 @@ Optimistic prediction along stable direction
 
 Option color
 == オプションの色
+
+Optional
+== 任意
 
 Optional authentication key for the DNSBL provider
 == DNSBL プロバイダーのオプションの認証キー
@@ -12426,10 +12438,10 @@ Thinking mode requires a reasoning model
 == 思考モードを使用するには推論モデルが必要です
 
 This bind contains an unfinished quote and cannot be edited safely.
-== このバインドには閉じていない引用符が含まれているため、安全に編集できません。
+== この割り当てには閉じていない引用符があり、安全に編集できません。
 
 This bind is already over the local config line limit.
-== このバインドはすでにローカル設定行の上限を超えています。
+== この割り当てはローカル設定行の上限を超えています。
 
 This connection cannot change names while connected. Reconnect with the saved names first.
 == この接続では接続中に名前を変更できません。保存された名前で再接続してください。

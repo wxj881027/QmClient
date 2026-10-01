@@ -479,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == Arkadaş eklemek için aşağıya adını yazın veya oyuncu listesinde adına tıklayın.
 
+Add function
+== İşlev ekle
+
 Add Group
 == Grup Ekle
 
@@ -1551,7 +1554,7 @@ Bounce
 == Sekme
 
 Bound functions
-== Bağlı işlevler
+== Atanmış işlevler
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Köşeli parantezli unvan rengi: 0 = sunucuyu takip et, 1 = tek renk, 2 = gökkuşağı
@@ -2274,7 +2277,7 @@ Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
 Configure keyboard, mouse, wheel, and modifier bindings
-== Klavye, fare, tekerlek ve değiştirici tuş bağlarını yapılandır
+== Klavye, fare, tekerlek ve değiştirici tuş atamalarını yapılandır
 
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
@@ -2656,6 +2659,9 @@ Custom color
 
 Custom colors
 == Özel renkler
+
+Custom command
+== Özel komut
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == Özel topluluk listesi getirme URL'si (https olmalı, devre dışı bırakmak için boş bırakın)
@@ -5708,6 +5714,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == İzleyiciye taşınacak istemci kimliği geçersiz
 
+Invalid command or parameters.
+== Geçersiz komut veya parametreler.
+
 Invalid Demo
 == Geçersiz Demo
 
@@ -7341,7 +7350,7 @@ No filter
 == Filtresiz
 
 No functions bound
-== Bağlı işlev yok
+== Atanmış işlev yok
 
 No input device available
 == Kullanılabilir giriş cihazı yok
@@ -7777,6 +7786,9 @@ Optimistic prediction along stable direction
 
 Option color
 == Seçenek rengi
+
+Optional
+== İsteğe bağlı
 
 Optional authentication key for the DNSBL provider
 == DNSBL sağlayıcısı için isteğe bağlı kimlik doğrulama anahtarı
@@ -12426,10 +12438,10 @@ Thinking mode requires a reasoning model
 == Düşünme modu bir akıl yürütme modeli gerektirir
 
 This bind contains an unfinished quote and cannot be edited safely.
-== Bu bağ kapanmamış bir tırnak içeriyor ve güvenle düzenlenemiyor.
+== Bu atamada kapatılmamış bir tırnak var ve güvenle düzenlenemiyor.
 
 This bind is already over the local config line limit.
-== Bu bağ zaten yerel yapılandırma satırı sınırını aşıyor.
+== Bu atama yerel yapılandırma satırı sınırını aşıyor.
 
 This connection cannot change names while connected. Reconnect with the saved names first.
 == Bu bağlantıda bağlıyken ad değiştirilemez. Önce kayıtlı adlarla yeniden bağlanın.

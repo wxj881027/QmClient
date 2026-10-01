@@ -1,9 +1,9 @@
 {
   "summary": {
-    "must_i18n": 7759,
+    "must_i18n": 7767,
     "business_data": 10478,
-    "test_only": 10256,
-    "needs_review": 357,
+    "test_only": 10271,
+    "needs_review": 358,
     "violation": 0
   },
   "must_i18n": [
@@ -13337,8 +13337,428 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
-      "line": 20,
+      "line": 31,
+      "text": "Move left",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 32,
+      "text": "Move right",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 33,
+      "text": "Jump",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 34,
+      "text": "Fire",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 35,
+      "text": "Hook",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 36,
+      "text": "Hook collisions",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 37,
+      "text": "Pause",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 38,
+      "text": "Kill",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 39,
+      "text": "Zoom in",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 40,
+      "text": "Zoom out",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 41,
+      "text": "Default zoom",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 42,
+      "text": "Show others",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 43,
+      "text": "Show all",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 44,
+      "text": "Toggle dyncam",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 45,
+      "text": "Toggle ghost",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 46,
+      "text": "Hammer",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 47,
+      "text": "Pistol",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 48,
+      "text": "Shotgun",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 49,
+      "text": "Grenade",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 50,
+      "text": "Laser",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 51,
+      "text": "Next weapon",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 52,
+      "text": "Prev. weapon",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 53,
+      "text": "Vote yes",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 54,
+      "text": "Vote no",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 55,
+      "text": "Chat",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 56,
+      "text": "Team chat",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 57,
+      "text": "Converse",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 58,
+      "text": "Show chat",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 59,
+      "text": "Repeat message",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 60,
+      "text": "Voice chat",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 61,
+      "text": "Toggle dummy",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 62,
+      "text": "Dummy jump",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 63,
+      "text": "Dummy fire",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 64,
+      "text": "Dummy hook",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 65,
+      "text": "Dummy copy",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 66,
+      "text": "Dummy control",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 67,
+      "text": "Emoticon",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 68,
+      "text": "Spectate mode",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 69,
+      "text": "Spectate next",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 70,
+      "text": "Spectate previous",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 71,
+      "text": "Active disconnect",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 72,
+      "text": "Console",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 73,
+      "text": "Screenshot",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 74,
+      "text": "Scoreboard",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 75,
+      "text": "Statboard",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 76,
+      "text": "Pie menu",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 77,
+      "text": "Show entities",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 78,
+      "text": "Show HUD",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 151,
+      "text": "Invalid command or parameters.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 157,
+      "text": "Custom command",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 185,
       "text": "Bind",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 213,
+      "text": "Search",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 261,
+      "text": "No results",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 303,
+      "text": "Add function",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 313,
+      "text": "Add function",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 384,
+      "text": "Optional",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 394,
+      "text": "Command",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 399,
+      "text": "Custom command",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 404,
+      "text": "Add",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 411,
+      "text": "Invalid command or parameters.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 413,
+      "text": "The command is empty, incomplete, or exceeds the local config line limit.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -28317,442 +28737,78 @@
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 37,
-      "text": "Move left",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 38,
-      "text": "Move right",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 39,
-      "text": "Jump",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 40,
-      "text": "Fire",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 41,
-      "text": "Hook",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 42,
-      "text": "Hook collisions",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 43,
-      "text": "Pause",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 44,
-      "text": "Kill",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 45,
-      "text": "Zoom in",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 46,
-      "text": "Zoom out",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 47,
-      "text": "Default zoom",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 48,
-      "text": "Show others",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 49,
-      "text": "Show all",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 50,
-      "text": "Toggle dyncam",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 51,
-      "text": "Toggle ghost",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 52,
-      "text": "Hammer",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 53,
-      "text": "Pistol",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 54,
-      "text": "Shotgun",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 55,
-      "text": "Grenade",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 56,
-      "text": "Laser",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 57,
-      "text": "Next weapon",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 58,
-      "text": "Prev. weapon",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 59,
-      "text": "Vote yes",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 60,
-      "text": "Vote no",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 61,
-      "text": "Chat",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 62,
-      "text": "Team chat",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 63,
-      "text": "Converse",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 64,
-      "text": "Show chat",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 65,
-      "text": "Repeat message",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 66,
-      "text": "Voice chat",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 67,
-      "text": "Toggle dummy",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 68,
-      "text": "Dummy jump",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 69,
-      "text": "Dummy fire",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 70,
-      "text": "Dummy hook",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 71,
-      "text": "Dummy copy",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 72,
-      "text": "Dummy control",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 73,
-      "text": "Emoticon",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 74,
-      "text": "Spectate mode",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 75,
-      "text": "Spectate next",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 76,
-      "text": "Spectate previous",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 77,
-      "text": "Active disconnect",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 78,
-      "text": "Console",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 79,
-      "text": "Screenshot",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 80,
-      "text": "Scoreboard",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 81,
-      "text": "Statboard",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 82,
-      "text": "Pie menu",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 83,
-      "text": "Show entities",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 84,
-      "text": "Show HUD",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 219,
-      "text": "Hover a key to inspect its bind, then click to edit it.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 222,
+      "line": 156,
       "text": "Alt",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 222,
+      "line": 156,
       "text": "Ctrl",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 222,
+      "line": 156,
       "text": "Gui",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 222,
+      "line": 156,
       "text": "Shift",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "Menu",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 339,
+      "line": 287,
       "text": "Mouse",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 389,
-      "text": "This bind contains an unfinished quote and cannot be edited safely.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 393,
-      "text": "Bound functions",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 400,
-      "text": "No functions bound",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 436,
-      "text": "Search or type a console command",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 453,
+      "line": 346,
       "text": "This bind is already over the local config line limit.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 455,
-      "text": "Commands cannot contain a line break.",
+      "line": 356,
+      "text": "This bind contains an unfinished quote and cannot be edited safely.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 457,
-      "text": "The command is empty, incomplete, or exceeds the local config line limit.",
+      "line": 360,
+      "text": "Bound functions",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 484,
-      "text": "Add typed command",
+      "line": 368,
+      "text": "No functions bound",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/qmclient/bind_settings.cpp",
+      "line": 393,
+      "text": "Delete",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -58454,8 +58510,246 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
-      "line": 20,
+      "line": 31,
+      "text": "+left",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 32,
+      "text": "+right",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 33,
+      "text": "+jump",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 34,
+      "text": "+fire",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 35,
+      "text": "+hook",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 36,
+      "text": "+showhookcoll",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 37,
+      "text": "say /pause",
+      "category": "business_data",
+      "reason": "chat, vote, or bind command data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 42,
+      "text": "say /showothers",
+      "category": "business_data",
+      "reason": "chat, vote, or bind command data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 43,
+      "text": "say /showall",
+      "category": "business_data",
+      "reason": "chat, vote, or bind command data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 46,
+      "text": "+weapon1",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 47,
+      "text": "+weapon2",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 48,
+      "text": "+weapon3",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 49,
+      "text": "+weapon4",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 50,
+      "text": "+weapon5",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 51,
+      "text": "+nextweapon",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 52,
+      "text": "+prevweapon",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 53,
+      "text": "vote yes",
+      "category": "business_data",
+      "reason": "chat, vote, or bind command data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 54,
+      "text": "vote no",
+      "category": "business_data",
+      "reason": "chat, vote, or bind command data"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 57,
+      "text": "+show_chat; chat all /c ",
+      "category": "business_data",
+      "reason": "MIME type or protocol metadata"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 58,
+      "text": "+show_chat",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 59,
+      "text": "+qm_repeat",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 60,
+      "text": "+qm_voice_ptt",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 67,
+      "text": "+emote",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 68,
+      "text": "+spectate",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 69,
+      "text": "spectate_next",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 70,
+      "text": "spectate_previous",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 71,
+      "text": "qm_timeout_disconnect",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 72,
+      "text": "toggle_local_console",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 74,
+      "text": "+scoreboard",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 75,
+      "text": "+statboard",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 76,
+      "text": "+pie_menu",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 185,
       "text": "qm:bind_editor",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 218,
+      "text": "qm_bind_command_picker",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 304,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 347,
+      "text": "qm_bind_command_editor",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
@@ -84172,1151 +84466,913 @@
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 37,
-      "text": "+left",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 38,
-      "text": "+right",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 39,
-      "text": "+jump",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 40,
-      "text": "+fire",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 41,
-      "text": "+hook",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 42,
-      "text": "+showhookcoll",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 43,
-      "text": "say /pause",
-      "category": "business_data",
-      "reason": "chat, vote, or bind command data"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 48,
-      "text": "say /showothers",
-      "category": "business_data",
-      "reason": "chat, vote, or bind command data"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 49,
-      "text": "say /showall",
-      "category": "business_data",
-      "reason": "chat, vote, or bind command data"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 52,
-      "text": "+weapon1",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 53,
-      "text": "+weapon2",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 54,
-      "text": "+weapon3",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 55,
-      "text": "+weapon4",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 56,
-      "text": "+weapon5",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 57,
-      "text": "+nextweapon",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 58,
-      "text": "+prevweapon",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 59,
-      "text": "vote yes",
-      "category": "business_data",
-      "reason": "chat, vote, or bind command data"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 60,
-      "text": "vote no",
-      "category": "business_data",
-      "reason": "chat, vote, or bind command data"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 63,
-      "text": "+show_chat; chat all /c ",
-      "category": "business_data",
-      "reason": "MIME type or protocol metadata"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 64,
-      "text": "+show_chat",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 65,
-      "text": "+qm_repeat",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 66,
-      "text": "+qm_voice_ptt",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 73,
-      "text": "+emote",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 74,
-      "text": "+spectate",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 75,
-      "text": "spectate_next",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
       "line": 76,
-      "text": "spectate_previous",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 77,
-      "text": "qm_timeout_disconnect",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 78,
-      "text": "toggle_local_console",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 80,
-      "text": "+scoreboard",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 81,
-      "text": "+statboard",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 82,
-      "text": "+pie_menu",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 141,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 151,
+      "line": 86,
       "text": "settings_qmclient_bind",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 164,
+      "line": 99,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 219,
-      "text": "qm-bind-editor-help",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 275,
+      "line": 214,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_escape",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f1",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f10",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f11",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f12",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f2",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f3",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f4",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f5",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f6",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f7",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f8",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_f9",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_pause",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_printscreen",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 329,
+      "line": 277,
       "text": "keyboard_scroll_lock",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "*",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "-",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "0",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "1",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "2",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "3",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "4",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "5",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "6",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "7",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "8",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "9",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_0",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_1",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_2",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_3",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_4",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_5",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_6",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_7",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_8",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_9",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_backspace",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_equals",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_home",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_insert",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_minus",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_numlock",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_page_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 330,
+      "line": 278,
       "text": "keyboard_tilde",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "+",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "7",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "8",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "9",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_bracket_close",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_bracket_open",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_delete",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_e",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_end",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_i",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_numpad_plus",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_o",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_p",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_page_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_q",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_r",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_slash_back",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_t",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_tab",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_u",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_w",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 331,
+      "line": 279,
       "text": "keyboard_y",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "4",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "5",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "6",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_a",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_apostrophe",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_capslock",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_d",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_f",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_g",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_j",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_k",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_l",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_return",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_s",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 332,
+      "line": 280,
       "text": "keyboard_semicolon",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": ".",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "1",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "2",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "3",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_arrow_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_b",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_c",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_comma",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_m",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_n",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_numpad_enter",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_period",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_shift",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_slash_forward",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_v",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_x",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 333,
+      "line": 281,
       "text": "keyboard_z",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": ".",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "0",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "Bind keyboard key",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "keyboard_alt",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "keyboard_arrow_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "keyboard_arrow_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "keyboard_arrow_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "keyboard_ctrl",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "keyboard_space",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 334,
+      "line": 282,
       "text": "keyboard_win",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 339,
+      "line": 287,
       "text": "qm-bind-editor-mouse",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "mouse_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "mouse_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "mouse_scroll",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "mouse_scroll_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "mouse_scroll_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "mouse_side_back",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "mouse_side_forward",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 341,
+      "line": 289,
       "text": "mouse_horizontal",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 371,
+      "line": 328,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 375,
+      "line": 337,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 393,
+      "line": 360,
       "text": "qm-bind-editor-current",
       "category": "business_data",
       "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 429,
-      "text": "settings_qmclient_bind_command_search",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 461,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/chat_command_preview.h",
@@ -136849,154 +136905,259 @@
     },
     {
       "file": "src/test/qm_bind_editor_console_test.cpp",
-      "line": 29,
+      "line": 30,
+      "text": "Local action",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_console_test.cpp",
+      "line": 31,
+      "text": "s[key] ?r[command]",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_console_test.cpp",
+      "line": 41,
+      "text": "s[key] ?r[command]",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_console_test.cpp",
+      "line": 62,
       "text": "s[key] r[command]",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_console_test.cpp",
-      "line": 30,
+      "line": 63,
       "text": "(+fire; echo ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_console_test.cpp",
-      "line": 30,
+      "line": 63,
       "text": "; exec cfg\\test.cfg)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_console_test.cpp",
-      "line": 47,
+      "line": 80,
+      "text": "s[key] r[command]",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_console_test.cpp",
+      "line": 93,
+      "text": "s[key] r[command]",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_console_test.cpp",
+      "line": 94,
+      "text": "(; quoted text",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_console_test.cpp",
+      "line": 94,
+      "text": "echo \"",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_console_test.cpp",
+      "line": 96,
+      "text": ", qm_bind_editor::ParseParameters(",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_test.cpp",
+      "line": 9,
+      "text": "s[key] r[command] ?i[mode] f[value]",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_test.cpp",
+      "line": 24,
+      "text": "s[name] ?r[value]",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_test.cpp",
+      "line": 27,
+      "text": "(qm_option ",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_test.cpp",
+      "line": 29,
+      "text": "(qm_option ",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_test.cpp",
+      "line": 34,
+      "text": "s[name] ?i[first] i[second]",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_test.cpp",
+      "line": 44,
       "text": "s[key] r[command]",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 12,
+      "line": 45,
+      "text": "(+fire; echo ",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_test.cpp",
+      "line": 45,
+      "text": "; exec cfg\\test.cfg)",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_bind_editor_test.cpp",
+      "line": 68,
       "text": "+fire; ;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 12,
+      "line": 68,
       "text": "+hook; +jump",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 13,
+      "line": 69,
       "text": "+fire; +hook; +jump",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 18,
+      "line": 74,
       "text": "#not a comment",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 18,
+      "line": 74,
       "text": "(bind mouse1 ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 21,
+      "line": 77,
       "text": "+fire; echo \"hello;world\"",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 22,
+      "line": 79,
       "text": "#not a comment",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 50,
+      "line": 107,
       "text": "+fire; +hook",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 51,
+      "line": 108,
       "text": "(bind mouse1 ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 52,
+      "line": 109,
       "text": "(bind q ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 52,
+      "line": 109,
       "text": "+fire; +hook\"",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 53,
+      "line": 111,
       "text": "), R",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 53,
+      "line": 111,
       "text": "exec cfg\\test.cfg",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 58,
+      "line": 116,
       "text": " + std::string(4096, 'a') + ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 70,
+      "line": 128,
       "text": ", AtLimit + ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 73,
+      "line": 131,
       "text": ", std::string(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 78,
+      "line": 136,
       "text": "+fire; +hook",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_bind_editor_test.cpp",
-      "line": 81,
+      "line": 139,
       "text": "+fire; +hook",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -199465,6 +199626,90 @@
   ],
   "needs_review": [
     {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 44,
+      "text": "toggle cl_dyncam 0 1",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 45,
+      "text": "toggle cl_race_show_ghost 0 1",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 55,
+      "text": "+show_chat; chat all",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 56,
+      "text": "+show_chat; chat team",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 61,
+      "text": "toggle cl_dummy 0 1",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 62,
+      "text": "+toggle_restore cl_dummy_jump 1",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 63,
+      "text": "+toggle_restore cl_dummy_fire 1",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 64,
+      "text": "+toggle_restore cl_dummy_hook 1",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 65,
+      "text": "toggle cl_dummy_copy_moves 0 1",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 66,
+      "text": "toggle cl_dummy_control 1 0",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 77,
+      "text": "toggle cl_overlay_entities 0 100",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogBind.cpp",
+      "line": 78,
+      "text": "toggle cl_showhud 0 1",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
       "file": "src/game/client/QmUi/cards/QmCardCatalogFunction.cpp",
       "line": 148,
       "text": "Auto chat when dying in water",
@@ -200936,161 +201181,84 @@
     },
     {
       "file": "src/game/client/components/qmclient/bind_editor.cpp",
-      "line": 17,
+      "line": 20,
       "text": " \\t\\r\\n",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_editor.cpp",
-      "line": 120,
+      "line": 79,
+      "text": " \\t\\r\\n;#\"\\",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/qmclient/bind_editor.cpp",
+      "line": 190,
       "text": "bind ",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 50,
-      "text": "toggle cl_dyncam 0 1",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 51,
-      "text": "toggle cl_race_show_ghost 0 1",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 61,
-      "text": "+show_chat; chat all",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 62,
-      "text": "+show_chat; chat team",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 67,
-      "text": "toggle cl_dummy 0 1",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 68,
-      "text": "+toggle_restore cl_dummy_jump 1",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 69,
-      "text": "+toggle_restore cl_dummy_fire 1",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 70,
-      "text": "+toggle_restore cl_dummy_hook 1",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 71,
-      "text": "toggle cl_dummy_copy_moves 0 1",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 72,
-      "text": "toggle cl_dummy_control 1 0",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 83,
-      "text": "toggle cl_overlay_entities 0 100",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 84,
-      "text": "toggle cl_showhud 0 1",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "Mouse 1",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "Mouse 2",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "Mouse 3",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "Mouse 4",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "Mouse 5",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "Wheel down",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 340,
+      "line": 288,
       "text": "Wheel up",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 341,
+      "line": 289,
       "text": "Wheel left",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 341,
+      "line": 289,
       "text": "Wheel right",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"

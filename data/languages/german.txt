@@ -479,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == Füge Freunde hinzu, indem du unten ihren Namen eingibst oder in der Spielerliste auf ihren Namen klickst.
 
+Add function
+== Funktion hinzufügen
+
 Add Group
 == Gruppe hinzufügen
 
@@ -1551,7 +1554,7 @@ Bounce
 == Abprallen
 
 Bound functions
-== Gebundene Funktionen
+== Zugewiesene Funktionen
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Farbe des Titels in Klammern: 0 = Server folgen, 1 = einfarbig, 2 = Regenbogen
@@ -2274,7 +2277,7 @@ Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
 Configure keyboard, mouse, wheel, and modifier bindings
-== Tastatur-, Maus-, Rad- und Modifikatortasten-Bindings konfigurieren
+== Tastatur-, Maus-, Mausrad- und Zusatztastenbelegungen konfigurieren
 
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
@@ -2656,6 +2659,9 @@ Custom color
 
 Custom colors
 == Benutzerdefinierte Farben
+
+Custom command
+== Eigener Befehl
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == Benutzerdefinierte Community-Listen-URL (muss https sein, leer zum Deaktivieren)
@@ -5708,6 +5714,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == Ungültige Client-ID zum Verschieben zu Zuschauern
 
+Invalid command or parameters.
+== Ungültiger Befehl oder ungültige Parameter.
+
 Invalid Demo
 == Ungültige Demo
 
@@ -7341,7 +7350,7 @@ No filter
 == Ohne Filter
 
 No functions bound
-== Keine Funktionen gebunden
+== Keine Funktionen zugewiesen
 
 No input device available
 == Kein Eingabegerät verfügbar
@@ -7777,6 +7786,9 @@ Optimistic prediction along stable direction
 
 Option color
 == Optionsfarbe
+
+Optional
+== Optional
 
 Optional authentication key for the DNSBL provider
 == Optionaler Authentifizierungsschlüssel für den DNSBL-Anbieter
@@ -12321,7 +12333,7 @@ The auth level you need to tele others
 == Die benötigte Berechtigungsstufe zum Teleportieren anderer Spieler
 
 The command is empty, incomplete, or exceeds the local config line limit.
-== Der Befehl ist leer, unvollständig oder überschreitet das Zeilenlimit der lokalen Konfiguration.
+== Der Befehl ist leer, unvollständig oder überschreitet die maximale Länge einer lokalen Konfigurationszeile.
 
 The downloaded file is not a valid demo
 == Die heruntergeladene Datei ist keine gültige Demo
@@ -12426,10 +12438,10 @@ Thinking mode requires a reasoning model
 == Der Denkmodus erfordert ein Reasoning-Modell
 
 This bind contains an unfinished quote and cannot be edited safely.
-== Diese Bindung enthält ein nicht geschlossenes Anführungszeichen und kann nicht sicher bearbeitet werden.
+== Diese Belegung enthält ein ungeschlossenes Anführungszeichen und kann nicht sicher bearbeitet werden.
 
 This bind is already over the local config line limit.
-== Diese Bindung überschreitet bereits das Zeilenlimit der lokalen Konfiguration.
+== Diese Belegung überschreitet die maximale Länge einer lokalen Konfigurationszeile.
 
 This connection cannot change names while connected. Reconnect with the saved names first.
 == Diese Verbindung erlaubt keine Namensänderung während der Verbindung. Zuerst mit den gespeicherten Namen neu verbinden.

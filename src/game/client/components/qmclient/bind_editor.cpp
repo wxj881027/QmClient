@@ -1,5 +1,8 @@
 #include "bind_editor.h"
 
+#include <engine/console.h>
+#include <engine/shared/config.h>
+
 #include <algorithm>
 #include <utility>
 
@@ -27,6 +30,73 @@ namespace qm_bind_editor
 			if(!Segment.empty())
 				Result.m_vCommands.push_back(std::move(Segment));
 		}
+	}
+
+	std::vector<SRegisteredCommand> RegisteredCommands(IConsole &Console)
+	{
+		std::vector<SRegisteredCommand> vCommands;
+		for(const auto *pInfo = Console.FirstCommandInfo(IConsole::CLIENT_ID_UNSPECIFIED, CFGFLAG_CLIENT);
+			pInfo != nullptr;
+			pInfo = Console.NextCommandInfo(pInfo, IConsole::CLIENT_ID_UNSPECIFIED, CFGFLAG_CLIENT))
+		{
+			// 远程控制台的临时命令不属于本地绑定目录；复制内容避免保留注册表指针。
+			if(Console.GetCommandInfo(pInfo->Name(), CFGFLAG_CLIENT, false) == pInfo)
+				vCommands.push_back({pInfo->Name(), pInfo->Params(), pInfo->Help()});
+		}
+		return vCommands;
+	}
+
+	std::vector<SParameter> ParseParameters(const std::string_view Format)
+	{
+		std::vector<SParameter> vParameters;
+		bool Optional = false;
+		for(size_t Index = 0; Index < Format.size();)
+		{
+			const char Type = Format[Index++];
+			if(IsWhitespace(Type))
+				continue;
+			if(Type == '?')
+			{
+				Optional = true;
+				continue;
+			}
+			std::string Name(1, Type);
+			if(Index < Format.size() && Format[Index] == '[')
+			{
+				const size_t End = Format.find(']', Index + 1);
+				if(End == std::string_view::npos)
+					break;
+				Name = Format.substr(Index + 1, End - Index - 1);
+				Index = End + 1;
+			}
+			vParameters.push_back({Type, std::move(Name), Optional});
+		}
+		return vParameters;
+	}
+
+	bool ComposeCommand(const std::string_view Name, const std::vector<SParameter> &vParameters, const std::vector<std::optional<std::string>> &vArguments, std::string &Result)
+	{
+		if(Name.empty() || Name.find_first_of(" \t\r\n;#\"\\") != std::string_view::npos || Name.find('\0') != std::string_view::npos || vParameters.size() != vArguments.size())
+			return false;
+		std::string Command(Name);
+		bool Omitted = false;
+		for(size_t Index = 0; Index < vParameters.size(); ++Index)
+		{
+			if(!vArguments[Index].has_value())
+			{
+				if(!vParameters[Index].m_Optional)
+					return false;
+				Omitted = true;
+				continue;
+			}
+			const std::string &Argument = *vArguments[Index];
+			if(Omitted || Argument.find_first_of("\r\n") != std::string::npos || Argument.find('\0') != std::string::npos)
+				return false;
+			Command.push_back(' ');
+			Command += QuoteArgument(Argument);
+		}
+		Result = std::move(Command);
+		return true;
 	}
 
 	SCommands SplitCommands(const std::string_view Text)

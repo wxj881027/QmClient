@@ -479,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == 在下方输入好友名称或点击玩家列表中的好友名称即可添加好友
 
+Add function
+== 添加功能
+
 Add Group
 == 添加群组
 
@@ -2656,6 +2659,9 @@ Custom color
 
 Custom colors
 == 自定义颜色
+
+Custom command
+== 自定义命令
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == 自定义社区列表的获取 URL（必须是 https，留空则禁用）
@@ -5708,6 +5714,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == 用于移至旁观的客户端 ID 无效
 
+Invalid command or parameters.
+== 命令或参数无效。
+
 Invalid Demo
 == 回放文件无效或已损坏
 
@@ -7777,6 +7786,9 @@ Optimistic prediction along stable direction
 
 Option color
 == 选项颜色
+
+Optional
+== 可选
 
 Optional authentication key for the DNSBL provider
 == 指定 DNSBL 提供商的可选身份验证密钥

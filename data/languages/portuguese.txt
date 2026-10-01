@@ -479,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == Adicione amigos inserindo o nome abaixo ou clicando no nome na lista de jogadores.
 
+Add function
+== Adicionar função
+
 Add Group
 == Adicionar Grupo
 
@@ -1551,7 +1554,7 @@ Bounce
 == Ressalto
 
 Bound functions
-== Funções ligadas
+== Funções atribuídas
 
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Cor do título entre parênteses retos: 0 = seguir o servidor, 1 = cor única, 2 = arco-íris
@@ -2274,7 +2277,7 @@ Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
 Configure keyboard, mouse, wheel, and modifier bindings
-== Configurar ligações do teclado, rato, roda e teclas modificadoras
+== Configurar atalhos de teclado, rato, roda e modificadores
 
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
@@ -2656,6 +2659,9 @@ Custom color
 
 Custom colors
 == Cores personalizadas
+
+Custom command
+== Comando personalizado
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == URL personalizado para buscar lista de comunidades (deve ser https, deixe vazio para desativar)
@@ -5708,6 +5714,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == ID de cliente inválido para mover para espectadores
 
+Invalid command or parameters.
+== Comando ou parâmetros inválidos.
+
 Invalid Demo
 == Demo Inválida
 
@@ -7341,7 +7350,7 @@ No filter
 == Sem filtro
 
 No functions bound
-== Nenhuma função ligada
+== Nenhuma função atribuída
 
 No input device available
 == Nenhum dispositivo de entrada disponível
@@ -7777,6 +7786,9 @@ Optimistic prediction along stable direction
 
 Option color
 == Cor da opção
+
+Optional
+== Opcional
 
 Optional authentication key for the DNSBL provider
 == Chave de autenticação opcional para o provedor DNSBL
@@ -12321,7 +12333,7 @@ The auth level you need to tele others
 == Nível de autorização necessário para teletransportar outros jogadores
 
 The command is empty, incomplete, or exceeds the local config line limit.
-== O comando está vazio, incompleto ou excede o limite de linha da configuração local.
+== O comando está vazio, incompleto ou excede o limite da linha de configuração local.
 
 The downloaded file is not a valid demo
 == O ficheiro descarregado não é uma demo válida
@@ -12426,10 +12438,10 @@ Thinking mode requires a reasoning model
 == O modo de pensamento requer um modelo de raciocínio
 
 This bind contains an unfinished quote and cannot be edited safely.
-== Esta ligação contém uma aspa não fechada e não pode ser editada com segurança.
+== Este atalho contém aspas não fechadas e não pode ser editado em segurança.
 
 This bind is already over the local config line limit.
-== Esta ligação já excede o limite de linha da configuração local.
+== Este atalho excede o limite da linha de configuração local.
 
 This connection cannot change names while connected. Reconnect with the saved names first.
 == Esta ligação não permite mudar nomes durante a sessão. Volta a ligar com os nomes guardados.

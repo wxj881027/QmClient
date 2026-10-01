@@ -479,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == 在下方輸入好友名稱或點擊玩家列表中的好友名稱即可添加好友
 
+Add function
+== 新增功能
+
 Add Group
 == 添加群組
 
@@ -2274,7 +2277,7 @@ Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
 Configure keyboard, mouse, wheel, and modifier bindings
-== 設定鍵盤、滑鼠、滾輪與修飾鍵綁定
+== 設定鍵盤、滑鼠、滾輪和修飾鍵綁定
 
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
@@ -2656,6 +2659,9 @@ Custom color
 
 Custom colors
 == 自定義顏色
+
+Custom command
+== 自訂指令
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == 自定義社區列表的獲取 URL（必須是 https，留空則禁用）
@@ -5708,6 +5714,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == 用於移至旁觀的客戶端 ID 無效
 
+Invalid command or parameters.
+== 指令或參數無效。
+
 Invalid Demo
 == 回放文件無效或已損壞
 
@@ -7341,7 +7350,7 @@ No filter
 == 不篩選
 
 No functions bound
-== 沒有綁定功能
+== 未綁定功能
 
 No input device available
 == 系統沒有可用輸入設備
@@ -7777,6 +7786,9 @@ Optimistic prediction along stable direction
 
 Option color
 == 選項顏色
+
+Optional
+== 選填
 
 Optional authentication key for the DNSBL provider
 == 指定 DNSBL 提供商的可選身份驗證密鑰
@@ -12321,7 +12333,7 @@ The auth level you need to tele others
 == 傳送其他玩家所需的權限等級
 
 The command is empty, incomplete, or exceeds the local config line limit.
-== 命令為空、不完整，或超過本機設定行限制。
+== 指令為空、不完整或超過本機設定行限制。
 
 The downloaded file is not a valid demo
 == 下載的檔案不是有效的示範
