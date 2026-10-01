@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == 常に自分のフック補助線を表示
 
+Always show song title and artist
+== 曲名とアーティストを常に表示
+
 Always translate
 == 常に翻訳
 

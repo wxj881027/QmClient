@@ -170,6 +170,22 @@ SQmHammerHitMatch QmMatchHammerHitEvent(
 	return Result;
 }
 
+bool QmIsDuplicateHammerHitEffect(const SQmHammerHitRecord &Previous, const SQmHammerHitRecord &Current, int64_t ElapsedNs)
+{
+	// 同一快照可包含互锤等多个近距离命中；只有跨连接且归属一致的送达才能合并。
+	if(Previous.m_Connection < 0 || Current.m_Connection < 0 || Previous.m_Connection == Current.m_Connection ||
+		Current.m_AttackerId < 0 || Current.m_TargetId < 0 ||
+		Previous.m_AttackerId != Current.m_AttackerId || Previous.m_TargetId != Current.m_TargetId)
+	{
+		return false;
+	}
+
+	constexpr int64_t DuplicateDeliveryWindowNs = 100 * 1000 * 1000;
+	return ElapsedNs >= 0 && ElapsedNs < DuplicateDeliveryWindowNs &&
+	       Current.m_SnapshotTick >= Previous.m_SnapshotTick && Current.m_SnapshotTick - Previous.m_SnapshotTick <= 3 &&
+	       distance_squared(Previous.m_Pos, Current.m_Pos) < 32.0f * 32.0f;
+}
+
 void CQmHammerHitTracker::Reset()
 {
 	for(auto &Entry : m_aEntries)

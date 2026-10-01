@@ -55,7 +55,7 @@ class CSpectator : public CComponent
 	void SpectateNext(bool Reverse);
 	// QmClient：按编号查找传送点，以及承载它的输入行 UI。
 	void FindTele();
-	void RenderTeleSearch(vec2 Center, float Alpha, bool MousePressed);
+	void RenderTeleSearch(CUIRect Row, vec2 Mouse, float Alpha, bool MousePressed);
 	// QmClient：查看模式底部播放控制条（布局对齐 demo 播放器的控制条：
 	// 视角切换 + 进度定位 + 秒级/tick 级快进快退 + 倍速），原生 CUI 交互。
 	// 显隐与 demo 播放一致：ESC 开关（见 OnInput 的单击/双击语义）

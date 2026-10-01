@@ -6,6 +6,7 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/gameclient.h>
+#include <game/localization.h>
 
 #include <algorithm>
 
@@ -115,24 +116,27 @@ namespace qm_card_catalog
 					}
 					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, &g_Config.m_QmHookCountdown) || Changed;
 					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmSwitchCountdown, &g_Config.m_QmSwitchCountdown) || Changed;
-					if(!g_Config.m_QmSwitchCountdown)
-						return Changed;
-					// 两个位置开关各自翻转自己的标志位，再合成模式值，与渲染路径保持一致。
-					int FollowTee = QmHudSwitchCountdownShowsFollowTee(g_Config.m_QmSwitchCountdownMode) ? 1 : 0;
-					int MediaIsland = QmHudSwitchCountdownShowsMediaIsland(g_Config.m_QmSwitchCountdownMode) ? 1 : 0;
-					bool LocationChanged = qm_card_catalog::QmCardRenderHook::ToggleQmHudCountdownLocation(pMenus, Content, LineHeight, LineSpacing, SwitchCountdownFollowTeeId(), &FollowTee);
-					LocationChanged |= qm_card_catalog::QmCardRenderHook::ToggleQmHudCountdownLocation(pMenus, Content, LineHeight, LineSpacing, SwitchCountdownMediaIslandId(), &MediaIsland);
-					if(LocationChanged)
+					if(g_Config.m_QmSwitchCountdown)
 					{
-						if(FollowTee == 0 && MediaIsland == 0)
+						// 两个位置开关各自翻转自己的标志位，再合成模式值，与渲染路径保持一致。
+						int FollowTee = QmHudSwitchCountdownShowsFollowTee(g_Config.m_QmSwitchCountdownMode) ? 1 : 0;
+						int MediaIsland = QmHudSwitchCountdownShowsMediaIsland(g_Config.m_QmSwitchCountdownMode) ? 1 : 0;
+						bool LocationChanged = qm_card_catalog::QmCardRenderHook::ToggleQmHudCountdownLocation(pMenus, Content, LineHeight, LineSpacing, SwitchCountdownFollowTeeId(), &FollowTee);
+						LocationChanged |= qm_card_catalog::QmCardRenderHook::ToggleQmHudCountdownLocation(pMenus, Content, LineHeight, LineSpacing, SwitchCountdownMediaIslandId(), &MediaIsland);
+						if(LocationChanged)
 						{
-							g_Config.m_QmSwitchCountdown = 0;
-							FollowTee = 0;
-							MediaIsland = 1;
+							if(FollowTee == 0 && MediaIsland == 0)
+							{
+								g_Config.m_QmSwitchCountdown = 0;
+								FollowTee = 0;
+								MediaIsland = 1;
+							}
+							g_Config.m_QmSwitchCountdownMode = QmHudSwitchCountdownModeFromLocations(FollowTee != 0, MediaIsland != 0, g_Config.m_QmSwitchCountdownMode);
+							Changed = true;
 						}
-						g_Config.m_QmSwitchCountdownMode = QmHudSwitchCountdownModeFromLocations(FollowTee != 0, MediaIsland != 0, g_Config.m_QmSwitchCountdownMode);
-						Changed = true;
 					}
+					if(!g_Config.m_QmHudIslandUseOriginalStyle)
+						Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandAlwaysShowTrackDetails, &g_Config.m_QmHudIslandAlwaysShowTrackDetails) || Changed;
 					return Changed;
 				};
 			case EQmModuleId::PlayerStats:
@@ -322,6 +326,13 @@ namespace qm_card_catalog
 	const void *SwitchCountdownMediaIslandId()
 	{
 		return &s_SwitchCountdownMediaIslandId;
+	}
+
+	void QmCardRenderHook::RenderQmHudDynamicIslandContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, bool OriginalStyle)
+	{
+		pMenus->RenderQmHudDynamicIslandContent(Content, LineHeight, LineSpacing, OriginalStyle);
+		if(!OriginalStyle)
+			pMenus->RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHudIslandAlwaysShowTrackDetails, "Always show song title and artist", Localize("Always show song title and artist"), &g_Config.m_QmHudIslandAlwaysShowTrackDetails);
 	}
 
 	bool BuildHudCard(const SQmCardBuildContext &Ctx, const EQmModuleId Id, SSettingsCardDefinition &Out)

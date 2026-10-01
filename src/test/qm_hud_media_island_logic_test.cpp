@@ -528,11 +528,13 @@ TEST(QmHudMediaIslandLyrics, ActiveLyricsKeepTheIslandExpandedWithoutRepeatedMor
 	EXPECT_FALSE(State.m_StartCapsuleMorph);
 }
 
-TEST(QmHudMediaIslandLyrics, TrackDetailsUseAnIndependentThreeSecondDeadline)
+TEST(QmHudMediaIslandLyrics, TrackDetailsUseTheDeadlineUnlessAlwaysShown)
 {
-	EXPECT_TRUE(QmHudMediaIslandShouldShowTrackDetails(1000, 4000));
-	EXPECT_FALSE(QmHudMediaIslandShouldShowTrackDetails(4000, 4000));
-	EXPECT_FALSE(QmHudMediaIslandShouldShowTrackDetails(5000, 0));
+	EXPECT_TRUE(QmHudMediaIslandShouldShowTrackDetails(1000, 4000, false));
+	EXPECT_FALSE(QmHudMediaIslandShouldShowTrackDetails(4000, 4000, false));
+	EXPECT_FALSE(QmHudMediaIslandShouldShowTrackDetails(5000, 0, false));
+	EXPECT_TRUE(QmHudMediaIslandShouldShowTrackDetails(4000, 4000, true));
+	EXPECT_TRUE(QmHudMediaIslandShouldShowTrackDetails(5000, 0, true));
 }
 
 TEST(QmHudMediaIslandLyrics, LosingLyricsRestoresTheNormalAutoCollapseDeadline)

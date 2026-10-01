@@ -503,6 +503,20 @@ void CSpectator::OnRender()
 		m_SelectedSpectatorId = NO_SELECTION;
 	}
 
+	const CNetObj_PlayerInfo *apDisplayPlayers[MAX_CLIENTS];
+	bool aIsFriend[MAX_CLIENTS];
+	int aDisplayOrder[MAX_CLIENTS];
+	int DisplayCount = 0;
+	for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
+	{
+		if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
+			continue;
+		apDisplayPlayers[DisplayCount] = pInfo;
+		aIsFriend[DisplayCount] = GameClient()->m_aClients[pInfo->m_ClientId].m_Friend;
+		++DisplayCount;
+	}
+	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder, g_Config.m_QmSpectatorFriendsFirst != 0);
+
 	// draw background
 	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
 	float Height = 400 * 3.0f;
@@ -514,20 +528,11 @@ void CSpectator::OnRender()
 	float TeeSizeMod = 1.0f;
 	float RoundRadius = 30.0f;
 	bool MultiViewSelected = false;
-	int TotalPlayers = 0;
 	int PerLine = 8;
 	float BoxMove = -10.0f;
 	float BoxOffset = 0.0f;
 
-	for(const auto &pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
-	{
-		if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
-			continue;
-
-		++TotalPlayers;
-	}
-
-	if(TotalPlayers > 96)
+	if(DisplayCount > 96)
 	{
 		FontSize = 15.0f;
 		LineHeight = 15.0f;
@@ -537,7 +542,7 @@ void CSpectator::OnRender()
 		BoxMove = 3.0f;
 		BoxOffset = 6.0f;
 	}
-	else if(TotalPlayers > 64)
+	else if(DisplayCount > 64)
 	{
 		FontSize = 16.0f;
 		LineHeight = 19.0f;
@@ -547,7 +552,7 @@ void CSpectator::OnRender()
 		BoxMove = 3.0f;
 		BoxOffset = 6.0f;
 	}
-	else if(TotalPlayers > 32)
+	else if(DisplayCount > 32)
 	{
 		FontSize = 18.0f;
 		LineHeight = 30.0f;
@@ -557,7 +562,7 @@ void CSpectator::OnRender()
 		BoxMove = 3.0f;
 		BoxOffset = 6.0f;
 	}
-	if(TotalPlayers > 16)
+	if(DisplayCount > 16)
 	{
 		ObjWidth = 600.0f;
 	}
@@ -566,7 +571,13 @@ void CSpectator::OnRender()
 	const float CenterX = Width / 2.0f;
 	const float CenterY = Height / 2.0f + PanelOffsetY;
 	const vec2 ScreenCenter = vec2(CenterX, CenterY);
-	CUIRect SpectatorRect = {CenterX - ObjWidth, CenterY - 300.0f, ObjWidth * 2.0f, 600.0f};
+	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f, 15.0f);
+	const float TitleFontSize = TitleHeight * 0.8f;
+	const float PlayersBottom = StartY + BoxMove + qm_spectator_friends::MaxColumnHeight(DisplayCount, FriendCount, PerLine, LineHeight, TitleHeight);
+	const float TeleSearchTop = maximum(310.0f, PlayersBottom + 20.0f);
+	// 查找行、状态文字和玩家分组共用面板边界，光标范围也从同一矩形取得。
+	const float PanelBottom = ViewModeActive ? 300.0f : TeleSearchTop + 90.0f;
+	CUIRect SpectatorRect = {CenterX - ObjWidth, CenterY - 300.0f, ObjWidth * 2.0f, PanelBottom + 300.0f};
 	CUIRect SpectatorMouseRect;
 	SpectatorRect.Margin(20.0f, &SpectatorMouseRect);
 
@@ -611,7 +622,7 @@ void CSpectator::OnRender()
 
 	// clamp mouse position to selector area
 	m_SelectorMouse.x = std::clamp(m_SelectorMouse.x, -(ObjWidth - 20.0f), ObjWidth - 20.0f);
-	m_SelectorMouse.y = std::clamp(m_SelectorMouse.y, -280.0f, 280.0f);
+	m_SelectorMouse.y = std::clamp(m_SelectorMouse.y, SpectatorRect.y + 20.0f - CenterY, SpectatorRect.y + SpectatorRect.h - 20.0f - CenterY);
 
 	// QmClient：查看模式的主列表只列 Rank 1 影子成员。服务器玩家与回放无关，列出来只会
 	// 让人分不清跟的是谁；成员行点击即锁定该成员视角。右侧那块重复的成员面板随之跳过。
@@ -752,21 +763,6 @@ void CSpectator::OnRender()
 
 	float x = -(ObjWidth - 35.0f), y = StartY;
 
-	const CNetObj_PlayerInfo *apDisplayPlayers[MAX_CLIENTS];
-	bool aIsFriend[MAX_CLIENTS];
-	int aDisplayOrder[MAX_CLIENTS];
-	int DisplayCount = 0;
-	for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
-	{
-		if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
-			continue;
-		apDisplayPlayers[DisplayCount] = pInfo;
-		aIsFriend[DisplayCount] = GameClient()->m_aClients[pInfo->m_ClientId].m_Friend;
-		++DisplayCount;
-	}
-	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder, g_Config.m_QmSpectatorFriendsFirst != 0);
-	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f, 15.0f);
-	const float TitleFontSize = TitleHeight * 0.8f;
 	const auto DrawGroupTitle = [&](const char *pTitle, const ColorRGBA &TitleColor) {
 		const float TitleLeft = CenterX + x - 10.0f + BoxOffset;
 		const float TitleTop = CenterY + y + BoxMove;
@@ -991,8 +987,8 @@ void CSpectator::OnRender()
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-	// QmClient：按编号查找传送点的输入行（与远程一致，画在选择器内容之上、光标之下）。
-	RenderTeleSearch(ScreenCenter, ContentAlpha, MousePressed);
+	const CUIRect TeleSearchRow = {CenterX - 280.0f, CenterY + TeleSearchTop, 560.0f, 40.0f};
+	RenderTeleSearch(TeleSearchRow, ScreenCenter + m_SelectorMouse, ContentAlpha, MousePressed);
 	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
 
 	// QmClient：查看模式的底部控制条画在原生旁观面板之上（矮屏上两者可能重叠）
@@ -1365,9 +1361,9 @@ void CSpectator::FindTele()
 	m_TeleSearchPending = true;
 }
 
-void CSpectator::RenderTeleSearch(vec2 Center, float Alpha, bool MousePressed)
+void CSpectator::RenderTeleSearch(CUIRect Row, vec2 Mouse, float Alpha, bool MousePressed)
 {
-	CUIRect Row = {Center.x - 280.0f, Center.y + 310.0f, 560.0f, 40.0f};
+	const CUIRect Status = {Row.x, Row.y + Row.h + 10.0f, Row.w, 20.0f};
 	CUIRect Label, Minus, Number, Plus, Find;
 	Row.VSplitLeft(140.0f, &Label, &Row);
 	Row.VSplitLeft(40.0f, &Minus, &Row);
@@ -1376,7 +1372,6 @@ void CSpectator::RenderTeleSearch(vec2 Center, float Alpha, bool MousePressed)
 	Row.VSplitLeft(8.0f, nullptr, &Row);
 	Row.VSplitLeft(40.0f, &Plus, &Row);
 	Row.VSplitLeft(12.0f, nullptr, &Find);
-	const vec2 Mouse = Center + m_SelectorMouse;
 
 	const auto Button = [&](const CUIRect &Rect, const char *pText) {
 		const bool Hovered = m_Active && Rect.Inside(Mouse);
@@ -1432,7 +1427,6 @@ void CSpectator::RenderTeleSearch(vec2 Center, float Alpha, bool MousePressed)
 		pStatus = Localize("There is no teleporter with that index on the map.");
 	const bool Error = m_TeleSearchStatus == ETeleSearchStatus::INVALID_NUMBER || m_TeleSearchStatus == ETeleSearchStatus::NOT_FOUND;
 	TextRender()->TextColor(Error ? ColorRGBA(1.0f, 0.5f, 0.5f, Alpha) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.6f * Alpha));
-	const CUIRect Status = {Center.x - 280.0f, Center.y + 360.0f, 560.0f, 20.0f};
 	Ui()->DoLabel(&Status, pStatus, 16.0f, TEXTALIGN_ML);
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 }

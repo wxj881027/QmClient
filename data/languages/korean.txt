@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == 자신의 갈고리 보조선 항상 표시
 
+Always show song title and artist
+== 곡 제목과 아티스트 항상 표시
+
 Always translate
 == 항상 번역
 

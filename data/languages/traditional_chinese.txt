@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == 始終顯示自己的鉤子輔助線
 
+Always show song title and artist
+== 始終顯示歌名歌手
+
 Always translate
 == 始終翻譯
 

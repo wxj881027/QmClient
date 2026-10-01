@@ -238,6 +238,7 @@ Always show local time
 Always show nameplates regardless of distance
 Always show other players' hook collision lines
 Always show own player's hook collision line
+Always show song title and artist
 Always translate
 Amount
 And pick one randomly

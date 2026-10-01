@@ -802,7 +802,7 @@ inline float ResolveQmHudDynamicIslandHeight(const SSettingsContentMetrics &Metr
 	if(!OriginalStyle)
 	{
 		const CUIRect ColorRowView{0.0f, 0.0f, std::max(0.0f, ContentWidth), 0.0f};
-		Height += ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight;
+		Height += ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight + Metrics.m_RowStep;
 	}
 	// 开关倒计时启用时增加跟随 Tee / 灵动岛两个位置开关，不再保留位置标题行。
 	Height += (SwitchCountdownEnabled ? 2.0f : 0.0f) * Metrics.m_RowStep;

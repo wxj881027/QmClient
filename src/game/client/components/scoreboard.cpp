@@ -1340,15 +1340,17 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		FontSize = 5.0f;
 	}
 	const float PreferredTeamFontSize = FontSize / 1.5f;
+	const float PreferredTeamModeIconSize = minimum(SCOREBOARD_TEAM_MODE_ICON_SIZE, FontSize);
+	const CUIRect PlayerRows = ScoreboardPlayerRowsRect(Scoreboard, HeadlineFontsize * 2.0f);
 	const float RowsVerticalScale = ScoreboardRowsVerticalScale(
-		maximum(0.0f, Scoreboard.h - HeadlineFontsize * 2.0f),
+		PlayerRows.h,
 		EndRow - FirstRow,
 		NumTeamLabels,
 		NumTeamModeLabels,
 		LineHeight,
 		Spacing,
 		PreferredTeamFontSize,
-		SCOREBOARD_TEAM_MODE_ICON_SIZE);
+		PreferredTeamModeIconSize);
 	LineHeight *= RowsVerticalScale;
 	TeeSizeMod *= RowsVerticalScale;
 	Spacing *= RowsVerticalScale;
@@ -1356,7 +1358,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	FontSize *= RowsVerticalScale;
 	// 练习/锁队图标随行字号等比缩小：固定 12px 在人多压缩行高时会比队伍标签文字还大。
 	// 基准场景（FontSize=12）下正好等于 SCOREBOARD_TEAM_MODE_ICON_SIZE，行为不变。
-	const float TeamModeIconSize = minimum(SCOREBOARD_TEAM_MODE_ICON_SIZE, FontSize);
+	const float TeamModeIconSize = PreferredTeamModeIconSize * RowsVerticalScale;
 
 	const SScoreboardRowRenderDetail RowDetail = ResolveScoreboardRowRenderDetail();
 	const bool ShowClientBrand = RowDetail.m_ShowClientBrand && g_Config.m_QmClientShowBadge;
@@ -1380,7 +1382,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 	// render headlines
 	CUIRect Headline;
-	Scoreboard.HSplitTop(HeadlineFontsize * 2.0f, &Headline, &Scoreboard);
+	Scoreboard.HSplitTop(HeadlineFontsize * 2.0f, &Headline, nullptr);
 	const float HeadlineY = Headline.y + Headline.h / 2.0f - HeadlineFontsize / 2.0f;
 	const char *pScore = TimeScore ? Localize("Time") : Localize("Score");
 	TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(HeadlineFontsize, pScore), HeadlineY, HeadlineFontsize, pScore);
@@ -1400,6 +1402,9 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const char *pPingLabel = Localize("Ping");
 	TextRender()->Text(PingOffset + PingLength - TextRender()->TextWidth(HeadlineFontsize, pPingLabel), HeadlineY, HeadlineFontsize, pPingLabel);
 
+	Scoreboard = PlayerRows;
+	// 皮肤描边和字体像素对齐可能超出逻辑行高，限制在玩家区内。
+	Ui()->ClipEnable(&PlayerRows);
 	// render player entries
 	int PrevDDTeam = -1;
 	int &CurrentDDTeamSize = State.m_CurrentDDTeamSize;
@@ -1446,7 +1451,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			const ColorRGBA Color = ScoreboardDecorationColor(GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ItemAlpha));
 			// 面板最后一行的队伍背景要贴着卡片圆角收口：用卡片圆角而不是缩放后的行圆角，
 			// 否则小圆角填不满面板底部圆角，颜色会溢出到圆角外。
-			const bool IsPanelLastRow = &PlannedRow == &Plan.m_aRows[Plan.m_Count - 1];
+			const bool IsPanelLastRow = RowIndex + 1 == EndRow;
 			int TeamRectCorners = 0;
 			if(PrevDDTeam != DDTeam)
 			{
@@ -1631,7 +1636,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			}
 			CTeeRenderInfo TeeInfo = GameClient()->m_aClients[pInfo->m_ClientId].m_RenderInfo;
 			TeeInfo.m_Size *= TeeSizeMod;
-			IGraphics::CQuadItem QuadItem(TeeOffset, Row.y, TeeInfo.m_Size, TeeInfo.m_Size);
+			const CUIRect TeeRect = ScoreboardDeadTeeRect(Row, TeeOffset, TeeLength, TeeInfo.m_Size);
+			IGraphics::CQuadItem QuadItem(TeeRect.x, TeeRect.y, TeeRect.w, TeeRect.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1747,6 +1753,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		TextRender()->Text(PingOffset + PingLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
 		TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
 	}
+	Ui()->ClipDisable();
 
 	TextRender()->TextColor(BaseTextColor);
 	TextRender()->TextOutlineColor(BaseOutlineColor);

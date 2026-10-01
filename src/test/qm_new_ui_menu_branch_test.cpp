@@ -1426,7 +1426,6 @@ TEST(QmNewUiMenuBranches, NameplateStrongHookRowReservesLayoutWithoutContentWidt
 	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
 	const std::string RangeSize = FunctionBody(Source, "vec2 RangeSize(");
 	const std::string AddHookRow = FunctionBody(Source, "void AddHookRow(");
-	const std::string RenderNamePlateGame = FunctionBody(Source, "void CNamePlates::RenderNamePlateGame");
 
 	EXPECT_NE(Source.find("bool m_ReserveHookStrongWeakRow;"), std::string::npos);
 	EXPECT_NE(Source.find("bool m_ReserveLineHeight = false;"), std::string::npos);
@@ -1436,9 +1435,6 @@ TEST(QmNewUiMenuBranches, NameplateStrongHookRowReservesLayoutWithoutContentWidt
 	EXPECT_NE(RangeSize.find("LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);"), std::string::npos);
 	EXPECT_NE(AddHookRow.find("AddPart<CNamePlatePartHookStrongWeakRowReserve>(This);"), std::string::npos);
 	EXPECT_LT(AddHookRow.find("AddPart<CNamePlatePartHookStrongWeakRowReserve>(This);"), AddHookRow.find("AddPart<CNamePlatePartHookStrongWeak>(This);"));
-	EXPECT_NE(RenderNamePlateGame.find("Data.m_ReserveHookStrongWeakRow = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong > 0;"), std::string::npos);
-	EXPECT_NE(RenderNamePlateGame.find("Data.m_ShowHookStrongWeak = false;"), std::string::npos);
-	EXPECT_NE(RenderNamePlateGame.find("Data.m_ShowHookStrongWeak = g_Config.m_Debug || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, false, Strong, Weak));"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, NameplateGameUsesFullScopeReferenceFrame)

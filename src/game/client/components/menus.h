@@ -2068,6 +2068,7 @@ protected:
 
 	// found in menus_demo.cpp
 	vec2 m_DemoControlsPositionOffset = vec2(0.0f, 0.0f);
+	bool m_DemoDisplayExpanded = false;
 	bool m_PausedBeforeSeeking;
 	float m_PrevSeekAmount;
 	float m_LastPauseChange = -1.0f;
@@ -2078,6 +2079,7 @@ protected:
 	bool FetchHeader(CDemoItem &Item);
 	void FetchAllHeaders();
 	void HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek = -1);
+	void RenderDemoCard(const CUIRect &Rect);
 	void RenderDemoPlayer(CUIRect MainView);
 	void RenderDemoPlayerSliceSavePopup(CUIRect MainView);
 	// 回放/导出共用的显示选项面板与其折叠开关。

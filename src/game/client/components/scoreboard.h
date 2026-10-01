@@ -58,19 +58,33 @@ constexpr SScoreboardTeamLabelLayout ResolveScoreboardTeamLabelLayout(float RowX
 
 constexpr float ScoreboardRowsVerticalScale(float AvailableHeight, int NumRows, int NumTeamLabels, int NumTeamModeLabels, float LineHeight, float Spacing, float TeamFontSize, float TeamModeIconSize)
 {
-	if(AvailableHeight <= 0.0f || NumRows <= 0)
+	if(NumRows <= 0)
 		return 1.0f;
+	if(AvailableHeight <= 0.0f)
+		return 0.0f;
 	const int ClampedTeamLabels = NumTeamLabels < 0 ? 0 : (NumTeamLabels > NumRows ? NumRows : NumTeamLabels);
 	const int ClampedTeamModeLabels = NumTeamModeLabels < 0 ? 0 : (NumTeamModeLabels > ClampedTeamLabels ? ClampedTeamLabels : NumTeamModeLabels);
 	const int TextOnlyTeamLabels = ClampedTeamLabels - ClampedTeamModeLabels;
 	const int RowsWithoutTeamLabels = NumRows - ClampedTeamLabels;
 	const float TeamTextSpacing = TeamFontSize > Spacing ? TeamFontSize : Spacing;
-	const float ScalableHeight = NumRows * LineHeight + RowsWithoutTeamLabels * Spacing + TextOnlyTeamLabels * TeamTextSpacing;
-	const float FixedHeight = ClampedTeamModeLabels * TeamModeIconSize;
-	const float RequiredHeight = ScalableHeight + FixedHeight;
-	if(RequiredHeight <= AvailableHeight || ScalableHeight <= 0.0f)
+	const float TeamModeSpacing = TeamModeIconSize > TeamTextSpacing ? TeamModeIconSize : TeamTextSpacing;
+	// 图标与文字随玩家行一起缩放，高度预算必须使用同一比例。
+	const float RequiredHeight = NumRows * LineHeight + RowsWithoutTeamLabels * Spacing + TextOnlyTeamLabels * TeamTextSpacing + ClampedTeamModeLabels * TeamModeSpacing;
+	if(RequiredHeight <= AvailableHeight)
 		return 1.0f;
-	return AvailableHeight > FixedHeight ? (AvailableHeight - FixedHeight) / ScalableHeight : 0.0f;
+	return AvailableHeight / RequiredHeight;
+}
+
+constexpr CUIRect ScoreboardPlayerRowsRect(CUIRect Column, float HeadlineHeight)
+{
+	const float HeaderHeight = maximum(0.0f, minimum(HeadlineHeight, Column.h));
+	return {Column.x, Column.y + HeaderHeight, Column.w, maximum(0.0f, Column.h - HeaderHeight - 5.0f)};
+}
+
+constexpr CUIRect ScoreboardDeadTeeRect(CUIRect Row, float TeeX, float TeeWidth, float PreferredSize)
+{
+	const float Size = maximum(0.0f, minimum(PreferredSize, minimum(TeeWidth, Row.h)));
+	return {TeeX + (TeeWidth - Size) / 2.0f, Row.y + (Row.h - Size) / 2.0f, Size, Size};
 }
 
 // 滚动模式只在非队伍玩法且人数超过固定可视行数时生效。

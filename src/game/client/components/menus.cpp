@@ -8133,7 +8133,10 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 void CMenus::OnStateChange(int NewState, int OldState)
 {
 	if(NewState == IClient::STATE_DEMOPLAYBACK)
+	{
+		m_DemoDisplayExpanded = false;
 		m_DemoExportDisplayExpanded = false;
+	}
 
 	// reset active item
 	Ui()->SetActiveItem(nullptr);

@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == Zawsze pokazuj własną linię asysty haka
 
+Always show song title and artist
+== Zawsze pokazuj tytuł utworu i wykonawcę
+
 Always translate
 == Zawsze tłumacz
 
