@@ -37,6 +37,9 @@
 %d players
 == %d Spieler
 
+%d points
+== %d Punkte
+
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d ausgewählte Elemente wurden gelöscht, aber %d Elemente konnten nicht gelöscht werden. Das erste fehlgeschlagene Element war '%s'.
 
@@ -105,6 +108,9 @@
 
 %s wins!
 == %s gewinnt!
+
+%s: %d points
+== %s: %d Punkte
 
 '%s' called for vote to force-pause '%s' for %s seconds (reason: %s)
 == '%s' hat eine Abstimmung zum erzwungenen Pausieren von '%s' für %s Sekunden gestartet (Grund: %s)
@@ -473,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == Füge Freunde hinzu, indem du unten ihren Namen eingibst oder in der Spielerliste auf ihren Namen klickst.
 
+Add function
+== Funktion hinzufügen
+
 Add Group
 == Gruppe hinzufügen
 
@@ -793,6 +802,9 @@ Append to log file instead of overwriting
 
 Applied to %d same-family part(s).
 == Angewendet auf %d Teile derselben Familie.
+
+Applies to single-color and rainbow overrides.
+== Gilt für einfarbige und regenbogenfarbige Farbüberlagerungen.
 
 Apply
 == Anwenden
@@ -1424,6 +1436,9 @@ Best
 Better scoreboard
 == Verbesserte Bestenliste
 
+Bind
+== Bindung
+
 Bind address for client/server
 == Bindeadresse für Client/Server
 
@@ -1535,6 +1550,9 @@ Bottom right
 Bounce
 == Abprallen
 
+Bound functions
+== Zugewiesene Funktionen
+
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Farbe des Titels in Klammern: 0 = Server folgen, 1 = einfarbig, 2 = Regenbogen
 
@@ -1579,9 +1597,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == Build the status text shown above Tees
-
-Built-in
-== Integriert
 
 Button - Disabled
 == Schaltfläche - Deaktiviert
@@ -1675,6 +1690,9 @@ Cancel your swap request
 
 Candidate files
 == Kandidatendateien
+
+Cannot join the target player's team
+== Dem Team dieses Spielers kann nicht beigetreten werden
 
 Cannot swap: the other player is not in your team
 == Tausch nicht möglich: der andere Spieler ist nicht in deinem Team
@@ -1793,6 +1811,12 @@ Chat log retention days
 Chat message
 == Chat-Nachricht
 
+Chat message preview
+== Nachrichtenvorschau
+
+Chat message style
+== Stil der Chatnachricht
+
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == Chatnachrichten beim Betreten von Freeze, kommagetrennt (leer=keine)
 
@@ -1894,6 +1918,9 @@ Clan Name
 
 Clan name size on nameplate
 == Clan-Name-Größe auf dem Namensschild
+
+Clan of the player followed from the pie menu
+== Clan des über das Kreismenü verfolgten Spielers
 
 Clan plates size
 == Größe der Clan-Schilder
@@ -2246,6 +2273,9 @@ Configure HUD island appearance
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
+Configure keyboard, mouse, wheel, and modifier bindings
+== Tastatur-, Maus-, Mausrad- und Zusatztastenbelegungen konfigurieren
+
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
 
@@ -2465,6 +2495,9 @@ Copy skin
 Copy skin option color
 == Farbe der Skin-Optionen kopieren
 
+Could not add the player as a friend
+== Spieler konnte nicht als Freund hinzugefügt werden
+
 Could not check for existing player with your name. Check your internet connection.
 == Konnte nicht nach einem existierenden Spieler mit deinem Namen suchen. Überprüfe deine Internetverbindung.
 
@@ -2503,6 +2536,9 @@ Could not load touch controls from file. See local console for details.
 
 Could not preview this image
 == Dieses Bild konnte nicht in der Vorschau angezeigt werden
+
+Could not query points for %s
+== Punkte von %s konnten nicht abgefragt werden
 
 Could not read the map file.
 == Die Kartendatei konnte nicht gelesen werden.
@@ -2555,6 +2591,9 @@ Crescent
 CRF value for libx264 video encoding (0=best quality, 51=worst)
 == CRF-Wert für libx264-Videokodierung (0=beste Qualität, 51=schlechteste)
 
+Cross-server following stopped
+== Serverübergreifendes Folgen beendet
+
 Crosshair opacity in free spectate
 == Fadenkreuz-Deckkraft im freien Zuschauermodus
 
@@ -2594,9 +2633,6 @@ Current: Score
 Current: Time
 == Aktuell: Zeit
 
-Cursed Flame
-== Verfluchte Flamme
-
 Custom
 == Benutzerdefiniert
 
@@ -2617,6 +2653,9 @@ Custom color
 
 Custom colors
 == Benutzerdefinierte Farben
+
+Custom command
+== Eigener Befehl
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == Benutzerdefinierte Community-Listen-URL (muss https sein, leer zum Deaktivieren)
@@ -3382,6 +3421,9 @@ Dummy clan
 
 Dummy Control
 == Dummy steuern
+
+Dummy control
+== Dummy-Steuerung
 
 Dummy Control: %s
 == Dummy-Steuerung: %s
@@ -4259,8 +4301,8 @@ Fade opacity along trail length
 Fade out
 == Ausblenden
 
-Fade paused spectators in water
-== Pausierte Zuschauer im Wasser abblenden
+Fade spectators in water
+== Zuschauer im Wasser abblenden
 
 Fade trail alpha
 == Spur-Transparenz verblassen
@@ -4487,11 +4529,23 @@ Folder Link
 Follow
 == Folgen
 
+Follow option color
+== Farbe des Folgens
+
+Follow server
+== Serverübergreifend folgen
+
 Follow Tee
 == Tee folgen
 
 Following
 == Folgend
+
+Following %s across servers
+== %s wird serverübergreifend gefolgt
+
+Following: %s
+== Folge: %s
 
 Font
 == Schrift
@@ -4678,9 +4732,6 @@ FSAA samples
 
 FSAA samples (may cause lag)
 == FSAA-Abtastwerte (kann zu Verzögerungen führen)
-
-FTAPI
-== FTAPI
 
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == FTAPI-Automatikübersetzung ist deaktiviert, um Überlastung zu vermeiden. Bei Bedarf in den Einstellungen aktivieren.
@@ -4909,9 +4960,6 @@ Go forward one tick
 
 Go forward the specified duration
 == Die angegebene Dauer vorgehen
-
-Golden Grace
-== Goldene Gnade
 
 Gores
 == Gores
@@ -5207,6 +5255,9 @@ High Detail
 High to low
 == Hoch zu niedrig
 
+Higher values make the wave move faster. Zero stops the movement.
+== Höhere Werte lassen die Welle schneller laufen. Null stoppt die Bewegung.
+
 Highlight Color
 == Hervorhebungsfarbe
 
@@ -5215,6 +5266,9 @@ Highlight game type
 
 Highlight message text gradient color
 == Farbverlauf für hervorgehobene Nachrichtentexte
+
+Highlight movement in Polished mode. Zero turns it off.
+== Bewegung des Glanzlichts im Modus Poliert. Null schaltet sie aus.
 
 Highlight ping value
 == Ping-Wert hervorheben
@@ -5471,6 +5525,9 @@ Include skin when saving/loading config preset
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Modus für automatische Übersetzung eingehender Nachrichten (0=nur wenn nicht in der Zielsprache, 1=immer übersetzen)
 
+Incoming language
+== Empfangssprache
+
 Indicate map finish
 == Abgeschlossene Karte anzeigen
 
@@ -5591,6 +5648,9 @@ Installed
 Installing update. Please wait...
 == Update wird installiert. Bitte warten...
 
+Instant compact hints
+== Sofortige kompakte Hinweise
+
 Instant zoom reverse
 == Zoomrichtung sofort umkehren
 
@@ -5642,6 +5702,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == Ungültige Client-ID zum Verschieben zu Zuschauern
 
+Invalid command or parameters.
+== Ungültiger Befehl oder ungültige Parameter.
+
 Invalid Demo
 == Ungültige Demo
 
@@ -5681,6 +5744,12 @@ Invite %s to the locked team
 Invite a person to a locked team
 == Eine Person zu einem gesperrten Team einladen
 
+Invite team option color
+== Farbe der Teameinladung
+
+Invite to team
+== Ins Team einladen
+
 Invites are disabled
 == Einladungen sind deaktiviert
 
@@ -5711,6 +5780,9 @@ Jelly strength
 Jitter
 == Jitter
 
+Join a team before inviting another player
+== Tritt einem Team bei, bevor du andere Spieler einlädst
+
 Join a team to enable practice mode, which means you can use /r, but can't earn a rank.
 == Tritt einem Team bei, um den Übungsmodus zu aktivieren. Das bedeutet, du kannst /r verwenden, aber keine Rangliste erhalten.
 
@@ -5729,8 +5801,14 @@ Join QQ group
 Join red
 == Rot beitreten
 
+Join team
+== Team beitreten
+
 Join team %s
 == Team %s beitreten
+
+Join team option color
+== Farbe des Teambeitritts
 
 Join the team of the specified player
 == Dem Team des angegebenen Spielers beitreten
@@ -6014,6 +6092,9 @@ Legacy option: connections that skip TLS verification are rejected
 Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 == Alte Echtzeit WebSocket URL (nach qm_websocket_url migriert)
 
+Legacy settings card collapse states migrated
+== Alte Einklappzustände der Einstellungskarten wurden übernommen
+
 Length
 == Länge
 
@@ -6032,9 +6113,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == Helligkeit
 
-LibreTranslate
-== LibreTranslate
-
 LibreTranslate API Key
 == LibreTranslate API-Schlüssel
 
@@ -6044,11 +6122,14 @@ LibreTranslate endpoint
 Light
 == Leicht
 
-Light band (0 = style default)
-== Farbphase (0 = Stilvorgabe)
+Light band
+== Lichtband
 
 Limit information in spectator mode
 == Informationen im Zuschauermodus einschränken
+
+Limit the title to the exact nickname below.
+== Den Titel nur beim exakt unten angegebenen Namen anzeigen.
 
 Limiter threshold (percent)
 == Schwellwert des Limiters (Prozent)
@@ -6098,6 +6179,9 @@ List foes
 List friends
 == Freunde auflisten
 
+List friends first in the spectator menu
+== Freunde im Zuschauermenü zuerst auflisten
+
 List KCP/legacy transport status and weak-network simulation metrics
 == Liste des KCP/Legacy-Transportstatus und der Schwachnetzsimulationsmetriken
 
@@ -6118,6 +6202,9 @@ Live director
 
 LLM API
 == LLM API
+
+LLM API key not configured
+== LLM-API-Schlüssel nicht eingerichtet
 
 LLM provider
 == LLM-Anbieter
@@ -6305,6 +6392,9 @@ Low to high
 Lyrics
 == Songtext
 
+Magic: Spirit Script
+== Magie: Geisterschrift
+
 Main Asset
 == Haupt-Asset
 
@@ -6361,6 +6451,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == Skin-Rotationswarteschlange verwalten
+
+Manga: Ink Slash
+== Manga: Tuscheschnitt
 
 Manual
 == Manuell
@@ -7256,6 +7349,9 @@ No favorite maps yet
 No filter
 == Ohne Filter
 
+No functions bound
+== Keine Funktionen zugewiesen
+
 No input device available
 == Kein Eingabegerät verfügbar
 
@@ -7592,9 +7688,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == Bindwheel-Auswahl öffnen
 
-Open color picker
-== Farbwähler öffnen
-
 Open DDNet Wiki
 == DDNet Wiki öffnen
 
@@ -7691,6 +7784,9 @@ Optimistic prediction along stable direction
 Option color
 == Optionsfarbe
 
+Optional
+== Optional
+
 Optional authentication key for the DNSBL provider
 == Optionaler Authentifizierungsschlüssel für den DNSBL-Anbieter
 
@@ -7720,6 +7816,9 @@ Others
 
 Others only
 == Nur andere
+
+Outgoing language
+== Sendesprache
 
 Outgoing translation target language code
 == Zielsprachcode für ausgehende Übersetzungen
@@ -7901,9 +8000,6 @@ Pause voice when window unfocused
 Pause/unpause game
 == Spiel pausieren/fortsetzen
 
-Paused spectator opacity (percent)
-== Deckkraft pausierter Zuschauer (Prozent)
-
 Penalty in seconds for saving or swapping positions
 == Strafe in Sekunden für das Speichern oder Tauschen von Positionen
 
@@ -7979,11 +8075,17 @@ Pistol
 Pistol guide line
 == Pistolen-Hilfslinie
 
+Pixel: Layer Shift
+== Pixel: Ebenenversatz
+
 Place title on a separate line above the player name instead of inline
 == Titel in einer eigenen Zeile über dem Spielernamen statt inline anzeigen
 
 Plasma gun shots per second
 == Plasmaschüsse pro Sekunde
+
+Platinum highlight
+== Platin-Glanz
 
 Play a flip animation while reloading weapons
 == Beim Nachladen von Waffen eine Drehanimation abspielen
@@ -8138,6 +8240,9 @@ Player stats
 Player stats and info display
 == Spielerstatistiken und Informationsanzeige
 
+Player to follow across servers until cancelled; empty disables following
+== Spieler für serverübergreifendes Folgen bis zum Abbruch; leer deaktiviert das Folgen
+
 Player: %s
 == Spieler: %s
 
@@ -8218,6 +8323,9 @@ Please wait…
 
 Points
 == Punkte
+
+Points unavailable
+== Punkte nicht verfügbar
 
 Polished
 == Poliert
@@ -8641,6 +8749,12 @@ Query server setting: %s
 
 Query team rank for %s
 == Teamrang für %s abfragen
+
+Querying points for %s...
+== Punkte von %s werden abgefragt...
+
+Querying points...
+== Punkte werden abgefragt...
 
 Queue is empty
 == Warteschlange ist leer
@@ -9365,6 +9479,9 @@ Reset all or one tuning variable to default
 Reset chat on escape
 == Chat bei Escape zurücksetzen
 
+Reset colors
+== Farben zurücksetzen
+
 Reset column widths
 == Spaltenbreiten zurücksetzen
 
@@ -9707,6 +9824,9 @@ Save/Load Skin
 Saved Profiles
 == Gespeicherte Profile
 
+Saved with your title and shared with other QmClient players.
+== Wird mit deinem Titel gespeichert und mit anderen QmClient-Spielern geteilt.
+
 Saves file
 == Speicherdatei
 
@@ -9742,6 +9862,9 @@ Score earned
 
 Score limit
 == Punktegrenze
+
+Score option color
+== Farbe der Punkteabfrage
 
 Scoreboard
 == Bestenliste
@@ -9881,6 +10004,9 @@ SecretKey
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == Eine Liste aller verfügbaren Übungsbefehle findest du mit /practicecmdlist. Am häufigsten genutzt werden /telecursor, /lasttp und /rescue
 
+See you at the next checkpoint.
+== Bis zum nächsten Kontrollpunkt.
+
 Select a saved .map file (client limit: 64 MiB).
 == Eine gespeicherte .map-Datei auswählen (Client-Limit: 64 MiB).
 
@@ -9967,6 +10093,9 @@ Send Rate
 
 Send specified command to rcon
 == Angegebenen Befehl an Rcon senden
+
+Send target language
+== Zielsprache senden
 
 Send translation method
 == Übersetzungsmethode senden
@@ -10157,6 +10286,9 @@ Settings card border color
 Settings card default layout migration version
 == Standard-Layout-Migrationsversion der Einstellungskarten
 
+Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
+== Einstellungskarten: stableId für eingeklappt, !stableId für ausgeklappt, durch Semikolons getrennt
+
 Settings card titles use rainbow colors
 == Titel der Einstellungskarten in Regenbogenfarben
 
@@ -10175,8 +10307,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == Anteil der Name/Karte-Aufteilung im Serverbrowser für die Namensspalte (Promille)
 
-Shimmer speed (polished)
-== Glanztempo (poliert)
+Shimmer speed
+== Schimmergeschwindigkeit
 
 Short server names
 == Kurze Servernamen
@@ -10328,8 +10460,14 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == Koordinaten über Spielern anzeigen
 
+Show copy skin option
+== Option zum Kopieren des Skins anzeigen
+
 Show country flags in nameplates
 == Länderflaggen in Namensschildern anzeigen
+
+Show cross-server follow option
+== Serverübergreifendes Folgen anzeigen
 
 Show current Netease lyric in Media Island
 == Aktuellen Netease-Liedtext in der Media Island anzeigen
@@ -10391,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == Dummy-Position im Bewegungsinfo-HUD anzeigen
 
+Show dummy title locally
+== Titel des Dummys lokal anzeigen
+
 Show dummy velocity in movement info HUD
 == Dummy-Geschwindigkeit im Bewegungsinfo-HUD anzeigen
 
@@ -10447,6 +10588,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == Freundesbeitritt als große Anzeige zeigen
+
+Show friend option
+== Freundesoption anzeigen
 
 Show friend tag (♥) on nametag
 == Freund-Tag (♥) auf dem Namensschild anzeigen
@@ -10616,6 +10760,9 @@ Show inputs
 Show IP addresses in rcon commands (1 = on, 0 = off)
 == IP-Adressen in Rcon-Befehlen anzeigen (1 = an, 0 = aus)
 
+Show join team option
+== Teambeitritt anzeigen
+
 Show jump hint based on fractional part of position
 == Sprungtipp basierend auf dem Dezimalteil der Position anzeigen
 
@@ -10661,6 +10808,9 @@ Show logs of the last i seconds
 Show lyrics inside Dynamic Island
 == Show lyrics in Dynamic Island
 
+Show main tee title locally
+== Titel des Haupt-Tees lokal anzeigen
+
 Show map details
 == Zeige Kartendetails
 
@@ -10669,6 +10819,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == Kartenfortschritts-Checkpoint-Route anzeigen
+
+Show mention option
+== Erwähnungsoption anzeigen
 
 Show moving tiles in entities
 == Bewegliche Kacheln in Entities anzeigen
@@ -10826,6 +10979,9 @@ Show player names in team color
 Show player position
 == Spielerposition anzeigen
 
+Show player score option
+== Spielerpunkte anzeigen
+
 Show player speed
 == Spielergeschwindigkeit anzeigen
 
@@ -10916,11 +11072,17 @@ Show skin release date and author
 Show song info in top-left corner
 == Songinfo in der oberen linken Ecke anzeigen
 
+Show spectate option
+== Zuschaueroption anzeigen
+
 Show spectator cursor
 == Zuschauer-Cursor anzeigen
 
 Show speedometer when changing
 == Zeige Tachometer bei Änderung
+
+Show sponsor chat effects locally
+== Chat-Effekte von Unterstützern lokal anzeigen
 
 Show sponsor QR code
 == Sponsor-QR-Code anzeigen
@@ -10937,6 +11099,12 @@ Show status bar
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == Zeige Stärke/Schwäche im Namensschild (0 = aus, 1 = Symbol, 2 = Symbol + Zahl)
 
+Show swap option
+== Tauschoption anzeigen
+
+Show synchronized sponsor chat styles
+== Synchronisierte Chatstile von Unterstützern anzeigen
+
 Show system media info on HUD
 == System-Medieninformationen auf dem HUD anzeigen
 
@@ -10948,6 +11116,9 @@ Show team
 
 Show team group players
 == Teamgruppen-Spieler anzeigen
+
+Show team invite option
+== Teameinladung anzeigen
 
 Show team on HUD Dynamic Island
 == HUD Dynamic Island zeigt Team an
@@ -11000,6 +11171,9 @@ Show the server rules
 Show tiles layers from BG map
 == Kachelebenen aus der Hintergrundkarte anzeigen
 
+Show title setting hints immediately in small text
+== Hinweise zu Titeleinstellungen sofort in kleiner Schrift anzeigen
+
 Show toast
 == Toast anzeigen
 
@@ -11044,6 +11218,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == Anzeigen, ob du eine DDNet-Karte abgeschlossen hast (überträgt deinen Spielernamen an info.ddnet.org/info)
+
+Show whisper option
+== Flüsteroption anzeigen
 
 Show Workshop Assets
 == Workshop-Assets anzeigen
@@ -11363,6 +11540,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Pfad zum SodaMusic-Hook-Hilfsprogramm (leer = neben QmClient)
 
+Soft glow
+== Sanftes Leuchten
+
 Solid
 == Durchgehend
 
@@ -11438,9 +11618,6 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Spamschutz: verhindert Spammen von Teamwechsel, Chat, Skinwechsel, Emotes, Abstimmungen
 
-Spatial effect
-== Räumlicher Effekt
-
 Speaker
 == Lautsprecher
 
@@ -11489,6 +11666,12 @@ Spectated player
 Spectated player and friends
 == Beobachteter Spieler und Freunde
 
+Spectator opacity
+== Deckkraft der Zuschauer
+
+Spectator opacity (percent)
+== Deckkraft der Zuschauer (Prozent)
+
 Spectators
 == Zuschauer
 
@@ -11513,11 +11696,11 @@ Sphere
 Spin pop
 == Dreh-Popup
 
-Spirit Light
-== Geisteslicht
-
 Split main and dummy into different teams for solo-run sync
 == Verteilt Haupt- und Dummy-Tee auf verschiedene Teams zur Solo-Run-Synchronisation
+
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== Entwurf des Unterstützer-Chatstils: 0=Normal, 1=Sanftes Leuchten, 2=Platin-Glanz
 
 Sponsor code
 == Unterstützercode
@@ -11642,6 +11825,12 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == Getragen von %d Unterstützern. Mal ansehen?
 
+Stop following
+== Folgen beenden
+
+Stop following a player across servers
+== Serverübergreifendes Folgen beenden
+
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == Tasteneingabe beim Wechsel stoppen (0=aus, 1=Dummy, 2=Spieler)
 
@@ -11749,9 +11938,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == Tauscht die aktive Aktion (Feuer und Haken) für direkte Touch-Eingabe und virtuelle Joysticks.
-
-Switch
-== Wechseln
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == Position des Schalter-Countdowns (0 = Tee folgen, 1 = dynamische Insel, 2 = beides)
@@ -12044,8 +12230,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee-Spur-Farbmodus (1=Einfarbig, 2=Aktuelle Tee-Farbe, 3=Regenbogen, 4=Tee-Geschwindigkeit, 5=Zufällig)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Tee-Spur-Stil (0=Originalstil, 1=Verfluchte Flamme, 2=Violetter Blitz, 3=Geisteslicht, 4=Schatten der Leere, 5=Goldene Gnade)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Tee-Spur-Stil (0=Originalstil, 1=Manga, 2=Magie, 3=Pixel, 4=Alte Manga-Nummer, 5=Alte Magie-Nummer)
 
 Tee Trails
 == Tee-Spuren
@@ -12137,6 +12323,9 @@ Temporary free camera
 Tencent Cloud
 == Tencent Cloud
 
+Tencent Cloud API not configured
+== Tencent-Cloud-API nicht eingerichtet
+
 Tencent Cloud SecretId
 == Tencent Cloud Secret-ID
 
@@ -12161,6 +12350,9 @@ Text alpha
 Text color
 == Textfarbe
 
+Text effect
+== Texteffekt
+
 Text input focus ring color
 == Farbe des Fokusrings für Texteingaben
 
@@ -12175,6 +12367,9 @@ The audio device couldn't be initialised.
 
 The auth level you need to tele others
 == Die benötigte Berechtigungsstufe zum Teleportieren anderer Spieler
+
+The command is empty, incomplete, or exceeds the local config line limit.
+== Der Befehl ist leer, unvollständig oder überschreitet die maximale Länge einer lokalen Konfigurationszeile.
 
 The downloaded file is not a valid demo
 == Die heruntergeladene Datei ist keine gültige Demo
@@ -12278,6 +12473,12 @@ There's an unsaved map in the editor, you might want to save it.
 Thinking mode requires a reasoning model
 == Der Denkmodus erfordert ein Reasoning-Modell
 
+This bind contains an unfinished quote and cannot be edited safely.
+== Diese Belegung enthält ein ungeschlossenes Anführungszeichen und kann nicht sicher bearbeitet werden.
+
+This bind is already over the local config line limit.
+== Diese Belegung überschreitet die maximale Länge einer lokalen Konfigurationszeile.
+
 This connection cannot change names while connected. Reconnect with the saved names first.
 == Diese Verbindung erlaubt keine Namensänderung während der Verbindung. Zuerst mit den gespeicherten Namen neu verbinden.
 
@@ -12301,6 +12502,9 @@ This save is no longer in the local save file.
 
 This save-code already exists
 == Dieser Speichercode existiert bereits
+
+This server does not support race teams
+== Dieser Server unterstützt keine Rennteams
 
 This server has an initial chat delay, you will be able to talk in %s seconds.
 == Dieser Server hat eine anfängliche Chat-Verzögerung, du kannst in %s Sekunden sprechen.
@@ -12440,14 +12644,11 @@ Title bob wavelength in pixels
 Title color
 == Titelfarbe
 
-Title color (single color)
-== Titelfarbe (einfarbig)
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == Tempo des Titellichtstreifens in 1/100 Zeile pro Sekunde (0 = aus)
 
-Title opacity (custom color)
-== Deckkraft (eigene Farbe)
+Title opacity
+== Titeldeckkraft
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == Phase pro Zeichen und Pixel in 1/1000 px (0 = Stilstandard, 20 = sichtbares Lichtband)
@@ -12457,6 +12658,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == Titelvorschau
+
+Title server does not support chat styles yet
+== Der Titelserver unterstützt Chatstile noch nicht
 
 Title server unavailable; retry
 == Titelserver nicht verfügbar; erneut versuchen
@@ -12776,6 +12980,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == Aktiviere „Message merging“ in den „Dream Features“.
 
+Turning this off only changes your display.
+== Das Ausschalten ändert nur deine eigene Anzeige.
+
 Tutorial
 == Tutorial
 
@@ -12973,6 +13180,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == Unbekannter Parameter. Akzeptierte Werte: default, gametimer, broadcast, both, none
+
+Unknown sponsor chat style
+== Unbekannter Unterstützer-Chatstil
 
 Unknown status
 == Unbekannter Status
@@ -13274,6 +13484,9 @@ Version
 Version performing the analysis
 == Version, die die Analyse durchführt
 
+Vertical movement of each character. Zero keeps the title still.
+== Vertikale Bewegung jedes Zeichens. Bei null bleibt der Titel still.
+
 Vertical position
 == Vertikale Position
 
@@ -13304,6 +13517,9 @@ View latest updates
 View margin
 == Ansichtsrand
 
+View points
+== Punkte ansehen
+
 View replay
 == Replay ansehen
 
@@ -13318,9 +13534,6 @@ View the developers, contributors, and project links
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
-
-Violet Bolt
-== Violetter Blitz
 
 Virtual joystick which always uses fire.
 == Virtueller Joystick, der immer Feuer verwendet.
@@ -13432,9 +13645,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == Sprach-Weißliste (kommagetrennt)
-
-Void Shadow
-== Schatten der Leere
 
 Volume
 == Lautstärke
@@ -13556,11 +13766,11 @@ Watermark
 Wave amount
 == Wellenhöhe
 
-Wave speed (0.01 rad/s)
-== Wellentempo (0,01 rad/s)
+Wave spacing
+== Wellenabstand
 
-Wave wavelength
-== Wellenlänge
+Wave speed
+== Wellengeschwindigkeit
 
 Weak hook
 == Schwacher Haken
@@ -13840,6 +14050,9 @@ You and other player need to have started the map
 
 You and the other player must not be paused.
 == Du und der andere Spieler dürfen nicht pausiert sein.
+
+You are already in the same team
+== Ihr seid bereits im selben Team
 
 You are already on the latest version
 == Du hast bereits die neueste Version
@@ -14150,6 +14363,9 @@ Zen Mode
 Zen mode key
 == Zen-Modus-Taste
 
+Zero uses the style default. Higher values make color bands narrower.
+== Null verwendet den Standardwert des Stils. Höhere Werte machen die Farbbänder schmaler.
+
 Zhipu AI
 == Zhipu AI
 
@@ -14191,12 +14407,6 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI ist ein kostenloser Dienst. Übermäßige Nutzung kann zur Aussetzung des Dienstes führen.
-
-⚠️ LLM API Key not configured
-== ⚠️ LLM API-Schlüssel nicht konfiguriert
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ Tencent Cloud API nicht konfiguriert
 
 [Assets editor blend mode]
 Color
@@ -14281,6 +14491,10 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == Für diesen Spieler nicht verfügbar
+
+[Bind keyboard key]
+Menu
+== Menütaste
 
 [Config help]
 %s (default: "%s", max length: %d)

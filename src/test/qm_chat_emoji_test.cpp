@@ -208,6 +208,53 @@ TEST(QmChatEmoji, FitSizeShrinksInsteadOfOverflowingTheLine)
 	EXPECT_FLOAT_EQ(QmChatEmojiFitSize(-1.0f, 40.0f), 0.0f);
 }
 
+TEST(QmChatEmoji, LoadedImageInvalidatesCachedTextHeightsForBothChatWidths)
+{
+	bool ImageLayout = false;
+	float aCachedHeights[2] = {8.0f, 14.0f};
+
+	const bool WaitingForImage = QmChatEmojiShouldRenderImage(EQmChatEmoji::DEAD, false);
+	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(WaitingForImage, ImageLayout, aCachedHeights));
+	EXPECT_FLOAT_EQ(aCachedHeights[0], 8.0f);
+	EXPECT_FLOAT_EQ(aCachedHeights[1], 14.0f);
+
+	const bool ImageReady = QmChatEmojiShouldRenderImage(EQmChatEmoji::DEAD, true);
+	EXPECT_TRUE(QmChatEmojiInvalidateChangedLayout(ImageReady, ImageLayout, aCachedHeights));
+	EXPECT_TRUE(ImageLayout);
+	EXPECT_LT(aCachedHeights[0], 0.0f);
+	EXPECT_LT(aCachedHeights[1], 0.0f);
+}
+
+TEST(QmChatEmoji, RepeatedImageFramesKeepMeasuredLayout)
+{
+	bool ImageLayout = false;
+	float aCachedHeights[2] = {20.0f, 26.0f};
+
+	ASSERT_TRUE(QmChatEmojiInvalidateChangedLayout(true, ImageLayout, aCachedHeights));
+	aCachedHeights[0] = 20.0f;
+	aCachedHeights[1] = 26.0f;
+	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(true, ImageLayout, aCachedHeights));
+	EXPECT_TRUE(ImageLayout);
+	EXPECT_FLOAT_EQ(aCachedHeights[0], 20.0f);
+	EXPECT_FLOAT_EQ(aCachedHeights[1], 26.0f);
+}
+
+TEST(QmChatEmoji, UnavailableImageInvalidatesCachedImageLayout)
+{
+	bool ImageLayout = true;
+	float aCachedHeights[2] = {20.0f, 26.0f};
+
+	const bool ImageAvailable = QmChatEmojiShouldRenderImage(EQmChatEmoji::DEAD, false);
+	EXPECT_TRUE(QmChatEmojiInvalidateChangedLayout(ImageAvailable, ImageLayout, aCachedHeights));
+	EXPECT_FALSE(ImageLayout);
+	EXPECT_LT(aCachedHeights[0], 0.0f);
+	EXPECT_LT(aCachedHeights[1], 0.0f);
+
+	aCachedHeights[0] = 8.0f;
+	EXPECT_FALSE(QmChatEmojiInvalidateChangedLayout(ImageAvailable, ImageLayout, aCachedHeights));
+	EXPECT_FLOAT_EQ(aCachedHeights[0], 8.0f);
+}
+
 TEST(QmChatEmoji, BackgroundImageIsVisibleOnlyAfterDecodeCompletes)
 {
 	CSemaphore Started;

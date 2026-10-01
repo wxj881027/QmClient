@@ -67,6 +67,7 @@ private:
 	std::vector<CBindOption> m_vBindOptions;
 	size_t m_NumPredefinedBindOptions;
 	bool m_BindOptionsDirty = true;
+	uint64_t m_BindOptionsRevision = 0;
 	uint64_t m_BindLayoutRevision = 1;
 	void UpdateBindOptions();
 

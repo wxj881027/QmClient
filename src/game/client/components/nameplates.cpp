@@ -2023,7 +2023,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	const int NameplateScope = NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateShowScope);
 	Data.m_ShowName = ShouldShowQmNameplateName(NameplateScope, pPlayerInfo->m_Local, GameClient()->IsLocalClientId(ClientId));
 	GameClient()->FormatStreamerName(ClientId, Data.m_aName, sizeof(Data.m_aName));
-	str_copy(Data.m_aQmTitle, Data.m_ShowName ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
+	str_copy(Data.m_aQmTitle, Data.m_ShowName && GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
 	Data.m_DeveloperRainbow = Data.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId);
 	const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
 	const bool Spectating = !DemoPlayback && GameClient()->m_Snap.m_SpecInfo.m_Active;
@@ -2214,7 +2214,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		CNamePlateData FrameData = Data;
 		FrameData.m_ShowName = true;
 		FrameData.m_ShowFriendMark = FrameData.m_ShowName && g_Config.m_ClNamePlatesFriendMark && GameClient()->m_aClients[ClientId].m_Friend;
-		str_copy(FrameData.m_aQmTitle, FrameData.m_ShowName ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
+		str_copy(FrameData.m_aQmTitle, FrameData.m_ShowName && GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? GameClient()->m_QmClient.PlayerTitle(ClientId) : "");
 		FrameData.m_DeveloperRainbow = FrameData.m_aQmTitle[0] != '\0' && GameClient()->IsQmDeveloperRainbow(ClientId);
 		FrameData.m_ShowClientId = FrameData.m_ShowName && (g_Config.m_Debug || g_Config.m_ClNamePlatesIds) && !HideIdentity;
 		FrameData.m_ShowClan = FrameData.m_ShowName && g_Config.m_ClNamePlatesClan && !HideIdentity;
@@ -3005,8 +3005,8 @@ void CNamePlates::OnRender()
 				const float SpecCharAlpha = ResolveQmPausedSpectatorAlpha(
 					g_Config.m_QmPausedSpectatorFade != 0,
 					g_Config.m_QmPausedSpectatorAlpha,
-					GameClient()->m_aClients[i].m_Paused,
 					GameClient()->m_aClients[i].m_SpecCharPresent,
+					g_Config.m_QmPausedSpectatorFade && GameClient()->QmWaterHammerIndicator().IsInPenaltyArea(RenderPos),
 					1.0f);
 				RenderNamePlateGame(RenderPos, pInfo, 0.4f * SpecCharAlpha, false);
 			}

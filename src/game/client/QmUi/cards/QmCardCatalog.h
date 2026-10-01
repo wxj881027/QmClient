@@ -20,10 +20,11 @@ class CMenus;
 // 而不是在页面里复制一份渲染代码或退化成跳转链接。
 namespace qm_card_catalog
 {
-	// 栖梦侧栏三个分类各自拥有的卡片（stableId 清单，与 QmCardRegistry 的 Placement 表同源）。
+	// 栖梦侧栏分类各自拥有的卡片（stableId 清单，与 QmCardRegistry 的 Placement 表同源）。
 	const std::vector<const char *> &VisualCardStableIds();
 	const std::vector<const char *> &FunctionCardStableIds();
 	const std::vector<const char *> &HudCardStableIds();
+	const std::vector<const char *> &BindCardStableIds();
 
 	// 该 stableId 是否有可构造的卡片模块（用于搜索页过滤与页面自检）。
 	bool HasCardModule(const char *pStableId);
@@ -88,6 +89,7 @@ namespace qm_card_catalog
 	bool BuildFunctionCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 	bool BuildHudCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 	bool BuildSteamCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
+	bool BuildBindCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 
 	// 卡片模块调用菜单内容渲染/输入助手的受控入口（CMenus 只对本结构开放友元）。
 	// 卡片模块是独立文件，不能直接触达 CMenus 的私有内容函数；
@@ -156,6 +158,7 @@ namespace qm_card_catalog
 		static ITextRender *TextRenderer(CMenus *pMenus);
 		static size_t FavoriteMapCount(CMenus *pMenus);
 		static bool GameConsoleActive(CMenus *pMenus);
+		static void RenderQmBindEditorContent(CMenus *pMenus, CUIRect &Content, bool ReadOnly);
 	};
 } // namespace qm_card_catalog
 

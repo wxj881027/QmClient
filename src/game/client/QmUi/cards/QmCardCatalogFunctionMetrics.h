@@ -16,6 +16,16 @@
 // 函数分类卡片的文本高度及旧版特性行定义。
 namespace qm_card_catalog
 {
+	inline float QmPieMenuContentHeight(float ContentWidth, float LineHeight, float BodySize, float LineSpacing, bool Enabled, bool Following)
+	{
+		const float Row = LineHeight + LineSpacing;
+		const float FollowHeight = Following ? Row : 0.0f;
+		if(!Enabled)
+			return Row + FollowHeight;
+		const float PreviewHeight = std::min(ContentWidth, std::clamp(ContentWidth * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f)) * 0.8f;
+		return Row * 15.0f + FollowHeight + BodySize + LineSpacing * 3.0f + PreviewHeight;
+	}
+
 	// 保留旧版特性文案的翻译提取标注；本地渲染逐项绘制，行数以其实际控件为准。
 	struct SQmMiniFeatureRow
 	{

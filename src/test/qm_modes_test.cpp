@@ -293,9 +293,7 @@ TEST(QmNameplateHookStrongWeak, ScopeFiltersExpectedPlayers)
 	EXPECT_FALSE(ShouldShowQmHookStrongWeakScope(99, false, true, false));
 }
 
-// 水中旁观者虚化只作用于「已 /pause 且世界里还留着旁观 Tee」的玩家，
-// 其余玩家（含未暂停的旁观者）必须保持原有透明度。
-TEST(QmPausedSpectatorFade, OnlyFadesPausedPlayersWithSpectatorTeeInWorld)
+TEST(QmPausedSpectatorFade, OnlyFadesSpectatorTeeInWater)
 {
 	constexpr float BaseAlpha = 0.8f;
 	EXPECT_FLOAT_EQ(ResolveQmPausedSpectatorAlpha(true, 40, true, true, BaseAlpha), 0.32f);

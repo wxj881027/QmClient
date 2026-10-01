@@ -113,6 +113,5 @@ int main()
 // 剪贴板测试不应进入渲染、计时或表达式路径；误调用时立即失败。
 std::chrono::nanoseconds time_get_nanoseconds() { std::abort(); }
 STextBoundingBox CTextCursor::BoundingBox() const { std::abort(); }
-void CTextCursor::SetPosition(vec2) { std::abort(); }
 vec2 CUi::CalcAlignedCursorPos(const CUIRect *, vec2, int, const float *) { std::abort(); }
 double te_interp(const char *, int *) { std::abort(); }

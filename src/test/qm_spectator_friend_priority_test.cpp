@@ -73,3 +73,17 @@ TEST(QmSpectatorFriendPriority, EveryInputIndexAppearsExactlyOnce)
 	for(int i = 0; i < FriendCount; ++i)
 		EXPECT_TRUE(aIsFriend[vOrder[i]]);
 }
+
+TEST(QmSpectatorFriendPriority, DisablingPriorityRestoresOriginalOrderAndRemovesGroupHeader)
+{
+	const bool aIsFriend[] = {false, true, false, true};
+	std::vector<int> vOrder(4, -1);
+	EXPECT_EQ(qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, 4, vOrder.data(), true), 2);
+	EXPECT_EQ(vOrder, (std::vector<int>{1, 3, 0, 2}));
+
+	EXPECT_EQ(qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, 4, vOrder.data(), false), 0);
+	EXPECT_EQ(vOrder, (std::vector<int>{0, 1, 2, 3}));
+
+	EXPECT_EQ(qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, 4, vOrder.data(), true), 2);
+	EXPECT_EQ(vOrder, (std::vector<int>{1, 3, 0, 2}));
+}

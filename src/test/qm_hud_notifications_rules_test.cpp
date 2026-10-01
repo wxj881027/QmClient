@@ -468,18 +468,40 @@ TEST(QmHudNotificationRules, DisabledCategoryFiltersRouteNonEmptySystemMessages)
 	EXPECT_TRUE(Decision.m_UseFallbackNotification);
 }
 
-TEST(QmHudNotificationRules, QueuedSystemNotificationsRemainVisibleInChat)
+TEST(QmHudNotificationRules, QueuedServerNotificationsAreSuppressedFromChat)
 {
+	QmHudNotifications::SServerMessageRouteConfig Config;
+	Config.m_RouteSystemMessages = true;
+	Config.m_ShowBasicInfo = true;
+	Config.m_ShowHelpInfo = true;
+
 	const auto Prompt = QmHudNotifications::AnalyzeServerMessage("Welcome to DDraceNetwork!", QmHudNotifications::ESoloPrompt::None);
 	EXPECT_EQ(Prompt.m_Route, QmHudNotifications::EServerMessageRoute::System);
-	// 抑制只看分析结果：系统路由消息保持可见。
-	EXPECT_FALSE(QmHudNotifications::ShouldSuppressServerMessageChat(Prompt));
+	EXPECT_TRUE(QmHudNotifications::DecideServerMessageEntry(Prompt, Config).m_QueueNotification);
+	EXPECT_TRUE(QmHudNotifications::ShouldSuppressServerMessageChat(Prompt));
 
 	const auto BasicInfo = QmHudNotifications::AnalyzeServerMessage("DDraceNetwork Version: 20.0", QmHudNotifications::ESoloPrompt::None);
-	EXPECT_FALSE(QmHudNotifications::ShouldSuppressServerMessageChat(BasicInfo));
+	EXPECT_TRUE(QmHudNotifications::DecideServerMessageEntry(BasicInfo, Config).m_QueueNotification);
+	EXPECT_TRUE(QmHudNotifications::ShouldSuppressServerMessageChat(BasicInfo));
 
-	// 单人路由消息被抑制（区间把「按隐藏标志抑制」改成只按分析结果判定）。
+	const auto HelpInfo = QmHudNotifications::AnalyzeServerMessage("Available practice commands: /rescue /lasttp /telecursor", QmHudNotifications::ESoloPrompt::None);
+	EXPECT_EQ(HelpInfo.m_Class, QmHudNotifications::EServerMessageClass::HelpInfo);
+	EXPECT_TRUE(QmHudNotifications::DecideServerMessageEntry(HelpInfo, Config).m_QueueNotification);
+	EXPECT_TRUE(QmHudNotifications::ShouldSuppressServerMessageChat(HelpInfo));
+
 	const auto Solo = QmHudNotifications::AnalyzeServerMessage("You are now in a solo part", QmHudNotifications::ESoloPrompt::Enter);
 	EXPECT_EQ(Solo.m_Route, QmHudNotifications::EServerMessageRoute::Solo);
+	EXPECT_TRUE(QmHudNotifications::DecideServerMessageEntry(Solo, Config).m_QueueNotification);
 	EXPECT_TRUE(QmHudNotifications::ShouldSuppressServerMessageChat(Solo));
+
+	const char *const apTeamStartWarnings[] = {
+		"Please join a team before you start",
+		"你必须与其他玩家组队才能开始",
+	};
+	for(const char *pMessage : apTeamStartWarnings)
+	{
+		const auto Analysis = QmHudNotifications::AnalyzeServerMessage(pMessage, QmHudNotifications::ESoloPrompt::None);
+		EXPECT_TRUE(QmHudNotifications::DecideServerMessageEntry(Analysis, Config).m_QueueNotification);
+		EXPECT_TRUE(QmHudNotifications::ShouldSuppressServerMessageChat(Analysis));
+	}
 }

@@ -128,11 +128,11 @@ namespace qm_card_registry
 			{"qm:jump_hint", "function", ECardColumn::Left, 7, "Jump hint", "位置跳跃提示 tiaoyue tishi jump hint position edge jump color yanse 颜色 horizontal position shuiping weizhi vertical position chuizhi weizhi font size ziti function", "Customize the position jump hint"},
 			{"qm:weapon_trajectory", "function", ECardColumn::Left, 8, "Weapon trajectory", "武器辅助线 wuqi fuzhuxian weapon trajectory 弹道辅助线 dandao fuzhuxian 手枪辅助线 shouqiang fuzhuxian pistol guide line 预测忍者路径 yuce renzhe lujing predict ninja path 线宽 xian kuan 透明度 toumingdu 始终显示 shizhong xianshi 按键显示 anjian xianshi function", "Show grenade and laser trajectory preview"},
 			{"qm:coords", "hud", ECardColumn::Left, 9, "Coordinates", "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi hud", "Show coordinates above players"},
-			{"qm:friend_notify", "function", ECardColumn::Left, 11, "Friend notify", "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi function", "Friend online and join notifications"},
+			{"qm:friend_notify", "function", ECardColumn::Left, 11, "Friend notify", "好友提醒 haoyou tixing 好友上线 shangxian 旁观优先 pangguan youxian spectator priority 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi function", "Friend online and join notifications"},
 			{"qm:block_words", "function", ECardColumn::Left, 12, "Block words", "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan function", "Chat word filtering"},
 			{"qm:qiafen", "function", ECardColumn::Left, 13, "Keyword reply", "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming keyword reply qiafen function", "Configure keyword-based automatic replies"}, // UI 名 keyword_reply，以持久化 key qiafen 为权威
 			{"qm:translate", "function", ECardColumn::Left, 14, "Translate", "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.7-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过 function", "Chat translation settings"},
-			{"qm:pie_menu", "function", ECardColumn::Left, 16, "Pie menu", "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan function", "Quick action menu for players"},
+			{"qm:pie_menu", "function", ECardColumn::Left, 16, "Pie menu", "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan 组队邀请 zu dui yao qing 加入队伍 jiaru duiwu 跟随 gensui follow server 查分 chafen points score 颜色 yanse function", "Quick action menu for players"},
 			{"qm:emoticons", "function", ECardColumn::Left, 18, "Emoticons", "表情 biaoqing 大表情 dabiaoqing 发射表情 fashe biaoqing 表情发射 launcher launch super emote 按键绑定 anjian bangding 他人显示 taren xianshi function", "Large emoticons and launched emoticons"},
 			{"qm:map_upload", "function", ECardColumn::Right, 21, "Map upload", "上传地图 shangchuan ditu 测图 cetu map upload test server function", "Upload a saved map to the public test server"},
 			{"qm:steam", "function", ECardColumn::Right, 22, "Steam integration", "Steam 启动 qidong 自动启动 zidong qidong 主窗口 zhuchuangkou 不启动游戏 buqidong youxi function", "Automatically launch Steam when the client is started externally"},
@@ -154,6 +154,7 @@ namespace qm_card_registry
 			{"qm:gores_drown_board", "hud", ECardColumn::Right, 23, "Gores drown board", "Gores Kog 落水 luoshui 冻结 dongjie 死亡 siwang 排行 paixing 榜单 bangdan 队伍 duiwu Tee 透明度 toumingdu 人数 renshu hud", "Configure the Gores team drown board"},
 			{"qm:nameplate_text", "hud", ECardColumn::Right, 18, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text", "appearance-name-plate", "deck:appearance-name-plate-settings"}, // 数据债：原无 tab 归属，B1 补 hud；功能由外观页承载
 			{"qm:laser", "visual", ECardColumn::Right, 3, "Laser", "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu visual", "Customize laser shape and effects", "appearance-laser", "deck:appearance-laser-enhanced"}, // 数据债：原无 tab 归属，B1 补 visual；功能由外观页承载
+			{"qm:bind_editor", "bind", ECardColumn::Full, 0, Localizable("Bind"), "绑定 bangding bind keyboard 键盘 anjian 按键 mouse 鼠标 wheel 滚轮 modifier 修饰键 command 命令", Localizable("Configure keyboard, mouse, wheel, and modifier bindings")},
 
 			// === Tclient section（19）· tclient:<name>（id 不变；column/order 按当前 section 顺序显式化）===
 			{"tclient:visual-font-cursor", "tclient", ECardColumn::Left, 0, "Font cursor", "font cursor tclient visual", "Choose the menu font and cursor appearance"},
@@ -182,7 +183,7 @@ namespace qm_card_registry
 			// === 设置 deck · deck:<page>-<card>（原无持久化；tab=归属页/子页，column/order 按运行时卡片顺序显式化）===
 			// 贡献者页分两个子页签（credits-qmclient / credits-links）；DDNet/TClient 署名卡并入友链，全卡半宽。
 			{"deck:qmclient-contributors-community", "credits-qmclient", ECardColumn::Left, 0, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
-			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname", Localizable("Redeem your code and customize your title")},
+			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname main dummy chat glow platinum 本体 分身 头衔 发言 柔光 铂金", Localizable("Redeem your code and customize your title")},
 			{"deck:qmclient-contributors-sponsors", "credits-qmclient", ECardColumn::Right, 0, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
 			{"deck:credits-friend-links", "credits-links", ECardColumn::Left, 0, "Friend links", "friend links ddnet workshop website qmclient homepage", "Project and community websites"},
 			{"deck:qmclient-contributors-ddnet", "credits-links", ECardColumn::Right, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
@@ -400,5 +401,24 @@ namespace qm_card_registry
 			vEntries.push_back({Default.m_pStableId, Default.m_pDefaultTab, Column, Default.m_DefaultOrder});
 		}
 		return vEntries;
+	}
+
+	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model)
+	{
+		bool Changed = false;
+		for(const qm_card_order::SEntry &Default : BuildDefaultEntries())
+		{
+			if(str_startswith(Default.m_pDefaultTab, "credits-") == nullptr && str_comp(Default.m_pStableId, "deck:tclient-info-files") != 0)
+				continue;
+			const int Index = Model.FindByStableId(Default.m_pStableId);
+			if(Index < 0)
+				continue;
+			const char *pTab = Model.Entry(Index).m_pDefaultTab;
+			if(pTab == nullptr || (str_comp(pTab, "qmclient-contributors") != 0 && str_comp(pTab, "qmclient-contributors-ddnet") != 0 && str_comp(pTab, "tclient-info") != 0 && str_comp(pTab, "credits-other") != 0))
+				continue;
+			Model.MoveToTab(Default.m_pStableId, Default.m_pDefaultTab, Default.m_Column, Default.m_OrderInColumn);
+			Changed = true;
+		}
+		return Changed;
 	}
 } // namespace qm_card_registry

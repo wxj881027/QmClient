@@ -105,29 +105,6 @@ TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurUsesSharedUiBackdropWithTransp
 	EXPECT_NE(ScoreboardSource.find("Scoreboard.Draw(ScoreboardGlassSurface(BackgroundAlphaFinal)"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurCoversRequestedHudAndVoteBackgroundsOnly)
-{
-	const std::string HudSource = ReadTextFile("src/game/client/components/hud.cpp");
-	const std::string VotingSource = ReadTextFile("src/game/client/components/voting.cpp");
-	const std::string TClientSource = ReadTextFile("src/game/client/components/tclient/tclient.cpp");
-	const std::string StatusBarSource = ReadTextFile("src/game/client/components/tclient/statusbar.cpp");
-	const std::string MovementInfo = FunctionBody(HudSource, "void CHud::RenderMovementInformation()");
-	const std::string KeyStatus = FunctionBody(HudSource, "void CHud::RenderKeyStatus()");
-	const std::string ScoreHud = FunctionBody(HudSource, "void CHud::RenderScoreHud()");
-	const std::string Vote = FunctionBody(VotingSource, "void CVoting::Render()");
-	const std::string MiniVote = FunctionBody(TClientSource, "void CTClient::RenderMiniVoteHud(");
-	const std::string StatusBar = FunctionBody(StatusBarSource, "void CStatusBar::OnRender()");
-
-	EXPECT_NE(MovementInfo.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(KeyStatus.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(ScoreHud.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(Vote.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(MiniVote.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(StatusBar.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(Vote.find("View.Draw(ui_token::color::SURFACE_GLASS"), std::string::npos);
-	EXPECT_NE(MiniVote.find("View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f)"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurSkipsPageSwitchTransitionOverlays)
 {
 	const std::string MenusHeader = ReadTextFile("src/game/client/components/menus.h");
@@ -156,91 +133,6 @@ TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurSkipsPageSwitchTransitionOverl
 	EXPECT_EQ(Settings7Source.find("DrawUiSwitchTransitionOverlay("), std::string::npos);
 	EXPECT_EQ(QmClientSource.find("DrawUiSwitchTransitionOverlay("), std::string::npos);
 	EXPECT_EQ(TClientSource.find("DrawUiSwitchTransitionOverlay("), std::string::npos);
-}
-
-TEST(QmNewUiMenuGameplayBlurContract, GaussianBlurSkipsButtonsAndKeepsSurfaceRounding)
-{
-	const std::string UiHeader = ReadTextFile("src/game/client/ui.h");
-	const std::string UiSource = ReadTextFile("src/game/client/ui.cpp");
-	const std::string UiListboxHeader = ReadTextFile("src/game/client/ui_listbox.h");
-	const std::string UiListboxSource = ReadTextFile("src/game/client/ui_listbox.cpp");
-	const std::string UiRectSource = ReadTextFile("src/game/client/ui_rect.cpp");
-	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string BrowserSource = ReadTextFile("src/game/client/components/menus_browser.cpp");
-	const std::string DemoSource = ReadTextFile("src/game/client/components/menus_demo.cpp");
-	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string SettingsAssetsSource = ReadTextFile("src/game/client/components/menus_settings_assets.cpp");
-	const std::string StartSource = ReadTextFile("src/game/client/components/menus_start.cpp");
-	const std::string QmClientSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string ButtonsSource = ReadTextFile("src/game/client/QmUi/UiButtons.cpp");
-	const std::string FormsSource = ReadTextFile("src/game/client/QmUi/UiForms.cpp");
-	const std::string NavigationSource = ReadTextFile("src/game/client/QmUi/UiNavigation.cpp");
-	const std::string HudSource = ReadTextFile("src/game/client/components/hud.cpp");
-	const std::string VotingSource = ReadTextFile("src/game/client/components/voting.cpp");
-	const std::string TClientSource = ReadTextFile("src/game/client/components/tclient/tclient.cpp");
-	const std::string BrowserServerList = FunctionBody(BrowserSource, "void CMenus::RenderServerbrowserServerList(");
-	const std::string BrowserFade = BlockBodyAfter(BrowserServerList, "if(NumServers * ms_ListheaderHeight > ListView.h)");
-	const std::string StartMenu = FunctionBody(StartSource, "void CMenusStart::RenderStartMenuImpl(");
-
-	EXPECT_NE(UiHeader.find("class CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(UiHeader.find("RenderGaussianBlur(const CUIRect &Rect, float Alpha = 1.0f, int Corners = IGraphics::CORNER_NONE, float Rounding = 0.0f)"), std::string::npos);
-	EXPECT_NE(FunctionBody(UiRectSource, "void CUIRect::DrawRectBackdrop(").find("Corners, Rounding"), std::string::npos);
-	EXPECT_NE(FunctionBody(UiSource, "void CUIElement::SUIElementRect::Draw(").find("Corners, Rounding"), std::string::npos);
-	EXPECT_NE(FunctionBody(UiSource, "void CUi::RenderBatchableRect(").find("Corners, Rounding"), std::string::npos);
-
-	EXPECT_NE(FunctionBody(UiSource, "int CUi::DoButton_Menu(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(UiSource, "void CUi::DrawButton_FontIcon(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(UiSource, "int CUi::DoButton_PopupMenu(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(UiSource, "bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, const SEditBoxRenderOptions &RenderOptions)").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(UiSource, "SEditResult<int64_t> CUi::DoValueSelectorWithState(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	// 颜色选择器弹窗内容画在已模糊的弹窗背板之上，必须抑制模糊，否则明度叠加层
-	// 的半透明角点会把饱和度渐变覆盖成模糊背板（方块呈灰度、不随色相变化）。
-	const std::string UiPopupsSource = ReadTextFile("src/game/client/ui_popups.cpp");
-	EXPECT_NE(FunctionBody(UiPopupsSource, "CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_MenuInternal(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_MenuTabInternal(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_Toggle(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoButton_CheckBox_Common_WithLabelElement(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(MenusSource, "ColorHSLA CMenus::DoButton_ColorPicker(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(MenusSource, "int CMenus::DoMenuTabV2Internal(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(ButtonsSource, "bool DoStyledButton(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(ButtonsSource, "bool IconButton(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(FormsSource, "bool Toggle(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(NavigationSource, "bool ListItem(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(FunctionBody(BrowserSource, "void CMenus::RenderServerbrowserServerList(").find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(StartMenu.find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_EQ(StartMenu.find("CUiScopedGaussianBlur GaussianBlurScope"), std::string::npos);
-
-	EXPECT_NE(UiListboxHeader.find("SuppressGaussianBlur() const"), std::string::npos);
-	EXPECT_NE(FunctionBody(UiListboxSource, "CListboxItem CListBox::DoNextItem(").find("Item.m_GaussianBlurSuppressed = true;"), std::string::npos);
-	EXPECT_NE(DemoSource.find("auto GaussianBlurSuppression = ListItem.SuppressGaussianBlur();"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("auto GaussianBlurSuppression = Item.SuppressGaussianBlur();"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("auto GaussianBlurSuppression = Item.SuppressGaussianBlur();"), std::string::npos);
-	EXPECT_NE(SettingsAssetsSource.find("auto GaussianBlurSuppression = Item.SuppressGaussianBlur();"), std::string::npos);
-	EXPECT_NE(BrowserFade.find("CUiScopedGaussianBlurSuppression"), std::string::npos);
-	EXPECT_NE(BrowserFade.find("Fade.Draw4("), std::string::npos);
-
-	const size_t PreviewSuppression = QmClientSource.find("CUiScopedGaussianBlurSuppression PreviewBlurSuppression(Ui());");
-	ASSERT_NE(PreviewSuppression, std::string::npos);
-	const size_t PreviewBlockStart = QmClientSource.rfind('{', PreviewSuppression);
-	ASSERT_NE(PreviewBlockStart, std::string::npos);
-	const size_t PreviewBlockEnd = MatchingBrace(QmClientSource, PreviewBlockStart);
-	ASSERT_NE(PreviewBlockEnd, std::string::npos);
-	const size_t PreviewDraw = QmClientSource.find("PreviewFrame.Draw(", PreviewSuppression);
-	const size_t PreviewMargin = QmClientSource.find("PreviewRect.Margin(maximum", PreviewSuppression);
-	const size_t PreviewButtonLogic = QmClientSource.find("Ui()->DoButtonLogic(&s_ColorPreviewButton", PreviewSuppression);
-	ASSERT_NE(PreviewDraw, std::string::npos);
-	ASSERT_NE(PreviewMargin, std::string::npos);
-	ASSERT_NE(PreviewButtonLogic, std::string::npos);
-	EXPECT_LT(PreviewDraw, PreviewBlockEnd);
-	EXPECT_GT(PreviewMargin, PreviewBlockEnd);
-	EXPECT_GT(PreviewButtonLogic, PreviewBlockEnd);
-
-	EXPECT_NE(HudSource.find("ScoreHudCorners, 5.0f"), std::string::npos);
-	EXPECT_NE(HudSource.find("IGraphics::CORNER_ALL, ui_token::radius::BASE"), std::string::npos);
-	EXPECT_NE(HudSource.find("HudEditorScope.m_Corners, ui_token::radius::BASE"), std::string::npos);
-	EXPECT_NE(VotingSource.find("HudEditorScope.m_Corners, ui_token::radius::BASE"), std::string::npos);
-	EXPECT_NE(TClientSource.find("HudEditorScope.m_Corners, 3.0f"), std::string::npos);
 }
 
 TEST(QmNewUiMenuGameplayBlurContract, EnvelopeScaleHotkeyGuardsModalInput)

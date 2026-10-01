@@ -1600,14 +1600,6 @@ STextBoundingBox CTextCursor::BoundingBox() const
 	return {m_StartX, m_StartY, m_LongestLineWidth, Height()};
 }
 
-void CTextCursor::SetPosition(vec2 Position)
-{
-	m_StartX = Position.x;
-	m_StartY = Position.y;
-	m_X = Position.x;
-	m_Y = Position.y;
-}
-
 struct SFontLanguageVariant
 {
 	char m_aLanguageFile[IO_MAX_PATH_LENGTH];

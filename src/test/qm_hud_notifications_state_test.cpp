@@ -44,6 +44,7 @@ TEST(QmHudNotifications, HandleServerChatUsesFallbackNotificationForUnknownMessa
 	EXPECT_TRUE(Analysis.m_UseFallbackLocalization);
 	EXPECT_EQ(Notifications.NotificationCountForTests(), 1);
 	EXPECT_STREQ(Notifications.LastNotificationTextForTests(), "regular server message");
+	EXPECT_TRUE(QmHudNotifications::ShouldSuppressServerMessageChat(Analysis));
 }
 
 TEST(QmHudNotifications, ConsecutiveIdenticalSystemNotificationsCollapseIntoRepeatCount)

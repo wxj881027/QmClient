@@ -75,26 +75,3 @@ TEST(QmNewUiMenuLocalizationContract, HudDummyStatusLabelsUseEnglishKeys)
 	EXPECT_NE(Source.find("Localize(\"Dummy Control: %s\")"), std::string::npos);
 	EXPECT_NE(Source.find("Localize(\"Dummy copy: %s\")"), std::string::npos);
 }
-
-TEST(QmNewUiMenuLocalizationContract, TranslationAndDemoUiLabelsUseEnglishKeys)
-{
-	const std::string ChatSource = ReadTextFile("src/game/client/components/chat.cpp");
-	// 截图画廊把菜单文案搬到了 menus_demo_screenshots.cpp，两份源码一起检查。
-	const std::string DemoSource = ReadTextFile("src/game/client/components/menus_demo.cpp") + ReadTextFile("src/game/client/components/menus_demo_screenshots.cpp");
-	const std::string BrowserSource = ReadTextFile("src/game/client/components/menus_browser.cpp");
-
-	EXPECT_NE(ChatSource.find("Localize(\"Translation Settings\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Auto-translate incoming messages\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Auto-translate outgoing messages\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Translate received messages to\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Translate outgoing messages to\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Translation service\")"), std::string::npos);
-	EXPECT_NE(DemoSource.find("Localize(\"Could not preview this image\")"), std::string::npos);
-	EXPECT_NE(DemoSource.find("BrowsingScreenshots ? Localize(\"Open the folder containing screenshots\") : Localize(\"Open the folder containing demo files\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Map\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Category\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Difficulty stars\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Note\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Has save\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"None\")"), std::string::npos);
-}

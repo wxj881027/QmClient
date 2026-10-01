@@ -27,6 +27,21 @@ TEST(Binds, KeepsPlainKeyFallbackForNonScreenshotCombinations)
 	EXPECT_FALSE(CBinds::AllowsUnmodifiedFallback(KEY_C, (1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)));
 }
 
+TEST(Binds, RevisionTracksExternalBindReplacementAndPreservesModifierSlots)
+{
+	CBindStorage Binds;
+	const uint64_t InitialRevision = Binds.Revision();
+	Binds.Bind(KEY_MOUSE_2, "+hook");
+	const uint64_t HookRevision = Binds.Revision();
+	Binds.Bind(KEY_MOUSE_2, "+hook", false, 1 << KeyModifier::CTRL);
+	Binds.Bind(KEY_MOUSE_2, "+bindwheel");
+
+	EXPECT_GT(HookRevision, InitialRevision);
+	EXPECT_GT(Binds.Revision(), HookRevision);
+	EXPECT_STREQ(Binds.Get(KEY_MOUSE_2, KeyModifier::NONE), "+bindwheel");
+	EXPECT_STREQ(Binds.Get(KEY_MOUSE_2, 1 << KeyModifier::CTRL), "+hook");
+}
+
 TEST(Binds, ReleasesShiftOnlyBindWhenScreenshotModifierIsPressedLater)
 {
 	EXPECT_TRUE(CBinds::ShouldReleaseUnmodifiedModifierBindOnModifierPress(CBindSlot(KEY_LSHIFT, KeyModifier::NONE), 1 << KeyModifier::CTRL));
@@ -97,4 +112,18 @@ TEST(Binds, MatchesDeepflyAuxiliaryCommandsByCommandName)
 	EXPECT_TRUE(IsDeepflyAuxiliaryCommand("echo \"DF enabled\""));
 	EXPECT_FALSE(IsDeepflyAuxiliaryCommand("echofoo"));
 	EXPECT_EQ(DetectDeepflyModeFromBindCommand("echofoo;+fire;+toggle cl_dummy_hammer 1 0"), DEEPFLY_MODE_CUSTOM);
+}
+
+TEST(Binds, StorageFreeOnlyAndAliasedReplacementPreserveCommands)
+{
+	CBindStorage Binds;
+	Binds.Bind(KEY_RIGHT, "spectate_next");
+	const uint64_t Revision = Binds.Revision();
+	EXPECT_FALSE(Binds.Bind(KEY_RIGHT, "+right", true));
+	EXPECT_EQ(Binds.Revision(), Revision);
+	EXPECT_TRUE(Binds.Bind(KEY_RIGHT, Binds.Get(KEY_RIGHT, KeyModifier::NONE)));
+	EXPECT_STREQ(Binds.Get(KEY_RIGHT, KeyModifier::NONE), "spectate_next");
+	Binds.UnbindAll();
+	Binds.UnbindAll();
+	EXPECT_STREQ(Binds.Get(KEY_RIGHT, KeyModifier::NONE), "");
 }

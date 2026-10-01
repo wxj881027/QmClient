@@ -17,12 +17,15 @@
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
 #include <game/client/components/qmclient/qm_title_render.h>
+#include <game/client/components/qmclient/sponsor_chat_render.h>
 #include <game/client/components/qmclient/translate/translate_jobs.h>
+#include <game/client/components/qmclient/translate/translate_ui_popup.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -120,6 +123,7 @@ private:
 	public:
 		CLine();
 		void Reset(CChat &This);
+		void DeleteTextContainers(ITextRender *pTextRender);
 
 		bool m_Initialized;
 		int64_t m_Time;
@@ -133,6 +137,7 @@ private:
 		char m_aQmTitle[64] = "";
 		char m_aText[MAX_LINE_LENGTH];
 		EQmChatEmoji m_ChatEmoji = EQmChatEmoji::NONE;
+		bool m_ChatEmojiImageLayout = false;
 		CUIRect m_ChatEmojiRect = {};
 		std::vector<SMergedAuthor> m_vMergedAuthors;
 		bool m_Friend;
@@ -141,8 +146,12 @@ private:
 		bool m_ConsoleSuppressed;
 		QmHudNotifications::EServerMessageClass m_ServerMessageClass;
 		std::optional<ColorRGBA> m_CustomColor;
+		EQmSponsorChatStyle m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
+		EQmSponsorChatStyle m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
 
 		STextContainerIndex m_TextContainerIndex;
+		STextContainerIndex m_BodyTextContainerIndex;
+		CUIRect m_SponsorTextBounds = {};
 		int m_QuadContainerIndex;
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
@@ -173,6 +182,9 @@ private:
 
 	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
+	std::array<int, 4> m_aPrevTitleVisibility = {};
+	bool m_PrevSponsorChatEffects = true;
+	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
 	bool m_LastPresentationShowLargeArea;
@@ -321,54 +333,7 @@ private:
 	};
 	STranslateButtonState m_TranslateButton;
 
-	// 翻译菜单下拉框展开状态
-	enum class ETranslateDropdown : int
-	{
-		NONE = 0,
-		INBOUND_LANG,
-		OUTBOUND_LANG,
-		BACKEND,
-	};
-
-	// 语言菜单
-	class CLanguagePopupContext : public SPopupMenuId
-	{
-	public:
-		CChat *m_pChat = nullptr;
-
-		// DoDropDown 状态（使用游戏自带下拉框组件）
-		CUi::SDropDownState m_InboundLangDropDownState;
-		CUi::SDropDownState m_OutboundLangDropDownState;
-		CUi::SDropDownState m_BackendDropDownState;
-
-		enum
-		{
-			LABEL_TITLE = 0,
-			LABEL_INBOUND_TOGGLE,
-			LABEL_OUTBOUND_TOGGLE,
-			LABEL_INBOUND_LANG,
-			LABEL_OUTBOUND_LANG,
-			LABEL_BACKEND,
-			LABEL_WARNING,
-			LABEL_COUNT,
-		};
-		CUIElement m_aLabelUiElements[LABEL_COUNT];
-		bool m_LabelUiElementsInit = false;
-
-		// 菜单动画状态
-		int64_t m_OpenTime = 0;
-		float m_AnimationProgress = 1.0f;
-
-		void InitLabelUiElements(CUi *pUi)
-		{
-			if(m_LabelUiElementsInit)
-				return;
-			for(CUIElement &LabelUiElement : m_aLabelUiElements)
-				LabelUiElement.Init(pUi, 1);
-			m_LabelUiElementsInit = true;
-		}
-	};
-	CLanguagePopupContext m_LanguagePopupContext;
+	CTranslateSettingsPopup m_LanguagePopupContext;
 	bool m_LanguageMenuOpen = false;
 
 	class CChatLinePopupContext : public SPopupMenuId
@@ -533,7 +498,7 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	void OnRender() override;
-	void OnPrepareLines(float y);
+	bool OnPrepareLines(float y);
 	void Reset();
 	void OnRelease() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
@@ -541,6 +506,7 @@ public:
 	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 	bool OnInput(const IInput::CEvent &Event) override;
 	void OnInit() override;
+	void OnShutdown() override;
 
 	void RebuildChat();
 	void ClearLines();
@@ -567,7 +533,6 @@ public:
 	{
 		return IsTranslatePlayerCandidate(ClientId, true, HasText, HasTranslateResponse, pLocalIds, NumLocalIds);
 	}
-	static CUi::EPopupMenuFunctionResult PopupLanguageMenu(void *pContext, CUIRect View, bool Active);
 	void OpenChatLineMenu(const CLine &Line, vec2 UiMousePos);
 	void CloseChatLineMenu();
 	static CUi::EPopupMenuFunctionResult PopupChatLineMenu(void *pContext, CUIRect View, bool Active);

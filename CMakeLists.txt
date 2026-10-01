@@ -2123,7 +2123,101 @@ set(EXPECTED_DATA
   maps7/readme.txt
   menuimages/demos.png
   menuimages/editor.png
+  menuimages/keyboard_0.png
+  menuimages/keyboard_1.png
+  menuimages/keyboard_2.png
+  menuimages/keyboard_3.png
+  menuimages/keyboard_4.png
+  menuimages/keyboard_5.png
+  menuimages/keyboard_6.png
+  menuimages/keyboard_7.png
+  menuimages/keyboard_8.png
+  menuimages/keyboard_9.png
+  menuimages/keyboard_a.png
+  menuimages/keyboard_alt.png
+  menuimages/keyboard_apostrophe.png
+  menuimages/keyboard_arrow_down.png
+  menuimages/keyboard_arrow_left.png
+  menuimages/keyboard_arrow_right.png
+  menuimages/keyboard_arrow_up.png
+  menuimages/keyboard_b.png
+  menuimages/keyboard_backspace.png
+  menuimages/keyboard_bracket_close.png
+  menuimages/keyboard_bracket_open.png
+  menuimages/keyboard_c.png
+  menuimages/keyboard_capslock.png
+  menuimages/keyboard_comma.png
+  menuimages/keyboard_ctrl.png
+  menuimages/keyboard_d.png
+  menuimages/keyboard_delete.png
+  menuimages/keyboard_e.png
+  menuimages/keyboard_end.png
+  menuimages/keyboard_equals.png
+  menuimages/keyboard_escape.png
+  menuimages/keyboard_f.png
+  menuimages/keyboard_f1.png
+  menuimages/keyboard_f10.png
+  menuimages/keyboard_f11.png
+  menuimages/keyboard_f12.png
+  menuimages/keyboard_f2.png
+  menuimages/keyboard_f3.png
+  menuimages/keyboard_f4.png
+  menuimages/keyboard_f5.png
+  menuimages/keyboard_f6.png
+  menuimages/keyboard_f7.png
+  menuimages/keyboard_f8.png
+  menuimages/keyboard_f9.png
+  menuimages/keyboard_g.png
+  menuimages/keyboard_h.png
+  menuimages/keyboard_home.png
+  menuimages/keyboard_i.png
+  menuimages/keyboard_insert.png
+  menuimages/keyboard_j.png
+  menuimages/keyboard_k.png
+  menuimages/keyboard_l.png
+  menuimages/keyboard_m.png
+  menuimages/keyboard_minus.png
+  menuimages/keyboard_n.png
+  menuimages/keyboard_numlock.png
+  menuimages/keyboard_numpad_enter.png
+  menuimages/keyboard_numpad_plus.png
+  menuimages/keyboard_o.png
+  menuimages/keyboard_page_down.png
+  menuimages/keyboard_page_up.png
+  menuimages/keyboard_p.png
+  menuimages/keyboard_pause.png
+  menuimages/keyboard_period.png
+  menuimages/keyboard_plus.png
+  menuimages/keyboard_printscreen.png
+  menuimages/keyboard_q.png
+  menuimages/keyboard_r.png
+  menuimages/keyboard_return.png
+  menuimages/keyboard_s.png
+  menuimages/keyboard_scroll_lock.png
+  menuimages/keyboard_semicolon.png
+  menuimages/keyboard_shift.png
+  menuimages/keyboard_slash_back.png
+  menuimages/keyboard_slash_forward.png
+  menuimages/keyboard_space.png
+  menuimages/keyboard_t.png
+  menuimages/keyboard_tab.png
+  menuimages/keyboard_tilde.png
+  menuimages/keyboard_u.png
+  menuimages/keyboard_v.png
+  menuimages/keyboard_w.png
+  menuimages/keyboard_win.png
+  menuimages/keyboard_x.png
+  menuimages/keyboard_y.png
+  menuimages/keyboard_z.png
   menuimages/local_server.png
+  menuimages/mouse_horizontal.png
+  menuimages/mouse_left.png
+  menuimages/mouse_right.png
+  menuimages/mouse_scroll.png
+  menuimages/mouse_scroll_down.png
+  menuimages/mouse_scroll_up.png
+  menuimages/mouse_side_back.png
+  menuimages/mouse_side_forward.png
   menuimages/play_game.png
   menuimages/settings.png
   particles.png
@@ -3054,6 +3148,9 @@ if(CLIENT)
     backend/opengl/backend_opengl.h
     backend/opengl/backend_opengl3.cpp
     backend/opengl/backend_opengl3.h
+    backend/opengl/backend_opengl3_qm_pipelines.cpp
+    backend/opengl/backend_opengl_qm_render_targets.cpp
+    backend/opengl/opengl_qm_sl_program.h
     backend/opengl/opengl_sl.cpp
     backend/opengl/opengl_sl.h
     backend/opengl/opengl_sl_program.cpp
@@ -3061,6 +3158,8 @@ if(CLIENT)
     backend/opengles/backend_opengles.cpp
     backend/opengles/backend_opengles3.cpp
     backend/opengles/backend_opengles3.h
+    backend/opengles/backend_opengles3_qm_pipelines.cpp
+    backend/opengles/backend_opengles_qm_render_targets.cpp
     backend/opengles/gles_class_defines.h
     backend/opengles/opengles_sl.cpp
     backend/opengles/opengles_sl_program.cpp
@@ -3068,6 +3167,8 @@ if(CLIENT)
     backend/vulkan/backend_vulkan.h
     backend/vulkan/backend_vulkan_qm_ext.cpp
     backend/vulkan/backend_vulkan_qm_ext.h
+    backend/vulkan/backend_vulkan_qm_pipelines_impl.h
+    backend/vulkan/backend_vulkan_qm_render_targets_impl.h
     backend_egl.cpp
     backend_egl.h
     backend_sdl.cpp
@@ -3158,8 +3259,11 @@ if(CLIENT)
     QmUi/QmTheme.h
     QmUi/QmTree.cpp
     QmUi/QmTree.h
+    QmUi/SecondaryPanel.h
     QmUi/SettingsCard.cpp
     QmUi/SettingsCard.h
+    QmUi/SettingsCardCollapseState.cpp
+    QmUi/SettingsCardCollapseState.h
     QmUi/SettingsCardGeometry.cpp
     QmUi/SettingsCardGeometry.h
     QmUi/UiButtons.cpp
@@ -3171,6 +3275,7 @@ if(CLIENT)
     QmUi/UiDiscreteSliderLogic.cpp
     QmUi/UiDogfood.cpp
     QmUi/UiDogfood.h
+    QmUi/UiDiscreteSliderStyle.h
     QmUi/UiFormLogic.cpp
     QmUi/UiFormLogic.h
     QmUi/UiForms.cpp
@@ -3188,6 +3293,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalog.cpp
     QmUi/cards/QmCardCatalog.h
     QmUi/cards/QmCardCatalogIds.cpp
+    QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
     QmUi/cards/QmCardCatalogBetterScoreboard.cpp
     QmUi/cards/QmCardCatalogSteam.cpp
@@ -3305,6 +3411,7 @@ if(CLIENT)
     components/particles.h
     components/pie_menu.cpp
     components/pie_menu.h
+    components/pie_menu_logic.h
     components/player_points.cpp
     components/player_points.h
     components/players.cpp
@@ -3316,6 +3423,9 @@ if(CLIENT)
     components/qmclient/axiom_scores.h
     components/qmclient/axiom_scores_data.cpp
     components/qmclient/axiom_scores_data.h
+    components/qmclient/bind_editor.cpp
+    components/qmclient/bind_editor.h
+    components/qmclient/bind_settings.cpp
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_emoji.cpp
     components/qmclient/chat_emoji.h
@@ -3373,6 +3483,11 @@ if(CLIENT)
     components/qmclient/music_lyrics/qm_spotify_token.h
     ../../qm/hooks/soda/qm_soda_protocol.cpp
     components/qmclient/nameplate_text_cache.h
+    components/qmclient/pie_menu_actions.cpp
+    components/qmclient/pie_menu_follow.cpp
+    components/qmclient/pie_menu_points.h
+    components/qmclient/pie_menu_settings.cpp
+    components/qmclient/predicted_event_queue.h
     components/qmclient/netease/netease_integration.cpp
     components/qmclient/netease/netease_integration.h
     components/qmclient/netease/netease_lyric_parser.cpp
@@ -3404,6 +3519,9 @@ if(CLIENT)
     components/qmclient/qm_map_upload.cpp
     components/qmclient/qm_title_style.cpp
     components/qmclient/qm_title_render.cpp
+    components/qmclient/sponsor_chat_render.cpp
+    components/qmclient/sponsor_chat_render.h
+    components/qmclient/sponsor_chat_style.h
     components/qmclient/qmclient_utils.h
     components/qmclient/rank_ghost.cpp
     components/qmclient/rank_ghost.h
@@ -3423,6 +3541,9 @@ if(CLIENT)
     components/qmclient/stutter_diagnostics.h
     components/qmclient/tee_hue_cycle.cpp
     components/qmclient/tee_hue_cycle.h
+    components/qmclient/tee_trail_styles.cpp
+    components/qmclient/tee_trail_styles.h
+    components/qmclient/title_settings.cpp
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
     components/qmclient/translate/translate.cpp
@@ -3435,6 +3556,9 @@ if(CLIENT)
     components/qmclient/translate/translate_detect.h
     components/qmclient/translate/translate_parse.cpp
     components/qmclient/translate/translate_parse.h
+    components/qmclient/translate/translate_ui_common.h
+    components/qmclient/translate/translate_ui_popup.cpp
+    components/qmclient/translate/translate_ui_popup.h
     components/qmclient/translate/translate_ui_settings.cpp
     components/qmclient/translate/translate_ui_settings.h
     components/qmclient/update_version.cpp
@@ -4257,6 +4381,8 @@ if(TOOLS)
           src/engine/client/backend_egl.cpp
           src/engine/client/backend/opengl/backend_opengl.cpp
           src/engine/client/backend/opengl/backend_opengl3.cpp
+          src/engine/client/backend/opengl/backend_opengl3_qm_pipelines.cpp
+          src/engine/client/backend/opengl/backend_opengl_qm_render_targets.cpp
           src/engine/client/backend/opengl/opengl_sl.cpp
           src/engine/client/backend/opengl/opengl_sl_program.cpp
           src/engine/client/backend/glsl_shader_compiler.cpp
@@ -4339,8 +4465,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_icon_shader_contract_test.cpp
     qm_msdf_param_encoding_test.cpp
     qm_icon_loader_contract_test.cpp
-    qm_icon_opengl_contract_test.cpp
-    qm_icon_vulkan_contract_test.cpp
+    qm_render_pipeline_contract_test.cpp
     qm_icon_glyph_contract_test.cpp
     qm_phosphor_resource_contract_test.cpp
     qm_icon_weight_contract_test.cpp
@@ -4359,6 +4484,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_card_order_model_test.cpp
     qm_card_order_model_contract_test.cpp
     qm_card_registry_test.cpp
+    qm_credits_layout_test.cpp
     qm_module_layout_adapter_test.cpp
     aio_test.cpp
     assets_editor_layout_test.cpp
@@ -4419,6 +4545,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     os_test.cpp
     packer_test.cpp
     prng_test.cpp
+    qm_bind_editor_console_test.cpp
+    qm_bind_editor_test.cpp
     qm_background_particles_test.cpp
     qm_axiom_scores_test.cpp
     qm_axiom_scores_contract_test.cpp
@@ -4520,6 +4648,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_map_progress_test.cpp
     qm_config_save_value_override_test.cpp
     qm_prediction_contract_test.cpp
+    qm_predicted_event_queue_test.cpp
     qm_tee_hue_cycle_test.cpp
     qm_tee_trail_test.cpp
     qm_sponsor_authors_test.cpp
@@ -4532,6 +4661,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     websocket_client_test.cpp
     qm_map_upload_test.cpp
     qm_title_style_test.cpp
+    qm_sponsor_chat_style_test.cpp
     qm_skin_outline_test.cpp
     qm_scoreboard_skin_test.cpp
     qm_weapon_trajectory_test.cpp
@@ -4564,6 +4694,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     serverbrowser_country_filter_test.cpp
     serverbrowser_test.cpp
     serverinfo_test.cpp
+    settings_card_collapse_state_test.cpp
+    settings_card_collapse_config_test.cpp
+    pie_menu_logic_test.cpp
+    pie_menu_points_test.cpp
     settings_card_deck_logic_test.cpp
     settings_resource_jobs_assets_contract_test.cpp
     settings_resource_jobs_assets_test.cpp
@@ -4668,6 +4802,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/map_history.cpp
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
+    src/game/client/components/qmclient/tee_trail_styles.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/test/render_tee_offset_helpers.cpp
     src/game/client/components/section_loader.cpp
@@ -4690,6 +4825,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmCardRegistry.cpp
     src/game/client/QmUi/cards/QmCardCatalogIds.cpp
     src/game/client/QmUi/SettingsCardDeckLogic.cpp
+    src/game/client/QmUi/SettingsCardCollapseState.cpp
     src/game/client/QmUi/QmModuleLayoutAdapter.cpp
     src/game/client/QmUi/SettingsCardGeometry.cpp
     src/game/client/components/assets_resource_registry.cpp
@@ -4723,6 +4859,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/qm/music/qm_kugou_protocol.h
     src/qm/music/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/modes.cpp
+    src/game/client/components/qmclient/bind_editor.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
     src/game/client/components/qmclient/qm_sponsor_authors.cpp
@@ -4735,6 +4872,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/qm_map_upload.cpp
     src/game/client/components/qmclient/qm_title_style.cpp
     src/game/client/components/qmclient/qm_title_render.cpp
+    src/game/client/components/qmclient/sponsor_chat_render.cpp
     src/game/client/components/qmclient/translate/translate_parse.cpp
     src/game/client/components/qmclient/translate/translate_backend.cpp
     src/game/client/components/qmclient/translate/translate_jobs.cpp

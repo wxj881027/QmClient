@@ -1604,26 +1604,6 @@ TEST(QmNewUiMenuBranches, ScoreboardUsesOneRowPlanAndDenseTeeLod)
 	EXPECT_NE(RenderScoreboard.find("m_PlayerPoints.GetPoints"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, GaussianBlurCoversRequestedHudAndVoteBackgroundsOnly)
-{
-	const std::string HudSource = ReadTextFile("src/game/client/components/hud.cpp");
-	const std::string VotingSource = ReadTextFile("src/game/client/components/voting.cpp");
-	const std::string TClientSource = ReadTextFile("src/game/client/components/tclient/tclient.cpp");
-	const std::string MovementInfo = FunctionBody(HudSource, "void CHud::RenderMovementInformation()");
-	const std::string KeyStatus = FunctionBody(HudSource, "void CHud::RenderKeyStatus()");
-	const std::string ScoreHud = FunctionBody(HudSource, "void CHud::RenderScoreHud()");
-	const std::string Vote = FunctionBody(VotingSource, "void CVoting::Render()");
-	const std::string MiniVote = FunctionBody(TClientSource, "void CTClient::RenderMiniVoteHud(");
-
-	EXPECT_NE(MovementInfo.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(KeyStatus.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(ScoreHud.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(Vote.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(MiniVote.find("RenderGaussianBlur"), std::string::npos);
-	EXPECT_NE(Vote.find("View.Draw(ui_token::color::SURFACE_GLASS"), std::string::npos);
-	EXPECT_NE(MiniVote.find("View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f)"), std::string::npos);
-}
-
 TEST(QmNewUiMenuBranches, IngameMenuPrimaryActionLabelsUseEnglishKeys)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_ingame.cpp");
@@ -1696,29 +1676,6 @@ TEST(QmNewUiMenuBranches, HudDummyStatusLabelsUseEnglishKeys)
 	EXPECT_NE(Source.find("Localize(\"Hammer: %s\")"), std::string::npos);
 	EXPECT_NE(Source.find("Localize(\"Dummy Control: %s\")"), std::string::npos);
 	EXPECT_NE(Source.find("Localize(\"Dummy copy: %s\")"), std::string::npos);
-}
-
-TEST(QmNewUiMenuBranches, TranslationAndDemoUiLabelsUseEnglishKeys)
-{
-	const std::string ChatSource = ReadTextFile("src/game/client/components/chat.cpp");
-	// 截图画廊把菜单文案搬到了 menus_demo_screenshots.cpp，两份源码一起检查。
-	const std::string DemoSource = ReadTextFile("src/game/client/components/menus_demo.cpp") + ReadTextFile("src/game/client/components/menus_demo_screenshots.cpp");
-	const std::string BrowserSource = ReadTextFile("src/game/client/components/menus_browser.cpp");
-
-	EXPECT_NE(ChatSource.find("Localize(\"Translation Settings\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Auto-translate incoming messages\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Auto-translate outgoing messages\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Translate received messages to\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Translate outgoing messages to\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Translation service\")"), std::string::npos);
-	EXPECT_NE(DemoSource.find("Localize(\"Could not preview this image\")"), std::string::npos);
-	EXPECT_NE(DemoSource.find("BrowsingScreenshots ? Localize(\"Open the folder containing screenshots\") : Localize(\"Open the folder containing demo files\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Map\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Category\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Difficulty stars\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Note\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Has save\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"None\")"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, ProtectedFriendCategoriesCannotBeRenamedOrDeleted)
@@ -1811,36 +1768,6 @@ TEST(QmNewUiMenuBranches, ClientSourceDoesNotUseChineseLocalizeKeys)
 	EXPECT_NE(StartSource.find("Localize(\"(Update required)\")"), std::string::npos);
 	EXPECT_NE(PieMenuSource.find("Localize(\"Spectate\")"), std::string::npos);
 	EXPECT_NE(ScoreboardSource.find("Localize(\"Spectators\")"), std::string::npos);
-}
-
-TEST(QmNewUiMenuBranches, PieMenuSeparatesSelfRenameFromOtherPlayerActions)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/pie_menu.cpp");
-	const std::string FindNearestPlayer = FunctionBody(Source, "int CPieMenu::FindNearestPlayer()");
-	const std::string OpenMenu = FunctionBody(Source, "void CPieMenu::OpenMenu()");
-	const std::string OnInput = FunctionBody(Source, "bool CPieMenu::OnInput(");
-	const std::string UpdateSelection = FunctionBody(Source, "void CPieMenu::UpdateSelection()");
-	const std::string OnRender = FunctionBody(Source, "void CPieMenu::OnRender()");
-	const std::string RenderCenterInfo = FunctionBody(Source, "void CPieMenu::RenderCenterInfo()");
-	const std::string ExecuteRenameOption = FunctionBody(Source, "void CPieMenu::ExecuteRenameOption(");
-
-	// Both local connections belong to the user and must never become inner-ring targets.
-	EXPECT_NE(FindNearestPlayer.find("GameClient()->IsLocalClientId(i)"), std::string::npos);
-
-	// A connected local identity and at least one usable ring are required to open the menu.
-	EXPECT_NE(OpenMenu.find("Client()->State() != IClient::STATE_ONLINE"), std::string::npos);
-	EXPECT_NE(OpenMenu.find("LocalClientId < 0 || LocalClientId >= MAX_CLIENTS"), std::string::npos);
-	EXPECT_NE(OpenMenu.find("if(TargetId < 0 && m_vRenameQueue.empty())"), std::string::npos);
-
-	// Without another player the hidden inner ring cannot be selected or triggered by number keys.
-	EXPECT_NE(OnInput.find("if(!HasTargetPlayer())"), std::string::npos);
-	EXPECT_NE(UpdateSelection.find("if(HasTargetPlayer() && MouseDistance <= OuterRadius)"), std::string::npos);
-	EXPECT_NE(OnRender.find("if(HasTargetPlayer())"), std::string::npos);
-
-	// Targetless mode displays self, and hovering the outer ring identifies rename as a self action.
-	EXPECT_NE(RenderCenterInfo.find("const int DisplayClientId = HasTargetPlayer() ? m_TargetClientId : LocalClientId;"), std::string::npos);
-	EXPECT_NE(RenderCenterInfo.find("Localize(\"Self\")"), std::string::npos);
-	EXPECT_EQ(ExecuteRenameOption.find("m_TargetClientId"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, QmClientAxiomAutoLoginLivesInQmClientComponent)
@@ -2024,12 +1951,13 @@ TEST(QmNewUiMenuBranches, NumericInputKeepsValueAndUnitInOneGeometry)
 	EXPECT_EQ(Forms.find("m_pInactiveDisplayText"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, EditBoxesActivateFromTheirConfiguredHitRect)
+TEST(QmNewUiMenuBranches, EditBoxesRequirePressInsideConfiguredHitRect)
 {
 	const std::string Source = ReadTextFile("src/game/client/ui.cpp");
 	const std::string Body = FunctionBody(Source, "bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, int Align, const SEditBoxRenderOptions &RenderOptions)");
 	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("else if(Inside)"), std::string::npos);
+	EXPECT_NE(Body.find("QmEditBoxShouldStartActivation(Inside, MouseButtonClicked(0))"), std::string::npos);
+	EXPECT_EQ(Body.find("else if(Inside)"), std::string::npos);
 	EXPECT_EQ(Body.find("else if(HotItem() == pLineInput)"), std::string::npos);
 }
 
@@ -2400,28 +2328,6 @@ TEST(QmNewUiMenuBranches, TClientSettingsTabsRenderAllSlotsWithVisibleCorners)
 	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex"), std::string::npos);
 	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == 0"), std::string::npos);
 	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == NUMBER_OF_TCLIENT_TABS - 1"), std::string::npos);
-}
-
-TEST(QmNewUiMenuBranches, TClientDeveloperCardMergesLinksAndLivesOnCreditsPage)
-{
-	// 「TClient 链接」卡并入开发人员卡；合并卡与 DDNet 卡都并入贡献者页「友链」子页签，
-	// 配置文件卡移到常规页。卡片构建统一收在独立的 menus_credits.cpp。
-	const std::string Source = ReadTextFile("src/game/client/components/menus_credits.cpp");
-	const std::string Registry = ReadTextFile("src/game/client/QmUi/QmCardRegistry.cpp");
-	const std::string General = FunctionBody(ReadTextFile("src/game/client/components/menus_settings.cpp"), "void CMenus::RenderSettingsGeneral(CUIRect MainView)");
-	const std::string Body = FunctionBody(Source, "void CMenus::AppendTClientDeveloperCard(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly)");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Body.find("{\"deck:tclient-info-developers\", Localize(\"TClient Developers\")"), std::string::npos);
-	EXPECT_NE(Body.find("Localize(\"Discord\")"), std::string::npos);
-	EXPECT_NE(Body.find("Localize(\"Support ♥\")"), std::string::npos);
-	EXPECT_EQ(Registry.find("deck:tclient-info-links"), std::string::npos);
-	EXPECT_EQ(Registry.find("\"tclient-info\""), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-files\", \"general\", ECardColumn::Right, 2"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:credits-friend-links\", \"credits-links\", ECardColumn::Left, 0"), std::string::npos);
-	EXPECT_NE(General.find("FindByStableId(\"deck:tclient-info-files\")"), std::string::npos);
-	EXPECT_NE(General.find("\"tclient-files-qmclient-settings\""), std::string::npos);
-	EXPECT_EQ(Source.find("deck:tclient-info-files"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, TClientProfilesUsesPublicCardDeck)

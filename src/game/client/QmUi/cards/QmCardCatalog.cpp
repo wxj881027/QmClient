@@ -85,6 +85,8 @@ namespace qm_card_catalog
 
 	bool BuildCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out)
 	{
+		if(str_comp(pStableId, "qm:bind_editor") == 0)
+			return BuildBindCard(Ctx, Out);
 		qm_module::EQmModuleId Id = qm_module::EQmModuleId::Info;
 		if(!qm_module::QmModuleIdFromStableId(pStableId, &Id))
 			return false;

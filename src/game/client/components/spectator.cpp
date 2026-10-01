@@ -772,7 +772,7 @@ void CSpectator::OnRender()
 			aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
 			++DisplayCount;
 		}
-	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder);
+	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder, g_Config.m_QmSpectatorFriendsFirst != 0);
 	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f, 15.0f);
 	const float TitleFontSize = TitleHeight * 0.8f;
 	const auto DrawGroupTitle = [&](const char *pTitle, const ColorRGBA &TitleColor) {
@@ -1172,9 +1172,6 @@ void CSpectator::Spectate(int SpectatorId)
 			GameClient()->m_Menus.DemoSeekTick(IDemoPlayer::TICK_CURRENT);
 		return;
 	}
-
-	if(GameClient()->m_FastPractice.ConsumeSpectatorCommand())
-		return;
 
 	if(GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SpectatorId)
 		return;

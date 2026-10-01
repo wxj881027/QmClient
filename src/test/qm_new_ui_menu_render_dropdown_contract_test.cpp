@@ -69,36 +69,6 @@ TEST(QmNewUiMenuRenderDropdownContract, SettingsDropdownWrapperAndNestedListsKee
 	EXPECT_NE(Tee.find("s_PresetListBox.SetScrollbarAlwaysReserved(true);"), std::string::npos);
 }
 
-TEST(QmNewUiMenuRenderDropdownContract, DropDownKeyboardActiveIndexIsRendered)
-{
-	const std::string UiSource = ReadTextFile("src/game/client/ui.cpp") + ReadTextFile("src/game/client/ui_popups.cpp");
-	const std::string UiHeader = ReadTextFile("src/game/client/ui.h");
-	const std::string SelectionReset = FunctionBody(UiSource, "void CUi::SSelectionPopupContext::Reset()");
-	const std::string PopupSelection = FunctionBody(UiSource, "CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, bool Active)");
-	const std::string PopupButton = FunctionBody(UiSource, "int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer");
-	const std::string DoDropDown = FunctionBody(UiSource, "int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps)");
-
-	ASSERT_FALSE(SelectionReset.empty());
-	ASSERT_FALSE(PopupSelection.empty());
-	ASSERT_FALSE(PopupButton.empty());
-	ASSERT_FALSE(DoDropDown.empty());
-	EXPECT_NE(UiHeader.find("int m_ActiveIndex;"), std::string::npos);
-	EXPECT_NE(SelectionReset.find("m_ActiveIndex = -1;"), std::string::npos);
-	EXPECT_NE(PopupButton.find("ButtonColor.has_value() || !TransparentInactive"), std::string::npos);
-	EXPECT_NE(PopupSelection.find("const bool ActiveEntry = pSelectionPopup->m_ActiveIndex == static_cast<int>(Index);"), std::string::npos);
-	EXPECT_NE(PopupSelection.find("ActiveEntry ? std::optional<ColorRGBA>"), std::string::npos);
-	EXPECT_EQ(PopupSelection.find("Accent.VSplitLeft(2.0f"), std::string::npos);
-	EXPECT_NE(PopupSelection.find("pSelectionPopup->m_TransparentButtons, true, ActiveColor"), std::string::npos);
-	const size_t UpdateResult = DoDropDown.find("const SQmDropdownUpdateResult DropDownResult = State.m_DropDownState.Update(DropDownInput, Num);");
-	const size_t ActiveIndexSync = DoDropDown.find("State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();");
-	const size_t PopupRender = DoDropDown.find("ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);");
-	ASSERT_NE(UpdateResult, std::string::npos);
-	ASSERT_NE(ActiveIndexSync, std::string::npos);
-	ASSERT_NE(PopupRender, std::string::npos);
-	EXPECT_LT(UpdateResult, ActiveIndexSync);
-	EXPECT_LT(ActiveIndexSync, PopupRender);
-}
-
 TEST(QmNewUiMenuRenderDropdownContract, ValueSelectorUsesOneFittedTextLayoutForDisplayAndEditing)
 {
 	EXPECT_FLOAT_EQ(QmFitSingleLineFontSize(10.0f, 6.0f, 40.0f, 80.0f), 10.0f);

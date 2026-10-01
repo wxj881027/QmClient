@@ -227,7 +227,8 @@ MACRO_CONFIG_COL(TcTeeTrailColor, tc_tee_trail_color, 255, CFGFLAG_CLIENT | CFGF
 MACRO_CONFIG_INT(TcTeeTrailTaper, tc_tee_trail_taper, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Taper trail ends")
 MACRO_CONFIG_INT(TcTeeTrailFade, tc_tee_trail_fade, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fade opacity along trail length")
 MACRO_CONFIG_INT(TcTeeTrailColorMode, tc_tee_trail_color_mode, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)")
-MACRO_CONFIG_INT(TcTeeTrailStyle, tc_tee_trail_style, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)")
+// 继续接受旧配置的 4、5，实际渲染和菜单统一解析为漫画、魔法。
+MACRO_CONFIG_INT(TcTeeTrailStyle, tc_tee_trail_style, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)")
 MACRO_CONFIG_INT(TcTeeTrailStyleColors, tc_tee_trail_style_colors, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use the selected tee trail style palette")
 
 // Chat Reply

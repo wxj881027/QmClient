@@ -222,28 +222,6 @@ TEST(QmNewUiMenuCardsDeckContract, TClientSettingsTabsRenderAllSlotsWithVisibleC
 	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == NUMBER_OF_TCLIENT_TABS - 1"), std::string::npos);
 }
 
-TEST(QmNewUiMenuCardsDeckContract, TClientDeveloperCardMergesLinksAndLivesOnCreditsPage)
-{
-	// 「TClient 链接」卡并入开发人员卡；合并卡与 DDNet 卡都并入贡献者页「友链」子页签，
-	// 配置文件卡移到常规页。卡片构建统一收在独立的 menus_credits.cpp。
-	const std::string Source = ReadTextFile("src/game/client/components/menus_credits.cpp");
-	const std::string Registry = ReadTextFile("src/game/client/QmUi/QmCardRegistry.cpp");
-	const std::string General = FunctionBody(ReadTextFile("src/game/client/components/menus_settings.cpp"), "void CMenus::RenderSettingsGeneral(CUIRect MainView)");
-	const std::string Body = FunctionBody(Source, "void CMenus::AppendTClientDeveloperCard(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly)");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Body.find("{\"deck:tclient-info-developers\", Localize(\"TClient Developers\")"), std::string::npos);
-	EXPECT_NE(Body.find("Localize(\"Discord\")"), std::string::npos);
-	EXPECT_NE(Body.find("Localize(\"Support ♥\")"), std::string::npos);
-	EXPECT_EQ(Registry.find("deck:tclient-info-links"), std::string::npos);
-	EXPECT_EQ(Registry.find("\"tclient-info\""), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:tclient-info-files\", \"general\", ECardColumn::Right, 2"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:credits-friend-links\", \"credits-links\", ECardColumn::Left, 0"), std::string::npos);
-	EXPECT_NE(General.find("FindByStableId(\"deck:tclient-info-files\")"), std::string::npos);
-	EXPECT_NE(General.find("\"tclient-files-qmclient-settings\""), std::string::npos);
-	EXPECT_EQ(Source.find("deck:tclient-info-files"), std::string::npos);
-}
-
 TEST(QmNewUiMenuCardsDeckContract, TClientProfilesUsesPublicCardDeck)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");

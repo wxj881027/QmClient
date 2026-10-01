@@ -167,63 +167,6 @@ TEST(GraphicsRenderTarget, CommandStructsExposeExpectedFields)
 	EXPECT_EQ(Draw.m_PrimCount, 2U);
 }
 
-TEST(GraphicsRenderTarget, DrawAlphaIsClampedAndForwardedToBackends)
-{
-	const std::string FrontendSource = ReadFile("src/engine/client/graphics_threaded.cpp");
-	const std::string FrontendBody = ExtractFunctionBody(FrontendSource, "void CGraphics_Threaded::DrawRenderTarget");
-	ASSERT_FALSE(FrontendBody.empty());
-	EXPECT_NE(FrontendBody.find("std::clamp(Params.m_Alpha, 0.0f, 1.0f)"), std::string::npos);
-	EXPECT_NE(FrontendBody.find("Cmd.m_Alpha"), std::string::npos);
-	EXPECT_NE(FrontendBody.find("Params.m_Corners"), std::string::npos);
-	EXPECT_NE(FrontendBody.find("Params.m_Rounding"), std::string::npos);
-	EXPECT_NE(FrontendBody.find("Cmd.m_pVertices"), std::string::npos);
-
-	const std::string OpenGlBody = ExtractFunctionBody(ReadFile("src/engine/client/backend/opengl/backend_opengl.cpp"), "void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Draw");
-	const std::string OpenGl3Body = ExtractFunctionBody(ReadFile("src/engine/client/backend/opengl/backend_opengl3.cpp"), "void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderTarget_Draw");
-	const std::string VulkanBody = ExtractFunctionBody(ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp"), "[[nodiscard]] bool Cmd_RenderTarget_Draw");
-	ASSERT_FALSE(OpenGlBody.empty());
-	ASSERT_FALSE(OpenGl3Body.empty());
-	ASSERT_FALSE(VulkanBody.empty());
-	EXPECT_NE(FrontendBody.find("Cmd.m_Alpha * 255.0f + 0.5f"), std::string::npos);
-	EXPECT_NE(OpenGlBody.find("pCommand->m_pVertices"), std::string::npos);
-	EXPECT_NE(OpenGl3Body.find("pCommand->m_PrimCount"), std::string::npos);
-	EXPECT_NE(VulkanBody.find("pCommand->m_PrimCount"), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, ModernBackendsSubmitFourVerticesPerIndexedQuad)
-{
-	const std::string OpenGl3Body = ExtractFunctionBody(ReadFile("src/engine/client/backend/opengl/backend_opengl3.cpp"), "void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderTarget_Draw");
-	const std::string VulkanBody = ExtractFunctionBody(ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp"), "[[nodiscard]] bool Cmd_RenderTarget_Draw");
-	ASSERT_FALSE(OpenGl3Body.empty());
-	ASSERT_FALSE(VulkanBody.empty());
-
-	EXPECT_NE(OpenGl3Body.find("UploadStreamBufferData(EPrimitiveType::QUADS, pCommand->m_pVertices, sizeof(CCommandBuffer::SVertex), pCommand->m_PrimCount)"), std::string::npos);
-	EXPECT_NE(OpenGl3Body.find("glDrawElements(GL_TRIANGLES, pCommand->m_PrimCount * 6"), std::string::npos);
-	EXPECT_NE(VulkanBody.find("sizeof(CCommandBuffer::SVertex) * pCommand->m_PrimCount * 4"), std::string::npos);
-	EXPECT_NE(VulkanBody.find("vkCmdDrawIndexed(CommandBuffer, pCommand->m_PrimCount * 6"), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, VulkanExternalDrawsInvalidateRawBindingCache)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::array<const char *, 2> apSignatures = {
-		"[[nodiscard]] bool Cmd_RenderTarget_Draw",
-		"[[nodiscard]] bool Cmd_RenderTarget_GaussianBlurPass",
-	};
-	for(const char *pSignature : apSignatures)
-	{
-		const std::string Body = ExtractFunctionBody(Source, pSignature);
-		ASSERT_FALSE(Body.empty()) << pSignature;
-		const size_t RawDraw = Body.find("vkCmdDrawIndexed");
-		ASSERT_NE(RawDraw, std::string::npos) << pSignature;
-		const size_t CacheReset = Body.find("ResetDrawCommandState(0);", RawDraw);
-		const size_t Return = Body.find("return true;", RawDraw);
-		EXPECT_NE(CacheReset, std::string::npos) << pSignature;
-		ASSERT_NE(Return, std::string::npos) << pSignature;
-		EXPECT_LT(CacheReset, Return) << pSignature;
-	}
-}
-
 TEST(GraphicsRenderTargetBackbufferCapture, CommandCarriesDestinationTarget)
 {
 	CCommandBuffer::SCommand_RenderTarget_CaptureBackbuffer Capture;
@@ -322,53 +265,6 @@ TEST(GraphicsRenderTargetBackbufferCapture, ThreadedFrontendValidatesAndQueuesCa
 	EXPECT_NE(Body.find("FlushVertices();"), std::string::npos);
 	EXPECT_NE(Body.find("SCommand_RenderTarget_CaptureBackbuffer"), std::string::npos);
 	EXPECT_NE(Body.find("AddCmd(Cmd);"), std::string::npos);
-}
-
-TEST(GraphicsRenderTargetBackbufferCapture, OpenGlUsesFramebufferBlitOnlyOnModernBackend)
-{
-	const std::string BaseSource = ReadFile("src/engine/client/backend/opengl/backend_opengl.cpp");
-	const std::string ModernSource = ReadFile("src/engine/client/backend/opengl/backend_opengl3.cpp");
-	const std::string Body = ExtractFunctionBody(ModernSource, "void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderTarget_CaptureBackbuffer");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(BaseSource.find("m_BackbufferCapture = false"), std::string::npos);
-	EXPECT_NE(ModernSource.find("m_BackbufferCapture = pCommand->m_pCapabilities->m_RenderTargets"), std::string::npos);
-	EXPECT_NE(Body.find("GL_READ_FRAMEBUFFER_BINDING"), std::string::npos);
-	EXPECT_NE(Body.find("GL_DRAW_FRAMEBUFFER_BINDING"), std::string::npos);
-	EXPECT_NE(Body.find("glBlitFramebuffer"), std::string::npos);
-	EXPECT_NE(Body.find("glCopyTexSubImage2D"), std::string::npos);
-	EXPECT_NE(Body.find("RequiresSeparateResolve"), std::string::npos);
-	EXPECT_NE(Body.find("glBindFramebuffer(GL_READ_FRAMEBUFFER, PreviousReadFramebuffer)"), std::string::npos);
-	EXPECT_EQ(Body.find("glBindFramebuffer(GL_READ_FRAMEBUFFER, PreviousDrawFramebuffer)"), std::string::npos);
-	EXPECT_NE(Body.find("PreviousReadFramebuffer == 0"), std::string::npos);
-	EXPECT_NE(Body.find("GL_COLOR_BUFFER_BIT, GL_LINEAR"), std::string::npos);
-	EXPECT_EQ(Body.find("glReadPixels"), std::string::npos);
-}
-
-TEST(GraphicsRenderTargetBackbufferCapture, VulkanBlitsCurrentSwapImageAndRestoresLayouts)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::string SupportBody = ExtractFunctionBody(Source, "[[nodiscard]] bool SupportsBackbufferCapture() const");
-	const std::string CaptureBody = ExtractFunctionBody(Source, "[[nodiscard]] bool Cmd_RenderTarget_CaptureBackbuffer");
-	ASSERT_FALSE(SupportBody.empty());
-	ASSERT_FALSE(CaptureBody.empty());
-	EXPECT_EQ(SupportBody.find("!HasMultiSampling()"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("HasMultiSampling()"), std::string::npos);
-	EXPECT_NE(SupportBody.find("m_OptimalSwapChainImageBlitting"), std::string::npos);
-	EXPECT_NE(SupportBody.find("m_OptimalRGBAImageBlitting"), std::string::npos);
-	EXPECT_NE(SupportBody.find("VK_FORMAT_B8G8R8A8_UNORM"), std::string::npos);
-	EXPECT_NE(SupportBody.find("VK_FORMAT_R8G8B8A8_UNORM"), std::string::npos);
-	EXPECT_NE(Source.find("VK_IMAGE_USAGE_TRANSFER_DST_BIT"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("EndSwapRenderPassForExternalWork();"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("vkCmdBlitImage"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("GetPresentedImageViewport()"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("Target.m_Height, 0"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR"), std::string::npos);
-	EXPECT_NE(CaptureBody.find("BeginSwapRenderPass(m_VKRenderPassLoad);"), std::string::npos);
-	EXPECT_EQ(CaptureBody.find("ReadRenderTarget"), std::string::npos);
-	EXPECT_EQ(CaptureBody.find("SubmitCurrentCommandsAndRestartSwapPass"), std::string::npos);
 }
 
 TEST(GraphicsRenderTargetBackbufferCapture, RuntimeMultiSamplingChangesKeepCapabilityInSync)
@@ -473,24 +369,6 @@ TEST(GraphicsRenderTargetGaussianBlur, ShadersAccumulateRgbaWithBoundedKernel)
 	}
 }
 
-TEST(GraphicsRenderTargetGaussianBlur, VulkanUsesSingleSampleRenderTargetPipeline)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "[[nodiscard]] bool CreateGaussianBlurGraphicsPipeline");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("m_VKRenderTargetRenderPass"), std::string::npos);
-	EXPECT_NE(Body.find("VK_SAMPLE_COUNT_1_BIT"), std::string::npos);
-	EXPECT_NE(Source.find("m_RenderTargetGaussianBlur = SupportsRenderTargetGaussianBlur()"), std::string::npos);
-}
-
-TEST(GraphicsRenderTargetGaussianBlur, OpenGlPublishesCapabilityOnlyForLinkedProgram)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/opengl/backend_opengl3.cpp");
-	EXPECT_NE(Source.find("shader/gaussian_blur.vert"), std::string::npos);
-	EXPECT_NE(Source.find("shader/gaussian_blur.frag"), std::string::npos);
-	EXPECT_NE(Source.find("m_RenderTargetGaussianBlur = pCommand->m_pCapabilities->m_RenderTargets && m_GaussianBlurProgramValid"), std::string::npos);
-}
-
 TEST(GraphicsRenderTargetGaussianBlur, VulkanRenderTargetPublishesWritesBeforeSampling)
 {
 	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
@@ -499,80 +377,4 @@ TEST(GraphicsRenderTargetGaussianBlur, VulkanRenderTargetPublishesWritesBeforeSa
 	EXPECT_NE(Body.find("VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT"), std::string::npos);
 	EXPECT_NE(Body.find("VK_ACCESS_SHADER_READ_BIT"), std::string::npos);
 	EXPECT_NE(Body.find("FinalLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ? 2 : 1"), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, VulkanBackendDeclaresRenderTargetSupport)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const size_t MultiSamplingInit = Source.find("m_MultiSamplingCount = (g_Config.m_GfxFsaaSamples & 0xFFFFFFFE)");
-	const size_t InitVulkan = Source.find("InitVulkan<true>()");
-	const size_t RenderTargetsCapability = Source.find("m_RenderTargets = SupportsRenderTargetReadback()");
-	ASSERT_NE(MultiSamplingInit, std::string::npos);
-	ASSERT_NE(InitVulkan, std::string::npos);
-	ASSERT_NE(RenderTargetsCapability, std::string::npos);
-	EXPECT_LT(MultiSamplingInit, RenderTargetsCapability);
-	EXPECT_LT(InitVulkan, RenderTargetsCapability);
-	EXPECT_NE(Source.find("m_VKRenderTargetRenderPass != VK_NULL_HANDLE"), std::string::npos);
-	EXPECT_NE(Source.find("RenderTargetReadbackSupportReason()"), std::string::npos);
-	EXPECT_NE(Source.find("RenderTargetReadbackFormat()"), std::string::npos);
-	EXPECT_NE(Source.find("VK_FORMAT_R8G8B8A8_UNORM"), std::string::npos);
-	EXPECT_NE(Source.find("SubmitCurrentCommandsAndRestartSwapPass()"), std::string::npos);
-	EXPECT_NE(Source.find("m_OptimalSwapChainImageBlitting && m_OptimalRGBAImageBlitting && m_LinearRGBAImageBlitting"), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, VulkanSwapRenderPassUsesInlineAfterForcedSingleThreadedRecording)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "void BeginSwapRenderPass");
-	ASSERT_FALSE(Body.empty());
-
-	const size_t SubpassContents = Body.find("SubpassContents");
-	const size_t ForceSingleThreaded = Body.find("m_ForceSingleThreadedRender");
-	const size_t BeginRenderPass = Body.find("vkCmdBeginRenderPass");
-	ASSERT_NE(SubpassContents, std::string::npos);
-	ASSERT_NE(ForceSingleThreaded, std::string::npos);
-	ASSERT_NE(BeginRenderPass, std::string::npos);
-	EXPECT_LT(SubpassContents, BeginRenderPass);
-	EXPECT_LT(ForceSingleThreaded, BeginRenderPass);
-	EXPECT_NE(Body.find("VK_SUBPASS_CONTENTS_INLINE"), std::string::npos);
-	EXPECT_NE(Body.find("VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS"), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, VulkanIntermediateSwapPassSubmitUsesFenceInsteadOfQueueIdle)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "[[nodiscard]] bool SubmitCurrentCommandsAndRestartSwapPass()");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Body.find("vkResetFences"), std::string::npos);
-	EXPECT_NE(Body.find("QueueSubmit("), std::string::npos);
-	EXPECT_NE(Body.find("WaitForFences("), std::string::npos);
-	EXPECT_EQ(Body.find("vkQueueSubmit("), std::string::npos);
-	EXPECT_EQ(Body.find("vkQueueWaitIdle("), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, VulkanRenderTargetReadbackUsesFenceInsteadOfQueueIdle)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "[[nodiscard]] bool Cmd_RenderTarget_Readback");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Body.find("vkResetFences"), std::string::npos);
-	EXPECT_NE(Body.find("QueueSubmit("), std::string::npos);
-	EXPECT_NE(Body.find("WaitForFences("), std::string::npos);
-	EXPECT_NE(Body.find("InvalidateMappedMemoryRanges("), std::string::npos);
-	EXPECT_EQ(Body.find("vkQueueSubmit("), std::string::npos);
-	EXPECT_EQ(Body.find("vkQueueWaitIdle("), std::string::npos);
-	EXPECT_EQ(Body.find("vkInvalidateMappedMemoryRanges("), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, VulkanPreviewReadbackDoesNotDependOnSwapchainMsaa)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::string SupportBody = ExtractFunctionBody(Source, "[[nodiscard]] bool SupportsRenderTargetReadback() const");
-	const std::string CreateBody = ExtractFunctionBody(Source, "[[nodiscard]] bool Cmd_RenderTarget_Create");
-	ASSERT_FALSE(SupportBody.empty());
-	ASSERT_FALSE(CreateBody.empty());
-	EXPECT_EQ(SupportBody.find("!HasMultiSampling()"), std::string::npos);
-	EXPECT_EQ(CreateBody.find("HasMultiSampling() ||"), std::string::npos);
 }

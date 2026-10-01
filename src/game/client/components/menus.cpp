@@ -774,6 +774,7 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 	if(!m_SettingsCardRenderOnlyOrderInitialized || m_SettingsCardRenderOnlyOrderSource != g_Config.m_QmGlobalCardOrder)
 	{
 		m_SettingsCardRenderOnlyOrderModel.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries());
+		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
 		m_SettingsCardRenderOnlyOrderSource = g_Config.m_QmGlobalCardOrder;
 		m_SettingsCardRenderOnlyOrderInitialized = true;
 	}
@@ -830,6 +831,13 @@ void CMenus::LoadSettingsCardOrderModel()
 		g_Config.m_QmCardLayoutVersion = Version;
 		return true;
 	};
+	// 归属修复不依赖布局版本，也不能被较早的可选布局迁移阻断。
+	// 写回失败时仍保留可显示的内存布局，下次加载会再次尝试修复。
+	if(qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel) && !PersistCurrentLayout())
+	{
+		m_SettingsCardOrderLoaded = true;
+		return;
+	}
 	if(g_Config.m_QmGlobalCardOrder[0] == '\0' && g_Config.m_QmCardOrderMigrated == 0)
 	{
 		qm_card_order::CModel Candidate;
@@ -2153,6 +2161,7 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 	dbg_assert(vButtonContainers.size() == vButtonTextIds.size(), "vButtonContainers and vButtonTextIds must have the same size");
 	const int N = vButtonContainers.size();
 	const SSettingsRadioRowLayout Layout = ResolveSettingsRadioRowLayout(View, N, Metrics);
+	const float FontSize = ResolveSettingsRadioFontSize(Metrics);
 	CUIRect Label = Layout.m_LabelRect;
 	CUIRect Buttons = Layout.m_ButtonsRect;
 	View.HSplitTop(Layout.m_Height, nullptr, &View);
@@ -2191,7 +2200,7 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), SegmentGroup, aSegmentSlots, SegmentCount, CurrentValid ? CurrentIndex : -1, SettingsCapsuleTabBarStyle());
 		for(int i = 0; i < SegmentCount; ++i)
 		{
-			if(DoButton_MenuTab(&vButtonContainers[i], vLabels[i], vValues[i] == Value, &aSegmentSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+			if(DoButton_MenuTab(&vButtonContainers[i], vLabels[i], vValues[i] == Value, &aSegmentSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, FontSize, true))
 			{
 				Pressed = true;
 				Value = vValues[i];
@@ -2209,7 +2218,7 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 			Corner = IGraphics::CORNER_L;
 		if(i == N - 1)
 			Corner = IGraphics::CORNER_R;
-		if(DoSettingsButton_Menu(Page, Tab, Subtab, &vButtonContainers[i], vButtonTextIds[i], vLabels[i], vValues[i] == Value, &Button, BUTTONFLAG_LEFT, Corner, 5.0f, ButtonColor, 0.0f, Metrics.m_BodySize))
+		if(DoSettingsButton_Menu(Page, Tab, Subtab, &vButtonContainers[i], vButtonTextIds[i], vLabels[i], vValues[i] == Value, &Button, BUTTONFLAG_LEFT, Corner, 5.0f, ButtonColor, 0.0f, FontSize))
 		{
 			Pressed = true;
 			if(!Locked)
@@ -6377,6 +6386,11 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	{
 		g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;
 		m_TClientSettingsTab = 0;
+	}
+	else if(str_comp(pTab, "bind") == 0 || str_comp(pTab, "qmclient-bind") == 0)
+	{
+		g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;
+		m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_BIND;
 	}
 	else if(str_comp(pTab, "tclient-bind-wheel") == 0)
 	{

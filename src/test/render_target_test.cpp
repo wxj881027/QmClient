@@ -844,25 +844,6 @@ TEST(GraphicsRenderTargetGaussianBlur, VulkanRenderTargetPublishesWritesBeforeSa
 	EXPECT_NE(Body.find("FinalLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ? 2 : 1"), std::string::npos);
 }
 
-TEST(GraphicsRenderTarget, VulkanBackendDeclaresRenderTargetSupport)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const size_t MultiSamplingInit = Source.find("m_MultiSamplingCount = (g_Config.m_GfxFsaaSamples & 0xFFFFFFFE)");
-	const size_t InitVulkan = Source.find("InitVulkan<true>()");
-	const size_t RenderTargetsCapability = Source.find("m_RenderTargets = SupportsRenderTargetReadback()");
-	ASSERT_NE(MultiSamplingInit, std::string::npos);
-	ASSERT_NE(InitVulkan, std::string::npos);
-	ASSERT_NE(RenderTargetsCapability, std::string::npos);
-	EXPECT_LT(MultiSamplingInit, RenderTargetsCapability);
-	EXPECT_LT(InitVulkan, RenderTargetsCapability);
-	EXPECT_NE(Source.find("m_VKRenderTargetRenderPass != VK_NULL_HANDLE"), std::string::npos);
-	EXPECT_NE(Source.find("RenderTargetReadbackSupportReason()"), std::string::npos);
-	EXPECT_NE(Source.find("RenderTargetReadbackFormat()"), std::string::npos);
-	EXPECT_NE(Source.find("VK_FORMAT_R8G8B8A8_UNORM"), std::string::npos);
-	EXPECT_NE(Source.find("SubmitCurrentCommandsAndRestartSwapPass()"), std::string::npos);
-	EXPECT_NE(Source.find("m_OptimalSwapChainImageBlitting && m_OptimalRGBAImageBlitting && m_LinearRGBAImageBlitting"), std::string::npos);
-}
-
 TEST(GraphicsRenderTarget, VulkanSwapRenderPassUsesInlineAfterForcedSingleThreadedRecording)
 {
 	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");

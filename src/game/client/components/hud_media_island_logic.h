@@ -498,11 +498,12 @@ struct SHudMediaIslandTimerRowLayout
 inline SHudMediaIslandTimerRowLayout QmHudMediaIslandTimerRows(float BoxY, float BoxH, bool HasSecondaryLine)
 {
 	BoxH = std::max(0.0f, BoxH);
-	if(!HasSecondaryLine)
-		return {BoxY, BoxH, BoxY + BoxH, 0.0f};
-
+	// 主时间固定使用同一行，避免 CP 提示显隐时位置和字号跳变。
 	const float TopMargin = BoxH * 0.10f;
 	const float RaceH = BoxH * 0.60f;
+	if(!HasSecondaryLine)
+		return {BoxY + TopMargin, RaceH, BoxY + BoxH, 0.0f};
+
 	const float SecondaryY = BoxY + BoxH * 0.70f;
 	return {BoxY + TopMargin, RaceH, SecondaryY, BoxH - TopMargin - RaceH};
 }
@@ -1021,9 +1022,8 @@ struct SHudMediaIslandSdfCapsule
 
 constexpr uint64_t QmHudMediaIslandBlurRefreshIntervalFrames = 1;
 
-// 模糊底图只在透明度满 100% 时关闭：0% 也照常准备（"亚克力板"语义）。着色器里
-// Background.a 是整块板的不透明度：模糊底图与背景色先按它混合，再整体按它合成，
-// 所以 0% 时整块板连外圈阴影一起消失，中间取值则是"透过带模糊的板看见后面的画面"。
+// 背景色不透明度低于 100% 时准备模糊底图，0% 时保留纯模糊。
+// 着色器独立合成模糊底图，Background.a 只控制背景染色。
 inline bool QmHudMediaIslandShouldPrepareBackdropBlur(int BackgroundOpacity, bool GaussianBlurEnabled)
 {
 	return GaussianBlurEnabled && BackgroundOpacity < 100;

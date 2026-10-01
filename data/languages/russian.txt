@@ -37,6 +37,9 @@
 %d players
 == %d игроков
 
+%d points
+== %d очков
+
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d выбранных элементов удалено, но %d элементов не удалось удалить. Первый неудачный элемент: «%s».
 
@@ -105,6 +108,9 @@
 
 %s wins!
 == %s побеждает!
+
+%s: %d points
+== %s: %d очков
 
 '%s' called for vote to force-pause '%s' for %s seconds (reason: %s)
 == '%s' инициировал(а) голосование за принудительную паузу '%s' на %s секунд (причина: %s)
@@ -473,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == Добавляйте друзей, введя их имя ниже или нажав на их имя в списке игроков.
 
+Add function
+== Добавить действие
+
 Add Group
 == Добавить группу
 
@@ -793,6 +802,9 @@ Append to log file instead of overwriting
 
 Applied to %d same-family part(s).
 == Применено к %d частям того же семейства.
+
+Applies to single-color and rainbow overrides.
+== Применяется к одноцветному и радужному режимам замены цвета.
 
 Apply
 == Применить
@@ -1424,6 +1436,9 @@ Best
 Better scoreboard
 == Улучшенная таблица лидеров
 
+Bind
+== Привязка
+
 Bind address for client/server
 == Адрес привязки для клиента/сервера
 
@@ -1535,6 +1550,9 @@ Bottom right
 Bounce
 == Отскок
 
+Bound functions
+== Назначенные действия
+
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == Цвет титула в скобках: 0 = как на сервере, 1 = один цвет, 2 = радуга
 
@@ -1579,9 +1597,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == Build the status text shown above Tees
-
-Built-in
-== Встроенный
 
 Button - Disabled
 == Кнопка - Отключена
@@ -1675,6 +1690,9 @@ Cancel your swap request
 
 Candidate files
 == Файлы-кандидаты
+
+Cannot join the target player's team
+== Нельзя вступить в команду выбранного игрока
 
 Cannot swap: the other player is not in your team
 == Невозможно обменяться: другой игрок не в вашей команде
@@ -1793,6 +1811,12 @@ Chat log retention days
 Chat message
 == Сообщение чата
 
+Chat message preview
+== Предпросмотр сообщения
+
+Chat message style
+== Стиль сообщений
+
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == Сообщения в чат при входе в заморозку, через запятую (пусто=нет)
 
@@ -1894,6 +1918,9 @@ Clan Name
 
 Clan name size on nameplate
 == Размер названия клана на табличке
+
+Clan of the player followed from the pie menu
+== Клан игрока, выбранного для следования в круговом меню
 
 Clan plates size
 == Размер табличек клана
@@ -2246,6 +2273,9 @@ Configure HUD island appearance
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
+Configure keyboard, mouse, wheel, and modifier bindings
+== Настройка клавиш, кнопок мыши, колеса и модификаторов
+
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
 
@@ -2465,6 +2495,9 @@ Copy skin
 Copy skin option color
 == Цвет опции копирования скина
 
+Could not add the player as a friend
+== Не удалось добавить игрока в друзья
+
 Could not check for existing player with your name. Check your internet connection.
 == Не удалось проверить существующего игрока с вашим именем. Проверьте подключение к интернету.
 
@@ -2503,6 +2536,9 @@ Could not load touch controls from file. See local console for details.
 
 Could not preview this image
 == Не удалось просмотреть это изображение
+
+Could not query points for %s
+== Не удалось запросить очки игрока %s
 
 Could not read the map file.
 == Не удалось прочитать файл карты.
@@ -2555,6 +2591,9 @@ Crescent
 CRF value for libx264 video encoding (0=best quality, 51=worst)
 == Значение CRF для кодирования видео libx264 (0=лучшее качество, 51=худшее)
 
+Cross-server following stopped
+== Следование между серверами остановлено
+
 Crosshair opacity in free spectate
 == Прозрачность прицела в свободном режиме наблюдения
 
@@ -2594,9 +2633,6 @@ Current: Score
 Current: Time
 == Текущее: Время
 
-Cursed Flame
-== Проклятое пламя
-
 Custom
 == Пользовательский
 
@@ -2617,6 +2653,9 @@ Custom color
 
 Custom colors
 == Пользовательские цвета
+
+Custom command
+== Своя команда
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == URL для загрузки пользовательского списка сообществ (должен быть https, оставьте пустым для отключения)
@@ -3381,6 +3420,9 @@ Dummy clan
 == Клан куклы
 
 Dummy Control
+== Управление дамми
+
+Dummy control
 == Управление дамми
 
 Dummy Control: %s
@@ -4259,8 +4301,8 @@ Fade opacity along trail length
 Fade out
 == Появление
 
-Fade paused spectators in water
-== Делать полупрозрачными зрителей на паузе в воде
+Fade spectators in water
+== Делать полупрозрачными зрителей в воде
 
 Fade trail alpha
 == Затухание альфа-канала следа
@@ -4487,11 +4529,23 @@ Folder Link
 Follow
 == Следовать
 
+Follow option color
+== Цвет следования
+
+Follow server
+== Следовать между серверами
+
 Follow Tee
 == Следовать за Tee
 
 Following
 == Следую
+
+Following %s across servers
+== Следование за %s между серверами
+
+Following: %s
+== Следование за: %s
 
 Font
 == Шрифт
@@ -4678,9 +4732,6 @@ FSAA samples
 
 FSAA samples (may cause lag)
 == Сэмплы FSAA (может вызывать лаги)
-
-FTAPI
-== FTAPI
 
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == Автоперевод FTAPI отключён для предотвращения перегрузки. Включите в настройках при необходимости.
@@ -4909,9 +4960,6 @@ Go forward one tick
 
 Go forward the specified duration
 == Вперёд на указанную длительность
-
-Golden Grace
-== Золотая благодать
 
 Gores
 == Горы
@@ -5207,6 +5255,9 @@ High Detail
 High to low
 == От высокого к низкому
 
+Higher values make the wave move faster. Zero stops the movement.
+== Чем больше значение, тем быстрее движется волна. Ноль останавливает движение.
+
 Highlight Color
 == Цвет выделения
 
@@ -5215,6 +5266,9 @@ Highlight game type
 
 Highlight message text gradient color
 == Цвет градиента текста выделенных сообщений
+
+Highlight movement in Polished mode. Zero turns it off.
+== Движение блика в режиме полировки. Ноль отключает его.
 
 Highlight ping value
 == Выделять значение пинга
@@ -5471,6 +5525,9 @@ Include skin when saving/loading config preset
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Режим автоперевода входящих сообщений (0=только если сообщение не на целевом языке, 1=всегда переводить)
 
+Incoming language
+== Входящий язык
+
 Indicate map finish
 == Отметить пройденную карту
 
@@ -5591,6 +5648,9 @@ Installed
 Installing update. Please wait...
 == Установка обновления. Пожалуйста, подождите...
 
+Instant compact hints
+== Мгновенные компактные подсказки
+
 Instant zoom reverse
 == Мгновенный разворот зума
 
@@ -5642,6 +5702,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == Неверный ID клиента для перемещения в зрители
 
+Invalid command or parameters.
+== Недопустимая команда или параметры.
+
 Invalid Demo
 == Недействительное демо
 
@@ -5681,6 +5744,12 @@ Invite %s to the locked team
 Invite a person to a locked team
 == Пригласить человека в заблокированную команду
 
+Invite team option color
+== Цвет приглашения в команду
+
+Invite to team
+== Пригласить в команду
+
 Invites are disabled
 == Приглашения отключены
 
@@ -5711,6 +5780,9 @@ Jelly strength
 Jitter
 == Джиттер
 
+Join a team before inviting another player
+== Вступите в команду перед приглашением другого игрока
+
 Join a team to enable practice mode, which means you can use /r, but can't earn a rank.
 == Присоединитесь к команде, чтобы включить режим тренировки. Это позволит использовать /r, но не даст получить ранг.
 
@@ -5729,8 +5801,14 @@ Join QQ group
 Join red
 == Присоединиться к красным
 
+Join team
+== Вступить в команду
+
 Join team %s
 == Вступить в команду %s
+
+Join team option color
+== Цвет вступления в команду
 
 Join the team of the specified player
 == Присоединиться к команде указанного игрока
@@ -6014,6 +6092,9 @@ Legacy option: connections that skip TLS verification are rejected
 Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 == Старый адрес WebSocket для канала реального времени (перенесён в qm_websocket_url)
 
+Legacy settings card collapse states migrated
+== Старые состояния сворачивания карточек настроек перенесены
+
 Length
 == Длительность
 
@@ -6032,9 +6113,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == Ярк.
 
-LibreTranslate
-== LibreTranslate
-
 LibreTranslate API Key
 == Ключ API LibreTranslate
 
@@ -6044,11 +6122,14 @@ LibreTranslate endpoint
 Light
 == Лёгкий
 
-Light band (0 = style default)
-== Фаза цвета (0 = по стилю)
+Light band
+== Световая полоса
 
 Limit information in spectator mode
 == Ограничить информацию в режиме наблюдателя
+
+Limit the title to the exact nickname below.
+== Показывать титул только при точном совпадении с указанным ниже ником.
 
 Limiter threshold (percent)
 == Порог лимитера (в процентах)
@@ -6098,6 +6179,9 @@ List foes
 List friends
 == Список друзей
 
+List friends first in the spectator menu
+== Показывать друзей первыми в меню наблюдения
+
 List KCP/legacy transport status and weak-network simulation metrics
 == Список статуса транспорта KCP/легаси и метрик симуляции слабой сети
 
@@ -6118,6 +6202,9 @@ Live director
 
 LLM API
 == LLM API
+
+LLM API key not configured
+== Ключ API LLM не настроен
 
 LLM provider
 == Поставщик LLM
@@ -6305,6 +6392,9 @@ Low to high
 Lyrics
 == Текст песни
 
+Magic: Spirit Script
+== Магия: духовное письмо
+
 Main Asset
 == Основной ресурс
 
@@ -6361,6 +6451,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == Управление очередью ротации скинов
+
+Manga: Ink Slash
+== Манга: чернильный разрез
 
 Manual
 == Вручную
@@ -7256,6 +7349,9 @@ No favorite maps yet
 No filter
 == Без фильтра
 
+No functions bound
+== Действия не назначены
+
 No input device available
 == Нет доступных устройств ввода
 
@@ -7592,9 +7688,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == Открыть селектор колёсика привязок
 
-Open color picker
-== Открыть выбор цвета
-
 Open DDNet Wiki
 == Открыть DDNet Wiki
 
@@ -7691,6 +7784,9 @@ Optimistic prediction along stable direction
 Option color
 == Цвет опции
 
+Optional
+== Необязательно
+
 Optional authentication key for the DNSBL provider
 == Необязательный ключ аутентификации для провайдера DNSBL
 
@@ -7720,6 +7816,9 @@ Others
 
 Others only
 == Только другим
+
+Outgoing language
+== Исходящий язык
 
 Outgoing translation target language code
 == Код целевого языка для исходящего перевода
@@ -7901,9 +8000,6 @@ Pause voice when window unfocused
 Pause/unpause game
 == Поставить/снять игру на паузу
 
-Paused spectator opacity (percent)
-== Непрозрачность зрителя (в процентах)
-
 Penalty in seconds for saving or swapping positions
 == Штраф в секундах за сохранение или обмен позициями
 
@@ -7979,11 +8075,17 @@ Pistol
 Pistol guide line
 == Линия траектории пистолета
 
+Pixel: Layer Shift
+== Пиксели: сдвиг слоёв
+
 Place title on a separate line above the player name instead of inline
 == Разместить титул отдельной строкой над именем игрока, а не в одной строке
 
 Plasma gun shots per second
 == Выстрелов плазменной пушки в секунду
+
+Platinum highlight
+== Платиновый блеск
 
 Play a flip animation while reloading weapons
 == Воспроизводить анимацию переворота при перезарядке оружия
@@ -8138,6 +8240,9 @@ Player stats
 Player stats and info display
 == Отображение статистики и информации об игроке
 
+Player to follow across servers until cancelled; empty disables following
+== Игрок для перехода между серверами до отмены; пустое поле отключает следование
+
 Player: %s
 == Игрок: %s
 
@@ -8218,6 +8323,9 @@ Please wait…
 
 Points
 == Очки
+
+Points unavailable
+== Очки недоступны
 
 Polished
 == Глянец
@@ -8641,6 +8749,12 @@ Query server setting: %s
 
 Query team rank for %s
 == Запросить ранг команды игрока %s
+
+Querying points for %s...
+== Запрос очков игрока %s...
+
+Querying points...
+== Запрос очков...
 
 Queue is empty
 == Очередь пуста
@@ -9365,6 +9479,9 @@ Reset all or one tuning variable to default
 Reset chat on escape
 == Сбрасывать чат при нажатии Escape
 
+Reset colors
+== Сбросить цвета
+
 Reset column widths
 == Сбросить ширину столбцов
 
@@ -9707,6 +9824,9 @@ Save/Load Skin
 Saved Profiles
 == Сохранённые профили
 
+Saved with your title and shared with other QmClient players.
+== Сохраняется вместе с титулом и передаётся другим игрокам QmClient.
+
 Saves file
 == Файл сохранений
 
@@ -9742,6 +9862,9 @@ Score earned
 
 Score limit
 == Лимит очков
+
+Score option color
+== Цвет просмотра очков
 
 Scoreboard
 == Таблица лидеров
@@ -9881,6 +10004,9 @@ SecretKey
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == Список всех доступных команд тренировки: /practicecmdlist. Чаще всего используются /telecursor, /lasttp и /rescue
 
+See you at the next checkpoint.
+== Увидимся на следующей контрольной точке.
+
 Select a saved .map file (client limit: 64 MiB).
 == Выберите сохранённый файл .map (лимит клиента: 64 MiB).
 
@@ -9967,6 +10093,9 @@ Send Rate
 
 Send specified command to rcon
 == Отправить указанную команду в rcon
+
+Send target language
+== Отправить целевой язык
 
 Send translation method
 == Способ отправки перевода
@@ -10157,6 +10286,9 @@ Settings card border color
 Settings card default layout migration version
 == Версия миграции макета карточек настроек по умолчанию
 
+Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
+== Состояния карточек настроек: stableId — свернуто, !stableId — развернуто; разделитель — точка с запятой
+
 Settings card titles use rainbow colors
 == Радужный цвет заголовков карточек настроек
 
@@ -10175,8 +10307,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == Доля разделения имени и карты в браузере серверов для столбца имени (промилле)
 
-Shimmer speed (polished)
-== Скорость блика (глянец)
+Shimmer speed
+== Скорость мерцания
 
 Short server names
 == Короткие названия серверов
@@ -10328,8 +10460,14 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == Показывать координаты над игроками
 
+Show copy skin option
+== Показывать действие копирования скина
+
 Show country flags in nameplates
 == Показывать флаги стран в табличках с именами
+
+Show cross-server follow option
+== Показывать переход за игроком между серверами
 
 Show current Netease lyric in Media Island
 == Показывать текущий текст песни Netease на Media Island
@@ -10391,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == Показывать позицию дамми в HUD информации о движении
 
+Show dummy title locally
+== Показывать титул манекена локально
+
 Show dummy velocity in movement info HUD
 == Показывать скорость дамми в HUD информации о движении
 
@@ -10447,6 +10588,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == Показывать крупное уведомление о входе друга
+
+Show friend option
+== Показывать действие с друзьями
 
 Show friend tag (♥) on nametag
 == Показывать метку друга (♥) на табличке с именем
@@ -10616,6 +10760,9 @@ Show inputs
 Show IP addresses in rcon commands (1 = on, 0 = off)
 == Показывать IP-адреса в командах rcon (1 = вкл, 0 = выкл)
 
+Show join team option
+== Показывать вступление в команду
+
 Show jump hint based on fractional part of position
 == Показывать подсказку прыжка в зависимости от дробной части позиции
 
@@ -10661,6 +10808,9 @@ Show logs of the last i seconds
 Show lyrics inside Dynamic Island
 == Показывать текст песни в Dynamic Island
 
+Show main tee title locally
+== Показывать титул основного ти локально
+
 Show map details
 == Показывать детали карты
 
@@ -10669,6 +10819,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == Показывать маршрут точек прогресса карты
+
+Show mention option
+== Показывать действие упоминания
 
 Show moving tiles in entities
 == Показывать движущиеся плитки в объектах
@@ -10826,6 +10979,9 @@ Show player names in team color
 Show player position
 == Показывать позицию игрока
 
+Show player score option
+== Показывать просмотр очков игрока
+
 Show player speed
 == Показывать скорость игрока
 
@@ -10916,11 +11072,17 @@ Show skin release date and author
 Show song info in top-left corner
 == Показывать информацию о песне в левом верхнем углу
 
+Show spectate option
+== Показывать действие наблюдения
+
 Show spectator cursor
 == Показывать курсор наблюдателя
 
 Show speedometer when changing
 == Показывать спидометр при изменении
+
+Show sponsor chat effects locally
+== Показывать эффекты сообщений спонсоров локально
 
 Show sponsor QR code
 == Показывать QR-код спонсора
@@ -10937,6 +11099,12 @@ Show status bar
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == Показывать силу/слабость в теге с именем (0 = выкл, 1 = иконка, 2 = иконка + число)
 
+Show swap option
+== Показывать действие обмена местами
+
+Show synchronized sponsor chat styles
+== Показывать синхронизированные стили чата спонсоров
+
 Show system media info on HUD
 == Отображать информацию о системном медиаплеере на HUD
 
@@ -10948,6 +11116,9 @@ Show team
 
 Show team group players
 == Показывать игроков группы команды
+
+Show team invite option
+== Показывать приглашение в команду
 
 Show team on HUD Dynamic Island
 == HUD: Динамический остров показывает команду
@@ -11000,6 +11171,9 @@ Show the server rules
 Show tiles layers from BG map
 == Показывать слои тайлов с фоновой карты сущностей
 
+Show title setting hints immediately in small text
+== Сразу показывать подсказки настроек титула мелким шрифтом
+
 Show toast
 == Показать toast
 
@@ -11044,6 +11218,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == Показывать, пройдена ли карта DDNet (имя игрока передается на info.ddnet.org/info)
+
+Show whisper option
+== Показывать действие личного сообщения
 
 Show Workshop Assets
 == Показывать ресурсы Мастерской
@@ -11363,6 +11540,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Путь к помощнику SodaMusic Hook (пусто = рядом с QmClient)
 
+Soft glow
+== Мягкое свечение
+
 Solid
 == Сплошной
 
@@ -11438,9 +11618,6 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Защита от спама: предотвращает спам при смене команды, в чате, смене скина, эмоциях и голосовании
 
-Spatial effect
-== Объёмный эффект
-
 Speaker
 == Динамик
 
@@ -11489,6 +11666,12 @@ Spectated player
 Spectated player and friends
 == Наблюдаемый игрок и друзья
 
+Spectator opacity
+== Непрозрачность зрителя
+
+Spectator opacity (percent)
+== Непрозрачность зрителя (в процентах)
+
 Spectators
 == Наблюдатели
 
@@ -11513,11 +11696,11 @@ Sphere
 Spin pop
 == Вращающееся появление
 
-Spirit Light
-== Свет духа
-
 Split main and dummy into different teams for solo-run sync
 == Распределяет основного и двойника по разным командам для синхронизации соло-забегов
+
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== Черновик стиля чата спонсора: 0=Обычный, 1=Мягкое свечение, 2=Платиновый блеск
 
 Sponsor code
 == Код спонсора
@@ -11642,6 +11825,12 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == Нас держат %d спонсоров. Посмотрите?
 
+Stop following
+== Прекратить следование
+
+Stop following a player across servers
+== Прекратить следование за игроком между серверами
+
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == Остановка ввода клавиш при переключении (0=выкл, 1=дамми, 2=игрок)
 
@@ -11749,9 +11938,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == Меняет активное действие (огонь и крюк) для прямого сенсорного ввода и виртуальных джойстиков.
-
-Switch
-== Переключить
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == Положение обратного отсчета переключателя (0 = следовать за Tee, 1 = динамический остров, 2 = оба)
@@ -12044,8 +12230,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Режим цвета следа Tee (1=Сплошной, 2=Текущий цвет Tee, 3=Радуга, 4=Скорость Tee, 5=Случайный)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Стиль следа Tee (0=Оригинал, 1=Проклятое пламя, 2=Фиолетовая молния, 3=Свет духа, 4=Тень пустоты, 5=Золотая благодать)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Стиль следа Tee (0=Оригинал, 1=Манга, 2=Магия, 3=Пиксели, 4=Старый номер манги, 5=Старый номер магии)
 
 Tee Trails
 == Следы ти
@@ -12137,6 +12323,9 @@ Temporary free camera
 Tencent Cloud
 == Тенсент Клауд
 
+Tencent Cloud API not configured
+== API Tencent Cloud не настроен
+
 Tencent Cloud SecretId
 == Идентификатор секрета Tencent Cloud
 
@@ -12161,6 +12350,9 @@ Text alpha
 Text color
 == Цвет текста
 
+Text effect
+== Эффект текста
+
 Text input focus ring color
 == Цвет кольца фокуса текстового ввода
 
@@ -12175,6 +12367,9 @@ The audio device couldn't be initialised.
 
 The auth level you need to tele others
 == Уровень прав, необходимый для телепортации других игроков
+
+The command is empty, incomplete, or exceeds the local config line limit.
+== Команда пуста, не завершена или превышает предел строки локальной конфигурации.
 
 The downloaded file is not a valid demo
 == Скачанный файл не является допустимым демо
@@ -12278,6 +12473,12 @@ There's an unsaved map in the editor, you might want to save it.
 Thinking mode requires a reasoning model
 == Для режима размышления требуется модель рассуждения
 
+This bind contains an unfinished quote and cannot be edited safely.
+== В привязке есть незакрытая кавычка; безопасное редактирование невозможно.
+
+This bind is already over the local config line limit.
+== Эта привязка превышает предел строки локальной конфигурации.
+
 This connection cannot change names while connected. Reconnect with the saved names first.
 == Это соединение не поддерживает смену имени во время игры. Переподключитесь с сохранёнными именами.
 
@@ -12301,6 +12502,9 @@ This save is no longer in the local save file.
 
 This save-code already exists
 == Такой код сохранения уже существует
+
+This server does not support race teams
+== Этот сервер не поддерживает гоночные команды
 
 This server has an initial chat delay, you will be able to talk in %s seconds.
 == На этом сервере есть начальная задержка чата, вы сможете говорить через %s секунд.
@@ -12440,14 +12644,11 @@ Title bob wavelength in pixels
 Title color
 == Цвет титула
 
-Title color (single color)
-== Цвет титула (однотонный)
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == Скорость блика титула в 1/100 строки в секунду (0 = выкл.)
 
-Title opacity (custom color)
-== Непрозрачность (свой цвет)
+Title opacity
+== Непрозрачность титула
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == Фаза на пиксель для символов титула в 1/1000 px (0 = по умолчанию стиля, 20 = заметная световая полоса)
@@ -12457,6 +12658,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == Предпросмотр титула
+
+Title server does not support chat styles yet
+== Сервер титулов пока не поддерживает стили чата
 
 Title server unavailable; retry
 == Сервер титулов недоступен; повторите попытку
@@ -12776,6 +12980,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == Включите «Message merging» в разделе «Dream Features».
 
+Turning this off only changes your display.
+== Отключение влияет только на отображение у вас.
+
 Tutorial
 == Обучение
 
@@ -12973,6 +13180,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == Неизвестный параметр. Допустимые значения: default, gametimer, broadcast, both, none
+
+Unknown sponsor chat style
+== Неизвестный стиль чата спонсора
 
 Unknown status
 == Неизвестный статус
@@ -13274,6 +13484,9 @@ Version
 Version performing the analysis
 == Версия, выполняющая анализ
 
+Vertical movement of each character. Zero keeps the title still.
+== Движение каждого символа вверх и вниз. Ноль отключает движение титула.
+
 Vertical position
 == Вертикальное положение
 
@@ -13304,6 +13517,9 @@ View latest updates
 View margin
 == Поле обзора
 
+View points
+== Посмотреть очки
+
 View replay
 == Смотреть реплей
 
@@ -13318,9 +13534,6 @@ View the developers, contributors, and project links
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
-
-Violet Bolt
-== Фиолетовая молния
 
 Virtual joystick which always uses fire.
 == Виртуальный джойстик, который всегда использует огонь.
@@ -13432,9 +13645,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == Белый список голосового чата (через запятую)
-
-Void Shadow
-== Тень пустоты
 
 Volume
 == Громкость
@@ -13556,11 +13766,11 @@ Watermark
 Wave amount
 == Амплитуда волны
 
-Wave speed (0.01 rad/s)
-== Скорость волны (0,01 рад/с)
+Wave spacing
+== Расстояние между волнами
 
-Wave wavelength
-== Длина волны
+Wave speed
+== Скорость волн
 
 Weak hook
 == Слабый крюк
@@ -13840,6 +14050,9 @@ You and other player need to have started the map
 
 You and the other player must not be paused.
 == Вы и другой игрок не должны быть на паузе.
+
+You are already in the same team
+== Вы уже в одной команде
 
 You are already on the latest version
 == У вас уже установлена последняя версия
@@ -14150,6 +14363,9 @@ Zen Mode
 Zen mode key
 == Клавиша режима Дзен
 
+Zero uses the style default. Higher values make color bands narrower.
+== Ноль использует значение стиля по умолчанию. Чем больше значение, тем уже цветовые полосы.
+
 Zhipu AI
 == Zhipu AI
 
@@ -14191,12 +14407,6 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI — это бесплатный сервис. Чрезмерное использование может привести к приостановке обслуживания.
-
-⚠️ LLM API Key not configured
-== ⚠️ Ключ LLM API не настроен
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ API Tencent Cloud не настроен
 
 [Assets editor blend mode]
 Color
@@ -14281,6 +14491,10 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == Недоступно для этого игрока
+
+[Bind keyboard key]
+Menu
+== Клавиша меню
 
 [Config help]
 %s (default: "%s", max length: %d)

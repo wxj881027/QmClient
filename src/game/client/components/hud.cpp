@@ -194,12 +194,6 @@ namespace
 		return Result;
 	}
 
-	uint64_t HudTextInfoNodeKey(const char *pScope)
-	{
-		static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_text_info_v2"));
-		return (s_BaseKey << 32) | static_cast<uint64_t>(str_quickhash(pScope));
-	}
-
 	uint64_t HudLocalTimeNodeKey(const char *pScope)
 	{
 		static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("hud_local_time_v2"));
@@ -1017,7 +1011,7 @@ CHud::CHud()
 	m_DDRaceEffectsTextContainerIndex.Reset();
 	m_PlayerAngleTextContainerIndex.Reset();
 	m_PlayerPrevAngle = -INFINITY;
-	m_TextInfoV2AnimState.Reset();
+	m_TextInfoDiagnostics.Reset();
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
@@ -1108,7 +1102,7 @@ void CHud::ResetHudContainers()
 		m_aPlayerPrevPosition[i] = -INFINITY;
 	}
 
-	m_TextInfoV2AnimState.Reset();
+	m_TextInfoDiagnostics.Reset();
 	m_LocalTimeV2AnimState.Reset();
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
@@ -2274,71 +2268,35 @@ void CHud::RenderTextInfo()
 		Showfps = 0;
 #endif
 	const bool Showpred = g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK;
-	const bool UseV2TextInfoLayout = true;
-	CUiV2AnimationRuntime *pAnimRuntime = nullptr;
-	if(UseV2TextInfoLayout)
-		pAnimRuntime = &GameClient()->UiRuntimeV2()->AnimRuntime();
+	const bool ShowLoss = g_Config.m_ClShowPacketLoss && Client()->State() != IClient::STATE_DEMOPLAYBACK;
 
 	float MiniX = 0.0f;
 	float MiniY = 0.0f;
 	float MiniW = 0.0f;
 	float MiniH = 0.0f;
 	const bool HasMiniMap = GetDummyMiniMapRect(MiniX, MiniY, MiniW, MiniH);
-	SHudTextInfoV2AnimState &AnimState = m_TextInfoV2AnimState;
-	if(!UseV2TextInfoLayout)
-	{
-		AnimState.m_FpsPositionInitialized = false;
-		AnimState.m_PredPositionInitialized = false;
-		AnimState.m_LossPositionInitialized = false;
-		AnimState.m_AlphaInitialized = false;
-	}
-
-	const uint64_t FpsNode = HudTextInfoNodeKey("fps");
-	const uint64_t PredNode = HudTextInfoNodeKey("pred");
-	const uint64_t LossNode = HudTextInfoNodeKey("loss");
-	const bool ShowLoss = g_Config.m_ClShowPacketLoss && Client()->State() != IClient::STATE_DEMOPLAYBACK;
-	if(UseV2TextInfoLayout && pAnimRuntime != nullptr && !AnimState.m_AlphaInitialized)
-	{
-		AnimState.m_FpsTargetAlpha = Showfps ? 1.0f : 0.0f;
-		AnimState.m_PredTargetAlpha = Showpred ? 1.0f : 0.0f;
-		AnimState.m_LossTargetAlpha = ShowLoss ? 1.0f : 0.0f;
-		SetUiPresentationStateValue(*pAnimRuntime, FpsNode, EUiAnimProperty::ALPHA, AnimState.m_FpsTargetAlpha);
-		SetUiPresentationStateValue(*pAnimRuntime, PredNode, EUiAnimProperty::ALPHA, AnimState.m_PredTargetAlpha);
-		SetUiPresentationStateValue(*pAnimRuntime, LossNode, EUiAnimProperty::ALPHA, AnimState.m_LossTargetAlpha);
-		AnimState.m_AlphaInitialized = true;
-	}
 
 	char aFpsBuf[16] = {0};
 	char aPredBuf[64] = {0};
 	char aLossBuf[16] = {0};
-	constexpr float TextInfoFontSize = 10.0f;
+	constexpr float TextInfoFontSize = ui_token::hud::font::BODY;
+	float FpsTextWidth = 0.0f;
 	float FpsWidth = 0.0f;
 	float PredWidth = 0.0f;
 	float LossWidth = 0.0f;
-	int DigitIndex = 0;
 	if(Showfps)
 	{
 		const int FramesPerSecond = round_to_int(1.0f / Client()->FrameTimeAverage());
 		str_format(aFpsBuf, sizeof(aFpsBuf), "%d", FramesPerSecond);
 
-		static float s_TextWidth0 = TextRender()->TextWidth(TextInfoFontSize, "0", -1, -1.0f);
-		static float s_TextWidth00 = TextRender()->TextWidth(TextInfoFontSize, "00", -1, -1.0f);
-		static float s_TextWidth000 = TextRender()->TextWidth(TextInfoFontSize, "000", -1, -1.0f);
-		static float s_TextWidth0000 = TextRender()->TextWidth(TextInfoFontSize, "0000", -1, -1.0f);
-		static float s_TextWidth00000 = TextRender()->TextWidth(TextInfoFontSize, "00000", -1, -1.0f);
-		static const float s_aTextWidth[5] = {s_TextWidth0, s_TextWidth00, s_TextWidth000, s_TextWidth0000, s_TextWidth00000};
-
-		DigitIndex = GetDigitsIndex(FramesPerSecond, 4);
-		FpsWidth = s_aTextWidth[DigitIndex];
-		str_copy(AnimState.m_aLastFpsText, aFpsBuf);
-		AnimState.m_LastFpsWidth = FpsWidth;
+		// 预留四位数的宽度，实际数字直接右对齐，位数变化不移动 HUD 锚点。
+		FpsTextWidth = TextRender()->TextWidth(TextInfoFontSize, aFpsBuf);
+		FpsWidth = maximum(FpsTextWidth, TextRender()->TextWidth(TextInfoFontSize, "0000"));
 	}
 	if(Showpred)
 	{
 		str_format(aPredBuf, sizeof(aPredBuf), "%d", Client()->GetPredictionTime());
 		PredWidth = TextRender()->TextWidth(TextInfoFontSize, aPredBuf, -1, -1.0f);
-		str_copy(AnimState.m_aLastPredText, aPredBuf);
-		AnimState.m_LastPredWidth = PredWidth;
 	}
 	const float PacketLoss = Client()->PacketLoss();
 	const ColorRGBA PredictionMarginColor = GetPredictionMarginColor(Client()->PredictionMarginState());
@@ -2346,84 +2304,12 @@ void CHud::RenderTextInfo()
 	{
 		str_format(aLossBuf, sizeof(aLossBuf), "%.1f%%", PacketLoss);
 		LossWidth = TextRender()->TextWidth(TextInfoFontSize, aLossBuf, -1, -1.0f);
-		str_copy(AnimState.m_aLastLossText, aLossBuf);
-		AnimState.m_LastLossWidth = LossWidth;
 	}
 
-	float FpsAlpha = Showfps ? 1.0f : 0.0f;
-	float PredAlpha = Showpred ? 1.0f : 0.0f;
-	float LossAlpha = ShowLoss ? 1.0f : 0.0f;
-	if(UseV2TextInfoLayout && pAnimRuntime != nullptr)
-	{
-		FpsAlpha = ResolveAnimatedLayoutValue(*pAnimRuntime, FpsNode, EUiAnimProperty::ALPHA, Showfps ? 1.0f : 0.0f, AnimState.m_FpsTargetAlpha);
-		PredAlpha = ResolveAnimatedLayoutValue(*pAnimRuntime, PredNode, EUiAnimProperty::ALPHA, Showpred ? 1.0f : 0.0f, AnimState.m_PredTargetAlpha);
-		LossAlpha = ResolveAnimatedLayoutValue(*pAnimRuntime, LossNode, EUiAnimProperty::ALPHA, ShowLoss ? 1.0f : 0.0f, AnimState.m_LossTargetAlpha);
-	}
-
-	const bool RenderFps = Showfps || (UseV2TextInfoLayout && FpsAlpha > 0.01f && AnimState.m_aLastFpsText[0] != '\0');
-	const bool RenderPred = Showpred || (UseV2TextInfoLayout && PredAlpha > 0.01f && AnimState.m_aLastPredText[0] != '\0');
-	const bool RenderLoss = ShowLoss || (UseV2TextInfoLayout && LossAlpha > 0.01f && AnimState.m_aLastLossText[0] != '\0');
-	const float DisplayFpsWidth = Showfps ? FpsWidth : (RenderFps ? AnimState.m_LastFpsWidth : 0.0f);
-	const float DisplayPredWidth = Showpred ? PredWidth : (RenderPred ? AnimState.m_LastPredWidth : 0.0f);
-	const float DisplayLossWidth = ShowLoss ? LossWidth : (RenderLoss ? AnimState.m_LastLossWidth : 0.0f);
-	const char *pFpsText = Showfps ? aFpsBuf : AnimState.m_aLastFpsText;
-	const char *pPredText = Showpred ? aPredBuf : AnimState.m_aLastPredText;
-	const char *pLossText = ShowLoss ? aLossBuf : AnimState.m_aLastLossText;
-	const bool UseMiniLayout = HasMiniMap && (RenderFps || RenderPred || RenderLoss);
-
-	SHudTextInfoLayout V2Layout;
-	if(UseV2TextInfoLayout)
-	{
-		V2Layout = ComputeHudTextInfoLayoutV2(RenderFps, RenderPred, RenderLoss, UseMiniLayout, m_Width, MiniX, MiniY, MiniW, MiniH, DisplayFpsWidth, DisplayPredWidth, DisplayLossWidth, m_vTextInfoLayoutChildrenScratch);
-	}
-
-	if(UseV2TextInfoLayout && pAnimRuntime != nullptr)
-	{
-		if(RenderFps && !AnimState.m_FpsPositionInitialized)
-		{
-			AnimState.m_FpsTargetX = V2Layout.m_FpsX;
-			AnimState.m_FpsTargetY = V2Layout.m_FpsY;
-			SetUiPresentationStateValue(*pAnimRuntime, FpsNode, EUiAnimProperty::POS_X, AnimState.m_FpsTargetX);
-			SetUiPresentationStateValue(*pAnimRuntime, FpsNode, EUiAnimProperty::POS_Y, AnimState.m_FpsTargetY);
-			AnimState.m_FpsPositionInitialized = true;
-		}
-		if(RenderPred && !AnimState.m_PredPositionInitialized)
-		{
-			AnimState.m_PredTargetX = V2Layout.m_PredX;
-			AnimState.m_PredTargetY = V2Layout.m_PredY;
-			SetUiPresentationStateValue(*pAnimRuntime, PredNode, EUiAnimProperty::POS_X, AnimState.m_PredTargetX);
-			SetUiPresentationStateValue(*pAnimRuntime, PredNode, EUiAnimProperty::POS_Y, AnimState.m_PredTargetY);
-			AnimState.m_PredPositionInitialized = true;
-		}
-		if(RenderLoss && !AnimState.m_LossPositionInitialized)
-		{
-			AnimState.m_LossTargetX = V2Layout.m_LossX;
-			AnimState.m_LossTargetY = V2Layout.m_LossY;
-			SetUiPresentationStateValue(*pAnimRuntime, LossNode, EUiAnimProperty::POS_X, AnimState.m_LossTargetX);
-			SetUiPresentationStateValue(*pAnimRuntime, LossNode, EUiAnimProperty::POS_Y, AnimState.m_LossTargetY);
-			AnimState.m_LossPositionInitialized = true;
-		}
-	}
-
-	float StartX = 0.0f;
-	float TextY = 5.0f;
-	float Gap = 0.0f;
-	if(UseMiniLayout && !UseV2TextInfoLayout)
-	{
-		const int TextInfoCount = (RenderFps ? 1 : 0) + (RenderPred ? 1 : 0) + (RenderLoss ? 1 : 0);
-		Gap = TextInfoCount > 1 ? 6.0f : 0.0f;
-		const float TotalWidth = DisplayFpsWidth + DisplayPredWidth + DisplayLossWidth + Gap * maximum(0, TextInfoCount - 1);
-		StartX = MiniX + MiniW - TotalWidth;
-		TextY = MiniY + MiniH + 4.0f;
-	}
+	const SHudTextInfoLayout Layout = ComputeHudTextInfoLayoutV2(Showfps, Showpred, ShowLoss, HasMiniMap, m_Width, MiniX, MiniY, MiniW, MiniH, FpsWidth, PredWidth, LossWidth, m_vTextInfoLayoutChildrenScratch);
+	const float FpsX = Layout.m_FpsX + FpsWidth - FpsTextWidth;
 	CHudEditor::STransformScope TextInfoScope;
-	float FpsX = m_Width - 10.0f - DisplayFpsWidth;
-	float FpsY = 5.0f;
-	float PredX = m_Width - 10.0f - DisplayPredWidth;
-	float PredY = RenderFps ? 18.0f : 5.0f;
-	float LossX = m_Width - 10.0f - DisplayLossWidth;
-	float LossY = RenderPred ? PredY + 13.0f : (RenderFps ? 18.0f : 5.0f);
-	if(RenderFps || RenderPred || RenderLoss)
+	if(Showfps || Showpred || ShowLoss)
 	{
 		bool BoundsInitialized = false;
 		float BoundsX = 0.0f;
@@ -2450,169 +2336,50 @@ void CHud::RenderTextInfo()
 			BoundsH = Bottom - BoundsY;
 		};
 
-		float FpsRectX = m_Width - 10.0f - DisplayFpsWidth;
-		float FpsRectY = 5.0f;
-		if(UseV2TextInfoLayout)
-		{
-			FpsRectX = V2Layout.m_FpsX;
-			FpsRectY = V2Layout.m_FpsY;
-		}
-		else if(UseMiniLayout)
-		{
-			FpsRectX = StartX;
-			FpsRectY = TextY;
-		}
-
-		float PredRectX = m_Width - 10.0f - DisplayPredWidth;
-		float PredRectY = RenderFps ? 18.0f : 5.0f;
-		if(UseV2TextInfoLayout)
-		{
-			PredRectX = V2Layout.m_PredX;
-			PredRectY = V2Layout.m_PredY;
-		}
-		else if(UseMiniLayout)
-		{
-			PredRectX = StartX + (RenderFps ? (DisplayFpsWidth + Gap) : 0.0f);
-			PredRectY = TextY;
-		}
-
-		float LossRectX = m_Width - 10.0f - DisplayLossWidth;
-		float LossRectY = RenderPred ? PredRectY + 13.0f : (RenderFps ? 18.0f : 5.0f);
-		if(UseV2TextInfoLayout)
-		{
-			LossRectX = V2Layout.m_LossX;
-			LossRectY = V2Layout.m_LossY;
-		}
-		else if(UseMiniLayout)
-		{
-			LossRectX = StartX + (RenderFps ? (DisplayFpsWidth + Gap) : 0.0f) + (RenderPred ? (DisplayPredWidth + Gap) : 0.0f);
-			LossRectY = TextY;
-		}
-
-		if(RenderFps)
-			ExtendBounds(FpsRectX, FpsRectY, DisplayFpsWidth, TextInfoFontSize);
-		if(RenderPred)
-			ExtendBounds(PredRectX, PredRectY, DisplayPredWidth, TextInfoFontSize);
-		if(RenderLoss)
-			ExtendBounds(LossRectX, LossRectY, DisplayLossWidth, TextInfoFontSize);
+		if(Showfps)
+			ExtendBounds(Layout.m_FpsX, Layout.m_FpsY, FpsWidth, TextInfoFontSize);
+		if(Showpred)
+			ExtendBounds(Layout.m_PredX, Layout.m_PredY, PredWidth, TextInfoFontSize);
+		if(ShowLoss)
+			ExtendBounds(Layout.m_LossX, Layout.m_LossY, LossWidth, TextInfoFontSize);
 		if(BoundsInitialized)
 			TextInfoScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::TextInfo, {BoundsX - 2.0f, BoundsY - 2.0f, BoundsW + 4.0f, BoundsH + 4.0f});
 	}
 
-	if(RenderFps)
+	if(Showfps)
 	{
 		CTextCursor Cursor;
-		if(UseV2TextInfoLayout)
-		{
-			if(pAnimRuntime != nullptr)
-			{
-				FpsX = ResolveAnimatedLayoutValue(*pAnimRuntime, FpsNode, EUiAnimProperty::POS_X, V2Layout.m_FpsX, AnimState.m_FpsTargetX);
-				FpsY = ResolveAnimatedLayoutValue(*pAnimRuntime, FpsNode, EUiAnimProperty::POS_Y, V2Layout.m_FpsY, AnimState.m_FpsTargetY);
-			}
-			else
-			{
-				FpsX = V2Layout.m_FpsX;
-				FpsY = V2Layout.m_FpsY;
-			}
-		}
-		else if(UseMiniLayout)
-		{
-			FpsX = StartX;
-			FpsY = TextY;
-		}
-		Cursor.SetPosition(vec2(FpsX, FpsY));
+		Cursor.SetPosition(vec2(FpsX, Layout.m_FpsY));
 		Cursor.m_FontSize = TextInfoFontSize;
 		auto OldFlags = TextRender()->GetRenderFlags();
 		TextRender()->SetRenderFlags(OldFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
 		if(m_FPSTextContainerIndex.Valid())
-			TextRender()->RecreateTextContainerSoft(m_FPSTextContainerIndex, &Cursor, pFpsText);
+			TextRender()->RecreateTextContainerSoft(m_FPSTextContainerIndex, &Cursor, aFpsBuf);
 		else
-			TextRender()->CreateTextContainer(m_FPSTextContainerIndex, &Cursor, pFpsText);
+			TextRender()->CreateTextContainer(m_FPSTextContainerIndex, &Cursor, aFpsBuf);
 		TextRender()->SetRenderFlags(OldFlags);
 		if(m_FPSTextContainerIndex.Valid())
 		{
-			ColorRGBA TextColor = TextRender()->DefaultTextColor();
-			ColorRGBA TextOutlineColor = TextRender()->DefaultTextOutlineColor();
-			if(UseV2TextInfoLayout)
-			{
-				TextColor.a *= FpsAlpha;
-				TextOutlineColor.a *= FpsAlpha;
-			}
-			TextRender()->RenderTextContainer(m_FPSTextContainerIndex, TextColor, TextOutlineColor);
+			TextRender()->RenderTextContainer(m_FPSTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor());
 		}
 	}
-	if(RenderPred)
+	if(Showpred)
 	{
-		if(UseV2TextInfoLayout)
-		{
-			if(pAnimRuntime != nullptr)
-			{
-				PredX = ResolveAnimatedLayoutValue(*pAnimRuntime, PredNode, EUiAnimProperty::POS_X, V2Layout.m_PredX, AnimState.m_PredTargetX);
-				PredY = ResolveAnimatedLayoutValue(*pAnimRuntime, PredNode, EUiAnimProperty::POS_Y, V2Layout.m_PredY, AnimState.m_PredTargetY);
-			}
-			else
-			{
-				PredX = V2Layout.m_PredX;
-				PredY = V2Layout.m_PredY;
-			}
-		}
-		else if(UseMiniLayout)
-		{
-			PredX = StartX + (RenderFps ? (DisplayFpsWidth + Gap) : 0.0f);
-			PredY = TextY;
-		}
-		if(UseV2TextInfoLayout)
-		{
-			ColorRGBA OldColor = TextRender()->GetTextColor();
-			ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
-			ColorRGBA PredTextColor = PredictionMarginColor;
-			ColorRGBA PredOutlineColor = TextRender()->DefaultTextOutlineColor();
-			PredTextColor.a *= PredAlpha;
-			PredOutlineColor.a *= PredAlpha;
-			TextRender()->TextColor(PredTextColor);
-			TextRender()->TextOutlineColor(PredOutlineColor);
-			TextRender()->Text(PredX, PredY, TextInfoFontSize, pPredText, -1.0f);
-			TextRender()->TextColor(OldColor);
-			TextRender()->TextOutlineColor(OldOutlineColor);
-		}
-		else
-		{
-			const ColorRGBA OldColor = TextRender()->GetTextColor();
-			TextRender()->TextColor(PredictionMarginColor);
-			TextRender()->Text(PredX, PredY, TextInfoFontSize, pPredText, -1.0f);
-			TextRender()->TextColor(OldColor);
-		}
+		const ColorRGBA OldColor = TextRender()->GetTextColor();
+		const ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
+		TextRender()->TextColor(PredictionMarginColor);
+		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+		TextRender()->Text(Layout.m_PredX, Layout.m_PredY, TextInfoFontSize, aPredBuf, -1.0f);
+		TextRender()->TextColor(OldColor);
+		TextRender()->TextOutlineColor(OldOutlineColor);
 	}
-	if(RenderLoss)
+	if(ShowLoss)
 	{
-		if(UseV2TextInfoLayout)
-		{
-			if(pAnimRuntime != nullptr)
-			{
-				LossX = ResolveAnimatedLayoutValue(*pAnimRuntime, LossNode, EUiAnimProperty::POS_X, V2Layout.m_LossX, AnimState.m_LossTargetX);
-				LossY = ResolveAnimatedLayoutValue(*pAnimRuntime, LossNode, EUiAnimProperty::POS_Y, V2Layout.m_LossY, AnimState.m_LossTargetY);
-			}
-			else
-			{
-				LossX = V2Layout.m_LossX;
-				LossY = V2Layout.m_LossY;
-			}
-		}
-		else if(UseMiniLayout)
-		{
-			LossX = StartX + (RenderFps ? (DisplayFpsWidth + Gap) : 0.0f) + (RenderPred ? (DisplayPredWidth + Gap) : 0.0f);
-			LossY = TextY;
-		}
-
-		ColorRGBA OldColor = TextRender()->GetTextColor();
-		ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
-		ColorRGBA LossTextColor = GetPredictionNetworkColor(PacketLoss, Client()->ConnectionProblems());
-		ColorRGBA LossOutlineColor = TextRender()->DefaultTextOutlineColor();
-		LossTextColor.a *= LossAlpha;
-		LossOutlineColor.a *= LossAlpha;
-		TextRender()->TextColor(LossTextColor);
-		TextRender()->TextOutlineColor(LossOutlineColor);
-		TextRender()->Text(LossX, LossY, TextInfoFontSize, pLossText, -1.0f);
+		const ColorRGBA OldColor = TextRender()->GetTextColor();
+		const ColorRGBA OldOutlineColor = TextRender()->GetTextOutlineColor();
+		TextRender()->TextColor(GetPredictionNetworkColor(PacketLoss, Client()->ConnectionProblems()));
+		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+		TextRender()->Text(Layout.m_LossX, Layout.m_LossY, TextInfoFontSize, aLossBuf, -1.0f);
 		TextRender()->TextColor(OldColor);
 		TextRender()->TextOutlineColor(OldOutlineColor);
 	}
@@ -2646,12 +2413,15 @@ void CHud::RenderTextInfo()
 			QmMacosGraphicsDiagnosticsLogPayload("perf/autodiag_hud", aPayload, Client());
 			LastSignature = Signature;
 		};
-		LogTextInfo("fps", AnimState.m_DiagnosticFpsSignature, Showfps, RenderFps, Showfps ? 1.0f : 0.0f, FpsAlpha,
-			V2Layout.m_FpsX, V2Layout.m_FpsY, FpsX, FpsY, m_FPSTextContainerIndex.m_Index, m_FPSTextContainerIndex.Valid(), pFpsText);
-		LogTextInfo("pred", AnimState.m_DiagnosticPredSignature, Showpred, RenderPred, Showpred ? 1.0f : 0.0f, PredAlpha,
-			V2Layout.m_PredX, V2Layout.m_PredY, PredX, PredY, -1, false, pPredText);
-		LogTextInfo("loss", AnimState.m_DiagnosticLossSignature, ShowLoss, RenderLoss, ShowLoss ? 1.0f : 0.0f, LossAlpha,
-			V2Layout.m_LossX, V2Layout.m_LossY, LossX, LossY, -1, false, pLossText);
+		const float FpsAlpha = Showfps ? 1.0f : 0.0f;
+		const float PredAlpha = Showpred ? 1.0f : 0.0f;
+		const float LossAlpha = ShowLoss ? 1.0f : 0.0f;
+		LogTextInfo("fps", m_TextInfoDiagnostics.m_DiagnosticFpsSignature, Showfps, Showfps, FpsAlpha, FpsAlpha,
+			FpsX, Layout.m_FpsY, FpsX, Layout.m_FpsY, m_FPSTextContainerIndex.m_Index, m_FPSTextContainerIndex.Valid(), aFpsBuf);
+		LogTextInfo("pred", m_TextInfoDiagnostics.m_DiagnosticPredSignature, Showpred, Showpred, PredAlpha, PredAlpha,
+			Layout.m_PredX, Layout.m_PredY, Layout.m_PredX, Layout.m_PredY, -1, false, aPredBuf);
+		LogTextInfo("loss", m_TextInfoDiagnostics.m_DiagnosticLossSignature, ShowLoss, ShowLoss, LossAlpha, LossAlpha,
+			Layout.m_LossX, Layout.m_LossY, Layout.m_LossX, Layout.m_LossY, -1, false, aLossBuf);
 	}
 
 	GameClient()->m_HudEditor.EndTransform(TextInfoScope);
@@ -3730,6 +3500,7 @@ void CHud::RenderAmmoHealthAndArmor(const CNetObj_Character *pCharacter)
 	if(!pCharacter)
 		return;
 
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	bool IsSixupGameSkin = GameClient()->m_GameSkin.IsSixup();
 	int QuadOffsetSixup = (IsSixupGameSkin ? 10 : 0);
 
@@ -4981,7 +4752,7 @@ void CHud::RenderMediaIsland()
 	const float TimerRaceFontSize = std::min(TimerCapsule.m_FontSize, TimerRows.m_RaceH);
 	const float TimerRaceTextWidth = TextRender()->TextWidth(TimerRaceFontSize, TimerCapsule.m_aText);
 	const float TimerTextX = TimerBoxX + std::max(0.0f, (TimerCapsule.m_BoxW - TimerRaceTextWidth) * 0.5f);
-	const float TimerRaceTextY = ShowTimerSecondaryLine ? TimerRows.m_RaceY + (TimerRows.m_RaceH - TimerRaceFontSize) * 0.5f : TimerCapsule.m_TextY;
+	const float TimerRaceTextY = TimerRows.m_RaceY + (TimerRows.m_RaceH - TimerRaceFontSize) * 0.5f;
 	const float CheckpointFontSize = std::min(TimerCapsule.m_FontSize * 0.40f, TimerRows.m_CheckpointH);
 	const float CheckpointTextY = TimerRows.m_CheckpointY + (TimerRows.m_CheckpointH - CheckpointFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);
 	ColorRGBA IslandBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandBgColor));
@@ -6051,6 +5822,7 @@ void CHud::RenderDummyActions()
 	}
 	Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudDummyCopy);
 	Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_DummyCopyOffset, x, y);
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
@@ -6520,8 +6292,7 @@ void CHud::RenderMovementInformation()
 	m_MovementInfoBoxH = BoxHeight;
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MovementInfo, {StartX, StartY, BoxWidth, BoxHeight});
 
-	Ui()->RenderGaussianBlur({StartX, StartY, BoxWidth, BoxHeight}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
-	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), HudEditorScope.m_Corners, 5.0f);
 
 	const bool HasMovementContent = ShowMovementInfo && MovementBoxHeight > 0.0f;
 	if(HasMovementContent)
@@ -6928,7 +6699,7 @@ void CHud::RenderSpectatorHud()
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SpectatorHud, {m_Width - 180.0f, BoundsTop, 180.0f, BoundsBottom - BoundsTop});
 
 	// draw the box
-	Graphics()->DrawRect(m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f, ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	Ui()->RenderGaussianBlur({m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 
 	// draw the text
 	char aBuf[128];
@@ -7736,29 +7507,31 @@ void CHud::RenderGoresDrownBoard()
 	const bool HasMoreRows = (int)vEntries.size() > RowCount;
 	const bool ShowTee = g_Config.m_QmGoresDrownBoardShowTee != 0;
 	const char *pTitle = Localize("Drown deaths");
-	constexpr float TitleFontSize = 10.0f;
-	constexpr float RowFontSize = 9.0f;
-	constexpr float MoreFontSize = 8.0f;
-	constexpr float PaddingX = 7.0f;
-	constexpr float PaddingY = 6.0f;
-	constexpr float TitleHeight = 12.0f;
-	constexpr float RowHeight = 11.0f;
-	constexpr float MoreHeight = 10.0f;
-	constexpr float TeeSize = 10.0f;
-	constexpr float TeeGap = 3.0f;
+	constexpr float TitleFontSize = ui_token::hud::font::BODY;
+	constexpr float RowFontSize = ui_token::hud::font::CAPTION;
+	constexpr float MoreFontSize = ui_token::hud::font::CAPTION;
+	constexpr float PaddingX = 5.0f;
+	constexpr float PaddingY = 4.0f;
+	constexpr float TitleHeight = TitleFontSize + 2.0f;
+	constexpr float RowHeight = RowFontSize + 3.0f;
+	constexpr float MoreHeight = MoreFontSize + 2.0f;
+	constexpr float TeeSize = 8.0f;
+	constexpr float TeeGap = 2.0f;
+	constexpr float CountGap = 4.0f;
+	const float TeeColumnWidth = ShowTee ? TeeSize + TeeGap : 0.0f;
 
 	float BoardWidth = TextRender()->TextWidth(TitleFontSize, pTitle);
 	for(int Index = 0; Index < RowCount; ++Index)
 	{
-		char aLine[128];
+		char aCount[16];
 		const char *pName = vEntries[Index].m_ClientId >= 0 ? GameClient()->m_aClients[vEntries[Index].m_ClientId].m_aName : Localize("Teammate");
-		str_format(aLine, sizeof(aLine), "%s: %d", pName, vEntries[Index].m_Count);
-		BoardWidth = maximum(BoardWidth, TextRender()->TextWidth(RowFontSize, aLine) + (ShowTee ? TeeSize + TeeGap : 0.0f));
+		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
+		BoardWidth = maximum(BoardWidth, TeeColumnWidth + TextRender()->TextWidth(RowFontSize, pName) + CountGap + TextRender()->TextWidth(RowFontSize, aCount));
 	}
 	if(HasMoreRows)
 		BoardWidth = maximum(BoardWidth, TextRender()->TextWidth(MoreFontSize, Localize("More teammates...")));
 
-	BoardWidth = maximum(BoardWidth + PaddingX * 2.0f, 72.0f);
+	BoardWidth = maximum(BoardWidth + PaddingX * 2.0f, 64.0f) + 2.0f;
 	const float BoardHeight = PaddingY * 2.0f + TitleHeight + RowCount * RowHeight + (HasMoreRows ? MoreHeight : 0.0f);
 	const float CenterX = 150.0f * Graphics()->ScreenAspect();
 	const float BoardX = std::clamp(CenterX - BoardWidth / 2.0f, 0.0f, maximum(0.0f, m_Width - BoardWidth));
@@ -7781,31 +7554,56 @@ void CHud::RenderGoresDrownBoard()
 	TextRender()->TextOutlineColor(BoardOutlineColor);
 
 	const float ContentCenterX = BoardX + BoardWidth / 2.0f;
+	const float RowLeft = BoardX + PaddingX;
+	const float RowRight = BoardX + BoardWidth - PaddingX;
 	TextRender()->Text(ContentCenterX - TextRender()->TextWidth(TitleFontSize, pTitle) / 2.0f, BoardY + PaddingY, TitleFontSize, pTitle);
 	for(int Index = 0; Index < RowCount; ++Index)
 	{
-		char aLine[128];
+		char aCount[16];
 		const int ClientId = vEntries[Index].m_ClientId;
 		const char *pName = ClientId >= 0 ? GameClient()->m_aClients[ClientId].m_aName : Localize("Teammate");
-		str_format(aLine, sizeof(aLine), "%s: %d", pName, vEntries[Index].m_Count);
+		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
 		const float Y = BoardY + PaddingY + TitleHeight + Index * RowHeight;
-		const float TextWidth = TextRender()->TextWidth(RowFontSize, aLine);
-		const float RowWidth = TextWidth + (ShowTee ? TeeSize + TeeGap : 0.0f);
-		const float RowLeft = ContentCenterX - RowWidth / 2.0f;
+		const float CountWidth = TextRender()->TextWidth(RowFontSize, aCount);
+		CTextCursor NameCursor;
+		NameCursor.SetPosition(vec2(RowLeft + TeeColumnWidth, Y));
+		NameCursor.m_FontSize = RowFontSize;
+		NameCursor.m_CalculateVisualBoundingBox = ShowTee && ClientId >= 0;
+		TextRender()->TextEx(&NameCursor, pName);
 		if(ShowTee && ClientId >= 0)
 		{
 			CTeeRenderInfo TeeInfo = GameClient()->m_aClients[ClientId].m_RenderInfo;
 			TeeInfo.m_Size = TeeSize;
 			const CAnimState *pIdleState = CAnimState::GetIdle();
-			vec2 OffsetToMid;
-			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-			RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(RowLeft + TeeSize / 2.0f, Y + RowHeight * 0.5f + OffsetToMid.y), RenderAlpha);
+			float AnimScale, BaseSize;
+			CRenderTools::GetRenderTeeAnimScaleAndBaseSize(&TeeInfo, AnimScale, BaseSize);
+			float FeetBottom = BaseSize / 4.2f;
+			if(!CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), TeeInfo.m_aSixup[g_Config.m_ClDummy].PartTexture(protocol7::SKINPART_BODY)))
+			{
+				if(g_Config.m_TcWhiteFeet && TeeInfo.m_CustomColoredSkin)
+				{
+					const CSkin *pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_TcWhiteFeetSkin);
+					if(pWhiteFeetSkin != nullptr && CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), pWhiteFeetSkin->m_OriginalSkin.m_Feet))
+						TeeInfo.m_SkinMetrics.m_Feet = pWhiteFeetSkin->m_Metrics.m_Feet;
+				}
+				vec2 FeetOffset;
+				float FeetWidth, FeetHeight;
+				CRenderTools::GetRenderTeeFeetSize(pIdleState, &TeeInfo, FeetOffset, FeetWidth, FeetHeight);
+				FeetBottom = -BaseSize * 0.25f + FeetOffset.y + FeetHeight;
+				if(g_Config.m_TcTinyTees && (RenderTools()->m_LocalTeeRender || g_Config.m_TcTinyTeesOthers))
+					FeetBottom *= 0.85f * (g_Config.m_TcTinyTeeSize / 100.0f);
+			}
+			FeetBottom += maximum(pIdleState->GetFrontFoot()->m_Y, pIdleState->GetBackFoot()->m_Y) * AnimScale;
+			// 用名字的可见底边和脚部贴图边界确定落脚平面。
+			const float TextBottom = NameCursor.m_HasVisualBoundingBox ? NameCursor.m_VisualBottom : Y + RowFontSize;
+			RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(RowLeft + TeeSize / 2.0f, TextBottom - FeetBottom), RenderAlpha);
 		}
-		TextRender()->Text(RowLeft + (ShowTee ? TeeSize + TeeGap : 0.0f), Y, RowFontSize, aLine);
+		TextRender()->Text(RowRight - CountWidth, Y, RowFontSize, aCount);
 	}
 	if(HasMoreRows)
 	{
 		const char *pMore = Localize("More teammates...");
+		TextRender()->TextColor(BoardTextColor.WithMultipliedAlpha(0.65f));
 		TextRender()->Text(ContentCenterX - TextRender()->TextWidth(MoreFontSize, pMore) / 2.0f, BoardY + PaddingY + TitleHeight + RowCount * RowHeight, MoreFontSize, pMore);
 	}
 

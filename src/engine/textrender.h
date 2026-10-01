@@ -392,7 +392,11 @@ public:
 
 	float Height() const;
 	STextBoundingBox BoundingBox() const;
-	void SetPosition(vec2 Position);
+	void SetPosition(vec2 Position)
+	{
+		m_StartX = m_X = Position.x;
+		m_StartY = m_Y = Position.y;
+	}
 };
 
 struct STextContainerUsages

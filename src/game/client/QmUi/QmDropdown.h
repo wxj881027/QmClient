@@ -107,6 +107,7 @@ SQmDropdownPopupPolicy QmResolveDropdownPopupPolicy(int ItemCount, float EntryHe
 bool QmDropdownPopupScrollable(const SQmDropdownPopupPolicy &Policy, float PopupHeight);
 bool QmDropdownPopupBlocksUnderlying(bool PopupVisible);
 bool QmDropdownSourceAlive(uint64_t CurrentFrame, uint64_t LastSourceFrame, bool AnchorFullyVisible);
+bool QmDropdownShouldKeepPopupAliveWhenDisabled(bool PopupOpen, bool ClosePopupWhenDisabled);
 bool QmDropdownAnchorFullyVisible(const CUIRect &AnchorRect, const CUIRect &ViewportRect);
 bool QmDropdownActiveItemShouldScrollIntoView(bool ScrollRequested, bool ActiveEntry);
 bool QmDropdownShouldRequestActiveScroll(bool PopupOpen, int PreviousActiveIndex, int ActiveIndex);

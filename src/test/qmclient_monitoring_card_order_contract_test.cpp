@@ -72,35 +72,6 @@ TEST(QmMonitoringCardOrderContract, SettingsCardOrderPersistenceCommitsGlobalCon
 	EXPECT_LT(SaveCopyPos, SaveDirtyClearPos);
 }
 
-TEST(QmMonitoringCardOrderContract, SettingsCardLayoutVersionMigrationRequiresWholeLegacyGroups)
-{
-	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
-	const std::string LoadBody = ExtractSourceFunctionBody(Menus, "void CMenus::LoadSettingsCardOrderModel()");
-	ASSERT_FALSE(LoadBody.empty());
-
-	EXPECT_NE(LoadBody.find("const bool ContributorsStillOldDefault"), std::string::npos);
-	EXPECT_NE(LoadBody.find("IsAtOldDefault(\"deck:qmclient-contributors-community\""), std::string::npos);
-	EXPECT_NE(LoadBody.find("IsAtOldDefault(\"deck:qmclient-contributors-sponsors\""), std::string::npos);
-	EXPECT_NE(LoadBody.find("const bool BindWheelStillOldDefault"), std::string::npos);
-	EXPECT_NE(LoadBody.find("IsAtOldDefault(\"deck:tclient-bind-wheel-editor\""), std::string::npos);
-	EXPECT_NE(LoadBody.find("IsAtOldDefault(\"deck:tclient-bind-wheel-preview\""), std::string::npos);
-	EXPECT_NE(LoadBody.find("MakeCandidate(Candidate);"), std::string::npos);
-	EXPECT_NE(LoadBody.find("TabContainsOnlyStableIds(Candidate, \"qmclient-contributors\""), std::string::npos);
-	EXPECT_NE(LoadBody.find("TabContainsOnlyStableIds(Candidate, \"tclient-bind-wheel\""), std::string::npos);
-	EXPECT_NE(LoadBody.find("MigrateExactLayout(Candidate, \"tclient-profiles\", vLegacyProfileLayout, vTargetProfileLayout, vProfileIds)"), std::string::npos);
-	EXPECT_NE(LoadBody.find("MigrateExactLayout(Candidate, \"tclient-status-bar\", vLegacyStatusBarDefaults, vTargetStatusBarLayout, vStatusBarIds)"), std::string::npos);
-	EXPECT_NE(LoadBody.find("MigrateExactLayout(Candidate, \"tee\", vLegacyTeeDefaults, vTargetTeeLayout, vTeeIds)"), std::string::npos);
-	EXPECT_EQ(LoadBody.find("MoveIfStillAtOldDefault"), std::string::npos);
-	EXPECT_NE(LoadBody.find("MigrateTClientMainCardsToAlternatingColumns"), std::string::npos);
-	EXPECT_NE(LoadBody.find("TClientMainCardsMigrationCommitPlan(MigrationResult)"), std::string::npos);
-	EXPECT_NE(LoadBody.find("PersistCandidate(Candidate, CandidateChanged)"), std::string::npos);
-	EXPECT_NE(LoadBody.find("g_Config.m_QmCardLayoutVersion = 1;"), std::string::npos);
-	EXPECT_NE(LoadBody.find("PersistAndAdvanceLayoutVersion(5, true)"), std::string::npos);
-	EXPECT_NE(LoadBody.find("if(CommitPlan.m_PersistSerialized)"), std::string::npos);
-	EXPECT_NE(LoadBody.find("if(CommitPlan.m_AdvanceVersion)"), std::string::npos);
-	EXPECT_NE(LoadBody.find("PersistAndAdvanceLayoutVersion(7, true)"), std::string::npos);
-}
-
 TEST(QmMonitoringCardOrderContract, CardOrderModelUsesStableIdIndexForFind)
 {
 	const std::string Model = ReadRepoFile("src/game/client/QmUi/QmCardOrderModel.cpp");

@@ -37,6 +37,9 @@
 %d players
 == %d명의 플레이어
 
+%d points
+== %d 포인트
+
 %d selected items were deleted, but %d items could not be deleted. The first failing item was '%s'.
 == %d개의 선택된 항목이 삭제되었지만, %d개 항목은 삭제할 수 없습니다. 첫 번째 실패 항목은 '%s'입니다.
 
@@ -105,6 +108,9 @@
 
 %s wins!
 == %s가 승리했습니다!
+
+%s: %d points
+== %s: %d 포인트
 
 '%s' called for vote to force-pause '%s' for %s seconds (reason: %s)
 == '%s'가 '%s'를 %s초 동안 강제 일시정지하는 투표를 요청했습니다 (사유: %s)
@@ -473,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == 아래에 이름을 입력하거나 플레이어 목록에서 이름을 클릭하여 친구를 추가하세요.
 
+Add function
+== 기능 추가
+
 Add Group
 == 그룹 추가
 
@@ -793,6 +802,9 @@ Append to log file instead of overwriting
 
 Applied to %d same-family part(s).
 == 동일 계열 부품 %d개에 적용되었습니다.
+
+Applies to single-color and rainbow overrides.
+== 단색 및 무지개색 덮어쓰기에 적용됩니다.
 
 Apply
 == 적용
@@ -1424,6 +1436,9 @@ Best
 Better scoreboard
 == 더 나은 점수판
 
+Bind
+== 바인드
+
 Bind address for client/server
 == 클라이언트/서버 바인딩 주소
 
@@ -1535,6 +1550,9 @@ Bottom right
 Bounce
 == 바운스
 
+Bound functions
+== 지정된 기능
+
 Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow
 == 대괄호 칭호 색상: 0 = 서버 설정 따르기, 1 = 단색, 2 = 무지개
 
@@ -1579,9 +1597,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == Build the status text shown above Tees
-
-Built-in
-== 내장
 
 Button - Disabled
 == 버튼 - 비활성화
@@ -1675,6 +1690,9 @@ Cancel your swap request
 
 Candidate files
 == 후보 파일
+
+Cannot join the target player's team
+== 대상 플레이어의 팀에 참가할 수 없습니다
 
 Cannot swap: the other player is not in your team
 == 스왑할 수 없음: 상대방이 당신의 팀에 없습니다
@@ -1793,6 +1811,12 @@ Chat log retention days
 Chat message
 == 채팅 메시지
 
+Chat message preview
+== 채팅 메시지 미리보기
+
+Chat message style
+== 채팅 메시지 스타일
+
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == 프리즈 진입 시 전송할 채팅 메시지, 쉼표로 구분 (비우기=없음)
 
@@ -1894,6 +1918,9 @@ Clan Name
 
 Clan name size on nameplate
 == 이름표에 표시되는 클랜 이름 크기
+
+Clan of the player followed from the pie menu
+== 원형 메뉴에서 따라가는 플레이어의 클랜
 
 Clan plates size
 == 클랜 명판 크기
@@ -2246,6 +2273,9 @@ Configure HUD island appearance
 Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
+Configure keyboard, mouse, wheel, and modifier bindings
+== 키보드, 마우스, 휠 및 보조 키 지정 설정
+
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
 
@@ -2465,6 +2495,9 @@ Copy skin
 Copy skin option color
 == 스킨 옵션 색상 복사
 
+Could not add the player as a friend
+== 플레이어를 친구로 추가할 수 없습니다
+
 Could not check for existing player with your name. Check your internet connection.
 == 사용자 이름과 일치하는 기존 플레이어를 확인할 수 없습니다. 인터넷 연결을 확인하세요.
 
@@ -2503,6 +2536,9 @@ Could not load touch controls from file. See local console for details.
 
 Could not preview this image
 == 이 이미지를 미리 볼 수 없습니다
+
+Could not query points for %s
+== %s 님의 포인트를 조회할 수 없습니다
 
 Could not read the map file.
 == 맵 파일을 읽을 수 없습니다.
@@ -2555,6 +2591,9 @@ Crescent
 CRF value for libx264 video encoding (0=best quality, 51=worst)
 == libx264 비디오 인코딩용 CRF 값 (0=최고 품질, 51=최저)
 
+Cross-server following stopped
+== 서버 간 따라가기를 중지했습니다
+
 Crosshair opacity in free spectate
 == 자유 관전 시 조준선 불투명도
 
@@ -2594,9 +2633,6 @@ Current: Score
 Current: Time
 == 현재: 시간
 
-Cursed Flame
-== 저주받은 불꽃
-
 Custom
 == 사용자 정의
 
@@ -2617,6 +2653,9 @@ Custom color
 
 Custom colors
 == 사용자 정의 색상
+
+Custom command
+== 사용자 지정 명령
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == 사용자 정의 커뮤니티 목록 가져오기 URL (https여야 함, 비우면 비활성화)
@@ -3381,6 +3420,9 @@ Dummy clan
 == 더미 클랜
 
 Dummy Control
+== 더미 제어
+
+Dummy control
 == 더미 제어
 
 Dummy Control: %s
@@ -4259,8 +4301,8 @@ Fade opacity along trail length
 Fade out
 == 페이드 아웃
 
-Fade paused spectators in water
-== 물속에서 일시정지한 관전자를 반투명하게 표시
+Fade spectators in water
+== 물속의 관전자를 반투명하게 표시
 
 Fade trail alpha
 == 꼬리 알파 페이드
@@ -4487,11 +4529,23 @@ Folder Link
 Follow
 == 따라가기
 
+Follow option color
+== 따라가기 색상
+
+Follow server
+== 서버 간 따라가기
+
 Follow Tee
 == Tee 따라가기
 
 Following
 == 현재
+
+Following %s across servers
+== %s 님을 서버 간 따라가는 중
+
+Following: %s
+== 따라가는 중: %s
 
 Font
 == 글꼴
@@ -4678,9 +4732,6 @@ FSAA samples
 
 FSAA samples (may cause lag)
 == FSAA 샘플 (지연 발생 가능)
-
-FTAPI
-== FTAPI
 
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == 과부하 방지를 위해 FTAPI 자동 번역이 비활성화되었습니다. 필요 시 설정에서 활성화하세요.
@@ -4909,9 +4960,6 @@ Go forward one tick
 
 Go forward the specified duration
 == 지정된 시간만큼 앞으로 가기
-
-Golden Grace
-== 황금의 은총
 
 Gores
 == 고어스
@@ -5207,6 +5255,9 @@ High Detail
 High to low
 == 높음에서 낮음으로
 
+Higher values make the wave move faster. Zero stops the movement.
+== 값이 클수록 물결이 빨리 움직입니다. 영으로 설정하면 멈춥니다.
+
 Highlight Color
 == 강조 색상
 
@@ -5215,6 +5266,9 @@ Highlight game type
 
 Highlight message text gradient color
 == 강조 메시지 텍스트 그라데이션 색상
+
+Highlight movement in Polished mode. Zero turns it off.
+== 광택 모드의 하이라이트 움직임입니다. 영으로 설정하면 꺼집니다.
 
 Highlight ping value
 == 핑 값 강조
@@ -5471,6 +5525,9 @@ Include skin when saving/loading config preset
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 수신 메시지 자동 번역 모드 (0=대상 언어가 아닐 때만 번역, 1=항상 번역)
 
+Incoming language
+== 수신 언어
+
 Indicate map finish
 == 맵 완주 표시
 
@@ -5591,6 +5648,9 @@ Installed
 Installing update. Please wait...
 == 업데이트 설치 중입니다. 잠시 기다려 주세요...
 
+Instant compact hints
+== 작은 도움말 즉시 표시
+
 Instant zoom reverse
 == 줌 반전 즉시 적용
 
@@ -5642,6 +5702,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == 관전자로 이동시킬 클라이언트 ID 가 잘못됨
 
+Invalid command or parameters.
+== 명령 또는 매개변수가 올바르지 않습니다.
+
 Invalid Demo
 == 유효하지 않은 데모
 
@@ -5681,6 +5744,12 @@ Invite %s to the locked team
 Invite a person to a locked team
 == 잠긴 팀에 사람 초대
 
+Invite team option color
+== 팀 초대 색상
+
+Invite to team
+== 팀에 초대
+
 Invites are disabled
 == 초대가 비활성화되었습니다
 
@@ -5711,6 +5780,9 @@ Jelly strength
 Jitter
 == 지터
 
+Join a team before inviting another player
+== 다른 플레이어를 초대하기 전에 팀에 참가하세요
+
 Join a team to enable practice mode, which means you can use /r, but can't earn a rank.
 == 연습 모드를 사용하려면 팀에 가입하세요. 연습 모드에서는 /r 을 사용할 수 있지만 순위를 얻을 수 없습니다.
 
@@ -5729,8 +5801,14 @@ Join QQ group
 Join red
 == 레드팀 참가
 
+Join team
+== 팀 참가
+
 Join team %s
 == 팀 %s에 가입
+
+Join team option color
+== 팀 참가 색상
 
 Join the team of the specified player
 == 지정된 플레이어의 팀에 가입
@@ -6014,6 +6092,9 @@ Legacy option: connections that skip TLS verification are rejected
 Legacy realtime WebSocket URL (migrated to qm_websocket_url)
 == 기존 실시간 WebSocket URL (qm_websocket_url로 이전됨)
 
+Legacy settings card collapse states migrated
+== 이전 설정 카드 접힘 상태 이전 완료
+
 Length
 == 길이
 
@@ -6032,9 +6113,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == 밝기
 
-LibreTranslate
-== LibreTranslate
-
 LibreTranslate API Key
 == LibreTranslate API 키
 
@@ -6044,11 +6122,14 @@ LibreTranslate endpoint
 Light
 == 라이트
 
-Light band (0 = style default)
-== 색상 위상 (0 = 스타일 기본값)
+Light band
+== 빛 띠
 
 Limit information in spectator mode
 == 관전자 모드에서 정보 제한
+
+Limit the title to the exact nickname below.
+== 아래 닉네임과 정확히 일치할 때만 칭호를 표시합니다.
 
 Limiter threshold (percent)
 == 리미터 임계값 (백분율)
@@ -6098,6 +6179,9 @@ List foes
 List friends
 == 친구 목록을 표시합니다
 
+List friends first in the spectator menu
+== 관전 메뉴에서 친구 우선 표시
+
 List KCP/legacy transport status and weak-network simulation metrics
 == KCP/레거시 전송 상태와 약한 네트워크 시뮬레이션 지표를 나열합니다
 
@@ -6118,6 +6202,9 @@ Live director
 
 LLM API
 == LLM API
+
+LLM API key not configured
+== LLM API 키가 설정되지 않았습니다
 
 LLM provider
 == LLM 제공자
@@ -6305,6 +6392,9 @@ Low to high
 Lyrics
 == 가사
 
+Magic: Spirit Script
+== 마법풍: 영혼의 문자
+
 Main Asset
 == 메인 에셋
 
@@ -6361,6 +6451,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == 스킨 순환 큐 관리
+
+Manga: Ink Slash
+== 만화풍: 먹빛 참격
 
 Manual
 == 수동
@@ -7256,6 +7349,9 @@ No favorite maps yet
 No filter
 == 필터 없음
 
+No functions bound
+== 지정된 기능 없음
+
 No input device available
 == 사용 가능한 입력 장치 없음
 
@@ -7592,9 +7688,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == 바인드 휠 선택기 열기
 
-Open color picker
-== 색상 선택기 열기
-
 Open DDNet Wiki
 == DDNet Wiki 열기
 
@@ -7691,6 +7784,9 @@ Optimistic prediction along stable direction
 Option color
 == 옵션 색상
 
+Optional
+== 선택 사항
+
 Optional authentication key for the DNSBL provider
 == DNSBL 제공자의 선택적 인증 키
 
@@ -7720,6 +7816,9 @@ Others
 
 Others only
 == 다른 사람만
+
+Outgoing language
+== 발신 언어
 
 Outgoing translation target language code
 == 발신 번역 대상 언어 코드
@@ -7901,9 +8000,6 @@ Pause voice when window unfocused
 Pause/unpause game
 == 게임 일시정지/재개
 
-Paused spectator opacity (percent)
-== 관전자 불투명도(퍼센트)
-
 Penalty in seconds for saving or swapping positions
 == 위치 저장 또는 교체에 대한 초 단위 패널티
 
@@ -7979,11 +8075,17 @@ Pistol
 Pistol guide line
 == 권총 보조선
 
+Pixel: Layer Shift
+== 픽셀풍: 레이어 이동
+
 Place title on a separate line above the player name instead of inline
 == 제목을 이름과 같은 줄에 표시하지 않고 플레이어 이름 위의 별도 줄에 배치
 
 Plasma gun shots per second
 == 플라즈마 건 초당 발사 수
+
+Platinum highlight
+== 백금 하이라이트
 
 Play a flip animation while reloading weapons
 == 무기 재장전 중 뒤집기 애니메이션 재생
@@ -8138,6 +8240,9 @@ Player stats
 Player stats and info display
 == 플레이어 통계 및 정보 표시
 
+Player to follow across servers until cancelled; empty disables following
+== 취소할 때까지 서버 간 따라갈 플레이어. 비워 두면 해제
+
 Player: %s
 == 플레이어: %s
 
@@ -8218,6 +8323,9 @@ Please wait…
 
 Points
 == 점수
+
+Points unavailable
+== 포인트를 조회할 수 없음
 
 Polished
 == 광택
@@ -8641,6 +8749,12 @@ Query server setting: %s
 
 Query team rank for %s
 == %s의 팀 순위 조회
+
+Querying points for %s...
+== %s 님의 포인트 조회 중...
+
+Querying points...
+== 포인트 조회 중...
 
 Queue is empty
 == 대기열이 비어 있습니다
@@ -9365,6 +9479,9 @@ Reset all or one tuning variable to default
 Reset chat on escape
 == Escape 키로 채팅 초기화
 
+Reset colors
+== 색상 초기화
+
 Reset column widths
 == 열 너비 초기화
 
@@ -9707,6 +9824,9 @@ Save/Load Skin
 Saved Profiles
 == 저장된 프로필
 
+Saved with your title and shared with other QmClient players.
+== 칭호와 함께 저장되며 다른 QmClient 플레이어에게 공유됩니다.
+
 Saves file
 == 파일 저장
 
@@ -9742,6 +9862,9 @@ Score earned
 
 Score limit
 == 점수 제한
+
+Score option color
+== 포인트 조회 색상
 
 Scoreboard
 == 점수판
@@ -9881,6 +10004,9 @@ SecretKey
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == /practicecmdlist 로 사용 가능한 모든 연습 명령어 목록을 볼 수 있습니다. 가장 많이 쓰이는 것은 /telecursor, /lasttp, /rescue 입니다
 
+See you at the next checkpoint.
+== 다음 체크포인트에서 만나요.
+
 Select a saved .map file (client limit: 64 MiB).
 == 저장된 .map 파일을 선택하세요(클라이언트 제한: 64 MiB).
 
@@ -9967,6 +10093,9 @@ Send Rate
 
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
+
+Send target language
+== 대상 언어 보내기
 
 Send translation method
 == 번역 방식 보내기
@@ -10157,6 +10286,9 @@ Settings card border color
 Settings card default layout migration version
 == 설정 카드 기본 레이아웃 마이그레이션 버전
 
+Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
+== 설정 카드 상태: stableId는 접힘, !stableId는 펼침, 세미콜론으로 구분
+
 Settings card titles use rainbow colors
 == 설정 카드 제목에 무지개색 사용
 
@@ -10175,8 +10307,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == 서버 브라우저 이름/맵 분할에서 이름 열에 할당할 비율(천분율)
 
-Shimmer speed (polished)
-== 빛 이동 속도 (광택)
+Shimmer speed
+== 반짝임 속도
 
 Short server names
 == 짧은 서버 이름
@@ -10328,8 +10460,14 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == 플레이어 위에 좌표 표시
 
+Show copy skin option
+== 스킨 복사 항목 표시
+
 Show country flags in nameplates
 == 이름표에 국가 국기 표시
+
+Show cross-server follow option
+== 서버 간 따라가기 표시
 
 Show current Netease lyric in Media Island
 == 현재 Netease 가사를 미디어 아일랜드에 표시
@@ -10391,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == 이동 정보 HUD에 더미 위치 표시
 
+Show dummy title locally
+== 로컬에서 더미 칭호 표시
+
 Show dummy velocity in movement info HUD
 == 이동 정보 HUD에 더미 속도 표시
 
@@ -10447,6 +10588,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == 친구 접속 시 큰 글자 표시
+
+Show friend option
+== 친구 항목 표시
 
 Show friend tag (♥) on nametag
 == 이름표에 친구 태그 (♥) 표시
@@ -10616,6 +10760,9 @@ Show inputs
 Show IP addresses in rcon commands (1 = on, 0 = off)
 == rcon 명령에서 IP 주소 표시 (1 = 켜기, 0 = 끄기)
 
+Show join team option
+== 팀 참가 표시
+
 Show jump hint based on fractional part of position
 == 위치 소수 부분에 따라 점프 알림 표시
 
@@ -10661,6 +10808,9 @@ Show logs of the last i seconds
 Show lyrics inside Dynamic Island
 == 다이나믹 아일랜드에 가사 표시
 
+Show main tee title locally
+== 로컬에서 메인 티 칭호 표시
+
 Show map details
 == 맵 세부 정보 표시
 
@@ -10669,6 +10819,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == 맵 진행률 체크포인트 경로 표시
+
+Show mention option
+== 언급 항목 표시
 
 Show moving tiles in entities
 == 엔티티에 움직이는 타일 표시
@@ -10826,6 +10979,9 @@ Show player names in team color
 Show player position
 == 플레이어 위치 표시
 
+Show player score option
+== 플레이어 포인트 조회 표시
+
 Show player speed
 == 플레이어 속도 표시
 
@@ -10916,11 +11072,17 @@ Show skin release date and author
 Show song info in top-left corner
 == 왼쪽 상단에 노래 정보 표시
 
+Show spectate option
+== 관전 항목 표시
+
 Show spectator cursor
 == 관전자 커서 표시
 
 Show speedometer when changing
 == 변경 시 속도계 표시
+
+Show sponsor chat effects locally
+== 로컬에서 후원자 채팅 효과 표시
 
 Show sponsor QR code
 == 스폰서 QR 코드 표시
@@ -10937,6 +11099,12 @@ Show status bar
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == 이름표에 강함/약함 표시 (0 = 끄기, 1 = 아이콘, 2 = 아이콘+숫자)
 
+Show swap option
+== 교환 항목 표시
+
+Show synchronized sponsor chat styles
+== 동기화된 후원자 채팅 스타일 표시
+
 Show system media info on HUD
 == HUD에 시스템 미디어 정보 표시
 
@@ -10948,6 +11116,9 @@ Show team
 
 Show team group players
 == 팀 그룹 플레이어 표시
+
+Show team invite option
+== 팀 초대 표시
 
 Show team on HUD Dynamic Island
 == HUD 다이내믹 아일랜드 팀 표시
@@ -11000,6 +11171,9 @@ Show the server rules
 Show tiles layers from BG map
 == 배경 맵의 타일 레이어 표시
 
+Show title setting hints immediately in small text
+== 칭호 설정 도움말을 작은 글씨로 즉시 표시
+
 Show toast
 == 토스트 메시지 표시
 
@@ -11044,6 +11218,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == DDNet 맵 완료 여부를 표시합니다(플레이어 이름을 info.ddnet.org/info로 전송)
+
+Show whisper option
+== 귓속말 항목 표시
 
 Show Workshop Assets
 == 상점 리소스 표시
@@ -11363,6 +11540,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook 도우미 경로(비워 두면 QmClient과 같은 디렉터리)
 
+Soft glow
+== 은은한 빛
+
 Solid
 == 단색
 
@@ -11438,9 +11618,6 @@ Space
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 스팸 방지: 팀 전환, 채팅, 스킨 변경, 이모트, 투표 스팸 방지
 
-Spatial effect
-== 입체 효과
-
 Speaker
 == 스피커
 
@@ -11489,6 +11666,12 @@ Spectated player
 Spectated player and friends
 == 관전 중인 플레이어와 친구
 
+Spectator opacity
+== 관전자 불투명도
+
+Spectator opacity (percent)
+== 관전자 불투명도(퍼센트)
+
 Spectators
 == 관전자
 
@@ -11513,11 +11696,11 @@ Sphere
 Spin pop
 == 회전 팝
 
-Spirit Light
-== 영혼의 빛
-
 Split main and dummy into different teams for solo-run sync
 == 본체와 분신을 서로 다른 팀에 넣어 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
+
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== 후원자 채팅 스타일 초안: 0=보통, 1=은은한 빛, 2=백금 하이라이트
 
 Sponsor code
 == 인증 코드
@@ -11642,6 +11825,12 @@ Steam profile name
 Still free after %d sponsors. Take a look?
 == %d명의 후원자 덕분입니다. 보시겠어요?
 
+Stop following
+== 따라가기 중지
+
+Stop following a player across servers
+== 플레이어의 서버 간 따라가기 중지
+
 Stop key input on switch (0=off, 1=dummy, 2=player)
 == 전환 시 키 입력 중지 (0=끄기, 1=더미, 2=플레이어)
 
@@ -11749,9 +11938,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == 직접 터치 입력 및 가상 조이스틱의 활성 작업 (발사 및 훅) 을 전환합니다.
-
-Switch
-== 전환
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == 스위치 카운트다운 위치(0 = Tee 따라가기, 1 = 다이내믹 아일랜드, 2 = 둘 다)
@@ -12044,8 +12230,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee 궤적 색상 모드 (1=단색, 2=현재 Tee 색상, 3=무지개, 4=Tee 속도, 5=무작위)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Tee 트레일 스타일(0=기본, 1=저주받은 불꽃, 2=보라 번개, 3=영혼의 빛, 4=공허의 그림자, 5=황금의 은총)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Tee 트레일 스타일(0=기본, 1=만화, 2=마법, 3=픽셀, 4=이전 번호의 만화, 5=이전 번호의 마법)
 
 Tee Trails
 == Tee 궤적
@@ -12137,6 +12323,9 @@ Temporary free camera
 Tencent Cloud
 == 텐센트 클라우드
 
+Tencent Cloud API not configured
+== Tencent Cloud API가 설정되지 않았습니다
+
 Tencent Cloud SecretId
 == 텐센트 클라우드 SecretId
 
@@ -12161,6 +12350,9 @@ Text alpha
 Text color
 == 텍스트 색상
 
+Text effect
+== 글자 효과
+
 Text input focus ring color
 == 텍스트 입력 포커스 링 색상
 
@@ -12175,6 +12367,9 @@ The audio device couldn't be initialised.
 
 The auth level you need to tele others
 == 다른 플레이어를 순간이동시키는 데 필요한 권한 레벨
+
+The command is empty, incomplete, or exceeds the local config line limit.
+== 명령이 비어 있거나 불완전하거나 로컬 설정 줄 제한을 초과합니다.
 
 The downloaded file is not a valid demo
 == 다운로드한 파일은 유효한 데모가 아닙니다
@@ -12278,6 +12473,12 @@ There's an unsaved map in the editor, you might want to save it.
 Thinking mode requires a reasoning model
 == 사고 모드를 사용하려면 추론 모델이 필요합니다
 
+This bind contains an unfinished quote and cannot be edited safely.
+== 이 지정에는 닫히지 않은 따옴표가 있어 안전하게 편집할 수 없습니다.
+
+This bind is already over the local config line limit.
+== 이 지정은 로컬 설정 줄 제한을 초과했습니다.
+
 This connection cannot change names while connected. Reconnect with the saved names first.
 == 이 연결에서는 접속 중 이름을 변경할 수 없습니다. 저장된 이름으로 다시 접속하세요.
 
@@ -12301,6 +12502,9 @@ This save is no longer in the local save file.
 
 This save-code already exists
 == 이 저장 코드는 이미 존재합니다
+
+This server does not support race teams
+== 이 서버는 레이스 팀을 지원하지 않습니다
 
 This server has an initial chat delay, you will be able to talk in %s seconds.
 == 이 서버에는 초기 채팅 지연이 있습니다. %s초 후에 말할 수 있습니다
@@ -12440,14 +12644,11 @@ Title bob wavelength in pixels
 Title color
 == 칭호 색상
 
-Title color (single color)
-== 칭호 색상 (단색)
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == 칭호 빛 이동 속도 (초당 1/100줄, 0 = 끔)
 
-Title opacity (custom color)
-== 불투명도 (사용자 지정 색상)
+Title opacity
+== 칭호 불투명도
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == 칭호 글자별 위상 (픽셀당 1/1000 px, 0 = 스타일 기본값, 20 = 빛 띠 보임)
@@ -12457,6 +12658,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == 칭호 완성 미리보기
+
+Title server does not support chat styles yet
+== 칭호 서버가 아직 채팅 스타일을 지원하지 않습니다
 
 Title server unavailable; retry
 == 칭호 서버에 연결할 수 없습니다. 다시 시도하세요
@@ -12776,6 +12980,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == "드림 기능"에서 "Message merging"을 켜세요.
 
+Turning this off only changes your display.
+== 끄면 내 화면의 표시만 변경됩니다.
+
 Tutorial
 == 튜토리얼
 
@@ -12973,6 +13180,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == 알 수 없는 매개변수입니다. 허용 값: default, gametimer, broadcast, both, none
+
+Unknown sponsor chat style
+== 알 수 없는 후원자 채팅 스타일
 
 Unknown status
 == 알 수 없는 상태
@@ -13274,6 +13484,9 @@ Version
 Version performing the analysis
 == 분석을 수행하는 버전
 
+Vertical movement of each character. Zero keeps the title still.
+== 각 글자의 위아래 움직임입니다. 영으로 설정하면 칭호가 움직이지 않습니다.
+
 Vertical position
 == 세로 위치
 
@@ -13304,6 +13517,9 @@ View latest updates
 View margin
 == 보기 여백
 
+View points
+== 포인트 보기
+
 View replay
 == 리플레이 보기
 
@@ -13318,9 +13534,6 @@ View the developers, contributors, and project links
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
-
-Violet Bolt
-== 보라 번개
 
 Virtual joystick which always uses fire.
 == 항상 발사를 사용하는 가상 조이스틱입니다.
@@ -13432,9 +13645,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == 음성 화이트리스트 (쉼표로 구분)
-
-Void Shadow
-== 공허의 그림자
 
 Volume
 == 볼륨
@@ -13556,11 +13766,11 @@ Watermark
 Wave amount
 == 파도 크기
 
-Wave speed (0.01 rad/s)
-== 물결 속도 (0.01 rad/s)
+Wave spacing
+== 물결 간격
 
-Wave wavelength
-== 물결 파장
+Wave speed
+== 물결 속도
 
 Weak hook
 == 약한 갈고리
@@ -13840,6 +14050,9 @@ You and other player need to have started the map
 
 You and the other player must not be paused.
 == 당신과 상대방 모두 일시정지 상태가 아니어야 교환할 수 있습니다
+
+You are already in the same team
+== 이미 같은 팀에 있습니다
 
 You are already on the latest version
 == 이미 최신 버전입니다
@@ -14150,6 +14363,9 @@ Zen Mode
 Zen mode key
 == 선 모드 키
 
+Zero uses the style default. Higher values make color bands narrower.
+== 영으로 설정하면 스타일 기본값을 사용합니다. 값이 클수록 색 띠가 좁아집니다.
+
 Zhipu AI
 == 지푸 AI
 
@@ -14191,12 +14407,6 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI 는 무료 서비스입니다. 과도한 사용은 서비스 중단을 초래할 수 있습니다
-
-⚠️ LLM API Key not configured
-== ⚠️ LLM API 키가 구성되지 않음
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ 텐센트 클라우드 API가 구성되지 않음
 
 [Assets editor blend mode]
 Color
@@ -14281,6 +14491,10 @@ Inactive
 [Auto camera]
 Unavailable for this player
 == 이 플레이어에게 사용할 수 없음
+
+[Bind keyboard key]
+Menu
+== 메뉴 키
 
 [Config help]
 %s (default: "%s", max length: %d)

@@ -13,6 +13,7 @@
 
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/SettingsCardCollapseState.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
@@ -27,6 +28,7 @@
 #include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
 
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <vector>
@@ -55,6 +57,31 @@ namespace
 		BUTTON_HEIGHT = Metrics.m_LineHeight;
 		BUTTON_SPACING = Metrics.m_LineSpacing;
 		BIND_OPTION_SPACING = Metrics.m_LineSpacing;
+	}
+
+	const char *BindGroupCardStableId(const EBindOptionGroup Group)
+	{
+		static constexpr const char *s_apStableIds[(int)EBindOptionGroup::NUM] = {
+			"deck:controls-movement",
+			"deck:controls-weapon",
+			"deck:controls-voting",
+			"deck:controls-chat",
+			"deck:controls-dummy",
+			"deck:controls-miscellaneous",
+			"deck:controls-custom",
+		};
+		const int Index = std::clamp((int)Group, 0, (int)EBindOptionGroup::NUM - 1);
+		return s_apStableIds[Index];
+	}
+
+	void SyncBindGroupExpanded(bool *pExpanded)
+	{
+		const qm_card_collapse::CState &CollapseState = qm_card_collapse::CurrentState();
+		for(int Index = 0; Index < (int)EBindOptionGroup::NUM; ++Index)
+		{
+			const EBindOptionGroup Group = static_cast<EBindOptionGroup>(Index);
+			pExpanded[Index] = !CollapseState.IsCollapsed(BindGroupCardStableId(Group), Group == EBindOptionGroup::CUSTOM);
+		}
 	}
 }
 
@@ -148,6 +175,7 @@ void CMenusSettingsControls::OnInterfacesInit(CGameClient *pClient)
 	};
 	m_NumPredefinedBindOptions = m_vBindOptions.size();
 
+	// 此时配置文件尚未加载；持久状态在 Render 中同步，避免提前完成旧配置迁移。
 	std::fill(std::begin(m_aBindGroupExpanded), std::end(m_aBindGroupExpanded), true);
 	m_aBindGroupExpanded[(int)EBindOptionGroup::CUSTOM] = false;
 
@@ -189,11 +217,13 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 {
 	ApplyControlsContentMetrics(MainView.w);
 	const bool ReadOnly = Ui()->RenderOnly();
+	SyncBindGroupExpanded(m_aBindGroupExpanded);
 	CPerfTimer ShellTimer;
-	if(!ReadOnly && (m_BindOptionsDirty || GameClient()->m_KeyBinder.IsActive()))
+	if(!ReadOnly && (m_BindOptionsDirty || GameClient()->m_KeyBinder.IsActive() || m_BindOptionsRevision != GameClient()->m_Binds.Revision()))
 	{
 		UpdateBindOptions();
 		m_BindOptionsDirty = false;
+		m_BindOptionsRevision = GameClient()->m_Binds.Revision();
 	}
 	LogControlsPerfStage(GameClient()->Client(), "controls_tab_shell", ShellTimer.ElapsedMs(), false, "page=controls");
 
@@ -377,6 +407,8 @@ void CMenusSettingsControls::Render(CUIRect MainView)
 			const auto PreLayoutHeaderInput = [this, Group](const SSettingsCardFrame &Frame, bool Collapsed) {
 				const int GroupIndex = (int)Group;
 				if(!Ui()->DoButtonLogic(&m_aBindGroupExpandButtons[GroupIndex], Collapsed, &Frame.m_HandleRect, BUTTONFLAG_LEFT))
+					return false;
+				if(!qm_card_collapse::SetCollapsed(BindGroupCardStableId(Group), m_aBindGroupExpanded[GroupIndex]))
 					return false;
 				m_aBindGroupExpanded[GroupIndex] = !m_aBindGroupExpanded[GroupIndex];
 				return true;
@@ -569,7 +601,8 @@ void CMenusSettingsControls::UpdateSearchMatches()
 				continue;
 			}
 
-			m_aBindGroupExpanded[(int)Option.m_Group] = true;
+			qm_card_collapse::SetCollapsed(BindGroupCardStableId(Option.m_Group), false);
+			m_aBindGroupExpanded[(int)Option.m_Group] = !qm_card_collapse::IsCollapsed(BindGroupCardStableId(Option.m_Group), Option.m_Group == EBindOptionGroup::CUSTOM);
 			m_vSearchMatches.emplace_back(&Option - m_vBindOptions.data());
 		}
 	}

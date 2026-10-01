@@ -84,6 +84,18 @@ constexpr float ScoreboardRowsVerticalScale(float AvailableHeight, int NumRows, 
 	return AvailableHeight > FixedHeight ? (AvailableHeight - FixedHeight) / ScalableHeight : 0.0f;
 }
 
+// 滚动模式只在非队伍玩法且人数超过固定可视行数时生效。
+constexpr bool ScoreboardScrollModeEnabled(bool IsTeamPlay, bool ConfigEnabled, int NumPlayers)
+{
+	return !IsTeamPlay && ConfigEnabled && NumPlayers > 16;
+}
+
+// 滚动条只在当前帧仍可交互且确实存在可滚动内容时绘制。
+constexpr bool ScoreboardScrollbarVisible(bool ScrollMode, bool Interactive, bool ConfigEnabled, int ScrollMaxStart)
+{
+	return ScrollMode && Interactive && ConfigEnabled && ScrollMaxStart > 0;
+}
+
 // 标题计分时间沿用计分板内容的统一淡出透明度。
 constexpr ColorRGBA ScoreboardTitleTimeColor(float ContentAlpha)
 {

@@ -17,6 +17,8 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
@@ -51,6 +53,36 @@ static constexpr ColorRGBA gs_HighlightedTextColor = ColorRGBA(0.4f, 0.4f, 1.0f,
 static constexpr ColorRGBA gs_QmClientCountColor = ColorRGBA(0.75f, 0.55f, 1.0f, 1.0f);
 static constexpr float SERVER_LIST_TEXT_SIZE = 11.0f;
 static constexpr float SERVER_LIST_SCROLLBAR_RAIL_ALPHA_SCALE = 0.28f;
+
+static SQmDropdownVisualStyle FriendsPopupVisualStyle()
+{
+	return QmSettingsDropdownVisualStyle(ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)));
+}
+
+static SPopupMenuProperties FriendsPopupProperties()
+{
+	const SQmDropdownVisualStyle Style = FriendsPopupVisualStyle();
+	SPopupMenuProperties Props;
+	Props.m_BackgroundColor = Style.m_PopupBackgroundColor;
+	Props.m_BorderColor = Style.m_PopupBorderColor;
+	return Props;
+}
+
+static void StyleFriendsSelectionPopup(CUi::SSelectionPopupContext &Context)
+{
+	const SQmDropdownVisualStyle Style = FriendsPopupVisualStyle();
+	Context.m_Props.m_BackgroundColor = Style.m_PopupBackgroundColor;
+	Context.m_Props.m_BorderColor = Style.m_PopupBorderColor;
+	Context.m_ActiveEntryColor = Style.m_ActiveEntryColor;
+	Context.m_HoverEntryColor = Style.m_ActiveEntryColor;
+	Context.m_TransparentButtons = Style.m_TransparentEntries;
+	Context.m_EntryHeight = 18.0f;
+	Context.m_EntryPadding = 3.0f;
+	Context.m_EntrySpacing = 3.0f;
+	Context.m_FontSize = ui_token::font::SMALL + 1.0f;
+	Context.m_MinimumFontSize = ui_token::font::SMALL;
+	Context.m_Width = 220.0f;
+}
 
 // 浏览器内灰度描边/覆盖色的统一透明通道：灰度色按「界面表面」（qm_ui_color）
 // 染色，alpha 跟随「界面背景」透明度（qm_ui_opacity）。
@@ -164,13 +196,12 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 
 static const char *MapDifficultyStars(int Stars)
 {
-	// 只显示实心星：空心星（☆）在列表里视觉噪音大，0 星不显示任何星级。
 	static constexpr const char *s_apStarLabels[] = {
-		"",
-		"★",
-		"★★",
-		"★★★",
-		"★★★★",
+		"☆☆☆☆☆",
+		"★☆☆☆☆",
+		"★★☆☆☆",
+		"★★★☆☆",
+		"★★★★☆",
 		"★★★★★",
 	};
 	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
@@ -304,7 +335,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	{
 		CUIRect ResetBtn;
 		Headers.VSplitLeft(ms_ListheaderHeight, &ResetBtn, &Headers);
-		ResetBtn.Margin(3.0f, &ResetBtn);
+		ResetBtn.Margin(1.0f, &ResetBtn);
 		static CButtonContainer s_ResetColsButton;
 		if(Ui()->DoButton_QmIcon(&s_ResetColsButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetBtn, BUTTONFLAG_LEFT))
 		{
@@ -2249,6 +2280,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	static CScrollRegion s_FriendsActionPopupScrollRegion;
 	bool FollowTargetOnline = false;
 	const char *pFollowTargetAddress = "";
+	if(GameClient()->m_PieMenu.IsFollowing())
+		StopFriendAutoFollow(m_FriendAutoFollowState);
 	for(const auto &vFriends : vvFriends)
 	{
 		for(const auto &Friend : vFriends)
@@ -2445,8 +2478,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			m_FriendsCategoryPopupContext.m_CategoryIndex = CategoryIndex;
 			m_FriendsCategoryPopupContext.m_Mode = CFriendsCategoryPopupContext::MODE_ACTIONS;
 			m_FriendsCategoryPopupContext.m_NameInput.Clear();
-			const CUIRect Panel = CMenus::SecondaryPanelRect(Ui()->MouseX(), Ui()->MouseY(), 300.0f, CMenus::FriendsCategoryActionsPopupHeight(), *Ui()->Screen());
-			Ui()->DoPopupMenu(&m_FriendsCategoryPopupContext, Panel.x, Panel.y, Panel.w, Panel.h, &m_FriendsCategoryPopupContext, PopupFriendsCategory);
+			const CUIRect Panel = CMenus::SecondaryPanelRect(Ui()->MouseX(), Ui()->MouseY(), 220.0f, CMenus::FriendsCategoryActionsPopupHeight() + CUi::PopupMenuContentInset(), *Ui()->Screen());
+			Ui()->DoPopupMenu(&m_FriendsCategoryPopupContext, Panel.x, Panel.y, Panel.w, Panel.h, &m_FriendsCategoryPopupContext, PopupFriendsCategory, FriendsPopupProperties());
 		};
 		if(Ui()->DoButton_QmIcon(&m_vFriendsCategoryManageButtons[CategoryIndex], EQmIcon::GEAR, FONT_ICON_GEAR, 0, &ManageButton, BUTTONFLAG_LEFT) && !DraggingAnyHeader && !DraggingFriend)
 		{
@@ -2628,7 +2661,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					const ColorRGBA InactiveIconColor = ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f);
 					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-					const bool FollowingThisFriend = m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0;
+					const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
+									 (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 					if(Friend.ServerInfo())
 					{
 						TextRender()->TextColor(FollowingThisFriend || Ui()->HotItem() == pFollowButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
@@ -2650,9 +2684,15 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					if(Friend.ServerInfo() && Ui()->DoButtonLogic(pFollowButtonId, 0, &FollowButton, BUTTONFLAG_LEFT))
 					{
 						if(FollowingThisFriend)
+						{
+							GameClient()->m_PieMenu.CancelFollow();
 							StopFriendAutoFollow(m_FriendAutoFollowState);
+						}
 						else
+						{
+							GameClient()->m_PieMenu.CancelFollow();
 							StartFriendAutoFollow(m_FriendAutoFollowState, Friend.Name(), Friend.Clan(), Friend.ServerInfo()->m_aAddress);
+						}
 						ButtonResult = 0;
 					}
 					if(Friend.ServerInfo())
@@ -2685,10 +2725,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					m_FriendsActionPopupContext.Reset();
 					m_FriendsActionPopupContext.m_pScrollRegion = &s_FriendsActionPopupScrollRegion;
 					m_vFriendsActionEntries.clear();
-					m_FriendsActionPopupContext.m_EntryHeight = 18.0f;
-					m_FriendsActionPopupContext.m_EntryPadding = 1.0f;
-					m_FriendsActionPopupContext.m_FontSize = (m_FriendsActionPopupContext.m_EntryHeight - 2 * m_FriendsActionPopupContext.m_EntryPadding) * CUi::ms_FontmodHeight;
-					m_FriendsActionPopupContext.m_Width = 180.0f;
+					StyleFriendsSelectionPopup(m_FriendsActionPopupContext);
 
 					if(CanMoveCategory)
 					{
@@ -2709,7 +2746,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 					if(Friend.ServerInfo())
 					{
-						const bool FollowingThisFriend = m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0;
+						const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
+										 (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 						m_FriendsActionPopupContext.m_vEntries.emplace_back(FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
 						m_vFriendsActionEntries.push_back(FollowingThisFriend ? FRIEND_ACTION_STOP_FOLLOW : FRIEND_ACTION_FOLLOW);
 					}
@@ -2945,10 +2983,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				m_FriendsMoveCategoryPopupContext.Reset();
 				m_FriendsMoveCategoryPopupContext.m_pScrollRegion = &s_FriendsMoveCategoryPopupScrollRegion;
 				str_copy(m_FriendsMoveCategoryPopupContext.m_aMessage, Localize("Move to category"));
-				m_FriendsMoveCategoryPopupContext.m_EntryHeight = 18.0f;
-				m_FriendsMoveCategoryPopupContext.m_EntryPadding = 1.0f;
-				m_FriendsMoveCategoryPopupContext.m_FontSize = (m_FriendsMoveCategoryPopupContext.m_EntryHeight - 2 * m_FriendsMoveCategoryPopupContext.m_EntryPadding) * CUi::ms_FontmodHeight;
-				m_FriendsMoveCategoryPopupContext.m_Width = 180.0f;
+				StyleFriendsSelectionPopup(m_FriendsMoveCategoryPopupContext);
 				for(int MoveCategoryIndex = 0; MoveCategoryIndex < NumCategories; ++MoveCategoryIndex)
 				{
 					const char *pMoveCategory = GameClient()->Friends()->GetCategory(MoveCategoryIndex);
@@ -2972,7 +3007,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				str_copy(m_FriendNotePopupContext.m_aClan, m_aFriendActionClan, sizeof(m_FriendNotePopupContext.m_aClan));
 				m_FriendNotePopupContext.m_NoteInput.Set(GameClient()->Friends()->GetFriendNote(m_aFriendActionName, m_aFriendActionClan));
 				m_FriendNotePopupContext.m_NoteInput.SelectAll();
-				Ui()->DoPopupMenu(&m_FriendNotePopupContext, Ui()->MouseX(), Ui()->MouseY(), 320.0f, 70.0f, &m_FriendNotePopupContext, PopupFriendNote);
+				Ui()->DoPopupMenu(&m_FriendNotePopupContext, Ui()->MouseX(), Ui()->MouseY(), 220.0f, 70.0f + CUi::PopupMenuContentInset(), &m_FriendNotePopupContext, PopupFriendNote, FriendsPopupProperties());
 			}
 			else if(Action == FRIEND_ACTION_CLEAR_NOTE)
 			{
@@ -2980,10 +3015,12 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 			}
 			else if(Action == FRIEND_ACTION_FOLLOW)
 			{
+				GameClient()->m_PieMenu.CancelFollow();
 				StartFriendAutoFollow(m_FriendAutoFollowState, m_aFriendActionName, m_aFriendActionClan, m_aFriendActionAddress);
 			}
 			else if(Action == FRIEND_ACTION_STOP_FOLLOW)
 			{
+				GameClient()->m_PieMenu.CancelFollow();
 				StopFriendAutoFollow(m_FriendAutoFollowState);
 			}
 			else if(Action == FRIEND_ACTION_REMOVE)
@@ -3145,8 +3182,8 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				m_FriendsCategoryPopupContext.m_CategoryIndex = m_FriendAddCategoryIndex;
 				m_FriendsCategoryPopupContext.m_Mode = CFriendsCategoryPopupContext::MODE_ADD;
 				m_FriendsCategoryPopupContext.m_NameInput.Clear();
-				const CUIRect Panel = CMenus::SecondaryPanelRect(Ui()->MouseX(), Ui()->MouseY(), 300.0f, CMenus::FriendsCategoryEditPopupHeight(), *Ui()->Screen());
-				Ui()->DoPopupMenu(&m_FriendsCategoryPopupContext, Panel.x, Panel.y, Panel.w, Panel.h, &m_FriendsCategoryPopupContext, PopupFriendsCategory);
+				const CUIRect Panel = CMenus::SecondaryPanelRect(Ui()->MouseX(), Ui()->MouseY(), 220.0f, CMenus::FriendsCategoryEditPopupHeight() + CUi::PopupMenuContentInset(), *Ui()->Screen());
+				Ui()->DoPopupMenu(&m_FriendsCategoryPopupContext, Panel.x, Panel.y, Panel.w, Panel.h, &m_FriendsCategoryPopupContext, PopupFriendsCategory, FriendsPopupProperties());
 			}
 			GameClient()->m_Tooltips.DoToolTip(&m_FriendsAddCategoryCreateButton, &CreateCategoryButton, Localize("Create category"));
 		}
@@ -3184,19 +3221,27 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 
 	const char *pCategory = pFriends->GetCategory(pPopupContext->m_CategoryIndex);
 	const bool IsProtectedCategory = IsProtectedFriendsCategory(pCategory);
-	const float FontSize = 10.0f;
+	const float FontSize = ui_token::font::SMALL + 1.0f;
 
 	View.Margin(5.0f, &View);
 
 	if(pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ACTIONS)
 	{
+		const SQmDropdownVisualStyle Style = FriendsPopupVisualStyle();
+		const auto ButtonColor = [&](const CButtonContainer *pButton, bool Enabled = true) {
+			const bool Highlighted = Enabled && (pMenus->Ui()->HotItem() == pButton || pMenus->Ui()->CheckActiveItem(pButton));
+			return Style.m_ActiveEntryColor.WithAlpha(Highlighted ? Style.m_ActiveEntryColor.a : 0.0f);
+		};
 		CUIRect Label, Button;
 		View.HSplitTop(12.0f, &Label, &View);
-		pMenus->Ui()->DoLabel(&Label, LocalizeFriendsCategory(pCategory), FontSize + 1.0f, TEXTALIGN_ML);
+		SLabelProperties LabelProps;
+		LabelProps.m_MaxWidth = Label.w;
+		LabelProps.m_EllipsisAtEnd = true;
+		pMenus->Ui()->DoLabel(&Label, LocalizeFriendsCategory(pCategory), FontSize + 1.0f, TEXTALIGN_ML, LabelProps);
 
 		View.HSplitTop(3.0f, nullptr, &View);
 		View.HSplitTop(18.0f, &Button, &View);
-		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_AddButton, Localize("Add category"), &Button, FontSize, TEXTALIGN_MC))
+		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_AddButton, Localize("Add category"), &Button, FontSize, TEXTALIGN_MC, 0.0f, false, true, ButtonColor(&pPopupContext->m_AddButton), ui_token::font::SMALL))
 		{
 			pPopupContext->m_Mode = CFriendsCategoryPopupContext::MODE_ADD;
 			pPopupContext->m_NameInput.Clear();
@@ -3205,7 +3250,10 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 
 		View.HSplitTop(3.0f, nullptr, &View);
 		View.HSplitTop(18.0f, &Button, &View);
-		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_RenameButton, Localize("Rename"), &Button, FontSize, TEXTALIGN_MC, 0.0f, false, !IsProtectedCategory))
+		const ColorRGBA PreviousTextColor = pMenus->TextRender()->GetTextColor();
+		if(IsProtectedCategory)
+			pMenus->TextRender()->TextColor(ui_token::color::TEXT_DISABLED);
+		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_RenameButton, Localize("Rename"), &Button, FontSize, TEXTALIGN_MC, 0.0f, false, !IsProtectedCategory, ButtonColor(&pPopupContext->m_RenameButton, !IsProtectedCategory), ui_token::font::SMALL))
 		{
 			pPopupContext->m_Mode = CFriendsCategoryPopupContext::MODE_RENAME;
 			pPopupContext->m_NameInput.Set(pCategory);
@@ -3215,13 +3263,14 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 
 		View.HSplitTop(3.0f, nullptr, &View);
 		View.HSplitTop(18.0f, &Button, &View);
-		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_DeleteButton, Localize("Delete category"), &Button, FontSize, TEXTALIGN_MC, 0.0f, false, !IsProtectedCategory))
+		if(pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_DeleteButton, Localize("Delete category"), &Button, FontSize, TEXTALIGN_MC, 0.0f, false, !IsProtectedCategory, ButtonColor(&pPopupContext->m_DeleteButton, !IsProtectedCategory), ui_token::font::SMALL))
 		{
 			if(pFriends->RemoveCategory(pCategory))
 				pMenus->FriendlistOnUpdate();
 			return CUi::POPUP_CLOSE_CURRENT;
 		}
 
+		pMenus->TextRender()->TextColor(PreviousTextColor);
 		return CUi::POPUP_KEEP_OPEN;
 	}
 
@@ -3240,11 +3289,11 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendsCategory(void *pContext, CUIRe
 	View.HSplitTop(20.0f, &Buttons, &View);
 	Buttons.VSplitMid(&Cancel, &Confirm, 5.0f);
 
-	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, Localize("Cancel"), &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
+	const bool CancelPressed = ui_widget::SecondaryButton(FriendsCategoryTextInputCtx, &pPopupContext->m_CancelButton, Localize("Cancel"), Cancel) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
 	if(CancelPressed)
 		return CUi::POPUP_CLOSE_CURRENT;
 
-	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD ? Localize("Add") : Localize("Rename"), &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
+	const bool ConfirmPressed = ui_widget::PrimaryButton(FriendsCategoryTextInputCtx, &pPopupContext->m_ConfirmButton, pPopupContext->m_Mode == CFriendsCategoryPopupContext::MODE_ADD ? Localize("Add") : Localize("Rename"), Confirm) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
 	if(ConfirmPressed)
 	{
 		char aCategory[IFriends::MAX_FRIEND_CATEGORY_LENGTH];
@@ -3281,7 +3330,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendNote(void *pContext, CUIRect Vi
 	if(pMenus == nullptr)
 		return CUi::POPUP_CLOSE_CURRENT;
 
-	const float FontSize = 10.0f;
+	const float FontSize = ui_token::font::SMALL + 1.0f;
 	View.Margin(5.0f, &View);
 
 	CUIRect Label, Input, Buttons, Cancel, Confirm;
@@ -3299,11 +3348,11 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFriendNote(void *pContext, CUIRect Vi
 	View.HSplitTop(18.0f, &Buttons, &View);
 	Buttons.VSplitMid(&Cancel, &Confirm, 3.0f);
 
-	const bool CancelPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_CancelButton, Localize("Cancel"), &Cancel, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
+	const bool CancelPressed = ui_widget::SecondaryButton(FriendNoteTextInputCtx, &pPopupContext->m_CancelButton, Localize("Cancel"), Cancel) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE));
 	if(CancelPressed)
 		return CUi::POPUP_CLOSE_CURRENT;
 
-	const bool ConfirmPressed = pMenus->Ui()->DoButton_PopupMenu(&pPopupContext->m_ConfirmButton, Localize("Save"), &Confirm, FontSize, TEXTALIGN_MC) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
+	const bool ConfirmPressed = ui_widget::PrimaryButton(FriendNoteTextInputCtx, &pPopupContext->m_ConfirmButton, Localize("Save"), Confirm) || (Active && pMenus->Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER));
 	if(ConfirmPressed)
 	{
 		char aNote[IFriends::MAX_FRIEND_NOTE_LENGTH];

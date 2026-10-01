@@ -8,6 +8,8 @@
 
 #include <game/client/component.h>
 
+#include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 class IConfigManager;
@@ -40,6 +42,56 @@ public:
 };
 
 inline constexpr CBindSlot EMPTY_BIND_SLOT = CBindSlot(KEY_UNKNOWN, KeyModifier::NONE);
+
+// 绑定存储与版本独立于客户端接口，编辑器刷新和行为测试共用生产状态。
+class CBindStorage
+{
+	friend class CBinds;
+	char *m_aapKeyBindings[KeyModifier::COMBINATION_COUNT][KEY_LAST]{};
+	uint64_t m_Revision = 0;
+
+public:
+	CBindStorage() = default;
+	CBindStorage(const CBindStorage &) = delete;
+	CBindStorage &operator=(const CBindStorage &) = delete;
+	~CBindStorage() { UnbindAll(); }
+	uint64_t Revision() const { return m_Revision; }
+	const char *Get(int Key, int Modifiers) const
+	{
+		dbg_assert(Key >= KEY_FIRST && Key < KEY_LAST, "Key invalid");
+		dbg_assert(Modifiers >= KeyModifier::NONE && Modifiers < KeyModifier::COMBINATION_COUNT, "Modifiers invalid");
+		return m_aapKeyBindings[Modifiers][Key] ? m_aapKeyBindings[Modifiers][Key] : "";
+	}
+	bool Bind(int Key, const char *pCommand, bool FreeOnly = false, int Modifiers = KeyModifier::NONE)
+	{
+		if(FreeOnly && Get(Key, Modifiers)[0])
+			return false;
+		Get(Key, Modifiers);
+		// 先复制后释放，允许用同一槽位的当前值覆盖自身。
+		char *pCopy = nullptr;
+		if(pCommand[0])
+		{
+			const int Size = str_length(pCommand) + 1;
+			pCopy = static_cast<char *>(malloc(Size));
+			dbg_assert(pCopy != nullptr, "bind allocation failed");
+			str_copy(pCopy, pCommand, Size);
+		}
+		free(m_aapKeyBindings[Modifiers][Key]);
+		m_aapKeyBindings[Modifiers][Key] = pCopy;
+		++m_Revision;
+		return true;
+	}
+	void UnbindAll()
+	{
+		for(auto &apBindings : m_aapKeyBindings)
+			for(auto &pBinding : apBindings)
+			{
+				free(pBinding);
+				pBinding = nullptr;
+			}
+		++m_Revision;
+	}
+};
 
 class CBinds : public CComponent
 {
@@ -76,6 +128,7 @@ public:
 	void Bind(int KeyId, const char *pStr, bool FreeOnly = false, int ModifierCombination = KeyModifier::NONE);
 	void SetDefaults();
 	void UnbindAll();
+	uint64_t Revision() const { return m_Storage.Revision(); }
 	const char *Get(int KeyId, int ModifierCombination) const;
 	const char *Get(const CBindSlot &BindSlot) const;
 	void GetKey(const char *pBindStr, char *pBuf, size_t BufSize) const;
@@ -114,7 +167,7 @@ public:
 	void SetDDRaceBinds(bool FreeOnly);
 
 private:
-	char *m_aapKeyBindings[KeyModifier::COMBINATION_COUNT][KEY_LAST];
+	CBindStorage m_Storage;
 	std::vector<CBindSlot> m_vActiveBinds;
 };
 #endif

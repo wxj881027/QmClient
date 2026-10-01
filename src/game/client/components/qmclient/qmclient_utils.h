@@ -2,6 +2,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QMCLIENT_UTILS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QMCLIENT_UTILS_H
 
+#include "sponsor_chat_style.h"
+
 #include <base/color.h>
 
 #include <engine/shared/client_brand.h>
@@ -21,10 +23,17 @@ struct SQmTitlePresence
 	std::string m_Title;
 	std::string m_Style;
 	int64_t m_RemainingSeconds = 0;
+	EQmSponsorChatStyle m_ChatStyle = EQmSponsorChatStyle::NONE;
 };
 
 std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, const char *pServerAddress, int64_t *pServerTime = nullptr);
 bool IsValidQmTitle(const char *pTitle);
+
+// 后端使用该标记表示包含多服分布的全局 USERS 快照。
+inline constexpr const char *QMCLIENT_REALTIME_USERS_GLOBAL = "users";
+
+// 全局快照可在菜单态使用，定向快照必须匹配当前服务器。
+bool IsQmClientUsersSnapshotForContext(const json_value *pRoot, const char *pCurrentServerAddress);
 
 struct SQmClientServerDistribution
 {

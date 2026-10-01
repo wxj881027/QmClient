@@ -166,9 +166,9 @@ bool ShouldShowQmNameplateName(int Scope, bool IsCurrentChar, bool IsLocalClient
 int QmNameplateShowScopeFromLegacyFlags(bool ShowOthers, bool ShowOwn);
 bool ShouldUseQmNameplateTextEffects(int PlayingScope, int SpectateScope, int DemoMode, int DemoTarget, bool DemoPlayback, bool Spectating, bool Self, bool Friend, bool SpectateTarget, int ClientId);
 
-// HJ大佬辅助 - 水中旁观者虚化：把「已 /pause 且世界里还留着旁观 Tee」的玩家整体调暗。
+// HJ大佬辅助 - 水中旁观者虚化：只淡化水域中的旁观实体。
 // 未开启虚化或透明度为 100% 时原样返回 BaseAlpha，调用方可无条件套用返回值。
-float ResolveQmPausedSpectatorAlpha(bool FadeEnabled, int AlphaPercent, bool Paused, bool SpectatorTeeInWorld, float BaseAlpha);
+float ResolveQmPausedSpectatorAlpha(bool FadeEnabled, int AlphaPercent, bool SpectatorTeeInWorld, bool InWater, float BaseAlpha);
 
 bool ShouldHideGoresGuide(bool GoresEnabled, bool HideGuidesEnabled, bool ManualGuideVisible);
 bool ShouldRenderGoresDebugRoute(bool Online, bool DebugRouteEnabled, bool GoresMapProgressEnabled);

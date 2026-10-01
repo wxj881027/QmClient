@@ -384,6 +384,8 @@ bool CScoreboard::OnInput(const IInput::CEvent &Event)
 		m_LastMousePos = Ui()->MousePos();
 		return true;
 	}
+	if(!IsActive() || !m_MouseUnlocked)
+		return false;
 
 	return QmScoreboardUiInput(*Ui(), IsActive() && m_MouseUnlocked, Event);
 }
@@ -1837,7 +1839,7 @@ void CScoreboard::OnRender()
 		BuildPlayerRowPlan(TEAM_BLUE, BluePlayerRows);
 	const int NumPlayers = Teams ? maximum(RedPlayerRows.m_Count, BluePlayerRows.m_Count) : RedPlayerRows.m_Count;
 	// 滚动模式：非队伍玩法且人数超过一屏时，固定行高只显示一列，滚轮查看其余玩家。
-	const bool ScrollMode = !Teams && g_Config.m_QmScoreboardScroll && NumPlayers > 16;
+	const bool ScrollMode = ScoreboardScrollModeEnabled(Teams, g_Config.m_QmScoreboardScroll, NumPlayers);
 	if(!ScrollMode)
 		m_ScrollRegion.Reset();
 	const bool TimeScore = GameClient()->m_GameInfo.m_TimeScore;

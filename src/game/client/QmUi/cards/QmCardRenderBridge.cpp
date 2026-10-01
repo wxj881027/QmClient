@@ -282,3 +282,9 @@ bool qm_card_catalog::QmCardRenderHook::GameConsoleActive(CMenus *pMenus)
 {
 	return pMenus != nullptr && pMenus->GameClient()->m_GameConsole.IsActive();
 }
+
+void qm_card_catalog::QmCardRenderHook::RenderQmBindEditorContent(CMenus *pMenus, CUIRect &Content, const bool ReadOnly)
+{
+	if(pMenus != nullptr)
+		pMenus->RenderSettingsQmClientBindCard(Content, ReadOnly);
+}

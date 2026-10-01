@@ -3,6 +3,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "UiForms.h"
 
+#include "UiDiscreteSliderStyle.h"
 #include "UiFormLogic.h"
 #include "UiMotion.h"
 #include "UiSurface.h"

@@ -240,8 +240,7 @@ void CEmoticon::SetActive(bool Active)
 
 void CEmoticon::ToggleLaunchMode()
 {
-	if(!m_Active)
-		return;
+	// 发射模式是轮盘的持久选择，绑定命令可以在轮盘打开前切换。
 	m_LaunchModeActive = !m_LaunchModeActive;
 	GameClient()->Echo(m_LaunchModeActive ? "表情发射：开启" : "表情发射：关闭");
 }
@@ -562,12 +561,17 @@ void CEmoticon::RenderProjectiles()
 		}
 	}
 
+	if(std::none_of(m_aProjectiles.begin(), m_aProjectiles.end(), [](const CEmoticonProjectile &Projectile) { return Projectile.m_Active; }))
+		return;
+
 	float OldX0, OldY0, OldX1, OldY1;
 	Graphics()->GetScreen(&OldX0, &OldY0, &OldX1, &OldY1);
 	float Width, Height;
 	Graphics()->CalcScreenParams(Graphics()->ScreenAspect(), GameClient()->m_Camera.m_Zoom, &Width, &Height);
 	const vec2 Center = GameClient()->m_Camera.m_Center;
-	Graphics()->MapScreen(Center.x - Width / 2, Center.y - Height / 2, Center.x + Width / 2, Center.y + Height / 2);
+	const vec2 ScreenMin = Center - vec2(Width, Height) * 0.5f;
+	const vec2 ScreenMax = Center + vec2(Width, Height) * 0.5f;
+	Graphics()->MapScreen(ScreenMin.x, ScreenMin.y, ScreenMax.x, ScreenMax.y);
 	Graphics()->BlendNormal();
 	const auto Solid = [this](int X, int Y) { return Collision()->CheckPoint(X * 32.0f + 16.0f, Y * 32.0f + 16.0f); };
 	QmEmoticon::SPlayerBox aPlayerBoxes[MAX_CLIENTS];
@@ -581,34 +585,50 @@ void CEmoticon::RenderProjectiles()
 			++NumPlayerBoxes;
 		}
 
+	const float FrameTime = std::clamp(Client()->RenderFrameTime(), 0.0f, 0.1f);
+	int BatchEmoticon = -1;
 	for(auto &Projectile : m_aProjectiles)
 	{
 		if(!Projectile.m_Active || Projectile.m_Emoticon < 0 || Projectile.m_Emoticon >= NUM_EMOTICONS)
 			continue;
 		const QmEmoticon::CAlphaMask &Mask = m_aCollisionMasks[Projectile.m_Emoticon];
-		Projectile.Update(std::clamp(Client()->RenderFrameTime(), 0.0f, 0.1f), Mask, Solid, aPlayerBoxes, NumPlayerBoxes);
+		Projectile.Update(FrameTime, Mask, Solid, aPlayerBoxes, NumPlayerBoxes);
 		if(!Projectile.m_Active)
 			continue;
 		const float Fraction = std::clamp((float)(Projectile.m_Accumulator / CEmoticonProjectile::STEP), 0.0f, 1.0f);
 		vec2 Position = mix(Projectile.m_PreviousPos, Projectile.m_Pos, Fraction);
 		float Angle = mix(Projectile.m_PreviousAngle, Projectile.m_Angle, Fraction);
+		const float Size = Projectile.Size();
+		const float Radius = Size * 0.707107f;
+		// 屏外仍正常模拟；同时包含插值与回退位置，避免在屏幕边缘漏画。
+		if(std::max(Position.x, Projectile.m_Pos.x) + Radius < ScreenMin.x ||
+			std::min(Position.x, Projectile.m_Pos.x) - Radius > ScreenMax.x ||
+			std::max(Position.y, Projectile.m_Pos.y) + Radius < ScreenMin.y ||
+			std::min(Position.y, Projectile.m_Pos.y) - Radius > ScreenMax.y)
+			continue;
 		// 插值可能切入墙角，重叠时使用已求解的位置和角度。
-		if(Mask.Overlaps(Position, Projectile.Size(), Angle, Solid))
+		if(Mask.Overlaps(Position, Size, Angle, Solid))
 		{
 			Position = Projectile.m_Pos;
 			Angle = Projectile.m_Angle;
 		}
-		Graphics()->TextureSet(GameClient()->m_EmoticonsSkin.m_aSpriteEmoticons[Projectile.m_Emoticon]);
-		Graphics()->QuadsBegin();
-		Graphics()->QuadsSetSubset(0, 0, 1, 1);
+		if(BatchEmoticon != Projectile.m_Emoticon)
+		{
+			if(BatchEmoticon >= 0)
+				Graphics()->QuadsEnd();
+			Graphics()->TextureSet(GameClient()->m_EmoticonsSkin.m_aSpriteEmoticons[Projectile.m_Emoticon]);
+			Graphics()->QuadsBegin();
+			BatchEmoticon = Projectile.m_Emoticon;
+		}
 		Graphics()->QuadsSetRotation(Angle);
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, std::clamp(Projectile.m_LifeTime * 2.0f, 0.0f, 1.0f));
-		const float Size = Projectile.Size();
 		IGraphics::CQuadItem Quad(Position.x, Position.y, Size, Size);
 		Graphics()->QuadsDraw(&Quad, 1);
-		Graphics()->QuadsEnd();
 	}
+	if(BatchEmoticon >= 0)
+		Graphics()->QuadsEnd();
 	Graphics()->QuadsSetRotation(0.0f);
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	Graphics()->MapScreen(OldX0, OldY0, OldX1, OldY1);
 }
 

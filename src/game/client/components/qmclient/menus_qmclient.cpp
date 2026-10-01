@@ -27,6 +27,7 @@
 #include <game/client/QmUi/QmModuleLayoutAdapter.h>
 #include <game/client/QmUi/QmModuleTypes.h>
 #include <game/client/QmUi/QmScroll.h>
+#include <game/client/QmUi/SettingsCardCollapseState.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiDogfood.h>
@@ -35,6 +36,7 @@
 #include <game/client/QmUi/UiOverlays.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/QmUi/cards/QmCardCatalogFunctionMetrics.h>
 #include <game/client/QmUi/cards/QmCardCatalogInternal.h>
 #include <game/client/QmUi/cards/QmCardCatalogSkinMetrics.h>
 #include <game/client/animstate.h>
@@ -54,6 +56,7 @@
 #include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/components/qmclient/qm_title_style.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
+#include <game/client/components/qmclient/translate/translate_ui_common.h>
 #include <game/client/components/qmclient/translate/translate_ui_settings.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/tclient/bindchat.h>
@@ -216,6 +219,7 @@ namespace
 		case CMenus::QMCLIENT_SETTINGS_TAB_HUD: return "hud";
 		case CMenus::QMCLIENT_SETTINGS_TAB_CONTRIBUTORS: return "contributors";
 		case CMenus::QMCLIENT_SETTINGS_TAB_CONFIG: return "config";
+		case CMenus::QMCLIENT_SETTINGS_TAB_BIND: return "bind";
 		default: return "unknown";
 		}
 	}
@@ -1880,57 +1884,21 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	RenderCheckbox(&g_Config.m_QmTranslateAutoOutgoing, "Auto translate sent messages", Localize("Auto translate sent messages"), &g_Config.m_QmTranslateAutoOutgoing, &Row, LineHeight);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
-	static std::vector<const char *> s_TranslateBackendDropDownNames;
-	s_TranslateBackendDropDownNames = {Localize("Tencent Cloud"), "LibreTranslate", "FTAPI", "LLM API", Localize("MyMemory (free)")};
+	const auto TranslateBackendDropDownNames = NTranslateUi::BackendNames();
+	if(!Ui()->RenderOnly())
+		NTranslateUi::NormalizeBackend(g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend));
 	static CUi::SDropDownState s_TranslateBackendDropDownState;
 	static CScrollRegion s_TranslateBackendDropDownScrollRegion;
 	s_TranslateBackendDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TranslateBackendDropDownScrollRegion;
 
-	int BackendSelectedOld = 0;
-	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
-		BackendSelectedOld = 1;
-	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
-		BackendSelectedOld = 2;
-	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
-		BackendSelectedOld = 3;
-	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0)
-		BackendSelectedOld = 4;
+	const int BackendSelectedOld = NTranslateUi::BackendIndexForDisplay(g_Config.m_QmTranslateBackend);
 
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 	CUIElement &TranslationServiceLabel = SettingsTextElement(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-translation-service");
 	DoSettingsLabelStreamed(TranslationServiceLabel, &LabelCol, Localize("Translation service"), BodySize, TEXTALIGN_ML);
-	const int BackendSelectedNew = DoSettingsDropDown(&ControlCol, BackendSelectedOld, s_TranslateBackendDropDownNames.data(), s_TranslateBackendDropDownNames.size(), s_TranslateBackendDropDownState);
-	if(BackendSelectedNew != BackendSelectedOld)
-	{
-		if(BackendSelectedNew == 1)
-		{
-			str_copy(g_Config.m_QmTranslateBackend, "libretranslate", sizeof(g_Config.m_QmTranslateBackend));
-			str_copy(g_Config.m_QmTranslateLibreEndpoint, "", sizeof(g_Config.m_QmTranslateLibreEndpoint)); // Use default localhost:5000
-		}
-		else if(BackendSelectedNew == 2)
-		{
-			str_copy(g_Config.m_QmTranslateBackend, "ftapi", sizeof(g_Config.m_QmTranslateBackend));
-			str_copy(g_Config.m_QmTranslateTcEndpoint, "", sizeof(g_Config.m_QmTranslateTcEndpoint)); // Use default ftapi.pythonanywhere.com
-		}
-		else if(BackendSelectedNew == 3)
-		{
-			// LLM API - 默认使用智谱AI预设
-			str_copy(g_Config.m_QmTranslateBackend, "llm", sizeof(g_Config.m_QmTranslateBackend));
-			// LLM API - 清空自定义端点，使用默认
-			str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "", sizeof(g_Config.m_QmTranslateLlmEndpointCustom));
-		}
-		else if(BackendSelectedNew == 4)
-		{
-			// MyMemory - 免注册零配置
-			str_copy(g_Config.m_QmTranslateBackend, "mymemory", sizeof(g_Config.m_QmTranslateBackend));
-		}
-		else
-		{
-			str_copy(g_Config.m_QmTranslateBackend, "tencentcloud", sizeof(g_Config.m_QmTranslateBackend));
-			str_copy(g_Config.m_QmTranslateTcEndpoint, "", sizeof(g_Config.m_QmTranslateTcEndpoint)); // Use default tencent endpoint
-		}
-	}
+	const int BackendSelectedNew = DoSettingsDropDown(&ControlCol, BackendSelectedOld, TranslateBackendDropDownNames.data(), TranslateBackendDropDownNames.size(), s_TranslateBackendDropDownState);
+	NTranslateUi::CommitBackend(g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), BackendSelectedOld, BackendSelectedNew);
 	const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
 	const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0;
 	const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
@@ -2013,12 +1981,12 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 	// 下拉框 + 输入框组合
 	{
-		static const char *s_apLangNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
-		static const char *s_apLangCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+		const auto &LangNames = NTranslateUi::LanguageNames();
+		const auto &LangCodes = NTranslateUi::LanguageCodes();
 		static CUi::SDropDownState s_TargetLangDropDown;
 
 		static CLineInput s_TranslateTarget(g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget));
-		RenderLanguageDropDownWithCustomInput(ControlCol, s_apLangNames, s_apLangCodes, std::size(s_apLangCodes), s_TargetLangDropDown, g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), s_TranslateTarget, "zh");
+		RenderLanguageDropDownWithCustomInput(ControlCol, LangNames.data(), LangCodes.data(), LangCodes.size(), s_TargetLangDropDown, g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), s_TranslateTarget, "zh");
 	}
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 	// Endpoint 配置 - 根据后端类型显示不同的端点输入
@@ -2502,6 +2470,22 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		}
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
+	RenderLabel("qmclient-translate-send-target-language", &LabelCol, Localize("Send target language"), BodySize);
+
+	// 下拉框 + 输入框组合
+	{
+		const auto &apOutTargetNames = NTranslateUi::LanguageNames();
+		const auto &apOutTargetCodes = NTranslateUi::LanguageCodes();
+		static CUi::SDropDownState s_OutTargetLangDropDown;
+
+		static CLineInput s_TargetLang(g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget));
+		RenderLanguageDropDownWithCustomInput(ControlCol, apOutTargetNames.data(), apOutTargetCodes.data(), apOutTargetCodes.size(), s_OutTargetLangDropDown, g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), s_TargetLang, "en");
+	}
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 	// Content.HSplitTop(LineHeight, &Row, &Content);
 	// Ui()->DoLabel(&Row, Localize("Auto-translate will skip simplified Chinese, traditional Chinese, and server messages"), BodySize * 0.8f, TEXTALIGN_ML);
@@ -2510,207 +2494,6 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	// Content.HSplitTop(LineHeight, &Row, &Content);
 	// Ui()->DoLabel(&Row, Localize("Append language codes like [ru], [en], [ja] at the end when sending"), BodySize * 0.8f, TEXTALIGN_ML);
 	// Content.HSplitTop(LineSpacing, nullptr, &Content);
-}
-
-void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CornerRadius, bool PrewarmOnly)
-{
-	CPerfTimer LayoutTimer;
-	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_pie_menu_text_inputs", UiScale);
-	char aLayoutExtra[96];
-	str_copy(aLayoutExtra, "tab=function module=pie_menu", sizeof(aLayoutExtra));
-	LogQmPerfStage(Client(), "pie_menu_layout", LayoutTimer.ElapsedMs(), false, aLayoutExtra);
-	CPerfTimer ControlsTimer;
-	CUIRect Row, LabelColumn, ControlColumn;
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	RenderQmFunctionCheckbox(&g_Config.m_QmPieMenuEnabled, "Enable pie menu", Localize("Enable pie menu"), &g_Config.m_QmPieMenuEnabled, &Row, PrewarmOnly);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-	if(!g_Config.m_QmPieMenuEnabled)
-	{
-		LogQmPerfStage(Client(), "pie_menu_controls", ControlsTimer.ElapsedMs(), false, aLayoutExtra);
-		return;
-	}
-
-	auto RenderSlider = [this, &Content, &Row, &LabelColumn, &ControlColumn, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly](const void *pId, const char *pTextId, const char *pText, int *pValue, int Min, int Max, const char *pSuffix = "") {
-		Content.HSplitTop(LineHeight, &Row, &Content);
-		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
-		RenderQmSettingsSliderWithValueInput(pId, ControlColumn, pValue, Min, Max, pSuffix, PrewarmOnly);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	};
-	static int s_PieMenuScaleInputId, s_PieMenuOpacityInputId, s_PieMenuMaxDistanceInputId;
-	RenderSlider(&s_PieMenuScaleInputId, "qmclient-pie-menu-ui-scale", "UI scale", &g_Config.m_QmPieMenuScale, 50, 200, "%");
-	RenderSlider(&s_PieMenuOpacityInputId, "qmclient-pie-menu-opacity", "Opacity", &g_Config.m_QmPieMenuOpacity, 0, 100, "%");
-	RenderSlider(&s_PieMenuMaxDistanceInputId, "qmclient-pie-menu-detection-distance", "Detection distance", &g_Config.m_QmPieMenuMaxDistance, 100, 2000);
-
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-rename-queue", &LabelColumn, Localize("Rename queue"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
-	static CLineInput s_PieMenuRenameQueue(g_Config.m_QmPieMenuRenameQueue, sizeof(g_Config.m_QmPieMenuRenameQueue));
-	s_PieMenuRenameQueue.SetEmptyText(Localize("Example: name1|name2|name3"));
-	ui_widget::InputField(TextInputCtx, &s_PieMenuRenameQueue, ControlColumn, Localize("Example: name1|name2|name3"), BodySize);
-	Content.HSplitTop(LineSpacing * 2.0f, nullptr, &Content);
-
-	Content.HSplitTop(BodySize, &Row, &Content);
-	TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.8f));
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-option-color", &Row, Localize("Option color"), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	struct SPieMenuColorEntry
-	{
-		const char *m_pName;
-		const char *m_pIcon;
-		unsigned int *m_pColorValue;
-		ColorRGBA m_DefaultColor;
-	};
-	const std::array<SPieMenuColorEntry, 6> aColorEntries = {{
-		{Localize("Friend"), "♥", (unsigned int *)&g_Config.m_QmPieMenuColorFriend, ColorRGBA(0.9f, 0.3f, 0.4f)},
-		{Localize("Whisper"), "✉", (unsigned int *)&g_Config.m_QmPieMenuColorWhisper, ColorRGBA(0.5f, 0.35f, 0.7f)},
-		{Localize("Mention"), "➤", (unsigned int *)&g_Config.m_QmPieMenuColorMention, ColorRGBA(0.85f, 0.5f, 0.2f)},
-		{Localize("Copy skin"), "⚡", (unsigned int *)&g_Config.m_QmPieMenuColorCopySkin, ColorRGBA(0.25f, 0.55f, 0.8f)},
-		{Localize("Switch"), "⇄", (unsigned int *)&g_Config.m_QmPieMenuColorSwap, ColorRGBA(0.8f, 0.3f, 0.3f)},
-		{Localize("Spectate"), "👁", (unsigned int *)&g_Config.m_QmPieMenuColorSpectate, ColorRGBA(0.45f, 0.55f, 0.6f)},
-	}};
-	auto OpenColorPopup = [&](unsigned int *pColorValue) {
-		const ColorHSLA HslaColor = ColorHSLA(*pColorValue, false);
-		m_ColorPickerPopupContext.m_pHslaColor = pColorValue;
-		m_ColorPickerPopupContext.m_HslaColor = HslaColor;
-		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(HslaColor);
-		m_ColorPickerPopupContext.m_RgbaColor = color_cast<ColorRGBA>(m_ColorPickerPopupContext.m_HsvaColor);
-		m_ColorPickerPopupContext.m_Alpha = false;
-		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);
-	};
-	constexpr float PreviewStartAngle = -90.0f;
-	constexpr float PreviewSectorGap = 3.6f;
-	constexpr float PreviewInnerRatio = 108.0f / 288.0f;
-	constexpr float PreviewHighlightScale = 1.12f;
-	const float PreviewBaseSide = minimum(Content.w, std::clamp(Content.w * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f));
-	const float PreviewSide = PreviewBaseSide * 0.8f;
-	CUIRect PreviewRow, PreviewRect, PreviewInfoRect;
-	Content.HSplitTop(PreviewSide, &PreviewRow, &Content);
-	PreviewRow.VSplitLeft(PreviewSide, &PreviewRect, &PreviewInfoRect);
-	PreviewInfoRect.VSplitLeft(maximum(CardPadding * 0.8f, LineSpacing * 2.0f), nullptr, &PreviewInfoRect);
-	PreviewRect.Margin(LineSpacing * 0.5f, &PreviewRect);
-	CUIRect PreviewFrame = PreviewRect;
-	const char *pHintText = Localize("Click to set color");
-	if(!PrewarmOnly)
-	{
-		{
-			CUiScopedGaussianBlurSuppression PreviewBlurSuppression(Ui());
-			PreviewFrame.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), IGraphics::CORNER_ALL, CornerRadius * 0.8f);
-		}
-		PreviewRect.Margin(maximum(4.0f, LineSpacing * 0.6f), &PreviewRect);
-		const vec2 PreviewCenter = PreviewRect.Center();
-		const float BaseOuterRadius = maximum(1.0f, minimum(PreviewRect.w, PreviewRect.h) * 0.5f - LineSpacing * 0.8f);
-		const float InnerRadius = BaseOuterRadius * PreviewInnerRatio;
-		const float CenterRadius = maximum(1.0f, InnerRadius - maximum(4.0f, BaseOuterRadius * 0.03f));
-		const float AnglePerSector = 360.0f / (float)std::size(aColorEntries);
-		const float PreviewAlpha = std::clamp(g_Config.m_QmPieMenuOpacity / 100.0f, 0.2f, 1.0f);
-		int PopupSectorIndex = -1;
-		if(Ui()->IsPopupOpen(&m_ColorPickerPopupContext))
-		{
-			for(size_t i = 0; i < aColorEntries.size(); ++i)
-				if(m_ColorPickerPopupContext.m_pHslaColor == aColorEntries[i].m_pColorValue)
-					PopupSectorIndex = (int)i;
-		}
-		int HoveredSector = -1;
-		if(Ui()->MouseInside(&PreviewFrame))
-		{
-			const vec2 MouseDir = Ui()->MousePos() - PreviewCenter;
-			const float MouseDist = length(MouseDir);
-			if(MouseDist >= InnerRadius && MouseDist <= BaseOuterRadius * PreviewHighlightScale)
-			{
-				float MouseAngle = atan2(MouseDir.y, MouseDir.x) * 180.0f / pi;
-				while(MouseAngle < 0.0f)
-					MouseAngle += 360.0f;
-				const float AdjustedAngle = fmodf(MouseAngle - PreviewStartAngle + 360.0f, 360.0f);
-				const int SectorIndex = (int)(AdjustedAngle / AnglePerSector);
-				const float AngleInSector = AdjustedAngle - SectorIndex * AnglePerSector;
-				if(SectorIndex >= 0 && SectorIndex < (int)aColorEntries.size() && AngleInSector >= PreviewSectorGap * 0.5f && AngleInSector <= AnglePerSector - PreviewSectorGap * 0.5f)
-					HoveredSector = SectorIndex;
-			}
-		}
-		static CButtonContainer s_ColorPreviewButton;
-		if(Ui()->DoButtonLogic(&s_ColorPreviewButton, 0, &PreviewFrame, BUTTONFLAG_LEFT) && HoveredSector >= 0)
-			OpenColorPopup(aColorEntries[HoveredSector].m_pColorValue);
-		for(size_t i = 0; i < aColorEntries.size(); ++i)
-		{
-			const bool Highlighted = (int)i == HoveredSector || (int)i == PopupSectorIndex;
-			const float OuterRadius = BaseOuterRadius * (Highlighted ? PreviewHighlightScale : 1.0f);
-			const float StartAngle = PreviewStartAngle + AnglePerSector * i + PreviewSectorGap * 0.5f;
-			const float EndAngle = StartAngle + AnglePerSector - PreviewSectorGap;
-			ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(*aColorEntries[i].m_pColorValue));
-			if(Highlighted)
-			{
-				Color.r = minimum(Color.r * 1.3f, 1.0f);
-				Color.g = minimum(Color.g * 1.3f, 1.0f);
-				Color.b = minimum(Color.b * 1.3f, 1.0f);
-				Color.a = minimum(Color.a * 1.2f, 1.0f);
-			}
-			Graphics()->TextureClear();
-			Graphics()->QuadsBegin();
-			Graphics()->SetColor(Color.r, Color.g, Color.b, Color.a * PreviewAlpha);
-			for(int Segment = 0; Segment < 24; ++Segment)
-			{
-				const float Rad1 = (StartAngle + (EndAngle - StartAngle) * (Segment / 24.0f)) * pi / 180.0f;
-				const float Rad2 = (StartAngle + (EndAngle - StartAngle) * ((Segment + 1) / 24.0f)) * pi / 180.0f;
-				const vec2 Inner1 = PreviewCenter + vec2(cos(Rad1), sin(Rad1)) * InnerRadius;
-				const vec2 Outer1 = PreviewCenter + vec2(cos(Rad1), sin(Rad1)) * OuterRadius;
-				const vec2 Inner2 = PreviewCenter + vec2(cos(Rad2), sin(Rad2)) * InnerRadius;
-				const vec2 Outer2 = PreviewCenter + vec2(cos(Rad2), sin(Rad2)) * OuterRadius;
-				const IGraphics::CFreeformItem Freeform(Inner1.x, Inner1.y, Outer1.x, Outer1.y, Inner2.x, Inner2.y, Outer2.x, Outer2.y);
-				Graphics()->QuadsDrawFreeform(&Freeform, 1);
-			}
-			Graphics()->QuadsEnd();
-			const float MidAngle = (StartAngle + EndAngle) * 0.5f * pi / 180.0f;
-			const vec2 ItemPos = PreviewCenter + vec2(cos(MidAngle), sin(MidAngle)) * ((InnerRadius + OuterRadius) * 0.5f);
-			const float IconSize = maximum(BodySize * 1.45f, BaseOuterRadius * (Highlighted ? 0.20f : 0.163f));
-			const float TextSize = maximum(BodySize * 0.95f, BaseOuterRadius * (Highlighted ? 0.10f : 0.08f));
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, PreviewAlpha);
-			const float IconWidth = TextRender()->TextWidth(IconSize, aColorEntries[i].m_pIcon);
-			const float IconYOffset = BaseOuterRadius * 0.0625f;
-			TextRender()->Text(ItemPos.x - IconWidth * 0.5f, ItemPos.y - IconSize * 0.5f - IconYOffset, IconSize, aColorEntries[i].m_pIcon);
-			const float NameWidth = TextRender()->TextWidth(TextSize, aColorEntries[i].m_pName);
-			TextRender()->Text(ItemPos.x - NameWidth * 0.5f, ItemPos.y + BaseOuterRadius * 0.0486f, TextSize, aColorEntries[i].m_pName);
-		}
-		Graphics()->TextureClear();
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(0.15f, 0.15f, 0.2f, 0.9f * PreviewAlpha);
-		Graphics()->DrawCircle(PreviewCenter.x, PreviewCenter.y, CenterRadius, 48);
-		Graphics()->QuadsEnd();
-		const int FocusedSector = HoveredSector >= 0 ? HoveredSector : PopupSectorIndex;
-		const char *pCenterTitle = FocusedSector >= 0 ? aColorEntries[FocusedSector].m_pName : Localize("Click to set color");
-		const char *pCenterSubtitle = FocusedSector >= 0 ? Localize("Open color picker") : Localize("Set color");
-		pHintText = FocusedSector >= 0 ? aColorEntries[FocusedSector].m_pName : Localize("Click to set color");
-		const float CenterTitleSize = maximum(BodySize * 1.05f, BaseOuterRadius * 0.095f);
-		const float CenterSubtitleSize = maximum(BodySize * 0.75f, BaseOuterRadius * 0.055f);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.98f);
-		const float CenterTitleWidth = TextRender()->TextWidth(CenterTitleSize, pCenterTitle);
-		TextRender()->Text(PreviewCenter.x - CenterTitleWidth * 0.5f, PreviewCenter.y - CenterTitleSize * 0.9f, CenterTitleSize, pCenterTitle);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.68f);
-		const float CenterSubtitleWidth = TextRender()->TextWidth(CenterSubtitleSize, pCenterSubtitle);
-		TextRender()->Text(PreviewCenter.x - CenterSubtitleWidth * 0.5f, PreviewCenter.y + CenterSubtitleSize * 0.1f, CenterSubtitleSize, pCenterSubtitle);
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-	}
-	CUIRect PreviewInfoContent = PreviewInfoRect;
-	const float InfoSpacing = LineSpacing * 0.75f;
-	const float InfoHeight = LineHeight + InfoSpacing + ButtonHeight;
-	if(PreviewInfoContent.h > InfoHeight)
-		PreviewInfoContent.HSplitTop((PreviewInfoContent.h - InfoHeight) * 0.5f, nullptr, &PreviewInfoContent);
-	CUIRect HintRow, ResetRow;
-	PreviewInfoContent.HSplitTop(LineHeight, &HintRow, &PreviewInfoContent);
-	PreviewInfoContent.HSplitTop(InfoSpacing, nullptr, &PreviewInfoContent);
-	PreviewInfoContent.HSplitTop(ButtonHeight, &ResetRow, &PreviewInfoContent);
-	Ui()->DoLabel(&HintRow, pHintText, BodySize * 0.9f, TEXTALIGN_MR);
-	static CButtonContainer s_ResetAllColorsButton;
-	CUIRect ResetButton;
-	const float ResetWidth = maximum(ButtonHeight * 4.0f, TextRender()->TextWidth(BodySize, Localize("Reset")) + ButtonHeight * 2.0f);
-	ResetRow.VSplitRight(ResetWidth, nullptr, &ResetButton);
-	if(!PrewarmOnly && DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, &s_ResetAllColorsButton, "qmclient-pie-menu-reset-colors", Localize("Reset"), 0, &ResetButton))
-		for(const auto &Entry : aColorEntries)
-			*Entry.m_pColorValue = color_cast<ColorHSLA>(Entry.m_DefaultColor).Pack(false);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-	LogQmPerfStage(Client(), "pie_menu_controls", ControlsTimer.ElapsedMs(), false, aLayoutExtra);
 }
 
 void CMenus::RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
@@ -2969,29 +2752,6 @@ void CMenus::RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale
 			++s_FavoriteMapsLayoutRevision;
 		}
 	}
-}
-
-void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
-{
-	CUIRect Row, LabelColumn, ControlColumn;
-	auto RenderCheckbox = [this, &Content, &Row, LineHeight, LineSpacing, PrewarmOnly](const void *pId, const char *pText, int *pValue) {
-		Content.HSplitTop(LineHeight, &Row, &Content);
-		RenderQmFunctionCheckbox(pId, pText, Localize(pText), pValue, &Row, PrewarmOnly);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	};
-	RenderCheckbox(&g_Config.m_QmAutoUnspecOnUnfreeze, "Auto unspec on unfreeze", &g_Config.m_QmAutoUnspecOnUnfreeze);
-	RenderCheckbox(&g_Config.m_QmAutoSwitchOnUnfreeze, "Auto switch to the tee that got unfrozen", &g_Config.m_QmAutoSwitchOnUnfreeze);
-	RenderCheckbox(&g_Config.m_QmAutoCloseChatOnUnfreeze, "Automatically close the current chat after waking from freeze", &g_Config.m_QmAutoCloseChatOnUnfreeze);
-	RenderCheckbox(&g_Config.m_QmFreezeWakeupPopup, "Show wake-up popup on the other tee", &g_Config.m_QmFreezeWakeupPopup);
-	RenderCheckbox(&g_Config.m_QmAutoTeamLock, "Auto team lock", &g_Config.m_QmAutoTeamLock);
-	if(!g_Config.m_QmAutoTeamLock)
-		return;
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-lock-delay", &LabelColumn, Localize("Lock delay"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
-	static int s_QmAutoTeamLockDelayInputId;
-	RenderQmSettingsSliderWithValueInput(&s_QmAutoTeamLockDelayInputId, ControlColumn, &g_Config.m_QmAutoTeamLockDelay, 0, 30, "s", PrewarmOnly);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
 
 void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -4242,25 +4002,13 @@ void CMenus::RenderSettingsQmClientHudDeck(CUIRect MainView, bool PrewarmOnly)
 	static CScrollRegion s_ScrollRegion;
 	static std::array<bool, QmModuleCount> s_aCollapsed = {};
 	static std::array<CButtonContainer, QmModuleCount> s_aCollapseButtons;
-	static char s_aCollapsedConfigCache[sizeof(g_Config.m_QmSidebarCardCollapsed)] = {};
-	static bool s_CollapsedInitialized = false;
-	if(!s_CollapsedInitialized || str_comp(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed) != 0)
-	{
-		ParseLegacyQmCollapsed(g_Config.m_QmSidebarCardCollapsed, s_aQmModuleDefaults, s_aCollapsed);
-		s_CollapsedInitialized = true;
-	}
-	char aNormalizedCollapsed[sizeof(g_Config.m_QmSidebarCardCollapsed)];
-	SerializeLegacyQmCollapsed(s_aQmModuleDefaults, s_aCollapsed, aNormalizedCollapsed, sizeof(aNormalizedCollapsed));
-	if(!Ui()->RenderOnly() && str_comp(aNormalizedCollapsed, g_Config.m_QmSidebarCardCollapsed) != 0)
-		str_copy(g_Config.m_QmSidebarCardCollapsed, aNormalizedCollapsed, sizeof(g_Config.m_QmSidebarCardCollapsed));
-	str_copy(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed, sizeof(s_aCollapsedConfigCache));
+	qm_card_collapse::SyncQmModules(s_aCollapsed);
 
 	auto ModuleStateIndex = [](EQmModuleId Id) { return std::clamp((int)Id, 0, (int)QmModuleCount - 1); };
 	auto ToggleCollapsed = [](void *, EQmModuleId Id) {
 		const int Index = std::clamp((int)Id, 0, (int)QmModuleCount - 1);
-		s_aCollapsed[Index] = !s_aCollapsed[Index];
-		SerializeLegacyQmCollapsed(s_aQmModuleDefaults, s_aCollapsed, g_Config.m_QmSidebarCardCollapsed, sizeof(g_Config.m_QmSidebarCardCollapsed));
-		str_copy(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed, sizeof(s_aCollapsedConfigCache));
+		if(qm_card_collapse::SetQmModuleCollapsed(Id, !s_aCollapsed[Index]))
+			s_aCollapsed[Index] = !s_aCollapsed[Index];
 	};
 	const bool DummyMiniViewExpanded = g_Config.m_QmDummyMiniView != 0;
 	const bool DynamicIslandOriginalStyle = g_Config.m_QmHudIslandUseOriginalStyle != 0;
@@ -4523,18 +4271,7 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 	static CScrollRegion s_ScrollRegion;
 	static std::array<bool, QmModuleCount> s_aCollapsed = {};
 	static std::array<CButtonContainer, QmModuleCount> s_aCollapseButtons;
-	static char s_aCollapsedConfigCache[sizeof(g_Config.m_QmSidebarCardCollapsed)] = {};
-	static bool s_CollapsedInitialized = false;
-	if(!s_CollapsedInitialized || str_comp(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed) != 0)
-	{
-		ParseLegacyQmCollapsed(g_Config.m_QmSidebarCardCollapsed, s_aQmModuleDefaults, s_aCollapsed);
-		s_CollapsedInitialized = true;
-	}
-	char aNormalizedCollapsed[sizeof(g_Config.m_QmSidebarCardCollapsed)];
-	SerializeLegacyQmCollapsed(s_aQmModuleDefaults, s_aCollapsed, aNormalizedCollapsed, sizeof(aNormalizedCollapsed));
-	if(!Ui()->RenderOnly() && str_comp(aNormalizedCollapsed, g_Config.m_QmSidebarCardCollapsed) != 0)
-		str_copy(g_Config.m_QmSidebarCardCollapsed, aNormalizedCollapsed, sizeof(g_Config.m_QmSidebarCardCollapsed));
-	str_copy(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed, sizeof(s_aCollapsedConfigCache));
+	qm_card_collapse::SyncQmModules(s_aCollapsed);
 
 	auto ModuleStateIndex = [](EQmModuleId Id) { return std::clamp((int)Id, 0, (int)QmModuleCount - 1); };
 	if(str_comp(s_aBlockWordsLayoutConfigCache, g_Config.m_QmBlockWordsList) != 0)
@@ -4560,6 +4297,8 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 		const int Index = std::clamp((int)Id, 0, (int)QmModuleCount - 1);
 		const bool WasCollapsed = s_aCollapsed[Index];
 		const bool Collapsed = !WasCollapsed;
+		if(!qm_card_collapse::SetQmModuleCollapsed(Id, Collapsed))
+			return;
 		s_aCollapsed[Index] = Collapsed;
 		if(Id == EQmModuleId::BlockWords && WasCollapsed != Collapsed && !Collapsed)
 			++s_BlockWordsLayoutRevision;
@@ -4577,8 +4316,6 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 				++s_FavoriteMapsLayoutRevision;
 			}
 		}
-		SerializeLegacyQmCollapsed(s_aQmModuleDefaults, s_aCollapsed, g_Config.m_QmSidebarCardCollapsed, sizeof(g_Config.m_QmSidebarCardCollapsed));
-		str_copy(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed, sizeof(s_aCollapsedConfigCache));
 	};
 	auto MeasureContentHeight = [this, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, Metrics](EQmModuleId Id, float ContentWidth) {
 		const auto Rows = [LineHeight, LineSpacing](float Count) { return Count * (LineHeight + LineSpacing); };
@@ -4599,7 +4336,7 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 		case EQmModuleId::JumpHint: return Row() * 5.0f;
 		case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 6.0f;
 		case EQmModuleId::FriendNotify:
-			return Row() * (5.0f + (g_Config.m_QmFriendOnlineAutoRefresh ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterBroadcast ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterAutoGreet ? 1.0f : 0.0f));
+			return Row() * (6.0f + (g_Config.m_QmFriendOnlineAutoRefresh ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterBroadcast ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterAutoGreet ? 1.0f : 0.0f));
 		case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(TextRender(), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
 		case EQmModuleId::Translate:
 		{
@@ -4626,15 +4363,13 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 		case EQmModuleId::QiaFen:
 			return Row() * (4.0f + (float)s_KeywordRulesLayoutCount) + (s_KeywordRulesLayoutHalfFilled ? Row() : 0.0f);
 		case EQmModuleId::PieMenu:
-			if(!g_Config.m_QmPieMenuEnabled)
-				return Row();
-			return Row() * 5.0f + BodySize + LineSpacing * 3.0f + std::min(ContentWidth, std::clamp(ContentWidth * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f)) * 0.8f;
+			return qm_card_catalog::QmPieMenuContentHeight(ContentWidth, LineHeight, BodySize, LineSpacing, g_Config.m_QmPieMenuEnabled != 0, g_Config.m_QmPieFollowName[0] != '\0');
 		case EQmModuleId::FavoriteMaps:
 		{
 			const size_t FavoriteCount = GameClient()->TClientComponent().GetFavoriteMaps().size();
 			return Rows((float)(4 + std::max<size_t>(1, std::min<size_t>(FavoriteCount, 64))));
 		}
-		case EQmModuleId::HJAssist: return Row() * (g_Config.m_QmAutoTeamLock ? 6.0f : 5.0f);
+		case EQmModuleId::HJAssist: return Row() * (6.0f + (g_Config.m_QmAutoTeamLock ? 1.0f : 0.0f) + (g_Config.m_QmPausedSpectatorFade ? 1.0f : 0.0f));
 		default: return Rows(1.0f);
 		}
 	};
@@ -4716,26 +4451,13 @@ void CMenus::RenderSettingsQmClientVisualDeck(CUIRect MainView, bool PrewarmOnly
 	static CScrollRegion s_ScrollRegion;
 	static std::array<bool, QmModuleCount> s_aCollapsed = {};
 	static std::array<CButtonContainer, QmModuleCount> s_aCollapseButtons;
-	static char s_aCollapsedConfigCache[sizeof(g_Config.m_QmSidebarCardCollapsed)] = {};
-	static bool s_CollapsedInitialized = false;
-	const bool CollapsedConfigChanged = !s_CollapsedInitialized || str_comp(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed) != 0;
-	if(CollapsedConfigChanged)
-	{
-		ParseLegacyQmCollapsed(g_Config.m_QmSidebarCardCollapsed, s_aQmModuleDefaults, s_aCollapsed);
-		s_CollapsedInitialized = true;
-	}
-	char aNormalizedCollapsed[sizeof(g_Config.m_QmSidebarCardCollapsed)];
-	SerializeLegacyQmCollapsed(s_aQmModuleDefaults, s_aCollapsed, aNormalizedCollapsed, sizeof(aNormalizedCollapsed));
-	if(!Ui()->RenderOnly() && str_comp(aNormalizedCollapsed, g_Config.m_QmSidebarCardCollapsed) != 0)
-		str_copy(g_Config.m_QmSidebarCardCollapsed, aNormalizedCollapsed, sizeof(g_Config.m_QmSidebarCardCollapsed));
-	str_copy(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed, sizeof(s_aCollapsedConfigCache));
+	qm_card_collapse::SyncQmModules(s_aCollapsed);
 
 	auto ModuleStateIndex = [](EQmModuleId Id) { return std::clamp((int)Id, 0, (int)QmModuleCount - 1); };
 	auto ToggleCollapsed = [](void *, EQmModuleId Id) {
 		const int Index = std::clamp((int)Id, 0, (int)QmModuleCount - 1);
-		s_aCollapsed[Index] = !s_aCollapsed[Index];
-		SerializeLegacyQmCollapsed(s_aQmModuleDefaults, s_aCollapsed, g_Config.m_QmSidebarCardCollapsed, sizeof(g_Config.m_QmSidebarCardCollapsed));
-		str_copy(s_aCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed, sizeof(s_aCollapsedConfigCache));
+		if(qm_card_collapse::SetQmModuleCollapsed(Id, !s_aCollapsed[Index]))
+			s_aCollapsed[Index] = !s_aCollapsed[Index];
 	};
 	auto EstimateContentHeight = [Metrics](EQmModuleId Id) {
 		const auto Rows = [&Metrics](float Count) { return Count * Metrics.m_RowStep; };
@@ -4918,22 +4640,14 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	static CScrollRegion s_GlobalSearchScrollRegion;
 	static std::array<bool, qm_module::QmModuleCount> s_aGlobalSearchCollapsed = {};
 	static std::array<CButtonContainer, qm_module::QmModuleCount> s_aGlobalSearchCollapseButtons;
-	static char s_aGlobalSearchCollapsedConfigCache[sizeof(g_Config.m_QmSidebarCardCollapsed)] = {};
-	static bool s_GlobalSearchCollapsedInitialized = false;
-	if(!s_GlobalSearchCollapsedInitialized || str_comp(s_aGlobalSearchCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed) != 0)
-	{
-		ParseLegacyQmCollapsed(g_Config.m_QmSidebarCardCollapsed, s_aQmModuleDefaults, s_aGlobalSearchCollapsed);
-		str_copy(s_aGlobalSearchCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed, sizeof(s_aGlobalSearchCollapsedConfigCache));
-		s_GlobalSearchCollapsedInitialized = true;
-	}
+	qm_card_collapse::SyncQmModules(s_aGlobalSearchCollapsed);
 	auto ToggleSearchCollapsed = [](void *pUser, qm_module::EQmModuleId Id) {
 		bool *pCollapsed = static_cast<bool *>(pUser);
 		if(pCollapsed == nullptr)
 			return;
 		const int Index = std::clamp((int)Id, 0, (int)qm_module::QmModuleCount - 1);
-		pCollapsed[Index] = !pCollapsed[Index];
-		SerializeLegacyQmCollapsed(s_aQmModuleDefaults, s_aGlobalSearchCollapsed, g_Config.m_QmSidebarCardCollapsed, sizeof(g_Config.m_QmSidebarCardCollapsed));
-		str_copy(s_aGlobalSearchCollapsedConfigCache, g_Config.m_QmSidebarCardCollapsed, sizeof(s_aGlobalSearchCollapsedConfigCache));
+		if(qm_card_collapse::SetQmModuleCollapsed(Id, !pCollapsed[Index]))
+			pCollapsed[Index] = !pCollapsed[Index];
 	};
 
 	CLineInputBuffered<128> &ModuleSearchInput = m_GlobalCardSearchInput;
@@ -5241,8 +4955,8 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		const SSettingsSubTabLayoutFrame QmClientSubTabs = ResolveSettingsSubTabLayout(MainView, QmClientUiScale);
 		TabBar = QmClientSubTabs.m_TabBarRect;
 		MainView = QmClientSubTabs.m_ContentRect;
-		// 贡献者页签删除后枚举保留占位（维持持久化索引兼容），页签栏只画可见的四个。
-		constexpr int aVisibleQmTabs[] = {QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_CONFIG};
+		// 贡献者枚举保留占位以兼容旧配置，可见页签使用独立列表。
+		constexpr int aVisibleQmTabs[] = {QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_CONFIG, QMCLIENT_SETTINGS_TAB_BIND};
 		constexpr int NumQmTabs = (int)std::size(aVisibleQmTabs);
 		const float TabWidth = TabBar.w / (float)NumQmTabs;
 		static CButtonContainer s_aPageTabs[NUMBER_OF_QMCLIENT_SETTINGS_TABS] = {};
@@ -5251,6 +4965,7 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_FUNCTION] = Localize("Functions");
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_HUD] = Localize("HUD");
 		apQmTabNames[QMCLIENT_SETTINGS_TAB_CONFIG] = Localize("Config");
+		apQmTabNames[QMCLIENT_SETTINGS_TAB_BIND] = Localize("Bind");
 
 		{
 			CPerfTimer StageTimer;
@@ -5337,6 +5052,13 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 			if(TabTransitionActive)
 				Ui()->ClipDisable();
 			LogQmPerfStage(Client(), "render_total", RenderTimer.ElapsedMs(), false, aConfigExtra);
+			return;
+		}
+		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_BIND)
+		{
+			RenderSettingsQmClientBindDeck(ContentView, PrewarmOnly);
+			if(TabTransitionActive)
+				Ui()->ClipDisable();
 			return;
 		}
 		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_VISUAL)

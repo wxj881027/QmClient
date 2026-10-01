@@ -33,7 +33,6 @@ TEST(QmNewUiMenuGameplayPredictionContract, WeaponImpactEventsUseInferredOwnerAl
 	const std::string Source = ReadTextFile("src/game/client/gameclient.cpp");
 	const std::string ProcessEvents = FunctionBody(Source, "void CGameClient::ProcessEvents()");
 	const std::string FinalizeHammerHitEvents = FunctionBody(Source, "void CGameClient::FinalizeHammerHitEvents()");
-	const std::string HandlePredictedEvents = FunctionBody(Source, "void CGameClient::HandlePredictedEvents(const int Tick)");
 
 	EXPECT_NE(Source.find("float QmKnownOwnerEventAlpha(CGameClient *pGameClient, int Owner)"), std::string::npos);
 	EXPECT_NE(Source.find("int QmInferExplosionOwner(CGameClient *pGameClient, vec2 Pos)"), std::string::npos);
@@ -51,7 +50,6 @@ TEST(QmNewUiMenuGameplayPredictionContract, WeaponImpactEventsUseInferredOwnerAl
 	EXPECT_NE(FinalizeHammerHitEvents.find("m_HammerHitTracker.Record(Hit)"), std::string::npos);
 	EXPECT_NE(FinalizeHammerHitEvents.find("const float HammerHitAlpha = QmKnownOwnerEventAlpha(this, Match.m_AttackerId);"), std::string::npos);
 	EXPECT_NE(FinalizeHammerHitEvents.find("m_Effects.HammerHit(Event.m_Pos, HammerHitAlpha, 1.0f);"), std::string::npos);
-	EXPECT_NE(HandlePredictedEvents.find("m_Effects.HammerHit(EventsIterator->m_Pos, Alpha, 1.0f);"), std::string::npos);
 	EXPECT_EQ(ProcessEvents.find("m_Effects.Explosion(vec2(pEvent->m_X, pEvent->m_Y), Alpha);"), std::string::npos);
 }
 

@@ -338,32 +338,10 @@ static bool ApplyBlockWords(std::string &Text, std::vector<std::string> *pMatche
 	return Replaced;
 }
 
-static void DoCachedChatPopupLabel(CUi *pUi, CUIElement &LabelUiElement, const CUIRect &Rect, const char *pText, float Size, int Align)
-{
-	SLabelProperties LabelProps;
-	LabelProps.m_MaxWidth = maximum(0.0f, Rect.w - 2.0f);
-	LabelProps.m_EllipsisAtEnd = true;
-	pUi->DoLabelStreamed(*LabelUiElement.Rect(0), &Rect, pText, Size, Align, LabelProps);
-}
-
-static const char *ChatTranslateBackendWarning()
-{
-	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
-	{
-		if(g_Config.m_QmTranslateTcSecretId[0] == '\0' || g_Config.m_QmTranslateTcSecretKey[0] == '\0')
-			return Localize("⚠️ Tencent Cloud API not configured");
-	}
-	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
-	{
-		if(GetSelectedTranslateLlmKey()[0] == '\0')
-			return Localize("⚠️ LLM API Key not configured");
-	}
-	return nullptr;
-}
-
 CChat::CLine::CLine()
 {
 	m_TextContainerIndex.Reset();
+	m_BodyTextContainerIndex.Reset();
 	m_QuadContainerIndex = -1;
 	m_aYOffset[0] = -1.0f;
 	m_aYOffset[1] = -1.0f;
@@ -379,9 +357,15 @@ CChat::CLine::CLine()
 	m_ServerMessageClass = QmHudNotifications::EServerMessageClass::None;
 }
 
+void CChat::CLine::DeleteTextContainers(ITextRender *pTextRender)
+{
+	pTextRender->DeleteTextContainer(m_TextContainerIndex);
+	pTextRender->DeleteTextContainer(m_BodyTextContainerIndex);
+}
+
 void CChat::CLine::Reset(CChat &This)
 {
-	This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
+	DeleteTextContainers(This.TextRender());
 	This.Graphics()->DeleteQuadContainer(m_QuadContainerIndex);
 	m_QuadContainerIndex = -1;
 	m_Initialized = false;
@@ -390,7 +374,11 @@ void CChat::CLine::Reset(CChat &This)
 	m_aName[0] = '\0';
 	m_aQmTitle[0] = '\0';
 	m_ChatEmoji = EQmChatEmoji::NONE;
+	m_ChatEmojiImageLayout = false;
 	m_ChatEmojiRect = {};
+	m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
+	m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
+	m_SponsorTextBounds = {};
 	m_QmTitleBobPadding = 0.0f;
 	m_vTitleTextMetrics.clear();
 	m_aYOffset[0] = -1.0f;
@@ -527,7 +515,7 @@ void CChat::RebuildChat()
 	{
 		if(!Line.m_Initialized)
 			continue;
-		TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+		Line.DeleteTextContainers(TextRender());
 		Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
 		// recalculate sizes
 		Line.m_aYOffset[0] = -1.0f;
@@ -544,6 +532,7 @@ void CChat::ClearLines()
 	FlushPendingConsoleLine(true);
 	for(auto &Line : m_aLines)
 		Line.Reset(*this);
+	m_SponsorChatRenderer.Reset(Graphics());
 	m_BacklogCurLine = 0;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
@@ -669,6 +658,14 @@ void CChat::InvalidateLineTranslation(CLine &Line)
 void CChat::OnWindowResize()
 {
 	RebuildChat();
+	m_SponsorChatRenderer.Reset(Graphics());
+}
+
+void CChat::OnShutdown()
+{
+	for(auto &Line : m_aLines)
+		Line.DeleteTextContainers(TextRender());
+	m_SponsorChatRenderer.Reset(Graphics());
 }
 
 void CChat::Reset()
@@ -1459,7 +1456,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)
 					SendChat(0, aCmd);
 				}
 			}
-			// 区间把「按隐藏标志吞消息」改成只按分析结果判定：单机/单人路由消息在聊天里被抑制。
+			// 通知栏成功接管的服务端消息不再重复进入聊天框；未入队的消息继续显示。
 			if(ServerMessageHandled && QmHudNotifications::ShouldSuppressServerMessageChat(ServerMessageAnalysis))
 			{
 				PrintSuppressedServerMessage();
@@ -2034,6 +2031,11 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		Highlighted |= GameClient()->m_Snap.m_LocalClientId >= 0 && LineShouldHighlight(pLine, GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_aName);
 	}
 
+	// 以收到消息时的认证身份为准，之后不按可能复用的玩家编号改变历史消息。
+	const EQmSponsorChatStyle SponsorChatStyle = QmSponsorChatMessageStyle(
+		GameClient()->m_QmClient.PlayerChatStyle(ClientId), Highlighted, Team == 1, Team >= 2,
+		CustomColor.has_value(), ChatEmoji != EQmChatEmoji::NONE);
+
 	if(g_Config.m_QmMessageMerge && !Highlighted &&
 		PreviousLine.m_Initialized &&
 		(PreviousLine.m_ConsoleSuppressed || m_PendingConsoleLineIndex == m_CurrentLine) &&
@@ -2044,6 +2046,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		CanMergePlayerMessages(PreviousLine.m_ClientId, PreviousLine.m_TeamNumber, PreviousLine.m_aText, PreviousLine.m_Time, ClientId, Team, pLine, Now))
 	{
 		PreviousLine.m_TimesRepeated++;
+		PreviousLine.m_SponsorChatStyle = QmSponsorChatMergedStyle(PreviousLine.m_SponsorChatStyle, SponsorChatStyle);
 		AddMergedAuthor(PreviousLine, ClientId);
 		if(PreviousLine.m_vMergedAuthors.size() > 1)
 		{
@@ -2060,7 +2063,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 			}
 		}
 		PreviousLine.m_ConsoleSuppressed |= BlockWordsConsolePrinted;
-		TextRender()->DeleteTextContainer(PreviousLine.m_TextContainerIndex);
+		PreviousLine.DeleteTextContainers(TextRender());
 		Graphics()->DeleteQuadContainer(PreviousLine.m_QuadContainerIndex);
 		PreviousLine.m_Time = Now;
 		PreviousLine.m_aYOffset[0] = -1.0f;
@@ -2096,6 +2099,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	CurrentLine.m_Whisper = Team >= 2;
 	CurrentLine.m_NameColor = -2;
 	CurrentLine.m_CustomColor = CustomColor;
+	CurrentLine.m_SponsorChatStyle = SponsorChatStyle;
 	CurrentLine.m_ForceVisible = ForceVisible;
 	CurrentLine.m_ConsoleSuppressed = BlockWordsConsolePrinted;
 	// echo 重复段的计数直接落到行上，聊天渲染已有的 [N] 计数显示会负责呈现它。
@@ -2250,8 +2254,9 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		GameClient()->m_Translate.AutoTranslate(CurrentLine);
 }
 
-void CChat::OnPrepareLines(float y)
+bool CChat::OnPrepareLines(float y)
 {
+	bool EmojiLayoutChanged = false;
 	float x = 5.0f;
 	float FontSize = this->FontSize();
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -2262,9 +2267,27 @@ void CChat::OnPrepareLines(float y)
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
+	const std::array<int, 4> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle,
+		GameClient()->m_aLocalIds[IClient::CONN_MAIN], GameClient()->m_aLocalIds[IClient::CONN_DUMMY]};
 	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat;
 	m_PrevScoreBoardShowed = IsScoreBoardOpen;
 	m_PrevShowChat = ShowLargeArea;
+	if(aTitleVisibility != m_aPrevTitleVisibility)
+	{
+		m_aPrevTitleVisibility = aTitleVisibility;
+		RebuildChat();
+	}
+	if(m_PrevSponsorChatEffects != (g_Config.m_QmSponsorChatEffects != 0))
+	{
+		m_PrevSponsorChatEffects = g_Config.m_QmSponsorChatEffects != 0;
+		RebuildChat();
+		if(!m_PrevSponsorChatEffects)
+			m_SponsorChatRenderer.Reset(Graphics());
+	}
+	// 保留消息原始头衔，重新开启本地显示后可以恢复历史消息。
+	const auto VisibleTitle = [this](const char *pTitle, int ClientId) {
+		return GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
+	};
 
 	const int TeeSize = MessageTeeSize();
 	float RealMsgPaddingX = MessagePaddingX();
@@ -2319,8 +2342,15 @@ void CChat::OnPrepareLines(float y)
 		}
 
 		const bool RenderChatEmoji = GameClient()->m_QmChatEmoji.CanRender(Line.m_ChatEmoji);
+		const bool LineEmojiLayoutChanged = QmChatEmojiInvalidateChangedLayout(RenderChatEmoji, Line.m_ChatEmojiImageLayout, Line.m_aYOffset);
+		EmojiLayoutChanged |= LineEmojiLayoutChanged;
 		// 隐藏身份后清除旧消息的头衔，并重新计算包含头衔的布局缓存。
 		bool TitleHidden = false;
+		if(Line.m_SponsorChatStyle != EQmSponsorChatStyle::NONE && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
+		{
+			Line.m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
+			TitleHidden = true;
+		}
 		if(Line.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
 		{
 			Line.m_aQmTitle[0] = '\0';
@@ -2328,6 +2358,11 @@ void CChat::OnPrepareLines(float y)
 		}
 		for(auto &Author : Line.m_vMergedAuthors)
 		{
+			if(Line.m_SponsorChatStyle != EQmSponsorChatStyle::NONE && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
+			{
+				Line.m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
+				TitleHidden = true;
+			}
 			if(Author.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
 			{
 				Author.m_aQmTitle[0] = '\0';
@@ -2338,6 +2373,7 @@ void CChat::OnPrepareLines(float y)
 		bool LineHasDynamicTitle = false;
 		float TitleBobPadding = 0.0f;
 		const auto IncludeTitleLayout = [&](const char *pTitle, int AuthorId) {
+			pTitle = VisibleTitle(pTitle, AuthorId);
 			if(pTitle[0] == '\0')
 				return;
 			const SQmTitleRenderStyle Style = QmTitleResolveRenderStyle(GameClient()->m_QmClient.PlayerTitleStyle(AuthorId));
@@ -2354,9 +2390,9 @@ void CChat::OnPrepareLines(float y)
 		}
 		else
 			IncludeTitleLayout(Line.m_aQmTitle, Line.m_ClientId);
-		if(TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
+		if(LineEmojiLayoutChanged || TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
 		{
-			TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+			Line.DeleteTextContainers(TextRender());
 			Line.m_ChatEmojiRect = {};
 			Line.m_aYOffset[0] = -1.0f;
 			Line.m_aYOffset[1] = -1.0f;
@@ -2378,7 +2414,7 @@ void CChat::OnPrepareLines(float y)
 		}
 
 		if(ForceRecreate || !LineHasDynamicTitle)
-			TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+			Line.DeleteTextContainers(TextRender());
 		if(!Line.m_TextContainerIndex.Valid())
 		{
 			for(auto &Metrics : Line.m_vTitleTextMetrics)
@@ -2420,6 +2456,10 @@ void CChat::OnPrepareLines(float y)
 		if(!ColoredParts.Colors().empty() && ColoredParts.Colors()[0].m_Index == 0)
 			Line.m_CustomColor = ColoredParts.Colors()[0].m_Color;
 		pText = ColoredParts.Text();
+		Line.m_RenderSponsorChatStyle = QmSponsorChatMessageStyle(
+			g_Config.m_QmSponsorChatEffects ? Line.m_SponsorChatStyle : EQmSponsorChatStyle::NONE,
+			Line.m_Highlighted, Line.m_Team, Line.m_Whisper,
+			Line.m_CustomColor.has_value() || !ColoredParts.Colors().empty(), Line.m_ChatEmoji != EQmChatEmoji::NONE);
 
 		const char *pTranslatedError = nullptr;
 		const char *pTranslatedText = nullptr;
@@ -2470,13 +2510,13 @@ void CChat::OnPrepareLines(float y)
 				{
 					if(i > 0)
 						TextRender()->TextEx(&MeasureCursor, ",");
-					TextRender()->TextEx(&MeasureCursor, Line.m_vMergedAuthors[i].m_aQmTitle);
+					TextRender()->TextEx(&MeasureCursor, VisibleTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_ClientId));
 					TextRender()->TextEx(&MeasureCursor, Line.m_vMergedAuthors[i].m_aName);
 				}
 			}
 			else
 			{
-				TextRender()->TextEx(&MeasureCursor, Line.m_aQmTitle);
+				TextRender()->TextEx(&MeasureCursor, VisibleTitle(Line.m_aQmTitle, Line.m_ClientId));
 				TextRender()->TextEx(&MeasureCursor, Line.m_aName);
 			}
 			if(Line.m_TimesRepeated > 0)
@@ -2542,7 +2582,7 @@ void CChat::OnPrepareLines(float y)
 
 		const float TextYOffset = TargetY + RealMsgPaddingY / 2.0f;
 		if(Line.m_TextYOffset != TextYOffset)
-			TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+			Line.DeleteTextContainers(TextRender());
 		Line.m_TextYOffset = TextYOffset;
 
 		int CurRenderFlags = TextRender()->GetRenderFlags();
@@ -2591,6 +2631,7 @@ void CChat::OnPrepareLines(float y)
 			NameColor = PlayerNameColor(Line.m_ClientId, Line.m_NameColor, Line.m_Team);
 
 		const auto AppendQmTitle = [&](const char *pTitle, const ColorRGBA &FallbackColor, int AuthorId) {
+			pTitle = VisibleTitle(pTitle, AuthorId);
 			CQmTitleTextMetrics &Metrics = Line.m_vTitleTextMetrics[TitleMetricsIndex++];
 			const bool CustomColor = pTitle[0] != '\0' && TitleColorStyle.m_Mode != EQmTitleColorMode::FOLLOW_SERVER;
 			const SQmTitleRenderStyle Style = QmTitleResolveRenderStyle(GameClient()->m_QmClient.PlayerTitleStyle(AuthorId));
@@ -2696,6 +2737,8 @@ void CChat::OnPrepareLines(float y)
 			Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor));
 			pGradient = g_Config.m_ClMessageGradient;
 		}
+		if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
+			Color = QmSponsorChatPlatinumColor(0.0f, Color.a);
 		TextRender()->TextColor(Color);
 
 		CTextCursor AppendCursor = LineCursor;
@@ -2706,6 +2749,24 @@ void CChat::OnPrepareLines(float y)
 			AppendCursor.m_LineWidth -= LineCursor.m_LongestLineWidth;
 		}
 
+		STextContainerIndex &BodyContainer = Line.m_RenderSponsorChatStyle != EQmSponsorChatStyle::NONE ? Line.m_BodyTextContainerIndex : Line.m_TextContainerIndex;
+		if(Line.m_BodyTextContainerIndex.Valid())
+		{
+			if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::NONE)
+				TextRender()->DeleteTextContainer(Line.m_BodyTextContainerIndex);
+			else
+			{
+				CTextCursor ClearCursor = AppendCursor;
+				TextRender()->RecreateTextContainerSoft(Line.m_BodyTextContainerIndex, &ClearCursor, "");
+			}
+		}
+		const auto AddMessageSplits = [&](const char *pMessage) {
+			if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
+				QmSponsorChatAddPlatinumSplits(AppendCursor, pMessage, Color.a);
+			else if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
+				CMessageGradient::AddTextSplits(AppendCursor, pMessage, pGradient, Color);
+		};
+
 		if(RenderChatEmoji)
 		{
 			const SQmChatEmojiCursorLayout EmojiLayout = LayoutQmChatEmoji(AppendCursor, QmChatEmojiChatDisplaySize(FontSize));
@@ -2713,9 +2774,8 @@ void CChat::OnPrepareLines(float y)
 		}
 		else if(pTranslatedText)
 		{
-			if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
-				CMessageGradient::AddTextSplits(AppendCursor, pTranslatedText, pGradient, Color);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pTranslatedText);
+			AddMessageSplits(pTranslatedText);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedText);
 			AppendCursor.m_vColorSplits.clear();
 			if(pTranslatedLanguage)
 			{
@@ -2724,44 +2784,42 @@ void CChat::OnPrepareLines(float y)
 				ColorLang.g *= 0.8f;
 				ColorLang.b *= 0.8f;
 				TextRender()->TextColor(ColorLang);
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, " [");
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pTranslatedLanguage);
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, "]");
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, " [");
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedLanguage);
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "]");
 			}
 			ColorRGBA ColorSub = Color;
 			ColorSub.r *= 0.7f;
 			ColorSub.g *= 0.7f;
 			ColorSub.b *= 0.7f;
 			TextRender()->TextColor(ColorSub);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, "\n");
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "\n");
 			AppendCursor.m_FontSize *= 0.8f;
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pText);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
 			AppendCursor.m_FontSize /= 0.8f;
 			TextRender()->TextColor(Color);
 		}
 		else if(pTranslatedError)
 		{
-			if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
-				CMessageGradient::AddTextSplits(AppendCursor, pText, pGradient, Color);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pText);
+			AddMessageSplits(pText);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
 			AppendCursor.m_vColorSplits.clear();
 			ColorRGBA ColorSub = Color;
 			ColorSub.r = 0.7f;
 			ColorSub.g = 0.6f;
 			ColorSub.b = 0.6f;
 			TextRender()->TextColor(ColorSub);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, "\n");
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "\n");
 			AppendCursor.m_FontSize *= 0.8f;
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pTranslatedError);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedError);
 			AppendCursor.m_FontSize /= 0.8f;
 			TextRender()->TextColor(Color);
 		}
 		else
 		{
-			if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
-				CMessageGradient::AddTextSplits(AppendCursor, pText, pGradient, Color);
+			AddMessageSplits(pText);
 			ColoredParts.AddSplitsToCursor(AppendCursor);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pText);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
 			AppendCursor.m_vColorSplits.clear();
 		}
 
@@ -2777,6 +2835,7 @@ void CChat::OnPrepareLines(float y)
 				FullWidth += maximum(LineCursor.m_LongestLineWidth, AppendCursor.m_LongestLineWidth);
 			}
 			Line.m_ContentWidth = maximum(0.0f, FullWidth);
+			Line.m_SponsorTextBounds = {Begin, TargetY, FullWidth, LineHeight};
 			if(!g_Config.m_ClChatOld)
 			{
 				const CUIRect Rect = {Begin, TargetY, FullWidth, LineHeight};
@@ -2796,6 +2855,8 @@ void CChat::OnPrepareLines(float y)
 		TextRender()->SetRenderFlags(CurRenderFlags);
 		if(Line.m_TextContainerIndex.Valid())
 			TextRender()->UploadTextContainer(Line.m_TextContainerIndex);
+		if(Line.m_BodyTextContainerIndex.Valid())
+			TextRender()->UploadTextContainer(Line.m_BodyTextContainerIndex);
 		if(Line.m_ClientId == SERVER_MSG && Line.m_TextContainerIndex.Valid() && QmMacosGraphicsDiagnosticsEnabled())
 		{
 			char aPayload[192];
@@ -2806,6 +2867,7 @@ void CChat::OnPrepareLines(float y)
 	}
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	return EmojiLayoutChanged;
 }
 
 void CChat::OnRender()
@@ -3183,7 +3245,7 @@ void CChat::OnRender()
 		m_MouseIsPress = false;
 	}
 
-	OnPrepareLines(y);
+	const bool EmojiLayoutChanged = OnPrepareLines(y);
 
 	bool RenderedAnyLines = false;
 	const CLine *pClickedLine = nullptr;
@@ -3221,7 +3283,7 @@ void CChat::OnRender()
 			continue;
 		}
 
-		if(!Line.m_Presentation.m_RenderYInitialized || HudEditorPreview || !ExtraAnimations)
+		if(!Line.m_Presentation.m_RenderYInitialized || HudEditorPreview || !ExtraAnimations || EmojiLayoutChanged)
 		{
 			Line.m_Presentation.m_RenderY = Line.m_Presentation.m_TargetY;
 			Line.m_Presentation.m_RenderYInitialized = true;
@@ -3320,6 +3382,10 @@ void CChat::OnRender()
 					Line.m_ChatEmojiRect.h,
 					AnimAlpha);
 			}
+
+			if(Line.m_BodyTextContainerIndex.Valid())
+				m_SponsorChatRenderer.Render(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
+					Line.m_RenderSponsorChatStyle, Line.m_SponsorTextBounds, FontSize(), AnimAlpha, AnimOffsetX, AnimOffsetY);
 
 			if(Line.m_TextContainerIndex.Valid())
 			{
@@ -3711,48 +3777,12 @@ void CChat::OpenLanguageMenu()
 		CloseLanguageMenu();
 		return;
 	}
-
 	m_LanguageMenuOpen = true;
-	m_LanguagePopupContext.m_pChat = this;
-	m_LanguagePopupContext.m_OpenTime = time();
-	m_LanguagePopupContext.m_AnimationProgress = 1.0f;
-
-	constexpr float MenuWidth = 240.0f;
-	constexpr float TitleHeight = 16.0f;
-	constexpr float ToggleHeight = 16.0f;
-	constexpr float DropdownLabelHeight = 11.0f;
-	constexpr float DropdownHeight = 18.0f;
-	constexpr float SectionSpacing = 4.0f;
-	constexpr float ContentMargin = 3.0f;
-	// Matches the popup border and margin trimmed by CUi::RenderPopupMenus.
-	constexpr float PopupChromeHeight = 10.0f;
-	const bool HasWarning = ChatTranslateBackendWarning() != nullptr;
-	const float ContentHeight =
-		TitleHeight +
-		SectionSpacing +
-		ToggleHeight +
-		SectionSpacing +
-		ToggleHeight +
-		SectionSpacing +
-		DropdownLabelHeight + DropdownHeight +
-		SectionSpacing +
-		DropdownLabelHeight + DropdownHeight +
-		SectionSpacing +
-		DropdownLabelHeight + DropdownHeight +
-		(HasWarning ? (SectionSpacing + ToggleHeight) : 0.0f) +
-		ContentMargin * 2.0f;
-	const float MenuHeight = ContentHeight + PopupChromeHeight;
-
-	const float Height = 300.0f;
-	const float Width = Height * Graphics()->ScreenAspect();
-	const vec2 ChatToUiScale(Ui()->Screen()->w / Width, Ui()->Screen()->h / Height);
-	vec2 MenuPos = vec2(m_TranslateButton.m_X + m_TranslateButton.m_W, m_TranslateButton.m_Y) * ChatToUiScale;
-	MenuPos.x -= MenuWidth;
-	MenuPos.y -= MenuHeight;
-	MenuPos.x = std::clamp(MenuPos.x, 0.0f, maximum(0.0f, Ui()->Screen()->w - MenuWidth));
-	MenuPos.y = std::clamp(MenuPos.y, 0.0f, maximum(0.0f, Ui()->Screen()->h - MenuHeight));
-
-	Ui()->DoPopupMenu(&m_LanguagePopupContext, MenuPos.x, MenuPos.y, MenuWidth, MenuHeight, &m_LanguagePopupContext, PopupLanguageMenu);
+	const float ChatHeight = 300.0f;
+	const float ChatWidth = ChatHeight * Graphics()->ScreenAspect();
+	const vec2 ChatToUiScale(Ui()->Screen()->w / ChatWidth, Ui()->Screen()->h / ChatHeight);
+	const vec2 Anchor = vec2(m_TranslateButton.m_X + m_TranslateButton.m_W, m_TranslateButton.m_Y) * ChatToUiScale;
+	m_LanguagePopupContext.Open(Ui(), Anchor);
 }
 
 void CChat::CloseLanguageMenu()
@@ -3970,161 +4000,6 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 	{
 		pChat->Input()->SetClipboardText(pPopupContext->m_aName);
 		return CUi::POPUP_CLOSE_CURRENT;
-	}
-
-	return CUi::POPUP_KEEP_OPEN;
-}
-
-CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect View, bool Active)
-{
-	CLanguagePopupContext *pPopupContext = static_cast<CLanguagePopupContext *>(pContext);
-	CChat *pChat = pPopupContext->m_pChat;
-	CUi *pUi = pChat->Ui();
-	pPopupContext->InitLabelUiElements(pUi);
-
-	const float Margin = 3.0f;
-	View.Margin(Margin, &View);
-
-	const float FontSize = 7.5f;
-	const float TitleHeight = 16.0f;
-	const float ToggleHeight = 16.0f;
-	const float DropdownLabelHeight = 11.0f;
-	const float DropdownHeight = 18.0f;
-	const float SectionSpacing = 4.0f;
-
-	ColorRGBA OptionSelectedColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionSelected, true));
-	ColorRGBA OptionNormalColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionNormal, true));
-
-	// 标题
-	CUIRect TitleRect;
-	View.HSplitTop(TitleHeight, &TitleRect, &View);
-	static CButtonContainer s_CloseButton;
-	CUIRect CloseButton;
-	TitleRect.VSplitRight(22.0f, &TitleRect, &CloseButton);
-	if(pUi->DoButton_QmIcon(&s_CloseButton, EQmIcon::CLOSE, FontIcons::FONT_ICON_XMARK, 0, &CloseButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
-		return CUi::POPUP_CLOSE_CURRENT;
-	DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_TITLE], TitleRect, Localize("Translation Settings"), FontSize, TEXTALIGN_MC);
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 自动入站翻译开关
-	{
-		CUIRect ToggleRect;
-		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		View.HSplitTop(ToggleHeight, &ToggleRect, &View);
-
-		const bool InboundEnabled = g_Config.m_QmTranslateAuto != 0;
-		const ColorRGBA ToggleColor = InboundEnabled ? OptionSelectedColor : OptionNormalColor;
-		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
-
-		static int s_InboundToggleId = 0;
-		if(Active && pUi->DoButtonLogic(&s_InboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
-		{
-			g_Config.m_QmTranslateAuto = InboundEnabled ? 0 : 1;
-			return CUi::POPUP_KEEP_OPEN;
-		}
-
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto-translate incoming messages"), InboundEnabled ? Localize("On") : Localize("Off"));
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_INBOUND_TOGGLE], ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
-	}
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 自动出站翻译开关
-	{
-		CUIRect ToggleRect;
-		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
-		View.HSplitTop(ToggleHeight, &ToggleRect, &View);
-
-		const bool OutboundEnabled = g_Config.m_QmTranslateAutoOutgoing != 0;
-		const ColorRGBA ToggleColor = OutboundEnabled ? OptionSelectedColor : OptionNormalColor;
-		ToggleRect.Draw(ToggleColor, IGraphics::CORNER_ALL, 4.0f);
-
-		static int s_OutboundToggleId = 0;
-		if(Active && pUi->DoButtonLogic(&s_OutboundToggleId, 0, &ToggleRect, BUTTONFLAG_LEFT))
-		{
-			g_Config.m_QmTranslateAutoOutgoing = OutboundEnabled ? 0 : 1;
-			return CUi::POPUP_KEEP_OPEN;
-		}
-
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), "%s: %s", Localize("Auto-translate outgoing messages"), OutboundEnabled ? Localize("On") : Localize("Off"));
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_OUTBOUND_TOGGLE], ToggleRect, aBuf, FontSize, TEXTALIGN_MC);
-	}
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 语言/后端名称数组（用于 DoDropDown）
-	static const char *s_apLangNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
-	static const char *s_apLangCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
-	const char *apBackendNames[] = {Localize("MyMemory (free)"), Localize("LLM API"), Localize("Tencent Cloud"), Localize("LibreTranslate"), Localize("FTAPI")};
-	static const char *s_apBackendCodes[] = {"mymemory", "llm", "tencentcloud", "libretranslate", "ftapi"};
-	auto DoChatDropDown = [pUi, Active](CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, CUi::SDropDownState &State) {
-		CUi::SDropDownProperties Props;
-		Props.m_Enabled = Active;
-		// 语言菜单本身拥有选择弹层，不能按普通页面下拉框的来源帧规则关闭。
-		Props.m_RequireSourceRefresh = false;
-		// 父弹窗在创建子层的那一帧会暂时报告为非活动，不能因此关闭子层。
-		Props.m_ClosePopupWhenDisabled = false;
-		return pUi->DoDropDown(pRect, CurSelection, pStrs, Num, State, Props);
-	};
-
-	auto FindIndex = [](const char *pValue, const char **apCodes, int Count) -> int {
-		for(int i = 0; i < Count; ++i)
-			if(str_comp(pValue, apCodes[i]) == 0)
-				return i;
-		return 0;
-	};
-
-	// 入站语言标签 + 下拉框
-	{
-		CUIRect LabelRect, DropdownRect;
-		View.HSplitTop(DropdownLabelHeight, &LabelRect, &View);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_INBOUND_LANG], LabelRect, Localize("Translate received messages to"), FontSize, TEXTALIGN_ML);
-		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
-
-		const int OldSel = FindIndex(g_Config.m_QmTranslateTarget, s_apLangCodes, std::size(s_apLangCodes));
-		const int NewSel = DoChatDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_InboundLangDropDownState);
-		if(NewSel != OldSel)
-			str_copy(g_Config.m_QmTranslateTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateTarget));
-	}
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 出站语言标签 + 下拉框
-	{
-		CUIRect LabelRect, DropdownRect;
-		View.HSplitTop(DropdownLabelHeight, &LabelRect, &View);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_OUTBOUND_LANG], LabelRect, Localize("Translate outgoing messages to"), FontSize, TEXTALIGN_ML);
-		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
-
-		const int OldSel = FindIndex(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes, std::size(s_apLangCodes));
-		const int NewSel = DoChatDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_OutboundLangDropDownState);
-		if(NewSel != OldSel)
-			str_copy(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateOutgoingTarget));
-	}
-	View.HSplitTop(SectionSpacing, nullptr, &View);
-
-	// 翻译后端标签 + 下拉框
-	{
-		CUIRect LabelRect, DropdownRect;
-		View.HSplitTop(DropdownLabelHeight, &LabelRect, &View);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_BACKEND], LabelRect, Localize("Translation service"), FontSize, TEXTALIGN_ML);
-		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
-
-		const int OldSel = FindIndex(g_Config.m_QmTranslateBackend, s_apBackendCodes, std::size(s_apBackendCodes));
-		const int NewSel = DoChatDropDown(&DropdownRect, OldSel, apBackendNames, std::size(apBackendNames), pPopupContext->m_BackendDropDownState);
-		if(NewSel >= 0 && NewSel < static_cast<int>(std::size(s_apBackendCodes)) && NewSel != OldSel)
-			str_copy(g_Config.m_QmTranslateBackend, s_apBackendCodes[NewSel], sizeof(g_Config.m_QmTranslateBackend));
-	}
-
-	// 后端未配置警告
-	const char *pConfigWarning = ChatTranslateBackendWarning();
-	if(pConfigWarning != nullptr)
-	{
-		View.HSplitTop(SectionSpacing, nullptr, &View);
-		CUIRect WarningRect, WarningLabelRect;
-		View.HSplitTop(ToggleHeight, &WarningRect, &View);
-		WarningRect.Draw(ColorRGBA(0.7f, 0.3f, 0.3f, 0.6f), IGraphics::CORNER_ALL, 4.0f);
-		WarningRect.VMargin(4.0f, &WarningLabelRect);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_WARNING], WarningLabelRect, pConfigWarning, FontSize, TEXTALIGN_ML);
 	}
 
 	return CUi::POPUP_KEEP_OPEN;

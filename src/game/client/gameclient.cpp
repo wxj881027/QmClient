@@ -35,6 +35,7 @@
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
+#include "components/qmclient/predicted_event_queue.h"
 #include "components/qmclient/qmclient_utils.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
 #include "components/race_demo.h"
@@ -1760,6 +1761,7 @@ void CGameClient::OnReset()
 
 	m_Teams.Reset();
 	m_GameWorld.Clear();
+	m_GameWorld.m_PredictedEvents.clear();
 	m_GameWorld.m_WorldConfig.m_InfiniteAmmo = true;
 	m_PredictedWorld.CopyWorld(&m_GameWorld);
 	m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
@@ -3321,13 +3323,15 @@ void CGameClient::ProcessEvents()
 {
 	m_vPendingHammerHitEvents.clear();
 	std::fill(std::begin(m_aConfirmedHammerHitEvent), std::end(m_aConfirmedHammerHitEvent), false);
+	const int EventDummy = g_Config.m_ClDummy;
+	const int EventTick = Client()->GameTick(EventDummy);
+	// 旁观、暂停或没有本地角色时不会运行预测，快照仍需清理已处理的过期记录。
+	QmPruneHandledPredictedEvents(m_PredictedWorld.m_PredictedEvents, EventTick, Client()->GameTickSpeed());
 	if(m_SuppressEvents)
 		return;
 
 	// Dummy 切换会重新载入当前快照。相同连接、相同 tick 的事件已经消费过，
 	// 不能因为重新载入快照再次播放声音或创建粒子。
-	const int EventDummy = g_Config.m_ClDummy;
-	const int EventTick = Client()->GameTick(EventDummy);
 	if(m_aLastProcessedEventTick[EventDummy] == EventTick)
 		return;
 	m_aLastProcessedEventTick[EventDummy] = EventTick;
@@ -6384,11 +6388,8 @@ void CGameClient::CClientData::CSixup::Reset()
 
 void CGameClient::SendSwitchTeam(int Team)
 {
-	if(Team == TEAM_SPECTATORS && m_FastPractice.Enabled())
-	{
-		m_FastPractice.ConsumeSpectatorCommand();
-		return;
-	}
+	if(Team == TEAM_SPECTATORS)
+		m_FastPractice.PrepareForSpectating();
 
 	CNetMsg_Cl_SetTeam Msg;
 	Msg.m_Team = Team;
@@ -7163,51 +7164,31 @@ void CGameClient::HandlePredictedEvents(const int Tick)
 {
 	const float Alpha = 1.0f;
 
-	auto EventsIterator = m_PredictedWorld.m_PredictedEvents.begin();
-	while(EventsIterator != m_PredictedWorld.m_PredictedEvents.end())
-	{
-		if(!EventsIterator->m_Handled && EventsIterator->m_Tick <= Tick)
+	QmProcessPredictedEvents(m_PredictedWorld.m_PredictedEvents, Tick, Client()->GameTickSpeed(), [this, Alpha](const CGameWorld::CPredictedEvent &Event) {
+		if(Event.m_EventId == NETEVENTTYPE_SOUNDWORLD)
 		{
-			if(EventsIterator->m_EventId == NETEVENTTYPE_SOUNDWORLD)
-			{
-				if(m_GameInfo.m_RaceSounds && ((EventsIterator->m_ExtraInfo == SOUND_GUN_FIRE && !g_Config.m_SndGun) || (EventsIterator->m_ExtraInfo == SOUND_PLAYER_PAIN_LONG && !g_Config.m_SndLongPain)))
-				{
-					EventsIterator = m_PredictedWorld.m_PredictedEvents.erase(EventsIterator);
-					continue;
-				}
-				if(g_Config.m_DbgPredictEvents)
-					dbg_msg("pred_event", "predict-play sound=%d tick=%d pos=%.1f,%.1f", EventsIterator->m_ExtraInfo, EventsIterator->m_Tick, EventsIterator->m_Pos.x, EventsIterator->m_Pos.y);
-				m_Sounds.PlayAt(CSounds::CHN_WORLD, EventsIterator->m_ExtraInfo, 1.0f, EventsIterator->m_Pos);
-			}
-			else if(EventsIterator->m_EventId == NETEVENTTYPE_EXPLOSION)
-			{
-				m_Effects.Explosion(EventsIterator->m_Pos, Alpha);
-			}
-			else if(EventsIterator->m_EventId == NETEVENTTYPE_HAMMERHIT)
-			{
-				if(g_Config.m_DbgPredictEvents)
-					dbg_msg("pred_event", "hammerhit-effect source=predict tick=%d pos=%.1f,%.1f", EventsIterator->m_Tick, EventsIterator->m_Pos.x, EventsIterator->m_Pos.y);
-				m_Effects.HammerHit(EventsIterator->m_Pos, Alpha, 1.0f);
-			}
-			else if(EventsIterator->m_EventId == NETEVENTTYPE_DAMAGEIND)
-			{
-				m_Effects.DamageIndicator(EventsIterator->m_Pos, direction(EventsIterator->m_ExtraInfo / 256.0f), Alpha);
-			}
-
-			EventsIterator->m_Handled = true;
-			++EventsIterator;
-			continue;
+			if(m_GameInfo.m_RaceSounds && ((Event.m_ExtraInfo == SOUND_GUN_FIRE && !g_Config.m_SndGun) || (Event.m_ExtraInfo == SOUND_PLAYER_PAIN_LONG && !g_Config.m_SndLongPain)))
+				return false;
+			if(g_Config.m_DbgPredictEvents)
+				dbg_msg("pred_event", "predict-play sound=%d tick=%d pos=%.1f,%.1f", Event.m_ExtraInfo, Event.m_Tick, Event.m_Pos.x, Event.m_Pos.y);
+			m_Sounds.PlayAt(CSounds::CHN_WORLD, Event.m_ExtraInfo, 1.0f, Event.m_Pos);
 		}
-		else if(Tick - EventsIterator->m_Tick > 3 * Client()->GameTickSpeed()) // 3 seconds
+		else if(Event.m_EventId == NETEVENTTYPE_EXPLOSION)
 		{
-			// remove too old events
-			EventsIterator = m_PredictedWorld.m_PredictedEvents.erase(EventsIterator);
+			m_Effects.Explosion(Event.m_Pos, Alpha);
 		}
-		else
+		else if(Event.m_EventId == NETEVENTTYPE_HAMMERHIT)
 		{
-			++EventsIterator;
+			if(g_Config.m_DbgPredictEvents)
+				dbg_msg("pred_event", "hammerhit-effect source=predict tick=%d pos=%.1f,%.1f", Event.m_Tick, Event.m_Pos.x, Event.m_Pos.y);
+			m_Effects.HammerHit(Event.m_Pos, Alpha, 1.0f);
 		}
-	}
+		else if(Event.m_EventId == NETEVENTTYPE_DAMAGEIND)
+		{
+			m_Effects.DamageIndicator(Event.m_Pos, direction(Event.m_ExtraInfo / 256.0f), Alpha);
+		}
+		return true;
+	});
 }
 
 void CGameClient::DetectStrongHook()

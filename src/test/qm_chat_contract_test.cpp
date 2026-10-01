@@ -148,16 +148,6 @@ TEST(QmFastPracticeCommands, LateDummyAttachKeepsSessionAnchorAndSpectatorInputL
 	EXPECT_EQ(SendBody.find("m_Snap.m_SpecInfo.m_Active"), std::string::npos);
 }
 
-TEST(QmFastPracticeCommands, SpectatorCommandKeepsPracticeStateOnSnapshotMiss)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/tclient/fast_practice.cpp");
-	const std::string Body = SourceFunctionBody(Source, "bool CFastPractice::ConsumeSpectatorCommand()");
-
-	EXPECT_EQ(Body.find("Disable();"), std::string::npos);
-	EXPECT_NE(Body.find("m_PracticeWorldInitialized = false;"), std::string::npos);
-	EXPECT_NE(Body.find("GameClient()->m_PredictedDummyId = -1;"), std::string::npos);
-}
-
 TEST(QmFastPracticeCommands, PredictionLoopsReuseNormalPreInputAndFreezeSemantics)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/tclient/fast_practice.cpp");

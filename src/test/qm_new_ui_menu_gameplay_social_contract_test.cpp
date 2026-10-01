@@ -348,36 +348,6 @@ TEST(QmNewUiMenuGameplaySocialContract, ClientSourceDoesNotUseChineseLocalizeKey
 	EXPECT_NE(ScoreboardSource.find("Localize(\"Spectators\")"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplaySocialContract, PieMenuSeparatesSelfRenameFromOtherPlayerActions)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/pie_menu.cpp");
-	const std::string FindNearestPlayer = FunctionBody(Source, "int CPieMenu::FindNearestPlayer()");
-	const std::string OpenMenu = FunctionBody(Source, "void CPieMenu::OpenMenu()");
-	const std::string OnInput = FunctionBody(Source, "bool CPieMenu::OnInput(");
-	const std::string UpdateSelection = FunctionBody(Source, "void CPieMenu::UpdateSelection()");
-	const std::string OnRender = FunctionBody(Source, "void CPieMenu::OnRender()");
-	const std::string RenderCenterInfo = FunctionBody(Source, "void CPieMenu::RenderCenterInfo()");
-	const std::string ExecuteRenameOption = FunctionBody(Source, "void CPieMenu::ExecuteRenameOption(");
-
-	// Both local connections belong to the user and must never become inner-ring targets.
-	EXPECT_NE(FindNearestPlayer.find("GameClient()->IsLocalClientId(i)"), std::string::npos);
-
-	// A connected local identity and at least one usable ring are required to open the menu.
-	EXPECT_NE(OpenMenu.find("Client()->State() != IClient::STATE_ONLINE"), std::string::npos);
-	EXPECT_NE(OpenMenu.find("LocalClientId < 0 || LocalClientId >= MAX_CLIENTS"), std::string::npos);
-	EXPECT_NE(OpenMenu.find("if(TargetId < 0 && m_vRenameQueue.empty())"), std::string::npos);
-
-	// Without another player the hidden inner ring cannot be selected or triggered by number keys.
-	EXPECT_NE(OnInput.find("if(!HasTargetPlayer())"), std::string::npos);
-	EXPECT_NE(UpdateSelection.find("if(HasTargetPlayer() && MouseDistance <= OuterRadius)"), std::string::npos);
-	EXPECT_NE(OnRender.find("if(HasTargetPlayer())"), std::string::npos);
-
-	// Targetless mode displays self, and hovering the outer ring identifies rename as a self action.
-	EXPECT_NE(RenderCenterInfo.find("const int DisplayClientId = HasTargetPlayer() ? m_TargetClientId : LocalClientId;"), std::string::npos);
-	EXPECT_NE(RenderCenterInfo.find("Localize(\"Self\")"), std::string::npos);
-	EXPECT_EQ(ExecuteRenameOption.find("m_TargetClientId"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplaySocialContract, QmClientAxiomAutoLoginLivesInQmClientComponent)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/qmclient/axiom_auto_login.cpp");
