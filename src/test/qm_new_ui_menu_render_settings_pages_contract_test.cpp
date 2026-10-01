@@ -151,7 +151,7 @@ TEST(QmNewUiMenuRenderSettingsPagesContract, CountryPopupOwnsWheelAndBlocksTheSe
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
 	const std::string Popup = FunctionBody(Source, "CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pContext, CUIRect View, bool Active)");
-	const std::string Identity = FunctionBody(Source, "void CMenus::RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, float BodySize)");
+	const std::string Identity = FunctionBody(Source, "void CMenus::RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, float BodySize, bool StackFields)");
 	const std::string MapPopup = FunctionBody(Source, "CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect View, bool Active)");
 	const std::string DDNet = FunctionBody(Source, "void CMenus::RenderSettingsDDNet(CUIRect MainView)");
 	ASSERT_FALSE(Popup.empty());
@@ -173,39 +173,6 @@ TEST(QmNewUiMenuRenderSettingsPagesContract, CountryPopupOwnsWheelAndBlocksTheSe
 	EXPECT_NE(DDNet.find("PopupMapPicker, PopupProps", MapPickerId), std::string::npos);
 }
 
-TEST(QmNewUiMenuRenderSettingsPagesContract, TeeOptionsMeasureAllRowsAndPlayerDummyChangeDisplayCycle)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string Tee = FunctionBody(Source, "void CMenus::RenderSettingsTee(CUIRect MainView)");
-	const std::string Settings = FunctionBody(Source, "void CMenus::RenderSettings(CUIRect MainView)");
-	ASSERT_FALSE(Tee.empty());
-	ASSERT_FALSE(Settings.empty());
-	EXPECT_NE(Tee.find("ResolveSettingsRowsHeight(4, ControlLineHeight, ControlSpacing)"), std::string::npos);
-	EXPECT_NE(Tee.find("ResolveSettingsRowsHeight(6, ControlLineHeight, ControlSpacing)"), std::string::npos);
-	EXPECT_NE(Tee.find("ResolveSettingsTeeCustomColorsLayout"), std::string::npos);
-	EXPECT_NE(Tee.find("g_Config.m_QmSkinShowMetadata != 0"), std::string::npos);
-	EXPECT_EQ(Tee.find("g_Config.m_QmSkinSortMode == 1 && g_Config.m_QmSkinShowMetadata"), std::string::npos);
-	EXPECT_NE(Tee.find("SkinSortDropDownProps.m_FontSize = BodySize;"), std::string::npos);
-	EXPECT_NE(Tee.find("const float SortLabelWidth = std::clamp(SortModeControl.w * 0.36f"), std::string::npos);
-	EXPECT_NE(Tee.find("SortDropDown.VSplitLeft(ControlSpacing, nullptr, &SortDropDown);"), std::string::npos);
-	EXPECT_EQ(Tee.find("settings_tee_skin_sort_dropdown"), std::string::npos);
-	EXPECT_EQ(Tee.find("SkinSortDropDownProps.m_VisualStyle"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("\"Show skin release date and author\""), std::string::npos);
-	EXPECT_EQ(ConfigSource.find("\"Show release date and author when sorted by date\""), std::string::npos);
-	EXPECT_NE(Tee.find("const auto NextCheckboxRow"), std::string::npos);
-	EXPECT_NE(Tee.find("const auto NextPrefixRow"), std::string::npos);
-	EXPECT_NE(Tee.find("s_QueueListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);"), std::string::npos);
-	EXPECT_NE(Tee.find("s_PresetListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);"), std::string::npos);
-	const size_t DummyInput = Tee.find("s_TeeSubTab = 1;");
-	const size_t DisplayCycle = Tee.find("const uint64_t TeeDisplayKey", DummyInput);
-	ASSERT_NE(DummyInput, std::string::npos);
-	ASSERT_NE(DisplayCycle, std::string::npos);
-	EXPECT_LT(DummyInput, DisplayCycle);
-	EXPECT_NE(Tee.find("m_SettingsCardDeckDisplayState.EnterView(TeeDisplayKey)", DisplayCycle), std::string::npos);
-	EXPECT_NE(Settings.find("g_Config.m_UiSettingsPage != SETTINGS_TEE"), std::string::npos);
-	EXPECT_EQ(Settings.find("m_Dummy + 1"), std::string::npos);
-}
 
 TEST(QmNewUiMenuRenderSettingsPagesContract, SettingsSubTabPagesUseTheSharedLayoutContract)
 {

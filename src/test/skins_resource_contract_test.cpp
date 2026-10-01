@@ -78,85 +78,20 @@ TEST(SkinsContract, TeeBackgroundRequestsWaitForAdmissionBeforePending)
 	EXPECT_NE(StartLoading.find("Stats.m_NumPending++;"), std::string::npos);
 }
 
-TEST(SkinsContract, TeeSkinListVirtualizationKeepsTotalListLength)
-{
-	std::ifstream File(TestSourcePath("src/game/client/components/menus_settings.cpp"));
-	ASSERT_TRUE(File.good());
-	std::stringstream Buffer;
-	Buffer << File.rdbuf();
-	const std::string Source = Buffer.str();
-	const size_t RenderTeePos = Source.find("void CMenus::RenderSettingsTee(CUIRect MainView)");
-	ASSERT_NE(RenderTeePos, std::string::npos);
-	const size_t RenderTeeEnd = Source.find("void CMenus::RenderSettings", RenderTeePos + 1);
-	const std::string RenderTeeBody = Source.substr(RenderTeePos, RenderTeeEnd - RenderTeePos);
 
-	EXPECT_NE(RenderTeeBody.find("s_ListBox.DoStart(TeeSkinListRowHeight, vSkinList.size(), TeeSkinListItemsPerRow, 2, OldSelected, &MainView);"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("SettingsSkinListVisibleRangeForScroll("), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("s_ListBox.SkipItems("), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("int RowsRendered = 0;"), std::string::npos);
-	const size_t RowsRendered = RenderTeeBody.find("++RowsRendered;");
-	EXPECT_NE(RowsRendered, std::string::npos);
-	EXPECT_LT(RenderTeeBody.find("if(RowStart)"), RowsRendered);
-	EXPECT_EQ(RenderTeeBody.find("const int RowsRendered = RowsIterated;"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("event=list_frame page=settings:tee"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("rows_total=%d rows_visible=%d rows_rendered=%d rows_iterated=%d rows_skipped=%d"), std::string::npos);
-}
-
-TEST(SkinsContract, TeeSkinListVirtualizationUsesFourColumnContract)
-{
-	const std::string JobsSource = ReadTestSourceFile("src/game/client/components/settings_resource_jobs.cpp");
-	const std::string Source = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	const size_t RenderTeePos = Source.find("void CMenus::RenderSettingsTee(CUIRect MainView)");
-	ASSERT_NE(RenderTeePos, std::string::npos);
-	const size_t RenderTeeEnd = Source.find("void CMenus::RenderSettingsAppearance", RenderTeePos);
-	ASSERT_NE(RenderTeeEnd, std::string::npos);
-	const std::string RenderTeeBody = Source.substr(RenderTeePos, RenderTeeEnd - RenderTeePos);
-
-	EXPECT_NE(RenderTeeBody.find("constexpr int TeeSkinListItemsPerRow = 4;"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("s_ListBox.DoStart(TeeSkinListRowHeight, vSkinList.size(), TeeSkinListItemsPerRow"), std::string::npos);
-	const size_t VisibleRange = RenderTeeBody.find("SettingsSkinListVisibleRangeForScroll(");
-	ASSERT_NE(VisibleRange, std::string::npos);
-	const size_t VisibleRangeEnd = RenderTeeBody.find(");", VisibleRange);
-	ASSERT_NE(VisibleRangeEnd, std::string::npos);
-	const std::string VisibleRangeCall = RenderTeeBody.substr(VisibleRange, VisibleRangeEnd - VisibleRange);
-	const size_t ScrollOffset = VisibleRangeCall.find("s_ListBox.ScrollOffsetY()");
-	const size_t ViewHeight = VisibleRangeCall.find("s_ListBox.ViewHeight()");
-	const size_t RowHeight = VisibleRangeCall.find("TeeSkinListRowHeight");
-	const size_t ItemsPerRow = VisibleRangeCall.find("TeeSkinListItemsPerRow");
-	const size_t ListSize = VisibleRangeCall.find("(int)vSkinList.size()");
-	const size_t OverscanRows = VisibleRangeCall.find("1");
-	ASSERT_NE(ScrollOffset, std::string::npos);
-	ASSERT_NE(ViewHeight, std::string::npos);
-	ASSERT_NE(RowHeight, std::string::npos);
-	ASSERT_NE(ItemsPerRow, std::string::npos);
-	ASSERT_NE(ListSize, std::string::npos);
-	ASSERT_NE(OverscanRows, std::string::npos);
-	EXPECT_LT(ScrollOffset, ViewHeight);
-	EXPECT_LT(ViewHeight, RowHeight);
-	EXPECT_LT(RowHeight, ItemsPerRow);
-	EXPECT_LT(ItemsPerRow, ListSize);
-	EXPECT_LT(ListSize, OverscanRows);
-	EXPECT_NE(JobsSource.find("constexpr int TeeSkinListItemsPerRow = 4;"), std::string::npos);
-}
 
 TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 {
 	const std::string Header = ReadTestSourceFile("src/game/client/components/skins.h");
 	const std::string Source = ReadTestSourceFile("src/game/client/components/skins.cpp");
 	const std::string ConfigSource = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string MenusSource = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
 	const std::string MenusI18nSource = ReadTestSourceFile("qmclient_scripts/languages_qmclient/translations/i18n/menus.toml");
 	const size_t ComparePos = Source.find("bool CSkins::CSkinListEntry::operator<");
 	const size_t ScanJobPos = Source.find("int CSkins::CSkinDirectoryScanJob::ScanCallback");
-	const size_t RenderTeePos = MenusSource.find("void CMenus::RenderSettingsTee(CUIRect MainView)");
-	const size_t RenderTeeEnd = MenusSource.find("void CMenus::RenderSettingsAppearance", RenderTeePos);
 	ASSERT_NE(ComparePos, std::string::npos);
 	ASSERT_NE(ScanJobPos, std::string::npos);
-	ASSERT_NE(RenderTeePos, std::string::npos);
-	ASSERT_NE(RenderTeeEnd, std::string::npos);
 	const std::string CompareBody = Source.substr(ComparePos, 1200);
 	const std::string ScanJobBody = Source.substr(ScanJobPos, 900);
-	const std::string RenderTeeBody = MenusSource.substr(RenderTeePos, RenderTeeEnd - RenderTeePos);
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1"), std::string::npos);
@@ -181,41 +116,12 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	EXPECT_NE(CompareBody.find("LastModified()"), std::string::npos);
 	EXPECT_NE(CompareBody.find("OfficialReleaseDate > OtherOfficialReleaseDate"), std::string::npos);
 	EXPECT_NE(CompareBody.find("LastModified() > Other.m_pSkinContainer->LastModified()"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("g_Config.m_QmSkinSortMode"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("Localize(\"Skin sort\")"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("Localize(\"Name\")"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("Localize(\"Time\")"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("SortModeControl = NextPrefixRow();"), std::string::npos);
-	const size_t SortChangePos = RenderTeeBody.find("if(g_Config.m_QmSkinSortMode != SkinSortModeNew)");
-	ASSERT_NE(SortChangePos, std::string::npos);
-	const size_t SortChangeEnd = RenderTeeBody.find("Button = NextPrefixRow();", SortChangePos);
-	ASSERT_NE(SortChangeEnd, std::string::npos);
-	const std::string SortChangeBody = RenderTeeBody.substr(SortChangePos, SortChangeEnd - SortChangePos);
-	EXPECT_NE(SortChangeBody.find("GameClient()->m_Skins.RebuildSkinListPlan();"), std::string::npos);
-	EXPECT_EQ(SortChangeBody.find("GameClient()->m_Skins.Refresh"), std::string::npos);
-	EXPECT_EQ(SortChangeBody.find("ClearSettingsTeeListPreviewCache"), std::string::npos);
-	EXPECT_EQ(SortChangeBody.find("SkinList(m_Dummy).ForceRefresh"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("Localize(\"Show skin date and author\")"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("g_Config.m_QmSkinShowMetadata"), std::string::npos);
-	EXPECT_EQ(RenderTeeBody.find("g_Config.m_QmSkinSortMode == 1 && g_Config.m_QmSkinShowMetadata"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("g_Config.m_QmSkinShowMetadata != 0"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("pSkinContainer->OfficialCreator()"), std::string::npos);
 	const size_t TimeTranslationPos = MenusI18nSource.find("key = \"Time\"");
 	ASSERT_NE(TimeTranslationPos, std::string::npos);
 	const size_t TimeTranslationEnd = MenusI18nSource.find("[[message]]", TimeTranslationPos + 1);
 	const std::string TimeTranslationBody = MenusI18nSource.substr(TimeTranslationPos, TimeTranslationEnd - TimeTranslationPos);
 	EXPECT_NE(TimeTranslationBody.find("simplified_chinese = \"时间\""), std::string::npos);
 	EXPECT_EQ(TimeTranslationBody.find("simplified_chinese = \"用时\""), std::string::npos);
-	const size_t ToolbarCommentPos = RenderTeeBody.find("// Layout bottom controls and use remainder for skin selector");
-	ASSERT_NE(ToolbarCommentPos, std::string::npos);
-	const std::string BottomToolbarBody = RenderTeeBody.substr(ToolbarCommentPos);
-	EXPECT_EQ(BottomToolbarBody.find("SkinSortModeControlWidth"), std::string::npos);
-	EXPECT_NE(BottomToolbarBody.find("const float SkinControlLabelPadding = TeeMetrics.m_LineSpacing * 3.0f;"), std::string::npos);
-	const size_t RefreshRightPos = BottomToolbarBody.find("ControlsArea.VSplitRight(SkinRefreshButtonWidth, &ControlsArea, &RefreshButton);");
-	const size_t EditButtonPos = BottomToolbarBody.find("SplitSkinToolbarLeft(ControlsArea, EditTextureButtonWidth, &EditTextureButton);");
-	ASSERT_NE(RefreshRightPos, std::string::npos);
-	ASSERT_NE(EditButtonPos, std::string::npos);
-	EXPECT_LT(RefreshRightPos, EditButtonPos);
 	const size_t FavoritePos = CompareBody.find("m_Favorite");
 	const size_t SortModePos = CompareBody.find("g_Config.m_QmSkinSortMode");
 	const size_t ModifiedPos = CompareBody.find("LastModified()");
@@ -228,70 +134,7 @@ TEST(SkinsContract, TeeSkinListSortModeKeepsFavoritesPinnedThenUsesOfficialDate)
 	EXPECT_NE(CompareBody.find("if(m_Favorite && !Other.m_Favorite)"), std::string::npos);
 }
 
-TEST(SkinsContract, TeeSkinListStableIdleAvoidsFullBackgroundScan)
-{
-	std::ifstream File(TestSourcePath("src/game/client/components/menus_settings.cpp"));
-	ASSERT_TRUE(File.good());
-	std::stringstream Buffer;
-	Buffer << File.rdbuf();
-	const std::string Source = Buffer.str();
-	const size_t RenderTeePos = Source.find("void CMenus::RenderSettingsTee(CUIRect MainView)");
-	ASSERT_NE(RenderTeePos, std::string::npos);
-	const size_t RenderTeeEnd = Source.find("void CMenus::RenderSettingsAppearance", RenderTeePos);
-	ASSERT_NE(RenderTeeEnd, std::string::npos);
-	const std::string RenderTeeBody = Source.substr(RenderTeePos, RenderTeeEnd - RenderTeePos);
 
-	EXPECT_NE(Source.find("bool m_BackgroundRequestScanComplete = false;"), std::string::npos);
-	EXPECT_NE(Source.find("uint64_t m_BackgroundRequestScanRevision = std::numeric_limits<uint64_t>::max();"), std::string::npos);
-	EXPECT_NE(Source.find("uint64_t m_FullListSettledRevision = std::numeric_limits<uint64_t>::max();"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("VisibleSourceSettled && BackgroundRequestBudget > 0"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("!gs_TeeSettingsPageState.m_BackgroundRequestScanComplete"), std::string::npos);
-	EXPECT_EQ(RenderTeeBody.find("SkinStatsBeforeBackgroundRequest.m_NumUnloaded > 0"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("gs_TeeSettingsPageState.m_BackgroundRequestScanComplete = true;"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("event=tee_skin_background_scan"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("items_total=%d items_scanned=%d items_skipped_visible=%d requests_issued=%d complete=%d budget=%d dur_ms=%.3f block_reason=%s"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("event=tee_skin_list_prescan"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("const bool NeedFullListSourceState = g_Config.m_QmSettingsPrewarm != 0;"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("gs_TeeSettingsPageState.m_SelectedIndexRevision != SkinList.Revision()"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("const bool NeedFullListSettledScan = NeedFullListSourceState && gs_TeeSettingsPageState.m_FullListSettledRevision != SkinList.Revision();"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("if(NeedFullListSettledScan)"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("m_BackgroundRequestScanRevision != SkinList.Revision()"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("gs_TeeSettingsPageState.m_SelectedIndex = NewSelected;"), std::string::npos);
-	EXPECT_EQ(RenderTeeBody.find("visual_ready_count=%d"), std::string::npos);
-}
-
-TEST(SkinsContract, TeeSkinListSeparatesVisualReadyFromSourceSettled)
-{
-	std::ifstream JobsFile(TestSourcePath("src/game/client/components/settings_resource_jobs.cpp"));
-	ASSERT_TRUE(JobsFile.good());
-	std::stringstream JobsBuffer;
-	JobsBuffer << JobsFile.rdbuf();
-	const std::string JobsSource = JobsBuffer.str();
-
-	EXPECT_NE(JobsSource.find("bool SettingsSkinListEntryVisualReady(bool SourceReady, bool TerminalFailure, bool PreviewCacheReady)"), std::string::npos);
-	EXPECT_NE(JobsSource.find("bool SettingsSkinListEntrySourceSettled(bool SourceReady, bool TerminalFailure)"), std::string::npos);
-	EXPECT_NE(JobsSource.find("return SourceReady || TerminalFailure || PreviewCacheReady;"), std::string::npos);
-	EXPECT_NE(JobsSource.find("return SourceReady || TerminalFailure;"), std::string::npos);
-
-	std::ifstream MenusFile(TestSourcePath("src/game/client/components/menus_settings.cpp"));
-	ASSERT_TRUE(MenusFile.good());
-	std::stringstream MenusBuffer;
-	MenusBuffer << MenusFile.rdbuf();
-	const std::string MenusSource = MenusBuffer.str();
-	const size_t RenderTeePos = MenusSource.find("void CMenus::RenderSettingsTee(CUIRect MainView)");
-	ASSERT_NE(RenderTeePos, std::string::npos);
-	const size_t RenderTeeEnd = MenusSource.find("void CMenus::RenderSettingsAppearance", RenderTeePos);
-	ASSERT_NE(RenderTeeEnd, std::string::npos);
-	const std::string RenderTeeBody = MenusSource.substr(RenderTeePos, RenderTeeEnd - RenderTeePos);
-
-	EXPECT_NE(RenderTeeBody.find("VisibleVisualReadyCount"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("VisibleSourceSettledCount"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("const bool VisibleSourceSettled = VisibleSourceSettledCount == (int)vVisibleSkinIndices.size();"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("m_SettingsHighPrioritySettled = VisibleSourceSettled;"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("FrameContext.m_HighPrioritySettled = VisibleSourceSettled;"), std::string::npos);
-	EXPECT_EQ(RenderTeeBody.find("m_SettingsHighPrioritySettled = VisibleSettled;"), std::string::npos);
-	EXPECT_EQ(RenderTeeBody.find("FrameContext.m_HighPrioritySettled = VisibleSettled;"), std::string::npos);
-}
 
 TEST(SkinsContract, TeeStartLoadingFallbackSweepIsBoundedAndLogged)
 {

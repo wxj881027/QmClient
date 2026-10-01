@@ -1372,6 +1372,8 @@ void CSkins::OnConsoleInit()
 {
 	ConfigManager()->RegisterCallback(CSkins::ConfigSaveCallback, this);
 	ConfigManager()->RegisterCallback(CSkins::ConfigSaveQueueCallback, this, ConfigDomain::QMCLIENT);
+	ConfigManager()->RegisterCallback(CSkins::ConfigSaveRecentSkinsCallback, this, ConfigDomain::QMCLIENT);
+	Console()->Register("qm_recent_tee_skin", "s[skin_name] i[use_custom_color] i[color_body] i[color_feet]", CFGFLAG_CLIENT, ConRecentSkin, this, "Restore a recently used Tee skin");
 	Console()->Register("add_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, ConAddFavoriteSkin, this, "Add a skin as a favorite");
 	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, ConRemFavoriteSkin, this, "Remove a skin from the favorites");
 	Console()->Register("add_skin_queue", "s[skin_name]", CFGFLAG_CLIENT, ConAddSkinQueue, this, "Add a skin to the queue");
@@ -3161,7 +3163,7 @@ const CSkins::CSkinContainer *CSkins::FindContainerOrNullptr(const char *pName)
 	return FindContainerImpl(pName);
 }
 
-const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName)
+const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName, bool RequestLoad)
 {
 	if(!CSkin::IsValidName(pName))
 	{
@@ -3191,7 +3193,8 @@ const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName)
 		pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 		ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
 	}
-	ExistingSkin->second->RequestLoad(true);
+	if(RequestLoad)
+		ExistingSkin->second->RequestLoad(true);
 	return ExistingSkin->second.get();
 }
 

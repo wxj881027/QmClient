@@ -3251,6 +3251,8 @@ if(CLIENT)
     QmUi/QmLegacy.cpp
     QmUi/QmLegacy.h
     QmUi/QmMotion.h
+    QmUi/QmPieMenuGeometry.h
+    QmUi/QmPieMenuRender.h
     QmUi/QmRender.cpp
     QmUi/QmRender.h
     QmUi/QmRt.cpp
@@ -3265,6 +3267,7 @@ if(CLIENT)
     QmUi/SettingsCard.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
+    QmUi/SettingsCardWidth.h
     QmUi/SettingsCardGeometry.cpp
     QmUi/SettingsCardGeometry.h
     QmUi/UiButtons.cpp
@@ -3301,8 +3304,11 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogFunctionMetrics.h
     QmUi/cards/QmCardCatalogHud.cpp
     QmUi/cards/QmCardCatalogInternal.h
+    QmUi/cards/QmCardCatalogNameplate.cpp
     QmUi/cards/QmCardCatalogSkin.cpp
     QmUi/cards/QmCardCatalogSkinMetrics.h
+    QmUi/cards/QmCardCatalogTee.cpp
+    QmUi/cards/QmCardCatalogTeeMetrics.h
     QmUi/cards/QmCardCatalogVisual.cpp
     QmUi/cards/QmCardCatalogWaterHammer.cpp
     QmUi/cards/QmCardRenderBridge.cpp
@@ -3428,6 +3434,8 @@ if(CLIENT)
     components/qmclient/bind_editor.h
     components/qmclient/bind_settings.cpp
     components/qmclient/chat_command_preview.h
+    components/qmclient/chat_command_hud.h
+    components/qmclient/chat_command_hud_render.h
     components/qmclient/chat_emoji.cpp
     components/qmclient/chat_emoji.h
     components/qmclient/collision_hitbox.cpp
@@ -3450,10 +3458,18 @@ if(CLIENT)
     components/qmclient/jelly_tee.cpp
     components/qmclient/jelly_tee.h
     components/qmclient/keyword_reply_rules.h
+    components/qmclient/recent_tee_skins.cpp
+    components/qmclient/recent_tee_skins.h
     components/qmclient/map_difficulty_catalog.cpp
     components/qmclient/map_difficulty_catalog.h
     components/qmclient/map_vote_difficulty.h
     components/qmclient/markdown_cache_writer.h
+    components/qmclient/media_volume_logic.h
+    components/qmclient/player_volume.cpp
+    components/qmclient/player_volume.h
+    components/qmclient/scoreboard_media_controls.cpp
+    components/qmclient/scoreboard_media_controls.h
+    components/qmclient/voting_hud.h
     components/qmclient/menus_qmclient.cpp
     components/qmclient/modes.cpp
     components/qmclient/modes.h
@@ -4492,7 +4508,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     bytes_be_test.cpp
     chunk_header_test.cpp
     color_test.cpp
-    color_contract_test.cpp
     compression_test.cpp
     console_test.cpp
     csv_test.cpp
@@ -4578,6 +4593,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     settings_card_translation_contract_test.cpp
     settings_player_info_contract_test.cpp
     settings_page_layout_test.cpp
+    settings_tee_layout_test.cpp
+    qm_tee_cards_test.cpp
+    recent_tee_skins_test.cpp
     qm_plausible_sizes_contract_test.cpp
     qm_tclient_statusbar_score_contract_test.cpp
     qm_tclient_statusbar_contract_test.cpp
@@ -4688,6 +4706,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     serverinfo_test.cpp
     settings_card_collapse_state_test.cpp
     settings_card_collapse_config_test.cpp
+    pie_menu_geometry_test.cpp
     pie_menu_logic_test.cpp
     pie_menu_points_test.cpp
     settings_card_deck_logic_test.cpp
@@ -4749,7 +4768,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     text_layout_string_test.cpp
     text_sweep_test.cpp
     qm_nameplate_effect_lod_test.cpp
+    qm_nameplate_cards_test.cpp
     qm_scoreboard_footer_test.cpp
+    qm_scoreboard_media_test.cpp
+    qm_media_volume_test.cpp
+    qm_voting_hud_test.cpp
+    qm_chat_command_hud_test.cpp
+    settings_card_width_test.cpp
     glyph_lookup_cache_test.cpp
     font_size_cache_test.cpp
     qm_hook_coll_intersection_test.cpp

@@ -207,12 +207,14 @@ MACRO_CONFIG_INT(QmPieMenuInviteTeamEnabled, qm_pie_menu_invite_team_enabled, 1,
 MACRO_CONFIG_INT(QmPieMenuJoinTeamEnabled, qm_pie_menu_join_team_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show join team option")
 MACRO_CONFIG_INT(QmPieMenuFollowEnabled, qm_pie_menu_follow_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show cross-server follow option")
 MACRO_CONFIG_INT(QmPieMenuScoreEnabled, qm_pie_menu_score_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show player score option")
+MACRO_CONFIG_INT(QmPieMenuCopyNameEnabled, qm_pie_menu_copy_name_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show copy name option")
 MACRO_CONFIG_STR(QmPieFollowName, qm_pie_follow_name, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Player to follow across servers until cancelled; empty disables following")
 MACRO_CONFIG_STR(QmPieFollowClan, qm_pie_follow_clan, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Clan of the player followed from the pie menu")
 MACRO_CONFIG_INT(QmPieMenuColorInviteTeam, qm_pie_menu_color_invite_team, 0xE67A4DBF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Invite team option color")
 MACRO_CONFIG_INT(QmPieMenuColorJoinTeam, qm_pie_menu_color_join_team, 0x4D9BE6BF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Join team option color")
 MACRO_CONFIG_INT(QmPieMenuColorFollow, qm_pie_menu_color_follow, 0x4DBF80BF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Follow option color")
 MACRO_CONFIG_INT(QmPieMenuColorScore, qm_pie_menu_color_score, 0xB06BE6BF, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Score option color")
+MACRO_CONFIG_INT(QmPieMenuColorCopyName, qm_pie_menu_color_copy_name, 0xBF808099, 0, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Copy name option color")
 
 // Repeat Message / 复读功能
 MACRO_CONFIG_INT(QmRepeatEnabled, qm_repeat_enabled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable repeat function")
@@ -416,6 +418,7 @@ MACRO_CONFIG_INT(QmNameplateShowScope, qm_nameplate_show_scope, 5, 0, 5, CFGFLAG
 MACRO_CONFIG_INT(QmNameplateShowScopeMigrated, qm_nameplate_show_scope_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate nickname scope migration completed flag")
 MACRO_CONFIG_COL(QmNameplateStrongHookColor, qm_nameplate_strong_hook_color, 6401973, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate strong hook icon color")
 MACRO_CONFIG_COL(QmNameplateWeakHookColor, qm_nameplate_weak_hook_color, 41131, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate weak hook icon color")
+MACRO_CONFIG_INT(QmNameplateAdvanced, qm_nameplate_advanced, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show advanced nameplate settings without changing effect values")
 MACRO_CONFIG_INT(QmNameplateTextEffects, qm_nameplate_text_effects, 1, 0, 15, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate text effects (1=Border 2=Gradient 4=Rainbow 8=Glow)")
 MACRO_CONFIG_COL(QmNameplateTextBorderColor, qm_nameplate_text_border_color, 0x80000000, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Nameplate text border color")
 MACRO_CONFIG_INT(QmNameplateTextBorderRange, qm_nameplate_text_border_range, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Nameplate text border range")
@@ -580,6 +583,7 @@ MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1, CFGFLAG_CLIENT
 
 // Chat Bubble Settings - 聊天气泡
 MACRO_CONFIG_INT(QmChatSaveDraft, qm_chat_save_draft, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep unsent message on chat close")
+MACRO_CONFIG_INT(QmChatCommandCompletion, qm_chat_command_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show command completion in chat")
 MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Merge consecutive identical player messages within 2 seconds")
 // echo 合并的滑动窗口：同一段 echo 文本在窗口内连续重复时只保留一次并计数。
 // 该行为始终生效，不受 qm_message_merge 影响；设为 0 关闭合并。

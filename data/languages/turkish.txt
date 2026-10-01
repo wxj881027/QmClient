@@ -1991,6 +1991,9 @@ Clear local console
 Clear note
 == Notu temizle
 
+Clear recent skins
+== Son kullanılan görünümleri temizle
+
 Clear remote console
 == Uzak konsolu temizle
 
@@ -2134,6 +2137,9 @@ Comma-separated list of banned clients to be kicked on join
 
 Command
 == Komut
+
+Command completion
+== Komut tamamlama
 
 Command executed by tc_mod_weapon, target id appended at end
 == tc_mod_weapon tarafından yürütülen komut, hedef id sona eklenir
@@ -2297,8 +2303,8 @@ Configure QmClient HUD elements
 Configure remaining DDNet client preferences
 == Configure remaining DDNet client preferences
 
-Configure skin colors, eyes, and filters
-== Configure skin colors, eyes, and filters
+Configure skin downloads and prefixes
+== Görünüm indirmelerini ve öneklerini yapılandır
 
 Configure sound and audio packs
 == Ses ve ses paketlerini yapılandır
@@ -2482,6 +2488,9 @@ Copy info
 
 Copy name
 == İsmi kopyala
+
+Copy name option color
+== İsim kopyalama seçeneğinin rengi
 
 Copy skin
 == Skin'i kopyala
@@ -2953,6 +2962,9 @@ Default output open failed
 
 Default preset
 == Varsayılan ön ayar
+
+Default width
+== Varsayılan genişlik
 
 Default zoom
 == Varsayılan yakınlaştırma
@@ -4732,6 +4744,9 @@ Full map listen in same room
 
 Full quality nameplate count
 == Tam kalitede tutulacak isim levhası sayısı
+
+Full width
+== Tam genişlik
 
 Full: each enabled animation category uses its complete transition
 == Tam: etkin her animasyon kategorisi tam geçişini kullanır
@@ -6947,6 +6962,9 @@ Multi-View
 Multiple exact Axiom players found
 == Tam eşleşen birden fazla Axiom oyuncusu bulundu
 
+Music player volume
+== Müzik oynatıcı ses düzeyi
+
 Mute
 == Sessize al
 
@@ -7247,6 +7265,9 @@ Next
 Next page in console
 == Konsolda sonraki sayfa
 
+Next track
+== Sonraki parça
+
 Next weapon
 == Sonraki silah
 
@@ -7402,6 +7423,9 @@ No rank 1 replay was found for this map
 
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 == Henüz önbelleğe alınmış Rank 1 demosu yok. Rank 1 sayfasından arayıp indirebilirsin.
+
+No recently used skins
+== Son kullanılan görünüm yok
 
 No results
 == Sonuç yok
@@ -8510,6 +8534,9 @@ Previous
 Previous page in console
 == Konsolda önceki sayfa
 
+Previous track
+== Önceki parça
+
 Primary
 == Birincil
 
@@ -9521,6 +9548,9 @@ Restart the client
 Restarting. Please wait…
 == Yeniden başlatılıyor. Lütfen bekleyin…
 
+Restore a recently used Tee skin
+== Son kullanılan bir Tee görünümünü geri yükle
+
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == İki kişilik kayıt geri yüklensin mi? /qm Yes en yeniyi yükler; /qm Yes numara başka kayıt seçer; /qm No kapatır.
 
@@ -9700,9 +9730,6 @@ Save all changes before switching selected button?
 
 Save all changes before turning off the editor?
 == Düzenleyiciyi kapatmadan önce tüm değişiklikler kaydedilsin mi?
-
-Save as
-== Farklı kaydet
 
 Save asset before closing?
 == Kapatmadan önce varlık kaydedilsin mi?
@@ -10313,6 +10340,12 @@ Show %s group
 Show a small view of the dummy
 == Dummy'nin küçük bir görünümünü göster
 
+Show advanced nameplate settings without changing effect values
+== Efekt değerlerini değiştirmeden gelişmiş isim etiketi ayarlarını göster
+
+Show advanced options
+== Gelişmiş seçenekleri göster
+
 Show advanced title settings (collapsing keeps configured effects)
 == Gelişmiş unvan ayarlarını göster (daraltmak ayarlanan efektleri korur)
 
@@ -10427,6 +10460,9 @@ Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 saniye içinde bir oyuncuyu art arda kancaladığında veya çekiçlediğinde combo ipucu göster
 
+Show command completion in chat
+== Sohbette komut tamamlamayı göster
+
 Show compact vote HUD
 == Kompakt oylama HUD'sunu göster
 
@@ -10435,6 +10471,9 @@ Show configurable outlines around map tiles
 
 Show coordinates above players
 == Oyuncuların üzerinde koordinatları göster
+
+Show copy name option
+== İsim kopyalama seçeneğini göster
 
 Show copy skin option
 == Görünüm kopyalama seçeneğini göster
@@ -13604,6 +13643,9 @@ Voice whitelist (comma-separated)
 Volume
 == Ses düzeyi
 
+Volume unavailable for this player
+== Bu oynatıcının ses düzeyi ayarlanamıyor
+
 Vote a map by name
 == Bir haritayı adına göre oyla
 
@@ -14547,18 +14589,6 @@ S
 [Friend auto follow]
 Follow this friend across servers
 == Bu arkadaşı sunucular arasında takip et
-
-[Friend auto follow]
-Following %s
-== %s takip ediliyor
-
-[Friend auto follow]
-Following %s: switching in %.0fs
-== %s takip ediliyor: %.0f saniye içinde geçiş yapılıyor
-
-[Friend auto follow]
-Stop
-== Durdur
 
 [Friend auto follow]
 Stop following this friend

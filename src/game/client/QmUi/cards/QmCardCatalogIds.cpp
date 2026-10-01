@@ -2,6 +2,8 @@
 // 便于 testrunner 等目标在不链接 game-client 的情况下校验 HasCardModule。
 #include <base/system.h>
 
+#include <engine/shared/config.h>
+
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 
 #include <algorithm>
@@ -17,7 +19,6 @@ namespace qm_card_catalog
 			"qm:chat_bubble",
 			"qm:focus_mode",
 			"qm:camera_view",
-			"qm:skin_appearance",
 			"qm:skin_transition",
 			"qm:weapon_animation",
 			"qm:streamer",
@@ -69,6 +70,22 @@ namespace qm_card_catalog
 			"qm:bind_editor",
 		};
 
+		const std::vector<const char *> s_vNameplateCards = {
+			"deck:appearance-name-plate-settings",
+			"deck:appearance-name-plate-text",
+			"deck:appearance-name-plate-hook-strength",
+			"deck:appearance-name-plate-key-presses",
+		};
+
+		const std::vector<const char *> s_vTeeCards = {
+			"deck:tee-identity",
+			"deck:tee-skin-list",
+			"deck:tee-skin-options",
+			"deck:tee-skin-queue",
+			"qm:skin_appearance",
+			"deck:tee-glow",
+		};
+
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
 		{
 			if(pStableId == nullptr)
@@ -102,9 +119,30 @@ namespace qm_card_catalog
 		return s_vBindCards;
 	}
 
+	const std::vector<const char *> &NameplateCardStableIds()
+	{
+		return s_vNameplateCards;
+	}
+
+	uint64_t NameplateMeasureContentRevision()
+	{
+		return (static_cast<uint64_t>(g_Config.m_ClNamePlatesClan != 0) << 0) |
+			(static_cast<uint64_t>(g_Config.m_ClNamePlatesIds != 0) << 1) |
+			(static_cast<uint64_t>(g_Config.m_ClNamePlatesIdsSeparateLine != 0) << 2) |
+			(static_cast<uint64_t>(g_Config.m_ClNamePlatesStrong != 0) << 3) |
+			(static_cast<uint64_t>(g_Config.m_ClShowDirection > 0) << 4) |
+			(static_cast<uint64_t>(g_Config.m_QmNameplateEffectAutoLod != 0) << 5) |
+			(static_cast<uint64_t>(g_Config.m_QmNameplateAdvanced != 0) << 6);
+	}
+
+	const std::vector<const char *> &TeeCardStableIds()
+	{
+		return s_vTeeCards;
+	}
+
 	bool HasCardModule(const char *pStableId)
 	{
-		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId);
+		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId);
 	}
 
 	uint64_t MeasureContentRevision()
@@ -113,6 +151,9 @@ namespace qm_card_catalog
 		Revision = FoldRevision(Revision, (uint64_t)s_vFunctionCards.size());
 		Revision = FoldRevision(Revision, (uint64_t)s_vHudCards.size());
 		Revision = FoldRevision(Revision, (uint64_t)s_vBindCards.size());
+		Revision = FoldRevision(Revision, (uint64_t)s_vNameplateCards.size());
+		Revision = FoldRevision(Revision, (uint64_t)s_vTeeCards.size());
+		Revision = FoldRevision(Revision, NameplateMeasureContentRevision());
 		return Revision;
 	}
 } // namespace qm_card_catalog

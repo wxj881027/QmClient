@@ -110,6 +110,9 @@ public:
 		bool m_CanPause = false;
 		bool m_CanPrev = false;
 		bool m_CanNext = false;
+		bool m_CanSetVolume = false;
+		float m_Volume = 0.0f;
+		uint64_t m_VolumeGeneration = 0;
 		EPlaybackState m_PlaybackState = EPlaybackState::Unknown;
 		bool m_Playing = false;
 		char m_aSourceAppId[128] = {};
@@ -145,6 +148,7 @@ public:
 	void Previous();
 	void PlayPause();
 	void Next();
+	void SetVolume(uint64_t Generation, float Volume);
 
 private:
 	void SyncNeteaseHookConfiguration();

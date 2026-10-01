@@ -21,6 +21,16 @@ namespace
 		return Pixels;
 	}
 
+	std::array<unsigned char, 64 * 64 * 4> FragmentedColumnPixels()
+	{
+		std::array<unsigned char, 64 * 64 * 4> Pixels{};
+		for(int Y = 0; Y < 64; Y += 2)
+			for(int X = 0; X < 64; ++X)
+				if(X < 8 || X >= 56)
+					Pixels[(Y * 64 + X) * 4 + 3] = 255;
+		return Pixels;
+	}
+
 	struct SCountingMask
 	{
 		const QmEmoticon::CAlphaMask &m_Mask;
@@ -95,6 +105,104 @@ TEST(QmEmoticonProjectile, RebuildingMaskReplacesMergedRuns)
 	Mask.Build(Columns.data(), 6, 64);
 	EXPECT_EQ(Mask.NumRects(), 2U);
 	EXPECT_FALSE(Mask.OverlapsBox(vec2(0, 0), 64.0f, 0.0f, vec2(0, 0), vec2(3, 3)));
+}
+
+TEST(QmEmoticonProjectile, FragmentedContourPreservesPixelsAndGapsDuringExpansion)
+{
+	const auto Pixels = FragmentedColumnPixels();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 64, 64);
+	const vec2 Pos(128.0f, -96.0f);
+	for(const float Size : {64.0f, 128.0f, 128.0f * 2.35f})
+	{
+		SCOPED_TRACE(Size);
+		for(const float Angle : {0.0f, pi / 4.0f, pi / 2.0f, -pi / 3.0f})
+		{
+			SCOPED_TRACE(Angle);
+			const vec2 AxisX = direction(Angle);
+			const vec2 AxisY(-AxisX.y, AxisX.x);
+			for(int Y = 0; Y < 64; ++Y)
+			{
+				SCOPED_TRACE(Y);
+				for(const int X : {4, 32, 60})
+				{
+					SCOPED_TRACE(X);
+					const vec2 Local = vec2((X + 0.5f) / 64.0f - 0.5f, (Y + 0.5f) / 64.0f - 0.5f) * Size;
+					const vec2 PixelCenter = Pos + AxisX * Local.x + AxisY * Local.y;
+					const float Half = Size / 1024.0f;
+					EXPECT_EQ(Mask.OverlapsBox(Pos, Size, Angle, PixelCenter, vec2(Half, Half)), Pixels[(Y * 64 + X) * 4 + 3] != 0);
+				}
+			}
+		}
+	}
+}
+
+TEST(QmEmoticonProjectile, ExpandedFragmentedContourKeepsTransparentMapGap)
+{
+	const auto Pixels = FragmentedColumnPixels();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 64, 64);
+	const vec2 Pos(16.0f, 16.0f);
+	for(const float Size : {64.0f, 128.0f, 128.0f * 2.35f})
+	{
+		SCOPED_TRACE(Size);
+		for(const float Angle : {0.0f, pi / 4.0f, pi / 2.0f, -pi / 3.0f})
+		{
+			SCOPED_TRACE(Angle);
+			EXPECT_FALSE(Mask.Overlaps(Pos, Size, Angle, [](int X, int Y) { return X == 0 && Y == 0; }));
+		}
+	}
+}
+
+TEST(QmEmoticonProjectile, ExpandedFragmentedContourStillHitsOpaqueMapTiles)
+{
+	const auto Pixels = FragmentedColumnPixels();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 64, 64);
+	const vec2 Pos(16.0f, 16.0f);
+	for(const float Size : {64.0f, 128.0f, 128.0f * 2.35f})
+	{
+		SCOPED_TRACE(Size);
+		for(const float Angle : {0.0f, pi / 4.0f, pi / 2.0f, -pi / 3.0f})
+		{
+			SCOPED_TRACE(Angle);
+			const vec2 AxisX = direction(Angle);
+			const vec2 AxisY(-AxisX.y, AxisX.x);
+			for(const int Y : {0, 30, 62})
+			{
+				SCOPED_TRACE(Y);
+				for(const int X : {4, 60})
+				{
+					SCOPED_TRACE(X);
+					const vec2 Local = vec2((X + 0.5f) / 64.0f - 0.5f, (Y + 0.5f) / 64.0f - 0.5f) * Size;
+					const vec2 PixelCenter = Pos + AxisX * Local.x + AxisY * Local.y;
+					const int TileX = (int)std::floor(PixelCenter.x / 32.0f);
+					const int TileY = (int)std::floor(PixelCenter.y / 32.0f);
+					EXPECT_TRUE(Mask.Overlaps(Pos, Size, Angle, [=](int MapX, int MapY) { return MapX == TileX && MapY == TileY; }));
+				}
+			}
+		}
+	}
+}
+
+TEST(QmEmoticonProjectile, RebuildingFragmentedMaskReplacesBounds)
+{
+	const auto Fragmented = FragmentedColumnPixels();
+	const auto Opaque = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	const vec2 Pos(16.0f, 16.0f);
+	const auto SolidTile = [](int X, int Y) { return X == 0 && Y == 0; };
+	Mask.Build(Fragmented.data(), 64, 64);
+	EXPECT_FALSE(Mask.Overlaps(Pos, 64.0f, 0.0f, SolidTile));
+	EXPECT_TRUE(Mask.OverlapsBox(Pos, 64.0f, 0.0f, Pos + vec2(28.5f, -31.5f), vec2(0.1f, 0.1f)));
+	Mask.Build(Opaque.data(), 2, 2);
+	EXPECT_TRUE(Mask.Overlaps(Pos, 64.0f, 0.0f, SolidTile));
+	Mask.Build(nullptr, 0, 0);
+	EXPECT_FALSE(Mask.Overlaps(Pos, 64.0f, 0.0f, SolidTile));
+	EXPECT_FALSE(Mask.OverlapsBox(Pos, 64.0f, 0.0f, Pos + vec2(28.5f, -31.5f), vec2(0.1f, 0.1f)));
+	Mask.Build(Fragmented.data(), 64, 64);
+	EXPECT_FALSE(Mask.Overlaps(Pos, 64.0f, 0.0f, SolidTile));
+	EXPECT_TRUE(Mask.OverlapsBox(Pos, 64.0f, 0.0f, Pos + vec2(28.5f, -31.5f), vec2(0.1f, 0.1f)));
 }
 
 TEST(QmEmoticonProjectile, DistantPlayersSkipNarrowPhase)
@@ -247,6 +355,33 @@ TEST(QmEmoticonProjectile, ExpansionContinuesWithClearSpace)
 	EXPECT_TRUE(Projectile.m_Active);
 	EXPECT_GT(Projectile.Size(), InitialSize);
 	EXPECT_FLOAT_EQ(Projectile.m_SizeLimit, 32.0f);
+}
+
+TEST(QmEmoticonProjectile, FragmentedProjectileFreezesExpansionAndBouncesDuringFade)
+{
+	const auto Pixels = FragmentedColumnPixels();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 64, 64);
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(79.8f, 16.0f), vec2(100.0f, 0.0f), 0);
+	Projectile.m_AngVel = 0.0f;
+	Projectile.m_LifeTime = 0.25f;
+	const float ClearSize = Projectile.Size();
+	const vec2 Before = Projectile.m_Pos;
+	const auto Solid = [](int X, int) { return X >= 4; };
+	ASSERT_FALSE(Mask.Overlaps(Before, ClearSize, Projectile.m_Angle, Solid));
+
+	Projectile.Update((float)CEmoticonProjectile::STEP, Mask, Solid);
+	EXPECT_TRUE(Projectile.m_Active);
+	EXPECT_LT(Projectile.m_LifeTime, 0.25f);
+	EXPECT_FLOAT_EQ(Projectile.Size(), ClearSize);
+	EXPECT_FLOAT_EQ(Projectile.m_Pos.x, Before.x);
+	EXPECT_LT(Projectile.m_Vel.x, 0.0f);
+	EXPECT_FALSE(Mask.Overlaps(Projectile.m_Pos, Projectile.Size(), Projectile.m_Angle, Solid));
+
+	Projectile.Update(0.3f, Mask, Solid);
+	EXPECT_FALSE(Projectile.m_Active);
+	EXPECT_FLOAT_EQ(Projectile.m_LifeTime, 0.0f);
 }
 
 TEST(QmEmoticonProjectile, ExistingWallOverlapStopsProjectile)

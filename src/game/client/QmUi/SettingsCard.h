@@ -19,6 +19,7 @@ struct SSettingsCardDeckVisualOptions
 	ColorRGBA m_BorderColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f);
 	ColorRGBA m_SurfaceColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f);
 	bool m_UseSurfaceColor = false;
+	int m_LeadingFullWidthCards = 0;
 };
 
 struct SSettingsCardVisualState

@@ -111,7 +111,7 @@ namespace qm_card_registry
 			{"qm:chat_bubble", "visual", ECardColumn::Left, 0, "Chat bubble", "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao visual", "Show chat messages above players"},
 			{"qm:focus_mode", "visual", ECardColumn::Left, 2, "Zen Mode", "禅模式 zhuanzhi moshi focus mode zen mode 隐藏 yincang hud 名字 mingzi 特效 texiao 计分板 jifenban 沉浸 chenjing 无干扰 wuganrao 聊天 liaotian chat 非必要UI visual", "Hide UI for focused gameplay"},
 			{"qm:camera_view", "visual", ECardColumn::Right, 0, "Camera view", "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao visual", "Adjust game camera and FOV settings"},
-			{"qm:skin_appearance", "visual", ECardColumn::Left, 1, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow visual", "Configure Tee appearance and skins"},
+			{"qm:skin_appearance", "tee", ECardColumn::Left, 1, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow visual", "Configure Tee appearance and skins"},
 			{"qm:water_hammer", "visual", ECardColumn::Right, 4, "Water hammer highlight", "水域 shuiyu 死亡 death 冻结 freeze 卡锤 kachui 锤子 chuizi hammer held preinput teammate 同队 tongdui 高亮 gaoliang 变色 bianse visual", "Highlight teammates holding hammer in death or freeze areas"},
 			{"qm:skin_transition", "visual", ECardColumn::Left, 2, "Skin transition animation", "皮肤切换 pifu qiehuan skin transition animation 换皮 huanpi 动画 donghua 开关 kaiguan 类型 leixing 时长 shichang 强度 qiangdu easing 缓动 huandong 锤中偷皮 chuizhong toupi hammer skin steal 故障 guzhang glitch 抖动 doudong 弹性 tanxing elastic 范围 fanwei scope 分身 fenshen dummy visual", "Configure hammer skin steal and skin transition animations"},
 			{"qm:weapon_animation", "visual", ECardColumn::Right, 1, "Weapon animation", "武器动画 wuqi donghua weapon animation 切换武器动画 qiehuan wuqi donghua weapon switch animation 装填动画 zhuangtian donghua reload animation 概率 gailv probability 滑入 huaru 旋转 xuanzhuan visual", "Play a slide-in rotation animation when switching weapons"},
@@ -132,7 +132,7 @@ namespace qm_card_registry
 			{"qm:block_words", "function", ECardColumn::Left, 12, "Block words", "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan function", "Chat word filtering"},
 			{"qm:qiafen", "function", ECardColumn::Left, 13, "Keyword reply", "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming keyword reply qiafen function", "Configure keyword-based automatic replies"}, // UI 名 keyword_reply，以持久化 key qiafen 为权威
 			{"qm:translate", "function", ECardColumn::Left, 14, "Translate", "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.5-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过 function", "Chat translation settings"},
-			{"qm:pie_menu", "function", ECardColumn::Left, 16, "Pie menu", "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan 组队邀请 zu dui yao qing 加入队伍 jiaru duiwu 跟随 gensui follow server 查分 chafen points score 颜色 yanse function", "Quick action menu for players"},
+			{"qm:pie_menu", "function", ECardColumn::Left, 16, "Pie menu", "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan 组队邀请 zu dui yao qing 加入队伍 jiaru duiwu 跟随 gensui follow server 查分 chafen points score 复制ID 复制名字 fuzhi mingzi copy name 颜色 yanse function", "Quick action menu for players"},
 			{"qm:emoticons", "function", ECardColumn::Left, 18, "Emoticons", "表情 biaoqing 大表情 dabiaoqing 发射表情 fashe biaoqing 表情发射 launcher launch super emote 按键绑定 anjian bangding 他人显示 taren xianshi function", "Large emoticons and launched emoticons"},
 			{"qm:map_upload", "function", ECardColumn::Right, 21, "Map upload", "上传地图 shangchuan ditu 测图 cetu map upload test server function", "Upload a saved map to the public test server"},
 			{"qm:steam", "function", ECardColumn::Right, 22, "Steam integration", "Steam 启动 qidong 自动启动 zidong qidong 主窗口 zhuchuangkou 不启动游戏 buqidong youxi function", "Automatically launch Steam when the client is started externally"},
@@ -152,7 +152,7 @@ namespace qm_card_registry
 			{"qm:debug_mode", "hud", ECardColumn::Right, 19, "Debug mode", "调试模式 tiaoshi moshi debug mode 性能日志 xingneng rizhi perf log 性能调试 xingneng tiaoshi 日志文件 rizhi wenjian 采样阈值 caiyang yuzhi threshold 卡顿诊断 kadun zhenduan stutter diagnostics hud", "Enable performance debug logging and diagnostics"},
 			{"qm:bind_status_hud", "hud", ECardColumn::Right, 20, "DDRace HUD Pro", "bind status hud 分身状态 fenshen zhuangtai 卡键 kajian 锤子 chuizi 分身控制 fenshen kongzhi 分身同步 fenshen tongbu 同步 tongbu ddrace hud pro", "Dummy key/hammer/control/copy status switches"},
 			{"qm:gores_drown_board", "hud", ECardColumn::Right, 23, "Gores drown board", "Gores Kog 落水 luoshui 冻结 dongjie 死亡 siwang 排行 paixing 榜单 bangdan 队伍 duiwu Tee 透明度 toumingdu 人数 renshu hud", "Configure the Gores team drown board"},
-			{"qm:nameplate_text", "hud", ECardColumn::Right, 18, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text", "appearance-name-plate", "deck:appearance-name-plate-settings"}, // 数据债：原无 tab 归属，B1 补 hud；功能由外观页承载
+			{"qm:nameplate_text", "hud", ECardColumn::Right, 18, "Nameplate text", "nameplate text hud 名字 mingzi 名牌 mingpai 文字 wenzi", "Customize additional nameplate text", "appearance-name-plate", "deck:appearance-name-plate-text"}, // 旧模块入口继续定位到外观页的文字卡片。
 			{"qm:laser", "visual", ECardColumn::Right, 3, "Laser", "激光设置 jiguang laser 增强特效 zengqiang texiao 辉光强度 huiguang qiangdu 激光大小 daxiao 半透明 bantouming 圆角端点 yuanjiao duandian 脉冲速度 maichong sudu 脉冲幅度 maichong fudu visual", "Customize laser shape and effects", "appearance-laser", "deck:appearance-laser-enhanced"}, // 数据债：原无 tab 归属，B1 补 visual；功能由外观页承载
 			{"qm:bind_editor", "bind", ECardColumn::Full, 0, Localizable("Bind"), "绑定 bangding bind keyboard 键盘 anjian 按键 mouse 鼠标 wheel 滚轮 modifier 修饰键 command 命令", Localizable("Configure keyboard, mouse, wheel, and modifier bindings")},
 
@@ -197,10 +197,10 @@ namespace qm_card_registry
 			{"deck:tclient-info-files", "general", ECardColumn::Right, 2, "Config Files", "config files settings profiles war list chat binds", "Open TClient configuration file locations"},
 			{"deck:player-identity", "player", ECardColumn::Left, 0, Localizable("Player"), "player dummy name clan identity", "Edit player and dummy identity information"},
 			{"deck:player-country", "player", ECardColumn::Right, 0, Localizable("Choose country flag"), "player dummy country flag", "Select the country flag for each player"},
-			{"deck:tee-identity", "tee", ECardColumn::Left, 0, "Player preview", "tee player dummy identity preview", "Preview player and dummy appearance"},
-			{"deck:tee-skin-options", "tee", ECardColumn::Right, 0, "Skin options", "tee skin colors eyes options prefix", "Configure skin colors, eyes, and filters"},
-			{"deck:tee-skin-list", "tee", ECardColumn::Full, 0, "Skin search", "tee skins search filter list", "Search, filter, and manage skins"},
-			{"deck:tee-skin-queue", "tee", ECardColumn::Left, 1, "Skin queue", "tee skin queue rotation random preset interval", "Manage the skin rotation queue"},
+			{"deck:tee-identity", "tee", ECardColumn::Full, 0, "Player preview", "tee player dummy identity preview colors eyes name clan 本体 分身 配色 表情", "Preview player and dummy appearance"},
+			{"deck:tee-skin-options", "tee", ECardColumn::Left, 0, "Skin options", "tee skin download options prefix metadata", "Configure skin downloads and prefixes"},
+			{"deck:tee-skin-list", "tee", ECardColumn::Full, 1, "Skin search", "tee skins search filter list favorite recent 最近 使用 皮肤 收藏", "Search, filter, and manage skins"},
+			{"deck:tee-skin-queue", "tee", ECardColumn::Right, 0, "Skin queue", "tee skin queue rotation random preset interval", "Manage the skin rotation queue"},
 			{"deck:tee-glow", "tee", ECardColumn::Right, 1, "Team tee glow", "tee team glow color rainbow spectate", "Color tee outlines by team for spectating"},
 			{"deck:tee7-editor", "tee7", ECardColumn::Full, 0, "Skin", "tee sixup skin editor", "Edit individual Tee 7 skin parts"},
 			{"deck:graphics-display", "graphics", ECardColumn::Left, 0, Localizable("Graphics display"), "graphics display monitor window", "Window and monitor"},
@@ -232,7 +232,10 @@ namespace qm_card_registry
 			{"deck:appearance-chat-settings", "appearance-chat", ECardColumn::Left, 0, "Chat", "appearance chat settings", "Configure chat position, size, and visibility"},
 			{"deck:appearance-chat-messages", "appearance-chat", ECardColumn::Right, 0, "Messages", "appearance chat messages", "Style chat names, text, and message colors"},
 			{"deck:appearance-chat-preview", "appearance-chat", ECardColumn::Left, 1, "Preview", "appearance chat preview", "Preview the current chat appearance"},
-			{"deck:appearance-name-plate-settings", "appearance-name-plate", ECardColumn::Left, 0, "Name Plate", "appearance name plate settings", "Configure nameplate text, badges, and visibility"},
+			{"deck:appearance-name-plate-settings", "appearance-name-plate", ECardColumn::Left, 0, "Name Plate", "appearance name plate settings visibility clan friend client id 昵称 显示 战队 好友 客户端 nicheng", "Configure nameplate text, badges, and visibility"},
+			{"deck:appearance-name-plate-text", "appearance-name-plate", ECardColumn::Left, 1, Localizable("Nameplate text"), "appearance nameplate text effects border gradient rainbow glow lod 名牌文字 描边 渐变 彩虹 辉光 特效 mingpai wenzi", "Customize additional nameplate text"},
+			{"deck:appearance-name-plate-hook-strength", "appearance-name-plate", ECardColumn::Right, 1, Localizable("Hook Strength"), "appearance nameplate hook strength strong weak 钩子强度 强钩 弱钩 gouzi qiangdu", "Show hook strength icon indicator"},
+			{"deck:appearance-name-plate-key-presses", "appearance-name-plate", ECardColumn::Right, 2, Localizable("Key Presses"), "appearance nameplate key presses direction 按键显示 按键指示 anjian", "Show players' key presses"},
 			{"deck:appearance-name-plate-preview", "appearance-name-plate", ECardColumn::Right, 0, "Preview", "appearance name plate preview", "Preview player and dummy nameplates"},
 			{"deck:appearance-hook-collision-main", "appearance-hook-collision", ECardColumn::Left, 0, "Hook collision line", "appearance hook collision line", "Configure hook range and collision guide lines"},
 			{"deck:appearance-hook-collision-preview", "appearance-hook-collision", ECardColumn::Right, 0, "Preview", "appearance hook collision preview", "Preview hook collision colors and line styles"},
@@ -417,6 +420,49 @@ namespace qm_card_registry
 			if(pTab == nullptr || (str_comp(pTab, "qmclient-contributors") != 0 && str_comp(pTab, "qmclient-contributors-ddnet") != 0 && str_comp(pTab, "tclient-info") != 0))
 				continue;
 			Model.MoveToTab(Default.m_pStableId, Default.m_pDefaultTab, Default.m_Column, Default.m_OrderInColumn);
+			Changed = true;
+		}
+		return Changed;
+	}
+
+	bool RepairLegacyTeeLayout(qm_card_order::CModel &Model)
+	{
+		const std::vector<qm_card_order::SEntry> vLegacy = {
+			{"deck:tee-identity", "tee", 1, 0},
+			{"deck:tee-skin-options", "tee", 2, 0},
+			{"deck:tee-skin-list", "tee", 0, 0},
+			{"deck:tee-skin-queue", "tee", 1, 1},
+			{"deck:tee-glow", "tee", 2, 1},
+		};
+		bool LegacyDefault = true;
+		for(const auto &Expected : vLegacy)
+		{
+			const int Index = Model.FindByStableId(Expected.m_pStableId);
+			if(Index < 0)
+			{
+				LegacyDefault = false;
+				break;
+			}
+			const auto &Entry = Model.Entry(Index);
+			LegacyDefault = LegacyDefault && Entry.m_pDefaultTab != nullptr && str_comp(Entry.m_pDefaultTab, "tee") == 0 && Entry.m_Column == Expected.m_Column && Entry.m_OrderInColumn == Expected.m_OrderInColumn;
+		}
+		bool Changed = false;
+		if(LegacyDefault)
+		{
+			const std::vector<qm_card_order::SEntry> vTarget = {
+				{"deck:tee-identity", "tee", 0, 0},
+				{"deck:tee-skin-options", "tee", 1, 0},
+				{"deck:tee-skin-list", "tee", 0, 1},
+				{"deck:tee-skin-queue", "tee", 2, 0},
+				{"deck:tee-glow", "tee", 2, 1},
+			};
+			const std::vector<const char *> vAllowed = {"deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-list", "deck:tee-skin-queue", "deck:tee-glow", "qm:skin_appearance"};
+			Changed = qm_card_order::MigrateExactLayout(Model, "tee", vLegacy, vTarget, vAllowed);
+		}
+		const int Appearance = Model.FindByStableId("qm:skin_appearance");
+		if(Appearance >= 0 && Model.Entry(Appearance).m_pDefaultTab != nullptr && str_comp(Model.Entry(Appearance).m_pDefaultTab, "visual") == 0)
+		{
+			Model.MoveToTab("qm:skin_appearance", "tee", 1, static_cast<int>(Model.ColumnIndices("tee", 1).size()));
 			Changed = true;
 		}
 		return Changed;

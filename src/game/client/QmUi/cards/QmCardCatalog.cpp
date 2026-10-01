@@ -87,6 +87,10 @@ namespace qm_card_catalog
 	{
 		if(str_comp(pStableId, "qm:bind_editor") == 0)
 			return BuildBindCard(Ctx, Out);
+		if(ContainsStableId(NameplateCardStableIds(), pStableId))
+			return QmCardRenderHook::BuildNameplateCard(Ctx, pStableId, Out);
+		if(ContainsStableId(TeeCardStableIds(), pStableId))
+			return QmCardRenderHook::BuildTeeCard(Ctx, pStableId, Out);
 		qm_module::EQmModuleId Id = qm_module::EQmModuleId::Info;
 		if(!qm_module::QmModuleIdFromStableId(pStableId, &Id))
 			return false;

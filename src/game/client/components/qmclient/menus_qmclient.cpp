@@ -1764,8 +1764,9 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-keyword-reply-rules", &LabelColumn, Localize("Keyword rules"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 	CUIRect AddRuleButtonRect;
 	ControlColumn.VSplitRight(maximum(LineHeight, 24.0f * UiScale), &ControlColumn, &AddRuleButtonRect);
+	AddRuleButtonRect.VMargin((AddRuleButtonRect.w - AddRuleButtonRect.h) * 0.5f, &AddRuleButtonRect);
 	QmKeywordReplyRules::SEditorChanges Changes;
-	if(!PrewarmOnly && DoButton_Menu(&s_KeywordAddRuleButton, "+", 0, &AddRuleButtonRect))
+	if(!PrewarmOnly && DoButton_Menu_QmIcon(&s_KeywordAddRuleButton, EQmIcon::PLUS, FONT_ICON_PLUS, 0, &AddRuleButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL))
 	{
 		auto pNewRule = CreateAutoReplyRuleInputRow();
 		pNewRule->m_TriggerInput.Activate(EInputPriority::UI);
@@ -1776,26 +1777,46 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 	s_vKeywordRemoveRuleButtons.resize(s_vKeywordRuleRows.size());
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
+	const char *pRenameLabel = Localize("Rename");
+	const char *pRegexLabel = Localize("Regex");
+	const float OptionSpacing = maximum(4.0f, 4.0f * UiScale);
+	const float CheckboxControlWidth = g_Config.m_QmNewUi ? maximum(LineHeight * 1.65f, 30.0f) + 8.0f : LineHeight + 5.0f;
+	const float MaxOptionWidth = maximum(CheckboxControlWidth + BodySize, Content.w * 0.24f);
+	const float RenameWidth = minimum(MaxOptionWidth, CheckboxControlWidth + TextRender()->TextWidth(BodySize, pRenameLabel) + 2.0f);
+	const float RegexWidth = minimum(MaxOptionWidth, CheckboxControlWidth + TextRender()->TextWidth(BodySize, pRegexLabel) + 2.0f);
+	auto RenderRuleOption = [this, PrewarmOnly, BodySize](const char *pTextId, const char *pText, int *pValue, const CUIRect &Rect) {
+		SLabelProperties Props;
+		Props.m_DisallowNewline = true;
+		Props.m_StopAtEnd = true;
+		const bool ProcessInput = !PrewarmOnly && !Ui()->RenderOnly();
+		const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pValue, pTextId, pText, *pValue, &Rect, Props, ProcessInput, BodySize) != 0;
+		if(Changed)
+			*pValue ^= 1;
+		return Changed;
+	};
+
 	for(size_t i = 0; i < s_vKeywordRuleRows.size();)
 	{
 		auto &pRule = s_vKeywordRuleRows[i];
 		pRule->m_TriggerInput.SetEmptyText("");
 		pRule->m_ReplyInput.SetEmptyText("");
 		Content.HSplitTop(LineHeight, &Row, &Content);
-		CUIRect OptionsColumn;
-		Row.VSplitLeft(LabelWidth, &OptionsColumn, &ControlColumn);
 		CUIRect RenameColumn, RegexColumn, TriggerColumn, SendColumn, ReplyColumn, RemoveButtonRect;
+		Row.VSplitLeft(RenameWidth, &RenameColumn, &ControlColumn);
+		ControlColumn.VSplitLeft(OptionSpacing, nullptr, &ControlColumn);
+		ControlColumn.VSplitLeft(RegexWidth, &RegexColumn, &ControlColumn);
+		ControlColumn.VSplitLeft(OptionSpacing, nullptr, &ControlColumn);
 		ControlColumn.VSplitRight(maximum(LineHeight, 24.0f * UiScale), &ControlColumn, &RemoveButtonRect);
-		ControlColumn.VSplitLeft(ControlColumn.w * 0.45f, &TriggerColumn, &ControlColumn);
-		ControlColumn.VSplitLeft(maximum(40.0f, 40.0f * UiScale), &SendColumn, &ReplyColumn);
-		OptionsColumn.VSplitLeft(maximum(54.0f, 54.0f * UiScale), &RenameColumn, &OptionsColumn);
-		OptionsColumn.VSplitLeft(maximum(54.0f, 54.0f * UiScale), &RegexColumn, &OptionsColumn);
-		Changes.m_Rename |= RenderQmFunctionCheckbox(&pRule->m_AutoRename, "Rename", Localize("Rename"), &pRule->m_AutoRename, &RenameColumn, PrewarmOnly);
-		Changes.m_Regex |= RenderQmFunctionCheckbox(&pRule->m_Regex, "Regex", Localize("Regex"), &pRule->m_Regex, &RegexColumn, PrewarmOnly);
+		RemoveButtonRect.VMargin((RemoveButtonRect.w - RemoveButtonRect.h) * 0.5f, &RemoveButtonRect);
+		const float SendWidth = minimum(ControlColumn.w, maximum(40.0f, 40.0f * UiScale));
+		ControlColumn.VSplitLeft((ControlColumn.w - SendWidth) * 0.5f, &TriggerColumn, &ControlColumn);
+		ControlColumn.VSplitLeft(SendWidth, &SendColumn, &ReplyColumn);
+		Changes.m_Rename |= RenderRuleOption("Rename", pRenameLabel, &pRule->m_AutoRename, RenameColumn);
+		Changes.m_Regex |= RenderRuleOption("Regex", pRegexLabel, &pRule->m_Regex, RegexColumn);
 		Changes.m_TriggerText |= ui_widget::InputField(TextInputCtx, &pRule->m_TriggerInput, TriggerColumn, "", BodySize);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-keyword-reply-send-label", &SendColumn, Localize("Send"), BodySize, TEXTALIGN_MC, {}, (int)SendColumn.w);
 		Changes.m_ReplyText |= ui_widget::InputField(TextInputCtx, &pRule->m_ReplyInput, ReplyColumn, "", BodySize);
-		const bool RemoveClicked = !PrewarmOnly && DoButton_Menu(&s_vKeywordRemoveRuleButtons[i], "-", 0, &RemoveButtonRect);
+		const bool RemoveClicked = !PrewarmOnly && DoButton_Menu_QmIcon(&s_vKeywordRemoveRuleButtons[i], EQmIcon::MINUS, FONT_ICON_MINUS, 0, &RemoveButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 		if(RemoveClicked)
 		{

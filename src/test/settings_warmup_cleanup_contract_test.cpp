@@ -31,7 +31,7 @@ TEST(SettingsWarmupCleanup, SourceNoLongerReferencesSettingsRuntimeFboContracts)
 
 TEST(SettingsWarmupCleanup, SourceKeepsTeeMemoryPreviewCacheAndWorkshopThumbCache)
 {
-	const std::string MenusSettings = ReadRepoFile("src/game/client/components/menus_settings.cpp");
+	const std::string MenusSettings = ReadRepoFile("src/game/client/QmUi/cards/QmCardCatalogTee.cpp");
 	const std::string Assets = ReadRepoFile("src/game/client/components/menus_settings_assets.cpp");
 
 	EXPECT_TRUE(ContainsAll(MenusSettings, {"SSettingsTeeListPreviewCache", "gs_TeeListPreviewCache"}));

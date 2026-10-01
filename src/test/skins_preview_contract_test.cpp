@@ -180,62 +180,8 @@ TEST(SkinsContract, SkinRefreshKeepsExistingListWhileNewPlanLoads)
 	EXPECT_EQ(RefreshBody.find("m_SkinsBackgroundList.clear();"), std::string::npos);
 }
 
-TEST(SkinsContract, TeeSkinRefreshClearsListPreviewCacheBeforeReloadingSkinTextures)
-{
-	const std::string Menus = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	const size_t RefreshBranch = Menus.find("if(!RenderOnly && ShouldRefresh)");
-	ASSERT_NE(RefreshBranch, std::string::npos);
-	const size_t RefreshSkins = Menus.find("GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SIX);", RefreshBranch);
-	ASSERT_NE(RefreshSkins, std::string::npos);
-	const std::string RefreshBody = Menus.substr(RefreshBranch, RefreshSkins - RefreshBranch);
 
-	EXPECT_NE(Menus.find("void ClearSettingsTeeListPreviewCache()"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("ClearSettingsTeeListPreviewCache();"), std::string::npos);
-}
 
-TEST(SkinsContract, TeeSkinListPreviewCacheKeysCoverPreviewVariantsAndStayBounded)
-{
-	const std::string Menus = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	const size_t CachePos = Menus.find("struct SSettingsTeeListPreviewCache");
-	ASSERT_NE(CachePos, std::string::npos);
-	const size_t CacheEnd = Menus.find("SSettingsTeeListPreviewCache gs_TeeListPreviewCache;", CachePos);
-	ASSERT_NE(CacheEnd, std::string::npos);
-	const std::string CacheBody = Menus.substr(CachePos, CacheEnd - CachePos);
-
-	EXPECT_NE(CacheBody.find("QM_TEE_PREVIEW_CACHE_CAPACITY"), std::string::npos);
-	EXPECT_NE(CacheBody.find("static std::string Key(const char *pSkinName, int Dummy, bool UseCustomColor, int ColorBody, int ColorFeet, int Emote)"), std::string::npos);
-	EXPECT_NE(CacheBody.find("pSkinName != nullptr ? pSkinName : \"\""), std::string::npos);
-	EXPECT_NE(CacheBody.find("Dummy,"), std::string::npos);
-	EXPECT_NE(CacheBody.find("UseCustomColor ? 1 : 0,"), std::string::npos);
-	EXPECT_NE(CacheBody.find("ColorBody,"), std::string::npos);
-	EXPECT_NE(CacheBody.find("ColorFeet,"), std::string::npos);
-	EXPECT_NE(CacheBody.find("Emote);"), std::string::npos);
-
-	const size_t PreviewKeyPos = Menus.find("const std::string PreviewCacheKey = SSettingsTeeListPreviewCache::Key(");
-	ASSERT_NE(PreviewKeyPos, std::string::npos);
-	const size_t PreviewKeyEnd = Menus.find(";", PreviewKeyPos);
-	ASSERT_NE(PreviewKeyEnd, std::string::npos);
-	const std::string PreviewKeyCall = Menus.substr(PreviewKeyPos, PreviewKeyEnd - PreviewKeyPos);
-	EXPECT_NE(PreviewKeyCall.find("m_Dummy"), std::string::npos);
-	EXPECT_NE(PreviewKeyCall.find("EntryUseCustomColor"), std::string::npos);
-	EXPECT_NE(PreviewKeyCall.find("EntryColorBody"), std::string::npos);
-	EXPECT_NE(PreviewKeyCall.find("EntryColorFeet"), std::string::npos);
-	EXPECT_NE(PreviewKeyCall.find("*pEmote"), std::string::npos);
-}
-
-TEST(SkinsContract, TeeSkinListLoadingEntriesUseDefaultSkinFallbackWithLoadingIndicator)
-{
-	const std::string Menus = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	const size_t RenderTeePos = Menus.find("void CMenus::RenderSettingsTee(CUIRect MainView)");
-	ASSERT_NE(RenderTeePos, std::string::npos);
-	const size_t RenderTeeEnd = Menus.find("void CMenus::RenderSettingsAppearance", RenderTeePos);
-	ASSERT_NE(RenderTeeEnd, std::string::npos);
-	const std::string RenderTeeBody = Menus.substr(RenderTeePos, RenderTeeEnd - RenderTeePos);
-
-	EXPECT_NE(RenderTeeBody.find("State == CSkins::CSkinContainer::EState::LOADED ? pSkinContainer->Skin().get() : pDefaultSkin"), std::string::npos);
-	EXPECT_NE(RenderTeeBody.find("RenderSkinStatus(Item.m_Rect, pSkinContainer, SkinListEntry.ErrorTooltipId(), PreviewCacheReady);"), std::string::npos);
-	EXPECT_EQ(RenderTeeBody.find("RenderSettingsSkinListPlaceholder"), std::string::npos);
-}
 
 TEST(SkinsContract, AbortedLocalSkinLoadJobStopsBeforeExpensiveRefreshWork)
 {

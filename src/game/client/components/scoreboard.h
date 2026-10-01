@@ -9,6 +9,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/axiom_scores_data.h>
+#include <game/client/components/qmclient/scoreboard_media_controls.h>
 #include <game/client/components/qmclient/scoreboard_team_modes.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
@@ -154,6 +155,7 @@ class CScoreboard : public CComponent
 	std::optional<vec2> m_LastMousePos;
 	bool m_MouseUnlocked = false;
 	bool m_RenderInteractions = false;
+	CQmScoreboardMediaControls m_MediaControls;
 
 	struct SSoundMuteButtonAnimState
 	{

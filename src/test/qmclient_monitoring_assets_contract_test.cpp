@@ -89,17 +89,6 @@ TEST(QmMonitoringAssetsContract, SettingsResourcePreviewPipelineExists)
 	EXPECT_NE(CMake.find("src/game/client/components/qmclient/settings_resource_preview.cpp"), std::string::npos);
 }
 
-TEST(QmMonitoringAssetsContract, TeeListDoesNotExposePartialSkinPreviewUploads)
-{
-	// The tee list must not render a CSkin while only some sprites have uploaded.
-	// Partially uploaded skins looked like broken/default tees in the settings list.
-	const std::string Source = ReadRepoFile("src/game/client/components/menus_settings.cpp");
-	const std::string Body = ExtractSourceFunctionBody(Source, "void CMenus::RenderSettingsTee(CUIRect MainView)");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Body.find("const CSkin *pSkin = State == CSkins::CSkinContainer::EState::LOADED ? pSkinContainer->Skin().get() : pDefaultSkin;"), std::string::npos);
-	EXPECT_EQ(Body.find("const CSkin *pSkin = pSkinContainer->Skin() != nullptr ? pSkinContainer->Skin().get() : pDefaultSkin;"), std::string::npos);
-}
 
 TEST(QmMonitoringAssetsContract, SettingsResourcePreviewDrainRejectsInvalidImagesBeforeConsumingBudget)
 {

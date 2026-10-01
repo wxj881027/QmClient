@@ -5,6 +5,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/components/menus.h>
+#include <game/client/gameclient.h>
 #include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
 
@@ -33,16 +34,17 @@ namespace qm_card_catalog
 		case EQmModuleId::SkinAppearance:
 			if(!ReadOnly)
 			{
-				PreLayoutInput = [pMenus, LineHeight, LineSpacing](CUIRect Content) {
-					bool Changed = QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineLocal, &g_Config.m_QmSkinOutlineLocal);
-					Changed = QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineOthers, &g_Config.m_QmSkinOutlineOthers) || Changed;
+				PreLayoutInput = [pMenus, Metrics](CUIRect Content) {
+					CUIRect Outline = ResolveSettingsSkinAppearanceLayout(Content, Metrics).m_Outline;
+					bool Changed = QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Outline, Metrics.m_LineHeight, Metrics.m_LineSpacing, &g_Config.m_QmSkinOutlineLocal, &g_Config.m_QmSkinOutlineLocal);
+					Changed = QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Outline, Metrics.m_LineHeight, Metrics.m_LineSpacing, &g_Config.m_QmSkinOutlineOthers, &g_Config.m_QmSkinOutlineOthers) || Changed;
 					return Changed;
 				};
 			}
 			MakeModuleCard(
 				Ctx, Id, "qm:skin_appearance", "Tee appearance", "Configure Tee appearance and skins",
 				[pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { QmCardRenderHook::RenderQmVisualSkinAppearanceContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); },
-				[Metrics](float) { return ResolveQmVisualSkinAppearanceHeight(Metrics); },
+				[Metrics](float Width) { return ResolveQmVisualSkinAppearanceHeight(Metrics, Width); },
 				0, std::move(PreLayoutInput), Out);
 			return true;
 		case EQmModuleId::SkinTransition:
@@ -69,59 +71,48 @@ namespace qm_card_catalog
 // 保留菜单内容助手，通过 QmCardRenderHook 桥接供分类页与搜索页复用。
 void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
-	const float SmallSize = CurrentSettingsContentMetrics().m_SmallSize;
-	CUIRect Row, LabelColumn, ControlColumn;
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineLocal, "Skin outline for self and dummy", Localize("Skin outline for self and dummy"), &g_Config.m_QmSkinOutlineLocal);
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineOthers, "Skin outline for other players", Localize("Skin outline for other players"), &g_Config.m_QmSkinOutlineOthers);
-	static CButtonContainer s_SkinOutlineColorId;
-	DoLine_ColorPicker(&s_SkinOutlineColorId, CurrentSettingsContentMetrics(), &Content, Localize("Skin outline color"), &g_Config.m_QmSkinOutlineColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmSkinOutlineColor)), false);
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	RenderQmVisualLabel("qmclient-skin-outline-width", &LabelColumn, Localize("Skin outline width"), BodySize);
-	static int s_SkinOutlineWidthInputId;
-	RenderQmSettingsSliderWithValueInput(&s_SkinOutlineWidthInputId, ControlColumn, &g_Config.m_QmSkinOutlineWidth, 1, 6, "", PrewarmOnly);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	RenderQmVisualLabel("qmclient-skin-outline-opacity", &LabelColumn, Localize("Skin outline opacity"), BodySize);
-	static int s_SkinOutlineAlphaInputId;
-	RenderQmSettingsSliderWithValueInput(&s_SkinOutlineAlphaInputId, ControlColumn, &g_Config.m_QmSkinOutlineAlpha, 0, 100, "%", PrewarmOnly);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
+	const SSettingsContentMetrics Metrics = CurrentSettingsContentMetrics();
+	const SSettingsSkinAppearanceLayout Layout = ResolveSettingsSkinAppearanceLayout(Content, Metrics);
+	CUIRect Outline = Layout.m_Outline;
+	CUIRect Hue = Layout.m_Hue;
+	CUIRect Shadow = Layout.m_Shadow;
+	const auto Slider = [&](CUIRect &Group, const char *pId, const char *pText, const void *pSliderId, int *pValue, int Min, int Max, const char *pSuffix) {
+		CUIRect Row, Label, Control;
+		Group.HSplitTop(LineHeight, &Row, &Group);
+		Group.HSplitTop(LineSpacing, nullptr, &Group);
+		Row.VSplitLeft(std::min(Row.w * 0.44f, LabelWidth > 0.0f ? LabelWidth : 142.0f * Metrics.m_UiScale), &Label, &Control);
+		Control.VSplitLeft(LineSpacing, nullptr, &Control);
+		SLabelProperties Props;
+		Props.m_DisallowNewline = true;
+		Props.m_StopAtEnd = true;
+		Props.m_MinimumFontSize = 6.0f;
+		Props.m_MaxWidth = Label.w;
+		RenderQmVisualLabel(pId, &Label, pText, BodySize, TEXTALIGN_ML, Props);
+		RenderQmSettingsSliderWithValueInput(pSliderId, Control, pValue, Min, Max, pSuffix, PrewarmOnly);
+	};
+	RenderQmVisualCheckbox(Outline, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineLocal, "Skin outline for self and dummy", Localize("Skin outline for self and dummy"), &g_Config.m_QmSkinOutlineLocal);
+	RenderQmVisualCheckbox(Outline, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineOthers, "Skin outline for other players", Localize("Skin outline for other players"), &g_Config.m_QmSkinOutlineOthers);
+	static CButtonContainer s_OutlineColor;
+	DoLine_ColorPicker(&s_OutlineColor, Metrics, &Outline, Localize("Skin outline color"), &g_Config.m_QmSkinOutlineColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmSkinOutlineColor)), false);
+	static int s_WidthId, s_AlphaId;
+	Slider(Outline, "qmclient-skin-outline-width", Localize("Skin outline width"), &s_WidthId, &g_Config.m_QmSkinOutlineWidth, 1, 6, "");
+	Slider(Outline, "qmclient-skin-outline-opacity", Localize("Skin outline opacity"), &s_AlphaId, &g_Config.m_QmSkinOutlineAlpha, 0, 100, "%");
 
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHue, "Cycle custom Tee hue", Localize("Cycle custom Tee hue"), &g_Config.m_QmCycleTeeHue);
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHueDummy, "Also apply to dummy", Localize("Also apply to dummy"), &g_Config.m_QmCycleTeeHueDummy);
-
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	SLabelProperties CycleHueSpeedLabelProps;
-	CycleHueSpeedLabelProps.m_DisallowNewline = true;
-	CycleHueSpeedLabelProps.m_StopAtEnd = true;
-	CycleHueSpeedLabelProps.m_MinimumFontSize = 6.0f;
+	const CUIRect HueToggle{Hue.x, Hue.y, Hue.w, LineHeight};
+	RenderQmVisualCheckbox(Hue, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHue, "Cycle custom Tee hue", Localize("Cycle custom Tee hue"), &g_Config.m_QmCycleTeeHue);
+	char aHueTooltip[512];
+	str_format(aHueTooltip, sizeof(aHueTooltip), "%s\n%s", Localize("Only affects custom Tee colors."), Localize("When TClient rainbow Tee is enabled, this feature has no effect."));
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmCycleTeeHue, &HueToggle, aHueTooltip);
+	RenderQmVisualCheckbox(Hue, LineHeight, LineSpacing, &g_Config.m_QmCycleTeeHueDummy, "Also apply to dummy", Localize("Also apply to dummy"), &g_Config.m_QmCycleTeeHueDummy);
+	static int s_HueSpeedId;
+	int DisabledSpeed = g_Config.m_QmCycleTeeHueSpeed;
 	if(!g_Config.m_QmCycleTeeHue)
 		TextRender()->TextColor(ColorRGBA(0.8f, 0.8f, 0.8f, 0.55f));
-	RenderQmVisualLabel("qmclient-cycle-tee-hue-speed", &LabelColumn, Localize("Hue speed"), BodySize, TEXTALIGN_ML, CycleHueSpeedLabelProps);
-	static int s_QmCycleTeeHueSpeedInputId;
-	int DisabledSpeedPreview = g_Config.m_QmCycleTeeHueSpeed;
-	RenderQmSettingsSliderWithValueInput(&s_QmCycleTeeHueSpeedInputId, ControlColumn, g_Config.m_QmCycleTeeHue ? &g_Config.m_QmCycleTeeHueSpeed : &DisabledSpeedPreview, 0, 360, "°/s", PrewarmOnly);
-	if(!g_Config.m_QmCycleTeeHue)
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	Content.HSplitTop(SmallSize, &Row, &Content);
-	TextRender()->TextColor(ColorRGBA(0.85f, 0.85f, 0.85f, 0.72f));
-	RenderQmVisualLabel("qmclient-cycle-tee-hue-custom-note", &Row, Localize("Only affects custom Tee colors."), SmallSize);
+	Slider(Hue, "qmclient-cycle-tee-hue-speed", Localize("Hue speed"), &s_HueSpeedId, g_Config.m_QmCycleTeeHue ? &g_Config.m_QmCycleTeeHueSpeed : &DisabledSpeed, 0, 360, "°/s");
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	Content.HSplitTop(SmallSize, &Row, &Content);
-	TextRender()->TextColor(g_Config.m_TcRainbowTees ? ColorRGBA(1.0f, 0.78f, 0.45f, 0.9f) : ColorRGBA(0.85f, 0.85f, 0.85f, 0.72f));
-	RenderQmVisualLabel("qmclient-cycle-tee-hue-tclient-note", &Row, Localize("When TClient rainbow Tee is enabled, this feature has no effect."), SmallSize);
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmEmoticonShadow, "Emoticon shadow", Localize("Emoticon shadow"), &g_Config.m_QmEmoticonShadow);
+	RenderQmVisualCheckbox(Shadow, LineHeight, LineSpacing, &g_Config.m_QmEmoticonShadow, "Emoticon shadow", Localize("Emoticon shadow"), &g_Config.m_QmEmoticonShadow);
+	Content.HSplitTop(Layout.m_Height, nullptr, &Content);
 }
-
 void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	CUIRect Row, LabelColumn, ControlColumn;

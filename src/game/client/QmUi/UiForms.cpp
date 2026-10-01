@@ -449,14 +449,17 @@ namespace ui_widget
 		if(HasLabel)
 		{
 			const float LabelFontSize = MultiLine ? std::min(Options.m_FontSize, Label.h * CUi::ms_FontmodHeight * 0.8f) : Options.m_FontSize;
+			SLabelProperties Props;
+			Props.m_MaxWidth = Label.w;
+			Props.m_DisallowNewline = true;
+			Props.m_StopAtEnd = true;
+			Props.m_MinimumFontSize = 6.0f;
 			if(Options.m_pLabelElement != nullptr)
 			{
-				SLabelProperties Props;
-				Props.m_MaxWidth = Label.w;
 				Ctx.m_pUi->DoLabelStreamed(*Options.m_pLabelElement->Rect(0), &Label, Options.m_pLabel, LabelFontSize, Options.m_LabelAlign, Props, -1, nullptr, !Ctx.m_pUi->RenderOnly());
 			}
 			else
-				Ctx.m_pUi->DoLabel(&Label, Options.m_pLabel, LabelFontSize, Options.m_LabelAlign);
+				Ctx.m_pUi->DoLabel(&Label, Options.m_pLabel, LabelFontSize, Options.m_LabelAlign, Props);
 		}
 		if(RenderOnly)
 		{

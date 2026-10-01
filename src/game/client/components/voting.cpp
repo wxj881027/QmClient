@@ -10,6 +10,8 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/voting_hud.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
@@ -463,6 +465,7 @@ void CVoting::OnReset()
 	m_Yes = m_No = m_Pass = m_Total = 0;
 	m_Voted = 0;
 	m_ReceivingOptions = false;
+	ResetScoreboardVoteInteraction();
 
 	if(GameClient() && !GameClient()->ClientStateOnline())
 		ClearUnfinishedMapVoteChain();
@@ -571,7 +574,10 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 void CVoting::Render()
 {
 	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
-	if((!g_Config.m_ClShowVotesAfterVoting && !GameClient()->m_Scoreboard.IsActive() && TakenChoice()) || (!IsVoting() && !HudEditorPreview))
+	const bool ScoreboardActive = GameClient()->m_Scoreboard.IsActive() && !GetQmFocusModeDecisions().m_HideScoreboard;
+	if(!ScoreboardActive || HudEditorPreview)
+		ResetScoreboardVoteInteraction();
+	if(!QmVoteHudVisible(IsVoting(), TakenChoice(), ScoreboardActive, g_Config.m_ClShowVotesAfterVoting != 0, HudEditorPreview))
 		return;
 	int Seconds = SecondsLeft();
 	if(Seconds < 0)
@@ -669,13 +675,106 @@ void CVoting::Render()
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
-void CVoting::RenderBars(CUIRect Bars) const
+void CVoting::ResetScoreboardVoteInteraction()
 {
-	Bars.Draw(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(2.0f), IGraphics::CORNER_ALL, Bars.h / 2.0f);
+	if(!GameClient())
+		return;
+	for(const int &ButtonId : m_aScoreboardVoteButtonIds)
+	{
+		if(Ui()->IsActiveItem(&ButtonId))
+			Ui()->SetActiveItem(nullptr);
+	}
+}
+
+void CVoting::RenderScoreboard(const CUIRect &Scoreboard, bool Interactive, float Alpha)
+{
+	if(!IsVoting() || !GameClient()->m_Scoreboard.IsActive() || GameClient()->m_HudEditor.IsActive() || GetQmFocusModeDecisions().m_HideScoreboard || Client()->State() != IClient::STATE_ONLINE || Alpha <= 0.0f)
+	{
+		ResetScoreboardVoteInteraction();
+		return;
+	}
+	const int Seconds = SecondsLeft();
+	if(Seconds < 0)
+	{
+		OnReset();
+		return;
+	}
+
+	const SQmScoreboardVoteLayout Layout = QmScoreboardVoteLayout(*Ui()->Screen(), Scoreboard, g_Config.m_TcMiniVoteHud > 0);
+	if(Layout.m_Scale <= 0.0f)
+	{
+		ResetScoreboardVoteInteraction();
+		return;
+	}
+
+	const bool CanInteract = Interactive && !Ui()->IsPopupOpen();
+	if(!CanInteract)
+		ResetScoreboardVoteInteraction();
+	Alpha = std::clamp(Alpha, 0.0f, 1.0f);
+	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
+	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
+	const ColorRGBA TextColor = TextRender()->DefaultTextColor().WithMultipliedAlpha(Alpha);
+	TextRender()->TextColor(TextColor);
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor().WithMultipliedAlpha(Alpha));
+	Layout.m_Panel.Draw(ui_token::color::SURFACE_GLASS.WithMultipliedAlpha(Alpha), IGraphics::CORNER_ALL, ui_token::radius::BASE * Layout.m_Scale);
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), Localize("%ds left"), Seconds);
+	const float FontSize = 9.0f * Layout.m_Scale;
+	CUIRect Description, Time;
+	Layout.m_Header.VSplitRight(std::min(Layout.m_Header.w * 0.4f, TextRender()->TextWidth(FontSize, aBuf)), &Description, &Time);
+	Description.VSplitRight(5.0f * Layout.m_Scale, &Description, nullptr);
+	Ui()->DoLabel(&Time, aBuf, FontSize, TEXTALIGN_MR);
+
+	char aDescription[VOTE_DESC_LENGTH];
+	char aReason[VOTE_REASON_LENGTH];
+	GameClient()->FormatStreamerVoteText(VoteDescription(), aDescription, sizeof(aDescription));
+	GameClient()->FormatStreamerVoteText(VoteReason(), aReason, sizeof(aReason));
+	SLabelProperties Props;
+	Props.m_EllipsisAtEnd = true;
+	Props.m_MaxWidth = Description.w;
+	Ui()->DoLabel(&Description, aDescription, FontSize, TEXTALIGN_ML, Props);
+	str_format(aBuf, sizeof(aBuf), "%s %s", Localize("Reason:"), aReason);
+	Props.m_MaxWidth = Layout.m_Reason.w;
+	Ui()->DoLabel(&Layout.m_Reason, aBuf, 8.0f * Layout.m_Scale, TEXTALIGN_ML, Props);
+	RenderBars(Layout.m_Bars, Alpha);
+
+	for(int Index = 0; Index < 2; ++Index)
+	{
+		const int Choice = Index == 0 ? 1 : -1;
+		const CUIRect &Button = Index == 0 ? Layout.m_Yes : Layout.m_No;
+		const void *pButtonId = &m_aScoreboardVoteButtonIds[Index];
+		const bool Selected = TakenChoice() == Choice;
+		const bool Enabled = QmScoreboardVoteCanSubmit(IsVoting(), CanInteract, TakenChoice(), Choice);
+		const bool Hovered = Enabled && Ui()->MouseHovered(&Button);
+		const ColorRGBA ChoiceColor = Choice == 1 ? ui_token::color::SUCCESS : ui_token::color::DANGER;
+		Button.Draw((Selected ? ChoiceColor.WithAlpha(0.25f) : ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(Hovered ? 1.8f : 1.0f)).WithMultipliedAlpha(Alpha), IGraphics::CORNER_ALL, ui_token::radius::BASE * Layout.m_Scale);
+		char aKey[64];
+		GameClient()->m_Binds.GetKey(Choice == 1 ? "vote yes" : "vote no", aKey, sizeof(aKey));
+		const char *pLabel = Choice == 1 ? Localize("Vote yes") : Localize("Vote no");
+		if(aKey[0] != '\0')
+			str_format(aBuf, sizeof(aBuf), "%s - %s", aKey, pLabel);
+		else
+			str_copy(aBuf, pLabel);
+		TextRender()->TextColor(Selected ? ChoiceColor.WithMultipliedAlpha(Alpha) : TextColor);
+		CUIRect Label;
+		Button.VMargin(3.0f * Layout.m_Scale, &Label);
+		Props.m_MaxWidth = Label.w;
+		Ui()->DoLabel(&Label, aBuf, FontSize, TEXTALIGN_MC, Props);
+		if(Enabled && Ui()->DoButtonLogic(pButtonId, 0, &Button, BUTTONFLAG_LEFT))
+			Vote(Choice);
+	}
+	TextRender()->TextColor(PreviousTextColor);
+	TextRender()->TextOutlineColor(PreviousOutlineColor);
+}
+
+void CVoting::RenderBars(CUIRect Bars, float Alpha) const
+{
+	Bars.Draw(ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(2.0f * Alpha), IGraphics::CORNER_ALL, Bars.h / 2.0f);
 
 	CUIRect Splitter;
 	Bars.VMargin((Bars.w - 2.0f) / 2.0f, &Splitter);
-	Splitter.Draw(ui_token::color::BORDER_SUBTLE.WithMultipliedAlpha(2.0f), IGraphics::CORNER_NONE, 0.0f);
+	Splitter.Draw(ui_token::color::BORDER_SUBTLE.WithMultipliedAlpha(2.0f * Alpha), IGraphics::CORNER_NONE, 0.0f);
 
 	if(m_Total)
 	{
@@ -683,14 +782,14 @@ void CVoting::RenderBars(CUIRect Bars) const
 		{
 			CUIRect YesArea;
 			Bars.VSplitLeft(Bars.w * m_Yes / m_Total, &YesArea, nullptr);
-			YesArea.Draw(ui_token::color::SUCCESS.WithMultipliedAlpha(0.85f), IGraphics::CORNER_ALL, YesArea.h / 2.0f);
+			YesArea.Draw(ui_token::color::SUCCESS.WithMultipliedAlpha(0.85f * Alpha), IGraphics::CORNER_ALL, YesArea.h / 2.0f);
 		}
 
 		if(m_No)
 		{
 			CUIRect NoArea;
 			Bars.VSplitRight(Bars.w * m_No / m_Total, nullptr, &NoArea);
-			NoArea.Draw(ui_token::color::DANGER.WithMultipliedAlpha(0.85f), IGraphics::CORNER_ALL, NoArea.h / 2.0f);
+			NoArea.Draw(ui_token::color::DANGER.WithMultipliedAlpha(0.85f * Alpha), IGraphics::CORNER_ALL, NoArea.h / 2.0f);
 		}
 	}
 }

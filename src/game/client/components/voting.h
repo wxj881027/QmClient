@@ -41,6 +41,7 @@ class CVoting : public CComponent
 	char m_aPendingTypeLabel[64];
 	bool m_PendingTypeVoteActive;
 	bool m_PendingMapVoteReady;
+	int m_aScoreboardVoteButtonIds[2]{};
 
 	int FindMapVoteOptionIndex(const char *pMapName) const;
 	int FindTypeVoteOptionIndex(const char *pTypeKey, const char *pTypeLabel) const;
@@ -51,7 +52,8 @@ class CVoting : public CComponent
 	void ClearOptions();
 	void Callvote(const char *pType, const char *pValue, const char *pReason);
 
-	void RenderBars(CUIRect Bars) const;
+	void RenderBars(CUIRect Bars, float Alpha = 1.0f) const;
+	void ResetScoreboardVoteInteraction();
 
 public:
 	friend class CTClient; // TClient
@@ -63,6 +65,7 @@ public:
 	void OnMessage(int MsgType, void *pRawMsg) override;
 
 	void Render();
+	void RenderScoreboard(const CUIRect &Scoreboard, bool Interactive, float Alpha);
 
 	enum class EUnfinishedMapVoteAction
 	{

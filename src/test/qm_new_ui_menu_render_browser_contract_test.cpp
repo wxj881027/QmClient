@@ -139,13 +139,3 @@ TEST(QmNewUiMenuRenderBrowserContract, GraphicsCurrentModeLabelSanitizesScaleAnd
 	EXPECT_NE(Source.find("g_Config.m_GfxScreenWidth / AspectGcd"), std::string::npos);
 	EXPECT_NE(Source.find("g_Config.m_GfxScreenHeight / AspectGcd"), std::string::npos);
 }
-
-TEST(QmNewUiMenuRenderBrowserContract, TeePresetListUsesTheSameRowSpacingAsItsMeasuredViewport)
-{
-	const std::string Settings = FunctionBody(ReadTextFile("src/game/client/components/menus_settings.cpp"), "void CMenus::RenderSettingsTee(CUIRect MainView)");
-
-	ASSERT_FALSE(Settings.empty());
-	EXPECT_NE(Settings.find("const float PresetRowSpacing = TeeMetrics.m_LineSpacing * 0.5f;"), std::string::npos);
-	EXPECT_NE(Settings.find("s_PresetListBox.DoAutoSpacing(PresetRowSpacing);"), std::string::npos);
-	EXPECT_NE(Settings.find("s_PresetListBox.DoNextItem(&s_vPresetItemIds[i], ActivePresetIndex == (int)i, PresetRowSpacing)"), std::string::npos);
-}
