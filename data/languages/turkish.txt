@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == Kendi oyuncunun kanca çarpışma çizgisini her zaman göster
 
+Always show song title and artist
+== Şarkı adını ve sanatçıyı her zaman göster
+
 Always translate
 == Her zaman çevir
 

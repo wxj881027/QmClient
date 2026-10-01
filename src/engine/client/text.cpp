@@ -1086,6 +1086,8 @@ public:
 			// 分类变化会改变 GetCharGlyph 的解析结果，近期索引必须失效。
 			m_GlyphLookupCache.Reset();
 			m_QmCjkFace = Face;
+			// 字重值未变也要更新新旧分类面的坐标，避免中文沿用拉丁字重。
+			ApplyCustomFontWeight();
 		}
 		return true;
 	}
@@ -2343,11 +2345,11 @@ public:
 	void ReloadCustomFonts() override
 	{
 		LoadCustomFonts();
-		m_pGlyphMap->TrySetDefaultFaceByName(g_Config.m_TcCustomFont);
-		m_pGlyphMap->SetCjkFaceByName(g_Config.m_TcCustomFontCjk);
-		m_pGlyphMap->SetIconsFaceByName(g_Config.m_TcCustomFontIcons);
-		m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
-		m_pGlyphMap->SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
+		SetCustomFace(g_Config.m_TcCustomFont);
+		SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
+		SetCustomFaceIcons(g_Config.m_TcCustomFontIcons);
+		SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
+		SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
 	}
 
 	void SetCustomFontWeight(const int Weight) override
@@ -2499,9 +2501,8 @@ public:
 			log_error("textrender", "Font index malformed: 'default' must be a string");
 			Success = false;
 		}
-		// TClient
-		LoadCustomFonts();
-		m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
+		// 首个加载画面之前就应用全部字体和字重，避免组件初始化期间显示默认字体。
+		ReloadCustomFonts();
 		m_pGlyphMap->AddFallbackFaceByName("DejaVu Sans");
 
 		// extract language variant family names

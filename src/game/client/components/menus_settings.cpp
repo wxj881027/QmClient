@@ -4213,7 +4213,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			static int s_AppearanceAlwaysShowChat = 0;
 			// ***** Chat ***** //
 			const auto ResolveChatSettingsMinCardHeight = [LineSize, MarginSmall, ColorPickerRowHeight]() {
-				const int ChatSettingsRowCount = 10 + (g_Config.m_ClShowChat != 0 ? 1 : 0) + (g_Config.m_QmChatLogAutoSave != 0 ? 1 : 0);
+				const int ChatSettingsRowCount = 9 + (g_Config.m_ClShowChat != 0 ? 1 : 0) + (g_Config.m_QmChatLogAutoSave != 0 ? 1 : 0);
 				return ResolveSettingsRowsHeight(ChatSettingsRowCount, LineSize, MarginSmall) + MarginSmall + ColorPickerRowHeight;
 			};
 			SSettingsCardDefinition ChatSettingsDefinition;
@@ -4274,7 +4274,6 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				}
 
 				static CButtonContainer s_BackgroundColor;
-				DoChatCheckBox(&g_Config.m_QmChatCommandCompletion, "appearance-chat-command-completion", Localize("Show command completion in chat"), &g_Config.m_QmChatCommandCompletion);
 				DoLine_ColorPicker(&s_BackgroundColor, AppearanceMetrics, &LeftView, Localize("Chat background color"), &g_Config.m_ClChatBackgroundColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::ClChatBackgroundColor, true)), false, nullptr, true);
 			};
 			ChatSettingsDefinition.m_MeasureRevision =

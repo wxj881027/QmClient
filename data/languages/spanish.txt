@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == Mostrar siempre la línea de gancho del propio jugador
 
+Always show song title and artist
+== Mostrar siempre el título de la canción y el artista
+
 Always translate
 == Traducir siempre
 

@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == Всегда показывать свою линию захвата
 
+Always show song title and artist
+== Всегда показывать название песни и исполнителя
+
 Always translate
 == Всегда переводить
 

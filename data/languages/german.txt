@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == Eigene Haken-Hilfslinie immer anzeigen
 
+Always show song title and artist
+== Songtitel und Interpret immer anzeigen
+
 Always translate
 == Immer übersetzen
 

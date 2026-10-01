@@ -374,13 +374,79 @@ TEST(QmScoreboardRender, DdTeamLabelSpacingFitsDenseColumnsWithoutOverlap)
 		PreferredLineHeight * Scale,
 		PreferredSpacing * Scale,
 		PreferredTeamFontSize * Scale,
-		SCOREBOARD_TEAM_MODE_ICON_SIZE,
+		SCOREBOARD_TEAM_MODE_ICON_SIZE * Scale,
 		true);
 
 	EXPECT_FLOAT_EQ(ScaleWithoutTeams, 1.0f);
 	EXPECT_LT(Scale, 1.0f);
-	EXPECT_FLOAT_EQ(TeamEnd.m_RowSpacing, SCOREBOARD_TEAM_MODE_ICON_SIZE);
+	EXPECT_FLOAT_EQ(TeamEnd.m_RowSpacing, SCOREBOARD_TEAM_MODE_ICON_SIZE * Scale);
 	EXPECT_LE(RowsPerColumn * (PreferredLineHeight * Scale + TeamEnd.m_RowSpacing), AvailableRowsHeight + 0.001f);
+}
+
+TEST(QmScoreboardRender, DenseTeamModeRowsRemainVisibleInsideTheColumn)
+{
+	const CUIRect Column = {20.0f, 105.0f, 280.0f, 355.0f};
+	const CUIRect Rows = ScoreboardPlayerRowsRect(Column, 22.0f);
+	constexpr int RowCount = 43;
+	constexpr float PreferredLineHeight = 7.5f;
+	constexpr float PreferredFontSize = 7.0f;
+	const float Scale = ScoreboardRowsVerticalScale(Rows.h, RowCount, RowCount, RowCount,
+		PreferredLineHeight, 0.0f, PreferredFontSize / 1.5f, PreferredFontSize);
+
+	ASSERT_GT(Scale, 0.0f);
+	ASSERT_LE(Scale, 1.0f);
+	EXPECT_GT(Rows.y, Column.y);
+	EXPECT_LT(Rows.y + Rows.h, Column.y + Column.h);
+	float RowY = Rows.y;
+	for(int RowIndex = 0; RowIndex < RowCount; ++RowIndex)
+	{
+		SCOPED_TRACE(RowIndex);
+		const float LineHeight = PreferredLineHeight * Scale;
+		const float TeamFontSize = PreferredFontSize * Scale / 1.5f;
+		const float IconSize = PreferredFontSize * Scale;
+		const SScoreboardTeamLabelLayout Label = ResolveScoreboardTeamLabelLayout(
+			Rows.x, RowY, LineHeight, 0.0f, TeamFontSize, IconSize, true);
+		RowY += LineHeight + Label.m_RowSpacing;
+		EXPECT_LE(Label.m_Y + TeamFontSize, RowY + 0.001f);
+		EXPECT_LE(Label.m_IconY + IconSize, RowY + 0.001f);
+		EXPECT_LE(RowY, Rows.y + Rows.h + 0.001f);
+	}
+}
+
+TEST(QmScoreboardRender, RowsFitThePanelDuringItsScaleAnimation)
+{
+	for(const float PanelScale : {0.985f, 1.0f, 1.015f})
+	{
+		SCOPED_TRACE(PanelScale);
+		const CUIRect Column = {20.0f, 105.0f, 450.0f, 385.0f * PanelScale - 30.0f};
+		const CUIRect Rows = ScoreboardPlayerRowsRect(Column, 22.0f);
+		const float Scale = ScoreboardRowsVerticalScale(Rows.h, 16, 16, 0, 20.0f, 0.0f, 8.0f, 12.0f);
+		const SScoreboardTeamLabelLayout LastLabel = ResolveScoreboardTeamLabelLayout(
+			Rows.x, Rows.y + 15.0f * 28.0f * Scale, 20.0f * Scale, 0.0f, 8.0f * Scale, 0.0f, true);
+		EXPECT_LE(LastLabel.m_Y + 8.0f * Scale, Rows.y + Rows.h + 0.001f);
+		EXPECT_LT(Rows.y + Rows.h, Column.y + Column.h);
+	}
+}
+
+TEST(QmScoreboardRender, DeadTeeFitsItsRowAndDoesNotCoverTheTeamLabel)
+{
+	const CUIRect Row = {20.0f, 410.0f, 400.0f, 20.0f};
+	const CUIRect Tee = ScoreboardDeadTeeRect(Row, 100.0f, 24.0f, 25.6f);
+	EXPECT_GE(Tee.x, 100.0f);
+	EXPECT_LE(Tee.x + Tee.w, 124.0f);
+	EXPECT_GE(Tee.y, Row.y);
+	EXPECT_LE(Tee.y + Tee.h, Row.y + Row.h);
+	EXPECT_FLOAT_EQ(Tee.w, Tee.h);
+}
+
+TEST(QmScoreboardRender, SmallDeadTeeKeepsItsSizeAndIsCentered)
+{
+	const CUIRect Row = {20.0f, 410.0f, 400.0f, 30.0f};
+	const CUIRect Tee = ScoreboardDeadTeeRect(Row, 100.0f, 30.0f, 16.0f);
+	EXPECT_FLOAT_EQ(Tee.w, 16.0f);
+	EXPECT_FLOAT_EQ(Tee.h, 16.0f);
+	EXPECT_FLOAT_EQ(Tee.Center().x, 115.0f);
+	EXPECT_FLOAT_EQ(Tee.Center().y, Row.Center().y);
 }
 
 TEST(QmScoreHudLayout, ShortRankKeepsOriginalFootprint)

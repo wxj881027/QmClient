@@ -975,6 +975,22 @@ turkish = "Her zaman göster"
 polish = "Zawsze pokazuj"
 
 [[message]]
+key = "Always show song title and artist"
+[message.translations]
+simplified_chinese = "始终显示歌名歌手"
+traditional_chinese = "始終顯示歌名歌手"
+japanese = "曲名とアーティストを常に表示"
+korean = "곡 제목과 아티스트 항상 표시"
+russian = "Всегда показывать название песни и исполнителя"
+german = "Songtitel und Interpret immer anzeigen"
+spanish = "Mostrar siempre el título de la canción y el artista"
+french = "Toujours afficher le titre et l'artiste"
+brazilian_portuguese = "Sempre mostrar o título da música e o artista"
+portuguese = "Mostrar sempre o título da música e o artista"
+turkish = "Şarkı adını ve sanatçıyı her zaman göster"
+polish = "Zawsze pokazuj tytuł utworu i wykonawcę"
+
+[[message]]
 key = "Always translate"
 [message.translations]
 simplified_chinese = "始终翻译"

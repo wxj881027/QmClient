@@ -87,3 +87,25 @@ TEST(QmSpectatorFriendPriority, DisablingPriorityRestoresOriginalOrderAndRemoves
 	EXPECT_EQ(qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, 4, vOrder.data(), true), 2);
 	EXPECT_EQ(vOrder, (std::vector<int>{1, 3, 0, 2}));
 }
+
+TEST(QmSpectatorFriendPriority, FullColumnIncludesBothGroupTitles)
+{
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(8, 1, 8, 60.0f, 15.0f), 510.0f);
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(8, 0, 8, 60.0f, 15.0f), 480.0f);
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(8, 8, 8, 60.0f, 15.0f), 495.0f);
+}
+
+TEST(QmSpectatorFriendPriority, GroupAtColumnBoundaryOnlyAddsHeightToItsOwnColumn)
+{
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(16, 8, 8, 60.0f, 15.0f), 495.0f);
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(16, 1, 8, 60.0f, 15.0f), 510.0f);
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(17, 16, 8, 60.0f, 15.0f), 495.0f);
+}
+
+TEST(QmSpectatorFriendPriority, DenseColumnsIncludeGroupTitlesWithoutAccumulatingOtherColumns)
+{
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(64, 1, 16, 30.0f, 15.0f), 510.0f);
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(96, 24, 24, 19.0f, 12.0f), 468.0f);
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(128, 1, 32, 15.0f, 12.0f), 504.0f);
+	EXPECT_FLOAT_EQ(qm_spectator_friends::MaxColumnHeight(0, 0, 8, 60.0f, 15.0f), 0.0f);
+}
