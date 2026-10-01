@@ -90,6 +90,11 @@ protected:
 
 	CCommandBuffer::SColorf m_ClearColor;
 
+	void AllocateQmPrograms();
+	void LoadQmPrograms(const SCommand_Init *pCommand, class CGLSLCompiler &ShaderCompiler, int ShaderMajor, int ShaderMinor, int ShaderPatch);
+	void UnloadQmPrograms();
+	void FreeQmPrograms();
+
 	void InitPrimExProgram(CGLSLPrimitiveExProgram *pProgram, class CGLSLCompiler *pCompiler, class IStorage *pStorage, bool Textured, bool Rotationless);
 
 	bool IsNewApi() override { return true; }

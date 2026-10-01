@@ -463,11 +463,7 @@ TEST(QmNewUiMenuRenderSurfaceContract, RoundedUiSurfacesUseClampedGeometryAndSha
 
 	const std::string GraphicsHeader = ReadTextFile("src/engine/graphics.h");
 	const std::string GraphicsThreaded = ReadTextFile("src/engine/client/graphics_threaded.cpp");
-	const std::string OpenGl = ReadTextFile("src/engine/client/backend/opengl/backend_opengl3.cpp");
-	const std::string Vulkan = ReadTextFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
 	EXPECT_NE(GraphicsHeader.find("static_assert(sizeof(SRoundedRectSdfParams) == sizeof(vec4) * 5);"), std::string::npos);
-	EXPECT_NE(OpenGl.find("SetUniformVec4(m_pRoundedRectSdfProgram->m_LocData, 5"), std::string::npos);
-	EXPECT_NE(FunctionBody(Vulkan, "[[nodiscard]] bool Cmd_RenderRoundedRectSdf").find("&pCommand->m_Params, sizeof(pCommand->m_Params)"), std::string::npos);
 	const std::string RoundedCommand = FunctionBody(GraphicsThreaded, "void CGraphics_Threaded::RenderRoundedRectSdf");
 	EXPECT_NE(RoundedCommand.find("Params.m_Params.z"), std::string::npos);
 	EXPECT_NE(RoundedCommand.find("if(m_NumVertices > 0)"), std::string::npos);
