@@ -2860,7 +2860,9 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 void CMenus::RenderInGameNetwork(CUIRect MainView)
 {
 	const bool UseNewUi = g_Config.m_QmNewUi != 0;
-	const int TabCorners = UseNewUi ? IGraphics::CORNER_ALL : IGraphics::CORNER_NONE;
+	const int LeftTabCorners = UseNewUi ? IGraphics::CORNER_L : IGraphics::CORNER_NONE;
+	const int RightTabCorners = UseNewUi ? IGraphics::CORNER_R : IGraphics::CORNER_NONE;
+	const auto vpFavoriteCommunities = ServerBrowser()->FavoriteCommunities();
 	CUIRect TabBar, Button;
 	MainView.HSplitTop(24.0f, &TabBar, &MainView);
 
@@ -2871,7 +2873,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_InternetButton;
-	if(DoMenuTabV2_QmIcon(&s_InternetButton, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, g_Config.m_UiPage == PAGE_INTERNET, &Button, TabCorners))
+	if(DoMenuTabV2_QmIcon(&s_InternetButton, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, g_Config.m_UiPage == PAGE_INTERNET, &Button, LeftTabCorners))
 	{
 		NewPage = PAGE_INTERNET;
 	}
@@ -2879,7 +2881,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_LanButton;
-	if(DoMenuTabV2_QmIcon(&s_LanButton, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, g_Config.m_UiPage == PAGE_LAN, &Button, TabCorners))
+	if(DoMenuTabV2_QmIcon(&s_LanButton, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, g_Config.m_UiPage == PAGE_LAN, &Button, IGraphics::CORNER_NONE))
 	{
 		NewPage = PAGE_LAN;
 	}
@@ -2887,7 +2889,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_FavoritesButton;
-	if(DoMenuTabV2_QmIcon(&s_FavoritesButton, EQmIcon::STAR, FONT_ICON_STAR, g_Config.m_UiPage == PAGE_FAVORITES, &Button, TabCorners))
+	if(DoMenuTabV2_QmIcon(&s_FavoritesButton, EQmIcon::STAR, FONT_ICON_STAR, g_Config.m_UiPage == PAGE_FAVORITES, &Button, IGraphics::CORNER_NONE))
 	{
 		NewPage = PAGE_FAVORITES;
 	}
@@ -2897,7 +2899,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_FavoriteMapsButton;
-	if(DoMenuTabV2(&s_FavoriteMapsButton, "", g_Config.m_UiPage == PAGE_FAVORITE_MAPS, &Button, TabCorners))
+	if(DoMenuTabV2(&s_FavoriteMapsButton, "", g_Config.m_UiPage == PAGE_FAVORITE_MAPS, &Button, vpFavoriteCommunities.empty() ? RightTabCorners : IGraphics::CORNER_NONE))
 	{
 		NewPage = PAGE_FAVORITE_MAPS;
 	}
@@ -2922,7 +2924,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
-	int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
+	int MaxPage = PAGE_FAVORITES + vpFavoriteCommunities.size();
 	if(
 		!Ui()->IsPopupOpen() &&
 		CLineInput::GetActiveInput() == nullptr &&
@@ -2937,7 +2939,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 			}
 			else if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
 			{
-				NewPage = ServerBrowser()->FavoriteCommunities().empty() ? PAGE_INTERNET : PAGE_FAVORITE_COMMUNITY_1;
+				NewPage = vpFavoriteCommunities.empty() ? PAGE_INTERNET : PAGE_FAVORITE_COMMUNITY_1;
 			}
 			else
 			{
@@ -2952,7 +2954,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 			{
 				NewPage = PAGE_FAVORITES;
 			}
-			else if(!ServerBrowser()->FavoriteCommunities().empty() && g_Config.m_UiPage == PAGE_FAVORITE_COMMUNITY_1)
+			else if(!vpFavoriteCommunities.empty() && g_Config.m_UiPage == PAGE_FAVORITE_COMMUNITY_1)
 			{
 				NewPage = PAGE_FAVORITE_MAPS;
 			}
@@ -2961,18 +2963,20 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 				NewPage = g_Config.m_UiPage - 1;
 			}
 			if(NewPage < PAGE_INTERNET)
-				NewPage = ServerBrowser()->FavoriteCommunities().empty() ? PAGE_FAVORITE_MAPS : MaxPage;
+				NewPage = vpFavoriteCommunities.empty() ? PAGE_FAVORITE_MAPS : MaxPage;
 		}
 	}
 
 	size_t FavoriteCommunityIndex = 0;
 	static CButtonContainer s_aFavoriteCommunityButtons[5];
 	static_assert(std::size(s_aFavoriteCommunityButtons) == (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
-	for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
+	const size_t NumFavoriteCommunityTabs = minimum(vpFavoriteCommunities.size(), std::size(s_aFavoriteCommunityButtons));
+	for(const CCommunity *pCommunity : vpFavoriteCommunities)
 	{
 		TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 		const int Page = PAGE_FAVORITE_COMMUNITY_1 + FavoriteCommunityIndex;
-		if(DoMenuTabV2_QmIcon(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, g_Config.m_UiPage == Page, &Button, TabCorners, nullptr, nullptr, nullptr, m_CommunityIcons.Find(pCommunity->Id())))
+		const int Corners = FavoriteCommunityIndex + 1 == NumFavoriteCommunityTabs ? RightTabCorners : IGraphics::CORNER_NONE;
+		if(DoMenuTabV2_QmIcon(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, g_Config.m_UiPage == Page, &Button, Corners, nullptr, nullptr, nullptr, m_CommunityIcons.Find(pCommunity->Id())))
 		{
 			NewPage = Page;
 		}
