@@ -1,6 +1,6 @@
 {
   "summary": {
-    "must_i18n": 7767,
+    "must_i18n": 7763,
     "business_data": 10478,
     "test_only": 10271,
     "needs_review": 358,
@@ -28737,77 +28737,49 @@
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 156,
-      "text": "Alt",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 156,
-      "text": "Ctrl",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 156,
-      "text": "Gui",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 156,
-      "text": "Shift",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "Menu",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 287,
+      "line": 289,
       "text": "Mouse",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 346,
+      "line": 348,
       "text": "This bind is already over the local config line limit.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 356,
+      "line": 358,
       "text": "This bind contains an unfinished quote and cannot be edited safely.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 360,
+      "line": 362,
       "text": "Bound functions",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 368,
+      "line": 370,
       "text": "No functions bound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 393,
+      "line": 395,
       "text": "Delete",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -84487,889 +84459,889 @@
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 214,
+      "line": 215,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_escape",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f1",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f10",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f11",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f12",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f2",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f3",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f4",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f5",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f6",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f7",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f8",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_f9",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_pause",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_printscreen",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 277,
+      "line": 279,
       "text": "keyboard_scroll_lock",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "*",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "-",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "0",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "1",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "2",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "3",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "4",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "5",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "6",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "7",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "8",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "9",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_0",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_1",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_2",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_3",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_4",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_5",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_6",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_7",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_8",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_9",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_backspace",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_equals",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_home",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_insert",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_minus",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_numlock",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_page_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 278,
+      "line": 280,
       "text": "keyboard_tilde",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "+",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "7",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "8",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "9",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_bracket_close",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_bracket_open",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_delete",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_e",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_end",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_i",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_numpad_plus",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_o",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_p",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_page_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_q",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_r",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_slash_back",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_t",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_tab",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_u",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_w",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 279,
+      "line": 281,
       "text": "keyboard_y",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "4",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "5",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "6",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_a",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_apostrophe",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_capslock",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_d",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_f",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_g",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_h",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_j",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_k",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_l",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_return",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_s",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 280,
+      "line": 282,
       "text": "keyboard_semicolon",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": ".",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "1",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "2",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "3",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_arrow_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_b",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_c",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_comma",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_m",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_n",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_numpad_enter",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_period",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_shift",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_slash_forward",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_v",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_x",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 281,
+      "line": 283,
       "text": "keyboard_z",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": ".",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "0",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "Bind keyboard key",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "keyboard_alt",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "keyboard_arrow_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "keyboard_arrow_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "keyboard_arrow_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "keyboard_ctrl",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "keyboard_space",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 282,
+      "line": 284,
       "text": "keyboard_win",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 287,
+      "line": 289,
       "text": "qm-bind-editor-mouse",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "mouse_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "mouse_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "mouse_scroll",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "mouse_scroll_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "mouse_scroll_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "mouse_side_back",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "mouse_side_forward",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 289,
+      "line": 291,
       "text": "mouse_horizontal",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 328,
+      "line": 330,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 337,
+      "line": 339,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 360,
+      "line": 362,
       "text": "qm-bind-editor-current",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -201202,63 +201174,63 @@
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "Mouse 1",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "Mouse 2",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "Mouse 3",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "Mouse 4",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "Mouse 5",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "Wheel down",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 288,
+      "line": 290,
       "text": "Wheel up",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 289,
+      "line": 291,
       "text": "Wheel left",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/qmclient/bind_settings.cpp",
-      "line": 289,
+      "line": 291,
       "text": "Wheel right",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
