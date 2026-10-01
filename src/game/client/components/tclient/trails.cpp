@@ -17,6 +17,7 @@ void CTrails::OnReset()
 {
 	for(auto &State : m_aTrailStates)
 		State.Reset();
+	m_Clock.Reset();
 	std::fill(std::begin(m_aPositionSources), std::end(m_aPositionSources), -1);
 	m_LastDummy = m_LastStyle = m_LastLength = -1;
 }
@@ -49,8 +50,9 @@ void CTrails::RenderTeeTrails()
 		return;
 	}
 	const int Style = qm_tee_trail::ResolveStyle(g_Config.m_TcTeeTrailStyle);
-	if(m_LastDummy != g_Config.m_ClDummy || m_LastStyle != Style || m_LastLength != g_Config.m_TcTeeTrailLength)
+	if(m_LastStyle != Style || m_LastLength != g_Config.m_TcTeeTrailLength)
 		OnReset();
+	const bool DummyChanged = m_LastDummy >= 0 && m_LastDummy != g_Config.m_ClDummy;
 	m_LastDummy = g_Config.m_ClDummy;
 	m_LastStyle = Style;
 	m_LastLength = g_Config.m_TcTeeTrailLength;
@@ -59,8 +61,9 @@ void CTrails::RenderTeeTrails()
 	Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
 	const float PixelSize = std::max(0.025f, (X1 - X0) / std::max(1, Graphics()->ScreenWidth()));
 	const bool ZoomAllowed = GameClient()->m_Camera.ZoomAllowed();
-	// 生命周期使用同一游戏时钟；暂停 Demo 不老化，回退由 State 清空。
-	const double Time = double(Client()->GameTick(g_Config.m_ClDummy)) + Client()->IntraGameTick(g_Config.m_ClDummy);
+	// 两条连接的快照时钟有偏差；切换帧只计入真实帧间隔，Demo 仍跟随游戏时间。
+	const double GameTime = double(Client()->GameTick(g_Config.m_ClDummy)) + Client()->IntraGameTick(g_Config.m_ClDummy);
+	const double Time = m_Clock.Update(GameTime, double(Client()->RenderFrameTime()) * Client()->GameTickSpeed(), DummyChanged);
 	Graphics()->TextureClear();
 	Graphics()->BlendNormal();
 	Graphics()->QuadsBegin();
@@ -97,7 +100,8 @@ void CTrails::RenderTeeTrails()
 		// 此组件位于 players 之前；只采样最终 m_RenderPos 一次，预测 ghost 不进入此入口。
 		// Ninja 冲刺等移动的核心速度可能为零；通过已检查的端点位移补足视觉速度。
 		const float VisualSpeed = std::max(Speed, RenderJump / (Data.m_IsPredicted ? 1.0f : float(TickGap)));
-		State.Update(Data.m_RenderPos, Time, VisualSpeed, qm_tee_trail::Lifetime(Style, m_LastLength, VisualSpeed), SourceChanged);
+		const auto UpdateMode = DummyChanged ? qm_tee_trail::EUpdateMode::KEEP_HISTORY : SourceChanged ? qm_tee_trail::EUpdateMode::RESET : qm_tee_trail::EUpdateMode::NORMAL;
+		State.Update(Data.m_RenderPos, Time, VisualSpeed, qm_tee_trail::Lifetime(Style, m_LastLength, VisualSpeed), UpdateMode);
 		State.Export(m_vTrail);
 		if(m_vTrail.size() < 2)
 			continue;

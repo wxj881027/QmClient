@@ -269,6 +269,113 @@ TEST(QmTeeTrailBuild, OriginalKeepsNormalBlending)
 		EXPECT_FALSE(Quad.m_Additive);
 }
 
+TEST(QmTeeTrailBuild, SeparatedSegmentsKeepAllBodiesBeforeTheGlow)
+{
+	auto vTrail = MakeTrail(16);
+	for(size_t i = 0; i < 8; ++i)
+	{
+		vTrail[i].m_Segment = 1;
+		vTrail[i].m_Pos.x += 1000.0f;
+	}
+	for(const int Style : {qm_tee_trail::STYLE_MANGA, qm_tee_trail::STYLE_MAGIC, qm_tee_trail::STYLE_PIXEL})
+	{
+		std::vector<qm_tee_trail::SQuad> vQuads;
+		qm_tee_trail::BuildEffect(vTrail, Style, true, 40.0, 12.0f, 9, vQuads);
+		bool HasNormal = false, HasAdditive = false;
+		for(const auto &Quad : vQuads)
+		{
+			if(Quad.m_Additive)
+				HasAdditive = true;
+			else
+			{
+				EXPECT_FALSE(HasAdditive) << Style;
+				HasNormal = true;
+			}
+		}
+		EXPECT_TRUE(HasNormal) << Style;
+		EXPECT_TRUE(HasAdditive) << Style;
+	}
+}
+
+TEST(QmTeeTrailClock, SwitchingConnectionsKeepsBothPlayersHistories)
+{
+	qm_tee_trail::CTrailClock Clock;
+	qm_tee_trail::CTrailState aStates[2];
+	for(int Tick = 0; Tick <= 10; ++Tick)
+	{
+		const double Time = Clock.Update(100.0 + Tick, 1.0, false);
+		for(int Player = 0; Player < 2; ++Player)
+			aStates[Player].Update(vec2(float(Tick) * 6.0f, float(Player) * 100.0f), Time, 6.0f, 60.0f);
+	}
+
+	// 先切到落后的连接，再切回领先的连接；两条历史都不应被误判为回退或长帧。
+	const double aGameTimes[] = {90.25, 130.5};
+	for(int Switch = 0; Switch < 2; ++Switch)
+	{
+		const double Time = Clock.Update(aGameTimes[Switch], 0.25, true);
+		EXPECT_DOUBLE_EQ(Time, 110.0 + (Switch + 1) * 0.25);
+		for(int Player = 0; Player < 2; ++Player)
+		{
+			const vec2 Position(60.0f + float(Switch + 1) * 1.5f, float(Player) * 100.0f);
+			aStates[Player].Update(Position, Time, 6.0f, 60.0f, qm_tee_trail::EUpdateMode::KEEP_HISTORY);
+			std::vector<CTrailPart> vTrail;
+			aStates[Player].Export(vTrail);
+			ASSERT_GT(vTrail.size(), 10u);
+			EXPECT_EQ(vTrail.front().m_Pos, Position);
+			EXPECT_EQ(vTrail.back().m_Pos, vec2(0, float(Player) * 100.0f));
+			EXPECT_DOUBLE_EQ(vTrail.back().m_Time, 100.0);
+		}
+	}
+	EXPECT_DOUBLE_EQ(Clock.Update(131.5, 1.0, false), 111.5);
+}
+
+TEST(QmTeeTrailClock, RepeatedSwitchesDoNotRenewStationaryHistory)
+{
+	qm_tee_trail::CTrailClock Clock;
+	qm_tee_trail::CTrailState State;
+	for(int Tick = 0; Tick <= 8; ++Tick)
+		State.Update(vec2(float(Tick) * 6.0f, 0), Clock.Update(100.0 + Tick, 1.0, false), 6.0f, 16.0f);
+
+	for(int Frame = 1; Frame <= 80; ++Frame)
+	{
+		const double Time = Clock.Update(Frame % 2 ? 50.0 : 500.0, 0.25, true);
+		EXPECT_DOUBLE_EQ(Time, 108.0 + Frame * 0.25);
+		State.Update(vec2(48, 0), Time, 0.0f, 16.0f, qm_tee_trail::EUpdateMode::KEEP_HISTORY);
+	}
+	std::vector<CTrailPart> vTrail;
+	State.Export(vTrail);
+	EXPECT_LE(vTrail.size(), 1u);
+	for(const auto &Part : vTrail)
+		EXPECT_GT(Part.m_Time, 108.0);
+}
+
+TEST(QmTeeTrailClock, PausedGameDoesNotAdvanceWithRenderFrames)
+{
+	qm_tee_trail::CTrailClock Clock;
+	EXPECT_DOUBLE_EQ(Clock.Update(50.5, 0.25, false), 50.5);
+	for(int Frame = 0; Frame < 80; ++Frame)
+		EXPECT_DOUBLE_EQ(Clock.Update(50.5, 0.25, false), 50.5);
+	EXPECT_DOUBLE_EQ(Clock.Update(51.0, 0.25, false), 51.0);
+}
+
+TEST(QmTeeTrailClock, GameRewindStillDropsFutureHistory)
+{
+	qm_tee_trail::CTrailClock Clock;
+	qm_tee_trail::CTrailState State;
+	for(int Tick = 0; Tick <= 8; ++Tick)
+		State.Update(vec2(float(Tick) * 6.0f, 0), Clock.Update(50.0 + Tick, 1.0, false), 6.0f, 40.0f);
+
+	const double Time = Clock.Update(40.0, 0.25, false);
+	State.Update(vec2(48, 0), Time, 6.0f, 40.0f);
+	std::vector<CTrailPart> vTrail;
+	State.Export(vTrail);
+	ASSERT_EQ(vTrail.size(), 1u);
+	EXPECT_DOUBLE_EQ(vTrail.front().m_Time, 40.0);
+
+	Clock.Reset();
+	EXPECT_DOUBLE_EQ(Clock.Update(5.0, 0.25, false), 5.0);
+}
+
 TEST(QmTeeTrailState, SamplesAtEvenSpacingAlongThePath)
 {
 	qm_tee_trail::CTrailState State;
@@ -312,8 +419,8 @@ TEST(QmTeeTrailState, BreakDropsHistoryAndRestartsAtTheNewPosition)
 	State.Export(vBefore);
 	ASSERT_GE(vBefore.size(), 3u);
 
-	// 显式断点（传送、复活、渲染时间源切换）必须清掉旧轨迹。
-	State.Update(vec2(5000.0f, 5000.0f), 61.0, 12.0f, 60.0f, true);
+	// 传送、复活等显式重置仍然清掉旧轨迹。
+	State.Update(vec2(5000.0f, 5000.0f), 61.0, 12.0f, 60.0f, qm_tee_trail::EUpdateMode::RESET);
 	std::vector<CTrailPart> vAfter;
 	State.Export(vAfter);
 	ASSERT_LE(vAfter.size(), 2u);
@@ -334,6 +441,130 @@ TEST(QmTeeTrailState, TeleportBreakIsDetectedWithoutAnExplicitFlag)
 	ASSERT_LE(vOut.size(), 2u);
 	for(const auto &Part : vOut)
 		EXPECT_NEAR(Part.m_Pos.x, 4000.0f, 0.5f);
+}
+
+TEST(QmTeeTrailState, ConnectionSwitchWithContinuousPositionKeepsTheSameSegment)
+{
+	qm_tee_trail::CTrailState State;
+	for(int Tick = 0; Tick <= 8; ++Tick)
+		State.Update(vec2(float(Tick) * 6.0f, 0), Tick, 6.0f, 40.0f);
+	State.Update(vec2(54, 0), 9.0, 6.0f, 40.0f, qm_tee_trail::EUpdateMode::KEEP_HISTORY);
+	std::vector<CTrailPart> vTrail;
+	State.Export(vTrail);
+	ASSERT_EQ(vTrail.size(), 10u);
+	EXPECT_DOUBLE_EQ(vTrail.back().m_Time, 0.0);
+	for(size_t i = 1; i < vTrail.size(); ++i)
+	{
+		EXPECT_EQ(vTrail[i].m_Segment, vTrail.front().m_Segment);
+		EXPECT_FLOAT_EQ(distance(vTrail[i - 1].m_Pos, vTrail[i].m_Pos), qm_tee_trail::SAMPLE_SPACING);
+	}
+}
+
+TEST(QmTeeTrailState, ConnectionSwitchWithPositionJumpKeepsOldGeometryUnchanged)
+{
+	qm_tee_trail::CTrailState State;
+	for(int Tick = 0; Tick <= 8; ++Tick)
+		State.Update(vec2(float(Tick) * 6.0f, 0), Tick, 6.0f, 40.0f);
+	State.Update(vec2(50, 0), 8.25, 8.0f, 40.0f);
+	std::vector<CTrailPart> vBefore;
+	State.Export(vBefore);
+
+	State.Update(vec2(1000, 0), 8.5, 8.0f, 40.0f, qm_tee_trail::EUpdateMode::KEEP_HISTORY);
+	std::vector<CTrailPart> vAfter;
+	State.Export(vAfter);
+	ASSERT_EQ(vAfter.size(), vBefore.size() + 1);
+	EXPECT_NE(vAfter[0].m_Segment, vAfter[1].m_Segment);
+	for(size_t i = 0; i < vBefore.size(); ++i)
+	{
+		EXPECT_EQ(vAfter[i + 1].m_Pos, vBefore[i].m_Pos);
+		EXPECT_DOUBLE_EQ(vAfter[i + 1].m_Time, vBefore[i].m_Time);
+		EXPECT_DOUBLE_EQ(vAfter[i + 1].m_Distance, vBefore[i].m_Distance);
+	}
+	for(int Style = 0; Style < qm_tee_trail::STYLE_COUNT; ++Style)
+	{
+		std::vector<qm_tee_trail::SQuad> vExpected, vActual;
+		qm_tee_trail::BuildEffect(vBefore, Style, true, 8.5, 8.0f, 17, vExpected);
+		qm_tee_trail::BuildEffect(vAfter, Style, true, 8.5, 8.0f, 17, vActual);
+		ASSERT_FALSE(vExpected.empty()) << Style;
+		ASSERT_EQ(vActual.size(), vExpected.size()) << Style;
+		for(size_t i = 0; i < vExpected.size(); ++i)
+			EXPECT_TRUE(SameQuad(vActual[i], vExpected[i])) << Style << ":" << i;
+	}
+}
+
+TEST(QmTeeTrailState, MovementAfterConnectionSwitchDoesNotBridgeThePositionJump)
+{
+	qm_tee_trail::CTrailState State;
+	for(int Tick = 0; Tick <= 8; ++Tick)
+		State.Update(vec2(float(Tick) * 6.0f, 0), Tick, 6.0f, 40.0f);
+	State.Update(vec2(1000, 0), 9.0, 6.0f, 40.0f, qm_tee_trail::EUpdateMode::KEEP_HISTORY);
+	for(int Tick = 1; Tick <= 4; ++Tick)
+		State.Update(vec2(1000.0f + float(Tick) * 6.0f, 0), 9.0 + Tick, 6.0f, 40.0f);
+	std::vector<CTrailPart> vTrail;
+	State.Export(vTrail);
+	for(int Style = 0; Style < qm_tee_trail::STYLE_COUNT; ++Style)
+	{
+		std::vector<qm_tee_trail::SQuad> vQuads;
+		qm_tee_trail::BuildEffect(vTrail, Style, true, 13.0, 8.0f, 17, vQuads);
+		bool OldVisible = false, NewVisible = false;
+		for(const auto &Quad : vQuads)
+		{
+			float MinX = Quad.m_aPos[0].x, MaxX = MinX;
+			for(const auto &Pos : Quad.m_aPos)
+			{
+				MinX = std::min(MinX, Pos.x);
+				MaxX = std::max(MaxX, Pos.x);
+			}
+			EXPECT_TRUE(MaxX < 200.0f || MinX > 800.0f) << Style;
+			OldVisible |= MaxX < 200.0f;
+			NewVisible |= MinX > 800.0f;
+		}
+		EXPECT_TRUE(OldVisible) << Style;
+		EXPECT_TRUE(NewVisible) << Style;
+	}
+}
+
+TEST(QmTeeTrailState, OlderSegmentCanOutliveTheNewHead)
+{
+	qm_tee_trail::CTrailState State;
+	for(int Tick = 0; Tick <= 8; ++Tick)
+		State.Update(vec2(float(Tick) * 6.0f, 0), Tick, 6.0f, 40.0f);
+	State.Update(vec2(1000, 0), 9.0, 0.0f, 1.0f, qm_tee_trail::EUpdateMode::KEEP_HISTORY);
+	State.Update(vec2(1000, 0), 11.0, 0.0f, 1.0f);
+	std::vector<CTrailPart> vTrail;
+	State.Export(vTrail);
+	ASSERT_GT(vTrail.size(), 2u);
+	for(int Style = 0; Style < qm_tee_trail::STYLE_COUNT; ++Style)
+	{
+		std::vector<qm_tee_trail::SQuad> vQuads;
+		qm_tee_trail::BuildEffect(vTrail, Style, true, 11.0, 8.0f, 17, vQuads);
+		ASSERT_FALSE(vQuads.empty()) << Style;
+		for(const auto &Quad : vQuads)
+			for(const auto &Pos : Quad.m_aPos)
+				EXPECT_LT(Pos.x, 200.0f) << Style;
+	}
+}
+
+TEST(QmTeeTrailState, RepeatedConnectionSegmentsStayWithinCapacity)
+{
+	qm_tee_trail::CTrailState State;
+	for(int Tick = 0; Tick < 600; ++Tick)
+	{
+		const float X = float((Tick / 4) % 2) * 1000.0f + float(Tick % 4) * 6.0f;
+		const auto Mode = Tick % 4 == 0 ? qm_tee_trail::EUpdateMode::KEEP_HISTORY : qm_tee_trail::EUpdateMode::NORMAL;
+		State.Update(vec2(X, 0), Tick, 6.0f, 400.0f, Mode);
+	}
+	std::vector<CTrailPart> vTrail;
+	State.Export(vTrail);
+	EXPECT_LE(vTrail.size(), qm_tee_trail::MAX_POINTS + 1);
+	EXPECT_GT(vTrail.size(), 100u);
+	for(int Style = 0; Style < qm_tee_trail::STYLE_COUNT; ++Style)
+	{
+		std::vector<qm_tee_trail::SQuad> vQuads;
+		qm_tee_trail::BuildEffect(vTrail, Style, true, 599.0, 20.0f, 17, vQuads);
+		EXPECT_LE(vQuads.size(), qm_tee_trail::MAX_QUADS) << Style;
+		EXPECT_TRUE(AllFinite(vQuads)) << Style;
+	}
 }
 
 TEST(QmTeeTrailState, DropsSamplesOnceTheirLifetimeHasPassed)

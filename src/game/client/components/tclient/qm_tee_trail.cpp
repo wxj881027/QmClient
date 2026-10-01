@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <span>
 
 namespace
 {
@@ -69,6 +70,22 @@ vec2 qm_tee_trail::SPreparedCurve::Evaluate(float T) const
 	return m_Start * (2 * T * T * T - 3 * T * T + 1) + m_StartTangent * (T * T * T - 2 * T * T + T) + m_End * (-2 * T * T * T + 3 * T * T) + m_EndTangent * (T * T * T - T * T);
 }
 
+void qm_tee_trail::CTrailClock::Reset()
+{
+	m_LastGameTime = -1.0;
+	m_Time = 0.0;
+}
+
+double qm_tee_trail::CTrailClock::Update(double GameTime, double FrameTicks, bool SwitchSource)
+{
+	if(m_LastGameTime < 0.0)
+		m_Time = GameTime;
+	else
+		m_Time += SwitchSource ? std::max(0.0, FrameTicks) : GameTime - m_LastGameTime;
+	m_LastGameTime = GameTime;
+	return m_Time;
+}
+
 void qm_tee_trail::CTrailState::Reset()
 {
 	m_First = m_Count = 0;
@@ -88,7 +105,7 @@ void qm_tee_trail::CTrailState::Push(const CTrailPart &Point)
 	m_aPoints[(m_First + m_Count++) % MAX_POINTS] = Point;
 }
 
-void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, float Life, bool Break)
+void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, float Life, EUpdateMode Mode)
 {
 	if(!std::isfinite(Position.x) || !std::isfinite(Position.y) || !std::isfinite(Time) || !std::isfinite(Speed) || Time < 0)
 	{
@@ -99,22 +116,31 @@ void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, 
 	Life = std::clamp(Life, 1.0f, 400.0f);
 	const double Dt = Time - m_LastTime;
 	const float Dist = distance(Position, m_LastPos);
+	const bool PositionJump = m_LastTime >= 0 && Dist > 48.0 + std::max(Speed, m_LastSpeed) * std::max(Dt, 0.0) * 2.5;
 	// 长帧间隔不猜测漏掉的运动；正常高速位移由速度预算区分，允许补齐多个中间点。
-	if(Break || Dt < 0 || Dt > 12.5 || (m_LastTime >= 0 && Dist > 48.0 + std::max(Speed, m_LastSpeed) * std::max(Dt, 0.0) * 2.5))
+	if(Mode == EUpdateMode::RESET || Dt < 0 || Dt > 12.5 || (PositionJump && Mode != EUpdateMode::KEEP_HISTORY))
 		Reset();
 	while(m_Count > 0 && Time - m_aPoints[m_First].m_Time >= m_aPoints[m_First].m_Life)
 	{
 		m_First = (m_First + 1) % MAX_POINTS;
 		--m_Count;
 	}
-	if(m_LastTime < 0 || m_Count == 0)
+	const bool Split = Mode == EUpdateMode::KEEP_HISTORY && PositionJump && m_LastTime >= 0 && m_Count > 0;
+	if(m_LastTime < 0 || m_Count == 0 || Split)
 	{
+		const unsigned Segment = Split ? m_Head.m_Segment + 1 : 0;
+		const double PathDistance = Split ? m_Head.m_Distance : 0.0;
+		// 固定旧段的端帽，避免切换后它随新位置移动或被提前丢弃。
+		if(Split && distance(m_aPoints[(m_First + m_Count - 1) % MAX_POINTS].m_Pos, m_Head.m_Pos) > 0.001f)
+			Push(m_Head);
 		m_Head = CTrailPart();
 		m_Head.m_Pos = Position;
 		m_Head.m_Time = Time;
 		m_Head.m_Tick = int(Time);
 		m_Head.m_Life = Life;
 		m_Head.m_Speed = Speed;
+		m_Head.m_Segment = Segment;
+		m_Head.m_Distance = PathDistance;
 		m_Carry = 0;
 		Push(m_Head);
 	}
@@ -136,6 +162,7 @@ void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, 
 			Point.m_Distance = StartDistance + Along;
 			Point.m_Speed = mix(m_LastSpeed, Speed, T);
 			Point.m_Life = mix(m_Head.m_Life, Life, T);
+			Point.m_Segment = m_Head.m_Segment;
 			Push(Point);
 		}
 		m_Carry = std::max(0.0, std::fmod(m_Carry + Dist + 0.00001, double(SAMPLE_SPACING)) - 0.00001);
@@ -154,14 +181,14 @@ void qm_tee_trail::CTrailState::Update(vec2 Position, double Time, float Speed, 
 void qm_tee_trail::CTrailState::Export(std::vector<CTrailPart> &vOut) const
 {
 	vOut.clear();
-	if(m_Count == 0 || m_LastTime - m_Head.m_Time >= m_Head.m_Life)
+	if(m_Count == 0)
 		return;
 	vOut.reserve(MAX_POINTS + 1);
 	vOut.push_back(m_Head);
 	for(size_t i = m_Count; i > 0; --i)
 	{
 		const CTrailPart &Point = m_aPoints[(m_First + i - 1) % MAX_POINTS];
-		if(distance(vOut.back().m_Pos, Point.m_Pos) > 0.001f)
+		if(vOut.back().m_Segment != Point.m_Segment || distance(vOut.back().m_Pos, Point.m_Pos) > 0.001f)
 			vOut.push_back(Point);
 	}
 }
@@ -182,6 +209,110 @@ float qm_tee_trail::Lifetime(int Style, int Length, float Speed)
 	return std::clamp(Length, 5, 200) * s_aLifeFactors[ResolveStyle(Style)] * (0.75f + 0.45f * Energy);
 }
 
+namespace
+{
+	void BuildTrailSegment(std::span<const CTrailPart> Trail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade)
+	{
+		const size_t Count = Trail.size();
+		if(Count < 2)
+			return;
+		std::array<float, MAX_POINTS + 1> aLengths{};
+		for(size_t i = 0; i < Count; ++i)
+		{
+			const auto &P = Trail[i];
+			if(!std::isfinite(P.m_Pos.x) || !std::isfinite(P.m_Pos.y) || !std::isfinite(P.m_Time) || !std::isfinite(P.m_Distance))
+				return;
+			const double Time = P.m_Time >= 0 ? P.m_Time : P.m_Tick;
+			if(Time > CurTime + 0.01)
+				return;
+			if(i > 0)
+			{
+				const float D = distance(Trail[i - 1].m_Pos, P.m_Pos);
+				if(D > 192.0f)
+					return;
+				aLengths[i] = aLengths[i - 1] + D;
+			}
+		}
+		const float Total = aLengths[Count - 1];
+		if(Total < 0.01f)
+			return;
+
+		std::array<SSample, MAX_RENDER_POINTS> aSamples;
+		size_t SampleCount = 0;
+		// 每段至少一个截面，剩余预算用于屏幕空间细分，不会因达到上限丢掉整条尾部。
+		// 像素风保持世界网格与锚点不随缩放变化；其余风格继续使用屏幕空间细分。
+		const float Step = std::max({Style == STYLE_PIXEL ? SAMPLE_SPACING : PixelSize * 2.5f, 0.75f, Total / float(MAX_RENDER_POINTS - Count)});
+		for(size_t i = 0; i + 1 < Count; ++i)
+		{
+			const auto &A = Trail[i];
+			const auto &B = Trail[i + 1];
+			const float Segment = aLengths[i + 1] - aLengths[i];
+			const int Divisions = std::max(1, int(Segment / Step));
+			const SPreparedCurve Curve = PrepareCurve(i > 0 ? Trail[i - 1].m_Pos : A.m_Pos * 2 - B.m_Pos, A.m_Pos, B.m_Pos, i + 2 < Count ? Trail[i + 2].m_Pos : B.m_Pos * 2 - A.m_Pos);
+			for(int j = 0; j < Divisions + (i + 2 == Count ? 1 : 0); ++j)
+			{
+				if(SampleCount == MAX_RENDER_POINTS)
+					break;
+				const float T = float(j) / Divisions;
+				SSample &S = aSamples[SampleCount++];
+				const double Birth = mix(A.m_Time >= 0 ? A.m_Time : double(A.m_Tick), B.m_Time >= 0 ? B.m_Time : double(B.m_Tick), double(T));
+				S.m_Age = std::max(0.0f, float(CurTime - Birth));
+				const float Life = mix(A.m_Life > 0 ? A.m_Life : 25.0f * s_aLifeFactors[Style], B.m_Life > 0 ? B.m_Life : 25.0f * s_aLifeFactors[Style], T);
+				const float Remaining = std::clamp(1.0f - S.m_Age / Life, 0.0f, 1.0f);
+				const float Speed = A.m_Speed >= 0 && B.m_Speed >= 0 ? mix(A.m_Speed, B.m_Speed, T) : Segment / std::max(0.01f, float(std::abs(A.m_Tick - B.m_Tick)));
+				S.m_Energy = std::clamp(Speed / 30.0f, 0.0f, 1.0f);
+				S.m_Head = mix(aLengths[i], aLengths[i + 1], T);
+				S.m_Distance = A.m_Time >= 0 ? mix(A.m_Distance, B.m_Distance, double(T)) : -double(S.m_Head);
+				S.m_Tint = Tint(A.m_Col, B.m_Col, T);
+				const float Tail = Smooth((Total - S.m_Head) / std::max(1.0f, std::min(Total, 30.0f)));
+				const float Tapering = Taper ? std::pow(Remaining, 0.65f) * Tail : 1.0f;
+				S.m_Width = Width * (Style == STYLE_ORIGINAL ? 1.0f : 0.7f + 0.4f * S.m_Energy) * Tapering;
+				S.m_Alpha = std::clamp(S.m_Tint.a, 0.0f, 1.0f) * Remaining * Remaining * Tail;
+				if(Fade)
+					S.m_Alpha *= 1.0f - S.m_Head / Total;
+				S.m_Remaining = Remaining;
+				S.m_Pos = Curve.Evaluate(T);
+			}
+		}
+		if(SampleCount < 2)
+			return;
+		vOut.reserve(MAX_QUADS);
+		if(Style != STYLE_ORIGINAL)
+		{
+			for(size_t i = 0; i < SampleCount; ++i)
+			{
+				const vec2 Before = aSamples[i > 0 ? i - 1 : i].m_Pos;
+				const vec2 After = aSamples[i + 1 < SampleCount ? i + 1 : i].m_Pos;
+				const vec2 Tangent = Unit(After - Before);
+				aSamples[i].m_Normal = vec2(-Tangent.y, Tangent.x);
+			}
+			BuildStyledEffect(aSamples.data(), SampleCount, Style, UsePresetPalette, Width, PixelSize, unsigned(Seed) * 0x9e3779b9u, vOut);
+			return;
+		}
+
+		// 原版保留原有主体截面、接缝、柔边及浮点运算顺序。
+		std::array<SBandPoint, MAX_RENDER_POINTS> aBand;
+		std::array<vec2, MAX_RENDER_POINTS> aNormals;
+		for(size_t i = 0; i < SampleCount; ++i)
+		{
+			const SSample &S = aSamples[i];
+			aBand[i] = {S.m_Pos, S.m_Width, S.m_Width, S.m_Tint.WithAlpha(S.m_Alpha)};
+		}
+		QmPrepareTrailBandJoins(aBand.data(), SampleCount, aNormals.data());
+		const auto PrepareSection = [&](size_t Index) {
+			const SBandPoint &P = aBand[Index];
+			return QmPrepareTrailBandSection(P.m_Pos, P.m_Left, P.m_Right, P.m_Color, aNormals[Index], 0.22f, PixelSize);
+		};
+		SQmTrailBandSection Previous = PrepareSection(0);
+		for(size_t i = 1; i < SampleCount; ++i)
+		{
+			const SQmTrailBandSection Current = PrepareSection(i);
+			EmitPreparedBand(vOut, Previous, Current);
+			Previous = Current;
+		}
+	}
+}
+
 void qm_tee_trail::BuildEffect(const std::vector<CTrailPart> &vTrail, int Style, bool UsePresetPalette, double CurTime, float Width, int Seed, std::vector<SQuad> &vOut, float PixelSize, bool Taper, bool Fade)
 {
 	vOut.clear();
@@ -190,99 +321,22 @@ void qm_tee_trail::BuildEffect(const std::vector<CTrailPart> &vTrail, int Style,
 	Style = ResolveStyle(Style);
 	PixelSize = std::clamp(PixelSize, 0.025f, 8.0f);
 	Width = Width > 0 ? Width : (Style == STYLE_ORIGINAL ? PixelSize * 0.5f : 4.0f);
-	const size_t Count = std::min(vTrail.size(), MAX_POINTS + 1);
-	std::array<float, MAX_POINTS + 1> aLengths{};
-	for(size_t i = 0; i < Count; ++i)
+	const std::span<const CTrailPart> Trail(vTrail.data(), std::min(vTrail.size(), MAX_POINTS + 1));
+	size_t NormalCount = 0;
+	for(size_t First = 0; First < Trail.size();)
 	{
-		const auto &P = vTrail[i];
-		if(!std::isfinite(P.m_Pos.x) || !std::isfinite(P.m_Pos.y) || !std::isfinite(P.m_Time) || !std::isfinite(P.m_Distance))
-			return;
-		const double Time = P.m_Time >= 0 ? P.m_Time : P.m_Tick;
-		if(Time > CurTime + 0.01)
-			return;
-		if(i > 0)
-		{
-			const float D = distance(vTrail[i - 1].m_Pos, P.m_Pos);
-			if(D > 192.0f)
-				return;
-			aLengths[i] = aLengths[i - 1] + D;
-		}
-	}
-	const float Total = aLengths[Count - 1];
-	if(Total < 0.01f)
-		return;
-
-	std::array<SSample, MAX_RENDER_POINTS> aSamples;
-	size_t SampleCount = 0;
-	// 每段至少一个截面，剩余预算用于屏幕空间细分，不会因达到上限丢掉整条尾部。
-	// 像素风保持世界网格与锚点不随缩放变化；其余风格继续使用屏幕空间细分。
-	const float Step = std::max({Style == STYLE_PIXEL ? SAMPLE_SPACING : PixelSize * 2.5f, 0.75f, Total / float(MAX_RENDER_POINTS - Count)});
-	for(size_t i = 0; i + 1 < Count; ++i)
-	{
-		const auto &A = vTrail[i];
-		const auto &B = vTrail[i + 1];
-		const float Segment = aLengths[i + 1] - aLengths[i];
-		const int Divisions = std::max(1, int(Segment / Step));
-		const SPreparedCurve Curve = PrepareCurve(i > 0 ? vTrail[i - 1].m_Pos : A.m_Pos * 2 - B.m_Pos, A.m_Pos, B.m_Pos, i + 2 < Count ? vTrail[i + 2].m_Pos : B.m_Pos * 2 - A.m_Pos);
-		for(int j = 0; j < Divisions + (i + 2 == Count ? 1 : 0); ++j)
-		{
-			if(SampleCount == MAX_RENDER_POINTS)
-				break;
-			const float T = float(j) / Divisions;
-			SSample &S = aSamples[SampleCount++];
-			const double Birth = mix(A.m_Time >= 0 ? A.m_Time : double(A.m_Tick), B.m_Time >= 0 ? B.m_Time : double(B.m_Tick), double(T));
-			S.m_Age = std::max(0.0f, float(CurTime - Birth));
-			const float Life = mix(A.m_Life > 0 ? A.m_Life : 25.0f * s_aLifeFactors[Style], B.m_Life > 0 ? B.m_Life : 25.0f * s_aLifeFactors[Style], T);
-			const float Remaining = std::clamp(1.0f - S.m_Age / Life, 0.0f, 1.0f);
-			const float Speed = A.m_Speed >= 0 && B.m_Speed >= 0 ? mix(A.m_Speed, B.m_Speed, T) : Segment / std::max(0.01f, float(std::abs(A.m_Tick - B.m_Tick)));
-			S.m_Energy = std::clamp(Speed / 30.0f, 0.0f, 1.0f);
-			S.m_Head = mix(aLengths[i], aLengths[i + 1], T);
-			S.m_Distance = A.m_Time >= 0 ? mix(A.m_Distance, B.m_Distance, double(T)) : -double(S.m_Head);
-			S.m_Tint = Tint(A.m_Col, B.m_Col, T);
-			const float Tail = Smooth((Total - S.m_Head) / std::max(1.0f, std::min(Total, 30.0f)));
-			const float Tapering = Taper ? std::pow(Remaining, 0.65f) * Tail : 1.0f;
-			S.m_Width = Width * (Style == STYLE_ORIGINAL ? 1.0f : 0.7f + 0.4f * S.m_Energy) * Tapering;
-			S.m_Alpha = std::clamp(S.m_Tint.a, 0.0f, 1.0f) * Remaining * Remaining * Tail;
-			if(Fade)
-				S.m_Alpha *= 1.0f - S.m_Head / Total;
-			S.m_Remaining = Remaining;
-			S.m_Pos = Curve.Evaluate(T);
-		}
-	}
-	if(SampleCount < 2)
-		return;
-	vOut.reserve(MAX_QUADS);
-	if(Style != STYLE_ORIGINAL)
-	{
-		for(size_t i = 0; i < SampleCount; ++i)
-		{
-			const vec2 Before = aSamples[i > 0 ? i - 1 : i].m_Pos;
-			const vec2 After = aSamples[i + 1 < SampleCount ? i + 1 : i].m_Pos;
-			const vec2 Tangent = Unit(After - Before);
-			aSamples[i].m_Normal = vec2(-Tangent.y, Tangent.x);
-		}
-		BuildStyledEffect(aSamples.data(), SampleCount, Style, UsePresetPalette, Width, PixelSize, unsigned(Seed) * 0x9e3779b9u, vOut);
-		return;
-	}
-
-	// 原版保留原有主体截面、接缝、柔边及浮点运算顺序。
-	std::array<SBandPoint, MAX_RENDER_POINTS> aBand;
-	std::array<vec2, MAX_RENDER_POINTS> aNormals;
-	for(size_t i = 0; i < SampleCount; ++i)
-	{
-		const SSample &S = aSamples[i];
-		aBand[i] = {S.m_Pos, S.m_Width, S.m_Width, S.m_Tint.WithAlpha(S.m_Alpha)};
-	}
-	QmPrepareTrailBandJoins(aBand.data(), SampleCount, aNormals.data());
-	const auto PrepareSection = [&](size_t Index) {
-		const SBandPoint &P = aBand[Index];
-		return QmPrepareTrailBandSection(P.m_Pos, P.m_Left, P.m_Right, P.m_Color, aNormals[Index], 0.22f, PixelSize);
-	};
-	SQmTrailBandSection Previous = PrepareSection(0);
-	for(size_t i = 1; i < SampleCount; ++i)
-	{
-		const SQmTrailBandSection Current = PrepareSection(i);
-		EmitPreparedBand(vOut, Previous, Current);
-		Previous = Current;
+		size_t End = First + 1;
+		while(End < Trail.size() && Trail[End].m_Segment == Trail[First].m_Segment)
+			++End;
+		// 分段只隔开位置来源的跳变；旧段仍按原始出生时间参与绘制和消散。
+		const size_t PreviousSize = vOut.size();
+		BuildTrailSegment(Trail.subspan(First, End - First), Style, UsePresetPalette, CurTime, Width, Seed, vOut, PixelSize, Taper, Fade);
+		size_t NormalEnd = PreviousSize;
+		while(NormalEnd < vOut.size() && !vOut[NormalEnd].m_Additive)
+			++NormalEnd;
+		// 原地把新段主体移到发光层之前，重叠处不覆盖已有高光，也不分配临时缓存。
+		std::rotate(vOut.begin() + NormalCount, vOut.begin() + PreviousSize, vOut.begin() + NormalEnd);
+		NormalCount += NormalEnd - PreviousSize;
+		First = End;
 	}
 }
