@@ -407,6 +407,7 @@ std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, con
 		const json_value *pName = JsonObjectField(pEntry, "player_name");
 		const json_value *pTitle = JsonObjectField(pEntry, "title");
 		const json_value *pStyle = JsonObjectField(pEntry, "style");
+		const json_value *pChatStyle = JsonObjectField(pEntry, "chat_style");
 		int64_t Id, Issued, Expires;
 		if(pServer->type != json_string || str_comp(pServer->u.string.ptr, pServerAddress) != 0 ||
 			pName->type != json_string || !pName->u.string.ptr[0] || pName->u.string.length >= MAX_NAME_LENGTH ||
@@ -415,7 +416,8 @@ std::vector<SQmTitlePresence> ParseQmTitlePresences(const json_value *pRoot, con
 			!JsonReadInteger(JsonObjectField(pEntry, "issued_at"), Issued) || Issued > Now ||
 			!JsonReadInteger(JsonObjectField(pEntry, "expires_at"), Expires) || Expires <= Now)
 			continue;
-		Result.push_back({(int)Id, pName->u.string.ptr, pTitle->u.string.ptr, pStyle && pStyle->type == json_string ? pStyle->u.string.ptr : "", std::min<int64_t>(Expires - Now, 15)});
+		Result.push_back({(int)Id, pName->u.string.ptr, pTitle->u.string.ptr, pStyle && pStyle->type == json_string ? pStyle->u.string.ptr : "", std::min<int64_t>(Expires - Now, 15),
+			QmSponsorChatStyleFromId(pChatStyle->type == json_string ? pChatStyle->u.string.ptr : "")});
 	}
 	return Result;
 }

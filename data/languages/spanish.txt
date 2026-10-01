@@ -512,9 +512,6 @@ Add to category
 Add to queue
 == Añadir a la cola
 
-Add typed command
-== Añadir el comando escrito
-
 Add war clan:
 == Añadir clan enemigo:
 
@@ -703,9 +700,6 @@ Alpha
 
 Also apply to dummy
 == Aplicar también al dummy
-
-Alt
-== Alt
 
 Always show
 == Mostrar siempre
@@ -1440,7 +1434,7 @@ Better scoreboard
 == Tabla de puntuaciones mejorada
 
 Bind
-== Vinculación
+== Bind
 
 Bind address for client/server
 == Dirección de enlace para el cliente/servidor
@@ -1600,9 +1594,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == Build the status text shown above Tees
-
-Built-in
-== Integrado
 
 Button - Disabled
 == Botón - Desactivado
@@ -1816,6 +1807,12 @@ Chat log retention days
 
 Chat message
 == Mensaje de chat
+
+Chat message preview
+== Vista previa del mensaje
+
+Chat message style
+== Estilo del mensaje
 
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == Mensajes de chat para enviar al entrar en congelación, separados por comas (vacío=ninguno)
@@ -2155,9 +2152,6 @@ Command:
 
 Commands
 == Comandos
-
-Commands cannot contain a line break.
-== Los comandos no pueden contener saltos de línea.
 
 Commands run in the console
 == Comandos ejecutados en la consola
@@ -2597,9 +2591,6 @@ Cross-server following stopped
 Crosshair opacity in free spectate
 == Opacidad de la mira en espectador libre
 
-Ctrl
-== Control
-
 Ctrl+right-click a tile to select its layer in editor
 == Ctrl+clic derecho en un tile para seleccionar su capa en el editor
 
@@ -2797,9 +2788,6 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == ¡El cliente de DDNet necesita reiniciarse para completar la actualización!
-
-DDNet contributors
-== DDNet contributors
 
 DDNet contributors and staff credits
 == Contribuidores y equipo de DDNet
@@ -3429,7 +3417,7 @@ Dummy Control
 == Controlar dummy
 
 Dummy control
-== Control del dummy
+== Dummy control
 
 Dummy Control: %s
 == Control de dummy: %s
@@ -4733,9 +4721,6 @@ FSAA samples
 FSAA samples (may cause lag)
 == Muestras FSAA (puede causar lag)
 
-FTAPI
-== FTAPI
-
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == La traducción automática de FTAPI está desactivada para evitar sobrecarga. Actívala en ajustes si es necesario.
 
@@ -5044,9 +5029,6 @@ Grenade
 
 Group name
 == Nombre del grupo
-
-Gui
-== GUI
 
 GUI cursor assets
 == Recursos del cursor de la GUI
@@ -5374,9 +5356,6 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == Hostname del proveedor DNSBL para verificación de IP
-
-Hover a key to inspect its bind, then click to edit it.
-== Pasa el cursor sobre una tecla para ver su vinculación y haz clic para editarla.
 
 Hover for tooltip
 == Pasa el cursor para ver ayuda
@@ -6119,9 +6098,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == Brillo
 
-LibreTranslate
-== LibreTranslate
-
 LibreTranslate API Key
 == Clave API de LibreTranslate
 
@@ -6133,9 +6109,6 @@ Light
 
 Light band
 == Banda de luz
-
-Light band (0 = style default)
-== Fase de color (0 = estilo)
 
 Limit information in spectator mode
 == Limitar la información en modo espectador
@@ -7694,9 +7667,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == Abrir selector de rueda de binds
 
-Open color picker
-== Abrir selector de color
-
 Open DDNet Wiki
 == Abrir DDNet Wiki
 
@@ -8086,6 +8056,9 @@ Place title on a separate line above the player name instead of inline
 
 Plasma gun shots per second
 == Disparos de cañón de plasma por segundo
+
+Platinum highlight
+== Brillo de platino
 
 Play a flip animation while reloading weapons
 == Reproducir una animación de giro al recargar las armas
@@ -9827,6 +9800,9 @@ Save/Load Skin
 Saved Profiles
 == Perfiles Guardados
 
+Saved with your title and shared with other QmClient players.
+== Se guarda con tu título y se comparte con otros jugadores de QmClient.
+
 Saves file
 == Archivo de guardado
 
@@ -10003,6 +9979,9 @@ SecretKey
 
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == Consulta /practicecmdlist para ver la lista de todos los comandos de práctica disponibles. Los más usados son /telecursor, /lasttp y /rescue
+
+See you at the next checkpoint.
+== Nos vemos en el próximo punto de control.
 
 Select a saved .map file (client limit: 64 MiB).
 == Selecciona un archivo .map guardado (límite del cliente: 64 MiB).
@@ -10283,9 +10262,6 @@ Settings card background transparency
 Settings card border color
 == Color de los bordes de las tarjetas de configuración
 
-Settings card collapse state (collapsed stableId; semicolon-separated)
-== Estado de colapso de las tarjetas de ajustes (stableId contraídos; separados por punto y coma)
-
 Settings card default layout migration version
 == Versión de migración de diseño predeterminado de tarjetas de configuración
 
@@ -10310,14 +10286,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == Proporción del reparto nombre/mapa del navegador de servidores para la columna de nombre (por mil)
 
-Shift
-== Mayús
-
 Shimmer speed
 == Velocidad del brillo
-
-Shimmer speed (polished)
-== Velocidad del brillo (pulido)
 
 Short server names
 == Nombres de servidor cortos
@@ -10466,6 +10436,9 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == Mostrar coordenadas sobre los jugadores
 
+Show copy skin option
+== Mostrar opción de copiar apariencia
+
 Show country flags in nameplates
 == Mostrar banderas de país en las placas de nombre
 
@@ -10591,6 +10564,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == Mostrar en grande cuando un amigo entra al servidor
+
+Show friend option
+== Mostrar opción de amigos
 
 Show friend tag (♥) on nametag
 == Mostrar etiqueta de amigo (♥) en la placa
@@ -10819,6 +10795,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == Mostrar ruta de puntos de control del mapa
+
+Show mention option
+== Mostrar opción de mención
 
 Show moving tiles in entities
 == Mostrar casillas en movimiento en entidades
@@ -11069,11 +11048,17 @@ Show skin release date and author
 Show song info in top-left corner
 == Mostrar información de la canción en la esquina superior izquierda
 
+Show spectate option
+== Mostrar opción de observar
+
 Show spectator cursor
 == Mostrar cursor del espectador
 
 Show speedometer when changing
 == Mostrar velocímetro al cambiar
+
+Show sponsor chat effects locally
+== Mostrar efectos de chat de patrocinadores localmente
 
 Show sponsor QR code
 == Mostrar código QR de patrocinador
@@ -11089,6 +11074,12 @@ Show status bar
 
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == Mostrar fortaleza/debilidad en la placa de nombre (0 = desactivado, 1 = icono, 2 = icono + número)
+
+Show swap option
+== Mostrar opción de intercambio
+
+Show synchronized sponsor chat styles
+== Mostrar estilos de chat sincronizados de patrocinadores
 
 Show system media info on HUD
 == Mostrar información de medios del sistema en el HUD
@@ -11203,6 +11194,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == Mostrar si has completado un mapa de DDNet (envía tu nombre de jugador a info.ddnet.org/info)
+
+Show whisper option
+== Mostrar opción de susurro
 
 Show Workshop Assets
 == Mostrar activos del Workshop
@@ -11522,6 +11516,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == Ruta del ayudante de SodaMusic Hook (vacía = junto a QmClient)
 
+Soft glow
+== Resplandor suave
+
 Solid
 == Sólido
 
@@ -11590,9 +11587,6 @@ Space
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Protección contra spam: evita el spam al cambiar de equipo, chatear, cambiar de skin, emotes y votos
-
-Spatial effect
-== Efecto espacial
 
 Speaker
 == Altavoz
@@ -11678,14 +11672,14 @@ Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
 == Divide principal/clon en dos equipos libres; pulsa de nuevo para volver al equipo 0
 
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== Borrador del estilo de chat de patrocinador: 0=Normal, 1=Resplandor suave, 2=Brillo de platino
+
 Sponsor code
 == Código de patrocinador
 
 Sponsor code already claimed
 == Este código ya se ha canjeado
-
-Sponsor information
-== Sponsor information
 
 Sponsor reminder
 == Recordatorio de patrocinio
@@ -11917,9 +11911,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == Intercambia la acción activa (disparar y gancho) para la entrada táctil directa y los joysticks virtuales.
-
-Switch
-== Cambiar
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == Posición de la cuenta atrás del interruptor (0 = seguir al Tee, 1 = isla dinámica, 2 = ambos)
@@ -12623,17 +12614,11 @@ Title bob wavelength in pixels
 Title color
 == Color del título
 
-Title color (single color)
-== Color del título (único)
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == Velocidad del barrido de luz del título en 1/100 de fila por segundo (0 = desactivado)
 
 Title opacity
 == Opacidad del título
-
-Title opacity (custom color)
-== Opacidad (color propio)
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == Fase por carácter y píxel en 1/1000 px (0 = valor del estilo, 20 = banda de luz visible)
@@ -12643,6 +12628,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == Vista previa del título
+
+Title server does not support chat styles yet
+== El servidor de títulos aún no admite estilos de chat
 
 Title server unavailable; retry
 == Servidor de títulos no disponible; reintenta
@@ -12950,6 +12938,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == Activa «Message merging» en «Dream Features».
 
+Turning this off only changes your display.
+== Desactivarlo solo cambia lo que ves tú.
+
 Tutorial
 == Tutorial
 
@@ -13147,6 +13138,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == Parámetro desconocido. Valores aceptados: default, gametimer, broadcast, both, none
+
+Unknown sponsor chat style
+== Estilo de chat de patrocinador desconocido
 
 Unknown status
 == Estado desconocido
@@ -13732,12 +13726,6 @@ Wave spacing
 
 Wave speed
 == Velocidad de las ondas
-
-Wave speed (0.01 rad/s)
-== Velocidad de onda (0,01 rad/s)
-
-Wave wavelength
-== Longitud de onda
 
 Weak hook
 == Gancho débil
@@ -14372,15 +14360,6 @@ Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI es un servicio gratuito. El uso excesivo puede causar la suspensión del servicio.
 
-⚠️ LibreTranslate API Key not set
-== ⚠️ Clave API de LibreTranslate no configurada
-
-⚠️ LLM API Key not configured
-== ⚠️ Clave API de LLM no configurada
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ API de Tencent Cloud no configurada
-
 [Assets editor blend mode]
 Color
 == Color
@@ -14467,7 +14446,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== Menú
+== Menu
 
 [Config help]
 %s (default: "%s", max length: %d)

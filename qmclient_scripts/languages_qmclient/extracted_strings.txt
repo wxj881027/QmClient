@@ -530,7 +530,6 @@ Browser
 Brutal
 Bubble opacity
 Build the status text shown above Tees
-Built-in
 Button - Disabled
 Button - Enabled
 Button browser
@@ -602,6 +601,8 @@ Chat fade smooth time (milliseconds)
 Chat font size
 Chat log retention days
 Chat message
+Chat message preview
+Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
 Chat score increases per message and decreases by 1 per tick
 Chat sound volume
@@ -2683,6 +2684,7 @@ Pistol guide line
 Pixel: Layer Shift
 Place title on a separate line above the player name instead of inline
 Plasma gun shots per second
+Platinum highlight
 Play a flip animation while reloading weapons
 Play a slide-in rotation animation when switching weapons
 Play back a demo
@@ -3263,6 +3265,7 @@ Save/Load Flag
 Save/Load Name
 Save/Load Skin
 Saved Profiles
+Saved with your title and shared with other QmClient players.
 Saves file
 Say in chat
 Say in team chat
@@ -3322,6 +3325,7 @@ Seconds to wait before reconnecting (after timeout, 0 to disable).
 SecretId
 SecretKey
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
+See you at the next checkpoint.
 Select a saved .map file (client limit: 64 MiB).
 Select all chat
 Select button by touch
@@ -3473,6 +3477,7 @@ Show combo hint when hooking or hammering player within 2 seconds
 Show compact vote HUD
 Show configurable outlines around map tiles
 Show coordinates above players
+Show copy skin option
 Show country flags in nameplates
 Show cross-server follow option
 Show current Netease lyric in Media Island
@@ -3515,6 +3520,7 @@ Show freeze bars
 Show freeze/deep freeze tile outlines
 Show friend icon in name plates
 Show friend join in large text
+Show friend option
 Show friend tag (♥) on nametag
 Show friends only
 Show frozen Tee HUD
@@ -3591,6 +3597,7 @@ Show main tee title locally
 Show map details
 Show map progress bar (beta)
 Show map progress test point route
+Show mention option
 Show moving tiles in entities
 Show moving tiles in entity layer
 Show name
@@ -3674,13 +3681,17 @@ Show skin name on name plate to find missing skins
 Show skin names in nameplate
 Show skin release date and author
 Show song info in top-left corner
+Show spectate option
 Show spectator cursor
 Show speedometer when changing
+Show sponsor chat effects locally
 Show sponsor QR code
 Show start menu image
 Show stats
 Show status bar
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
+Show swap option
+Show synchronized sponsor chat styles
 Show system media info on HUD
 Show TClient config variables
 Show team
@@ -3719,6 +3730,7 @@ Show Weapon Interactions in Hitbox Mode
 Show weapon trajectory guide
 Show welcome message indicating first client launch
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
+Show whisper option
 Show Workshop Assets
 Show X
 Show Y
@@ -3825,6 +3837,7 @@ Snapshot tick gap
 Social
 SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
+Soft glow
 Solid
 Solid tile outline opacity
 Solo
@@ -3876,6 +3889,7 @@ Sphere
 Spin pop
 Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
 Sponsor code
 Sponsor code already claimed
 Sponsor reminder
@@ -4194,6 +4208,7 @@ Title opacity
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 Title per-character vertical bob amplitude in pixels (0 = off)
 Title preview
+Title server does not support chat styles yet
 Title server unavailable; retry
 Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off
 Title style
@@ -4296,6 +4311,7 @@ Tune layer opacity
 Tune variable to value
 Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
+Turning this off only changes your display.
 Tutorial
 Twinkle strength
 Type
@@ -4362,6 +4378,7 @@ Unknown
 Unknown argument. Check '/rescuemode list'
 Unknown emote. Use /emote to see available emotes.
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
+Unknown sponsor chat style
 Unknown status
 Unknown title style
 Unload the rank ghost

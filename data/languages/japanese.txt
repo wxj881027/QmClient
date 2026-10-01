@@ -512,9 +512,6 @@ Add to category
 Add to queue
 == キューに追加
 
-Add typed command
-== 入力したコマンドを追加
-
 Add war clan:
 == 敵対クランを追加：
 
@@ -703,9 +700,6 @@ Alpha
 
 Also apply to dummy
 == ダミーにも適用する
-
-Alt
-== オルト
 
 Always show
 == 常に表示
@@ -1440,7 +1434,7 @@ Better scoreboard
 == より良いスコアボード
 
 Bind
-== バインド
+== Bind
 
 Bind address for client/server
 == クライアント/サーバーのバインドアドレス
@@ -1600,9 +1594,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == Build the status text shown above Tees
-
-Built-in
-== 内蔵
 
 Button - Disabled
 == ボタン - 無効
@@ -1816,6 +1807,12 @@ Chat log retention days
 
 Chat message
 == チャットメッセージ
+
+Chat message preview
+== チャットのプレビュー
+
+Chat message style
+== チャットのスタイル
 
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == フリーズ進入時に送信するチャットメッセージ（カンマ区切り、空=なし）
@@ -2155,9 +2152,6 @@ Command:
 
 Commands
 == コマンド
-
-Commands cannot contain a line break.
-== コマンドに改行を含めることはできません。
 
 Commands run in the console
 == コンソールで実行されるコマンド
@@ -2597,9 +2591,6 @@ Cross-server following stopped
 Crosshair opacity in free spectate
 == フリースペクテート時のクロスヘアの不透明度
 
-Ctrl
-== コントロール
-
 Ctrl+right-click a tile to select its layer in editor
 == Ctrl+右クリックでタイルを選択し、エディターでそのレイヤーを選択
 
@@ -2797,9 +2788,6 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet クライアントを再起動してアップデートを完了する必要があります！
-
-DDNet contributors
-== DDNet contributors
 
 DDNet contributors and staff credits
 == DDNet のコントリビューターとスタッフ
@@ -3429,7 +3417,7 @@ Dummy Control
 == ダミーを操作
 
 Dummy control
-== ダミー操作
+== Dummy control
 
 Dummy Control: %s
 == ダミーコントロール：%s
@@ -4733,9 +4721,6 @@ FSAA samples
 FSAA samples (may cause lag)
 == FSAA サンプル（ラグの原因になる可能性あり）
 
-FTAPI
-== FTAPI
-
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == 過負荷防止のため FTAPI 自動翻訳は無効になっています。必要な場合は設定で有効にしてください。
 
@@ -5044,9 +5029,6 @@ Grenade
 
 Group name
 == グループ名
-
-Gui
-== GUI
 
 GUI cursor assets
 == GUI カーソルアセット
@@ -5374,9 +5356,6 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == IP 検証用 DNSBL プロバイダーのホスト名
-
-Hover a key to inspect its bind, then click to edit it.
-== キーにカーソルを合わせてバインドを確認し、クリックして編集します。
 
 Hover for tooltip
 == ホバーでツールチップ
@@ -6119,9 +6098,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == 明るさ
 
-LibreTranslate
-== LibreTranslate
-
 LibreTranslate API Key
 == LibreTranslate API キー
 
@@ -6133,9 +6109,6 @@ Light
 
 Light band
 == 光の帯
-
-Light band (0 = style default)
-== 色の位相（0 = スタイル既定値）
 
 Limit information in spectator mode
 == 観戦モードの情報を制限する
@@ -7694,9 +7667,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == バインドホイールセレクターを開く
 
-Open color picker
-== カラーピッカーを開く
-
 Open DDNet Wiki
 == DDNet Wiki を開く
 
@@ -8086,6 +8056,9 @@ Place title on a separate line above the player name instead of inline
 
 Plasma gun shots per second
 == プラズマガンの毎秒発射数
+
+Platinum highlight
+== プラチナの輝き
 
 Play a flip animation while reloading weapons
 == 武器のリロード中に反転アニメーションを再生
@@ -9827,6 +9800,9 @@ Save/Load Skin
 Saved Profiles
 == 保存済みプロファイル
 
+Saved with your title and shared with other QmClient players.
+== 称号と一緒に保存され、他のQmClientプレイヤーに共有されます。
+
 Saves file
 == ファイルを保存
 
@@ -10003,6 +9979,9 @@ SecretKey
 
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == /practicecmdlist で利用可能な練習コマンドの一覧を確認できます。よく使われるのは /telecursor、/lasttp、/rescue です
+
+See you at the next checkpoint.
+== 次のチェックポイントで会おう。
 
 Select a saved .map file (client limit: 64 MiB).
 == 保存済みの .map ファイルを選択してください（クライアントの上限: 64 MiB）。
@@ -10283,9 +10262,6 @@ Settings card background transparency
 Settings card border color
 == 設定カードの枠線色
 
-Settings card collapse state (collapsed stableId; semicolon-separated)
-== 設定カードの折りたたみ状態（折りたたまれた stableId；セミコロン区切り）
-
 Settings card default layout migration version
 == 設定カードデフォルトレイアウト移行バージョン
 
@@ -10310,14 +10286,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == サーバーブラウザーの名前/マップ分割で名前列に割り当てる割合（パーミル）
 
-Shift
-== シフト
-
 Shimmer speed
 == きらめきの速度
-
-Shimmer speed (polished)
-== 光の走査速度（光沢）
 
 Short server names
 == 短いサーバー名
@@ -10466,6 +10436,9 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == プレイヤーの上に座標を表示
 
+Show copy skin option
+== スキンコピー項目を表示
+
 Show country flags in nameplates
 == ネームプレートに国旗を表示
 
@@ -10591,6 +10564,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == フレンドのサーバー参加を大きな文字で表示
+
+Show friend option
+== フレンド項目を表示
 
 Show friend tag (♥) on nametag
 == ネームタグにフレンドタグ（♥）を表示
@@ -10819,6 +10795,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == マップ進行バーのチェックポイントルートを表示
+
+Show mention option
+== メンション項目を表示
 
 Show moving tiles in entities
 == エンティティに移動タイルを表示
@@ -11069,11 +11048,17 @@ Show skin release date and author
 Show song info in top-left corner
 == 左上に曲情報を表示
 
+Show spectate option
+== 観戦項目を表示
+
 Show spectator cursor
 == 観戦者カーソルを表示
 
 Show speedometer when changing
 == 変更時にスピードメーターを表示
+
+Show sponsor chat effects locally
+== 支援者のチャット効果をローカル表示
 
 Show sponsor QR code
 == スポンサー QR コードを表示
@@ -11089,6 +11074,12 @@ Show status bar
 
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == ネームタグに強さ/弱さを表示（0 = オフ、1 = アイコン、2 = アイコン+数字）
+
+Show swap option
+== 入れ替え項目を表示
+
+Show synchronized sponsor chat styles
+== 同期された支援者チャットのスタイルを表示
 
 Show system media info on HUD
 == HUD にシステムメディア情報を表示
@@ -11203,6 +11194,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == DDNet マップをクリア済みか表示します（プレイヤー名を info.ddnet.org/info に送信します）
+
+Show whisper option
+== ささやき項目を表示
 
 Show Workshop Assets
 == ワークショップアセットを表示
@@ -11522,6 +11516,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook ヘルパーのパス（空欄の場合は QmClient と同じディレクトリ）
 
+Soft glow
+== 柔らかな光
+
 Solid
 == 単色
 
@@ -11590,9 +11587,6 @@ Space
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == スパム対策：チーム切り替え、チャット、スキン変更、エモート、投票のスパムを防止
-
-Spatial effect
-== 立体効果
 
 Speaker
 == スピーカー
@@ -11678,14 +11672,14 @@ Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
 == 本体/分身を2つの空きチームに分け、もう一度押すとチーム0に戻る
 
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== 支援者チャットのスタイル下書き：0=通常、1=柔らかな光、2=プラチナの輝き
+
 Sponsor code
 == 認証コード
 
 Sponsor code already claimed
 == このコードは使用済みです
-
-Sponsor information
-== Sponsor information
 
 Sponsor reminder
 == スポンサー通知
@@ -11917,9 +11911,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == ダイレクトタッチ入力とバーチャルジョイスティックのアクティブアクション（発射とフック）を切り替えます。
-
-Switch
-== 切り替え
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == スイッチカウントダウンの位置（0 = Tee に追従、1 = ダイナミックアイランド、2 = 両方）
@@ -12623,17 +12614,11 @@ Title bob wavelength in pixels
 Title color
 == タイトル色
 
-Title color (single color)
-== タイトル色（単色）
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == タイトルの光の走査速度（毎秒 1/100 行、0 = 無効）
 
 Title opacity
 == 称号の不透明度
-
-Title opacity (custom color)
-== 不透明度（カスタム色）
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == タイトルの文字ごとの位相（1 ピクセルあたり 1/1000 px、0 = スタイル既定値、20 = 光の帯が見える）
@@ -12643,6 +12628,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == タイトルの仕上がりプレビュー
+
+Title server does not support chat styles yet
+== 称号サーバーはまだチャットスタイルに対応していません
 
 Title server unavailable; retry
 == 称号サーバーに接続できません。再試行してください
@@ -12950,6 +12938,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == 「ドリーム機能」で「Message merging」をオンにします。
 
+Turning this off only changes your display.
+== オフにしても自分の画面の表示だけが変わります。
+
 Tutorial
 == チュートリアル
 
@@ -13147,6 +13138,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == 不明なパラメーターです。使用可能な値: default、gametimer、broadcast、both、none
+
+Unknown sponsor chat style
+== 不明な支援者チャットのスタイル
 
 Unknown status
 == 不明なステータス
@@ -13491,7 +13485,7 @@ View tele found (at offset) with given number
 == 指定された番号のテレポート（オフセット位置）を表示
 
 View the developers, contributors, and project links
-== View the developers, contributors, and project links
+== 開発者・コントリビューター・プロジェクトリンクを見る
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
@@ -13732,12 +13726,6 @@ Wave spacing
 
 Wave speed
 == 波の速度
-
-Wave speed (0.01 rad/s)
-== 波の速度（0.01 rad/秒）
-
-Wave wavelength
-== 波の波長
 
 Weak hook
 == 弱いフック
@@ -14372,15 +14360,6 @@ Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI は無料サービスです。過度に使用するとサービスが停止される可能性があります。
 
-⚠️ LibreTranslate API Key not set
-== ⚠️ LibreTranslate API キーが設定されていません
-
-⚠️ LLM API Key not configured
-== ⚠️ LLM API キーが設定されていません
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ テンセントクラウド API が設定されていません
-
 [Assets editor blend mode]
 Color
 == カラー
@@ -14467,7 +14446,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== メニュー
+== Menu
 
 [Config help]
 %s (default: "%s", max length: %d)

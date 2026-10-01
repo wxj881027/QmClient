@@ -43,30 +43,40 @@ void CPieMenu::ToggleTargetFollow()
 {
 	if(!HasTargetPlayer())
 		return;
-	if(IsFollowingTarget())
+	ToggleFollowPlayer(m_TargetClientId);
+}
+
+void CPieMenu::ToggleFollowPlayer(int ClientId)
+{
+	if(Client()->State() != IClient::STATE_ONLINE || ClientId < 0 || ClientId >= MAX_CLIENTS || GameClient()->IsLocalClientId(ClientId))
+		return;
+	const auto &Player = GameClient()->m_aClients[ClientId];
+	if(!Player.m_Active)
+		return;
+	if(IsFollowingPlayer(Player.m_aName, Player.m_aClan))
 	{
 		CancelFollow();
 		return;
 	}
 
 	IFriends *pFriends = GameClient()->Friends();
-	if(!pFriends->IsFriend(m_TargetName.c_str(), m_TargetClan.c_str(), true))
+	if(!pFriends->IsFriend(Player.m_aName, Player.m_aClan, true))
 	{
-		pFriends->AddFriend(m_TargetName.c_str(), m_TargetClan.c_str(), pFriends->DefaultCategory());
-		if(!pFriends->IsFriend(m_TargetName.c_str(), m_TargetClan.c_str(), true))
+		pFriends->AddFriend(Player.m_aName, Player.m_aClan, pFriends->DefaultCategory());
+		if(!pFriends->IsFriend(Player.m_aName, Player.m_aClan, true))
 		{
 			GameClient()->Echo(Localize("Could not add the player as a friend"), true);
 			return;
 		}
 		Client()->ServerBrowserUpdate();
 	}
-	str_copy(g_Config.m_QmPieFollowName, m_TargetName.c_str());
-	str_copy(g_Config.m_QmPieFollowClan, m_TargetClan.c_str());
+	str_copy(g_Config.m_QmPieFollowName, Player.m_aName);
+	str_copy(g_Config.m_QmPieFollowClan, Player.m_aClan);
 	qm_pie_menu::StartFollow(m_FollowState, g_Config.m_QmPieFollowName, g_Config.m_QmPieFollowClan);
 	m_NextFollowScan = 0.0;
 	m_NextFollowRefresh = 0.0;
 	char aMessage[192];
-	str_format(aMessage, sizeof(aMessage), Localize("Following %s across servers"), m_TargetName.c_str());
+	str_format(aMessage, sizeof(aMessage), Localize("Following %s across servers"), Player.m_aName);
 	GameClient()->Echo(aMessage, true);
 }
 

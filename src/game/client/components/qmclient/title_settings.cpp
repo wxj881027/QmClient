@@ -12,9 +12,11 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/message_gradient.h>
 #include <game/client/components/qmclient/qm_title_color.h>
 #include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/components/qmclient/qm_title_style.h>
+#include <game/client/components/qmclient/sponsor_chat_render.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
@@ -45,11 +47,13 @@ struct SQmTitleStylePreviewContext
 // 样式预览的文本容器按风格序号缓存；弹层每帧重建可见条目，这里逐项复用自己的容器。
 static std::array<STextContainerIndex, 64> s_aTitleStylePreviewContainers;
 static STextContainerIndex s_TitleFinishedPreviewContainer;
+static STextContainerIndex s_SponsorChatPreviewContainer;
 
 void CMenus::ClearQmTitlePreviewContainers()
 {
 	// 清理全部条目，包括已折叠或滚出屏幕的预览；删除后下次绘制会重新创建。
 	TextRender()->DeleteTextContainer(s_TitleFinishedPreviewContainer);
+	TextRender()->DeleteTextContainer(s_SponsorChatPreviewContainer);
 	for(auto &Container : s_aTitleStylePreviewContainers)
 		TextRender()->DeleteTextContainer(Container);
 }
@@ -244,6 +248,35 @@ static void RenderQmTitleFinishedPreview(ITextRender *pTextRender, CRenderTools 
 		pTextRender->RenderTextContainer(PreviewContainer, Color, OutlineColor, PreviewX, PreviewY);
 }
 
+static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextRender, const CUIRect &Rect, float FontSize, EQmSponsorChatStyle Style)
+{
+	if(Rect.w <= 1.0f || Rect.h <= 1.0f)
+		return;
+	const char *pText = Localize("See you at the next checkpoint.");
+	const ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor));
+	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
+	pTextRender->TextColor(Color);
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(Rect.x, Rect.y + (Rect.h - FontSize) / 2.0f));
+	Cursor.m_FontSize = FontSize;
+	Cursor.m_LineWidth = Rect.w;
+	Cursor.m_MaxLines = 1;
+	Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
+	if(Style == EQmSponsorChatStyle::PLATINUM)
+		QmSponsorChatAddPlatinumSplits(Cursor, pText, Color.a);
+	else
+		CMessageGradient::AddTextSplits(Cursor, pText, g_Config.m_ClMessageGradient, Color);
+	if(s_SponsorChatPreviewContainer.Valid())
+		pTextRender->RecreateTextContainerSoft(s_SponsorChatPreviewContainer, &Cursor, pText);
+	else
+		pTextRender->CreateOrAppendTextContainer(s_SponsorChatPreviewContainer, &Cursor, pText);
+	pTextRender->TextColor(PreviousColor);
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const vec2 PixelSize((ScreenX1 - ScreenX0) / std::max(1, pGraphics->ScreenWidth()), (ScreenY1 - ScreenY0) / std::max(1, pGraphics->ScreenHeight()));
+	QmRenderSponsorChatText(pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, PixelSize, 0.0f, 0.0f);
+}
+
 bool CMenus::QmTitleStyleExpanded() const
 {
 	return s_TitleStyleExpanded;
@@ -258,13 +291,13 @@ void CMenus::AppendQmTitleCard(std::vector<SSettingsCardDefinition> &vCards, con
 	const float TipSize = Metrics.m_SmallSize;
 	const bool TitleStyleExpanded = s_TitleStyleExpanded;
 	const bool TitleAdvanced = g_Config.m_QmTitleAdvanced != 0;
-	const float TitlePreviewHeight = LineHeight * 4.0f + LineSpacing * 2.0f;
+	const float TitlePreviewHeight = LineHeight * 6.0f + LineSpacing * 3.0f;
 
 	SSettingsCardDefinition TitleCard;
 	TitleCard.m_Spec = {"deck:qmclient-contributors-title", Localize("Sponsor title"), Localize("Redeem your code and customize your title")};
 	TitleCard.m_Measure = [LineHeight, LineSpacing, TitleStyleExpanded, TitleAdvanced, TitlePreviewHeight](float) {
 		// 长说明移入悬浮提示，基础行包含提示模式与高级模式开关。
-		float Height = ResolveSettingsRowsHeight(TitleAdvanced ? 23 : 13, LineHeight, LineSpacing);
+		float Height = ResolveSettingsRowsHeight(TitleAdvanced ? 25 : 15, LineHeight, LineSpacing);
 		Height += LineSpacing + TitlePreviewHeight;
 		// 展开风格列表时，卡片要跟着长高，列表才不会被卡片或按钮挤住。
 		if(TitleStyleExpanded)
@@ -291,7 +324,10 @@ void CMenus::AppendQmTitleCard(std::vector<SSettingsCardDefinition> &vCards, con
 			s_BindName = Auth.TitleBoundName()[0] != '\0';
 			s_Revision = Auth.TitleRevision();
 			if(Auth.TitleAuthenticated())
+			{
 				s_Code.Set("");
+				g_Config.m_QmSponsorChatStyle = static_cast<int>(Auth.TitleProfileChatStyle());
+			}
 		}
 		s_Code.SetHidden(true);
 		s_Code.SetEmptyText(Localize("Sponsor code"));
@@ -346,6 +382,30 @@ void CMenus::AppendQmTitleCard(std::vector<SSettingsCardDefinition> &vCards, con
 		Row = NextRow();
 		if(DoSettingsButton_CheckBox(SETTINGS_CONTRIBUTORS, -1, -1, &g_Config.m_QmShowDummyTitle, "qm-title-show-dummy", Localize("Show dummy title locally"), g_Config.m_QmShowDummyTitle, &Row) && !ReadOnly)
 			g_Config.m_QmShowDummyTitle ^= 1;
+		Row = NextRow();
+		CUIRect ChatStyleLabel, ChatStyleControl;
+		Row.VSplitLeft(Row.w * 0.5f, &ChatStyleLabel, &ChatStyleControl);
+		DoSettingsMenuLabel(SETTINGS_CONTRIBUTORS, -1, -1, "qm-sponsor-chat-style", &ChatStyleLabel, Localize("Chat message style"), BodySize, TEXTALIGN_ML);
+		static CUi::SDropDownState s_ChatStyleState;
+		static CScrollRegion s_ChatStyleScroll;
+		static std::array<const char *, 3> s_apChatStyleNames;
+		s_apChatStyleNames = {Localize("Normal"), Localize("Soft glow"), Localize("Platinum highlight")};
+		s_ChatStyleState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatStyleScroll;
+		CUi::SDropDownProperties ChatStyleProperties;
+		ChatStyleProperties.m_Enabled = Auth.TitleAuthenticated() && !Auth.TitleBusy() && !GameClient()->m_GameConsole.IsActive();
+		ChatStyleProperties.m_FontSize = BodySize;
+		if(ReadOnly)
+			Ui()->BeginRenderOnly();
+		const int ChatStyle = DoSettingsDropDown(&ChatStyleControl, g_Config.m_QmSponsorChatStyle, s_apChatStyleNames.data(), s_apChatStyleNames.size(), s_ChatStyleState, ChatStyleProperties);
+		if(ReadOnly)
+			Ui()->EndRenderOnly();
+		if(!ReadOnly && ChatStyleProperties.m_Enabled)
+			g_Config.m_QmSponsorChatStyle = ChatStyle;
+		Hint(&g_Config.m_QmSponsorChatStyle, Row, Localize("Saved with your title and shared with other QmClient players."));
+		Row = NextRow();
+		if(DoSettingsButton_CheckBox(SETTINGS_CONTRIBUTORS, -1, -1, &g_Config.m_QmSponsorChatEffects, "qm-sponsor-chat-effects", Localize("Show sponsor chat effects locally"), g_Config.m_QmSponsorChatEffects, &Row) && !ReadOnly)
+			g_Config.m_QmSponsorChatEffects ^= 1;
+		Hint(&g_Config.m_QmSponsorChatEffects, Row, Localize("Turning this off only changes your display."));
 		// 常用风格与波浪幅度保持直达，其余外观参数统一收进高级模式。
 		{
 			// 风格选择：条目里渲染「头衔文本 + 该风格」的实时效果，整列收进下拉，
@@ -546,24 +606,31 @@ void CMenus::AppendQmTitleCard(std::vector<SSettingsCardDefinition> &vCards, con
 		}
 
 		// 成品预览始终可见，修改草稿不需要提交头衔资料。
-		CUIRect Preview, PreviewLabel, PreviewArea;
+		CUIRect Preview, PreviewLabel, PreviewArea, TitlePreviewArea, ChatPreviewArea;
 		Content.HSplitTop(TitlePreviewHeight, &Preview, &Content);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 		DrawRoundedSurface(Ui(), Preview, ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.14f), ui_token::radius::BASE);
 		Preview.Margin(LineSpacing, &PreviewArea);
 		PreviewArea.HSplitTop(TipSize, &PreviewLabel, &PreviewArea);
 		Ui()->DoLabel(&PreviewLabel, Localize("Title preview"), TipSize, TEXTALIGN_ML);
+		PreviewArea.HSplitTop(LineHeight * 2.0f, &TitlePreviewArea, &PreviewArea);
+		PreviewArea.HSplitTop(LineSpacing, nullptr, &PreviewArea);
+		PreviewArea.HSplitTop(TipSize, &PreviewLabel, &ChatPreviewArea);
+		Ui()->DoLabel(&PreviewLabel, Localize("Chat message preview"), TipSize, TEXTALIGN_ML);
 		const char *pPreviewStyleId = g_Config.m_QmTitleStyleEnabled ? g_Config.m_QmTitleStyle : Auth.PlayerTitleStyle(GameClient()->m_Snap.m_LocalClientId);
 		// 未收到在线风格时使用账号风格；已选择的草稿始终优先，避免预览仍显示旧风格。
 		if(pPreviewStyleId[0] == '\0')
 			pPreviewStyleId = Auth.TitleProfileStyle();
-		Ui()->ClipEnable(&PreviewArea);
-		RenderQmTitleFinishedPreview(TextRender(), GameClient()->RenderTools(), PreviewArea, s_Title.GetString(), pPreviewStyleId, GameClient()->IsQmDeveloperRainbow(GameClient()->m_Snap.m_LocalClientId), BodySize * 1.4f, (float)Auth.TitleAnimationTime());
+		Ui()->ClipEnable(&TitlePreviewArea);
+		RenderQmTitleFinishedPreview(TextRender(), GameClient()->RenderTools(), TitlePreviewArea, s_Title.GetString(), pPreviewStyleId, GameClient()->IsQmDeveloperRainbow(GameClient()->m_Snap.m_LocalClientId), BodySize * 1.4f, (float)Auth.TitleAnimationTime());
+		Ui()->ClipDisable();
+		Ui()->ClipEnable(&ChatPreviewArea);
+		RenderQmSponsorChatPreview(Graphics(), TextRender(), ChatPreviewArea, BodySize, static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle));
 		Ui()->ClipDisable();
 		Row = NextRow();
 		Row.VSplitMid(&Row, &Button, LineSpacing);
 		if(DoButton_Menu(&s_SaveButton, Localize("Save"), 0, &Row) && Enabled && Auth.TitleAuthenticated() && (!s_BindName || s_Name.GetString()[0]))
-			Auth.SaveTitleProfile(s_Title.GetString(), s_BindName ? s_Name.GetString() : "", g_Config.m_QmTitleStyleEnabled ? g_Config.m_QmTitleStyle : "");
+			Auth.SaveTitleProfile(s_Title.GetString(), s_BindName ? s_Name.GetString() : "", g_Config.m_QmTitleStyleEnabled ? g_Config.m_QmTitleStyle : "", static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle));
 		if(DoButton_Menu(&s_RefreshButton, Localize("Refresh"), 0, &Button) && Enabled)
 			Auth.RefreshTitleProfile();
 	};

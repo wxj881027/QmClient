@@ -512,9 +512,6 @@ Add to category
 Add to queue
 == 加入隊列
 
-Add typed command
-== 新增輸入的命令
-
 Add war clan:
 == 添加敵對戰隊：
 
@@ -703,9 +700,6 @@ Alpha
 
 Also apply to dummy
 == 同時應用到分身
-
-Alt
-== 替代
 
 Always show
 == 始終顯示
@@ -1440,7 +1434,7 @@ Better scoreboard
 == 更好的計分板
 
 Bind
-== 綁定
+== Bind
 
 Bind address for client/server
 == 綁定客戶端/伺服器的地址
@@ -1600,9 +1594,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == Build the status text shown above Tees
-
-Built-in
-== 內置
 
 Button - Disabled
 == 按鈕 - 未啟用
@@ -1816,6 +1807,12 @@ Chat log retention days
 
 Chat message
 == 聊天消息
+
+Chat message preview
+== 發言預覽
+
+Chat message style
+== 發言樣式
 
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == 進入凍結狀態時發送的聊天消息，以逗號分隔（空=無消息）
@@ -2155,9 +2152,6 @@ Command:
 
 Commands
 == 指令
-
-Commands cannot contain a line break.
-== 命令不能包含換行符。
 
 Commands run in the console
 == 在控制台中執行的命令
@@ -2597,9 +2591,6 @@ Cross-server following stopped
 Crosshair opacity in free spectate
 == 自由視角旁觀時準星透明度
 
-Ctrl
-== 控制
-
 Ctrl+right-click a tile to select its layer in editor
 == Ctrl+右鍵單擊圖塊以在編輯器中選擇其圖層
 
@@ -2797,9 +2788,6 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet 客戶端需要重新啟動才能完成更新！
-
-DDNet contributors
-== DDNet contributors
 
 DDNet contributors and staff credits
 == DDNet 貢獻者與團隊名單
@@ -3429,7 +3417,7 @@ Dummy Control
 == 分身控制
 
 Dummy control
-== 分身控制
+== Dummy control
 
 Dummy Control: %s
 == 分身控制：%s
@@ -4733,9 +4721,6 @@ FSAA samples
 FSAA samples (may cause lag)
 == FSAA 樣本（可能會導致延遲）
 
-FTAPI
-== FTAPI
-
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == FTAPI 自動翻譯已禁用以防止過載。如需啟用請在設置中配置。
 
@@ -5044,9 +5029,6 @@ Grenade
 
 Group name
 == 分組名稱
-
-Gui
-== GUI
 
 GUI cursor assets
 == GUI 光標資源
@@ -5374,9 +5356,6 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == 用於 IP 驗證的 DNSBL 提供商的主機名
-
-Hover a key to inspect its bind, then click to edit it.
-== 將滑鼠停留在按鍵上查看綁定，然後點擊編輯。
 
 Hover for tooltip
 == 懸停查看提示
@@ -6119,9 +6098,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == 亮度
 
-LibreTranslate
-== Libre 翻譯
-
 LibreTranslate API Key
 == LibreTranslate API 密鑰
 
@@ -6133,9 +6109,6 @@ Light
 
 Light band
 == 色帶寬度
-
-Light band (0 = style default)
-== 色帶相位（0 = 風格預設）
 
 Limit information in spectator mode
 == 限制觀戰模式中的信息
@@ -7694,9 +7667,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == 打開綁定輪盤選擇器
 
-Open color picker
-== 打開選色
-
 Open DDNet Wiki
 == 開啟 DDNet Wiki
 
@@ -8086,6 +8056,9 @@ Place title on a separate line above the player name instead of inline
 
 Plasma gun shots per second
 == 等離子槍每秒發射多少發子彈
+
+Platinum highlight
+== 鉑金高光
 
 Play a flip animation while reloading weapons
 == 武器裝填時播放翻轉動畫
@@ -9827,6 +9800,9 @@ Save/Load Skin
 Saved Profiles
 == 已儲存的設定檔
 
+Saved with your title and shared with other QmClient players.
+== 隨頭銜一起儲存，並同步給其他 QmClient 玩家。
+
 Saves file
 == 存檔密碼文件
 
@@ -10003,6 +9979,9 @@ SecretKey
 
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == 輸入 /practicecmdlist 可以查看所有可用的練習指令。最常用的是 /telecursor、/lasttp 和 /rescue
+
+See you at the next checkpoint.
+== 下個檢查點見。
 
 Select a saved .map file (client limit: 64 MiB).
 == 選擇已儲存的 .map 檔案（用戶端上限：64 MiB）。
@@ -10283,9 +10262,6 @@ Settings card background transparency
 Settings card border color
 == 設定卡片邊框顏色
 
-Settings card collapse state (collapsed stableId; semicolon-separated)
-== 設定卡片折疊狀態（折疊的 stableId；分號分隔）
-
 Settings card default layout migration version
 == 設定卡片預設佈局遷移版本
 
@@ -10310,14 +10286,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == 伺服器瀏覽器名稱/地圖分欄中分配給名稱列的千分比
 
-Shift
-== 上檔
-
 Shimmer speed
 == 流光速度
-
-Shimmer speed (polished)
-== 掠光速度（拋光檔）
 
 Short server names
 == 短伺服器名稱
@@ -10466,6 +10436,9 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == 在玩家頭頂顯示座標
 
+Show copy skin option
+== 顯示複製外觀選項
+
 Show country flags in nameplates
 == 在玩家暱稱旁顯示國旗
 
@@ -10591,6 +10564,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == 大字顯示好友進服
+
+Show friend option
+== 顯示好友選項
 
 Show friend tag (♥) on nametag
 == 在名牌上顯示好友標記 (♥ )
@@ -10819,6 +10795,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == 顯示地圖進度調試點路線
+
+Show mention option
+== 顯示提及選項
 
 Show moving tiles in entities
 == 在實體層顯示移動方塊
@@ -11069,11 +11048,17 @@ Show skin release date and author
 Show song info in top-left corner
 == 在左上角顯示歌曲信息
 
+Show spectate option
+== 顯示旁觀選項
+
 Show spectator cursor
 == 顯示旁觀者光標
 
 Show speedometer when changing
 == 顯示變化時的速度計
+
+Show sponsor chat effects locally
+== 本機顯示贊助者發言特效
 
 Show sponsor QR code
 == 顯示贊助碼
@@ -11089,6 +11074,12 @@ Show status bar
 
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == 在銘牌中顯示強/弱（0 - 關閉、1 - 圖標、2 - 圖標 + 數字）
+
+Show swap option
+== 顯示交換選項
+
+Show synchronized sponsor chat styles
+== 顯示同步的贊助者發言樣式
 
 Show system media info on HUD
 == 在 HUD 上顯示系統媒體信息
@@ -11203,6 +11194,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == 顯示你是否已完成 DDNet 地圖（會將你的玩家名稱傳送至 info.ddnet.org/info）
+
+Show whisper option
+== 顯示私聊選項
 
 Show Workshop Assets
 == 顯示商店資源
@@ -11522,6 +11516,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == 汽水音樂 Hook 輔助程式路徑（留空則使用 QmClient 所在目錄中的程式）
 
+Soft glow
+== 柔光
+
 Solid
 == 純色
 
@@ -11590,9 +11587,6 @@ Space
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 刷屏保護：防止切換隊伍、聊天、換皮膚、表情和投票的刷屏
-
-Spatial effect
-== 空間效果
 
 Speaker
 == 揚聲器
@@ -11678,14 +11672,14 @@ Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
 == 本體/分身分別進入兩個空閒隊伍；再按一次回到隊伍 0
 
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== 贊助者發言樣式草稿：0=普通，1=柔光，2=鉑金高光
+
 Sponsor code
 == 認證碼
 
 Sponsor code already claimed
 == 此認證碼已被領取
-
-Sponsor information
-== 贊助資訊
 
 Sponsor reminder
 == 贊助提醒
@@ -11917,9 +11911,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == 交換直接觸控輸入和虛擬搖桿的當前動作（開火和鉤索）。
-
-Switch
-== 切換
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == 開關倒數位置（0 = 跟隨 Tee，1 = 靈動島，2 = 兩者）
@@ -12623,17 +12614,11 @@ Title bob wavelength in pixels
 Title color
 == 頭銜顏色
 
-Title color (single color)
-== 頭銜顏色（單色）
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == 頭銜掠光速度（每秒 1/100 行，0 = 關閉）
 
 Title opacity
 == 頭銜不透明度
-
-Title opacity (custom color)
-== 透明度（自訂配色）
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == 頭銜逐字元相位（每像素，1/1000 像素；0 = 用風格預設值，20 = 可見光帶）
@@ -12643,6 +12628,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == 頭銜成品預覽
+
+Title server does not support chat styles yet
+== 頭銜伺服器尚不支援發言樣式
 
 Title server unavailable; retry
 == 頭銜服務暫不可用，請重試
@@ -12950,6 +12938,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == 在「夢的小功能」裡開啟「訊息合併」。
 
+Turning this off only changes your display.
+== 關閉後僅影響本機顯示。
+
 Tutorial
 == 教學
 
@@ -13147,6 +13138,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == 未知參數。可用值：default、gametimer、broadcast、both、none
+
+Unknown sponsor chat style
+== 未知的贊助者發言樣式
 
 Unknown status
 == 未知狀態
@@ -13491,7 +13485,7 @@ View tele found (at offset) with given number
 == 查看給定編號找到的傳送點（在偏移處）
 
 View the developers, contributors, and project links
-== View the developers, contributors, and project links
+== 查看開發者、貢獻者與專案連結
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
@@ -13732,12 +13726,6 @@ Wave spacing
 
 Wave speed
 == 波浪速度
-
-Wave speed (0.01 rad/s)
-== 波浪速度（0.01 弧度/秒）
-
-Wave wavelength
-== 波浪波長
 
 Weak hook
 == 弱鉤
@@ -14372,15 +14360,6 @@ Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI 是免費服務，過度使用可能導致服務暫停
 
-⚠️ LibreTranslate API Key not set
-== ⚠️ Libre 翻譯 API 密鑰未設置
-
-⚠️ LLM API Key not configured
-== ⚠️ LLM API 密鑰未配置
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ 騰訊雲 API 密鑰未配置
-
 [Assets editor blend mode]
 Color
 == 顏色
@@ -14467,7 +14446,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== 選單
+== Menu
 
 [Config help]
 %s (default: "%s", max length: %d)

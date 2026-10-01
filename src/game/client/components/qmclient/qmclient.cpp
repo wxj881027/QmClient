@@ -1434,11 +1434,16 @@ void CQmClient::ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message)
 		const char *pTitle = TitleJsonString(pPayload, "title");
 		const char *pName = TitleJsonString(pPayload, "bound_name");
 		const char *pStyle = TitleJsonString(pPayload, "style");
+		const EQmSponsorChatStyle ChatStyle = QmSponsorChatStyleFromId(TitleJsonString(pPayload, "chat_style"));
+		const bool ChatStyleSupported = JsonObjectField(pPayload, "chat_style")->type == json_string;
 		const json_value *pStatus = JsonObjectField(pPayload, "status");
 		const bool Authenticated = pStatus->type == json_integer && pStatus->u.integer == 200 && IsValidQmTitle(pTitle);
 		const bool Changed = m_TitleAuthenticated != Authenticated ||
-				     str_comp(m_aTitleText, pTitle) || str_comp(m_aTitleBoundName, pName) || str_comp(m_aTitleProfileStyle, pStyle);
+				     str_comp(m_aTitleText, pTitle) || str_comp(m_aTitleBoundName, pName) || str_comp(m_aTitleProfileStyle, pStyle) ||
+				     m_TitleProfileChatStyle != ChatStyle || m_TitleChatStyleSupported != ChatStyleSupported;
 		m_TitleAuthenticated = Authenticated;
+		m_TitleProfileChatStyle = Authenticated ? ChatStyle : EQmSponsorChatStyle::NONE;
+		m_TitleChatStyleSupported = Authenticated && ChatStyleSupported;
 		str_copy(m_aTitleText, pTitle);
 		str_copy(m_aTitleBoundName, pName);
 		str_copy(m_aTitleProfileStyle, pStyle);
@@ -1566,6 +1571,7 @@ void CQmClient::ApplyQmRealtimeTitles(const SQmRealtimeMessage &Message)
 		str_copy(m_aaTitleNames[Presence.m_PlayerId], Presence.m_PlayerName.c_str());
 		str_format(m_aaPlayerTitles[Presence.m_PlayerId], sizeof(m_aaPlayerTitles[Presence.m_PlayerId]), "[%s]", Presence.m_Title.c_str());
 		str_copy(m_aaPlayerTitleStyles[Presence.m_PlayerId], Presence.m_Style.c_str());
+		m_aPlayerChatStyles[Presence.m_PlayerId] = Presence.m_ChatStyle;
 		m_aTitleExpires[Presence.m_PlayerId] = time_get() + Presence.m_RemainingSeconds * time_freq();
 	}
 	const double Measured = static_cast<double>(ServerTime) - Client()->GlobalTime();
@@ -3080,7 +3086,7 @@ void CQmClient::RefreshTitleProfile()
 	m_pTitleStatus = Localizable("Contacting title server");
 }
 
-void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle)
+void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle)
 {
 	if(TitleBusy() || !m_TitleAuthenticated)
 		return;
@@ -3095,6 +3101,11 @@ void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, con
 		m_pTitleStatus = Localizable("Unknown title style");
 		return;
 	}
+	if(ChatStyle != EQmSponsorChatStyle::NONE && !m_TitleChatStyleSupported)
+	{
+		m_pTitleStatus = Localizable("Title server does not support chat styles yet");
+		return;
+	}
 	CJsonStringWriter Writer;
 	Writer.BeginObject();
 	Writer.WriteAttribute("title");
@@ -3103,6 +3114,8 @@ void CQmClient::SaveTitleProfile(const char *pTitle, const char *pBoundName, con
 	Writer.WriteStrValue(pBoundName);
 	Writer.WriteAttribute("style");
 	Writer.WriteStrValue(pStyleId);
+	Writer.WriteAttribute("chat_style");
+	Writer.WriteStrValue(QmSponsorChatStyleId(ChatStyle));
 	Writer.EndObject();
 	StartTitleRequest("profile", Writer.GetOutputString().c_str(), m_pTitleOperation);
 	m_pTitleStatus = Localizable("Contacting title server");
@@ -3138,6 +3151,15 @@ const char *CQmClient::PlayerTitleStyle(int ClientId) const
 	return m_aaPlayerTitleStyles[ClientId];
 }
 
+EQmSponsorChatStyle CQmClient::PlayerChatStyle(int ClientId) const
+{
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))
+		return EQmSponsorChatStyle::NONE;
+	if(m_aTitleExpires[ClientId] <= time_get() || str_comp(m_aaTitleNames[ClientId], GameClient()->m_aClients[ClientId].m_aName) != 0)
+		return EQmSponsorChatStyle::NONE;
+	return m_aPlayerChatStyles[ClientId];
+}
+
 double CQmClient::TitleAnimationTime() const
 {
 	return QmTitleAnimationTime(Client()->GlobalTime(), m_TitleServerTimeOffset, m_TitleServerTimeOffsetValid);
@@ -3164,6 +3186,8 @@ void CQmClient::UpdateTitleAuthentication()
 			str_copy(m_aTitleText, pTitle);
 			str_copy(m_aTitleBoundName, pName);
 			str_copy(m_aTitleProfileStyle, TitleJsonString(pRoot, "style"));
+			m_TitleProfileChatStyle = QmSponsorChatStyleFromId(TitleJsonString(pRoot, "chat_style"));
+			m_TitleChatStyleSupported = JsonObjectField(pRoot, "chat_style")->type == json_string;
 			++m_TitleRevision;
 			m_pTitleStatus = Localizable("Permanent sponsor verified");
 			ResetTitlePresences();
@@ -3180,6 +3204,8 @@ void CQmClient::UpdateTitleAuthentication()
 				m_pTitleStatus = Localizable("Title too long or contains unsupported characters");
 			else if(str_comp(pError, "invalid_name") == 0)
 				m_pTitleStatus = Localizable("Invalid bound name");
+			else if(str_comp(pError, "invalid_chat_style") == 0)
+				m_pTitleStatus = Localizable("Unknown sponsor chat style");
 			else if(m_pTitleOperation->StatusCode() == 401)
 			{
 				m_TitleAuthenticated = false;

@@ -83,35 +83,33 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		const char *m_pIcon;
 		unsigned int *m_pColorValue;
 		ColorRGBA m_DefaultColor;
-		int *m_pEnabled = nullptr;
-		const char *m_pTextId = nullptr;
+		int *m_pEnabled;
+		const char *m_pTextId;
+		bool m_Alpha = false;
 	};
 	const std::array<SPieMenuColorEntry, 10> aColorEntries = {{
-		{Localize("Friend"), FontIcons::FONT_ICON_HEART, (unsigned int *)&g_Config.m_QmPieMenuColorFriend, ColorRGBA(0.9f, 0.3f, 0.4f)},
-		{Localize("Whisper"), FontIcons::FONT_ICON_COMMENT, (unsigned int *)&g_Config.m_QmPieMenuColorWhisper, ColorRGBA(0.5f, 0.35f, 0.7f)},
-		{Localize("Mention"), FontIcons::FONT_ICON_CHEVRON_RIGHT, (unsigned int *)&g_Config.m_QmPieMenuColorMention, ColorRGBA(0.85f, 0.5f, 0.2f)},
-		{Localize("Copy skin"), FontIcons::FONT_ICON_COPY, (unsigned int *)&g_Config.m_QmPieMenuColorCopySkin, ColorRGBA(0.25f, 0.55f, 0.8f)},
-		{Localize("Swap"), FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, (unsigned int *)&g_Config.m_QmPieMenuColorSwap, ColorRGBA(0.8f, 0.3f, 0.3f)},
-		{Localize("Spectate"), FontIcons::FONT_ICON_EYE, (unsigned int *)&g_Config.m_QmPieMenuColorSpectate, ColorRGBA(0.45f, 0.55f, 0.6f)},
-		{Localize("Invite to team"), FontIcons::FONT_ICON_USERS, (unsigned int *)&g_Config.m_QmPieMenuColorInviteTeam, ColorRGBA(0.9f, 0.48f, 0.3f, 0.75f), &g_Config.m_QmPieMenuInviteTeamEnabled, "qmclient-pie-invite-team"},
-		{Localize("Join team"), FontIcons::FONT_ICON_RIGHT_TO_BRACKET, (unsigned int *)&g_Config.m_QmPieMenuColorJoinTeam, ColorRGBA(0.3f, 0.61f, 0.9f, 0.75f), &g_Config.m_QmPieMenuJoinTeamEnabled, "qmclient-pie-join-team"},
-		{Localize("Follow server"), FontIcons::FONT_ICON_NETWORK_WIRED, (unsigned int *)&g_Config.m_QmPieMenuColorFollow, ColorRGBA(0.3f, 0.75f, 0.5f, 0.75f), &g_Config.m_QmPieMenuFollowEnabled, "qmclient-pie-follow"},
-		{Localize("View points"), FontIcons::FONT_ICON_MAGNIFYING_GLASS, (unsigned int *)&g_Config.m_QmPieMenuColorScore, ColorRGBA(0.69f, 0.42f, 0.9f, 0.75f), &g_Config.m_QmPieMenuScoreEnabled, "qmclient-pie-points"},
+		{Localize("Friend"), FontIcons::FONT_ICON_HEART, (unsigned int *)&g_Config.m_QmPieMenuColorFriend, ColorRGBA(0.9f, 0.3f, 0.4f), &g_Config.m_QmPieMenuFriendEnabled, "qmclient-pie-friend"},
+		{Localize("Whisper"), FontIcons::FONT_ICON_COMMENT, (unsigned int *)&g_Config.m_QmPieMenuColorWhisper, ColorRGBA(0.5f, 0.35f, 0.7f), &g_Config.m_QmPieMenuWhisperEnabled, "qmclient-pie-whisper"},
+		{Localize("Mention"), FontIcons::FONT_ICON_CHEVRON_RIGHT, (unsigned int *)&g_Config.m_QmPieMenuColorMention, ColorRGBA(0.85f, 0.5f, 0.2f), &g_Config.m_QmPieMenuMentionEnabled, "qmclient-pie-mention"},
+		{Localize("Copy skin"), FontIcons::FONT_ICON_COPY, (unsigned int *)&g_Config.m_QmPieMenuColorCopySkin, ColorRGBA(0.25f, 0.55f, 0.8f), &g_Config.m_QmPieMenuCopySkinEnabled, "qmclient-pie-copy-skin"},
+		{Localize("Swap"), FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, (unsigned int *)&g_Config.m_QmPieMenuColorSwap, ColorRGBA(0.8f, 0.3f, 0.3f), &g_Config.m_QmPieMenuSwapEnabled, "qmclient-pie-swap"},
+		{Localize("Spectate"), FontIcons::FONT_ICON_EYE, (unsigned int *)&g_Config.m_QmPieMenuColorSpectate, ColorRGBA(0.45f, 0.55f, 0.6f), &g_Config.m_QmPieMenuSpectateEnabled, "qmclient-pie-spectate"},
+		{Localize("Invite to team"), FontIcons::FONT_ICON_USERS, (unsigned int *)&g_Config.m_QmPieMenuColorInviteTeam, ColorRGBA(0.9f, 0.48f, 0.3f, 0.75f), &g_Config.m_QmPieMenuInviteTeamEnabled, "qmclient-pie-invite-team", true},
+		{Localize("Join team"), FontIcons::FONT_ICON_RIGHT_TO_BRACKET, (unsigned int *)&g_Config.m_QmPieMenuColorJoinTeam, ColorRGBA(0.3f, 0.61f, 0.9f, 0.75f), &g_Config.m_QmPieMenuJoinTeamEnabled, "qmclient-pie-join-team", true},
+		{Localize("Follow server"), FontIcons::FONT_ICON_NETWORK_WIRED, (unsigned int *)&g_Config.m_QmPieMenuColorFollow, ColorRGBA(0.3f, 0.75f, 0.5f, 0.75f), &g_Config.m_QmPieMenuFollowEnabled, "qmclient-pie-follow", true},
+		{Localize("View points"), FontIcons::FONT_ICON_MAGNIFYING_GLASS, (unsigned int *)&g_Config.m_QmPieMenuColorScore, ColorRGBA(0.69f, 0.42f, 0.9f, 0.75f), &g_Config.m_QmPieMenuScoreEnabled, "qmclient-pie-points", true},
 	}};
 	auto OpenColorPopup = [&](const SPieMenuColorEntry &Entry) {
-		const bool Alpha = Entry.m_pEnabled != nullptr;
-		const ColorHSLA HslaColor = ColorHSLA(*Entry.m_pColorValue, Alpha);
+		const ColorHSLA HslaColor = ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha);
 		m_ColorPickerPopupContext.m_pHslaColor = Entry.m_pColorValue;
 		m_ColorPickerPopupContext.m_HslaColor = HslaColor;
 		m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(HslaColor);
 		m_ColorPickerPopupContext.m_RgbaColor = color_cast<ColorRGBA>(m_ColorPickerPopupContext.m_HsvaColor);
-		m_ColorPickerPopupContext.m_Alpha = Alpha;
+		m_ColorPickerPopupContext.m_Alpha = Entry.m_Alpha;
 		Ui()->ShowPopupColorPicker(Ui()->MouseX(), Ui()->MouseY(), &m_ColorPickerPopupContext);
 	};
 	for(const auto &Entry : aColorEntries)
 	{
-		if(Entry.m_pEnabled == nullptr)
-			continue;
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		CUIRect Swatch;
 		Row.VSplitRight(LineHeight, &Row, &Swatch);
@@ -119,7 +117,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		RenderQmFunctionCheckbox(Entry.m_pEnabled, Entry.m_pTextId, Entry.m_pName, Entry.m_pEnabled, &Row, PrewarmOnly);
 		if(!PrewarmOnly)
 		{
-			Swatch.Draw(color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, true)), IGraphics::CORNER_ALL, CornerRadius * 0.5f);
+			Swatch.Draw(color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), IGraphics::CORNER_ALL, CornerRadius * 0.5f);
 			if(Ui()->DoButtonLogic(Entry.m_pColorValue, 0, &Swatch, BUTTONFLAG_LEFT))
 				OpenColorPopup(Entry);
 			GameClient()->m_Tooltips.DoToolTip(Entry.m_pColorValue, &Swatch, Localize("Set color"));
@@ -132,7 +130,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	std::array<const SPieMenuColorEntry *, 10> apVisibleEntries{};
 	int VisibleCount = 0;
 	for(const auto &Entry : aColorEntries)
-		if(Entry.m_pEnabled == nullptr || *Entry.m_pEnabled)
+		if(*Entry.m_pEnabled)
 			apVisibleEntries[VisibleCount++] = &Entry;
 	constexpr float PreviewStartAngle = -90.0f;
 	constexpr float PreviewSectorGap = 3.6f;
@@ -158,7 +156,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		const float BaseOuterRadius = maximum(1.0f, minimum(PreviewRect.w, PreviewRect.h) * 0.5f - LineSpacing * 0.8f);
 		const float InnerRadius = BaseOuterRadius * PreviewInnerRatio;
 		const float CenterRadius = maximum(1.0f, InnerRadius - maximum(4.0f, BaseOuterRadius * 0.03f));
-		const float AnglePerSector = 360.0f / VisibleCount;
+		const float AnglePerSector = VisibleCount > 0 ? 360.0f / VisibleCount : 0.0f;
 		const float PreviewAlpha = std::clamp(g_Config.m_QmPieMenuOpacity / 100.0f, 0.2f, 1.0f);
 		int PopupSectorIndex = -1;
 		if(Ui()->IsPopupOpen(&m_ColorPickerPopupContext))
@@ -168,7 +166,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 					PopupSectorIndex = (int)i;
 		}
 		int HoveredSector = -1;
-		if(Ui()->MouseInside(&PreviewFrame))
+		if(VisibleCount > 0 && Ui()->MouseInside(&PreviewFrame))
 		{
 			const vec2 MouseDir = Ui()->MousePos() - PreviewCenter;
 			const float MouseDist = length(MouseDir);
@@ -194,7 +192,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			const float OuterRadius = BaseOuterRadius * (Highlighted ? PreviewHighlightScale : 1.0f);
 			const float StartAngle = PreviewStartAngle + AnglePerSector * i + PreviewSectorGap * 0.5f;
 			const float EndAngle = StartAngle + AnglePerSector - PreviewSectorGap;
-			ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_pEnabled != nullptr));
+			ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha));
 			if(Highlighted)
 			{
 				Color.r = minimum(Color.r * 1.3f, 1.0f);
@@ -265,7 +263,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	ResetRow.VSplitRight(ResetWidth, nullptr, &ResetButton);
 	if(!PrewarmOnly && Ui()->DoButton_QmIcon(&s_ResetAllColorsButton, EQmIcon::ARROW_ROTATE_RIGHT, FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetButton, BUTTONFLAG_LEFT))
 		for(const auto &Entry : aColorEntries)
-			*Entry.m_pColorValue = color_cast<ColorHSLA>(Entry.m_DefaultColor).Pack(Entry.m_pEnabled != nullptr);
+			*Entry.m_pColorValue = color_cast<ColorHSLA>(Entry.m_DefaultColor).Pack(Entry.m_Alpha);
 	if(!PrewarmOnly)
 		GameClient()->m_Tooltips.DoToolTip(&s_ResetAllColorsButton, &ResetButton, Localize("Reset colors"));
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
