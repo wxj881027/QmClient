@@ -224,7 +224,7 @@ TEST(QmNewUiMenuCardsDeckContract, TClientSettingsTabsRenderAllSlotsWithVisibleC
 
 TEST(QmNewUiMenuCardsDeckContract, TClientDeveloperCardMergesLinksAndLivesOnCreditsPage)
 {
-	// 「TClient 链接」卡并入开发人员卡；合并卡与 DDNet 卡都在贡献者页「其他」子页签，
+	// 「TClient 链接」卡并入开发人员卡；合并卡与 DDNet 卡都并入贡献者页「友链」子页签，
 	// 配置文件卡移到常规页。卡片构建统一收在独立的 menus_credits.cpp。
 	const std::string Source = ReadTextFile("src/game/client/components/menus_credits.cpp");
 	const std::string Registry = ReadTextFile("src/game/client/QmUi/QmCardRegistry.cpp");
@@ -238,7 +238,7 @@ TEST(QmNewUiMenuCardsDeckContract, TClientDeveloperCardMergesLinksAndLivesOnCred
 	EXPECT_EQ(Registry.find("deck:tclient-info-links"), std::string::npos);
 	EXPECT_EQ(Registry.find("\"tclient-info\""), std::string::npos);
 	EXPECT_NE(Registry.find("{\"deck:tclient-info-files\", \"general\", ECardColumn::Right, 2"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:credits-friend-links\", \"credits-links\", ECardColumn::Full, 0"), std::string::npos);
+	EXPECT_NE(Registry.find("{\"deck:credits-friend-links\", \"credits-links\", ECardColumn::Left, 0"), std::string::npos);
 	EXPECT_NE(General.find("FindByStableId(\"deck:tclient-info-files\")"), std::string::npos);
 	EXPECT_NE(General.find("\"tclient-files-qmclient-settings\""), std::string::npos);
 	EXPECT_EQ(Source.find("deck:tclient-info-files"), std::string::npos);

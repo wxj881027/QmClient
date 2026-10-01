@@ -1521,7 +1521,7 @@ polish = "Automatyczne blokowanie drużyny"
 [[message]]
 key = "Auto translate received messages"
 [message.translations]
-simplified_chinese = "自动翻译收到的消息"
+simplified_chinese = "自动翻译收到的聊天消息"
 traditional_chinese = "自動翻譯收到的消息"
 japanese = "受信メッセージを自動翻訳"
 korean = "수신 메시지 자동 번역"
@@ -1537,7 +1537,7 @@ polish = "Automatyczne tłumaczenie otrzymanych wiadomości"
 [[message]]
 key = "Auto translate sent messages"
 [message.translations]
-simplified_chinese = "自动翻译发送的消息"
+simplified_chinese = "自动翻译发送的聊天消息"
 traditional_chinese = "自動翻譯發送的消息"
 japanese = "送信メッセージを自動翻訳"
 korean = "발신 메시지 자동 번역"
@@ -8624,6 +8624,22 @@ turkish = "Pasif şarkı sözü satırı minimum opaklık yüzdesi"
 polish = "Minimalna procentowa przezroczystość nieaktywnej linii tekstu utworu"
 
 [[message]]
+key = "Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)"
+[message.translations]
+simplified_chinese = "收到消息自动翻译方式（0=仅在非目标语言时翻译，1=始终翻译）"
+traditional_chinese = "收到消息自動翻譯方式（0=僅在非目標語言時翻譯，1=始終翻譯）"
+japanese = "受信メッセージの自動翻訳方式（0=対象言語でない場合のみ翻訳、1=常に翻訳）"
+korean = "수신 메시지 자동 번역 모드 (0=대상 언어가 아닐 때만 번역, 1=항상 번역)"
+russian = "Режим автоперевода входящих сообщений (0=только если сообщение не на целевом языке, 1=всегда переводить)"
+german = "Modus für automatische Übersetzung eingehender Nachrichten (0=nur wenn nicht in der Zielsprache, 1=immer übersetzen)"
+spanish = "Modo de traducción automática de mensajes recibidos (0=solo si no está en el idioma de destino, 1=traducir siempre)"
+french = "Mode de traduction automatique des messages reçus (0=uniquement si le message n'est pas dans la langue cible, 1=toujours traduire)"
+brazilian_portuguese = "Modo de tradução automática de mensagens recebidas (0=apenas se não estiver no idioma de destino, 1=traduzir sempre)"
+portuguese = "Modo de tradução automática de mensagens recebidas (0=apenas se não estiver no idioma de destino, 1=traduzir sempre)"
+turkish = "Gelen mesajlar için otomatik çeviri modu (0=yalnızca hedef dilde değilse çevir, 1=her zaman çevir)"
+polish = "Tryb automatycznego tłumaczenia wiadomości przychodzących (0=tłumacz tylko, gdy wiadomość nie jest w języku docelowym, 1=zawsze tłumacz)"
+
+[[message]]
 key = "Input device"
 [message.translations]
 simplified_chinese = "输入设备"
@@ -15296,6 +15312,22 @@ turkish = "Alma"
 polish = "Odbiór"
 
 [[message]]
+key = "Receive translation method"
+[message.translations]
+simplified_chinese = "接收翻译方式"
+traditional_chinese = "接收翻譯方式"
+japanese = "受信メッセージの翻訳方式"
+korean = "수신 번역 방식"
+russian = "Способ перевода входящих сообщений"
+german = "Übersetzungsmethode für empfangene Nachrichten"
+spanish = "Método de traducción de mensajes recibidos"
+french = "Méthode de traduction des messages reçus"
+brazilian_portuguese = "Método de tradução de mensagens recebidas"
+portuguese = "Método de tradução de mensagens recebidas"
+turkish = "Alınan mesajlar için çeviri yöntemi"
+polish = "Metoda tłumaczenia odebranych wiadomości"
+
+[[message]]
 key = "Receive VAD speakers"
 [message.translations]
 simplified_chinese = "接收 VAD 讲话者"
@@ -16242,7 +16274,7 @@ polish = "Prawdopodobieństwo wysłania"
 [[message]]
 key = "Send source language"
 [message.translations]
-simplified_chinese = "发送源语言"
+simplified_chinese = "发送消息的源语言"
 traditional_chinese = "發送源語言"
 japanese = "送信元言語"
 korean = "소스 언어 보내기"
@@ -20350,6 +20382,22 @@ brazilian_portuguese = "Traduzir apenas quando necessário"
 portuguese = "Traduzir apenas quando necessário"
 turkish = "Yalnızca gerektiğinde çevir"
 polish = "Tłumacz tylko w razie potrzeby"
+
+[[message]]
+key = "Translate only when not in target language"
+[message.translations]
+simplified_chinese = "仅在非目标语言时翻译"
+traditional_chinese = "僅在非目標語言時翻譯"
+japanese = "対象言語でない場合のみ翻訳"
+korean = "대상 언어가 아닐 때만 번역"
+russian = "Переводить только если сообщение не на целевом языке"
+german = "Nur übersetzen, wenn nicht in der Zielsprache"
+spanish = "Traducir solo si no está en el idioma de destino"
+french = "Traduire uniquement si ce n'est pas dans la langue cible"
+brazilian_portuguese = "Traduzir apenas se não estiver no idioma de destino"
+portuguese = "Traduzir apenas se não estiver no idioma de destino"
+turkish = "Yalnızca hedef dilde değilse çevir"
+polish = "Tłumacz tylko, gdy nie jest w języku docelowym"
 
 [[message]]
 key = "Translation backend (llm/tencentcloud/libretranslate/ftapi)"
@@ -29317,6 +29365,70 @@ turkish = "Solo bölme tuşu"
 polish = "Klawisz podziału solo"
 
 [[message]]
+key = "Auto-connect dummy"
+[message.translations]
+simplified_chinese = "自动连接分身"
+traditional_chinese = "自動連接分身"
+japanese = "ダミーを自動接続"
+korean = "더미 자동 연결"
+russian = "Автоподключение двойника"
+german = "Dummy automatisch verbinden"
+spanish = "Conectar el dummy automáticamente"
+french = "Connecter le dummy automatiquement"
+brazilian_portuguese = "Conectar o dummy automaticamente"
+portuguese = "Ligar o dummy automaticamente"
+turkish = "Dummy'yi otomatik bağla"
+polish = "Automatycznie połącz dummy"
+
+[[message]]
+key = "Team when leaving solo split"
+[message.translations]
+simplified_chinese = "退出单刷时的队伍"
+traditional_chinese = "退出單刷時的隊伍"
+japanese = "ソロスプリット終了時のチーム"
+korean = "솔로 스플릿 종료 시 팀"
+russian = "Команда при выходе из соло-разделения"
+german = "Team beim Verlassen der Solo-Aufteilung"
+spanish = "Equipo al salir de la división en solitario"
+french = "Équipe à la sortie de la séparation solo"
+brazilian_portuguese = "Equipe ao sair da divisão solo"
+portuguese = "Equipa ao sair da divisão a solo"
+turkish = "Solo bölmeden çıkarken takım"
+polish = "Drużyna przy wyjściu z podziału solo"
+
+[[message]]
+key = "Solo split enter key"
+[message.translations]
+simplified_chinese = "单刷模式进队按键"
+traditional_chinese = "單刷模式進隊按鍵"
+japanese = "ソロスプリット参加キー"
+korean = "솔로 스플릿 입장 키"
+russian = "Клавиша входа в соло-разделение"
+german = "Taste zum Betreten der Solo-Aufteilung"
+spanish = "Tecla para entrar en la división en solitario"
+french = "Touche d'entrée dans la séparation solo"
+brazilian_portuguese = "Tecla para entrar na divisão solo"
+portuguese = "Tecla para entrar na divisão a solo"
+turkish = "Solo bölmeye girme tuşu"
+polish = "Klawisz wejścia do podziału solo"
+
+[[message]]
+key = "Solo split leave key"
+[message.translations]
+simplified_chinese = "单刷模式出队按键"
+traditional_chinese = "單刷模式出隊按鍵"
+japanese = "ソロスプリット退出キー"
+korean = "솔로 스플릿 퇴장 키"
+russian = "Клавиша выхода из соло-разделения"
+german = "Taste zum Verlassen der Solo-Aufteilung"
+spanish = "Tecla para salir de la división en solitario"
+french = "Touche de sortie de la séparation solo"
+brazilian_portuguese = "Tecla para sair da divisão solo"
+portuguese = "Tecla para sair da divisão a solo"
+turkish = "Solo bölmeden çıkma tuşu"
+polish = "Klawisz wyjścia z podziału solo"
+
+[[message]]
 key = "Split main and dummy into different teams for solo-run sync"
 [message.translations]
 simplified_chinese = "本体和分身分别进队，方便开局 solo 同步（部分地图不好同步时使用）"
@@ -31339,3 +31451,243 @@ brazilian_portuguese = "Modo martelo"
 portuguese = "Modo martelo"
 turkish = "Çekiç modu"
 polish = "Tryb młotka"
+
+[[message]]
+key = "Connect dummy automatically for solo split mode"
+[message.translations]
+simplified_chinese = "单刷模式自动连接分身"
+traditional_chinese = "單刷模式自動連接分身"
+japanese = "ソロスプリット時にダミーを自動接続"
+korean = "솔로 스플릿 모드에서 더미 자동 연결"
+russian = "Автоматически подключать двойника в режиме соло-разделения"
+german = "Dummy im Solo-Aufteilungsmodus automatisch verbinden"
+spanish = "Conectar el dummy automáticamente en el modo de división en solitario"
+french = "Connecter automatiquement le dummy en mode séparation solo"
+brazilian_portuguese = "Conectar o dummy automaticamente no modo de divisão solo"
+portuguese = "Ligar o dummy automaticamente no modo de divisão a solo"
+turkish = "Solo bölme modunda dummy'yi otomatik bağla"
+polish = "Automatycznie łącz dummy w trybie podziału solo"
+
+[[message]]
+key = "Team used when leaving solo split mode"
+[message.translations]
+simplified_chinese = "退出单刷模式时使用的队伍"
+traditional_chinese = "退出單刷模式時使用的隊伍"
+japanese = "ソロスプリット終了時に使用するチーム"
+korean = "솔로 스플릿 종료 시 사용할 팀"
+russian = "Команда при выходе из режима соло-разделения"
+german = "Team beim Verlassen des Solo-Aufteilungsmodus"
+spanish = "Equipo al salir del modo de división en solitario"
+french = "Équipe à la sortie du mode séparation solo"
+brazilian_portuguese = "Equipe ao sair do modo de divisão solo"
+portuguese = "Equipa ao sair do modo de divisão a solo"
+turkish = "Solo bölme modundan çıkarken kullanılan takım"
+polish = "Drużyna używana przy wyjściu z trybu podziału solo"
+
+[[message]]
+key = "Toggle solo split mode"
+[message.translations]
+simplified_chinese = "切换单刷模式"
+traditional_chinese = "切換單刷模式"
+japanese = "ソロスプリットモードを切り替え"
+korean = "솔로 스플릿 모드 전환"
+russian = "Переключить режим соло-разделения"
+german = "Solo-Aufteilungsmodus umschalten"
+spanish = "Alternar el modo de división en solitario"
+french = "Basculer le mode séparation solo"
+brazilian_portuguese = "Alternar o modo de divisão solo"
+portuguese = "Alternar o modo de divisão a solo"
+turkish = "Solo bölme modunu değiştir"
+polish = "Przełącz tryb podziału solo"
+
+[[message]]
+key = "Enter solo split mode"
+[message.translations]
+simplified_chinese = "进入单刷模式"
+traditional_chinese = "進入單刷模式"
+japanese = "ソロスプリットモードに入る"
+korean = "솔로 스플릿 모드 시작"
+russian = "Войти в режим соло-разделения"
+german = "Solo-Aufteilungsmodus betreten"
+spanish = "Entrar en el modo de división en solitario"
+french = "Entrer en mode séparation solo"
+brazilian_portuguese = "Entrar no modo de divisão solo"
+portuguese = "Entrar no modo de divisão a solo"
+turkish = "Solo bölme moduna gir"
+polish = "Wejdź w tryb podziału solo"
+
+[[message]]
+key = "Leave solo split mode"
+[message.translations]
+simplified_chinese = "退出单刷模式"
+traditional_chinese = "退出單刷模式"
+japanese = "ソロスプリットモードを終了"
+korean = "솔로 스플릿 모드 종료"
+russian = "Выйти из режима соло-разделения"
+german = "Solo-Aufteilungsmodus verlassen"
+spanish = "Salir del modo de división en solitario"
+french = "Quitter le mode séparation solo"
+brazilian_portuguese = "Sair do modo de divisão solo"
+portuguese = "Sair do modo de divisão a solo"
+turkish = "Solo bölme modundan çık"
+polish = "Wyjdź z trybu podziału solo"
+
+[[message]]
+key = "Custom…"
+[message.translations]
+simplified_chinese = "自定义…"
+traditional_chinese = "自訂…"
+japanese = "カスタム…"
+korean = "사용자 지정…"
+russian = "Пользовательский…"
+german = "Benutzerdefiniert…"
+spanish = "Personalizado…"
+french = "Personnalisé…"
+brazilian_portuguese = "Personalizado…"
+portuguese = "Personalizado…"
+turkish = "Özel…"
+polish = "Niestandardowy…"
+
+[[message]]
+key = "MyMemory (free)"
+[message.translations]
+simplified_chinese = "MyMemory（免费）"
+traditional_chinese = "MyMemory（免費）"
+japanese = "MyMemory（無料）"
+korean = "MyMemory(무료)"
+russian = "MyMemory (бесплатно)"
+german = "MyMemory (kostenlos)"
+spanish = "MyMemory (gratis)"
+french = "MyMemory (gratuit)"
+brazilian_portuguese = "MyMemory (grátis)"
+portuguese = "MyMemory (gratuito)"
+turkish = "MyMemory (ücretsiz)"
+polish = "MyMemory (bezpłatne)"
+
+[[message]]
+key = "MyMemory needs no registration (anonymous daily quota)"
+[message.translations]
+simplified_chinese = "MyMemory 无需注册（匿名每日配额）"
+traditional_chinese = "MyMemory 無需註冊（匿名每日配額）"
+japanese = "MyMemoryは登録不要（匿名の1日上限）"
+korean = "MyMemory는 가입이 필요 없습니다(익명 일일 한도)"
+russian = "MyMemory не требует регистрации (анонимная дневная квота)"
+german = "MyMemory erfordert keine Registrierung (anonymes Tageskontingent)"
+spanish = "MyMemory no requiere registro (cuota diaria anónima)"
+french = "MyMemory ne nécessite pas d'inscription (quota quotidien anonyme)"
+brazilian_portuguese = "O MyMemory não exige registro (cota diária anônima)"
+portuguese = "O MyMemory não requer registo (quota diária anónima)"
+turkish = "MyMemory kayıt gerektirmez (anonim günlük kota)"
+polish = "MyMemory nie wymaga rejestracji (anonimowy dzienny limit)"
+
+[[message]]
+key = "Show advanced translation options"
+[message.translations]
+simplified_chinese = "显示高级翻译选项"
+traditional_chinese = "顯示進階翻譯選項"
+japanese = "高度な翻訳オプションを表示"
+korean = "고급 번역 옵션 표시"
+russian = "Показывать расширенные параметры перевода"
+german = "Erweiterte Übersetzungsoptionen anzeigen"
+spanish = "Mostrar opciones avanzadas de traducción"
+french = "Afficher les options de traduction avancées"
+brazilian_portuguese = "Mostrar opções avançadas de tradução"
+portuguese = "Mostrar opções avançadas de tradução"
+turkish = "Gelişmiş çeviri seçeneklerini göster"
+polish = "Pokaż zaawansowane opcje tłumaczenia"
+
+[[message]]
+key = "Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+[message.translations]
+simplified_chinese = "翻译后端（mymemory/llm/tencentcloud/libretranslate/ftapi）"
+traditional_chinese = "翻譯後端（mymemory/llm/tencentcloud/libretranslate/ftapi）"
+japanese = "翻訳バックエンド（mymemory/llm/tencentcloud/libretranslate/ftapi）"
+korean = "번역 백엔드(mymemory/llm/tencentcloud/libretranslate/ftapi)"
+russian = "Бэкенд перевода (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+german = "Übersetzungs-Backend (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+spanish = "Backend de traducción (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+french = "Backend de traduction (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+brazilian_portuguese = "Backend de tradução (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+portuguese = "Backend de tradução (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+turkish = "Çeviri arka ucu (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+polish = "Backend tłumaczenia (mymemory/llm/tencentcloud/libretranslate/ftapi)"
+
+[[message]]
+key = "Zhipu free models allow only 1 concurrent request"
+[message.translations]
+simplified_chinese = "智谱免费模型只允许 1 个并发请求"
+traditional_chinese = "智譜免費模型只允許 1 個並發請求"
+japanese = "Zhipuの無料モデルは同時リクエストを1件のみ許可します"
+korean = "Zhipu 무료 모델은 동시 요청을 1개만 허용합니다"
+russian = "Бесплатные модели Zhipu допускают только 1 одновременный запрос"
+german = "Kostenlose Zhipu-Modelle erlauben nur 1 parallele Anfrage"
+spanish = "Los modelos gratuitos de Zhipu permiten solo 1 solicitud simultánea"
+french = "Les modèles gratuits de Zhipu n'autorisent qu'une seule requête simultanée"
+brazilian_portuguese = "Os modelos gratuitos da Zhipu permitem apenas 1 solicitação simultânea"
+portuguese = "Os modelos gratuitos da Zhipu permitem apenas 1 pedido simultâneo"
+turkish = "Zhipu ücretsiz modelleri yalnızca 1 eşzamanlı isteğe izin verir"
+polish = "Darmowe modele Zhipu pozwalają tylko na 1 równoczesne żądanie"
+
+[[message]]
+key = "Translate received messages to"
+[message.translations]
+simplified_chinese = "收到消息译为"
+traditional_chinese = "收到訊息譯為"
+japanese = "受信メッセージの翻訳先"
+korean = "받은 메시지 번역 언어"
+russian = "Язык перевода входящих"
+german = "Empfangene Nachrichten übersetzen in"
+spanish = "Traducir mensajes recibidos a"
+french = "Traduire les messages reçus en"
+brazilian_portuguese = "Traduzir mensagens recebidas para"
+portuguese = "Traduzir mensagens recebidas para"
+turkish = "Alınan mesajların çeviri dili"
+polish = "Tłumacz odebrane wiadomości na"
+
+[[message]]
+key = "Translate outgoing messages to"
+[message.translations]
+simplified_chinese = "发送消息译为"
+traditional_chinese = "傳送訊息譯為"
+japanese = "送信メッセージの翻訳先"
+korean = "보낼 메시지 번역 언어"
+russian = "Язык перевода исходящих"
+german = "Ausgehende Nachrichten übersetzen in"
+spanish = "Traducir mensajes salientes a"
+french = "Traduire les messages envoyés en"
+brazilian_portuguese = "Traduzir mensagens enviadas para"
+portuguese = "Traduzir mensagens enviadas para"
+turkish = "Gönderilecek mesajların çeviri dili"
+polish = "Tłumacz wysyłane wiadomości na"
+
+[[message]]
+key = "Original message language"
+[message.translations]
+simplified_chinese = "原文语言"
+traditional_chinese = "原文語言"
+japanese = "原文の言語"
+korean = "원문 언어"
+russian = "Язык исходного сообщения"
+german = "Sprache der Originalnachricht"
+spanish = "Idioma del mensaje original"
+french = "Langue du message original"
+brazilian_portuguese = "Idioma da mensagem original"
+portuguese = "Idioma da mensagem original"
+turkish = "Orijinal mesajın dili"
+polish = "Język oryginalnej wiadomości"
+
+[[message]]
+key = "Original language for both received and outgoing messages. Use Auto to detect each message."
+[message.translations]
+simplified_chinese = "告诉翻译服务原文是什么语言，接收和发送翻译共用。建议选“自动”，按每条消息识别。"
+traditional_chinese = "告訴翻譯服務原文是什麼語言，接收和傳送翻譯共用。建議選「自動」，逐條訊息識別。"
+japanese = "受信・送信の両方で使う原文の言語です。「自動」で各メッセージの言語を判定します。"
+korean = "수신 및 발신 메시지에 공통으로 사용하는 원문 언어입니다. 자동을 선택하면 각 메시지의 언어를 감지합니다。"
+russian = "Язык оригинала для входящих и исходящих сообщений. Выберите «Авто», чтобы определять язык каждого сообщения."
+german = "Originalsprache für empfangene und ausgehende Nachrichten. Mit Auto wird jede Nachricht einzeln erkannt."
+spanish = "Idioma original de mensajes recibidos y salientes. Usa Auto para detectar el idioma de cada mensaje."
+french = "Langue originale des messages reçus et envoyés. Choisissez Auto pour détecter chaque message."
+brazilian_portuguese = "Idioma original das mensagens recebidas e enviadas. Use Auto para detectar cada mensagem."
+portuguese = "Idioma original das mensagens recebidas e enviadas. Use Auto para detetar cada mensagem."
+turkish = "Alınan ve gönderilen mesajların orijinal dili. Her mesajın dilini algılamak için Otomatik seçin."
+polish = "Język oryginalny odebranych i wysyłanych wiadomości. Użyj Auto, aby wykrywać język każdej wiadomości."

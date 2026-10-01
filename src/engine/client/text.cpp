@@ -398,6 +398,7 @@ private:
 	// 游标之后新增的缺失字形会被继续预热。
 	size_t m_QmRecentGlyphPrewarmCursor = 0;
 	bool m_QmRecordGlyphMisses = true;
+	bool m_QmTraceFirstCjkGlyph = true;
 
 	// Font faces
 	FT_Face m_DefaultFace = nullptr;
@@ -756,6 +757,23 @@ private:
 			return false;
 		}
 
+		// 中文首次实际光栅化时记录真实字体面和轴坐标，供启动回归与字体回退诊断使用。
+		if(g_Config.m_QmGraphicsTrace >= 1 && m_QmTraceFirstCjkGlyph && QmIsCjkCodepoint(Glyph.m_Chr))
+		{
+			m_QmTraceFirstCjkGlyph = false;
+			const SQmFaceWeightState &WeightState = QmEnsureFaceWeightState(Glyph.m_Face);
+			int Weight = -1;
+			if(WeightState.m_HasWeightAxis)
+			{
+				std::vector<FT_Fixed> vCoords(WeightState.m_vAppliedCoords.size());
+				if(FT_Get_Var_Design_Coordinates(Glyph.m_Face, static_cast<FT_UInt>(vCoords.size()), vCoords.data()) == 0)
+					Weight = static_cast<int>(vCoords[WeightState.m_WeightAxisIndex] / 65536);
+			}
+			dbg_msg("textrender/font", "event=first_cjk_glyph family='%s' style='%s' weight=%d chr=%d",
+				Glyph.m_Face->family_name != nullptr ? Glyph.m_Face->family_name : "",
+				Glyph.m_Face->style_name != nullptr ? Glyph.m_Face->style_name : "", Weight, Glyph.m_Chr);
+		}
+
 		const FT_Bitmap *pBitmap = &Glyph.m_Face->glyph->bitmap;
 		if(pBitmap->pixel_mode != FT_PIXEL_MODE_GRAY)
 		{
@@ -1063,7 +1081,9 @@ public:
 		if(m_VariantFace != Face)
 		{
 			m_VariantFace = Face;
-			Clear(); // rebuild atlas after changing variant font
+			// 字体角色变化也要重算字重；图集已因轴坐标变化清理时不重复清理。
+			if(!ApplyCustomFontWeight())
+				Clear();
 			if(!Face && pFamilyName != nullptr)
 			{
 				log_error("textrender", "The variant font face '%s' could not be found", pFamilyName);
@@ -1085,6 +1105,8 @@ public:
 			// 分类变化会改变 GetCharGlyph 的解析结果，近期索引必须失效。
 			m_GlyphLookupCache.Reset();
 			m_QmCjkFace = Face;
+			// 同一个数值可能对应新的字体角色，不能只依赖字重数值变化触发更新。
+			ApplyCustomFontWeight();
 		}
 		return true;
 	}
@@ -1184,7 +1206,7 @@ public:
 		return State;
 	}
 
-	void ApplyCustomFontWeight()
+	bool ApplyCustomFontWeight()
 	{
 		bool WeightCoordsChanged = false;
 		for(FT_Face Face : m_vFtFaces)
@@ -1194,7 +1216,10 @@ public:
 				continue;
 			// 分类字重：中文/中日韩面使用独立字重；与默认面重合（同一族同一 face）
 			// 时以拉丁字重为准——同一物理 face 无法承载两套可变坐标。
-			const int TargetWeight = (Face == m_QmCjkFace && Face != m_DefaultFace) ? m_QmCjkCustomFontWeight : m_CustomFontWeight;
+			// 已配置独立中文面时，语言对应的中文回退面也使用中文字重。
+			const bool IsCjkFace = Face != m_DefaultFace &&
+					       (Face == m_QmCjkFace || (m_QmCjkFace != nullptr && Face == m_VariantFace));
+			const int TargetWeight = IsCjkFace ? m_QmCjkCustomFontWeight : m_CustomFontWeight;
 			// 字重设置可能已变化：基于缓存的轴范围重算期望坐标，只在真正变化时写入。
 			const FT_Fixed Requested = static_cast<FT_Fixed>(TargetWeight * 65536);
 			const FT_Fixed Clamped = std::clamp(Requested, State.m_WeightMin, State.m_WeightMax);
@@ -1208,6 +1233,7 @@ public:
 		// 否则同一帧内已排版的文本会采样到被清空的纹理而全部消失。
 		if(WeightCoordsChanged)
 			Clear();
+		return WeightCoordsChanged;
 	}
 
 	void SetCustomFontWeight(const int Weight)
@@ -1267,6 +1293,7 @@ public:
 		}
 
 		m_TextureAtlas.Clear(m_TextureDimension);
+		m_QmTraceFirstCjkGlyph = true;
 		m_Glyphs.clear();
 		m_GlyphLookupCache.Reset();
 		InvalidateFacePixelSizeCache();
@@ -2238,6 +2265,17 @@ public:
 	}
 
 	// TClient
+	// 启动与字体重载共用配置入口，首次加载页绘制前就完成字体面和字重选择。
+	void ApplyConfiguredFonts()
+	{
+		SetFontLanguageVariant(g_Config.m_ClLanguagefile);
+		SetCustomFace(g_Config.m_TcCustomFont);
+		SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
+		SetCustomFaceIcons(g_Config.m_TcCustomFontIcons);
+		SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
+		SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
+	}
+
 	void LoadCustomFonts()
 	{
 		CheckDefaultFaces();
@@ -2310,11 +2348,7 @@ public:
 	void ReloadCustomFonts() override
 	{
 		LoadCustomFonts();
-		m_pGlyphMap->TrySetDefaultFaceByName(g_Config.m_TcCustomFont);
-		m_pGlyphMap->SetCjkFaceByName(g_Config.m_TcCustomFontCjk);
-		m_pGlyphMap->SetIconsFaceByName(g_Config.m_TcCustomFontIcons);
-		m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
-		m_pGlyphMap->SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
+		ApplyConfiguredFonts();
 	}
 
 	void SetCustomFontWeight(const int Weight) override
@@ -2468,7 +2502,6 @@ public:
 		}
 		// TClient
 		LoadCustomFonts();
-		m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
 		m_pGlyphMap->AddFallbackFaceByName("DejaVu Sans");
 
 		// extract language variant family names
@@ -2544,6 +2577,7 @@ public:
 		}
 
 		m_pGlyphMap->SetIconFontWeight(g_Config.m_QmUiIconWeight);
+		ApplyConfiguredFonts();
 
 		json_value_free(pJsonData);
 		return Success;

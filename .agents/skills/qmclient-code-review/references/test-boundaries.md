@@ -9,7 +9,7 @@
 - 状态机：prewarm/read-only、实际存在的观察者状态、IME candidate、touch finger、Gores、main/dummy/spectator/demo。
 - 生命周期决策：generation、取消、发布条件、reset、cache invalidation。
 - 索引与边界：空列表、最大列表、失效 selection、非法 client id、畸形 count。
-- 调用顺序合同：先更新状态再渲染、weapon body 与 laser endpoint 顺序、主线程发布前验证。
+- 可观察调用顺序：用 fake/记录接口验证先更新再渲染、weapon body 与 laser endpoint 顺序和发布条件，不读取源码证明执行顺序。
 - fake-interface 集成：模拟 storage、HTTP、input、client state、clock 和 job result。
 - 配置合同：默认值、旧值迁移、canonicalize、序列化往返和 chain 初始化时机。
 
@@ -21,7 +21,7 @@
 | --------- | ------------------------------------------ | -------------------------------- |
 | UI 布局   | 几何、测量、裁剪、滚轮 owner、focus/reveal | 截图和多分辨率视觉检查           |
 | 渲染      | gating、参数、调用顺序、状态恢复约定       | OpenGL/OpenGL ES/Vulkan/Metal 实际像素与驱动     |
-| 性能      | 预算、采样、聚合和日志合同                 | 固定场景 p95/p99 实测            |
+| 性能      | 行为测试覆盖预算/采样/聚合；Google Benchmark 测生产 CPU 路径 | 同条件帧 p95/p99、GPU/I/O 与设备实测 |
 | 网络      | parser、超时状态机、旧响应丢弃             | 真实延迟、丢包、重连             |
 | 音频      | buffer、状态机、格式和生命周期             | 设备、驱动、实时延迟和听感       |
 | IME/触控  | offset、状态机、几何和 reset               | 原生候选窗、软键盘和真机多点触控 |

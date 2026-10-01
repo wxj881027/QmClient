@@ -57,8 +57,8 @@ TEST(TranslateLlmProvider, DefaultProviderIsZhipu)
 // 测试默认模型配置
 TEST(TranslateLlmProvider, DefaultModels)
 {
-	// 验证默认模型名称正确
-	EXPECT_STREQ("glm-4.5-flash", DefaultConfig::QmTranslateLlmModelZhipu);
-	EXPECT_STREQ("deepseek-chat", DefaultConfig::QmTranslateLlmModelDeepseek);
-	EXPECT_STREQ("gpt-4o-mini", DefaultConfig::QmTranslateLlmModelOpenai);
+	// 验证默认模型名称正确（2026-09 官网核查：旧默认 glm-4.5-flash 已下线、deepseek-chat 已退役）
+	EXPECT_STREQ("glm-4.7-flash", DefaultConfig::QmTranslateLlmModelZhipu);
+	EXPECT_STREQ("deepseek-flash", DefaultConfig::QmTranslateLlmModelDeepseek);
+	EXPECT_STREQ("gpt-5.6-luna", DefaultConfig::QmTranslateLlmModelOpenai);
 }

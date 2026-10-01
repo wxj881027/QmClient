@@ -444,14 +444,14 @@ void CEmoticon::OnRender()
 		const float Size = (50.0f + HoverPhase * 30.0f) * ItemScale;
 		if(g_Config.m_QmEmoticonShadow)
 		{
-			Graphics()->TextureClear();
+			// 阴影 = 循环开头绑定的表情贴图染黑后的轮廓剪影（黑色顶点色 × 贴图
+			// alpha，与 players.cpp 头顶表情阴影一致）。不能用无纹理实心方块：
+			// 表情贴图的透明区域会露出整块黑色背景。
 			Graphics()->QuadsBegin();
 			Graphics()->SetColor(0.0f, 0.0f, 0.0f, EmoticonSelectorShadowOpacity);
 			IGraphics::CQuadItem ShadowQuad(ScreenCenter.x + Nudge.x + EmoticonSelectorShadowOffsetX, ScreenCenter.y + Nudge.y + EmoticonSelectorShadowOffsetY, Size, Size);
 			Graphics()->QuadsDraw(&ShadowQuad, 1);
 			Graphics()->QuadsEnd();
-			Graphics()->TextureSet(GameClient()->m_EmoticonsSkin.m_aSpriteEmoticons[Emote]);
-			Graphics()->QuadsSetSubset(0, 0, 1, 1);
 		}
 		Graphics()->QuadsBegin();
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, ItemAlpha);

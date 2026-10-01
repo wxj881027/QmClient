@@ -12,6 +12,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstring>
 
 // main / IsInterrupted 桩统一在 qm_benchmark_main.cpp 提供
 
@@ -30,20 +31,28 @@ public:
 	void SetUp(const benchmark::State &State) override
 	{
 		const int NumItems = static_cast<int>(State.range(0));
-		if(NumItems > CSnapshot::MAX_ITEMS)
+		m_Ready = false;
+		if(NumItems < 0 || NumItems > CSnapshot::MAX_ITEMS)
 			return;
 
 		m_pDelta->SetStaticsize(0, 0);
 		m_pDelta->SetStaticsize(ITEM_TYPE, ITEM_INTS * static_cast<int>(sizeof(int32_t)));
 
-		BuildSnapshot(m_Prev, NumItems, 0);
-		BuildSnapshot(m_Current, NumItems, 1); // 全部实体 +1 tick 位移
+		const int PreviousSize = BuildSnapshot(m_Prev, NumItems, 0);
+		m_CurrentSize = BuildSnapshot(m_Current, NumItems, 1); // 全部字段 +1 的固定输入
+		if(PreviousSize <= 0 || m_CurrentSize <= 0)
+			return;
 
 		// 预生成一份真实 delta 供解压基准使用
 		m_DeltaSize = m_pDelta->CreateDelta(*m_Prev.AsSnapshot(), *m_Current.AsSnapshot(), m_DeltaBuffer.AsMutSlice());
+		if(m_DeltaSize <= 0 || m_DeltaSize % sizeof(int32_t) != 0)
+			return;
+		const rust::Slice<const int32_t> Delta(reinterpret_cast<const int32_t *>(m_DeltaBuffer.m_aData), m_DeltaSize / sizeof(int32_t));
+		m_Ready = m_pDelta->UnpackDelta(*m_Prev.AsSnapshot(), m_Output, Delta) == m_CurrentSize &&
+			  std::memcmp(m_Output.m_aData, m_Current.m_aData, m_CurrentSize) == 0;
 	}
 
-	void BuildSnapshot(CSnapshotBuffer &Buffer, int NumItems, int Offset)
+	int BuildSnapshot(CSnapshotBuffer &Buffer, int NumItems, int Offset)
 	{
 		rust::Box<CSnapshotBuilder> pBuilder = CSnapshotBuilder::New();
 		pBuilder->Init(false);
@@ -52,9 +61,10 @@ public:
 			std::array<int32_t, ITEM_INTS> aData;
 			for(int j = 0; j < ITEM_INTS; j++)
 				aData[j] = i * 100 + j + Offset;
-			(void)pBuilder->NewItem(ITEM_TYPE, i, rust::Slice<const int32_t>(aData.data(), aData.size()));
+			if(!pBuilder->NewItem(ITEM_TYPE, i, rust::Slice<const int32_t>(aData.data(), aData.size())))
+				return -1;
 		}
-		(void)pBuilder->Finish(Buffer);
+		return pBuilder->Finish(Buffer);
 	}
 
 	CSnapshotBuffer m_Prev;
@@ -63,16 +73,29 @@ public:
 	CSnapshotDeltaBuffer m_DeltaBuffer;
 	CSnapshotDeltaBuffer m_DeltaOutput;
 	int m_DeltaSize = 0;
+	int m_CurrentSize = 0;
+	bool m_Ready = false;
 };
 
 // 服务端每 tick：对比上一帧与当前帧生成 delta（netserver 发送路径）
 BENCHMARK_DEFINE_F(SnapshotDeltaBenchmark, BM_SnapshotDeltaDiff)(benchmark::State &State)
 {
+	if(!m_Ready)
+	{
+		State.SkipWithError("snapshot fixture round-trip failed");
+		return;
+	}
 	const int NumItems = static_cast<int>(State.range(0));
 	for(auto _ : State)
 	{
-		const int DeltaSize = m_pDelta->CreateDelta(*m_Prev.AsSnapshot(), *m_Current.AsSnapshot(), m_DeltaOutput.AsMutSlice());
+		int DeltaSize = m_pDelta->CreateDelta(*m_Prev.AsSnapshot(), *m_Current.AsSnapshot(), m_DeltaOutput.AsMutSlice());
 		benchmark::DoNotOptimize(DeltaSize);
+		benchmark::ClobberMemory();
+		if(DeltaSize != m_DeltaSize)
+		{
+			State.SkipWithError("snapshot delta size differs");
+			break;
+		}
 	}
 	State.SetItemsProcessed(State.iterations() * NumItems);
 }
@@ -82,9 +105,9 @@ BENCHMARK_REGISTER_F(SnapshotDeltaBenchmark, BM_SnapshotDeltaDiff)->Arg(128)->Ar
 BENCHMARK_DEFINE_F(SnapshotDeltaBenchmark, BM_SnapshotDeltaUnpack)(benchmark::State &State)
 {
 	const int NumItems = static_cast<int>(State.range(0));
-	if(m_DeltaSize <= 0)
+	if(!m_Ready)
 	{
-		State.SkipWithError("CreateDelta failed during SetUp");
+		State.SkipWithError("snapshot fixture round-trip failed");
 		return;
 	}
 	rust::Slice<const int32_t> Delta(
@@ -92,9 +115,17 @@ BENCHMARK_DEFINE_F(SnapshotDeltaBenchmark, BM_SnapshotDeltaUnpack)(benchmark::St
 		m_DeltaSize / static_cast<int>(sizeof(int32_t)));
 	for(auto _ : State)
 	{
-		const int Result = m_pDelta->UnpackDelta(*m_Prev.AsSnapshot(), m_Output, Delta);
+		int Result = m_pDelta->UnpackDelta(*m_Prev.AsSnapshot(), m_Output, Delta);
 		benchmark::DoNotOptimize(Result);
+		benchmark::ClobberMemory();
+		if(Result != m_CurrentSize)
+		{
+			State.SkipWithError("snapshot unpack did not restore the full snapshot");
+			break;
+		}
 	}
+	if(!State.skipped() && std::memcmp(m_Output.m_aData, m_Current.m_aData, m_CurrentSize) != 0)
+		State.SkipWithError("snapshot restored content differs");
 	State.SetItemsProcessed(State.iterations() * NumItems);
 }
 BENCHMARK_REGISTER_F(SnapshotDeltaBenchmark, BM_SnapshotDeltaUnpack)->Arg(128)->Arg(512)->Arg(1024);

@@ -493,6 +493,24 @@ bool CUi::TryConsumeWheel(const void *pOwnerId, float *pDelta)
 
 void CUi::Update()
 {
+	// 孤儿阻断弹窗兜底清扫：要求来源每帧刷新的弹窗（下拉选择弹层等）若连续
+	// 两帧未刷新，说明来源渲染已停止且当前没有任何 RenderPopupMenus 调用方
+	// 在运行（如聊天模式退出后弹窗残留），在这里强制关闭，防止底层指针输入
+	// 被永久锁死。正常刷新节奏下弹层在前一帧渲染中刚刷新，差值恰为 1，不受影响。
+	const uint64_t CurFrame = Client()->PerfFrame();
+	for(size_t i = 0; i < m_vPopupMenus.size();)
+	{
+		const SPopupMenu &PopupMenu = m_vPopupMenus[i];
+		const bool Stale = !PopupMenu.m_Closing && PopupMenu.m_Props.m_RequireSourceRefresh &&
+				   !QmDropdownSourceAlive(CurFrame, PopupMenu.m_Props.m_SourceFrame, true);
+		if(!Stale)
+		{
+			++i;
+			continue;
+		}
+		// ClosePopupMenu 至少移除目标自身（并按栈序连带其上方子弹窗），索引不前进
+		ClosePopupMenu(PopupMenu.m_pId, true);
+	}
 	BeginWheelOwnershipFrame();
 	m_MenuUiFirstWheelPerf = false;
 	const int UiScale = std::clamp(g_Config.m_QmUiScale, 50, 200);

@@ -107,3 +107,79 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 	Out.m_Success = true;
 	return true;
 }
+
+namespace
+{
+	bool StrEndsWithNocase(const char *pStr, const char *pSuffix)
+	{
+		const int StrLen = str_length(pStr);
+		const int SuffixLen = str_length(pSuffix);
+		return StrLen >= SuffixLen && str_comp_nocase(pStr + StrLen - SuffixLen, pSuffix) == 0;
+	}
+
+	void StripTrailingSlashes(char *pUrl)
+	{
+		int End = str_length(pUrl);
+		while(End > 0 && pUrl[End - 1] == '/')
+			--End;
+		pUrl[End] = '\0';
+	}
+
+	void StripSuffixNocase(char *pUrl, const char *pSuffix)
+	{
+		pUrl[str_length(pUrl) - str_length(pSuffix)] = '\0';
+		StripTrailingSlashes(pUrl);
+	}
+} // namespace
+
+bool NormalizeLlmEndpoint(const char *pEndpoint, SLlmEndpointInfo &Out)
+{
+	Out.m_aBaseUrl[0] = '\0';
+	Out.m_Style = ELlmApiStyle::AUTO;
+	if(!pEndpoint)
+		return false;
+
+	// 去除首尾空白
+	char aTrimmed[256];
+	{
+		const char *pStart = pEndpoint;
+		while(*pStart == ' ' || *pStart == '\t' || *pStart == '\r' || *pStart == '\n')
+			++pStart;
+		int End = str_length(pStart);
+		while(End > 0 && (pStart[End - 1] == ' ' || pStart[End - 1] == '\t' || pStart[End - 1] == '\r' || pStart[End - 1] == '\n'))
+			--End;
+		if(End >= (int)sizeof(aTrimmed))
+			return false;
+		str_copy(aTrimmed, pStart, End + 1);
+	}
+
+	if(aTrimmed[0] == '\0')
+		return false;
+	// 仅接受 http(s) 地址
+	if(!str_startswith_nocase(aTrimmed, "http://") && !str_startswith_nocase(aTrimmed, "https://"))
+		return false;
+
+	StripTrailingSlashes(aTrimmed);
+
+	// 识别显式路径后缀（容忍 chat/completion 少写 s 的笔误与大小写差异）
+	if(StrEndsWithNocase(aTrimmed, "/chat/completions"))
+	{
+		Out.m_Style = ELlmApiStyle::CHAT;
+		StripSuffixNocase(aTrimmed, "/chat/completions");
+	}
+	else if(StrEndsWithNocase(aTrimmed, "/chat/completion"))
+	{
+		Out.m_Style = ELlmApiStyle::CHAT;
+		StripSuffixNocase(aTrimmed, "/chat/completion");
+	}
+	else if(StrEndsWithNocase(aTrimmed, "/responses"))
+	{
+		Out.m_Style = ELlmApiStyle::RESPONSES;
+		StripSuffixNocase(aTrimmed, "/responses");
+	}
+
+	if(aTrimmed[0] == '\0')
+		return false;
+	str_copy(Out.m_aBaseUrl, aTrimmed, sizeof(Out.m_aBaseUrl));
+	return true;
+}

@@ -8,6 +8,7 @@
 #include <game/client/QmUi/QmAnimCurves.h>
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/QmPopupPointer.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/SettingsCardGeometry.h>
@@ -28,6 +29,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 
 namespace
 {
@@ -344,10 +346,12 @@ TEST(UiV2DropdownPolicy, PopupAlwaysBlocksUnderlyingWheelButOnlyShowsRailOnOverf
 	EXPECT_TRUE(QmDropdownPopupBlocksUnderlying(true));
 	EXPECT_FALSE(QmDropdownPopupBlocksUnderlying(false));
 }
-TEST(UiV2DropdownLifecycle, SourceMustRefreshInTheCurrentFrame)
+TEST(UiV2DropdownLifecycle, SourceMayRefreshOneFrameLaterButExpiresAfterTwoFrames)
 {
 	EXPECT_TRUE(QmDropdownSourceAlive(42, 42, true));
-	EXPECT_FALSE(QmDropdownSourceAlive(42, 41, true));
+	EXPECT_TRUE(QmDropdownSourceAlive(42, 41, true));
+	EXPECT_FALSE(QmDropdownSourceAlive(42, 40, true));
+	EXPECT_FALSE(QmDropdownSourceAlive(41, 42, true));
 	EXPECT_FALSE(QmDropdownSourceAlive(42, 42, false));
 }
 TEST(UiV2DropdownPolicy, MapPickerIncludesPopupChromeBeforeTestingEightRowOverflow)
@@ -499,4 +503,181 @@ TEST(UiV2DropdownState, MouseHoverAndClickSelectsHoveredItem)
 	EXPECT_TRUE(Result.m_Selected);
 	EXPECT_EQ(Result.m_SelectedIndex, 2);
 	EXPECT_FALSE(State.IsOpen());
+}
+
+TEST(UiV2DropdownLifecycle, SourceFrameGraceDoesNotOverflowAtMaximumFrame)
+{
+	const uint64_t LastFrame = std::numeric_limits<uint64_t>::max();
+	EXPECT_TRUE(QmDropdownSourceAlive(LastFrame, LastFrame, true));
+	EXPECT_TRUE(QmDropdownSourceAlive(LastFrame, LastFrame - 1, true));
+	EXPECT_FALSE(QmDropdownSourceAlive(LastFrame, LastFrame - 2, true));
+	EXPECT_FALSE(QmDropdownSourceAlive(0, LastFrame, true));
+}
+
+TEST(UiV2DropdownState, OutsideClickCancelsWithoutSelectingAndAllowsReopening)
+{
+	CQmDropdownState State;
+	SQmDropdownInput Input;
+	Input.m_TogglePressed = true;
+	Input.m_InitialIndex = 2;
+	ASSERT_TRUE(State.Update(Input, 4).m_Opened);
+	Input = {};
+	Input.m_ClickOutside = true;
+	const auto Cancel = State.Update(Input, 4);
+	EXPECT_TRUE(Cancel.m_Closed);
+	EXPECT_FALSE(Cancel.m_Selected);
+	EXPECT_FALSE(State.IsOpen());
+	EXPECT_EQ(State.ActiveIndex(), -1);
+	EXPECT_FALSE(State.Update(Input, 4).m_Closed);
+	Input = {};
+	Input.m_TogglePressed = true;
+	Input.m_InitialIndex = 1;
+	EXPECT_TRUE(State.Update(Input, 4).m_Opened);
+	EXPECT_EQ(State.ActiveIndex(), 1);
+}
+
+TEST(UiV2DropdownState, DisablingClosesAndReopeningUsesTheCurrentSelection)
+{
+	CQmDropdownState State;
+	SQmDropdownInput Input;
+	Input.m_TogglePressed = true;
+	Input.m_InitialIndex = 2;
+	ASSERT_TRUE(State.Update(Input, 3).m_Opened);
+	EXPECT_TRUE(State.Disable(true));
+	EXPECT_FALSE(State.IsOpen());
+	EXPECT_EQ(State.ActiveIndex(), -1);
+	EXPECT_FALSE(State.Disable(false));
+	Input.m_InitialIndex = 0;
+	EXPECT_TRUE(State.Update(Input, 3).m_Opened);
+	EXPECT_EQ(State.ActiveIndex(), 0);
+}
+
+TEST(UiV2DropdownState, ShrinkingEntriesClampsSelectionAndEmptyEntriesCancel)
+{
+	CQmDropdownState State;
+	SQmDropdownInput Input;
+	Input.m_TogglePressed = true;
+	Input.m_InitialIndex = 3;
+	ASSERT_TRUE(State.Update(Input, 4).m_Opened);
+	Input = {};
+	EXPECT_FALSE(State.Update(Input, 2).m_Closed);
+	EXPECT_EQ(State.ActiveIndex(), 1);
+	const auto Result = State.Update(Input, 0);
+	EXPECT_TRUE(Result.m_Closed);
+	EXPECT_FALSE(Result.m_Selected);
+	EXPECT_FALSE(State.IsOpen());
+}
+
+TEST(UiV2DropdownPopupSelection, InactiveParentDoesNotNavigateOrSubmitButActiveChildDoes)
+{
+	int ActiveIndex = 1;
+	SQmDropdownInput Input;
+	Input.m_KeyDown = true;
+	Input.m_KeyEnter = true;
+	const auto Parent = QmUpdateDropdownPopupSelection(Input, 3, false, ActiveIndex);
+	EXPECT_EQ(ActiveIndex, 1);
+	EXPECT_FALSE(Parent.m_Selected);
+	EXPECT_FALSE(Parent.m_Closed);
+	const auto Child = QmUpdateDropdownPopupSelection(Input, 3, true, ActiveIndex);
+	EXPECT_EQ(ActiveIndex, 2);
+	EXPECT_TRUE(Child.m_Selected);
+	EXPECT_EQ(Child.m_SelectedIndex, 2);
+	EXPECT_TRUE(Child.m_Closed);
+}
+
+TEST(UiV2DropdownPopupSelection, EscapeCancelsEvenWhenEnterIsPressed)
+{
+	int ActiveIndex = 1;
+	SQmDropdownInput Input;
+	Input.m_KeyEscape = true;
+	Input.m_KeyEnter = true;
+	const auto Result = QmUpdateDropdownPopupSelection(Input, 3, true, ActiveIndex);
+	EXPECT_TRUE(Result.m_Closed);
+	EXPECT_FALSE(Result.m_Selected);
+}
+
+TEST(UiV2DropdownPopupSelection, MouseAndEnterCommitOnlyOneHoveredSelection)
+{
+	int ActiveIndex = 0;
+	SQmDropdownInput Input;
+	Input.m_MouseSelectPressed = true;
+	Input.m_HoveredIndex = 2;
+	Input.m_KeyEnter = true;
+	const auto Result = QmUpdateDropdownPopupSelection(Input, 3, true, ActiveIndex);
+	EXPECT_TRUE(Result.m_Selected);
+	EXPECT_EQ(Result.m_SelectedIndex, 2);
+	EXPECT_TRUE(Result.m_Closed);
+}
+
+TEST(UiV2PopupPointer, BlockingPopupClosesOnOutsidePressWithoutCapture)
+{
+	SQmPopupPointerInput Input;
+	Input.m_Active = true;
+	Input.m_BlockUnderlying = true;
+	Input.m_Pressed = true;
+	Input.m_Held = true;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::CLOSE);
+	Input.m_Inside = true;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::NONE);
+}
+
+TEST(UiV2PopupPointer, NonBlockingPopupCapturesPressThenClosesOnOutsideRelease)
+{
+	SQmPopupPointerInput Input;
+	Input.m_Active = true;
+	Input.m_Pressed = true;
+	Input.m_Held = true;
+	Input.m_Hot = true;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::CAPTURE);
+	Input.m_Pressed = false;
+	Input.m_Captured = true;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::NONE);
+	Input.m_Held = false;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::CLOSE);
+	Input.m_Inside = true;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::RELEASE);
+}
+
+TEST(UiV2PopupPointer, InactiveParentCannotCloseOrCaptureItsActiveChildInput)
+{
+	SQmPopupPointerInput Input;
+	Input.m_BlockUnderlying = true;
+	Input.m_Pressed = true;
+	Input.m_Held = true;
+	Input.m_Hot = true;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::NONE);
+	Input.m_Captured = true;
+	Input.m_Held = false;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::NONE);
+}
+
+TEST(UiV2PopupInputScope, NestedActiveScopesRestoreDepthAfterLeavingEachLayer)
+{
+	int Depth = 0;
+	{
+		CQmPopupInputScope Parent(Depth, true);
+		EXPECT_EQ(Depth, 1);
+		{
+			CQmPopupInputScope Inactive(Depth, false);
+			EXPECT_EQ(Depth, 1);
+			CQmPopupInputScope Child(Depth, true);
+			EXPECT_EQ(Depth, 2);
+		}
+		EXPECT_EQ(Depth, 1);
+	}
+	EXPECT_EQ(Depth, 0);
+}
+
+TEST(UiV2PopupInputScope, ExplicitReleaseAndDestructorReleaseDepthOnlyOnce)
+{
+	int Depth = 0;
+	{
+		CQmPopupInputScope Scope(Depth, true);
+		EXPECT_EQ(Depth, 1);
+		Scope.Release();
+		EXPECT_EQ(Depth, 0);
+		Scope.Release();
+		EXPECT_EQ(Depth, 0);
+	}
+	EXPECT_EQ(Depth, 0);
 }

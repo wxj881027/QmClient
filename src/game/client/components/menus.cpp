@@ -195,6 +195,22 @@ namespace
 		return Text;
 	}
 
+	// 图标+文字组合布局：整组（图标格 + 间距 + 文字）在按钮文本区内水平居中，图标紧贴文字左侧。
+	// 文字计划收集与实际绘制必须调用同一函数保证矩形一致；HoverLift 只影响 y，不影响 x/w 对齐。
+	void MenuButtonIconTextLayout(ITextRender *pTextRender, const CUIRect *pRect, const char *pText, float FontFactor, float HoverLift, float TextFontSize, CUIRect *pIconRect, CUIRect *pTextRect)
+	{
+		CUIRect Text = MenuButtonTextRect(pRect, FontFactor, HoverLift);
+		const float ResolvedTextFontSize = TextFontSize > 0.0f ? std::min(TextFontSize, Text.h * CUi::ms_FontmodHeight) : Text.h * CUi::ms_FontmodHeight;
+		const float IconSide = Text.h;
+		const float Gap = IconSide * 0.20f;
+		float TextWidth = pTextRender->TextWidth(ResolvedTextFontSize, pText);
+		TextWidth = std::clamp(TextWidth, 1.0f, std::max(1.0f, Text.w - IconSide - Gap));
+		const float TotalWidth = IconSide + Gap + TextWidth;
+		const float StartX = Text.x + (Text.w - TotalWidth) * 0.5f;
+		*pIconRect = {StartX, Text.y, IconSide, IconSide};
+		*pTextRect = {StartX + IconSide + Gap, Text.y, TextWidth, Text.h};
+	}
+
 	bool PerfDebugEnabled()
 	{
 		return QmPerfEnabled();
@@ -1091,6 +1107,22 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardLayoutVersion = 11;
 	}
+	if(g_Config.m_QmCardLayoutVersion < 12)
+	{
+		// 贡献者页砍掉「其他」子页签：DDNet/TClient 署名卡并入友链，友链卡改半宽
+		// （列编码 0=Full 1=Left 2=Right，与 QmModuleColumnToInt 一致）。
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		Candidate.MoveToTab("deck:credits-friend-links", "credits-links", 1, 0);
+		Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "credits-links", 2, 0);
+		Candidate.MoveToTab("deck:tclient-info-developers", "credits-links", 1, 1);
+		if(!PersistCandidate(Candidate, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 12;
+	}
 	m_SettingsCardOrderLoaded = true;
 }
 
@@ -1242,7 +1274,7 @@ int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Ico
 	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
 }
 
-int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
+int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	CUIRect Text = *pRect;
@@ -1293,10 +1325,40 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	}
 
 	Text = MenuButtonTextRect(&Text, FontFactor, HoverLift);
-	if(Icon != EQmIcon::COUNT)
+	if(Icon != EQmIcon::COUNT || (pIconTexture != nullptr && pIconTexture->IsValid()))
 	{
 		const float ResolvedTextFontSize = TextFontSize > 0.0f ? std::min(TextFontSize, Text.h * CUi::ms_FontmodHeight) : Text.h * CUi::ms_FontmodHeight;
-		Ui()->DoLabel_QmIcon(&Text, Icon, pFallbackIcon, ResolvedTextFontSize, TEXTALIGN_MC);
+		if(pText != nullptr && pText[0] != '\0')
+		{
+			// 图标+文字组合：整组（图标+间距+文字）居中，图标紧贴文字左侧（与计划收集共用布局函数）。
+			CUIRect IconRect;
+			MenuButtonIconTextLayout(TextRender(), pRect, pText, FontFactor, HoverLift, TextFontSize, &IconRect, &Text);
+			if(pIconTexture != nullptr && pIconTexture->IsValid())
+			{
+				// 站点图标纹理：等比铺满图标格，留少量内边距避免顶格。
+				const float Inset = IconRect.h * 0.08f;
+				IGraphics::CQuadItem QuadItem(IconRect.x + Inset, IconRect.y + Inset, IconRect.w - Inset * 2, IconRect.h - Inset * 2);
+				Graphics()->TextureSet(*pIconTexture);
+				Graphics()->WrapClamp();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->QuadsEnd();
+				Graphics()->WrapNormal();
+			}
+			else
+			{
+				Ui()->DoLabel_QmIcon(&IconRect, Icon, pFallbackIcon, ResolvedTextFontSize, TEXTALIGN_MC);
+			}
+			if(pTextUiElement != nullptr)
+				DoSettingsLabelStreamed(*pTextUiElement, &Text, pText, ResolvedTextFontSize, TEXTALIGN_MC);
+			else
+				Ui()->DoLabel(&Text, pText, ResolvedTextFontSize, TEXTALIGN_MC);
+		}
+		else
+		{
+			Ui()->DoLabel_QmIcon(&Text, Icon, pFallbackIcon, ResolvedTextFontSize, TEXTALIGN_MC);
+		}
 	}
 	else if(pText != nullptr && pText[0] != '\0')
 	{
@@ -1848,7 +1910,7 @@ void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTex
 	DoSettingsLabelStreamed(Element, pLabelRect, pText, Size, Align, LabelProps, -1, nullptr, true);
 }
 
-int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor, float BodySize)
+int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor, float BodySize, EQmIcon Icon, const char *pFallbackIcon, const IGraphics::CTextureHandle *pIconTexture)
 {
 	dbg_assert(pBC != nullptr, "settings menu button requires a stable button container");
 	const float ResolvedBodySize = BodySize > 0.0f ? BodySize : CurrentSettingsContentMetrics().m_BodySize;
@@ -1856,9 +1918,18 @@ int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContaine
 	{
 		return DoButton_Menu(pBC, pText, Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, nullptr, ResolvedBodySize);
 	}
+	const bool HasIcon = Icon != EQmIcon::COUNT || (pIconTexture != nullptr && pIconTexture->IsValid());
 	CUIRect Text = MenuButtonTextRect(pRect, 0.0f, 0.0f);
 	SLabelProperties Props;
 	Props.m_MaxWidth = Text.w;
+	if(HasIcon && pText != nullptr && pText[0] != '\0')
+	{
+		// 图标+文字组合：整组（图标+间距+文字）居中、图标紧贴文字左侧，
+		// 与 DoButton_MenuInternal 的组合分支共用同一布局函数，计划收集与实际绘制矩形一致。
+		CUIRect IconRect;
+		MenuButtonIconTextLayout(TextRender(), pRect, pText, 0.0f, 0.0f, ResolvedBodySize, &IconRect, &Text);
+		Props.m_MaxWidth = Text.w;
+	}
 	const SMenuTextStyleKey StyleKey = BuildMenuTextStyleKey(&Text, ResolvedBodySize, TEXTALIGN_MC, Props);
 	if(m_MenuTextPlanCollecting)
 	{
@@ -1866,12 +1937,12 @@ int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContaine
 		return 0;
 	}
 	CUIElement &TextElement = MenuTextElement(MENU_TEXT_SCOPE_SETTINGS, Page, Tab, Subtab, pTextId, StyleKey);
-	return DoButton_Menu(pBC, pText, Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize);
+	return DoButton_MenuInternal(pBC, pText, Icon, pFallbackIcon ? pFallbackIcon : "", Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize, pIconTexture);
 }
 
-int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor)
+int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor, EQmIcon Icon, const char *pFallbackIcon, const IGraphics::CTextureHandle *pIconTexture)
 {
-	return DoSettingsButton_Menu(Page, Tab, Subtab, pBC, pTextId, pText, Checked, pRect, Flags, Corners, Rounding, Color, FontFactor, Metrics.m_BodySize);
+	return DoSettingsButton_Menu(Page, Tab, Subtab, pBC, pTextId, pText, Checked, pRect, Flags, Corners, Rounding, Color, FontFactor, Metrics.m_BodySize, Icon, pFallbackIcon, pIconTexture);
 }
 
 int CMenus::DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor, const ColorRGBA *pHoverColor)
@@ -6280,9 +6351,9 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	}
 	else if(str_comp(pTab, "qmclient-contributors-ddnet") == 0 || str_comp(pTab, "tclient-info") == 0 || str_comp(pTab, "credits-other") == 0)
 	{
-		// DDNet 与 TClient 署名卡都在「其他」子页签；旧深链接（含已删除的信息 tab）落到这里。
+		// 「其他」子页签已并入友链；DDNet/TClient 署名卡与旧深链接（含已删除的信息 tab）都落到友链。
 		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
-		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_OTHER;
+		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_LINKS;
 	}
 	else if(str_comp(pTab, "tclient") == 0)
 	{

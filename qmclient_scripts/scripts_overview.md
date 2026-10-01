@@ -67,12 +67,18 @@
 
 - `qmclient_scripts/integration/`：QmClient 自有客户端/服务端进程级集成与冒烟测试；不得把 QmClient 特化场景加入根目录上游 `scripts/`
 - `qmclient_scripts/coverage/`：使用独立 clang/Ninja 构建采集 C++ LLVM line/function/region/branch coverage
+- `qmclient_scripts/benchmark/`：Google Benchmark 构建/运行编排、结果校验与重复统计；见 [README](benchmark/README.md)
+- `qmclient_scripts/perf/`：客户端性能日志的离线 HTML/JSON 分析工具，按需用于帧耗时、卡顿与配置归因，见 [README](perf/README.md)
 
 - `qmclient_scripts/languages_qmclient/`
 - `qmclient_scripts/qmclient_center_server/`
 - `qmclient_scripts/diff_update.py`
 - `qmclient_scripts/tw_api.py`
 - `qmclient_scripts/update.zsh`：旧增量更新服务部署脚本；必须显式设置 `QM_UPDATE_SCRIPTS_DIR` 与 `QM_UPDATE_OUTPUT_DIR`，可用 `QM_UPDATE_RELEASE_REPOSITORY` 覆盖发布仓库
+
+### 性能验证入口
+
+代码性能优先使用 `src/test/benchmark/` 下调用生产实现的 Google Benchmark；[统一运行入口](benchmark/README.md) `python qmclient_scripts/benchmark/run.py --filter <正则>` 负责串行构建、枚举、重复测量与原始结果校验。构建目标为 `qm-benchmarks`，原生全量目标 `run_cxx_benchmarks` 仍保留。配置条件、过滤运行、JSON 留存与基线要求统一见 [性能验证参考](../.agents/skills/qmclient-verification-gate/references/performance.md)。现有 gate 不运行 benchmark，常规验证不要求 HTML 报表；真实帧、GPU、I/O 和交互卡顿仍使用对应场景诊断。
 
 ### 5. 独立开源的服务仓库
 

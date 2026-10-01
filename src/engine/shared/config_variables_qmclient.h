@@ -280,6 +280,8 @@ MACRO_CONFIG_INT(QmHudNotificationsShowHelpInfo, qm_hud_notifications_show_help_
 MACRO_CONFIG_INT(QmHudNotificationsShowPrompts, qm_hud_notifications_show_prompts, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Notification bar shows important server hints")
 MACRO_CONFIG_INT(QmHudNotificationsShowUnknown, qm_hud_notifications_show_unknown, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Notification bar shows unknown server messages")
 MACRO_CONFIG_INT(QmHudNotificationsCompatSolo, qm_hud_notifications_compat_solo, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Compatible with single-player area hints from other servers")
+MACRO_CONFIG_INT(QmSoloSplitRestoreTeam, qm_solo_split_restore_team, 0, 0, 63, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Team used when leaving solo split mode")
+MACRO_CONFIG_INT(QmSoloSplitLinkDummy, qm_solo_split_link_dummy, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Connect dummy automatically for solo split mode")
 MACRO_CONFIG_COL(QmHudNotificationsBgColor, qm_hud_notifications_bg_color, 0x99000000, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Notification bar background color")
 MACRO_CONFIG_COL(QmHudNotificationsTextColor, qm_hud_notifications_text_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Notification bar system message text color")
 MACRO_CONFIG_INT(QmHudNotificationsEchoInheritColor, qm_hud_notifications_echo_inherit_color, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Notification bar echo inherits chat echo color")
@@ -616,9 +618,11 @@ MACRO_CONFIG_INT(QmSpotifyEnable, qm_spotify_enable, 0, 0, 1, CFGFLAG_CLIENT | C
 MACRO_CONFIG_STR(QmSpotifySpDc, qm_spotify_sp_dc, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spotify sp_dc cookie (from browser DevTools, long-lived)")
 
 // Translate - 翻译模块
-MACRO_CONFIG_STR(QmTranslateBackend, qm_translate_backend, 32, "llm", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation backend (llm/tencentcloud/libretranslate/ftapi)")
+MACRO_CONFIG_STR(QmTranslateBackend, qm_translate_backend, 32, "mymemory", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)")
+MACRO_CONFIG_INT(QmTranslateShowAdvanced, qm_translate_show_advanced, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show advanced translation options")
 MACRO_CONFIG_STR(QmTranslateTarget, qm_translate_target, 16, "zh", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Target language code (e.g. zh, en, ja, zh-TW)")
 MACRO_CONFIG_INT(QmTranslateAuto, qm_translate_auto, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-translate incoming messages")
+MACRO_CONFIG_INT(QmTranslateAutoMode, qm_translate_auto_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)")
 MACRO_CONFIG_INT(QmTranslateLocalDetectMinChars, qm_translate_local_detect_min_chars, 2, 1, 12, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Minimum characters for local target language detection")
 MACRO_CONFIG_INT(QmTranslateLocalDetectRatio, qm_translate_local_detect_ratio, 75, 50, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Ratio threshold for local target language detection")
 MACRO_CONFIG_INT(QmTranslateFtapiAutoEnable, qm_translate_ftapi_auto_enable, 0, 0, 1,
@@ -629,9 +633,9 @@ MACRO_CONFIG_INT(QmTranslateFtapiAutoEnable, qm_translate_ftapi_auto_enable, 0, 
 MACRO_CONFIG_INT(QmTranslateLlmProvider, qm_translate_llm_provider, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM Provider (0=ZhipuAI, 1=DeepSeek, 2=OpenAI, 3=Custom)")
 
 // 各 Provider 的模型配置（切换 Provider 时自动切换对应模型）
-MACRO_CONFIG_STR(QmTranslateLlmModelZhipu, qm_translate_llm_model_zhipu, 32, "glm-4.5-flash", CFGFLAG_CLIENT | CFGFLAG_SAVE, "ZhipuAI model name")
-MACRO_CONFIG_STR(QmTranslateLlmModelDeepseek, qm_translate_llm_model_deepseek, 32, "deepseek-chat", CFGFLAG_CLIENT | CFGFLAG_SAVE, "DeepSeek model name")
-MACRO_CONFIG_STR(QmTranslateLlmModelOpenai, qm_translate_llm_model_openai, 32, "gpt-4o-mini", CFGFLAG_CLIENT | CFGFLAG_SAVE, "OpenAI model name")
+MACRO_CONFIG_STR(QmTranslateLlmModelZhipu, qm_translate_llm_model_zhipu, 32, "glm-4.7-flash", CFGFLAG_CLIENT | CFGFLAG_SAVE, "ZhipuAI model name")
+MACRO_CONFIG_STR(QmTranslateLlmModelDeepseek, qm_translate_llm_model_deepseek, 32, "deepseek-flash", CFGFLAG_CLIENT | CFGFLAG_SAVE, "DeepSeek model name")
+MACRO_CONFIG_STR(QmTranslateLlmModelOpenai, qm_translate_llm_model_openai, 32, "gpt-5.6-luna", CFGFLAG_CLIENT | CFGFLAG_SAVE, "OpenAI model name")
 MACRO_CONFIG_STR(QmTranslateLlmModelCustom, qm_translate_llm_model_custom, 32, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom Provider model name")
 
 // 各 Provider 的端点配置（留空使用默认端点）

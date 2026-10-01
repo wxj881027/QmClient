@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmUi/QmDropdown.h"
+#include "QmUi/QmPopupPointer.h"
 #include "QmUi/QmUiPerf.h"
 #include "QmUi/UiSurface.h"
 #include "components/qmclient/perf_logging.h"
@@ -123,6 +124,9 @@ void CUi::RenderPopupMenus()
 			continue;
 		}
 
+		// 来源弹窗通常在同一渲染循环中刷新下拉层，但嵌套弹窗的父层回调
+		// 可能在下一次 PerfFrame 才运行。允许一个帧差，避免下拉刚打开就
+		// 被来源新鲜度检查收掉；CUi::Update 的兜底清扫仍会关闭真正失联的弹窗。
 		if(PopupMenu.m_Props.m_RequireSourceRefresh && !QmDropdownSourceAlive(Client()->PerfFrame(), PopupMenu.m_Props.m_SourceFrame, true))
 		{
 			ClosePopupMenu(pId);
@@ -143,8 +147,7 @@ void CUi::RenderPopupMenus()
 		}
 		const bool ClipToViewport = PopupMenu.m_Props.m_ClipToViewport;
 		const bool AllowPopupPointerInput = Active && PopupMenu.m_Props.m_BlockUnderlyingPointerInput;
-		if(AllowPopupPointerInput)
-			++m_PopupInputDepth;
+		CQmPopupInputScope PopupInputScope(m_PopupInputDepth, AllowPopupPointerInput);
 
 		// 非阻断弹窗沿用上游机制：栈顶弹窗每帧接管热项，既阻止弹窗打开期间
 		// 底层 UI 被悬停/激活，也保证「弹窗外按下 → 成为活动项 → 弹窗外
@@ -152,29 +155,15 @@ void CUi::RenderPopupMenus()
 		if(Active && !PopupMenu.m_Props.m_BlockUnderlyingPointerInput)
 			SetHotItem(pId);
 
-		// 点击弹窗外释放左键时关闭弹窗。这里必须先记下关闭意图并走完本帧渲染流程，
-		// 不能提前 continue：m_PopupInputDepth 一旦漏掉配对递减就会永久泄漏，
-		// 之后所有弹窗的底层输入屏蔽失效，弹窗下面的页面会重新响应鼠标并抢占拖拽捕获。
-		bool CloseBeforeRender = false;
-		// 阻断型弹窗：在弹窗外按下左键立即关闭，不依赖 HotItem→ActiveItem 的
-		// 两帧捕获链，保证“点外部关闭”始终可用。
-		if(Active && PopupMenu.m_Props.m_BlockUnderlyingPointerInput && MouseButtonClicked(0) && !Inside)
-			CloseBeforeRender = true;
-		else if(CheckActiveItem(pId))
-		{
-			if(!MouseButton(0))
-			{
-				if(!Inside)
-					CloseBeforeRender = true;
-				else
-					SetActiveItem(nullptr);
-			}
-		}
-		else if(HotItem() == pId)
-		{
-			if(MouseButton(0))
-				SetActiveItem(pId);
-		}
+		// 先保存关闭意图，绘制完成后释放输入深度，再运行关闭回调。
+		// 作用域兜底保证提前退出也不会泄漏深度，防止底层页面抢占弹窗拖拽。
+		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, MouseButtonClicked(0), MouseButton(0), CheckActiveItem(pId), HotItem() == pId};
+		const EQmPopupPointerAction PointerAction = QmResolvePopupPointerAction(PointerInput);
+		const bool CloseBeforeRender = PointerAction == EQmPopupPointerAction::CLOSE;
+		if(PointerAction == EQmPopupPointerAction::CAPTURE)
+			SetActiveItem(pId);
+		else if(PointerAction == EQmPopupPointerAction::RELEASE)
+			SetActiveItem(nullptr);
 
 		EPopupMenuFunctionResult Result = POPUP_KEEP_OPEN;
 		if(!CloseBeforeRender)
@@ -206,9 +195,9 @@ void CUi::RenderPopupMenus()
 			// 对齐判定留浮点余量：几何端 AlignToAnchor 已保证严格相等，
 			// 余量只吸收布局趟/渲染趟的舍入误差。
 			const bool HasAlignedAnchor = PopupProps.m_HasAnchorSurface &&
-				PopupProps.m_AnchorSurface.w > 0.0f && PopupProps.m_AnchorSurface.h > 0.0f &&
-				std::fabs(PopupProps.m_AnchorSurface.x - PopupRect.x) < 1.5f &&
-				std::fabs(PopupProps.m_AnchorSurface.w - PopupRect.w) < 1.5f;
+						      PopupProps.m_AnchorSurface.w > 0.0f && PopupProps.m_AnchorSurface.h > 0.0f &&
+						      std::fabs(PopupProps.m_AnchorSurface.x - PopupRect.x) < 1.5f &&
+						      std::fabs(PopupProps.m_AnchorSurface.w - PopupRect.w) < 1.5f;
 			if(HasAlignedAnchor)
 			{
 				// 边框把触发按钮与列表包成一个整体：外框只描边，填充由按钮
@@ -249,8 +238,7 @@ void CUi::RenderPopupMenus()
 			if(ClipToViewport)
 				ClipDisable();
 		}
-		if(AllowPopupPointerInput)
-			--m_PopupInputDepth;
+		PopupInputScope.Release();
 		if(CloseBeforeRender)
 		{
 			ClosePopupMenu(pId);
@@ -288,7 +276,22 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants)
 		if(IncludeDescendants)
 			m_vPopupMenus.erase(PopupMenuToClose, m_vPopupMenus.end());
 		else
-			m_vPopupMenus.erase(PopupMenuToClose);
+		{
+			// 关闭弹窗时，栈存其上方的子弹窗必须一并结束：子弹窗的来源渲染
+			// 多半就是被关弹窗，遗留成孤儿阻断弹窗会永久锁死底层指针输入。
+			// 带出场动画的子弹窗转为收缩渐隐，由渲染循环自然移除。
+			const float Now = Client()->LocalTime();
+			for(auto It = PopupMenuToClose + 1; It != m_vPopupMenus.end(); ++It)
+			{
+				if(It->m_Closing || !It->m_Props.m_Animate)
+					continue;
+				It->m_Closing = true;
+				It->m_CloseStart = Now;
+			}
+			m_vPopupMenus.erase(
+				std::remove_if(PopupMenuToClose, m_vPopupMenus.end(), [](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing; }),
+				m_vPopupMenus.end());
+		}
 		SetActiveItem(nullptr);
 		if(m_pfnPopupMenuClosedCallback)
 			m_pfnPopupMenuClosedCallback();
@@ -464,6 +467,27 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
+	// 键盘输入属于栈顶子层，父菜单失活时不能停止导航或让父层抢走按键。
+	SQmDropdownInput KeyboardInput;
+	if(Active)
+	{
+		KeyboardInput.m_KeyUp = pUI->ConsumeHotkey(HOTKEY_UP);
+		KeyboardInput.m_KeyDown = pUI->ConsumeHotkey(HOTKEY_DOWN);
+		KeyboardInput.m_KeyEnter = pUI->ConsumeHotkey(HOTKEY_ENTER);
+		KeyboardInput.m_KeyEscape = pUI->ConsumeHotkey(HOTKEY_ESCAPE);
+	}
+	const int PreviousActiveIndex = pSelectionPopup->m_ActiveIndex;
+	const SQmDropdownUpdateResult KeyboardResult = QmUpdateDropdownPopupSelection(KeyboardInput, pSelectionPopup->m_vEntries.size(), Active, pSelectionPopup->m_ActiveIndex);
+	if(KeyboardResult.m_Selected)
+	{
+		pSelectionPopup->m_SelectionIndex = KeyboardResult.m_SelectedIndex;
+		pSelectionPopup->m_pSelection = &pSelectionPopup->m_vEntries[KeyboardResult.m_SelectedIndex];
+	}
+	if(KeyboardResult.m_Closed)
+		return CUi::POPUP_CLOSE_CURRENT;
+	if(QmDropdownShouldRequestActiveScroll(true, PreviousActiveIndex, pSelectionPopup->m_ActiveIndex))
+		pSelectionPopup->m_ScrollToActiveItem = true;
+
 	vec2 ScrollOffset(0.0f, 0.0f);
 	SQmScrollRequest ScrollRequest;
 	ScrollRequest.m_Profile = EQmScrollProfile::POPUP_LIST;
@@ -614,6 +638,22 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 
 int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps)
 {
+	// 防御：选中索引必须落在 [-1, Num) 才能安全用作 pStrs 下标。索引来源包括
+	// g_Config 与跨帧 UI 状态，一旦被越界写破坏（2026-09-30 崩溃报告：按钮文字
+	// lambda 捕获块在两次调用之间被栈上野写覆盖成 0x2D6D6C67），直接下标访问
+	// 会野读崩溃。这里收敛到合法区间：越界正值按最后一项处理，非法负值按未选中处理。
+	if(Num <= 0)
+	{
+		CurSelection = -1;
+	}
+	else if(CurSelection >= Num)
+	{
+		CurSelection = Num - 1;
+	}
+	else if(CurSelection < -1)
+	{
+		CurSelection = -1;
+	}
 	const float ResolvedFontSize = DropDownProps.m_FontSize > 0.0f ? DropDownProps.m_FontSize : m_DropDownFontSize > 0.0f ? m_DropDownFontSize :
 																pRect->h * ms_FontmodHeight * 0.8f;
 	if(RenderOnly())
@@ -664,6 +704,15 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 			State.m_SelectionPopupContext.m_SelectionIndex = -1;
 			State.m_SelectionPopupContext.m_ActiveIndex = -1;
 		}
+		else if(PopupOpen)
+		{
+			// 上层弹窗（如聊天翻译菜单）在本下拉的选择弹层打开期间会失去
+			// Active，令本下拉切入禁用分支；选择弹层的来源帧保活刷新只存在
+			// 于启用分支，若此处不补上，RenderPopupMenus 会在下一帧按
+			// 「来源失效」关闭刚打开的弹层，表现为下拉点开即一闪而过。
+			State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
+			State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
+		}
 		SMenuButtonProperties ButtonProps;
 		ButtonProps.m_Enabled = false;
 		ButtonProps.m_HintRequiresStringCheck = true;
@@ -683,7 +732,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	Props.m_Color = DropDownProps.m_VisualStyle.m_TriggerColor;
 	if(PopupOpen)
 	{
-		State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = true;
+		State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
 		State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
 		Props.m_Corners = IGraphics::CORNER_ALL & (~State.m_SelectionPopupContext.m_Props.m_Corners);
 	}
@@ -692,13 +741,9 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	SQmDropdownInput DropDownInput;
 	DropDownInput.m_TogglePressed = TogglePressed;
 	DropDownInput.m_InitialIndex = CurSelection;
-	if(PopupOpen && State.m_SelectionPopupContext.m_SelectionIndex < 0)
-	{
-		DropDownInput.m_KeyUp = ConsumeHotkey(HOTKEY_UP);
-		DropDownInput.m_KeyDown = ConsumeHotkey(HOTKEY_DOWN);
-		DropDownInput.m_KeyEnter = ConsumeHotkey(HOTKEY_ENTER);
-		DropDownInput.m_KeyEscape = ConsumeHotkey(HOTKEY_ESCAPE);
-	}
+	// 子弹层在自身回调中更新选择，父层只同步活动条目并处理触发按钮。
+	if(PopupOpen)
+		DropDownInput.m_HoveredIndex = State.m_SelectionPopupContext.m_ActiveIndex;
 	const int PreviousActiveIndex = State.m_DropDownState.ActiveIndex();
 	const SQmDropdownUpdateResult DropDownResult = State.m_DropDownState.Update(DropDownInput, Num);
 	State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
@@ -742,7 +787,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_AlignmentHeight = pRect->h;
 		State.m_SelectionPopupContext.m_TransparentButtons = DropDownProps.m_VisualStyle.m_TransparentEntries;
 		State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();
-		State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = true;
+		State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
 		State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
 		State.m_SelectionPopupContext.m_ScrollToActiveItem = true;
 		State.m_SelectionPopupContext.m_Viewport = Viewport;

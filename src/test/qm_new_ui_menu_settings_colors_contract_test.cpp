@@ -192,23 +192,4 @@ TEST(QmNewUiMenuSettingsColorsContract, ColorPickerUsesIndependentPointerCapture
 	EXPECT_EQ(Picker.find("m_pLastEditingItem"), std::string::npos);
 }
 
-TEST(QmNewUiMenuSettingsColorsContract, RenderPopupMenusAlwaysPairsPopupInputDepth)
-{
-	// m_PopupInputDepth 只能由 RenderPopupMenus 配对递减复位。点击弹窗外关闭的路径
-	// 若提前 continue 会泄漏深度，使所有弹窗的底层输入屏蔽永久失效：弹窗下面的
-	// 设置页重新响应鼠标并抢占颜色选择器的拖拽捕获，表现为拖拽断断续续。该约束
-	// 需要真实鼠标与弹窗状态才能在运行时观察，当前测试环境无法构造，因此以源码
-	// 合同固定“递增与递减之间不得提前退出”。
-	const std::string Source = ReadTextFile("src/game/client/ui_popups.cpp");
-	const std::string Render = FunctionBody(Source, "void CUi::RenderPopupMenus()");
-	ASSERT_FALSE(Render.empty());
-
-	const size_t Increment = Render.find("++m_PopupInputDepth;");
-	const size_t Decrement = Render.find("--m_PopupInputDepth;");
-	ASSERT_NE(Increment, std::string::npos);
-	ASSERT_NE(Decrement, std::string::npos);
-	ASSERT_LT(Increment, Decrement);
-	EXPECT_EQ(Render.substr(Increment, Decrement - Increment).find("continue;"), std::string::npos);
-	EXPECT_NE(Render.find("bool CloseBeforeRender = false;"), std::string::npos);
-	EXPECT_NE(Render.find("if(CloseBeforeRender)"), std::string::npos);
-}
+// 弹层输入深度由 CQmPopupInputScope 保证，生产行为测试见 QmAnimDropdownTest.cpp。

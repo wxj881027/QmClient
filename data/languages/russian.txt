@@ -1094,6 +1094,9 @@ Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 == Автоматически закрывать чат после разморозки
 
+Auto-connect dummy
+== Автоподключение двойника
+
 Auto-create CSV on game end
 == Автоматически создавать CSV при завершении игры
 
@@ -2321,6 +2324,9 @@ Connect address error
 Connect dummy
 == Подключить дубль
 
+Connect dummy automatically for solo split mode
+== Автоматически подключать двойника в режиме соло-разделения
+
 Connect dummy to enable
 == Подключите дамми, чтобы включить
 
@@ -2674,6 +2680,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== Пользовательский…
 
 Cut interval
 == Интервал обрезки
@@ -3668,6 +3677,7 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == Включить шлейф фоновых 3D-частиц
 
+
 Enable camera drift
 == Включить дрейф камеры
 
@@ -4060,6 +4070,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == Введите пароль
+
+Enter solo split mode
+== Войти в режим соло-разделения
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Введите спонсорский код и нажмите «Активировать», затем впишите титул и нажмите «Сохранить». Включите «Показывать только с этим ником», чтобы привязать титул к одному нику.
@@ -5456,8 +5469,8 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == Включать скин при сохранении/загрузке пресета конфигурации
 
-Incoming language
-== Входящий язык
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== Режим автоперевода входящих сообщений (0=только если сообщение не на целевом языке, 1=всегда переводить)
 
 Indicate map finish
 == Отметить пройденную карту
@@ -5983,6 +5996,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Оставьте пустым для использования промпта по умолчанию
+
+Leave solo split mode
+== Выйти из режима соло-разделения
 
 Left jump
 == Левый прыжок
@@ -6935,6 +6951,12 @@ Muted
 my_%s
 == моя_%s
 
+MyMemory (free)
+== MyMemory (бесплатно)
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemory не требует регистрации (анонимная дневная квота)
+
 n = Prediction latency
 == n = Задержка предсказания
 
@@ -7679,6 +7701,12 @@ Or visit DDNet.org
 Original
 == Оригинал
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== Язык оригинала для входящих и исходящих сообщений. Выберите «Авто», чтобы определять язык каждого сообщения.
+
+Original message language
+== Язык исходного сообщения
+
 Other
 == Другое
 
@@ -7693,9 +7721,6 @@ Others
 
 Others only
 == Только другим
-
-Outgoing language
-== Исходящий язык
 
 Outgoing translation target language code
 == Код целевого языка для исходящего перевода
@@ -8840,6 +8865,9 @@ Rebinds the client's listening address and port
 Receive Rate
 == Скорость приёма
 
+Receive translation method
+== Способ перевода входящих сообщений
+
 Receive VAD speakers
 == Принимать говорящих VAD
 
@@ -9944,14 +9972,8 @@ Send probability
 Send Rate
 == Скорость отправки
 
-Send source language
-== Отправить целевой язык
-
 Send specified command to rcon
 == Отправить указанную команду в rcon
-
-Send target language
-== Отправить целевой язык
 
 Send translation method
 == Способ отправки перевода
@@ -10189,6 +10211,9 @@ Show a small view of the dummy
 
 Show advanced title settings (collapsing keeps configured effects)
 == Показать расширенные настройки титула (при сворачивании эффекты сохраняются)
+
+Show advanced translation options
+== Показывать расширенные параметры перевода
 
 Show air jump indicator
 == Показывать индикатор прыжка в воздухе
@@ -11357,8 +11382,14 @@ Solo
 Solo split
 == Соло-разделение
 
+Solo split enter key
+== Клавиша входа в соло-разделение
+
 Solo split key
 == Клавиша соло-разделения
+
+Solo split leave key
+== Клавиша выхода из соло-разделения
 
 Some fonts could not be loaded. Check the local console for details.
 == Некоторые шрифты не удалось загрузить. Подробности смотрите в локальной консоли.
@@ -11494,9 +11525,6 @@ Spirit Light
 
 Split main and dummy into different teams for solo-run sync
 == Распределяет основного и двойника по разным командам для синхронизации соло-забегов
-
-Split main/dummy into two free teams; press again to return to team 0
-== Разделить основного/двойника по двум свободным командам; повторное нажатие возвращает в команду 0
 
 Sponsor code
 == Код спонсора
@@ -11843,9 +11871,6 @@ Taper trail ends
 Taper trail width
 == Сужающаяся ширина следа
 
-Target language
-== Целевой язык
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == Код целевого языка перевода (например, zh, en, ja, zh-TW)
 
@@ -11959,6 +11984,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Свечение контура ти по командам
+
+Team used when leaving solo split mode
+== Команда при выходе из режима соло-разделения
+
+Team when leaving solo split
+== Команда при выходе из соло-разделения
 
 Teammate
 == Товарищ по команде
@@ -12515,6 +12546,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == Переключить курсор таблицы счёта
 
+Toggle solo split mode
+== Переключить режим соло-разделения
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == Переключить команду между командой 0 и командным режимом. Этот режим заставит вашу команду вести себя как команда 0.
 
@@ -12644,6 +12678,15 @@ Translate last message of the person with this id
 Translate only when needed
 == Переводить только при необходимости
 
+Translate only when not in target language
+== Переводить только если сообщение не на целевом языке
+
+Translate outgoing messages to
+== Язык перевода исходящих
+
+Translate received messages to
+== Язык перевода входящих
+
 Translate UI
 == Перевод интерфейса
 
@@ -12656,8 +12699,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == Перевод на %s...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== Бэкенд перевода (llm/tencentcloud/libretranslate/ftapi)
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== Бэкенд перевода (mymemory/llm/tencentcloud/libretranslate/ftapi)
 
 Translation backend invalid, sending original
 == Бэкенд перевода недействителен, отправка оригинала
@@ -13275,7 +13318,7 @@ View tele found (at offset) with given number
 == Просмотр найденного телепорта (со смещением) с заданным номером
 
 View the developers, contributors, and project links
-== View the developers, contributors, and project links
+== Разработчики, участники и ссылки на проект
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
@@ -14116,6 +14159,9 @@ Zhipu AI
 
 Zhipu API key
 == Ключ API Zhipu
+
+Zhipu free models allow only 1 concurrent request
+== Бесплатные модели Zhipu допускают только 1 одновременный запрос
 
 ZhipuAI API Key
 == API-ключ ZhiPu AI

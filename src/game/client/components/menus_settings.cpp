@@ -6699,6 +6699,60 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					 m_AppearanceSettingsTab == APPEARANCE_TAB_HOOK_COLLISION ? "appearance-hook-collision" :
 					 m_AppearanceSettingsTab == APPEARANCE_TAB_INFO_MESSAGES  ? "appearance-info-messages" :
 												    "appearance-laser";
+	const auto ResolveNamePlatePreviewMeasureRevision = [this]() {
+		const int aInputs[] = {
+			g_Config.m_QmNameplateShowScope,
+			g_Config.m_ClNamePlatesClan,
+			g_Config.m_ClNamePlatesFriendMark,
+			g_Config.m_ClNamePlatesIds,
+			g_Config.m_ClNamePlatesIdsSeparateLine,
+			g_Config.m_ClNamePlatesStrong,
+			g_Config.m_Debug,
+			g_Config.m_ClNamePlatesSize,
+			g_Config.m_ClNamePlatesClanSize,
+			g_Config.m_ClNamePlatesIdsSize,
+			g_Config.m_ClNamePlatesCoordsSize,
+			g_Config.m_ClDirectionSize,
+			g_Config.m_ClNamePlatesStrongSize,
+			g_Config.m_QmNameplateCoords,
+			g_Config.m_QmNameplateCoordsOwn,
+			g_Config.m_QmNameplateCoordX,
+			g_Config.m_QmNameplateCoordY,
+			g_Config.m_ClShowDirection,
+			g_Config.m_QmNameplateHookStrongWeakScope,
+			g_Config.m_QmNameplateFreeMove,
+			g_Config.m_QmNameplateFreeMoveX,
+			g_Config.m_QmNameplateFreeMoveY,
+			g_Config.m_ClDummy,
+			g_Config.m_ClNamePlatesOffset,
+			g_Config.m_QmNameplateNameOffsetX,
+			g_Config.m_QmNameplateNameOffsetY,
+			g_Config.m_QmNameplateClanOffsetX,
+			g_Config.m_QmNameplateClanOffsetY,
+			g_Config.m_QmNameplateHookOffsetX,
+			g_Config.m_QmNameplateHookOffsetY,
+			g_Config.m_QmNameplateCoordsOffsetX,
+			g_Config.m_QmNameplateCoordsOffsetY,
+			g_Config.m_QmNameplateKeysOffsetX,
+			g_Config.m_QmNameplateKeysOffsetY,
+			g_Config.m_ClNamePlatesTeamcolors,
+			g_Config.m_QmNameplateTextEffects,
+			g_Config.m_QmNameplateTextBorderRange,
+			g_Config.m_QmNameplateTextGlowRange,
+		};
+		uint64_t Revision = 1469598103934665603ull;
+		for(const int Input : aInputs)
+			Revision = (Revision ^ static_cast<uint64_t>(static_cast<uint32_t>(Input))) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFont)) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFontCjk)) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFontIcons)) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(Client()->PlayerName())) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(Client()->DummyName())) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(g_Config.m_PlayerClan)) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(g_Config.m_ClDummyClan)) * 1099511628211ull;
+		return Revision;
+	};
+	const uint64_t NamePlatePreviewMeasureRevision = m_AppearanceSettingsTab == APPEARANCE_TAB_NAME_PLATE ? ResolveNamePlatePreviewMeasureRevision() : 0;
 	const auto BuildDefinitions = [=, this](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(std::size(aAppearanceIds));
 		const auto AddCard = [&vCards, &CardSpec](size_t Index, float ContentHeight, FSettingsCardRender Render) {
@@ -7702,49 +7756,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 			const auto ResolveNamePlatePreviewCardHeight = [this, NamePlatePreviewMinAreaHeight, NamePlatePreviewControlsHeight, MarginSmall](float) {
 				return maximum(NamePlatePreviewMinAreaHeight, GameClient()->m_NamePlates.MeasurePreviewAreaHeight()) + MarginSmall + NamePlatePreviewControlsHeight;
 			};
-			const auto ResolveNamePlatePreviewMeasureRevision = [this]() {
-				const int aInputs[] = {
-					g_Config.m_QmNameplateShowScope,
-					g_Config.m_ClNamePlatesClan,
-					g_Config.m_ClNamePlatesFriendMark,
-					g_Config.m_ClNamePlatesIds,
-					g_Config.m_ClNamePlatesIdsSeparateLine,
-					g_Config.m_ClNamePlatesStrong,
-					g_Config.m_Debug,
-					g_Config.m_ClNamePlatesSize,
-					g_Config.m_ClNamePlatesClanSize,
-					g_Config.m_ClNamePlatesIdsSize,
-					g_Config.m_ClNamePlatesCoordsSize,
-					g_Config.m_ClDirectionSize,
-					g_Config.m_ClNamePlatesStrongSize,
-					g_Config.m_QmNameplateCoords,
-					g_Config.m_QmNameplateCoordsOwn,
-					g_Config.m_QmNameplateCoordX,
-					g_Config.m_QmNameplateCoordY,
-					g_Config.m_ClShowDirection,
-					g_Config.m_QmNameplateHookStrongWeakScope,
-					g_Config.m_QmNameplateFreeMove,
-					g_Config.m_QmNameplateFreeMoveX,
-					g_Config.m_QmNameplateFreeMoveY,
-					g_Config.m_ClDummy,
-					g_Config.m_ClNamePlatesOffset,
-					g_Config.m_ClNamePlatesTeamcolors,
-					g_Config.m_QmNameplateTextEffects,
-					g_Config.m_QmNameplateTextBorderRange,
-					g_Config.m_QmNameplateTextGlowRange,
-				};
-				uint64_t Revision = 1469598103934665603ull;
-				for(const int Input : aInputs)
-					Revision = (Revision ^ static_cast<uint64_t>(static_cast<uint32_t>(Input))) * 1099511628211ull;
-				Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFont)) * 1099511628211ull;
-				Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFontCjk)) * 1099511628211ull;
-				Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFontIcons)) * 1099511628211ull;
-				Revision = (Revision ^ str_quickhash(Client()->PlayerName())) * 1099511628211ull;
-				Revision = (Revision ^ str_quickhash(Client()->DummyName())) * 1099511628211ull;
-				Revision = (Revision ^ str_quickhash(g_Config.m_PlayerClan)) * 1099511628211ull;
-				Revision = (Revision ^ str_quickhash(g_Config.m_ClDummyClan)) * 1099511628211ull;
-				return Revision;
-			};
+
 			AddMeasuredCard(6, ResolveNamePlatePreviewCardHeight, [=, this](CUIRect ContentRect) mutable {
 				CUIRect RightView = ContentRect;
 				CUIRect PreviewArea, Controls;
@@ -7789,7 +7801,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					g_Config.m_QmNameplateNameOffsetY = 0;
 				}
 				int Dummy = g_Config.m_ClDummy != (m_DummyNamePlatePreview ? 1 : 0);
-				GameClient()->m_NamePlates.RenderNamePlatePreview(PreviewArea, Dummy); }, ResolveNamePlatePreviewMeasureRevision());
+				GameClient()->m_NamePlates.RenderNamePlatePreview(PreviewArea, Dummy); }, NamePlatePreviewMeasureRevision);
 		}
 		else if(m_AppearanceSettingsTab == APPEARANCE_TAB_HOOK_COLLISION)
 		{
@@ -8252,6 +8264,8 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		}
 	};
 	uint64_t AppearanceLayoutRevision = static_cast<uint64_t>(m_AppearanceSettingsTab & 0xff);
+	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ NamePlatePreviewMeasureRevision;
+	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_QmNameplateEffectAutoLod != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(RenderOnly ? 1 : 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClShowhudDDRace != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClShowFreezeBars != 0);

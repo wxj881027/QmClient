@@ -441,7 +441,9 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 	const char *pDisplayStr = GetDisplayedString();
 	const bool HasComposition = Input()->HasComposition();
 
-	if(pDisplayStr[0] == '\0' && !HasComposition && m_pEmptyText != nullptr)
+	// IME 状态是全局的，只有当前输入框有组合文本时才隐藏它自己的提示文本。
+	const bool HasVisibleComposition = IsActive() && HasComposition && Input()->GetCompositionLength() > 0;
+	if(pDisplayStr[0] == '\0' && !HasVisibleComposition && m_pEmptyText != nullptr)
 	{
 		pDisplayStr = m_pEmptyText;
 		m_MouseSelection.m_Selecting = false;

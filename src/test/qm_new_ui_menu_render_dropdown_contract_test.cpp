@@ -28,51 +28,7 @@
 #include <sstream>
 #include <string>
 
-TEST(QmNewUiMenuRenderDropdownContract, DropDownPopupFollowsScrolledControlRect)
-{
-	const std::string UiSource = ReadTextFile("src/game/client/ui.cpp") + ReadTextFile("src/game/client/ui_popups.cpp");
-	const std::string UiHeader = ReadTextFile("src/game/client/ui.h");
-	const std::string DoDropDown = FunctionBody(UiSource, "int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps)");
-	const std::string DoDropDownActive = FunctionBody(UiSource, "int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, bool Enabled)");
-	const std::string DoPopupMenu = FunctionBody(UiSource, "void CUi::DoPopupMenu(");
-
-	ASSERT_FALSE(DoDropDown.empty());
-	ASSERT_FALSE(DoDropDownActive.empty());
-	ASSERT_FALSE(DoPopupMenu.empty());
-	EXPECT_NE(DoDropDown.find("bool PopupOpen = IsPopupOpen(&State.m_SelectionPopupContext);"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("if(PopupOpen)"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("PopupOpen = IsPopupOpen(&State.m_SelectionPopupContext);"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("if(State.m_DropDownState.IsOpen() && !PopupOpen)"), std::string::npos);
-	// Popup 以设置页最外层 viewport 定位，并在锚点离开所属容器时关闭。
-	EXPECT_NE(DoDropDown.find("DropDownProps.m_pPopupViewport != nullptr"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("QmDropdownAnchorFullyVisible(*pRect, AnchorViewport)"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("SQmDropdownInput DropDownInput;"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("State.m_DropDownState.Update(DropDownInput, Num);"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("DropDownInput.m_KeyUp = ConsumeHotkey(HOTKEY_UP);"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("DropDownInput.m_KeyDown = ConsumeHotkey(HOTKEY_DOWN);"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("DropDownInput.m_KeyEnter = ConsumeHotkey(HOTKEY_ENTER);"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("DropDownInput.m_KeyEscape = ConsumeHotkey(HOTKEY_ESCAPE);"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("State.m_SelectionPopupContext.m_ActiveIndex = State.m_DropDownState.ActiveIndex();"), std::string::npos);
-	const size_t SelectedBranch = DoDropDown.find("if(DropDownResult.m_Selected)");
-	const size_t ClosedBranch = DoDropDown.find("else if(DropDownResult.m_Closed)");
-	ASSERT_NE(SelectedBranch, std::string::npos);
-	ASSERT_NE(ClosedBranch, std::string::npos);
-	EXPECT_LT(SelectedBranch, ClosedBranch);
-	EXPECT_NE(DoPopupMenu.find("std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end()"), std::string::npos);
-	EXPECT_NE(DoPopupMenu.find("ExistingPopupMenu->m_Rect.x = X;"), std::string::npos);
-	EXPECT_NE(DoPopupMenu.find("ExistingPopupMenu->m_Rect.y = Y;"), std::string::npos);
-	const size_t DisabledBranch = DoDropDown.find("if(!DropDownProps.m_Enabled)");
-	const size_t CloseWhenDisabled = DoDropDown.find("if(DropDownProps.m_ClosePopupWhenDisabled)", DisabledBranch);
-	const size_t CloseDisabledPopup = DoDropDown.find("ClosePopupMenu(&State.m_SelectionPopupContext);", DisabledBranch);
-	ASSERT_NE(DisabledBranch, std::string::npos);
-	ASSERT_NE(CloseWhenDisabled, std::string::npos);
-	ASSERT_NE(CloseDisabledPopup, std::string::npos);
-	EXPECT_LT(CloseWhenDisabled, CloseDisabledPopup);
-	EXPECT_LT(DisabledBranch, CloseDisabledPopup);
-	EXPECT_NE(UiHeader.find("m_ClosePopupWhenDisabled(true),"), std::string::npos);
-	EXPECT_NE(DoDropDownActive.find("DropDownProps.m_ClosePopupWhenDisabled = false;"), std::string::npos);
-}
+// 下拉键盘、取消、来源帧与外部点击使用 QmAnimDropdownTest.cpp 的生产行为测试。
 
 TEST(QmNewUiMenuRenderDropdownContract, SettingsDropdownsUseTheSharedWrapper)
 {

@@ -1094,6 +1094,9 @@ Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 == 凍結解除後にチャットを自動で閉じる
 
+Auto-connect dummy
+== ダミーを自動接続
+
 Auto-create CSV on game end
 == ゲーム終了時に CSV を自動作成
 
@@ -2321,6 +2324,9 @@ Connect address error
 Connect dummy
 == ダミーに接続
 
+Connect dummy automatically for solo split mode
+== ソロスプリット時にダミーを自動接続
+
 Connect dummy to enable
 == ダミーに接続すると有効になります
 
@@ -2674,6 +2680,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== カスタム…
 
 Cut interval
 == カット間隔
@@ -3668,6 +3677,7 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 背景 3D パーティクルの軌跡を有効化
 
+
 Enable camera drift
 == カメラドリフトを有効化
 
@@ -4060,6 +4070,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == パスワードを入力
+
+Enter solo split mode
+== ソロスプリットモードに入る
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == スポンサーコードを入力して「引き換える」を押し、称号を書いて「保存」を押します。「このニックネームのみ表示」を有効にすると1つのニックネームに紐付けられます。
@@ -5456,8 +5469,8 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == 設定プリセットの保存/読み込み時にスキンを含める
 
-Incoming language
-== 受信言語
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== 受信メッセージの自動翻訳方式（0=対象言語でない場合のみ翻訳、1=常に翻訳）
 
 Indicate map finish
 == マップクリアを表示
@@ -5983,6 +5996,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == 空欄にしてデフォルトプロンプトを使用
+
+Leave solo split mode
+== ソロスプリットモードを終了
 
 Left jump
 == 左ジャンプ
@@ -6935,6 +6951,12 @@ Muted
 my_%s
 == 私の_%s
 
+MyMemory (free)
+== MyMemory（無料）
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemoryは登録不要（匿名の1日上限）
+
 n = Prediction latency
 == n = 予測レイテンシ
 
@@ -7679,6 +7701,12 @@ Or visit DDNet.org
 Original
 == オリジナル
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== 受信・送信の両方で使う原文の言語です。「自動」で各メッセージの言語を判定します。
+
+Original message language
+== 原文の言語
+
 Other
 == その他
 
@@ -7693,9 +7721,6 @@ Others
 
 Others only
 == 他人のみ
-
-Outgoing language
-== 送信言語
 
 Outgoing translation target language code
 == 送信翻訳のターゲット言語コード
@@ -8840,6 +8865,9 @@ Rebinds the client's listening address and port
 Receive Rate
 == 受信レート
 
+Receive translation method
+== 受信メッセージの翻訳方式
+
 Receive VAD speakers
 == VAD 発話者を受信
 
@@ -9944,14 +9972,8 @@ Send probability
 Send Rate
 == 送信レート
 
-Send source language
-== 送信元言語
-
 Send specified command to rcon
 == rcon に指定コマンドを送信
-
-Send target language
-== 送信先言語
 
 Send translation method
 == 翻訳方式を送信
@@ -10189,6 +10211,9 @@ Show a small view of the dummy
 
 Show advanced title settings (collapsing keeps configured effects)
 == タイトルの詳細設定を表示（閉じても設定した効果を維持）
+
+Show advanced translation options
+== 高度な翻訳オプションを表示
 
 Show air jump indicator
 == 空中ジャンプインジケーターを表示
@@ -11357,8 +11382,14 @@ Solo
 Solo split
 == ソロスプリット
 
+Solo split enter key
+== ソロスプリット参加キー
+
 Solo split key
 == ソロスプリットキー
+
+Solo split leave key
+== ソロスプリット退出キー
 
 Some fonts could not be loaded. Check the local console for details.
 == 一部のフォントを読み込めませんでした。詳細はローカルコンソールを確認してください。
@@ -11494,9 +11525,6 @@ Spirit Light
 
 Split main and dummy into different teams for solo-run sync
 == 本体と分身を別々のチームに入れ、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
-
-Split main/dummy into two free teams; press again to return to team 0
-== 本体/分身を2つの空きチームに分け、もう一度押すとチーム0に戻る
 
 Sponsor code
 == 認証コード
@@ -11843,9 +11871,6 @@ Taper trail ends
 Taper trail width
 == テーパートレイル幅
 
-Target language
-== ターゲット言語
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == 翻訳先言語コード（例：zh、en、ja、zh-TW）
 
@@ -11959,6 +11984,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == チーム Tee の外側グロー
+
+Team used when leaving solo split mode
+== ソロスプリット終了時に使用するチーム
+
+Team when leaving solo split
+== ソロスプリット終了時のチーム
 
 Teammate
 == チームメイト
@@ -12515,6 +12546,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == スコアボードカーソルを切り替え
 
+Toggle solo split mode
+== ソロスプリットモードを切り替え
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == チームをチーム 0 とチームモード間で切り替えます。このモードでは、チームがチーム 0 のように動作します。
 
@@ -12644,6 +12678,15 @@ Translate last message of the person with this id
 Translate only when needed
 == 必要なときのみ翻訳
 
+Translate only when not in target language
+== 対象言語でない場合のみ翻訳
+
+Translate outgoing messages to
+== 送信メッセージの翻訳先
+
+Translate received messages to
+== 受信メッセージの翻訳先
+
 Translate UI
 == UI を翻訳
 
@@ -12656,8 +12699,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == %s に翻訳中...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== 翻訳バックエンド（llm/tencentcloud/libretranslate/ftapi）
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== 翻訳バックエンド（mymemory/llm/tencentcloud/libretranslate/ftapi）
 
 Translation backend invalid, sending original
 == 翻訳バックエンドが無効なため、原文を送信
@@ -13275,7 +13318,7 @@ View tele found (at offset) with given number
 == 指定された番号のテレポート（オフセット位置）を表示
 
 View the developers, contributors, and project links
-== View the developers, contributors, and project links
+== 開発者・コントリビューター・プロジェクトリンクを見る
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
@@ -14116,6 +14159,9 @@ Zhipu AI
 
 Zhipu API key
 == Zhipu API キー
+
+Zhipu free models allow only 1 concurrent request
+== Zhipuの無料モデルは同時リクエストを1件のみ許可します
 
 ZhipuAI API Key
 == Zhipu AI API キー

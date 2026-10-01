@@ -1094,6 +1094,9 @@ Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 == 얼음 해제 후 자동 채팅 닫기
 
+Auto-connect dummy
+== 더미 자동 연결
+
 Auto-create CSV on game end
 == 게임 종료 시 CSV 자동 생성
 
@@ -2321,6 +2324,9 @@ Connect address error
 Connect dummy
 == 더미 연결
 
+Connect dummy automatically for solo split mode
+== 솔로 스플릿 모드에서 더미 자동 연결
+
 Connect dummy to enable
 == 더미 연결 후 활성화
 
@@ -2674,6 +2680,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== 사용자 지정…
 
 Cut interval
 == 잘라낸 구간
@@ -3668,6 +3677,7 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 배경 3D 파티클 트레일 활성화
 
+
 Enable camera drift
 == 카메라 드리프트 활성화
 
@@ -4060,6 +4070,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == 비밀번호 입력
+
+Enter solo split mode
+== 솔로 스플릿 모드 시작
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == 후원 코드를 입력하고 "등록"을 누른 뒤 칭호를 작성하고 "저장"을 누르세요. "이 닉네임에서만 표시"를 켜면 하나의 닉네임에만 연결됩니다.
@@ -5456,8 +5469,8 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == 설정 프리셋 저장/불러오기 시 스킨 포함
 
-Incoming language
-== 수신 언어
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== 수신 메시지 자동 번역 모드 (0=대상 언어가 아닐 때만 번역, 1=항상 번역)
 
 Indicate map finish
 == 맵 완주 표시
@@ -5983,6 +5996,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == 기본 프롬프트를 사용하려면 비워 두세요
+
+Leave solo split mode
+== 솔로 스플릿 모드 종료
 
 Left jump
 == 왼쪽 점프
@@ -6935,6 +6951,12 @@ Muted
 my_%s
 == 내_%s
 
+MyMemory (free)
+== MyMemory(무료)
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemory는 가입이 필요 없습니다(익명 일일 한도)
+
 n = Prediction latency
 == n = 예측 지연 시간
 
@@ -7679,6 +7701,12 @@ Or visit DDNet.org
 Original
 == 기본
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== 수신 및 발신 메시지에 공통으로 사용하는 원문 언어입니다. 자동을 선택하면 각 메시지의 언어를 감지합니다。
+
+Original message language
+== 원문 언어
+
 Other
 == 기타
 
@@ -7693,9 +7721,6 @@ Others
 
 Others only
 == 다른 사람만
-
-Outgoing language
-== 발신 언어
 
 Outgoing translation target language code
 == 발신 번역 대상 언어 코드
@@ -8840,6 +8865,9 @@ Rebinds the client's listening address and port
 Receive Rate
 == 수신 속도
 
+Receive translation method
+== 수신 번역 방식
+
 Receive VAD speakers
 == VAD 화자 수신
 
@@ -9944,14 +9972,8 @@ Send probability
 Send Rate
 == 전송 속도
 
-Send source language
-== 소스 언어 보내기
-
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
-
-Send target language
-== 대상 언어 보내기
 
 Send translation method
 == 번역 방식 보내기
@@ -10189,6 +10211,9 @@ Show a small view of the dummy
 
 Show advanced title settings (collapsing keeps configured effects)
 == 고급 칭호 설정 표시 (접어도 설정한 효과 유지)
+
+Show advanced translation options
+== 고급 번역 옵션 표시
 
 Show air jump indicator
 == 공중 점프 표시기 표시
@@ -11357,8 +11382,14 @@ Solo
 Solo split
 == 솔로 스플릿
 
+Solo split enter key
+== 솔로 스플릿 입장 키
+
 Solo split key
 == 솔로 스플릿 키
+
+Solo split leave key
+== 솔로 스플릿 퇴장 키
 
 Some fonts could not be loaded. Check the local console for details.
 == 일부 글꼴을 불러올 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
@@ -11494,9 +11525,6 @@ Spirit Light
 
 Split main and dummy into different teams for solo-run sync
 == 본체와 분신을 서로 다른 팀에 넣어 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
-
-Split main/dummy into two free teams; press again to return to team 0
-== 본체/분신을 두 개의 빈 팀에 나누고, 다시 누르면 팀 0으로 돌아감
 
 Sponsor code
 == 인증 코드
@@ -11843,9 +11871,6 @@ Taper trail ends
 Taper trail width
 == 가늘어지는 궤적 너비
 
-Target language
-== 대상 언어
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == 번역 대상 언어 코드 (예: zh, en, ja, zh-TW)
 
@@ -11959,6 +11984,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == 팀 티 외부 발광
+
+Team used when leaving solo split mode
+== 솔로 스플릿 종료 시 사용할 팀
+
+Team when leaving solo split
+== 솔로 스플릿 종료 시 팀
 
 Teammate
 == 팀원
@@ -12515,6 +12546,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == 점수판 커서 전환
 
+Toggle solo split mode
+== 솔로 스플릿 모드 전환
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == 팀 0과 팀 모드 사이를 전환합니다. 이 모드는 팀이 팀 0처럼 작동하게 합니다.
 
@@ -12644,6 +12678,15 @@ Translate last message of the person with this id
 Translate only when needed
 == 필요할 때만 번역
 
+Translate only when not in target language
+== 대상 언어가 아닐 때만 번역
+
+Translate outgoing messages to
+== 보낼 메시지 번역 언어
+
+Translate received messages to
+== 받은 메시지 번역 언어
+
 Translate UI
 == UI 번역
 
@@ -12656,8 +12699,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == %s(으)로 번역 중...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== 번역 백엔드 (llm/tencentcloud/libretranslate/ftapi)
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== 번역 백엔드(mymemory/llm/tencentcloud/libretranslate/ftapi)
 
 Translation backend invalid, sending original
 == 번역 백엔드가 유효하지 않음, 원문 전송
@@ -13275,7 +13318,7 @@ View tele found (at offset) with given number
 == 주어진 번호로 찾은 텔레포트 보기 (오프셋 위치)
 
 View the developers, contributors, and project links
-== View the developers, contributors, and project links
+== 개발자, 기여자 및 프로젝트 링크 보기
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
@@ -14116,6 +14159,9 @@ Zhipu AI
 
 Zhipu API key
 == 지푸 API 키
+
+Zhipu free models allow only 1 concurrent request
+== Zhipu 무료 모델은 동시 요청을 1개만 허용합니다
 
 ZhipuAI API Key
 == ZhipuAI API 키

@@ -1,3 +1,4 @@
+#include <game/client/QmUi/cards/QmCardMeasureRevision.h>
 #include <game/client/components/menus.h>
 
 #include <gtest/gtest.h>
@@ -116,4 +117,85 @@ TEST(SettingsCardInteraction, SubtitleVisibilityUsesCurrentPointerMotionLatchAnd
 	EXPECT_TRUE(SettingsCardSubtitleVisible(false, true, false));
 	EXPECT_TRUE(SettingsCardSubtitleVisible(false, false, true));
 	EXPECT_FALSE(SettingsCardSubtitleVisible(false, false, false));
+}
+
+namespace
+{
+	class SettingsCardMeasureRevision : public ::testing::Test
+	{
+		CConfig m_SavedConfig = g_Config;
+
+	protected:
+		void TearDown() override { g_Config = m_SavedConfig; }
+	};
+}
+
+TEST_F(SettingsCardMeasureRevision, TranslationAdvancedRowsInvalidatePageAndSearchMeasurements)
+{
+	using namespace qm_card_catalog;
+	g_Config.m_QmTranslateShowAdvanced = 0;
+	const uint64_t PageRevision = MeasureModuleCardRevision(qm_module::EQmModuleId::Translate);
+	const uint64_t SearchRevision = MeasureModuleCardsRevision();
+	g_Config.m_QmTranslateShowAdvanced = 1;
+	EXPECT_NE(PageRevision, MeasureModuleCardRevision(qm_module::EQmModuleId::Translate));
+	EXPECT_NE(SearchRevision, MeasureModuleCardsRevision());
+	g_Config.m_QmTranslateShowAdvanced = 0;
+	EXPECT_EQ(PageRevision, MeasureModuleCardRevision(qm_module::EQmModuleId::Translate));
+	EXPECT_EQ(SearchRevision, MeasureModuleCardsRevision());
+}
+
+TEST_F(SettingsCardMeasureRevision, DynamicHudTogglesInvalidatePageAndSearchMeasurements)
+{
+	using namespace qm_card_catalog;
+	using qm_module::EQmModuleId;
+	struct SBranch
+	{
+		EQmModuleId m_Id;
+		int *m_pToggle;
+	};
+	const SBranch aBranches[] = {
+		{EQmModuleId::WeaponAnimation, &g_Config.m_QmWeaponReloadAnim},
+		{EQmModuleId::DynamicIsland, &g_Config.m_QmSwitchCountdown},
+		{EQmModuleId::Lyrics, &g_Config.m_QmSpotifyEnable},
+		{EQmModuleId::Lyrics, &g_Config.m_QmKugouHookEnable},
+		{EQmModuleId::Lyrics, &g_Config.m_QmQQMusicHookEnable},
+		{EQmModuleId::GoresDrownBoard, &g_Config.m_QmGoresDrownBoard},
+		{EQmModuleId::Emoticons, &g_Config.m_QmShowOtherSuperEmotes},
+	};
+	for(const SBranch &Branch : aBranches)
+	{
+		SCOPED_TRACE(static_cast<int>(Branch.m_Id));
+		*Branch.m_pToggle = 0;
+		const uint64_t PageRevision = MeasureModuleCardRevision(Branch.m_Id);
+		const uint64_t SearchRevision = MeasureModuleCardsRevision();
+		*Branch.m_pToggle = 1;
+		EXPECT_NE(PageRevision, MeasureModuleCardRevision(Branch.m_Id));
+		EXPECT_NE(SearchRevision, MeasureModuleCardsRevision());
+		*Branch.m_pToggle = 0;
+		EXPECT_EQ(PageRevision, MeasureModuleCardRevision(Branch.m_Id));
+		EXPECT_EQ(SearchRevision, MeasureModuleCardsRevision());
+	}
+}
+
+TEST_F(SettingsCardMeasureRevision, UnchangedLayoutAndNonLayoutValuesKeepMeasurementsCached)
+{
+	using namespace qm_card_catalog;
+	const uint64_t Revision = MeasureModuleCardsRevision();
+	EXPECT_EQ(Revision, MeasureModuleCardsRevision());
+	g_Config.m_QmTranslateAuto = !g_Config.m_QmTranslateAuto;
+	g_Config.m_QmTranslateAutoOutgoing = !g_Config.m_QmTranslateAutoOutgoing;
+	EXPECT_EQ(Revision, MeasureModuleCardsRevision());
+}
+
+TEST_F(SettingsCardMeasureRevision, DynamicListChangesInvalidateSearchMeasurements)
+{
+	using namespace qm_card_catalog;
+	SQmFunctionCardLayoutState Layout;
+	const uint64_t Original = MeasureModuleCardsRevision(Layout);
+	++Layout.m_KeywordRulesRevision;
+	EXPECT_NE(Original, MeasureModuleCardsRevision(Layout));
+	--Layout.m_KeywordRulesRevision;
+	EXPECT_EQ(Original, MeasureModuleCardsRevision(Layout));
+	++Layout.m_FavoriteMapsRevision;
+	EXPECT_NE(Original, MeasureModuleCardsRevision(Layout));
 }

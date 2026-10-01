@@ -1,5 +1,6 @@
 #include "QmCardCatalogFunctionMetrics.h"
 #include "QmCardCatalogInternal.h"
+#include "QmCardMeasureRevision.h"
 
 #include <engine/shared/config.h>
 
@@ -83,40 +84,7 @@ namespace qm_card_catalog
 
 		uint64_t MeasureFunctionCardRevision(const SQmCardBuildContext &Ctx, const EQmModuleId Id)
 		{
-			const SQmFunctionCardLayoutState Layout = Ctx.m_pFunctionLayout != nullptr ? *Ctx.m_pFunctionLayout : SQmFunctionCardLayoutState{};
-			switch(Id)
-			{
-			case EQmModuleId::GoresActor:
-				return g_Config.m_TcFreezeChatEnabled ? 1u | (g_Config.m_TcFreezeChatEmoticon ? 2u : 0u) : 0u;
-			case EQmModuleId::Gores:
-				return (g_Config.m_QmAxiomAutoLogin ? 1u : 0u) |
-				       ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 2u : 0u);
-			case EQmModuleId::Emoticons:
-				return (g_Config.m_QmShowOtherSuperEmotes ? 1u : 0u) |
-				       (g_Config.m_QmShowOtherLaunchEmotes ? 2u : 0u);
-			case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory != 0 ? 1u : 0u;
-			case EQmModuleId::FriendNotify:
-				return (g_Config.m_QmFriendOnlineAutoRefresh ? 1u : 0u) |
-				       (g_Config.m_QmFriendEnterBroadcast ? 2u : 0u) |
-				       (g_Config.m_QmFriendEnterAutoGreet ? 4u : 0u);
-			case EQmModuleId::BlockWords: return Layout.m_BlockWordsRevision * 2u + (g_Config.m_QmBlockWordsAction == 0 ? 0u : 1u);
-			case EQmModuleId::Translate:
-				if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
-					return 1u;
-				if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
-					return 2u;
-				if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
-					return 3u;
-				if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
-					return 4u | ((g_Config.m_QmTranslateLlmEnableThinking && (g_Config.m_QmTranslateLlmProvider == 2 || g_Config.m_QmTranslateLlmProvider == 3)) ? 8u : 0u);
-				return 0u;
-			case EQmModuleId::QiaFen: return Layout.m_KeywordRulesRevision;
-			case EQmModuleId::PieMenu: return g_Config.m_QmPieMenuEnabled ? 1u : 0u;
-			case EQmModuleId::FavoriteMaps: return Layout.m_FavoriteMapsRevision;
-			case EQmModuleId::MapUpload: return 1u;
-			case EQmModuleId::HJAssist: return (g_Config.m_QmAutoTeamLock ? 1u : 0u) | (g_Config.m_QmPausedSpectatorFade ? 2u : 0u);
-			default: return 0u;
-			}
+			return MeasureModuleCardRevision(Id, Ctx.m_pFunctionLayout != nullptr ? *Ctx.m_pFunctionLayout : SQmFunctionCardLayoutState{});
 		}
 	} // namespace
 

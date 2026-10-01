@@ -106,7 +106,7 @@ TEST(QmNewUiMenuSettingsFeaturesContract, WeaponAnimationAdvancedControlsAreConf
 
 	const std::string VisualDeck = FunctionBody(MenusSource, "void CMenus::RenderSettingsQmClientVisualDeck(");
 	EXPECT_NE(VisualDeck.find("ResolveQmVisualWeaponAnimationHeight(Metrics, g_Config.m_QmWeaponSwitchAnim != 0, g_Config.m_QmWeaponReloadAnim != 0)"), std::string::npos);
-	EXPECT_NE(VisualDeck.find("(g_Config.m_QmWeaponReloadAnim ? 2u : 0u)"), std::string::npos);
+	// 测量缓存失效由 SettingsCardMeasureRevision 行为测试验证，不绑定页面局部实现。
 	EXPECT_NE(VisualDeck.find("HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponReloadAnim, &g_Config.m_QmWeaponReloadAnim)"), std::string::npos);
 	EXPECT_NE(RegistrySource.find("装填动画 zhuangtian donghua reload animation"), std::string::npos);
 }
@@ -187,11 +187,9 @@ TEST(QmNewUiMenuSettingsFeaturesContract, EmoticonShadowHasConfigRenderPassAndVi
 	EXPECT_EQ(CountOccurrences(EmoticonItemsBody, "Graphics()->QuadsBegin();"), 2);
 	const size_t ShadowBranch = EmoticonItemsBody.find("if(g_Config.m_QmEmoticonShadow)");
 	ASSERT_NE(ShadowBranch, std::string::npos);
-	const size_t ShadowClear = EmoticonItemsBody.find("Graphics()->TextureClear();", ShadowBranch);
-	const size_t ShadowBegin = EmoticonItemsBody.find("Graphics()->QuadsBegin();", ShadowBranch);
-	ASSERT_NE(ShadowClear, std::string::npos);
-	ASSERT_NE(ShadowBegin, std::string::npos);
-	EXPECT_LT(ShadowClear, ShadowBegin);
+	// 表情阴影必须是贴图染黑的轮廓剪影；禁止退回 TextureClear + 无纹理实心方块
+	// （贴图透明区域会露出整块黑色背景，2026-09-30 修复）。
+	EXPECT_EQ(EmoticonItemsBody.find("Graphics()->TextureClear();"), std::string::npos);
 	// 皮肤卡的内容函数已迁入全局卡片目录（N3）：改在目录文件里定位函数体。
 	// 「表情阴影」开关仍在皮肤外观卡内（QmCardCatalogSkin.cpp），未因迁移丢失。
 	const std::string SkinCardSource = ReadTextFile("src/game/client/QmUi/cards/QmCardCatalogSkin.cpp");

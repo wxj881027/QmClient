@@ -10,8 +10,20 @@ TEST(QmSponsorAuthors, ProvidesTheThreeDisplayedAuthors)
 	EXPECT_STREQ(Authors[1].m_pName, "DYL");
 	EXPECT_STREQ(Authors[2].m_pName, "夏日");
 	EXPECT_STREQ(Authors[0].m_pSkin, "qwqdog_mie");
-	EXPECT_STREQ(Authors[1].m_pSkin, "10Nanami_glow");
+	EXPECT_STREQ(Authors[1].m_pSkin, "default_v2");
 	EXPECT_STREQ(Authors[2].m_pSkin, "Miemiemiea");
+}
+
+TEST(QmSponsorAuthors, DylUsesWhiteCustomColors)
+{
+	// DYL 使用可着色皮肤 default_v2，必须以自定义颜色渲染，身体与脚均为白色；
+	// 其余作者不启用自定义颜色。
+	const auto &Authors = QmSponsorAuthors::Authors();
+	ASSERT_TRUE(Authors[1].m_CustomColors);
+	EXPECT_EQ(Authors[1].m_BodyColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+	EXPECT_EQ(Authors[1].m_FeetColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+	EXPECT_FALSE(Authors[0].m_CustomColors);
+	EXPECT_FALSE(Authors[2].m_CustomColors);
 }
 
 TEST(QmSponsorAuthors, RowsHeightUsesOneHorizontalAuthorRow)

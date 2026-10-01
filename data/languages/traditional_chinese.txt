@@ -1094,6 +1094,9 @@ Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 == 解凍後自動關閉聊天
 
+Auto-connect dummy
+== 自動連接分身
+
 Auto-create CSV on game end
 == 遊戲結束時自動創建 CSV
 
@@ -2321,6 +2324,9 @@ Connect address error
 Connect dummy
 == 連接分身
 
+Connect dummy automatically for solo split mode
+== 單刷模式自動連接分身
+
 Connect dummy to enable
 == 連接分身後可啟用
 
@@ -2674,6 +2680,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== 自訂…
 
 Cut interval
 == 裁剪區間
@@ -3668,6 +3677,7 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 啟用背景 3D 粒子拖尾
 
+
 Enable camera drift
 == 啟用鏡頭漂移
 
@@ -4060,6 +4070,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == 輸入密碼
+
+Enter solo split mode
+== 進入單刷模式
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == 填入贊助兌換碼並點「兌換」，寫下稱號後點「儲存」。勾選「僅在指定暱稱下顯示」可把稱號綁定到某一個暱稱。
@@ -5456,8 +5469,8 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == 保存/加載配置方案時包含皮膚
 
-Incoming language
-== 接收語言
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== 收到消息自動翻譯方式（0=僅在非目標語言時翻譯，1=始終翻譯）
 
 Indicate map finish
 == 標記已完成的地圖
@@ -5983,6 +5996,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == 留空使用默認提示詞
+
+Leave solo split mode
+== 退出單刷模式
 
 Left jump
 == 左跳
@@ -6935,6 +6951,12 @@ Muted
 my_%s
 == 我的_%s
 
+MyMemory (free)
+== MyMemory（免費）
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemory 無需註冊（匿名每日配額）
+
 n = Prediction latency
 == n = 預測延遲
 
@@ -7679,6 +7701,12 @@ Or visit DDNet.org
 Original
 == 原版
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== 告訴翻譯服務原文是什麼語言，接收和傳送翻譯共用。建議選「自動」，逐條訊息識別。
+
+Original message language
+== 原文語言
+
 Other
 == 其他
 
@@ -7693,9 +7721,6 @@ Others
 
 Others only
 == 僅他人
-
-Outgoing language
-== 發送語言
 
 Outgoing translation target language code
 == 出站翻譯目標語言代碼
@@ -8840,6 +8865,9 @@ Rebinds the client's listening address and port
 Receive Rate
 == 接收速率
 
+Receive translation method
+== 接收翻譯方式
+
 Receive VAD speakers
 == 接收 VAD 講話者
 
@@ -9944,14 +9972,8 @@ Send probability
 Send Rate
 == 發送速率
 
-Send source language
-== 發送源語言
-
 Send specified command to rcon
 == 向 rcon 發送指定命令
-
-Send target language
-== 發送目標語言
 
 Send translation method
 == 發送翻譯方式
@@ -10189,6 +10211,9 @@ Show a small view of the dummy
 
 Show advanced title settings (collapsing keeps configured effects)
 == 顯示頭銜進階設定（收起後保留已設定效果）
+
+Show advanced translation options
+== 顯示進階翻譯選項
 
 Show air jump indicator
 == 顯示空中跳指示器
@@ -11357,8 +11382,14 @@ Solo
 Solo split
 == 單刷模式
 
+Solo split enter key
+== 單刷模式進隊按鍵
+
 Solo split key
 == 單刷模式按鍵
+
+Solo split leave key
+== 單刷模式出隊按鍵
 
 Some fonts could not be loaded. Check the local console for details.
 == 未能加載某些字體。檢查本地控制台以獲取詳情。
@@ -11494,9 +11525,6 @@ Spirit Light
 
 Split main and dummy into different teams for solo-run sync
 == 本體和分身分別進隊，方便開局 solo 同步（部分地圖不好同步時使用）
-
-Split main/dummy into two free teams; press again to return to team 0
-== 本體/分身分別進入兩個空閒隊伍；再按一次回到隊伍 0
 
 Sponsor code
 == 認證碼
@@ -11843,9 +11871,6 @@ Taper trail ends
 Taper trail width
 == 錐形拖尾寬度
 
-Target language
-== 目標語言
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == 翻譯目標語言代碼（如 zh、en、ja、zh-TW）
 
@@ -11959,6 +11984,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == 隊伍 Tee 外發光
+
+Team used when leaving solo split mode
+== 退出單刷模式時使用的隊伍
+
+Team when leaving solo split
+== 退出單刷時的隊伍
 
 Teammate
 == 隊友
@@ -12515,6 +12546,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == 切換計分板光標
 
+Toggle solo split mode
+== 切換單刷模式
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == 在 team 0 和 team 模式間切換。該模式會讓你的隊伍按 team 0 規則運行
 
@@ -12644,6 +12678,15 @@ Translate last message of the person with this id
 Translate only when needed
 == 僅在需要時翻譯
 
+Translate only when not in target language
+== 僅在非目標語言時翻譯
+
+Translate outgoing messages to
+== 傳送訊息譯為
+
+Translate received messages to
+== 收到訊息譯為
+
 Translate UI
 == 翻譯 UI
 
@@ -12656,8 +12699,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == 正在翻譯為 %s……
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== 翻譯後端（llm/tencentcloud/libretranslate/ftapi）
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== 翻譯後端（mymemory/llm/tencentcloud/libretranslate/ftapi）
 
 Translation backend invalid, sending original
 == 翻譯後端無效，發送原文
@@ -13275,7 +13318,7 @@ View tele found (at offset) with given number
 == 查看給定編號找到的傳送點（在偏移處）
 
 View the developers, contributors, and project links
-== View the developers, contributors, and project links
+== 查看開發者、貢獻者與專案連結
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
@@ -14116,6 +14159,9 @@ Zhipu AI
 
 Zhipu API key
 == 智譜 API 密鑰
+
+Zhipu free models allow only 1 concurrent request
+== 智譜免費模型只允許 1 個並發請求
 
 ZhipuAI API Key
 == 智譜 AI API Key

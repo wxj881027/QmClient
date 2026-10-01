@@ -48,6 +48,7 @@
 #include <game/client/components/tclient/warlist.h>
 #include <game/client/frame_scheduler.h>
 #include <game/client/lineinput.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/voting.h>
@@ -166,7 +167,7 @@ public:
 	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand);
 
 private:
-	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize);
+	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, bool Active, const CUIRect *pRect, int Corners, const ColorRGBA *pCustomDefault, const ColorRGBA *pCustomActive, const ColorRGBA *pCustomHover, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float ContentScale, bool CapsuleTab = false);
 
 	int DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float FontSize, bool CapsuleTab = false);
@@ -2522,12 +2523,11 @@ public:
 		NUMBER_OF_QMCLIENT_SETTINGS_TABS,
 	};
 
-	// 顶层「贡献者」页的子页签。
+	// 顶层「贡献者」页的子页签（其他子页签已并入友链）。
 	enum
 	{
 		CREDITS_SETTINGS_TAB_QMCLIENT = 0,
 		CREDITS_SETTINGS_TAB_LINKS,
-		CREDITS_SETTINGS_TAB_OTHER,
 		CREDITS_SETTINGS_TAB_NUM,
 	};
 
@@ -2768,8 +2768,8 @@ public:
 	void DoSettingsLabelStreamed(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	void DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, bool Render = true);
 	void DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1);
-	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f);
-	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f);
+	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
+	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor = nullptr, const ColorRGBA *pHoverColor = nullptr);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps);

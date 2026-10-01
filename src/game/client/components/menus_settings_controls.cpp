@@ -702,7 +702,8 @@ void CMenusSettingsControls::RenderSettingsBinds(EBindOptionGroup Group, CUIRect
 
 float CMenusSettingsControls::MeasureSettingsMouseHeight() const
 {
-	return 2.0f * BUTTON_HEIGHT + BUTTON_SPACING;
+	// 灵敏度（游戏内）、最小/最大光标距离、灵敏度（界面）共 4 行
+	return 4.0f * BUTTON_HEIGHT + 3.0f * BUTTON_SPACING;
 }
 
 void CMenusSettingsControls::RenderSettingsMouse(CUIRect View)
@@ -710,6 +711,14 @@ void CMenusSettingsControls::RenderSettingsMouse(CUIRect View)
 	CUIRect Button;
 	View.HSplitTop(BUTTON_HEIGHT, &Button, &View);
 	DoSettingsControlsNumericField("controls-ingame-mouse-sens-label", &g_Config.m_InpMousesens, &g_Config.m_InpMousesens, Button, Localize("Ingame mouse sens."), 1, 500, &CUi::ms_LogarithmicScrollbarScale);
+
+	View.HSplitTop(BIND_OPTION_SPACING, nullptr, &View);
+	View.HSplitTop(BUTTON_HEIGHT, &Button, &View);
+	DoSettingsControlsNumericField("controls-ingame-mouse-min-distance-label", &g_Config.m_ClMouseMinDistance, &g_Config.m_ClMouseMinDistance, Button, Localize("Minimum cursor distance"), 0, 5000);
+
+	View.HSplitTop(BIND_OPTION_SPACING, nullptr, &View);
+	View.HSplitTop(BUTTON_HEIGHT, &Button, &View);
+	DoSettingsControlsNumericField("controls-ingame-mouse-max-distance-label", &g_Config.m_ClMouseMaxDistance, &g_Config.m_ClMouseMaxDistance, Button, Localize("Maximum cursor distance"), 0, 5000);
 
 	View.HSplitTop(BIND_OPTION_SPACING, nullptr, &View);
 	View.HSplitTop(BUTTON_HEIGHT, &Button, &View);
@@ -916,6 +925,8 @@ void CMenus::ResetSettingsControls()
 
 	g_Config.m_InpMousesens = 200;
 	g_Config.m_UiMousesens = 200;
+	g_Config.m_ClMouseMinDistance = 0;
+	g_Config.m_ClMouseMaxDistance = 400;
 
 	g_Config.m_InpControllerEnable = 0;
 	g_Config.m_InpControllerGUID[0] = '\0';

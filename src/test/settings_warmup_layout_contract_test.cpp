@@ -137,7 +137,7 @@ TEST(SettingsWarmupLayoutContract, TClientSettingsUseTwoLevelFontScale)
 	EXPECT_NE(Menus.find("Props.m_MinimumFontSize = FixedFontSize ? FontSize : FontSize * 0.7f;"), std::string::npos);
 	EXPECT_NE(Menus.find("Props.m_EllipsisAtEnd = FixedFontSize;"), std::string::npos);
 	EXPECT_NE(Menus.find("ResolveSettingsCheckboxFontSize(BodySize, RequestedFontSize, pRect->h, Box.h, CUi::ms_FontmodHeight)"), std::string::npos);
-	EXPECT_NE(Menus.find("return DoButton_Menu(pBC, pText, Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize);"), std::string::npos);
+	EXPECT_NE(Menus.find("return DoButton_MenuInternal(pBC, pText, Icon, pFallbackIcon ? pFallbackIcon : \"\", Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize"), std::string::npos);
 	EXPECT_NE(KeyBinder.find("Props.m_MinimumFontSize = FontSize;"), std::string::npos);
 	EXPECT_NE(KeyBinder.find("Props.m_EllipsisAtEnd = true;"), std::string::npos);
 

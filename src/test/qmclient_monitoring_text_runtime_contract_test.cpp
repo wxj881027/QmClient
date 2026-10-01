@@ -87,7 +87,7 @@ TEST(QmMonitoringTextRuntimeContract, SettingsStableTextMissAndStaleBlockVisible
 	EXPECT_NE(Source.find("dbg_assert(pBC != nullptr, \"settings menu button requires a stable button container\")"), std::string::npos);
 	EXPECT_EQ(Header.find("CButtonContainer *pBC = nullptr"), std::string::npos);
 	EXPECT_EQ(Source.find("s_FallbackButton"), std::string::npos);
-	EXPECT_NE(Source.find("DoButton_Menu(pBC, pText, Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize)"), std::string::npos);
+	EXPECT_NE(Source.find("return DoButton_MenuInternal(pBC, pText, Icon, pFallbackIcon ? pFallbackIcon : \"\", Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize"), std::string::npos);
 	EXPECT_EQ(Source.find("reason=%s\", pReason != nullptr ? pReason : \"unknown\""), std::string::npos);
 
 	const std::string TClient = ReadRepoFile("src/game/client/components/tclient/menus_tclient.cpp");

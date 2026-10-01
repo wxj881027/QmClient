@@ -4063,8 +4063,17 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	// 语言/后端名称数组（用于 DoDropDown）
 	static const char *s_apLangNames[] = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
 	static const char *s_apLangCodes[] = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
-	const char *apBackendNames[] = {Localize("LLM API"), Localize("Tencent Cloud"), Localize("LibreTranslate"), Localize("FTAPI")};
-	static const char *s_apBackendCodes[] = {"llm", "tencentcloud", "libretranslate", "ftapi"};
+	const char *apBackendNames[] = {Localize("MyMemory (free)"), Localize("LLM API"), Localize("Tencent Cloud"), Localize("LibreTranslate"), Localize("FTAPI")};
+	static const char *s_apBackendCodes[] = {"mymemory", "llm", "tencentcloud", "libretranslate", "ftapi"};
+	auto DoChatDropDown = [pUi, Active](CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, CUi::SDropDownState &State) {
+		CUi::SDropDownProperties Props;
+		Props.m_Enabled = Active;
+		// 语言菜单本身拥有选择弹层，不能按普通页面下拉框的来源帧规则关闭。
+		Props.m_RequireSourceRefresh = false;
+		// 父弹窗在创建子层的那一帧会暂时报告为非活动，不能因此关闭子层。
+		Props.m_ClosePopupWhenDisabled = false;
+		return pUi->DoDropDown(pRect, CurSelection, pStrs, Num, State, Props);
+	};
 
 	auto FindIndex = [](const char *pValue, const char **apCodes, int Count) -> int {
 		for(int i = 0; i < Count; ++i)
@@ -4077,11 +4086,11 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	{
 		CUIRect LabelRect, DropdownRect;
 		View.HSplitTop(DropdownLabelHeight, &LabelRect, &View);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_INBOUND_LANG], LabelRect, Localize("Incoming language"), FontSize, TEXTALIGN_ML);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_INBOUND_LANG], LabelRect, Localize("Translate received messages to"), FontSize, TEXTALIGN_ML);
 		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
 
 		const int OldSel = FindIndex(g_Config.m_QmTranslateTarget, s_apLangCodes, std::size(s_apLangCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_InboundLangDropDownState, Active);
+		const int NewSel = DoChatDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_InboundLangDropDownState);
 		if(NewSel != OldSel)
 			str_copy(g_Config.m_QmTranslateTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateTarget));
 	}
@@ -4091,11 +4100,11 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 	{
 		CUIRect LabelRect, DropdownRect;
 		View.HSplitTop(DropdownLabelHeight, &LabelRect, &View);
-		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_OUTBOUND_LANG], LabelRect, Localize("Outgoing language"), FontSize, TEXTALIGN_ML);
+		DoCachedChatPopupLabel(pUi, pPopupContext->m_aLabelUiElements[CLanguagePopupContext::LABEL_OUTBOUND_LANG], LabelRect, Localize("Translate outgoing messages to"), FontSize, TEXTALIGN_ML);
 		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
 
 		const int OldSel = FindIndex(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes, std::size(s_apLangCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_OutboundLangDropDownState, Active);
+		const int NewSel = DoChatDropDown(&DropdownRect, OldSel, s_apLangNames, std::size(s_apLangNames), pPopupContext->m_OutboundLangDropDownState);
 		if(NewSel != OldSel)
 			str_copy(g_Config.m_QmTranslateOutgoingTarget, s_apLangCodes[NewSel], sizeof(g_Config.m_QmTranslateOutgoingTarget));
 	}
@@ -4109,8 +4118,8 @@ CUi::EPopupMenuFunctionResult CChat::PopupLanguageMenu(void *pContext, CUIRect V
 		View.HSplitTop(DropdownHeight, &DropdownRect, &View);
 
 		const int OldSel = FindIndex(g_Config.m_QmTranslateBackend, s_apBackendCodes, std::size(s_apBackendCodes));
-		const int NewSel = pUi->DoDropDown(&DropdownRect, OldSel, apBackendNames, std::size(apBackendNames), pPopupContext->m_BackendDropDownState, Active);
-		if(NewSel != OldSel)
+		const int NewSel = DoChatDropDown(&DropdownRect, OldSel, apBackendNames, std::size(apBackendNames), pPopupContext->m_BackendDropDownState);
+		if(NewSel >= 0 && NewSel < static_cast<int>(std::size(s_apBackendCodes)) && NewSel != OldSel)
 			str_copy(g_Config.m_QmTranslateBackend, s_apBackendCodes[NewSel], sizeof(g_Config.m_QmTranslateBackend));
 	}
 

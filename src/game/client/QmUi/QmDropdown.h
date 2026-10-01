@@ -111,6 +111,9 @@ bool QmDropdownAnchorFullyVisible(const CUIRect &AnchorRect, const CUIRect &View
 bool QmDropdownActiveItemShouldScrollIntoView(bool ScrollRequested, bool ActiveEntry);
 bool QmDropdownShouldRequestActiveScroll(bool PopupOpen, int PreviousActiveIndex, int ActiveIndex);
 
+// 子弹层拥有键盘选择；父触发控件失活时不影响活动子层。
+SQmDropdownUpdateResult QmUpdateDropdownPopupSelection(const SQmDropdownInput &Input, int ItemCount, bool Active, int &ActiveIndex);
+
 class CQmDropdownState
 {
 public:

@@ -67,10 +67,13 @@
 
 ## 性能量化与观测真实性
 
-推荐入口：`src/game/client/components/qmclient/monitoring/`、`perf_logging.h`、`qmclient_scripts/perf/` 和监控合同测试。
+推荐入口：`src/test/benchmark/`、`qm-benchmarks`、`src/game/client/components/qmclient/monitoring/`、`perf_logging.h` 和 `qmclient_scripts/perf/`。验证命令与证据统一见 [性能参考](../../qmclient-verification-gate/references/performance.md)。
 
 ```text
-把性能量化系统作为生产诊断系统审查：
+代码性能与客户端诊断按各自观察范围审查：
+- Google Benchmark 是否调用生产实现，计时范围、输入、冷/稳态和过滤 case 是否对应本次成本；
+- 基线/当前的 revision、工具链、Release 配置、硬件和重复参数是否可比；
+- 是否将 CPU 微基准、功能测试或 gate 误写为整帧、设备或玩家体验通过；
 - event/page/tab/dur_ms/count/bytes/stop 的单位和缺省语义；
 - page_switch 是否被错误计入耗时归因；
 - 空数据、缺字段和畸形行是否被伪装成 0、100% 或优秀结论；
@@ -78,7 +81,7 @@
 - KPI、文字结论、图表和 verdict 是否共享阈值；
 - 未命中日志阈值时是否仍构造昂贵 payload；
 - 自动基线是否被误写为严格 A/B 回归；
-- C++ 与 TypeScript 字段是否有跨语言合同测试。
+- 真实 C++ 日志与 TypeScript 解析结果是否有行为保护，静态合同是否被误用为运行时证明。
 ```
 
 ## i18n 与文本生成链
@@ -240,7 +243,7 @@
 - 测试集合是否与变更风险匹配，已有 gate 证据是否复用；
 - merge 是否削弱父分支断言；
 - 空数据、最大数据、非法索引、取消、重连和平台差异；
-- 性能测试是否有固定场景、基线和样本可信度；
+- Google Benchmark 或场景性能实测是否有对应输入、可比基线和样本可信度；
 - build/test/quick/default/full gate 是否被正确表述。
 
 分类：缺失测试、脆弱测试、错误测试、验证证据缺口。
@@ -248,7 +251,7 @@
 
 ## 文档、规格与实现漂移
 
-推荐入口：当前有效 specs/plans、`.agents/skills/`（含 `audit-qmclient-quality` 与相关 skill）、实际代码和测试。
+推荐入口：当前有效 specs/plans、`.agents/skills/`（含代码审查的按需深度审计参考与相关 skill）、实际代码和测试。
 
 ```text
 先按日期、status、过时 banner 和 supersedes 关系确定权威文档：

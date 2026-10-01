@@ -95,7 +95,7 @@ TEST(QmModuleLayoutAdapter, BetterScoreboardStableIdRoundTrips)
 
 TEST(QmCardRegistry, P6QmClientContributorsCards)
 {
-	// 贡献者页分三个子页签 deck：栖梦（社区/头衔/赞助）、友链、其他（DDNet/TClient 署名）；
+	// 贡献者页分两个子页签 deck：栖梦（社区/头衔/赞助）、友链（友链 + DDNet/TClient 署名，全卡半宽）；
 	// 配置文件卡在常规页；「TClient 链接」卡已并入开发人员卡。
 	const auto *pCommunity = qm_card_registry::FindByStableId("deck:qmclient-contributors-community");
 	const auto *pSponsors = qm_card_registry::FindByStableId("deck:qmclient-contributors-sponsors");
@@ -115,20 +115,20 @@ TEST(QmCardRegistry, P6QmClientContributorsCards)
 	EXPECT_STREQ(pCommunity->m_pDefaultTab, "credits-qmclient");
 	EXPECT_STREQ(pSponsors->m_pDefaultTab, "credits-qmclient");
 	EXPECT_STREQ(pFriendLinks->m_pDefaultTab, "credits-links");
-	EXPECT_STREQ(pDdnet->m_pDefaultTab, "credits-other");
-	EXPECT_STREQ(pTcDevelopers->m_pDefaultTab, "credits-other");
+	EXPECT_STREQ(pDdnet->m_pDefaultTab, "credits-links");
+	EXPECT_STREQ(pTcDevelopers->m_pDefaultTab, "credits-links");
 	EXPECT_STREQ(pTcFiles->m_pDefaultTab, "general");
 	EXPECT_EQ(pCommunity->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
 	EXPECT_EQ(pSponsors->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pDdnet->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
-	EXPECT_EQ(pTcDevelopers->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	EXPECT_EQ(pDdnet->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
+	EXPECT_EQ(pTcDevelopers->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
 	EXPECT_EQ(pTcFiles->m_DefaultColumn, qm_card_registry::ECardColumn::Right);
-	EXPECT_EQ(pFriendLinks->m_DefaultColumn, qm_card_registry::ECardColumn::Full);
+	EXPECT_EQ(pFriendLinks->m_DefaultColumn, qm_card_registry::ECardColumn::Left);
 	EXPECT_EQ(pCommunity->m_DefaultOrder, 0);
 	EXPECT_EQ(pTitle->m_DefaultOrder, 1);
 	EXPECT_EQ(pSponsors->m_DefaultOrder, 0);
 	EXPECT_EQ(pDdnet->m_DefaultOrder, 0);
-	EXPECT_EQ(pTcDevelopers->m_DefaultOrder, 0);
+	EXPECT_EQ(pTcDevelopers->m_DefaultOrder, 1);
 	EXPECT_EQ(pTcFiles->m_DefaultOrder, 2);
 	EXPECT_EQ(pFriendLinks->m_DefaultOrder, 0);
 	EXPECT_EQ(qm_card_registry::FindByStableId("deck:tclient-info-links"), nullptr);

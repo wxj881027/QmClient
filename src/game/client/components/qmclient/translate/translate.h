@@ -79,6 +79,9 @@ private:
 	// 获取最大并发数
 	int GetMaxConcurrency() const;
 	int GetEffectiveConcurrency() const;
+
+	// MyMemory 匿名配额提示的节流时间戳（time_get），<0 表示未提示过
+	int64_t m_LastMymemoryQuotaNoticeTime = -1;
 };
 
 #endif

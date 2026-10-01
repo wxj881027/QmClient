@@ -4271,13 +4271,10 @@ void CClient::Run()
 		}
 	}
 
-	// make sure the first frame just clears everything to prevent undesired colors when waiting for io
-	// QmClient: 首帧清屏必须保持纯黑。曾改用 cl_background_color，但该值默认 128，
-	// 经 ColorHSLA 解成 l=128/255≈0.502 → #808080 中灰；窗口打开后到首个加载帧之间
-	// （GameClient 初始化还没跑完）呈现的就是这个清屏色，表现为启动整屏灰。
-	// 菜单主题是 .map 时会铺满全屏，只有这种"空帧"才露出清屏色，故与主题选择无关。
+	// 可见窗口先呈现干净的初始帧；隐藏窗口只清理后缓冲，等有效内容就绪再显示。
 	Graphics()->Clear(0, 0, 0);
-	Graphics()->Swap();
+	if(Graphics()->WindowOpen())
+		Graphics()->Swap();
 
 	// init localization first, making sure all errors during init can be localized
 	GameClient()->InitializeLanguage();
@@ -4367,12 +4364,8 @@ void CClient::Run()
 	int LastIdleRenderThrottleRate = -1;
 	int LastRequestedRenderThrottleRate = -1;
 
-	// QmClient: 兜底显示窗口。窗口是隐藏创建的，正常路径由菜单加载界面 present 首帧后
-	// 调用 ShowWindow()；但若本次启动压根没有走过加载界面，窗口会一直隐藏，而
-	// WindowOpen() 依赖 SDL_WINDOW_SHOWN，一旦 gfx_backgroundrender 为 0，
-	// IsRenderActive 就恒为 false，主循环永远不渲染、也就永远不会显示窗口 —— 死锁。
-	// 进主循环前无条件显示一次即可消除该路径（重复调用无副作用）。
-	Graphics()->ShowWindow();
+	// 没有加载帧的启动路径也走同一入口，避免后台渲染关闭时窗口始终隐藏。
+	EnsureWindowShown();
 
 	while(true)
 	{
@@ -5890,33 +5883,21 @@ bool CClient::HandleQmGraphicsFatalError()
 	return true;
 }
 
+void CClient::EnsureWindowShown()
+{
+	if(m_WindowShown)
+		return;
+	// 隐藏路径先完成后缓冲绘制再显示；可见创建路径无需重复同步与显示。
+	if(!Graphics()->WindowOpen())
+		Graphics()->ShowWindow();
+	m_WindowShown = true;
+}
+
 void CClient::UpdateAndSwap()
 {
 	Input()->Update();
+	EnsureWindowShown();
 	Graphics()->Swap();
-	// QmClient: 窗口是隐藏创建的（见 backend_sdl.cpp 里的 SDL_WINDOW_HIDDEN）。
-	// 这里在第一帧真正 present 之后再显示它，启动就不会先闪一帧纯黑。
-	// 本函数只有一条调用路径：加载界面 RenderLoadingDirect() 末尾的
-	// UpdateAndSwapClient()。主循环的呈现走的是 m_pGraphics->Swap()，不经过这里，
-	// 所以主循环由 Run() 进 while 前那次无条件 ShowWindow() 负责。
-	// 用标志只调一次：加载界面每帧都会走到这里，没必要重复调 SDL_ShowWindow。
-	if(!m_WindowShown)
-	{
-		m_WindowShown = true;
-		// 必须等这一帧真的 present 出去再显示窗口。Swap() 是异步的：它只把
-		// SCommand_Swap 入队、KickCommandBuffer() 就返回，present 由渲染线程执行。
-		// 不等的话，窗口显示出来的那一刻屏幕上还是 Run() 里 Clear(0,0,0) 的那帧黑，
-		// 加载帧仍在渲染线程里排队 —— 用户看到的就是"先黑一下再出现加载界面"。
-		// Vulkan 首次 present 叠加 vsync 等待更久，这段黑尤其明显；GL 上同样存在。
-		// WaitForIdle() 等到的是渲染线程处理完整个缓冲（CGraphicsBackend_Threaded
-		// 在 m_pProcessor->RunBuffer() 返回之后才置空 m_pBuffer），所以返回即已 present，
-		// 且不依赖时序猜测。只在首帧付一次等待成本。
-		Graphics()->WaitForIdle();
-		Graphics()->ShowWindow();
-	}
-	// QmClient: 帧间清屏同样保持纯黑，理由同 CClient::Run() 的首帧清屏。
-	// 这里曾是 cl_background_color（默认 128 → #808080），加载期间任何
-	// "还没绘制就被呈现"的空帧都会露出整屏中灰。
 	Graphics()->Clear(0, 0, 0);
 	if(g_Config.m_QmGraphicsTrace >= 3)
 		dbg_msg("gfx/swap", "swap source=loading state=%d", State());

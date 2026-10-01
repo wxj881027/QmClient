@@ -353,3 +353,59 @@ TEST(ParseLlmResponseJson, LongContent)
 
 	json_value_free(pJson);
 }
+
+// 测试：端点归一——完整 chat/completions URL 剥离为 base URL 并判定 Chat 格式
+TEST(NormalizeLlmEndpoint, FullChatCompletionsUrl)
+{
+	SLlmEndpointInfo Info;
+	ASSERT_TRUE(NormalizeLlmEndpoint("https://api.ziliao.xyz/v1/chat/completions", Info));
+	EXPECT_STREQ(Info.m_aBaseUrl, "https://api.ziliao.xyz/v1");
+	EXPECT_EQ(Info.m_Style, ELlmApiStyle::CHAT);
+}
+
+// 测试：端点归一——只填到 /v1 的 base URL，格式为 AUTO
+TEST(NormalizeLlmEndpoint, BaseUrlWithV1)
+{
+	SLlmEndpointInfo Info;
+	ASSERT_TRUE(NormalizeLlmEndpoint("https://api.ziliao.xyz/v1", Info));
+	EXPECT_STREQ(Info.m_aBaseUrl, "https://api.ziliao.xyz/v1");
+	EXPECT_EQ(Info.m_Style, ELlmApiStyle::AUTO);
+}
+
+// 测试：端点归一——responses 后缀判定 Responses 格式
+TEST(NormalizeLlmEndpoint, ResponsesUrl)
+{
+	SLlmEndpointInfo Info;
+	ASSERT_TRUE(NormalizeLlmEndpoint("https://api.openai.com/v1/responses", Info));
+	EXPECT_STREQ(Info.m_aBaseUrl, "https://api.openai.com/v1");
+	EXPECT_EQ(Info.m_Style, ELlmApiStyle::RESPONSES);
+}
+
+// 测试：端点归一——chat/completion 少写 s 的笔误同样识别
+TEST(NormalizeLlmEndpoint, ChatCompletionTypo)
+{
+	SLlmEndpointInfo Info;
+	ASSERT_TRUE(NormalizeLlmEndpoint("https://relay.example.com/v1/chat/completion", Info));
+	EXPECT_STREQ(Info.m_aBaseUrl, "https://relay.example.com/v1");
+	EXPECT_EQ(Info.m_Style, ELlmApiStyle::CHAT);
+}
+
+// 测试：端点归一——尾斜杠、首尾空白与大小写容错
+TEST(NormalizeLlmEndpoint, TrailingSlashAndWhitespace)
+{
+	SLlmEndpointInfo Info;
+	ASSERT_TRUE(NormalizeLlmEndpoint("  HTTPS://Api.Example.com/v1/CHAT/COMPLETIONS/  ", Info));
+	EXPECT_STREQ(Info.m_aBaseUrl, "HTTPS://Api.Example.com/v1");
+	EXPECT_EQ(Info.m_Style, ELlmApiStyle::CHAT);
+}
+
+// 测试：端点归一——非法输入拒绝
+TEST(NormalizeLlmEndpoint, RejectsInvalid)
+{
+	SLlmEndpointInfo Info;
+	EXPECT_FALSE(NormalizeLlmEndpoint("", Info));
+	EXPECT_FALSE(NormalizeLlmEndpoint(nullptr, Info));
+	EXPECT_FALSE(NormalizeLlmEndpoint("api.example.com/v1", Info));
+	EXPECT_FALSE(NormalizeLlmEndpoint("ftp://api.example.com", Info));
+	EXPECT_FALSE(NormalizeLlmEndpoint("   ", Info));
+}

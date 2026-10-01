@@ -1320,6 +1320,7 @@ public:
 			m_FontSize(-1.0f),
 			m_Enabled(true),
 			m_ClosePopupWhenDisabled(true),
+			m_RequireSourceRefresh(true),
 			m_pAnchorViewport(nullptr),
 			m_pPopupViewport(nullptr)
 		{
@@ -1328,6 +1329,7 @@ public:
 		float m_FontSize;
 		bool m_Enabled;
 		bool m_ClosePopupWhenDisabled;
+		bool m_RequireSourceRefresh;
 		// 下拉框的锚点和弹层有不同的裁剪语义：锚点必须仍在所属控件内，
 		// 弹层则允许离开卡片，但不能越过设置页滚动 viewport。未指定时沿用
 		// 当前 clip stack，旧调用方因此保持兼容。

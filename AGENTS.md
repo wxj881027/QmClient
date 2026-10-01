@@ -29,10 +29,8 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 | --- | --- |
 | C++ 实现、调试、重构 | `qmclient-cpp-conventions/SKILL.md` |
 | 选择验证、交付代码 | `qmclient-verification-gate/SKILL.md` |
-| 代码审查 | `qmclient-code-review/SKILL.md` |
-| 深度质量审计、发布风险审查 | `audit-qmclient-quality/SKILL.md` |
-| 翻译与生成链 | `qmclient-i18n-workflow/SKILL.md` |
-| 翻译污染、迁移、覆盖审计 | `qmclient-i18n-audit/SKILL.md` |
+| 代码审查、深度质量审计、发布风险审查 | `qmclient-code-review/SKILL.md` |
+| 翻译、生成链及污染/迁移/覆盖审计 | `qmclient-i18n-workflow/SKILL.md` |
 | 提交、PR、版本与发布 | `qmclient-git-commit/SKILL.md` |
 
 维护规则时读 `.agents/README.md`；使用脚本时按需读 `qmclient_scripts/scripts_overview.md`。
@@ -82,13 +80,16 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 
 - 代码改动按验证 skill 选择风险匹配的测试与 gate；低风险修改允许相关过滤测试，常规代码至少 quick gate。已覆盖的检查不重复执行。
 - 修复可复现行为时优先先写失败测试；小改动不为满足 TDD 写实现镜像或无意义测试。
+- 性能敏感代码尽可能模块化并可通过 Google Benchmark 测量生产实现；相关性能验证由 verification skill 选择。功能测试或 gate 通过不能代替性能证据，CPU 微基准不能代替帧、设备和玩家场景实测。
 - 纯文档人工核对内容、链接和状态，不跑代码 gate。未经验证的运行时或跨平台行为不称通过。
 - 默认用自然段说明结果、验证和真实剩余问题；必要时才列项，普通回复不套 commit/PR 模板。
 - 版本号分两层：正式版版本号 `QMCLIENT_STABLE_VERSION`（V3、V3.1…）只在用户明确授权发布时更新，未授权一律不动；开发迭代需要标识进度时只动开发版本号 `QMCLIENT_DEV_VERSION`（V3.13.0 格式）。纯调查、文档、规则维护不升任何版本。版本操作统一走 bump_version.py，见 Git skill。
 
 ## 文档权威
 
-- 本文件负责全局边界，skills 负责专项操作，`references/` 仅放按需资料；`docs/superpowers/` 放规格、计划和证据，不再维护另一套通用 agent 规则。
+- 本文件负责全局边界，skills 负责专项操作，`references/` 仅放按需资料。项目文档按内容归入现有目录：当前功能设计、方案和实施安排放 `docs/规格/`；历史调研、修复记录和被替代的方案放 `docs/归档/`。
+- 新增项目文档使用中文文件名，历史记录可加日期前缀；正文用清楚的中文说明目标、行为和实现安排，按内容组织，不套用 skill、审查报告或提交模板。
+- 不再创建 `docs/superpowers/`，也不以工具或插件名称另建文档体系。
 - 采用与当前任务相符且仍有效的文档；`draft` 仅在用户采纳后作为实现依据，无状态文档须核对现状，不能仅凭日期认定有效。
 - 归档、过时或被替代的文档仅作历史线索。保留历史记录，以状态或 supersedes 标记替代关系。
 - 重要决策、长任务进度和交接证据写入版本化文档；小任务可直接在最终回复交付，不强制新建计划或报告。

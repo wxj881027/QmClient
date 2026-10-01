@@ -6,7 +6,7 @@
 2. 验证版本差异及发布要求，提交标题为 `chore: bump version to X.Y.Z`。
 3. 已授权发布时核对目标仓库的 workflow 触发条件与发布权限，再创建对应 tag 并推送；不要顺带推送其他分支或 tag。
 
-说明由 `qmclient_scripts/generate_release_notes.py` 确定性生成和润色，不调用外部 AI。具体规范见 [RELEASE_NOTE_TEMPLATE.md](../../../../docs/RELEASE_NOTE_TEMPLATE.md)。
+说明由 `qmclient_scripts/generate_release_notes.py` 确定性生成和润色，不调用外部 AI。当前通道和说明结构以 [generate_release_notes.py](../../../../qmclient_scripts/generate_release_notes.py) 及对应 workflow 为准。
 
 - Stable 使用 `vX.Y.Z`，生成普通 Release；脚本输出应面向玩家，可选人工润色。
 - Nightly 使用 `.github/workflows/nightly.yml` 对应流程，脚本输出即终稿。生成器支持预发布说明不等于 CI 支持任意 tag：当前 `build.yml` 的版本校验仅接受 v/V 开头的数字版本，不能假定 rc/beta tag 可直接发布。

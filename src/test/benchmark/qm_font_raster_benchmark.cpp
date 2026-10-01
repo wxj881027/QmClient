@@ -1,33 +1,19 @@
-// qm_font_raster_benchmark.cpp：字形首次光栅化成本基准（Google Benchmark）
-// 首开界面 spike 的 CPU 主因：每个新（字符, 字号）组合首次绘制都要 freetype
-// 光栅化（text.cpp RenderGlyph，FT_LOAD_RENDER|FT_LOAD_NO_BITMAP，同款参数），
-// 随后每字形一次 GPU 纹理更新（UploadGlyph→UpdateTextTexture，无预热无合批）。
-// 本基准量化 CPU 侧：一次「冷启动画满一屏」= 256 个首见中文字形逐个光栅化。
-// GPU 上传开销不在本基准内，游戏内 QmPerf 计数器（ConsumeQmPerfGlyphStats）可直接实测。
-// 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
+// 字形查表与光栅化批次的 CPU 成本；不包含字体文件加载、应用字形缓存或 GPU 上传。
+// 每次重复独立初始化 FreeType，所有迭代都显式光栅化完整字符集。
 #include <benchmark/benchmark.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
 #include <cstdint>
-#include <cstdio>
+#include <fstream>
+#include <limits>
 #include <vector>
-
-// main / IsInterrupted 桩统一在 qm_benchmark_main.cpp 提供
 
 namespace
 {
-	// 简体中文主字体（fonts/index.json 的 simplified_chinese 默认面），构建目录含副本
-	constexpr const char *CJK_FONT_PATH = "data/fonts/NotoSansSC-VF.ttf";
-	constexpr int NUM_GLYPHS = 256; // 一屏文字的典型新字形数量
-
-	// 256 个不重复的 CJK 码点（统一表意区按步长取样，笔画复杂度代表性一致）
-	void MakeCjkCharset(std::vector<FT_ULong> &vCodepoints)
-	{
-		vCodepoints.clear();
-		for(int i = 0; i < NUM_GLYPHS; i++)
-			vCodepoints.push_back(static_cast<FT_ULong>(0x4E00 + i * 7));
-	}
+	// 使用当前源码字体，独立于调用者的工作目录。
+	constexpr const char *CJK_FONT_PATH = DDNET_TEST_SOURCE_DIR "/data/fonts/NotoSansSC-VF.ttf";
+	constexpr int NUM_GLYPHS = 256;
 } // namespace
 
 class FontRasterBenchmark : public benchmark::Fixture
@@ -35,60 +21,81 @@ class FontRasterBenchmark : public benchmark::Fixture
 public:
 	void SetUp(const benchmark::State &State) override
 	{
-		const int FontSize = static_cast<int>(State.range(0));
-
-		if(m_Library == nullptr && FT_Init_FreeType(&m_Library))
+		m_pError = "FreeType initialization failed";
+		if(FT_Init_FreeType(&m_Library))
 			return;
-		if(m_pFace == nullptr)
+
+		m_pError = "CJK font could not be read";
+		std::ifstream File(CJK_FONT_PATH, std::ios::binary | std::ios::ate);
+		const std::streamoff Size = File ? static_cast<std::streamoff>(File.tellg()) : 0;
+		if(Size <= 0 || Size > std::numeric_limits<FT_Long>::max())
+			return;
+		m_vFontData.resize(static_cast<size_t>(Size));
+		File.seekg(0);
+		if(!File.read(reinterpret_cast<char *>(m_vFontData.data()), Size))
+			return;
+
+		m_pError = "CJK font face or size initialization failed";
+		if(FT_New_Memory_Face(m_Library, m_vFontData.data(), static_cast<FT_Long>(Size), 0, &m_pFace) ||
+			FT_Set_Pixel_Sizes(m_pFace, 0, static_cast<FT_UInt>(State.range(0))))
+			return;
+
+		m_pError = "CJK font is missing a benchmark glyph";
+		for(int i = 0; i < NUM_GLYPHS; i++)
 		{
-			FILE *pFile = std::fopen(CJK_FONT_PATH, "rb");
-			if(pFile == nullptr)
+			const FT_ULong Codepoint = static_cast<FT_ULong>(0x4E00 + i * 7);
+			if(FT_Get_Char_Index(m_pFace, Codepoint) == 0)
 				return;
-			std::fseek(pFile, 0, SEEK_END);
-			const long Size = std::ftell(pFile);
-			std::fseek(pFile, 0, SEEK_SET);
-			m_vFontData.resize(static_cast<size_t>(Size));
-			const size_t Read = std::fread(m_vFontData.data(), 1, m_vFontData.size(), pFile);
-			std::fclose(pFile);
-			if(Read != m_vFontData.size() || FT_New_Memory_Face(m_Library, m_vFontData.data(), static_cast<FT_Long>(m_vFontData.size()), 0, &m_pFace))
-				return;
+			m_vCharset.push_back(Codepoint);
 		}
-		if(FT_Set_Pixel_Sizes(m_pFace, 0, FontSize))
-			return;
+		m_pError = nullptr;
+	}
 
-		MakeCjkCharset(m_vCharset);
-		m_Ready = true;
+	void TearDown(const benchmark::State &) override
+	{
+		// Face 引用内存字体，先销毁 Face，再释放字节及 Library。
+		if(m_pFace != nullptr)
+			FT_Done_Face(m_pFace);
+		if(m_Library != nullptr)
+			FT_Done_FreeType(m_Library);
+		m_pFace = nullptr;
+		m_Library = nullptr;
+		m_vFontData.clear();
+		m_vCharset.clear();
+		m_pError = "fixture not initialized";
 	}
 
 	FT_Library m_Library = nullptr;
 	FT_Face m_pFace = nullptr;
 	std::vector<uint8_t> m_vFontData;
 	std::vector<FT_ULong> m_vCharset;
-	bool m_Ready = false;
+	const char *m_pError = "fixture not initialized";
 };
 
-// 冷启动画一屏：256 个首见中文字形逐个光栅化（首开画字的 CPU 成本），
-// Arg = 字号（像素）；每迭代 = 一次完整冷绘制
-BENCHMARK_DEFINE_F(FontRasterBenchmark, BM_GlyphRasterizeColdPaint)(benchmark::State &State)
+// 批次内每个字符都执行生产 FreeType API；不是应用字形缓存命中的稳态绘制。
+BENCHMARK_DEFINE_F(FontRasterBenchmark, BM_GlyphRasterizeBatch)(benchmark::State &State)
 {
-	if(!m_Ready)
+	if(m_pError != nullptr)
 	{
-		State.SkipWithError("freetype/font init failed in SetUp");
+		State.SkipWithError(m_pError);
 		return;
 	}
+	State.SetLabel("lookup+raster;no-gpu;v2");
 	for(auto _ : State)
 	{
-		int Ok = 0;
 		for(FT_ULong Chr : m_vCharset)
 		{
-			const uint32_t GlyphIndex = FT_Get_Char_Index(m_pFace, Chr);
-			if(GlyphIndex == 0)
-				continue;
-			if(!FT_Load_Glyph(m_pFace, GlyphIndex, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP))
-				++Ok;
+			const FT_UInt GlyphIndex = FT_Get_Char_Index(m_pFace, Chr);
+			if(FT_Load_Glyph(m_pFace, GlyphIndex, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP))
+			{
+				State.SkipWithError("glyph rasterization failed");
+				break;
+			}
+			benchmark::DoNotOptimize(m_pFace->glyph->bitmap.buffer);
 		}
-		benchmark::DoNotOptimize(Ok);
+		if(State.skipped())
+			break;
 	}
 	State.SetItemsProcessed(State.iterations() * NUM_GLYPHS);
 }
-BENCHMARK_REGISTER_F(FontRasterBenchmark, BM_GlyphRasterizeColdPaint)->Arg(16)->Arg(24)->Arg(36);
+BENCHMARK_REGISTER_F(FontRasterBenchmark, BM_GlyphRasterizeBatch)->Arg(16)->Arg(24)->Arg(36);

@@ -1094,6 +1094,9 @@ Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 == Chat nach Auftauen automatisch schließen
 
+Auto-connect dummy
+== Dummy automatisch verbinden
+
 Auto-create CSV on game end
 == CSV am Spielende automatisch erstellen
 
@@ -2321,6 +2324,9 @@ Connect address error
 Connect dummy
 == Dummy verbinden
 
+Connect dummy automatically for solo split mode
+== Dummy im Solo-Aufteilungsmodus automatisch verbinden
+
 Connect dummy to enable
 == Dummy verbinden, um zu aktivieren
 
@@ -2674,6 +2680,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== Benutzerdefiniert…
 
 Cut interval
 == Schnittintervall
@@ -3668,6 +3677,7 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == Hintergrund-3D-Partikel-Schweif aktivieren
 
+
 Enable camera drift
 == Kameradrift aktivieren
 
@@ -4060,6 +4070,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == Passwort eingeben
+
+Enter solo split mode
+== Solo-Aufteilungsmodus betreten
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Gib den Sponsor-Code ein und drücke „Einlösen“, schreibe dann den Titel und drücke „Speichern“. Aktiviere „Nur mit diesem Nicknamen anzeigen“, um den Titel an einen Nicknamen zu binden.
@@ -5456,8 +5469,8 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == Skin beim Speichern/Laden von Konfigurationsvoreinstellungen einbeziehen
 
-Incoming language
-== Empfangssprache
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== Modus für automatische Übersetzung eingehender Nachrichten (0=nur wenn nicht in der Zielsprache, 1=immer übersetzen)
 
 Indicate map finish
 == Abgeschlossene Karte anzeigen
@@ -5983,6 +5996,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Leer lassen, um Standard-Prompt zu verwenden
+
+Leave solo split mode
+== Solo-Aufteilungsmodus verlassen
 
 Left jump
 == Links springen
@@ -6935,6 +6951,12 @@ Muted
 my_%s
 == mein_%s
 
+MyMemory (free)
+== MyMemory (kostenlos)
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemory erfordert keine Registrierung (anonymes Tageskontingent)
+
 n = Prediction latency
 == n = Vorhersage-Latenz
 
@@ -7679,6 +7701,12 @@ Or visit DDNet.org
 Original
 == Originalstil
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== Originalsprache für empfangene und ausgehende Nachrichten. Mit Auto wird jede Nachricht einzeln erkannt.
+
+Original message language
+== Sprache der Originalnachricht
+
 Other
 == Andere
 
@@ -7693,9 +7721,6 @@ Others
 
 Others only
 == Nur andere
-
-Outgoing language
-== Sendesprache
 
 Outgoing translation target language code
 == Zielsprachcode für ausgehende Übersetzungen
@@ -8840,6 +8865,9 @@ Rebinds the client's listening address and port
 Receive Rate
 == Empfangsrate
 
+Receive translation method
+== Übersetzungsmethode für empfangene Nachrichten
+
 Receive VAD speakers
 == VAD-Sprecher empfangen
 
@@ -9944,14 +9972,8 @@ Send probability
 Send Rate
 == Senderate
 
-Send source language
-== Quellsprache senden
-
 Send specified command to rcon
 == Angegebenen Befehl an Rcon senden
-
-Send target language
-== Zielsprache senden
 
 Send translation method
 == Übersetzungsmethode senden
@@ -10189,6 +10211,9 @@ Show a small view of the dummy
 
 Show advanced title settings (collapsing keeps configured effects)
 == Erweiterte Titeleinstellungen anzeigen (Zuklappen behält die Effekte bei)
+
+Show advanced translation options
+== Erweiterte Übersetzungsoptionen anzeigen
 
 Show air jump indicator
 == Luftspring-Anzeige anzeigen
@@ -11357,8 +11382,14 @@ Solo
 Solo split
 == Solo-Aufteilung
 
+Solo split enter key
+== Taste zum Betreten der Solo-Aufteilung
+
 Solo split key
 == Solo-Aufteilungs-Taste
+
+Solo split leave key
+== Taste zum Verlassen der Solo-Aufteilung
 
 Some fonts could not be loaded. Check the local console for details.
 == Einige Schriftarten konnten nicht geladen werden. Überprüfe die lokale Konsole für Details.
@@ -11494,9 +11525,6 @@ Spirit Light
 
 Split main and dummy into different teams for solo-run sync
 == Verteilt Haupt- und Dummy-Tee auf verschiedene Teams zur Solo-Run-Synchronisation
-
-Split main/dummy into two free teams; press again to return to team 0
-== Haupt-/Dummy-Tee auf zwei freie Teams aufteilen; erneutes Drücken kehrt zu Team 0 zurück
 
 Sponsor code
 == Unterstützercode
@@ -11843,9 +11871,6 @@ Taper trail ends
 Taper trail width
 == Verjüngte Spurbreite
 
-Target language
-== Zielsprache
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == Zielsprachcode für Übersetzung (z. B. zh, en, ja, zh-TW)
 
@@ -11959,6 +11984,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Team-Tee-Glühen
+
+Team used when leaving solo split mode
+== Team beim Verlassen des Solo-Aufteilungsmodus
+
+Team when leaving solo split
+== Team beim Verlassen der Solo-Aufteilung
 
 Teammate
 == Teamkamerad
@@ -12515,6 +12546,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == Anzeigetafel-Cursor umschalten
 
+Toggle solo split mode
+== Solo-Aufteilungsmodus umschalten
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == Team zwischen Team 0 und Team-Modus umschalten. Dieser Modus bewirkt, dass sich dein Team wie Team 0 verhält.
 
@@ -12644,6 +12678,15 @@ Translate last message of the person with this id
 Translate only when needed
 == Nur bei Bedarf übersetzen
 
+Translate only when not in target language
+== Nur übersetzen, wenn nicht in der Zielsprache
+
+Translate outgoing messages to
+== Ausgehende Nachrichten übersetzen in
+
+Translate received messages to
+== Empfangene Nachrichten übersetzen in
+
 Translate UI
 == UI übersetzen
 
@@ -12656,8 +12699,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == Übersetze zu %s...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== Übersetzungs-Backend (llm/tencentcloud/libretranslate/ftapi)
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== Übersetzungs-Backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
 
 Translation backend invalid, sending original
 == Übersetzungs-Backend ungültig, Original wird gesendet
@@ -14116,6 +14159,9 @@ Zhipu AI
 
 Zhipu API key
 == Zhipu-API-Schlüssel
+
+Zhipu free models allow only 1 concurrent request
+== Kostenlose Zhipu-Modelle erlauben nur 1 parallele Anfrage
 
 ZhipuAI API Key
 == Zhipu AI API Key

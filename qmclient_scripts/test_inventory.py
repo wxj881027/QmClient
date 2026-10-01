@@ -92,7 +92,10 @@ def build_inventory(root: Path) -> dict[str, object]:
 	}
 	python_tests = list((root / "qmclient_scripts" / "tests").glob("test*.py"))
 	integration_tests = list((root / "qmclient_scripts" / "integration").glob("test*.py"))
-	smoke_runner = root / "qmclient_scripts" / "integration" / "qmclient_smoke.py"
+	smoke_runners = [
+		path for path in (root / "qmclient_scripts" / "integration").glob("*smoke.py")
+		if SMOKE_SCENARIO.search(path.read_text(encoding="utf-8", errors="replace"))
+	]
 	e2e_scenarios = sum(
 		len(E2E_SCENARIO.findall(path.read_text(encoding="utf-8", errors="replace")))
 		for path in (root / "qmclient_scripts" / "integration").glob("e2e_*.py")
@@ -116,8 +119,11 @@ def build_inventory(root: Path) -> dict[str, object]:
 				len(PYTHON_CASE.findall(path.read_text(encoding="utf-8", errors="replace")))
 				for path in python_integration_files
 			),
-			"process_smoke_runners": 1 if (root / "qmclient_scripts" / "integration" / "qmclient_smoke.py").is_file() else 0,
-			"process_smoke_scenarios": len(SMOKE_SCENARIO.findall(smoke_runner.read_text(encoding="utf-8", errors="replace"))) if smoke_runner.is_file() else 0,
+			"process_smoke_runners": len(smoke_runners),
+			"process_smoke_scenarios": sum(
+				len(SMOKE_SCENARIO.findall(path.read_text(encoding="utf-8", errors="replace")))
+				for path in smoke_runners
+			),
 			"official_process_integration": 1 if (root / "scripts" / "integration_test.py").is_file() else 0,
 			"e2e_scenarios": e2e_scenarios,
 		},

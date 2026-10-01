@@ -17,7 +17,7 @@
 // 混合码点分类：模拟中文 UI 文本（拉丁 / CJK / 图标符号约各占 1/3）
 static void BM_FontCategoryClassify(benchmark::State &State)
 {
-	static const int aMixedCodepoints[] = {
+	int aMixedCodepoints[] = {
 		0x41,
 		0x4E2D,
 		0x2600,
@@ -44,12 +44,17 @@ static void BM_FontCategoryClassify(benchmark::State &State)
 		0x2728,
 	};
 	const int NumCodepoints = static_cast<int>(sizeof(aMixedCodepoints) / sizeof(aMixedCodepoints[0]));
+	int *pCodepoints = aMixedCodepoints;
+	benchmark::DoNotOptimize(pCodepoints);
 	for(auto _ : State)
 	{
+		// 输入逃逸并加内存屏障，避免内联分类被折叠为常量计数。
+		benchmark::ClobberMemory();
 		int NumCjk = 0;
 		int NumIcons = 0;
-		for(int Chr : aMixedCodepoints)
+		for(int i = 0; i < NumCodepoints; i++)
 		{
+			const int Chr = pCodepoints[i];
 			NumCjk += QmIsCjkCodepoint(Chr) ? 1 : 0;
 			NumIcons += QmIsIconSymbolCodepoint(Chr) ? 1 : 0;
 		}
@@ -77,6 +82,7 @@ static void BM_StrUtf8DecodeMixed(benchmark::State &State)
 		benchmark::DoNotOptimize(NumCodepoints);
 	}
 	State.SetItemsProcessed(State.iterations());
+	State.SetBytesProcessed(State.iterations() * (pEnd - pText));
 }
 BENCHMARK(BM_StrUtf8DecodeMixed);
 
@@ -113,9 +119,10 @@ static void BM_StrUtf8Check(benchmark::State &State)
 	const int Len = str_length(pText);
 	for(auto _ : State)
 	{
-		const int Valid = str_utf8_check(pText);
+		int Valid = str_utf8_check(pText);
 		benchmark::DoNotOptimize(Valid);
 	}
-	State.SetItemsProcessed(State.iterations() * Len); // 字节吞吐
+	State.SetItemsProcessed(State.iterations()); // 完整字符串数量
+	State.SetBytesProcessed(State.iterations() * Len);
 }
 BENCHMARK(BM_StrUtf8Check);

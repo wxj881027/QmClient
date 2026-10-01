@@ -86,8 +86,8 @@ TEST(QmNewUiMenuLocalizationContract, TranslationAndDemoUiLabelsUseEnglishKeys)
 	EXPECT_NE(ChatSource.find("Localize(\"Translation Settings\")"), std::string::npos);
 	EXPECT_NE(ChatSource.find("Localize(\"Auto-translate incoming messages\")"), std::string::npos);
 	EXPECT_NE(ChatSource.find("Localize(\"Auto-translate outgoing messages\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Incoming language\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Outgoing language\")"), std::string::npos);
+	EXPECT_NE(ChatSource.find("Localize(\"Translate received messages to\")"), std::string::npos);
+	EXPECT_NE(ChatSource.find("Localize(\"Translate outgoing messages to\")"), std::string::npos);
 	EXPECT_NE(ChatSource.find("Localize(\"Translation service\")"), std::string::npos);
 	EXPECT_NE(DemoSource.find("Localize(\"Could not preview this image\")"), std::string::npos);
 	EXPECT_NE(DemoSource.find("BrowsingScreenshots ? Localize(\"Open the folder containing screenshots\") : Localize(\"Open the folder containing demo files\")"), std::string::npos);

@@ -131,7 +131,7 @@ namespace qm_card_registry
 			{"qm:friend_notify", "function", ECardColumn::Left, 11, "Friend notify", "好友提醒 haoyou tixing 好友上线 shangxian 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi function", "Friend online and join notifications"},
 			{"qm:block_words", "function", ECardColumn::Left, 12, "Block words", "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan function", "Chat word filtering"},
 			{"qm:qiafen", "function", ECardColumn::Left, 13, "Keyword reply", "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming keyword reply qiafen function", "Configure keyword-based automatic replies"}, // UI 名 keyword_reply，以持久化 key qiafen 为权威
-			{"qm:translate", "function", ECardColumn::Left, 14, "Translate", "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.5-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过 function", "Chat translation settings"},
+			{"qm:translate", "function", ECardColumn::Left, 14, "Translate", "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.7-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过 function", "Chat translation settings"},
 			{"qm:pie_menu", "function", ECardColumn::Left, 16, "Pie menu", "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan function", "Quick action menu for players"},
 			{"qm:emoticons", "function", ECardColumn::Left, 18, "Emoticons", "表情 biaoqing 大表情 dabiaoqing 发射表情 fashe biaoqing 表情发射 launcher launch super emote 按键绑定 anjian bangding 他人显示 taren xianshi function", "Large emoticons and launched emoticons"},
 			{"qm:map_upload", "function", ECardColumn::Right, 21, "Map upload", "上传地图 shangchuan ditu 测图 cetu map upload test server function", "Upload a saved map to the public test server"},
@@ -180,13 +180,13 @@ namespace qm_card_registry
 			{"tclient:cursor", "tclient", ECardColumn::Left, 1, "Visual: Cursor", "cursor tclient visual", "Configure the ingame cursor scale"},
 
 			// === 设置 deck · deck:<page>-<card>（原无持久化；tab=归属页/子页，column/order 按运行时卡片顺序显式化）===
-			// 贡献者页分三个子页签（credits-qmclient / credits-links / credits-other）；配置文件卡在常规页。
+			// 贡献者页分两个子页签（credits-qmclient / credits-links）；DDNet/TClient 署名卡并入友链，全卡半宽。
 			{"deck:qmclient-contributors-community", "credits-qmclient", ECardColumn::Left, 0, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
 			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname", Localizable("Redeem your code and customize your title")},
 			{"deck:qmclient-contributors-sponsors", "credits-qmclient", ECardColumn::Right, 0, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
-			{"deck:credits-friend-links", "credits-links", ECardColumn::Full, 0, "Friend links", "friend links ddnet workshop website qmclient homepage", "Project and community websites"},
-			{"deck:qmclient-contributors-ddnet", "credits-other", ECardColumn::Left, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
-			{"deck:tclient-info-developers", "credits-other", ECardColumn::Right, 0, "TClient Developers", "tclient developers links discord website github support tater sollybunny pebox teero chillerdragon", "View the developers, contributors, and project links"},
+			{"deck:credits-friend-links", "credits-links", ECardColumn::Left, 0, "Friend links", "friend links ddnet workshop website qmclient homepage", "Project and community websites"},
+			{"deck:qmclient-contributors-ddnet", "credits-links", ECardColumn::Right, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
+			{"deck:tclient-info-developers", "credits-links", ECardColumn::Left, 1, "TClient Developers", "tclient developers links discord website github support tater sollybunny pebox teero chillerdragon", "View the developers, contributors, and project links"},
 			{"deck:global-search-input", "global-search", ECardColumn::Full, 0, "Feature Search", "global search feature cards", "Search settings by title, feature, or keyword"},
 			{"deck:global-search-results", "global-search", ECardColumn::Full, 1, "Search", "global search result cards", "Open a matching settings card directly"},
 			{"deck:general-game", "general", ECardColumn::Left, 0, Localizable("Game"), "general game camera weapon", "Configure camera, weapon, and gameplay defaults"},

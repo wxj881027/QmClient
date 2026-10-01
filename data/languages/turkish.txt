@@ -1094,6 +1094,9 @@ Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
 == Çözülmeden sonra sohbeti otomatik kapat
 
+Auto-connect dummy
+== Dummy'yi otomatik bağla
+
 Auto-create CSV on game end
 == Oyun sonunda otomatik CSV oluştur
 
@@ -2321,6 +2324,9 @@ Connect address error
 Connect dummy
 == Dummy bağla
 
+Connect dummy automatically for solo split mode
+== Solo bölme modunda dummy'yi otomatik bağla
+
 Connect dummy to enable
 == Etkinleştirmek için dublör bağla
 
@@ -2674,6 +2680,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== Özel…
 
 Cut interval
 == Kesim aralığı
@@ -3668,6 +3677,7 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == Arka plan 3D parçacık izlerini etkinleştir
 
+
 Enable camera drift
 == Kamera sürüklenmesini etkinleştir
 
@@ -4060,6 +4070,9 @@ Enter a CP number from 1 to 255.
 
 Enter Password
 == Şifre Gir
+
+Enter solo split mode
+== Solo bölme moduna gir
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Sponsor kodunu gir ve "Kullan" düğmesine bas, ardından unvanı yaz ve "Kaydet"e bas. Tek bir takma ada bağlamak için "Yalnızca bu takma adla göster" seçeneğini işaretle.
@@ -5456,8 +5469,8 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == Yapılandırma ön ayarını kaydederken/yüklerken skin'i dahil et
 
-Incoming language
-== Gelen dil
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== Gelen mesajlar için otomatik çeviri modu (0=yalnızca hedef dilde değilse çevir, 1=her zaman çevir)
 
 Indicate map finish
 == Harita bitişini işaretle
@@ -5983,6 +5996,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Varsayılan istemi kullanmak için boş bırakın
+
+Leave solo split mode
+== Solo bölme modundan çık
 
 Left jump
 == Sol zıplama
@@ -6935,6 +6951,12 @@ Muted
 my_%s
 == benim_%s
 
+MyMemory (free)
+== MyMemory (ücretsiz)
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemory kayıt gerektirmez (anonim günlük kota)
+
 n = Prediction latency
 == n = Tahmin gecikmesi
 
@@ -7679,6 +7701,12 @@ Or visit DDNet.org
 Original
 == Özgün
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== Alınan ve gönderilen mesajların orijinal dili. Her mesajın dilini algılamak için Otomatik seçin.
+
+Original message language
+== Orijinal mesajın dili
+
 Other
 == Diğer
 
@@ -7693,9 +7721,6 @@ Others
 
 Others only
 == Yalnızca diğerleri
-
-Outgoing language
-== Giden dil
 
 Outgoing translation target language code
 == Giden çeviri hedef dil kodu
@@ -8840,6 +8865,9 @@ Rebinds the client's listening address and port
 Receive Rate
 == Alma hızı
 
+Receive translation method
+== Alınan mesajlar için çeviri yöntemi
+
 Receive VAD speakers
 == VAD konuşmacılarını al
 
@@ -9944,14 +9972,8 @@ Send probability
 Send Rate
 == Gönderme hızı
 
-Send source language
-== Kaynak dili gönder
-
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
-
-Send target language
-== Hedef dili gönder
 
 Send translation method
 == Çeviri yöntemini gönder
@@ -10189,6 +10211,9 @@ Show a small view of the dummy
 
 Show advanced title settings (collapsing keeps configured effects)
 == Gelişmiş unvan ayarlarını göster (daraltmak ayarlanan efektleri korur)
+
+Show advanced translation options
+== Gelişmiş çeviri seçeneklerini göster
 
 Show air jump indicator
 == Havada zıplama göstergesini göster
@@ -11357,8 +11382,14 @@ Solo
 Solo split
 == Solo bölme
 
+Solo split enter key
+== Solo bölmeye girme tuşu
+
 Solo split key
 == Solo bölme tuşu
+
+Solo split leave key
+== Solo bölmeden çıkma tuşu
 
 Some fonts could not be loaded. Check the local console for details.
 == Bazı yazı tipleri yüklenemedi. Ayrıntılar için yerel konsolu kontrol edin.
@@ -11494,9 +11525,6 @@ Spirit Light
 
 Split main and dummy into different teams for solo-run sync
 == Ana karakter ve kuklayı solo koşu senkronizasyonu için farklı takımlara dağıtır
-
-Split main/dummy into two free teams; press again to return to team 0
-== Ana/kukla karakteri iki boş takıma böler; takım 0'a dönmek için tekrar basın
 
 Sponsor code
 == Destekçi kodu
@@ -11843,9 +11871,6 @@ Taper trail ends
 Taper trail width
 == Konik iz genişliği
 
-Target language
-== Hedef dil
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == Çeviri hedef dil kodu (ör. zh, en, ja, zh-TW)
 
@@ -11959,6 +11984,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Takım tee parlaması
+
+Team used when leaving solo split mode
+== Solo bölme modundan çıkarken kullanılan takım
+
+Team when leaving solo split
+== Solo bölmeden çıkarken takım
 
 Teammate
 == Takım arkadaşı
@@ -12515,6 +12546,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == Skor tablosu imlecini değiştir
 
+Toggle solo split mode
+== Solo bölme modunu değiştir
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == Takım 0 ile takım modu arasında geçiş yap. Bu mod, takımının takım 0 gibi davranmasını sağlayacaktır.
 
@@ -12644,6 +12678,15 @@ Translate last message of the person with this id
 Translate only when needed
 == Yalnızca gerektiğinde çevir
 
+Translate only when not in target language
+== Yalnızca hedef dilde değilse çevir
+
+Translate outgoing messages to
+== Gönderilecek mesajların çeviri dili
+
+Translate received messages to
+== Alınan mesajların çeviri dili
+
 Translate UI
 == Arayüzü çevir
 
@@ -12656,8 +12699,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == %s diline çevriliyor...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== Çeviri arka ucu (llm/tencentcloud/libretranslate/ftapi)
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== Çeviri arka ucu (mymemory/llm/tencentcloud/libretranslate/ftapi)
 
 Translation backend invalid, sending original
 == Çeviri arka ucu geçersiz, orijinal metin gönderiliyor
@@ -14116,6 +14159,9 @@ Zhipu AI
 
 Zhipu API key
 == Zhipu API anahtarı
+
+Zhipu free models allow only 1 concurrent request
+== Zhipu ücretsiz modelleri yalnızca 1 eşzamanlı isteğe izin verir
 
 ZhipuAI API Key
 == Zhipu AI API Key

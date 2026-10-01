@@ -1880,8 +1880,12 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	CUIRect PopupOuterRect = View;
 	PopupOuterRect.Margin(-CUi::PopupMenuContentInset() * 0.5f, &PopupOuterRect);
 	CUi::SDropDownProperties CategoryProps;
+	CategoryProps.m_Enabled = Active;
 	CategoryProps.m_pAnchorViewport = &PopupOuterRect;
 	CategoryProps.m_pPopupViewport = &PopupOuterRect;
+	// 字体商店的下拉框属于当前弹窗，父回调打开子层的下一帧不能按禁用策略关闭它。
+	CategoryProps.m_RequireSourceRefresh = false;
+	CategoryProps.m_ClosePopupWhenDisabled = false;
 	pCtx->m_Category = pSelf->DoSettingsDropDown(&CategoryRect, pCtx->m_Category, aCategoryNames, (int)std::size(aCategoryNames), s_CategoryState, CategoryProps);
 
 	// 安装状态筛选：全部 / 未安装 / 已安装（与卡片底部状态文字同语义）。

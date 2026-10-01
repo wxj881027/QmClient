@@ -1347,7 +1347,7 @@ TEST(QmNewUiMenuBranches, WeaponAnimationAdvancedControlsAreConfigurable)
 
 	const std::string VisualDeck = FunctionBody(MenusSource, "void CMenus::RenderSettingsQmClientVisualDeck(");
 	EXPECT_NE(VisualDeck.find("ResolveQmVisualWeaponAnimationHeight(Metrics, g_Config.m_QmWeaponSwitchAnim != 0, g_Config.m_QmWeaponReloadAnim != 0)"), std::string::npos);
-	EXPECT_NE(VisualDeck.find("(g_Config.m_QmWeaponReloadAnim ? 2u : 0u)"), std::string::npos);
+	// 测量缓存失效由 SettingsCardMeasureRevision 行为测试验证，不绑定页面局部实现。
 	EXPECT_NE(VisualDeck.find("HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponReloadAnim, &g_Config.m_QmWeaponReloadAnim)"), std::string::npos);
 	EXPECT_NE(RegistrySource.find("装填动画 zhuangtian donghua reload animation"), std::string::npos);
 }
@@ -1388,11 +1388,9 @@ TEST(QmNewUiMenuBranches, EmoticonShadowHasConfigRenderPassAndVisualToggle)
 	EXPECT_EQ(CountOccurrences(EmoticonItemsBody, "Graphics()->QuadsBegin();"), 2);
 	const size_t ShadowBranch = EmoticonItemsBody.find("if(g_Config.m_QmEmoticonShadow)");
 	ASSERT_NE(ShadowBranch, std::string::npos);
-	const size_t ShadowClear = EmoticonItemsBody.find("Graphics()->TextureClear();", ShadowBranch);
-	const size_t ShadowBegin = EmoticonItemsBody.find("Graphics()->QuadsBegin();", ShadowBranch);
-	ASSERT_NE(ShadowClear, std::string::npos);
-	ASSERT_NE(ShadowBegin, std::string::npos);
-	EXPECT_LT(ShadowClear, ShadowBegin);
+	// 表情阴影必须是贴图染黑的轮廓剪影；禁止退回 TextureClear + 无纹理实心方块
+	// （贴图透明区域会露出整块黑色背景，2026-09-30 修复）。
+	EXPECT_EQ(EmoticonItemsBody.find("Graphics()->TextureClear();"), std::string::npos);
 	// 皮肤卡的内容函数已迁入全局卡片目录（N3）：改在目录文件里定位函数体。
 	// 「表情阴影」开关仍在皮肤外观卡内（QmCardCatalogSkin.cpp），未因迁移丢失。
 	const std::string SkinCardSource = ReadTextFile("src/game/client/QmUi/cards/QmCardCatalogSkin.cpp");
@@ -1756,8 +1754,8 @@ TEST(QmNewUiMenuBranches, TranslationAndDemoUiLabelsUseEnglishKeys)
 	EXPECT_NE(ChatSource.find("Localize(\"Translation Settings\")"), std::string::npos);
 	EXPECT_NE(ChatSource.find("Localize(\"Auto-translate incoming messages\")"), std::string::npos);
 	EXPECT_NE(ChatSource.find("Localize(\"Auto-translate outgoing messages\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Incoming language\")"), std::string::npos);
-	EXPECT_NE(ChatSource.find("Localize(\"Outgoing language\")"), std::string::npos);
+	EXPECT_NE(ChatSource.find("Localize(\"Translate received messages to\")"), std::string::npos);
+	EXPECT_NE(ChatSource.find("Localize(\"Translate outgoing messages to\")"), std::string::npos);
 	EXPECT_NE(ChatSource.find("Localize(\"Translation service\")"), std::string::npos);
 	EXPECT_NE(DemoSource.find("Localize(\"Could not preview this image\")"), std::string::npos);
 	EXPECT_NE(DemoSource.find("BrowsingScreenshots ? Localize(\"Open the folder containing screenshots\") : Localize(\"Open the folder containing demo files\")"), std::string::npos);
@@ -2452,7 +2450,7 @@ TEST(QmNewUiMenuBranches, TClientSettingsTabsRenderAllSlotsWithVisibleCorners)
 
 TEST(QmNewUiMenuBranches, TClientDeveloperCardMergesLinksAndLivesOnCreditsPage)
 {
-	// 「TClient 链接」卡并入开发人员卡；合并卡与 DDNet 卡都在贡献者页「其他」子页签，
+	// 「TClient 链接」卡并入开发人员卡；合并卡与 DDNet 卡都并入贡献者页「友链」子页签，
 	// 配置文件卡移到常规页。卡片构建统一收在独立的 menus_credits.cpp。
 	const std::string Source = ReadTextFile("src/game/client/components/menus_credits.cpp");
 	const std::string Registry = ReadTextFile("src/game/client/QmUi/QmCardRegistry.cpp");
@@ -2466,7 +2464,7 @@ TEST(QmNewUiMenuBranches, TClientDeveloperCardMergesLinksAndLivesOnCreditsPage)
 	EXPECT_EQ(Registry.find("deck:tclient-info-links"), std::string::npos);
 	EXPECT_EQ(Registry.find("\"tclient-info\""), std::string::npos);
 	EXPECT_NE(Registry.find("{\"deck:tclient-info-files\", \"general\", ECardColumn::Right, 2"), std::string::npos);
-	EXPECT_NE(Registry.find("{\"deck:credits-friend-links\", \"credits-links\", ECardColumn::Full, 0"), std::string::npos);
+	EXPECT_NE(Registry.find("{\"deck:credits-friend-links\", \"credits-links\", ECardColumn::Left, 0"), std::string::npos);
 	EXPECT_NE(General.find("FindByStableId(\"deck:tclient-info-files\")"), std::string::npos);
 	EXPECT_NE(General.find("\"tclient-files-qmclient-settings\""), std::string::npos);
 	EXPECT_EQ(Source.find("deck:tclient-info-files"), std::string::npos);
@@ -2923,7 +2921,7 @@ TEST(QmNewUiMenuBranches, SettingsCardContentHeightsExcludeSharedHeaderChrome)
 	const std::string Contributors = FunctionBody(ContributorsSource, "void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly, int SponsorsRevision, bool HasSponsorDeveloper)");
 	ASSERT_FALSE(MouseMeasure.empty());
 	ASSERT_FALSE(Contributors.empty());
-	EXPECT_NE(MouseMeasure.find("return 2.0f * BUTTON_HEIGHT + BUTTON_SPACING;"), std::string::npos);
+	EXPECT_NE(MouseMeasure.find("return 4.0f * BUTTON_HEIGHT + 3.0f * BUTTON_SPACING;"), std::string::npos);
 	EXPECT_EQ(MouseMeasure.find("CARD_HEADER"), std::string::npos);
 	EXPECT_NE(Contributors.find("Community.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(3, LineHeight, LineSpacing); };"), std::string::npos);
 }

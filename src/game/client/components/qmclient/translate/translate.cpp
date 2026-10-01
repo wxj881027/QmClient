@@ -22,6 +22,7 @@
 #include <ctime>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace
 {
@@ -307,6 +308,18 @@ namespace
 			return false;
 		return str_comp_nocase(pLanguage, "zh-cn") == 0 ||
 		       str_comp_nocase(pLanguage, "zh-tw") == 0;
+	}
+
+	// 后端检测出的源语言是否即为目标语言；中文变体目标（zh-TW 等）与本地启发式粒度一致不做判定
+	bool AutoDetectedLanguageMatchesTarget(const char *pDetected, const char *pTarget)
+	{
+		if(!pDetected || pDetected[0] == '\0' || !pTarget || pTarget[0] == '\0')
+			return false;
+		if(IsChineseVariantLanguage(pTarget))
+			return false;
+		if(IsChineseLanguage(pDetected) && IsChineseLanguage(pTarget))
+			return true;
+		return str_comp_nocase(pDetected, pTarget) == 0;
 	}
 
 	const char *NormalizeTranslateSource(const char *pSource)
@@ -1074,12 +1087,258 @@ public:
 };
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
+class CTranslateBackendMymemory : public ITranslateBackendHttp
+{
+private:
+	// MyMemory 单次查询上限 500 字节
+	static constexpr size_t MAX_QUERY_BYTES = 500;
+
+	// MyMemory 使用 RFC3066 语言码，简体中文需写作 zh-CN
+	static const char *EncodeLangCode(const char *pCode)
+	{
+		if(!pCode || pCode[0] == '\0')
+			return "en";
+		if(str_comp_nocase(pCode, "zh") == 0 || str_comp_nocase(pCode, "zh-cn") == 0)
+			return "zh-CN";
+		if(str_comp_nocase(pCode, "zh-tw") == 0)
+			return "zh-TW";
+		return pCode;
+	}
+
+	// MyMemory 不支持源语言自动检测：优先用用户显式配置的来源语言，
+	// 否则按文字系统猜测（拉丁字母默认按英文处理）
+	const char *ResolveSource(const char *pSource, const char *pText) const
+	{
+		if(HasExplicitTranslateSource(pSource))
+			return EncodeLangCode(NormalizeTranslateSource(pSource));
+
+		const SLocalLanguageStats Stats = AnalyzeLocalLanguageStats(pText);
+		if(Stats.m_Kana > 0)
+			return "ja";
+		if(Stats.m_Hangul > 0)
+			return "ko";
+		if(Stats.m_Cyrillic > 0)
+			return "ru";
+		if(Stats.m_Han > 0)
+			return "zh-CN";
+		return "en";
+	}
+
+	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
+	{
+		if(!pObj)
+		{
+			str_copy(Out.m_Text, "Response is not JSON");
+			return false;
+		}
+		if(pObj->type != json_object)
+		{
+			str_copy(Out.m_Text, "Response is not object");
+			return false;
+		}
+
+		int Status = 200;
+		const json_value *pStatus = json_object_get(pObj, "responseStatus");
+		if(pStatus != &json_value_none)
+		{
+			if(pStatus->type == json_integer)
+				Status = (int)pStatus->u.integer;
+			else if(pStatus->type == json_double)
+				Status = (int)pStatus->u.dbl;
+		}
+
+		const json_value *pData = json_object_get(pObj, "responseData");
+		if(pData == &json_value_none || pData->type != json_object)
+		{
+			str_copy(Out.m_Text, "No responseData");
+			return false;
+		}
+
+		const json_value *pTranslatedText = json_object_get(pData, "translatedText");
+		if(pTranslatedText == &json_value_none || pTranslatedText->type != json_string)
+		{
+			str_copy(Out.m_Text, "No translatedText");
+			return false;
+		}
+
+		// MyMemory 把配额超限、语言对无效等错误以 WARNING 文本形式塞进 translatedText
+		if(str_startswith_nocase(pTranslatedText->u.string.ptr, "MYMEMORY WARNING"))
+		{
+			if(str_find_nocase(pTranslatedText->u.string.ptr, "USED ALL AVAILABLE"))
+				str_copy(Out.m_Text, "MyMemory: daily anonymous quota reached (resets tomorrow) - pick another service in settings");
+			else
+				str_format(Out.m_Text, sizeof(Out.m_Text), "MyMemory: %.120s", pTranslatedText->u.string.ptr);
+			return false;
+		}
+
+		if(Status != 200)
+		{
+			str_format(Out.m_Text, sizeof(Out.m_Text), "MyMemory error %d: %.120s", Status, pTranslatedText->u.string.ptr);
+			return false;
+		}
+
+		str_copy(Out.m_Text, pTranslatedText->u.string.ptr);
+		Out.m_Language[0] = '\0';
+		return true;
+	}
+
+protected:
+	bool ParseResponse(CTranslateResponse &Out) override
+	{
+		json_value *pObj = m_pHttpRequest->ResultJson();
+		bool Res = ParseResponseJson(pObj, Out);
+		if(!Res)
+		{
+			unsigned char *pResult = nullptr;
+			size_t ResultLength = 0;
+			m_pHttpRequest->Result(&pResult, &ResultLength);
+			if(pResult && ResultLength > 0)
+			{
+				size_t LogLength = std::min(ResultLength, size_t(1024));
+				log_debug("translate/mymemory", "MyMemory response failed to parse. Raw response: %.*s", (int)LogLength, pResult);
+			}
+		}
+		json_value_free(pObj);
+		return Res;
+	}
+
+public:
+	const char *EncodeTarget(const char *pTarget) const override
+	{
+		if(!pTarget || pTarget[0] == '\0')
+			return EncodeLangCode(DefaultConfig::QmTranslateTarget);
+		return EncodeLangCode(pTarget);
+	}
+
+	const char *Name() const override
+	{
+		return "MyMemory";
+	}
+
+	CTranslateBackendMymemory(IHttp &Http, const char *pText, const char *pTarget, const char *pSource)
+	{
+		// 按 UTF-8 边界截断到 MyMemory 500 字节上限
+		char aQuery[MAX_QUERY_BYTES + 1];
+		size_t Copy = 0;
+		const char *p = pText;
+		while(p && *p && Copy < MAX_QUERY_BYTES)
+		{
+			const char *pBefore = p;
+			str_utf8_decode(&p);
+			const size_t ByteLen = (size_t)(p - pBefore);
+			if(Copy + ByteLen > MAX_QUERY_BYTES)
+				break;
+			mem_copy(aQuery + Copy, pBefore, ByteLen);
+			Copy += ByteLen;
+		}
+		aQuery[Copy] = '\0';
+
+		char aBuf[8192];
+		str_copy(aBuf, "https://api.mymemory.translated.net/get?q=");
+		UrlEncode(aQuery, aBuf + strlen(aBuf), sizeof(aBuf) - strlen(aBuf));
+		str_append(aBuf, "&langpair=", sizeof(aBuf));
+		str_append(aBuf, ResolveSource(pSource, pText), sizeof(aBuf));
+		str_append(aBuf, "%7C", sizeof(aBuf));
+		str_append(aBuf, EncodeTarget(pTarget), sizeof(aBuf));
+
+		CreateHttpRequest(Http, aBuf);
+	}
+};
+
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 class CTranslateBackendLlm : public ITranslateBackendHttp
 {
 private:
 	ELlmProvider m_Provider;
 
+	// 端点归一与双格式（Chat Completions / Responses）支持
+	IHttp *m_pHttp = nullptr;
+	char m_aBaseUrl[256] = "";
+	ELlmApiStyle m_ConfigStyle = ELlmApiStyle::AUTO; // 端点后缀显式指定的格式
+	ELlmApiStyle m_ActiveStyle = ELlmApiStyle::CHAT; // 当前实际使用的格式
+	char m_aChatPayload[8192] = "";
+	char m_aResponsesPayload[8192] = "";
+	char m_aAuthorization[512] = "";
+
 	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
+	{
+		if(m_ActiveStyle == ELlmApiStyle::RESPONSES)
+			return ParseResponsesApiJson(pObj, Out);
+		return ParseChatCompletionsJson(pObj, Out);
+	}
+
+	// Responses API 响应解析：优先顶层 output_text，其次 output[].message.content[].output_text
+	bool ParseResponsesApiJson(const json_value *pObj, CTranslateResponse &Out)
+	{
+		if(!pObj)
+		{
+			str_copy(Out.m_Text, "Response is not JSON");
+			return false;
+		}
+		if(pObj->type != json_object)
+		{
+			str_copy(Out.m_Text, "Response is not object");
+			return false;
+		}
+
+		const json_value *pError = json_object_get(pObj, "error");
+		if(pError != &json_value_none && pError->type == json_object)
+		{
+			const json_value *pMessage = json_object_get(pError, "message");
+			const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "LLM API request failed";
+			str_copy(Out.m_Text, pMessageStr);
+			return false;
+		}
+
+		const json_value *pOutputText = json_object_get(pObj, "output_text");
+		if(pOutputText != &json_value_none && pOutputText->type == json_string)
+		{
+			str_copy(Out.m_Text, pOutputText->u.string.ptr);
+			Out.m_Language[0] = '\0';
+			return true;
+		}
+
+		const json_value *pOutput = json_object_get(pObj, "output");
+		if(pOutput == &json_value_none || pOutput->type != json_array)
+		{
+			str_copy(Out.m_Text, "No output in response");
+			return false;
+		}
+
+		for(size_t i = 0; i < pOutput->u.array.length; ++i)
+		{
+			const json_value *pItem = pOutput->u.array.values[i];
+			if(pItem->type != json_object)
+				continue;
+			const json_value *pItemType = json_object_get(pItem, "type");
+			if(pItemType == &json_value_none || pItemType->type != json_string || str_comp_nocase(pItemType->u.string.ptr, "message") != 0)
+				continue;
+
+			const json_value *pContent = json_object_get(pItem, "content");
+			if(pContent == &json_value_none || pContent->type != json_array)
+				continue;
+			for(size_t j = 0; j < pContent->u.array.length; ++j)
+			{
+				const json_value *pPart = pContent->u.array.values[j];
+				if(pPart->type != json_object)
+					continue;
+				const json_value *pPartType = json_object_get(pPart, "type");
+				if(pPartType == &json_value_none || pPartType->type != json_string || str_comp_nocase(pPartType->u.string.ptr, "output_text") != 0)
+					continue;
+				const json_value *pText = json_object_get(pPart, "text");
+				if(pText == &json_value_none || pText->type != json_string)
+					continue;
+				str_copy(Out.m_Text, pText->u.string.ptr);
+				Out.m_Language[0] = '\0';
+				return true;
+			}
+		}
+
+		str_copy(Out.m_Text, "No output_text in response");
+		return false;
+	}
+
+	bool ParseChatCompletionsJson(const json_value *pObj, CTranslateResponse &Out)
 	{
 		if(!pObj)
 		{
@@ -1244,10 +1503,24 @@ protected:
 						*p = ' ';
 				}
 
-				str_format(Out.m_Text, sizeof(Out.m_Text),
-					"JSON parse error: %.200s%s",
-					aRawResponse,
-					ResultLength > 200 ? "... (truncated)" : "");
+				// HTML 响应通常意味着端点填写的是站点首页或 base URL，
+				// 而非完整的 chat/completions 请求地址，给出针对性提示
+				size_t Offset = 0;
+				while(Offset < CopyLen && (aRawResponse[Offset] == ' ' || aRawResponse[Offset] == '\t'))
+					Offset++;
+				if(aRawResponse[Offset] == '<')
+				{
+					str_format(Out.m_Text, sizeof(Out.m_Text),
+						"Endpoint returned HTML instead of JSON: fill in the full chat completions URL (e.g. https://api.example.com/v1/chat/completions), response starts with: %.100s",
+						aRawResponse + Offset);
+				}
+				else
+				{
+					str_format(Out.m_Text, sizeof(Out.m_Text),
+						"JSON parse error: %.200s%s",
+						aRawResponse,
+						ResultLength > 200 ? "... (truncated)" : "");
+				}
 			}
 			else
 			{
@@ -1259,6 +1532,95 @@ protected:
 		bool Res = ParseResponseJson(pObj, Out);
 		json_value_free(pObj);
 		return Res;
+	}
+
+protected:
+	// 会话内记忆 base URL 的可用接口格式，避免每次请求双发探测
+	static std::vector<std::pair<std::string, int>> s_vLlmApiStyleMemory;
+
+	static void LearnApiStyle(const char *pBaseUrl, ELlmApiStyle Style)
+	{
+		for(auto &Entry : s_vLlmApiStyleMemory)
+		{
+			if(Entry.first == pBaseUrl)
+			{
+				Entry.second = static_cast<int>(Style);
+				return;
+			}
+		}
+		if(s_vLlmApiStyleMemory.size() < 16)
+			s_vLlmApiStyleMemory.emplace_back(pBaseUrl, static_cast<int>(Style));
+	}
+
+	static std::optional<ELlmApiStyle> RecallApiStyle(const char *pBaseUrl)
+	{
+		for(const auto &Entry : s_vLlmApiStyleMemory)
+		{
+			if(Entry.first == pBaseUrl)
+				return static_cast<ELlmApiStyle>(Entry.second);
+		}
+		return std::nullopt;
+	}
+
+	void StartRequest(ELlmApiStyle Style)
+	{
+		m_ActiveStyle = Style;
+		const char *pPath = Style == ELlmApiStyle::RESPONSES ? "/responses" : "/chat/completions";
+		char aUrl[512];
+		str_format(aUrl, sizeof(aUrl), "%s%s", m_aBaseUrl, pPath);
+		const char *pPayload = Style == ELlmApiStyle::RESPONSES ? m_aResponsesPayload : m_aChatPayload;
+
+		m_pHttpRequest = HttpGet(aUrl);
+		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
+		m_pHttpRequest->FailOnErrorStatus(false);
+		// LLM API 响应可能较慢（特别是智谱AI），增加超时时间到30秒
+		// 降低最低速度要求避免 "Operation too slow" 错误
+		m_pHttpRequest->Timeout(CTimeout{30000, 0, 100, 30});
+		m_pHttpRequest->HeaderString("Content-Type", "application/json");
+		m_pHttpRequest->HeaderString("Authorization", m_aAuthorization);
+		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(pPayload), str_length(pPayload));
+		m_pHttp->Run(m_pHttpRequest);
+	}
+
+	// Chat 格式请求失败且可能是端点不支持时，判断是否值得回退尝试 Responses
+	bool ShouldRetryWithResponses() const
+	{
+		if(m_ConfigStyle != ELlmApiStyle::AUTO || m_ActiveStyle != ELlmApiStyle::CHAT)
+			return false;
+		const int StatusCode = m_pHttpRequest->StatusCode();
+		if(StatusCode == 404 || StatusCode == 405)
+			return true;
+		// 200 但返回 HTML 页面（站点首页/错误页），同样尝试 Responses
+		unsigned char *pResult = nullptr;
+		size_t ResultLength = 0;
+		m_pHttpRequest->Result(&pResult, &ResultLength);
+		if(pResult && ResultLength > 0)
+		{
+			size_t Offset = 0;
+			while(Offset < ResultLength && (pResult[Offset] == ' ' || pResult[Offset] == '\t' || pResult[Offset] == '\r' || pResult[Offset] == '\n'))
+				++Offset;
+			return Offset < ResultLength && pResult[Offset] == '<';
+		}
+		return false;
+	}
+
+public:
+	std::optional<bool> Update(CTranslateResponse &Out) override
+	{
+		const std::optional<bool> Result = ITranslateBackendHttp::Update(Out);
+		if(Result.has_value() && *Result)
+		{
+			// 成功：记忆该 base URL 的可用格式
+			if(m_ConfigStyle == ELlmApiStyle::AUTO)
+				LearnApiStyle(m_aBaseUrl, m_ActiveStyle);
+			return Result;
+		}
+		if(Result.has_value() && ShouldRetryWithResponses())
+		{
+			StartRequest(ELlmApiStyle::RESPONSES);
+			return std::nullopt; // 继续等待 Responses 请求
+		}
+		return Result;
 	}
 
 	bool ParseHttpError() const override
@@ -1306,6 +1668,17 @@ public:
 			SetInitError("Missing Endpoint: configure the endpoint for the selected provider in settings");
 			return;
 		}
+
+		// 归一端点：兼容 base URL、/v1、完整路径、笔误后缀；显式后缀决定接口格式
+		SLlmEndpointInfo EndpointInfo;
+		if(!NormalizeLlmEndpoint(pEndpoint, EndpointInfo))
+		{
+			SetInitError("Invalid Endpoint: must be an http(s) URL, e.g. https://api.example.com/v1");
+			return;
+		}
+		str_copy(m_aBaseUrl, EndpointInfo.m_aBaseUrl, sizeof(m_aBaseUrl));
+		m_ConfigStyle = EndpointInfo.m_Style;
+		m_pHttp = &Http;
 
 		// Build system message with target language
 		char aSystemMessage[1024];
@@ -1455,21 +1828,29 @@ public:
 		}
 
 		// Build Authorization header
-		char aAuthorization[512];
-		str_format(aAuthorization, sizeof(aAuthorization), "Bearer %s", pApiKey);
+		str_format(m_aAuthorization, sizeof(m_aAuthorization), "Bearer %s", pApiKey);
 
-		m_pHttpRequest = HttpGet(pEndpoint);
-		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
-		m_pHttpRequest->FailOnErrorStatus(false);
-		// LLM API 响应可能较慢（特别是智谱AI），增加超时时间到30秒
-		// 降低最低速度要求避免 "Operation too slow" 错误
-		m_pHttpRequest->Timeout(CTimeout{30000, 0, 100, 30});
-		m_pHttpRequest->HeaderString("Content-Type", "application/json");
-		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
-		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(aPayload), str_length(aPayload));
-		Http.Run(m_pHttpRequest);
+		// Chat Completions 与 Responses 两种格式的请求体都在构造期备好
+		str_copy(m_aChatPayload, aPayload);
+		str_format(m_aResponsesPayload, sizeof(m_aResponsesPayload),
+			"{"
+			"\"model\":%s,"
+			"\"instructions\":%s,"
+			"\"input\":%s,"
+			"\"max_output_tokens\":1024"
+			"}",
+			aEscapedModel, aEscapedSystem, aEscapedText);
+
+		// 确定初始接口格式：显式后缀 > 会话记忆 > 默认 Chat
+		std::optional<ELlmApiStyle> Remembered;
+		if(m_ConfigStyle == ELlmApiStyle::AUTO)
+			Remembered = RecallApiStyle(m_aBaseUrl);
+		ELlmApiStyle InitialStyle = m_ConfigStyle != ELlmApiStyle::AUTO ? m_ConfigStyle : Remembered.value_or(ELlmApiStyle::CHAT);
+		StartRequest(InitialStyle);
 	}
 };
+
+std::vector<std::pair<std::string, int>> CTranslateBackendLlm::s_vLlmApiStyleMemory;
 
 static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const char *pText, const char *pTarget, const char *pSource = "auto")
 {
@@ -1477,6 +1858,8 @@ static std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, co
 		return std::make_unique<CTranslateBackendLibretranslate>(Http, pText, pTarget, pSource);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 		return std::make_unique<CTranslateBackendFtapi>(Http, pText, pTarget);
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0)
+		return std::make_unique<CTranslateBackendMymemory>(Http, pText, pTarget, pSource);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
 		return std::make_unique<CTranslateBackendTencentCloud>(Http, pText, pTarget, pSource);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
@@ -1702,7 +2085,8 @@ void CTranslate::OnRender()
 			return false; // Keep ongoing tasks
 		if(*Done)
 		{
-			if(Job.m_AutoTriggered && IsChineseLanguage(Job.m_pTranslateResponse->m_Language))
+			// 自动翻译按检测语言过滤：模式 0 丢弃源语言即目标语言的结果，模式 1 始终展示
+			if(Job.m_AutoTriggered && g_Config.m_QmTranslateAutoMode == 0 && AutoDetectedLanguageMatchesTarget(Job.m_pTranslateResponse->m_Language, Job.m_aTarget))
 				Job.m_pTranslateResponse->m_Text[0] = '\0';
 			else if(str_comp_nocase(pLine->m_aText, Job.m_pTranslateResponse->m_Text) == 0) // Check for no translation difference
 				Job.m_pTranslateResponse->m_Text[0] = '\0';
@@ -1711,6 +2095,19 @@ void CTranslate::OnRender()
 		{
 			char aBuf[sizeof(Job.m_pTranslateResponse->m_Text)];
 			str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Job.m_pTranslateResponse->m_Text);
+			// MyMemory 匿名配额耗尽：60 秒内只展示一次，避免自动翻译刷屏
+			if(str_comp(Job.m_pBackend->Name(), "MyMemory") == 0 && str_find_nocase(aBuf, "daily anonymous quota reached"))
+			{
+				const int64_t Now = time_get();
+				if(m_LastMymemoryQuotaNoticeTime >= 0 && Now - m_LastMymemoryQuotaNoticeTime < time_freq() * 60)
+				{
+					// 节流期内静默丢弃，聊天行保持原文
+					Job.m_pTranslateResponse->m_Error = false;
+					Job.m_pTranslateResponse->m_Text[0] = '\0';
+					return true;
+				}
+				m_LastMymemoryQuotaNoticeTime = Now;
+			}
 			Job.m_pTranslateResponse->m_Error = true;
 			str_copy(Job.m_pTranslateResponse->m_Text, aBuf);
 		}
@@ -1781,7 +2178,9 @@ void CTranslate::AutoTranslate(CChat::CLine &Line)
 	const SLocalLanguageStats LocalStats = AnalyzeLocalLanguageStats(Line.m_aText);
 	if(IsPredominantlyNumeric(LocalStats))
 		return;
-	if(MatchesTargetLanguageHeuristically(LocalStats, pTarget))
+	// 模式 0: 仅在非目标语言时翻译——本地启发式判定已是目标语言则跳过
+	// 模式 1: 始终翻译——仅保留纯数字等无意义文本的兜底过滤
+	if(g_Config.m_QmTranslateAutoMode == 0 && MatchesTargetLanguageHeuristically(LocalStats, pTarget))
 		return;
 	Translate(Line, false, true);
 }
@@ -1901,8 +2300,9 @@ int CTranslate::GetEffectiveConcurrency() const
 		switch(Provider)
 		{
 		case ELlmProvider::ZHIPU_AI:
+			return 1; // 智谱免费 flash 档速率限制仅 1 条并发
 		case ELlmProvider::DEEPSEEK:
-			return 3; // ZhipuAI 和 DeepSeek 默认 3
+			return 3; // DeepSeek 默认 3
 		case ELlmProvider::OPENAI:
 			return 2; // OpenAI 默认 2（成本考虑）
 		case ELlmProvider::CUSTOM:
@@ -1921,6 +2321,10 @@ int CTranslate::GetEffectiveConcurrency() const
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 	{
 		return 1; // FTAPI 默认 1（防止过载）
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0)
+	{
+		return 1; // MyMemory 匿名配额有限，默认 1
 	}
 
 	// 未知后端默认 3

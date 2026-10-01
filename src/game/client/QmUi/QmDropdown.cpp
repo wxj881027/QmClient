@@ -124,7 +124,8 @@ bool QmDropdownPopupBlocksUnderlying(const bool PopupVisible)
 
 bool QmDropdownSourceAlive(const uint64_t CurrentFrame, const uint64_t LastSourceFrame, const bool AnchorFullyVisible)
 {
-	return AnchorFullyVisible && CurrentFrame == LastSourceFrame;
+	// 来源最多允许跨一帧刷新；先比较再相减，避免帧号加法溢出。
+	return AnchorFullyVisible && CurrentFrame >= LastSourceFrame && CurrentFrame - LastSourceFrame <= 1;
 }
 
 bool QmDropdownAnchorFullyVisible(const CUIRect &AnchorRect, const CUIRect &ViewportRect)
@@ -176,29 +177,38 @@ SQmDropdownUpdateResult CQmDropdownState::Update(const SQmDropdownInput &Input, 
 		return Result;
 	}
 
+	Result = QmUpdateDropdownPopupSelection(Input, ItemCount, true, m_ActiveIndex);
+	if(Result.m_Closed)
+		Reset();
+	return Result;
+}
+
+SQmDropdownUpdateResult QmUpdateDropdownPopupSelection(const SQmDropdownInput &Input, int ItemCount, const bool Active, int &ActiveIndex)
+{
+	SQmDropdownUpdateResult Result;
+	if(!Active)
+		return Result;
 	if(ItemCount <= 0 || Input.m_KeyEscape || Input.m_ClickOutside || Input.m_TogglePressed)
 	{
-		Reset();
 		Result.m_Closed = true;
 		return Result;
 	}
 
-	m_ActiveIndex = std::clamp(m_ActiveIndex, 0, ItemCount - 1);
+	ActiveIndex = std::clamp(ActiveIndex, 0, ItemCount - 1);
 	if(Input.m_HoveredIndex >= 0 && Input.m_HoveredIndex < ItemCount)
-		m_ActiveIndex = Input.m_HoveredIndex;
+		ActiveIndex = Input.m_HoveredIndex;
 
 	if(Input.m_KeyUp)
-		m_ActiveIndex = (m_ActiveIndex + ItemCount - 1) % ItemCount;
+		ActiveIndex = (ActiveIndex + ItemCount - 1) % ItemCount;
 	if(Input.m_KeyDown)
-		m_ActiveIndex = (m_ActiveIndex + 1) % ItemCount;
+		ActiveIndex = (ActiveIndex + 1) % ItemCount;
 
 	if(Input.m_KeyEnter || (Input.m_MouseSelectPressed && Input.m_HoveredIndex >= 0 && Input.m_HoveredIndex < ItemCount))
 	{
 		if(Input.m_MouseSelectPressed)
-			m_ActiveIndex = Input.m_HoveredIndex;
+			ActiveIndex = Input.m_HoveredIndex;
 		Result.m_Selected = true;
-		Result.m_SelectedIndex = m_ActiveIndex;
-		Reset();
+		Result.m_SelectedIndex = ActiveIndex;
 		Result.m_Closed = true;
 	}
 

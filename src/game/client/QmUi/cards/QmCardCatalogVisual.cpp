@@ -1,4 +1,5 @@
 #include "QmCardCatalogInternal.h"
+#include "QmCardMeasureRevision.h"
 
 #include <engine/shared/config.h>
 
@@ -38,30 +39,7 @@ namespace qm_card_catalog
 
 		uint64_t MeasureVisualCardRevision(const EQmModuleId Id)
 		{
-			switch(Id)
-			{
-			case EQmModuleId::ChatBubble: return g_Config.m_QmChatBubble ? 1u : 0u;
-			case EQmModuleId::CameraView:
-				return (g_Config.m_QmCameraDrift ? 1u : 0u) |
-				       (g_Config.m_QmDynamicFov ? 2u : 0u) |
-				       (g_Config.m_QmAspectPreset == 6 ? 4u : 0u);
-			case EQmModuleId::WeaponAnimation:
-				return (g_Config.m_QmWeaponSwitchAnim ? 1u : 0u) |
-				       (g_Config.m_QmWeaponReloadAnim ? 2u : 0u);
-			case EQmModuleId::CollisionHitbox:
-				return (g_Config.m_QmHitboxMode || g_Config.m_QmShowCollisionHitbox ? 1u : 0u) |
-				       (g_Config.m_QmHitboxShowMap ? 1u << 1 : 0u) |
-				       (g_Config.m_QmHitboxShowTeeCollision ? 1u << 2 : 0u) |
-				       (g_Config.m_QmHitboxShowTeeFreeze ? 1u << 3 : 0u) |
-				       (g_Config.m_QmHitboxShowTeeDeath ? 1u << 4 : 0u) |
-				       (g_Config.m_QmHitboxShowPickups ? 1u << 5 : 0u) |
-				       (g_Config.m_QmHitboxShowHammer ? 1u << 6 : 0u) |
-				       (g_Config.m_QmHitboxShowProjectiles ? 1u << 7 : 0u) |
-				       (g_Config.m_QmHitboxShowLasers ? 1u << 8 : 0u) |
-				       (g_Config.m_QmHitboxShowFreezeLasers ? 1u << 9 : 0u) |
-				       (g_Config.m_QmHitboxShowHook ? 1u << 10 : 0u);
-			default: return 0u;
-			}
+			return MeasureModuleCardRevision(Id);
 		}
 
 		FSettingsCardPreLayoutInput BuildVisualPreLayoutInput(const SQmCardBuildContext &Ctx, const EQmModuleId Id)

@@ -1,11 +1,7 @@
----
-name: qmclient-i18n-audit
-description: 排查 QmClient 翻译污染、历史漂移、配置中文 key、数字误判或迁移缺口时使用；补充专项检查，不重复定义生成链和语言覆盖门槛。
----
 
 # QmClient 翻译审计
 
-维护路径、授权、生成与覆盖要求遵循 `qmclient-i18n-workflow`。先按用户指定语言、模块或问题检查；只读请求交付 findings，已有修复授权则验证后继续处理。
+维护路径、授权、生成与覆盖要求遵循 [父 skill](../SKILL.md)。先按用户指定语言、模块或问题检查；只读请求交付 findings，已有修复授权则验证后继续处理。
 
 ## 检查点
 
@@ -32,3 +28,13 @@ python -m unittest discover qmclient_scripts/languages_qmclient/tests
 历史中文 Desc 迁移用 `migrate_cjk_config_help.py`；先核对映射再使用 `--apply`。映射文件在 `qmclient_scripts/languages_qmclient/translations/_migrations/`，`--map` 相对路径按脚本目录解析。`cjk_config_help_map.json` 对应 qmclient/tclient，`cjk_config_help_map_ddnet.json` 对应主配置头。
 
 报告列出确定缺陷、范围内覆盖和实际失败项。已存在的范围外缺译单独说明，不因审计自动调用模型批量补齐。
+
+## 草稿回填边界
+
+写草稿前用 `translate_with_local_http.language_quality_failure(language, source, translation, terminology=...)` 预检；`--write-back` 只接收合格条目，后续草稿清理也可能移除不合格条目，不能以命令完成代替核对维护源。
+
+典型失败包括译文引入源串不允许的 ASCII 数字（如 "Double-tap" 对应日文「2回」），以及译文逐字等于源串但不在 `SAME_SOURCE_ALLOWED_BY_LANGUAGE` / `may_keep_source_text` 许可范围内。术语校验仅对 `simplified_chinese` 生效；保留失败原因并核对最终 TOML 与生成结果。
+
+## 环境故障
+
+如果 Windows 写文件实际出现 `OSError: [Errno 22] Invalid argument`，先确认失败文件、权限和调用位置，不将历史沙箱现象作为每次任务都拆进程重试的要求。确认是连续写入故障时，可按单语言、单模块隔离执行：生成脚本没有语言命令行参数，可在 `tmp/` 下的驱动中调用 `generate_all.generate_configured_languages(generate_all.read_strings(), [language])`；回填使用 `--languages <一种> --modules <一个模块>`。重试后核对所有目标产物，不能隐藏持续失败。

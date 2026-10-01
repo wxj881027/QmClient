@@ -82,7 +82,7 @@ TEST(QmNewUiMenuRenderSettingsPagesContract, SettingsCardContentHeightsExcludeSh
 	const std::string Contributors = FunctionBody(ContributorsSource, "void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition> &vCards, const SSettingsContentMetrics &Metrics, bool ReadOnly, int SponsorsRevision, bool HasSponsorDeveloper)");
 	ASSERT_FALSE(MouseMeasure.empty());
 	ASSERT_FALSE(Contributors.empty());
-	EXPECT_NE(MouseMeasure.find("return 2.0f * BUTTON_HEIGHT + BUTTON_SPACING;"), std::string::npos);
+	EXPECT_NE(MouseMeasure.find("return 4.0f * BUTTON_HEIGHT + 3.0f * BUTTON_SPACING;"), std::string::npos);
 	EXPECT_EQ(MouseMeasure.find("CARD_HEADER"), std::string::npos);
 	EXPECT_NE(Contributors.find("Community.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(3, LineHeight, LineSpacing); };"), std::string::npos);
 }

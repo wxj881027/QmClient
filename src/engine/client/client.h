@@ -143,8 +143,7 @@ class CClient : public IClient, public CDemoPlayer::IListener
 
 	int64_t m_LastRenderTime;
 
-	// 窗口是隐藏创建的（backend_sdl.cpp 的 SDL_WINDOW_HIDDEN），第一帧真正
-	// present 之后再显示它，启动就不会先闪一帧纯黑。只显示一次，见 UpdateAndSwap()。
+	// 隐藏窗口准备好首帧后只显示一次，随后在可见窗口上提交首帧。
 	bool m_WindowShown = false;
 
 	int m_SnapCrcErrors = 0;
@@ -625,6 +624,7 @@ public:
 	void OnWindowResize() override;
 	void BenchmarkQuit(int Seconds, const char *pFilename);
 
+	void EnsureWindowShown();
 	void UpdateAndSwap() override;
 
 	// DDRace
