@@ -575,6 +575,7 @@ void CSkins::CSkinContainer::RequestLoad(bool Immediate)
 
 	if(m_AlwaysLoaded)
 	{
+		EnsureAlwaysLoaded();
 		return;
 	}
 
@@ -609,6 +610,7 @@ void CSkins::CSkinContainer::RequestLoad(ESettingsResourcePriority Priority)
 {
 	if(m_AlwaysLoaded)
 	{
+		EnsureAlwaysLoaded();
 		return;
 	}
 	const bool TeeSettingsActive = ActiveSettingsTeePage(m_pSkins->GameClient());
@@ -655,6 +657,21 @@ void CSkins::CSkinContainer::RequestLoad(ESettingsResourcePriority Priority)
 	{
 		TouchUsage();
 	}
+}
+
+void CSkins::CSkinContainer::EnsureAlwaysLoaded()
+{
+	if(!AlwaysLoadedSkinNeedsImmediateLoad(m_State))
+	{
+		return;
+	}
+	// Built-in skins can only come from the local skins/ directory. The container may
+	// already have been created by Find/queue handling before CSkins::OnInit, and
+	// RequestLoad used to be a no-op for always-loaded skins: once such a skin stopped in
+	// a transient state it had no load entry left, so the settings page spun forever and
+	// render infos fell back to the untextured placeholder. Reuse the container and load
+	// it synchronously from the local source.
+	m_pSkins->LoadSkinDirect(Name());
 }
 
 CSkins::CSkinContainer::EState CSkins::CSkinContainer::DetermineInitialState() const
@@ -849,9 +866,12 @@ bool CSkins::IsSpecialSkin(const char *pName)
 
 bool CSkins::IsVanillaSkin(const char *pName)
 {
-	return std::any_of(std::begin(VANILLA_SKINS), std::end(VANILLA_SKINS), [pName](const char *pVanillaSkin) {
-		return str_comp(pName, pVanillaSkin) == 0;
-	});
+	return PreferredContainerType(pName) == CSkinContainer::EType::LOCAL;
+}
+
+static int ContainerStorageTypeFor(CSkins::CSkinContainer::EType Type)
+{
+	return Type == CSkins::CSkinContainer::EType::LOCAL ? IStorage::TYPE_ALL : IStorage::TYPE_SAVE;
 }
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
@@ -1293,31 +1313,56 @@ void CSkins::FinishSkinPreviewUpload(CSkinContainer *pSkinContainer)
 
 void CSkins::LoadSkinDirect(const char *pName)
 {
-	if(m_Skins.contains(pName))
+	auto SkinIt = m_Skins.find(pName);
+	if(SkinIt != m_Skins.end())
 	{
-		return;
+		CSkinContainer *pExisting = SkinIt->second.get();
+		if(pExisting->m_State == CSkinContainer::EState::LOADED ||
+			pExisting->m_State == CSkinContainer::EState::LOADING)
+		{
+			return;
+		}
+		// The container may already exist because Find/queue handling created it before
+		// CSkins::OnInit. Built-in skins must be reloaded from the local source, otherwise
+		// they stay PENDING and RequestLoad no longer accepts them, so the settings page
+		// spins forever.
+		if(pExisting->m_pLoadJob)
+		{
+			pExisting->m_pLoadJob->Abort();
+			pExisting->m_pLoadJob = nullptr;
+		}
+		if(pExisting->m_pSkin)
+		{
+			UnloadLoadedSkinTextures(pExisting);
+		}
+		pExisting->m_Type = CSkinContainer::EType::LOCAL;
+		pExisting->m_StorageType = IStorage::TYPE_ALL;
 	}
-	CSkinContainer SkinContainer(this, pName, CSkinContainer::EType::LOCAL, IStorage::TYPE_ALL);
-	auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
-	pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
-	const auto &[SkinIt, _] = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)});
+	else
+	{
+		CSkinContainer SkinContainer(this, pName, CSkinContainer::EType::LOCAL, IStorage::TYPE_ALL);
+		auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
+		pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
+		SkinIt = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
+	}
+	CSkinContainer *pSkinContainer = SkinIt->second.get();
 
 	char aPath[IO_MAX_PATH_LENGTH];
 	str_format(aPath, sizeof(aPath), "skins/%s.png", pName);
 	CSkinLoadData DefaultSkinData;
-	SkinIt->second->SetState(CSkinContainer::EState::LOADING);
-	if(!Graphics()->LoadPng(DefaultSkinData.m_Info, aPath, SkinIt->second->StorageType()))
+	pSkinContainer->SetState(CSkinContainer::EState::LOADING);
+	if(!Graphics()->LoadPng(DefaultSkinData.m_Info, aPath, pSkinContainer->StorageType()))
 	{
 		log_error("skins", "Failed to load PNG of skin '%s' from '%s'", pName, aPath);
-		SkinIt->second->SetState(CSkinContainer::EState::ERROR);
+		pSkinContainer->SetState(CSkinContainer::EState::ERROR);
 	}
 	else if(PrepareSkinData(pName, DefaultSkinData))
 	{
-		LoadSkinFinish(SkinIt->second.get(), DefaultSkinData);
+		LoadSkinFinish(pSkinContainer, DefaultSkinData);
 	}
 	else
 	{
-		SkinIt->second->SetState(CSkinContainer::EState::ERROR);
+		pSkinContainer->SetState(CSkinContainer::EState::ERROR);
 	}
 	DefaultSkinData.m_Info.Free();
 	DefaultSkinData.m_InfoGrayscale.Free();
@@ -2190,11 +2235,21 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 	static constexpr int MaxFallbackSweepItems = 64;
 	std::vector<std::string> vFallbackSkinNames;
 	vFallbackSkinNames.reserve(minimum(MaxFallbackSweepItems, (int)m_Skins.size()));
+	// Always-loaded (built-in/vanilla) skins never join the request queues and follow no
+	// list, so they have no load entry left if they miss this fallback batch. Collect them
+	// unconditionally first (there are very few), then fill the remaining budget in
+	// iteration order, so unordered_map iteration order no longer decides who gets swept.
 	for(const auto &[SkinName, pSkinContainer] : m_Skins)
 	{
-		(void)pSkinContainer;
+		if(pSkinContainer->IsAlwaysLoaded())
+			vFallbackSkinNames.push_back(SkinName);
+	}
+	for(const auto &[SkinName, pSkinContainer] : m_Skins)
+	{
 		if((int)vFallbackSkinNames.size() >= MaxFallbackSweepItems)
 			break;
+		if(pSkinContainer->IsAlwaysLoaded())
+			continue; // already collected unconditionally above
 		vFallbackSkinNames.push_back(SkinName);
 	}
 	for(const std::string &SkinName : vFallbackSkinNames)
@@ -2793,7 +2848,8 @@ void CSkins::QueueSkinListPlanJob(int Dummy)
 		auto SkinIt = m_Skins.find(QueueEntry.m_SkinName);
 		if(SkinIt == m_Skins.end())
 		{
-			CSkinContainer SkinContainer(this, QueueEntry.m_SkinName.c_str(), CSkinContainer::EType::DOWNLOAD, IStorage::TYPE_SAVE);
+			const CSkinContainer::EType Type = PreferredContainerType(QueueEntry.m_SkinName.c_str());
+			CSkinContainer SkinContainer(this, QueueEntry.m_SkinName.c_str(), Type, ContainerStorageTypeFor(Type));
 			auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
 			pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 			SkinIt = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
@@ -2961,7 +3017,8 @@ bool CSkins::ApplyOfficialSkinIndexJson(const char *pJson, size_t JsonSize)
 			auto ExistingSkin = m_Skins.find(pName);
 			if(ExistingSkin == m_Skins.end())
 			{
-				CSkinContainer SkinContainer(this, pName, CSkinContainer::EType::DOWNLOAD, IStorage::TYPE_SAVE);
+				const CSkinContainer::EType Type = PreferredContainerType(pName);
+				CSkinContainer SkinContainer(this, pName, Type, ContainerStorageTypeFor(Type));
 				auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
 				pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 				ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
@@ -3128,7 +3185,8 @@ const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName)
 	}
 	if(ExistingSkin == m_Skins.end())
 	{
-		CSkinContainer SkinContainer(this, pName, CSkinContainer::EType::DOWNLOAD, IStorage::TYPE_SAVE);
+		const CSkinContainer::EType Type = PreferredContainerType(pName);
+		CSkinContainer SkinContainer(this, pName, Type, ContainerStorageTypeFor(Type));
 		auto &&pSkinContainer = std::make_unique<CSkinContainer>(std::move(SkinContainer));
 		pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
 		ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;
