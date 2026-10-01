@@ -215,6 +215,18 @@ inline float QmChatEmojiBaselineOffset(float AlignedFontSize, float EmojiSize)
 	return std::min(0.0f, AlignedFontSize - EmojiSize);
 }
 
+inline bool QmChatEmojiInvalidateChangedLayout(bool RenderImage, bool &ImageLayout, float (&aCachedHeights)[2])
+{
+	if(RenderImage == ImageLayout)
+		return false;
+
+	// 异步图片就绪或回退为文字时，两个聊天宽度下的行高都必须重新测量。
+	ImageLayout = RenderImage;
+	for(float &Height : aCachedHeights)
+		Height = -1.0f;
+	return true;
+}
+
 // 解码任务独立持有图像，渲染线程只在完成后接管像素所有权。
 class CQmChatEmojiLoadJob : public IJob
 {

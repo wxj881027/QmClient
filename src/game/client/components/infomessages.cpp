@@ -19,7 +19,8 @@
 #include <game/localization.h>
 
 static constexpr float ROW_HEIGHT = 46.0f;
-static constexpr float FONT_SIZE = 36.0f;
+// 击杀消息使用 1800 逻辑高度，是普通 HUD 坐标的六倍。
+static constexpr float FONT_SIZE = ui_token::hud::font::CAPTION * 6.0f;
 static constexpr float RACE_FLAG_SIZE = 52.0f;
 
 void CInfoMessages::OnWindowResize()

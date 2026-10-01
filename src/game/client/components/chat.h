@@ -142,6 +142,7 @@ private:
 		char m_aQmTitle[64] = "";
 		char m_aText[MAX_LINE_LENGTH];
 		EQmChatEmoji m_ChatEmoji = EQmChatEmoji::NONE;
+		bool m_ChatEmojiImageLayout = false;
 		CUIRect m_ChatEmojiRect = {};
 		std::vector<SMergedAuthor> m_vMergedAuthors;
 		bool m_Friend;
@@ -496,7 +497,7 @@ public:
 	void OnConsoleInit() override;
 	void OnStateChange(int NewState, int OldState) override;
 	void OnRender() override;
-	void OnPrepareLines(float y);
+	bool OnPrepareLines(float y);
 	void Reset();
 	void OnRelease() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
