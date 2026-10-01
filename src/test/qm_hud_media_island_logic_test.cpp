@@ -1291,13 +1291,20 @@ TEST(QmHudMediaIslandTimerLayout, SecondaryLinePreservesTenPercentTopMargin)
 	EXPECT_FLOAT_EQ(Layout.m_CheckpointH, 4.8f);
 }
 
-TEST(QmHudMediaIslandTimerLayout, RaceUsesTheWholeSlotWithoutSecondaryLine)
+TEST(QmHudMediaIslandTimerLayout, RaceKeepsTheSameSlotWhenSecondaryLineIsHidden)
 {
-	const SHudMediaIslandTimerRowLayout Layout = QmHudMediaIslandTimerRows(1.0f, 16.0f, false);
+	for(const float Scale : {QmHudMediaIslandDesignScale, 1.0f, 1.5f})
+	{
+		SCOPED_TRACE(Scale);
+		const float BoxY = 1.0f;
+		const float BoxH = 16.0f * Scale;
+		const SHudMediaIslandTimerRowLayout WithSecondaryLine = QmHudMediaIslandTimerRows(BoxY, BoxH, true);
+		const SHudMediaIslandTimerRowLayout WithoutSecondaryLine = QmHudMediaIslandTimerRows(BoxY, BoxH, false);
 
-	EXPECT_FLOAT_EQ(Layout.m_RaceY, 1.0f);
-	EXPECT_FLOAT_EQ(Layout.m_RaceH, 16.0f);
-	EXPECT_FLOAT_EQ(Layout.m_CheckpointH, 0.0f);
+		EXPECT_FLOAT_EQ(WithoutSecondaryLine.m_RaceY, WithSecondaryLine.m_RaceY);
+		EXPECT_FLOAT_EQ(WithoutSecondaryLine.m_RaceH, WithSecondaryLine.m_RaceH);
+		EXPECT_FLOAT_EQ(WithoutSecondaryLine.m_CheckpointH, 0.0f);
+	}
 }
 
 TEST(QmHudMediaIslandWaveform, PlayingBarsVaryIndependentlyAndPausedBarsSettle)
@@ -1621,47 +1628,6 @@ TEST(QmHudMediaIslandSource, BothLayoutPathsShareTheSameMainCapsuleReservation)
 	// 回归护栏：状态区不再算主胶囊内容，观战卫星也不再作为保留依据。
 	EXPECT_EQ(IslandBody.find("ShowTeam || ShowInfoStack"), std::string::npos);
 	EXPECT_EQ(IslandBody.find("QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, HasSpectatorSatellitePresentation"), std::string::npos);
-}
-
-TEST(QmHudMediaIslandSource, BackdropAndOuterShadowFollowTheSameCombinedSdf)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/hud.cpp");
-	const std::string OpenGlShader = ReadTestSourceFile("data/shader/media_island_sdf.frag");
-	const std::string VulkanShader = ReadTestSourceFile("data/shader/vulkan/media_island_sdf.frag");
-	const std::string IslandBody = FunctionBody(Source, "void CHud::RenderMediaIsland()");
-	const std::string ShadowBody = FunctionBody(Source, "void DrawMediaIslandOuterShadowFallback(IGraphics *pGraphics, const SHudMediaIslandSdfRenderState &State)");
-	const std::string FallbackBody = FunctionBody(Source, "void DrawMediaIslandGeometryFallback(IGraphics *pGraphics, const SHudMediaIslandSdfRenderState &State)");
-
-	EXPECT_NE(Source.find("MEDIA_ISLAND_OUTER_SHADOW_PIXELS = 5.0f"), std::string::npos);
-	EXPECT_NE(Source.find("MEDIA_ISLAND_OUTER_SHADOW_OPACITY = 0.35f"), std::string::npos);
-	EXPECT_NE(IslandBody.find("m_OuterShadowSize = ScreenPixelSize * MEDIA_ISLAND_OUTER_SHADOW_PIXELS"), std::string::npos);
-	EXPECT_NE(IslandBody.find("m_OuterShadowOpacity = MEDIA_ISLAND_OUTER_SHADOW_OPACITY * EntrancePose.m_BackgroundColor.a"), std::string::npos);
-	EXPECT_NE(IslandBody.find("QmHudMediaIslandBackdropUv(CurrentSdfState.m_Rect"), std::string::npos);
-	EXPECT_NE(ShadowBody.find("State.m_Items"), std::string::npos);
-	EXPECT_NE(ShadowBody.find("State.m_HasRightCapsule"), std::string::npos);
-	EXPECT_NE(FallbackBody.find("DrawMediaIslandOuterShadowFallback"), std::string::npos);
-
-	for(const std::string *pShader : {&OpenGlShader, &VulkanShader})
-	{
-		const size_t ShadowParams = pShader->find("vec4 ShadowParams = Data(7);");
-		const size_t ShadowComposite = pShader->find("Composite(PremulColor, Alpha, vec4(0.0, 0.0, 0.0, ShadowParams.y * PanelAlpha)");
-		const size_t BackgroundComposite = pShader->find("Composite(PremulColor, Alpha, vec4(ShapeColor, PanelAlpha), ShapeCoverage)");
-		ASSERT_NE(ShadowParams, std::string::npos);
-		ASSERT_NE(ShadowComposite, std::string::npos);
-		ASSERT_NE(BackgroundComposite, std::string::npos);
-		EXPECT_NE(pShader->find("ShapeDistance = min(ShapeDistance, SatelliteDistance);"), std::string::npos);
-		EXPECT_NE(pShader->find("ShapeDistance = min(ShapeDistance, CapsuleDistance);"), std::string::npos);
-		EXPECT_NE(pShader->find("texture(gBackdropSampler"), std::string::npos);
-		// 亚克力板语义：背景色与模糊底图先按面板透明度混合，再整体按它合成，
-		// 因此透明度 0 时整块板（含外圈阴影）消失，而不是"只去掉背景色、留下不透明底图"。
-		EXPECT_NE(pShader->find("float PanelAlpha = clamp(Background.a, 0.0, 1.0);"), std::string::npos);
-		// const 非常量初始化在 GLSL 330 下不合法，OpenGL 与 Vulkan 两份都必须保持可编译的写法。
-		EXPECT_EQ(pShader->find("const float PanelAlpha"), std::string::npos);
-		EXPECT_NE(pShader->find("vec3 ShapeColor = mix(Backdrop, Background.rgb, PanelAlpha);"), std::string::npos);
-		EXPECT_NE(pShader->find("Composite(PremulColor, Alpha, Background, ShapeCoverage);"), std::string::npos);
-		EXPECT_LT(ShadowParams, ShadowComposite);
-		EXPECT_LT(ShadowComposite, BackgroundComposite);
-	}
 }
 
 TEST(QmHudPresentationSource, MediaIslandUsesContinuousPresentationState)

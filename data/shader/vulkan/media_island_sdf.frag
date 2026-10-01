@@ -179,8 +179,7 @@ void main()
 	vec3 PremulColor = vec3(0.0);
 	float Alpha = 0.0;
 	vec4 Background = Data(3);
-	// 面板整体不透明度：模糊底图与背景色一起按它淡出，所以透明度 0 时整块板（含外圈阴影）消失。
-	// 不能写成 const（clamp 结果不是常量表达式，GLSL 330 不允许 const 非常量初始化）。
+	// 背景色不透明度控制染色和阴影，不影响模糊底图的覆盖率。
 	float PanelAlpha = clamp(Background.a, 0.0, 1.0);
 	float ShadowSize = max(ShadowParams.x, 0.0);
 	if(ShadowSize > 0.0 && ShadowParams.y > 0.0 && PanelAlpha > 0.0)
@@ -194,10 +193,9 @@ void main()
 	if(abs(BackdropUv.z) > 0.000001 && abs(BackdropUv.w) > 0.000001)
 	{
 		vec3 Backdrop = texture(gBackdropSampler, BackdropUv.xy + texCoord * BackdropUv.zw).rgb;
-		// 亚克力板：背景色与模糊底图按 PanelAlpha 混合后整体按 PanelAlpha 合成，
-		// 即"模糊照旧，板越透越看得见后面的画面"。下方无底图分支直接用 Background，语义一致。
+		// 模糊底图先覆盖岛内，再按背景色不透明度染色；0% 时保留纯模糊。
 		vec3 ShapeColor = mix(Backdrop, Background.rgb, PanelAlpha);
-		Composite(PremulColor, Alpha, vec4(ShapeColor, PanelAlpha), ShapeCoverage);
+		Composite(PremulColor, Alpha, vec4(ShapeColor, 1.0), ShapeCoverage);
 	}
 	else
 		Composite(PremulColor, Alpha, Background, ShapeCoverage);

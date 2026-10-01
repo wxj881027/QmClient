@@ -4750,7 +4750,7 @@ void CHud::RenderMediaIsland()
 	const float TimerRaceFontSize = std::min(TimerCapsule.m_FontSize, TimerRows.m_RaceH);
 	const float TimerRaceTextWidth = TextRender()->TextWidth(TimerRaceFontSize, TimerCapsule.m_aText);
 	const float TimerTextX = TimerBoxX + std::max(0.0f, (TimerCapsule.m_BoxW - TimerRaceTextWidth) * 0.5f);
-	const float TimerRaceTextY = ShowTimerSecondaryLine ? TimerRows.m_RaceY + (TimerRows.m_RaceH - TimerRaceFontSize) * 0.5f : TimerCapsule.m_TextY;
+	const float TimerRaceTextY = TimerRows.m_RaceY + (TimerRows.m_RaceH - TimerRaceFontSize) * 0.5f;
 	const float CheckpointFontSize = std::min(TimerCapsule.m_FontSize * 0.40f, TimerRows.m_CheckpointH);
 	const float CheckpointTextY = TimerRows.m_CheckpointY + (TimerRows.m_CheckpointH - CheckpointFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);
 	ColorRGBA IslandBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandBgColor));
@@ -6697,7 +6697,7 @@ void CHud::RenderSpectatorHud()
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SpectatorHud, {m_Width - 180.0f, BoundsTop, 180.0f, BoundsBottom - BoundsTop});
 
 	// draw the box
-	Graphics()->DrawRect(m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f, ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	Ui()->RenderGaussianBlur({m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
 
 	// draw the text
 	char aBuf[128];
@@ -7501,19 +7501,21 @@ void CHud::RenderGoresDrownBoard()
 	constexpr float MoreHeight = MoreFontSize + 2.0f;
 	constexpr float TeeSize = 8.0f;
 	constexpr float TeeGap = 2.0f;
+	constexpr float CountGap = 4.0f;
+	const float TeeColumnWidth = ShowTee ? TeeSize + TeeGap : 0.0f;
 
 	float BoardWidth = TextRender()->TextWidth(TitleFontSize, pTitle);
 	for(int Index = 0; Index < RowCount; ++Index)
 	{
-		char aLine[128];
+		char aCount[16];
 		const char *pName = vEntries[Index].m_ClientId >= 0 ? GameClient()->m_aClients[vEntries[Index].m_ClientId].m_aName : Localize("Teammate");
-		str_format(aLine, sizeof(aLine), "%s: %d", pName, vEntries[Index].m_Count);
-		BoardWidth = maximum(BoardWidth, TextRender()->TextWidth(RowFontSize, aLine) + (ShowTee ? TeeSize + TeeGap : 0.0f));
+		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
+		BoardWidth = maximum(BoardWidth, TeeColumnWidth + TextRender()->TextWidth(RowFontSize, pName) + CountGap + TextRender()->TextWidth(RowFontSize, aCount));
 	}
 	if(HasMoreRows)
 		BoardWidth = maximum(BoardWidth, TextRender()->TextWidth(MoreFontSize, Localize("More teammates...")));
 
-	BoardWidth = maximum(BoardWidth + PaddingX * 2.0f, 64.0f);
+	BoardWidth = maximum(BoardWidth + PaddingX * 2.0f, 64.0f) + 2.0f;
 	const float BoardHeight = PaddingY * 2.0f + TitleHeight + RowCount * RowHeight + (HasMoreRows ? MoreHeight : 0.0f);
 	const float CenterX = 150.0f * Graphics()->ScreenAspect();
 	const float BoardX = std::clamp(CenterX - BoardWidth / 2.0f, 0.0f, maximum(0.0f, m_Width - BoardWidth));
@@ -7536,17 +7538,17 @@ void CHud::RenderGoresDrownBoard()
 	TextRender()->TextOutlineColor(BoardOutlineColor);
 
 	const float ContentCenterX = BoardX + BoardWidth / 2.0f;
+	const float RowLeft = BoardX + PaddingX;
+	const float RowRight = BoardX + BoardWidth - PaddingX;
 	TextRender()->Text(ContentCenterX - TextRender()->TextWidth(TitleFontSize, pTitle) / 2.0f, BoardY + PaddingY, TitleFontSize, pTitle);
 	for(int Index = 0; Index < RowCount; ++Index)
 	{
-		char aLine[128];
+		char aCount[16];
 		const int ClientId = vEntries[Index].m_ClientId;
 		const char *pName = ClientId >= 0 ? GameClient()->m_aClients[ClientId].m_aName : Localize("Teammate");
-		str_format(aLine, sizeof(aLine), "%s: %d", pName, vEntries[Index].m_Count);
+		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
 		const float Y = BoardY + PaddingY + TitleHeight + Index * RowHeight;
-		const float TextWidth = TextRender()->TextWidth(RowFontSize, aLine);
-		const float RowWidth = TextWidth + (ShowTee ? TeeSize + TeeGap : 0.0f);
-		const float RowLeft = ContentCenterX - RowWidth / 2.0f;
+		const float CountWidth = TextRender()->TextWidth(RowFontSize, aCount);
 		if(ShowTee && ClientId >= 0)
 		{
 			CTeeRenderInfo TeeInfo = GameClient()->m_aClients[ClientId].m_RenderInfo;
@@ -7556,7 +7558,8 @@ void CHud::RenderGoresDrownBoard()
 			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
 			RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(RowLeft + TeeSize / 2.0f, Y + RowHeight * 0.5f + OffsetToMid.y), RenderAlpha);
 		}
-		TextRender()->Text(RowLeft + (ShowTee ? TeeSize + TeeGap : 0.0f), Y, RowFontSize, aLine);
+		TextRender()->Text(RowLeft + TeeColumnWidth, Y, RowFontSize, pName);
+		TextRender()->Text(RowRight - CountWidth, Y, RowFontSize, aCount);
 	}
 	if(HasMoreRows)
 	{
