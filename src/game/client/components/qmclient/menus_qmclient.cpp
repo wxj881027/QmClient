@@ -4789,8 +4789,8 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		const SSettingsSubTabLayoutFrame QmClientSubTabs = ResolveSettingsSubTabLayout(MainView, QmClientUiScale);
 		TabBar = QmClientSubTabs.m_TabBarRect;
 		MainView = QmClientSubTabs.m_ContentRect;
-		// 贡献者页签删除后枚举保留占位（维持持久化索引兼容），页签栏只画可见的四个。
-		constexpr int aVisibleQmTabs[] = {QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_CONFIG};
+		// 贡献者枚举保留占位以兼容旧配置，可见页签使用独立列表。
+		constexpr int aVisibleQmTabs[] = {QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_CONFIG, QMCLIENT_SETTINGS_TAB_BIND};
 		constexpr int NumQmTabs = (int)std::size(aVisibleQmTabs);
 		const float TabWidth = TabBar.w / (float)NumQmTabs;
 		static CButtonContainer s_aPageTabs[NUMBER_OF_QMCLIENT_SETTINGS_TABS] = {};

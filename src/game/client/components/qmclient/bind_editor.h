@@ -2,9 +2,12 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_BIND_EDITOR_H
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
+
+class IConsole;
 
 namespace qm_bind_editor
 {
@@ -18,6 +21,23 @@ namespace qm_bind_editor
 		bool m_Complete = true;
 	};
 
+	struct SRegisteredCommand
+	{
+		std::string m_Name;
+		std::string m_Parameters;
+		std::string m_Help;
+	};
+
+	struct SParameter
+	{
+		char m_Type;
+		std::string m_Name;
+		bool m_Optional;
+	};
+
+	std::vector<SRegisteredCommand> RegisteredCommands(IConsole &Console);
+	std::vector<SParameter> ParseParameters(std::string_view Format);
+	bool ComposeCommand(std::string_view Name, const std::vector<SParameter> &vParameters, const std::vector<std::optional<std::string>> &vArguments, std::string &Result);
 	SCommands SplitCommands(std::string_view Text);
 	std::string JoinCommands(const std::vector<std::string> &vCommands);
 	std::string QuoteArgument(std::string_view Text);

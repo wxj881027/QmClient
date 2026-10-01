@@ -6,7 +6,6 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
-#include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
@@ -15,76 +14,19 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/bind_editor.h>
 #include <game/client/gameclient.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/localization.h>
 
 #include <algorithm>
 #include <array>
+#include <deque>
 #include <initializer_list>
 #include <iterator>
 #include <string>
-#include <string_view>
 #include <vector>
 
 namespace
 {
-	struct SBindCommandOption
-	{
-		const char *m_pLabel;
-		const char *m_pCommand;
-	};
-
-	// 控制页已有的常用动作在 Bind 页复用；输入框仍允许任意控制台命令。
-	constexpr SBindCommandOption s_aBindCommandOptions[] = {
-		{Localizable("Move left"), "+left"},
-		{Localizable("Move right"), "+right"},
-		{Localizable("Jump"), "+jump"},
-		{Localizable("Fire"), "+fire"},
-		{Localizable("Hook"), "+hook"},
-		{Localizable("Hook collisions"), "+showhookcoll"},
-		{Localizable("Pause"), "say /pause"},
-		{Localizable("Kill"), "kill"},
-		{Localizable("Zoom in"), "zoom+"},
-		{Localizable("Zoom out"), "zoom-"},
-		{Localizable("Default zoom"), "zoom"},
-		{Localizable("Show others"), "say /showothers"},
-		{Localizable("Show all"), "say /showall"},
-		{Localizable("Toggle dyncam"), "toggle cl_dyncam 0 1"},
-		{Localizable("Toggle ghost"), "toggle cl_race_show_ghost 0 1"},
-		{Localizable("Hammer"), "+weapon1"},
-		{Localizable("Pistol"), "+weapon2"},
-		{Localizable("Shotgun"), "+weapon3"},
-		{Localizable("Grenade"), "+weapon4"},
-		{Localizable("Laser"), "+weapon5"},
-		{Localizable("Next weapon"), "+nextweapon"},
-		{Localizable("Prev. weapon"), "+prevweapon"},
-		{Localizable("Vote yes"), "vote yes"},
-		{Localizable("Vote no"), "vote no"},
-		{Localizable("Chat"), "+show_chat; chat all"},
-		{Localizable("Team chat"), "+show_chat; chat team"},
-		{Localizable("Converse"), "+show_chat; chat all /c "},
-		{Localizable("Show chat"), "+show_chat"},
-		{Localizable("Repeat message"), "+qm_repeat"},
-		{Localizable("Voice chat"), "+qm_voice_ptt"},
-		{Localizable("Toggle dummy"), "toggle cl_dummy 0 1"},
-		{Localizable("Dummy jump"), "+toggle_restore cl_dummy_jump 1"},
-		{Localizable("Dummy fire"), "+toggle_restore cl_dummy_fire 1"},
-		{Localizable("Dummy hook"), "+toggle_restore cl_dummy_hook 1"},
-		{Localizable("Dummy copy"), "toggle cl_dummy_copy_moves 0 1"},
-		{Localizable("Dummy control"), "toggle cl_dummy_control 1 0"},
-		{Localizable("Emoticon"), "+emote"},
-		{Localizable("Spectate mode"), "+spectate"},
-		{Localizable("Spectate next"), "spectate_next"},
-		{Localizable("Spectate previous"), "spectate_previous"},
-		{Localizable("Active disconnect"), "qm_timeout_disconnect"},
-		{Localizable("Console"), "toggle_local_console"},
-		{Localizable("Screenshot"), "screenshot"},
-		{Localizable("Scoreboard"), "+scoreboard"},
-		{Localizable("Statboard"), "+statboard"},
-		{Localizable("Pie menu"), "+pie_menu"},
-		{Localizable("Show entities"), "toggle cl_overlay_entities 0 100"},
-		{Localizable("Show HUD"), "toggle cl_showhud 0 1"},
-	};
-
 	struct SBindKeyTile
 	{
 		int m_Key;
@@ -97,20 +39,24 @@ namespace
 
 	struct SBindEditorUiState
 	{
+		struct SActionControls
+		{
+			CButtonContainer m_Remove;
+			char m_LabelId = 0;
+		};
+
 		CBindSlot m_Selected = CBindSlot(KEY_A, KeyModifier::NONE);
 		int m_ModifierMask = KeyModifier::NONE;
 		bool m_HasSelected = true;
-		bool m_HasHovered = false;
-		CBindSlot m_Hovered = CBindSlot(KEY_A, KeyModifier::NONE);
+		bool m_CapturePending = false;
+		bool m_KeySelectionHeld = false;
+		CUIRect m_KeyboardRect{};
 		int m_KeyButtonCount = 0;
 		std::array<CButtonContainer, 128> m_aKeyButtons{};
 		std::array<CButtonContainer, 4> m_aModifierButtons{};
-		std::array<CButtonContainer, 64> m_aRemoveButtons{};
-		std::array<CButtonContainer, 16> m_aCommandButtons{};
+		std::deque<SActionControls> m_vActionControls;
 		CButtonContainer m_CaptureButton;
 		CButtonContainer m_ClearCaptureButton;
-		CButtonContainer m_AddCustomButton;
-		CLineInputBuffered<qm_bind_editor::INPUT_CAPACITY> m_CommandSearch;
 		std::string m_Error;
 	};
 
@@ -120,21 +66,9 @@ namespace
 		return s_State;
 	}
 
-	bool CommandMatches(const SBindCommandOption &Option, const char *pSearch)
-	{
-		if(pSearch == nullptr || pSearch[0] == '\0')
-			return true;
-		return str_utf8_find_nocase(Localize(Option.m_pLabel), pSearch) != nullptr || str_utf8_find_nocase(Option.m_pCommand, pSearch) != nullptr;
-	}
-
 	int ModifierBit(const int Modifier)
 	{
 		return 1 << Modifier;
-	}
-
-	float BindCardRowHeight(const SSettingsContentMetrics &Metrics)
-	{
-		return Metrics.m_LineHeight + Metrics.m_LineSpacing;
 	}
 
 	void SetBindEditorError(SBindEditorUiState &State, const char *pMessage)
@@ -200,34 +134,34 @@ void CMenus::RenderSettingsQmClientBindDeck(CUIRect MainView, const bool Prewarm
 		SaveSettingsCardOrderModel();
 }
 
-void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnly)
+void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool PrewarmOnly)
 {
+	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	SBindEditorUiState &State = BindEditorState();
-	const float InitialContentHeight = std::max(0.0f, Content.h);
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Content.w);
-	const float UiScale = Metrics.m_UiScale;
 	const float LineHeight = Metrics.m_LineHeight;
 	const float LineSpacing = Metrics.m_LineSpacing;
 	const float BodySize = Metrics.m_BodySize;
-	const float RowHeight = BindCardRowHeight(Metrics);
-	const int OriginalModifierMask = State.m_ModifierMask;
 
 	CUIRect Left, Right;
-	Content.VSplitLeft(std::max(1.0f, Content.w * 0.63f), &Left, &Right);
+	const bool Stacked = Content.w < 640.0f;
+	if(Stacked)
+		Left = Right = Content;
+	else
+		Content.VSplitLeft(std::max(1.0f, Content.w * 0.63f), &Left, &Right);
 	Right.VMargin(LineSpacing * 0.75f, &Right);
 	Left.VMargin(LineSpacing * 0.75f, &Left);
-
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_BIND, QMCLIENT_SETTINGS_TAB_BIND, "qm-bind-editor-help", &Left, Localize("Hover a key to inspect its bind, then click to edit it."), BodySize, TEXTALIGN_ML, {}, (int)Left.w);
-	Left.HSplitTop(RowHeight, nullptr, &Left);
+	const CUIRect KeyboardStart = Left;
 
 	static constexpr std::array<const char *, 4> s_apModifierLabels = {Localizable("Ctrl"), Localizable("Alt"), Localizable("Shift"), Localizable("Gui")};
 	static constexpr std::array<int, 4> s_aModifierIds = {KeyModifier::CTRL, KeyModifier::ALT, KeyModifier::SHIFT, KeyModifier::GUI};
 	CUIRect ModifierRow;
 	Left.HSplitTop(LineHeight, &ModifierRow, &Left);
+	const float ModifierButtonWidth = (ModifierRow.w - LineSpacing * 3.0f) / 4.0f;
 	for(size_t Index = 0; Index < s_apModifierLabels.size(); ++Index)
 	{
 		CUIRect Button;
-		ModifierRow.VSplitLeft((ModifierRow.w - LineSpacing * 3.0f) / 4.0f, &Button, &ModifierRow);
+		ModifierRow.VSplitLeft(ModifierButtonWidth, &Button, &ModifierRow);
 		if(Index + 1 < s_apModifierLabels.size())
 			ModifierRow.VSplitLeft(LineSpacing, nullptr, &ModifierRow);
 		const bool Checked = (State.m_ModifierMask & ModifierBit(s_aModifierIds[Index])) != 0;
@@ -236,26 +170,30 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnl
 			State.m_ModifierMask ^= ModifierBit(s_aModifierIds[Index]);
 			if(State.m_HasSelected)
 				State.m_Selected.m_ModifierMask = State.m_ModifierMask;
+			State.m_Error.clear();
 		}
 	}
 
 	Left.HSplitTop(LineSpacing, nullptr, &Left);
-	State.m_HasHovered = false;
 	State.m_KeyButtonCount = 0;
 	const bool KeyCaptureActive = GameClient()->m_KeyBinder.IsActive();
-	const auto DrawKey = [this, &State, ReadOnly, BodySize, KeyCaptureActive](const SBindKeyTile &Tile, const CUIRect &Rect) {
+	if(!ReadOnly && !Ui()->MouseInside(&State.m_KeyboardRect))
+		State.m_KeySelectionHeld = false;
+	const bool FollowHover = !ReadOnly && !KeyCaptureActive && !State.m_CapturePending && !State.m_KeySelectionHeld && !Ui()->IsPopupOpen() && CLineInput::GetActiveInput() == nullptr;
+	const auto DrawKey = [this, &State, ReadOnly, BodySize, FollowHover](const SBindKeyTile &Tile, const CUIRect &Rect) {
 		if(Tile.m_Spacer)
 			return;
 		if(State.m_KeyButtonCount >= (int)State.m_aKeyButtons.size())
 			return;
 		const CBindSlot Slot(Tile.m_Key, State.m_ModifierMask);
-		const bool Selected = State.m_HasSelected && State.m_Selected == Slot;
 		const bool Hovered = Ui()->MouseHovered(&Rect);
-		if(Hovered && !ReadOnly && !KeyCaptureActive)
+		if(Hovered && FollowHover && State.m_Selected != Slot)
 		{
-			State.m_HasHovered = true;
-			State.m_Hovered = Slot;
+			State.m_Selected = Slot;
+			State.m_HasSelected = true;
+			State.m_Error.clear();
 		}
+		const bool Selected = State.m_HasSelected && State.m_Selected == Slot;
 
 		const auto *pImage = Tile.m_pImage != nullptr ? FindMenuImage(Tile.m_pImage) : nullptr;
 		DrawRoundedSurface(Ui(), Rect, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), 4.0f);
@@ -279,12 +217,21 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnl
 			DrawRoundedSurface(Ui(), Rect, ColorRGBA(0.2f, 0.75f, 1.0f, 0.18f), ColorRGBA(0.3f, 0.85f, 1.0f, 0.75f), 4.0f, 1.0f);
 		else if(Hovered)
 			DrawRoundedSurface(Ui(), Rect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f), ColorRGBA(), 4.0f);
+		if(GameClient()->m_Binds.Get(Slot)[0] != '\0')
+		{
+			CUIRect Indicator;
+			Rect.HSplitTop(2.0f, &Indicator, nullptr);
+			Indicator.Draw(ColorRGBA(0.3f, 0.78f, 0.65f, 0.9f), IGraphics::CORNER_T, 2.0f);
+		}
 		const int ButtonResult = ReadOnly ? 0 : Ui()->DoButtonLogic(&State.m_aKeyButtons[State.m_KeyButtonCount], Selected ? 1 : 0, &Rect, BUTTONFLAG_LEFT);
 		++State.m_KeyButtonCount;
 		if(ButtonResult != 0 && !ReadOnly)
 		{
 			State.m_Selected = Slot;
 			State.m_HasSelected = true;
+			// 点击后穿过其他键位前往编辑面板时，保留用户明确选中的键。
+			State.m_KeySelectionHeld = true;
+			State.m_Error.clear();
 		}
 	};
 
@@ -340,9 +287,15 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnl
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_BIND, QMCLIENT_SETTINGS_TAB_BIND, "qm-bind-editor-mouse", &MouseHeader, Localize("Mouse"), BodySize, TEXTALIGN_ML, {}, (int)MouseHeader.w);
 	RenderKeyRow({{KEY_MOUSE_1, "Mouse 1", "mouse_left", 1.4f}, {KEY_MOUSE_2, "Mouse 2", "mouse_right", 1.4f}, {KEY_MOUSE_3, "Mouse 3", "mouse_scroll", 1.4f}, {KEY_MOUSE_4, "Mouse 4", "mouse_side_back", 1.4f}, {KEY_MOUSE_5, "Mouse 5", "mouse_side_forward", 1.4f}, {KEY_MOUSE_WHEEL_UP, "Wheel up", "mouse_scroll_up", 1.4f}, {KEY_MOUSE_WHEEL_DOWN, "Wheel down", "mouse_scroll_down", 1.4f}});
 	RenderKeyRow({{KEY_MOUSE_WHEEL_LEFT, "Wheel left", "mouse_horizontal", 1.4f}, {KEY_MOUSE_WHEEL_RIGHT, "Wheel right", "mouse_horizontal", 1.4f}});
+	if(!ReadOnly)
+		State.m_KeyboardRect = {KeyboardStart.x, KeyboardStart.y, KeyboardStart.w, Left.y - KeyboardStart.y};
 
-	const CBindSlot HoverOrSelected = !KeyCaptureActive && State.m_HasHovered ? State.m_Hovered : State.m_Selected;
-	CBindSlot ActiveSlot = HoverOrSelected;
+	if(Stacked)
+	{
+		Right = Left;
+		Right.HSplitTop(LineSpacing, nullptr, &Right);
+	}
+	CBindSlot ActiveSlot = State.m_Selected;
 	if(ActiveSlot.m_Key == KEY_UNKNOWN)
 		ActiveSlot = CBindSlot(KEY_A, State.m_ModifierMask);
 
@@ -364,22 +317,35 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnl
 		State.m_Selected = PreviousSlot;
 		State.m_ModifierMask = PreviousSlot.m_ModifierMask;
 		State.m_HasSelected = true;
+		State.m_CapturePending = true;
 	}
+	if(!ReadOnly && !GameClient()->m_KeyBinder.IsActive())
+		State.m_CapturePending = false;
 	if(!ReadOnly && CaptureResult.m_Bind != PreviousSlot)
 	{
 		if(CaptureResult.m_Bind.m_Key == KEY_UNKNOWN)
 		{
 			GameClient()->m_Binds.Bind(PreviousSlot.m_Key, "", false, PreviousSlot.m_ModifierMask);
+			State.m_Error.clear();
 		}
 		else
 		{
-			GameClient()->m_Binds.Bind(PreviousSlot.m_Key, "", false, PreviousSlot.m_ModifierMask);
-			GameClient()->m_Binds.Bind(CaptureResult.m_Bind.m_Key, PreviousBinding.c_str(), false, CaptureResult.m_Bind.m_ModifierMask);
-			State.m_Selected = CaptureResult.m_Bind;
-			State.m_ModifierMask = CaptureResult.m_Bind.m_ModifierMask;
-			State.m_HasSelected = true;
+			char aNewKeyName[128];
+			GameClient()->m_Binds.GetKeyBindName(CaptureResult.m_Bind.m_Key, CaptureResult.m_Bind.m_ModifierMask, aNewKeyName, sizeof(aNewKeyName));
+			if(qm_bind_editor::FitsConfigLine(aNewKeyName, PreviousBinding))
+			{
+				GameClient()->m_Binds.Bind(PreviousSlot.m_Key, "", false, PreviousSlot.m_ModifierMask);
+				GameClient()->m_Binds.Bind(CaptureResult.m_Bind.m_Key, PreviousBinding.c_str(), false, CaptureResult.m_Bind.m_ModifierMask);
+				State.m_Selected = CaptureResult.m_Bind;
+				State.m_ModifierMask = CaptureResult.m_Bind.m_ModifierMask;
+				State.m_HasSelected = true;
+				State.m_KeySelectionHeld = true;
+				State.m_Error.clear();
+			}
+			else
+				SetBindEditorError(State, Localize("This bind is already over the local config line limit."));
 		}
-		ActiveSlot = CaptureResult.m_Bind.m_Key == KEY_UNKNOWN ? PreviousSlot : CaptureResult.m_Bind;
+		ActiveSlot = State.m_Selected;
 		GameClient()->m_Binds.GetKeyBindName(ActiveSlot.m_Key, ActiveSlot.m_ModifierMask, aActiveKeyName, sizeof(aActiveKeyName));
 	}
 	Right.HSplitTop(LineSpacing, nullptr, &Right);
@@ -393,7 +359,8 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnl
 	Right.HSplitTop(LineHeight, &BoundHeader, &Right);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_BIND, QMCLIENT_SETTINGS_TAB_BIND, "qm-bind-editor-current", &BoundHeader, Localize("Bound functions"), BodySize, TEXTALIGN_ML, {}, (int)BoundHeader.w);
 	Right.HSplitTop(LineSpacing * 0.4f, nullptr, &Right);
-	State.m_aRemoveButtons.fill({});
+	if(!ReadOnly)
+		State.m_vActionControls.resize(Parsed.m_vCommands.size());
 	if(Parsed.m_vCommands.empty())
 	{
 		CUIRect EmptyRow;
@@ -403,12 +370,13 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnl
 	}
 	else
 	{
-		for(size_t Index = 0; Index < Parsed.m_vCommands.size() && Index < State.m_aRemoveButtons.size(); ++Index)
+		for(size_t Index = 0; Index < Parsed.m_vCommands.size(); ++Index)
 		{
 			CUIRect Row, Remove;
 			Right.HSplitTop(LineHeight, &Row, &Right);
 			Row.VSplitRight(LineHeight, &Row, &Remove);
-			if(!ReadOnly && DoButton_Menu(&State.m_aRemoveButtons[Index], "×", 0, &Remove, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 4.0f, 0.0f, ColorRGBA(1.0f, 0.35f, 0.35f, 0.45f)))
+			const bool CanRemove = !ReadOnly && Parsed.m_Complete && !Ui()->IsPopupOpen() && !GameClient()->m_KeyBinder.IsActive();
+			if(Index < State.m_vActionControls.size() && Ui()->DoButton_QmIcon(&State.m_vActionControls[Index].m_Remove, EQmIcon::TRASH, FontIcons::FONT_ICON_TRASH, CanRemove ? 0 : -1, &Remove, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL) && CanRemove)
 			{
 				Parsed.m_vCommands.erase(Parsed.m_vCommands.begin() + Index);
 				const std::string Updated = qm_bind_editor::JoinCommands(Parsed.m_vCommands);
@@ -420,74 +388,17 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnl
 			Props.m_EllipsisAtEnd = true;
 			Props.m_MinimumFontSize = std::max(8.0f, BodySize * 0.82f);
 			Ui()->DoLabel(&Row, Parsed.m_vCommands[Index].c_str(), BodySize, TEXTALIGN_ML, Props);
+			if(!ReadOnly && Index < State.m_vActionControls.size())
+			{
+				GameClient()->m_Tooltips.DoToolTip(&State.m_vActionControls[Index].m_Remove, &Remove, Localize("Delete"));
+				GameClient()->m_Tooltips.DoToolTipForRect(&State.m_vActionControls[Index].m_LabelId, &Row, Parsed.m_vCommands[Index].c_str(), 400.0f);
+			}
 			Right.HSplitTop(LineSpacing * 0.35f, nullptr, &Right);
 		}
 	}
 
 	Right.HSplitTop(LineSpacing * 0.35f, nullptr, &Right);
-	CUIRect SearchRow;
-	Right.HSplitTop(LineHeight, &SearchRow, &Right);
-	IUiContext InputCtx = SettingsUiContext("settings_qmclient_bind_command_search", UiScale);
-	if(ReadOnly)
-	{
-		InputCtx.m_pAnim = nullptr;
-		InputCtx.m_pTree = nullptr;
-	}
-	ui_widget::SInputFieldOptions SearchOptions;
-	SearchOptions.m_pPlaceholder = Localize("Search or type a console command");
-	SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
-	SearchOptions.m_TextStyle = ui_widget::EInputTextStyle::BODY;
-	SearchOptions.m_Clearable = true;
-	SearchOptions.m_SearchHotkeyEnabled = true;
-	SearchOptions.m_FontSize = BodySize;
-	SearchOptions.m_ProcessInput = !ReadOnly && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_KeyBinder.IsActive();
-	(void)ui_widget::InputField(InputCtx, &State.m_CommandSearch, SearchRow, SearchOptions);
-
-	const std::string SearchText = State.m_CommandSearch.GetString();
-	const auto AddCommand = [&](const std::string_view Next) {
-		std::string Updated;
-		char aKeyName[128];
-		GameClient()->m_Binds.GetKeyBindName(ActiveSlot.m_Key, ActiveSlot.m_ModifierMask, aKeyName, sizeof(aKeyName));
-		if(!qm_bind_editor::AppendCommand(aKeyName, ExistingBinding, Next, Updated))
-		{
-			if(!qm_bind_editor::FitsConfigLine(aKeyName, ExistingBinding))
-				SetBindEditorError(State, Localize("This bind is already over the local config line limit."));
-			else if(Next.find('\n') != std::string_view::npos || Next.find('\r') != std::string_view::npos)
-				SetBindEditorError(State, Localize("Commands cannot contain a line break."));
-			else
-				SetBindEditorError(State, Localize("The command is empty, incomplete, or exceeds the local config line limit."));
-			return;
-		}
-		GameClient()->m_Binds.Bind(ActiveSlot.m_Key, Updated.c_str(), false, ActiveSlot.m_ModifierMask);
-		SetBindEditorError(State, "");
-	};
-
-	int SuggestionCount = 0;
-	State.m_aCommandButtons.fill({});
-	for(size_t Index = 0; Index < std::size(s_aBindCommandOptions) && SuggestionCount < 6; ++Index)
-	{
-		if(!CommandMatches(s_aBindCommandOptions[Index], SearchText.c_str()))
-			continue;
-		CUIRect Suggestion;
-		Right.HSplitTop(LineHeight, &Suggestion, &Right);
-		if(!ReadOnly && DoButton_Menu(&State.m_aCommandButtons[SuggestionCount], Localize(s_aBindCommandOptions[Index].m_pLabel), 0, &Suggestion, BUTTONFLAG_LEFT))
-		{
-			AddCommand(s_aBindCommandOptions[Index].m_pCommand);
-			State.m_CommandSearch.Clear();
-		}
-		SuggestionCount++;
-		Right.HSplitTop(LineSpacing * 0.3f, nullptr, &Right);
-	}
-	if(!SearchText.empty())
-	{
-		CUIRect AddRow;
-		Right.HSplitTop(LineHeight, &AddRow, &Right);
-		if(!ReadOnly && DoButton_Menu(&State.m_AddCustomButton, Localize("Add typed command"), 0, &AddRow))
-		{
-			AddCommand(SearchText);
-			State.m_CommandSearch.Clear();
-		}
-	}
+	RenderQmBindCommandEditor(Right, ActiveSlot, ReadOnly);
 
 	if(!State.m_Error.empty())
 	{
@@ -499,11 +410,5 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool ReadOnl
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}
 
-	// 左右两列共享同一张卡片高度，取消费更多的一列作为实际内容高度。
-	const float ConsumedHeight = std::max(InitialContentHeight - Left.h, InitialContentHeight - Right.h);
-	Content.h = std::clamp(ConsumedHeight, 0.0f, InitialContentHeight);
-
-	// 防止测量阶段意外把真实交互中的 modifier 选择改掉。
-	if(ReadOnly)
-		State.m_ModifierMask = OriginalModifierMask;
+	CommitSettingsColumnContentFlow(Content, Left, Right);
 }

@@ -3145,6 +3145,8 @@ private:
 	void RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientBindDeck(CUIRect MainView, bool PrewarmOnly);
 	void RenderSettingsQmClientBindCard(CUIRect &Content, bool ReadOnly);
+	void RenderQmBindCommandEditor(CUIRect &Content, CBindSlot Slot, bool ReadOnly);
+	static CUi::EPopupMenuFunctionResult PopupQmBindCommands(void *pContext, CUIRect View, bool Active);
 	void RenderQmSettingsSliderWithValueInput(const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix, bool PrewarmOnly, unsigned Flags = 0u);
 	bool RenderQmFunctionCheckbox(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly, const char *pTooltip = nullptr);
 	bool RenderQmFunctionCheckboxRow(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue, bool PrewarmOnly, const char *pTooltip = nullptr);

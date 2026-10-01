@@ -479,6 +479,9 @@ Add friend
 Add friends by entering their name below or by clicking their name in the player list.
 == Dodaj znajomych, wpisując ich nazwę poniżej lub klikając ich nazwę na liście graczy.
 
+Add function
+== Dodaj funkcję
+
 Add Group
 == Dodaj grupę
 
@@ -2274,7 +2277,7 @@ Configure input helpers and cursor behavior
 == Configure input helpers and cursor behavior
 
 Configure keyboard, mouse, wheel, and modifier bindings
-== Skonfiguruj przypisania klawiatury, myszy, kółka i klawiszy modyfikujących
+== Skonfiguruj przypisania klawiatury, myszy, kółka i modyfikatorów
 
 Configure keyword-based automatic replies
 == Configure keyword-based automatic replies
@@ -2656,6 +2659,9 @@ Custom color
 
 Custom colors
 == Niestandardowe kolory
+
+Custom command
+== Własne polecenie
 
 Custom community list fetch URL (must be https, leave empty to disable)
 == Niestandardowy URL pobierania listy społeczności (musi być https, pozostaw puste, aby wyłączyć)
@@ -5708,6 +5714,9 @@ Invalid client id to kick
 Invalid client id to move to spectators
 == Nieprawidłowe ID klienta do przeniesienia do widzów
 
+Invalid command or parameters.
+== Nieprawidłowe polecenie lub parametry.
+
 Invalid Demo
 == Nieprawidłowe demo
 
@@ -7777,6 +7786,9 @@ Optimistic prediction along stable direction
 
 Option color
 == Kolor opcji
+
+Optional
+== Opcjonalnie
 
 Optional authentication key for the DNSBL provider
 == Opcjonalny klucz uwierzytelniający dla dostawcy DNSBL
@@ -12321,7 +12333,7 @@ The auth level you need to tele others
 == Poziom uprawnień wymagany do teleportowania innych graczy
 
 The command is empty, incomplete, or exceeds the local config line limit.
-== Polecenie jest puste, niekompletne lub przekracza limit wiersza konfiguracji lokalnej.
+== Polecenie jest puste, niekompletne lub przekracza limit wiersza lokalnej konfiguracji.
 
 The downloaded file is not a valid demo
 == Pobrany plik nie jest prawidłowym demem
@@ -12426,10 +12438,10 @@ Thinking mode requires a reasoning model
 == Tryb myślenia wymaga modelu rozumowania
 
 This bind contains an unfinished quote and cannot be edited safely.
-== To przypisanie zawiera niezakończony cudzysłów i nie można go bezpiecznie edytować.
+== To przypisanie zawiera niezamknięty cudzysłów i nie można go bezpiecznie edytować.
 
 This bind is already over the local config line limit.
-== To przypisanie już przekracza limit wiersza konfiguracji lokalnej.
+== To przypisanie przekracza limit wiersza lokalnej konfiguracji.
 
 This connection cannot change names while connected. Reconnect with the saved names first.
 == To połączenie nie pozwala zmieniać nazw w trakcie sesji. Połącz się ponownie z zapisanymi nazwami.
