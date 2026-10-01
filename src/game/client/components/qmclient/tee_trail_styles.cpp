@@ -9,6 +9,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 
 namespace
 {
@@ -270,49 +271,203 @@ namespace
 		});
 	}
 
-	void PixelBlock(std::vector<SQuad> &vOut, vec2 Position, float Size, float Cell, ColorRGBA Color)
+	constexpr size_t MAX_PIXEL_CELLS = 4096;
+	constexpr size_t PIXEL_HASH_SIZE = MAX_PIXEL_CELLS * 2;
+	constexpr size_t MAX_PIXEL_VISITS = MAX_RENDER_POINTS * 512;
+
+	struct SPixelCell
 	{
-		const vec2 Corner(std::floor((Position.x - Size * 0.5f) / Cell) * Cell, std::floor((Position.y - Size * 0.5f) / Cell) * Cell);
-		Quad(vOut, Corner, Corner + vec2(Size, 0), Corner + vec2(Size, Size), Corner + vec2(0, Size), Color, Color, Color, Color, false);
+		int m_X, m_Y;
+		ColorRGBA m_Color;
+		float m_Strength, m_Radius, m_Integrity, m_Heat, m_Glow;
+	};
+
+	unsigned PixelHash(int X, int Y, unsigned Seed)
+	{
+		return Hash(unsigned(X) * 0x9e3779b9u ^ unsigned(Y) * 0x85ebca6bu ^ Seed);
+	}
+
+	// 固定容量的稀疏网格只扫描轨迹附近；折返的像素共享一份能量，不重复叠亮。
+	struct SPixelGrid
+	{
+		std::array<SPixelCell, MAX_PIXEL_CELLS> m_aCells;
+		std::array<uint16_t, PIXEL_HASH_SIZE> m_aSlots;
+		size_t m_Count;
+
+		void Reset()
+		{
+			m_aSlots.fill(0);
+			m_Count = 0;
+		}
+
+		SPixelCell *FindOrAdd(int X, int Y)
+		{
+			size_t Slot = PixelHash(X, Y, 0) & (PIXEL_HASH_SIZE - 1);
+			while(m_aSlots[Slot] != 0)
+			{
+				SPixelCell &Cell = m_aCells[m_aSlots[Slot] - 1];
+				if(Cell.m_X == X && Cell.m_Y == Y)
+					return &Cell;
+				Slot = (Slot + 1) & (PIXEL_HASH_SIZE - 1);
+			}
+			if(m_Count == m_aCells.size())
+				return nullptr;
+			SPixelCell &Cell = m_aCells[m_Count++];
+			Cell = {};
+			Cell.m_X = X;
+			Cell.m_Y = Y;
+			m_aSlots[Slot] = uint16_t(m_Count);
+			return &Cell;
+		}
+	};
+
+	float PixelClusterNoise(double X, double Y, unsigned Seed)
+	{
+		const int Ix = int(std::floor(X)), Iy = int(std::floor(Y));
+		const float Tx = Smooth(float(X - Ix)), Ty = Smooth(float(Y - Iy));
+		return mix(mix(Random(PixelHash(Ix, Iy, Seed)), Random(PixelHash(Ix + 1, Iy, Seed)), Tx),
+			mix(Random(PixelHash(Ix, Iy + 1, Seed)), Random(PixelHash(Ix + 1, Iy + 1, Seed)), Tx), Ty);
+	}
+
+	bool RasterizePixels(SPixelGrid &Grid, const SStyleSample *pSamples, size_t Count, float CellSize)
+	{
+		Grid.Reset();
+		size_t Visits = 0;
+		const float Total = std::max(pSamples[Count - 1].m_Head, 0.01f);
+		const auto Position = [&](const SStyleSample &S) {
+			const float Tail = Smooth((S.m_Head / Total - 0.5f) * 2.0f);
+			return S.m_Pos + Tangent(S) * (CellSize * 0.7f * Tail * (1.0f - S.m_Remaining));
+		};
+		for(size_t i = 0; i + 1 < Count; ++i)
+		{
+			const auto &A = pSamples[i], &B = pSamples[i + 1];
+			if(std::max(A.m_Alpha, B.m_Alpha) < 0.001f)
+				continue;
+			const vec2 Start = Position(A), End = Position(B);
+			const vec2 Delta = End - Start;
+			const float LengthSquared = dot(Delta, Delta);
+			if(LengthSquared < 0.00001f)
+				continue;
+			const float Radius = std::max({A.m_Width, B.m_Width, CellSize * 0.6f}) * 1.12f;
+			const double MinX = std::floor((double(std::min(Start.x, End.x)) - Radius) / CellSize);
+			const double MaxX = std::floor((double(std::max(Start.x, End.x)) + Radius) / CellSize);
+			const double MinY = std::floor((double(std::min(Start.y, End.y)) - Radius) / CellSize);
+			const double MaxY = std::floor((double(std::max(Start.y, End.y)) + Radius) / CellSize);
+			const double Limit = std::numeric_limits<int>::max() - 2.0;
+			const double Area = (MaxX - MinX + 1.0) * (MaxY - MinY + 1.0);
+			if(!std::isfinite(Area) || MinX < -Limit || MinY < -Limit || MaxX > Limit || MaxY > Limit || Area > MAX_PIXEL_VISITS - Visits)
+				return false;
+			Visits += size_t(Area);
+			for(int Y = int(MinY); Y <= int(MaxY); ++Y)
+				for(int X = int(MinX); X <= int(MaxX); ++X)
+				{
+					const vec2 Center((float(X) + 0.5f) * CellSize, (float(Y) + 0.5f) * CellSize);
+					const float T = std::clamp(dot(Center - Start, Delta) / LengthSquared, 0.0f, 1.0f);
+					const float Width = mix(A.m_Width, B.m_Width, T);
+					const float Alpha = mix(A.m_Alpha, B.m_Alpha, T);
+					if(Width <= 0.001f || Alpha < 0.001f)
+						continue;
+					const float Radial = distance(Center, Start + Delta * T) / std::max(Width, CellSize * 0.6f);
+					if(Radial > 1.12f)
+						continue;
+					const ColorRGBA Source = Tint(A.m_Tint, B.m_Tint, T);
+					const float Luminance = std::clamp(Source.r * 0.2126f + Source.g * 0.7152f + Source.b * 0.0722f, 0.0f, 1.0f);
+					const float Energy = mix(A.m_Energy, B.m_Energy, T);
+					const float Heat = (0.45f + 0.55f * Energy) * (0.68f + 0.32f * Luminance) * mix(A.m_Remaining, B.m_Remaining, T);
+					const float Strength = Alpha * (0.4f + 0.6f * Heat) * (1.0f - Radial * 0.65f);
+					SPixelCell *pCell = Grid.FindOrAdd(X, Y);
+					if(!pCell)
+						return false;
+					if(Strength <= pCell->m_Strength)
+						continue;
+					const float Opacity = std::clamp(Alpha / std::max(mix(A.m_Tint.a, B.m_Tint.a, T), 0.001f), 0.0f, 1.0f);
+					const float Tail = 1.0f - 0.78f * Smooth((mix(A.m_Head, B.m_Head, T) / Total - 0.52f) / 0.48f);
+					pCell->m_Color = Source.WithAlpha(Alpha);
+					pCell->m_Strength = Strength;
+					pCell->m_Radius = Radial;
+					pCell->m_Integrity = (0.58f + 0.42f * Energy) * mix(A.m_Remaining, B.m_Remaining, T) * (0.6f + 0.4f * Opacity) * Tail;
+					pCell->m_Heat = Heat;
+				}
+		}
+		return true;
+	}
+
+	void ShadePixels(SPixelGrid &Grid, bool Preset, unsigned Seed)
+	{
+		for(size_t i = 0; i < Grid.m_Count; ++i)
+		{
+			auto &Cell = Grid.m_aCells[i];
+			// 旋转噪声坐标并混合两种簇尺度，实际像素仍保持世界轴对齐。
+			const double U = Cell.m_X * 0.8 + Cell.m_Y * 0.6, V = Cell.m_Y * 0.8 - Cell.m_X * 0.6;
+			const float Cluster = mix(PixelClusterNoise(U / 3.0, V / 3.0, Seed), PixelClusterNoise(U / 7.0, V / 7.0, Seed + 101u), 0.35f);
+			const float Grain = Random(PixelHash(Cell.m_X, Cell.m_Y, Seed + 43u));
+			const float Boundary = 0.94f + Cluster * 0.16f;
+			const float Threshold = (0.08f + Cluster * 0.70f + Grain * 0.22f) * (0.65f + 0.35f * std::min(Cell.m_Radius, 1.0f));
+			if(Cell.m_Radius > Boundary || Cell.m_Integrity <= Threshold)
+			{
+				Cell.m_Color.a = 0.0f;
+				continue;
+			}
+			// 同一簇的生存阈值不随时间重播种；临近消失只改变整格透明度，不柔化边缘。
+			const float Alpha = Cell.m_Color.a * std::min(1.0f, (Cell.m_Integrity - Threshold) * 20.0f);
+			const float Light = Cell.m_Radius + (1.0f - Cell.m_Heat) * 0.20f + (Cluster - 0.5f) * 0.16f;
+			const int Tier = Light < 0.48f ? 4 : Light < 0.72f ? 3 : Light < 0.90f ? 2 : Light < 1.06f ? 1 : 0;
+			const ColorRGBA Base = Preset ? ColorRGBA(0xffad32u) : Cell.m_Color;
+			const float Peak = std::max({Base.r, Base.g, Base.b});
+			const ColorRGBA White(Peak, Peak, Peak, 1.0f);
+			const ColorRGBA Palette[] = {
+				ColorRGBA(Base.r * 0.44f, Base.g * 0.44f, Base.b * 0.44f, 1.0f),
+				ColorRGBA(Base.r * 0.66f, Base.g * 0.66f, Base.b * 0.66f, 1.0f),
+				Base, Tint(Base, White, 0.48f), Tint(Base, White, 0.92f)};
+			Cell.m_Color = Palette[Tier].WithAlpha(Alpha);
+			Cell.m_Glow = Tier >= 3 ? Cell.m_Heat * (Tier == 4 ? 0.32f : 0.10f) : 0.0f;
+		}
+		std::sort(Grid.m_aCells.begin(), Grid.m_aCells.begin() + Grid.m_Count, [](const SPixelCell &A, const SPixelCell &B) {
+			return A.m_Y != B.m_Y ? A.m_Y < B.m_Y : A.m_X < B.m_X;
+		});
+	}
+
+	void PixelPass(const SPixelGrid &Grid, float CellSize, bool Additive, size_t &QuadCount, std::vector<SQuad> &vOut)
+	{
+		for(size_t i = 0; i < Grid.m_Count;)
+		{
+			const auto &First = Grid.m_aCells[i++];
+			const ColorRGBA Color = First.m_Color.WithMultipliedAlpha(Additive ? First.m_Glow : 1.0f);
+			if(Color.a < 0.001f)
+				continue;
+			int EndX = First.m_X + 1;
+			while(i < Grid.m_Count)
+			{
+				const auto &Next = Grid.m_aCells[i];
+				if(Next.m_Y != First.m_Y || Next.m_X != EndX || Next.m_Color.WithMultipliedAlpha(Additive ? Next.m_Glow : 1.0f) != Color)
+					break;
+				++EndX;
+				++i;
+			}
+			++QuadCount;
+			const vec2 A(float(First.m_X) * CellSize, float(First.m_Y) * CellSize);
+			const vec2 B(float(EndX) * CellSize, A.y + CellSize);
+			Quad(vOut, A, vec2(B.x, A.y), B, vec2(A.x, B.y), Color, Color, Color, Color, Additive);
+		}
 	}
 
 	void Pixels(const SStyleSample *pSamples, size_t Count, bool Preset, float Width, unsigned Seed, std::vector<SQuad> &vOut)
 	{
-		const float Cell = std::clamp(std::round(Width * 0.16f), 1.0f, 3.0f);
-		const float Spacing = std::max(8.0f, Cell * 4.0f);
-		const float Offset = Random(Seed) * Spacing;
-		const ColorRGBA aColors[] = {ColorRGBA(0xf0cc10u), ColorRGBA(0x2090e0u), ColorRGBA(0xee3040u)};
-		const float aAlpha[] = {0.30f, 0.65f, 0.95f};
-		for(int Layer = 0; Layer < 3; ++Layer)
+		SPixelGrid Grid;
+		// 世界网格仅由设置宽度确定；普通移动、缩放和老化不会改变像素尺度。
+		float CellSize = std::max(2.0f, std::ceil(std::sqrt(Width)));
+		for(int Attempt = 0; Attempt < 8; ++Attempt, CellSize *= 2.0f)
 		{
-			Anchors(pSamples, Count, Spacing, Offset, MAX_POINTS, [&](const SStyleSample &S, unsigned Id) {
-				if(Layer < 2 && S.m_Head < 16.0f)
-					return;
-				const float Root = Smooth(S.m_Head / 12.0f);
-				const float Age = std::floor(S.m_Age / 3.0f) * 3.0f;
-				const float Drift = Age / (Age + 22.0f);
-				const float Depth = float(1 - Layer);
-				const float Bias = 0.8f + 0.2f * Random(Id + Seed + 17u);
-				const vec2 Displacement = (S.m_Normal * (Depth * 0.24f) + Tangent(S) * ((Layer == 0 ? 0.30f : Layer == 1 ? 0.13f : -0.10f) * Drift)) * (S.m_Width * Root * Bias);
-				const vec2 Center = S.m_Pos + Displacement;
-				const float WidthRatio = S.m_Width / std::max(Width, 0.01f);
-				const int Cells = std::clamp(int(std::round(WidthRatio * (2.0f + Layer))), 1, 4);
-				const float Size = Cell * Cells;
-				const float DepthFade = Layer == 0 ? S.m_Remaining * S.m_Remaining : Layer == 1 ? S.m_Remaining : 1.0f;
-				const ColorRGBA Base = Preset ? aColors[Layer] : Tint(S.m_Tint, ColorRGBA(Layer == 0 ? 0x000000u : 0xffffffu), Layer == 0 ? 0.35f : Layer == 1 ? 0.0f : 0.22f);
-				const ColorRGBA Color = Base.WithAlpha(S.m_Alpha * aAlpha[Layer] * Root * DepthFade);
-				PixelBlock(vOut, Center, Size, Cell, Color);
-				// 相邻小方块组成完整阶梯簇；位置由同一锚点导出，不抛洒独立粒子。
-				const vec2 Step = Tangent(S);
-				const vec2 Shoulder = std::abs(Step.x) >= std::abs(Step.y) ? vec2(Step.x < 0 ? -Size : Size, 0) : vec2(0, Step.y < 0 ? -Size : Size);
-				PixelBlock(vOut, Center + Shoulder * 0.65f, Cell * std::max(1, Cells - 1), Cell, Color.WithMultipliedAlpha(0.72f));
-				if(Layer == 2 && Cells >= 2)
-				{
-					const vec2 Corner(std::floor((Center.x - Size * 0.5f) / Cell) * Cell, std::floor((Center.y - Size * 0.5f) / Cell) * Cell);
-					const ColorRGBA Highlight = Tint(Base, ColorRGBA(0xfffadeu), 0.48f).WithAlpha(Color.a * 0.55f);
-					PixelBlock(vOut, Corner + vec2(Cell * 0.5f, Cell * 0.5f), Cell, Cell, Highlight);
-				}
-			});
+			if(!RasterizePixels(Grid, pSamples, Count, CellSize))
+				continue;
+			ShadePixels(Grid, Preset, Seed);
+			size_t QuadCount = 0;
+			PixelPass(Grid, CellSize, false, QuadCount, vOut);
+			PixelPass(Grid, CellSize, true, QuadCount, vOut);
+			if(QuadCount <= MAX_QUADS)
+				return;
+			// 异常长的输入按整条轨迹降低分辨率，不能耗尽预算后直接截掉尾部。
+			vOut.clear();
 		}
 	}
 }
