@@ -2636,9 +2636,6 @@ Current: Score
 Current: Time
 == Obecnie: Czas
 
-Cursed Flame
-== Przeklęty płomień
-
 Custom
 == Niestandardowy
 
@@ -4970,9 +4967,6 @@ Go forward one tick
 Go forward the specified duration
 == Przejdź do przodu o określony czas
 
-Golden Grace
-== Złota łaska
-
 Gores
 == Gores
 
@@ -6410,6 +6404,9 @@ Low to high
 Lyrics
 == Tekst utworu
 
+Magic: Spirit Script
+== Magia: pismo duchów
+
 Main Asset
 == Główny zasób
 
@@ -6466,6 +6463,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == Zarządzaj kolejką rotacji skórek
+
+Manga: Ink Slash
+== Manga: cięcie tuszem
 
 Manual
 == Ręczny
@@ -8077,6 +8077,9 @@ Pistol
 
 Pistol guide line
 == Linia pomocnicza pistoletu
+
+Pixel: Layer Shift
+== Piksele: przesunięcie warstw
 
 Place title on a separate line above the player name instead of inline
 == Umieść tytuł w osobnym wierszu nad nazwą gracza zamiast w tym samym wierszu
@@ -11669,9 +11672,6 @@ Sphere
 Spin pop
 == Obrót z wyskokiem
 
-Spirit Light
-== Światło ducha
-
 Split main and dummy into different teams for solo-run sync
 == Rozdziela główną postać i dummy do różnych drużyn w celu synchronizacji biegów solo
 
@@ -12209,8 +12209,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tryb koloru śladu Tee (1=Jednolity, 2=Bieżący kolor Tee, 3=Tęcza, 4=Prędkość Tee, 5=Losowy)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Styl smugi Tee (0=Oryginalny, 1=Przeklęty płomień, 2=Fioletowa błyskawica, 3=Światło ducha, 4=Cień pustki, 5=Złota łaska)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Styl smugi Tee (0=Oryginalny, 1=Manga, 2=Magia, 3=Piksele, 4=Stary numer mangi, 5=Stary numer magii)
 
 Tee Trails
 == Ślady tee
@@ -13496,9 +13496,6 @@ View the developers, contributors, and project links
 View the people supporting QmClient development
 == View the people supporting QmClient development
 
-Violet Bolt
-== Fioletowa błyskawica
-
 Virtual joystick which always uses fire.
 == Wirtualny joystick, który zawsze używa ognia.
 
@@ -13609,9 +13606,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == Biała lista głosowa (oddzielona przecinkami)
-
-Void Shadow
-== Cień pustki
 
 Volume
 == Głośność

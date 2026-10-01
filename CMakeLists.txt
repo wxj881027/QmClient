@@ -3537,6 +3537,8 @@ if(CLIENT)
     components/qmclient/stutter_diagnostics.h
     components/qmclient/tee_hue_cycle.cpp
     components/qmclient/tee_hue_cycle.h
+    components/qmclient/tee_trail_styles.cpp
+    components/qmclient/tee_trail_styles.h
     components/qmclient/title_settings.cpp
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
@@ -4788,6 +4790,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/map_history.cpp
     src/game/client/components/tclient/swap_countdown_message.cpp
     src/game/client/components/tclient/qm_tee_trail.cpp
+    src/game/client/components/qmclient/tee_trail_styles.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/test/render_tee_offset_helpers.cpp
     src/game/client/components/section_loader.cpp

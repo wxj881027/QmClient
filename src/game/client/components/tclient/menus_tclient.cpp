@@ -4599,13 +4599,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				LogSettingsStage("tclient_settings_right_tee_trails_dropdown", DropDownTimer);
 			}
 			static std::vector<const char *> s_TrailStyleNames;
-			s_TrailStyleNames = {Localize("Original"), Localize("Cursed Flame"), Localize("Violet Bolt"), Localize("Spirit Light"), Localize("Void Shadow"), Localize("Golden Grace")};
+			s_TrailStyleNames = {Localize("Original"), Localize("Manga: Ink Slash"), Localize("Magic: Spirit Script"), Localize("Pixel: Layer Shift")};
 			s_TrailStyleDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TrailStyleDropDownScrollRegion;
 			CUIRect TrailStyleDropDownRect = Rows.Next();
 			if(Render)
 			{
-				const int TrailStyleNew = DoSettingsDropDown(&TrailStyleDropDownRect, g_Config.m_TcTeeTrailStyle, s_TrailStyleNames.data(), s_TrailStyleNames.size(), s_TrailStyleDropDownState);
-				if(TrailStyleNew != g_Config.m_TcTeeTrailStyle)
+				const int TrailStyleOld = qm_tee_trail::ResolveStyle(g_Config.m_TcTeeTrailStyle);
+				const int TrailStyleNew = DoSettingsDropDown(&TrailStyleDropDownRect, TrailStyleOld, s_TrailStyleNames.data(), s_TrailStyleNames.size(), s_TrailStyleDropDownState);
+				if(TrailStyleNew != TrailStyleOld)
 					g_Config.m_TcTeeTrailStyle = TrailStyleNew;
 			}
 			if(g_Config.m_TcTeeTrailColorMode == CTrails::COLORMODE_SOLID)

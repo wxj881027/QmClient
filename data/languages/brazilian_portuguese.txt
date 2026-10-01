@@ -2636,9 +2636,6 @@ Current: Score
 Current: Time
 == Atual: Tempo
 
-Cursed Flame
-== Chama amaldiçoada
-
 Custom
 == Personalizado
 
@@ -4970,9 +4967,6 @@ Go forward one tick
 Go forward the specified duration
 == Avançar a duração especificada
 
-Golden Grace
-== Graça dourada
-
 Gores
 == Gores
 
@@ -6410,6 +6404,9 @@ Low to high
 Lyrics
 == Letra
 
+Magic: Spirit Script
+== Magia: escrita espiritual
+
 Main Asset
 == Asset principal
 
@@ -6466,6 +6463,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == Gerenciar a fila de rotação de skins
+
+Manga: Ink Slash
+== Mangá: corte de tinta
 
 Manual
 == Manual
@@ -8077,6 +8077,9 @@ Pistol
 
 Pistol guide line
 == Linha guia da pistola
+
+Pixel: Layer Shift
+== Pixels: deslocamento de camadas
 
 Place title on a separate line above the player name instead of inline
 == Colocar o título em uma linha separada acima do nome do jogador, em vez de na mesma linha
@@ -11669,9 +11672,6 @@ Sphere
 Spin pop
 == Pop giratório
 
-Spirit Light
-== Luz espiritual
-
 Split main and dummy into different teams for solo-run sync
 == Distribui o personagem principal e o clone em equipes diferentes para sincronizar corridas solo
 
@@ -12209,8 +12209,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Modo de cor do rastro do Tee (1=Sólido, 2=Cor atual do Tee, 3=Arco-íris, 4=Velocidade do Tee, 5=Aleatório)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Estilo de rastro do Tee (0=Estilo original, 1=Chama amaldiçoada, 2=Raio violeta, 3=Luz espiritual, 4=Sombra do vazio, 5=Graça dourada)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Estilo de rastro do Tee (0=Original, 1=Mangá, 2=Magia, 3=Pixels, 4=Número antigo de mangá, 5=Número antigo de magia)
 
 Tee Trails
 == Rastros do Tee
@@ -13496,9 +13496,6 @@ View the developers, contributors, and project links
 View the people supporting QmClient development
 == View the people supporting QmClient development
 
-Violet Bolt
-== Raio violeta
-
 Virtual joystick which always uses fire.
 == Joystick virtual que sempre usa fogo.
 
@@ -13609,9 +13606,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == Lista de permissões de voz (separado por vírgulas)
-
-Void Shadow
-== Sombra do vazio
 
 Volume
 == Volume

@@ -1,8 +1,8 @@
 {
   "summary": {
-    "must_i18n": 7772,
-    "business_data": 10490,
-    "test_only": 10268,
+    "must_i18n": 7770,
+    "business_data": 10493,
+    "test_only": 10269,
     "needs_review": 358,
     "violation": 0
   },
@@ -10649,273 +10649,273 @@
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 230,
-      "text": "Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)",
+      "line": 231,
+      "text": "Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 231,
+      "line": 232,
       "text": "Use the selected tee trail style palette",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 234,
+      "line": 235,
       "text": "Auto-reply to muted players",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 235,
+      "line": 236,
       "text": "Reply to messages from muted players",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 236,
+      "line": 237,
       "text": "Auto-reply when game minimized",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 237,
+      "line": 238,
       "text": "Message to reply when game minimized",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 240,
+      "line": 241,
       "text": "Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 241,
+      "line": 242,
       "text": "Message to send on auto vote, leave empty to not send",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 242,
+      "line": 243,
       "text": "Wait time before triggering auto vote",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 245,
+      "line": 246,
       "text": "Custom font for Latin text (family, or family + style)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 247,
+      "line": 248,
       "text": "Variable custom font weight for Latin text",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 248,
+      "line": 249,
       "text": "Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 249,
+      "line": 250,
       "text": "Variable custom font weight for Chinese/CJK text",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 250,
+      "line": 251,
       "text": "Custom font for icon/symbol glyphs; empty = follow CJK or Latin font",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 253,
+      "line": 254,
       "text": "Background stroke width",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 254,
+      "line": 255,
       "text": "Stroke retention time (0=Never disappear)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 255,
+      "line": 256,
       "text": "Max stroke entries to keep",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 256,
+      "line": 257,
       "text": "Background stroke color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 257,
+      "line": 258,
       "text": "Auto save and load background strokes",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 260,
+      "line": 261,
       "text": "Emote and binding wheel animation duration (ms, 0=No animation, 1000=1 sec)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 263,
+      "line": 264,
       "text": "Show pet",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 264,
+      "line": 265,
       "text": "Pet skin",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 265,
+      "line": 266,
       "text": "Pet size relative to normal player",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 266,
+      "line": 267,
       "text": "Pet opacity (100=Opaque, 50=Semi-transparent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 269,
+      "line": 270,
       "text": "Try to change name near finish",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 270,
+      "line": 271,
       "text": "Name to change to near finish (when tc_change_name_near_finish enabled)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 273,
+      "line": 274,
       "text": "Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 274,
+      "line": 275,
       "text": "Player skin used for volleyball appearance",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 277,
+      "line": 278,
       "text": "Show player hitboxes (1=predicted only, 2=predicted and unpredicted)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 279,
+      "line": 280,
       "text": "Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 280,
+      "line": 281,
       "text": "Command executed by tc_mod_weapon, target id appended at end",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 285,
+      "line": 286,
       "text": "Tick delay before executing tc_execute_on_join",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 288,
+      "line": 289,
       "text": "Custom community list fetch URL (must be https, leave empty to disable)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 291,
+      "line": 292,
       "text": "Enable Discord RPC (requires restart)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 294,
+      "line": 295,
       "text": "Show TClient config variables",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 295,
+      "line": 296,
       "text": "Show DDNet config variables",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 296,
+      "line": 297,
       "text": "Show QmClient config variables",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 297,
+      "line": 298,
       "text": "Use compact list view for config variables",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_tclient.h",
-      "line": 298,
+      "line": 299,
       "text": "Show only modified config variables",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
@@ -41415,14 +41415,14 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 4602,
-      "text": "Cursed Flame",
+      "text": "Magic: Spirit Script",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 4602,
-      "text": "Golden Grace",
+      "text": "Manga: Ink Slash",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -41436,342 +41436,321 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 4602,
-      "text": "Spirit Light",
+      "text": "Pixel: Layer Shift",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4602,
-      "text": "Violet Bolt",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4602,
-      "text": "Void Shadow",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4618,
+      "line": 4619,
       "text": "Tee trail color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4628,
+      "line": 4629,
       "text": "Trail width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4629,
+      "line": 4630,
       "text": "Trail length",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4630,
+      "line": 4631,
       "text": "Trail alpha",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4643,
+      "line": 4644,
       "text": "Background Draw",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4649,
+      "line": 4650,
       "text": "Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4655,
+      "line": 4656,
       "text": " seconds (never)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4655,
+      "line": 4656,
       "text": "Stroke fade time",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4657,
+      "line": 4658,
       "text": " seconds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4657,
+      "line": 4658,
       "text": "Stroke fade time",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4661,
+      "line": 4662,
       "text": "Width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4666,
+      "line": 4667,
       "text": "Draw where mouse is",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4685,
+      "line": 4686,
       "text": "Finish Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4690,
+      "line": 4691,
       "text": "Attempt to change your name when near finish",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4697,
+      "line": 4698,
       "text": "Finish Name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4715,
+      "line": 4716,
       "text": "Tee status bar",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4723,
+      "line": 4724,
       "text": "Tee status bar",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4726,
+      "line": 4727,
       "text": "Tee status bar",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4734,
+      "line": 4735,
       "text": "Tile outlines",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4742,
+      "line": 4743,
       "text": "Tile outlines",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4745,
+      "line": 4746,
       "text": "Tile outlines",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4754,
+      "line": 4755,
       "text": "Ghost tools",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4762,
+      "line": 4763,
       "text": "Ghost tools",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4765,
+      "line": 4766,
       "text": "Ghost tools",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4773,
+      "line": 4774,
       "text": "Rainbow",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4781,
+      "line": 4782,
       "text": "Rainbow",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4784,
+      "line": 4785,
       "text": "Rainbow",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4792,
+      "line": 4793,
       "text": "Tee Trails",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4800,
+      "line": 4801,
       "text": "Tee Trails",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4803,
+      "line": 4804,
       "text": "Tee Trails",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4811,
+      "line": 4812,
       "text": "Background Draw",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4819,
+      "line": 4820,
       "text": "Background Draw",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4822,
+      "line": 4823,
       "text": "Background Draw",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4830,
+      "line": 4831,
       "text": "Finish Name",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4838,
+      "line": 4839,
       "text": "Finish Name",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4841,
+      "line": 4842,
       "text": "Finish Name",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5251,
+      "line": 5252,
       "text": "Name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5254,
+      "line": 5255,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5256,
+      "line": 5257,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5263,
+      "line": 5264,
       "text": "Command:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5266,
+      "line": 5267,
       "text": "Command",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5268,
+      "line": 5269,
       "text": "Command",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5275,
+      "line": 5276,
       "text": "Override Selected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5283,
+      "line": 5284,
       "text": "Override Selected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5289,
-      "text": "Add Bind",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5297,
+      "line": 5290,
       "text": "Add Bind",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -41779,440 +41758,440 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 5298,
+      "text": "Add Bind",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 5299,
       "text": "Remove Bind",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5304,
+      "line": 5305,
       "text": "Remove Bind",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5308,
+      "line": 5309,
       "text": "Commands run in the console",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5310,
+      "line": 5311,
       "text": "L select  R swap  M select only",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5315,
+      "line": 5316,
       "text": "Bind Wheel Key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5317,
+      "line": 5318,
       "text": "Bind Wheel Key",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5321,
+      "line": 5322,
       "text": "Reset position of mouse when opening bindwheel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5324,
+      "line": 5325,
       "text": "Reset position of mouse when opening bindwheel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5771,
+      "line": 5772,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5773,
+      "line": 5774,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5778,
+      "line": 5779,
       "text": "Clan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5780,
+      "line": 5781,
       "text": "Clan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5788,
+      "line": 5789,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5793,
+      "line": 5794,
       "text": "Clan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5806,
+      "line": 5807,
       "text": "Reason",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5808,
+      "line": 5809,
       "text": "Reason",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5816,
+      "line": 5817,
       "text": "Override Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5827,
+      "line": 5828,
       "text": "Add Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5855,
+      "line": 5856,
       "text": "Allow Duplicate Entries",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5859,
+      "line": 5860,
       "text": "Enable warlist",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5863,
+      "line": 5864,
       "text": "Block enemy chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5867,
+      "line": 5868,
       "text": "Colors in chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5871,
+      "line": 5872,
       "text": "Colors in scoreboard",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5875,
+      "line": 5876,
       "text": "Show colors in spectator selection",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5879,
+      "line": 5880,
       "text": "Show clan if war",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5947,
+      "line": 5948,
       "text": "Are you sure that you want to remove '%s' from your war groups?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5949,
+      "line": 5950,
       "text": "No",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5949,
+      "line": 5950,
       "text": "Remove War Group",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5949,
+      "line": 5950,
       "text": "Yes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5955,
+      "line": 5956,
       "text": "Group name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5957,
+      "line": 5958,
       "text": "Group name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5966,
+      "line": 5967,
       "text": "Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5973,
+      "line": 5974,
       "text": "Override Group",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5983,
+      "line": 5984,
       "text": "Add Group",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6097,
+      "line": 6098,
       "text": "War Entries",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6098,
+      "line": 6099,
       "text": "Settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6099,
+      "line": 6100,
       "text": "Edit Entry",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6100,
+      "line": 6101,
       "text": "War Groups",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6101,
+      "line": 6102,
       "text": "Online Players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6188,
+      "line": 6189,
       "text": "War List",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6269,
+      "line": 6270,
       "text": "No status bar items",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6356,
+      "line": 6357,
       "text": "Show status bar",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6359,
+      "line": 6360,
       "text": "Show status bar",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6361,
+      "line": 6362,
       "text": "Show labels on status bar items",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6364,
+      "line": 6365,
       "text": "Show labels on status bar items",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6367,
+      "line": 6368,
       "text": "Status bar height",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6369,
+      "line": 6370,
       "text": "Status bar height",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6371,
+      "line": 6372,
       "text": "Local Time",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6373,
+      "line": 6374,
       "text": "Use 12 hour clock",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6376,
+      "line": 6377,
       "text": "Use 12 hour clock",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6378,
+      "line": 6379,
       "text": "Show seconds on clock",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6381,
+      "line": 6382,
       "text": "Show seconds on clock",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6383,
+      "line": 6384,
       "text": "Colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6388,
+      "line": 6389,
       "text": "Status bar color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6390,
+      "line": 6391,
       "text": "Text color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6395,
+      "line": 6396,
       "text": "Status bar color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6397,
+      "line": 6398,
       "text": "Text color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6401,
+      "line": 6402,
       "text": "Status bar alpha",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6403,
+      "line": 6404,
       "text": "Status bar alpha",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6406,
+      "line": 6407,
       "text": "Text alpha",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6408,
+      "line": 6409,
       "text": "Text alpha",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6455,
-      "text": "Apply",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6462,
+      "line": 6456,
       "text": "Apply",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -42220,27 +42199,27 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 6463,
+      "text": "Apply",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 6464,
       "text": "Status Scheme:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6506,
+      "line": 6507,
       "text": "Item type",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6508,
-      "text": "Add Item",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6515,
+      "line": 6509,
       "text": "Add Item",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -42248,447 +42227,454 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 6516,
+      "text": "Add Item",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 6517,
       "text": "Remove Item",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6526,
+      "line": 6527,
       "text": "Remove Item",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6532,
+      "line": 6533,
       "text": "Status Bar Codes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6632,
+      "line": 6633,
       "text": "Status Bar Codes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6810,
+      "line": 6811,
       "text": "Name: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6813,
+      "line": 6814,
       "text": "Clan: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6816,
+      "line": 6817,
       "text": "Skin: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6901,
+      "line": 6902,
       "text": "Your profile",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6913,
+      "line": 6914,
       "text": "After Load",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6927,
+      "line": 6928,
       "text": "Load",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6932,
+      "line": 6933,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6939,
+      "line": 6940,
       "text": "Enable Deleting",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6945,
+      "line": 6946,
       "text": "Delete",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6950,
+      "line": 6951,
       "text": "Override",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6989,
+      "line": 6990,
       "text": "Save/Load Skin",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6990,
+      "line": 6991,
       "text": "Save/Load Colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6991,
+      "line": 6992,
       "text": "Save/Load Emote",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6992,
+      "line": 6993,
       "text": "Save/Load Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6993,
+      "line": 6994,
       "text": "Save/Load Clan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6994,
+      "line": 6995,
       "text": "Save/Load Flag",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7000,
+      "line": 7001,
       "text": "Dummy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7004,
+      "line": 7005,
       "text": "Custom colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7010,
+      "line": 7011,
       "text": "Overwrite clan even if empty",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7030,
+      "line": 7031,
       "text": "Profiles file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7282,
+      "line": 7283,
       "text": "Apply Changes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7315,
+      "line": 7316,
       "text": "Clear Changes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7322,
+      "line": 7323,
       "text": "Changes: %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7340,
+      "line": 7341,
       "text": "Search",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7377,
+      "line": 7378,
       "text": "DDNet",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7379,
+      "line": 7380,
       "text": "TClient",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7381,
+      "line": 7382,
       "text": "QmClient",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7392,
+      "line": 7393,
       "text": "Compact",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7394,
+      "line": 7395,
       "text": "Modified",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "Tags",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7415,
+      "line": 7416,
       "text": "Search",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7437,
+      "line": 7438,
       "text": "DDNet",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7439,
+      "line": 7440,
       "text": "TClient",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7441,
+      "line": 7442,
       "text": "QmClient",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7451,
+      "line": 7452,
       "text": "Compact",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7453,
+      "line": 7454,
       "text": "Modified",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7466,
+      "line": 7467,
       "text": "Tags",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7475,
+      "line": 7476,
       "text": "Visual",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7480,
+      "line": 7481,
       "text": "HUD",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7485,
+      "line": 7486,
       "text": "Input",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7490,
+      "line": 7491,
       "text": "Chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7495,
+      "line": 7496,
       "text": "Audio",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7516,
+      "line": 7517,
       "text": "Auto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7521,
+      "line": 7522,
       "text": "Social",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7526,
+      "line": 7527,
       "text": "Camera",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7531,
+      "line": 7532,
       "text": "Gameplay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7536,
+      "line": 7537,
       "text": "Misc",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7652,
+      "line": 7653,
       "text": "default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7654,
+      "line": 7655,
       "text": "default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7654,
+      "line": 7655,
       "text": "minimum",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7656,
+      "line": 7657,
       "text": "default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7656,
+      "line": 7657,
       "text": "maximum",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7656,
+      "line": 7657,
       "text": "minimum",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7661,
+      "line": 7662,
       "text": "default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7666,
+      "line": 7667,
       "text": "default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7666,
+      "line": 7667,
       "text": "maximum",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7856,
+      "line": 7857,
       "text": "Reset",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8030,
+      "line": 8031,
       "text": "Config Changes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8031,
+      "line": 8032,
       "text": "Config Filters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8041,
+      "line": 8042,
       "text": "Configuration",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -99921,6 +99907,27 @@
       "reason": "command, config, or machine token"
     },
     {
+      "file": "src/game/client/components/qmclient/tee_trail_styles.cpp",
+      "line": 1,
+      "text": "tee_trail_styles.h",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/tee_trail_styles.cpp",
+      "line": 3,
+      "text": "trail_band_geometry.h",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/tee_trail_styles.cpp",
+      "line": 4,
+      "text": "trail_band_section.h",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
       "file": "src/game/client/components/qmclient/title_settings.cpp",
       "line": 36,
       "text": "",
@@ -109841,308 +109848,301 @@
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4619,
+      "line": 4620,
       "text": "tclient_settings_right_tee_trails_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4628,
+      "line": 4629,
       "text": "tclient-tee-trail-width",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4629,
+      "line": 4630,
       "text": "tclient-tee-trail-length",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4630,
+      "line": 4631,
       "text": "tclient-tee-trail-alpha",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4631,
+      "line": 4632,
       "text": "tclient_settings_right_tee_trails_sliders",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4655,
+      "line": 4656,
       "text": "tclient-bg-draw-fade-time",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4657,
+      "line": 4658,
       "text": "tclient-bg-draw-fade-time",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4661,
+      "line": 4662,
       "text": "tclient-bg-draw-width",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4666,
+      "line": 4667,
       "text": "+bg_draw",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4679,
+      "line": 4680,
       "text": "settings_tclient_finish_name_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4690,
+      "line": 4691,
       "text": "tclient-change-name-near-finish",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4855,
+      "line": 4856,
       "text": "tclient_settings_right_prewarm_budgeted",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4864,
+      "line": 4865,
       "text": "tclient_settings_right_column",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4891,
+      "line": 4892,
       "text": "missing TClient settings card binding",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4900,
+      "line": 4901,
       "text": "tclient:visual-nameplates",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4915,
+      "line": 4916,
       "text": "tclient:anti-latency-tools",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4933,
+      "line": 4934,
       "text": "tclient:auto-reply",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4946,
+      "line": 4947,
       "text": "tclient:player-indicator",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4982,
+      "line": 4983,
       "text": "tclient:tee-status-bar",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5010,
+      "line": 5011,
       "text": "tclient:finish-name",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5023,
+      "line": 5024,
       "text": "tclient:hud",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5046,
+      "line": 5047,
       "text": "tclient:visual-effects",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5075,
+      "line": 5076,
       "text": "tclient:input",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5090,
+      "line": 5091,
       "text": "tclient:tee-trails",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5118,
+      "line": 5119,
       "text": "tclient:tee-trails",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5144,
+      "line": 5145,
       "text": "tclient:",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5149,
+      "line": 5150,
       "text": "settings_tclient_main",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5233,
+      "line": 5234,
       "text": "settings_tclient_bindwheel_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5251,
+      "line": 5252,
       "text": "tclient-bindwheel-name-label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5263,
+      "line": 5264,
       "text": "tclient-bindwheel-command-label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5275,
+      "line": 5276,
       "text": "tclient-bindwheel-override-selected",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5278,
+      "line": 5279,
       "text": "*",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5283,
+      "line": 5284,
       "text": "tclient-bindwheel-override-selected",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5289,
+      "line": 5290,
       "text": "tclient-bindwheel-add-bind",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5292,
+      "line": 5293,
       "text": "*",
       "category": "business_data",
       "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5297,
-      "text": "tclient-bindwheel-add-bind",
-      "category": "business_data",
-      "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 5298,
+      "text": "tclient-bindwheel-add-bind",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 5299,
       "text": "tclient-bindwheel-remove-bind",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5304,
+      "line": 5305,
       "text": "tclient-bindwheel-remove-bind",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5308,
+      "line": 5309,
       "text": "tclient-bindwheel-footer-console",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5310,
+      "line": 5311,
       "text": "tclient-bindwheel-footer-mouse",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5315,
+      "line": 5316,
       "text": "+bindwheel",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5317,
+      "line": 5318,
       "text": "tclient-bindwheel-key",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5321,
-      "text": "tclient-bindwheel-reset-mouse",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5324,
+      "line": 5322,
       "text": "tclient-bindwheel-reset-mouse",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -110150,16 +110150,16 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 5325,
-      "text": "tclient_bindwheel_editor",
+      "text": "tclient-bindwheel-reset-mouse",
       "category": "business_data",
-      "reason": "command, config, or machine token"
+      "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5365,
-      "text": "",
+      "line": 5326,
+      "text": "tclient_bindwheel_editor",
       "category": "business_data",
-      "reason": "empty or whitespace literal"
+      "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
@@ -110170,483 +110170,483 @@
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5387,
+      "line": 5367,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 5388,
       "text": "count=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5388,
+      "line": 5389,
       "text": "tclient_bindwheel_wheel",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5428,
+      "line": 5429,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5433,
+      "line": 5434,
       "text": "deck:tclient-bind-wheel-",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5452,
+      "line": 5453,
       "text": "settings_tclient_chatbinds_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5465,
+      "line": 5466,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5537,
+      "line": 5538,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5542,
+      "line": 5543,
       "text": "deck:tclient-chat-binds-",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5552,
+      "line": 5553,
       "text": "tclient_chatbinds_total",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5603,
+      "line": 5604,
       "text": "settings_tclient_warlist_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5610,
+      "line": 5611,
       "text": "settings_tclient_warlist_entries_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5612,
+      "line": 5613,
       "text": "settings_tclient_warlist_player_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5631,
+      "line": 5632,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5694,
+      "line": 5695,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5712,
+      "line": 5713,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5745,
+      "line": 5746,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5760,
+      "line": 5761,
       "text": "entries=%d filtered=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5761,
+      "line": 5762,
       "text": "tclient_warlist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5788,
+      "line": 5789,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5788,
+      "line": 5789,
       "text": "X",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5793,
+      "line": 5794,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5793,
+      "line": 5794,
       "text": "X",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5799,
+      "line": 5800,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5801,
+      "line": 5802,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5818,
+      "line": 5819,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5849,
+      "line": 5850,
       "text": "tclient_warlist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5855,
+      "line": 5856,
       "text": "tclient-warlist-allow-duplicates",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5859,
+      "line": 5860,
       "text": "tclient-warlist-enable",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5863,
+      "line": 5864,
       "text": "tclient-warlist-block-enemy-chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5867,
+      "line": 5868,
       "text": "tclient-warlist-colors-chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5871,
+      "line": 5872,
       "text": "tclient-warlist-colors-scoreboard",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5875,
+      "line": 5876,
       "text": "tclient-warlist-colors-spectate",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5879,
+      "line": 5880,
       "text": "tclient-warlist-show-clan",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5975,
+      "line": 5976,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5982,
+      "line": 5983,
       "text": "none",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5990,
+      "line": 5991,
       "text": "groups=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5991,
+      "line": 5992,
       "text": "tclient_warlist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6083,
+      "line": 6084,
       "text": "players=%d filtered=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6084,
+      "line": 6085,
       "text": "tclient_warlist",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6188,
+      "line": 6189,
       "text": "deck:tclient-warlist",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6213,
+      "line": 6214,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6218,
+      "line": 6219,
       "text": "deck:tclient-warlist",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6233,
+      "line": 6234,
       "text": "tclient_warlist_total",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6242,
+      "line": 6243,
       "text": "settings_tclient_status_scheme_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6259,
+      "line": 6260,
       "text": "Space",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6269,
+      "line": 6270,
       "text": "tclient-statusbar-empty-preview",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6297,
+      "line": 6298,
       "text": "_ or ' '",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6297,
+      "line": 6298,
       "text": "Space",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6298,
+      "line": 6299,
       "text": "%s = %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6356,
+      "line": 6357,
       "text": "tclient-statusbar-show",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6359,
+      "line": 6360,
       "text": "tclient-statusbar-show",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6361,
+      "line": 6362,
       "text": "tclient-statusbar-show-labels",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6364,
+      "line": 6365,
       "text": "tclient-statusbar-show-labels",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6367,
+      "line": 6368,
       "text": "tclient-statusbar-height",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6369,
+      "line": 6370,
       "text": "tclient-statusbar-height",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6371,
+      "line": 6372,
       "text": "tclient-statusbar-local-time-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6373,
+      "line": 6374,
       "text": "tclient-statusbar-12-hour-clock",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6376,
+      "line": 6377,
       "text": "tclient-statusbar-12-hour-clock",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6378,
+      "line": 6379,
       "text": "tclient-statusbar-seconds",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6381,
+      "line": 6382,
       "text": "tclient-statusbar-seconds",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6383,
+      "line": 6384,
       "text": "tclient-statusbar-colors-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6395,
+      "line": 6396,
       "text": "tclient-statusbar-color",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6397,
+      "line": 6398,
       "text": "tclient-statusbar-text-color",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6401,
+      "line": 6402,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6401,
+      "line": 6402,
       "text": "tclient-statusbar-alpha",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6403,
+      "line": 6404,
       "text": "tclient-statusbar-alpha",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6406,
+      "line": 6407,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6406,
-      "text": "tclient-statusbar-text-alpha",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6408,
+      "line": 6407,
       "text": "tclient-statusbar-text-alpha",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -110654,20 +110654,20 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 6409,
+      "text": "tclient-statusbar-text-alpha",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 6410,
       "text": "tclient_statusbar",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6455,
-      "text": "tclient-statusbar-apply-scheme",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6462,
+      "line": 6456,
       "text": "tclient-statusbar-apply-scheme",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -110675,34 +110675,34 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 6463,
-      "text": "tclient-statusbar-scheme-label",
+      "text": "tclient-statusbar-apply-scheme",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 6464,
+      "text": "tclient-statusbar-scheme-label",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 6465,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6506,
+      "line": 6507,
       "text": "tclient-statusbar-item-type",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6508,
-      "text": "tclient-statusbar-add-item",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6515,
+      "line": 6509,
       "text": "tclient-statusbar-add-item",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -110710,79 +110710,79 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 6516,
+      "text": "tclient-statusbar-add-item",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 6517,
       "text": "tclient-statusbar-remove-item",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6526,
+      "line": 6527,
       "text": "tclient-statusbar-remove-item",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6532,
+      "line": 6533,
       "text": "tclient-statusbar-codes-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6534,
+      "line": 6535,
       "text": "tclient_statusbar",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6626,
+      "line": 6627,
       "text": "tclient-statusbar-preview-item",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6632,
+      "line": 6633,
       "text": "tclient-statusbar-codes-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6634,
+      "line": 6635,
       "text": "tclient_statusbar",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6679,
+      "line": 6680,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6684,
+      "line": 6685,
       "text": "deck:tclient-status-bar-",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6707,
+      "line": 6708,
       "text": "settings_tclient_profiles",
       "category": "business_data",
       "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6851,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
@@ -110800,455 +110800,455 @@
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6927,
+      "line": 6854,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 6928,
       "text": "tclient-profile-load",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6932,
+      "line": 6933,
       "text": "tclient-profile-save",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6945,
+      "line": 6946,
       "text": "tclient-profile-delete",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6950,
+      "line": 6951,
       "text": "tclient-profile-override",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6978,
+      "line": 6979,
       "text": "tclient_profiles",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6989,
+      "line": 6990,
       "text": "tclient-profile-save-load-skin",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6990,
+      "line": 6991,
       "text": "tclient-profile-save-load-colors",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6991,
+      "line": 6992,
       "text": "tclient-profile-save-load-emote",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6992,
+      "line": 6993,
       "text": "tclient-profile-save-load-name",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6993,
+      "line": 6994,
       "text": "tclient-profile-save-load-clan",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6994,
+      "line": 6995,
       "text": "tclient-profile-save-load-flag",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7000,
+      "line": 7001,
       "text": "tclient-profile-dummy",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7004,
+      "line": 7005,
       "text": "tclient-profile-custom-colors",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7010,
+      "line": 7011,
       "text": "tclient-profile-overwrite-empty-clan",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7030,
+      "line": 7031,
       "text": "tclient-profiles-file",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7072,
+      "line": 7073,
       "text": "profiles=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7073,
+      "line": 7074,
       "text": "tclient_profiles",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7131,
+      "line": 7132,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7136,
+      "line": 7137,
       "text": "deck:tclient-profiles-",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7148,
+      "line": 7149,
       "text": "tclient_profiles_total",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7162,
+      "line": 7163,
       "text": "settings_tclient_configs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7282,
+      "line": 7283,
       "text": "tclient-config-apply-changes",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7288,
+      "line": 7289,
       "text": "missing staged int",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7290,
+      "line": 7291,
       "text": "%s %d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7296,
+      "line": 7297,
       "text": "missing staged string",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7302,
+      "line": 7303,
       "text": "%s \"%s\"",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7308,
+      "line": 7309,
       "text": "missing staged color",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7310,
+      "line": 7311,
       "text": "%s %u",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7315,
+      "line": 7316,
       "text": "tclient-config-clear-changes",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7324,
+      "line": 7325,
       "text": "tclient_configs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7345,
+      "line": 7346,
       "text": "settings_tclient_config_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7377,
+      "line": 7378,
       "text": "tclient-ui-show-ddnet",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7379,
+      "line": 7380,
       "text": "tclient-ui-show-tclient",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7381,
+      "line": 7382,
       "text": "tclient-ui-show-qmclient",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7392,
+      "line": 7393,
       "text": "tclient-ui-compact-list",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7394,
+      "line": 7395,
       "text": "tclient-ui-only-modified",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "Audio",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "Chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "HUD",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "Input",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "tclient-ui-tag-audio",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "tclient-ui-tag-chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "tclient-ui-tag-hud",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "tclient-ui-tag-input",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "tclient-ui-tag-visual",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7397,
+      "line": 7398,
       "text": "Visual",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7420,
+      "line": 7421,
       "text": "settings_tclient_config_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7437,
+      "line": 7438,
       "text": "tclient-ui-show-ddnet",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7439,
+      "line": 7440,
       "text": "tclient-ui-show-tclient",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7441,
+      "line": 7442,
       "text": "tclient-ui-show-qmclient",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7451,
+      "line": 7452,
       "text": "tclient-ui-compact-list",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7453,
+      "line": 7454,
       "text": "tclient-ui-only-modified",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7455,
+      "line": 7456,
       "text": "tclient_configs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7475,
+      "line": 7476,
       "text": "tclient-ui-tag-visual",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7480,
+      "line": 7481,
       "text": "tclient-ui-tag-hud",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7485,
+      "line": 7486,
       "text": "tclient-ui-tag-input",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7490,
+      "line": 7491,
       "text": "tclient-ui-tag-chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7495,
+      "line": 7496,
       "text": "tclient-ui-tag-audio",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7516,
+      "line": 7517,
       "text": "tclient-ui-tag-auto",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7521,
+      "line": 7522,
       "text": "tclient-ui-tag-social",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7526,
+      "line": 7527,
       "text": "tclient-ui-tag-camera",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7531,
+      "line": 7532,
       "text": "tclient-ui-tag-gameplay",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7536,
+      "line": 7537,
       "text": "tclient-ui-tag-misc",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7557,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7575,
+      "line": 7558,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -111256,23 +111256,23 @@
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
       "line": 7576,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 7577,
       "text": "qm_",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7578,
+      "line": 7579,
       "text": "tc_",
       "category": "business_data",
       "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7645,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
@@ -111283,49 +111283,49 @@
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7652,
-      "text": "%s (%s: %d)",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7654,
-      "text": "%s (%s: %d, %s: %d)",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7656,
-      "text": "%s (%s: %d, %s: %d, %s: %d)",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7661,
-      "text": "%s (%s: $%0*X)",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7666,
-      "text": "%s (%s: \"%s\", %s: %d)",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7693,
+      "line": 7647,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7712,
+      "line": 7653,
+      "text": "%s (%s: %d)",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 7655,
+      "text": "%s (%s: %d, %s: %d)",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 7657,
+      "text": "%s (%s: %d, %s: %d, %s: %d)",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 7662,
+      "text": "%s (%s: $%0*X)",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 7667,
+      "text": "%s (%s: \"%s\", %s: %d)",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 7694,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -111339,91 +111339,98 @@
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7726,
+      "line": 7714,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7807,
+      "line": 7727,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/tclient/menus_tclient.cpp",
+      "line": 7808,
       "text": "settings_tclient_config_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7856,
+      "line": 7857,
       "text": "tclient-config-reset",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7879,
+      "line": 7880,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7987,
+      "line": 7988,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8003,
+      "line": 8004,
       "text": "filtered=%d scroll_y=%.1f",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8004,
+      "line": 8005,
       "text": "tclient_configs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8030,
+      "line": 8031,
       "text": "tclient-config-changes-heading",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8031,
+      "line": 8032,
       "text": "tclient-config-filters-heading",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8041,
+      "line": 8042,
       "text": "deck:tclient-configs-actions",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8067,
+      "line": 8068,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8072,
+      "line": 8073,
       "text": "deck:tclient-configs-",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 8081,
+      "line": 8082,
       "text": "tclient_configs_total",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -163141,35 +163148,42 @@
     },
     {
       "file": "src/test/qm_tee_trail_test.cpp",
-      "line": 87,
+      "line": 120,
       "text": "style ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_tee_trail_test.cpp",
-      "line": 88,
+      "line": 121,
       "text": "style ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_tee_trail_test.cpp",
-      "line": 89,
+      "line": 122,
       "text": "style ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_tee_trail_test.cpp",
-      "line": 102,
+      "line": 135,
       "text": "quad ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/qm_tee_trail_test.cpp",
-      "line": 216,
+      "line": 222,
+      "text": "normal layer after additive for style ",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/qm_tee_trail_test.cpp",
+      "line": 257,
       "text": "gap ",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -202049,126 +202063,126 @@
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4871,
+      "line": 4872,
       "text": "Visual: Cursor",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4872,
+      "line": 4873,
       "text": "Visual: Nameplates",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4873,
+      "line": 4874,
       "text": "Visual: Effects",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4875,
+      "line": 4876,
       "text": "Anti Latency Tools",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4876,
+      "line": 4877,
       "text": "Improved Anti Ping",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4877,
+      "line": 4878,
       "text": "Execute on join",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4879,
+      "line": 4880,
       "text": "Auto reply",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4880,
+      "line": 4881,
       "text": "Player Indicator",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4883,
+      "line": 4884,
       "text": "Tee status bar",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4884,
+      "line": 4885,
       "text": "Tile outlines",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4885,
+      "line": 4886,
       "text": "Ghost tools",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4887,
+      "line": 4888,
       "text": "Tee Trails",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4888,
+      "line": 4889,
       "text": "Background Draw",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 4889,
+      "line": 4890,
       "text": "Finish Name",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 5396,
+      "line": 5397,
       "text": "Bind Wheel",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 6644,
+      "line": 6645,
       "text": "Status Bar",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7096,
+      "line": 7097,
       "text": "Profile Options",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/tclient/menus_tclient.cpp",
-      "line": 7097,
+      "line": 7098,
       "text": "Saved Profiles",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"

@@ -2636,9 +2636,6 @@ Current: Score
 Current: Time
 == Текущее: Время
 
-Cursed Flame
-== Проклятое пламя
-
 Custom
 == Пользовательский
 
@@ -4970,9 +4967,6 @@ Go forward one tick
 Go forward the specified duration
 == Вперёд на указанную длительность
 
-Golden Grace
-== Золотая благодать
-
 Gores
 == Горы
 
@@ -6410,6 +6404,9 @@ Low to high
 Lyrics
 == Текст песни
 
+Magic: Spirit Script
+== Магия: духовное письмо
+
 Main Asset
 == Основной ресурс
 
@@ -6466,6 +6463,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == Управление очередью ротации скинов
+
+Manga: Ink Slash
+== Манга: чернильный разрез
 
 Manual
 == Вручную
@@ -8077,6 +8077,9 @@ Pistol
 
 Pistol guide line
 == Линия траектории пистолета
+
+Pixel: Layer Shift
+== Пиксели: сдвиг слоёв
 
 Place title on a separate line above the player name instead of inline
 == Разместить титул отдельной строкой над именем игрока, а не в одной строке
@@ -11669,9 +11672,6 @@ Sphere
 Spin pop
 == Вращающееся появление
 
-Spirit Light
-== Свет духа
-
 Split main and dummy into different teams for solo-run sync
 == Распределяет основного и двойника по разным командам для синхронизации соло-забегов
 
@@ -12209,8 +12209,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Режим цвета следа Tee (1=Сплошной, 2=Текущий цвет Tee, 3=Радуга, 4=Скорость Tee, 5=Случайный)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Стиль следа Tee (0=Оригинал, 1=Проклятое пламя, 2=Фиолетовая молния, 3=Свет духа, 4=Тень пустоты, 5=Золотая благодать)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Стиль следа Tee (0=Оригинал, 1=Манга, 2=Магия, 3=Пиксели, 4=Старый номер манги, 5=Старый номер магии)
 
 Tee Trails
 == Следы ти
@@ -13496,9 +13496,6 @@ View the developers, contributors, and project links
 View the people supporting QmClient development
 == View the people supporting QmClient development
 
-Violet Bolt
-== Фиолетовая молния
-
 Virtual joystick which always uses fire.
 == Виртуальный джойстик, который всегда использует огонь.
 
@@ -13609,9 +13606,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == Белый список голосового чата (через запятую)
-
-Void Shadow
-== Тень пустоты
 
 Volume
 == Громкость

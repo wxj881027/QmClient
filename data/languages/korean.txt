@@ -2636,9 +2636,6 @@ Current: Score
 Current: Time
 == 현재: 시간
 
-Cursed Flame
-== 저주받은 불꽃
-
 Custom
 == 사용자 정의
 
@@ -4970,9 +4967,6 @@ Go forward one tick
 Go forward the specified duration
 == 지정된 시간만큼 앞으로 가기
 
-Golden Grace
-== 황금의 은총
-
 Gores
 == 고어스
 
@@ -6410,6 +6404,9 @@ Low to high
 Lyrics
 == 가사
 
+Magic: Spirit Script
+== 마법풍: 영혼의 문자
+
 Main Asset
 == 메인 에셋
 
@@ -6466,6 +6463,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == 스킨 순환 큐 관리
+
+Manga: Ink Slash
+== 만화풍: 먹빛 참격
 
 Manual
 == 수동
@@ -8077,6 +8077,9 @@ Pistol
 
 Pistol guide line
 == 권총 보조선
+
+Pixel: Layer Shift
+== 픽셀풍: 레이어 이동
 
 Place title on a separate line above the player name instead of inline
 == 제목을 이름과 같은 줄에 표시하지 않고 플레이어 이름 위의 별도 줄에 배치
@@ -11669,9 +11672,6 @@ Sphere
 Spin pop
 == 회전 팝
 
-Spirit Light
-== 영혼의 빛
-
 Split main and dummy into different teams for solo-run sync
 == 본체와 분신을 서로 다른 팀에 넣어 solo 런 시작을 동기화합니다（team-0 동기화가 어려운 맵용）
 
@@ -12209,8 +12209,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee 궤적 색상 모드 (1=단색, 2=현재 Tee 색상, 3=무지개, 4=Tee 속도, 5=무작위)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Tee 트레일 스타일(0=기본, 1=저주받은 불꽃, 2=보라 번개, 3=영혼의 빛, 4=공허의 그림자, 5=황금의 은총)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Tee 트레일 스타일(0=기본, 1=만화, 2=마법, 3=픽셀, 4=이전 번호의 만화, 5=이전 번호의 마법)
 
 Tee Trails
 == Tee 궤적
@@ -13496,9 +13496,6 @@ View the developers, contributors, and project links
 View the people supporting QmClient development
 == View the people supporting QmClient development
 
-Violet Bolt
-== 보라 번개
-
 Virtual joystick which always uses fire.
 == 항상 발사를 사용하는 가상 조이스틱입니다.
 
@@ -13609,9 +13606,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == 음성 화이트리스트 (쉼표로 구분)
-
-Void Shadow
-== 공허의 그림자
 
 Volume
 == 볼륨
