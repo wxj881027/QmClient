@@ -368,6 +368,7 @@ void CChat::CLine::Reset(CChat &This)
 	m_aName[0] = '\0';
 	m_aQmTitle[0] = '\0';
 	m_ChatEmoji = EQmChatEmoji::NONE;
+	m_ChatEmojiImageLayout = false;
 	m_ChatEmojiRect = {};
 	m_QmTitleBobPadding = 0.0f;
 	m_vTitleTextMetrics.clear();
@@ -2228,8 +2229,9 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		GameClient()->m_Translate.AutoTranslate(CurrentLine);
 }
 
-void CChat::OnPrepareLines(float y)
+bool CChat::OnPrepareLines(float y)
 {
+	bool EmojiLayoutChanged = false;
 	float x = 5.0f;
 	float FontSize = this->FontSize();
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
@@ -2308,6 +2310,8 @@ void CChat::OnPrepareLines(float y)
 		}
 
 		const bool RenderChatEmoji = GameClient()->m_QmChatEmoji.CanRender(Line.m_ChatEmoji);
+		const bool LineEmojiLayoutChanged = QmChatEmojiInvalidateChangedLayout(RenderChatEmoji, Line.m_ChatEmojiImageLayout, Line.m_aYOffset);
+		EmojiLayoutChanged |= LineEmojiLayoutChanged;
 		// 隐藏身份后清除旧消息的头衔，并重新计算包含头衔的布局缓存。
 		bool TitleHidden = false;
 		if(Line.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
@@ -2344,7 +2348,7 @@ void CChat::OnPrepareLines(float y)
 		}
 		else
 			IncludeTitleLayout(Line.m_aQmTitle, Line.m_ClientId);
-		if(TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
+		if(LineEmojiLayoutChanged || TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
 		{
 			TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
 			Line.m_ChatEmojiRect = {};
@@ -2797,6 +2801,7 @@ void CChat::OnPrepareLines(float y)
 	}
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	return EmojiLayoutChanged;
 }
 
 void CChat::OnRender()
@@ -3174,7 +3179,7 @@ void CChat::OnRender()
 		m_MouseIsPress = false;
 	}
 
-	OnPrepareLines(y);
+	const bool EmojiLayoutChanged = OnPrepareLines(y);
 
 	bool RenderedAnyLines = false;
 	const CLine *pClickedLine = nullptr;
@@ -3212,7 +3217,7 @@ void CChat::OnRender()
 			continue;
 		}
 
-		if(!Line.m_Presentation.m_RenderYInitialized || HudEditorPreview || !ExtraAnimations)
+		if(!Line.m_Presentation.m_RenderYInitialized || HudEditorPreview || !ExtraAnimations || EmojiLayoutChanged)
 		{
 			Line.m_Presentation.m_RenderY = Line.m_Presentation.m_TargetY;
 			Line.m_Presentation.m_RenderYInitialized = true;

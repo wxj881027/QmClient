@@ -125,6 +125,15 @@ namespace ui_token::font
 	inline constexpr float TIP = 9.0f;
 } // namespace ui_token::font
 
+// HUD 基础字号按 300 逻辑高度定义：辅助信息、正文、重点数值、关键提示。
+namespace ui_token::hud::font
+{
+	inline constexpr float CAPTION = 6.0f;
+	inline constexpr float BODY = 8.0f;
+	inline constexpr float TITLE = 10.0f;
+	inline constexpr float EMPHASIS = 12.0f;
+} // namespace ui_token::hud::font
+
 namespace ui_token::ime
 {
 	inline constexpr float SCALE = 0.68f;
