@@ -512,9 +512,6 @@ Add to category
 Add to queue
 == 加入队列
 
-Add typed command
-== 添加输入的命令
-
 Add war clan:
 == 添加敌对战队：
 
@@ -703,9 +700,6 @@ Alpha
 
 Also apply to dummy
 == 同时应用到分身
-
-Alt
-== 替代
 
 Always show
 == 始终显示
@@ -1440,7 +1434,7 @@ Better scoreboard
 == 更好的计分板
 
 Bind
-== 绑定
+== Bind
 
 Bind address for client/server
 == 绑定客户端/服务器的地址
@@ -1600,9 +1594,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == 构建显示在 Tee 头顶的状态文本
-
-Built-in
-== 内置
 
 Button - Disabled
 == 按钮 - 未启用
@@ -1816,6 +1807,12 @@ Chat log retention days
 
 Chat message
 == 聊天消息
+
+Chat message preview
+== 发言预览
+
+Chat message style
+== 发言样式
 
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == 进入冻结状态时发送的聊天消息，以逗号分隔（空=无消息）
@@ -2155,9 +2152,6 @@ Command:
 
 Commands
 == 命令
-
-Commands cannot contain a line break.
-== 命令不能包含换行符。
 
 Commands run in the console
 == 在控制台中执行的命令
@@ -2597,9 +2591,6 @@ Cross-server following stopped
 Crosshair opacity in free spectate
 == 自由视角旁观时准星透明度
 
-Ctrl
-== 控制
-
 Ctrl+right-click a tile to select its layer in editor
 == Ctrl+右键单击图块以在编辑器中选择其图层
 
@@ -2797,9 +2788,6 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet 客户端需要重新启动才能完成更新！
-
-DDNet contributors
-== DDNet 贡献者
 
 DDNet contributors and staff credits
 == DDNet 贡献者与团队名单
@@ -3429,7 +3417,7 @@ Dummy Control
 == 分身控制
 
 Dummy control
-== 分身控制
+== Dummy control
 
 Dummy Control: %s
 == 分身控制：%s
@@ -4733,9 +4721,6 @@ FSAA samples
 FSAA samples (may cause lag)
 == FSAA 采样数（可能导致卡顿）
 
-FTAPI
-== FTAPI
-
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == FTAPI 自动翻译已禁用以防止过载。如需启用请在设置中配置。
 
@@ -5044,9 +5029,6 @@ Grenade
 
 Group name
 == 分组名称
-
-Gui
-== GUI
 
 GUI cursor assets
 == GUI 光标资源
@@ -5374,9 +5356,6 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == 用于 IP 验证的 DNSBL 提供商的主机名
-
-Hover a key to inspect its bind, then click to edit it.
-== 将鼠标悬停在按键上查看绑定，然后点击编辑。
 
 Hover for tooltip
 == 悬停显示提示
@@ -6119,9 +6098,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == 亮度
 
-LibreTranslate
-== Libre 翻译
-
 LibreTranslate API Key
 == LibreTranslate API 密钥
 
@@ -6133,9 +6109,6 @@ Light
 
 Light band
 == 色带宽度
-
-Light band (0 = style default)
-== 色带相位（0 = 风格默认）
 
 Limit information in spectator mode
 == 限制观战模式中的信息
@@ -7694,9 +7667,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == 打开绑定轮盘选择器
 
-Open color picker
-== 打开选色
-
 Open DDNet Wiki
 == 打开 DDNet Wiki
 
@@ -8086,6 +8056,9 @@ Place title on a separate line above the player name instead of inline
 
 Plasma gun shots per second
 == 等离子枪每秒发射多少发子弹
+
+Platinum highlight
+== 铂金高光
 
 Play a flip animation while reloading weapons
 == 武器装填时播放翻转动画
@@ -9827,6 +9800,9 @@ Save/Load Skin
 Saved Profiles
 == 已保存的预设
 
+Saved with your title and shared with other QmClient players.
+== 随头衔一起保存，并同步给其他 QmClient 玩家。
+
 Saves file
 == 存档密码文件
 
@@ -10003,6 +9979,9 @@ SecretKey
 
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == 输入 /practicecmdlist 可以查看所有可用的练习命令。最常用的是 /telecursor、/lasttp 和 /rescue
+
+See you at the next checkpoint.
+== 下个检查点见。
 
 Select a saved .map file (client limit: 64 MiB).
 == 选择已保存的 .map 文件（客户端上限：64 MiB）。
@@ -10283,9 +10262,6 @@ Settings card background transparency
 Settings card border color
 == 设置卡片边框颜色
 
-Settings card collapse state (collapsed stableId; semicolon-separated)
-== 设置卡片折叠状态（折叠的 stableId；分号分隔）
-
 Settings card default layout migration version
 == 设置卡片默认布局迁移版本
 
@@ -10310,14 +10286,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == 服务器浏览器名称/地图分栏中分配给名称列的千分比
 
-Shift
-== 上档
-
 Shimmer speed
 == 流光速度
-
-Shimmer speed (polished)
-== 掠光速度（抛光档）
 
 Short server names
 == 短服务器名称
@@ -10466,6 +10436,9 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == 在玩家头顶显示坐标
 
+Show copy skin option
+== 显示复制皮肤选项
+
 Show country flags in nameplates
 == 在玩家昵称旁显示国旗
 
@@ -10591,6 +10564,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == 大字显示好友进服
+
+Show friend option
+== 显示好友选项
 
 Show friend tag (♥) on nametag
 == 在铭牌上显示好友标记（♥）
@@ -10819,6 +10795,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == 显示地图进度调试点路线
+
+Show mention option
+== 显示提及选项
 
 Show moving tiles in entities
 == 在实体层显示移动方块
@@ -11069,11 +11048,17 @@ Show skin release date and author
 Show song info in top-left corner
 == 在左上角显示歌曲信息
 
+Show spectate option
+== 显示旁观选项
+
 Show spectator cursor
 == 显示旁观者光标
 
 Show speedometer when changing
 == 显示变化时的速度计
+
+Show sponsor chat effects locally
+== 本机显示赞助者发言特效
 
 Show sponsor QR code
 == 显示赞助码
@@ -11089,6 +11074,12 @@ Show status bar
 
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == 在铭牌中显示强/弱（0 - 关闭、1 - 图标、2 - 图标 + 数字）
+
+Show swap option
+== 显示交换选项
+
+Show synchronized sponsor chat styles
+== 显示同步的赞助者发言样式
 
 Show system media info on HUD
 == 在 HUD 上显示系统媒体信息
@@ -11203,6 +11194,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == 显示你是否已完成 DDNet 地图（会将你的玩家名传输至 info.ddnet.org/info）
+
+Show whisper option
+== 显示私聊选项
 
 Show Workshop Assets
 == 显示商店资源
@@ -11522,6 +11516,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == 汽水音乐 Hook 辅助程序路径（留空则使用 QmClient 所在目录中的程序）
 
+Soft glow
+== 柔光
+
 Solid
 == 纯色
 
@@ -11590,9 +11587,6 @@ Space
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 刷屏保护：防止切换队伍、聊天、换皮肤、表情和投票的刷屏
-
-Spatial effect
-== 空间效果
 
 Speaker
 == 扬声器
@@ -11678,14 +11672,14 @@ Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
 == 本体/分身分别进入两个空闲队伍；再按一次回到队伍 0
 
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== 赞助者发言样式草稿：0=普通，1=柔光，2=铂金高光
+
 Sponsor code
 == 认证码
 
 Sponsor code already claimed
 == 此认证码已被领取
-
-Sponsor information
-== 赞助信息
 
 Sponsor reminder
 == 赞助提醒
@@ -11917,9 +11911,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == 切换触控输入和虚拟摇杆的当前动作（开火和钩索）。
-
-Switch
-== 切换
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == 开关倒计时位置（0 = 跟随 Tee，1 = 灵动岛，2 = 两者）
@@ -12623,17 +12614,11 @@ Title bob wavelength in pixels
 Title color
 == 头衔颜色
 
-Title color (single color)
-== 头衔颜色（单色）
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == 头衔掠光速度（每秒 1/100 行，0 = 关闭）
 
 Title opacity
 == 头衔不透明度
-
-Title opacity (custom color)
-== 透明度（自定义配色）
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == 头衔逐字符相位（每像素，1/1000 像素；0 = 用风格默认值，20 = 可见光带）
@@ -12643,6 +12628,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == 头衔成品预览
+
+Title server does not support chat styles yet
+== 头衔服务器尚不支持发言样式
 
 Title server unavailable; retry
 == 头衔服务暂不可用，请重试
@@ -12950,6 +12938,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == 在「梦的小功能」里打开「消息合并」。
 
+Turning this off only changes your display.
+== 关闭后仅影响本机显示。
+
 Tutorial
 == 教学
 
@@ -13147,6 +13138,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == 未知参数。可用值：default、gametimer、broadcast、both、none
+
+Unknown sponsor chat style
+== 未知的赞助者发言样式
 
 Unknown status
 == 未知状态
@@ -13732,12 +13726,6 @@ Wave spacing
 
 Wave speed
 == 波浪速度
-
-Wave speed (0.01 rad/s)
-== 波浪速度（0.01 弧度/秒）
-
-Wave wavelength
-== 波浪波长
 
 Weak hook
 == 弱钩
@@ -14372,15 +14360,6 @@ Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停
 
-⚠️ LibreTranslate API Key not set
-== ⚠️ Libre 翻译 API 密钥未设置
-
-⚠️ LLM API Key not configured
-== ⚠️ LLM API 密钥未配置
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ 腾讯云 API 密钥未配置
-
 [Assets editor blend mode]
 Color
 == 颜色
@@ -14467,7 +14446,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== 菜单
+== Menu
 
 [Config help]
 %s (default: "%s", max length: %d)

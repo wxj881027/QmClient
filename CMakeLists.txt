@@ -3519,6 +3519,9 @@ if(CLIENT)
     components/qmclient/qm_map_upload.cpp
     components/qmclient/qm_title_style.cpp
     components/qmclient/qm_title_render.cpp
+    components/qmclient/sponsor_chat_render.cpp
+    components/qmclient/sponsor_chat_render.h
+    components/qmclient/sponsor_chat_style.h
     components/qmclient/qmclient_utils.h
     components/qmclient/rank_ghost.cpp
     components/qmclient/rank_ghost.h
@@ -4649,6 +4652,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     websocket_client_test.cpp
     qm_map_upload_test.cpp
     qm_title_style_test.cpp
+    qm_sponsor_chat_style_test.cpp
     qm_skin_outline_test.cpp
     qm_scoreboard_skin_test.cpp
     qm_weapon_trajectory_test.cpp
@@ -4860,6 +4864,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/qm_map_upload.cpp
     src/game/client/components/qmclient/qm_title_style.cpp
     src/game/client/components/qmclient/qm_title_render.cpp
+    src/game/client/components/qmclient/sponsor_chat_render.cpp
     src/game/client/components/qmclient/translate/translate_parse.cpp
     src/game/client/components/qmclient/voice/voice_capture_pipeline.cpp
     src/game/client/components/qmclient/voice/voice_utils.cpp

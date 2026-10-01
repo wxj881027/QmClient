@@ -183,7 +183,7 @@ namespace qm_card_registry
 			// === 设置 deck · deck:<page>-<card>（原无持久化；tab=归属页/子页，column/order 按运行时卡片顺序显式化）===
 			// 贡献者页分三个子页签（credits-qmclient / credits-links / credits-other）；配置文件卡在常规页。
 			{"deck:qmclient-contributors-community", "credits-qmclient", ECardColumn::Left, 0, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
-			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname main dummy 本体 分身 头衔", Localizable("Redeem your code and customize your title")},
+			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname main dummy chat glow platinum 本体 分身 头衔 发言 柔光 铂金", Localizable("Redeem your code and customize your title")},
 			{"deck:qmclient-contributors-sponsors", "credits-qmclient", ECardColumn::Right, 0, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
 			{"deck:credits-friend-links", "credits-links", ECardColumn::Full, 0, "Friend links", "friend links ddnet workshop website qmclient homepage", "Project and community websites"},
 			{"deck:qmclient-contributors-ddnet", "credits-other", ECardColumn::Left, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},

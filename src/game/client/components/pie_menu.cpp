@@ -179,10 +179,11 @@ void CPieMenu::OpenMenu()
 	if(GameClient()->m_GameConsole.IsActive())
 		return;
 
-	// Find nearest player
-	int TargetId = FindNearestPlayer();
 	RefreshVisibleOptions();
 	RefreshRenameQueue();
+	if(VisibleOptionCount() == 0 && m_vRenameQueue.empty())
+		return;
+	const int TargetId = VisibleOptionCount() > 0 ? FindNearestPlayer() : -1;
 	if(TargetId < 0 && m_vRenameQueue.empty())
 	{
 		// Neither the other-player ring nor the self-rename ring can be used.
@@ -320,12 +321,12 @@ void CPieMenu::RefreshRenameQueue()
 void CPieMenu::RefreshVisibleOptions()
 {
 	std::array<bool, qm_pie_menu::OPTION_COUNT> Enabled{};
-	Enabled[static_cast<size_t>(EMenuOption::FRIEND)] = true;
-	Enabled[static_cast<size_t>(EMenuOption::WHISPER)] = true;
-	Enabled[static_cast<size_t>(EMenuOption::MENTION)] = true;
-	Enabled[static_cast<size_t>(EMenuOption::COPY_SKIN)] = true;
-	Enabled[static_cast<size_t>(EMenuOption::SWAP)] = true;
-	Enabled[static_cast<size_t>(EMenuOption::SPECTATE)] = true;
+	Enabled[static_cast<size_t>(EMenuOption::FRIEND)] = g_Config.m_QmPieMenuFriendEnabled != 0;
+	Enabled[static_cast<size_t>(EMenuOption::WHISPER)] = g_Config.m_QmPieMenuWhisperEnabled != 0;
+	Enabled[static_cast<size_t>(EMenuOption::MENTION)] = g_Config.m_QmPieMenuMentionEnabled != 0;
+	Enabled[static_cast<size_t>(EMenuOption::COPY_SKIN)] = g_Config.m_QmPieMenuCopySkinEnabled != 0;
+	Enabled[static_cast<size_t>(EMenuOption::SWAP)] = g_Config.m_QmPieMenuSwapEnabled != 0;
+	Enabled[static_cast<size_t>(EMenuOption::SPECTATE)] = g_Config.m_QmPieMenuSpectateEnabled != 0;
 	Enabled[static_cast<size_t>(EMenuOption::INVITE_TEAM)] = g_Config.m_QmPieMenuInviteTeamEnabled != 0;
 	Enabled[static_cast<size_t>(EMenuOption::JOIN_TEAM)] = g_Config.m_QmPieMenuJoinTeamEnabled != 0;
 	Enabled[static_cast<size_t>(EMenuOption::FOLLOW)] = g_Config.m_QmPieMenuFollowEnabled != 0;
@@ -460,7 +461,7 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 	// Draw icon
 	const char *pIcon = GetOptionIcon(Option);
 	const float Scale = OuterRadius / OUTER_RADIUS;
-	const float AvailableWidth = maximum(1.0f, 1.35f * MidRadius * sinf((AnglePerSector - SECTOR_GAP) * pi / 360.0f));
+	const float AvailableWidth = maximum(1.0f, 1.35f * MidRadius * sinf(minimum(AnglePerSector - SECTOR_GAP, 180.0f) * pi / 360.0f));
 	float IconSize = minimum((Highlighted ? 54.0f : 45.0f) * Scale, AvailableWidth * 0.65f);
 
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -553,7 +554,8 @@ void CPieMenu::RenderCenterInfo()
 {
 	const bool UseDummy = g_Config.m_ClDummy && Client()->DummyConnected();
 	const int LocalClientId = GameClient()->m_aLocalIds[UseDummy ? 1 : 0];
-	const int DisplayClientId = HasTargetPlayer() ? m_TargetClientId : LocalClientId;
+	const bool ShowTarget = VisibleOptionCount() > 0 && HasTargetPlayer();
+	const int DisplayClientId = ShowTarget ? m_TargetClientId : LocalClientId;
 	if(DisplayClientId < 0 || DisplayClientId >= MAX_CLIENTS)
 		return;
 
@@ -581,7 +583,7 @@ void CPieMenu::RenderCenterInfo()
 		str_format(aPreview, sizeof(aPreview), "%s · %s", Localize("Self"), aRenamePreview);
 		CenteredText(aPreview, 18.0f, 24.0f);
 	}
-	else
+	else if(ShowTarget)
 	{
 		char aPoints[96];
 		if(FormatTargetScore(aPoints, sizeof(aPoints)))

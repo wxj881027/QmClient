@@ -124,6 +124,7 @@ public:
 	bool IsActive() const { return m_Active; }
 	bool IsFollowing() const { return m_FollowState.m_Active; }
 	bool IsFollowingPlayer(const char *pName, const char *pClan) const;
+	void ToggleFollowPlayer(int ClientId);
 	void CancelFollow();
 };
 

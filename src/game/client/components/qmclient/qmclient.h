@@ -8,6 +8,7 @@
 #include "qm_realtime.h"
 #include "qm_sponsors.h"
 #include "qmclient_utils.h"
+#include "sponsor_chat_style.h"
 
 #include <base/hash.h>
 
@@ -54,8 +55,11 @@ class CQmClient : public CComponent
 	char m_aTitleText[64] = "";
 	char m_aTitleBoundName[64] = "";
 	char m_aTitleProfileStyle[64] = "";
+	EQmSponsorChatStyle m_TitleProfileChatStyle = EQmSponsorChatStyle::NONE;
+	bool m_TitleChatStyleSupported = false;
 	char m_aaPlayerTitles[MAX_CLIENTS][64] = {};
 	char m_aaPlayerTitleStyles[MAX_CLIENTS][48] = {};
+	EQmSponsorChatStyle m_aPlayerChatStyles[MAX_CLIENTS] = {};
 	char m_aaTitleNames[MAX_CLIENTS][MAX_NAME_LENGTH] = {};
 	int64_t m_aTitleExpires[MAX_CLIENTS] = {};
 	double m_TitleServerTimeOffset = 0.0;
@@ -250,7 +254,7 @@ public:
 	void QmSponsorsReloadDraft();
 	void QmSponsorsPublishDraft();
 	void RedeemTitleCode(const char *pCode);
-	void SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle);
+	void SaveTitleProfile(const char *pTitle, const char *pBoundName, const char *pStyle, EQmSponsorChatStyle ChatStyle);
 	void RefreshTitleProfile();
 	bool TitleBusy() const { return m_pTitleOperation != nullptr; }
 	bool TitleAuthenticated() const { return m_TitleAuthenticated; }
@@ -258,10 +262,12 @@ public:
 	const char *TitleText() const { return m_aTitleText; }
 	const char *TitleBoundName() const { return m_aTitleBoundName; }
 	const char *TitleProfileStyle() const { return m_aTitleProfileStyle; }
+	EQmSponsorChatStyle TitleProfileChatStyle() const { return m_TitleProfileChatStyle; }
 	int TitleRevision() const { return m_TitleRevision; }
 	const char *PlayerTitle(int ClientId) const;
 	bool ShouldShowPlayerTitle(int ClientId) const;
 	const char *PlayerTitleStyle(int ClientId) const;
+	EQmSponsorChatStyle PlayerChatStyle(int ClientId) const;
 	double TitleAnimationTime() const;
 	bool HasQmMarkdownBroadcast() const { return m_QmMarkdownBroadcast.HasMarkdown(); }
 	const char *QmMarkdownBroadcast() const { return m_QmMarkdownBroadcast.Markdown(); }

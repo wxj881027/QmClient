@@ -342,6 +342,7 @@ static bool ApplyBlockWords(std::string &Text, std::vector<std::string> *pMatche
 CChat::CLine::CLine()
 {
 	m_TextContainerIndex.Reset();
+	m_BodyTextContainerIndex.Reset();
 	m_QuadContainerIndex = -1;
 	m_aYOffset[0] = -1.0f;
 	m_aYOffset[1] = -1.0f;
@@ -357,9 +358,15 @@ CChat::CLine::CLine()
 	m_ServerMessageClass = QmHudNotifications::EServerMessageClass::None;
 }
 
+void CChat::CLine::DeleteTextContainers(ITextRender *pTextRender)
+{
+	pTextRender->DeleteTextContainer(m_TextContainerIndex);
+	pTextRender->DeleteTextContainer(m_BodyTextContainerIndex);
+}
+
 void CChat::CLine::Reset(CChat &This)
 {
-	This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
+	DeleteTextContainers(This.TextRender());
 	This.Graphics()->DeleteQuadContainer(m_QuadContainerIndex);
 	m_QuadContainerIndex = -1;
 	m_Initialized = false;
@@ -370,6 +377,9 @@ void CChat::CLine::Reset(CChat &This)
 	m_ChatEmoji = EQmChatEmoji::NONE;
 	m_ChatEmojiImageLayout = false;
 	m_ChatEmojiRect = {};
+	m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
+	m_RenderSponsorChatStyle = EQmSponsorChatStyle::NONE;
+	m_SponsorTextBounds = {};
 	m_QmTitleBobPadding = 0.0f;
 	m_vTitleTextMetrics.clear();
 	m_aYOffset[0] = -1.0f;
@@ -506,7 +516,7 @@ void CChat::RebuildChat()
 	{
 		if(!Line.m_Initialized)
 			continue;
-		TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+		Line.DeleteTextContainers(TextRender());
 		Graphics()->DeleteQuadContainer(Line.m_QuadContainerIndex);
 		// recalculate sizes
 		Line.m_aYOffset[0] = -1.0f;
@@ -523,6 +533,7 @@ void CChat::ClearLines()
 	FlushPendingConsoleLine(true);
 	for(auto &Line : m_aLines)
 		Line.Reset(*this);
+	m_SponsorChatRenderer.Reset(Graphics());
 	m_BacklogCurLine = 0;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
@@ -648,6 +659,14 @@ void CChat::InvalidateLineTranslation(CLine &Line)
 void CChat::OnWindowResize()
 {
 	RebuildChat();
+	m_SponsorChatRenderer.Reset(Graphics());
+}
+
+void CChat::OnShutdown()
+{
+	for(auto &Line : m_aLines)
+		Line.DeleteTextContainers(TextRender());
+	m_SponsorChatRenderer.Reset(Graphics());
 }
 
 void CChat::Reset()
@@ -2013,6 +2032,11 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		Highlighted |= GameClient()->m_Snap.m_LocalClientId >= 0 && LineShouldHighlight(pLine, GameClient()->m_aClients[GameClient()->m_Snap.m_LocalClientId].m_aName);
 	}
 
+	// 以收到消息时的认证身份为准，之后不按可能复用的玩家编号改变历史消息。
+	const EQmSponsorChatStyle SponsorChatStyle = QmSponsorChatMessageStyle(
+		GameClient()->m_QmClient.PlayerChatStyle(ClientId), Highlighted, Team == 1, Team >= 2,
+		CustomColor.has_value(), ChatEmoji != EQmChatEmoji::NONE);
+
 	if(g_Config.m_QmMessageMerge && !Highlighted &&
 		PreviousLine.m_Initialized &&
 		(PreviousLine.m_ConsoleSuppressed || m_PendingConsoleLineIndex == m_CurrentLine) &&
@@ -2023,6 +2047,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		CanMergePlayerMessages(PreviousLine.m_ClientId, PreviousLine.m_TeamNumber, PreviousLine.m_aText, PreviousLine.m_Time, ClientId, Team, pLine, Now))
 	{
 		PreviousLine.m_TimesRepeated++;
+		PreviousLine.m_SponsorChatStyle = QmSponsorChatMergedStyle(PreviousLine.m_SponsorChatStyle, SponsorChatStyle);
 		AddMergedAuthor(PreviousLine, ClientId);
 		if(PreviousLine.m_vMergedAuthors.size() > 1)
 		{
@@ -2039,7 +2064,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 			}
 		}
 		PreviousLine.m_ConsoleSuppressed |= BlockWordsConsolePrinted;
-		TextRender()->DeleteTextContainer(PreviousLine.m_TextContainerIndex);
+		PreviousLine.DeleteTextContainers(TextRender());
 		Graphics()->DeleteQuadContainer(PreviousLine.m_QuadContainerIndex);
 		PreviousLine.m_Time = Now;
 		PreviousLine.m_aYOffset[0] = -1.0f;
@@ -2075,6 +2100,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	CurrentLine.m_Whisper = Team >= 2;
 	CurrentLine.m_NameColor = -2;
 	CurrentLine.m_CustomColor = CustomColor;
+	CurrentLine.m_SponsorChatStyle = SponsorChatStyle;
 	CurrentLine.m_ForceVisible = ForceVisible;
 	CurrentLine.m_ConsoleSuppressed = BlockWordsConsolePrinted;
 	// echo 重复段的计数直接落到行上，聊天渲染已有的 [N] 计数显示会负责呈现它。
@@ -2252,6 +2278,13 @@ bool CChat::OnPrepareLines(float y)
 		m_aPrevTitleVisibility = aTitleVisibility;
 		RebuildChat();
 	}
+	if(m_PrevSponsorChatEffects != (g_Config.m_QmSponsorChatEffects != 0))
+	{
+		m_PrevSponsorChatEffects = g_Config.m_QmSponsorChatEffects != 0;
+		RebuildChat();
+		if(!m_PrevSponsorChatEffects)
+			m_SponsorChatRenderer.Reset(Graphics());
+	}
 	// 保留消息原始头衔，重新开启本地显示后可以恢复历史消息。
 	const auto VisibleTitle = [this](const char *pTitle, int ClientId) {
 		return GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
@@ -2314,6 +2347,11 @@ bool CChat::OnPrepareLines(float y)
 		EmojiLayoutChanged |= LineEmojiLayoutChanged;
 		// 隐藏身份后清除旧消息的头衔，并重新计算包含头衔的布局缓存。
 		bool TitleHidden = false;
+		if(Line.m_SponsorChatStyle != EQmSponsorChatStyle::NONE && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
+		{
+			Line.m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
+			TitleHidden = true;
+		}
 		if(Line.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
 		{
 			Line.m_aQmTitle[0] = '\0';
@@ -2321,6 +2359,11 @@ bool CChat::OnPrepareLines(float y)
 		}
 		for(auto &Author : Line.m_vMergedAuthors)
 		{
+			if(Line.m_SponsorChatStyle != EQmSponsorChatStyle::NONE && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
+			{
+				Line.m_SponsorChatStyle = EQmSponsorChatStyle::NONE;
+				TitleHidden = true;
+			}
 			if(Author.m_aQmTitle[0] != '\0' && GameClient()->ShouldHideStreamerIdentity(Author.m_ClientId))
 			{
 				Author.m_aQmTitle[0] = '\0';
@@ -2350,7 +2393,7 @@ bool CChat::OnPrepareLines(float y)
 			IncludeTitleLayout(Line.m_aQmTitle, Line.m_ClientId);
 		if(LineEmojiLayoutChanged || TitleHidden || TitleBobPadding != Line.m_QmTitleBobPadding)
 		{
-			TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+			Line.DeleteTextContainers(TextRender());
 			Line.m_ChatEmojiRect = {};
 			Line.m_aYOffset[0] = -1.0f;
 			Line.m_aYOffset[1] = -1.0f;
@@ -2372,7 +2415,7 @@ bool CChat::OnPrepareLines(float y)
 		}
 
 		if(ForceRecreate || !LineHasDynamicTitle)
-			TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+			Line.DeleteTextContainers(TextRender());
 		if(!Line.m_TextContainerIndex.Valid())
 		{
 			for(auto &Metrics : Line.m_vTitleTextMetrics)
@@ -2414,6 +2457,10 @@ bool CChat::OnPrepareLines(float y)
 		if(!ColoredParts.Colors().empty() && ColoredParts.Colors()[0].m_Index == 0)
 			Line.m_CustomColor = ColoredParts.Colors()[0].m_Color;
 		pText = ColoredParts.Text();
+		Line.m_RenderSponsorChatStyle = QmSponsorChatMessageStyle(
+			g_Config.m_QmSponsorChatEffects ? Line.m_SponsorChatStyle : EQmSponsorChatStyle::NONE,
+			Line.m_Highlighted, Line.m_Team, Line.m_Whisper,
+			Line.m_CustomColor.has_value() || !ColoredParts.Colors().empty(), Line.m_ChatEmoji != EQmChatEmoji::NONE);
 
 		const char *pTranslatedError = nullptr;
 		const char *pTranslatedText = nullptr;
@@ -2536,7 +2583,7 @@ bool CChat::OnPrepareLines(float y)
 
 		const float TextYOffset = TargetY + RealMsgPaddingY / 2.0f;
 		if(Line.m_TextYOffset != TextYOffset)
-			TextRender()->DeleteTextContainer(Line.m_TextContainerIndex);
+			Line.DeleteTextContainers(TextRender());
 		Line.m_TextYOffset = TextYOffset;
 
 		int CurRenderFlags = TextRender()->GetRenderFlags();
@@ -2691,6 +2738,8 @@ bool CChat::OnPrepareLines(float y)
 			Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor));
 			pGradient = g_Config.m_ClMessageGradient;
 		}
+		if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
+			Color = QmSponsorChatPlatinumColor(0.0f, Color.a);
 		TextRender()->TextColor(Color);
 
 		CTextCursor AppendCursor = LineCursor;
@@ -2701,6 +2750,24 @@ bool CChat::OnPrepareLines(float y)
 			AppendCursor.m_LineWidth -= LineCursor.m_LongestLineWidth;
 		}
 
+		STextContainerIndex &BodyContainer = Line.m_RenderSponsorChatStyle != EQmSponsorChatStyle::NONE ? Line.m_BodyTextContainerIndex : Line.m_TextContainerIndex;
+		if(Line.m_BodyTextContainerIndex.Valid())
+		{
+			if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::NONE)
+				TextRender()->DeleteTextContainer(Line.m_BodyTextContainerIndex);
+			else
+			{
+				CTextCursor ClearCursor = AppendCursor;
+				TextRender()->RecreateTextContainerSoft(Line.m_BodyTextContainerIndex, &ClearCursor, "");
+			}
+		}
+		const auto AddMessageSplits = [&](const char *pMessage) {
+			if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
+				QmSponsorChatAddPlatinumSplits(AppendCursor, pMessage, Color.a);
+			else if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
+				CMessageGradient::AddTextSplits(AppendCursor, pMessage, pGradient, Color);
+		};
+
 		if(RenderChatEmoji)
 		{
 			const SQmChatEmojiCursorLayout EmojiLayout = LayoutQmChatEmoji(AppendCursor, QmChatEmojiChatDisplaySize(FontSize));
@@ -2708,9 +2775,8 @@ bool CChat::OnPrepareLines(float y)
 		}
 		else if(pTranslatedText)
 		{
-			if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
-				CMessageGradient::AddTextSplits(AppendCursor, pTranslatedText, pGradient, Color);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pTranslatedText);
+			AddMessageSplits(pTranslatedText);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedText);
 			AppendCursor.m_vColorSplits.clear();
 			if(pTranslatedLanguage)
 			{
@@ -2719,44 +2785,42 @@ bool CChat::OnPrepareLines(float y)
 				ColorLang.g *= 0.8f;
 				ColorLang.b *= 0.8f;
 				TextRender()->TextColor(ColorLang);
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, " [");
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pTranslatedLanguage);
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, "]");
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, " [");
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedLanguage);
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "]");
 			}
 			ColorRGBA ColorSub = Color;
 			ColorSub.r *= 0.7f;
 			ColorSub.g *= 0.7f;
 			ColorSub.b *= 0.7f;
 			TextRender()->TextColor(ColorSub);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, "\n");
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "\n");
 			AppendCursor.m_FontSize *= 0.8f;
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pText);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
 			AppendCursor.m_FontSize /= 0.8f;
 			TextRender()->TextColor(Color);
 		}
 		else if(pTranslatedError)
 		{
-			if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
-				CMessageGradient::AddTextSplits(AppendCursor, pText, pGradient, Color);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pText);
+			AddMessageSplits(pText);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
 			AppendCursor.m_vColorSplits.clear();
 			ColorRGBA ColorSub = Color;
 			ColorSub.r = 0.7f;
 			ColorSub.g = 0.6f;
 			ColorSub.b = 0.6f;
 			TextRender()->TextColor(ColorSub);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, "\n");
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "\n");
 			AppendCursor.m_FontSize *= 0.8f;
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pTranslatedError);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedError);
 			AppendCursor.m_FontSize /= 0.8f;
 			TextRender()->TextColor(Color);
 		}
 		else
 		{
-			if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
-				CMessageGradient::AddTextSplits(AppendCursor, pText, pGradient, Color);
+			AddMessageSplits(pText);
 			ColoredParts.AddSplitsToCursor(AppendCursor);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &AppendCursor, pText);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
 			AppendCursor.m_vColorSplits.clear();
 		}
 
@@ -2772,6 +2836,7 @@ bool CChat::OnPrepareLines(float y)
 				FullWidth += maximum(LineCursor.m_LongestLineWidth, AppendCursor.m_LongestLineWidth);
 			}
 			Line.m_ContentWidth = maximum(0.0f, FullWidth);
+			Line.m_SponsorTextBounds = {Begin, TargetY, FullWidth, LineHeight};
 			if(!g_Config.m_ClChatOld)
 			{
 				const CUIRect Rect = {Begin, TargetY, FullWidth, LineHeight};
@@ -2791,6 +2856,8 @@ bool CChat::OnPrepareLines(float y)
 		TextRender()->SetRenderFlags(CurRenderFlags);
 		if(Line.m_TextContainerIndex.Valid())
 			TextRender()->UploadTextContainer(Line.m_TextContainerIndex);
+		if(Line.m_BodyTextContainerIndex.Valid())
+			TextRender()->UploadTextContainer(Line.m_BodyTextContainerIndex);
 		if(Line.m_ClientId == SERVER_MSG && Line.m_TextContainerIndex.Valid() && QmMacosGraphicsDiagnosticsEnabled())
 		{
 			char aPayload[192];
@@ -3316,6 +3383,10 @@ void CChat::OnRender()
 					Line.m_ChatEmojiRect.h,
 					AnimAlpha);
 			}
+
+			if(Line.m_BodyTextContainerIndex.Valid())
+				m_SponsorChatRenderer.Render(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
+					Line.m_RenderSponsorChatStyle, Line.m_SponsorTextBounds, FontSize(), AnimAlpha, AnimOffsetX, AnimOffsetY);
 
 			if(Line.m_TextContainerIndex.Valid())
 			{

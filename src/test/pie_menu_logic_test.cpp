@@ -32,6 +32,40 @@ namespace
 		EXPECT_EQ(SectorAtAngle(std::numeric_limits<float>::quiet_NaN(), -90.0f, 10), -1);
 	}
 
+	TEST(PieMenuOptions, EveryActionCanBeTheOnlyVisibleOption)
+	{
+		for(size_t Index = 0; Index < OPTION_COUNT; ++Index)
+		{
+			SCOPED_TRACE(Index);
+			std::array<bool, OPTION_COUNT> Enabled{};
+			Enabled[Index] = true;
+			std::array<EOption, OPTION_COUNT> Options{};
+			const int Count = BuildVisibleOptions(Enabled, Options);
+			ASSERT_EQ(Count, 1);
+			EXPECT_EQ(Options[0], static_cast<EOption>(Index));
+			for(float Angle : {-90.0f, 0.0f, 90.0f, 180.0f, 270.0f})
+				EXPECT_EQ(SectorAtAngle(Angle, -90.0f, Count), 0);
+		}
+	}
+
+	TEST(PieMenuOptions, AllActionsCanBeHiddenAndRestored)
+	{
+		std::array<bool, OPTION_COUNT> Enabled;
+		Enabled.fill(true);
+		std::array<EOption, OPTION_COUNT> Options{};
+		ASSERT_EQ(BuildVisibleOptions(Enabled, Options), OPTION_COUNT);
+		const auto OriginalOptions = Options;
+
+		Enabled.fill(false);
+		const int EmptyCount = BuildVisibleOptions(Enabled, Options);
+		EXPECT_EQ(EmptyCount, 0);
+		EXPECT_EQ(SectorAtAngle(0.0f, -90.0f, EmptyCount), -1);
+
+		Enabled.fill(true);
+		ASSERT_EQ(BuildVisibleOptions(Enabled, Options), OPTION_COUNT);
+		EXPECT_EQ(Options, OriginalOptions);
+	}
+
 	TEST(PieMenuTargets, ChangedPlayerIdentityDoesNotMatchTheCapturedTarget)
 	{
 		EXPECT_TRUE(MatchesPlayer("player", "clan", "player", "clan"));

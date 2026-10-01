@@ -7549,16 +7549,39 @@ void CHud::RenderGoresDrownBoard()
 		str_format(aCount, sizeof(aCount), "%d", vEntries[Index].m_Count);
 		const float Y = BoardY + PaddingY + TitleHeight + Index * RowHeight;
 		const float CountWidth = TextRender()->TextWidth(RowFontSize, aCount);
+		CTextCursor NameCursor;
+		NameCursor.SetPosition(vec2(RowLeft + TeeColumnWidth, Y));
+		NameCursor.m_FontSize = RowFontSize;
+		NameCursor.m_CalculateVisualBoundingBox = ShowTee && ClientId >= 0;
+		TextRender()->TextEx(&NameCursor, pName);
 		if(ShowTee && ClientId >= 0)
 		{
 			CTeeRenderInfo TeeInfo = GameClient()->m_aClients[ClientId].m_RenderInfo;
 			TeeInfo.m_Size = TeeSize;
 			const CAnimState *pIdleState = CAnimState::GetIdle();
-			vec2 OffsetToMid;
-			CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
-			RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(RowLeft + TeeSize / 2.0f, Y + RowHeight * 0.5f + OffsetToMid.y), RenderAlpha);
+			float AnimScale, BaseSize;
+			CRenderTools::GetRenderTeeAnimScaleAndBaseSize(&TeeInfo, AnimScale, BaseSize);
+			float FeetBottom = BaseSize / 4.2f;
+			if(!CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), TeeInfo.m_aSixup[g_Config.m_ClDummy].PartTexture(protocol7::SKINPART_BODY)))
+			{
+				if(g_Config.m_TcWhiteFeet && TeeInfo.m_CustomColoredSkin)
+				{
+					const CSkin *pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_TcWhiteFeetSkin);
+					if(pWhiteFeetSkin != nullptr && CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), pWhiteFeetSkin->m_OriginalSkin.m_Feet))
+						TeeInfo.m_SkinMetrics.m_Feet = pWhiteFeetSkin->m_Metrics.m_Feet;
+				}
+				vec2 FeetOffset;
+				float FeetWidth, FeetHeight;
+				CRenderTools::GetRenderTeeFeetSize(pIdleState, &TeeInfo, FeetOffset, FeetWidth, FeetHeight);
+				FeetBottom = -BaseSize * 0.25f + FeetOffset.y + FeetHeight;
+				if(g_Config.m_TcTinyTees && (RenderTools()->m_LocalTeeRender || g_Config.m_TcTinyTeesOthers))
+					FeetBottom *= 0.85f * (g_Config.m_TcTinyTeeSize / 100.0f);
+			}
+			FeetBottom += maximum(pIdleState->GetFrontFoot()->m_Y, pIdleState->GetBackFoot()->m_Y) * AnimScale;
+			// 用名字的可见底边和脚部贴图边界确定落脚平面。
+			const float TextBottom = NameCursor.m_HasVisualBoundingBox ? NameCursor.m_VisualBottom : Y + RowFontSize;
+			RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(RowLeft + TeeSize / 2.0f, TextBottom - FeetBottom), RenderAlpha);
 		}
-		TextRender()->Text(RowLeft + TeeColumnWidth, Y, RowFontSize, pName);
 		TextRender()->Text(RowRight - CountWidth, Y, RowFontSize, aCount);
 	}
 	if(HasMoreRows)

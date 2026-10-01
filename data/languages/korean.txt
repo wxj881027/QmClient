@@ -512,9 +512,6 @@ Add to category
 Add to queue
 == 대기열에 추가
 
-Add typed command
-== 입력한 명령 추가
-
 Add war clan:
 == 전쟁 클랜 추가:
 
@@ -703,9 +700,6 @@ Alpha
 
 Also apply to dummy
 == 더미에도 적용
-
-Alt
-== 알트
 
 Always show
 == 항상 표시
@@ -1440,7 +1434,7 @@ Better scoreboard
 == 더 나은 점수판
 
 Bind
-== 바인드
+== Bind
 
 Bind address for client/server
 == 클라이언트/서버 바인딩 주소
@@ -1600,9 +1594,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == Build the status text shown above Tees
-
-Built-in
-== 내장
 
 Button - Disabled
 == 버튼 - 비활성화
@@ -1816,6 +1807,12 @@ Chat log retention days
 
 Chat message
 == 채팅 메시지
+
+Chat message preview
+== 채팅 메시지 미리보기
+
+Chat message style
+== 채팅 메시지 스타일
 
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == 프리즈 진입 시 전송할 채팅 메시지, 쉼표로 구분 (비우기=없음)
@@ -2155,9 +2152,6 @@ Command:
 
 Commands
 == 명령어
-
-Commands cannot contain a line break.
-== 명령에는 줄바꿈을 포함할 수 없습니다.
 
 Commands run in the console
 == 콘솔에서 실행되는 명령어
@@ -2597,9 +2591,6 @@ Cross-server following stopped
 Crosshair opacity in free spectate
 == 자유 관전 시 조준선 불투명도
 
-Ctrl
-== 컨트롤
-
 Ctrl+right-click a tile to select its layer in editor
 == Ctrl+우클릭으로 타일을 클릭하면 편집기에서 해당 레이어 선택
 
@@ -2797,9 +2788,6 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == DDNet 클라이언트를 다시 시작해야 업데이트가 완료됩니다!
-
-DDNet contributors
-== DDNet contributors
 
 DDNet contributors and staff credits
 == DDNet 기여자 및 스태프
@@ -3429,7 +3417,7 @@ Dummy Control
 == 더미 제어
 
 Dummy control
-== 더미 조작
+== Dummy control
 
 Dummy Control: %s
 == 더미 제어: %s
@@ -4733,9 +4721,6 @@ FSAA samples
 FSAA samples (may cause lag)
 == FSAA 샘플 (지연 발생 가능)
 
-FTAPI
-== FTAPI
-
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == 과부하 방지를 위해 FTAPI 자동 번역이 비활성화되었습니다. 필요 시 설정에서 활성화하세요.
 
@@ -5044,9 +5029,6 @@ Grenade
 
 Group name
 == 그룹 이름
-
-Gui
-== GUI
 
 GUI cursor assets
 == GUI 커서 에셋
@@ -5374,9 +5356,6 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == IP 확인용 DNSBL 제공자 호스트명
-
-Hover a key to inspect its bind, then click to edit it.
-== 키 위에 마우스를 올려 바인딩을 확인한 다음 클릭하여 편집하세요.
 
 Hover for tooltip
 == 툴팁을 보려면 마우스를 올리세요
@@ -6119,9 +6098,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == 밝기
 
-LibreTranslate
-== LibreTranslate
-
 LibreTranslate API Key
 == LibreTranslate API 키
 
@@ -6133,9 +6109,6 @@ Light
 
 Light band
 == 빛 띠
-
-Light band (0 = style default)
-== 색상 위상 (0 = 스타일 기본값)
 
 Limit information in spectator mode
 == 관전자 모드에서 정보 제한
@@ -7694,9 +7667,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == 바인드 휠 선택기 열기
 
-Open color picker
-== 색상 선택기 열기
-
 Open DDNet Wiki
 == DDNet Wiki 열기
 
@@ -8086,6 +8056,9 @@ Place title on a separate line above the player name instead of inline
 
 Plasma gun shots per second
 == 플라즈마 건 초당 발사 수
+
+Platinum highlight
+== 백금 하이라이트
 
 Play a flip animation while reloading weapons
 == 무기 재장전 중 뒤집기 애니메이션 재생
@@ -9827,6 +9800,9 @@ Save/Load Skin
 Saved Profiles
 == 저장된 프로필
 
+Saved with your title and shared with other QmClient players.
+== 칭호와 함께 저장되며 다른 QmClient 플레이어에게 공유됩니다.
+
 Saves file
 == 파일 저장
 
@@ -10003,6 +9979,9 @@ SecretKey
 
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == /practicecmdlist 로 사용 가능한 모든 연습 명령어 목록을 볼 수 있습니다. 가장 많이 쓰이는 것은 /telecursor, /lasttp, /rescue 입니다
+
+See you at the next checkpoint.
+== 다음 체크포인트에서 만나요.
 
 Select a saved .map file (client limit: 64 MiB).
 == 저장된 .map 파일을 선택하세요(클라이언트 제한: 64 MiB).
@@ -10283,9 +10262,6 @@ Settings card background transparency
 Settings card border color
 == 설정 카드 테두리 색상
 
-Settings card collapse state (collapsed stableId; semicolon-separated)
-== 설정 카드 접기 상태(접힌 stableId; 세미콜론으로 구분)
-
 Settings card default layout migration version
 == 설정 카드 기본 레이아웃 마이그레이션 버전
 
@@ -10310,14 +10286,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == 서버 브라우저 이름/맵 분할에서 이름 열에 할당할 비율(천분율)
 
-Shift
-== 시프트
-
 Shimmer speed
 == 반짝임 속도
-
-Shimmer speed (polished)
-== 빛 이동 속도 (광택)
 
 Short server names
 == 짧은 서버 이름
@@ -10466,6 +10436,9 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == 플레이어 위에 좌표 표시
 
+Show copy skin option
+== 스킨 복사 항목 표시
+
 Show country flags in nameplates
 == 이름표에 국가 국기 표시
 
@@ -10591,6 +10564,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == 친구 접속 시 큰 글자 표시
+
+Show friend option
+== 친구 항목 표시
 
 Show friend tag (♥) on nametag
 == 이름표에 친구 태그 (♥) 표시
@@ -10819,6 +10795,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == 맵 진행률 체크포인트 경로 표시
+
+Show mention option
+== 언급 항목 표시
 
 Show moving tiles in entities
 == 엔티티에 움직이는 타일 표시
@@ -11069,11 +11048,17 @@ Show skin release date and author
 Show song info in top-left corner
 == 왼쪽 상단에 노래 정보 표시
 
+Show spectate option
+== 관전 항목 표시
+
 Show spectator cursor
 == 관전자 커서 표시
 
 Show speedometer when changing
 == 변경 시 속도계 표시
+
+Show sponsor chat effects locally
+== 로컬에서 후원자 채팅 효과 표시
 
 Show sponsor QR code
 == 스폰서 QR 코드 표시
@@ -11089,6 +11074,12 @@ Show status bar
 
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == 이름표에 강함/약함 표시 (0 = 끄기, 1 = 아이콘, 2 = 아이콘+숫자)
+
+Show swap option
+== 교환 항목 표시
+
+Show synchronized sponsor chat styles
+== 동기화된 후원자 채팅 스타일 표시
 
 Show system media info on HUD
 == HUD에 시스템 미디어 정보 표시
@@ -11203,6 +11194,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == DDNet 맵 완료 여부를 표시합니다(플레이어 이름을 info.ddnet.org/info로 전송)
+
+Show whisper option
+== 귓속말 항목 표시
 
 Show Workshop Assets
 == 상점 리소스 표시
@@ -11522,6 +11516,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook 도우미 경로(비워 두면 QmClient과 같은 디렉터리)
 
+Soft glow
+== 은은한 빛
+
 Solid
 == 단색
 
@@ -11590,9 +11587,6 @@ Space
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == 스팸 방지: 팀 전환, 채팅, 스킨 변경, 이모트, 투표 스팸 방지
-
-Spatial effect
-== 입체 효과
 
 Speaker
 == 스피커
@@ -11678,14 +11672,14 @@ Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
 == 본체/분신을 두 개의 빈 팀에 나누고, 다시 누르면 팀 0으로 돌아감
 
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== 후원자 채팅 스타일 초안: 0=보통, 1=은은한 빛, 2=백금 하이라이트
+
 Sponsor code
 == 인증 코드
 
 Sponsor code already claimed
 == 이미 사용된 인증 코드입니다
-
-Sponsor information
-== Sponsor information
 
 Sponsor reminder
 == 후원 알림
@@ -11917,9 +11911,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == 직접 터치 입력 및 가상 조이스틱의 활성 작업 (발사 및 훅) 을 전환합니다.
-
-Switch
-== 전환
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == 스위치 카운트다운 위치(0 = Tee 따라가기, 1 = 다이내믹 아일랜드, 2 = 둘 다)
@@ -12623,17 +12614,11 @@ Title bob wavelength in pixels
 Title color
 == 칭호 색상
 
-Title color (single color)
-== 칭호 색상 (단색)
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == 칭호 빛 이동 속도 (초당 1/100줄, 0 = 끔)
 
 Title opacity
 == 칭호 불투명도
-
-Title opacity (custom color)
-== 불투명도 (사용자 지정 색상)
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == 칭호 글자별 위상 (픽셀당 1/1000 px, 0 = 스타일 기본값, 20 = 빛 띠 보임)
@@ -12643,6 +12628,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == 칭호 완성 미리보기
+
+Title server does not support chat styles yet
+== 칭호 서버가 아직 채팅 스타일을 지원하지 않습니다
 
 Title server unavailable; retry
 == 칭호 서버에 연결할 수 없습니다. 다시 시도하세요
@@ -12950,6 +12938,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == "드림 기능"에서 "Message merging"을 켜세요.
 
+Turning this off only changes your display.
+== 끄면 내 화면의 표시만 변경됩니다.
+
 Tutorial
 == 튜토리얼
 
@@ -13147,6 +13138,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == 알 수 없는 매개변수입니다. 허용 값: default, gametimer, broadcast, both, none
+
+Unknown sponsor chat style
+== 알 수 없는 후원자 채팅 스타일
 
 Unknown status
 == 알 수 없는 상태
@@ -13491,7 +13485,7 @@ View tele found (at offset) with given number
 == 주어진 번호로 찾은 텔레포트 보기 (오프셋 위치)
 
 View the developers, contributors, and project links
-== View the developers, contributors, and project links
+== 개발자, 기여자 및 프로젝트 링크 보기
 
 View the people supporting QmClient development
 == View the people supporting QmClient development
@@ -13732,12 +13726,6 @@ Wave spacing
 
 Wave speed
 == 물결 속도
-
-Wave speed (0.01 rad/s)
-== 물결 속도 (0.01 rad/s)
-
-Wave wavelength
-== 물결 파장
 
 Weak hook
 == 약한 갈고리
@@ -14372,15 +14360,6 @@ Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI 는 무료 서비스입니다. 과도한 사용은 서비스 중단을 초래할 수 있습니다
 
-⚠️ LibreTranslate API Key not set
-== ⚠️ LibreTranslate API 키가 설정되지 않음
-
-⚠️ LLM API Key not configured
-== ⚠️ LLM API 키가 구성되지 않음
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ 텐센트 클라우드 API가 구성되지 않음
-
 [Assets editor blend mode]
 Color
 == 색상
@@ -14467,7 +14446,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== 메뉴
+== Menu
 
 [Config help]
 %s (default: "%s", max length: %d)

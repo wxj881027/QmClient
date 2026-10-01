@@ -512,9 +512,6 @@ Add to category
 Add to queue
 == Sıraya ekle
 
-Add typed command
-== Yazılan komutu ekle
-
 Add war clan:
 == Savaş klanı ekle:
 
@@ -703,9 +700,6 @@ Alpha
 
 Also apply to dummy
 == Ayrıca dummy'e de uygula
-
-Alt
-== Alt
 
 Always show
 == Her zaman göster
@@ -1440,7 +1434,7 @@ Better scoreboard
 == Geliştirilmiş skor tablosu
 
 Bind
-== Bağlama
+== Bind
 
 Bind address for client/server
 == İstemci/sunucu için bağlama adresi
@@ -1600,9 +1594,6 @@ Bubble opacity
 
 Build the status text shown above Tees
 == Build the status text shown above Tees
-
-Built-in
-== Dahili
 
 Button - Disabled
 == Düğme - Devre Dışı
@@ -1816,6 +1807,12 @@ Chat log retention days
 
 Chat message
 == Sohbet mesajı
+
+Chat message preview
+== Sohbet mesajı önizlemesi
+
+Chat message style
+== Sohbet mesajı stili
 
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == Donma durumuna girildiğinde gönderilecek sohbet mesajları, virgülle ayrılmış (boş=hiçbiri)
@@ -2155,9 +2152,6 @@ Command:
 
 Commands
 == Komutlar
-
-Commands cannot contain a line break.
-== Komutlar satır sonu içeremez.
 
 Commands run in the console
 == Konsolda çalıştırılan komutlar
@@ -2597,9 +2591,6 @@ Cross-server following stopped
 Crosshair opacity in free spectate
 == Serbest izleme modunda nişangah opaklığı
 
-Ctrl
-== Denetim
-
 Ctrl+right-click a tile to select its layer in editor
 == Düzenleyicide bir katmanı seçmek için Ctrl+sağ tıklama
 
@@ -2797,9 +2788,6 @@ DDNet / Total CPU
 
 DDNet Client needs to be restarted to complete update!
 == Güncellemeyi tamamlamak için DDNet istemcisinin yeniden başlatılması gerekiyor!
-
-DDNet contributors
-== DDNet contributors
 
 DDNet contributors and staff credits
 == DDNet katkıda bulunanlar ve ekip
@@ -3429,7 +3417,7 @@ Dummy Control
 == Yapayı kontrol et
 
 Dummy control
-== Dummy kontrolü
+== Dummy control
 
 Dummy Control: %s
 == Dublör Kontrolü: %s
@@ -4733,9 +4721,6 @@ FSAA samples
 FSAA samples (may cause lag)
 == FSAA örnekleri (gecikmeye neden olabilir)
 
-FTAPI
-== FTAPI
-
 FTAPI auto-translate is disabled to prevent overload. Enable in settings if needed.
 == Aşırı yüklemeyi önlemek için FTAPI otomatik çevirisi devre dışı bırakıldı. Gerekirse ayarlardan etkinleştirin.
 
@@ -5044,9 +5029,6 @@ Grenade
 
 Group name
 == Grup adı
-
-Gui
-== GUI
 
 GUI cursor assets
 == GUI imleç varlıkları
@@ -5374,9 +5356,6 @@ Horizontal position
 
 Hostname of DNSBL provider for IP verification
 == IP doğrulaması için DNSBL sağlayıcısının ana bilgisayar adı
-
-Hover a key to inspect its bind, then click to edit it.
-== Bağını görmek için bir tuşun üzerine gelin, ardından düzenlemek için tıklayın.
 
 Hover for tooltip
 == İpucu için üzerine gel
@@ -6119,9 +6098,6 @@ Lets you join team i (shows your team if left blank)
 Lht.
 == Prl.
 
-LibreTranslate
-== LibreTranslate
-
 LibreTranslate API Key
 == LibreTranslate API Anahtarı
 
@@ -6133,9 +6109,6 @@ Light
 
 Light band
 == Işık bandı
-
-Light band (0 = style default)
-== Renk fazı (0 = stil varsayılanı)
 
 Limit information in spectator mode
 == Seyirci modunda bilgiyi sınırla
@@ -7694,9 +7667,6 @@ Open a matching settings card directly
 Open bindwheel selector
 == Bind tekerleği seçiciyi aç
 
-Open color picker
-== Renk seçiciyi aç
-
 Open DDNet Wiki
 == DDNet Wiki'yi aç
 
@@ -8086,6 +8056,9 @@ Place title on a separate line above the player name instead of inline
 
 Plasma gun shots per second
 == Plazma tabancasının saniyedeki atış sayısı
+
+Platinum highlight
+== Platin ışıltısı
 
 Play a flip animation while reloading weapons
 == Silahları yeniden doldururken çevirme animasyonu oynat
@@ -9827,6 +9800,9 @@ Save/Load Skin
 Saved Profiles
 == Kaydedilmiş Profiller
 
+Saved with your title and shared with other QmClient players.
+== Unvanınla birlikte kaydedilir ve diğer QmClient oyuncularıyla paylaşılır.
+
 Saves file
 == Kayıtlı oyun dosyası
 
@@ -10003,6 +9979,9 @@ SecretKey
 
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 == Kullanılabilir tüm alıştırma komutlarının listesi için /practicecmdlist yazın. En çok kullanılanlar /telecursor, /lasttp ve /rescue
+
+See you at the next checkpoint.
+== Sonraki kontrol noktasında görüşürüz.
 
 Select a saved .map file (client limit: 64 MiB).
 == Kaydedilmiş bir .map dosyası seçin (istemci sınırı: 64 MiB).
@@ -10283,9 +10262,6 @@ Settings card background transparency
 Settings card border color
 == Ayar kartı kenarlık rengi
 
-Settings card collapse state (collapsed stableId; semicolon-separated)
-== Ayar kartı daraltma durumu (daraltılmış stableId; noktalı virgülle ayrılmış)
-
 Settings card default layout migration version
 == Kart varsayılan düzen geçiş sürümü
 
@@ -10310,14 +10286,8 @@ Shape
 Share of the server browser name/map split given to the name column (per mille)
 == Sunucu tarayıcısı ad/harita bölünmesinden ad sütununa ayrılan oran (binde)
 
-Shift
-== Shift
-
 Shimmer speed
 == Parıltı hızı
-
-Shimmer speed (polished)
-== Işık hızı (cilalı)
 
 Short server names
 == Kısa sunucu adları
@@ -10466,6 +10436,9 @@ Show configurable outlines around map tiles
 Show coordinates above players
 == Oyuncuların üzerinde koordinatları göster
 
+Show copy skin option
+== Görünüm kopyalama seçeneğini göster
+
 Show country flags in nameplates
 == İsim levhalarında ülke bayraklarını göster
 
@@ -10591,6 +10564,9 @@ Show friend icon in name plates
 
 Show friend join in large text
 == Arkadaş girişini büyük yazıyla göster
+
+Show friend option
+== Arkadaş seçeneğini göster
 
 Show friend tag (♥) on nametag
 == İsim levhasında arkadaş etiketini (♥) göster
@@ -10819,6 +10795,9 @@ Show map progress bar (beta)
 
 Show map progress test point route
 == Harita ilerleme kontrol noktası rotasını göster
+
+Show mention option
+== Bahsetme seçeneğini göster
 
 Show moving tiles in entities
 == Varlıklarda hareketli karoları göster
@@ -11069,11 +11048,17 @@ Show skin release date and author
 Show song info in top-left corner
 == Sol üst köşede şarkı bilgisini göster
 
+Show spectate option
+== İzleme seçeneğini göster
+
 Show spectator cursor
 == İzleyici imlecini göster
 
 Show speedometer when changing
 == Değişiklik sırasında hız göstergesini göster
+
+Show sponsor chat effects locally
+== Destekçi sohbet efektlerini yerel olarak göster
 
 Show sponsor QR code
 == Sponsor QR kodunu göster
@@ -11089,6 +11074,12 @@ Show status bar
 
 Show strength/weakness in nametag (0=off, 1=icon, 2=icon+number)
 == İsim etiketinde güçlü/zayıf göster (0=kapalı, 1=simgeler, 2=simgeler+sayı)
+
+Show swap option
+== Yer değiştirme seçeneğini göster
+
+Show synchronized sponsor chat styles
+== Eşitlenen destekçi sohbet stillerini göster
 
 Show system media info on HUD
 == HUD üzerinde sistem medya bilgilerini göster
@@ -11203,6 +11194,9 @@ Show welcome message indicating first client launch
 
 Show whether you have finished a DDNet map (transmits your player name to info.ddnet.org/info)
 == Bir DDNet haritasını bitirip bitirmediğinizi gösterir (oyuncu adınızı info.ddnet.org/info adresine gönderir)
+
+Show whisper option
+== Fısıltı seçeneğini göster
 
 Show Workshop Assets
 == Workshop Varlıklarını Göster
@@ -11522,6 +11516,9 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 == SodaMusic Hook yardımcı yolu (boş = QmClient'ın yanında)
 
+Soft glow
+== Yumuşak parıltı
+
 Solid
 == Düz
 
@@ -11590,9 +11587,6 @@ Space
 
 Spam protection: prevent spamming of team switching, chat, skin changes, emotes, votes
 == Spam koruması: takım değiştirme, sohbet, skin değiştirme, ifade ve oylama spamını önler
-
-Spatial effect
-== Uzamsal efekt
 
 Speaker
 == Hoparlör
@@ -11678,14 +11672,14 @@ Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
 == Ana/kukla karakteri iki boş takıma böler; takım 0'a dönmek için tekrar basın
 
+Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
+== Destekçi sohbet stili taslağı: 0=Normal, 1=Yumuşak parıltı, 2=Platin ışıltısı
+
 Sponsor code
 == Destekçi kodu
 
 Sponsor code already claimed
 == Bu kod zaten kullanılmış
-
-Sponsor information
-== Sponsor information
 
 Sponsor reminder
 == Destekçi hatırlatması
@@ -11917,9 +11911,6 @@ Swap option color
 
 Swaps the active action (fire and hook) for direct touch input and virtual joysticks.
 == Doğrudan dokunma girişi ve sanal joystick'ler için etkin eylemi (ateş ve kanca) değiştirir.
-
-Switch
-== Değiştir
 
 Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)
 == Anahtar geri sayımının konumu (0 = Tee'yi takip et, 1 = Dinamik Ada, 2 = ikisi de)
@@ -12623,17 +12614,11 @@ Title bob wavelength in pixels
 Title color
 == Unvan rengi
 
-Title color (single color)
-== Unvan rengi (tek renk)
-
 Title light sweep speed in 1/100 row per second (0 = off)
 == Unvan ışık tarama hızı (saniyede 1/100 satır, 0 = kapalı)
 
 Title opacity
 == Unvan opaklığı
-
-Title opacity (custom color)
-== Opaklık (özel renk)
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == Karakter başına piksel başına faz (1/1000 px, 0 = stil varsayılanı, 20 = görünür ışık şeridi)
@@ -12643,6 +12628,9 @@ Title per-character vertical bob amplitude in pixels (0 = off)
 
 Title preview
 == Unvan önizlemesi
+
+Title server does not support chat styles yet
+== Unvan sunucusu henüz sohbet stillerini desteklemiyor
 
 Title server unavailable; retry
 == Unvan sunucusu kullanılamıyor; tekrar dene
@@ -12950,6 +12938,9 @@ Tune variable to value or show current value
 Turn on "Message merging" in Dream Features.
 == "Dream Features" bölümünde "Message merging" seçeneğini aç.
 
+Turning this off only changes your display.
+== Kapatmak yalnızca senin ekranını etkiler.
+
 Tutorial
 == Eğitim
 
@@ -13147,6 +13138,9 @@ Unknown emote. Use /emote to see available emotes.
 
 Unknown parameter. Accepted values: default, gametimer, broadcast, both, none
 == Bilinmeyen parametre. Kabul edilen değerler: default, gametimer, broadcast, both, none
+
+Unknown sponsor chat style
+== Bilinmeyen destekçi sohbet stili
 
 Unknown status
 == Bilinmeyen durum
@@ -13732,12 +13726,6 @@ Wave spacing
 
 Wave speed
 == Dalga hızı
-
-Wave speed (0.01 rad/s)
-== Dalga hızı (0,01 rad/sn)
-
-Wave wavelength
-== Dalga boyu
 
 Weak hook
 == Zayıf kanca
@@ -14372,15 +14360,6 @@ Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI ücretsiz bir hizmettir. Aşırı kullanım hizmetin askıya alınmasına neden olabilir.
 
-⚠️ LibreTranslate API Key not set
-== ⚠️ LibreTranslate API Anahtarı ayarlanmamış
-
-⚠️ LLM API Key not configured
-== ⚠️ LLM API Anahtarı yapılandırılmamış
-
-⚠️ Tencent Cloud API not configured
-== ⚠️ Tencent Cloud API yapılandırılmamış
-
 [Assets editor blend mode]
 Color
 == Renk
@@ -14467,7 +14446,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== Menü
+== Menu
 
 [Config help]
 %s (default: "%s", max length: %d)
