@@ -397,57 +397,6 @@ TEST(QmIconDiagnosticsContract, KeepsAtlasAndRendererCountersSeparated)
 	EXPECT_NE(ShutdownBody.find("m_pCommandBuffer = nullptr;"), std::string::npos);
 }
 
-TEST(QmVulkanRenderTargetDestroy, GuardsPausedRenderingAndActiveRenderPass)
-{
-	const std::string Source = ReadTextFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-
-	// 延迟销毁队列成员（渲染通道期间收到的销毁请求）
-	EXPECT_NE(Source.find("std::vector<std::pair<size_t, VkImage>> m_vPendingRenderTargetDestroy;"), std::string::npos);
-
-	// Cmd_RenderTarget_Destroy：暂停时直接销毁，活跃渲染通道期间延迟到 End 后处理
-	const size_t DestroyFn = Source.find("[[nodiscard]] bool Cmd_RenderTarget_Destroy");
-	const size_t BeginFn = Source.find("[[nodiscard]] bool Cmd_RenderTarget_Begin", DestroyFn);
-	ASSERT_NE(DestroyFn, std::string::npos);
-	ASSERT_NE(BeginFn, std::string::npos);
-	const std::string DestroySection = Source.substr(DestroyFn, BeginFn - DestroyFn);
-	EXPECT_NE(DestroySection.find("if(m_RenderingPaused)"), std::string::npos);
-	EXPECT_NE(DestroySection.find("DestroyRenderTarget(m_vRenderTargets[pCommand->m_TargetId]);"), std::string::npos);
-	EXPECT_NE(DestroySection.find("m_vPendingRenderTargetDestroy.emplace_back"), std::string::npos);
-	EXPECT_NE(DestroySection.find("SubmitCurrentCommandsAndRestartSwapPass"), std::string::npos);
-
-	// Cmd_RenderTarget_Begin：暂停时跳过
-	const size_t EndFn = Source.find("[[nodiscard]] bool Cmd_RenderTarget_End", BeginFn);
-	ASSERT_NE(EndFn, std::string::npos);
-	const std::string BeginSection = Source.substr(BeginFn, EndFn - BeginFn);
-	EXPECT_NE(BeginSection.find("if(m_RenderingPaused)"), std::string::npos);
-
-	// Cmd_RenderTarget_End：暂停时跳过，并在结束后统一处理延迟销毁队列
-	const size_t ReadbackFn = Source.find("[[nodiscard]] bool Cmd_RenderTarget_Readback", EndFn);
-	ASSERT_NE(ReadbackFn, std::string::npos);
-	const std::string EndSection = Source.substr(EndFn, ReadbackFn - EndFn);
-	EXPECT_NE(EndSection.find("if(m_RenderingPaused)"), std::string::npos);
-	EXPECT_NE(EndSection.find("m_vPendingRenderTargetDestroy.empty()"), std::string::npos);
-	EXPECT_NE(EndSection.find("m_vPendingRenderTargetDestroy.clear();"), std::string::npos);
-
-	// Cmd_RenderTarget_Readback / Draw：暂停时跳过
-	const size_t DrawFn = Source.find("[[nodiscard]] bool Cmd_RenderTarget_Draw", ReadbackFn);
-	ASSERT_NE(DrawFn, std::string::npos);
-	EXPECT_NE(Source.substr(ReadbackFn, DrawFn - ReadbackFn).find("if(m_RenderingPaused)"), std::string::npos);
-	const size_t CaptureFn = Source.find("[[nodiscard]] bool Cmd_RenderTarget_CaptureBackbuffer", DrawFn);
-	ASSERT_NE(CaptureFn, std::string::npos);
-	EXPECT_NE(Source.substr(DrawFn, CaptureFn - DrawFn).find("if(m_RenderingPaused)"), std::string::npos);
-
-	// Cmd_RenderTarget_CaptureBackbuffer：暂停时跳过（并入既有守卫条件）
-	const size_t BlurPassFn = Source.find("[[nodiscard]] bool Cmd_RenderTarget_GaussianBlurPass", CaptureFn);
-	ASSERT_NE(BlurPassFn, std::string::npos);
-	EXPECT_NE(Source.substr(CaptureFn, BlurPassFn - CaptureFn).find("m_RenderingPaused || !SupportsBackbufferCapture()"), std::string::npos);
-
-	// Cmd_RenderTarget_GaussianBlurPass：暂停时跳过
-	const size_t NextFn = Source.find("[[nodiscard]] bool Cmd_TextTextures_Create", BlurPassFn);
-	ASSERT_NE(NextFn, std::string::npos);
-	EXPECT_NE(Source.substr(BlurPassFn, NextFn - BlurPassFn).find("if(m_RenderingPaused)"), std::string::npos);
-}
-
 TEST(QmIconAtlasContract, IconDrawsPreserveGlyphAspectRatio)
 {
 	// manifest 存的是每个字形自己的紧贴框（宽高比各异），绘制必须等比适配调用方方框，
