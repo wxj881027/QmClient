@@ -45,19 +45,6 @@ TEST(QmVulkanEnhanced, DeviceLostReasonOnlyWhenEnhancedActive)
 	EXPECT_EQ(qm_vulkan_ext::ResolveDeviceLost(EEnhancedMode::OFF, false), EDisableReason::NONE);
 }
 
-TEST(QmVulkanEnhancedSource, VulkanGatesQmPipelinesBehindEnhancedSwitch)
-{
-	const std::string Source = ReadRepoFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	EXPECT_NE(Source.find("QmEnhancedShouldLoad()"), std::string::npos);
-	EXPECT_NE(Source.find("m_QmMediaIslandSdfPipelineValid"), std::string::npos);
-	EXPECT_NE(Source.find("if(!m_QmMediaIslandSdfPipelineValid)"), std::string::npos);
-	EXPECT_NE(Source.find("if(!m_QmRoundedRectSdfPipelineValid)"), std::string::npos);
-	EXPECT_NE(Source.find("QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST)"), std::string::npos);
-	// 能力必须跟随真实管线，而不是无条件 true。
-	EXPECT_NE(Source.find("m_pCapabilities->m_MediaIslandSdf = m_QmMediaIslandSdfPipelineValid"), std::string::npos);
-	EXPECT_NE(Source.find("m_pCapabilities->m_RoundedRectSdf = m_QmRoundedRectSdfPipelineValid"), std::string::npos);
-}
-
 TEST(QmVulkanEnhancedSource, VulkanMarksEnhancedDisabledOnWaitIdleDeviceLost)
 {
 	const std::string Source = ReadRepoFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");

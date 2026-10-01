@@ -3148,6 +3148,9 @@ if(CLIENT)
     backend/opengl/backend_opengl.h
     backend/opengl/backend_opengl3.cpp
     backend/opengl/backend_opengl3.h
+    backend/opengl/backend_opengl3_qm_pipelines.cpp
+    backend/opengl/backend_opengl_qm_render_targets.cpp
+    backend/opengl/opengl_qm_sl_program.h
     backend/opengl/opengl_sl.cpp
     backend/opengl/opengl_sl.h
     backend/opengl/opengl_sl_program.cpp
@@ -3155,6 +3158,8 @@ if(CLIENT)
     backend/opengles/backend_opengles.cpp
     backend/opengles/backend_opengles3.cpp
     backend/opengles/backend_opengles3.h
+    backend/opengles/backend_opengles3_qm_pipelines.cpp
+    backend/opengles/backend_opengles_qm_render_targets.cpp
     backend/opengles/gles_class_defines.h
     backend/opengles/opengles_sl.cpp
     backend/opengles/opengles_sl_program.cpp
@@ -3162,6 +3167,8 @@ if(CLIENT)
     backend/vulkan/backend_vulkan.h
     backend/vulkan/backend_vulkan_qm_ext.cpp
     backend/vulkan/backend_vulkan_qm_ext.h
+    backend/vulkan/backend_vulkan_qm_pipelines_impl.h
+    backend/vulkan/backend_vulkan_qm_render_targets_impl.h
     backend_egl.cpp
     backend_egl.h
     backend_sdl.cpp
@@ -4362,6 +4369,8 @@ if(TOOLS)
           src/engine/client/backend_egl.cpp
           src/engine/client/backend/opengl/backend_opengl.cpp
           src/engine/client/backend/opengl/backend_opengl3.cpp
+          src/engine/client/backend/opengl/backend_opengl3_qm_pipelines.cpp
+          src/engine/client/backend/opengl/backend_opengl_qm_render_targets.cpp
           src/engine/client/backend/opengl/opengl_sl.cpp
           src/engine/client/backend/opengl/opengl_sl_program.cpp
           src/engine/client/backend/glsl_shader_compiler.cpp
@@ -4444,8 +4453,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_icon_shader_contract_test.cpp
     qm_msdf_param_encoding_test.cpp
     qm_icon_loader_contract_test.cpp
-    qm_icon_opengl_contract_test.cpp
-    qm_icon_vulkan_contract_test.cpp
+    qm_render_pipeline_contract_test.cpp
     qm_icon_glyph_contract_test.cpp
     qm_phosphor_resource_contract_test.cpp
     qm_icon_weight_contract_test.cpp
