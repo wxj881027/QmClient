@@ -9,7 +9,7 @@
 #include <game/client/ui_rect.h>
 
 void QmSponsorChatAddPlatinumSplits(CTextCursor &Cursor, const char *pText, float Alpha);
-void QmRenderSponsorChatText(ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, vec2 PixelSize, float X, float Y, float FontSize, float SweepProgress, bool DrawGlow = true);
+void QmRenderSponsorChatText(ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, vec2 PixelSize, float X, float Y, float FontSize, const SQmSponsorChatSweep &SweepState, bool DrawGlow = true);
 
 class CQmSponsorChatRenderer
 {
@@ -27,7 +27,7 @@ public:
 	CQmSponsorChatRenderer(const CQmSponsorChatRenderer &) = delete;
 	CQmSponsorChatRenderer &operator=(const CQmSponsorChatRenderer &) = delete;
 	void Reset(IGraphics *pGraphics);
-	void Render(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, const CUIRect &Bounds, float FontSize, float Alpha, float X, float Y, float SweepProgress);
+	void Render(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, const CUIRect &Bounds, float FontSize, float Alpha, float X, float Y, const SQmSponsorChatSweep &SweepState);
 };
 
 #endif

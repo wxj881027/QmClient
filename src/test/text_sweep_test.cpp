@@ -76,28 +76,73 @@ TEST(TextSweep, ClippingPreservesAtlasCoordinatesAndFadesAtBothEdges)
 	}
 }
 
-TEST(TextSweep, OneDiagonalBandCrossesWrappedRowsWithoutRestarting)
+TEST(TextSweepLayout, EachSelectedLineContainsOnlyItsOwnGlyphs)
 {
-	const STextSweepBand Band{7.0f, 1.0f, 0.25f};
-	const auto vUpper = Clip(Glyph(), Band);
-	const auto vLower = Clip(Glyph(0.0f, 20.0f), Band);
-	ASSERT_FALSE(vUpper.empty());
-	ASSERT_FALSE(vLower.empty());
-	for(const auto &Fragment : vLower)
-	{
-		for(const auto &Vertex : Fragment)
-		{
-			EXPECT_GE(Band.Project(Vertex.m_Position), 6.0f - 0.0001f);
-			EXPECT_LE(Band.Project(Vertex.m_Position), 8.0f + 0.0001f);
-			EXPECT_LE(Vertex.m_Position.x, 3.0f + 0.0001f);
-		}
-	}
-	for(const auto &Fragment : vUpper)
-		for(const auto &Vertex : Fragment)
-			EXPECT_GE(Vertex.m_Position.x, 3.5f - 0.0001f);
+	CTextSweepLayout Layout;
+	Layout.AddQuad(1, 0);
+	Layout.AddQuad(1, 1);
+	Layout.AddQuad(2, 2);
+	Layout.AddQuad(2, 3);
+	Layout.AddQuad(2, 4);
+	Layout.AddQuad(3, 5);
+	ASSERT_EQ(Layout.LineCount(), 3);
+	EXPECT_EQ(Layout.Line(0).m_Begin, 0u);
+	EXPECT_EQ(Layout.Line(0).m_End, 2u);
+	EXPECT_EQ(Layout.Line(1).m_Begin, 2u);
+	EXPECT_EQ(Layout.Line(1).m_End, 5u);
+	EXPECT_EQ(Layout.Line(2).m_Begin, 5u);
+	EXPECT_EQ(Layout.Line(2).m_End, 6u);
 }
 
-TEST(TextSweep, TravelStartsAndEndsOutsideTheWholeText)
+TEST(TextSweepLayout, PrefixAndBlankLinesDoNotAddEmptySweepSteps)
+{
+	CTextSweepLayout Layout;
+	Layout.AddQuad(6, 0);
+	Layout.AddQuad(6, 1);
+	Layout.AddQuad(9, 2);
+	ASSERT_EQ(Layout.LineCount(), 2);
+	EXPECT_EQ(Layout.Line(0).m_Begin, 0u);
+	EXPECT_EQ(Layout.Line(0).m_End, 2u);
+	EXPECT_EQ(Layout.Line(1).m_Begin, 2u);
+	EXPECT_EQ(Layout.Line(1).m_End, 3u);
+}
+
+TEST(TextSweepLayout, ContinuingAnAppendExtendsTheExistingLine)
+{
+	CTextSweepLayout Layout;
+	Layout.AddQuad(1, 0);
+	EXPECT_EQ(Layout.Line(0).m_End, 1u);
+	Layout.AddQuad(1, 1);
+	EXPECT_EQ(Layout.LineCount(), 1);
+	EXPECT_EQ(Layout.Line(0).m_Begin, 0u);
+	EXPECT_EQ(Layout.Line(0).m_End, 2u);
+}
+
+TEST(TextSweepLayout, RebuildingDiscardsPreviousWrapRanges)
+{
+	CTextSweepLayout Layout;
+	Layout.AddQuad(1, 0);
+	Layout.AddQuad(2, 1);
+	Layout.Clear();
+	EXPECT_EQ(Layout.LineCount(), 0);
+	Layout.AddQuad(1, 0);
+	Layout.AddQuad(1, 1);
+	ASSERT_EQ(Layout.LineCount(), 1);
+	EXPECT_EQ(Layout.Line(0).m_Begin, 0u);
+	EXPECT_EQ(Layout.Line(0).m_End, 2u);
+	EXPECT_EQ(Layout.Line(1).m_Begin, Layout.Line(1).m_End);
+}
+
+TEST(TextSweepLayout, MissingLinesHaveAnEmptyRange)
+{
+	CTextSweepLayout Layout;
+	EXPECT_EQ(Layout.Line(0).m_Begin, Layout.Line(0).m_End);
+	Layout.AddQuad(1, 0);
+	for(int Index : {-1, 1, 2})
+		EXPECT_EQ(Layout.Line(Index).m_Begin, Layout.Line(Index).m_End);
+}
+
+TEST(TextSweep, TravelStartsAndEndsOutsideTheSelectedLine)
 {
 	const float Start = TextSweepCenter(0.0f, 40.0f, 2.0f, 0.0f);
 	const float End = TextSweepCenter(0.0f, 40.0f, 2.0f, 1.0f);

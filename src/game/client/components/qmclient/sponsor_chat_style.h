@@ -49,13 +49,22 @@ inline float QmSponsorChatGlowRadius(float FontSizePx)
 	return std::isfinite(FontSizePx) && FontSizePx > 0.0f ? std::clamp(FontSizePx * 0.1f, 1.0f, 2.5f) : 0.0f;
 }
 
-inline float QmSponsorChatSweepProgress(double AgeSeconds, bool LatestVisibleSponsor, bool HistoryOpen)
+struct SQmSponsorChatSweep
 {
-	if(HistoryOpen || !std::isfinite(AgeSeconds) || AgeSeconds < 0.0)
-		return -1.0f;
-	// 到达时扫过一次，之后只有最新可见赞助消息每七秒重播。
-	const double Phase = LatestVisibleSponsor ? std::fmod(AgeSeconds, 7.0) : AgeSeconds;
-	return Phase < 1.0 ? static_cast<float>(Phase) : -1.0f;
+	int m_Line = -1;
+	float m_Progress = 0.0f;
+};
+
+inline SQmSponsorChatSweep QmSponsorChatSweepState(double AgeSeconds, int LineCount, bool LatestVisibleSponsor)
+{
+	if(!std::isfinite(AgeSeconds) || AgeSeconds < 0.0 || LineCount <= 0)
+		return {};
+	// 每行扫一秒，整条消息完成后停一秒；最新可见赞助消息持续重播。
+	const double Phase = LatestVisibleSponsor ? std::fmod(AgeSeconds, static_cast<double>(LineCount) + 1.0) : AgeSeconds;
+	if(Phase >= LineCount)
+		return {};
+	const int Line = static_cast<int>(Phase);
+	return {Line, static_cast<float>(Phase - Line)};
 }
 
 inline ColorRGBA QmSponsorChatPlatinumColor(float Position, float Alpha)
