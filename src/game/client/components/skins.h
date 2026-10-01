@@ -14,6 +14,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/recent_tee_skins.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/components/qmclient/skin_load_budget.h>
 #include <game/client/components/qmclient/skin_prepared_textures.h>
@@ -540,6 +541,12 @@ public:
 	void Refresh(TSkinLoadedCallback &&SkinLoadedCallback);
 	CSkinLoadingStats LoadingStats() const;
 	CSkinList &SkinList(int Dummy);
+	const CQmRecentTeeSkins &RecentSkins() const { return m_RecentSkins; }
+	std::optional<CSkinListEntry> RecentSkinListEntry(const SQmRecentTeeSkin &Skin);
+	void RecordRecentSkin(int Dummy);
+	void StageRecentSkin(const SQmRecentTeeSkin &Skin) { m_RecentSkins.Stage(Skin); }
+	void CommitRecentSkins() { m_RecentSkins.CommitPending(); }
+	void ClearRecentSkins() { m_RecentSkins.Clear(); }
 	void RebuildSkinListPlan();
 	bool SkinListSkeletonReady() const;
 	bool SkinListReady() const;
@@ -918,7 +925,7 @@ private:
 	void FinishSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void DiscardSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void LoadSkinDirect(const char *pName);
-	const CSkinContainer *FindContainerImpl(const char *pName);
+	const CSkinContainer *FindContainerImpl(const char *pName, bool RequestLoad = true);
 	static int SkinScan(const char *pName, int IsDir, int StorageType, void *pUser);
 
 	void UpdateUnloadSkins(CSkinLoadingStats &Stats);
@@ -942,6 +949,8 @@ private:
 	static void ConAddFavoriteSkin(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemFavoriteSkin(IConsole::IResult *pResult, void *pUserData);
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
+	static void ConRecentSkin(IConsole::IResult *pResult, void *pUserData);
+	static void ConfigSaveRecentSkinsCallback(IConfigManager *pConfigManager, void *pUserData);
 	void OnConfigSave(IConfigManager *pConfigManager);
 	static void ConAddSkinQueue(IConsole::IResult *pResult, void *pUserData);
 	static void ConAddDummySkinQueue(IConsole::IResult *pResult, void *pUserData);
@@ -998,6 +1007,7 @@ private:
 	std::vector<CSkinDirectoryScanJob::SResult::SEntry> m_vPendingSkinDirectoryEntries;
 	size_t m_SkinDirectoryMergeCursor = 0;
 	std::set<std::string> m_Favorites;
+	CQmRecentTeeSkins m_RecentSkins;
 	std::array<std::vector<CSkinQueueEntry>, NUM_DUMMIES> m_aSkinQueue;
 	std::vector<CSkinQueuePreset> m_vSkinQueuePresets;
 	std::array<int, NUM_DUMMIES> m_aAppliedSkinQueuePresetIndex = {};

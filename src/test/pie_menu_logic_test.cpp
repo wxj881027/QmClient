@@ -16,20 +16,34 @@ namespace
 		Enabled[static_cast<size_t>(EOption::FOLLOW)] = false;
 		std::array<EOption, OPTION_COUNT> Options;
 		const int Count = BuildVisibleOptions(Enabled, Options);
-		ASSERT_EQ(Count, 8);
+		ASSERT_EQ(Count, static_cast<int>(OPTION_COUNT) - 2);
 		EXPECT_EQ(Options[6], EOption::INVITE_TEAM);
 		EXPECT_EQ(Options[7], EOption::SCORE);
+		EXPECT_EQ(Options[8], EOption::COPY_NAME);
 		for(int Index = 0; Index < Count; ++Index)
 			EXPECT_EQ(SectorAtAngle(-90.0f + (Index + 0.5f) * 360.0f / Count, -90.0f, Count), Index);
 	}
 
 	TEST(PieMenuOptions, AngleWrapAndEmptyRingDoNotSelectInvalidActions)
 	{
-		EXPECT_EQ(SectorAtAngle(-90.0f, -90.0f, 10), 0);
-		EXPECT_EQ(SectorAtAngle(270.0f, -90.0f, 10), 0);
-		EXPECT_EQ(SectorAtAngle(-91.0f, -90.0f, 10), 9);
+		const int Count = static_cast<int>(OPTION_COUNT);
+		EXPECT_EQ(SectorAtAngle(-90.0f, -90.0f, Count), 0);
+		EXPECT_EQ(SectorAtAngle(270.0f, -90.0f, Count), 0);
+		EXPECT_EQ(SectorAtAngle(-91.0f, -90.0f, Count), Count - 1);
 		EXPECT_EQ(SectorAtAngle(0.0f, -90.0f, 0), -1);
-		EXPECT_EQ(SectorAtAngle(std::numeric_limits<float>::quiet_NaN(), -90.0f, 10), -1);
+		EXPECT_EQ(SectorAtAngle(std::numeric_limits<float>::quiet_NaN(), -90.0f, Count), -1);
+	}
+
+	TEST(PieMenuOptions, CopyNameCanBeHiddenWithoutChangingTheOtherActions)
+	{
+		std::array<bool, OPTION_COUNT> Enabled;
+		Enabled.fill(true);
+		Enabled[static_cast<size_t>(EOption::COPY_NAME)] = false;
+		std::array<EOption, OPTION_COUNT> Options{};
+		const int Count = BuildVisibleOptions(Enabled, Options);
+		ASSERT_EQ(Count, static_cast<int>(OPTION_COUNT) - 1);
+		EXPECT_EQ(Options[0], EOption::FRIEND);
+		EXPECT_EQ(Options[Count - 1], EOption::SCORE);
 	}
 
 	TEST(PieMenuOptions, EveryActionCanBeTheOnlyVisibleOption)

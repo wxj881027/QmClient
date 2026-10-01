@@ -109,6 +109,9 @@ private:
 		bool m_LastCollapsed = false;
 		bool m_DefaultCollapsed = false;
 		char m_DefaultCollapseButtonId = 0;
+		char m_WidthButtonId = 0;
+		int m_RestoreColumn = -1;
+		int m_RestoreOrder = -1;
 		bool m_PointerInsideLastFrame = false;
 		bool m_SubtitleMotionWasActive = false;
 		bool m_SubtitleVisibleDuringMotion = false;

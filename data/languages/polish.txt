@@ -1991,6 +1991,9 @@ Clear local console
 Clear note
 == Wyczyść notatkę
 
+Clear recent skins
+== Wyczyść ostatnio używane skórki
+
 Clear remote console
 == Wyczyść zdalną konsolę
 
@@ -2134,6 +2137,9 @@ Comma-separated list of banned clients to be kicked on join
 
 Command
 == Komenda
+
+Command completion
+== Uzupełnianie poleceń
 
 Command executed by tc_mod_weapon, target id appended at end
 == Polecenie wykonywane przez tc_mod_weapon, docelowe id dodawane na końcu
@@ -2297,8 +2303,8 @@ Configure QmClient HUD elements
 Configure remaining DDNet client preferences
 == Configure remaining DDNet client preferences
 
-Configure skin colors, eyes, and filters
-== Configure skin colors, eyes, and filters
+Configure skin downloads and prefixes
+== Ustaw pobieranie i prefiksy skórek
 
 Configure sound and audio packs
 == Skonfiguruj dźwięk i pakiety audio
@@ -2482,6 +2488,9 @@ Copy info
 
 Copy name
 == Kopiuj nazwę
+
+Copy name option color
+== Kolor opcji kopiowania nazwy
 
 Copy skin
 == Kopiuj skin
@@ -2953,6 +2962,9 @@ Default output open failed
 
 Default preset
 == Domyślny preset
+
+Default width
+== Domyślna szerokość
 
 Default zoom
 == Domyślne przybliżenie
@@ -4732,6 +4744,9 @@ Full map listen in same room
 
 Full quality nameplate count
 == Liczba tabliczek z pełną jakością
+
+Full width
+== Pełna szerokość
 
 Full: each enabled animation category uses its complete transition
 == Pełne: każda włączona kategoria animacji używa pełnego przejścia
@@ -6947,6 +6962,9 @@ Multi-View
 Multiple exact Axiom players found
 == Znaleziono wielu graczy Axiom z dokładnym dopasowaniem
 
+Music player volume
+== Głośność odtwarzacza muzyki
+
 Mute
 == Wycisz
 
@@ -7247,6 +7265,9 @@ Next
 Next page in console
 == Następna strona w konsoli
 
+Next track
+== Następny utwór
+
 Next weapon
 == Następna broń
 
@@ -7402,6 +7423,9 @@ No rank 1 replay was found for this map
 
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 == Nie ma jeszcze zapisanych nagrań rangi 1. Wyszukaj i pobierz je na stronie Rank 1.
+
+No recently used skins
+== Brak ostatnio używanych skórek
 
 No results
 == Brak wyników
@@ -8510,6 +8534,9 @@ Previous
 Previous page in console
 == Poprzednia strona w konsoli
 
+Previous track
+== Poprzedni utwór
+
 Primary
 == Główne
 
@@ -9521,6 +9548,9 @@ Restart the client
 Restarting. Please wait…
 == Restartowanie. Proszę czekać…
 
+Restore a recently used Tee skin
+== Przywróć ostatnio używaną skórkę Tee
+
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == Przywrócić zapis dla dwóch graczy? /qm Yes wczyta najnowszy; /qm Yes numer wybierze inny; /qm No odrzuci.
 
@@ -9700,9 +9730,6 @@ Save all changes before switching selected button?
 
 Save all changes before turning off the editor?
 == Zapisać wszystkie zmiany przed wyłączeniem edytora?
-
-Save as
-== Zapisz jako
 
 Save asset before closing?
 == Zapisać zasób przed zamknięciem?
@@ -10313,6 +10340,12 @@ Show %s group
 Show a small view of the dummy
 == Pokaż mały podgląd kukły
 
+Show advanced nameplate settings without changing effect values
+== Pokaż zaawansowane ustawienia nazw bez zmiany wartości efektów
+
+Show advanced options
+== Pokaż opcje zaawansowane
+
 Show advanced title settings (collapsing keeps configured effects)
 == Pokaż zaawansowane ustawienia tytułu (zwinięcie zachowuje skonfigurowane efekty)
 
@@ -10427,6 +10460,9 @@ Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 == Pokaż combo przy trafieniu gracza hakiem lub młotkiem w ciągu 2 sekund
 
+Show command completion in chat
+== Pokaż uzupełnianie poleceń na czacie
+
 Show compact vote HUD
 == Pokaż kompaktowy HUD głosowania
 
@@ -10435,6 +10471,9 @@ Show configurable outlines around map tiles
 
 Show coordinates above players
 == Pokaż współrzędne nad graczami
+
+Show copy name option
+== Pokaż opcję kopiowania nazwy
 
 Show copy skin option
 == Pokaż opcję kopiowania skórki
@@ -13604,6 +13643,9 @@ Voice whitelist (comma-separated)
 Volume
 == Głośność
 
+Volume unavailable for this player
+== Głośność tego odtwarzacza jest niedostępna
+
 Vote a map by name
 == Głosuj na mapę po nazwie
 
@@ -14547,18 +14589,6 @@ S
 [Friend auto follow]
 Follow this friend across servers
 == Podążaj za tym znajomym między serwerami
-
-[Friend auto follow]
-Following %s
-== Podążanie za %s
-
-[Friend auto follow]
-Following %s: switching in %.0fs
-== Podążanie za %s: przełączenie za %.0fs
-
-[Friend auto follow]
-Stop
-== Zatrzymaj
 
 [Friend auto follow]
 Stop following this friend

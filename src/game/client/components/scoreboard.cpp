@@ -356,6 +356,7 @@ void CScoreboard::OnReset()
 
 void CScoreboard::OnRelease()
 {
+	m_MediaControls.Cancel(*Ui());
 	m_Active = false;
 	m_Visibility = 0.0f;
 	m_OpenTime = 0.0f;
@@ -1809,6 +1810,8 @@ void CScoreboard::RenderRecordingNotification(float x)
 void CScoreboard::OnRender()
 {
 	m_RenderInteractions = false;
+	if(!IsActive() || !m_MouseUnlocked || GameClient()->m_Menus.IsActive() || GameClient()->m_Chat.IsActive() || GetQmFocusModeDecisions().m_HideScoreboard)
+		m_MediaControls.Cancel(*Ui());
 
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
@@ -1946,7 +1949,9 @@ void CScoreboard::OnRender()
 
 	// Scoreboard width: clamp to screen width for narrow aspect ratios
 	const float ScreenMargin = 10.0f;
-	const float MaxScoreboardWidth = maximum(200.0f, Screen.w - ScreenMargin);
+	CSystemMediaControls::SState MediaState;
+	const bool HasMedia = GameClient()->m_SystemMediaControls.GetStateSnapshot(MediaState);
+	const float MaxScoreboardWidth = HasMedia ? QmScoreboardMediaMaxWidth(Screen.w, true) : maximum(200.0f, Screen.w - ScreenMargin);
 	const int ScoreboardColumns = ScrollMode ? 1 : (Teams ? 2 : (NumPlayers <= 16 ? 1 : (NumPlayers <= 64 ? 2 : 3)));
 	const float ClientBrandExtraWidth = g_Config.m_QmClientShowBadge ? maximum(TextRender()->TextWidth(12.0f, "Qm"), TextRender()->TextWidth(12.0f, "Arg")) + CLIENT_BRAND_LABEL_GAP : 0.0f;
 	const float BaseScoreboardSmallWidth = (g_Config.m_QmScoreboardPoints ? (450.0f + 10.0f) : 450.0f) + ClientBrandExtraWidth;
@@ -2305,6 +2310,8 @@ void CScoreboard::OnRender()
 	}
 
 	RenderSoundMuteBar(ScoreboardContent);
+	m_MediaControls.Render(*Ui(), *TextRender(), GameClient()->m_Tooltips, GameClient()->m_SystemMediaControls, ScoreboardContent,
+		ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha, ScoreboardUiColorSurface(BackgroundAlphaFinal));
 
 	CUIRect Spectators = {ScoreboardContent.x, ScoreboardContent.y + ScoreboardContent.h + 5.0f, ScoreboardContent.w, 100.0f};
 	if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
@@ -2329,6 +2336,7 @@ void CScoreboard::OnRender()
 		RenderGoals(Goals);
 	}
 	RenderFooter(Spectators);
+	GameClient()->m_Voting.RenderScoreboard(ScoreboardContent, ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha);
 
 	if(!g_Config.m_ClShowhudTimer)
 		RenderRecordingNotification((Screen.w / 7) * 4 + 10);

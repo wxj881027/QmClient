@@ -21,6 +21,8 @@
 
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/prepared_media_art.h>
+#include <game/client/components/qmclient/media_volume_logic.h>
+#include <game/client/components/qmclient/player_volume.h>
 
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Foundation.h>
@@ -56,6 +58,9 @@ struct SPlainState
 	bool m_CanPause = false;
 	bool m_CanPrev = false;
 	bool m_CanNext = false;
+	bool m_CanSetVolume = false;
+	float m_Volume = 0.0f;
+	uint64_t m_VolumeGeneration = 0;
 	CSystemMediaControls::EPlaybackState m_PlaybackState = CSystemMediaControls::EPlaybackState::Unknown;
 	bool m_Playing = false;
 	char m_aSourceAppId[128] = {};
@@ -77,12 +82,19 @@ enum class ECommand
 	Next,
 };
 
+struct SMediaCommand
+{
+	ECommand m_Type;
+	std::string m_SourceAppId;
+};
+
 struct CSystemMediaControls::SShared
 {
 	std::mutex m_Mutex;
 	SPlainState m_State{};
 	bool m_HasMedia = false;
-	std::deque<ECommand> m_Commands;
+	std::deque<SMediaCommand> m_Commands;
+	QmMediaVolume::CPendingVolume m_PendingVolume;
 	std::unique_ptr<CQmPreparedMediaArt> m_pAlbumArt;
 	int m_AlbumArtWidth = 0;
 	int m_AlbumArtHeight = 0;
@@ -208,6 +220,8 @@ static void ResetSharedState(CSystemMediaControls::SShared *pShared, SPlainState
 	std::scoped_lock Lock(pShared->m_Mutex);
 	pShared->m_State = State;
 	pShared->m_HasMedia = false;
+	pShared->m_PendingVolume.Reset();
+	pShared->m_Commands.clear();
 }
 
 static void ApplyRoundedMask(std::vector<uint8_t> &Pixels, int Width, int Height, float Radius);
@@ -516,6 +530,7 @@ void CSystemMediaControls::ThreadMain()
 		bool HasMedia = false;
 		std::string AlbumArtKey;
 		SystemMediaControls::CTimelineGenerationTracker TimelineGenerationTracker;
+		CQmPlayerVolume PlayerVolume;
 		auto LastPropsUpdate = std::chrono::steady_clock::now() - std::chrono::seconds(2);
 
 		while(!m_StopThread)
@@ -524,6 +539,7 @@ void CSystemMediaControls::ThreadMain()
 			{
 				if(!g_Config.m_QmSmtcEnable)
 				{
+					PlayerVolume.Reset();
 					if(HasMedia)
 						ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
 					std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -566,6 +582,7 @@ void CSystemMediaControls::ThreadMain()
 				Session = Manager.GetCurrentSession();
 				if(!Session)
 				{
+					PlayerVolume.Reset();
 					if(HasMedia)
 					{
 						ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
@@ -624,6 +641,21 @@ void CSystemMediaControls::ThreadMain()
 					TimelineGenerationTracker.Reset();
 				}
 				str_copy(State.m_aSourceAppId, SourceAppId.c_str(), sizeof(State.m_aSourceAppId));
+
+				auto Volume = PlayerVolume.Refresh(SourceAppId);
+				std::optional<QmMediaVolume::SRequest> VolumeRequest;
+				{
+					std::scoped_lock Lock(m_pShared->m_Mutex);
+					VolumeRequest = m_pShared->m_PendingVolume.Take(Volume.m_Generation);
+				}
+				if(VolumeRequest && Volume.m_Available)
+				{
+					PlayerVolume.SetVolume(VolumeRequest->m_Generation, VolumeRequest->m_Level);
+					Volume = PlayerVolume.Refresh(SourceAppId);
+				}
+				State.m_CanSetVolume = Volume.m_Available;
+				State.m_Volume = Volume.m_Level;
+				State.m_VolumeGeneration = Volume.m_Generation;
 
 				const auto Timeline = Session.GetTimelineProperties();
 				if(!Timeline)
@@ -742,18 +774,21 @@ void CSystemMediaControls::ThreadMain()
 					m_pShared->m_HasMedia = HasMedia;
 				}
 
-				std::deque<ECommand> Commands;
+				std::deque<SMediaCommand> Commands;
 				{
 					std::scoped_lock Lock(m_pShared->m_Mutex);
 					Commands.swap(m_pShared->m_Commands);
 				}
 				if(Session)
 				{
-					for(const auto Command : Commands)
+					for(const auto &Command : Commands)
 					{
 						try
 						{
-							switch(Command)
+							const auto CurrentSession = Manager.GetCurrentSession();
+							if(!g_Config.m_QmSmtcEnable || !CurrentSession || Command.m_SourceAppId != SourceAppId || winrt::to_string(CurrentSession.SourceAppUserModelId()) != SourceAppId)
+								continue;
+							switch(Command.m_Type)
 							{
 							case ECommand::Prev:
 								Session.TrySkipPreviousAsync();
@@ -776,10 +811,12 @@ void CSystemMediaControls::ThreadMain()
 
 			catch(const winrt::hresult_error &)
 			{
+				PlayerVolume.Reset();
 				ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
 			}
 			catch(...)
 			{
+				PlayerVolume.Reset();
 				ResetSharedState(m_pShared.get(), State, HasMedia, AlbumArtKey);
 			}
 
@@ -907,6 +944,9 @@ void CSystemMediaControls::OnUpdate()
 		m_pWinrt->m_State.m_CanPause = SharedState.m_CanPause;
 		m_pWinrt->m_State.m_CanPrev = SharedState.m_CanPrev;
 		m_pWinrt->m_State.m_CanNext = SharedState.m_CanNext;
+		m_pWinrt->m_State.m_CanSetVolume = SharedState.m_CanSetVolume;
+		m_pWinrt->m_State.m_Volume = SharedState.m_Volume;
+		m_pWinrt->m_State.m_VolumeGeneration = SharedState.m_VolumeGeneration;
 		m_pWinrt->m_State.m_PlaybackState = SharedState.m_PlaybackState;
 		m_pWinrt->m_State.m_Playing = SharedState.m_Playing;
 		str_copy(m_pWinrt->m_State.m_aSourceAppId, SharedState.m_aSourceAppId, sizeof(m_pWinrt->m_State.m_aSourceAppId));
@@ -961,11 +1001,11 @@ void CSystemMediaControls::Previous()
 	if(!g_Config.m_QmSmtcEnable)
 		return;
 
-	if(!m_pShared)
+	if(!m_pShared || !m_pWinrt || !m_pWinrt->m_HasMedia)
 		return;
 
 	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back(ECommand::Prev);
+	m_pShared->m_Commands.push_back({ECommand::Prev, m_pWinrt->m_State.m_aSourceAppId});
 #endif
 }
 
@@ -975,11 +1015,11 @@ void CSystemMediaControls::PlayPause()
 	if(!g_Config.m_QmSmtcEnable)
 		return;
 
-	if(!m_pShared)
+	if(!m_pShared || !m_pWinrt || !m_pWinrt->m_HasMedia)
 		return;
 
 	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back(ECommand::PlayPause);
+	m_pShared->m_Commands.push_back({ECommand::PlayPause, m_pWinrt->m_State.m_aSourceAppId});
 #endif
 }
 
@@ -989,10 +1029,21 @@ void CSystemMediaControls::Next()
 	if(!g_Config.m_QmSmtcEnable)
 		return;
 
-	if(!m_pShared)
+	if(!m_pShared || !m_pWinrt || !m_pWinrt->m_HasMedia)
 		return;
 
 	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back(ECommand::Next);
+	m_pShared->m_Commands.push_back({ECommand::Next, m_pWinrt->m_State.m_aSourceAppId});
+#endif
+}
+
+void CSystemMediaControls::SetVolume(uint64_t Generation, float Volume)
+{
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
+	if(!g_Config.m_QmSmtcEnable || !m_pShared)
+		return;
+	std::scoped_lock Lock(m_pShared->m_Mutex);
+	if(m_pShared->m_HasMedia && m_pShared->m_State.m_CanSetVolume && m_pShared->m_State.m_VolumeGeneration == Generation)
+		m_pShared->m_PendingVolume.Set(Generation, Volume);
 #endif
 }

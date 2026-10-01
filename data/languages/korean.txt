@@ -1991,6 +1991,9 @@ Clear local console
 Clear note
 == 메모 지우기
 
+Clear recent skins
+== 최근 사용한 스킨 기록 지우기
+
 Clear remote console
 == 원격 콘솔 지우기
 
@@ -2134,6 +2137,9 @@ Comma-separated list of banned clients to be kicked on join
 
 Command
 == 명령어
+
+Command completion
+== 명령어 자동 완성
 
 Command executed by tc_mod_weapon, target id appended at end
 == tc_mod_weapon이 실행하는 명령, 대상 ID가 끝에 추가됨
@@ -2297,8 +2303,8 @@ Configure QmClient HUD elements
 Configure remaining DDNet client preferences
 == Configure remaining DDNet client preferences
 
-Configure skin colors, eyes, and filters
-== Configure skin colors, eyes, and filters
+Configure skin downloads and prefixes
+== 스킨 다운로드 및 접두사 설정
 
 Configure sound and audio packs
 == 사운드 및 오디오 팩 구성
@@ -2482,6 +2488,9 @@ Copy info
 
 Copy name
 == 이름 복사
+
+Copy name option color
+== 이름 복사 항목 색상
 
 Copy skin
 == 스킨 복사
@@ -2953,6 +2962,9 @@ Default output open failed
 
 Default preset
 == 기본 프리셋
+
+Default width
+== 기본 너비
 
 Default zoom
 == 기본 줌
@@ -4732,6 +4744,9 @@ Full map listen in same room
 
 Full quality nameplate count
 == 전체 품질을 유지할 네임플레이트 수
+
+Full width
+== 전체 너비
 
 Full: each enabled animation category uses its complete transition
 == 전체: 활성화된 각 애니메이션 범주에 전체 전환을 사용합니다
@@ -6947,6 +6962,9 @@ Multi-View
 Multiple exact Axiom players found
 == 정확히 일치하는 Axiom 플레이어가 여러 명 있습니다
 
+Music player volume
+== 음악 플레이어 음량
+
 Mute
 == 음소거
 
@@ -7247,6 +7265,9 @@ Next
 Next page in console
 == 콘솔 다음 페이지
 
+Next track
+== 다음 곡
+
 Next weapon
 == 다음 무기
 
@@ -7402,6 +7423,9 @@ No rank 1 replay was found for this map
 
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 == 캐시된 Rank 1 리플레이가 아직 없습니다. Rank 1 페이지에서 검색하여 다운로드할 수 있습니다.
+
+No recently used skins
+== 최근 사용한 스킨 없음
 
 No results
 == 결과 없음
@@ -8510,6 +8534,9 @@ Previous
 Previous page in console
 == 콘솔에서 이전 페이지
 
+Previous track
+== 이전 곡
+
 Primary
 == 기본
 
@@ -9521,6 +9548,9 @@ Restart the client
 Restarting. Please wait…
 == 재시작 중입니다. 잠시 기다려 주세요…
 
+Restore a recently used Tee skin
+== 최근 사용한 Tee 스킨 복원
+
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 2인 저장 데이터를 복원할까요? /qm Yes는 최신 데이터, /qm Yes 번호는 다른 데이터 선택, /qm No는 알림 닫기입니다.
 
@@ -9700,9 +9730,6 @@ Save all changes before switching selected button?
 
 Save all changes before turning off the editor?
 == 편집기를 끄기 전에 모든 변경 사항을 저장하시겠습니까?
-
-Save as
-== 다른 이름으로 저장
 
 Save asset before closing?
 == 닫기 전에 에셋을 저장하시겠습니까?
@@ -10313,6 +10340,12 @@ Show %s group
 Show a small view of the dummy
 == 더미의 작은 화면 표시
 
+Show advanced nameplate settings without changing effect values
+== 효과 값을 변경하지 않고 이름표 고급 설정 표시
+
+Show advanced options
+== 고급 옵션 표시
+
 Show advanced title settings (collapsing keeps configured effects)
 == 고급 칭호 설정 표시 (접어도 설정한 효과 유지)
 
@@ -10427,6 +10460,9 @@ Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 == 2초 내에 연속으로 갈고리나 망치로 플레이어를 맞추면 콤보 알림 표시
 
+Show command completion in chat
+== 채팅에서 명령어 자동 완성 표시
+
 Show compact vote HUD
 == 소형 투표 HUD 표시
 
@@ -10435,6 +10471,9 @@ Show configurable outlines around map tiles
 
 Show coordinates above players
 == 플레이어 위에 좌표 표시
+
+Show copy name option
+== 이름 복사 항목 표시
 
 Show copy skin option
 == 스킨 복사 항목 표시
@@ -13604,6 +13643,9 @@ Voice whitelist (comma-separated)
 Volume
 == 볼륨
 
+Volume unavailable for this player
+== 이 플레이어의 음량을 조절할 수 없습니다
+
 Vote a map by name
 == 이름으로 맵 투표
 
@@ -14547,18 +14589,6 @@ S
 [Friend auto follow]
 Follow this friend across servers
 == 서버 간 친구 따라가기
-
-[Friend auto follow]
-Following %s
-== %s 님 따라가는 중
-
-[Friend auto follow]
-Following %s: switching in %.0fs
-== %s 님 따라가는 중: %.0f 초 후 전환
-
-[Friend auto follow]
-Stop
-== 중지
 
 [Friend auto follow]
 Stop following this friend

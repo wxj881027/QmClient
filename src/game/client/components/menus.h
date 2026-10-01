@@ -2347,8 +2347,17 @@ protected:
 	void RenderThemeSelection(CUIRect MainView, const SSettingsContentMetrics *pMetrics = nullptr);
 	void RenderSettingsGeneral(CUIRect MainView);
 	void RenderSettingsPlayer(CUIRect MainView);
-	void RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, float BodySize = ui_token::font::BODY);
+	void RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, float BodySize = ui_token::font::BODY, bool StackFields = false);
 	void RenderSettingsTee(CUIRect MainView);
+	bool ProcessSettingsTeeEditorInput(CUIRect Content, const SSettingsContentMetrics &Metrics);
+	void CommitSettingsTeeSkinEdits();
+	void RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetrics &Metrics);
+	void RenderSettingsTeeOptions(CUIRect Content, const SSettingsContentMetrics &Metrics);
+	void RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMetrics &Metrics);
+	void AdvanceSettingsTeeSkinListOffscreen();
+	void RenderSettingsTeeSkinQueue(CUIRect Content, const SSettingsContentMetrics &Metrics);
+	void RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetrics &Metrics);
+	void RefreshSettingsTeeSkins(int VisibleRows = 0, const char *pFirstVisibleSkin = "");
 	void RenderSettingsTee7(CUIRect MainView);
 	void RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentMetrics &Metrics);
 	void RenderSettingsTeeCustom7(CUIRect MainView, const SSettingsContentMetrics &Metrics);

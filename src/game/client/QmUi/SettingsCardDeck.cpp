@@ -1,12 +1,16 @@
 #include "SettingsCardDeck.h"
 
 #include "QmAnimResolve.h"
+#include "QmCardRegistry.h"
 #include "SettingsCardCollapseState.h"
+#include "SettingsCardWidth.h"
 #include "UiContext.h"
 
 #include <base/system.h>
 
 #include <game/client/ui_scrollregion.h>
+#include <game/client/components/tooltips.h>
+#include <game/localization.h>
 
 #include <algorithm>
 #include <array>
@@ -331,24 +335,21 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 
 		if(DrawLayout.m_TwoColumns && !aDisplayColumns[0].empty())
 		{
-			const size_t NumLayers = std::max({aDisplayColumns[0].size(), aDisplayColumns[1].size(), aDisplayColumns[2].size()});
 			CSettingsCardColumnFramePlan LeftPlan(DrawLayout.m_aColumns[0].y, DrawLayout.m_CardGap);
 			CSettingsCardColumnFramePlan RightPlan(DrawLayout.m_aColumns[1].y, DrawLayout.m_CardGap);
-			for(size_t Layer = 0; Layer < NumLayers; ++Layer)
-			{
-				if(Layer < aDisplayColumns[1].size())
-					AppendCard(aDisplayColumns[1][Layer], 1, DrawLayout.m_aColumns[0], LeftPlan);
-				if(Layer < aDisplayColumns[2].size())
-					AppendCard(aDisplayColumns[2][Layer], 2, DrawLayout.m_aColumns[1], RightPlan);
-
-				if(Layer < aDisplayColumns[0].size())
+			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) {
+				if(Column == 1)
+					AppendCard(StateIndex, Column, DrawLayout.m_aColumns[0], LeftPlan);
+				else if(Column == 2)
+					AppendCard(StateIndex, Column, DrawLayout.m_aColumns[1], RightPlan);
+				else
 				{
 					CSettingsCardColumnFramePlan FullPlan(std::max(LeftPlan.CursorY(), RightPlan.CursorY()), DrawLayout.m_CardGap);
-					AppendCard(aDisplayColumns[0][Layer], 0, DrawLayout.m_ContentViewport, FullPlan);
+					AppendCard(StateIndex, 0, DrawLayout.m_ContentViewport, FullPlan);
 					LeftPlan.SetCursorY(FullPlan.CursorY());
 					RightPlan.SetCursorY(FullPlan.CursorY());
 				}
-			}
+			}, VisualOptions.m_LeadingFullWidthCards);
 		}
 		else if(DrawLayout.m_TwoColumns)
 		{
@@ -362,7 +363,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			CSettingsCardColumnFramePlan ColumnPlan(DrawLayout.m_ContentViewport.y, DrawLayout.m_CardGap);
 			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) {
 				AppendCard(StateIndex, Column, DrawLayout.m_ContentViewport, ColumnPlan);
-			});
+			}, VisualOptions.m_LeadingFullWidthCards);
 		}
 	};
 
@@ -390,6 +391,16 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			const SSettingsCardFrame PreLayoutFrame = ResolveSettingsCardDrawFrame(Card.m_Frame, Runtime.m_LastDrawOffsetX, Runtime.m_LastDrawOffsetY);
 			const bool ControllerVisible = pScrollRegion == nullptr || !pScrollRegion->RectClipped(PreLayoutFrame.m_Rect) || Card.m_pDefinition->m_RenderWhenClipped;
 			bool CardGeometryChanged = false;
+			const CUIRect WidthButton = SettingsCardWidthButtonRect(PreLayoutFrame);
+			if(ControllerVisible && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !m_Drag.Active() &&
+				Ctx.m_pUi->DoButtonLogic(&Runtime.m_WidthButtonId, Card.m_Column == 0, &WidthButton, BUTTONFLAG_LEFT))
+			{
+				const auto *pDefault = qm_card_registry::FindByStableId(Card.m_pDefinition->m_Spec.m_pStableId);
+				const int DefaultColumn = pDefault && pDefault->m_DefaultColumn == qm_card_registry::ECardColumn::Right ? 2 : 1;
+				CardGeometryChanged = ToggleSettingsCardWidth(Model, Card.m_pDefinition->m_Spec.m_pStableId, DefaultColumn, Runtime.m_RestoreColumn, Runtime.m_RestoreOrder);
+				Result.m_OrderChanged = Result.m_OrderChanged || CardGeometryChanged;
+				Ctx.m_pUi->ClosePopupMenus();
+			}
 			const bool HasCustomCollapsedState = static_cast<bool>(Card.m_pDefinition->m_IsCollapsed);
 			const bool CollapsedBeforeHeader = SettingsCardDeckResolveCollapsed(HasCustomCollapsedState, HasCustomCollapsedState && Card.m_pDefinition->m_IsCollapsed(), Runtime.m_DefaultCollapsed);
 			bool HeaderGeometryChanged = false;
@@ -400,7 +411,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			{
 				m_FrameRuntime.CountPreLayoutInput();
 				HeaderGeometryChanged = Card.m_pDefinition->m_PreLayoutHeaderInput(PreLayoutFrame, CollapsedBeforeHeader);
-				CardGeometryChanged = HeaderGeometryChanged;
+				CardGeometryChanged = CardGeometryChanged || HeaderGeometryChanged;
 			}
 			else if((ControllerVisible || HasActiveHeaderContinuation) && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && SettingsCardDeckUsesDefaultCollapseControl(HasCustomCollapsedState, static_cast<bool>(Card.m_pDefinition->m_PreLayoutHeaderInput)) &&
 				Ctx.m_pUi->DoButtonLogic(&Runtime.m_DefaultCollapseButtonId, CollapsedBeforeHeader, &PreLayoutFrame.m_HandleRect, BUTTONFLAG_LEFT))
@@ -539,7 +550,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 		for(const SPreparedCard &Card : m_vPreparedCards)
 		{
 			const bool InHeader = PointInRect(Card.m_Frame.m_HeaderRect, Input.m_MouseX, Input.m_MouseY);
-			const bool InHeaderAction = PointInRect(Card.m_Frame.m_HandleRect, Input.m_MouseX, Input.m_MouseY);
+			const bool InHeaderAction = PointInRect(Card.m_Frame.m_HandleRect, Input.m_MouseX, Input.m_MouseY) || PointInRect(SettingsCardWidthButtonRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY);
 			if(InHeader && !InHeaderAction)
 			{
 				m_Drag.m_StateIndex = Card.m_StateIndex;
@@ -721,8 +732,31 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			State.m_HoverFeedbackEnabled = !m_SuppressHoverFeedbackOnce && !ScrollMovedThisFrame && !EntryPositionActive &&
 						       !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive;
 			bool PointerInsideDrawFrame = false;
-			SettingsCard(Ctx, Card.m_Frame, Card.m_pDefinition->m_Spec, State, VisualOptions,
-				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_Render : FSettingsCardRender{}, Card.m_pDefinition->m_HeaderAction,
+			SSettingsCardFrame Frame = Card.m_Frame;
+			Frame.m_TitleRect.w = std::max(0.0f, Frame.m_TitleRect.w - Frame.m_HandleRect.w - 4.0f);
+			Frame.m_SubtitleRect.w = Frame.m_TitleRect.w;
+			const auto HeaderAction = [&](const SSettingsCardFrame &DrawFrame, bool IsCollapsed) {
+				if(Card.m_pDefinition->m_HeaderAction)
+					Card.m_pDefinition->m_HeaderAction(DrawFrame, IsCollapsed);
+				const CUIRect Button = SettingsCardWidthButtonRect(DrawFrame);
+				if(Ctx.m_pTextRender != nullptr && Ctx.m_pUi != nullptr)
+				{
+					const auto Font = Ctx.m_pTextRender->GetFontPreset();
+					const auto Flags = Ctx.m_pTextRender->GetRenderFlags();
+					const ColorRGBA Color = Ctx.m_pTextRender->GetTextColor();
+					Ctx.m_pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
+					Ctx.m_pTextRender->SetRenderFlags(TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | TEXT_RENDER_FLAG_NO_X_BEARING | TEXT_RENDER_FLAG_NO_Y_BEARING);
+					Ctx.m_pTextRender->TextColor(Color.WithMultipliedAlpha(State.m_DrawAlpha));
+					Ctx.m_pUi->DoLabel(&Button, Card.m_Column == 0 ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, Button.h * 0.65f, TEXTALIGN_MC);
+					Ctx.m_pTextRender->SetFontPreset(Font);
+					Ctx.m_pTextRender->SetRenderFlags(Flags);
+					Ctx.m_pTextRender->TextColor(Color);
+					if(Ctx.m_pTooltips != nullptr)
+						Ctx.m_pTooltips->DoSmallToolTip(&Runtime.m_WidthButtonId, &Button, Card.m_Column == 0 ? Localize("Default width") : Localize("Full width"), 10.0f * Ctx.m_UiScale);
+				}
+			};
+			SettingsCard(Ctx, Frame, Card.m_pDefinition->m_Spec, State, VisualOptions,
+				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_Render : FSettingsCardRender{}, HeaderAction,
 				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_RenderMeasured : FSettingsCardRenderMeasured{}, &PointerInsideDrawFrame);
 			Runtime.m_PointerInsideLastFrame = PointerInsideDrawFrame;
 			if(Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly())

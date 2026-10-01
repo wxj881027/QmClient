@@ -7,6 +7,7 @@
 #include <engine/shared/localization.h>
 #include <engine/textrender.h>
 
+#include <game/client/components/pie_menu_logic.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -23,7 +24,7 @@ namespace qm_card_catalog
 		if(!Enabled)
 			return Row + FollowHeight;
 		const float PreviewHeight = std::min(ContentWidth, std::clamp(ContentWidth * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f)) * 0.8f;
-		return Row * 15.0f + FollowHeight + BodySize + LineSpacing * 3.0f + PreviewHeight;
+		return Row * (5.0f + static_cast<float>(qm_pie_menu::OPTION_COUNT)) + FollowHeight + BodySize + LineSpacing * 3.0f + PreviewHeight;
 	}
 
 	// 保留旧版特性文案的翻译提取标注；本地渲染逐项绘制，行数以其实际控件为准。

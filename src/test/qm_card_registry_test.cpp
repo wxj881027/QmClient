@@ -459,33 +459,7 @@ TEST(QmCardRegistry, PlayerStandardPageCardsPersistInVisualOrder)
 		(std::vector<std::string>{"deck:player-country"}));
 }
 
-// 意图：Tee 页按预览、选项、列表拆卡后，宽屏默认保持预览与选项左右排列、搜索列表全宽。
-TEST(QmCardRegistry, TeeStandardPageUsesFiveFunctionalCards)
-{
-	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	// 皮肤列表全宽独立；预览/选项一行，皮肤队列/外发光各占左右半宽一行。
-	EXPECT_EQ(Model.StableIdOrder("deck:", "tee", 0),
-		(std::vector<std::string>{"deck:tee-skin-list"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "tee", 1),
-		(std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-queue"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "tee", 2),
-		(std::vector<std::string>{"deck:tee-skin-options", "deck:tee-glow"}));
-}
 
-// 意图：Tee 拆卡后搜索词必须落到实际承载功能的卡片，而不是都跳到预览卡。
-TEST(QmCardRegistry, TeeFunctionalSearchTargetsSplitCards)
-{
-	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	for(const auto &[pQuery, pExpectedId] : {std::pair{"colors", "deck:tee-skin-options"}, std::pair{"eyes", "deck:tee-skin-options"}, std::pair{"search", "deck:tee-skin-list"}, std::pair{"filter", "deck:tee-skin-list"}})
-	{
-		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
-		const auto It = std::find_if(vResults.begin(), vResults.end(), [pExpectedId = pExpectedId](const auto &Result) {
-			return std::string(Result.m_pStableId) == pExpectedId;
-		});
-		ASSERT_NE(It, vResults.end()) << pQuery;
-		EXPECT_STREQ(It->m_Target.m_pTab, "tee");
-	}
-}
 
 TEST(QmCardRegistry, LegacyMergedFunctionalCardMigratesOnlyOldDefaultGroup)
 {
@@ -788,49 +762,6 @@ TEST(QmCardRegistry, TClientStatusBarMigrationAcceptsLegacyColonFormat)
 	EXPECT_TRUE(qm_card_order::MigrateExactLayout(Model, "tclient-status-bar", vLegacyDefaults, vTargetLayout, vAllowedIds));
 }
 
-TEST(QmCardRegistry, TeeMigrationOnlyReflowsLegacyDefaultLayout)
-{
-	const std::vector<qm_card_order::SEntry> vLegacyDefaults = {
-		{"deck:tee-identity", "tee", 0, 0},
-		{"deck:tee-skin-options", "tee", 1, 0},
-		{"deck:tee-skin-list", "tee", 2, 0},
-		{"deck:tee-skin-queue", "tee", 1, 1},
-		{"deck:tee-glow", "tee", 2, 1},
-	};
-	const char *pLegacySerialized =
-		"deck:tee-identity|tee|full|0;"
-		"deck:tee-skin-options|tee|left|0;"
-		"deck:tee-skin-list|tee|right|0;";
-	const std::vector<qm_card_order::SEntry> vTargetLayout = {
-		{"deck:tee-identity", "tee", 1, 0},
-		{"deck:tee-skin-options", "tee", 2, 0},
-		{"deck:tee-skin-list", "tee", 0, 0},
-		{"deck:tee-skin-queue", "tee", 1, 1},
-		{"deck:tee-glow", "tee", 2, 1},
-	};
-	const std::vector<const char *> vAllowedIds = {
-		"deck:tee-identity",
-		"deck:tee-skin-options",
-		"deck:tee-skin-list",
-		"deck:tee-skin-queue",
-		"deck:tee-glow",
-	};
-	qm_card_order::CModel LegacyModel;
-	LegacyModel.LoadMerged(pLegacySerialized, qm_card_registry::BuildDefaultEntries());
-	EXPECT_TRUE(qm_card_order::MigrateExactLayout(LegacyModel, "tee", vLegacyDefaults, vTargetLayout, vAllowedIds));
-	EXPECT_EQ(LegacyModel.StableIdOrder("deck:", "tee", 0), (std::vector<std::string>{"deck:tee-skin-list"}));
-	EXPECT_EQ(LegacyModel.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-queue"}));
-	EXPECT_EQ(LegacyModel.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-options", "deck:tee-glow"}));
-
-	const char *pCustomizedSerialized =
-		"deck:tee-identity|tee|left|0;"
-		"deck:tee-skin-options|tee|left|1;"
-		"deck:tee-skin-list|tee|right|0;";
-	qm_card_order::CModel CustomizedModel;
-	CustomizedModel.LoadMerged(pCustomizedSerialized, qm_card_registry::BuildDefaultEntries());
-	EXPECT_FALSE(qm_card_order::MigrateExactLayout(CustomizedModel, "tee", vLegacyDefaults, vTargetLayout, vAllowedIds));
-	EXPECT_EQ(CustomizedModel.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-queue"}));
-}
 
 TEST(QmCardRegistry, GlobalCardOrderMaximumValueFitsConsoleCommand)
 {
@@ -911,9 +842,9 @@ TEST(QmCardRegistry, GlobalCardOrderSurvivesFreshConfigManagerReload)
 
 		qm_card_order::CModel Reloaded;
 		ASSERT_TRUE(Reloaded.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries()));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 0), (std::vector<std::string>{"deck:tee-skin-list"}));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-identity", "deck:tee-skin-queue"}));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-options", "deck:tee-glow"}));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 0), (std::vector<std::string>{"deck:tee-skin-list", "deck:tee-identity"}));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 1), (std::vector<std::string>{"deck:tee-skin-options"}));
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-queue", "deck:tee-glow"}));
 		EXPECT_TRUE(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 1).empty());
 		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 2), (std::vector<std::string>{"deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"}));
 		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-profiles", 1), (std::vector<std::string>{"deck:tclient-profiles-options"}));
@@ -1148,7 +1079,7 @@ TEST(QmCardRegistry, RendererlessCardsNavigateToHostingCard)
 	};
 
 	ExpectTarget("qm:laser", "appearance-laser", "deck:appearance-laser-enhanced");
-	ExpectTarget("qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-settings");
+	ExpectTarget("qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-text");
 	ExpectTarget("qm:info", "credits-qmclient", "deck:qmclient-contributors-community");
 	// 歌词开关渲染在灵动岛卡内，因此停留在 hud 页但指向承载卡。
 	ExpectTarget("qm:lyrics", "hud", "qm:dynamic_island");
@@ -1178,7 +1109,7 @@ TEST(QmCardRegistry, SearchResultsCarryHostingCardTarget)
 	};
 
 	ExpectSearchTarget("激光", "qm:laser", "appearance-laser", "deck:appearance-laser-enhanced");
-	ExpectSearchTarget("名牌", "qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-settings");
+	ExpectSearchTarget("名牌", "qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-text");
 	ExpectSearchTarget("歌词", "qm:lyrics", "hud", "qm:dynamic_island");
 }
 

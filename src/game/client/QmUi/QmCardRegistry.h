@@ -95,6 +95,7 @@ namespace qm_card_registry
 	std::vector<qm_card_order::SEntry> BuildDefaultEntries();
 	// 旧贡献者页已删除，加载时先修复归属，避免其它布局迁移提前返回后留下不可见卡片。
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model);
+	bool RepairLegacyTeeLayout(qm_card_order::CModel &Model);
 	bool IsTClientMainCardsLegacyLeft(const qm_card_order::CModel &Model);
 	bool MoveTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model);
 	ETClientMainCardsMigrationResult MigrateTClientMainCardsToAlternatingColumns(qm_card_order::CModel &Model, char *pSerialized, int SerializedSize);

@@ -2563,15 +2563,37 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				}
 				++FriendTooltipIndex;
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
+				const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
+					(m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 				const bool InSelectedServer = m_SelectedIndex >= 0 && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == ServerBrowser()->SortedGet(m_SelectedIndex)->m_ServerIndex;
 				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), InSelectedServer, Inside);
 				DrawRoundedSurface(Ui(), Rect, Color, ColorRGBA(), 5.0f);
 				Rect.Margin(2.0f, &Rect);
 
+				if(FollowingThisFriend)
+				{
+					const char *pFollowLabel = Localize("Follow");
+					const float FollowFontSize = FontSize - 2.0f;
+					const float FollowTagWidth = minimum(TextRender()->TextWidth(FollowFontSize, pFollowLabel) + 8.0f, Rect.w * 0.4f);
+					CUIRect FollowTag;
+					Rect.VSplitRight(FollowTagWidth, &Rect, &FollowTag);
+					Rect.VSplitRight(3.0f, &Rect, nullptr);
+					FollowTag.HSplitTop(21.0f, &FollowTag, nullptr);
+					FollowTag.HMargin(4.0f, &FollowTag);
+					const ColorRGBA FollowColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiFocusColor));
+					DrawRoundedSurface(Ui(), FollowTag, FollowColor.WithAlpha(0.3f), FollowColor.WithAlpha(0.6f), 3.0f);
+					FollowTag.VMargin(4.0f, &FollowTag);
+					SLabelProperties FollowLabelProps;
+					FollowLabelProps.m_MaxWidth = FollowTag.w;
+					FollowLabelProps.m_DisallowNewline = true;
+					FollowLabelProps.m_EllipsisAtEnd = true;
+					Ui()->DoLabel(&FollowTag, pFollowLabel, FollowFontSize, TEXTALIGN_MC, FollowLabelProps);
+				}
+
 				CUIRect ButtonsRow, FollowButton, CopyButton, RemoveButton, NameLabel, ClanLabel, InfoLabel;
 				Rect.HSplitTop(16.0f, &ButtonsRow, nullptr);
-				ButtonsRow.VSplitRight(13.0f, nullptr, &RemoveButton);
-				ButtonsRow.VSplitRight(15.0f, nullptr, &CopyButton);
+				ButtonsRow.VSplitRight(13.0f, &ButtonsRow, &RemoveButton);
+				ButtonsRow.VSplitRight(15.0f, &ButtonsRow, &CopyButton);
 				ButtonsRow.VSplitRight(15.0f, nullptr, &FollowButton);
 				FollowButton.VSplitLeft(2.0f, nullptr, &FollowButton);
 				CopyButton.VSplitLeft(2.0f, nullptr, &CopyButton);
@@ -2610,11 +2632,19 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				}
 				Rect.HSplitTop(11.0f, &NameLabel, &ClanLabel);
 
+				SLabelProperties FriendLabelProps;
+				if(FollowingThisFriend)
+				{
+					FriendLabelProps.m_MaxWidth = maximum(0.0f, FollowButton.x - NameLabel.x - 2.0f);
+					FriendLabelProps.m_DisallowNewline = true;
+					FriendLabelProps.m_EllipsisAtEnd = true;
+				}
+
 				// name
-				Ui()->DoLabel(&NameLabel, Friend.Name(), FontSize - 1.0f, TEXTALIGN_ML);
+				Ui()->DoLabel(&NameLabel, Friend.Name(), FontSize - 1.0f, TEXTALIGN_ML, FriendLabelProps);
 
 				// clan
-				Ui()->DoLabel(&ClanLabel, Friend.Clan(), FontSize - 2.0f, TEXTALIGN_ML);
+				Ui()->DoLabel(&ClanLabel, Friend.Clan(), FontSize - 2.0f, TEXTALIGN_ML, FriendLabelProps);
 
 				// server info
 				if(Friend.ServerInfo())
@@ -2651,8 +2681,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					const ColorRGBA InactiveIconColor = ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f);
 					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-					const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
-						(m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 					if(Friend.ServerInfo())
 					{
 						TextRender()->TextColor(FollowingThisFriend || Ui()->HotItem() == pFollowButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
@@ -2736,8 +2764,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 
 					if(Friend.ServerInfo())
 					{
-						const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
-							(m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 						m_FriendsActionPopupContext.m_vEntries.emplace_back(FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
 						m_vFriendsActionEntries.push_back(FollowingThisFriend ? FRIEND_ACTION_STOP_FOLLOW : FRIEND_ACTION_FOLLOW);
 					}
@@ -3079,23 +3105,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	{
 		CUIRect Button;
 		ServerFriends.Margin(5.0f, &ServerFriends);
-
-		if(m_FriendAutoFollowState.m_Active)
-		{
-			CUIRect Status, StopButton;
-			ServerFriends.HSplitTop(18.0f, &Status, &ServerFriends);
-			Status.VSplitRight(64.0f, &Status, &StopButton);
-			char aStatus[128];
-			if(m_FriendAutoFollowState.m_HasPendingAddress)
-				str_format(aStatus, sizeof(aStatus), Localize("Following %s: switching in %.0fs", "Friend auto follow"), m_FriendAutoFollowState.m_aName, maximum(0.0f, m_FriendAutoFollowState.m_PendingConnectTime - Client()->GlobalTime()));
-			else
-				str_format(aStatus, sizeof(aStatus), Localize("Following %s", "Friend auto follow"), m_FriendAutoFollowState.m_aName);
-			Ui()->DoLabel(&Status, aStatus, FontSize, TEXTALIGN_ML);
-			static CButtonContainer s_StopFollowButton;
-			if(DoButton_Menu(&s_StopFollowButton, Localize("Stop", "Friend auto follow"), 0, &StopButton))
-				StopFriendAutoFollow(m_FriendAutoFollowState);
-			ServerFriends.HSplitTop(3.0f, nullptr, &ServerFriends);
-		}
 
 		ServerFriends.HSplitTop(18.0f, &Button, &ServerFriends);
 		str_format(aBuf, sizeof(aBuf), "%s:", Localize("Name"));

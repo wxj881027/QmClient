@@ -4,8 +4,43 @@
 
 #include <base/system.h>
 
+#include <string>
+#include <string_view>
+#include <vector>
+
 namespace QmKeywordReplyRules
 {
+	template<typename F>
+	inline bool PickReply(const char *pReplies, char *pOut, size_t OutSize, F &&RandomBelow)
+	{
+		if(!pOut || OutSize == 0)
+			return false;
+		pOut[0] = '\0';
+		if(!pReplies)
+			return false;
+
+		std::vector<std::string> vReplies;
+		std::string_view Remaining(pReplies);
+		while(!Remaining.empty())
+		{
+			const size_t Separator = Remaining.find('|');
+			std::string Reply(Remaining.substr(0, Separator));
+			char *pTrimmedReply = Reply.data() + (str_utf8_skip_whitespaces(Reply.c_str()) - Reply.c_str());
+			str_utf8_trim_right(pTrimmedReply);
+			if(pTrimmedReply[0] != '\0')
+				vReplies.emplace_back(pTrimmedReply);
+			if(Separator == std::string_view::npos)
+				break;
+			Remaining.remove_prefix(Separator + 1);
+		}
+		if(vReplies.empty())
+			return false;
+
+		const int PickedIndex = vReplies.size() == 1 ? 0 : RandomBelow(static_cast<int>(vReplies.size()));
+		str_copy(pOut, vReplies[PickedIndex].c_str(), OutSize);
+		return pOut[0] != '\0';
+	}
+
 	struct SEditorChanges
 	{
 		bool m_Added = false;

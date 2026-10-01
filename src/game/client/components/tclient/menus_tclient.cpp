@@ -6884,6 +6884,8 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)
 		if(!pProfile)
 			return;
 		GameClient()->m_SkinProfiles.ApplyProfile(m_Dummy, *pProfile);
+		if(g_Config.m_TcProfileSkin || g_Config.m_TcProfileColors)
+			GameClient()->m_Skins.RecordRecentSkin(m_Dummy);
 	};
 
 	auto DeleteSelectedProfile = [&]() {

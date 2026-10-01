@@ -1991,6 +1991,9 @@ Clear local console
 Clear note
 == 移除备注
 
+Clear recent skins
+== 清空最近使用的皮肤
+
 Clear remote console
 == 清空远程控制台
 
@@ -2134,6 +2137,9 @@ Comma-separated list of banned clients to be kicked on join
 
 Command
 == 命令
+
+Command completion
+== 指令补全
 
 Command executed by tc_mod_weapon, target id appended at end
 == tc_mod_weapon 执行的命令，目标 id 会附加在命令末尾
@@ -2297,8 +2303,8 @@ Configure QmClient HUD elements
 Configure remaining DDNet client preferences
 == 配置其余 DDNet 客户端偏好
 
-Configure skin colors, eyes, and filters
-== 配置皮肤颜色、眼睛和筛选条件
+Configure skin downloads and prefixes
+== 设置皮肤下载与前缀
 
 Configure sound and audio packs
 == 配置声音与音频包
@@ -2482,6 +2488,9 @@ Copy info
 
 Copy name
 == 复制名字
+
+Copy name option color
+== 复制名字选项颜色
 
 Copy skin
 == 复制皮肤
@@ -2953,6 +2962,9 @@ Default output open failed
 
 Default preset
 == 默认预设
+
+Default width
+== 默认宽度
 
 Default zoom
 == 默认缩放
@@ -4732,6 +4744,9 @@ Full map listen in same room
 
 Full quality nameplate count
 == 保持完整质量的名牌数量上限
+
+Full width
+== 全宽
 
 Full: each enabled animation category uses its complete transition
 == 完整：按下方各项开关播放完整过渡和展示动画
@@ -6947,6 +6962,9 @@ Multi-View
 Multiple exact Axiom players found
 == 找到多个完全匹配的 Axiom 玩家
 
+Music player volume
+== 音乐播放器音量
+
 Mute
 == 静音
 
@@ -7247,6 +7265,9 @@ Next
 Next page in console
 == 控制台下一页
 
+Next track
+== 下一首
+
 Next weapon
 == 下一个武器
 
@@ -7402,6 +7423,9 @@ No rank 1 replay was found for this map
 
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 == 还没有缓存的 Rank 1 回放。可在 Rank 1 页面搜索下载。
+
+No recently used skins
+== 暂无最近使用的皮肤
 
 No results
 == 无结果
@@ -8510,6 +8534,9 @@ Previous
 Previous page in console
 == 控制台上一页
 
+Previous track
+== 上一首
+
 Primary
 == 主要
 
@@ -9521,6 +9548,9 @@ Restart the client
 Restarting. Please wait…
 == 正在重启，请稍等
 
+Restore a recently used Tee skin
+== 恢复最近使用的 Tee 皮肤
+
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 是否恢复双人存档？/qm Yes 读取最新一条，/qm Yes 序号 选择其他存档，/qm No 忽略本次提示。
 
@@ -9700,9 +9730,6 @@ Save all changes before switching selected button?
 
 Save all changes before turning off the editor?
 == 是否在关闭编辑器前保存更改？
-
-Save as
-== 另存为
 
 Save asset before closing?
 == 关闭前保存材质吗？
@@ -10313,6 +10340,12 @@ Show %s group
 Show a small view of the dummy
 == 显示分身小视图
 
+Show advanced nameplate settings without changing effect values
+== 显示昵称高级设置，不改变已有特效值
+
+Show advanced options
+== 显示高级选项
+
 Show advanced title settings (collapsing keeps configured effects)
 == 显示头衔高级设置（收起后保留已设置效果）
 
@@ -10427,6 +10460,9 @@ Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 秒内钩中或锤击玩家时显示连击提示
 
+Show command completion in chat
+== 显示聊天指令补全
+
 Show compact vote HUD
 == 显示小型投票 HUD
 
@@ -10435,6 +10471,9 @@ Show configurable outlines around map tiles
 
 Show coordinates above players
 == 在玩家头顶显示坐标
+
+Show copy name option
+== 显示复制名字选项
 
 Show copy skin option
 == 显示复制皮肤选项
@@ -13603,6 +13642,9 @@ Voice whitelist (comma-separated)
 
 Volume
 == 音量
+
+Volume unavailable for this player
+== 此播放器暂不支持音量控制
 
 Vote a map by name
 == 按名称对地图进行投票
@@ -18455,18 +18497,6 @@ Shift by
 [Friend auto follow]
 Follow this friend across servers
 == 跟随好友换服
-
-[Friend auto follow]
-Following %s
-== 正在跟随 %s
-
-[Friend auto follow]
-Following %s: switching in %.0fs
-== 正在跟随 %s：%.0f 秒后换服
-
-[Friend auto follow]
-Stop
-== 停止
 
 [Friend auto follow]
 Stop following this friend

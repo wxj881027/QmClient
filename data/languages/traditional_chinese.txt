@@ -1991,6 +1991,9 @@ Clear local console
 Clear note
 == 移除備註
 
+Clear recent skins
+== 清空最近使用的皮膚
+
 Clear remote console
 == 清空遠程控制台
 
@@ -2134,6 +2137,9 @@ Comma-separated list of banned clients to be kicked on join
 
 Command
 == 命令
+
+Command completion
+== 指令補全
 
 Command executed by tc_mod_weapon, target id appended at end
 == tc_mod_weapon 執行的命令，目標 id 會附加在命令末尾
@@ -2297,8 +2303,8 @@ Configure QmClient HUD elements
 Configure remaining DDNet client preferences
 == Configure remaining DDNet client preferences
 
-Configure skin colors, eyes, and filters
-== Configure skin colors, eyes, and filters
+Configure skin downloads and prefixes
+== 設定皮膚下載與前綴
 
 Configure sound and audio packs
 == 設定音效與音效包
@@ -2482,6 +2488,9 @@ Copy info
 
 Copy name
 == 複製名字
+
+Copy name option color
+== 複製名字選項顏色
 
 Copy skin
 == 複製皮膚
@@ -2953,6 +2962,9 @@ Default output open failed
 
 Default preset
 == 默認預設
+
+Default width
+== 預設寬度
 
 Default zoom
 == 默認縮放
@@ -4732,6 +4744,9 @@ Full map listen in same room
 
 Full quality nameplate count
 == 保持完整質量的名牌數量上限
+
+Full width
+== 全寬
 
 Full: each enabled animation category uses its complete transition
 == 完整：依下方各項開關播放完整過渡和展示動畫
@@ -6947,6 +6962,9 @@ Multi-View
 Multiple exact Axiom players found
 == 找到多個完全相符的 Axiom 玩家
 
+Music player volume
+== 音樂播放器音量
+
 Mute
 == 靜音
 
@@ -7247,6 +7265,9 @@ Next
 Next page in console
 == 控制台下一頁
 
+Next track
+== 下一首
+
 Next weapon
 == 下一個武器
 
@@ -7402,6 +7423,9 @@ No rank 1 replay was found for this map
 
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 == 還沒有快取的 Rank 1 回放。可在 Rank 1 頁面搜尋下載。
+
+No recently used skins
+== 暫無最近使用的皮膚
 
 No results
 == 無結果
@@ -8510,6 +8534,9 @@ Previous
 Previous page in console
 == 控制台上一頁
 
+Previous track
+== 上一首
+
 Primary
 == 主要
 
@@ -9521,6 +9548,9 @@ Restart the client
 Restarting. Please wait…
 == 正在重啟，請稍等
 
+Restore a recently used Tee skin
+== 還原最近使用的 Tee 皮膚
+
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 是否恢復雙人存檔？/qm Yes 讀取最新一筆，/qm Yes 序號 選擇其他存檔，/qm No 忽略本次提示。
 
@@ -9700,9 +9730,6 @@ Save all changes before switching selected button?
 
 Save all changes before turning off the editor?
 == 是否在關閉編輯器前保存更改？
-
-Save as
-== 另存為
 
 Save asset before closing?
 == 關閉前保存材質嗎？
@@ -10313,6 +10340,12 @@ Show %s group
 Show a small view of the dummy
 == 顯示分身的小視窗
 
+Show advanced nameplate settings without changing effect values
+== 顯示暱稱進階設定，不改變既有特效值
+
+Show advanced options
+== 顯示進階選項
+
 Show advanced title settings (collapsing keeps configured effects)
 == 顯示頭銜進階設定（收起後保留已設定效果）
 
@@ -10427,6 +10460,9 @@ Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 秒內連續鉤中或錘中玩家時顯示連擊提示
 
+Show command completion in chat
+== 顯示聊天指令補全
+
 Show compact vote HUD
 == 顯示小型投票 HUD
 
@@ -10435,6 +10471,9 @@ Show configurable outlines around map tiles
 
 Show coordinates above players
 == 在玩家頭頂顯示座標
+
+Show copy name option
+== 顯示複製名字選項
 
 Show copy skin option
 == 顯示複製外觀選項
@@ -13604,6 +13643,9 @@ Voice whitelist (comma-separated)
 Volume
 == 音量
 
+Volume unavailable for this player
+== 此播放器暫不支援音量控制
+
 Vote a map by name
 == 按名稱對地圖進行投票
 
@@ -14547,18 +14589,6 @@ S
 [Friend auto follow]
 Follow this friend across servers
 == 跟隨好友換服
-
-[Friend auto follow]
-Following %s
-== 正在跟隨 %s
-
-[Friend auto follow]
-Following %s: switching in %.0fs
-== 正在跟隨 %s：%.0f 秒後換服
-
-[Friend auto follow]
-Stop
-== 停止
 
 [Friend auto follow]
 Stop following this friend

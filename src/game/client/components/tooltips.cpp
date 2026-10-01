@@ -1,6 +1,7 @@
 #include "tooltips.h"
 
 #include <game/client/ui.h>
+#include <game/client/gameclient.h>
 
 #include <algorithm>
 
@@ -40,12 +41,14 @@ void CTooltips::SetFadeTime(const void *pId, float Time)
 
 void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
 {
-	DoToolTip(pId, pNearRect, pText, WidthHint, 14.0f, false, false);
+	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? 10.0f : 14.0f, Small, false);
 }
 
 void CTooltips::DoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint)
 {
-	DoToolTip(pId, pNearRect, pText, WidthHint, 14.0f, false, true);
+	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
+	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? 10.0f : 14.0f, Small, true);
 }
 
 void CTooltips::DoSmallToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint)

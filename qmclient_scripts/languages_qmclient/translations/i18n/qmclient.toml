@@ -1,4 +1,164 @@
 [[message]]
+key = "Previous track"
+[message.translations]
+simplified_chinese = "上一首"
+traditional_chinese = "上一首"
+japanese = "前の曲"
+korean = "이전 곡"
+russian = "Предыдущая композиция"
+german = "Vorheriger Titel"
+spanish = "Pista anterior"
+french = "Piste précédente"
+brazilian_portuguese = "Faixa anterior"
+portuguese = "Faixa anterior"
+turkish = "Önceki parça"
+polish = "Poprzedni utwór"
+
+[[message]]
+key = "Next track"
+[message.translations]
+simplified_chinese = "下一首"
+traditional_chinese = "下一首"
+japanese = "次の曲"
+korean = "다음 곡"
+russian = "Следующая композиция"
+german = "Nächster Titel"
+spanish = "Pista siguiente"
+french = "Piste suivante"
+brazilian_portuguese = "Próxima faixa"
+portuguese = "Faixa seguinte"
+turkish = "Sonraki parça"
+polish = "Następny utwór"
+
+[[message]]
+key = "Music player volume"
+[message.translations]
+simplified_chinese = "音乐播放器音量"
+traditional_chinese = "音樂播放器音量"
+japanese = "音楽プレーヤーの音量"
+korean = "음악 플레이어 음량"
+russian = "Громкость музыкального проигрывателя"
+german = "Lautstärke des Musikplayers"
+spanish = "Volumen del reproductor de música"
+french = "Volume du lecteur de musique"
+brazilian_portuguese = "Volume do reprodutor de música"
+portuguese = "Volume do leitor de música"
+turkish = "Müzik oynatıcı ses düzeyi"
+polish = "Głośność odtwarzacza muzyki"
+
+[[message]]
+key = "Volume unavailable for this player"
+[message.translations]
+simplified_chinese = "此播放器暂不支持音量控制"
+traditional_chinese = "此播放器暫不支援音量控制"
+japanese = "このプレーヤーの音量は操作できません"
+korean = "이 플레이어의 음량을 조절할 수 없습니다"
+russian = "Громкость этого проигрывателя недоступна"
+german = "Lautstärke für diesen Player nicht verfügbar"
+spanish = "Volumen no disponible para este reproductor"
+french = "Volume indisponible pour ce lecteur"
+brazilian_portuguese = "Volume indisponível para este reprodutor"
+portuguese = "Volume indisponível para este leitor"
+turkish = "Bu oynatıcının ses düzeyi ayarlanamıyor"
+polish = "Głośność tego odtwarzacza jest niedostępna"
+
+[[message]]
+key = "Default width"
+[message.translations]
+simplified_chinese = "默认宽度"
+traditional_chinese = "預設寬度"
+japanese = "標準の幅"
+korean = "기본 너비"
+russian = "Обычная ширина"
+german = "Standardbreite"
+spanish = "Ancho predeterminado"
+french = "Largeur par défaut"
+brazilian_portuguese = "Largura padrão"
+portuguese = "Largura predefinida"
+turkish = "Varsayılan genişlik"
+polish = "Domyślna szerokość"
+
+[[message]]
+key = "Full width"
+[message.translations]
+simplified_chinese = "全宽"
+traditional_chinese = "全寬"
+japanese = "全幅"
+korean = "전체 너비"
+russian = "Полная ширина"
+german = "Volle Breite"
+spanish = "Ancho completo"
+french = "Pleine largeur"
+brazilian_portuguese = "Largura total"
+portuguese = "Largura total"
+turkish = "Tam genişlik"
+polish = "Pełna szerokość"
+
+[[message]]
+key = "Show advanced options"
+[message.translations]
+simplified_chinese = "显示高级选项"
+traditional_chinese = "顯示進階選項"
+japanese = "詳細オプションを表示"
+korean = "고급 옵션 표시"
+russian = "Показать дополнительные параметры"
+german = "Erweiterte Optionen anzeigen"
+spanish = "Mostrar opciones avanzadas"
+french = "Afficher les options avancées"
+brazilian_portuguese = "Mostrar opções avançadas"
+portuguese = "Mostrar opções avançadas"
+turkish = "Gelişmiş seçenekleri göster"
+polish = "Pokaż opcje zaawansowane"
+
+[[message]]
+key = "Command completion"
+[message.translations]
+simplified_chinese = "指令补全"
+traditional_chinese = "指令補全"
+japanese = "コマンド補完"
+korean = "명령어 자동 완성"
+russian = "Дополнение команд"
+german = "Befehlsvervollständigung"
+spanish = "Autocompletado de comandos"
+french = "Complétion des commandes"
+brazilian_portuguese = "Conclusão de comandos"
+portuguese = "Conclusão de comandos"
+turkish = "Komut tamamlama"
+polish = "Uzupełnianie poleceń"
+
+[[message]]
+key = "Show command completion in chat"
+[message.translations]
+simplified_chinese = "显示聊天指令补全"
+traditional_chinese = "顯示聊天指令補全"
+japanese = "チャットでコマンド補完を表示"
+korean = "채팅에서 명령어 자동 완성 표시"
+russian = "Показывать дополнение команд в чате"
+german = "Befehlsvervollständigung im Chat anzeigen"
+spanish = "Mostrar autocompletado de comandos en el chat"
+french = "Afficher la complétion des commandes dans le chat"
+brazilian_portuguese = "Mostrar conclusão de comandos no chat"
+portuguese = "Mostrar conclusão de comandos na conversa"
+turkish = "Sohbette komut tamamlamayı göster"
+polish = "Pokaż uzupełnianie poleceń na czacie"
+
+[[message]]
+key = "Show advanced nameplate settings without changing effect values"
+[message.translations]
+simplified_chinese = "显示昵称高级设置，不改变已有特效值"
+traditional_chinese = "顯示暱稱進階設定，不改變既有特效值"
+japanese = "エフェクトの値を変更せずにネームプレートの詳細設定を表示"
+korean = "효과 값을 변경하지 않고 이름표 고급 설정 표시"
+russian = "Показывать расширенные настройки имён без изменения эффектов"
+german = "Erweiterte Namensschild-Einstellungen ohne Änderung der Effektwerte anzeigen"
+spanish = "Mostrar ajustes avanzados de nombres sin cambiar los valores de los efectos"
+french = "Afficher les réglages avancés des noms sans modifier les valeurs des effets"
+brazilian_portuguese = "Mostrar configurações avançadas dos nomes sem alterar os valores dos efeitos"
+portuguese = "Mostrar definições avançadas dos nomes sem alterar os valores dos efeitos"
+turkish = "Efekt değerlerini değiştirmeden gelişmiş isim etiketi ayarlarını göster"
+polish = "Pokaż zaawansowane ustawienia nazw bez zmiany wartości efektów"
+
+[[message]]
 key = "%s and %s have swapped"
 [message.translations]
 simplified_chinese = "%s 与 %s 已完成交换"
@@ -3870,6 +4030,22 @@ brazilian_portuguese = "Cor do console"
 portuguese = "Cor da consola"
 turkish = "Konsol rengi"
 polish = "Kolor konsoli"
+
+[[message]]
+key = "Copy name option color"
+[message.translations]
+simplified_chinese = "复制名字选项颜色"
+traditional_chinese = "複製名字選項顏色"
+japanese = "名前コピー項目の色"
+korean = "이름 복사 항목 색상"
+russian = "Цвет действия копирования имени"
+german = "Farbe der Option zum Kopieren des Namens"
+spanish = "Color de la opción de copiar nombre"
+french = "Couleur de l'option de copie du nom"
+brazilian_portuguese = "Cor da opção de copiar nome"
+portuguese = "Cor da opção de copiar nome"
+turkish = "İsim kopyalama seçeneğinin rengi"
+polish = "Kolor opcji kopiowania nazwy"
 
 [[message]]
 key = "Copy skin option color"
@@ -31707,6 +31883,22 @@ brazilian_portuguese = "Mostrar opção de menção"
 portuguese = "Mostrar opção de menção"
 turkish = "Bahsetme seçeneğini göster"
 polish = "Pokaż opcję wzmianki"
+
+[[message]]
+key = "Show copy name option"
+[message.translations]
+simplified_chinese = "显示复制名字选项"
+traditional_chinese = "顯示複製名字選項"
+japanese = "名前コピー項目を表示"
+korean = "이름 복사 항목 표시"
+russian = "Показывать действие копирования имени"
+german = "Option zum Kopieren des Namens anzeigen"
+spanish = "Mostrar opción de copiar nombre"
+french = "Afficher l'option de copie du nom"
+brazilian_portuguese = "Mostrar opção de copiar nome"
+portuguese = "Mostrar opção de copiar nome"
+turkish = "İsim kopyalama seçeneğini göster"
+polish = "Pokaż opcję kopiowania nazwy"
 
 [[message]]
 key = "Show copy skin option"

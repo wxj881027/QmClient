@@ -307,23 +307,16 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 	// 页签计时段仍然覆盖两条分支。
 	EXPECT_LT(QmDraw, RenderQmClient.find("LogQmPerfStage(Client(), \"tabbar\", StageTimer.ElapsedMs(), false, aTabExtra);"));
 
-	// 玩家/Dummy 行与皮肤（Player/Dummy/Profiles）行同样先画胶囊再画文字。
+	// 玩家/Dummy 行同样先画胶囊再画文字。
 	const std::string RenderPlayer = FunctionBody(Settings, "void CMenus::RenderSettingsPlayer(CUIRect MainView)");
-	const std::string RenderTee = FunctionBody(Settings, "void CMenus::RenderSettingsTee(CUIRect MainView)");
 	ASSERT_FALSE(RenderPlayer.empty());
-	ASSERT_FALSE(RenderTee.empty());
 	const size_t PlayerChrome = RenderPlayer.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_player_dummy_tabs_capsule\"), aPlayerTabSlots, std::size(aPlayerTabSlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());");
 	const size_t PlayerDraw = RenderPlayer.find("if(DoButton_MenuTab(&s_PlayerTabButton, Localize(\"Player\"), !m_Dummy, &PlayerTab, IGraphics::CORNER_ALL");
 	ASSERT_NE(PlayerChrome, std::string::npos);
 	ASSERT_NE(PlayerDraw, std::string::npos);
 	EXPECT_LT(PlayerChrome, PlayerDraw);
 	EXPECT_NE(RenderPlayer.find("&PlayerTab, IGraphics::CORNER_L"), std::string::npos);
-	const size_t TeeChrome = RenderTee.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_tee_sub_tabs_capsule\"), aTeeTabSlots, std::size(aTeeTabSlots), ActiveTeeTab, SettingsCapsuleTabBarStyle());");
-	const size_t TeeDraw = RenderTee.find("if(DoButton_MenuTab(&s_PlayerTabButton, pPlayerTabLabel, s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_ALL");
-	ASSERT_NE(TeeChrome, std::string::npos);
-	ASSERT_NE(TeeDraw, std::string::npos);
-	EXPECT_LT(TeeChrome, TeeDraw);
-	EXPECT_NE(RenderTee.find("SeparateProfilesTab ? IGraphics::CORNER_R : IGraphics::CORNER_NONE"), std::string::npos);
+
 }
 
 TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)
@@ -607,46 +600,6 @@ TEST(QmDemoCutRender, UsesExportedCutAsRenderSource)
 	EXPECT_EQ(SlicePopup.find("str_copy(m_aPendingDemoRenderSelectionName, m_aCurrentDemoSelectionName"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, AppearanceNamePlateContainsNameplateTextControlsWithoutInternalScrollRegion)
-{
-	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string NamePlateBranch = BlockBodyAfter(SettingsSource, "else if(m_AppearanceSettingsTab == APPEARANCE_TAB_NAME_PLATE)");
-	ASSERT_FALSE(NamePlateBranch.empty());
-
-	const size_t TextSettingsPos = NamePlateBranch.find("Localize(\"Nameplate text\")");
-	const size_t HookStrengthPos = NamePlateBranch.find("Localize(\"Hook Strength\")");
-	ASSERT_NE(TextSettingsPos, std::string::npos);
-	ASSERT_NE(HookStrengthPos, std::string::npos);
-	EXPECT_LT(TextSettingsPos, HookStrengthPos);
-	EXPECT_EQ(NamePlateBranch.find("appearance-name-plate-title"), std::string::npos);
-
-	EXPECT_NE(NamePlateBranch.find("g_Config.m_QmNameplateTextEffects"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("QM_TEXT_EFFECT_BORDER"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("QM_TEXT_EFFECT_GRADIENT"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("QM_TEXT_EFFECT_RAINBOW"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("QM_TEXT_EFFECT_GLOW"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Playing effects\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Spectate effects\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Demo effects\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Demo target\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Border range\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Glow range\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("DoLine_ColorPicker(&s_NameplateTextBorderColorId"), std::string::npos);
-
-	EXPECT_EQ(NamePlateBranch.find("static CScrollRegion s_NameplateTextCardScrollRegion;"), std::string::npos);
-	EXPECT_EQ(NamePlateBranch.find("BeginSettingsScrollRegion(s_NameplateTextCardScrollRegion"), std::string::npos);
-	EXPECT_EQ(NamePlateBranch.find("FinishSettingsScrollRegion(s_NameplateTextCardScrollRegion"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("static CScrollRegion s_NameplateTextPlayingDropDownScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("static CScrollRegion s_NameplateTextSpectateDropDownScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("static CScrollRegion s_NameplateTextDemoDropDownScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("static CScrollRegion s_NameplateTextDemoTargetDropDownScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("s_NameplateTextDemoTargetDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_NameplateTextDemoTargetDropDownScrollRegion;"), std::string::npos);
-
-	const std::string QmSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	EXPECT_EQ(QmSource.find("auto RenderNameplateTextSettings = [&](CUIRect &CardContent)"), std::string::npos);
-	EXPECT_EQ(QmSource.find("RenderNameplateTextSettings(CardContent);"), std::string::npos);
-}
 
 TEST(QmNewUiMenuBranches, DemoBrowserUsesExplicitLegacyShellBranches)
 {
@@ -2344,16 +2297,6 @@ TEST(QmNewUiMenuBranches, SettingsCardFeedbackFixesUseStableLayouts)
 	EXPECT_NE(RenderSettingsDDNet.find("SettingsCardDeckForRenderPass().RenderCached(DDNetCardCtx, DDNetPage, \"ddnet\""), std::string::npos);
 	EXPECT_EQ(RenderSettingsDDNet.find("BeginSettingsCardDeck("), std::string::npos);
 	EXPECT_EQ(RenderSettingsDDNet.find("BeginDDNetCard(MainView"), std::string::npos);
-
-	const std::string NamePlateBranch = BlockBodyAfter(SettingsSource, "else if(m_AppearanceSettingsTab == APPEARANCE_TAB_NAME_PLATE)");
-	ASSERT_FALSE(NamePlateBranch.empty());
-	EXPECT_EQ(NamePlateBranch.find("BeginSettingsScrollRegion(s_NameplateTextCardScrollRegion"), std::string::npos);
-	EXPECT_EQ(NamePlateBranch.find("FinishSettingsScrollRegion(s_NameplateTextCardScrollRegion"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Nameplate text\")"), std::string::npos);
-	EXPECT_EQ(NamePlateBranch.find("NameplateTextExpandedMinHeight"), std::string::npos);
-
-	const std::string QmSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	EXPECT_EQ(QmSource.find("RenderNameplateTextSettings(CardContent);"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, LaserPreviewEntityBranchesReserveEndpointDecorationSpace)
@@ -2782,19 +2725,14 @@ TEST(QmNewUiMenuBranches, TClientQueuesAspectRefreshFromSnapshots)
 TEST(QmNewUiMenuBranches, SettingsDropdownWrapperAndNestedListsKeepSharedVisualAndScrollContracts)
 {
 	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
 	const std::string ListBoxHeader = ReadTextFile("src/game/client/ui_listbox.h");
 	const std::string ListBoxSource = ReadTextFile("src/game/client/ui_listbox.cpp");
-	const std::string Tee = FunctionBody(SettingsSource, "void CMenus::RenderSettingsTee(CUIRect MainView)");
 	const std::string Wrapper = FunctionBody(MenusSource, "int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const char *const *ppStrs, const int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties)");
 
-	ASSERT_FALSE(Tee.empty());
 	ASSERT_FALSE(Wrapper.empty());
 	EXPECT_NE(Wrapper.find("Properties.m_VisualStyle = QmSettingsDropdownVisualStyle(m_SettingsUiTheme, SettingsCardDeckVisualOptions().m_BorderColor);"), std::string::npos);
 	EXPECT_NE(ListBoxHeader.find("void SetScrollbarAlwaysReserved(bool AlwaysReserved)"), std::string::npos);
 	EXPECT_NE(ListBoxSource.find("ScrollParams.m_ScrollbarAlwaysReserved = m_ScrollbarAlwaysReserved;"), std::string::npos);
-	EXPECT_NE(Tee.find("s_QueueListBox.SetScrollbarAlwaysReserved(true);"), std::string::npos);
-	EXPECT_NE(Tee.find("s_PresetListBox.SetScrollbarAlwaysReserved(true);"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, CallVoteSearchSupportsIndependentExclusion)
@@ -2830,15 +2768,6 @@ TEST(QmNewUiMenuBranches, IngameFavoriteMapsUsesSharedBookmarkIcon)
 	EXPECT_EQ(Ingame.find("\xF0\x9F\x94\x96"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, TeePresetListUsesTheSameRowSpacingAsItsMeasuredViewport)
-{
-	const std::string Settings = FunctionBody(ReadTextFile("src/game/client/components/menus_settings.cpp"), "void CMenus::RenderSettingsTee(CUIRect MainView)");
-
-	ASSERT_FALSE(Settings.empty());
-	EXPECT_NE(Settings.find("const float PresetRowSpacing = TeeMetrics.m_LineSpacing * 0.5f;"), std::string::npos);
-	EXPECT_NE(Settings.find("s_PresetListBox.DoAutoSpacing(PresetRowSpacing);"), std::string::npos);
-	EXPECT_NE(Settings.find("s_PresetListBox.DoNextItem(&s_vPresetItemIds[i], ActivePresetIndex == (int)i, PresetRowSpacing)"), std::string::npos);
-}
 
 TEST(QmNewUiMenuBranches, GeneralStandardPageUsesUnifiedSettingsStack)
 {
@@ -2939,7 +2868,7 @@ TEST(QmNewUiMenuBranches, CountryPopupOwnsWheelAndBlocksTheSettingsPage)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
 	const std::string Popup = FunctionBody(Source, "CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pContext, CUIRect View, bool Active)");
-	const std::string Identity = FunctionBody(Source, "void CMenus::RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, float BodySize)");
+	const std::string Identity = FunctionBody(Source, "void CMenus::RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, float BodySize, bool StackFields)");
 	const std::string MapPopup = FunctionBody(Source, "CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect View, bool Active)");
 	const std::string DDNet = FunctionBody(Source, "void CMenus::RenderSettingsDDNet(CUIRect MainView)");
 	ASSERT_FALSE(Popup.empty());
@@ -2961,39 +2890,6 @@ TEST(QmNewUiMenuBranches, CountryPopupOwnsWheelAndBlocksTheSettingsPage)
 	EXPECT_NE(DDNet.find("PopupMapPicker, PopupProps", MapPickerId), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, TeeOptionsMeasureAllRowsAndPlayerDummyChangeDisplayCycle)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string Tee = FunctionBody(Source, "void CMenus::RenderSettingsTee(CUIRect MainView)");
-	const std::string Settings = FunctionBody(Source, "void CMenus::RenderSettings(CUIRect MainView)");
-	ASSERT_FALSE(Tee.empty());
-	ASSERT_FALSE(Settings.empty());
-	EXPECT_NE(Tee.find("ResolveSettingsRowsHeight(4, ControlLineHeight, ControlSpacing)"), std::string::npos);
-	EXPECT_NE(Tee.find("ResolveSettingsRowsHeight(6, ControlLineHeight, ControlSpacing)"), std::string::npos);
-	EXPECT_NE(Tee.find("ResolveSettingsTeeCustomColorsLayout"), std::string::npos);
-	EXPECT_NE(Tee.find("g_Config.m_QmSkinShowMetadata != 0"), std::string::npos);
-	EXPECT_EQ(Tee.find("g_Config.m_QmSkinSortMode == 1 && g_Config.m_QmSkinShowMetadata"), std::string::npos);
-	EXPECT_NE(Tee.find("SkinSortDropDownProps.m_FontSize = BodySize;"), std::string::npos);
-	EXPECT_NE(Tee.find("const float SortLabelWidth = std::clamp(SortModeControl.w * 0.36f"), std::string::npos);
-	EXPECT_NE(Tee.find("SortDropDown.VSplitLeft(ControlSpacing, nullptr, &SortDropDown);"), std::string::npos);
-	EXPECT_EQ(Tee.find("settings_tee_skin_sort_dropdown"), std::string::npos);
-	EXPECT_EQ(Tee.find("SkinSortDropDownProps.m_VisualStyle"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("\"Show skin release date and author\""), std::string::npos);
-	EXPECT_EQ(ConfigSource.find("\"Show release date and author when sorted by date\""), std::string::npos);
-	EXPECT_NE(Tee.find("const auto NextCheckboxRow"), std::string::npos);
-	EXPECT_NE(Tee.find("const auto NextPrefixRow"), std::string::npos);
-	EXPECT_NE(Tee.find("s_QueueListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);"), std::string::npos);
-	EXPECT_NE(Tee.find("s_PresetListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);"), std::string::npos);
-	const size_t DummyInput = Tee.find("s_TeeSubTab = 1;");
-	const size_t DisplayCycle = Tee.find("const uint64_t TeeDisplayKey", DummyInput);
-	ASSERT_NE(DummyInput, std::string::npos);
-	ASSERT_NE(DisplayCycle, std::string::npos);
-	EXPECT_LT(DummyInput, DisplayCycle);
-	EXPECT_NE(Tee.find("m_SettingsCardDeckDisplayState.EnterView(TeeDisplayKey)", DisplayCycle), std::string::npos);
-	EXPECT_NE(Settings.find("g_Config.m_UiSettingsPage != SETTINGS_TEE"), std::string::npos);
-	EXPECT_EQ(Settings.find("m_Dummy + 1"), std::string::npos);
-}
 
 TEST(QmNewUiMenuBranches, SettingsSubTabPagesUseTheSharedLayoutContract)
 {

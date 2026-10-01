@@ -1169,7 +1169,8 @@ static bool MatchAutoReplyRules(const char *pMessage, const char *pRules, char *
 		{
 			if(MatchedReplyCount < MAX_MATCHED_REPLIES)
 			{
-				str_copy(aaMatchedReplies[MatchedReplyCount], pReply, sizeof(aaMatchedReplies[MatchedReplyCount]));
+				if(!QmKeywordReplyRules::PickReply(pReply, aaMatchedReplies[MatchedReplyCount], sizeof(aaMatchedReplies[MatchedReplyCount]), secure_rand_below))
+					continue;
 				aMatchedRenameFlags[MatchedReplyCount] = AutoRename;
 			}
 			MatchedReplyCount++;
