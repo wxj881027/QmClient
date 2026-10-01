@@ -31,7 +31,7 @@ void QmSponsorChatAddPlatinumSplits(CTextCursor &Cursor, const char *pText, floa
 	}
 }
 
-void QmRenderSponsorChatText(ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, vec2 PixelSize, float X, float Y, bool DrawGlow)
+void QmRenderSponsorChatText(ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, float Alpha, vec2 PixelSize, float X, float Y, float FontSize, float SweepProgress, bool DrawGlow)
 {
 	if(!Index.Valid() || Alpha <= 0.0f)
 		return;
@@ -45,10 +45,18 @@ void QmRenderSponsorChatText(ITextRender *pTextRender, STextContainerIndex Index
 		for(const vec2 &Direction : s_aDirections)
 			pTextRender->RenderTextContainer(Index, Empty, ColorRGBA(1.0f, 1.0f, 1.0f, 0.025f * Alpha), X + Direction.x * PixelSize.x, Y + Direction.y * PixelSize.y);
 	}
-	if(Style == EQmSponsorChatStyle::PLATINUM)
-		pTextRender->RenderTextContainer(Index, ColorRGBA(1.0f, 1.0f, 1.0f, 0.12f * Alpha), Empty, X, Y - PixelSize.y);
-	const ColorRGBA Outline = Style == EQmSponsorChatStyle::NONE ? pTextRender->DefaultTextOutlineColor() : ColorRGBA(0.0f, 0.0f, 0.0f, 0.65f);
+	const ColorRGBA Outline = Style == EQmSponsorChatStyle::NONE ? pTextRender->DefaultTextOutlineColor() :
+		ColorRGBA(0.0f, 0.0f, 0.0f, Style == EQmSponsorChatStyle::PLATINUM ? 0.82f : 0.65f);
 	pTextRender->RenderTextContainer(Index, ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Outline.WithMultipliedAlpha(Alpha), X, Y);
+	if(Style == EQmSponsorChatStyle::PLATINUM && SweepProgress >= 0.0f)
+	{
+		STextSweepParams Sweep;
+		Sweep.m_Progress = SweepProgress;
+		Sweep.m_HalfWidth = std::max(FontSize * 0.75f, PixelSize.x * 2.0f);
+		Sweep.m_Slant = 0.28f;
+		Sweep.m_Color = ColorRGBA(1.0f, 1.0f, 0.97f, 0.94f * Alpha);
+		pTextRender->RenderTextContainerSweep(Index, Sweep, X, Y);
+	}
 }
 
 void CQmSponsorChatRenderer::Reset(IGraphics *pGraphics)
@@ -133,7 +141,7 @@ bool CQmSponsorChatRenderer::RenderGlow(IGraphics *pGraphics, ITextRender *pText
 	return true;
 }
 
-void CQmSponsorChatRenderer::Render(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, const CUIRect &Bounds, float FontSize, float Alpha, float X, float Y)
+void CQmSponsorChatRenderer::Render(IGraphics *pGraphics, ITextRender *pTextRender, STextContainerIndex Index, EQmSponsorChatStyle Style, const CUIRect &Bounds, float FontSize, float Alpha, float X, float Y, float SweepProgress)
 {
 	if(!Index.Valid() || Alpha <= 0.0f)
 		return;
@@ -149,5 +157,5 @@ void CQmSponsorChatRenderer::Render(IGraphics *pGraphics, ITextRender *pTextRend
 		if(Radius > 0.0f)
 			GlowRendered = RenderGlow(pGraphics, pTextRender, Index, Bounds, Radius, Alpha, PixelSize, X, Y);
 	}
-	QmRenderSponsorChatText(pTextRender, Index, Style, Alpha, PixelSize, X, Y, !GlowRendered);
+	QmRenderSponsorChatText(pTextRender, Index, Style, Alpha, PixelSize, X, Y, FontSize, SweepProgress, !GlowRendered);
 }

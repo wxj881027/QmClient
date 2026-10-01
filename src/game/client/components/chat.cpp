@@ -3249,6 +3249,8 @@ void CChat::OnRender()
 	const bool EmojiLayoutChanged = OnPrepareLines(y);
 
 	bool RenderedAnyLines = false;
+	bool HasVisibleSponsorMessage = false;
+	const bool SponsorSweepStatic = m_Show || InputActive || m_BacklogCurLine > 0 || HudEditorPreview;
 	const CLine *pClickedLine = nullptr;
 	const CLine *pMenuLine = nullptr;
 
@@ -3385,8 +3387,15 @@ void CChat::OnRender()
 			}
 
 			if(Line.m_BodyTextContainerIndex.Valid())
+			{
+				const bool LatestVisibleSponsor = !HasVisibleSponsorMessage;
+				if(Line.m_RenderSponsorChatStyle != EQmSponsorChatStyle::NONE)
+					HasVisibleSponsorMessage = true;
+				const double AgeSeconds = static_cast<double>(Now - Line.m_Time) / time_freq();
+				const float SweepProgress = QmSponsorChatSweepProgress(AgeSeconds, LatestVisibleSponsor, SponsorSweepStatic);
 				m_SponsorChatRenderer.Render(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
-					Line.m_RenderSponsorChatStyle, Line.m_SponsorTextBounds, FontSize(), AnimAlpha, AnimOffsetX, AnimOffsetY);
+					Line.m_RenderSponsorChatStyle, Line.m_SponsorTextBounds, FontSize(), AnimAlpha, AnimOffsetX, AnimOffsetY, SweepProgress);
+			}
 
 			if(Line.m_TextContainerIndex.Valid())
 			{

@@ -3218,6 +3218,7 @@ if(CLIENT)
     sqlite.cpp
     steam.cpp
     text.cpp
+    text_sweep.h
     updater.cpp
     updater.h
     video.cpp
@@ -4746,6 +4747,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     swap_endian_test.cpp
     teehistorian_test.cpp
     text_layout_string_test.cpp
+    text_sweep_test.cpp
     qm_nameplate_effect_lod_test.cpp
     qm_scoreboard_footer_test.cpp
     glyph_lookup_cache_test.cpp
