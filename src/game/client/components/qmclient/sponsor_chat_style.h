@@ -49,16 +49,34 @@ inline float QmSponsorChatGlowRadius(float FontSizePx)
 	return std::isfinite(FontSizePx) && FontSizePx > 0.0f ? std::clamp(FontSizePx * 0.1f, 1.0f, 2.5f) : 0.0f;
 }
 
+struct SQmSponsorChatSweep
+{
+	int m_Line = -1;
+	float m_Progress = 0.0f;
+};
+
+inline SQmSponsorChatSweep QmSponsorChatSweepState(double AgeSeconds, int LineCount, bool LatestVisibleSponsor)
+{
+	if(!std::isfinite(AgeSeconds) || AgeSeconds < 0.0 || LineCount <= 0)
+		return {};
+	// 每行扫一秒，整条消息完成后停一秒；最新可见赞助消息持续重播。
+	const double Phase = LatestVisibleSponsor ? std::fmod(AgeSeconds, static_cast<double>(LineCount) + 1.0) : AgeSeconds;
+	if(Phase >= LineCount)
+		return {};
+	const int Line = static_cast<int>(Phase);
+	return {Line, static_cast<float>(Phase - Line)};
+}
+
 inline ColorRGBA QmSponsorChatPlatinumColor(float Position, float Alpha)
 {
-	// 静态窄亮带，只改变亮度和低饱和色温，不循环色相。
+	// 银色底保留明暗层次，为独立扫过的白色高光留出亮度空间。
 	static constexpr std::array<float, 5> s_aPositions = {0.0f, 0.42f, 0.64f, 0.78f, 1.0f};
 	static const std::array<ColorRGBA, 5> s_aColors = {
-		ColorRGBA(0.76f, 0.80f, 0.85f, 1.0f),
-		ColorRGBA(0.87f, 0.90f, 0.93f, 1.0f),
-		ColorRGBA(1.0f, 0.98f, 0.92f, 1.0f),
-		ColorRGBA(0.90f, 0.92f, 0.94f, 1.0f),
-		ColorRGBA(0.78f, 0.82f, 0.87f, 1.0f),
+		ColorRGBA(0.65f, 0.70f, 0.74f, 1.0f),
+		ColorRGBA(0.78f, 0.82f, 0.85f, 1.0f),
+		ColorRGBA(0.84f, 0.85f, 0.86f, 1.0f),
+		ColorRGBA(0.76f, 0.79f, 0.84f, 1.0f),
+		ColorRGBA(0.61f, 0.66f, 0.70f, 1.0f),
 	};
 	Position = std::isfinite(Position) ? std::clamp(Position, 0.0f, 1.0f) : 0.0f;
 	size_t Index = 0;

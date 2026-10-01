@@ -5,6 +5,7 @@
 #include "glyph_outline.h"
 #include "qm_font_category.h"
 #include "text_layout_string.h"
+#include "text_sweep.h"
 #include "text_word_cursor.h"
 
 #include <base/log.h>
@@ -1535,6 +1536,7 @@ struct STextContainer
 	}
 
 	SStringInfo m_StringInfo;
+	CTextSweepLayout m_SweepLayout;
 
 	// keep these values to calculate offsets
 	float m_AlignedStartX;
@@ -1568,6 +1570,7 @@ struct STextContainer
 	{
 		m_StringInfo.m_QuadBufferObjectIndex = m_StringInfo.m_QuadBufferContainerIndex = m_StringInfo.m_SelectionQuadContainerIndex = -1;
 		m_StringInfo.m_vCharacterQuads.clear();
+		m_SweepLayout.Clear();
 
 		m_AlignedStartX = m_AlignedStartY = m_X = m_Y = 0.0f;
 		m_Flags = m_LineCount = m_CharCount = m_GlyphCount = 0;
@@ -1642,6 +1645,35 @@ class CTextRender : public IEngineTextRender
 	int m_FirstFreeTextContainerIndex;
 
 	SBufferContainerInfo m_DefaultTextContainerInfo;
+	std::vector<STextCharQuad> m_vTextSweepQuads;
+	int m_TextSweepBufferObject = -1;
+	int m_TextSweepBufferContainer = -1;
+
+	void ClearTextSweepBuffers()
+	{
+		if(m_TextSweepBufferContainer != -1)
+			Graphics()->DeleteBufferContainer(m_TextSweepBufferContainer, true);
+		else if(m_TextSweepBufferObject != -1)
+			Graphics()->DeleteBufferObject(m_TextSweepBufferObject);
+		m_TextSweepBufferObject = m_TextSweepBufferContainer = -1;
+		m_vTextSweepQuads.clear();
+	}
+
+	vec2 AlignTextContainerOffset(const STextContainer &TextContainer, vec2 Offset, float ScreenWidth, float ScreenHeight)
+	{
+		if((TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) != 0)
+			return Offset;
+		const float GraphicsWidth = Graphics()->ScreenWidth();
+		const float GraphicsHeight = Graphics()->ScreenHeight();
+		const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
+		const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
+		const vec2 FakeToScreen = vec2(
+			ScreenWidth >= 1.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
+			ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
+		return vec2(
+			SafePixelAlign(TextContainer.m_X + Offset.x, FakeToScreen.x) - TextContainer.m_AlignedStartX,
+			SafePixelAlign(TextContainer.m_Y + Offset.y, FakeToScreen.y) - TextContainer.m_AlignedStartY);
+	}
 
 	std::chrono::nanoseconds m_CursorRenderTime;
 	int m_QmPerfTextContainerNew = 0;
@@ -2069,6 +2101,7 @@ public:
 
 	void Shutdown() override
 	{
+		ClearTextSweepBuffers();
 		for(auto *pTextCont : m_vpTextContainers)
 			delete pTextCont;
 		m_vpTextContainers.clear();
@@ -3257,6 +3290,8 @@ public:
 					if(Color.a != 0.f && IsRendered)
 					{
 						TextContainer.m_StringInfo.m_vCharacterQuads.emplace_back();
+						if(pCursor->m_TrackLineRanges)
+							TextContainer.m_SweepLayout.AddQuad(LineCount, TextContainer.m_StringInfo.m_vCharacterQuads.size() - 1);
 						STextCharQuad &TextCharQuad = TextContainer.m_StringInfo.m_vCharacterQuads.back();
 
 						TextCharQuad.m_aVertices[0].m_X = CharX + CharOffsetX;
@@ -3485,6 +3520,7 @@ public:
 	{
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		TextContainer.m_StringInfo.m_vCharacterQuads.clear();
+		TextContainer.m_SweepLayout.Clear();
 		// the text buffer gets then recreated by the appended quads
 		AppendTextContainer(TextContainerIndex, pCursor, pText, Length);
 	}
@@ -3633,22 +3669,9 @@ public:
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-		if((TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) == 0)
-		{
-			const float ScreenWidth = ScreenX1 - ScreenX0;
-			const float ScreenHeight = ScreenY1 - ScreenY0;
-			const float GraphicsWidth = Graphics()->ScreenWidth();
-			const float GraphicsHeight = Graphics()->ScreenHeight();
-			const float SafeGraphicsWidth = GraphicsWidth > 0.0f && std::isfinite(GraphicsWidth) ? GraphicsWidth : 1.0f;
-			const float SafeGraphicsHeight = GraphicsHeight > 0.0f && std::isfinite(GraphicsHeight) ? GraphicsHeight : 1.0f;
-			const vec2 FakeToScreen = vec2(
-				ScreenWidth >= 1.0f && std::isfinite(ScreenWidth) ? SafeGraphicsWidth / ScreenWidth : 1.0f,
-				ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
-			const float AlignedX = SafePixelAlign(TextContainer.m_X + X, FakeToScreen.x);
-			const float AlignedY = SafePixelAlign(TextContainer.m_Y + Y, FakeToScreen.y);
-			X = AlignedX - TextContainer.m_AlignedStartX;
-			Y = AlignedY - TextContainer.m_AlignedStartY;
-		}
+		const vec2 Offset = AlignTextContainerOffset(TextContainer, vec2(X, Y), ScreenX1 - ScreenX0, ScreenY1 - ScreenY0);
+		X = Offset.x;
+		Y = Offset.y;
 
 		TextContainer.m_BoundingBox.m_X = X;
 		TextContainer.m_BoundingBox.m_Y = Y;
@@ -3656,6 +3679,116 @@ public:
 		Graphics()->MapScreen(ScreenX0 - X, ScreenY0 - Y, ScreenX1 - X, ScreenY1 - Y);
 		RenderTextContainer(TextContainerIndex, TextColor, TextOutlineColor);
 		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	}
+
+	void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) override
+	{
+		if(!TextContainerIndex.Valid() || Params.m_Color.a <= 0.0f ||
+			!std::isfinite(Params.m_Progress) || Params.m_Progress < 0.0f || Params.m_Progress > 1.0f ||
+			!std::isfinite(Params.m_HalfWidth) || Params.m_HalfWidth <= 0.0f || !std::isfinite(Params.m_Slant))
+			return;
+		const STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
+		const auto &vSourceQuads = TextContainer.m_StringInfo.m_vCharacterQuads;
+		const STextSweepLineRange Range = TextContainer.m_SweepLayout.Line(Params.m_Line);
+		if(Range.m_Begin == Range.m_End)
+			return;
+
+		STextSweepBand Band{0.0f, Params.m_HalfWidth, Params.m_Slant};
+		float MinProjection = std::numeric_limits<float>::max();
+		float MaxProjection = std::numeric_limits<float>::lowest();
+		for(size_t QuadIndex = Range.m_Begin; QuadIndex < Range.m_End; ++QuadIndex)
+		{
+			const auto &Quad = vSourceQuads[QuadIndex];
+			for(const auto &Vertex : Quad.m_aVertices)
+			{
+				const float Projection = Band.Project(vec2(Vertex.m_X, Vertex.m_Y));
+				MinProjection = std::min(MinProjection, Projection);
+				MaxProjection = std::max(MaxProjection, Projection);
+			}
+		}
+		Band.m_Center = TextSweepCenter(MinProjection, MaxProjection, Band.m_HalfWidth, Params.m_Progress);
+		// 一次只绘制当前行；工作网格复用容量，只上传光带命中的字形片段。
+		m_vTextSweepQuads.clear();
+		for(size_t QuadIndex = Range.m_Begin; QuadIndex < Range.m_End; ++QuadIndex)
+		{
+			const auto &Quad = vSourceQuads[QuadIndex];
+			std::array<STextSweepVertex, 4> aVertices;
+			for(size_t i = 0; i < aVertices.size(); ++i)
+			{
+				const auto &Vertex = Quad.m_aVertices[i];
+				aVertices[i] = {vec2(Vertex.m_X, Vertex.m_Y), vec2(Vertex.m_U, Vertex.m_V), Vertex.m_Color.a / 255.0f};
+			}
+			TextSweepClipQuad(aVertices, Band, [&](const auto &aClipped) {
+				auto &Output = m_vTextSweepQuads.emplace_back();
+				for(size_t i = 0; i < aClipped.size(); ++i)
+				{
+					auto &Vertex = Output.m_aVertices[i];
+					Vertex.m_X = aClipped[i].m_Position.x;
+					Vertex.m_Y = aClipped[i].m_Position.y;
+					Vertex.m_U = aClipped[i].m_TexCoord.x;
+					Vertex.m_V = aClipped[i].m_TexCoord.y;
+					Vertex.m_Color.a = static_cast<unsigned char>(std::clamp(aClipped[i].m_Alpha, 0.0f, 1.0f) * 255.0f + 0.5f);
+				}
+			});
+		}
+		if(m_vTextSweepQuads.empty())
+			return;
+
+		m_pGlyphMap->FlushPendingGlyphUploads();
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const vec2 Offset = AlignTextContainerOffset(TextContainer, vec2(X, Y), ScreenX1 - ScreenX0, ScreenY1 - ScreenY0);
+		Graphics()->MapScreen(ScreenX0 - Offset.x, ScreenY0 - Offset.y, ScreenX1 - Offset.x, ScreenY1 - Offset.y);
+		if(Graphics()->IsTextBufferingEnabled())
+		{
+			const size_t DataSize = m_vTextSweepQuads.size() * sizeof(STextCharQuad);
+			const int Flags = IGraphics::EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT;
+			if(m_TextSweepBufferObject == -1)
+				m_TextSweepBufferObject = Graphics()->CreateBufferObject(DataSize, m_vTextSweepQuads.data(), Flags);
+			else
+				Graphics()->RecreateBufferObject(m_TextSweepBufferObject, DataSize, m_vTextSweepQuads.data(), Flags);
+			if(m_TextSweepBufferContainer == -1)
+			{
+				m_DefaultTextContainerInfo.m_VertBufferBindingIndex = m_TextSweepBufferObject;
+				m_TextSweepBufferContainer = Graphics()->CreateBufferContainer(&m_DefaultTextContainerInfo);
+			}
+			Graphics()->IndicesNumRequiredNotify(m_vTextSweepQuads.size() * 6);
+			Graphics()->TextureClear();
+			Graphics()->RenderText(m_TextSweepBufferContainer, m_vTextSweepQuads.size(), m_pGlyphMap->TextureDimension(),
+				m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL).Id(), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE).Id(),
+				Params.m_Color, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
+		}
+		else
+		{
+			const float UVScale = 1.0f / m_pGlyphMap->TextureDimension();
+			Graphics()->FlushVertices();
+			Graphics()->TextureSet(m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL));
+			Graphics()->QuadsBegin();
+			for(const auto &Quad : m_vTextSweepQuads)
+			{
+				const auto &aVertices = Quad.m_aVertices;
+				// Freeform 接口的后两个角与文字网格顺序相反。
+				const IGraphics::CColorVertex aColors[] = {
+					{0, Params.m_Color.WithMultipliedAlpha(aVertices[0].m_Color.a / 255.0f)},
+					{1, Params.m_Color.WithMultipliedAlpha(aVertices[1].m_Color.a / 255.0f)},
+					{2, Params.m_Color.WithMultipliedAlpha(aVertices[3].m_Color.a / 255.0f)},
+					{3, Params.m_Color.WithMultipliedAlpha(aVertices[2].m_Color.a / 255.0f)}};
+				Graphics()->SetColorVertex(aColors, std::size(aColors));
+				Graphics()->QuadsSetSubsetFree(aVertices[0].m_U * UVScale, aVertices[0].m_V * UVScale, aVertices[1].m_U * UVScale, aVertices[1].m_V * UVScale,
+					aVertices[3].m_U * UVScale, aVertices[3].m_V * UVScale, aVertices[2].m_U * UVScale, aVertices[2].m_V * UVScale);
+				const IGraphics::CFreeformItem Item(aVertices[0].m_X, aVertices[0].m_Y, aVertices[1].m_X, aVertices[1].m_Y,
+					aVertices[3].m_X, aVertices[3].m_Y, aVertices[2].m_X, aVertices[2].m_Y);
+				Graphics()->QuadsDrawFreeform(&Item, 1);
+			}
+			Graphics()->QuadsEnd();
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+		}
+		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	}
+
+	int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) override
+	{
+		return TextContainerIndex.Valid() ? GetTextContainer(TextContainerIndex).m_SweepLayout.LineCount() : 0;
 	}
 
 	STextBoundingBox GetBoundingBoxTextContainer(STextContainerIndex TextContainerIndex) override
@@ -3747,6 +3880,7 @@ public:
 
 	void OnPreWindowResize() override
 	{
+		ClearTextSweepBuffers();
 		for(auto *pTextContainer : m_vpTextContainers)
 		{
 			if(pTextContainer->m_pContainerUseCount != nullptr && pTextContainer->m_pContainerUseCount.use_count() <= 1)
@@ -3759,6 +3893,9 @@ public:
 
 	void OnGraphicsResourcesReset() override
 	{
+		// 设备已经释放旧缓冲，不能再用旧编号发送删除命令。
+		m_TextSweepBufferObject = m_TextSweepBufferContainer = -1;
+		m_vTextSweepQuads.clear();
 		if(m_pGlyphMap == nullptr)
 			return;
 		m_pGlyphMap->OnGraphicsResourcesReset();

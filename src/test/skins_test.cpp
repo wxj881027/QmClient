@@ -119,6 +119,35 @@ TEST(Skins, AlwaysLoadedStateTransitionsNeverTouchUsageList)
 	}
 }
 
+TEST(Skins, AlwaysLoadedSkinsRecoverOnlyFromTransientStates)
+{
+	using EState = CSkins::CSkinContainer::EState;
+
+	EXPECT_TRUE(CSkins::CSkinContainer::AlwaysLoadedSkinNeedsImmediateLoad(EState::UNLOADED));
+	EXPECT_TRUE(CSkins::CSkinContainer::AlwaysLoadedSkinNeedsImmediateLoad(EState::PENDING));
+	EXPECT_TRUE(CSkins::CSkinContainer::AlwaysLoadedSkinNeedsImmediateLoad(EState::BACKGROUND_REQUESTED));
+
+	EXPECT_FALSE(CSkins::CSkinContainer::AlwaysLoadedSkinNeedsImmediateLoad(EState::LOADING));
+	EXPECT_FALSE(CSkins::CSkinContainer::AlwaysLoadedSkinNeedsImmediateLoad(EState::LOADED));
+	// 终态失败不自动重试，避免缺少内建素材时每帧重复解码。
+	EXPECT_FALSE(CSkins::CSkinContainer::AlwaysLoadedSkinNeedsImmediateLoad(EState::ERROR));
+	EXPECT_FALSE(CSkins::CSkinContainer::AlwaysLoadedSkinNeedsImmediateLoad(EState::NOT_FOUND));
+}
+
+TEST(Skins, BuiltInSkinsUseLocalContainerSource)
+{
+	using EType = CSkins::CSkinContainer::EType;
+
+	// 内建皮肤随客户端发布，绝不能被建成下载容器，否则会停在 PENDING 且没有加载入口。
+	EXPECT_EQ(CSkins::PreferredContainerType("default"), EType::LOCAL);
+	EXPECT_EQ(CSkins::PreferredContainerType("x_ninja"), EType::LOCAL);
+	EXPECT_EQ(CSkins::PreferredContainerType("x_spec"), EType::LOCAL);
+	EXPECT_EQ(CSkins::PreferredContainerType("bluekitty"), EType::LOCAL);
+
+	// 非内建名字仍按下载来源建容器。
+	EXPECT_EQ(CSkins::PreferredContainerType("some_community_skin"), EType::DOWNLOAD);
+}
+
 TEST(Skins, UsageListEntriesThatCannotBeUnloadedAreDiscarded)
 {
 	using EState = CSkins::CSkinContainer::EState;

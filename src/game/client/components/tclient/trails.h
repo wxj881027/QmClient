@@ -28,6 +28,7 @@ public:
 
 private:
 	qm_tee_trail::CTrailState m_aTrailStates[MAX_CLIENTS];
+	qm_tee_trail::CTrailClock m_Clock;
 	int m_aPositionSources[MAX_CLIENTS] = {};
 	std::vector<CTrailPart> m_vTrail;
 	std::vector<qm_tee_trail::SQuad> m_vQuads;

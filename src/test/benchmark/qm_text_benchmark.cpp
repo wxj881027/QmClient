@@ -9,6 +9,7 @@
 #include <base/system.h>
 
 #include <engine/client/qm_font_category.h>
+#include <engine/client/text_sweep.h>
 
 #include <benchmark/benchmark.h>
 
@@ -126,3 +127,33 @@ static void BM_StrUtf8Check(benchmark::State &State)
 	State.SetBytesProcessed(State.iterations() * Len);
 }
 BENCHMARK(BM_StrUtf8Check);
+
+// 逐行扫光直接测量生产裁剪接口：窄/长聊天行及命中/未命中字形均计入。
+static void BM_TextSweepLineClip(benchmark::State &State)
+{
+	using TQuad = std::array<STextSweepVertex, 4>;
+	std::vector<TQuad> vGlyphs;
+	for(int i = 0; i < State.range(0); ++i)
+	{
+		const float X = i * 12.0f;
+		vGlyphs.push_back({{{vec2(X, 10.0f), vec2(0.0f, 1.0f), 1.0f},
+			{vec2(X + 10.0f, 10.0f), vec2(1.0f, 1.0f), 1.0f},
+			{vec2(X + 10.0f, 0.0f), vec2(1.0f, 0.0f), 1.0f},
+			{vec2(X, 0.0f), vec2(0.0f, 0.0f), 1.0f}}});
+	}
+	int Frame = 0;
+	for(auto _ : State)
+	{
+		const float Progress = float(Frame++ % 101) / 100.0f;
+		const STextSweepBand Band{TextSweepCenter(0.0f, State.range(0) * 12.0f, 8.0f, Progress), 8.0f, 0.25f};
+		size_t Fragments = 0;
+		for(const auto &Quad : vGlyphs)
+			TextSweepClipQuad(Quad, Band, [&](const auto &Fragment) {
+				benchmark::DoNotOptimize(Fragment);
+				++Fragments;
+			});
+		benchmark::DoNotOptimize(Fragments);
+	}
+	State.SetItemsProcessed(State.iterations() * State.range(0));
+}
+BENCHMARK(BM_TextSweepLineClip)->Arg(8)->Arg(64)->Arg(256);

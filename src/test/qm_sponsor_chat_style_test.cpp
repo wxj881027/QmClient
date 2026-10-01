@@ -59,6 +59,7 @@ TEST(QmSponsorChatStyle, GlowStaysNarrowAtLargeFontSizesAndRejectsInvalidSizes)
 TEST(QmSponsorChatStyle, PlatinumHasABrightLowSaturationBandAndPreservesOpacity)
 {
 	const ColorRGBA Peak = QmSponsorChatPlatinumColor(0.64f, 0.35f);
+	EXPECT_LT(std::max({Peak.r, Peak.g, Peak.b}), 0.9f);
 	for(float Position : {0.0f, 0.25f, 0.5f, 0.64f, 0.8f, 1.0f})
 	{
 		const ColorRGBA Color = QmSponsorChatPlatinumColor(Position, 0.35f);
@@ -109,6 +110,94 @@ TEST(QmSponsorChatStyle, SingleCharacterGetsTheHighlightAndEmptyTextAddsNothing)
 	QmSponsorChatAddPlatinumSplits(Cursor, "中", 1.0f);
 	ASSERT_EQ(Cursor.m_vColorSplits.size(), 1u);
 	EXPECT_EQ(Cursor.m_vColorSplits[0].m_Color, QmSponsorChatPlatinumColor(0.64f, 1.0f));
+}
+
+TEST(QmSponsorChatSweep, NewMessagesBeginWithAOneSecondFirstLine)
+{
+	for(bool Latest : {false, true})
+	{
+		for(double Age : {0.0, 0.5, 0.99})
+		{
+			const auto State = QmSponsorChatSweepState(Age, 1, Latest);
+			EXPECT_EQ(State.m_Line, 0);
+			EXPECT_FLOAT_EQ(State.m_Progress, static_cast<float>(Age));
+		}
+		EXPECT_EQ(QmSponsorChatSweepState(1.0, 1, Latest).m_Line, -1);
+	}
+}
+
+TEST(QmSponsorChatSweep, SingleLinePausesForOneSecondBeforeRestarting)
+{
+	for(double Age : {1.0, 1.5, 1.99, 3.0, 3.99})
+		EXPECT_EQ(QmSponsorChatSweepState(Age, 1, true).m_Line, -1);
+	const auto Restart = QmSponsorChatSweepState(2.0, 1, true);
+	EXPECT_EQ(Restart.m_Line, 0);
+	EXPECT_FLOAT_EQ(Restart.m_Progress, 0.0f);
+	for(double Age : {2.5, 4.5, 6000.5})
+	{
+		const auto State = QmSponsorChatSweepState(Age, 1, true);
+		EXPECT_EQ(State.m_Line, 0);
+		EXPECT_FLOAT_EQ(State.m_Progress, 0.5f);
+	}
+}
+
+TEST(QmSponsorChatSweep, MultilineSweepsTopToBottomWithoutPausingBetweenLines)
+{
+	const auto First = QmSponsorChatSweepState(0.5, 3, true);
+	EXPECT_EQ(First.m_Line, 0);
+	EXPECT_FLOAT_EQ(First.m_Progress, 0.5f);
+	const auto SecondStart = QmSponsorChatSweepState(1.0, 3, true);
+	EXPECT_EQ(SecondStart.m_Line, 1);
+	EXPECT_FLOAT_EQ(SecondStart.m_Progress, 0.0f);
+	const auto Second = QmSponsorChatSweepState(1.5, 3, true);
+	EXPECT_EQ(Second.m_Line, 1);
+	EXPECT_FLOAT_EQ(Second.m_Progress, 0.5f);
+	const auto Third = QmSponsorChatSweepState(2.5, 3, true);
+	EXPECT_EQ(Third.m_Line, 2);
+	EXPECT_FLOAT_EQ(Third.m_Progress, 0.5f);
+}
+
+TEST(QmSponsorChatSweep, MultilinePausesOnlyAfterTheFinalLine)
+{
+	for(double Age : {3.0, 3.5, 3.99})
+		EXPECT_EQ(QmSponsorChatSweepState(Age, 3, true).m_Line, -1);
+	const auto Restart = QmSponsorChatSweepState(4.0, 3, true);
+	EXPECT_EQ(Restart.m_Line, 0);
+	EXPECT_FLOAT_EQ(Restart.m_Progress, 0.0f);
+	EXPECT_EQ(QmSponsorChatSweepState(5.5, 3, true).m_Line, 1);
+}
+
+TEST(QmSponsorChatSweep, OlderMessagesFinishTheInitialPassWithoutRepeating)
+{
+	const auto LastLine = QmSponsorChatSweepState(2.5, 3, false);
+	EXPECT_EQ(LastLine.m_Line, 2);
+	EXPECT_FLOAT_EQ(LastLine.m_Progress, 0.5f);
+	for(double Age : {3.0, 4.5, 5.5})
+		EXPECT_EQ(QmSponsorChatSweepState(Age, 3, false).m_Line, -1);
+}
+
+TEST(QmSponsorChatSweep, OldMessagesCanReplayWhenTheyBecomeTheLatestVisibleSponsor)
+{
+	EXPECT_EQ(QmSponsorChatSweepState(6000.5, 3, false).m_Line, -1);
+	const auto Visible = QmSponsorChatSweepState(6000.5, 3, true);
+	EXPECT_EQ(Visible.m_Line, 0);
+	EXPECT_FLOAT_EQ(Visible.m_Progress, 0.5f);
+}
+
+TEST(QmSponsorChatSweep, ReflowUsesTheCurrentLineCount)
+{
+	EXPECT_EQ(QmSponsorChatSweepState(2.5, 3, true).m_Line, 2);
+	const auto Reflowed = QmSponsorChatSweepState(2.5, 1, true);
+	EXPECT_EQ(Reflowed.m_Line, 0);
+	EXPECT_FLOAT_EQ(Reflowed.m_Progress, 0.5f);
+}
+
+TEST(QmSponsorChatSweep, InvalidAgesAndEmptyLayoutsDoNotSelectALine)
+{
+	for(double Age : {-1.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()})
+		EXPECT_EQ(QmSponsorChatSweepState(Age, 1, true).m_Line, -1);
+	for(int LineCount : {0, -1})
+		EXPECT_EQ(QmSponsorChatSweepState(0.5, LineCount, true).m_Line, -1);
 }
 
 namespace
