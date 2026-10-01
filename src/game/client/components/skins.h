@@ -251,6 +251,16 @@ public:
 		}
 
 		/**
+		 * Always-loaded skins never queue through RequestLoad; they can only be reloaded
+		 * from the built-in asset while in a transient state. Terminal failures
+		 * (ERROR/NOT_FOUND) are excluded so a missing file is not retried every frame.
+		 */
+		static bool AlwaysLoadedSkinNeedsImmediateLoad(EState State)
+		{
+			return State == EState::UNLOADED || State == EState::PENDING || State == EState::BACKGROUND_REQUESTED;
+		}
+
+		/**
 		 * Request that this skin should be loaded and should stay loaded.
 		 */
 		void RequestLoad(bool Immediate = false);
@@ -295,6 +305,11 @@ public:
 
 		EState DetermineInitialState() const;
 		bool IsBackgroundTracked() const { return m_BackgroundEntryIterator.has_value() && !m_UsageEntryIterator.has_value(); }
+		/**
+		 * An always-loaded skin that stops in a transient state has no other load entry,
+		 * so reload it from the built-in asset.
+		 */
+		void EnsureAlwaysLoaded();
 		void TouchUsage();
 		void ClearUsage();
 		void TouchBackgroundUsage();
@@ -661,6 +676,20 @@ public:
 	const char *SkinPrefix() const;
 
 	static bool IsSpecialSkin(const char *pName);
+	/**
+	 * Vanilla skins ship with the client and must use a local container; every other
+	 * name may be downloaded. Kept inline so unit tests can cover it without linking
+	 * skins.cpp.
+	 */
+	static CSkinContainer::EType PreferredContainerType(const char *pName)
+	{
+		for(const char *pVanillaSkin : VANILLA_SKINS)
+		{
+			if(str_comp(pName, pVanillaSkin) == 0)
+				return CSkinContainer::EType::LOCAL;
+		}
+		return CSkinContainer::EType::DOWNLOAD;
+	}
 	static int ParseOfficialSkinReleaseDateKey(const char *pDate)
 	{
 		if(pDate == nullptr)

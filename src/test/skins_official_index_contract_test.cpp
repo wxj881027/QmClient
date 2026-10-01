@@ -15,7 +15,7 @@ TEST(SkinsOfficialIndexContract, CreatesMissingDownloadEntries)
 	ASSERT_NE(ApplyIndexEnd, std::string::npos);
 	const std::string ApplyIndexBody = Source.substr(ApplyIndexPos, ApplyIndexEnd - ApplyIndexPos);
 
-	EXPECT_NE(ApplyIndexBody.find("CSkinContainer SkinContainer(this, pName, CSkinContainer::EType::DOWNLOAD, IStorage::TYPE_SAVE);"), std::string::npos);
+	EXPECT_NE(ApplyIndexBody.find("const CSkinContainer::EType Type = PreferredContainerType(pName);"), std::string::npos);
 	EXPECT_NE(ApplyIndexBody.find("pSkinContainer->SetState(pSkinContainer->DetermineInitialState());"), std::string::npos);
 	EXPECT_NE(ApplyIndexBody.find("ExistingSkin = m_Skins.insert({pSkinContainer->Name(), std::move(pSkinContainer)}).first;"), std::string::npos);
 	EXPECT_NE(ApplyIndexBody.find("SetOfficialReleaseDate(ReleaseDate)"), std::string::npos);
