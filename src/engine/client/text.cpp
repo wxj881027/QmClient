@@ -1509,6 +1509,7 @@ struct STextContainer
 	}
 
 	SStringInfo m_StringInfo;
+	CTextSweepLayout m_SweepLayout;
 
 	// keep these values to calculate offsets
 	float m_AlignedStartX;
@@ -1542,6 +1543,7 @@ struct STextContainer
 	{
 		m_StringInfo.m_QuadBufferObjectIndex = m_StringInfo.m_QuadBufferContainerIndex = m_StringInfo.m_SelectionQuadContainerIndex = -1;
 		m_StringInfo.m_vCharacterQuads.clear();
+		m_SweepLayout.Clear();
 
 		m_AlignedStartX = m_AlignedStartY = m_X = m_Y = 0.0f;
 		m_Flags = m_LineCount = m_CharCount = m_GlyphCount = 0;
@@ -3262,6 +3264,8 @@ public:
 					if(Color.a != 0.f && IsRendered)
 					{
 						TextContainer.m_StringInfo.m_vCharacterQuads.emplace_back();
+						if(pCursor->m_TrackLineRanges)
+							TextContainer.m_SweepLayout.AddQuad(LineCount, TextContainer.m_StringInfo.m_vCharacterQuads.size() - 1);
 						STextCharQuad &TextCharQuad = TextContainer.m_StringInfo.m_vCharacterQuads.back();
 
 						TextCharQuad.m_aVertices[0].m_X = CharX + CharOffsetX;
@@ -3490,6 +3494,7 @@ public:
 	{
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		TextContainer.m_StringInfo.m_vCharacterQuads.clear();
+		TextContainer.m_SweepLayout.Clear();
 		// the text buffer gets then recreated by the appended quads
 		AppendTextContainer(TextContainerIndex, pCursor, pText, Length);
 	}
@@ -3658,14 +3663,16 @@ public:
 			return;
 		const STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		const auto &vSourceQuads = TextContainer.m_StringInfo.m_vCharacterQuads;
-		if(vSourceQuads.empty())
+		const STextSweepLineRange Range = TextContainer.m_SweepLayout.Line(Params.m_Line);
+		if(Range.m_Begin == Range.m_End)
 			return;
 
 		STextSweepBand Band{0.0f, Params.m_HalfWidth, Params.m_Slant};
 		float MinProjection = std::numeric_limits<float>::max();
 		float MaxProjection = std::numeric_limits<float>::lowest();
-		for(const auto &Quad : vSourceQuads)
+		for(size_t QuadIndex = Range.m_Begin; QuadIndex < Range.m_End; ++QuadIndex)
 		{
+			const auto &Quad = vSourceQuads[QuadIndex];
 			for(const auto &Vertex : Quad.m_aVertices)
 			{
 				const float Projection = Band.Project(vec2(Vertex.m_X, Vertex.m_Y));
@@ -3674,10 +3681,11 @@ public:
 			}
 		}
 		Band.m_Center = TextSweepCenter(MinProjection, MaxProjection, Band.m_HalfWidth, Params.m_Progress);
-		// 所有正文行共用投影范围；工作网格复用容量，只上传光带命中的字形片段。
+		// 一次只绘制当前行；工作网格复用容量，只上传光带命中的字形片段。
 		m_vTextSweepQuads.clear();
-		for(const auto &Quad : vSourceQuads)
+		for(size_t QuadIndex = Range.m_Begin; QuadIndex < Range.m_End; ++QuadIndex)
 		{
+			const auto &Quad = vSourceQuads[QuadIndex];
 			std::array<STextSweepVertex, 4> aVertices;
 			for(size_t i = 0; i < aVertices.size(); ++i)
 			{
@@ -3750,6 +3758,11 @@ public:
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 		Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
+	}
+
+	int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) override
+	{
+		return TextContainerIndex.Valid() ? GetTextContainer(TextContainerIndex).m_SweepLayout.LineCount() : 0;
 	}
 
 	STextBoundingBox GetBoundingBoxTextContainer(STextContainerIndex TextContainerIndex) override

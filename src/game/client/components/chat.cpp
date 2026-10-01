@@ -2743,6 +2743,7 @@ bool CChat::OnPrepareLines(float y)
 		TextRender()->TextColor(Color);
 
 		CTextCursor AppendCursor = LineCursor;
+		AppendCursor.m_TrackLineRanges = Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM;
 		AppendCursor.m_LongestLineWidth = 0.0f;
 		if(!IsScoreBoardOpen && !g_Config.m_ClChatOld)
 		{
@@ -3250,7 +3251,6 @@ void CChat::OnRender()
 
 	bool RenderedAnyLines = false;
 	bool HasVisibleSponsorMessage = false;
-	const bool SponsorSweepStatic = m_Show || InputActive || m_BacklogCurLine > 0 || HudEditorPreview;
 	const CLine *pClickedLine = nullptr;
 	const CLine *pMenuLine = nullptr;
 
@@ -3392,9 +3392,11 @@ void CChat::OnRender()
 				if(Line.m_RenderSponsorChatStyle != EQmSponsorChatStyle::NONE)
 					HasVisibleSponsorMessage = true;
 				const double AgeSeconds = static_cast<double>(Now - Line.m_Time) / time_freq();
-				const float SweepProgress = QmSponsorChatSweepProgress(AgeSeconds, LatestVisibleSponsor, SponsorSweepStatic);
+				SQmSponsorChatSweep SweepState;
+				if(!HudEditorPreview && Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
+					SweepState = QmSponsorChatSweepState(AgeSeconds, TextRender()->GetTextContainerRenderedLineCount(Line.m_BodyTextContainerIndex), LatestVisibleSponsor);
 				m_SponsorChatRenderer.Render(Graphics(), TextRender(), Line.m_BodyTextContainerIndex,
-					Line.m_RenderSponsorChatStyle, Line.m_SponsorTextBounds, FontSize(), AnimAlpha, AnimOffsetX, AnimOffsetY, SweepProgress);
+					Line.m_RenderSponsorChatStyle, Line.m_SponsorTextBounds, FontSize(), AnimAlpha, AnimOffsetX, AnimOffsetY, SweepState);
 			}
 
 			if(Line.m_TextContainerIndex.Valid())

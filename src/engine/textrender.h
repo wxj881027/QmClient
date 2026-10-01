@@ -299,6 +299,7 @@ struct STextBoundingBox
 
 struct STextSweepParams
 {
+	int m_Line = 0;
 	float m_Progress = 0.0f;
 	float m_HalfWidth = 1.0f;
 	float m_Slant = 0.0f;
@@ -352,6 +353,8 @@ public:
 	float m_MaxCharacterHeight = 0.0f;
 	float m_LongestLineWidth = 0.0f;
 	bool m_CalculateVisualBoundingBox = false;
+	// 按需缓存实际绘制的行范围，用于逐行扫光。
+	bool m_TrackLineRanges = false;
 	bool m_HasVisualBoundingBox = false;
 	float m_VisualTop = 0.0f;
 	float m_VisualBottom = 0.0f;
@@ -516,6 +519,8 @@ public:
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float X, float Y) = 0;
 	// 扫光只覆盖字形填充，复用容器布局和当前裁剪区域。
 	virtual void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) {}
+	// 排版时启用 m_TrackLineRanges 后，返回包含绘制字形的行数。
+	virtual int GetTextContainerRenderedLineCount(STextContainerIndex TextContainerIndex) { return 0; }
 
 	virtual STextBoundingBox GetBoundingBoxTextContainer(STextContainerIndex TextContainerIndex) = 0;
 

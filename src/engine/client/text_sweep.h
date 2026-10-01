@@ -6,6 +6,47 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <vector>
+
+struct STextSweepLineRange
+{
+	size_t m_Begin = 0;
+	size_t m_End = 0;
+};
+
+class CTextSweepLayout
+{
+	std::vector<size_t> m_vLineStarts;
+	int m_LastLayoutLine = -1;
+	size_t m_QuadCount = 0;
+
+public:
+	void Clear()
+	{
+		m_vLineStarts.clear();
+		m_LastLayoutLine = -1;
+		m_QuadCount = 0;
+	}
+
+	void AddQuad(int LayoutLine, size_t QuadIndex)
+	{
+		// 使用排版行号，字体高度、字形偏移和消息前缀都不会影响分行。
+		if(m_vLineStarts.empty() || LayoutLine != m_LastLayoutLine)
+			m_vLineStarts.push_back(QuadIndex);
+		m_LastLayoutLine = LayoutLine;
+		m_QuadCount = QuadIndex + 1;
+	}
+
+	int LineCount() const { return static_cast<int>(m_vLineStarts.size()); }
+
+	STextSweepLineRange Line(int Index) const
+	{
+		if(Index < 0 || Index >= LineCount())
+			return {};
+		const size_t End = Index + 1 < LineCount() ? m_vLineStarts[Index + 1] : m_QuadCount;
+		return {m_vLineStarts[Index], End};
+	}
+};
 
 struct STextSweepVertex
 {

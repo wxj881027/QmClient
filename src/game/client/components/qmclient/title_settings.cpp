@@ -269,6 +269,7 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	Cursor.m_LineWidth = Rect.w;
 	Cursor.m_MaxLines = 1;
 	Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
+	Cursor.m_TrackLineRanges = Style == EQmSponsorChatStyle::PLATINUM;
 	if(Style == EQmSponsorChatStyle::PLATINUM)
 		QmSponsorChatAddPlatinumSplits(Cursor, pText, Color.a);
 	else
@@ -281,8 +282,8 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const vec2 PixelSize((ScreenX1 - ScreenX0) / std::max(1, pGraphics->ScreenWidth()), (ScreenY1 - ScreenY0) / std::max(1, pGraphics->ScreenHeight()));
-	const float SweepProgress = QmSponsorChatSweepProgress(TimeSeconds - s_StartTime, true, false);
-	QmRenderSponsorChatText(pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, PixelSize, 0.0f, 0.0f, FontSize, SweepProgress);
+	const SQmSponsorChatSweep SweepState = QmSponsorChatSweepState(TimeSeconds - s_StartTime, pTextRender->GetTextContainerRenderedLineCount(s_SponsorChatPreviewContainer), true);
+	QmRenderSponsorChatText(pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, PixelSize, 0.0f, 0.0f, FontSize, SweepState);
 }
 
 bool CMenus::QmTitleStyleExpanded() const
