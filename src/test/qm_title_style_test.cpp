@@ -8,6 +8,24 @@
 
 #include <cmath>
 
+TEST(QmTitleVisibility, LocalConnectionsCanBeHiddenIndependently)
+{
+	EXPECT_FALSE(QmTitleVisibleForLocalConnection(7, 7, 12, false, true));
+	EXPECT_TRUE(QmTitleVisibleForLocalConnection(12, 7, 12, false, true));
+	EXPECT_TRUE(QmTitleVisibleForLocalConnection(7, 7, 12, true, false));
+	EXPECT_FALSE(QmTitleVisibleForLocalConnection(12, 7, 12, true, false));
+	EXPECT_TRUE(QmTitleVisibleForLocalConnection(7, 7, 12, true, true));
+	EXPECT_TRUE(QmTitleVisibleForLocalConnection(12, 7, 12, true, true));
+}
+
+TEST(QmTitleVisibility, LocalTogglesDoNotHideOtherPlayersOrMatchDisconnectedIds)
+{
+	EXPECT_TRUE(QmTitleVisibleForLocalConnection(15, 7, 12, false, false));
+	EXPECT_TRUE(QmTitleVisibleForLocalConnection(12, 7, -1, false, false));
+	EXPECT_TRUE(QmTitleVisibleForLocalConnection(7, -1, -1, false, false));
+	EXPECT_FALSE(QmTitleVisibleForLocalConnection(-1, -1, -1, true, true));
+}
+
 // 称号风格引擎是纯函数模块：配色采样、逐字符相位、浮动偏移、掠光与时间对齐都在这里，
 // 因此这一层全部用行为断言覆盖，不依赖绘制实现。
 namespace

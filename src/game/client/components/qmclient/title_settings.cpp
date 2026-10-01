@@ -264,7 +264,7 @@ void CMenus::AppendQmTitleCard(std::vector<SSettingsCardDefinition> &vCards, con
 	TitleCard.m_Spec = {"deck:qmclient-contributors-title", Localize("Sponsor title"), Localize("Redeem your code and customize your title")};
 	TitleCard.m_Measure = [LineHeight, LineSpacing, TitleStyleExpanded, TitleAdvanced, TitlePreviewHeight](float) {
 		// 长说明移入悬浮提示，基础行包含提示模式与高级模式开关。
-		float Height = ResolveSettingsRowsHeight(TitleAdvanced ? 21 : 11, LineHeight, LineSpacing);
+		float Height = ResolveSettingsRowsHeight(TitleAdvanced ? 23 : 13, LineHeight, LineSpacing);
 		Height += LineSpacing + TitlePreviewHeight;
 		// 展开风格列表时，卡片要跟着长高，列表才不会被卡片或按钮挤住。
 		if(TitleStyleExpanded)
@@ -340,6 +340,12 @@ void CMenus::AppendQmTitleCard(std::vector<SSettingsCardDefinition> &vCards, con
 		Hint(&s_BindName, Row, Localize("Limit the title to the exact nickname below."));
 		Row = NextRow();
 		ui_widget::InputField(Ctx, &s_Name, Row, s_Name.GetEmptyText(), BodySize, nullptr, true);
+		Row = NextRow();
+		if(DoSettingsButton_CheckBox(SETTINGS_CONTRIBUTORS, -1, -1, &g_Config.m_QmShowMainTitle, "qm-title-show-main", Localize("Show main tee title locally"), g_Config.m_QmShowMainTitle, &Row) && !ReadOnly)
+			g_Config.m_QmShowMainTitle ^= 1;
+		Row = NextRow();
+		if(DoSettingsButton_CheckBox(SETTINGS_CONTRIBUTORS, -1, -1, &g_Config.m_QmShowDummyTitle, "qm-title-show-dummy", Localize("Show dummy title locally"), g_Config.m_QmShowDummyTitle, &Row) && !ReadOnly)
+			g_Config.m_QmShowDummyTitle ^= 1;
 		// 常用风格与波浪幅度保持直达，其余外观参数统一收进高级模式。
 		{
 			// 风格选择：条目里渲染「头衔文本 + 该风格」的实时效果，整列收进下拉，

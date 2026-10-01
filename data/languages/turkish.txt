@@ -4304,8 +4304,8 @@ Fade opacity along trail length
 Fade out
 == Soldurarak kapat
 
-Fade paused spectators in water
-== Suda duraklatılmış izleyicileri saydamlaştır
+Fade spectators in water
+== Sudaki izleyicileri saydamlaştır
 
 Fade trail alpha
 == İz alfasını soldur
@@ -6197,6 +6197,9 @@ List foes
 List friends
 == Arkadaşları listele
 
+List friends first in the spectator menu
+== İzleyici menüsünde arkadaşları önce listele
+
 List KCP/legacy transport status and weak-network simulation metrics
 == KCP/eski taşıma durumunu ve zayıf ağ simülasyon metriklerini listele
 
@@ -7999,9 +8002,6 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == Oyunu duraklat/duraklatmayı kaldır
-
-Paused spectator opacity (percent)
-== Duraklatılmış izleyici opaklığı (yüzde)
 
 Penalty in seconds for saving or swapping positions
 == Konum kaydetme veya değiştirme için saniye cinsinden ceza
@@ -10529,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == Hareket bilgisi HUD'unda dummy konumunu göster
 
+Show dummy title locally
+== Kukla unvanını yerel olarak göster
+
 Show dummy velocity in movement info HUD
 == Hareket bilgisi HUD'unda dummy hızını göster
 
@@ -10801,6 +10804,9 @@ Show logs of the last i seconds
 
 Show lyrics inside Dynamic Island
 == Show lyrics in Dynamic Island
+
+Show main tee title locally
+== Ana tee unvanını yerel olarak göster
 
 Show map details
 == Harita detaylarını göster
@@ -11632,6 +11638,12 @@ Spectated player
 
 Spectated player and friends
 == İzlenen oyuncu ve arkadaşlar
+
+Spectator opacity
+== İzleyici opaklığı
+
+Spectator opacity (percent)
+== İzleyici opaklığı (yüzde)
 
 Spectators
 == İzleyiciler

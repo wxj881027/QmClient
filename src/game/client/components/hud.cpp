@@ -3730,6 +3730,7 @@ void CHud::RenderAmmoHealthAndArmor(const CNetObj_Character *pCharacter)
 	if(!pCharacter)
 		return;
 
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	bool IsSixupGameSkin = GameClient()->m_GameSkin.IsSixup();
 	int QuadOffsetSixup = (IsSixupGameSkin ? 10 : 0);
 
@@ -6049,6 +6050,7 @@ void CHud::RenderDummyActions()
 	}
 	Graphics()->TextureSet(GameClient()->m_HudSkin.m_SpriteHudDummyCopy);
 	Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_DummyCopyOffset, x, y);
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 }
 
@@ -6518,8 +6520,7 @@ void CHud::RenderMovementInformation()
 	m_MovementInfoBoxH = BoxHeight;
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::MovementInfo, {StartX, StartY, BoxWidth, BoxHeight});
 
-	Ui()->RenderGaussianBlur({StartX, StartY, BoxWidth, BoxHeight}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
-	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ui_token::color::SURFACE_GLASS, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), HudEditorScope.m_Corners, 5.0f);
 
 	const bool HasMovementContent = ShowMovementInfo && MovementBoxHeight > 0.0f;
 	if(HasMovementContent)

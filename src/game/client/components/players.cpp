@@ -2110,13 +2110,12 @@ void CPlayers::OnRender()
 			}
 			if(!ScreenRect.Inside(Client.m_SpecChar))
 				continue;
-			// HJ大佬辅助：/pause 的旁观者保存在世界里的 x_spec 幽灵可整体调暗，
-			// Alpha 只在这里乘算一次，不影响未暂停的旁观者。
+			// 只在开启功能时查询水域，透明度与名牌保持一致。
 			Alpha = ResolveQmPausedSpectatorAlpha(
 				g_Config.m_QmPausedSpectatorFade != 0,
 				g_Config.m_QmPausedSpectatorAlpha,
-				Client.m_Paused,
 				Client.m_SpecCharPresent,
+				g_Config.m_QmPausedSpectatorFade && GameClient()->QmWaterHammerIndicator().IsInPenaltyArea(Client.m_SpecChar),
 				Alpha);
 			RenderTools()->RenderTee(CAnimState::GetIdle(), &SpectatorTeeRenderInfo()->TeeRenderInfo(), EMOTE_BLINK, vec2(1, 0), Client.m_SpecChar, Alpha);
 		}

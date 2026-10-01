@@ -2077,6 +2077,7 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 	dbg_assert(vButtonContainers.size() == vButtonTextIds.size(), "vButtonContainers and vButtonTextIds must have the same size");
 	const int N = vButtonContainers.size();
 	const SSettingsRadioRowLayout Layout = ResolveSettingsRadioRowLayout(View, N, Metrics);
+	const float FontSize = ResolveSettingsRadioFontSize(Metrics);
 	CUIRect Label = Layout.m_LabelRect;
 	CUIRect Buttons = Layout.m_ButtonsRect;
 	View.HSplitTop(Layout.m_Height, nullptr, &View);
@@ -2115,7 +2116,7 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), SegmentGroup, aSegmentSlots, SegmentCount, CurrentValid ? CurrentIndex : -1, SettingsCapsuleTabBarStyle());
 		for(int i = 0; i < SegmentCount; ++i)
 		{
-			if(DoButton_MenuTab(&vButtonContainers[i], vLabels[i], vValues[i] == Value, &aSegmentSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, -1.0f, true))
+			if(DoButton_MenuTab(&vButtonContainers[i], vLabels[i], vValues[i] == Value, &aSegmentSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 5.0f, nullptr, nullptr, FontSize, true))
 			{
 				Pressed = true;
 				Value = vValues[i];
@@ -2133,7 +2134,7 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 			Corner = IGraphics::CORNER_L;
 		if(i == N - 1)
 			Corner = IGraphics::CORNER_R;
-		if(DoSettingsButton_Menu(Page, Tab, Subtab, &vButtonContainers[i], vButtonTextIds[i], vLabels[i], vValues[i] == Value, &Button, BUTTONFLAG_LEFT, Corner, 5.0f, ButtonColor, 0.0f, Metrics.m_BodySize))
+		if(DoSettingsButton_Menu(Page, Tab, Subtab, &vButtonContainers[i], vButtonTextIds[i], vLabels[i], vValues[i] == Value, &Button, BUTTONFLAG_LEFT, Corner, 5.0f, ButtonColor, 0.0f, FontSize))
 		{
 			Pressed = true;
 			if(!Locked)

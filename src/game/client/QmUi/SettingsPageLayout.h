@@ -556,6 +556,17 @@ inline SSettingsColorRowLayout ResolveSettingsColorRowLayout(const CUIRect &View
 	return Layout;
 }
 
+inline float ResolveSettingsRadioFontSize(const SSettingsContentMetrics &Metrics)
+{
+	return std::max(12.0f, Metrics.m_BodySize);
+}
+
+inline float ResolveSettingsRadioButtonHeight(const SSettingsContentMetrics &Metrics)
+{
+	// 胶囊内边距之外仍保留文字上下留白，不随窄内容区压成细线。
+	return std::max(Metrics.m_ButtonHeight, ResolveSettingsRadioFontSize(Metrics) + 12.0f);
+}
+
 inline SSettingsRadioRowLayout ResolveSettingsRadioRowLayout(const CUIRect &View, const int OptionCount, const SSettingsContentMetrics &Metrics)
 {
 	SSettingsRadioRowLayout Layout;
@@ -563,23 +574,24 @@ inline SSettingsRadioRowLayout ResolveSettingsRadioRowLayout(const CUIRect &View
 		return Layout;
 
 	const float Gap = Metrics.m_LineSpacing;
+	const float ButtonHeight = ResolveSettingsRadioButtonHeight(Metrics);
 	// 字号存在下限，因此窄屏控件宽度不能继续按 UiScale 同比例缩小。
 	// 为标签和每个选项保留可读宽度，空间不足时统一换到下一行。
 	const float LabelWidth = std::max(96.0f, ResolveSettingsCardLabelWidth(View.w, Metrics));
-	const float MinimumOptionWidth = std::max(72.0f, Metrics.m_ButtonHeight * 3.0f);
+	const float MinimumOptionWidth = std::max(72.0f, ButtonHeight * 3.0f);
 	const float RequiredInlineWidth = LabelWidth + Gap + MinimumOptionWidth * OptionCount;
 	Layout.m_Stacked = View.w < RequiredInlineWidth;
 	if(Layout.m_Stacked)
 	{
 		Layout.m_LabelRect = {View.x, View.y, View.w, Metrics.m_LineHeight};
-		Layout.m_ButtonsRect = {View.x, View.y + Metrics.m_LineHeight + Gap, View.w, Metrics.m_ButtonHeight};
-		Layout.m_Height = Metrics.m_LineHeight + Gap + Metrics.m_ButtonHeight;
+		Layout.m_ButtonsRect = {View.x, View.y + Metrics.m_LineHeight + Gap, View.w, ButtonHeight};
+		Layout.m_Height = Metrics.m_LineHeight + Gap + ButtonHeight;
 	}
 	else
 	{
-		Layout.m_LabelRect = {View.x, View.y, LabelWidth, Metrics.m_LineHeight};
-		Layout.m_ButtonsRect = {View.x + LabelWidth + Gap, View.y, std::max(0.0f, View.w - LabelWidth - Gap), Metrics.m_ButtonHeight};
-		Layout.m_Height = std::max(Metrics.m_LineHeight, Metrics.m_ButtonHeight);
+		Layout.m_Height = std::max(Metrics.m_LineHeight, ButtonHeight);
+		Layout.m_LabelRect = {View.x, View.y, LabelWidth, Layout.m_Height};
+		Layout.m_ButtonsRect = {View.x + LabelWidth + Gap, View.y, std::max(0.0f, View.w - LabelWidth - Gap), ButtonHeight};
 	}
 	return Layout;
 }
@@ -601,8 +613,9 @@ inline SSettingsNestedRadioRowLayout ResolveSettingsNestedRadioRowLayout(const C
 		return Layout;
 
 	Layout.m_LabelRect = {View.x, View.y, View.w, Metrics.m_LineHeight};
-	Layout.m_ContainerRect = {View.x, View.y + Metrics.m_LineHeight + Metrics.m_LineSpacing, View.w, Metrics.m_ButtonHeight};
-	Layout.m_Height = Metrics.m_LineHeight + Metrics.m_LineSpacing + Metrics.m_ButtonHeight;
+	const float ButtonHeight = ResolveSettingsRadioButtonHeight(Metrics);
+	Layout.m_ContainerRect = {View.x, View.y + Metrics.m_LineHeight + Metrics.m_LineSpacing, View.w, ButtonHeight};
+	Layout.m_Height = Metrics.m_LineHeight + Metrics.m_LineSpacing + ButtonHeight;
 	return Layout;
 }
 

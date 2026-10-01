@@ -1057,26 +1057,29 @@ void CFastPractice::StandbyCharacter(CCharacter *pChar) const
 	pChar->SetCore(Core);
 }
 
-bool CFastPractice::ConsumeSpectatorCommand()
+void CFastPractice::PrepareForSpectating()
 {
 	if(!m_Enabled)
-		return false;
+		return;
 	if(Client()->State() != IClient::STATE_ONLINE)
-		return false;
+		return;
+	if(GameClient()->m_Snap.m_SpecInfo.m_Active || (GameClient()->m_Snap.m_pLocalInfo && GameClient()->m_Snap.m_pLocalInfo->m_Team == TEAM_SPECTATORS))
+		return;
 
+	// 只释放练习输入并保存待机状态，调用方仍须把进入旁观的请求发给服务器。
 	int LocalClientId = -1;
 	int DummyClientId = -1;
 	if(!ResolvePracticeRoles(LocalClientId, DummyClientId))
 	{
 		m_PracticeWorldInitialized = false;
 		GameClient()->m_PredictedDummyId = -1;
-		return true;
+		return;
 	}
 	if(!m_PracticeWorldInitialized && !InitPracticeWorld())
 	{
 		m_PracticeWorldInitialized = false;
 		GameClient()->m_PredictedDummyId = -1;
-		return true;
+		return;
 	}
 
 	SyncPracticeWorldConfig();
@@ -1112,7 +1115,6 @@ bool CFastPractice::ConsumeSpectatorCommand()
 	GameClient()->m_PredictedTick = m_PracticeBaseWorld.GameTick();
 	GameClient()->m_PredictedDummyId = CurrentPracticeDummyId();
 	ResetAttackTickHistory();
-	return true;
 }
 
 void CFastPractice::ResetPracticeToAnchor()

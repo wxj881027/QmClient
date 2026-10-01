@@ -164,13 +164,12 @@ static const char *FavoriteMapCategoryDisplayName(const char *pType)
 
 static const char *MapDifficultyStars(int Stars)
 {
-	// 只显示实心星：空心星（☆）在列表里视觉噪音大，0 星不显示任何星级。
 	static constexpr const char *s_apStarLabels[] = {
-		"",
-		"★",
-		"★★",
-		"★★★",
-		"★★★★",
+		"☆☆☆☆☆",
+		"★☆☆☆☆",
+		"★★☆☆☆",
+		"★★★☆☆",
+		"★★★★☆",
 		"★★★★★",
 	};
 	return Stars >= 0 && Stars <= 5 ? s_apStarLabels[Stars] : "";
@@ -304,7 +303,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	{
 		CUIRect ResetBtn;
 		Headers.VSplitLeft(ms_ListheaderHeight, &ResetBtn, &Headers);
-		ResetBtn.Margin(3.0f, &ResetBtn);
+		ResetBtn.Margin(1.0f, &ResetBtn);
 		static CButtonContainer s_ResetColsButton;
 		if(Ui()->DoButton_QmIcon(&s_ResetColsButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &ResetBtn, BUTTONFLAG_LEFT))
 		{

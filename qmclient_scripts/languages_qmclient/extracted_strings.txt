@@ -1428,7 +1428,7 @@ Fade in
 Fade only
 Fade opacity along trail length
 Fade out
-Fade paused spectators in water
+Fade spectators in water
 Fade trail alpha
 Failed
 Failed saving the replay!
@@ -2054,6 +2054,7 @@ List connected players with optional case-insensitive substring matching filter
 List filter mode
 List foes
 List friends
+List friends first in the spectator menu
 List KCP/legacy transport status and weak-network simulation metrics
 List local saves for current map (or specified map)
 List players containing name or all players
@@ -2654,7 +2655,6 @@ Pause the current demo
 Pause video rendering when demo playback is paused
 Pause voice when window unfocused
 Pause/unpause game
-Paused spectator opacity (percent)
 Penalty in seconds for saving or swapping positions
 Per-name volume (name=percent)
 Performance debug log threshold (ms)
@@ -3494,6 +3494,7 @@ Show dummy CTF flags on players (0=Off, 1=Red flag, 2=Blue flag)
 Show dummy mini view only when other tee leaves current view
 Show dummy mini view window
 Show dummy position in movement info HUD
+Show dummy title locally
 Show dummy velocity in movement info HUD
 Show enemy color in chat
 Show enemy color in scoreboard
@@ -3585,6 +3586,7 @@ Show local time always
 Show local time seconds
 Show logs of the last i seconds
 Show lyrics inside Dynamic Island
+Show main tee title locally
 Show map details
 Show map progress bar (beta)
 Show map progress test point route
@@ -3861,6 +3863,8 @@ Spectate the next player
 Spectate the previous player
 Spectated player
 Spectated player and friends
+Spectator opacity
+Spectator opacity (percent)
 Spectators
 Speech trigger threshold
 Speed

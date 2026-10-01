@@ -4,6 +4,17 @@
 
 #include <base/color.h>
 
+inline bool QmTitleVisibleForLocalConnection(int ClientId, int MainClientId, int DummyClientId, bool ShowMain, bool ShowDummy)
+{
+	if(ClientId < 0)
+		return false;
+	if(ClientId == MainClientId)
+		return ShowMain;
+	if(ClientId == DummyClientId)
+		return ShowDummy;
+	return true;
+}
+
 // 头衔动态风格：逐字节复刻 Calamity Mod 2.2.2 的稀有度配色与插值。
 // 色值出处与公式原文见 docs/qmclient/title_style_spec.md。
 //

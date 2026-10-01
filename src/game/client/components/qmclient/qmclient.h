@@ -260,6 +260,7 @@ public:
 	const char *TitleProfileStyle() const { return m_aTitleProfileStyle; }
 	int TitleRevision() const { return m_TitleRevision; }
 	const char *PlayerTitle(int ClientId) const;
+	bool ShouldShowPlayerTitle(int ClientId) const;
 	const char *PlayerTitleStyle(int ClientId) const;
 	double TitleAnimationTime() const;
 	bool HasQmMarkdownBroadcast() const { return m_QmMarkdownBroadcast.HasMarkdown(); }

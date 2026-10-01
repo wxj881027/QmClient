@@ -25,7 +25,6 @@ class CQmWaterHammerIndicator : public CComponent
 
 	std::array<SInputState, MAX_CLIENTS> m_aInputs;
 
-	bool IsInPenaltyArea(vec2 Position) const;
 	bool IsClientInPenaltyArea(int ClientId) const;
 
 public:
@@ -34,6 +33,7 @@ public:
 	void OnNewSnapshot() override;
 
 	void OnPreInput(const CNetMsg_Sv_PreInput &Message);
+	bool IsInPenaltyArea(vec2 Position) const;
 	bool IsMarked(int ClientId) const;
 };
 
