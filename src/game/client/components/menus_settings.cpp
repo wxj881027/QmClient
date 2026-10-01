@@ -5570,10 +5570,10 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 			s_AudioPackListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);
 			s_AudioPackListBox.DoStart(LineHeight + LineSpacing, gs_vAudioPacks.size(), 1, 4, SelectedPack, &ListRow, false);
 
-			// 音频个数徽章：圆角样式，高度贴合列表行，只保留一条细缝区分相邻音频包。
+			// 数量徽章在行内居中，使用紧凑尺寸并保留上下间隙。
 			const float BadgeFontSize = SoundMetrics.m_SmallSize;
-			const float BadgeInset = maximum(1.0f, LineSpacing * 0.25f);
-			const float BuiltInBadgeW = minimum(72.0f, maximum(38.0f, TextRender()->TextWidth(BadgeFontSize, Localize("Built-in"), -1, -1.0f) + 16.0f));
+			const float BadgeWidth = 28.0f * SoundMetrics.m_UiScale;
+			const float BadgeHeight = SoundMetrics.m_BadgeHeight;
 
 			for(size_t i = 0; i < gs_vAudioPacks.size(); ++i)
 			{
@@ -5593,9 +5593,9 @@ void CMenus::RenderSettingsSound(CUIRect MainView)
 				}
 
 				CUIRect NameRect, BadgeRect;
-				Item.m_Rect.VSplitRight(BuiltInBadgeW, &NameRect, &BadgeRect);
+				Item.m_Rect.VSplitRight(BadgeWidth, &NameRect, &BadgeRect);
 				NameRect.VMargin(6.0f, &NameRect);
-				BadgeRect.VMargin(BadgeInset, &BadgeRect);
+				BadgeRect.HMargin((BadgeRect.h - BadgeHeight) * 0.5f, &BadgeRect);
 
 				char aBadge[32];
 				str_format(aBadge, sizeof(aBadge), "%d", Entry.m_FileCount);
