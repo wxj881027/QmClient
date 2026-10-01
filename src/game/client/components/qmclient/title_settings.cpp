@@ -248,10 +248,17 @@ static void RenderQmTitleFinishedPreview(ITextRender *pTextRender, CRenderTools 
 		pTextRender->RenderTextContainer(PreviewContainer, Color, OutlineColor, PreviewX, PreviewY);
 }
 
-static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextRender, const CUIRect &Rect, float FontSize, EQmSponsorChatStyle Style)
+static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextRender, const CUIRect &Rect, float FontSize, EQmSponsorChatStyle Style, double TimeSeconds)
 {
 	if(Rect.w <= 1.0f || Rect.h <= 1.0f)
 		return;
+	static EQmSponsorChatStyle s_PreviousStyle = EQmSponsorChatStyle::NONE;
+	static double s_StartTime = 0.0;
+	static double s_LastTime = -1.0;
+	if(Style != s_PreviousStyle || !s_SponsorChatPreviewContainer.Valid() || s_LastTime < 0.0 || TimeSeconds < s_LastTime || TimeSeconds - s_LastTime > 0.5)
+		s_StartTime = TimeSeconds;
+	s_PreviousStyle = Style;
+	s_LastTime = TimeSeconds;
 	const char *pText = Localize("See you at the next checkpoint.");
 	const ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor));
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
@@ -274,7 +281,8 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const vec2 PixelSize((ScreenX1 - ScreenX0) / std::max(1, pGraphics->ScreenWidth()), (ScreenY1 - ScreenY0) / std::max(1, pGraphics->ScreenHeight()));
-	QmRenderSponsorChatText(pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, PixelSize, 0.0f, 0.0f);
+	const float SweepProgress = QmSponsorChatSweepProgress(TimeSeconds - s_StartTime, true, false);
+	QmRenderSponsorChatText(pTextRender, s_SponsorChatPreviewContainer, Style, 1.0f, PixelSize, 0.0f, 0.0f, FontSize, SweepProgress);
 }
 
 bool CMenus::QmTitleStyleExpanded() const
@@ -625,7 +633,7 @@ void CMenus::AppendQmTitleCard(std::vector<SSettingsCardDefinition> &vCards, con
 		RenderQmTitleFinishedPreview(TextRender(), GameClient()->RenderTools(), TitlePreviewArea, s_Title.GetString(), pPreviewStyleId, GameClient()->IsQmDeveloperRainbow(GameClient()->m_Snap.m_LocalClientId), BodySize * 1.4f, (float)Auth.TitleAnimationTime());
 		Ui()->ClipDisable();
 		Ui()->ClipEnable(&ChatPreviewArea);
-		RenderQmSponsorChatPreview(Graphics(), TextRender(), ChatPreviewArea, BodySize, static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle));
+		RenderQmSponsorChatPreview(Graphics(), TextRender(), ChatPreviewArea, BodySize, static_cast<EQmSponsorChatStyle>(g_Config.m_QmSponsorChatStyle), Auth.TitleAnimationTime());
 		Ui()->ClipDisable();
 		Row = NextRow();
 		Row.VSplitMid(&Row, &Button, LineSpacing);

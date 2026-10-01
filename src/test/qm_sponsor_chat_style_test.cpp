@@ -59,6 +59,7 @@ TEST(QmSponsorChatStyle, GlowStaysNarrowAtLargeFontSizesAndRejectsInvalidSizes)
 TEST(QmSponsorChatStyle, PlatinumHasABrightLowSaturationBandAndPreservesOpacity)
 {
 	const ColorRGBA Peak = QmSponsorChatPlatinumColor(0.64f, 0.35f);
+	EXPECT_LT(std::max({Peak.r, Peak.g, Peak.b}), 0.9f);
 	for(float Position : {0.0f, 0.25f, 0.5f, 0.64f, 0.8f, 1.0f})
 	{
 		const ColorRGBA Color = QmSponsorChatPlatinumColor(Position, 0.35f);
@@ -109,6 +110,48 @@ TEST(QmSponsorChatStyle, SingleCharacterGetsTheHighlightAndEmptyTextAddsNothing)
 	QmSponsorChatAddPlatinumSplits(Cursor, "中", 1.0f);
 	ASSERT_EQ(Cursor.m_vColorSplits.size(), 1u);
 	EXPECT_EQ(Cursor.m_vColorSplits[0].m_Color, QmSponsorChatPlatinumColor(0.64f, 1.0f));
+}
+
+TEST(QmSponsorChatSweep, NewMessagesSweepOnceForOneSecond)
+{
+	for(bool Latest : {false, true})
+	{
+		EXPECT_FLOAT_EQ(QmSponsorChatSweepProgress(0.0, Latest, false), 0.0f);
+		EXPECT_FLOAT_EQ(QmSponsorChatSweepProgress(0.5, Latest, false), 0.5f);
+		EXPECT_FLOAT_EQ(QmSponsorChatSweepProgress(0.99, Latest, false), 0.99f);
+		EXPECT_LT(QmSponsorChatSweepProgress(1.0, Latest, false), 0.0f);
+	}
+}
+
+TEST(QmSponsorChatSweep, OnlyLatestVisibleSponsorReplaysEverySevenSeconds)
+{
+	EXPECT_LT(QmSponsorChatSweepProgress(6.99, true, false), 0.0f);
+	EXPECT_FLOAT_EQ(QmSponsorChatSweepProgress(7.0, true, false), 0.0f);
+	EXPECT_FLOAT_EQ(QmSponsorChatSweepProgress(7.5, true, false), 0.5f);
+	EXPECT_LT(QmSponsorChatSweepProgress(8.0, true, false), 0.0f);
+	EXPECT_FLOAT_EQ(QmSponsorChatSweepProgress(14.5, true, false), 0.5f);
+	for(double Age : {7.0, 7.5, 14.5})
+		EXPECT_LT(QmSponsorChatSweepProgress(Age, false, false), 0.0f);
+}
+
+TEST(QmSponsorChatSweep, HistoryIsStaticIncludingDuringArrivalAndReplay)
+{
+	for(double Age : {0.0, 0.5, 7.0, 7.5, 14.5})
+		for(bool Latest : {false, true})
+			EXPECT_LT(QmSponsorChatSweepProgress(Age, Latest, true), 0.0f);
+}
+
+TEST(QmSponsorChatSweep, ClosingHistoryKeepsTheMessageAgeInsteadOfStartingAgain)
+{
+	EXPECT_LT(QmSponsorChatSweepProgress(3.0, true, true), 0.0f);
+	EXPECT_LT(QmSponsorChatSweepProgress(4.0, true, false), 0.0f);
+	EXPECT_FLOAT_EQ(QmSponsorChatSweepProgress(7.5, true, false), 0.5f);
+}
+
+TEST(QmSponsorChatSweep, InvalidAndFutureAgesStayStatic)
+{
+	for(double Age : {-1.0, std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()})
+		EXPECT_LT(QmSponsorChatSweepProgress(Age, true, false), 0.0f);
 }
 
 namespace

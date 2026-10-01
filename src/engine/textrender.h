@@ -297,6 +297,14 @@ struct STextBoundingBox
 	}
 };
 
+struct STextSweepParams
+{
+	float m_Progress = 0.0f;
+	float m_HalfWidth = 1.0f;
+	float m_Slant = 0.0f;
+	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+};
+
 // Allow to render multi colored text in one go without having to call TextEx() multiple times.
 // Needed to allow multi colored multi line texts
 struct STextColorSplit
@@ -506,6 +514,8 @@ public:
 
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) = 0;
 	virtual void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor, float X, float Y) = 0;
+	// 扫光只覆盖字形填充，复用容器布局和当前裁剪区域。
+	virtual void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) {}
 
 	virtual STextBoundingBox GetBoundingBoxTextContainer(STextContainerIndex TextContainerIndex) = 0;
 
