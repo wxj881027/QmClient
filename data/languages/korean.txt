@@ -4304,8 +4304,8 @@ Fade opacity along trail length
 Fade out
 == 페이드 아웃
 
-Fade paused spectators in water
-== 물속에서 일시정지한 관전자를 반투명하게 표시
+Fade spectators in water
+== 물속의 관전자를 반투명하게 표시
 
 Fade trail alpha
 == 꼬리 알파 페이드
@@ -6197,6 +6197,9 @@ List foes
 List friends
 == 친구 목록을 표시합니다
 
+List friends first in the spectator menu
+== 관전 메뉴에서 친구 우선 표시
+
 List KCP/legacy transport status and weak-network simulation metrics
 == KCP/레거시 전송 상태와 약한 네트워크 시뮬레이션 지표를 나열합니다
 
@@ -7999,9 +8002,6 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == 게임 일시정지/재개
-
-Paused spectator opacity (percent)
-== 관전자 불투명도(퍼센트)
 
 Penalty in seconds for saving or swapping positions
 == 위치 저장 또는 교체에 대한 초 단위 패널티
@@ -10529,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == 이동 정보 HUD에 더미 위치 표시
 
+Show dummy title locally
+== 로컬에서 더미 칭호 표시
+
 Show dummy velocity in movement info HUD
 == 이동 정보 HUD에 더미 속도 표시
 
@@ -10801,6 +10804,9 @@ Show logs of the last i seconds
 
 Show lyrics inside Dynamic Island
 == 다이나믹 아일랜드에 가사 표시
+
+Show main tee title locally
+== 로컬에서 메인 티 칭호 표시
 
 Show map details
 == 맵 세부 정보 표시
@@ -11632,6 +11638,12 @@ Spectated player
 
 Spectated player and friends
 == 관전 중인 플레이어와 친구
+
+Spectator opacity
+== 관전자 불투명도
+
+Spectator opacity (percent)
+== 관전자 불투명도(퍼센트)
 
 Spectators
 == 관전자

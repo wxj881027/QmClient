@@ -281,11 +281,11 @@ bool ShouldUseQmNameplateTextEffects(int PlayingScope, int SpectateScope, int De
 	return ShouldUseQmNameplateTextPlayingScope(PlayingScope, Self, Friend);
 }
 
-// HJ大佬辅助 - 水中旁观者虚化：只有真正 /pause 且世界内仍有旁观 Tee 的玩家才被调暗。
+// HJ 大佬辅助：只淡化水域中的旁观实体。
 // 透明度按最外侧乘算，避免覆盖 cl_show_others_alpha 等既有档位。
-float ResolveQmPausedSpectatorAlpha(bool FadeEnabled, int AlphaPercent, bool Paused, bool SpectatorTeeInWorld, float BaseAlpha)
+float ResolveQmPausedSpectatorAlpha(bool FadeEnabled, int AlphaPercent, bool SpectatorTeeInWorld, bool InWater, float BaseAlpha)
 {
-	if(!FadeEnabled || !Paused || !SpectatorTeeInWorld)
+	if(!FadeEnabled || !SpectatorTeeInWorld || !InWater)
 		return BaseAlpha;
 	return BaseAlpha * std::clamp(AlphaPercent, 0, 100) / 100.0f;
 }

@@ -2240,9 +2240,20 @@ void CChat::OnPrepareLines(float y)
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
+	const std::array<int, 4> aTitleVisibility = {g_Config.m_QmShowMainTitle, g_Config.m_QmShowDummyTitle,
+		GameClient()->m_aLocalIds[IClient::CONN_MAIN], GameClient()->m_aLocalIds[IClient::CONN_DUMMY]};
 	const bool ForceRecreate = IsScoreBoardOpen != m_PrevScoreBoardShowed || ShowLargeArea != m_PrevShowChat;
 	m_PrevScoreBoardShowed = IsScoreBoardOpen;
 	m_PrevShowChat = ShowLargeArea;
+	if(aTitleVisibility != m_aPrevTitleVisibility)
+	{
+		m_aPrevTitleVisibility = aTitleVisibility;
+		RebuildChat();
+	}
+	// 保留消息原始头衔，重新开启本地显示后可以恢复历史消息。
+	const auto VisibleTitle = [this](const char *pTitle, int ClientId) {
+		return GameClient()->m_QmClient.ShouldShowPlayerTitle(ClientId) ? pTitle : "";
+	};
 
 	const int TeeSize = MessageTeeSize();
 	float RealMsgPaddingX = MessagePaddingX();
@@ -2316,6 +2327,7 @@ void CChat::OnPrepareLines(float y)
 		bool LineHasDynamicTitle = false;
 		float TitleBobPadding = 0.0f;
 		const auto IncludeTitleLayout = [&](const char *pTitle, int AuthorId) {
+			pTitle = VisibleTitle(pTitle, AuthorId);
 			if(pTitle[0] == '\0')
 				return;
 			const SQmTitleRenderStyle Style = QmTitleResolveRenderStyle(GameClient()->m_QmClient.PlayerTitleStyle(AuthorId));
@@ -2448,13 +2460,13 @@ void CChat::OnPrepareLines(float y)
 				{
 					if(i > 0)
 						TextRender()->TextEx(&MeasureCursor, ",");
-					TextRender()->TextEx(&MeasureCursor, Line.m_vMergedAuthors[i].m_aQmTitle);
+					TextRender()->TextEx(&MeasureCursor, VisibleTitle(Line.m_vMergedAuthors[i].m_aQmTitle, Line.m_vMergedAuthors[i].m_ClientId));
 					TextRender()->TextEx(&MeasureCursor, Line.m_vMergedAuthors[i].m_aName);
 				}
 			}
 			else
 			{
-				TextRender()->TextEx(&MeasureCursor, Line.m_aQmTitle);
+				TextRender()->TextEx(&MeasureCursor, VisibleTitle(Line.m_aQmTitle, Line.m_ClientId));
 				TextRender()->TextEx(&MeasureCursor, Line.m_aName);
 			}
 			if(Line.m_TimesRepeated > 0)
@@ -2569,6 +2581,7 @@ void CChat::OnPrepareLines(float y)
 			NameColor = PlayerNameColor(Line.m_ClientId, Line.m_NameColor, Line.m_Team);
 
 		const auto AppendQmTitle = [&](const char *pTitle, const ColorRGBA &FallbackColor, int AuthorId) {
+			pTitle = VisibleTitle(pTitle, AuthorId);
 			CQmTitleTextMetrics &Metrics = Line.m_vTitleTextMetrics[TitleMetricsIndex++];
 			const bool CustomColor = pTitle[0] != '\0' && TitleColorStyle.m_Mode != EQmTitleColorMode::FOLLOW_SERVER;
 			const SQmTitleRenderStyle Style = QmTitleResolveRenderStyle(GameClient()->m_QmClient.PlayerTitleStyle(AuthorId));

@@ -110,6 +110,43 @@ TEST(QmEmoticonProjectile, DistantPlayersSkipNarrowPhase)
 	EXPECT_EQ(CountedMask.m_NumBoxChecks, 0);
 }
 
+TEST(QmEmoticonProjectile, TransparentPaddingDoesNotQueryUnoccupiedTiles)
+{
+	std::array<unsigned char, 64 * 64 * 4> Pixels{};
+	Pixels[(32 * 64 + 32) * 4 + 3] = 255;
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 64, 64);
+	int TileQueries = 0;
+	const auto EmptyMap = [&](int X, int Y) {
+		++TileQueries;
+		EXPECT_EQ(X, 0);
+		EXPECT_EQ(Y, 0);
+		return false;
+	};
+	EXPECT_FALSE(Mask.Overlaps(vec2(16.0f, 16.0f), 128.0f, 0.0f, EmptyMap));
+	EXPECT_EQ(TileQueries, 1);
+}
+
+TEST(QmEmoticonProjectile, RotatedOffCenterContourStillHitsItsTile)
+{
+	std::array<unsigned char, 8 * 8 * 4> Pixels{};
+	Pixels[(6 * 8 + 1) * 4 + 3] = 255;
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 8, 8);
+	for(float Angle : {0.0f, pi / 4.0f, pi / 2.0f, pi, -pi / 4.0f})
+	{
+		SCOPED_TRACE(Angle);
+		const vec2 AxisX = direction(Angle);
+		const vec2 Center = vec2(16.0f, 16.0f) + AxisX * -20.0f + vec2(-AxisX.y, AxisX.x) * 20.0f;
+		const int TileX = (int)std::floor(Center.x / 32.0f);
+		const int TileY = (int)std::floor(Center.y / 32.0f);
+		const auto SolidTile = [=](int X, int Y) { return X == TileX && Y == TileY; };
+		EXPECT_TRUE(Mask.Overlaps(vec2(16.0f, 16.0f), 64.0f, Angle, SolidTile));
+	}
+	Mask.Build(nullptr, 0, 0);
+	EXPECT_FALSE(Mask.Overlaps(vec2(16.0f, 16.0f), 64.0f, 0.0f, [](int, int) { return true; }));
+}
+
 TEST(QmEmoticonProjectile, RotatedSuperEmoticonCornerStillHitsNearbyPlayer)
 {
 	const auto Pixels = OpaquePixel();

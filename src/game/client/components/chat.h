@@ -23,6 +23,7 @@
 #include <game/client/ui.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -181,6 +182,7 @@ private:
 
 	bool m_PrevScoreBoardShowed;
 	bool m_PrevShowChat;
+	std::array<int, 4> m_aPrevTitleVisibility = {};
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
 	bool m_LastPresentationShowLargeArea;

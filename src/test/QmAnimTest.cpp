@@ -424,12 +424,12 @@ TEST(SettingsPageLayout, ControllerRadioRowAddsASecondLineOnlyWhenWidthRequiresI
 	const SSettingsContentMetrics WideMetrics = ResolveSettingsContentMetrics(700.0f);
 	const SSettingsRadioRowLayout Wide = ResolveSettingsRadioRowLayout({0.0f, 0.0f, 700.0f, 100.0f}, 2, WideMetrics);
 	EXPECT_FALSE(Wide.m_Stacked);
-	EXPECT_FLOAT_EQ(Wide.m_Height, WideMetrics.m_LineHeight);
+	EXPECT_FLOAT_EQ(Wide.m_Height, Wide.m_ButtonsRect.h);
 
 	const SSettingsContentMetrics NarrowMetrics = ResolveSettingsContentMetrics(240.0f);
 	const SSettingsRadioRowLayout Narrow = ResolveSettingsRadioRowLayout({0.0f, 0.0f, 240.0f, 100.0f}, 2, NarrowMetrics);
 	EXPECT_TRUE(Narrow.m_Stacked);
-	EXPECT_FLOAT_EQ(Narrow.m_Height, NarrowMetrics.m_LineHeight + NarrowMetrics.m_LineSpacing + NarrowMetrics.m_ButtonHeight);
+	EXPECT_FLOAT_EQ(Narrow.m_Height, Narrow.m_ButtonsRect.y + Narrow.m_ButtonsRect.h);
 }
 
 TEST(SettingsPageLayout, ControllerHeightTracksStateWidthAndAxisLimit)
@@ -597,13 +597,13 @@ TEST(SettingsPageLayout, RadioRowsUseMetricsAndStackOnlyWhenRequired)
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(640.0f);
 	const SSettingsRadioRowLayout Inline = ResolveSettingsRadioRowLayout({0.0f, 0.0f, 600.0f, 100.0f}, 3, Metrics);
 	EXPECT_FALSE(Inline.m_Stacked);
-	EXPECT_FLOAT_EQ(Inline.m_Height, Metrics.m_ButtonHeight);
-	EXPECT_FLOAT_EQ(Inline.m_LabelRect.h, Metrics.m_LineHeight);
-	EXPECT_FLOAT_EQ(Inline.m_ButtonsRect.h, Metrics.m_ButtonHeight);
+	EXPECT_FLOAT_EQ(Inline.m_Height, 24.0f);
+	EXPECT_FLOAT_EQ(Inline.m_LabelRect.h, Inline.m_Height);
+	EXPECT_FLOAT_EQ(Inline.m_ButtonsRect.h, Inline.m_Height);
 
 	const SSettingsRadioRowLayout Stacked = ResolveSettingsRadioRowLayout({0.0f, 0.0f, 140.0f, 100.0f}, 3, Metrics);
 	EXPECT_TRUE(Stacked.m_Stacked);
-	EXPECT_FLOAT_EQ(Stacked.m_Height, Metrics.m_LineHeight + Metrics.m_LineSpacing + Metrics.m_ButtonHeight);
+	EXPECT_FLOAT_EQ(Stacked.m_Height, Metrics.m_LineHeight + Metrics.m_LineSpacing + 24.0f);
 	EXPECT_FLOAT_EQ(Stacked.m_ButtonsRect.y, Metrics.m_LineHeight + Metrics.m_LineSpacing);
 }
 

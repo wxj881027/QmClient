@@ -26,15 +26,19 @@ namespace QmEmoticon
 			int m_Top;
 			int m_Right;
 			int m_Bottom;
+			vec2 m_NormalizedCenter = vec2(0.0f, 0.0f);
 		};
 		std::vector<SRect> m_vRects;
 		int m_Width = 1;
 		int m_Height = 1;
+		vec2 m_BoundsCenter = vec2(0.0f, 0.0f);
+		vec2 m_BoundsHalf = vec2(0.0f, 0.0f);
 
 	public:
 		void Build(const unsigned char *pRgba, int Width, int Height, int Stride = 0)
 		{
 			m_vRects.clear();
+			m_BoundsCenter = m_BoundsHalf = vec2(0.0f, 0.0f);
 			m_Width = std::max(1, Width);
 			m_Height = std::max(1, Height);
 			if(pRgba == nullptr || Width <= 0 || Height <= 0)
@@ -77,6 +81,19 @@ namespace QmEmoticon
 				}
 				vPreviousRow.swap(vCurrentRow);
 			}
+			if(m_vRects.empty())
+				return;
+			int Left = Width, Top = Height, Right = 0, Bottom = 0;
+			for(SRect &Rect : m_vRects)
+			{
+				Rect.m_NormalizedCenter = vec2((Rect.m_Left + Rect.m_Right) / (2.0f * m_Width) - 0.5f, (Rect.m_Top + Rect.m_Bottom) / (2.0f * m_Height) - 0.5f);
+				Left = std::min(Left, Rect.m_Left);
+				Top = std::min(Top, Rect.m_Top);
+				Right = std::max(Right, Rect.m_Right);
+				Bottom = std::max(Bottom, Rect.m_Bottom);
+			}
+			m_BoundsCenter = vec2((Left + Right) / (2.0f * m_Width) - 0.5f, (Top + Bottom) / (2.0f * m_Height) - 0.5f);
+			m_BoundsHalf = vec2((Right - Left) / (2.0f * m_Width), (Bottom - Top) / (2.0f * m_Height));
 		}
 
 		std::size_t NumRects() const { return m_vRects.size(); }
@@ -90,10 +107,16 @@ namespace QmEmoticon
 			const vec2 AxisY(-AxisX.y, AxisX.x);
 			const vec2 AbsX(std::abs(AxisX.x), std::abs(AxisX.y));
 			const vec2 AbsY(std::abs(AxisY.x), std::abs(AxisY.y));
-			const float Radius = Size * 0.707107f;
-			for(int Y = (int)std::floor((Pos.y - Radius) / 32.0f); Y <= (int)std::floor((Pos.y + Radius) / 32.0f); ++Y)
+			// 只查询不透明轮廓包围盒覆盖的瓦片；精细相交仍由原来的 SAT 判定。
+			const vec2 BoundsCenter = Pos + AxisX * (m_BoundsCenter.x * Size) + AxisY * (m_BoundsCenter.y * Size);
+			const vec2 BoundsHalf = (AbsX * m_BoundsHalf.x + AbsY * m_BoundsHalf.y) * Size + vec2(0.01f, 0.01f);
+			const int MinX = (int)std::floor((BoundsCenter.x - BoundsHalf.x) / 32.0f);
+			const int MaxX = (int)std::floor((BoundsCenter.x + BoundsHalf.x) / 32.0f);
+			const int MinY = (int)std::floor((BoundsCenter.y - BoundsHalf.y) / 32.0f);
+			const int MaxY = (int)std::floor((BoundsCenter.y + BoundsHalf.y) / 32.0f);
+			for(int Y = MinY; Y <= MaxY; ++Y)
 			{
-				for(int X = (int)std::floor((Pos.x - Radius) / 32.0f); X <= (int)std::floor((Pos.x + Radius) / 32.0f); ++X)
+				for(int X = MinX; X <= MaxX; ++X)
 				{
 					if(!Solid(X, Y))
 						continue;
@@ -101,7 +124,7 @@ namespace QmEmoticon
 					for(const SRect &Rect : m_vRects)
 					{
 						const vec2 Half((Rect.m_Right - Rect.m_Left) * Size / (2.0f * m_Width), (Rect.m_Bottom - Rect.m_Top) * Size / (2.0f * m_Height));
-						const vec2 Local(((Rect.m_Left + Rect.m_Right) / (2.0f * m_Width) - 0.5f) * Size, ((Rect.m_Top + Rect.m_Bottom) / (2.0f * m_Height) - 0.5f) * Size);
+						const vec2 Local = Rect.m_NormalizedCenter * Size;
 						const vec2 Delta = TileCenter - (Pos + AxisX * Local.x + AxisY * Local.y);
 						if(std::abs(Delta.x) < 16.0f + AbsX.x * Half.x + AbsY.x * Half.y - 0.0001f &&
 							std::abs(Delta.y) < 16.0f + AbsX.y * Half.x + AbsY.y * Half.y - 0.0001f &&
@@ -125,7 +148,7 @@ namespace QmEmoticon
 			for(const SRect &Rect : m_vRects)
 			{
 				const vec2 Half((Rect.m_Right - Rect.m_Left) * Size / (2.0f * m_Width), (Rect.m_Bottom - Rect.m_Top) * Size / (2.0f * m_Height));
-				const vec2 Local(((Rect.m_Left + Rect.m_Right) / (2.0f * m_Width) - 0.5f) * Size, ((Rect.m_Top + Rect.m_Bottom) / (2.0f * m_Height) - 0.5f) * Size);
+				const vec2 Local = Rect.m_NormalizedCenter * Size;
 				const vec2 Delta = BoxCenter - (Pos + AxisX * Local.x + AxisY * Local.y);
 				if(std::abs(Delta.x) < BoxHalf.x + AbsX.x * Half.x + AbsY.x * Half.y - 0.0001f &&
 					std::abs(Delta.y) < BoxHalf.y + AbsX.y * Half.x + AbsY.y * Half.y - 0.0001f &&

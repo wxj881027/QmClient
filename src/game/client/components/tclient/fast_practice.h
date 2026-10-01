@@ -29,7 +29,7 @@ public:
 	void Enable(bool PreserveHeldInput = false);
 	void Disable();
 	bool ConsumeKillCommand();
-	bool ConsumeSpectatorCommand();
+	void PrepareForSpectating();
 	bool ConsumePracticeChatCommand(int Team, const char *pLine);
 	void ResetPracticeToAnchor();
 

@@ -5,9 +5,42 @@
 
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
+#include <game/localization.h>
 
 #include <algorithm>
 #include <cmath>
+
+void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	CUIRect Row, LabelColumn, ControlColumn;
+	const auto RenderCheckbox = [this, &Content, LineHeight, LineSpacing, PrewarmOnly](const char *pText, int *pValue) {
+		RenderQmFunctionCheckboxRow(Content, LineHeight, LineSpacing, pValue, pText, Localize(pText), pValue, PrewarmOnly);
+	};
+	RenderCheckbox(Localizable("Auto unspec on unfreeze"), &g_Config.m_QmAutoUnspecOnUnfreeze);
+	RenderCheckbox(Localizable("Auto switch to the tee that got unfrozen"), &g_Config.m_QmAutoSwitchOnUnfreeze);
+	RenderCheckbox(Localizable("Automatically close the current chat after waking from freeze"), &g_Config.m_QmAutoCloseChatOnUnfreeze);
+	RenderCheckbox(Localizable("Show wake-up popup on the other tee"), &g_Config.m_QmFreezeWakeupPopup);
+	RenderCheckbox(Localizable("Auto team lock"), &g_Config.m_QmAutoTeamLock);
+	if(g_Config.m_QmAutoTeamLock)
+	{
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-lock-delay", &LabelColumn, Localize("Lock delay"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		static int s_QmAutoTeamLockDelayInputId;
+		RenderQmSettingsSliderWithValueInput(&s_QmAutoTeamLockDelayInputId, ControlColumn, &g_Config.m_QmAutoTeamLockDelay, 0, 30, "s", PrewarmOnly);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+	RenderCheckbox(Localizable("Fade spectators in water"), &g_Config.m_QmPausedSpectatorFade);
+	if(g_Config.m_QmPausedSpectatorFade)
+	{
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-spectator-alpha", &LabelColumn, Localize("Spectator opacity"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		static int s_QmPausedSpectatorAlphaInputId;
+		RenderQmSettingsSliderWithValueInput(&s_QmPausedSpectatorAlphaInputId, ControlColumn, &g_Config.m_QmPausedSpectatorAlpha, 0, 100, "%", PrewarmOnly);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+}
 
 // 功能分类卡片模块（17 张）：卡片的高度测量、重测版本、预布局输入与内容渲染都在这里，
 // 页面（栖梦「功能」页、搜索页）只声明"这一页有这些卡"。
@@ -203,7 +236,10 @@ namespace qm_card_catalog
 		}
 		case EQmModuleId::FriendNotify:
 		{
-			const auto RenderFriendNotify = [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content, const bool PrewarmOnly) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionFriendNotifyContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly); };
+			const auto RenderFriendNotify = [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content, const bool PrewarmOnly) {
+				QmCardRenderHook::RenderQmFunctionCheckboxRow(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmSpectatorFriendsFirst, "List friends first in the spectator menu", Localize("List friends first in the spectator menu"), &g_Config.m_QmSpectatorFriendsFirst, PrewarmOnly);
+				QmCardRenderHook::RenderQmFunctionFriendNotifyContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+			};
 			MakeModuleCard(
 				Ctx, Id, "qm:friend_notify", "Friend Notifications", "Friend online and join notifications",
 				[RenderFriendNotify, ReadOnly](CUIRect &Content) { RenderFriendNotify(Content, ReadOnly); },

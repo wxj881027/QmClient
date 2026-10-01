@@ -4304,8 +4304,8 @@ Fade opacity along trail length
 Fade out
 == フェードアウト
 
-Fade paused spectators in water
-== 水中で一時停止中の観戦者を半透明にする
+Fade spectators in water
+== 水中の観戦者を半透明にする
 
 Fade trail alpha
 == フェードトレイルアルファ
@@ -6197,6 +6197,9 @@ List foes
 List friends
 == フレンドを一覧表示
 
+List friends first in the spectator menu
+== 観戦メニューでフレンドを優先表示
+
 List KCP/legacy transport status and weak-network simulation metrics
 == KCP/レガシートランスポートステータスと弱体ネットワークシミュレーションメトリクスを一覧表示
 
@@ -7999,9 +8002,6 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == ゲームを一時停止/再開
-
-Paused spectator opacity (percent)
-== 観戦者の不透明度（パーセント）
 
 Penalty in seconds for saving or swapping positions
 == 位置の保存または交換に対するペナルティ（秒単位）
@@ -10529,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == 移動情報 HUD にダミー位置を表示
 
+Show dummy title locally
+== ダミーの称号をローカル表示
+
 Show dummy velocity in movement info HUD
 == 移動情報 HUD にダミー速度を表示
 
@@ -10801,6 +10804,9 @@ Show logs of the last i seconds
 
 Show lyrics inside Dynamic Island
 == Dynamic Island 内に歌詞を表示
+
+Show main tee title locally
+== メインTeeの称号をローカル表示
 
 Show map details
 == マップの詳細を表示
@@ -11632,6 +11638,12 @@ Spectated player
 
 Spectated player and friends
 == 観戦中のプレイヤーとフレンド
+
+Spectator opacity
+== 観戦者の不透明度
+
+Spectator opacity (percent)
+== 観戦者の不透明度（パーセント）
 
 Spectators
 == 観戦者

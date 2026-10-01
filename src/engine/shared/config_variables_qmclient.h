@@ -244,6 +244,8 @@ MACRO_CONFIG_INT(QmTitleBobWavelength, qm_title_bob_wavelength, 320, 16, 1024, C
 MACRO_CONFIG_INT(QmTitleBobSpeed, qm_title_bob_speed, 150, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Title bob angular speed in 1/100 rad/s")
 MACRO_CONFIG_INT(QmTitleBobPixelSnap, qm_title_bob_pixel_snap, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Snap title bob offset to whole pixels (sharper glyphs, choppier motion)")
 MACRO_CONFIG_INT(QmShowNameplateTitle, qm_show_nameplate_title, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show QmClient title in player nameplate (0 = hide)")
+MACRO_CONFIG_INT(QmShowMainTitle, qm_show_main_title, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show main tee title locally")
+MACRO_CONFIG_INT(QmShowDummyTitle, qm_show_dummy_title, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show dummy title locally")
 MACRO_CONFIG_INT(QmNameplateTitleAboveName, qm_nameplate_title_above_name, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Place title on a separate line above the player name instead of inline")
 MACRO_CONFIG_INT(QmWeaponTrajectory, qm_weapon_trajectory, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Weapon trajectory helper mode (0=Off, 1=On key, 2=Always)")
 MACRO_CONFIG_INT(QmWeaponTrajectoryGun, qm_weapon_trajectory_gun, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pistol guide line")
@@ -271,9 +273,10 @@ MACRO_CONFIG_INT(QmFreezeWakeupPopup, qm_freeze_wakeup_popup, 0, 0, 1, CFGFLAG_C
 MACRO_CONFIG_INT(QmAutoTeamLock, qm_auto_team_lock, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-lock after joining lockable team")
 MACRO_CONFIG_INT(QmAutoTeamLockDelay, qm_auto_team_lock_delay, 5, 0, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-lock delay (seconds)")
 MACRO_CONFIG_INT(QmAutoAcceptTeamInvite, qm_auto_accept_team_invite, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-accept team invites by sending /team <n>")
-// Paused spectator fade (HJ大佬辅助): 淡化身在水中且已 /pause 的旁观者
-MACRO_CONFIG_INT(QmPausedSpectatorFade, qm_paused_spectator_fade, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fade paused spectators in water")
-MACRO_CONFIG_INT(QmPausedSpectatorAlpha, qm_paused_spectator_alpha, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Paused spectator opacity (percent)")
+MACRO_CONFIG_INT(QmSpectatorFriendsFirst, qm_spectator_friends_first, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "List friends first in the spectator menu")
+// HJ 大佬辅助：淡化水中的旁观实体，保留既有配置键。
+MACRO_CONFIG_INT(QmPausedSpectatorFade, qm_paused_spectator_fade, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Fade spectators in water")
+MACRO_CONFIG_INT(QmPausedSpectatorAlpha, qm_paused_spectator_alpha, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spectator opacity (percent)")
 
 // Input Overlay / 输入叠加
 MACRO_CONFIG_INT(QmInputOverlay, qm_input_overlay, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show input overlay")

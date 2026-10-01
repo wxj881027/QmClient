@@ -4304,8 +4304,8 @@ Fade opacity along trail length
 Fade out
 == Появление
 
-Fade paused spectators in water
-== Делать полупрозрачными зрителей на паузе в воде
+Fade spectators in water
+== Делать полупрозрачными зрителей в воде
 
 Fade trail alpha
 == Затухание альфа-канала следа
@@ -6197,6 +6197,9 @@ List foes
 List friends
 == Список друзей
 
+List friends first in the spectator menu
+== Показывать друзей первыми в меню наблюдения
+
 List KCP/legacy transport status and weak-network simulation metrics
 == Список статуса транспорта KCP/легаси и метрик симуляции слабой сети
 
@@ -7999,9 +8002,6 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == Поставить/снять игру на паузу
-
-Paused spectator opacity (percent)
-== Непрозрачность зрителя (в процентах)
 
 Penalty in seconds for saving or swapping positions
 == Штраф в секундах за сохранение или обмен позициями
@@ -10529,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == Показывать позицию дамми в HUD информации о движении
 
+Show dummy title locally
+== Показывать титул манекена локально
+
 Show dummy velocity in movement info HUD
 == Показывать скорость дамми в HUD информации о движении
 
@@ -10801,6 +10804,9 @@ Show logs of the last i seconds
 
 Show lyrics inside Dynamic Island
 == Показывать текст песни в Dynamic Island
+
+Show main tee title locally
+== Показывать титул основного ти локально
 
 Show map details
 == Показывать детали карты
@@ -11632,6 +11638,12 @@ Spectated player
 
 Spectated player and friends
 == Наблюдаемый игрок и друзья
+
+Spectator opacity
+== Непрозрачность зрителя
+
+Spectator opacity (percent)
+== Непрозрачность зрителя (в процентах)
 
 Spectators
 == Наблюдатели

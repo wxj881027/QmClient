@@ -4304,8 +4304,8 @@ Fade opacity along trail length
 Fade out
 == Esvanecer
 
-Fade paused spectators in water
-== Suavizar espetadores em pausa na água
+Fade spectators in water
+== Suavizar espetadores na água
 
 Fade trail alpha
 == Desvanecer alfa do rasto
@@ -6197,6 +6197,9 @@ List foes
 List friends
 == Listar amigos
 
+List friends first in the spectator menu
+== Mostrar amigos primeiro no menu de espectador
+
 List KCP/legacy transport status and weak-network simulation metrics
 == Listar estado do transporte KCP/legado e métricas de simulação de rede fraca
 
@@ -7999,9 +8002,6 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == Pausar/despausar jogo
-
-Paused spectator opacity (percent)
-== Opacidade do espetador em pausa (percentagem)
 
 Penalty in seconds for saving or swapping positions
 == Penalidade em segundos por guardar ou trocar posições
@@ -10529,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == Mostrar posição do Dummy no HUD de informação de movimento
 
+Show dummy title locally
+== Mostrar título do dummy localmente
+
 Show dummy velocity in movement info HUD
 == Mostrar velocidade do Dummy no HUD de informação de movimento
 
@@ -10801,6 +10804,9 @@ Show logs of the last i seconds
 
 Show lyrics inside Dynamic Island
 == Show lyrics in Dynamic Island
+
+Show main tee title locally
+== Mostrar título do tee principal localmente
 
 Show map details
 == Mostrar detalhes do mapa
@@ -11632,6 +11638,12 @@ Spectated player
 
 Spectated player and friends
 == Jogador observado e amigos
+
+Spectator opacity
+== Opacidade do espetador
+
+Spectator opacity (percent)
+== Opacidade do espetador (percentagem)
 
 Spectators
 == Espetadores

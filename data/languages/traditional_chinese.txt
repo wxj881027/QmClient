@@ -4304,8 +4304,8 @@ Fade opacity along trail length
 Fade out
 == 淡出
 
-Fade paused spectators in water
-== 虛化水中的暫停旁觀者
+Fade spectators in water
+== 虛化水中的旁觀者
 
 Fade trail alpha
 == 淡化拖尾
@@ -6197,6 +6197,9 @@ List foes
 List friends
 == 列出好友
 
+List friends first in the spectator menu
+== 旁觀選單中優先顯示好友
+
 List KCP/legacy transport status and weak-network simulation metrics
 == 列出 KCP/舊傳輸狀態和弱網模擬指標
 
@@ -7999,9 +8002,6 @@ Pause voice when window unfocused
 
 Pause/unpause game
 == 暫停/恢復遊戲
-
-Paused spectator opacity (percent)
-== 旁觀者透明度（百分比）
 
 Penalty in seconds for saving or swapping positions
 == 保存或交換位置的懲罰時間（秒）
@@ -10529,6 +10529,9 @@ Show dummy mini view window
 Show dummy position in movement info HUD
 == 在運動信息 HUD 中顯示分身位置
 
+Show dummy title locally
+== 本機顯示分身頭銜
+
 Show dummy velocity in movement info HUD
 == 在運動信息 HUD 中顯示分身速度
 
@@ -10801,6 +10804,9 @@ Show logs of the last i seconds
 
 Show lyrics inside Dynamic Island
 == 將歌詞顯示在靈動島內
+
+Show main tee title locally
+== 本機顯示本體頭銜
 
 Show map details
 == 顯示地圖細節
@@ -11632,6 +11638,12 @@ Spectated player
 
 Spectated player and friends
 == 被觀戰的玩家與好友
+
+Spectator opacity
+== 旁觀者透明度
+
+Spectator opacity (percent)
+== 旁觀者透明度（百分比）
 
 Spectators
 == 旁觀者

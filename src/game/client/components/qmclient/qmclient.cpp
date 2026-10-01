@@ -3124,6 +3124,13 @@ const char *CQmClient::PlayerTitle(int ClientId) const
 	return "";
 }
 
+bool CQmClient::ShouldShowPlayerTitle(int ClientId) const
+{
+	return QmTitleVisibleForLocalConnection(ClientId,
+		GameClient()->m_aLocalIds[IClient::CONN_MAIN], GameClient()->m_aLocalIds[IClient::CONN_DUMMY],
+		g_Config.m_QmShowMainTitle != 0, g_Config.m_QmShowDummyTitle != 0);
+}
+
 const char *CQmClient::PlayerTitleStyle(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))

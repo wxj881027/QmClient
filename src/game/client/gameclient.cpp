@@ -6388,11 +6388,8 @@ void CGameClient::CClientData::CSixup::Reset()
 
 void CGameClient::SendSwitchTeam(int Team)
 {
-	if(Team == TEAM_SPECTATORS && m_FastPractice.Enabled())
-	{
-		m_FastPractice.ConsumeSpectatorCommand();
-		return;
-	}
+	if(Team == TEAM_SPECTATORS)
+		m_FastPractice.PrepareForSpectating();
 
 	CNetMsg_Cl_SetTeam Msg;
 	Msg.m_Team = Team;

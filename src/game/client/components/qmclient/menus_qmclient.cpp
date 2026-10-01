@@ -2567,29 +2567,6 @@ void CMenus::RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale
 	}
 }
 
-void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
-{
-	CUIRect Row, LabelColumn, ControlColumn;
-	auto RenderCheckbox = [this, &Content, &Row, LineHeight, LineSpacing, PrewarmOnly](const void *pId, const char *pText, int *pValue) {
-		Content.HSplitTop(LineHeight, &Row, &Content);
-		RenderQmFunctionCheckbox(pId, pText, Localize(pText), pValue, &Row, PrewarmOnly);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	};
-	RenderCheckbox(&g_Config.m_QmAutoUnspecOnUnfreeze, "Auto unspec on unfreeze", &g_Config.m_QmAutoUnspecOnUnfreeze);
-	RenderCheckbox(&g_Config.m_QmAutoSwitchOnUnfreeze, "Auto switch to the tee that got unfrozen", &g_Config.m_QmAutoSwitchOnUnfreeze);
-	RenderCheckbox(&g_Config.m_QmAutoCloseChatOnUnfreeze, "Automatically close the current chat after waking from freeze", &g_Config.m_QmAutoCloseChatOnUnfreeze);
-	RenderCheckbox(&g_Config.m_QmFreezeWakeupPopup, "Show wake-up popup on the other tee", &g_Config.m_QmFreezeWakeupPopup);
-	RenderCheckbox(&g_Config.m_QmAutoTeamLock, "Auto team lock", &g_Config.m_QmAutoTeamLock);
-	if(!g_Config.m_QmAutoTeamLock)
-		return;
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-hj-assist-lock-delay", &LabelColumn, Localize("Lock delay"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
-	static int s_QmAutoTeamLockDelayInputId;
-	RenderQmSettingsSliderWithValueInput(&s_QmAutoTeamLockDelayInputId, ControlColumn, &g_Config.m_QmAutoTeamLockDelay, 0, 30, "s", PrewarmOnly);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-}
-
 void CMenus::RenderQmHudBindStatusContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	// 内置四项状态开关（自外观页 DDRace HUD 卡片迁移）
@@ -4194,7 +4171,7 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 		case EQmModuleId::JumpHint: return Row() * 5.0f;
 		case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 6.0f;
 		case EQmModuleId::FriendNotify:
-			return Row() * (5.0f + (g_Config.m_QmFriendOnlineAutoRefresh ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterBroadcast ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterAutoGreet ? 1.0f : 0.0f));
+			return Row() * (6.0f + (g_Config.m_QmFriendOnlineAutoRefresh ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterBroadcast ? 1.0f : 0.0f) + (g_Config.m_QmFriendEnterAutoGreet ? 1.0f : 0.0f));
 		case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(TextRender(), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
 		case EQmModuleId::Translate:
 		{
@@ -4227,7 +4204,7 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 			const size_t FavoriteCount = GameClient()->TClientComponent().GetFavoriteMaps().size();
 			return Rows((float)(4 + std::max<size_t>(1, std::min<size_t>(FavoriteCount, 64))));
 		}
-		case EQmModuleId::HJAssist: return Row() * (g_Config.m_QmAutoTeamLock ? 6.0f : 5.0f);
+		case EQmModuleId::HJAssist: return Row() * (6.0f + (g_Config.m_QmAutoTeamLock ? 1.0f : 0.0f) + (g_Config.m_QmPausedSpectatorFade ? 1.0f : 0.0f));
 		default: return Rows(1.0f);
 		}
 	};
@@ -4258,7 +4235,7 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 		case EQmModuleId::QiaFen: return s_KeywordRulesLayoutRevision;
 		case EQmModuleId::PieMenu: return (g_Config.m_QmPieMenuEnabled ? 1u : 0u) | (g_Config.m_QmPieFollowName[0] != '\0' ? 2u : 0u);
 		case EQmModuleId::FavoriteMaps: return s_FavoriteMapsLayoutRevision;
-		case EQmModuleId::HJAssist: return g_Config.m_QmAutoTeamLock ? 1u : 0u;
+		case EQmModuleId::HJAssist: return (g_Config.m_QmAutoTeamLock ? 1u : 0u) | (g_Config.m_QmPausedSpectatorFade ? 2u : 0u);
 		default: return 0u;
 		}
 	};
