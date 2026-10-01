@@ -2681,6 +2681,9 @@ Custom font weight (variable fonts)
 Custom Font:
 == 自定义字体：
 
+Custom map upload
+== 自定义地图上传
+
 Custom prompt template
 == 自定义提示词模板
 

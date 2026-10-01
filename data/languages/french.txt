@@ -2681,6 +2681,9 @@ Custom font weight (variable fonts)
 Custom Font:
 == Police personnalisée :
 
+Custom map upload
+== Envoyer des cartes personnalisées
+
 Custom prompt template
 == Modèle d'invite personnalisé
 

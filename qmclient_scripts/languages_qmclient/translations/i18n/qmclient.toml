@@ -14960,6 +14960,22 @@ turkish = "DDNet sürümleri"
 polish = "Wydania DDNet"
 
 [[message]]
+key = "Custom map upload"
+[message.translations]
+simplified_chinese = "自定义地图上传"
+traditional_chinese = "自訂地圖上傳"
+japanese = "カスタムマップのアップロード"
+korean = "사용자 지정 맵 업로드"
+russian = "Загрузка пользовательских карт"
+german = "Eigene Karten hochladen"
+spanish = "Subir mapas personalizados"
+french = "Envoyer des cartes personnalisées"
+brazilian_portuguese = "Enviar mapas personalizados"
+portuguese = "Enviar mapas personalizados"
+turkish = "Özel harita yükle"
+polish = "Prześlij własne mapy"
+
+[[message]]
 key = "Friend links"
 [message.translations]
 simplified_chinese = "友链"

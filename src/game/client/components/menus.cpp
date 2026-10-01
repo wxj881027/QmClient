@@ -756,6 +756,7 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 	if(!m_SettingsCardRenderOnlyOrderInitialized || m_SettingsCardRenderOnlyOrderSource != g_Config.m_QmGlobalCardOrder)
 	{
 		m_SettingsCardRenderOnlyOrderModel.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries());
+		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
 		m_SettingsCardRenderOnlyOrderSource = g_Config.m_QmGlobalCardOrder;
 		m_SettingsCardRenderOnlyOrderInitialized = true;
 	}
@@ -812,6 +813,13 @@ void CMenus::LoadSettingsCardOrderModel()
 		g_Config.m_QmCardLayoutVersion = Version;
 		return true;
 	};
+	// 归属修复不依赖布局版本，也不能被较早的可选布局迁移阻断。
+	// 写回失败时仍保留可显示的内存布局，下次加载会再次尝试修复。
+	if(qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel) && !PersistCurrentLayout())
+	{
+		m_SettingsCardOrderLoaded = true;
+		return;
+	}
 	if(g_Config.m_QmGlobalCardOrder[0] == '\0' && g_Config.m_QmCardOrderMigrated == 0)
 	{
 		qm_card_order::CModel Candidate;

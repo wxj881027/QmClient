@@ -2681,6 +2681,9 @@ Custom font weight (variable fonts)
 Custom Font:
 == Niestandardowa czcionka:
 
+Custom map upload
+== Prześlij własne mapy
+
 Custom prompt template
 == Niestandardowy szablon promptu
 

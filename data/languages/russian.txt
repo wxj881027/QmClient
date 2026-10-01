@@ -2681,6 +2681,9 @@ Custom font weight (variable fonts)
 Custom Font:
 == Пользовательский шрифт:
 
+Custom map upload
+== Загрузка пользовательских карт
+
 Custom prompt template
 == Пользовательский шаблон промпта
 

@@ -2681,6 +2681,9 @@ Custom font weight (variable fonts)
 Custom Font:
 == Fonte Personalizada:
 
+Custom map upload
+== Enviar mapas personalizados
+
 Custom prompt template
 == Modelo de prompt personalizado
 

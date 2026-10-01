@@ -402,4 +402,23 @@ namespace qm_card_registry
 		}
 		return vEntries;
 	}
+
+	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model)
+	{
+		bool Changed = false;
+		for(const qm_card_order::SEntry &Default : BuildDefaultEntries())
+		{
+			if(str_startswith(Default.m_pDefaultTab, "credits-") == nullptr && str_comp(Default.m_pStableId, "deck:tclient-info-files") != 0)
+				continue;
+			const int Index = Model.FindByStableId(Default.m_pStableId);
+			if(Index < 0)
+				continue;
+			const char *pTab = Model.Entry(Index).m_pDefaultTab;
+			if(pTab == nullptr || (str_comp(pTab, "qmclient-contributors") != 0 && str_comp(pTab, "qmclient-contributors-ddnet") != 0 && str_comp(pTab, "tclient-info") != 0))
+				continue;
+			Model.MoveToTab(Default.m_pStableId, Default.m_pDefaultTab, Default.m_Column, Default.m_OrderInColumn);
+			Changed = true;
+		}
+		return Changed;
+	}
 } // namespace qm_card_registry

@@ -489,7 +489,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 	FriendLinks.m_Spec = {"deck:credits-friend-links", Localize("Friend links"), qm_card_registry::ResolveLocalizedDescription("deck:credits-friend-links")};
 	FriendLinks.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(2, LineHeight, LineSpacing); };
 	FriendLinks.m_Render = [this, LineHeight, LineSpacing, ReadOnly](CUIRect Content) {
-		static CButtonContainer s_DdnetWorkshopButton, s_DdnetWebsiteButton, s_QmClientWebsiteButton;
+		static CButtonContainer s_DdnetWorkshopButton, s_DdnetWebsiteButton, s_QmClientWebsiteButton, s_CustomMapUploadButton;
 		CUIRect Row, LeftButton, RightButton;
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
@@ -499,8 +499,11 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			Client()->ViewLink("https://ddnet.org");
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 		Content.HSplitTop(LineHeight, &Row, &Content);
-		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_QmClientWebsiteButton, "credits-links-qmclient-website", Localize("QmClient Website"), 0, &Row))
+		Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_QmClientWebsiteButton, "credits-links-qmclient-website", Localize("QmClient Website"), 0, &LeftButton))
 			Client()->ViewLink("https://qmclient.icu");
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_CustomMapUploadButton, "credits-links-custom-map-upload", Localize("Custom map upload"), 0, &RightButton))
+			Client()->ViewLink("https://shengyan.art");
 	};
 	vCards.push_back(std::move(FriendLinks));
 }

@@ -2681,6 +2681,9 @@ Custom font weight (variable fonts)
 Custom Font:
 == Benutzerdefinierte Schriftart:
 
+Custom map upload
+== Eigene Karten hochladen
+
 Custom prompt template
 == Benutzerdefinierte Prompt-Vorlage
 

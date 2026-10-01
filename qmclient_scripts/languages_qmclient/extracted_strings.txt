@@ -888,6 +888,7 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 Custom font weight (variable fonts)
 Custom Font:
+Custom map upload
 Custom prompt template
 Custom Provider API Key
 Custom Provider endpoint

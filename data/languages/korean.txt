@@ -2681,6 +2681,9 @@ Custom font weight (variable fonts)
 Custom Font:
 == 사용자 정의 글꼴:
 
+Custom map upload
+== 사용자 지정 맵 업로드
+
 Custom prompt template
 == 사용자 정의 프롬프트 템플릿
 

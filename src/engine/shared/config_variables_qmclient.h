@@ -47,7 +47,7 @@ MACRO_CONFIG_STR(QmGlobalCardOrder, qm_global_card_order, 8000, "", CFGFLAG_CLIE
 MACRO_CONFIG_STR(QmSettingsCardCollapsed, qm_settings_card_collapsed, 8000, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons")
 MACRO_CONFIG_INT(QmSettingsCardCollapseMigrated, qm_settings_card_collapse_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Legacy settings card collapse states migrated")
 MACRO_CONFIG_INT(QmCardOrderMigrated, qm_card_order_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Global card ordering old config migration completed flag")
-MACRO_CONFIG_INT(QmCardLayoutVersion, qm_card_layout_version, 0, 0, 9, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card default layout migration version")
+MACRO_CONFIG_INT(QmCardLayoutVersion, qm_card_layout_version, 0, 0, 11, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card default layout migration version")
 MACRO_CONFIG_STR(QmSettingsCardOrder, qm_settings_card_order, 2048, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tclient settings card ordering (format: id:col:order; semicolon-separated)")
 MACRO_CONFIG_INT(DbgQmUiDogfood, dbg_qm_ui_dogfood, 0, 0, 1, CFGFLAG_CLIENT, "Show feat-003 shared UI primitives dogfood page (takes over QmClient settings page, for visual verification of 11 primitives + spring/easing animations)")
 MACRO_CONFIG_INT(QmNewUi, qm_new_ui, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable new settings page UI")

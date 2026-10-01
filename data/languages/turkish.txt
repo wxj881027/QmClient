@@ -2681,6 +2681,9 @@ Custom font weight (variable fonts)
 Custom Font:
 == Özel Yazı Tipi:
 
+Custom map upload
+== Özel harita yükle
+
 Custom prompt template
 == Özel istem şablonu
 
