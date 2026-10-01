@@ -2859,6 +2859,8 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 
 void CMenus::RenderInGameNetwork(CUIRect MainView)
 {
+	const bool UseNewUi = g_Config.m_QmNewUi != 0;
+	const int TabCorners = UseNewUi ? IGraphics::CORNER_ALL : IGraphics::CORNER_NONE;
 	CUIRect TabBar, Button;
 	MainView.HSplitTop(24.0f, &TabBar, &MainView);
 
@@ -2869,7 +2871,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_InternetButton;
-	if(DoMenuTabV2_QmIcon(&s_InternetButton, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, g_Config.m_UiPage == PAGE_INTERNET, &Button, IGraphics::CORNER_NONE))
+	if(DoMenuTabV2_QmIcon(&s_InternetButton, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, g_Config.m_UiPage == PAGE_INTERNET, &Button, TabCorners))
 	{
 		NewPage = PAGE_INTERNET;
 	}
@@ -2877,7 +2879,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_LanButton;
-	if(DoMenuTabV2_QmIcon(&s_LanButton, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, g_Config.m_UiPage == PAGE_LAN, &Button, IGraphics::CORNER_NONE))
+	if(DoMenuTabV2_QmIcon(&s_LanButton, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, g_Config.m_UiPage == PAGE_LAN, &Button, TabCorners))
 	{
 		NewPage = PAGE_LAN;
 	}
@@ -2885,7 +2887,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_FavoritesButton;
-	if(DoMenuTabV2_QmIcon(&s_FavoritesButton, EQmIcon::STAR, FONT_ICON_STAR, g_Config.m_UiPage == PAGE_FAVORITES, &Button, IGraphics::CORNER_NONE))
+	if(DoMenuTabV2_QmIcon(&s_FavoritesButton, EQmIcon::STAR, FONT_ICON_STAR, g_Config.m_UiPage == PAGE_FAVORITES, &Button, TabCorners))
 	{
 		NewPage = PAGE_FAVORITES;
 	}
@@ -2895,7 +2897,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 	static CButtonContainer s_FavoriteMapsButton;
-	if(DoMenuTabV2(&s_FavoriteMapsButton, "", g_Config.m_UiPage == PAGE_FAVORITE_MAPS, &Button, IGraphics::CORNER_NONE))
+	if(DoMenuTabV2(&s_FavoriteMapsButton, "", g_Config.m_UiPage == PAGE_FAVORITE_MAPS, &Button, TabCorners))
 	{
 		NewPage = PAGE_FAVORITE_MAPS;
 	}
@@ -2970,7 +2972,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	{
 		TabBar.VSplitLeft(75.0f, &Button, &TabBar);
 		const int Page = PAGE_FAVORITE_COMMUNITY_1 + FavoriteCommunityIndex;
-		if(DoMenuTabV2_QmIcon(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, g_Config.m_UiPage == Page, &Button, IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, m_CommunityIcons.Find(pCommunity->Id())))
+		if(DoMenuTabV2_QmIcon(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, g_Config.m_UiPage == Page, &Button, TabCorners, nullptr, nullptr, nullptr, m_CommunityIcons.Find(pCommunity->Id())))
 		{
 			NewPage = Page;
 		}
@@ -2989,7 +2991,8 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		SetMenuPage(NewPage);
 	}
 
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	if(!UseNewUi)
+		MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	RenderServerbrowser(MainView, false);
 }
 
