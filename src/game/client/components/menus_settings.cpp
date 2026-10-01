@@ -1082,6 +1082,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 	CMenus *pMenus = pPopupContext->m_pMenus;
 
 	static CListBox s_ListBox;
+	static int64_t s_PopupOpenTime = 0;
 	s_ListBox.SetActive(Active);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
@@ -1091,6 +1092,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 	{
 		pPopupContext->m_New = false;
 		s_ListBox.ScrollToSelected();
+		s_PopupOpenTime = time_get();
 	}
 
 	for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
@@ -1107,7 +1109,15 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 		const float OldWidth = FlagRect.w;
 		FlagRect.w = FlagRect.h * 2.0f;
 		FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
-		pMenus->GameClient()->m_CountryFlags.Render(Entry.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
+		int64_t FlagAnimStartTime = s_PopupOpenTime;
+		if(s_PopupOpenTime > 0)
+		{
+			const int Col = (int)(i % 8);
+			const int Row = (int)(i / 8) % 6;
+			const float StaggerDelay = Col * 0.006f + Row * 0.015f;
+			FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
+		}
+		pMenus->GameClient()->m_CountryFlags.Render(Entry.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
 		pMenus->Ui()->DoLabel(&Label, Entry.m_aCountryCodeString, 10.0f, TEXTALIGN_MC);
 	}
 
@@ -1191,7 +1201,7 @@ void CMenus::RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, f
 	const float OldWidth = FlagIcon.w;
 	FlagIcon.w = FlagIcon.h * 2.0f;
 	FlagIcon.x += (OldWidth - FlagIcon.w) / 2.0f;
-	GameClient()->m_CountryFlags.Render(*pCountry, ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->HotItem() == &s_FlagButton ? 1.0f : 0.85f), FlagIcon.x, FlagIcon.y, FlagIcon.w, FlagIcon.h);
+	GameClient()->m_CountryFlags.Render(*pCountry, ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->HotItem() == &s_FlagButton ? 1.0f : 0.85f), FlagIcon.x, FlagIcon.y, FlagIcon.w, FlagIcon.h, m_TeeEntranceStartTime);
 	if(pFlagButton != nullptr)
 		*pFlagButton = FlagButton;
 }
@@ -1478,12 +1488,14 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			s_TeeSubTab = 0;
 			m_Dummy = false;
 			m_SkinListScrollToSelected = true;
+			m_TeeEntranceStartTime = time_get();
 		}
 		if(DoButton_MenuTab(&s_DummyTabButton, pDummyTabLabel, s_TeeSubTab == 1, &DummyTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
 		{
 			s_TeeSubTab = 1;
 			m_Dummy = true;
 			m_SkinListScrollToSelected = true;
+			m_TeeEntranceStartTime = time_get();
 		}
 		if(DoButton_MenuTab(&s_ProfilesTabButton, pProfilesTabLabel, s_TeeSubTab == 2, &ProfilesTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
 		{
@@ -1497,6 +1509,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			s_TeeSubTab = 0;
 			m_Dummy = false;
 			m_SkinListScrollToSelected = true;
+			m_TeeEntranceStartTime = time_get();
 		}
 
 		if(DoButton_MenuTab(&s_DummyTabButton, pDummyTabLabel, s_TeeSubTab == 1, &DummyTab,
@@ -1505,6 +1518,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 			s_TeeSubTab = 1;
 			m_Dummy = true;
 			m_SkinListScrollToSelected = true;
+			m_TeeEntranceStartTime = time_get();
 		}
 
 		if(DoButton_MenuTab(&s_ProfilesTabButton, pProfilesTabLabel, s_TeeSubTab == 2, &ProfilesTab,
@@ -1519,6 +1533,7 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		if(m_SettingsCardDeckDisplayState.EnterView(TeeDisplayKey))
 		{
 			m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
+			m_TeeEntranceStartTime = time_get();
 		}
 	}
 
@@ -1865,7 +1880,38 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				QmApplyTeeHueCycle(PreviousPreviewSkinInfo, HueCycleConfig);
 				pPreviousPreviewSkinInfo = &PreviousPreviewSkinInfo;
 			}
-			RenderTools()->RenderTeeWithSkinChangeTransition(CAnimState::GetIdle(), pPreviousPreviewSkinInfo, &PreviewSkinInfo, TeeEmote, TeeDirection, TeeRenderPos, PreviewTransitionState.Progress(PreviewNow));
+
+			const bool MotionEnabled = g_Config.m_QmUiMotionLevel > 0;
+			float TeeScale = 1.0f;
+			float TeeAlphaScale = 1.0f;
+			if(MotionEnabled && m_TeeEntranceStartTime > 0)
+			{
+				const float Duration = g_Config.m_QmUiMotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
+				const float Overshoot = g_Config.m_QmUiMotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT;
+				const float Elapsed = (time_get() - m_TeeEntranceStartTime) / (float)time_freq();
+				if(Elapsed >= 0.0f && Elapsed < Duration)
+				{
+					const float Progress = Elapsed / Duration;
+					TeeScale = ComputeCountryFlagEntryScale(Progress, Overshoot);
+					TeeAlphaScale = ComputeCountryFlagEntryAlpha(Progress);
+				}
+			}
+
+			if(TeeScale > 0.001f && TeeAlphaScale > 0.001f)
+			{
+				PreviewSkinInfo.m_Size = 60.0f * TeeScale;
+				PreviewSkinInfo.m_BloodColor.a *= TeeAlphaScale;
+				PreviewSkinInfo.m_ColorBody.a *= TeeAlphaScale;
+				PreviewSkinInfo.m_ColorFeet.a *= TeeAlphaScale;
+				if(pPreviousPreviewSkinInfo != nullptr)
+				{
+					PreviousPreviewSkinInfo.m_Size = 60.0f * TeeScale;
+					PreviousPreviewSkinInfo.m_BloodColor.a *= TeeAlphaScale;
+					PreviousPreviewSkinInfo.m_ColorBody.a *= TeeAlphaScale;
+					PreviousPreviewSkinInfo.m_ColorFeet.a *= TeeAlphaScale;
+				}
+				RenderTools()->RenderTeeWithSkinChangeTransition(CAnimState::GetIdle(), pPreviousPreviewSkinInfo, &PreviewSkinInfo, TeeEmote, TeeDirection, TeeRenderPos, PreviewTransitionState.Progress(PreviewNow));
+			}
 		}
 
 		// Skin loading status
@@ -6044,11 +6090,15 @@ void CMenus::RenderSettings(CUIRect MainView)
 		{
 			s_PrevSettingsPage = g_Config.m_UiSettingsPage;
 			s_SettingsTransitionInitialized = true;
+			if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
+				m_TeeEntranceStartTime = time_get();
 		}
 		else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
 		{
 			if(s_PrevSettingsPage == SETTINGS_TEE && g_Config.m_UiSettingsPage != SETTINGS_TEE)
 				FinalizeTeeListDrainPerfSession();
+			if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
+				m_TeeEntranceStartTime = time_get();
 			if(PerfDebugEnabled())
 			{
 				char aPayload[160];

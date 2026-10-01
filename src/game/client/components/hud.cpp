@@ -1398,7 +1398,7 @@ void CHud::RenderGameTimer()
 		const vec2 DotCenter(StatusSectionX + StatusPaddingLeft + StatusDotSize * 0.5f, TimerCapsule.m_BoxY + TimerCapsule.m_BoxH * 0.5f);
 		DrawHudRecordingStatusDot(Graphics(), DotCenter, StatusDotSize, QmHudRecordingDotAlpha(time_get() / (double)time_freq()) * StatusAlpha, RecordingDotScreenPixelSize);
 
-		if(StatusTextAlpha > 0.001f && StatusWidth > RawCollapsedWidth + QmHudMediaIslandScaled(2.0f))
+		if(QmHudRecordingPresentation(ShowRecordingStatus, ScoreboardExpanded, false, false).RecordingTextAlpha(StatusTextAlpha) > 0.001f && StatusWidth > RawCollapsedWidth + QmHudMediaIslandScaled(2.0f))
 		{
 			const float TextX = StatusSectionX + StatusPaddingLeft + StatusDotSize + StatusDotGap;
 			const float TextY = TimerCapsule.m_BoxY + (TimerCapsule.m_BoxH - StatusFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);
@@ -3960,11 +3960,12 @@ float CHud::GetTopIslandAvoidanceRight() const
 	const SHudFrozenTeamInfo FrozenInfo = BuildHudFrozenTeamInfo(*GameClient());
 	char aFrozenSummaryBuf[64];
 	const bool ShowFrozenSummary = BuildHudFrozenSummaryText(FrozenInfo, aFrozenSummaryBuf, sizeof(aFrozenSummaryBuf));
-	const bool ShowInfoStack = ShowLocalTime || ShowFrozenSummary;
 
 	char aRecordingBuf[512];
 	const bool ShowRecordingStatus = TimerCapsule.m_Visible && BuildHudRecordingStatusText(*GameClient(), aRecordingBuf, sizeof(aRecordingBuf));
 	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
+	const SHudRecordingPresentation RecordingPresentation = QmHudRecordingPresentation(ShowRecordingStatus, ScoreboardExpanded, ShowLocalTime, ShowFrozenSummary);
+	const bool ShowInfoStack = RecordingPresentation.m_ShowInfoStack;
 	const int SpectatorCount = m_MediaIslandFrameCache.m_SpectatorCount;
 	const bool ShowSpectator = SpectatorCount > 0;
 	const bool ShowSpectatorSatellite = ShowSpectator || QmHudMediaIslandBlobProgressOf(m_MediaIslandAnimState.m_SpectatorLiquidSpring.m_Progress) > 0.0f;
@@ -4251,12 +4252,13 @@ void CHud::RenderMediaIsland()
 	const bool ShowFrozenSummary = BuildHudFrozenSummaryText(FrozenInfo, aFrozenSummaryBuf, sizeof(aFrozenSummaryBuf));
 
 	const bool ShowLocalTime = ShouldRenderHudLocalTime(*GameClient());
-	const bool ShowInfoStack = ShowLocalTime || ShowFrozenSummary;
 	const SHudGameTimerInfo TimerInfo = g_Config.m_ClShowhudTimer ? BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width) : SHudGameTimerInfo{};
 	SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
 	char aRecordingBuf[512];
 	const bool ShowRecordingStatus = TimerCapsule.m_Visible && BuildHudRecordingStatusText(*GameClient(), aRecordingBuf, sizeof(aRecordingBuf));
 	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
+	const SHudRecordingPresentation RecordingPresentation = QmHudRecordingPresentation(ShowRecordingStatus, ScoreboardExpanded, ShowLocalTime, ShowFrozenSummary);
+	const bool ShowInfoStack = RecordingPresentation.m_ShowInfoStack;
 	const int SpectatorCount = m_MediaIslandFrameCache.m_SpectatorCount;
 	const bool ShowSpectator = SpectatorCount > 0;
 	const float SpectatorLiquidProgressBeforeUpdate = QmHudMediaIslandBlobProgress(AnimState.m_SpectatorLiquidSpring);
@@ -4932,7 +4934,7 @@ void CHud::RenderMediaIsland()
 	const float StatusSectionX = StatusAnchorRight + StatusSectionGap;
 	const float TargetStatusWidth = PlannedStatusWidth;
 	const float TargetStatusAlpha = (ShowInfoStack || ShowRecordingStatus) ? 1.0f : 0.0f;
-	const float TargetTextAlpha = ShowInfoStack ? 1.0f : (ShowRecordingStatus && ScoreboardExpanded ? 1.0f : 0.0f);
+	const float TargetTextAlpha = RecordingPresentation.m_ShowRecordingText ? 1.0f : 0.0f;
 
 	const uint64_t StatusBoxNode = HudRecordingStatusNodeKey("box");
 	const uint64_t StatusTextNode = HudRecordingStatusNodeKey("text");
@@ -5334,7 +5336,7 @@ void CHud::RenderMediaIsland()
 			const vec2 DotCenter(StatusSectionX + StatusPaddingLeft + StatusDotSize * 0.5f, IslandY + BaseIslandHeight * 0.5f);
 			DrawHudRecordingStatusDot(Graphics(), DotCenter, StatusDotSize, QmHudRecordingDotAlpha(time_get() / (double)time_freq()) * StatusAlpha * EntranceContentAlpha, ScreenPixelSize);
 
-			if(StatusTextAlpha > 0.001f && StatusWidth > RawCollapsedStatusWidth + QmHudMediaIslandScaled(2.0f))
+			if(RecordingPresentation.RecordingTextAlpha(StatusTextAlpha) > 0.001f && StatusWidth > RawCollapsedStatusWidth + QmHudMediaIslandScaled(2.0f))
 			{
 				const float StatusTextX = StatusSectionX + StatusPaddingLeft + StatusDotSize + StatusDotGap;
 				const float StatusTextY = IslandY + (BaseIslandHeight - StatusFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);
@@ -6914,7 +6916,7 @@ void CHud::RenderSpectatorHud()
 	float AdjustedHeight = m_Height - (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f);
 	float BoundsTop = AdjustedHeight - 15.0f;
 	float BoundsBottom = AdjustedHeight;
-	const bool ShowAutoTag = Client()->State() != IClient::STATE_DEMOPLAYBACK &&
+	const bool ShowAutoTag = !GameClient()->m_RankGhost.IsViewModeActive() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
 				 GameClient()->m_Camera.SpectatingPlayer() &&
 				 GameClient()->m_Camera.CanUseAutoSpecCamera() &&
 				 g_Config.m_ClSpecAutoSync;
@@ -6930,7 +6932,21 @@ void CHud::RenderSpectatorHud()
 
 	// draw the text
 	char aBuf[128];
-	if(GameClient()->m_MultiViewActivated)
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+	{
+		const auto &Replay = GameClient()->m_RankGhost;
+		if(Replay.ViewCameraMode() == CRankGhost::EViewCameraMode::ALL_MEMBERS)
+			str_copy(aBuf, Localize("Multi-View"));
+		else if(Replay.ViewCameraMode() == CRankGhost::EViewCameraMode::FREE)
+			str_copy(aBuf, Localize("Free-View"));
+		else
+		{
+			char aName[MAX_NAME_LENGTH] = "";
+			Replay.ViewMemberName(Replay.ViewSelectedMember(), aName, sizeof(aName));
+			str_format(aBuf, sizeof(aBuf), Localize("Following %s", "Spectating"), aName);
+		}
+	}
+	else if(GameClient()->m_MultiViewActivated)
 	{
 		str_copy(aBuf, Localize("Multi-View"));
 	}
@@ -7319,13 +7335,13 @@ void CHud::OnRender()
 	const bool VideoRendering = false;
 #endif
 	// 回放/导出走独立显示选项；其余情况沿用 cl_showhud / cl_video_showhud。
-	const bool MainHudVisible = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK, VideoRendering).m_Hud;
+	const bool MainHudVisible = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK || GameClient()->m_RankGhost.IsViewModeActive(), VideoRendering).m_Hud;
 	const bool FocusSpectatorHudVisible = ShouldRenderFocusSpectatorHud(
 		GameClient()->m_Snap.m_SpecInfo.m_Active,
 		g_Config.m_ClShowhudSpectator != 0,
 		MainHudVisible,
 		GetQmFocusModeDecisions().m_HideHud);
-	const bool LocalCharacterHudVisible = GameClient()->m_Snap.m_pLocalCharacter &&
+	const bool LocalCharacterHudVisible = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_pLocalCharacter &&
 					      !GameClient()->m_Snap.m_SpecInfo.m_Active &&
 					      !(GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER);
 	if(MainHudVisible)
@@ -7364,7 +7380,7 @@ void CHud::OnRender()
 		}
 		else if(GameClient()->m_Snap.m_SpecInfo.m_Active || GameClient()->m_RankGhost.IsViewModeActive())
 		{
-			const int SpectatorId = GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : SPEC_FREEVIEW;
+			const int SpectatorId = !GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Snap.m_SpecInfo.m_Active ? GameClient()->m_Snap.m_SpecInfo.m_SpectatorId : SPEC_FREEVIEW;
 			if(SpectatorId != SPEC_FREEVIEW && g_Config.m_ClShowhudHealthAmmo)
 			{
 				float HudMainHeight = 0.0f;

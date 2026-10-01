@@ -51,7 +51,7 @@ qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target run_rust
 
 Linux/macOS 使用 `cmake --build cmake-build-release --target <目标> -j 14`。首次配置与 WSL 目录选择见 [build-platforms.md](references/build-platforms.md)。已有 build 目录只在需要时重新配置。
 
-同一 build 目录的 `game-client`、`testrunner`、`run_cxx_tests`、`run_rust_tests`、`qm-benchmarks`、`run_cxx_benchmarks`、`package_default` 及会调用它们的 gate 必须串行；并行需独立 build 目录。
+同一 build 目录的 `game-client`、`testrunner`、`run_cxx_tests`、`run_rust_tests`、`qm-benchmarks`、`run_cxx_benchmarks`、`package_default` 及会调用它们的 gate 必须串行；并行需独立 build 目录。Windows 封装入口会按构建目录获取系统文件锁；遇到占用时自动等待，最长 10 分钟后报告失败。不要绕过封装直接调用 CMake/Ninja。
 
 过滤测试先确保 `testrunner` 已针对当前源码构建，再从 build 目录运行：PowerShell 用 `./testrunner.exe --gtest_filter=<suite.test>`，Linux/macOS 用 `./testrunner --gtest_filter=<suite.test>`。测试临时产物使用 build 下 `tmp/tests/`；源码合同测试不能依赖当前工作目录查找源码。
 

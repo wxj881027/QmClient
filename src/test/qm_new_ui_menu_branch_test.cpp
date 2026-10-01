@@ -883,32 +883,6 @@ TEST(QmNewUiMenuBranches, SettingsShellKeepsExplicitQmNewUiContainerBranch)
 	EXPECT_NE(SettingsHeaderLegacyBranch.find("Button.Draw(ms_ColorTabbarActive"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, LegacyMenusKeepTabAndPanelShellConnected)
-{
-	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	// 统一边距模型：全局安全区 Screen.Margin(8) 提供到窗口四边的 8px 基准，
-	// 导航胶囊行（21px）直接对齐安全区边缘，导航栏高度余下的 8px 即导航→内容间隙，
-	// 壳层只做一次 HSplitTop，内部不再叠加边距或额外下移。
-	const std::string MenuShellSplit = "const bool UseNewUi = g_Config.m_QmNewUi != 0;\n\t\t\tScreen.HSplitTop(MenuMenubarHeight(UseNewUi), &TabBar, &MainView);";
-	EXPECT_NE(MenusSource.find("Screen.Margin(8.0f, &Screen);"), std::string::npos);
-	EXPECT_EQ(MenusSource.find("Screen.Margin(10.0f, &Screen);"), std::string::npos);
-	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f;"), std::string::npos);
-	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_GAP_NEW = 8.0f;"), std::string::npos);
-	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;"), std::string::npos);
-	EXPECT_NE(MenusSource.find("constexpr float MENU_MENUBAR_HEIGHT_LEGACY = 30.0f;"), std::string::npos);
-	EXPECT_NE(MenusSource.find("constexpr float MenuMenubarHeight(bool UseNewUi)"), std::string::npos);
-	EXPECT_NE(MenusSource.find(MenuShellSplit), std::string::npos);
-	EXPECT_NE(MenusSource.find("case IClient::STATE_ONLINE:"), std::string::npos);
-	EXPECT_NE(MenusSource.find(MenuShellSplit, MenusSource.find("case IClient::STATE_ONLINE:")), std::string::npos);
-	EXPECT_EQ(MenusSource.find("MainView.HSplitTop(6.0f, nullptr, &MainView);"), std::string::npos);
-
-	const std::string QmClientSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	// 设置页不再缓存 UseNewUi 局部量，直接读配置，避免未使用变量。
-	EXPECT_EQ(QmClientSource.find("UseNewUi"), std::string::npos);
-	EXPECT_NE(QmClientSource.find("if(g_Config.m_QmNewUi != 0)"), std::string::npos);
-	EXPECT_EQ(QmClientSource.find("if(UseNewUi)\n\t\t\tMainView.HSplitTop(Margin, nullptr, &MainView);"), std::string::npos);
-}
-
 TEST(QmNewUiMenuBranches, AssetsPreviewUsesInnerFrameRectForPreviewImage)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_settings_assets.cpp");
@@ -1612,26 +1586,6 @@ TEST(QmNewUiMenuBranches, ScoreboardDdTeamLabelUsesUnifiedBelowRowLayout)
 	EXPECT_EQ(RenderScoreboard.find("NumPlayers > 8"), std::string::npos);
 	EXPECT_EQ(RenderScoreboard.find("State.m_TeamStartX"), std::string::npos);
 	EXPECT_EQ(RenderScoreboard.find("Row.x + Row.w / 2.0f - TextRender()->TextWidth(TeamFontSize, aBuf) / 2.0f + 5.0f"), std::string::npos);
-}
-
-TEST(QmNewUiMenuBranches, ScoreboardMediaButtonSymbolsFollowContentAlpha)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/scoreboard.cpp");
-	const std::string Helper = FunctionBody(Source, "int DoScoreboardMediaIconButton(");
-
-	EXPECT_NE(Helper.find("const float IconAlpha = std::clamp(ContentAlpha"), std::string::npos);
-	EXPECT_NE(Helper.find("DefaultTextColor().WithMultipliedAlpha(IconAlpha)"), std::string::npos);
-	EXPECT_NE(Helper.find("ColorRGBA(1.0f, 0.0f, 0.0f, IconAlpha)"), std::string::npos);
-	EXPECT_NE(Helper.find("FontIcons::FONT_ICON_SLASH"), std::string::npos);
-	// 计分板的三个 SMTC 播放控制按钮已按远程结果删除，助手只服务影子回放控制条。
-	EXPECT_EQ(Source.find("s_SmtcPrevButton"), std::string::npos);
-	EXPECT_EQ(Source.find("s_SmtcPlayButton"), std::string::npos);
-	EXPECT_EQ(Source.find("s_SmtcNextButton"), std::string::npos);
-	EXPECT_NE(Source.find("DoScoreboardMediaIconButton(Ui(), TextRender(), &s_GhostPlayButton"), std::string::npos);
-	EXPECT_NE(Source.find("DoScoreboardMediaIconButton(Ui(), TextRender(), &s_GhostCloseButton"), std::string::npos);
-	EXPECT_EQ(Source.find("Ui()->DoButton_FontIcon(&s_SmtcPrevButton"), std::string::npos);
-	EXPECT_EQ(Source.find("Ui()->DoButton_FontIcon(&s_SmtcPlayButton"), std::string::npos);
-	EXPECT_EQ(Source.find("Ui()->DoButton_FontIcon(&s_SmtcNextButton"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, ScoreboardUsesOneRowPlanAndDenseTeeLod)

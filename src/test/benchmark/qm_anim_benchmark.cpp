@@ -12,9 +12,11 @@
 
 #include <game/client/QmUi/QmAnim.h>
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
+#include <game/client/components/scoreboard.h>
 
 #include <benchmark/benchmark.h>
 
@@ -294,3 +296,21 @@ BENCHMARK_DEFINE_F(CardMeasureRevisionBenchmark, TranslationRevision)(benchmark:
 	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK_REGISTER_F(CardMeasureRevisionBenchmark, TranslationRevision)->Arg(0)->Arg(1);
+
+// 测量计分板真实内容尺寸与共享滚动状态更新，不包含图形设备或玩家绘制。
+static void BM_ScoreboardScrollFrame(benchmark::State &State)
+{
+	const int NumPlayers = static_cast<int>(State.range(0));
+	const SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, 0.25f);
+	CQmScrollState Scroll;
+	int Frame = 0;
+	for(auto _ : State)
+	{
+		const SQmScrollMetrics Metrics{333.0f, ScoreboardRowsHeight(NumPlayers, NumPlayers / 4, NumPlayers / 8, 20.0f, 0.0f, 8.0f, 12.0f)};
+		if(Frame++ % 10 == 0)
+			Scroll.AddWheelImpulse(Scroll.Offset() > Metrics.MaxOffset() / 2.0f ? 120.0f : -120.0f, Metrics, Config);
+		Scroll.Advance(1.0f / 60.0f, Metrics, Config);
+		benchmark::DoNotOptimize(Scroll.Offset());
+	}
+}
+BENCHMARK(BM_ScoreboardScrollFrame)->Arg(17)->Arg(64)->Arg(128);

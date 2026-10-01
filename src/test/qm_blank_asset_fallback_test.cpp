@@ -5,6 +5,8 @@
 #include <engine/gfx/image_manipulation.h>
 #include <engine/image.h>
 
+#include <game/client/components/assets_resource_registry.h>
+
 #include <gtest/gtest.h>
 
 namespace
@@ -51,6 +53,51 @@ namespace
 	constexpr int QM_TEST_HUD_GRID = 16;
 	constexpr size_t QM_TEST_HUD_SIZE = 512;
 } // namespace
+
+TEST(QmBlankAssetFallback, BuiltinBlankEntitiesUseDefaultSourceAndRespectFallback)
+{
+	const auto Blank = ResolveEntitiesAssetSelection("blank", false);
+	EXPECT_EQ(Blank.m_Path, "editor/entities_clear");
+	EXPECT_TRUE(Blank.m_IsBlank);
+
+	const auto Fallback = ResolveEntitiesAssetSelection("blank", true);
+	EXPECT_EQ(Fallback.m_Path, "editor/entities_clear");
+	EXPECT_FALSE(Fallback.m_IsBlank);
+}
+
+TEST(QmBlankAssetFallback, EntitiesFallbackToggleRestoresBlank)
+{
+	const std::string SelectedAsset = "blank";
+	for(const bool Enabled : {false, true, true, false, false, true})
+	{
+		SCOPED_TRACE(Enabled);
+		const auto Selection = ResolveEntitiesAssetSelection(SelectedAsset, Enabled);
+		EXPECT_EQ(Selection.m_Path, "editor/entities_clear");
+		EXPECT_EQ(Selection.m_IsBlank, !Enabled);
+	}
+}
+
+TEST(QmBlankAssetFallback, DefaultEntitiesRemainVisibleWithEitherFallbackSetting)
+{
+	for(const bool Enabled : {false, true})
+	{
+		SCOPED_TRACE(Enabled);
+		const auto Selection = ResolveEntitiesAssetSelection("default", Enabled);
+		EXPECT_EQ(Selection.m_Path, "editor/entities_clear");
+		EXPECT_FALSE(Selection.m_IsBlank);
+	}
+}
+
+TEST(QmBlankAssetFallback, CustomEntitiesKeepTheirSourceWithEitherFallbackSetting)
+{
+	for(const bool Enabled : {false, true})
+	{
+		SCOPED_TRACE(Enabled);
+		const auto Selection = ResolveEntitiesAssetSelection("my_pack", Enabled);
+		EXPECT_EQ(Selection.m_Path, "assets/entities/my_pack");
+		EXPECT_FALSE(Selection.m_IsBlank);
+	}
+}
 
 TEST(QmBlankAssetFallback, ResolveSpritePixelRectConvertsGridCellsToPixels)
 {

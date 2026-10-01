@@ -42,3 +42,20 @@ TEST(QmScoreboardFooter, SpectatorPanelShrinksToMeasuredLines)
 	// 内容超出上限时按上限截断。
 	EXPECT_FLOAT_EQ(QmScoreboardSpectatorPanelHeight(500.0f, 40, 3, 11.0f, 10.0f), 43.0f);
 }
+
+TEST(QmScoreboardFooter, TallerPanelLeavesFooterInsideDefaultScreen)
+{
+	const float Height = QmScoreboardPanelHeight(600.0f, 75.0f);
+	EXPECT_FLOAT_EQ(Height, 415.0f);
+	CUIRect Footer{0.0f, 75.0f + Height + 5.0f, 450.0f, 100.0f};
+	const auto Layout = QmScoreboardFooterLayout(Footer, true, true);
+	EXPECT_FLOAT_EQ(Layout.m_Media.h, 25.0f);
+	EXPECT_LE(Layout.m_Spectators.y + Layout.m_Spectators.h, 595.0f);
+}
+
+TEST(QmScoreboardFooter, EnlargedUiClampsPanelToLeaveFooterSpace)
+{
+	EXPECT_FLOAT_EQ(QmScoreboardPanelHeight(400.0f, 75.0f), 215.0f);
+	EXPECT_FLOAT_EQ(QmScoreboardPanelHeight(1200.0f, 75.0f), 415.0f);
+	EXPECT_FLOAT_EQ(QmScoreboardPanelHeight(100.0f, 75.0f), 0.0f);
+}

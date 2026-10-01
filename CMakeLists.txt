@@ -3407,6 +3407,7 @@ if(CLIENT)
     components/qmclient/qmclient_utils.h
     components/qmclient/rank_ghost.cpp
     components/qmclient/rank_ghost.h
+    components/qmclient/online_replay_player.h
     components/qmclient/route_start_index.h
     components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
@@ -3425,7 +3426,13 @@ if(CLIENT)
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
     components/qmclient/translate/translate.cpp
+    components/qmclient/translate/translate_backend.cpp
+    components/qmclient/translate/translate_backend.h
+    components/qmclient/translate/translate_jobs.cpp
+    components/qmclient/translate/translate_jobs.h
     components/qmclient/translate/translate.h
+    components/qmclient/translate/translate_detect.cpp
+    components/qmclient/translate/translate_detect.h
     components/qmclient/translate/translate_parse.cpp
     components/qmclient/translate/translate_parse.h
     components/qmclient/translate/translate_ui_settings.cpp
@@ -4427,9 +4434,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     qm_water_hammer_indicator_test.cpp
     qm_demo_display_test.cpp
     qm_demo_ui_test.cpp
+    online_replay_player_test.cpp
     qm_jump_hint_utils_test.cpp
     qm_hud_hook_countdown_test.cpp
     qm_hud_media_island_logic_test.cpp
+    qm_hud_recording_presentation_test.cpp
     qm_vulkan_enhanced_test.cpp
     qm_hud_notifications_catalog_test.cpp
     qm_hud_notifications_formatting_test.cpp
@@ -4626,14 +4635,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     thread_test.cpp
     time_test.cpp
     timestamp_test.cpp
-    translate_boundary_test.cpp
-    translate_integration_test.cpp
-    translate_json_format_test.cpp
+    translate_backend_test.cpp
+    translate_http_test_support.h
+    translate_detect_test.cpp
+    translate_history_test.cpp
+    translate_jobs_integration_test.cpp
+    translate_responses_test.cpp
     translate_llm_parse_test.cpp
-    translate_llm_provider_test.cpp
-    translate_llm_response_test.cpp
-    translate_safety_test.cpp
-    translate_test.cpp
     unix_test.cpp
     uuid_test.cpp
     vmath_test.cpp
@@ -4728,6 +4736,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/qm_title_style.cpp
     src/game/client/components/qmclient/qm_title_render.cpp
     src/game/client/components/qmclient/translate/translate_parse.cpp
+    src/game/client/components/qmclient/translate/translate_backend.cpp
+    src/game/client/components/qmclient/translate/translate_jobs.cpp
+    src/game/client/components/qmclient/translate/translate_detect.cpp
     src/game/client/components/qmclient/voice/voice_capture_pipeline.cpp
     src/game/client/components/qmclient/voice/voice_utils.cpp
     src/game/client/frame_scheduler.cpp
@@ -4907,9 +4918,15 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   # 对象库集合与 testrunner 一致，基准可覆盖 base/engine/game 各层代码
   add_executable(qm-benchmarks EXCLUDE_FROM_ALL
     src/test/benchmark/qm_benchmark_main.cpp
+    src/test/benchmark/qm_online_replay_benchmark.cpp
     src/test/benchmark/qm_str_benchmark.cpp
     src/test/benchmark/qm_anim_benchmark.cpp
     src/test/benchmark/qm_text_benchmark.cpp
+    src/test/benchmark/qm_translate_benchmark.cpp
+    src/game/client/components/qmclient/translate/translate_jobs.cpp
+    src/game/client/components/qmclient/translate/translate_parse.cpp
+    src/game/client/components/qmclient/translate/translate_backend.cpp
+    src/game/client/components/qmclient/translate/translate_detect.cpp
     src/test/benchmark/qm_net_benchmark.cpp
     src/test/benchmark/qm_snapshot_benchmark.cpp
     src/test/benchmark/qm_font_raster_benchmark.cpp
@@ -4917,6 +4934,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmAnimationBackend.cpp
     src/game/client/QmUi/QmAnimResolve.cpp
+    src/game/client/QmUi/QmScroll.cpp
     src/game/client/QmUi/QmTree.cpp
     $<TARGET_OBJECTS:game-server-without-main>
     $<TARGET_OBJECTS:engine-gfx>

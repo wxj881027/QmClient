@@ -41,11 +41,12 @@
 
 当前主要脚本：
 
-- `qmclient_scripts/cmake-windows.cmd`
+- `qmclient_scripts/cmake-windows.cmd` — Windows 构建统一入口，加载 MSVC 环境后调用 `cmake_windows.py`。
+- `qmclient_scripts/cmake_windows.py` — 按规范化后的构建目录持有系统文件锁，覆盖 configure、build、测试目标、打包目标及 install；同目录任务自动等待，最长 10 分钟后明确失败，不同目录可以并行。锁内统一执行 MSVC 前缀检查、旧依赖恢复和规则重生成后的补构建，日志与锁文件保留在 `tmp/`。直接运行 CMake/Ninja 不会获取这把锁，日常操作继续使用 `.cmd` 入口。
 - `qmclient_scripts/darwin_fix_install_names.py`
 - `qmclient_scripts/make_lib_openssl.sh`
 - `qmclient_scripts/cmake-windows-filter.py` — 过滤 Windows/MSVC 构建日志噪音（如"注意: 包含文件:"前缀）
-- `qmclient_scripts/repair_ninja_msvc_prefix.py` — 修复 Ninja + MSVC 下的依赖前缀编码（configure/build 通用）
+- `qmclient_scripts/repair_ninja_msvc_prefix.py` — 按编译器原始输出字节修复 Ninja + MSVC 依赖前缀；Windows 封装入口在构建前执行，构建中重新生成规则后会修复并补一轮构建。前缀变化时，将已有的有效零依赖对象标为待重编，恢复头文件依赖；日志保留在 `tmp/`。
 - `qmclient_scripts/preview-crash-dialog.cmd [build-dir] [graphics|assertion|fatal|hang]` — 不启动完整客户端、不制造真实崩溃，预览 Windows 喜庆崩溃窗口；默认使用 `cmake-build-release` 和 `graphics`。窗口内的“放烟花”按钮只在预览窗口中播放 GDI 烟花动画，不改变报告结果。
 
 ### 3. 代码卫生与内容生成辅助

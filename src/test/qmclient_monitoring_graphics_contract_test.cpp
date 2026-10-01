@@ -67,23 +67,6 @@ TEST(QmMonitoringHelpers, RenderLoopKeepsConfiguredAsyncPolicyAndDisablesPerfHot
 	EXPECT_NE(RunBody.find("AdditionalTime > (time_freq() / 60)"), std::string::npos);
 }
 
-TEST(QmMonitoringHelpers, WindowsCmakeWrapperDoesNotPreconfigureBeforeBuild)
-{
-	const std::string Wrapper = ReadRepoFile("qmclient_scripts/cmake-windows.cmd");
-	const std::string Repair = ReadRepoFile("qmclient_scripts/repair_ninja_msvc_prefix.py");
-	ASSERT_FALSE(Wrapper.empty());
-	ASSERT_FALSE(Repair.empty());
-
-	EXPECT_EQ(Wrapper.find("--prepare-build"), std::string::npos);
-	EXPECT_NE(Wrapper.find("if not \"%CMRC%\"==\"0\""), std::string::npos);
-	EXPECT_NE(Wrapper.find("type \"%CMOUT%\""), std::string::npos);
-	EXPECT_FALSE(ContainsAny(Repair, {
-						 "--prepare-build",
-						 "def _prepare_build_rules",
-						 "subprocess.run(\n        [\"cmake\", \"-S\"",
-					 }));
-}
-
 TEST(QmMonitoringHelpers, MacosVulkanGraphicsErrorDialogKeepsWindowAlive)
 {
 	const std::string BackendSource = ReadRepoFile("src/engine/client/backend_sdl.cpp");

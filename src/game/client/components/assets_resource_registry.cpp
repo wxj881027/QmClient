@@ -6,6 +6,14 @@
 #include <unordered_map>
 #include <unordered_set>
 
+SEntitiesAssetSelection ResolveEntitiesAssetSelection(std::string_view AssetName, bool BlankAssetFallback)
+{
+	const bool IsBlank = IsBlankAssetName(AssetName);
+	return {
+		AssetName == "default" || IsBlank ? "editor/entities_clear" : "assets/entities/" + std::string(AssetName),
+		IsBlank && !BlankAssetFallback};
+}
+
 namespace
 {
 	constexpr std::string_view ENTITY_BG_WORKSHOP_PREFIX = "entity_bg/";

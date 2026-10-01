@@ -19,6 +19,8 @@
 #include <game/client/QmUi/UiOverlays.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/components/qmclient/scoreboard_scroll.h>
+#include <game/client/components/scoreboard.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_rect.h>
 #include <game/client/ui_scrollregion.h>
@@ -1266,4 +1268,123 @@ TEST(UiV2ScrollContainer, BlockedContentDragCancelsPendingCandidate)
 	Frame = Container.Update(State, View, 400.0f, 0.0f, Input);
 	EXPECT_FALSE(Container.ContentDragActive(State));
 	EXPECT_NEAR(Frame.m_Offset, 0.0f, 1e-6f);
+}
+
+namespace
+{
+	class CScoreboardInputObserver
+	{
+	public:
+		int m_Count = 0;
+		IInput::CEvent m_Event{};
+		bool OnInput(const IInput::CEvent &Event)
+		{
+			++m_Count;
+			m_Event = Event;
+			return false;
+		}
+	};
+}
+
+TEST(QmScoreboardInput, UnlockedScoreboardForwardsWheelPressAndReleaseToUi)
+{
+	CScoreboardInputObserver Ui;
+	for(const int Key : {KEY_MOUSE_WHEEL_UP, KEY_MOUSE_WHEEL_DOWN})
+	{
+		for(const int Flags : {IInput::FLAG_PRESS, IInput::FLAG_RELEASE})
+		{
+			IInput::CEvent Event{};
+			Event.m_Key = Key;
+			Event.m_Flags = Flags;
+			const int PreviousCount = Ui.m_Count;
+			EXPECT_TRUE(QmScoreboardUiInput(Ui, true, Event));
+			EXPECT_EQ(Ui.m_Count, PreviousCount + 1);
+			EXPECT_EQ(Ui.m_Event.m_Key, Key);
+			EXPECT_EQ(Ui.m_Event.m_Flags, Flags);
+		}
+	}
+}
+
+TEST(QmScoreboardInput, InactiveOrLockedScoreboardLeavesWheelForGameInput)
+{
+	CScoreboardInputObserver Ui;
+	IInput::CEvent Event{};
+	Event.m_Key = KEY_MOUSE_WHEEL_DOWN;
+	Event.m_Flags = IInput::FLAG_PRESS;
+	EXPECT_FALSE(QmScoreboardUiInput(Ui, false, Event));
+	EXPECT_EQ(Ui.m_Count, 0);
+	EXPECT_TRUE(QmScoreboardUiInput(Ui, true, Event));
+	EXPECT_FALSE(QmScoreboardUiInput(Ui, false, Event));
+	EXPECT_EQ(Ui.m_Count, 1);
+}
+
+TEST(QmScoreboardScroll, ContentHeightIncludesTeamTextAndModeIcons)
+{
+	EXPECT_FLOAT_EQ(ScoreboardRowsHeight(17, 0, 0, 20.0f, 0.0f, 8.0f, 12.0f), 340.0f);
+	EXPECT_FLOAT_EQ(ScoreboardRowsHeight(17, 2, 1, 20.0f, 0.0f, 8.0f, 12.0f), 360.0f);
+	EXPECT_FLOAT_EQ(ScoreboardRowsHeight(17, 17, 17, 20.0f, 0.0f, 8.0f, 12.0f), 544.0f);
+}
+
+TEST(QmScoreboardScroll, EmptyAndInconsistentTeamCountsKeepContentHeightBounded)
+{
+	EXPECT_FLOAT_EQ(ScoreboardRowsHeight(0, 8, 8, 20.0f, 0.0f, 8.0f, 12.0f), 0.0f);
+	EXPECT_FLOAT_EQ(ScoreboardRowsHeight(17, -2, 8, 20.0f, 0.0f, 8.0f, 12.0f), 340.0f);
+	EXPECT_FLOAT_EQ(ScoreboardRowsHeight(17, 40, 80, 20.0f, 0.0f, 8.0f, 12.0f), 544.0f);
+}
+
+TEST(QmScoreboardScroll, SharedListPolicyMovesContentContinuouslyBetweenRows)
+{
+	SQmScrollRequest Request;
+	Request.m_Profile = EQmScrollProfile::MENU_LIST;
+	Request.m_RowExtent = 20.0f;
+	Request.m_RowsPerStep = 2;
+	const auto Policy = QmResolveScrollPolicy(Request, 1.0f, 0.25f);
+	const SQmScrollMetrics Metrics{333.0f, ScoreboardRowsHeight(64, 0, 0, 20.0f, 0.0f, 8.0f, 12.0f)};
+	CQmScrollState State;
+	State.AddWheelImpulse(-120.0f, Metrics, Policy.m_Config);
+	State.Advance(1.0f / 60.0f, Metrics, Policy.m_Config);
+	EXPECT_GT(State.Offset(), 0.0f);
+	EXPECT_LT(State.Offset(), Request.m_RowExtent);
+	const float FirstOffset = State.Offset();
+	State.Advance(1.0f / 60.0f, Metrics, Policy.m_Config);
+	EXPECT_GT(State.Offset(), FirstOffset);
+	for(int Frame = 0; Frame < 60; ++Frame)
+		State.Advance(1.0f / 60.0f, Metrics, Policy.m_Config);
+	EXPECT_FLOAT_EQ(State.Offset(), 40.0f);
+	EXPECT_FALSE(State.Animating());
+}
+
+TEST(QmScoreboardScroll, ShrinkingPlayerCountClampsBeforeDrawingAndResetRestoresTop)
+{
+	const auto Config = QmNativeWheelScrollConfig(1.0f, 0.25f);
+	SQmScrollMetrics Metrics{333.0f, ScoreboardRowsHeight(64, 0, 0, 20.0f, 0.0f, 8.0f, 12.0f)};
+	CQmScrollState State;
+	State.SetOffset(Metrics.MaxOffset(), Metrics, Config);
+	State.AddWheelImpulse(120.0f, Metrics, Config);
+	State.Advance(1.0f / 60.0f, Metrics, Config);
+	Metrics.m_ContentSize = ScoreboardRowsHeight(17, 0, 0, 20.0f, 0.0f, 8.0f, 12.0f);
+	State.Advance(0.0f, Metrics, Config);
+	EXPECT_FLOAT_EQ(State.Offset(), Metrics.MaxOffset());
+	EXPECT_FALSE(State.Animating());
+	State.BeginThumbDrag(3.0f);
+	State.Reset();
+	EXPECT_FLOAT_EQ(State.Offset(), 0.0f);
+	EXPECT_FALSE(State.Animating());
+	EXPECT_FALSE(State.ThumbDragActive());
+}
+
+TEST(QmScoreboardScroll, ClosingAlphaFadesRailAndEveryThumbStateToZero)
+{
+	for(const float Alpha : {1.0f, 0.5f, 0.01f, 0.0f})
+	{
+		SCOPED_TRACE(Alpha);
+		CScrollRegionParams Params;
+		const CScrollRegionParams Original;
+		QmScoreboardScrollAlpha(Params, Alpha);
+		EXPECT_FLOAT_EQ(Params.m_RailBgColor.a, Original.m_RailBgColor.a * Alpha);
+		EXPECT_FLOAT_EQ(Params.SliderColor(false, false).a, Original.SliderColor(false, false).a * Alpha);
+		EXPECT_FLOAT_EQ(Params.SliderColor(false, true).a, Original.SliderColor(false, true).a * Alpha);
+		EXPECT_FLOAT_EQ(Params.SliderColor(true, true).a, Original.SliderColor(true, true).a * Alpha);
+		EXPECT_FLOAT_EQ(Params.m_SliderColor.r, Original.m_SliderColor.r);
+	}
 }

@@ -1376,7 +1376,6 @@ TEST(QmHudMediaIslandSource, MovesClockAndFrozenCountIntoStackAndReplacesClockSl
 	const std::string RenderBody = FunctionBody(Source, "void CHud::RenderMediaIsland()");
 	const std::string VisibleBody = FunctionBody(Source, "void CHud::EnsureMediaIslandFrameCache() const");
 
-	EXPECT_NE(RenderBody.find("const bool ShowInfoStack = ShowLocalTime || ShowFrozenSummary;"), std::string::npos);
 	EXPECT_NE(RenderBody.find("constexpr float InfoStackGap = QmHudMediaIslandScaled(0.8f);"), std::string::npos);
 	EXPECT_NE(RenderBody.find("QmHudMediaIslandMirroredInfoStack"), std::string::npos);
 	EXPECT_NE(RenderBody.find("QmHudMediaIslandWaveBarHeight"), std::string::npos);

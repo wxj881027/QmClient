@@ -54,62 +54,14 @@ if not defined CMAKE_EXE (
 	exit /b 1
 )
 
-set "CMOUT=%TEMP%\cmake-windows-%RANDOM%.log"
-if /I "%~1"=="--build" (
-	"%CMAKE_EXE%" %* > "%CMOUT%" 2>&1
-) else if /I "%~1"=="-E" (
-	"%CMAKE_EXE%" %* > "%CMOUT%" 2>&1
-) else if /I "%~1"=="-P" (
-	"%CMAKE_EXE%" %* > "%CMOUT%" 2>&1
-) else if /I "%~1"=="--install" (
-	"%CMAKE_EXE%" %* > "%CMOUT%" 2>&1
-) else if /I "%~1"=="--open" (
-	"%CMAKE_EXE%" %* > "%CMOUT%" 2>&1
-) else if /I "%~1"=="--workflow" (
-	"%CMAKE_EXE%" %* > "%CMOUT%" 2>&1
-) else (
-	"%CMAKE_EXE%" -Wno-dev %* > "%CMOUT%" 2>&1
-)
-set "CMRC=%errorlevel%"
-if not "%CMRC%"=="0" (
-	type "%CMOUT%"
-	del /Q "%CMOUT%" >nul 2>&1
-	exit /b %CMRC%
-)
+rem 目录锁覆盖依赖修复、构建和规则恢复，所有目标共用同一事务入口。
+if defined FALLBACK_PYTHON goto run_with_python
+call py.exe -3 "%~dp0cmake_windows.py" "%CMAKE_EXE%" %*
+exit /b %errorlevel%
 
-set "RULES_FIXED="
-rem Repair rules.ninja again in case configure/build regenerated it during this command.
-if defined FALLBACK_PYTHON (
-	call "%FALLBACK_PYTHON%" "%~dp0repair_ninja_msvc_prefix.py" %*
-) else (
-	call py.exe -3 "%~dp0repair_ninja_msvc_prefix.py" %*
-)
-if not errorlevel 1 (
-	set "RULES_FIXED=1"
-) else (
-	call python "%~dp0repair_ninja_msvc_prefix.py" %*
-	if not errorlevel 1 (
-		set "RULES_FIXED=1"
-	)
-)
-
-set "FILTERED="
-if defined FALLBACK_PYTHON (
-	call "%FALLBACK_PYTHON%" "%~dp0cmake-windows-filter.py" "%CMOUT%"
-) else (
-	call py.exe -3 "%~dp0cmake-windows-filter.py" "%CMOUT%"
-)
-if not errorlevel 1 (
-	set "FILTERED=1"
-) else (
-	call python "%~dp0cmake-windows-filter.py" "%CMOUT%"
-	if not errorlevel 1 (
-		set "FILTERED=1"
-	)
-)
-if not defined FILTERED type "%CMOUT%"
-del /Q "%CMOUT%" >nul 2>&1
-exit /b %CMRC%
+:run_with_python
+call "%FALLBACK_PYTHON%" "%~dp0cmake_windows.py" "%CMAKE_EXE%" %*
+exit /b %errorlevel%
 
 :usage
 echo Usage: qmclient_scripts\cmake-windows.cmd [cmake arguments]

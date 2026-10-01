@@ -4,6 +4,7 @@
 
 #include <base/log.h>
 
+#include <engine/demo.h>
 #include <engine/ghost.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -13,6 +14,7 @@
 
 #include <game/client/components/menus.h>
 #include <game/client/components/players.h>
+#include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
 #include <game/client/race.h>
@@ -318,7 +320,7 @@ void CGhost::OnRender()
 		return;
 
 	// Play the ghost
-	if(!m_Rendering || !g_Config.m_ClRaceShowGhost)
+	if(!m_Rendering || (!m_ManualMode && !g_Config.m_ClRaceShowGhost))
 		return;
 
 	int PlaybackTick;
@@ -326,10 +328,10 @@ void CGhost::OnRender()
 	{
 		// 查看模式：独立时间线，播到尽头自动停在最后一帧
 		PlaybackTick = ManualPlaybackTick();
-		if(m_ManualPlaying && m_ManualEndTick > 0 && PlaybackTick >= m_ManualEndTick)
+		if(m_ManualClock.Playing() && m_ManualEndTick > 0 && PlaybackTick >= m_ManualEndTick)
 		{
 			ManualSeek(m_ManualEndTick);
-			PlaybackTick = m_ManualBaseTick;
+			PlaybackTick = ManualPlaybackTick();
 		}
 	}
 	else
@@ -349,7 +351,7 @@ void CGhost::OnRender()
 	for(int Slot = 0; Slot < MAX_ACTIVE_GHOSTS; ++Slot)
 	{
 		CGhostItem &Ghost = m_aActiveGhosts[Slot];
-		if(Ghost.Empty())
+		if(Ghost.Empty() || (m_ManualMode && !m_aManualSlots[Slot]))
 			continue;
 
 		int GhostTick = Ghost.m_StartTick + PlaybackTick;
@@ -479,7 +481,7 @@ void CGhost::OnRender()
 	{
 		const CGhostItem &Ghost = m_aActiveGhosts[Draw.m_Slot];
 		const vec2 TeePos = Draw.m_Pos;
-		if(Ghost.m_aPlayer[0] != '\0')
+		if(g_Config.m_ClNamePlates && Ghost.m_aPlayer[0] != '\0')
 		{
 			const float NameFontSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
 			const float NameWidth = TextRender()->TextWidth(NameFontSize, Ghost.m_aPlayer, -1);
@@ -488,9 +490,10 @@ void CGhost::OnRender()
 			TextRender()->Text(TeePos.x - NameWidth / 2, TeePos.y - 56.0f, NameFontSize, Ghost.m_aPlayer);
 		}
 
-		// QmClient: 查看模式方向键指示（面板开关持久化于 qm_rank_ghost_show_direction），
-		// 数据来自影子路径的完整角色快照，与名字牌的方向指示同一来源
-		if(!g_Config.m_QmRankGhostShowDirection)
+		// 查看模式使用共用 demo 的方向显示配置，主选手作为回放的自身成员。
+		const int Direction = qm_demo_display::Resolve(g_Config, true, false).m_Direction;
+		const bool Own = Draw.m_Slot == m_ManualPrimarySlot;
+		if(!g_Config.m_QmRankGhostShowDirection || Direction == 0 || (Direction == 1 && Own) || (Direction == 3 && !Own))
 			continue;
 		const float DirSize = 18.0f + 20.0f * g_Config.m_ClNamePlatesSize / 100.0f;
 		const bool DirLeft = Draw.m_Player.m_Direction == -1;
@@ -618,36 +621,41 @@ void CGhost::StopRender()
 	m_Rendering = false;
 	m_NewRenderTick = -1;
 	m_ManualMode = false;
-	m_ManualPlaying = false;
+	m_ManualClock.SetPlaying(false, Client()->LocalTime());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
 }
 
 void CGhost::ManualSetSpeed(float Speed)
 {
-	if(!m_ManualMode)
-		return;
-	Speed = std::clamp(Speed, 0.1f, 4.0f);
-	if(m_ManualSpeed == Speed)
-		return;
-	if(m_ManualPlaying)
-	{
-		// 以当前播放头为基准重整时间轴，变速瞬间不跳帧
-		const float Elapsed = ManualElapsedTicks();
-		m_ManualBaseTick = (int)Elapsed;
-		m_ManualStartTime = Client()->LocalTime();
-	}
-	m_ManualSpeed = Speed;
+	if(m_ManualMode)
+		m_ManualClock.SetSpeed(Speed, Client()->LocalTime());
 }
 
-void CGhost::StartRenderManual()
+void CGhost::StartRenderManual(const std::vector<int> &vSlots)
 {
+	StopRender();
+	m_ManualPrimarySlot = vSlots.empty() ? -1 : vSlots.front();
+	m_vManualSampleTicks.clear();
+	std::fill(std::begin(m_aManualSlots), std::end(m_aManualSlots), false);
+	for(int Slot : vSlots)
+		if(Slot >= 0 && Slot < MAX_ACTIVE_GHOSTS)
+			m_aManualSlots[Slot] = true;
 	bool HaveGhost = false;
 	m_ManualEndTick = 0;
-	for(auto &Ghost : m_aActiveGhosts)
+	for(int Slot : vSlots)
 	{
+		if(Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS)
+			continue;
+		CGhostItem &Ghost = m_aActiveGhosts[Slot];
 		if(Ghost.Empty())
 			continue;
 		HaveGhost = true;
+		if(Slot == m_ManualPrimarySlot)
+		{
+			m_vManualSampleTicks.reserve(Ghost.m_Path.Size());
+			for(int Index = 0; Index < Ghost.m_Path.Size(); ++Index)
+				m_vManualSampleTicks.push_back(Ghost.m_Path.Get(Index)->m_Tick - Ghost.m_StartTick);
+		}
 		// 总时长取所有激活影子中最长的一条轨迹（相对 tick）：团队/接力回放里先
 		// 完成、中途加入或提前离开的玩家轨迹更短，取最短会把整组截断在最早那下；
 		// 短轨迹播到自己的末帧后停在原处（查看模式按各自轨迹范围钳制）
@@ -661,71 +669,34 @@ void CGhost::StartRenderManual()
 	m_ManualMode = true;
 	m_Rendering = true;
 	m_RenderingStartedByServer = false;
-	m_ManualPlaying = true;
-	m_ManualBaseTick = 0;
-	m_ManualStartTime = Client()->LocalTime();
+	m_ManualClock.Start(Client()->LocalTime(), m_ManualEndTick, Client()->GameTickSpeed());
 	std::fill(std::begin(m_aManualRenderPosValid), std::end(m_aManualRenderPosValid), false);
 }
 
 int CGhost::ManualPlaybackTick() const
 {
-	if(!m_ManualMode)
-		return 0;
-	if(!m_ManualPlaying)
-		return m_ManualBaseTick;
-	return m_ManualBaseTick + (int)ManualElapsedTicks();
-}
-
-float CGhost::ManualElapsedTicks() const
-{
-	// 相对手动播放头的 tick 数（含小数相位），按倍速缩放。
-	// 用 LocalTime（单调）而非本地预测 tick：预测会回滚，导致播放头倒退、
-	// 快照游标（只前进）与 tick 错位，表现为虚影闪烁/左右乱跳。
-	return maximum(0.0f, (Client()->LocalTime() - m_ManualStartTime) * (float)Client()->GameTickSpeed() * m_ManualSpeed);
+	return m_ManualMode ? m_ManualClock.Tick(Client()->LocalTime()) : 0;
 }
 
 float CGhost::ManualRenderIntra() const
 {
-	if(!m_ManualMode)
-		return 0.0f;
-	if(!m_ManualPlaying)
-		return m_ManualPauseIntra;
-	const float Elapsed = ManualElapsedTicks();
-	return Elapsed - (int)Elapsed;
+	return m_ManualMode ? m_ManualClock.Intra(Client()->LocalTime()) : 0.0f;
 }
 
 void CGhost::ManualSetPlaying(bool Playing)
 {
-	if(!m_ManualMode || Playing == m_ManualPlaying)
-		return;
-	if(Playing)
-	{
-		m_ManualStartTime = Client()->LocalTime();
-	}
-	else
-	{
-		// 暂停时把播放头冻结在当前进度，并锁存 tick 内相位：
-		// 本地预测的插值相位会持续波动，直接沿用会让暂停后的画面抖动
-		const float Elapsed = ManualElapsedTicks();
-		m_ManualBaseTick = (int)Elapsed;
-		m_ManualPauseIntra = Elapsed - (int)Elapsed;
-	}
-	m_ManualPlaying = Playing;
+	if(m_ManualMode)
+		m_ManualClock.SetPlaying(Playing, Client()->LocalTime());
 }
 
 void CGhost::ManualSeek(int RelativeTick)
 {
 	if(!m_ManualMode)
 		return;
-	const int MaxTick = maximum(1, m_ManualEndTick);
-	m_ManualBaseTick = std::clamp(RelativeTick, 0, MaxTick);
-	m_ManualStartTime = Client()->LocalTime();
-	m_ManualPauseIntra = 0.0f;
-	if(m_ManualBaseTick >= MaxTick)
-		m_ManualPlaying = false;
+	m_ManualClock.Seek(RelativeTick, Client()->LocalTime());
 
 	// 快照游标只前进，seek 后必须重扫定位
-	const int PlaybackTick = m_ManualBaseTick;
+	const int PlaybackTick = ManualPlaybackTick();
 	for(auto &Ghost : m_aActiveGhosts)
 	{
 		if(Ghost.Empty())
@@ -868,6 +839,8 @@ int CGhost::Load(const char *pFilename)
 
 void CGhost::Unload(int Slot)
 {
+	m_aManualSlots[Slot] = false;
+	m_aManualRenderPosValid[Slot] = false;
 	m_aActiveGhosts[Slot].Reset();
 }
 

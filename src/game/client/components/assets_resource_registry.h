@@ -60,7 +60,7 @@ bool IsProtectedDefaultAsset(std::string_view AssetName);
 bool AssetResourceNameLess(std::string_view LeftName, std::string_view RightName);
 void EnsureDefaultAssetVisible(std::vector<std::string> &vAssetNames);
 // 客户端自带的空白材质（虚拟条目，不对应文件）：选中它表示该类资源故意留空，
-// 用户不必自己造透明图；显式选择时不再参与 qm_blank_asset_fallback 回退。
+// 用户不必自己造透明图；开启 qm_blank_asset_fallback 时绘制默认资源，保留选择。
 void EnsureBlankAssetVisible(std::vector<std::string> &vAssetNames);
 
 inline constexpr const char *QM_BLANK_ASSET_NAME = "blank";
@@ -69,6 +69,14 @@ inline bool IsBlankAssetName(std::string_view AssetName)
 {
 	return AssetName == QM_BLANK_ASSET_NAME;
 }
+
+// 实体材质加载与预览共用解析后的路径和透明状态，虚拟 blank 不探测同名磁盘资源。
+struct SEntitiesAssetSelection
+{
+	std::string m_Path;
+	bool m_IsBlank;
+};
+SEntitiesAssetSelection ResolveEntitiesAssetSelection(std::string_view AssetName, bool BlankAssetFallback);
 
 // 内置虚拟条目（default / blank）：不可删除、不可重命名，也不对应本地素材文件。
 inline bool IsProtectedAssetName(std::string_view AssetName)

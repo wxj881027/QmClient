@@ -3,6 +3,12 @@
 
 #include <game/client/ui_rect.h>
 
+// 默认主面板向下增加 30，保留底栏 100、面板间隙 5 和屏幕底边 5。
+inline float QmScoreboardPanelHeight(float ScreenHeight, float PanelTop)
+{
+	return minimum(415.0f, maximum(0.0f, ScreenHeight - PanelTop - 110.0f));
+}
+
 // 计分板底栏：整宽媒体信息条在上，旁观者列表在下。
 struct SQmScoreboardFooterLayout
 {

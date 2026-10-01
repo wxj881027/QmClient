@@ -3677,6 +3677,8 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == Ativar rastro de partículas 3D de fundo
 
+Enable bounce-in entrance animation when country flags finish loading
+== Ativar animação elástica de entrada ao carregar bandeiras de países
 
 Enable camera drift
 == Ativar deriva da câmera
@@ -4800,17 +4802,14 @@ Ghost active (%d)
 Ghost ready
 == Fantasma pronto
 
-Ghost replay
-== Demo do fantasma
-
 Ghost tools
 == Ferramentas de fantasma
 
 Ghost view mode off. The ghost follows your runs again.
 == Modo de visualização do fantasma desligado. O fantasma volta a seguir suas corridas.
 
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
-== Modo de visualização do fantasma: ESC alterna o painel de controle. Pressione ESC duas vezes para abrir o menu do jogo (sair da repetição). Segure a tecla de espectador para a lista de membros.
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
+== Modo de visualização do fantasma: ESC alterna o painel de controle. Pressione ESC duas vezes para abrir o menu do jogo (a reprodução continua). Segure a tecla de espectador para a lista de membros.
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == Visibilidade do fantasma (alfa, 0=invisível, 100=visível)
@@ -8735,12 +8734,6 @@ Rank 1 demo already cached under 'Rank 1 replays': %s
 
 Rank 1 demo downloaded to '%s'
 == Demo de rank 1 baixada para '%s'
-
-Rank 1 members
-== Membros do rank 1
-
-Rank 1 replay
-== Repetição do rank 1
 
 Rank 1 replays
 == Demos de rank 1
@@ -13296,6 +13289,9 @@ Video name
 Video name:
 == Nome do vídeo:
 
+Video rendering is unavailable during online replay.
+== A renderização de vídeo não está disponível durante uma repetição online.
+
 Video was saved to '%s'
 == O vídeo foi salvo em '%s'
 
@@ -14196,9 +14192,6 @@ Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI é um serviço gratuito. O uso excessivo pode causar suspensão do serviço.
 
-⚠️ LibreTranslate API Key not set
-== ⚠️ Chave da API LibreTranslate não definida
-
 ⚠️ LLM API Key not configured
 == ⚠️ Chave da API LLM não configurada
 
@@ -14516,10 +14509,6 @@ Swap Action
 [Predefined touch button behaviors]
 Use Action
 == Usar Ação
-
-[Rank 1 replay]
-Direction
-== Direção
 
 [Show name plates]
 All

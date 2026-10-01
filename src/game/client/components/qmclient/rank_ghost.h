@@ -10,6 +10,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_RANK_GHOST_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_RANK_GHOST_H
 
+#include "online_replay_player.h"
 #include "rank_demo_manifest.h"
 
 #include <base/vmath.h>
@@ -26,8 +27,9 @@
 
 class IStorage;
 class CSnapshot;
+class CTeeRenderInfo;
 
-class CRankGhost : public CComponent, private CDemoPlayer::IListener
+class CRankGhost : public CComponent, private CDemoPlayer::IListener, private COnlineReplayPlayer::ISource
 {
 public:
 	// 查看模式状态快照（供计分板控制条等 UI 读取）
@@ -104,17 +106,25 @@ public:
 	// 请求加载该 demo 的影子并直接进入查看模式；已加载时直接切换
 	void RequestGhostViewForDemo(const char *pDemoName);
 	bool IsViewModeActive() const;
-	// 计分板控制条状态快照（false = 当前无可用播放状态）
+	IDemoPlayer *ViewPlayer() { return &m_ViewPlayer; }
+	uint64_t ViewGeneration() const { return m_ViewGeneration; }
+	bool ExportViewCut(const char *pDestination, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pFilter, void *pUser);
+	bool ViewMemberRenderInfo(int Index, CTeeRenderInfo *pInfo) const;
+	bool ViewMemberPosition(int Index, vec2 *pPosition) const;
+	// 回放成绩 HUD 状态快照（false = 当前无可用播放状态）
 	bool GetViewState(SViewState &Out) const;
-	void ViewPlayPause();
-	// Fraction ∈ [0, 1]
-	void ViewSeek(float Fraction);
 	// 退出查看模式：影子保持加载，恢复跑图同步模式
 	void ViewStop();
 	// ===== 旁观模式成员面板：列出虚影成员并锁定镜头跟随 =====
 	// 成员顺序与多轨缓存文件顺序一致（00 = 主选手）
 	int ViewSelectedMember() const { return m_ViewSelected; }
 	void ViewSelectMember(int Index);
+	bool ViewMultiMemberSelected(int Index) const { return Index >= 0 && m_ViewMembers.Selected(Index); }
+	void ViewToggleMultiMember(int Index)
+	{
+		if(Index >= 0)
+			m_ViewMembers.Toggle(Index);
+	}
 	// 查看模式相机：跟随选中成员 / 自由视角（镜头停在原地）/ 多人同框（框住全部成员并自动缩放）
 	enum class EViewCameraMode
 	{
@@ -240,9 +250,24 @@ private:
 	int64_t m_RetryLoadNextAttempt = 0;
 
 	// 查看模式
+	COnlineReplayPlayer m_ViewPlayer{*this};
+	IDemoPlayer::CInfo m_ViewPlaybackMetadata{};
+	uint64_t m_ViewGeneration = 0;
+	char m_aViewPlaybackFilename[IO_MAX_PATH_LENGTH] = "";
+	char m_aLoadedReplayFilename[IO_MAX_PATH_LENGTH] = "";
+	IDemoPlayer::CInfo PlaybackInfo() const override;
+	bool PlaybackActive() const override { return IsViewModeActive(); }
+	int PlaybackTickSpeed() const override;
+	void PlaybackSeek(int Tick) override;
+	int PlaybackAdjacentTick(int Tick, IDemoPlayer::ETickOffset Offset) const override;
+	void PlaybackSetPlaying(bool Playing) override;
+	void PlaybackSetSpeed(float Speed) override;
+	const char *PlaybackFilename() const override { return m_aViewPlaybackFilename; }
+	IDemoPlayer *PlaybackMetadataReader() const override;
 	bool m_ViewMode = false;
 	// 旁观面板选中的跟随成员（多轨顺序索引，0 = 主选手）
 	int m_ViewSelected = 0;
+	COnlineReplayMembers m_ViewMembers;
 	// 相机跟随选中成员；关闭为自由视角（相机停在当前位置）
 	EViewCameraMode m_ViewCameraMode = EViewCameraMode::MEMBER;
 	// 自由视角的相机位置（进入模式时锚定当前镜头，之后随鼠标平移）

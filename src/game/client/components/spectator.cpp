@@ -58,6 +58,8 @@ namespace
 
 bool CSpectator::CanChangeSpectatorId()
 {
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+		return true;
 	// don't change SpectatorId when not spectating
 	if(!GameClient()->m_Snap.m_SpecInfo.m_Active)
 		return false;
@@ -71,6 +73,17 @@ bool CSpectator::CanChangeSpectatorId()
 
 void CSpectator::SpectateNext(bool Reverse)
 {
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+	{
+		const int Count = GameClient()->m_RankGhost.ViewMemberCount();
+		if(Count > 0)
+		{
+			const int Current = GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::MEMBER ? GameClient()->m_RankGhost.ViewSelectedMember() : Reverse ? 0 :
+																							   -1;
+			Spectate((Current + Count + (Reverse ? -1 : 1)) % Count);
+		}
+		return;
+	}
 	int CurIndex = -1;
 	const CNetObj_PlayerInfo **paPlayerInfos = GameClient()->m_Snap.m_apInfoByDDTeamName;
 
@@ -182,6 +195,12 @@ void CSpectator::ConMultiView(IConsole::IResult *pResult, void *pUserData)
 {
 	CSpectator *pSelf = (CSpectator *)pUserData;
 	int Input = pResult->GetInteger(0);
+	if(pSelf->GameClient()->m_RankGhost.IsViewModeActive())
+	{
+		if(Input >= 0)
+			pSelf->GameClient()->m_RankGhost.ViewToggleMultiMember(Input);
+		return;
+	}
 
 	if(Input == -1)
 		std::fill(std::begin(pSelf->GameClient()->m_aMultiViewId), std::end(pSelf->GameClient()->m_aMultiViewId), false); // remove everyone from multiview
@@ -222,21 +241,23 @@ bool CSpectator::GhostFreeCameraCanPan() const
 
 // QmClient：查看模式下鼠标归谁用。控制面板显示时归 UI 光标（面板可点）；隐藏时归
 // 镜头或选择器。与 demo 播放一致：UI 只在面板出现时才占用鼠标，屏幕上也只有一个光标。
-bool CSpectator::GhostUiCursorActive() const
+bool CSpectator::PlaybackControlsActive() const
 {
 	if(!GameClient()->m_RankGhost.IsViewModeActive() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		return false;
 	if(GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_HudEditor.IsActive())
 		return false;
 	// 原生选择器打开时归它（它的玩家列表、视角按钮与光标都只读 m_SelectorMouse）
-	return !m_Active && m_GhostPanelOpen;
+	return !m_Active && !GameClient()->m_Chat.IsActive() && m_ReplayUi.PanelOpen();
 }
 
 bool CSpectator::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
 	const bool ViewMode = GameClient()->m_RankGhost.IsViewModeActive();
 	const bool GhostFreeCamera = GhostFreeCameraCanPan();
-	if(!m_Active && !GhostFreeCamera && !GhostUiCursorActive())
+	if(ViewMode && (GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_Chat.IsActive()))
+		return false;
+	if(!m_Active && !GhostFreeCamera && !PlaybackControlsActive() && !(ViewMode && GameClient()->m_Menus.OnlineReplayPopupActive()))
 		return false;
 
 	// 镜头平移要用原始增量：ConvertMouseMove 换算的是菜单/UI 灵敏度（默认 200%），
@@ -255,7 +276,7 @@ bool CSpectator::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 		}
 
 		// 控制面板显示：鼠标归面板，此时不平移镜头（否则点按钮的同时镜头也在动）
-		if(m_GhostPanelOpen)
+		if(PlaybackControlsActive() || GameClient()->m_Menus.OnlineReplayPopupActive())
 		{
 			Ui()->OnCursorMove(x, y);
 			return true;
@@ -316,35 +337,18 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 		return true;
 	}
 
-	// QmClient：查看模式的 ESC 与 demo 播放同语义——单击开关控制面板，双击打开游戏菜单。
-	// 单击必须立刻生效（不能等双击窗口），所以先切换再在双击时还原回切换前的状态，
-	// 双击结束把 ESC 让给菜单（本组件在输入栈里排在菜单之前）。
-	if(GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_GameConsole.IsActive())
+	// 控制层与菜单分别处理 Esc，播放会话保持不变。
+	if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_RELEASE))
+		m_ReplayUi.ReleaseEscape();
+	if(GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_Menus.IsActive() && !Ui()->IsPopupOpen() && !GameClient()->m_Menus.OnlineReplayPopupActive())
 	{
-		if((Event.m_Flags & IInput::FLAG_PRESS) != 0 && Event.m_Key == KEY_ESCAPE)
-		{
-			const float Now = Client()->LocalTime();
-			if(m_GhostEscapeArmed && Now - m_GhostEscapeLastTime <= 0.4f)
-			{
-				m_GhostEscapeArmed = false;
-				m_GhostPanelOpen = m_GhostPanelOpenBeforeEscape;
-				// 双 Esc 交给游戏菜单前先真正退出 Rank 1 查看模式，
-				// 否则菜单关闭后会继续停留在手动影子播放状态。
-				GameClient()->m_RankGhost.ViewStop();
-				m_GhostPanelOpen = false;
-				return false;
-			}
-			m_GhostPanelOpenBeforeEscape = m_GhostPanelOpen;
-			m_GhostPanelOpen = !m_GhostPanelOpen;
-			m_GhostEscapeArmed = true;
-			m_GhostEscapeLastTime = Now;
-			return true;
-		}
-		if(m_GhostEscapeArmed && Client()->LocalTime() - m_GhostEscapeLastTime > 0.4f)
-			m_GhostEscapeArmed = false;
+		if((Event.m_Flags & IInput::FLAG_PRESS) && Event.m_Key == KEY_ESCAPE)
+			return m_ReplayUi.PressEscape(Client()->LocalTime()) != COnlineReplayUiState::EAction::OPEN_MENU;
 	}
+	else
+		m_ReplayUi.CancelEscape();
 
-	if(g_Config.m_ClSpectatorMouseclicks)
+	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_ClSpectatorMouseclicks)
 	{
 		if(GameClient()->m_Snap.m_SpecInfo.m_Active && !IsActive() && !GameClient()->m_MultiViewActivated &&
 			!Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Menus.IsActive())
@@ -360,7 +364,7 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 		}
 	}
 
-	if(GameClient()->m_Camera.SpectatingPlayer() && GameClient()->m_Camera.CanUseAutoSpecCamera())
+	if(!GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Camera.SpectatingPlayer() && GameClient()->m_Camera.CanUseAutoSpecCamera())
 	{
 		if(Event.m_Flags & IInput::FLAG_PRESS && Event.m_Key == KEY_MOUSE_2)
 		{
@@ -369,19 +373,55 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 		}
 	}
 
+	// 自由视角的旁观绑定优先；共用播放 HUD 同帧跳过此键，避免同时跳转时间轴。
+	if((Event.m_Flags & IInput::FLAG_PRESS) && GameClient()->m_Menus.ClaimOnlineReplaySpectatorBind(Event.m_Key))
+		return false;
+
 	// QmClient：查看模式下鼠标归 UI 光标时吞掉鼠标键，点击控制条不再误触发射击/钩爪。
-	// 滚轮不直接丢弃：它是相机面板的缩放控件（默认绑定还是 +prevweapon/+nextweapon，
-	// 放过去会误切武器），转成 zoom+/- 既保留吞键意图，又让多人同框取景可调
-	if(GhostUiCursorActive() && Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_WHEEL_RIGHT)
+	// 鼠标事件交给共用播放 HUD，滚轮保持普通 demo 的倍速语义。
+	if(PlaybackControlsActive() || (GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Menus.OnlineReplayPopupActive()))
 	{
-		if(Event.m_Flags & IInput::FLAG_PRESS)
+		const bool Consumed = Ui()->OnInput(Event);
+		if(Consumed || (Event.m_Key >= KEY_MOUSE_1 && Event.m_Key <= KEY_MOUSE_WHEEL_DOWN))
+			return true;
+	}
+
+	// 共用播放快捷键先取得输入，避免同一方向键同时触发旁观绑定。
+	if(GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_Menus.PlaybackShortcutsActive())
+	{
+		switch(Event.m_Key)
 		{
-			if(Event.m_Key == KEY_MOUSE_WHEEL_UP)
-				Console()->ExecuteLine("zoom+", IConsole::CLIENT_ID_UNSPECIFIED);
-			else if(Event.m_Key == KEY_MOUSE_WHEEL_DOWN)
-				Console()->ExecuteLine("zoom-", IConsole::CLIENT_ID_UNSPECIFIED);
+		case KEY_P:
+		case KEY_UP:
+		case KEY_DOWN:
+		case KEY_SPACE:
+		case KEY_RETURN:
+		case KEY_KP_ENTER:
+		case KEY_K:
+		case KEY_LEFT:
+		case KEY_RIGHT:
+		case KEY_J:
+		case KEY_L:
+		case KEY_HOME:
+		case KEY_END:
+		case KEY_PERIOD:
+		case KEY_COMMA:
+		case KEY_0:
+		case KEY_1:
+		case KEY_2:
+		case KEY_3:
+		case KEY_4:
+		case KEY_5:
+		case KEY_6:
+		case KEY_7:
+		case KEY_8:
+		case KEY_9:
+			return true;
+		case KEY_C:
+			return PlaybackControlsActive();
+		default:
+			break;
 		}
-		return true;
 	}
 
 	return false;
@@ -401,8 +441,27 @@ void CSpectator::OnRender()
 		return;
 	}
 
+	const bool ViewModeActive = GameClient()->m_RankGhost.IsViewModeActive();
+	if(ViewModeActive && (GameClient()->m_Menus.IsActive() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_Chat.IsActive() || GameClient()->m_Menus.OnlineReplayPopupActive()))
+	{
+		m_Active = false;
+		m_SelectedSpectatorId = NO_SELECTION;
+		m_TeleNumberInput.Deactivate();
+	}
+	const auto SelectedId = [&]() {
+		if(ViewModeActive)
+		{
+			using EMode = CRankGhost::EViewCameraMode;
+			const EMode Mode = GameClient()->m_RankGhost.ViewCameraMode();
+			return Mode == EMode::FREE ? (int)SPEC_FREEVIEW : Mode == EMode::ALL_MEMBERS ? (int)MULTI_VIEW :
+												       GameClient()->m_RankGhost.ViewSelectedMember();
+		}
+		return Client()->State() == IClient::STATE_DEMOPLAYBACK ? GameClient()->m_DemoSpecId : GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
+	};
+	const auto MultiViewActive = [&]() { return ViewModeActive ? SelectedId() == MULTI_VIEW : GameClient()->m_MultiViewActivated; };
+
 	// QmClient：等自由视角状态真正生效后再设置位置，避免被跟随镜头覆盖查找目标。
-	if(m_TeleSearchPending)
+	if(!ViewModeActive && m_TeleSearchPending)
 	{
 		const auto &SpecInfo = GameClient()->m_Snap.m_SpecInfo;
 		if(!SpecInfo.m_Active || GameClient()->m_MultiViewActivated)
@@ -414,7 +473,7 @@ void CSpectator::OnRender()
 		}
 	}
 
-	if(!GameClient()->m_MultiViewActivated && m_MultiViewActivateDelay != 0.0f)
+	if(!ViewModeActive && !GameClient()->m_MultiViewActivated && m_MultiViewActivateDelay != 0.0f)
 	{
 		if(m_MultiViewActivateDelay <= Client()->LocalTime())
 		{
@@ -431,7 +490,12 @@ void CSpectator::OnRender()
 		// closing the spectator menu
 		if(m_WasActive)
 		{
-			if(m_SelectedSpectatorId != NO_SELECTION)
+			if(ViewModeActive && m_SelectedSpectatorId != NO_SELECTION)
+			{
+				if(!MultiViewActive() || m_SelectedSpectatorId < 0)
+					Spectate(m_SelectedSpectatorId);
+			}
+			else if(m_SelectedSpectatorId != NO_SELECTION)
 			{
 				if(m_SelectedSpectatorId == MULTI_VIEW)
 					GameClient()->m_MultiViewActivated = true;
@@ -452,13 +516,11 @@ void CSpectator::OnRender()
 		}
 		if(!ExtraAnimations || !m_PresentationInitialized)
 		{
-			// 选择器收起时原生 HUD 不做动画，但查看模式的底部控制条仍要在
-			RenderGhostControlBar();
+			// 选择器收起；播放 HUD 由菜单组件统一绘制。
 			return;
 		}
 	}
 
-	const bool ViewModeActive = GameClient()->m_RankGhost.IsViewModeActive();
 	if(!GameClient()->m_Snap.m_SpecInfo.m_Active && Client()->State() != IClient::STATE_DEMOPLAYBACK && !ViewModeActive)
 	{
 		m_Active = false;
@@ -466,7 +528,6 @@ void CSpectator::OnRender()
 		m_TeleNumberInput.Deactivate();
 		if(!ExtraAnimations)
 		{
-			RenderGhostControlBar();
 			return;
 		}
 	}
@@ -492,7 +553,6 @@ void CSpectator::OnRender()
 		PanelOffsetY = ResolveUiPresentationStateValue(*pAnimRuntime, PanelNode, EUiAnimProperty::POS_Y, WantActive ? 0.0f : -10.0f, Spring, 3, 0.01f);
 		if(!WantActive && PanelAlpha <= 0.01f && !pAnimRuntime->HasActiveAnimation(PanelNode, EUiAnimProperty::ALPHA))
 		{
-			RenderGhostControlBar();
 			return;
 		}
 	}
@@ -519,15 +579,27 @@ void CSpectator::OnRender()
 	float BoxMove = -10.0f;
 	float BoxOffset = 0.0f;
 
-	for(const auto &pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
+	if(ViewModeActive)
+		TotalPlayers = GameClient()->m_RankGhost.ViewMemberCount();
+	else
+		for(const auto &pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
+		{
+			if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
+				continue;
+
+			++TotalPlayers;
+		}
+
+	if(TotalPlayers > 128)
 	{
-		if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
-			continue;
-
-		++TotalPlayers;
+		PerLine = (TotalPlayers + 3) / 4;
+		LineHeight = 500.0f / PerLine;
+		FontSize = maximum(6.0f, LineHeight - 1.0f);
+		TeeSizeMod = LineHeight / 60.0f;
+		RoundRadius = 3.0f;
+		BoxMove = 0.0f;
 	}
-
-	if(TotalPlayers > 96)
+	else if(TotalPlayers > 96)
 	{
 		FontSize = 15.0f;
 		LineHeight = 15.0f;
@@ -570,20 +642,6 @@ void CSpectator::OnRender()
 	CUIRect SpectatorMouseRect;
 	SpectatorRect.Margin(20.0f, &SpectatorMouseRect);
 
-	// QmClient: 影子旁观模式——右侧成员面板（点击锁定该成员视角）
-	const bool ShowRankPanel = GameClient()->m_RankGhost.IsViewModeActive() && GameClient()->m_RankGhost.ViewMemberCount() > 0;
-	const float RankPanelWidth = 280.0f;
-	const CUIRect RankPanelRect = {CenterX + ObjWidth + 10.0f, CenterY - 300.0f, RankPanelWidth, 600.0f};
-	if(ShowRankPanel)
-	{
-		// 触摸按下/释放判定区域扩展到成员面板
-		const float X0 = minimum(SpectatorMouseRect.x, RankPanelRect.x);
-		const float Y0 = minimum(SpectatorMouseRect.y, RankPanelRect.y);
-		const float X1 = maximum(SpectatorMouseRect.x + SpectatorMouseRect.w, RankPanelRect.x + RankPanelRect.w);
-		const float Y1 = maximum(SpectatorMouseRect.y + SpectatorMouseRect.h, RankPanelRect.y + RankPanelRect.h);
-		SpectatorMouseRect = {X0, Y0, X1 - X0, Y1 - Y0};
-	}
-
 	const bool WasTouchPressed = m_TouchState.m_AnyPressed;
 	if(WantActive)
 		Ui()->UpdateTouchState(m_TouchState);
@@ -613,93 +671,20 @@ void CSpectator::OnRender()
 	m_SelectorMouse.x = std::clamp(m_SelectorMouse.x, -(ObjWidth - 20.0f), ObjWidth - 20.0f);
 	m_SelectorMouse.y = std::clamp(m_SelectorMouse.y, -280.0f, 280.0f);
 
-	// QmClient：查看模式的主列表只列 Rank 1 影子成员。服务器玩家与回放无关，列出来只会
-	// 让人分不清跟的是谁；成员行点击即锁定该成员视角。右侧那块重复的成员面板随之跳过。
-	if(ViewModeActive)
-	{
-		const float RowHeight = 34.0f;
-		const float RowX = -(ObjWidth - 35.0f);
-		const bool RowPressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) || m_TouchState.m_PrimaryPressed);
-		const int MemberCount = minimum(GameClient()->m_RankGhost.ViewMemberCount(), 12);
-		for(int MemberIndex = 0; MemberIndex < MemberCount; MemberIndex++)
-		{
-			char aMemberName[MAX_NAME_LENGTH];
-			if(!GameClient()->m_RankGhost.ViewMemberName(MemberIndex, aMemberName, sizeof(aMemberName)))
-				continue;
-			const float RowY = -190.0f + MemberIndex * RowHeight;
-			const float RowW = (ObjWidth - 40.0f) * 2.0f;
-			const bool Hovered = WantActive && m_SelectorMouse.x >= RowX && m_SelectorMouse.x <= RowX + RowW &&
-					     m_SelectorMouse.y >= RowY && m_SelectorMouse.y <= RowY + RowHeight - 2.0f;
-			const bool Selected = GameClient()->m_RankGhost.ViewSelectedMember() == MemberIndex;
-			if(Hovered && RowPressed)
-				GameClient()->m_RankGhost.ViewSelectMember(MemberIndex);
-
-			ColorRGBA RowColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f * ContentAlpha);
-			if(Selected)
-				RowColor = ColorRGBA(0.30f, 0.62f, 1.0f, 0.45f * ContentAlpha);
-			else if(Hovered)
-				RowColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.15f * ContentAlpha);
-			Graphics()->DrawRect(CenterX + RowX, CenterY + RowY, RowW, RowHeight - 2.0f, RowColor, IGraphics::CORNER_ALL, 10.0f);
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, (Selected ? 1.0f : 0.7f) * ContentAlpha);
-			TextRender()->Text(CenterX + RowX + 14.0f, CenterY + RowY + 8.0f, FontSize, aMemberName, -1.0f);
-		}
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-		RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
-		return;
-	}
-
-	// QmClient: 成员面板可见时光标允许进入右侧面板
-	const bool OverRankPanel = ShowRankPanel && m_SelectorMouse.x >= ObjWidth + 10.0f;
-	if(ShowRankPanel)
-		m_SelectorMouse.x = std::clamp(m_SelectorMouse.x, -(ObjWidth - 20.0f), ObjWidth + RankPanelWidth - 10.0f);
-
 	const bool MousePressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) || m_TouchState.m_PrimaryPressed);
 
-	// QmClient: Rank 1 成员面板——点击行锁定该成员视角
-	if(ShowRankPanel)
-	{
-		RankPanelRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * PanelAlpha), IGraphics::CORNER_ALL, 20.0f);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, ContentAlpha);
-		TextRender()->Text(RankPanelRect.x + 20.0f, RankPanelRect.y + 22.0f, BigFontSize, Localize("Rank 1 members"), -1.0f);
-
-		const int MemberCount = minimum(GameClient()->m_RankGhost.ViewMemberCount(), 12);
-		for(int MemberIndex = 0; MemberIndex < MemberCount; MemberIndex++)
-		{
-			char aMemberName[MAX_NAME_LENGTH];
-			if(!GameClient()->m_RankGhost.ViewMemberName(MemberIndex, aMemberName, sizeof(aMemberName)))
-				continue;
-			const CUIRect RowRect = {RankPanelRect.x + 15.0f, RankPanelRect.y + 65.0f + MemberIndex * 42.0f, RankPanelWidth - 30.0f, 34.0f};
-			const bool Hovered = WantActive && m_SelectorMouse.x >= RowRect.x && m_SelectorMouse.x < RowRect.x + RowRect.w &&
-					     m_SelectorMouse.y >= RowRect.y && m_SelectorMouse.y < RowRect.y + RowRect.h;
-			const bool Selected = GameClient()->m_RankGhost.ViewSelectedMember() == MemberIndex;
-			if(Hovered && MousePressed)
-				GameClient()->m_RankGhost.ViewSelectMember(MemberIndex);
-			ColorRGBA RowColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f * ContentAlpha);
-			if(Selected)
-				RowColor = ColorRGBA(0.30f, 0.62f, 1.0f, 0.45f * ContentAlpha);
-			else if(Hovered)
-				RowColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.15f * ContentAlpha);
-			Graphics()->DrawRect(RowRect.x, RowRect.y, RowRect.w, RowRect.h, RowColor, IGraphics::CORNER_ALL, 10.0f);
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, (Selected ? 1.0f : 0.65f) * ContentAlpha);
-			TextRender()->Text(RowRect.x + 12.0f, RowRect.y + (RowRect.h - FontSize) / 2.0f, FontSize, aMemberName, -1.0f);
-		}
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-	}
-
 	// draw selections
-	if((Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_DemoSpecId == SPEC_FREEVIEW) ||
-		(Client()->State() != IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW))
+	if(SelectedId() == SPEC_FREEVIEW)
 	{
 		Graphics()->DrawRect(CenterX - (ObjWidth - 20.0f), CenterY - 280.0f, ((ObjWidth * 2.0f) / 3.0f) - 40.0f, 60.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, 20.0f);
 	}
 
-	if(GameClient()->m_MultiViewActivated)
+	if(MultiViewActive())
 	{
 		Graphics()->DrawRect(CenterX - (ObjWidth - 20.0f) + (ObjWidth * 2.0f / 3.0f), CenterY - 280.0f, ((ObjWidth * 2.0f) / 3.0f) - 40.0f, 60.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, 20.0f);
 	}
 
-	if(Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_LocalClientId >= 0 && GameClient()->m_DemoSpecId == SPEC_FOLLOW)
+	if((ViewModeActive || (Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_LocalClientId >= 0)) && (ViewModeActive ? SelectedId() == 0 : GameClient()->m_DemoSpecId == SPEC_FOLLOW))
 	{
 		Graphics()->DrawRect(CenterX - (ObjWidth - 20.0f) + (ObjWidth * 2.0f * 2.0f / 3.0f), CenterY - 280.0f, ((ObjWidth * 2.0f) / 3.0f) - 40.0f, 60.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, 20.0f);
 	}
@@ -712,7 +697,8 @@ void CSpectator::OnRender()
 		FreeViewSelected = true;
 		if(MousePressed)
 		{
-			GameClient()->m_MultiViewActivated = false;
+			if(!ViewModeActive)
+				GameClient()->m_MultiViewActivated = false;
 			Spectate(m_SelectedSpectatorId);
 		}
 	}
@@ -726,13 +712,16 @@ void CSpectator::OnRender()
 		MultiViewSelected = true;
 		if(MousePressed)
 		{
-			GameClient()->m_MultiViewActivated = true;
+			if(ViewModeActive)
+				Spectate(MULTI_VIEW);
+			else
+				GameClient()->m_MultiViewActivated = true;
 		}
 	}
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, (MultiViewSelected ? 1.0f : 0.5f) * ContentAlpha);
 	TextRender()->Text(CenterX - (ObjWidth - 40.0f) + (ObjWidth * 2.0f / 3.0f), CenterY - 280.f + (60.f - BigFontSize) / 2.f, BigFontSize, Localize("Multi-View"), -1.0f);
 
-	if(Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_LocalClientId >= 0)
+	if((ViewModeActive || (Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_LocalClientId >= 0)))
 	{
 		bool FollowSelected = false;
 		if(WantActive && m_SelectorMouse.x >= -(ObjWidth - 20.0f) + (ObjWidth * 2.0f * 2.0f / 3.0f) && m_SelectorMouse.x <= -(ObjWidth - 20.0f) + (ObjWidth * 2.0f * 2.0f / 3.0f) + ((ObjWidth * 2.0f) / 3.0f) - 40.0f &&
@@ -742,7 +731,8 @@ void CSpectator::OnRender()
 			FollowSelected = true;
 			if(MousePressed)
 			{
-				GameClient()->m_MultiViewActivated = false;
+				if(!ViewModeActive)
+					GameClient()->m_MultiViewActivated = false;
 				Spectate(m_SelectedSpectatorId);
 			}
 		}
@@ -752,18 +742,36 @@ void CSpectator::OnRender()
 
 	float x = -(ObjWidth - 35.0f), y = StartY;
 
-	const CNetObj_PlayerInfo *apDisplayPlayers[MAX_CLIENTS];
-	bool aIsFriend[MAX_CLIENTS];
-	int aDisplayOrder[MAX_CLIENTS];
-	int DisplayCount = 0;
-	for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
+	// 成员描述与服务器快照分离；同一旁观布局读取不同来源。
+	struct SDisplayPlayer
 	{
-		if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
-			continue;
-		apDisplayPlayers[DisplayCount] = pInfo;
-		aIsFriend[DisplayCount] = GameClient()->m_aClients[pInfo->m_ClientId].m_Friend;
-		++DisplayCount;
+		int m_Id;
+		int m_DDTeam;
+		bool m_Friend;
+	};
+	SDisplayPlayer aDisplayPlayers[CGhost::MAX_ACTIVE_GHOSTS];
+	bool aIsFriend[CGhost::MAX_ACTIVE_GHOSTS];
+	int aDisplayOrder[CGhost::MAX_ACTIVE_GHOSTS];
+	int DisplayCount = 0;
+	if(ViewModeActive)
+	{
+		DisplayCount = minimum(GameClient()->m_RankGhost.ViewMemberCount(), (int)CGhost::MAX_ACTIVE_GHOSTS);
+		for(int i = 0; i < DisplayCount; ++i)
+		{
+			aDisplayPlayers[i] = {i, TEAM_FLOCK, false};
+			aIsFriend[i] = false;
+		}
 	}
+	else
+		for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
+		{
+			if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
+				continue;
+			const int Id = pInfo->m_ClientId;
+			aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend};
+			aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
+			++DisplayCount;
+		}
 	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder);
 	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f, 15.0f);
 	const float TitleFontSize = TitleHeight * 0.8f;
@@ -794,11 +802,11 @@ void CSpectator::OnRender()
 		else if(FriendCount > 0 && i == FriendCount)
 			DrawGroupTitle(Localize("Others"), ColorRGBA(1.0f, 1.0f, 1.0f, 0.85f));
 
-		const CNetObj_PlayerInfo *pInfo = apDisplayPlayers[aDisplayOrder[i]];
-		const int DDTeam = GameClient()->m_Teams.Team(pInfo->m_ClientId);
+		const SDisplayPlayer *pInfo = &aDisplayPlayers[aDisplayOrder[i]];
+		const int DDTeam = pInfo->m_DDTeam;
 		const bool StartsGroup = i % PerLine == 0 || (FriendCount > 0 && i == FriendCount);
 		const bool EndsGroup = i + 1 == DisplayCount || (i + 1) % PerLine == 0 || (FriendCount > 0 && i + 1 == FriendCount);
-		const int NextDDTeam = EndsGroup ? 0 : GameClient()->m_Teams.Team(apDisplayPlayers[aDisplayOrder[i + 1]]->m_ClientId);
+		const int NextDDTeam = EndsGroup ? 0 : aDisplayPlayers[aDisplayOrder[i + 1]].m_DDTeam;
 
 		if(DDTeam != TEAM_FLOCK)
 		{
@@ -812,21 +820,27 @@ void CSpectator::OnRender()
 		}
 		OldDDTeam = DDTeam;
 
-		if((Client()->State() == IClient::STATE_DEMOPLAYBACK && GameClient()->m_DemoSpecId == pInfo->m_ClientId) ||
-			(Client()->State() != IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == pInfo->m_ClientId))
+		if(SelectedId() == pInfo->m_Id)
 		{
 			Graphics()->DrawRect(CenterX + x - 10.0f + BoxOffset, CenterY + y + BoxMove, 270.0f - BoxOffset, LineHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * ContentAlpha), IGraphics::CORNER_ALL, RoundRadius);
 		}
 
 		bool PlayerSelected = false;
-		if(WantActive && !OverRankPanel && m_SelectorMouse.x >= x - 10.0f && m_SelectorMouse.x < x + 260.0f &&
+		if(WantActive && m_SelectorMouse.x >= x - 10.0f && m_SelectorMouse.x < x + 260.0f &&
 			m_SelectorMouse.y >= y - (LineHeight / 6.0f) && m_SelectorMouse.y < y + (LineHeight * 5.0f / 6.0f))
 		{
-			m_SelectedSpectatorId = pInfo->m_ClientId;
+			m_SelectedSpectatorId = pInfo->m_Id;
 			PlayerSelected = true;
 			if(MousePressed)
 			{
-				if(GameClient()->m_MultiViewActivated)
+				if(ViewModeActive)
+				{
+					if(MultiViewActive())
+						GameClient()->m_RankGhost.ViewToggleMultiMember(m_SelectedSpectatorId);
+					else
+						Spectate(m_SelectedSpectatorId);
+				}
+				else if(GameClient()->m_MultiViewActivated)
 				{
 					if(GameClient()->m_MultiViewTeam == DDTeam)
 					{
@@ -858,7 +872,7 @@ void CSpectator::OnRender()
 		float TeeAlpha;
 		float NameAlpha;
 		if(Client()->State() == IClient::STATE_DEMOPLAYBACK &&
-			!GameClient()->m_Snap.m_aCharacters[pInfo->m_ClientId].m_Active)
+			!GameClient()->m_Snap.m_aCharacters[pInfo->m_Id].m_Active)
 		{
 			NameAlpha = 0.25f;
 			TeeAlpha = 0.5f;
@@ -875,13 +889,21 @@ void CSpectator::OnRender()
 		NameCursor.m_FontSize = FontSize;
 		NameCursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
 		NameCursor.m_LineWidth = 180.0f;
-		const int ClientId = pInfo->m_ClientId;
-		const bool HideIdentity = GameClient()->ShouldHideStreamerIdentity(ClientId);
-		const bool IsFriend = GameClient()->m_aClients[ClientId].m_Friend;
+		const int ClientId = pInfo->m_Id;
+		const bool HideIdentity = !ViewModeActive && GameClient()->ShouldHideStreamerIdentity(ClientId);
+		const bool IsFriend = pInfo->m_Friend;
 		char aNameBuf[MAX_NAME_LENGTH];
 		char aClanBuf[MAX_CLAN_LENGTH];
-		GameClient()->FormatStreamerName(ClientId, aNameBuf, sizeof(aNameBuf));
-		GameClient()->FormatStreamerClan(ClientId, aClanBuf, sizeof(aClanBuf));
+		if(ViewModeActive)
+		{
+			GameClient()->m_RankGhost.ViewMemberName(ClientId, aNameBuf, sizeof(aNameBuf));
+			aClanBuf[0] = '\0';
+		}
+		else
+		{
+			GameClient()->FormatStreamerName(ClientId, aNameBuf, sizeof(aNameBuf));
+			GameClient()->FormatStreamerClan(ClientId, aClanBuf, sizeof(aClanBuf));
+		}
 		bool IsSameClan = false;
 		if(aClanBuf[0] != '\0')
 		{
@@ -893,7 +915,7 @@ void CSpectator::OnRender()
 		}
 
 		ColorRGBA NameColor;
-		if(GameClient()->IsLocalClientId(ClientId))
+		if(!ViewModeActive && GameClient()->IsLocalClientId(ClientId))
 		{
 			const float Time = Client()->GlobalTime();
 			const float Hue = std::fmod(Time * 0.15f, 1.0f);
@@ -914,7 +936,7 @@ void CSpectator::OnRender()
 		NameColor.a *= NameAlpha;
 		TextRender()->TextColor(NameColor);
 
-		if(g_Config.m_ClShowIds && !HideIdentity)
+		if(g_Config.m_ClShowIds && !HideIdentity && !ViewModeActive)
 		{
 			char aClientId[16];
 			GameClient()->FormatClientId(ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
@@ -922,14 +944,14 @@ void CSpectator::OnRender()
 		}
 
 		TextRender()->TextEx(&NameCursor, aNameBuf);
-		if(GameClient()->m_MultiViewActivated)
+		if(MultiViewActive())
 		{
-			if(GameClient()->m_aMultiViewId[pInfo->m_ClientId])
+			if(ViewModeActive ? GameClient()->m_RankGhost.ViewMultiMemberSelected(pInfo->m_Id) : GameClient()->m_aMultiViewId[pInfo->m_Id])
 			{
 				TextRender()->TextColor(0.1f, 1.0f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
 				TextRender()->Text(CenterX + x + 50.0f + 180.0f, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "⬤", 220.0f);
 			}
-			else if(GameClient()->m_MultiViewTeam == DDTeam)
+			else if(ViewModeActive || GameClient()->m_MultiViewTeam == DDTeam)
 			{
 				TextRender()->TextColor(1.0f, 0.1f, 0.1f, (PlayerSelected ? 1.0f : 0.5f) * ContentAlpha);
 				TextRender()->Text(CenterX + x + 50.0f + 180.0f, CenterY + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize - 3, "◯", 220.0f);
@@ -937,11 +959,11 @@ void CSpectator::OnRender()
 		}
 
 		// flag
-		if(GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) &&
-			GameClient()->m_Snap.m_pGameDataObj && (GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierRed == pInfo->m_ClientId || GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_ClientId))
+		if(!ViewModeActive && GameClient()->m_Snap.m_pGameInfoObj && (GameClient()->m_Snap.m_pGameInfoObj->m_GameFlags & GAMEFLAG_FLAGS) &&
+			GameClient()->m_Snap.m_pGameDataObj && (GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierRed == pInfo->m_Id || GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_Id))
 		{
 			Graphics()->BlendNormal();
-			if(GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_ClientId)
+			if(GameClient()->m_Snap.m_pGameDataObj->m_FlagCarrierBlue == pInfo->m_Id)
 				Graphics()->TextureSet(GameClient()->m_GameSkin.m_SpriteFlagBlue);
 			else
 				Graphics()->TextureSet(GameClient()->m_GameSkin.m_SpriteFlagRed);
@@ -957,7 +979,11 @@ void CSpectator::OnRender()
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		}
 
-		CTeeRenderInfo TeeInfo = GameClient()->m_aClients[pInfo->m_ClientId].m_RenderInfo;
+		CTeeRenderInfo TeeInfo;
+		if(ViewModeActive)
+			GameClient()->m_RankGhost.ViewMemberRenderInfo(pInfo->m_Id, &TeeInfo);
+		else
+			TeeInfo = GameClient()->m_aClients[pInfo->m_Id].m_RenderInfo;
 		TeeInfo.m_Size *= TeeSizeMod;
 
 		const CAnimState *pIdleState = CAnimState::GetIdle();
@@ -992,345 +1018,9 @@ void CSpectator::OnRender()
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 	// QmClient：按编号查找传送点的输入行（与远程一致，画在选择器内容之上、光标之下）。
-	RenderTeleSearch(ScreenCenter, ContentAlpha, MousePressed);
+	if(!ViewModeActive)
+		RenderTeleSearch(ScreenCenter, ContentAlpha, MousePressed);
 	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
-
-	// QmClient：查看模式的底部控制条画在原生旁观面板之上（矮屏上两者可能重叠）
-	RenderGhostControlBar();
-}
-
-// QmClient：查看模式底部控制条矩形（UI 坐标）。度量照 demo 播放器的控制条：
-// 贴底、左边距 50、宽度上限 760、总高 70（进度条 15 + 按钮行 16 + 名字行 20 + 行距）
-CUIRect CSpectator::GhostControlBarRect() const
-{
-	const CUIRect Screen = *Ui()->Screen();
-	const float S = Screen.h / 1200.0f;
-	const float LeftMargin = 50.0f * S;
-	const float TotalHeight = 70.0f * S;
-	const float BarW = minimum(760.0f * S, Screen.w - LeftMargin);
-	return {LeftMargin, Screen.h - TotalHeight, BarW, TotalHeight};
-}
-
-// QmClient：查看模式底部播放控制条。布局参考 demo 播放器的控制条：视角切换、
-// 进度定位、秒级/tick 级快进快退、倍速与方向指示；交互走原生 CUI 管线
-// （DoButtonLogic + 原生 UI 光标），与记分板内嵌控件同一套实现。
-// 成员清单由原生旁观选择器的右侧面板负责，这里不再重复画一份。
-void CSpectator::RenderGhostControlBar()
-{
-	// 只在查看模式下出现，且由 ESC 控制显隐（与 demo 播放一致）；
-	// demo 回放有自己的播放器 UI
-	if(!m_GhostPanelOpen || !GameClient()->m_RankGhost.IsViewModeActive() || Client()->State() == IClient::STATE_DEMOPLAYBACK)
-		return;
-
-	CRankGhost *pRankGhost = &GameClient()->m_RankGhost;
-	const CUIRect Screen = *Ui()->Screen();
-	// S：把 1200 高的设计高度换算到 UI 坐标，保持视觉比例
-	const float S = Screen.h / 1200.0f;
-	const CUIRect BarBase = GhostControlBarRect();
-	// 与 demo 播放器一致：控制条可拖动，位移跨帧保留、越界钳回屏幕内；
-	// 圆角按当前贴住哪几条边动态裁剪
-	static vec2 s_BarOffset = vec2(0.0f, 0.0f);
-	CUIRect BarRect = BarBase;
-	BarRect.x += s_BarOffset.x;
-	BarRect.y += s_BarOffset.y;
-	int BarCorners = IGraphics::CORNER_NONE;
-	if(BarRect.x > 0.0f && BarRect.y > 0.0f)
-		BarCorners |= IGraphics::CORNER_TL;
-	if(BarRect.x < Screen.w - BarRect.w && BarRect.y > 0.0f)
-		BarCorners |= IGraphics::CORNER_TR;
-	if(BarRect.x > 0.0f && BarRect.y < Screen.h - BarRect.h)
-		BarCorners |= IGraphics::CORNER_BL;
-	if(BarRect.x < Screen.w - BarRect.w && BarRect.y < Screen.h - BarRect.h)
-		BarCorners |= IGraphics::CORNER_BR;
-
-	Ui()->MapScreen();
-	Ui()->StartCheck();
-	Ui()->Update();
-
-	// 底板与行距照 demo 播放器控制条：圆角卡片 + 进度条 15 / 按钮行 16 / 名字行 20
-	BarRect.Draw(ui_token::color::SURFACE_ELEVATED, BarCorners, ui_token::radius::CARD);
-
-	const float RowMargin = 5.0f * S;
-	CUIRect Body = BarRect;
-	Body.Margin(RowMargin, &Body);
-	CUIRect SeekRect, ButtonRow, NameRow;
-	Body.HSplitTop(15.0f * S, &SeekRect, &ButtonRow);
-	ButtonRow.HSplitTop(RowMargin, nullptr, &ButtonRow);
-	ButtonRow.HSplitBottom(20.0f * S, &ButtonRow, &NameRow);
-	NameRow.HSplitTop(4.0f * S, nullptr, &NameRow);
-
-	// 只有鼠标真的归 UI 光标时才响应点击（选择器打开时鼠标归它，这里不能抢）
-	const bool Interact = GhostUiCursorActive();
-
-	// 拖动控制条：与 demo 播放器同一套 DoDraggableButtonLogic 逻辑——按住空白处
-	// 拖动，位移超过 5px 才算拖动（轻点仍落到具体控件上，子控件后处理覆盖热项）
-	{
-		enum EDragOperation
-		{
-			OP_NONE,
-			OP_DRAGGING,
-			OP_CLICKED
-		};
-		static EDragOperation s_Operation = OP_NONE;
-		static vec2 s_InitialMouse = vec2(0.0f, 0.0f);
-		if(!Interact)
-			s_Operation = OP_NONE;
-		bool Clicked;
-		bool Abrupted;
-		if(int Result = Ui()->DoDraggableButtonLogic(&s_Operation, 8, &BarRect, &Clicked, &Abrupted))
-		{
-			if(s_Operation == OP_NONE && Result == 1)
-			{
-				s_InitialMouse = Ui()->MousePos();
-				s_Operation = OP_CLICKED;
-			}
-			if(Clicked || Abrupted)
-				s_Operation = OP_NONE;
-			if(s_Operation == OP_CLICKED && length(Ui()->MousePos() - s_InitialMouse) > 5.0f)
-			{
-				s_Operation = OP_DRAGGING;
-				s_InitialMouse -= s_BarOffset;
-			}
-			if(s_Operation == OP_DRAGGING)
-			{
-				s_BarOffset = Ui()->MousePos() - s_InitialMouse;
-				s_BarOffset.x = std::clamp(s_BarOffset.x, -BarBase.x, Screen.w - BarRect.w - BarBase.x);
-				s_BarOffset.y = std::clamp(s_BarOffset.y, -BarBase.y, Screen.h - BarRect.h - BarBase.y);
-			}
-		}
-	}
-	const auto DoBarButton = [&](CButtonContainer *pButton, int Flags, const CUIRect *pRect, int ButtonFlags) {
-		return Interact && Ui()->DoButtonLogic(pButton, Flags, pRect, ButtonFlags);
-	};
-
-	// 文字按钮底色与 demo 播放器控制条同一套 token（SURFACE_OVERLAY / ACCENT_PRIMARY_DIM）
-	const auto DrawTextButton = [&](CButtonContainer *pButton, const CUIRect &Rect, const char *pText, bool Active) {
-		const bool Hovered = Ui()->HotItem() == pButton;
-		Rect.Draw(Active ? ui_token::color::ACCENT_PRIMARY_DIM : ui_token::color::SURFACE_OVERLAY.WithMultipliedAlpha(Hovered ? 1.8f : 1.15f), IGraphics::CORNER_ALL, ui_token::radius::TIGHT);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, Active || Hovered ? 1.0f : 0.85f);
-		Ui()->DoLabel(&Rect, pText, Rect.h * 0.62f, TEXTALIGN_MC);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-	};
-
-	CRankGhost::SViewState State;
-	if(!pRankGhost->GetViewState(State))
-	{
-		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
-		Ui()->FinishCheck();
-		return;
-	}
-
-	// 进度条：与 demo 播放器同一套画法——底槽 + 已播填充 + 居中「当前 / 总」时间；
-	// 拖动时先暂停、松手还原原来的播放状态（与 demo 播放器拖进度条的语义一致）
-	{
-		const float Rounding = 5.0f * S;
-		SeekRect.Draw(ui_token::color::SURFACE_OVERLAY.WithMultipliedAlpha(1.15f), IGraphics::CORNER_ALL, Rounding);
-		CUIRect FilledBar = SeekRect;
-		FilledBar.w = 2.0f * Rounding + (FilledBar.w - 2.0f * Rounding) * std::clamp(State.m_Progress, 0.0f, 1.0f);
-		FilledBar.Draw(ui_token::color::ACCENT_PRIMARY_DIM.WithMultipliedAlpha(1.9f), IGraphics::CORNER_ALL, Rounding);
-
-		char aCurTime[32];
-		str_time((int64_t)(State.m_CurSeconds * 100.0f), TIME_HOURS, aCurTime, sizeof(aCurTime));
-		char aTotalTime[32];
-		str_time((int64_t)(State.m_TotalSeconds * 100.0f), TIME_HOURS, aTotalTime, sizeof(aTotalTime));
-		char aSeekLabel[128];
-		str_format(aSeekLabel, sizeof(aSeekLabel), "%s / %s", aCurTime, aTotalTime);
-		Ui()->DoLabel(&SeekRect, aSeekLabel, SeekRect.h * 0.70f, TEXTALIGN_MC);
-
-		static CButtonContainer s_SeekBarId;
-		static bool s_PausedBeforeSeeking = false;
-		if(Ui()->CheckActiveItem(&s_SeekBarId))
-		{
-			if(!Ui()->MouseButton(0) || !Interact)
-			{
-				if(s_PausedBeforeSeeking)
-					pRankGhost->ViewPlayPause();
-				s_PausedBeforeSeeking = false;
-				Ui()->SetActiveItem(nullptr);
-			}
-			else
-			{
-				pRankGhost->ViewSeek(std::clamp((Ui()->MouseX() - SeekRect.x - Rounding) / (SeekRect.w - 2.0f * Rounding), 0.0f, 1.0f));
-			}
-		}
-		else if(Interact && Ui()->HotItem() == &s_SeekBarId && Ui()->MouseButton(0))
-		{
-			s_PausedBeforeSeeking = State.m_Playing;
-			if(State.m_Playing)
-				pRankGhost->ViewPlayPause();
-			Ui()->SetActiveItem(&s_SeekBarId);
-			pRankGhost->ViewSeek(std::clamp((Ui()->MouseX() - SeekRect.x - Rounding) / (SeekRect.w - 2.0f * Rounding), 0.0f, 1.0f));
-		}
-		if(Interact && Ui()->MouseInside(&SeekRect) && !Ui()->MouseButton(0))
-			Ui()->SetHotItem(&s_SeekBarId);
-	}
-
-	// 按钮行：顺序与 demo 播放器控制条一致——播放/暂停 · 停止 · 秒级跳转（中间夹跳转时长）
-	// · 逐 tick · 倍速；最右侧是查看模式特有的三种视角模式与方向指示（demo 播放器没有这两项）
-	{
-		const float Btn = ButtonRow.h;
-		const float Gap = 5.0f * S;
-		const float GroupGap = 15.0f * S;
-		const CUIRect RowFull = ButtonRow;
-
-		// 右侧控件（方向 + 三种视角模式）先按文字实际宽度预留，左侧按钮只排进
-		// 剩余区域——固定宽度在长本地化文案下会溢出压到相邻按钮
-		const char *apModeLabels[3] = {Localize("Follow"), Localize("Free-View"), Localize("Multi-View")};
-		const CRankGhost::EViewCameraMode apModes[3] = {
-			CRankGhost::EViewCameraMode::MEMBER,
-			CRankGhost::EViewCameraMode::FREE,
-			CRankGhost::EViewCameraMode::ALL_MEMBERS};
-		const float ModeFont = Btn * 0.62f;
-		const auto TextPaddedWidth = [&](const char *pText) {
-			return TextRender()->TextWidth(ModeFont, pText, -1) + 14.0f * S;
-		};
-		CUIRect Right = RowFull;
-		CUIRect DirectionRect;
-		Right.VSplitRight(Btn, &Right, &DirectionRect);
-		Right.VSplitRight(Gap, &Right, nullptr);
-		CUIRect aModeRects[3];
-		for(int i = 2; i >= 0; i--)
-		{
-			Right.VSplitRight(TextPaddedWidth(apModeLabels[i]), &Right, &aModeRects[i]);
-			Right.VSplitRight(Gap, &Right, nullptr);
-		}
-		CUIRect Rest = RowFull;
-		Rest.VSplitRight(RowFull.w - Right.w, &Rest, nullptr);
-		CUIRect Button;
-
-		static CButtonContainer s_PlayPauseButton;
-		Rest.VSplitLeft(Btn, &Button, &Rest);
-		if(Ui()->DoButton_QmIcon(&s_PlayPauseButton, State.m_Playing ? EQmIcon::PAUSE : EQmIcon::PLAY, State.m_Playing ? FontIcons::FONT_ICON_PAUSE : FontIcons::FONT_ICON_PLAY, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Interact))
-			pRankGhost->ViewPlayPause();
-
-		static CButtonContainer s_StopButton;
-		Rest.VSplitLeft(Gap, nullptr, &Rest);
-		Rest.VSplitLeft(Btn, &Button, &Rest);
-		if(Ui()->DoButton_QmIcon(&s_StopButton, EQmIcon::STOP, FontIcons::FONT_ICON_STOP, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Interact))
-		{
-			if(State.m_Playing)
-				pRankGhost->ViewPlayPause();
-			pRankGhost->ViewSeek(0.0f);
-		}
-
-		// 秒级跳转：跳转时长在中间（demo 播放器是时长菜单，这里用同一位置的紧凑按钮循环 1s/5s/30s）
-		static float s_SkipSeconds = 5.0f;
-		const auto SeekBySeconds = [&](float Seconds) {
-			const int TicksPerSecond = Client()->GameTickSpeed();
-			pRankGhost->ViewSeek(std::clamp((GameClient()->m_Ghost.ManualPlaybackTick() + Seconds * TicksPerSecond) / (float)maximum(1, GameClient()->m_Ghost.ManualEndTick()), 0.0f, 1.0f));
-		};
-
-		static CButtonContainer s_SkipBackButton;
-		Rest.VSplitLeft(GroupGap, nullptr, &Rest);
-		Rest.VSplitLeft(Btn, &Button, &Rest);
-		if(Ui()->DoButton_QmIcon(&s_SkipBackButton, EQmIcon::BACKWARD, FontIcons::FONT_ICON_BACKWARD, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Interact))
-			SeekBySeconds(-s_SkipSeconds);
-
-		static CButtonContainer s_SkipDurationButton;
-		Rest.VSplitLeft(Gap, nullptr, &Rest);
-		{
-			// 时长控件文案与 demo 播放器一致（"%s sec." 的既有翻译键），宽度按文字实测
-			char aSeconds[8];
-			str_format(aSeconds, sizeof(aSeconds), "%d", (int)s_SkipSeconds);
-			char aDurBuf[16];
-			str_format(aDurBuf, sizeof(aDurBuf), Localize("%s sec.", "Demo player duration"), aSeconds);
-			Rest.VSplitLeft(maximum(TextPaddedWidth(aDurBuf), 46.0f * S), &Button, &Rest);
-			const bool Clicked = DoBarButton(&s_SkipDurationButton, 0, &Button, BUTTONFLAG_LEFT) != 0;
-			DrawTextButton(&s_SkipDurationButton, Button, aDurBuf, false);
-			if(Clicked)
-				s_SkipSeconds = s_SkipSeconds < 2.0f ? 5.0f : (s_SkipSeconds < 10.0f ? 30.0f : 1.0f);
-		}
-
-		static CButtonContainer s_SkipForwardButton;
-		Rest.VSplitLeft(Gap, nullptr, &Rest);
-		Rest.VSplitLeft(Btn, &Button, &Rest);
-		if(Ui()->DoButton_QmIcon(&s_SkipForwardButton, EQmIcon::FORWARD, FontIcons::FONT_ICON_FORWARD, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Interact))
-			SeekBySeconds(s_SkipSeconds);
-
-		// 逐 tick 微调
-		const auto NudgeTick = [&](int Delta) {
-			pRankGhost->ViewSeek(std::clamp((GameClient()->m_Ghost.ManualPlaybackTick() + Delta) / (float)maximum(1, GameClient()->m_Ghost.ManualEndTick()), 0.0f, 1.0f));
-		};
-		static CButtonContainer s_TickBackButton, s_TickForwardButton;
-		Rest.VSplitLeft(GroupGap, nullptr, &Rest);
-		Rest.VSplitLeft(Btn, &Button, &Rest);
-		if(Ui()->DoButton_QmIcon(&s_TickBackButton, EQmIcon::BACKWARD_STEP, FontIcons::FONT_ICON_BACKWARD_STEP, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Interact))
-			NudgeTick(-1);
-		Rest.VSplitLeft(Gap, nullptr, &Rest);
-		Rest.VSplitLeft(Btn, &Button, &Rest);
-		if(Ui()->DoButton_QmIcon(&s_TickForwardButton, EQmIcon::FORWARD_STEP, FontIcons::FONT_ICON_FORWARD_STEP, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Interact))
-			NudgeTick(1);
-
-		// 倍速：与 demo 播放器一样是「减速 / 读数 / 加速」三件套
-		static constexpr float s_aSpeeds[] = {0.25f, 0.5f, 1.0f, 2.0f, 4.0f};
-		const int NumSpeeds = (int)std::size(s_aSpeeds);
-		const int SpeedIndex = [&]() {
-			for(int i = 0; i < NumSpeeds; i++)
-			{
-				if(GameClient()->m_Ghost.ManualSpeed() == s_aSpeeds[i])
-					return i;
-			}
-			return 2; // 1.0x
-		}();
-		static CButtonContainer s_SlowDownButton, s_SpeedUpButton;
-		Rest.VSplitLeft(GroupGap, nullptr, &Rest);
-		Rest.VSplitLeft(Btn, &Button, &Rest);
-		if(Ui()->DoButton_QmIcon(&s_SlowDownButton, EQmIcon::CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_DOWN, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Interact))
-			GameClient()->m_Ghost.ManualSetSpeed(s_aSpeeds[maximum(0, SpeedIndex - 1)]);
-		CUIRect SpeedRect;
-		Rest.VSplitLeft(Gap, nullptr, &Rest);
-		Rest.VSplitLeft(50.0f * S, &SpeedRect, &Rest);
-		{
-			char aSpeedBuf[16];
-			str_format(aSpeedBuf, sizeof(aSpeedBuf), "×%g", (double)GameClient()->m_Ghost.ManualSpeed());
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.85f);
-			Ui()->DoLabel(&SpeedRect, aSpeedBuf, SpeedRect.h * 0.85f, TEXTALIGN_MC);
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-		}
-		Rest.VSplitLeft(Gap, nullptr, &Rest);
-		Rest.VSplitLeft(Btn, &Button, &Rest);
-		if(Ui()->DoButton_QmIcon(&s_SpeedUpButton, EQmIcon::CHEVRON_UP, FontIcons::FONT_ICON_CHEVRON_UP, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Interact))
-			GameClient()->m_Ghost.ManualSetSpeed(s_aSpeeds[minimum(NumSpeeds - 1, SpeedIndex + 1)]);
-
-		// 右侧：方向指示 + 三种视角模式（矩形已在上方预留，视觉顺序 跟随 / 自由视角 / 多人同框视角 / 方向）
-		static CButtonContainer s_DirectionButton;
-		{
-			const bool DirOn = g_Config.m_QmRankGhostShowDirection != 0;
-			const bool Clicked = DoBarButton(&s_DirectionButton, 0, &DirectionRect, BUTTONFLAG_LEFT) != 0;
-			DrawTextButton(&s_DirectionButton, DirectionRect, Localize("Direction", "Rank 1 replay"), DirOn);
-			if(Clicked)
-				g_Config.m_QmRankGhostShowDirection ^= 1;
-		}
-
-		static CButtonContainer s_aModeButtons[3];
-		const CRankGhost::EViewCameraMode CurrentMode = pRankGhost->ViewCameraMode();
-		for(int i = 0; i < 3; i++)
-		{
-			const bool Clicked = DoBarButton(&s_aModeButtons[i], 0, &aModeRects[i], BUTTONFLAG_LEFT) != 0;
-			DrawTextButton(&s_aModeButtons[i], aModeRects[i], apModeLabels[i], CurrentMode == apModes[i]);
-			if(Clicked && CurrentMode != apModes[i])
-				pRankGhost->ViewSetCameraMode(apModes[i]);
-		}
-	}
-
-	// 名字行：回放对象 · 地图 · 当前跟随的成员（demo 播放器这里是 Demofile: <name>）
-	{
-		char aMember[64];
-		if(!pRankGhost->ViewMemberName(pRankGhost->ViewSelectedMember(), aMember, sizeof(aMember)))
-			aMember[0] = '\0';
-		char aNameBuf[256];
-		if(aMember[0] != '\0')
-			str_format(aNameBuf, sizeof(aNameBuf), "%s · %s · %s", Localize("Rank 1 replay"), Client()->GetCurrentMap(), aMember);
-		else
-			str_format(aNameBuf, sizeof(aNameBuf), "%s · %s", Localize("Rank 1 replay"), Client()->GetCurrentMap());
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.9f);
-		Ui()->DoLabel(&NameRow, aNameBuf, NameRow.h * 0.85f, TEXTALIGN_ML);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-	}
-
-	// 原生光标（与记分板解锁后的光标一致）
-	RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
-	Ui()->FinishCheck();
 }
 
 void CSpectator::FindTele()
@@ -1445,11 +1135,7 @@ void CSpectator::OnReset()
 	m_SelectedSpectatorId = NO_SELECTION;
 	m_MultiViewActivateDelay = 0.0f;
 	m_TouchState = {};
-	// 查看模式控制面板随状态一并收起
-	m_GhostPanelOpen = false;
-	m_GhostEscapeArmed = false;
-	m_GhostEscapeLastTime = -1.0f;
-	m_GhostPanelOpenBeforeEscape = false;
+	m_ReplayUi.Reset();
 	m_TeleNumberInput.Deactivate();
 	m_TeleNumberInput.Set("1");
 	m_IgnoreTeleNumberTextEvent = false;
@@ -1462,6 +1148,19 @@ void CSpectator::OnReset()
 
 void CSpectator::Spectate(int SpectatorId)
 {
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+	{
+		using EMode = CRankGhost::EViewCameraMode;
+		if(SpectatorId == SPEC_FREEVIEW)
+			GameClient()->m_RankGhost.ViewSetCameraMode(EMode::FREE);
+		else if(SpectatorId == MULTI_VIEW)
+			GameClient()->m_RankGhost.ViewSetCameraMode(EMode::ALL_MEMBERS);
+		else if(SpectatorId == SPEC_FOLLOW)
+			GameClient()->m_RankGhost.ViewSelectMember(0);
+		else if(SpectatorId >= 0 && SpectatorId < GameClient()->m_RankGhost.ViewMemberCount())
+			GameClient()->m_RankGhost.ViewSelectMember(SpectatorId);
+		return;
+	}
 	if(SpectatorId != SPEC_FREEVIEW)
 		m_TeleSearchPending = false;
 	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -1503,6 +1202,26 @@ void CSpectator::Spectate(int SpectatorId)
 
 void CSpectator::SpectateClosest()
 {
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+	{
+		int Closest = -1;
+		float ClosestDistance = std::numeric_limits<float>::max();
+		for(int Index = 0; Index < GameClient()->m_RankGhost.ViewMemberCount(); ++Index)
+		{
+			vec2 Position;
+			if((GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::MEMBER && Index == GameClient()->m_RankGhost.ViewSelectedMember()) || !GameClient()->m_RankGhost.ViewMemberPosition(Index, &Position))
+				continue;
+			const float Distance = distance(GameClient()->m_Camera.m_Center, Position);
+			if(Distance < ClosestDistance)
+			{
+				Closest = Index;
+				ClosestDistance = Distance;
+			}
+		}
+		if(Closest >= 0)
+			Spectate(Closest);
+		return;
+	}
 	if(!CanChangeSpectatorId())
 		return;
 

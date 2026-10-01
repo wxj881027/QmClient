@@ -353,17 +353,9 @@ static const char *ChatTranslateBackendWarning()
 		if(g_Config.m_QmTranslateTcSecretId[0] == '\0' || g_Config.m_QmTranslateTcSecretKey[0] == '\0')
 			return Localize("⚠️ Tencent Cloud API not configured");
 	}
-	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
-	{
-		if(g_Config.m_QmTranslateLibreKey[0] == '\0')
-			return Localize("⚠️ LibreTranslate API Key not set");
-	}
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
 	{
-		if(g_Config.m_QmTranslateLlmKeyZhipu[0] == '\0' &&
-			g_Config.m_QmTranslateLlmKeyDeepseek[0] == '\0' &&
-			g_Config.m_QmTranslateLlmKeyOpenai[0] == '\0' &&
-			g_Config.m_QmTranslateLlmKeyCustom[0] == '\0')
+		if(GetSelectedTranslateLlmKey()[0] == '\0')
 			return Localize("⚠️ LLM API Key not configured");
 	}
 	return nullptr;

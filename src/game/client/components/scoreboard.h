@@ -55,6 +55,18 @@ constexpr SScoreboardTeamLabelLayout ResolveScoreboardTeamLabelLayout(float RowX
 	};
 }
 
+constexpr float ScoreboardRowsHeight(int NumRows, int NumTeamLabels, int NumTeamModeLabels, float LineHeight, float Spacing, float TeamFontSize, float TeamModeIconSize)
+{
+	if(NumRows <= 0)
+		return 0.0f;
+	const int ClampedTeamLabels = NumTeamLabels < 0 ? 0 : (NumTeamLabels > NumRows ? NumRows : NumTeamLabels);
+	const int ClampedTeamModeLabels = NumTeamModeLabels < 0 ? 0 : (NumTeamModeLabels > ClampedTeamLabels ? ClampedTeamLabels : NumTeamModeLabels);
+	const float TextSpacing = ResolveScoreboardTeamLabelLayout(0.0f, 0.0f, LineHeight, Spacing, TeamFontSize, 0.0f, true).m_RowSpacing;
+	const float IconSpacing = ResolveScoreboardTeamLabelLayout(0.0f, 0.0f, LineHeight, Spacing, TeamFontSize, TeamModeIconSize, true).m_RowSpacing;
+	return NumRows * LineHeight + (NumRows - ClampedTeamLabels) * Spacing +
+	       (ClampedTeamLabels - ClampedTeamModeLabels) * TextSpacing + ClampedTeamModeLabels * IconSpacing;
+}
+
 constexpr float ScoreboardRowsVerticalScale(float AvailableHeight, int NumRows, int NumTeamLabels, int NumTeamModeLabels, float LineHeight, float Spacing, float TeamFontSize, float TeamModeIconSize)
 {
 	if(AvailableHeight <= 0.0f || NumRows <= 0)
@@ -110,12 +122,11 @@ class CScoreboard : public CComponent
 	void RenderGoals(CUIRect Goals);
 	void RenderFooter(CUIRect Footer);
 	void RenderSpectators(CUIRect Spectators);
-	void RenderGhostPlaybackControls(CUIRect Controls);
 	void RenderSoundMuteBar(CUIRect ScoreboardRect);
 	void RenderTeamModeIcons(float x, float y, float IconSize, const SQmScoreboardTeamModeState &State, float Alpha);
 	void UpdateTeamModeCache();
 	void BuildPlayerRowPlan(int Team, CScoreboardPlayerRowPlan &Plan);
-	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State);
+	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, const CScoreboardPlayerRowPlan &Plan, CScoreboardRenderState &State, bool Scroll = false);
 	void RenderRecordingNotification(float x);
 	static CUi::EPopupMenuFunctionResult PopupScoreboard(void *pContext, CUIRect View, bool Active);
 
@@ -135,9 +146,8 @@ class CScoreboard : public CComponent
 	IGraphics::CTextureHandle m_DeadTeeTexture;
 	std::array<SQmScoreboardTeamModeState, NUM_DDRACE_TEAMS> m_aCachedTeamModes{};
 
-	// 滚动模式下的行偏移（单位：行，可有小数以获得平滑滚动）与其目标行。
-	float m_ScrollOffset = 0.0f;
-	int m_ScrollTarget = 0;
+	// 滚动状态由组件持有，离开滚动模式或释放客户端时复位。
+	CScrollRegion m_ScrollRegion;
 
 	std::optional<vec2> m_LastMousePos;
 	bool m_MouseUnlocked = false;

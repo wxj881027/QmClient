@@ -7,6 +7,7 @@
 
 bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 {
+	Out = {};
 	if(!pObj)
 	{
 		str_copy(Out.m_aError, "Response is not valid JSON", sizeof(Out.m_aError));
@@ -103,7 +104,78 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 		return false;
 	}
 
+	if(pContent->u.string.length >= sizeof(Out.m_aText))
+	{
+		str_copy(Out.m_aError, "Translation result exceeds buffer capacity");
+		return false;
+	}
 	str_copy(Out.m_aText, pContent->u.string.ptr, sizeof(Out.m_aText));
+	Out.m_Success = true;
+	return true;
+}
+
+bool ParseLlmResponsesJson(const json_value *pObj, SLlmParseResult &Out)
+{
+	Out = {};
+	if(!pObj || pObj->type != json_object)
+	{
+		str_copy(Out.m_aError, "Response is not a JSON object");
+		return false;
+	}
+	const json_value *pError = json_object_get(pObj, "error");
+	if(pError != &json_value_none && pError->type != json_null)
+	{
+		const json_value *pMessage = json_object_get(pError, "message");
+		str_copy(Out.m_aError, pMessage->type == json_string ? pMessage->u.string.ptr : "LLM API request failed");
+		return false;
+	}
+	auto AppendText = [&](const json_value *pText) {
+		if(pText->type != json_string)
+			return true;
+		const size_t Current = str_length(Out.m_aText);
+		if(pText->u.string.length >= sizeof(Out.m_aText) - Current)
+		{
+			Out.m_aText[0] = '\0';
+			str_copy(Out.m_aError, "Translation result exceeds buffer capacity");
+			return false;
+		}
+		str_append(Out.m_aText, pText->u.string.ptr);
+		return true;
+	};
+	const json_value *pTopText = json_object_get(pObj, "output_text");
+	if(pTopText->type == json_string && pTopText->u.string.length > 0)
+	{
+		if(!AppendText(pTopText))
+			return false;
+		Out.m_Success = true;
+		return true;
+	}
+	const json_value *pOutput = json_object_get(pObj, "output");
+	if(pOutput->type == json_array)
+	{
+		for(size_t i = 0; i < pOutput->u.array.length; ++i)
+		{
+			const json_value *pItem = pOutput->u.array.values[i];
+			const json_value *pType = json_object_get(pItem, "type");
+			if(pType->type != json_string || str_comp(pType->u.string.ptr, "message") != 0)
+				continue;
+			const json_value *pContent = json_object_get(pItem, "content");
+			if(pContent->type != json_array)
+				continue;
+			for(size_t j = 0; j < pContent->u.array.length; ++j)
+			{
+				const json_value *pPart = pContent->u.array.values[j];
+				const json_value *pPartType = json_object_get(pPart, "type");
+				if(pPartType->type == json_string && str_comp(pPartType->u.string.ptr, "output_text") == 0 && !AppendText(json_object_get(pPart, "text")))
+					return false;
+			}
+		}
+	}
+	if(Out.m_aText[0] == '\0')
+	{
+		str_copy(Out.m_aError, "No output_text in response");
+		return false;
+	}
 	Out.m_Success = true;
 	return true;
 }

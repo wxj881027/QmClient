@@ -1911,6 +1911,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	CMenus *pMenus = pPopupContext->m_pMenus;
 
 	static CListBox s_ListBox;
+	static int64_t s_PopupOpenTime = 0;
 	s_ListBox.SetActive(Active);
 	s_ListBox.DoStart(50.0f, pMenus->GameClient()->m_CountryFlags.Num(), 8, 1, -1, &View, false);
 
@@ -1918,6 +1919,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 	{
 		pPopupContext->m_New = false;
 		s_ListBox.ScrollToSelected();
+		s_PopupOpenTime = time_get();
 	}
 
 	for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
@@ -1935,7 +1937,15 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 		const float OldWidth = FlagRect.w;
 		FlagRect.w = FlagRect.h * 2.0f;
 		FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
-		pMenus->GameClient()->m_CountryFlags.Render(Entry.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
+		int64_t FlagAnimStartTime = s_PopupOpenTime;
+		if(s_PopupOpenTime > 0)
+		{
+			const int Col = (int)(i % 8);
+			const int Row = (int)(i / 8) % 6;
+			const float StaggerDelay = Col * 0.006f + Row * 0.015f;
+			FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
+		}
+		pMenus->GameClient()->m_CountryFlags.Render(Entry.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
 
 		pMenus->Ui()->DoLabel(&Label, Entry.m_aCountryCodeString, 10.0f, TEXTALIGN_MC);
 	}

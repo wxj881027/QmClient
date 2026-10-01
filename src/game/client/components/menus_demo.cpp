@@ -206,15 +206,14 @@ namespace
 
 }
 
-void CMenus::RenderDemoExportDisplayToggle(const CUIRect &Rect)
+void CMenus::RenderDemoDisplayToggle(const CUIRect &Rect, bool &Expanded, CButtonContainer &Button, bool Enabled)
 {
-	static CButtonContainer s_DisplayButton;
-	const bool Expanded = m_DemoExportDisplayExpanded;
-	if(DoButton_Menu(&s_DisplayButton, Localize("Demo display"), Ui()->IsPopupOpen() ? -1 : 0, &Rect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, Expanded ? ui_token::color::ACCENT_PRIMARY_DIM.WithAlpha(0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f) && !Ui()->IsPopupOpen())
-		m_DemoExportDisplayExpanded = !Expanded;
+	Enabled = Enabled && !Ui()->IsPopupOpen();
+	if(DoButton_Menu(&Button, Localize("Demo display"), Enabled ? 0 : -1, &Rect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f, 0.0f, Expanded ? ui_token::color::ACCENT_PRIMARY_DIM.WithAlpha(0.18f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), nullptr, 11.0f) && Enabled)
+		Expanded = !Expanded;
 	CUIRect Arrow;
 	Rect.VSplitRight(22.0f, nullptr, &Arrow);
-	Ui()->DoLabel(&Arrow, m_DemoExportDisplayExpanded ? "-" : "+", 12.0f, TEXTALIGN_MC);
+	Ui()->DoLabel(&Arrow, Expanded ? "-" : "+", 12.0f, TEXTALIGN_MC);
 }
 
 void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
@@ -228,7 +227,7 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 	View.HSplitTop(2.0f, nullptr, &View);
 
 	// 三组段选：值就是配置项本身的下标，点哪档写哪档。
-	const auto Segments = [&](const char *pLabel, int *pValue, const char *const *ppLabels, int Count, CButtonContainer *pButtons) {
+	const auto Segments = [&](const char *pLabel, int *pValue, const char *const *ppLabels, int Count, CButtonContainer *pButtons, bool Available = true) {
 		CUIRect Label, Options;
 		View.HSplitTop(20.0f, &Row, &View);
 		View.HSplitTop(2.0f, nullptr, &View);
@@ -241,7 +240,7 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 			CUIRect Option{Options.x + Width * i, Options.y, Width, Options.h};
 			Option.Margin(2.0f, &Option);
 			const ColorRGBA Fill = *pValue == i ? ui_token::color::ACCENT_PRIMARY_DIM : ColorRGBA(1.0f, 1.0f, 1.0f, 0.02f);
-			if(DoButton_Menu(&pButtons[i], nullptr, Enabled ? 0 : -1, &Option, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 4.0f, 0.0f, Fill) && Enabled)
+			if(DoButton_Menu(&pButtons[i], nullptr, Enabled && Available ? 0 : -1, &Option, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 4.0f, 0.0f, Fill) && Enabled && Available)
 				*pValue = i;
 			Ui()->DoLabel(&Option, ppLabels[i], 10.0f, TEXTALIGN_MC, {.m_MaxWidth = Option.w - 4.0f, .m_EllipsisAtEnd = true});
 			GameClient()->m_Tooltips.DoToolTip(&pButtons[i], &Option, ppLabels[i]);
@@ -251,9 +250,9 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 	const char *apDirection[] = {Localize("None", "Show players' key presses"), Localize("Others", "Show players' key presses"), Localize("All", "Show players' key presses"), Localize("Own", "Show players' key presses")};
 	Segments(Localize("Show key presses"), &g_Config.m_QmDemoShowDirection, apDirection, std::size(apDirection), s_aDirectionButtons);
 	const char *apStrength[] = {Localize("Off"), Localize("Icons"), Localize("Icon and number")};
-	Segments(Localize("Strong Weak Hook"), &g_Config.m_QmDemoShowStrongWeak, apStrength, std::size(apStrength), s_aStrongWeakButtons);
+	Segments(Localize("Strong Weak Hook"), &g_Config.m_QmDemoShowStrongWeak, apStrength, std::size(apStrength), s_aStrongWeakButtons, !GameClient()->m_RankGhost.IsViewModeActive());
 	const char *apScope[] = {Localize("Self"), Localize("Others"), Localize("Strong hook"), Localize("Weak hook"), Localize("All")};
-	Segments(Localize("Hook strength scope"), &g_Config.m_QmDemoStrongWeakScope, apScope, std::size(apScope), s_aScopeButtons);
+	Segments(Localize("Hook strength scope"), &g_Config.m_QmDemoStrongWeakScope, apScope, std::size(apScope), s_aScopeButtons, !GameClient()->m_RankGhost.IsViewModeActive());
 
 	// 两个开关并排：回放里是否画主 HUD 与聊天。
 	IUiContext Context;
@@ -274,12 +273,13 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 			*pValue = Value;
 	};
 	Toggle(Hud, Localize("Show ingame HUD"), &g_Config.m_QmDemoShowHud);
-	Toggle(Chat, Localize("Show chat"), &g_Config.m_QmDemoShowChat);
+	// 在线回放保留服务器实时聊天，显示开关沿用实时聊天配置。
+	Toggle(Chat, Localize("Show chat"), GameClient()->m_RankGhost.IsViewModeActive() ? &g_Config.m_ClShowChat : &g_Config.m_QmDemoShowChat);
 }
 
 bool CMenus::DemoFilterChat(const void *pData, int Size, void *pUser)
 {
-	bool DoFilterChat = *(bool *)pUser;
+	bool DoFilterChat = *(int *)pUser != 0;
 	if(!DoFilterChat)
 	{
 		return false;
@@ -295,11 +295,49 @@ bool CMenus::DemoFilterChat(const void *pData, int Size, void *pUser)
 	return !Unpacker.Error() && !Sys && Msg == NETMSGTYPE_SV_CHAT;
 }
 
+IDemoPlayer *CMenus::PlaybackPlayer() const
+{
+	return GameClient()->m_RankGhost.IsViewModeActive() ? GameClient()->m_RankGhost.ViewPlayer() : DemoPlayer();
+}
+
+bool CMenus::PlaybackShortcutsActive() const
+{
+	return !GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Spectator.IsEditingTeleNumber() && m_DemoPlayerState == DEMOPLAYER_NONE && g_Config.m_ClDemoKeyboardShortcuts && !Ui()->IsPopupOpen() && !GameClient()->m_Chat.IsActive() && (!GameClient()->m_RankGhost.IsViewModeActive() || !m_MenuActive) && !GameClient()->m_Spectator.IsActive() && !GameClient()->m_HudEditor.IsActive();
+}
+
+bool CMenus::ClaimOnlineReplaySpectatorBind(int Key)
+{
+	if(!GameClient()->m_RankGhost.IsViewModeActive() || GameClient()->m_RankGhost.ViewCameraMode() != CRankGhost::EViewCameraMode::FREE ||
+		m_MenuActive || OnlineReplayPopupActive() || Ui()->IsPopupOpen() || GameClient()->m_GameConsole.IsActive() || GameClient()->m_Chat.IsActive() || GameClient()->m_HudEditor.IsActive() ||
+		Key <= KEY_UNKNOWN || Key >= KEY_LAST)
+		return false;
+	const int Mask = CBinds::GetModifierMask(Input()) & ~CBinds::GetModifierMaskOfKey(Key);
+	const char *pBind = GameClient()->m_Binds.Get(Key, Mask);
+	if(pBind[0] == '\0' && CBinds::AllowsUnmodifiedFallback(Key, Mask))
+		pBind = GameClient()->m_Binds.Get(Key, KeyModifier::NONE);
+	if(!OnlineReplayHasSpectatorBind(pBind))
+		return false;
+	m_OnlineReplayShortcutClaims.Claim(Client()->PerfFrame(), Key);
+	return true;
+}
+
 void CMenus::HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek)
 {
 	if((PositionToSeek >= 0.0f && PositionToSeek <= 1.0f) || TimeToSeek != 0.0f || TickToSeek >= 0)
 	{
 		m_DemoCutPreview.Reset();
+		if(GameClient()->m_RankGhost.IsViewModeActive())
+		{
+			if(TickToSeek >= 0)
+				PlaybackPlayer()->SetPos(TickToSeek);
+			else if(TimeToSeek != 0.0f)
+				PlaybackPlayer()->SeekTime(TimeToSeek);
+			else
+				PlaybackPlayer()->SeekPercent(PositionToSeek);
+			if(PositionToSeek == 1.0f)
+				PlaybackPlayer()->Pause();
+			return;
+		}
 		GameClient()->m_Chat.Reset();
 		GameClient()->m_DamageInd.OnReset();
 		GameClient()->m_InfoMessages.OnReset();
@@ -310,18 +348,18 @@ void CMenus::HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickT
 		GameClient()->m_Statboard.OnReset();
 		GameClient()->m_SuppressEvents = true;
 		if(TickToSeek >= 0)
-			DemoPlayer()->SetPos(TickToSeek + 1);
+			PlaybackPlayer()->SetPos(TickToSeek + 1);
 		else if(TimeToSeek != 0.0f)
-			DemoPlayer()->SeekTime(TimeToSeek);
+			PlaybackPlayer()->SeekTime(TimeToSeek);
 		else
-			DemoPlayer()->SeekPercent(PositionToSeek);
+			PlaybackPlayer()->SeekPercent(PositionToSeek);
 		GameClient()->m_SuppressEvents = false;
 
-		if(!DemoPlayer()->BaseInfo()->m_Paused &&
-			!DemoPlayer()->BaseInfo()->m_LiveDemo &&
+		if(!PlaybackPlayer()->BaseInfo()->m_Paused &&
+			!PlaybackPlayer()->BaseInfo()->m_LiveDemo &&
 			PositionToSeek == 1.0f)
 		{
-			DemoPlayer()->Pause();
+			PlaybackPlayer()->Pause();
 		}
 	}
 }
@@ -329,11 +367,17 @@ void CMenus::HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickT
 void CMenus::DemoSeekTick(IDemoPlayer::ETickOffset TickOffset)
 {
 	m_DemoCutPreview.Reset();
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+	{
+		PlaybackPlayer()->SeekTick(TickOffset);
+		PlaybackPlayer()->Pause();
+		return;
+	}
 	GameClient()->m_Trails.OnReset();
 	GameClient()->m_SuppressEvents = true;
-	DemoPlayer()->SeekTick(TickOffset);
+	PlaybackPlayer()->SeekTick(TickOffset);
 	GameClient()->m_SuppressEvents = false;
-	DemoPlayer()->Pause();
+	PlaybackPlayer()->Pause();
 }
 
 const char *CMenus::DemoBrowserBaseFolder() const
@@ -375,7 +419,26 @@ void CMenus::ResetDemoBrowserFolder()
 
 void CMenus::RenderDemoPlayer(CUIRect MainView)
 {
-	const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
+	const bool OnlineReplay = GameClient()->m_RankGhost.IsViewModeActive();
+	const bool ControlsActive = OnlineReplay ? GameClient()->m_Spectator.PlaybackControlsActive() : m_MenuActive;
+	const uint64_t Generation = OnlineReplay ? GameClient()->m_RankGhost.ViewGeneration() : 0;
+	if(m_DemoControlsWereOnline != OnlineReplay || m_OnlineReplayControlsGeneration != Generation)
+	{
+		m_DemoDisplayExpanded = false;
+		m_DemoControlsWereOnline = OnlineReplay;
+		m_OnlineReplayControlsGeneration = Generation;
+		m_DemoControlsDragOperation = 0;
+		m_DemoControlsPositionOffset = vec2(0.0f, 0.0f);
+		m_DemoPlayerState = DEMOPLAYER_NONE;
+		m_DemoCutPreview.Reset();
+		m_vDemoCutSegments.clear();
+		g_Config.m_ClDemoSliceBegin = -1;
+		g_Config.m_ClDemoSliceEnd = -1;
+		m_PrevSeekAmount = -1.0f;
+		m_PausedBeforeSeeking = true;
+		Ui()->SetActiveItem(nullptr);
+	}
+	const IDemoPlayer::CInfo *pInfo = PlaybackPlayer()->BaseInfo();
 	if(m_DemoCutPreview.Update(pInfo->m_CurrentTick))
 	{
 		const int EndTick = m_DemoCutPreview.EndTick();
@@ -385,10 +448,10 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			HandleDemoSeeking(-1.0f, 0.0f, EndTick);
 			m_DemoCutPreview = FinishedPreview;
 		}
-		DemoPlayer()->Pause();
+		PlaybackPlayer()->Pause();
 	}
 	const int CurrentTick = pInfo->m_CurrentTick - pInfo->m_FirstTick;
-	const int TotalTicks = pInfo->m_LastTick - pInfo->m_FirstTick;
+	const int TotalTicks = maximum(1, pInfo->m_LastTick - pInfo->m_FirstTick);
 
 	// When rendering a demo and starting paused, render the pause indicator permanently.
 #if defined(CONF_VIDEORECORDER)
@@ -466,15 +529,15 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		if(m_DemoCutPreview.IsActive())
 		{
 			m_DemoCutPreview.Reset();
-			DemoPlayer()->Pause();
+			PlaybackPlayer()->Pause();
 			return;
 		}
 		const SDemoCutSegment Range = NormalizePendingSlice();
 		if(Range.m_StartTick < 0 || Range.m_StartTick >= Range.m_EndTick)
 			return;
 		HandleDemoSeeking(-1.0f, 0.0f, Range.m_StartTick);
-		if(DemoPlayer()->IsPlaying() && m_DemoCutPreview.Start(Range))
-			DemoPlayer()->Unpause();
+		if(PlaybackPlayer()->IsPlaying() && m_DemoCutPreview.Start(Range))
+			PlaybackPlayer()->Unpause();
 	};
 	const auto &&AddPendingSlice = [&]() {
 		if(g_Config.m_ClDemoSliceBegin == -1 && g_Config.m_ClDemoSliceEnd == -1)
@@ -497,41 +560,45 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// handle keyboard shortcuts independent of active menu
 	float PositionToSeek = -1.0f;
 	float TimeToSeek = 0.0f;
-	if(!GameClient()->m_GameConsole.IsActive() && !GameClient()->m_Spectator.IsEditingTeleNumber() && m_DemoPlayerState == DEMOPLAYER_NONE && g_Config.m_ClDemoKeyboardShortcuts && !Ui()->IsPopupOpen())
+	const bool ShortcutsActive = PlaybackShortcutsActive();
+	const auto ShortcutPressed = [&](int Key) {
+		return Input()->KeyPress(Key) && (!OnlineReplay || !m_OnlineReplayShortcutClaims.Claimed(Client()->PerfFrame(), Key));
+	};
+	if(ShortcutsActive)
 	{
 		// increase/decrease speed
 		if(!Input()->ModifierIsPressed() && !Input()->ShiftIsPressed() && !Input()->AltIsPressed())
 		{
-			if(Input()->KeyPress(KEY_P))
+			if(ShortcutPressed(KEY_P))
 				PreviewCut();
-			if(Input()->KeyPress(KEY_UP) || (m_MenuActive && Input()->KeyPress(KEY_MOUSE_WHEEL_UP)))
+			if(ShortcutPressed(KEY_UP) || (ControlsActive && ShortcutPressed(KEY_MOUSE_WHEEL_UP)))
 			{
-				DemoPlayer()->AdjustSpeedIndex(+1);
+				PlaybackPlayer()->AdjustSpeedIndex(+1);
 				UpdateLastSpeedChange();
 			}
-			else if(Input()->KeyPress(KEY_DOWN) || (m_MenuActive && Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN)))
+			else if(ShortcutPressed(KEY_DOWN) || (ControlsActive && ShortcutPressed(KEY_MOUSE_WHEEL_DOWN)))
 			{
-				DemoPlayer()->AdjustSpeedIndex(-1);
+				PlaybackPlayer()->AdjustSpeedIndex(-1);
 				UpdateLastSpeedChange();
 			}
 		}
 
 		// pause/unpause
-		if(Input()->KeyPress(KEY_SPACE) || Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || Input()->KeyPress(KEY_K))
+		if(ShortcutPressed(KEY_SPACE) || ShortcutPressed(KEY_RETURN) || ShortcutPressed(KEY_KP_ENTER) || ShortcutPressed(KEY_K))
 		{
 			if(pInfo->m_Paused)
 			{
-				DemoPlayer()->Unpause();
+				PlaybackPlayer()->Unpause();
 			}
 			else
 			{
-				DemoPlayer()->Pause();
+				PlaybackPlayer()->Pause();
 			}
 			UpdateLastPauseChange();
 		}
 
 		// seek backward/forward configured time
-		if(Input()->KeyPress(KEY_LEFT) || Input()->KeyPress(KEY_J))
+		if(ShortcutPressed(KEY_LEFT) || ShortcutPressed(KEY_J))
 		{
 			if(Input()->ModifierIsPressed())
 				PositionToSeek = FindPreviousMarkerPosition();
@@ -545,7 +612,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			else
 				TimeToSeek = -SKIP_DURATIONS_SECONDS[m_SkipDurationIndex];
 		}
-		else if(Input()->KeyPress(KEY_RIGHT) || Input()->KeyPress(KEY_L))
+		else if(ShortcutPressed(KEY_RIGHT) || ShortcutPressed(KEY_L))
 		{
 			if(Input()->ModifierIsPressed())
 				PositionToSeek = FindNextMarkerPosition();
@@ -564,7 +631,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		const int aSeekPercentKeys[] = {KEY_0, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9};
 		for(unsigned i = 0; i < std::size(aSeekPercentKeys); i++)
 		{
-			if(Input()->KeyPress(aSeekPercentKeys[i]))
+			if(ShortcutPressed(aSeekPercentKeys[i]))
 			{
 				PositionToSeek = i * 0.1f;
 				break;
@@ -572,21 +639,21 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		}
 
 		// seek to the beginning/end
-		if(Input()->KeyPress(KEY_HOME))
+		if(ShortcutPressed(KEY_HOME))
 		{
 			PositionToSeek = 0.0f;
 		}
-		else if(Input()->KeyPress(KEY_END))
+		else if(ShortcutPressed(KEY_END))
 		{
 			PositionToSeek = 1.0f;
 		}
 
 		// Advance single frame forward/backward with period/comma key
-		if(Input()->KeyPress(KEY_PERIOD))
+		if(ShortcutPressed(KEY_PERIOD))
 		{
 			DemoSeekTick(IDemoPlayer::TICK_NEXT);
 		}
-		else if(Input()->KeyPress(KEY_COMMA))
+		else if(ShortcutPressed(KEY_COMMA))
 		{
 			DemoSeekTick(IDemoPlayer::TICK_PREVIOUS);
 		}
@@ -596,9 +663,10 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	const float ButtonbarHeight = 20.0f;
 	const float NameBarHeight = 20.0f;
 	const float Margins = 5.0f;
-	const float TotalHeight = SeekBarHeight + ButtonbarHeight + NameBarHeight + Margins * 3;
+	const float DisplayHeight = m_DemoDisplayExpanded ? qm_demo_ui::DISPLAY_HEIGHT + Margins : 0.0f;
+	const float TotalHeight = SeekBarHeight + ButtonbarHeight + NameBarHeight + Margins * 3 + DisplayHeight;
 
-	if(!m_MenuActive)
+	if(!ControlsActive)
 	{
 		// Render pause indicator
 		if(g_Config.m_ClDemoShowPause && (InitialVideoPause || (!VideoRendering && Client()->GlobalTime() - m_LastPauseChange < 0.5f)))
@@ -639,13 +707,14 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 
 	if(CurrentTick == TotalTicks && !m_DemoCutPreview.IsFinished())
 	{
-		DemoPlayer()->Pause();
+		PlaybackPlayer()->Pause();
 		PositionToSeek = 0.0f;
 		UpdateLastPauseChange();
 	}
 
-	if(!m_MenuActive)
+	if(!ControlsActive)
 	{
+		m_DemoControlsDragOperation = 0;
 		HandleDemoSeeking(PositionToSeek, TimeToSeek);
 		return;
 	}
@@ -665,8 +734,11 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	DemoControls.Draw(ui_token::color::SURFACE_ELEVATED, Corners, ui_token::radius::CARD);
 	const CUIRect DemoControlsDragRect = DemoControls;
 
-	CUIRect SeekBar, ButtonBar, NameBar, SpeedBar;
+	CUIRect SeekBar, ButtonBar, NameBar, SpeedBar, DisplayBar;
 	DemoControls.Margin(5.0f, &DemoControls);
+	DemoControls.HSplitBottom(DisplayHeight, &DemoControls, &DisplayBar);
+	if(DisplayHeight > 0.0f)
+		DisplayBar.HSplitTop(Margins, nullptr, &DisplayBar);
 	DemoControls.HSplitTop(SeekBarHeight, &SeekBar, &ButtonBar);
 	ButtonBar.HSplitTop(Margins, nullptr, &ButtonBar);
 	ButtonBar.HSplitBottom(NameBarHeight, &ButtonBar, &NameBar);
@@ -680,31 +752,31 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			OP_DRAGGING,
 			OP_CLICKED
 		};
-		static EDragOperation s_Operation = OP_NONE;
-		static vec2 s_InitialMouse = vec2(0.0f, 0.0f);
+		if(!ControlsActive)
+			m_DemoControlsDragOperation = OP_NONE;
 
 		bool Clicked;
 		bool Abrupted;
-		if(int Result = Ui()->DoDraggableButtonLogic(&s_Operation, 8, &DemoControlsDragRect, &Clicked, &Abrupted))
+		if(int Result = Ui()->DoDraggableButtonLogic(&m_DemoControlsDragOperation, 8, &DemoControlsDragRect, &Clicked, &Abrupted))
 		{
-			if(s_Operation == OP_NONE && Result == 1)
+			if(m_DemoControlsDragOperation == OP_NONE && Result == 1)
 			{
-				s_InitialMouse = Ui()->MousePos();
-				s_Operation = OP_CLICKED;
+				m_DemoControlsDragInitialMouse = Ui()->MousePos();
+				m_DemoControlsDragOperation = OP_CLICKED;
 			}
 
 			if(Clicked || Abrupted)
-				s_Operation = OP_NONE;
+				m_DemoControlsDragOperation = OP_NONE;
 
-			if(s_Operation == OP_CLICKED && length(Ui()->MousePos() - s_InitialMouse) > 5.0f)
+			if(m_DemoControlsDragOperation == OP_CLICKED && length(Ui()->MousePos() - m_DemoControlsDragInitialMouse) > 5.0f)
 			{
-				s_Operation = OP_DRAGGING;
-				s_InitialMouse -= m_DemoControlsPositionOffset;
+				m_DemoControlsDragOperation = OP_DRAGGING;
+				m_DemoControlsDragInitialMouse -= m_DemoControlsPositionOffset;
 			}
 
-			if(s_Operation == OP_DRAGGING)
+			if(m_DemoControlsDragOperation == OP_DRAGGING)
 			{
-				m_DemoControlsPositionOffset = Ui()->MousePos() - s_InitialMouse;
+				m_DemoControlsPositionOffset = Ui()->MousePos() - m_DemoControlsDragInitialMouse;
 				const CUIRect Dragged = qm_demo_ui::DraggedPlayerRect(MainView, DemoControlsOriginal, m_DemoControlsPositionOffset.x, m_DemoControlsPositionOffset.y);
 				m_DemoControlsPositionOffset = vec2(Dragged.x - DemoControlsOriginal.x, Dragged.y - DemoControlsOriginal.y);
 			}
@@ -733,7 +805,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		if(Ui()->DoButtonLogic(&s_LiveButtonId, 0, &LiveButton, BUTTONFLAG_LEFT))
 		{
 			PositionToSeek = 1.0f;
-			DemoPlayer()->SetSpeedIndex(DEMO_SPEED_INDEX_DEFAULT);
+			PlaybackPlayer()->SetSpeedIndex(DEMO_SPEED_INDEX_DEFAULT);
 			UpdateLastSpeedChange();
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_LiveButtonId, &LiveButton,
@@ -854,14 +926,13 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 			return ClosestDistance <= SnapPixels ? ClosestAmount : AmountSeek;
 		};
 
-		static char s_SeekBarId;
-		if(Ui()->CheckActiveItem(&s_SeekBarId))
+		if(Ui()->CheckActiveItem(&m_DemoSeekBarId))
 		{
 			if(!Ui()->MouseButton(0))
 			{
 				if(!m_PausedBeforeSeeking)
 				{
-					DemoPlayer()->Unpause();
+					PlaybackPlayer()->Unpause();
 				}
 				Ui()->SetActiveItem(nullptr);
 			}
@@ -880,7 +951,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 				}
 			}
 		}
-		else if(Ui()->HotItem() == &s_SeekBarId)
+		else if(Ui()->HotItem() == &m_DemoSeekBarId)
 		{
 			if(Ui()->MouseButton(0))
 			{
@@ -888,22 +959,22 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 				m_PausedBeforeSeeking = pInfo->m_Paused;
 				if(!pInfo->m_Paused)
 				{
-					DemoPlayer()->Pause();
+					PlaybackPlayer()->Pause();
 				}
-				Ui()->SetActiveItem(&s_SeekBarId);
+				Ui()->SetActiveItem(&m_DemoSeekBarId);
 			}
 		}
 
 		if(Ui()->MouseInside(&SeekBar) && !Ui()->MouseButton(0))
-			Ui()->SetHotItem(&s_SeekBarId);
+			Ui()->SetHotItem(&m_DemoSeekBarId);
 
-		if(Ui()->HotItem() == &s_SeekBarId)
+		if(Ui()->HotItem() == &m_DemoSeekBarId)
 		{
 			const float HoveredAmount = SnapToTimelineMarker(std::clamp((Ui()->MouseX() - SeekBar.x - Rounding) / (SeekBar.w - 2 * Rounding), 0.0f, 1.0f));
 			const int HoveredTick = (int)(HoveredAmount * TotalTicks);
 			static char s_aHoveredTime[32];
 			str_time(qm_demo_cut::ToCentiseconds(HoveredTick, Client()->GameTickSpeed()), TIME_HOURS_CENTISECS, s_aHoveredTime, sizeof(s_aHoveredTime));
-			GameClient()->m_Tooltips.DoToolTip(&s_SeekBarId, &SeekBar, s_aHoveredTime);
+			GameClient()->m_Tooltips.DoToolTip(&m_DemoSeekBarId, &SeekBar, s_aHoveredTime);
 		}
 	}
 
@@ -919,11 +990,11 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	{
 		if(pInfo->m_Paused)
 		{
-			DemoPlayer()->Unpause();
+			PlaybackPlayer()->Unpause();
 		}
 		else
 		{
-			DemoPlayer()->Pause();
+			PlaybackPlayer()->Pause();
 		}
 		UpdateLastPauseChange();
 	}
@@ -935,7 +1006,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	static CButtonContainer s_ResetButton;
 	if(Ui()->DoButton_QmIcon(&s_ResetButton, EQmIcon::STOP, FONT_ICON_STOP, false, &Button, BUTTONFLAG_LEFT))
 	{
-		DemoPlayer()->Pause();
+		PlaybackPlayer()->Pause();
 		PositionToSeek = 0.0f;
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_ResetButton, &Button, Localize("Stop the current demo"));
@@ -1058,7 +1129,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	if(SliceBeginButtonResult == 1)
 	{
 		m_DemoCutPreview.Reset();
-		Client()->DemoSliceBegin();
+		g_Config.m_ClDemoSliceBegin = pInfo->m_CurrentTick;
 		if(CurrentTick > (g_Config.m_ClDemoSliceEnd - pInfo->m_FirstTick))
 			g_Config.m_ClDemoSliceEnd = -1;
 	}
@@ -1077,7 +1148,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	if(SliceEndButtonResult == 1)
 	{
 		m_DemoCutPreview.Reset();
-		Client()->DemoSliceEnd();
+		g_Config.m_ClDemoSliceEnd = pInfo->m_CurrentTick;
 		if(CurrentTick < (g_Config.m_ClDemoSliceBegin - pInfo->m_FirstTick))
 			g_Config.m_ClDemoSliceBegin = -1;
 	}
@@ -1142,7 +1213,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	{
 		m_DemoCutPreview.Reset();
 		char aDemoName[IO_MAX_PATH_LENGTH];
-		DemoPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
+		PlaybackPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
 		m_DemoSliceInput.Set(aDemoName);
 		Ui()->SetActiveItem(&m_DemoSliceInput);
 		m_DemoPlayerState = DEMOPLAYER_SLICE_SAVE;
@@ -1152,8 +1223,14 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	// close button
 	ButtonBar.VSplitRight(ButtonbarHeight, &ButtonBar, &Button);
 	static CButtonContainer s_ExitButton;
-	if(Ui()->DoButton_QmIcon(&s_ExitButton, EQmIcon::CLOSE, FONT_ICON_XMARK, 0, &Button, BUTTONFLAG_LEFT) || (Input()->KeyPress(KEY_C) && !GameClient()->m_GameConsole.IsActive() && m_DemoPlayerState == DEMOPLAYER_NONE))
+	if(Ui()->DoButton_QmIcon(&s_ExitButton, EQmIcon::CLOSE, FONT_ICON_XMARK, 0, &Button, BUTTONFLAG_LEFT) || (ShortcutPressed(KEY_C) && ShortcutsActive))
 	{
+		if(OnlineReplay)
+		{
+			GameClient()->m_RankGhost.ViewStop();
+			GameClient()->m_Spectator.OnReset();
+			return;
+		}
 		Client()->Disconnect();
 		SetMenuPage(PAGE_DEMOS);
 		DemolistOnUpdate(false);
@@ -1171,7 +1248,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	GameClient()->m_Tooltips.DoToolTip(&s_KeyboardShortcutsButton, &Button, Localize("Toggle keyboard shortcuts"));
 
 	// auto camera button (only available when it is possible to use)
-	if(GameClient()->m_Camera.CanUseAutoSpecCamera())
+	if(!OnlineReplay && GameClient()->m_Camera.CanUseAutoSpecCamera())
 	{
 		ButtonBar.VSplitRight(Margins, &ButtonBar, nullptr);
 		ButtonBar.VSplitRight(ButtonbarHeight, &ButtonBar, &Button);
@@ -1182,6 +1259,14 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_AutoCameraButton, &Button, Localize("Toggle auto camera"));
 	}
+
+	// 播放 HUD 与导出弹窗共用显示设置，面板展开状态分别保存。
+	CUIRect DisplayToggle;
+	NameBar.VSplitRight(std::min(NameBar.w * 0.45f, TextRender()->TextWidth(11.0f, Localize("Demo display")) + 26.0f), &NameBar, &DisplayToggle);
+	NameBar.VSplitRight(Margins, &NameBar, nullptr);
+	RenderDemoDisplayToggle(DisplayToggle, m_DemoDisplayExpanded, m_DemoDisplayButton, m_DemoPlayerState == DEMOPLAYER_NONE);
+	if(DisplayHeight > 0.0f && m_DemoPlayerState == DEMOPLAYER_NONE)
+		RenderDemoDisplaySettings(DisplayBar, !Ui()->IsPopupOpen());
 
 	// demo name
 	CUIRect PreviewButton;
@@ -1196,7 +1281,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		PreviewCut();
 	GameClient()->m_Tooltips.DoToolTip(&s_CutPreviewButton, &PreviewButton, m_DemoCutPreview.IsActive() ? Localize("Stop preview (P)") : Localize("Preview cut (P)"));
 	char aDemoName[IO_MAX_PATH_LENGTH];
-	DemoPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
+	PlaybackPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
 	char aBuf[IO_MAX_PATH_LENGTH + 128];
 	str_format(aBuf, sizeof(aBuf), Localize("Demofile: %s"), aDemoName);
 	SLabelProperties Props;
@@ -1207,12 +1292,12 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 
 	if(IncreaseDemoSpeed)
 	{
-		DemoPlayer()->AdjustSpeedIndex(+1);
+		PlaybackPlayer()->AdjustSpeedIndex(+1);
 		UpdateLastSpeedChange();
 	}
 	else if(DecreaseDemoSpeed)
 	{
-		DemoPlayer()->AdjustSpeedIndex(-1);
+		PlaybackPlayer()->AdjustSpeedIndex(-1);
 		UpdateLastSpeedChange();
 	}
 
@@ -1232,7 +1317,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 
 void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 {
-	const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
+	const IDemoPlayer::CInfo *pInfo = PlaybackPlayer()->BaseInfo();
 
 	const bool DisplayExpanded = m_DemoExportDisplayExpanded;
 	const float DisplayPanelHeight = DisplayExpanded ? qm_demo_ui::DISPLAY_HEIGHT + 4.0f : 0.0f;
@@ -1367,8 +1452,8 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 				g_Config.m_ClDemoSliceBegin = Segment.m_StartTick;
 				g_Config.m_ClDemoSliceEnd = Segment.m_EndTick;
 				HandleDemoSeeking(-1.0f, 0.0f, Segment.m_StartTick);
-				if(DemoPlayer()->IsPlaying() && m_DemoCutPreview.Start(Segment))
-					DemoPlayer()->Unpause();
+				if(PlaybackPlayer()->IsPlaying() && m_DemoCutPreview.Start(Segment))
+					PlaybackPlayer()->Unpause();
 				m_DemoPlayerState = DEMOPLAYER_NONE;
 				Ui()->SetActiveItem(nullptr);
 				s_ContentScroll.End();
@@ -1417,7 +1502,15 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	}
 #if defined(CONF_VIDEORECORDER)
 	static int s_RenderCut = 0;
-	if(DoButton_CheckBox(&s_RenderCut, Localize("Render cut to video"), s_RenderCut, &RenderCutCheckBox))
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+	{
+		const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+		TextRender()->TextColor(PreviousColor.WithMultipliedAlpha(0.4f));
+		DoButton_CheckBox_Common(&s_RenderCut, Localize("Render cut to video"), "-", &RenderCutCheckBox, BUTTONFLAG_LEFT, false);
+		TextRender()->TextColor(PreviousColor);
+		GameClient()->m_Tooltips.DoToolTip(&s_RenderCut, &RenderCutCheckBox, Localize("Video rendering is unavailable during online replay."));
+	}
+	else if(DoButton_CheckBox(&s_RenderCut, Localize("Render cut to video"), s_RenderCut, &RenderCutCheckBox))
 	{
 		s_RenderCut ^= 1;
 	}
@@ -1426,7 +1519,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	// 回放/导出显示选项：折叠开关常驻，展开后显示三组段选与两个开关。
 	CUIRect DisplayOptions;
 	Box.HSplitTop(22.0f, &DisplayOptions, &Box);
-	RenderDemoExportDisplayToggle(DisplayOptions);
+	RenderDemoDisplayToggle(DisplayOptions, m_DemoExportDisplayExpanded, m_DemoExportDisplayButton);
 	if(m_DemoExportDisplayExpanded)
 	{
 		Box.HSplitTop(4.0f, nullptr, &Box);
@@ -1455,7 +1548,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 
 		static CUi::SMessagePopupContext s_MessagePopupContext;
 		char aDemoName[IO_MAX_PATH_LENGTH];
-		DemoPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
+		PlaybackPlayer()->GetDemoName(aDemoName, sizeof(aDemoName));
 		if(str_comp_nocase(aDemoName, m_DemoSliceInput.GetString()) == 0)
 		{
 			s_MessagePopupContext.ErrorColor();
@@ -1504,7 +1597,10 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		for(const auto &Segment : vExportSegments)
 			vDemoSliceSegments.push_back({Segment.m_StartTick, Segment.m_EndTick});
 		static CUi::SMessagePopupContext s_MessagePopupContext;
-		if(!Client()->DemoSlice(aPath, vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat))
+		const bool Exported = GameClient()->m_RankGhost.IsViewModeActive() ?
+					      GameClient()->m_RankGhost.ExportViewCut(aPath, vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat) :
+					      Client()->DemoSlice(aPath, vDemoSliceSegments, CMenus::DemoFilterChat, &s_RemoveChat);
+		if(!Exported)
 		{
 			s_MessagePopupContext.ErrorColor();
 			str_copy(s_MessagePopupContext.m_aMessage, Localize("Failed to export demo cut"));
@@ -1517,7 +1613,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		m_DemoCutPreview.Reset();
 		m_DemoPlayerState = DEMOPLAYER_NONE;
 #if defined(CONF_VIDEORECORDER)
-		if(s_RenderCut)
+		if(s_RenderCut && !GameClient()->m_RankGhost.IsViewModeActive())
 		{
 			m_HasPendingDemoRenderSource = true;
 			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder, sizeof(m_aPendingDemoRenderFolder));

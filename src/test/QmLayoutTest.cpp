@@ -3,6 +3,7 @@
 
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/components/countryflags.h>
+#include <game/client/components/menus.h>
 #include <game/client/components/qmclient/afk_presentation.h>
 #include <game/client/components/qmclient/input_overlay.h>
 #include <game/client/components/qmclient/score_hud_layout.h>
@@ -31,6 +32,53 @@ TEST(QmCountryFlags, InvalidNetworkCountryCodesUseTheDefaultFlag)
 	EXPECT_EQ(QmNormalizeCountryCode(-2), CountryCode::DEFAULT);
 	EXPECT_EQ(QmNormalizeCountryCode(CountryCode::DEFAULT), CountryCode::DEFAULT);
 	EXPECT_EQ(QmNormalizeCountryCode(156), 156);
+}
+
+TEST(QmCountryFlags, EntranceAnimationCalculatesExpectedScaleAndOvershoot)
+{
+	EXPECT_FLOAT_EQ(ComputeCountryFlagEntryScale(0.0f), 0.0f);
+	EXPECT_FLOAT_EQ(ComputeCountryFlagEntryScale(-0.1f), 0.0f);
+
+	const float MidScale = ComputeCountryFlagEntryScale(0.5185f);
+	EXPECT_GE(MidScale, 1.19f);
+	EXPECT_LE(MidScale, 1.21f);
+
+	EXPECT_FLOAT_EQ(ComputeCountryFlagEntryScale(1.0f), 1.0f);
+	EXPECT_FLOAT_EQ(ComputeCountryFlagEntryScale(1.5f), 1.0f);
+
+	const float ReducedMid = ComputeCountryFlagEntryScale(0.52f, 1.4f);
+	EXPECT_GE(ReducedMid, 1.05f);
+	EXPECT_LE(ReducedMid, 1.10f);
+}
+
+TEST(QmCountryFlags, EntranceAnimationCalculatesAlphaFadeIn)
+{
+	EXPECT_FLOAT_EQ(ComputeCountryFlagEntryAlpha(0.0f), 0.0f);
+	EXPECT_FLOAT_EQ(ComputeCountryFlagEntryAlpha(-0.5f), 0.0f);
+	EXPECT_NEAR(ComputeCountryFlagEntryAlpha(0.125f), 0.5f, 0.001f);
+	EXPECT_FLOAT_EQ(ComputeCountryFlagEntryAlpha(0.25f), 1.0f);
+	EXPECT_FLOAT_EQ(ComputeCountryFlagEntryAlpha(1.0f), 1.0f);
+}
+
+TEST(QmCountryFlags, EntranceAnimationPreservesCenterAnchorDuringScaling)
+{
+	const float X = 100.0f;
+	const float Y = 50.0f;
+	const float W = 64.0f;
+	const float H = 32.0f;
+	const float ExpectedCenterX = X + W * 0.5f;
+	const float ExpectedCenterY = Y + H * 0.5f;
+
+	for(float Scale : {0.0f, 0.5f, 1.0f, 1.20f, 1.5f})
+	{
+		float OutX = 0.0f, OutY = 0.0f, OutW = 0.0f, OutH = 0.0f;
+		ComputeCountryFlagEntryRect(X, Y, W, H, Scale, OutX, OutY, OutW, OutH);
+
+		EXPECT_FLOAT_EQ(OutW, W * Scale);
+		EXPECT_FLOAT_EQ(OutH, H * Scale);
+		EXPECT_NEAR(OutX + OutW * 0.5f, ExpectedCenterX, 0.001f);
+		EXPECT_NEAR(OutY + OutH * 0.5f, ExpectedCenterY, 0.001f);
+	}
 }
 
 TEST(QmAfkPresentation, ServerAndEscMenuStatesRemainAvailableForNonOpacityIndicators)
@@ -476,4 +524,15 @@ TEST(QmInputOverlayFiles, MissingFileIsACompletedResult)
 	std::optional<time_t> Modified = 99;
 	EXPECT_TRUE(pCheck->TryGetResult(Modified));
 	EXPECT_FALSE(Modified.has_value());
+}
+
+TEST(QmMenuShellGeometry, ChangingUiModeSelectsIndependentOrConnectedCorners)
+{
+	for(const bool UseNewUi : {false, true, true, false})
+	{
+		SCOPED_TRACE(UseNewUi);
+		const int Corners = QmMenuShellCorners(UseNewUi);
+		EXPECT_EQ(Corners & IGraphics::CORNER_B, IGraphics::CORNER_B);
+		EXPECT_EQ(Corners & IGraphics::CORNER_T, UseNewUi ? IGraphics::CORNER_T : IGraphics::CORNER_NONE);
+	}
 }

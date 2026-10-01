@@ -187,6 +187,7 @@ def run(
     env: dict[str, str] | None = None,
     stdin=None,
 ) -> tuple[int, str]:
+    _prepare_console_output()
     if title:
         print(f"\n==> {title}")
     print(f"命令: {' '.join(cmd)}")
@@ -238,10 +239,18 @@ def _truncate_console_output(output: str, limit: int = _CONSOLE_OUTPUT_LIMIT) ->
     )
 
 
+def _prepare_console_output() -> None:
+    # GBK 控制台无法表示替换字符时，只降级显示，保留返回值中的完整诊断。
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
+
+
 # 保持与旧脚本的 print_section 兼容
 def print_section(name: str) -> None:
+    _prepare_console_output()
     print(f"\n==> {name}")
 
 
 def print_result(level: str, message: str) -> None:
+    _prepare_console_output()
     print(f"[{level}] {message}")

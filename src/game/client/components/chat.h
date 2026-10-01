@@ -17,6 +17,7 @@
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
 #include <game/client/components/qmclient/qm_title_render.h>
+#include <game/client/components/qmclient/translate/translate_jobs.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
@@ -27,14 +28,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-class CTranslateResponse
-{
-public:
-	bool m_Error = false;
-	char m_Text[1024] = "";
-	char m_Language[16] = "";
-};
 
 constexpr auto SAVES_FILE = "ddnet-saves.txt";
 
@@ -572,16 +565,7 @@ public:
 	bool TranslateVisibleChatLines();
 	static bool IsManualVisibleTranslateCandidate(int ClientId, bool HasText, bool HasTranslateResponse, const int *pLocalIds, size_t NumLocalIds)
 	{
-		if(!HasText || HasTranslateResponse)
-			return false;
-		if(ClientId < 0)
-			return false;
-		for(size_t i = 0; i < NumLocalIds; ++i)
-		{
-			if(pLocalIds[i] >= 0 && ClientId == pLocalIds[i])
-				return false;
-		}
-		return true;
+		return IsTranslatePlayerCandidate(ClientId, true, HasText, HasTranslateResponse, pLocalIds, NumLocalIds);
 	}
 	static CUi::EPopupMenuFunctionResult PopupLanguageMenu(void *pContext, CUIRect View, bool Active);
 	void OpenChatLineMenu(const CLine &Line, vec2 UiMousePos);

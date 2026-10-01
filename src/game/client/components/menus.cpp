@@ -72,11 +72,10 @@ extern bool gs_SettingsAssetsEntityGamePreview;
 
 namespace
 {
-	constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f; // 导航胶囊行高
+	// 胶囊行高与内容缩放常量已提升到 menus.h（menus_ingame.cpp 的服务器导航栏也用）。
 	constexpr float MENU_MENUBAR_GAP_NEW = 8.0f; // 导航→内容间隙（统一边距基准）
 	constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;
 	constexpr float MENU_MENUBAR_HEIGHT_LEGACY = 30.0f;
-	constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
 	constexpr float MenuMenubarHeight(bool UseNewUi)
 	{
@@ -311,16 +310,7 @@ namespace
 		return ui_widget::CapsuleTabBarHoverColor(MenuCapsuleSurfaceColor());
 	}
 
-	ui_widget::SCapsuleTabBarStyle MenuCapsuleTabBarStyle()
-	{
-		ui_widget::SCapsuleTabBarStyle Style;
-		Style.m_CapsuleColor = MenuCapsuleSurfaceColor();
-		Style.m_IndicatorColor = MenuCapsuleTabIndicatorColor();
-		Style.m_ActiveLabelColor = MenuCapsuleTabActiveLabelColor();
-		Style.m_InactiveLabelColor = MenuCapsuleTabInactiveLabelColor();
-		return Style;
-	}
-
+	// MenuCapsuleTabBarStyle 已提升为 CMenus 成员（游戏内浏览页服务器导航栏共用），见 CMenus::MenuCapsuleTabBarStyle。
 	void LogPerfStage(IClient *pClient, const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
 	{
 		QmPerfLogStage("perf/menu", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
@@ -400,6 +390,18 @@ ui_widget::SCapsuleTabBarStyle CMenus::CapsuleTabBarStyleFor(const ColorRGBA &Su
 	Style.m_IndicatorColor = ui_widget::CapsuleTabBarIndicatorColor(SurfaceColor);
 	Style.m_ActiveLabelColor = ui_widget::CapsuleTabBarActiveLabelColor(SurfaceColor);
 	Style.m_InactiveLabelColor = ui_widget::CapsuleTabBarInactiveLabelColor(SurfaceColor);
+	return Style;
+}
+
+ui_widget::SCapsuleTabBarStyle CMenus::MenuCapsuleTabBarStyle() const
+{
+	// 主导航胶囊：容器是悬浮表面本体（MenuCapsuleSurfaceColor 与 BrowserPanelColor(1.0f)
+	// 同源，非压暗轨道），滑块与文字按该表面明暗自适应。
+	ui_widget::SCapsuleTabBarStyle Style;
+	Style.m_CapsuleColor = MenuCapsuleSurfaceColor();
+	Style.m_IndicatorColor = ui_widget::CapsuleTabBarIndicatorColor(Style.m_CapsuleColor);
+	Style.m_ActiveLabelColor = ui_widget::CapsuleTabBarActiveLabelColor(Style.m_CapsuleColor);
+	Style.m_InactiveLabelColor = ui_widget::CapsuleTabBarInactiveLabelColor(Style.m_CapsuleColor);
 	return Style;
 }
 
@@ -1211,8 +1213,19 @@ ColorRGBA CMenus::MenuPanelElevatedColor(float AlphaScale) const
 	return Base.WithAlpha(std::clamp((g_Config.m_QmUiOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f));
 }
 
+int CMenus::MenuShellCorners() const
+{
+	// 新 UI 的页签胶囊悬浮在游戏画面上，内容面板是独立卡片，四角全圆；
+	// 旧 UI 页签与内容面板相连（浏览器页签样式），保留底部圆角 + 顶部方角。
+	return QmMenuShellCorners(g_Config.m_QmNewUi != 0);
+}
+
 // 服务器列表面板底色：跟随设置页「界面表面」（qm_ui_color / qm_ui_opacity），
 // 与主导航胶囊容器（MenuCapsuleSurfaceColor）同源。
+ColorRGBA CMenus::QmMenuTabDefaultColor() const { return MenuTabDefaultColor(); }
+ColorRGBA CMenus::QmMenuTabActiveColor() const { return MenuTabActiveColor(); }
+ColorRGBA CMenus::QmMenuMenubarHoverColor() const { return MenuMenubarHoverColor(); }
+
 ColorRGBA CMenus::BrowserPanelColor(float AlphaScale) const
 {
 	const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
@@ -4466,7 +4479,7 @@ void CMenus::Render()
 	}
 
 	CUIRect Screen = *Ui()->Screen();
-	if(Client()->State() != IClient::STATE_DEMOPLAYBACK || m_Popup != POPUP_NONE)
+	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())) || m_Popup != POPUP_NONE)
 	{
 		// 全局安全区 = 统一边距基准（8px）：菜单内所有页面到窗口四边的基础距离，
 		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
@@ -4605,6 +4618,11 @@ void CMenus::Render()
 		break;
 
 	case IClient::STATE_ONLINE:
+		if(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())
+		{
+			RenderDemoPlayer(Screen);
+			break;
+		}
 		if(m_Popup != POPUP_NONE)
 		{
 			CPerfTimer StageTimer;
@@ -5288,7 +5306,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		s_DemoRenderScroll.AddRect(Box);
 		CUIRect DisplayOptions;
 		Box.HSplitTop(22.0f, &DisplayOptions, &Box);
-		RenderDemoExportDisplayToggle(DisplayOptions);
+		RenderDemoDisplayToggle(DisplayOptions, m_DemoExportDisplayExpanded, m_DemoExportDisplayButton);
 		if(DemoDisplayExpanded)
 		{
 			Box.HSplitTop(4.0f, nullptr, &Box);
@@ -8146,7 +8164,7 @@ void CMenus::PrewarmVisibleSettingsResources(CUIRect MainView)
 
 bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!m_MenuActive)
+	if(!m_MenuActive && !GameClient()->m_Spectator.PlaybackControlsActive())
 		return false;
 
 	MarkMenuInteraction();
@@ -8174,7 +8192,10 @@ bool CMenus::OnInput(const IInput::CEvent &Event)
 void CMenus::OnStateChange(int NewState, int OldState)
 {
 	if(NewState == IClient::STATE_DEMOPLAYBACK)
+	{
 		m_DemoExportDisplayExpanded = false;
+		m_DemoDisplayExpanded = false;
+	}
 
 	// reset active item
 	Ui()->SetActiveItem(nullptr);
@@ -8288,7 +8309,7 @@ void CMenus::OnRender()
 			}
 			SetActive(true);
 		}
-		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK && !GameClient()->m_RankGhost.IsViewModeActive())
 		{
 			Ui()->ClearHotkeys();
 			// QmClient: 菜单关闭时的空闲帧预热“最近缺失字形”（每帧少量，约 2ms），
@@ -8299,6 +8320,13 @@ void CMenus::OnRender()
 		}
 	}
 
+	// 在线控制层让出输入时结束拖动，恢复拖动前的播放状态。
+	if(GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_Spectator.PlaybackControlsActive() && Ui()->CheckActiveItem(&m_DemoSeekBarId))
+	{
+		if(!m_PausedBeforeSeeking)
+			GameClient()->m_RankGhost.ViewPlayer()->Unpause();
+		Ui()->SetActiveItem(nullptr);
+	}
 	Ui()->StartCheck();
 	UpdateColors();
 
@@ -8361,11 +8389,13 @@ void CMenus::OnRender()
 		LogPerfStage(Client(), "ingame_text_runtime_drain", StageTimer.ElapsedMs());
 	}
 
-	if(IsActive())
+	if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || (GameClient()->m_RankGhost.IsViewModeActive() && OnlineReplayPopupActive()))
 	{
 		CPerfTimer StageTimer;
-		Ui()->RenderBackButton();
-		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		if(IsActive())
+			Ui()->RenderBackButton();
+		if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive())
+			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 		LogPerfStage(Client(), "cursor_render", StageTimer.ElapsedMs());
 	}
 

@@ -1953,6 +1953,8 @@ bool CPlayers::ShouldRenderWeaponAnimation(int ClientId) const
 
 void CPlayers::OnRender()
 {
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+		return;
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 

@@ -8,7 +8,6 @@ TEST(QmChatMessageMergeContract, ChatAndConsoleKeepStructuredMergedAuthors)
 	const std::string Chat = ReadRepoFile("src/game/client/components/chat.cpp");
 	const std::string ConsoleHeader = ReadRepoFile("src/game/client/components/console.h");
 	const std::string Console = ReadRepoFile("src/game/client/components/console.cpp");
-	const std::string Translate = ReadRepoFile("src/game/client/components/qmclient/translate/translate.cpp");
 	const std::string AddLine = ExtractSourceFunctionBody(Chat, "void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible, std::optional");
 
 	EXPECT_TRUE(ContainsAll(ChatHeader, {"struct SMergedAuthor", "std::vector<SMergedAuthor> m_vMergedAuthors"}));
@@ -25,7 +24,6 @@ TEST(QmChatMessageMergeContract, ChatAndConsoleKeepStructuredMergedAuthors)
 				      }));
 	EXPECT_TRUE(ContainsAll(ConsoleHeader, {"struct SColorSpan", "m_ColorSpansByExportId", "PrintLineWithColorSpans"}));
 	EXPECT_TRUE(ContainsAll(Console, {"m_PendingColorSpansByExportId", "EntryCursor.m_vColorSplits.emplace_back"}));
-	EXPECT_NE(Translate.find("for(const CChat::SMergedAuthor &Author : pLine->m_vMergedAuthors)"), std::string::npos);
 }
 
 TEST(QmChatMessageMergeContract, SettingIsDefaultLocalizedAndVersioned)

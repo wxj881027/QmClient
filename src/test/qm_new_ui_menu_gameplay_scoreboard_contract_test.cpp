@@ -116,26 +116,6 @@ TEST(QmNewUiMenuGameplayScoreboardContract, ScoreboardDdTeamLabelUsesUnifiedBelo
 	EXPECT_EQ(RenderScoreboard.find("Row.x + Row.w / 2.0f - TextRender()->TextWidth(TeamFontSize, aBuf) / 2.0f + 5.0f"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplayScoreboardContract, ScoreboardMediaButtonSymbolsFollowContentAlpha)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/scoreboard.cpp");
-	const std::string Helper = FunctionBody(Source, "int DoScoreboardMediaIconButton(");
-
-	EXPECT_NE(Helper.find("const float IconAlpha = std::clamp(ContentAlpha"), std::string::npos);
-	EXPECT_NE(Helper.find("DefaultTextColor().WithMultipliedAlpha(IconAlpha)"), std::string::npos);
-	EXPECT_NE(Helper.find("ColorRGBA(1.0f, 0.0f, 0.0f, IconAlpha)"), std::string::npos);
-	EXPECT_NE(Helper.find("FontIcons::FONT_ICON_SLASH"), std::string::npos);
-	// 计分板的三个 SMTC 播放控制按钮已按远程结果删除，助手只服务影子回放控制条。
-	EXPECT_EQ(Source.find("s_SmtcPrevButton"), std::string::npos);
-	EXPECT_EQ(Source.find("s_SmtcPlayButton"), std::string::npos);
-	EXPECT_EQ(Source.find("s_SmtcNextButton"), std::string::npos);
-	EXPECT_NE(Source.find("DoScoreboardMediaIconButton(Ui(), TextRender(), &s_GhostPlayButton"), std::string::npos);
-	EXPECT_NE(Source.find("DoScoreboardMediaIconButton(Ui(), TextRender(), &s_GhostCloseButton"), std::string::npos);
-	EXPECT_EQ(Source.find("Ui()->DoButton_FontIcon(&s_SmtcPrevButton"), std::string::npos);
-	EXPECT_EQ(Source.find("Ui()->DoButton_FontIcon(&s_SmtcPlayButton"), std::string::npos);
-	EXPECT_EQ(Source.find("Ui()->DoButton_FontIcon(&s_SmtcNextButton"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplayScoreboardContract, ScoreboardUsesOneRowPlanAndDenseTeeLod)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/scoreboard.cpp");

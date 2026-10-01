@@ -39,6 +39,7 @@
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
+#include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/components/qmclient/qm_map_upload.h>
 #include <game/client/components/qmclient/screenshot_manager.h>
 #include <game/client/components/qmclient/settings_perf_windows.h>
@@ -104,6 +105,17 @@ enum
 	NUMBER_OF_ASSETS_TABS = 10,
 };
 
+// 导航胶囊行高与内容缩放：主菜单导航栏（离线/在线）与游戏内浏览页服务器导航栏
+// 共用同一组尺寸，保证上下两排胶囊导航观感一致。
+inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f;
+inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
+
+// 悬浮卡片四角独立，旧页签壳层与内容相连，仅保留底部圆角。
+inline constexpr int QmMenuShellCorners(bool UseNewUi)
+{
+	return UseNewUi ? IGraphics::CORNER_ALL : IGraphics::CORNER_B;
+}
+
 class CUIRect;
 enum class EQmIcon;
 struct IUiContext;
@@ -144,6 +156,10 @@ public:
 	// 设置页内的胶囊配色：容器是卡片，胶囊只当滑块轨道（比卡片深一档），
 	// 滑块与文字按卡片表面明暗自适应。
 	ui_widget::SCapsuleTabBarStyle SettingsCapsuleTabBarStyle() const;
+	// 主导航胶囊配色（主菜单导航栏与游戏内浏览页服务器导航栏共用）：
+	// 容器是悬浮表面本体（与 BrowserPanelColor(1.0f) 同源，非压暗轨道），
+	// 滑块与文字按该表面明暗自适应。
+	ui_widget::SCapsuleTabBarStyle MenuCapsuleTabBarStyle() const;
 	// 通用胶囊配色：轨道在给定容器表面上压一层暗色，滑块与文字按该表面明暗自适应。
 	ui_widget::SCapsuleTabBarStyle CapsuleTabBarStyleFor(const ColorRGBA &SurfaceColor) const;
 	// 多选一分段选择器：新 UI 渲染为胶囊滑块（先画容器与滑块，再画分段文字，滑块压在
@@ -156,6 +172,12 @@ public:
 	ColorRGBA BrowserPanelColor(float AlphaScale = 1.0f) const;
 	ColorRGBA BrowserPanelElevatedColor(float AlphaScale = 1.0f) const;
 	ColorRGBA SettingsTabbarColor(float AlphaScale = 1.0f) const;
+	ColorRGBA QmMenuTabDefaultColor() const;
+	ColorRGBA QmMenuTabActiveColor() const;
+	ColorRGBA QmMenuMenubarHoverColor() const;
+	// 菜单页背景圆角：新 UI 页签是悬浮胶囊，内容为独立圆角卡片（四角全圆）；
+	// 旧 UI 页签与内容相连，只圆底部、顶部保持方角衔接页签。
+	int MenuShellCorners() const;
 
 	int DoButton_CheckBox_Common(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, bool ProcessInput = true);
 	int DoButton_CheckBox(const void *pId, const char *pText, int Checked, const CUIRect *pRect, float BodySize = -1.0f);
@@ -216,6 +238,7 @@ private:
 	int DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect);
 
 	bool m_SkinListScrollToSelected = false;
+	int64_t m_TeeEntranceStartTime = 0;
 	std::optional<std::chrono::nanoseconds> m_SkinList7LastRefreshTime;
 	std::optional<std::chrono::nanoseconds> m_SkinPartsList7LastRefreshTime;
 	std::unordered_map<const void *, std::unique_ptr<ui_widget::SNumericFieldState>> m_vpSettingsNumericFieldStates;
@@ -1803,6 +1826,10 @@ protected:
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSliceInput;
 	// 导出/预览弹窗里的「Demo display」折叠状态：展开后显示回放专用显示选项。
 	bool m_DemoExportDisplayExpanded = false;
+	bool m_DemoDisplayExpanded = false;
+	CButtonContainer m_DemoDisplayButton;
+	CButtonContainer m_DemoExportDisplayButton;
+	COnlineReplayShortcutClaims m_OnlineReplayShortcutClaims;
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSearchInput;
 #if defined(CONF_VIDEORECORDER)
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenderInput;
@@ -2068,6 +2095,9 @@ protected:
 	void UpdateMusicState();
 
 	// found in menus_demo.cpp
+	char m_DemoSeekBarId = 0;
+	int m_DemoControlsDragOperation = 0;
+	vec2 m_DemoControlsDragInitialMouse = vec2(0.0f, 0.0f);
 	vec2 m_DemoControlsPositionOffset = vec2(0.0f, 0.0f);
 	bool m_PausedBeforeSeeking;
 	float m_PrevSeekAmount;
@@ -2078,12 +2108,15 @@ protected:
 	static bool DemoFilterChat(const void *pData, int Size, void *pUser);
 	bool FetchHeader(CDemoItem &Item);
 	void FetchAllHeaders();
+	IDemoPlayer *PlaybackPlayer() const;
+	uint64_t m_OnlineReplayControlsGeneration = 0;
+	bool m_DemoControlsWereOnline = false;
 	void HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek = -1);
 	void RenderDemoPlayer(CUIRect MainView);
 	void RenderDemoPlayerSliceSavePopup(CUIRect MainView);
 	// 回放/导出共用的显示选项面板与其折叠开关。
 	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true);
-	void RenderDemoExportDisplayToggle(const CUIRect &Rect);
+	void RenderDemoDisplayToggle(const CUIRect &Rect, bool &Expanded, CButtonContainer &Button, bool Enabled = true);
 	bool m_DemoBrowserListInitialized = false;
 	void RenderDemoBrowser(CUIRect MainView);
 	void RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivated);
@@ -2439,6 +2472,9 @@ public:
 
 	bool IsInit() const { return m_IsInit; }
 
+	bool OnlineReplayPopupActive() const { return m_DemoPlayerState != DEMOPLAYER_NONE; }
+	bool PlaybackShortcutsActive() const;
+	bool ClaimOnlineReplaySpectatorBind(int Key);
 	bool IsActive() const { return m_MenuActive; }
 	bool IsSettingsPageActive() const;
 	const char *CurrentQmUiPerfPage() const;

@@ -31,6 +31,7 @@ MACRO_CONFIG_INT(QmUiListEntryAnimations, qm_ui_list_entry_animations, 1, 0, 1, 
 MACRO_CONFIG_INT(QmUiCardHeightAnimations, qm_ui_card_height_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate settings card expand and collapse height changes")
 MACRO_CONFIG_INT(QmUiCardReflowAnimations, qm_ui_card_reflow_animations, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate settings card reorder and layout reflow")
 MACRO_CONFIG_INT(QmExtraAnimations, qm_extra_animations, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animate chat box, emote selector, scoreboard, and spectate selection")
+MACRO_CONFIG_INT(QmCountryFlagAnim, qm_country_flag_anim, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable bounce-in entrance animation when country flags finish loading")
 MACRO_CONFIG_INT(QmUiCardRainbowTitles, qm_ui_card_rainbow_titles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Settings card titles use rainbow colors")
 MACRO_CONFIG_INT(QmUiCardBorders, qm_ui_card_borders, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show settings card borders")
 MACRO_CONFIG_COL(QmUiCardBorderColor, qm_ui_card_border_color, 0x1AFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Settings card border color")

@@ -159,16 +159,9 @@ void CMapImages::OnInit()
 	m_TextureScale = g_Config.m_ClTextEntitiesSize;
 	InitOverlayTextures();
 
-	if(str_comp(g_Config.m_ClAssetsEntities, "default") == 0)
-	{
-		str_copy(m_aEntitiesPath, "editor/entities_clear");
-	}
-	else
-	{
-		str_format(m_aEntitiesPath, sizeof(m_aEntitiesPath), "assets/entities/%s", g_Config.m_ClAssetsEntities);
-	}
-	// blank 状态与 ChangeEntitiesPath 保持一致（原先仅在 ChangeEntitiesPath 设置，启动期恒为 false）
-	m_EntitiesIsBlank = IsBlankAssetName(g_Config.m_ClAssetsEntities);
+	const auto Selection = ResolveEntitiesAssetSelection(g_Config.m_ClAssetsEntities, g_Config.m_QmBlankAssetFallback != 0);
+	str_copy(m_aEntitiesPath, Selection.m_Path.c_str());
+	m_EntitiesIsBlank = Selection.m_IsBlank;
 
 	Console()->Chain("cl_text_entities_size", ConchainClTextEntitiesSize, this);
 
@@ -431,8 +424,7 @@ IGraphics::CTextureHandle CMapImages::GetEntities(EMapImageEntityLayerType Entit
 				Graphics()->LoadPng(ImgInfo, aPath, IStorage::TYPE_ALL);
 		}
 
-		// 选中内置空白材质 "blank"：按默认实体图的尺寸与格式解码后整张清空，
-		// 下方按格切块得到的各实体层就是全透明（显式留空，不参与 qm_blank_asset_fallback）。
+		// 内置 blank 在关闭回退时按默认实体图尺寸造透明层；开启时保留默认图。
 		if(m_EntitiesIsBlank && ImgInfo.m_pData != nullptr)
 			ClearImageToTransparent(ImgInfo);
 
@@ -578,17 +570,13 @@ IGraphics::CTextureHandle CMapImages::GetOverlayCenter()
 
 void CMapImages::ChangeEntitiesPath(const char *pPath)
 {
-	m_EntitiesIsBlank = IsBlankAssetName(pPath);
-	if(str_comp(pPath, "default") == 0)
-	{
-		str_copy(m_aEntitiesPath, "editor/entities_clear");
-	}
-	else
-	{
-		str_format(m_aEntitiesPath, sizeof(m_aEntitiesPath), "assets/entities/%s", pPath);
-	}
+	const auto Selection = ResolveEntitiesAssetSelection(pPath, g_Config.m_QmBlankAssetFallback != 0);
+	str_copy(m_aEntitiesPath, Selection.m_Path.c_str());
+	m_EntitiesIsBlank = Selection.m_IsBlank;
 
 	ReloadEntitiesTextures();
+	// 空白开关变化也会改变预览可见性；清除失败状态和旧纹理后按新选择预热。
+	HookPreviewInvalidate();
 	// 实体包变化：预览小图缓存随之失效，后台重新解码（key 不变时为幂等空操作）
 	RequestHookPreviewTileTextures();
 }
@@ -669,7 +657,7 @@ void CMapImages::HookPreviewPollJob()
 	const bool Masked = !GameClient()->m_GameInfo.m_DontMaskEntities;
 	const int ModType = GetEntitiesModType(GameClient()->m_GameInfo);
 	// 发布前校验 key：解码期间实体包或游戏信息可能已变化，过期结果直接丢弃
-	if(pDecode->m_ModType != ModType || pDecode->m_Masked != Masked ||
+	if(m_EntitiesIsBlank || pDecode->m_ModType != ModType || pDecode->m_Masked != Masked ||
 		str_comp(pDecode->m_aEntitiesPath, m_aEntitiesPath) != 0)
 	{
 		pDecode->FreeTiles();
@@ -683,6 +671,10 @@ void CMapImages::HookPreviewPollJob()
 		return;
 	}
 
+	// 相同默认源的任务可跨开关切换复用；失效过的缓存 key 在成功发布时恢复。
+	m_HookPreviewModType = ModType;
+	m_HookPreviewMasked = Masked;
+	str_copy(m_aHookPreviewEntitiesPath, m_aEntitiesPath);
 	for(size_t i = 0; i < std::size(gs_aHookPreviewTileIndices); ++i)
 	{
 		m_aHookPreviewTileTextures[i] = Graphics()->LoadTextureRawMove(pDecode->m_aTileImages[i], 0, pDecode->m_aSourcePath);

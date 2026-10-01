@@ -3677,6 +3677,8 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == Arka plan 3D parçacık izlerini etkinleştir
 
+Enable bounce-in entrance animation when country flags finish loading
+== Ülke bayrakları yüklendiğinde zıplayarak giriş animasyonunu etkinleştir
 
 Enable camera drift
 == Kamera sürüklenmesini etkinleştir
@@ -4800,17 +4802,14 @@ Ghost active (%d)
 Ghost ready
 == Hayalet hazır
 
-Ghost replay
-== Hayalet demosu
-
 Ghost tools
 == Hayalet araçları
 
 Ghost view mode off. The ghost follows your runs again.
 == Hayalet görüntüleme modu kapatıldı. Hayalet yine koşularınızı takip eder.
 
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
-== Hayalet görüntüleme modu: ESC kontrol panelini değiştirir. Oyun menüsünü açmak için ESC'ye iki kez basın (tekrardan çıkılır). Üye listesi için izleme tuşunu basılı tutun.
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
+== Hayalet görüntüleme modu: ESC kontrol panelini değiştirir. Oyun menüsünü açmak için ESC'ye iki kez basın (oynatma devam eder). Üye listesi için izleme tuşunu basılı tutun.
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == Hayalet görünürlüğü (alfa, 0=görünmez, 100=görünür)
@@ -8735,12 +8734,6 @@ Rank 1 demo already cached under 'Rank 1 replays': %s
 
 Rank 1 demo downloaded to '%s'
 == Rank 1 demosu '%s' konumuna indirildi
-
-Rank 1 members
-== Rank 1 üyeleri
-
-Rank 1 replay
-== Rank 1 tekrarı
 
 Rank 1 replays
 == Rank 1 demoları
@@ -13296,6 +13289,9 @@ Video name
 Video name:
 == Video adı:
 
+Video rendering is unavailable during online replay.
+== Çevrimiçi tekrar sırasında video oluşturma kullanılamaz.
+
 Video was saved to '%s'
 == Video '%s' konumuna kaydedildi
 
@@ -14196,9 +14192,6 @@ Zoom to current mouse target
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI ücretsiz bir hizmettir. Aşırı kullanım hizmetin askıya alınmasına neden olabilir.
 
-⚠️ LibreTranslate API Key not set
-== ⚠️ LibreTranslate API Anahtarı ayarlanmamış
-
 ⚠️ LLM API Key not configured
 == ⚠️ LLM API Anahtarı yapılandırılmamış
 
@@ -14516,10 +14509,6 @@ Swap Action
 [Predefined touch button behaviors]
 Use Action
 == Eylemi Kullan
-
-[Rank 1 replay]
-Direction
-== Yön
 
 [Show name plates]
 All

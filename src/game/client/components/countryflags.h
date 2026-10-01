@@ -19,6 +19,40 @@ constexpr int QmNormalizeCountryCode(int CountryCodeValue)
 	return CountryCodeValue >= ::CountryCode::MINIMUM && CountryCodeValue <= ::CountryCode::MAXIMUM ? CountryCodeValue : ::CountryCode::DEFAULT;
 }
 
+// 国旗加载入场动效参数
+constexpr float COUNTRY_FLAG_ANIM_DURATION = 0.28f;
+constexpr float COUNTRY_FLAG_ANIM_OVERSHOOT = 2.6f;
+
+// 计算国旗入场弹性缩放：Progress 从 0 -> 1，Scale 从 0 -> 约 1.20 -> 1.00
+inline float ComputeCountryFlagEntryScale(float Progress, float Overshoot = COUNTRY_FLAG_ANIM_OVERSHOOT)
+{
+	if(Progress <= 0.0f)
+		return 0.0f;
+	if(Progress >= 1.0f)
+		return 1.0f;
+	const float T = Progress - 1.0f;
+	return 1.0f + (Overshoot + 1.0f) * T * T * T + Overshoot * T * T;
+}
+
+// 计算国旗入场淡入透明度比例：前 25% 时间从 0 -> 1
+inline float ComputeCountryFlagEntryAlpha(float Progress)
+{
+	if(Progress <= 0.0f)
+		return 0.0f;
+	if(Progress >= 0.25f)
+		return 1.0f;
+	return Progress / 0.25f;
+}
+
+// 计算中心锚点对齐缩放后的包围矩形
+inline void ComputeCountryFlagEntryRect(float x, float y, float w, float h, float Scale, float &OutX, float &OutY, float &OutW, float &OutH)
+{
+	OutW = w * Scale;
+	OutH = h * Scale;
+	OutX = x + (w - OutW) * 0.5f;
+	OutY = y + (h - OutH) * 0.5f;
+}
+
 class CCountryFlags : public CComponent
 {
 public:
@@ -28,6 +62,7 @@ public:
 		char m_aCountryCodeString[16];
 		IGraphics::CTextureHandle m_Texture;
 		bool m_Loaded = false;
+		int64_t m_LoadedTimestamp = 0;
 
 		bool operator<(const CCountryFlag &Other) const { return str_comp(m_aCountryCodeString, Other.m_aCountryCodeString) < 0; }
 	};
@@ -84,6 +119,8 @@ public:
 	bool PrewarmByIndicesReady(const std::vector<int> &vIndices);
 	void Render(const CCountryFlag &Flag, ColorRGBA Color, float x, float y, float w, float h);
 	void Render(int CountryCode, ColorRGBA Color, float x, float y, float w, float h);
+	void Render(const CCountryFlag &Flag, ColorRGBA Color, float x, float y, float w, float h, int64_t CustomStartTime);
+	void Render(int CountryCode, ColorRGBA Color, float x, float y, float w, float h, int64_t CustomStartTime);
 
 private:
 	enum

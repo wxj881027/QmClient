@@ -3677,6 +3677,8 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 启用背景 3D 粒子拖尾
 
+Enable bounce-in entrance animation when country flags finish loading
+== 国旗图标加载完成时播放弹跳入场动画
 
 Enable camera drift
 == 启用镜头漂移
@@ -4800,17 +4802,14 @@ Ghost active (%d)
 Ghost ready
 == 影子就绪
 
-Ghost replay
-== 影子回放
-
 Ghost tools
 == 影子工具
 
 Ghost view mode off. The ghost follows your runs again.
 == 已退出查看模式。影子恢复跟随你的跑图。
 
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
-== 查看模式：按 ESC 切换控制面板。连按两次 ESC 打开游戏菜单（退出回放）。按住旁观键显示成员列表。
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
+== 查看模式：按 ESC 切换控制面板。连按两次 ESC 打开游戏菜单（回放继续）。按住旁观键显示成员列表。
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == 幽灵不透明度（0 不可见，100 完全可见）
@@ -8735,12 +8734,6 @@ Rank 1 demo already cached under 'Rank 1 replays': %s
 
 Rank 1 demo downloaded to '%s'
 == Rank 1 演示已下载到 '%s'
-
-Rank 1 members
-== Rank 1 成员
-
-Rank 1 replay
-== Rank 1 回放
 
 Rank 1 replays
 == Rank 1 回放
@@ -13296,6 +13289,9 @@ Video name
 Video name:
 == 视频名称：
 
+Video rendering is unavailable during online replay.
+== 在线回放期间无法渲染视频。
+
 Video was saved to '%s'
 == 视频保存至 "%s"
 
@@ -14195,9 +14191,6 @@ Zoom to current mouse target
 
 ⚠️ FTAPI is a free service. Excessive use may cause service suspension.
 == ⚠️ FTAPI 是免费服务，过度使用可能导致服务暂停
-
-⚠️ LibreTranslate API Key not set
-== ⚠️ Libre 翻译 API 密钥未设置
 
 ⚠️ LLM API Key not configured
 == ⚠️ LLM API 密钥未配置
@@ -18424,10 +18417,6 @@ Swap Action
 [Predefined touch button behaviors]
 Use Action
 == 使用行为
-
-[Rank 1 replay]
-Direction
-== 方向
 
 [Show name plates]
 All

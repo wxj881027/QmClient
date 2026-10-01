@@ -17,6 +17,8 @@ struct _json_value;
 // Out: 解析结果
 // 返回: true 表示解析成功，false 表示解析失败
 bool ParseLlmResponseJson(const struct _json_value *pObj, SLlmParseResult &Out);
+// 合并 Responses 所有文本片段，超出容量时报告错误而不截断。
+bool ParseLlmResponsesJson(const struct _json_value *pObj, SLlmParseResult &Out);
 
 // LLM 接口格式：AUTO 表示由客户端自动识别（先 Chat Completions 后 Responses）
 enum class ELlmApiStyle

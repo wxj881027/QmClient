@@ -149,10 +149,12 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &LeftTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true))
 		{
 			m_Dummy = false;
+			m_TeeEntranceStartTime = time_get();
 		}
 		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &RightTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true))
 		{
 			m_Dummy = true;
+			m_TeeEntranceStartTime = time_get();
 		}
 	}
 	else
@@ -160,11 +162,13 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &LeftTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE))
 		{
 			m_Dummy = false;
+			m_TeeEntranceStartTime = time_get();
 		}
 
 		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &RightTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE))
 		{
 			m_Dummy = true;
+			m_TeeEntranceStartTime = time_get();
 		}
 	}
 	const CSkins7::CSkin *pSelectedSkin = GameClient()->m_Skins7.FindSkin(CSkins7::ms_apSkinNameVariables[m_Dummy], false);
@@ -279,6 +283,21 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 	char aBuf[128 + IO_MAX_PATH_LENGTH];
 	str_format(aBuf, sizeof(aBuf), "%s:", Localize("Your skin"));
 	Ui()->DoLabel(&SkinPreview, aBuf, BodySize, TEXTALIGN_ML);
+
+	const bool MotionEnabled = g_Config.m_QmUiMotionLevel > 0;
+	float TeeScale = 1.0f;
+	if(MotionEnabled && m_TeeEntranceStartTime > 0)
+	{
+		const float Duration = g_Config.m_QmUiMotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
+		const float Overshoot = g_Config.m_QmUiMotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT;
+		const float Elapsed = (time_get() - m_TeeEntranceStartTime) / (float)time_freq();
+		if(Elapsed >= 0.0f && Elapsed < Duration)
+		{
+			const float Progress = Elapsed / Duration;
+			TeeScale = ComputeCountryFlagEntryScale(Progress, Overshoot);
+		}
+	}
+	OwnSkinInfo.m_Size *= TeeScale;
 
 	vec2 OffsetToMid;
 	CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &OwnSkinInfo, OffsetToMid);

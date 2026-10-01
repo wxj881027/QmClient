@@ -46,7 +46,7 @@ class CMapImages : public CComponent, public IMapImages
 	int m_Count;
 
 	char m_aEntitiesPath[IO_MAX_PATH_LENGTH];
-	// cl_assets_entities 选中内置空白材质 "blank"：GetEntities 按默认实体图尺寸造全透明层。
+	// 当前生效的透明状态：选中 blank 且关闭自动回退时造全透明层。
 	bool m_EntitiesIsBlank = false;
 
 public:
