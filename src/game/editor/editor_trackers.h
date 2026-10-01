@@ -135,6 +135,8 @@ public:
 	explicit CPropTracker(CEditorMap *pMap) :
 		CMapObject(pMap),
 		m_OriginalValue(0),
+		m_CurrentValue(0),
+		m_Prop(static_cast<E>(-1)),
 		m_pObject(nullptr),
 		m_OriginalLayerIndex(-1),
 		m_OriginalGroupIndex(-1),
@@ -158,6 +160,8 @@ public:
 		{
 			m_Tracking = true;
 			m_OriginalValue = Value;
+			m_CurrentValue = Value;
+			m_Prop = Prop;
 			OnStart(Prop);
 		}
 	}
@@ -169,14 +173,22 @@ public:
 
 		m_CurrentGroupIndex = GroupIndex < 0 ? CPropTrackerHelper::GetDefaultGroupIndex(Map()) : GroupIndex;
 		m_CurrentLayerIndex = LayerIndex < 0 ? CPropTrackerHelper::GetDefaultLayerIndex(Map()) : LayerIndex;
+		m_CurrentValue = PropToValue(Prop);
 
 		if(State == EEditState::END || State == EEditState::ONE_GO)
-		{
-			m_Tracking = false;
-			int Value = PropToValue(Prop);
-			if(EndChecker(Prop, Value))
-				OnEnd(Prop, Value);
-		}
+			Finish();
+	}
+
+	bool Finish()
+	{
+		if(!m_Tracking)
+			return false;
+		m_Tracking = false;
+		// 选择切换后对象可能已移走，使用最后一帧记录的值和下标结束编辑。
+		if(!EndChecker(m_Prop, m_CurrentValue))
+			return false;
+		OnEnd(m_Prop, m_CurrentValue);
+		return true;
 	}
 
 protected:
@@ -189,6 +201,8 @@ protected:
 	}
 
 	int m_OriginalValue;
+	int m_CurrentValue;
+	E m_Prop;
 	const T *m_pObject;
 	int m_OriginalLayerIndex;
 	int m_OriginalGroupIndex;

@@ -14607,14 +14607,6 @@ Relative aim
 == %s：按住鼠标左键拖拽绘制。Alt+左键可临时填充，Ctrl+滚轮调粗细。
 
 [Editor]
-1 new mention
-== 1 条新被提及消息
-
-[Editor]
-9+ new mentions
-== 9+ 条新被提及消息
-
-[Editor]
 [Alt+Down] Move the selected command down.
 == [Alt+Down] 将选中的命令下移.
 
@@ -15329,10 +15321,6 @@ Create an identical copy of the selected layer.
 [Editor]
 Create new folder
 == 创建新文件夹
-
-[Editor]
-Create or join an editor collaboration room for up to 4 people.
-== 创建或加入最多 4 人的编辑器协作房间。
 
 [Editor]
 Create Quadart
@@ -16603,6 +16591,10 @@ LASER: Unfreezes hit tee. Bounces off the walls. Also known as laser.
 == 激光: 解冻被击中的tee,会从墙壁反弹.
 
 [Editor]
+Layer
+== 图层
+
+[Editor]
 Layer type does not match a sound layer
 == 图层类型与声音图层不匹配
 
@@ -16879,6 +16871,10 @@ No
 == 否
 
 [Editor]
+No selection
+== 未选择对象
+
+[Editor]
 No tile layer selected
 == 未选择图块层
 
@@ -17081,6 +17077,10 @@ Project points
 [Editor]
 Proof
 == 验证模式
+
+[Editor]
+Properties
+== 属性
 
 [Editor]
 PURPLE SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server.
@@ -18117,6 +18117,10 @@ Toggle previewing the paths of quads with a position envelope when a quad layer 
 [Editor]
 Toggle proof borders. These borders represent the area that a player can see with default zoom.
 == 切换验证边框. 这些边框代表玩家在默认缩放下可以看到的区域.
+
+[Editor]
+Toggle properties panel.
+== 显示或隐藏属性面板。
 
 [Editor]
 Toggle solid/outline drawing.

@@ -11,6 +11,8 @@
 #include "font_typer.h"
 #include "layer_selector.h"
 #include "map_view.h"
+#include "qm_editor_layout.h"
+#include "qm_editor_theme.h"
 #include "quadart.h"
 #include "smooth_value.h"
 
@@ -156,7 +158,7 @@ class CEditor : public IEditor
 	};
 
 	std::shared_ptr<CLayerGroup> m_apSavedBrushes[10];
-	static constexpr ColorRGBA ms_DefaultPropColor = ColorRGBA(1, 1, 1, 0.5f);
+	static constexpr ColorRGBA ms_DefaultPropColor = QmEditorTheme::INPUT;
 
 public:
 	class IInput *Input() const { return m_pInput; }
@@ -504,7 +506,18 @@ public:
 	};
 	EExtraEditor m_ActiveExtraEditor = EXTRAEDITOR_NONE;
 	float m_aExtraEditorSplits[NUM_EXTRAEDITORS] = {250.0f, 250.0f, 250.0f};
-	float m_ToolBoxWidth = 100.0f;
+	float m_ToolBoxWidth = QmEditorLayout::DEFAULT_LAYERS_WIDTH;
+	float m_InspectorWidth = QmEditorLayout::DEFAULT_INSPECTOR_WIDTH;
+	bool m_ShowInspector = true;
+	bool m_PropertiesInInspector = false;
+	bool m_ShowServerSettingsEditorLast = false;
+	QmEditorLayout::SWorkspace m_Workspace;
+	CScrollRegion m_ToolbarScrollRegion;
+	SEditorValueSelectorState m_ValueSelectorState;
+	vec2 m_PanelResizeStartMouse{};
+	float m_PanelResizeStartValue = 0.0f;
+	void HandleMapTabShortcuts();
+	void RenderWorkspaceToolbar();
 
 	bool m_ShowEnvelopePreview = false;
 	enum class EEnvelopePreview
@@ -606,11 +619,26 @@ public:
 	static CUi::EPopupMenuFunctionResult PopupGroup(void *pContext, CUIRect View, bool Active);
 	struct SLayerPopupContext : public SPopupMenuId
 	{
-		CEditor *m_pEditor;
+		CEditor *m_pEditor = nullptr;
 		std::vector<std::shared_ptr<CLayerTiles>> m_vpLayers;
 		std::vector<int> m_vLayerIndices;
 		CLayerTiles::SCommonPropState m_CommonPropState;
 	};
+	SLayerPopupContext m_LayerPropertiesContext;
+	SPopupMenuId m_GroupPropertiesPopupId;
+	std::weak_ptr<CLayerGroup> m_InspectorGroup;
+	CEditorMap *m_pInspectorMap = nullptr;
+	std::weak_ptr<CLayer> m_InspectorLayer;
+	std::vector<int> m_vInspectorSelection;
+	CLineInput m_GroupNameInput;
+	CLineInput m_LayerNameInput;
+	void ShowGroupProperties();
+	void ShowLayerProperties();
+	void RefreshInspectorSelection();
+	void ResetInspectorSelection();
+	void RenderInspector(CUIRect View);
+	CUi::EPopupMenuFunctionResult RenderGroupProperties(CUIRect View);
+	CUi::EPopupMenuFunctionResult RenderLayerProperties(SLayerPopupContext &Context, CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupLayer(void *pContext, CUIRect View, bool Active);
 	class CQuadPopupContext : public SPopupMenuId
 	{

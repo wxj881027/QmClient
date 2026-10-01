@@ -97,7 +97,7 @@ void CFileBrowser::OnRender(CUIRect _)
 	View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_NONE, 0.0f);
 	View.VMargin(150.0f, &View);
 	View.HMargin(50.0f, &View);
-	View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.75f), IGraphics::CORNER_ALL, 5.0f);
+	View.Draw(QmEditorTheme::PANEL, IGraphics::CORNER_ALL, 4.0f);
 	View.Margin(10.0f, &View);
 
 	CUIRect Title, FileBox, FileBoxLabel, ButtonBar, PathBox;

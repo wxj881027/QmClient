@@ -6053,6 +6053,30 @@ context = "Editor"
 simplified_chinese = "加速器：使武器、护盾、雪花和旋转激光缓慢移动。"
 
 [[message]]
+key = "Properties"
+context = "Editor"
+[message.translations]
+simplified_chinese = "属性"
+
+[[message]]
+key = "Layer"
+context = "Editor"
+[message.translations]
+simplified_chinese = "图层"
+
+[[message]]
+key = "No selection"
+context = "Editor"
+[message.translations]
+simplified_chinese = "未选择对象"
+
+[[message]]
+key = "Toggle properties panel."
+context = "Editor"
+[message.translations]
+simplified_chinese = "显示或隐藏属性面板。"
+
+[[message]]
 key = "Collaboration connection lost; please try again"
 context = "Editor"
 [message.translations]

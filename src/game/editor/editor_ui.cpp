@@ -5,6 +5,7 @@
 #include <game/client/ui.h>
 #include <game/editor/editor.h>
 #include <game/editor/editor_ui.h>
+#include <game/editor/qm_editor_theme.h>
 
 void CEditor::UpdateTooltip(const void *pId, const CUIRect *pRect, const char *pToolTip)
 {
@@ -16,57 +17,7 @@ void CEditor::UpdateTooltip(const void *pId, const CUIRect *pRect, const char *p
 
 ColorRGBA CEditor::GetButtonColor(const void *pId, int Checked)
 {
-	if(Checked < 0)
-		return ColorRGBA(0, 0, 0, 0.5f);
-
-	switch(Checked)
-	{
-	case EditorButtonChecked::DANGEROUS_ACTION:
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(1.0f, 0.0f, 0.0f, 0.75f);
-		return ColorRGBA(1.0f, 0.0f, 0.0f, 0.5f);
-	case 8: // invisible
-		return ColorRGBA(0, 0, 0, 0);
-	case 7: // selected + game layers
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(1, 0, 0, 0.4f);
-		return ColorRGBA(1, 0, 0, 0.2f);
-
-	case 6: // game layers
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(1, 1, 1, 0.4f);
-		return ColorRGBA(1, 1, 1, 0.2f);
-
-	case 5: // selected + image/sound should be embedded
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(1, 0, 0, 0.75f);
-		return ColorRGBA(1, 0, 0, 0.5f);
-
-	case 4: // image/sound should be embedded
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(1, 0, 0, 1.0f);
-		return ColorRGBA(1, 0, 0, 0.875f);
-
-	case 3: // selected + unused image/sound
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(1, 0, 1, 0.75f);
-		return ColorRGBA(1, 0, 1, 0.5f);
-
-	case 2: // unused image/sound
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(0, 0, 1, 0.75f);
-		return ColorRGBA(0, 0, 1, 0.5f);
-
-	case 1: // selected
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(1, 0, 0, 0.75f);
-		return ColorRGBA(1, 0, 0, 0.5f);
-
-	default: // regular
-		if(Ui()->HotItem() == pId)
-			return ColorRGBA(1, 1, 1, 0.75f);
-		return ColorRGBA(1, 1, 1, 0.5f);
-	}
+	return QmEditorTheme::ButtonColor(Checked, Ui()->HotItem() == pId, Ui()->ActiveItem() == pId);
 }
 
 int CEditor::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip)
@@ -83,9 +34,14 @@ int CEditor::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, i
 
 int CEditor::DoButton_Editor(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip)
 {
-	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), 3.0f);
+	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), QmEditorTheme::CORNER_RADIUS);
 	CUIRect NewRect = *pRect;
-	Ui()->DoLabel(&NewRect, pText, 10.0f, TEXTALIGN_MC);
+	NewRect.VMargin(2.0f, &NewRect);
+	SLabelProperties Props;
+	Props.m_MaxWidth = NewRect.w;
+	Props.m_EllipsisAtEnd = true;
+	Props.SetColor(QmEditorTheme::ButtonTextColor(Checked));
+	Ui()->DoLabel(&NewRect, pText, QmEditorTheme::FONT_SIZE, TEXTALIGN_MC, Props);
 	Checked %= 2;
 	return DoButtonLogic(pId, Checked, pRect, Flags, pToolTip);
 }
@@ -96,7 +52,7 @@ int CEditor::DoButton_Env(const void *pId, const char *pText, int Checked, const
 	float Alpha = Ui()->HotItem() == pId ? 1.0f : 0.75f;
 	ColorRGBA Color = ColorRGBA(BaseColor.r * Bright, BaseColor.g * Bright, BaseColor.b * Bright, Alpha);
 
-	DrawRoundedSurface(Ui(), *pRect, Color, ColorRGBA(), 3.0f, 0.0f, Corners);
+	DrawRoundedSurface(Ui(), *pRect, Color, ColorRGBA(), QmEditorTheme::CORNER_RADIUS, 0.0f, Corners);
 	Ui()->DoLabel(pRect, pText, 10.0f, TEXTALIGN_MC);
 	Checked %= 2;
 	return DoButtonLogic(pId, Checked, pRect, BUTTONFLAG_LEFT, pToolTip);
@@ -104,7 +60,7 @@ int CEditor::DoButton_Env(const void *pId, const char *pText, int Checked, const
 
 int CEditor::DoButton_Ex(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners, float FontSize, int Align)
 {
-	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), 3.0f, 0.0f, Corners);
+	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), QmEditorTheme::CORNER_RADIUS, 0.0f, Corners);
 
 	CUIRect Rect;
 	pRect->VMargin(((Align & TEXTALIGN_MASK_HORIZONTAL) == TEXTALIGN_CENTER) ? 1.0f : 5.0f, &Rect);
@@ -112,6 +68,7 @@ int CEditor::DoButton_Ex(const void *pId, const char *pText, int Checked, const 
 	SLabelProperties Props;
 	Props.m_MaxWidth = Rect.w;
 	Props.m_EllipsisAtEnd = true;
+	Props.SetColor(QmEditorTheme::ButtonTextColor(Checked));
 	Ui()->DoLabel(&Rect, pText, FontSize, Align, Props);
 
 	return DoButtonLogic(pId, Checked, pRect, Flags, pToolTip);
@@ -119,7 +76,7 @@ int CEditor::DoButton_Ex(const void *pId, const char *pText, int Checked, const 
 
 int CEditor::DoButton_FontIcon(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners, float FontSize)
 {
-	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), 3.0f, 0.0f, Corners);
+	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), QmEditorTheme::CORNER_RADIUS, 0.0f, Corners);
 
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
@@ -132,7 +89,7 @@ int CEditor::DoButton_FontIcon(const void *pId, const char *pText, int Checked, 
 
 int CEditor::DoButton_QmIcon(const void *pId, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip, int Corners, float FontSize)
 {
-	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), 3.0f, 0.0f, Corners);
+	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), QmEditorTheme::CORNER_RADIUS, 0.0f, Corners);
 
 	// 图集优先；图集未就绪时 DoLabel_QmIcon 内部回退到 pFallbackIcon 字形。
 	Ui()->DoLabel_QmIcon(pRect, Icon, pFallbackIcon, FontSize, TEXTALIGN_MC);
@@ -143,7 +100,7 @@ int CEditor::DoButton_QmIcon(const void *pId, EQmIcon Icon, const char *pFallbac
 int CEditor::DoButton_MenuItem(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Flags, const char *pToolTip)
 {
 	if((Ui()->HotItem() == pId && Checked == 0) || Checked > 0)
-		DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), 3.0f);
+		DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), QmEditorTheme::CORNER_RADIUS);
 
 	CUIRect Rect;
 	pRect->VMargin(5.0f, &Rect);
@@ -162,7 +119,7 @@ int CEditor::DoButton_MenuItem(const void *pId, const char *pText, int Checked, 
 
 int CEditor::DoButton_DraggableEx(const void *pId, const char *pText, int Checked, const CUIRect *pRect, bool *pClicked, bool *pAbrupted, int Flags, const char *pToolTip, int Corners, float FontSize)
 {
-	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), 3.0f, 0.0f, Corners);
+	DrawRoundedSurface(Ui(), *pRect, GetButtonColor(pId, Checked), ColorRGBA(), QmEditorTheme::CORNER_RADIUS, 0.0f, Corners);
 
 	CUIRect Rect;
 	pRect->VMargin(pRect->w > 20.0f ? 5.0f : 0.0f, &Rect);
@@ -170,7 +127,8 @@ int CEditor::DoButton_DraggableEx(const void *pId, const char *pText, int Checke
 	SLabelProperties Props;
 	Props.m_MaxWidth = Rect.w;
 	Props.m_EllipsisAtEnd = true;
-	Ui()->DoLabel(&Rect, pText, FontSize, TEXTALIGN_MC, Props);
+	Props.SetColor(QmEditorTheme::ButtonTextColor(Checked));
+	Ui()->DoLabel(&Rect, pText, FontSize, TEXTALIGN_ML, Props);
 
 	if(Ui()->MouseInside(pRect))
 	{
@@ -185,79 +143,85 @@ int CEditor::DoButton_DraggableEx(const void *pId, const char *pText, int Checke
 bool CEditor::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const char *pToolTip, const std::vector<STextColorSplit> &vColorSplits)
 {
 	UpdateTooltip(pLineInput, pRect, pToolTip);
-	return Ui()->DoEditBox(pLineInput, pRect, FontSize, Corners, vColorSplits);
+	pRect->Draw(QmEditorTheme::INPUT, Corners, QmEditorTheme::CORNER_RADIUS);
+	CUi::SEditBoxRenderOptions Options;
+	Options.m_DrawBackground = false;
+	return Ui()->DoEditBox(pLineInput, pRect, FontSize, Corners, vColorSplits, TEXTALIGN_ML, Options);
 }
 
 bool CEditor::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const char *pToolTip, const std::vector<STextColorSplit> &vColorSplits)
 {
 	UpdateTooltip(pLineInput, pRect, pToolTip);
-	return Ui()->DoClearableEditBox(pLineInput, pRect, FontSize, Corners, vColorSplits);
+	pRect->Draw(QmEditorTheme::INPUT, Corners, QmEditorTheme::CORNER_RADIUS);
+	CUi::SEditBoxRenderOptions Options;
+	Options.m_DrawBackground = false;
+	return Ui()->DoClearableEditBox(pLineInput, pRect, FontSize, Corners, vColorSplits, Options);
 }
 
 SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, const char *pLabel, int Current, int Min, int Max, int Step, float Scale, const char *pToolTip, bool IsDegree, bool IsHex, int Corners, const ColorRGBA *pColor, bool ShowValue)
 {
 	// logic
-	static bool s_DidScroll = false;
-	static float s_ScrollValue = 0.0f;
-	static CLineInputNumber s_NumberInput;
-	static int s_ButtonUsed = -1;
-	static const void *s_pLastTextId = nullptr;
+	bool &DidScroll = m_ValueSelectorState.m_DidScroll;
+	float &ScrollValue = m_ValueSelectorState.m_ScrollValue;
+	CLineInputNumber &NumberInput = m_ValueSelectorState.m_NumberInput;
+	int &ButtonUsed = m_ValueSelectorState.m_ButtonUsed;
+	const void *&pLastTextId = m_ValueSelectorState.m_pLastTextId;
 
 	const bool Inside = Ui()->MouseInside(pRect);
 	const int Base = IsHex ? 16 : 10;
 
-	if(Ui()->HotItem() == pId && s_ButtonUsed >= 0 && !Ui()->MouseButton(s_ButtonUsed))
+	if(Ui()->HotItem() == pId && ButtonUsed >= 0 && !Ui()->MouseButton(ButtonUsed))
 	{
 		Ui()->DisableMouseLock();
 		if(Ui()->CheckActiveItem(pId))
 		{
 			Ui()->SetActiveItem(nullptr);
 		}
-		if(Inside && ((s_ButtonUsed == 0 && !s_DidScroll && Ui()->DoDoubleClickLogic(pId)) || s_ButtonUsed == 1))
+		if(Inside && ((ButtonUsed == 0 && !DidScroll && Ui()->DoDoubleClickLogic(pId)) || ButtonUsed == 1))
 		{
-			s_pLastTextId = pId;
-			s_NumberInput.SetInteger(Current, Base);
-			s_NumberInput.SelectAll();
+			pLastTextId = pId;
+			NumberInput.SetInteger(Current, Base);
+			NumberInput.SelectAll();
 		}
-		s_ButtonUsed = -1;
+		ButtonUsed = -1;
 	}
 
-	if(s_pLastTextId == pId)
+	if(pLastTextId == pId)
 	{
 		str_copy(m_aTooltip, Localize("Type your number. Press enter to confirm.", "Editor"));
-		Ui()->SetActiveItem(&s_NumberInput);
-		DoEditBox(&s_NumberInput, pRect, 10.0f, Corners);
+		Ui()->SetActiveItem(&NumberInput);
+		DoEditBox(&NumberInput, pRect, 10.0f, Corners);
 
 		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || ((Ui()->MouseButtonClicked(1) || Ui()->MouseButtonClicked(0)) && !Inside))
 		{
-			Current = std::clamp(s_NumberInput.GetInteger(Base), Min, Max);
+			Current = std::clamp(NumberInput.GetInteger(Base), Min, Max);
 			Ui()->DisableMouseLock();
 			Ui()->SetActiveItem(nullptr);
-			s_pLastTextId = nullptr;
+			pLastTextId = nullptr;
 		}
 
 		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 		{
 			Ui()->DisableMouseLock();
 			Ui()->SetActiveItem(nullptr);
-			s_pLastTextId = nullptr;
+			pLastTextId = nullptr;
 		}
 	}
 	else
 	{
 		if(Ui()->CheckActiveItem(pId))
 		{
-			if(s_ButtonUsed == 0 && Ui()->MouseButton(0))
+			if(ButtonUsed == 0 && Ui()->MouseButton(0))
 			{
-				s_ScrollValue += Ui()->MouseDeltaX() * (Input()->ShiftIsPressed() ? 0.05f : 1.0f);
+				ScrollValue += Ui()->MouseDeltaX() * (Input()->ShiftIsPressed() ? 0.05f : 1.0f);
 
-				if(absolute(s_ScrollValue) >= Scale)
+				if(absolute(ScrollValue) >= Scale)
 				{
-					int Count = (int)(s_ScrollValue / Scale);
-					s_ScrollValue = std::fmod(s_ScrollValue, Scale);
+					int Count = (int)(ScrollValue / Scale);
+					ScrollValue = std::fmod(ScrollValue, Scale);
 					Current += Step * Count;
 					Current = std::clamp(Current, Min, Max);
-					s_DidScroll = true;
+					DidScroll = true;
 
 					// Constrain to discrete steps
 					if(Count > 0)
@@ -267,26 +231,26 @@ SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, con
 				}
 			}
 
-			if(pToolTip && s_pLastTextId != pId)
+			if(pToolTip && pLastTextId != pId)
 				str_copy(m_aTooltip, pToolTip);
 		}
 		else if(Ui()->HotItem() == pId)
 		{
 			if(Ui()->MouseButton(0))
 			{
-				s_ButtonUsed = 0;
-				s_DidScroll = false;
-				s_ScrollValue = 0.0f;
+				ButtonUsed = 0;
+				DidScroll = false;
+				ScrollValue = 0.0f;
 				Ui()->SetActiveItem(pId);
 				Ui()->EnableMouseLock(pId);
 			}
 			else if(Ui()->MouseButton(1))
 			{
-				s_ButtonUsed = 1;
+				ButtonUsed = 1;
 				Ui()->SetActiveItem(pId);
 			}
 
-			if(pToolTip && s_pLastTextId != pId)
+			if(pToolTip && pLastTextId != pId)
 				str_copy(m_aTooltip, pToolTip);
 		}
 
@@ -311,7 +275,7 @@ SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, con
 		{
 			str_format(aBuf, sizeof(aBuf), "%d", Current);
 		}
-		DrawRoundedSurface(Ui(), *pRect, pColor ? *pColor : GetButtonColor(pId, 0), ColorRGBA(), 3.0f, 0.0f, Corners);
+		DrawRoundedSurface(Ui(), *pRect, pColor ? *pColor : GetButtonColor(pId, 0), ColorRGBA(), QmEditorTheme::CORNER_RADIUS, 0.0f, Corners);
 		CUIRect Textbox;
 		pRect->VMargin(2.0f, &Textbox);
 		Ui()->DoLabel(&Textbox, aBuf, 10, TEXTALIGN_MC);
@@ -320,21 +284,21 @@ SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, con
 	if(Inside && !Ui()->MouseButton(0) && !Ui()->MouseButton(1))
 		Ui()->SetHotItem(pId);
 
-	static const void *s_pEditing = nullptr;
+	const void *&pEditing = m_ValueSelectorState.m_pEditing;
 	EEditState State = EEditState::NONE;
-	if(s_pEditing == pId)
+	if(pEditing == pId)
 	{
 		State = EEditState::EDITING;
 	}
-	if(((Ui()->CheckActiveItem(pId) && Ui()->CheckMouseLock() && s_DidScroll) || s_pLastTextId == pId) && s_pEditing != pId)
+	if(((Ui()->CheckActiveItem(pId) && Ui()->CheckMouseLock() && DidScroll) || pLastTextId == pId) && pEditing != pId)
 	{
 		State = EEditState::START;
-		s_pEditing = pId;
+		pEditing = pId;
 	}
-	if(!Ui()->CheckMouseLock() && s_pLastTextId != pId && s_pEditing == pId)
+	if(!Ui()->CheckMouseLock() && pLastTextId != pId && pEditing == pId)
 	{
 		State = EEditState::END;
-		s_pEditing = nullptr;
+		pEditing = nullptr;
 	}
 
 	return SEditResult<int>{State, Current};

@@ -4850,8 +4850,6 @@ Zoom to current mouse target
 [Editor]	%s Right click for context menu.
 [Editor]	%s value: %s (position %d, parameter "%s")
 [Editor]	%s: Hold the left mouse button to draw. Alt+left click temporarily fills. Ctrl+mouse wheel changes thickness.
-[Editor]	1 new mention
-[Editor]	9+ new mentions
 [Editor]	[Alt+Down] Move the selected command down.
 [Editor]	[Alt+Enter] Update the selected command based on the entered value.
 [Editor]	[Alt+Up] Move the selected command up.
@@ -5031,7 +5029,6 @@ Zoom to current mouse target
 [Editor]	Create a new tuning layer.
 [Editor]	Create an identical copy of the selected layer.
 [Editor]	Create new folder
-[Editor]	Create or join an editor collaboration room for up to 4 people.
 [Editor]	Create Quadart
 [Editor]	Create room
 [Editor]	Creating collaboration room...
@@ -5349,6 +5346,7 @@ Zoom to current mouse target
 [Editor]	LASER: Gives you laser weapon with 10 charges.
 [Editor]	LASER: Gives you laser weapon with 10 charges. Not really useful in FNG.
 [Editor]	LASER: Unfreezes hit tee. Bounces off the walls. Also known as laser.
+[Editor]	Layer
 [Editor]	Layer type does not match a sound layer
 [Editor]	Layer: add image
 [Editor]	Leave room
@@ -5418,6 +5416,7 @@ Zoom to current mouse target
 [Editor]	NINJA: Gives you ninja for a period of time.
 [Editor]	NINJA: Makes you invisible in the darkest nights.
 [Editor]	No
+[Editor]	No selection
 [Editor]	No tile layer selected
 [Editor]	NON-SPINNING LASER: Tile where freezing laser (made with LASER LENGTH) begins.
 [Editor]	None
@@ -5469,6 +5468,7 @@ Zoom to current mouse target
 [Editor]	Project onto
 [Editor]	Project points
 [Editor]	Proof
+[Editor]	Properties
 [Editor]	PURPLE SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server.
 [Editor]	Quad pixelsize
 [Editor]	Quad place (x%d)
@@ -5728,6 +5728,7 @@ Zoom to current mouse target
 [Editor]	Toggle preview of how layers will be zoomed ingame.
 [Editor]	Toggle previewing the paths of quads with a position envelope when a quad layer is selected.
 [Editor]	Toggle proof borders. These borders represent the area that a player can see with default zoom.
+[Editor]	Toggle properties panel.
 [Editor]	Toggle solid/outline drawing.
 [Editor]	Toggle the editor history view.
 [Editor]	Toggle the envelope editor.

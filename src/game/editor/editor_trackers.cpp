@@ -591,7 +591,7 @@ int CLayerTilesCommonPropTracker::PropToValue(ETilesCommonProp Prop)
 
 void CLayerGroupPropTracker::OnEnd(EGroupProp Prop, int Value)
 {
-	Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionEditGroupProp>(Map(), Map()->m_SelectedGroup, Prop, m_OriginalValue, Value));
+	Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionEditGroupProp>(Map(), m_CurrentGroupIndex, Prop, m_OriginalValue, Value));
 }
 
 int CLayerGroupPropTracker::PropToValue(EGroupProp Prop)

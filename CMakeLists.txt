@@ -3803,6 +3803,11 @@ if(CLIENT)
     prompt.h
     proof_mode.cpp
     proof_mode.h
+    qm_editor_inspector.cpp
+    qm_editor_layout.h
+    qm_editor_order.h
+    qm_editor_theme.h
+    qm_editor_workspace.cpp
     quadart.cpp
     quadart.h
     quad_knife.cpp
@@ -4556,6 +4561,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     prng_test.cpp
     qm_bind_editor_console_test.cpp
     qm_bind_editor_test.cpp
+    qm_editor_layout_test.cpp
+    qm_editor_interaction_test.cpp
     qm_background_particles_test.cpp
     qm_axiom_scores_test.cpp
     qm_axiom_scores_contract_test.cpp
@@ -5040,6 +5047,33 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
 
   list(APPEND TARGETS_OWN ${TARGET_TESTRUNNER})
   list(APPEND TARGETS_LINK ${TARGET_TESTRUNNER})
+
+  add_executable(qm-editor-tests EXCLUDE_FROM_ALL
+    src/test/test.cpp
+    src/test/editor_test.cpp
+    src/test/map_load_test.cpp
+    src/test/qm_editor_layout_test.cpp
+    src/test/qm_editor_interaction_test.cpp
+    $<TARGET_OBJECTS:engine-gfx>
+    $<TARGET_OBJECTS:engine-shared>
+    $<TARGET_OBJECTS:game-shared>
+    $<TARGET_OBJECTS:rust-bridge-shared>
+    ${DEPS}
+  )
+  add_dependencies(qm-editor-tests generate_protocol)
+  target_link_libraries(qm-editor-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+  target_include_directories(qm-editor-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS})
+  target_compile_definitions(qm-editor-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+  list(APPEND TARGETS_OWN qm-editor-tests)
+  list(APPEND TARGETS_LINK qm-editor-tests)
+  enable_testing()
+  add_test(NAME qm-editor-tests COMMAND $<TARGET_FILE:qm-editor-tests>)
+  add_custom_target(run_editor_tests
+    COMMAND $<TARGET_FILE:qm-editor-tests>
+    DEPENDS qm-editor-tests
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+    USES_TERMINAL
+  )
 
   add_custom_target(run_cxx_tests
     COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS}

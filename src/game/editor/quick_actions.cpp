@@ -166,9 +166,7 @@ void CEditor::LayerSelectImage()
 	std::shared_ptr<CLayer> pLayer = Map()->SelectedLayer(0);
 	std::shared_ptr<CLayerTiles> pTiles = std::static_pointer_cast<CLayerTiles>(pLayer);
 
-	static SLayerPopupContext s_LayerPopupContext = {};
-	s_LayerPopupContext.m_pEditor = this;
-	Ui()->DoPopupMenu(&s_LayerPopupContext, Ui()->MouseX(), Ui()->MouseY(), 150, 300, &s_LayerPopupContext, PopupLayer);
+	ShowLayerProperties();
 	PopupSelectImageInvoke(pTiles->m_Image, Ui()->MouseX(), Ui()->MouseY());
 }
 

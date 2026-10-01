@@ -1,5 +1,7 @@
 #include "editor_actions.h"
 
+#include "qm_editor_order.h"
+
 #include <base/log.h>
 
 #include <game/editor/editor.h>
@@ -1197,44 +1199,24 @@ CEditorActionEditLayersGroupAndOrder::CEditorActionEditLayersGroupAndOrder(CEdit
 
 void CEditorActionEditLayersGroupAndOrder::Undo()
 {
-	// Undo : restore group and order
-	auto &pCurrentGroup = Map()->m_vpGroups[m_NewGroupIndex];
-	auto &pPreviousGroup = Map()->m_vpGroups[m_GroupIndex];
-	std::vector<std::shared_ptr<CLayer>> vpLayers;
-	vpLayers.reserve(m_NewLayerIndices.size());
-	for(auto &LayerIndex : m_NewLayerIndices)
-		vpLayers.push_back(pCurrentGroup->m_vpLayers[LayerIndex]);
-
-	int k = 0;
-	for(auto &pLayer : vpLayers)
+	if(QmEditorOrder::MoveItemsToIndices(Map()->m_vpGroups[m_NewGroupIndex]->m_vpLayers,
+		   Map()->m_vpGroups[m_GroupIndex]->m_vpLayers, m_NewLayerIndices, m_LayerIndices))
 	{
-		pCurrentGroup->m_vpLayers.erase(std::find(pCurrentGroup->m_vpLayers.begin(), pCurrentGroup->m_vpLayers.end(), pLayer));
-		pPreviousGroup->m_vpLayers.insert(pPreviousGroup->m_vpLayers.begin() + m_LayerIndices[k++], pLayer);
+		Map()->m_vSelectedLayers = m_LayerIndices;
+		Map()->m_SelectedGroup = m_GroupIndex;
+		Map()->OnModify();
 	}
-
-	Map()->m_vSelectedLayers = m_LayerIndices;
-	Map()->m_SelectedGroup = m_GroupIndex;
 }
 
 void CEditorActionEditLayersGroupAndOrder::Redo()
 {
-	// Redo : move layers
-	auto &pCurrentGroup = Map()->m_vpGroups[m_GroupIndex];
-	auto &pPreviousGroup = Map()->m_vpGroups[m_NewGroupIndex];
-	std::vector<std::shared_ptr<CLayer>> vpLayers;
-	vpLayers.reserve(m_LayerIndices.size());
-	for(auto &LayerIndex : m_LayerIndices)
-		vpLayers.push_back(pCurrentGroup->m_vpLayers[LayerIndex]);
-
-	int k = 0;
-	for(auto &pLayer : vpLayers)
+	if(QmEditorOrder::MoveItemsToIndices(Map()->m_vpGroups[m_GroupIndex]->m_vpLayers,
+		   Map()->m_vpGroups[m_NewGroupIndex]->m_vpLayers, m_LayerIndices, m_NewLayerIndices))
 	{
-		pCurrentGroup->m_vpLayers.erase(std::find(pCurrentGroup->m_vpLayers.begin(), pCurrentGroup->m_vpLayers.end(), pLayer));
-		pPreviousGroup->m_vpLayers.insert(pPreviousGroup->m_vpLayers.begin() + m_NewLayerIndices[k++], pLayer);
+		Map()->m_vSelectedLayers = m_NewLayerIndices;
+		Map()->m_SelectedGroup = m_NewGroupIndex;
+		Map()->OnModify();
 	}
-
-	Map()->m_vSelectedLayers = m_NewLayerIndices;
-	Map()->m_SelectedGroup = m_NewGroupIndex;
 }
 
 // -----------------------------------

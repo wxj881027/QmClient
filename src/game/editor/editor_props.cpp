@@ -26,11 +26,15 @@ SEditResult<E> CEditor::DoPropertiesWithState(CUIRect *pToolBox, CProperty *pPro
 		const ColorRGBA *pColor = i >= (int)vColors.size() ? &ms_DefaultPropColor : &vColors[i];
 
 		CUIRect Slot;
-		pToolBox->HSplitTop(13.0f, &Slot, pToolBox);
+		pToolBox->HSplitTop(m_PropertiesInInspector ? QmEditorTheme::ROW_HEIGHT : 13.0f, &Slot, pToolBox);
 		CUIRect Label, Shifter;
 		Slot.VSplitMid(&Label, &Shifter);
 		Shifter.HMargin(1.0f, &Shifter);
-		Ui()->DoLabel(&Label, pProps[i].m_pName, 10.0f, TEXTALIGN_ML);
+		SLabelProperties LabelProps;
+		LabelProps.m_MaxWidth = Label.w - 2.0f;
+		LabelProps.m_EllipsisAtEnd = true;
+		LabelProps.SetColor(QmEditorTheme::TEXT_MUTED);
+		Ui()->DoLabel(&Label, pProps[i].m_pName, 10.0f, TEXTALIGN_ML, LabelProps);
 
 		if(pProps[i].m_Type == PROPTYPE_INT)
 		{
