@@ -827,6 +827,9 @@ Apply a writable preset and edit first
 Apply Changes
 == Aplicar Alterações
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== Desfocar o fundo de janelas secundárias e listas
+
 Apply input early before next tick for prediction
 == Aplicar entrada cedo antes do próximo tick para previsão
 
@@ -1603,6 +1606,12 @@ Button - Disabled
 
 Button - Enabled
 == Botão - Ativado
+
+Button background color
+== Cor de fundo dos botões
+
+Button background opacity percentage
+== Cor de fundo dos botões — opacidade em percentagem
 
 Button browser
 == Navegador de botões
@@ -2686,6 +2695,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Nome do modelo do Provider personalizado
+
+Custom text color
+== Cor de texto personalizada
 
 Custom title
 == Título personalizado
@@ -3809,6 +3821,9 @@ Enable fat skin
 Enable freeze call sound
 == Ativar som de chamada de congelamento
 
+Enable frosted glass blur behind secondary popups and dropdowns
+== Ativar desfocagem atrás de janelas secundárias e listas
+
 Enable FTAPI auto-translate (may overload the service)
 == Ativar tradução automática FTAPI (pode sobrecarregar o serviço)
 
@@ -4244,6 +4259,12 @@ Existing Player
 Exit replay view
 == Sair da vista da demo
 
+Expanded dropdown background color
+== Cor de fundo da lista expandida
+
+Expanded dropdown background opacity percentage
+== Cor de fundo da lista expandida — opacidade em percentagem
+
 Export
 == Exportar
 
@@ -4555,6 +4576,9 @@ Font cursor
 
 Font size
 == Tamanho da fonte
+
+Font store
+== Loja de tipos de letra
 
 Font store:
 == Loja de tipos de letra:
@@ -5605,6 +5629,12 @@ Initializing map logic
 
 Input
 == Entrada
+
+Input background color
+== Cor de fundo dos campos de entrada
+
+Input background opacity percentage
+== Cor de fundo dos campos de entrada — opacidade em percentagem
 
 Input device
 == Dispositivo de entrada
@@ -8330,6 +8360,9 @@ Points unavailable
 Polished
 == Polido
 
+Popup & dropdown blur
+== Desfocagem de janelas e listas
+
 Popup animation
 == Animação pop-up
 
@@ -9956,6 +9989,9 @@ Search
 Search and navigate settings
 == Pesquisar e navegar nas definições
 
+Search country flag…
+== Pesquisar bandeira…
+
 Search donor asset
 == Pesquisar recurso doador
 
@@ -9988,6 +10024,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == Secundário
+
+Secondary menu background color
+== Cor de fundo do submenu
+
+Secondary menu background opacity percentage
+== Cor de fundo do submenu — opacidade em percentagem
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == Segundos de espera antes de reconectar (0=desligado, quando servidor está cheio)
@@ -10093,9 +10135,6 @@ Send Rate
 
 Send specified command to rcon
 == Enviar comando especificado para o rcon
-
-Send target language
-== Idioma de destino do envio
 
 Send translation method
 == Método de envio de tradução
@@ -12349,6 +12388,12 @@ Text alpha
 
 Text color
 == Cor do texto
+
+Text color mode
+== Modo de cor do texto
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== Modo de cor do texto: 0 automático, 1 branco, 2 preto, 3 personalizado
 
 Text effect
 == Efeito de texto

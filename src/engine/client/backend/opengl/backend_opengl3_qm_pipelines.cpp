@@ -184,6 +184,14 @@ void CCommandProcessorFragment_OpenGL3_3::FreeQmPrograms()
 	m_GaussianBlurProgramValid = false;
 }
 
+void CCommandProcessorFragment_OpenGL3_3::BindRenderTargetTexture(TWGLuint Texture)
+{
+	// 离屏纹理只有单层，必须清除上一笔绘制的 mipmap 采样器，并绑定到着色器使用的 0 号单元。
+	glActiveTexture(GL_TEXTURE0);
+	glBindSampler(0, 0);
+	glBindTexture(GL_TEXTURE_2D, Texture);
+}
+
 void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderMediaIslandSdf(const CCommandBuffer::SCommand_RenderMediaIslandSdf *pCommand)
 {
 	if(!m_MediaIslandSdfProgramValid || pCommand->m_pVertices == nullptr || pCommand->m_PrimCount == 0 || m_pMediaIslandSdfProgram == nullptr)
@@ -195,7 +203,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderMediaIslandSdf(const CComman
 	{
 		const SOpenGLRenderTarget &Target = m_vRenderTargets[pCommand->m_BackdropTargetId];
 		if(Target.m_Texture != 0)
-			glBindTexture(GL_TEXTURE_2D, Target.m_Texture);
+			BindRenderTargetTexture(Target.m_Texture);
 	}
 	m_pMediaIslandSdfProgram->SetUniformVec4(m_pMediaIslandSdfProgram->m_LocData, IGraphics::SMediaIslandSdfParams::DATA_COUNT, (const float *)pCommand->m_Params.m_aData.data());
 
@@ -274,13 +282,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderTarget_Draw(const CCommandBu
 
 	UseProgram(m_pPrimitiveProgramTextured);
 	SetState(pCommand->m_State, m_pPrimitiveProgramTextured);
-	// Render targets do not have a mipmap chain. Do not inherit a sampler
-	// from the previous textured draw (for example a font/atlas sampler with
-	// a mipmapped minification filter), otherwise the target texture becomes
-	// incomplete and samples as black on OpenGL.
-	glActiveTexture(GL_TEXTURE0);
-	glBindSampler(0, 0);
-	glBindTexture(GL_TEXTURE_2D, Target.m_Texture);
+	BindRenderTargetTexture(Target.m_Texture);
 
 	UploadStreamBufferData(EPrimitiveType::QUADS, pCommand->m_pVertices, sizeof(CCommandBuffer::SVertex), pCommand->m_PrimCount);
 	glBindVertexArray(m_aPrimitiveDrawVertexId[m_LastStreamBuffer]);
@@ -453,8 +455,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderTarget_GaussianBlurPass(cons
 	UseProgram(m_pGaussianBlurProgram);
 	glDisable(GL_BLEND);
 	m_LastBlendMode = EBlendMode::NONE;
-	glBindSampler(0, 0);
-	glBindTexture(GL_TEXTURE_2D, Source.m_Texture);
+	BindRenderTargetTexture(Source.m_Texture);
 	const bool Gaussian = pCommand->m_Mode == IGraphics::EBlurMode::GAUSSIAN;
 	const float aTexelOffset[2] = {
 		Gaussian && !pCommand->m_Horizontal ? 0.0f : 1.0f / Source.m_Width,

@@ -827,6 +827,9 @@ Apply a writable preset and edit first
 Apply Changes
 == Zastosuj zmiany
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== Rozmyj tło okien podrzędnych i list rozwijanych
+
 Apply input early before next tick for prediction
 == Zastosuj dane wejściowe wcześniej przed następnym tickiem do przewidywania
 
@@ -1603,6 +1606,12 @@ Button - Disabled
 
 Button - Enabled
 == Przycisk - Włączony
+
+Button background color
+== Kolor tła przycisków
+
+Button background opacity percentage
+== Kolor tła przycisków — nieprzezroczystość w procentach
 
 Button browser
 == Przeglądarka przycisków
@@ -2686,6 +2695,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Niestandardowa nazwa modelu dostawcy
+
+Custom text color
+== Własny kolor tekstu
 
 Custom title
 == Własny tytuł
@@ -3809,6 +3821,9 @@ Enable fat skin
 Enable freeze call sound
 == Włącz dźwięk wezwania zamrożenia
 
+Enable frosted glass blur behind secondary popups and dropdowns
+== Włącz rozmycie tła okien podrzędnych i list
+
 Enable FTAPI auto-translate (may overload the service)
 == Włącz automatyczne tłumaczenie FTAPI (może przeciążyć usługę)
 
@@ -4244,6 +4259,12 @@ Existing Player
 Exit replay view
 == Zakończ podgląd nagrania
 
+Expanded dropdown background color
+== Kolor tła rozwiniętej listy
+
+Expanded dropdown background opacity percentage
+== Kolor tła rozwiniętej listy — nieprzezroczystość w procentach
+
 Export
 == Eksportuj
 
@@ -4555,6 +4576,9 @@ Font cursor
 
 Font size
 == Rozmiar czcionki
+
+Font store
+== Sklep z czcionkami
 
 Font store:
 == Sklep z czcionkami:
@@ -5605,6 +5629,12 @@ Initializing map logic
 
 Input
 == Wejście
+
+Input background color
+== Kolor tła pól wprowadzania
+
+Input background opacity percentage
+== Kolor tła pól wprowadzania — nieprzezroczystość w procentach
 
 Input device
 == Urządzenie wejściowe
@@ -8330,6 +8360,9 @@ Points unavailable
 Polished
 == Połysk
 
+Popup & dropdown blur
+== Rozmycie okien i list
+
 Popup animation
 == Animacja wyskakująca
 
@@ -9956,6 +9989,9 @@ Search
 Search and navigate settings
 == Wyszukuj ustawienia i przechodź do nich
 
+Search country flag…
+== Szukaj flagi kraju…
+
 Search donor asset
 == Szukaj zasobu dawcy
 
@@ -9988,6 +10024,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == Drugorzędne
+
+Secondary menu background color
+== Kolor tła podmenu
+
+Secondary menu background opacity percentage
+== Kolor tła podmenu — nieprzezroczystość w procentach
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == Sekundy oczekiwania przed ponownym połączeniem (0=wyłączone, gdy serwer jest pełny)
@@ -10093,9 +10135,6 @@ Send Rate
 
 Send specified command to rcon
 == Wyślij określone polecenie do rcon
-
-Send target language
-== Wyślij język docelowy
 
 Send translation method
 == Wyślij metodę tłumaczenia
@@ -12349,6 +12388,12 @@ Text alpha
 
 Text color
 == Kolor tekstu
+
+Text color mode
+== Tryb koloru tekstu
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== Tryb koloru tekstu: 0 automatyczny, 1 biały, 2 czarny, 3 własny
 
 Text effect
 == Efekt tekstu

@@ -14,9 +14,11 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmTree.h>
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
 #include <game/client/components/scoreboard.h>
+#include <game/client/ui.h>
 
 #include <benchmark/benchmark.h>
 
@@ -314,3 +316,67 @@ static void BM_ScoreboardScrollFrame(benchmark::State &State)
 	}
 }
 BENCHMARK(BM_ScoreboardScrollFrame)->Arg(17)->Arg(64)->Arg(128);
+
+// 每轮解析一项按钮几何与一个弹层主题；输入由外部基准屏障防止常量折叠。
+static void BM_SecondaryPanelPresentation(benchmark::State &State)
+{
+	CUIRect Slot{10.0f, 20.0f, 26.0f, 20.0f};
+	unsigned Background = 0x97FFA6;
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Slot);
+		benchmark::DoNotOptimize(Background);
+		const CUIRect Button = QmUiSquareIconButtonRect(Slot);
+		const SUiTheme Theme = ResolveSecondaryPanelTheme(Background, 75, 0xFFFFFF);
+		benchmark::DoNotOptimize(Button);
+		benchmark::DoNotOptimize(Theme);
+	}
+}
+BENCHMARK(BM_SecondaryPanelPresentation);
+
+// 覆盖深色、浅色及透明表面的生产前景解析，不包含绘制或设备工作。
+static void BM_SurfaceForeground(benchmark::State &State)
+{
+	ColorRGBA Surface = State.range(0) == 0 ? ColorRGBA(0.1f, 0.1f, 0.1f, 1) : ColorRGBA(1, 1, 1, State.range(0) == 1 ? 1.0f : 0.2f);
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Surface);
+		const ColorRGBA Foreground = ResolveUiSurfaceForeground(Surface);
+		benchmark::DoNotOptimize(Foreground);
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_SurfaceForeground)->Arg(0)->Arg(1)->Arg(2);
+
+// 测量自动与手动文本策略及共享图标反馈，输入经过屏障避免折叠。
+static void BM_TextColorPolicy(benchmark::State &State)
+{
+	ColorRGBA Surface(0.2f, 0.4f, 0.6f, 0.75f);
+	unsigned Custom = 0x8FDDAD;
+	int Mode = static_cast<int>(State.range(0));
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Surface);
+		benchmark::DoNotOptimize(Custom);
+		benchmark::DoNotOptimize(Mode);
+		const ColorRGBA Color = ResolveUiTextColor(Surface, Mode, Custom);
+		benchmark::DoNotOptimize(Color);
+	}
+}
+BENCHMARK(BM_TextColorPolicy)->Arg(0)->Arg(1)->Arg(2)->Arg(3);
+
+static void BM_IconButtonFeedback(benchmark::State &State)
+{
+	ColorRGBA Surface(0.2f, 0.4f, 0.6f, 1);
+	bool Hovered = State.range(0) != 0;
+	bool Pressed = State.range(0) == 2;
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Surface);
+		benchmark::DoNotOptimize(Hovered);
+		benchmark::DoNotOptimize(Pressed);
+		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, true, Hovered, Pressed);
+		benchmark::DoNotOptimize(Feedback);
+	}
+}
+BENCHMARK(BM_IconButtonFeedback)->Arg(0)->Arg(1)->Arg(2);

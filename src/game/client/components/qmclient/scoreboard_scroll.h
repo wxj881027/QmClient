@@ -3,11 +3,11 @@
 
 #include <game/client/ui_scrollregion.h>
 
-// 计分板占用鼠标输入时同步转交 UI，供共享滚轮路由和弹窗读取。
+// 计分板占用鼠标输入时同步转交 UI；截图等组合键继续下传给绑定系统。
 template<typename TUi>
-inline bool QmScoreboardUiInput(TUi &Ui, bool Interactive, const IInput::CEvent &Event)
+inline bool QmScoreboardUiInput(TUi &Ui, bool Interactive, const IInput::CEvent &Event, bool ReservedShortcut = false)
 {
-	if(!Interactive)
+	if(!Interactive || ReservedShortcut)
 		return false;
 	Ui.OnInput(Event);
 	return true;

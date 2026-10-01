@@ -108,19 +108,33 @@ namespace NTranslateUi
 		return FoundIndex >= 0 && FoundIndex < Count ? FoundIndex : std::clamp(FallbackIndex, 0, std::max(0, Count - 1));
 	}
 
-	inline int LanguageIndexForDisplay(const char *pValue, const int FallbackIndex = 0)
+	template<size_t N>
+	std::array<const char *, N + 1> NamesWithCustom(const std::array<const char *, N> &Names)
 	{
-		return DisplayIndex(FindLanguageIndex(pValue), FallbackIndex, LANGUAGE_COUNT);
+		std::array<const char *, N + 1> Result{};
+		std::copy(Names.begin(), Names.end(), Result.begin());
+		Result[N] = Localize("Custom…");
+		return Result;
 	}
 
-	inline int SourceLanguageIndexForDisplay(const char *pValue, const int FallbackIndex = 0)
+	inline int CustomSelectionIndex(const int FoundIndex, const int Count)
 	{
-		return DisplayIndex(FindSourceLanguageIndex(pValue), FallbackIndex, SOURCE_LANGUAGE_COUNT);
+		return FoundIndex >= 0 && FoundIndex < Count ? FoundIndex : Count;
+	}
+
+	inline int LanguageIndexForDisplay(const char *pValue)
+	{
+		return CustomSelectionIndex(FindLanguageIndex(pValue), LANGUAGE_COUNT);
+	}
+
+	inline int SourceLanguageIndexForDisplay(const char *pValue)
+	{
+		return CustomSelectionIndex(FindSourceLanguageIndex(pValue), SOURCE_LANGUAGE_COUNT);
 	}
 
 	inline int BackendIndexForDisplay(const char *pValue)
 	{
-		return DisplayIndex(FindBackendIndex(pValue), BACKEND_LLM, BACKEND_COUNT);
+		return CustomSelectionIndex(FindBackendIndex(pValue), BACKEND_COUNT);
 	}
 
 	inline bool NormalizeBackend(char *pConfigValue, const size_t ConfigValueSize)

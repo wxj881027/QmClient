@@ -827,6 +827,9 @@ Apply a writable preset and edit first
 Apply Changes
 == 変更を適用
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== サブウィンドウとドロップダウンの背景をぼかす
+
 Apply input early before next tick for prediction
 == 予測のために次の tick の前に早期に入力を適用
 
@@ -1603,6 +1606,12 @@ Button - Disabled
 
 Button - Enabled
 == ボタン - 有効
+
+Button background color
+== ボタン背景色
+
+Button background opacity percentage
+== ボタン背景 — 不透明度（パーセント）
 
 Button browser
 == ボタンブラウザ
@@ -2686,6 +2695,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == カスタム Provider モデル名
+
+Custom text color
+== カスタム文字色
 
 Custom title
 == カスタム称号
@@ -3809,6 +3821,9 @@ Enable fat skin
 Enable freeze call sound
 == フリーズコール音を有効にする
 
+Enable frosted glass blur behind secondary popups and dropdowns
+== サブウィンドウとドロップダウンの背景ぼかしを有効にする
+
 Enable FTAPI auto-translate (may overload the service)
 == FTAPI 自動翻訳を有効化（サービスに過負荷がかかる可能性あり）
 
@@ -4244,6 +4259,12 @@ Existing Player
 Exit replay view
 == リプレイ視聴を終了
 
+Expanded dropdown background color
+== 展開リスト背景色
+
+Expanded dropdown background opacity percentage
+== 展開リスト背景 — 不透明度（パーセント）
+
 Export
 == エクスポート
 
@@ -4555,6 +4576,9 @@ Font cursor
 
 Font size
 == フォントサイズ
+
+Font store
+== フォントストア
 
 Font store:
 == フォントストア：
@@ -5605,6 +5629,12 @@ Initializing map logic
 
 Input
 == 入力
+
+Input background color
+== 入力欄背景色
+
+Input background opacity percentage
+== 入力欄背景 — 不透明度（パーセント）
 
 Input device
 == 入力デバイス
@@ -8330,6 +8360,9 @@ Points unavailable
 Polished
 == 光沢
 
+Popup & dropdown blur
+== ポップアップとドロップダウンのぼかし
+
 Popup animation
 == ポップアップアニメーション
 
@@ -9956,6 +9989,9 @@ Search
 Search and navigate settings
 == 設定を検索して移動
 
+Search country flag…
+== 国旗を検索…
+
 Search donor asset
 == ドナーアセットを検索
 
@@ -9988,6 +10024,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == セカンダリ
+
+Secondary menu background color
+== サブメニュー背景色
+
+Secondary menu background opacity percentage
+== サブメニュー背景 — 不透明度（パーセント）
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == 再接続までの待機秒数（サーバー満員時、0 = オフ）
@@ -10093,9 +10135,6 @@ Send Rate
 
 Send specified command to rcon
 == rcon に指定コマンドを送信
-
-Send target language
-== 送信先言語
 
 Send translation method
 == 翻訳方式を送信
@@ -12349,6 +12388,12 @@ Text alpha
 
 Text color
 == テキスト色
+
+Text color mode
+== 文字色モード
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== 文字色モード: 0 自動, 1 白, 2 黒, 3 カスタム
 
 Text effect
 == 文字効果

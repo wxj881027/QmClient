@@ -827,6 +827,9 @@ Apply a writable preset and edit first
 Apply Changes
 == 应用更改
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== 对二级弹窗与下拉列表背后的内容应用模糊
+
 Apply input early before next tick for prediction
 == 在下一 tick 前提前应用输入进行预测
 
@@ -1603,6 +1606,12 @@ Button - Disabled
 
 Button - Enabled
 == 按钮 - 已启用
+
+Button background color
+== 按钮背景颜色
+
+Button background opacity percentage
+== 按钮背景 — 不透明度百分比
 
 Button browser
 == 按键浏览器
@@ -2686,6 +2695,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == 自定义提供商模型名称
+
+Custom text color
+== 自定义文本颜色
 
 Custom title
 == 自定义头衔
@@ -3809,6 +3821,9 @@ Enable fat skin
 Enable freeze call sound
 == 启用冻结呼叫声
 
+Enable frosted glass blur behind secondary popups and dropdowns
+== 启用二级弹窗与下拉列表背景模糊
+
 Enable FTAPI auto-translate (may overload the service)
 == 启用 FTAPI 自动翻译（可能导致服务过载）
 
@@ -4244,6 +4259,12 @@ Existing Player
 Exit replay view
 == 退出回放查看
 
+Expanded dropdown background color
+== 展开列表背景颜色
+
+Expanded dropdown background opacity percentage
+== 展开列表背景 — 不透明度百分比
+
 Export
 == 导出
 
@@ -4555,6 +4576,9 @@ Font cursor
 
 Font size
 == 字体大小
+
+Font store
+== 字体商店
 
 Font store:
 == 字体商店：
@@ -5605,6 +5629,12 @@ Initializing map logic
 
 Input
 == 输入
+
+Input background color
+== 输入框背景颜色
+
+Input background opacity percentage
+== 输入框背景 — 不透明度百分比
 
 Input device
 == 输入设备
@@ -8330,6 +8360,9 @@ Points unavailable
 Polished
 == 抛光
 
+Popup & dropdown blur
+== 弹窗与下拉列表模糊
+
 Popup animation
 == 弹出动画
 
@@ -9956,6 +9989,9 @@ Search
 Search and navigate settings
 == 搜索并跳转到设置项
 
+Search country flag…
+== 搜索国家旗帜…
+
 Search donor asset
 == 搜索来源材质
 
@@ -9988,6 +10024,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == 次要
+
+Secondary menu background color
+== 二级菜单背景颜色
+
+Secondary menu background opacity percentage
+== 二级菜单背景 — 不透明度百分比
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == 重新连接前等待多少秒（服务器已满时，0 表示关闭）
@@ -10093,9 +10135,6 @@ Send Rate
 
 Send specified command to rcon
 == 向 rcon 发送指定命令
-
-Send target language
-== 发送目标语言
 
 Send translation method
 == 发送翻译方式
@@ -12349,6 +12388,12 @@ Text alpha
 
 Text color
 == 文本颜色
+
+Text color mode
+== 文本颜色模式
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== 文本颜色模式：0 自动，1 白色，2 黑色，3 自定义
 
 Text effect
 == 文字效果

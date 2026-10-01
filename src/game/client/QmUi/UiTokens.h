@@ -17,6 +17,8 @@
 namespace ui_token::color
 {
 	// surface
+	// 半透明前景解析无法采样场景时使用的背板参考色，不改变实际表面绘制。
+	inline constexpr ColorRGBA SURFACE_BACKDROP{0.10f, 0.10f, 0.10f, 1.0f};
 	inline constexpr ColorRGBA SURFACE_GLASS{0.08f, 0.09f, 0.12f, 0.70f};
 	inline constexpr ColorRGBA SURFACE_ELEVATED{0.10f, 0.11f, 0.14f, 0.82f};
 	inline constexpr ColorRGBA SURFACE_OVERLAY{0.0f, 0.0f, 0.0f, 0.40f};
@@ -61,6 +63,15 @@ namespace ui_token::color
 		return UiColor.WithAlpha(std::clamp(UiColor.a * AlphaScale, 0.0f, 1.0f));
 	}
 } // namespace ui_token::color
+
+// 图标按钮反馈统一强度；透明背景也保留可见的边界提示。
+namespace ui_token::feedback
+{
+	inline constexpr float ICON_HOVER_ALPHA = 0.16f;
+	inline constexpr float ICON_PRESS_ALPHA = 0.30f;
+	inline constexpr float ICON_BORDER_ALPHA = 0.70f;
+	inline constexpr float ICON_BORDER_WIDTH = 1.0f;
+}
 
 namespace ui_token::spacing
 {
@@ -218,6 +229,18 @@ namespace ui_token::motion
 	// 离散滑条专用：档位切换时旋钮与填充带阻尼滑过去（ζ≈0.70），悬停/拖动只放大旋钮不改色。
 	inline constexpr SUiSpringConfig SLIDER_SPRING{1.0f, 340.0f, 26.0f, 0.01f, 0.05f};
 	inline constexpr SUiSpringConfig SLIDER_KNOB_SPRING{1.0f, 520.0f, 26.0f, 0.01f, 0.05f};
+
+	// 语义化动静节奏标尺（onetake 呼吸感与分级规约）：
+	// 1. 竞技快击（Combat/Twitch）：≤80ms，临界阻尼，0 过冲，无拖泥带水
+	inline constexpr SUiAnimTransition TWITCH_SNAP{.m_DurationSec = 0.06f, .m_Easing = EEasing::EASE_OUT_QUART};
+	inline constexpr SUiSpringConfig TWITCH_SPRING{1.0f, 1000.0f, 63.0f, 0.01f, 0.05f}; // ζ≈1.0 临界阻尼
+
+	// 2. 交互级（Interactive）：120ms~180ms，高响应轻微回弹
+	inline constexpr SUiAnimTransition INTERACTION_POP{.m_DurationSec = 0.14f, .m_Easing = EEasing::EASE_OUT_QUART};
+
+	// 3. 通告/展示级（Presentation）：~0.20s 入场 → 2.5s 静止定格 → 0.10s 快速收折
+	inline constexpr float PRESENTATION_HOLD_TIME = 2.5f;
+	inline constexpr SUiAnimTransition PRESENTATION_COLLAPSE{.m_DurationSec = 0.10f, .m_Easing = EEasing::EASE_OUT_QUART};
 
 	inline constexpr const SUiAnimTransition &BTN_HOVER = HOVER_FADE;
 	inline constexpr const SUiAnimTransition &BTN_PRESS = PRESS_SCALE;

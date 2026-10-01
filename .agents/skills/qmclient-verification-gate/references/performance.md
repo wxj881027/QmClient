@@ -43,6 +43,17 @@ python -m unittest qmclient_scripts.tests.test_benchmark_results qmclient_script
 
 `run_cxx_benchmarks` 保留为原生全量入口，它不自动附带上述重复、预热、过滤和结果校验。直接运行原生二进制时从 build 目录执行，并保留命中的 case、完整原始 JSON 与实际参数；字体基准已按源码路径加载数据。
 
+## Case 书写
+
+新增或修改 case 前读取 `src/test/AGENTS.md` 与 `src/test/benchmark/AGENTS.md`。按功能域复用已有文件；新增编译单元显式注册到 `qm-benchmarks`。Google Benchmark 不计入 Google Test 声明库存。
+
+- 名称说明被测职责和状态；在 fixture 或 case 旁用中文说明输入、计时边界和每次迭代的工作量。参数只用于同一职责的规模或输入组合，不把不同路径合成一个结果。
+- 准备固定、可复现的输入；正确性由生产行为测试或计时循环外的预检确认。预检失败用 `SkipWithError` 报告，不能继续输出貌似有效的耗时。
+- 每次迭代执行预期工作。消费型队列、状态机、动画、缓存等检查是否在前几轮后变成空操作；必要时复位或重建，冷路径与稳态分别命名。计时内外的复位成本按实际被测职责决定并注明。
+- fixture 显式准备和恢复配置、缓存及其他共享状态，支持随机交错、重复和过滤单独运行。输入与产物使用隔离目录，不访问真实用户数据或互联网，不用任意 sleep 控制测量。
+- 输出按真实单位提供 `SetItemsProcessed`、`SetBytesProcessed` 或适用 counters；不把批次成本标成单项成本。只在对应读写语义需要时使用 `DoNotOptimize` / `ClobberMemory`，不能以屏障代替确认生产工作实际执行。
+- 新增或改变 case 使用统一 runner 的精确过滤完成 smoke，检查命中 case 和参数规模；需要性能结论时再按下文收集重复样本与可比基线。smoke、单次耗时和无基线测量均不能称性能改善。
+
 ## Case 与可比性
 
 - 用生产接口测量真实职责，不复制算法或只测为基准重写的实现；必要拆分应同时服务模块化和行为测试。

@@ -827,6 +827,9 @@ Apply a writable preset and edit first
 Apply Changes
 == Değişiklikleri Uygula
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== Alt pencerelerin ve açılır listelerin arkasını bulanıklaştır
+
 Apply input early before next tick for prediction
 == Tahmin için bir sonraki tick'ten önce girdiyi erken uygula
 
@@ -1603,6 +1606,12 @@ Button - Disabled
 
 Button - Enabled
 == Düğme - Etkin
+
+Button background color
+== Düğme arka plan rengi
+
+Button background opacity percentage
+== Düğme arka plan rengi — opaklık yüzdesi
 
 Button browser
 == Düğme tarayıcısı
@@ -2686,6 +2695,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Özel Sağlayıcı Model Adı
+
+Custom text color
+== Özel metin rengi
 
 Custom title
 == Özel unvan
@@ -3809,6 +3821,9 @@ Enable fat skin
 Enable freeze call sound
 == Donma çağrı sesini etkinleştir
 
+Enable frosted glass blur behind secondary popups and dropdowns
+== Alt pencerelerin ve açılır listelerin arkasında bulanıklığı etkinleştir
+
 Enable FTAPI auto-translate (may overload the service)
 == FTAPI otomatik çeviriyi etkinleştir (hizmeti aşırı yükleyebilir)
 
@@ -4244,6 +4259,12 @@ Existing Player
 Exit replay view
 == Demo görünümünden çık
 
+Expanded dropdown background color
+== Açılan liste arka plan rengi
+
+Expanded dropdown background opacity percentage
+== Açılan liste arka plan rengi — opaklık yüzdesi
+
 Export
 == Dışa aktar
 
@@ -4555,6 +4576,9 @@ Font cursor
 
 Font size
 == Yazı tipi boyutu
+
+Font store
+== Yazı tipi mağazası
 
 Font store:
 == Yazı tipi mağazası:
@@ -5605,6 +5629,12 @@ Initializing map logic
 
 Input
 == Giriş
+
+Input background color
+== Giriş alanı arka plan rengi
+
+Input background opacity percentage
+== Giriş alanı arka plan rengi — opaklık yüzdesi
 
 Input device
 == Giriş cihazı
@@ -8330,6 +8360,9 @@ Points unavailable
 Polished
 == Cilalı
 
+Popup & dropdown blur
+== Açılır pencere ve liste bulanıklığı
+
 Popup animation
 == Açılır animasyon
 
@@ -9956,6 +9989,9 @@ Search
 Search and navigate settings
 == Ayarları ara ve gezin
 
+Search country flag…
+== Ülke bayrağı ara…
+
 Search donor asset
 == Kaynak varlık ara
 
@@ -9988,6 +10024,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == İkincil
+
+Secondary menu background color
+== Alt menü arka plan rengi
+
+Secondary menu background opacity percentage
+== Alt menü arka plan rengi — opaklık yüzdesi
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == Yeniden bağlanmadan önce beklenecek saniye (0=kapalı, sunucu dolu olduğunda)
@@ -10093,9 +10135,6 @@ Send Rate
 
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
-
-Send target language
-== Hedef dili gönder
 
 Send translation method
 == Çeviri yöntemini gönder
@@ -12349,6 +12388,12 @@ Text alpha
 
 Text color
 == Metin rengi
+
+Text color mode
+== Metin rengi modu
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== Metin rengi modu: 0 otomatik, 1 beyaz, 2 siyah, 3 özel
 
 Text effect
 == Metin efekti

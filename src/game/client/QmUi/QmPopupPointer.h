@@ -1,6 +1,21 @@
 #ifndef GAME_CLIENT_QMUI_QMPOPUPPOINTER_H
 #define GAME_CLIENT_QMUI_QMPOPUPPOINTER_H
 
+// 公共鼠标读取同时屏蔽当前与上一帧，避免底层误认释放并提交拖放。
+struct SQmPointerButtons
+{
+	unsigned m_Current = 0;
+	unsigned m_Previous = 0;
+	int Held(int Index) const { return (m_Current >> Index) & 1; }
+	int Previous(int Index) const { return (m_Previous >> Index) & 1; }
+	int Pressed(int Index) const { return Held(Index) && !Previous(Index); }
+};
+
+inline SQmPointerButtons QmResolvePointerButtons(unsigned Current, unsigned Previous, bool Blocked)
+{
+	return Blocked ? SQmPointerButtons{} : SQmPointerButtons{Current, Previous};
+}
+
 // 将弹层指针决策与绘制分离，活动层独占输入，关闭后仍由调用方配对清理输入深度。
 struct SQmPopupPointerInput
 {

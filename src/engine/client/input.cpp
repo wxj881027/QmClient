@@ -920,6 +920,11 @@ int CInput::Update()
 			break;
 
 		case SDL_KEYUP:
+			if(g_Config.m_QmGraphicsTrace > 0 && !Graphics()->WindowActive())
+			{
+				// 截图工具抢焦点时记录 SDL 松键事件，区分修饰键冲突与失焦重置。
+				dbg_msg("input/focus", "event=unfocused_key_release key=%d scancode=%d", TranslateKeyEventKey(Event.key), Event.key.keysym.scancode);
+			}
 			AddKeyEventChecked(TranslateKeyEventKey(Event.key), IInput::FLAG_RELEASE);
 			break;
 
@@ -1007,6 +1012,8 @@ int CInput::Update()
 				IgnoreKeys = true;
 				break;
 			case SDL_WINDOWEVENT_FOCUS_LOST:
+				if(g_Config.m_QmGraphicsTrace > 0)
+					dbg_msg("input/focus", "event=focus_lost tab=%d left_shift=%d right_shift=%d left_ctrl=%d right_ctrl=%d queued_events=%zu", m_aCurrentKeyStates[KEY_TAB], m_aCurrentKeyStates[KEY_LSHIFT], m_aCurrentKeyStates[KEY_RSHIFT], m_aCurrentKeyStates[KEY_LCTRL], m_aCurrentKeyStates[KEY_RCTRL], m_vInputEvents.size());
 				std::fill(std::begin(m_aCurrentKeyStates), std::end(m_aCurrentKeyStates), false);
 				m_MouseFocus = false;
 				IgnoreKeys = true;

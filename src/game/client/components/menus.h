@@ -2333,19 +2333,21 @@ protected:
 	void RenderServerbrowserTypesFilter(CUIRect View);
 	struct SPopupCountrySelectionContext
 	{
-		CMenus *m_pMenus;
-		int m_Selection;
-		bool m_New;
+		CMenus *m_pMenus = nullptr;
+		int m_Selection = -1;
+		bool m_New = false;
+		CLineInputBuffered<64> m_FilterInput;
 	};
 	static CUi::EPopupMenuFunctionResult PopupCountrySelection(void *pContext, CUIRect View, bool Active);
 	// QmClient: 字体商店弹层（可搜索的在线字体卡片网格）。
 	static CUi::EPopupMenuFunctionResult PopupFontStore(void *pContext, CUIRect View, bool Active);
 	struct SPopupSettingsCountrySelectionContext
 	{
-		CMenus *m_pMenus;
-		int *m_pCountry;
-		int m_Selection;
-		bool m_New;
+		CMenus *m_pMenus = nullptr;
+		int *m_pCountry = nullptr;
+		int m_Selection = -1;
+		bool m_New = false;
+		CLineInputBuffered<64> m_FilterInput;
 	};
 	static CUi::EPopupMenuFunctionResult PopupSettingsCountrySelection(void *pContext, CUIRect View, bool Active);
 	void RenderServerbrowserInfo(CUIRect View);

@@ -9,6 +9,7 @@
 
 #include <engine/config.h>
 #include <engine/console.h>
+#include <engine/graphics.h>
 #include <engine/shared/config.h>
 
 #include <game/client/components/chat.h>
@@ -176,19 +177,17 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		{
 			while(true)
 			{
-				auto ActiveModifierBind = std::find_if(m_vActiveBinds.begin(), m_vActiveBinds.end(), [&](const CBindSlot &Bind) {
-					return ShouldReleaseUnmodifiedModifierBindOnModifierPress(Bind, KeyModifierMask);
+				auto ActiveModifierBind = std::find_if(m_vActiveBinds.begin(), m_vActiveBinds.end(), [&](const CActiveBind &Bind) {
+					return !Bind.m_ShortcutState.Restricted() && ShouldRestrictUnmodifiedShiftBindOnModifierPress(Bind, KeyModifierMask);
 				});
 				if(ActiveModifierBind == m_vActiveBinds.end())
 					break;
 
-				// The release command can unbind itself, so resolve it before erasing the active slot.
-				const char *pBind = m_Storage.m_aapKeyBindings[ActiveModifierBind->m_ModifierMask][ActiveModifierBind->m_Key];
-				if(pBind)
-				{
-					ExecuteBindCommand(Console(), pBind, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
-				}
-				m_vActiveBinds.erase(ActiveModifierBind);
+				const bool KeepHeldPanel = ActiveModifierBind->m_ShortcutState.Restrict(Get(*ActiveModifierBind), [&](const char *pCommand) {
+					ExecuteBindCommand(Console(), pCommand, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+				});
+				if(!KeepHeldPanel)
+					m_vActiveBinds.erase(ActiveModifierBind);
 			}
 		}
 
@@ -228,7 +227,7 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 			// Have to check for nullptr again because the previous execute can unbind itself
 			if(m_Storage.m_aapKeyBindings[ActiveBind->m_ModifierMask][ActiveBind->m_Key])
 			{
-				ExecuteBindCommand(Console(), m_Storage.m_aapKeyBindings[ActiveBind->m_ModifierMask][ActiveBind->m_Key], GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
+				ExecuteBindCommand(Console(), ActiveBind->m_ShortcutState.Command(Get(*ActiveBind)), GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
 			}
 			Handled = true;
 		}
@@ -236,12 +235,20 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 
 	if(Event.m_Flags & IInput::FLAG_RELEASE)
 	{
-		const auto &&OnKeyRelease = [&](const CBindSlot &Bind) {
+		IEngineGraphics *pEngineGraphics = Kernel()->RequestInterface<IEngineGraphics>();
+		const bool WindowActive = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
+		const auto &&OnKeyRelease = [&](CActiveBind &Bind) {
+			if(!WindowActive && Bind.m_ShortcutState.ReleaseWhileUnfocused(Get(Bind), [&](const char *pCommand) {
+				   ExecuteBindCommand(Console(), pCommand, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+			   }))
+				return true;
+			if(!WindowActive)
+				return false;
 			// Have to check for nullptr again because the previous execute can unbind itself
-			const char *pBind = m_Storage.m_aapKeyBindings[Bind.m_ModifierMask][Bind.m_Key];
+			const char *pBind = Bind.m_ShortcutState.Command(m_Storage.m_aapKeyBindings[Bind.m_ModifierMask][Bind.m_Key]);
 			if(!pBind)
 			{
-				return;
+				return false;
 			}
 
 			// Prevent binds from being deactivated while chat, console and menus are open, as these components will
@@ -250,9 +257,10 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 				GameClient()->m_GameConsole.IsActive() ||
 				GameClient()->m_Menus.IsActive())
 			{
-				return;
+				return false;
 			}
 			ExecuteBindCommand(Console(), pBind, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+			return false;
 		};
 
 		// Release active bind that uses this primary key
@@ -261,8 +269,8 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		});
 		if(ActiveBind != m_vActiveBinds.end())
 		{
-			OnKeyRelease(*ActiveBind);
-			m_vActiveBinds.erase(ActiveBind);
+			if(!OnKeyRelease(*ActiveBind))
+				m_vActiveBinds.erase(ActiveBind);
 			Handled = true;
 		}
 
@@ -272,12 +280,13 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 			while(true)
 			{
 				auto ActiveModifierBind = std::find_if(m_vActiveBinds.begin(), m_vActiveBinds.end(), [&](const CBindSlot &Bind) {
-					return (Bind.m_ModifierMask & KeyModifierMask) != 0;
+					const auto &Active = static_cast<const CActiveBind &>(Bind);
+					return !Active.m_ShortcutState.WaitingForFocusReturn() && (Bind.m_ModifierMask & KeyModifierMask) != 0;
 				});
 				if(ActiveModifierBind == m_vActiveBinds.end())
 					break;
-				OnKeyRelease(*ActiveModifierBind);
-				m_vActiveBinds.erase(ActiveModifierBind);
+				if(!OnKeyRelease(*ActiveModifierBind))
+					m_vActiveBinds.erase(ActiveModifierBind);
 				Handled = true;
 			}
 		}
@@ -286,11 +295,32 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 	return Handled;
 }
 
+void CBinds::OnRender()
+{
+	IEngineGraphics *pEngineGraphics = Kernel()->RequestInterface<IEngineGraphics>();
+	const bool WindowActive = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
+	for(size_t i = 0; i < m_vActiveBinds.size();)
+	{
+		CActiveBind &Bind = m_vActiveBinds[i];
+		if(!Bind.m_ShortcutState.ReleaseOnFocusReturn(WindowActive))
+		{
+			++i;
+			continue;
+		}
+		// 切回游戏先结束被冻结的显示状态，新的按键事件可重新打开；不恢复任何玩家输入。
+		const std::string Command = Bind.m_ShortcutState.Command(Get(Bind));
+		m_vActiveBinds.erase(m_vActiveBinds.begin() + i);
+		ExecuteBindCommand(Console(), Command.c_str(), GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+	}
+}
+
 void CBinds::RefreshActiveBinds()
 {
-	for(const CBindSlot &Bind : m_vActiveBinds)
+	for(const CActiveBind &Bind : m_vActiveBinds)
 	{
-		const char *pBind = Get(Bind);
+		if(Bind.m_ShortcutState.WaitingForFocusReturn())
+			continue;
+		const char *pBind = Bind.m_ShortcutState.Command(Get(Bind));
 		if(pBind[0] == '\0')
 			continue;
 

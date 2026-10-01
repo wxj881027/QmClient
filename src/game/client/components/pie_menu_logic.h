@@ -12,6 +12,50 @@
 
 namespace qm_pie_menu
 {
+	// 显示生命周期独立于业务交互；提交前先封闭输入，避免回调重入重复执行。
+	class CMenuLifecycle
+	{
+	public:
+		enum class EState
+		{
+			INACTIVE,
+			OPENING,
+			ACTIVE,
+			CLOSING
+		};
+
+		enum class EInputKind
+		{
+			ACTION,
+			CANCEL,
+			OTHER
+		};
+
+	private:
+		EState m_State = EState::INACTIVE;
+
+	public:
+		EState State() const { return m_State; }
+		bool IsVisible() const { return m_State != EState::INACTIVE; }
+		bool IsInteractive() const { return m_State == EState::OPENING || m_State == EState::ACTIVE; }
+		// 关闭期只吞掉本菜单动作，开菜单绑定仍可下传到 binds。
+		bool CapturesClosingInput(EInputKind Kind) const { return m_State == EState::CLOSING && Kind != EInputKind::OTHER; }
+		void Open() { m_State = EState::OPENING; }
+		void FinishOpening()
+		{
+			if(m_State == EState::OPENING)
+				m_State = EState::ACTIVE;
+		}
+		void Cancel() { m_State = EState::INACTIVE; }
+		bool BeginCommit()
+		{
+			if(!IsInteractive())
+				return false;
+			m_State = EState::CLOSING;
+			return true;
+		}
+	};
+
 	enum class EOption
 	{
 		FRIEND = 0,

@@ -44,6 +44,7 @@
 #include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
@@ -218,7 +219,8 @@ namespace
 	ColorRGBA MenuUiColorSurface(float AlphaScale, float ColorScale)
 	{
 		ColorHSLA UiHsla(g_Config.m_QmUiColor);
-		UiHsla = UiHsla.UnclampLighting(0.42f);
+		if(!g_Config.m_QmNewUi)
+			UiHsla = UiHsla.UnclampLighting(0.42f);
 		const ColorRGBA UiColor = color_cast<ColorRGBA>(UiHsla);
 		const float BaseAlpha = maximum(UiColor.a, 0.70f);
 		const float UiAlpha = g_Config.m_QmUiOpacity / 100.0f;
@@ -232,7 +234,8 @@ namespace
 	ColorRGBA MenuUiColorAccent(float AlphaScale)
 	{
 		ColorHSLA UiHsla(g_Config.m_QmUiColor);
-		UiHsla = UiHsla.UnclampLighting(0.48f);
+		if(!g_Config.m_QmNewUi)
+			UiHsla = UiHsla.UnclampLighting(0.48f);
 		const ColorRGBA UiColor = color_cast<ColorRGBA>(UiHsla);
 		const float UiAlpha = g_Config.m_QmUiOpacity / 100.0f;
 		return UiColor.WithAlpha(std::clamp(maximum(UiColor.a, 0.85f) * UiAlpha * AlphaScale, 0.0f, 1.0f));
@@ -754,7 +757,7 @@ SSettingsCardDeckVisualOptions CMenus::SettingsCardDeckVisualOptions() const
 	Options.m_RainbowTitles = g_Config.m_QmUiCardRainbowTitles != 0;
 	Options.m_AlwaysShowBorders = g_Config.m_QmUiCardBorders != 0;
 	Options.m_BorderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true));
-	const ColorRGBA CardColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardColor).UnclampLighting(0.42f));
+	const ColorRGBA CardColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardColor));
 	Options.m_SurfaceColor = CardColor.WithAlpha(std::clamp(g_Config.m_QmUiCardOpacity / 100.0f, 0.0f, 1.0f));
 	Options.m_UseSurfaceColor = true;
 	return Options;
@@ -1292,7 +1295,8 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 
 int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
 {
-	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
+	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
+	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, &ButtonRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
 }
 
 int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture)
@@ -1312,11 +1316,14 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	}
 	const float HoverLift = -1.25f * HoverStrength;
 
-	if(Checked)
+	if(g_Config.m_QmNewUi)
+		Color = ResolveConfiguredControlSurface(Checked >= 0);
+	else if(Checked)
 		Color = ColorRGBA(0.6f, 0.6f, 0.6f, 0.5f);
 	else // TClient, why was this not here? ig they never use "checked" anywhere important
 		Color.a *= Ui()->ButtonColorMul(pButtonContainer);
 
+	CUiScopedSurfaceText SurfaceText(TextRender(), Color, g_Config.m_QmNewUi);
 	DrawRoundedSurface(Ui(), *pRect, Color, ColorRGBA(), Rounding, 0.0f, Corners);
 	if(HoverStrength > MENU_TAB_ANIM_EPSILON)
 	{
@@ -2414,19 +2421,18 @@ int CMenus::DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *
 		{
 			Ui()->DoLabel_QmIcon(&Label, Icon, pFallbackIcon, LabelFontSize, TEXTALIGN_MC);
 		}
-		else if(pText != nullptr && pTextUiElement != nullptr)
-		{
-			CUIElement::SUIElementRect *pElementRect = pTextUiElement->Rect(0);
-			const bool HadReadyContainer = pElementRect->m_UITextContainer.Valid();
-			DoMenuLabelStreamed(MENU_TEXT_SCOPE_INGAME, *pTextUiElement, &Label, pText, LabelFontSize, TEXTALIGN_MC);
-			if(pTextUiElement != &m_MenuTextFallbackElement && !HadReadyContainer && !pElementRect->m_UITextContainer.Valid())
-			{
-				CountMenuTextImmediateFallback();
-				Ui()->DoLabel(&Label, pText, LabelFontSize, TEXTALIGN_MC);
-			}
-		}
 		else if(pText != nullptr)
+		{
+			const unsigned OldFlags = TextRender()->GetRenderFlags();
+			const EFontPreset OldPreset = TextRender()->GetFontPreset();
+			TextRender()->SetRenderFlags(0);
+			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
 			Ui()->DoLabel(&Label, pText, LabelFontSize, TEXTALIGN_MC);
+
+			TextRender()->SetRenderFlags(OldFlags);
+			TextRender()->SetFontPreset(OldPreset);
+		}
 	}
 
 	if(InCapsule)
@@ -2437,6 +2443,9 @@ int CMenus::DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *
 
 void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 {
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
 	CUIRect Button;
 
 	int NewPage = -1;
@@ -4551,7 +4560,10 @@ void CMenus::Render()
 				PrepareSettingsTabLabelCache(MainView.w);
 			if(ContentTransitionActive)
 			{
-				ApplyUiSwitchOffset(MainView, TransitionStrength, m_MenuPageTransitionDirection, false, 0.04f, 18.0f, 48.0f);
+				const float RelOffset = g_Config.m_QmNewUi ? 0.015f : 0.04f;
+				const float MinOffset = g_Config.m_QmNewUi ? 6.0f : 18.0f;
+				const float MaxOffset = g_Config.m_QmNewUi ? 16.0f : 48.0f;
+				ApplyUiSwitchOffset(MainView, TransitionStrength, m_MenuPageTransitionDirection, false, RelOffset, MinOffset, MaxOffset);
 				Ui()->ClipEnable(&MainViewClip);
 			}
 
@@ -4658,7 +4670,10 @@ void CMenus::Render()
 				PrepareSettingsTabLabelCache(MainView.w);
 			if(ContentTransitionActive)
 			{
-				ApplyUiSwitchOffset(MainView, TransitionStrength, m_GamePageTransitionDirection, false, 0.04f, 18.0f, 48.0f);
+				const float RelOffset = g_Config.m_QmNewUi ? 0.015f : 0.04f;
+				const float MinOffset = g_Config.m_QmNewUi ? 6.0f : 18.0f;
+				const float MaxOffset = g_Config.m_QmNewUi ? 16.0f : 48.0f;
+				ApplyUiSwitchOffset(MainView, TransitionStrength, m_GamePageTransitionDirection, false, RelOffset, MinOffset, MaxOffset);
 				Ui()->ClipEnable(&MainViewClip);
 			}
 

@@ -4,6 +4,8 @@ description: QmClient 代码交付或选择测试、Google Benchmark、构建与
 ---
 # QmClient 验证
 
+测试或 benchmark 书写先按根规则读取对应目录 `AGENTS.md`；benchmark 设计与运行必须读取 [性能参考](references/performance.md)。quick/default/full 的测试库存检查扫描当前完整仓库，阻断混合声明、未注册文件、缺失源码与重复 ID；这项检查不执行测试或 benchmark，也不判断语义覆盖。
+
 选能覆盖本轮风险的最小检查集合。测试通过后继续交付；只有新改动、失败或未解决问题才扩大或重复验证。
 
 ## 检查范围

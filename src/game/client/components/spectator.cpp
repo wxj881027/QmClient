@@ -15,6 +15,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/spectator_friend_priority.h>
+#include <game/client/components/qmclient/spectator_selector_layout.h>
 #include <game/client/components/qmclient/spectator_tele_search.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon_manager.h>
@@ -304,6 +305,10 @@ bool CSpectator::OnInput(const IInput::CEvent &Event)
 		m_TeleNumberInput.Deactivate();
 		return true;
 	}
+
+	// 截图等组合键继续交给绑定系统，不被 CP 输入框吞掉；普通 Ctrl+C 仍可复制输入内容。
+	if((Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_RELEASE)) && CBinds::IsReservedShortcutChord(CBinds::GetModifierMask(Input())))
+		return false;
 
 	// QmClient：编号输入行激活时独占数字按键，回车直接查找。
 	if(IsActive() && m_TeleNumberInput.IsActive())
@@ -638,9 +643,9 @@ void CSpectator::OnRender()
 	const float CenterX = Width / 2.0f;
 	const float CenterY = Height / 2.0f + PanelOffsetY;
 	const vec2 ScreenCenter = vec2(CenterX, CenterY);
-	CUIRect SpectatorRect = {CenterX - ObjWidth, CenterY - 300.0f, ObjWidth * 2.0f, 600.0f};
-	CUIRect SpectatorMouseRect;
-	SpectatorRect.Margin(20.0f, &SpectatorMouseRect);
+	const auto SelectorLayout = qm_spectator_layout::Build(ScreenCenter, ObjWidth, !ViewModeActive);
+	const CUIRect &SpectatorRect = SelectorLayout.m_Panel;
+	const CUIRect &SpectatorMouseRect = SelectorLayout.m_Mouse;
 
 	const bool WasTouchPressed = m_TouchState.m_AnyPressed;
 	if(WantActive)
@@ -668,8 +673,7 @@ void CSpectator::OnRender()
 	SpectatorRect.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * PanelAlpha), IGraphics::CORNER_ALL, 20.0f);
 
 	// clamp mouse position to selector area
-	m_SelectorMouse.x = std::clamp(m_SelectorMouse.x, -(ObjWidth - 20.0f), ObjWidth - 20.0f);
-	m_SelectorMouse.y = std::clamp(m_SelectorMouse.y, -280.0f, 280.0f);
+	m_SelectorMouse = qm_spectator_layout::ClampMouse(SelectorLayout, ScreenCenter, m_SelectorMouse);
 
 	const bool MousePressed = WantActive && (Input()->KeyPress(KEY_MOUSE_1) || m_TouchState.m_PrimaryPressed);
 
@@ -1019,7 +1023,7 @@ void CSpectator::OnRender()
 
 	// QmClient：按编号查找传送点的输入行（与远程一致，画在选择器内容之上、光标之下）。
 	if(!ViewModeActive)
-		RenderTeleSearch(ScreenCenter, ContentAlpha, MousePressed);
+		RenderTeleSearch(ScreenCenter, SelectorLayout.m_SearchRow, SelectorLayout.m_Status, ContentAlpha, MousePressed);
 	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse, 48.0f, ContentAlpha);
 }
 
@@ -1055,11 +1059,11 @@ void CSpectator::FindTele()
 	m_TeleSearchPending = true;
 }
 
-void CSpectator::RenderTeleSearch(vec2 Center, float Alpha, bool MousePressed)
+void CSpectator::RenderTeleSearch(vec2 Center, const CUIRect &RowRect, const CUIRect &StatusRect, float Alpha, bool MousePressed)
 {
-	CUIRect Row = {Center.x - 280.0f, Center.y + 310.0f, 560.0f, 40.0f};
+	CUIRect Row = RowRect;
 	CUIRect Label, Minus, Number, Plus, Find;
-	Row.VSplitLeft(140.0f, &Label, &Row);
+	Row.VSplitLeft(std::clamp(TextRender()->TextWidth(20.0f, Localize("Find CP")) + 16.0f, 100.0f, Row.w * 0.4f), &Label, &Row);
 	Row.VSplitLeft(40.0f, &Minus, &Row);
 	Row.VSplitLeft(8.0f, nullptr, &Row);
 	Row.VSplitLeft(80.0f, &Number, &Row);
@@ -1122,8 +1126,10 @@ void CSpectator::RenderTeleSearch(vec2 Center, float Alpha, bool MousePressed)
 		pStatus = Localize("There is no teleporter with that index on the map.");
 	const bool Error = m_TeleSearchStatus == ETeleSearchStatus::INVALID_NUMBER || m_TeleSearchStatus == ETeleSearchStatus::NOT_FOUND;
 	TextRender()->TextColor(Error ? ColorRGBA(1.0f, 0.5f, 0.5f, Alpha) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.6f * Alpha));
-	const CUIRect Status = {Center.x - 280.0f, Center.y + 360.0f, 560.0f, 20.0f};
-	Ui()->DoLabel(&Status, pStatus, 16.0f, TEXTALIGN_ML);
+	SLabelProperties StatusProps;
+	StatusProps.m_MaxWidth = StatusRect.w;
+	StatusProps.m_DisallowNewline = true;
+	Ui()->DoLabel(&StatusRect, pStatus, 16.0f, TEXTALIGN_ML, StatusProps);
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 

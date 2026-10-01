@@ -21,28 +21,24 @@
 class CPieMenu : public CComponent
 {
 public:
-	enum class EMenuState
-	{
-		INACTIVE = 0,
-		OPENING,
-		ACTIVE,
-		CLOSING
-	};
+	using EMenuState = qm_pie_menu::CMenuLifecycle::EState;
 
 	using EMenuOption = qm_pie_menu::EOption;
 
 private:
 	// Menu state
-	EMenuState m_State;
-	bool m_Active;
+	qm_pie_menu::CMenuLifecycle m_Lifecycle;
 	int m_TargetClientId;
 	std::string m_TargetName;
 	std::string m_TargetClan;
 	int m_SelectedOption;
 	int m_SelectedRenameIndex;
+	int m_CommittedOption = -1;
+	int m_CommittedRenameIndex = -1;
 	float m_AnimationProgress;
 	vec2 m_MenuCenter;
 	int64_t m_OpenTime;
+	int64_t m_CloseTime = 0;
 	bool m_WasPressed;
 	vec2 m_SelectorMouse; // Mouse position for selection
 	std::vector<std::string> m_vRenameQueue;
@@ -62,7 +58,8 @@ private:
 	static constexpr float SECTOR_GAP = 3.6f; // 2 * 1.8
 
 	// Animation parameters
-	static constexpr float ANIMATION_DURATION = 0.08f; // seconds
+	static constexpr float ANIMATION_DURATION = 0.16f; // seconds (虹膜光圈开合耗时 160ms，兼具急速响应与清晰视觉轨迹)
+	static constexpr float CLOSE_DURATION = 0.08f; // seconds
 	static constexpr float MIN_SCALE = 0.85f;
 	static constexpr float MAX_SCALE = 1.0f;
 	static constexpr float HIGHLIGHT_SCALE = 1.25f; // 25% larger when highlighted
@@ -74,7 +71,7 @@ private:
 	// Helper methods
 	int FindNearestPlayer();
 	void OpenMenu();
-	void CloseMenu();
+	void CloseMenu(bool HasExecuted = false);
 	void RefreshVisibleOptions();
 	void UpdateFollowState();
 	void ToggleTargetFollow();
@@ -88,9 +85,9 @@ private:
 
 	// Rendering helpers
 	void RenderOverlay();
-	void RenderSector(int Index, float InnerRadius, float OuterRadius, bool Highlighted, float Alpha);
-	void RenderRenameSector(int Index, int SectorCount, float InnerRadius, float OuterRadius, bool Highlighted, float Alpha);
-	void RenderCenterInfo();
+	void RenderSector(int Index, float InnerRadius, float OuterRadius, bool Highlighted, float Alpha, float AngleOffset = 0.0f, float SpanFactor = 1.0f, float BladeEdgeAlpha = 0.0f);
+	void RenderRenameSector(int Index, int SectorCount, float InnerRadius, float OuterRadius, bool Highlighted, float Alpha, float AngleOffset = 0.0f, float SpanFactor = 1.0f);
+	void RenderCenterInfo(float Alpha = 1.0f);
 	float MenuScale() const;
 	vec2 GetSectorPosition(int Index, float Radius) const;
 	float GetSectorAngle(int Index) const;
@@ -121,7 +118,7 @@ public:
 	void OnRender() override;
 	void OnRelease() override;
 
-	bool IsActive() const { return m_Active; }
+	bool IsActive() const { return m_Lifecycle.IsVisible(); }
 	bool IsFollowing() const { return m_FollowState.m_Active; }
 	bool IsFollowingPlayer(const char *pName, const char *pClan) const;
 	void ToggleFollowPlayer(int ClientId);

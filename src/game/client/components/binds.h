@@ -7,6 +7,7 @@
 #include <engine/keys.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/shortcut_held_bind.h>
 
 #include <cstdint>
 #include <cstdlib>
@@ -134,11 +135,15 @@ public:
 	void GetKey(const char *pBindStr, char *pBuf, size_t BufSize) const;
 	static int GetModifierMask(IInput *pInput);
 	static int GetModifierMaskOfKey(int Key);
+	static bool IsReservedShortcutChord(int ModifierMask)
+	{
+		return ModifierMask == ((1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)) ||
+		       ModifierMask == ((1 << KeyModifier::ALT) | (1 << KeyModifier::SHIFT)) ||
+		       ModifierMask == ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT));
+	}
 	static bool AllowsUnmodifiedFallback(int Key, int ModifierMask)
 	{
-		if(ModifierMask == ((1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)) ||
-			ModifierMask == ((1 << KeyModifier::ALT) | (1 << KeyModifier::SHIFT)) ||
-			ModifierMask == ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)))
+		if(IsReservedShortcutChord(ModifierMask))
 			return false;
 
 		if((Key == KEY_LSHIFT || Key == KEY_RSHIFT) &&
@@ -147,7 +152,7 @@ public:
 
 		return true;
 	}
-	static bool ShouldReleaseUnmodifiedModifierBindOnModifierPress(const CBindSlot &ActiveBind, int PressedKeyModifierMask)
+	static bool ShouldRestrictUnmodifiedShiftBindOnModifierPress(const CBindSlot &ActiveBind, int PressedKeyModifierMask)
 	{
 		return ActiveBind.m_ModifierMask == KeyModifier::NONE &&
 		       (ActiveBind.m_Key == KEY_LSHIFT || ActiveBind.m_Key == KEY_RSHIFT) &&
@@ -160,6 +165,9 @@ public:
 	void RefreshActiveBinds();
 
 	void OnConsoleInit() override;
+	void OnRender() override;
+	void OnReset() override { m_vActiveBinds.clear(); }
+	void OnRelease() override { m_vActiveBinds.clear(); }
 	bool OnInput(const IInput::CEvent &Event) override;
 
 	// DDRace
@@ -168,6 +176,11 @@ public:
 
 private:
 	CBindStorage m_Storage;
-	std::vector<CBindSlot> m_vActiveBinds;
+	struct CActiveBind : CBindSlot
+	{
+		CQmShortcutHeldBind m_ShortcutState;
+		CActiveBind(int Key, int ModifierMask) : CBindSlot(Key, ModifierMask) {}
+	};
+	std::vector<CActiveBind> m_vActiveBinds;
 };
 #endif

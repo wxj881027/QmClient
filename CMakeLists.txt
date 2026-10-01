@@ -3241,6 +3241,7 @@ if(CLIENT)
     QmUi/QmAnimCurves.h
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
+    QmUi/QmPopupSource.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
     QmUi/QmIslandSurface.cpp
@@ -3429,6 +3430,7 @@ if(CLIENT)
     components/qmclient/bind_settings.cpp
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_emoji.cpp
+    components/qmclient/chat_translate_button.h
     components/qmclient/chat_emoji.h
     components/qmclient/collision_hitbox.cpp
     components/qmclient/collision_hitbox.h
@@ -3483,6 +3485,7 @@ if(CLIENT)
     components/qmclient/music_lyrics/qm_spotify_token.cpp
     components/qmclient/music_lyrics/qm_spotify_token.h
     ../../qm/hooks/soda/qm_soda_protocol.cpp
+    components/qmclient/nameplate_density.h
     components/qmclient/nameplate_text_cache.h
     components/qmclient/pie_menu_actions.cpp
     components/qmclient/pie_menu_follow.cpp
@@ -3538,6 +3541,8 @@ if(CLIENT)
     components/qmclient/skin_prepared_textures.h
     components/qmclient/skin_prepared_visuals.h
     components/qmclient/snapshot_entities.h
+    components/qmclient/spectator_selector_layout.h
+    components/qmclient/shortcut_held_bind.h
     components/qmclient/spectator_tele_search.h
     components/qmclient/stutter_diagnostics.h
     components/qmclient/tee_hue_cycle.cpp
@@ -4450,346 +4455,396 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 ########################################################################
 
 if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
-  set_src(TESTS GLOB src/test
-    QmAnimTest.cpp
-    QmAnimSpringTest.cpp
-    QmAnimCoreTest.cpp
-    qm_anim_contract_test.cpp
-    QmAnimDropdownTest.cpp
-    QmAnimFormsTest.cpp
-    QmDiscreteSliderTest.cpp
-    map_browser_filter_slider_test.cpp
-    QmAnimScrollTest.cpp
-    QmAnimTreeTest.cpp
-    qm_icon_atlas_contract_test.cpp
-    qm_font_icon_cmap_test.cpp
-    qm_icon_shader_contract_test.cpp
-    qm_msdf_param_encoding_test.cpp
-    qm_icon_loader_contract_test.cpp
-    qm_render_pipeline_contract_test.cpp
-    qm_icon_glyph_contract_test.cpp
-    qm_phosphor_resource_contract_test.cpp
-    qm_icon_weight_contract_test.cpp
-    qm_font_icon_resource_contract_test.cpp
-    QmLayoutTest.cpp
-    qm_afk_presentation_contract_test.cpp
-    qm_blank_asset_fallback_test.cpp
-    qm_spectator_tele_search_test.cpp
-    qm_spectator_friend_priority_test.cpp
-    qm_friend_enter_tracker_test.cpp
-    qm_friends_category_drag_test.cpp
-    friends_revision_test.cpp
-    qm_perf_diagnostics_test.cpp
-    qm_music_hook_protocol_test.cpp
-    QmUiTokensTest.cpp
-    qm_card_order_model_test.cpp
-    qm_card_order_model_contract_test.cpp
-    qm_card_registry_test.cpp
-    qm_credits_layout_test.cpp
-    qm_module_layout_adapter_test.cpp
-    aio_test.cpp
-    assets_editor_layout_test.cpp
-    assets_preview_scale_test.cpp
-    assets_resource_migration_test.cpp
-    assets_resource_registry_test.cpp
-    audio_pack_editor_test.cpp
-    bezier_test.cpp
-    binds_test.cpp
-    blocklist_driver_test.cpp
-    bytes_be_test.cpp
-    chunk_header_test.cpp
-    color_test.cpp
-    color_contract_test.cpp
-    compression_test.cpp
-    console_test.cpp
-    csv_test.cpp
-    datafile_test.cpp
-    dbg_test.cpp
-    ddnet_19_9_sync_contract_test.cpp
-    demo_player_test.cpp
-    editor_test.cpp
-    fs_test.cpp
-    gameworld_test.cpp
-    gameinfo_ex_test.cpp
-    git_revision_test.cpp
-    graphics_backend_contract_test.cpp
-    hash_test.cpp
-    huffman_test.cpp
-    http_shutdown_lifecycle_contract_test.cpp
-    image_test.cpp
-    io_test.cpp
-    ios_runtime_contract_test.cpp
-    jobs_test.cpp
-    json_test.cpp
-    jsonwriter_test.cpp
-    keyword_reply_rules_test.cpp
-    logger_test.cpp
-    map_difficulty_catalog_test.cpp
-    map_history_test.cpp
-    map_load_test.cpp
-    linereader_test.cpp
-    mapbugs_test.cpp
-    mapitems_test.cpp
-    math_test.cpp
-    metal_backend_contract_test.cpp
-    metal_backend_runtime_test.cpp
-    metal_frame_state_test.cpp
-    metal_render_target_state_test.cpp
-    metal_types_test.cpp
-    mem_test.cpp
-    mutes_test.cpp
-    name_ban_test.cpp
-    net_test.cpp
-    net_protocol_contract_test.cpp
-    netaddr_test.cpp
-    network_test.cpp
-    os_test.cpp
-    packer_test.cpp
-    prng_test.cpp
-    qm_bind_editor_console_test.cpp
-    qm_bind_editor_test.cpp
-    qm_background_particles_test.cpp
-    qm_axiom_scores_test.cpp
-    qm_axiom_scores_contract_test.cpp
-    qm_chat_emoji_test.cpp
-    qm_chat_interactions_test.cpp
-    qm_console_log_filter_test.cpp
-    qm_red_packet_auto_claim_test.cpp
-    qm_tclient_warlist_test.cpp
-    qm_chat_contract_test.cpp
-    qm_chat_message_merge_contract_test.cpp
-    qm_gores_mode_test.cpp
-    qm_hammer_hit_detection_test.cpp
-    qm_water_hammer_indicator_test.cpp
-    qm_demo_display_test.cpp
-    qm_demo_ui_test.cpp
-    online_replay_player_test.cpp
-    qm_jump_hint_utils_test.cpp
-    qm_hud_hook_countdown_test.cpp
-    qm_hud_media_island_logic_test.cpp
-    qm_hud_recording_presentation_test.cpp
-    qm_vulkan_enhanced_test.cpp
-    qm_hud_notifications_catalog_test.cpp
-    qm_hud_notifications_formatting_test.cpp
-    qm_hud_notifications_state_test.cpp
-    qm_hud_notifications_presentation_test.cpp
-    qm_hud_notifications_geometry_test.cpp
-    qm_hud_notifications_rules_test.cpp
-    qm_hud_notifications_contract_test.cpp
-    qm_hud_notifications_legacy_contract_test.cpp
-    qm_hud_editor_contract_test.cpp
-    qm_ime_platform_test.cpp
-    qm_new_ui_menu_branch_test.cpp
-    qm_new_ui_menu_tooltips_contract_test.cpp
-    qm_camera_effects_contract_test.cpp
-    qm_ui_scale_contract_test.cpp
-    qm_camera_aspect_ratio_contract_test.cpp
-    settings_card_translation_contract_test.cpp
-    settings_player_info_contract_test.cpp
-    settings_page_layout_test.cpp
-    qm_plausible_sizes_contract_test.cpp
-    qm_tclient_statusbar_score_contract_test.cpp
-    qm_tclient_statusbar_contract_test.cpp
-    qm_tclient_warlist_contract_test.cpp
-    qm_graphics_shutdown_contract_test.cpp
-    qm_crashdump_shutdown_suppression_test.cpp
-    qm_graphics_backend_fallback_contract_test.cpp
-    qm_graphics_opengl_probe_contract_test.cpp
-    qm_font_category_test.cpp
-    qm_demo_cut_contract_test.cpp
-    qm_demo_cut_test.cpp
-    qm_screenshot_gallery_contract_test.cpp
-    qm_local_saves_test.cpp
-    qm_ui_scale_popup_contract_test.cpp
-    qm_localization_contract_test.cpp
-    qm_storage_path_contract_test.cpp
-    qm_new_ui_menu_hitbox_contract_test.cpp
-    qm_new_ui_menu_cards_surface_contract_test.cpp
-    qm_new_ui_menu_cards_deck_contract_test.cpp
-    qm_new_ui_menu_cards_catalogue_contract_test.cpp
-    qm_new_ui_menu_cards_warlist_contract_test.cpp
-    qm_new_ui_menu_gameplay_prediction_contract_test.cpp
-    qm_new_ui_menu_gameplay_hud_contract_test.cpp
-    qm_new_ui_menu_gameplay_scoreboard_contract_test.cpp
-    qm_new_ui_menu_gameplay_blur_contract_test.cpp
-    qm_new_ui_menu_gameplay_social_contract_test.cpp
-    qm_new_ui_menu_localization_contract_test.cpp
-    qm_new_ui_menu_render_engine_contract_test.cpp
-    qm_new_ui_menu_render_browser_contract_test.cpp
-    qm_new_ui_menu_render_dropdown_contract_test.cpp
-    qm_new_ui_menu_render_settings_pages_contract_test.cpp
-    qm_new_ui_menu_render_surface_contract_test.cpp
-    qm_new_ui_menu_settings_colors_contract_test.cpp
-    qm_new_ui_menu_settings_features_contract_test.cpp
-    qm_new_ui_menu_settings_config_contract_test.cpp
-    qm_new_ui_menu_settings_nameplate_contract_test.cpp
-    qm_new_ui_menu_settings_textinput_contract_test.cpp
-    qm_new_ui_menu_shell_chrome_contract_test.cpp
-    qm_new_ui_menu_shell_browser_contract_test.cpp
-    qm_new_ui_menu_shell_settings_contract_test.cpp
-    ddnet_19_9_sync_test.cpp
-    qm_update_arguments_test.cpp
-    netease_lyric_parser_test.cpp
-    netease_lyric_timeline_test.cpp
-    netease_lyric_state_test.cpp
-    netease_shared_memory_test.cpp
-    qm_netease_hook_protocol_test.cpp
-    qm_music_app_watcher_test.cpp
-    qm_qqmusic_protocol_test.cpp
-    qm_music_transport_test.cpp
-    qm_kugou_protocol_test.cpp
-    qm_kugou_patch_test.cpp
-    qm_music_registry_test.cpp
-    music_lyrics_krc_test.cpp
-    music_lyrics_qrc_test.cpp
-    qm_spotify_crypto_test.cpp
-    qm_spotify_token_test.cpp
-    qm_spotify_parser_test.cpp
-    qm_modes_test.cpp
-    qm_map_progress_test.cpp
-    qm_config_save_value_override_test.cpp
-    qm_prediction_contract_test.cpp
-    qm_predicted_event_queue_test.cpp
-    qm_tee_hue_cycle_test.cpp
-    qm_tee_trail_test.cpp
-    qm_sponsor_authors_test.cpp
-    qm_sponsors_test.cpp
-    qm_markdown_test.cpp
-    qm_markdown_broadcast_test.cpp
-    qm_emoticon_projectile_test.cpp
-    qm_realtime_test.cpp
-    qm_prepared_media_art_test.cpp
-    websocket_client_test.cpp
-    qm_map_upload_test.cpp
-    qm_title_style_test.cpp
-    qm_sponsor_chat_style_test.cpp
-    qm_skin_outline_test.cpp
-    qm_scoreboard_skin_test.cpp
-    qm_weapon_trajectory_test.cpp
-    qm_weapon_trajectory_contract_test.cpp
-    qm_rank_demo_manifest_test.cpp
-    qmclient_update_version_test.cpp
-    qmclient_update_manifest_test.cpp
-    qmclient_monitoring_assets_contract_test.cpp
-    qmclient_monitoring_card_order_contract_test.cpp
-    qmclient_monitoring_graphics_contract_test.cpp
-    qmclient_monitoring_metrics_contract_test.cpp
-    qmclient_monitoring_misc_contract_test.cpp
-    qmclient_monitoring_persistence_contract_test.cpp
-    qmclient_monitoring_settings_structure_contract_test.cpp
-    qmclient_monitoring_settings_plan_contract_test.cpp
-    qmclient_monitoring_settings_perf_contract_test.cpp
-    qmclient_monitoring_text_plan_contract_test.cpp
-    qmclient_monitoring_frame_budget_contract_test.cpp
-    qmclient_monitoring_text_runtime_contract_test.cpp
-    qmclient_monitoring_motd_contract_test.cpp
-    qmclient_monitoring_runtime_test.cpp
-    qmclient_monitoring_font_store_contract_test.cpp
-    race_test.cpp
-    score_test.cpp
-    storage_replace_test.cpp
-    section_loader_test.cpp
-    swap_countdown_message_test.cpp
-    secure_random_test.cpp
-    server_test.cpp
-    serverbrowser_country_filter_test.cpp
-    serverbrowser_test.cpp
-    serverinfo_test.cpp
-    settings_card_collapse_state_test.cpp
-    settings_card_collapse_config_test.cpp
-    pie_menu_logic_test.cpp
-    pie_menu_points_test.cpp
-    settings_card_deck_logic_test.cpp
-    settings_resource_jobs_assets_contract_test.cpp
-    settings_resource_jobs_assets_test.cpp
-    settings_resource_jobs_skin_plan_test.cpp
-    settings_resource_jobs_skin_throughput_test.cpp
-    settings_resource_jobs_adaptive_budget_test.cpp
-    settings_resource_jobs_background_test.cpp
-    settings_loading_prewarm_test.cpp
-    settings_skin_plan_test.cpp
-    settings_skin_preview_test.cpp
-    settings_card_order_revision_test.cpp
-    settings_card_order_drop_test.cpp
-    settings_card_interaction_test.cpp
-    settings_card_animation_test.cpp
-    settings_card_view_key_test.cpp
-    settings_country_flag_plan_test.cpp
-    settings_resource_budget_test.cpp
-    settings_asset_loading_test.cpp
-    settings_asset_preview_budget_test.cpp
-    settings_asset_preview_lifecycle_test.cpp
-    settings_asset_priority_test.cpp
-    settings_asset_admission_test.cpp
-    settings_resource_visible_range_test.cpp
-    settings_resource_jobs_contract_test.cpp
-    settings_runtime_cache_test.cpp
-    settings_warmup_test.cpp
-    settings_warmup_loading_contract_test.cpp
-    settings_warmup_tclient_contract_test.cpp
-    settings_warmup_layout_contract_test.cpp
-    settings_warmup_cleanup_contract_test.cpp
-    skin_transition_test.cpp
-    skins_test.cpp
-    skins_preview_layers_test.cpp
-    skins_resource_contract_test.cpp
-    skins_render_contract_test.cpp
-    skins_queue_contract_test.cpp
-    skins_preview_contract_test.cpp
-    skins_preset_contract_test.cpp
-    skins_official_index_contract_test.cpp
-    render_target_contract_test.cpp
-    qm_quad_rotation_cache_test.cpp
-    windows_test.cpp
-    netobj_secure_unpack_test.cpp
-    snapshot_test.cpp
-    steam_presence_contract_test.cpp
-    str_search_test.cpp
-    str_utf8_test.cpp
-    str_format_test.cpp
-    str_codec_test.cpp
-    str_copy_test.cpp
-    str_whitespace_test.cpp
-    str_filename_test.cpp
-    str_integer_packing_test.cpp
-    strip_path_and_extension_test.cpp
-    swap_endian_test.cpp
-    teehistorian_test.cpp
-    text_layout_string_test.cpp
-    text_sweep_test.cpp
-    qm_nameplate_effect_lod_test.cpp
-    qm_scoreboard_footer_test.cpp
-    glyph_lookup_cache_test.cpp
-    font_size_cache_test.cpp
-    qm_hook_coll_intersection_test.cpp
-    qm_chat_avatar_test.cpp
-    qm_chat_export_test.cpp
-    qm_chat_log_jobs_test.cpp
-    test.cpp
-    test.h
-    theme_scan_test.cpp
-    thread_test.cpp
-    time_test.cpp
-    timestamp_test.cpp
-    translate_backend_test.cpp
-    translate_http_test_support.h
-    translate_detect_test.cpp
-    translate_history_test.cpp
-    translate_jobs_integration_test.cpp
-    translate_responses_test.cpp
-    translate_llm_parse_test.cpp
-    unix_test.cpp
-    uuid_test.cpp
-    vmath_test.cpp
-    voice_core_test.cpp
-    voice_qmclient_contract_test.cpp
-    voice_sequence_test.cpp
-    voice_qmclient_test.cpp
-    voice_packet_utils_test.cpp
-    voice_state_utils_test.cpp
-    voice_processing_utils_test.cpp
-    voice_audio_utils_test.cpp
-    voice_spatial_utils_test.cpp
+  # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
+  set(TESTS
+    src/test/unit/qmclient/ui/QmAnimTest.cpp
+    src/test/unit/qmclient/ui/QmAnimSpringTest.cpp
+    src/test/unit/qmclient/ui/QmAnimCoreTest.cpp
+    src/test/contract/qmclient/ui/qm_anim_contract_test.cpp
+    src/test/unit/qmclient/ui/QmAnimDropdownTest.cpp
+    src/test/unit/qmclient/ui/QmAnimFormsTest.cpp
+    src/test/unit/qmclient/ui/QmDiscreteSliderTest.cpp
+    src/test/unit/client/map_browser_filter_slider_test.cpp
+    src/test/unit/qmclient/ui/QmAnimScrollTest.cpp
+    src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
+    src/test/contract/qmclient/ui/qm_icon_atlas_contract_test.cpp
+    src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
+    src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
+    src/test/unit/qmclient/ui/qm_icon_color_migration_test.cpp
+    src/test/unit/qmclient/ui/qm_font_icon_cmap_test.cpp
+    src/test/contract/qmclient/ui/qm_icon_shader_contract_test.cpp
+    src/test/unit/qmclient/client/qm_msdf_param_encoding_test.cpp
+    src/test/contract/qmclient/ui/qm_icon_loader_contract_test.cpp
+    src/test/unit/qmclient/client/qm_render_pipeline_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_icon_glyph_contract_test.cpp
+    src/test/contract/qmclient/client/qm_phosphor_resource_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_icon_weight_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
+    src/test/unit/qmclient/ui/QmLayoutTest.cpp
+    src/test/contract/qmclient/client/qm_afk_presentation_contract_test.cpp
+    src/test/unit/qmclient/client/qm_blank_asset_fallback_test.cpp
+    src/test/unit/qmclient/client/qm_spectator_selector_layout_test.cpp
+    src/test/unit/qmclient/client/qm_shortcut_held_bind_test.cpp
+    src/test/unit/qmclient/client/qm_spectator_tele_search_test.cpp
+    src/test/unit/qmclient/client/qm_spectator_friend_priority_test.cpp
+    src/test/unit/qmclient/client/qm_friend_enter_tracker_test.cpp
+    src/test/unit/qmclient/client/qm_friend_online_tracker_test.cpp
+    src/test/unit/qmclient/client/qm_friends_category_drag_test.cpp
+    src/test/unit/engine/friends_revision_test.cpp
+    src/test/unit/qmclient/monitoring/qm_perf_diagnostics_test.cpp
+    src/test/unit/qmclient/monitoring/qm_perf_json_test.cpp
+    src/test/unit/qmclient/monitoring/qm_device_sampler_lifecycle_test.cpp
+    src/test/unit/client/player_points_parse_test.cpp
+    src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
+    src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
+    src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
+    src/test/unit/qmclient/client/qm_route_visited_test.cpp
+    src/test/unit/qmclient/monitoring/qm_stutter_sample_series_test.cpp
+    src/test/unit/qmclient/client/qm_map_upload_multipart_test.cpp
+    src/test/unit/qmclient/client/qm_map_upload_response_test.cpp
+    src/test/unit/qmclient/music/qm_music_hook_protocol_test.cpp
+    src/test/contract/qmclient/ui/qm_ui_presentation_contract_test.cpp
+    src/test/unit/qmclient/ui/QmUiTokensTest.cpp
+    src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
+    src/test/unit/qmclient/ui/qm_card_registry_test.cpp
+    src/test/unit/qmclient/client/qm_credits_layout_test.cpp
+    src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
+    src/test/unit/base/aio_test.cpp
+    src/test/unit/client/assets_editor_layout_test.cpp
+    src/test/unit/client/assets_preview_scale_test.cpp
+    src/test/contract/qmclient/settings/assets_preview_scale_contract_test.cpp
+    src/test/unit/client/assets_resource_migration_test.cpp
+    src/test/unit/client/assets_resource_registry_test.cpp
+    src/test/unit/client/audio_pack_editor_test.cpp
+    src/test/unit/base/bezier_test.cpp
+    src/test/unit/client/binds_test.cpp
+    src/test/unit/engine/blocklist_driver_test.cpp
+    src/test/unit/base/bytes_be_test.cpp
+    src/test/unit/engine/chunk_header_test.cpp
+    src/test/unit/client/color_test.cpp
+    src/test/contract/base/color_contract_test.cpp
+    src/test/unit/engine/compression_test.cpp
+    src/test/unit/engine/console_test.cpp
+    src/test/unit/engine/csv_test.cpp
+    src/test/unit/engine/datafile_test.cpp
+    src/test/unit/base/dbg_test.cpp
+    src/test/contract/base/ddnet_19_9_sync_contract_test.cpp
+    src/test/unit/engine/demo_player_test.cpp
+    src/test/unit/engine/editor_test.cpp
+    src/test/unit/base/fs_test.cpp
+    src/test/unit/server/gameworld_test.cpp
+    src/test/unit/base/gameinfo_ex_test.cpp
+    src/test/unit/base/git_revision_test.cpp
+    src/test/contract/engine/graphics/graphics_backend_contract_test.cpp
+    src/test/unit/engine/graphics/graphics_backend_policy_test.cpp
+    src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
+    src/test/unit/engine/graphics/graphics_command_batch_test.cpp
+    src/test/unit/base/hash_test.cpp
+    src/test/unit/engine/huffman_test.cpp
+    src/test/contract/base/http_shutdown_lifecycle_contract_test.cpp
+    src/test/unit/engine/image_test.cpp
+    src/test/unit/base/io_test.cpp
+    src/test/contract/base/ios_runtime_contract_test.cpp
+    src/test/unit/engine/jobs_test.cpp
+    src/test/unit/engine/json_test.cpp
+    src/test/unit/engine/jsonwriter_test.cpp
+    src/test/unit/client/keyword_reply_rules_test.cpp
+    src/test/unit/engine/logger_test.cpp
+    src/test/unit/client/map_difficulty_catalog_test.cpp
+    src/test/unit/client/map_history_test.cpp
+    src/test/unit/engine/map_load_test.cpp
+    src/test/unit/engine/linereader_test.cpp
+    src/test/unit/base/mapbugs_test.cpp
+    src/test/unit/base/mapitems_test.cpp
+    src/test/unit/base/math_test.cpp
+    src/test/contract/engine/graphics/metal_backend_contract_test.cpp
+    src/test/unit/engine/graphics/metal_backend_runtime_test.cpp
+    src/test/unit/engine/graphics/metal_frame_state_test.cpp
+    src/test/unit/engine/graphics/metal_render_target_state_test.cpp
+    src/test/unit/engine/graphics/metal_types_test.cpp
+    src/test/unit/base/mem_test.cpp
+    src/test/unit/server/mutes_test.cpp
+    src/test/unit/engine/name_ban_test.cpp
+    src/test/unit/engine/net_test.cpp
+    src/test/contract/base/net_protocol_contract_test.cpp
+    src/test/unit/base/netaddr_test.cpp
+    src/test/unit/engine/network_test.cpp
+    src/test/unit/base/os_test.cpp
+    src/test/unit/engine/packer_test.cpp
+    src/test/unit/base/prng_test.cpp
+    src/test/unit/qmclient/client/qm_bind_editor_console_test.cpp
+    src/test/unit/qmclient/client/qm_bind_editor_test.cpp
+    src/test/unit/qmclient/client/qm_background_particles_test.cpp
+    src/test/unit/qmclient/client/qm_axiom_scores_test.cpp
+    src/test/contract/qmclient/client/qm_axiom_scores_contract_test.cpp
+    src/test/unit/qmclient/client/qm_chat_emoji_test.cpp
+    src/test/unit/qmclient/client/qm_chat_interactions_test.cpp
+    src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp
+    src/test/unit/qmclient/client/qm_chat_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_console_log_filter_test.cpp
+    src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp
+    src/test/unit/qmclient/client/qm_tclient_warlist_test.cpp
+    src/test/contract/qmclient/client/qm_chat_contract_test.cpp
+    src/test/contract/qmclient/client/qm_chat_message_merge_contract_test.cpp
+    src/test/unit/qmclient/client/qm_gores_mode_test.cpp
+    src/test/unit/qmclient/client/qm_hammer_hit_detection_test.cpp
+    src/test/unit/qmclient/client/qm_water_hammer_indicator_test.cpp
+    src/test/unit/qmclient/client/qm_demo_display_test.cpp
+    src/test/unit/qmclient/client/qm_demo_ui_test.cpp
+    src/test/unit/client/online_replay_player_test.cpp
+    src/test/unit/qmclient/client/qm_jump_hint_utils_test.cpp
+    src/test/unit/qmclient/client/qm_hud_hook_countdown_test.cpp
+    src/test/contract/qmclient/ui/qm_media_island_shader_contract_test.cpp
+    src/test/unit/qmclient/client/qm_media_island_render_params_test.cpp
+    src/test/unit/qmclient/client/qm_media_island_content_test.cpp
+    src/test/unit/qmclient/client/qm_media_island_satellite_test.cpp
+    src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
+    src/test/unit/qmclient/client/qm_media_island_track_state_test.cpp
+    src/test/unit/qmclient/client/qm_media_island_layout_test.cpp
+    src/test/contract/qmclient/client/qm_hud_media_island_contract_test.cpp
+    src/test/unit/qmclient/client/qm_hud_frozen_tee_state_test.cpp
+    src/test/unit/qmclient/client/qm_hud_recording_presentation_test.cpp
+    src/test/contract/qmclient/client/qm_vulkan_enhanced_contract_test.cpp
+    src/test/unit/qmclient/client/qm_vulkan_enhanced_test.cpp
+    src/test/unit/qmclient/client/qm_hud_notifications_catalog_test.cpp
+    src/test/unit/qmclient/client/qm_hud_notifications_formatting_test.cpp
+    src/test/unit/qmclient/client/qm_hud_notifications_state_test.cpp
+    src/test/unit/qmclient/client/qm_hud_notifications_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_hud_notifications_geometry_test.cpp
+    src/test/unit/qmclient/client/qm_hud_notifications_rules_test.cpp
+    src/test/contract/qmclient/client/qm_hud_notifications_contract_test.cpp
+    src/test/unit/qmclient/client/qm_hud_notifications_legacy_contract_test.cpp
+    src/test/contract/qmclient/client/qm_hud_editor_contract_test.cpp
+    src/test/unit/qmclient/client/country_flag_anim_start_time_test.cpp
+    src/test/contract/qmclient/client/qm_ime_platform_contract_test.cpp
+    src/test/unit/qmclient/client/qm_ime_platform_test.cpp
+    src/test/unit/qmclient/ui/qm_ui_scale_test.cpp
+    src/test/unit/qmclient/client/qm_localization_policy_test.cpp
+    src/test/unit/qmclient/client/qm_storage_path_test.cpp
+    src/test/unit/qmclient/client/qm_camera_effects_test.cpp
+    src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
+    src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
+    src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp
+    src/test/unit/qmclient/ui/qm_tooltip_ownership_test.cpp
+    src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_ui_scale_contract_test.cpp
+    src/test/contract/qmclient/client/qm_camera_aspect_ratio_contract_test.cpp
+    src/test/contract/qmclient/settings/settings_card_translation_contract_test.cpp
+    src/test/contract/qmclient/settings/settings_player_info_contract_test.cpp
+    src/test/unit/qmclient/settings/settings_page_layout_test.cpp
+    src/test/unit/qmclient/settings/settings_tee_emote_slider_test.cpp
+    src/test/unit/qmclient/client/qm_plausible_sizes_contract_test.cpp
+    src/test/unit/qmclient/client/qm_tclient_statusbar_score_contract_test.cpp
+    src/test/contract/qmclient/client/qm_tclient_statusbar_contract_test.cpp
+    src/test/contract/qmclient/client/qm_tclient_warlist_contract_test.cpp
+    src/test/contract/qmclient/client/qm_graphics_shutdown_contract_test.cpp
+    src/test/unit/qmclient/client/qm_crashdump_shutdown_suppression_test.cpp
+    src/test/contract/qmclient/client/qm_graphics_backend_fallback_contract_test.cpp
+    src/test/unit/qmclient/client/qm_graphics_opengl_probe_contract_test.cpp
+    src/test/unit/qmclient/client/qm_font_category_test.cpp
+    src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
+    src/test/unit/qmclient/client/qm_demo_cut_test.cpp
+    src/test/contract/qmclient/client/qm_screenshot_gallery_contract_test.cpp
+    src/test/unit/qmclient/client/qm_local_saves_test.cpp
+    src/test/contract/qmclient/client/qm_localization_contract_test.cpp
+    src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_hitbox_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_cards_deck_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_cards_catalogue_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_cards_warlist_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_gameplay_prediction_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_gameplay_hud_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_gameplay_scoreboard_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_gameplay_blur_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_gameplay_social_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_localization_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_render_engine_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_render_browser_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_render_dropdown_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_render_settings_pages_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_render_surface_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_settings_config_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_settings_nameplate_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_settings_textinput_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_shell_chrome_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_shell_browser_contract_test.cpp
+    src/test/contract/qmclient/ui/qm_new_ui_menu_shell_settings_contract_test.cpp
+    src/test/unit/client/ddnet_19_9_sync_test.cpp
+    src/test/unit/qmclient/client/qm_update_arguments_test.cpp
+    src/test/unit/qmclient/music/netease_lyric_parser_test.cpp
+    src/test/unit/qmclient/music/netease_lyric_timeline_test.cpp
+    src/test/unit/qmclient/music/netease_lyric_state_test.cpp
+    src/test/unit/qmclient/music/netease_shared_memory_test.cpp
+    src/test/unit/qmclient/music/qm_netease_hook_protocol_test.cpp
+    src/test/unit/qmclient/music/qm_music_app_watcher_test.cpp
+    src/test/unit/qmclient/music/qm_qqmusic_protocol_test.cpp
+    src/test/unit/qmclient/music/qm_music_transport_test.cpp
+    src/test/unit/qmclient/music/qm_kugou_protocol_test.cpp
+    src/test/unit/qmclient/music/qm_kugou_patch_test.cpp
+    src/test/unit/qmclient/music/qm_music_registry_test.cpp
+    src/test/unit/qmclient/music/music_lyrics_krc_test.cpp
+    src/test/unit/qmclient/music/music_lyrics_qrc_test.cpp
+    src/test/unit/qmclient/music/qm_spotify_crypto_test.cpp
+    src/test/unit/qmclient/music/qm_spotify_token_test.cpp
+    src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
+    src/test/unit/qmclient/client/qm_modes_test.cpp
+    src/test/unit/qmclient/client/qm_map_progress_test.cpp
+    src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
+    src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
+    src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
+    src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
+    src/test/unit/qmclient/client/qm_tee_trail_test.cpp
+    src/test/unit/qmclient/client/qm_sponsor_authors_test.cpp
+    src/test/unit/qmclient/client/qm_sponsors_test.cpp
+    src/test/unit/qmclient/client/qm_markdown_test.cpp
+    src/test/unit/qmclient/client/qm_markdown_broadcast_test.cpp
+    src/test/unit/qmclient/client/qm_emoticon_projectile_test.cpp
+    src/test/unit/qmclient/client/qm_realtime_test.cpp
+    src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
+    src/test/unit/engine/websocket_client_test.cpp
+    src/test/unit/qmclient/client/qm_map_upload_test.cpp
+    src/test/unit/qmclient/client/qm_title_style_test.cpp
+    src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
+    src/test/unit/qmclient/client/qm_skin_outline_test.cpp
+    src/test/unit/qmclient/client/qm_scoreboard_skin_test.cpp
+    src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp
+    src/test/unit/qmclient/client/qm_rank_demo_manifest_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_version_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_manifest_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
+    src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_graphics_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_metrics_contract_test.cpp
+    src/test/integration/qmclient/monitoring/qm_menu_ui_perf_logging_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_misc_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_persistence_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_settings_structure_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_settings_plan_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_settings_perf_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_text_runtime_contract_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_motd_contract_test.cpp
+    src/test/unit/qmclient/monitoring/qmclient_monitoring_runtime_test.cpp
+    src/test/contract/qmclient/monitoring/qmclient_monitoring_font_store_contract_test.cpp
+    src/test/unit/client/race_test.cpp
+    src/test/unit/server/score_test.cpp
+    src/test/unit/engine/storage_replace_test.cpp
+    src/test/unit/client/section_loader_test.cpp
+    src/test/contract/qmclient/settings/section_loader_cleanup_contract_test.cpp
+    src/test/unit/client/swap_countdown_message_test.cpp
+    src/test/unit/base/secure_random_test.cpp
+    src/test/unit/engine/server_test.cpp
+    src/test/unit/engine/serverbrowser_country_filter_test.cpp
+    src/test/unit/client/serverbrowser_test.cpp
+    src/test/unit/engine/serverinfo_test.cpp
+    src/test/unit/qmclient/settings/settings_card_collapse_state_test.cpp
+    src/test/unit/qmclient/settings/settings_card_collapse_config_test.cpp
+    src/test/unit/client/pie_menu_logic_test.cpp
+    src/test/unit/client/pie_menu_points_test.cpp
+    src/test/unit/qmclient/client/qm_collision_hitbox_geometry_test.cpp
+    src/test/unit/qmclient/settings/settings_form_state_test.cpp
+    src/test/unit/qmclient/settings/settings_card_surface_geometry_test.cpp
+    src/test/unit/qmclient/settings/settings_card_placement_test.cpp
+    src/test/unit/qmclient/client/qm_weapon_trajectory_test.cpp
+    src/test/unit/qmclient/client/qm_screenshot_watermark_test.cpp
+    src/test/unit/qmclient/client/qm_friend_menu_policy_test.cpp
+    src/test/unit/qmclient/ui/qm_rounded_surface_matrix_test.cpp
+    src/test/contract/qmclient/settings/settings_resource_jobs_assets_contract_test.cpp
+    src/test/unit/qmclient/settings/settings_resource_jobs_assets_test.cpp
+    src/test/unit/qmclient/settings/settings_resource_jobs_skin_plan_test.cpp
+    src/test/unit/qmclient/settings/settings_resource_jobs_skin_throughput_test.cpp
+    src/test/unit/qmclient/settings/settings_resource_jobs_adaptive_budget_test.cpp
+    src/test/unit/qmclient/settings/settings_resource_jobs_background_test.cpp
+    src/test/unit/qmclient/settings/settings_loading_prewarm_test.cpp
+    src/test/unit/qmclient/settings/settings_skin_plan_test.cpp
+    src/test/unit/qmclient/settings/settings_skin_preview_test.cpp
+    src/test/unit/qmclient/settings/settings_card_order_revision_test.cpp
+    src/test/unit/qmclient/settings/settings_card_order_drop_test.cpp
+    src/test/unit/qmclient/settings/settings_card_interaction_test.cpp
+    src/test/unit/qmclient/settings/settings_card_animation_test.cpp
+    src/test/unit/qmclient/settings/settings_card_view_key_test.cpp
+    src/test/unit/qmclient/settings/settings_country_flag_plan_test.cpp
+    src/test/unit/qmclient/settings/settings_resource_budget_test.cpp
+    src/test/unit/qmclient/settings/settings_asset_loading_test.cpp
+    src/test/unit/qmclient/settings/settings_asset_preview_budget_test.cpp
+    src/test/unit/qmclient/settings/settings_asset_preview_lifecycle_test.cpp
+    src/test/unit/qmclient/settings/settings_asset_priority_test.cpp
+    src/test/unit/qmclient/settings/settings_asset_admission_test.cpp
+    src/test/unit/qmclient/settings/settings_resource_visible_range_test.cpp
+    src/test/unit/qmclient/settings/settings_runtime_cache_test.cpp
+    src/test/unit/qmclient/settings/settings_warmup_test.cpp
+    src/test/contract/qmclient/settings/settings_warmup_loading_contract_test.cpp
+    src/test/contract/qmclient/settings/settings_warmup_tclient_contract_test.cpp
+    src/test/contract/qmclient/settings/settings_warmup_layout_contract_test.cpp
+    src/test/contract/qmclient/settings/settings_warmup_cleanup_contract_test.cpp
+    src/test/unit/client/skins/skin_transition_test.cpp
+    src/test/unit/client/skins/skins_test.cpp
+    src/test/unit/client/skins/skins_preview_layers_test.cpp
+    src/test/contract/client/skins/skins_resource_contract_test.cpp
+    src/test/contract/client/skins/skins_render_contract_test.cpp
+    src/test/contract/client/skins/skins_queue_contract_test.cpp
+    src/test/contract/client/skins/skins_preview_contract_test.cpp
+    src/test/contract/client/skins/skins_preset_contract_test.cpp
+    src/test/contract/client/skins/skins_official_index_contract_test.cpp
+    src/test/contract/engine/graphics/render_target_contract_test.cpp
+    src/test/unit/engine/graphics/render_target_policy_test.cpp
+    src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
+    src/test/unit/base/windows_test.cpp
+    src/test/unit/engine/netobj_secure_unpack_test.cpp
+    src/test/unit/engine/snapshot_test.cpp
+    src/test/contract/base/steam_presence_contract_test.cpp
+    src/test/unit/engine/str_search_test.cpp
+    src/test/unit/engine/str_utf8_test.cpp
+    src/test/unit/engine/str_format_test.cpp
+    src/test/unit/engine/str_codec_test.cpp
+    src/test/unit/engine/str_copy_test.cpp
+    src/test/unit/engine/str_whitespace_test.cpp
+    src/test/unit/engine/str_filename_test.cpp
+    src/test/unit/engine/str_integer_packing_test.cpp
+    src/test/unit/engine/strip_path_and_extension_test.cpp
+    src/test/unit/base/swap_endian_test.cpp
+    src/test/unit/server/teehistorian_test.cpp
+    src/test/unit/engine/graphics/text_container_lifetime_test.cpp
+    src/test/unit/engine/graphics/text_layout_string_test.cpp
+    src/test/unit/engine/graphics/text_sweep_test.cpp
+    src/test/unit/qmclient/client/qm_nameplate_effect_lod_test.cpp
+    src/test/unit/qmclient/client/qm_scoreboard_footer_test.cpp
+    src/test/unit/engine/graphics/glyph_outline_test.cpp
+    src/test/unit/qmclient/client/qm_nameplate_density_test.cpp
+    src/test/unit/engine/graphics/glyph_lookup_cache_test.cpp
+    src/test/unit/engine/graphics/font_size_cache_test.cpp
+    src/test/unit/qmclient/client/qm_hook_coll_intersection_test.cpp
+    src/test/unit/qmclient/client/qm_chat_avatar_test.cpp
+    src/test/unit/qmclient/client/qm_chat_export_test.cpp
+    src/test/unit/qmclient/client/qm_chat_log_jobs_test.cpp
+    src/test/test.cpp
+    src/test/test.h
+    src/test/unit/client/theme_scan_test.cpp
+    src/test/unit/base/thread_test.cpp
+    src/test/unit/base/time_test.cpp
+    src/test/unit/base/timestamp_test.cpp
+    src/test/integration/qmclient/translate/translate_backend_test.cpp
+    src/test/support/translate_http_test_support.h
+    src/test/unit/qmclient/translate/translate_detect_test.cpp
+    src/test/unit/qmclient/translate/translate_history_test.cpp
+    src/test/integration/qmclient/translate/translate_jobs_integration_test.cpp
+    src/test/unit/qmclient/translate/translate_responses_test.cpp
+    src/test/unit/qmclient/translate/translate_llm_parse_test.cpp
+    src/test/unit/base/unix_test.cpp
+    src/test/unit/engine/uuid_test.cpp
+    src/test/unit/base/vmath_test.cpp
+    src/test/unit/client/voice_core_test.cpp
+    src/test/unit/client/voice_sequence_test.cpp
+    src/test/unit/client/voice_qmclient_test.cpp
+    src/test/unit/client/voice_packet_utils_test.cpp
+    src/test/unit/client/voice_state_utils_test.cpp
+    src/test/unit/client/voice_processing_utils_test.cpp
+    src/test/unit/client/voice_audio_utils_test.cpp
+    src/test/unit/client/voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
@@ -4806,18 +4861,19 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
     src/game/client/components/jump_hint_utils.cpp
-    src/test/render_tee_offset_helpers.cpp
+    src/test/support/render_tee_offset_helpers.cpp
     src/game/client/components/section_loader.cpp
     src/game/client/components/settings_runtime_cache.cpp
     src/game/client/components/settings_resource_jobs.cpp
     src/game/client/components/settings_warmup.cpp
     src/game/client/ui_rect.cpp
     src/game/client/QmUi/UiSurface.cpp
-    src/test/ui_rect_test_helpers.cpp
+    src/test/support/ui_rect_test_helpers.cpp
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmAnimationBackend.cpp
     src/game/client/QmUi/QmAnimResolve.cpp
     src/game/client/QmUi/QmLayout.cpp
+    src/game/client/QmUi/QmUiPerf.cpp
     src/game/client/QmUi/UiFormLogic.cpp
     src/game/client/QmUi/UiDiscreteSliderLogic.cpp
     src/game/client/QmUi/QmCardOrderModel.cpp
@@ -4840,7 +4896,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/hammer_hit_detection.cpp
     src/game/client/components/qmclient/axiom_scores.cpp
     src/game/client/components/qmclient/axiom_scores_data.cpp
-    src/test/ui_test_stubs.cpp
+    src/test/support/ui_test_stubs.cpp
     src/game/client/components/qmclient/monitoring/monitoring_device_perf.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_krc.cpp
     src/game/client/components/qmclient/music_lyrics/music_lyrics_qrc.cpp
@@ -4896,7 +4952,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   )
   # Windows 专用：bootstrap 无跨平台实现（winsock2/CreateFileW），仅 Windows 编入 testrunner
   if(TARGET_OS STREQUAL "windows")
-    list(APPEND TESTS src/test/qm_netease_cdp_test.cpp)
+    list(APPEND TESTS src/test/unit/qmclient/music/qm_netease_cdp_test.cpp)
     list(APPEND TESTS_EXTRA
       src/qm/hooks/netease/qm_netease_bootstrap.cpp
       src/qm/hooks/netease/qm_netease_cdp.cpp
@@ -4960,24 +5016,24 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
   if(QM_NMT_GTEST_MAIN_TARGET AND TARGET_OS STREQUAL "windows")
     add_executable(qm-nmt-tests EXCLUDE_FROM_ALL
-      src/test/music_lyrics_krc_test.cpp
-      src/test/music_lyrics_qrc_test.cpp
-      src/test/qm_soda_lyric_file_test.cpp
-      src/test/qm_soda_probe_test.cpp
-      src/test/qm_soda_protocol_test.cpp
-      src/test/netease_lyric_parser_test.cpp
-      src/test/netease_lyric_state_test.cpp
-      src/test/netease_lyric_timeline_test.cpp
-      src/test/netease_shared_memory_test.cpp
-      src/test/qm_netease_hook_protocol_test.cpp
-      src/test/qm_spotify_crypto_test.cpp
-      src/test/qm_spotify_token_test.cpp
-      src/test/qm_spotify_parser_test.cpp
-      src/test/qm_qqmusic_protocol_test.cpp
-      src/test/qm_music_transport_test.cpp
-      src/test/qm_kugou_protocol_test.cpp
-      src/test/qm_kugou_patch_test.cpp
-      src/test/qm_music_registry_test.cpp
+      src/test/unit/qmclient/music/music_lyrics_krc_test.cpp
+      src/test/unit/qmclient/music/music_lyrics_qrc_test.cpp
+      src/test/unit/qmclient/music/qm_soda_lyric_file_test.cpp
+      src/test/unit/qmclient/music/qm_soda_probe_test.cpp
+      src/test/unit/qmclient/music/qm_soda_protocol_test.cpp
+      src/test/unit/qmclient/music/netease_lyric_parser_test.cpp
+      src/test/unit/qmclient/music/netease_lyric_state_test.cpp
+      src/test/unit/qmclient/music/netease_lyric_timeline_test.cpp
+      src/test/unit/qmclient/music/netease_shared_memory_test.cpp
+      src/test/unit/qmclient/music/qm_netease_hook_protocol_test.cpp
+      src/test/unit/qmclient/music/qm_spotify_crypto_test.cpp
+      src/test/unit/qmclient/music/qm_spotify_token_test.cpp
+      src/test/unit/qmclient/music/qm_spotify_parser_test.cpp
+      src/test/unit/qmclient/music/qm_qqmusic_protocol_test.cpp
+      src/test/unit/qmclient/music/qm_music_transport_test.cpp
+      src/test/unit/qmclient/music/qm_kugou_protocol_test.cpp
+      src/test/unit/qmclient/music/qm_kugou_patch_test.cpp
+      src/test/unit/qmclient/music/qm_music_registry_test.cpp
       src/qm/hooks/soda/qm_soda_probe.cpp
       src/qm/hooks/soda/qm_soda_protocol.cpp
       src/game/client/components/qmclient/music_lyrics/qm_soda_lyric_file.cpp
@@ -4987,6 +5043,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/components/qmclient/music_lyrics/qm_spotify_token.cpp
       src/game/client/components/qmclient/music_lyrics/qm_spotify_parser.cpp
       src/qm/music/qm_music_publication.cpp
+      src/qm/music/qm_kugou_protocol.cpp
+      src/qm/music/qm_qqmusic_protocol.cpp
+      src/test/support/music_config_test_support.cpp
       src/game/client/components/qmclient/netease/netease_lyric_parser.cpp
       src/game/client/components/qmclient/netease/netease_lyric_state.cpp
       src/game/client/components/qmclient/netease/netease_lyric_timeline.cpp
@@ -5006,7 +5065,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     target_link_libraries(qm-nmt-tests ${QM_NMT_GTEST_MAIN_TARGET})
     if(TARGET_OS STREQUAL "windows")
       target_sources(qm-nmt-tests PRIVATE
-        src/test/qm_netease_cdp_test.cpp
+        src/test/unit/qmclient/music/qm_netease_cdp_test.cpp
         src/qm/hooks/netease/qm_netease_bootstrap.cpp
         src/qm/hooks/netease/qm_netease_cdp_client.cpp
       )
@@ -5027,10 +5086,17 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   list(APPEND TARGETS_OWN ${TARGET_TESTRUNNER})
   list(APPEND TARGETS_LINK ${TARGET_TESTRUNNER})
 
+  # Windows 的独立音乐目标也必须进入日常 C++ gate，避免只有注册却从未执行。
+  set(CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS})
+  set(CXX_TEST_DEPENDS ${TARGET_TESTRUNNER})
+  if(TARGET qm-nmt-tests)
+    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-nmt-tests> ${TESTRUNNER_ARGS})
+    list(APPEND CXX_TEST_DEPENDS qm-nmt-tests)
+  endif()
   add_custom_target(run_cxx_tests
-    COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS}
+    ${CXX_TEST_COMMANDS}
     COMMENT Running unit tests
-    DEPENDS ${TARGET_TESTRUNNER}
+    DEPENDS ${CXX_TEST_DEPENDS}
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     USES_TERMINAL
   )

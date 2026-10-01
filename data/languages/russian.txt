@@ -827,6 +827,9 @@ Apply a writable preset and edit first
 Apply Changes
 == Применить изменения
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== Размывать фон подокон и выпадающих списков
+
 Apply input early before next tick for prediction
 == Применять ввод заранее до следующего тика для предсказания
 
@@ -1603,6 +1606,12 @@ Button - Disabled
 
 Button - Enabled
 == Кнопка - Включена
+
+Button background color
+== Цвет фона кнопок
+
+Button background opacity percentage
+== Цвет фона кнопок — непрозрачность в процентах
 
 Button browser
 == Браузер кнопок
@@ -2686,6 +2695,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Пользовательское название модели провайдера
+
+Custom text color
+== Пользовательский цвет текста
 
 Custom title
 == Свой титул
@@ -3809,6 +3821,9 @@ Enable fat skin
 Enable freeze call sound
 == Включить звук вызова заморозки
 
+Enable frosted glass blur behind secondary popups and dropdowns
+== Включить размытие фона подокон и списков
+
 Enable FTAPI auto-translate (may overload the service)
 == Включить автоперевод FTAPI (может перегрузить сервис)
 
@@ -4244,6 +4259,12 @@ Existing Player
 Exit replay view
 == Выйти из просмотра реплея
 
+Expanded dropdown background color
+== Цвет фона раскрытого списка
+
+Expanded dropdown background opacity percentage
+== Цвет фона раскрытого списка — непрозрачность в процентах
+
 Export
 == Экспорт
 
@@ -4555,6 +4576,9 @@ Font cursor
 
 Font size
 == Размер шрифта
+
+Font store
+== Магазин шрифтов
 
 Font store:
 == Магазин шрифтов:
@@ -5605,6 +5629,12 @@ Initializing map logic
 
 Input
 == Ввод
+
+Input background color
+== Цвет фона полей ввода
+
+Input background opacity percentage
+== Цвет фона полей ввода — непрозрачность в процентах
 
 Input device
 == Устройство ввода
@@ -8330,6 +8360,9 @@ Points unavailable
 Polished
 == Глянец
 
+Popup & dropdown blur
+== Размытие окон и списков
+
 Popup animation
 == Анимация всплытия
 
@@ -9956,6 +9989,9 @@ Search
 Search and navigate settings
 == Поиск и переход к настройкам
 
+Search country flag…
+== Поиск флага страны…
+
 Search donor asset
 == Поиск ресурса донора
 
@@ -9988,6 +10024,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == Вторичная
+
+Secondary menu background color
+== Цвет фона подменю
+
+Secondary menu background opacity percentage
+== Цвет фона подменю — непрозрачность в процентах
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == Секунд ожидания перед переподключением (0 = выкл., когда сервер полон)
@@ -10093,9 +10135,6 @@ Send Rate
 
 Send specified command to rcon
 == Отправить указанную команду в rcon
-
-Send target language
-== Отправить целевой язык
 
 Send translation method
 == Способ отправки перевода
@@ -12349,6 +12388,12 @@ Text alpha
 
 Text color
 == Цвет текста
+
+Text color mode
+== Режим цвета текста
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== Режим цвета текста: 0 авто, 1 белый, 2 черный, 3 свой
 
 Text effect
 == Эффект текста

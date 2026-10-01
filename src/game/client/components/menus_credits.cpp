@@ -238,7 +238,13 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 			for(int Tab = 0; Tab < CREDITS_SETTINGS_TAB_NUM; ++Tab)
 			{
 				if(DoButton_MenuTab(&s_aPageTabs[Tab], apCreditsTabNames[Tab], m_CreditsSettingsTab == Tab, &aTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true) && !ReadOnly)
-					m_CreditsSettingsTab = Tab;
+				{
+					if(m_CreditsSettingsTab != Tab)
+					{
+						m_CreditsSettingsTab = Tab;
+						m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
+					}
+				}
 			}
 		}
 		else
@@ -250,7 +256,13 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 						    Tab == CREDITS_SETTINGS_TAB_NUM - 1 ? IGraphics::CORNER_R :
 											  IGraphics::CORNER_NONE;
 				if(DoButton_MenuTab(&s_aPageTabs[Tab], apCreditsTabNames[Tab], m_CreditsSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
-					m_CreditsSettingsTab = Tab;
+				{
+					if(m_CreditsSettingsTab != Tab)
+					{
+						m_CreditsSettingsTab = Tab;
+						m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
+					}
+				}
 			}
 		}
 	}

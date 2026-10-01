@@ -56,7 +56,7 @@ class CSpectator : public CComponent
 	void SpectateNext(bool Reverse);
 	// QmClient：按编号查找传送点，以及承载它的输入行 UI。
 	void FindTele();
-	void RenderTeleSearch(vec2 Center, float Alpha, bool MousePressed);
+	void RenderTeleSearch(vec2 Center, const CUIRect &RowRect, const CUIRect &StatusRect, float Alpha, bool MousePressed);
 	// 在线回放使用正常旁观选择器与共用 demo 播放 HUD。
 	bool GhostFreeCameraCanPan() const;
 	COnlineReplayUiState m_ReplayUi;

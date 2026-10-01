@@ -284,6 +284,7 @@ private:
 		unsigned m_EchoColor = 0;
 		bool m_HasEchoColor = false;
 		int m_RepeatCount = 1;
+		float m_VisualY = -1.0f;
 	};
 
 	struct SEditorPreviewMetrics

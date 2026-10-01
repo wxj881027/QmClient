@@ -390,12 +390,30 @@ void CCountryFlags::Render(const CCountryFlag &Flag, ColorRGBA Color, float x, f
 		ColorRGBA RenderColor = Color;
 
 		const bool AnimEnabled = g_Config.m_QmCountryFlagAnim != 0 && g_Config.m_QmUiMotionLevel > 0;
-		const int64_t AnimationStartTime = CustomStartTime > 0 ? CustomStartTime : Flag.m_LoadedTimestamp;
+		const bool MeasurePass = Ui()->RenderOnly();
+		const int64_t Now = time_get();
+		const float Duration = g_Config.m_QmUiMotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
+		const float Overshoot = g_Config.m_QmUiMotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT;
+		int64_t AnimationStartTime = 0;
+		if(AnimEnabled && !MeasurePass)
+		{
+			if(CustomStartTime > 0)
+			{
+				AnimationStartTime = CustomStartTime;
+			}
+			else
+			{
+				const int64_t Gap = Now - Flag.m_LastRenderTimestamp;
+				const bool Reappeared = Flag.m_LastRenderTimestamp <= 0 || Gap >= (int64_t)(COUNTRY_FLAG_ANIM_REAPPEAR_GAP * time_freq());
+				if(Reappeared)
+					Flag.m_AnimStartTimestamp = Now;
+				if(Flag.m_AnimStartTimestamp > 0 && (Now - Flag.m_AnimStartTimestamp) / (float)time_freq() < Duration)
+					AnimationStartTime = Flag.m_AnimStartTimestamp;
+			}
+			Flag.m_LastRenderTimestamp = Now;
+		}
 		if(AnimEnabled && AnimationStartTime > 0)
 		{
-			const float Duration = g_Config.m_QmUiMotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
-			const float Overshoot = g_Config.m_QmUiMotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT;
-			const int64_t Now = time_get();
 			if(Now < AnimationStartTime)
 				return;
 			const float Elapsed = (Now - AnimationStartTime) / (float)time_freq();

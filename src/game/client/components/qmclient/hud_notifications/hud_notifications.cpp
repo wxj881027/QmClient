@@ -12,6 +12,7 @@
 #include <game/localization.h>
 
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -316,7 +317,26 @@ void CQmHudNotifications::RenderNotifications(const CUIRect &BaseRect, const CUI
 		const float NaturalBoxW = maximum(MinBoxWidth, TextBox.m_W + RepeatGap + RepeatTextBox.m_W + PaddingX * 2.0f);
 		const float BoxW = QmHudNotifications::NotificationBoxWidth(BaseRect, NaturalBoxW);
 		const float BoxH = maximum(FontSize + PaddingY * 2.0f, TextBox.m_H + PaddingY * 2.0f);
-		CUIRect Box = {QmHudNotifications::NotificationBoxX(BaseRect, BoxW, Flow, OffsetX), Y, BoxW, BoxH};
+
+		// onetake Reflow 顺滑续接：位置变动时平滑吸附到目标 Y，消除列表项消除时的硬跳（帧率无关阻尼）
+		float RenderY = Y;
+		if(!PreviewContent && !StableEditorGeometry)
+		{
+			SNotification *pMutable = const_cast<SNotification *>(apVisible[i]);
+			if(pMutable->m_VisualY < 0.0f)
+				pMutable->m_VisualY = Y;
+			else
+			{
+				const float Dt = std::clamp(Client()->RenderFrameTime(), 0.001f, 0.1f);
+				const float Blend = 1.0f - std::exp(-15.0f * Dt);
+				pMutable->m_VisualY = pMutable->m_VisualY + (Y - pMutable->m_VisualY) * Blend;
+				if(std::fabs(Y - pMutable->m_VisualY) < 0.2f)
+					pMutable->m_VisualY = Y;
+			}
+			RenderY = pMutable->m_VisualY;
+		}
+
+		CUIRect Box = {QmHudNotifications::NotificationBoxX(BaseRect, BoxW, Flow, OffsetX), RenderY, BoxW, BoxH};
 		const float CornerRadius = minimum(6.0f, BoxH / 2.0f);
 		Box.Draw(ApplyAlpha(BgColor, Alpha), IGraphics::CORNER_ALL, CornerRadius);
 

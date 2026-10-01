@@ -7,6 +7,7 @@
 #include "UiFormLogic.h"
 #include "UiMotion.h"
 #include "UiSurface.h"
+#include "UiSurfaceText.h"
 #include "UiTheme.h"
 
 #include <engine/graphics.h>
@@ -51,7 +52,7 @@ namespace ui_widget
 			const SUiTheme Theme = ThemeFor(Ctx);
 			ColorRGBA Border = Theme.m_Border;
 			Border.a = std::max(Border.a, 0.24f);
-			DrawRoundedSurface(Ctx, Rect, Ctx.m_pUi->ScaleBackgroundAlpha(Fill), Ctx.m_pUi->ScaleBackgroundAlpha(Border), Radius, 1.0f, Corners);
+			DrawRoundedSurface(Ctx, Rect, (g_Config.m_QmNewUi ? Fill : Ctx.m_pUi->ScaleBackgroundAlpha(Fill)), Ctx.m_pUi->ScaleBackgroundAlpha(Border), Radius, 1.0f, Corners);
 		}
 
 		bool NumericFieldTextIsInfinite(const char *pText)
@@ -71,7 +72,7 @@ namespace ui_widget
 			const SUiTheme &Theme = ThemeFor(Ctx);
 			ColorRGBA RingColor = Theme.m_FocusRing;
 			RingColor.a *= Alpha;
-			DrawRoundedSurface(Ctx, Rect, Ctx.m_pUi->ScaleBackgroundAlpha(Theme.m_InputSurface), Ctx.m_pUi->ScaleBackgroundAlpha(RingColor), ui_token::radius::BASE + Theme.m_FocusRingWidth, Theme.m_FocusRingWidth);
+			DrawRoundedSurface(Ctx, Rect, (g_Config.m_QmNewUi ? ResolveConfiguredInputSurface() : Ctx.m_pUi->ScaleBackgroundAlpha(Theme.m_InputSurface)), Ctx.m_pUi->ScaleBackgroundAlpha(RingColor), ui_token::radius::BASE + Theme.m_FocusRingWidth, Theme.m_FocusRingWidth);
 		}
 
 		void DrawTextFieldFocusBorder(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect)
@@ -217,7 +218,9 @@ namespace ui_widget
 			return Theme.m_BorderHovered.WithAlpha(std::clamp(Theme.m_BorderHovered.a * (State - 1.0f), 0.0f, 1.0f));
 		};
 		const bool Hovered = Ctx.m_pUi->HotItem() == pInput;
-		const ColorRGBA PlateColor = Hovered && !pInput->IsActive() ? Theme.m_SurfaceHovered : Theme.m_InputSurface;
+		const ColorRGBA PlateColor = g_Config.m_QmNewUi ? ResolveConfiguredInputSurface(Options.m_ProcessInput) : Hovered && !pInput->IsActive() ? Theme.m_SurfaceHovered :
+																			   Theme.m_InputSurface;
+		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), PlateColor);
 		DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE);
 		pInput->SetEmptyText(Options.m_pPlaceholder != nullptr ? Options.m_pPlaceholder : (Search ? Localize("Search") : nullptr));
 		if(!Options.m_ProcessInput)
@@ -238,7 +241,7 @@ namespace ui_widget
 		}
 		DrawTextFieldFocusBorder(Ctx, pInput, Layout.m_FocusRingRect, Options.m_Mode == EInputFieldMode::MULTILINE);
 
-		const ColorRGBA InputIconColor = ConfiguredQmUiIconColor(SQmIconStyle().Color(EQmIconState::NORMAL));
+		const ColorRGBA InputIconColor = ResolveUiSurfaceIconColor(PlateColor, ConfiguredQmUiIconColor(Ctx.m_pUi->TextRender()->GetTextColor()));
 		const char *pLeadingIcon = Options.m_pLeadingIcon != nullptr ? Options.m_pLeadingIcon : (Search ? FontIcons::FONT_ICON_MAGNIFYING_GLASS : nullptr);
 		const int LeadingQmIcon = Options.m_LeadingQmIcon >= 0 ? Options.m_LeadingQmIcon : (Search ? static_cast<int>(EQmIcon::SEARCH) : -1);
 		DrawInputFieldIcon(Ctx, Layout.m_IconRect, pLeadingIcon, InputIconColor, LeadingQmIcon);

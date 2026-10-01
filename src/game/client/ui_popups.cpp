@@ -2,8 +2,12 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmPopupPointer.h"
+#include "QmUi/QmPopupSource.h"
 #include "QmUi/QmUiPerf.h"
 #include "QmUi/UiSurface.h"
+#include "QmUi/UiSurfaceText.h"
+#include "QmUi/UiTheme.h"
+#include "QmUi/UiTokens.h"
 #include "components/qmclient/perf_logging.h"
 #include "ui.h"
 #include "ui_scrollregion.h"
@@ -26,7 +30,7 @@
 
 const CUIRect *CUi::GetPopupMenuRect(const SPopupMenuId *pId) const
 {
-	const auto PopupMenuIt = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
+	const auto PopupMenuIt = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing && PopupMenu.m_pId == pId; });
 	return PopupMenuIt == m_vPopupMenus.end() ? nullptr : &PopupMenuIt->m_Rect;
 }
 
@@ -34,14 +38,21 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 {
 	if(RenderOnly())
 		return;
-	if(Props.m_CenterInViewport)
+	SPopupMenuProperties ResolvedProps = Props;
+	if(g_Config.m_QmNewUi && ResolvedProps.m_CenterInViewport)
+	{
+		// 新版 UI 下，居中模态二级弹窗默认启用缩放入场动画与底层滚动阻断（对齐字体商店体验）
+		ResolvedProps.m_Animate = true;
+		ResolvedProps.m_BlockUnderlyingScroll = true;
+	}
+	if(ResolvedProps.m_CenterInViewport)
 	{
 		// 二级界面弹窗：在当前视口内居中，忽略调用点传入的锚定坐标；
 		// 之后的 AutoReposition 仍兜底弹窗超出视口的情形。
 		X = Screen()->x + (Screen()->w - Width) / 2.0f;
 		Y = Screen()->y + (Screen()->h - Height) / 2.0f;
 	}
-	if(Props.m_AutoReposition)
+	if(ResolvedProps.m_AutoReposition)
 	{
 		constexpr float Margin = SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN;
 		if(X + Width > Screen()->w - Margin)
@@ -53,7 +64,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	auto ExistingPopupMenu = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
 	if(ExistingPopupMenu != m_vPopupMenus.end())
 	{
-		ExistingPopupMenu->m_Props = Props;
+		ExistingPopupMenu->m_Props = ResolvedProps;
 		ExistingPopupMenu->m_Rect.x = X;
 		ExistingPopupMenu->m_Rect.y = Y;
 		ExistingPopupMenu->m_Rect.w = Width;
@@ -64,7 +75,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 		if(ExistingPopupMenu->m_Closing)
 		{
 			ExistingPopupMenu->m_Closing = false;
-			ExistingPopupMenu->m_OpenStart = Props.m_Animate ? Client()->LocalTime() : -1.0f;
+			ExistingPopupMenu->m_OpenStart = ResolvedProps.m_Animate ? Client()->LocalTime() : -1.0f;
 		}
 		return;
 	}
@@ -72,15 +83,15 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	m_vPopupMenus.emplace_back();
 	SPopupMenu *pNewMenu = &m_vPopupMenus.back();
 	pNewMenu->m_pId = pId;
-	pNewMenu->m_Props = Props;
+	pNewMenu->m_Props = ResolvedProps;
 	pNewMenu->m_Rect.x = X;
 	pNewMenu->m_Rect.y = Y;
 	pNewMenu->m_Rect.w = Width;
 	pNewMenu->m_Rect.h = Height;
 	pNewMenu->m_pContext = pContext;
 	pNewMenu->m_pfnFunc = pfnFunc;
-	pNewMenu->m_OpenStart = Props.m_Animate ? Client()->LocalTime() : -1.0f;
-	if(Props.m_BlockUnderlyingPointerInput)
+	pNewMenu->m_OpenStart = ResolvedProps.m_Animate ? Client()->LocalTime() : -1.0f;
+	if(ResolvedProps.m_BlockUnderlyingPointerInput)
 	{
 		if(CLineInput *pActiveInput = CLineInput::GetActiveInput())
 			pActiveInput->Deactivate();
@@ -93,6 +104,8 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 
 void CUi::RenderPopupMenus()
 {
+	// 禁用弹层模糊时，背景和分隔线的半透明绘制也不能触发自动背板模糊。
+	CUiScopedGaussianBlurSuppression PopupBlurSuppression(this, g_Config.m_QmNewUi && g_Config.m_QmUiPopupBlur == 0);
 	m_RenderingPopupMenus = true;
 	const float Now = Client()->LocalTime();
 	for(size_t i = 0; i < m_vPopupMenus.size(); ++i)
@@ -106,16 +119,85 @@ void CUi::RenderPopupMenus()
 		{
 			const float Progress = std::clamp((Now - PopupMenu.m_CloseStart) / SPopupMenu::POPUP_CLOSE_DURATION, 0.0f, 1.0f);
 			CUIRect ShrinkRect = PopupMenu.m_Rect;
-			const float Scale = 1.0f - 0.08f * Progress;
-			ShrinkRect.x += ShrinkRect.w * (1.0f - Scale) * 0.5f;
-			ShrinkRect.y += ShrinkRect.h * (1.0f - Scale) * 0.5f;
-			ShrinkRect.w *= Scale;
-			ShrinkRect.h *= Scale;
-			const float Alpha = 1.0f - Progress;
-			DrawRoundedSurface(this, ShrinkRect,
-				PopupMenu.m_Props.m_BackgroundColor.WithAlpha(PopupMenu.m_Props.m_BackgroundColor.a * Alpha),
-				PopupMenu.m_Props.m_BorderColor.WithAlpha(PopupMenu.m_Props.m_BorderColor.a * Alpha),
-				ui_token::radius::BASE, SPopupMenu::POPUP_BORDER, PopupMenu.m_Props.m_Corners);
+			// 平滑出场缓动：三阶 smoothstep 配合平滑透明度衰减，消除收起瞬间的生硬与突兀感
+			const float Eased = Progress * Progress * (3.0f - 2.0f * Progress);
+			const float Alpha = 1.0f - Progress * Progress;
+			const bool HasAlignedAnchorClosing = PopupMenu.m_Props.m_HasAnchorSurface &&
+							     PopupMenu.m_Props.m_AnchorSurface.w > 0.0f && PopupMenu.m_Props.m_AnchorSurface.h > 0.0f &&
+							     std::fabs(PopupMenu.m_Props.m_AnchorSurface.x - ShrinkRect.x) < 1.5f &&
+							     std::fabs(PopupMenu.m_Props.m_AnchorSurface.w - ShrinkRect.w) < 1.5f;
+			if(HasAlignedAnchorClosing)
+			{
+				const float ScaleY = 1.0f - 0.18f * Eased;
+				const bool Below = ShrinkRect.y >= PopupMenu.m_Props.m_AnchorSurface.y;
+				if(!Below)
+					ShrinkRect.y += ShrinkRect.h * (1.0f - ScaleY);
+				ShrinkRect.h *= ScaleY;
+			}
+			else
+			{
+				const float Scale = 1.0f - 0.10f * Eased;
+				ShrinkRect.x += ShrinkRect.w * (1.0f - Scale) * 0.5f;
+				ShrinkRect.y += ShrinkRect.h * (1.0f - Scale) * 0.5f;
+				ShrinkRect.w *= Scale;
+				ShrinkRect.h *= Scale;
+			}
+			if(g_Config.m_QmNewUi && PopupMenu.m_Props.m_CenterInViewport && PopupMenu.m_Props.m_BlockUnderlyingPointerInput)
+			{
+				// 遮罩只叠色，避免模糊重画页面之前缓存的菜单背景。
+				CUiScopedGaussianBlurSuppression OverlayBlurSuppression(this);
+				CUIRect ScreenRect = *Screen();
+				ScreenRect.Draw(ui_token::color::SURFACE_OVERLAY.WithAlpha(ui_token::color::SURFACE_OVERLAY.a * Alpha), IGraphics::CORNER_NONE, 0.0f);
+			}
+			const float CornerRadius = (g_Config.m_QmNewUi && PopupMenu.m_Props.m_CenterInViewport) ? ui_token::radius::CARD : ui_token::radius::BASE;
+			ColorRGBA BgColor = PopupMenu.m_Props.m_BackgroundColor;
+			ColorRGBA BorderColor = PopupMenu.m_Props.m_BorderColor;
+			if(g_Config.m_QmNewUi)
+			{
+				if(PopupMenu.m_Props.m_CenterInViewport)
+				{
+					const SUiTheme Theme = ResolveConfiguredSecondaryPanelTheme();
+					BgColor = Theme.m_Surface;
+					BorderColor = Theme.m_Border;
+				}
+			}
+			if(HasAlignedAnchorClosing)
+			{
+				const CUIRect &Anchor = PopupMenu.m_Props.m_AnchorSurface;
+				const bool Below = ShrinkRect.y > Anchor.y;
+				CUIRect UnionRect;
+				if(Below)
+					UnionRect = CUIRect{Anchor.x, Anchor.y, Anchor.w, ShrinkRect.y + ShrinkRect.h - Anchor.y};
+				else
+					UnionRect = CUIRect{Anchor.x, ShrinkRect.y, Anchor.w, Anchor.y + Anchor.h - ShrinkRect.y};
+				DrawRoundedSurface(this, UnionRect, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), BorderColor.WithAlpha(BorderColor.a * Alpha), ui_token::radius::BASE, SPopupMenu::POPUP_BORDER, IGraphics::CORNER_ALL);
+				CUIRect FillRect = ShrinkRect;
+				FillRect.x += SPopupMenu::POPUP_BORDER;
+				FillRect.w -= SPopupMenu::POPUP_BORDER * 2.0f;
+				if(Below)
+					FillRect.h -= SPopupMenu::POPUP_BORDER;
+				else
+				{
+					FillRect.y += SPopupMenu::POPUP_BORDER;
+					FillRect.h -= SPopupMenu::POPUP_BORDER;
+				}
+				if(g_Config.m_QmNewUi && g_Config.m_QmUiPopupBlur != 0 && GaussianBlurScopeActive())
+				{
+					RenderGaussianBlur(FillRect, Alpha, Below ? IGraphics::CORNER_B : IGraphics::CORNER_T, ui_token::radius::BASE);
+				}
+				DrawRoundedSurface(this, FillRect, BgColor.WithAlpha(BgColor.a * Alpha), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), ui_token::radius::BASE, 0.0f, Below ? IGraphics::CORNER_B : IGraphics::CORNER_T);
+			}
+			else
+			{
+				if(g_Config.m_QmNewUi && g_Config.m_QmUiPopupBlur != 0 && GaussianBlurScopeActive())
+				{
+					RenderGaussianBlur(ShrinkRect, Alpha, PopupMenu.m_Props.m_Corners, CornerRadius);
+				}
+				DrawRoundedSurface(this, ShrinkRect,
+					BgColor.WithAlpha(BgColor.a * Alpha),
+					BorderColor.WithAlpha(BorderColor.a * Alpha),
+					CornerRadius, SPopupMenu::POPUP_BORDER, PopupMenu.m_Props.m_Corners);
+			}
 			if(Progress >= 1.0f)
 			{
 				m_vPopupMenus.erase(m_vPopupMenus.begin() + i);
@@ -146,7 +228,8 @@ void CUi::RenderPopupMenus()
 			}
 		}
 		const bool ClipToViewport = PopupMenu.m_Props.m_ClipToViewport;
-		const bool AllowPopupPointerInput = Active && PopupMenu.m_Props.m_BlockUnderlyingPointerInput;
+		// 任意活动弹层都能读取自己的鼠标；嵌套非模态子层不能被父层屏蔽。
+		const bool AllowPopupPointerInput = Active;
 		CQmPopupInputScope PopupInputScope(m_PopupInputDepth, AllowPopupPointerInput);
 
 		// 非阻断弹窗沿用上游机制：栈顶弹窗每帧接管热项，既阻止弹窗打开期间
@@ -157,7 +240,7 @@ void CUi::RenderPopupMenus()
 
 		// 先保存关闭意图，绘制完成后释放输入深度，再运行关闭回调。
 		// 作用域兜底保证提前退出也不会泄漏深度，防止底层页面抢占弹窗拖拽。
-		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, MouseButtonClicked(0), MouseButton(0), CheckActiveItem(pId), HotItem() == pId};
+		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, MouseButtonClicked(0) != 0, MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId};
 		const EQmPopupPointerAction PointerAction = QmResolvePopupPointerAction(PointerInput);
 		const bool CloseBeforeRender = PointerAction == EQmPopupPointerAction::CLOSE;
 		if(PointerAction == EQmPopupPointerAction::CAPTURE)
@@ -178,26 +261,53 @@ void CUi::RenderPopupMenus()
 
 			CUIRect PopupRect = PopupMenu.m_Rect;
 			const SPopupMenuProperties &PopupProps = PopupMenu.m_Props;
-			// 入场缩放动画：矩形从 92% 平滑放大到 100%（内容随矩形重排），
-			// 背景/边框同步渐显；非动画弹窗乘子恒 1，路径零变化。
-			float AnimAlphaMul = 1.0f;
-			if(PopupProps.m_Animate && PopupMenu.m_OpenStart >= 0.0f)
-			{
-				const float Progress = std::clamp((Now - PopupMenu.m_OpenStart) / SPopupMenu::POPUP_OPEN_DURATION, 0.0f, 1.0f);
-				const float Eased = 1.0f - (1.0f - Progress) * (1.0f - Progress);
-				const float Scale = 0.92f + 0.08f * Eased;
-				PopupRect.x += PopupRect.w * (1.0f - Scale) * 0.5f;
-				PopupRect.y += PopupRect.h * (1.0f - Scale) * 0.5f;
-				PopupRect.w *= Scale;
-				PopupRect.h *= Scale;
-				AnimAlphaMul = Eased;
-			}
 			// 对齐判定留浮点余量：几何端 AlignToAnchor 已保证严格相等，
 			// 余量只吸收布局趟/渲染趟的舍入误差。
 			const bool HasAlignedAnchor = PopupProps.m_HasAnchorSurface &&
 						      PopupProps.m_AnchorSurface.w > 0.0f && PopupProps.m_AnchorSurface.h > 0.0f &&
 						      std::fabs(PopupProps.m_AnchorSurface.x - PopupRect.x) < 1.5f &&
 						      std::fabs(PopupProps.m_AnchorSurface.w - PopupRect.w) < 1.5f;
+
+			// 入场缩放动画：矩形平滑放大到 100%（内容随矩形重排），
+			// 背景/边框同步渐显；非动画弹窗乘子恒 1，路径零变化。
+			float AnimAlphaMul = 1.0f;
+			if(PopupProps.m_Animate && PopupMenu.m_OpenStart >= 0.0f)
+			{
+				const float Progress = std::clamp((Now - PopupMenu.m_OpenStart) / SPopupMenu::POPUP_OPEN_DURATION, 0.0f, 1.0f);
+				const float Eased = 1.0f - (1.0f - Progress) * (1.0f - Progress);
+				if(HasAlignedAnchor)
+				{
+					const float ScaleY = 0.88f + 0.12f * Eased;
+					const bool Below = PopupRect.y >= PopupProps.m_AnchorSurface.y;
+					if(!Below)
+					{
+						const float OrigH = PopupRect.h;
+						PopupRect.h *= ScaleY;
+						PopupRect.y += (OrigH - PopupRect.h);
+					}
+					else
+					{
+						PopupRect.h *= ScaleY;
+					}
+				}
+				else
+				{
+					const float Scale = 0.92f + 0.08f * Eased;
+					PopupRect.x += PopupRect.w * (1.0f - Scale) * 0.5f;
+					PopupRect.y += PopupRect.h * (1.0f - Scale) * 0.5f;
+					PopupRect.w *= Scale;
+					PopupRect.h *= Scale;
+				}
+				AnimAlphaMul = Eased;
+			}
+			if(g_Config.m_QmNewUi && PopupProps.m_CenterInViewport && PopupProps.m_BlockUnderlyingPointerInput)
+			{
+				// 遮罩只叠色，避免模糊重画页面之前缓存的菜单背景。
+				CUiScopedGaussianBlurSuppression OverlayBlurSuppression(this);
+				CUIRect ScreenRect = *Screen();
+				ScreenRect.Draw(ui_token::color::SURFACE_OVERLAY.WithAlpha(ui_token::color::SURFACE_OVERLAY.a * AnimAlphaMul), IGraphics::CORNER_NONE, 0.0f);
+			}
+			ColorRGBA ForegroundSurface = PopupProps.m_BackgroundColor;
 			if(HasAlignedAnchor)
 			{
 				// 边框把触发按钮与列表包成一个整体：外框只描边，填充由按钮
@@ -209,7 +319,15 @@ void CUi::RenderPopupMenus()
 					UnionRect = CUIRect{Anchor.x, Anchor.y, Anchor.w, PopupRect.y + PopupRect.h - Anchor.y};
 				else
 					UnionRect = CUIRect{Anchor.x, PopupRect.y, Anchor.w, Anchor.y + Anchor.h - PopupRect.y};
-				DrawRoundedSurface(this, UnionRect, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), PopupProps.m_BorderColor, ui_token::radius::BASE, SPopupMenu::POPUP_BORDER, IGraphics::CORNER_ALL);
+				ColorRGBA BorderColor = PopupProps.m_BorderColor;
+				ColorRGBA BgColor = PopupProps.m_BackgroundColor;
+				if(g_Config.m_QmNewUi)
+				{
+					if(BorderColor.a <= 0.0f)
+						BorderColor = ui_token::color::BORDER_SUBTLE;
+				}
+				ForegroundSurface = BgColor;
+				DrawRoundedSurface(this, UnionRect, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), BorderColor.WithAlpha(BorderColor.a * AnimAlphaMul), ui_token::radius::BASE, SPopupMenu::POPUP_BORDER, IGraphics::CORNER_ALL);
 				CUIRect FillRect = PopupRect;
 				FillRect.x += SPopupMenu::POPUP_BORDER;
 				FillRect.w -= SPopupMenu::POPUP_BORDER * 2.0f;
@@ -220,20 +338,42 @@ void CUi::RenderPopupMenus()
 					FillRect.y += SPopupMenu::POPUP_BORDER;
 					FillRect.h -= SPopupMenu::POPUP_BORDER;
 				}
-				DrawRoundedSurface(this, FillRect, PopupProps.m_BackgroundColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), ui_token::radius::BASE, 0.0f, Below ? IGraphics::CORNER_B : IGraphics::CORNER_T);
+				if(g_Config.m_QmNewUi && g_Config.m_QmUiPopupBlur != 0 && GaussianBlurScopeActive())
+				{
+					RenderGaussianBlur(FillRect, AnimAlphaMul, Below ? IGraphics::CORNER_B : IGraphics::CORNER_T, ui_token::radius::BASE);
+				}
+				DrawRoundedSurface(this, FillRect, BgColor.WithAlpha(BgColor.a * AnimAlphaMul), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), ui_token::radius::BASE, 0.0f, Below ? IGraphics::CORNER_B : IGraphics::CORNER_T);
 			}
 			else
 			{
+				const float CornerRadius = (g_Config.m_QmNewUi && PopupProps.m_CenterInViewport) ? ui_token::radius::CARD : ui_token::radius::BASE;
+				ColorRGBA EffectiveBg = PopupProps.m_BackgroundColor;
+				ColorRGBA EffectiveBorder = PopupProps.m_BorderColor;
+				if(g_Config.m_QmNewUi)
+				{
+					if(PopupProps.m_CenterInViewport)
+					{
+						const SUiTheme Theme = ResolveConfiguredSecondaryPanelTheme();
+						EffectiveBg = Theme.m_Surface;
+						EffectiveBorder = Theme.m_Border;
+					}
+				}
+				if(g_Config.m_QmNewUi && g_Config.m_QmUiPopupBlur != 0 && GaussianBlurScopeActive())
+				{
+					RenderGaussianBlur(PopupRect, AnimAlphaMul, PopupProps.m_Corners, CornerRadius);
+				}
+				ForegroundSurface = EffectiveBg;
 				DrawRoundedSurface(this, PopupRect,
-					PopupProps.m_BackgroundColor.WithAlpha(PopupProps.m_BackgroundColor.a * AnimAlphaMul),
-					PopupProps.m_BorderColor.WithAlpha(PopupProps.m_BorderColor.a * AnimAlphaMul),
-					ui_token::radius::BASE, SPopupMenu::POPUP_BORDER, PopupProps.m_Corners);
+					EffectiveBg.WithAlpha(EffectiveBg.a * AnimAlphaMul),
+					EffectiveBorder.WithAlpha(EffectiveBorder.a * AnimAlphaMul),
+					CornerRadius, SPopupMenu::POPUP_BORDER, PopupProps.m_Corners);
 			}
 			PopupRect.Margin(SPopupMenu::POPUP_BORDER, &PopupRect);
 			PopupRect.Margin(SPopupMenu::POPUP_MARGIN, &PopupRect);
 
 			// The popup render function can open/close popups, which may resize the vector and thus
 			// invalidate the variable PopupMenu. We therefore store pId in a separate variable.
+			CUiScopedSurfaceText SurfaceText(TextRender(), ForegroundSurface, g_Config.m_QmNewUi);
 			Result = PopupMenu.m_pfnFunc(PopupMenu.m_pContext, PopupRect, Active);
 			if(ClipToViewport)
 				ClipDisable();
@@ -298,6 +438,12 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants)
 	}
 }
 
+void CUi::RefreshPopupMenuSource(const SPopupMenuId *pId, bool RequireRefresh, uint64_t Frame)
+{
+	if(!RenderOnly())
+		QmRefreshPopupSource(m_vPopupMenus, pId, RequireRefresh, Frame);
+}
+
 void CUi::ClosePopupMenus()
 {
 	if(m_vPopupMenus.empty())
@@ -311,12 +457,12 @@ void CUi::ClosePopupMenus()
 
 bool CUi::IsPopupOpen() const
 {
-	return !m_vPopupMenus.empty();
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing; });
 }
 
 bool CUi::IsPopupOpen(const SPopupMenuId *pId) const
 {
-	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu PopupMenu) { return PopupMenu.m_pId == pId; });
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing && PopupMenu.m_pId == pId; });
 }
 
 bool CUi::IsPopupHovered() const
@@ -359,7 +505,15 @@ void CUi::ShowPopupMessage(float X, float Y, SMessagePopupContext *pContext)
 	TextSizeProps.m_pHeight = &TextHeight;
 	TextRender()->TextWidth(SMessagePopupContext::POPUP_FONT_SIZE, pContext->m_aMessage, -1, TextWidth, 0, TextSizeProps);
 	pContext->m_pUI = this;
-	DoPopupMenu(pContext, X, Y, TextWidth + 10.0f, TextHeight + 10.0f, pContext, PopupMessage);
+	SPopupMenuProperties Props;
+	if(g_Config.m_QmNewUi)
+	{
+		Props.m_CenterInViewport = true;
+		Props.m_BlockUnderlyingPointerInput = true;
+		Props.m_BlockUnderlyingScroll = true;
+		Props.m_Animate = true;
+	}
+	DoPopupMenu(pContext, X, Y, TextWidth + 10.0f, TextHeight + 10.0f, pContext, PopupMessage, Props);
 }
 
 CUi::SConfirmPopupContext::SConfirmPopupContext()
@@ -388,7 +542,15 @@ void CUi::ShowPopupConfirm(float X, float Y, SConfirmPopupContext *pContext)
 	const float PopupHeight = TextHeight + SConfirmPopupContext::POPUP_BUTTON_HEIGHT + SConfirmPopupContext::POPUP_BUTTON_SPACING + 10.0f;
 	pContext->m_pUI = this;
 	pContext->m_Result = SConfirmPopupContext::UNSET;
-	DoPopupMenu(pContext, X, Y, TextWidth + 10.0f, PopupHeight, pContext, PopupConfirm);
+	SPopupMenuProperties Props;
+	if(g_Config.m_QmNewUi)
+	{
+		Props.m_CenterInViewport = true;
+		Props.m_BlockUnderlyingPointerInput = true;
+		Props.m_BlockUnderlyingScroll = true;
+		Props.m_Animate = true;
+	}
+	DoPopupMenu(pContext, X, Y, TextWidth + 10.0f, PopupHeight, pContext, PopupConfirm, Props);
 }
 
 CUi::EPopupMenuFunctionResult CUi::PopupConfirm(void *pContext, CUIRect View, bool Active)
@@ -528,13 +690,14 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 		if(pScrollRegion->AddRect(Slot, QmDropdownActiveItemShouldScrollIntoView(pSelectionPopup->m_ScrollToActiveItem, ActiveEntry)))
 		{
 			++VisibleEntries;
-			// TClient: 字体预览只对实际渲染的条目切换字体面。此前对所有条目
-			// （含滚动区外的）每帧切换，条目多时每帧反复解析字面并触发字重
-			// 应用，是字体下拉框打开即卡死的直接原因。
+			// 字体预览只选择可见条目的临时面，不修改默认字体角色或清空共享图集。
 			// QmClient: m_FontFaceAvailabilityCheck 供商店搜索弹层使用——条目是
 			// 未安装的在线字体，只有预览面已加载的条目才切换，避免逐帧失败日志。
-			if(pSelectionPopup->m_SpecialFontRenderMode && (!pSelectionPopup->m_FontFaceAvailabilityCheck || pUI->TextRender()->QmHasCustomFace(Entry.c_str())))
-				pUI->TextRender()->SetCustomFace(Entry.c_str());
+			if(pSelectionPopup->m_SpecialFontRenderMode)
+			{
+				const bool FaceAvailable = !pSelectionPopup->m_FontFaceAvailabilityCheck || pUI->TextRender()->QmHasCustomFace(Entry.c_str());
+				pUI->TextRender()->SetFontPreviewFace(FaceAvailable ? Entry.c_str() : nullptr);
+			}
 			// 活动项与悬浮项使用同一种整行背景，避免左侧竖条与条目背景重叠。
 			CButtonContainer *pButton = &pSelectionPopup->m_vButtonContainers[Index];
 			const bool Hovered = pUI->HotItem() == pButton || pUI->CheckActiveItem(pButton);
@@ -550,7 +713,7 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 	}
 	// TClient
 	if(pSelectionPopup->m_SpecialFontRenderMode)
-		pUI->TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+		pUI->TextRender()->SetFontPreviewFace(nullptr);
 
 	pScrollRegion->End();
 	pSelectionPopup->m_ScrollToActiveItem = false;
@@ -592,6 +755,10 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 	// 阻断底层指针输入：点击弹窗（含触发按钮）以外区域时立即关闭弹窗。
 	// 几何判定不可见的路径会在下方直接 ClosePopupMenu，阻断标志无副作用。
 	pContext->m_Props.m_BlockUnderlyingPointerInput = true;
+	if(g_Config.m_QmNewUi && g_Config.m_QmUiMotionLevel > 0)
+	{
+		pContext->m_Props.m_Animate = true;
+	}
 	float PopupWidth = pContext->m_Width;
 	float PopupHeightResolved = PopupHeight;
 	if(pContext->m_AlignmentHeight >= 0.0f)
@@ -696,18 +863,12 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	if(State.m_DropDownState.IsOpen() && !PopupOpen)
 		State.m_DropDownState.Reset();
 
+	const ColorRGBA TriggerColor = g_Config.m_QmNewUi ? ResolveConfiguredDropdownSurface() : DropDownProps.m_VisualStyle.m_TriggerColor;
 	const auto LabelFunc = [CurSelection, pStrs]() {
 		return CurSelection > -1 ? pStrs[CurSelection] : "";
 	};
 	if(!DropDownProps.m_Enabled)
 	{
-		if(QmDropdownShouldKeepPopupAliveWhenDisabled(PopupOpen, DropDownProps.m_ClosePopupWhenDisabled))
-		{
-			// 父弹层失去 Active 时，子下拉弹层仍属于当前交互链，必须刷新来源帧。
-			// 触发器本身保持禁用，输入仍由最上层子弹层处理。
-			State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = true;
-			State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
-		}
 		if(DropDownProps.m_ClosePopupWhenDisabled)
 		{
 			if(State.m_DropDownState.Disable(PopupOpen))
@@ -715,14 +876,11 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 			State.m_SelectionPopupContext.m_SelectionIndex = -1;
 			State.m_SelectionPopupContext.m_ActiveIndex = -1;
 		}
-		else if(PopupOpen)
+		else if(QmDropdownShouldKeepPopupAliveWhenDisabled(PopupOpen, false))
 		{
-			// 上层弹窗（如聊天翻译菜单）在本下拉的选择弹层打开期间会失去
-			// Active，令本下拉切入禁用分支；选择弹层的来源帧保活刷新只存在
-			// 于启用分支，若此处不补上，RenderPopupMenus 会在下一帧按
-			// 「来源失效」关闭刚打开的弹层，表现为下拉点开即一闪而过。
 			State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
 			State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
+			RefreshPopupMenuSource(&State.m_SelectionPopupContext, DropDownProps.m_RequireSourceRefresh, SourceFrame);
 		}
 		SMenuButtonProperties ButtonProps;
 		ButtonProps.m_Enabled = false;
@@ -730,7 +888,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		ButtonProps.m_HintCanChangePositionOrSize = true;
 		ButtonProps.m_ShowDropDownIcon = true;
 		ButtonProps.m_FontSize = ResolvedFontSize;
-		ButtonProps.m_Color = DropDownProps.m_VisualStyle.m_TriggerColor;
+		ButtonProps.m_Color = TriggerColor;
 		DoButton_Menu(State.m_UiElement, &State.m_ButtonContainer, LabelFunc, pRect, ButtonProps);
 		return CurSelection;
 	}
@@ -740,7 +898,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	Props.m_HintCanChangePositionOrSize = true;
 	Props.m_ShowDropDownIcon = true;
 	Props.m_FontSize = ResolvedFontSize;
-	Props.m_Color = DropDownProps.m_VisualStyle.m_TriggerColor;
+	Props.m_Color = TriggerColor;
 	if(PopupOpen)
 	{
 		State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
@@ -768,8 +926,16 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_Width = pRect->w;
 		State.m_SelectionPopupContext.m_AlignmentHeight = pRect->h;
 		State.m_SelectionPopupContext.m_Viewport = Viewport;
-		State.m_SelectionPopupContext.m_Props.m_BorderColor = DropDownProps.m_VisualStyle.m_PopupBorderColor;
-		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = DropDownProps.m_VisualStyle.m_PopupBackgroundColor;
+		ColorRGBA ResolvedBg = DropDownProps.m_VisualStyle.m_PopupBackgroundColor;
+		ColorRGBA ResolvedBorder = DropDownProps.m_VisualStyle.m_PopupBorderColor;
+		if(g_Config.m_QmNewUi)
+		{
+			const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
+			ResolvedBg = Theme.m_Surface;
+			ResolvedBorder = Theme.m_Border;
+		}
+		State.m_SelectionPopupContext.m_Props.m_BorderColor = ResolvedBorder;
+		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = ResolvedBg;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
 		State.m_SelectionPopupContext.m_TransparentButtons = DropDownProps.m_VisualStyle.m_TransparentEntries;
 		ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);
@@ -786,8 +952,16 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_pScrollRegion = pScrollRegion != nullptr ? pScrollRegion : State.m_pScrollRegion;
 		State.m_SelectionPopupContext.m_SpecialFontRenderMode = SpecialFontRenderMode;
 		State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = FontFaceAvailabilityCheck;
-		State.m_SelectionPopupContext.m_Props.m_BorderColor = DropDownProps.m_VisualStyle.m_PopupBorderColor;
-		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = DropDownProps.m_VisualStyle.m_PopupBackgroundColor;
+		ColorRGBA ResolvedBg = DropDownProps.m_VisualStyle.m_PopupBackgroundColor;
+		ColorRGBA ResolvedBorder = DropDownProps.m_VisualStyle.m_PopupBorderColor;
+		if(g_Config.m_QmNewUi)
+		{
+			const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
+			ResolvedBg = Theme.m_Surface;
+			ResolvedBorder = Theme.m_Border;
+		}
+		State.m_SelectionPopupContext.m_Props.m_BorderColor = ResolvedBorder;
+		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = ResolvedBg;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
 		for(int i = 0; i < Num; ++i)
 			State.m_SelectionPopupContext.m_vEntries.emplace_back(pStrs[i]);
@@ -888,8 +1062,8 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 
 	// Color Area
 	ColorRGBA TL, TR, BL, BR;
-	TL = BL = color_cast<ColorRGBA>(ColorHSVA(PickerColorHSV.x, 0.0f, 1.0f));
-	TR = BR = color_cast<ColorRGBA>(ColorHSVA(PickerColorHSV.x, 1.0f, 1.0f));
+	TL = BL = color_cast<ColorRGBA>(ResolveUiColorPickerSelection(PickerColorHSV.x, 0.0f, 0.0f, 1.0f));
+	TR = BR = color_cast<ColorRGBA>(ResolveUiColorPickerSelection(PickerColorHSV.x, 1.0f, 0.0f, 1.0f));
 	ColorsArea.Draw4(TL, TR, BL, BR, IGraphics::CORNER_NONE, 0.0f);
 
 	TL = TR = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f);
@@ -1054,8 +1228,7 @@ CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View
 	{
 		const float ColorX = std::clamp(PickerX - (ColorsArea.x - ColorsHitArea.x), 0.0f, ColorsArea.w);
 		const float ColorY = std::clamp(PickerY - (ColorsArea.y - ColorsHitArea.y), 0.0f, ColorsArea.h);
-		PickerColorHSV.y = ColorX / ColorsArea.w;
-		PickerColorHSV.z = 1.0f - ColorY / ColorsArea.h;
+		PickerColorHSV = ResolveUiColorPickerSelection(PickerColorHSV.x, ColorX / std::max(ColorsArea.w, 1.0f), ColorY / std::max(ColorsArea.h, 1.0f), PickerColorHSV.a);
 		PickerColorHSL = color_cast<ColorHSLA>(PickerColorHSV);
 		PickerColorRGB = color_cast<ColorRGBA>(PickerColorHSL);
 		pColorPicker->m_State = ColorPickerRes;
@@ -1124,5 +1297,7 @@ void CUi::ShowPopupColorPicker(float X, float Y, SColorPickerPopupContext *pCont
 	SPopupMenuProperties PopupProps;
 	PopupProps.m_BlockUnderlyingPointerInput = true;
 	PopupProps.m_BlockUnderlyingScroll = true;
+	if(g_Config.m_QmNewUi)
+		PopupProps.m_Animate = true;
 	DoPopupMenu(pContext, X, Y, 160.0f + 10.0f, 209.0f + 10.0f, pContext, PopupColorPicker, PopupProps);
 }

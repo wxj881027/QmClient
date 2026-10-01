@@ -23,6 +23,7 @@
 #include <game/client/QmUi/QmCardOrderModel.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
@@ -1821,20 +1822,20 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	ITextRender *pTextRender = pSelf->TextRender();
 	IStorage *pStorage = pSelf->Storage();
 	const std::vector<fontstore::SFamily> &vFamilies = fontstore::Families(pStorage);
-	// 商店弹层与设置卡片同源配色：卡面/容器背景用设置卡片色，边框用卡片边框色，
-	// 不再走下拉弹层的强调色（避免蓝色高亮边框）；容器背景压暗一档并保底不透明度以遮住底层页面。
 	const SSettingsCardDeckVisualOptions CardVisual = pSelf->SettingsCardDeckVisualOptions();
 	const SQmDropdownVisualStyle Style = QmSettingsDropdownVisualStyle(pSelf->m_SettingsUiTheme, CardVisual.m_BorderColor);
-	const float ElevatedScale = 0.82f;
-	const ColorRGBA ElevatedCardColor = ColorRGBA(
-		std::clamp(CardVisual.m_SurfaceColor.r * ElevatedScale, 0.0f, 1.0f),
-		std::clamp(CardVisual.m_SurfaceColor.g * ElevatedScale, 0.0f, 1.0f),
-		std::clamp(CardVisual.m_SurfaceColor.b * ElevatedScale, 0.0f, 1.0f),
-		CardVisual.m_SurfaceColor.a)
-						    .WithAlpha(std::clamp(std::max(CardVisual.m_SurfaceColor.a, 0.90f), 0.0f, 1.0f));
 
 	// 推进下载状态机：弹层每帧必然渲染，字体卡滚出屏幕也不中断安装/预览。
 	fontstore::Update(pSelf->Http(), pStorage, pTextRender, true);
+
+	IUiContext HeaderCtx;
+	HeaderCtx.m_pUi = pUi;
+	static ui_widget::SSecondaryPanelLabel s_Title;
+	static CButtonContainer s_CloseButton;
+	ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w, true), {});
+	if(Panel.Header(s_Title, s_CloseButton, Localize("Font store")))
+		return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
+	View = Panel.ContentRect();
 
 	// 顶部栏：搜索框 + 分类下拉 + 结果数量。
 	CUIRect TopBar, List;
@@ -1844,11 +1845,13 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	CUIRect SearchRect, CategoryRect, FilterRect, CountRect;
 	// 顶部栏（从右往左切）：字体总数 | 安装筛选 | 分类 —— 两个下拉等宽；
 	// 剩余整段给搜索框（最左，视觉主入口）。
-	TopBar.VSplitRight(150.0f, &TopBar, &CountRect);
+	const float FilterWidth = std::min(150.0f, TopBar.w * 0.20f);
+	const float CountWidth = std::min(150.0f, TopBar.w * 0.18f);
+	TopBar.VSplitRight(CountWidth, &TopBar, &CountRect);
 	TopBar.VSplitRight(MarginSmall, &TopBar, nullptr);
-	TopBar.VSplitRight(150.0f, &TopBar, &FilterRect);
+	TopBar.VSplitRight(FilterWidth, &TopBar, &FilterRect);
 	TopBar.VSplitRight(MarginSmall, &TopBar, nullptr);
-	TopBar.VSplitRight(150.0f, &TopBar, &CategoryRect);
+	TopBar.VSplitRight(FilterWidth, &TopBar, &CategoryRect);
 	SearchRect = TopBar;
 	SearchRect.VSplitRight(MarginSmall, &SearchRect, nullptr);
 
@@ -2052,7 +2055,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 			const float ContentH = pHint != nullptr ? 55.0f : 41.0f;
 			const float PreviewY = Preview.y + std::max(0.0f, (Preview.h - ContentH) * 0.5f);
 			if(FaceReady)
-				pTextRender->SetCustomFace(Family.m_Name.c_str());
+				pTextRender->SetFontPreviewFace(Family.m_Name.c_str());
 			pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(FaceReady ? 1.0f : 0.45f));
 			pTextRender->Text(Preview.x, PreviewY, 12.0f, Family.m_Name.c_str(), Preview.w);
 			// 固定样例文案：拉丁+数字 与 CJK（汉字/假名）各一行，直观展示该
@@ -2063,7 +2066,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 				pTextRender->Text(Preview.x, PreviewY + 44.0f, 9.0f, pHint, Preview.w);
 			pTextRender->TextColor(pTextRender->DefaultTextColor());
 			if(FaceReady)
-				pTextRender->SetCustomFace(g_Config.m_TcCustomFont);
+				pTextRender->SetFontPreviewFace(nullptr);
 
 			// 底部行：族名（普通字体，始终可读）+ 右侧状态。
 			char aFamilyClamped[64];
@@ -2362,11 +2365,11 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		if(!Ui()->IsPopupOpen(&s_FontDropDownState.m_SelectionPopupContext) && s_FontPrewarmIndex < s_FontDropDownNamesOwned.size())
 		{
 			const std::string &PrewarmFace = s_FontDropDownNamesOwned[s_FontPrewarmIndex];
-			TextRender()->SetCustomFace(PrewarmFace.c_str());
+			TextRender()->SetFontPreviewFace(PrewarmFace.c_str());
 			TextRender()->TextColor(TextRender()->DefaultTextColor().WithAlpha(0.0f));
 			TextRender()->Text(Button.x, Button.y, FontSize, PrewarmFace.c_str(), -1.0f);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
-			TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+			TextRender()->SetFontPreviewFace(nullptr);
 			++s_FontPrewarmIndex;
 		}
 		// 英文字体的字重子选项：静态样式面下拉（可变族改由下方滑杆行承载）。
@@ -2686,26 +2689,10 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				s_FontStorePopupCtx.m_pMenus = this;
 				s_FontStorePopupCtx.m_New = true;
 				fontstore::ClearPreviewQueue();
-				// 弹层容器与设置卡片同源：卡片面色压暗一档并保底不透明度，边框用卡片边框色。
-				const SSettingsCardDeckVisualOptions CardVisual = SettingsCardDeckVisualOptions();
-				const float ElevatedScale = 0.82f;
-				const ColorRGBA ElevatedCardColor = ColorRGBA(
-					std::clamp(CardVisual.m_SurfaceColor.r * ElevatedScale, 0.0f, 1.0f),
-					std::clamp(CardVisual.m_SurfaceColor.g * ElevatedScale, 0.0f, 1.0f),
-					std::clamp(CardVisual.m_SurfaceColor.b * ElevatedScale, 0.0f, 1.0f),
-					CardVisual.m_SurfaceColor.a)
-									    .WithAlpha(std::clamp(std::max(CardVisual.m_SurfaceColor.a, 0.90f), 0.0f, 1.0f));
-				SPopupMenuProperties PopupProps;
-				// 二级界面语义：视口居中（不锚定按钮），并锁定下层页面的滚轮与指针交互。
-				PopupProps.m_CenterInViewport = true;
-				PopupProps.m_BlockUnderlyingScroll = true;
-				PopupProps.m_BlockUnderlyingPointerInput = true;
-				// 二级界面开/关缩放动画（弹窗体系内置能力，其它弹窗不受影响）。
-				PopupProps.m_Animate = true;
-				PopupProps.m_BackgroundColor = ElevatedCardColor;
-				PopupProps.m_BorderColor = CardVisual.m_BorderColor;
-				const float PopupWidth = std::min(780.0f, Ui()->Screen()->w * 0.74f);
-				const float PopupHeight = std::min(470.0f, Ui()->Screen()->h * 0.74f);
+				const SPopupMenuProperties PopupProps = ui_widget::SecondaryPanelProperties();
+				const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
+				const float PopupWidth = PanelRect.w;
+				const float PopupHeight = PanelRect.h;
 				Ui()->DoPopupMenu(&s_FontStorePopupId, 0.0f, 0.0f, PopupWidth, PopupHeight, &s_FontStorePopupCtx, PopupFontStore, PopupProps);
 			}
 			GameClient()->m_Tooltips.DoToolTip(&s_StoreBrowseId, &Button, Localize("Download fonts from the internet instead of shipping them with the client"));

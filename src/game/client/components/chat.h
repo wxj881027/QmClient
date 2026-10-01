@@ -13,6 +13,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/chat_emoji.h>
+#include <game/client/components/qmclient/chat_translate_button.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
@@ -184,6 +185,7 @@ private:
 	bool m_PrevShowChat;
 	std::array<int, 4> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
+	uint64_t m_PreparedGlyphAtlasRevision = 0;
 	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
@@ -323,7 +325,7 @@ private:
 	// 翻译按钮状态
 	struct STranslateButtonState
 	{
-		bool m_IsPressed = false;
+		CQmChatTranslateButton m_Input;
 		bool m_RectValid = false;
 		float m_X = 0.0f;
 		float m_Y = 0.0f;

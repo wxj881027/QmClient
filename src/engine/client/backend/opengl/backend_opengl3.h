@@ -70,6 +70,7 @@ protected:
 	int m_BackbufferCaptureResolveHeight = 0;
 	bool m_BackbufferCaptureMultisampleResolveSupported = false;
 
+	void BindRenderTargetTexture(TWGLuint Texture);
 	void DestroyBufferContainer(int Index, bool DeleteBOs = true);
 	void DestroyBackbufferCaptureResolveTarget();
 	bool EnsureBackbufferCaptureResolveTarget(int Width, int Height);

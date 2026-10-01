@@ -316,6 +316,8 @@ void CScoreboard::OnReset()
 	m_OpenTime = 0.0f;
 	m_AnimContentAlpha = 0.0f;
 	m_PresentationInitialized = false;
+	m_ActiveStartTime = 0;
+	m_WasActive = false;
 	m_MouseUnlocked = false;
 	m_RenderInteractions = false;
 	m_aCachedTeamModes = {};
@@ -332,6 +334,8 @@ void CScoreboard::OnRelease()
 	m_OpenTime = 0.0f;
 	m_AnimContentAlpha = 0.0f;
 	m_PresentationInitialized = false;
+	m_ActiveStartTime = 0;
+	m_WasActive = false;
 	m_RenderInteractions = false;
 	m_aCachedTeamModes = {};
 	m_ScrollRegion.Reset();
@@ -387,7 +391,7 @@ bool CScoreboard::OnInput(const IInput::CEvent &Event)
 	if(!IsActive() || !m_MouseUnlocked)
 		return false;
 
-	return QmScoreboardUiInput(*Ui(), IsActive() && m_MouseUnlocked, Event);
+	return QmScoreboardUiInput(*Ui(), IsActive() && m_MouseUnlocked, Event, CBinds::IsReservedShortcutChord(CBinds::GetModifierMask(Input())));
 }
 
 void CScoreboard::RenderTitle(CUIRect TitleLabel, int Team, const char *pTitle, float TitleFontSize)
@@ -1625,7 +1629,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		{
 			const int CountryCode = g_Config.m_QmStreamerScoreboardDefaultFlags ? -1 : ClientData.m_Country;
 			GameClient()->m_CountryFlags.Render(CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ItemAlpha),
-				CountryOffset, Row.y + (Spacing + TeeSizeMod * 5.0f) / 2.0f, CountryLength, Row.h - Spacing - TeeSizeMod * 5.0f);
+				CountryOffset, Row.y + (Spacing + TeeSizeMod * 5.0f) / 2.0f, CountryLength, Row.h - Spacing - TeeSizeMod * 5.0f, m_ActiveStartTime);
 		}
 
 		// ping
@@ -1759,6 +1763,11 @@ void CScoreboard::OnRender()
 	}
 
 	const bool WantActive = IsActive();
+	// 显示状态转换检测：每次由隐藏转为显示（Tab 开合、死亡自动弹出、游戏结束）都重置
+	// 行内国旗的入场动画起点，保证每次打开计分板国旗都重放入场动画。
+	if(WantActive && !m_WasActive)
+		m_ActiveStartTime = time_get();
+	m_WasActive = WantActive;
 	const bool ExtraAnimations = g_Config.m_QmExtraAnimations != 0 && GameClient()->UiRuntimeV2()->Enabled();
 	float PanelOffsetY = 0.0f;
 	float PanelScale = 1.0f;

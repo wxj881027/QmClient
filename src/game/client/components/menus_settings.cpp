@@ -24,6 +24,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmUiPerf.h>
+#include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiContext.h>
@@ -1080,20 +1081,157 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 {
 	SPopupSettingsCountrySelectionContext *pPopupContext = static_cast<SPopupSettingsCountrySelectionContext *>(pContext);
 	CMenus *pMenus = pPopupContext->m_pMenus;
+	CUi *pUi = pMenus->Ui();
 
 	static CListBox s_ListBox;
 	static int64_t s_PopupOpenTime = 0;
+	static std::string s_LastFilter;
 	s_ListBox.SetActive(Active);
 	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
-	s_ListBox.DoStart(50.0f, pMenus->GameClient()->m_CountryFlags.Num(), 8, 1, -1, &View, false);
 
 	if(pPopupContext->m_New)
 	{
 		pPopupContext->m_New = false;
+		pPopupContext->m_FilterInput.Clear();
 		s_ListBox.ScrollToSelected();
 		s_PopupOpenTime = time_get();
+		s_LastFilter.clear();
 	}
+	else if(s_LastFilter != pPopupContext->m_FilterInput.GetString())
+	{
+		s_LastFilter = pPopupContext->m_FilterInput.GetString();
+		s_PopupOpenTime = time_get();
+	}
+
+	if(g_Config.m_QmNewUi)
+	{
+		IUiContext HeaderCtx;
+		HeaderCtx.m_pUi = pUi;
+		static ui_widget::SSecondaryPanelLabel s_Title;
+		static CButtonContainer s_CloseButton;
+		ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w, true), {});
+		if(Panel.Header(s_Title, s_CloseButton, Localize("Choose country flag")))
+			return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
+		CUIRect SearchRect, GridArea = Panel.ContentRect();
+		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(pUi->Screen()->w);
+		GridArea.HSplitTop(Metrics.m_LineHeight, &SearchRect, &GridArea);
+		GridArea.HSplitTop(Metrics.m_LineSpacing, nullptr, &GridArea);
+
+		IUiContext SearchCtx;
+		SearchCtx.m_pUi = pUi;
+		SearchCtx.m_pAnim = &pMenus->GameClient()->UiRuntimeV2()->AnimRuntime();
+		SearchCtx.m_pTree = &pMenus->GameClient()->UiRuntimeV2()->Tree();
+		SearchCtx.m_ScopeHash = MakeUiScopeHash("settings_country_flag_popup_search");
+		SearchCtx.m_FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
+		ui_widget::SInputFieldOptions SearchOptions;
+		SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+		SearchOptions.m_pPlaceholder = Localize("Search country flag…");
+		SearchOptions.m_Clearable = true;
+		ui_widget::InputField(SearchCtx, &pPopupContext->m_FilterInput, SearchRect, SearchOptions);
+
+		struct SFilteredFlag
+		{
+			const CCountryFlags::CCountryFlag *m_pEntry;
+			std::optional<std::pair<int, int>> m_Match;
+		};
+		static std::vector<SFilteredFlag> s_vFiltered;
+		s_vFiltered.clear();
+		for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
+		{
+			const CCountryFlags::CCountryFlag &Entry = pMenus->GameClient()->m_CountryFlags.GetByIndex(i);
+			if(!pPopupContext->m_FilterInput.IsEmpty())
+			{
+				const char *pMatchEnd = nullptr;
+				const char *pMatchStart = str_utf8_find_nocase(Entry.m_aCountryCodeString, pPopupContext->m_FilterInput.GetString(), &pMatchEnd);
+				if(pMatchStart != nullptr)
+				{
+					s_vFiltered.push_back({&Entry, std::make_pair((int)(pMatchStart - Entry.m_aCountryCodeString), (int)(pMatchEnd - pMatchStart))});
+				}
+			}
+			else
+			{
+				s_vFiltered.push_back({&Entry, std::nullopt});
+			}
+		}
+
+		const int Columns = std::clamp((int)(GridArea.w / 54.0f), 1, 14);
+		int SelectedIndex = -1;
+		for(size_t i = 0; i < s_vFiltered.size(); ++i)
+		{
+			if(s_vFiltered[i].m_pEntry->m_CountryCode == pPopupContext->m_Selection)
+			{
+				SelectedIndex = (int)i;
+				break;
+			}
+		}
+
+		s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
+
+		for(size_t i = 0; i < s_vFiltered.size(); ++i)
+		{
+			const SFilteredFlag &Filtered = s_vFiltered[i];
+			const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
+			const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
+			const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
+			if(!Item.m_Visible)
+				continue;
+
+			if(IsSelected)
+			{
+				DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
+			}
+			else if(pUi->MouseInside(&Item.m_Rect))
+			{
+				DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(0, 0, 0, 0), ui_token::radius::BASE);
+			}
+
+			CUIRect FlagRect, Label;
+			Item.m_Rect.Margin(5.0f, &FlagRect);
+			FlagRect.HSplitBottom(12.0f, &FlagRect, &Label);
+			Label.HSplitTop(2.0f, nullptr, &Label);
+			const float OldWidth = FlagRect.w;
+			FlagRect.w = FlagRect.h * 2.0f;
+			FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
+			int64_t FlagAnimStartTime = s_PopupOpenTime;
+			if(s_PopupOpenTime > 0)
+			{
+				const int Col = (int)(i % Columns);
+				const int Row = (int)(i / Columns) % 6;
+				const float StaggerDelay = Col * 0.006f + Row * 0.015f;
+				FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
+			}
+			pMenus->GameClient()->m_CountryFlags.Render(pEntry->m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
+
+			SLabelProperties Props;
+			if(Filtered.m_Match.has_value())
+			{
+				const auto [MatchStart, MatchLen] = Filtered.m_Match.value();
+				Props.m_vColorSplits.emplace_back(MatchStart, MatchLen, ui_token::color::ACCENT_PRIMARY);
+			}
+			pUi->DoLabel(&Label, pEntry->m_aCountryCodeString, 10.0f, TEXTALIGN_MC, Props);
+		}
+
+		const int NewSelected = s_ListBox.DoEnd();
+		if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size())
+		{
+			pPopupContext->m_Selection = s_vFiltered[NewSelected].m_pEntry->m_CountryCode;
+		}
+		if(s_ListBox.WasItemSelected() || s_ListBox.WasItemActivated())
+		{
+			if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size() && QmCommitCountrySelection(pPopupContext->m_pCountry, pPopupContext->m_Selection))
+			{
+				pMenus->SetNeedSendInfo();
+				pMenus->m_TeeEntranceStartTime = time_get();
+			}
+			return CUi::POPUP_CLOSE_CURRENT;
+		}
+
+		return CUi::POPUP_KEEP_OPEN;
+	}
+
+	// 旧版 UI 沿用列表布局，提交时同样校验是否存在有效选中项。
+	s_ListBox.DoStart(50.0f, pMenus->GameClient()->m_CountryFlags.Num(), 8, 1, -1, &View, false);
 
 	for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
 	{
@@ -1125,10 +1263,10 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 	pPopupContext->m_Selection = NewSelected >= 0 ? pMenus->GameClient()->m_CountryFlags.GetByIndex(NewSelected).m_CountryCode : -1;
 	if(s_ListBox.WasItemSelected() || s_ListBox.WasItemActivated())
 	{
-		if(pPopupContext->m_pCountry != nullptr)
+		if(NewSelected >= 0 && QmCommitCountrySelection(pPopupContext->m_pCountry, pPopupContext->m_Selection))
 		{
-			*pPopupContext->m_pCountry = pPopupContext->m_Selection;
 			pMenus->SetNeedSendInfo();
+			pMenus->m_TeeEntranceStartTime = time_get();
 		}
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
@@ -1193,7 +1331,14 @@ void CMenus::RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, f
 		s_PopupCountryContext.m_New = true;
 		SPopupMenuProperties PopupProps;
 		PopupProps.m_BlockUnderlyingScroll = true;
-		Ui()->DoPopupMenu(&s_PopupCountryId, FlagButton.x, FlagButton.y + FlagButton.h, 490.0f, 210.0f, &s_PopupCountryContext, PopupSettingsCountrySelection, PopupProps);
+		if(g_Config.m_QmNewUi)
+		{
+			PopupProps = ui_widget::SecondaryPanelProperties();
+		}
+		const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
+		const float PopupWidth = g_Config.m_QmNewUi ? PanelRect.w : 490.0f;
+		const float PopupHeight = g_Config.m_QmNewUi ? PanelRect.h : 210.0f;
+		Ui()->DoPopupMenu(&s_PopupCountryId, FlagButton.x, FlagButton.y + FlagButton.h, PopupWidth, PopupHeight, &s_PopupCountryContext, PopupSettingsCountrySelection, PopupProps);
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_FlagButton, &FlagButton, Localize("Choose country flag"));
 
@@ -1236,16 +1381,28 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 		const CUIRect aPlayerTabSlots[] = {PlayerTab, DummyTab};
 		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_player_dummy_tabs_capsule"), aPlayerTabSlots, std::size(aPlayerTabSlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());
 		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &PlayerTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
+		{
 			m_Dummy = false;
+			m_TeeEntranceStartTime = time_get();
+		}
 		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &DummyTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
+		{
 			m_Dummy = true;
+			m_TeeEntranceStartTime = time_get();
+		}
 	}
 	else
 	{
 		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
+		{
 			m_Dummy = false;
+			m_TeeEntranceStartTime = time_get();
+		}
 		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &DummyTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
+		{
 			m_Dummy = true;
+			m_TeeEntranceStartTime = time_get();
+		}
 	}
 	// 子 Tab 已由设置壳层的 Card Deck 统一处理入场；页面内部不再叠加横向位移动效。
 	const auto DrawAnimatedContent = [](CUIRect Content, auto &&DrawContent) { DrawContent(Content); };
@@ -1599,16 +1756,16 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	const float OptionsCheckboxHeight = ResolveSettingsRowsHeight(4, ControlLineHeight, ControlSpacing);
 	const float OptionsPrefixHeight = ResolveSettingsRowsHeight(6, ControlLineHeight, ControlSpacing);
 	const float OptionsTopHeight = maximum(OptionsCheckboxHeight, OptionsPrefixHeight);
-	// 六个默认眼睛表情平铺为一行，不再占两行高度。
-	constexpr int EyesPerRow = NUM_EMOTES;
-	const float EyesHeight = ResolveSettingsGridHeight(NUM_EMOTES, EyesPerRow, EyeLineSize, ControlSpacing);
+	// 六个默认眼睛表情采用胶囊跑道滑块式 UI。
+	const SSettingsTeeEmoteSliderLayout EyeSliderLayout = ResolveSettingsTeeEmoteSliderLayout({}, TeeMetrics);
+	const float EyesHeight = EyeSliderLayout.m_Height + ControlSpacing;
 	const float IdentityContentHeight = ResolveSettingsTeeIdentityHeight(TeeMetrics);
 	// 皮肤选项卡片只按自身内容测量；左侧玩家预览卡片不再跟随它的高度一起拉伸。
 	const auto ResolveTeeTopContentHeight = [OptionsTopHeight, EyesHeight, TeeMetrics, pUseCustomColor]() {
 		const float CustomColorsHeight = ResolveSettingsTeeCustomColorsLayout({}, *pUseCustomColor != 0, TeeMetrics).m_Height;
 		return OptionsTopHeight + EyesHeight + CustomColorsHeight;
 	};
-	const auto RenderOptions = [this, OptionsTopHeight, EyesHeight, ControlLineHeight, ControlSpacing, EyeLineSize, UiScale, BodySize, TeeMetrics, pUseCustomColor, pColorBody, pColorFeet, pEmote](CUIRect Content) {
+	const auto RenderOptions = [this, OptionsTopHeight, EyesHeight, ControlLineHeight, ControlSpacing, EyeSliderLayout, EyeLineSize, UiScale, BodySize, TeeMetrics, pUseCustomColor, pColorBody, pColorFeet, pEmote](CUIRect Content) {
 		CUIRect MainView = Content;
 		CUIRect OptionsTop, Checkboxes, SkinPrefix, Eyes, Button, Label, SortModeControl;
 		const CSkin *pDefaultSkin = GameClient()->m_Skins.Find("default");
@@ -1624,7 +1781,9 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 		OptionsTop.VSplitLeft(OptionsTop.w * 0.42f, &Checkboxes, &SkinPrefix);
 		Checkboxes.VSplitRight(12.0f * UiScale, &Checkboxes, nullptr);
 		SkinPrefix.VSplitLeft(12.0f * UiScale, nullptr, &SkinPrefix);
-		MainView.HSplitTop(EyesHeight, &Eyes, &MainView);
+		MainView.HSplitTop(ControlSpacing * 0.5f, nullptr, &MainView);
+		MainView.HSplitTop(EyeSliderLayout.m_Height, &Eyes, &MainView);
+		MainView.HSplitTop(ControlSpacing * 0.5f, nullptr, &MainView);
 		int CheckboxRowsRemaining = 4;
 		const auto NextCheckboxRow = [&]() {
 			CUIRect Row;
@@ -1727,30 +1886,141 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 				g_Config.m_QmSkinShowMetadata ^= 1;
 			}
 		}
-		// Default eyes
+		// Default eyes: 胶囊跑道滑块式 UI
 		{
+			const SSettingsTeeEmoteSliderLayout SliderLayout = ResolveSettingsTeeEmoteSliderLayout(Eyes, TeeMetrics);
+			const CUIRect &Track = SliderLayout.m_TrackRect;
+
+			static char s_EyeSliderId;
+			static CButtonContainer s_aEyeSlotButtons[NUM_EMOTES];
+
+			// 1. 输入处理：鼠标点击与拖拽滑动
+			const bool MouseInsideTrack = Ui()->MouseHovered(&Track);
+			bool DragActive = Ui()->CheckActiveItem(&s_EyeSliderId);
+
+			if(DragActive)
+			{
+				if(Ui()->MouseButton(0))
+				{
+					const int NewEmote = ResolveTeeEmoteSliderTargetFromPoint(Track, Ui()->MouseX());
+					if(NewEmote != *pEmote)
+					{
+						*pEmote = NewEmote;
+						if((int)m_Dummy == g_Config.m_ClDummy)
+							GameClient()->m_Emoticon.EyeEmote(NewEmote);
+					}
+				}
+				else
+				{
+					Ui()->SetActiveItem(nullptr);
+					DragActive = false;
+				}
+			}
+			else if(MouseInsideTrack && !Ui()->IsPopupOpen())
+			{
+				if(Ui()->MouseButtonClicked(0))
+				{
+					Ui()->SetActiveItem(&s_EyeSliderId);
+					const int NewEmote = ResolveTeeEmoteSliderTargetFromPoint(Track, Ui()->MouseX());
+					if(NewEmote != *pEmote)
+					{
+						*pEmote = NewEmote;
+						if((int)m_Dummy == g_Config.m_ClDummy)
+							GameClient()->m_Emoticon.EyeEmote(NewEmote);
+					}
+				}
+				else if(Ui()->HotItem() == nullptr)
+				{
+					Ui()->SetHotItem(&s_EyeSliderId);
+				}
+			}
+
+			// 滚轮微调
+			if(MouseInsideTrack && !Ui()->IsPopupOpen())
+			{
+				if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
+				{
+					const int NewEmote = StepTeeEmoteSlider(*pEmote, -1);
+					if(NewEmote != *pEmote)
+					{
+						*pEmote = NewEmote;
+						if((int)m_Dummy == g_Config.m_ClDummy)
+							GameClient()->m_Emoticon.EyeEmote(NewEmote);
+					}
+				}
+				else if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
+				{
+					const int NewEmote = StepTeeEmoteSlider(*pEmote, 1);
+					if(NewEmote != *pEmote)
+					{
+						*pEmote = NewEmote;
+						if((int)m_Dummy == g_Config.m_ClDummy)
+							GameClient()->m_Emoticon.EyeEmote(NewEmote);
+					}
+				}
+			}
+
+			// 2. 绘制跑道底槽（一体化暗色微质感胶囊）
+			DrawRoundedSurface(TabBarUiContext(), Track, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f), ui_token::radius::PILL);
+
+			// 3. 绘制弹簧物理滑块指示器（毛玻璃微光胶囊）
+			const int ActiveEmote = std::clamp(*pEmote, 0, NUM_EMOTES - 1);
+			CUIRect TargetSlot = SliderLayout.m_aSlotRects[ActiveEmote];
+			CUIRect TargetThumb;
+			TargetSlot.Margin(2.5f * UiScale, &TargetThumb);
+
+			CUIRect AnimatedThumb = TargetThumb;
+			if(GameClient()->UiRuntimeV2() != nullptr)
+			{
+				auto &Anim = GameClient()->UiRuntimeV2()->AnimRuntime();
+				const uint64_t NodeKey = BuildUiAnimNodeKey(MakeUiScopeHash("settings_tee_eyes_slider_thumb"), m_Dummy ? 1 : 0);
+				AnimatedThumb.x = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::POS_X, TargetThumb.x, ui_token::motion::NAVIGATION_SPRING, 2);
+				AnimatedThumb.y = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::POS_Y, TargetThumb.y, ui_token::motion::NAVIGATION_SPRING, 2);
+				AnimatedThumb.w = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::WIDTH, TargetThumb.w, ui_token::motion::NAVIGATION_SPRING, 2);
+				AnimatedThumb.h = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::HEIGHT, TargetThumb.h, ui_token::motion::NAVIGATION_SPRING, 2);
+			}
+
+			// 毛玻璃微光胶囊底色：半透明磨砂白 + 细微高亮边框
+			DrawRoundedSurface(TabBarUiContext(), AnimatedThumb, ColorRGBA(1.0f, 1.0f, 1.0f, 0.20f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), ui_token::radius::PILL);
+
+			// 4. 槽位 Hover 反馈、Tooltip 与 Tee 表情预览
 			CTeeRenderInfo EyeSkinInfo = OwnSkinInfo;
-			EyeSkinInfo.m_Size = EyeLineSize;
+			EyeSkinInfo.m_Size = SliderLayout.m_TeeSize;
 			vec2 OffsetToMid;
 			CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &EyeSkinInfo, OffsetToMid);
 
-			CUIRect EyesRow;
-			Eyes.HSplitTop(EyeLineSize, &EyesRow, &Eyes);
-			static CButtonContainer s_aEyeButtons[NUM_EMOTES];
-			for(int CurrentEyeEmote = 0; CurrentEyeEmote < NUM_EMOTES; CurrentEyeEmote++)
-			{
-				// 单行平铺：每个表情均分剩余行宽，表情在按钮内居中。
-				EyesRow.VSplitLeft(EyesRow.w / (NUM_EMOTES - CurrentEyeEmote), &Button, &EyesRow);
+			static const char *s_apEmoteNames[] = {
+				"Normal",
+				"Pain",
+				"Happy",
+				"Surprise",
+				"Angry",
+				"Blink",
+			};
 
-				const ColorRGBA EyeButtonColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f + (*pEmote == CurrentEyeEmote ? 0.25f : 0.0f));
-				if(DoButton_Menu(&s_aEyeButtons[CurrentEyeEmote], "", 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.0f, EyeButtonColor))
+			for(int i = 0; i < NUM_EMOTES; ++i)
+			{
+				const CUIRect &Slot = SliderLayout.m_aSlotRects[i];
+				const bool IsActive = (i == ActiveEmote);
+				const bool IsHovered = Ui()->MouseHovered(&Slot) && !Ui()->IsPopupOpen();
+
+				// 未选中槽位悬浮时的轻微胶囊反馈
+				if(IsHovered && !IsActive)
 				{
-					*pEmote = CurrentEyeEmote;
-					if((int)m_Dummy == g_Config.m_ClDummy)
-						GameClient()->m_Emoticon.EyeEmote(CurrentEyeEmote);
+					CUIRect HoverRect;
+					Slot.Margin(2.5f * UiScale, &HoverRect);
+					DrawRoundedSurface(TabBarUiContext(), HoverRect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), ColorRGBA(), ui_token::radius::PILL);
 				}
-				GameClient()->m_Tooltips.DoToolTip(&s_aEyeButtons[CurrentEyeEmote], &Button, Localize("Choose default eyes when joining a server"));
-				RenderTools()->RenderTee(CAnimState::GetIdle(), &EyeSkinInfo, CurrentEyeEmote, vec2(1.0f, 0.0f), vec2(Button.x + Button.w / 2.0f, Button.y + Button.h / 2.0f + OffsetToMid.y));
+
+				// 表情 Tooltip：显示表情名称与说明
+				char aTooltip[128];
+				str_format(aTooltip, sizeof(aTooltip), "%s - %s", Localize(s_apEmoteNames[i]), Localize("Choose default eyes when joining a server"));
+				GameClient()->m_Tooltips.DoToolTip(&s_aEyeSlotButtons[i], &Slot, aTooltip);
+
+				// Tee 形象渲染：选中项 100% 聚焦，悬浮项 90%，未选中项 78% 柔和对比度
+				const float TeeAlpha = IsActive ? 1.0f : (IsHovered ? 0.90f : 0.78f);
+				const vec2 TeePos = vec2(Slot.x + Slot.w * 0.5f, Slot.y + Slot.h * 0.5f + OffsetToMid.y);
+				RenderTools()->RenderTee(CAnimState::GetIdle(), &EyeSkinInfo, i, vec2(1.0f, 0.0f), TeePos, TeeAlpha);
 			}
 		}
 
@@ -3642,8 +3912,15 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 					m_SkinQueuePresetRenamePopupContext.m_Dummy = QueueDummy;
 					m_SkinQueuePresetRenamePopupContext.m_PresetIndex = RenamePresetIndex;
 					m_SkinQueuePresetRenamePopupContext.m_NameInput.Set(vQueuePresets[RenamePresetIndex].m_Name.c_str());
-					m_SkinQueuePresetRenamePopupContext.m_NameInput.SelectAll();
-					Ui()->DoPopupMenu(&m_SkinQueuePresetRenamePopupContext, Ui()->MouseX(), Ui()->MouseY(), 260.0f, 72.0f, &m_SkinQueuePresetRenamePopupContext, PopupSkinQueuePresetRename);
+					SPopupMenuProperties PopupProps;
+					if(g_Config.m_QmNewUi)
+					{
+						PopupProps.m_CenterInViewport = true;
+						PopupProps.m_BlockUnderlyingPointerInput = true;
+						PopupProps.m_BlockUnderlyingScroll = true;
+						PopupProps.m_Animate = true;
+					}
+					Ui()->DoPopupMenu(&m_SkinQueuePresetRenamePopupContext, Ui()->MouseX(), Ui()->MouseY(), 260.0f, 72.0f, &m_SkinQueuePresetRenamePopupContext, PopupSkinQueuePresetRename, PopupProps);
 				}
 				else if(SelectPresetIndex >= 0)
 				{
@@ -3960,11 +4237,29 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	const float GraphicsDisplayContentHeight = ResolveSettingsRowsHeight(GraphicsDisplayRowCount, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineSpacing);
 	const float GraphicsDisplayMinCardHeight = DisplayChromeHeight + GraphicsDisplayContentHeight;
 	const uint64_t GraphicsDisplayMeasureRevision = (static_cast<uint64_t>(std::max(0, GraphicsDisplayRowCount)) << 32) ^ static_cast<uint64_t>(std::max(0, OldWindowMode));
-	const float GraphicsVisualContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight});
+	const bool GraphicsVisualTextCustomVisible = g_Config.m_QmUiTextColorMode == 3;
+	const float GraphicsVisualContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight, GraphicsVisualTextCustomVisible),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_LineHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_LineHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_LineHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_ButtonHeight),
+													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_LineHeight)});
+	const uint64_t GraphicsVisualMeasureRevision = static_cast<uint64_t>(GraphicsVisualTextCustomVisible);
 	const float GraphicsVisualMinCardHeight = VisualChromeHeight + GraphicsVisualContentHeight;
 	const float GraphicsIconsContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight});
 	const float GraphicsIconsMinCardHeight = IconsChromeHeight + GraphicsIconsContentHeight;
-	const float GraphicsInteractionContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight});
+	const float GraphicsInteractionContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight});
 	const float GraphicsInteractionMinCardHeight = InteractionChromeHeight + GraphicsInteractionContentHeight;
 	static CButtonContainer s_aGraphicsIconColorButtons[4];
 	static CButtonContainer s_aGraphicsIconWeightButtons[5];
@@ -3973,7 +4268,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	static CButtonContainer s_GraphicsIconDuotoneSecondaryColorResetId;
 
 	const bool RenderOnly = Ui()->RenderOnly();
-	const auto BuildDefinitions = [this, pModesDefault, pDisplayDefault, pVisualDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesMinCardHeight, ModesChromeHeight, GraphicsDisplayMinCardHeight, DisplayChromeHeight, GraphicsVisualMinCardHeight, VisualChromeHeight, GraphicsIconsMinCardHeight, IconsChromeHeight, GraphicsInteractionMinCardHeight, InteractionChromeHeight, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, FoundBackendCount, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
+	const auto BuildDefinitions = [this, pModesDefault, pDisplayDefault, pVisualDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesMinCardHeight, ModesChromeHeight, GraphicsDisplayMinCardHeight, DisplayChromeHeight, GraphicsVisualMinCardHeight, VisualChromeHeight, GraphicsVisualMeasureRevision, GraphicsIconsMinCardHeight, IconsChromeHeight, GraphicsInteractionMinCardHeight, InteractionChromeHeight, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, FoundBackendCount, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(5);
 		const SSettingsCardSpec ModesSpec{pModesDefault->m_pStableId, Localize(pModesDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pModesDefault)};
 		const SSettingsCardSpec DisplaySpec{pDisplayDefault->m_pStableId, Localize(pDisplayDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pDisplayDefault)};
@@ -4320,8 +4615,9 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 					CheckSettings = true;
 				});
 			} }, GraphicsDisplayMeasureRevision);
-		AddCard(VisualSpec, GraphicsVisualMinCardHeight, VisualChromeHeight, [this, GraphicsMetrics, BodySize, DoGraphicsNumericField](CUIRect ContentRect) {
+		AddCard(VisualSpec, GraphicsVisualMinCardHeight, VisualChromeHeight, [this, GraphicsMetrics, GraphicsPage, BodySize, DoGraphicsNumericField](CUIRect ContentRect) {
 			CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);
+			const bool TextCustomColorVisible = g_Config.m_QmUiTextColorMode == 3;
 			SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 			ColorMetrics.m_LineSpacing = 0.0f;
 			static CButtonContainer s_UiColorResetId;
@@ -4346,6 +4642,60 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			static CButtonContainer s_UiCardColorResetId;
 			CUIRect UiCardColorRow = Rows.NextButton();
 			if(DoLine_AlphaColorPicker(&s_UiCardColorResetId, ColorMetrics, &UiCardColorRow, Localize("Settings card background"), &g_Config.m_QmUiCardColor, &g_Config.m_QmUiCardOpacity, DefaultConfig::QmUiCardColor, DefaultConfig::QmUiCardOpacity))
+				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+
+			static CButtonContainer s_DropdownColorResetId;
+			CUIRect DropdownColorRow = Rows.NextButton();
+			if(DoLine_AlphaColorPicker(&s_DropdownColorResetId, ColorMetrics, &DropdownColorRow, Localize("Button background color"), &g_Config.m_QmUiDropdownColor, &g_Config.m_QmUiDropdownOpacity, DefaultConfig::QmUiDropdownColor, DefaultConfig::QmUiDropdownOpacity))
+				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+
+			static CButtonContainer s_InputColorResetId;
+			CUIRect InputColorRow = Rows.NextButton();
+			if(DoLine_AlphaColorPicker(&s_InputColorResetId, ColorMetrics, &InputColorRow, Localize("Input background color"), &g_Config.m_QmUiInputColor, &g_Config.m_QmUiInputOpacity, DefaultConfig::QmUiInputColor, DefaultConfig::QmUiInputOpacity))
+				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+
+			static CButtonContainer s_DropdownListColorResetId;
+			CUIRect DropdownListColorRow = Rows.NextButton();
+			if(DoLine_AlphaColorPicker(&s_DropdownListColorResetId, ColorMetrics, &DropdownListColorRow, Localize("Expanded dropdown background color"), &g_Config.m_QmUiDropdownListColor, &g_Config.m_QmUiDropdownListOpacity, DefaultConfig::QmUiDropdownListColor, DefaultConfig::QmUiDropdownListOpacity))
+				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+
+			static CButtonContainer s_PopupColorResetId;
+			CUIRect PopupColorRow = Rows.NextButton();
+			if(DoLine_AlphaColorPicker(&s_PopupColorResetId, ColorMetrics, &PopupColorRow, Localize("Secondary menu background color"), &g_Config.m_QmUiPopupColor, &g_Config.m_QmUiPopupOpacity, DefaultConfig::QmUiPopupColor, DefaultConfig::QmUiPopupOpacity))
+				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+			CUIRect TextModeRow = Rows.NextButton();
+			CUIRect TextModeLabel, TextModeControl;
+			TextModeRow.VSplitMid(&TextModeLabel, &TextModeControl, GraphicsMetrics.m_LineSpacing);
+			DoSettingsMenuLabel(SETTINGS_GRAPHICS, -1, -1, "text-color-mode", &TextModeLabel, Localize("Text color mode"), GraphicsMetrics.m_BodySize, TEXTALIGN_ML);
+			static CUi::SDropDownState s_TextColorModeState;
+			static CScrollRegion s_TextColorModeScroll;
+			s_TextColorModeState.m_SelectionPopupContext.m_pScrollRegion = &s_TextColorModeScroll;
+			const char *apTextModes[] = {Localize("Auto"), Localize("White"), Localize("Black"), Localize("Custom")};
+			CUi::SDropDownProperties TextModeProps;
+			TextModeProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
+			const int TextMode = DoSettingsDropDown(&TextModeControl, g_Config.m_QmUiTextColorMode, apTextModes, std::size(apTextModes), s_TextColorModeState, TextModeProps);
+			if(TextMode != g_Config.m_QmUiTextColorMode)
+			{
+				g_Config.m_QmUiTextColorMode = TextMode;
+				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+			}
+			CUIRect TextCustomColorRow = Rows.NextIf(TextCustomColorVisible, GraphicsMetrics.m_ButtonHeight);
+			if(TextCustomColorVisible)
+			{
+				static CButtonContainer s_TextCustomColorResetId;
+				const unsigned PreviousTextColor = g_Config.m_QmUiTextCustomColor;
+				DoLine_ColorPicker(&s_TextCustomColorResetId, ColorMetrics, &TextCustomColorRow, Localize("Custom text color"), &g_Config.m_QmUiTextCustomColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmUiTextCustomColor)), false, nullptr, false);
+				if(PreviousTextColor != g_Config.m_QmUiTextCustomColor)
+					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+			}
+			static CButtonContainer s_FocusColorResetId;
+			const unsigned OldFocusColor = g_Config.m_QmUiFocusColor;
+			CUIRect FocusColorRow = Rows.NextButton();
+			SSettingsContentMetrics FocusColorMetrics = ColorMetrics;
+			FocusColorMetrics.m_LineSpacing = 0.0f;
+			DoLine_ColorPicker(&s_FocusColorResetId, FocusColorMetrics, &FocusColorRow, Localize("Text input focus ring color"), &g_Config.m_QmUiFocusColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmUiFocusColor)), false, nullptr, false);
+			GameClient()->m_Tooltips.DoToolTip(&s_FocusColorResetId, &FocusColorRow, Localize("Used by active shared text and numeric input fields"));
+			if(OldFocusColor != g_Config.m_QmUiFocusColor)
 				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 
 			static CButtonContainer s_ScoreboardColorResetId;
@@ -4388,8 +4738,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 
 			Button = Rows.NextLine();
 			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiCardRainbowTitles, "rainbow-card-titles", Localize("Rainbow card titles"), g_Config.m_QmUiCardRainbowTitles, &Button))
-				g_Config.m_QmUiCardRainbowTitles ^= 1;
-		});
+				g_Config.m_QmUiCardRainbowTitles ^= 1; }, GraphicsVisualMeasureRevision);
 		AddCard(IconsSpec, GraphicsIconsMinCardHeight, IconsChromeHeight, [this, GraphicsMetrics, BodySize](CUIRect ContentRect) {
 			CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);
 			const bool CustomColor = g_Config.m_QmUiIconColor == 3;
@@ -4558,15 +4907,11 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmExtraAnimations, "presentation-animations", Localize("Presentation animations"), g_Config.m_QmExtraAnimations, &PresentationAnimations))
 				g_Config.m_QmExtraAnimations ^= 1;
 			GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmExtraAnimations, &PresentationAnimations, Localize("Animate chat box, emote selector, scoreboard, and spectate selection"));
-			static CButtonContainer s_FocusColorResetId;
-			const unsigned OldFocusColor = g_Config.m_QmUiFocusColor;
-			CUIRect FocusColorRow = Rows.NextButton();
-			SSettingsContentMetrics FocusColorMetrics = GraphicsMetrics;
-			FocusColorMetrics.m_LineSpacing = 0.0f;
-			DoLine_ColorPicker(&s_FocusColorResetId, FocusColorMetrics, &FocusColorRow, Localize("Text input focus ring color"), &g_Config.m_QmUiFocusColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmUiFocusColor)), false, nullptr, false);
-			GameClient()->m_Tooltips.DoToolTip(&s_FocusColorResetId, &FocusColorRow, Localize("Used by active shared text and numeric input fields"));
-			if(OldFocusColor != g_Config.m_QmUiFocusColor)
-				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
+
+			CUIRect PopupBlurRow = Rows.NextLine();
+			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiPopupBlur, "settings-popup-blur", Localize("Popup & dropdown blur"), g_Config.m_QmUiPopupBlur, &PopupBlurRow))
+				g_Config.m_QmUiPopupBlur ^= 1;
+			GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiPopupBlur, &PopupBlurRow, Localize("Apply frosted glass blur behind secondary popups and dropdowns"));
 		});
 	};
 	uint64_t GraphicsLayoutRevision = GraphicsModesMeasureRevision;
@@ -4575,6 +4920,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(FoundBackendCount);
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(OldWindowMode);
 	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(RenderOnly ? 1 : 0);
+	GraphicsLayoutRevision = GraphicsLayoutRevision * 1099511628211ULL ^ GraphicsVisualMeasureRevision;
 	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, GraphicsLayoutRevision);
 
 	if(!m_MenuTextPlanCollecting && !Ui()->RenderOnly() && !m_SettingsCardFocusStableId.empty())
@@ -6078,7 +6424,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 			LogPerfStage(Client(), "settings_tabbar", StageTimer.ElapsedMs(), false, aTabBarExtra);
 		}
 	}
-	const uint64_t SettingsDisplayViewKey = ResolveSettingsCardDisplayViewKey(g_Config.m_UiSettingsPage, m_Dummy ? 1 : 0, m_AppearanceSettingsTab, m_TClientSettingsTab, m_QmClientSettingsTab);
+	const uint64_t SettingsDisplayViewKey = ResolveSettingsCardDisplayViewKey(g_Config.m_UiSettingsPage, m_Dummy ? 1 : 0, m_AppearanceSettingsTab, m_TClientSettingsTab, m_QmClientSettingsTab, m_CreditsSettingsTab);
 	if(!CollectingMenuTextPlan && g_Config.m_UiSettingsPage != SETTINGS_TEE && m_SettingsCardDeckDisplayState.EnterView(SettingsDisplayViewKey))
 	{
 		m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
@@ -6090,14 +6436,14 @@ void CMenus::RenderSettings(CUIRect MainView)
 		{
 			s_PrevSettingsPage = g_Config.m_UiSettingsPage;
 			s_SettingsTransitionInitialized = true;
-			if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
+			if(g_Config.m_UiSettingsPage == SETTINGS_TEE || g_Config.m_UiSettingsPage == SETTINGS_PLAYER)
 				m_TeeEntranceStartTime = time_get();
 		}
 		else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
 		{
 			if(s_PrevSettingsPage == SETTINGS_TEE && g_Config.m_UiSettingsPage != SETTINGS_TEE)
 				FinalizeTeeListDrainPerfSession();
-			if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
+			if(g_Config.m_UiSettingsPage == SETTINGS_TEE || g_Config.m_UiSettingsPage == SETTINGS_PLAYER)
 				m_TeeEntranceStartTime = time_get();
 			if(PerfDebugEnabled())
 			{
@@ -8730,6 +9076,12 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 				const SQmDropdownPopupPolicy PopupPolicy = QmResolveDropdownPopupPolicy((int)s_PopupMapPickerContext.m_vMaps.size(), 20.0f, 0.0f, false, 0.0f, CUi::PopupMenuContentInset(), 1);
 				SPopupMenuProperties PopupProps;
 				PopupProps.m_BlockUnderlyingScroll = true;
+				if(g_Config.m_QmNewUi)
+				{
+					PopupProps.m_CenterInViewport = true;
+					PopupProps.m_BlockUnderlyingPointerInput = true;
+					PopupProps.m_Animate = true;
+				}
 				Ui()->DoPopupMenu(&s_PopupMapPickerId, Ui()->MouseX(), Ui()->MouseY(), 300.0f, PopupPolicy.m_PreferredHeight, &s_PopupMapPickerContext, PopupMapPicker, PopupProps);
 			}
 

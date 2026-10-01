@@ -827,6 +827,9 @@ Apply a writable preset and edit first
 Apply Changes
 == 변경 사항 적용
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== 하위 팝업과 드롭다운 뒤의 배경을 흐리게 표시
+
 Apply input early before next tick for prediction
 == 예측을 위해 다음 틱 전에 입력을 미리 적용
 
@@ -1603,6 +1606,12 @@ Button - Disabled
 
 Button - Enabled
 == 버튼 - 활성화
+
+Button background color
+== 버튼 배경색
+
+Button background opacity percentage
+== 버튼 배경색 — 불투명도 백분율
 
 Button browser
 == 버튼 브라우저
@@ -2686,6 +2695,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == 사용자 정의 Provider 모델 이름
+
+Custom text color
+== 사용자 지정 텍스트 색상
 
 Custom title
 == 사용자 지정 칭호
@@ -3809,6 +3821,9 @@ Enable fat skin
 Enable freeze call sound
 == 프리즈 콜 사운드 활성화
 
+Enable frosted glass blur behind secondary popups and dropdowns
+== 하위 팝업과 드롭다운 배경 흐림 활성화
+
 Enable FTAPI auto-translate (may overload the service)
 == FTAPI 자동 번역 활성화 (서비스에 과부하가 걸릴 수 있음)
 
@@ -4244,6 +4259,12 @@ Existing Player
 Exit replay view
 == 리플레이 보기 종료
 
+Expanded dropdown background color
+== 펼쳐진 목록 배경색
+
+Expanded dropdown background opacity percentage
+== 펼쳐진 목록 배경색 — 불투명도 백분율
+
 Export
 == 내보내기
 
@@ -4555,6 +4576,9 @@ Font cursor
 
 Font size
 == 글꼴 크기
+
+Font store
+== 글꼴 상점
 
 Font store:
 == 글꼴 상점:
@@ -5605,6 +5629,12 @@ Initializing map logic
 
 Input
 == 입력
+
+Input background color
+== 입력란 배경색
+
+Input background opacity percentage
+== 입력란 배경색 — 불투명도 백분율
 
 Input device
 == 입력 장치
@@ -8330,6 +8360,9 @@ Points unavailable
 Polished
 == 광택
 
+Popup & dropdown blur
+== 팝업 및 드롭다운 흐림
+
 Popup animation
 == 팝업 애니메이션
 
@@ -9956,6 +9989,9 @@ Search
 Search and navigate settings
 == 설정 검색 및 이동
 
+Search country flag…
+== 국기 검색…
+
 Search donor asset
 == 기증자 에셋 검색
 
@@ -9988,6 +10024,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == 보조
+
+Secondary menu background color
+== 보조 메뉴 배경색
+
+Secondary menu background opacity percentage
+== 보조 메뉴 배경색 — 불투명도 백분율
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == 재연결 전 대기 시간 (초) (서버가 가득 찼을 때, 0=끄기)
@@ -10093,9 +10135,6 @@ Send Rate
 
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
-
-Send target language
-== 대상 언어 보내기
 
 Send translation method
 == 번역 방식 보내기
@@ -12349,6 +12388,12 @@ Text alpha
 
 Text color
 == 텍스트 색상
+
+Text color mode
+== 텍스트 색상 모드
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== 텍스트 색상 모드: 0 자동, 1 흰색, 2 검정, 3 사용자 지정
 
 Text effect
 == 글자 효과

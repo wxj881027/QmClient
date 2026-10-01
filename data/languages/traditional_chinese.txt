@@ -827,6 +827,9 @@ Apply a writable preset and edit first
 Apply Changes
 == 應用更改
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== 對次級視窗與下拉清單背後的內容套用模糊
+
 Apply input early before next tick for prediction
 == 在下一 tick 前提前應用輸入進行預測
 
@@ -1603,6 +1606,12 @@ Button - Disabled
 
 Button - Enabled
 == 按鈕 - 已啟用
+
+Button background color
+== 按鈕背景顏色
+
+Button background opacity percentage
+== 按鈕背景 — 不透明度百分比
 
 Button browser
 == 按鈕瀏覽器
@@ -2686,6 +2695,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == 自定義 Provider 模型名稱
+
+Custom text color
+== 自訂文字顏色
 
 Custom title
 == 自訂頭銜
@@ -3809,6 +3821,9 @@ Enable fat skin
 Enable freeze call sound
 == 啟用凍結呼叫聲
 
+Enable frosted glass blur behind secondary popups and dropdowns
+== 啟用次級視窗與下拉清單背景模糊
+
 Enable FTAPI auto-translate (may overload the service)
 == 啟用 FTAPI 自動翻譯（可能導致服務過載）
 
@@ -4244,6 +4259,12 @@ Existing Player
 Exit replay view
 == 退出回放檢視
 
+Expanded dropdown background color
+== 展開清單背景顏色
+
+Expanded dropdown background opacity percentage
+== 展開清單背景 — 不透明度百分比
+
 Export
 == 導出
 
@@ -4555,6 +4576,9 @@ Font cursor
 
 Font size
 == 字體大小
+
+Font store
+== 字型商店
 
 Font store:
 == 字型商店：
@@ -5605,6 +5629,12 @@ Initializing map logic
 
 Input
 == 輸入
+
+Input background color
+== 輸入框背景顏色
+
+Input background opacity percentage
+== 輸入框背景 — 不透明度百分比
 
 Input device
 == 輸入設備
@@ -8330,6 +8360,9 @@ Points unavailable
 Polished
 == 拋光
 
+Popup & dropdown blur
+== 彈出視窗與下拉清單模糊
+
 Popup animation
 == 彈出動畫
 
@@ -9956,6 +9989,9 @@ Search
 Search and navigate settings
 == 搜尋並前往設定
 
+Search country flag…
+== 搜尋國家旗幟…
+
 Search donor asset
 == 搜索來源材質
 
@@ -9988,6 +10024,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == 次要
+
+Secondary menu background color
+== 次級選單背景顏色
+
+Secondary menu background opacity percentage
+== 次級選單背景 — 不透明度百分比
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == 重新連接前等待多少秒（伺服器已滿時，0 表示關閉）
@@ -10093,9 +10135,6 @@ Send Rate
 
 Send specified command to rcon
 == 向 rcon 發送指定命令
-
-Send target language
-== 發送目標語言
 
 Send translation method
 == 發送翻譯方式
@@ -12349,6 +12388,12 @@ Text alpha
 
 Text color
 == 文本顏色
+
+Text color mode
+== 文字顏色模式
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== 文字顏色模式: 0 自動, 1 白色, 2 黑色, 3 自訂
 
 Text effect
 == 文字效果

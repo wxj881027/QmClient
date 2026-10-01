@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 GATE_DIR = REPO_ROOT / "qmclient_scripts" / "gate"
 sys.path.insert(0, str(GATE_DIR))
 
-from checks import clang_tidy_warn, config_vars, env, identifiers, python_tests, settings_ui  # noqa: E402
+from checks import clang_tidy_warn, config_vars, env, identifiers, settings_ui  # noqa: E402
 import check_gate  # noqa: E402
 from lib import scope  # noqa: E402
 from lib.report import ResultCollector  # noqa: E402
@@ -183,21 +183,19 @@ class GateLibraryContractTest(unittest.TestCase):
 		self.assertTrue(any(item.title == "Git 子模块前置检查" for item in results.items))
 
 	def test_analysis_checks_ignore_deleted_translation_units(self):
-		included = [
-			"src/test/definitely_deleted.cpp",
-			"src/test/qm_axiom_scores_test.cpp",
-			"src/game/client/gameclient.cpp",
-			"src/game/client/gameclient.h",
-		]
-
-		self.assertEqual(
-			clang_tidy_warn._existing_source_files(included),
-			["src/test/qm_axiom_scores_test.cpp", "src/game/client/gameclient.cpp"],
-		)
-		self.assertEqual(
-			identifiers._existing_source_files(included),
-			["src/game/client/gameclient.cpp"],
-		)
+		# 通过隔离文件树验证生产过滤器，不依赖仓库某个测试的固定路径。
+		with TemporaryDirectory() as directory:
+			root = Path(directory)
+			test_file = "src/test/unit/qmclient/one_test.cpp"
+			client_file = "src/game/client/example.cpp"
+			for name in (test_file, client_file, "src/game/client/example.h"):
+				path = root / name
+				path.parent.mkdir(parents=True, exist_ok=True)
+				path.write_text("", encoding="utf-8")
+			included = ["src/test/deleted.cpp", test_file, client_file, "src/game/client/example.h"]
+			with mock.patch.object(clang_tidy_warn, "REPO_ROOT", root), mock.patch.object(identifiers, "REPO_ROOT", root):
+				self.assertEqual(clang_tidy_warn._existing_source_files(included), [test_file, client_file])
+				self.assertEqual(identifiers._existing_source_files(included), [client_file])
 
 	def test_identifier_rows_are_limited_to_changed_lines(self):
 		rows = [

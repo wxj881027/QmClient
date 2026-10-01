@@ -49,6 +49,20 @@ struct SSettingsCardDeckInput
 	SSettingsCardDeckFrameDiagnostics *m_pDiagnostics = nullptr;
 };
 
+// 输入快照可能采集于本帧弹层打开之前，Deck 在预布局前后都需重新隔离。
+inline SSettingsCardDeckInput ResolveSettingsCardDeckPointerInput(SSettingsCardDeckInput Input, bool Blocked)
+{
+	if(Blocked)
+	{
+		Input.m_MousePressed = false;
+		Input.m_MouseDown = false;
+		Input.m_MouseReleased = false;
+		Input.m_CtrlPressed = false;
+		Input.m_AllowHeaderDrag = false;
+	}
+	return Input;
+}
+
 struct SSettingsCardDeckResult
 {
 	const char *m_pRevealedStableId = nullptr;

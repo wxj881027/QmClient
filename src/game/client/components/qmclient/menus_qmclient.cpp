@@ -56,6 +56,7 @@
 #include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/components/qmclient/qm_title_style.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
+#include <game/client/components/qmclient/translate/translate_backend.h>
 #include <game/client/components/qmclient/translate/translate_ui_common.h>
 #include <game/client/components/qmclient/translate/translate_ui_settings.h>
 #include <game/client/components/skins.h>
@@ -1371,6 +1372,9 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 	static CButtonContainer s_ReaderButtonSoloSplitEnter, s_ClearButtonSoloSplitEnter;
 	static CButtonContainer s_ReaderButtonSoloSplitLeave, s_ClearButtonSoloSplitLeave;
 	static const void *s_RestoreTeamInputId = &s_RestoreTeamInputId;
+	// 自动锁队配置与 HJAssist 卡共用 qm_auto_team_lock；HJAssist 已用配置地址作控件 id，
+	// 两卡可能同屏显示，这里改用独立静态地址避免 hot/active 项串扰。
+	static const void *s_AutoTeamLockCheckboxId = &s_AutoTeamLockCheckboxId;
 	CUIRect Row, BindLabel, BindKey, LabelColumn, ControlColumn;
 	auto RenderCheckbox = [&](const void *pId, const char *pTextId, const char *pText, int *pValue) {
 		Content.HSplitTop(LineHeight, &Row, &Content);
@@ -1378,6 +1382,7 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};
 	RenderCheckbox(&g_Config.m_QmSoloSplitLinkDummy, "qmclient-solo-split-link-dummy", "Auto-connect dummy", &g_Config.m_QmSoloSplitLinkDummy);
+	RenderCheckbox(s_AutoTeamLockCheckboxId, "qmclient-solo-split-auto-team-lock", "Auto team lock", &g_Config.m_QmAutoTeamLock);
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-solo-split-restore-team", &LabelColumn, Localize("Team when leaving solo split"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
@@ -1884,8 +1889,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	RenderCheckbox(&g_Config.m_QmTranslateAutoOutgoing, "Auto translate sent messages", Localize("Auto translate sent messages"), &g_Config.m_QmTranslateAutoOutgoing, &Row, LineHeight);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
-	const auto TranslateBackendDropDownNames = NTranslateUi::BackendNames();
-	if(!Ui()->RenderOnly())
+	const auto TranslateBackendDropDownNames = NTranslateUi::NamesWithCustom(NTranslateUi::BackendNames());
+	if(!PrewarmOnly && !Ui()->RenderOnly())
 		NTranslateUi::NormalizeBackend(g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend));
 	static CUi::SDropDownState s_TranslateBackendDropDownState;
 	static CScrollRegion s_TranslateBackendDropDownScrollRegion;
@@ -1898,7 +1903,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	CUIElement &TranslationServiceLabel = SettingsTextElement(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-translation-service");
 	DoSettingsLabelStreamed(TranslationServiceLabel, &LabelCol, Localize("Translation service"), BodySize, TEXTALIGN_ML);
 	const int BackendSelectedNew = DoSettingsDropDown(&ControlCol, BackendSelectedOld, TranslateBackendDropDownNames.data(), TranslateBackendDropDownNames.size(), s_TranslateBackendDropDownState);
-	NTranslateUi::CommitBackend(g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), BackendSelectedOld, BackendSelectedNew);
+	if(!PrewarmOnly && !Ui()->RenderOnly())
+		NTranslateUi::CommitBackend(g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), BackendSelectedOld, BackendSelectedNew);
 	const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
 	const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0;
 	const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
@@ -1948,10 +1954,10 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		// 自定义语言代码不能在普通重绘时被第一项覆盖；显式展示“自定义”项。
 		std::vector<const char *> vNames(apNames, apNames + Count);
 		vNames.push_back(Localize("Custom…"));
-		const int SelectedIndex = ResolveSettingsSelectionWithCustomFallback(OldSel, Count);
+		const int SelectedIndex = NTranslateUi::CustomSelectionIndex(OldSel, Count);
 		const int NewSel = DoSettingsDropDown(&DropRect, SelectedIndex, vNames.data(), static_cast<int>(vNames.size()), DropDownState);
-		if(NewSel >= 0 && NewSel < Count && NewSel != OldSel)
-			str_copy(pConfigValue, apCodes[NewSel], ConfigValueSize);
+		if(!PrewarmOnly && !Ui()->RenderOnly())
+			NTranslateUi::CommitSelection(pConfigValue, ConfigValueSize, apCodes, Count, SelectedIndex, NewSel);
 
 		if(!LineInput.IsActive() && str_comp(LineInput.GetString(), pConfigValue) != 0)
 			LineInput.Set(pConfigValue);
@@ -2228,8 +2234,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 	// 下拉框 + 输入框组合
 	{
-		const std::array<const char *, 10> apOutTargetNames = {"中文", "English", "日本語", "한국어", "繁體中文", "Русский", "Deutsch", "Français", "Español", "Português"};
-		const std::array<const char *, 10> apOutTargetCodes = {"zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+		const auto &apOutTargetNames = NTranslateUi::LanguageNames();
+		const auto &apOutTargetCodes = NTranslateUi::LanguageCodes();
 		static CUi::SDropDownState s_OutTargetLangDropDown;
 
 		static CLineInput s_TargetLang(g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget));
@@ -2314,33 +2320,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 		// 显示当前有效并发数
 		{
-			// 计算智能默认值（与 CTranslate::GetEffectiveConcurrency 保持一致）
-			int EffectiveConcurrency = 3; // 默认值
-			if(g_Config.m_QmTranslateLlmConcurrency != 0)
-			{
-				// 用户手动设置
-				EffectiveConcurrency = g_Config.m_QmTranslateLlmConcurrency;
-			}
-			else
-			{
-				// 根据 Provider 类型提供智能默认值
-				switch(g_Config.m_QmTranslateLlmProvider)
-				{
-				case 0: // Zhipu AI
-					EffectiveConcurrency = 1; // 免费档限 1 并发
-					break;
-				case 1: // DeepSeek
-					EffectiveConcurrency = 3;
-					break;
-				case 2: // OpenAI
-					EffectiveConcurrency = 2;
-					break;
-				case 3: // Custom
-				default:
-					EffectiveConcurrency = g_Config.m_QmTranslateLlmConcurrencyDefault;
-					break;
-				}
-			}
+			const int EffectiveConcurrency = GetTranslateConcurrency();
 
 			// 显示有效并发数
 			char aBuf[64];
@@ -2415,20 +2395,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 		// 下拉框 + 输入框组合
 		{
-			const std::array<const char *, 11> apSourceNames = {
-				Localize("Auto"),
-				"中文",
-				"English",
-				"日本語",
-				"한국어",
-				"繁體中文",
-				"Русский",
-				"Deutsch",
-				"Français",
-				"Español",
-				"Português",
-			};
-			const std::array<const char *, 11> apSourceCodes = {"auto", "zh", "en", "ja", "ko", "zh-TW", "ru", "de", "fr", "es", "pt"};
+			const auto apSourceNames = NTranslateUi::SourceLanguageNames();
+			const auto apSourceCodes = NTranslateUi::SourceLanguageCodes();
 			static CUi::SDropDownState s_SourceLangDropDown;
 
 			static CLineInput s_SourceLang(g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource));
@@ -2470,30 +2438,6 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		}
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
-	RenderLabel("qmclient-translate-send-target-language", &LabelCol, Localize("Send target language"), BodySize);
-
-	// 下拉框 + 输入框组合
-	{
-		const auto &apOutTargetNames = NTranslateUi::LanguageNames();
-		const auto &apOutTargetCodes = NTranslateUi::LanguageCodes();
-		static CUi::SDropDownState s_OutTargetLangDropDown;
-
-		static CLineInput s_TargetLang(g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget));
-		RenderLanguageDropDownWithCustomInput(ControlCol, apOutTargetNames.data(), apOutTargetCodes.data(), apOutTargetCodes.size(), s_OutTargetLangDropDown, g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), s_TargetLang, "en");
-	}
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-
-	// Content.HSplitTop(LineHeight, &Row, &Content);
-	// Ui()->DoLabel(&Row, Localize("Auto-translate will skip simplified Chinese, traditional Chinese, and server messages"), BodySize * 0.8f, TEXTALIGN_ML);
-	// Content.HSplitTop(LineSpacing / 2.0f, nullptr, &Content);
-	//
-	// Content.HSplitTop(LineHeight, &Row, &Content);
-	// Ui()->DoLabel(&Row, Localize("Append language codes like [ru], [en], [ja] at the end when sending"), BodySize * 0.8f, TEXTALIGN_ML);
-	// Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
 
 void CMenus::RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)

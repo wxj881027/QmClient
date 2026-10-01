@@ -1,5 +1,8 @@
 #include "nameplates.h"
 
+#include "qmclient/nameplate_density.h"
+#include "qmclient/perf_logging.h"
+
 #include <base/log.h>
 #include <base/str.h>
 
@@ -370,6 +373,8 @@ class CNamePlateData
 public:
 	bool m_Local; // TClient
 	bool m_InGame;
+	float m_BakeDensity = 0.0f;
+	uint64_t m_DensityRevision = 0;
 	ColorRGBA m_Color;
 	bool m_ShowName;
 	bool m_UseTextEffects;
@@ -410,13 +415,11 @@ public:
 // Part Types
 
 static constexpr float DEFAULT_PADDING = 5.0f;
-// 名牌文字按“整数相机缩放档位”的像素密度栅格化：档位变化时才重建文字容器。
-// 每帧最多重建的文本部件数量用于摊平重建（字形栅格化/上传）开销，避免缩放瞬间卡顿。
+// 每帧预算以文本部件计费、整块名牌提交，摊平字形栅格化与上传开销。
 static constexpr int NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME = 16;
 static int s_NameplateTextRebuildBudget = NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME;
 
-// 铭牌文字烘焙密度按相机离散缩放档位量化。文字位图按烘焙时所在映射的密度栅格化并被 1:1 使用，
-// 缩放动画期间保持旧容器，动画结束后再按预算切换到新档位，避免细小 zoom 漂移触发连续重建。
+// 一个相机档位的有限采样余量，实际停点作为密度锚点，支持中途反向缩放。
 static const float QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID = std::log(1.0f / CCamera::ZOOM_STEP);
 
 class CNamePlatePart
@@ -433,6 +436,7 @@ protected:
 public:
 	virtual void Update(CGameClient &This, const CNamePlateData &Data) {}
 	virtual void Reset(CGameClient &This) {}
+	virtual int TextRebuildCost() const { return 0; }
 	virtual void Render(CGameClient &This, vec2 Pos) const {}
 	vec2 Size() const { return m_Size; }
 	vec2 Padding() const { return m_Padding; }
@@ -454,10 +458,7 @@ protected:
 	// 不能拿容器是否存在来推断（否则空文字部件每帧重跑整条文字更新路径）。
 	CQmNameplateTextCache m_TextCache;
 	vec2 m_RenderSize = vec2(0.0f, 0.0f);
-	// 上次栅格化字形时所在映射的密度（相对默认缩放密度的倍数）；0 = 尚未烘焙。
-	// 文字位图按烘焙时的映射密度栅格化并被 1:1 使用，密度错配就会重采样发虚，
-	// 因此用「当前密度相对烘焙密度的偏差」而不是缩放档位来决定何时重建。
-	float m_BakedDensityRatio = 0.0f;
+	uint64_t m_BakedDensityRevision = 0;
 	virtual bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) = 0;
 	virtual void UpdateText(CGameClient &This, const CNamePlateData &Data) = 0;
 	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
@@ -475,43 +476,13 @@ protected:
 public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
-		// 名牌文字在世界映射下渲染。文字位图按「烘焙时所在映射的密度」栅格化并被 1:1 使用，
-		// 因此清晰度取决于烘焙密度与绘制密度是否一致。相机缩放（含平滑缩放动画，以及
-		// qm_zoom_instant_reverse 以动画中间值为基准的情况）会让实际 zoom 离开 0.866^k 的
-		// 档位格点；若按绝对档位量化烘焙，就会留下永久性的密度错配——文字发虚且缩放也救不回来。
-		// 这里把烘焙密度锚定在相机离散档位上：缩放动画期间保持旧容器，
-		// 动画结束后按预算切换到新档位，避免连续重建导致的粗细/位置跳变。
+		// 设置预览可能清空字体图集：旧索引仍有效，但 UV 已指向其他字形。
+		// 先释放容器，再判断复用；称号度量和坐标缓冲随正常创建路径恢复。
+		if(m_TextCache.ResourcesChanged(This.TextRender()->GlyphAtlasRevision()))
+			Reset(This);
 		bool NeedsTextUpdate = UpdateNeeded(This, Data);
-		float BakeDensity = 0.0f;
-		if(Data.m_InGame)
-		{
-			float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
-			This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-			const float ScreenHeight = ScreenY1 - ScreenY0;
-			float RefWidth, RefHeight;
-			This.Graphics()->CalcScreenParams(This.Graphics()->GameScreenAspect(), 1.0f, &RefWidth, &RefHeight);
-			if(ScreenHeight > 0.0f && RefHeight > 0.0f)
-			{
-				// 当前映射密度相对默认缩放密度的倍数，量化到网格作为本次烘焙的目标密度
-				const float DensityRatio = RefHeight / ScreenHeight;
-				if(DensityRatio > 0.0f)
-					BakeDensity = std::exp(std::round(std::log(DensityRatio) / QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID) * QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID);
-			}
-			const bool DensityDrifted = BakeDensity > 0.0f && m_BakedDensityRatio > 0.0f &&
-						    std::abs(std::log(BakeDensity / m_BakedDensityRatio)) > QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID * 0.5f;
-			if(DensityDrifted && !NeedsTextUpdate && m_TextContainerIndex.Valid())
-			{
-				// 缩放动画期间保留现有容器，只让相机做连续的 GPU 变换。
-				// 如果此时重建，名字、ID、称号等部件会在不同帧使用不同的
-				// FreeType 烘焙密度，造成粗细跳变、布局抖动，并持续触发字形上传。
-				// 动画结束后再按预算收尾，保证所有部件最终回到同一密度。
-				if(!This.m_Camera.m_Zooming && s_NameplateTextRebuildBudget > 0)
-				{
-					NeedsTextUpdate = true;
-					--s_NameplateTextRebuildBudget;
-				}
-			}
-		}
+		const float BakeDensity = Data.m_BakeDensity;
+		NeedsTextUpdate |= m_BakedDensityRevision != Data.m_DensityRevision;
 		// 以显式「已算过」标志判断是否需要更新，而不是容器是否存在：
 		// 空文字会渲染出无效容器，用 Valid() 判断会让该部件每帧重跑下面的整条更新路径。
 		if(!m_TextCache.NeedsUpdate(m_Visible, NeedsTextUpdate))
@@ -524,7 +495,8 @@ public:
 		}
 
 		// Set flags
-		unsigned int Flags = ETextRenderFlags::TEXT_RENDER_FLAG_NO_FIRST_CHARACTER_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_LAST_CHARACTER_ADVANCE;
+		const unsigned PreviousFlags = This.TextRender()->GetRenderFlags();
+		unsigned int Flags = ETextRenderFlags::TEXT_RENDER_FLAG_QM_NAMEPLATE | ETextRenderFlags::TEXT_RENDER_FLAG_NO_FIRST_CHARACTER_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_LAST_CHARACTER_ADVANCE;
 		bool UsePhysicalPixelAlignment = false;
 #if defined(CONF_PLATFORM_MACOS)
 		UsePhysicalPixelAlignment = QmNameplateUsesPhysicalPixelAlignment(This.Graphics()->ScreenHiDPIScale(), true);
@@ -533,7 +505,7 @@ public:
 			Flags |= ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT; // Prevent jittering from rounding
 		This.TextRender()->SetRenderFlags(Flags);
 
-		// 切到量化后的烘焙密度再栅格化：字形密度与绘制密度一致（偏差 ≤ 网格的一半），
+		// 切到整块名牌共同选定的烘焙密度，保留有限采样余量，
 		// 且同帧所有部件使用同一密度，布局不会因各部件重建时机不同而互相错位。
 		float ScreenX0 = 0.0f, ScreenY0 = 0.0f, ScreenX1 = 0.0f, ScreenY1 = 0.0f;
 		if(Data.m_InGame && BakeDensity > 0.0f)
@@ -547,32 +519,33 @@ public:
 		if(Data.m_InGame && BakeDensity > 0.0f)
 			This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 
-		This.TextRender()->SetRenderFlags(0);
+		This.TextRender()->SetRenderFlags(PreviousFlags);
 
 		if(!m_TextContainerIndex.Valid())
 		{
 			// 本次已尝试并得到「无容器」这一有效结果，同样要记入缓存，
 			// 否则下一帧仍会被判为待更新，退化成逐帧重建。
-			m_TextCache.OnUpdate();
+			m_TextCache.OnUpdate(This.TextRender()->GlyphAtlasRevision());
 			m_Visible = false;
-			m_BakedDensityRatio = 0.0f;
+			m_BakedDensityRevision = Data.m_DensityRevision;
 			return;
 		}
 
-		// 记录本次栅格化采用的烘焙密度，供密度偏差判断是否需要重建
-		m_BakedDensityRatio = BakeDensity;
+		// 同一代密度在整块名牌内同时生效。
+		m_BakedDensityRevision = Data.m_DensityRevision;
 
 		const STextBoundingBox Container = This.TextRender()->GetBoundingBoxTextContainer(m_TextContainerIndex);
 		m_RenderSize = vec2(Container.m_W, Container.m_H);
 		const float EffectPadding = m_UseTextEffects ? QmNameplateTextEffectPadding(g_Config.m_QmNameplateTextEffects, g_Config.m_QmNameplateTextBorderRange, g_Config.m_QmNameplateTextGlowRange) : 0.0f;
 		m_Size = m_RenderSize + vec2(EffectPadding * 2.0f, EffectPadding * 2.0f + ExtraVerticalPadding() * 2.0f);
-		m_TextCache.OnUpdate();
+		m_TextCache.OnUpdate(This.TextRender()->GlyphAtlasRevision());
 	}
+	int TextRebuildCost() const override { return m_Visible && m_TextContainerIndex.Valid() ? 1 : 0; }
 	void Reset(CGameClient &This) override
 	{
 		This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 		m_TextCache.Reset();
-		m_BakedDensityRatio = 0.0f;
+		m_BakedDensityRevision = 0;
 	}
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
@@ -1438,6 +1411,7 @@ private:
 
 	bool m_Inited = false;
 	bool m_InGame = false;
+	CQmNameplateDensity m_Density;
 	PartsVector m_vpParts;
 	std::vector<SCoreRowParts> m_vCoreRows;
 	void RenderLine(CGameClient &This,
@@ -1726,6 +1700,7 @@ private:
 	{
 		for(auto &Part : m_vpParts)
 			Part->Reset(This);
+		m_Density.Reset();
 		m_vpParts.clear();
 		m_vCoreRows.clear();
 
@@ -1757,13 +1732,42 @@ public:
 	{
 		for(auto &Part : m_vpParts)
 			Part->Reset(This);
+		m_Density.Reset();
 	}
 	void Update(CGameClient &This, const CNamePlateData &Data)
 	{
 		Init(This);
+		if(m_InGame != Data.m_InGame)
+			Reset(This);
 		m_InGame = Data.m_InGame;
+		CNamePlateData BakeData = Data;
+		if(Data.m_InGame)
+		{
+			float X0, Y0, X1, Y1, RefWidth, RefHeight;
+			This.Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
+			This.Graphics()->CalcScreenParams(This.Graphics()->GameScreenAspect(), 1.0f, &RefWidth, &RefHeight);
+			if(Y1 > Y0 && RefHeight > 0.0f)
+			{
+				int Cost = 0;
+				for(const auto &Part : m_vpParts)
+					Cost += Part->TextRebuildCost();
+				const bool DensityChanged = m_Density.Update(RefHeight / (Y1 - Y0), This.Graphics()->ScreenHeight() / RefHeight,
+					QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID, This.m_Camera.m_Zooming, Cost,
+					NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME, s_NameplateTextRebuildBudget);
+				if(DensityChanged && QmPerfEnabled())
+				{
+					char aPayload[256];
+					str_format(aPayload, sizeof(aPayload), "event=nameplate_density_commit client_id=%d requested_density=%.6f bake_density=%.6f text_parts=%d budget_remaining=%d zooming=%d",
+						Data.m_ClientId, This.Graphics()->ScreenHeight() / (Y1 - Y0), m_Density.Ratio() * This.Graphics()->ScreenHeight() / RefHeight,
+						Cost, s_NameplateTextRebuildBudget, int(This.m_Camera.m_Zooming));
+					QmPerfLogPayload("perf/nameplates", aPayload, This.Client());
+				}
+			}
+			BakeData.m_BakeDensity = m_Density.Ratio();
+			BakeData.m_DensityRevision = m_Density.Revision();
+		}
 		for(auto &Part : m_vpParts)
-			Part->Update(This, Data);
+			Part->Update(This, BakeData);
 	}
 	void Render(CGameClient &This, const vec2 &PositionBottomMiddle, const CNamePlate *pLayoutReference = nullptr)
 	{

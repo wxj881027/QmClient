@@ -5,6 +5,7 @@
 #include "SettingsPageLayout.h"
 #include "UiContext.h"
 #include "UiSurface.h"
+#include "UiSurfaceText.h"
 #include "UiTheme.h"
 #include "UiTokens.h"
 
@@ -58,7 +59,7 @@ void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect
 	const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? 0.28f : 0.18f) * Alpha);
 	DrawRoundedSurface(Ctx, ChromeRect, ChromeColor, ChromeColor, Radius);
 	const float IconSize = std::clamp(ui_token::font::BODY * UiScale, 10.0f, ui_token::font::BODY);
-	const ColorRGBA IconColor = ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha));
+	const ColorRGBA IconColor = ResolveUiSurfaceIconColor(ChromeColor, ConfiguredQmUiIconColor(Ctx.m_pUi->TextRender()->GetTextColor().WithAlpha(Alpha)));
 	ITextRender *pTextRender = Ctx.m_pUi->TextRender();
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 	const ColorRGBA PreviousOutlineColor = pTextRender->GetTextOutlineColor();
@@ -126,8 +127,9 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		const ColorRGBA PreviousTextSelectionColor = Ctx.m_pTextRender->GetTextSelectionColor();
 		const unsigned PreviousRenderFlags = Ctx.m_pTextRender->GetRenderFlags();
 		const EFontPreset PreviousFontPreset = Ctx.m_pTextRender->GetFontPreset();
-		ColorRGBA TitleColor = Theme.m_TextTitle;
-		if(VisualOptions.m_RainbowTitles)
+		CUiScopedSurfaceText HeaderSurfaceText(Ctx.m_pTextRender, Surface, g_Config.m_QmNewUi);
+		ColorRGBA TitleColor = g_Config.m_QmNewUi ? ResolveConfiguredTextColor(Surface) : Theme.m_TextTitle;
+		if(VisualOptions.m_RainbowTitles && g_Config.m_QmUiTextColorMode == 0)
 		{
 			const float TimePhase = (float)time_get() / (float)time_freq() * 0.08f;
 			const float IdPhase = Spec.m_pStableId != nullptr ? (float)(str_quickhash(Spec.m_pStableId) & 0xffff) / 65535.0f : 0.0f;
@@ -142,7 +144,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		const char *pSubtitle = Spec.m_pSubtitle;
 		if(pSubtitle != nullptr && SettingsCardSubtitleVisible(DrawState.m_Hovered, DrawState.m_SubtitleVisibleDuringMotion, DrawState.m_Focused))
 		{
-			ColorRGBA SubtitleColor = Theme.m_TextSmall;
+			ColorRGBA SubtitleColor = g_Config.m_QmNewUi ? ResolveConfiguredTextColor(Surface) : Theme.m_TextSmall;
 			SubtitleColor.a *= DrawState.m_DrawAlpha;
 			Ctx.m_pTextRender->TextColor(SubtitleColor);
 			SLabelProperties SubtitleProps;
@@ -169,6 +171,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		const CUIRect ClipRect = ResolveSettingsCardContentClipRect(DrawFrame.m_ContentRect, DrawFrame.m_Rect, UiScale);
 		Ctx.m_pUi->ClipEnable(&ClipRect);
 	}
+	CUiScopedSurfaceText SurfaceText(Ctx.m_pTextRender, Surface, g_Config.m_QmNewUi);
 	if(RenderMeasured)
 	{
 		CUIRect ContentRect = DrawFrame.m_ContentRect;

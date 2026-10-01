@@ -153,6 +153,10 @@ class CScoreboard : public CComponent
 	float m_OpenTime;
 	float m_AnimContentAlpha;
 	bool m_PresentationInitialized;
+	// 国旗入场重放锚点：记分板由隐藏转为显示的瞬间记录时刻，行内国旗以它作为
+	// 入场动画起点，规避名牌国旗持续渲染对 CCountryFlags 重现检测的遮蔽。
+	int64_t m_ActiveStartTime = 0;
+	bool m_WasActive = false;
 	static constexpr int SOUND_MUTE_BUTTON_COUNT = 9;
 
 	IGraphics::CTextureHandle m_DeadTeeTexture;

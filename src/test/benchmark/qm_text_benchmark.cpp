@@ -8,8 +8,11 @@
 #include <base/str.h>
 #include <base/system.h>
 
+#include <engine/client/glyph_outline.h>
 #include <engine/client/qm_font_category.h>
 #include <engine/client/text_sweep.h>
+
+#include <game/client/components/qmclient/nameplate_density.h>
 
 #include <benchmark/benchmark.h>
 
@@ -157,3 +160,40 @@ static void BM_TextSweepLineClip(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations() * State.range(0));
 }
 BENCHMARK(BM_TextSweepLineClip)->Arg(8)->Arg(64)->Arg(256);
+
+// 同一缓冲对比普通描边与名牌连续描边；输入准备不计时，内核及 mask 生成计时。
+static void BM_NameplateGlyphOutline(benchmark::State &State)
+{
+	const int Size = State.range(0);
+	std::vector<unsigned char> Input(Size * Size), Output(Size * Size);
+	for(int Y = Size / 4; Y < Size * 3 / 4; ++Y)
+		for(int X = Size / 4; X < Size * 3 / 4; ++X)
+			Input[Y * Size + X] = (X + Y) % 3 == 0 ? 127 : 255;
+	for(auto _ : State)
+	{
+		if(State.range(1))
+			QmGrowGlyphOutlineContinuous(Input.data(), Output.data(), Size, Size, QmNameplateGlyphOutlineRadius(Size));
+		else
+			QmGrowGlyphOutline(Input.data(), Output.data(), Size, Size, Size < 18 ? 1 : Size > 48 ? 4 :
+														2);
+		benchmark::DoNotOptimize(Output.data());
+		benchmark::ClobberMemory();
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_NameplateGlyphOutline)->Args({18, 0})->Args({18, 1})->Args({48, 0})->Args({48, 1})->Args({128, 0})->Args({128, 1});
+
+static void BM_NameplateDensityStable(benchmark::State &State)
+{
+	CQmNameplateDensity Density;
+	int Budget = 16;
+	Density.Update(1.0f, 1.0f, 0.14384104f, false, 6, 16, Budget);
+	for(auto _ : State)
+	{
+		Budget = 16;
+		benchmark::DoNotOptimize(Density);
+		benchmark::DoNotOptimize(Density.Update(1.0f, 1.0f, 0.14384104f, false, 6, 16, Budget));
+		benchmark::DoNotOptimize(Density.Revision());
+	}
+}
+BENCHMARK(BM_NameplateDensityStable);

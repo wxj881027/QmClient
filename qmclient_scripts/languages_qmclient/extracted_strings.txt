@@ -274,6 +274,7 @@ Apply a random skin from the queue
 Apply a saved profile by 1-based index to the current tee
 Apply a writable preset and edit first
 Apply Changes
+Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
@@ -533,6 +534,8 @@ Bubble opacity
 Build the status text shown above Tees
 Button - Disabled
 Button - Enabled
+Button background color
+Button background opacity percentage
 Button browser
 Button position is outside of the screen.
 Buttons
@@ -894,6 +897,7 @@ Custom prompt template
 Custom Provider API Key
 Custom Provider endpoint
 Custom Provider model name
+Custom text color
 Custom title
 Custom translation prompt (overrides built-in)
 Custom watermark text
@@ -1268,6 +1272,7 @@ Enable fast input in Gores mode
 Enable fast map download
 Enable fat skin
 Enable freeze call sound
+Enable frosted glass blur behind secondary popups and dropdowns
 Enable FTAPI auto-translate (may overload the service)
 Enable game sounds
 Enable ghost
@@ -1413,6 +1418,8 @@ Execute on join
 Execute the specified file
 Existing Player
 Exit replay view
+Expanded dropdown background color
+Expanded dropdown background opacity percentage
 Export
 Export cut as a separate demo
 Export demo cut
@@ -1517,6 +1524,7 @@ Following: %s
 Font
 Font cursor
 Font size
+Font store
 Font store:
 Font weight:
 For more info: /cmdlist
@@ -1867,6 +1875,8 @@ Initializing components
 Initializing layers
 Initializing map logic
 Input
+Input background color
+Input background opacity percentage
 Input device
 Input device not found
 Input device open failed
@@ -2775,6 +2785,7 @@ Please wait…
 Points
 Points unavailable
 Polished
+Popup & dropdown blur
 Popup animation
 Port for client to server connection (0=random, >=1024 sets manual port)
 Port for dummy connection to server (0=random, >=1024 sets manual port)
@@ -3317,6 +3328,7 @@ Scroll mode: Off
 Scroll mode: On
 Search
 Search and navigate settings
+Search country flag…
 Search donor asset
 Search main asset
 Search maps and downloadedmaps, including subfolders
@@ -3328,6 +3340,8 @@ Searching
 Searching all map folders...
 Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
+Secondary menu background color
+Secondary menu background opacity percentage
 Seconds to wait before reconnecting (0=off, when server is full)
 Seconds to wait before reconnecting (after timeout, 0 to disable).
 SecretId
@@ -3363,7 +3377,6 @@ Send emoticon in water
 Send probability
 Send Rate
 Send specified command to rcon
-Send target language
 Send translation method
 Sending and receiving
 Sending initial client info
@@ -4115,6 +4128,8 @@ Tencent Cloud Translation SecretId
 Tencent Cloud Translation SecretKey
 Text alpha
 Text color
+Text color mode
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 Text effect
 Text input focus ring color
 Thank you for your company and trust. This is what gives me the courage to keep going.
