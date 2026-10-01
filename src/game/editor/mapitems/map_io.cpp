@@ -622,7 +622,7 @@ bool CEditorMap::PerformPreSaveSanityChecks(const FErrorHandler &ErrorHandler)
 
 bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandler &ErrorHandler)
 {
-	std::unique_ptr<IEngineMap> pMap(CreateEngineMap());
+	std::unique_ptr<IEngineMap> pMap(CreateEngineMap(Editor()->Storage()));
 	if(!pMap->Load(pFilename, StorageType))
 	{
 		ErrorHandler(Localize("Error: Failed to open map file. See local console for details.", "Editor"));

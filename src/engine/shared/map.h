@@ -17,9 +17,10 @@ class CMapItemLayerTilemap_v2;
 class CMap : public IEngineMap
 {
 	CDataFileReader m_DataFile;
+	IStorage *m_pStorage;
 
 public:
-	CMap();
+	explicit CMap(IStorage *pStorage = nullptr);
 
 	CDataFileReader *GetReader() { return &m_DataFile; }
 
