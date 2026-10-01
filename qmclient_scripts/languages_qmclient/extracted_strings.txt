@@ -873,7 +873,6 @@ Current status
 Current: Ranks
 Current: Score
 Current: Time
-Cursed Flame
 Custom
 custom
 Custom API key
@@ -1649,7 +1648,6 @@ Go back the specified duration
 Go forward one marker
 Go forward one tick
 Go forward the specified duration
-Golden Grace
 Gores
 Gores actor
 Gores auto weapon switch
@@ -2125,6 +2123,7 @@ Long frames
 Lose weapons when teleporting (useful for race maps)
 Low to high
 Lyrics
+Magic: Spirit Script
 Main Asset
 Main menu
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
@@ -2144,6 +2143,7 @@ Manage hostile players, groups, and display rules
 Manage hostile-list chat shortcuts
 Manage kaomoji chat shortcuts
 Manage the skin rotation queue
+Manga: Ink Slash
 Manual
 Manual concurrency: %d
 Manual scope
@@ -2680,6 +2680,7 @@ Ping
 Ping the current server
 Pistol
 Pistol guide line
+Pixel: Layer Shift
 Place title on a separate line above the player name instead of inline
 Plasma gun shots per second
 Play a flip animation while reloading weapons
@@ -3873,7 +3874,6 @@ Speed up the demo
 Speed:
 Sphere
 Spin pop
-Spirit Light
 Split main and dummy into different teams for solo-run sync
 Split main/dummy into two free teams; press again to return to team 0
 Sponsor code
@@ -4051,7 +4051,7 @@ Tee size
 Tee status bar
 Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
 Tee Trails
 Tee trails
 Teeworlds 0.7 difficulty level (0 = Casual, 1 = Normal, 2 = Competitive).
@@ -4478,7 +4478,6 @@ View switch found (at offset) with given number
 View tele found (at offset) with given number
 View the developers, contributors, and project links
 View the people supporting QmClient development
-Violet Bolt
 Virtual joystick which always uses fire.
 Virtual joystick which always uses hook.
 Virtual joystick which only aims and moves the mouse pointer relatively.
@@ -4516,7 +4515,6 @@ Voice stereo output
 Voice stereo width (percent)
 Voice test mode (0=Off 1=Local 2=Server Loopback)
 Voice whitelist (comma-separated)
-Void Shadow
 Volume
 Vote a map by name
 Vote aborted

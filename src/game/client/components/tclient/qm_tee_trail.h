@@ -25,16 +25,14 @@ public:
 
 namespace qm_tee_trail
 {
-	// 保留已保存配置的编号；原紫电升级为 Exo，原黄金升级为冥火。
+	// 0 保留原版；旧配置中的 4、5 由 ResolveStyle 映射到新的艺术风格。
 	enum
 	{
 		STYLE_ORIGINAL = 0,
-		STYLE_BLACK_FLASH = 1,
-		STYLE_EXO = 2,
-		STYLE_SPIRIT = 3,
-		STYLE_VOID = 4,
-		STYLE_INFERNO = 5,
-		STYLE_COUNT = 6,
+		STYLE_MANGA = 1,
+		STYLE_MAGIC = 2,
+		STYLE_PIXEL = 3,
+		STYLE_COUNT = 4,
 	};
 
 	constexpr size_t MAX_POINTS = 192;

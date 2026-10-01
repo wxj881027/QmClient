@@ -2636,9 +2636,6 @@ Current: Score
 Current: Time
 == Geçerli: Süre
 
-Cursed Flame
-== Lanetli Alev
-
 Custom
 == Özel
 
@@ -4970,9 +4967,6 @@ Go forward one tick
 Go forward the specified duration
 == Belirtilen süre kadar ileri git
 
-Golden Grace
-== Altın Lütuf
-
 Gores
 == Gores
 
@@ -6410,6 +6404,9 @@ Low to high
 Lyrics
 == Şarkı sözleri
 
+Magic: Spirit Script
+== Büyü: ruh yazısı
+
 Main Asset
 == Ana Varlık
 
@@ -6466,6 +6463,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == Skin döndürme kuyruğunu yönet
+
+Manga: Ink Slash
+== Manga: mürekkep kesiği
 
 Manual
 == Manuel
@@ -8077,6 +8077,9 @@ Pistol
 
 Pistol guide line
 == Tabanca yardımcı çizgisi
+
+Pixel: Layer Shift
+== Piksel: katman kayması
 
 Place title on a separate line above the player name instead of inline
 == Unvanı satır içinde yerine oyuncu adının üstünde ayrı bir satıra yerleştir
@@ -11669,9 +11672,6 @@ Sphere
 Spin pop
 == Döndürerek aç
 
-Spirit Light
-== Ruh Işığı
-
 Split main and dummy into different teams for solo-run sync
 == Ana karakter ve kuklayı solo koşu senkronizasyonu için farklı takımlara dağıtır
 
@@ -12209,8 +12209,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee izi renk modu (1=Düz, 2=Geçerli Tee rengi, 3=Gökkuşağı, 4=Tee hızı, 5=Rastgele)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Tee iz stili (0=Özgün, 1=Lanetli Alev, 2=Mor Şimşek, 3=Ruh Işığı, 4=Boşluk Gölgesi, 5=Altın Lütuf)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Tee iz stili (0=Özgün, 1=Manga, 2=Büyü, 3=Piksel, 4=Eski manga numarası, 5=Eski büyü numarası)
 
 Tee Trails
 == Tee İzleri
@@ -13496,9 +13496,6 @@ View the developers, contributors, and project links
 View the people supporting QmClient development
 == View the people supporting QmClient development
 
-Violet Bolt
-== Mor Şimşek
-
 Virtual joystick which always uses fire.
 == Her zaman ateş kullanan sanal joystick.
 
@@ -13609,9 +13606,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == Ses Beyaz Listesi (Virgülle Ayrılmış)
-
-Void Shadow
-== Boşluk Gölgesi
 
 Volume
 == Ses düzeyi

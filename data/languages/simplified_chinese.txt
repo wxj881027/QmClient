@@ -2636,9 +2636,6 @@ Current: Score
 Current: Time
 == 当前：时间
 
-Cursed Flame
-== 咒焰
-
 Custom
 == 自定义
 
@@ -4970,9 +4967,6 @@ Go forward one tick
 Go forward the specified duration
 == 快进指定时长
 
-Golden Grace
-== 黄金恩泽
-
 Gores
 == Gores 模式
 
@@ -6410,6 +6404,9 @@ Low to high
 Lyrics
 == 歌词
 
+Magic: Spirit Script
+== 魔法风：灵文游丝
+
 Main Asset
 == 主材质
 
@@ -6466,6 +6463,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == 管理皮肤轮换队列
+
+Manga: Ink Slash
+== 漫画风：墨斩
 
 Manual
 == 手动
@@ -8077,6 +8077,9 @@ Pistol
 
 Pistol guide line
 == 手枪辅助线
+
+Pixel: Layer Shift
+== 像素风：层移
 
 Place title on a separate line above the player name instead of inline
 == 将头衔单独显示在玩家名称上方，而不是显示在同一行
@@ -11669,9 +11672,6 @@ Sphere
 Spin pop
 == 旋转弹出
 
-Spirit Light
-== 灵光
-
 Split main and dummy into different teams for solo-run sync
 == 本体和分身分别进队，方便开局 solo 同步（部分地图不好同步时使用）
 
@@ -12209,8 +12209,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee 轨迹颜色模式（1=纯色，2=当前 Tee 颜色，3=彩虹，4=按 Tee 速度着色，5=随机）
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Tee 拖尾样式（0=原版，1=咒焰，2=紫电，3=灵光，4=虚空，5=黄金恩泽）
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Tee 拖尾样式（0=原版，1=漫画，2=魔法，3=像素，4=旧编号漫画，5=旧编号魔法）
 
 Tee Trails
 == Tee 拖尾
@@ -13496,9 +13496,6 @@ View the developers, contributors, and project links
 View the people supporting QmClient development
 == 查看支持 QmClient 开发的成员
 
-Violet Bolt
-== 紫电
-
 Virtual joystick which always uses fire.
 == 始终用于开火的虚拟摇杆。
 
@@ -13609,9 +13606,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == 语音白名单（逗号分隔）
-
-Void Shadow
-== 虚空
 
 Volume
 == 音量

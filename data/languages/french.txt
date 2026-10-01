@@ -2636,9 +2636,6 @@ Current: Score
 Current: Time
 == Actuel : Temps
 
-Cursed Flame
-== Flamme maudite
-
 Custom
 == Personnalisé
 
@@ -4970,9 +4967,6 @@ Go forward one tick
 Go forward the specified duration
 == Avancer de la durée spécifiée
 
-Golden Grace
-== Grâce dorée
-
 Gores
 == Gores
 
@@ -6410,6 +6404,9 @@ Low to high
 Lyrics
 == Paroles
 
+Magic: Spirit Script
+== Magie : écriture des esprits
+
 Main Asset
 == Élément principal
 
@@ -6466,6 +6463,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == Gérer la file de rotation des skins
+
+Manga: Ink Slash
+== Manga : entaille d'encre
 
 Manual
 == Manuel
@@ -8077,6 +8077,9 @@ Pistol
 
 Pistol guide line
 == Ligne guide du pistolet
+
+Pixel: Layer Shift
+== Pixels : décalage des plans
 
 Place title on a separate line above the player name instead of inline
 == Placer le titre sur une ligne séparée au-dessus du nom du joueur plutôt que sur la même ligne
@@ -11669,9 +11672,6 @@ Sphere
 Spin pop
 == Popup tournante
 
-Spirit Light
-== Lumière spirituelle
-
 Split main and dummy into different teams for solo-run sync
 == Répartit le personnage principal et le clone dans des équipes différentes pour synchroniser les runs solo
 
@@ -12209,8 +12209,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Mode de couleur de la traînée de Tee (1=Uni, 2=Couleur actuelle du Tee, 3=Arc-en-ciel, 4=Vitesse du Tee, 5=Aléatoire)
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Style de traînée du Tee (0=Style d'origine, 1=Flamme maudite, 2=Éclair violet, 3=Lumière spirituelle, 4=Ombre du vide, 5=Grâce dorée)
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Style de traînée du Tee (0=Original, 1=Manga, 2=Magie, 3=Pixels, 4=Ancien numéro manga, 5=Ancien numéro magie)
 
 Tee Trails
 == Traînées de tee
@@ -13496,9 +13496,6 @@ View the developers, contributors, and project links
 View the people supporting QmClient development
 == View the people supporting QmClient development
 
-Violet Bolt
-== Éclair violet
-
 Virtual joystick which always uses fire.
 == Joystick virtuel qui utilise toujours le tir.
 
@@ -13609,9 +13606,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == Liste blanche vocale (séparée par des virgules)
-
-Void Shadow
-== Ombre du vide
 
 Volume
 == Volume

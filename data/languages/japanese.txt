@@ -2636,9 +2636,6 @@ Current: Score
 Current: Time
 == 現在：時間
 
-Cursed Flame
-== 呪いの炎
-
 Custom
 == カスタム
 
@@ -4970,9 +4967,6 @@ Go forward one tick
 Go forward the specified duration
 == 指定時間だけ進む
 
-Golden Grace
-== 黄金の恵み
-
 Gores
 == ゴア
 
@@ -6410,6 +6404,9 @@ Low to high
 Lyrics
 == 歌詞
 
+Magic: Spirit Script
+== 魔法風：精霊の筆跡
+
 Main Asset
 == メインアセット
 
@@ -6466,6 +6463,9 @@ Manage kaomoji chat shortcuts
 
 Manage the skin rotation queue
 == スキンローテーションキューを管理
+
+Manga: Ink Slash
+== 漫画風：墨の斬撃
 
 Manual
 == 手動
@@ -8077,6 +8077,9 @@ Pistol
 
 Pistol guide line
 == ピストル補助線
+
+Pixel: Layer Shift
+== ピクセル風：レイヤーシフト
 
 Place title on a separate line above the player name instead of inline
 == タイトルを名前と同じ行ではなく、プレイヤー名の上に別の行で表示
@@ -11669,9 +11672,6 @@ Sphere
 Spin pop
 == スピンポップ
 
-Spirit Light
-== 精霊の光
-
 Split main and dummy into different teams for solo-run sync
 == 本体と分身を別々のチームに入れ、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
 
@@ -12209,8 +12209,8 @@ Tee trail color
 Tee trail color mode (1=Solid, 2=Current Tee color, 3=Rainbow, 4=Tee speed, 5=Random)
 == Tee トレイルの色モード（1=単色、2=現在の Tee 色、3=虹色、4=Tee 速度、5=ランダム）
 
-Tee trail style (0=Original, 1=Cursed flame, 2=Violet bolt, 3=Spirit light, 4=Void shadow, 5=Golden grace)
-== Tee トレイルスタイル（0=オリジナル、1=呪いの炎、2=紫電、3=精霊の光、4=虚空の影、5=黄金の恵み）
+Tee trail style (0=Original, 1=Manga, 2=Magic, 3=Pixel, 4=Legacy manga, 5=Legacy magic)
+== Tee トレイルスタイル（0=オリジナル、1=漫画、2=魔法、3=ピクセル、4=旧番号の漫画、5=旧番号の魔法）
 
 Tee Trails
 == Tee トレイル
@@ -13496,9 +13496,6 @@ View the developers, contributors, and project links
 View the people supporting QmClient development
 == View the people supporting QmClient development
 
-Violet Bolt
-== 紫電
-
 Virtual joystick which always uses fire.
 == 常に発射を使用するバーチャルジョイスティック。
 
@@ -13609,9 +13606,6 @@ Voice test mode (0=Off 1=Local 2=Server Loopback)
 
 Voice whitelist (comma-separated)
 == 音声ホワイトリスト（カンマ区切り）
-
-Void Shadow
-== 虚空の影
 
 Volume
 == 音量
