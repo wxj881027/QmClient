@@ -11,7 +11,10 @@
 #include <game/gamecore.h>
 #include <game/mapitems.h>
 
-CMap::CMap() = default;
+CMap::CMap(IStorage *pStorage) :
+	m_pStorage(pStorage)
+{
+}
 
 int CMap::GetDataSize(int Index) const
 {
@@ -75,9 +78,9 @@ int CMap::NumItems() const
 
 bool CMap::Load(const char *pMapName, int StorageType)
 {
-	if(Kernel() == nullptr)
-		return false;
-	IStorage *pStorage = Kernel()->RequestInterface<IStorage>();
+	IStorage *pStorage = m_pStorage;
+	if(pStorage == nullptr && Kernel() != nullptr)
+		pStorage = Kernel()->RequestInterface<IStorage>();
 	if(!pStorage)
 		return false;
 
@@ -714,4 +717,4 @@ bool CMap::ValidateAndUnpackTilesLayerData(CDataFileReader &NewDataFile, int Gro
 	return true;
 }
 
-extern IEngineMap *CreateEngineMap() { return new CMap; }
+extern IEngineMap *CreateEngineMap(IStorage *pStorage) { return new CMap(pStorage); }
