@@ -1259,6 +1259,7 @@ public:
 		float m_Width;
 		float m_AlignmentHeight;
 		ColorRGBA m_ActiveEntryColor;
+		std::optional<ColorRGBA> m_HoverEntryColor;
 		bool m_TransparentButtons;
 		bool m_AnchorVisible = true;
 		bool m_PopupVisible = true;
