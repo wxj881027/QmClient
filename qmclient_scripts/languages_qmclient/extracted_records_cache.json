@@ -2976,13 +2976,6 @@
       "line": 92
     },
     {
-      "key": "Alt",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_settings.cpp",
-      "context": "",
-      "line": 156
-    },
-    {
       "key": "Always show",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/menus_qmclient.cpp",
@@ -5780,7 +5773,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 360
+      "line": 362
     },
     {
       "key": "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow",
@@ -9815,13 +9808,6 @@
       "line": 162
     },
     {
-      "key": "Ctrl",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_settings.cpp",
-      "context": "",
-      "line": 156
-    },
-    {
       "key": "Ctrl+right-click a tile to select its layer in editor",
       "category": "indirect",
       "source": "src/engine/shared/config_variables.h",
@@ -11331,7 +11317,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 393
+      "line": 395
     },
     {
       "key": "Delete",
@@ -19881,13 +19867,6 @@
       "line": 5957
     },
     {
-      "key": "Gui",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_settings.cpp",
-      "context": "",
-      "line": 156
-    },
-    {
       "key": "GUI cursor assets",
       "category": "indirect",
       "source": "src/engine/shared/config_variables.h",
@@ -26073,7 +26052,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "Bind keyboard key",
-      "line": 282
+      "line": 284
     },
     {
       "key": "Menu",
@@ -26633,7 +26612,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 287
+      "line": 289
     },
     {
       "key": "Mouse sensitivity",
@@ -28369,7 +28348,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 368
+      "line": 370
     },
     {
       "key": "No input device available",
@@ -40125,13 +40104,6 @@
       "line": 368
     },
     {
-      "key": "Shift",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/components/qmclient/bind_settings.cpp",
-      "context": "",
-      "line": 156
-    },
-    {
       "key": "shift",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
@@ -47626,14 +47598,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 356
+      "line": 358
     },
     {
       "key": "This bind is already over the local config line limit.",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/qmclient/bind_settings.cpp",
       "context": "",
-      "line": 346
+      "line": 348
     },
     {
       "key": "This connection cannot change names while connected. Reconnect with the saved names first.",

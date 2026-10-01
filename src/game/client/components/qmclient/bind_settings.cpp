@@ -144,16 +144,17 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 	const float BodySize = Metrics.m_BodySize;
 
 	CUIRect Left, Right;
-	const bool Stacked = Content.w < 640.0f;
+	const bool Stacked = Content.w < 760.0f;
 	if(Stacked)
 		Left = Right = Content;
 	else
-		Content.VSplitLeft(std::max(1.0f, Content.w * 0.63f), &Left, &Right);
+		Content.VSplitLeft(std::min(Content.w * 0.72f, Content.w - 220.0f), &Left, &Right);
 	Right.VMargin(LineSpacing * 0.75f, &Right);
 	Left.VMargin(LineSpacing * 0.75f, &Left);
 	const CUIRect KeyboardStart = Left;
 
-	static constexpr std::array<const char *, 4> s_apModifierLabels = {Localizable("Ctrl"), Localizable("Alt"), Localizable("Shift"), Localizable("Gui")};
+	// 按键名沿用键帽标识，避免翻译成普通词义。
+	static constexpr std::array<const char *, 4> s_apModifierLabels = {"Ctrl", "Alt", "Shift", "Win"};
 	static constexpr std::array<int, 4> s_aModifierIds = {KeyModifier::CTRL, KeyModifier::ALT, KeyModifier::SHIFT, KeyModifier::GUI};
 	CUIRect ModifierRow;
 	Left.HSplitTop(LineHeight, &ModifierRow, &Left);
@@ -165,7 +166,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		if(Index + 1 < s_apModifierLabels.size())
 			ModifierRow.VSplitLeft(LineSpacing, nullptr, &ModifierRow);
 		const bool Checked = (State.m_ModifierMask & ModifierBit(s_aModifierIds[Index])) != 0;
-		if(!ReadOnly && DoButton_Menu(&State.m_aModifierButtons[Index], Localize(s_apModifierLabels[Index]), Checked, &Button))
+		if(!ReadOnly && DoButton_Menu(&State.m_aModifierButtons[Index], s_apModifierLabels[Index], Checked, &Button))
 		{
 			State.m_ModifierMask ^= ModifierBit(s_aModifierIds[Index]);
 			if(State.m_HasSelected)
@@ -254,6 +255,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		}
 		Left.HSplitTop(LineSpacing, nullptr, &Left);
 	};
+	const float KeyboardRowHeight = LineHeight * 1.25f;
 	const float KeyboardUnitGap = LineSpacing * 0.45f;
 	constexpr float KeyboardColumns = 23.0f;
 	const float KeyboardUnit = std::max(1.0f, Left.w / KeyboardColumns);
@@ -261,7 +263,7 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		if(Tiles.size() == 0)
 			return;
 		CUIRect Row;
-		Left.HSplitTop(LineHeight, &Row, &Left);
+		Left.HSplitTop(KeyboardRowHeight, &Row, &Left);
 		float X = Row.x;
 		for(const SBindKeyTile &Tile : Tiles)
 		{

@@ -232,7 +232,6 @@ Allow voting to pause players (instead of moving to spectators)
 Allows maps to render with more detail
 Alpha
 Also apply to dummy
-Alt
 Always show
 Always show chat
 Always show local time
@@ -862,7 +861,6 @@ Crescent
 CRF value for libx264 video encoding (0=best quality, 51=worst)
 Cross-server following stopped
 Crosshair opacity in free spectate
-Ctrl
 Ctrl+right-click a tile to select its layer in editor
 Cube
 Current
@@ -1677,7 +1675,6 @@ Greek
 Greeting text
 Grenade
 Group name
-Gui
 GUI cursor assets
 Guide line color
 Hammer
@@ -3424,7 +3421,6 @@ Settings page right panel opacity
 Severe
 Shape
 Share of the server browser name/map split given to the name column (per mille)
-Shift
 Shimmer speed
 Short server names
 Shotgun
