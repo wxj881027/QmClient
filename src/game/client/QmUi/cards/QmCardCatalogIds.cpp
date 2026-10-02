@@ -34,6 +34,7 @@ namespace qm_card_catalog
 			"qm:emoticons",
 			"qm:better_scoreboard",
 			"qm:mini_features",
+			"qm:ime",
 			"qm:jump_hint",
 			"qm:weapon_trajectory",
 			"qm:friend_notify",

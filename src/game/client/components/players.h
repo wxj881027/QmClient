@@ -97,6 +97,7 @@ class CPlayers : public CComponent
 	// 避免每名玩家每帧重新分配线段与四边形。
 
 public:
+	float PlayerRenderAlpha(int ClientId) const;
 	float GetPlayerTargetAngle(
 		const CNetObj_Character *pPrevChar,
 		const CNetObj_Character *pPlayerChar,

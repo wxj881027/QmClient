@@ -1309,6 +1309,11 @@ static int GetFlagsForLabelProperties(const SLabelProperties &LabelProps, const 
 	return Flags;
 }
 
+int CUi::GetLabelFlagsForProperties(const SLabelProperties &LabelProps, const CTextCursor *pReadCursor) const
+{
+	return GetFlagsForLabelProperties(LabelProps, pReadCursor);
+}
+
 vec2 CUi::CalcAlignedCursorPos(const CUIRect *pRect, vec2 TextSize, int Align, const float *pBiggestCharHeight)
 {
 	vec2 Cursor(pRect->x, pRect->y);

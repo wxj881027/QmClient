@@ -109,7 +109,7 @@ TEST(QmNewUiMenuSettingsFeaturesContract, WeaponAnimationAdvancedControlsAreConf
 	EXPECT_NE(RegistrySource.find("装填动画 zhuangtian donghua reload animation"), std::string::npos);
 }
 
-TEST(QmNewUiMenuSettingsFeaturesContract, ProcessPrioritySettingIsRemovedAndImeRemainsVisible)
+TEST(QmNewUiMenuSettingsFeaturesContract, ProcessPrioritySettingIsRemovedAndImeMovedToDedicatedCard)
 {
 	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string ClientSource = ReadTextFile("src/engine/client/client.cpp");
@@ -121,8 +121,14 @@ TEST(QmNewUiMenuSettingsFeaturesContract, ProcessPrioritySettingIsRemovedAndImeR
 	const std::string MiniFeaturesBody = FunctionBody(MenusSource, "void CMenus::RenderQmFunctionMiniFeaturesContent(");
 	ASSERT_FALSE(MiniFeaturesBody.empty());
 	EXPECT_EQ(MiniFeaturesBody.find("QmProcessHighPriority"), std::string::npos);
-	EXPECT_NE(MiniFeaturesBody.find("&g_Config.m_QmImeAutoManage"), std::string::npos);
-	EXPECT_NE(MiniFeaturesBody.find("&g_Config.m_QmNewIme"), std::string::npos);
+	EXPECT_EQ(MiniFeaturesBody.find("&g_Config.m_QmImeAutoManage"), std::string::npos);
+	EXPECT_EQ(MiniFeaturesBody.find("&g_Config.m_QmNewIme"), std::string::npos);
+	const std::string ImeBody = FunctionBody(MenusSource, "void CMenus::RenderQmFunctionImeContent(");
+	ASSERT_FALSE(ImeBody.empty());
+	EXPECT_NE(ImeBody.find("&g_Config.m_QmImeAutoManage"), std::string::npos);
+	EXPECT_NE(ImeBody.find("&g_Config.m_QmNewIme"), std::string::npos);
+	EXPECT_NE(ImeBody.find("m_QmImeBgColor"), std::string::npos);
+	EXPECT_NE(ImeBody.find("m_QmImeOpacity"), std::string::npos);
 }
 
 TEST(QmNewUiMenuSettingsFeaturesContract, ScoreboardSettingsLiveInDedicatedCardModule)

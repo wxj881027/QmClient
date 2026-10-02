@@ -65,7 +65,7 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::Gores, EQmModuleColumn::Left, 4, "gores"},
 		{EQmModuleId::SoloSplit, EQmModuleColumn::Left, 17, "solo_split"},
 		{EQmModuleId::KeyBinds, EQmModuleColumn::Left, 5, "key_binds"},
-		{EQmModuleId::MiniFeatures, EQmModuleColumn::Left, 6, "mini_features"},
+		{EQmModuleId::MiniFeatures, EQmModuleColumn::Left, 7, "mini_features"},
 		{EQmModuleId::JumpHint, EQmModuleColumn::Left, 7, "jump_hint"},
 		{EQmModuleId::WeaponTrajectory, EQmModuleColumn::Left, 8, "weapon_trajectory"},
 		{EQmModuleId::Coords, EQmModuleColumn::Left, 9, "coords"},
@@ -103,6 +103,7 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::WaterHammerHighlight, EQmModuleColumn::Right, 4, "water_hammer"},
 		{EQmModuleId::GoresDrownBoard, EQmModuleColumn::Right, 23, "gores_drown_board"},
 		{EQmModuleId::BetterScoreboard, EQmModuleColumn::Left, 6, "better_scoreboard"},
+		{EQmModuleId::Ime, EQmModuleColumn::Left, 19, "ime"},
 	};
 }
 

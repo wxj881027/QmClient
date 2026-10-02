@@ -123,7 +123,8 @@ namespace
 		{qm_module::EQmModuleId::GoresActor, qm_module::EQmModuleColumn::Left, 3, "gores_actor"},
 		{qm_module::EQmModuleId::Gores, qm_module::EQmModuleColumn::Left, 4, "gores"},
 		{qm_module::EQmModuleId::KeyBinds, qm_module::EQmModuleColumn::Left, 5, "key_binds"},
-		{qm_module::EQmModuleId::MiniFeatures, qm_module::EQmModuleColumn::Left, 6, "mini_features"},
+		{qm_module::EQmModuleId::BetterScoreboard, qm_module::EQmModuleColumn::Left, 6, "better_scoreboard"},
+		{qm_module::EQmModuleId::MiniFeatures, qm_module::EQmModuleColumn::Left, 7, "mini_features"},
 		{qm_module::EQmModuleId::JumpHint, qm_module::EQmModuleColumn::Left, 7, "jump_hint"},
 		{qm_module::EQmModuleId::WeaponTrajectory, qm_module::EQmModuleColumn::Left, 8, "weapon_trajectory"},
 		{qm_module::EQmModuleId::Coords, qm_module::EQmModuleColumn::Left, 9, "coords"},
@@ -161,7 +162,9 @@ namespace
 		{qm_module::EQmModuleId::Emoticons, qm_module::EQmModuleColumn::Left, 18, "emoticons"},
 		{qm_module::EQmModuleId::MapUpload, qm_module::EQmModuleColumn::Right, 21, "map_upload"},
 		{qm_module::EQmModuleId::Steam, qm_module::EQmModuleColumn::Right, 22, "steam"},
-		{qm_module::EQmModuleId::WaterHammerHighlight, qm_module::EQmModuleColumn::Right, 4, "water_hammer"}}};
+		{qm_module::EQmModuleId::WaterHammerHighlight, qm_module::EQmModuleColumn::Right, 4, "water_hammer"},
+		{qm_module::EQmModuleId::GoresDrownBoard, qm_module::EQmModuleColumn::Right, 23, "gores_drown_board"},
+		{qm_module::EQmModuleId::Ime, qm_module::EQmModuleColumn::Left, 19, "ime"}}};
 }
 
 using SQmGlobalSearchCard = qm_card_registry::SCardSearchResult;
@@ -1605,12 +1608,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	// 这里只负责渲染复选框，不在渲染遍里做加载副作用。
 	RenderCheckboxTipped(&g_Config.m_QmBlankAssetFallback, "Blank asset auto fallback", Localize("Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)"), &g_Config.m_QmBlankAssetFallback);
 	RenderCheckbox(&g_Config.m_QmMessageMerge, "Message merging", &g_Config.m_QmMessageMerge);
-	RenderCheckbox(&g_Config.m_QmNewUi, "New UI", &g_Config.m_QmNewUi);
 	RenderCheckbox(&g_Config.m_QmShortServerNames, "Short server names", &g_Config.m_QmShortServerNames);
-	RenderCheckbox(&g_Config.m_QmImeAutoManage, "Auto manage IME while typing", &g_Config.m_QmImeAutoManage);
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	RenderQmFunctionCheckbox(&g_Config.m_QmNewIme, "New IME", Localize("New IME"), &g_Config.m_QmNewIme, &Row, PrewarmOnly);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
 	RenderCheckbox(&g_Config.m_QmRepeatEnabled, "Enable repeat", &g_Config.m_QmRepeatEnabled);
 	RenderCheckbox(&g_Config.m_QmRandomEmoteOnHit, "Random emoticon", &g_Config.m_QmRandomEmoteOnHit);
 	// 两个表情开关已迁入 qm:emoticons 卡（RenderQmFunctionEmoticonsContent），此处不再重复渲染。
@@ -1626,6 +1624,14 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 	else if(!PrewarmOnly && SponsorNudgeBefore == 0 && g_Config.m_QmSponsorNudge != 0)
 		GameClient()->HideSponsorNudgeFarewell();
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
+}
+
+void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	RenderQmFunctionCheckboxRow(Content, LineHeight, LineSpacing, &g_Config.m_QmImeAutoManage, "Auto manage IME while typing", Localize("Auto manage IME while typing"), &g_Config.m_QmImeAutoManage, PrewarmOnly);
+	RenderQmFunctionCheckboxRow(Content, LineHeight, LineSpacing, &g_Config.m_QmNewIme, "New IME", Localize("New IME"), &g_Config.m_QmNewIme, PrewarmOnly);
+	static CButtonContainer s_ImeBgColorId;
+	DoLine_AlphaColorPicker(&s_ImeBgColorId, CurrentSettingsContentMetrics(), &Content, Localize("IME background color"), &g_Config.m_QmImeBgColor, &g_Config.m_QmImeOpacity, 0x1C1C1E, 96);
 }
 
 void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
@@ -4294,10 +4300,9 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 			return Row() * (3.0f + (g_Config.m_QmAxiomAutoLogin ? 2.0f : 0.0f) + ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 7.0f : 0.0f)) + LineHeight;
 		case EQmModuleId::KeyBinds: return Rows(8.0f);
 		case EQmModuleId::MiniFeatures:
-			// 16 个 RenderCheckbox/Tipped + CLineInput(计分板过滤器) 已迁出，不再计入。
-			// 19 行 = 16 个 RenderCheckbox/Tipped + NewIme/SponsorNudge 两个手写 RenderQmFunctionCheckbox + 赞助提醒行。
+			// IME 已独立为 qm:ime 卡；这里按剩余小功能行测量。
 			// 与 RenderQmFunctionMiniFeaturesContent 逐行对应；新增控件时须同步更新此计数。
-			return Rows(19.0f);
+			return Rows(16.0f);
 		case EQmModuleId::JumpHint: return Row() * 5.0f;
 		case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 6.0f;
 		case EQmModuleId::FriendNotify:

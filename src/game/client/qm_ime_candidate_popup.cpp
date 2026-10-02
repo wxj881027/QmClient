@@ -183,6 +183,7 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	IGraphics *pGraphics = pGameClient->Graphics();
 	ITextRender *pTextRender = pGameClient->TextRender();
 	const qm_theme::SImeTheme &Ime = qm_theme::ImeTheme(true);
+	const float UserOpacity = std::clamp(g_Config.m_QmImeOpacity, 0, 100) / 100.0f;
 	const unsigned OldRenderFlags = pTextRender->GetRenderFlags();
 	pTextRender->SetRenderFlags(OldRenderFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 
@@ -411,7 +412,10 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	DrawRoundedSurface(pGraphics, PanelDropB, WithAlpha(Ime.m_PanelShadow, Alpha * 0.28f), ColorRGBA(), SurfaceParams);
 
 	SurfaceParams.m_BorderWidth = Ime.m_BorderInset;
-	DrawRoundedSurface(pGraphics, Panel, WithAlpha(Ime.m_PanelBg, Alpha), WithAlpha(Ime.m_PanelBorder, Alpha), SurfaceParams);
+	const ColorRGBA PanelBackground = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeBgColor));
+	if(UserOpacity < 0.999f && g_Config.m_QmGaussianBlur != 0)
+		pGameClient->Ui()->RenderGaussianBlur(Panel, Alpha * UserOpacity, SurfaceParams.m_Corners, SurfaceParams.m_Radius);
+	DrawRoundedSurface(pGraphics, Panel, WithAlpha(PanelBackground, Alpha * UserOpacity), WithAlpha(Ime.m_PanelBorder, Alpha * UserOpacity), SurfaceParams);
 	CUIRect PanelContent;
 	Panel.Margin(Ime.m_BorderInset, &PanelContent);
 

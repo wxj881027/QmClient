@@ -2336,6 +2336,9 @@ Configure the companion appearance and movement
 Configure the Gores team drown board
 == Gores チーム溺死ボードを設定
 
+Configure the IME candidate bar
+== Configure the IME candidate bar
+
 Configure the ingame cursor scale
 == ゲーム内カーソルスケールを設定
 
@@ -5522,6 +5525,12 @@ Ignore voice distance attenuation
 Ignored legacy Dynamic Island edge margin
 == 旧式ダイナミックアイランドの端の余白は無視されます
 
+IME
+== IME
+
+IME background color
+== IME 背景色
+
 Import from clipboard
 == クリップボードからインポート
 
@@ -7295,6 +7304,12 @@ New features
 New IME
 == 新しいIME
 
+New IME candidate bar background color
+== 新しい IME 候補バーの背景色
+
+New IME candidate bar opacity
+== 新しい IME 候補バーの不透明度
+
 New name
 == 新しい名前
 
@@ -7306,9 +7321,6 @@ New preset name
 
 New random timeout code
 == 新しいランダムタイムアウトコード
-
-New UI
-== 新しいUI
 
 News
 == ニュース

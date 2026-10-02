@@ -2136,6 +2136,10 @@ void CHud::RenderDummyMiniMap()
 				Graphics()->FlushVertices();
 				Graphics()->ClipDisable();
 				Graphics()->UpdateViewport(ClampedX, ClampedY, ClampedW, ClampedH, false);
+				// UpdateViewport 只限制光栅化视口；地图层和 Tee 仍可能提交越界几何，
+				// 因此同步启用同一内框的屏幕裁剪。
+				const int ClipTop = ScreenH - (ClampedY + ClampedH);
+				Graphics()->ClipEnable(ClampedX, ClipTop, ClampedW, ClampedH);
 				RenderingMiniView = true;
 			}
 
@@ -3827,10 +3831,9 @@ float CHud::GetTopIslandAvoidanceRight() const
 	else if(ShowRecordingStatus)
 		RightSlotWidth = ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth;
 	const float RightSlotGap = RightSlotWidth > 0.0f && (TimerCapsule.m_Visible || BaseWidth > 0.0f) ? TimerToStatusGap : 0.0f;
-	const float TimerBoxX = TimerCapsule.m_Visible ? std::round(m_Width * 0.5f - TimerCapsule.m_BoxW * 0.5f) : TimerCapsule.m_BoxX;
-	const float TimerBoxRight = TimerBoxX + TimerCapsule.m_BoxW;
+	const float MaxUnifiedWidth = std::max(0.0f, m_Width - ScreenPadding * 2.0f);
 	const float MaxIslandWidth = TimerCapsule.m_Visible ?
-					     std::max(BaseWidth, TimerBoxX - GapToTimer - RightSlotGap - RightSlotWidth - ScreenPadding) :
+					     std::max(BaseWidth, MaxUnifiedWidth - GapToTimer - TimerCapsule.m_BoxW - RightSlotGap - RightSlotWidth) :
 					     BaseWidth + (ShowCover ? (Gap + MaxTitleWidth) : 0.0f);
 	const float MaxExpandedTitleWidth = std::max(0.0f, MaxIslandWidth - BaseWidth - Gap);
 	const char *pDisplayTitle = "";
@@ -3858,20 +3861,14 @@ float CHud::GetTopIslandAvoidanceRight() const
 	if(TrackDetailsExpanded && TitleWidth > 0.0f)
 		TargetWidth += Gap + TitleWidth;
 
+	const float MainToTimerGap = TargetWidth > 0.0f ? GapToTimer : 0.0f;
 	const float PlannedUnifiedWidth = TimerCapsule.m_Visible ?
-						  TargetWidth + GapToTimer + TimerCapsule.m_BoxW + RightSlotGap + RightSlotWidth :
+						  TargetWidth + MainToTimerGap + TimerCapsule.m_BoxW + RightSlotGap + RightSlotWidth :
 						  TargetWidth + RightSlotGap + RightSlotWidth;
-	float TargetX = m_Width * 0.5f - TargetWidth * 0.5f;
-	if(TimerCapsule.m_Visible)
-		TargetX = TargetWidth > 0.0f ? std::max(ScreenPadding, TimerBoxX - GapToTimer - TargetWidth) : TimerBoxX;
-	else if(RightSlotWidth > 0.0f)
-		TargetX = m_Width * 0.5f - PlannedUnifiedWidth * 0.5f;
-	else
-	{
-		const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - TargetWidth);
-		TargetX = std::clamp(TargetX, ScreenPadding, MaxTargetX);
-	}
-	TargetX = std::max(ScreenPadding, TargetX);
+	const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - PlannedUnifiedWidth);
+	float TargetX = std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
+	const float TimerBoxX = TimerCapsule.m_Visible ? TargetX + TargetWidth + MainToTimerGap : TimerCapsule.m_BoxX;
+	const float TimerBoxRight = TimerBoxX + TimerCapsule.m_BoxW;
 
 	const float StatusAnchorRight = TimerCapsule.m_Visible ? TimerBoxRight : TargetX + TargetWidth;
 	const float UnifiedRight = StatusAnchorRight + RightSlotGap + RightSlotWidth;
@@ -4278,10 +4275,8 @@ void CHud::RenderMediaIsland()
 		const float MaxTimerWidth = std::max(TimerCapsule.m_BoxW, MaxUnifiedWidth - ReservedWidth);
 		TimerCapsule.m_BoxW = std::min(MaxTimerWidth, std::max(TimerCapsule.m_BoxW, IncomingSwapTextWidth + BottomRowPaddingX * 2.0f));
 	}
-	const float TimerBoxX = TimerCapsule.m_Visible ? std::round(m_Width * 0.5f - TimerCapsule.m_BoxW * 0.5f) : TimerCapsule.m_BoxX;
-	const float TimerBoxRight = TimerBoxX + TimerCapsule.m_BoxW;
 	const float MaxIslandWidth = TimerCapsule.m_Visible ?
-					     std::max(BaseWidth, TimerBoxX - GapToTimer - ScreenPadding) :
+					     std::max(BaseWidth, MaxUnifiedWidth - GapToTimer - TimerCapsule.m_BoxW - (PlannedStatusWidth > 0.0f ? TimerToStatusGap + PlannedStatusWidth : 0.0f)) :
 					     BaseWidth + (ShowCover ? (Gap + MaxTitleWidth) : 0.0f);
 	const float MaxExpandedTitleWidth = std::max(0.0f, MaxIslandWidth - BaseWidth - Gap);
 	char aLayoutTrackMeta[256];
@@ -4297,26 +4292,23 @@ void CHud::RenderMediaIsland()
 	float TargetWidth = BaseWidth;
 	if(TrackDetailsExpanded && TitleWidth > 0.0f)
 		TargetWidth += Gap + TitleWidth;
+	float MainToTimerGap = TargetWidth > 0.0f ? GapToTimer : 0.0f;
 	float PlannedUnifiedWidth = TimerCapsule.m_Visible ?
-					    (TargetWidth + GapToTimer + TimerCapsule.m_BoxW + (PlannedStatusWidth > 0.0f ? (TimerToStatusGap + PlannedStatusWidth) : 0.0f)) :
+					    (TargetWidth + MainToTimerGap + TimerCapsule.m_BoxW + (PlannedStatusWidth > 0.0f ? (TimerToStatusGap + PlannedStatusWidth) : 0.0f)) :
 					    (TargetWidth + (TargetWidth > 0.0f && PlannedStatusWidth > 0.0f ? TimerToStatusGap : 0.0f) + PlannedStatusWidth);
 	if(DesiredBottomUnifiedWidth > PlannedUnifiedWidth)
 	{
 		const float ExtraWidth = DesiredBottomUnifiedWidth - PlannedUnifiedWidth;
 		TargetWidth += ExtraWidth;
-		PlannedUnifiedWidth += ExtraWidth;
+		MainToTimerGap = TargetWidth > 0.0f ? GapToTimer : 0.0f;
+		PlannedUnifiedWidth = TimerCapsule.m_Visible ?
+					      (TargetWidth + MainToTimerGap + TimerCapsule.m_BoxW + (PlannedStatusWidth > 0.0f ? (TimerToStatusGap + PlannedStatusWidth) : 0.0f)) :
+					      (TargetWidth + (TargetWidth > 0.0f && PlannedStatusWidth > 0.0f ? TimerToStatusGap : 0.0f) + PlannedStatusWidth);
 	}
-	float TargetX = m_Width * 0.5f - TargetWidth * 0.5f;
-	if(TimerCapsule.m_Visible)
-		TargetX = TargetWidth > 0.0f ? std::max(ScreenPadding, TimerBoxX - GapToTimer - TargetWidth) : TimerBoxX;
-	else if(PlannedStatusWidth > 0.0f)
-		TargetX = m_Width * 0.5f - PlannedUnifiedWidth * 0.5f;
-	else
-	{
-		const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - TargetWidth);
-		TargetX = std::clamp(TargetX, ScreenPadding, MaxTargetX);
-	}
-	TargetX = std::max(ScreenPadding, TargetX);
+	const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - PlannedUnifiedWidth);
+	float TargetX = std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
+	float TimerBoxX = TimerCapsule.m_Visible ? TargetX + TargetWidth + MainToTimerGap : TimerCapsule.m_BoxX;
+	const float TimerBoxRight = TimerBoxX + TimerCapsule.m_BoxW;
 	const float TargetBottomHeight = ShowBottomRow ? (BottomRowPaddingY * 2.0f + BottomRowLineHeight * BottomRowLineCount) : 0.0f;
 	const float TargetHeight = BaseIslandHeight + TargetBottomHeight;
 	const float TitleAlphaTarget = TrackDetailsExpanded && TitleWidth > 0.0f ? 1.0f : 0.0f;
@@ -7538,8 +7530,7 @@ void CHud::RenderGoresDrownBoard()
 
 	BoardWidth = maximum(BoardWidth + PaddingX * 2.0f, 64.0f) + 2.0f;
 	const float BoardHeight = PaddingY * 2.0f + TitleHeight + RowCount * RowHeight + (HasMoreRows ? MoreHeight : 0.0f);
-	const float CenterX = 150.0f * Graphics()->ScreenAspect();
-	const float BoardX = std::clamp(CenterX - BoardWidth / 2.0f, 0.0f, maximum(0.0f, m_Width - BoardWidth));
+	const float BoardX = std::clamp(8.0f, 0.0f, maximum(0.0f, m_Width - BoardWidth));
 	const float BoardY = QmHudTopEffectY(35.0f, BoardHeight, BoardX, BoardX + BoardWidth, m_MediaIslandLastVisibleRect, m_MediaIslandLastVisibleRectValid);
 	const CUIRect BoardRect{BoardX, BoardY, BoardWidth, BoardHeight};
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::GoresDrownBoard, BoardRect);
@@ -7551,10 +7542,9 @@ void CHud::RenderGoresDrownBoard()
 
 	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
-	ColorRGBA BoardTextColor = TextRender()->DefaultTextColor();
-	BoardTextColor.a *= RenderAlpha;
-	ColorRGBA BoardOutlineColor = TextRender()->DefaultTextOutlineColor();
-	BoardOutlineColor.a *= RenderAlpha;
+	// 榜内文字保持可读性：透明度只作用于榜面和 Tee，不能把排名信息一起淡掉。
+	const ColorRGBA BoardTextColor = TextRender()->DefaultTextColor();
+	const ColorRGBA BoardOutlineColor = TextRender()->DefaultTextOutlineColor();
 	TextRender()->TextColor(BoardTextColor);
 	TextRender()->TextOutlineColor(BoardOutlineColor);
 

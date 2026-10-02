@@ -134,6 +134,7 @@ namespace qm_module
 		case EQmModuleId::WaterHammerHighlight: return "qm:water_hammer";
 		case EQmModuleId::GoresDrownBoard: return "qm:gores_drown_board";
 		case EQmModuleId::BetterScoreboard: return "qm:better_scoreboard";
+		case EQmModuleId::Ime: return "qm:ime";
 		}
 		return nullptr;
 	}

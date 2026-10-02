@@ -4687,6 +4687,70 @@ turkish = "Configure Dream-only convenience features"
 polish = "Configure Dream-only convenience features"
 
 [[message]]
+key = "Configure the IME candidate bar"
+[message.translations]
+simplified_chinese = "配置 IME 候选栏"
+traditional_chinese = "Configure the IME candidate bar"
+japanese = "Configure the IME candidate bar"
+korean = "Configure the IME candidate bar"
+russian = "Configure the IME candidate bar"
+german = "Configure the IME candidate bar"
+spanish = "Configure the IME candidate bar"
+french = "Configure the IME candidate bar"
+brazilian_portuguese = "Configure the IME candidate bar"
+portuguese = "Configure the IME candidate bar"
+turkish = "Configure the IME candidate bar"
+polish = "Configure the IME candidate bar"
+
+[[message]]
+key = "IME background color"
+[message.translations]
+simplified_chinese = "IME 背景颜色"
+traditional_chinese = "IME 背景顏色"
+japanese = "IME 背景色"
+korean = "IME 배경 색상"
+russian = "Цвет фона IME"
+german = "Hintergrundfarbe der IME"
+spanish = "Color de fondo del IME"
+french = "Couleur d'arrière-plan de l'IME"
+brazilian_portuguese = "Cor de fundo do IME"
+portuguese = "Cor de fundo do IME"
+turkish = "IME arka plan rengi"
+polish = "Kolor tła IME"
+
+[[message]]
+key = "New IME candidate bar background color"
+[message.translations]
+simplified_chinese = "新版 IME 候选栏背景颜色"
+traditional_chinese = "新版 IME 候選欄背景顏色"
+japanese = "新しい IME 候補バーの背景色"
+korean = "새 IME 후보 표시줄 배경 색상"
+russian = "Цвет фона новой панели кандидатов IME"
+german = "Hintergrundfarbe der neuen IME-Kandidatenleiste"
+spanish = "Color de fondo de la nueva barra de candidatos del IME"
+french = "Couleur d'arrière-plan de la nouvelle barre de candidats IME"
+brazilian_portuguese = "Cor de fundo da nova barra de candidatos do IME"
+portuguese = "Cor de fundo da nova barra de candidatos do IME"
+turkish = "Yeni IME aday çubuğu arka plan rengi"
+polish = "Kolor tła nowego paska kandydatów IME"
+
+[[message]]
+key = "New IME candidate bar opacity"
+[message.translations]
+simplified_chinese = "新版 IME 候选栏透明度"
+traditional_chinese = "新版 IME 候選欄透明度"
+japanese = "新しい IME 候補バーの不透明度"
+korean = "새 IME 후보 표시줄 불투명도"
+russian = "Непрозрачность новой панели кандидатов IME"
+german = "Deckkraft der neuen IME-Kandidatenleiste"
+spanish = "Opacidad de la nueva barra de candidatos del IME"
+french = "Opacité de la nouvelle barre de candidats IME"
+brazilian_portuguese = "Opacidade da nova barra de candidatos do IME"
+portuguese = "Opacidade da nova barra de candidatos do IME"
+turkish = "Yeni IME aday çubuğu opaklığı"
+polish = "Nieprzezroczystość nowego paska kandydatów IME"
+
+[[message]]
 key = "Configure ghost recording and playback tools"
 [message.translations]
 simplified_chinese = "配置幽灵录制和回放工具"
