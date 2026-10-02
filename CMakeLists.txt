@@ -4541,6 +4541,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/blocklist_driver_test.cpp
     src/test/unit/base/bytes_be_test.cpp
     src/test/unit/engine/chunk_header_test.cpp
+    src/test/unit/engine/checksum_test.cpp
     src/test/unit/client/color_test.cpp
     src/test/unit/engine/compression_test.cpp
     src/test/unit/engine/console_test.cpp
@@ -5002,6 +5003,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL
     ${TESTS}
     ${TESTS_EXTRA}
+    src/generated/checksum.cpp
     $<TARGET_OBJECTS:game-server-without-main>
     $<TARGET_OBJECTS:engine-gfx>
     $<TARGET_OBJECTS:engine-shared>

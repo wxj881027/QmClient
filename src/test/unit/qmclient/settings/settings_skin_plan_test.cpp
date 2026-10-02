@@ -45,13 +45,15 @@ TEST(SettingsSkinPlan, SameNameQueuedColorVariantsRemainDistinctAfterSorting)
 	const auto Plan = BuildSettingsSkinListPlan(vEntries, 0);
 	ASSERT_EQ(Plan.m_vEntries.size(), 3u);
 	ASSERT_EQ(Plan.m_vNames.size(), 3u);
-	ASSERT_TRUE(Plan.m_vEntries[0].m_ColorKey.has_value());
+	const auto &SelectedColor = Plan.m_vEntries[0].m_ColorKey;
+	const auto &QueuedColor = Plan.m_vEntries[1].m_ColorKey;
+	ASSERT_TRUE(SelectedColor.has_value());
 	EXPECT_TRUE(Plan.m_vEntries[0].m_Selected);
-	EXPECT_TRUE(Plan.m_vEntries[0].m_ColorKey->m_UseCustomColor);
-	EXPECT_EQ(Plan.m_vEntries[0].m_ColorKey->m_ColorBody, 789);
-	EXPECT_EQ(Plan.m_vEntries[0].m_ColorKey->m_ColorFeet, 1011);
-	ASSERT_TRUE(Plan.m_vEntries[1].m_ColorKey.has_value());
-	EXPECT_EQ(Plan.m_vEntries[1].m_ColorKey->m_ColorBody, 123);
-	EXPECT_EQ(Plan.m_vEntries[1].m_ColorKey->m_ColorFeet, 456);
+	EXPECT_TRUE(SelectedColor->m_UseCustomColor);
+	EXPECT_EQ(SelectedColor->m_ColorBody, 789);
+	EXPECT_EQ(SelectedColor->m_ColorFeet, 1011);
+	ASSERT_TRUE(QueuedColor.has_value());
+	EXPECT_EQ(QueuedColor->m_ColorBody, 123);
+	EXPECT_EQ(QueuedColor->m_ColorFeet, 456);
 	EXPECT_FALSE(Plan.m_vEntries[2].m_ColorKey.has_value());
 }

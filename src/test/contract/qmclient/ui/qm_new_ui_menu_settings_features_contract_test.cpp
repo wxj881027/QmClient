@@ -1,7 +1,5 @@
 // QmNewUi 菜单源码合同：Qm 功能开关域：动态岛行预布局、武器轨迹/动画、皮肤切换过渡、进程优先级与 IME、表情阴影。
 // 运行时行为保留在 qm_new_ui_menu_branch_test.cpp。
-#include <engine/client/backend/vulkan/backend_vulkan.h>
-#include <engine/client/backend_sdl.h>
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/storage.h>

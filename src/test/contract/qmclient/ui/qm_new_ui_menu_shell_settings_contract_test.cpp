@@ -1,7 +1,5 @@
 // QmNewUi 菜单源码合同：设置外壳与卡片页面域。
 // 运行时行为保留在 qm_new_ui_menu_branch_test.cpp。
-#include <engine/client/backend/vulkan/backend_vulkan.h>
-#include <engine/client/backend_sdl.h>
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/storage.h>

@@ -36,6 +36,10 @@ def main():
 		"""\
 #include <engine/client/checksum.h>
 
+#include <algorithm>
+#include <array>
+#include <iterator>
+
 void CChecksumData::InitFiles()
 {
 """,
@@ -43,8 +47,11 @@ void CChecksumData::InitFiles()
 	)
 	print(f"\tm_NumFiles = {len(hashes_files)};")
 	print(f"\tm_NumExtra = {len(hashes_extra)};")
-	for i, h in enumerate(hashes):
-		print(f"\tm_aFiles[0x{i:03x}] = {h};")
+	print(f"\tstatic constexpr std::array<unsigned, {len(hashes)}> s_aFiles = {{")
+	for h in hashes:
+		print(f"\t\t{h},")
+	print("\t};")
+	print("\tstd::copy_n(s_aFiles.begin(), std::min(s_aFiles.size(), std::size(m_aFiles)), m_aFiles);")
 	print("}")
 
 

@@ -1,7 +1,5 @@
 // QmNewUi 菜单源码合同：设置卡片视觉表面与共享样式助手。
 // 卡片甲板状态/生命周期合同见 qm_new_ui_menu_cards_deck_contract_test.cpp。
-#include <engine/client/backend/vulkan/backend_vulkan.h>
-#include <engine/client/backend_sdl.h>
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/storage.h>
@@ -119,7 +117,6 @@ TEST(QmNewUiMenuCardsSurfaceContract, SettingsCardDeckSharedComponentMigratesSou
 	EXPECT_EQ(MenuSource.find("LoadSettingsCardDeckOrdersFromGlobalConfig"), std::string::npos);
 
 	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string FormatBackendDisplayName = FunctionBody(SettingsSource, "void FormatQmGraphicsBackendDisplayName(");
 	ASSERT_FALSE(FormatBackendDisplayName.empty());
 	EXPECT_NE(FormatBackendDisplayName.find("\"OpenGL %d.%d\""), std::string::npos);

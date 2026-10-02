@@ -89,11 +89,11 @@ jobs:
         mkdir clang-tidy
         cd clang-tidy
         # 可选特性构建保留 CMake 清单告警，不将既有 source list 漂移升级为错误。
+        # 主 clang-tidy 扫描负责 required gate；可选特性构建只验证完整配置能编译，
+        # 不把未参与主扫描的历史启发式告警伪装成新回归。
         cmake -G Ninja \
           -DCMAKE_CXX_COMPILER="clang++-${CLANG_VERSION}" \
           -DCMAKE_C_COMPILER="clang-${CLANG_VERSION}" \
-          # 主 clang-tidy 扫描负责 required gate；可选特性构建只验证完整配置能编译，
-          # 不把未参与主扫描的历史启发式告警伪装成新回归。
           -DCMAKE_CXX_CLANG_TIDY="clang-tidy-${CLANG_VERSION}" \
           -DCMAKE_C_CLANG_TIDY="clang-tidy-${CLANG_VERSION}" \
           -DCMAKE_BUILD_TYPE=Debug \

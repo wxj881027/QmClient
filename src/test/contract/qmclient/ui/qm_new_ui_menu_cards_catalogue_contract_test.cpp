@@ -1,8 +1,6 @@
 // QmNewUi 菜单源码合同：设置卡片目录、外观/图形页面卡片定义与激光预览。
 // 卡片视觉表面合同见 qm_new_ui_menu_cards_surface_contract_test.cpp；
 // 甲板状态/生命周期合同见 qm_new_ui_menu_cards_deck_contract_test.cpp。
-#include <engine/client/backend/vulkan/backend_vulkan.h>
-#include <engine/client/backend_sdl.h>
 #include <engine/client/plausible_sizes.h>
 #include <engine/client/rounded_rect_geometry.h>
 #include <engine/storage.h>
