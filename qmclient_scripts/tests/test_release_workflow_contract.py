@@ -30,6 +30,21 @@ class ReleaseWorkflowContractTest(unittest.TestCase):
         self.assertNotIn("DDNET_VERSION_NUMBER", script)
         self.assertNotIn("GAME_RELEASE_VERSION_INTERNAL", script)
 
+    def test_portable_zip_is_written_with_utf8_names(self) -> None:
+        # `cmake -E tar --format=zip` 按宿主代码页写归档名，Windows 上会把
+        # `霞鹜新致宋.ttf` 写成 `?????.ttf`；便携包必须改用 UTF-8 写入器。
+        cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
+
+        self.assertIn("qmclient_scripts/zip_pack.py", cmake)
+        self.assertNotIn("tar c ../${CPACK_PACKAGE_FILE_NAME}.${ext} --format=zip", cmake)
+
+    def test_windows_package_verification_rejects_lossy_names(self) -> None:
+        workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Windows package has lossy file names", workflow)
+
     def test_legacy_delta_updater_requires_explicit_deployment_paths(self) -> None:
         script = (REPO_ROOT / "qmclient_scripts/update.zsh").read_text(encoding="utf-8")
 

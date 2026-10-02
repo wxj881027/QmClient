@@ -275,11 +275,25 @@ jobs:
           package = Path("dist/QmClient-windows.zip")
           required = {"DDNet.exe", "DDNet-Server.exe", "QmClient-Updater.exe"}
           with zipfile.ZipFile(package) as archive:
-              basenames = [Path(name).name for name in archive.namelist() if not name.endswith("/")]
+              infos = [info for info in archive.infolist() if not info.is_dir()]
+          basenames = [Path(info.filename).name for info in infos]
           missing = sorted(name for name in required if basenames.count(name) != 1)
           if missing:
               raise SystemExit(f"Windows package is missing or duplicates required files: {missing}")
+          # 有损代码页转换会把非 ASCII 文件名写成 `?`：字体文件会因此找不到，
+          # 两个不同的字体还可能塌成同一个名字，发布签名随后看到重复条目。
+          lossy = sorted(
+              info.filename
+              for info in infos
+              if "?" in info.filename or "\ufffd" in info.filename
+          )
+          if lossy:
+              raise SystemExit(f"Windows package has lossy file names: {lossy}")
+          non_ascii = sorted(info.filename for info in infos if not info.filename.isascii())
           print("Verified Windows automatic update executables")
+          print(f"Non-ASCII package entries: {len(non_ascii)}")
+          for name in non_ascii:
+              print(f"  {name}")
           PY
 
       - name: Upload packaged artifact

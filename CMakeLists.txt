@@ -5753,7 +5753,9 @@ foreach(ext zip tar.gz tar.xz 7z)
 
   set(PACKAGE_COMMAND)
   if(ext STREQUAL zip)
-    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${CMAKE_COMMAND} -E tar c ../${CPACK_PACKAGE_FILE_NAME}.${ext} --format=zip -- ${CPACK_PACKAGE_FILE_NAME}/)
+    # 不用 `cmake -E tar --format=zip`：它按宿主代码页写归档名，Windows 上会把
+    # 非 ASCII 文件名写成 `?`，客户端因此找不到字体文件，发布校验也会看到重复条目。
+    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/zip_pack.py --source ${CPACK_PACKAGE_FILE_NAME} --output ../${CPACK_PACKAGE_FILE_NAME}.${ext})
   elseif(ext STREQUAL tar.gz)
     set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${CMAKE_COMMAND} -E tar cz ../${CPACK_PACKAGE_FILE_NAME}.${ext} -- ${CPACK_PACKAGE_FILE_NAME}/)
   elseif(ext STREQUAL tar.xz)

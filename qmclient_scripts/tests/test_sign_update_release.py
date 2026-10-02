@@ -208,6 +208,66 @@ class SignUpdateReleaseTest(unittest.TestCase):
             manifest = SIGN_UPDATE_RELEASE.build_manifest(package, "2.80.0")
             self.assertEqual(len(manifest["files"]), 4)
 
+    def test_normalizes_package_with_non_ascii_file_names(self) -> None:
+        # V3 发布阻断回归：CPack 顶层目录里带有中文名字体时，规范化必须
+        # 保持名字逐字节不变，不能出现 `?` 替换或重复条目。
+        with tempfile.TemporaryDirectory(prefix="qm-update-utf8-") as temp_dir:
+            root = Path(temp_dir)
+            package = root / "QmClient-windows.zip"
+            with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("QmClient-3.0-win64/DDNet.exe", b"client")
+                archive.writestr("QmClient-3.0-win64/DDNet-Server.exe", b"server")
+                archive.writestr("QmClient-3.0-win64/QmClient-Updater.exe", b"updater")
+                archive.writestr(
+                    "QmClient-3.0-win64/data/qmclient/fonts/霞鹜新致宋.ttf",
+                    b"zhi-song",
+                )
+                archive.writestr(
+                    "QmClient-3.0-win64/data/qmclient/fonts/霞鹜新晰黑.ttf",
+                    b"xi-hei",
+                )
+
+            SIGN_UPDATE_RELEASE.normalize_windows_package(package)
+
+            with zipfile.ZipFile(package) as archive:
+                self.assertEqual(
+                    set(archive.namelist()),
+                    {
+                        "DDNet.exe",
+                        "DDNet-Server.exe",
+                        "QmClient-Updater.exe",
+                        "data/qmclient/fonts/霞鹜新致宋.ttf",
+                        "data/qmclient/fonts/霞鹜新晰黑.ttf",
+                    },
+                )
+                self.assertEqual(
+                    archive.read("data/qmclient/fonts/霞鹜新晰黑.ttf"), b"xi-hei"
+                )
+            manifest = SIGN_UPDATE_RELEASE.build_manifest(package, "v3")
+            self.assertEqual(manifest["version"], "3")
+            self.assertIn(
+                "data/qmclient/fonts/霞鹜新致宋.ttf",
+                {entry["path"] for entry in manifest["files"]},
+            )
+
+    def test_rejects_names_collapsed_by_lossy_codepage_conversion(self) -> None:
+        # 有损代码页转换会让两个不同字体都变成 `?????.ttf`，规范化必须拒绝。
+        with tempfile.TemporaryDirectory(prefix="qm-update-lossy-") as temp_dir:
+            package = Path(temp_dir) / "QmClient-windows.zip"
+            with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
+                archive.writestr("QmClient-3.0-win64/DDNet.exe", b"client")
+                archive.writestr("QmClient-3.0-win64/DDNet-Server.exe", b"server")
+                archive.writestr("QmClient-3.0-win64/QmClient-Updater.exe", b"updater")
+                archive.writestr(
+                    "QmClient-3.0-win64/data/qmclient/fonts/?????.ttf", b"one"
+                )
+                archive.writestr(
+                    "QmClient-3.0-win64/data/qmclient/fonts/?????.ttf", b"two"
+                )
+
+            with self.assertRaisesRegex(ValueError, "duplicate archive path"):
+                SIGN_UPDATE_RELEASE.normalize_windows_package(package)
+
     def test_release_workflow_signs_and_uploads_all_update_assets(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(
             encoding="utf-8"

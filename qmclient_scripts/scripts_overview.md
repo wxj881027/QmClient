@@ -46,6 +46,7 @@
 - `qmclient_scripts/darwin_fix_install_names.py`
 - `qmclient_scripts/make_lib_openssl.sh`
 - `qmclient_scripts/cmake-windows-filter.py` — 过滤 Windows/MSVC 构建日志噪音（如"注意: 包含文件:"前缀）
+- `qmclient_scripts/zip_pack.py` — 把已收集好的便携目录打成 ZIP 的写入器，供 CMake 的 `package_zip`/`package_default` 调用。归档名固定按 UTF-8 写入并置位 UTF-8 标志，写完后再核对归档名与大小同磁盘逐项一致；不用 `cmake -E tar --format=zip` 是因为它按宿主代码页写名字，Windows 上会把 `霞鹜新致宋.ttf` 这类文件名写成 `?`，既让客户端找不到字体，也让发布校验看到重复条目。
 - `qmclient_scripts/repair_ninja_msvc_prefix.py` — 按编译器原始输出字节修复 Ninja + MSVC 依赖前缀；Windows 封装入口在构建前执行，构建中重新生成规则后会修复并补一轮构建。前缀变化时，将已有的有效零依赖对象标为待重编，恢复头文件依赖；日志保留在 `tmp/`。
 - `qmclient_scripts/preview-crash-dialog.cmd [build-dir] [graphics|assertion|fatal|hang]` — 不启动完整客户端、不制造真实崩溃，预览 Windows 喜庆崩溃窗口；默认使用 `cmake-build-release` 和 `graphics`。窗口内的“放烟花”按钮只在预览窗口中播放 GDI 烟花动画，不改变报告结果。
 
