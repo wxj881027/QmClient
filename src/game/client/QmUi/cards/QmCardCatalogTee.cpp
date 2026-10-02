@@ -11,6 +11,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -582,6 +583,7 @@ bool CMenus::ProcessSettingsTeeEditorInput(CUIRect Content, const SSettingsConte
 				CLineInput::GetActiveInput()->Deactivate();
 			m_Dummy = Target != 0;
 			m_SkinListScrollToSelected = false;
+			m_TeeEntranceStartTime = time_get();
 			return true;
 		}
 	}
@@ -612,6 +614,20 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	CompactLabel.m_DisallowNewline = true;
 	CompactLabel.m_StopAtEnd = true;
 	CompactLabel.m_MinimumFontSize = 8.0f;
+	float TeeScale = 1.0f;
+	float TeeAlphaScale = 1.0f;
+	if(g_Config.m_QmUiMotionLevel > 0 && m_TeeEntranceStartTime > 0)
+	{
+		const float Duration = g_Config.m_QmUiMotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
+		const float Overshoot = g_Config.m_QmUiMotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT;
+		const float Elapsed = (time_get() - m_TeeEntranceStartTime) / (float)time_freq();
+		if(Elapsed >= 0.0f && Elapsed < Duration)
+		{
+			const float Progress = Elapsed / Duration;
+			TeeScale = ComputeCountryFlagEntryScale(Progress, Overshoot);
+			TeeAlphaScale = ComputeCountryFlagEntryAlpha(Progress);
+		}
+	}
 	for(int PreviewTarget = 0; PreviewTarget < NUM_DUMMIES; ++PreviewTarget)
 	{
 		const bool Dummy = PreviewTarget != 0;
@@ -633,7 +649,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		str_format(aHeading, sizeof(aHeading), "%s: %s", Dummy ? Localize("Dummy") : Localize("Player"), pName);
 		CompactLabel.m_MaxWidth = Heading.w;
 		Ui()->DoLabel(&Heading, aHeading, BodySize, TEXTALIGN_ML, CompactLabel);
-		GameClient()->m_CountryFlags.Render(Dummy ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), Flag.x, Flag.y, Flag.w, Flag.h);
+		GameClient()->m_CountryFlags.Render(Dummy ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), Flag.x, Flag.y, Flag.w, Flag.h, m_TeeEntranceStartTime);
 		Inner.HSplitBottom(TeeMetrics.m_LineHeight, &TeeRect, &SkinLabel);
 		CompactLabel.m_MaxWidth = SkinLabel.w;
 		Ui()->DoLabel(&SkinLabel, pPreviewSkin, TeeMetrics.m_SmallSize, TEXTALIGN_MC, CompactLabel);
@@ -680,9 +696,23 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		const float Distance = length(Delta);
 		const vec2 Direction = Distance > 0.001f ? normalize(Delta) : vec2(1.0f, 0.0f);
 		const int Emote = Distance < 20.0f ? EMOTE_HAPPY : (Dummy ? g_Config.m_ClDummyDefaultEyes : g_Config.m_ClPlayerDefaultEyes);
-		Ui()->ClipEnable(&TeeRect);
-		RenderTools()->RenderTeeWithSkinChangeTransition(CAnimState::GetIdle(), pPrevious, &Current, Emote, Direction, Position, Transition.Progress(Now));
-		Ui()->ClipDisable();
+		if(TeeScale > 0.001f && TeeAlphaScale > 0.001f)
+		{
+			Current.m_Size *= TeeScale;
+			Current.m_BloodColor.a *= TeeAlphaScale;
+			Current.m_ColorBody.a *= TeeAlphaScale;
+			Current.m_ColorFeet.a *= TeeAlphaScale;
+			if(pPrevious != nullptr)
+			{
+				Previous.m_Size *= TeeScale;
+				Previous.m_BloodColor.a *= TeeAlphaScale;
+				Previous.m_ColorBody.a *= TeeAlphaScale;
+				Previous.m_ColorFeet.a *= TeeAlphaScale;
+			}
+			Ui()->ClipEnable(&TeeRect);
+			RenderTools()->RenderTeeWithSkinChangeTransition(CAnimState::GetIdle(), pPrevious, &Current, Emote, Direction, Position, Transition.Progress(Now));
+			Ui()->ClipDisable();
+		}
 		const CSkins::CSkinContainer *pContainer = GameClient()->m_Skins.FindContainerOrNullptr(pPreviewSkin);
 		if(pContainer == nullptr || pContainer->State() != CSkins::CSkinContainer::EState::LOADED)
 		{
@@ -735,30 +765,87 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	CTeeRenderInfo EyeInfo;
 	EyeInfo.Apply(GameClient()->m_Skins.Find(pSkinName[0] == '\0' ? "default" : pSkinName));
 	EyeInfo.ApplyColors(*pUseCustomColor, *pColorBody, *pColorFeet);
-	const float EyeRequestedSize = 32.0f * UiScale;
+	const SSettingsTeeEmoteSliderLayout SliderLayout = ResolveSettingsTeeEmoteSliderLayout(Layout.m_Eyes, TeeMetrics);
+	const CUIRect &Track = SliderLayout.m_TrackRect;
+	const float EyeRequestedSize = SliderLayout.m_TeeSize;
 	EyeInfo.m_Size = EyeRequestedSize;
 	float EyeMinX, EyeMinY, EyeMaxX, EyeMaxY;
 	GetSettingsTeePreviewBounds(CAnimState::GetIdle(), EyeInfo, EyeMinX, EyeMinY, EyeMaxX, EyeMaxY);
-	EyeInfo.m_Size = std::min(EyeRequestedSize, SettingsSkinPreviewSize(Layout.m_Eyes.h, Layout.m_Eyes.w / NUM_EMOTES - Gap, EyeRequestedSize, EyeMaxX - EyeMinX, EyeMaxY - EyeMinY));
+	EyeInfo.m_Size = std::min(EyeRequestedSize, SettingsSkinPreviewSize(Track.h, Track.w / NUM_EMOTES - Gap, EyeRequestedSize, EyeMaxX - EyeMinX, EyeMaxY - EyeMinY));
+	static char s_aEyeSliderIds[NUM_DUMMIES];
 	static CButtonContainer s_aEyes[NUM_DUMMIES][NUM_EMOTES];
-	CUIRect Eyes = Layout.m_Eyes;
+	const void *pSliderId = &s_aEyeSliderIds[Target];
+	const auto SetEmote = [&](int Emote) {
+		if(*pEmote == Emote)
+			return;
+		*pEmote = Emote;
+		if(Target == g_Config.m_ClDummy)
+			GameClient()->m_Emoticon.EyeEmote(Emote);
+	};
+	if(!Ui()->RenderOnly() && !Ui()->IsPopupOpen())
+	{
+		const bool MouseInsideTrack = Ui()->MouseHovered(&Track);
+		if(Ui()->CheckActiveItem(pSliderId))
+		{
+			if(Ui()->MouseButton(0))
+				SetEmote(ResolveTeeEmoteSliderTargetFromPoint(Track, Ui()->MouseX()));
+			else
+				Ui()->SetActiveItem(nullptr);
+		}
+		else if(MouseInsideTrack)
+		{
+			if(Ui()->MouseButtonClicked(0))
+			{
+				Ui()->SetActiveItem(pSliderId);
+				SetEmote(ResolveTeeEmoteSliderTargetFromPoint(Track, Ui()->MouseX()));
+			}
+			else if(Ui()->HotItem() == nullptr)
+				Ui()->SetHotItem(pSliderId);
+		}
+		if(MouseInsideTrack)
+		{
+			if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
+				SetEmote(StepTeeEmoteSlider(*pEmote, -1));
+			else if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
+				SetEmote(StepTeeEmoteSlider(*pEmote, 1));
+		}
+	}
+	DrawRoundedSurface(TabBarUiContext(), Track, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f), ui_token::radius::PILL);
+	const int ActiveEmote = std::clamp(*pEmote, 0, NUM_EMOTES - 1);
+	CUIRect TargetThumb;
+	SliderLayout.m_aSlotRects[ActiveEmote].Margin(2.5f * UiScale, &TargetThumb);
+	CUIRect AnimatedThumb = TargetThumb;
+	if(GameClient()->UiRuntimeV2() != nullptr)
+	{
+		auto &Anim = GameClient()->UiRuntimeV2()->AnimRuntime();
+		const uint64_t NodeKey = BuildUiAnimNodeKey(MakeUiScopeHash("settings_tee_eyes_slider_thumb"), Target);
+		AnimatedThumb.x = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::POS_X, TargetThumb.x, ui_token::motion::NAVIGATION_SPRING, 2);
+		AnimatedThumb.y = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::POS_Y, TargetThumb.y, ui_token::motion::NAVIGATION_SPRING, 2);
+		AnimatedThumb.w = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::WIDTH, TargetThumb.w, ui_token::motion::NAVIGATION_SPRING, 2);
+		AnimatedThumb.h = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::HEIGHT, TargetThumb.h, ui_token::motion::NAVIGATION_SPRING, 2);
+	}
+	DrawRoundedSurface(TabBarUiContext(), AnimatedThumb, ColorRGBA(1.0f, 1.0f, 1.0f, 0.20f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), ui_token::radius::PILL);
+	static const char *s_apEmoteNames[] = {"Normal", "Pain", "Happy", "Surprise", "Angry", "Blink"};
 	for(int Emote = 0; Emote < NUM_EMOTES; ++Emote)
 	{
-		CUIRect Button;
-		Eyes.VSplitLeft(Eyes.w / (NUM_EMOTES - Emote), &Button, &Eyes);
-		Button.VMargin(Gap * 0.5f, &Button);
-		if(DoButton_Menu(&s_aEyes[Target][Emote], "", *pEmote == Emote, &Button))
+		const CUIRect &Slot = SliderLayout.m_aSlotRects[Emote];
+		const bool IsActive = Emote == ActiveEmote;
+		const bool IsHovered = Ui()->MouseHovered(&Slot) && !Ui()->IsPopupOpen();
+		if(IsHovered && !IsActive)
 		{
-			*pEmote = Emote;
-			if(Target == g_Config.m_ClDummy)
-				GameClient()->m_Emoticon.EyeEmote(Emote);
+			CUIRect HoverRect;
+			Slot.Margin(2.5f * UiScale, &HoverRect);
+			DrawRoundedSurface(TabBarUiContext(), HoverRect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), ColorRGBA(), ui_token::radius::PILL);
 		}
 		vec2 Offset;
 		CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &EyeInfo, Offset);
-		Ui()->ClipEnable(&Button);
-		RenderTools()->RenderTee(CAnimState::GetIdle(), &EyeInfo, Emote, vec2(1.0f, 0.0f), Button.Center() + Offset + vec2(SettingsSkinPreviewCenterOffset(EyeMinX, EyeMaxX) * EyeInfo.m_Size / EyeRequestedSize, 0.0f));
+		const float TeeAlpha = IsActive ? 1.0f : (IsHovered ? 0.90f : 0.78f);
+		Ui()->ClipEnable(&Slot);
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &EyeInfo, Emote, vec2(1.0f, 0.0f), Slot.Center() + Offset + vec2(SettingsSkinPreviewCenterOffset(EyeMinX, EyeMaxX) * EyeInfo.m_Size / EyeRequestedSize, 0.0f), TeeAlpha);
 		Ui()->ClipDisable();
-		GameClient()->m_Tooltips.DoToolTip(&s_aEyes[Target][Emote], &Button, Localize("Choose default eyes when joining a server"));
+		char aTooltip[128];
+		str_format(aTooltip, sizeof(aTooltip), "%s - %s", Localize(s_apEmoteNames[Emote]), Localize("Choose default eyes when joining a server"));
+		GameClient()->m_Tooltips.DoToolTip(&s_aEyes[Target][Emote], &Slot, aTooltip);
 	}
 	DoSettingsButton_CheckBox(SETTINGS_TEE, -1, pUseCustomColor, m_Dummy ? "tee-dummy-custom-colors" : "tee-player-custom-colors", Localize("Custom colors"), *pUseCustomColor, &Layout.m_CustomColors);
 	if(!*pUseCustomColor)

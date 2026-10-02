@@ -7,8 +7,10 @@
 #include <engine/keys.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/shortcut_held_bind.h>
 
 #include <cstdint>
+#include <cstdlib>
 #include <vector>
 
 class IConfigManager;
@@ -41,6 +43,56 @@ public:
 };
 
 inline constexpr CBindSlot EMPTY_BIND_SLOT = CBindSlot(KEY_UNKNOWN, KeyModifier::NONE);
+
+// 绑定存储与版本独立于客户端接口，编辑器刷新和行为测试共用生产状态。
+class CBindStorage
+{
+	friend class CBinds;
+	char *m_aapKeyBindings[KeyModifier::COMBINATION_COUNT][KEY_LAST]{};
+	uint64_t m_Revision = 0;
+
+public:
+	CBindStorage() = default;
+	CBindStorage(const CBindStorage &) = delete;
+	CBindStorage &operator=(const CBindStorage &) = delete;
+	~CBindStorage() { UnbindAll(); }
+	uint64_t Revision() const { return m_Revision; }
+	const char *Get(int Key, int Modifiers) const
+	{
+		dbg_assert(Key >= KEY_FIRST && Key < KEY_LAST, "Key invalid");
+		dbg_assert(Modifiers >= KeyModifier::NONE && Modifiers < KeyModifier::COMBINATION_COUNT, "Modifiers invalid");
+		return m_aapKeyBindings[Modifiers][Key] ? m_aapKeyBindings[Modifiers][Key] : "";
+	}
+	bool Bind(int Key, const char *pCommand, bool FreeOnly = false, int Modifiers = KeyModifier::NONE)
+	{
+		if(FreeOnly && Get(Key, Modifiers)[0])
+			return false;
+		Get(Key, Modifiers);
+		// 先复制后释放，允许用同一槽位的当前值覆盖自身。
+		char *pCopy = nullptr;
+		if(pCommand[0])
+		{
+			const int Size = str_length(pCommand) + 1;
+			pCopy = static_cast<char *>(malloc(Size));
+			dbg_assert(pCopy != nullptr, "bind allocation failed");
+			str_copy(pCopy, pCommand, Size);
+		}
+		free(m_aapKeyBindings[Modifiers][Key]);
+		m_aapKeyBindings[Modifiers][Key] = pCopy;
+		++m_Revision;
+		return true;
+	}
+	void UnbindAll()
+	{
+		for(auto &apBindings : m_aapKeyBindings)
+			for(auto &pBinding : apBindings)
+			{
+				free(pBinding);
+				pBinding = nullptr;
+			}
+		++m_Revision;
+	}
+};
 
 class CBinds : public CComponent
 {
@@ -77,17 +129,21 @@ public:
 	void Bind(int KeyId, const char *pStr, bool FreeOnly = false, int ModifierCombination = KeyModifier::NONE);
 	void SetDefaults();
 	void UnbindAll();
-	uint64_t Revision() const { return m_Revision; }
+	uint64_t Revision() const { return m_Storage.Revision(); }
 	const char *Get(int KeyId, int ModifierCombination) const;
 	const char *Get(const CBindSlot &BindSlot) const;
 	void GetKey(const char *pBindStr, char *pBuf, size_t BufSize) const;
 	static int GetModifierMask(IInput *pInput);
 	static int GetModifierMaskOfKey(int Key);
+	static bool IsReservedShortcutChord(int ModifierMask)
+	{
+		return ModifierMask == ((1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)) ||
+		       ModifierMask == ((1 << KeyModifier::ALT) | (1 << KeyModifier::SHIFT)) ||
+		       ModifierMask == ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT));
+	}
 	static bool AllowsUnmodifiedFallback(int Key, int ModifierMask)
 	{
-		if(ModifierMask == ((1 << KeyModifier::CTRL) | (1 << KeyModifier::SHIFT)) ||
-			ModifierMask == ((1 << KeyModifier::ALT) | (1 << KeyModifier::SHIFT)) ||
-			ModifierMask == ((1 << KeyModifier::GUI) | (1 << KeyModifier::SHIFT)))
+		if(IsReservedShortcutChord(ModifierMask))
 			return false;
 
 		if((Key == KEY_LSHIFT || Key == KEY_RSHIFT) &&
@@ -96,7 +152,7 @@ public:
 
 		return true;
 	}
-	static bool ShouldReleaseUnmodifiedModifierBindOnModifierPress(const CBindSlot &ActiveBind, int PressedKeyModifierMask)
+	static bool ShouldRestrictUnmodifiedShiftBindOnModifierPress(const CBindSlot &ActiveBind, int PressedKeyModifierMask)
 	{
 		return ActiveBind.m_ModifierMask == KeyModifier::NONE &&
 		       (ActiveBind.m_Key == KEY_LSHIFT || ActiveBind.m_Key == KEY_RSHIFT) &&
@@ -109,6 +165,9 @@ public:
 	void RefreshActiveBinds();
 
 	void OnConsoleInit() override;
+	void OnRender() override;
+	void OnReset() override { m_vActiveBinds.clear(); }
+	void OnRelease() override { m_vActiveBinds.clear(); }
 	bool OnInput(const IInput::CEvent &Event) override;
 
 	// DDRace
@@ -116,8 +175,12 @@ public:
 	void SetDDRaceBinds(bool FreeOnly);
 
 private:
-	char *m_aapKeyBindings[KeyModifier::COMBINATION_COUNT][KEY_LAST];
-	std::vector<CBindSlot> m_vActiveBinds;
-	uint64_t m_Revision = 0;
+	CBindStorage m_Storage;
+	struct CActiveBind : CBindSlot
+	{
+		CQmShortcutHeldBind m_ShortcutState;
+		CActiveBind(int Key, int ModifierMask) : CBindSlot(Key, ModifierMask) {}
+	};
+	std::vector<CActiveBind> m_vActiveBinds;
 };
 #endif

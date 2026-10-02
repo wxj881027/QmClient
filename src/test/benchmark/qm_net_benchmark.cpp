@@ -9,6 +9,7 @@
 #include <benchmark/benchmark.h>
 
 #include <cstdint>
+#include <cstring>
 #include <vector>
 
 // main / IsInterrupted 桩统一在 qm_benchmark_main.cpp 提供
@@ -38,30 +39,47 @@ namespace
 class NetHuffmanBenchmark : public benchmark::Fixture
 {
 public:
-	void SetUp(const benchmark::State &State) override
+	void SetUp(const benchmark::State &) override
 	{
+		m_Ready = false;
 		CNetBase::Init();
 		m_aInput.resize(DATA_SIZE);
 		FillSnapshotLikeData(m_aInput.data(), DATA_SIZE);
 		m_aCompressed.resize(DATA_SIZE + 64);
 		m_CompressedSize = CNetBase::Compress(m_aInput.data(), DATA_SIZE, m_aCompressed.data(), static_cast<int>(m_aCompressed.size()));
+		std::vector<unsigned char> vRestored(DATA_SIZE);
+		m_Ready = m_CompressedSize > 0 &&
+			  CNetBase::Decompress(m_aCompressed.data(), m_CompressedSize, vRestored.data(), DATA_SIZE) == DATA_SIZE &&
+			  vRestored == m_aInput;
 	}
 
 	std::vector<unsigned char> m_aInput;
 	std::vector<unsigned char> m_aCompressed;
 	int m_CompressedSize = 0;
+	bool m_Ready = false;
 };
 
 // 压缩：每迭代压缩一整份 16 KiB 快照分布数据
 BENCHMARK_DEFINE_F(NetHuffmanBenchmark, BM_NetHuffmanCompress)(benchmark::State &State)
 {
+	if(!m_Ready)
+	{
+		State.SkipWithError("huffman fixture round-trip failed");
+		return;
+	}
 	unsigned char aOutput[DATA_SIZE + 64];
 	for(auto _ : State)
 	{
-		const int Size = CNetBase::Compress(m_aInput.data(), DATA_SIZE, aOutput, static_cast<int>(sizeof(aOutput)));
+		int Size = CNetBase::Compress(m_aInput.data(), DATA_SIZE, aOutput, static_cast<int>(sizeof(aOutput)));
 		benchmark::DoNotOptimize(Size);
+		benchmark::DoNotOptimize(aOutput);
+		if(Size <= 0)
+		{
+			State.SkipWithError("huffman compression failed");
+			break;
+		}
 	}
-	State.SetItemsProcessed(State.iterations() * DATA_SIZE);
+	State.SetItemsProcessed(State.iterations());
 	State.SetBytesProcessed(State.iterations() * DATA_SIZE);
 }
 BENCHMARK_REGISTER_F(NetHuffmanBenchmark, BM_NetHuffmanCompress);
@@ -69,18 +87,26 @@ BENCHMARK_REGISTER_F(NetHuffmanBenchmark, BM_NetHuffmanCompress);
 // 解压：解压 SetUp 预压缩的真实 Huffman 流
 BENCHMARK_DEFINE_F(NetHuffmanBenchmark, BM_NetHuffmanDecompress)(benchmark::State &State)
 {
-	if(m_CompressedSize <= 0)
+	if(!m_Ready)
 	{
-		State.SkipWithError("huffman compress failed during SetUp");
+		State.SkipWithError("huffman fixture round-trip failed");
 		return;
 	}
 	unsigned char aOutput[DATA_SIZE + 64];
 	for(auto _ : State)
 	{
-		const int Size = CNetBase::Decompress(m_aCompressed.data(), m_CompressedSize, aOutput, static_cast<int>(sizeof(aOutput)));
+		int Size = CNetBase::Decompress(m_aCompressed.data(), m_CompressedSize, aOutput, static_cast<int>(sizeof(aOutput)));
 		benchmark::DoNotOptimize(Size);
+		benchmark::DoNotOptimize(aOutput);
+		if(Size != DATA_SIZE)
+		{
+			State.SkipWithError("huffman decompression did not restore the full payload");
+			break;
+		}
 	}
-	State.SetItemsProcessed(State.iterations() * DATA_SIZE);
+	if(!State.skipped() && std::memcmp(aOutput, m_aInput.data(), DATA_SIZE) != 0)
+		State.SkipWithError("huffman restored payload differs");
+	State.SetItemsProcessed(State.iterations());
 	State.SetBytesProcessed(State.iterations() * DATA_SIZE);
 }
 BENCHMARK_REGISTER_F(NetHuffmanBenchmark, BM_NetHuffmanDecompress);

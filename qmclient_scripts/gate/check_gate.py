@@ -34,6 +34,7 @@ from checks import (  # noqa: E402
 	qm_smoke,
 	shell,
 	settings_ui,
+	test_structure,
 	strict_build,
 	style,
 	tests,
@@ -113,6 +114,7 @@ _CHECK_SPECS = (
 	CheckSpec("qm_smoke", qm_smoke, frozenset(), enable_attr="run_qm_smoke", enable_modes=frozenset({"default", "full"}), scope_kind="changed"),
 	CheckSpec("shell", shell, _ALL_MODES, skip_attr="skip_shell_check"),
 	CheckSpec("settings_ui", settings_ui, _SOURCE_MODES, scope_kind="changed"),
+	CheckSpec("test_structure", test_structure, _SOURCE_MODES),
 	CheckSpec("strict_build", strict_build, frozenset({"full"}), skip_attr="skip_strict_debug", needs_base_ref=True),
 	CheckSpec("dilate", dilate, frozenset({"full"}), skip_attr="skip_dilate_check"),
 	CheckSpec(

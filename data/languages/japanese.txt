@@ -830,6 +830,9 @@ Apply a writable preset and edit first
 Apply Changes
 == 変更を適用
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== サブウィンドウとドロップダウンの背景をぼかす
+
 Apply input early before next tick for prediction
 == 予測のために次の tick の前に早期に入力を適用
 
@@ -1108,6 +1111,9 @@ Auto-accept team invites by sending /team <n>
 
 Auto-close chat after unfreeze
 == 凍結解除後にチャットを自動で閉じる
+
+Auto-connect dummy
+== ダミーを自動接続
 
 Auto-create CSV on game end
 == ゲーム終了時に CSV を自動作成
@@ -1437,7 +1443,7 @@ Better scoreboard
 == より良いスコアボード
 
 Bind
-== Bind
+== バインド
 
 Bind address for client/server
 == クライアント/サーバーのバインドアドレス
@@ -1603,6 +1609,12 @@ Button - Disabled
 
 Button - Enabled
 == ボタン - 有効
+
+Button background color
+== ボタン背景色
+
+Button background opacity percentage
+== ボタン背景 — 不透明度（パーセント）
 
 Button browser
 == ボタンブラウザ
@@ -2360,6 +2372,9 @@ Connect address error
 Connect dummy
 == ダミーに接続
 
+Connect dummy automatically for solo split mode
+== ソロスプリット時にダミーを自動接続
+
 Connect dummy to enable
 == ダミーに接続すると有効になります
 
@@ -2681,9 +2696,6 @@ Custom font weight (variable fonts)
 Custom Font:
 == カスタムフォント：
 
-Custom map upload
-== カスタムマップのアップロード
-
 Custom prompt template
 == カスタムプロンプトテンプレート
 
@@ -2695,6 +2707,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == カスタム Provider モデル名
+
+Custom text color
+== カスタム文字色
 
 Custom title
 == カスタム称号
@@ -2728,6 +2743,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== カスタム…
 
 Cut interval
 == カット間隔
@@ -3432,7 +3450,7 @@ Dummy Control
 == ダミーを操作
 
 Dummy control
-== Dummy control
+== ダミー操作
 
 Dummy Control: %s
 == ダミーコントロール：%s
@@ -3728,6 +3746,9 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 背景 3D パーティクルの軌跡を有効化
 
+Enable bounce-in entrance animation when country flags finish loading
+== 国旗アイコン読み込み完了時にバウンス入場アニメーションを再生
+
 Enable camera drift
 == カメラドリフトを有効化
 
@@ -3814,6 +3835,9 @@ Enable fat skin
 
 Enable freeze call sound
 == フリーズコール音を有効にする
+
+Enable frosted glass blur behind secondary popups and dropdowns
+== サブウィンドウとドロップダウンの背景ぼかしを有効にする
 
 Enable FTAPI auto-translate (may overload the service)
 == FTAPI 自動翻訳を有効化（サービスに過負荷がかかる可能性あり）
@@ -4121,6 +4145,9 @@ Enter a CP number from 1 to 255.
 Enter Password
 == パスワードを入力
 
+Enter solo split mode
+== ソロスプリットモードに入る
+
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == スポンサーコードを入力して「引き換える」を押し、称号を書いて「保存」を押します。「このニックネームのみ表示」を有効にすると1つのニックネームに紐付けられます。
 
@@ -4246,6 +4273,12 @@ Existing Player
 
 Exit replay view
 == リプレイ視聴を終了
+
+Expanded dropdown background color
+== 展開リスト背景色
+
+Expanded dropdown background opacity percentage
+== 展開リスト背景 — 不透明度（パーセント）
 
 Export
 == エクスポート
@@ -4559,6 +4592,9 @@ Font cursor
 Font size
 == フォントサイズ
 
+Font store
+== フォントストア
+
 Font store:
 == フォントストア：
 
@@ -4859,17 +4895,14 @@ Ghost active (%d)
 Ghost ready
 == ゴースト準備完了
 
-Ghost replay
-== ゴーストリプレイ
-
 Ghost tools
 == ゴーストツール
 
 Ghost view mode off. The ghost follows your runs again.
 == ゴースト視聴モードを解除しました。ゴーストは再びあなたの走行に追従します。
 
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
-== ゴースト視聴モード: ESC でコントロールパネルを切り替え。ESC を二回押すとゲームメニューを開きます（リプレイを離脱）。観戦キーを押している間はメンバー一覧を表示。
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
+== ゴースト視聴モード: ESC でコントロールパネルを切り替え。ESC を二回押すとゲームメニューを開きます（再生は継続）。観戦キーを押している間はメンバー一覧を表示。
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == ゴーストの可視性（アルファ、0=不可視、100=可視）
@@ -5531,6 +5564,9 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == 設定プリセットの保存/読み込み時にスキンを含める
 
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== 受信メッセージの自動翻訳方式（0=対象言語でない場合のみ翻訳、1=常に翻訳）
+
 Incoming language
 == 受信言語
 
@@ -5611,6 +5647,12 @@ Initializing map logic
 
 Input
 == 入力
+
+Input background color
+== 入力欄背景色
+
+Input background opacity percentage
+== 入力欄背景 — 不透明度（パーセント）
 
 Input device
 == 入力デバイス
@@ -6079,6 +6121,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == 空欄にしてデフォルトプロンプトを使用
+
+Leave solo split mode
+== ソロスプリットモードを終了
 
 Left jump
 == 左ジャンプ
@@ -7049,6 +7094,12 @@ Muted
 my_%s
 == 私の_%s
 
+MyMemory (free)
+== MyMemory（無料）
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemoryは登録不要（匿名の1日上限）
+
 n = Prediction latency
 == n = 予測レイテンシ
 
@@ -7802,6 +7853,12 @@ Or visit DDNet.org
 Original
 == オリジナル
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== 受信・送信の両方で使う原文の言語です。「自動」で各メッセージの言語を判定します。
+
+Original message language
+== 原文の言語
+
 Other
 == その他
 
@@ -8330,6 +8387,9 @@ Points unavailable
 Polished
 == 光沢
 
+Popup & dropdown blur
+== ポップアップとドロップダウンのぼかし
+
 Popup animation
 == ポップアップアニメーション
 
@@ -8852,12 +8912,6 @@ Rank 1 demo already cached under 'Rank 1 replays': %s
 Rank 1 demo downloaded to '%s'
 == ランク1デモを '%s' にダウンロードしました
 
-Rank 1 members
-== Rank 1 メンバー
-
-Rank 1 replay
-== ランク1リプレイ
-
 Rank 1 replays
 == Rank 1 リプレイ
 
@@ -8980,6 +9034,9 @@ Rebinds the client's listening address and port
 
 Receive Rate
 == 受信レート
+
+Receive translation method
+== 受信メッセージの翻訳方式
 
 Receive VAD speakers
 == VAD 発話者を受信
@@ -9962,6 +10019,9 @@ Search
 Search and navigate settings
 == 設定を検索して移動
 
+Search country flag…
+== 国旗を検索…
+
 Search donor asset
 == ドナーアセットを検索
 
@@ -9994,6 +10054,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == セカンダリ
+
+Secondary menu background color
+== サブメニュー背景色
+
+Secondary menu background opacity percentage
+== サブメニュー背景 — 不透明度（パーセント）
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == 再接続までの待機秒数（サーバー満員時、0 = オフ）
@@ -10097,14 +10163,8 @@ Send probability
 Send Rate
 == 送信レート
 
-Send source language
-== 送信元言語
-
 Send specified command to rcon
 == rcon に指定コマンドを送信
-
-Send target language
-== 送信先言語
 
 Send translation method
 == 翻訳方式を送信
@@ -10351,6 +10411,9 @@ Show advanced options
 
 Show advanced title settings (collapsing keeps configured effects)
 == タイトルの詳細設定を表示（閉じても設定した効果を維持）
+
+Show advanced translation options
+== 高度な翻訳オプションを表示
 
 Show air jump indicator
 == 空中ジャンプインジケーターを表示
@@ -11573,8 +11636,14 @@ Solo
 Solo split
 == ソロスプリット
 
+Solo split enter key
+== ソロスプリット参加キー
+
 Solo split key
 == ソロスプリットキー
+
+Solo split leave key
+== ソロスプリット退出キー
 
 Some fonts could not be loaded. Check the local console for details.
 == 一部のフォントを読み込めませんでした。詳細はローカルコンソールを確認してください。
@@ -11710,9 +11779,6 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == 本体と分身を別々のチームに入れ、solo ランの開始を同期します（team-0 で同期しにくいマップ向け）
-
-Split main/dummy into two free teams; press again to return to team 0
-== 本体/分身を2つの空きチームに分け、もう一度押すとチーム0に戻る
 
 Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
 == 支援者チャットのスタイル下書き：0=通常、1=柔らかな光、2=プラチナの輝き
@@ -12065,9 +12131,6 @@ Taper trail ends
 Taper trail width
 == テーパートレイル幅
 
-Target language
-== ターゲット言語
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == 翻訳先言語コード（例：zh、en、ja、zh-TW）
 
@@ -12181,6 +12244,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == チーム Tee の外側グロー
+
+Team used when leaving solo split mode
+== ソロスプリット終了時に使用するチーム
+
+Team when leaving solo split
+== ソロスプリット終了時のチーム
 
 Teammate
 == チームメイト
@@ -12361,6 +12430,12 @@ Text alpha
 
 Text color
 == テキスト色
+
+Text color mode
+== 文字色モード
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== 文字色モード: 0 自動, 1 白, 2 黒, 3 カスタム
 
 Text effect
 == 文字効果
@@ -12755,6 +12830,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == スコアボードカーソルを切り替え
 
+Toggle solo split mode
+== ソロスプリットモードを切り替え
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == チームをチーム 0 とチームモード間で切り替えます。このモードでは、チームがチーム 0 のように動作します。
 
@@ -12884,6 +12962,15 @@ Translate last message of the person with this id
 Translate only when needed
 == 必要なときのみ翻訳
 
+Translate only when not in target language
+== 対象言語でない場合のみ翻訳
+
+Translate outgoing messages to
+== 送信メッセージの翻訳先
+
+Translate received messages to
+== 受信メッセージの翻訳先
+
 Translate UI
 == UI を翻訳
 
@@ -12896,8 +12983,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == %s に翻訳中...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== 翻訳バックエンド（llm/tencentcloud/libretranslate/ftapi）
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== 翻訳バックエンド（mymemory/llm/tencentcloud/libretranslate/ftapi）
 
 Translation backend invalid, sending original
 == 翻訳バックエンドが無効なため、原文を送信
@@ -13501,6 +13588,9 @@ Video name
 
 Video name:
 == ビデオ名：
+
+Video rendering is unavailable during online replay.
+== オンラインリプレイ中は動画を書き出せません。
 
 Video was saved to '%s'
 == ビデオは '%s' に保存されました
@@ -14372,6 +14462,9 @@ Zhipu AI
 Zhipu API key
 == Zhipu API キー
 
+Zhipu free models allow only 1 concurrent request
+== Zhipuの無料モデルは同時リクエストを1件のみ許可します
+
 ZhipuAI API Key
 == Zhipu AI API キー
 
@@ -14491,7 +14584,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== Menu
+== メニューキー
 
 [Config help]
 %s (default: "%s", max length: %d)
@@ -14708,10 +14801,6 @@ Swap Action
 [Predefined touch button behaviors]
 Use Action
 == アクションを使用
-
-[Rank 1 replay]
-Direction
-== 方向
 
 [Show name plates]
 All

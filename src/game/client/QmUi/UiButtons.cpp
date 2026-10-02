@@ -5,6 +5,7 @@
 
 #include "QmAnimResolve.h"
 #include "UiSurface.h"
+#include "UiSurfaceText.h"
 #include "UiTokens.h"
 
 #include <engine/graphics.h>
@@ -58,6 +59,7 @@ namespace ui_widget
 
 			if(Disabled)
 			{
+				CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), CompositeUiSurface(ui_token::color::BORDER_SUBTLE, Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : ui_token::color::SURFACE_BACKDROP));
 				DrawRoundedSurface(Ctx, Rect, ui_token::color::BORDER_SUBTLE, ui_token::color::BORDER_SUBTLE, ui_token::radius::BASE);
 				SLabelProperties LabelProps;
 				Ctx.m_pUi->DoLabel(&Rect, pText, ui_token::font::BODY, TEXTALIGN_MC, LabelProps);
@@ -67,8 +69,10 @@ namespace ui_widget
 			// 强度并入动画目标，按下时使用较短的过渡。
 			const bool HoverPrev = Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 			const bool Pressed = Ctx.m_pUi->CheckActiveItem(pBtn);
-			ColorRGBA Target = HoverPrev || Pressed ? Hover : Idle;
-			Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
+			ColorRGBA Target = g_Config.m_QmNewUi && DrawBorder ? ResolveConfiguredControlSurface() : HoverPrev || Pressed ? Hover :
+																	 Idle;
+			if(!(g_Config.m_QmNewUi && DrawBorder))
+				Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
 			ColorRGBA Resolved = Target;
 			if(Ctx.m_pAnim != nullptr)
 			{
@@ -77,6 +81,7 @@ namespace ui_widget
 				Resolved = ResolveUiAnimValueColor(*Ctx.m_pAnim, NodeKey, Target, Transition.m_DurationSec, Transition.m_Easing);
 			}
 
+			CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), CompositeUiSurface(Resolved, Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : ui_token::color::SURFACE_BACKDROP));
 			DrawRoundedSurface(Ctx, Rect, Resolved, ui_token::color::BORDER_SUBTLE, ui_token::radius::BASE, DrawBorder ? Ctx.m_pUi->PixelSize() : 0.0f);
 			Ctx.m_pUi->DoLabel(&Rect, pText, ui_token::font::BODY, TEXTALIGN_MC);
 			const int Result = Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT);
@@ -108,8 +113,9 @@ namespace ui_widget
 		const bool HoverPrev = !Disabled && Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 		const bool Pressed = !Disabled && Ctx.m_pUi->CheckActiveItem(pBtn);
 		const ColorRGBA Accent = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
-		ColorRGBA Target = HoverPrev || Pressed ? Accent.WithAlpha(0.18f) : ColorRGBA{0.0f, 0.0f, 0.0f, 0.0f};
-		if(!Disabled)
+		ColorRGBA Target = g_Config.m_QmNewUi ? ResolveConfiguredControlSurface(!Disabled) : HoverPrev || Pressed ? Accent.WithAlpha(0.18f) :
+															    ColorRGBA{0.0f, 0.0f, 0.0f, 0.0f};
+		if(!Disabled && !g_Config.m_QmNewUi)
 			Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
 		ColorRGBA BgColor = Target;
 		if(Ctx.m_pAnim != nullptr && !Disabled)
@@ -120,10 +126,16 @@ namespace ui_widget
 		}
 
 		DrawRoundedSurface(Ctx, Rect, BgColor, BgColor, ui_token::radius::BASE);
+		if(g_Config.m_QmNewUi)
+		{
+			const ColorRGBA Surface = CompositeUiSurface(BgColor, CUiScopedSurfaceText::CurrentSurface());
+			const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, !Disabled, Ctx.m_pUi->MouseHovered(&Rect), Pressed && Ctx.m_pUi->MouseButton(0));
+			DrawRoundedSurface(Ctx, Rect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
+		}
 		const SQmIconStyle IconStyle = ConfiguredIconStyle();
 		const EQmIconState IconState = Disabled ? EQmIconState::DISABLED : (Pressed ? EQmIconState::ACTIVE : HoverPrev ? EQmIconState::HOVER :
 																 EQmIconState::NORMAL);
-		RenderQmGlyphIcon(Ctx, Rect, pIcon, IconStyle.Color(IconState));
+		RenderQmGlyphIcon(Ctx, Rect, pIcon, ResolveUiSurfaceIconColor(CompositeUiSurface(BgColor, Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : ui_token::color::SURFACE_BACKDROP), IconStyle.Color(IconState)));
 		const int Result = Disabled ? 0 : Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT);
 		return Result != 0;
 	}
@@ -137,8 +149,9 @@ namespace ui_widget
 		const bool HoverPrev = !Disabled && Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 		const bool Pressed = !Disabled && Ctx.m_pUi->CheckActiveItem(pBtn);
 		const ColorRGBA Accent = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
-		ColorRGBA Target = HoverPrev || Pressed ? Accent.WithAlpha(0.18f) : ColorRGBA{0.0f, 0.0f, 0.0f, 0.0f};
-		if(!Disabled)
+		ColorRGBA Target = g_Config.m_QmNewUi ? ResolveConfiguredControlSurface(!Disabled) : HoverPrev || Pressed ? Accent.WithAlpha(0.18f) :
+															    ColorRGBA{0.0f, 0.0f, 0.0f, 0.0f};
+		if(!Disabled && !g_Config.m_QmNewUi)
 			Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
 		ColorRGBA BgColor = Target;
 		if(Ctx.m_pAnim != nullptr && !Disabled)
@@ -149,6 +162,12 @@ namespace ui_widget
 		}
 
 		DrawRoundedSurface(Ctx, Rect, BgColor, BgColor, ui_token::radius::BASE);
+		if(g_Config.m_QmNewUi)
+		{
+			const ColorRGBA Surface = CompositeUiSurface(BgColor, CUiScopedSurfaceText::CurrentSurface());
+			const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, !Disabled, Ctx.m_pUi->MouseHovered(&Rect), Pressed && Ctx.m_pUi->MouseButton(0));
+			DrawRoundedSurface(Ctx, Rect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
+		}
 		const int Result = Disabled ? 0 : Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT);
 
 		const float IconSide = minimum(Rect.w, Rect.h) * 0.58f;
@@ -160,9 +179,10 @@ namespace ui_widget
 		const EQmIconState IconState = Disabled ? EQmIconState::DISABLED : (Pressed ? EQmIconState::ACTIVE : HoverPrev ? EQmIconState::HOVER :
 																 EQmIconState::NORMAL);
 		const SQmIconStyle IconStyle = ConfiguredIconStyle();
-		if(Ctx.m_pIconManager == nullptr || (Ctx.m_pIconManager->PreferFontFallback() && pFallbackIcon != nullptr && pFallbackIcon[0] != '\0') || !Ctx.m_pIconManager->RenderIcon(Icon, IconRect, IconState, IconStyle))
+		const ColorRGBA IconColor = ResolveUiSurfaceIconColor(CompositeUiSurface(BgColor, Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : ui_token::color::SURFACE_BACKDROP), IconStyle.Color(IconState));
+		if(Ctx.m_pIconManager == nullptr || (Ctx.m_pIconManager->PreferFontFallback() && pFallbackIcon != nullptr && pFallbackIcon[0] != '\0') || !Ctx.m_pIconManager->RenderIcon(Icon, IconRect, IconColor))
 		{
-			RenderQmGlyphIcon(Ctx, IconRect, pFallbackIcon, IconStyle.Color(IconState));
+			RenderQmGlyphIcon(Ctx, IconRect, pFallbackIcon, IconColor);
 		}
 
 		return Result != 0;

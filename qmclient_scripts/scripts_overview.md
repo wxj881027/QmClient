@@ -41,11 +41,12 @@
 
 当前主要脚本：
 
-- `qmclient_scripts/cmake-windows.cmd`
+- `qmclient_scripts/cmake-windows.cmd` — Windows 构建统一入口，加载 MSVC 环境后调用 `cmake_windows.py`。
+- `qmclient_scripts/cmake_windows.py` — 按规范化后的构建目录持有系统文件锁，覆盖 configure、build、测试目标、打包目标及 install；同目录任务自动等待，最长 10 分钟后明确失败，不同目录可以并行。锁内统一执行 MSVC 前缀检查、旧依赖恢复和规则重生成后的补构建，日志与锁文件保留在 `tmp/`。直接运行 CMake/Ninja 不会获取这把锁，日常操作继续使用 `.cmd` 入口。
 - `qmclient_scripts/darwin_fix_install_names.py`
 - `qmclient_scripts/make_lib_openssl.sh`
 - `qmclient_scripts/cmake-windows-filter.py` — 过滤 Windows/MSVC 构建日志噪音（如"注意: 包含文件:"前缀）
-- `qmclient_scripts/repair_ninja_msvc_prefix.py` — 修复 Ninja + MSVC 下的依赖前缀编码（configure/build 通用）
+- `qmclient_scripts/repair_ninja_msvc_prefix.py` — 按编译器原始输出字节修复 Ninja + MSVC 依赖前缀；Windows 封装入口在构建前执行，构建中重新生成规则后会修复并补一轮构建。前缀变化时，将已有的有效零依赖对象标为待重编，恢复头文件依赖；日志保留在 `tmp/`。
 - `qmclient_scripts/preview-crash-dialog.cmd [build-dir] [graphics|assertion|fatal|hang]` — 不启动完整客户端、不制造真实崩溃，预览 Windows 喜庆崩溃窗口；默认使用 `cmake-build-release` 和 `graphics`。窗口内的“放烟花”按钮只在预览窗口中播放 GDI 烟花动画，不改变报告结果。
 
 ### 3. 代码卫生与内容生成辅助
@@ -67,12 +68,18 @@
 
 - `qmclient_scripts/integration/`：QmClient 自有客户端/服务端进程级集成与冒烟测试；不得把 QmClient 特化场景加入根目录上游 `scripts/`
 - `qmclient_scripts/coverage/`：使用独立 clang/Ninja 构建采集 C++ LLVM line/function/region/branch coverage
+- `qmclient_scripts/benchmark/`：Google Benchmark 构建/运行编排、结果校验与重复统计；见 [README](benchmark/README.md)
+- `qmclient_scripts/perf/`：客户端性能日志的离线 HTML/JSON 分析工具，按需用于帧耗时、卡顿与配置归因，见 [README](perf/README.md)
 
 - `qmclient_scripts/languages_qmclient/`
 - `qmclient_scripts/qmclient_center_server/`
 - `qmclient_scripts/diff_update.py`
 - `qmclient_scripts/tw_api.py`
 - `qmclient_scripts/update.zsh`：旧增量更新服务部署脚本；必须显式设置 `QM_UPDATE_SCRIPTS_DIR` 与 `QM_UPDATE_OUTPUT_DIR`，可用 `QM_UPDATE_RELEASE_REPOSITORY` 覆盖发布仓库
+
+### 性能验证入口
+
+代码性能优先使用 `src/test/benchmark/` 下调用生产实现的 Google Benchmark；[统一运行入口](benchmark/README.md) `python qmclient_scripts/benchmark/run.py --filter <正则>` 负责串行构建、枚举、重复测量与原始结果校验。构建目标为 `qm-benchmarks`，原生全量目标 `run_cxx_benchmarks` 仍保留。配置条件、过滤运行、JSON 留存与基线要求统一见 [性能验证参考](../.agents/skills/qmclient-verification-gate/references/performance.md)。现有 gate 不运行 benchmark，常规验证不要求 HTML 报表；真实帧、GPU、I/O 和交互卡顿仍使用对应场景诊断。
 
 ### 5. 独立开源的服务仓库
 

@@ -46,7 +46,7 @@ void QmRenderSponsorChatText(ITextRender *pTextRender, STextContainerIndex Index
 			pTextRender->RenderTextContainer(Index, Empty, ColorRGBA(1.0f, 1.0f, 1.0f, 0.025f * Alpha), X + Direction.x * PixelSize.x, Y + Direction.y * PixelSize.y);
 	}
 	const ColorRGBA Outline = Style == EQmSponsorChatStyle::NONE ? pTextRender->DefaultTextOutlineColor() :
-		ColorRGBA(0.0f, 0.0f, 0.0f, Style == EQmSponsorChatStyle::PLATINUM ? 0.82f : 0.65f);
+								       ColorRGBA(0.0f, 0.0f, 0.0f, Style == EQmSponsorChatStyle::PLATINUM ? 0.82f : 0.65f);
 	pTextRender->RenderTextContainer(Index, ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), Outline.WithMultipliedAlpha(Alpha), X, Y);
 	if(Style == EQmSponsorChatStyle::PLATINUM && SweepState.m_Line >= 0)
 	{

@@ -1,4 +1,6 @@
-# 统一性能诊断
+# 客户端性能日志离线诊断
+
+本目录保留真实客户端帧耗时、卡顿归因、配置变化和采样偏差的 HTML/JSON 分析能力。代码性能质量优先使用 Google Benchmark，工作流见 [性能验证参考](../../.agents/skills/qmclient-verification-gate/references/performance.md)；常规代码验收不要求生成 HTML，CPU 微基准也不能代替这些运行场景数据。
 
 在控制台输入 `qm_perf_debug 1`，或在「设置 → QmClient → HUD → 调试模式」开启唯一总开关。关闭使用 `qm_perf_debug 0`，游戏内立即生效；每次开启创建新的日志和会话 ID。
 
@@ -45,4 +47,4 @@ bun run analyze
 bun run test
 ~~~
 
-修改诊断链路时应同步维护 C++ 边界测试、`test.ts`、HTML 和 JSON 输出。
+修改诊断链路时按实际影响维护 C++ 行为测试、`test.ts` 及 HTML/JSON 输出；跨语言字段通过真实日志与解析结果验证，不用源码字符串证明运行时兼容。TypeScript 逻辑变化补 `npx --no-install tsc --noEmit`，需已安装本地依赖；仅文档变化不运行分析器测试。

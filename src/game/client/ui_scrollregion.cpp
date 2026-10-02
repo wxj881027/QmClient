@@ -76,14 +76,25 @@ void CScrollRegion::End()
 {
 	Ui()->ClipDisable();
 
+	if(!m_Params.m_Interactive)
+	{
+		// 父层停止交互时也要处理内容已不再溢出的情况。
+		if(Ui()->ActiveItem() == &m_SliderId)
+			Ui()->SetActiveItem(nullptr);
+		m_ScrollState.EndThumbDrag();
+	}
+
 	if(!ContentOverflows())
 	{
 		MaintainNoScrollSliderActive();
 		return;
 	}
 
-	UpdateHotScrollRegion();
-	DoScrollInput();
+	if(m_Params.m_Interactive)
+	{
+		UpdateHotScrollRegion();
+		DoScrollInput();
+	}
 	AdvanceAnimation();
 	DoSlider();
 }
@@ -380,8 +391,9 @@ void CScrollRegion::DoSlider()
 
 	const float MousePos = m_Params.m_ScrollHorizontal ? Ui()->MouseX() : Ui()->MouseY();
 	const bool WasActive = Ui()->ActiveItem() == pId;
-	Ui()->DoButtonLogic(pId, 0, &m_RailRect, BUTTONFLAG_LEFT); // Result ignored, we only care about the button becoming and being active
-	if(Ui()->CheckActiveItem(pId))
+	if(m_Params.m_Interactive)
+		Ui()->DoButtonLogic(pId, 0, &m_RailRect, BUTTONFLAG_LEFT); // Result ignored, we only care about the button becoming and being active
+	if(m_Params.m_Interactive && Ui()->CheckActiveItem(pId))
 	{
 		if(!WasActive)
 		{

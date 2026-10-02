@@ -4,7 +4,7 @@
 //  2. 活跃帧：全节点弹簧 REPLACE 重请求 + Advance + 解析（持续动画 UI 上界）
 //  3. 出现帧：全节点 ResolvePresence（稳态 PRESENT）+ EndFrame + Advance
 //  4. 切换帧：全节点每帧翻转可见性（进入/退出瞬态 + 打断 churn 上界）
-//  5. 剪枝帧：大量一次性布局键的插入+剪枝 churn（缓存超限行为）
+//  5. 缓存：固定键命中与交替键集插入/剪枝分别测量
 // 运行方式：配置时加 -DDOWNLOAD_BENCHMARK=ON，构建 run_cxx_benchmarks 目标
 // 注意：带参数化 fixture 必须用 BENCHMARK_DEFINE_F + BENCHMARK_REGISTER_F(...)->Arg(n)；
 // BENCHMARK_F 会自动注册一个无参裸实例，State.range(0) 读空参数向量直接 0xC0000005。
@@ -12,8 +12,13 @@
 
 #include <game/client/QmUi/QmAnim.h>
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmTree.h>
+#include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/QmUi/cards/QmCardMeasureRevision.h>
+#include <game/client/components/scoreboard.h>
+#include <game/client/ui.h>
 
 #include <benchmark/benchmark.h>
 
@@ -39,13 +44,27 @@ namespace
 	}
 } // namespace
 
-// 固件：按参数规模建立 N 节点 × 4 属性的动画运行时
-class AnimBenchmark : public benchmark::Fixture
+// 各用例隔离全局运动配置，交错重复时不污染其他 fixture。
+class UiMotionBenchmark : public benchmark::Fixture
+{
+	int m_SavedMotionLevel = 0;
+
+public:
+	void SetUp(const benchmark::State &) override
+	{
+		m_SavedMotionLevel = g_Config.m_QmUiMotionLevel;
+		g_Config.m_QmUiMotionLevel = 2;
+	}
+	void TearDown(const benchmark::State &) override { g_Config.m_QmUiMotionLevel = m_SavedMotionLevel; }
+};
+
+// 夹具：按参数规模建立 N 节点 × 4 属性的动画运行时。
+class AnimBenchmark : public UiMotionBenchmark
 {
 public:
 	void SetUp(const benchmark::State &State) override
 	{
-		g_Config.m_QmUiMotionLevel = 2;
+		UiMotionBenchmark::SetUp(State);
 		const int NumNodes = static_cast<int>(State.range(0));
 		m_pRuntime = std::make_unique<CUiV2AnimationRuntime>();
 		m_pTree = std::make_unique<CUiV2Tree>();
@@ -62,17 +81,19 @@ public:
 			// 就是纯查表路径，避免首帧 PositionNeedsSync 起弹簧造成瞬态污染
 			m_pRuntime->SetValue(NodeKey, EUiAnimProperty::POS_X, m_Target.x);
 			m_pRuntime->SetValue(NodeKey, EUiAnimProperty::POS_Y, m_Target.y);
-			m_pRuntime->SetValue(NodeKey, EUiAnimProperty::WIDTH, 120.0f);
-			m_pRuntime->SetValue(NodeKey, EUiAnimProperty::HEIGHT, 40.0f);
+			m_pRuntime->SetValue(NodeKey, EUiAnimProperty::WIDTH, m_Target.w);
+			m_pRuntime->SetValue(NodeKey, EUiAnimProperty::HEIGHT, m_Target.h);
+			(void)m_pTree->SyncLayoutTransition(*m_pRuntime, NodeKey, m_Target);
 		}
 
 		// presence 预热：把 BM_AnimPresenceFrame 的状态推进到稳态 PRESENT
 		//（alpha 收敛到 1），使测量只含稳态帧成本
 		const SUiAnimTransition DefaultTransition;
-		for(uint64_t NodeKey : m_vNodeKeys)
-			(void)m_pTree->ResolvePresence(*m_pRuntime, NodeKey, true, DefaultTransition);
 		for(int Frame = 0; Frame < 90; Frame++)
 		{
+			m_pTree->BeginFrame();
+			for(uint64_t NodeKey : m_vNodeKeys)
+				(void)m_pTree->ResolvePresence(*m_pRuntime, NodeKey, true, DefaultTransition);
 			m_pTree->EndFrame(*m_pRuntime);
 			m_pRuntime->Advance(FRAME_DT);
 		}
@@ -87,13 +108,19 @@ public:
 // 稳态帧：无活跃动画，每帧 Advance + 全节点解析（纯查表路径）
 BENCHMARK_DEFINE_F(AnimBenchmark, BM_AnimIdleFrame)(benchmark::State &State)
 {
+	if(m_pRuntime->ActiveTrackCount() != 0)
+	{
+		State.SkipWithError("idle fixture still has active tracks");
+		return;
+	}
+	State.SetLabel("stable-layout-v2");
 	const int NumNodes = static_cast<int>(State.range(0));
 	for(auto _ : State)
 	{
 		m_pRuntime->Advance(FRAME_DT);
 		for(uint64_t NodeKey : m_vNodeKeys)
 		{
-			const CUIRect Resolved = m_pTree->ResolveLayoutTransition(*m_pRuntime, NodeKey, m_Target, ui_token::motion::CARD_REORDER);
+			CUIRect Resolved = m_pTree->ResolveLayoutTransition(*m_pRuntime, NodeKey, m_Target, ui_token::motion::CARD_REORDER);
 			benchmark::DoNotOptimize(Resolved.x);
 		}
 	}
@@ -105,14 +132,19 @@ BENCHMARK_REGISTER_F(AnimBenchmark, BM_AnimIdleFrame)->Arg(16)->Arg(64)->Arg(256
 BENCHMARK_DEFINE_F(AnimBenchmark, BM_AnimActiveSpringFrame)(benchmark::State &State)
 {
 	const int NumNodes = static_cast<int>(State.range(0));
+	bool HighTarget = true;
+	State.SetLabel("alternating-spring-target-v2");
 	for(auto _ : State)
 	{
+		CUIRect Target = m_Target;
+		Target.x = HighTarget ? 100.0f : 40.0f;
+		HighTarget = !HighTarget;
 		for(uint64_t NodeKey : m_vNodeKeys)
-			m_pRuntime->RequestAnimation(MakeSpringRequest(NodeKey, 100.0f, static_cast<uint32_t>(NodeKey)));
+			m_pRuntime->RequestAnimation(MakeSpringRequest(NodeKey, Target.x, static_cast<uint32_t>(NodeKey)));
 		m_pRuntime->Advance(FRAME_DT);
 		for(uint64_t NodeKey : m_vNodeKeys)
 		{
-			const CUIRect Resolved = m_pTree->ResolveLayoutTransition(*m_pRuntime, NodeKey, m_Target, ui_token::motion::CARD_REORDER);
+			const CUIRect Resolved = m_pTree->ResolveLayoutTransition(*m_pRuntime, NodeKey, Target, ui_token::motion::CARD_REORDER);
 			benchmark::DoNotOptimize(Resolved.x);
 		}
 	}
@@ -123,13 +155,20 @@ BENCHMARK_REGISTER_F(AnimBenchmark, BM_AnimActiveSpringFrame)->Arg(16)->Arg(64)-
 // 出现帧：每帧全节点 ResolvePresence（SetUp 已预热到稳态 PRESENT）+ EndFrame + Advance
 BENCHMARK_DEFINE_F(AnimBenchmark, BM_AnimPresenceFrame)(benchmark::State &State)
 {
+	if(m_pRuntime->ActiveTrackCount() != 0)
+	{
+		State.SkipWithError("presence fixture did not settle");
+		return;
+	}
+	State.SetLabel("stable-presence-v2");
 	const int NumNodes = static_cast<int>(State.range(0));
 	const SUiAnimTransition DefaultTransition;
 	for(auto _ : State)
 	{
+		m_pTree->BeginFrame();
 		for(uint64_t NodeKey : m_vNodeKeys)
 		{
-			const SUiPresenceResult Presence = m_pTree->ResolvePresence(*m_pRuntime, NodeKey, true, DefaultTransition);
+			SUiPresenceResult Presence = m_pTree->ResolvePresence(*m_pRuntime, NodeKey, true, DefaultTransition);
 			benchmark::DoNotOptimize(Presence.m_Alpha);
 		}
 		m_pTree->EndFrame(*m_pRuntime);
@@ -148,6 +187,7 @@ BENCHMARK_DEFINE_F(AnimBenchmark, BM_AnimPresenceToggleFrame)(benchmark::State &
 	bool Visible = true;
 	for(auto _ : State)
 	{
+		m_pTree->BeginFrame();
 		for(uint64_t NodeKey : m_vNodeKeys)
 		{
 			const SUiPresenceResult Presence = m_pTree->ResolvePresence(*m_pRuntime, NodeKey, Visible, DefaultTransition);
@@ -161,20 +201,182 @@ BENCHMARK_DEFINE_F(AnimBenchmark, BM_AnimPresenceToggleFrame)(benchmark::State &
 }
 BENCHMARK_REGISTER_F(AnimBenchmark, BM_AnimPresenceToggleFrame)->Arg(16)->Arg(64)->Arg(256);
 
-// 剪枝帧：每帧访问 N 个一次性布局键（10000+i，与固件节点键不相交），不调
-// Advance——纯测 m_LayoutTransitions 的插入 + PruneLayoutTransitionCache 成本。
-// Arg(4096)：缓存恰好饱和，测每调用全表扫描成本；Arg(8192)：超限，测扫描+逐出 churn
-BENCHMARK_DEFINE_F(AnimBenchmark, BM_AnimLayoutCacheChurn)(benchmark::State &State)
+// 缓存测量不初始化无关 presence/弹簧轨道，避免大规模夹具预热污染。
+class LayoutCacheBenchmark : public UiMotionBenchmark
+{
+public:
+	void SetUp(const benchmark::State &State) override
+	{
+		UiMotionBenchmark::SetUp(State);
+		m_Runtime.Reset();
+		m_Tree.Reset();
+		m_Target = {40.0f, 80.0f, 120.0f, 240.0f};
+	}
+	CUiV2AnimationRuntime m_Runtime;
+	CUiV2Tree m_Tree;
+	CUIRect m_Target;
+};
+
+BENCHMARK_DEFINE_F(LayoutCacheBenchmark, BM_AnimLayoutCacheHits)(benchmark::State &State)
 {
 	const int NumKeys = static_cast<int>(State.range(0));
+	for(int i = 0; i < NumKeys; i++)
+		(void)m_Tree.SyncLayoutTransition(m_Runtime, 10000 + i, m_Target);
+	State.SetLabel("fixed-key-cache-hit-v2");
 	for(auto _ : State)
 	{
 		for(int i = 0; i < NumKeys; i++)
 		{
-			const CUIRect Resolved = m_pTree->ResolveLayoutTransition(*m_pRuntime, 10000 + i, m_Target, ui_token::motion::CARD_REORDER);
-			benchmark::DoNotOptimize(Resolved.x);
+			CUIRect Resolved = m_Tree.ResolveLayoutTransition(m_Runtime, 10000 + i, m_Target, ui_token::motion::CARD_REORDER);
+			benchmark::DoNotOptimize(Resolved);
 		}
 	}
 	State.SetItemsProcessed(State.iterations() * NumKeys);
 }
-BENCHMARK_REGISTER_F(AnimBenchmark, BM_AnimLayoutCacheChurn)->Arg(4096)->Arg(8192);
+BENCHMARK_REGISTER_F(LayoutCacheBenchmark, BM_AnimLayoutCacheHits)->Arg(256)->Arg(4096);
+
+// 两组不相交键集交替访问，持续触发插入/剪枝；运行时值表最多保留 2N 个键。
+BENCHMARK_DEFINE_F(LayoutCacheBenchmark, BM_AnimLayoutCacheChurn)(benchmark::State &State)
+{
+	const int NumKeys = static_cast<int>(State.range(0));
+	bool SecondBank = false;
+	State.SetLabel("alternating-key-cache-churn-v2");
+	for(auto _ : State)
+	{
+		const uint64_t BaseKey = 10000 + (SecondBank ? NumKeys : 0);
+		SecondBank = !SecondBank;
+		for(int i = 0; i < NumKeys; i++)
+		{
+			CUIRect Resolved = m_Tree.ResolveLayoutTransition(m_Runtime, BaseKey + i, m_Target, ui_token::motion::CARD_REORDER);
+			benchmark::DoNotOptimize(Resolved);
+		}
+	}
+	State.SetItemsProcessed(State.iterations() * NumKeys);
+}
+BENCHMARK_REGISTER_F(LayoutCacheBenchmark, BM_AnimLayoutCacheChurn)->Arg(4096)->Arg(8192);
+
+// 测量依赖在页面空闲与内容切换时都经过生产接口，覆盖搜索每帧聚合成本。
+class CardMeasureRevisionBenchmark : public benchmark::Fixture
+{
+	CConfig m_SavedConfig;
+
+public:
+	void SetUp(const benchmark::State &) override
+	{
+		m_SavedConfig = g_Config;
+		str_copy(g_Config.m_QmTranslateBackend, "llm");
+		g_Config.m_QmTranslateShowAdvanced = 0;
+	}
+	void TearDown(const benchmark::State &) override { g_Config = m_SavedConfig; }
+};
+
+BENCHMARK_DEFINE_F(CardMeasureRevisionBenchmark, SearchRevision)(benchmark::State &State)
+{
+	qm_card_catalog::SQmFunctionCardLayoutState Layout;
+	for(auto _ : State)
+	{
+		if(State.range(0) != 0)
+			g_Config.m_QmTranslateShowAdvanced = !g_Config.m_QmTranslateShowAdvanced;
+		benchmark::ClobberMemory();
+		auto Revision = qm_card_catalog::MeasureModuleCardsRevision(Layout);
+		benchmark::DoNotOptimize(Revision);
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK_REGISTER_F(CardMeasureRevisionBenchmark, SearchRevision)->Arg(0)->Arg(1);
+
+BENCHMARK_DEFINE_F(CardMeasureRevisionBenchmark, TranslationRevision)(benchmark::State &State)
+{
+	for(auto _ : State)
+	{
+		if(State.range(0) != 0)
+			g_Config.m_QmTranslateShowAdvanced = !g_Config.m_QmTranslateShowAdvanced;
+		benchmark::ClobberMemory();
+		auto Revision = qm_card_catalog::MeasureModuleCardRevision(qm_module::EQmModuleId::Translate);
+		benchmark::DoNotOptimize(Revision);
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK_REGISTER_F(CardMeasureRevisionBenchmark, TranslationRevision)->Arg(0)->Arg(1);
+
+// 测量计分板真实内容尺寸与共享滚动状态更新，不包含图形设备或玩家绘制。
+static void BM_ScoreboardScrollFrame(benchmark::State &State)
+{
+	const int NumPlayers = static_cast<int>(State.range(0));
+	const SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, 0.25f);
+	CQmScrollState Scroll;
+	int Frame = 0;
+	for(auto _ : State)
+	{
+		const SQmScrollMetrics Metrics{333.0f, ScoreboardRowsHeight(NumPlayers, NumPlayers / 4, NumPlayers / 8, 20.0f, 0.0f, 8.0f, 12.0f)};
+		if(Frame++ % 10 == 0)
+			Scroll.AddWheelImpulse(Scroll.Offset() > Metrics.MaxOffset() / 2.0f ? 120.0f : -120.0f, Metrics, Config);
+		Scroll.Advance(1.0f / 60.0f, Metrics, Config);
+		benchmark::DoNotOptimize(Scroll.Offset());
+	}
+}
+BENCHMARK(BM_ScoreboardScrollFrame)->Arg(17)->Arg(64)->Arg(128);
+
+// 每轮解析一项按钮几何与一个弹层主题；输入由外部基准屏障防止常量折叠。
+static void BM_SecondaryPanelPresentation(benchmark::State &State)
+{
+	CUIRect Slot{10.0f, 20.0f, 26.0f, 20.0f};
+	unsigned Background = 0x97FFA6;
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Slot);
+		benchmark::DoNotOptimize(Background);
+		const CUIRect Button = QmUiSquareIconButtonRect(Slot);
+		const SUiTheme Theme = ResolveSecondaryPanelTheme(Background, 75, 0xFFFFFF);
+		benchmark::DoNotOptimize(Button);
+		benchmark::DoNotOptimize(Theme);
+	}
+}
+BENCHMARK(BM_SecondaryPanelPresentation);
+
+// 覆盖深色、浅色及透明表面的生产前景解析，不包含绘制或设备工作。
+static void BM_SurfaceForeground(benchmark::State &State)
+{
+	ColorRGBA Surface = State.range(0) == 0 ? ColorRGBA(0.1f, 0.1f, 0.1f, 1) : ColorRGBA(1, 1, 1, State.range(0) == 1 ? 1.0f : 0.2f);
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Surface);
+		const ColorRGBA Foreground = ResolveUiSurfaceForeground(Surface);
+		benchmark::DoNotOptimize(Foreground);
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_SurfaceForeground)->Arg(0)->Arg(1)->Arg(2);
+
+// 测量自动与手动文本策略及共享图标反馈，输入经过屏障避免折叠。
+static void BM_TextColorPolicy(benchmark::State &State)
+{
+	ColorRGBA Surface(0.2f, 0.4f, 0.6f, 0.75f);
+	unsigned Custom = 0x8FDDAD;
+	int Mode = static_cast<int>(State.range(0));
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Surface);
+		benchmark::DoNotOptimize(Custom);
+		benchmark::DoNotOptimize(Mode);
+		const ColorRGBA Color = ResolveUiTextColor(Surface, Mode, Custom);
+		benchmark::DoNotOptimize(Color);
+	}
+}
+BENCHMARK(BM_TextColorPolicy)->Arg(0)->Arg(1)->Arg(2)->Arg(3);
+
+static void BM_IconButtonFeedback(benchmark::State &State)
+{
+	ColorRGBA Surface(0.2f, 0.4f, 0.6f, 1);
+	bool Hovered = State.range(0) != 0;
+	bool Pressed = State.range(0) == 2;
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Surface);
+		benchmark::DoNotOptimize(Hovered);
+		benchmark::DoNotOptimize(Pressed);
+		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, true, Hovered, Pressed);
+		benchmark::DoNotOptimize(Feedback);
+	}
+}
+BENCHMARK(BM_IconButtonFeedback)->Arg(0)->Arg(1)->Arg(2);

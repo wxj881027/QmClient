@@ -1,5 +1,3 @@
-#include <game/client/components/menus.h>
-
 #include <base/perf_timer.h>
 #include <base/str.h>
 
@@ -11,6 +9,7 @@
 
 #include <game/client/QmUi/QmPieMenuRender.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/components/menus.h>
 #include <game/client/components/pie_menu_logic.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>

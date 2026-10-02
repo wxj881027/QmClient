@@ -339,7 +339,6 @@ static bool ApplyBlockWords(std::string &Text, std::vector<std::string> *pMatche
 	return Replaced;
 }
 
-
 CChat::CLine::CLine()
 {
 	m_TextContainerIndex.Reset();
@@ -977,7 +976,10 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 {
 	const bool ChatInputActive = m_Mode != MODE_NONE;
 	if(!ChatInputActive)
+	{
+		m_TranslateButton.m_Input.Reset();
 		return false;
+	}
 
 	const bool LanguageMenuOpen = m_LanguageMenuOpen || Ui()->IsPopupOpen(&m_LanguagePopupContext);
 	const bool ChatLineMenuOpen = Ui()->IsPopupOpen(&m_ChatLinePopupContext);
@@ -1016,57 +1018,28 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 		}
 	}
 
-	// ===== 翻译按钮处理（优先级高于输入框）=====
-	if(!AnyChatPopupOpen && m_TranslateButton.m_RectValid)
+	// 翻译按钮只按鼠标按钮分工，不依据聊天内容切换左键的动作。
+	const vec2 ButtonMousePos = GetChatMousePos();
+	const bool InsideButton = m_TranslateButton.m_RectValid &&
+				  ButtonMousePos.x >= m_TranslateButton.m_X && ButtonMousePos.x <= m_TranslateButton.m_X + m_TranslateButton.m_W &&
+				  ButtonMousePos.y >= m_TranslateButton.m_Y && ButtonMousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
+	const auto ButtonAction = m_TranslateButton.m_Input.Update(Event.m_Key, Event.m_Flags, InsideButton, !AnyChatPopupOpen && m_TranslateButton.m_RectValid);
+	if(ButtonAction != CQmChatTranslateButton::EAction::NONE)
 	{
-		const vec2 MousePos = GetChatMousePos();
-		const bool InsideButton =
-			MousePos.x >= m_TranslateButton.m_X &&
-			MousePos.x <= m_TranslateButton.m_X + m_TranslateButton.m_W &&
-			MousePos.y >= m_TranslateButton.m_Y &&
-			MousePos.y <= m_TranslateButton.m_Y + m_TranslateButton.m_H;
-
-		// 左键处理：翻译可见聊天；没有可翻译行时打开语言菜单
-		if(Event.m_Key == KEY_MOUSE_1)
+		if(ButtonAction == CQmChatTranslateButton::EAction::OPEN_SETTINGS)
+			OpenLanguageMenu();
+		else if(ButtonAction == CQmChatTranslateButton::EAction::TOGGLE_AUTO)
+			ToggleAutoTranslate();
+		else if(Event.m_Flags & IInput::FLAG_PRESS)
 		{
-			if(Event.m_Flags & IInput::FLAG_PRESS)
+			if(CLineInput::SMouseSelection *pMouseSel = m_Input.GetMouseSelection())
 			{
-				m_TranslateButton.m_IsPressed = InsideButton;
-				if(InsideButton)
-				{
-					// 重置输入框的鼠标选择状态
-					CLineInput::SMouseSelection *pMouseSel = m_Input.GetMouseSelection();
-					if(pMouseSel)
-					{
-						pMouseSel->m_Selecting = false;
-						pMouseSel->m_PressMouse = vec2(0, 0);
-						pMouseSel->m_ReleaseMouse = vec2(0, 0);
-					}
-					return true;
-				}
-			}
-			else if(Event.m_Flags & IInput::FLAG_RELEASE)
-			{
-				const bool Activate = m_TranslateButton.m_IsPressed && InsideButton;
-				m_TranslateButton.m_IsPressed = false;
-				if(Activate)
-				{
-					if(!TranslateVisibleChatLines())
-						OpenLanguageMenu();
-					return true;
-				}
+				pMouseSel->m_Selecting = false;
+				pMouseSel->m_PressMouse = vec2(0, 0);
+				pMouseSel->m_ReleaseMouse = vec2(0, 0);
 			}
 		}
-
-		// 右键处理：切换自动翻译
-		if(Event.m_Key == KEY_MOUSE_2)
-		{
-			if((Event.m_Flags & IInput::FLAG_PRESS) && InsideButton)
-			{
-				ToggleAutoTranslate();
-				return true;
-			}
-		}
+		return true;
 	}
 
 	// 聊天弹窗打开时，键盘确认/取消只作用于弹窗，不能穿透到聊天提交/关闭。
@@ -2338,6 +2311,14 @@ bool CChat::OnPrepareLines(float y)
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
 	const bool FocusHideSystemPromptMessages = Focus.m_HideSystemPromptMessages;
 	const bool FocusHideEcho = Focus.m_HideEchoMessages;
+
+	// 图集或配置字体变化时，正文、头衔及表情行的布局缓存一起失效。
+	const uint64_t GlyphAtlasRevision = TextRender()->GlyphAtlasRevision();
+	if(m_PreparedGlyphAtlasRevision != GlyphAtlasRevision)
+	{
+		m_PreparedGlyphAtlasRevision = GlyphAtlasRevision;
+		RebuildChat();
+	}
 
 	const bool IsScoreBoardOpen = GameClient()->m_Scoreboard.IsActive();
 	const bool ShowLargeArea = m_Show || (m_Mode != MODE_NONE && g_Config.m_ClShowChat == 1) || g_Config.m_ClShowChat == 2;
@@ -3888,7 +3869,7 @@ void CChat::OpenLanguageMenu()
 	const float ChatWidth = ChatHeight * Graphics()->ScreenAspect();
 	const vec2 ChatToUiScale(Ui()->Screen()->w / ChatWidth, Ui()->Screen()->h / ChatHeight);
 	const vec2 Anchor = vec2(m_TranslateButton.m_X + m_TranslateButton.m_W, m_TranslateButton.m_Y) * ChatToUiScale;
-	m_LanguagePopupContext.Open(Ui(), Anchor);
+	m_LanguagePopupContext.Open(Ui(), Anchor, GameClient());
 }
 
 void CChat::CloseLanguageMenu()
@@ -3896,7 +3877,7 @@ void CChat::CloseLanguageMenu()
 	if(Ui()->IsPopupOpen(&m_LanguagePopupContext))
 		Ui()->ClosePopupMenu(&m_LanguagePopupContext, true);
 	m_LanguageMenuOpen = false;
-	m_TranslateButton.m_IsPressed = false;
+	m_TranslateButton.m_Input.Reset();
 }
 
 void CChat::OpenChatLineMenu(const CLine &Line, vec2 UiMousePos)
@@ -4110,7 +4091,6 @@ CUi::EPopupMenuFunctionResult CChat::PopupChatLineMenu(void *pContext, CUIRect V
 
 	return CUi::POPUP_KEEP_OPEN;
 }
-
 
 bool CChat::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {

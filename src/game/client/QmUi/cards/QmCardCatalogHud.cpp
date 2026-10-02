@@ -1,4 +1,5 @@
 #include "QmCardCatalogInternal.h"
+#include "QmCardMeasureRevision.h"
 
 #include <engine/shared/config.h>
 
@@ -59,7 +60,7 @@ namespace qm_card_catalog
 			}
 			case EQmModuleId::Background3D: return ResolveQmHudBackground3DHeight(Metrics, ContentWidth, g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
 			case EQmModuleId::BindStatusHud:
-				return Rows(6.0f); // 4 个状态开关 + 自定义列表编辑行 + 格式提示行
+				return Rows(4.0f); // 当前卡片实际渲染 4 个状态开关
 			case EQmModuleId::GoresDrownBoard: return Rows(g_Config.m_QmGoresDrownBoard != 0 ? 4.0f : 1.0f);
 			default: return Rows(1.0f);
 			}
@@ -67,28 +68,7 @@ namespace qm_card_catalog
 
 		uint64_t MeasureHudCardRevision(const EQmModuleId Id)
 		{
-			const bool DummyMiniViewExpanded = g_Config.m_QmDummyMiniView != 0;
-			const bool DynamicIslandOriginalStyle = g_Config.m_QmHudIslandUseOriginalStyle != 0;
-			switch(Id)
-			{
-			case EQmModuleId::DummyMiniView: return DummyMiniViewExpanded ? 1u : 0u;
-			case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (g_Config.m_QmPlayerStatsMapProgressStyle ? 2u : 0u);
-			case EQmModuleId::InputOverlay: return g_Config.m_QmInputOverlay ? 1u : 0u;
-			case EQmModuleId::HudNotifications:
-			{
-				uint64_t Revision = g_Config.m_QmHudNotificationsShowAdvanced ? 1u : 0u;
-				if(g_Config.m_QmHudNotificationsShowAdvanced && g_Config.m_QmHudNotificationsUseCategoryFilters)
-					Revision |= 2u;
-				return Revision;
-			}
-			case EQmModuleId::Voice: return ResolveQmHudVoiceRevision(g_Config.m_QmVoiceEnable != 0, g_Config.m_QmVoiceShowAdvanced != 0, g_Config.m_QmVoiceShowConnectionStatus != 0, g_Config.m_QmVoiceNoiseSuppressEnable, g_Config.m_QmVoiceVadEnable != 0, g_Config.m_QmVoiceStereo != 0);
-			case EQmModuleId::DynamicIsland: return (DynamicIslandOriginalStyle ? 1u : 0u) | (g_Config.m_QmSwitchCountdown ? 2u : 0u);
-			case EQmModuleId::SystemMediaControls: return g_Config.m_QmSmtcEnable ? 1u : 0u;
-			case EQmModuleId::Lyrics: return (g_Config.m_QmSpotifyEnable ? 1u : 0u) | (g_Config.m_QmKugouHookEnable ? 2u : 0u) | (g_Config.m_QmQQMusicHookEnable ? 4u : 0u); // 来源附加行影响布局高度
-			case EQmModuleId::Background3D: return ResolveQmHudBackground3DRevision(g_Config.m_Qm3DParticles != 0, g_Config.m_Qm3DParticlesColorMode == 1, g_Config.m_Qm3DParticlesGlow != 0, g_Config.m_Qm3DParticlesTrail != 0, g_Config.m_Qm3DParticlesPulse != 0, g_Config.m_Qm3DParticlesTwinkle != 0);
-			case EQmModuleId::GoresDrownBoard: return g_Config.m_QmGoresDrownBoard != 0 ? 1u : 0u;
-			default: return 0u;
-			}
+			return MeasureModuleCardRevision(Id);
 		}
 
 		FSettingsCardPreLayoutInput BuildHudPreLayoutInput(const SQmCardBuildContext &Ctx, const EQmModuleId Id)

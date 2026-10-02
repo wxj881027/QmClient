@@ -275,6 +275,7 @@ Apply a random skin from the queue
 Apply a saved profile by 1-based index to the current tee
 Apply a writable preset and edit first
 Apply Changes
+Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
@@ -368,6 +369,7 @@ Auto vote on map change after min duration (0=Off, 1=Oppose, 2=Agree)
 Auto weapon switch
 Auto-accept team invites by sending /team <n>
 Auto-close chat after unfreeze
+Auto-connect dummy
 Auto-create CSV on game end
 Auto-fetch all players' skins for dummy rotation queue
 Auto-fetch all players' skins for rotation queue
@@ -533,6 +535,8 @@ Bubble opacity
 Build the status text shown above Tees
 Button - Disabled
 Button - Enabled
+Button background color
+Button background opacity percentage
 Button browser
 Button position is outside of the screen.
 Buttons
@@ -785,6 +789,7 @@ Confirm disconnect after game end (minutes, -1 off, 0 always)
 Confirm quit after game end (minutes, -1 off, 0 always)
 Connect address error
 Connect dummy
+Connect dummy automatically for solo split mode
 Connect dummy to enable
 Connect to a server first
 Connect to server first to establish voice network link
@@ -892,11 +897,11 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 Custom font weight (variable fonts)
 Custom Font:
-Custom map upload
 Custom prompt template
 Custom Provider API Key
 Custom Provider endpoint
 Custom Provider model name
+Custom text color
 Custom title
 Custom translation prompt (overrides built-in)
 Custom watermark text
@@ -908,6 +913,7 @@ Customize QmClient visuals and effects
 Customize the position jump hint
 Customize translate button and menu colors
 Customize vote display and interaction
+Custom…
 Cut interval
 Cut length
 Cut segments
@@ -1241,6 +1247,7 @@ Enable background 3D particle flicker
 Enable background 3D particle glow
 Enable background 3D particle pulse scaling
 Enable background 3D particle trail
+Enable bounce-in entrance animation when country flags finish loading
 Enable camera drift
 Enable camera drift effect, slightly drags camera based on speed
 Enable chat mention sound
@@ -1270,6 +1277,7 @@ Enable fast input in Gores mode
 Enable fast map download
 Enable fat skin
 Enable freeze call sound
+Enable frosted glass blur behind secondary popups and dropdowns
 Enable FTAPI auto-translate (may overload the service)
 Enable game sounds
 Enable ghost
@@ -1372,6 +1380,7 @@ English font:
 Enter /practice mode or restart to avoid the entire team being killed in 60 seconds
 Enter a CP number from 1 to 255.
 Enter Password
+Enter solo split mode
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 Enter Username
 Enter your sponsor code
@@ -1414,6 +1423,8 @@ Execute on join
 Execute the specified file
 Existing Player
 Exit replay view
+Expanded dropdown background color
+Expanded dropdown background opacity percentage
 Export
 Export cut as a separate demo
 Export demo cut
@@ -1518,6 +1529,7 @@ Following: %s
 Font
 Font cursor
 Font size
+Font store
 Font store:
 Font weight:
 For more info: /cmdlist
@@ -1618,10 +1630,9 @@ Ghost
 Ghost active
 Ghost active (%d)
 Ghost ready
-Ghost replay
 Ghost tools
 Ghost view mode off. The ghost follows your runs again.
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
 Ghost visibility (alpha, 0=invisible, 100=visible)
 Ghosts directory
 Github
@@ -1842,6 +1853,7 @@ Include emoticon when saving/loading config preset
 Include name when saving/loading config preset
 Include seconds in local time display
 Include skin when saving/loading config preset
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 Incoming language
 Indicate map finish
 Indicator alive color
@@ -1869,6 +1881,8 @@ Initializing components
 Initializing layers
 Initializing map logic
 Input
+Input background color
+Input background opacity percentage
 Input device
 Input device not found
 Input device open failed
@@ -2025,6 +2039,7 @@ Leave empty to disable
 Leave empty to join public room
 Leave empty to show everyone
 Leave empty to use default prompt
+Leave solo split mode
 Left jump
 Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
 Left/right channel width
@@ -2348,6 +2363,8 @@ Mute when window inactive
 Mute:
 Muted
 my_%s
+MyMemory (free)
+MyMemory needs no registration (anonymous daily quota)
 n = Prediction latency
 NA
 Name
@@ -2599,6 +2616,8 @@ Optional
 Optional authentication key for the DNSBL provider
 Or visit DDNet.org
 Original
+Original language for both received and outgoing messages. Use Auto to detect each message.
+Original message language
 Other
 Other modes
 Other players' hook line width
@@ -2775,6 +2794,7 @@ Please wait…
 Points
 Points unavailable
 Polished
+Popup & dropdown blur
 Popup animation
 Port for client to server connection (0=random, >=1024 sets manual port)
 Port for dummy connection to server (0=random, >=1024 sets manual port)
@@ -2949,8 +2969,6 @@ Rank 1
 Rank 1 demo
 Rank 1 demo already cached under 'Rank 1 replays': %s
 Rank 1 demo downloaded to '%s'
-Rank 1 members
-Rank 1 replay
 Rank 1 replays
 Rank demo already available in the demo browser: %s
 Rank demo downloaded: %s. Play it from the Rank 1 list or the demo browser.
@@ -2992,6 +3010,7 @@ Reason
 Reason:
 Rebinds the client's listening address and port
 Receive Rate
+Receive translation method
 Receive VAD speakers
 Receive voice from spectators/inactive players
 Receiving
@@ -3319,6 +3338,7 @@ Scroll mode: Off
 Scroll mode: On
 Search
 Search and navigate settings
+Search country flag…
 Search donor asset
 Search main asset
 Search maps and downloadedmaps, including subfolders
@@ -3330,6 +3350,8 @@ Searching
 Searching all map folders...
 Sec-WebSocket-Protocol sent during the realtime handshake
 Secondary
+Secondary menu background color
+Secondary menu background opacity percentage
 Seconds to wait before reconnecting (0=off, when server is full)
 Seconds to wait before reconnecting (after timeout, 0 to disable).
 SecretId
@@ -3364,9 +3386,7 @@ Send emote when entering freeze
 Send emoticon in water
 Send probability
 Send Rate
-Send source language
 Send specified command to rcon
-Send target language
 Send translation method
 Sending and receiving
 Sending initial client info
@@ -3449,6 +3469,7 @@ Show a small view of the dummy
 Show advanced nameplate settings without changing effect values
 Show advanced options
 Show advanced title settings (collapsing keeps configured effects)
+Show advanced translation options
 Show air jump indicator
 Show all
 Show all buttons
@@ -3856,7 +3877,9 @@ Solid
 Solid tile outline opacity
 Solo
 Solo split
+Solo split enter key
 Solo split key
+Solo split leave key
 Some fonts could not be loaded. Check the local console for details.
 Some map images could not be loaded. Check the local console for details.
 Some map sounds could not be loaded. Check the local console for details.
@@ -3902,7 +3925,6 @@ Speed:
 Sphere
 Spin pop
 Split main and dummy into different teams for solo-run sync
-Split main/dummy into two free teams; press again to return to team 0
 Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
 Sponsor code
 Sponsor code already claimed
@@ -4020,7 +4042,6 @@ Tags
 Take a screenshot
 Taper trail ends
 Taper trail width
-Target language
 Target language code (e.g. zh, en, ja, zh-TW)
 Target language ratio
 Target server: %s
@@ -4059,6 +4080,8 @@ Team save in progress. You'll be able to load with '/load %s' if save is success
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' on %s to continue
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' to continue
 Team tee glow
+Team used when leaving solo split mode
+Team when leaving solo split
 Teammate
 Teams
 Teams are available on this server
@@ -4119,6 +4142,8 @@ Tencent Cloud Translation SecretId
 Tencent Cloud Translation SecretKey
 Text alpha
 Text color
+Text color mode
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 Text effect
 Text input focus ring color
 Thank you for your company and trust. This is what gives me the courage to keep going.
@@ -4250,6 +4275,7 @@ Toggle or set the switch on or off for the specified time (or indefinitely by de
 Toggle receiving whispers
 Toggle remote console
 Toggle scoreboard cursor
+Toggle solo split mode
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 Toggle team lock so no one else can join and so the team restarts when a player dies. /lock 0 to unlock, /lock 1 to lock
 Toggle tune variable
@@ -4293,11 +4319,14 @@ Translate keys before interpreting them, respect keyboard layout
 Translate last message (of a given name)
 Translate last message of the person with this id
 Translate only when needed
+Translate only when not in target language
+Translate outgoing messages to
+Translate received messages to
 Translate UI
 Translate:
 Translated text hidden due to streamer mode
 Translating to %s...
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
 Translation backend invalid, sending original
 Translation button active color
 Translation button cancel color
@@ -4499,6 +4528,7 @@ Vertical sync (may cause lag)
 Video Background
 Video name
 Video name:
+Video rendering is unavailable during online replay.
 Video was saved to '%s'
 Videos directory
 View latest updates
@@ -4789,6 +4819,7 @@ Zen mode key
 Zero uses the style default. Higher values make color bands narrower.
 Zhipu AI
 Zhipu API key
+Zhipu free models allow only 1 concurrent request
 ZhipuAI API Key
 ZhipuAI endpoint (leave empty for default)
 ZhipuAI model name
@@ -5853,7 +5884,6 @@ Zoom to current mouse target
 [Predefined touch button behaviors]	Spectate
 [Predefined touch button behaviors]	Swap Action
 [Predefined touch button behaviors]	Use Action
-[Rank 1 replay]	Direction
 [Show name plates]	All
 [Show name plates]	Current
 [Show name plates]	None

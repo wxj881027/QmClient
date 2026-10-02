@@ -82,7 +82,7 @@ inline SSettingsTeeEditorLayout ResolveSettingsTeeEditorLayout(const CUIRect &Vi
 	SkinRow.VSplitLeft(std::min(SkinRow.w * 0.28f, 84.0f * Metrics.m_UiScale), &Layout.m_SkinLabel, &SkinRow);
 	SkinRow.VSplitRight(Metrics.m_ButtonHeight, &Layout.m_SkinInput, &Layout.m_RandomSkin);
 	Layout.m_SkinInput.VSplitRight(Gap, &Layout.m_SkinInput, nullptr);
-	Layout.m_Eyes = NextRow(36.0f * Metrics.m_UiScale);
+	Layout.m_Eyes = NextRow(ResolveSettingsTeeEmoteSliderLayout({}, Metrics).m_Height);
 	CUIRect ColorsRow = NextRow(Metrics.m_LineHeight);
 	ColorsRow.VSplitRight(Metrics.m_ButtonHeight, &Layout.m_CustomColors, &Layout.m_RandomColors);
 	Layout.m_CustomColors.VSplitRight(Gap, &Layout.m_CustomColors, nullptr);

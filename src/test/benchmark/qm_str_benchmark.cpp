@@ -17,8 +17,10 @@ static void BM_StrFormat(benchmark::State &State)
 	{
 		str_format(aBuf, sizeof(aBuf), "player %s killed %s with weapon %d at (%d, %d)",
 			"chen", "death", 42, -1024, 512);
+		benchmark::DoNotOptimize(aBuf);
+		benchmark::ClobberMemory();
 	}
-	benchmark::DoNotOptimize(aBuf[0]);
+	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_StrFormat);
 
@@ -30,7 +32,9 @@ static void BM_Snprintf(benchmark::State &State)
 	{
 		snprintf(aBuf, sizeof(aBuf), "player %s killed %s with weapon %d at (%d, %d)",
 			"chen", "death", 42, -1024, 512);
+		benchmark::DoNotOptimize(aBuf);
+		benchmark::ClobberMemory();
 	}
-	benchmark::DoNotOptimize(aBuf[0]);
+	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_Snprintf);

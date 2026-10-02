@@ -263,6 +263,7 @@ void CCountryFlags::ProcessCompletedJobs()
 				{
 					Flag.m_Texture = Graphics()->LoadTextureRawMove(Result.m_Image, 0, Flag.m_aCountryCodeString);
 					Flag.m_Loaded = true;
+					Flag.m_LoadedTimestamp = time_get();
 					GameClient()->GpuUploadLimiter()->OnUploaded();
 					LogCountryFlagSettingsResourcePerf("upload", 1, 1, (int)m_PendingJobs.size() - 1, ESettingsWarmupMissReason::NONE, 0.0);
 
@@ -377,19 +378,77 @@ bool CCountryFlags::PrewarmByIndicesReady(const std::vector<int> &vIndices)
 	return true;
 }
 
-void CCountryFlags::Render(const CCountryFlag &Flag, ColorRGBA Color, float x, float y, float w, float h)
+void CCountryFlags::Render(const CCountryFlag &Flag, ColorRGBA Color, float x, float y, float w, float h, int64_t CustomStartTime)
 {
 	ProcessCompletedJobs();
 	if(Flag.m_Texture.IsValid())
 	{
+		float RenderX = x;
+		float RenderY = y;
+		float RenderW = w;
+		float RenderH = h;
+		ColorRGBA RenderColor = Color;
+
+		const bool AnimEnabled = g_Config.m_QmCountryFlagAnim != 0 && g_Config.m_QmUiMotionLevel > 0;
+		const bool MeasurePass = Ui()->RenderOnly();
+		const int64_t Now = time_get();
+		const float Duration = g_Config.m_QmUiMotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
+		const float Overshoot = g_Config.m_QmUiMotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT;
+		int64_t AnimationStartTime = 0;
+		if(AnimEnabled && !MeasurePass)
+		{
+			if(CustomStartTime > 0)
+			{
+				AnimationStartTime = CustomStartTime;
+			}
+			else
+			{
+				const int64_t Gap = Now - Flag.m_LastRenderTimestamp;
+				const bool Reappeared = Flag.m_LastRenderTimestamp <= 0 || Gap >= (int64_t)(COUNTRY_FLAG_ANIM_REAPPEAR_GAP * time_freq());
+				if(Reappeared)
+					Flag.m_AnimStartTimestamp = Now;
+				if(Flag.m_AnimStartTimestamp > 0 && (Now - Flag.m_AnimStartTimestamp) / (float)time_freq() < Duration)
+					AnimationStartTime = Flag.m_AnimStartTimestamp;
+			}
+			Flag.m_LastRenderTimestamp = Now;
+		}
+		if(AnimEnabled && AnimationStartTime > 0)
+		{
+			if(Now < AnimationStartTime)
+				return;
+			const float Elapsed = (Now - AnimationStartTime) / (float)time_freq();
+			if(Elapsed >= 0.0f && Elapsed < Duration)
+			{
+				const float Progress = Elapsed / Duration;
+				const float Scale = ComputeCountryFlagEntryScale(Progress, Overshoot);
+				const float AlphaScale = ComputeCountryFlagEntryAlpha(Progress);
+
+				ComputeCountryFlagEntryRect(x, y, w, h, Scale, RenderX, RenderY, RenderW, RenderH);
+				RenderColor.a *= AlphaScale;
+			}
+		}
+
+		if(RenderW <= 0.001f || RenderH <= 0.001f || RenderColor.a <= 0.001f)
+			return;
+
 		Graphics()->TextureSet(Flag.m_Texture);
-		Graphics()->SetColor(Color);
+		Graphics()->SetColor(RenderColor);
 		Graphics()->QuadsSetRotation(0.0f);
-		Graphics()->RenderQuadContainerEx(m_FlagsQuadContainerIndex, 0, -1, x, y, w, h);
+		Graphics()->RenderQuadContainerEx(m_FlagsQuadContainerIndex, 0, -1, RenderX, RenderY, RenderW, RenderH);
 	}
+}
+
+void CCountryFlags::Render(const CCountryFlag &Flag, ColorRGBA Color, float x, float y, float w, float h)
+{
+	Render(Flag, Color, x, y, w, h, 0);
 }
 
 void CCountryFlags::Render(int CountryCode, ColorRGBA Color, float x, float y, float w, float h)
 {
-	Render(GetByCountryCode(CountryCode), Color, x, y, w, h);
+	Render(GetByCountryCode(CountryCode), Color, x, y, w, h, 0);
+}
+
+void CCountryFlags::Render(int CountryCode, ColorRGBA Color, float x, float y, float w, float h, int64_t CustomStartTime)
+{
+	Render(GetByCountryCode(CountryCode), Color, x, y, w, h, CustomStartTime);
 }

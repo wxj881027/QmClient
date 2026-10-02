@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_QMUI_SECONDARYPANEL_H
 #define GAME_CLIENT_QMUI_SECONDARYPANEL_H
 
+#include "SettingsPageLayout.h"
 #include "UiForms.h"
 #include "UiTheme.h"
 
@@ -14,6 +15,8 @@ namespace ui_widget
 		float m_FontSize = 7.5f;
 		float m_Margin = 3.0f;
 		float m_TitleHeight = 16.0f;
+		float m_TitleFontSize = 7.5f;
+		float m_DividerHeight = 0.0f;
 		float m_RowHeight = 16.0f;
 		float m_LabelHeight = 11.0f;
 		float m_DropdownHeight = 18.0f;
@@ -21,11 +24,53 @@ namespace ui_widget
 
 		float ContentHeight(int Toggles, int Dropdowns, int Notices) const
 		{
-			return 2.0f * m_Margin + m_TitleHeight +
-				(Toggles + Notices) * (m_Spacing + m_RowHeight) +
-				Dropdowns * (m_Spacing + m_LabelHeight + m_DropdownHeight);
+			return 2.0f * m_Margin + m_TitleHeight + (m_DividerHeight > 0.0f ? 2.0f * m_Spacing + m_DividerHeight : 0.0f) +
+			       (Toggles + Notices) * (m_Spacing + m_RowHeight) +
+			       Dropdowns * (m_Spacing + m_LabelHeight + m_DropdownHeight);
 		}
 	};
+
+	inline SSecondaryPanelMetrics ResolveSecondaryPanelMetrics(float ViewportWidth, bool NewUi)
+	{
+		SSecondaryPanelMetrics Metrics;
+		if(NewUi)
+		{
+			const SSettingsContentMetrics Settings = ResolveSettingsContentMetrics(ViewportWidth);
+			Metrics.m_TitleHeight = Settings.m_LineHeight;
+			Metrics.m_TitleFontSize = Settings.m_BodySize;
+			Metrics.m_DividerHeight = 1.0f;
+		}
+		return Metrics;
+	}
+
+	struct SSecondaryPanelHeaderLayout
+	{
+		CUIRect m_Title;
+		CUIRect m_Close;
+	};
+
+	inline SSecondaryPanelHeaderLayout ResolveSecondaryPanelHeaderLayout(CUIRect Row, float Spacing)
+	{
+		SSecondaryPanelHeaderLayout Result;
+		const float Side = std::max(0.0f, std::min(Row.w, Row.h));
+		Row.VSplitRight(Side, &Result.m_Title, &Result.m_Close);
+		Result.m_Close = QmUiSquareIconButtonRect(Result.m_Close);
+		Result.m_Title.VSplitRight(std::clamp(Spacing, 0.0f, std::max(0.0f, Result.m_Title.w)), &Result.m_Title, nullptr);
+		return Result;
+	}
+
+	inline SPopupMenuProperties SecondaryPanelProperties()
+	{
+		SPopupMenuProperties Props;
+		Props.m_CenterInViewport = true;
+		Props.m_BlockUnderlyingPointerInput = true;
+		Props.m_BlockUnderlyingScroll = true;
+		Props.m_Animate = true;
+		const SUiTheme Theme = ResolveConfiguredSecondaryPanelTheme();
+		Props.m_BackgroundColor = Theme.m_Surface;
+		Props.m_BorderColor = Theme.m_Border;
+		return Props;
+	}
 
 	struct SSecondaryPanelLabel
 	{
@@ -74,24 +119,43 @@ namespace ui_widget
 		bool Header(SSecondaryPanelLabel &State, CButtonContainer &CloseButton, const char *pText)
 		{
 			CUIRect Row = TakeRow(m_Metrics.m_TitleHeight);
-			CUIRect Close;
-			Row.VSplitRight(m_Metrics.m_TitleHeight + 6.0f, &Row, &Close);
+			const SSecondaryPanelHeaderLayout Layout = ResolveSecondaryPanelHeaderLayout(Row, m_Metrics.m_Spacing);
+			Row = Layout.m_Title;
+			const CUIRect Close = Layout.m_Close;
 			const bool Clicked = m_Ctx.m_pUi->DoButton_QmIcon(&CloseButton, EQmIcon::CLOSE, FontIcons::FONT_ICON_XMARK, 0, &Close, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL);
+			const float BodyFontSize = m_Metrics.m_FontSize;
+			m_Metrics.m_FontSize = m_Metrics.m_TitleFontSize;
 			Label(State, Row, pText, TEXTALIGN_ML);
+			m_Metrics.m_FontSize = BodyFontSize;
+			if(m_Metrics.m_DividerHeight > 0.0f)
+			{
+				Space();
+				CUIRect Divider = TakeRow(m_Metrics.m_DividerHeight);
+				Divider.Draw(ResolveConfiguredSecondaryPanelTheme().m_Border, IGraphics::CORNER_NONE, 0.0f);
+				Space();
+			}
 			return m_Active && Clicked;
 		}
+
+		CUIRect ContentRect() const { return m_View; }
 
 		void ToggleRow(SSecondaryPanelLabel &State, const char *pText, int &Value)
 		{
 			Space();
 			CUIRect Row = TakeRow(m_Metrics.m_RowHeight);
+			const CUIRect FullRow = Row;
 			CUIRect ToggleRect;
-			Row.VSplitRight(m_Metrics.m_RowHeight * 1.8f, &Row, &ToggleRect);
-			ToggleRect.HMargin(2.0f, &ToggleRect);
+			const float SwitchWidth = g_Config.m_QmNewUi ? 30.0f : m_Metrics.m_RowHeight * 1.8f;
+			const float SwitchHeight = g_Config.m_QmNewUi ? 16.0f : m_Metrics.m_RowHeight - 4.0f;
+			Row.VSplitRight(SwitchWidth, &Row, &ToggleRect);
+			ToggleRect.y += (ToggleRect.h - SwitchHeight) * 0.5f;
+			ToggleRect.h = SwitchHeight;
 			Label(State, Row, pText, TEXTALIGN_ML);
 			bool Enabled = Value != 0;
-			if(Toggle(m_Ctx, &Value, &Enabled, ToggleRect, m_Active))
-				Value = Enabled ? 1 : 0;
+			const bool Clicked = m_Active && m_Ctx.m_pUi != nullptr && m_Ctx.m_pUi->DoButtonLogic(&Value, 0, &FullRow, BUTTONFLAG_LEFT);
+			Toggle(m_Ctx, &Value, &Enabled, ToggleRect, false);
+			if(Clicked)
+				Value = !Value;
 		}
 
 		int DropdownRow(SSecondaryPanelLabel &LabelState, const char *pText, int Selected, const char *const *ppNames, int Count, CUi::SDropDownState &State)

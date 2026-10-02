@@ -34,8 +34,8 @@ description: 用户要求 git commit、PR、版本更新或 Release 时使用；
 
 ## 版本与 Release
 
-功能交付或用户要求版本更新时，统一通过 `python qmclient_scripts/bump_version.py --version X.Y.Z` 或 `--tag vX.Y.Z`；不手改版本源。`CLIENT_RELEASE_VERSION` 源自 `QMCLIENT_VERSION`。纯文档与规则维护不升客户端版本。
+版本边界遵循根 `AGENTS.md`：正式版 `QMCLIENT_STABLE_VERSION` 只在用户明确授权发布时更新；开发迭代需要进度标识时更新 `QMCLIENT_DEV_VERSION`。统一使用 `python qmclient_scripts/bump_version.py --dev-version X.Y.Z` 更新开发版，正式发布使用 `--version <正式版本>` 或 `--tag <正式 tag>`；不手改版本源。纯调查、文档与规则维护不升任何版本。
 
-发布任务再读 [release.md](references/release.md)，并按 `docs/RELEASE_NOTE_TEMPLATE.md` 的通道与说明规范执行。版本参数使用本次实际目标，先以 `--dry-run` 核对版本解析（该选项不展示文件 diff），实际更新后检查目标文件差异；发版脚本或生成逻辑变动按风险补验证。
+发布任务再读 [release.md](references/release.md)，通道与说明以现有生成脚本及对应 workflow 为准。版本参数使用本次实际目标，先以 `--dry-run` 核对版本解析（该选项不展示文件 diff），实际更新后检查目标文件差异；发版脚本或生成逻辑变动按风险补验证。
 
 提交前验证由 `qmclient-verification-gate` 统一决定，已完成的相关测试证据可复用。普通最终回复遵循根 `AGENTS.md`，不套本 skill 的提交结构。

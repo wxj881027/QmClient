@@ -1,5 +1,3 @@
-#include <game/client/components/pie_menu.h>
-
 #include <base/str.h>
 #include <base/system.h>
 
@@ -8,6 +6,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 
+#include <game/client/components/pie_menu.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -36,7 +35,7 @@ bool CPieMenu::IsFollowingTarget() const
 bool CPieMenu::IsFollowingPlayer(const char *pName, const char *pClan) const
 {
 	return m_FollowState.m_Active && qm_pie_menu::MatchesPlayer(pName, pClan,
-		m_FollowState.m_Name.c_str(), m_FollowState.m_Clan.c_str(), g_Config.m_ClFriendsIgnoreClan != 0);
+						 m_FollowState.m_Name.c_str(), m_FollowState.m_Clan.c_str(), g_Config.m_ClFriendsIgnoreClan != 0);
 }
 
 void CPieMenu::ToggleTargetFollow()

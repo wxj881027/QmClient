@@ -232,9 +232,15 @@ namespace
 				const float Wave = float(std::sin(Phase + (Layer == 1 ? 1.45 : 0.0)));
 				const float Offset = Layer == 1 ? 0.32f + Wave * 0.25f : Wave * 0.16f;
 				const float Pressure = 0.72f + 0.28f * float(std::sin(Phase - 0.6));
-				const float Width = S.m_Width * (Layer == 0 ? 0.23f : Layer == 1 ? 0.072f : 0.038f) * Pressure;
-				const ColorRGBA Color = Preset ? ColorRGBA(Layer == 0 ? 0x00c0b0u : Layer == 1 ? 0xe09820u : 0xfffadeu) : Tint(S.m_Tint, ColorRGBA(0xffffffu), Layer == 0 ? 0.0f : Layer == 1 ? 0.35f : 0.78f);
-				aBand[i] = {S.m_Pos + S.m_Normal * (S.m_Width * Offset * Root), Width, Width, Color.WithAlpha(S.m_Alpha * Root * (Layer == 0 ? 0.78f : Layer == 1 ? 0.62f : 0.6f))};
+				const float Width = S.m_Width * (Layer == 0 ? 0.23f : Layer == 1 ? 0.072f :
+												   0.038f) *
+						    Pressure;
+				const ColorRGBA Color = Preset ? ColorRGBA(Layer == 0 ? 0x00c0b0u : Layer == 1 ? 0xe09820u :
+														 0xfffadeu) :
+								 Tint(S.m_Tint, ColorRGBA(0xffffffu), Layer == 0 ? 0.0f : Layer == 1 ? 0.35f :
+																       0.78f);
+				aBand[i] = {S.m_Pos + S.m_Normal * (S.m_Width * Offset * Root), Width, Width, Color.WithAlpha(S.m_Alpha * Root * (Layer == 0 ? 0.78f : Layer == 1 ? 0.62f :
+																						    0.6f))};
 			}
 			Band(vOut, aBand.data(), Count, Layer == 2 ? 0.3f : 0.14f, PixelSize, Layer == 2);
 		}
@@ -411,7 +417,10 @@ namespace
 			// 同一簇的生存阈值不随时间重播种；临近消失只改变整格透明度，不柔化边缘。
 			const float Alpha = Cell.m_Color.a * std::min(1.0f, (Cell.m_Integrity - Threshold) * 20.0f);
 			const float Light = Cell.m_Radius + (1.0f - Cell.m_Heat) * 0.20f + (Cluster - 0.5f) * 0.16f;
-			const int Tier = Light < 0.48f ? 4 : Light < 0.72f ? 3 : Light < 0.90f ? 2 : Light < 1.06f ? 1 : 0;
+			const int Tier = Light < 0.48f ? 4 : Light < 0.72f ? 3 :
+						     Light < 0.90f         ? 2 :
+						     Light < 1.06f         ? 1 :
+									     0;
 			const ColorRGBA Base = Preset ? ColorRGBA(0xffad32u) : Cell.m_Color;
 			const float Peak = std::max({Base.r, Base.g, Base.b});
 			const ColorRGBA White(Peak, Peak, Peak, 1.0f);

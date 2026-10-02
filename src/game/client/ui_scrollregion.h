@@ -43,6 +43,7 @@ struct CScrollRegionParams
 	bool m_ScrollHorizontal;
 	const void *m_pWheelOwnerId;
 	bool m_WheelOwnerPreRegistered;
+	bool m_Interactive;
 	EUiWheelOwnerPriority m_WheelOwnerPriority;
 
 	CScrollRegionParams();
@@ -103,6 +104,7 @@ inline CScrollRegionParams::CScrollRegionParams()
 	m_ScrollHorizontal = false;
 	m_pWheelOwnerId = nullptr;
 	m_WheelOwnerPreRegistered = false;
+	m_Interactive = true;
 	m_WheelOwnerPriority = EUiWheelOwnerPriority::PAGE;
 }
 

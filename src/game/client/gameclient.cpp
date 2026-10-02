@@ -7567,8 +7567,12 @@ void CGameClient::ProcessPendingCustomAssetImageryReload()
 		if(str_comp(g_Config.m_ClAssetStrongWeak, "default") != 0)
 			ReloadNamedSingleFileAssetImage(IMAGE_STRONGWEAK, "strong_weak", g_Config.m_ClAssetStrongWeak);
 		break;
+	case 8:
+		if(IsBlankAssetName(g_Config.m_ClAssetsEntities))
+			m_MapImages.ChangeEntitiesPath(g_Config.m_ClAssetsEntities);
+		break;
 	}
-	m_PendingCustomAssetReloadStep = m_PendingCustomAssetReloadStep >= 7 ? -1 : m_PendingCustomAssetReloadStep + 1;
+	m_PendingCustomAssetReloadStep = m_PendingCustomAssetReloadStep >= 8 ? -1 : m_PendingCustomAssetReloadStep + 1;
 }
 
 void CGameClient::OnGraphicsResourcesReset()
@@ -7708,7 +7712,7 @@ void CGameClient::LoadGameSkin(const char *pPath, bool AsDir)
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
 	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
 	const bool IsBlankAsset = IsBlankAssetName(pPath);
 	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
@@ -7897,7 +7901,7 @@ void CGameClient::LoadEmoticonsSkin(const char *pPath, bool AsDir)
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
 	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
 	const bool IsBlankAsset = IsBlankAssetName(pPath);
 	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
@@ -7977,7 +7981,7 @@ void CGameClient::LoadParticlesSkin(const char *pPath, bool AsDir)
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
 	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
 	const bool IsBlankAsset = IsBlankAssetName(pPath);
 	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
@@ -8114,7 +8118,7 @@ void CGameClient::LoadHudSkin(const char *pPath, bool AsDir)
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
 	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
 	const bool IsBlankAsset = IsBlankAssetName(pPath);
 	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{
@@ -8233,7 +8237,7 @@ void CGameClient::LoadExtrasSkin(const char *pPath, bool AsDir)
 	char aPath[IO_MAX_PATH_LENGTH];
 	bool IsDefault = false;
 	// "blank" 是客户端自带的空白材质：以内置默认图为基准造一张全透明图（尺寸与格式一致），
-	// 且显式留空优先于 qm_blank_asset_fallback，不参与回退。
+	// 关闭 qm_blank_asset_fallback 时清空，开启时直接使用默认图。
 	const bool IsBlankAsset = IsBlankAssetName(pPath);
 	if(str_comp(pPath, "default") == 0 || IsBlankAsset)
 	{

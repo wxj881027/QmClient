@@ -4,6 +4,7 @@
 #define GAME_CLIENT_UI_H
 
 #include "QmUi/QmDropdown.h"
+#include "QmUi/QmPopupPointer.h"
 #include "QmUi/UiTokens.h"
 #include "lineinput.h"
 #include "ui_rect.h"
@@ -54,6 +55,13 @@ inline int QmUiVisibleRows(float AvailableHeight, float ReservedHeight, float Ro
 inline bool QmEditBoxShouldStartActivation(bool Inside, bool MouseButtonClicked)
 {
 	return Inside && MouseButtonClicked;
+}
+
+// 纯图标按钮共用正方形绘制和命中区域，保留调用方分配区域的中心。
+inline CUIRect QmUiSquareIconButtonRect(const CUIRect &Rect)
+{
+	const float Side = std::max(0.0f, std::min(Rect.w, Rect.h));
+	return CUIRect{Rect.x + (Rect.w - Side) * 0.5f, Rect.y + (Rect.h - Side) * 0.5f, Side, Side};
 }
 
 constexpr int UiGaussianBlurTargetDimension(int ScreenDimension)
@@ -923,9 +931,10 @@ public:
 	float MouseDeltaY() const { return m_MouseDelta.y; }
 	vec2 UpdatedMousePos() const { return m_UpdatedMousePos; }
 	vec2 UpdatedMouseDelta() const { return m_UpdatedMouseDelta; }
-	int LastMouseButton(int Index) const { return (m_LastMouseButtons >> Index) & 1; } // TClient
-	int MouseButton(int Index) const { return (m_MouseButtons >> Index) & 1; }
-	int MouseButtonClicked(int Index) const { return MouseButton(Index) && !((m_LastMouseButtons >> Index) & 1); }
+	bool PointerInputBlocked() const { return UnderlyingPointerInputBlocked(); }
+	int LastMouseButton(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Previous(Index); }
+	int MouseButton(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Held(Index); }
+	int MouseButtonClicked(int Index) const { return QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()).Pressed(Index); }
 	bool CheckMouseLock()
 	{
 		if(m_MouseLock && ActiveItem() != m_pMouseLockId)
@@ -1190,6 +1199,7 @@ public:
 	void DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, float Height, void *pContext, FPopupMenuFunction pfnFunc, const SPopupMenuProperties &Props = {});
 	void RenderPopupMenus();
 	void ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants = false);
+	void RefreshPopupMenuSource(const SPopupMenuId *pId, bool RequireRefresh, uint64_t Frame);
 	void ClosePopupMenus();
 	bool IsPopupOpen() const;
 	bool IsPopupOpen(const SPopupMenuId *pId) const;
@@ -1327,6 +1337,7 @@ public:
 			m_FontSize(-1.0f),
 			m_Enabled(true),
 			m_ClosePopupWhenDisabled(true),
+			m_RequireSourceRefresh(true),
 			m_pAnchorViewport(nullptr),
 			m_pPopupViewport(nullptr)
 		{
@@ -1335,6 +1346,7 @@ public:
 		float m_FontSize;
 		bool m_Enabled;
 		bool m_ClosePopupWhenDisabled;
+		bool m_RequireSourceRefresh;
 		// 下拉框的锚点和弹层有不同的裁剪语义：锚点必须仍在所属控件内，
 		// 弹层则允许离开卡片，但不能越过设置页滚动 viewport。未指定时沿用
 		// 当前 clip stack，旧调用方因此保持兼容。

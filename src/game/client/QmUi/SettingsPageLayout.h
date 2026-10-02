@@ -8,9 +8,12 @@
 #include <base/color.h>
 #include <base/math.h>
 
+#include <generated/protocol.h>
+
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <initializer_list>
 
@@ -40,6 +43,14 @@ struct SSettingsShellLayoutFrame
 	float m_CardGap = 0.0f;
 	bool m_TwoColumns = false;
 };
+
+// 大型二级面板沿用字体商店的视口占比与尺寸上限。
+inline CUIRect ResolveSettingsSecondaryPanelRect(const CUIRect &Viewport)
+{
+	const float Width = std::min(780.0f, std::max(0.0f, Viewport.w) * 0.74f);
+	const float Height = std::min(470.0f, std::max(0.0f, Viewport.h) * 0.74f);
+	return CUIRect{Viewport.x + (Viewport.w - Width) * 0.5f, Viewport.y + (Viewport.h - Height) * 0.5f, Width, Height};
+}
 
 struct SSettingsSubTabLayoutFrame
 {
@@ -92,7 +103,7 @@ private:
 
 // 页面和当前子 Tab 共同定义一次 card deck 的可见视图。
 // 子 Tab 改变时必须重新播放入场动画，但不能影响卡片在 model 中的持久化顺序。
-inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int PlayerTab, const int AppearanceTab, const int TClientTab, const int QmClientTab)
+inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int PlayerTab, const int AppearanceTab, const int TClientTab, const int QmClientTab, const int CreditsTab = 0)
 {
 	uint64_t Key = 1469598103934665603ULL;
 	const auto Mix = [&Key](const int Value) {
@@ -104,6 +115,7 @@ inline uint64_t ResolveSettingsCardDisplayViewKey(const int Page, const int Play
 	Mix(AppearanceTab);
 	Mix(TClientTab);
 	Mix(QmClientTab);
+	Mix(CreditsTab);
 	return Key;
 }
 
@@ -210,8 +222,19 @@ inline float ResolveSettingsRowsHeight(const int RowCount, const float RowHeight
 	return RowCount * std::max(0.0f, RowHeight) + std::max(0, RowCount - 1) * std::max(0.0f, RowSpacing);
 }
 
+struct SSettingsContentFlowEntry
+{
+	float m_Height = 0.0f;
+	bool m_Visible = true;
+};
+
+inline SSettingsContentFlowEntry MakeSettingsContentFlowEntry(const float Height, const bool Visible = true)
+{
+	return {Height, Visible};
+}
+
 // 卡片内容的行间距只由这个行流消费：首行无前间距，后续每一可见行恰好一个标准间距。
-// 条件行在测量、预布局和绘制阶段均省略 Next 调用即可，不再手算 RowsRemaining。
+// 条件行在测量、预布局和绘制阶段均省略 NextIf 调用即可，不再手算 RowsRemaining。
 class CSettingsContentRowFlow
 {
 	CUIRect &m_View;
@@ -237,6 +260,7 @@ public:
 
 	CUIRect NextLine() { return Next(m_Metrics.m_LineHeight); }
 	CUIRect NextButton() { return Next(m_Metrics.m_ButtonHeight); }
+	CUIRect NextIf(const bool Visible, const float Height) { return Visible ? Next(Height) : CUIRect{}; }
 };
 
 inline float ResolveSettingsContentFlowHeight(const SSettingsContentMetrics &Metrics, const std::initializer_list<float> RowHeights)
@@ -248,6 +272,22 @@ inline float ResolveSettingsContentFlowHeight(const SSettingsContentMetrics &Met
 		if(HasPreviousRow)
 			Height += std::max(0.0f, Metrics.m_LineSpacing);
 		Height += std::max(0.0f, RowHeight);
+		HasPreviousRow = true;
+	}
+	return Height;
+}
+
+inline float ResolveSettingsContentFlowHeight(const SSettingsContentMetrics &Metrics, const std::initializer_list<SSettingsContentFlowEntry> Entries)
+{
+	float Height = 0.0f;
+	bool HasPreviousRow = false;
+	for(const SSettingsContentFlowEntry &Entry : Entries)
+	{
+		if(!Entry.m_Visible)
+			continue;
+		if(HasPreviousRow)
+			Height += std::max(0.0f, Metrics.m_LineSpacing);
+		Height += std::max(0.0f, Entry.m_Height);
 		HasPreviousRow = true;
 	}
 	return Height;
@@ -440,6 +480,43 @@ inline SSettingsTeeQueuePanelGeometry ResolveSettingsTeeQueuePanelGeometry(const
 inline float ResolveSettingsTeeQueuePanelHeight(const SSettingsContentMetrics &Metrics, const int QueueCount, const int PresetCount, float ContentWidth = 0.0f)
 {
 	return ResolveSettingsTeeQueuePanelGeometry(Metrics, QueueCount, PresetCount, ContentWidth).m_ContentHeight;
+}
+
+struct SSettingsTeeEmoteSliderLayout
+{
+	CUIRect m_TrackRect{};
+	std::array<CUIRect, NUM_EMOTES> m_aSlotRects{};
+	float m_TeeSize = 0.0f;
+	float m_Height = 0.0f;
+};
+
+inline SSettingsTeeEmoteSliderLayout ResolveSettingsTeeEmoteSliderLayout(const CUIRect &View, const SSettingsContentMetrics &Metrics)
+{
+	SSettingsTeeEmoteSliderLayout Layout;
+	const float BaseHeight = std::max(44.0f * Metrics.m_UiScale, Metrics.m_LineHeight * 1.5f);
+	Layout.m_Height = BaseHeight;
+	Layout.m_TrackRect = {View.x, View.y, View.w, BaseHeight};
+	CUIRect Remainder = Layout.m_TrackRect;
+	for(int i = 0; i < NUM_EMOTES; ++i)
+	{
+		Remainder.VSplitLeft(Remainder.w / static_cast<float>(NUM_EMOTES - i), &Layout.m_aSlotRects[i], &Remainder);
+	}
+	Layout.m_TeeSize = std::clamp(BaseHeight - 10.0f * Metrics.m_UiScale, 26.0f * Metrics.m_UiScale, 34.0f * Metrics.m_UiScale);
+	return Layout;
+}
+
+inline int ResolveTeeEmoteSliderTargetFromPoint(const CUIRect &TrackRect, float MouseX)
+{
+	if(TrackRect.w <= 0.0f)
+		return 0;
+	const float RelX = std::clamp(MouseX - TrackRect.x, 0.0f, TrackRect.w - 0.001f);
+	const int Index = static_cast<int>(RelX / (TrackRect.w / static_cast<float>(NUM_EMOTES)));
+	return std::clamp(Index, 0, NUM_EMOTES - 1);
+}
+
+inline int StepTeeEmoteSlider(int CurrentEmote, int Delta)
+{
+	return std::clamp(CurrentEmote + Delta, 0, NUM_EMOTES - 1);
 }
 
 inline float ResolveQmVisualWeaponAnimationHeight(const SSettingsContentMetrics &Metrics, const bool SwitchEnabled, const bool ReloadEnabled)

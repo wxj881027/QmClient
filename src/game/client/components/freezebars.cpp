@@ -198,6 +198,8 @@ inline bool CFreezeBars::IsPlayerInfoAvailable(int ClientId) const
 
 void CFreezeBars::OnRender()
 {
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+		return;
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 

@@ -830,6 +830,9 @@ Apply a writable preset and edit first
 Apply Changes
 == Değişiklikleri Uygula
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== Alt pencerelerin ve açılır listelerin arkasını bulanıklaştır
+
 Apply input early before next tick for prediction
 == Tahmin için bir sonraki tick'ten önce girdiyi erken uygula
 
@@ -1108,6 +1111,9 @@ Auto-accept team invites by sending /team <n>
 
 Auto-close chat after unfreeze
 == Çözülmeden sonra sohbeti otomatik kapat
+
+Auto-connect dummy
+== Dummy'yi otomatik bağla
 
 Auto-create CSV on game end
 == Oyun sonunda otomatik CSV oluştur
@@ -1437,7 +1443,7 @@ Better scoreboard
 == Geliştirilmiş skor tablosu
 
 Bind
-== Bind
+== Bağla
 
 Bind address for client/server
 == İstemci/sunucu için bağlama adresi
@@ -1603,6 +1609,12 @@ Button - Disabled
 
 Button - Enabled
 == Düğme - Etkin
+
+Button background color
+== Düğme arka plan rengi
+
+Button background opacity percentage
+== Düğme arka plan rengi — opaklık yüzdesi
 
 Button browser
 == Düğme tarayıcısı
@@ -2360,6 +2372,9 @@ Connect address error
 Connect dummy
 == Dummy bağla
 
+Connect dummy automatically for solo split mode
+== Solo bölme modunda dummy'yi otomatik bağla
+
 Connect dummy to enable
 == Etkinleştirmek için dublör bağla
 
@@ -2681,9 +2696,6 @@ Custom font weight (variable fonts)
 Custom Font:
 == Özel Yazı Tipi:
 
-Custom map upload
-== Özel harita yükle
-
 Custom prompt template
 == Özel istem şablonu
 
@@ -2695,6 +2707,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Özel Sağlayıcı Model Adı
+
+Custom text color
+== Özel metin rengi
 
 Custom title
 == Özel unvan
@@ -2728,6 +2743,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== Özel…
 
 Cut interval
 == Kesim aralığı
@@ -3432,7 +3450,7 @@ Dummy Control
 == Yapayı kontrol et
 
 Dummy control
-== Dummy control
+== Kukla kontrolü
 
 Dummy Control: %s
 == Dublör Kontrolü: %s
@@ -3728,6 +3746,9 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == Arka plan 3D parçacık izlerini etkinleştir
 
+Enable bounce-in entrance animation when country flags finish loading
+== Ülke bayrakları yüklendiğinde zıplayarak giriş animasyonunu etkinleştir
+
 Enable camera drift
 == Kamera sürüklenmesini etkinleştir
 
@@ -3814,6 +3835,9 @@ Enable fat skin
 
 Enable freeze call sound
 == Donma çağrı sesini etkinleştir
+
+Enable frosted glass blur behind secondary popups and dropdowns
+== Alt pencerelerin ve açılır listelerin arkasında bulanıklığı etkinleştir
 
 Enable FTAPI auto-translate (may overload the service)
 == FTAPI otomatik çeviriyi etkinleştir (hizmeti aşırı yükleyebilir)
@@ -4121,6 +4145,9 @@ Enter a CP number from 1 to 255.
 Enter Password
 == Şifre Gir
 
+Enter solo split mode
+== Solo bölme moduna gir
+
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Sponsor kodunu gir ve "Kullan" düğmesine bas, ardından unvanı yaz ve "Kaydet"e bas. Tek bir takma ada bağlamak için "Yalnızca bu takma adla göster" seçeneğini işaretle.
 
@@ -4246,6 +4273,12 @@ Existing Player
 
 Exit replay view
 == Demo görünümünden çık
+
+Expanded dropdown background color
+== Açılan liste arka plan rengi
+
+Expanded dropdown background opacity percentage
+== Açılan liste arka plan rengi — opaklık yüzdesi
 
 Export
 == Dışa aktar
@@ -4559,6 +4592,9 @@ Font cursor
 Font size
 == Yazı tipi boyutu
 
+Font store
+== Yazı tipi mağazası
+
 Font store:
 == Yazı tipi mağazası:
 
@@ -4859,17 +4895,14 @@ Ghost active (%d)
 Ghost ready
 == Hayalet hazır
 
-Ghost replay
-== Hayalet demosu
-
 Ghost tools
 == Hayalet araçları
 
 Ghost view mode off. The ghost follows your runs again.
 == Hayalet görüntüleme modu kapatıldı. Hayalet yine koşularınızı takip eder.
 
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
-== Hayalet görüntüleme modu: ESC kontrol panelini değiştirir. Oyun menüsünü açmak için ESC'ye iki kez basın (tekrardan çıkılır). Üye listesi için izleme tuşunu basılı tutun.
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
+== Hayalet görüntüleme modu: ESC kontrol panelini değiştirir. Oyun menüsünü açmak için ESC'ye iki kez basın (oynatma devam eder). Üye listesi için izleme tuşunu basılı tutun.
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == Hayalet görünürlüğü (alfa, 0=görünmez, 100=görünür)
@@ -5531,6 +5564,9 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == Yapılandırma ön ayarını kaydederken/yüklerken skin'i dahil et
 
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== Gelen mesajlar için otomatik çeviri modu (0=yalnızca hedef dilde değilse çevir, 1=her zaman çevir)
+
 Incoming language
 == Gelen dil
 
@@ -5611,6 +5647,12 @@ Initializing map logic
 
 Input
 == Giriş
+
+Input background color
+== Giriş alanı arka plan rengi
+
+Input background opacity percentage
+== Giriş alanı arka plan rengi — opaklık yüzdesi
 
 Input device
 == Giriş cihazı
@@ -6079,6 +6121,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Varsayılan istemi kullanmak için boş bırakın
+
+Leave solo split mode
+== Solo bölme modundan çık
 
 Left jump
 == Sol zıplama
@@ -7049,6 +7094,12 @@ Muted
 my_%s
 == benim_%s
 
+MyMemory (free)
+== MyMemory (ücretsiz)
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemory kayıt gerektirmez (anonim günlük kota)
+
 n = Prediction latency
 == n = Tahmin gecikmesi
 
@@ -7802,6 +7853,12 @@ Or visit DDNet.org
 Original
 == Özgün
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== Alınan ve gönderilen mesajların orijinal dili. Her mesajın dilini algılamak için Otomatik seçin.
+
+Original message language
+== Orijinal mesajın dili
+
 Other
 == Diğer
 
@@ -8330,6 +8387,9 @@ Points unavailable
 Polished
 == Cilalı
 
+Popup & dropdown blur
+== Açılır pencere ve liste bulanıklığı
+
 Popup animation
 == Açılır animasyon
 
@@ -8852,12 +8912,6 @@ Rank 1 demo already cached under 'Rank 1 replays': %s
 Rank 1 demo downloaded to '%s'
 == Rank 1 demosu '%s' konumuna indirildi
 
-Rank 1 members
-== Rank 1 üyeleri
-
-Rank 1 replay
-== Rank 1 tekrarı
-
 Rank 1 replays
 == Rank 1 demoları
 
@@ -8980,6 +9034,9 @@ Rebinds the client's listening address and port
 
 Receive Rate
 == Alma hızı
+
+Receive translation method
+== Alınan mesajlar için çeviri yöntemi
 
 Receive VAD speakers
 == VAD konuşmacılarını al
@@ -9962,6 +10019,9 @@ Search
 Search and navigate settings
 == Ayarları ara ve gezin
 
+Search country flag…
+== Ülke bayrağı ara…
+
 Search donor asset
 == Kaynak varlık ara
 
@@ -9994,6 +10054,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == İkincil
+
+Secondary menu background color
+== Alt menü arka plan rengi
+
+Secondary menu background opacity percentage
+== Alt menü arka plan rengi — opaklık yüzdesi
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == Yeniden bağlanmadan önce beklenecek saniye (0=kapalı, sunucu dolu olduğunda)
@@ -10097,14 +10163,8 @@ Send probability
 Send Rate
 == Gönderme hızı
 
-Send source language
-== Kaynak dili gönder
-
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
-
-Send target language
-== Hedef dili gönder
 
 Send translation method
 == Çeviri yöntemini gönder
@@ -10351,6 +10411,9 @@ Show advanced options
 
 Show advanced title settings (collapsing keeps configured effects)
 == Gelişmiş unvan ayarlarını göster (daraltmak ayarlanan efektleri korur)
+
+Show advanced translation options
+== Gelişmiş çeviri seçeneklerini göster
 
 Show air jump indicator
 == Havada zıplama göstergesini göster
@@ -11573,8 +11636,14 @@ Solo
 Solo split
 == Solo bölme
 
+Solo split enter key
+== Solo bölmeye girme tuşu
+
 Solo split key
 == Solo bölme tuşu
+
+Solo split leave key
+== Solo bölmeden çıkma tuşu
 
 Some fonts could not be loaded. Check the local console for details.
 == Bazı yazı tipleri yüklenemedi. Ayrıntılar için yerel konsolu kontrol edin.
@@ -11710,9 +11779,6 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == Ana karakter ve kuklayı solo koşu senkronizasyonu için farklı takımlara dağıtır
-
-Split main/dummy into two free teams; press again to return to team 0
-== Ana/kukla karakteri iki boş takıma böler; takım 0'a dönmek için tekrar basın
 
 Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
 == Destekçi sohbet stili taslağı: 0=Normal, 1=Yumuşak parıltı, 2=Platin ışıltısı
@@ -12065,9 +12131,6 @@ Taper trail ends
 Taper trail width
 == Konik iz genişliği
 
-Target language
-== Hedef dil
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == Çeviri hedef dil kodu (ör. zh, en, ja, zh-TW)
 
@@ -12181,6 +12244,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Takım tee parlaması
+
+Team used when leaving solo split mode
+== Solo bölme modundan çıkarken kullanılan takım
+
+Team when leaving solo split
+== Solo bölmeden çıkarken takım
 
 Teammate
 == Takım arkadaşı
@@ -12361,6 +12430,12 @@ Text alpha
 
 Text color
 == Metin rengi
+
+Text color mode
+== Metin rengi modu
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== Metin rengi modu: 0 otomatik, 1 beyaz, 2 siyah, 3 özel
 
 Text effect
 == Metin efekti
@@ -12755,6 +12830,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == Skor tablosu imlecini değiştir
 
+Toggle solo split mode
+== Solo bölme modunu değiştir
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == Takım 0 ile takım modu arasında geçiş yap. Bu mod, takımının takım 0 gibi davranmasını sağlayacaktır.
 
@@ -12884,6 +12962,15 @@ Translate last message of the person with this id
 Translate only when needed
 == Yalnızca gerektiğinde çevir
 
+Translate only when not in target language
+== Yalnızca hedef dilde değilse çevir
+
+Translate outgoing messages to
+== Gönderilecek mesajların çeviri dili
+
+Translate received messages to
+== Alınan mesajların çeviri dili
+
 Translate UI
 == Arayüzü çevir
 
@@ -12896,8 +12983,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == %s diline çevriliyor...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== Çeviri arka ucu (llm/tencentcloud/libretranslate/ftapi)
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== Çeviri arka ucu (mymemory/llm/tencentcloud/libretranslate/ftapi)
 
 Translation backend invalid, sending original
 == Çeviri arka ucu geçersiz, orijinal metin gönderiliyor
@@ -13501,6 +13588,9 @@ Video name
 
 Video name:
 == Video adı:
+
+Video rendering is unavailable during online replay.
+== Çevrimiçi tekrar sırasında video oluşturma kullanılamaz.
 
 Video was saved to '%s'
 == Video '%s' konumuna kaydedildi
@@ -14372,6 +14462,9 @@ Zhipu AI
 Zhipu API key
 == Zhipu API anahtarı
 
+Zhipu free models allow only 1 concurrent request
+== Zhipu ücretsiz modelleri yalnızca 1 eşzamanlı isteğe izin verir
+
 ZhipuAI API Key
 == Zhipu AI API Key
 
@@ -14491,7 +14584,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== Menu
+== Menü tuşu
 
 [Config help]
 %s (default: "%s", max length: %d)
@@ -14708,10 +14801,6 @@ Swap Action
 [Predefined touch button behaviors]
 Use Action
 == Eylemi Kullan
-
-[Rank 1 replay]
-Direction
-== Yön
 
 [Show name plates]
 All

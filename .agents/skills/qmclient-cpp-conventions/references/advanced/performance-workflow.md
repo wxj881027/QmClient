@@ -1,74 +1,34 @@
-# 性能优化工作流
+# 性能实现与诊断参考
 
-本文件用于性能优化、卡顿调查、长帧归因和页面降温任务。目标是用生产级性能量化系统驱动改动，而不是凭体感猜测。
+用于性能优化、性能敏感代码设计和卡顿调查。性能验证命令、Google Benchmark 基线与证据统一见 [验证 skill 的性能参考](../../../qmclient-verification-gate/references/performance.md)，本文件只维护实现取舍与诊断边界。
 
-## 入口原则
+## 实现取舍
 
-- 宣称性能改善前采集可比较基线；静态可确认的正确性修复可先推进，缺少实测时不宣称性能提升。
-- 先归因，再决定技术路线。
-- 先减少交互帧工作，再考虑缓存。
-- FBO 不作为页面性能优化默认路线；仅当本次任务确实涉及它时评估实际收益与成本，不预设结论。
-- 任何性能结论都必须能对应到日志、报表、固定场景或 A/B 对照。
+先识别本次成本发生在哪个生产路径，再选择技术路线；可独立测量的代码优先复用现有 Google Benchmark，普通正确性修复缺少实测时不宣称性能提升。
 
-## 必备基线
+1. 跳过不可见 section、不可见列表行和无关后台结果。
+2. 文本、布局、排序、筛选和 section plan 只在相关 dirty 变化时重建。
+3. merge、upload、publish 和 decode 结果消费按实际帧预算推进。
+4. 文件 I/O、图片 decode、列表 plan build 等不依赖 GPU context 的工作按现有 jobs 与生命周期规则异步执行。
+5. 引入缓存时验证命中率、实际收益、失效机制和内存/显存成本。
 
-页面性能实测可使用以下配置；其他性能问题选择对应的现有观测方式：
+同类成本由共享生产模块负责；为了可测性提取真实职责边界，不复制算法、不为 benchmark 增加无关抽象。FBO 仅在本次任务确实涉及时评估，不预设收益。
 
-```text
-qm_perf_debug 1
-qm_perf_logfile 1
-qm_perf_debug_threshold_ms 4
-```
+## 长帧归因
 
-报告必须说明：
+按真实操作调查切页同步重建、列表不可见项工作、UI dirty/文本重建、work drain 集中发布、资源 decode/upload 和设备瓶颈。复用日志或 profiler，只有存在明确观察缺口时再补 telemetry。
 
-- 操作路径：例如打开 Settings、切到 Tee、滚动一屏、刷新 server browser。
-- 环境：平台、renderer、窗口模式、刷新率、UI scale。
-- 样本可信度：是否存在采样偏差、是否同一操作路径、是否有官方 DDNet baseline。
-- 指标：p50、p95、p99、max、spike count、归因类别。
+可选场景包括 Settings/Tee 首次切页、含大量文件的 Demo Browser 首次进入、Server Browser 滚动、Assets/Workshop 发布和 Tee 快速滚动；只选择本次改变的路径。不要将示例 16/33ms 当通用阈值，也不要将 CPU callback 耗时当 GPU 时间。
 
-## 固定场景
+## 诊断链路边界
 
-不同操作路径的日志只能用于趋势参考，不能作为严格回归结论。下表 16/33ms 为调查示例，验收阈值须结合刷新率、设备与同场景基线；字段缺失先区分未采集和实际无工作。性能改动优先复用以下场景，并保持采集环境和操作签名一致。
+客户端采集目前只需 `qm_perf_debug` 总开关，实际开关、日志路径、采样和 HTML/JSON 使用见 [perf/README.md](../../../../../qmclient_scripts/perf/README.md)。旧的 `qm_perf_logfile`、`qm_perf_stutter_diagnostics`、`qm_perf_debug_threshold_ms` 已移除，不再作为操作步骤。
 
-| ID | 操作路径 | 主要归因 | 调查信号（需结合基线） |
-| --- | --- | --- | --- |
-| `PERF-SETTINGS-TEE-SWITCH` | 打开 Settings，切到 Tee 页，等待首屏稳定 | page switch、section、work drain | p99 > 16ms 或连续长帧 |
-| `PERF-DEMO-FIRST-ENTER` | 首次进入 Demo Browser，打开含大量 demo 的目录 | page switch、list frame | 单帧 > 33ms 或 list frame 无 `rows_skipped` |
-| `PERF-SERVER-SCROLL` | 进入 Server Browser，滚动一屏 | list frame | `rows_iterated` 明显大于 `rows_rendered`，或 `rows_rendered` 明显大于 `rows_visible` |
-| `PERF-ASSETS-DRAIN` | 进入 Assets / Workshop，等待缩略图和资源完成 | work drain、device | 交互帧出现无 stop reason 的集中 publish |
-| `PERF-TEE-SCROLL` | Tee 页快速滚动一屏 | list frame、work drain | 已显示 preview 回退到 loading，或 drain 无预算原因 |
+修改采集、解析或报表时保留以下约束：
 
-使用报表工具时保留实际输出及比较所需摘要；单项调查可直接保留日志和指标。记录客户端版本、renderer、窗口模式、刷新率和 UI scale。与官方 DDNet 或上一轮 QmClient 对比时，必须说明 operation signature 是否一致。
-
-## 归因分类
-
-长帧优先归到以下类别之一：
-
-| 类别 | 典型字段 | 处理方向 |
-| --- | --- | --- |
-| Page switch | `event=page_switch` | 拆分切页同步工作，避免切页帧集中重建 |
-| List frame | `event=list_frame` | 只处理可见行，缓存排序/筛选 plan |
-| UI rebuild | `event=section`、`dirty`、`text_new` | 收紧 dirty，复用文本和布局 |
-| Work drain | `event=work_drain`、`stop` | 分帧 drain，记录 stop reason |
-| Resource | decode/upload/publish | jobs 化或预算化，不阻塞交互帧 |
-| Device bound | `perf/device` | 判断 GPU/CPU/IO 是否真的打满 |
-
-不能归因的长帧先调查现有日志或 profiler；只有确有观测缺口时再补 telemetry，不为满足流程先扩建系统。
-
-## 优化顺序
-
-1. **不做**：跳过不可见 section、不可见列表行和无关后台结果。
-2. **少做**：文本、布局、排序、筛选和 section plan 只在 dirty 时重建。
-3. **分帧做**：merge、upload、publish、decode 结果消费按预算推进。
-4. **异步做**：文件 I/O、图片 decode、列表 plan build 等不依赖 GPU context 的工作进入 jobs。
-5. **证明后缓存**：缓存必须证明命中率、收益和内存/显存成本。
-
-## 验收
-
-性能优化完成时必须给出：
-
-- 优化前后同一操作路径的 perf report 或等价日志摘要。
-- 改动是否降低 p95/p99、spike count 或明确改善归因类别。
-- 如果指标没有改善，说明保留改动的非性能理由；否则回退或改为后续调查。
-- 对应验证由 `qmclient-verification-gate` 选择，已有证据可复用。
+- 字段名、单位、事件和缺省语义以实际发出端与解析器为准，保持现有历史日志兼容；不为了参考模板统一改名或换算。
+- `page_switch` 边界事件不混入耗时归因总量；缺少事件或字段不意味着没有成本，空日志、畸形行和缺失数据显示 unavailable/N/A。
+- KPI、verdict、文字和图表共享统计语义；明确样本上限、采样偏差和环境差异，发生抽样时不能输出严格回归结论。
+- 热路径控制统计、格式化和 payload 构造成本；完整帧样本、详情限流、关闭/退出 flush 和会话边界按实际机制验证。
+- 采集配置在日志落盘前脱敏，分段字符串的缺失不能当完整值；离线报告保持自包含。
+- C++/TypeScript 协作通过真实日志与解析结果约束，不把源码片段存在当成日志兼容或统计正确性的证明。

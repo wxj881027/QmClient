@@ -44,6 +44,7 @@
 #include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
@@ -72,11 +73,10 @@ extern bool gs_SettingsAssetsEntityGamePreview;
 
 namespace
 {
-	constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f; // 导航胶囊行高
+	// 胶囊行高与内容缩放常量已提升到 menus.h（menus_ingame.cpp 的服务器导航栏也用）。
 	constexpr float MENU_MENUBAR_GAP_NEW = 8.0f; // 导航→内容间隙（统一边距基准）
 	constexpr float MENU_MENUBAR_HEIGHT_NEW = MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW + MENU_MENUBAR_GAP_NEW;
 	constexpr float MENU_MENUBAR_HEIGHT_LEGACY = 30.0f;
-	constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
 	constexpr float MenuMenubarHeight(bool UseNewUi)
 	{
@@ -195,6 +195,22 @@ namespace
 		return Text;
 	}
 
+	// 图标+文字组合布局：整组（图标格 + 间距 + 文字）在按钮文本区内水平居中，图标紧贴文字左侧。
+	// 文字计划收集与实际绘制必须调用同一函数保证矩形一致；HoverLift 只影响 y，不影响 x/w 对齐。
+	void MenuButtonIconTextLayout(ITextRender *pTextRender, const CUIRect *pRect, const char *pText, float FontFactor, float HoverLift, float TextFontSize, CUIRect *pIconRect, CUIRect *pTextRect)
+	{
+		CUIRect Text = MenuButtonTextRect(pRect, FontFactor, HoverLift);
+		const float ResolvedTextFontSize = TextFontSize > 0.0f ? std::min(TextFontSize, Text.h * CUi::ms_FontmodHeight) : Text.h * CUi::ms_FontmodHeight;
+		const float IconSide = Text.h;
+		const float Gap = IconSide * 0.20f;
+		float TextWidth = pTextRender->TextWidth(ResolvedTextFontSize, pText);
+		TextWidth = std::clamp(TextWidth, 1.0f, std::max(1.0f, Text.w - IconSide - Gap));
+		const float TotalWidth = IconSide + Gap + TextWidth;
+		const float StartX = Text.x + (Text.w - TotalWidth) * 0.5f;
+		*pIconRect = {StartX, Text.y, IconSide, IconSide};
+		*pTextRect = {StartX + IconSide + Gap, Text.y, TextWidth, Text.h};
+	}
+
 	bool PerfDebugEnabled()
 	{
 		return QmPerfEnabled();
@@ -203,7 +219,8 @@ namespace
 	ColorRGBA MenuUiColorSurface(float AlphaScale, float ColorScale)
 	{
 		ColorHSLA UiHsla(g_Config.m_QmUiColor);
-		UiHsla = UiHsla.UnclampLighting(0.42f);
+		if(!g_Config.m_QmNewUi)
+			UiHsla = UiHsla.UnclampLighting(0.42f);
 		const ColorRGBA UiColor = color_cast<ColorRGBA>(UiHsla);
 		const float BaseAlpha = maximum(UiColor.a, 0.70f);
 		const float UiAlpha = g_Config.m_QmUiOpacity / 100.0f;
@@ -217,7 +234,8 @@ namespace
 	ColorRGBA MenuUiColorAccent(float AlphaScale)
 	{
 		ColorHSLA UiHsla(g_Config.m_QmUiColor);
-		UiHsla = UiHsla.UnclampLighting(0.48f);
+		if(!g_Config.m_QmNewUi)
+			UiHsla = UiHsla.UnclampLighting(0.48f);
 		const ColorRGBA UiColor = color_cast<ColorRGBA>(UiHsla);
 		const float UiAlpha = g_Config.m_QmUiOpacity / 100.0f;
 		return UiColor.WithAlpha(std::clamp(maximum(UiColor.a, 0.85f) * UiAlpha * AlphaScale, 0.0f, 1.0f));
@@ -295,16 +313,7 @@ namespace
 		return ui_widget::CapsuleTabBarHoverColor(MenuCapsuleSurfaceColor());
 	}
 
-	ui_widget::SCapsuleTabBarStyle MenuCapsuleTabBarStyle()
-	{
-		ui_widget::SCapsuleTabBarStyle Style;
-		Style.m_CapsuleColor = MenuCapsuleSurfaceColor();
-		Style.m_IndicatorColor = MenuCapsuleTabIndicatorColor();
-		Style.m_ActiveLabelColor = MenuCapsuleTabActiveLabelColor();
-		Style.m_InactiveLabelColor = MenuCapsuleTabInactiveLabelColor();
-		return Style;
-	}
-
+	// MenuCapsuleTabBarStyle 已提升为 CMenus 成员（游戏内浏览页服务器导航栏共用），见 CMenus::MenuCapsuleTabBarStyle。
 	void LogPerfStage(IClient *pClient, const char *pStage, const double DurationMs, const bool Force = false, const char *pExtra = nullptr)
 	{
 		QmPerfLogStage("perf/menu", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
@@ -384,6 +393,18 @@ ui_widget::SCapsuleTabBarStyle CMenus::CapsuleTabBarStyleFor(const ColorRGBA &Su
 	Style.m_IndicatorColor = ui_widget::CapsuleTabBarIndicatorColor(SurfaceColor);
 	Style.m_ActiveLabelColor = ui_widget::CapsuleTabBarActiveLabelColor(SurfaceColor);
 	Style.m_InactiveLabelColor = ui_widget::CapsuleTabBarInactiveLabelColor(SurfaceColor);
+	return Style;
+}
+
+ui_widget::SCapsuleTabBarStyle CMenus::MenuCapsuleTabBarStyle() const
+{
+	// 主导航胶囊：容器是悬浮表面本体（MenuCapsuleSurfaceColor 与 BrowserPanelColor(1.0f)
+	// 同源，非压暗轨道），滑块与文字按该表面明暗自适应。
+	ui_widget::SCapsuleTabBarStyle Style;
+	Style.m_CapsuleColor = MenuCapsuleSurfaceColor();
+	Style.m_IndicatorColor = ui_widget::CapsuleTabBarIndicatorColor(Style.m_CapsuleColor);
+	Style.m_ActiveLabelColor = ui_widget::CapsuleTabBarActiveLabelColor(Style.m_CapsuleColor);
+	Style.m_InactiveLabelColor = ui_widget::CapsuleTabBarInactiveLabelColor(Style.m_CapsuleColor);
 	return Style;
 }
 
@@ -736,7 +757,7 @@ SSettingsCardDeckVisualOptions CMenus::SettingsCardDeckVisualOptions() const
 	Options.m_RainbowTitles = g_Config.m_QmUiCardRainbowTitles != 0;
 	Options.m_AlwaysShowBorders = g_Config.m_QmUiCardBorders != 0;
 	Options.m_BorderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true));
-	const ColorRGBA CardColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardColor).UnclampLighting(0.42f));
+	const ColorRGBA CardColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardColor));
 	Options.m_SurfaceColor = CardColor.WithAlpha(std::clamp(g_Config.m_QmUiCardOpacity / 100.0f, 0.0f, 1.0f));
 	Options.m_UseSurfaceColor = true;
 	return Options;
@@ -1100,6 +1121,22 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardLayoutVersion = 11;
 	}
+	if(g_Config.m_QmCardLayoutVersion < 12)
+	{
+		// 贡献者页砍掉「其他」子页签：DDNet/TClient 署名卡并入友链，友链卡改半宽
+		// （列编码 0=Full 1=Left 2=Right，与 QmModuleColumnToInt 一致）。
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		Candidate.MoveToTab("deck:credits-friend-links", "credits-links", 1, 0);
+		Candidate.MoveToTab("deck:qmclient-contributors-ddnet", "credits-links", 2, 0);
+		Candidate.MoveToTab("deck:tclient-info-developers", "credits-links", 1, 1);
+		if(!PersistCandidate(Candidate, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 12;
+	}
 	m_SettingsCardOrderLoaded = true;
 }
 
@@ -1188,8 +1225,19 @@ ColorRGBA CMenus::MenuPanelElevatedColor(float AlphaScale) const
 	return Base.WithAlpha(std::clamp((g_Config.m_QmUiOpacity / 100.0f) * AlphaScale, 0.0f, 1.0f));
 }
 
+int CMenus::MenuShellCorners() const
+{
+	// 新 UI 的页签胶囊悬浮在游戏画面上，内容面板是独立卡片，四角全圆；
+	// 旧 UI 页签与内容面板相连（浏览器页签样式），保留底部圆角 + 顶部方角。
+	return QmMenuShellCorners(g_Config.m_QmNewUi != 0);
+}
+
 // 服务器列表面板底色：跟随设置页「界面表面」（qm_ui_color / qm_ui_opacity），
 // 与主导航胶囊容器（MenuCapsuleSurfaceColor）同源。
+ColorRGBA CMenus::QmMenuTabDefaultColor() const { return MenuTabDefaultColor(); }
+ColorRGBA CMenus::QmMenuTabActiveColor() const { return MenuTabActiveColor(); }
+ColorRGBA CMenus::QmMenuMenubarHoverColor() const { return MenuMenubarHoverColor(); }
+
 ColorRGBA CMenus::BrowserPanelColor(float AlphaScale) const
 {
 	const ColorRGBA Base = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
@@ -1248,10 +1296,11 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 
 int CMenus::DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
 {
-	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, pRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
+	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
+	return DoButton_MenuInternal(pButtonContainer, nullptr, Icon, pFallbackIcon, Checked, &ButtonRect, Flags, pImageName, Corners, Rounding, FontFactor, Color, pTextUiElement, TextFontSize);
 }
 
-int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize)
+int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	CUIRect Text = *pRect;
@@ -1268,11 +1317,14 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	}
 	const float HoverLift = -1.25f * HoverStrength;
 
-	if(Checked)
+	if(g_Config.m_QmNewUi)
+		Color = ResolveConfiguredControlSurface(Checked >= 0);
+	else if(Checked)
 		Color = ColorRGBA(0.6f, 0.6f, 0.6f, 0.5f);
 	else // TClient, why was this not here? ig they never use "checked" anywhere important
 		Color.a *= Ui()->ButtonColorMul(pButtonContainer);
 
+	CUiScopedSurfaceText SurfaceText(TextRender(), Color, g_Config.m_QmNewUi);
 	DrawRoundedSurface(Ui(), *pRect, Color, ColorRGBA(), Rounding, 0.0f, Corners);
 	if(HoverStrength > MENU_TAB_ANIM_EPSILON)
 	{
@@ -1302,10 +1354,40 @@ int CMenus::DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char
 	}
 
 	Text = MenuButtonTextRect(&Text, FontFactor, HoverLift);
-	if(Icon != EQmIcon::COUNT)
+	if(Icon != EQmIcon::COUNT || (pIconTexture != nullptr && pIconTexture->IsValid()))
 	{
 		const float ResolvedTextFontSize = TextFontSize > 0.0f ? std::min(TextFontSize, Text.h * CUi::ms_FontmodHeight) : Text.h * CUi::ms_FontmodHeight;
-		Ui()->DoLabel_QmIcon(&Text, Icon, pFallbackIcon, ResolvedTextFontSize, TEXTALIGN_MC);
+		if(pText != nullptr && pText[0] != '\0')
+		{
+			// 图标+文字组合：整组（图标+间距+文字）居中，图标紧贴文字左侧（与计划收集共用布局函数）。
+			CUIRect IconRect;
+			MenuButtonIconTextLayout(TextRender(), pRect, pText, FontFactor, HoverLift, TextFontSize, &IconRect, &Text);
+			if(pIconTexture != nullptr && pIconTexture->IsValid())
+			{
+				// 站点图标纹理：等比铺满图标格，留少量内边距避免顶格。
+				const float Inset = IconRect.h * 0.08f;
+				IGraphics::CQuadItem QuadItem(IconRect.x + Inset, IconRect.y + Inset, IconRect.w - Inset * 2, IconRect.h - Inset * 2);
+				Graphics()->TextureSet(*pIconTexture);
+				Graphics()->WrapClamp();
+				Graphics()->QuadsBegin();
+				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+				Graphics()->QuadsDrawTL(&QuadItem, 1);
+				Graphics()->QuadsEnd();
+				Graphics()->WrapNormal();
+			}
+			else
+			{
+				Ui()->DoLabel_QmIcon(&IconRect, Icon, pFallbackIcon, ResolvedTextFontSize, TEXTALIGN_MC);
+			}
+			if(pTextUiElement != nullptr)
+				DoSettingsLabelStreamed(*pTextUiElement, &Text, pText, ResolvedTextFontSize, TEXTALIGN_MC);
+			else
+				Ui()->DoLabel(&Text, pText, ResolvedTextFontSize, TEXTALIGN_MC);
+		}
+		else
+		{
+			Ui()->DoLabel_QmIcon(&Text, Icon, pFallbackIcon, ResolvedTextFontSize, TEXTALIGN_MC);
+		}
 	}
 	else if(pText != nullptr && pText[0] != '\0')
 	{
@@ -1860,7 +1942,7 @@ void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTex
 	DoSettingsLabelStreamed(Element, pLabelRect, pText, Size, Align, LabelProps, -1, nullptr, true);
 }
 
-int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor, float BodySize)
+int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor, float BodySize, EQmIcon Icon, const char *pFallbackIcon, const IGraphics::CTextureHandle *pIconTexture)
 {
 	dbg_assert(pBC != nullptr, "settings menu button requires a stable button container");
 	const float ResolvedBodySize = BodySize > 0.0f ? BodySize : CurrentSettingsContentMetrics().m_BodySize;
@@ -1868,9 +1950,18 @@ int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContaine
 	{
 		return DoButton_Menu(pBC, pText, Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, nullptr, ResolvedBodySize);
 	}
+	const bool HasIcon = Icon != EQmIcon::COUNT || (pIconTexture != nullptr && pIconTexture->IsValid());
 	CUIRect Text = MenuButtonTextRect(pRect, 0.0f, 0.0f);
 	SLabelProperties Props;
 	Props.m_MaxWidth = Text.w;
+	if(HasIcon && pText != nullptr && pText[0] != '\0')
+	{
+		// 图标+文字组合：整组（图标+间距+文字）居中、图标紧贴文字左侧，
+		// 与 DoButton_MenuInternal 的组合分支共用同一布局函数，计划收集与实际绘制矩形一致。
+		CUIRect IconRect;
+		MenuButtonIconTextLayout(TextRender(), pRect, pText, 0.0f, 0.0f, ResolvedBodySize, &IconRect, &Text);
+		Props.m_MaxWidth = Text.w;
+	}
 	const SMenuTextStyleKey StyleKey = BuildMenuTextStyleKey(&Text, ResolvedBodySize, TEXTALIGN_MC, Props);
 	if(m_MenuTextPlanCollecting)
 	{
@@ -1878,12 +1969,12 @@ int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContaine
 		return 0;
 	}
 	CUIElement &TextElement = MenuTextElement(MENU_TEXT_SCOPE_SETTINGS, Page, Tab, Subtab, pTextId, StyleKey);
-	return DoButton_Menu(pBC, pText, Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize);
+	return DoButton_MenuInternal(pBC, pText, Icon, pFallbackIcon ? pFallbackIcon : "", Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize, pIconTexture);
 }
 
-int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor)
+int CMenus::DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags, int Corners, float Rounding, const ColorRGBA &Color, float FontFactor, EQmIcon Icon, const char *pFallbackIcon, const IGraphics::CTextureHandle *pIconTexture)
 {
-	return DoSettingsButton_Menu(Page, Tab, Subtab, pBC, pTextId, pText, Checked, pRect, Flags, Corners, Rounding, Color, FontFactor, Metrics.m_BodySize);
+	return DoSettingsButton_Menu(Page, Tab, Subtab, pBC, pTextId, pText, Checked, pRect, Flags, Corners, Rounding, Color, FontFactor, Metrics.m_BodySize, Icon, pFallbackIcon, pIconTexture);
 }
 
 int CMenus::DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor, const ColorRGBA *pHoverColor)
@@ -2345,19 +2436,18 @@ int CMenus::DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *
 		{
 			Ui()->DoLabel_QmIcon(&Label, Icon, pFallbackIcon, LabelFontSize, TEXTALIGN_MC);
 		}
-		else if(pText != nullptr && pTextUiElement != nullptr)
-		{
-			CUIElement::SUIElementRect *pElementRect = pTextUiElement->Rect(0);
-			const bool HadReadyContainer = pElementRect->m_UITextContainer.Valid();
-			DoMenuLabelStreamed(MENU_TEXT_SCOPE_INGAME, *pTextUiElement, &Label, pText, LabelFontSize, TEXTALIGN_MC);
-			if(pTextUiElement != &m_MenuTextFallbackElement && !HadReadyContainer && !pElementRect->m_UITextContainer.Valid())
-			{
-				CountMenuTextImmediateFallback();
-				Ui()->DoLabel(&Label, pText, LabelFontSize, TEXTALIGN_MC);
-			}
-		}
 		else if(pText != nullptr)
+		{
+			const unsigned OldFlags = TextRender()->GetRenderFlags();
+			const EFontPreset OldPreset = TextRender()->GetFontPreset();
+			TextRender()->SetRenderFlags(0);
+			TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
 			Ui()->DoLabel(&Label, pText, LabelFontSize, TEXTALIGN_MC);
+
+			TextRender()->SetRenderFlags(OldFlags);
+			TextRender()->SetFontPreset(OldPreset);
+		}
 	}
 
 	if(InCapsule)
@@ -2368,6 +2458,9 @@ int CMenus::DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *
 
 void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 {
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
 	CUIRect Button;
 
 	int NewPage = -1;
@@ -4419,7 +4512,7 @@ void CMenus::Render()
 	}
 
 	CUIRect Screen = *Ui()->Screen();
-	if(Client()->State() != IClient::STATE_DEMOPLAYBACK || m_Popup != POPUP_NONE)
+	if((Client()->State() != IClient::STATE_DEMOPLAYBACK && !(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())) || m_Popup != POPUP_NONE)
 	{
 		// 全局安全区 = 统一边距基准（8px）：菜单内所有页面到窗口四边的基础距离，
 		// 内部元素（导航胶囊/内容面板）直接对齐安全区边缘，不再叠加额外内缩。
@@ -4482,7 +4575,10 @@ void CMenus::Render()
 				PrepareSettingsTabLabelCache(MainView.w);
 			if(ContentTransitionActive)
 			{
-				ApplyUiSwitchOffset(MainView, TransitionStrength, m_MenuPageTransitionDirection, false, 0.04f, 18.0f, 48.0f);
+				const float RelOffset = g_Config.m_QmNewUi ? 0.015f : 0.04f;
+				const float MinOffset = g_Config.m_QmNewUi ? 6.0f : 18.0f;
+				const float MaxOffset = g_Config.m_QmNewUi ? 16.0f : 48.0f;
+				ApplyUiSwitchOffset(MainView, TransitionStrength, m_MenuPageTransitionDirection, false, RelOffset, MinOffset, MaxOffset);
 				Ui()->ClipEnable(&MainViewClip);
 			}
 
@@ -4558,6 +4654,11 @@ void CMenus::Render()
 		break;
 
 	case IClient::STATE_ONLINE:
+		if(GameClient()->m_RankGhost.IsViewModeActive() && !IsActive())
+		{
+			RenderDemoPlayer(Screen);
+			break;
+		}
 		if(m_Popup != POPUP_NONE)
 		{
 			CPerfTimer StageTimer;
@@ -4584,7 +4685,10 @@ void CMenus::Render()
 				PrepareSettingsTabLabelCache(MainView.w);
 			if(ContentTransitionActive)
 			{
-				ApplyUiSwitchOffset(MainView, TransitionStrength, m_GamePageTransitionDirection, false, 0.04f, 18.0f, 48.0f);
+				const float RelOffset = g_Config.m_QmNewUi ? 0.015f : 0.04f;
+				const float MinOffset = g_Config.m_QmNewUi ? 6.0f : 18.0f;
+				const float MaxOffset = g_Config.m_QmNewUi ? 16.0f : 48.0f;
+				ApplyUiSwitchOffset(MainView, TransitionStrength, m_GamePageTransitionDirection, false, RelOffset, MinOffset, MaxOffset);
 				Ui()->ClipEnable(&MainViewClip);
 			}
 
@@ -5241,7 +5345,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		s_DemoRenderScroll.AddRect(Box);
 		CUIRect DisplayOptions;
 		Box.HSplitTop(22.0f, &DisplayOptions, &Box);
-		RenderDemoExportDisplayToggle(DisplayOptions);
+		RenderDemoDisplayToggle(DisplayOptions, m_DemoExportDisplayExpanded, m_DemoExportDisplayButton);
 		if(DemoDisplayExpanded)
 		{
 			Box.HSplitTop(4.0f, nullptr, &Box);
@@ -6305,9 +6409,9 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 	}
 	else if(str_comp(pTab, "qmclient-contributors-ddnet") == 0 || str_comp(pTab, "tclient-info") == 0 || str_comp(pTab, "credits-other") == 0)
 	{
-		// DDNet 与 TClient 署名卡都在「其他」子页签；旧深链接（含已删除的信息 tab）落到这里。
+		// 「其他」子页签已并入友链；DDNet/TClient 署名卡与旧深链接（含已删除的信息 tab）都落到友链。
 		g_Config.m_UiSettingsPage = SETTINGS_CONTRIBUTORS;
-		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_OTHER;
+		m_CreditsSettingsTab = CREDITS_SETTINGS_TAB_LINKS;
 	}
 	else if(str_comp(pTab, "tclient") == 0)
 	{
@@ -8105,7 +8209,7 @@ void CMenus::PrewarmVisibleSettingsResources(CUIRect MainView)
 
 bool CMenus::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
 {
-	if(!m_MenuActive)
+	if(!m_MenuActive && !GameClient()->m_Spectator.PlaybackControlsActive())
 		return false;
 
 	MarkMenuInteraction();
@@ -8250,7 +8354,7 @@ void CMenus::OnRender()
 			}
 			SetActive(true);
 		}
-		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
+		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK && !GameClient()->m_RankGhost.IsViewModeActive())
 		{
 			Ui()->ClearHotkeys();
 			// QmClient: 菜单关闭时的空闲帧预热“最近缺失字形”（每帧少量，约 2ms），
@@ -8261,6 +8365,13 @@ void CMenus::OnRender()
 		}
 	}
 
+	// 在线控制层让出输入时结束拖动，恢复拖动前的播放状态。
+	if(GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_Spectator.PlaybackControlsActive() && Ui()->CheckActiveItem(&m_DemoSeekBarId))
+	{
+		if(!m_PausedBeforeSeeking)
+			GameClient()->m_RankGhost.ViewPlayer()->Unpause();
+		Ui()->SetActiveItem(nullptr);
+	}
 	Ui()->StartCheck();
 	UpdateColors();
 
@@ -8323,11 +8434,13 @@ void CMenus::OnRender()
 		LogPerfStage(Client(), "ingame_text_runtime_drain", StageTimer.ElapsedMs());
 	}
 
-	if(IsActive())
+	if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive() || (GameClient()->m_RankGhost.IsViewModeActive() && OnlineReplayPopupActive()))
 	{
 		CPerfTimer StageTimer;
-		Ui()->RenderBackButton();
-		RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+		if(IsActive())
+			Ui()->RenderBackButton();
+		if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive())
+			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 		LogPerfStage(Client(), "cursor_render", StageTimer.ElapsedMs());
 	}
 

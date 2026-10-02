@@ -830,6 +830,9 @@ Apply a writable preset and edit first
 Apply Changes
 == Aplicar Alterações
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== Desfocar o fundo de janelas secundárias e listas
+
 Apply input early before next tick for prediction
 == Aplicar entrada antecipada antes do próximo tick para predição
 
@@ -1108,6 +1111,9 @@ Auto-accept team invites by sending /team <n>
 
 Auto-close chat after unfreeze
 == Fechar chat automaticamente após descongelar
+
+Auto-connect dummy
+== Conectar o dummy automaticamente
 
 Auto-create CSV on game end
 == Criar CSV automaticamente ao fim do jogo
@@ -1437,7 +1443,7 @@ Better scoreboard
 == Placar aprimorado
 
 Bind
-== Bind
+== Vincular
 
 Bind address for client/server
 == Endereço de vinculação para cliente/servidor
@@ -1603,6 +1609,12 @@ Button - Disabled
 
 Button - Enabled
 == Botão - Ativado
+
+Button background color
+== Cor de fundo dos botões
+
+Button background opacity percentage
+== Cor de fundo dos botões — opacidade em porcentagem
 
 Button browser
 == Navegador de botões
@@ -2360,6 +2372,9 @@ Connect address error
 Connect dummy
 == Conectar dummy
 
+Connect dummy automatically for solo split mode
+== Conectar o dummy automaticamente no modo de divisão solo
+
 Connect dummy to enable
 == Conecte o dummy para habilitar
 
@@ -2681,9 +2696,6 @@ Custom font weight (variable fonts)
 Custom Font:
 == Fonte Personalizada:
 
-Custom map upload
-== Enviar mapas personalizados
-
 Custom prompt template
 == Modelo de prompt personalizado
 
@@ -2695,6 +2707,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Nome do modelo do Provider personalizado
+
+Custom text color
+== Cor de texto personalizada
 
 Custom title
 == Título personalizado
@@ -2728,6 +2743,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== Personalizado…
 
 Cut interval
 == Intervalo de corte
@@ -3432,7 +3450,7 @@ Dummy Control
 == Controlar dummy
 
 Dummy control
-== Dummy control
+== Controle do dummy
 
 Dummy Control: %s
 == Controle de Dummy: %s
@@ -3728,6 +3746,9 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == Ativar rastro de partículas 3D de fundo
 
+Enable bounce-in entrance animation when country flags finish loading
+== Ativar animação elástica de entrada ao carregar bandeiras de países
+
 Enable camera drift
 == Ativar deriva da câmera
 
@@ -3814,6 +3835,9 @@ Enable fat skin
 
 Enable freeze call sound
 == Ativar som de chamada de congelamento
+
+Enable frosted glass blur behind secondary popups and dropdowns
+== Ativar desfoque atrás de janelas secundárias e listas
 
 Enable FTAPI auto-translate (may overload the service)
 == Ativar tradução automática FTAPI (pode sobrecarregar o serviço)
@@ -4121,6 +4145,9 @@ Enter a CP number from 1 to 255.
 Enter Password
 == Digitar senha
 
+Enter solo split mode
+== Entrar no modo de divisão solo
+
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Insira o código de patrocinador e clique em "Resgatar", escreva o título e clique em "Salvar". Marque "Mostrar apenas com este apelido" para vinculá-lo a um apelido.
 
@@ -4246,6 +4273,12 @@ Existing Player
 
 Exit replay view
 == Sair da visualização da demo
+
+Expanded dropdown background color
+== Cor de fundo da lista expandida
+
+Expanded dropdown background opacity percentage
+== Cor de fundo da lista expandida — opacidade em porcentagem
 
 Export
 == Exportar
@@ -4559,6 +4592,9 @@ Font cursor
 Font size
 == Tamanho da fonte
 
+Font store
+== Loja de fontes
+
 Font store:
 == Loja de fontes:
 
@@ -4859,17 +4895,14 @@ Ghost active (%d)
 Ghost ready
 == Fantasma pronto
 
-Ghost replay
-== Demo do fantasma
-
 Ghost tools
 == Ferramentas de fantasma
 
 Ghost view mode off. The ghost follows your runs again.
 == Modo de visualização do fantasma desligado. O fantasma volta a seguir suas corridas.
 
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
-== Modo de visualização do fantasma: ESC alterna o painel de controle. Pressione ESC duas vezes para abrir o menu do jogo (sair da repetição). Segure a tecla de espectador para a lista de membros.
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
+== Modo de visualização do fantasma: ESC alterna o painel de controle. Pressione ESC duas vezes para abrir o menu do jogo (a reprodução continua). Segure a tecla de espectador para a lista de membros.
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == Visibilidade do fantasma (alfa, 0=invisível, 100=visível)
@@ -5531,6 +5564,9 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == Incluir skin ao salvar/carregar predefinição de configuração
 
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== Modo de tradução automática de mensagens recebidas (0=apenas se não estiver no idioma de destino, 1=traduzir sempre)
+
 Incoming language
 == Idioma de entrada
 
@@ -5611,6 +5647,12 @@ Initializing map logic
 
 Input
 == Entrada
+
+Input background color
+== Cor de fundo dos campos de entrada
+
+Input background opacity percentage
+== Cor de fundo dos campos de entrada — opacidade em porcentagem
 
 Input device
 == Dispositivo de entrada
@@ -6079,6 +6121,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Deixe em branco para usar o prompt padrão
+
+Leave solo split mode
+== Sair do modo de divisão solo
 
 Left jump
 == Pulo esquerdo
@@ -7049,6 +7094,12 @@ Muted
 my_%s
 == minha_%s
 
+MyMemory (free)
+== MyMemory (grátis)
+
+MyMemory needs no registration (anonymous daily quota)
+== O MyMemory não exige registro (cota diária anônima)
+
 n = Prediction latency
 == n = Latência de previsão
 
@@ -7802,6 +7853,12 @@ Or visit DDNet.org
 Original
 == Estilo original
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== Idioma original das mensagens recebidas e enviadas. Use Auto para detectar cada mensagem.
+
+Original message language
+== Idioma da mensagem original
+
 Other
 == Outro
 
@@ -8330,6 +8387,9 @@ Points unavailable
 Polished
 == Polido
 
+Popup & dropdown blur
+== Desfoque de janelas e listas
+
 Popup animation
 == Animação de pop-up
 
@@ -8852,12 +8912,6 @@ Rank 1 demo already cached under 'Rank 1 replays': %s
 Rank 1 demo downloaded to '%s'
 == Demo de rank 1 baixada para '%s'
 
-Rank 1 members
-== Membros do rank 1
-
-Rank 1 replay
-== Repetição do rank 1
-
 Rank 1 replays
 == Demos de rank 1
 
@@ -8980,6 +9034,9 @@ Rebinds the client's listening address and port
 
 Receive Rate
 == Taxa de recebimento
+
+Receive translation method
+== Método de tradução de mensagens recebidas
 
 Receive VAD speakers
 == Receber falantes VAD
@@ -9962,6 +10019,9 @@ Search
 Search and navigate settings
 == Pesquisar e navegar pelas configurações
 
+Search country flag…
+== Buscar bandeira…
+
 Search donor asset
 == Pesquisar asset doador
 
@@ -9994,6 +10054,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == Secundário
+
+Secondary menu background color
+== Cor de fundo do submenu
+
+Secondary menu background opacity percentage
+== Cor de fundo do submenu — opacidade em porcentagem
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == Segundos para esperar antes de reconectar (0=desligado, quando servidor estiver cheio)
@@ -10097,14 +10163,8 @@ Send probability
 Send Rate
 == Taxa de envio
 
-Send source language
-== Idioma de origem do envio
-
 Send specified command to rcon
 == Enviar comando especificado para o rcon
-
-Send target language
-== Idioma alvo do envio
 
 Send translation method
 == Método de envio da tradução
@@ -10351,6 +10411,9 @@ Show advanced options
 
 Show advanced title settings (collapsing keeps configured effects)
 == Mostrar ajustes avançados do título (recolher mantém os efeitos configurados)
+
+Show advanced translation options
+== Mostrar opções avançadas de tradução
 
 Show air jump indicator
 == Mostrar indicador de pulo aéreo
@@ -11573,8 +11636,14 @@ Solo
 Solo split
 == Divisão solo
 
+Solo split enter key
+== Tecla para entrar na divisão solo
+
 Solo split key
 == Tecla de divisão solo
+
+Solo split leave key
+== Tecla para sair da divisão solo
 
 Some fonts could not be loaded. Check the local console for details.
 == Algumas fontes não puderam ser carregadas. Verifique o console local para detalhes.
@@ -11710,9 +11779,6 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == Distribui o personagem principal e o clone em equipes diferentes para sincronizar corridas solo
-
-Split main/dummy into two free teams; press again to return to team 0
-== Divide principal/clone em duas equipes livres; pressione novamente para voltar à equipe 0
 
 Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
 == Rascunho do estilo de chat de apoiador: 0=Normal, 1=Brilho suave, 2=Reflexo de platina
@@ -12065,9 +12131,6 @@ Taper trail ends
 Taper trail width
 == Largura do rastro em cone
 
-Target language
-== Idioma alvo
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == Código do idioma de destino da tradução (ex.: zh, en, ja, zh-TW)
 
@@ -12181,6 +12244,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Brilho do tee por equipe
+
+Team used when leaving solo split mode
+== Equipe ao sair do modo de divisão solo
+
+Team when leaving solo split
+== Equipe ao sair da divisão solo
 
 Teammate
 == Companheiro de equipe
@@ -12361,6 +12430,12 @@ Text alpha
 
 Text color
 == Cor do texto
+
+Text color mode
+== Modo de cor do texto
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== Modo de cor do texto: 0 automático, 1 branco, 2 preto, 3 personalizado
 
 Text effect
 == Efeito de texto
@@ -12755,6 +12830,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == Alternar cursor do placar
 
+Toggle solo split mode
+== Alternar o modo de divisão solo
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == Alternar equipe entre equipe 0 e modo de equipe. Este modo fará sua equipe se comportar como equipe 0.
 
@@ -12884,6 +12962,15 @@ Translate last message of the person with this id
 Translate only when needed
 == Traduzir apenas quando necessário
 
+Translate only when not in target language
+== Traduzir apenas se não estiver no idioma de destino
+
+Translate outgoing messages to
+== Traduzir mensagens enviadas para
+
+Translate received messages to
+== Traduzir mensagens recebidas para
+
 Translate UI
 == Traduzir interface
 
@@ -12896,8 +12983,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == Traduzindo para %s...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== Backend de tradução (llm/tencentcloud/libretranslate/ftapi)
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== Backend de tradução (mymemory/llm/tencentcloud/libretranslate/ftapi)
 
 Translation backend invalid, sending original
 == Backend de tradução inválido, enviando original
@@ -13501,6 +13588,9 @@ Video name
 
 Video name:
 == Nome do vídeo:
+
+Video rendering is unavailable during online replay.
+== A renderização de vídeo não está disponível durante uma repetição online.
 
 Video was saved to '%s'
 == O vídeo foi salvo em '%s'
@@ -14372,6 +14462,9 @@ Zhipu AI
 Zhipu API key
 == Chave da API Zhipu
 
+Zhipu free models allow only 1 concurrent request
+== Os modelos gratuitos da Zhipu permitem apenas 1 solicitação simultânea
+
 ZhipuAI API Key
 == Chave da API do ZhiPu AI
 
@@ -14491,7 +14584,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== Menu
+== Tecla de menu
 
 [Config help]
 %s (default: "%s", max length: %d)
@@ -14708,10 +14801,6 @@ Swap Action
 [Predefined touch button behaviors]
 Use Action
 == Usar Ação
-
-[Rank 1 replay]
-Direction
-== Direção
 
 [Show name plates]
 All

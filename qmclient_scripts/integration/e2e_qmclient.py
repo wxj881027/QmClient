@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-import re
 import sys
 import time
 from collections.abc import Callable
@@ -50,6 +49,24 @@ def _quit_client(env: ProcessEnvironment) -> None:
 	code = env.client.wait_for_exit(15)
 	if code != 0:
 		raise RuntimeError(f"client exited with {code}")
+
+
+def scenario_online_replay_without_source(env: ProcessEnvironment) -> None:
+	"""未加载回放时的查看请求可重复调用，连接和真实聊天仍可用。"""
+	env.start_server()
+	env.connect_client(["qm_echo_merge_window_ms 0"])
+	# 默认语言在初始化时根据系统选择，连接后明确切回英文再断言反馈。
+	env.client.command('cl_languagefile ""')
+	for index in range(2):
+		marker = f"rank1_missing_source_request_processed_{index}"
+		env.client.command("qm_rank_ghost_view")
+		env.client.command(f"echo {marker}")
+		env.client.wait_for(lambda line: marker in line, "view command processed", 10)
+	env.client.wait_for(lambda line: "load a ghost first" in line, "missing replay feedback", 10)
+	env.client.command("qm_rank_ghost_off")
+	env.client.command("say rank1_connection_still_alive")
+	env.server.wait_for(lambda line: "rank1_connection_still_alive" in line, "live chat reached server", 15)
+	_quit_client(env)
 
 
 def scenario_demo_recording(env: ProcessEnvironment) -> None:
@@ -111,10 +128,7 @@ def scenario_startup_saved_favorites(env: ProcessEnvironment) -> None:
 	settings_path = env.path("qmclient", "settings.cfg")
 	settings_path.parent.mkdir(parents=True, exist_ok=True)
 	settings_path.write_text(
-		'qm_steam_auto_launch 0\n'
-		'add_favorite "127.0.0.1:8303"\n'
-		'add_favorite_community "ddnet"\n'
-		'add_friend "Startup Friend" "Clan" "Friends"\n',
+		'qm_steam_auto_launch 0\nadd_favorite "127.0.0.1:8303"\nadd_favorite_community "ddnet"\nadd_friend "Startup Friend" "Clan" "Friends"\n',
 		encoding="utf-8",
 	)
 
@@ -258,6 +272,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"hang_watchdog_reports_stall": scenario_hang_watchdog_reports_stall,
 	"connection_failure_recovery": scenario_connection_failure_recovery,
 	"demo_recording": scenario_demo_recording,
+	"online_replay_without_source": scenario_online_replay_without_source,
 	"invalid_statistics_preserved": scenario_invalid_statistics_preserved,
 	"perf_log_persistence": scenario_perf_log_persistence,
 	"qm_lifecycle_persistence": scenario_qm_lifecycle_persistence,

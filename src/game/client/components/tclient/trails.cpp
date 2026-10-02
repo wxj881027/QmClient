@@ -100,7 +100,8 @@ void CTrails::RenderTeeTrails()
 		// 此组件位于 players 之前；只采样最终 m_RenderPos 一次，预测 ghost 不进入此入口。
 		// Ninja 冲刺等移动的核心速度可能为零；通过已检查的端点位移补足视觉速度。
 		const float VisualSpeed = std::max(Speed, RenderJump / (Data.m_IsPredicted ? 1.0f : float(TickGap)));
-		const auto UpdateMode = DummyChanged ? qm_tee_trail::EUpdateMode::KEEP_HISTORY : SourceChanged ? qm_tee_trail::EUpdateMode::RESET : qm_tee_trail::EUpdateMode::NORMAL;
+		const auto UpdateMode = DummyChanged ? qm_tee_trail::EUpdateMode::KEEP_HISTORY : SourceChanged ? qm_tee_trail::EUpdateMode::RESET :
+														 qm_tee_trail::EUpdateMode::NORMAL;
 		State.Update(Data.m_RenderPos, Time, VisualSpeed, qm_tee_trail::Lifetime(Style, m_LastLength, VisualSpeed), UpdateMode);
 		State.Export(m_vTrail);
 		if(m_vTrail.size() < 2)
@@ -176,6 +177,11 @@ void CTrails::RenderTeeTrails()
 
 void CTrails::OnRender()
 {
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+	{
+		OnReset();
+		return;
+	}
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
 		OnReset();

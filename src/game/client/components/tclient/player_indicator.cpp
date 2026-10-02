@@ -18,6 +18,8 @@ static vec2 DirectionTo(vec2 Src, vec2 Dst)
 
 void CPlayerIndicator::OnRender()
 {
+	if(GameClient()->m_RankGhost.IsViewModeActive())
+		return;
 	if(g_Config.m_TcPlayerIndicator != 1)
 		return;
 

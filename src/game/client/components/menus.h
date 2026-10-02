@@ -39,6 +39,7 @@
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
 #include <game/client/components/qmclient/map_vote_difficulty.h>
+#include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/components/qmclient/qm_map_upload.h>
 #include <game/client/components/qmclient/screenshot_manager.h>
 #include <game/client/components/qmclient/settings_perf_windows.h>
@@ -48,6 +49,7 @@
 #include <game/client/components/tclient/warlist.h>
 #include <game/client/frame_scheduler.h>
 #include <game/client/lineinput.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/voting.h>
@@ -103,6 +105,17 @@ enum
 	NUMBER_OF_ASSETS_TABS = 10,
 };
 
+// 导航胶囊行高与内容缩放：主菜单导航栏（离线/在线）与游戏内浏览页服务器导航栏
+// 共用同一组尺寸，保证上下两排胶囊导航观感一致。
+inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f;
+inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
+
+// 悬浮卡片四角独立，旧页签壳层与内容相连，仅保留底部圆角。
+inline constexpr int QmMenuShellCorners(bool UseNewUi)
+{
+	return UseNewUi ? IGraphics::CORNER_ALL : IGraphics::CORNER_B;
+}
+
 class CUIRect;
 enum class EQmIcon;
 struct IUiContext;
@@ -143,6 +156,10 @@ public:
 	// 设置页内的胶囊配色：容器是卡片，胶囊只当滑块轨道（比卡片深一档），
 	// 滑块与文字按卡片表面明暗自适应。
 	ui_widget::SCapsuleTabBarStyle SettingsCapsuleTabBarStyle() const;
+	// 主导航胶囊配色（主菜单导航栏与游戏内浏览页服务器导航栏共用）：
+	// 容器是悬浮表面本体（与 BrowserPanelColor(1.0f) 同源，非压暗轨道），
+	// 滑块与文字按该表面明暗自适应。
+	ui_widget::SCapsuleTabBarStyle MenuCapsuleTabBarStyle() const;
 	// 通用胶囊配色：轨道在给定容器表面上压一层暗色，滑块与文字按该表面明暗自适应。
 	ui_widget::SCapsuleTabBarStyle CapsuleTabBarStyleFor(const ColorRGBA &SurfaceColor) const;
 	// 多选一分段选择器：新 UI 渲染为胶囊滑块（先画容器与滑块，再画分段文字，滑块压在
@@ -155,6 +172,12 @@ public:
 	ColorRGBA BrowserPanelColor(float AlphaScale = 1.0f) const;
 	ColorRGBA BrowserPanelElevatedColor(float AlphaScale = 1.0f) const;
 	ColorRGBA SettingsTabbarColor(float AlphaScale = 1.0f) const;
+	ColorRGBA QmMenuTabDefaultColor() const;
+	ColorRGBA QmMenuTabActiveColor() const;
+	ColorRGBA QmMenuMenubarHoverColor() const;
+	// 菜单页背景圆角：新 UI 页签是悬浮胶囊，内容为独立圆角卡片（四角全圆）；
+	// 旧 UI 页签与内容相连，只圆底部、顶部保持方角衔接页签。
+	int MenuShellCorners() const;
 
 	int DoButton_CheckBox_Common(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, bool ProcessInput = true);
 	int DoButton_CheckBox(const void *pId, const char *pText, int Checked, const CUIRect *pRect, float BodySize = -1.0f);
@@ -166,7 +189,7 @@ public:
 	bool DoLine_KeyReader(CUIRect &View, CButtonContainer &ReaderButton, CButtonContainer &ClearButton, const char *pName, const char *pCommand);
 
 private:
-	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize);
+	int DoButton_MenuInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, const char *pImageName, int Corners, float Rounding, float FontFactor, ColorRGBA Color, CUIElement *pTextUiElement, float TextFontSize, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoMenuTabV2Internal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, bool Active, const CUIRect *pRect, int Corners, const ColorRGBA *pCustomDefault, const ColorRGBA *pCustomActive, const ColorRGBA *pCustomHover, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float ContentScale, bool CapsuleTab = false);
 
 	int DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float FontSize, bool CapsuleTab = false);
@@ -215,6 +238,7 @@ private:
 	int DoButton_Favorite(const void *pButtonId, const void *pParentId, bool Checked, const CUIRect *pRect);
 
 	bool m_SkinListScrollToSelected = false;
+	int64_t m_TeeEntranceStartTime = 0;
 	std::optional<std::chrono::nanoseconds> m_SkinList7LastRefreshTime;
 	std::optional<std::chrono::nanoseconds> m_SkinPartsList7LastRefreshTime;
 	std::unordered_map<const void *, std::unique_ptr<ui_widget::SNumericFieldState>> m_vpSettingsNumericFieldStates;
@@ -1802,6 +1826,10 @@ protected:
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSliceInput;
 	// 导出/预览弹窗里的「Demo display」折叠状态：展开后显示回放专用显示选项。
 	bool m_DemoExportDisplayExpanded = false;
+	bool m_DemoDisplayExpanded = false;
+	CButtonContainer m_DemoDisplayButton;
+	CButtonContainer m_DemoExportDisplayButton;
+	COnlineReplayShortcutClaims m_OnlineReplayShortcutClaims;
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSearchInput;
 #if defined(CONF_VIDEORECORDER)
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenderInput;
@@ -2067,8 +2095,10 @@ protected:
 	void UpdateMusicState();
 
 	// found in menus_demo.cpp
+	char m_DemoSeekBarId = 0;
+	int m_DemoControlsDragOperation = 0;
+	vec2 m_DemoControlsDragInitialMouse = vec2(0.0f, 0.0f);
 	vec2 m_DemoControlsPositionOffset = vec2(0.0f, 0.0f);
-	bool m_DemoDisplayExpanded = false;
 	bool m_PausedBeforeSeeking;
 	float m_PrevSeekAmount;
 	float m_LastPauseChange = -1.0f;
@@ -2078,13 +2108,16 @@ protected:
 	static bool DemoFilterChat(const void *pData, int Size, void *pUser);
 	bool FetchHeader(CDemoItem &Item);
 	void FetchAllHeaders();
+	IDemoPlayer *PlaybackPlayer() const;
+	uint64_t m_OnlineReplayControlsGeneration = 0;
+	bool m_DemoControlsWereOnline = false;
 	void HandleDemoSeeking(float PositionToSeek, float TimeToSeek, int TickToSeek = -1);
 	void RenderDemoCard(const CUIRect &Rect);
 	void RenderDemoPlayer(CUIRect MainView);
 	void RenderDemoPlayerSliceSavePopup(CUIRect MainView);
 	// 回放/导出共用的显示选项面板与其折叠开关。
 	void RenderDemoDisplaySettings(CUIRect View, bool Enabled = true);
-	void RenderDemoExportDisplayToggle(const CUIRect &Rect);
+	void RenderDemoDisplayToggle(const CUIRect &Rect, bool &Expanded, CButtonContainer &Button, bool Enabled = true);
 	bool m_DemoBrowserListInitialized = false;
 	void RenderDemoBrowser(CUIRect MainView);
 	void RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivated);
@@ -2301,19 +2334,21 @@ protected:
 	void RenderServerbrowserTypesFilter(CUIRect View);
 	struct SPopupCountrySelectionContext
 	{
-		CMenus *m_pMenus;
-		int m_Selection;
-		bool m_New;
+		CMenus *m_pMenus = nullptr;
+		int m_Selection = -1;
+		bool m_New = false;
+		CLineInputBuffered<64> m_FilterInput;
 	};
 	static CUi::EPopupMenuFunctionResult PopupCountrySelection(void *pContext, CUIRect View, bool Active);
 	// QmClient: 字体商店弹层（可搜索的在线字体卡片网格）。
 	static CUi::EPopupMenuFunctionResult PopupFontStore(void *pContext, CUIRect View, bool Active);
 	struct SPopupSettingsCountrySelectionContext
 	{
-		CMenus *m_pMenus;
-		int *m_pCountry;
-		int m_Selection;
-		bool m_New;
+		CMenus *m_pMenus = nullptr;
+		int *m_pCountry = nullptr;
+		int m_Selection = -1;
+		bool m_New = false;
+		CLineInputBuffered<64> m_FilterInput;
 	};
 	static CUi::EPopupMenuFunctionResult PopupSettingsCountrySelection(void *pContext, CUIRect View, bool Active);
 	void RenderServerbrowserInfo(CUIRect View);
@@ -2449,6 +2484,9 @@ public:
 
 	bool IsInit() const { return m_IsInit; }
 
+	bool OnlineReplayPopupActive() const { return m_DemoPlayerState != DEMOPLAYER_NONE; }
+	bool PlaybackShortcutsActive() const;
+	bool ClaimOnlineReplaySpectatorBind(int Key);
 	bool IsActive() const { return m_MenuActive; }
 	bool IsSettingsPageActive() const;
 	const char *CurrentQmUiPerfPage() const;
@@ -2535,12 +2573,11 @@ public:
 		NUMBER_OF_QMCLIENT_SETTINGS_TABS,
 	};
 
-	// 顶层「贡献者」页的子页签。
+	// 顶层「贡献者」页的子页签（其他子页签已并入友链）。
 	enum
 	{
 		CREDITS_SETTINGS_TAB_QMCLIENT = 0,
 		CREDITS_SETTINGS_TAB_LINKS,
-		CREDITS_SETTINGS_TAB_OTHER,
 		CREDITS_SETTINGS_TAB_NUM,
 	};
 
@@ -2781,8 +2818,8 @@ public:
 	void DoSettingsLabelStreamed(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	void DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, bool Render = true);
 	void DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1);
-	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f);
-	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f);
+	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
+	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoSettingsButton_CapsuleSegment(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, float BodySize, const ColorRGBA *pLabelColor = nullptr, const ColorRGBA *pHoverColor = nullptr);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
 	int DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps);

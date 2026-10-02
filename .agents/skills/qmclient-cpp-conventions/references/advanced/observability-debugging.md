@@ -11,9 +11,12 @@
 | 层级 | 内容 | 用途 |
 | --- | --- | --- |
 | HUD/debug panel | 当前 FPS、p95/p99、ping、jitter、correction、renderer | 现场判断 |
-| perf report | 时间序列、分布、尖峰、归因、采样偏差 | 性能决策 |
+| Google Benchmark JSON | 指定生产 CPU 路径、输入和重复统计 | 代码性能对比 |
+| 客户端日志/离线报告 | 帧时间序列、分布、尖峰、归因、采样偏差 | 场景诊断 |
 | debug bundle | 脱敏配置、日志、summary、环境 | 用户反馈 |
 | fixed scenarios | maps/demos/configs/A-B 表 | 复现和回归 |
+
+代码性能命令见 [验证 skill 的性能参考](../../../qmclient-verification-gate/references/performance.md)；客户端报告按场景读取 `qmclient_scripts/perf/README.md`，不将离线 HTML 作为所有代码改动的交付要求。
 
 ## Debug Bundle
 

@@ -5,6 +5,7 @@
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmUiPerf.h"
 #include "QmUi/UiSurface.h"
+#include "QmUi/UiSurfaceText.h"
 #include "components/qmclient/perf_logging.h"
 #include "qm_icon_manager.h"
 #include "ui_scrollregion.h"
@@ -493,6 +494,24 @@ bool CUi::TryConsumeWheel(const void *pOwnerId, float *pDelta)
 
 void CUi::Update()
 {
+	// 孤儿阻断弹窗兜底清扫：要求来源每帧刷新的弹窗（下拉选择弹层等）若连续
+	// 两帧未刷新，说明来源渲染已停止且当前没有任何 RenderPopupMenus 调用方
+	// 在运行（如聊天模式退出后弹窗残留），在这里强制关闭，防止底层指针输入
+	// 被永久锁死。正常刷新节奏下弹层在前一帧渲染中刚刷新，差值恰为 1，不受影响。
+	const uint64_t CurFrame = Client()->PerfFrame();
+	for(size_t i = 0; i < m_vPopupMenus.size();)
+	{
+		const SPopupMenu &PopupMenu = m_vPopupMenus[i];
+		const bool Stale = !PopupMenu.m_Closing && PopupMenu.m_Props.m_RequireSourceRefresh &&
+				   !QmDropdownSourceAlive(CurFrame, PopupMenu.m_Props.m_SourceFrame, true);
+		if(!Stale)
+		{
+			++i;
+			continue;
+		}
+		// ClosePopupMenu 至少移除目标自身（并按栈序连带其上方子弹窗），索引不前进
+		ClosePopupMenu(PopupMenu.m_pId, true);
+	}
 	BeginWheelOwnershipFrame();
 	m_MenuUiFirstWheelPerf = false;
 	const int UiScale = std::clamp(g_Config.m_QmUiScale, 50, 200);
@@ -1459,6 +1478,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 
 bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, int Align, const SEditBoxRenderOptions &RenderOptions)
 {
+	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), g_Config.m_QmNewUi && RenderOptions.m_DrawBackground);
 	const float VSpacing = 2.0f;
 	const float EditBoxRounding = ui_token::radius::BASE;
 	const CUIRect *pHitRect = RenderOptions.m_pHitRect != nullptr ? RenderOptions.m_pHitRect : pRect;
@@ -1468,7 +1488,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 	{
 		const bool Active = m_pLastActiveItem == pLineInput;
 		if(RenderOptions.m_DrawBackground)
-			DrawRoundedSurface(this, *pRect, ScaleBackgroundAlpha(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput)), ColorRGBA(), EditBoxRounding, 0.0f, Corners);
+			DrawRoundedSurface(this, *pRect, (g_Config.m_QmNewUi ? ResolveConfiguredInputSurface() : ScaleBackgroundAlpha(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput))), ColorRGBA(), EditBoxRounding, 0.0f, Corners);
 		ClipEnable(pRect);
 		Textbox.x -= pLineInput->GetScrollOffset();
 		pLineInput->Render(&Textbox, FontSize, Align, false, -1.0f, 0.0f, vColorSplits);
@@ -1559,7 +1579,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 
 	// Render
 	if(RenderOptions.m_DrawBackground)
-		DrawRoundedSurface(this, *pRect, ScaleBackgroundAlpha(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput)), ColorRGBA(), EditBoxRounding, 0.0f, Corners);
+		DrawRoundedSurface(this, *pRect, (g_Config.m_QmNewUi ? ResolveConfiguredInputSurface() : ScaleBackgroundAlpha(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput))), ColorRGBA(), EditBoxRounding, 0.0f, Corners);
 	ClipEnable(pRect);
 	Textbox.x -= ScrollOffset;
 	const STextBoundingBox BoundingBox = pLineInput->Render(&Textbox, FontSize, Align, Changed || CursorChanged, -1.0f, 0.0f, vColorSplits);
@@ -1585,6 +1605,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 
 bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, float LineSpacing, int TextAlign, const SEditBoxRenderOptions &RenderOptions)
 {
+	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), g_Config.m_QmNewUi && RenderOptions.m_DrawBackground);
 	if(pLineInput == nullptr || pRect == nullptr)
 		return false;
 
@@ -1658,7 +1679,7 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 	}
 
 	if(RenderOptions.m_DrawBackground)
-		DrawRoundedSurface(this, *pRect, ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput), ColorRGBA(), ui_token::radius::TIGHT);
+		DrawRoundedSurface(this, *pRect, (g_Config.m_QmNewUi ? ResolveConfiguredInputSurface() : ScaleBackgroundAlpha(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput))), ColorRGBA(), ui_token::radius::TIGHT);
 	ClipEnable(pRect);
 	pLineInput->Render(&Textbox, FontSize, TextAlign, Changed || CursorChanged, LineWidth, LineSpacing);
 	ClipDisable();
@@ -1752,6 +1773,8 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
 	const bool Enabled = Props.m_Enabled;
+	const bool ConfiguredSurface = g_Config.m_QmNewUi;
+	const ColorRGBA BaseSurface = ConfiguredSurface ? ResolveConfiguredControlSurface(Enabled) : Props.m_Color;
 	const bool UseRoundedRectSdf = Graphics()->HasRoundedRectSdf();
 	CUIRect Text = *pRect, DropDownIcon;
 	Text.HMargin(pRect->h >= 20.0f ? 2.0f : 1.0f, &Text);
@@ -1766,6 +1789,20 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 	if(!UIElement.AreRectsInit() || Props.m_HintRequiresStringCheck || Props.m_HintCanChangePositionOrSize || !UIElement.Rect(0)->m_UITextContainer.Valid() || (UseRoundedRectSdf ? UIElement.Rect(0)->m_UIRectQuadContainer != -1 : UIElement.Rect(0)->m_UIRectQuadContainer == -1))
 	{
 		bool NeedsRecalc = !UIElement.AreRectsInit() || !UIElement.Rect(0)->m_UITextContainer.Valid() || (UseRoundedRectSdf ? UIElement.Rect(0)->m_UIRectQuadContainer != -1 : UIElement.Rect(0)->m_UIRectQuadContainer == -1);
+		if(UIElement.AreRectsInit())
+		{
+			for(int i = 0; i < 3; ++i)
+			{
+				ColorRGBA Color = BaseSurface;
+				if(!ConfiguredSurface)
+					Color.a *= i == 0 ? ButtonColorMulActive() : i == 1 ? ButtonColorMulHot() :
+											      ButtonColorMulDefault();
+				if(!Enabled && !ConfiguredSurface)
+					Color.a *= 0.65f;
+				if(UIElement.Rect(i)->m_QuadColor != (ConfiguredSurface ? Color : ScaleBackgroundAlpha(Color)))
+					NeedsRecalc = true;
+			}
+		}
 		if(Props.m_HintCanChangePositionOrSize)
 		{
 			if(UIElement.AreRectsInit())
@@ -1798,16 +1835,16 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 
 			for(int i = 0; i < 3; ++i)
 			{
-				ColorRGBA Color = Props.m_Color;
-				if(i == 0)
+				ColorRGBA Color = BaseSurface;
+				if(!ConfiguredSurface && i == 0)
 					Color.a *= ButtonColorMulActive();
-				else if(i == 1)
+				else if(!ConfiguredSurface && i == 1)
 					Color.a *= ButtonColorMulHot();
-				else if(i == 2)
+				else if(!ConfiguredSurface && i == 2)
 					Color.a *= ButtonColorMulDefault();
-				if(!Enabled)
+				if(!Enabled && !ConfiguredSurface)
 					Color.a *= 0.65f;
-				Color = ScaleBackgroundAlpha(Color);
+				Color = (ConfiguredSurface ? Color : ScaleBackgroundAlpha(Color));
 				CUIElement::SUIElementRect &NewRect = *UIElement.Rect(i);
 				NewRect.m_QuadColor = Color;
 				if(!UseRoundedRectSdf)
@@ -1844,8 +1881,17 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 		Index = 0;
 	else if(Enabled && HotItem() == pId)
 		Index = 1;
+	ColorRGBA EffectiveSurface = BaseSurface;
+	if(!ConfiguredSurface)
+		EffectiveSurface.a *= Index == 0 ? ButtonColorMulActive() : Index == 1 ? ButtonColorMulHot() :
+											 ButtonColorMulDefault();
+	if(!Enabled && !ConfiguredSurface)
+		EffectiveSurface.a *= 0.65f;
+	if(!ConfiguredSurface)
+		EffectiveSurface = ScaleBackgroundAlpha(EffectiveSurface);
+	CUiScopedSurfaceText StateSurfaceText(TextRender(), EffectiveSurface, g_Config.m_QmNewUi);
 	if(UseRoundedRectSdf)
-		DrawRoundedSurface(this, *pRect, UIElement.Rect(Index)->m_QuadColor, ColorRGBA(), Props.m_Rounding, 0.0f, Props.m_Corners);
+		DrawRoundedSurface(this, *pRect, EffectiveSurface, ColorRGBA(), Props.m_Rounding, 0.0f, Props.m_Corners);
 	else
 	{
 		Graphics()->TextureClear();
@@ -1859,8 +1905,8 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	}
-	ColorRGBA ColorText(TextRender()->DefaultTextColor());
-	ColorRGBA ColorTextOutline(TextRender()->DefaultTextOutlineColor());
+	ColorRGBA ColorText(TextRender()->GetTextColor());
+	ColorRGBA ColorTextOutline(TextRender()->GetTextOutlineColor());
 	if(!Enabled)
 	{
 		ColorText.a *= 0.65f;
@@ -1877,17 +1923,24 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 
 void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA Color, int Corners, bool Enabled)
 {
+	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
+	pRect = &ButtonRect;
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	DrawRoundedSurface(this, *pRect, ScaleBackgroundAlpha(Color), ColorRGBA(), 5.0f, 0.0f, Corners);
+	if(g_Config.m_QmNewUi)
+		Color = ResolveConfiguredControlSurface(Enabled);
+	if(!g_Config.m_QmNewUi)
+		Color = ScaleBackgroundAlpha(Color);
+	DrawRoundedSurface(this, *pRect, Color, ColorRGBA(), 5.0f, 0.0f, Corners);
 
+	CUiScopedSurfaceText SurfaceText(TextRender(), Color, g_Config.m_QmNewUi);
 	const ColorRGBA PreviousColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
 	const unsigned PreviousFlags = TextRender()->GetRenderFlags();
 	const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
-	TextRender()->TextColor(ConfiguredQmUiIconColor(TextRender()->DefaultTextColor()));
+
+	TextRender()->TextColor(g_Config.m_QmNewUi ? ResolveUiSurfaceIconColor(SurfaceText.Surface(), ConfiguredQmUiIconColor(ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(TextRender()->GetTextColor().a))) : ConfiguredQmUiIconColor(TextRender()->GetTextColor()));
 
 	CUIRect Label;
 	pRect->HMargin(2.0f, &Label);
@@ -1911,9 +1964,17 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 
 int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor)
 {
+	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
+	pRect = &ButtonRect;
 	DrawButton_FontIcon(pText, pRect, ButtonColor.value_or(ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.1f : 0.5f) * ButtonColorMul(pButtonContainer))), Corners, Enabled);
+	if(g_Config.m_QmNewUi)
+	{
+		const ColorRGBA Surface = CompositeUiSurface(ResolveConfiguredControlSurface(Enabled), CUiScopedSurfaceText::CurrentSurface());
+		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, Enabled, MouseHovered(pRect), CheckActiveItem(pButtonContainer) && MouseButton(0));
+		DrawRoundedSurface(this, *pRect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), 5.0f, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
+	}
 
-	return DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
+	return Enabled ? DoButtonLogic(pButtonContainer, Checked, pRect, Flags) : 0;
 }
 
 bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color) const
@@ -1965,11 +2026,18 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 
 int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor)
 {
+	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
+	pRect = &ButtonRect;
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	DrawRoundedSurface(this, *pRect, ScaleBackgroundAlpha(ButtonColor.value_or(ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.1f : 0.5f) * ButtonColorMul(pButtonContainer)))), ColorRGBA(), 5.0f, 0.0f, Corners);
-
+	const ColorRGBA Fill = g_Config.m_QmNewUi ? ButtonColor.value_or(ResolveConfiguredControlSurface(Enabled)) : ScaleBackgroundAlpha(ButtonColor.value_or(ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.1f : 0.5f) * ButtonColorMul(pButtonContainer))));
+	DrawRoundedSurface(this, *pRect, Fill, ColorRGBA(), 5.0f, 0.0f, Corners);
+	if(g_Config.m_QmNewUi)
+	{
+		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(CompositeUiSurface(Fill, CUiScopedSurfaceText::CurrentSurface()), Enabled, MouseHovered(pRect), CheckActiveItem(pButtonContainer) && MouseButton(0));
+		DrawRoundedSurface(this, *pRect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), 5.0f, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
+	}
+	CUiScopedSurfaceText SurfaceText(TextRender(), Fill, g_Config.m_QmNewUi);
 	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
 
 	CUIRect Label;
 	pRect->HMargin(2.0f, &Label);
@@ -1979,7 +2047,7 @@ int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const
 	IconRect.y = Label.y + (Label.h - IconSide) * 0.5f;
 	IconRect.w = IconSide;
 	IconRect.h = IconSide;
-	DrawQmIcon(IconRect, Icon, pFallbackIcon, ConfiguredQmUiIconColor(TextRender()->DefaultTextColor()));
+	DrawQmIcon(IconRect, Icon, pFallbackIcon, g_Config.m_QmNewUi ? ResolveUiSurfaceIconColor(SurfaceText.Surface(), ConfiguredQmUiIconColor(ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(TextRender()->GetTextColor().a))) : ConfiguredQmUiIconColor(TextRender()->GetTextColor()));
 
 	if(!Enabled)
 	{
@@ -1988,14 +2056,17 @@ int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const
 	}
 	TextRender()->TextOutlineColor(PreviousOutlineColor);
 
-	return DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
+	return Enabled ? DoButtonLogic(pButtonContainer, Checked, pRect, Flags) : 0;
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	if(ButtonColor.has_value() || !TransparentInactive || CheckActiveItem(pButtonContainer) || HotItem() == pButtonContainer)
-		DrawRoundedSurface(this, *pRect, ScaleBackgroundAlpha(ButtonColor.value_or(Enabled ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ButtonColorMul(pButtonContainer)) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f))), ColorRGBA(), ui_token::radius::BASE);
+	const bool DrawBackground = ButtonColor.has_value() || !TransparentInactive || CheckActiveItem(pButtonContainer) || HotItem() == pButtonContainer;
+	const ColorRGBA Fill = g_Config.m_QmNewUi ? ButtonColor.value_or(ResolveConfiguredControlSurface(Enabled)) : ScaleBackgroundAlpha(ButtonColor.value_or(Enabled ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ButtonColorMul(pButtonContainer)) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f)));
+	CUiScopedSurfaceText SurfaceText(TextRender(), DrawBackground ? Fill : ColorRGBA(), g_Config.m_QmNewUi);
+	if(DrawBackground)
+		DrawRoundedSurface(this, *pRect, Fill, ColorRGBA(), ui_token::radius::BASE);
 
 	CUIRect Label;
 	pRect->Margin(Padding, &Label);
@@ -2020,6 +2091,7 @@ int64_t CUi::DoValueSelector(const void *pId, const CUIRect *pRect, const char *
 
 SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRect *pRect, const char *pLabel, int64_t Current, int64_t Min, int64_t Max, const SValueSelectorProperties &Props)
 {
+	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), g_Config.m_QmNewUi);
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
 	// logic
 	const bool Inside = MouseInside(pRect);
@@ -2050,7 +2122,7 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 			str_format(aBuf, sizeof(aBuf), "%" PRId64, Current);
 		const bool Active = CheckActiveItem(pId) || m_ActiveValueSelectorState.m_pLastTextId == pId;
 		const bool Hovered = HotItem() == pId;
-		DrawRoundedSurface(this, *pRect, ScaleBackgroundAlpha(ms_LightButtonColorFunction.GetColor(Active, Hovered)), ColorRGBA(), ui_token::radius::BASE);
+		DrawRoundedSurface(this, *pRect, (g_Config.m_QmNewUi ? ResolveConfiguredInputSurface() : ScaleBackgroundAlpha(ms_LightButtonColorFunction.GetColor(Active, Hovered))), ColorRGBA(), ui_token::radius::BASE);
 		SLabelProperties ValueLabelProps;
 		ValueLabelProps.m_MaxWidth = Textbox.w;
 		ValueLabelProps.m_DisallowNewline = true;
@@ -2548,7 +2620,9 @@ void CUi::RenderProgressBar(CUIRect ProgressBar, float Progress)
 
 void CCachedText::Update(ITextRender *pTextRender, const char *pText, float FontSize, float LineWidth, int CursorFlags)
 {
-	if(m_FontSize == FontSize && m_LineWidth == LineWidth && m_CursorFlags == CursorFlags && m_Text == pText)
+	// 非空缓存还必须属于当前图集，不能仅凭文本和布局参数跳过重建。
+	if(m_FontSize == FontSize && m_LineWidth == LineWidth && m_CursorFlags == CursorFlags && m_Text == pText &&
+		(m_TextContainerIndex.Valid() || (m_Text.empty() && m_TextContainerIndex.m_Index < 0)))
 		return;
 
 	pTextRender->DeleteTextContainer(m_TextContainerIndex);

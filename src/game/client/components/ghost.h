@@ -7,6 +7,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/online_replay_player.h>
 #include <game/client/render.h>
 
 struct CNetObj_Character;
@@ -49,12 +50,13 @@ struct CGhostCharacter : public CGhostCharacter_NoTick
 
 class CGhost : public CComponent
 {
-private:
+public:
 	enum
 	{
 		MAX_ACTIVE_GHOSTS = 256,
 	};
 
+private:
 	class CGhostPath
 	{
 		int m_ChunkSize;
@@ -135,13 +137,12 @@ private:
 	bool m_RenderingStartedByServer = false;
 
 	// QmClient: 查看模式——影子按独立时间线播放（游戏内 demo 播放器），不与玩家跑图同步
+	bool m_aManualSlots[MAX_ACTIVE_GHOSTS] = {};
 	bool m_ManualMode = false;
-	bool m_ManualPlaying = false;
-	int m_ManualBaseTick = 0; // 播放头（相对轨迹起点的 tick）
-	float m_ManualStartTime = 0.0f; // 播放基准时间（LocalTime，单调不回滚；本地预测 tick 会回滚导致画面抖动/闪烁）
-	int m_ManualEndTick = 0; // 轨迹总时长（相对 tick，取所有激活影子最短者）
-	float m_ManualSpeed = 1.0f; // 播放倍速（0.1–4，查看模式控制条可调）
-	float m_ManualPauseIntra = 0.0f; // 暂停时冻结的 tick 内相位；本地预测相位会波动导致画面抖动
+	COnlineReplayClock m_ManualClock;
+	int m_ManualPrimarySlot = -1;
+	std::vector<int> m_vManualSampleTicks;
+	int m_ManualEndTick = 0; // 本回放最长成员轨迹
 	vec2 m_aManualRenderPos[MAX_ACTIVE_GHOSTS] = {}; // 每个槽位虚影当前插值位置（供镜头跟随）
 	bool m_aManualRenderPosValid[MAX_ACTIVE_GHOSTS] = {};
 
@@ -185,17 +186,16 @@ public:
 	void StartRender(int Tick);
 
 	// QmClient: 查看模式——独立时间线播放（进度/暂停/拖动由 CRankGhost 控制）
-	void StartRenderManual();
+	void StartRenderManual(const std::vector<int> &vSlots);
 	void ManualSetPlaying(bool Playing);
 	void ManualSeek(int RelativeTick);
 	void ManualSetSpeed(float Speed);
-	float ManualSpeed() const { return m_ManualSpeed; }
+	float ManualSpeed() const { return m_ManualClock.Speed(); }
 	void StopManual() { StopRender(); }
 	bool ManualModeActive() const { return m_ManualMode; }
-	bool ManualPlaying() const { return m_ManualPlaying; }
+	bool ManualPlaying() const { return m_ManualClock.Playing(); }
 	int ManualPlaybackTick() const;
-	// 自上次播放起点以来经过的倍速加权 tick 数（供播放头/相位推进复用）
-	float ManualElapsedTicks() const;
+	int ManualAdjacentTick(int Current, IDemoPlayer::ETickOffset Offset) const { return OnlineReplayAdjacentTick(m_vManualSampleTicks, Current, Offset); }
 	// 手动播放的 tick 内插值相位（0–1）；暂停时冻结，不随本地预测波动（避免画面抖动）
 	float ManualRenderIntra() const;
 	int ManualEndTick() const { return m_ManualEndTick; }
@@ -214,6 +214,17 @@ public:
 			return false;
 		str_copy(pBuf, m_aActiveGhosts[Slot].m_aPlayer, BufSize);
 		return pBuf[0] != '\0';
+	}
+
+	// 旁观 HUD 读取回放成员的真实皮肤，不借用同 ID 的服务器玩家。
+	bool GetGhostRenderInfo(int Slot, CTeeRenderInfo *pInfo) const
+	{
+		if(Slot < 0 || Slot >= MAX_ACTIVE_GHOSTS || m_aActiveGhosts[Slot].Empty())
+			return false;
+		if(!m_aActiveGhosts[Slot].m_pManagedTeeRenderInfo)
+			return false;
+		*pInfo = m_aActiveGhosts[Slot].m_pManagedTeeRenderInfo->TeeRenderInfo();
+		return true;
 	}
 
 	int FreeSlots() const;

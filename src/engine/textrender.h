@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 enum
@@ -57,6 +58,8 @@ enum ETextRenderFlags
 	TEXT_RENDER_FLAG_NO_AUTOMATIC_QUAD_UPLOAD = 1 << 8,
 	// text is only rendered once and then discarded (a hint for buffer creation)
 	TEXT_RENDER_FLAG_ONE_TIME_USE = 1 << 9,
+	// 名牌独立缓存：连续描边、无 hinting，世界字号不跟随栅格取整。
+	TEXT_RENDER_FLAG_QM_NAMEPLATE = 1 << 10,
 };
 
 enum class EFontPreset
@@ -403,12 +406,33 @@ public:
 
 	float Height() const;
 	STextBoundingBox BoundingBox() const;
-	void SetPosition(vec2 Position);
+	void SetPosition(vec2 Position)
+	{
+		m_StartX = m_X = Position.x;
+		m_StartY = m_Y = Position.y;
+	}
 };
 
 struct STextContainerUsages
 {
-	int m_Dummy = 0;
+	// 图集重排后句柄仍拥有资源，但旧字形坐标已经不能复用。
+	std::shared_ptr<const uint64_t> m_pGlyphAtlasRevision;
+	uint64_t m_GlyphAtlasRevision = 0;
+	bool m_Alive = true;
+
+	void BindGlyphAtlas(std::shared_ptr<const uint64_t> pRevision)
+	{
+		m_pGlyphAtlasRevision = std::move(pRevision);
+		m_GlyphAtlasRevision = m_pGlyphAtlasRevision ? *m_pGlyphAtlasRevision : 0;
+		m_Alive = true;
+	}
+
+	void Invalidate() { m_Alive = false; }
+
+	bool Current() const
+	{
+		return m_Alive && (!m_pGlyphAtlasRevision || m_GlyphAtlasRevision == *m_pGlyphAtlasRevision);
+	}
 };
 
 struct STextContainerIndex
@@ -418,7 +442,7 @@ struct STextContainerIndex
 		std::make_shared<STextContainerUsages>(STextContainerUsages());
 
 	STextContainerIndex() { Reset(); }
-	bool Valid() const { return m_Index >= 0; }
+	bool Valid() const { return m_Index >= 0 && m_UseCount && m_UseCount->Current(); }
 	void Reset() { m_Index = -1; }
 };
 
@@ -453,6 +477,8 @@ public:
 	virtual std::vector<std::string> *GetCustomFaces() = 0; // TClient
 	virtual std::vector<std::string> *GetCustomFontStyles(const char *pFamily) = 0; // TClient
 	virtual void SetCustomFace(const char *pFace) = 0; // TClient
+	// 临时预览只改变字形选择，不改变配置字体角色或共享字重；nullptr 结束预览。
+	virtual void SetFontPreviewFace(const char *pFace) = 0;
 	// 分类字体：中文/中日韩字形与图标符号字形可分别指定；空串表示跟随主字体链。
 	virtual void SetCustomFaceCjk(const char *pFace) = 0; // TClient
 	virtual void SetCustomFaceIcons(const char *pFace) = 0; // TClient
@@ -481,6 +507,8 @@ public:
 
 	virtual void SetRenderFlags(unsigned Flags) = 0;
 	virtual unsigned GetRenderFlags() const = 0;
+	// 图集重排或配置字体解析变化时递增；普通上传及保留像素 UV 的扩容不失效。
+	virtual uint64_t GlyphAtlasRevision() const = 0;
 
 	ColorRGBA DefaultTextColor() const { return ColorRGBA(1, 1, 1, 1); }
 	ColorRGBA DefaultTextOutlineColor() const { return ColorRGBA(0, 0, 0, 0.3f); }

@@ -1,5 +1,3 @@
-#include <game/client/components/pie_menu.h>
-
 #include <base/str.h>
 #include <base/system.h>
 
@@ -8,6 +6,7 @@
 #include <engine/input.h>
 #include <engine/shared/config.h>
 
+#include <game/client/components/pie_menu.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -38,7 +37,8 @@ void CPieMenu::ExecuteTeamAction(EMenuOption Option)
 		break;
 	}
 	const std::string Command = Option == EMenuOption::INVITE_TEAM ?
-		qm_pie_menu::QuotedPlayerCommand("/invite", m_TargetName.c_str()) : "/team " + std::to_string(TargetTeam);
+					    qm_pie_menu::QuotedPlayerCommand("/invite", m_TargetName.c_str()) :
+					    "/team " + std::to_string(TargetTeam);
 	GameClient()->m_Chat.SendChat(0, Command.c_str());
 }
 

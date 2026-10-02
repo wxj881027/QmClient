@@ -830,6 +830,9 @@ Apply a writable preset and edit first
 Apply Changes
 == 应用更改
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== 对二级弹窗与下拉列表背后的内容应用模糊
+
 Apply input early before next tick for prediction
 == 在下一 tick 前提前应用输入进行预测
 
@@ -1086,10 +1089,10 @@ Auto team lock
 == 自动锁队
 
 Auto translate received messages
-== 自动翻译收到的消息
+== 自动翻译收到的聊天消息
 
 Auto translate sent messages
-== 自动翻译发送的消息
+== 自动翻译发送的聊天消息
 
 Auto unmute when speaking
 == 自动检测说话时开麦
@@ -1108,6 +1111,9 @@ Auto-accept team invites by sending /team <n>
 
 Auto-close chat after unfreeze
 == 解冻后自动关闭聊天
+
+Auto-connect dummy
+== 自动连接分身
 
 Auto-create CSV on game end
 == 游戏结束时自动创建 CSV
@@ -1437,7 +1443,7 @@ Better scoreboard
 == 更好的计分板
 
 Bind
-== Bind
+== 绑定
 
 Bind address for client/server
 == 绑定客户端/服务器的地址
@@ -1603,6 +1609,12 @@ Button - Disabled
 
 Button - Enabled
 == 按钮 - 已启用
+
+Button background color
+== 按钮背景颜色
+
+Button background opacity percentage
+== 按钮背景 — 不透明度百分比
 
 Button browser
 == 按键浏览器
@@ -2360,6 +2372,9 @@ Connect address error
 Connect dummy
 == 连接分身
 
+Connect dummy automatically for solo split mode
+== 单刷模式自动连接分身
+
 Connect dummy to enable
 == 连接分身后可启用
 
@@ -2681,9 +2696,6 @@ Custom font weight (variable fonts)
 Custom Font:
 == 自定义字体：
 
-Custom map upload
-== 自定义地图上传
-
 Custom prompt template
 == 自定义提示词模板
 
@@ -2695,6 +2707,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == 自定义提供商模型名称
+
+Custom text color
+== 自定义文本颜色
 
 Custom title
 == 自定义头衔
@@ -2728,6 +2743,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == 自定义投票显示和交互
+
+Custom…
+== 自定义…
 
 Cut interval
 == 裁剪区间
@@ -3432,7 +3450,7 @@ Dummy Control
 == 分身控制
 
 Dummy control
-== Dummy control
+== 分身控制
 
 Dummy Control: %s
 == 分身控制：%s
@@ -3728,6 +3746,9 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == 启用背景 3D 粒子拖尾
 
+Enable bounce-in entrance animation when country flags finish loading
+== 国旗图标加载完成时播放弹跳入场动画
+
 Enable camera drift
 == 启用镜头漂移
 
@@ -3814,6 +3835,9 @@ Enable fat skin
 
 Enable freeze call sound
 == 启用冻结呼叫声
+
+Enable frosted glass blur behind secondary popups and dropdowns
+== 启用二级弹窗与下拉列表背景模糊
 
 Enable FTAPI auto-translate (may overload the service)
 == 启用 FTAPI 自动翻译（可能导致服务过载）
@@ -4121,6 +4145,9 @@ Enter a CP number from 1 to 255.
 Enter Password
 == 输入密码
 
+Enter solo split mode
+== 进入单刷模式
+
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == 填入赞助兑换码并点「兑换」，写下称号后点「保存」。勾选「仅在指定昵称下显示」可把称号绑定到某一个昵称。
 
@@ -4246,6 +4273,12 @@ Existing Player
 
 Exit replay view
 == 退出回放查看
+
+Expanded dropdown background color
+== 展开列表背景颜色
+
+Expanded dropdown background opacity percentage
+== 展开列表背景 — 不透明度百分比
 
 Export
 == 导出
@@ -4559,6 +4592,9 @@ Font cursor
 Font size
 == 字体大小
 
+Font store
+== 字体商店
+
 Font store:
 == 字体商店：
 
@@ -4859,17 +4895,14 @@ Ghost active (%d)
 Ghost ready
 == 影子就绪
 
-Ghost replay
-== 影子回放
-
 Ghost tools
 == 影子工具
 
 Ghost view mode off. The ghost follows your runs again.
 == 已退出查看模式。影子恢复跟随你的跑图。
 
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
-== 查看模式：按 ESC 切换控制面板。连按两次 ESC 打开游戏菜单（退出回放）。按住旁观键显示成员列表。
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
+== 查看模式：按 ESC 切换控制面板。连按两次 ESC 打开游戏菜单（回放继续）。按住旁观键显示成员列表。
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == 幽灵不透明度（0 不可见，100 完全可见）
@@ -5531,6 +5564,9 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == 保存/加载配置方案时包含皮肤
 
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== 收到消息自动翻译方式（0=仅在非目标语言时翻译，1=始终翻译）
+
 Incoming language
 == 接收语言
 
@@ -5611,6 +5647,12 @@ Initializing map logic
 
 Input
 == 输入
+
+Input background color
+== 输入框背景颜色
+
+Input background opacity percentage
+== 输入框背景 — 不透明度百分比
 
 Input device
 == 输入设备
@@ -6079,6 +6121,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == 留空使用默认提示词
+
+Leave solo split mode
+== 退出单刷模式
 
 Left jump
 == 左跳
@@ -7049,6 +7094,12 @@ Muted
 my_%s
 == 我的_%s
 
+MyMemory (free)
+== MyMemory（免费）
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemory 无需注册（匿名每日配额）
+
 n = Prediction latency
 == n = 预测延迟
 
@@ -7802,6 +7853,12 @@ Or visit DDNet.org
 Original
 == 原版
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== 告诉翻译服务原文是什么语言，接收和发送翻译共用。建议选“自动”，按每条消息识别。
+
+Original message language
+== 原文语言
+
 Other
 == 其他
 
@@ -8330,6 +8387,9 @@ Points unavailable
 Polished
 == 抛光
 
+Popup & dropdown blur
+== 弹窗与下拉列表模糊
+
 Popup animation
 == 弹出动画
 
@@ -8852,12 +8912,6 @@ Rank 1 demo already cached under 'Rank 1 replays': %s
 Rank 1 demo downloaded to '%s'
 == Rank 1 演示已下载到 '%s'
 
-Rank 1 members
-== Rank 1 成员
-
-Rank 1 replay
-== Rank 1 回放
-
 Rank 1 replays
 == Rank 1 回放
 
@@ -8980,6 +9034,9 @@ Rebinds the client's listening address and port
 
 Receive Rate
 == 接收速率
+
+Receive translation method
+== 接收翻译方式
 
 Receive VAD speakers
 == 接收 VAD 讲话者
@@ -9962,6 +10019,9 @@ Search
 Search and navigate settings
 == 搜索并跳转到设置项
 
+Search country flag…
+== 搜索国家旗帜…
+
 Search donor asset
 == 搜索来源材质
 
@@ -9994,6 +10054,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == 次要
+
+Secondary menu background color
+== 二级菜单背景颜色
+
+Secondary menu background opacity percentage
+== 二级菜单背景 — 不透明度百分比
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == 重新连接前等待多少秒（服务器已满时，0 表示关闭）
@@ -10097,14 +10163,8 @@ Send probability
 Send Rate
 == 发送速率
 
-Send source language
-== 发送源语言
-
 Send specified command to rcon
 == 向 rcon 发送指定命令
-
-Send target language
-== 发送目标语言
 
 Send translation method
 == 发送翻译方式
@@ -10351,6 +10411,9 @@ Show advanced options
 
 Show advanced title settings (collapsing keeps configured effects)
 == 显示头衔高级设置（收起后保留已设置效果）
+
+Show advanced translation options
+== 显示高级翻译选项
 
 Show air jump indicator
 == 显示空中跳指示器
@@ -11573,8 +11636,14 @@ Solo
 Solo split
 == 单刷模式
 
+Solo split enter key
+== 单刷模式进队按键
+
 Solo split key
 == 单刷模式按键
+
+Solo split leave key
+== 单刷模式出队按键
 
 Some fonts could not be loaded. Check the local console for details.
 == 未能加载某些字体。检查本地控制台以获取详情。
@@ -11710,9 +11779,6 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == 本体和分身分别进队，方便开局 solo 同步（部分地图不好同步时使用）
-
-Split main/dummy into two free teams; press again to return to team 0
-== 本体/分身分别进入两个空闲队伍；再按一次回到队伍 0
 
 Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
 == 赞助者发言样式草稿：0=普通，1=柔光，2=铂金高光
@@ -12065,9 +12131,6 @@ Taper trail ends
 Taper trail width
 == 锥形拖尾宽度
 
-Target language
-== 目标语言
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == 翻译目标语言代码（如 zh、en、ja、zh-TW）
 
@@ -12181,6 +12244,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == 队伍 Tee 外发光
+
+Team used when leaving solo split mode
+== 退出单刷模式时使用的队伍
+
+Team when leaving solo split
+== 退出单刷时的队伍
 
 Teammate
 == 队友
@@ -12361,6 +12430,12 @@ Text alpha
 
 Text color
 == 文本颜色
+
+Text color mode
+== 文本颜色模式
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== 文本颜色模式：0 自动，1 白色，2 黑色，3 自定义
 
 Text effect
 == 文字效果
@@ -12755,6 +12830,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == 切换计分板光标
 
+Toggle solo split mode
+== 切换单刷模式
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == 在 team 0 和 team 模式间切换。该模式会让你的队伍按 team 0 规则运行
 
@@ -12884,6 +12962,15 @@ Translate last message of the person with this id
 Translate only when needed
 == 仅在需要时翻译
 
+Translate only when not in target language
+== 仅在非目标语言时翻译
+
+Translate outgoing messages to
+== 发送消息译为
+
+Translate received messages to
+== 收到消息译为
+
 Translate UI
 == 翻译 UI
 
@@ -12896,8 +12983,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == 正在翻译为 %s……
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== 翻译后端（llm/tencentcloud/libretranslate/ftapi）
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== 翻译后端（mymemory/llm/tencentcloud/libretranslate/ftapi）
 
 Translation backend invalid, sending original
 == 翻译后端无效，发送原文
@@ -13501,6 +13588,9 @@ Video name
 
 Video name:
 == 视频名称：
+
+Video rendering is unavailable during online replay.
+== 在线回放期间无法渲染视频。
 
 Video was saved to '%s'
 == 视频保存至 "%s"
@@ -14372,6 +14462,9 @@ Zhipu AI
 Zhipu API key
 == 智谱 API 密钥
 
+Zhipu free models allow only 1 concurrent request
+== 智谱免费模型只允许 1 个并发请求
+
 ZhipuAI API Key
 == 智谱 AI API Key
 
@@ -14491,7 +14584,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== Menu
+== 菜单键
 
 [Config help]
 %s (default: "%s", max length: %d)
@@ -18616,10 +18709,6 @@ Swap Action
 [Predefined touch button behaviors]
 Use Action
 == 使用行为
-
-[Rank 1 replay]
-Direction
-== 方向
 
 [Show name plates]
 All

@@ -14,11 +14,13 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/chat_command_hud.h>
 #include <game/client/components/qmclient/chat_emoji.h>
+#include <game/client/components/qmclient/chat_translate_button.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
 #include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/components/qmclient/sponsor_chat_render.h>
+#include <game/client/components/qmclient/translate/translate_jobs.h>
 #include <game/client/components/qmclient/translate/translate_ui_popup.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
@@ -31,14 +33,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-class CTranslateResponse
-{
-public:
-	bool m_Error = false;
-	char m_Text[1024] = "";
-	char m_Language[16] = "";
-};
 
 constexpr auto SAVES_FILE = "ddnet-saves.txt";
 
@@ -192,6 +186,7 @@ private:
 	bool m_PrevShowChat;
 	std::array<int, 4> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
+	uint64_t m_PreparedGlyphAtlasRevision = 0;
 	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
@@ -335,7 +330,7 @@ private:
 	// 翻译按钮状态
 	struct STranslateButtonState
 	{
-		bool m_IsPressed = false;
+		CQmChatTranslateButton m_Input;
 		bool m_RectValid = false;
 		float m_X = 0.0f;
 		float m_Y = 0.0f;
@@ -543,16 +538,7 @@ public:
 	bool TranslateVisibleChatLines();
 	static bool IsManualVisibleTranslateCandidate(int ClientId, bool HasText, bool HasTranslateResponse, const int *pLocalIds, size_t NumLocalIds)
 	{
-		if(!HasText || HasTranslateResponse)
-			return false;
-		if(ClientId < 0)
-			return false;
-		for(size_t i = 0; i < NumLocalIds; ++i)
-		{
-			if(pLocalIds[i] >= 0 && ClientId == pLocalIds[i])
-				return false;
-		}
-		return true;
+		return IsTranslatePlayerCandidate(ClientId, true, HasText, HasTranslateResponse, pLocalIds, NumLocalIds);
 	}
 	void OpenChatLineMenu(const CLine &Line, vec2 UiMousePos);
 	void CloseChatLineMenu();

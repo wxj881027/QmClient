@@ -140,6 +140,24 @@ inline float QmHudMediaIslandScreenPixelSize(float ScreenX0, float ScreenY0, flo
 		(ScreenY1 - ScreenY0) / (float)std::max(1, ScreenHeight));
 }
 
+struct SHudRecordingPresentation
+{
+	bool m_ShowInfoStack;
+	bool m_ShowRecordingText;
+
+	// 内容是否可绘制由当前模式决定，不能借用上一种内容遗留的动画透明度。
+	float RecordingTextAlpha(float AnimatedAlpha) const
+	{
+		return m_ShowRecordingText ? std::clamp(AnimatedAlpha, 0.0f, 1.0f) : 0.0f;
+	}
+};
+
+inline SHudRecordingPresentation QmHudRecordingPresentation(bool Recording, bool ScoreboardExpanded, bool LocalTime, bool FrozenSummary)
+{
+	const bool ShowRecordingText = Recording && ScoreboardExpanded;
+	return {(LocalTime || FrozenSummary) && !ShowRecordingText, ShowRecordingText};
+}
+
 // 两处录制红点共用 2.4 秒呼吸周期，透明度保持在 65%～95%，不影响布局和显隐条件。
 inline float QmHudRecordingDotAlpha(double Seconds)
 {

@@ -1186,10 +1186,13 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	}
 
 	// set flags
-	// QmClient: 窗口先以隐藏状态创建。首帧（CClient::Run() 里那帧纯黑清屏）到
-	// 加载界面真正 present 之间隔着语言/声音/视频初始化和主题加载，窗口若一开始就可见，
-	// 这段时间用户看到的就是整屏黑在"闪"。等第一帧有内容后再由 ShowWindow() 显示。
-	int SdlFlags = SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN;
+	int SdlFlags = SDL_WINDOW_INPUT_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_ALLOW_HIGHDPI;
+	// Windows OpenGL 保留可见创建流程，避免隐藏窗口先渲染后显示留下旧的全屏捕获内容。
+	// 其他后端仍在首个有效帧准备好后显示，减少初始化期间的空帧。
+#if defined(CONF_FAMILY_WINDOWS)
+	if(!IsOpenGLFamilyBackend)
+#endif
+		SdlFlags |= SDL_WINDOW_HIDDEN;
 	SdlFlags |= (IsOpenGLFamilyBackend) ? SDL_WINDOW_OPENGL : SDL_WINDOW_VULKAN;
 	if(Flags & IGraphicsBackend::INITFLAG_RESIZABLE)
 		SdlFlags |= SDL_WINDOW_RESIZABLE;
@@ -1253,6 +1256,9 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		else
 			return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_SDL_WINDOW_CREATE_FAILED;
 	}
+
+	if(g_Config.m_QmGraphicsTrace >= 1 && (SDL_GetWindowFlags(m_pWindow) & SDL_WINDOW_HIDDEN) == 0)
+		dbg_msg("gfx/window", "event=startup_show phase=create flags=%u", SDL_GetWindowFlags(m_pWindow));
 
 	int GlewMajor = 0;
 	int GlewMinor = 0;
@@ -1536,15 +1542,12 @@ void CGraphicsBackend_SDL_GL::HideWindow()
 
 void CGraphicsBackend_SDL_GL::ShowWindow()
 {
-	// QmClient: 窗口以 SDL_WINDOW_HIDDEN 创建，等第一帧真有内容后再显示，
-	// 避免启动时先闪一帧纯黑。终端启动时窗口可能沿用最小化状态或被终端置于后方，
-	// 因此显示前先恢复，再请求 SDL 将其抬到前台。重复调用无副作用。
-	if(m_pWindow != nullptr)
-	{
-		SDL_RestoreWindow(m_pWindow);
-		SDL_ShowWindow(m_pWindow);
-		SDL_RaiseWindow(m_pWindow);
-	}
+	// 显示与恢复、激活分离：重复显示不能恢复用户最小化的窗口或重新抢占焦点。
+	if(m_pWindow == nullptr || (SDL_GetWindowFlags(m_pWindow) & SDL_WINDOW_HIDDEN) == 0)
+		return;
+	SDL_ShowWindow(m_pWindow);
+	if(g_Config.m_QmGraphicsTrace >= 1)
+		dbg_msg("gfx/window", "event=startup_show flags=%u", SDL_GetWindowFlags(m_pWindow));
 }
 
 void CGraphicsBackend_SDL_GL::SetWindowParams(int FullscreenMode, bool IsBorderless)

@@ -19,7 +19,11 @@ description: 修改或调试 QmClient C++ 时使用；提供 DDNet 命名、热�
 
 识别每帧、tick、玩家、实体、snapshot 和文本布局路径。检查新增的分配、字符串构造、排序扫描、`TextWidth`、配置写入、序列化和网络成本是否必要。
 
-性能结论须有同场景证据；无需为普通正确性修复启动完整性能诊断。静态发现可先修复并验证正确性，未实测时不宣称性能提升。
+性能敏感职责尽可能保持模块化和可 benchmark 化，直接测量生产实现；相关路径优先复用 Google Benchmark，具体命令与证据由 `qmclient-verification-gate` 的 [性能参考](../qmclient-verification-gate/references/performance.md) 维护。静态可确认的正确性问题可以先修复，缺少可比实测时不宣称性能提升。
+
+## UI 组件与共享职责
+
+Qm 卡片和组件沿现有共享入口管理布局、状态与生命周期。检查长译文、缩放、窄视口和无内容时的尺寸适应与兜底；交互改动同时覆盖外部点击、ESC、嵌套关闭、离页失效和重开。用生产状态转换约束回归，不为最小化 diff 分散同类策略或牺牲架构统一性。
 
 ## 资源与线程
 
@@ -34,8 +38,7 @@ description: 修改或调试 QmClient C++ 时使用；提供 DDNet 命名、热�
 
 | 风险 | 本 skill 下的参考 |
 | --- | --- |
-| 性能优化、长帧 | [performance-workflow.md](references/advanced/performance-workflow.md) |
-| 性能日志和报表系统 | [perf-system-workflow.md](references/advanced/perf-system-workflow.md) |
+| 性能实现、长帧或诊断链路 | [performance-workflow.md](references/advanced/performance-workflow.md) |
 | 行为保持型重构 | [refactor-workflow.md](references/advanced/refactor-workflow.md) |
 | 新功能或新配置 | [feature-introduction.md](references/advanced/feature-introduction.md) |
 | 下载、文件、外部输入 | [safety-security.md](references/advanced/safety-security.md) |

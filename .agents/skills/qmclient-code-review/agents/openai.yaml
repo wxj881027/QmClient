@@ -1,0 +1,4 @@
+interface:
+  display_name: "QmClient 代码审查与质量审计"
+  short_description: "检查真实缺陷、边界状态、行为测试及共享影响面"
+  default_prompt: "使用 $qmclient-code-review 审查指定范围；深度审计时按需选择场景参考，输出已验证问题和真实验证限制。"

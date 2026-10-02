@@ -830,6 +830,9 @@ Apply a writable preset and edit first
 Apply Changes
 == Применить изменения
 
+Apply frosted glass blur behind secondary popups and dropdowns
+== Размывать фон подокон и выпадающих списков
+
 Apply input early before next tick for prediction
 == Применять ввод заранее до следующего тика для предсказания
 
@@ -1108,6 +1111,9 @@ Auto-accept team invites by sending /team <n>
 
 Auto-close chat after unfreeze
 == Автоматически закрывать чат после разморозки
+
+Auto-connect dummy
+== Автоподключение двойника
 
 Auto-create CSV on game end
 == Автоматически создавать CSV при завершении игры
@@ -1437,7 +1443,7 @@ Better scoreboard
 == Улучшенная таблица лидеров
 
 Bind
-== Bind
+== Привязка
 
 Bind address for client/server
 == Адрес привязки для клиента/сервера
@@ -1603,6 +1609,12 @@ Button - Disabled
 
 Button - Enabled
 == Кнопка - Включена
+
+Button background color
+== Цвет фона кнопок
+
+Button background opacity percentage
+== Цвет фона кнопок — непрозрачность в процентах
 
 Button browser
 == Браузер кнопок
@@ -2360,6 +2372,9 @@ Connect address error
 Connect dummy
 == Подключить дубль
 
+Connect dummy automatically for solo split mode
+== Автоматически подключать двойника в режиме соло-разделения
+
 Connect dummy to enable
 == Подключите дамми, чтобы включить
 
@@ -2681,9 +2696,6 @@ Custom font weight (variable fonts)
 Custom Font:
 == Пользовательский шрифт:
 
-Custom map upload
-== Загрузка пользовательских карт
-
 Custom prompt template
 == Пользовательский шаблон промпта
 
@@ -2695,6 +2707,9 @@ Custom Provider endpoint
 
 Custom Provider model name
 == Пользовательское название модели провайдера
+
+Custom text color
+== Пользовательский цвет текста
 
 Custom title
 == Свой титул
@@ -2728,6 +2743,9 @@ Customize translate button and menu colors
 
 Customize vote display and interaction
 == Customize vote display and interaction
+
+Custom…
+== Пользовательский…
 
 Cut interval
 == Интервал обрезки
@@ -3432,7 +3450,7 @@ Dummy Control
 == Управление дамми
 
 Dummy control
-== Dummy control
+== Управление дамми
 
 Dummy Control: %s
 == Управление дамми: %s
@@ -3728,6 +3746,9 @@ Enable background 3D particle pulse scaling
 Enable background 3D particle trail
 == Включить шлейф фоновых 3D-частиц
 
+Enable bounce-in entrance animation when country flags finish loading
+== Анимация упругого появления флагов стран при завершении загрузки
+
 Enable camera drift
 == Включить дрейф камеры
 
@@ -3814,6 +3835,9 @@ Enable fat skin
 
 Enable freeze call sound
 == Включить звук вызова заморозки
+
+Enable frosted glass blur behind secondary popups and dropdowns
+== Включить размытие фона подокон и списков
 
 Enable FTAPI auto-translate (may overload the service)
 == Включить автоперевод FTAPI (может перегрузить сервис)
@@ -4121,6 +4145,9 @@ Enter a CP number from 1 to 255.
 Enter Password
 == Введите пароль
 
+Enter solo split mode
+== Войти в режим соло-разделения
+
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Введите спонсорский код и нажмите «Активировать», затем впишите титул и нажмите «Сохранить». Включите «Показывать только с этим ником», чтобы привязать титул к одному нику.
 
@@ -4246,6 +4273,12 @@ Existing Player
 
 Exit replay view
 == Выйти из просмотра реплея
+
+Expanded dropdown background color
+== Цвет фона раскрытого списка
+
+Expanded dropdown background opacity percentage
+== Цвет фона раскрытого списка — непрозрачность в процентах
 
 Export
 == Экспорт
@@ -4559,6 +4592,9 @@ Font cursor
 Font size
 == Размер шрифта
 
+Font store
+== Магазин шрифтов
+
 Font store:
 == Магазин шрифтов:
 
@@ -4859,17 +4895,14 @@ Ghost active (%d)
 Ghost ready
 == Ghost готов
 
-Ghost replay
-== Реплей Ghost
-
 Ghost tools
 == Инструменты призраков
 
 Ghost view mode off. The ghost follows your runs again.
 == Режим просмотра Ghost выключен. Ghost снова следует за вашими заездами.
 
-Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.
-== Режим просмотра Ghost: ESC переключает панель управления. Двойное нажатие ESC открывает меню игры (выход из повтора). Удерживайте клавишу наблюдения для списка участников.
+Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.
+== Режим просмотра Ghost: ESC переключает панель управления. Двойное нажатие ESC открывает меню игры (воспроизведение продолжается). Удерживайте клавишу наблюдения для списка участников.
 
 Ghost visibility (alpha, 0=invisible, 100=visible)
 == Видимость призрака (альфа, 0=невидимо, 100=видимо)
@@ -5531,6 +5564,9 @@ Include seconds in local time display
 Include skin when saving/loading config preset
 == Включать скин при сохранении/загрузке пресета конфигурации
 
+Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
+== Режим автоперевода входящих сообщений (0=только если сообщение не на целевом языке, 1=всегда переводить)
+
 Incoming language
 == Входящий язык
 
@@ -5611,6 +5647,12 @@ Initializing map logic
 
 Input
 == Ввод
+
+Input background color
+== Цвет фона полей ввода
+
+Input background opacity percentage
+== Цвет фона полей ввода — непрозрачность в процентах
 
 Input device
 == Устройство ввода
@@ -6079,6 +6121,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Оставьте пустым для использования промпта по умолчанию
+
+Leave solo split mode
+== Выйти из режима соло-разделения
 
 Left jump
 == Левый прыжок
@@ -7049,6 +7094,12 @@ Muted
 my_%s
 == моя_%s
 
+MyMemory (free)
+== MyMemory (бесплатно)
+
+MyMemory needs no registration (anonymous daily quota)
+== MyMemory не требует регистрации (анонимная дневная квота)
+
 n = Prediction latency
 == n = Задержка предсказания
 
@@ -7802,6 +7853,12 @@ Or visit DDNet.org
 Original
 == Оригинал
 
+Original language for both received and outgoing messages. Use Auto to detect each message.
+== Язык оригинала для входящих и исходящих сообщений. Выберите «Авто», чтобы определять язык каждого сообщения.
+
+Original message language
+== Язык исходного сообщения
+
 Other
 == Другое
 
@@ -8330,6 +8387,9 @@ Points unavailable
 Polished
 == Глянец
 
+Popup & dropdown blur
+== Размытие окон и списков
+
 Popup animation
 == Анимация всплытия
 
@@ -8852,12 +8912,6 @@ Rank 1 demo already cached under 'Rank 1 replays': %s
 Rank 1 demo downloaded to '%s'
 == Демо ранга 1 загружено в '%s'
 
-Rank 1 members
-== Участники ранга 1
-
-Rank 1 replay
-== Повтор ранга 1
-
 Rank 1 replays
 == Реплеи ранга 1
 
@@ -8980,6 +9034,9 @@ Rebinds the client's listening address and port
 
 Receive Rate
 == Скорость приёма
+
+Receive translation method
+== Способ перевода входящих сообщений
 
 Receive VAD speakers
 == Принимать говорящих VAD
@@ -9962,6 +10019,9 @@ Search
 Search and navigate settings
 == Поиск и переход к настройкам
 
+Search country flag…
+== Поиск флага страны…
+
 Search donor asset
 == Поиск ресурса донора
 
@@ -9994,6 +10054,12 @@ Sec-WebSocket-Protocol sent during the realtime handshake
 
 Secondary
 == Вторичная
+
+Secondary menu background color
+== Цвет фона подменю
+
+Secondary menu background opacity percentage
+== Цвет фона подменю — непрозрачность в процентах
 
 Seconds to wait before reconnecting (0=off, when server is full)
 == Секунд ожидания перед переподключением (0 = выкл., когда сервер полон)
@@ -10097,14 +10163,8 @@ Send probability
 Send Rate
 == Скорость отправки
 
-Send source language
-== Отправить целевой язык
-
 Send specified command to rcon
 == Отправить указанную команду в rcon
-
-Send target language
-== Отправить целевой язык
 
 Send translation method
 == Способ отправки перевода
@@ -10351,6 +10411,9 @@ Show advanced options
 
 Show advanced title settings (collapsing keeps configured effects)
 == Показать расширенные настройки титула (при сворачивании эффекты сохраняются)
+
+Show advanced translation options
+== Показывать расширенные параметры перевода
 
 Show air jump indicator
 == Показывать индикатор прыжка в воздухе
@@ -11573,8 +11636,14 @@ Solo
 Solo split
 == Соло-разделение
 
+Solo split enter key
+== Клавиша входа в соло-разделение
+
 Solo split key
 == Клавиша соло-разделения
+
+Solo split leave key
+== Клавиша выхода из соло-разделения
 
 Some fonts could not be loaded. Check the local console for details.
 == Некоторые шрифты не удалось загрузить. Подробности смотрите в локальной консоли.
@@ -11710,9 +11779,6 @@ Spin pop
 
 Split main and dummy into different teams for solo-run sync
 == Распределяет основного и двойника по разным командам для синхронизации соло-забегов
-
-Split main/dummy into two free teams; press again to return to team 0
-== Разделить основного/двойника по двум свободным командам; повторное нажатие возвращает в команду 0
 
 Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight
 == Черновик стиля чата спонсора: 0=Обычный, 1=Мягкое свечение, 2=Платиновый блеск
@@ -12065,9 +12131,6 @@ Taper trail ends
 Taper trail width
 == Сужающаяся ширина следа
 
-Target language
-== Целевой язык
-
 Target language code (e.g. zh, en, ja, zh-TW)
 == Код целевого языка перевода (например, zh, en, ja, zh-TW)
 
@@ -12181,6 +12244,12 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Свечение контура ти по командам
+
+Team used when leaving solo split mode
+== Команда при выходе из режима соло-разделения
+
+Team when leaving solo split
+== Команда при выходе из соло-разделения
 
 Teammate
 == Товарищ по команде
@@ -12361,6 +12430,12 @@ Text alpha
 
 Text color
 == Цвет текста
+
+Text color mode
+== Режим цвета текста
+
+Text color mode: 0 automatic, 1 white, 2 black, 3 custom
+== Режим цвета текста: 0 авто, 1 белый, 2 черный, 3 свой
 
 Text effect
 == Эффект текста
@@ -12755,6 +12830,9 @@ Toggle remote console
 Toggle scoreboard cursor
 == Переключить курсор таблицы счёта
 
+Toggle solo split mode
+== Переключить режим соло-разделения
+
 Toggle team between team 0 and team mode. This mode will make your team behave like team 0.
 == Переключить команду между командой 0 и командным режимом. Этот режим заставит вашу команду вести себя как команда 0.
 
@@ -12884,6 +12962,15 @@ Translate last message of the person with this id
 Translate only when needed
 == Переводить только при необходимости
 
+Translate only when not in target language
+== Переводить только если сообщение не на целевом языке
+
+Translate outgoing messages to
+== Язык перевода исходящих
+
+Translate received messages to
+== Язык перевода входящих
+
 Translate UI
 == Перевод интерфейса
 
@@ -12896,8 +12983,8 @@ Translated text hidden due to streamer mode
 Translating to %s...
 == Перевод на %s...
 
-Translation backend (llm/tencentcloud/libretranslate/ftapi)
-== Бэкенд перевода (llm/tencentcloud/libretranslate/ftapi)
+Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
+== Бэкенд перевода (mymemory/llm/tencentcloud/libretranslate/ftapi)
 
 Translation backend invalid, sending original
 == Бэкенд перевода недействителен, отправка оригинала
@@ -13501,6 +13588,9 @@ Video name
 
 Video name:
 == Имя видео:
+
+Video rendering is unavailable during online replay.
+== Рендеринг видео недоступен во время онлайн-повтора.
 
 Video was saved to '%s'
 == Видео сохранено в «%s»
@@ -14372,6 +14462,9 @@ Zhipu AI
 Zhipu API key
 == Ключ API Zhipu
 
+Zhipu free models allow only 1 concurrent request
+== Бесплатные модели Zhipu допускают только 1 одновременный запрос
+
 ZhipuAI API Key
 == API-ключ ZhiPu AI
 
@@ -14491,7 +14584,7 @@ Unavailable for this player
 
 [Bind keyboard key]
 Menu
-== Menu
+== Клавиша меню
 
 [Config help]
 %s (default: "%s", max length: %d)
@@ -14708,10 +14801,6 @@ Swap Action
 [Predefined touch button behaviors]
 Use Action
 == Использовать действие
-
-[Rank 1 replay]
-Direction
-== Направление
 
 [Show name plates]
 All

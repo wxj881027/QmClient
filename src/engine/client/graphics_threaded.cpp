@@ -4222,8 +4222,10 @@ void CGraphics_Threaded::HideWindow()
 
 void CGraphics_Threaded::ShowWindow()
 {
-	// QmClient: 与 HideWindow 对称，同样直接转发到后端。启动时窗口是隐藏创建的，
-	// 等第一帧真有内容 present 之后再显示（重复调用无副作用）。
+	// 先把首个有效帧绘入后缓冲，再显示窗口；由调用方在可见窗口上交换帧。
+	// 只同步首次显示，普通帧与失焦恢复不增加等待。
+	KickCommandBuffer();
+	WaitForIdle();
 	m_pBackend->ShowWindow();
 }
 

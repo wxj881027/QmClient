@@ -602,6 +602,7 @@ void CTClient::ConchainRandomColor(IConsole::IResult *pResult, void *pUserData, 
 
 void CTClient::OnInit()
 {
+	// 字体配置已在 LoadFonts 中应用，不能等本组件初始化时才切换加载页字体。
 	m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
 	m_UpdateAutoEnabled = g_Config.m_QmAutoUpdate != 0;
 	if(g_Config.m_QmAutoUpdate)
@@ -1582,62 +1583,168 @@ void CTClient::ConSoloSplit(IConsole::IResult *pResult, void *pUserData)
 	((CTClient *)pUserData)->SoloSplitToggle();
 }
 
+void CTClient::ConSoloSplitEnter(IConsole::IResult *pResult, void *pUserData)
+{
+	((CTClient *)pUserData)->SoloSplitEnter();
+}
+
+void CTClient::ConSoloSplitLeave(IConsole::IResult *pResult, void *pUserData)
+{
+	((CTClient *)pUserData)->SoloSplitLeave();
+}
+
 void CTClient::SoloSplitToggle()
 {
+	if(m_SoloSplitAction != 0)
+		return;
 	if(Client()->State() != IClient::STATE_ONLINE)
 		return;
-	if(!Client()->DummyConnected())
+	if(Client()->DummyConnected())
+	{
+		const int MainId = GameClient()->m_aLocalIds[0];
+		const int DummyId = GameClient()->m_aLocalIds[1];
+		if(MainId >= 0 && DummyId >= 0 && GameClient()->m_Teams.Team(MainId) > 0 && GameClient()->m_Teams.Team(DummyId) > 0 && GameClient()->m_Teams.Team(MainId) != GameClient()->m_Teams.Team(DummyId))
+		{
+			SoloSplitLeave();
+			return;
+		}
+	}
+	SoloSplitEnter();
+}
+
+void CTClient::SoloSplitEnter()
+{
+	SoloSplitStart(1);
+}
+
+void CTClient::SoloSplitLeave()
+{
+	SoloSplitStart(2);
+}
+
+void CTClient::SoloSplitStart(int Action)
+{
+	if(m_SoloSplitAction != 0 || Client()->State() != IClient::STATE_ONLINE)
 		return;
+	if(!Client()->DummyConnected())
+	{
+		if(Action != 1 || !g_Config.m_QmSoloSplitLinkDummy)
+			return;
+		m_SoloSplitAction = Action;
+		m_SoloSplitWaitingForDummy = true;
+		m_SoloSplitDeadline = time_get() + time_freq() * 10;
+		Client()->DummyConnect();
+		return;
+	}
 
 	const int MainId = GameClient()->m_aLocalIds[0];
 	const int DummyId = GameClient()->m_aLocalIds[1];
 	if(MainId < 0 || DummyId < 0)
+	{
+		m_SoloSplitAction = 0;
 		return;
+	}
 
 	const int MainTeam = GameClient()->m_Teams.Team(MainId);
 	const int DummyTeam = GameClient()->m_Teams.Team(DummyId);
-
-	// 已分队（各自在非 0 的不同 team）→ 恢复：两者都回 team 0
-	if(MainTeam > 0 && DummyTeam > 0 && MainTeam != DummyTeam)
+	const int TeamSuper = GameClient()->m_Teams.TeamSuper();
+	const int RestoreTeam = g_Config.m_QmSoloSplitRestoreTeam;
+	if(RestoreTeam < 0 || RestoreTeam >= TeamSuper)
 	{
-		GameClient()->m_Chat.SendChatOnConn(IClient::CONN_MAIN, 0, "/team 0");
-		GameClient()->m_Chat.SendChatOnConn(IClient::CONN_DUMMY, 0, "/team 0");
+		m_SoloSplitAction = 0;
 		return;
 	}
-
-	// 未分队 → 找两个未被占用的合法 team（DDRace team 从 1 开始；0 是公共队，TEAM_SUPER 保留）
-	const int TeamSuper = GameClient()->m_Teams.TeamSuper();
-	bool aTeamUsed[NUM_DDRACE_TEAMS] = {};
-	for(int i = 0; i < MAX_CLIENTS; ++i)
+	m_aSoloSplitPreviousTeam[0] = MainTeam;
+	m_aSoloSplitPreviousTeam[1] = DummyTeam;
+	if(Action == 2)
 	{
-		if(!GameClient()->m_aClients[i].m_Active)
-			continue;
-		const int Team = GameClient()->m_Teams.Team(i);
-		if(Team > 0 && Team < TeamSuper && Team < NUM_DDRACE_TEAMS)
-			aTeamUsed[Team] = true;
+		m_aSoloSplitTargetTeam[0] = RestoreTeam;
+		m_aSoloSplitTargetTeam[1] = RestoreTeam;
 	}
-
-	int First = -1, Second = -1;
-	for(int Team = 1; Team < TeamSuper && Team < NUM_DDRACE_TEAMS; ++Team)
+	else
 	{
-		if(aTeamUsed[Team])
-			continue;
-		if(First < 0)
-			First = Team;
-		else if(Second < 0)
+		// 进队时找两个未被占用的合法 team（0 是公共队，TEAM_SUPER 保留）。
+		bool aTeamUsed[NUM_DDRACE_TEAMS] = {};
+		for(int i = 0; i < MAX_CLIENTS; ++i)
 		{
-			Second = Team;
-			break;
+			if(!GameClient()->m_aClients[i].m_Active)
+				continue;
+			const int Team = GameClient()->m_Teams.Team(i);
+			if(Team > 0 && Team < TeamSuper && Team < NUM_DDRACE_TEAMS)
+				aTeamUsed[Team] = true;
 		}
-	}
-	if(First < 0 || Second < 0)
-		return; // 无两个空闲 team 可用
 
+		int First = -1, Second = -1;
+		for(int Team = 1; Team < TeamSuper && Team < NUM_DDRACE_TEAMS; ++Team)
+		{
+			if(aTeamUsed[Team])
+				continue;
+			if(First < 0)
+				First = Team;
+			else if(Second < 0)
+			{
+				Second = Team;
+				break;
+			}
+		}
+		if(First < 0 || Second < 0)
+		{
+			m_SoloSplitAction = 0;
+			return;
+		}
+		m_aSoloSplitTargetTeam[0] = First;
+		m_aSoloSplitTargetTeam[1] = Second;
+	}
+	m_SoloSplitAction = Action;
+	m_SoloSplitAttempts = 0;
+	m_SoloSplitWaitingForDummy = false;
+	m_SoloSplitDeadline = time_get();
+	SoloSplitUpdate();
+}
+
+void CTClient::SoloSplitUpdate()
+{
+	if(m_SoloSplitAction == 0 || !Client()->DummyConnected())
+		return;
+	const int MainId = GameClient()->m_aLocalIds[0];
+	const int DummyId = GameClient()->m_aLocalIds[1];
+	if(MainId < 0 || DummyId < 0)
+		return;
+	const bool Done = GameClient()->m_Teams.Team(MainId) == m_aSoloSplitTargetTeam[0] && GameClient()->m_Teams.Team(DummyId) == m_aSoloSplitTargetTeam[1];
+	if(Done)
+	{
+		SoloSplitFinish(true);
+		return;
+	}
+	if(time_get() < m_SoloSplitDeadline)
+		return;
+	if(m_SoloSplitAttempts < 2)
+	{
+		m_SoloSplitAttempts++;
+		m_SoloSplitDeadline = time_get() + time_freq() * 2;
+		char aCmd[32];
+		str_format(aCmd, sizeof(aCmd), "/team %d", m_aSoloSplitTargetTeam[0]);
+		GameClient()->m_Chat.SendChatOnConn(IClient::CONN_MAIN, 0, aCmd);
+		str_format(aCmd, sizeof(aCmd), "/team %d", m_aSoloSplitTargetTeam[1]);
+		GameClient()->m_Chat.SendChatOnConn(IClient::CONN_DUMMY, 0, aCmd);
+		return;
+	}
+	// 两边未能达到目标，回滚到调用前的队伍。
 	char aCmd[32];
-	str_format(aCmd, sizeof(aCmd), "/team %d", First);
+	str_format(aCmd, sizeof(aCmd), "/team %d", m_aSoloSplitPreviousTeam[0]);
 	GameClient()->m_Chat.SendChatOnConn(IClient::CONN_MAIN, 0, aCmd);
-	str_format(aCmd, sizeof(aCmd), "/team %d", Second);
+	str_format(aCmd, sizeof(aCmd), "/team %d", m_aSoloSplitPreviousTeam[1]);
 	GameClient()->m_Chat.SendChatOnConn(IClient::CONN_DUMMY, 0, aCmd);
+	SoloSplitFinish(false);
+}
+
+void CTClient::SoloSplitFinish(bool Success)
+{
+	(void)Success;
+	m_SoloSplitAction = 0;
+	m_SoloSplitAttempts = 0;
+	m_SoloSplitWaitingForDummy = false;
+	m_SoloSplitDeadline = 0;
 }
 
 void CTClient::ConEmoteCycle(IConsole::IResult *pResult, void *pUserData)
@@ -1723,7 +1830,9 @@ void CTClient::OnConsoleInit()
 	Console()->Register("spec_id", "v[id]", CFGFLAG_CLIENT, ConSpecId, this, "Spectate a player by Id");
 
 	// 单刷模式：一键分队（本体/分身各进一个空闲 team），再按恢复 team 0
-	Console()->Register("qm_solo_split", "", CFGFLAG_CLIENT, ConSoloSplit, this, "Split main/dummy into two free teams; press again to return to team 0");
+	Console()->Register("qm_solo_split", "", CFGFLAG_CLIENT, ConSoloSplit, this, "Toggle solo split mode");
+	Console()->Register("qm_solo_split_enter", "", CFGFLAG_CLIENT, ConSoloSplitEnter, this, "Enter solo split mode");
+	Console()->Register("qm_solo_split_leave", "", CFGFLAG_CLIENT, ConSoloSplitLeave, this, "Leave solo split mode");
 
 	Console()->Register("emote_cycle", "", CFGFLAG_CLIENT, ConEmoteCycle, this, "Cycle through emotes");
 
@@ -1957,6 +2066,23 @@ bool CTClient::ServerCommandExists(const char *pCommand)
 
 void CTClient::OnUpdate()
 {
+	if(m_SoloSplitAction != 0)
+	{
+		if(m_SoloSplitWaitingForDummy)
+		{
+			if(Client()->DummyConnected())
+			{
+				const int Action = m_SoloSplitAction;
+				m_SoloSplitAction = 0;
+				m_SoloSplitWaitingForDummy = false;
+				SoloSplitStart(Action);
+			}
+			else if(time_get() >= m_SoloSplitDeadline)
+				SoloSplitFinish(false);
+		}
+		else
+			SoloSplitUpdate();
+	}
 	UpdateLocalSaveRestore();
 #if defined(CONF_FAMILY_WINDOWS)
 	const bool AutoUpdateEnabled = g_Config.m_QmAutoUpdate != 0;

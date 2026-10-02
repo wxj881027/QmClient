@@ -813,13 +813,13 @@ void CCollisionHitbox::RenderWeaponHitboxes()
 
 	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
-	if(g_Config.m_QmHitboxShowHammer)
+	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_QmHitboxShowHammer)
 		RenderHammerHitboxes();
 	if(g_Config.m_QmHitboxShowProjectiles)
 		RenderProjectileHitboxes();
 	if(g_Config.m_QmHitboxShowLasers || g_Config.m_QmHitboxShowFreezeLasers)
 		RenderLaserHitboxes();
-	if(g_Config.m_QmHitboxShowHook)
+	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_QmHitboxShowHook)
 		RenderHookHitboxes();
 	Graphics()->LinesEnd();
 }
@@ -857,7 +857,7 @@ void CCollisionHitbox::OnRender()
 		RenderTileHitboxes();
 	}
 
-	if(LegacyMode || g_Config.m_QmHitboxShowTeeCollision || g_Config.m_QmHitboxShowTeeFreeze || g_Config.m_QmHitboxShowTeeDeath)
+	if(!GameClient()->m_RankGhost.IsViewModeActive() && (LegacyMode || g_Config.m_QmHitboxShowTeeCollision || g_Config.m_QmHitboxShowTeeFreeze || g_Config.m_QmHitboxShowTeeDeath))
 	{
 		// 按 Tee↔Tee、Tee↔Freeze 和 Tee↔Death 语义分别绘制。
 		RenderTeeHitboxes();

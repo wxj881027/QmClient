@@ -148,8 +148,9 @@ SSettingsCardDeckResult CSettingsCardDeck::Render(const IUiContext &Ctx, const S
 	return RenderInternal(Ctx, Layout, pTab, vCards, Model, pScrollRegion, Input, Motion, VisualOptions, true);
 }
 
-SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx, const SSettingsPageLayoutFrame &Layout, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &Input, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, bool PersistentDefinitions)
+SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx, const SSettingsPageLayoutFrame &Layout, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &RawInput, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, bool PersistentDefinitions)
 {
+	SSettingsCardDeckInput Input = ResolveSettingsCardDeckPointerInput(RawInput, Ctx.m_pUi != nullptr && Ctx.m_pUi->PointerInputBlocked());
 	SSettingsCardDeckResult Result;
 	m_FrameRuntime.BeginFrame(Input.m_pDiagnostics);
 	if(pTab == nullptr)
@@ -445,6 +446,8 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 		if(Ctx.m_pUi != nullptr)
 			Ctx.m_pUi->EndPreLayoutInput();
 	}
+	// 预布局回调可能刚打开颜色选择器，原始按键快照不得驱动同帧拖动。
+	Input = ResolveSettingsCardDeckPointerInput(Input, Ctx.m_pUi != nullptr && Ctx.m_pUi->PointerInputBlocked());
 	RebuildActiveStateIndices();
 	if(m_vActiveStateIndices != m_vPreviousActiveStateIndices || PreLayoutGeometryChanged)
 	{

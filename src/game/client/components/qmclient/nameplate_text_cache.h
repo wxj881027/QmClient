@@ -7,11 +7,21 @@
 class CQmNameplateTextCache
 {
 	bool m_Updated = false;
+	uint64_t m_GlyphAtlasRevision = 0;
 
 public:
 	bool NeedsUpdate(bool Visible, bool Changed) const { return Visible && (Changed || !m_Updated); }
-	void OnUpdate() { m_Updated = true; }
-	void Reset() { m_Updated = false; }
+	bool ResourcesChanged(uint64_t GlyphAtlasRevision) const { return m_Updated && m_GlyphAtlasRevision != GlyphAtlasRevision; }
+	void OnUpdate(uint64_t GlyphAtlasRevision)
+	{
+		m_Updated = true;
+		m_GlyphAtlasRevision = GlyphAtlasRevision;
+	}
+	void Reset()
+	{
+		m_Updated = false;
+		m_GlyphAtlasRevision = 0;
+	}
 };
 
 // 坐标文字持续变化时复用缓冲；窗口重建使容器失效后重新创建。

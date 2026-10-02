@@ -14,6 +14,7 @@ class QmClientE2ERunnerTest(unittest.TestCase):
 				"assert_dialog_no_false_hang",
 				"connection_failure_recovery",
 				"demo_recording",
+				"online_replay_without_source",
 				"hang_watchdog_reports_stall",
 				"invalid_statistics_preserved",
 				"perf_log_persistence",

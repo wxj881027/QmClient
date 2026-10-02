@@ -1575,6 +1575,9 @@ void CRankGhost::OnGhostUnloaded(int Slot)
 	{
 		if(m_vLoadedSlots[i] != Slot)
 			continue;
+		if((int)i < m_ViewSelected)
+			--m_ViewSelected;
+		m_ViewMembers.Remove(i);
 		m_vLoadedSlots.erase(m_vLoadedSlots.begin() + i);
 		m_vLoadedGhostPaths.erase(m_vLoadedGhostPaths.begin() + i);
 		break;
@@ -1582,6 +1585,8 @@ void CRankGhost::OnGhostUnloaded(int Slot)
 	if(m_vLoadedSlots.empty())
 	{
 		m_ViewMode = false;
+		GameClient()->m_Ghost.StopManual();
+		GameClient()->m_Spectator.OnReset();
 		m_ViewSelected = 0;
 	}
 	else if(m_ViewSelected >= (int)m_vLoadedSlots.size())
@@ -2088,6 +2093,7 @@ void CRankGhost::RegisterLoadedGhost(const char *pStoragePath, int Slot)
 // 加载成功后的公共收尾：按需进入查看模式
 void CRankGhost::AfterGhostLoaded()
 {
+	str_copy(m_aLoadedReplayFilename, m_aDemoStoragePath);
 	if(m_PendingView)
 	{
 		m_PendingView = false;
@@ -2095,18 +2101,106 @@ void CRankGhost::AfterGhostLoaded()
 	}
 }
 
+IDemoPlayer::CInfo CRankGhost::PlaybackInfo() const
+{
+	IDemoPlayer::CInfo Info = m_ViewPlaybackMetadata;
+	const CGhost &Ghost = GameClient()->m_Ghost;
+	Info.m_Paused = !Ghost.ManualPlaying();
+	Info.m_Speed = Ghost.ManualSpeed();
+	Info.m_LastTick = Info.m_FirstTick + maximum(0, Ghost.ManualEndTick());
+	Info.m_CurrentTick = Info.m_FirstTick + std::clamp(Ghost.ManualPlaybackTick(), 0, maximum(0, Ghost.ManualEndTick()));
+	return Info;
+}
+
+int CRankGhost::PlaybackTickSpeed() const { return Client()->GameTickSpeed(); }
+IDemoPlayer *CRankGhost::PlaybackMetadataReader() const { return DemoPlayer(); }
+void CRankGhost::PlaybackSeek(int Tick)
+{
+	if(IsViewModeActive())
+		GameClient()->m_Ghost.ManualSeek(Tick - m_ViewPlaybackMetadata.m_FirstTick);
+}
+int CRankGhost::PlaybackAdjacentTick(int Tick, IDemoPlayer::ETickOffset Offset) const
+{
+	const int First = m_ViewPlaybackMetadata.m_FirstTick;
+	return First + GameClient()->m_Ghost.ManualAdjacentTick(Tick - First, Offset);
+}
+
+void CRankGhost::PlaybackSetPlaying(bool Playing)
+{
+	if(IsViewModeActive())
+		GameClient()->m_Ghost.ManualSetPlaying(Playing);
+}
+void CRankGhost::PlaybackSetSpeed(float Speed)
+{
+	if(IsViewModeActive())
+		GameClient()->m_Ghost.ManualSetSpeed(Speed);
+}
+
+bool CRankGhost::ExportViewCut(const char *pDestination, const std::vector<SDemoSliceSegment> &vSegments, DEMOFUNC_FILTER pFilter, void *pUser)
+{
+	if(!IsViewModeActive() || m_aViewPlaybackFilename[0] == '\0')
+		return false;
+	auto Delta = CSnapshotDelta::New();
+	auto DeltaSixup = CSnapshotDelta::New();
+	CDemoEditor Editor;
+	Editor.Init(&*Delta, &*DeltaSixup, Console(), Storage());
+	// 临时 demo 读取器会重置全局剪辑标记；保留当前在线会话的编辑状态。
+	const int SliceBegin = g_Config.m_ClDemoSliceBegin;
+	const int SliceEnd = g_Config.m_ClDemoSliceEnd;
+	const bool Result = Editor.Slice(m_aViewPlaybackFilename, pDestination, vSegments, pFilter, pUser);
+	g_Config.m_ClDemoSliceBegin = SliceBegin;
+	g_Config.m_ClDemoSliceEnd = SliceEnd;
+	return Result;
+}
+
+bool CRankGhost::ViewMemberRenderInfo(int Index, CTeeRenderInfo *pInfo) const
+{
+	return Index >= 0 && Index < (int)m_vLoadedSlots.size() && GameClient()->m_Ghost.GetGhostRenderInfo(m_vLoadedSlots[Index], pInfo);
+}
+
+bool CRankGhost::ViewMemberPosition(int Index, vec2 *pPosition) const
+{
+	return IsViewModeActive() && Index >= 0 && Index < (int)m_vLoadedSlots.size() && GameClient()->m_Ghost.GetManualRenderPos(m_vLoadedSlots[Index], pPosition);
+}
+
 void CRankGhost::EnterViewMode()
 {
 	if(m_vLoadedSlots.empty())
 		return;
-	GameClient()->m_Ghost.StartRenderManual();
+	GameClient()->m_Ghost.StartRenderManual(m_vLoadedSlots);
 	if(!GameClient()->m_Ghost.ManualModeActive())
 		return;
+	m_ViewPlaybackMetadata = {};
+	str_copy(m_aViewPlaybackFilename, m_aLoadedReplayFilename);
+	// 只扫描源文件的 tick 与标记；不播放快照，不改变在线服务器状态。
+	CDemoPlayer Metadata(nullptr, nullptr, false);
+	if(Metadata.Load(Storage(), nullptr, m_aViewPlaybackFilename, IStorage::TYPE_SAVE) != -1)
+	{
+		m_ViewPlaybackMetadata = *Metadata.BaseInfo();
+		if(m_ViewPlaybackMetadata.m_NumTimelineMarkers >= 2)
+			m_ViewPlaybackMetadata.m_FirstTick = m_ViewPlaybackMetadata.m_aTimelineMarkers[0];
+		Metadata.Stop();
+	}
+	m_ViewPlaybackMetadata.m_FirstTick = maximum(0, m_ViewPlaybackMetadata.m_FirstTick);
+	m_ViewPlaybackMetadata.m_LastTick = m_ViewPlaybackMetadata.m_FirstTick + GameClient()->m_Ghost.ManualEndTick();
+	int Markers = 0;
+	for(int i = 0; i < m_ViewPlaybackMetadata.m_NumTimelineMarkers; ++i)
+	{
+		const int Tick = m_ViewPlaybackMetadata.m_aTimelineMarkers[i];
+		if(Tick >= m_ViewPlaybackMetadata.m_FirstTick && Tick <= m_ViewPlaybackMetadata.m_LastTick)
+			m_ViewPlaybackMetadata.m_aTimelineMarkers[Markers++] = Tick;
+	}
+	m_ViewPlaybackMetadata.m_NumTimelineMarkers = Markers;
+	m_ViewPlaybackMetadata.m_LiveDemo = false;
+	m_ViewPlaybackMetadata.m_LivePlayback = false;
+	m_ViewMembers.Reset(m_vLoadedSlots.size());
+	++m_ViewGeneration;
 	m_ViewMode = true;
+	GameClient()->m_Spectator.OnReset();
 	// 查看模式不跟跑，清掉对齐标记，退出后由下一次跑图重新对齐
 	m_LastAlignedRaceTick = -1;
 	// 首次进入必须给出可退出的指引：控制面板由 ESC 开关，退出回放要走游戏菜单（双击 ESC）
-	const char *pHint = Localize("Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (leave the replay). Hold the spectate key for the member list.");
+	const char *pHint = Localize("Ghost view mode: ESC toggles the control panel. Double-tap ESC to open the game menu (playback continues). Hold the spectate key for the member list.");
 	Echo(pHint);
 	GameClient()->m_QmHudNotifications.QueueEcho(pHint, g_Config.m_ClMessageClientColor);
 }
@@ -2183,31 +2277,10 @@ bool CRankGhost::GetViewState(SViewState &Out) const
 	return true;
 }
 
-void CRankGhost::ViewPlayPause()
-{
-	if(!IsViewModeActive())
-		return;
-	CGhost *pGhost = &GameClient()->m_Ghost;
-	// 播到末帧（自动暂停）后再按播放 = 从头重播
-	if(!pGhost->ManualPlaying() && pGhost->ManualPlaybackTick() >= pGhost->ManualEndTick())
-	{
-		pGhost->ManualSeek(0);
-		pGhost->ManualSetPlaying(true);
-		return;
-	}
-	pGhost->ManualSetPlaying(!pGhost->ManualPlaying());
-}
-
-void CRankGhost::ViewSeek(float Fraction)
-{
-	if(!IsViewModeActive())
-		return;
-	const int MaxTick = maximum(1, GameClient()->m_Ghost.ManualEndTick());
-	GameClient()->m_Ghost.ManualSeek((int)(std::clamp(Fraction, 0.0f, 1.0f) * MaxTick));
-}
-
 void CRankGhost::ViewStop()
 {
+	m_PendingView = false;
+	GameClient()->m_Spectator.OnReset();
 	if(!m_ViewMode && !GameClient()->m_Ghost.ManualModeActive())
 		return;
 	m_ViewMode = false;
@@ -2701,6 +2774,8 @@ bool CRankGhost::ViewFocusAllMembers(vec2 *pCenter, vec2 *pSize) const
 	vec2 Min(0.0f, 0.0f), Max(0.0f, 0.0f);
 	for(size_t i = 0; i < m_vLoadedSlots.size(); i++)
 	{
+		if(!m_ViewMembers.Selected(i))
+			continue;
 		vec2 Pos;
 		if(!GameClient()->m_Ghost.GetManualRenderPos(m_vLoadedSlots[i], &Pos))
 			continue;

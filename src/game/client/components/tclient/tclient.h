@@ -128,9 +128,22 @@ class CTClient : public CComponent
 	static void ConSpecId(IConsole::IResult *pResult, void *pUserData);
 	void SpecId(int ClientId);
 
-	// 单刷模式：一键把本体与分身分到两个空闲 team；已分队时一键回 team 0。
+	// 单刷模式：支持一键切换与独立的进队/出队命令。
 	static void ConSoloSplit(IConsole::IResult *pResult, void *pUserData);
+	static void ConSoloSplitEnter(IConsole::IResult *pResult, void *pUserData);
+	static void ConSoloSplitLeave(IConsole::IResult *pResult, void *pUserData);
 	void SoloSplitToggle();
+	void SoloSplitEnter();
+	void SoloSplitLeave();
+	void SoloSplitStart(int Action);
+	void SoloSplitUpdate();
+	void SoloSplitFinish(bool Success);
+	int m_SoloSplitAction = 0; // 1=进队，2=出队
+	int m_SoloSplitAttempts = 0;
+	int64_t m_SoloSplitDeadline = 0;
+	bool m_SoloSplitWaitingForDummy = false;
+	int m_aSoloSplitPreviousTeam[NUM_DUMMIES] = {0, 0};
+	int m_aSoloSplitTargetTeam[NUM_DUMMIES] = {0, 0};
 
 	int m_EmoteCycle = 0;
 	static void ConEmoteCycle(IConsole::IResult *pResult, void *pUserData);

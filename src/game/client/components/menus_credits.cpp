@@ -199,7 +199,7 @@ namespace
 
 void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 {
-	// 顶层「贡献者」页：栖梦（社区/赞助）、友链、其他（DDNet/TClient 署名）三个子页签。
+	// 顶层「贡献者」页：栖梦（社区/赞助）、友链（友链 + DDNet/TClient 署名）两个子页签。
 	const bool ReadOnly = PrewarmOnly || Ui()->RenderOnly();
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
 	const float UiScale = Metrics.m_UiScale;
@@ -222,7 +222,6 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 	const char *apCreditsTabNames[CREDITS_SETTINGS_TAB_NUM] = {
 		Localize("QmClient"),
 		Localize("Friend links"),
-		Localize("Other"),
 	};
 	{
 		CUIRect Button;
@@ -239,7 +238,13 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 			for(int Tab = 0; Tab < CREDITS_SETTINGS_TAB_NUM; ++Tab)
 			{
 				if(DoButton_MenuTab(&s_aPageTabs[Tab], apCreditsTabNames[Tab], m_CreditsSettingsTab == Tab, &aTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true) && !ReadOnly)
-					m_CreditsSettingsTab = Tab;
+				{
+					if(m_CreditsSettingsTab != Tab)
+					{
+						m_CreditsSettingsTab = Tab;
+						m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
+					}
+				}
 			}
 		}
 		else
@@ -251,14 +256,19 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 						    Tab == CREDITS_SETTINGS_TAB_NUM - 1 ? IGraphics::CORNER_R :
 											  IGraphics::CORNER_NONE;
 				if(DoButton_MenuTab(&s_aPageTabs[Tab], apCreditsTabNames[Tab], m_CreditsSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
-					m_CreditsSettingsTab = Tab;
+				{
+					if(m_CreditsSettingsTab != Tab)
+					{
+						m_CreditsSettingsTab = Tab;
+						m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
+					}
+				}
 			}
 		}
 	}
 
 	const int ActiveTab = m_CreditsSettingsTab;
 	const char *pDeckTab = ActiveTab == CREDITS_SETTINGS_TAB_LINKS ? "credits-links" :
-			       ActiveTab == CREDITS_SETTINGS_TAB_OTHER ? "credits-other" :
 									 "credits-qmclient";
 	const int SponsorsRevision = GameClient()->m_QmClient.QmSponsorsRevision();
 	const bool HasSponsorDeveloper = GameClient()->m_QmClient.HasDeveloperCredential();
@@ -276,10 +286,10 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 	const auto BuildDefinitions = [this, Metrics, ReadOnly, ActiveTab, SponsorsRevision, HasSponsorDeveloper](std::vector<SSettingsCardDefinition> &vCards) {
 		if(ActiveTab == CREDITS_SETTINGS_TAB_QMCLIENT)
 			AppendQmClientContributorCards(vCards, Metrics, ReadOnly, SponsorsRevision, HasSponsorDeveloper);
-		else if(ActiveTab == CREDITS_SETTINGS_TAB_LINKS)
-			AppendFriendLinkCards(vCards, Metrics, ReadOnly);
 		else
 		{
+			// 「其他」子页签已并入友链：友链 + DDNet/TClient 署名三张卡同页。
+			AppendFriendLinkCards(vCards, Metrics, ReadOnly);
 			AppendDdnetContributorCard(vCards, Metrics, ReadOnly);
 			AppendTClientDeveloperCard(vCards, Metrics, ReadOnly);
 		}
@@ -487,23 +497,60 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 
 	SSettingsCardDefinition FriendLinks;
 	FriendLinks.m_Spec = {"deck:credits-friend-links", Localize("Friend links"), qm_card_registry::ResolveLocalizedDescription("deck:credits-friend-links")};
-	FriendLinks.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(2, LineHeight, LineSpacing); };
+	FriendLinks.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(3, LineHeight, LineSpacing); };
 	FriendLinks.m_Render = [this, LineHeight, LineSpacing, ReadOnly](CUIRect Content) {
-		static CButtonContainer s_DdnetWorkshopButton, s_DdnetWebsiteButton, s_QmClientWebsiteButton, s_CustomMapUploadButton;
+		static CButtonContainer s_DdnetWorkshopButton, s_DdnetWebsiteButton, s_QmClientWebsiteButton;
+		static CButtonContainer s_ShengyanButton, s_TeeDataButton, s_DdStatsButton;
+		// 站点图标纹理：首次渲染时各加载一次，失败则回退到 EQmIcon 字形。
+		enum
+		{
+			ICON_DDRACE,
+			ICON_DDNET,
+			ICON_QMCLIENT,
+			ICON_SHENGYAN,
+			ICON_TEEDATA,
+			ICON_DDSTATS,
+			ICON_COUNT,
+		};
+		static IGraphics::CTextureHandle s_aSiteIcons[ICON_COUNT];
+		static bool s_aSiteIconsAttempted[ICON_COUNT] = {};
+		const char *const apSiteIconPaths[ICON_COUNT] = {
+			"qmclient/friendlinks/ddrace.png",
+			"qmclient/friendlinks/ddnet.png",
+			"qmclient/friendlinks/qmclient.png",
+			"qmclient/friendlinks/shengyan.png",
+			"qmclient/friendlinks/teedata.png",
+			"qmclient/friendlinks/ddstats.png",
+		};
+		for(int i = 0; i < ICON_COUNT; ++i)
+		{
+			if(!s_aSiteIconsAttempted[i])
+			{
+				s_aSiteIconsAttempted[i] = true;
+				s_aSiteIcons[i] = Graphics()->LoadTexture(apSiteIconPaths[i], IStorage::TYPE_ALL);
+			}
+		}
 		CUIRect Row, LeftButton, RightButton;
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
-		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetWorkshopButton, "credits-links-ddnet-workshop", "DDNet Workshop", 0, &LeftButton))
-			Client()->ViewLink("https://ddnet.org/workshop/");
-		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetWebsiteButton, "credits-links-ddnet-website", Localize("DDNet Website"), 0, &RightButton))
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetWorkshopButton, "credits-links-ddnet-workshop", "DDNet Workshop", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::MAP, FONT_ICON_MAP, &s_aSiteIcons[ICON_DDRACE]))
+			Client()->ViewLink("https://ddrace.cn/");
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdnetWebsiteButton, "credits-links-ddnet-website", Localize("DDNet Website"), 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, &s_aSiteIcons[ICON_DDNET]))
 			Client()->ViewLink("https://ddnet.org");
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
-		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_QmClientWebsiteButton, "credits-links-qmclient-website", Localize("QmClient Website"), 0, &LeftButton))
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_QmClientWebsiteButton, "credits-links-qmclient-website", Localize("QmClient Website"), 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::HOUSE, FONT_ICON_HOUSE, &s_aSiteIcons[ICON_QMCLIENT]))
 			Client()->ViewLink("https://qmclient.icu");
-		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_CustomMapUploadButton, "credits-links-custom-map-upload", Localize("Custom map upload"), 0, &RightButton))
-			Client()->ViewLink("https://shengyan.art");
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_ShengyanButton, "credits-links-shengyan", "shengyan 北京服", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, &s_aSiteIcons[ICON_SHENGYAN]))
+			Client()->ViewLink("https://shengyan.art/");
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_TeeDataButton, "credits-links-teedata", "TeeData 官方资源库", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::FOLDER_OPEN, FONT_ICON_FOLDER_OPEN, &s_aSiteIcons[ICON_TEEDATA]))
+			Client()->ViewLink("https://teedata.net/");
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdStatsButton, "credits-links-ddstats", "DDStats 官方统计网站", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::LIST_UL, FONT_ICON_LIST_UL, &s_aSiteIcons[ICON_DDSTATS]))
+			Client()->ViewLink("https://ddstats.tw/");
 	};
 	vCards.push_back(std::move(FriendLinks));
 }
@@ -696,7 +743,7 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 			CUIRect AuthorColumn{AuthorsRow.x + AuthorIndex * (AuthorWidth + AuthorGap), AuthorsRow.y, AuthorWidth, AuthorsRow.h};
 			CUIRect TeeRect, Label;
 			AuthorColumn.HSplitTop(AuthorTeeSize, &TeeRect, &Label);
-			RenderDevSkin(TeeRect.Center(), AuthorTeeSize, Author.m_pSkin, "default", false, 0, 0, 0, false, true);
+			RenderDevSkin(TeeRect.Center(), AuthorTeeSize, Author.m_pSkin, "default", Author.m_CustomColors, 0, 0, 0, false, true, Author.m_FeetColor, Author.m_BodyColor);
 			Label.HSplitTop(LineSpacing, nullptr, &Label);
 			Label.HSplitTop(LineHeight, &Label, nullptr);
 			DoSettingsMenuLabel(SETTINGS_CONTRIBUTORS, -1, -1, Author.m_pTextId, &Label, Author.m_pName, BodySize, TEXTALIGN_MC, {}, (int)Label.w);

@@ -148,6 +148,13 @@ public:
 private:
 	struct SUploadItem
 	{
+		SUploadItem() = default;
+		SUploadItem(SUploadItem &&) = default;
+		SUploadItem &operator=(SUploadItem &&) = default;
+		SUploadItem(const SUploadItem &) = delete;
+		SUploadItem &operator=(const SUploadItem &) = delete;
+		// 排队图像在取消、清空或调度器析构时也必须释放；成功移动后指针为空。
+		~SUploadItem() { m_Image.Free(); }
 		SResourcePreviewKey m_Key;
 		CImageInfo m_Image;
 		std::string m_DebugName;

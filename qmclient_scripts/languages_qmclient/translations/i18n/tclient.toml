@@ -10535,3 +10535,19 @@ brazilian_portuguese = "Espessura variável da fonte personalizada para texto la
 portuguese = "Espessura variável do tipo de letra personalizado para texto latino"
 turkish = "Latin metin için değişken özel yazı tipi kalınlığı"
 polish = "Zmienna grubość niestandardowej czcionki dla tekstu łacińskiego"
+
+[[message]]
+key = "Font store"
+[message.translations]
+simplified_chinese = "字体商店"
+traditional_chinese = "字型商店"
+japanese = "フォントストア"
+korean = "글꼴 상점"
+russian = "Магазин шрифтов"
+german = "Schriftspeicher"
+spanish = "Tienda de fuentes"
+french = "Boutique de polices"
+brazilian_portuguese = "Loja de fontes"
+portuguese = "Loja de tipos de letra"
+turkish = "Yazı tipi mağazası"
+polish = "Sklep z czcionkami"

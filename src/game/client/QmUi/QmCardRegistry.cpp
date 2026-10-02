@@ -121,7 +121,7 @@ namespace qm_card_registry
 			{"qm:translate_ui", "function", ECardColumn::Left, 15, "Translate UI", "fanyi ui 颜色 yanse color 按钮 anniu button 菜单 caidan menu rgba 自定义 zidingyi custom function", "Customize translate button and menu colors"},
 			{"qm:gores_actor", "function", ECardColumn::Left, 3, "Gores actor", "gores 演员 actor 掉水 diaoshui 自动发言 zidong fayan 表情 biaoqing 表情id emoticon 发送概率 gaolv function", "Auto chat when dying in water"},
 			{"qm:gores", "function", ECardColumn::Left, 4, "Gores", "gores kog king of gores 锤枪切换 chuichang qiehuan 自动切枪 zidong qieqiang 自动切锤 zidong qiechui gun hammer prevweapon fire 开火后切锤 kaihuo qiechui 拿到其他武器停用 快速输入 kuaisu shuru fast input 快速输入其他玩家 function", "Gores auto weapon switch"},
-			{"qm:solo_split", "function", ECardColumn::Left, 17, "Solo split", "单刷 danshua 单刷模式 danshua moshi 分队 fendui 分身 fenshen dummy 队伍 duiwu team 独立 duli 各自进队 gezi jindui 组队 zudui 一键 yijian 单人 danren 刷图 shuatu solo 同步 tongbu 开局 kaiju function", "Split main and dummy into different teams for solo-run sync"},
+			{"qm:solo_split", "function", ECardColumn::Left, 17, "Solo split", "单刷 danshua 单刷模式 danshua moshi 分队 fendui 分身 fenshen dummy 队伍 duiwu team 独立 duli 各自进队 gezi jindui 组队 zudui 自动锁队 zidong suodui lock 锁队 一键 yijian 单人 danren 刷图 shuatu solo 同步 tongbu 开局 kaiju function", "Split main and dummy into different teams for solo-run sync"},
 			{"qm:key_binds", "function", ECardColumn::Left, 5, "Key binds", "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding 武器辅助线 fuzhuxian 异常断开 yichang duankai timeout disconnect function", "Common key bindings"},
 			{"qm:better_scoreboard", "function", ECardColumn::Left, 6, "Better scoreboard", "更好的计分板 genghao jifenban better scoreboard 计分板查分 chafen 计分板积分检查 jifenban jifen jiancha scoreboard point check 显示死亡后计分板 死亡后显示计分板 siwang hou xianshi jifenban show scoreboard after death 滚动计分板 gundong jifenban fixed-size scoreboard rows mouse wheel 计分板筛选 jifenban shaixuan scoreboard filter 计分板Qm标识 qm biaoshi scoreboard badge function", "Scoreboard"},
 			{"qm:mini_features", "function", ECardColumn::Left, 7, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 新版IME xinban ime 输入法 shurufa 候选栏 houxuanlan 自动管理 zidong guanli 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Configure Dream-only convenience features"},
@@ -131,7 +131,7 @@ namespace qm_card_registry
 			{"qm:friend_notify", "function", ECardColumn::Left, 11, "Friend notify", "好友提醒 haoyou tixing 好友上线 shangxian 旁观优先 pangguan youxian spectator priority 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi function", "Friend online and join notifications"},
 			{"qm:block_words", "function", ECardColumn::Left, 12, "Block words", "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan function", "Chat word filtering"},
 			{"qm:qiafen", "function", ECardColumn::Left, 13, "Keyword reply", "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming keyword reply qiafen function", "Configure keyword-based automatic replies"}, // UI 名 keyword_reply，以持久化 key qiafen 为权威
-			{"qm:translate", "function", ECardColumn::Left, 14, "Translate", "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.5-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过 function", "Chat translation settings"},
+			{"qm:translate", "function", ECardColumn::Left, 14, "Translate", "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.7-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过 function", "Chat translation settings"},
 			{"qm:pie_menu", "function", ECardColumn::Left, 16, "Pie menu", "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan 组队邀请 zu dui yao qing 加入队伍 jiaru duiwu 跟随 gensui follow server 查分 chafen points score 复制ID 复制名字 fuzhi mingzi copy name 颜色 yanse function", "Quick action menu for players"},
 			{"qm:emoticons", "function", ECardColumn::Left, 18, "Emoticons", "表情 biaoqing 大表情 dabiaoqing 发射表情 fashe biaoqing 表情发射 launcher launch super emote 按键绑定 anjian bangding 他人显示 taren xianshi function", "Large emoticons and launched emoticons"},
 			{"qm:map_upload", "function", ECardColumn::Right, 21, "Map upload", "上传地图 shangchuan ditu 测图 cetu map upload test server function", "Upload a saved map to the public test server"},
@@ -181,13 +181,13 @@ namespace qm_card_registry
 			{"tclient:cursor", "tclient", ECardColumn::Left, 1, "Visual: Cursor", "cursor tclient visual", "Configure the ingame cursor scale"},
 
 			// === 设置 deck · deck:<page>-<card>（原无持久化；tab=归属页/子页，column/order 按运行时卡片顺序显式化）===
-			// 贡献者页分三个子页签（credits-qmclient / credits-links / credits-other）；配置文件卡在常规页。
+			// 贡献者页分两个子页签（credits-qmclient / credits-links）；DDNet/TClient 署名卡并入友链，全卡半宽。
 			{"deck:qmclient-contributors-community", "credits-qmclient", ECardColumn::Left, 0, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
 			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname main dummy chat glow platinum 本体 分身 头衔 发言 柔光 铂金", Localizable("Redeem your code and customize your title")},
 			{"deck:qmclient-contributors-sponsors", "credits-qmclient", ECardColumn::Right, 0, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
-			{"deck:credits-friend-links", "credits-links", ECardColumn::Full, 0, "Friend links", "friend links ddnet workshop website qmclient homepage", "Project and community websites"},
-			{"deck:qmclient-contributors-ddnet", "credits-other", ECardColumn::Left, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
-			{"deck:tclient-info-developers", "credits-other", ECardColumn::Right, 0, "TClient Developers", "tclient developers links discord website github support tater sollybunny pebox teero chillerdragon", "View the developers, contributors, and project links"},
+			{"deck:credits-friend-links", "credits-links", ECardColumn::Left, 0, "Friend links", "friend links ddnet workshop website qmclient homepage", "Project and community websites"},
+			{"deck:qmclient-contributors-ddnet", "credits-links", ECardColumn::Right, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
+			{"deck:tclient-info-developers", "credits-links", ECardColumn::Left, 1, "TClient Developers", "tclient developers links discord website github support tater sollybunny pebox teero chillerdragon", "View the developers, contributors, and project links"},
 			{"deck:global-search-input", "global-search", ECardColumn::Full, 0, "Feature Search", "global search feature cards", "Search settings by title, feature, or keyword"},
 			{"deck:global-search-results", "global-search", ECardColumn::Full, 1, "Search", "global search result cards", "Open a matching settings card directly"},
 			{"deck:general-game", "general", ECardColumn::Left, 0, Localizable("Game"), "general game camera weapon", "Configure camera, weapon, and gameplay defaults"},
@@ -417,7 +417,7 @@ namespace qm_card_registry
 			if(Index < 0)
 				continue;
 			const char *pTab = Model.Entry(Index).m_pDefaultTab;
-			if(pTab == nullptr || (str_comp(pTab, "qmclient-contributors") != 0 && str_comp(pTab, "qmclient-contributors-ddnet") != 0 && str_comp(pTab, "tclient-info") != 0))
+			if(pTab == nullptr || (str_comp(pTab, "qmclient-contributors") != 0 && str_comp(pTab, "qmclient-contributors-ddnet") != 0 && str_comp(pTab, "tclient-info") != 0 && str_comp(pTab, "credits-other") != 0))
 				continue;
 			Model.MoveToTab(Default.m_pStableId, Default.m_pDefaultTab, Default.m_Column, Default.m_OrderInColumn);
 			Changed = true;

@@ -21,21 +21,12 @@ struct SQmDropdownVisualStyle
 	bool m_TransparentEntries = true;
 };
 
-inline SQmDropdownVisualStyle QmSettingsDropdownVisualStyle(const SUiTheme &Theme, const ColorRGBA &PopupBorderColor)
+inline SQmDropdownVisualStyle QmSettingsDropdownVisualStyle(const SUiTheme &Theme, const ColorRGBA &PopupBorderColor, const SUiTheme &PopupTheme = ResolveConfiguredDropdownListTheme())
 {
 	SQmDropdownVisualStyle Style;
 	Style.m_TriggerColor = Theme.m_InputSurface;
-	// 弹层遮住底层内容：背景跟随用户主题表面色（qm_ui_color / qm_ui_opacity 可调），
-	// 仅整体压暗一档以表达悬浮层级，并保证最低不透明度维持可读性；
-	// 边框与设置卡片边框同源（qm_ui_card_border_color 可调），不再使用强调色，
-	// 避免下拉弹层出现突兀的高亮蓝框。
-	const float ElevatedScale = 0.82f;
-	const ColorRGBA Elevated = ColorRGBA(
-		std::clamp(Theme.m_Surface.r * ElevatedScale, 0.0f, 1.0f),
-		std::clamp(Theme.m_Surface.g * ElevatedScale, 0.0f, 1.0f),
-		std::clamp(Theme.m_Surface.b * ElevatedScale, 0.0f, 1.0f),
-		Theme.m_Surface.a);
-	Style.m_PopupBackgroundColor = Elevated.WithAlpha(std::clamp(std::max(Elevated.a, 0.90f), 0.0f, 1.0f));
+	// 列表拥有独立背景；触发器使用按钮角色。
+	Style.m_PopupBackgroundColor = PopupTheme.m_Surface;
 	Style.m_PopupBorderColor = PopupBorderColor;
 	Style.m_ActiveEntryColor = Theme.m_Selected;
 	return Style;
@@ -111,6 +102,9 @@ bool QmDropdownShouldKeepPopupAliveWhenDisabled(bool PopupOpen, bool ClosePopupW
 bool QmDropdownAnchorFullyVisible(const CUIRect &AnchorRect, const CUIRect &ViewportRect);
 bool QmDropdownActiveItemShouldScrollIntoView(bool ScrollRequested, bool ActiveEntry);
 bool QmDropdownShouldRequestActiveScroll(bool PopupOpen, int PreviousActiveIndex, int ActiveIndex);
+
+// 子弹层拥有键盘选择；父触发控件失活时不影响活动子层。
+SQmDropdownUpdateResult QmUpdateDropdownPopupSelection(const SQmDropdownInput &Input, int ItemCount, bool Active, int &ActiveIndex);
 
 class CQmDropdownState
 {

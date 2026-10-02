@@ -18,12 +18,14 @@
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/QmDropdown.h>
+#include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
@@ -1540,7 +1542,16 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 			s_PopupCountryContext.m_pMenus = this;
 			s_PopupCountryContext.m_Selection = g_Config.m_BrFilterCountryIndex;
 			s_PopupCountryContext.m_New = true;
-			Ui()->DoPopupMenu(&s_PopupCountryId, Flag.x, Flag.y + Flag.h, 490, 210, &s_PopupCountryContext, PopupCountrySelection);
+			SPopupMenuProperties PopupProps;
+			PopupProps.m_BlockUnderlyingScroll = true;
+			if(g_Config.m_QmNewUi)
+			{
+				PopupProps = ui_widget::SecondaryPanelProperties();
+			}
+			const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
+			const float PopupWidth = g_Config.m_QmNewUi ? PanelRect.w : 490.0f;
+			const float PopupHeight = g_Config.m_QmNewUi ? PanelRect.h : 210.0f;
+			Ui()->DoPopupMenu(&s_PopupCountryId, Flag.x, Flag.y + Flag.h, PopupWidth, PopupHeight, &s_PopupCountryContext, PopupCountrySelection, PopupProps);
 		}
 	}
 
@@ -1940,16 +1951,155 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 {
 	SPopupCountrySelectionContext *pPopupContext = static_cast<SPopupCountrySelectionContext *>(pContext);
 	CMenus *pMenus = pPopupContext->m_pMenus;
+	CUi *pUi = pMenus->Ui();
 
 	static CListBox s_ListBox;
+	static int64_t s_PopupOpenTime = 0;
+	static std::string s_LastFilter;
 	s_ListBox.SetActive(Active);
-	s_ListBox.DoStart(50.0f, pMenus->GameClient()->m_CountryFlags.Num(), 8, 1, -1, &View, false);
+	s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);
+	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);
 
 	if(pPopupContext->m_New)
 	{
 		pPopupContext->m_New = false;
+		pPopupContext->m_FilterInput.Clear();
 		s_ListBox.ScrollToSelected();
+		s_PopupOpenTime = time_get();
+		s_LastFilter.clear();
 	}
+	else if(s_LastFilter != pPopupContext->m_FilterInput.GetString())
+	{
+		s_LastFilter = pPopupContext->m_FilterInput.GetString();
+		s_PopupOpenTime = time_get();
+	}
+
+	if(g_Config.m_QmNewUi)
+	{
+		IUiContext HeaderCtx;
+		HeaderCtx.m_pUi = pUi;
+		static ui_widget::SSecondaryPanelLabel s_Title;
+		static CButtonContainer s_CloseButton;
+		ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w, true), {});
+		if(Panel.Header(s_Title, s_CloseButton, Localize("Choose country flag")))
+			return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
+		CUIRect SearchRect, GridArea = Panel.ContentRect();
+		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(pUi->Screen()->w);
+		GridArea.HSplitTop(Metrics.m_LineHeight, &SearchRect, &GridArea);
+		GridArea.HSplitTop(Metrics.m_LineSpacing, nullptr, &GridArea);
+
+		IUiContext SearchCtx;
+		SearchCtx.m_pUi = pUi;
+		SearchCtx.m_pAnim = &pMenus->GameClient()->UiRuntimeV2()->AnimRuntime();
+		SearchCtx.m_pTree = &pMenus->GameClient()->UiRuntimeV2()->Tree();
+		SearchCtx.m_ScopeHash = MakeUiScopeHash("browser_country_flag_popup_search");
+		SearchCtx.m_FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
+		ui_widget::SInputFieldOptions SearchOptions;
+		SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+		SearchOptions.m_pPlaceholder = Localize("Search country flag…");
+		SearchOptions.m_Clearable = true;
+		ui_widget::InputField(SearchCtx, &pPopupContext->m_FilterInput, SearchRect, SearchOptions);
+
+		struct SFilteredFlag
+		{
+			const CCountryFlags::CCountryFlag *m_pEntry;
+			std::optional<std::pair<int, int>> m_Match;
+		};
+		static std::vector<SFilteredFlag> s_vFiltered;
+		s_vFiltered.clear();
+		for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
+		{
+			const CCountryFlags::CCountryFlag &Entry = pMenus->GameClient()->m_CountryFlags.GetByIndex(i);
+			if(!pPopupContext->m_FilterInput.IsEmpty())
+			{
+				const char *pMatchEnd = nullptr;
+				const char *pMatchStart = str_utf8_find_nocase(Entry.m_aCountryCodeString, pPopupContext->m_FilterInput.GetString(), &pMatchEnd);
+				if(pMatchStart != nullptr)
+				{
+					s_vFiltered.push_back({&Entry, std::make_pair((int)(pMatchStart - Entry.m_aCountryCodeString), (int)(pMatchEnd - pMatchStart))});
+				}
+			}
+			else
+			{
+				s_vFiltered.push_back({&Entry, std::nullopt});
+			}
+		}
+
+		const int Columns = std::clamp((int)(GridArea.w / 54.0f), 1, 14);
+		int SelectedIndex = -1;
+		for(size_t i = 0; i < s_vFiltered.size(); ++i)
+		{
+			if(s_vFiltered[i].m_pEntry->m_CountryCode == pPopupContext->m_Selection)
+			{
+				SelectedIndex = (int)i;
+				break;
+			}
+		}
+
+		s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
+
+		for(size_t i = 0; i < s_vFiltered.size(); ++i)
+		{
+			const SFilteredFlag &Filtered = s_vFiltered[i];
+			const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
+			const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
+			const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
+			if(!Item.m_Visible)
+				continue;
+
+			if(IsSelected)
+			{
+				DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
+			}
+			else if(pUi->MouseInside(&Item.m_Rect))
+			{
+				DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(0, 0, 0, 0), ui_token::radius::BASE);
+			}
+
+			CUIRect FlagRect, Label;
+			Item.m_Rect.Margin(5.0f, &FlagRect);
+			FlagRect.HSplitBottom(12.0f, &FlagRect, &Label);
+			Label.HSplitTop(2.0f, nullptr, &Label);
+			const float OldWidth = FlagRect.w;
+			FlagRect.w = FlagRect.h * 2.0f;
+			FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
+			int64_t FlagAnimStartTime = s_PopupOpenTime;
+			if(s_PopupOpenTime > 0)
+			{
+				const int Col = (int)(i % Columns);
+				const int Row = (int)(i / Columns) % 6;
+				const float StaggerDelay = Col * 0.006f + Row * 0.015f;
+				FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
+			}
+			pMenus->GameClient()->m_CountryFlags.Render(pEntry->m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
+
+			SLabelProperties Props;
+			if(Filtered.m_Match.has_value())
+			{
+				const auto [MatchStart, MatchLen] = Filtered.m_Match.value();
+				Props.m_vColorSplits.emplace_back(MatchStart, MatchLen, ui_token::color::ACCENT_PRIMARY);
+			}
+			pUi->DoLabel(&Label, pEntry->m_aCountryCodeString, 10.0f, TEXTALIGN_MC, Props);
+		}
+
+		const int NewSelected = s_ListBox.DoEnd();
+		if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size())
+		{
+			pPopupContext->m_Selection = s_vFiltered[NewSelected].m_pEntry->m_CountryCode;
+		}
+		if(s_ListBox.WasItemSelected() || s_ListBox.WasItemActivated())
+		{
+			g_Config.m_BrFilterCountry = 1;
+			g_Config.m_BrFilterCountryIndex = pPopupContext->m_Selection;
+			pMenus->Client()->ServerBrowserUpdate();
+			return CUi::POPUP_CLOSE_CURRENT;
+		}
+
+		return CUi::POPUP_KEEP_OPEN;
+	}
+
+	// 旧版 UI 保持 100% 原始逻辑
+	s_ListBox.DoStart(50.0f, pMenus->GameClient()->m_CountryFlags.Num(), 8, 1, -1, &View, false);
 
 	for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
 	{
@@ -1966,7 +2116,15 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 		const float OldWidth = FlagRect.w;
 		FlagRect.w = FlagRect.h * 2.0f;
 		FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
-		pMenus->GameClient()->m_CountryFlags.Render(Entry.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
+		int64_t FlagAnimStartTime = s_PopupOpenTime;
+		if(s_PopupOpenTime > 0)
+		{
+			const int Col = (int)(i % 8);
+			const int Row = (int)(i / 8) % 6;
+			const float StaggerDelay = Col * 0.006f + Row * 0.015f;
+			FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
+		}
+		pMenus->GameClient()->m_CountryFlags.Render(Entry.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
 
 		pMenus->Ui()->DoLabel(&Label, Entry.m_aCountryCodeString, 10.0f, TEXTALIGN_MC);
 	}
@@ -3547,6 +3705,7 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 
 	View.Draw(BrowserPanelColor(0.82f), IGraphics::CORNER_ALL, Layout.m_PanelMargin);
+	CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor(0.82f), g_Config.m_QmNewUi);
 	View.Margin(Layout.m_PanelMargin, &View);
 	const char *apWorkspaceTitles[] = {
 		Localize("Favorite map"),
@@ -4239,6 +4398,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 
 	bool WasListboxItemActivated = false;
 	{
+		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor(), UseNewUi);
 		CUIRect ServerList = ServerListBase;
 		if(DoClip)
 		{
@@ -4259,9 +4419,13 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 		}
 	}
 
-	RenderServerbrowserStatusBox(StatusBox, WasListboxItemActivated);
+	{
+		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelElevatedColor(), UseNewUi);
+		RenderServerbrowserStatusBox(StatusBox, WasListboxItemActivated);
+	}
 
 	{
+		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor(), UseNewUi);
 		CUIRect ToolBox = ToolBoxBase;
 		if(DoClip)
 		{

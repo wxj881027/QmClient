@@ -8,7 +8,11 @@
 #include <base/str.h>
 #include <base/system.h>
 
+#include <engine/client/glyph_outline.h>
 #include <engine/client/qm_font_category.h>
+#include <engine/client/text_sweep.h>
+
+#include <game/client/components/qmclient/nameplate_density.h>
 
 #include <benchmark/benchmark.h>
 
@@ -17,7 +21,7 @@
 // 混合码点分类：模拟中文 UI 文本（拉丁 / CJK / 图标符号约各占 1/3）
 static void BM_FontCategoryClassify(benchmark::State &State)
 {
-	static const int aMixedCodepoints[] = {
+	int aMixedCodepoints[] = {
 		0x41,
 		0x4E2D,
 		0x2600,
@@ -44,12 +48,17 @@ static void BM_FontCategoryClassify(benchmark::State &State)
 		0x2728,
 	};
 	const int NumCodepoints = static_cast<int>(sizeof(aMixedCodepoints) / sizeof(aMixedCodepoints[0]));
+	int *pCodepoints = aMixedCodepoints;
+	benchmark::DoNotOptimize(pCodepoints);
 	for(auto _ : State)
 	{
+		// 输入逃逸并加内存屏障，避免内联分类被折叠为常量计数。
+		benchmark::ClobberMemory();
 		int NumCjk = 0;
 		int NumIcons = 0;
-		for(int Chr : aMixedCodepoints)
+		for(int i = 0; i < NumCodepoints; i++)
 		{
+			const int Chr = pCodepoints[i];
 			NumCjk += QmIsCjkCodepoint(Chr) ? 1 : 0;
 			NumIcons += QmIsIconSymbolCodepoint(Chr) ? 1 : 0;
 		}
@@ -77,6 +86,7 @@ static void BM_StrUtf8DecodeMixed(benchmark::State &State)
 		benchmark::DoNotOptimize(NumCodepoints);
 	}
 	State.SetItemsProcessed(State.iterations());
+	State.SetBytesProcessed(State.iterations() * (pEnd - pText));
 }
 BENCHMARK(BM_StrUtf8DecodeMixed);
 
@@ -113,9 +123,77 @@ static void BM_StrUtf8Check(benchmark::State &State)
 	const int Len = str_length(pText);
 	for(auto _ : State)
 	{
-		const int Valid = str_utf8_check(pText);
+		int Valid = str_utf8_check(pText);
 		benchmark::DoNotOptimize(Valid);
 	}
-	State.SetItemsProcessed(State.iterations() * Len); // 字节吞吐
+	State.SetItemsProcessed(State.iterations()); // 完整字符串数量
+	State.SetBytesProcessed(State.iterations() * Len);
 }
 BENCHMARK(BM_StrUtf8Check);
+
+// 逐行扫光直接测量生产裁剪接口：窄/长聊天行及命中/未命中字形均计入。
+static void BM_TextSweepLineClip(benchmark::State &State)
+{
+	using TQuad = std::array<STextSweepVertex, 4>;
+	std::vector<TQuad> vGlyphs;
+	for(int i = 0; i < State.range(0); ++i)
+	{
+		const float X = i * 12.0f;
+		vGlyphs.push_back({{{vec2(X, 10.0f), vec2(0.0f, 1.0f), 1.0f},
+			{vec2(X + 10.0f, 10.0f), vec2(1.0f, 1.0f), 1.0f},
+			{vec2(X + 10.0f, 0.0f), vec2(1.0f, 0.0f), 1.0f},
+			{vec2(X, 0.0f), vec2(0.0f, 0.0f), 1.0f}}});
+	}
+	int Frame = 0;
+	for(auto _ : State)
+	{
+		const float Progress = float(Frame++ % 101) / 100.0f;
+		const STextSweepBand Band{TextSweepCenter(0.0f, State.range(0) * 12.0f, 8.0f, Progress), 8.0f, 0.25f};
+		size_t Fragments = 0;
+		for(const auto &Quad : vGlyphs)
+			TextSweepClipQuad(Quad, Band, [&](const auto &Fragment) {
+				benchmark::DoNotOptimize(Fragment);
+				++Fragments;
+			});
+		benchmark::DoNotOptimize(Fragments);
+	}
+	State.SetItemsProcessed(State.iterations() * State.range(0));
+}
+BENCHMARK(BM_TextSweepLineClip)->Arg(8)->Arg(64)->Arg(256);
+
+// 同一缓冲对比普通描边与名牌连续描边；输入准备不计时，内核及 mask 生成计时。
+static void BM_NameplateGlyphOutline(benchmark::State &State)
+{
+	const int Size = State.range(0);
+	std::vector<unsigned char> Input(Size * Size), Output(Size * Size);
+	for(int Y = Size / 4; Y < Size * 3 / 4; ++Y)
+		for(int X = Size / 4; X < Size * 3 / 4; ++X)
+			Input[Y * Size + X] = (X + Y) % 3 == 0 ? 127 : 255;
+	for(auto _ : State)
+	{
+		if(State.range(1))
+			QmGrowGlyphOutlineContinuous(Input.data(), Output.data(), Size, Size, QmNameplateGlyphOutlineRadius(Size));
+		else
+			QmGrowGlyphOutline(Input.data(), Output.data(), Size, Size, Size < 18 ? 1 : Size > 48 ? 4 :
+														2);
+		benchmark::DoNotOptimize(Output.data());
+		benchmark::ClobberMemory();
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_NameplateGlyphOutline)->Args({18, 0})->Args({18, 1})->Args({48, 0})->Args({48, 1})->Args({128, 0})->Args({128, 1});
+
+static void BM_NameplateDensityStable(benchmark::State &State)
+{
+	CQmNameplateDensity Density;
+	int Budget = 16;
+	Density.Update(1.0f, 1.0f, 0.14384104f, false, 6, 16, Budget);
+	for(auto _ : State)
+	{
+		Budget = 16;
+		benchmark::DoNotOptimize(Density);
+		benchmark::DoNotOptimize(Density.Update(1.0f, 1.0f, 0.14384104f, false, 6, 16, Budget));
+		benchmark::DoNotOptimize(Density.Revision());
+	}
+}
+BENCHMARK(BM_NameplateDensityStable);

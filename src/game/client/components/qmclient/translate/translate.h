@@ -2,58 +2,20 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_TRANSLATE_TRANSLATE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_TRANSLATE_TRANSLATE_H
 
-#include "translate_parse.h"
+#include "translate_backend.h"
+#include "translate_jobs.h"
 
 #include <game/client/component.h>
 #include <game/client/components/chat.h>
 
-#include <memory>
-#include <optional>
-#include <vector>
-
-class CTranslate;
-
-class ITranslateBackend
-{
-public:
-	virtual ~ITranslateBackend() = default;
-	virtual const char *EncodeTarget(const char *pTarget) const;
-	virtual bool CompareTargets(const char *pA, const char *pB) const;
-	virtual const char *Name() const = 0;
-	virtual std::optional<bool> Update(CTranslateResponse &Out) = 0;
-};
-
 class CTranslate : public CComponent
 {
-	class CTranslateJob
-	{
-	public:
-		std::unique_ptr<ITranslateBackend> m_pBackend = nullptr;
-		// For chat translations (使用索引和翻译ID代替裸指针，避免悬垂指针风险)
-		int m_LineIndex = -1;
-		unsigned int m_TranslationId = 0;
-		std::shared_ptr<CTranslateResponse> m_pTranslateResponse = nullptr;
-		bool m_AutoTriggered = false;
-		char m_aTarget[16] = "";
-	};
-	std::vector<CTranslateJob> m_vJobs;
-
-	class COutgoingTranslateJob
-	{
-	public:
-		std::unique_ptr<ITranslateBackend> m_pBackend = nullptr;
-		CTranslateResponse m_Response;
-		int m_Team = 0;
-		char m_aTarget[16] = "";
-	};
-	std::vector<COutgoingTranslateJob> m_vOutgoingJobs;
+	CTranslateJobQueue m_Jobs;
 
 	static void ConTranslate(IConsole::IResult *pResult, void *pUserData);
 	static void ConTranslateId(IConsole::IResult *pResult, void *pUserData);
 
 public:
-	static constexpr size_t MAX_TRANSLATION_JOBS = 15;
-
 	int Sizeof() const override { return sizeof(*this); }
 
 	void OnConsoleInit() override;
@@ -73,12 +35,11 @@ public:
 	void StartAutoOutgoingTranslate(int Team, const char *pText);
 
 private:
-	// 中文检测
-	static bool ContainsChinese(const char *pText);
-
 	// 获取最大并发数
 	int GetMaxConcurrency() const;
-	int GetEffectiveConcurrency() const;
+
+	// MyMemory 匿名配额提示的节流时间戳（time_get），<0 表示未提示过
+	int64_t m_LastMymemoryQuotaNoticeTime = -1;
 };
 
 #endif

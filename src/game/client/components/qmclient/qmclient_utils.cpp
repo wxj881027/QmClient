@@ -157,7 +157,7 @@ bool IsQmClientUsersSnapshotForContext(const json_value *pRoot, const char *pCur
 		return true;
 
 	return pCurrentServerAddress != nullptr && pCurrentServerAddress[0] != '\0' &&
-		str_comp(pAddress->u.string.ptr, pCurrentServerAddress) == 0;
+	       str_comp(pAddress->u.string.ptr, pCurrentServerAddress) == 0;
 }
 
 bool ParseQmClientUsersJson(const json_value *pRoot, const char *pServerAddress, SQmClientUsersParseResult &OutResult)
