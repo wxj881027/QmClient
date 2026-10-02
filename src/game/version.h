@@ -22,7 +22,7 @@ extern const char *GIT_SHORTREV_HASH;
 
 // QmClient
 // 正式版本按 V3、V3.1 递增；开发测试版本独立使用 V3.13.0 格式。
-#define QMCLIENT_STABLE_VERSION "3.1"
+#define QMCLIENT_STABLE_VERSION "3.2"
 #define QMCLIENT_DEV_VERSION "3.13.1"
 
 #if defined(QMCLIENT_STABLE_BUILD)
