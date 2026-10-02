@@ -699,5 +699,5 @@ TEST(QmModuleLayoutAdapter, SplitSkinCardsKeepIndependentPersistentState)
 	ASSERT_GE(AppearanceIndex, 0);
 	EXPECT_STREQ(ReloadedModel.Entry(TransitionIndex).m_pDefaultTab, "function");
 	EXPECT_EQ(ReloadedModel.Entry(TransitionIndex).m_Column, 2);
-	EXPECT_STREQ(ReloadedModel.Entry(AppearanceIndex).m_pDefaultTab, "visual");
+	EXPECT_STREQ(ReloadedModel.Entry(AppearanceIndex).m_pDefaultTab, "tee");
 }

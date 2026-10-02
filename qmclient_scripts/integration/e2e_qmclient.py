@@ -128,7 +128,7 @@ def scenario_startup_saved_favorites(env: ProcessEnvironment) -> None:
 	settings_path = env.path("qmclient", "settings.cfg")
 	settings_path.parent.mkdir(parents=True, exist_ok=True)
 	settings_path.write_text(
-		'qm_steam_auto_launch 0\nadd_favorite "127.0.0.1:8303"\nadd_favorite_community "ddnet"\nadd_friend "Startup Friend" "Clan" "Friends"\n',
+		'stdout_output_level 1\nqm_steam_auto_launch 0\nadd_favorite "127.0.0.1:8303"\nadd_favorite_community "ddnet"\nadd_friend "Startup Friend" "Clan" "Friends"\n',
 		encoding="utf-8",
 	)
 

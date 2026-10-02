@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <optional>
+#include <vector>
+
 TEST(SettingsSkinPlan, KeepsSelectedFavoritesThenSorted)
 {
 	std::vector<SSettingsSkinListEntry> vEntries = {
@@ -30,4 +33,25 @@ TEST(SettingsSkinPlan, TimeSortKeepsFavoritesThenOrdersGroupsByOfficialDate)
 	EXPECT_EQ(Plan.m_vNames[1], "old_favorite");
 	EXPECT_EQ(Plan.m_vNames[2], "new_regular");
 	EXPECT_EQ(Plan.m_vNames[3], "old_regular");
+}
+
+TEST(SettingsSkinPlan, SameNameQueuedColorVariantsRemainDistinctAfterSorting)
+{
+	const std::vector<SSettingsSkinListEntry> vEntries = {
+		{"default", false, false, SSettingsSkinListColorKey{true, 123, 456}},
+		{"default", true, false, SSettingsSkinListColorKey{true, 789, 1011}},
+		{"default", false, false, std::nullopt},
+	};
+	const auto Plan = BuildSettingsSkinListPlan(vEntries, 0);
+	ASSERT_EQ(Plan.m_vEntries.size(), 3u);
+	ASSERT_EQ(Plan.m_vNames.size(), 3u);
+	ASSERT_TRUE(Plan.m_vEntries[0].m_ColorKey.has_value());
+	EXPECT_TRUE(Plan.m_vEntries[0].m_Selected);
+	EXPECT_TRUE(Plan.m_vEntries[0].m_ColorKey->m_UseCustomColor);
+	EXPECT_EQ(Plan.m_vEntries[0].m_ColorKey->m_ColorBody, 789);
+	EXPECT_EQ(Plan.m_vEntries[0].m_ColorKey->m_ColorFeet, 1011);
+	ASSERT_TRUE(Plan.m_vEntries[1].m_ColorKey.has_value());
+	EXPECT_EQ(Plan.m_vEntries[1].m_ColorKey->m_ColorBody, 123);
+	EXPECT_EQ(Plan.m_vEntries[1].m_ColorKey->m_ColorFeet, 456);
+	EXPECT_FALSE(Plan.m_vEntries[2].m_ColorKey.has_value());
 }

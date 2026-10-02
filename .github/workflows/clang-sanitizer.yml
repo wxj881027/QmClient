@@ -148,7 +148,7 @@ jobs:
         cd clang-sanitizer
         rm -f integration_*/SAN.*
         set +e
-        python ../scripts/integration_test.py --test-mastersrv . 2>&1 | tee ../clang-sanitizer-integration.log
+        python ../qmclient_scripts/integration/ddnet_integration.py --test-mastersrv . 2>&1 | tee ../clang-sanitizer-integration.log
         integration_test_result=$?
         set -e
         failed=false

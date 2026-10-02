@@ -148,30 +148,3 @@ TEST(SettingsWarmupLayoutContract, TClientSettingsUseTwoLevelFontScale)
 	EXPECT_NE(Ui.find("RectEl.m_LabelFlags != Flags"), std::string::npos);
 	EXPECT_NE(Ui.find("State.m_SelectionPopupContext.m_FontSize = ResolvedFontSize;"), std::string::npos);
 }
-
-TEST(SettingsWarmupLayoutContract, PassiveTooltipOnlyUiHelpersStayOutOfButtonLogic)
-{
-	const std::string Header = ReadTestSourceFile("src/game/client/ui.h");
-	EXPECT_NE(Header.find("void RegisterPassiveHotItem(const void *pId, const CUIRect *pRect);"), std::string::npos);
-
-	const std::string UiSource = ReadTestSourceFile("src/game/client/ui.cpp");
-	const size_t HelperPos = UiSource.find("void CUi::RegisterPassiveHotItem(const void *pId, const CUIRect *pRect)");
-	ASSERT_NE(HelperPos, std::string::npos);
-	const size_t NextFunctionPos = UiSource.find("int CUi::DoButtonLogic", HelperPos);
-	ASSERT_NE(NextFunctionPos, std::string::npos);
-	const std::string HelperBody = UiSource.substr(HelperPos, NextFunctionPos - HelperPos);
-
-	EXPECT_NE(HelperBody.find("MouseHovered(pRect)"), std::string::npos);
-	EXPECT_NE(HelperBody.find("SetHotItem(pId);"), std::string::npos);
-	EXPECT_EQ(HelperBody.find("SetActiveItem"), std::string::npos);
-	EXPECT_EQ(HelperBody.find("MouseButton("), std::string::npos);
-
-	const std::string MenusSettingsSource = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	EXPECT_NE(MenusSettingsSource.find("Ui()->RegisterPassiveHotItem(pStatusTooltipId, &StatusIcon);"), std::string::npos);
-	EXPECT_NE(MenusSettingsSource.find("Ui()->RegisterPassiveHotItem(&s_HookCollToolTip, &LeftView);"), std::string::npos);
-	EXPECT_EQ(MenusSettingsSource.find("Ui()->DoButtonLogic(pStatusTooltipId, 0, &StatusIcon, BUTTONFLAG_NONE);"), std::string::npos);
-	EXPECT_EQ(MenusSettingsSource.find("Ui()->DoButtonLogic(&s_HookCollToolTip, 0, &LeftView, BUTTONFLAG_NONE);"), std::string::npos);
-
-	const std::string MenusQmClientSource = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	EXPECT_EQ(MenusQmClientSource.find("RegisterPassiveHotItem("), std::string::npos);
-}

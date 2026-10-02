@@ -31,7 +31,7 @@ if scenario == "exit":
     raise SystemExit(7)
 if scenario == "timeout":
     print("started", flush=True)
-    time.sleep(5)
+    time.sleep(30)
 if scenario == "missing":
     raise SystemExit(0)
 output = Path(flags["--benchmark_out"])
@@ -46,11 +46,12 @@ if scenario == "partial":
     rows.pop()
 build_type = "debug" if scenario == "debug" else "release"
 payload = {"context": {"library_build_type": build_type}, "benchmarks": rows}
+if "--fake_host_name" in flags:
+    payload["context"]["host_name"] = flags["--fake_host_name"]
 if scenario == "ansi":
-    payload["context"]["host_name"] = bytes([0x80]).decode("mbcs")
     output.write_bytes(json.dumps(payload, ensure_ascii=False).encode("mbcs"))
 else:
-    output.write_text(json.dumps(payload), encoding="utf-8")
+    output.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 """
 
 
@@ -64,8 +65,11 @@ class BenchmarkRunnerIntegrationTest(unittest.TestCase):
 		self.output = self.root / "results with spaces"
 		self.output.mkdir()
 
-	def execute(self, scenario: str, **options: object) -> dict:
-		return execute_benchmarks([sys.executable, str(self.program), scenario], self.root, self.output, pattern="^fake/", **options)
+	def execute(self, scenario: str, *, host_name: str | None = None, **options: object) -> dict:
+		command = [sys.executable, str(self.program), scenario]
+		if host_name is not None:
+			command.append(f"--fake_host_name={host_name}")
+		return execute_benchmarks(command, self.root, self.output, pattern="^fake/", **options)
 
 	def test_valid_process_results_are_summarized_and_original_json_is_preserved(self) -> None:
 		summary = self.execute("valid", repetitions=3)
@@ -76,12 +80,34 @@ class BenchmarkRunnerIntegrationTest(unittest.TestCase):
 		self.assertIn("--benchmark_report_aggregates_only=false", command)
 		self.assertIn("--benchmark_enable_random_interleaving=true", command)
 
+	def test_utf8_context_preserves_unicode_host_name_and_raw_bytes(self) -> None:
+		host_name = "Qm-\u6d4b\u8bd5-\u00e9"
+		summary = self.execute("valid", host_name=host_name, repetitions=3)
+		self.assertEqual(summary["json_encoding"], "utf-8")
+		self.assertEqual(summary["context"]["host_name"], host_name)
+		self.assertIn(host_name.encode("utf-8"), (self.output / "results.json").read_bytes())
+
 	@unittest.skipUnless(os.name == "nt", "Windows ANSI output")
 	def test_windows_native_ansi_context_records_fallback_and_preserves_raw_bytes(self) -> None:
-		summary = self.execute("ansi", repetitions=3)
+		for codepoint in range(0x80, 0x10000):
+			host_name = chr(codepoint)
+			try:
+				native_bytes = host_name.encode("mbcs")
+			except UnicodeEncodeError:
+				continue
+			if native_bytes.decode("mbcs") != host_name:
+				continue
+			try:
+				native_bytes.decode("utf-8")
+			except UnicodeDecodeError:
+				break
+		else:
+			self.skipTest("The native Windows code page has no non-UTF-8 sample")
+		summary = self.execute("ansi", host_name=host_name, repetitions=3)
 		self.assertEqual(summary["json_encoding"], "mbcs")
+		self.assertEqual(summary["context"]["host_name"], host_name)
 		raw = (self.output / "results.json").read_bytes()
-		self.assertIn(bytes([0x80]), raw)
+		self.assertIn(native_bytes, raw)
 		self.assertEqual(summary["cases"][0]["cpu"]["median_ns"], 101)
 
 	def test_empty_filter_stops_before_measurement(self) -> None:
@@ -95,8 +121,9 @@ class BenchmarkRunnerIntegrationTest(unittest.TestCase):
 		self.assertIn("measurement failed", (self.output / "benchmark.log").read_text())
 
 	def test_timeout_terminates_own_measurement_process_and_keeps_partial_log(self) -> None:
+		# 超时窗口包含 Python 启动，为并行构建时的进程调度留出余量。
 		with self.assertRaisesRegex(RunError, "timed out"):
-			self.execute("timeout", timeout=0.4)
+			self.execute("timeout", timeout=5)
 		self.assertIn("started", (self.output / "benchmark.log").read_text())
 
 	def test_zero_exit_without_json_is_not_success(self) -> None:

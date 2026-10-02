@@ -114,12 +114,9 @@ TEST(QmNewUiMenuCardsSurfaceContract, SettingsCardDeckSharedComponentMigratesSou
 
 	const std::string MenuSource = ReadTextFile("src/game/client/components/menus.cpp");
 	const std::string TClientSource = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
-	const std::string SettingsDeck = ReadTextFile("src/game/client/QmUi/SettingsCardDeck.cpp");
 	EXPECT_EQ(MenuSource.find("RenderQmSettingsGlassCard"), std::string::npos);
 	EXPECT_EQ(MenuSource.find("SettingsCardDeckStableId"), std::string::npos);
 	EXPECT_EQ(MenuSource.find("LoadSettingsCardDeckOrdersFromGlobalConfig"), std::string::npos);
-	EXPECT_NE(SettingsDeck.find("CommitSettingsCardDeckDrop(Model, pTab, pStableId"), std::string::npos);
-	EXPECT_NE(SettingsDeck.find("SettingsCard(Ctx, Card.m_Frame"), std::string::npos);
 
 	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
 	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");

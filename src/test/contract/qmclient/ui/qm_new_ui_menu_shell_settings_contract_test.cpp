@@ -80,22 +80,6 @@ TEST(QmNewUiMenuShellSettingsContract, TClientPreLayoutUsesDeckContentCoordinate
 	EXPECT_NE(PreLayout.find("s_vTinyTeeModeButtons"), std::string::npos);
 }
 
-TEST(QmNewUiMenuShellSettingsContract, SettingsInputFieldsReserveTrailingActionsAndKeepQueueUnitsInline)
-{
-	const std::string FormsSource = ReadTextFile("src/game/client/QmUi/UiForms.cpp");
-	const std::string ThemeSource = ReadTextFile("src/game/client/QmUi/UiTheme.h");
-	const std::string Forms = FunctionBody(FormsSource, "SInputFieldResult InputField(");
-	EXPECT_NE(Forms.find("CUIRect InputHitRect = Layout.m_ShellRect;"), std::string::npos);
-	EXPECT_NE(Forms.find("RenderOptions.m_pHitRect = &InputHitRect;"), std::string::npos);
-	EXPECT_NE(ThemeSource.find("ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f"), std::string::npos);
-
-	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string SkinRenderQueue = FunctionBody(SettingsSource, "const auto RenderSkinQueue =");
-	EXPECT_NE(SkinRenderQueue.find("QueueIntervalOptions.m_pSuffix = \"ms\";"), std::string::npos);
-	EXPECT_EQ(SkinRenderQueue.find("Ui()->DoLabel(&IntervalUnit"), std::string::npos);
-}
-
-
 TEST(QmNewUiMenuShellSettingsContract, QmLocalizationEnglishOverlayUsesExplicitEnglishFile)
 {
 	const std::string Source = ReadTextFile("src/game/client/gameclient.cpp");

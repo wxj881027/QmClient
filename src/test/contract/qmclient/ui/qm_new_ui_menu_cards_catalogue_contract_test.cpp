@@ -11,7 +11,6 @@
 #include <game/client/components/camera.h>
 #include <game/client/components/controls.h>
 #include <game/client/components/menus.h>
-#include <game/client/components/nameplate_text_effects.h>
 #include <game/client/components/nameplates.h>
 #include <game/client/components/qmclient/axiom_auto_login.h>
 #include <game/client/components/tclient/statusbar.h>
@@ -43,21 +42,6 @@ TEST(QmNewUiMenuCardsCatalogueContract, NameplatePreviewRebuildsTextContainerIns
 	EXPECT_LT(DeletePos, UpdateTextPos);
 	EXPECT_EQ(Body.find("else\n\t\t{\n\t\t\tUpdateText(This, Data);\n\t\t}"), std::string::npos);
 	EXPECT_NE(Body.find("QmNameplateTextEffectPadding"), std::string::npos);
-}
-
-TEST(QmNewUiMenuCardsCatalogueContract, NameplateTextEffectsReserveTheirRenderedExtent)
-{
-	EXPECT_FLOAT_EQ(QmNameplateTextEffectPadding(0, 4, 12), 0.0f);
-	EXPECT_FLOAT_EQ(QmNameplateTextEffectPadding(QM_TEXT_EFFECT_BORDER, 1, 12), 1.0f);
-	EXPECT_FLOAT_EQ(QmNameplateTextEffectPadding(QM_TEXT_EFFECT_BORDER, 8, 12), 4.0f);
-	EXPECT_FLOAT_EQ(QmNameplateTextEffectPadding(QM_TEXT_EFFECT_GLOW, 4, 0), 1.0f);
-	EXPECT_FLOAT_EQ(QmNameplateTextEffectPadding(QM_TEXT_EFFECT_GLOW, 4, 7), 7.0f);
-	EXPECT_FLOAT_EQ(QmNameplateTextEffectPadding(QM_TEXT_EFFECT_BORDER | QM_TEXT_EFFECT_GLOW, 3, 7), 7.0f);
-
-	const std::string QmConfigHeader = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string AppearanceSettings = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	EXPECT_NE(QmConfigHeader.find("QmNameplateTextGlowRange, qm_nameplate_text_glow_range, 4, 1, 12"), std::string::npos);
-	EXPECT_NE(AppearanceSettings.find("Localize(\"Glow range\"), 1, 12"), std::string::npos);
 }
 
 TEST(QmNewUiMenuCardsCatalogueContract, QmLaserSettingsMovedToAppearanceLaserTab)

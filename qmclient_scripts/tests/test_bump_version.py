@@ -19,6 +19,22 @@ SPEC.loader.exec_module(BUMP_VERSION)
 
 
 class BumpVersionTest(unittest.TestCase):
+    def test_stable_tags_allow_one_to_three_version_components(self) -> None:
+        for tag, version in (
+            ("v3", "3"),
+            ("V3", "3"),
+            ("v3.1", "3.1"),
+            ("v3.1.2", "3.1.2"),
+        ):
+            with self.subTest(tag=tag):
+                self.assertEqual(BUMP_VERSION.normalize_version(None, tag), version)
+
+    def test_stable_tags_reject_prerelease_and_extra_components(self) -> None:
+        for tag in ("v", "v3-rc1", "v3.1.2.3", "v3.", "nightly"):
+            with self.subTest(tag=tag):
+                with self.assertRaises(ValueError):
+                    BUMP_VERSION.normalize_version(None, tag)
+
     def test_tag_updates_authoritative_version_without_removed_docs_info(self) -> None:
         with tempfile.TemporaryDirectory(prefix="qm-version-test-") as temp_dir:
             version_h_path = Path(temp_dir) / "version.h"

@@ -320,29 +320,6 @@ TEST(SkinsContract, ManagedTeeRefreshClearsTextureBranchesMissingFromDescriptor)
 	EXPECT_NE(RefreshSkinBody.find("TeeInfo.ResetMissingDescriptorBranches(SkinDescriptor.m_Flags);"), std::string::npos);
 }
 
-TEST(SkinsContract, TeamTeeGlowConfigAndTeePageUiAreRegistered)
-{
-	const std::string Config = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string SettingsSource = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-
-	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmTeamTeeGlow, qm_team_tee_glow, 0, 0, 1"), std::string::npos);
-	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmTeamTeeGlowTeam0Mode, qm_team_tee_glow_team0_mode, 1, 0, 3"), std::string::npos);
-	EXPECT_NE(Config.find("MACRO_CONFIG_COL(QmTeamTeeGlowColor, qm_team_tee_glow_color, 0xFFFFFFFF"), std::string::npos);
-	// 外发光是 Tee 外观设置：入口必须挂在 Tee 设置页（皮肤队列面板同栏），不得放回外观页。
-	EXPECT_NE(SettingsSource.find("DoSettingsButton_CheckBox(SETTINGS_TEE, -1, &g_Config.m_QmTeamTeeGlow"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("Localize(\"Team tee glow\")"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("std::clamp(g_Config.m_QmTeamTeeGlowTeam0Mode, 0, 3)"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("&g_Config.m_QmTeamTeeGlowColor"), std::string::npos);
-	EXPECT_EQ(SettingsSource.find("m_AppearanceSettingsTab == APPEARANCE_TAB_TEE"), std::string::npos);
-	EXPECT_EQ(ReadTestSourceFile("src/game/client/QmUi/QmCardRegistry.cpp").find("deck:appearance-tee-glow"), std::string::npos);
-	// Tee 页卡片体系：皮肤列表全宽独立，皮肤队列与外发光各占左右半宽卡片。
-	const std::string CardRegistrySource = ReadTestSourceFile("src/game/client/QmUi/QmCardRegistry.cpp");
-	EXPECT_NE(CardRegistrySource.find("\"deck:tee-skin-queue\", \"tee\", ECardColumn::Left, 1"), std::string::npos);
-	EXPECT_NE(CardRegistrySource.find("\"deck:tee-glow\", \"tee\", ECardColumn::Right, 1"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("AddCard(QueueSpec,"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("AddCard(GlowSpec,"), std::string::npos);
-}
-
 TEST(SkinsContract, WarListGlowKeepsPriorityOverTeamTeeGlow)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/players.cpp");

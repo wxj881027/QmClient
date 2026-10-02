@@ -458,8 +458,6 @@ TEST(QmCardRegistry, PlayerStandardPageCardsPersistInVisualOrder)
 		(std::vector<std::string>{"deck:player-country"}));
 }
 
-
-
 TEST(QmCardRegistry, LegacyMergedFunctionalCardMigratesOnlyOldDefaultGroup)
 {
 	const std::vector<qm_card_order::SEntry> vLegacyLayout = {
@@ -761,7 +759,6 @@ TEST(QmCardRegistry, TClientStatusBarMigrationAcceptsLegacyColonFormat)
 	EXPECT_TRUE(qm_card_order::MigrateExactLayout(Model, "tclient-status-bar", vLegacyDefaults, vTargetLayout, vAllowedIds));
 }
 
-
 TEST(QmCardRegistry, GlobalCardOrderMaximumValueFitsConsoleCommand)
 {
 	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
@@ -1033,7 +1030,7 @@ TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
 			return std::string(Result.m_pStableId) == pOwner;
 		});
 		ASSERT_NE(It, Results.end()) << pQuery;
-		EXPECT_STREQ(It->m_Target.m_pTab, "visual") << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pTab, "tee") << pQuery;
 		EXPECT_STREQ(It->m_Target.m_pStableId, pOwner) << pQuery;
 		EXPECT_EQ(std::count_if(Results.begin(), Results.end(), [pOther](const auto &Result) {
 			return std::string(Result.m_pStableId) == pOther;

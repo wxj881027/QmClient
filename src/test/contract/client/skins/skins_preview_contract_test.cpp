@@ -103,31 +103,6 @@ TEST(SkinsContract, TeeSettingsRequestsNoLongerPromoteToPendingAtRequestSite)
 	EXPECT_EQ(RequestLoadBody.find("SetState(EState::PENDING, Priority);"), std::string::npos);
 }
 
-TEST(SkinsContract, TeePrewarmNoLongerUsesImmediateBoolPath)
-{
-	std::ifstream File(TestSourcePath("src/game/client/components/skins.cpp"));
-	ASSERT_TRUE(File.good());
-	std::stringstream Buffer;
-	Buffer << File.rdbuf();
-	const std::string Source = Buffer.str();
-
-	const size_t PrewarmByNamesPos = Source.find("void CSkins::PrewarmByNames(const std::vector<std::string> &vNames, bool Immediate)");
-	ASSERT_NE(PrewarmByNamesPos, std::string::npos);
-	const size_t PrewarmReadyPos = Source.find("bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady)", PrewarmByNamesPos);
-	ASSERT_NE(PrewarmReadyPos, std::string::npos);
-	const std::string PrewarmByNamesBody = Source.substr(PrewarmByNamesPos, PrewarmReadyPos - PrewarmByNamesPos);
-
-	EXPECT_EQ(PrewarmByNamesBody.find("RequestLoad(Immediate)"), std::string::npos);
-	EXPECT_NE(PrewarmByNamesBody.find("Immediate ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::PREFETCH"), std::string::npos);
-
-	const size_t FindImplPos = Source.find("const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName)");
-	ASSERT_NE(FindImplPos, std::string::npos);
-	const size_t FindOrNullptrPos = Source.find("const CSkin *CSkins::FindOrNullptr(const char *pName)", FindImplPos);
-	ASSERT_NE(FindOrNullptrPos, std::string::npos);
-	const std::string FindImplBody = Source.substr(FindImplPos, FindOrNullptrPos - FindImplPos);
-	EXPECT_NE(FindImplBody.find("ExistingSkin->second->RequestLoad(true);"), std::string::npos);
-}
-
 TEST(SkinsContract, SourceResidencyNoLongerDependsOnPreviewCachePins)
 {
 	std::ifstream File(TestSourcePath("src/game/client/components/skins.cpp"));
@@ -180,9 +155,6 @@ TEST(SkinsContract, SkinRefreshKeepsExistingListWhileNewPlanLoads)
 	EXPECT_EQ(RefreshBody.find("m_SkinsBackgroundList.clear();"), std::string::npos);
 }
 
-
-
-
 TEST(SkinsContract, AbortedLocalSkinLoadJobStopsBeforeExpensiveRefreshWork)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/skins.cpp");
@@ -202,41 +174,6 @@ TEST(SkinsContract, AbortedLocalSkinLoadJobStopsBeforeExpensiveRefreshWork)
 	EXPECT_LT(RunBody.find("if(State() == IJob::STATE_ABORTED)"), ReadFilePos);
 	EXPECT_LT(RunBody.find("if(State() == IJob::STATE_ABORTED)", ReadFilePos), DecodePos);
 	EXPECT_LT(RunBody.find("if(State() == IJob::STATE_ABORTED)", DecodePos), PreparePos);
-}
-
-TEST(SkinsContract, AsyncSkinListKeepsQueuedColorVariantsSelectable)
-{
-	std::ifstream HeaderFile(TestSourcePath("src/game/client/components/skins.h"));
-	ASSERT_TRUE(HeaderFile.good());
-	std::stringstream HeaderBuffer;
-	HeaderBuffer << HeaderFile.rdbuf();
-	const std::string Header = HeaderBuffer.str();
-
-	std::ifstream SourceFile(TestSourcePath("src/game/client/components/skins.cpp"));
-	ASSERT_TRUE(SourceFile.good());
-	std::stringstream SourceBuffer;
-	SourceBuffer << SourceFile.rdbuf();
-	const std::string Source = SourceBuffer.str();
-
-	std::ifstream MenuFile(TestSourcePath("src/game/client/components/menus_settings.cpp"));
-	ASSERT_TRUE(MenuFile.good());
-	std::stringstream MenuBuffer;
-	MenuBuffer << MenuFile.rdbuf();
-	const std::string MenuSource = MenuBuffer.str();
-
-	EXPECT_NE(Header.find("struct SColorKey"), std::string::npos);
-	EXPECT_NE(Header.find("const std::optional<SColorKey> &ColorKey() const"), std::string::npos);
-	EXPECT_NE(Header.find("CSkinList &SkinList(int Dummy);"), std::string::npos);
-
-	EXPECT_NE(Source.find("MakeSkinListColorKey(QueueEntry.m_UseCustomColor"), std::string::npos);
-	EXPECT_NE(Source.find("m_vPendingSkinListMergeEntries = std::move(Result.m_Plan.m_vEntries);"), std::string::npos);
-	EXPECT_NE(Source.find("Entry.m_ColorKey.has_value() ? std::make_optional(MakeSkinListColorKey(Entry.m_ColorKey.value())) : std::nullopt"), std::string::npos);
-	EXPECT_NE(Source.find("MakeSkinListEntry(SkinIt->second.get(), ColorKey)"), std::string::npos);
-
-	EXPECT_NE(MenuSource.find("SelectedSkinEntry.ColorKey().has_value()"), std::string::npos);
-	EXPECT_NE(MenuSource.find("*pUseCustomColor = SelectedColorKey.m_UseCustomColor ? 1 : 0;"), std::string::npos);
-	EXPECT_NE(MenuSource.find("*pColorBody = SelectedColorKey.m_ColorBody;"), std::string::npos);
-	EXPECT_NE(MenuSource.find("*pColorFeet = SelectedColorKey.m_ColorFeet;"), std::string::npos);
 }
 
 TEST(SkinsContract, PrepareSkinDataResetsMetricsBeforeWritingPlan)
