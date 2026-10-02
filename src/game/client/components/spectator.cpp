@@ -1051,6 +1051,7 @@ void CSpectator::FindTele()
 
 void CSpectator::RenderTeleSearch(vec2 Center, const CUIRect &RowRect, const CUIRect &StatusRect, float Alpha, bool MousePressed)
 {
+	const vec2 Mouse = Center + m_SelectorMouse;
 	CUIRect Row = RowRect;
 	CUIRect Label, Minus, Number, Plus, Find;
 	Row.VSplitLeft(std::clamp(TextRender()->TextWidth(20.0f, Localize("Find CP")) + 16.0f, 100.0f, Row.w * 0.4f), &Label, &Row);
