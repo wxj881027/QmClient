@@ -18,6 +18,10 @@ TEST(QmScreenshotGalleryContract, UsesFourColumnsAndSeparateThumbnailCache)
 	EXPECT_NE(Gallery.find("WasListboxItemActivated = false"), std::string::npos);
 	EXPECT_NE(Manager.find("LoadThumbnail"), std::string::npos);
 	EXPECT_NE(Manager.find("ClearThumbnails"), std::string::npos);
+	// 网格渲染路径只消费异步缓存：解码与纹理上传都不能再回到每帧渲染里。
+	EXPECT_NE(Gallery.find("PumpThumbnails"), std::string::npos);
+	EXPECT_EQ(Gallery.find("LoadTextureRawMove"), std::string::npos);
+	EXPECT_EQ(Gallery.find("CImageLoader"), std::string::npos);
 	EXPECT_NE(Details.find("窄面板内按纵向表单排列"), std::string::npos);
 	EXPECT_EQ(Details.find("Left.VSplitMid(&Timestamp, &Map)"), std::string::npos);
 }
