@@ -7,10 +7,17 @@
 #include <engine/image.h>
 #include <engine/storage.h>
 
+#include <game/client/components/qmclient/screenshot_image_job.h>
+
+#include <cstdint>
 #include <ctime>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+class IEngine;
+class CGpuUploadLimiter;
 
 // 截图页只负责选择文件，水印处理放在这个独立模块中，便于其它卡片复用。
 class CQmScreenshotManager
@@ -60,18 +67,27 @@ public:
 		return Text;
 	}
 
+	// 缩略图条目：纹理就绪前 m_Loading 为真；加载失败是终态，不再重试同一路径。
 	struct SThumbnail
 	{
 		IGraphics::CTextureHandle m_Texture;
 		int m_Width = 0;
 		int m_Height = 0;
+		bool m_Loading = false;
 		bool m_LoadFailed = false;
 	};
 
 	void Refresh(IStorage *pStorage, const char *pFolder = "screenshots", int StorageType = IStorage::TYPE_ALL);
 	const std::vector<SEntry> &Entries() const { return m_vEntries; }
-	const SThumbnail *LoadThumbnail(IStorage *pStorage, IGraphics *pGraphics, const char *pPath, int StorageType);
+
+	// 只查缓存并按可见性排队，不在渲染线程做任何磁盘或解码工作。
+	// 返回的条目在 m_Loading 时纹理尚不可用，调用方保留占位底色即可。
+	// 指针在下一次 LoadThumbnail 插入或 PumpThumbnails 淘汰之前有效，只可当帧使用。
+	const SThumbnail *LoadThumbnail(const char *pPath, int StorageType);
+	// 每帧渲染完可见项后调用一次：回收后台结果、按 GPU 上传预算上传纹理并淘汰超限条目。
+	void PumpThumbnails(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter);
 	void ClearThumbnails(IGraphics *pGraphics);
+
 	std::string BuildWatermarkText(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const SWatermarkOptions &Options, const char *pMapName) const;
 
 	// 从指定存储路径读取图片，合成水印后写入用户保存目录。源文件不会被覆盖。
@@ -84,6 +100,16 @@ private:
 		std::string m_Folder;
 	};
 
+	struct SThumbnailEntry
+	{
+		SThumbnail m_Thumbnail;
+		std::shared_ptr<CQmScreenshotImageJob> m_pJob;
+		std::string m_Path;
+		int m_StorageType = IStorage::TYPE_SAVE;
+		uint64_t m_LastUsedFrame = 0;
+		bool m_Requested = false;
+	};
+
 	static int ScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
 	static bool LoadImage(IStorage *pStorage, const char *pPath, int StorageType, CImageInfo &Image);
 	static bool EnsureRgba(CImageInfo &Image);
@@ -93,7 +119,10 @@ private:
 	static std::string ThumbnailKey(const char *pPath, int StorageType);
 
 	std::vector<SEntry> m_vEntries;
-	std::unordered_map<std::string, SThumbnail> m_vThumbnails;
+	std::unordered_map<std::string, SThumbnailEntry> m_vThumbnails;
+	// 本帧按可见顺序排队的缩略图键：只在当前可见项上启动后台任务，滚动过快不会堆积陈旧请求。
+	std::vector<std::string> m_vThumbnailRequests;
+	uint64_t m_ThumbnailFrame = 0;
 };
 
 #endif

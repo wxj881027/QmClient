@@ -4,6 +4,8 @@
 #include <base/system.h>
 #include <base/time.h>
 
+#include <engine/client/gpu_upload_limiter.h>
+#include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
 
 #include <ft2build.h>
@@ -232,47 +234,165 @@ std::string CQmScreenshotManager::ThumbnailKey(const char *pPath, int StorageTyp
 	return std::to_string(StorageType) + ":" + (pPath != nullptr ? pPath : "");
 }
 
-const CQmScreenshotManager::SThumbnail *CQmScreenshotManager::LoadThumbnail(IStorage *pStorage, IGraphics *pGraphics, const char *pPath, int StorageType)
+const CQmScreenshotManager::SThumbnail *CQmScreenshotManager::LoadThumbnail(const char *pPath, int StorageType)
 {
-	if(pStorage == nullptr || pGraphics == nullptr || pPath == nullptr || pPath[0] == '\0')
+	if(pPath == nullptr || pPath[0] == '\0')
 		return nullptr;
 
 	const std::string Key = ThumbnailKey(pPath, StorageType);
-	if(const auto It = m_vThumbnails.find(Key); It != m_vThumbnails.end())
-		return &It->second;
-
-	SThumbnail Thumbnail;
-	CImageInfo Image;
-	if(LoadImage(pStorage, pPath, StorageType, Image))
+	auto It = m_vThumbnails.find(Key);
+	if(It == m_vThumbnails.end())
 	{
-		Thumbnail.m_Width = (int)Image.m_Width;
-		Thumbnail.m_Height = (int)Image.m_Height;
-		Thumbnail.m_Texture = pGraphics->LoadTextureRawMove(Image, 0, pPath);
-		Thumbnail.m_LoadFailed = !Thumbnail.m_Texture.IsValid();
-	}
-	else
-	{
-		Image.Free();
-		Thumbnail.m_LoadFailed = true;
+		SThumbnailEntry Entry;
+		Entry.m_Path = pPath;
+		Entry.m_StorageType = StorageType;
+		Entry.m_Thumbnail.m_Loading = true;
+		Entry.m_LastUsedFrame = m_ThumbnailFrame;
+		It = m_vThumbnails.emplace(Key, std::move(Entry)).first;
 	}
 
-	const auto [It, Inserted] = m_vThumbnails.emplace(Key, std::move(Thumbnail));
-	(void)Inserted;
-	return &It->second;
+	SThumbnailEntry &Entry = It->second;
+	if(!Entry.m_Requested)
+	{
+		Entry.m_Requested = true;
+		m_vThumbnailRequests.push_back(Key);
+	}
+	Entry.m_LastUsedFrame = m_ThumbnailFrame;
+	return &Entry.m_Thumbnail;
+}
+
+void CQmScreenshotManager::PumpThumbnails(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter)
+{
+	// 请求表记录的是「本帧可见」的条目：先回收上一帧的结果，再按需补足后台任务。
+	if(pGraphics != nullptr)
+	{
+		int UploadsLeft = QM_SCREENSHOT_THUMBNAIL_MAX_UPLOADS_PER_FRAME;
+		for(auto &[Key, Entry] : m_vThumbnails)
+		{
+			(void)Key;
+			if(Entry.m_pJob == nullptr || Entry.m_pJob->State() != IJob::STATE_DONE)
+				continue;
+			if(UploadsLeft <= 0 || (pLimiter != nullptr && !pLimiter->CanUpload()))
+				continue;
+
+			CImageInfo *pImage = Entry.m_pJob->Image();
+			if(pImage != nullptr && pImage->m_Width > 0 && pImage->m_Height > 0)
+			{
+				Entry.m_Thumbnail.m_Width = (int)pImage->m_Width;
+				Entry.m_Thumbnail.m_Height = (int)pImage->m_Height;
+				Entry.m_Thumbnail.m_Texture = pGraphics->LoadTextureRawMove(*pImage, 0, Entry.m_Path.c_str());
+				Entry.m_Thumbnail.m_LoadFailed = !Entry.m_Thumbnail.m_Texture.IsValid();
+				if(pLimiter != nullptr)
+					pLimiter->OnUploaded();
+				--UploadsLeft;
+			}
+			else
+			{
+				Entry.m_Thumbnail.m_LoadFailed = true;
+			}
+			Entry.m_Thumbnail.m_Loading = false;
+			Entry.m_pJob.reset();
+		}
+	}
+
+	int RunningJobs = 0;
+	for(const auto &[Key, Entry] : m_vThumbnails)
+	{
+		(void)Key;
+		// 已完成但还没上传的条目只占内存，不占用后台解码槽位。
+		if(Entry.m_pJob != nullptr && Entry.m_pJob->State() != IJob::STATE_DONE)
+			++RunningJobs;
+	}
+
+	int PendingRequests = 0;
+	for(const std::string &Key : m_vThumbnailRequests)
+	{
+		const auto It = m_vThumbnails.find(Key);
+		if(It != m_vThumbnails.end() && It->second.m_pJob == nullptr && It->second.m_Thumbnail.m_Loading)
+			++PendingRequests;
+	}
+
+	if(pEngine != nullptr && pStorage != nullptr)
+	{
+		int JobsToStart = QmScreenshotImageJobsToStart(RunningJobs, PendingRequests, QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS);
+		for(const std::string &Key : m_vThumbnailRequests)
+		{
+			if(JobsToStart <= 0)
+				break;
+			const auto It = m_vThumbnails.find(Key);
+			if(It == m_vThumbnails.end())
+				continue;
+
+			SThumbnailEntry &Entry = It->second;
+			if(Entry.m_pJob != nullptr || !Entry.m_Thumbnail.m_Loading)
+				continue;
+
+			Entry.m_pJob = std::make_shared<CQmScreenshotImageJob>(pStorage, Entry.m_Path, Entry.m_StorageType, QM_SCREENSHOT_THUMBNAIL_MAX_EDGE);
+			pEngine->AddJob(Entry.m_pJob);
+			--JobsToStart;
+		}
+	}
+
+	// 常驻纹理按最久未使用淘汰；本帧可见和仍在加载的条目保留，避免滚动时反复重解码。
+	if(pGraphics != nullptr)
+	{
+		int ResidentEntries = 0;
+		for(const auto &[Key, Entry] : m_vThumbnails)
+		{
+			(void)Key;
+			if(Entry.m_pJob == nullptr)
+				++ResidentEntries;
+		}
+
+		const int EvictionsNeeded = QmScreenshotImageEvictionCount(ResidentEntries, QM_SCREENSHOT_THUMBNAIL_MAX_RESIDENT);
+		if(EvictionsNeeded > 0)
+		{
+			std::vector<std::string> vEvictable;
+			vEvictable.reserve(m_vThumbnails.size());
+			for(const auto &[Key, Entry] : m_vThumbnails)
+				if(Entry.m_pJob == nullptr && !Entry.m_Requested)
+					vEvictable.push_back(Key);
+			std::sort(vEvictable.begin(), vEvictable.end(), [this](const std::string &Left, const std::string &Right) {
+				return m_vThumbnails.at(Left).m_LastUsedFrame < m_vThumbnails.at(Right).m_LastUsedFrame;
+			});
+
+			const int EvictCount = std::min(EvictionsNeeded, (int)vEvictable.size());
+			for(int Index = 0; Index < EvictCount; ++Index)
+			{
+				const auto It = m_vThumbnails.find(vEvictable[Index]);
+				if(It == m_vThumbnails.end())
+					continue;
+				if(It->second.m_Thumbnail.m_Texture.IsValid())
+					pGraphics->UnloadTexture(&It->second.m_Thumbnail.m_Texture);
+				m_vThumbnails.erase(It);
+			}
+		}
+	}
+
+	for(const std::string &Key : m_vThumbnailRequests)
+	{
+		const auto It = m_vThumbnails.find(Key);
+		if(It != m_vThumbnails.end())
+			It->second.m_Requested = false;
+	}
+	m_vThumbnailRequests.clear();
+	++m_ThumbnailFrame;
 }
 
 void CQmScreenshotManager::ClearThumbnails(IGraphics *pGraphics)
 {
 	if(pGraphics != nullptr)
 	{
-		for(auto &[Key, Thumbnail] : m_vThumbnails)
+		for(auto &[Key, Entry] : m_vThumbnails)
 		{
 			(void)Key;
-			if(Thumbnail.m_Texture.IsValid())
-				pGraphics->UnloadTexture(&Thumbnail.m_Texture);
+			if(Entry.m_Thumbnail.m_Texture.IsValid())
+				pGraphics->UnloadTexture(&Entry.m_Thumbnail.m_Texture);
 		}
 	}
+	// 正在运行的任务不再持有结果引用，解码结束后随任务对象自行释放。
 	m_vThumbnails.clear();
+	m_vThumbnailRequests.clear();
 }
 
 int CQmScreenshotManager::ScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser)

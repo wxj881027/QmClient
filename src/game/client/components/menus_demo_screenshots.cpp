@@ -328,15 +328,16 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
 			str_format(aPath, sizeof(aPath), "%s/%s", m_aCurrentDemoFolder, pItem->m_aFilename);
-			const CQmScreenshotManager::SThumbnail *pThumbnail = m_ScreenshotManager.LoadThumbnail(Storage(), Graphics(), aPath, pItem->m_StorageType);
-			if(pThumbnail != nullptr && !pThumbnail->m_LoadFailed)
+			const CQmScreenshotManager::SThumbnail *pThumbnail = m_ScreenshotManager.LoadThumbnail(aPath, pItem->m_StorageType);
+			if(pThumbnail != nullptr && pThumbnail->m_Texture.IsValid())
 			{
 				RenderScreenshotTexture(Graphics(), *pThumbnail, Preview);
 			}
-			else
+			else if(pThumbnail != nullptr && pThumbnail->m_LoadFailed)
 			{
 				Ui()->DoLabel(&Preview, Localize("Could not preview this image"), 10.0f, TEXTALIGN_MC);
 			}
+			// 其余情况是后台正在解码：保留占位底色，贴图就绪后的帧再画。
 		}
 
 		Caption.HMargin(1.0f, &Caption);
@@ -346,6 +347,9 @@ void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemAc
 		LabelProperties.m_EnableWidthCheck = false;
 		Ui()->DoLabel(&Caption, pItem->m_aName, 11.0f, TEXTALIGN_MC, LabelProperties);
 	}
+
+	// 可见项已全部登记：本帧只在预算内回收结果并上传缩略图，解码全部发生在后台线程。
+	m_ScreenshotManager.PumpThumbnails(Graphics(), Storage(), Engine(), GameClient()->GpuUploadLimiter());
 
 	for(const CDemoItem *pItem : m_vpFilteredDemos)
 	{
