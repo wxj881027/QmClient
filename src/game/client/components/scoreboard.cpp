@@ -907,7 +907,7 @@ void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
 		const ColorRGBA ButtonColor = Active ?
 						      ColorRGBA(1.0f, 0.32f, 0.32f, 0.95f * RenderAlpha) :
 						      ColorRGBA(0.82f, 0.88f, 0.96f, 0.45f * RenderAlpha);
-		if(Ui()->DoButton_FontIcon(&s_aButtons[i], gs_aSoundMuteButtonDefs[i].m_pIcon, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Clickable, ButtonColor) && Clickable)
+		if(Ui()->DoButton_FontIcon(&s_aButtons[i], gs_aSoundMuteButtonDefs[i].m_pIcon, Active, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, Clickable, ButtonColor) && Clickable)
 			g_Config.*gs_aSoundMuteButtonDefs[i].m_pConfig ^= 1;
 		RestoreTextColors();
 
@@ -1205,15 +1205,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float PreferredTeamFontSize = FontSize / 1.5f;
 	const float PreferredTeamModeIconSize = minimum(SCOREBOARD_TEAM_MODE_ICON_SIZE, FontSize);
 	const CUIRect PlayerRows = ScoreboardPlayerRowsRect(Scoreboard, HeadlineFontsize * 2.0f);
-	const float RowsVerticalScale = Scroll ? 1.0f : ScoreboardRowsVerticalScale(
-		PlayerRows.h,
-		EndRow - FirstRow,
-		NumTeamLabels,
-		NumTeamModeLabels,
-		LineHeight,
-		Spacing,
-		PreferredTeamFontSize,
-		PreferredTeamModeIconSize);
+	const float RowsVerticalScale = Scroll ? 1.0f : ScoreboardRowsVerticalScale(PlayerRows.h, EndRow - FirstRow, NumTeamLabels, NumTeamModeLabels, LineHeight, Spacing, PreferredTeamFontSize, PreferredTeamModeIconSize);
 	LineHeight *= RowsVerticalScale;
 	TeeSizeMod *= RowsVerticalScale;
 	Spacing *= RowsVerticalScale;

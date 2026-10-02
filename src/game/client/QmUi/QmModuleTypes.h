@@ -59,6 +59,7 @@ namespace qm_module
 		WaterHammerHighlight,
 		GoresDrownBoard,
 		BetterScoreboard,
+		Ime,
 	};
 
 	enum class EQmModuleColumn
@@ -76,7 +77,7 @@ namespace qm_module
 		const char *m_pKey;
 	};
 
-	constexpr size_t QmModuleCount = 45;
+	constexpr size_t QmModuleCount = 46;
 } // namespace qm_module
 
 #endif // GAME_CLIENT_QMUI_QMMODULETYPES_H

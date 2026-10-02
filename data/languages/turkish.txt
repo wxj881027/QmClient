@@ -2336,6 +2336,9 @@ Configure the companion appearance and movement
 Configure the Gores team drown board
 == Gores takım boğulma panosunu yapılandır
 
+Configure the IME candidate bar
+== Configure the IME candidate bar
+
 Configure the ingame cursor scale
 == Oyun içi imleç ölçeğini ayarlayın
 
@@ -5522,6 +5525,12 @@ Ignore voice distance attenuation
 Ignored legacy Dynamic Island edge margin
 == Eski Dinamik Ada kenar boşluğu yok sayıldı
 
+IME
+== IME
+
+IME background color
+== IME arka plan rengi
+
 Import from clipboard
 == Panodan içe aktar
 
@@ -7295,6 +7304,12 @@ New features
 New IME
 == Yeni IME
 
+New IME candidate bar background color
+== Yeni IME aday çubuğu arka plan rengi
+
+New IME candidate bar opacity
+== Yeni IME aday çubuğu opaklığı
+
 New name
 == Yeni isim
 
@@ -7306,9 +7321,6 @@ New preset name
 
 New random timeout code
 == Yeni rastgele zaman aşımı kodu
-
-New UI
-== Yeni Arayüz
 
 News
 == Haberler

@@ -2336,6 +2336,9 @@ Configure the companion appearance and movement
 Configure the Gores team drown board
 == Gores-Team-Ertrunkenenanzeige konfigurieren
 
+Configure the IME candidate bar
+== Configure the IME candidate bar
+
 Configure the ingame cursor scale
 == Ingame-Cursor-Skalierung einstellen
 
@@ -5522,6 +5525,12 @@ Ignore voice distance attenuation
 Ignored legacy Dynamic Island edge margin
 == Alter Randabstand der Dynamic Island wird ignoriert
 
+IME
+== IME
+
+IME background color
+== Hintergrundfarbe der IME
+
 Import from clipboard
 == Aus Zwischenablage importieren
 
@@ -7295,6 +7304,12 @@ New features
 New IME
 == Neue IME
 
+New IME candidate bar background color
+== Hintergrundfarbe der neuen IME-Kandidatenleiste
+
+New IME candidate bar opacity
+== Deckkraft der neuen IME-Kandidatenleiste
+
 New name
 == Neuer Name
 
@@ -7306,9 +7321,6 @@ New preset name
 
 New random timeout code
 == Neuer zufälliger Timeout-Code
-
-New UI
-== Neue UI
 
 News
 == Neuigkeiten

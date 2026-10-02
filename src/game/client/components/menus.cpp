@@ -731,9 +731,9 @@ int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const cha
 	// 所有设置页下拉框统一使用当前设置主题，调用点不得回退到旧的默认配色；
 	// 弹层边框与设置卡片边框同源，避免强调色高亮蓝框。
 	Properties.m_VisualStyle = QmSettingsDropdownVisualStyle(m_SettingsUiTheme, SettingsCardDeckVisualOptions().m_BorderColor);
-	// 锚点必须留在当前卡片内，弹层可以越过卡片但不能越过设置页 viewport。
+	// 卡片内部裁剪区会在弹层打开后失效，锚点判断必须使用设置页最外层 viewport。
 	if(Properties.m_pAnchorViewport == nullptr)
-		Properties.m_pAnchorViewport = Ui()->IsClipped() ? Ui()->ClipArea() : Ui()->Screen();
+		Properties.m_pAnchorViewport = Ui()->IsClipped() ? Ui()->OutermostClipArea() : Ui()->Screen();
 	// 弹窗渲染上下文没有激活裁剪区（裁剪栈为空），此时回退到整屏 viewport；
 	// 与 ui_popups.cpp DoDropDown 的既有回退模式保持一致，避免断言崩溃。
 	if(Properties.m_pPopupViewport == nullptr)
@@ -6922,6 +6922,14 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 		m_MenuTextPoolLanguageHash = LanguageHash;
 		m_MenuTextPoolFontHash = FontHash;
 	}
+	const uint64_t GlyphAtlasRevision = TextRender()->GlyphAtlasRevision();
+	if(m_MenuTextPoolGlyphAtlasRevision == 0)
+		m_MenuTextPoolGlyphAtlasRevision = GlyphAtlasRevision;
+	else if(m_MenuTextPoolGlyphAtlasRevision != GlyphAtlasRevision)
+	{
+		InvalidateMenuTextPool("glyph_atlas");
+		m_MenuTextPoolGlyphAtlasRevision = GlyphAtlasRevision;
+	}
 
 	if(m_MenuTextPlanCollecting)
 	{
@@ -7041,7 +7049,7 @@ void CMenus::DoSettingsLabelStreamed(CUIElement &Element, const CUIRect *pRect, 
 	DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor, Render);
 }
 
-bool CMenus::MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, int StrLen, const CTextCursor *pReadCursor)
+bool CMenus::MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor)
 {
 	if(pRect == nullptr || pText == nullptr)
 		return false;
@@ -7051,19 +7059,19 @@ bool CMenus::MenuTextContainerNeedsBuild(CUIElement &Element, const CUIRect *pRe
 		(StrLen != 0 && StrLen < 0 && str_comp(pElementRect->m_Text.c_str(), pText) != 0);
 	const int ReadCursorGlyphCount = pReadCursor == nullptr ? -1 : pReadCursor->m_GlyphCount;
 	const bool SizeChanged = pElementRect->m_Width != pRect->w || pElementRect->m_Height != pRect->h;
+	const bool StyleChanged = pElementRect->m_FontSize != Size || pElementRect->m_TextAlign != Align || pElementRect->m_LabelMaxWidth != LabelProps.m_MaxWidth || pElementRect->m_LabelFlags != Ui()->GetLabelFlagsForProperties(LabelProps, pReadCursor);
 	const bool NeedsBuild =
 		(!pElementRect->m_UITextContainer.Valid() && pText[0] != '\0' && StrLen != 0) ||
 		TextChanged ||
 		SizeChanged ||
+		StyleChanged ||
 		pElementRect->m_ReadCursorGlyphCount != ReadCursorGlyphCount;
 	return NeedsBuild;
 }
 
-bool CMenus::RequestMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, int StrLen, const CTextCursor *pReadCursor)
+bool CMenus::RequestMenuTextContainerBuild(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor)
 {
-	(void)Size;
-	(void)Align;
-	const bool NeedsBuild = MenuTextContainerNeedsBuild(Element, pRect, pText, StrLen, pReadCursor);
+	const bool NeedsBuild = MenuTextContainerNeedsBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor);
 	if(!NeedsBuild)
 		return true;
 	if(m_pSettingsTextPrebuildBudget != nullptr)
@@ -7201,7 +7209,7 @@ void CMenus::DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, cons
 		pElementRect->m_TextOutlineColor = TextRender()->GetTextOutlineColor();
 	}
 
-	const bool NeedsBuild = MenuTextContainerNeedsBuild(Element, pRect, pText, StrLen, pReadCursor);
+	const bool NeedsBuild = MenuTextContainerNeedsBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor);
 	if(NeedsBuild && m_pSettingsTextPrebuildBudget == nullptr)
 	{
 		if(m_MenuTextPoolVisibleGuard)
@@ -7226,7 +7234,7 @@ void CMenus::DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, cons
 
 	if(m_pSettingsTextPrebuildBudget != nullptr)
 	{
-		if(MenuTextContainerNeedsBuild(Element, pRect, pText, StrLen, pReadCursor))
+		if(MenuTextContainerNeedsBuild(Element, pRect, pText, Size, Align, LabelProps, StrLen, pReadCursor))
 		{
 			SSettingsWarmupFrameBudget Budget{};
 			Budget.m_MaxTextContainers = *m_pSettingsTextPrebuildBudget;
@@ -7360,11 +7368,7 @@ bool CMenus::PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &Re
 	const SMenuTextStyleKey StyleKey = SettingsMenuTextPlanStyleKey(Item);
 	CUIElement &Element = MenuTextElement(Item.m_Scope, Item.m_Page, Item.m_Tab, Item.m_Subtab, Item.m_TextId.c_str(), StyleKey);
 	CUIElement::SUIElementRect *pRect = Element.Rect(0);
-	const bool NeedsBuild =
-		!pRect->m_UITextContainer.Valid() ||
-		pRect->m_Width != Item.m_Rect.w ||
-		pRect->m_Height != Item.m_Rect.h ||
-		pRect->m_Text != Item.m_Text;
+	const bool NeedsBuild = MenuTextContainerNeedsBuild(Element, &Item.m_Rect, Item.m_Text.c_str(), Item.m_FontSize, Item.m_Align, Item.m_LabelProps, -1, nullptr);
 	if(NeedsBuild)
 	{
 		SSettingsWarmupFrameBudget Budget{};
@@ -8060,6 +8064,7 @@ void CMenus::InvalidateMenuTextPool(const char *pReason)
 	}
 	m_MenuTextPoolLanguageHash = 0;
 	m_MenuTextPoolFontHash = 0;
+	m_MenuTextPoolGlyphAtlasRevision = 0;
 	m_MenuTextPoolLayoutHash = 0;
 	m_MenuTextPoolThemeHash = 0;
 	m_SettingsMenuTextPlanMetadataDirty = true;

@@ -2336,6 +2336,9 @@ Configure the companion appearance and movement
 Configure the Gores team drown board
 == 設定 Gores 團隊落水榜
 
+Configure the IME candidate bar
+== Configure the IME candidate bar
+
 Configure the ingame cursor scale
 == 設定遊戲內光標縮放
 
@@ -5522,6 +5525,12 @@ Ignore voice distance attenuation
 Ignored legacy Dynamic Island edge margin
 == 已忽略舊版靈動島邊緣外邊距
 
+IME
+== IME
+
+IME background color
+== IME 背景顏色
+
 Import from clipboard
 == 從剪貼板導入
 
@@ -7295,6 +7304,12 @@ New features
 New IME
 == 新版 IME
 
+New IME candidate bar background color
+== 新版 IME 候選欄背景顏色
+
+New IME candidate bar opacity
+== 新版 IME 候選欄透明度
+
 New name
 == 新文件名
 
@@ -7306,9 +7321,6 @@ New preset name
 
 New random timeout code
 == 隨機生成新的超時代碼
-
-New UI
-== 新版 UI
 
 News
 == 新聞

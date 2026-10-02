@@ -1,4 +1,4 @@
-// QmNewUi 菜单源码合同：配置默认值与迁移域：Qm 默认关闭策略、显式遗留值保留、配置帮助文本本地化。
+// QmNewUi 菜单源码合同：新版 UI 的配置迁移域与配置帮助文本本地化。
 // 运行时行为保留在 qm_new_ui_menu_branch_test.cpp。
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/backend_sdl.h>
@@ -45,7 +45,7 @@ TEST(QmNewUiMenuSettingsConfigContract, ConfigPageLocalizesVariableHelpText)
 	EXPECT_EQ(TClientMenusSource.find("Ui()->DoLabel(&Help, pVar->m_pHelp ? pVar->m_pHelp : \"\""), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, QmDefaultOffMigrationKeepsExplicitLegacyValues)
+TEST(QmNewUiMenuBranches, LegacyConfigMigrationKeepsExplicitValues)
 {
 	const std::string ConfigSource = ReadTextFile("src/engine/shared/config.cpp");
 	const std::string ClientSource = ReadTextFile("src/engine/client/client.cpp");

@@ -621,7 +621,8 @@ void CEmoticon::RenderProjectiles()
 			BatchEmoticon = Projectile.m_Emoticon;
 		}
 		Graphics()->QuadsSetRotation(Angle);
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, std::clamp(Projectile.m_LifeTime * 2.0f, 0.0f, 1.0f));
+		const float TeeAlpha = Projectile.m_OwnerClientId >= 0 && Projectile.m_OwnerClientId < MAX_CLIENTS ? GameClient()->m_Players.PlayerRenderAlpha(Projectile.m_OwnerClientId) : 1.0f;
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, std::clamp(Projectile.m_LifeTime * 2.0f, 0.0f, 1.0f) * TeeAlpha);
 		IGraphics::CQuadItem Quad(Position.x, Position.y, Size, Size);
 		Graphics()->QuadsDraw(&Quad, 1);
 	}

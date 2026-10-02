@@ -777,6 +777,7 @@ Configure TClient tools and profiles
 Configure Tee appearance and skins
 Configure the companion appearance and movement
 Configure the Gores team drown board
+Configure the IME candidate bar
 Configure the ingame cursor scale
 Configure the input overlay display
 Configure the lyrics display
@@ -1839,6 +1840,8 @@ Ignore clan tag when searching friends
 Ignore keyboard modifier mask
 Ignore voice distance attenuation
 Ignored legacy Dynamic Island edge margin
+IME
+IME background color
 Import from clipboard
 Improved Anti Ping
 Improved anti ping
@@ -2430,11 +2433,12 @@ New button
 New category name
 New features
 New IME
+New IME candidate bar background color
+New IME candidate bar opacity
 New name
 New name:
 New preset name
 New random timeout code
-New UI
 News
 Next
 Next page in console

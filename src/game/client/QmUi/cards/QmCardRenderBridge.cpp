@@ -118,6 +118,11 @@ void qm_card_catalog::QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(CMen
 	pMenus->RenderQmFunctionMiniFeaturesContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 }
 
+void qm_card_catalog::QmCardRenderHook::RenderQmFunctionImeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmFunctionImeContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+}
+
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionBetterScoreboardContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmFunctionBetterScoreboardContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);

@@ -947,6 +947,8 @@ void CGameClient::OnInit()
 	MigrateNameplateShowScopeConfig();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
 	MigrateQmUiIconDuotoneSecondaryColor(ConfigManager());
+	// 新版 UI 已经是当前界面，保留配置变量只用于兼容旧配置文件，不再允许启动到旧版 UI。
+	g_Config.m_QmNewUi = 1;
 
 	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
 	{

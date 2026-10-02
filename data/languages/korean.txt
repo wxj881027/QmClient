@@ -2336,6 +2336,9 @@ Configure the companion appearance and movement
 Configure the Gores team drown board
 == Gores 팀 익사 보드 설정
 
+Configure the IME candidate bar
+== Configure the IME candidate bar
+
 Configure the ingame cursor scale
 == 게임 내 커서 크기 설정
 
@@ -5522,6 +5525,12 @@ Ignore voice distance attenuation
 Ignored legacy Dynamic Island edge margin
 == 기존 다이내믹 아일랜드 가장자리 여백은 무시됨
 
+IME
+== IME
+
+IME background color
+== IME 배경 색상
+
 Import from clipboard
 == 클립보드에서 가져오기
 
@@ -7295,6 +7304,12 @@ New features
 New IME
 == 새 IME
 
+New IME candidate bar background color
+== 새 IME 후보 표시줄 배경 색상
+
+New IME candidate bar opacity
+== 새 IME 후보 표시줄 불투명도
+
 New name
 == 새 이름
 
@@ -7306,9 +7321,6 @@ New preset name
 
 New random timeout code
 == 새 랜덤 타임아웃 코드
-
-New UI
-== 새 UI
 
 News
 == 뉴스

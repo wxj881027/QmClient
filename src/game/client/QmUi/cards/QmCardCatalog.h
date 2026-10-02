@@ -126,6 +126,7 @@ namespace qm_card_catalog
 		// CMenus::RenderQmFunctionMiniFeaturesContent / RenderQmHudBindStatusContent 仍需要
 		// 它们来排版，故桥接按**本地签名**保留并透传这两个参数（以本地实现为准，不改本地行为）。
 		static void RenderQmFunctionMiniFeaturesContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+		static void RenderQmFunctionImeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionBetterScoreboardContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionJumpHintContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionWeaponTrajectoryContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);

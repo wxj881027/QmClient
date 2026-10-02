@@ -805,6 +805,31 @@ void CPlayers::RenderHook(
 	RenderHand(&RenderInfo, Position, normalize(HookPos - Pos), -pi / 2, vec2(20, 0), Alpha);
 }
 
+float CPlayers::PlayerRenderAlpha(int ClientId) const
+{
+	const bool Local = GameClient()->m_Snap.m_LocalClientId == ClientId;
+	const bool OtherTeam = GameClient()->IsOtherTeam(ClientId);
+	const bool Spec = GameClient()->m_Snap.m_SpecInfo.m_Active;
+
+	float Alpha = 1.0f;
+	if(OtherTeam || ClientId < 0)
+		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
+	else if(g_Config.m_TcShowOthersGhosts && !Local && !Spec)
+		Alpha = g_Config.m_TcPredGhostsAlpha / 100.0f;
+
+	if(!OtherTeam && g_Config.m_TcShowOthersGhosts && !Local && g_Config.m_TcUnpredOthersInFreeze && Client()->m_IsLocalFrozen && !Spec)
+		Alpha = 1.0f;
+
+	if(ClientId == -2)
+	{
+		// QmClient: 查看模式下回放是主内容，用不透明渲染；跑图模式保持半透明参照物语义。
+		Alpha = GameClient()->m_Ghost.ManualModeActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
+	}
+	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
+		Alpha = std::min(Alpha, 0.5f);
+	return std::clamp(Alpha, 0.0f, 1.0f);
+}
+
 void CPlayers::RenderPlayer(
 	const CScreenRect &ScreenRect,
 	const CNetObj_Character *pPrevChar,
@@ -822,30 +847,11 @@ void CPlayers::RenderPlayer(
 
 	CTeeRenderInfo RenderInfo = *pRenderInfo;
 
-	bool Local = GameClient()->m_Snap.m_LocalClientId == ClientId;
-	bool OtherTeam = GameClient()->IsOtherTeam(ClientId);
-	// float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
-	bool Spec = GameClient()->m_Snap.m_SpecInfo.m_Active;
+	const bool Local = GameClient()->m_Snap.m_LocalClientId == ClientId;
 
 	RenderTools()->m_LocalTeeRender = Local; // TClient
 
-	float Alpha = 1.0f;
-	if(OtherTeam || ClientId < 0)
-		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
-	else if(g_Config.m_TcShowOthersGhosts && !Local && !Spec)
-		Alpha = g_Config.m_TcPredGhostsAlpha / 100.0f;
-
-	if(!OtherTeam && g_Config.m_TcShowOthersGhosts && !Local && g_Config.m_TcUnpredOthersInFreeze && Client()->m_IsLocalFrozen && !Spec)
-		Alpha = 1.0f;
-
-	if(ClientId == -2) // ghost
-	{
-		// QmClient: 查看模式（独立时间线）下回放是主内容，用不透明渲染；
-		// 跑图模式保持半透明参照物语义
-		Alpha = GameClient()->m_Ghost.ManualModeActive() ? 1.0f : g_Config.m_ClRaceGhostAlpha / 100.0f;
-	}
-	if(ClientId >= 0 && GameClient()->m_FastPractice.Enabled() && !GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_FastPractice.IsPracticeParticipant(ClientId))
-		Alpha = std::min(Alpha, 0.5f);
+	const float Alpha = PlayerRenderAlpha(ClientId);
 	const bool Afk = ClientId >= 0 && IsQmAfkForPresentation(
 						  GameClient()->m_aClients[ClientId].m_Afk,
 						  Client()->State() == IClient::STATE_ONLINE,
@@ -2063,12 +2069,14 @@ void CPlayers::OnRender()
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	const CScreenRect ScreenRect = Graphics()->GetScreen();
-	// expand the edges to prevent popping in/out onscreen
-	float BorderBuffer = 100;
-	ScreenX0 -= BorderBuffer;
-	ScreenX1 += BorderBuffer;
-	ScreenY0 -= BorderBuffer;
-	ScreenY1 += BorderBuffer;
+	// 扩展 Tee 的可见区域，避免高速移动或镜头滚动时在屏幕边缘突然弹出。
+	constexpr float BorderBuffer = 100.0f;
+	CScreenRect PlayerScreenRect = ScreenRect;
+	PlayerScreenRect.Expand(BorderBuffer);
+	ScreenX0 = PlayerScreenRect.m_TopLeft.x;
+	ScreenX1 = PlayerScreenRect.m_BottomRight.x;
+	ScreenY0 = PlayerScreenRect.m_TopLeft.y;
+	ScreenY1 = PlayerScreenRect.m_BottomRight.y;
 
 	// render everyone else's hook, then our own
 	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
@@ -2156,14 +2164,14 @@ void CPlayers::OnRender()
 		if(RenderGhost && g_Config.m_TcShowOthersGhosts && !Spec && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 			RenderPlayerGhost(&GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
 
-		RenderPlayer(ScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
+		RenderPlayer(PlayerScreenRect, &GameClient()->m_aClients[ClientId].m_RenderPrev, &aRenderCurForTee[ClientId], &aRenderInfo[ClientId], ClientId);
 	}
 	if(RenderLastId != -1 && IsPlayerInfoAvailable(RenderLastId))
 	{
 		const CGameClient::CClientData *pClientData = &GameClient()->m_aClients[RenderLastId];
 		RenderHookCollLine(ScreenRect, &pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
 		RenderWeaponTrajectory(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
-		RenderPlayer(ScreenRect, &pClientData->m_RenderPrev, &aRenderCurForTee[RenderLastId], &aRenderInfo[RenderLastId], RenderLastId);
+		RenderPlayer(PlayerScreenRect, &pClientData->m_RenderPrev, &aRenderCurForTee[RenderLastId], &aRenderInfo[RenderLastId], RenderLastId);
 	}
 }
 

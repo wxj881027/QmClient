@@ -1060,6 +1060,7 @@ public:
 
 	CLabelResult DoLabel(const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}) const;
 	CLabelResult DoLabel_AutoLineSize(const char *pText, float FontSize, int Align, CUIRect *pRect, float LineSize, const SLabelProperties &LabelProps = {}) const;
+	int GetLabelFlagsForProperties(const SLabelProperties &LabelProps, const CTextCursor *pReadCursor = nullptr) const;
 
 	struct SEditBoxRenderOptions
 	{
