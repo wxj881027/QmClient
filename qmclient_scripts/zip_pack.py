@@ -23,6 +23,14 @@ from pathlib import Path
 FORBIDDEN_NAME_CHARACTERS = ("\\", ":", "\0", "?", "\ufffd")
 
 
+def configure_stdio() -> None:
+    # CI 的 Windows 构建把 stdout 接到 cp1252 上，中文提示会让打包命令整体失败。
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors="replace")
+
+
 def _iter_entries(source: Path) -> Iterator[tuple[Path, str, bool]]:
     """按稳定顺序产出 (磁盘路径, 归档名, 是否为目录)，每个目录恰好一次。"""
     prefix = source.name
@@ -144,6 +152,7 @@ def pack(source: Path, output: Path) -> int:
 
 
 def main() -> int:
+    configure_stdio()
     parser = argparse.ArgumentParser(
         description="把便携目录打成 UTF-8 文件名的 ZIP"
     )

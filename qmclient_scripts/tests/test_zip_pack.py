@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import importlib.util
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -108,6 +111,40 @@ class ZipPackTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "便携目录为空"):
                 ZIP_PACK.pack(source, workspace / "QmClient-windows.zip")
+
+    def test_console_that_cannot_encode_chinese_does_not_fail_the_pack(self) -> None:
+        # CI 的 Windows 构建把 stdout 接到 cp1252 上，中文提示曾让打包命令
+        # 在写完 ZIP 之后以 UnicodeEncodeError 失败。
+        with tempfile.TemporaryDirectory(prefix="qm-zip-pack-") as temp_dir:
+            workspace = Path(temp_dir)
+            source = workspace / "QmClient-3.0-win64"
+            self._write_tree(source)
+            package = workspace / "QmClient-windows.zip"
+            environment = dict(os.environ, PYTHONIOENCODING="cp1252")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--source",
+                    str(source),
+                    "--output",
+                    str(package),
+                ],
+                capture_output=True,
+                env=environment,
+                check=False,
+            )
+
+            self.assertEqual(
+                result.returncode, 0, result.stderr.decode("utf-8", "replace")
+            )
+            self.assertTrue(package.is_file())
+            with zipfile.ZipFile(package) as archive:
+                self.assertIn(
+                    "QmClient-3.0-win64/data/qmclient/fonts/霞鹜新致宋.ttf",
+                    archive.namelist(),
+                )
 
 
 if __name__ == "__main__":
