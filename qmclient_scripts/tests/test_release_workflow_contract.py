@@ -44,6 +44,10 @@ class ReleaseWorkflowContractTest(unittest.TestCase):
         )
 
         self.assertIn("Windows package has lossy file names", workflow)
+        # 该步骤会打印非 ASCII 文件名，而 Windows 运行器的 stdout 是 cp1252：
+        # 没有显式 UTF-8 输出时会以 UnicodeEncodeError 让构建失败。
+        step = workflow.index("Verify Windows update package contents")
+        self.assertIn("PYTHONIOENCODING: utf-8", workflow[step : step + 400])
 
     def test_legacy_delta_updater_requires_explicit_deployment_paths(self) -> None:
         script = (REPO_ROOT / "qmclient_scripts/update.zsh").read_text(encoding="utf-8")

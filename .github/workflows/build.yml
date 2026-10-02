@@ -267,6 +267,10 @@ jobs:
       - name: Verify Windows update package contents
         if: runner.os == 'Windows'
         shell: bash
+        env:
+          # Windows 运行器的 stdout 是 cp1252，直接打印非 ASCII 文件名会
+          # 以 UnicodeEncodeError 失败，必须显式用 UTF-8 输出。
+          PYTHONIOENCODING: utf-8
         run: |
           python3 - <<'PY'
           from pathlib import Path
