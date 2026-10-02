@@ -22,7 +22,7 @@ description: 用户要求 git commit、PR、版本更新或 Release 时使用；
 - merge 保留 Git 默认 message。
 - 上游同步用 `chore(sync): <中文简述>`。
 - cherry-pick 沿用类型规范，可保留来源尾注。
-- 版本提交用 `chore: bump version to X.Y.Z`。
+- 版本提交用 `chore: bump version to X.Y`，预览版使用 `chore: bump version to X.Y-preview.N`。
 
 提交消息校验入口为 `qmclient_scripts/check_commit_msg.py`；不要为了文案重新定义其规则。
 
@@ -34,7 +34,7 @@ description: 用户要求 git commit、PR、版本更新或 Release 时使用；
 
 ## 版本与 Release
 
-版本边界遵循根 `AGENTS.md`：正式版 `QMCLIENT_STABLE_VERSION` 只在用户明确授权发布时更新；开发迭代需要进度标识时更新 `QMCLIENT_DEV_VERSION`。统一使用 `python qmclient_scripts/bump_version.py --dev-version X.Y.Z` 更新开发版，正式发布使用 `--version <正式版本>` 或 `--tag <正式 tag>`；不手改版本源。纯调查、文档与规则维护不升任何版本。
+版本边界遵循根 `AGENTS.md`，格式与通道以 [版本号与发布通道](../../../docs/规格/版本号与发布通道.md) 为唯一规则来源。正式版和预览版统一使用 `python qmclient_scripts/bump_version.py --tag <目标 Tag>`，不手改版本源，不再使用独立开发版本参数。纯调查、文档与规则维护不升任何版本。
 
 发布任务再读 [release.md](references/release.md)，通道与说明以现有生成脚本及对应 workflow 为准。版本参数使用本次实际目标，先以 `--dry-run` 核对版本解析（该选项不展示文件 diff），实际更新后检查目标文件差异；发版脚本或生成逻辑变动按风险补验证。
 

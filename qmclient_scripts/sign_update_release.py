@@ -10,9 +10,15 @@ import json
 import os
 import shutil
 import stat
+import sys
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import NamedTuple
+
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from qmclient_scripts.versioning import parse_version
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
@@ -70,19 +76,7 @@ class SignedReleaseOutputs(NamedTuple):
 
 
 def _normalize_version(version: str) -> str:
-    normalized = version.strip()
-    if normalized[:1] in {"v", "V"}:
-        normalized = normalized[1:]
-    parts = normalized.split(".")
-    if len(parts) not in {1, 2, 3, 4} or any(
-        not part.isascii() or not part.isdigit() for part in parts
-    ):
-        raise ValueError(f"invalid stable version: {version}")
-    if any(int(part) > 2_147_483_647 for part in parts):
-        raise ValueError(f"stable version component is too large: {version}")
-    if len(normalized) >= 32:
-        raise ValueError(f"stable version is too long: {version}")
-    return normalized
+    return parse_version(version).version
 
 
 def _validate_archive_path(name: str) -> str:

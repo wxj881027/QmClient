@@ -4,8 +4,8 @@
 根据 tag / ref 区间内的 commit 生成 GitHub Release 说明。
 
 通道：
-- stable（正式版）：tag 形如 vX、vX.Y 或 vX.Y.Z，对应 GitHub 正式 Release
-- pre-release（预发布）：nightly / rc / beta 等，对应 GitHub Pre-release
+- stable（正式版）：新 tag 形如 vX.Y，保留历史版本的说明生成能力
+- pre-release（预览版）：新 tag 形如 vX.Y-preview.N，对应 GitHub Pre-release
 
 输出按「功能领域」分组、中文优先，并对条目做确定性自动润色：
 - Conventional type → 中文玩家前缀（feat→新增 等）
@@ -32,7 +32,6 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -44,7 +43,7 @@ SUBJECT_RE = re.compile(
     r"^(?P<type>[A-Za-z]+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?[:：]\s*(?P<desc>.+)$"
 )
 TRAILER_RE = re.compile(r"^Release-ZH:\s*(?P<text>.+)$")
-# 正式版 tag：v3 / v3.1 / v3.1.1（不含 rc/beta/nightly 后缀）
+# 保留旧正式 tag 的识别，用于计算跨版本的历史说明范围。
 STABLE_TAG_RE = re.compile(r"^v?(?P<ver>\d+(?:\.\d+){0,2})$")
 PRE_RELEASE_HINT_RE = re.compile(
     r"(?i)(nightly|rc\d*|alpha|beta|pre|preview|snapshot|dev)"
@@ -445,8 +444,11 @@ def render_header(
         title = "Nightly" if current_tag == "nightly" else version
         lines.append(f"# QmClient {title} · 预发布（Pre-release）")
         lines.append("")
-        lines.append("> **通道**：预发布 / 内部测试 · **Nightly 构建**")
-        lines.append("> **注意**：可能不稳定；`nightly` 会被下一次构建覆盖，**不建议当主力客户端**")
+        lines.append("> **通道**：预览版（Pre-release）")
+        if current_tag == "nightly":
+            lines.append("> **注意**：旧 Nightly 构建可能不稳定，**不建议当主力客户端**")
+        else:
+            lines.append("> **注意**：预览版用于测试，**不建议当主力客户端**；对应 Tag 和安装包保留，不覆盖。")
         lines.append(
             "> **说明来源**：由区间内 commit **自动汇总并润色**"
             "（中文前缀 / 同质省略前缀 / 去重 / 「其他」上限；"
@@ -538,13 +540,13 @@ def resolve_repo_path(path: Path | None) -> Path | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="生成 GitHub Release 说明（正式版 / 预发布）")
     parser.add_argument("--version", default="UNRELEASED", help="展示用版本号")
-    parser.add_argument("--current-tag", required=True, help="当前 tag/ref，如 v2.74.9 或 nightly")
+    parser.add_argument("--current-tag", required=True, help="当前 tag/ref，如 v3.3 或 v3.4-preview.1")
     parser.add_argument("--previous-tag", default=None, help="上一个 tag；不传则按通道自动推断")
     parser.add_argument(
         "--channel",
         choices=("auto", "stable", "pre-release"),
         default="auto",
-        help="发布通道；auto 根据 tag 名推断（vX[.Y[.Z]]=stable，nightly/rc=pre-release）",
+        help="发布通道；auto 根据 tag 名推断（vX.Y=stable，vX.Y-preview.N=pre-release）",
     )
     parser.add_argument("--commit", default=None, help="预发布展示用完整 commit SHA")
     parser.add_argument("--branch", default=None, help="预发布展示用分支名")

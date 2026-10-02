@@ -6,6 +6,7 @@
 
 #include <game/localization.h>
 
+#include <algorithm>
 #include <iterator>
 #include <utility>
 
@@ -441,8 +442,10 @@ namespace qm_card_registry
 			{"deck:qmclient-contributors-sponsors", "credits-qmclient", 2, 1},
 		};
 		const std::vector<const char *> vAllowed = {
-			"deck:qmclient-contributors-community", "deck:qmclient-contributors-title",
-			"deck:qmclient-contributors-title-display", "deck:qmclient-contributors-sponsors",
+			"deck:qmclient-contributors-community",
+			"deck:qmclient-contributors-title",
+			"deck:qmclient-contributors-title-display",
+			"deck:qmclient-contributors-sponsors",
 		};
 		const bool AlreadyCurrent = std::all_of(vTarget.begin(), vTarget.end(), [&](const auto &Expected) {
 			const int Index = Model.FindByStableId(Expected.m_pStableId);

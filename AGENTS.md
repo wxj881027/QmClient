@@ -86,7 +86,7 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 - 性能敏感代码尽可能模块化并可通过 Google Benchmark 测量生产实现；相关性能验证由 verification skill 选择。功能测试或 gate 通过不能代替性能证据，CPU 微基准不能代替帧、设备和玩家场景实测。
 - 纯文档人工核对内容、链接和状态，不跑代码 gate。未经验证的运行时或跨平台行为不称通过。
 - 默认用自然段说明结果、验证和真实剩余问题；必要时才列项，普通回复不套 commit/PR 模板。
-- 版本号分两层：正式版版本号 `QMCLIENT_STABLE_VERSION`（V3、V3.1…）只在用户明确授权发布时更新，未授权一律不动；开发迭代需要标识进度时只动开发版本号 `QMCLIENT_DEV_VERSION`（V3.13.0 格式）。纯调查、文档、规则维护不升任何版本。版本操作统一走 bump_version.py，见 Git skill。
+- 版本与通道统一遵循 [版本号与发布通道](docs/规格/版本号与发布通道.md)：正式版 `X.Y`，预览版 `X.Y-preview.N`，不使用额外代号。仅在用户授权版本调整或发布时通过 `bump_version.py` 修改；普通提交、纯调查、文档和规则维护不升级版本。操作入口见 Git skill。
 
 ## 文档权威
 

@@ -44,6 +44,7 @@ class DetectChannelTests(unittest.TestCase):
         self.assertEqual(detect_channel("2.74.9"), "stable")
 
     def test_pre_release_tags(self) -> None:
+        self.assertEqual(detect_channel("v3.4-preview.1"), "pre-release")
         self.assertEqual(detect_channel("nightly"), "pre-release")
         self.assertEqual(detect_channel("v2.0.0-rc1"), "pre-release")
         self.assertEqual(detect_channel("19.9-rc1"), "pre-release")
@@ -51,6 +52,13 @@ class DetectChannelTests(unittest.TestCase):
 
 
 class RenderHeaderTests(unittest.TestCase):
+    def test_numbered_preview_does_not_claim_to_replace_nightly(self) -> None:
+        text = "\n".join(render_header(channel="pre-release", version="v3.4-preview.1", current_tag="v3.4-preview.1", previous_tag="v3.3", commit=None, built_at=None, branch=None))
+        self.assertIn("预览版", text)
+        self.assertIn("保留，不覆盖", text)
+        self.assertNotIn("Nightly", text)
+        self.assertNotIn("会被下一次构建覆盖", text)
+
     def test_stable_header_mentions_channel(self) -> None:
         lines = render_header(
             channel="stable",

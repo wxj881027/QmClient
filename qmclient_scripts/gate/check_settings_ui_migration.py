@@ -11,7 +11,7 @@ from pathlib import Path
 PAGE_STABLE_IDS = {
 	"general": ("deck:general-game", "deck:general-language", "deck:general-client", "deck:general-recording"),
 	"player": ("deck:player-identity", "deck:player-country"),
-	"tee": ("deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-list"),
+	"tee": ("deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-list", "deck:tee-skin-queue", "qm:skin_appearance", "deck:tee-glow"),
 	"tee7": ("deck:tee7-editor",),
 	"graphics": ("deck:graphics-display", "deck:graphics-visual", "deck:graphics-modes", "deck:graphics-interaction"),
 	"sound": ("deck:sound-toggle", "deck:sound-volume", "deck:sound-audio-pack"),
@@ -79,7 +79,6 @@ PAGE_STABLE_IDS = {
 	"qmclient_visual": (
 		"qm:chat_bubble",
 		"qm:camera_view",
-		"qm:skin_appearance",
 		"qm:skin_transition",
 		"qm:focus_mode",
 		"qm:weapon_animation",
@@ -145,6 +144,7 @@ PAGE_FUNCTIONS = {
 }
 
 PRODUCER_COMPLETE_PAGES = {
+	"tee",
 	"appearance",
 	"qmclient_hud",
 	"qmclient_function",
@@ -232,7 +232,7 @@ DECK_LEGACY_FORBIDDEN = ("BeginSettingsCardDeck(", "BeginSettingsCardDeckCard(")
 PAGE_REQUIRED = {
 	"general": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::NumericField("),
 	"player": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::InputField("),
-	"tee": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::InputField(", "ui_widget::NumericField("),
+	"tee": ("SettingsCardDeckForRenderPass().RenderCached(", "ResolveSettingsCardDefinitionsRevision("),
 	"tee7": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::InputField(", "EQmScrollProfile::SETTINGS_GRID"),
 	"graphics": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::NumericField("),
 	"sound": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::NumericField("),
@@ -316,11 +316,13 @@ _NAVIGATION_SOURCE = Path("src/game/client/components/menus.cpp")
 # 卡片生产的归属：页面声明「这一页有哪些卡片」，具体生产在全局卡片目录的分类模块里（N3）。
 _CATALOGUE_SOURCE = Path("src/game/client/QmUi/cards/QmCardCatalogIds.cpp")
 PAGE_CATALOGUE_LIST = {
+	"tee": "TeeCardStableIds",
 	"qmclient_hud": "HudCardStableIds",
 	"qmclient_function": "FunctionCardStableIds",
 	"qmclient_visual": "VisualCardStableIds",
 }
 _CATALOGUE_LIST_STATICS = {
+	"TeeCardStableIds": "s_vTeeCards",
 	"HudCardStableIds": "s_vHudCards",
 	"FunctionCardStableIds": "s_vFunctionCards",
 	"VisualCardStableIds": "s_vVisualCards",

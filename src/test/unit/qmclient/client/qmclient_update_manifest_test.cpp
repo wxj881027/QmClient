@@ -1,9 +1,43 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include <base/system.h>
 
+#include <engine/shared/jsonwriter.h>
+
 #include <game/client/components/qmclient/update_manifest.h>
 
 #include <gtest/gtest.h>
+
+#include <utility>
+
+namespace
+{
+	void WriteRelease(CJsonWriter &Writer, const char *pTag, bool Prerelease, bool Draft = false, bool Complete = true)
+	{
+		Writer.BeginObject();
+		Writer.WriteAttribute("tag_name");
+		Writer.WriteStrValue(pTag);
+		Writer.WriteAttribute("draft");
+		Writer.WriteBoolValue(Draft);
+		Writer.WriteAttribute("prerelease");
+		Writer.WriteBoolValue(Prerelease);
+		Writer.WriteAttribute("assets");
+		Writer.BeginArray();
+		for(const char *pName : {"QmClient-windows.zip", "QmClient-windows.zip.sig", "QmClient-windows-update.json", "QmClient-windows-update.json.sig"})
+		{
+			if(!Complete)
+				break;
+			Writer.BeginObject();
+			Writer.WriteAttribute("name");
+			Writer.WriteStrValue(pName);
+			Writer.WriteAttribute("browser_download_url");
+			const std::string Url = std::string("https://github.com/wxj881027/QmClient/releases/download/") + pTag + "/" + pName;
+			Writer.WriteStrValue(Url.c_str());
+			Writer.EndObject();
+		}
+		Writer.EndArray();
+		Writer.EndObject();
+	}
+}
 
 TEST(QmClientUpdateManifest, AcceptsSignedManifestShapeForNewerStableVersion)
 {
@@ -83,4 +117,61 @@ TEST(QmClientUpdateRelease, RejectsPrereleaseMissingAssetAndForeignDownloadUrl)
 		char aError[256];
 		EXPECT_FALSE(ParseQmClientUpdateRelease(pJson, str_length(pJson), "2.79.21", Release, aError, sizeof(aError)));
 	}
+}
+
+TEST(QmClientUpdateRelease, PreviewChannelSelectsNewestCompleteVersionRegardlessOfListOrder)
+{
+	CJsonStringWriter Writer;
+	Writer.BeginArray();
+	WriteRelease(Writer, "v3.3", false);
+	WriteRelease(Writer, "v3.4-preview.10", true);
+	WriteRelease(Writer, "v3.4-preview.2", true);
+	WriteRelease(Writer, "v3.5-preview.1", true, false, false);
+	WriteRelease(Writer, "v3.4-preview.99", true, true);
+	Writer.EndArray();
+	const std::string Json = Writer.GetOutputString();
+	SQmClientUpdateRelease Release;
+	char aError[256];
+	ASSERT_TRUE(ParseQmClientUpdateRelease(Json.c_str(), Json.size(), "3.3-preview.1", Release, aError, sizeof(aError), true)) << aError;
+	EXPECT_STREQ(Release.m_aVersion, "3.4-preview.10");
+	ASSERT_TRUE(ParseQmClientUpdateRelease(Json.c_str(), Json.size(), "3.2", Release, aError, sizeof(aError))) << aError;
+	EXPECT_STREQ(Release.m_aVersion, "3.3");
+}
+
+TEST(QmClientUpdateRelease, MatchingFormalReleaseTakesPriorityOverItsPreviewBuilds)
+{
+	CJsonStringWriter Writer;
+	Writer.BeginArray();
+	WriteRelease(Writer, "v3.3", false);
+	WriteRelease(Writer, "v3.3-preview.10", true);
+	Writer.EndArray();
+	const std::string Json = Writer.GetOutputString();
+	SQmClientUpdateRelease Release;
+	char aError[256];
+	ASSERT_TRUE(ParseQmClientUpdateRelease(Json.c_str(), Json.size(), "3.3-preview.1", Release, aError, sizeof(aError), true)) << aError;
+	EXPECT_STREQ(Release.m_aVersion, "3.3");
+}
+
+TEST(QmClientUpdateRelease, RejectsTagsWhoseChannelDoesNotMatchGithubMetadata)
+{
+	for(const auto &[pTag, Prerelease] : {std::pair{"v3.3-preview.1", false}, std::pair{"v3.3", true}})
+	{
+		CJsonStringWriter Writer;
+		WriteRelease(Writer, pTag, Prerelease);
+		const std::string Json = Writer.GetOutputString();
+		SQmClientUpdateRelease Release;
+		char aError[256];
+		EXPECT_FALSE(ParseQmClientUpdateRelease(Json.c_str(), Json.size(), "3.2-preview.1", Release, aError, sizeof(aError), true));
+	}
+}
+
+TEST(QmClientUpdateManifest, PreviewManifestRequiresAnOptedInClientAndNewerBatch)
+{
+	const char *pJson = R"({"schema":1,"version":"3.4-preview.2","package":{"name":"QmClient-windows.zip","size":123,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},"files":[]})";
+	SQmClientUpdateManifest Manifest;
+	char aError[256];
+	EXPECT_FALSE(ParseQmClientUpdateManifest(pJson, str_length(pJson), "3.3", Manifest, aError, sizeof(aError)));
+	ASSERT_TRUE(ParseQmClientUpdateManifest(pJson, str_length(pJson), "3.4-preview.1", Manifest, aError, sizeof(aError), true)) << aError;
+	EXPECT_STREQ(Manifest.m_aVersion, "3.4-preview.2");
+	EXPECT_FALSE(ParseQmClientUpdateManifest(pJson, str_length(pJson), "3.4-preview.2", Manifest, aError, sizeof(aError), true));
 }

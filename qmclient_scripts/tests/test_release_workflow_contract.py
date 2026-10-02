@@ -8,6 +8,46 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 class ReleaseWorkflowContractTest(unittest.TestCase):
+    def test_release_stages_signed_assets_before_publishing_the_selected_channel(self) -> None:
+        # GitHub 的上传顺序与发布标志属于 CI 接线合同，本地签名单测无法观察。
+        workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(
+            encoding="utf-8"
+        )
+        prepare_step = workflow.index("Prepare Windows update signing environment")
+        signing_step = workflow.index("Sign Windows automatic update assets")
+        release_step = workflow.index("Stage all platform assets in a draft release")
+        publish_step = workflow.index("Verify every uploaded asset and publish")
+        self.assertLess(prepare_step, signing_step)
+        self.assertLess(signing_step, release_step)
+        self.assertLess(release_step, publish_step)
+        self.assertNotIn(
+            "secrets.QM_UPDATE_ED25519_PRIVATE_KEY",
+            workflow[prepare_step:signing_step],
+        )
+        self.assertIn(
+            "secrets.QM_UPDATE_ED25519_PRIVATE_KEY",
+            workflow[signing_step:release_step],
+        )
+        self.assertIn("--normalize-package", workflow[signing_step:release_step])
+        draft_step = workflow[release_step:publish_step]
+        self.assertIn("draft: true", draft_step)
+        self.assertIn("prerelease: ${{ contains(env.RELEASE_TAG, '-preview.') }}", draft_step)
+        self.assertIn("make_latest: false", draft_step)
+        for asset in (
+            "QmClient-windows.zip",
+            "QmClient-windows.zip.sig",
+            "QmClient-windows-update.json",
+            "QmClient-windows-update.json.sig",
+            "QmClient-windows.7z",
+            "QmClient-ubuntu.tar.xz",
+            "QmClient-macOS.dmg",
+            "QmClient-android.apk",
+            "QmClient-android.aab",
+        ):
+            self.assertIn(f"release-assets/{asset}", draft_step)
+        self.assertIn("--draft=false --prerelease --latest=false", workflow[publish_step:])
+        self.assertIn("--draft=false --prerelease=false --latest", workflow[publish_step:])
+
     def test_tag_release_uses_a_production_android_key(self) -> None:
         workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
 

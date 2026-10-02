@@ -66,7 +66,7 @@ class SignUpdateReleaseTest(unittest.TestCase):
 
             outputs = SIGN_UPDATE_RELEASE.sign_release(
                 package=package,
-                version="v2.80.0",
+                version="v3.3",
                 private_key_base64=base64.b64encode(self.PRIVATE_SEED).decode(),
                 output_dir=root,
                 expected_public_key=self.PUBLIC_KEY,
@@ -75,7 +75,7 @@ class SignUpdateReleaseTest(unittest.TestCase):
             manifest_bytes = outputs.manifest.read_bytes()
             manifest = json.loads(manifest_bytes)
             self.assertEqual(manifest["schema"], 1)
-            self.assertEqual(manifest["version"], "2.80.0")
+            self.assertEqual(manifest["version"], "3.3")
             self.assertEqual(manifest["package"]["name"], "QmClient-windows.zip")
             self.assertEqual(
                 [entry["path"] for entry in manifest["files"]],
@@ -104,6 +104,24 @@ class SignUpdateReleaseTest(unittest.TestCase):
             self.assertEqual(outputs.manifest_signature.stat().st_size, 64)
             self.assertEqual(outputs.package_signature.stat().st_size, 64)
 
+    def test_preview_version_is_authenticated_by_manifest_signature(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="qm-update-preview-") as temp_dir:
+            root = Path(temp_dir)
+            package = root / "QmClient-windows.zip"
+            self._write_package(package)
+            outputs = SIGN_UPDATE_RELEASE.sign_release(
+                package=package,
+                version="v3.4-preview.1",
+                private_key_base64=base64.b64encode(self.PRIVATE_SEED).decode(),
+                output_dir=root,
+                expected_public_key=self.PUBLIC_KEY,
+            )
+            manifest = outputs.manifest.read_bytes()
+            Ed25519PublicKey.from_public_bytes(self.PUBLIC_KEY).verify(
+                outputs.manifest_signature.read_bytes(), manifest
+            )
+            self.assertEqual(json.loads(manifest)["version"], "3.4-preview.1")
+
     def test_rejects_package_without_server(self) -> None:
         with tempfile.TemporaryDirectory(prefix="qm-update-sign-") as temp_dir:
             root = Path(temp_dir)
@@ -113,7 +131,7 @@ class SignUpdateReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "DDNet-Server.exe"):
                 SIGN_UPDATE_RELEASE.sign_release(
                     package=package,
-                    version="2.80.0",
+                    version="3.3",
                     private_key_base64=base64.b64encode(self.PRIVATE_SEED).decode(),
                     output_dir=root,
                     expected_public_key=self.PUBLIC_KEY,
@@ -129,8 +147,12 @@ class SignUpdateReleaseTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     SIGN_UPDATE_RELEASE._normalize_version(version)
 
-    def test_accepts_major_only_stable_version(self) -> None:
-        self.assertEqual(SIGN_UPDATE_RELEASE._normalize_version("v3"), "3")
+    def test_accepts_two_part_stable_and_preview_versions(self) -> None:
+        self.assertEqual(SIGN_UPDATE_RELEASE._normalize_version("v3.3"), "3.3")
+        self.assertEqual(SIGN_UPDATE_RELEASE._normalize_version("v3.4-preview.2"), "3.4-preview.2")
+        for version in ("v3", "3.3.1"):
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                SIGN_UPDATE_RELEASE._normalize_version(version)
 
     def test_rejects_unsafe_or_case_insensitive_duplicate_paths(self) -> None:
         for entries in (
@@ -161,7 +183,7 @@ class SignUpdateReleaseTest(unittest.TestCase):
             ):
                 SIGN_UPDATE_RELEASE.sign_release(
                     package=package,
-                    version="2.80.0",
+                    version="3.3",
                     private_key_base64=base64.b64encode(self.PRIVATE_SEED).decode(),
                     output_dir=root,
                     expected_public_key=self.PUBLIC_KEY,
@@ -177,7 +199,7 @@ class SignUpdateReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "does not match"):
                 SIGN_UPDATE_RELEASE.sign_release(
                     package=package,
-                    version="2.80.0",
+                    version="3.3",
                     private_key_base64=base64.b64encode(self.PRIVATE_SEED).decode(),
                     output_dir=root,
                 )
@@ -205,7 +227,7 @@ class SignUpdateReleaseTest(unittest.TestCase):
                         "data/file.txt",
                     },
                 )
-            manifest = SIGN_UPDATE_RELEASE.build_manifest(package, "2.80.0")
+            manifest = SIGN_UPDATE_RELEASE.build_manifest(package, "3.3")
             self.assertEqual(len(manifest["files"]), 4)
 
     def test_normalizes_package_with_non_ascii_file_names(self) -> None:
@@ -243,8 +265,8 @@ class SignUpdateReleaseTest(unittest.TestCase):
                 self.assertEqual(
                     archive.read("data/qmclient/fonts/霞鹜新晰黑.ttf"), b"xi-hei"
                 )
-            manifest = SIGN_UPDATE_RELEASE.build_manifest(package, "v3")
-            self.assertEqual(manifest["version"], "3")
+            manifest = SIGN_UPDATE_RELEASE.build_manifest(package, "v3.3")
+            self.assertEqual(manifest["version"], "3.3")
             self.assertIn(
                 "data/qmclient/fonts/霞鹜新致宋.ttf",
                 {entry["path"] for entry in manifest["files"]},
@@ -267,34 +289,6 @@ class SignUpdateReleaseTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "duplicate archive path"):
                 SIGN_UPDATE_RELEASE.normalize_windows_package(package)
-
-    def test_release_workflow_signs_and_uploads_all_update_assets(self) -> None:
-        workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(
-            encoding="utf-8"
-        )
-        prepare_step = workflow.index("Prepare Windows update signing environment")
-        signing_step = workflow.index("Sign Windows automatic update assets")
-        release_step = workflow.index("Create release and upload desktop assets")
-        self.assertLess(prepare_step, signing_step)
-        self.assertLess(signing_step, release_step)
-        self.assertNotIn(
-            "secrets.QM_UPDATE_ED25519_PRIVATE_KEY",
-            workflow[prepare_step:signing_step],
-        )
-        self.assertIn(
-            "secrets.QM_UPDATE_ED25519_PRIVATE_KEY",
-            workflow[signing_step:release_step],
-        )
-        self.assertIn("--normalize-package", workflow)
-        self.assertIn("Verify Windows update package contents", workflow)
-        self.assertIn("prerelease: false", workflow[release_step:])
-        for asset in (
-            "QmClient-windows.zip",
-            "QmClient-windows.zip.sig",
-            "QmClient-windows-update.json",
-            "QmClient-windows-update.json.sig",
-        ):
-            self.assertIn(f"release-assets/{asset}", workflow[signing_step:])
 
     def test_windows_updater_links_only_the_dedicated_update_library(self) -> None:
         cmake = (REPO_ROOT / "CMakeLists.txt").read_text(encoding="utf-8")

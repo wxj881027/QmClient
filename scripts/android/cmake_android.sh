@@ -85,20 +85,8 @@ export TW_KEY_NAME="${DEFAULT_KEY_NAME}"
 export TW_KEY_PW=$DEFAULT_KEY_PW
 export TW_KEY_ALIAS=$DEFAULT_KEY_ALIAS
 
-QMCLIENT_VERSION_DEFINE=QMCLIENT_DEV_VERSION
-if [[ "${QMCLIENT_STABLE_BUILD:-OFF}" == "ON" ]]; then
-	QMCLIENT_VERSION_DEFINE=QMCLIENT_STABLE_VERSION
-fi
-QMCLIENT_VERSION=$(awk -v define="${QMCLIENT_VERSION_DEFINE}" '$2 == define {gsub(/"/, "", $3); print $3; exit}' src/game/version.h)
-if [[ ! "${QMCLIENT_VERSION}" =~ ^[0-9]+(\.[0-9]+)?(\.[0-9]+)?$ ]]; then
-	log_error "Could not parse ${QMCLIENT_VERSION_DEFINE} from src/game/version.h"
-	exit 1
-fi
-
-IFS='.' read -r QMCLIENT_VERSION_MAJOR QMCLIENT_VERSION_MINOR QMCLIENT_VERSION_PATCH <<< "${QMCLIENT_VERSION}"
-QMCLIENT_VERSION_MINOR=${QMCLIENT_VERSION_MINOR:-0}
-QMCLIENT_VERSION_PATCH=${QMCLIENT_VERSION_PATCH:-0}
-QMCLIENT_VERSION_CODE=$((10#${QMCLIENT_VERSION_MAJOR} * 1000000 + 10#${QMCLIENT_VERSION_MINOR} * 1000 + 10#${QMCLIENT_VERSION_PATCH}))
+QMCLIENT_VERSION=$(python3 qmclient_scripts/bump_version.py --field version) || exit 1
+QMCLIENT_VERSION_CODE=$(python3 qmclient_scripts/bump_version.py --field android_version_code) || exit 1
 
 ANDROID_VERSION_CODE=1
 if [ -z ${TW_VERSION_CODE+x} ]; then
@@ -112,7 +100,7 @@ export TW_VERSION_CODE=$ANDROID_VERSION_CODE
 
 ANDROID_VERSION_NAME="1.0"
 if [ -z ${TW_VERSION_NAME+x} ]; then
-	ANDROID_VERSION_NAME="V${QMCLIENT_VERSION}"
+	ANDROID_VERSION_NAME=$(python3 qmclient_scripts/bump_version.py --field display) || exit 1
 	log_warn "Did not pass a version name, using QmClient version: ${ANDROID_VERSION_NAME}"
 else
 	ANDROID_VERSION_NAME=$TW_VERSION_NAME
@@ -172,7 +160,6 @@ function build_for_type() {
 		-DTOOLS=OFF \
 		-DCMAKE_CROSSCOMPILING=ON \
 		-DVULKAN=ON \
-		-DQMCLIENT_STABLE_BUILD="${QMCLIENT_STABLE_BUILD:-OFF}" \
 		-DVIDEORECORDER=OFF
 	(
 		cd "${BUILD_FOLDER}/$ANDROID_SUB_BUILD_DIR/$1" || exit 1

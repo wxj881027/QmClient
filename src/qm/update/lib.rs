@@ -50,31 +50,42 @@ struct ManifestFile {
 }
 
 fn validate_version(version: &str) -> Result<(), String> {
-    let parts: Vec<_> = version.split('.').collect();
+    version_parts(version).map(|_| ())
+}
+
+fn version_parts(version: &str) -> Result<([i32; 4], bool, i32), String> {
+    let (base, preview) = match version.split_once("-preview.") {
+        Some((base, number)) => {
+            if number.is_empty()
+                || number.starts_with('0')
+                || !number.bytes().all(|byte| byte.is_ascii_digit())
+            {
+                return Err("the update preview number is invalid".into());
+            }
+            let number = number
+                .parse::<i32>()
+                .map_err(|_| "the update preview number is too large")?;
+            (base, Some(number))
+        }
+        None => (version, None),
+    };
+    let parts: Vec<_> = base.split('.').collect();
     if version.len() >= 32
-        || !(2..=4).contains(&parts.len())
+        || !(1..=4).contains(&parts.len())
+        || (preview.is_some() && parts.len() != 2)
         || parts
             .iter()
             .any(|part| part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()))
     {
-        return Err("the update version is not a stable numeric version".into());
+        return Err("the update version is invalid".into());
     }
-    for part in parts {
-        part.parse::<i32>()
-            .map_err(|_| "the update version component is too large")?;
-    }
-    Ok(())
-}
-
-fn version_parts(version: &str) -> Result<[i32; 4], String> {
-    validate_version(version)?;
     let mut result = [0; 4];
-    for (index, part) in version.split('.').enumerate() {
+    for (index, part) in parts.into_iter().enumerate() {
         result[index] = part
             .parse()
             .map_err(|_| "the update version component is too large")?;
     }
-    Ok(result)
+    Ok((result, preview.is_none(), preview.unwrap_or(0)))
 }
 
 fn validate_not_downgrade(update_version: &str, current_version: &str) -> Result<(), String> {
@@ -916,6 +927,31 @@ mod tests {
         assert!(validate_not_downgrade("2.79.30", "2.79.31").is_err());
         assert!(validate_not_downgrade("2.2147483647", "2.79.31").is_ok());
         assert!(validate_not_downgrade("2.2147483648", "2.79.31").is_err());
+    }
+
+    #[test]
+    fn preview_order_and_formal_promotion_do_not_allow_downgrades() {
+        assert!(validate_not_downgrade("3.3-preview.2", "3.3-preview.1").is_ok());
+        assert!(validate_not_downgrade("3.3", "3.3-preview.99").is_ok());
+        assert!(validate_not_downgrade("3.10", "3.9").is_ok());
+        assert!(validate_not_downgrade("3.3-preview.1", "3.3-preview.2").is_err());
+        assert!(validate_not_downgrade("3.3-preview.99", "3.3").is_err());
+        assert!(validate_not_downgrade("3.3", "3.4-preview.1").is_err());
+    }
+
+    #[test]
+    fn malformed_preview_versions_are_rejected_before_installation() {
+        for version in [
+            "3-preview.1",
+            "3.3.0-preview.1",
+            "3.3-preview.0",
+            "3.3-preview.01",
+            "3.3-preview.-1",
+            "3.3-preview.2147483648",
+            "3.3-preview.1junk",
+        ] {
+            assert!(validate_version(version).is_err(), "{version}");
+        }
     }
 
     #[test]

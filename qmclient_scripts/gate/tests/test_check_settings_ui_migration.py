@@ -122,6 +122,23 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		self.assertIn("SettingsCardDeckForRenderPass().RenderCached(", PAGE_REQUIRED["tee7"])
 		self.assertNotIn("m_SettingsCardDeck.RenderCached(", PAGE_REQUIRED["tee7"])
 
+	def test_tee_page_validates_delegated_cards_in_its_catalogue(self):
+		self.make_repo(add="ResolveSettingsCardDefinitionsRevision(); qm_card_catalog::TeeCardStableIds();")
+		page = self.root / "src/game/client/components/menus_settings.cpp"
+		source = page.read_text(encoding="utf-8").replace("RenderSettingsGeneral", "RenderSettingsTee").replace("ui_widget::NumericField(Context);", "")
+		page.write_text(source, encoding="utf-8")
+		registry = self.root / "src/game/client/QmUi/QmCardRegistry.cpp"
+		registry.write_text("\n".join(PAGE_STABLE_IDS["tee"]), encoding="utf-8")
+		navigation = self.root / "src/game/client/components/menus.cpp"
+		navigation.write_text(navigation.read_text(encoding="utf-8").replace('"general"', '"tee"'), encoding="utf-8")
+		catalogue = self.root / "src/game/client/QmUi/cards/QmCardCatalogIds.cpp"
+		catalogue.parent.mkdir(parents=True, exist_ok=True)
+		entries = ", ".join(f'"{stable_id}"' for stable_id in PAGE_STABLE_IDS["tee"])
+		catalogue.write_text(f"s_vTeeCards = {{{entries}}};", encoding="utf-8")
+		self.assertEqual(audit_page(self.root, "tee"), [])
+		catalogue.write_text('s_vTeeCards = {"qm:other"};', encoding="utf-8")
+		self.assertTrue(any("catalogue category entry missing" in error for error in audit_page(self.root, "tee")))
+
 	def test_manifest_covers_every_new_settings_page(self):
 		self.assertTrue(
 			{
@@ -156,7 +173,8 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 		self.assertIn("qm:map_upload", PAGE_STABLE_IDS["qmclient_function"])
 		self.assertIn("qm:solo_split", PAGE_STABLE_IDS["qmclient_function"])
 		self.assertIn("qm:favorite_maps", PAGE_STABLE_IDS["qmclient_function"])
-		self.assertIn("qm:skin_appearance", PAGE_STABLE_IDS["qmclient_visual"])
+		self.assertIn("qm:skin_appearance", PAGE_STABLE_IDS["tee"])
+		self.assertNotIn("qm:skin_appearance", PAGE_STABLE_IDS["qmclient_visual"])
 		self.assertIn("qm:skin_transition", PAGE_STABLE_IDS["qmclient_visual"])
 		self.assertTrue({"appearance", "qmclient_hud", "qmclient_function", "qmclient_visual", "contributors", "tclient_configs", "tclient_warlist"}.issubset(PRODUCER_COMPLETE_PAGES))
 

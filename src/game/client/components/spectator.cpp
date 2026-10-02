@@ -14,6 +14,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
+#include <game/client/components/qmclient/friend_heart_icon.h>
 #include <game/client/components/qmclient/spectator_friend_priority.h>
 #include <game/client/components/qmclient/spectator_selector_layout.h>
 #include <game/client/components/qmclient/spectator_tele_search.h>
@@ -27,6 +28,31 @@
 
 namespace
 {
+	void DrawSolidFriendHeart(const CUi *pUi, float X, float Y, float Size, const ColorRGBA &Color)
+	{
+		ITextRender *pTextRender = pUi->TextRender();
+		const ColorRGBA PreviousColor = pTextRender->GetTextColor();
+		const unsigned PreviousFlags = pTextRender->GetRenderFlags();
+		const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
+
+		CUIRect Rect;
+		Rect.x = X;
+		Rect.y = Y;
+		Rect.w = Size;
+		Rect.h = Size;
+
+		pTextRender->TextColor(Color);
+		pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |
+			ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
+			ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
+		pUi->DoLabel(&Rect, QM_FRIEND_HEART_ICON, Size, TEXTALIGN_MC);
+
+		pTextRender->SetRenderFlags(PreviousFlags);
+		pTextRender->SetFontPreset(PreviousPreset);
+		pTextRender->TextColor(PreviousColor);
+	}
+
 	uint64_t SpectatorPresentationNodeKey(const char *pScope)
 	{
 		static const uint64_t s_BaseKey = static_cast<uint64_t>(str_quickhash("qm_extra_spectator_presentation"));
@@ -994,7 +1020,7 @@ void CSpectator::OnRender()
 		{
 			ColorRGBA FriendIconColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendHeartColor));
 			FriendIconColor.a *= NameAlpha;
-			Ui()->DrawQmIconAt(IconX, IconY, IconSize, EQmIcon::HEART, FontIcons::FONT_ICON_HEART, FriendIconColor);
+			DrawSolidFriendHeart(Ui(), IconX, IconY, IconSize, FriendIconColor);
 			IconX += IconSize - 2.0f;
 		}
 

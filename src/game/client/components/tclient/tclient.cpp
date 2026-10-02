@@ -68,6 +68,7 @@
 static constexpr int64_t QMCLIENT_UPDATE_RETRY_INTERVAL = 15 * 60;
 #if defined(CONF_FAMILY_WINDOWS)
 static constexpr const char *QMCLIENT_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases/latest";
+static constexpr const char *QMCLIENT_PREVIEW_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases?per_page=100";
 static constexpr const char *QMCLIENT_UPDATE_PACKAGE_NAME = "QmClient-windows.zip";
 static constexpr const char *QMCLIENT_UPDATE_PACKAGE_SIGNATURE_NAME = "QmClient-windows.zip.sig";
 static constexpr const char *QMCLIENT_UPDATE_MANIFEST_NAME = "QmClient-windows-update.json";
@@ -3160,7 +3161,7 @@ void CTClient::FetchQmClientUpdateInfo()
 	m_UpdateFailureExitAt = 0;
 	m_aUpdateError[0] = '\0';
 	m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_CHECK_INTERVAL;
-	m_pQmClientUpdateInfoTask = HttpGet(QMCLIENT_INFO_URL);
+	m_pQmClientUpdateInfoTask = HttpGet(QMCLIENT_IS_DEVELOPMENT_BUILD ? QMCLIENT_PREVIEW_INFO_URL : QMCLIENT_INFO_URL);
 	m_pQmClientUpdateInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
 	m_pQmClientUpdateInfoTask->MaxResponseSize(4 * 1024 * 1024);
 	m_pQmClientUpdateInfoTask->LogProgress(HTTPLOG::FAILURE);
@@ -3175,7 +3176,7 @@ void CTClient::FinishQmClientUpdateInfo()
 	m_pQmClientUpdateInfoTask->Result(&pResult, &ResultSize);
 	char aError[256];
 	SQmClientUpdateRelease Release;
-	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_STABLE_VERSION, Release, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD))
+	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_VERSION, Release, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD))
 	{
 		m_FetchedQmClientUpdateInfo = true;
 		m_aQmClientLatestVersionStr[0] = '0';
@@ -3278,7 +3279,7 @@ void CTClient::FinishUpdateDownloads()
 	}
 
 	SQmClientUpdateManifest Manifest;
-	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_STABLE_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD) ||
+	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD) ||
 		str_comp(Manifest.m_aVersion, m_UpdateRelease.m_aVersion) != 0 ||
 		Manifest.m_PackageSize != SignedPackageSize || mem_comp(Manifest.m_PackageSha256.data, aSignedPackageDigest, sizeof(aSignedPackageDigest)) != 0)
 	{

@@ -26,17 +26,15 @@ TEST(QmChatMessageMergeContract, ChatAndConsoleKeepStructuredMergedAuthors)
 	EXPECT_TRUE(ContainsAll(Console, {"m_PendingColorSpansByExportId", "EntryCursor.m_vColorSplits.emplace_back"}));
 }
 
-TEST(QmChatMessageMergeContract, SettingIsDefaultLocalizedAndVersioned)
+TEST(QmChatMessageMergeContract, SettingIsDefaultAndLocalized)
 {
 	const std::string Config = ReadRepoFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string Menus = ReadRepoFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 	const std::string Translations = ReadRepoFile("qmclient_scripts/languages_qmclient/translations/i18n/qmclient.toml");
-	const std::string Version = ReadRepoFile("src/game/version.h");
 	const size_t MiniFeatures = Menus.find("void CMenus::RenderQmFunctionMiniFeaturesContent(");
 
 	ASSERT_NE(MiniFeatures, std::string::npos);
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE"), std::string::npos);
 	EXPECT_NE(Menus.find("RenderCheckbox(&g_Config.m_QmMessageMerge, \"Message merging\", &g_Config.m_QmMessageMerge);", MiniFeatures), std::string::npos);
 	EXPECT_TRUE(ContainsAll(Translations, {"key = \"Message merging\"", "simplified_chinese = \"消息合并\""}));
-	EXPECT_TRUE(ContainsAll(Version, {"#define QMCLIENT_STABLE_VERSION \"", "#define QMCLIENT_DEV_VERSION \""}));
 }

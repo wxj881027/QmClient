@@ -8,5 +8,6 @@
 // 该码位在图标字体中缺失，渲染时由 ITextRender::GetCharGlyph 在选中字体之后回退到默认字体，
 // 所以调用点需要先把字体预设切回 EFontPreset::DEFAULT_FONT，不要继续用 ICON_FONT。
 constexpr const char *QM_FRIEND_HEART_ICON = "♥";
+constexpr const char *QM_FRIEND_HEART_ICON_WITH_SPACE = "♥ ";
 
 #endif

@@ -19,6 +19,8 @@ namespace
 		pStr = str_skip_whitespaces_const(pStr);
 		if(pStr[0] == 'v' || pStr[0] == 'V')
 			pStr++;
+		if(static_cast<size_t>(str_length(pStr)) >= BufSize)
+			return;
 
 		str_copy(pBuf, pStr, BufSize);
 		int End = str_length(pBuf);
@@ -29,62 +31,65 @@ namespace
 		}
 	}
 
-	bool ParseQmClientVersion(const char *pVersion, int (&aParts)[4])
+	bool ParseNumber(const char *&pCursor, int &Value)
 	{
-		if(!pVersion || pVersion[0] == '\0')
-			return false;
-
-		int PartCount = 0;
-		const char *pCursor = pVersion;
-		while(*pCursor != '\0')
+		bool HasDigit = false;
+		while(*pCursor >= '0' && *pCursor <= '9')
 		{
-			if(PartCount == 4)
+			HasDigit = true;
+			const int Digit = *pCursor - '0';
+			if(Value > (INT_MAX - Digit) / 10)
 				return false;
-			int Value = 0;
-			bool HasDigit = false;
-			while(*pCursor >= '0' && *pCursor <= '9')
-			{
-				HasDigit = true;
-				const int Digit = *pCursor - '0';
-				if(Value > (INT_MAX - Digit) / 10)
-					return false;
-				Value = Value * 10 + Digit;
-				pCursor++;
-			}
-			if(!HasDigit || (*pCursor != '\0' && *pCursor != '.'))
-				return false;
-			aParts[PartCount++] = Value;
-			if(*pCursor == '.')
-			{
-				pCursor++;
-				if(*pCursor == '\0')
-					return false;
-			}
+			Value = Value * 10 + Digit;
+			pCursor++;
 		}
-		return PartCount >= 1;
+		return HasDigit;
 	}
 
 } // namespace
 
+bool ParseQmClientVersion(const char *pVersion, SQmClientVersion &Version)
+{
+	Version = {};
+	char aNormalized[64];
+	NormalizeQmClientVersion(pVersion, aNormalized, sizeof(aNormalized));
+	const char *pCursor = aNormalized;
+	int PartCount = 0;
+	while(true)
+	{
+		if(PartCount == 4 || !ParseNumber(pCursor, Version.m_aParts[PartCount++]))
+			return false;
+		if(*pCursor != '.')
+			break;
+		++pCursor;
+	}
+	// 旧纯数字版本仅用于识别已有安装；新预览版本固定为两段基础版本。
+	if(*pCursor == '\0')
+		return true;
+	const char *pPreview = str_startswith(pCursor, "-preview.");
+	if(PartCount != 2 || !pPreview || *pPreview == '0')
+		return false;
+	return ParseNumber(pPreview, Version.m_Preview) && *pPreview == '\0';
+}
+
 bool IsQmClientRemoteVersionNewer(const char *pRemoteVersion, const char *pLocalVersion, bool LocalIsDevelopmentBuild)
 {
-	char aRemote[64];
-	char aLocal[64];
-	NormalizeQmClientVersion(pRemoteVersion, aRemote, sizeof(aRemote));
-	NormalizeQmClientVersion(pLocalVersion, aLocal, sizeof(aLocal));
-
-	if(aRemote[0] == '\0' || aLocal[0] == '\0')
+	SQmClientVersion Remote;
+	SQmClientVersion Local;
+	if(!ParseQmClientVersion(pRemoteVersion, Remote) || !ParseQmClientVersion(pLocalVersion, Local))
 		return false;
-
-	int aRemoteParts[4] = {};
-	int aLocalParts[4] = {};
-	if(!ParseQmClientVersion(aRemote, aRemoteParts) || !ParseQmClientVersion(aLocal, aLocalParts))
+	if(Remote.m_Preview && !Local.m_Preview && !LocalIsDevelopmentBuild)
 		return false;
-
 	for(int Index = 0; Index < 4; ++Index)
 	{
-		if(aRemoteParts[Index] != aLocalParts[Index])
-			return aRemoteParts[Index] > aLocalParts[Index];
+		if(Remote.m_aParts[Index] != Local.m_aParts[Index])
+			return Remote.m_aParts[Index] > Local.m_aParts[Index];
 	}
-	return LocalIsDevelopmentBuild;
+	if(Remote.m_Preview != Local.m_Preview)
+	{
+		if(Remote.m_Preview == 0)
+			return true;
+		return Local.m_Preview != 0 && Remote.m_Preview > Local.m_Preview;
+	}
+	return LocalIsDevelopmentBuild && Local.m_Preview == 0;
 }

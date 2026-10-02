@@ -165,16 +165,18 @@ python3 qmclient_scripts/gate/check_settings_ui_migration.py --all
 ### GitHub Release 说明
 
 ```bash
-python3 qmclient_scripts/generate_release_notes.py --version vX --current-tag vX --output tmp/release-notes.md
+python3 qmclient_scripts/generate_release_notes.py --version vX.Y --current-tag vX.Y --output tmp/release-notes.md
 ```
 
 ### 版本号收口
 
 ```bash
-python3 qmclient_scripts/bump_version.py --version X[.Y[.Z]]
-python3 qmclient_scripts/bump_version.py --dev-version X.Y.Z
-python3 qmclient_scripts/bump_version.py --tag vX[.Y[.Z]]
+python3 qmclient_scripts/bump_version.py --tag vX.Y
+python3 qmclient_scripts/bump_version.py --tag vX.Y-preview.N
+python3 qmclient_scripts/bump_version.py --describe
 ```
+
+格式和发布通道以 [版本号与发布通道](../docs/规格/版本号与发布通道.md) 为准。
 
 ### baseline allowlist
 

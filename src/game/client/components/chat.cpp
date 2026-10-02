@@ -27,6 +27,7 @@
 #include <game/client/components/qmclient/chat_command_preview.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/friend_heart_icon.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
@@ -63,6 +64,25 @@ struct SQmChatEmojiCursorLayout
 	CUIRect m_Rect;
 	float m_RequiredHeight;
 };
+
+static void MeasureSolidFriendHeart(ITextRender *pTextRender, CTextCursor *pCursor)
+{
+	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
+	pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	pTextRender->TextEx(pCursor, QM_FRIEND_HEART_ICON_WITH_SPACE);
+	pTextRender->SetFontPreset(PreviousPreset);
+}
+
+static void AppendSolidFriendHeart(ITextRender *pTextRender, STextContainerIndex &TextContainerIndex, CTextCursor *pCursor, const ColorRGBA &Color)
+{
+	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
+	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
+	pTextRender->TextColor(Color);
+	pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	pTextRender->CreateOrAppendTextContainer(TextContainerIndex, pCursor, QM_FRIEND_HEART_ICON_WITH_SPACE);
+	pTextRender->SetFontPreset(PreviousPreset);
+	pTextRender->TextColor(PreviousColor);
+}
 
 static SQmChatEmojiCursorLayout LayoutQmChatEmoji(CTextCursor &Cursor, float Size)
 {
@@ -2554,7 +2574,7 @@ bool CChat::OnPrepareLines(float y)
 
 				if(Line.m_Friend && g_Config.m_ClMessageFriend)
 				{
-					TextRender()->TextEx(&MeasureCursor, "♥ ");
+					MeasureSolidFriendHeart(TextRender(), &MeasureCursor);
 				}
 			}
 
@@ -2669,8 +2689,11 @@ bool CChat::OnPrepareLines(float y)
 
 			if(Line.m_Friend && g_Config.m_ClMessageFriend)
 			{
-				TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendHeartColor)));
-				TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, "♥ ");
+				AppendSolidFriendHeart(
+					TextRender(),
+					Line.m_TextContainerIndex,
+					&LineCursor,
+					color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendHeartColor)));
 			}
 		}
 

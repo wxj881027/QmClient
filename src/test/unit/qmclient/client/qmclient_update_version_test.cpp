@@ -41,3 +41,28 @@ TEST(QmClientUpdateVersion, IgnoresInvalidOrOverflowingRemoteVersions)
 	EXPECT_FALSE(IsQmClientRemoteVersionNewer("3.999999999999.0", "2.62.4"));
 	EXPECT_FALSE(IsQmClientRemoteVersionNewer(nullptr, "2.62.4"));
 }
+
+TEST(QmClientUpdateVersion, PreviewUpdatesStayInTheirOptedInChannel)
+{
+	EXPECT_FALSE(IsQmClientRemoteVersionNewer("3.4-preview.1", "3.3"));
+	EXPECT_TRUE(IsQmClientRemoteVersionNewer("3.4-preview.2", "3.4-preview.1", true));
+	EXPECT_FALSE(IsQmClientRemoteVersionNewer("3.4-preview.2", "3.4-preview.2", true));
+	EXPECT_FALSE(IsQmClientRemoteVersionNewer("3.4-preview.1", "3.4-preview.2", true));
+}
+
+TEST(QmClientUpdateVersion, FormalReleaseFollowsEveryPreviewOfTheSameVersion)
+{
+	EXPECT_TRUE(IsQmClientRemoteVersionNewer("3.3", "3.3-preview.99", true));
+	EXPECT_FALSE(IsQmClientRemoteVersionNewer("3.3-preview.99", "3.3", true));
+	EXPECT_FALSE(IsQmClientRemoteVersionNewer("3.3", "3.4-preview.1", true));
+	EXPECT_TRUE(IsQmClientRemoteVersionNewer("3.10", "3.9"));
+}
+
+TEST(QmClientUpdateVersion, RejectsMalformedPreviewVersions)
+{
+	for(const char *pVersion : {"3-preview.1", "3.3.0-preview.1", "3.3-preview.0", "3.3-preview.01", "3.3-preview.-1", "3.3-preview.2147483648", "3.3-preview.1junk"})
+	{
+		SQmClientVersion Version;
+		EXPECT_FALSE(ParseQmClientVersion(pVersion, Version)) << pVersion;
+	}
+}
