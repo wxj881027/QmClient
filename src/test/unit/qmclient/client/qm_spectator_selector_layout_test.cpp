@@ -42,6 +42,17 @@ TEST(QmSpectatorSelectorLayout, MouseCanReachSearchControlsWithoutLeavingPanel)
 	EXPECT_TRUE(Layout.m_Panel.Inside(Clamped));
 }
 
+TEST(QmSpectatorSelectorLayout, TallPlayerListPushesSearchBelowThePlayers)
+{
+	const vec2 Center(800.0f, 600.0f);
+	constexpr float PlayersBottom = 310.0f;
+	const auto Layout = qm_spectator_layout::Build(Center, 300.0f, true, PlayersBottom);
+	EXPECT_GE(Layout.m_SearchRow.y, Center.y + PlayersBottom + 20.0f);
+	ExpectContains(Layout.m_Panel, Layout.m_SearchRow);
+	ExpectContains(Layout.m_Mouse, Layout.m_SearchRow);
+	ExpectContains(Layout.m_Mouse, Layout.m_Status);
+}
+
 TEST(QmSpectatorSelectorLayout, OutOfBoundsMouseStopsInsidePaddedPanel)
 {
 	const vec2 Center(800.0f, 600.0f);

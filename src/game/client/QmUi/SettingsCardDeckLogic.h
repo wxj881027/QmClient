@@ -187,17 +187,20 @@ std::array<std::vector<int>, 3> BuildSettingsCardDeckColumnOrder(const qm_card_o
 // 单列沿用宽屏的阅读层级：每层先左、再右、最后全宽分隔卡。
 // 回调签名为 void(int StateIndex, int CanonicalColumn)，遍历过程不分配内存。
 template<typename F>
-void ForEachSettingsCardDeckVisualOrder(const std::array<std::vector<int>, 3> &aColumns, F &&Callback)
+void ForEachSettingsCardDeckVisualOrder(const std::array<std::vector<int>, 3> &aColumns, F &&Callback, int LeadingFullWidthCards = 0)
 {
-	const size_t NumLayers = std::max({aColumns[0].size(), aColumns[1].size(), aColumns[2].size()});
+	const size_t Leading = std::min(aColumns[0].size(), static_cast<size_t>(std::max(0, LeadingFullWidthCards)));
+	for(size_t Index = 0; Index < Leading; ++Index)
+		Callback(aColumns[0][Index], 0);
+	const size_t NumLayers = std::max({aColumns[0].size() - Leading, aColumns[1].size(), aColumns[2].size()});
 	for(size_t Layer = 0; Layer < NumLayers; ++Layer)
 	{
 		if(Layer < aColumns[1].size())
 			Callback(aColumns[1][Layer], 1);
 		if(Layer < aColumns[2].size())
 			Callback(aColumns[2][Layer], 2);
-		if(Layer < aColumns[0].size())
-			Callback(aColumns[0][Layer], 0);
+		if(Layer + Leading < aColumns[0].size())
+			Callback(aColumns[0][Layer + Leading], 0);
 	}
 }
 

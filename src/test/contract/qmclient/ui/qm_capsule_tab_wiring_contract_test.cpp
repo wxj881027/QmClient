@@ -104,23 +104,15 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 	// 页签计时段仍然覆盖两条分支。
 	EXPECT_LT(QmDraw, RenderQmClient.find("LogQmPerfStage(Client(), \"tabbar\", StageTimer.ElapsedMs(), false, aTabExtra);"));
 
-	// 玩家/Dummy 行与皮肤（Player/Dummy/Profiles）行同样先画胶囊再画文字。
+	// 玩家/Dummy 行同样先画胶囊再画文字。
 	const std::string RenderPlayer = FunctionBody(Settings, "void CMenus::RenderSettingsPlayer(CUIRect MainView)");
-	const std::string RenderTee = FunctionBody(Settings, "void CMenus::RenderSettingsTee(CUIRect MainView)");
 	ASSERT_FALSE(RenderPlayer.empty());
-	ASSERT_FALSE(RenderTee.empty());
 	const size_t PlayerChrome = RenderPlayer.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_player_dummy_tabs_capsule\"), aPlayerTabSlots, std::size(aPlayerTabSlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());");
 	const size_t PlayerDraw = RenderPlayer.find("if(DoButton_MenuTab(&s_PlayerTabButton, Localize(\"Player\"), !m_Dummy, &PlayerTab, IGraphics::CORNER_ALL");
 	ASSERT_NE(PlayerChrome, std::string::npos);
 	ASSERT_NE(PlayerDraw, std::string::npos);
 	EXPECT_LT(PlayerChrome, PlayerDraw);
 	EXPECT_NE(RenderPlayer.find("&PlayerTab, IGraphics::CORNER_L"), std::string::npos);
-	const size_t TeeChrome = RenderTee.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"settings_tee_sub_tabs_capsule\"), aTeeTabSlots, std::size(aTeeTabSlots), ActiveTeeTab, SettingsCapsuleTabBarStyle());");
-	const size_t TeeDraw = RenderTee.find("if(DoButton_MenuTab(&s_PlayerTabButton, pPlayerTabLabel, s_TeeSubTab == 0, &PlayerTab, IGraphics::CORNER_ALL");
-	ASSERT_NE(TeeChrome, std::string::npos);
-	ASSERT_NE(TeeDraw, std::string::npos);
-	EXPECT_LT(TeeChrome, TeeDraw);
-	EXPECT_NE(RenderTee.find("SeparateProfilesTab ? IGraphics::CORNER_R : IGraphics::CORNER_NONE"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)

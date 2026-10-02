@@ -3,6 +3,7 @@
 
 #include <engine/client.h>
 #include <engine/friends.h>
+#include <engine/input.h>
 #include <engine/shared/config.h>
 
 #include <game/client/components/pie_menu.h>
@@ -265,6 +266,9 @@ void CPieMenu::ExecuteOption(EMenuOption Option)
 		break;
 	case EMenuOption::SCORE:
 		RequestTargetPoints();
+		break;
+	case EMenuOption::COPY_NAME:
+		Input()->SetClipboardText(pPlayerName);
 		break;
 	default:
 		break;

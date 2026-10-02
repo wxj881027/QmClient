@@ -21,6 +21,7 @@
 #include <generated/client_data.h>
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/QmPieMenuRender.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 
@@ -367,6 +368,7 @@ void CPieMenu::RefreshVisibleOptions()
 	Enabled[static_cast<size_t>(EMenuOption::JOIN_TEAM)] = g_Config.m_QmPieMenuJoinTeamEnabled != 0;
 	Enabled[static_cast<size_t>(EMenuOption::FOLLOW)] = g_Config.m_QmPieMenuFollowEnabled != 0;
 	Enabled[static_cast<size_t>(EMenuOption::SCORE)] = g_Config.m_QmPieMenuScoreEnabled != 0;
+	Enabled[static_cast<size_t>(EMenuOption::COPY_NAME)] = g_Config.m_QmPieMenuCopyNameEnabled != 0;
 	m_VisibleOptionCount = qm_pie_menu::BuildVisibleOptions(Enabled, m_vVisibleOptions);
 }
 
@@ -545,22 +547,13 @@ void CPieMenu::OnRender()
 	// Draw center circle for player name (aperture pupil)
 	if(PupilRadius > 1.0f)
 	{
-		Graphics()->TextureClear();
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(0.12f, 0.13f, 0.17f, 0.92f * Alpha);
-		Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, PupilRadius, 48);
-		Graphics()->QuadsEnd();
+		qm_pie_menu_ui::DrawDisc(Graphics(), ScreenCenter, PupilRadius, ColorRGBA(0.12f, 0.13f, 0.17f, 0.92f * Alpha));
 
 		// 开合动画期间渲染虹膜内圈光晕 (Iris Aperture Ring)
 		if(m_Lifecycle.State() == EMenuState::OPENING && IrisProgress < 0.98f)
 		{
-			Graphics()->TextureClear();
-			Graphics()->QuadsBegin();
-			Graphics()->SetColor(0.35f, 0.70f, 1.0f, (1.0f - IrisProgress) * 0.55f * Alpha);
-			Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, PupilRadius + 1.8f * Scale, 48);
-			Graphics()->SetColor(0.12f, 0.13f, 0.17f, 0.92f * Alpha);
-			Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, PupilRadius, 48);
-			Graphics()->QuadsEnd();
+			qm_pie_menu_ui::DrawDisc(Graphics(), ScreenCenter, PupilRadius + 1.8f * Scale, ColorRGBA(0.35f, 0.70f, 1.0f, (1.0f - IrisProgress) * 0.55f * Alpha));
+			qm_pie_menu_ui::DrawDisc(Graphics(), ScreenCenter, PupilRadius, ColorRGBA(0.12f, 0.13f, 0.17f, 0.92f * Alpha));
 		}
 	}
 
@@ -592,46 +585,16 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 		return;
 	const EMenuOption Option = VisibleOption(Index);
 
-	float HighlightScale = Highlighted ? 1.12f : 1.0f;
-	float ActualOuterRadius = OuterRadius * HighlightScale;
-
-	// Calculate sector angles with Iris twist and blade span
+	// Calculate sector angles
 	float AnglePerSector = 360.0f / VisibleOptionCount();
-	float EffectiveGap = SECTOR_GAP;
-	float BladeSpan = (AnglePerSector - EffectiveGap) * SpanFactor;
-	float StartAngle = START_ANGLE + AngleOffset + AnglePerSector * Index + EffectiveGap / 2.0f;
+	const float SectorGap = VisibleOptionCount() == 1 ? 0.0f : SECTOR_GAP;
+	float BladeSpan = (AnglePerSector - SectorGap) * SpanFactor;
+	float StartAngle = START_ANGLE + AngleOffset + AnglePerSector * Index + SectorGap / 2.0f;
 	float EndAngle = StartAngle + BladeSpan;
 
-	// Get option color
-	ColorRGBA Color = GetOptionColor(Option, Highlighted);
-
-	// Draw sector using triangle fan
-	const int Segments = 24;
-	Graphics()->TextureClear();
-	Graphics()->QuadsBegin();
-	Graphics()->SetColor(Color.r, Color.g, Color.b, Color.a * Alpha);
-
-	for(int i = 0; i < Segments; i++)
-	{
-		float Angle1 = StartAngle + (EndAngle - StartAngle) * (i / (float)Segments);
-		float Angle2 = StartAngle + (EndAngle - StartAngle) * ((i + 1) / (float)Segments);
-
-		float Rad1 = Angle1 * pi / 180.0f;
-		float Rad2 = Angle2 * pi / 180.0f;
-
-		vec2 Inner1 = m_MenuCenter + vec2(cos(Rad1), sin(Rad1)) * InnerRadius;
-		vec2 Outer1 = m_MenuCenter + vec2(cos(Rad1), sin(Rad1)) * ActualOuterRadius;
-		vec2 Inner2 = m_MenuCenter + vec2(cos(Rad2), sin(Rad2)) * InnerRadius;
-		vec2 Outer2 = m_MenuCenter + vec2(cos(Rad2), sin(Rad2)) * ActualOuterRadius;
-
-		IGraphics::CFreeformItem Freeform(
-			Inner1.x, Inner1.y,
-			Outer1.x, Outer1.y,
-			Inner2.x, Inner2.y,
-			Outer2.x, Outer2.y);
-		Graphics()->QuadsDrawFreeform(&Freeform, 1);
-	}
-	Graphics()->QuadsEnd();
+	// 悬停只改变颜色，轮廓保持在原命中半径，避免凸入外侧改名环。
+	const ColorRGBA Color = GetOptionColor(Option, Highlighted).WithMultipliedAlpha(Alpha);
+	qm_pie_menu_ui::DrawSector(Graphics(), m_MenuCenter, InnerRadius, OuterRadius, StartAngle, EndAngle, SectorGap, Color);
 
 	// 虹膜机械叶片边缘高光 (Iris Blade Leading Edge)
 	if(BladeEdgeAlpha > 0.01f)
@@ -639,7 +602,7 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 		float RadLeading = StartAngle * pi / 180.0f;
 		vec2 DirLeading = vec2(cos(RadLeading), sin(RadLeading));
 		vec2 LineInner = m_MenuCenter + DirLeading * InnerRadius;
-		vec2 LineOuter = m_MenuCenter + DirLeading * ActualOuterRadius;
+		vec2 LineOuter = m_MenuCenter + DirLeading * OuterRadius;
 		vec2 Normal = vec2(-DirLeading.y, DirLeading.x) * 1.5f;
 
 		Graphics()->TextureClear();
@@ -660,7 +623,7 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 		return;
 
 	// Draw icon and text in sector center
-	float MidRadius = (InnerRadius + ActualOuterRadius) / 2.0f;
+	float MidRadius = (InnerRadius + OuterRadius) / 2.0f;
 	float MidAngle = (StartAngle + EndAngle) / 2.0f * pi / 180.0f;
 	vec2 ItemPos = m_MenuCenter + vec2(cos(MidAngle), sin(MidAngle)) * MidRadius;
 
@@ -668,7 +631,7 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 	const char *pIcon = GetOptionIcon(Option);
 	const float Scale = OuterRadius / OUTER_RADIUS;
 	const float AvailableWidth = maximum(1.0f, 1.35f * MidRadius * sinf(minimum(BladeSpan, 180.0f) * pi / 360.0f));
-	float IconSize = minimum((Highlighted ? 54.0f : 45.0f) * Scale, AvailableWidth * 0.65f);
+	float IconSize = minimum(45.0f * Scale, AvailableWidth * 0.65f);
 
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, ContentAlpha);
 	const EFontPreset PreviousFont = TextRender()->GetFontPreset();
@@ -679,7 +642,7 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 
 	// Draw label below icon
 	const char *pName = GetOptionName(Option);
-	float TextSize = (Highlighted ? 25.0f : 23.0f) * Scale;
+	float TextSize = 23.0f * Scale;
 	float TextWidth = TextRender()->TextWidth(TextSize, pName);
 	if(TextWidth > AvailableWidth)
 	{
@@ -694,11 +657,8 @@ void CPieMenu::RenderRenameSector(int Index, int SectorCount, float InnerRadius,
 	if(Index < 0 || Index >= SectorCount || SectorCount <= 0 || Index >= (int)m_vRenameQueue.size())
 		return;
 
-	float HighlightScale = Highlighted ? 1.06f : 1.0f;
-	float ActualOuterRadius = OuterRadius * HighlightScale;
-
 	float AnglePerSector = 360.0f / SectorCount;
-	float DynamicGap = minimum(SECTOR_GAP, AnglePerSector * 0.35f);
+	float DynamicGap = SectorCount == 1 ? 0.0f : minimum(SECTOR_GAP, AnglePerSector * 0.35f);
 	float BladeSpan = (AnglePerSector - DynamicGap) * SpanFactor;
 	float StartAngle = START_ANGLE + AngleOffset + AnglePerSector * Index + DynamicGap / 2.0f;
 	float EndAngle = StartAngle + BladeSpan;
@@ -706,45 +666,19 @@ void CPieMenu::RenderRenameSector(int Index, int SectorCount, float InnerRadius,
 	if(EndAngle <= StartAngle)
 		return;
 
-	ColorRGBA Color = Highlighted ? ColorRGBA(0.36f, 0.75f, 0.52f, 0.95f) : ColorRGBA(0.28f, 0.58f, 0.43f, 0.78f);
-
-	const int Segments = maximum(8, (int)((EndAngle - StartAngle) / 6.0f));
-	Graphics()->TextureClear();
-	Graphics()->QuadsBegin();
-	Graphics()->SetColor(Color.r, Color.g, Color.b, Color.a * Alpha);
-
-	for(int i = 0; i < Segments; i++)
-	{
-		float Angle1 = StartAngle + (EndAngle - StartAngle) * (i / (float)Segments);
-		float Angle2 = StartAngle + (EndAngle - StartAngle) * ((i + 1) / (float)Segments);
-
-		float Rad1 = Angle1 * pi / 180.0f;
-		float Rad2 = Angle2 * pi / 180.0f;
-
-		vec2 Inner1 = m_MenuCenter + vec2(cos(Rad1), sin(Rad1)) * InnerRadius;
-		vec2 Outer1 = m_MenuCenter + vec2(cos(Rad1), sin(Rad1)) * ActualOuterRadius;
-		vec2 Inner2 = m_MenuCenter + vec2(cos(Rad2), sin(Rad2)) * InnerRadius;
-		vec2 Outer2 = m_MenuCenter + vec2(cos(Rad2), sin(Rad2)) * ActualOuterRadius;
-
-		IGraphics::CFreeformItem Freeform(
-			Inner1.x, Inner1.y,
-			Outer1.x, Outer1.y,
-			Inner2.x, Inner2.y,
-			Outer2.x, Outer2.y);
-		Graphics()->QuadsDrawFreeform(&Freeform, 1);
-	}
-	Graphics()->QuadsEnd();
+	const ColorRGBA Color = (Highlighted ? ColorRGBA(0.36f, 0.75f, 0.52f, 0.95f) : ColorRGBA(0.28f, 0.58f, 0.43f, 0.78f)).WithMultipliedAlpha(Alpha);
+	qm_pie_menu_ui::DrawSector(Graphics(), m_MenuCenter, InnerRadius, OuterRadius, StartAngle, EndAngle, DynamicGap, Color);
 
 	float ContentAlpha = Alpha * std::clamp(SpanFactor * 1.5f - 0.5f, 0.0f, 1.0f);
 	if(ContentAlpha < 0.02f)
 		return;
 
 	const char *pRenameName = m_vRenameQueue[Index].c_str();
-	float MidRadius = (InnerRadius + ActualOuterRadius) / 2.0f;
+	float MidRadius = (InnerRadius + OuterRadius) / 2.0f;
 	float MidAngle = (StartAngle + EndAngle) / 2.0f * pi / 180.0f;
 	vec2 ItemPos = m_MenuCenter + vec2(cos(MidAngle), sin(MidAngle)) * MidRadius;
 
-	float TextSize = (Highlighted ? 22.0f : 18.0f) * (OuterRadius / SECONDARY_OUTER_RADIUS);
+	float TextSize = 18.0f * (OuterRadius / SECONDARY_OUTER_RADIUS);
 	if(SectorCount > 8)
 		TextSize *= 0.92f;
 	if(SectorCount > 12)
@@ -838,6 +772,7 @@ const char *CPieMenu::GetOptionName(EMenuOption Option) const
 	case EMenuOption::JOIN_TEAM: return Localize("Join team");
 	case EMenuOption::FOLLOW: return IsFollowingTarget() ? Localize("Stop following") : Localize("Follow server");
 	case EMenuOption::SCORE: return Localize("View points");
+	case EMenuOption::COPY_NAME: return Localize("Copy name");
 	default: return "";
 	}
 }
@@ -856,6 +791,7 @@ const char *CPieMenu::GetOptionIcon(EMenuOption Option) const
 	case EMenuOption::JOIN_TEAM: return FontIcons::FONT_ICON_RIGHT_TO_BRACKET;
 	case EMenuOption::FOLLOW: return IsFollowingTarget() ? FontIcons::FONT_ICON_STOP : FontIcons::FONT_ICON_NETWORK_WIRED;
 	case EMenuOption::SCORE: return FontIcons::FONT_ICON_MAGNIFYING_GLASS;
+	case EMenuOption::COPY_NAME: return FontIcons::FONT_ICON_USER;
 	default: return "";
 	}
 }
@@ -897,22 +833,14 @@ ColorRGBA CPieMenu::GetOptionColor(EMenuOption Option, bool Highlighted) const
 	case EMenuOption::SCORE:
 		ConfigColor = g_Config.m_QmPieMenuColorScore;
 		break;
+	case EMenuOption::COPY_NAME:
+		ConfigColor = g_Config.m_QmPieMenuColorCopyName;
+		break;
 	default:
 		ConfigColor = 0x4D6680BF;
 	}
 
-	ColorRGBA BaseColor = color_cast<ColorRGBA>(ColorHSLA(ConfigColor, Option >= EMenuOption::INVITE_TEAM));
-
-	if(Highlighted)
-	{
-		// Brighten and increase alpha when highlighted
-		BaseColor.r = minimum(BaseColor.r * 1.3f, 1.0f);
-		BaseColor.g = minimum(BaseColor.g * 1.3f, 1.0f);
-		BaseColor.b = minimum(BaseColor.b * 1.3f, 1.0f);
-		BaseColor.a = minimum(BaseColor.a * 1.2f, 1.0f);
-	}
-
-	return BaseColor;
+	return qm_pie_menu_ui::OptionColor(color_cast<ColorRGBA>(ColorHSLA(ConfigColor, Option >= EMenuOption::INVITE_TEAM)), Highlighted);
 }
 
 bool CPieMenu::IsMouseInCenter() const

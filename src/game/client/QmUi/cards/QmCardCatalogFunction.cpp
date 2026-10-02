@@ -159,7 +159,10 @@ namespace qm_card_catalog
 			return true;
 		case EQmModuleId::MiniFeatures:
 		{
-			const auto RenderMiniFeatures = [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content, const bool PrewarmOnly) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly); };
+			const auto RenderMiniFeatures = [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content, const bool PrewarmOnly) {
+				QmCardRenderHook::RenderQmFunctionCheckboxRow(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmChatCommandCompletion, "Show command completion in chat", Localize("Show command completion in chat"), &g_Config.m_QmChatCommandCompletion, PrewarmOnly);
+				QmCardRenderHook::RenderQmFunctionMiniFeaturesContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+			};
 			MakeModuleCard(
 				Ctx, Id, "qm:mini_features", "Dream Features", "Only what you can't imagine, nothing Dream can't do",
 				[RenderMiniFeatures, ReadOnly](CUIRect &Content) { RenderMiniFeatures(Content, ReadOnly); },

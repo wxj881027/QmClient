@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == Всегда показывать свою линию захвата
 
+Always show song title and artist
+== Всегда показывать название песни и исполнителя
+
 Always translate
 == Всегда переводить
 
@@ -2003,6 +2006,9 @@ Clear local console
 Clear note
 == Удалить заметку
 
+Clear recent skins
+== Очистить недавно использованные скины
+
 Clear remote console
 == Очистить удалённую консоль
 
@@ -2146,6 +2152,9 @@ Comma-separated list of banned clients to be kicked on join
 
 Command
 == Команда
+
+Command completion
+== Дополнение команд
 
 Command executed by tc_mod_weapon, target id appended at end
 == Команда, выполняемая tc_mod_weapon, ID цели добавляется в конец
@@ -2309,8 +2318,8 @@ Configure QmClient HUD elements
 Configure remaining DDNet client preferences
 == Configure remaining DDNet client preferences
 
-Configure skin colors, eyes, and filters
-== Configure skin colors, eyes, and filters
+Configure skin downloads and prefixes
+== Настроить загрузку и префиксы скинов
 
 Configure sound and audio packs
 == Настроить звук и аудиопакеты
@@ -2497,6 +2506,9 @@ Copy info
 
 Copy name
 == Копировать имя
+
+Copy name option color
+== Цвет действия копирования имени
 
 Copy skin
 == Копировать скин
@@ -2971,6 +2983,9 @@ Default output open failed
 
 Default preset
 == Пресет по умолчанию
+
+Default width
+== Обычная ширина
 
 Default zoom
 == Масштаб по умолчанию
@@ -4768,6 +4783,9 @@ Full map listen in same room
 
 Full quality nameplate count
 == Число табличек с полным качеством
+
+Full width
+== Полная ширина
 
 Full: each enabled animation category uses its complete transition
 == Полный: для каждой включенной категории анимаций используются полные переходы
@@ -6992,6 +7010,9 @@ Multi-View
 Multiple exact Axiom players found
 == Найдено несколько игроков Axiom с точным совпадением
 
+Music player volume
+== Громкость музыкального проигрывателя
+
 Mute
 == Заглушить
 
@@ -7298,6 +7319,9 @@ Next
 Next page in console
 == Следующая страница в консоли
 
+Next track
+== Следующая композиция
+
 Next weapon
 == Следующее оружие
 
@@ -7453,6 +7477,9 @@ No rank 1 replay was found for this map
 
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 == Реплеи ранга 1 ещё не сохранены в кэше. Найдите и скачайте их на странице ранга 1.
+
+No recently used skins
+== Нет недавно использованных скинов
 
 No results
 == Нет результатов
@@ -8570,6 +8597,9 @@ Previous
 Previous page in console
 == Предыдущая страница в консоли
 
+Previous track
+== Предыдущая композиция
+
 Primary
 == Основная
 
@@ -9578,6 +9608,9 @@ Restart the client
 Restarting. Please wait…
 == Перезапуск. Пожалуйста, подождите…
 
+Restore a recently used Tee skin
+== Восстановить недавно использованный скин Tee
+
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == Восстановить сохранение для двоих? /qm Yes — последнее, /qm Yes номер — другое, /qm No — отмена.
 
@@ -9757,9 +9790,6 @@ Save all changes before switching selected button?
 
 Save all changes before turning off the editor?
 == Сохранить все изменения перед закрытием редактора?
-
-Save as
-== Сохранить как
 
 Save asset before closing?
 == Сохранить ресурс перед закрытием?
@@ -10373,6 +10403,12 @@ Show %s group
 Show a small view of the dummy
 == Показать небольшой вид дамми
 
+Show advanced nameplate settings without changing effect values
+== Показывать расширенные настройки имён без изменения эффектов
+
+Show advanced options
+== Показать дополнительные параметры
+
 Show advanced title settings (collapsing keeps configured effects)
 == Показать расширенные настройки титула (при сворачивании эффекты сохраняются)
 
@@ -10490,6 +10526,9 @@ Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 == Показывать комбо-уведомления при попадании крюком или молотом в одного игрока в течение 2 секунд
 
+Show command completion in chat
+== Показывать дополнение команд в чате
+
 Show compact vote HUD
 == Показать компактный HUD голосования
 
@@ -10498,6 +10537,9 @@ Show configurable outlines around map tiles
 
 Show coordinates above players
 == Показывать координаты над игроками
+
+Show copy name option
+== Показывать действие копирования имени
 
 Show copy skin option
 == Показывать действие копирования скина
@@ -13694,6 +13736,9 @@ Voice whitelist (comma-separated)
 Volume
 == Громкость
 
+Volume unavailable for this player
+== Громкость этого проигрывателя недоступна
+
 Vote a map by name
 == Проголосовать за карту по имени
 
@@ -14640,18 +14685,6 @@ S
 [Friend auto follow]
 Follow this friend across servers
 == Следовать за другом между серверами
-
-[Friend auto follow]
-Following %s
-== Следование за %s
-
-[Friend auto follow]
-Following %s: switching in %.0fs
-== Следование за %s: переключение через %.0fs
-
-[Friend auto follow]
-Stop
-== Остановить
 
 [Friend auto follow]
 Stop following this friend

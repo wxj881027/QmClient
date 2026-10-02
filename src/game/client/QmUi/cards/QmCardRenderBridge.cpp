@@ -218,11 +218,6 @@ void qm_card_catalog::QmCardRenderHook::RenderQmHudVoiceContent(CMenus *pMenus, 
 	pMenus->RenderQmHudVoiceContent(Content, Metrics, LabelWidth, PrewarmOnly);
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmHudDynamicIslandContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float LineSpacing, bool OriginalStyle)
-{
-	pMenus->RenderQmHudDynamicIslandContent(Content, LineHeight, LineSpacing, OriginalStyle);
-}
-
 void qm_card_catalog::QmCardRenderHook::RenderQmHudSystemMediaControlsContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
 {
 	pMenus->RenderQmHudSystemMediaControlsContent(Content, LineHeight, BodySize, LineSpacing, PrewarmOnly);

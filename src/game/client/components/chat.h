@@ -12,6 +12,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/chat_command_hud.h>
 #include <game/client/components/qmclient/chat_emoji.h>
 #include <game/client/components/qmclient/chat_translate_button.h>
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
@@ -274,6 +275,8 @@ public:
 private:
 	std::vector<CCommand> m_vServerCommands;
 	bool m_ServerCommandsNeedSorting;
+	uint64_t m_ServerCommandsRevision = 0;
+	CQmChatCommandHud m_CommandHud;
 
 	struct CHistoryEntry
 	{
@@ -312,6 +315,8 @@ private:
 	const CCommand *FindServerCommand(const char *pName) const;
 	// 斜杠指令用法提示：/xxx 下方显示的一行小字说明
 	bool BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufSize) const;
+	bool HandleCommandHudInput(const IInput::CEvent &Event);
+	void RenderCommandHud(float X, float Bottom, float Width, float FontSize, const CUIRect &ChatRect, const CUIRect &TargetRect);
 	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
 	int CountInitializedLines() const;
 	int CountVisibleLinesFrom(int BacklogLine) const;

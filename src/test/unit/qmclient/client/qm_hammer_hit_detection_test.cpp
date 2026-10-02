@@ -190,6 +190,84 @@ TEST(QmHammerHitDetection, KeepsAttackerKnownForOneSwingWithAmbiguousTargets)
 	EXPECT_EQ(Match.m_TargetId, -1);
 }
 
+TEST(QmHammerHitEffect, KeepsBothSimultaneousMutualHits)
+{
+	const SQmHammerHitRecord First = Hit(1, 2, 100, 4);
+	const SQmHammerHitRecord Second = Hit(2, 1, 100, 5);
+
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, 0));
+}
+
+TEST(QmHammerHitEffect, KeepsBothSimultaneousHitsWhenOwnershipIsAmbiguous)
+{
+	const SQmHammerHitRecord First = Hit(-1, -1, 100, 4);
+	const SQmHammerHitRecord Second = Hit(-1, -1, 100, 5);
+
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, 0));
+}
+
+TEST(QmHammerHitEffect, KeepsDistinctEventsFromTheSameConnection)
+{
+	const SQmHammerHitRecord First = Hit(1, 2, 100, 4);
+
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Hit(1, 2, 100, 5), 0));
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Hit(1, 2, 102, 5), 20000000));
+}
+
+TEST(QmHammerHitEffect, KeepsOppositeHitAfterConnectionSwitch)
+{
+	const SQmHammerHitRecord First = Hit(1, 2, 100, 4, 0);
+	const SQmHammerHitRecord Second = Hit(2, 1, 102, 5, 1);
+
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, 20000000));
+}
+
+TEST(QmHammerHitEffect, KeepsDifferentTargetAfterConnectionSwitch)
+{
+	const SQmHammerHitRecord First = Hit(1, 2, 100, 4, 0);
+	const SQmHammerHitRecord Second = Hit(1, 3, 102, 5, 1);
+
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, 20000000));
+}
+
+TEST(QmHammerHitEffect, RequiresKnownOwnershipOnBothConnections)
+{
+	const SQmHammerHitRecord First = Hit(1, 2, 100, 4, 0);
+	const SQmHammerHitRecord Second = Hit(1, 2, 102, 5, 1);
+
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Hit(-1, 2, 102, 5, 1), 20000000));
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Hit(1, -1, 102, 5, 1), 20000000));
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(Hit(-1, 2, 100, 4, 0), Second, 20000000));
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(Hit(1, -1, 100, 4, 0), Second, 20000000));
+}
+
+TEST(QmHammerHitEffect, SuppressesKnownHitRedeliveredByOtherConnection)
+{
+	const SQmHammerHitRecord First = Hit(1, 2, 100, 4, 0);
+	const SQmHammerHitRecord Second = Hit(1, 2, 102, 5, 1);
+
+	EXPECT_TRUE(QmIsDuplicateHammerHitEffect(First, Second, 20000000));
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(SQmHammerHitRecord(), Second, 20000000));
+}
+
+TEST(QmHammerHitEffect, RepeatedDeliveryMustStayInsideTimeTickAndPositionWindows)
+{
+	const SQmHammerHitRecord First = Hit(1, 2, 100, 4, 0);
+	SQmHammerHitRecord Second = Hit(1, 2, 103, 5, 1);
+	Second.m_Pos = First.m_Pos + vec2(31.0f, 0.0f);
+
+	EXPECT_TRUE(QmIsDuplicateHammerHitEffect(First, Second, 99999999));
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, 100000000));
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, -1));
+	Second.m_SnapshotTick = 104;
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, 20000000));
+	Second.m_SnapshotTick = 99;
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, 20000000));
+	Second.m_SnapshotTick = 102;
+	Second.m_Pos = First.m_Pos + vec2(32.0f, 0.0f);
+	EXPECT_FALSE(QmIsDuplicateHammerHitEffect(First, Second, 20000000));
+}
+
 TEST(QmHammerHitTracker, DeduplicatesRawSnapshotEventIdentity)
 {
 	CQmHammerHitTracker Tracker;

@@ -329,6 +329,7 @@ void CScoreboard::OnReset()
 
 void CScoreboard::OnRelease()
 {
+	m_MediaControls.Cancel(*Ui());
 	m_Active = false;
 	m_Visibility = 0.0f;
 	m_OpenTime = 0.0f;
@@ -1202,7 +1203,17 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		FontSize = 5.0f;
 	}
 	const float PreferredTeamFontSize = FontSize / 1.5f;
-	const float RowsVerticalScale = Scroll ? 1.0f : ScoreboardRowsVerticalScale(maximum(0.0f, Scoreboard.h - HeadlineFontsize * 2.0f), EndRow - FirstRow, NumTeamLabels, NumTeamModeLabels, LineHeight, Spacing, PreferredTeamFontSize, SCOREBOARD_TEAM_MODE_ICON_SIZE);
+	const float PreferredTeamModeIconSize = minimum(SCOREBOARD_TEAM_MODE_ICON_SIZE, FontSize);
+	const CUIRect PlayerRows = ScoreboardPlayerRowsRect(Scoreboard, HeadlineFontsize * 2.0f);
+	const float RowsVerticalScale = Scroll ? 1.0f : ScoreboardRowsVerticalScale(
+		PlayerRows.h,
+		EndRow - FirstRow,
+		NumTeamLabels,
+		NumTeamModeLabels,
+		LineHeight,
+		Spacing,
+		PreferredTeamFontSize,
+		PreferredTeamModeIconSize);
 	LineHeight *= RowsVerticalScale;
 	TeeSizeMod *= RowsVerticalScale;
 	Spacing *= RowsVerticalScale;
@@ -1210,14 +1221,13 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	FontSize *= RowsVerticalScale;
 	// 练习/锁队图标随行字号等比缩小：固定 12px 在人多压缩行高时会比队伍标签文字还大。
 	// 基准场景（FontSize=12）下正好等于 SCOREBOARD_TEAM_MODE_ICON_SIZE，行为不变。
-	const float TeamModeIconSize = minimum(SCOREBOARD_TEAM_MODE_ICON_SIZE, FontSize);
+	const float TeamModeIconSize = PreferredTeamModeIconSize * RowsVerticalScale;
 
 	// 表头固定，玩家区域使用与服务器列表相同的连续坐标滚动。
-	CUIRect ScrollViewport = Scoreboard;
+	CUIRect ScrollViewport = PlayerRows;
 	vec2 ScrollOffset(0.0f, 0.0f);
 	if(Scroll)
 	{
-		Scoreboard.HSplitTop(HeadlineFontsize * 2.0f, nullptr, &ScrollViewport);
 		SQmScrollRequest ScrollRequest;
 		ScrollRequest.m_Profile = EQmScrollProfile::MENU_LIST;
 		ScrollRequest.m_RowExtent = LineHeight + Spacing;
@@ -1262,7 +1272,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 	// render headlines
 	CUIRect Headline;
-	Scoreboard.HSplitTop(HeadlineFontsize * 2.0f, &Headline, &Scoreboard);
+	Scoreboard.HSplitTop(HeadlineFontsize * 2.0f, &Headline, nullptr);
 	const float HeadlineY = Headline.y + Headline.h / 2.0f - HeadlineFontsize / 2.0f;
 	const char *pScore = TimeScore ? Localize("Time") : Localize("Score");
 	TextRender()->Text(ScoreOffset + ScoreLength - TextRender()->TextWidth(HeadlineFontsize, pScore), HeadlineY, HeadlineFontsize, pScore);
@@ -1282,13 +1292,12 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const char *pPingLabel = Localize("Ping");
 	TextRender()->Text(PingOffset + PingLength - TextRender()->TextWidth(HeadlineFontsize, pPingLabel), HeadlineY, HeadlineFontsize, pPingLabel);
 
+	const CUIRect &RowsViewport = Scroll ? ScrollViewport : PlayerRows;
+	Scoreboard = RowsViewport;
 	if(Scroll)
-	{
-		Ui()->ClipEnable(&ScrollViewport);
-		Scoreboard = ScrollViewport;
 		Scoreboard.y += ScrollOffset.y;
-	}
-
+	// 皮肤描边和字体像素对齐可能超出逻辑行高，限制在玩家区内。
+	Ui()->ClipEnable(&RowsViewport);
 	// render player entries
 	int PrevDDTeam = -1;
 	int &CurrentDDTeamSize = State.m_CurrentDDTeamSize;
@@ -1344,7 +1353,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			const ColorRGBA Color = ScoreboardDecorationColor(GameClient()->GetDDTeamColor(DDTeam).WithAlpha(0.5f * ItemAlpha));
 			// 面板最后一行的队伍背景要贴着卡片圆角收口：用卡片圆角而不是缩放后的行圆角，
 			// 否则小圆角填不满面板底部圆角，颜色会溢出到圆角外。
-			const bool IsPanelLastRow = &PlannedRow == &Plan.m_aRows[Plan.m_Count - 1];
+			const bool IsPanelLastRow = RowIndex + 1 == EndRow;
 			int TeamRectCorners = 0;
 			if(PrevDDTeam != DDTeam)
 			{
@@ -1529,7 +1538,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			}
 			CTeeRenderInfo TeeInfo = GameClient()->m_aClients[pInfo->m_ClientId].m_RenderInfo;
 			TeeInfo.m_Size *= TeeSizeMod;
-			IGraphics::CQuadItem QuadItem(TeeOffset, Row.y, TeeInfo.m_Size, TeeInfo.m_Size);
+			const CUIRect TeeRect = ScoreboardDeadTeeRect(Row, TeeOffset, TeeLength, TeeInfo.m_Size);
+			IGraphics::CQuadItem QuadItem(TeeRect.x, TeeRect.y, TeeRect.w, TeeRect.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
 			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1645,10 +1655,13 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		TextRender()->Text(PingOffset + PingLength - TextRender()->TextWidth(FontSize, aBuf), Row.y + (Row.h - FontSize) / 2.0f, FontSize, aBuf);
 		TextRender()->TextColor(TextRender()->DefaultTextColor().WithMultipliedAlpha(ItemAlpha));
 	}
-
 	if(Scroll)
 	{
 		m_ScrollRegion.End();
+	}
+	else
+	{
+		Ui()->ClipDisable();
 	}
 
 	TextRender()->TextColor(BaseTextColor);
@@ -1713,6 +1726,8 @@ void CScoreboard::RenderRecordingNotification(float x)
 void CScoreboard::OnRender()
 {
 	m_RenderInteractions = false;
+	if(!IsActive() || !m_MouseUnlocked || GameClient()->m_Menus.IsActive() || GameClient()->m_Chat.IsActive() || GetQmFocusModeDecisions().m_HideScoreboard)
+		m_MediaControls.Cancel(*Ui());
 
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
@@ -1855,7 +1870,9 @@ void CScoreboard::OnRender()
 
 	// Scoreboard width: clamp to screen width for narrow aspect ratios
 	const float ScreenMargin = 10.0f;
-	const float MaxScoreboardWidth = maximum(200.0f, Screen.w - ScreenMargin);
+	CSystemMediaControls::SState MediaState;
+	const bool HasMedia = GameClient()->m_SystemMediaControls.GetStateSnapshot(MediaState);
+	const float MaxScoreboardWidth = HasMedia ? QmScoreboardMediaMaxWidth(Screen.w, true) : maximum(200.0f, Screen.w - ScreenMargin);
 	const int ScoreboardColumns = ScrollMode ? 1 : (Teams ? 2 : (NumPlayers <= 16 ? 1 : (NumPlayers <= 64 ? 2 : 3)));
 	const float ClientBrandExtraWidth = g_Config.m_QmClientShowBadge ? maximum(TextRender()->TextWidth(12.0f, "Qm"), TextRender()->TextWidth(12.0f, "Arg")) + CLIENT_BRAND_LABEL_GAP : 0.0f;
 	const float BaseScoreboardSmallWidth = (g_Config.m_QmScoreboardPoints ? (450.0f + 10.0f) : 450.0f) + ClientBrandExtraWidth;
@@ -2169,6 +2186,8 @@ void CScoreboard::OnRender()
 	}
 
 	RenderSoundMuteBar(ScoreboardContent);
+	m_MediaControls.Render(*Ui(), *TextRender(), GameClient()->m_Tooltips, GameClient()->m_SystemMediaControls, ScoreboardContent,
+		ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha, ScoreboardUiColorSurface(BackgroundAlphaFinal));
 
 	CUIRect Spectators = {ScoreboardContent.x, ScoreboardContent.y + ScoreboardContent.h + 5.0f, ScoreboardContent.w, 100.0f};
 	if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
@@ -2193,6 +2212,7 @@ void CScoreboard::OnRender()
 		RenderGoals(Goals);
 	}
 	RenderFooter(Spectators);
+	GameClient()->m_Voting.RenderScoreboard(ScoreboardContent, ScoreboardUiInteractive && m_MouseUnlocked && !GameClient()->m_HudEditor.IsActive(), m_AnimContentAlpha);
 
 	if(!g_Config.m_ClShowhudTimer)
 		RenderRecordingNotification((Screen.w / 7) * 4 + 10);

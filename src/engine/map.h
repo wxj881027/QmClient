@@ -13,6 +13,8 @@ enum
 	MAX_MAP_LENGTH = 128
 };
 
+class IStorage;
+
 class IMap : public IInterface
 {
 	MACRO_INTERFACE("map")
@@ -46,6 +48,6 @@ public:
 	virtual int Size() const = 0;
 };
 
-extern IEngineMap *CreateEngineMap();
+extern IEngineMap *CreateEngineMap(IStorage *pStorage = nullptr);
 
 #endif

@@ -28,16 +28,77 @@ namespace QmEmoticon
 			int m_Bottom;
 			vec2 m_NormalizedCenter = vec2(0.0f, 0.0f);
 		};
+		struct SBoundsNode
+		{
+			SRect m_Bounds;
+			std::size_t m_FirstRect;
+			std::size_t m_EndRect;
+			std::size_t m_NextNode;
+		};
+		static constexpr std::size_t RECTS_PER_LEAF = 8;
 		std::vector<SRect> m_vRects;
+		std::vector<SBoundsNode> m_vBoundsNodes;
 		int m_Width = 1;
 		int m_Height = 1;
 		vec2 m_BoundsCenter = vec2(0.0f, 0.0f);
 		vec2 m_BoundsHalf = vec2(0.0f, 0.0f);
 
+		void BuildBoundsNodes(std::size_t FirstRect, std::size_t EndRect)
+		{
+			SRect Bounds = m_vRects[FirstRect];
+			for(std::size_t Index = FirstRect + 1; Index < EndRect; ++Index)
+			{
+				const SRect &Rect = m_vRects[Index];
+				Bounds.m_Left = std::min(Bounds.m_Left, Rect.m_Left);
+				Bounds.m_Top = std::min(Bounds.m_Top, Rect.m_Top);
+				Bounds.m_Right = std::max(Bounds.m_Right, Rect.m_Right);
+				Bounds.m_Bottom = std::max(Bounds.m_Bottom, Rect.m_Bottom);
+			}
+			Bounds.m_NormalizedCenter = vec2((Bounds.m_Left + Bounds.m_Right) / (2.0f * m_Width) - 0.5f, (Bounds.m_Top + Bounds.m_Bottom) / (2.0f * m_Height) - 0.5f);
+			const std::size_t NodeIndex = m_vBoundsNodes.size();
+			m_vBoundsNodes.push_back({Bounds, FirstRect, EndRect, 0});
+			if(EndRect - FirstRect > RECTS_PER_LEAF)
+			{
+				m_vBoundsNodes[NodeIndex].m_EndRect = FirstRect;
+				const std::size_t Middle = FirstRect + (EndRect - FirstRect) / 2;
+				BuildBoundsNodes(FirstRect, Middle);
+				BuildBoundsNodes(Middle, EndRect);
+			}
+			m_vBoundsNodes[NodeIndex].m_NextNode = m_vBoundsNodes.size();
+		}
+
+		template<typename TOverlapsRect>
+		bool OverlapsRects(const TOverlapsRect &OverlapsRect) const
+		{
+			if(m_vBoundsNodes.empty())
+			{
+				for(const SRect &Rect : m_vRects)
+					if(OverlapsRect(Rect, 0.0001f))
+						return true;
+				return false;
+			}
+			// 包围盒只做保守排除；叶子仍使用原精细判定，查询时不分配内存。
+			for(std::size_t NodeIndex = 0; NodeIndex < m_vBoundsNodes.size();)
+			{
+				const SBoundsNode &Node = m_vBoundsNodes[NodeIndex];
+				if(!OverlapsRect(Node.m_Bounds, -0.01f))
+				{
+					NodeIndex = Node.m_NextNode;
+					continue;
+				}
+				for(std::size_t Index = Node.m_FirstRect; Index < Node.m_EndRect; ++Index)
+					if(OverlapsRect(m_vRects[Index], 0.0001f))
+						return true;
+				++NodeIndex;
+			}
+			return false;
+		}
+
 	public:
 		void Build(const unsigned char *pRgba, int Width, int Height, int Stride = 0)
 		{
 			m_vRects.clear();
+			m_vBoundsNodes.clear();
 			m_BoundsCenter = m_BoundsHalf = vec2(0.0f, 0.0f);
 			m_Width = std::max(1, Width);
 			m_Height = std::max(1, Height);
@@ -94,6 +155,12 @@ namespace QmEmoticon
 			}
 			m_BoundsCenter = vec2((Left + Right) / (2.0f * m_Width) - 0.5f, (Top + Bottom) / (2.0f * m_Height) - 0.5f);
 			m_BoundsHalf = vec2((Right - Left) / (2.0f * m_Width), (Bottom - Top) / (2.0f * m_Height));
+			// 轮廓只在材质加载时分层，避免消散膨胀后每块墙砖都扫描全部矩形。
+			if(m_vRects.size() > RECTS_PER_LEAF)
+			{
+				m_vBoundsNodes.reserve(m_vRects.size() / 2 + 1);
+				BuildBoundsNodes(0, m_vRects.size());
+			}
 		}
 
 		std::size_t NumRects() const { return m_vRects.size(); }
@@ -121,17 +188,16 @@ namespace QmEmoticon
 					if(!Solid(X, Y))
 						continue;
 					const vec2 TileCenter(X * 32.0f + 16.0f, Y * 32.0f + 16.0f);
-					for(const SRect &Rect : m_vRects)
-					{
+					if(OverlapsRects([&](const SRect &Rect, float Epsilon) {
 						const vec2 Half((Rect.m_Right - Rect.m_Left) * Size / (2.0f * m_Width), (Rect.m_Bottom - Rect.m_Top) * Size / (2.0f * m_Height));
 						const vec2 Local = Rect.m_NormalizedCenter * Size;
 						const vec2 Delta = TileCenter - (Pos + AxisX * Local.x + AxisY * Local.y);
-						if(std::abs(Delta.x) < 16.0f + AbsX.x * Half.x + AbsY.x * Half.y - 0.0001f &&
-							std::abs(Delta.y) < 16.0f + AbsX.y * Half.x + AbsY.y * Half.y - 0.0001f &&
-							std::abs(dot(Delta, AxisX)) < Half.x + 16.0f * (AbsX.x + AbsX.y) - 0.0001f &&
-							std::abs(dot(Delta, AxisY)) < Half.y + 16.0f * (AbsY.x + AbsY.y) - 0.0001f)
-							return true;
-					}
+						return std::abs(Delta.x) < 16.0f + AbsX.x * Half.x + AbsY.x * Half.y - Epsilon &&
+						       std::abs(Delta.y) < 16.0f + AbsX.y * Half.x + AbsY.y * Half.y - Epsilon &&
+						       std::abs(dot(Delta, AxisX)) < Half.x + 16.0f * (AbsX.x + AbsX.y) - Epsilon &&
+						       std::abs(dot(Delta, AxisY)) < Half.y + 16.0f * (AbsY.x + AbsY.y) - Epsilon;
+						}))
+						return true;
 				}
 			}
 			return false;
@@ -145,18 +211,15 @@ namespace QmEmoticon
 			const vec2 AxisY(-AxisX.y, AxisX.x);
 			const vec2 AbsX(std::abs(AxisX.x), std::abs(AxisX.y));
 			const vec2 AbsY(std::abs(AxisY.x), std::abs(AxisY.y));
-			for(const SRect &Rect : m_vRects)
-			{
+			return OverlapsRects([&](const SRect &Rect, float Epsilon) {
 				const vec2 Half((Rect.m_Right - Rect.m_Left) * Size / (2.0f * m_Width), (Rect.m_Bottom - Rect.m_Top) * Size / (2.0f * m_Height));
 				const vec2 Local = Rect.m_NormalizedCenter * Size;
 				const vec2 Delta = BoxCenter - (Pos + AxisX * Local.x + AxisY * Local.y);
-				if(std::abs(Delta.x) < BoxHalf.x + AbsX.x * Half.x + AbsY.x * Half.y - 0.0001f &&
-					std::abs(Delta.y) < BoxHalf.y + AbsX.y * Half.x + AbsY.y * Half.y - 0.0001f &&
-					std::abs(dot(Delta, AxisX)) < Half.x + BoxHalf.x * AbsX.x + BoxHalf.y * AbsX.y - 0.0001f &&
-					std::abs(dot(Delta, AxisY)) < Half.y + BoxHalf.x * AbsY.x + BoxHalf.y * AbsY.y - 0.0001f)
-					return true;
-			}
-			return false;
+				return std::abs(Delta.x) < BoxHalf.x + AbsX.x * Half.x + AbsY.x * Half.y - Epsilon &&
+				       std::abs(Delta.y) < BoxHalf.y + AbsX.y * Half.x + AbsY.y * Half.y - Epsilon &&
+				       std::abs(dot(Delta, AxisX)) < Half.x + BoxHalf.x * AbsX.x + BoxHalf.y * AbsX.y - Epsilon &&
+				       std::abs(dot(Delta, AxisY)) < Half.y + BoxHalf.x * AbsY.x + BoxHalf.y * AbsY.y - Epsilon;
+			});
 		}
 	};
 

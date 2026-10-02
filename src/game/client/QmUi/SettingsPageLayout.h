@@ -425,9 +425,9 @@ inline float ResolveSettingsProfilesListHeight(const SSettingsContentMetrics &Me
 
 inline float ResolveSettingsTeeQueuePresetHeight(const SSettingsContentMetrics &Metrics, const int VisiblePresetRows)
 {
-	// 分割高度包含预设区域前的间距、Surface 的上下内边距、标题、操作按钮和可见列表行。
+	// 操作图标与标题同一行，列表区域仅保留必要内边距。
 	const float PresetRowSpacing = Metrics.m_LineSpacing * 0.5f;
-	return Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight + Metrics.m_ButtonHeight + ResolveSettingsListViewportHeight(VisiblePresetRows, Metrics.m_ListRowHeight, PresetRowSpacing);
+	return Metrics.m_LineSpacing * 4.0f + Metrics.m_LineHeight + ResolveSettingsListViewportHeight(VisiblePresetRows, Metrics.m_ListRowHeight, PresetRowSpacing);
 }
 
 inline int ResolveSettingsTeeVisiblePresetRows(const int PresetCount)
@@ -438,15 +438,6 @@ inline int ResolveSettingsTeeVisiblePresetRows(const int PresetCount)
 inline int ResolveSettingsTeeVisibleQueueRows(const int QueueCount)
 {
 	return std::clamp(QueueCount, 1, 8);
-}
-
-inline uint64_t ResolveSettingsTeeQueueLayoutRevision(const bool RenderOnly, const bool Dummy, const bool UseCustomColor, const int QueueCount, const int PresetCount)
-{
-	return ((uint64_t)(RenderOnly ? 1 : 0) << 63) |
-	       ((uint64_t)(Dummy ? 1 : 0) << 62) |
-	       ((uint64_t)(UseCustomColor ? 1 : 0) << 61) |
-	       ((uint64_t)ResolveSettingsTeeVisibleQueueRows(QueueCount) << 32) |
-	       (uint64_t)ResolveSettingsTeeVisiblePresetRows(PresetCount);
 }
 
 inline uint64_t ResolveSettingsSoundLayoutRevision(const bool RenderOnly, const bool SoundEnabled, const int AudioPackCount)
@@ -460,13 +451,15 @@ struct SSettingsTeeQueuePanelGeometry
 {
 	int m_VisibleQueueRows = 0;
 	int m_VisiblePresetRows = 0;
+	bool m_StackInterval = false;
+	float m_IntervalHeight = 0.0f;
 	float m_QueueListViewportHeight = 0.0f;
 	float m_QueueListSurfaceHeight = 0.0f;
 	float m_QueuePresetHeight = 0.0f;
 	float m_ContentHeight = 0.0f;
 };
 
-inline SSettingsTeeQueuePanelGeometry ResolveSettingsTeeQueuePanelGeometry(const SSettingsContentMetrics &Metrics, const int QueueCount, const int PresetCount)
+inline SSettingsTeeQueuePanelGeometry ResolveSettingsTeeQueuePanelGeometry(const SSettingsContentMetrics &Metrics, const int QueueCount, const int PresetCount, float ContentWidth = 0.0f)
 {
 	SSettingsTeeQueuePanelGeometry Geometry;
 	Geometry.m_VisibleQueueRows = ResolveSettingsTeeVisibleQueueRows(QueueCount);
@@ -475,24 +468,18 @@ inline SSettingsTeeQueuePanelGeometry ResolveSettingsTeeQueuePanelGeometry(const
 	// 列表 Surface 包含上下内边距、标题与标题到首行的标准间距，viewport 始终只显示完整行。
 	Geometry.m_QueueListSurfaceHeight = Metrics.m_LineSpacing * 3.0f + Metrics.m_LineHeight + Geometry.m_QueueListViewportHeight;
 	Geometry.m_QueuePresetHeight = ResolveSettingsTeeQueuePresetHeight(Metrics, Geometry.m_VisiblePresetRows);
-	// 区间标签在窄列会换成两行，按较高形态测量以避免挤压下面两个列表。
-	const float StackedIntervalHeight = Metrics.m_LineHeight + Metrics.m_LineSpacing + Metrics.m_InputHeight;
+	Geometry.m_StackInterval = ContentWidth < 250.0f * Metrics.m_UiScale;
+	Geometry.m_IntervalHeight = Metrics.m_InputHeight + (Geometry.m_StackInterval ? Metrics.m_LineHeight + Metrics.m_LineSpacing : 0.0f);
 	const float RequiredHeight =
-		Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight + StackedIntervalHeight +
+		Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight * 3.0f + Geometry.m_IntervalHeight +
 		Geometry.m_QueueListSurfaceHeight + Geometry.m_QueuePresetHeight;
-	Geometry.m_ContentHeight = std::max(Metrics.m_UiScale * 440.0f, RequiredHeight);
+	Geometry.m_ContentHeight = RequiredHeight;
 	return Geometry;
 }
 
-inline float ResolveSettingsTeeQueuePanelHeight(const SSettingsContentMetrics &Metrics, const int QueueCount, const int PresetCount)
+inline float ResolveSettingsTeeQueuePanelHeight(const SSettingsContentMetrics &Metrics, const int QueueCount, const int PresetCount, float ContentWidth = 0.0f)
 {
-	return ResolveSettingsTeeQueuePanelGeometry(Metrics, QueueCount, PresetCount).m_ContentHeight;
-}
-
-inline float ResolveSettingsTeeIdentityHeight(const SSettingsContentMetrics &Metrics)
-{
-	// 名称/国旗、Tee 预览、标签和底部颜色按钮均需要自己的安全间距。
-	return Metrics.m_InputHeight + Metrics.m_LineSpacing + Metrics.m_LineHeight * 2.0f + Metrics.m_ButtonHeight * 4.0f;
+	return ResolveSettingsTeeQueuePanelGeometry(Metrics, QueueCount, PresetCount, ContentWidth).m_ContentHeight;
 }
 
 struct SSettingsTeeEmoteSliderLayout
@@ -582,8 +569,12 @@ inline SSettingsTeeCustomColorsLayout ResolveSettingsTeeCustomColorsLayout(const
 
 	const float ControlsHeight = ResolveSettingsHslaRowsHeight(Metrics, false);
 	const float GroupHeight = Spacing * 2.0f + Metrics.m_LineHeight + Spacing + ControlsHeight;
-	Layout.m_BodyGroup = {View.x, View.y + Spacing, View.w, GroupHeight};
-	Layout.m_FeetGroup = {View.x, Layout.m_BodyGroup.y + Layout.m_BodyGroup.h + Metrics.m_SectionGap, View.w, GroupHeight};
+	const bool SideBySide = View.w >= 540.0f * Metrics.m_UiScale;
+	const float GroupWidth = SideBySide ? (View.w - Metrics.m_SectionGap) * 0.5f : View.w;
+	Layout.m_BodyGroup = {View.x, View.y + Spacing, GroupWidth, GroupHeight};
+	Layout.m_FeetGroup = SideBySide ?
+		CUIRect{View.x + GroupWidth + Metrics.m_SectionGap, Layout.m_BodyGroup.y, GroupWidth, GroupHeight} :
+		CUIRect{View.x, Layout.m_BodyGroup.y + GroupHeight + Metrics.m_SectionGap, GroupWidth, GroupHeight};
 	const auto ResolveGroup = [&](const CUIRect &Group, CUIRect &Title, CUIRect &Controls) {
 		CUIRect Inner;
 		Group.Margin(Spacing, &Inner);
@@ -888,7 +879,7 @@ inline float ResolveQmHudDynamicIslandHeight(const SSettingsContentMetrics &Metr
 	if(!OriginalStyle)
 	{
 		const CUIRect ColorRowView{0.0f, 0.0f, std::max(0.0f, ContentWidth), 0.0f};
-		Height += ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight;
+		Height += ResolveSettingsColorRowLayout(ColorRowView, Metrics, false).m_ConsumedHeight + Metrics.m_RowStep;
 	}
 	// 开关倒计时启用时增加跟随 Tee / 灵动岛两个位置开关，不再保留位置标题行。
 	Height += (SwitchCountdownEnabled ? 2.0f : 0.0f) * Metrics.m_RowStep;

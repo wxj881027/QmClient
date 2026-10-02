@@ -23,6 +23,7 @@
 #include <game/client/components/censor.h>
 #include <game/client/components/console.h>
 #include <game/client/components/message_gradient.h>
+#include <game/client/components/qmclient/chat_command_hud_render.h>
 #include <game/client/components/qmclient/chat_command_preview.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
@@ -473,11 +474,13 @@ void CChat::RegisterCommand(const char *pName, const char *pParams, const char *
 
 	m_vServerCommands.emplace_back(pName, pParams, pHelpText);
 	m_ServerCommandsNeedSorting = true;
+	++m_ServerCommandsRevision;
 }
 
 void CChat::UnregisterCommand(const char *pName)
 {
 	m_vServerCommands.erase(std::remove_if(m_vServerCommands.begin(), m_vServerCommands.end(), [pName](const CCommand &Command) { return str_comp(Command.m_aName, pName) == 0; }), m_vServerCommands.end());
+	++m_ServerCommandsRevision;
 }
 
 const CChat::CCommand *CChat::FindServerCommand(const char *pName) const
@@ -507,6 +510,66 @@ bool CChat::BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufS
 		}
 	}
 	return QmChatCommandPreview::Build(pInput, pCommandInfo, pBuf, BufSize);
+}
+
+bool CChat::HandleCommandHudInput(const IInput::CEvent &Event)
+{
+	if(!m_CommandHud.MatchesSource(m_ServerCommandsRevision))
+	{
+		m_CommandHud.Hide();
+		return false;
+	}
+	const vec2 MousePos = GetChatMousePos();
+	if((Event.m_Flags & IInput::FLAG_PRESS) && (Event.m_Key == KEY_MOUSE_WHEEL_UP || Event.m_Key == KEY_MOUSE_WHEEL_DOWN))
+		return m_CommandHud.Scroll(MousePos.x, MousePos.y, Event.m_Key == KEY_MOUSE_WHEEL_UP ? -1 : 1, m_Input.GetString(), m_Input.GetCursorOffset());
+	if(Event.m_Key != KEY_MOUSE_1)
+		return false;
+
+	if(Event.m_Flags & IInput::FLAG_PRESS)
+	{
+		if(!m_CommandHud.Press(MousePos.x, MousePos.y, m_Input.GetString(), m_Input.GetCursorOffset()))
+			return false;
+		// 列表按下不能同时开始输入框选字或聊天记录拖选。
+		m_Input.GetMouseSelection()->m_Selecting = false;
+		m_MouseIsPress = false;
+		return true;
+	}
+	if(Event.m_Flags & IInput::FLAG_RELEASE)
+	{
+		const bool WasPressed = m_CommandHud.IsPressed();
+		std::string Completion;
+		size_t Cursor = 0;
+		if(m_CommandHud.Release(MousePos.x, MousePos.y, m_Input.GetString(), m_Input.GetCursorOffset(), Completion, Cursor))
+		{
+			m_Input.Set(Completion.c_str());
+			m_Input.SetCursorOffset(Cursor);
+			m_Input.SelectNothing();
+			m_CompletionChosen = -1;
+			m_CompletionUsed = false;
+			m_EmojiCompletionListLength = 0;
+			m_aEmojiCompletionColon[0] = '\0';
+		}
+		return WasPressed;
+	}
+	return false;
+}
+
+void CChat::RenderCommandHud(float X, float Bottom, float Width, float FontSize, const CUIRect &ChatRect, const CUIRect &TargetRect)
+{
+	if(m_CommandHud.BeginUpdate(m_Input.GetString(), m_Input.GetCursorOffset(), g_Config.m_QmChatCommandCompletion != 0, m_ServerCommandsRevision))
+	{
+		for(const auto &Command : m_vServerCommands)
+			m_CommandHud.AddServerCommand(Command.m_aName, Command.m_aParams, Localize(Command.m_aHelpText));
+		m_CommandHud.EndUpdate();
+	}
+
+	const float Scale = ChatRect.w > 0.0f ? TargetRect.w / ChatRect.w : 1.0f;
+	const float OffsetX = TargetRect.x - ChatRect.x * Scale;
+	const float OffsetY = TargetRect.y - ChatRect.y * Scale;
+	m_CommandHud.SetInputTransform(OffsetX, OffsetY, Scale);
+	const float ScreenTop = (4.0f - OffsetY) / maximum(Scale, 0.01f);
+	m_CommandHud.SetLayout(X, Bottom, Width, maximum(0.0f, Bottom - ScreenTop), FontSize);
+	QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos(), FontSize);
 }
 
 void CChat::RebuildChat()
@@ -657,6 +720,7 @@ void CChat::InvalidateLineTranslation(CLine &Line)
 
 void CChat::OnWindowResize()
 {
+	m_CommandHud.Hide();
 	RebuildChat();
 	m_SponsorChatRenderer.Reset(Graphics());
 }
@@ -693,6 +757,7 @@ void CChat::Reset()
 	m_aCurrentInputText[0] = '\0';
 	DisableMode();
 	m_vServerCommands.clear();
+	++m_ServerCommandsRevision;
 
 	for(int64_t &LastSoundPlayed : m_aLastSoundPlayed)
 		LastSoundPlayed = 0;
@@ -700,6 +765,7 @@ void CChat::Reset()
 
 void CChat::OnRelease()
 {
+	m_CommandHud.Hide();
 	FlushPendingConsoleLine(true);
 	m_Show = false;
 }
@@ -918,6 +984,11 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	const bool LanguageMenuOpen = m_LanguageMenuOpen || Ui()->IsPopupOpen(&m_LanguagePopupContext);
 	const bool ChatLineMenuOpen = Ui()->IsPopupOpen(&m_ChatLinePopupContext);
 	const bool AnyChatPopupOpen = LanguageMenuOpen || ChatLineMenuOpen;
+	const bool CommandHudEnabled = m_CommandHud.Source() == CQmChatCommandHud::ESource::SERVER && g_Config.m_QmChatCommandCompletion;
+	if(AnyChatPopupOpen || Input()->HasComposition() || GameClient()->m_Menus.IsActive() || GameClient()->m_HudEditor.IsActive() || !CommandHudEnabled)
+		m_CommandHud.Hide();
+	else if(HandleCommandHudInput(Event))
+		return true;
 	const bool IsWheelEvent = Event.m_Key == KEY_MOUSE_WHEEL_UP || Event.m_Key == KEY_MOUSE_WHEEL_DOWN;
 	if(!AnyChatPopupOpen && (Event.m_Flags & IInput::FLAG_PRESS) && IsWheelEvent)
 	{
@@ -1341,6 +1412,7 @@ void CChat::EnableMode(int Team)
 
 void CChat::DisableMode()
 {
+	m_CommandHud.Hide();
 	CloseLanguageMenu();
 	CloseChatLineMenu();
 	if(m_Mode != MODE_NONE)
@@ -1457,6 +1529,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)
 		if(!m_ServerSupportsCommandInfo)
 		{
 			m_vServerCommands.clear();
+			++m_ServerCommandsRevision;
 			m_ServerSupportsCommandInfo = true;
 		}
 		RegisterCommand(pMsg->m_pName, pMsg->m_pArgsFormat, pMsg->m_pHelpText);
@@ -2857,7 +2930,10 @@ void CChat::OnRender()
 {
 	FlushPendingConsoleLine(false);
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		m_CommandHud.Hide();
 		return;
+	}
 	const SQmFocusModeDecisions Focus = GetQmFocusModeDecisions();
 	const bool FocusHideChat = Focus.m_HidePlayerMessages;
 	const bool FocusHideSystemInfoMessages = Focus.m_HideSystemInfoMessages;
@@ -2865,7 +2941,10 @@ void CChat::OnRender()
 	const bool FocusHideEcho = Focus.m_HideEchoMessages;
 	const bool HasForceVisibleLine = std::any_of(std::begin(m_aLines), std::end(m_aLines), [](const CLine &Line) { return Line.m_Initialized && Line.m_ForceVisible; });
 	if(!ShouldRenderAnyFocusFilteredChat(FocusHideChat, FocusHideSystemInfoMessages, FocusHideSystemPromptMessages, FocusHideEcho, HasForceVisibleLine))
+	{
+		m_CommandHud.Hide();
 		return;
+	}
 
 	const bool HudEditorPreview = GameClient()->m_HudEditor.IsActive();
 	const bool InputActive = m_Mode != MODE_NONE;
@@ -3072,10 +3151,23 @@ void CChat::OnRender()
 		// 渲染翻译按钮
 		CUIRect TranslateButtonRect = {InputContentRect.x + InputContentRect.w + TranslateButtonGap, InputContentRect.y, TranslateButtonSize, maximum(InputCursor.m_FontSize + 4.0f, 16.0f)};
 		RenderTranslateButton(TranslateButtonRect);
+		if(!Input()->HasComposition() && !HudEditorPreview && !GameClient()->m_Menus.IsActive() && !m_LanguageMenuOpen && !Ui()->IsPopupOpen(&m_LanguagePopupContext) && !Ui()->IsPopupOpen(&m_ChatLinePopupContext))
+		{
+			RenderCommandHud(x, InputContentRect.y - 4.0f, minimum(InputLineWidth, ChatRect.w - x), ScaledFontSize, ChatRect, HudEditorScope.m_Applied ? HudEditorScope.m_TargetRect : ChatRect);
+			const auto &CommandLayout = m_CommandHud.Layout();
+			if(CommandLayout.m_VisibleRows > 0)
+			{
+				ExtendBounds(CommandLayout.m_X, CommandLayout.m_Y, CommandLayout.m_W, CommandLayout.m_H);
+				y = CommandLayout.m_Y - 2.0f;
+			}
+		}
+		else
+			m_CommandHud.Hide();
 	}
 	else
 	{
 		m_TranslateButton.m_RectValid = false;
+		m_CommandHud.Hide();
 	}
 
 #if defined(CONF_VIDEORECORDER)
@@ -3194,13 +3286,15 @@ void CChat::OnRender()
 		MousePos.x <= ScrollbarRect.x + ScrollbarRect.w &&
 		MousePos.y >= ScrollbarRect.y &&
 		MousePos.y <= ScrollbarRect.y + ScrollbarRect.h;
-	const bool ChatCopyActive = m_Mode != MODE_NONE && !LanguageMenuOpen && !ChatLineMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !m_ScrollbarDragging;
+	const vec2 CommandHudMousePos = GetChatMousePos();
+	const bool InsideCommandHud = m_CommandHud.Contains(CommandHudMousePos.x, CommandHudMousePos.y);
+	const bool ChatCopyActive = m_Mode != MODE_NONE && !LanguageMenuOpen && !ChatLineMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !InsideCommandHud && !m_CommandHud.IsPressed() && !m_ScrollbarDragging;
 	const bool CopyClickReleased = m_MouseIsPress && !MouseDown && IsCopyClickDrag(m_MousePress, MousePos);
 	// 菜单打开时也允许右键：在其它消息行重新定位菜单，在空白处关闭菜单；
 	// 菜单自身区域内的右键不处理，避免与菜单按钮交互冲突。
 	const CUIRect *pChatLineMenuRect = ChatLineMenuOpen ? Ui()->GetPopupMenuRect(&m_ChatLinePopupContext) : nullptr;
 	const bool InsideChatLineMenu = pChatLineMenuRect != nullptr && pChatLineMenuRect->Inside(GetUiMousePos());
-	const bool ChatLineMenuRequested = m_Mode != MODE_NONE && !LanguageMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !m_ScrollbarDragging && !InsideChatLineMenu && Input()->KeyPress(KEY_MOUSE_2);
+	const bool ChatLineMenuRequested = m_Mode != MODE_NONE && !LanguageMenuOpen && !InsideInputBlock && !InsideTranslateButton && !InsideScrollbar && !InsideCommandHud && !m_ScrollbarDragging && !InsideChatLineMenu && Input()->KeyPress(KEY_MOUSE_2);
 
 	// 菜单打开时，左键按下非菜单区域立即关闭菜单。
 	if(ChatLineMenuOpen && !InsideChatLineMenu && Input()->KeyPress(KEY_MOUSE_1))

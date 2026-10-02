@@ -7,8 +7,10 @@
 #include <engine/shared/localization.h>
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmPieMenuRender.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/pie_menu_logic.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon_manager.h>
@@ -86,7 +88,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		const char *m_pTextId;
 		bool m_Alpha = false;
 	};
-	const std::array<SPieMenuColorEntry, 10> aColorEntries = {{
+	const std::array<SPieMenuColorEntry, qm_pie_menu::OPTION_COUNT> aColorEntries = {{
 		{Localize("Friend"), FontIcons::FONT_ICON_HEART, (unsigned int *)&g_Config.m_QmPieMenuColorFriend, ColorRGBA(0.9f, 0.3f, 0.4f), &g_Config.m_QmPieMenuFriendEnabled, "qmclient-pie-friend"},
 		{Localize("Whisper"), FontIcons::FONT_ICON_COMMENT, (unsigned int *)&g_Config.m_QmPieMenuColorWhisper, ColorRGBA(0.5f, 0.35f, 0.7f), &g_Config.m_QmPieMenuWhisperEnabled, "qmclient-pie-whisper"},
 		{Localize("Mention"), FontIcons::FONT_ICON_CHEVRON_RIGHT, (unsigned int *)&g_Config.m_QmPieMenuColorMention, ColorRGBA(0.85f, 0.5f, 0.2f), &g_Config.m_QmPieMenuMentionEnabled, "qmclient-pie-mention"},
@@ -97,6 +99,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		{Localize("Join team"), FontIcons::FONT_ICON_RIGHT_TO_BRACKET, (unsigned int *)&g_Config.m_QmPieMenuColorJoinTeam, ColorRGBA(0.3f, 0.61f, 0.9f, 0.75f), &g_Config.m_QmPieMenuJoinTeamEnabled, "qmclient-pie-join-team", true},
 		{Localize("Follow server"), FontIcons::FONT_ICON_NETWORK_WIRED, (unsigned int *)&g_Config.m_QmPieMenuColorFollow, ColorRGBA(0.3f, 0.75f, 0.5f, 0.75f), &g_Config.m_QmPieMenuFollowEnabled, "qmclient-pie-follow", true},
 		{Localize("View points"), FontIcons::FONT_ICON_MAGNIFYING_GLASS, (unsigned int *)&g_Config.m_QmPieMenuColorScore, ColorRGBA(0.69f, 0.42f, 0.9f, 0.75f), &g_Config.m_QmPieMenuScoreEnabled, "qmclient-pie-points", true},
+		{Localize("Copy name"), FontIcons::FONT_ICON_USER, (unsigned int *)&g_Config.m_QmPieMenuColorCopyName, ColorRGBA(0.4f, 0.8f, 0.8f, 0.75f), &g_Config.m_QmPieMenuCopyNameEnabled, "qmclient-pie-copy-name", true},
 	}};
 	auto OpenColorPopup = [&](const SPieMenuColorEntry &Entry) {
 		const ColorHSLA HslaColor = ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha);
@@ -126,15 +129,15 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 	Content.HSplitTop(BodySize, &Row, &Content);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-pie-menu-option-color", &Row, Localize("Option color"), BodySize, TEXTALIGN_ML, {}, (int)Row.w);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
-	std::array<const SPieMenuColorEntry *, 10> apVisibleEntries{};
+	std::array<const SPieMenuColorEntry *, qm_pie_menu::OPTION_COUNT> apVisibleEntries{};
 	int VisibleCount = 0;
 	for(const auto &Entry : aColorEntries)
 		if(*Entry.m_pEnabled)
 			apVisibleEntries[VisibleCount++] = &Entry;
 	constexpr float PreviewStartAngle = -90.0f;
-	constexpr float PreviewSectorGap = 3.6f;
+	const float PreviewSectorGap = VisibleCount == 1 ? 0.0f : 3.6f;
 	constexpr float PreviewInnerRatio = 108.0f / 288.0f;
-	constexpr float PreviewHighlightScale = 1.12f;
+	constexpr float PreviewHitOuterScale = 1.12f;
 	const float PreviewBaseSide = minimum(Content.w, std::clamp(Content.w * 0.88f, LineHeight * 10.0f, LineHeight * 13.5f));
 	const float PreviewSide = PreviewBaseSide * 0.8f;
 	CUIRect PreviewRow, PreviewRect, PreviewInfoRect;
@@ -169,7 +172,7 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		{
 			const vec2 MouseDir = Ui()->MousePos() - PreviewCenter;
 			const float MouseDist = length(MouseDir);
-			if(MouseDist >= InnerRadius && MouseDist <= BaseOuterRadius * PreviewHighlightScale)
+			if(MouseDist >= InnerRadius && MouseDist <= BaseOuterRadius * PreviewHitOuterScale)
 			{
 				float MouseAngle = atan2(MouseDir.y, MouseDir.x) * 180.0f / pi;
 				while(MouseAngle < 0.0f)
@@ -184,39 +187,19 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 		static CButtonContainer s_ColorPreviewButton;
 		if(Ui()->DoButtonLogic(&s_ColorPreviewButton, 0, &PreviewFrame, BUTTONFLAG_LEFT) && HoveredSector >= 0)
 			OpenColorPopup(*apVisibleEntries[HoveredSector]);
+		qm_pie_menu_ui::DrawDisc(Graphics(), PreviewCenter, CenterRadius, ColorRGBA(0.15f, 0.15f, 0.2f, 0.9f * PreviewAlpha));
 		for(int i = 0; i < VisibleCount; ++i)
 		{
 			const auto &Entry = *apVisibleEntries[i];
 			const bool Highlighted = (int)i == HoveredSector || (int)i == PopupSectorIndex;
-			const float OuterRadius = BaseOuterRadius * (Highlighted ? PreviewHighlightScale : 1.0f);
+			const float OuterRadius = BaseOuterRadius;
 			const float StartAngle = PreviewStartAngle + AnglePerSector * i + PreviewSectorGap * 0.5f;
 			const float EndAngle = StartAngle + AnglePerSector - PreviewSectorGap;
-			ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha));
-			if(Highlighted)
-			{
-				Color.r = minimum(Color.r * 1.3f, 1.0f);
-				Color.g = minimum(Color.g * 1.3f, 1.0f);
-				Color.b = minimum(Color.b * 1.3f, 1.0f);
-				Color.a = minimum(Color.a * 1.2f, 1.0f);
-			}
-			Graphics()->TextureClear();
-			Graphics()->QuadsBegin();
-			Graphics()->SetColor(Color.r, Color.g, Color.b, Color.a * PreviewAlpha);
-			for(int Segment = 0; Segment < 24; ++Segment)
-			{
-				const float Rad1 = (StartAngle + (EndAngle - StartAngle) * (Segment / 24.0f)) * pi / 180.0f;
-				const float Rad2 = (StartAngle + (EndAngle - StartAngle) * ((Segment + 1) / 24.0f)) * pi / 180.0f;
-				const vec2 Inner1 = PreviewCenter + vec2(cos(Rad1), sin(Rad1)) * InnerRadius;
-				const vec2 Outer1 = PreviewCenter + vec2(cos(Rad1), sin(Rad1)) * OuterRadius;
-				const vec2 Inner2 = PreviewCenter + vec2(cos(Rad2), sin(Rad2)) * InnerRadius;
-				const vec2 Outer2 = PreviewCenter + vec2(cos(Rad2), sin(Rad2)) * OuterRadius;
-				const IGraphics::CFreeformItem Freeform(Inner1.x, Inner1.y, Outer1.x, Outer1.y, Inner2.x, Inner2.y, Outer2.x, Outer2.y);
-				Graphics()->QuadsDrawFreeform(&Freeform, 1);
-			}
-			Graphics()->QuadsEnd();
+			const ColorRGBA Color = qm_pie_menu_ui::OptionColor(color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), Highlighted).WithMultipliedAlpha(PreviewAlpha);
+			qm_pie_menu_ui::DrawSector(Graphics(), PreviewCenter, InnerRadius, OuterRadius, StartAngle, EndAngle, PreviewSectorGap, Color);
 			const float MidAngle = (StartAngle + EndAngle) * 0.5f * pi / 180.0f;
 			const vec2 ItemPos = PreviewCenter + vec2(cos(MidAngle), sin(MidAngle)) * ((InnerRadius + OuterRadius) * 0.5f);
-			const float IconSize = BaseOuterRadius * (Highlighted ? 0.22f : 0.19f);
+			const float IconSize = BaseOuterRadius * 0.19f;
 			TextRender()->TextColor(1.0f, 1.0f, 1.0f, PreviewAlpha);
 			const EFontPreset PreviousFont = TextRender()->GetFontPreset();
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
@@ -224,11 +207,6 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			TextRender()->Text(ItemPos.x - IconWidth * 0.5f, ItemPos.y - IconSize * 0.5f, IconSize, Entry.m_pIcon);
 			TextRender()->SetFontPreset(PreviousFont);
 		}
-		Graphics()->TextureClear();
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(0.15f, 0.15f, 0.2f, 0.9f * PreviewAlpha);
-		Graphics()->DrawCircle(PreviewCenter.x, PreviewCenter.y, CenterRadius, 48);
-		Graphics()->QuadsEnd();
 		const int FocusedSector = HoveredSector >= 0 ? HoveredSector : PopupSectorIndex;
 		const char *pCenterTitle = FocusedSector >= 0 ? apVisibleEntries[FocusedSector]->m_pName : Localize("Set color");
 		pHintText = FocusedSector >= 0 ? apVisibleEntries[FocusedSector]->m_pName : Localize("Option color");

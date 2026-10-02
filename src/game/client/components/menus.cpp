@@ -778,6 +778,7 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 	{
 		m_SettingsCardRenderOnlyOrderModel.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries());
 		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
+		qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardRenderOnlyOrderModel);
 		m_SettingsCardRenderOnlyOrderSource = g_Config.m_QmGlobalCardOrder;
 		m_SettingsCardRenderOnlyOrderInitialized = true;
 	}
@@ -836,7 +837,9 @@ void CMenus::LoadSettingsCardOrderModel()
 	};
 	// 归属修复不依赖布局版本，也不能被较早的可选布局迁移阻断。
 	// 写回失败时仍保留可显示的内存布局，下次加载会再次尝试修复。
-	if(qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel) && !PersistCurrentLayout())
+	const bool CreditsLayoutChanged = qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel);
+	const bool TeeLayoutChanged = qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardOrderModel);
+	if((CreditsLayoutChanged || TeeLayoutChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;
@@ -1054,13 +1057,11 @@ void CMenus::LoadSettingsCardOrderModel()
 	}
 	if(g_Config.m_QmCardLayoutVersion < 9)
 	{
-		// 修正已存为 v8 的 Tee 卡片列位，只调整这三张卡。
+		// 只迁移仍使用旧默认排列的 Tee 页，保留手动排序。
 		qm_card_order::CModel Candidate;
 		MakeCandidate(Candidate);
-		Candidate.MoveToTab("deck:tee-identity", "tee", 1, 0);
-		Candidate.MoveToTab("deck:tee-skin-options", "tee", 2, 0);
-		Candidate.MoveToTab("deck:tee-skin-list", "tee", 0, 0);
-		if(!PersistCandidate(Candidate, true))
+		const bool Changed = qm_card_registry::RepairLegacyTeeLayout(Candidate);
+		if(!PersistCandidate(Candidate, Changed))
 		{
 			m_SettingsCardOrderLoaded = true;
 			return;
@@ -1863,6 +1864,9 @@ int CMenus::DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const 
 		pRect->HSplitTop(RowSpacing, nullptr, pRect);
 
 	SLabelProperties LabelProps;
+	LabelProps.m_DisallowNewline = true;
+	LabelProps.m_StopAtEnd = true;
+	LabelProps.m_MinimumFontSize = 6.0f;
 	// 被禅模式/Gores 临时接管的配置项：灰化、拒绝点击并提示接管来源。
 	const char *pOverrideTooltip = TemporaryOverrideTooltip(pValue);
 	if(pOverrideTooltip != nullptr)
@@ -2018,6 +2022,9 @@ bool CMenus::PrepareSettingsNumericFieldLabel(int Page, int Tab, int Subtab, con
 	const CUIRect Label = ui_widget::SliderInputFieldLabelRect(Rect, pLabel != nullptr && pLabel[0] != '\0', Flags);
 	SLabelProperties Props;
 	Props.m_MaxWidth = Label.w;
+	Props.m_DisallowNewline = true;
+	Props.m_StopAtEnd = true;
+	Props.m_MinimumFontSize = 6.0f;
 	if(m_MenuTextPlanCollecting)
 	{
 		const float FontSize = Options.m_FontSize;
@@ -2177,6 +2184,9 @@ bool CMenus::DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &Vi
 	const char *pOverrideTooltip = pOverrideSource != nullptr ? TemporaryOverrideTooltip(pOverrideSource) : nullptr;
 	const bool Locked = pOverrideTooltip != nullptr;
 	SLabelProperties LabelProps;
+	LabelProps.m_DisallowNewline = true;
+	LabelProps.m_StopAtEnd = true;
+	LabelProps.m_MinimumFontSize = 6.0f;
 	ColorRGBA ButtonColor(1.0f, 1.0f, 1.0f, 0.5f);
 	if(Locked)
 	{
@@ -2252,7 +2262,12 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettings
 	}
 	if(pCheckBoxValue == nullptr)
 	{
-		Ui()->DoLabel(&Label, pText, Metrics.m_BodySize, TEXTALIGN_ML);
+		SLabelProperties Props;
+		Props.m_MaxWidth = Label.w;
+		Props.m_DisallowNewline = true;
+		Props.m_StopAtEnd = true;
+		Props.m_MinimumFontSize = 6.0f;
+		Ui()->DoLabel(&Label, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
 	}
 
 	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha);
@@ -6153,6 +6168,7 @@ void CMenus::SetActive(bool Active)
 	m_MenuActive = Active;
 	if(!m_MenuActive)
 	{
+		CommitSettingsTeeSkinEdits();
 		if(g_Config.m_UiSettingsPage == SETTINGS_TEE)
 			FinalizeTeeListDrainPerfSession();
 		ClearQmClientSettingsSearchInputs();
@@ -8222,8 +8238,8 @@ void CMenus::OnStateChange(int NewState, int OldState)
 {
 	if(NewState == IClient::STATE_DEMOPLAYBACK)
 	{
-		m_DemoExportDisplayExpanded = false;
 		m_DemoDisplayExpanded = false;
+		m_DemoExportDisplayExpanded = false;
 	}
 
 	// reset active item

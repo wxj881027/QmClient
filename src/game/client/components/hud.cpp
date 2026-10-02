@@ -3819,7 +3819,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 		BaseWidth = std::max(BaseWidth, BaseIslandHeight);
 
 	const int64_t Now = time_get();
-	const bool TrackDetailsExpanded = HasMediaState && QmHudMediaIslandShouldShowTrackDetails(Now, m_MediaIslandAnimState.m_TrackDetailsUntilTick);
+	const bool TrackDetailsExpanded = HasMediaState && QmHudMediaIslandShouldShowTrackDetails(Now, m_MediaIslandAnimState.m_TrackDetailsUntilTick, g_Config.m_QmHudIslandAlwaysShowTrackDetails != 0);
 	const float MaxTitleWidth = std::clamp(m_Width * 0.18f * QmHudMediaIslandDesignScale, QmHudMediaIslandScaled(42.0f), QmHudMediaIslandScaled(88.0f));
 	float RightSlotWidth = 0.0f;
 	if(ShowInfoStack)
@@ -3889,6 +3889,7 @@ void CHud::RenderMediaIsland()
 	const CSystemMediaControls::SState &MediaState = m_MediaIslandFrameCache.m_MediaState;
 	const bool HasMediaState = m_MediaIslandFrameCache.m_HasMediaState;
 	const bool LyricsActive = m_MediaIslandFrameCache.m_LyricsActive;
+	const bool AlwaysShowTrackDetails = g_Config.m_QmHudIslandAlwaysShowTrackDetails != 0;
 	if(!HasMediaState)
 	{
 		AnimState.m_WaveformWasPlaying = false;
@@ -4141,7 +4142,7 @@ void CHud::RenderMediaIsland()
 		AnimState.m_TrackDetailsUntilTick = 0;
 	}
 
-	if(LyricsActive)
+	if(LyricsActive || (HasMediaState && AlwaysShowTrackDetails))
 	{
 		if(AnimState.m_VisualState != SHudMediaIslandAnimState::EVisualState::EXPANDED)
 		{
@@ -4162,7 +4163,7 @@ void CHud::RenderMediaIsland()
 		}
 	}
 	AnimState.m_LyricsActive = LyricsActive;
-	const bool TrackDetailsExpanded = HasMediaState && QmHudMediaIslandShouldShowTrackDetails(Now, AnimState.m_TrackDetailsUntilTick);
+	const bool TrackDetailsExpanded = HasMediaState && QmHudMediaIslandShouldShowTrackDetails(Now, AnimState.m_TrackDetailsUntilTick, AlwaysShowTrackDetails);
 	const char *pDisplayTitle = "";
 	if(HasMediaState)
 	{
@@ -6699,7 +6700,11 @@ void CHud::RenderSpectatorHud()
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::SpectatorHud, {m_Width - 180.0f, BoundsTop, 180.0f, BoundsBottom - BoundsTop});
 
 	// draw the box
-	Ui()->RenderGaussianBlur({m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f}, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	const CUIRect BackgroundRect = {m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f};
+	ColorRGBA BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiColor));
+	BackgroundColor.a = std::clamp(g_Config.m_QmUiOpacity / 100.0f, 0.0f, 1.0f);
+	Ui()->RenderGaussianBlur(BackgroundRect, 1.0f, HudEditorScope.m_Corners, ui_token::radius::BASE);
+	Graphics()->DrawRect(BackgroundRect.x, BackgroundRect.y, BackgroundRect.w, BackgroundRect.h, BackgroundColor, HudEditorScope.m_Corners, ui_token::radius::BASE);
 
 	// draw the text
 	char aBuf[128];

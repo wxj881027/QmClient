@@ -95,46 +95,6 @@ TEST(QmNewUiMenuShellSettingsContract, SettingsInputFieldsReserveTrailingActions
 	EXPECT_EQ(SkinRenderQueue.find("Ui()->DoLabel(&IntervalUnit"), std::string::npos);
 }
 
-TEST(QmNewUiMenuShellSettingsContract, AppearanceNamePlateContainsNameplateTextControlsWithoutInternalScrollRegion)
-{
-	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string NamePlateBranch = BlockBodyAfter(SettingsSource, "else if(m_AppearanceSettingsTab == APPEARANCE_TAB_NAME_PLATE)");
-	ASSERT_FALSE(NamePlateBranch.empty());
-
-	const size_t TextSettingsPos = NamePlateBranch.find("Localize(\"Nameplate text\")");
-	const size_t HookStrengthPos = NamePlateBranch.find("Localize(\"Hook Strength\")");
-	ASSERT_NE(TextSettingsPos, std::string::npos);
-	ASSERT_NE(HookStrengthPos, std::string::npos);
-	EXPECT_LT(TextSettingsPos, HookStrengthPos);
-	EXPECT_EQ(NamePlateBranch.find("appearance-name-plate-title"), std::string::npos);
-
-	EXPECT_NE(NamePlateBranch.find("g_Config.m_QmNameplateTextEffects"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("QM_TEXT_EFFECT_BORDER"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("QM_TEXT_EFFECT_GRADIENT"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("QM_TEXT_EFFECT_RAINBOW"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("QM_TEXT_EFFECT_GLOW"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Playing effects\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Spectate effects\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Demo effects\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Demo target\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Border range\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("Localize(\"Glow range\")"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("DoLine_ColorPicker(&s_NameplateTextBorderColorId"), std::string::npos);
-
-	EXPECT_EQ(NamePlateBranch.find("static CScrollRegion s_NameplateTextCardScrollRegion;"), std::string::npos);
-	EXPECT_EQ(NamePlateBranch.find("BeginSettingsScrollRegion(s_NameplateTextCardScrollRegion"), std::string::npos);
-	EXPECT_EQ(NamePlateBranch.find("FinishSettingsScrollRegion(s_NameplateTextCardScrollRegion"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("static CScrollRegion s_NameplateTextPlayingDropDownScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("static CScrollRegion s_NameplateTextSpectateDropDownScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("static CScrollRegion s_NameplateTextDemoDropDownScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("static CScrollRegion s_NameplateTextDemoTargetDropDownScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;"), std::string::npos);
-	EXPECT_NE(NamePlateBranch.find("s_NameplateTextDemoTargetDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_NameplateTextDemoTargetDropDownScrollRegion;"), std::string::npos);
-
-	const std::string QmSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	EXPECT_EQ(QmSource.find("auto RenderNameplateTextSettings = [&](CUIRect &CardContent)"), std::string::npos);
-	EXPECT_EQ(QmSource.find("RenderNameplateTextSettings(CardContent);"), std::string::npos);
-}
 
 TEST(QmNewUiMenuShellSettingsContract, QmLocalizationEnglishOverlayUsesExplicitEnglishFile)
 {

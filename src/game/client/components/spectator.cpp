@@ -568,6 +568,38 @@ void CSpectator::OnRender()
 		m_SelectedSpectatorId = NO_SELECTION;
 	}
 
+	// 成员描述与服务器快照分离；同一旁观布局读取不同来源。
+	struct SDisplayPlayer
+	{
+		int m_Id;
+		int m_DDTeam;
+		bool m_Friend;
+	};
+	SDisplayPlayer aDisplayPlayers[CGhost::MAX_ACTIVE_GHOSTS];
+	bool aIsFriend[CGhost::MAX_ACTIVE_GHOSTS];
+	int aDisplayOrder[CGhost::MAX_ACTIVE_GHOSTS];
+	int DisplayCount = 0;
+	if(ViewModeActive)
+	{
+		DisplayCount = minimum(GameClient()->m_RankGhost.ViewMemberCount(), (int)CGhost::MAX_ACTIVE_GHOSTS);
+		for(int i = 0; i < DisplayCount; ++i)
+		{
+			aDisplayPlayers[i] = {i, TEAM_FLOCK, false};
+			aIsFriend[i] = false;
+		}
+	}
+	else
+		for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
+		{
+			if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
+				continue;
+			const int Id = pInfo->m_ClientId;
+			aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend};
+			aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
+			++DisplayCount;
+		}
+	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder, g_Config.m_QmSpectatorFriendsFirst != 0);
+
 	// draw background
 	float Width = 400 * 3.0f * Graphics()->ScreenAspect();
 	float Height = 400 * 3.0f;
@@ -579,32 +611,20 @@ void CSpectator::OnRender()
 	float TeeSizeMod = 1.0f;
 	float RoundRadius = 30.0f;
 	bool MultiViewSelected = false;
-	int TotalPlayers = 0;
 	int PerLine = 8;
 	float BoxMove = -10.0f;
 	float BoxOffset = 0.0f;
 
-	if(ViewModeActive)
-		TotalPlayers = GameClient()->m_RankGhost.ViewMemberCount();
-	else
-		for(const auto &pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
-		{
-			if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
-				continue;
-
-			++TotalPlayers;
-		}
-
-	if(TotalPlayers > 128)
+	if(DisplayCount > 128)
 	{
-		PerLine = (TotalPlayers + 3) / 4;
+		PerLine = (DisplayCount + 3) / 4;
 		LineHeight = 500.0f / PerLine;
 		FontSize = maximum(6.0f, LineHeight - 1.0f);
 		TeeSizeMod = LineHeight / 60.0f;
 		RoundRadius = 3.0f;
 		BoxMove = 0.0f;
 	}
-	else if(TotalPlayers > 96)
+	else if(DisplayCount > 96)
 	{
 		FontSize = 15.0f;
 		LineHeight = 15.0f;
@@ -614,7 +634,7 @@ void CSpectator::OnRender()
 		BoxMove = 3.0f;
 		BoxOffset = 6.0f;
 	}
-	else if(TotalPlayers > 64)
+	else if(DisplayCount > 64)
 	{
 		FontSize = 16.0f;
 		LineHeight = 19.0f;
@@ -624,7 +644,7 @@ void CSpectator::OnRender()
 		BoxMove = 3.0f;
 		BoxOffset = 6.0f;
 	}
-	else if(TotalPlayers > 32)
+	else if(DisplayCount > 32)
 	{
 		FontSize = 18.0f;
 		LineHeight = 30.0f;
@@ -634,7 +654,7 @@ void CSpectator::OnRender()
 		BoxMove = 3.0f;
 		BoxOffset = 6.0f;
 	}
-	if(TotalPlayers > 16)
+	if(DisplayCount > 16)
 	{
 		ObjWidth = 600.0f;
 	}
@@ -643,7 +663,10 @@ void CSpectator::OnRender()
 	const float CenterX = Width / 2.0f;
 	const float CenterY = Height / 2.0f + PanelOffsetY;
 	const vec2 ScreenCenter = vec2(CenterX, CenterY);
-	const auto SelectorLayout = qm_spectator_layout::Build(ScreenCenter, ObjWidth, !ViewModeActive);
+	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f, 15.0f);
+	const float TitleFontSize = TitleHeight * 0.8f;
+	const float PlayersBottom = StartY + BoxMove + qm_spectator_friends::MaxColumnHeight(DisplayCount, FriendCount, PerLine, LineHeight, TitleHeight);
+	const auto SelectorLayout = qm_spectator_layout::Build(ScreenCenter, ObjWidth, !ViewModeActive, PlayersBottom);
 	const CUIRect &SpectatorRect = SelectorLayout.m_Panel;
 	const CUIRect &SpectatorMouseRect = SelectorLayout.m_Mouse;
 
@@ -746,39 +769,6 @@ void CSpectator::OnRender()
 
 	float x = -(ObjWidth - 35.0f), y = StartY;
 
-	// 成员描述与服务器快照分离；同一旁观布局读取不同来源。
-	struct SDisplayPlayer
-	{
-		int m_Id;
-		int m_DDTeam;
-		bool m_Friend;
-	};
-	SDisplayPlayer aDisplayPlayers[CGhost::MAX_ACTIVE_GHOSTS];
-	bool aIsFriend[CGhost::MAX_ACTIVE_GHOSTS];
-	int aDisplayOrder[CGhost::MAX_ACTIVE_GHOSTS];
-	int DisplayCount = 0;
-	if(ViewModeActive)
-	{
-		DisplayCount = minimum(GameClient()->m_RankGhost.ViewMemberCount(), (int)CGhost::MAX_ACTIVE_GHOSTS);
-		for(int i = 0; i < DisplayCount; ++i)
-		{
-			aDisplayPlayers[i] = {i, TEAM_FLOCK, false};
-			aIsFriend[i] = false;
-		}
-	}
-	else
-		for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByDDTeamName)
-		{
-			if(!pInfo || pInfo->m_Team == TEAM_SPECTATORS)
-				continue;
-			const int Id = pInfo->m_ClientId;
-			aDisplayPlayers[DisplayCount] = {Id, GameClient()->m_Teams.Team(Id), GameClient()->m_aClients[Id].m_Friend};
-			aIsFriend[DisplayCount] = aDisplayPlayers[DisplayCount].m_Friend;
-			++DisplayCount;
-		}
-	const int FriendCount = qm_spectator_friends::BuildFriendFirstOrder(aIsFriend, DisplayCount, aDisplayOrder, g_Config.m_QmSpectatorFriendsFirst != 0);
-	const float TitleHeight = std::clamp(LineHeight * 0.5f, 12.0f, 15.0f);
-	const float TitleFontSize = TitleHeight * 0.8f;
 	const auto DrawGroupTitle = [&](const char *pTitle, const ColorRGBA &TitleColor) {
 		const float TitleLeft = CenterX + x - 10.0f + BoxOffset;
 		const float TitleTop = CenterY + y + BoxMove;
@@ -1070,7 +1060,6 @@ void CSpectator::RenderTeleSearch(vec2 Center, const CUIRect &RowRect, const CUI
 	Row.VSplitLeft(8.0f, nullptr, &Row);
 	Row.VSplitLeft(40.0f, &Plus, &Row);
 	Row.VSplitLeft(12.0f, nullptr, &Find);
-	const vec2 Mouse = Center + m_SelectorMouse;
 
 	const auto Button = [&](const CUIRect &Rect, const char *pText) {
 		const bool Hovered = m_Active && Rect.Inside(Mouse);

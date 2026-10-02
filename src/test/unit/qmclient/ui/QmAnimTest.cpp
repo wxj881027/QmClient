@@ -504,7 +504,7 @@ TEST(SettingsPageLayout, SavedProfilesHeightTracksRowsAndCapsTheViewport)
 TEST(SettingsPageLayout, TeeQueueListViewportUsesCompleteRowsAndPrioritizesQueueSpace)
 {
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(1000.0f);
-	const float FixedChromeHeight = Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight + Metrics.m_ButtonHeight;
+	const float FixedChromeHeight = Metrics.m_LineSpacing * 4.0f + Metrics.m_LineHeight;
 	const float PresetRowSpacing = Metrics.m_LineSpacing * 0.5f;
 	EXPECT_FLOAT_EQ(ResolveSettingsTeeQueuePresetHeight(Metrics, 3), FixedChromeHeight + ResolveSettingsListViewportHeight(3, Metrics.m_ListRowHeight, PresetRowSpacing));
 	EXPECT_FLOAT_EQ(ResolveSettingsTeeQueuePresetHeight(Metrics, 6), FixedChromeHeight + ResolveSettingsListViewportHeight(6, Metrics.m_ListRowHeight, PresetRowSpacing));
@@ -525,15 +525,8 @@ TEST(SettingsPageLayout, TeeQueueListViewportUsesCompleteRowsAndPrioritizesQueue
 	EXPECT_EQ(EightQueueItems.m_VisiblePresetRows, 3);
 	const float StackedIntervalHeight = Metrics.m_LineHeight + Metrics.m_LineSpacing + Metrics.m_InputHeight;
 	EXPECT_GE(EightQueueItems.m_ContentHeight, Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight + StackedIntervalHeight + EightQueueItems.m_QueueListSurfaceHeight + EightQueueItems.m_QueuePresetHeight);
-	EXPECT_NE(ResolveSettingsTeeQueueLayoutRevision(false, false, false, 7, 3), ResolveSettingsTeeQueueLayoutRevision(false, false, false, 8, 3));
-	EXPECT_EQ(ResolveSettingsTeeQueueLayoutRevision(false, false, false, 9, 3), ResolveSettingsTeeQueueLayoutRevision(false, false, false, 10, 4));
 }
 
-TEST(SettingsPageLayout, TeeIdentityPreviewReservesSemanticHeight)
-{
-	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(1000.0f);
-	EXPECT_FLOAT_EQ(ResolveSettingsTeeIdentityHeight(Metrics), Metrics.m_InputHeight + Metrics.m_LineSpacing + Metrics.m_LineHeight * 2.0f + Metrics.m_ButtonHeight * 4.0f);
-}
 
 TEST(SettingsPageLayout, TeeCustomColorsUseTwoStackedFullWidthGroups)
 {

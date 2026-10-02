@@ -73,6 +73,8 @@ SQmHammerHitMatch QmMatchHammerHitEvent(
 	const SQmHammerTargetSample *pTargetSamples,
 	int NumTargetSamples);
 
+bool QmIsDuplicateHammerHitEffect(const SQmHammerHitRecord &Previous, const SQmHammerHitRecord &Current, int64_t ElapsedNs);
+
 class CQmHammerHitTracker
 {
 public:

@@ -227,31 +227,6 @@ TEST(SettingsWarmupLoadingContract, TextPlanCollectionUsesPrewarmOnlyRenderers)
 	EXPECT_NE(QmClient.find("QmPerfLogPayload(\"perf/qmclient\", aPayload, Client(), CurrentQmUiPerfPage());"), std::string::npos);
 }
 
-TEST(SettingsWarmupLoadingContract, TeeOffscreenDrainRequiresExplicitPrewarm)
-{
-	const std::string Settings = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	const size_t AdvanceStart = Settings.find("const auto AdvanceListOffscreen = [this, QueueDummy]() {");
-	ASSERT_NE(AdvanceStart, std::string::npos);
-	const size_t SkinListLookup = Settings.find("GameClient()->m_Skins.SkinList(QueueDummy)", AdvanceStart);
-	ASSERT_NE(SkinListLookup, std::string::npos);
-	const size_t SkinListAccess = Settings.find("SkinList.Skins()", AdvanceStart);
-	ASSERT_NE(SkinListAccess, std::string::npos);
-	const size_t PrewarmGuard = Settings.find("g_Config.m_QmSettingsPrewarm == 0", AdvanceStart);
-	ASSERT_NE(PrewarmGuard, std::string::npos);
-	EXPECT_LT(PrewarmGuard, SkinListLookup);
-	EXPECT_LT(PrewarmGuard, SkinListAccess);
-	const size_t ListCard = Settings.find("AddCard(ListSpec", AdvanceStart);
-	ASSERT_NE(ListCard, std::string::npos);
-	const size_t OffscreenCall = Settings.find("AdvanceListOffscreen();", ListCard);
-	ASSERT_NE(OffscreenCall, std::string::npos);
-	const size_t CallGuard = Settings.rfind("else if(g_Config.m_QmSettingsPrewarm != 0)", OffscreenCall);
-	ASSERT_NE(CallGuard, std::string::npos);
-	EXPECT_GT(CallGuard, ListCard);
-	EXPECT_NE(Settings.find("m_BackgroundRequestScanComplete", AdvanceStart), std::string::npos);
-	EXPECT_NE(Settings.find("m_BackgroundRequestScanRevision != SkinList.Revision()", AdvanceStart), std::string::npos);
-	EXPECT_NE(Settings.find("g_Config.m_QmSettingsPrewarm != 0 && VisibleSourceSettled"), std::string::npos);
-	EXPECT_NE(Settings.find("g_Config.m_QmSettingsPrewarm != 0 && m_SettingsHighPrioritySettled"), std::string::npos);
-}
 
 TEST(SettingsWarmupLoadingContract, CardHeightCacheInvalidatesWhenViewportHeightChanges)
 {

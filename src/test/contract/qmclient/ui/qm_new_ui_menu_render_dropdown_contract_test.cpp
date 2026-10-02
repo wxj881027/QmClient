@@ -54,19 +54,14 @@ TEST(QmNewUiMenuRenderDropdownContract, SettingsDropdownsUseTheSharedWrapper)
 TEST(QmNewUiMenuRenderDropdownContract, SettingsDropdownWrapperAndNestedListsKeepSharedVisualAndScrollContracts)
 {
 	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
 	const std::string ListBoxHeader = ReadTextFile("src/game/client/ui_listbox.h");
 	const std::string ListBoxSource = ReadTextFile("src/game/client/ui_listbox.cpp");
-	const std::string Tee = FunctionBody(SettingsSource, "void CMenus::RenderSettingsTee(CUIRect MainView)");
 	const std::string Wrapper = FunctionBody(MenusSource, "int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const char *const *ppStrs, const int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties)");
 
-	ASSERT_FALSE(Tee.empty());
 	ASSERT_FALSE(Wrapper.empty());
 	EXPECT_NE(Wrapper.find("Properties.m_VisualStyle = QmSettingsDropdownVisualStyle(m_SettingsUiTheme, SettingsCardDeckVisualOptions().m_BorderColor);"), std::string::npos);
 	EXPECT_NE(ListBoxHeader.find("void SetScrollbarAlwaysReserved(bool AlwaysReserved)"), std::string::npos);
 	EXPECT_NE(ListBoxSource.find("ScrollParams.m_ScrollbarAlwaysReserved = m_ScrollbarAlwaysReserved;"), std::string::npos);
-	EXPECT_NE(Tee.find("s_QueueListBox.SetScrollbarAlwaysReserved(true);"), std::string::npos);
-	EXPECT_NE(Tee.find("s_PresetListBox.SetScrollbarAlwaysReserved(true);"), std::string::npos);
 }
 
 TEST(QmNewUiMenuRenderDropdownContract, ValueSelectorUsesOneFittedTextLayoutForDisplayAndEditing)

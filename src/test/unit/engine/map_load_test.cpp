@@ -84,6 +84,110 @@ TEST(MapLoad, LoadsMinimalValidMap)
 	EXPECT_TRUE(LoadMap(pStorage.get(), "valid.map"));
 }
 
+TEST(MapLoad, EditorReaderLoadsWithoutKernelRegistration)
+{
+	CTestInfo Info;
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	WriteMap(pStorage.get(), "editor.map", 3, 2, TILESLAYERFLAG_GAME, 1, false);
+	std::unique_ptr<IEngineMap> pMap(CreateEngineMap(pStorage.get()));
+
+	ASSERT_TRUE(pMap->Load("editor.map", IStorage::TYPE_SAVE));
+	EXPECT_TRUE(pMap->IsLoaded());
+	int Start, Count;
+	pMap->GetType(MAPITEMTYPE_LAYER, &Start, &Count);
+	ASSERT_EQ(Count, 1);
+	const auto *pLayer = static_cast<const CMapItemLayerTilemap *>(pMap->GetItem(Start));
+	ASSERT_NE(pLayer, nullptr);
+	EXPECT_EQ(pLayer->m_Width, 3);
+	EXPECT_EQ(pLayer->m_Height, 2);
+}
+
+TEST(MapLoad, EditorReaderLeavesRegisteredGameMapUntouched)
+{
+	CTestInfo Info;
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	WriteMap(pStorage.get(), "game.map", 2, 2, TILESLAYERFLAG_GAME, 1, false);
+	WriteMap(pStorage.get(), "editor.map", 4, 3, TILESLAYERFLAG_GAME, 1, false);
+	std::unique_ptr<IKernel> pKernel(IKernel::Create());
+	pKernel->RegisterInterface(pStorage.get(), false);
+	IEngineMap *pGameMap = CreateEngineMap();
+	pKernel->RegisterInterface(pGameMap);
+	ASSERT_TRUE(pGameMap->Load("game.map", IStorage::TYPE_SAVE));
+	const unsigned GameCrc = pGameMap->Crc();
+
+	{
+		std::unique_ptr<IEngineMap> pEditorMap(CreateEngineMap(pStorage.get()));
+		ASSERT_TRUE(pEditorMap->Load("editor.map", IStorage::TYPE_SAVE));
+		EXPECT_NE(pEditorMap->Crc(), GameCrc);
+		EXPECT_EQ(pKernel->RequestInterface<IEngineMap>(), pGameMap);
+	}
+	EXPECT_TRUE(pGameMap->IsLoaded());
+	EXPECT_EQ(pGameMap->Crc(), GameCrc);
+}
+
+TEST(MapLoad, IndependentEditorReadersRetainTheirOwnMap)
+{
+	CTestInfo Info;
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	WriteMap(pStorage.get(), "first.map", 2, 2, TILESLAYERFLAG_GAME, 1, false);
+	WriteMap(pStorage.get(), "second.map", 5, 4, TILESLAYERFLAG_GAME, 1, false);
+	std::unique_ptr<IEngineMap> pFirst(CreateEngineMap(pStorage.get()));
+	std::unique_ptr<IEngineMap> pSecond(CreateEngineMap(pStorage.get()));
+	ASSERT_TRUE(pFirst->Load("first.map", IStorage::TYPE_SAVE));
+	const unsigned FirstCrc = pFirst->Crc();
+	ASSERT_TRUE(pSecond->Load("second.map", IStorage::TYPE_SAVE));
+
+	EXPECT_TRUE(pFirst->IsLoaded());
+	EXPECT_EQ(pFirst->Crc(), FirstCrc);
+	EXPECT_NE(pSecond->Crc(), FirstCrc);
+}
+
+TEST(MapLoad, EditorReaderCanRetryAfterMissingFile)
+{
+	CTestInfo Info;
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	WriteMap(pStorage.get(), "valid.map", 2, 2, TILESLAYERFLAG_GAME, 1, false);
+	std::unique_ptr<IEngineMap> pMap(CreateEngineMap(pStorage.get()));
+
+	EXPECT_FALSE(pMap->Load("missing.map", IStorage::TYPE_SAVE));
+	EXPECT_FALSE(pMap->IsLoaded());
+	EXPECT_TRUE(pMap->Load("valid.map", IStorage::TYPE_SAVE));
+	EXPECT_TRUE(pMap->IsLoaded());
+}
+
+TEST(MapLoad, FailedEditorReloadPreservesLastValidMap)
+{
+	CTestInfo Info;
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	WriteMap(pStorage.get(), "valid.map", 2, 2, TILESLAYERFLAG_GAME, 1, false);
+	WriteMap(pStorage.get(), "invalid.map", 1, 2, TILESLAYERFLAG_GAME, 1, false);
+	std::unique_ptr<IEngineMap> pMap(CreateEngineMap(pStorage.get()));
+	ASSERT_TRUE(pMap->Load("valid.map", IStorage::TYPE_SAVE));
+	const unsigned PreviousCrc = pMap->Crc();
+
+	EXPECT_FALSE(pMap->Load("invalid.map", IStorage::TYPE_SAVE));
+	EXPECT_TRUE(pMap->IsLoaded());
+	EXPECT_EQ(pMap->Crc(), PreviousCrc);
+}
+
+TEST(MapLoad, EditorReaderSupportsAbsoluteAndUnicodePaths)
+{
+	CTestInfo Info;
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr);
+	WriteMap(pStorage.get(), "编辑器测试.map", 2, 2, TILESLAYERFLAG_GAME, 1, false);
+	char aPath[IO_MAX_PATH_LENGTH];
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, "编辑器测试.map", aPath, sizeof(aPath));
+	std::unique_ptr<IEngineMap> pMap(CreateEngineMap(pStorage.get()));
+
+	EXPECT_TRUE(pMap->Load(aPath, IStorage::TYPE_ABSOLUTE));
+}
+
 TEST(MapLoad, RejectsTileLayerWidthBelowTwo)
 {
 	CTestInfo Info;

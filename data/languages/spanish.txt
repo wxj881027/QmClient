@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == Mostrar siempre la línea de gancho del propio jugador
 
+Always show song title and artist
+== Mostrar siempre el título de la canción y el artista
+
 Always translate
 == Traducir siempre
 
@@ -2003,6 +2006,9 @@ Clear local console
 Clear note
 == Borrar nota
 
+Clear recent skins
+== Borrar aspectos recientes
+
 Clear remote console
 == Limpiar consola remota
 
@@ -2146,6 +2152,9 @@ Comma-separated list of banned clients to be kicked on join
 
 Command
 == Comando
+
+Command completion
+== Autocompletado de comandos
 
 Command executed by tc_mod_weapon, target id appended at end
 == Comando ejecutado por tc_mod_weapon, id de objetivo añadido al final
@@ -2309,8 +2318,8 @@ Configure QmClient HUD elements
 Configure remaining DDNet client preferences
 == Configure remaining DDNet client preferences
 
-Configure skin colors, eyes, and filters
-== Configure skin colors, eyes, and filters
+Configure skin downloads and prefixes
+== Configurar descargas y prefijos de aspectos
 
 Configure sound and audio packs
 == Configurar el sonido y los paquetes de audio
@@ -2497,6 +2506,9 @@ Copy info
 
 Copy name
 == Copiar nombre
+
+Copy name option color
+== Color de la opción de copiar nombre
 
 Copy skin
 == Copiar skin
@@ -2971,6 +2983,9 @@ Default output open failed
 
 Default preset
 == Preajuste predeterminado
+
+Default width
+== Ancho predeterminado
 
 Default zoom
 == Zoom predeterminado
@@ -4768,6 +4783,9 @@ Full map listen in same room
 
 Full quality nameplate count
 == Cantidad de nombres con calidad completa
+
+Full width
+== Ancho completo
 
 Full: each enabled animation category uses its complete transition
 == Completo: cada categoría de animación activada usa su transición completa
@@ -6992,6 +7010,9 @@ Multi-View
 Multiple exact Axiom players found
 == Se encontraron varios jugadores de Axiom con coincidencia exacta
 
+Music player volume
+== Volumen del reproductor de música
+
 Mute
 == Silenciar
 
@@ -7298,6 +7319,9 @@ Next
 Next page in console
 == Página siguiente en la consola
 
+Next track
+== Pista siguiente
+
 Next weapon
 == Siguiente arma
 
@@ -7453,6 +7477,9 @@ No rank 1 replay was found for this map
 
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 == Aún no hay demos de rank 1 guardadas. Búscalas y descárgalas desde la página de rank 1.
+
+No recently used skins
+== No hay aspectos usados recientemente
 
 No results
 == Sin resultados
@@ -8570,6 +8597,9 @@ Previous
 Previous page in console
 == Página anterior en la consola
 
+Previous track
+== Pista anterior
+
 Primary
 == Principal
 
@@ -9578,6 +9608,9 @@ Restart the client
 Restarting. Please wait…
 == Reiniciando. Por favor espera…
 
+Restore a recently used Tee skin
+== Restaurar un aspecto de Tee usado recientemente
+
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == ¿Restaurar una partida de dos jugadores? /qm Yes carga la más reciente; /qm Yes número elige otra; /qm No descarta.
 
@@ -9757,9 +9790,6 @@ Save all changes before switching selected button?
 
 Save all changes before turning off the editor?
 == ¿Guardar todos los cambios antes de apagar el editor?
-
-Save as
-== Guardar como
 
 Save asset before closing?
 == ¿Guardar el activo antes de cerrar?
@@ -10373,6 +10403,12 @@ Show %s group
 Show a small view of the dummy
 == Mostrar una vista pequeña del Dummy
 
+Show advanced nameplate settings without changing effect values
+== Mostrar ajustes avanzados de nombres sin cambiar los valores de los efectos
+
+Show advanced options
+== Mostrar opciones avanzadas
+
 Show advanced title settings (collapsing keeps configured effects)
 == Mostrar ajustes avanzados del título (al plegarlos se conservan los efectos)
 
@@ -10490,6 +10526,9 @@ Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 == Mostrar combo al enganchar o golpear a un jugador dos veces seguidas en 2 segundos
 
+Show command completion in chat
+== Mostrar autocompletado de comandos en el chat
+
 Show compact vote HUD
 == Mostrar HUD de votación compacto
 
@@ -10498,6 +10537,9 @@ Show configurable outlines around map tiles
 
 Show coordinates above players
 == Mostrar coordenadas sobre los jugadores
+
+Show copy name option
+== Mostrar opción de copiar nombre
 
 Show copy skin option
 == Mostrar opción de copiar apariencia
@@ -13694,6 +13736,9 @@ Voice whitelist (comma-separated)
 Volume
 == Volumen
 
+Volume unavailable for this player
+== Volumen no disponible para este reproductor
+
 Vote a map by name
 == Votar un mapa por nombre
 
@@ -14640,18 +14685,6 @@ S
 [Friend auto follow]
 Follow this friend across servers
 == Seguir a este amigo entre servidores
-
-[Friend auto follow]
-Following %s
-== Siguiendo a %s
-
-[Friend auto follow]
-Following %s: switching in %.0fs
-== Siguiendo a %s: cambiando en %.0fs
-
-[Friend auto follow]
-Stop
-== Detener
 
 [Friend auto follow]
 Stop following this friend

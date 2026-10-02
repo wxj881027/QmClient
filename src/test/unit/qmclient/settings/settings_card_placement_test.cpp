@@ -188,7 +188,7 @@ TEST(SettingsCardDeck, ProductionPagePlacementsPreserveWideColumnsAndNarrowReadi
 	qm_card_order::CModel Model;
 	Model.LoadMerged("", qm_card_registry::BuildDefaultEntries());
 
-	const auto VerifyPage = [&Model](const char *pTab, const std::vector<const char *> &vStableIds, const std::array<std::vector<const char *>, 3> &aExpectedColumns, const std::vector<const char *> &vExpectedVisualOrder) {
+	const auto VerifyPage = [&Model](const char *pTab, const std::vector<const char *> &vStableIds, const std::array<std::vector<const char *>, 3> &aExpectedColumns, const std::vector<const char *> &vExpectedVisualOrder, int LeadingFullWidthCards = 0) {
 		std::vector<int> vActiveStateIndices;
 		vActiveStateIndices.reserve(vStableIds.size());
 		for(const char *pStableId : vStableIds)
@@ -209,7 +209,7 @@ TEST(SettingsCardDeck, ProductionPagePlacementsPreserveWideColumnsAndNarrowReadi
 		std::vector<const char *> vVisualOrder;
 		ForEachSettingsCardDeckVisualOrder(aColumns, [&](const int StateIndex, int) {
 			vVisualOrder.push_back(Model.Entry(StateIndex).m_pStableId);
-		});
+		}, LeadingFullWidthCards);
 		ASSERT_EQ(vVisualOrder.size(), vExpectedVisualOrder.size());
 		for(size_t Index = 0; Index < vVisualOrder.size(); ++Index)
 			EXPECT_STREQ(vVisualOrder[Index], vExpectedVisualOrder[Index]);
@@ -217,8 +217,8 @@ TEST(SettingsCardDeck, ProductionPagePlacementsPreserveWideColumnsAndNarrowReadi
 
 	VerifyPage("tee",
 		{"deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-list"},
-		{{{"deck:tee-skin-list"}, {"deck:tee-identity"}, {"deck:tee-skin-options"}}},
-		{"deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-list"});
+		{{{"deck:tee-identity", "deck:tee-skin-list"}, {"deck:tee-skin-options"}, {}}},
+		{"deck:tee-identity", "deck:tee-skin-list", "deck:tee-skin-options"}, 2);
 	VerifyPage("appearance-chat",
 		{"deck:appearance-chat-settings", "deck:appearance-chat-messages", "deck:appearance-chat-preview"},
 		{{{}, {"deck:appearance-chat-settings", "deck:appearance-chat-preview"}, {"deck:appearance-chat-messages"}}},

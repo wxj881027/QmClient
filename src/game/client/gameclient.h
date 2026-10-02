@@ -413,12 +413,8 @@ private:
 	};
 	std::vector<SPendingHammerHitEvent> m_vPendingHammerHitEvents;
 
-	// QmClient: 最近一次锤击特效播放记录。挂 dummy 时同一服务端事件会经主/
-	// 分身两条连接各送达一次，第二次确认会绕过预测事件的 confirmed 屏障
-	// （tick 差可到 2-3，契约只允许 1）；在特效播放处按时间+位置+tick 识别
-	// 跨连接的重复送达，防止粒子偶发双播。
-	vec2 m_LastHammerEffectPos = vec2(0.0f, 0.0f);
-	int m_LastHammerEffectTick = -1;
+	// 主/分身连接的重复送达只有在攻击者和目标均已确定且一致时才合并。
+	SQmHammerHitRecord m_LastHammerEffect;
 	int64_t m_LastHammerEffectTime = 0;
 
 	void ProcessEvents();

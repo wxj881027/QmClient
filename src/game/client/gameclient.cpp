@@ -3514,10 +3514,7 @@ void CGameClient::FinalizeHammerHitEvents()
 		// UnplayedMatch：确认命中"预测已创建但尚未播放"的事件 → 快照路径代播，
 		// 防止特效（含声音）因确认先于预测播放而整体丢失。
 		const int64_t Now = time_get_nanoseconds().count();
-		constexpr int64_t DuplicateDeliveryWindowNs = 100 * 1000 * 1000; // 100ms
-		const bool DuplicateDelivery = (Now - m_LastHammerEffectTime) < DuplicateDeliveryWindowNs &&
-					       Event.m_SnapshotTick >= m_LastHammerEffectTick && Event.m_SnapshotTick - m_LastHammerEffectTick <= 3 &&
-					       distance_squared(m_LastHammerEffectPos, Event.m_Pos) < 32.0f * 32.0f;
+		const bool DuplicateDelivery = QmIsDuplicateHammerHitEffect(m_LastHammerEffect, Hit, Now - m_LastHammerEffectTime);
 		if(Event.m_RenderEffect && (!PredictedHandled || UnplayedMatch))
 		{
 			if(DuplicateDelivery)
@@ -3527,8 +3524,7 @@ void CGameClient::FinalizeHammerHitEvents()
 			}
 			else
 			{
-				m_LastHammerEffectPos = Event.m_Pos;
-				m_LastHammerEffectTick = Event.m_SnapshotTick;
+				m_LastHammerEffect = Hit;
 				m_LastHammerEffectTime = Now;
 				if(g_Config.m_DbgPredictEvents)
 					dbg_msg("pred_event", "hammerhit-effect source=snapshot snaptick=%d pos=%.1f,%.1f attacker=%d target=%d", Event.m_SnapshotTick, Event.m_Pos.x, Event.m_Pos.y, Match.m_AttackerId, Match.m_TargetId);

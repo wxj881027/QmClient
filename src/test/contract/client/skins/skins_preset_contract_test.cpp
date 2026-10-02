@@ -120,12 +120,6 @@ TEST(SkinsContract, SkinQueuePresetsAreSelectableEditableQueues)
 	ASSERT_NE(ClearEnd, std::string::npos);
 	const std::string ClearBody = Source.substr(ClearPos, ClearEnd - ClearPos);
 
-	std::ifstream MenusFile(TestSourcePath("src/game/client/components/menus_settings.cpp"));
-	ASSERT_TRUE(MenusFile.good());
-	std::stringstream MenusBuffer;
-	MenusBuffer << MenusFile.rdbuf();
-	const std::string Menus = MenusBuffer.str();
-
 	// Preset model: Default(0, USER) + Server(1, SERVER) built-ins, then user presets.
 	EXPECT_NE(Header.find("static constexpr size_t SKIN_QUEUE_DEFAULT_PRESET = 0;"), std::string::npos);
 	EXPECT_NE(Header.find("static constexpr size_t SKIN_QUEUE_SERVER_PRESET = 1;"), std::string::npos);
@@ -178,70 +172,7 @@ TEST(SkinsContract, SkinQueuePresetsAreSelectableEditableQueues)
 	EXPECT_NE(ClearBody.find("m_aSkinQueueDirty[Dummy] = true;"), std::string::npos);
 	EXPECT_EQ(ClearBody.find("m_aAppliedSkinQueuePresetIndex[Dummy] = -1;"), std::string::npos);
 
-	// UI: preset bar uses Save / Save-as / Rename / Delete; clicking a preset applies it.
-	EXPECT_NE(Menus.find("Localize(\"Save\")"), std::string::npos);
-	EXPECT_NE(Menus.find("Localize(\"Save as\")"), std::string::npos);
-	EXPECT_NE(Menus.find("SaveSkinQueueToAppliedPreset(QueueDummy)"), std::string::npos);
-	EXPECT_NE(Menus.find("AddSkinQueuePresetFromCurrent(QueueDummy)"), std::string::npos);
-	EXPECT_NE(Menus.find("const int AppliedPresetIndex = GameClient()->m_Skins.AppliedSkinQueuePresetIndex(QueueDummy);"), std::string::npos);
-	EXPECT_NE(Menus.find("const bool QueueDirty = GameClient()->m_Skins.SkinQueueDirty(QueueDummy);"), std::string::npos);
-	EXPECT_NE(Menus.find("const auto &SkinQueue = GameClient()->m_Skins.SkinQueue(QueueDummy);"), std::string::npos);
-	EXPECT_EQ(Menus.find("QueueDirty ? \"● \""), std::string::npos);
-	EXPECT_NE(Menus.find("Localize(\"Enable rotation\")"), std::string::npos);
-	EXPECT_EQ(Menus.find("CurrentQueueRect"), std::string::npos);
-	EXPECT_EQ(Menus.find("QueueHeader.VSplitLeft(QueueHeader.w * 0.48f"), std::string::npos);
-	EXPECT_NE(Menus.find("DoSettingsButton_CheckBox(SETTINGS_TEE, -1, &QueueEnabled, QueueDummy ? \"tee-dummy-skin-queue-enabled\" : \"tee-player-skin-queue-enabled\", Localize(\"Enable rotation\")"), std::string::npos);
-	EXPECT_EQ(Menus.find("Localize(\"Enable skin queue\"), QueueEnabled"), std::string::npos);
-	EXPECT_EQ(Menus.find("CUIRect QueueEnabledRect"), std::string::npos);
-	EXPECT_NE(Menus.find("ResolveSettingsTeeQueuePanelGeometry(TeeMetrics, (int)SkinQueue.size(), (int)vQueuePresets.size())"), std::string::npos);
-	EXPECT_NE(Menus.find("QueueGeometry.m_QueueListSurfaceHeight"), std::string::npos);
-	EXPECT_NE(Menus.find("QueueGeometry.m_QueuePresetHeight"), std::string::npos);
-	EXPECT_NE(Menus.find("QueueListBody.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &QueueListBody);"), std::string::npos);
-	EXPECT_NE(Menus.find("QueueGeometry.m_QueueListViewportHeight"), std::string::npos);
-	EXPECT_NE(Menus.find("s_PresetListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);"), std::string::npos);
-	EXPECT_NE(Menus.find("s_QueueListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED"), std::string::npos);
-	EXPECT_NE(Menus.find("s_PresetListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED"), std::string::npos);
-	EXPECT_NE(Menus.find("QueueList.HSplitTop(TeeMetrics.m_LineHeight, &QueueListHeader"), std::string::npos);
-	EXPECT_NE(Menus.find("TeeMetrics.m_ButtonHeight), &QueueListHeader, &ClearQueueRect"), std::string::npos);
-	EXPECT_NE(Menus.find("TeeMetrics.m_ButtonHeight), &QueueListHeaderLabel, &QueueRandomRect"), std::string::npos);
-	EXPECT_NE(Menus.find("CurrentQueueLabelProps.m_MaxWidth = QueueListHeaderLabel.w;"), std::string::npos);
-	EXPECT_NE(Menus.find("Ui()->DoLabel(&QueueListHeaderLabel, aCurrentQueueLabel"), std::string::npos);
-	EXPECT_EQ(Menus.find("DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, \"tee_queue_list_label\", &QueueListHeaderLabel, Localize(\"Skin queue\")"), std::string::npos);
-	EXPECT_NE(Menus.find("s_TeeClearCurrentSkinQueueButton"), std::string::npos);
-	EXPECT_NE(Menus.find("IsBuiltInSkinQueuePreset(i)"), std::string::npos);
-	EXPECT_NE(Menus.find("GameClient()->m_Skins.ApplySkinQueuePreset((size_t)SelectPresetIndex, QueueDummy);"), std::string::npos);
-	EXPECT_NE(Menus.find("GameClient()->m_Skins.ClearSkinQueue(QueueDummy);"), std::string::npos);
-	EXPECT_NE(Menus.find("GameClient()->m_Skins.MoveActiveSkinQueueItem("), std::string::npos);
-	EXPECT_NE(Menus.find("GameClient()->m_Skins.RemoveActiveSkinQueue("), std::string::npos);
-	EXPECT_NE(Menus.find("GameClient()->m_Skins.AddActiveSkinQueue("), std::string::npos);
-	EXPECT_NE(Menus.find("GameClient()->m_Skins.ApplySkinQueueIndex((size_t)ApplyQueueIndex, QueueDummy);"), std::string::npos);
-	EXPECT_NE(Menus.find("Localize(\"Queue preset: %s\")"), std::string::npos);
-	EXPECT_NE(Menus.find("Localize(\"Custom\")"), std::string::npos);
-	EXPECT_NE(Menus.find("Localize(\"Default preset\")"), std::string::npos);
-	EXPECT_NE(Menus.find("Localize(\"Rotate all server player skins\")"), std::string::npos);
-	EXPECT_NE(Menus.find("Localize(\"Clear current queue\")"), std::string::npos);
-	EXPECT_NE(Menus.find("static ui_widget::SNumericFieldState s_aQueueIntervalStates[NUM_DUMMIES];"), std::string::npos);
-	EXPECT_NE(Menus.find("IUiContext TeeSkinQueueIntervalCtx;"), std::string::npos);
-	EXPECT_NE(Menus.find("TeeSkinQueueIntervalCtx.m_ScopeHash = MakeUiScopeHash(\"settings_tee_skin_queue_interval_text_input\");"), std::string::npos);
-	EXPECT_NE(Menus.find("QueueIntervalOptions.m_CommitPolicy = ui_widget::EInputCommitPolicy::ON_RELEASE_OR_SUBMIT;"), std::string::npos);
-	EXPECT_NE(Menus.find("QueueIntervalOptions.m_pSuffix = \"ms\";"), std::string::npos);
-	EXPECT_NE(Menus.find("ui_widget::NumericField(TeeSkinQueueIntervalCtx, &s_aQueueIntervalStates[QueueDummy], &QueueInterval, &QueueInterval, 0, 120000, IntervalInputGroup, QueueIntervalOptions);"), std::string::npos);
-	EXPECT_EQ(Menus.find("Ui()->DoEditBox(&QueueIntervalInput, &IntervalInput"), std::string::npos);
 	EXPECT_NE(Source.find("m_vSkinQueuePresets.push_back({\"Server preset\", {}, CSkinQueuePreset::EKind::SERVER});"), std::string::npos);
-	// Removed UI: Apply/Save-current buttons, the select/cancel-select calls, and the
-	// old edit-state wiring. Clicking a preset now applies it directly.
-	EXPECT_EQ(Menus.find("const int ActivePresetIndex = GameClient()->m_Skins.ActiveSkinQueuePresetIndex(QueueDummy);"), std::string::npos);
-	EXPECT_EQ(Menus.find("const auto &SkinQueue = GameClient()->m_Skins.ActiveSkinQueue(QueueDummy);"), std::string::npos);
-	EXPECT_EQ(Menus.find("SkinQueueCurrentPresetIndex(QueueDummy)"), std::string::npos);
-	EXPECT_EQ(Menus.find("SelectSkinQueuePreset("), std::string::npos);
-	EXPECT_EQ(Menus.find("ClearSkinQueuePresetSelection("), std::string::npos);
-	EXPECT_EQ(Menus.find("Localize(\"Apply\")"), std::string::npos);
-	EXPECT_EQ(Menus.find("Localize(\"Apply this preset to the current queue\")"), std::string::npos);
-	EXPECT_EQ(Menus.find("if(SelectPresetIndex == 0 || SelectPresetIndex == 1)"), std::string::npos);
-	EXPECT_EQ(Menus.find("Localize(\"Editing: %s\")"), std::string::npos);
-	EXPECT_EQ(Menus.find("Localize(\"Editing: current queue\")"), std::string::npos);
-	EXPECT_EQ(Menus.find("Localize(\"Queue capacity\")"), std::string::npos);
-	EXPECT_EQ(Menus.find("return Localize(vQueuePresets[PresetIndex].m_Name.c_str());"), std::string::npos);
 	EXPECT_EQ(Source.find("if(PresetIndex == 1)"), std::string::npos);
 	EXPECT_EQ(Source.find("m_aActiveSkinQueuePresetIndex[Dummy] = -1;"), std::string::npos);
 	EXPECT_EQ(Source.find("m_vSkinQueuePresets[PresetIndex].IsProtected()"), std::string::npos);

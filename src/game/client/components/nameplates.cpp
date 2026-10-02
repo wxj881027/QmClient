@@ -2120,14 +2120,14 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 	Data.m_Color.a = Alpha;
 
-	// 回放中按键显示改读回放专用选项；其余情况沿用本地原逻辑（录视频时读 cl_video_show_direction）。
-	int ShowDirectionConfig = g_Config.m_ClShowDirection;
+	// 按键与强弱钩统一读取回放选项，预览和视频导出保持一致。
 #if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current())
-		ShowDirectionConfig = g_Config.m_ClVideoShowDirection;
+	const bool VideoRendering = IVideo::Current() != nullptr;
+#else
+	const bool VideoRendering = false;
 #endif
-	if(Client()->State() == IClient::STATE_DEMOPLAYBACK)
-		ShowDirectionConfig = qm_demo_display::Resolve(g_Config, true, false).m_Direction;
+	const auto DisplaySettings = qm_demo_display::Resolve(g_Config, Client()->State() == IClient::STATE_DEMOPLAYBACK, VideoRendering);
+	const int ShowDirectionConfig = DisplaySettings.m_Direction;
 	Data.m_DirLeft = Data.m_DirJump = Data.m_DirRight = false;
 	switch(ShowDirectionConfig)
 	{
@@ -2173,7 +2173,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 
 	Data.m_ShowHookStrongWeak = false;
-	Data.m_ReserveHookStrongWeakRow = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong > 0;
+	Data.m_ReserveHookStrongWeakRow = DisplaySettings.StrongWeakEnabled();
 	Data.m_HookStrongWeakState = EHookStrongWeakState::NEUTRAL;
 	Data.m_ShowHookStrongWeakId = false;
 	Data.m_HookStrongWeakId = 0;
@@ -2191,15 +2191,15 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 			{
 				int SelectedStrongWeakId = Selected.m_HasExtendedData ? Selected.m_ExtendedData.m_StrongWeakId : 0;
 				Data.m_HookStrongWeakId = Other.m_ExtendedData.m_StrongWeakId;
-				Data.m_ShowHookStrongWeakId = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong == 2;
+				Data.m_ShowHookStrongWeakId = DisplaySettings.ShowStrongWeakId();
 				if(SelectedId == ClientId)
-					Data.m_ShowHookStrongWeak = Data.m_ShowHookStrongWeakId || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, true, false, false));
+					Data.m_ShowHookStrongWeak = DisplaySettings.ShowStrongWeak(true, false, false);
 				else
 				{
 					Data.m_HookStrongWeakState = SelectedStrongWeakId > Other.m_ExtendedData.m_StrongWeakId ? EHookStrongWeakState::STRONG : EHookStrongWeakState::WEAK;
 					const bool Strong = Data.m_HookStrongWeakState == EHookStrongWeakState::STRONG;
 					const bool Weak = Data.m_HookStrongWeakState == EHookStrongWeakState::WEAK;
-					Data.m_ShowHookStrongWeak = g_Config.m_Debug || (g_Config.m_ClNamePlatesStrong > 0 && ShouldShowQmHookStrongWeakScope(g_Config.m_QmNameplateHookStrongWeakScope, false, Strong, Weak));
+					Data.m_ShowHookStrongWeak = DisplaySettings.ShowStrongWeak(false, Strong, Weak);
 				}
 			}
 		}
@@ -2967,8 +2967,7 @@ void CNamePlates::OnRender()
 	const bool RenderClan = g_Config.m_ClNamePlatesClan || (g_Config.m_TcWarList && g_Config.m_TcWarListShowClan);
 	const bool RenderClientIds = g_Config.m_Debug || g_Config.m_ClNamePlatesIds;
 	// 回放的强弱钩改成独立档位；调试模式下回放不强行显示（避免导出画面被调试标记污染）。
-	const bool RenderStrongWeak = (g_Config.m_Debug && !DemoPlayback) ||
-				      (DemoPlayback ? DisplaySettings.m_StrongWeak > 0 : g_Config.m_ClNamePlatesStrong > 0);
+	const bool RenderStrongWeak = DisplaySettings.StrongWeakEnabled();
 	const bool RenderTClientExtras = g_Config.m_TcNameplatePingCircle || g_Config.m_TcNameplateCountry || g_Config.m_TcNameplateSkins || (g_Config.m_TcWarList && g_Config.m_TcWarListReason);
 	const bool RenderDirection = ShowDirection != 0;
 	const bool RenderNameplates = RenderNames || RenderClan || RenderClientIds || RenderStrongWeak || RenderTClientExtras || RenderDirection || ShowCoords || ShowCoordXAlignHint;

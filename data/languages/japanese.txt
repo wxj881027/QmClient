@@ -719,6 +719,9 @@ Always show other players' hook collision lines
 Always show own player's hook collision line
 == 常に自分のフック補助線を表示
 
+Always show song title and artist
+== 曲名とアーティストを常に表示
+
 Always translate
 == 常に翻訳
 
@@ -2003,6 +2006,9 @@ Clear local console
 Clear note
 == メモをクリア
 
+Clear recent skins
+== 最近使ったスキンを消去
+
 Clear remote console
 == リモートコンソールをクリア
 
@@ -2146,6 +2152,9 @@ Comma-separated list of banned clients to be kicked on join
 
 Command
 == コマンド
+
+Command completion
+== コマンド補完
 
 Command executed by tc_mod_weapon, target id appended at end
 == tc_mod_weapon によって実行されるコマンド、末尾にターゲット ID が追加される
@@ -2309,8 +2318,8 @@ Configure QmClient HUD elements
 Configure remaining DDNet client preferences
 == Configure remaining DDNet client preferences
 
-Configure skin colors, eyes, and filters
-== Configure skin colors, eyes, and filters
+Configure skin downloads and prefixes
+== スキンのダウンロードと接頭辞を設定
 
 Configure sound and audio packs
 == サウンドとオーディオパックを設定
@@ -2497,6 +2506,9 @@ Copy info
 
 Copy name
 == 名前をコピー
+
+Copy name option color
+== 名前コピー項目の色
 
 Copy skin
 == スキンをコピー
@@ -2971,6 +2983,9 @@ Default output open failed
 
 Default preset
 == デフォルトプリセット
+
+Default width
+== 標準の幅
 
 Default zoom
 == デフォルトのズーム
@@ -4768,6 +4783,9 @@ Full map listen in same room
 
 Full quality nameplate count
 == フル品質を保つネームプレート数
+
+Full width
+== 全幅
 
 Full: each enabled animation category uses its complete transition
 == 完全：有効な各アニメーションカテゴリで完全な遷移を使用します
@@ -6992,6 +7010,9 @@ Multi-View
 Multiple exact Axiom players found
 == 完全一致する Axiom プレイヤーが複数見つかりました
 
+Music player volume
+== 音楽プレーヤーの音量
+
 Mute
 == ミュート
 
@@ -7298,6 +7319,9 @@ Next
 Next page in console
 == コンソールの次のページ
 
+Next track
+== 次の曲
+
 Next weapon
 == 次の武器
 
@@ -7453,6 +7477,9 @@ No rank 1 replay was found for this map
 
 No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 == キャッシュされた Rank 1 リプレイはまだありません。Rank 1 ページで検索してダウンロードできます。
+
+No recently used skins
+== 最近使ったスキンはありません
 
 No results
 == 結果なし
@@ -8570,6 +8597,9 @@ Previous
 Previous page in console
 == コンソールの前のページ
 
+Previous track
+== 前の曲
+
 Primary
 == プライマリ
 
@@ -9578,6 +9608,9 @@ Restart the client
 Restarting. Please wait…
 == 再起動しています。お待ちください…
 
+Restore a recently used Tee skin
+== 最近使った Tee スキンを復元
+
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 2人用セーブを復元しますか？ /qm Yes で最新、/qm Yes 番号 で別のセーブを選択、/qm No で閉じます。
 
@@ -9757,9 +9790,6 @@ Save all changes before switching selected button?
 
 Save all changes before turning off the editor?
 == エディターを閉じる前にすべての変更を保存しますか？
-
-Save as
-== 名前を付けて保存
 
 Save asset before closing?
 == 閉じる前にアセットを保存しますか？
@@ -10373,6 +10403,12 @@ Show %s group
 Show a small view of the dummy
 == ダミーの小さなビューを表示
 
+Show advanced nameplate settings without changing effect values
+== エフェクトの値を変更せずにネームプレートの詳細設定を表示
+
+Show advanced options
+== 詳細オプションを表示
+
 Show advanced title settings (collapsing keeps configured effects)
 == タイトルの詳細設定を表示（閉じても設定した効果を維持）
 
@@ -10490,6 +10526,9 @@ Show colors in spectator selection
 Show combo hint when hooking or hammering player within 2 seconds
 == 2 秒以内に連続でフックまたはハンマーでヒットしたときにコンボ表示
 
+Show command completion in chat
+== チャットでコマンド補完を表示
+
 Show compact vote HUD
 == コンパクトな投票 HUD を表示
 
@@ -10498,6 +10537,9 @@ Show configurable outlines around map tiles
 
 Show coordinates above players
 == プレイヤーの上に座標を表示
+
+Show copy name option
+== 名前コピー項目を表示
 
 Show copy skin option
 == スキンコピー項目を表示
@@ -13694,6 +13736,9 @@ Voice whitelist (comma-separated)
 Volume
 == 音量
 
+Volume unavailable for this player
+== このプレーヤーの音量は操作できません
+
 Vote a map by name
 == マップ名で投票する
 
@@ -14640,18 +14685,6 @@ S
 [Friend auto follow]
 Follow this friend across servers
 == このフレンドをサーバー間で追跡
-
-[Friend auto follow]
-Following %s
-== %s を追跡中
-
-[Friend auto follow]
-Following %s: switching in %.0fs
-== %s を追跡中：%.0f 秒後に切り替え
-
-[Friend auto follow]
-Stop
-== 停止
 
 [Friend auto follow]
 Stop following this friend

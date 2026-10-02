@@ -68,6 +68,7 @@ namespace qm_pie_menu
 		JOIN_TEAM,
 		FOLLOW,
 		SCORE,
+		COPY_NAME,
 		NUM_OPTIONS,
 	};
 

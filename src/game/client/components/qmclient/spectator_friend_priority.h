@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SPECTATOR_FRIEND_PRIORITY_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SPECTATOR_FRIEND_PRIORITY_H
 
+#include <algorithm>
+
 namespace qm_spectator_friends
 {
 	// 好友优先的显示顺序：好友保持原有相对顺序排在最前，其余玩家保持原有相对顺序紧随其后。
@@ -33,6 +35,24 @@ namespace qm_spectator_friends
 		}
 
 		return Friends;
+	}
+
+	// 分组标题占用所在列的高度，面板和底栏按最高的一列排布。
+	inline float MaxColumnHeight(int PlayerCount, int FriendCount, int PlayersPerColumn, float RowHeight, float TitleHeight)
+	{
+		if(PlayerCount <= 0 || PlayersPerColumn <= 0)
+			return 0.0f;
+
+		float Height = 0.0f;
+		for(int First = 0; First < PlayerCount; First += PlayersPerColumn)
+		{
+			const int Count = std::min(PlayersPerColumn, PlayerCount - First);
+			int Titles = FriendCount > 0 && First == 0 ? 1 : 0;
+			if(FriendCount > 0 && FriendCount < PlayerCount && FriendCount >= First && FriendCount < First + Count)
+				++Titles;
+			Height = std::max(Height, Count * RowHeight + Titles * TitleHeight);
+		}
+		return Height;
 	}
 }
 

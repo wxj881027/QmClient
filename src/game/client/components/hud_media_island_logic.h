@@ -120,10 +120,10 @@ inline SHudMediaIslandExpansionState QmHudMediaIslandUpdateExpansion(
 	return State;
 }
 
-// 歌词会让底部行保持可见，但歌名/歌手仍按独立的截止时间收起。
-inline bool QmHudMediaIslandShouldShowTrackDetails(int64_t Now, int64_t DetailsUntilTick)
+// 歌名/歌手独立于歌词行，未开启常显时按截止时间收起。
+inline bool QmHudMediaIslandShouldShowTrackDetails(int64_t Now, int64_t DetailsUntilTick, bool AlwaysShow)
 {
-	return DetailsUntilTick > 0 && Now < DetailsUntilTick;
+	return AlwaysShow || (DetailsUntilTick > 0 && Now < DetailsUntilTick);
 }
 
 inline bool QmHudMediaIslandShouldResetMarquee(const char *pPrevious, const char *pCurrent)
