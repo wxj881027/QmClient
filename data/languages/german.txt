@@ -11255,6 +11255,12 @@ Show tiles layers from BG map
 Show title setting hints immediately in small text
 == Hinweise zu Titeleinstellungen sofort in kleiner Schrift anzeigen
 
+Show titles above player names
+== Titel über Spielernamen anzeigen
+
+Show titles on nameplates
+== Titel auf Namensschildern anzeigen
+
 Show toast
 == Toast anzeigen
 
@@ -12731,6 +12737,9 @@ Title bob wavelength in pixels
 Title color
 == Titelfarbe
 
+Title display
+== Titelanzeige
+
 Title light sweep speed in 1/100 row per second (0 = off)
 == Tempo des Titellichtstreifens in 1/100 Zeile pro Sekunde (0 = aus)
 
@@ -12760,6 +12769,9 @@ Title style
 
 Title too long or contains unsupported characters
 == Titel zu lang oder mit ungültigen Zeichen
+
+Title visibility and appearance
+== Sichtbarkeit und Aussehen der Titel
 
 to check a server setting say /settings and setting's name, setting names are:
 == Um eine Servereinstellung zu prüfen, gib /settings und den Namen ein. Die Namen sind:

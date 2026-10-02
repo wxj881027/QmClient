@@ -3310,6 +3310,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogSkinMetrics.h
     QmUi/cards/QmCardCatalogTee.cpp
     QmUi/cards/QmCardCatalogTeeMetrics.h
+    QmUi/cards/QmCardCatalogTitle.cpp
     QmUi/cards/QmCardCatalogVisual.cpp
     QmUi/cards/QmCardCatalogWaterHammer.cpp
     QmUi/cards/QmCardRenderBridge.cpp
@@ -3567,7 +3568,6 @@ if(CLIENT)
     components/qmclient/tee_hue_cycle.h
     components/qmclient/tee_trail_styles.cpp
     components/qmclient/tee_trail_styles.h
-    components/qmclient/title_settings.cpp
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
     components/qmclient/translate/translate.cpp
@@ -4743,6 +4743,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
+    src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_graphics_contract_test.cpp

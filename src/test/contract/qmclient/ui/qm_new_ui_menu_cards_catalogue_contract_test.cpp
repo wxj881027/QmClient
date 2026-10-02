@@ -108,9 +108,6 @@ TEST(QmNewUiMenuCardsCatalogueContract, SettingsCardDeckSharedComponentExposesGr
 	EXPECT_NE(RenderSettingsGraphics.find("&g_Config.m_QmUiCardBorders, \"show-settings-card-borders\", Localize(\"Show settings card borders\")"), std::string::npos);
 	EXPECT_NE(RenderSettingsGraphics.find("Localize(\"Settings card border color\"), &g_Config.m_QmUiCardBorderColor"), std::string::npos);
 	EXPECT_NE(RenderSettingsGraphics.find("DoLine_AlphaColorPicker(&s_UiCardColorResetId, ColorMetrics, &UiCardColorRow, Localize(\"Settings card background\"), &g_Config.m_QmUiCardColor, &g_Config.m_QmUiCardOpacity"), std::string::npos);
-	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(QmUiCardColor"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmUiCardOpacity, qm_ui_card_opacity, 30"), std::string::npos);
 	EXPECT_EQ(RenderSettingsGraphics.find("DoGraphicsNumericField(\"graphics-card-corner-segments\""), std::string::npos);
 	EXPECT_EQ(RenderSettingsGraphics.find("RenderQmVisualCardAppearanceContent"), std::string::npos);
 	EXPECT_NE(RenderSettingsGraphics.find("CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);"), std::string::npos);

@@ -11255,6 +11255,12 @@ Show tiles layers from BG map
 Show title setting hints immediately in small text
 == Сразу показывать подсказки настроек титула мелким шрифтом
 
+Show titles above player names
+== Показывать титулы над именами игроков
+
+Show titles on nameplates
+== Показывать титулы на табличках имён
+
 Show toast
 == Показать toast
 
@@ -12731,6 +12737,9 @@ Title bob wavelength in pixels
 Title color
 == Цвет титула
 
+Title display
+== Отображение титулов
+
 Title light sweep speed in 1/100 row per second (0 = off)
 == Скорость блика титула в 1/100 строки в секунду (0 = выкл.)
 
@@ -12760,6 +12769,9 @@ Title style
 
 Title too long or contains unsupported characters
 == Титул слишком длинный или содержит недопустимые символы
+
+Title visibility and appearance
+== Видимость и оформление титулов
 
 to check a server setting say /settings and setting's name, setting names are:
 == Чтобы посмотреть настройку сервера, введите /settings и её название. Названия настроек:

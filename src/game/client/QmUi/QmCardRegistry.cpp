@@ -182,9 +182,10 @@ namespace qm_card_registry
 
 			// === 设置 deck · deck:<page>-<card>（原无持久化；tab=归属页/子页，column/order 按运行时卡片顺序显式化）===
 			// 贡献者页分两个子页签（credits-qmclient / credits-links）；DDNet/TClient 署名卡并入友链，全卡半宽。
-			{"deck:qmclient-contributors-community", "credits-qmclient", ECardColumn::Left, 0, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
-			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 1, Localizable("Sponsor title"), "sponsor title code authentication nickname main dummy chat glow platinum 本体 分身 头衔 发言 柔光 铂金", Localizable("Redeem your code and customize your title")},
-			{"deck:qmclient-contributors-sponsors", "credits-qmclient", ECardColumn::Right, 0, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
+			{"deck:qmclient-contributors-community", "credits-qmclient", ECardColumn::Left, 1, "QmClient Community", "community links qmclient", "Find QmClient communities and project links"},
+			{"deck:qmclient-contributors-title", "credits-qmclient", ECardColumn::Left, 0, Localizable("Sponsor title"), "sponsor title code authentication nickname redeem chat platinum 赞助头衔 兑换 绑定 昵称 发言 柔光 铂金", Localizable("Redeem your code and customize your title")},
+			{"deck:qmclient-contributors-title-display", "credits-qmclient", ECardColumn::Right, 0, Localizable("Title display"), "title display nameplate above main dummy style color wave glow 头衔显示 名牌 上方 本体 分身 风格 颜色 波浪 辉光 qm_show_nameplate_title qm_nameplate_title_above_name qm_show_main_title qm_show_dummy_title qm_sponsor_chat_effects qm_title_style qm_title_style_enabled qm_title_instant_hints qm_title_advanced qm_title_color_mode qm_title_color qm_title_opacity qm_title_phase qm_title_effect qm_title_bloom qm_title_shimmer_speed qm_title_bob_amplitude qm_title_bob_wavelength qm_title_bob_speed qm_title_bob_pixel_snap", Localizable("Title visibility and appearance")},
+			{"deck:qmclient-contributors-sponsors", "credits-qmclient", ECardColumn::Right, 1, "Sponsor support", "sponsor support qmclient", "View the people supporting QmClient development"},
 			{"deck:credits-friend-links", "credits-links", ECardColumn::Left, 0, "Friend links", "friend links ddnet workshop website qmclient homepage", "Project and community websites"},
 			{"deck:qmclient-contributors-ddnet", "credits-links", ECardColumn::Right, 0, "DDNet", "ddnet contributors credits ddrace ddnet staff ddnet releases", "DDNet contributors and staff credits"},
 			{"deck:tclient-info-developers", "credits-links", ECardColumn::Left, 1, "TClient Developers", "tclient developers links discord website github support tater sollybunny pebox teero chillerdragon", "View the developers, contributors, and project links"},
@@ -423,6 +424,36 @@ namespace qm_card_registry
 			Changed = true;
 		}
 		return Changed;
+	}
+
+	bool RepairLegacyTitleLayout(qm_card_order::CModel &Model)
+	{
+		const std::vector<qm_card_order::SEntry> vLegacy = {
+			{"deck:qmclient-contributors-community", "credits-qmclient", 1, 0},
+			{"deck:qmclient-contributors-title", "credits-qmclient", 1, 1},
+			{"deck:qmclient-contributors-title-display", "credits-qmclient", 2, 1},
+			{"deck:qmclient-contributors-sponsors", "credits-qmclient", 2, 0},
+		};
+		const std::vector<qm_card_order::SEntry> vTarget = {
+			{"deck:qmclient-contributors-community", "credits-qmclient", 1, 1},
+			{"deck:qmclient-contributors-title", "credits-qmclient", 1, 0},
+			{"deck:qmclient-contributors-title-display", "credits-qmclient", 2, 0},
+			{"deck:qmclient-contributors-sponsors", "credits-qmclient", 2, 1},
+		};
+		const std::vector<const char *> vAllowed = {
+			"deck:qmclient-contributors-community", "deck:qmclient-contributors-title",
+			"deck:qmclient-contributors-title-display", "deck:qmclient-contributors-sponsors",
+		};
+		const bool AlreadyCurrent = std::all_of(vTarget.begin(), vTarget.end(), [&](const auto &Expected) {
+			const int Index = Model.FindByStableId(Expected.m_pStableId);
+			if(Index < 0)
+				return false;
+			const auto &Entry = Model.Entry(Index);
+			return Entry.m_pDefaultTab != nullptr && str_comp(Entry.m_pDefaultTab, Expected.m_pDefaultTab) == 0 && Entry.m_Column == Expected.m_Column && Entry.m_OrderInColumn == Expected.m_OrderInColumn;
+		});
+		if(AlreadyCurrent)
+			return false;
+		return qm_card_order::MigrateExactLayout(Model, "credits-qmclient", vLegacy, vTarget, vAllowed);
 	}
 
 	bool RepairLegacyTeeLayout(qm_card_order::CModel &Model)

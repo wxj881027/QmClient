@@ -3750,6 +3750,8 @@ Show the screen center line
 Show the server rules
 Show tiles layers from BG map
 Show title setting hints immediately in small text
+Show titles above player names
+Show titles on nameplates
 Show toast
 Show tune zone colors
 Show tuning parameters affecting own player (0=Off, 1=Show changed, 2=Show all)
@@ -4242,6 +4244,7 @@ Tiny Tee Size
 Title bob angular speed in 1/100 rad/s
 Title bob wavelength in pixels
 Title color
+Title display
 Title light sweep speed in 1/100 row per second (0 = off)
 Title opacity
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
@@ -4252,6 +4255,7 @@ Title server unavailable; retry
 Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off
 Title style
 Title too long or contains unsupported characters
+Title visibility and appearance
 to check a server setting say /settings and setting's name, setting names are:
 To save all players in your team have to be alive and not in '/spec'
 Toast uses UiTokens + QmMotion slide

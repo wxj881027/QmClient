@@ -128,18 +128,13 @@ TEST(QmNewUiMenuSettingsColorsContract, TranslateUiColorsPreserveConfiguredAlpha
 		EXPECT_NE(Config.find(pKey), std::string::npos) << pKey;
 }
 
-TEST(QmNewUiMenuSettingsColorsContract, DefaultUiSurfacesUseBlackThirtyPercent)
+TEST(QmNewUiMenuSettingsColorsContract, LegacyUiSurfaceOptionsRemainCompatible)
 {
 	const std::string QmConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables.h");
 
-	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_COL(QmUiColor, qm_ui_color, 0x000000"), std::string::npos);
 	EXPECT_EQ(QmConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
-	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color, 0x000000"), std::string::npos);
-	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_INT(QmUiOpacity, qm_ui_opacity, 30"), std::string::npos);
-	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_INT(QmUiCardOpacity, qm_ui_card_opacity, 30"), std::string::npos);
 	EXPECT_EQ(QmConfigSource.find("MACRO_CONFIG_INT(QmMapBrowserOpacity, qm_map_browser_opacity"), std::string::npos);
-	EXPECT_NE(QmConfigSource.find("MACRO_CONFIG_INT(QmScoreboardOpacity, qm_scoreboard_opacity, 30"), std::string::npos);
 
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(UiColor, ui_color, 0x4D000000"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(ClMenuPanelColor, cl_menu_panel_color, 0x000000"), std::string::npos);

@@ -19,6 +19,7 @@
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
+#include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/qm_markdown.h>
@@ -280,8 +281,6 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (SponsorImageVisible ? 1u : 0u);
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (uint64_t)SponsorsRevision;
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (HasSponsorDeveloper ? 1u : 0u);
-	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (uint64_t)(g_Config.m_QmTitleAdvanced != 0);
-	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (uint64_t)(QmTitleStyleExpanded() ? 1u : 0u);
 	const uint64_t DefinitionsRevision = ResolveSettingsCardDefinitionsRevision(m_SettingsCardDeckDisplayCycle, m_MenuTextPoolGeneration, MainView.w, CardLayoutRevision);
 	const auto BuildDefinitions = [this, Metrics, ReadOnly, ActiveTab, SponsorsRevision, HasSponsorDeveloper](std::vector<SSettingsCardDefinition> &vCards) {
 		if(ActiveTab == CREDITS_SETTINGS_TAB_QMCLIENT)
@@ -563,7 +562,7 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 	const float LineHeight = Metrics.m_LineHeight;
 	const float LineSpacing = Metrics.m_LineSpacing;
 	const float TipSize = Metrics.m_SmallSize;
-	vCards.reserve(vCards.size() + 3);
+	vCards.reserve(vCards.size() + 4);
 
 	SSettingsCardDefinition Community;
 	Community.m_Spec = {"deck:qmclient-contributors-community", Localize("QmClient Community"), Localize("Official community links")};
@@ -829,5 +828,9 @@ void CMenus::AppendQmClientContributorCards(std::vector<SSettingsCardDefinition>
 	};
 	vCards.push_back(std::move(Sponsors));
 
-	AppendQmTitleCard(vCards, Metrics, ReadOnly);
+	qm_card_catalog::SQmCardBuildContext CardBuild;
+	CardBuild.m_pMenus = this;
+	CardBuild.m_Metrics = Metrics;
+	CardBuild.m_ReadOnly = ReadOnly;
+	qm_card_catalog::BuildCards(CardBuild, qm_card_catalog::TitleCardStableIds(), vCards);
 }

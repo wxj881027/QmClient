@@ -1137,6 +1137,18 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardLayoutVersion = 12;
 	}
+	if(g_Config.m_QmCardLayoutVersion < 13)
+	{
+		qm_card_order::CModel Candidate;
+		MakeCandidate(Candidate);
+		const bool Changed = qm_card_registry::RepairLegacyTitleLayout(Candidate);
+		if(!PersistCandidate(Candidate, Changed, true))
+		{
+			m_SettingsCardOrderLoaded = true;
+			return;
+		}
+		g_Config.m_QmCardLayoutVersion = 13;
+	}
 	m_SettingsCardOrderLoaded = true;
 }
 

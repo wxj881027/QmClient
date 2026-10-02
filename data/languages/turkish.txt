@@ -11255,6 +11255,12 @@ Show tiles layers from BG map
 Show title setting hints immediately in small text
 == Unvan ayarı ipuçlarını küçük yazıyla hemen göster
 
+Show titles above player names
+== Unvanları oyuncu adlarının üstünde göster
+
+Show titles on nameplates
+== İsim etiketlerinde unvanları göster
+
 Show toast
 == Toast'ı göster
 
@@ -12731,6 +12737,9 @@ Title bob wavelength in pixels
 Title color
 == Unvan rengi
 
+Title display
+== Unvan görünümü
+
 Title light sweep speed in 1/100 row per second (0 = off)
 == Unvan ışık tarama hızı (saniyede 1/100 satır, 0 = kapalı)
 
@@ -12760,6 +12769,9 @@ Title style
 
 Title too long or contains unsupported characters
 == Unvan çok uzun veya desteklenmeyen karakterler içeriyor
+
+Title visibility and appearance
+== Unvan görünürlüğü ve görünüşü
 
 to check a server setting say /settings and setting's name, setting names are:
 == Bir sunucu ayarını görmek için /settings ve ayar adını yazın. Ayar adları şunlardır:

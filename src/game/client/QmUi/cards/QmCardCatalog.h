@@ -26,6 +26,7 @@ namespace qm_card_catalog
 	const std::vector<const char *> &HudCardStableIds();
 	const std::vector<const char *> &BindCardStableIds();
 	const std::vector<const char *> &NameplateCardStableIds();
+	const std::vector<const char *> &TitleCardStableIds();
 	const std::vector<const char *> &TeeCardStableIds();
 	uint64_t NameplateMeasureContentRevision();
 
@@ -100,6 +101,7 @@ namespace qm_card_catalog
 	struct QmCardRenderHook
 	{
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildTeeCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		// 在 render-only UI scope 内运行内容回调，量出它实际消费的内容高度。
 		// Deck 的测量阶段不处于正式绘制帧，因此必须由桥接层隔离输入和配置提交。

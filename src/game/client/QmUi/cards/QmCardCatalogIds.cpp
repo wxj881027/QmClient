@@ -86,6 +86,11 @@ namespace qm_card_catalog
 			"deck:tee-glow",
 		};
 
+		const std::vector<const char *> s_vTitleCards = {
+			"deck:qmclient-contributors-title",
+			"deck:qmclient-contributors-title-display",
+		};
+
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
 		{
 			if(pStableId == nullptr)
@@ -142,7 +147,12 @@ namespace qm_card_catalog
 
 	bool HasCardModule(const char *pStableId)
 	{
-		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId);
+		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId);
+	}
+
+	const std::vector<const char *> &TitleCardStableIds()
+	{
+		return s_vTitleCards;
 	}
 
 	uint64_t MeasureContentRevision()
@@ -153,6 +163,7 @@ namespace qm_card_catalog
 		Revision = FoldRevision(Revision, (uint64_t)s_vBindCards.size());
 		Revision = FoldRevision(Revision, (uint64_t)s_vNameplateCards.size());
 		Revision = FoldRevision(Revision, (uint64_t)s_vTeeCards.size());
+		Revision = FoldRevision(Revision, (uint64_t)s_vTitleCards.size());
 		Revision = FoldRevision(Revision, NameplateMeasureContentRevision());
 		return Revision;
 	}

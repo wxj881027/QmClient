@@ -36,7 +36,7 @@ TEST(QmCreditsLayout, PartialLegacyLayoutRestoresQmCardsToVisibleColumns)
 
 	ASSERT_TRUE(qm_card_registry::RepairLegacyCreditsTabs(Model));
 	const auto After = BuildSettingsCardDeckColumnOrder(Model, "credits-qmclient", vActive);
-	EXPECT_EQ(After[1], (std::vector<int>{vActive[0], vActive[1]}));
+	EXPECT_EQ(After[1], (std::vector<int>{vActive[1], vActive[0]}));
 	EXPECT_EQ(After[2], (std::vector<int>{vActive[2]}));
 	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-links", 1), (std::vector<std::string>{"deck:credits-friend-links", "deck:tclient-info-developers"}));
 }
@@ -80,8 +80,8 @@ TEST(QmCreditsLayout, UnifiedLegacyPageSplitsIntoCurrentTabs)
 		qm_card_registry::BuildDefaultEntries()));
 
 	ASSERT_TRUE(qm_card_registry::RepairLegacyCreditsTabs(Model));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-qmclient", 1), (std::vector<std::string>{"deck:qmclient-contributors-community", "deck:qmclient-contributors-title"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-qmclient", 2), (std::vector<std::string>{"deck:qmclient-contributors-sponsors"}));
+	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-qmclient", 1), (std::vector<std::string>{"deck:qmclient-contributors-title", "deck:qmclient-contributors-community"}));
+	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-qmclient", 2), (std::vector<std::string>{"deck:qmclient-contributors-title-display", "deck:qmclient-contributors-sponsors"}));
 	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-links", 2), (std::vector<std::string>{"deck:qmclient-contributors-ddnet"}));
 	EXPECT_EQ(Model.StableIdOrder("deck:", "credits-links", 1), (std::vector<std::string>{"deck:credits-friend-links", "deck:tclient-info-developers"}));
 	const int FilesIndex = Model.FindByStableId("deck:tclient-info-files");
@@ -127,7 +127,7 @@ TEST(QmCreditsLayout, RepairedLayoutSurvivesReloadWithoutRepeatedMigration)
 	ASSERT_TRUE(Reloaded.LoadMerged(aSerialized, Defaults));
 	EXPECT_FALSE(qm_card_registry::RepairLegacyCreditsTabs(Reloaded));
 	EXPECT_FALSE(Reloaded.IsDirty());
-	EXPECT_EQ(Reloaded.StableIdOrder("deck:", "credits-qmclient", 1), (std::vector<std::string>{"deck:qmclient-contributors-community", "deck:qmclient-contributors-title"}));
+	EXPECT_EQ(Reloaded.StableIdOrder("deck:", "credits-qmclient", 1), (std::vector<std::string>{"deck:qmclient-contributors-title", "deck:qmclient-contributors-community"}));
 }
 
 TEST(QmCreditsLayout, CompletedMigrationVersionSurvivesConfigReload)
@@ -154,13 +154,13 @@ TEST(QmCreditsLayout, CompletedMigrationVersionSurvivesConfigReload)
 		if(Session == 0)
 		{
 			g_Config.m_ClSaveSettings = 1;
-			g_Config.m_QmCardLayoutVersion = 11;
+			g_Config.m_QmCardLayoutVersion = 13;
 			ASSERT_TRUE(pConfigManager->Save());
 		}
 		else
 		{
 			ASSERT_TRUE(pConsole->ExecuteFile(s_aConfigDomains[ConfigDomain::QMCLIENT].m_aConfigPath, IConsole::CLIENT_ID_UNSPECIFIED, true, IStorage::TYPE_SAVE));
-			EXPECT_EQ(g_Config.m_QmCardLayoutVersion, 11);
+			EXPECT_EQ(g_Config.m_QmCardLayoutVersion, 13);
 		}
 	}
 }

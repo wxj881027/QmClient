@@ -11255,6 +11255,12 @@ Show tiles layers from BG map
 Show title setting hints immediately in small text
 == 칭호 설정 도움말을 작은 글씨로 즉시 표시
 
+Show titles above player names
+== 플레이어 이름 위에 칭호 표시
+
+Show titles on nameplates
+== 이름표에 칭호 표시
+
 Show toast
 == 토스트 메시지 표시
 
@@ -12731,6 +12737,9 @@ Title bob wavelength in pixels
 Title color
 == 칭호 색상
 
+Title display
+== 칭호 표시
+
 Title light sweep speed in 1/100 row per second (0 = off)
 == 칭호 빛 이동 속도 (초당 1/100줄, 0 = 끔)
 
@@ -12760,6 +12769,9 @@ Title style
 
 Title too long or contains unsupported characters
 == 칭호가 너무 길거나 지원하지 않는 문자가 있습니다
+
+Title visibility and appearance
+== 칭호 표시 여부와 외형
 
 to check a server setting say /settings and setting's name, setting names are:
 == 서버 설정을 확인하려면 /settings 와 설정 이름을 입력하세요. 설정 이름은 다음과 같습니다:

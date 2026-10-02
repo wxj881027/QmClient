@@ -87,7 +87,7 @@ PAGE_STABLE_IDS = {
 		"qm:collision_hitbox",
 		"qm:streamer",
 	),
-	"contributors": ("deck:qmclient-contributors-community", "deck:qmclient-contributors-title", "deck:qmclient-contributors-sponsors", "deck:credits-friend-links", "deck:qmclient-contributors-ddnet", "deck:tclient-info-developers"),
+	"contributors": ("deck:qmclient-contributors-community", "deck:qmclient-contributors-title", "deck:qmclient-contributors-title-display", "deck:qmclient-contributors-sponsors", "deck:credits-friend-links", "deck:qmclient-contributors-ddnet", "deck:tclient-info-developers"),
 	"global_search": ("deck:global-search-input", "deck:global-search-results"),
 	"tclient": (
 		"tclient:visual-font-cursor",
