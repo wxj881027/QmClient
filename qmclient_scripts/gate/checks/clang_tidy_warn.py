@@ -75,6 +75,8 @@ def run(results: ResultCollector, included: list[str], dry_run: bool = False) ->
 				f"-p={build_dir}",
 				f"--config-file={REPO_ROOT / '.clang-tidy'}",
 				"--extra-arg=-Qunused-arguments",
+				# Clang 无法读取 MSVC 的二进制 PCH，直接解析同一组头文件。
+				*(["--extra-arg=/Y-"] if runner.is_windows_host() else []),
 				"--header-filter=^$",
 				"--quiet",
 			],

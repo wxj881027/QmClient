@@ -1,12 +1,33 @@
 # 请抬头享受阳光｜日子很好 我很我---------致咩子
 #!/usr/bin/env python3
 
+import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 
 
+def is_distance_field_atlas(filename):
+    path = Path(filename)
+    try:
+        metadata = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(metadata, dict) or metadata.get("kind") not in {"sdf", "msdf", "mtsdf"}:
+        return False
+    atlas = metadata.get("atlas")
+    if not isinstance(atlas, dict):
+        return False
+    image = atlas.get("image")
+    return isinstance(image, str) and Path(image).name == path.name
+
+
 def check_file(dilate_path, filename):
+    # 距离场通道保存距离值，普通颜色扩边会破坏图标轮廓。
+    if is_distance_field_atlas(filename):
+        print(f"Skipping distance-field atlas: '{filename}'.")
+        return 0
     executable_path = os.path.join(dilate_path, "dilate")
     try:
         with subprocess.Popen(
@@ -47,7 +68,7 @@ def main(arguments):
     if errors > 0:
         return 1
 
-    print(f"Success: All .png files in '{check_path}' are dilated.")
+    print(f"Success: All color .png files in '{check_path}' are dilated.")
     return 0
 
 

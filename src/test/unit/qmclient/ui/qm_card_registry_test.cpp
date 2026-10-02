@@ -1024,13 +1024,13 @@ TEST(QmCardRegistry, QmCardsPreserveLegacyModuleSearchKeywords)
 TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
 {
 	const qm_card_order::CModel Model = RegistryModelAfterRoundTrip();
-	const auto ExpectOwner = [&Model](const char *pQuery, const char *pOwner, const char *pOther) {
+	const auto ExpectOwner = [&Model](const char *pQuery, const char *pOwner, const char *pOther, const char *pTab) {
 		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
 		const auto It = std::find_if(Results.begin(), Results.end(), [pOwner](const auto &Result) {
 			return std::string(Result.m_pStableId) == pOwner;
 		});
 		ASSERT_NE(It, Results.end()) << pQuery;
-		EXPECT_STREQ(It->m_Target.m_pTab, "tee") << pQuery;
+		EXPECT_STREQ(It->m_Target.m_pTab, pTab) << pQuery;
 		EXPECT_STREQ(It->m_Target.m_pStableId, pOwner) << pQuery;
 		EXPECT_EQ(std::count_if(Results.begin(), Results.end(), [pOther](const auto &Result) {
 			return std::string(Result.m_pStableId) == pOther;
@@ -1039,9 +1039,9 @@ TEST(QmCardRegistry, SkinSettingsSearchFindsOwningCard)
 			<< pQuery;
 	};
 	for(const char *pQuery : {"皮肤描边", "循环色调", "表情阴影", "skin outline"})
-		ExpectOwner(pQuery, "qm:skin_appearance", "qm:skin_transition");
+		ExpectOwner(pQuery, "qm:skin_appearance", "qm:skin_transition", "tee");
 	for(const char *pQuery : {"锤中偷皮", "皮肤切换", "换皮", "skin transition animation"})
-		ExpectOwner(pQuery, "qm:skin_transition", "qm:skin_appearance");
+		ExpectOwner(pQuery, "qm:skin_transition", "qm:skin_appearance", "visual");
 }
 
 // 意图：QiaFen 三名分裂（枚举 QiaFen / UI 名 keyword_reply / 持久化 key qiafen）是迁移最大陷阱。

@@ -542,6 +542,8 @@ def run(
                 f"-p={debug_build_dir}",
                 f"--checks={tidy_checks}",
                 "--extra-arg=-Qunused-arguments",
+                # Clang 无法读取 MSVC 的二进制 PCH，直接解析同一组头文件。
+                *(["--extra-arg=/Y-"] if cm_cmd == "cmd.exe" else []),
                 "--quiet",
             ],
             fail_on_warnings=1,
