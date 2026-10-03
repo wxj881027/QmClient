@@ -44,6 +44,20 @@ namespace
 		SImeTextMetrics m_Text;
 	};
 
+	struct SImeCandidateRow
+	{
+		std::array<SImeCandidateMetrics, qm_ime_overlay::MAX_CANDIDATES> m_aMetrics;
+		std::array<qm_ime_overlay::SCandidateMeasure, qm_ime_overlay::MAX_CANDIDATES> m_aMeasures{};
+		qm_ime_overlay::SCandidateLayoutConfig m_LayoutConfig;
+		qm_ime_overlay::SQmImeCandidateViewport m_Viewport;
+		qm_ime_overlay::SCandidateRowLayout m_TargetLayout;
+		SImeTextMetrics m_PageTextMetrics;
+		char m_aPageText[16] = "";
+		float m_TrailingWidth = 0.0f;
+		float m_Height = 0.0f;
+		int m_SelectedIndex = -1;
+	};
+
 	struct SImePresentationTarget
 	{
 		CUIRect m_Rect = {};
@@ -117,7 +131,7 @@ namespace
 		{
 			Cursor.m_LineWidth = maximum(0.01f, MaxWidth - 2.0f * Metrics.m_DrawOffsetX) * Scale;
 			Cursor.m_MaxLines = 1;
-			Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END;
+			Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END | TEXTFLAG_STOP_AT_END;
 		}
 		pTextRender->TextEx(&Cursor, pText);
 	}
@@ -135,11 +149,94 @@ namespace
 			return -1;
 		return std::clamp(State.m_PageIndex, 0, State.m_PageCount - 1);
 	}
+
+	SImeCandidateRow MeasureCandidateRow(ITextRender *pTextRender, const SQmImePopupState &State, int CandidateStart, const qm_theme::SImeTheme &Ime, float MaxPanelWidth)
+	{
+		SImeCandidateRow Row;
+		const int CandidateCount = minimum((int)State.m_vCandidates.size(), qm_ime_overlay::MAX_CANDIDATES);
+		Row.m_SelectedIndex = qm_ime_overlay::NormalizeSelectedCandidateIndex(State.m_SelectedIndex, CandidateCount);
+		Row.m_Viewport = qm_ime_overlay::BuildCandidateViewport(CandidateCount, Row.m_SelectedIndex, CandidateStart);
+		const int PageCount = CandidatePageCount(State);
+		if(PageCount > 1)
+			str_format(Row.m_aPageText, sizeof(Row.m_aPageText), "%d/%d", CandidatePageIndex(State) + 1, PageCount);
+		else if(Row.m_Viewport.m_Count < CandidateCount)
+			str_copy(Row.m_aPageText, ">");
+		if(Row.m_aPageText[0] != '\0')
+		{
+			Row.m_PageTextMetrics = MeasureImeText(pTextRender, Ime.m_FontComposition, Row.m_aPageText, Ime);
+			Row.m_TrailingWidth = maximum(Ime.m_TrailingWidth, Row.m_PageTextMetrics.m_Width + Ime.m_CompositionTextPaddingX * 2.0f);
+		}
+
+		const float CandidatePaddingX = maximum(Ime.m_SelectedPaddingX, Ime.m_CandidatePaddingX);
+		float TextHeight = MeasureImeText(pTextRender, Ime.m_FontCandidate, "国g", Ime).m_VisualHeight;
+		for(int Offset = 0; Offset < Row.m_Viewport.m_Count; ++Offset)
+		{
+			const int CandidateIndex = Row.m_Viewport.m_Start + Offset;
+			SImeCandidateMetrics &Metrics = Row.m_aMetrics[Offset];
+			char aNum[4];
+			str_format(aNum, sizeof(aNum), "%d", (CandidateIndex + 1) % 10);
+			Metrics.m_Num = MeasureImeText(pTextRender, Ime.m_FontCandidate, aNum, Ime);
+			Metrics.m_Text = MeasureImeText(pTextRender, Ime.m_FontCandidate, State.m_vCandidates[CandidateIndex].c_str(), Ime);
+			TextHeight = maximum(TextHeight, maximum(Metrics.m_Num.m_VisualHeight, Metrics.m_Text.m_VisualHeight));
+			Row.m_aMeasures[Offset].m_FixedWidth = 2.0f * CandidatePaddingX + Metrics.m_Num.m_Width + Ime.m_CandidateNumPaddingX;
+			Row.m_aMeasures[Offset].m_TextWidth = Metrics.m_Text.m_Width;
+		}
+		Row.m_LayoutConfig.m_Gap = Ime.m_CandidateGap;
+		Row.m_LayoutConfig.m_TrailingWidth = Row.m_TrailingWidth;
+		Row.m_LayoutConfig.m_PaddingX = Ime.m_PaddingX;
+		Row.m_LayoutConfig.m_MinPanelWidth = Ime.m_MinWidth;
+		Row.m_LayoutConfig.m_MaxPanelWidth = MaxPanelWidth;
+		Row.m_LayoutConfig.m_MinTextWidth = MeasureImeText(pTextRender, Ime.m_FontCandidate, "国…", Ime).m_Width;
+		Row.m_TargetLayout = qm_ime_overlay::BuildCandidateRowLayout(Row.m_aMeasures, Row.m_Viewport.m_Count, Row.m_LayoutConfig);
+		Row.m_Height = maximum(Ime.m_RowHeight, TextHeight + 2.0f * Ime.m_TextSafePaddingY);
+		return Row;
+	}
+
+	void DrawCandidateRow(ITextRender *pTextRender, const SQmImePopupState &State, const SImeCandidateRow &Row,
+		const CUIRect &Panel, const qm_theme::SImeTheme &Ime, float Alpha, float Scale)
+	{
+		if(Alpha <= 0.0f)
+			return;
+		const auto Layout = qm_ime_overlay::BuildCandidateRowLayoutForPanel(Row.m_aMeasures, Row.m_Viewport.m_Count, Row.m_LayoutConfig, Panel);
+		const auto Presentation = qm_ime_overlay::BuildCandidateRowPresentation(Layout, Panel, Row.m_Height, Ime.m_PaddingX, Ime.m_PaddingY, Scale);
+		const float ContentScale = Presentation.m_Scale;
+		const float CandidatePaddingX = maximum(Ime.m_SelectedPaddingX, Ime.m_CandidatePaddingX);
+		for(int CellIndex = 0; CellIndex < Layout.m_Count; ++CellIndex)
+		{
+			const int CandidateIndex = Row.m_Viewport.m_Start + CellIndex;
+			const auto &Cell = Layout.m_aCells[CellIndex];
+			const CUIRect CellRect = Presentation.Transform({Cell.m_X, 0.0f, Cell.m_Width, Row.m_Height});
+			const bool Selected = CandidateIndex == Row.m_SelectedIndex;
+			const auto &Metrics = Row.m_aMetrics[CellIndex];
+			char aNum[4];
+			str_format(aNum, sizeof(aNum), "%d", (CandidateIndex + 1) % 10);
+			const float NumX = CellRect.x + CandidatePaddingX * ContentScale;
+			const float TextX = NumX + (Metrics.m_Num.m_Width + Ime.m_CandidateNumPaddingX) * ContentScale;
+			DrawImeText(pTextRender, NumX, CellRect.y, CellRect.h, Ime.m_FontCandidate, aNum, Metrics.m_Num, Selected ? Ime.m_TextSelected : Ime.m_TextMuted, Alpha, ContentScale);
+			DrawImeText(pTextRender, TextX, CellRect.y, CellRect.h, Ime.m_FontCandidate, State.m_vCandidates[CandidateIndex].c_str(), Metrics.m_Text, Selected ? Ime.m_TextSelected : Ime.m_Text, Alpha, ContentScale, Cell.m_TextWidth);
+		}
+
+		if(Row.m_TrailingWidth > 0.0f)
+		{
+			const CUIRect MoreLocal = {Layout.m_ContentWidth - Row.m_TrailingWidth, 0.0f, Row.m_TrailingWidth, Row.m_Height};
+			const CUIRect More = Presentation.Transform(MoreLocal);
+			CUIRect Divider = MoreLocal;
+			Divider.x += 0.4f;
+			Divider.y += 2.0f;
+			Divider.w = 0.35f;
+			Divider.h = maximum(0.0f, Divider.h - 4.0f);
+			Divider = Presentation.Transform(Divider);
+			Divider.Draw(WithAlpha(Ime.m_PanelBorder, Alpha * 1.25f), IGraphics::CORNER_ALL, 0.25f);
+			DrawImeText(pTextRender, More.x + (More.w - Row.m_PageTextMetrics.m_Width * ContentScale) * 0.5f,
+				More.y, More.h, Ime.m_FontComposition, Row.m_aPageText, Row.m_PageTextMetrics, Ime.m_TextMuted, Alpha, ContentScale);
+		}
+	}
 } // namespace
 
 void CQmImeCandidatePopup::Reset()
 {
 	m_LastState = {};
+	m_ContentTransition.Reset();
 	m_Presentation = {};
 	m_CandidateStart = 0;
 	m_WasVisible = false;
@@ -170,10 +267,6 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	const unsigned OldRenderFlags = pTextRender->GetRenderFlags();
 	pTextRender->SetRenderFlags(OldRenderFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 
-	const bool HasCandidates = !DrawState.m_vCandidates.empty();
-	const int CandidateCount = minimum((int)DrawState.m_vCandidates.size(), qm_ime_overlay::MAX_CANDIDATES);
-	const int PageCount = CandidatePageCount(DrawState);
-
 	float OldScreenX0, OldScreenY0, OldScreenX1, OldScreenY1;
 	pGraphics->GetScreen(&OldScreenX0, &OldScreenY0, &OldScreenX1, &OldScreenY1);
 
@@ -187,58 +280,10 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 
 	pGraphics->MapScreen(0.0f, 0.0f, Width, Height);
 
-	char aPageText[16] = "";
-	SImeTextMetrics PageTextMetrics;
-	float TrailingWidth = 0.0f;
-	const auto SetTrailingText = [&](const char *pText) {
-		str_copy(aPageText, pText, sizeof(aPageText));
-		PageTextMetrics = MeasureImeText(pTextRender, Ime.m_FontComposition, aPageText, Ime);
-		TrailingWidth = maximum(Ime.m_TrailingWidth, PageTextMetrics.m_Width + Ime.m_CompositionTextPaddingX * 2.0f);
-	};
-	if(PageCount > 1)
-	{
-		char aFormattedPageText[16];
-		str_format(aFormattedPageText, sizeof(aFormattedPageText), "%d/%d", CandidatePageIndex(DrawState) + 1, PageCount);
-		SetTrailingText(aFormattedPageText);
-	}
-
-	const int SelectedIndex = qm_ime_overlay::NormalizeSelectedCandidateIndex(DrawState.m_SelectedIndex, CandidateCount);
-	const qm_ime_overlay::SQmImeCandidateViewport CandidateViewport = qm_ime_overlay::BuildCandidateViewport(CandidateCount, SelectedIndex, m_CandidateStart);
-	const int CandidateStart = CandidateViewport.m_Start;
-	const int CandidateDisplayCount = CandidateViewport.m_Count;
-	m_CandidateStart = CandidateStart;
-	if(PageCount <= 1 && CandidateDisplayCount < CandidateCount)
-		SetTrailingText(">");
-
-	std::array<SImeCandidateMetrics, qm_ime_overlay::MAX_CANDIDATES> aCandidateMetrics;
-	float CandidateTextHeight = MeasureImeText(pTextRender, Ime.m_FontCandidate, "国g", Ime).m_VisualHeight;
-	for(int i = 0; i < CandidateCount; ++i)
-	{
-		char aNum[4];
-		str_format(aNum, sizeof(aNum), "%d", (i + 1) % 10);
-		aCandidateMetrics[i].m_Num = MeasureImeText(pTextRender, Ime.m_FontCandidate, aNum, Ime);
-		aCandidateMetrics[i].m_Text = MeasureImeText(pTextRender, Ime.m_FontCandidate, DrawState.m_vCandidates[i].c_str(), Ime);
-		CandidateTextHeight = maximum(CandidateTextHeight, maximum(aCandidateMetrics[i].m_Num.m_VisualHeight, aCandidateMetrics[i].m_Text.m_VisualHeight));
-	}
-
-	const float CandidatePaddingX = maximum(Ime.m_SelectedPaddingX, Ime.m_CandidatePaddingX);
-	std::array<qm_ime_overlay::SCandidateMeasure, qm_ime_overlay::MAX_CANDIDATES> aCandidateMeasures{};
-	for(int Offset = 0; Offset < CandidateDisplayCount; ++Offset)
-	{
-		const SImeCandidateMetrics &Metrics = aCandidateMetrics[CandidateStart + Offset];
-		aCandidateMeasures[Offset].m_FixedWidth = 2.0f * CandidatePaddingX + Metrics.m_Num.m_Width + Ime.m_CandidateNumPaddingX;
-		aCandidateMeasures[Offset].m_TextWidth = Metrics.m_Text.m_Width;
-	}
-	qm_ime_overlay::SCandidateLayoutConfig LayoutConfig;
-	LayoutConfig.m_Gap = Ime.m_CandidateGap;
-	LayoutConfig.m_TrailingWidth = TrailingWidth;
-	LayoutConfig.m_PaddingX = Ime.m_PaddingX;
-	LayoutConfig.m_MinPanelWidth = Ime.m_MinWidth;
-	LayoutConfig.m_MaxPanelWidth = ScreenMaxPanelWidth;
-	LayoutConfig.m_MinTextWidth = MeasureImeText(pTextRender, Ime.m_FontCandidate, "国…", Ime).m_Width;
-	const qm_ime_overlay::SCandidateRowLayout CandidateLayout = qm_ime_overlay::BuildCandidateRowLayout(aCandidateMeasures, CandidateDisplayCount, LayoutConfig);
-	const float PanelWidth = CandidateLayout.m_PanelWidth;
-	const float CandidateRowHeight = maximum(Ime.m_RowHeight, CandidateTextHeight + 2.0f * Ime.m_TextSafePaddingY);
+	const SImeCandidateRow CandidateRow = MeasureCandidateRow(pTextRender, DrawState, m_CandidateStart, Ime, ScreenMaxPanelWidth);
+	m_CandidateStart = CandidateRow.m_Viewport.m_Start;
+	const float PanelWidth = CandidateRow.m_TargetLayout.m_PanelWidth;
+	const float CandidateRowHeight = CandidateRow.m_Height;
 	const float PanelHeight = 2.0f * Ime.m_PaddingY + CandidateRowHeight;
 
 	vec2 Anchor = DrawState.m_AnchorScreen / vec2((float)ScreenWidth, (float)ScreenHeight) * vec2(Width, Height);
@@ -248,9 +293,8 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	if(Position.y + PanelHeight + Margin > Height && AboveY >= Margin)
 		Position.y = AboveY;
 
-	if(Position.x + PanelWidth + Margin > Width)
-		Position.x = Width - PanelWidth - Margin;
-	Position.x = std::clamp(Position.x, Margin, maximum(Margin, Width - PanelWidth - Margin));
+	// 跟随光标的位置与尺寸分开动画，靠近右边缘时再按当前宽度约束。
+	Position.x = std::clamp(Position.x, Margin, maximum(Margin, Width - Margin));
 	Position.y = std::clamp(Position.y, Margin, maximum(Margin, Height - PanelHeight - Margin));
 
 	const auto PixelAlign = [](float Value, float UiToPixel) {
@@ -270,6 +314,8 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	const uint64_t CapsuleNode = ImePresentationNodeKey("capsule");
 	const uint64_t CandidatesNode = ImePresentationNodeKey("candidates");
 	const uint64_t SelectedNode = ImePresentationNodeKey("selected");
+	m_ContentTransition.Update(AnimRuntime, ImePresentationNodeKey("candidate_contents"), DrawState, m_CandidateStart,
+		qm_motion::NormalizeMotionLevel(g_Config.m_QmUiMotionLevel) > 0);
 
 	SImePresentationTarget TargetPresentation;
 	TargetPresentation.m_Rect = {Position.x, Position.y, PanelWidth, PanelHeight};
@@ -285,6 +331,9 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	CapsuleSpring.m_Damping = 38.0f;
 	CapsuleSpring.m_RestEpsilon = 0.02f;
 	CapsuleSpring.m_RestVelocity = 0.14f;
+	SUiSpringConfig ResizeSpring = CapsuleSpring;
+	ResizeSpring.m_Stiffness = 180.0f;
+	ResizeSpring.m_Damping = 28.0f;
 	SUiSpringConfig ContentSpring;
 	ContentSpring.m_Stiffness = 520.0f / (IME_CONTENT_TIME_SCALE * IME_CONTENT_TIME_SCALE);
 	ContentSpring.m_Damping = 44.0f / IME_CONTENT_TIME_SCALE;
@@ -322,9 +371,9 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	SImeResolvedPresentation Presentation;
 	Presentation.m_Rect.x = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, m_Presentation.m_TargetX, CapsuleSpring, 3, 0.01f);
 	Presentation.m_Rect.y = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_Y, m_Presentation.m_TargetY, CapsuleSpring, 3, 0.01f);
-	Presentation.m_Rect.w = std::max(0.0f, ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::WIDTH, m_Presentation.m_TargetWidth, CapsuleSpring, 3, 0.01f));
-	Presentation.m_Rect.h = std::max(0.0f, ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::HEIGHT, m_Presentation.m_TargetHeight, CapsuleSpring, 3, 0.01f));
-	Presentation.m_Radius = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::SCALE, m_Presentation.m_TargetRadius, CapsuleSpring, 3, 0.01f);
+	Presentation.m_Rect.w = std::max(0.0f, ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::WIDTH, m_Presentation.m_TargetWidth, ResizeSpring, 3, 0.01f));
+	Presentation.m_Rect.h = std::max(0.0f, ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::HEIGHT, m_Presentation.m_TargetHeight, ResizeSpring, 3, 0.01f));
+	Presentation.m_Radius = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::SCALE, m_Presentation.m_TargetRadius, ResizeSpring, 3, 0.01f);
 	Presentation.m_Alpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::ALPHA, m_Presentation.m_TargetAlpha, ContentSpring, 3, 0.004f), 0.0f, 1.0f);
 	Presentation.m_CandidateAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, CandidatesNode, EUiAnimProperty::ALPHA, m_Presentation.m_TargetCandidateAlpha, ContentSpring, 2, 0.004f), 0.0f, 1.0f);
 	Presentation.m_CandidateScale = ResolveUiPresentationStateValue(AnimRuntime, CandidatesNode, EUiAnimProperty::SCALE, m_Presentation.m_TargetCandidateScale, ContentSpring, 2, 0.004f);
@@ -332,6 +381,9 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	if(!Presence.m_Render)
 	{
 		m_WasVisible = false;
+		m_ContentTransition.Reset();
+		m_Presentation = {};
+		m_CandidateStart = 0;
 		pTextRender->SetRenderFlags(OldRenderFlags);
 		pGraphics->MapScreen(OldScreenX0, OldScreenY0, OldScreenX1, OldScreenY1);
 		return;
@@ -342,13 +394,9 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	const float Alpha = minimum(Presence.m_Alpha, PresentationAlpha);
 	const float CandidateDrawAlpha = Alpha * CandidateAlpha;
 
-	const CUIRect Panel = qm_ime_overlay::FitCandidatePanel(CandidateLayout, Presentation.m_Rect, PanelHeight,
+	const CUIRect Panel = qm_ime_overlay::FitCandidatePanel(Presentation.m_Rect,
 		{Margin, Margin, ScreenMaxPanelWidth, Height - 2.0f * Margin});
-	// 即时扩张同步到动画状态，后续退格从实际显示的尺寸开始收缩。
-	if(Panel.w != Presentation.m_Rect.w)
-		SetUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::WIDTH, Panel.w);
-	if(Panel.h != Presentation.m_Rect.h)
-		SetUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::HEIGHT, Panel.h);
+	const qm_ime_overlay::SCandidateRowLayout CandidateLayout = qm_ime_overlay::BuildCandidateRowLayoutForPanel(CandidateRow.m_aMeasures, CandidateRow.m_Viewport.m_Count, CandidateRow.m_LayoutConfig, Panel);
 	CUIRect PanelDropA = Panel;
 	PanelDropA.x += Ime.m_ShadowX;
 	PanelDropA.y += Ime.m_ShadowY * 0.65f;
@@ -379,16 +427,14 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	const ColorRGBA OldOutlineColor = pTextRender->GetTextOutlineColor();
 	pTextRender->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-	if(HasCandidates)
+	if(CandidateLayout.m_Count > 0)
 	{
-		// 动画只变换整行，候选数量与省略宽度始终使用目标布局。
+		// 候选数量保持不变，长词按当前宽度省略；胶囊展开后自然恢复完整文字。
 		const qm_ime_overlay::SCandidateRowPresentation RowPresentation = qm_ime_overlay::BuildCandidateRowPresentation(CandidateLayout, Panel,
 			CandidateRowHeight, Ime.m_PaddingX, Ime.m_PaddingY, Presentation.m_CandidateScale);
-		const float ContentScale = RowPresentation.m_Scale;
-
 		for(int CellIndex = 0; CellIndex < CandidateLayout.m_Count; ++CellIndex)
 		{
-			if(CandidateStart + CellIndex != SelectedIndex)
+			if(m_CandidateStart + CellIndex != CandidateRow.m_SelectedIndex)
 				continue;
 			const qm_ime_overlay::SCandidateCellLayout &Cell = CandidateLayout.m_aCells[CellIndex];
 			CUIRect SelectedRect = {Cell.m_X, 0.75f, Cell.m_Width, CandidateRowHeight - 1.5f};
@@ -408,7 +454,7 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 			DrawRect.y = ResolveUiPresentationStateValue(AnimRuntime, SelectedNode, EUiAnimProperty::POS_Y, m_Presentation.m_TargetSelectedY, SelectedSpring, 2, 0.01f);
 			DrawRect.w = ResolveUiPresentationStateValue(AnimRuntime, SelectedNode, EUiAnimProperty::WIDTH, m_Presentation.m_TargetSelectedWidth, SelectedSpring, 2, 0.01f);
 			DrawRect.h = ResolveUiPresentationStateValue(AnimRuntime, SelectedNode, EUiAnimProperty::HEIGHT, m_Presentation.m_TargetSelectedHeight, SelectedSpring, 2, 0.01f);
-			const float CandidateRight = CandidateLayout.m_ContentWidth - TrailingWidth;
+			const float CandidateRight = CandidateLayout.m_ContentWidth - CandidateRow.m_TrailingWidth;
 			DrawRect.x = std::clamp(DrawRect.x, 0.0f, CandidateRight);
 			DrawRect.w = std::clamp(DrawRect.w, 0.0f, CandidateRight - DrawRect.x);
 			DrawRect = RowPresentation.Transform(DrawRect);
@@ -419,44 +465,17 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 			break;
 		}
 
-		for(int CellIndex = 0; CellIndex < CandidateLayout.m_Count; ++CellIndex)
+		const auto &vLayers = m_ContentTransition.Layers();
+		const int CurrentLayer = m_ContentTransition.CurrentLayerIndex();
+		for(int i = 0; i < (int)vLayers.size(); ++i)
 		{
-			const int CandidateIndex = CandidateStart + CellIndex;
-			const qm_ime_overlay::SCandidateCellLayout &Cell = CandidateLayout.m_aCells[CellIndex];
-			const CUIRect CellRect = RowPresentation.Transform({Cell.m_X, 0.0f, Cell.m_Width, CandidateRowHeight});
-			const bool Selected = CandidateIndex == SelectedIndex;
-			const SImeCandidateMetrics &Metrics = aCandidateMetrics[CandidateIndex];
-			char aNum[4];
-			str_format(aNum, sizeof(aNum), "%d", (CandidateIndex + 1) % 10);
-			const float NumX = CellRect.x + CandidatePaddingX * ContentScale;
-			const float TextX = NumX + (Metrics.m_Num.m_Width + Ime.m_CandidateNumPaddingX) * ContentScale;
-			DrawImeText(pTextRender, NumX, CellRect.y, CellRect.h, Ime.m_FontCandidate, aNum, Metrics.m_Num, Selected ? Ime.m_TextSelected : Ime.m_TextMuted, CandidateDrawAlpha, ContentScale);
-			DrawImeText(pTextRender, TextX, CellRect.y, CellRect.h, Ime.m_FontCandidate, DrawState.m_vCandidates[CandidateIndex].c_str(), Metrics.m_Text, Selected ? Ime.m_TextSelected : Ime.m_Text, CandidateDrawAlpha, ContentScale, Cell.m_TextWidth);
+			const auto &Layer = vLayers[i];
+			if(i == CurrentLayer || !Layer.m_Active)
+				continue;
+			const SImeCandidateRow PreviousRow = MeasureCandidateRow(pTextRender, Layer.m_State, Layer.m_CandidateStart, Ime, ScreenMaxPanelWidth);
+			DrawCandidateRow(pTextRender, Layer.m_State, PreviousRow, Panel, Ime, CandidateDrawAlpha * Layer.m_Alpha, Presentation.m_CandidateScale);
 		}
-
-		if(TrailingWidth > 0.0f)
-		{
-			const CUIRect MoreLocal = {CandidateLayout.m_ContentWidth - TrailingWidth, 0.0f, TrailingWidth, CandidateRowHeight};
-			const CUIRect More = RowPresentation.Transform(MoreLocal);
-			CUIRect Divider = MoreLocal;
-			Divider.x += 0.4f;
-			Divider.y += 2.0f;
-			Divider.w = 0.35f;
-			Divider.h = maximum(0.0f, Divider.h - 4.0f);
-			Divider = RowPresentation.Transform(Divider);
-			Divider.Draw(WithAlpha(Ime.m_PanelBorder, CandidateDrawAlpha * 1.25f), IGraphics::CORNER_ALL, 0.25f);
-
-			DrawImeText(pTextRender,
-				More.x + (More.w - PageTextMetrics.m_Width * ContentScale) * 0.5f,
-				More.y,
-				More.h,
-				Ime.m_FontComposition,
-				aPageText,
-				PageTextMetrics,
-				Ime.m_TextMuted,
-				CandidateDrawAlpha,
-				ContentScale);
-		}
+		DrawCandidateRow(pTextRender, DrawState, CandidateRow, Panel, Ime, CandidateDrawAlpha * vLayers[CurrentLayer].m_Alpha, Presentation.m_CandidateScale);
 	}
 	pTextRender->TextColor(OldTextColor);
 	pTextRender->TextOutlineColor(OldOutlineColor);

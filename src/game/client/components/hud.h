@@ -208,7 +208,7 @@ class CHud : public CComponent
 			m_CapsuleMorphNeedsCapture = true;
 		}
 
-		// 换队/开关/禁言倒计时的液滴从主岛左边缘长出，判定主胶囊是否要留出生长空位只认这一种副岛。
+		// 左侧倒计时副岛包括仍在收回的项目。
 		bool HasVisibleCountdownSatellite() const
 		{
 			for(const SSatelliteItem &Item : m_aSatelliteItems)

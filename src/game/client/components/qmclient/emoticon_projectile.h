@@ -3,6 +3,8 @@
 
 #include <base/vmath.h>
 
+#include <game/teamscore.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -224,9 +226,9 @@ namespace QmEmoticon
 	};
 
 	template<typename TMask>
-	bool OverlapsPlayerBoxes(const TMask &Mask, vec2 Pos, float Size, float Angle, int OwnerClientId, const SPlayerBox *pBoxes, int NumBoxes)
+	bool OverlapsPlayerBoxes(const TMask &Mask, vec2 Pos, float Size, float Angle, int OwnerClientId, const SPlayerBox *pBoxes, int NumBoxes, const CTeamsCore *pTeams = nullptr)
 	{
-		if(pBoxes == nullptr)
+		if(pBoxes == nullptr || (pTeams != nullptr && (OwnerClientId < 0 || OwnerClientId >= MAX_CLIENTS)))
 			return false;
 		// 两个外接圆不相交时跳过精细轮廓，旋转与超大表情仍保守包含在圆内。
 		const float MaskRadius = Size * 0.707107f;
@@ -238,6 +240,8 @@ namespace QmEmoticon
 			const vec2 Delta = Pos - Box.m_Pos;
 			const float Radius = MaskRadius + Box.m_Half * 1.414214f;
 			if(dot(Delta, Delta) > Radius * Radius)
+				continue;
+			if(pTeams != nullptr && (Box.m_ClientId < 0 || Box.m_ClientId >= MAX_CLIENTS || !pTeams->SameTeam(OwnerClientId, Box.m_ClientId)))
 				continue;
 			if(Mask.OverlapsBox(Pos, Size, Angle, Box.m_Pos, vec2(Box.m_Half, Box.m_Half)))
 				return true;
@@ -300,7 +304,7 @@ struct CEmoticonProjectile
 	}
 
 	template<typename TSolid>
-	void Update(float Dt, const QmEmoticon::CAlphaMask &Mask, const TSolid &Solid, const QmEmoticon::SPlayerBox *pPlayerBoxes = nullptr, int NumPlayerBoxes = 0)
+	void Update(float Dt, const QmEmoticon::CAlphaMask &Mask, const TSolid &Solid, const QmEmoticon::SPlayerBox *pPlayerBoxes = nullptr, int NumPlayerBoxes = 0, const CTeamsCore *pTeams = nullptr)
 	{
 		if(!m_Active || Dt <= 0.0f)
 			return;
@@ -312,7 +316,7 @@ struct CEmoticonProjectile
 		}
 		m_Accumulator += Dt;
 		const auto Blocked = [&](vec2 Pos, float Size, float Angle) {
-			return Mask.Overlaps(Pos, Size, Angle, Solid) || QmEmoticon::OverlapsPlayerBoxes(Mask, Pos, Size, Angle, m_OwnerClientId, pPlayerBoxes, NumPlayerBoxes);
+			return Mask.Overlaps(Pos, Size, Angle, Solid) || QmEmoticon::OverlapsPlayerBoxes(Mask, Pos, Size, Angle, m_OwnerClientId, pPlayerBoxes, NumPlayerBoxes, pTeams);
 		};
 		while(m_Accumulator + 1e-9 >= STEP && m_Active)
 		{

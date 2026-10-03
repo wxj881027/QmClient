@@ -587,9 +587,12 @@ void CChat::RenderCommandHud(float X, float Bottom, float Width, float FontSize,
 	const float OffsetX = TargetRect.x - ChatRect.x * Scale;
 	const float OffsetY = TargetRect.y - ChatRect.y * Scale;
 	m_CommandHud.SetInputTransform(OffsetX, OffsetY, Scale);
-	const float ScreenTop = (4.0f - OffsetY) / maximum(Scale, 0.01f);
-	m_CommandHud.SetLayout(X, Bottom, Width, maximum(0.0f, Bottom - ScreenTop), FontSize);
-	QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos(), FontSize);
+	float ScreenLeft, ScreenTop, ScreenRight, ScreenBottom;
+	Graphics()->GetScreen(&ScreenLeft, &ScreenTop, &ScreenRight, &ScreenBottom);
+	const float ScreenMargin = 4.0f / maximum(Scale, 0.01f);
+	Bottom = minimum(Bottom, ScreenBottom - ScreenMargin);
+	m_CommandHud.SetLayout(X, Bottom, Width, maximum(0.0f, Bottom - ScreenTop - ScreenMargin), FontSize, ScreenLeft + ScreenMargin, ScreenRight - ScreenMargin);
+	QmRenderChatCommandHud(m_CommandHud, Ui(), TextRender(), GetChatMousePos());
 }
 
 void CChat::RebuildChat()
@@ -3176,12 +3179,13 @@ void CChat::OnRender()
 		RenderTranslateButton(TranslateButtonRect);
 		if(!Input()->HasComposition() && !HudEditorPreview && !GameClient()->m_Menus.IsActive() && !m_LanguageMenuOpen && !Ui()->IsPopupOpen(&m_LanguagePopupContext) && !Ui()->IsPopupOpen(&m_ChatLinePopupContext))
 		{
-			RenderCommandHud(x, InputContentRect.y - 4.0f * CQmChatCommandHud::UI_SCALE, minimum(InputLineWidth, ChatRect.w - x), ScaledFontSize, ChatRect, HudEditorScope.m_Applied ? HudEditorScope.m_TargetRect : ChatRect);
+			const vec2 CaretPosition = m_Input.GetCaretPosition();
+			RenderCommandHud(CaretPosition.x, CaretPosition.y - 4.0f * CQmChatCommandHud::UI_SCALE, minimum(InputLineWidth, ChatRect.w - x), ScaledFontSize, ChatRect, HudEditorScope.m_Applied ? HudEditorScope.m_TargetRect : ChatRect);
 			const auto &CommandLayout = m_CommandHud.Layout();
 			if(CommandLayout.m_VisibleRows > 0)
 			{
 				ExtendBounds(CommandLayout.m_X, CommandLayout.m_Y, CommandLayout.m_W, CommandLayout.m_H);
-				y = CommandLayout.m_Y - 2.0f;
+				y = minimum(y, CommandLayout.m_Y - 2.0f);
 			}
 		}
 		else

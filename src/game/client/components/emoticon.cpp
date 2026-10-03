@@ -592,7 +592,7 @@ void CEmoticon::RenderProjectiles()
 		if(!Projectile.m_Active || Projectile.m_Emoticon < 0 || Projectile.m_Emoticon >= NUM_EMOTICONS)
 			continue;
 		const QmEmoticon::CAlphaMask &Mask = m_aCollisionMasks[Projectile.m_Emoticon];
-		Projectile.Update(FrameTime, Mask, Solid, aPlayerBoxes, NumPlayerBoxes);
+		Projectile.Update(FrameTime, Mask, Solid, aPlayerBoxes, NumPlayerBoxes, &GameClient()->m_Teams);
 		if(!Projectile.m_Active)
 			continue;
 		const float Fraction = std::clamp((float)(Projectile.m_Accumulator / CEmoticonProjectile::STEP), 0.0f, 1.0f);

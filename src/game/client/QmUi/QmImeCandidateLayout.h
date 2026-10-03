@@ -90,14 +90,28 @@ namespace qm_ime_overlay
 		return Layout;
 	}
 
-	inline CUIRect FitCandidatePanel(const SCandidateRowLayout &Layout, CUIRect Panel, float PanelHeight, const CUIRect &Bounds)
+	inline CUIRect FitCandidatePanel(CUIRect Panel, const CUIRect &Bounds)
 	{
-		// 扩张时立即容纳当前页，收缩仍可过渡；文字不随宽度弹簧改变字号。
-		Panel.w = std::min(std::max(Panel.w, Layout.m_PanelWidth), Bounds.w);
-		Panel.h = std::min(std::max(Panel.h, PanelHeight), Bounds.h);
+		// 只约束屏幕边界，候选内容在当前动画宽度内重新排布，不能反向撑开胶囊。
+		Panel.w = std::clamp(Panel.w, 0.0f, std::max(0.0f, Bounds.w));
+		Panel.h = std::clamp(Panel.h, 0.0f, std::max(0.0f, Bounds.h));
 		Panel.x = std::clamp(Panel.x, Bounds.x, Bounds.x + Bounds.w - Panel.w);
 		Panel.y = std::clamp(Panel.y, Bounds.y, Bounds.y + Bounds.h - Panel.h);
 		return Panel;
+	}
+
+	inline SCandidateRowLayout BuildCandidateRowLayoutForPanel(const std::array<SCandidateMeasure, MAX_CANDIDATES> &aMeasures, int Count, SCandidateLayoutConfig Config, const CUIRect &Panel)
+	{
+		// 动画中的空间不足只省略词尾；真实窄屏仍保留最小词头并整体适配。
+		const int VisibleCount = std::clamp(Count, 0, MAX_CANDIDATES);
+		float MinimumReadableWidth = 2.0f * Config.m_PaddingX + Config.m_TrailingWidth + std::max(0, VisibleCount - 1) * Config.m_Gap;
+		for(int i = 0; i < VisibleCount; ++i)
+			MinimumReadableWidth += aMeasures[i].m_FixedWidth + std::min(aMeasures[i].m_TextWidth, Config.m_MinTextWidth);
+		if(Config.m_MaxPanelWidth >= MinimumReadableWidth)
+			Config.m_MinTextWidth = 0.0f;
+		Config.m_MaxPanelWidth = std::max(1.0f, Panel.w);
+		Config.m_MinPanelWidth = Config.m_MaxPanelWidth;
+		return BuildCandidateRowLayout(aMeasures, Count, Config);
 	}
 
 	struct SCandidateRowPresentation

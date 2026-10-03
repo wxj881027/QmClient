@@ -870,7 +870,7 @@ namespace
 			return EQmIcon::CHECK;
 		switch(Type)
 		{
-		case EHudMediaIslandCountdownType::SWAP: return SwapOutgoing ? EQmIcon::ARROWS_OUT : EQmIcon::ARROWS_IN;
+		case EHudMediaIslandCountdownType::SWAP: return SwapOutgoing ? EQmIcon::ARROW_RIGHT : EQmIcon::ARROW_LEFT;
 		case EHudMediaIslandCountdownType::SWITCH: return EQmIcon::SWAP;
 		case EHudMediaIslandCountdownType::MUTE: return EQmIcon::SPEAKER_SLASH;
 		}
@@ -882,8 +882,8 @@ namespace
 		switch(Icon)
 		{
 		case EQmIcon::CHECK: return "\xEE\x86\x82";
-		case EQmIcon::ARROWS_IN: return "\xEE\x82\x9A";
-		case EQmIcon::ARROWS_OUT: return "\xEE\x82\xA2";
+		case EQmIcon::ARROW_LEFT: return "\xEE\x81\x98";
+		case EQmIcon::ARROW_RIGHT: return "\xEE\x81\xAC";
 		case EQmIcon::SWAP: return "\xEE\xA0\xBC";
 		case EQmIcon::SPEAKER_SLASH: return "\xEE\x91\x9A";
 		default: return nullptr;
@@ -3819,7 +3819,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 	if(!ShowCover && MetaItemCount == 0)
 		BaseWidth = 0.0f;
 	// 与 RenderMediaIsland 共用同一判定，避免两处保留宽度不同源。
-	if(QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, m_MediaIslandAnimState.HasVisibleCountdownSatellite()))
+	if(QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, m_MediaIslandAnimState.HasVisibleCountdownSatellite(), TimerCapsule.m_Visible))
 		BaseWidth = std::max(BaseWidth, BaseIslandHeight);
 
 	const int64_t Now = time_get();
@@ -4023,6 +4023,7 @@ void CHud::RenderMediaIsland()
 	const bool ShowLocalTime = ShouldRenderHudLocalTime(*GameClient());
 	const SHudGameTimerInfo TimerInfo = g_Config.m_ClShowhudTimer ? BuildHudGameTimerInfo(*GameClient(), *Client(), TextRender(), m_Width) : SHudGameTimerInfo{};
 	SHudTopTimerCapsuleInfo TimerCapsule = BuildHudTopTimerCapsuleInfo(TimerInfo);
+	const float TimerAnchorWidth = TimerCapsule.m_BoxW;
 	char aRecordingBuf[512];
 	const bool ShowRecordingStatus = TimerCapsule.m_Visible && BuildHudRecordingStatusText(*GameClient(), aRecordingBuf, sizeof(aRecordingBuf));
 	const bool ScoreboardExpanded = GameClient()->m_Scoreboard.IsActive();
@@ -4268,16 +4269,16 @@ void CHud::RenderMediaIsland()
 	if(!ShowCover && MetaItemCount == 0)
 		BaseWidth = 0.0f;
 	// 状态区（时钟/冰冻统计）在计时器右侧，不属于主胶囊内容，不能作为保留依据。
-	if(QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, AnimState.HasVisibleCountdownSatellite()))
+	if(QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, AnimState.HasVisibleCountdownSatellite(), TimerCapsule.m_Visible))
 		BaseWidth = std::max(BaseWidth, BaseIslandHeight);
 	if(SwapRows.m_InlineSwapCount > 0)
 	{
-		const float ReservedWidth = BaseWidth + (BaseWidth > 0.0f ? GapToTimer : 0.0f) + PlannedStatusWidth + (PlannedStatusWidth > 0.0f ? TimerToStatusGap : 0.0f);
-		const float MaxTimerWidth = std::max(TimerCapsule.m_BoxW, MaxUnifiedWidth - ReservedWidth);
+		const float ReservedSideWidth = std::max(BaseWidth + (BaseWidth > 0.0f ? GapToTimer : 0.0f), PlannedStatusWidth + (PlannedStatusWidth > 0.0f ? TimerToStatusGap : 0.0f));
+		const float MaxTimerWidth = std::max(TimerCapsule.m_BoxW, MaxUnifiedWidth - ReservedSideWidth * 2.0f);
 		TimerCapsule.m_BoxW = std::min(MaxTimerWidth, std::max(TimerCapsule.m_BoxW, IncomingSwapTextWidth + BottomRowPaddingX * 2.0f));
 	}
 	const float MaxIslandWidth = TimerCapsule.m_Visible ?
-					     std::max(BaseWidth, MaxUnifiedWidth - GapToTimer - TimerCapsule.m_BoxW - (PlannedStatusWidth > 0.0f ? TimerToStatusGap + PlannedStatusWidth : 0.0f)) :
+					     std::max(BaseWidth, (MaxUnifiedWidth - TimerCapsule.m_BoxW) * 0.5f - GapToTimer) :
 					     BaseWidth + (ShowCover ? (Gap + MaxTitleWidth) : 0.0f);
 	const float MaxExpandedTitleWidth = std::max(0.0f, MaxIslandWidth - BaseWidth - Gap);
 	char aLayoutTrackMeta[256];
@@ -4301,13 +4302,17 @@ void CHud::RenderMediaIsland()
 	{
 		const float ExtraWidth = DesiredBottomUnifiedWidth - PlannedUnifiedWidth;
 		TargetWidth += ExtraWidth;
+		if(TimerCapsule.m_Visible)
+			TargetWidth = std::min(TargetWidth, MaxIslandWidth);
 		MainToTimerGap = TargetWidth > 0.0f ? GapToTimer : 0.0f;
 		PlannedUnifiedWidth = TimerCapsule.m_Visible ?
 					      (TargetWidth + MainToTimerGap + TimerCapsule.m_BoxW + (PlannedStatusWidth > 0.0f ? (TimerToStatusGap + PlannedStatusWidth) : 0.0f)) :
 					      (TargetWidth + (TargetWidth > 0.0f && PlannedStatusWidth > 0.0f ? TimerToStatusGap : 0.0f) + PlannedStatusWidth);
 	}
 	const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - PlannedUnifiedWidth);
-	float TargetX = std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
+	const float TargetX = TimerCapsule.m_Visible ?
+		QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, TargetWidth, MainToTimerGap).m_MainX :
+		std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
 	const float TargetBottomHeight = ShowBottomRow ? (BottomRowPaddingY * 2.0f + BottomRowLineHeight * BottomRowLineCount) : 0.0f;
 	const float TargetHeight = BaseIslandHeight + TargetBottomHeight;
 	const float TitleAlphaTarget = TrackDetailsExpanded && TitleWidth > 0.0f ? 1.0f : 0.0f;
@@ -4489,6 +4494,8 @@ void CHud::RenderMediaIsland()
 		}
 	}
 
+	if(TimerCapsule.m_Visible)
+		EffectiveTargetX = QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, EffectiveTargetWidth, MainToTimerGap).m_MainX;
 	AnimState.m_TargetX = EffectiveTargetX;
 	AnimState.m_TargetWidth = EffectiveTargetWidth;
 	AnimState.m_TargetHeight = EffectiveTargetHeight;
@@ -4509,11 +4516,14 @@ void CHud::RenderMediaIsland()
 	AnimState.m_TargetTrackMetaInOffset = 0.0f;
 	AnimState.m_TargetTrackMetaOutOffset = -TrackTextOffset;
 
-	const float IslandX = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, AnimState.m_TargetX, CapsuleSpring, 3, 0.01f);
 	const float IslandWidth = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::WIDTH, AnimState.m_TargetWidth, CapsuleSpring, 3, 0.01f);
 	const float AnimatedIslandHeight = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::HEIGHT, AnimState.m_TargetHeight, CapsuleSpring, 3, 0.01f);
-	// 计时器也是固定位置的锚点，须跟随当前帧的岛体，避免目标坐标提前改变整岛映射。
-	const float TimerBoxX = TimerCapsule.m_Visible ? IslandX + IslandWidth + MainToTimerGap : TimerCapsule.m_BoxX;
+	// 大时间独立锚定中线，左侧宽度弹簧和右侧扩展只改变各自的边界。
+	const SHudMediaIslandTimerAnchor TimerAnchor = QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, IslandWidth, MainToTimerGap);
+	const float IslandX = TimerCapsule.m_Visible ? TimerAnchor.m_MainX : ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, AnimState.m_TargetX, CapsuleSpring, 3, 0.01f);
+	if(TimerCapsule.m_Visible)
+		SetUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, IslandX);
+	const float TimerBoxX = TimerCapsule.m_Visible ? TimerAnchor.m_TimerX : TimerCapsule.m_BoxX;
 	const float TimerBoxRight = TimerBoxX + TimerCapsule.m_BoxW;
 	const float TitleAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, TitleNode, EUiAnimProperty::ALPHA, AnimState.m_TargetTitleAlpha, TitleSpring, 2, 0.004f), 0.0f, 1.0f);
 	const float TitleOffset = ResolveUiPresentationStateValue(AnimRuntime, TitleNode, EUiAnimProperty::POS_X, AnimState.m_TargetTitleOffset, TitleSpring, 2, 0.01f);
@@ -4615,6 +4625,7 @@ void CHud::RenderMediaIsland()
 	static_assert(SHudMediaIslandAnimState::SATELLITE_MAX_ITEMS == QmHudMediaIslandSdfMaxItems);
 	std::array<SSatelliteRenderItem, SHudMediaIslandAnimState::SATELLITE_MAX_ITEMS> aSatelliteRenderItems{};
 	int SatelliteRenderItemCount = 0;
+	const bool CountdownUsesTimer = TimerCapsule.m_Visible && !HasMediaState && !ShowTeam;
 	for(auto &Item : AnimState.m_aSatelliteItems)
 	{
 		if(!Item.m_Used)
@@ -4666,19 +4677,16 @@ void CHud::RenderMediaIsland()
 		if(FinalWidth <= 0.0f)
 			FinalWidth = SatelliteDiameter;
 
-		const float SpawnCenterX = IslandX + SatelliteRadius * 0.15f;
-		const float ItemCenterX = mix(SpawnCenterX, FinalCenterX, BlobPose.m_Travel);
-		const float BlobWidth = mix(SatelliteDiameter, FinalWidth, BlobPose.m_ContentAlpha);
+		const SHudMediaIslandSdfItem BlobItem = QmHudMediaIslandLeftBlobItem(
+			IslandX, SatelliteCenterY, SatelliteRadius, FinalCenterX, FinalWidth, BlobPose, CountdownUsesTimer);
 
 		SSatelliteRenderItem &RenderItem = aSatelliteRenderItems[SatelliteRenderItemCount++];
 		RenderItem.m_Type = Item.m_Type;
-		RenderItem.m_Center = vec2(ItemCenterX, SatelliteCenterY);
-		RenderItem.m_Radii = vec2(
-			BlobWidth * 0.5f * BlobPose.m_RadiusScale * BlobPose.m_StretchX,
-			SatelliteRadius * BlobPose.m_RadiusScale * BlobPose.m_StretchY);
-		RenderItem.m_SmoothUnion = QmHudMediaIslandBlobBlend(SatelliteRadius, BlobPose.m_RadiusScale) * QmHudMediaIslandBlobConnectionStrength(BlobPose.m_Travel);
-		RenderItem.m_ContentAlpha = BlobPose.m_ContentAlpha;
-		RenderItem.m_ContentScale = std::clamp(BlobPose.m_RadiusScale, 0.0f, 1.0f);
+		RenderItem.m_Center = BlobItem.m_Center;
+		RenderItem.m_Radii = BlobItem.m_Radii;
+		RenderItem.m_SmoothUnion = BlobItem.m_SmoothUnion;
+		RenderItem.m_ContentAlpha = BlobItem.m_ContentAlpha;
+		RenderItem.m_ContentScale = BlobItem.m_ContentScale;
 		RenderItem.m_Progress = Item.m_Progress;
 		RenderItem.m_Completed = Item.m_Completed;
 		RenderItem.m_SwapOutgoing = Item.m_SwapOutgoing;
@@ -4735,18 +4743,20 @@ void CHud::RenderMediaIsland()
 		SpectatorSatelliteRestGap,
 		SpectatorBlobPose);
 	const float SpectatorVisibleRight = SpectatorLiquidCapsule.m_Rect.x + SpectatorLiquidCapsule.m_Rect.w + QmHudMediaIslandScaled(1.0f);
-	const float EditorX = TimerCapsule.m_Visible ? TimerBoxX : IslandX;
-	const float EditorRight = TimerCapsule.m_Visible ? UnifiedRight : (IslandX + UnifiedWidth);
-	const float EditorWidth = std::max(0.0f, EditorRight - EditorX);
-	const CUIRect EditorTransformRect = {EditorX, IslandY, EditorWidth, AnimatedIslandHeight};
+	const float EditorX = TimerCapsule.m_Visible ? (m_Width - TimerAnchorWidth) * 0.5f : IslandX;
+	const float EditorWidth = TimerCapsule.m_Visible ? TimerAnchorWidth : UnifiedWidth;
+	const CUIRect EditorTransformRect = {EditorX, IslandY, EditorWidth, TimerCapsule.m_Visible ? BaseIslandHeight : AnimatedIslandHeight};
 	const float EditorVisibleRight = std::max(UnifiedRight, SpectatorVisibleRight);
-	const CUIRect EditorVisibleRect = {SatelliteVisibleLeft, IslandY, EditorVisibleRight - SatelliteVisibleLeft, AnimatedIslandHeight};
+	// 屏幕外的副岛不参与整岛平移，避免边界约束把居中的大时间推走。
+	const float VisibleLeft = TimerCapsule.m_Visible ? std::max(0.0f, SatelliteVisibleLeft) : SatelliteVisibleLeft;
+	const float VisibleRight = TimerCapsule.m_Visible ? std::min(m_Width, EditorVisibleRight) : EditorVisibleRight;
+	const CUIRect EditorVisibleRect = {VisibleLeft, IslandY, VisibleRight - VisibleLeft, AnimatedIslandHeight};
 	const bool RenderLeftSection = ShowCover || ShowTeam || ShowWaveform;
 	const bool ShowTimerSecondaryLine = SwapRows.m_InlineSwapCount > 0 || Checkpoint > 0;
 	const SHudMediaIslandTimerRowLayout TimerRows = QmHudMediaIslandTimerRows(TimerCapsule.m_BoxY, TimerCapsule.m_BoxH, ShowTimerSecondaryLine);
 	const float TimerRaceFontSize = std::min(TimerCapsule.m_FontSize, TimerRows.m_RaceH);
 	const float TimerRaceTextWidth = TextRender()->TextWidth(TimerRaceFontSize, TimerCapsule.m_aText);
-	const float TimerTextX = TimerBoxX + std::max(0.0f, (TimerCapsule.m_BoxW - TimerRaceTextWidth) * 0.5f);
+	const float TimerTextX = TimerBoxX + (TimerCapsule.m_BoxW - TimerRaceTextWidth) * 0.5f;
 	const float TimerRaceTextY = TimerRows.m_RaceY + (TimerRows.m_RaceH - TimerRaceFontSize) * 0.5f;
 	const float CheckpointFontSize = std::min(TimerCapsule.m_FontSize * 0.40f, TimerRows.m_CheckpointH);
 	const float CheckpointTextY = TimerRows.m_CheckpointY + (TimerRows.m_CheckpointH - CheckpointFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);

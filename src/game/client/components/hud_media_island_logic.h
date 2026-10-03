@@ -478,13 +478,22 @@ inline bool QmHudMediaIslandShouldShowTeam(bool ShowTeam, bool EntitiesDDRace, i
 	return ShowTeam && EntitiesDDRace && Team > 0;
 }
 
-// 主胶囊只在"确有内容"或"有会从主岛左边缘长出的倒计时副岛"时保留最小宽度：
-// 后者（换队/开关/禁言倒计时）需要一段空位给液滴生长，否则副岛会压到计时器上。
-// 观战卫星长在主岛右侧，不构成保留依据；既无内容又无副岛时更不能白留空胶囊，
-// 否则药丸左侧会出现一段谁都不画的空槽（看起来就是占位符）。
-inline bool QmHudMediaIslandShouldReserveMainCapsule(bool HasMediaState, bool HasOtherMainContent, bool HasCountdownSatellite)
+// 无媒体或队伍内容时，倒计时直接依附计时器；计时器隐藏时才保留独立载体。
+inline bool QmHudMediaIslandShouldReserveMainCapsule(bool HasMediaState, bool HasOtherMainContent, bool HasCountdownSatellite, bool HasTimer)
 {
-	return HasMediaState || HasOtherMainContent || HasCountdownSatellite;
+	return HasMediaState || HasOtherMainContent || (HasCountdownSatellite && !HasTimer);
+}
+
+struct SHudMediaIslandTimerAnchor
+{
+	float m_TimerX;
+	float m_MainX;
+};
+
+inline SHudMediaIslandTimerAnchor QmHudMediaIslandAnchorTimer(float CenterX, float TimerWidth, float MainWidth, float MainGap)
+{
+	const float TimerX = CenterX - TimerWidth * 0.5f;
+	return {TimerX, TimerX - MainWidth - MainGap};
 }
 
 struct SHudMediaIslandTimerRowLayout
@@ -1012,6 +1021,25 @@ struct SHudMediaIslandSdfItem
 	float m_CountdownProgress = 0.0f;
 	ColorRGBA m_RingColor{};
 };
+
+inline SHudMediaIslandSdfItem QmHudMediaIslandLeftBlobItem(float MainLeft, float CenterY, float Radius, float FinalCenterX, float FinalWidth, const SHudMediaIslandBlobPose &Pose, bool KeepOutsideMain)
+{
+	const float SpawnCenterX = MainLeft + Radius * 0.15f;
+	const float BlobWidth = mix(Radius * 2.0f, FinalWidth, Pose.m_ContentAlpha);
+	SHudMediaIslandSdfItem Item;
+	Item.m_Radii = vec2(
+		BlobWidth * 0.5f * Pose.m_RadiusScale * Pose.m_StretchX,
+		Radius * Pose.m_RadiusScale * Pose.m_StretchY);
+	float CenterX = mix(SpawnCenterX, FinalCenterX, Pose.m_Travel);
+	// 没有左侧内容承接液滴时，伸出和收回都沿外边缘进行，避免遮住计时器。
+	if(KeepOutsideMain)
+		CenterX = std::min(CenterX, MainLeft - Item.m_Radii.x);
+	Item.m_Center = vec2(CenterX, CenterY);
+	Item.m_SmoothUnion = QmHudMediaIslandBlobBlend(Radius, Pose.m_RadiusScale) * QmHudMediaIslandBlobConnectionStrength(Pose.m_Travel);
+	Item.m_ContentAlpha = Pose.m_ContentAlpha;
+	Item.m_ContentScale = std::clamp(Pose.m_RadiusScale, 0.0f, 1.0f);
+	return Item;
+}
 
 struct SHudMediaIslandSdfCapsule
 {
