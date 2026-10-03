@@ -1158,7 +1158,12 @@ public:
 	void SetFontPreviewFace(const char *pFamilyName)
 	{
 		// 独立选择面，保留全局默认/CJK 角色和轴坐标；预览结束回到原链。
-		m_PreviewFace = GetFaceByName(pFamilyName);
+		FT_Face Face = GetFaceByName(pFamilyName);
+		if(m_PreviewFace == Face)
+			return;
+		// 预览面参与 GetCharGlyph 的回退顺序，切换后旧的近期命中不能继续复用。
+		m_GlyphLookupCache.Reset();
+		m_PreviewFace = Face;
 	}
 
 	void SetFontPreset(EFontPreset FontPreset)
@@ -2601,6 +2606,9 @@ public:
 			Success = false;
 		}
 
+		// QmClient: 默认字体可来自 qmclient/fonts，先加载随包字体再解析默认字体面。
+		LoadCustomFonts();
+
 		// extract default family name
 		const json_value &DefaultFace = (*pJsonData)["default"];
 		if(DefaultFace.type == json_string)
@@ -2616,7 +2624,6 @@ public:
 			Success = false;
 		}
 		// TClient
-		LoadCustomFonts();
 		m_pGlyphMap->AddFallbackFaceByName("DejaVu Sans");
 
 		// extract language variant family names

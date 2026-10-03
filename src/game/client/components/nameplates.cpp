@@ -476,13 +476,14 @@ protected:
 public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
-		// 设置预览可能清空字体图集：旧索引仍有效，但 UV 已指向其他字形。
-		// 先释放容器，再判断复用；称号度量和坐标缓冲随正常创建路径恢复。
+		// 字体或字重设置可能清空字体图集：旧索引仍有效，但 UV 已指向其他字形。
+		// 图集代际变化先释放旧容器；单纯密度换代则在下面完成候选容器交换。
 		if(m_TextCache.ResourcesChanged(This.TextRender()->GlyphAtlasRevision()))
 			Reset(This);
-		bool NeedsTextUpdate = UpdateNeeded(This, Data);
+		const bool TextDataChanged = UpdateNeeded(This, Data);
 		const float BakeDensity = Data.m_BakeDensity;
-		NeedsTextUpdate |= m_BakedDensityRevision != Data.m_DensityRevision;
+		const bool DensityChanged = m_BakedDensityRevision != Data.m_DensityRevision;
+		const bool NeedsTextUpdate = TextDataChanged || DensityChanged;
 		// 以显式「已算过」标志判断是否需要更新，而不是容器是否存在：
 		// 空文字会渲染出无效容器，用 Valid() 判断会让该部件每帧重跑下面的整条更新路径。
 		if(!m_TextCache.NeedsUpdate(m_Visible, NeedsTextUpdate))
@@ -513,13 +514,41 @@ public:
 			This.Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 			This.Graphics()->MapScreenToGameInterface(This.m_Camera.m_Center.x, This.m_Camera.m_Center.y, 1.0f / BakeDensity);
 		}
-		if(!m_ReuseTextContainer)
+		// 密度换代时先在旧容器旁边创建候选容器，成功后再交换，避免玩家看到空帧。
+		const bool KeepPreviousContainer = DensityChanged && m_TextContainerIndex.Valid();
+		STextContainerIndex PreviousTextContainer;
+		const bool PreviousReuseTextContainer = m_ReuseTextContainer;
+		if(KeepPreviousContainer)
+		{
+			PreviousTextContainer = m_TextContainerIndex;
+			m_TextContainerIndex.Reset();
+			m_ReuseTextContainer = false;
+		}
+		else if(!m_ReuseTextContainer)
 			This.TextRender()->DeleteTextContainer(m_TextContainerIndex);
 		UpdateText(This, Data);
 		if(Data.m_InGame && BakeDensity > 0.0f)
 			This.Graphics()->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 
 		This.TextRender()->SetRenderFlags(PreviousFlags);
+
+		if(KeepPreviousContainer)
+		{
+			STextContainerIndex CandidateTextContainer = m_TextContainerIndex;
+			m_TextContainerIndex.Reset();
+			m_ReuseTextContainer = PreviousReuseTextContainer;
+			if(CandidateTextContainer.Valid())
+			{
+				This.TextRender()->DeleteTextContainer(PreviousTextContainer);
+				m_TextContainerIndex = CandidateTextContainer;
+			}
+			else
+			{
+				// 新密度暂时无法创建时继续显示上一代，并保留本次更新以便下一帧重试。
+				m_TextContainerIndex = PreviousTextContainer;
+				return;
+			}
+		}
 
 		if(!m_TextContainerIndex.Valid())
 		{

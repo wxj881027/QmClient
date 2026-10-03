@@ -51,6 +51,19 @@ def _quit_client(env: ProcessEnvironment) -> None:
 		raise RuntimeError(f"client exited with {code}")
 
 
+def _wait_for_hang_report(env: ProcessEnvironment) -> Path:
+	dump_dir = env.path("dumps", "QmClient_Crash")
+	deadline = time.monotonic() + HANG_WATCHDOG_TIMEOUT + 20.0
+	while time.monotonic() < deadline:
+		reports = sorted(dump_dir.glob("*hang_report_*.txt"))
+		if reports and "Report type: hang" in reports[0].read_text(encoding="utf-8", errors="replace"):
+			return reports[0]
+		if not env.client.is_alive():
+			raise AssertionError("client exited before the hang watchdog reported the injected stall")
+		time.sleep(0.25)
+	raise AssertionError("hang watchdog did not report the injected main thread stall")
+
+
 def scenario_online_replay_without_source(env: ProcessEnvironment) -> None:
 	"""未加载回放时的查看请求可重复调用，连接和真实聊天仍可用。"""
 	env.start_server()
@@ -244,21 +257,7 @@ def scenario_hang_watchdog_reports_stall(env: ProcessEnvironment) -> None:
 	tick 缓存（修复前的行为），报告永远不会出现，本场景失败。
 	"""
 	env.start_client(["--qm-test-main-thread-stall"], connect=False, env={"QMCLIENT_TEST_HIDE_DIALOG": "1"})
-	dump_dir = env.path("dumps", "QmClient_Crash")
-	deadline = time.monotonic() + HANG_WATCHDOG_TIMEOUT + 20.0
-	hang_report = None
-	while time.monotonic() < deadline:
-		reports = sorted(dump_dir.glob("*hang_report_*.txt"))
-		if reports:
-			hang_report = reports[0]
-			break
-		if not env.client.is_alive():
-			raise AssertionError("client exited before the hang watchdog reported the injected stall")
-		time.sleep(0.25)
-	if hang_report is None:
-		raise AssertionError("hang watchdog did not report the injected main thread stall")
-	if "Report type: hang" not in hang_report.read_text(encoding="utf-8", errors="replace"):
-		raise AssertionError(f"unexpected hang report content: {hang_report}")
+	_wait_for_hang_report(env)
 
 	# 主线程仍处于注入的阻塞中，直接结束进程、不校验退出码：卡死后退出清理里
 	# NVIDIA ICD（nvoglv64.dll）在销毁阶段可能访问违例，属于项目按已知驱动故障
@@ -267,8 +266,47 @@ def scenario_hang_watchdog_reports_stall(env: ProcessEnvironment) -> None:
 	env.client.kill()
 
 
+def scenario_slow_asset_loading_no_false_hang(env: ProcessEnvironment) -> None:
+	"""逐项加载累计超过十秒仍可完成启动，且不产生卡死报告。"""
+	env.start_client(
+		["qm_steam_auto_launch 0"],
+		connect=False,
+		env={"QMCLIENT_TEST_ASSET_LOAD_DELAY_MS": "1000", "QMCLIENT_TEST_HIDE_DIALOG": "1"},
+		startup_timeout=None,
+	)
+	env.client.wait_for(lambda line: line == "test/loading: assets_begin delay_ms=1000", "slow asset loading start", 30)
+	prefix = "test/loading: assets_complete elapsed_ms="
+	line = env.client.wait_for(lambda value: value.startswith(prefix), "slow asset loading completion", 60)
+	if int(line.removeprefix(prefix)) <= HANG_WATCHDOG_TIMEOUT * 1000:
+		raise AssertionError(f"asset loading did not exceed the watchdog threshold: {line}")
+	env.client.wait_for(lambda line: line.startswith("client: version"), "client startup after slow assets", 30)
+	env.client.command("echo slow_asset_loading_responsive")
+	env.client.wait_for(lambda line: line.endswith(": slow_asset_loading_responsive"), "client command after slow assets", 10)
+	_quit_client(env)
+	dump_dir = env.path("dumps", "QmClient_Crash")
+	hang_artifacts = sorted(dump_dir.glob("*hang_report_*.txt")) + sorted(dump_dir.glob("*hang_dump_*.dmp"))
+	if hang_artifacts:
+		raise AssertionError(f"hang watchdog reported while asset loading was progressing: {hang_artifacts}")
+
+
+def scenario_asset_loading_stall_reports_hang(env: ProcessEnvironment) -> None:
+	"""启动资源加载中单次停滞超过十秒，仍然生成卡死报告。"""
+	env.start_client(
+		["qm_steam_auto_launch 0"],
+		connect=False,
+		env={"QMCLIENT_TEST_ASSET_LOAD_DELAY_MS": "12000", "QMCLIENT_TEST_HIDE_DIALOG": "1"},
+		startup_timeout=None,
+	)
+	env.client.wait_for(lambda line: line == "test/loading: assets_begin delay_ms=12000", "stalled asset loading start", 30)
+	_wait_for_hang_report(env)
+	if any("test/loading: assets_complete" in line for line in env.client._lines):
+		raise AssertionError("hang report was not produced during asset loading")
+	env.client.kill()
+
+
 E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"assert_dialog_no_false_hang": scenario_assert_dialog_no_false_hang,
+	"asset_loading_stall_reports_hang": scenario_asset_loading_stall_reports_hang,
 	"hang_watchdog_reports_stall": scenario_hang_watchdog_reports_stall,
 	"connection_failure_recovery": scenario_connection_failure_recovery,
 	"demo_recording": scenario_demo_recording,
@@ -277,6 +315,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"perf_log_persistence": scenario_perf_log_persistence,
 	"qm_lifecycle_persistence": scenario_qm_lifecycle_persistence,
 	"recording_without_connection": scenario_recording_without_connection,
+	"slow_asset_loading_no_false_hang": scenario_slow_asset_loading_no_false_hang,
 	"startup_saved_favorites": scenario_startup_saved_favorites,
 	"vector_font_and_icon_resources": scenario_vector_font_and_icon_resources,
 }

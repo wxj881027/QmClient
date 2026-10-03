@@ -5902,6 +5902,8 @@ void CClient::UpdateAndSwap()
 	if(g_Config.m_QmGraphicsTrace >= 3)
 		dbg_msg("gfx/swap", "swap source=loading state=%d", State());
 	m_GlobalTime = (time_get() - m_GlobalStartTime) / (float)time_freq();
+	// 加载期间尚未进入主循环，完成事件处理和呈现的加载帧同样代表主线程仍在推进。
+	UpdateHangHeartbeat();
 }
 
 void CClient::ServerBrowserUpdate()

@@ -128,6 +128,7 @@
 #include <array>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <string>
@@ -954,7 +955,7 @@ public:
 	// 丢弃并重新加载所有 GPU 资源。
 	void OnGraphicsResourcesReset();
 	// 按 g_pData 图片表加载全部初始资源；启动与资源重置后重建共用这一条路径。
-	void LoadInitialGraphicsAssets();
+	void LoadInitialGraphicsAssets(const std::function<void()> &OnAssetLoaded = {});
 
 	void InitializeLanguage() override;
 	bool m_LanguageChanged = false;

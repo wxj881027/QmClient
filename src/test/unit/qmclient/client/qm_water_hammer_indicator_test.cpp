@@ -2,24 +2,34 @@
 
 #include <gtest/gtest.h>
 
-TEST(QmWaterHammerIndicator, PenaltyAreaAndHammerFireMarksPlayer)
+TEST(QmWaterHammerIndicator, TimedFreezeAndHammerFireMarksPlayer)
 {
-	EXPECT_TRUE(QmShouldMarkWaterHammer(true, true, true));
+	EXPECT_TRUE(QmShouldMarkWaterHammer(200, false, true, true));
 }
 
-TEST(QmWaterHammerIndicator, OutsidePenaltyAreaDoesNotMarkPlayer)
+TEST(QmWaterHammerIndicator, UnfrozenHammerFireDoesNotMarkPlayer)
 {
-	EXPECT_FALSE(QmShouldMarkWaterHammer(false, true, true));
+	EXPECT_FALSE(QmShouldMarkWaterHammer(0, false, true, true));
+}
+
+TEST(QmWaterHammerIndicator, DeepFreezeAndHammerFireMarksPlayer)
+{
+	EXPECT_TRUE(QmShouldMarkWaterHammer(-1, false, true, true));
+}
+
+TEST(QmWaterHammerIndicator, LiveFreezeAndHammerFireMarksPlayer)
+{
+	EXPECT_TRUE(QmShouldMarkWaterHammer(0, true, true, true));
 }
 
 TEST(QmWaterHammerIndicator, NonHammerInputDoesNotMarkPlayer)
 {
-	EXPECT_FALSE(QmShouldMarkWaterHammer(true, false, true));
+	EXPECT_FALSE(QmShouldMarkWaterHammer(200, false, false, true));
 }
 
 TEST(QmWaterHammerIndicator, ReleasedFireDoesNotMarkPlayer)
 {
-	EXPECT_FALSE(QmShouldMarkWaterHammer(true, true, false));
+	EXPECT_FALSE(QmShouldMarkWaterHammer(200, false, true, false));
 }
 
 TEST(QmWaterHammerIndicator, AllDeathAndFreezeTilesArePenaltyTiles)

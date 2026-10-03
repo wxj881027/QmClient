@@ -120,12 +120,10 @@ namespace ui_widget
 		CUIRect Indicator = Target;
 		if(Ctx.m_pAnim != nullptr)
 		{
-			// 胶囊与嵌套分段共用导航弹簧，切换时保留当前速度。
+			// 胶囊与嵌套分段共用导航弹簧，切换时保留当前速度；选中块固定在同一条竖向轨道。
 			const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
 			Indicator.x = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, ui_token::motion::NAVIGATION_SPRING, 2);
-			Indicator.y = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_Y, Target.y, ui_token::motion::NAVIGATION_SPRING, 2);
 			Indicator.w = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, ui_token::motion::NAVIGATION_SPRING, 2);
-			Indicator.h = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::HEIGHT, Target.h, ui_token::motion::NAVIGATION_SPRING, 2);
 		}
 		DrawRoundedSurface(Ctx, Indicator, Style.m_IndicatorColor, ColorRGBA(), ui_token::radius::PILL);
 	}

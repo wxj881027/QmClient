@@ -243,7 +243,7 @@ MACRO_CONFIG_STR(TcAutoVoteWhenFarMessage, tc_auto_vote_when_far_message, 128, "
 MACRO_CONFIG_INT(TcAutoVoteWhenFarTime, tc_auto_vote_when_far_time, 5, 0, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Wait time before triggering auto vote")
 
 // Font
-MACRO_CONFIG_STR(TcCustomFont, tc_custom_font, 255, "DejaVu Sans", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom font for Latin text (family, or family + style)")
+MACRO_CONFIG_STR(TcCustomFont, tc_custom_font, 255, "LXGW WenKai Regular", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom font for Latin text (family, or family + style)")
 // 字重有效范围按所选可变字体的 wght 轴钳制（轴上限可达 1000），此处只做安全网。
 MACRO_CONFIG_INT(TcCustomFontWeight, tc_custom_font_weight, 400, 1, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Variable custom font weight for Latin text")
 MACRO_CONFIG_STR(TcCustomFontCjk, tc_custom_font_cjk, 255, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font")

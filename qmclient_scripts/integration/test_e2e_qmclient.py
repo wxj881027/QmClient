@@ -12,6 +12,7 @@ class QmClientE2ERunnerTest(unittest.TestCase):
 			set(E2E_TESTS),
 			{
 				"assert_dialog_no_false_hang",
+				"asset_loading_stall_reports_hang",
 				"connection_failure_recovery",
 				"demo_recording",
 				"online_replay_without_source",
@@ -20,6 +21,7 @@ class QmClientE2ERunnerTest(unittest.TestCase):
 				"perf_log_persistence",
 				"qm_lifecycle_persistence",
 				"recording_without_connection",
+				"slow_asset_loading_no_false_hang",
 				"startup_saved_favorites",
 				"vector_font_and_icon_resources",
 			},

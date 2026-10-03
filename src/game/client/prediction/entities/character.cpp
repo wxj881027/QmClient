@@ -1431,9 +1431,7 @@ CCharacter::CCharacter(CGameWorld *pGameWorld, int Id, CNetObj_Character *pChar,
 	m_Core.Reset();
 	m_Core.Init(&GameWorld()->m_Core, GameWorld()->Collision(), GameWorld()->Teams());
 	m_Core.m_Id = Id;
-	m_Core.SetAntiPingInterfereCallback([this](int ClientId, bool DisallowReset) {
-		AntiPingInterference(ClientId, DisallowReset, true);
-	});
+	BindAntiPingInterferenceCallback();
 	m_Core.m_ActiveWeapon = -1; // set by the first Read below
 	mem_zero(&m_Core.m_Ninja, sizeof(m_Core.m_Ninja));
 	m_Core.m_LeftWall = true;
@@ -1727,6 +1725,15 @@ void CCharacter::Read(CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtende
 void CCharacter::SetCoreWorld(CGameWorld *pGameWorld)
 {
 	m_Core.SetCoreWorld(&pGameWorld->m_Core, pGameWorld->Collision(), pGameWorld->Teams());
+	BindAntiPingInterferenceCallback();
+}
+
+void CCharacter::BindAntiPingInterferenceCallback()
+{
+	// 预测世界复制角色时，不能继续捕获父世界角色的 this 指针。
+	m_Core.SetAntiPingInterfereCallback([this](int ClientId, bool DisallowReset) {
+		AntiPingInterference(ClientId, DisallowReset, true);
+	});
 }
 
 bool CCharacter::Match(CCharacter *pChar) const

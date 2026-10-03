@@ -4307,8 +4307,6 @@ void CHud::RenderMediaIsland()
 	}
 	const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - PlannedUnifiedWidth);
 	float TargetX = std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
-	float TimerBoxX = TimerCapsule.m_Visible ? TargetX + TargetWidth + MainToTimerGap : TimerCapsule.m_BoxX;
-	const float TimerBoxRight = TimerBoxX + TimerCapsule.m_BoxW;
 	const float TargetBottomHeight = ShowBottomRow ? (BottomRowPaddingY * 2.0f + BottomRowLineHeight * BottomRowLineCount) : 0.0f;
 	const float TargetHeight = BaseIslandHeight + TargetBottomHeight;
 	const float TitleAlphaTarget = TrackDetailsExpanded && TitleWidth > 0.0f ? 1.0f : 0.0f;
@@ -4513,6 +4511,9 @@ void CHud::RenderMediaIsland()
 	const float IslandX = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::POS_X, AnimState.m_TargetX, CapsuleSpring, 3, 0.01f);
 	const float IslandWidth = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::WIDTH, AnimState.m_TargetWidth, CapsuleSpring, 3, 0.01f);
 	const float AnimatedIslandHeight = ResolveUiPresentationStateValue(AnimRuntime, CapsuleNode, EUiAnimProperty::HEIGHT, AnimState.m_TargetHeight, CapsuleSpring, 3, 0.01f);
+	// 计时器也是固定位置的锚点，须跟随当前帧的岛体，避免目标坐标提前改变整岛映射。
+	const float TimerBoxX = TimerCapsule.m_Visible ? IslandX + IslandWidth + MainToTimerGap : TimerCapsule.m_BoxX;
+	const float TimerBoxRight = TimerBoxX + TimerCapsule.m_BoxW;
 	const float TitleAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, TitleNode, EUiAnimProperty::ALPHA, AnimState.m_TargetTitleAlpha, TitleSpring, 2, 0.004f), 0.0f, 1.0f);
 	const float TitleOffset = ResolveUiPresentationStateValue(AnimRuntime, TitleNode, EUiAnimProperty::POS_X, AnimState.m_TargetTitleOffset, TitleSpring, 2, 0.01f);
 	const float BottomAlpha = std::clamp(ResolveUiPresentationStateValue(AnimRuntime, BottomNode, EUiAnimProperty::ALPHA, AnimState.m_TargetBottomAlpha, BottomSpring, 2, 0.004f), 0.0f, 1.0f);
