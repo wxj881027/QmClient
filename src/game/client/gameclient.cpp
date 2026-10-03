@@ -85,7 +85,10 @@
 #include <generated/client_data.h>
 #include <generated/client_data7.h>
 
+#include <chrono>
 #include <cinttypes>
+#include <cstdlib>
+#include <thread>
 
 namespace
 {
@@ -1098,9 +1101,20 @@ void CGameClient::OnInit()
 
 	// setup load amount, load textures
 	const char *pLoadingMessageAssets = Localize("Initializing assets");
-	LoadInitialGraphicsAssets();
+	// 测试专用：逐项延迟可复现总加载超过看门狗阈值，以及单项真正停滞的两条路径。
+	const char *pTestAssetDelay = std::getenv("QMCLIENT_TEST_ASSET_LOAD_DELAY_MS");
+	const int TestAssetDelayMs = pTestAssetDelay != nullptr ? std::clamp(str_toint(pTestAssetDelay), 0, 20000) : 0;
+	const auto AssetLoadStart = time_get_nanoseconds();
+	if(TestAssetDelayMs > 0)
+		log_info("test/loading", "assets_begin delay_ms=%d", TestAssetDelayMs);
+	LoadInitialGraphicsAssets([&]() {
+		if(TestAssetDelayMs > 0)
+			std::this_thread::sleep_for(std::chrono::milliseconds(TestAssetDelayMs));
+		m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 1);
+	});
+	if(TestAssetDelayMs > 0)
+		log_info("test/loading", "assets_complete elapsed_ms=%" PRId64, (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(time_get_nanoseconds() - AssetLoadStart).count());
 	m_LastBlankAssetFallback = g_Config.m_QmBlankAssetFallback;
-	m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 1);
 
 	m_GameWorld.Init(Collision(), m_aTuningList, &m_MapBugs);
 	if(!m_pJellyTee)
@@ -7488,7 +7502,7 @@ void CGameClient::ReloadNamedSingleFileAssetImage(int ImageId, const char *pCate
 		m_NamePlates.ResetNamePlates();
 }
 
-void CGameClient::LoadInitialGraphicsAssets()
+void CGameClient::LoadInitialGraphicsAssets(const std::function<void()> &OnAssetLoaded)
 {
 	// 按 g_pData 的图片表加载全部初始资源。启动与「图形资源重置后重建」共用这一条路径，
 	// 保证两条路径不会各自漂移。
@@ -7514,6 +7528,9 @@ void CGameClient::LoadInitialGraphicsAssets()
 			g_pData->m_aImages[i].m_Id = IGraphics::CTextureHandle();
 		else
 			g_pData->m_aImages[i].m_Id = Graphics()->LoadTexture(g_pData->m_aImages[i].m_pFilename, IStorage::TYPE_ALL);
+		// 启动时逐项处理窗口事件、呈现进度；设备重建不传回调，避免重建途中重入渲染。
+		if(OnAssetLoaded)
+			OnAssetLoaded();
 	}
 }
 

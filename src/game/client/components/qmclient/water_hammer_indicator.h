@@ -13,7 +13,7 @@
 
 #include <array>
 
-// 接收 sv_preinput，并为渲染层提供「同队可见玩家正在水里卡锤」状态。
+// 接收 sv_preinput，并为渲染层提供「同队可见玩家在冻结状态下卡锤」状态。
 class CQmWaterHammerIndicator : public CComponent
 {
 	struct SInputState
@@ -24,8 +24,6 @@ class CQmWaterHammerIndicator : public CComponent
 	};
 
 	std::array<SInputState, MAX_CLIENTS> m_aInputs;
-
-	bool IsClientInPenaltyArea(int ClientId) const;
 
 public:
 	int Sizeof() const override { return sizeof(*this); }

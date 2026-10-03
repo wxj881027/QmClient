@@ -59,13 +59,6 @@ bool CQmWaterHammerIndicator::IsInPenaltyArea(const vec2 Position) const
 	return false;
 }
 
-bool CQmWaterHammerIndicator::IsClientInPenaltyArea(const int ClientId) const
-{
-	const CGameClient::CClientData &Client = GameClient()->m_aClients[ClientId];
-	// 以当前渲染位置的地图死亡/冻结判定为准，避免把普通冻结状态误当成水域。
-	return IsInPenaltyArea(Client.m_RenderPos);
-}
-
 bool CQmWaterHammerIndicator::IsMarked(const int ClientId) const
 {
 	if(!g_Config.m_QmWaterHammerHighlight || ClientId < 0 || ClientId >= MAX_CLIENTS)
@@ -84,5 +77,5 @@ bool CQmWaterHammerIndicator::IsMarked(const int ClientId) const
 	const SInputState &Input = m_aInputs[ClientId];
 	const bool HammerRequested = Input.m_WantedWeapon == WEAPON_HAMMER + 1 || Client.m_RenderCur.m_Weapon == WEAPON_HAMMER;
 	const bool FireHeld = (Input.m_Fire & 1) != 0;
-	return Input.m_Received && QmShouldMarkWaterHammer(IsClientInPenaltyArea(ClientId), HammerRequested, FireHeld);
+	return Input.m_Received && QmShouldMarkWaterHammer(Client.m_FreezeEnd, Client.m_LiveFrozen, HammerRequested, FireHeld);
 }

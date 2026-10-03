@@ -91,7 +91,11 @@ public:
 	int GetActiveWeapon() const { return m_Core.m_ActiveWeapon; }
 	void SetActiveWeapon(int ActiveWeapon);
 	CCharacterCore GetCore() { return m_Core; }
-	void SetCore(const CCharacterCore &Core) { m_Core = Core; }
+	void SetCore(const CCharacterCore &Core)
+	{
+		m_Core = Core;
+		BindAntiPingInterferenceCallback();
+	}
 	const CCharacterCore *Core() const { return &m_Core; }
 	bool GetWeaponGot(int Type) { return m_Core.m_aWeapons[Type].m_Got; }
 	void SetWeaponGot(int Type, bool Value) { m_Core.m_aWeapons[Type].m_Got = Value; }
@@ -150,6 +154,8 @@ public:
 	void ShiftTickBase(int TickDelta);
 
 private:
+	void BindAntiPingInterferenceCallback();
+
 	// weapon info
 	int m_aHitObjects[MAX_CLIENTS];
 	int m_NumObjectsHit;

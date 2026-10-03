@@ -2050,7 +2050,7 @@ void CPlayers::OnRender()
 			}
 		}
 
-		// 仅对可见渲染路径中的同队玩家变色，提示其在死亡/冻结区域持续按锤。
+		// 仅对可见渲染路径中的同队玩家变色，提示其在冻结状态下持续按锤。
 		if(GameClient()->QmWaterHammerIndicator().IsMarked(i))
 		{
 			const ColorRGBA BodyColor(1.0f, 0.25f, 0.08f, 1.0f);

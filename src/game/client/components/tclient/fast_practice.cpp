@@ -828,6 +828,10 @@ void CFastPractice::CaptureServerLockedInputs()
 {
 	for(int Slot = 0; Slot < NUM_DUMMIES; Slot++)
 	{
+		// 练习中接入分身时，主角色继续沿用进入练习前锁定的输入。
+		if(m_Enabled && m_aHasServerLockedInputs[Slot] && GameClient()->m_aLocalIds[Slot] == m_EnableLocalClientId)
+			continue;
+
 		CNetObj_PlayerInput Input = {};
 		if(Slot == g_Config.m_ClDummy)
 		{
@@ -842,10 +846,9 @@ void CFastPractice::CaptureServerLockedInputs()
 		if(Input.m_TargetX == 0 && Input.m_TargetY == 0)
 			Input.m_TargetX = 1;
 
-		// 快速练习期间不能继续推动服务器角色；保留瞄准，释放移动和动作边沿。
+		// 保留瞄准和钩子，避免挂墙本体松钩掉落；释放移动、跳跃和开火。
 		Input.m_Direction = 0;
 		Input.m_Jump = 0;
-		Input.m_Hook = 0;
 		SuppressActionInput(Input, ReleasedFireState(Input.m_Fire));
 		m_aServerLockedInputs[Slot] = Input;
 		m_aHasServerLockedInputs[Slot] = true;

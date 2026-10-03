@@ -9,9 +9,11 @@ inline bool QmIsWaterHammerPenaltyTile(const int Tile)
 	return Tile == TILE_DEATH || Tile == TILE_FREEZE || Tile == TILE_DFREEZE || Tile == TILE_LFREEZE;
 }
 
-inline bool QmShouldMarkWaterHammer(const bool InPenaltyArea, const bool HammerRequested, const bool FireHeld)
+// 按角色实际冻结状态判断，避免仅接触水域边缘时提前高亮。
+inline bool QmShouldMarkWaterHammer(const int FreezeEnd, const bool LiveFrozen, const bool HammerRequested, const bool FireHeld)
 {
-	return InPenaltyArea && HammerRequested && FireHeld;
+	const bool Frozen = FreezeEnd != 0 || LiveFrozen;
+	return Frozen && HammerRequested && FireHeld;
 }
 
 #endif // GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H
