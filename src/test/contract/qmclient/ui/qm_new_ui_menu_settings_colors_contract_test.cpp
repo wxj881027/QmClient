@@ -23,18 +23,13 @@
 #include <test/support/qmclient_source_contract_test.h>
 #include <test/test.h>
 
-TEST(QmNewUiMenuSettingsColorsContract, NewSettingsUseToggleAndExposeAccentAndBlurControls)
+TEST(QmNewUiMenuSettingsColorsContract, SettingsExposeAccentAndBlurControls)
 {
 	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
 	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
 
 	EXPECT_NE(ConfigSource.find("QmUiAccentColor, qm_ui_accent_color"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("QmUiSelectedColor, qm_ui_selected_color"), std::string::npos);
-	const std::string SettingsCheckbox = FunctionBody(MenusSource, "int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SLabelProperties &LabelProps, const bool ProcessInput, const float RequestedFontSize)");
-	EXPECT_NE(SettingsCheckbox.find("if(g_Config.m_QmNewUi)"), std::string::npos);
-	EXPECT_NE(SettingsCheckbox.find("ui_widget::Toggle(Context, pId, &ToggleValue, ToggleRect, false, ProcessInput)"), std::string::npos);
-	EXPECT_NE(SettingsCheckbox.find("Ui()->DoButtonLogic(pId, 0, pRect, BUTTONFLAG_LEFT)"), std::string::npos);
 	EXPECT_NE(SettingsSource.find("Localize(\"Interface accent color\")"), std::string::npos);
 	EXPECT_NE(SettingsSource.find("Localize(\"Selected item color\")"), std::string::npos);
 	// 高斯模糊开关的稳定文案与稳定 ID（旧的 "Enable Gaussian blur" 已随渲染模式统一移除）。

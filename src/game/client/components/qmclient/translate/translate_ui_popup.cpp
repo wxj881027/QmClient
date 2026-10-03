@@ -31,21 +31,11 @@ void CTranslateSettingsPopup::Open(CUi *pUi, vec2 BottomRight, CGameClient *pGam
 {
 	m_pUi = pUi;
 	m_pGameClient = pGameClient;
-	const ui_widget::SSecondaryPanelMetrics Metrics = ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w, g_Config.m_QmNewUi != 0);
+	const ui_widget::SSecondaryPanelMetrics Metrics = ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w);
 	const float Width = minimum(240.0f, pUi->Screen()->w);
 	// 保留提示行，切换后端时出现的配置提示不改变弹层尺寸。
 	const float Height = minimum(Metrics.ContentHeight(2, 3, 1) + CUi::PopupMenuContentInset(), pUi->Screen()->h);
-	SPopupMenuProperties Props;
-	Props.m_BlockUnderlyingPointerInput = true;
-	Props.m_BlockUnderlyingScroll = true;
-	if(g_Config.m_QmNewUi)
-	{
-		Props = ui_widget::SecondaryPanelProperties();
-	}
-	else
-	{
-		Props.m_BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuBgColor, true));
-	}
+	const SPopupMenuProperties Props = ui_widget::SecondaryPanelProperties();
 	const float X = std::clamp(BottomRight.x - Width, 0.0f, maximum(0.0f, pUi->Screen()->w - Width));
 	const float Y = std::clamp(BottomRight.y - Height, 0.0f, maximum(0.0f, pUi->Screen()->h - Height));
 	pUi->DoPopupMenu(this, X, Y, Width, Height, this, Render, Props);
@@ -54,8 +44,6 @@ void CTranslateSettingsPopup::Open(CUi *pUi, vec2 BottomRight, CGameClient *pGam
 CUi::EPopupMenuFunctionResult CTranslateSettingsPopup::Render(void *pContext, CUIRect View, bool Active)
 {
 	auto &State = *static_cast<CTranslateSettingsPopup *>(pContext);
-	SUiTheme Theme{};
-	Theme.m_Accent = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionSelected, true));
 	IUiContext Ctx;
 	Ctx.m_pUi = State.m_pUi;
 	if(State.m_pGameClient != nullptr && State.m_pGameClient->UiRuntimeV2() != nullptr)
@@ -65,24 +53,9 @@ CUi::EPopupMenuFunctionResult CTranslateSettingsPopup::Render(void *pContext, CU
 		Ctx.m_ScopeHash = MakeUiScopeHash("translate_settings_popup");
 		Ctx.m_FrameDt = State.m_pGameClient->UiRuntimeV2()->FrameDt();
 	}
-	if(g_Config.m_QmNewUi)
-	{
-		Ctx.m_pTheme = nullptr;
-	}
-	else
-	{
-		Ctx.m_pTheme = &Theme;
-	}
-	SQmDropdownVisualStyle Style;
-	Style.m_TriggerColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuOptionNormal, true));
-	Style.m_ActiveEntryColor = Theme.m_Accent;
-	Style.m_PopupBackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTranslateMenuBgColor, true));
-	if(g_Config.m_QmNewUi)
-	{
-		const SUiTheme SharedTheme = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
-		Style = QmSettingsDropdownVisualStyle(SharedTheme, ResolveConfiguredSecondaryPanelTheme().m_Border);
-	}
-	ui_widget::CSecondaryPanel Panel(Ctx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(State.m_pUi->Screen()->w, g_Config.m_QmNewUi != 0), Style);
+	const SUiTheme SharedTheme = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+	const SQmDropdownVisualStyle Style = QmSettingsDropdownVisualStyle(SharedTheme, ResolveConfiguredSecondaryPanelTheme().m_Border);
+	ui_widget::CSecondaryPanel Panel(Ctx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(State.m_pUi->Screen()->w), Style);
 	if(Panel.Header(State.m_Title, State.m_CloseButton, Localize("Translation Settings")))
 		return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
 

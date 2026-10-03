@@ -1542,16 +1542,9 @@ void CMenus::RenderServerbrowserFilters(CUIRect View)
 			s_PopupCountryContext.m_pMenus = this;
 			s_PopupCountryContext.m_Selection = g_Config.m_BrFilterCountryIndex;
 			s_PopupCountryContext.m_New = true;
-			SPopupMenuProperties PopupProps;
-			PopupProps.m_BlockUnderlyingScroll = true;
-			if(g_Config.m_QmNewUi)
-			{
-				PopupProps = ui_widget::SecondaryPanelProperties();
-			}
+			const SPopupMenuProperties PopupProps = ui_widget::SecondaryPanelProperties();
 			const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
-			const float PopupWidth = g_Config.m_QmNewUi ? PanelRect.w : 490.0f;
-			const float PopupHeight = g_Config.m_QmNewUi ? PanelRect.h : 210.0f;
-			Ui()->DoPopupMenu(&s_PopupCountryId, Flag.x, Flag.y + Flag.h, PopupWidth, PopupHeight, &s_PopupCountryContext, PopupCountrySelection, PopupProps);
+			Ui()->DoPopupMenu(&s_PopupCountryId, Flag.x, Flag.y + Flag.h, PanelRect.w, PanelRect.h, &s_PopupCountryContext, PopupCountrySelection, PopupProps);
 		}
 	}
 
@@ -1974,140 +1967,85 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 		s_PopupOpenTime = time_get();
 	}
 
-	if(g_Config.m_QmNewUi)
+	IUiContext HeaderCtx;
+	HeaderCtx.m_pUi = pUi;
+	static ui_widget::SSecondaryPanelLabel s_Title;
+	static CButtonContainer s_CloseButton;
+	ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w), {});
+	if(Panel.Header(s_Title, s_CloseButton, Localize("Choose country flag")))
+		return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
+	CUIRect SearchRect, GridArea = Panel.ContentRect();
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(pUi->Screen()->w);
+	GridArea.HSplitTop(Metrics.m_LineHeight, &SearchRect, &GridArea);
+	GridArea.HSplitTop(Metrics.m_LineSpacing, nullptr, &GridArea);
+
+	IUiContext SearchCtx;
+	SearchCtx.m_pUi = pUi;
+	SearchCtx.m_pAnim = &pMenus->GameClient()->UiRuntimeV2()->AnimRuntime();
+	SearchCtx.m_pTree = &pMenus->GameClient()->UiRuntimeV2()->Tree();
+	SearchCtx.m_ScopeHash = MakeUiScopeHash("browser_country_flag_popup_search");
+	SearchCtx.m_FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
+	ui_widget::SInputFieldOptions SearchOptions;
+	SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+	SearchOptions.m_pPlaceholder = Localize("Search country flag…");
+	SearchOptions.m_Clearable = true;
+	ui_widget::InputField(SearchCtx, &pPopupContext->m_FilterInput, SearchRect, SearchOptions);
+
+	struct SFilteredFlag
 	{
-		IUiContext HeaderCtx;
-		HeaderCtx.m_pUi = pUi;
-		static ui_widget::SSecondaryPanelLabel s_Title;
-		static CButtonContainer s_CloseButton;
-		ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w, true), {});
-		if(Panel.Header(s_Title, s_CloseButton, Localize("Choose country flag")))
-			return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
-		CUIRect SearchRect, GridArea = Panel.ContentRect();
-		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(pUi->Screen()->w);
-		GridArea.HSplitTop(Metrics.m_LineHeight, &SearchRect, &GridArea);
-		GridArea.HSplitTop(Metrics.m_LineSpacing, nullptr, &GridArea);
-
-		IUiContext SearchCtx;
-		SearchCtx.m_pUi = pUi;
-		SearchCtx.m_pAnim = &pMenus->GameClient()->UiRuntimeV2()->AnimRuntime();
-		SearchCtx.m_pTree = &pMenus->GameClient()->UiRuntimeV2()->Tree();
-		SearchCtx.m_ScopeHash = MakeUiScopeHash("browser_country_flag_popup_search");
-		SearchCtx.m_FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
-		ui_widget::SInputFieldOptions SearchOptions;
-		SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
-		SearchOptions.m_pPlaceholder = Localize("Search country flag…");
-		SearchOptions.m_Clearable = true;
-		ui_widget::InputField(SearchCtx, &pPopupContext->m_FilterInput, SearchRect, SearchOptions);
-
-		struct SFilteredFlag
-		{
-			const CCountryFlags::CCountryFlag *m_pEntry;
-			std::optional<std::pair<int, int>> m_Match;
-		};
-		static std::vector<SFilteredFlag> s_vFiltered;
-		s_vFiltered.clear();
-		for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
-		{
-			const CCountryFlags::CCountryFlag &Entry = pMenus->GameClient()->m_CountryFlags.GetByIndex(i);
-			if(!pPopupContext->m_FilterInput.IsEmpty())
-			{
-				const char *pMatchEnd = nullptr;
-				const char *pMatchStart = str_utf8_find_nocase(Entry.m_aCountryCodeString, pPopupContext->m_FilterInput.GetString(), &pMatchEnd);
-				if(pMatchStart != nullptr)
-				{
-					s_vFiltered.push_back({&Entry, std::make_pair((int)(pMatchStart - Entry.m_aCountryCodeString), (int)(pMatchEnd - pMatchStart))});
-				}
-			}
-			else
-			{
-				s_vFiltered.push_back({&Entry, std::nullopt});
-			}
-		}
-
-		const int Columns = std::clamp((int)(GridArea.w / 54.0f), 1, 14);
-		int SelectedIndex = -1;
-		for(size_t i = 0; i < s_vFiltered.size(); ++i)
-		{
-			if(s_vFiltered[i].m_pEntry->m_CountryCode == pPopupContext->m_Selection)
-			{
-				SelectedIndex = (int)i;
-				break;
-			}
-		}
-
-		s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
-
-		for(size_t i = 0; i < s_vFiltered.size(); ++i)
-		{
-			const SFilteredFlag &Filtered = s_vFiltered[i];
-			const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
-			const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
-			const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
-			if(!Item.m_Visible)
-				continue;
-
-			if(IsSelected)
-			{
-				DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
-			}
-			else if(pUi->MouseInside(&Item.m_Rect))
-			{
-				DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(0, 0, 0, 0), ui_token::radius::BASE);
-			}
-
-			CUIRect FlagRect, Label;
-			Item.m_Rect.Margin(5.0f, &FlagRect);
-			FlagRect.HSplitBottom(12.0f, &FlagRect, &Label);
-			Label.HSplitTop(2.0f, nullptr, &Label);
-			const float OldWidth = FlagRect.w;
-			FlagRect.w = FlagRect.h * 2.0f;
-			FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
-			int64_t FlagAnimStartTime = s_PopupOpenTime;
-			if(s_PopupOpenTime > 0)
-			{
-				const int Col = (int)(i % Columns);
-				const int Row = (int)(i / Columns) % 6;
-				const float StaggerDelay = Col * 0.006f + Row * 0.015f;
-				FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
-			}
-			pMenus->GameClient()->m_CountryFlags.Render(pEntry->m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
-
-			SLabelProperties Props;
-			if(Filtered.m_Match.has_value())
-			{
-				const auto [MatchStart, MatchLen] = Filtered.m_Match.value();
-				Props.m_vColorSplits.emplace_back(MatchStart, MatchLen, ui_token::color::ACCENT_PRIMARY);
-			}
-			pUi->DoLabel(&Label, pEntry->m_aCountryCodeString, 10.0f, TEXTALIGN_MC, Props);
-		}
-
-		const int NewSelected = s_ListBox.DoEnd();
-		if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size())
-		{
-			pPopupContext->m_Selection = s_vFiltered[NewSelected].m_pEntry->m_CountryCode;
-		}
-		if(s_ListBox.WasItemSelected() || s_ListBox.WasItemActivated())
-		{
-			g_Config.m_BrFilterCountry = 1;
-			g_Config.m_BrFilterCountryIndex = pPopupContext->m_Selection;
-			pMenus->Client()->ServerBrowserUpdate();
-			return CUi::POPUP_CLOSE_CURRENT;
-		}
-
-		return CUi::POPUP_KEEP_OPEN;
-	}
-
-	// 旧版 UI 保持 100% 原始逻辑
-	s_ListBox.DoStart(50.0f, pMenus->GameClient()->m_CountryFlags.Num(), 8, 1, -1, &View, false);
-
+		const CCountryFlags::CCountryFlag *m_pEntry;
+		std::optional<std::pair<int, int>> m_Match;
+	};
+	static std::vector<SFilteredFlag> s_vFiltered;
+	s_vFiltered.clear();
 	for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
 	{
 		const CCountryFlags::CCountryFlag &Entry = pMenus->GameClient()->m_CountryFlags.GetByIndex(i);
+		if(!pPopupContext->m_FilterInput.IsEmpty())
+		{
+			const char *pMatchEnd = nullptr;
+			const char *pMatchStart = str_utf8_find_nocase(Entry.m_aCountryCodeString, pPopupContext->m_FilterInput.GetString(), &pMatchEnd);
+			if(pMatchStart != nullptr)
+			{
+				s_vFiltered.push_back({&Entry, std::make_pair((int)(pMatchStart - Entry.m_aCountryCodeString), (int)(pMatchEnd - pMatchStart))});
+			}
+		}
+		else
+		{
+			s_vFiltered.push_back({&Entry, std::nullopt});
+		}
+	}
 
-		const CListboxItem Item = s_ListBox.DoNextItem(&Entry, Entry.m_CountryCode == pPopupContext->m_Selection);
+	const int Columns = std::clamp((int)(GridArea.w / 54.0f), 1, 14);
+	int SelectedIndex = -1;
+	for(size_t i = 0; i < s_vFiltered.size(); ++i)
+	{
+		if(s_vFiltered[i].m_pEntry->m_CountryCode == pPopupContext->m_Selection)
+		{
+			SelectedIndex = (int)i;
+			break;
+		}
+	}
+
+	s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
+
+	for(size_t i = 0; i < s_vFiltered.size(); ++i)
+	{
+		const SFilteredFlag &Filtered = s_vFiltered[i];
+		const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
+		const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
+		const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
 		if(!Item.m_Visible)
 			continue;
+
+		if(IsSelected)
+		{
+			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
+		}
+		else if(pUi->MouseInside(&Item.m_Rect))
+		{
+			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(0, 0, 0, 0), ui_token::radius::BASE);
+		}
 
 		CUIRect FlagRect, Label;
 		Item.m_Rect.Margin(5.0f, &FlagRect);
@@ -2119,18 +2057,27 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 		int64_t FlagAnimStartTime = s_PopupOpenTime;
 		if(s_PopupOpenTime > 0)
 		{
-			const int Col = (int)(i % 8);
-			const int Row = (int)(i / 8) % 6;
+			const int Col = (int)(i % Columns);
+			const int Row = (int)(i / Columns) % 6;
 			const float StaggerDelay = Col * 0.006f + Row * 0.015f;
 			FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
 		}
-		pMenus->GameClient()->m_CountryFlags.Render(Entry.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
+		pMenus->GameClient()->m_CountryFlags.Render(pEntry->m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
 
-		pMenus->Ui()->DoLabel(&Label, Entry.m_aCountryCodeString, 10.0f, TEXTALIGN_MC);
+		SLabelProperties Props;
+		if(Filtered.m_Match.has_value())
+		{
+			const auto [MatchStart, MatchLen] = Filtered.m_Match.value();
+			Props.m_vColorSplits.emplace_back(MatchStart, MatchLen, ui_token::color::ACCENT_PRIMARY);
+		}
+		pUi->DoLabel(&Label, pEntry->m_aCountryCodeString, 10.0f, TEXTALIGN_MC, Props);
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();
-	pPopupContext->m_Selection = NewSelected >= 0 ? pMenus->GameClient()->m_CountryFlags.GetByIndex(NewSelected).m_CountryCode : -1;
+	if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size())
+	{
+		pPopupContext->m_Selection = s_vFiltered[NewSelected].m_pEntry->m_CountryCode;
+	}
 	if(s_ListBox.WasItemSelected() || s_ListBox.WasItemActivated())
 	{
 		g_Config.m_BrFilterCountry = 1;
@@ -3693,19 +3640,17 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 
 	CUIRect WorkspaceTabs;
 	View.HSplitTop(Layout.m_TabHeight, &WorkspaceTabs, &View);
-	const ColorRGBA TabActiveColor = BrowserPanelElevatedColor(0.98f);
 	const ColorRGBA TabInactiveColor = BrowserPanelColor(0.68f);
-	const ColorRGBA TabHoverColor = BrowserPanelElevatedColor(0.84f);
 	const char *apWorkspaceTabLabelPtrs[3] = {aaWorkspaceTabLabels[0], aaWorkspaceTabLabels[1], aaWorkspaceTabLabels[2]};
-	// 多选一分段选择器：新 UI 为胶囊滑块（配色按浏览器面板表面自适应），旧 UI 为分段圆角按钮。
+	// 胶囊滑块配色按浏览器面板表面自适应。
 	const ui_widget::SCapsuleTabBarStyle WorkspaceTabStyle = CapsuleTabBarStyleFor(TabInactiveColor);
-	const int NewWorkspaceTab = DoSegmentedChoice(s_aFavoriteMapsWorkspaceTabButtons, apWorkspaceTabLabelPtrs, 3, s_FavoriteMapsWorkspaceTab, WorkspaceTabs, Layout.m_TabHeight * 0.20f, &TabInactiveColor, &TabActiveColor, &TabHoverColor, &WorkspaceTabStyle);
+	const int NewWorkspaceTab = DoSegmentedChoice(s_aFavoriteMapsWorkspaceTabButtons, apWorkspaceTabLabelPtrs, 3, s_FavoriteMapsWorkspaceTab, WorkspaceTabs, Layout.m_TabHeight * 0.20f, &WorkspaceTabStyle);
 	if(NewWorkspaceTab != s_FavoriteMapsWorkspaceTab)
 		s_FavoriteMapsWorkspaceTab = NewWorkspaceTab;
 	View.HSplitTop(Layout.m_SectionGap, nullptr, &View);
 
 	View.Draw(BrowserPanelColor(0.82f), IGraphics::CORNER_ALL, Layout.m_PanelMargin);
-	CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor(0.82f), g_Config.m_QmNewUi);
+	CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor(0.82f));
 	View.Margin(Layout.m_PanelMargin, &View);
 	const char *apWorkspaceTitles[] = {
 		Localize("Favorite map"),
@@ -3936,10 +3881,10 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 		str_format(aaFilterLabels[0], sizeof(aaFilterLabels[0]), "%s (%d)", Localize("Unfinished"), UnfinishedCount);
 		str_format(aaFilterLabels[1], sizeof(aaFilterLabels[1]), "%s (%d)", Localize("Finished"), FinishedCount);
 		str_format(aaFilterLabels[2], sizeof(aaFilterLabels[2]), "%s (%d)", Localize("Recent"), (int)HistoryEntries.size());
-		// 多选一分段选择器：新 UI 为胶囊滑块（配色按浏览器面板表面自适应），旧 UI 为分段圆角按钮。
+		// 胶囊滑块配色按浏览器面板表面自适应。
 		const char *apFilterLabels[3] = {aaFilterLabels[0], aaFilterLabels[1], aaFilterLabels[2]};
 		const ui_widget::SCapsuleTabBarStyle FilterStyle = CapsuleTabBarStyleFor(TabInactiveColor);
-		const int NewMapHistoryFilter = DoSegmentedChoice(s_aMapHistoryFilterButtons, apFilterLabels, 3, s_MapHistoryFilter, FilterArea, 5.0f, &TabInactiveColor, &TabActiveColor, &TabHoverColor, &FilterStyle);
+		const int NewMapHistoryFilter = DoSegmentedChoice(s_aMapHistoryFilterButtons, apFilterLabels, 3, s_MapHistoryFilter, FilterArea, 5.0f, &FilterStyle);
 		if(NewMapHistoryFilter != s_MapHistoryFilter)
 			s_MapHistoryFilter = NewMapHistoryFilter;
 
@@ -4162,7 +4107,6 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 {
 	NormalizeServerbrowserToolboxPage();
 	CUIRect FilterTabButton, InfoTabButton, FriendsTabButton;
-	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 	TabBar.VSplitLeft(TabBar.w / 3.0f, &FilterTabButton, &TabBar);
 	TabBar.VSplitLeft(TabBar.w / 2.0f, &InfoTabButton, &FriendsTabButton);
 	FilterTabButton.VSplitRight(3.0f, &FilterTabButton, nullptr);
@@ -4171,75 +4115,40 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 	FriendsTabButton.VSplitLeft(3.0f, nullptr, &FriendsTabButton);
 	FriendsTabButton.VSplitRight(3.0f, &FriendsTabButton, nullptr);
 
-	const ColorRGBA ColorActive = UseNewUi ? BrowserPanelElevatedColor(0.92f) : ms_ColorTabbarActive;
-	const ColorRGBA ColorInactive = UseNewUi ? BrowserPanelColor(0.70f) : ms_ColorTabbarInactive;
-	const ColorRGBA ColorHover = UseNewUi ? BrowserPanelElevatedColor(0.82f) : ms_ColorTabbarHover;
-
 	if(!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_TAB))
 	{
 		const int Direction = Input()->ShiftIsPressed() ? -1 : 1;
 		g_Config.m_UiToolboxPage = (g_Config.m_UiToolboxPage + NUM_UI_TOOLBOX_PAGES + Direction) % NUM_UI_TOOLBOX_PAGES;
 	}
 
-	if(UseNewUi)
+	// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签图标/文字。
+	const CUIRect aToolboxTabSlots[] = {FilterTabButton, InfoTabButton, FriendsTabButton};
+	const int aToolboxTabPages[] = {UI_TOOLBOX_PAGE_FILTERS, UI_TOOLBOX_PAGE_INFO, UI_TOOLBOX_PAGE_FRIENDS};
+	int ActiveToolboxTab = -1;
+	for(size_t Tab = 0; Tab < std::size(aToolboxTabSlots); ++Tab)
 	{
-		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签图标/文字。
-		const CUIRect aToolboxTabSlots[] = {FilterTabButton, InfoTabButton, FriendsTabButton};
-		const int aToolboxTabPages[] = {UI_TOOLBOX_PAGE_FILTERS, UI_TOOLBOX_PAGE_INFO, UI_TOOLBOX_PAGE_FRIENDS};
-		int ActiveToolboxTab = -1;
-		for(size_t Tab = 0; Tab < std::size(aToolboxTabSlots); ++Tab)
-		{
-			if(g_Config.m_UiToolboxPage == aToolboxTabPages[Tab])
-				ActiveToolboxTab = (int)Tab;
-		}
-		const IUiContext ToolboxTabBarCtx = TabBarUiContext();
-		ui_widget::CapsuleTabBarChrome(ToolboxTabBarCtx, MakeUiScopeHash("browser_toolbox_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aToolboxTabSlots, std::size(aToolboxTabSlots)), ActiveToolboxTab >= 0 ? &aToolboxTabSlots[ActiveToolboxTab] : nullptr, CapsuleTabBarStyleFor(BrowserPanelColor(1.0f)));
-
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-
-		static CButtonContainer s_FilterTabButton;
-		if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
-			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
-		GameClient()->m_Tooltips.DoToolTip(&s_FilterTabButton, &FilterTabButton, Localize("Server filter"));
-
-		static CButtonContainer s_InfoTabButton;
-		if(DoButton_MenuTab(&s_InfoTabButton, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
-			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
-		GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
-
-		static CButtonContainer s_FriendsTabButton;
-		if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
-			g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
-		GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
-
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		return;
+		if(g_Config.m_UiToolboxPage == aToolboxTabPages[Tab])
+			ActiveToolboxTab = (int)Tab;
 	}
+	const IUiContext ToolboxTabBarCtx = TabBarUiContext();
+	ui_widget::CapsuleTabBarChrome(ToolboxTabBarCtx, MakeUiScopeHash("browser_toolbox_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aToolboxTabSlots, std::size(aToolboxTabSlots)), ActiveToolboxTab >= 0 ? &aToolboxTabSlots[ActiveToolboxTab] : nullptr, CapsuleTabBarStyleFor(BrowserPanelColor(1.0f)));
 
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
 	static CButtonContainer s_FilterTabButton;
-	if(DoButton_MenuTab_QmIcon(&s_FilterTabButton, EQmIcon::LIST_UL, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], &ColorInactive, &ColorActive, &ColorHover))
-	{
+	if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
 		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
-	}
 	GameClient()->m_Tooltips.DoToolTip(&s_FilterTabButton, &FilterTabButton, Localize("Server filter"));
 
 	static CButtonContainer s_InfoTabButton;
-	if(DoButton_MenuTab_QmIcon(&s_InfoTabButton, EQmIcon::INFO, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], &ColorInactive, &ColorActive, &ColorHover))
-	{
+	if(DoButton_MenuTab(&s_InfoTabButton, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
 		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
-	}
 	GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
 
 	static CButtonContainer s_FriendsTabButton;
-	if(DoButton_MenuTab_QmIcon(&s_FriendsTabButton, EQmIcon::HEART, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], &ColorInactive, &ColorActive, &ColorHover))
-	{
+	if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_ALL, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
 		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
-	}
 	GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
 
 	TextRender()->SetRenderFlags(0);
@@ -4343,7 +4252,6 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	// clang-format on
 
 	(void)DrawBackground;
-	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 	if(g_Config.m_UiPage == PAGE_FAVORITE_MAPS)
 	{
 		// 新 UI：面板直接对齐全局安全区边缘（距窗口 8px 统一基准），
@@ -4353,39 +4261,24 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	}
 
 	CUIRect View = MainView;
-	if(!UseNewUi)
-	{
-		View.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
-		View.Margin(10.0f, &View);
-	}
-
 	CUIRect ServerListBase, StatusBox, ToolBoxBase, TabBar;
 	CUIRect ContentLayout = View;
 	CUIRect ServerListWithGap;
-	const float ToolBoxWidth = UseNewUi ? 205.0f : 188.0f;
-	const float ColumnGap = UseNewUi ? 8.0f : 6.0f; // 板块间距统一用 8px 基准边距
-	const float StatusHeight = UseNewUi ? 84.0f : 76.0f;
+	const float ToolBoxWidth = 205.0f;
+	const float ColumnGap = 8.0f;
+	const float StatusHeight = 84.0f;
 	ContentLayout.VSplitRight(ToolBoxWidth, &ServerListWithGap, &ToolBoxBase);
 	ServerListWithGap.VSplitRight(ColumnGap, &ServerListBase, nullptr);
 	CUIRect ServerListStackBase = ServerListBase;
 	ServerListStackBase.HSplitBottom(StatusHeight, &ServerListBase, &StatusBox);
 	StatusBox.y = ServerListStackBase.y + ServerListStackBase.h - StatusHeight;
 	ServerListBase.h = maximum(StatusBox.y - ColumnGap - ServerListBase.y, 0.0f);
-	if(UseNewUi)
-	{
-		ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-		StatusBox.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-		ToolBoxBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-		ServerListBase.Margin(2.0f, &ServerListBase);
-		StatusBox.Margin(10.0f, &StatusBox);
-		ToolBoxBase.Margin(10.0f, &ToolBoxBase);
-	}
-	else
-	{
-		ServerListBase.Margin(std::clamp(ServerListBase.w * 0.006f, 1.0f, 4.0f), &ServerListBase);
-		StatusBox.Margin(std::clamp(StatusBox.w * 0.006f, 1.0f, 4.0f), &StatusBox);
-		ToolBoxBase.Margin(std::clamp(ToolBoxBase.w * 0.006f, 1.0f, 4.0f), &ToolBoxBase);
-	}
+	ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	StatusBox.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	ToolBoxBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	ServerListBase.Margin(2.0f, &ServerListBase);
+	StatusBox.Margin(10.0f, &StatusBox);
+	ToolBoxBase.Margin(10.0f, &ToolBoxBase);
 
 	float TransitionOffset = 0.0f;
 	const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("browser_page_switch"));
@@ -4398,7 +4291,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 
 	bool WasListboxItemActivated = false;
 	{
-		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor(), UseNewUi);
+		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor());
 		CUIRect ServerList = ServerListBase;
 		if(DoClip)
 		{
@@ -4420,12 +4313,12 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	}
 
 	{
-		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelElevatedColor(), UseNewUi);
+		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelElevatedColor());
 		RenderServerbrowserStatusBox(StatusBox, WasListboxItemActivated);
 	}
 
 	{
-		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor(), UseNewUi);
+		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor());
 		CUIRect ToolBox = ToolBoxBase;
 		if(DoClip)
 		{

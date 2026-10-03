@@ -27,28 +27,6 @@
 #include <sstream>
 #include <string>
 
-namespace
-{
-
-	[[maybe_unused]] size_t MatchingBrace(const std::string &Source, size_t BodyStart)
-	{
-		int Depth = 0;
-		for(size_t Index = BodyStart; Index < Source.size(); ++Index)
-		{
-			if(Source[Index] == '{')
-				++Depth;
-			else if(Source[Index] == '}')
-			{
-				--Depth;
-				if(Depth == 0)
-					return Index;
-			}
-		}
-		return std::string::npos;
-	}
-
-} // namespace
-
 TEST(QmNewUiMenuShellSettingsContract, SettingsShellAndOuterScrollbarUseStableContracts)
 {
 	const std::string ShellSource = ReadTextFile("src/game/client/QmUi/SettingsPageLayout.h");
@@ -179,38 +157,6 @@ TEST(QmNewUiMenuShellSettingsContract, TClientHeaderIncludesGeneratedProtocolFor
 
 	EXPECT_NE(TClientHeader.find("#include <generated/protocol.h>"), std::string::npos);
 	EXPECT_NE(TClientHeader.find("m_aGoresPreHammerWeapon[NUM_DUMMIES] = {WEAPON_GUN, WEAPON_GUN};"), std::string::npos);
-}
-
-TEST(QmNewUiMenuShellSettingsContract, SettingsShellKeepsExplicitQmNewUiContainerBranch)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string RenderSettings = FunctionBody(Source, "void CMenus::RenderSettings(CUIRect MainView)");
-	const size_t UseNewSettingsUiIfPos = RenderSettings.find("if(UseNewSettingsUi)");
-	ASSERT_NE(UseNewSettingsUiIfPos, std::string::npos);
-	const size_t UseNewSettingsUiBodyStart = RenderSettings.find("{", UseNewSettingsUiIfPos);
-	ASSERT_NE(UseNewSettingsUiBodyStart, std::string::npos);
-	const size_t UseNewSettingsUiBodyEnd = MatchingBrace(RenderSettings, UseNewSettingsUiBodyStart);
-	ASSERT_NE(UseNewSettingsUiBodyEnd, std::string::npos);
-	const std::string UseNewSettingsUiBlock = RenderSettings.substr(UseNewSettingsUiBodyStart, UseNewSettingsUiBodyEnd - UseNewSettingsUiBodyStart);
-	const size_t OldSettingsUiElsePos = RenderSettings.find("else", UseNewSettingsUiBodyEnd);
-	ASSERT_NE(OldSettingsUiElsePos, std::string::npos);
-	const size_t OldSettingsUiBodyStart = RenderSettings.find("{", OldSettingsUiElsePos);
-	ASSERT_NE(OldSettingsUiBodyStart, std::string::npos);
-	const size_t OldSettingsUiBodyEnd = MatchingBrace(RenderSettings, OldSettingsUiBodyStart);
-	ASSERT_NE(OldSettingsUiBodyEnd, std::string::npos);
-	const std::string OldSettingsUiBlock = RenderSettings.substr(OldSettingsUiBodyStart, OldSettingsUiBodyEnd - OldSettingsUiBodyStart);
-	const std::string SettingsHeaderBranch = BlockBodyAfter(RenderSettings, "if(UseNewSettingsUi)\n\t{\n\t\tTabBar.Margin(10.0f, &TabBar);");
-	const std::string SettingsHeaderLegacyBranch = BlockBodyAfter(RenderSettings, "else\n\t{\n\t\tTabBar.HSplitTop(50.0f, &Button, &TabBar);");
-
-	EXPECT_NE(Source.find("const bool UseNewSettingsUi = g_Config.m_QmNewUi != 0;"), std::string::npos);
-	EXPECT_NE(UseNewSettingsUiBlock.find("TabBar.Draw(SettingsTabbarColor()"), std::string::npos);
-	EXPECT_NE(UseNewSettingsUiBlock.find("Shell.m_ContentPanelRect.Draw(MenuPanelColor()"), std::string::npos);
-	EXPECT_EQ(UseNewSettingsUiBlock.find("MainView.Draw(ms_ColorTabbarActive"), std::string::npos);
-	EXPECT_NE(OldSettingsUiBlock.find("MainView.Draw(ms_ColorTabbarActive"), std::string::npos);
-	EXPECT_EQ(OldSettingsUiBlock.find("SettingsTabbarColor()"), std::string::npos);
-	EXPECT_EQ(OldSettingsUiBlock.find("MenuPanelColor()"), std::string::npos);
-	EXPECT_EQ(SettingsHeaderBranch.find("Button.Draw(ms_ColorTabbarActive"), std::string::npos);
-	EXPECT_NE(SettingsHeaderLegacyBranch.find("Button.Draw(ms_ColorTabbarActive"), std::string::npos);
 }
 
 TEST(QmNewUiMenuShellSettingsContract, AssetsPreviewUsesInnerFrameRectForPreviewImage)

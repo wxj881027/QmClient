@@ -39,7 +39,7 @@ TEST(QmNewUiMenuBranches, CapsuleTabBarChromeDrawsContainerThenSpringIndicatorUn
 TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 {
 	// 意图：设置页各子 Tab 行（外观 / Assets / TClient / QmClient）统一走
-	// 「槽位预布局 → 容器与滑块 → 页签文字」，旧 UI 分支保留原来的分段外观。
+	// 「槽位预布局 → 容器与滑块 → 页签文字」。
 	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
 	const std::string MenusHeader = ReadTextFile("src/game/client/components/menus.h");
 	const std::string Settings = ReadTextFile("src/game/client/components/menus_settings.cpp");
@@ -64,7 +64,6 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 	EXPECT_LT(AppearanceGrid, AppearanceChrome);
 	EXPECT_LT(AppearanceChrome, AppearanceDraw);
 	EXPECT_NE(RenderAppearance.find("nullptr, nullptr, -1.0f, true))"), std::string::npos);
-	EXPECT_NE(RenderAppearance.find("IGraphics::CORNER_L"), std::string::npos);
 
 	const std::string RenderAssets = FunctionBody(Assets, "void CMenus::RenderSettingsCustom(CUIRect MainView)");
 	ASSERT_FALSE(RenderAssets.empty());
@@ -76,7 +75,6 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 	ASSERT_NE(AssetsDraw, std::string::npos);
 	EXPECT_LT(AssetsGrid, AssetsChrome);
 	EXPECT_LT(AssetsChrome, AssetsDraw);
-	EXPECT_NE(RenderAssets.find("IGraphics::CORNER_L"), std::string::npos);
 
 	const std::string RenderTClient = FunctionBody(TClient, "void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)");
 	ASSERT_FALSE(RenderTClient.empty());
@@ -88,8 +86,6 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 	ASSERT_NE(TClientDraw, std::string::npos);
 	EXPECT_LT(TClientGrid, TClientChrome);
 	EXPECT_LT(TClientChrome, TClientDraw);
-	// 旧 UI 仍按 CORNER_L/R/NONE 的分段外观逐段切分。
-	EXPECT_NE(RenderTClient.find("ActiveTab == Tab, &Button, Corners"), std::string::npos);
 
 	const std::string RenderQmClient = FunctionBody(QmClient, "void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)");
 	ASSERT_FALSE(RenderQmClient.empty());
@@ -101,7 +97,6 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 	ASSERT_NE(QmDraw, std::string::npos);
 	EXPECT_LT(QmGrid, QmChrome);
 	EXPECT_LT(QmChrome, QmDraw);
-	// 页签计时段仍然覆盖两条分支。
 	EXPECT_LT(QmDraw, RenderQmClient.find("LogQmPerfStage(Client(), \"tabbar\", StageTimer.ElapsedMs(), false, aTabExtra);"));
 
 	// 玩家/Dummy 行同样先画胶囊再画文字。
@@ -112,13 +107,11 @@ TEST(QmNewUiMenuBranches, SettingsSubTabRowsUseCapsuleTabBar)
 	ASSERT_NE(PlayerChrome, std::string::npos);
 	ASSERT_NE(PlayerDraw, std::string::npos);
 	EXPECT_LT(PlayerChrome, PlayerDraw);
-	EXPECT_NE(RenderPlayer.find("&PlayerTab, IGraphics::CORNER_L"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)
 {
-	// 意图：服务器浏览器工具箱页签（过滤器 / 信息 / 好友）在新 UI 下同样是胶囊，
-	// 旧 UI 保留原来的分段底色。
+	// 意图：服务器浏览器工具箱页签（过滤器 / 信息 / 好友）同样使用胶囊。
 	const std::string Source = ReadTextFile("src/game/client/components/menus_browser.cpp");
 	const std::string Body = FunctionBody(Source, "void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)");
 	ASSERT_FALSE(Body.empty());
@@ -130,7 +123,6 @@ TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)
 	ASSERT_NE(Draw, std::string::npos);
 	EXPECT_LT(Chrome, Draw);
 	EXPECT_NE(Body.find("CapsuleTabBarStyleFor(BrowserPanelColor(1.0f))"), std::string::npos);
-	EXPECT_NE(Body.find("const ColorRGBA ColorActive = UseNewUi ? BrowserPanelElevatedColor(0.92f) : ms_ColorTabbarActive;"), std::string::npos);
 	EXPECT_EQ(Source.find("UI_TOOLBOX_PAGE_QM"), std::string::npos);
 	EXPECT_EQ(Source.find("RenderServerbrowserQm"), std::string::npos);
 
@@ -143,8 +135,8 @@ TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)
 
 TEST(QmNewUiMenuBranches, ServerControlTabsUseCapsuleTabBarInNewUi)
 {
-	// 意图：游戏中"服务器控制"页的三个页签（改设置 / 踢人 / 移到观察者）在新 UI 下
-	// 同样先画胶囊容器与滑块，再画页签文字；旧 UI 保留贴边的分段外观。
+	// 意图：游戏中"服务器控制"页的三个页签（改设置 / 踢人 / 移到观察者）
+	// 同样先画胶囊容器与滑块，再画页签文字。
 	const std::string Source = ReadTextFile("src/game/client/components/menus_ingame.cpp");
 	const std::string Body = FunctionBody(Source, "void CMenus::RenderServerControl(CUIRect MainView)");
 	ASSERT_FALSE(Body.empty());
@@ -157,13 +149,12 @@ TEST(QmNewUiMenuBranches, ServerControlTabsUseCapsuleTabBarInNewUi)
 	EXPECT_LT(Chrome, Draw);
 	EXPECT_NE(Body.find("ControlTabsRemainder.VSplitLeft(ControlTabsRemainder.w / 3.0f, &aControlTabSlots[0], &ControlTabsRemainder);"), std::string::npos);
 	EXPECT_NE(Body.find("ControlTabsRemainder.VSplitMid(&aControlTabSlots[1], &aControlTabSlots[2]);"), std::string::npos);
-	EXPECT_NE(Body.find("&Button, IGraphics::CORNER_NONE"), std::string::npos);
 }
 
 TEST(QmNewUiMenuBranches, Tee7SubTabsUseCapsuleTabBar)
 {
 	// 意图：Tee7 皮肤的「玩家/Dummy」「Basic/Custom」「皮肤部位」三行子 Tab 同样
-	// 先画胶囊容器与滑块、再画文字；旧 UI 保留贴边分段外观。
+	// 先画胶囊容器与滑块、再画文字。
 	const std::string Source = ReadTextFile("src/game/client/components/menus_settings7.cpp");
 	const std::string Body = FunctionBody(Source, "void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentMetrics &Metrics)");
 	ASSERT_FALSE(Body.empty());
@@ -185,8 +176,4 @@ TEST(QmNewUiMenuBranches, Tee7SubTabsUseCapsuleTabBar)
 	EXPECT_LT(PlayerDummyChrome, PlayerDummyDraw);
 	EXPECT_LT(ModeChrome, ModeDraw);
 	EXPECT_LT(SkinPartChrome, SkinPartDraw);
-	// 旧 UI 的贴边分段外观与圆角分支仍在。
-	EXPECT_NE(Source.find("!m_Dummy, &LeftTab, IGraphics::CORNER_L"), std::string::npos);
-	EXPECT_NE(Source.find("!m_CustomSkinMenu, &LeftTab, IGraphics::CORNER_L"), std::string::npos);
-	EXPECT_NE(Source.find("Button, Corners, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE"), std::string::npos);
 }

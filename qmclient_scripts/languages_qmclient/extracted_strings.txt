@@ -1307,7 +1307,6 @@ Enable Netease lyric integration
 Enable Netease music Hook
 Enable Netease Music hook integration
 Enable new IME candidate bar
-Enable new settings page UI
 Enable performance debug logging and diagnostics
 Enable Pie Menu
 Enable pie menu

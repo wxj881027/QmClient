@@ -141,35 +141,18 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 
 	static CButtonContainer s_PlayerTabButton;
 	static CButtonContainer s_DummyTabButton;
-	if(g_Config.m_QmNewUi != 0)
+	// 胶囊 Tabbar：容器与滑块先画，页签文字随后，滑块压在文字之下。
+	const CUIRect aPlayerDummySlots[] = {LeftTab, RightTab};
+	ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee7_player_dummy_tabs_capsule"), aPlayerDummySlots, std::size(aPlayerDummySlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());
+	if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &LeftTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true))
 	{
-		// 胶囊 Tabbar：容器与滑块先画，页签文字随后，滑块压在文字之下。
-		const CUIRect aPlayerDummySlots[] = {LeftTab, RightTab};
-		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee7_player_dummy_tabs_capsule"), aPlayerDummySlots, std::size(aPlayerDummySlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());
-		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &LeftTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true))
-		{
-			m_Dummy = false;
-			m_TeeEntranceStartTime = time_get();
-		}
-		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &RightTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true))
-		{
-			m_Dummy = true;
-			m_TeeEntranceStartTime = time_get();
-		}
+		m_Dummy = false;
+		m_TeeEntranceStartTime = time_get();
 	}
-	else
+	if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &RightTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true))
 	{
-		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &LeftTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE))
-		{
-			m_Dummy = false;
-			m_TeeEntranceStartTime = time_get();
-		}
-
-		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &RightTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE))
-		{
-			m_Dummy = true;
-			m_TeeEntranceStartTime = time_get();
-		}
+		m_Dummy = true;
+		m_TeeEntranceStartTime = time_get();
 	}
 	const CSkins7::CSkin *pSelectedSkin = GameClient()->m_Skins7.FindSkin(CSkins7::ms_apSkinNameVariables[m_Dummy], false);
 	m_SelectedSkin7Name = pSelectedSkin != nullptr ? pSelectedSkin->m_aName : "";
@@ -179,21 +162,11 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 
 	static CButtonContainer s_BasicTabButton;
 	static CButtonContainer s_CustomTabButton;
-	bool ClickedBasicTab = false;
-	bool ClickedCustomTab = false;
-	if(g_Config.m_QmNewUi != 0)
-	{
-		// 胶囊 Tabbar：容器与滑块先画，页签文字随后，滑块压在文字之下。
-		const CUIRect aModeTabSlots[] = {LeftTab, RightTab};
-		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee7_mode_tabs_capsule"), aModeTabSlots, std::size(aModeTabSlots), m_CustomSkinMenu ? 1 : 0, SettingsCapsuleTabBarStyle());
-		ClickedBasicTab = DoButton_MenuTab(&s_BasicTabButton, Localize("Basic"), !m_CustomSkinMenu, &LeftTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true) != 0;
-		ClickedCustomTab = DoButton_MenuTab(&s_CustomTabButton, Localize("Custom"), m_CustomSkinMenu, &RightTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true) != 0;
-	}
-	else
-	{
-		ClickedBasicTab = DoButton_MenuTab(&s_BasicTabButton, Localize("Basic"), !m_CustomSkinMenu, &LeftTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE) != 0;
-		ClickedCustomTab = DoButton_MenuTab(&s_CustomTabButton, Localize("Custom"), m_CustomSkinMenu, &RightTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE) != 0;
-	}
+	// 胶囊 Tabbar：容器与滑块先画，页签文字随后，滑块压在文字之下。
+	const CUIRect aModeTabSlots[] = {LeftTab, RightTab};
+	ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee7_mode_tabs_capsule"), aModeTabSlots, std::size(aModeTabSlots), m_CustomSkinMenu ? 1 : 0, SettingsCapsuleTabBarStyle());
+	const bool ClickedBasicTab = DoButton_MenuTab(&s_BasicTabButton, Localize("Basic"), !m_CustomSkinMenu, &LeftTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true) != 0;
+	const bool ClickedCustomTab = DoButton_MenuTab(&s_CustomTabButton, Localize("Custom"), m_CustomSkinMenu, &RightTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true) != 0;
 	if(ClickedBasicTab)
 	{
 		m_CustomSkinMenu = false;
@@ -450,34 +423,18 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView, const SSettingsContentMe
 	const float ButtonWidth = ButtonBar.w / (float)protocol7::NUM_SKINPARTS;
 
 	static CButtonContainer s_aSkinPartButtons[protocol7::NUM_SKINPARTS];
-	if(g_Config.m_QmNewUi != 0)
+	// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字。
+	CUIRect aSkinPartSlots[protocol7::NUM_SKINPARTS];
+	CUIRect SkinPartRemainder = ButtonBar;
+	for(int i = 0; i < protocol7::NUM_SKINPARTS; i++)
+		SkinPartRemainder.VSplitLeft(ButtonWidth, &aSkinPartSlots[i], &SkinPartRemainder);
+	const int ActiveSkinPart = std::clamp(m_TeePartSelected, 0, (int)protocol7::NUM_SKINPARTS - 1);
+	ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee7_skin_part_tabs_capsule"), aSkinPartSlots, protocol7::NUM_SKINPARTS, ActiveSkinPart, SettingsCapsuleTabBarStyle());
+	for(int i = 0; i < protocol7::NUM_SKINPARTS; i++)
 	{
-		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字。
-		CUIRect aSkinPartSlots[protocol7::NUM_SKINPARTS];
-		CUIRect SkinPartRemainder = ButtonBar;
-		for(int i = 0; i < protocol7::NUM_SKINPARTS; i++)
-			SkinPartRemainder.VSplitLeft(ButtonWidth, &aSkinPartSlots[i], &SkinPartRemainder);
-		const int ActiveSkinPart = std::clamp(m_TeePartSelected, 0, (int)protocol7::NUM_SKINPARTS - 1);
-		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee7_skin_part_tabs_capsule"), aSkinPartSlots, protocol7::NUM_SKINPARTS, ActiveSkinPart, SettingsCapsuleTabBarStyle());
-		for(int i = 0; i < protocol7::NUM_SKINPARTS; i++)
+		if(DoButton_MenuTab(&s_aSkinPartButtons[i], Localize(CSkins7::ms_apSkinPartNamesLocalized[i], "skins"), m_TeePartSelected == i, &aSkinPartSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true))
 		{
-			if(DoButton_MenuTab(&s_aSkinPartButtons[i], Localize(CSkins7::ms_apSkinPartNamesLocalized[i], "skins"), m_TeePartSelected == i, &aSkinPartSlots[i], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE, nullptr, nullptr, -1.0f, true))
-			{
-				m_TeePartSelected = i;
-			}
-		}
-	}
-	else
-	{
-		for(int i = 0; i < protocol7::NUM_SKINPARTS; i++)
-		{
-			CUIRect Button;
-			ButtonBar.VSplitLeft(ButtonWidth, &Button, &ButtonBar);
-			const int Corners = i == 0 ? IGraphics::CORNER_TL : (i == (protocol7::NUM_SKINPARTS - 1) ? IGraphics::CORNER_TR : IGraphics::CORNER_NONE);
-			if(DoButton_MenuTab(&s_aSkinPartButtons[i], Localize(CSkins7::ms_apSkinPartNamesLocalized[i], "skins"), m_TeePartSelected == i, &Button, Corners, nullptr, nullptr, nullptr, nullptr, ui_token::radius::BASE))
-			{
-				m_TeePartSelected = i;
-			}
+			m_TeePartSelected = i;
 		}
 	}
 

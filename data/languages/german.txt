@@ -3926,9 +3926,6 @@ Enable Netease Music hook integration
 Enable new IME candidate bar
 == Neue IME-Kandidatenleiste aktivieren
 
-Enable new settings page UI
-== Neue Einstellungsseiten-UI aktivieren
-
 Enable performance debug logging and diagnostics
 == Leistungs-Debug-Logging und Ruckel-Diagnose aktivieren
 

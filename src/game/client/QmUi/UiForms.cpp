@@ -52,7 +52,7 @@ namespace ui_widget
 			const SUiTheme Theme = ThemeFor(Ctx);
 			ColorRGBA Border = Theme.m_Border;
 			Border.a = std::max(Border.a, 0.24f);
-			DrawRoundedSurface(Ctx, Rect, (g_Config.m_QmNewUi ? Fill : Ctx.m_pUi->ScaleBackgroundAlpha(Fill)), Ctx.m_pUi->ScaleBackgroundAlpha(Border), Radius, 1.0f, Corners);
+			DrawRoundedSurface(Ctx, Rect, Fill, Ctx.m_pUi->ScaleBackgroundAlpha(Border), Radius, 1.0f, Corners);
 		}
 
 		bool NumericFieldTextIsInfinite(const char *pText)
@@ -72,7 +72,7 @@ namespace ui_widget
 			const SUiTheme &Theme = ThemeFor(Ctx);
 			ColorRGBA RingColor = Theme.m_FocusRing;
 			RingColor.a *= Alpha;
-			DrawRoundedSurface(Ctx, Rect, (g_Config.m_QmNewUi ? ResolveConfiguredInputSurface() : Ctx.m_pUi->ScaleBackgroundAlpha(Theme.m_InputSurface)), Ctx.m_pUi->ScaleBackgroundAlpha(RingColor), ui_token::radius::BASE + Theme.m_FocusRingWidth, Theme.m_FocusRingWidth);
+			DrawRoundedSurface(Ctx, Rect, ResolveConfiguredInputSurface(), Ctx.m_pUi->ScaleBackgroundAlpha(RingColor), ui_token::radius::BASE + Theme.m_FocusRingWidth, Theme.m_FocusRingWidth);
 		}
 
 		void DrawTextFieldFocusBorder(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect)
@@ -217,9 +217,7 @@ namespace ui_widget
 		const auto ActionHoverColor = [&Theme](float State) {
 			return Theme.m_BorderHovered.WithAlpha(std::clamp(Theme.m_BorderHovered.a * (State - 1.0f), 0.0f, 1.0f));
 		};
-		const bool Hovered = Ctx.m_pUi->HotItem() == pInput;
-		const ColorRGBA PlateColor = g_Config.m_QmNewUi ? ResolveConfiguredInputSurface(Options.m_ProcessInput) : Hovered && !pInput->IsActive() ? Theme.m_SurfaceHovered :
-																			   Theme.m_InputSurface;
+		const ColorRGBA PlateColor = ResolveConfiguredInputSurface(Options.m_ProcessInput);
 		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), PlateColor);
 		DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE);
 		pInput->SetEmptyText(Options.m_pPlaceholder != nullptr ? Options.m_pPlaceholder : (Search ? Localize("Search") : nullptr));

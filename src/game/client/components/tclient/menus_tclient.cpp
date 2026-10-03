@@ -1121,7 +1121,7 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 		}
 	}
 
-	CUIRect TabBar, Button;
+	CUIRect TabBar;
 	int ActiveTab = m_TClientSettingsTab;
 	if(ActiveTab < 0 || ActiveTab >= NUMBER_OF_TCLIENT_TABS)
 		ActiveTab = TCLIENT_TAB_SETTINGS;
@@ -1150,53 +1150,34 @@ void CMenus::RenderSettingsTClient(CUIRect MainView, bool PrewarmOnly)
 		s_apTClientTabNames[TCLIENT_TAB_STATUSBAR] = Localize("Status Bar");
 	}
 
-	int VisibleTabIndex = 0;
-	if(g_Config.m_QmNewUi != 0)
+	// 胶囊 Tabbar：可见页签槽位先算完，再画容器与滑块，最后画页签文字。
+	CUIRect aTClientTabSlots[NUMBER_OF_TCLIENT_TABS];
+	int aTClientTabPages[NUMBER_OF_TCLIENT_TABS];
+	int NumTClientTabs = 0;
+	int ActiveTClientTab = -1;
 	{
-		// 胶囊 Tabbar：可见页签槽位先算完，再画容器与滑块，最后画页签文字。
-		CUIRect aTClientTabSlots[NUMBER_OF_TCLIENT_TABS];
-		int aTClientTabPages[NUMBER_OF_TCLIENT_TABS];
-		int NumTClientTabs = 0;
-		int ActiveTClientTab = -1;
-		{
-			CUIRect TabsRemainder = TabBar;
-			for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
-			{
-				TabsRemainder.VSplitLeft(TabWidth, &aTClientTabSlots[NumTClientTabs], &TabsRemainder);
-				aTClientTabPages[NumTClientTabs] = Tab;
-				if(ActiveTab == Tab)
-					ActiveTClientTab = NumTClientTabs;
-				++NumTClientTabs;
-			}
-		}
-		if(NumTClientTabs > 0)
-		{
-			const IUiContext TClientTabBarCtx = TabBarUiContext();
-			ui_widget::CapsuleTabBarChrome(TClientTabBarCtx, MakeUiScopeHash("settings_tclient_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aTClientTabSlots, NumTClientTabs), ActiveTClientTab >= 0 ? &aTClientTabSlots[ActiveTClientTab] : nullptr, SettingsCapsuleTabBarStyle());
-			for(int TabIndex = 0; TabIndex < NumTClientTabs; ++TabIndex)
-			{
-				const int Tab = aTClientTabPages[TabIndex];
-				if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &aTClientTabSlots[TabIndex], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true) && !ReadOnly)
-				{
-					m_TClientSettingsTab = Tab;
-					ActiveTab = Tab;
-				}
-			}
-		}
-	}
-	else
-	{
+		CUIRect TabsRemainder = TabBar;
 		for(int Tab = 0; Tab < NUMBER_OF_TCLIENT_TABS; ++Tab)
 		{
-			TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-			const int Corners = VisibleTabIndex == 0 ? IGraphics::CORNER_L : VisibleTabIndex == NUMBER_OF_TCLIENT_TABS - 1 ? IGraphics::CORNER_R :
-																	 IGraphics::CORNER_NONE;
-			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
+			TabsRemainder.VSplitLeft(TabWidth, &aTClientTabSlots[NumTClientTabs], &TabsRemainder);
+			aTClientTabPages[NumTClientTabs] = Tab;
+			if(ActiveTab == Tab)
+				ActiveTClientTab = NumTClientTabs;
+			++NumTClientTabs;
+		}
+	}
+	if(NumTClientTabs > 0)
+	{
+		const IUiContext TClientTabBarCtx = TabBarUiContext();
+		ui_widget::CapsuleTabBarChrome(TClientTabBarCtx, MakeUiScopeHash("settings_tclient_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aTClientTabSlots, NumTClientTabs), ActiveTClientTab >= 0 ? &aTClientTabSlots[ActiveTClientTab] : nullptr, SettingsCapsuleTabBarStyle());
+		for(int TabIndex = 0; TabIndex < NumTClientTabs; ++TabIndex)
+		{
+			const int Tab = aTClientTabPages[TabIndex];
+			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &aTClientTabSlots[TabIndex], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true) && !ReadOnly)
 			{
 				m_TClientSettingsTab = Tab;
 				ActiveTab = Tab;
 			}
-			++VisibleTabIndex;
 		}
 	}
 
@@ -1832,7 +1813,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	HeaderCtx.m_pUi = pUi;
 	static ui_widget::SSecondaryPanelLabel s_Title;
 	static CButtonContainer s_CloseButton;
-	ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w, true), {});
+	ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w), {});
 	if(Panel.Header(s_Title, s_CloseButton, Localize("Font store")))
 		return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
 	View = Panel.ContentRect();

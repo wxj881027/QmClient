@@ -225,44 +225,22 @@ void CMenus::RenderSettingsContributors(CUIRect MainView, bool PrewarmOnly)
 		Localize("Friend links"),
 	};
 	{
-		CUIRect Button;
 		const float TabWidth = TabBar.w / (float)CREDITS_SETTINGS_TAB_NUM;
-		if(g_Config.m_QmNewUi != 0)
+		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字。
+		CUIRect aTabSlots[CREDITS_SETTINGS_TAB_NUM];
+		CUIRect TabsRemainder = TabBar;
+		for(int Tab = 0; Tab < CREDITS_SETTINGS_TAB_NUM; ++Tab)
+			TabsRemainder.VSplitLeft(TabWidth, &aTabSlots[Tab], &TabsRemainder);
+		const IUiContext TabBarCtx = TabBarUiContext();
+		ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash("settings_credits_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aTabSlots, CREDITS_SETTINGS_TAB_NUM), &aTabSlots[m_CreditsSettingsTab], SettingsCapsuleTabBarStyle());
+		for(int Tab = 0; Tab < CREDITS_SETTINGS_TAB_NUM; ++Tab)
 		{
-			// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字。
-			CUIRect aTabSlots[CREDITS_SETTINGS_TAB_NUM];
-			CUIRect TabsRemainder = TabBar;
-			for(int Tab = 0; Tab < CREDITS_SETTINGS_TAB_NUM; ++Tab)
-				TabsRemainder.VSplitLeft(TabWidth, &aTabSlots[Tab], &TabsRemainder);
-			const IUiContext TabBarCtx = TabBarUiContext();
-			ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash("settings_credits_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aTabSlots, CREDITS_SETTINGS_TAB_NUM), &aTabSlots[m_CreditsSettingsTab], SettingsCapsuleTabBarStyle());
-			for(int Tab = 0; Tab < CREDITS_SETTINGS_TAB_NUM; ++Tab)
+			if(DoButton_MenuTab(&s_aPageTabs[Tab], apCreditsTabNames[Tab], m_CreditsSettingsTab == Tab, &aTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true) && !ReadOnly)
 			{
-				if(DoButton_MenuTab(&s_aPageTabs[Tab], apCreditsTabNames[Tab], m_CreditsSettingsTab == Tab, &aTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true) && !ReadOnly)
+				if(m_CreditsSettingsTab != Tab)
 				{
-					if(m_CreditsSettingsTab != Tab)
-					{
-						m_CreditsSettingsTab = Tab;
-						m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
-					}
-				}
-			}
-		}
-		else
-		{
-			for(int Tab = 0; Tab < CREDITS_SETTINGS_TAB_NUM; ++Tab)
-			{
-				TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-				const int Corners = Tab == 0                            ? IGraphics::CORNER_L :
-						    Tab == CREDITS_SETTINGS_TAB_NUM - 1 ? IGraphics::CORNER_R :
-											  IGraphics::CORNER_NONE;
-				if(DoButton_MenuTab(&s_aPageTabs[Tab], apCreditsTabNames[Tab], m_CreditsSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f) && !ReadOnly)
-				{
-					if(m_CreditsSettingsTab != Tab)
-					{
-						m_CreditsSettingsTab = Tab;
-						m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
-					}
+					m_CreditsSettingsTab = Tab;
+					m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
 				}
 			}
 		}

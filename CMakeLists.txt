@@ -4697,6 +4697,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_modes_test.cpp
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
+    src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
     src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp

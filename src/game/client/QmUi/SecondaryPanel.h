@@ -30,16 +30,13 @@ namespace ui_widget
 		}
 	};
 
-	inline SSecondaryPanelMetrics ResolveSecondaryPanelMetrics(float ViewportWidth, bool NewUi)
+	inline SSecondaryPanelMetrics ResolveSecondaryPanelMetrics(float ViewportWidth)
 	{
 		SSecondaryPanelMetrics Metrics;
-		if(NewUi)
-		{
-			const SSettingsContentMetrics Settings = ResolveSettingsContentMetrics(ViewportWidth);
-			Metrics.m_TitleHeight = Settings.m_LineHeight;
-			Metrics.m_TitleFontSize = Settings.m_BodySize;
-			Metrics.m_DividerHeight = 1.0f;
-		}
+		const SSettingsContentMetrics Settings = ResolveSettingsContentMetrics(ViewportWidth);
+		Metrics.m_TitleHeight = Settings.m_LineHeight;
+		Metrics.m_TitleFontSize = Settings.m_BodySize;
+		Metrics.m_DividerHeight = 1.0f;
 		return Metrics;
 	}
 
@@ -145,8 +142,8 @@ namespace ui_widget
 			CUIRect Row = TakeRow(m_Metrics.m_RowHeight);
 			const CUIRect FullRow = Row;
 			CUIRect ToggleRect;
-			const float SwitchWidth = g_Config.m_QmNewUi ? 30.0f : m_Metrics.m_RowHeight * 1.8f;
-			const float SwitchHeight = g_Config.m_QmNewUi ? 16.0f : m_Metrics.m_RowHeight - 4.0f;
+			const float SwitchWidth = 30.0f;
+			const float SwitchHeight = 16.0f;
 			Row.VSplitRight(SwitchWidth, &Row, &ToggleRect);
 			ToggleRect.y += (ToggleRect.h - SwitchHeight) * 0.5f;
 			ToggleRect.h = SwitchHeight;

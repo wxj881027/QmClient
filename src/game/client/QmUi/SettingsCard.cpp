@@ -32,7 +32,7 @@ namespace
 
 	void RenderSettingsCardLabel(const IUiContext &Ctx, const SSettingsCardSpec &Spec, bool Subtitle, const CUIRect &Rect, const char *pText, float Size, const SLabelProperties &Props)
 	{
-		if(g_Config.m_QmNewUi == 0 || Ctx.m_pMenus == nullptr || Spec.m_pStableId == nullptr || Spec.m_pStableId[0] == '\0')
+		if(Ctx.m_pMenus == nullptr || Spec.m_pStableId == nullptr || Spec.m_pStableId[0] == '\0')
 		{
 			Ctx.m_pUi->DoLabel(&Rect, pText, Size, TEXTALIGN_ML, Props);
 			return;
@@ -127,8 +127,8 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		const ColorRGBA PreviousTextSelectionColor = Ctx.m_pTextRender->GetTextSelectionColor();
 		const unsigned PreviousRenderFlags = Ctx.m_pTextRender->GetRenderFlags();
 		const EFontPreset PreviousFontPreset = Ctx.m_pTextRender->GetFontPreset();
-		CUiScopedSurfaceText HeaderSurfaceText(Ctx.m_pTextRender, Surface, g_Config.m_QmNewUi);
-		ColorRGBA TitleColor = g_Config.m_QmNewUi ? ResolveConfiguredTextColor(Surface) : Theme.m_TextTitle;
+		CUiScopedSurfaceText HeaderSurfaceText(Ctx.m_pTextRender, Surface);
+		ColorRGBA TitleColor = ResolveConfiguredTextColor(Surface);
 		if(VisualOptions.m_RainbowTitles && g_Config.m_QmUiTextColorMode == 0)
 		{
 			const float TimePhase = (float)time_get() / (float)time_freq() * 0.08f;
@@ -144,7 +144,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		const char *pSubtitle = Spec.m_pSubtitle;
 		if(pSubtitle != nullptr && SettingsCardSubtitleVisible(DrawState.m_Hovered, DrawState.m_SubtitleVisibleDuringMotion, DrawState.m_Focused))
 		{
-			ColorRGBA SubtitleColor = g_Config.m_QmNewUi ? ResolveConfiguredTextColor(Surface) : Theme.m_TextSmall;
+			ColorRGBA SubtitleColor = ResolveConfiguredTextColor(Surface);
 			SubtitleColor.a *= DrawState.m_DrawAlpha;
 			Ctx.m_pTextRender->TextColor(SubtitleColor);
 			SLabelProperties SubtitleProps;
@@ -171,7 +171,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		const CUIRect ClipRect = ResolveSettingsCardContentClipRect(DrawFrame.m_ContentRect, DrawFrame.m_Rect, UiScale);
 		Ctx.m_pUi->ClipEnable(&ClipRect);
 	}
-	CUiScopedSurfaceText SurfaceText(Ctx.m_pTextRender, Surface, g_Config.m_QmNewUi);
+	CUiScopedSurfaceText SurfaceText(Ctx.m_pTextRender, Surface);
 	if(RenderMeasured)
 	{
 		CUIRect ContentRect = DrawFrame.m_ContentRect;

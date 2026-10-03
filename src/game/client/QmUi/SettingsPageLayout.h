@@ -814,14 +814,6 @@ inline float ResolveSettingsInlineRowMinimumWidth(const float FixedControlsWidth
 	return std::max(0.0f, FixedControlsWidth) + std::max(0.0f, Gap) * std::max(0, GapCount);
 }
 
-inline float ResolveSettingsCheckboxFontSize(const float BodySize, const float RequestedFontSize, const float RowHeight, const float BoxHeight, const float FontmodHeight)
-{
-	// 设置文本由整行高度约束，不能跟随缩进后的勾选框图标再次缩小。
-	(void)BoxHeight;
-	const float ResolvedBodySize = RequestedFontSize > 0.0f ? RequestedFontSize : BodySize;
-	return std::min(std::max(0.0f, ResolvedBodySize), std::max(0.0f, RowHeight) * std::max(0.0f, FontmodHeight));
-}
-
 inline float ResolveAppearanceChatMessagesHeight(const SSettingsContentMetrics &Metrics)
 {
 	constexpr int MessageGradientCount = 6;

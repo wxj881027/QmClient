@@ -3926,9 +3926,6 @@ Enable Netease Music hook integration
 Enable new IME candidate bar
 == 새 IME 후보 창 활성화
 
-Enable new settings page UI
-== 새 설정 페이지 UI 활성화
-
 Enable performance debug logging and diagnostics
 == 성능 디버그 로그 및 끊김 진단 활성화
 
