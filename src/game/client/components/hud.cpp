@@ -4209,6 +4209,7 @@ void CHud::RenderMediaIsland()
 	constexpr float InfoStackGap = QmHudMediaIslandScaled(0.8f);
 	constexpr float WaveformSlotWidth = QmHudMediaIslandScaled(12.0f);
 	constexpr float BottomFontSize = QmHudMediaIslandScaled(5.2f);
+	constexpr float LyricsFontSize = BottomFontSize * 1.2f;
 	constexpr float BottomRowPaddingX = QmHudMediaIslandScaled(7.0f);
 	constexpr float BottomRowLineHeight = QmHudMediaIslandScaled(7.0f);
 	constexpr float BottomRowPaddingY = QmHudMediaIslandScaled(2.5f);
@@ -5196,22 +5197,28 @@ void CHud::RenderMediaIsland()
 
 		if(ShowLyricsIslandLine)
 		{
-			const float LyricsTextY = BottomTextY + BottomRowLineHeight * SwapRows.m_LyricsLineIndex;
+			const float LyricsRowY = BottomTextY + BottomRowLineHeight * SwapRows.m_LyricsLineIndex;
 			ColorRGBA LyricsTextColor = LyricsIslandColor;
 			LyricsTextColor.a *= VisibleBottomAlpha;
 			if(pLyricsIslandBuf[0] != '\0' && ContentWidth > 0.0f)
 			{
-				const float LyricsTextWidth = std::round(TextRender()->TextBoundingBox(BottomFontSize, pLyricsIslandBuf).m_W);
+				float LyricsVisualTop = 0.0f;
+				float LyricsVisualBottom = 0.0f;
+				STextSizeProperties LyricsTextSizeProps{};
+				LyricsTextSizeProps.m_pVisualTop = &LyricsVisualTop;
+				LyricsTextSizeProps.m_pVisualBottom = &LyricsVisualBottom;
+				const float LyricsTextWidth = std::round(TextRender()->TextWidth(LyricsFontSize, pLyricsIslandBuf, -1, -1.0f, 0, LyricsTextSizeProps));
 				const float ElapsedSeconds = AnimState.m_LyricsMarqueeStartTick > 0 && Now >= AnimState.m_LyricsMarqueeStartTick ?
 								     (Now - AnimState.m_LyricsMarqueeStartTick) / (float)time_freq() :
 								     0.0f;
 				const float LyricsOffset = QmHudMediaIslandMarqueeOffset(LyricsTextWidth, ContentWidth, ElapsedSeconds, QmHudMediaIslandScaled(32.0f));
-				const CUIRect LyricsRect = {ContentX, LyricsTextY, ContentWidth, BottomRowLineHeight};
+				const CUIRect LyricsRect = {ContentX, LyricsRowY, ContentWidth, BottomRowLineHeight};
 				const float DrawX = LyricsTextWidth <= ContentWidth ? LyricsRect.x + (LyricsRect.w - LyricsTextWidth) * 0.5f : LyricsRect.x - LyricsOffset;
+				const float DrawY = LyricsRect.y + LyricsRect.h * 0.5f - (LyricsVisualTop + LyricsVisualBottom) * 0.5f;
 				TextRender()->TextColor(LyricsTextColor);
 				if(EnableMappedClip(LyricsRect))
 				{
-					TextRender()->Text(DrawX, LyricsTextY, BottomFontSize, pLyricsIslandBuf, -1.0f);
+					TextRender()->Text(DrawX, DrawY, LyricsFontSize, pLyricsIslandBuf, -1.0f);
 					Graphics()->ClipDisable();
 				}
 			}
