@@ -299,7 +299,7 @@ TEST_F(CQmImeCandidateTransitionTest, LongCandidatesFadeInWithoutReplacingVisibl
 	EXPECT_FLOAT_EQ(AlphaFor("a"), 1.0f);
 	EXPECT_FLOAT_EQ(AlphaFor("a much longer candidate"), 0.0f);
 
-	Advance(Long, 12);
+	Advance(Long, 3);
 	EXPECT_GT(AlphaFor("a"), 0.0f);
 	EXPECT_LT(AlphaFor("a"), 1.0f);
 	EXPECT_GT(AlphaFor("a much longer candidate"), 0.0f);
@@ -314,7 +314,7 @@ TEST_F(CQmImeCandidateTransitionTest, RapidTypingPreservesTheVisibleBlendAndUses
 	const auto Latest = Page({"latest"});
 	Update(First);
 	Update(Second);
-	Advance(Second, 10);
+	Advance(Second, 3);
 	const float FirstAlpha = AlphaFor("first");
 	const float SecondAlpha = AlphaFor("second, longer candidate");
 
@@ -335,7 +335,7 @@ TEST_F(CQmImeCandidateTransitionTest, SelectionAndCaretMovementDoNotRestartTheFa
 	auto Next = Page({"long first", "long second"});
 	Update(First);
 	Update(Next);
-	Advance(Next, 10);
+	Advance(Next, 3);
 	const int CurrentLayer = m_Transition.CurrentLayerIndex();
 	const float Alpha = AlphaFor("long first");
 
@@ -355,7 +355,7 @@ TEST_F(CQmImeCandidateTransitionTest, ReturningToPreviousCandidatesKeepsTheCurre
 	const auto Second = Page({"a much longer candidate"});
 	Update(First);
 	Update(Second);
-	Advance(Second, 10);
+	Advance(Second, 3);
 	const float FirstAlpha = AlphaFor("short");
 	const float SecondAlpha = AlphaFor("a much longer candidate");
 
@@ -374,7 +374,7 @@ TEST_F(CQmImeCandidateTransitionTest, DisablingMotionImmediatelyFinishesAnInterr
 	const auto Latest = Page({"latest"});
 	Update(First);
 	Update(Second);
-	Advance(Second, 10);
+	Advance(Second, 3);
 	Update(Latest, 0, false);
 
 	EXPECT_EQ(ActiveLayers(), 1);
@@ -389,7 +389,7 @@ TEST_F(CQmImeCandidateTransitionTest, ResetDropsOldContentBeforeTheNextPopup)
 	const auto Reopened = Page({"reopened"});
 	Update(First);
 	Update(Second);
-	Advance(Second, 10);
+	Advance(Second, 3);
 	m_Transition.Reset();
 	Update(Reopened);
 
@@ -441,7 +441,7 @@ TEST_F(CQmImeCandidateTransitionTest, ReusingFinishedLayersKeepsVisibleTextInThe
 	Update(Third);
 	Advance(Third, 120);
 	Update(Fourth);
-	Advance(Fourth, 10);
+	Advance(Fourth, 3);
 	const float ThirdAlpha = AlphaFor("third");
 	const float FourthAlpha = AlphaFor("fourth");
 
@@ -455,4 +455,43 @@ TEST_F(CQmImeCandidateTransitionTest, ReusingFinishedLayersKeepsVisibleTextInThe
 	EXPECT_EQ(vDrawOrder, (std::vector<std::string>{"third", "fourth", "latest"}));
 	EXPECT_FLOAT_EQ(AlphaFor("third"), ThirdAlpha);
 	EXPECT_FLOAT_EQ(AlphaFor("fourth"), FourthAlpha);
+}
+
+TEST_F(CQmImeCandidateTransitionTest, OldWordsFinishFadingWithinEightyMilliseconds)
+{
+	const auto First = Page({"old words"});
+	const auto Latest = Page({"new words"});
+	Update(First);
+	Update(Latest);
+	Advance(Latest, 6);
+	EXPECT_LT(AlphaFor("old words"), 0.05f);
+	EXPECT_GT(AlphaFor("new words"), 0.95f);
+
+	m_Runtime.Advance(0.03f);
+	Update(Latest);
+	EXPECT_FLOAT_EQ(AlphaFor("old words"), 0.0f);
+	EXPECT_FLOAT_EQ(AlphaFor("new words"), 1.0f);
+	EXPECT_EQ(ActiveLayers(), 1);
+}
+
+TEST_F(CQmImeCandidateTransitionTest, TypingAgainDoesNotExtendEarlierWordsFadeOut)
+{
+	const auto First = Page({"first"});
+	const auto Second = Page({"second"});
+	const auto Latest = Page({"latest"});
+	Update(First);
+	Update(Second);
+	Advance(Second, 7);
+	ASSERT_GT(AlphaFor("first"), 0.0f);
+
+	Update(Latest);
+	Advance(Latest, 3);
+	EXPECT_FLOAT_EQ(AlphaFor("first"), 0.0f);
+	EXPECT_GT(AlphaFor("second"), 0.0f);
+	EXPECT_GT(AlphaFor("latest"), 0.0f);
+
+	Advance(Latest, 7);
+	EXPECT_FLOAT_EQ(AlphaFor("second"), 0.0f);
+	EXPECT_FLOAT_EQ(AlphaFor("latest"), 1.0f);
+	EXPECT_EQ(ActiveLayers(), 1);
 }
