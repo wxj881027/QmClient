@@ -79,6 +79,7 @@ CCamera::CCamera()
 	m_ZoomSet = false;
 	m_Zoom = 1.0f;
 	m_Zooming = false;
+	m_ZoomSmoothingIsReset = false;
 	m_ForceFreeview = false;
 	m_GotoSwitchOffset = 0;
 	m_GotoTeleOffset = 0;
@@ -128,7 +129,7 @@ float CCamera::ZoomProgress(float CurrentTime) const
 void CCamera::ScaleZoom(float Factor)
 {
 	RemoveDynamicFovZoom();
-	float CurrentTarget = QmCameraEffects::ZoomTargetBaseOnRetarget(m_Zoom, m_ZoomSmoothingTarget, Factor, m_Zooming, g_Config.m_QmZoomInstantReverse != 0);
+	float CurrentTarget = QmCameraEffects::ZoomTargetBaseOnRetarget(m_Zoom, m_ZoomSmoothingTarget, Factor, m_Zooming, g_Config.m_QmZoomInstantReverse != 0, m_ZoomSmoothingIsReset);
 	ChangeZoom(CurrentTarget * Factor, GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_MultiViewActivated ? g_Config.m_ClMultiViewZoomSmoothness : g_Config.m_ClSmoothZoomTime, true);
 
 	m_AutoSpecCamera = false;
@@ -150,7 +151,7 @@ bool CCamera::GhostMultiViewZoomActive() const
 	       GameClient()->m_RankGhost.ViewCameraMode() == CRankGhost::EViewCameraMode::ALL_MEMBERS;
 }
 
-void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser)
+void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset)
 {
 	RemoveDynamicFovZoom();
 	if(Target > MaxZoomLevel() || Target < MinZoomLevel())
@@ -173,6 +174,7 @@ void CCamera::ChangeZoom(float Target, int Smoothness, bool IsUser)
 	m_ZoomSmoothing = CCubicBezier::With(Current, Derivative, 0, m_ZoomSmoothingTarget);
 	m_ZoomSmoothingStart = Now;
 	m_ZoomSmoothingEnd = Now + (float)Smoothness / 1000;
+	m_ZoomSmoothingIsReset = IsReset;
 
 	if(IsUser)
 		m_UserZoomTarget = Target;
@@ -615,6 +617,7 @@ void CCamera::OnReset()
 
 	m_Zoom = CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10);
 	m_Zooming = false;
+	m_ZoomSmoothingIsReset = false;
 	m_AutoSpecCameraZooming = false;
 	m_UserZoomTarget = CCamera::ZoomStepsToValue(g_Config.m_ClDefaultZoom - 10);
 }
@@ -682,7 +685,7 @@ void CCamera::ConZoom(IConsole::IResult *pResult, void *pUserData)
 		return;
 
 	if(!pSelf->CanUseAutoSpecCamera() || !pSelf->m_CanUseCameraInfo)
-		pSelf->ChangeZoom(CCamera::ZoomStepsToValue(TargetLevel - 10.0f), pSelf->GameClient()->m_Snap.m_SpecInfo.m_Active && pSelf->GameClient()->m_MultiViewActivated ? g_Config.m_ClMultiViewZoomSmoothness : g_Config.m_ClSmoothZoomTime, true);
+		pSelf->ChangeZoom(CCamera::ZoomStepsToValue(TargetLevel - 10.0f), pSelf->GameClient()->m_Snap.m_SpecInfo.m_Active && pSelf->GameClient()->m_MultiViewActivated ? g_Config.m_ClMultiViewZoomSmoothness : g_Config.m_ClSmoothZoomTime, true, IsReset);
 	else
 		pSelf->m_UserZoomTarget = CCamera::ZoomStepsToValue(TargetLevel - 10.0f);
 

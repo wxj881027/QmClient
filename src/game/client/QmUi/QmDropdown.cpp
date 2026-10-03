@@ -156,6 +156,24 @@ bool QmDropdownShouldRequestActiveScroll(const bool PopupOpen, const int Previou
 	return PopupOpen && PreviousActiveIndex != ActiveIndex;
 }
 
+bool QmDropdownEntriesMatch(const std::vector<std::string> &vEntries, const char *const *pEntries, const int ItemCount)
+{
+	if(ItemCount < 0 || vEntries.size() != (size_t)ItemCount)
+		return false;
+	for(int Index = 0; Index < ItemCount; ++Index)
+	{
+		if(vEntries[Index] != pEntries[Index])
+			return false;
+	}
+	return true;
+}
+
+int QmResolveDropdownSelection(const int CurrentSelection, const int PopupSelection, const std::vector<std::string> &vPopupEntries, const char *const *pEntries, const int ItemCount)
+{
+	// 弹层回调与来源提交跨帧执行，旧列表的下标不能套用到已变化的列表。
+	return PopupSelection >= 0 && PopupSelection < ItemCount && QmDropdownEntriesMatch(vPopupEntries, pEntries, ItemCount) ? PopupSelection : CurrentSelection;
+}
+
 void CQmDropdownState::Reset()
 {
 	m_Open = false;

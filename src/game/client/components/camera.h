@@ -31,11 +31,12 @@ namespace QmCameraEffects
 
 	// 反向按键时的步进基准：与当前动画方向相反时改用画面当前值
 	// 否则旧目标可能仍停在旧方向那一侧，整段动画会继续朝旧方向跑，按键在视觉上等于没反应
-	inline float ZoomTargetBaseOnRetarget(float Value, float Target, float Factor, bool Zooming, bool InstantReverse)
+	inline float ZoomTargetBaseOnRetarget(float Value, float Target, float Factor, bool Zooming, bool InstantReverse, bool IsReset)
 	{
 		if(!Zooming)
 			return Value;
-		if(InstantReverse && (Factor - 1.0f) * (Target - Value) < 0.0f)
+		// 重置途中仍以默认目标步进，避免相对缩放丢失已请求的默认档位。
+		if(InstantReverse && !IsReset && (Factor - 1.0f) * (Target - Value) < 0.0f)
 			return Value;
 		return Target;
 	}
@@ -84,9 +85,10 @@ private:
 	CCubicBezier m_ZoomSmoothing;
 	float m_ZoomSmoothingStart;
 	float m_ZoomSmoothingEnd;
+	bool m_ZoomSmoothingIsReset;
 
 	void ScaleZoom(float Factor);
-	void ChangeZoom(float Target, int Smoothness, bool IsUser);
+	void ChangeZoom(float Target, int Smoothness, bool IsUser, bool IsReset = false);
 	float ZoomProgress(float CurrentTime) const;
 
 	float MinZoomLevel();

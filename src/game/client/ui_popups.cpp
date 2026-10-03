@@ -204,9 +204,9 @@ void CUi::RenderPopupMenus()
 		}
 
 		// 来源弹窗通常在同一渲染循环中刷新下拉层，但嵌套弹窗的父层回调
-		// 可能在下一次 PerfFrame 才运行。允许一个帧差，避免下拉刚打开就
+		// 可能在下一次 UI 更新才运行。允许一个 UI 帧差，避免下拉刚打开就
 		// 被来源新鲜度检查收掉；CUi::Update 的兜底清扫仍会关闭真正失联的弹窗。
-		if(PopupMenu.m_Props.m_RequireSourceRefresh && !QmDropdownSourceAlive(Client()->PerfFrame(), PopupMenu.m_Props.m_SourceFrame, true))
+		if(PopupMenu.m_Props.m_RequireSourceRefresh && !QmDropdownSourceAlive(PopupSourceFrame(), PopupMenu.m_Props.m_SourceFrame, true))
 		{
 			ClosePopupMenu(pId);
 			--i;
@@ -831,13 +831,23 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion;
 
 	bool PopupOpen = IsPopupOpen(&State.m_SelectionPopupContext);
+	if((PopupOpen || State.m_SelectionPopupContext.m_SelectionIndex >= 0) &&
+		!QmDropdownEntriesMatch(State.m_SelectionPopupContext.m_vEntries, pStrs, Num))
+	{
+		ClosePopupMenu(&State.m_SelectionPopupContext);
+		State.m_DropDownState.Reset();
+		State.m_SelectionPopupContext.m_pSelection = nullptr;
+		State.m_SelectionPopupContext.m_SelectionIndex = -1;
+		State.m_SelectionPopupContext.m_ActiveIndex = -1;
+		PopupOpen = false;
+	}
 	// 弹窗使用设置页最外层裁剪区，不能越过 Tab 或页面容器；卡片内容裁剪区
 	// 只判断锚点是否仍完整可见，锚点滚出卡片后应关闭弹窗。
 	const CUIRect Viewport = DropDownProps.m_pPopupViewport != nullptr ? *DropDownProps.m_pPopupViewport : IsClipped() ? *OutermostClipArea() :
 															     *Screen();
 	const CUIRect AnchorViewport = DropDownProps.m_pAnchorViewport != nullptr ? *DropDownProps.m_pAnchorViewport : IsClipped() ? *ClipArea() :
 																     Viewport;
-	const uint64_t SourceFrame = Client()->PerfFrame();
+	const uint64_t SourceFrame = PopupSourceFrame();
 	if(PopupOpen && !QmDropdownAnchorFullyVisible(*pRect, AnchorViewport))
 	{
 		ClosePopupMenu(&State.m_SelectionPopupContext);
@@ -882,6 +892,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	Props.m_HintRequiresStringCheck = true;
 	Props.m_HintCanChangePositionOrSize = true;
 	Props.m_ShowDropDownIcon = true;
+	Props.m_Flags |= BUTTONFLAG_CURRENT_HIT;
 	Props.m_FontSize = ResolvedFontSize;
 	Props.m_Color = TriggerColor;
 	if(PopupOpen)
@@ -951,9 +962,10 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	}
 	if(DropDownResult.m_Selected)
 	{
+		const int NewSelection = QmResolveDropdownSelection(CurSelection, DropDownResult.m_SelectedIndex, State.m_SelectionPopupContext.m_vEntries, pStrs, Num);
 		ClosePopupMenu(&State.m_SelectionPopupContext);
 		State.m_SelectionPopupContext.Reset();
-		return DropDownResult.m_SelectedIndex;
+		return NewSelection;
 	}
 	else if(DropDownResult.m_Closed)
 	{
@@ -962,7 +974,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	}
 	else if(State.m_SelectionPopupContext.m_SelectionIndex >= 0)
 	{
-		const int NewSelection = State.m_SelectionPopupContext.m_SelectionIndex;
+		const int NewSelection = QmResolveDropdownSelection(CurSelection, State.m_SelectionPopupContext.m_SelectionIndex, State.m_SelectionPopupContext.m_vEntries, pStrs, Num);
 		State.m_DropDownState.Reset();
 		State.m_SelectionPopupContext.Reset();
 		return NewSelection;

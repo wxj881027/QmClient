@@ -301,14 +301,15 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 	CUIRect SelectorLabel, Arrow;
 	Selector.VSplitRight(Metrics.m_LineHeight, &SelectorLabel, &Arrow);
 	const char *pSelection = State.m_SelectedLabel.empty() ? Localize("Add function") : Localize(State.m_SelectedLabel.c_str());
-	const bool Pick = DoButton_Menu(&State.m_PickerButton, "", Enabled ? 0 : -1, &SelectorLabel);
+	const unsigned SelectorFlags = BUTTONFLAG_LEFT | (Enabled ? BUTTONFLAG_CURRENT_HIT : BUTTONFLAG_NONE);
+	const bool Pick = DoButton_Menu(&State.m_PickerButton, "", Enabled ? 0 : -1, &SelectorLabel, SelectorFlags);
 	CUIRect SelectionText;
 	SelectorLabel.VMargin(4.0f, &SelectionText);
 	SLabelProperties SelectionProps;
 	SelectionProps.m_MaxWidth = SelectionText.w;
 	SelectionProps.m_EllipsisAtEnd = true;
 	Ui()->DoLabel(&SelectionText, pSelection, Metrics.m_BodySize, TEXTALIGN_ML, SelectionProps);
-	const bool Drop = Ui()->DoButton_QmIcon(&State.m_DropdownButton, EQmIcon::CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_DOWN, Enabled ? 0 : -1, &Arrow, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL);
+	const bool Drop = Ui()->DoButton_QmIcon(&State.m_DropdownButton, EQmIcon::CHEVRON_DOWN, FontIcons::FONT_ICON_CHEVRON_DOWN, Enabled ? 0 : -1, &Arrow, SelectorFlags, IGraphics::CORNER_ALL);
 	if(!ReadOnly)
 		GameClient()->m_Tooltips.DoToolTip(&State.m_DropdownButton, &Arrow, Localize("Add function"));
 	const bool OpenPicker = Enabled && (Pick || Drop);
@@ -335,7 +336,7 @@ void CMenus::RenderQmBindCommandEditor(CUIRect &Content, const CBindSlot Slot, c
 			Props.m_BlockUnderlyingPointerInput = true;
 			Props.m_BlockUnderlyingScroll = true;
 			Props.m_RequireSourceRefresh = true;
-			Props.m_SourceFrame = Client()->PerfFrame();
+			Props.m_SourceFrame = Ui()->PopupSourceFrame();
 			Ui()->DoPopupMenu(&State.m_PopupId, X, Y, Width, Height, &State, PopupQmBindCommands, Props);
 		}
 		else

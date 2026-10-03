@@ -214,7 +214,7 @@ namespace qm_card_catalog
 					const int Selection = pMenus->DoSettingsDropDown(&Control, DemoTargetSelection, s_vDemoTargetNames.data(), (int)s_vDemoTargetNames.size(), s_DemoTargetState);
 					if(Selection == 0)
 						g_Config.m_QmNameplateTextDemoTarget = -1;
-					else
+					else if(Selection > 0 && Selection < (int)s_vDemoTargetStorage.size())
 						sscanf(s_vDemoTargetStorage[Selection].c_str(), "%d:", &g_Config.m_QmNameplateTextDemoTarget);
 				});
 

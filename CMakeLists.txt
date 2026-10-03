@@ -3225,6 +3225,7 @@ if(CLIENT)
     QmUi/QmPopupSource.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
+    QmUi/QmImeCandidateLayout.h
     QmUi/QmIslandSurface.cpp
     QmUi/QmIslandSurface.h
     QmUi/QmIslandNotice.h
@@ -4506,6 +4507,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_music_hook_protocol_test.cpp
     src/test/contract/qmclient/ui/qm_ui_presentation_contract_test.cpp
     src/test/unit/qmclient/ui/QmUiTokensTest.cpp
+    src/test/unit/qmclient/ui/qm_ime_candidate_layout_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/client/qm_credits_layout_test.cpp

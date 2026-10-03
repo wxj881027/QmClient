@@ -494,11 +494,12 @@ bool CUi::TryConsumeWheel(const void *pOwnerId, float *pDelta)
 
 void CUi::Update()
 {
+	m_PopupSourceClock.Update(Client()->PerfFrame());
 	// 孤儿阻断弹窗兜底清扫：要求来源每帧刷新的弹窗（下拉选择弹层等）若连续
 	// 两帧未刷新，说明来源渲染已停止且当前没有任何 RenderPopupMenus 调用方
 	// 在运行（如聊天模式退出后弹窗残留），在这里强制关闭，防止底层指针输入
 	// 被永久锁死。正常刷新节奏下弹层在前一帧渲染中刚刷新，差值恰为 1，不受影响。
-	const uint64_t CurFrame = Client()->PerfFrame();
+	const uint64_t CurFrame = PopupSourceFrame();
 	for(size_t i = 0; i < m_vPopupMenus.size();)
 	{
 		const SPopupMenu &PopupMenu = m_vPopupMenus[i];
@@ -1008,25 +1009,15 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 
 	int ReturnValue = 0;
 	const bool Inside = MouseHovered(pRect);
-	bool PreLayoutCurrentFramePress = false;
-	if(PreLayoutInput() && Inside && !IsPopupOpen())
-	{
-		for(int Button = 0; Button < 3; ++Button)
-		{
-			if((Flags & (BUTTONFLAG_LEFT << Button)) && MouseButtonClicked(Button))
-			{
-				PreLayoutCurrentFramePress = true;
-				break;
-			}
-		}
-	}
-	// Deck 的预布局发生在正式渲染之前，鼠标按下可能早于上一帧正式布局建立
-	// HotItem。只在该受控阶段按当前命中矩形补齐 HotItem，避免首次点击丢失；
-	// popup 打开时仍保持底层控件不可穿透。
-	if(PreLayoutCurrentFramePress)
+	const bool UseCurrentHit = (Flags & BUTTONFLAG_CURRENT_HIT) != 0;
+	const bool AllowCurrentPress = UseCurrentHit || (PreLayoutInput() && !IsPopupOpen());
+	const int CurrentPress = AllowCurrentPress ? QmButtonCurrentPress(QmResolvePointerButtons(m_MouseButtons, m_LastMouseButtons, UnderlyingPointerInputBlocked()), Flags, Inside) : -1;
+	// 预布局及显式启用的下拉触发器按当前矩形接管新按下；释放仍由原状态机处理。
+	// MouseHovered 和按钮状态共同保留裁剪与弹层输入屏蔽。
+	if(CurrentPress >= 0)
 	{
 		// 新按下意味着旧控件不应继续占用 ActiveItem。被裁剪的卡片可能
-		// 没有机会在上一帧处理释放，这里只在 Deck 的预布局路径清理陈旧状态。
+		// 没有机会在上一帧处理释放，此处同时释放陈旧状态和文本输入焦点。
 		if(m_pActiveItem != nullptr || m_pLastActiveItem != nullptr)
 		{
 			if(CLineInput *pActiveInput = CLineInput::GetActiveInput())
@@ -1056,10 +1047,7 @@ int CUi::DoButtonLogic(const void *pId, int Checked, const CUIRect *pRect, const
 		if((Flags & (BUTTONFLAG_LEFT << Button)) && MouseButton(Button))
 		{
 			NoRelevantButtonsPressed = false;
-			// 预布局先于正式渲染，同帧新出现或正在重排的控件可能尚未
-			// 进入上一帧 HotItem。首次按下直接建立 ActiveItem，释放仍由
-			// 同一套按钮状态机处理，避免只在按住期间显示 pressed。
-			if(HotItem() == pId || (PreLayoutCurrentFramePress && MouseButtonClicked(Button)))
+			if(UseCurrentHit ? CurrentPress == Button : HotItem() == pId)
 			{
 				SetActiveItem(pId);
 				m_ActiveButtonLogicButton = Button;

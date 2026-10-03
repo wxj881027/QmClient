@@ -5,6 +5,7 @@
 
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmPopupPointer.h"
+#include "QmUi/QmPopupSource.h"
 #include "QmUi/UiTokens.h"
 #include "lineinput.h"
 #include "ui_rect.h"
@@ -381,6 +382,8 @@ enum EButtonFlags : unsigned
 	BUTTONFLAG_MIDDLE = 1 << 2,
 
 	BUTTONFLAG_ALL = BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT | BUTTONFLAG_MIDDLE,
+	// 新按下按当前命中位置处理，不依赖上一帧的 HotItem。
+	BUTTONFLAG_CURRENT_HIT = 1 << 3,
 };
 
 struct SMenuButtonProperties
@@ -509,6 +512,7 @@ struct SPopupMenuProperties
 	bool m_BlockUnderlyingScroll = false;
 	bool m_BlockUnderlyingPointerInput = false;
 	bool m_RequireSourceRefresh = false;
+	// 使用 CUi::PopupSourceFrame()，主循环 PerfFrame 不代表实际 UI 更新次数。
 	uint64_t m_SourceFrame = 0;
 	CUIRect m_Viewport{};
 	// 有效时弹窗外框同时包裹该锚点矩形（如下拉框的触发按钮），边框把按钮
@@ -810,6 +814,7 @@ private:
 		float m_CloseStart = 0.0f;
 	};
 	std::vector<SPopupMenu> m_vPopupMenus;
+	CQmPopupSourceClock m_PopupSourceClock;
 	FPopupMenuClosedCallback m_pfnPopupMenuClosedCallback = nullptr;
 	int m_PopupInputDepth = 0;
 	bool UnderlyingPointerInputBlocked() const;
@@ -844,6 +849,7 @@ public:
 
 	void Init(IKernel *pKernel);
 	IClient *Client() const { return m_pClient; }
+	uint64_t PopupSourceFrame() const { return m_PopupSourceClock.Frame(); }
 	bool ConsumeMenuUiFirstWheelPerf()
 	{
 		const bool Result = m_MenuUiFirstWheelPerf;

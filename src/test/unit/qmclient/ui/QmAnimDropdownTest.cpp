@@ -356,6 +356,39 @@ TEST(UiV2DropdownLifecycle, SourceMayRefreshOneFrameLaterButExpiresAfterTwoFrame
 	EXPECT_FALSE(QmDropdownSourceAlive(41, 42, true));
 	EXPECT_FALSE(QmDropdownSourceAlive(42, 42, false));
 }
+TEST(UiV2DropdownLifecycle, MainLoopGapsDoNotExpireVisibleSource)
+{
+	CQmPopupSourceClock Clock;
+	Clock.Update(100);
+	uint64_t SourceFrame = Clock.Frame();
+	for(const uint64_t PerfFrame : {107u, 131u, 1000u})
+	{
+		Clock.Update(PerfFrame);
+		EXPECT_TRUE(QmDropdownSourceAlive(Clock.Frame(), SourceFrame, true));
+		SourceFrame = Clock.Frame();
+	}
+}
+TEST(UiV2DropdownLifecycle, RepeatedUpdatesInSameMainLoopDoNotAgeSource)
+{
+	CQmPopupSourceClock Clock;
+	Clock.Update(100);
+	const uint64_t SourceFrame = Clock.Frame();
+	Clock.Update(108);
+	Clock.Update(108);
+	Clock.Update(108);
+	EXPECT_EQ(Clock.Frame(), SourceFrame + 1);
+	EXPECT_TRUE(QmDropdownSourceAlive(Clock.Frame(), SourceFrame, true));
+}
+TEST(UiV2DropdownLifecycle, MissingSourceExpiresAfterTwoActualUiFrames)
+{
+	CQmPopupSourceClock Clock;
+	Clock.Update(100);
+	const uint64_t SourceFrame = Clock.Frame();
+	Clock.Update(120);
+	EXPECT_TRUE(QmDropdownSourceAlive(Clock.Frame(), SourceFrame, true));
+	Clock.Update(140);
+	EXPECT_FALSE(QmDropdownSourceAlive(Clock.Frame(), SourceFrame, true));
+}
 TEST(UiV2DropdownLifecycle, InactiveParentKeepsOpenChildSourceFresh)
 {
 	EXPECT_TRUE(QmDropdownShouldKeepPopupAliveWhenDisabled(true, false));
@@ -485,6 +518,71 @@ TEST(UiV2DropdownState, OpensWithCurrentItemAndClosesOnEscape)
 	EXPECT_TRUE(Result.m_Closed);
 	EXPECT_FALSE(State.IsOpen());
 	EXPECT_EQ(State.ActiveIndex(), -1);
+}
+TEST(UiV2DropdownSelection, UnchangedEntriesCommitAcrossDifferentStringStorage)
+{
+	const std::vector<std::string> vPopupEntries{"None", "7: Player A", "13: Player B"};
+	const char *apEntries[] = {"None", "7: Player A", "13: Player B"};
+	EXPECT_EQ(QmResolveDropdownSelection(0, 2, vPopupEntries, apEntries, 3), 2);
+}
+TEST(UiV2DropdownSelection, RemovedEntryCancelsPendingSelectionEvenWhenIndexStillFits)
+{
+	const std::vector<std::string> vPopupEntries{"None", "7: Player A", "13: Player B"};
+	const char *apEntries[] = {"None", "13: Player B"};
+	EXPECT_FALSE(QmDropdownEntriesMatch(vPopupEntries, apEntries, 2));
+	EXPECT_EQ(QmResolveDropdownSelection(0, 1, vPopupEntries, apEntries, 2), 0);
+}
+TEST(UiV2DropdownSelection, ReorderedEntriesCancelPendingSelection)
+{
+	const std::vector<std::string> vPopupEntries{"None", "7: Player A", "13: Player B"};
+	const char *apEntries[] = {"None", "13: Player B", "7: Player A"};
+	EXPECT_FALSE(QmDropdownEntriesMatch(vPopupEntries, apEntries, 3));
+	EXPECT_EQ(QmResolveDropdownSelection(0, 1, vPopupEntries, apEntries, 3), 0);
+}
+TEST(UiV2DropdownSelection, ChangedEntryCancelsPendingSelection)
+{
+	const std::vector<std::string> vPopupEntries{"None", "7: Player A"};
+	const char *apEntries[] = {"None", "7: Player B"};
+	EXPECT_FALSE(QmDropdownEntriesMatch(vPopupEntries, apEntries, 2));
+	EXPECT_EQ(QmResolveDropdownSelection(0, 1, vPopupEntries, apEntries, 2), 0);
+}
+TEST(UiV2DropdownSelection, AddedEntryCancelsPendingSelection)
+{
+	const std::vector<std::string> vPopupEntries{"None", "7: Player A"};
+	const char *apEntries[] = {"None", "7: Player A", "13: Player B"};
+	EXPECT_EQ(QmResolveDropdownSelection(0, 1, vPopupEntries, apEntries, 3), 0);
+}
+TEST(UiV2DropdownSelection, EmptySourceRejectsPendingSelection)
+{
+	const std::vector<std::string> vPopupEntries{"7: Player A"};
+	EXPECT_FALSE(QmDropdownEntriesMatch(vPopupEntries, nullptr, 0));
+	EXPECT_EQ(QmResolveDropdownSelection(-1, 0, vPopupEntries, nullptr, 0), -1);
+}
+TEST(UiV2DropdownSelection, OutOfRangePopupSelectionKeepsCurrentSelection)
+{
+	const std::vector<std::string> vPopupEntries{"None", "7: Player A"};
+	const char *apEntries[] = {"None", "7: Player A"};
+	EXPECT_EQ(QmResolveDropdownSelection(1, 2, vPopupEntries, apEntries, 2), 1);
+	EXPECT_EQ(QmResolveDropdownSelection(1, -1, vPopupEntries, apEntries, 2), 1);
+}
+TEST(UiV2DropdownPointer, FirstPressUsesCurrentHitWithoutPriorHover)
+{
+	EXPECT_EQ(QmButtonCurrentPress(QmResolvePointerButtons(0, 0, false), BUTTONFLAG_LEFT, false), -1);
+	EXPECT_EQ(QmButtonCurrentPress(QmResolvePointerButtons(BUTTONFLAG_LEFT, 0, false), BUTTONFLAG_LEFT, true), 0);
+}
+TEST(UiV2DropdownPointer, DraggingHeldButtonIntoTriggerDoesNotStartPress)
+{
+	EXPECT_EQ(QmButtonCurrentPress(QmResolvePointerButtons(BUTTONFLAG_LEFT, 0, false), BUTTONFLAG_LEFT, false), -1);
+	EXPECT_EQ(QmButtonCurrentPress(QmResolvePointerButtons(BUTTONFLAG_LEFT, BUTTONFLAG_LEFT, false), BUTTONFLAG_LEFT, true), -1);
+	EXPECT_EQ(QmButtonCurrentPress(QmResolvePointerButtons(0, BUTTONFLAG_LEFT, false), BUTTONFLAG_LEFT, true), -1);
+}
+TEST(UiV2DropdownPointer, BlockingPopupPreventsUnderlyingTriggerPress)
+{
+	EXPECT_EQ(QmButtonCurrentPress(QmResolvePointerButtons(BUTTONFLAG_LEFT, 0, true), BUTTONFLAG_LEFT, true), -1);
+}
+TEST(UiV2DropdownPointer, OtherMouseButtonsDoNotStartLeftButtonTrigger)
+{
+	EXPECT_EQ(QmButtonCurrentPress(QmResolvePointerButtons(BUTTONFLAG_RIGHT, 0, false), BUTTONFLAG_LEFT, true), -1);
 }
 TEST(UiV2DropdownState, InvalidCurrentItemFallsBackToFirstItem)
 {
@@ -785,13 +883,18 @@ TEST(UiV2DropdownLifecycle, InactiveParentRefreshesLiveRegistryAcrossMultipleFra
 		int m_Selection;
 	};
 	SPopupMenuId Parent, Child;
+	CQmPopupSourceClock Clock;
+	Clock.Update(400);
 	SPopupMenuProperties SourceProps;
 	SourceProps.m_RequireSourceRefresh = true;
-	SourceProps.m_SourceFrame = 40;
+	SourceProps.m_SourceFrame = Clock.Frame();
 	std::vector<SEntry> Popups{{&Parent, false, {}, -1}, {&Child, false, SourceProps, 3}};
-	for(uint64_t Frame = 41; Frame < 48; ++Frame)
+	for(uint64_t PerfFrame = 410; PerfFrame < 480; PerfFrame += 10)
 	{
-		SCOPED_TRACE(Frame);
+		SCOPED_TRACE(PerfFrame);
+		Clock.Update(PerfFrame);
+		const uint64_t Frame = Clock.Frame();
+		EXPECT_TRUE(QmDropdownSourceAlive(Frame, Popups[1].m_Props.m_SourceFrame, true));
 		SourceProps.m_SourceFrame = Frame;
 		ASSERT_TRUE(QmRefreshPopupSource(Popups, &Child, SourceProps.m_RequireSourceRefresh, Frame));
 		EXPECT_TRUE(QmDropdownSourceAlive(Frame, Popups[1].m_Props.m_SourceFrame, true));
@@ -799,7 +902,9 @@ TEST(UiV2DropdownLifecycle, InactiveParentRefreshesLiveRegistryAcrossMultipleFra
 		EXPECT_EQ(Popups[1].m_Selection, 3);
 		EXPECT_EQ(Popups[0].m_Props.m_SourceFrame, 0u);
 	}
-	EXPECT_FALSE(QmDropdownSourceAlive(49, Popups[1].m_Props.m_SourceFrame, true));
+	Clock.Update(480);
+	Clock.Update(490);
+	EXPECT_FALSE(QmDropdownSourceAlive(Clock.Frame(), Popups[1].m_Props.m_SourceFrame, true));
 }
 
 TEST(UiV2DropdownLifecycle, SourceRefreshDoesNotReopenClosingOrMissingPopup)
