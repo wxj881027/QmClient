@@ -118,6 +118,8 @@ enum class EQmIcon
 	SWAP,
 	SPEAKER_SLASH,
 	CHECK,
+	ARROW_LEFT,
+	ARROW_RIGHT,
 	COUNT,
 };
 
@@ -546,6 +548,8 @@ public:
 			{EQmIcon::SWAP, "swap"},
 			{EQmIcon::SPEAKER_SLASH, "speaker-slash"},
 			{EQmIcon::CHECK, "check"},
+			{EQmIcon::ARROW_LEFT, "arrow-left"},
+			{EQmIcon::ARROW_RIGHT, "arrow-right"},
 		};
 		for(const SEntry &Entry : s_aEntries)
 		{

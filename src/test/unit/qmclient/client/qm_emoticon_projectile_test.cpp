@@ -418,3 +418,101 @@ TEST(QmEmoticonProjectile, UpdateBouncesOffOtherPlayerButNotOwner)
 	EXPECT_FLOAT_EQ(WithOther.m_Pos.x, 16.0f);
 	EXPECT_LT(WithOther.m_Vel.x, 0.0f);
 }
+
+TEST(QmEmoticonProjectile, UpdatePassesThroughPlayersFromOtherTeams)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	const QmEmoticon::SPlayerBox Other = {8, vec2(16.0f, 16.0f), 16.0f};
+	CTeamsCore Teams;
+	const int aaTeams[][2] = {{1, 0}, {0, 1}, {1, 2}, {2, 1}};
+	for(const auto &aTeams : aaTeams)
+	{
+		SCOPED_TRACE(::testing::Message() << "Owner team " << aTeams[0] << ", target team " << aTeams[1]);
+		Teams.Team(7, aTeams[0]);
+		Teams.Team(8, aTeams[1]);
+		for(const float SizeScale : {1.0f, 2.35f})
+		{
+			SCOPED_TRACE(SizeScale);
+			CEmoticonProjectile Projectile;
+			Projectile.Init(vec2(16.0f, 16.0f), vec2(100.0f, 0.0f), 0, SizeScale, 7);
+			Projectile.m_AngVel = 0.0f;
+			Projectile.Update((float)CEmoticonProjectile::STEP, Mask, [](int, int) { return false; }, &Other, 1, &Teams);
+			EXPECT_TRUE(Projectile.m_Active);
+			EXPECT_GT(Projectile.m_Pos.x, 16.0f);
+			EXPECT_FLOAT_EQ(Projectile.m_Vel.x, 100.0f);
+		}
+	}
+}
+
+TEST(QmEmoticonProjectile, UpdateBouncesOffPlayersFromSameTeam)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	const QmEmoticon::SPlayerBox Other = {8, vec2(16.0f, 16.0f), 16.0f};
+	CTeamsCore Teams;
+	for(const int Team : {0, 1})
+	{
+		SCOPED_TRACE(Team);
+		Teams.Team(7, Team);
+		Teams.Team(8, Team);
+		CEmoticonProjectile Projectile;
+		Projectile.Init(vec2(16.0f, 16.0f), vec2(100.0f, 0.0f), 0, 1.0f, 7);
+		Projectile.m_AngVel = 0.0f;
+		Projectile.Update((float)CEmoticonProjectile::STEP, Mask, [](int, int) { return false; }, &Other, 1, &Teams);
+		EXPECT_TRUE(Projectile.m_Active);
+		EXPECT_FLOAT_EQ(Projectile.m_Pos.x, 16.0f);
+		EXPECT_LT(Projectile.m_Vel.x, 0.0f);
+	}
+}
+
+TEST(QmEmoticonProjectile, UpdateUsesCurrentTeamsDuringFlight)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	const QmEmoticon::SPlayerBox Other = {8, vec2(16.0f, 16.0f), 16.0f};
+	CTeamsCore Teams;
+	Teams.Team(7, 1);
+	Teams.Team(8, 0);
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(16.0f, 16.0f), vec2(100.0f, 0.0f), 0, 1.0f, 7);
+	Projectile.m_AngVel = 0.0f;
+	const auto Solid = [](int, int) { return false; };
+	Projectile.Update((float)CEmoticonProjectile::STEP, Mask, Solid, &Other, 1, &Teams);
+	ASSERT_GT(Projectile.m_Pos.x, 16.0f);
+	const float BeforeJoining = Projectile.m_Pos.x;
+
+	Teams.Team(8, 1);
+	Projectile.Update((float)CEmoticonProjectile::STEP, Mask, Solid, &Other, 1, &Teams);
+	EXPECT_FLOAT_EQ(Projectile.m_Pos.x, BeforeJoining);
+	ASSERT_LT(Projectile.m_Vel.x, 0.0f);
+
+	Teams.Team(7, 0);
+	Projectile.Update((float)CEmoticonProjectile::STEP, Mask, Solid, &Other, 1, &Teams);
+	EXPECT_TRUE(Projectile.m_Active);
+	EXPECT_LT(Projectile.m_Pos.x, BeforeJoining);
+	EXPECT_LT(Projectile.m_Vel.x, 0.0f);
+}
+
+TEST(QmEmoticonProjectile, TeamFilteringSkipsInvalidClientIds)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	CTeamsCore Teams;
+	Teams.Team(7, 1);
+	Teams.Team(8, 1);
+	const QmEmoticon::SPlayerBox Other = {8, vec2(16.0f, 16.0f), 16.0f};
+	const int aInvalidClientIds[] = {-1, MAX_CLIENTS};
+	for(const int ClientId : aInvalidClientIds)
+	{
+		SCOPED_TRACE(ClientId);
+		EXPECT_FALSE(QmEmoticon::OverlapsPlayerBoxes(Mask, vec2(16.0f, 16.0f), 32.0f, 0.0f, ClientId, &Other, 1, &Teams));
+		const QmEmoticon::SPlayerBox Invalid = {ClientId, Other.m_Pos, Other.m_Half};
+		EXPECT_FALSE(QmEmoticon::OverlapsPlayerBoxes(Mask, vec2(16.0f, 16.0f), 32.0f, 0.0f, 7, &Invalid, 1, &Teams));
+	}
+	EXPECT_TRUE(QmEmoticon::OverlapsPlayerBoxes(Mask, vec2(16.0f, 16.0f), 32.0f, 0.0f, 7, &Other, 1, &Teams));
+}

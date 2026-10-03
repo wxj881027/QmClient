@@ -377,6 +377,53 @@ TEST(QmHudMediaIslandSpectatorEye, ReopensOnlyWhileTheRightCapsuleIsBeingReclaim
 	EXPECT_FLOAT_EQ(QmHudMediaIslandSpectatorCountAlpha(false, QmHudMediaIslandSpectatorIconPose(1.0f)), 0.0f);
 }
 
+TEST(QmHudMediaIslandBlob, LeftCountdownRemainsOutsideTimerDuringEntrance)
+{
+	SHudMediaIslandBlobSpring Spring;
+	SHudMediaIslandSdfItem Item;
+	constexpr float Frame = 1.0f / 240.0f;
+	const int Steps = StepCount(QmHudMediaIslandBlobSpringWindowSeconds() * 2.5f, Frame);
+	for(int i = 0; i < Steps; ++i)
+	{
+		SCOPED_TRACE(i);
+		QmHudMediaIslandBlobSpringAdvance(Spring, Frame, QmHudMediaIslandBlobSpringWindowSeconds(), true);
+		Item = QmHudMediaIslandLeftBlobItem(100.0f, 20.0f, 8.0f, 88.0f, 16.0f, QmHudMediaIslandBlobPose(Spring), true);
+		EXPECT_LE(Item.m_Center.x + Item.m_Radii.x, 100.0001f);
+	}
+	EXPECT_NEAR(Item.m_Center.x + Item.m_Radii.x, 96.0f, 0.0001f);
+	EXPECT_FLOAT_EQ(Item.m_ContentAlpha, 1.0f);
+}
+
+TEST(QmHudMediaIslandBlob, LeftCountdownRemainsOutsideTimerDuringExit)
+{
+	SHudMediaIslandBlobSpring Spring;
+	QmHudMediaIslandBlobSetBinary(Spring, true);
+	SHudMediaIslandSdfItem Item;
+	constexpr float Frame = 1.0f / 240.0f;
+	const int Steps = StepCount(QmHudMediaIslandBlobSpringWindowSeconds() * 2.5f, Frame);
+	for(int i = 0; i < Steps; ++i)
+	{
+		SCOPED_TRACE(i);
+		QmHudMediaIslandBlobSpringAdvance(Spring, Frame, QmHudMediaIslandBlobSpringWindowSeconds(), false);
+		Item = QmHudMediaIslandLeftBlobItem(100.0f, 20.0f, 8.0f, 88.0f, 16.0f, QmHudMediaIslandBlobPose(Spring), true);
+		EXPECT_LE(Item.m_Center.x + Item.m_Radii.x, 100.0001f);
+	}
+	EXPECT_FLOAT_EQ(Item.m_Radii.x, 0.0f);
+	EXPECT_FLOAT_EQ(Item.m_ContentAlpha, 0.0f);
+}
+
+TEST(QmHudMediaIslandBlob, LeftCountdownKeepsLiquidAttachmentWhenMainHasContent)
+{
+	SHudMediaIslandBlobPose Pose;
+	Pose.m_Travel = 0.4f;
+	Pose.m_RadiusScale = 0.6f;
+	Pose.m_ContentAlpha = 0.5f;
+	const SHudMediaIslandSdfItem Item = QmHudMediaIslandLeftBlobItem(100.0f, 20.0f, 8.0f, 88.0f, 16.0f, Pose, false);
+
+	EXPECT_GT(Item.m_Center.x + Item.m_Radii.x, 100.0f);
+	EXPECT_GT(Item.m_SmoothUnion, 0.0f);
+}
+
 TEST(QmHudMediaIslandBlob, RightCapsuleSettlesOutsideMainIsland)
 {
 	SHudMediaIslandBlobSpring SettledSpring;

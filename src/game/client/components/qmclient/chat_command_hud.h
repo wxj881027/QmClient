@@ -15,7 +15,9 @@
 class CQmChatCommandHud
 {
 public:
-	static constexpr float UI_SCALE = 0.4f;
+	static constexpr float UI_SCALE = 0.6f;
+	static constexpr float ROW_PADDING_Y = 3.0f * UI_SCALE;
+	static constexpr float ROW_LINE_GAP = 2.0f * UI_SCALE;
 
 	enum class ESource
 	{
@@ -38,6 +40,8 @@ public:
 		float m_H = 0.0f;
 		float m_HeaderHeight = 0.0f;
 		float m_RowHeight = 0.0f;
+		float m_FontSize = 0.0f;
+		float m_DetailFontSize = 0.0f;
 		int m_VisibleRows = 0;
 	};
 
@@ -120,19 +124,22 @@ public:
 		});
 	}
 
-	void SetLayout(float X, float Bottom, float Width, float AvailableHeight, float FontSize)
+	void SetLayout(float X, float Bottom, float Width, float AvailableHeight, float FontSize, float ScreenLeft, float ScreenRight)
 	{
 		m_Layout = {};
-		if(!m_Valid || m_vCandidates.empty() || Width < 60.0f)
+		if(!m_Valid || m_vCandidates.empty() || Width < 60.0f || ScreenRight <= ScreenLeft)
 			return;
-		const float RowHeight = std::max(14.0f, FontSize * 2.2f) * UI_SCALE;
-		const float HeaderHeight = (FontSize + 6.0f) * UI_SCALE;
+		const float NameFontSize = FontSize * UI_SCALE;
+		const float DetailFontSize = NameFontSize * 0.8f;
+		const float RowHeight = ROW_PADDING_Y * 2.0f + NameFontSize + DetailFontSize + ROW_LINE_GAP + 4.0f * UI_SCALE;
+		const float HeaderHeight = (FontSize + 8.0f) * UI_SCALE;
 		const int AvailableRows = std::max(0, (int)std::floor((AvailableHeight - HeaderHeight) / RowHeight));
 		const int VisibleRows = std::min({6, (int)m_vCandidates.size(), AvailableRows});
 		if(VisibleRows == 0)
 			return;
 		const float Height = HeaderHeight + VisibleRows * RowHeight;
-		m_Layout = {X, Bottom - Height, Width * UI_SCALE, Height, HeaderHeight, RowHeight, VisibleRows};
+		const float PanelWidth = std::min(Width * UI_SCALE, ScreenRight - ScreenLeft);
+		m_Layout = {std::clamp(X, ScreenLeft, ScreenRight - PanelWidth), Bottom - Height, PanelWidth, Height, HeaderHeight, RowHeight, NameFontSize, DetailFontSize, VisibleRows};
 		m_Offset = std::clamp(m_Offset, 0, (int)m_vCandidates.size() - VisibleRows);
 	}
 

@@ -11,7 +11,7 @@ namespace
 		Hud.AddServerCommand("race", "", "Show time");
 		Hud.AddServerCommand("team", "?i[team]", "Join a team");
 		Hud.EndUpdate();
-		Hud.SetLayout(10.0f, 250.0f, 200.0f, 200.0f, 8.0f);
+		Hud.SetLayout(10.0f, 250.0f, 200.0f, 200.0f, 8.0f, 0.0f, 500.0f);
 	}
 
 	float RowCenterY(const CQmChatCommandHud &Hud, int Row)
@@ -101,15 +101,15 @@ TEST(QmChatCommandHud, LayoutRespectsAvailableHeightAndScaledMouseCoordinates)
 {
 	CQmChatCommandHud Hud;
 	AddServerCandidates(Hud, "/ra", 3);
-	Hud.SetLayout(10.0f, 100.0f, 200.0f, 13.0f, 8.0f);
+	Hud.SetLayout(10.0f, 100.0f, 200.0f, 30.0f, 8.0f, 0.0f, 500.0f);
 	ASSERT_EQ(Hud.Layout().m_VisibleRows, 1);
-	EXPECT_FLOAT_EQ(Hud.Layout().m_W, 80.0f);
-	EXPECT_GE(Hud.Layout().m_Y, 87.0f);
+	EXPECT_FLOAT_EQ(Hud.Layout().m_W, 120.0f);
+	EXPECT_GE(Hud.Layout().m_Y, 70.0f);
 	Hud.SetInputTransform(30.0f, -10.0f, 2.0f);
 	EXPECT_EQ(Hud.HoveredRow(70.0f, RowCenterY(Hud, 0) * 2.0f - 10.0f), 0);
-	EXPECT_FALSE(Hud.Contains(211.0f, RowCenterY(Hud, 0) * 2.0f - 10.0f));
+	EXPECT_FALSE(Hud.Contains(291.0f, RowCenterY(Hud, 0) * 2.0f - 10.0f));
 	EXPECT_FALSE(Hud.Contains(20.0f, RowCenterY(Hud, 0)));
-	Hud.SetLayout(10.0f, 100.0f, 200.0f, 10.0f, 8.0f);
+	Hud.SetLayout(10.0f, 100.0f, 200.0f, 20.0f, 8.0f, 0.0f, 500.0f);
 	EXPECT_EQ(Hud.Layout().m_VisibleRows, 0);
 }
 
@@ -117,7 +117,7 @@ TEST(QmChatCommandHud, ScrollingKeepsAllCandidatesReachableAndCancelsPressedRow)
 {
 	CQmChatCommandHud Hud;
 	AddServerCandidates(Hud, "/", 1);
-	Hud.SetLayout(10.0f, 100.0f, 200.0f, 13.0f, 8.0f);
+	Hud.SetLayout(10.0f, 100.0f, 200.0f, 30.0f, 8.0f, 0.0f, 500.0f);
 	const float Y = RowCenterY(Hud, 0);
 	ASSERT_TRUE(Hud.Press(20.0f, Y, "/", 1));
 	ASSERT_TRUE(Hud.Scroll(20.0f, Y, 20, "/", 1));
@@ -143,4 +143,34 @@ TEST(QmChatCommandHud, SourceRevisionAndSettingsInvalidateCachedCandidates)
 	Hud.AddServerCommand("rank", "", "Show rank");
 	EXPECT_EQ(Hud.Count(), 0);
 	EXPECT_EQ(Hud.Source(), CQmChatCommandHud::ESource::NONE);
+}
+
+TEST(QmChatCommandHud, MovingCaretMovesPanelAndItsClickTarget)
+{
+	CQmChatCommandHud Hud;
+	AddServerCandidates(Hud, "/ra", 3);
+	Hud.SetLayout(160.0f, 210.0f, 200.0f, 200.0f, 8.0f, 4.0f, 496.0f);
+	EXPECT_FLOAT_EQ(Hud.Layout().m_X, 160.0f);
+	EXPECT_FLOAT_EQ(Hud.Layout().m_Y + Hud.Layout().m_H, 210.0f);
+	const float Y = RowCenterY(Hud, 1);
+	EXPECT_FALSE(Hud.Contains(20.0f, Y));
+	ASSERT_TRUE(Hud.Press(170.0f, Y, "/ra", 3));
+	std::string Completion;
+	size_t Cursor = 0;
+	ASSERT_TRUE(Hud.Release(170.0f, Y, "/ra", 3, Completion, Cursor));
+	EXPECT_EQ(Completion, "/rank ");
+}
+
+TEST(QmChatCommandHud, ScreenEdgesConstrainPanelWithoutChangingCandidateSelection)
+{
+	CQmChatCommandHud Hud;
+	AddServerCandidates(Hud, "/ra", 3);
+	Hud.SetLayout(490.0f, 210.0f, 200.0f, 200.0f, 8.0f, 4.0f, 496.0f);
+	EXPECT_FLOAT_EQ(Hud.Layout().m_X + Hud.Layout().m_W, 496.0f);
+	EXPECT_EQ(Hud.HoveredRow(Hud.Layout().m_X + 5.0f, RowCenterY(Hud, 1)), 1);
+
+	Hud.SetLayout(-20.0f, 210.0f, 200.0f, 200.0f, 8.0f, 4.0f, 84.0f);
+	EXPECT_FLOAT_EQ(Hud.Layout().m_X, 4.0f);
+	EXPECT_FLOAT_EQ(Hud.Layout().m_W, 80.0f);
+	EXPECT_EQ(Hud.HoveredRow(20.0f, RowCenterY(Hud, 0)), 0);
 }

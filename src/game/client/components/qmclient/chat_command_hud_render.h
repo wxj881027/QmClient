@@ -10,14 +10,14 @@
 #include <game/client/ui.h>
 #include <game/localization.h>
 
-inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, ITextRender *pTextRender, vec2 MousePos, float FontSize)
+inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, ITextRender *pTextRender, vec2 MousePos)
 {
 	const auto &Layout = Hud.Layout();
 	if(Layout.m_VisibleRows == 0)
 		return;
 
 	const float Scale = CQmChatCommandHud::UI_SCALE;
-	FontSize *= Scale;
+	const float FontSize = Layout.m_FontSize;
 	const float Rounding = 3.0f * Scale;
 	const CUIRect Panel{Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H};
 	const float UserOpacity = std::clamp(g_Config.m_QmImeOpacity, 0, 100) / 100.0f;
@@ -34,6 +34,11 @@ inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, IText
 	SLabelProperties LabelProps;
 	LabelProps.m_MaxWidth = Header.w;
 	LabelProps.m_EllipsisAtEnd = true;
+	LabelProps.m_StopAtEnd = true;
+	LabelProps.m_DisallowNewline = true;
+	LabelProps.m_EnableWidthCheck = false;
+	// HUD 已按自身坐标缩放字号，不能再被菜单标签默认的最小字号放大。
+	LabelProps.m_MinimumFontSize = 0.0f;
 	pTextRender->TextColor(0.65f, 0.82f, 0.90f, 0.90f);
 	pUi->DoLabel(&Header, Localize("Command completion"), FontSize * 0.85f, TEXTALIGN_ML, LabelProps);
 	char aCount[48];
@@ -49,13 +54,13 @@ inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, IText
 		const CUIRect Rect{Panel.x, Panel.y + Layout.m_HeaderHeight + Row * Layout.m_RowHeight, Panel.w, Layout.m_RowHeight};
 		if(HoveredRow == Index)
 			Rect.Draw(ColorRGBA(0.24f, 0.43f, 0.48f, 0.55f), IGraphics::CORNER_NONE, 0.0f);
-		CUIRect Name{Rect.x + 5.0f * Scale, Rect.y + Scale, Rect.w - 10.0f * Scale, FontSize + Scale};
-		CUIRect Detail{Name.x, Name.y + Name.h, Name.w, std::max(Scale, Rect.h - Name.h - 2.0f * Scale)};
+		const CUIRect Name{Rect.x + 5.0f * Scale, Rect.y + CQmChatCommandHud::ROW_PADDING_Y, Rect.w - 10.0f * Scale, FontSize + 2.0f * Scale};
+		const CUIRect Detail{Name.x, Name.y + Name.h + CQmChatCommandHud::ROW_LINE_GAP, Name.w, Layout.m_DetailFontSize + 2.0f * Scale};
 		LabelProps.m_MaxWidth = Name.w;
 		pTextRender->TextColor(0.95f, 0.97f, 0.98f, 1.0f);
 		pUi->DoLabel(&Name, Candidate.m_Name.c_str(), FontSize, TEXTALIGN_ML, LabelProps);
 		pTextRender->TextColor(0.70f, 0.75f, 0.77f, 0.90f);
-		pUi->DoLabel(&Detail, Candidate.m_Detail.c_str(), FontSize * 0.67f, TEXTALIGN_ML, LabelProps);
+		pUi->DoLabel(&Detail, Candidate.m_Detail.c_str(), Layout.m_DetailFontSize, TEXTALIGN_ML, LabelProps);
 	}
 	pTextRender->TextColor(TextColor);
 }

@@ -23,13 +23,54 @@ TEST(QmHudMediaIslandLayout, CompactHeightIsAboutFortyPixelsAt1080p)
 	EXPECT_NEAR(QmHudMediaIslandScaled(16.0f) * 1080.0f / 300.0f, 40.32f, 0.001f);
 }
 
-TEST(QmHudMediaIslandLayout, EmptyMainCapsuleIsNotReservedWithoutContentOrCountdownSatellite)
+TEST(QmHudMediaIslandLayout, MainCapsuleWithoutTimerRequiresContentOrCountdownSatellite)
 {
-	EXPECT_FALSE(QmHudMediaIslandShouldReserveMainCapsule(false, false, false));
-	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(true, false, false));
-	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(false, true, false));
-	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(false, false, true));
-	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(true, true, true));
+	EXPECT_FALSE(QmHudMediaIslandShouldReserveMainCapsule(false, false, false, false));
+	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(true, false, false, false));
+	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(false, true, false, false));
+	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(false, false, true, false));
+	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(true, true, true, false));
+}
+
+TEST(QmHudMediaIslandLayout, CountdownUsesTimerWithoutReservingEmptyMainCapsule)
+{
+	EXPECT_FALSE(QmHudMediaIslandShouldReserveMainCapsule(false, false, true, true));
+	EXPECT_FALSE(QmHudMediaIslandShouldReserveMainCapsule(false, false, false, true));
+}
+
+TEST(QmHudMediaIslandLayout, CountdownKeepsMediaAndTeamContentBesideTimer)
+{
+	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(true, false, true, true));
+	EXPECT_TRUE(QmHudMediaIslandShouldReserveMainCapsule(false, true, true, true));
+}
+
+TEST(QmHudMediaIslandLayout, MainSectionExpansionKeepsRaceTimerCentered)
+{
+	for(const float ScreenWidth : {400.0f, 533.3333f, 700.0f})
+	{
+		SCOPED_TRACE(ScreenWidth);
+		for(const float MainWidth : {0.0f, 11.2f, 35.0f, 80.0f, 140.0f})
+		{
+			SCOPED_TRACE(MainWidth);
+			const float Gap = MainWidth > 0.0f ? QmHudMediaIslandScaled(3.0f) : 0.0f;
+			const SHudMediaIslandTimerAnchor Anchor = QmHudMediaIslandAnchorTimer(ScreenWidth * 0.5f, 42.0f, MainWidth, Gap);
+			EXPECT_NEAR(Anchor.m_TimerX + 21.0f, ScreenWidth * 0.5f, 0.0001f);
+			EXPECT_NEAR(Anchor.m_MainX + MainWidth + Gap, Anchor.m_TimerX, 0.0001f);
+		}
+	}
+}
+
+TEST(QmHudMediaIslandLayout, IncomingSwapWidthKeepsTimerTextOnTheSameCenter)
+{
+	constexpr float CenterX = 266.5f;
+	constexpr float TextWidth = 30.0f;
+	for(const float TimerWidth : {42.0f, 80.0f, 160.0f, 42.0f})
+	{
+		SCOPED_TRACE(TimerWidth);
+		const SHudMediaIslandTimerAnchor Anchor = QmHudMediaIslandAnchorTimer(CenterX, TimerWidth, 60.0f, 2.1f);
+		const float TextX = Anchor.m_TimerX + (TimerWidth - TextWidth) * 0.5f;
+		EXPECT_NEAR(TextX, CenterX - TextWidth * 0.5f, 0.0001f);
+	}
 }
 
 TEST(QmHudMediaIslandLayout, InfoStackMirrorsRowsAroundHorizontalMidlineWithCompactGap)
