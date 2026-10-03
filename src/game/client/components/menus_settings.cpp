@@ -744,141 +744,85 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 		s_PopupOpenTime = time_get();
 	}
 
-	if(g_Config.m_QmNewUi)
+	IUiContext HeaderCtx;
+	HeaderCtx.m_pUi = pUi;
+	static ui_widget::SSecondaryPanelLabel s_Title;
+	static CButtonContainer s_CloseButton;
+	ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w), {});
+	if(Panel.Header(s_Title, s_CloseButton, Localize("Choose country flag")))
+		return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
+	CUIRect SearchRect, GridArea = Panel.ContentRect();
+	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(pUi->Screen()->w);
+	GridArea.HSplitTop(Metrics.m_LineHeight, &SearchRect, &GridArea);
+	GridArea.HSplitTop(Metrics.m_LineSpacing, nullptr, &GridArea);
+
+	IUiContext SearchCtx;
+	SearchCtx.m_pUi = pUi;
+	SearchCtx.m_pAnim = &pMenus->GameClient()->UiRuntimeV2()->AnimRuntime();
+	SearchCtx.m_pTree = &pMenus->GameClient()->UiRuntimeV2()->Tree();
+	SearchCtx.m_ScopeHash = MakeUiScopeHash("settings_country_flag_popup_search");
+	SearchCtx.m_FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
+	ui_widget::SInputFieldOptions SearchOptions;
+	SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+	SearchOptions.m_pPlaceholder = Localize("Search country flag…");
+	SearchOptions.m_Clearable = true;
+	ui_widget::InputField(SearchCtx, &pPopupContext->m_FilterInput, SearchRect, SearchOptions);
+
+	struct SFilteredFlag
 	{
-		IUiContext HeaderCtx;
-		HeaderCtx.m_pUi = pUi;
-		static ui_widget::SSecondaryPanelLabel s_Title;
-		static CButtonContainer s_CloseButton;
-		ui_widget::CSecondaryPanel Panel(HeaderCtx, View, Active, ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w, true), {});
-		if(Panel.Header(s_Title, s_CloseButton, Localize("Choose country flag")))
-			return CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS;
-		CUIRect SearchRect, GridArea = Panel.ContentRect();
-		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(pUi->Screen()->w);
-		GridArea.HSplitTop(Metrics.m_LineHeight, &SearchRect, &GridArea);
-		GridArea.HSplitTop(Metrics.m_LineSpacing, nullptr, &GridArea);
-
-		IUiContext SearchCtx;
-		SearchCtx.m_pUi = pUi;
-		SearchCtx.m_pAnim = &pMenus->GameClient()->UiRuntimeV2()->AnimRuntime();
-		SearchCtx.m_pTree = &pMenus->GameClient()->UiRuntimeV2()->Tree();
-		SearchCtx.m_ScopeHash = MakeUiScopeHash("settings_country_flag_popup_search");
-		SearchCtx.m_FrameDt = pMenus->GameClient()->UiRuntimeV2()->FrameDt();
-		ui_widget::SInputFieldOptions SearchOptions;
-		SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
-		SearchOptions.m_pPlaceholder = Localize("Search country flag…");
-		SearchOptions.m_Clearable = true;
-		ui_widget::InputField(SearchCtx, &pPopupContext->m_FilterInput, SearchRect, SearchOptions);
-
-		struct SFilteredFlag
-		{
-			const CCountryFlags::CCountryFlag *m_pEntry;
-			std::optional<std::pair<int, int>> m_Match;
-		};
-		static std::vector<SFilteredFlag> s_vFiltered;
-		s_vFiltered.clear();
-		for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
-		{
-			const CCountryFlags::CCountryFlag &Entry = pMenus->GameClient()->m_CountryFlags.GetByIndex(i);
-			if(!pPopupContext->m_FilterInput.IsEmpty())
-			{
-				const char *pMatchEnd = nullptr;
-				const char *pMatchStart = str_utf8_find_nocase(Entry.m_aCountryCodeString, pPopupContext->m_FilterInput.GetString(), &pMatchEnd);
-				if(pMatchStart != nullptr)
-				{
-					s_vFiltered.push_back({&Entry, std::make_pair((int)(pMatchStart - Entry.m_aCountryCodeString), (int)(pMatchEnd - pMatchStart))});
-				}
-			}
-			else
-			{
-				s_vFiltered.push_back({&Entry, std::nullopt});
-			}
-		}
-
-		const int Columns = std::clamp((int)(GridArea.w / 54.0f), 1, 14);
-		int SelectedIndex = -1;
-		for(size_t i = 0; i < s_vFiltered.size(); ++i)
-		{
-			if(s_vFiltered[i].m_pEntry->m_CountryCode == pPopupContext->m_Selection)
-			{
-				SelectedIndex = (int)i;
-				break;
-			}
-		}
-
-		s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
-
-		for(size_t i = 0; i < s_vFiltered.size(); ++i)
-		{
-			const SFilteredFlag &Filtered = s_vFiltered[i];
-			const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
-			const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
-			const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
-			if(!Item.m_Visible)
-				continue;
-
-			if(IsSelected)
-			{
-				DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
-			}
-			else if(pUi->MouseInside(&Item.m_Rect))
-			{
-				DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(0, 0, 0, 0), ui_token::radius::BASE);
-			}
-
-			CUIRect FlagRect, Label;
-			Item.m_Rect.Margin(5.0f, &FlagRect);
-			FlagRect.HSplitBottom(12.0f, &FlagRect, &Label);
-			Label.HSplitTop(2.0f, nullptr, &Label);
-			const float OldWidth = FlagRect.w;
-			FlagRect.w = FlagRect.h * 2.0f;
-			FlagRect.x += (OldWidth - FlagRect.w) / 2.0f;
-			int64_t FlagAnimStartTime = s_PopupOpenTime;
-			if(s_PopupOpenTime > 0)
-			{
-				const int Col = (int)(i % Columns);
-				const int Row = (int)(i / Columns) % 6;
-				const float StaggerDelay = Col * 0.006f + Row * 0.015f;
-				FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
-			}
-			pMenus->GameClient()->m_CountryFlags.Render(pEntry->m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
-
-			SLabelProperties Props;
-			if(Filtered.m_Match.has_value())
-			{
-				const auto [MatchStart, MatchLen] = Filtered.m_Match.value();
-				Props.m_vColorSplits.emplace_back(MatchStart, MatchLen, ui_token::color::ACCENT_PRIMARY);
-			}
-			pUi->DoLabel(&Label, pEntry->m_aCountryCodeString, 10.0f, TEXTALIGN_MC, Props);
-		}
-
-		const int NewSelected = s_ListBox.DoEnd();
-		if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size())
-		{
-			pPopupContext->m_Selection = s_vFiltered[NewSelected].m_pEntry->m_CountryCode;
-		}
-		if(s_ListBox.WasItemSelected() || s_ListBox.WasItemActivated())
-		{
-			if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size() && QmCommitCountrySelection(pPopupContext->m_pCountry, pPopupContext->m_Selection))
-			{
-				pMenus->SetNeedSendInfo();
-				pMenus->m_TeeEntranceStartTime = time_get();
-			}
-			return CUi::POPUP_CLOSE_CURRENT;
-		}
-
-		return CUi::POPUP_KEEP_OPEN;
-	}
-
-	// 旧版 UI 沿用列表布局，提交时同样校验是否存在有效选中项。
-	s_ListBox.DoStart(50.0f, pMenus->GameClient()->m_CountryFlags.Num(), 8, 1, -1, &View, false);
-
+		const CCountryFlags::CCountryFlag *m_pEntry;
+		std::optional<std::pair<int, int>> m_Match;
+	};
+	static std::vector<SFilteredFlag> s_vFiltered;
+	s_vFiltered.clear();
 	for(size_t i = 0; i < pMenus->GameClient()->m_CountryFlags.Num(); ++i)
 	{
 		const CCountryFlags::CCountryFlag &Entry = pMenus->GameClient()->m_CountryFlags.GetByIndex(i);
-		const CListboxItem Item = s_ListBox.DoNextItem(&Entry, Entry.m_CountryCode == pPopupContext->m_Selection);
+		if(!pPopupContext->m_FilterInput.IsEmpty())
+		{
+			const char *pMatchEnd = nullptr;
+			const char *pMatchStart = str_utf8_find_nocase(Entry.m_aCountryCodeString, pPopupContext->m_FilterInput.GetString(), &pMatchEnd);
+			if(pMatchStart != nullptr)
+			{
+				s_vFiltered.push_back({&Entry, std::make_pair((int)(pMatchStart - Entry.m_aCountryCodeString), (int)(pMatchEnd - pMatchStart))});
+			}
+		}
+		else
+		{
+			s_vFiltered.push_back({&Entry, std::nullopt});
+		}
+	}
+
+	const int Columns = std::clamp((int)(GridArea.w / 54.0f), 1, 14);
+	int SelectedIndex = -1;
+	for(size_t i = 0; i < s_vFiltered.size(); ++i)
+	{
+		if(s_vFiltered[i].m_pEntry->m_CountryCode == pPopupContext->m_Selection)
+		{
+			SelectedIndex = (int)i;
+			break;
+		}
+	}
+
+	s_ListBox.DoStart(44.0f, s_vFiltered.size(), Columns, 1, SelectedIndex, &GridArea, false);
+
+	for(size_t i = 0; i < s_vFiltered.size(); ++i)
+	{
+		const SFilteredFlag &Filtered = s_vFiltered[i];
+		const CCountryFlags::CCountryFlag *pEntry = Filtered.m_pEntry;
+		const bool IsSelected = pEntry->m_CountryCode == pPopupContext->m_Selection;
+		const CListboxItem Item = s_ListBox.DoNextItem(pEntry, IsSelected);
 		if(!Item.m_Visible)
 			continue;
+
+		if(IsSelected)
+		{
+			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
+		}
+		else if(pUi->MouseInside(&Item.m_Rect))
+		{
+			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_HOVER, ColorRGBA(0, 0, 0, 0), ui_token::radius::BASE);
+		}
 
 		CUIRect FlagRect, Label;
 		Item.m_Rect.Margin(5.0f, &FlagRect);
@@ -890,20 +834,30 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 		int64_t FlagAnimStartTime = s_PopupOpenTime;
 		if(s_PopupOpenTime > 0)
 		{
-			const int Col = (int)(i % 8);
-			const int Row = (int)(i / 8) % 6;
+			const int Col = (int)(i % Columns);
+			const int Row = (int)(i / Columns) % 6;
 			const float StaggerDelay = Col * 0.006f + Row * 0.015f;
 			FlagAnimStartTime = s_PopupOpenTime + (int64_t)(StaggerDelay * time_freq());
 		}
-		pMenus->GameClient()->m_CountryFlags.Render(Entry.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
-		pMenus->Ui()->DoLabel(&Label, Entry.m_aCountryCodeString, 10.0f, TEXTALIGN_MC);
+		pMenus->GameClient()->m_CountryFlags.Render(pEntry->m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h, FlagAnimStartTime);
+
+		SLabelProperties Props;
+		if(Filtered.m_Match.has_value())
+		{
+			const auto [MatchStart, MatchLen] = Filtered.m_Match.value();
+			Props.m_vColorSplits.emplace_back(MatchStart, MatchLen, ui_token::color::ACCENT_PRIMARY);
+		}
+		pUi->DoLabel(&Label, pEntry->m_aCountryCodeString, 10.0f, TEXTALIGN_MC, Props);
 	}
 
 	const int NewSelected = s_ListBox.DoEnd();
-	pPopupContext->m_Selection = NewSelected >= 0 ? pMenus->GameClient()->m_CountryFlags.GetByIndex(NewSelected).m_CountryCode : -1;
+	if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size())
+	{
+		pPopupContext->m_Selection = s_vFiltered[NewSelected].m_pEntry->m_CountryCode;
+	}
 	if(s_ListBox.WasItemSelected() || s_ListBox.WasItemActivated())
 	{
-		if(NewSelected >= 0 && QmCommitCountrySelection(pPopupContext->m_pCountry, pPopupContext->m_Selection))
+		if(NewSelected >= 0 && (size_t)NewSelected < s_vFiltered.size() && QmCommitCountrySelection(pPopupContext->m_pCountry, pPopupContext->m_Selection))
 		{
 			pMenus->SetNeedSendInfo();
 			pMenus->m_TeeEntranceStartTime = time_get();
@@ -967,16 +921,9 @@ void CMenus::RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, f
 		s_PopupCountryContext.m_pCountry = pCountry;
 		s_PopupCountryContext.m_Selection = *pCountry;
 		s_PopupCountryContext.m_New = true;
-		SPopupMenuProperties PopupProps;
-		PopupProps.m_BlockUnderlyingScroll = true;
-		if(g_Config.m_QmNewUi)
-		{
-			PopupProps = ui_widget::SecondaryPanelProperties();
-		}
+		const SPopupMenuProperties PopupProps = ui_widget::SecondaryPanelProperties();
 		const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
-		const float PopupWidth = g_Config.m_QmNewUi ? PanelRect.w : 490.0f;
-		const float PopupHeight = g_Config.m_QmNewUi ? PanelRect.h : 210.0f;
-		Ui()->DoPopupMenu(&s_PopupCountryId, FlagButton.x, FlagButton.y + FlagButton.h, PopupWidth, PopupHeight, &s_PopupCountryContext, PopupSettingsCountrySelection, PopupProps);
+		Ui()->DoPopupMenu(&s_PopupCountryId, FlagButton.x, FlagButton.y + FlagButton.h, PanelRect.w, PanelRect.h, &s_PopupCountryContext, PopupSettingsCountrySelection, PopupProps);
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_FlagButton, &FlagButton, Localize("Choose country flag"));
 
@@ -1013,34 +960,18 @@ void CMenus::RenderSettingsPlayer(CUIRect MainView)
 	TabBar.VSplitMid(&PlayerTab, &DummyTab);
 	static CButtonContainer s_PlayerTabButton;
 	static CButtonContainer s_DummyTabButton;
-	if(g_Config.m_QmNewUi != 0)
+	// 胶囊 Tabbar：容器与滑块先画，页签文字随后，滑块压在文字之下。
+	const CUIRect aPlayerTabSlots[] = {PlayerTab, DummyTab};
+	ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_player_dummy_tabs_capsule"), aPlayerTabSlots, std::size(aPlayerTabSlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());
+	if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &PlayerTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
 	{
-		// 胶囊 Tabbar：容器与滑块先画，页签文字随后，滑块压在文字之下。
-		const CUIRect aPlayerTabSlots[] = {PlayerTab, DummyTab};
-		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_player_dummy_tabs_capsule"), aPlayerTabSlots, std::size(aPlayerTabSlots), m_Dummy ? 1 : 0, SettingsCapsuleTabBarStyle());
-		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &PlayerTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
-		{
-			m_Dummy = false;
-			m_TeeEntranceStartTime = time_get();
-		}
-		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &DummyTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
-		{
-			m_Dummy = true;
-			m_TeeEntranceStartTime = time_get();
-		}
+		m_Dummy = false;
+		m_TeeEntranceStartTime = time_get();
 	}
-	else
+	if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &DummyTab, IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
 	{
-		if(DoButton_MenuTab(&s_PlayerTabButton, Localize("Player"), !m_Dummy, &PlayerTab, IGraphics::CORNER_L, nullptr, nullptr, nullptr, nullptr, 4.0f))
-		{
-			m_Dummy = false;
-			m_TeeEntranceStartTime = time_get();
-		}
-		if(DoButton_MenuTab(&s_DummyTabButton, Localize("Dummy"), m_Dummy, &DummyTab, IGraphics::CORNER_R, nullptr, nullptr, nullptr, nullptr, 4.0f))
-		{
-			m_Dummy = true;
-			m_TeeEntranceStartTime = time_get();
-		}
+		m_Dummy = true;
+		m_TeeEntranceStartTime = time_get();
 	}
 	// 子 Tab 已由设置壳层的 Card Deck 统一处理入场；页面内部不再叠加横向位移动效。
 	const auto DrawAnimatedContent = [](CUIRect Content, auto &&DrawContent) { DrawContent(Content); };
@@ -1239,13 +1170,10 @@ void CMenus::RenderSettingsTee(CUIRect MainView)
 	static int s_SubTab = 0;
 	static CButtonContainer s_aTabs[2];
 	const char *apLabels[] = {Localize("Tee"), Localize("Profiles")};
-	const bool Capsule = g_Config.m_QmNewUi != 0;
-	if(Capsule)
-		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee_sub_tabs_capsule"), aTabs, std::size(aTabs), s_SubTab, SettingsCapsuleTabBarStyle());
+	ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("settings_tee_sub_tabs_capsule"), aTabs, std::size(aTabs), s_SubTab, SettingsCapsuleTabBarStyle());
 	for(int Tab = 0; Tab < 2; ++Tab)
 	{
-		const int Corners = Capsule ? IGraphics::CORNER_ALL : (Tab == 0 ? IGraphics::CORNER_L : IGraphics::CORNER_R);
-		if(DoButton_MenuTab(&s_aTabs[Tab], apLabels[Tab], s_SubTab == Tab, &aTabs[Tab], Corners, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, Capsule))
+		if(DoButton_MenuTab(&s_aTabs[Tab], apLabels[Tab], s_SubTab == Tab, &aTabs[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
 			s_SubTab = Tab;
 	}
 	if(!m_MenuTextPlanCollecting && !RenderOnly)
@@ -1956,7 +1884,6 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			Button.VSplitLeft(std::clamp(Button.w * 0.36f, 96.0f, 150.0f), &BlurModeLabel, &BlurModeSegments);
 			BlurModeSegments.VSplitLeft(8.0f, nullptr, &BlurModeSegments);
 			Ui()->DoLabel(&BlurModeLabel, Localize("Blur mode"), BodySize, TEXTALIGN_ML);
-			// 多选一分段选择器：新 UI 为胶囊滑块，旧 UI 为分段圆角按钮。
 			const int NewBlurMode = DoSegmentedChoice(s_aGraphicsBlurModeButtons, apBlurModeLabels, (int)std::size(apBlurModeLabels), g_Config.m_QmBlurMode, BlurModeSegments);
 			if(NewBlurMode != g_Config.m_QmBlurMode)
 				g_Config.m_QmBlurMode = NewBlurMode;
@@ -1986,7 +1913,6 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				Row.VSplitLeft(std::clamp(Row.w * 0.36f, 96.0f, 150.0f), &Label, &Segments);
 				Segments.VSplitLeft(8.0f, nullptr, &Segments);
 				Ui()->DoLabel(&Label, pLabel, BodySize, TEXTALIGN_ML);
-				// 多选一分段选择器：新 UI 为胶囊滑块（SettingsCapsuleTabBarStyle 为辅助函数缺省样式），旧 UI 为分段圆角按钮。
 				const int ClickedSegment = DoSegmentedChoice(pButtons, ppLabels, Count, Current, Segments);
 				if(ClickedSegment != Current)
 					OnChanged(ClickedSegment);
@@ -2036,34 +1962,18 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				CUIRect Label, Segments;
 				Row.VSplitLeft(std::clamp(Row.w * 0.36f, 96.0f, 150.0f), &Label, &Segments);
 				Segments.VSplitLeft(8.0f, nullptr, &Segments);
-				if(g_Config.m_QmNewUi != 0)
+				// 预布局只接手点击，轨道与滑块由正式渲染阶段绘制。
+				CUIRect aSegmentSlots[8];
+				CUIRect SegmentsRemainder = Segments;
+				const int SegmentCount = std::clamp(Count, 0, (int)std::size(aSegmentSlots));
+				for(int i = 0; i < SegmentCount; ++i)
+					SegmentsRemainder.VSplitLeft(SegmentsRemainder.w / (SegmentCount - i), &aSegmentSlots[i], &SegmentsRemainder);
+				for(int i = 0; i < SegmentCount; ++i)
 				{
-					// 预布局只接手点击，轨道与滑块由正式渲染阶段绘制。
-					CUIRect aSegmentSlots[8];
-					CUIRect SegmentsRemainder = Segments;
-					const int SegmentCount = std::clamp(Count, 0, (int)std::size(aSegmentSlots));
-					for(int i = 0; i < SegmentCount; ++i)
-						SegmentsRemainder.VSplitLeft(SegmentsRemainder.w / (SegmentCount - i), &aSegmentSlots[i], &SegmentsRemainder);
-					for(int i = 0; i < SegmentCount; ++i)
+					if(Ui()->DoButtonLogic(&pButtons[i], Current == i, &aSegmentSlots[i], BUTTONFLAG_LEFT))
 					{
-						if(Ui()->DoButtonLogic(&pButtons[i], Current == i, &aSegmentSlots[i], BUTTONFLAG_LEFT))
-						{
-							OnChanged(i);
-							Changed = true;
-						}
-					}
-				}
-				else
-				{
-					for(int i = 0; i < Count; ++i)
-					{
-						CUIRect Segment;
-						Segments.VSplitLeft(Segments.w / (Count - i), &Segment, &Segments);
-						if(Ui()->DoButtonLogic(&pButtons[i], Current == i, &Segment, BUTTONFLAG_LEFT))
-						{
-							OnChanged(i);
-							Changed = true;
-						}
+						OnChanged(i);
+						Changed = true;
 					}
 				}
 			};
@@ -2111,7 +2021,6 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 			DoSettingsLabel(SETTINGS_GRAPHICS, -1, "graphics-ui-motion-level-label", &Label, Localize("UI motion level"), BodySize, TEXTALIGN_ML);
 			static CButtonContainer s_aMotionButtons[3];
 			const char *apMotionLabels[] = {Localize("Off"), Localize("Reduced"), Localize("Full")};
-			// 多选一分段选择器：新 UI 为胶囊滑块，旧 UI 为分段圆角按钮。
 			const int NewMotionLevel = DoSegmentedChoice(s_aMotionButtons, apMotionLabels, 3, g_Config.m_QmUiMotionLevel, Segments);
 			if(NewMotionLevel != g_Config.m_QmUiMotionLevel)
 				g_Config.m_QmUiMotionLevel = NewMotionLevel;
@@ -3532,54 +3441,26 @@ void CMenus::RenderSettings(CUIRect MainView)
 	// render background
 	const int64_t ShellLayoutStartTime = PerfDebugStartTime();
 	CUIRect Button, TabBar, RestartBar;
-	const bool UseNewSettingsUi = g_Config.m_QmNewUi != 0;
 	const bool NeedRestart = m_NeedRestartGraphics || m_NeedRestartSound || m_NeedRestartUpdate;
-	if(UseNewSettingsUi)
+	const SSettingsShellLayoutFrame Shell = ResolveSettingsShellLayout(MainView, NeedRestart ? 30.0f : 0.0f);
+	m_SettingsShellLayout = Shell;
+	m_SettingsContentMetrics = ResolveSettingsContentMetrics(Shell.m_ContentRect.w);
+	m_SettingsShellLayoutValid = true;
+	MainView = Shell.m_ContentRect;
+	TabBar = Shell.m_TabBarRect;
+	if(NeedRestart)
+		RestartBar = Shell.m_RestartBarRect;
+	if(!CollectingMenuTextPlan)
 	{
-		const SSettingsShellLayoutFrame Shell = ResolveSettingsShellLayout(MainView, NeedRestart ? 30.0f : 0.0f);
-		m_SettingsShellLayout = Shell;
-		m_SettingsContentMetrics = ResolveSettingsContentMetrics(Shell.m_ContentRect.w);
-		m_SettingsShellLayoutValid = true;
-		MainView = Shell.m_ContentRect;
-		TabBar = Shell.m_TabBarRect;
-		if(NeedRestart)
-			RestartBar = Shell.m_RestartBarRect;
-		if(!CollectingMenuTextPlan)
-		{
-			TabBar.Draw(SettingsTabbarColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-			Shell.m_ContentPanelRect.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-		}
-	}
-	else
-	{
-		m_SettingsShellLayoutValid = false;
-		const float TabBarWidth = std::clamp(MainView.w * 0.14f, 108.0f, 120.0f);
-		MainView.VSplitRight(TabBarWidth, &MainView, &TabBar);
-		if(!CollectingMenuTextPlan)
-			MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, ui_token::radius::CARD);
-		MainView.Margin(std::clamp(MainView.w * 0.02f, 12.0f, 20.0f), &MainView);
-		m_SettingsContentMetrics = ResolveSettingsContentMetrics(MainView.w);
+		TabBar.Draw(SettingsTabbarColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+		Shell.m_ContentPanelRect.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	}
 	const float PreviousDropDownFontSize = Ui()->DropDownFontSize();
 	Ui()->SetDropDownFontSize(m_SettingsContentMetrics.m_BodySize);
 
-	if(!UseNewSettingsUi && NeedRestart)
-	{
-		MainView.HSplitBottom(20.0f, &MainView, &RestartBar);
-		MainView.HSplitBottom(10.0f, &MainView, nullptr);
-	}
-
-	if(UseNewSettingsUi)
-	{
-		TabBar.Margin(10.0f, &TabBar);
-		TabBar.HSplitTop(38.0f, &Button, &TabBar);
-		DoSettingsMenuLabel(SETTINGS_GENERAL, -1, -1, "settings-shell-title", &Button, Localize("Settings"), ui_token::font::HEADLINE_LG, TEXTALIGN_MC);
-	}
-	else
-	{
-		TabBar.HSplitTop(50.0f, &Button, &TabBar);
-		Button.Draw(ms_ColorTabbarActive, IGraphics::CORNER_BR, ui_token::radius::CARD);
-	}
+	TabBar.Margin(10.0f, &TabBar);
+	TabBar.HSplitTop(38.0f, &Button, &TabBar);
+	DoSettingsMenuLabel(SETTINGS_GENERAL, -1, -1, "settings-shell-title", &Button, Localize("Settings"), ui_token::font::HEADLINE_LG, TEXTALIGN_MC);
 	if(SettingsPerfEnabled)
 	{
 		char aSettingsPerfTab[16];
@@ -3600,7 +3481,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		LogPerfStage(Client(), "settings_shell_layout", PerfDebugElapsedMs(ShellLayoutStartTime), false, aShellExtra);
 	}
 
-	const float SettingsTabBarButtonWidth = UseNewSettingsUi ? std::max(0.0f, TabBar.w - 20.0f) : -1.0f;
+	const float SettingsTabBarButtonWidth = std::max(0.0f, TabBar.w - 20.0f);
 	PrepareSettingsTabLabelCache(MainView.w, SettingsTabBarButtonWidth);
 
 	{
@@ -3627,20 +3508,10 @@ void CMenus::RenderSettings(CUIRect MainView)
 			if(!SettingsPageVisibleInRightTabBar(i))
 				continue;
 			const bool Active = g_Config.m_UiSettingsPage == i;
-			if(UseNewSettingsUi)
-			{
-				TabBar.HSplitTop(ui_token::settings::TAB_GAP, nullptr, &TabBar);
-				TabBar.HSplitTop(ui_token::settings::TAB_HEIGHT, &Button, &TabBar);
-				if(DoButton_MenuTab(&m_aSettingsTabButtons[i], m_apSettingsTabs[i], Active, &Button, IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[i], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[i]))
-					g_Config.m_UiSettingsPage = i;
-			}
-			else
-			{
-				TabBar.HSplitTop(ui_token::settings::TAB_GAP, nullptr, &TabBar);
-				TabBar.HSplitTop(ui_token::settings::TAB_HEIGHT, &Button, &TabBar);
-				if(DoButton_MenuTab(&m_aSettingsTabButtons[i], m_apSettingsTabs[i], Active, &Button, IGraphics::CORNER_R, &m_aAnimatorsSettingsTab[i], nullptr, nullptr, nullptr, 10.0f, nullptr, &m_aSettingsTabLabelElements[i]))
-					g_Config.m_UiSettingsPage = i;
-			}
+			TabBar.HSplitTop(ui_token::settings::TAB_GAP, nullptr, &TabBar);
+			TabBar.HSplitTop(ui_token::settings::TAB_HEIGHT, &Button, &TabBar);
+			if(DoButton_MenuTab(&m_aSettingsTabButtons[i], m_apSettingsTabs[i], Active, &Button, IGraphics::CORNER_ALL, &m_aAnimatorsSettingsTab[i], nullptr, &SettingsNavigationSelected, &SettingsNavigationHover, 10.0f, nullptr, &m_aSettingsTabLabelElements[i]))
+				g_Config.m_UiSettingsPage = i;
 		}
 
 		if(SettingsPerfEnabled)
@@ -4252,35 +4123,20 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		s_apAppearanceTabNames[APPEARANCE_TAB_LASER] = Localize("Laser");
 	}
 
-	if(g_Config.m_QmNewUi != 0)
-	{
-		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
-		CUIRect aAppearanceTabSlots[NUMBER_OF_APPEARANCE_TABS];
-		CUIRect AppearanceTabsRemainder = TabBar;
-		for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
-			AppearanceTabsRemainder.VSplitLeft(TabWidth, &aAppearanceTabSlots[Tab], &AppearanceTabsRemainder);
-		const int ActiveAppearanceTab = std::clamp(m_AppearanceSettingsTab, (int)APPEARANCE_TAB_HUD, (int)NUMBER_OF_APPEARANCE_TABS - 1);
-		const IUiContext AppearanceTabBarCtx = TabBarUiContext();
-		ui_widget::CapsuleTabBarChrome(AppearanceTabBarCtx, MakeUiScopeHash("settings_appearance_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aAppearanceTabSlots, NUMBER_OF_APPEARANCE_TABS), &aAppearanceTabSlots[ActiveAppearanceTab], SettingsCapsuleTabBarStyle());
+	// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
+	CUIRect aAppearanceTabSlots[NUMBER_OF_APPEARANCE_TABS];
+	CUIRect AppearanceTabsRemainder = TabBar;
+	for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
+		AppearanceTabsRemainder.VSplitLeft(TabWidth, &aAppearanceTabSlots[Tab], &AppearanceTabsRemainder);
+	const int ActiveAppearanceTab = std::clamp(m_AppearanceSettingsTab, (int)APPEARANCE_TAB_HUD, (int)NUMBER_OF_APPEARANCE_TABS - 1);
+	const IUiContext AppearanceTabBarCtx = TabBarUiContext();
+	ui_widget::CapsuleTabBarChrome(AppearanceTabBarCtx, MakeUiScopeHash("settings_appearance_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aAppearanceTabSlots, NUMBER_OF_APPEARANCE_TABS), &aAppearanceTabSlots[ActiveAppearanceTab], SettingsCapsuleTabBarStyle());
 
-		for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
-		{
-			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &aAppearanceTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
-			{
-				m_AppearanceSettingsTab = Tab;
-			}
-		}
-	}
-	else
+	for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
 	{
-		for(int Tab = APPEARANCE_TAB_HUD; Tab < NUMBER_OF_APPEARANCE_TABS; ++Tab)
+		if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &aAppearanceTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
 		{
-			TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-			const int Corners = Tab == APPEARANCE_TAB_HUD ? IGraphics::CORNER_L : (Tab == NUMBER_OF_APPEARANCE_TABS - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAppearanceTabNames[Tab], m_AppearanceSettingsTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f))
-			{
-				m_AppearanceSettingsTab = Tab;
-			}
+			m_AppearanceSettingsTab = Tab;
 		}
 	}
 
@@ -5937,12 +5793,9 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 				const SQmDropdownPopupPolicy PopupPolicy = QmResolveDropdownPopupPolicy((int)s_PopupMapPickerContext.m_vMaps.size(), 20.0f, 0.0f, false, 0.0f, CUi::PopupMenuContentInset(), 1);
 				SPopupMenuProperties PopupProps;
 				PopupProps.m_BlockUnderlyingScroll = true;
-				if(g_Config.m_QmNewUi)
-				{
-					PopupProps.m_CenterInViewport = true;
-					PopupProps.m_BlockUnderlyingPointerInput = true;
-					PopupProps.m_Animate = true;
-				}
+				PopupProps.m_CenterInViewport = true;
+				PopupProps.m_BlockUnderlyingPointerInput = true;
+				PopupProps.m_Animate = true;
 				Ui()->DoPopupMenu(&s_PopupMapPickerId, Ui()->MouseX(), Ui()->MouseY(), 300.0f, PopupPolicy.m_PreferredHeight, &s_PopupMapPickerContext, PopupMapPicker, PopupProps);
 			}
 

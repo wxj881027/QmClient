@@ -110,12 +110,6 @@ enum
 inline constexpr float MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW = 21.0f;
 inline constexpr float MENU_MENUBAR_CONTENT_SCALE_NEW = 1.10f;
 
-// 悬浮卡片四角独立，旧页签壳层与内容相连，仅保留底部圆角。
-inline constexpr int QmMenuShellCorners(bool UseNewUi)
-{
-	return UseNewUi ? IGraphics::CORNER_ALL : IGraphics::CORNER_B;
-}
-
 class CUIRect;
 enum class EQmIcon;
 struct IUiContext;
@@ -162,11 +156,9 @@ public:
 	ui_widget::SCapsuleTabBarStyle MenuCapsuleTabBarStyle() const;
 	// 通用胶囊配色：轨道在给定容器表面上压一层暗色，滑块与文字按该表面明暗自适应。
 	ui_widget::SCapsuleTabBarStyle CapsuleTabBarStyleFor(const ColorRGBA &SurfaceColor) const;
-	// 多选一分段选择器：新 UI 渲染为胶囊滑块（先画容器与滑块，再画分段文字，滑块压在
-	// 文字之下），旧 UI 保持分段圆角按钮。槽位在 Segments 内均分；返回点击后的新下标，
-	// 无点击返回 Current。pLegacy* 三色仅用于旧 UI 分段外观（nullptr 用默认）；胶囊样式
-	// 缺省用 SettingsCapsuleTabBarStyle()，浏览器等同源面板处显式传 CapsuleTabBarStyleFor(表面色)。
-	int DoSegmentedChoice(CButtonContainer *pButtons, const char *const *ppLabels, int Count, int Current, const CUIRect &Segments, float Rounding = 5.0f, const ColorRGBA *pLegacyDefault = nullptr, const ColorRGBA *pLegacyActive = nullptr, const ColorRGBA *pLegacyHover = nullptr, const ui_widget::SCapsuleTabBarStyle *pCapsuleStyle = nullptr);
+	// 多选一胶囊选择器：槽位在 Segments 内均分，先画容器与滑块，再画文字。
+	// 返回点击后的新下标，无点击返回 Current；缺省配色使用 SettingsCapsuleTabBarStyle()。
+	int DoSegmentedChoice(CButtonContainer *pButtons, const char *const *ppLabels, int Count, int Current, const CUIRect &Segments, float Rounding = 5.0f, const ui_widget::SCapsuleTabBarStyle *pCapsuleStyle = nullptr);
 	ColorRGBA MenuPanelColor(float AlphaScale = 1.0f) const;
 	ColorRGBA MenuPanelElevatedColor(float AlphaScale = 1.0f) const;
 	ColorRGBA BrowserPanelColor(float AlphaScale = 1.0f) const;
@@ -175,8 +167,7 @@ public:
 	ColorRGBA QmMenuTabDefaultColor() const;
 	ColorRGBA QmMenuTabActiveColor() const;
 	ColorRGBA QmMenuMenubarHoverColor() const;
-	// 菜单页背景圆角：新 UI 页签是悬浮胶囊，内容为独立圆角卡片（四角全圆）；
-	// 旧 UI 页签与内容相连，只圆底部、顶部保持方角衔接页签。
+	// 菜单页签是悬浮胶囊，内容面板使用四角圆角。
 	int MenuShellCorners() const;
 
 	int DoButton_CheckBox_Common(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, bool ProcessInput = true);

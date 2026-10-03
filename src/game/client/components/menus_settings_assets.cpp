@@ -4229,36 +4229,20 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		s_apAssetsTabNames[ASSETS_TAB_EXTRAS] = Localize("Other");
 	}
 
-	if(g_Config.m_QmNewUi != 0)
-	{
-		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
-		CUIRect aAssetsTabSlots[NUMBER_OF_ASSETS_TABS];
-		CUIRect AssetsTabsRemainder = TabBar;
-		for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
-			AssetsTabsRemainder.VSplitLeft(TabWidth, &aAssetsTabSlots[Tab], &AssetsTabsRemainder);
-		const int ActiveAssetsTab = std::clamp(s_CurCustomTab, (int)ASSETS_TAB_ENTITIES, (int)NUMBER_OF_ASSETS_TABS - 1);
-		const IUiContext AssetsTabBarCtx = TabBarUiContext();
-		ui_widget::CapsuleTabBarChrome(AssetsTabBarCtx, MakeUiScopeHash("settings_assets_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aAssetsTabSlots, NUMBER_OF_ASSETS_TABS), &aAssetsTabSlots[ActiveAssetsTab], SettingsCapsuleTabBarStyle());
+	// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
+	CUIRect aAssetsTabSlots[NUMBER_OF_ASSETS_TABS];
+	CUIRect AssetsTabsRemainder = TabBar;
+	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
+		AssetsTabsRemainder.VSplitLeft(TabWidth, &aAssetsTabSlots[Tab], &AssetsTabsRemainder);
+	const int ActiveAssetsTab = std::clamp(s_CurCustomTab, (int)ASSETS_TAB_ENTITIES, (int)NUMBER_OF_ASSETS_TABS - 1);
+	const IUiContext AssetsTabBarCtx = TabBarUiContext();
+	ui_widget::CapsuleTabBarChrome(AssetsTabBarCtx, MakeUiScopeHash("settings_assets_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aAssetsTabSlots, NUMBER_OF_ASSETS_TABS), &aAssetsTabSlots[ActiveAssetsTab], SettingsCapsuleTabBarStyle());
 
-		for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
-		{
-			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAssetsTabNames[Tab], s_CurCustomTab == Tab, &aAssetsTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
-			{
-				s_CurCustomTab = Tab;
-			}
-		}
-	}
-	else
+	for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
 	{
-		for(int Tab = ASSETS_TAB_ENTITIES; Tab < NUMBER_OF_ASSETS_TABS; ++Tab)
+		if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAssetsTabNames[Tab], s_CurCustomTab == Tab, &aAssetsTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true))
 		{
-			CUIRect Button;
-			TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-			const int Corners = Tab == ASSETS_TAB_ENTITIES ? IGraphics::CORNER_L : (Tab == NUMBER_OF_ASSETS_TABS - 1 ? IGraphics::CORNER_R : IGraphics::CORNER_NONE);
-			if(DoButton_MenuTab(&s_aPageTabs[Tab], s_apAssetsTabNames[Tab], s_CurCustomTab == Tab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f))
-			{
-				s_CurCustomTab = Tab;
-			}
+			s_CurCustomTab = Tab;
 		}
 	}
 

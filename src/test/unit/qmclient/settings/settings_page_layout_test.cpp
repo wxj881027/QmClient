@@ -180,12 +180,10 @@ TEST(SettingsPageLayout, SecondaryHeaderKeepsCloseSquareAndTitleOutsideItsHitReg
 
 TEST(SettingsPageLayout, SecondaryMetricsReserveTheVisibleDividerAndNotice)
 {
-	const auto Modern = ui_widget::ResolveSecondaryPanelMetrics(1000.0f, true);
-	const auto Legacy = ui_widget::ResolveSecondaryPanelMetrics(1000.0f, false);
-	EXPECT_GT(Modern.m_DividerHeight, 0.0f);
-	EXPECT_FLOAT_EQ(Legacy.m_DividerHeight, 0.0f);
-	EXPECT_FLOAT_EQ(Modern.ContentHeight(2, 3, 1) - Modern.ContentHeight(2, 3, 0), Modern.m_Spacing + Modern.m_RowHeight);
-	EXPECT_GT(Modern.ContentHeight(2, 3, 1), Legacy.ContentHeight(2, 3, 1));
+	const auto Metrics = ui_widget::ResolveSecondaryPanelMetrics(1000.0f);
+	EXPECT_GT(Metrics.m_DividerHeight, 0.0f);
+	EXPECT_FLOAT_EQ(Metrics.ContentHeight(2, 3, 1) - Metrics.ContentHeight(2, 3, 0), Metrics.m_Spacing + Metrics.m_RowHeight);
+	EXPECT_GT(Metrics.ContentHeight(0, 0, 0), 2.0f * Metrics.m_Margin + Metrics.m_TitleHeight);
 }
 
 TEST(SettingsPageLayout, SecondaryPanelPropertiesRequestCenteredModalPresentation)

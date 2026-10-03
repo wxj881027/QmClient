@@ -9,7 +9,6 @@
 #include "UiTokens.h"
 
 #include <engine/graphics.h>
-#include <engine/shared/config.h>
 
 #include <game/client/components/menus.h>
 #include <game/client/qm_icon_manager.h>
@@ -69,9 +68,8 @@ namespace ui_widget
 			// 强度并入动画目标，按下时使用较短的过渡。
 			const bool HoverPrev = Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 			const bool Pressed = Ctx.m_pUi->CheckActiveItem(pBtn);
-			ColorRGBA Target = g_Config.m_QmNewUi && DrawBorder ? ResolveConfiguredControlSurface() : HoverPrev || Pressed ? Hover :
-																	 Idle;
-			if(!(g_Config.m_QmNewUi && DrawBorder))
+			ColorRGBA Target = DrawBorder ? ResolveConfiguredControlSurface() : HoverPrev || Pressed ? Hover : Idle;
+			if(!DrawBorder)
 				Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
 			ColorRGBA Resolved = Target;
 			if(Ctx.m_pAnim != nullptr)
@@ -112,11 +110,7 @@ namespace ui_widget
 
 		const bool HoverPrev = !Disabled && Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 		const bool Pressed = !Disabled && Ctx.m_pUi->CheckActiveItem(pBtn);
-		const ColorRGBA Accent = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
-		ColorRGBA Target = g_Config.m_QmNewUi ? ResolveConfiguredControlSurface(!Disabled) : HoverPrev || Pressed ? Accent.WithAlpha(0.18f) :
-															    ColorRGBA{0.0f, 0.0f, 0.0f, 0.0f};
-		if(!Disabled && !g_Config.m_QmNewUi)
-			Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
+		const ColorRGBA Target = ResolveConfiguredControlSurface(!Disabled);
 		ColorRGBA BgColor = Target;
 		if(Ctx.m_pAnim != nullptr && !Disabled)
 		{
@@ -126,12 +120,9 @@ namespace ui_widget
 		}
 
 		DrawRoundedSurface(Ctx, Rect, BgColor, BgColor, ui_token::radius::BASE);
-		if(g_Config.m_QmNewUi)
-		{
-			const ColorRGBA Surface = CompositeUiSurface(BgColor, CUiScopedSurfaceText::CurrentSurface());
-			const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, !Disabled, Ctx.m_pUi->MouseHovered(&Rect), Pressed && Ctx.m_pUi->MouseButton(0));
-			DrawRoundedSurface(Ctx, Rect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
-		}
+		const ColorRGBA Surface = CompositeUiSurface(BgColor, CUiScopedSurfaceText::CurrentSurface());
+		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, !Disabled, Ctx.m_pUi->MouseHovered(&Rect), Pressed && Ctx.m_pUi->MouseButton(0));
+		DrawRoundedSurface(Ctx, Rect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
 		const SQmIconStyle IconStyle = ConfiguredIconStyle();
 		const EQmIconState IconState = Disabled ? EQmIconState::DISABLED : (Pressed ? EQmIconState::ACTIVE : HoverPrev ? EQmIconState::HOVER :
 																 EQmIconState::NORMAL);
@@ -148,11 +139,7 @@ namespace ui_widget
 
 		const bool HoverPrev = !Disabled && Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 		const bool Pressed = !Disabled && Ctx.m_pUi->CheckActiveItem(pBtn);
-		const ColorRGBA Accent = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
-		ColorRGBA Target = g_Config.m_QmNewUi ? ResolveConfiguredControlSurface(!Disabled) : HoverPrev || Pressed ? Accent.WithAlpha(0.18f) :
-															    ColorRGBA{0.0f, 0.0f, 0.0f, 0.0f};
-		if(!Disabled && !g_Config.m_QmNewUi)
-			Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
+		const ColorRGBA Target = ResolveConfiguredControlSurface(!Disabled);
 		ColorRGBA BgColor = Target;
 		if(Ctx.m_pAnim != nullptr && !Disabled)
 		{
@@ -162,12 +149,9 @@ namespace ui_widget
 		}
 
 		DrawRoundedSurface(Ctx, Rect, BgColor, BgColor, ui_token::radius::BASE);
-		if(g_Config.m_QmNewUi)
-		{
-			const ColorRGBA Surface = CompositeUiSurface(BgColor, CUiScopedSurfaceText::CurrentSurface());
-			const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, !Disabled, Ctx.m_pUi->MouseHovered(&Rect), Pressed && Ctx.m_pUi->MouseButton(0));
-			DrawRoundedSurface(Ctx, Rect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
-		}
+		const ColorRGBA Surface = CompositeUiSurface(BgColor, CUiScopedSurfaceText::CurrentSurface());
+		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, !Disabled, Ctx.m_pUi->MouseHovered(&Rect), Pressed && Ctx.m_pUi->MouseButton(0));
+		DrawRoundedSurface(Ctx, Rect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
 		const int Result = Disabled ? 0 : Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT);
 
 		const float IconSide = minimum(Rect.w, Rect.h) * 0.58f;

@@ -610,17 +610,6 @@ TEST(QmInputOverlayFiles, MissingFileIsACompletedResult)
 	EXPECT_FALSE(Modified.has_value());
 }
 
-TEST(QmMenuShellGeometry, ChangingUiModeSelectsIndependentOrConnectedCorners)
-{
-	for(const bool UseNewUi : {false, true, true, false})
-	{
-		SCOPED_TRACE(UseNewUi);
-		const int Corners = QmMenuShellCorners(UseNewUi);
-		EXPECT_EQ(Corners & IGraphics::CORNER_B, IGraphics::CORNER_B);
-		EXPECT_EQ(Corners & IGraphics::CORNER_T, UseNewUi ? IGraphics::CORNER_T : IGraphics::CORNER_NONE);
-	}
-}
-
 TEST(QmCountryFlags, SelectionCanResetToDefaultAndThenChooseAnotherCountry)
 {
 	int Country = 156;

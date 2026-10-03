@@ -602,7 +602,7 @@ void CMenus::RenderGame(CUIRect MainView)
 
 	const bool HasSecondaryButtonBar = g_Config.m_ClTouchControls || UseSecondaryUtilityButtonBar;
 	MainView.HSplitTop(45.0f + (HasSecondaryButtonBar ? 35.0f : 0.0f), &ButtonBars, &MainView);
-	const int ButtonBarsCorners = g_Config.m_QmNewUi != 0 ? IGraphics::CORNER_ALL : IGraphics::CORNER_B;
+	const int ButtonBarsCorners = IGraphics::CORNER_ALL;
 	ButtonBars.Draw(ms_ColorTabbarActive, ButtonBarsCorners, 10.0f);
 	ButtonBars.Margin(10.0f, &ButtonBars);
 	ButtonBars.HSplitTop(MenuButtonHeight, &ButtonBar, &ButtonBars);
@@ -1506,10 +1506,9 @@ void CMenus::PrepareIngameServerInfoTextRuntime(const CUIRect *pMainView)
 	{
 		CUIRect Screen = *Ui()->Screen();
 		CUIRect TabBar;
-		const float MenubarHeight = g_Config.m_QmNewUi ? 24.0f : 30.0f;
+		const float MenubarHeight = 24.0f;
 		Screen.HSplitTop(MenubarHeight, &TabBar, &MainView);
-		if(g_Config.m_QmNewUi)
-			MainView.HSplitTop(6.0f, nullptr, &MainView);
+		MainView.HSplitTop(6.0f, nullptr, &MainView);
 	}
 
 	const float FontSizeTitle = 32.0f;
@@ -2371,65 +2370,35 @@ void CMenus::RenderServerControl(CUIRect MainView)
 
 	// render background
 	CUIRect Bottom, RconExtension, TabBar, Button;
-	const bool UseNewUiShell = g_Config.m_QmNewUi != 0;
-	if(UseNewUiShell)
-	{
-		// 新 UI：页签胶囊悬浮，整页一张全圆角卡片，页签行叠在卡片内部。
-		MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_ALL, 10.0f);
-		MainView.HSplitTop(20.0f, nullptr, &MainView);
-	}
-	else
-	{
-		MainView.HSplitTop(20.0f, &Bottom, &MainView);
-		Bottom.Draw(ms_ColorTabbarActive, IGraphics::CORNER_NONE, 0.0f);
-	}
+	// 新 UI：页签胶囊悬浮，整页一张全圆角卡片，页签行叠在卡片内部。
+	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_ALL, 10.0f);
+	MainView.HSplitTop(20.0f, nullptr, &MainView);
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
-	if(!UseNewUiShell)
-		DrawRoundedSurface(Ui(), MainView, ms_ColorTabbarActive, ms_ColorTabbarActive, 10.0f, 0.0f, IGraphics::CORNER_B);
 	MainView.Margin(10.0f, &MainView);
 
 	if(Client()->RconAuthed())
 		MainView.HSplitBottom(90.0f, &MainView, &RconExtension);
 
 	// tab bar
-	if(g_Config.m_QmNewUi != 0)
-	{
-		// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
-		CUIRect aControlTabSlots[3];
-		CUIRect ControlTabsRemainder = TabBar;
-		ControlTabsRemainder.VSplitLeft(ControlTabsRemainder.w / 3.0f, &aControlTabSlots[0], &ControlTabsRemainder);
-		ControlTabsRemainder.VSplitMid(&aControlTabSlots[1], &aControlTabSlots[2]);
-		const int ActiveControlTab = s_ControlPage == EServerControlTab::SETTINGS ? 0 : (s_ControlPage == EServerControlTab::KICKVOTE ? 1 : 2);
-		ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("ingame_server_control_tabs_capsule"), aControlTabSlots, 3, ActiveControlTab, CapsuleTabBarStyleFor(ms_ColorTabbarActive));
+	// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
+	CUIRect aControlTabSlots[3];
+	CUIRect ControlTabsRemainder = TabBar;
+	ControlTabsRemainder.VSplitLeft(ControlTabsRemainder.w / 3.0f, &aControlTabSlots[0], &ControlTabsRemainder);
+	ControlTabsRemainder.VSplitMid(&aControlTabSlots[1], &aControlTabSlots[2]);
+	const int ActiveControlTab = s_ControlPage == EServerControlTab::SETTINGS ? 0 : (s_ControlPage == EServerControlTab::KICKVOTE ? 1 : 2);
+	ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash("ingame_server_control_tabs_capsule"), aControlTabSlots, 3, ActiveControlTab, CapsuleTabBarStyleFor(ms_ColorTabbarActive));
 
-		static CButtonContainer s_Button0;
-		if(DoButton_MenuTab(&s_Button0, Localize("Change settings"), s_ControlPage == EServerControlTab::SETTINGS, &aControlTabSlots[0], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
-			s_ControlPage = EServerControlTab::SETTINGS;
+	static CButtonContainer s_Button0;
+	if(DoButton_MenuTab(&s_Button0, Localize("Change settings"), s_ControlPage == EServerControlTab::SETTINGS, &aControlTabSlots[0], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+		s_ControlPage = EServerControlTab::SETTINGS;
 
-		static CButtonContainer s_Button1;
-		if(DoButton_MenuTab(&s_Button1, Localize("Kick player"), s_ControlPage == EServerControlTab::KICKVOTE, &aControlTabSlots[1], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
-			s_ControlPage = EServerControlTab::KICKVOTE;
+	static CButtonContainer s_Button1;
+	if(DoButton_MenuTab(&s_Button1, Localize("Kick player"), s_ControlPage == EServerControlTab::KICKVOTE, &aControlTabSlots[1], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+		s_ControlPage = EServerControlTab::KICKVOTE;
 
-		static CButtonContainer s_Button2;
-		if(DoButton_MenuTab(&s_Button2, Localize("Move player to spectators"), s_ControlPage == EServerControlTab::SPECVOTE, &aControlTabSlots[2], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
-			s_ControlPage = EServerControlTab::SPECVOTE;
-	}
-	else
-	{
-		TabBar.VSplitLeft(TabBar.w / 3, &Button, &TabBar);
-		static CButtonContainer s_Button0;
-		if(DoButton_MenuTab(&s_Button0, Localize("Change settings"), s_ControlPage == EServerControlTab::SETTINGS, &Button, IGraphics::CORNER_NONE))
-			s_ControlPage = EServerControlTab::SETTINGS;
-
-		TabBar.VSplitMid(&Button, &TabBar);
-		static CButtonContainer s_Button1;
-		if(DoButton_MenuTab(&s_Button1, Localize("Kick player"), s_ControlPage == EServerControlTab::KICKVOTE, &Button, IGraphics::CORNER_NONE))
-			s_ControlPage = EServerControlTab::KICKVOTE;
-
-		static CButtonContainer s_Button2;
-		if(DoButton_MenuTab(&s_Button2, Localize("Move player to spectators"), s_ControlPage == EServerControlTab::SPECVOTE, &TabBar, IGraphics::CORNER_NONE))
-			s_ControlPage = EServerControlTab::SPECVOTE;
-	}
+	static CButtonContainer s_Button2;
+	if(DoButton_MenuTab(&s_Button2, Localize("Move player to spectators"), s_ControlPage == EServerControlTab::SPECVOTE, &aControlTabSlots[2], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 10.0f, nullptr, nullptr, -1.0f, true))
+		s_ControlPage = EServerControlTab::SPECVOTE;
 
 	if(!s_ControlPageTransitionInitialized)
 	{
@@ -2927,213 +2896,129 @@ void CMenus::RenderUnfinishedMaps(CUIRect MainView)
 
 void CMenus::RenderInGameNetwork(CUIRect MainView)
 {
-	const bool UseNewUi = g_Config.m_QmNewUi != 0;
-	CUIRect TabBar, Button;
-	MainView.HSplitTop(UseNewUi ? MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW : 24.0f, &TabBar, &MainView);
+	CUIRect TabBar;
+	MainView.HSplitTop(MENU_MENUBAR_CAPSULE_ROW_HEIGHT_NEW, &TabBar, &MainView);
 
 	int NewPage = g_Config.m_UiPage;
 
-	if(UseNewUi)
+	// 新 UI：服务器导航栏是滑块式胶囊导航（与主菜单服务器列表顶部导航同款）：
+	// 槽位先全部收集，再画胶囊容器与滑块，最后画图标 —— 滑块必须压在图标之下。
+	static CButtonContainer s_aServerTabButtons[4 + (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1];
+	struct SServerTab
 	{
-		// 新 UI：服务器导航栏是滑块式胶囊导航（与主菜单服务器列表顶部导航同款）：
-		// 槽位先全部收集，再画胶囊容器与滑块，最后画图标 —— 滑块必须压在图标之下。
-		static CButtonContainer s_aServerTabButtons[4 + (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1];
-		struct SServerTab
-		{
-			int m_Page;
-			EQmIcon m_Icon;
-			const char *m_pIcon;
-			bool m_bFavoriteMapsIcon;
-			const CCommunityIcon *m_pCommunityIcon;
-			const char *m_pTooltip;
-			float m_AppearStrength;
-		};
-		SServerTab aServerTabs[std::size(s_aServerTabButtons)] = {};
-		CUIRect aServerTabSlots[std::size(s_aServerTabButtons)];
-		int NumServerTabs = 0;
-		int ActiveServerTab = -1;
-		auto AddServerTab = [&](int Page, EQmIcon Icon, const char *pIcon, bool FavoriteMapsIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, float AppearStrength, const CUIRect &Slot) {
-			aServerTabs[NumServerTabs] = {Page, Icon, pIcon, FavoriteMapsIcon, pCommunityIcon, pTooltip, AppearStrength};
-			aServerTabSlots[NumServerTabs] = Slot;
-			if(g_Config.m_UiPage == Page)
-				ActiveServerTab = NumServerTabs;
-			++NumServerTabs;
-		};
+		int m_Page;
+		EQmIcon m_Icon;
+		const char *m_pIcon;
+		bool m_bFavoriteMapsIcon;
+		const CCommunityIcon *m_pCommunityIcon;
+		const char *m_pTooltip;
+		float m_AppearStrength;
+	};
+	SServerTab aServerTabs[std::size(s_aServerTabButtons)] = {};
+	CUIRect aServerTabSlots[std::size(s_aServerTabButtons)];
+	int NumServerTabs = 0;
+	int ActiveServerTab = -1;
+	auto AddServerTab = [&](int Page, EQmIcon Icon, const char *pIcon, bool FavoriteMapsIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, float AppearStrength, const CUIRect &Slot) {
+		aServerTabs[NumServerTabs] = {Page, Icon, pIcon, FavoriteMapsIcon, pCommunityIcon, pTooltip, AppearStrength};
+		aServerTabSlots[NumServerTabs] = Slot;
+		if(g_Config.m_UiPage == Page)
+			ActiveServerTab = NumServerTabs;
+		++NumServerTabs;
+	};
 
-		const float ServerTabWidth = 58.0f * MENU_MENUBAR_CONTENT_SCALE_NEW;
-		const float ServerTabGap = 4.0f;
-		CUIRect TabsRemainder = TabBar;
+	const float ServerTabWidth = 58.0f * MENU_MENUBAR_CONTENT_SCALE_NEW;
+	const float ServerTabGap = 4.0f;
+	CUIRect TabsRemainder = TabBar;
+	{
+		const int aFixedPages[] = {PAGE_INTERNET, PAGE_LAN, PAGE_FAVORITES, PAGE_FAVORITE_MAPS};
+		const EQmIcon aFixedIcons[] = {EQmIcon::EARTH_AMERICAS, EQmIcon::NETWORK_WIRED, EQmIcon::STAR, EQmIcon::COUNT};
+		const char *const apFixedIcons[] = {FONT_ICON_EARTH_AMERICAS, FONT_ICON_NETWORK_WIRED, FONT_ICON_STAR, ""};
+		const char *const apFixedTooltips[] = {Localize("Internet"), Localize("LAN"), Localize("Favorites"), Localize("Favorite map")};
+		for(size_t Fixed = 0; Fixed < std::size(aFixedPages); ++Fixed)
 		{
-			const int aFixedPages[] = {PAGE_INTERNET, PAGE_LAN, PAGE_FAVORITES, PAGE_FAVORITE_MAPS};
-			const EQmIcon aFixedIcons[] = {EQmIcon::EARTH_AMERICAS, EQmIcon::NETWORK_WIRED, EQmIcon::STAR, EQmIcon::COUNT};
-			const char *const apFixedIcons[] = {FONT_ICON_EARTH_AMERICAS, FONT_ICON_NETWORK_WIRED, FONT_ICON_STAR, ""};
-			const char *const apFixedTooltips[] = {Localize("Internet"), Localize("LAN"), Localize("Favorites"), Localize("Favorite map")};
-			for(size_t Fixed = 0; Fixed < std::size(aFixedPages); ++Fixed)
-			{
-				if(NumServerTabs > 0)
-					TabsRemainder.VSplitLeft(ServerTabGap, nullptr, &TabsRemainder);
-				CUIRect Slot;
-				TabsRemainder.VSplitLeft(ServerTabWidth, &Slot, &TabsRemainder);
-				AddServerTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], Fixed == std::size(aFixedPages) - 1, nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
-			}
-		}
-
-		// 收藏社区页签带出现动画（与主菜单的社区页签一致）。
-		static const uint64_t s_FavoriteCommunityAppearScopeHash = static_cast<uint64_t>(str_quickhash("menu_ingame_favorite_community_tab_appear"));
-		CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
-		CUiV2Tree &Tree = GameClient()->UiRuntimeV2()->Tree();
-		SUiAnimTransition AppearTransition;
-		AppearTransition.m_DurationSec = 0.18f;
-		AppearTransition.m_Easing = EEasing::EASE_OUT;
-		for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
-		{
-			if((size_t)NumServerTabs >= std::size(s_aServerTabButtons))
-				break;
-			if(TabsRemainder.w < ServerTabWidth + ServerTabGap)
-				break;
-			TabsRemainder.VSplitLeft(ServerTabGap, nullptr, &TabsRemainder);
+			if(NumServerTabs > 0)
+				TabsRemainder.VSplitLeft(ServerTabGap, nullptr, &TabsRemainder);
 			CUIRect Slot;
 			TabsRemainder.VSplitLeft(ServerTabWidth, &Slot, &TabsRemainder);
-
-			const uint64_t NodeKey = BuildUiAnimNodeKey(s_FavoriteCommunityAppearScopeHash, static_cast<uint64_t>(str_quickhash(pCommunity->Id())));
-			const SUiPresenceResult Presence = Tree.ResolvePresence(AnimRuntime, NodeKey, true, AppearTransition);
-			const float AppearStrength = std::clamp(Presence.m_Alpha, 0.0f, 1.0f);
-			const float RevealWidth = maximum(2.0f, Slot.w * AppearStrength);
-			Slot.x += (Slot.w - RevealWidth) * 0.5f;
-			Slot.w = RevealWidth;
-
-			const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumServerTabs - 4);
-			AddServerTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, false, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
+			AddServerTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], Fixed == std::size(aFixedPages) - 1, nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
 		}
-
-		const IUiContext TabBarCtx = TabBarUiContext();
-		ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash("menubar_capsule_ingame_server_tabs"), aServerTabSlots, NumServerTabs, ActiveServerTab, MenuCapsuleTabBarStyle());
-
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		for(int TabIndex = 0; TabIndex < NumServerTabs; ++TabIndex)
-		{
-			const SServerTab &Tab = aServerTabs[TabIndex];
-			const CUIRect &Slot = aServerTabSlots[TabIndex];
-			const bool TabActive = g_Config.m_UiPage == Tab.m_Page;
-			ColorRGBA InactiveColor = QmMenuTabDefaultColor();
-			ColorRGBA ActiveColor = QmMenuTabActiveColor();
-			ColorRGBA HoverColor = QmMenuMenubarHoverColor();
-			InactiveColor.a *= Tab.m_AppearStrength;
-			ActiveColor.a *= Tab.m_AppearStrength;
-			HoverColor.a *= Tab.m_AppearStrength;
-			if(DoMenuTabV2_QmIcon(&s_aServerTabButtons[TabIndex], Tab.m_Icon, Tab.m_pIcon, TabActive, &Slot, IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HoverColor, Tab.m_pCommunityIcon, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
-			{
-				NewPage = Tab.m_Page;
-			}
-			if(Tab.m_bFavoriteMapsIcon)
-			{
-				// 收藏地图页签：图标走图集渲染（失败回退字体图标）；滑块上的
-				// 图标用滑块同款深色，避免默认白图标压亮滑块不可见。
-				const float IconSide = minimum(Slot.w, Slot.h) * 0.56f;
-				const CUIRect IconRect{Slot.x + (Slot.w - IconSide) * 0.5f, Slot.y + (Slot.h - IconSide) * 0.5f, IconSide, IconSide};
-				const ColorRGBA IconColor = TabActive ? ui_widget::CapsuleTabBarActiveLabelColor(BrowserPanelColor()) : ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-				if(GameClient()->QmIconManager()->PreferFontFallback() || !GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, IconRect, IconColor))
-				{
-					const unsigned OldFlags = TextRender()->GetRenderFlags();
-					const EFontPreset OldPreset = TextRender()->GetFontPreset();
-					const ColorRGBA OldTextColor = TextRender()->GetTextColor();
-					TextRender()->TextColor(IconColor);
-					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-					Ui()->DoLabel_QmIcon(&IconRect, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, IconSide, TEXTALIGN_MC);
-					TextRender()->SetRenderFlags(OldFlags);
-					TextRender()->SetFontPreset(OldPreset);
-					TextRender()->TextColor(OldTextColor);
-				}
-			}
-			GameClient()->m_Tooltips.DoToolTip(&s_aServerTabButtons[TabIndex], &Slot, Tab.m_pTooltip);
-		}
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	}
-	else
+
+	// 收藏社区页签带出现动画（与主菜单的社区页签一致）。
+	static const uint64_t s_FavoriteCommunityAppearScopeHash = static_cast<uint64_t>(str_quickhash("menu_ingame_favorite_community_tab_appear"));
+	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	CUiV2Tree &Tree = GameClient()->UiRuntimeV2()->Tree();
+	SUiAnimTransition AppearTransition;
+	AppearTransition.m_DurationSec = 0.18f;
+	AppearTransition.m_Easing = EEasing::EASE_OUT;
+	for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
 	{
-		// 旧 UI：保持原服务器导航栏（方角、75px 宽、逐页签绘制）。
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+		if((size_t)NumServerTabs >= std::size(s_aServerTabButtons))
+			break;
+		if(TabsRemainder.w < ServerTabWidth + ServerTabGap)
+			break;
+		TabsRemainder.VSplitLeft(ServerTabGap, nullptr, &TabsRemainder);
+		CUIRect Slot;
+		TabsRemainder.VSplitLeft(ServerTabWidth, &Slot, &TabsRemainder);
 
-		TabBar.VSplitLeft(75.0f, &Button, &TabBar);
-		static CButtonContainer s_InternetButton;
-		if(DoMenuTabV2_QmIcon(&s_InternetButton, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, g_Config.m_UiPage == PAGE_INTERNET, &Button, IGraphics::CORNER_NONE))
-		{
-			NewPage = PAGE_INTERNET;
-		}
-		GameClient()->m_Tooltips.DoToolTip(&s_InternetButton, &Button, Localize("Internet"));
+		const uint64_t NodeKey = BuildUiAnimNodeKey(s_FavoriteCommunityAppearScopeHash, static_cast<uint64_t>(str_quickhash(pCommunity->Id())));
+		const SUiPresenceResult Presence = Tree.ResolvePresence(AnimRuntime, NodeKey, true, AppearTransition);
+		const float AppearStrength = std::clamp(Presence.m_Alpha, 0.0f, 1.0f);
+		const float RevealWidth = maximum(2.0f, Slot.w * AppearStrength);
+		Slot.x += (Slot.w - RevealWidth) * 0.5f;
+		Slot.w = RevealWidth;
 
-		TabBar.VSplitLeft(75.0f, &Button, &TabBar);
-		static CButtonContainer s_LanButton;
-		if(DoMenuTabV2_QmIcon(&s_LanButton, EQmIcon::NETWORK_WIRED, FONT_ICON_NETWORK_WIRED, g_Config.m_UiPage == PAGE_LAN, &Button, IGraphics::CORNER_NONE))
-		{
-			NewPage = PAGE_LAN;
-		}
-		GameClient()->m_Tooltips.DoToolTip(&s_LanButton, &Button, Localize("LAN"));
-
-		TabBar.VSplitLeft(75.0f, &Button, &TabBar);
-		static CButtonContainer s_FavoritesButton;
-		if(DoMenuTabV2_QmIcon(&s_FavoritesButton, EQmIcon::STAR, FONT_ICON_STAR, g_Config.m_UiPage == PAGE_FAVORITES, &Button, IGraphics::CORNER_NONE))
-		{
-			NewPage = PAGE_FAVORITES;
-		}
-		GameClient()->m_Tooltips.DoToolTip(&s_FavoritesButton, &Button, Localize("Favorites"));
-
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-		TabBar.VSplitLeft(75.0f, &Button, &TabBar);
-		static CButtonContainer s_FavoriteMapsButton;
-		if(DoMenuTabV2(&s_FavoriteMapsButton, "", g_Config.m_UiPage == PAGE_FAVORITE_MAPS, &Button, IGraphics::CORNER_NONE))
-		{
-			NewPage = PAGE_FAVORITE_MAPS;
-		}
-		const float FavoriteMapsIconSide = minimum(Button.w, Button.h) * 0.56f;
-		const CUIRect FavoriteMapsIconRect{Button.x + (Button.w - FavoriteMapsIconSide) * 0.5f, Button.y + (Button.h - FavoriteMapsIconSide) * 0.5f, FavoriteMapsIconSide, FavoriteMapsIconSide};
-		const ColorRGBA FavoriteMapsIconColor = ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-		if(GameClient()->QmIconManager()->PreferFontFallback() || !GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, FavoriteMapsIconRect, FavoriteMapsIconColor))
-		{
-			const unsigned OldFlags = TextRender()->GetRenderFlags();
-			const EFontPreset OldPreset = TextRender()->GetFontPreset();
-			const ColorRGBA OldTextColor = TextRender()->GetTextColor();
-			TextRender()->TextColor(FavoriteMapsIconColor);
-			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-			TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-			Ui()->DoLabel_QmIcon(&FavoriteMapsIconRect, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, FavoriteMapsIconSide, TEXTALIGN_MC);
-			TextRender()->SetRenderFlags(OldFlags);
-			TextRender()->SetFontPreset(OldPreset);
-			TextRender()->TextColor(OldTextColor);
-		}
-		GameClient()->m_Tooltips.DoToolTip(&s_FavoriteMapsButton, &Button, Localize("Favorite map"));
-
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-
-		size_t FavoriteCommunityIndex = 0;
-		static CButtonContainer s_aFavoriteCommunityButtons[5];
-		static_assert(std::size(s_aFavoriteCommunityButtons) == (size_t)PAGE_FAVORITE_COMMUNITY_5 - PAGE_FAVORITE_COMMUNITY_1 + 1);
-		for(const CCommunity *pCommunity : ServerBrowser()->FavoriteCommunities())
-		{
-			TabBar.VSplitLeft(75.0f, &Button, &TabBar);
-			const int Page = PAGE_FAVORITE_COMMUNITY_1 + FavoriteCommunityIndex;
-			if(DoMenuTabV2_QmIcon(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, g_Config.m_UiPage == Page, &Button, IGraphics::CORNER_NONE, nullptr, nullptr, nullptr, m_CommunityIcons.Find(pCommunity->Id())))
-			{
-				NewPage = Page;
-			}
-			GameClient()->m_Tooltips.DoToolTip(&s_aFavoriteCommunityButtons[FavoriteCommunityIndex], &Button, pCommunity->Name());
-
-			++FavoriteCommunityIndex;
-			if(FavoriteCommunityIndex >= std::size(s_aFavoriteCommunityButtons))
-				break;
-		}
-
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumServerTabs - 4);
+		AddServerTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, false, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
 	}
 
-	// 键盘左右键循环切换服务器页签（新旧 UI 共用）。
+	const IUiContext TabBarCtx = TabBarUiContext();
+	ui_widget::CapsuleTabBarChrome(TabBarCtx, MakeUiScopeHash("menubar_capsule_ingame_server_tabs"), aServerTabSlots, NumServerTabs, ActiveServerTab, MenuCapsuleTabBarStyle());
+
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+	for(int TabIndex = 0; TabIndex < NumServerTabs; ++TabIndex)
+	{
+		const SServerTab &Tab = aServerTabs[TabIndex];
+		const CUIRect &Slot = aServerTabSlots[TabIndex];
+		const bool TabActive = g_Config.m_UiPage == Tab.m_Page;
+		ColorRGBA InactiveColor = QmMenuTabDefaultColor();
+		ColorRGBA ActiveColor = QmMenuTabActiveColor();
+		ColorRGBA HoverColor = QmMenuMenubarHoverColor();
+		InactiveColor.a *= Tab.m_AppearStrength;
+		ActiveColor.a *= Tab.m_AppearStrength;
+		HoverColor.a *= Tab.m_AppearStrength;
+		if(DoMenuTabV2_QmIcon(&s_aServerTabButtons[TabIndex], Tab.m_Icon, Tab.m_pIcon, TabActive, &Slot, IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HoverColor, Tab.m_pCommunityIcon, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
+		{
+			NewPage = Tab.m_Page;
+		}
+		if(Tab.m_bFavoriteMapsIcon)
+		{
+			// 收藏地图页签：图标走图集渲染（失败回退字体图标）；滑块上的
+			// 图标用滑块同款深色，避免默认白图标压亮滑块不可见。
+			const float IconSide = minimum(Slot.w, Slot.h) * 0.56f;
+			const CUIRect IconRect{Slot.x + (Slot.w - IconSide) * 0.5f, Slot.y + (Slot.h - IconSide) * 0.5f, IconSide, IconSide};
+			const ColorRGBA IconColor = TabActive ? ui_widget::CapsuleTabBarActiveLabelColor(BrowserPanelColor()) : ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+			if(GameClient()->QmIconManager()->PreferFontFallback() || !GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, IconRect, IconColor))
+			{
+				const unsigned OldFlags = TextRender()->GetRenderFlags();
+				const EFontPreset OldPreset = TextRender()->GetFontPreset();
+				const ColorRGBA OldTextColor = TextRender()->GetTextColor();
+				TextRender()->TextColor(IconColor);
+				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+				TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+				Ui()->DoLabel_QmIcon(&IconRect, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, IconSide, TEXTALIGN_MC);
+				TextRender()->SetRenderFlags(OldFlags);
+				TextRender()->SetFontPreset(OldPreset);
+				TextRender()->TextColor(OldTextColor);
+			}
+		}
+		GameClient()->m_Tooltips.DoToolTip(&s_aServerTabButtons[TabIndex], &Slot, Tab.m_pTooltip);
+	}
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+	// 键盘左右键循环切换服务器页签。
 	int MaxPage = PAGE_FAVORITES + ServerBrowser()->FavoriteCommunities().size();
 	if(
 		!Ui()->IsPopupOpen() &&
@@ -3182,9 +3067,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		SetMenuPage(NewPage);
 	}
 
-	// 浏览页不画整页壳背景（与主菜单服务器列表一致）：新 UI 由 RenderServerbrowser
-	// 画服务器列表/状态栏/工具箱三块圆角卡片；旧 UI 由 RenderServerbrowser 自绘
-	// 底部圆角背景。整页底色会与卡片圆角不匹配、且按设计属于多余的一层。
+	// 浏览页由 RenderServerbrowser 绘制服务器列表、状态栏与工具箱，不叠加整页背景。
 	RenderServerbrowser(MainView, false);
 }
 // ghost stuff

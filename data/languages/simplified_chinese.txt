@@ -3926,9 +3926,6 @@ Enable Netease Music hook integration
 Enable new IME candidate bar
 == 启用新版 IME 候选栏
 
-Enable new settings page UI
-== 启用新版设置页面 UI
-
 Enable performance debug logging and diagnostics
 == 启用性能调试日志与卡顿诊断
 

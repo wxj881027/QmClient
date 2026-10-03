@@ -9,8 +9,10 @@
 #include <engine/shared/config.h>
 #include <engine/shared/console.h>
 #include <engine/shared/protocol.h>
+#include <engine/shared/qm_removed_config.h>
 #include <engine/storage.h>
 
+#include <string_view>
 #include <unordered_map>
 
 CConfig g_Config;
@@ -789,6 +791,10 @@ void CConfigManager::WriteLine(const char *pLine, ConfigDomain ConfigDomain)
 
 void CConfigManager::StoreUnknownCommand(const char *pCommand, ConfigDomain ConfigDomain)
 {
+	// 已移除的界面开关不再作为未知命令写回旧配置。
+	std::string_view Command(pCommand);
+	if(str_comp_nocase(QmRemovedConfig::ReadToken(Command).c_str(), "qm_new_ui") == 0)
+		return;
 	m_avpUnknownCommands[ConfigDomain].push_back(m_ConfigHeap.StoreString(pCommand));
 }
 

@@ -8383,22 +8383,6 @@ turkish = "Yeni IME aday çubuğunu etkinleştir"
 polish = "Włącz nową listę kandydatów IME"
 
 [[message]]
-key = "Enable new settings page UI"
-[message.translations]
-simplified_chinese = "启用新版设置页面 UI"
-traditional_chinese = "啟用新版設置頁面 UI"
-japanese = "新しい設定ページ UI を有効化"
-korean = "새 설정 페이지 UI 활성화"
-russian = "Включить новый интерфейс страницы настроек"
-german = "Neue Einstellungsseiten-UI aktivieren"
-spanish = "Activar nueva interfaz de página de configuración UI"
-french = "Activer la nouvelle interface utilisateur des pages de paramètres"
-brazilian_portuguese = "Ativar nova UI da página de configurações"
-portuguese = "Ativar nova UI da página de definições"
-turkish = "Yeni ayarlar sayfası UI’ını etkinleştir"
-polish = "Włącz nowy interfejs strony ustawień"
-
-[[message]]
 key = "Enable performance debug logging and diagnostics"
 [message.translations]
 simplified_chinese = "启用性能调试日志与卡顿诊断"

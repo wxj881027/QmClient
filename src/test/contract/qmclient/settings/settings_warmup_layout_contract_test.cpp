@@ -126,7 +126,6 @@ TEST(SettingsWarmupLayoutContract, TClientSettingsUseTwoLevelFontScale)
 	EXPECT_NE(TClient.find("DoTClientSettingsButton_Menu(&ResetBtn, \"tclient-config-reset\", Localize(\"Reset\")"), std::string::npos);
 	EXPECT_NE(TClient.find("DoKeyReader(&ReaderButton, &ClearButton, &KeyButton, Bind, false, TCLIENT_BODY_FONT_SIZE)"), std::string::npos);
 	EXPECT_NE(TClient.find("DoSettingsDropDown(&Button, FontSelectedOld, s_FontDropDownNames.data(), s_FontDropDownNames.size(), s_FontDropDownState)"), std::string::npos);
-	EXPECT_NE(TClient.find("DoButton_MenuTab(&s_aPageTabs[Tab], s_apTClientTabNames[Tab], ActiveTab == Tab, &Button, Corners"), std::string::npos);
 	EXPECT_NE(TClient.find("ui_widget::InputField(TClientWarListEntriesSearchCtx, &s_EntriesFilterInput, EntriesSearch, FontSize"), std::string::npos);
 
 	EXPECT_NE(Menus.find("const float BodySize = RequestedFontSize > 0.0f ? RequestedFontSize : CurrentSettingsContentMetrics().m_BodySize;"), std::string::npos);
@@ -136,7 +135,6 @@ TEST(SettingsWarmupLayoutContract, TClientSettingsUseTwoLevelFontScale)
 	EXPECT_EQ(Menus.find("Page == SETTINGS_TCLIENT ? 14.0f"), std::string::npos);
 	EXPECT_NE(Menus.find("Props.m_MinimumFontSize = FixedFontSize ? FontSize : FontSize * 0.7f;"), std::string::npos);
 	EXPECT_NE(Menus.find("Props.m_EllipsisAtEnd = FixedFontSize;"), std::string::npos);
-	EXPECT_NE(Menus.find("ResolveSettingsCheckboxFontSize(BodySize, RequestedFontSize, pRect->h, Box.h, CUi::ms_FontmodHeight)"), std::string::npos);
 	EXPECT_NE(Menus.find("return DoButton_MenuInternal(pBC, pText, Icon, pFallbackIcon ? pFallbackIcon : \"\", Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize"), std::string::npos);
 	EXPECT_NE(KeyBinder.find("Props.m_MinimumFontSize = FontSize;"), std::string::npos);
 	EXPECT_NE(KeyBinder.find("Props.m_EllipsisAtEnd = true;"), std::string::npos);

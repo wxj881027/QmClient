@@ -2621,31 +2621,19 @@ void CMenus::RenderDemoBrowser(CUIRect MainView)
 {
 	UpdateRankDemoDownload();
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
-	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 
 	CUIRect ListView, DetailsView, ButtonsView;
-	if(UseNewUi)
-	{
-		MainView.HSplitBottom(10.0f, &MainView, nullptr);
-		MainView.HSplitBottom(44.0f, &ListView, &ButtonsView);
-		ListView.HSplitBottom(10.0f, &ListView, nullptr);
-		ListView.VSplitRight(205.0f, &ListView, &DetailsView);
-		ListView.VSplitRight(10.0f, &ListView, nullptr);
-		ListView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-		DetailsView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-		ButtonsView.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-		ListView.Margin(10.0f, &ListView);
-		DetailsView.Margin(10.0f, &DetailsView);
-		ButtonsView.Margin(10.0f, &ButtonsView);
-	}
-	else
-	{
-		MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
-		MainView.Margin(10.0f, &MainView);
-		MainView.HSplitBottom(22.0f * 2.0f + 5.0f, &ListView, &ButtonsView);
-		ListView.VSplitRight(205.0f, &ListView, &DetailsView);
-		ListView.VSplitRight(5.0f, &ListView, nullptr);
-	}
+	MainView.HSplitBottom(10.0f, &MainView, nullptr);
+	MainView.HSplitBottom(44.0f, &ListView, &ButtonsView);
+	ListView.HSplitBottom(10.0f, &ListView, nullptr);
+	ListView.VSplitRight(205.0f, &ListView, &DetailsView);
+	ListView.VSplitRight(10.0f, &ListView, nullptr);
+	ListView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	DetailsView.Draw(MenuPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	ButtonsView.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	ListView.Margin(10.0f, &ListView);
+	DetailsView.Margin(10.0f, &DetailsView);
+	ButtonsView.Margin(10.0f, &ButtonsView);
 
 	bool WasListboxItemActivated;
 	RenderDemoBrowserList(ListView, WasListboxItemActivated);
@@ -2656,7 +2644,6 @@ void CMenus::RenderDemoBrowser(CUIRect MainView)
 void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivated)
 {
 	bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
-	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 
 	if(!m_DemoBrowserListInitialized)
 	{
@@ -2702,47 +2689,38 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	};
 
 	static CListBox s_ListBox;
-	const float HeaderHeight = UseNewUi ? ms_ListheaderHeight + 8.0f : ms_ListheaderHeight;
+	const float HeaderHeight = ms_ListheaderHeight + 8.0f;
 	const float HeaderOuterPadding = 2.0f;
 	const float HeaderInnerPadding = 2.0f;
-	const float HeaderGap = UseNewUi ? 4.0f : 2.0f;
-	const float RowHeight = UseNewUi ? ms_ListheaderHeight + 1.0f : ms_ListheaderHeight;
+	const float HeaderGap = 4.0f;
+	const float RowHeight = ms_ListheaderHeight + 1.0f;
 	CColumn aCols[] = {
 		{-1, -1, "", -1, false, HeaderGap, {0}, nullptr},
 		{COL_ICON, -1, "", -1, false, HeaderHeight - HeaderOuterPadding * 2.0f, {0}, nullptr},
 		{-1, -1, "", -1, false, HeaderGap, {0}, nullptr},
 		{COL_DEMONAME, SORT_DEMONAME, Localizable("Demo"), 0, false, 0.0f, {0}, nullptr},
 		{-1, -1, "", 1, false, HeaderGap, {0}, nullptr},
-		{COL_MARKERS, SORT_MARKERS, FONT_ICON_BOOKMARK, 1, true, UseNewUi ? 34.0f : 30.0f, {0}, Localizable("Markers")},
+		{COL_MARKERS, SORT_MARKERS, FONT_ICON_BOOKMARK, 1, true, 34.0f, {0}, Localizable("Markers")},
 		{-1, -1, "", 1, false, HeaderGap, {0}, nullptr},
-		{COL_LENGTH, SORT_LENGTH, Localizable("Length"), 1, false, UseNewUi ? 84.0f : 75.0f, {0}, nullptr},
+		{COL_LENGTH, SORT_LENGTH, Localizable("Length"), 1, false, 84.0f, {0}, nullptr},
 		{-1, -1, "", 1, false, HeaderGap, {0}, nullptr},
-		{COL_DATE, SORT_DATE, Localizable("Date"), 1, false, UseNewUi ? 156.0f : 150.0f, {0}, nullptr},
+		{COL_DATE, SORT_DATE, Localizable("Date"), 1, false, 156.0f, {0}, nullptr},
 		{-1, -1, "", 1, false, s_ListBox.ScrollbarWidthMax() + HeaderGap, {0}, nullptr},
 	};
 	aCols[3].m_pCaption = DemoBrowserListColumnLabel(BrowsingScreenshots);
 	aCols[4].m_Width = BrowsingScreenshots ? 0.0f : HeaderGap;
-	aCols[5].m_Width = BrowsingScreenshots ? 0.0f : (UseNewUi ? 34.0f : 30.0f);
+	aCols[5].m_Width = BrowsingScreenshots ? 0.0f : 34.0f;
 	aCols[6].m_Width = BrowsingScreenshots ? 0.0f : HeaderGap;
-	aCols[7].m_Width = BrowsingScreenshots ? 0.0f : (UseNewUi ? 84.0f : 75.0f);
+	aCols[7].m_Width = BrowsingScreenshots ? 0.0f : 84.0f;
 	aCols[8].m_Width = BrowsingScreenshots ? 0.0f : HeaderGap;
-	aCols[9].m_Width = BrowsingScreenshots ? (UseNewUi ? 176.0f : 170.0f) : (UseNewUi ? 156.0f : 150.0f);
+	aCols[9].m_Width = BrowsingScreenshots ? 176.0f : 156.0f;
 
 	CUIRect HeaderArea, Headers, ListBox;
-	if(UseNewUi)
-	{
-		ListView.HSplitTop(HeaderHeight, &HeaderArea, &ListBox);
-		HeaderArea.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_T, ui_token::radius::BASE);
-		HeaderArea.Margin(HeaderOuterPadding, &Headers);
-		Headers.VMargin(HeaderInnerPadding, &Headers);
-		ListBox.Draw(MenuPanelColor(0.72f), IGraphics::CORNER_B, ui_token::radius::BASE);
-	}
-	else
-	{
-		ListView.HSplitTop(ms_ListheaderHeight, &Headers, &ListBox);
-		Headers.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_T, 5.0f);
-		ListBox.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_B, 5.0f);
-	}
+	ListView.HSplitTop(HeaderHeight, &HeaderArea, &ListBox);
+	HeaderArea.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_T, ui_token::radius::BASE);
+	HeaderArea.Margin(HeaderOuterPadding, &Headers);
+	Headers.VMargin(HeaderInnerPadding, &Headers);
+	ListBox.Draw(MenuPanelColor(0.72f), IGraphics::CORNER_B, ui_token::radius::BASE);
 
 	for(auto &Col : aCols)
 	{
@@ -2822,7 +2800,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 	}
 
 	s_ListBox.DoAutoSpacing(1.0f);
-	s_ListBox.DoStart(UseNewUi ? RowHeight : ms_ListheaderHeight, m_vpFilteredDemos.size(), 1, 3, m_DemolistSelectedIndex, &ListBox, false, IGraphics::CORNER_ALL);
+	s_ListBox.DoStart(RowHeight, m_vpFilteredDemos.size(), 1, 3, m_DemolistSelectedIndex, &ListBox, false, IGraphics::CORNER_ALL);
 
 	char aBuf[64];
 	int ItemIndex = -1;
@@ -2940,7 +2918,7 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 		const bool AnyDemoFile = std::any_of(m_vpFilteredDemos.begin(), m_vpFilteredDemos.end(), [](const CDemoItem *pItem) { return !pItem->m_IsDir; });
 		if(InRankCacheFolder && !AnyDemoFile)
 		{
-			const CListboxItem HintItem = s_ListBox.DoCustomRow(UseNewUi ? RowHeight : ms_ListheaderHeight, false);
+			const CListboxItem HintItem = s_ListBox.DoCustomRow(RowHeight, false);
 			if(HintItem.m_Visible)
 			{
 				TextRender()->TextColor(0.55f, 0.55f, 0.55f, 1.0f);
@@ -3046,20 +3024,11 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 
 void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 {
-	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 	const bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
 	CUIRect Contents, Header;
 	DetailsView.HSplitTop(ms_ListheaderHeight, &Header, &Contents);
-	if(UseNewUi)
-	{
-		Contents.Draw(MenuPanelColor(0.72f), IGraphics::CORNER_B, ui_token::radius::BASE);
-		Contents.Margin(10.0f, &Contents);
-	}
-	else
-	{
-		Contents.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f), IGraphics::CORNER_B, 5.0f);
-		Contents.Margin(5.0f, &Contents);
-	}
+	Contents.Draw(MenuPanelColor(0.72f), IGraphics::CORNER_B, ui_token::radius::BASE);
+	Contents.Margin(10.0f, &Contents);
 
 	const float FontSize = 12.0f;
 	const int NumSelected = NumSelectedDemos();
@@ -3072,10 +3041,7 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 		pItem = m_vpFilteredDemos[m_DemolistSelectedIndex];
 	}
 
-	if(UseNewUi)
-		Header.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_T, ui_token::radius::BASE);
-	else
-		Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_T, 5.0f);
+	Header.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_T, ui_token::radius::BASE);
 	const char *pHeaderLabel;
 	if(NumSelected == 0)
 		pHeaderLabel = DemoBrowserBrowsingScreenshots() ? Localize("No screenshot selected") : Localize("No demo selected");
@@ -3227,7 +3193,6 @@ void CMenus::RenderDemoBrowserDetails(CUIRect DetailsView)
 void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemActivated)
 {
 	const bool BrowsingScreenshots = DemoBrowserBrowsingScreenshots();
-	const bool UseNewUi = g_Config.m_QmNewUi != 0;
 	const char *pBaseFolder = DemoBrowserBaseFolder();
 	const IUiContext DemoBrowserSearchCtx = SettingsUiContext("demo_browser_search");
 
@@ -3244,392 +3209,75 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		}
 	};
 
-	if(UseNewUi)
+	ButtonsView.HSplitTop(3.0f, nullptr, &ButtonsView);
+	ButtonsView.HSplitBottom(3.0f, &ButtonsView, nullptr);
+
+	const float RowHeight = minimum(22.0f, ButtonsView.h);
+	if(ButtonsView.h > RowHeight)
 	{
-		ButtonsView.HSplitTop(3.0f, nullptr, &ButtonsView);
-		ButtonsView.HSplitBottom(3.0f, &ButtonsView, nullptr);
-
-		const float RowHeight = minimum(22.0f, ButtonsView.h);
-		if(ButtonsView.h > RowHeight)
-		{
-			const float VerticalMargin = (ButtonsView.h - RowHeight) / 2.0f;
-			ButtonsView.HMargin(VerticalMargin, &ButtonsView);
-		}
-
-		CUIRect MainRow = ButtonsView;
-		const float ButtonWidth = MainRow.h * 1.55f;
-		const float TightSpacing = 4.0f;
-		const float GroupSpacing = 6.0f;
-
-		bool HasSingleSelection =
-			NumSelectedDemos() == 1 &&
-			m_DemolistSelectedIndex >= 0 &&
-			m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
-			IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
-		CDemoItem *pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
-		if(!BrowsingScreenshots && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && !pSelectedItem->m_InfosLoaded)
-			FetchHeader(*pSelectedItem);
-		int NumSelectedDeletable = NumSelectedDeletableDemos();
-		CUIRect LeftGroup = MainRow;
-		CUIRect RightGroup;
-		bool CanRenderDemo =
-#if defined(CONF_VIDEORECORDER)
-			!BrowsingScreenshots && HasSingleSelection && !pSelectedItem->m_IsDir && pSelectedItem->IsDemoFile();
-#else
-			false;
-#endif
-		const bool CanDownloadRankDemo = !BrowsingScreenshots && HasSingleSelection && pSelectedItem->IsDemoFile() && pSelectedItem->m_InfosLoaded && pSelectedItem->m_Valid && pSelectedItem->m_Info.m_aMapName[0] != '\0';
-		int NumRightButtons = 0;
-		if(NumSelectedDeletable > 0)
-			NumRightButtons++;
-		if(m_aCurrentDemoFolder[0] != '\0' && HasSingleSelection && IsDemoItemDeletable(*pSelectedItem))
-			NumRightButtons++;
-		if(HasSingleSelection)
-			NumRightButtons++;
-		if(BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir &&
-			(str_endswith_nocase(pSelectedItem->m_aFilename, ".png") != nullptr || str_endswith_nocase(pSelectedItem->m_aFilename, ".webp") != nullptr))
-			NumRightButtons++;
-		if(CanRenderDemo)
-			NumRightButtons++;
-		if(CanDownloadRankDemo)
-			NumRightButtons++;
-
-		if(NumRightButtons > 0)
-		{
-			const float RightGroupWidth = NumRightButtons * ButtonWidth + (NumRightButtons - 1) * TightSpacing;
-			MainRow.VSplitRight(RightGroupWidth, &LeftGroup, &RightGroup);
-			if(LeftGroup.w > GroupSpacing)
-				LeftGroup.VSplitRight(GroupSpacing, &LeftGroup, nullptr);
-		}
-
-		// quick search
-		{
-			CUIRect DemoSearch;
-			const float SearchWidth = maximum(220.0f, minimum(LeftGroup.w * 0.48f, 360.0f));
-			LeftGroup.VSplitLeft(minimum(SearchWidth, LeftGroup.w), &DemoSearch, &LeftGroup);
-			if(LeftGroup.w > TightSpacing)
-				LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
-			ui_widget::SInputFieldOptions NewUiSearchOptions;
-			NewUiSearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
-			NewUiSearchOptions.m_Clearable = true;
-			NewUiSearchOptions.m_SearchHotkeyEnabled = !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive();
-			NewUiSearchOptions.m_FontSize = 13.0f;
-			if(ui_widget::InputField(DemoBrowserSearchCtx, &m_DemoSearchInput, DemoSearch, NewUiSearchOptions).m_Changed)
-			{
-				RefreshFilteredDemos();
-				DemolistOnUpdate(false);
-			}
-		}
-
-		if(!Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive() && Input()->ModifierIsPressed() && Input()->KeyPress(KEY_A))
-		{
-			SelectAllDemos();
-		}
-
-		// refresh button
-		{
-			CUIRect RefreshButton;
-			LeftGroup.VSplitLeft(ButtonWidth, &RefreshButton, &LeftGroup);
-			if(LeftGroup.w > TightSpacing)
-				LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
-			SetIconMode(true);
-			static CButtonContainer s_RefreshButton;
-			if(DoButton_Menu_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
-			{
-				SetIconMode(false);
-				DemolistPopulate();
-				DemolistOnUpdate(false);
-			}
-			SetIconMode(false);
-			GameClient()->m_Tooltips.DoToolTip(&s_RefreshButton, &RefreshButton, Localize("Refresh the demo list"));
-		}
-
-		// fetch info checkbox
-		if(!BrowsingScreenshots)
-		{
-			CUIRect FetchInfo;
-			const float FetchInfoWidth = minimum(maximum(LeftGroup.w * 0.26f, 104.0f), 140.0f);
-			LeftGroup.VSplitLeft(minimum(FetchInfoWidth, LeftGroup.w), &FetchInfo, &LeftGroup);
-			if(LeftGroup.w > TightSpacing)
-				LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
-			if(DoButton_CheckBox(&g_Config.m_BrDemoFetchInfo, Localize("Fetch Info"), g_Config.m_BrDemoFetchInfo, &FetchInfo))
-			{
-				g_Config.m_BrDemoFetchInfo ^= 1;
-				m_DemoHeaderFetchCursor = 0;
-				m_DemoHeaderFetchComplete = DemoBrowserBrowsingScreenshots() || !g_Config.m_BrDemoFetchInfo;
-			}
-		}
-
-		// demos directory button
-		if(HasSingleSelection && pSelectedItem->m_StorageType != IStorage::TYPE_ALL)
-		{
-			CUIRect DemosDirectoryButton;
-			const float DirectoryWidth = minimum(maximum(LeftGroup.w, 120.0f), 188.0f);
-			LeftGroup.VSplitLeft(minimum(DirectoryWidth, LeftGroup.w), &DemosDirectoryButton, &LeftGroup);
-			static CButtonContainer s_DemosDirectoryButton;
-			if(DoButton_Menu(&s_DemosDirectoryButton, BrowsingScreenshots ? Localize("Screenshots directory") : Localize("Demos directory"), 0, &DemosDirectoryButton))
-			{
-				char aBuf[IO_MAX_PATH_LENGTH];
-				Storage()->GetCompletePath(pSelectedItem->m_StorageType, m_aCurrentDemoFolder[0] == '\0' ? pBaseFolder : m_aCurrentDemoFolder, aBuf, sizeof(aBuf));
-				Client()->ViewFile(aBuf);
-			}
-			GameClient()->m_Tooltips.DoToolTip(&s_DemosDirectoryButton, &DemosDirectoryButton, BrowsingScreenshots ? Localize("Open the folder containing screenshots") : Localize("Open the folder containing demo files"));
-		}
-
-		// play/open button
-		if(HasSingleSelection)
-		{
-			CUIRect PlayButton;
-			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &PlayButton);
-			if(RightGroup.w > TightSpacing)
-				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
-			SetIconMode(true);
-			static CButtonContainer s_PlayButton;
-			const EQmIcon OpenIcon = pSelectedItem->m_IsDir ? EQmIcon::FOLDER_OPEN : (BrowsingScreenshots ? EQmIcon::IMAGE : EQmIcon::PLAY);
-			const char *pOpenIcon = pSelectedItem->m_IsDir ? FONT_ICON_FOLDER_OPEN : (BrowsingScreenshots ? FONT_ICON_IMAGE : FONT_ICON_PLAY);
-			// 提示文本在点击处理前取好：点击文件夹会在本帧重建列表，之后 pSelectedItem 可能已失效
-			const char *pPlayTooltip = pSelectedItem->m_IsDir ? Localize("Open the selected folder") : (BrowsingScreenshots ? Localize("Open the selected screenshot") : Localize("Play the selected demo"));
-			if(DoButton_Menu_QmIcon(&s_PlayButton, OpenIcon, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (!BrowsingScreenshots && Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
-			{
-				SetIconMode(false);
-				if(pSelectedItem->m_IsDir) // folder
-				{
-					m_DemoSearchInput.Clear();
-					const bool ParentFolder = str_comp(pSelectedItem->m_aFilename, "..") == 0;
-					if(ParentFolder) // parent folder
-					{
-						// QmClient: Rank 1 缓存目录（含其子目录）是挂在顶层的链接入口，
-						// .. 直接回到 demos 根目录，不逐级穿过 qmclient/ 等内部目录
-						const size_t RankCacheDirLen = str_length(CRankGhost::DEMO_CACHE_DIR);
-						const bool InRankCacheFolder = str_startswith(m_aCurrentDemoFolder, CRankGhost::DEMO_CACHE_DIR) &&
-									       (m_aCurrentDemoFolder[RankCacheDirLen] == '\0' || m_aCurrentDemoFolder[RankCacheDirLen] == '/');
-						if(InRankCacheFolder)
-						{
-							str_copy(m_aCurrentDemoFolder, pBaseFolder);
-							m_DemolistStorageType = IStorage::TYPE_ALL;
-							str_copy(m_aCurrentDemoSelectionName, Localize("Rank 1 replays"));
-						}
-						else
-						{
-							str_copy(m_aCurrentDemoSelectionName, fs_filename(m_aCurrentDemoFolder));
-							str_append(m_aCurrentDemoSelectionName, "/");
-							if(fs_parent_dir(m_aCurrentDemoFolder))
-							{
-								m_aCurrentDemoFolder[0] = '\0';
-								if(m_DemolistStorageType == IStorage::TYPE_ALL)
-								{
-									m_aCurrentDemoSelectionName[0] = '\0'; // will select first list item
-								}
-								else
-								{
-									Storage()->GetCompletePath(m_DemolistStorageType, pBaseFolder, m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName));
-									str_append(m_aCurrentDemoSelectionName, "/");
-								}
-							}
-						}
-					}
-					else // sub folder
-					{
-						// QmClient: 链接项携带完整存储路径（如 Rank 1 回放缓存目录），直接跳转
-						if(str_find(pSelectedItem->m_aFilename, "/") != nullptr)
-						{
-							str_copy(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
-							m_DemolistStorageType = pSelectedItem->m_StorageType;
-						}
-						else
-						{
-							if(m_aCurrentDemoFolder[0] != '\0')
-								str_append(m_aCurrentDemoFolder, "/");
-							else
-								m_DemolistStorageType = pSelectedItem->m_StorageType;
-							str_append(m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
-						}
-					}
-					DemolistPopulate();
-					DemolistOnUpdate(!ParentFolder);
-				}
-				else // file
-				{
-					if(BrowsingScreenshots)
-					{
-						char aBuf[IO_MAX_PATH_LENGTH];
-						str_format(aBuf, sizeof(aBuf), "%s/%s", m_aCurrentDemoFolder, pSelectedItem->m_aFilename);
-						char aFullPath[IO_MAX_PATH_LENGTH];
-						Storage()->GetCompletePath(pSelectedItem->m_StorageType, aBuf, aFullPath, sizeof(aFullPath));
-						if(!Client()->ViewFile(aFullPath))
-							PopupMessage(Localize("Error opening screenshot"), Localize("Unable to open the screenshot file"), Localize("Ok"));
-					}
-					else if(GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmDisconnectTime && g_Config.m_ClConfirmDisconnectTime >= 0)
-					{
-						PopupConfirm(Localize("Disconnect"), Localize("Are you sure that you want to disconnect and play this demo?"), Localize("Yes"), Localize("No"), &CMenus::PopupConfirmPlayDemo);
-					}
-					else
-					{
-						CMenus::PopupConfirmPlayDemo();
-					}
-					return;
-				}
-			}
-			SetIconMode(false);
-			GameClient()->m_Tooltips.DoToolTip(&s_PlayButton, &PlayButton, pPlayTooltip);
-		}
-
-		if(BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir &&
-			(str_endswith_nocase(pSelectedItem->m_aFilename, ".png") != nullptr || str_endswith_nocase(pSelectedItem->m_aFilename, ".webp") != nullptr))
-		{
-			CUIRect WatermarkButton;
-			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &WatermarkButton);
-			if(RightGroup.w > TightSpacing)
-				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
-			if(DoDemoScreenshotWatermarkButton(WatermarkButton))
-			{
-				if(ApplyDemoScreenshotWatermark(*pSelectedItem))
-					PopupMessage(Localize("Screenshot saved"), Localize("The watermarked screenshot was saved next to the original"), Localize("Ok"));
-				else
-					PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
-			}
-		}
-
-		HasSingleSelection =
-			NumSelectedDemos() == 1 &&
-			m_DemolistSelectedIndex >= 0 &&
-			m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
-			IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
-		pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
-		NumSelectedDeletable = NumSelectedDeletableDemos();
-#if defined(CONF_VIDEORECORDER)
-		CanRenderDemo = !BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir && pSelectedItem->IsDemoFile();
-#else
-		CanRenderDemo = false;
-#endif
-		const bool CanDownloadRankDemoNow = !BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && pSelectedItem->m_InfosLoaded && pSelectedItem->m_Valid && pSelectedItem->m_Info.m_aMapName[0] != '\0';
-		if(CanDownloadRankDemoNow)
-		{
-			CUIRect DownloadButton;
-			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &DownloadButton);
-			if(RightGroup.w > TightSpacing)
-				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
-			SetIconMode(true);
-			static CButtonContainer s_RankDemoDownloadButton;
-			const bool DownloadActive = m_RankDemoDownloadStage != ERankDemoDownloadStage::IDLE;
-			if(DoButton_Menu_QmIcon(&s_RankDemoDownloadButton, EQmIcon::FILE, FONT_ICON_FILE, DownloadActive ? -1 : 0, &DownloadButton))
-				StartRankDemoDownload(pSelectedItem->m_Info.m_aMapName);
-			GameClient()->m_Tooltips.DoToolTip(&s_RankDemoDownloadButton, &DownloadButton, DownloadActive ? Localize("Downloading rank 1 demo") : Localize("Download the rank 1 demo for this map"));
-			SetIconMode(false);
-		}
-
-		if(m_aCurrentDemoFolder[0] != '\0')
-		{
-			if(HasSingleSelection && IsDemoItemDeletable(*pSelectedItem))
-			{
-				// rename button
-				CUIRect RenameButton;
-				RightGroup.VSplitRight(ButtonWidth, &RightGroup, &RenameButton);
-				if(RightGroup.w > TightSpacing)
-					RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
-				SetIconMode(true);
-				static CButtonContainer s_RenameButton;
-				if(DoButton_Menu_QmIcon(&s_RenameButton, EQmIcon::PENCIL, FONT_ICON_PENCIL, 0, &RenameButton))
-				{
-					SetIconMode(false);
-					m_Popup = POPUP_RENAME_DEMO;
-					if(pSelectedItem->m_IsDir)
-					{
-						m_DemoRenameInput.Set(pSelectedItem->m_aFilename);
-					}
-					else
-					{
-						char aNameWithoutExt[IO_MAX_PATH_LENGTH];
-						fs_split_file_extension(pSelectedItem->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
-						m_DemoRenameInput.Set(aNameWithoutExt);
-					}
-					Ui()->SetActiveItem(&m_DemoRenameInput);
-					return;
-				}
-				const char *pRenameTooltip = pSelectedItem->m_IsDir ? Localize("Rename folder") : (BrowsingScreenshots ? Localize("Rename screenshot") : Localize("Rename demo"));
-				GameClient()->m_Tooltips.DoToolTip(&s_RenameButton, &RenameButton, pRenameTooltip);
-				SetIconMode(false);
-			}
-
-			if(NumSelectedDeletable > 0)
-			{
-				static CButtonContainer s_DeleteButton;
-				CUIRect DeleteButton;
-				RightGroup.VSplitRight(ButtonWidth, &RightGroup, &DeleteButton);
-				if(RightGroup.w > TightSpacing)
-					RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
-				SetIconMode(true);
-				if(DoButton_Menu_QmIcon(&s_DeleteButton, EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE) || (Input()->KeyPress(KEY_D) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
-				{
-					SetIconMode(false);
-					PrepareDemoDeleteTargetsFromSelection();
-					if(m_vDemoDeleteTargets.empty())
-						return;
-
-					if(m_vDemoDeleteTargets.size() == 1)
-					{
-						char aBuf[128 + IO_MAX_PATH_LENGTH];
-						str_format(aBuf, sizeof(aBuf), m_vDemoDeleteTargets[0].m_IsDir ? Localize("Are you sure that you want to delete the folder '%s'?") : (BrowsingScreenshots ? Localize("Are you sure that you want to delete the screenshot '%s'?") : Localize("Are you sure that you want to delete the demo '%s'?")), m_vDemoDeleteTargets[0].m_Selection.m_aFilename);
-						PopupConfirm(m_vDemoDeleteTargets[0].m_IsDir ? Localize("Delete folder") : (BrowsingScreenshots ? Localize("Delete screenshot") : Localize("Delete demo")), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSelectedDemos);
-					}
-					else
-					{
-						char aBuf[128];
-						str_format(aBuf, sizeof(aBuf), Localize("Are you sure that you want to delete %d selected items?"), (int)m_vDemoDeleteTargets.size());
-						PopupConfirm(Localize("Delete selected items"), aBuf, Localize("Yes"), Localize("No"), &CMenus::PopupConfirmDeleteSelectedDemos);
-					}
-					return;
-				}
-				const char *pDeleteTooltip = NumSelectedDeletable > 1 ? Localize("Delete selected items") : (pSelectedItem != nullptr && pSelectedItem->m_IsDir ? Localize("Delete folder") : (BrowsingScreenshots ? Localize("Delete screenshot") : Localize("Delete demo")));
-				GameClient()->m_Tooltips.DoToolTip(&s_DeleteButton, &DeleteButton, pDeleteTooltip);
-				SetIconMode(false);
-			}
-
-#if defined(CONF_VIDEORECORDER)
-			// render demo button
-			if(CanRenderDemo)
-			{
-				CUIRect RenderButton;
-				RightGroup.VSplitRight(ButtonWidth, &RightGroup, &RenderButton);
-				if(RightGroup.w > TightSpacing)
-					RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
-				SetIconMode(true);
-				static CButtonContainer s_RenderButton;
-				if(DoButton_Menu_QmIcon(&s_RenderButton, EQmIcon::VIDEO, FONT_ICON_VIDEO, 0, &RenderButton) || (Input()->KeyPress(KEY_R) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
-				{
-					SetIconMode(false);
-					m_HasPendingDemoRenderSource = false;
-					m_Popup = POPUP_RENDER_DEMO;
-					m_StartPaused = false;
-					char aNameWithoutExt[IO_MAX_PATH_LENGTH];
-					fs_split_file_extension(pSelectedItem->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
-					m_DemoRenderInput.Set(aNameWithoutExt);
-					Ui()->SetActiveItem(&m_DemoRenderInput);
-					return;
-				}
-				GameClient()->m_Tooltips.DoToolTip(&s_RenderButton, &RenderButton, Localize("Render demo"));
-				SetIconMode(false);
-			}
-#endif
-		}
-		return;
+		const float VerticalMargin = (ButtonsView.h - RowHeight) / 2.0f;
+		ButtonsView.HMargin(VerticalMargin, &ButtonsView);
 	}
 
-	CUIRect ButtonBarTop, ButtonBarBottom;
-	ButtonsView.HSplitTop(5.0f, nullptr, &ButtonsView);
-	ButtonsView.HSplitMid(&ButtonBarTop, &ButtonBarBottom, 5.0f);
+	CUIRect MainRow = ButtonsView;
+	const float ButtonWidth = MainRow.h * 1.55f;
+	const float TightSpacing = 4.0f;
+	const float GroupSpacing = 6.0f;
+
+	bool HasSingleSelection =
+		NumSelectedDemos() == 1 &&
+		m_DemolistSelectedIndex >= 0 &&
+		m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
+		IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
+	CDemoItem *pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
+	if(!BrowsingScreenshots && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && !pSelectedItem->m_InfosLoaded)
+		FetchHeader(*pSelectedItem);
+	int NumSelectedDeletable = NumSelectedDeletableDemos();
+	CUIRect LeftGroup = MainRow;
+	CUIRect RightGroup;
+	bool CanRenderDemo =
+#if defined(CONF_VIDEORECORDER)
+		!BrowsingScreenshots && HasSingleSelection && !pSelectedItem->m_IsDir && pSelectedItem->IsDemoFile();
+#else
+		false;
+#endif
+	const bool CanDownloadRankDemo = !BrowsingScreenshots && HasSingleSelection && pSelectedItem->IsDemoFile() && pSelectedItem->m_InfosLoaded && pSelectedItem->m_Valid && pSelectedItem->m_Info.m_aMapName[0] != '\0';
+	int NumRightButtons = 0;
+	if(NumSelectedDeletable > 0)
+		NumRightButtons++;
+	if(m_aCurrentDemoFolder[0] != '\0' && HasSingleSelection && IsDemoItemDeletable(*pSelectedItem))
+		NumRightButtons++;
+	if(HasSingleSelection)
+		NumRightButtons++;
+	if(BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir &&
+		(str_endswith_nocase(pSelectedItem->m_aFilename, ".png") != nullptr || str_endswith_nocase(pSelectedItem->m_aFilename, ".webp") != nullptr))
+		NumRightButtons++;
+	if(CanRenderDemo)
+		NumRightButtons++;
+	if(CanDownloadRankDemo)
+		NumRightButtons++;
+
+	if(NumRightButtons > 0)
+	{
+		const float RightGroupWidth = NumRightButtons * ButtonWidth + (NumRightButtons - 1) * TightSpacing;
+		MainRow.VSplitRight(RightGroupWidth, &LeftGroup, &RightGroup);
+		if(LeftGroup.w > GroupSpacing)
+			LeftGroup.VSplitRight(GroupSpacing, &LeftGroup, nullptr);
+	}
 
 	// quick search
 	{
 		CUIRect DemoSearch;
-		ButtonBarTop.VSplitLeft(ButtonBarBottom.h * 21.0f, &DemoSearch, &ButtonBarTop);
-		ButtonBarTop.VSplitLeft(ButtonBarTop.h / 2.0f, nullptr, &ButtonBarTop);
-		ui_widget::SInputFieldOptions LegacySearchOptions;
-		LegacySearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
-		LegacySearchOptions.m_Clearable = true;
-		LegacySearchOptions.m_SearchHotkeyEnabled = !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive();
-		LegacySearchOptions.m_FontSize = 14.0f;
-		if(ui_widget::InputField(DemoBrowserSearchCtx, &m_DemoSearchInput, DemoSearch, LegacySearchOptions).m_Changed)
+		const float SearchWidth = maximum(220.0f, minimum(LeftGroup.w * 0.48f, 360.0f));
+		LeftGroup.VSplitLeft(minimum(SearchWidth, LeftGroup.w), &DemoSearch, &LeftGroup);
+		if(LeftGroup.w > TightSpacing)
+			LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
+		ui_widget::SInputFieldOptions NewUiSearchOptions;
+		NewUiSearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
+		NewUiSearchOptions.m_Clearable = true;
+		NewUiSearchOptions.m_SearchHotkeyEnabled = !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive();
+		NewUiSearchOptions.m_FontSize = 13.0f;
+		if(ui_widget::InputField(DemoBrowserSearchCtx, &m_DemoSearchInput, DemoSearch, NewUiSearchOptions).m_Changed)
 		{
 			RefreshFilteredDemos();
 			DemolistOnUpdate(false);
@@ -3641,21 +3289,12 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		SelectAllDemos();
 	}
 
-	bool HasSingleSelection =
-		NumSelectedDemos() == 1 &&
-		m_DemolistSelectedIndex >= 0 &&
-		m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
-		IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
-	CDemoItem *pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
-	if(!BrowsingScreenshots && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && !pSelectedItem->m_InfosLoaded)
-		FetchHeader(*pSelectedItem);
-	int NumSelectedDeletable = NumSelectedDeletableDemos();
-
 	// refresh button
 	{
 		CUIRect RefreshButton;
-		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h * 3.0f, &RefreshButton, &ButtonBarBottom);
-		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h / 2.0f, nullptr, &ButtonBarBottom);
+		LeftGroup.VSplitLeft(ButtonWidth, &RefreshButton, &LeftGroup);
+		if(LeftGroup.w > TightSpacing)
+			LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
 		SetIconMode(true);
 		static CButtonContainer s_RefreshButton;
 		if(DoButton_Menu_QmIcon(&s_RefreshButton, EQmIcon::ARROW_ROTATE_RIGHT, FONT_ICON_ARROW_ROTATE_RIGHT, 0, &RefreshButton) || Input()->KeyPress(KEY_F5) || (Input()->KeyPress(KEY_R) && Input()->ModifierIsPressed()))
@@ -3672,8 +3311,10 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 	if(!BrowsingScreenshots)
 	{
 		CUIRect FetchInfo;
-		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h * 7.0f, &FetchInfo, &ButtonBarBottom);
-		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h / 2.0f, nullptr, &ButtonBarBottom);
+		const float FetchInfoWidth = minimum(maximum(LeftGroup.w * 0.26f, 104.0f), 140.0f);
+		LeftGroup.VSplitLeft(minimum(FetchInfoWidth, LeftGroup.w), &FetchInfo, &LeftGroup);
+		if(LeftGroup.w > TightSpacing)
+			LeftGroup.VSplitLeft(TightSpacing, nullptr, &LeftGroup);
 		if(DoButton_CheckBox(&g_Config.m_BrDemoFetchInfo, Localize("Fetch Info"), g_Config.m_BrDemoFetchInfo, &FetchInfo))
 		{
 			g_Config.m_BrDemoFetchInfo ^= 1;
@@ -3686,8 +3327,8 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 	if(HasSingleSelection && pSelectedItem->m_StorageType != IStorage::TYPE_ALL)
 	{
 		CUIRect DemosDirectoryButton;
-		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h * 10.0f, &DemosDirectoryButton, &ButtonBarBottom);
-		ButtonBarBottom.VSplitLeft(ButtonBarBottom.h / 2.0f, nullptr, &ButtonBarBottom);
+		const float DirectoryWidth = minimum(maximum(LeftGroup.w, 120.0f), 188.0f);
+		LeftGroup.VSplitLeft(minimum(DirectoryWidth, LeftGroup.w), &DemosDirectoryButton, &LeftGroup);
 		static CButtonContainer s_DemosDirectoryButton;
 		if(DoButton_Menu(&s_DemosDirectoryButton, BrowsingScreenshots ? Localize("Screenshots directory") : Localize("Demos directory"), 0, &DemosDirectoryButton))
 		{
@@ -3702,19 +3343,18 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 	if(HasSingleSelection)
 	{
 		CUIRect PlayButton;
-		ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &PlayButton);
-		ButtonBarBottom.VSplitRight(ButtonBarBottom.h, &ButtonBarBottom, nullptr);
+		RightGroup.VSplitRight(ButtonWidth, &RightGroup, &PlayButton);
+		if(RightGroup.w > TightSpacing)
+			RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 		SetIconMode(true);
 		static CButtonContainer s_PlayButton;
 		const EQmIcon OpenIcon = pSelectedItem->m_IsDir ? EQmIcon::FOLDER_OPEN : (BrowsingScreenshots ? EQmIcon::IMAGE : EQmIcon::PLAY);
 		const char *pOpenIcon = pSelectedItem->m_IsDir ? FONT_ICON_FOLDER_OPEN : (BrowsingScreenshots ? FONT_ICON_IMAGE : FONT_ICON_PLAY);
-		const bool ActivateSelectedItem = DoButton_Menu_QmIcon(&s_PlayButton, OpenIcon, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated ||
-						  Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) ||
-						  (!BrowsingScreenshots && Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive());
-		SetIconMode(false);
-
-		if(ActivateSelectedItem)
+		// 提示文本在点击处理前取好：点击文件夹会在本帧重建列表，之后 pSelectedItem 可能已失效
+		const char *pPlayTooltip = pSelectedItem->m_IsDir ? Localize("Open the selected folder") : (BrowsingScreenshots ? Localize("Open the selected screenshot") : Localize("Play the selected demo"));
+		if(DoButton_Menu_QmIcon(&s_PlayButton, OpenIcon, pOpenIcon, 0, &PlayButton) || WasListboxItemActivated || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || (!BrowsingScreenshots && Input()->KeyPress(KEY_P) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 		{
+			SetIconMode(false);
 			if(pSelectedItem->m_IsDir) // folder
 			{
 				m_DemoSearchInput.Clear();
@@ -3794,27 +3434,44 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			}
 		}
 		SetIconMode(false);
-		const char *pPlayTooltip = pSelectedItem->m_IsDir ? Localize("Open the selected folder") : (BrowsingScreenshots ? Localize("Open the selected screenshot") : Localize("Play the selected demo"));
 		GameClient()->m_Tooltips.DoToolTip(&s_PlayButton, &PlayButton, pPlayTooltip);
 	}
 
-	// The selected item can disappear when returning to the parent of a folder
-	// that was deleted externally, so all later controls must re-check it.
+	if(BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir &&
+		(str_endswith_nocase(pSelectedItem->m_aFilename, ".png") != nullptr || str_endswith_nocase(pSelectedItem->m_aFilename, ".webp") != nullptr))
+	{
+		CUIRect WatermarkButton;
+		RightGroup.VSplitRight(ButtonWidth, &RightGroup, &WatermarkButton);
+		if(RightGroup.w > TightSpacing)
+			RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
+		if(DoDemoScreenshotWatermarkButton(WatermarkButton))
+		{
+			if(ApplyDemoScreenshotWatermark(*pSelectedItem))
+				PopupMessage(Localize("Screenshot saved"), Localize("The watermarked screenshot was saved next to the original"), Localize("Ok"));
+			else
+				PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
+		}
+	}
+
 	HasSingleSelection =
 		NumSelectedDemos() == 1 &&
 		m_DemolistSelectedIndex >= 0 &&
 		m_DemolistSelectedIndex < (int)m_vpFilteredDemos.size() &&
 		IsDemoItemSelected(*m_vpFilteredDemos[m_DemolistSelectedIndex]);
 	pSelectedItem = HasSingleSelection ? m_vpFilteredDemos[m_DemolistSelectedIndex] : nullptr;
-	if(!BrowsingScreenshots && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && !pSelectedItem->m_InfosLoaded)
-		FetchHeader(*pSelectedItem);
 	NumSelectedDeletable = NumSelectedDeletableDemos();
-	const bool CanDownloadRankDemo = !BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && pSelectedItem->m_InfosLoaded && pSelectedItem->m_Valid && pSelectedItem->m_Info.m_aMapName[0] != '\0';
-	if(CanDownloadRankDemo)
+#if defined(CONF_VIDEORECORDER)
+	CanRenderDemo = !BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && !pSelectedItem->m_IsDir && pSelectedItem->IsDemoFile();
+#else
+	CanRenderDemo = false;
+#endif
+	const bool CanDownloadRankDemoNow = !BrowsingScreenshots && HasSingleSelection && pSelectedItem != nullptr && pSelectedItem->IsDemoFile() && pSelectedItem->m_InfosLoaded && pSelectedItem->m_Valid && pSelectedItem->m_Info.m_aMapName[0] != '\0';
+	if(CanDownloadRankDemoNow)
 	{
 		CUIRect DownloadButton;
-		ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &DownloadButton);
-		ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
+		RightGroup.VSplitRight(ButtonWidth, &RightGroup, &DownloadButton);
+		if(RightGroup.w > TightSpacing)
+			RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 		SetIconMode(true);
 		static CButtonContainer s_RankDemoDownloadButton;
 		const bool DownloadActive = m_RankDemoDownloadStage != ERankDemoDownloadStage::IDLE;
@@ -3830,8 +3487,9 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		{
 			// rename button
 			CUIRect RenameButton;
-			ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &RenameButton);
-			ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
+			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &RenameButton);
+			if(RightGroup.w > TightSpacing)
+				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 			SetIconMode(true);
 			static CButtonContainer s_RenameButton;
 			if(DoButton_Menu_QmIcon(&s_RenameButton, EQmIcon::PENCIL, FONT_ICON_PENCIL, 0, &RenameButton))
@@ -3860,8 +3518,9 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 		{
 			static CButtonContainer s_DeleteButton;
 			CUIRect DeleteButton;
-			ButtonBarBottom.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarBottom, &DeleteButton);
-			ButtonBarBottom.VSplitRight(ButtonBarBottom.h / 2.0f, &ButtonBarBottom, nullptr);
+			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &DeleteButton);
+			if(RightGroup.w > TightSpacing)
+				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 			SetIconMode(true);
 			if(DoButton_Menu_QmIcon(&s_DeleteButton, EQmIcon::TRASH, FONT_ICON_TRASH, 0, &DeleteButton) || Ui()->ConsumeHotkey(CUi::HOTKEY_DELETE) || (Input()->KeyPress(KEY_D) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))
 			{
@@ -3891,11 +3550,12 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 
 #if defined(CONF_VIDEORECORDER)
 		// render demo button
-		if(!BrowsingScreenshots && HasSingleSelection && !pSelectedItem->m_IsDir && pSelectedItem->IsDemoFile())
+		if(CanRenderDemo)
 		{
 			CUIRect RenderButton;
-			ButtonBarTop.VSplitRight(ButtonBarBottom.h * 3.0f, &ButtonBarTop, &RenderButton);
-			ButtonBarTop.VSplitRight(ButtonBarBottom.h, &ButtonBarTop, nullptr);
+			RightGroup.VSplitRight(ButtonWidth, &RightGroup, &RenderButton);
+			if(RightGroup.w > TightSpacing)
+				RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 			SetIconMode(true);
 			static CButtonContainer s_RenderButton;
 			if(DoButton_Menu_QmIcon(&s_RenderButton, EQmIcon::VIDEO, FONT_ICON_VIDEO, 0, &RenderButton) || (Input()->KeyPress(KEY_R) && !GameClient()->m_GameConsole.IsActive() && !m_DemoSearchInput.IsActive()))

@@ -606,13 +606,6 @@ TEST(SettingsPageLayout, InlineRowMinimumWidthIncludesEveryGap)
 	EXPECT_FLOAT_EQ(ResolveSettingsInlineRowMinimumWidth(-1.0f, 5.0f, -1), 0.0f);
 }
 
-TEST(SettingsPageLayout, CheckboxBodySizeUsesRowHeightLimit)
-{
-	EXPECT_FLOAT_EQ(ResolveSettingsCheckboxFontSize(10.0f, 10.0f, 16.0f, 12.0f, 0.8f), 10.0f);
-	EXPECT_FLOAT_EQ(ResolveSettingsCheckboxFontSize(12.0f, 12.0f, 20.0f, 16.0f, 0.8f), 12.0f);
-	EXPECT_FLOAT_EQ(ResolveSettingsCheckboxFontSize(10.0f, -1.0f, 16.0f, 12.0f, 0.8f), 10.0f);
-}
-
 TEST(SettingsPageLayout, AppearanceDynamicCardsMatchConsumedPrimitivesAtBothScales)
 {
 	const SSettingsContentMetrics Compact = ResolveSettingsContentMetrics(640.0f);

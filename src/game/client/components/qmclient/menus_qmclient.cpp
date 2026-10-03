@@ -1819,7 +1819,7 @@ void CMenus::RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale
 	const char *pRenameLabel = Localize("Rename");
 	const char *pRegexLabel = Localize("Regex");
 	const float OptionSpacing = maximum(4.0f, 4.0f * UiScale);
-	const float CheckboxControlWidth = g_Config.m_QmNewUi ? maximum(LineHeight * 1.65f, 30.0f) + 8.0f : LineHeight + 5.0f;
+	const float CheckboxControlWidth = maximum(LineHeight * 1.65f, 30.0f) + 8.0f;
 	const float MaxOptionWidth = maximum(CheckboxControlWidth + BodySize, Content.w * 0.24f);
 	const float RenameWidth = minimum(MaxOptionWidth, CheckboxControlWidth + TextRender()->TextWidth(BodySize, pRenameLabel) + 2.0f);
 	const float RegexWidth = minimum(MaxOptionWidth, CheckboxControlWidth + TextRender()->TextWidth(BodySize, pRegexLabel) + 2.0f);
@@ -4921,7 +4921,7 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		if(m_QmClientSettingsTab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
 			m_QmClientSettingsTab = QMCLIENT_SETTINGS_TAB_VISUAL;
 
-		CUIRect TabBar, Button;
+		CUIRect TabBar;
 		const SSettingsSubTabLayoutFrame QmClientSubTabs = ResolveSettingsSubTabLayout(MainView, QmClientUiScale);
 		TabBar = QmClientSubTabs.m_TabBarRect;
 		MainView = QmClientSubTabs.m_ContentRect;
@@ -4939,43 +4939,25 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 
 		{
 			CPerfTimer StageTimer;
-			if(g_Config.m_QmNewUi != 0)
+			// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
+			CUIRect aQmTabSlots[NumQmTabs];
+			CUIRect QmTabsRemainder = TabBar;
+			for(int Tab = 0; Tab < NumQmTabs; ++Tab)
+				QmTabsRemainder.VSplitLeft(TabWidth, &aQmTabSlots[Tab], &QmTabsRemainder);
+			int ActiveQmTabSlot = -1;
+			for(int Slot = 0; Slot < NumQmTabs; ++Slot)
 			{
-				// 胶囊 Tabbar：槽位先算完，再画容器与滑块，最后画页签文字 —— 滑块压在文字之下。
-				CUIRect aQmTabSlots[NumQmTabs];
-				CUIRect QmTabsRemainder = TabBar;
-				for(int Tab = 0; Tab < NumQmTabs; ++Tab)
-					QmTabsRemainder.VSplitLeft(TabWidth, &aQmTabSlots[Tab], &QmTabsRemainder);
-				int ActiveQmTabSlot = -1;
-				for(int Slot = 0; Slot < NumQmTabs; ++Slot)
-				{
-					if(aVisibleQmTabs[Slot] == m_QmClientSettingsTab)
-						ActiveQmTabSlot = Slot;
-				}
-				const IUiContext QmTabBarCtx = TabBarUiContext();
-				ui_widget::CapsuleTabBarChrome(QmTabBarCtx, MakeUiScopeHash("settings_qmclient_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aQmTabSlots, NumQmTabs), ActiveQmTabSlot >= 0 ? &aQmTabSlots[ActiveQmTabSlot] : nullptr, SettingsCapsuleTabBarStyle());
-				for(int Tab = 0; Tab < NumQmTabs; ++Tab)
-				{
-					const int PageTab = aVisibleQmTabs[Tab];
-					const bool ClickedTab = DoButton_MenuTab(&s_aPageTabs[PageTab], apQmTabNames[PageTab], m_QmClientSettingsTab == PageTab, &aQmTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
-					if(!PrewarmOnly && ClickedTab)
-						m_QmClientSettingsTab = PageTab;
-				}
+				if(aVisibleQmTabs[Slot] == m_QmClientSettingsTab)
+					ActiveQmTabSlot = Slot;
 			}
-			else
+			const IUiContext QmTabBarCtx = TabBarUiContext();
+			ui_widget::CapsuleTabBarChrome(QmTabBarCtx, MakeUiScopeHash("settings_qmclient_tabs_capsule"), ui_widget::CapsuleTabBarRowRect(aQmTabSlots, NumQmTabs), ActiveQmTabSlot >= 0 ? &aQmTabSlots[ActiveQmTabSlot] : nullptr, SettingsCapsuleTabBarStyle());
+			for(int Tab = 0; Tab < NumQmTabs; ++Tab)
 			{
-				for(int Tab = 0; Tab < NumQmTabs; ++Tab)
-				{
-					const int PageTab = aVisibleQmTabs[Tab];
-					TabBar.VSplitLeft(TabWidth, &Button, &TabBar);
-					const int Corners = Tab == 0             ? IGraphics::CORNER_L :
-							    Tab == NumQmTabs - 1 ? IGraphics::CORNER_R :
-										   IGraphics::CORNER_NONE;
-					const char *pTabName = apQmTabNames[PageTab];
-					const bool ClickedTab = DoButton_MenuTab(&s_aPageTabs[PageTab], pTabName, m_QmClientSettingsTab == PageTab, &Button, Corners, nullptr, nullptr, nullptr, nullptr, 4.0f);
-					if(!PrewarmOnly && ClickedTab)
-						m_QmClientSettingsTab = PageTab;
-				}
+				const int PageTab = aVisibleQmTabs[Tab];
+				const bool ClickedTab = DoButton_MenuTab(&s_aPageTabs[PageTab], apQmTabNames[PageTab], m_QmClientSettingsTab == PageTab, &aQmTabSlots[Tab], IGraphics::CORNER_ALL, nullptr, nullptr, nullptr, nullptr, 4.0f, nullptr, nullptr, -1.0f, true);
+				if(!PrewarmOnly && ClickedTab)
+					m_QmClientSettingsTab = PageTab;
 			}
 
 			char aTabExtra[96];
