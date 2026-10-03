@@ -15,6 +15,8 @@
 class CQmChatCommandHud
 {
 public:
+	static constexpr float UI_SCALE = 0.4f;
+
 	enum class ESource
 	{
 		NONE,
@@ -123,14 +125,14 @@ public:
 		m_Layout = {};
 		if(!m_Valid || m_vCandidates.empty() || Width < 60.0f)
 			return;
-		const float RowHeight = std::max(14.0f, FontSize * 2.2f);
-		const float HeaderHeight = FontSize + 6.0f;
+		const float RowHeight = std::max(14.0f, FontSize * 2.2f) * UI_SCALE;
+		const float HeaderHeight = (FontSize + 6.0f) * UI_SCALE;
 		const int AvailableRows = std::max(0, (int)std::floor((AvailableHeight - HeaderHeight) / RowHeight));
 		const int VisibleRows = std::min({6, (int)m_vCandidates.size(), AvailableRows});
 		if(VisibleRows == 0)
 			return;
 		const float Height = HeaderHeight + VisibleRows * RowHeight;
-		m_Layout = {X, Bottom - Height, Width, Height, HeaderHeight, RowHeight, VisibleRows};
+		m_Layout = {X, Bottom - Height, Width * UI_SCALE, Height, HeaderHeight, RowHeight, VisibleRows};
 		m_Offset = std::clamp(m_Offset, 0, (int)m_vCandidates.size() - VisibleRows);
 	}
 

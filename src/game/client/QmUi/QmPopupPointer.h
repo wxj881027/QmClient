@@ -16,6 +16,19 @@ inline SQmPointerButtons QmResolvePointerButtons(unsigned Current, unsigned Prev
 	return Blocked ? SQmPointerButtons{} : SQmPointerButtons{Current, Previous};
 }
 
+inline int QmButtonCurrentPress(const SQmPointerButtons &Buttons, unsigned ButtonMask, bool Inside)
+{
+	if(Inside)
+	{
+		for(int Button = 0; Button < 3; ++Button)
+		{
+			if((ButtonMask & (1u << Button)) && Buttons.Pressed(Button))
+				return Button;
+		}
+	}
+	return -1;
+}
+
 // 将弹层指针决策与绘制分离，活动层独占输入，关闭后仍由调用方配对清理输入深度。
 struct SQmPopupPointerInput
 {

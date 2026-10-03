@@ -3176,7 +3176,7 @@ void CChat::OnRender()
 		RenderTranslateButton(TranslateButtonRect);
 		if(!Input()->HasComposition() && !HudEditorPreview && !GameClient()->m_Menus.IsActive() && !m_LanguageMenuOpen && !Ui()->IsPopupOpen(&m_LanguagePopupContext) && !Ui()->IsPopupOpen(&m_ChatLinePopupContext))
 		{
-			RenderCommandHud(x, InputContentRect.y - 4.0f, minimum(InputLineWidth, ChatRect.w - x), ScaledFontSize, ChatRect, HudEditorScope.m_Applied ? HudEditorScope.m_TargetRect : ChatRect);
+			RenderCommandHud(x, InputContentRect.y - 4.0f * CQmChatCommandHud::UI_SCALE, minimum(InputLineWidth, ChatRect.w - x), ScaledFontSize, ChatRect, HudEditorScope.m_Applied ? HudEditorScope.m_TargetRect : ChatRect);
 			const auto &CommandLayout = m_CommandHud.Layout();
 			if(CommandLayout.m_VisibleRows > 0)
 			{

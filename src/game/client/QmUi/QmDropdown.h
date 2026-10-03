@@ -11,6 +11,8 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
+#include <vector>
 
 struct SQmDropdownVisualStyle
 {
@@ -102,6 +104,8 @@ bool QmDropdownShouldKeepPopupAliveWhenDisabled(bool PopupOpen, bool ClosePopupW
 bool QmDropdownAnchorFullyVisible(const CUIRect &AnchorRect, const CUIRect &ViewportRect);
 bool QmDropdownActiveItemShouldScrollIntoView(bool ScrollRequested, bool ActiveEntry);
 bool QmDropdownShouldRequestActiveScroll(bool PopupOpen, int PreviousActiveIndex, int ActiveIndex);
+bool QmDropdownEntriesMatch(const std::vector<std::string> &vEntries, const char *const *pEntries, int ItemCount);
+int QmResolveDropdownSelection(int CurrentSelection, int PopupSelection, const std::vector<std::string> &vPopupEntries, const char *const *pEntries, int ItemCount);
 
 // 子弹层拥有键盘选择；父触发控件失活时不影响活动子层。
 SQmDropdownUpdateResult QmUpdateDropdownPopupSelection(const SQmDropdownInput &Input, int ItemCount, bool Active, int &ActiveIndex);

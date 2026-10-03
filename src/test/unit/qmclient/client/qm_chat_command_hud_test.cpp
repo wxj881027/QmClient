@@ -101,11 +101,13 @@ TEST(QmChatCommandHud, LayoutRespectsAvailableHeightAndScaledMouseCoordinates)
 {
 	CQmChatCommandHud Hud;
 	AddServerCandidates(Hud, "/ra", 3);
-	Hud.SetLayout(10.0f, 100.0f, 200.0f, 32.0f, 8.0f);
+	Hud.SetLayout(10.0f, 100.0f, 200.0f, 13.0f, 8.0f);
 	ASSERT_EQ(Hud.Layout().m_VisibleRows, 1);
-	EXPECT_GE(Hud.Layout().m_Y, 68.0f);
+	EXPECT_FLOAT_EQ(Hud.Layout().m_W, 80.0f);
+	EXPECT_GE(Hud.Layout().m_Y, 87.0f);
 	Hud.SetInputTransform(30.0f, -10.0f, 2.0f);
 	EXPECT_EQ(Hud.HoveredRow(70.0f, RowCenterY(Hud, 0) * 2.0f - 10.0f), 0);
+	EXPECT_FALSE(Hud.Contains(211.0f, RowCenterY(Hud, 0) * 2.0f - 10.0f));
 	EXPECT_FALSE(Hud.Contains(20.0f, RowCenterY(Hud, 0)));
 	Hud.SetLayout(10.0f, 100.0f, 200.0f, 10.0f, 8.0f);
 	EXPECT_EQ(Hud.Layout().m_VisibleRows, 0);
@@ -115,7 +117,7 @@ TEST(QmChatCommandHud, ScrollingKeepsAllCandidatesReachableAndCancelsPressedRow)
 {
 	CQmChatCommandHud Hud;
 	AddServerCandidates(Hud, "/", 1);
-	Hud.SetLayout(10.0f, 100.0f, 200.0f, 32.0f, 8.0f);
+	Hud.SetLayout(10.0f, 100.0f, 200.0f, 13.0f, 8.0f);
 	const float Y = RowCenterY(Hud, 0);
 	ASSERT_TRUE(Hud.Press(20.0f, Y, "/", 1));
 	ASSERT_TRUE(Hud.Scroll(20.0f, Y, 20, "/", 1));

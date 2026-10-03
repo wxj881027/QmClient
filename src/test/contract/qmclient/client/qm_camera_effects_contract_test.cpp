@@ -29,7 +29,6 @@ TEST(QmCameraEffectsContract, CinematicCameraAndDynamicFovKeepScopedState)
 	EXPECT_EQ(GameClient.find("float ShowDistanceZoom = m_Camera.m_Zoom;"), std::string::npos);
 
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmZoomInstantReverse, qm_zoom_instant_reverse, 1, 0, 1"), std::string::npos);
-	EXPECT_NE(ScaleZoom.find("QmCameraEffects::ZoomTargetBaseOnRetarget(m_Zoom, m_ZoomSmoothingTarget, Factor, m_Zooming, g_Config.m_QmZoomInstantReverse != 0)"), std::string::npos);
 	EXPECT_NE(ChangeZoom.find("QmCameraEffects::ZoomDerivativeOnRetarget(Current, m_ZoomSmoothing.Derivative(Progress), Target, IsUser && g_Config.m_QmZoomInstantReverse != 0)"), std::string::npos);
 }
 

@@ -4,6 +4,7 @@
 #include "chat_command_hud.h"
 
 #include <engine/graphics.h>
+#include <engine/shared/config.h>
 #include <engine/textrender.h>
 
 #include <game/client/ui.h>
@@ -15,13 +16,21 @@ inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, IText
 	if(Layout.m_VisibleRows == 0)
 		return;
 
-	CUiScopedGaussianBlurSuppression BlurSuppression(pUi);
+	const float Scale = CQmChatCommandHud::UI_SCALE;
+	FontSize *= Scale;
+	const float Rounding = 3.0f * Scale;
 	const CUIRect Panel{Layout.m_X, Layout.m_Y, Layout.m_W, Layout.m_H};
-	Panel.Draw(ColorRGBA(0.05f, 0.07f, 0.08f, 0.88f), IGraphics::CORNER_ALL, 3.0f);
+	const float UserOpacity = std::clamp(g_Config.m_QmImeOpacity, 0, 100) / 100.0f;
+	ColorRGBA PanelBackground = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeBgColor));
+	PanelBackground.a *= UserOpacity;
+	if(UserOpacity < 0.999f && g_Config.m_QmGaussianBlur != 0)
+		pUi->RenderGaussianBlur(Panel, UserOpacity, IGraphics::CORNER_ALL, Rounding);
+	CUiScopedGaussianBlurSuppression BlurSuppression(pUi);
+	Panel.Draw(PanelBackground, IGraphics::CORNER_ALL, Rounding);
 	const ColorRGBA TextColor = pTextRender->GetTextColor();
-	CUIRect Header{Panel.x + 5.0f, Panel.y, Panel.w - 10.0f, Layout.m_HeaderHeight};
+	CUIRect Header{Panel.x + 5.0f * Scale, Panel.y, Panel.w - 10.0f * Scale, Layout.m_HeaderHeight};
 	CUIRect CountRect;
-	Header.VSplitRight(44.0f, &Header, &CountRect);
+	Header.VSplitRight(44.0f * Scale, &Header, &CountRect);
 	SLabelProperties LabelProps;
 	LabelProps.m_MaxWidth = Header.w;
 	LabelProps.m_EllipsisAtEnd = true;
@@ -40,8 +49,8 @@ inline void QmRenderChatCommandHud(const CQmChatCommandHud &Hud, CUi *pUi, IText
 		const CUIRect Rect{Panel.x, Panel.y + Layout.m_HeaderHeight + Row * Layout.m_RowHeight, Panel.w, Layout.m_RowHeight};
 		if(HoveredRow == Index)
 			Rect.Draw(ColorRGBA(0.24f, 0.43f, 0.48f, 0.55f), IGraphics::CORNER_NONE, 0.0f);
-		CUIRect Name{Rect.x + 5.0f, Rect.y + 1.0f, Rect.w - 10.0f, FontSize + 1.0f};
-		CUIRect Detail{Name.x, Name.y + Name.h, Name.w, std::max(1.0f, Rect.h - Name.h - 2.0f)};
+		CUIRect Name{Rect.x + 5.0f * Scale, Rect.y + Scale, Rect.w - 10.0f * Scale, FontSize + Scale};
+		CUIRect Detail{Name.x, Name.y + Name.h, Name.w, std::max(Scale, Rect.h - Name.h - 2.0f * Scale)};
 		LabelProps.m_MaxWidth = Name.w;
 		pTextRender->TextColor(0.95f, 0.97f, 0.98f, 1.0f);
 		pUi->DoLabel(&Name, Candidate.m_Name.c_str(), FontSize, TEXTALIGN_ML, LabelProps);

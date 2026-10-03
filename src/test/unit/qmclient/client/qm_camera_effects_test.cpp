@@ -19,13 +19,13 @@ TEST(QmCameraEffects, ZoomReverseRetargetKeepsStepsButDropsInertiaOnReversal)
 	constexpr float ZoomOutFactor = 1.154700f;
 
 	// 未在缩放动画中：步进基准就是画面当前值
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(1.0f, 0.5f, ZoomInFactor, false, true), 1.0f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(1.0f, 0.5f, ZoomInFactor, false, true, false), 1.0f);
 	// 同向按键：基准仍是旧目标，连点 N 下仍是 N 步
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomInFactor, true, true), 0.866f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomInFactor, true, true, false), 0.866f);
 	// 反向按键：改以画面当前值为基准，本次动画立刻朝新方向运动
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomOutFactor, true, true), 0.95f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomOutFactor, true, true, false), 0.95f);
 	// 关闭开关：完全保留上游"以旧目标为基准"的行为
-	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomOutFactor, true, false), 0.866f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(0.95f, 0.866f, ZoomOutFactor, true, false, false), 0.866f);
 
 	// 反向：新目标在速度反方向，继承速度归零
 	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomDerivativeOnRetarget(0.95f, -0.5f, 1.1f, true), 0.0f);
@@ -41,6 +41,29 @@ TEST(QmCameraEffects, ZoomReverseRetargetKeepsStepsButDropsInertiaOnReversal)
 	const CCubicBezier RetargetedCurve = CCubicBezier::With(StartZoom, QmCameraEffects::ZoomDerivativeOnRetarget(StartZoom, -0.5f, ReverseTarget, true), 0.0f, ReverseTarget);
 	EXPECT_LT(UpstreamCurve.Evaluate(0.05f), StartZoom);
 	EXPECT_GT(RetargetedCurve.Evaluate(0.05f), StartZoom);
+}
+
+TEST(QmCameraEffects, ZoomOutDuringDefaultResetUsesDefaultTarget)
+{
+	const float ZoomOutFactor = CCamera::ZoomStepsToValue(-1.0f);
+
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(2.0f, 1.0f, ZoomOutFactor, true, true, true), 1.0f);
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(1.05f, 1.0f, ZoomOutFactor, true, true, true), 1.0f);
+}
+
+TEST(QmCameraEffects, ZoomOutDuringResetUsesConfiguredDefaultTarget)
+{
+	const float DefaultZoom = CCamera::ZoomStepsToValue(-2.0f);
+	const float ZoomOutFactor = CCamera::ZoomStepsToValue(-1.0f);
+
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(2.0f, DefaultZoom, ZoomOutFactor, true, true, true), DefaultZoom);
+}
+
+TEST(QmCameraEffects, CompletedResetUsesCurrentZoomForNextStep)
+{
+	const float ZoomOutFactor = CCamera::ZoomStepsToValue(-1.0f);
+
+	EXPECT_FLOAT_EQ(QmCameraEffects::ZoomTargetBaseOnRetarget(1.0f, 0.5f, ZoomOutFactor, false, true, true), 1.0f);
 }
 
 TEST(QmCameraEffects, CinematicFreeviewSmoothingIsFrameRateIndependent)
