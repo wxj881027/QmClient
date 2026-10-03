@@ -67,6 +67,13 @@ public:
 			m_vLayers[m_CurrentLayer].m_State.m_PageCount != State.m_PageCount;
 		if(Changed)
 		{
+			if(!FirstContent)
+			{
+				const SLayer &Previous = m_vLayers[m_CurrentLayer];
+				const float Alpha = AnimRuntime.GetValue(Previous.m_NodeKey, EUiAnimProperty::ALPHA, Previous.m_Alpha);
+				// 退场保留当前透明度，但清除淡入速度，避免打断后转回弹簧并留下长尾。
+				AnimRuntime.SetValue(Previous.m_NodeKey, EUiAnimProperty::ALPHA, Alpha);
+			}
 			int LayerIndex = 0;
 			while(LayerIndex < (int)m_vLayers.size() && m_vLayers[LayerIndex].m_Active)
 				++LayerIndex;
@@ -94,12 +101,9 @@ public:
 		}
 
 		SUiAnimTransition Transition;
-		Transition.m_Driver = EUiAnimDriver::SPRING;
+		Transition.m_Driver = EUiAnimDriver::TWEEN;
 		Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-		Transition.m_Spring.m_Stiffness = 360.0f;
-		Transition.m_Spring.m_Damping = 38.0f;
-		Transition.m_Spring.m_RestEpsilon = 0.001f;
-		Transition.m_Spring.m_RestVelocity = 0.01f;
+		Transition.m_Easing = EEasing::EASE_OUT_QUART;
 		float TotalAlpha = 0.0f;
 		for(int i = 0; i < (int)m_vLayers.size(); ++i)
 		{
@@ -109,8 +113,15 @@ public:
 			const uint64_t NodeKey = Layer.m_NodeKey;
 			const float TargetAlpha = i == m_CurrentLayer ? 1.0f : 0.0f;
 			if(!Animate)
+			{
 				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, TargetAlpha);
-			Layer.m_Alpha = std::clamp(AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, Transition), 0.0f, 1.0f);
+				Layer.m_Alpha = TargetAlpha;
+			}
+			else
+			{
+				Transition.m_DurationSec = i == m_CurrentLayer ? 0.12f : 0.08f;
+				Layer.m_Alpha = std::clamp(AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, TargetAlpha, Transition), 0.0f, 1.0f);
+			}
 			if(i != m_CurrentLayer && Layer.m_Alpha <= 0.001f)
 			{
 				AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
