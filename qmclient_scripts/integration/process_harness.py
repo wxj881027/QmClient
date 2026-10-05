@@ -224,7 +224,7 @@ class ProcessEnvironment:
 				assert self._server_port is not None
 				connect_address = f"localhost:{self._server_port}"
 			arguments.append(f"connect {connect_address}")
-		self._client = Process("client", arguments, self._temp_dir, fifo_command="cl_input_fifo", pipe_prefix=self._temp_prefix, env=env)
+		self._client = Process("client", arguments, self._temp_dir, fifo_command="cl_input_fifo", pipe_prefix=self._temp_prefix, env={**(env or {}), **({"QMCLIENT_TEST_STORAGE_ROOT": str(self._temp_dir)} if os.name == "nt" else {})})
 		if startup_timeout is not None:
 			self._client.wait_for(lambda line: line.startswith("client: version"), "client startup", startup_timeout)
 		return self._client

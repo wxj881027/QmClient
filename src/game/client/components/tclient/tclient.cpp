@@ -9,6 +9,7 @@
 
 #include <engine/client.h>
 #include <engine/client/enums.h>
+#include <engine/client/qm_storage_mode.h>
 #include <engine/engine.h>
 #include <engine/external/regex.h>
 #include <engine/external/tinyexpr.h>
@@ -69,10 +70,10 @@ static constexpr int64_t QMCLIENT_UPDATE_RETRY_INTERVAL = 15 * 60;
 #if defined(CONF_FAMILY_WINDOWS)
 static constexpr const char *QMCLIENT_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases/latest";
 static constexpr const char *QMCLIENT_PREVIEW_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases?per_page=100";
-static constexpr const char *QMCLIENT_UPDATE_PACKAGE_NAME = "QmClient-windows.zip";
-static constexpr const char *QMCLIENT_UPDATE_PACKAGE_SIGNATURE_NAME = "QmClient-windows.zip.sig";
-static constexpr const char *QMCLIENT_UPDATE_MANIFEST_NAME = "QmClient-windows-update.json";
-static constexpr const char *QMCLIENT_UPDATE_MANIFEST_SIGNATURE_NAME = "QmClient-windows-update.json.sig";
+static constexpr const char *QMCLIENT_UPDATE_PACKAGE_NAME = IsQmClientPortableBuild() ? "QmClient-windows-portable.zip" : "QmClient-windows.zip";
+static constexpr const char *QMCLIENT_UPDATE_PACKAGE_SIGNATURE_NAME = IsQmClientPortableBuild() ? "QmClient-windows-portable.zip.sig" : "QmClient-windows.zip.sig";
+static constexpr const char *QMCLIENT_UPDATE_MANIFEST_NAME = IsQmClientPortableBuild() ? "QmClient-windows-portable-update.json" : "QmClient-windows-update.json";
+static constexpr const char *QMCLIENT_UPDATE_MANIFEST_SIGNATURE_NAME = IsQmClientPortableBuild() ? "QmClient-windows-portable-update.json.sig" : "QmClient-windows-update.json.sig";
 static constexpr int64_t QMCLIENT_UPDATE_MAX_PACKAGE_SIZE = 5LL * 1024 * 1024 * 1024;
 static constexpr int64_t QMCLIENT_UPDATE_MAX_MANIFEST_SIZE = 32 * 1024 * 1024;
 static constexpr int64_t QMCLIENT_UPDATE_CHECK_INTERVAL = 6 * 60 * 60;
@@ -3080,7 +3081,7 @@ void CTClient::StartUpdateDownload()
 	// 安装版使用 Setup 更新卸载记录；便携版和旧 Release 保留 ZIP 流程。
 	char aSetupMarker[IO_MAX_PATH_LENGTH];
 	Storage()->GetBinaryPath("QmClient-Setup.ini", aSetupMarker, sizeof(aSetupMarker));
-	m_UpdateUseSetup = UseQmClientSetupUpdate(fs_is_file(aSetupMarker), m_UpdateRelease);
+	m_UpdateUseSetup = UseQmClientSetupUpdate(fs_is_file(aSetupMarker), m_UpdateRelease, IsQmClientPortableBuild());
 	IStorage::FormatTmpPath(m_aUpdatePackageTmp, sizeof(m_aUpdatePackageTmp), m_UpdateUseSetup ? "QmClient-Setup.exe" : QMCLIENT_UPDATE_PACKAGE_NAME);
 	IStorage::FormatTmpPath(m_aUpdatePackageSignatureTmp, sizeof(m_aUpdatePackageSignatureTmp), m_UpdateUseSetup ? "QmClient-Setup.exe.sig" : QMCLIENT_UPDATE_PACKAGE_SIGNATURE_NAME);
 	IStorage::FormatTmpPath(m_aUpdateManifestTmp, sizeof(m_aUpdateManifestTmp), m_UpdateUseSetup ? "QmClient-windows-setup-update.json" : QMCLIENT_UPDATE_MANIFEST_NAME);
@@ -3180,7 +3181,7 @@ void CTClient::FinishQmClientUpdateInfo()
 	m_pQmClientUpdateInfoTask->Result(&pResult, &ResultSize);
 	char aError[256];
 	SQmClientUpdateRelease Release;
-	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_VERSION, Release, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD))
+	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_VERSION, Release, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD, IsQmClientPortableBuild()))
 	{
 		m_FetchedQmClientUpdateInfo = true;
 		m_aQmClientLatestVersionStr[0] = '0';
@@ -3284,7 +3285,7 @@ void CTClient::FinishUpdateDownloads()
 	}
 
 	SQmClientUpdateManifest Manifest;
-	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD, m_UpdateUseSetup) ||
+	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD, m_UpdateUseSetup, IsQmClientPortableBuild()) ||
 		str_comp(Manifest.m_aVersion, m_UpdateRelease.m_aVersion) != 0 ||
 		Manifest.m_PackageSize != SignedPackageSize || mem_comp(Manifest.m_PackageSha256.data, aSignedPackageDigest, sizeof(aSignedPackageDigest)) != 0)
 	{

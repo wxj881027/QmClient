@@ -106,6 +106,14 @@ fn validate_relative_path(value: &str) -> Result<PathBuf, String> {
     {
         return Err(format!("unsafe update path: {value:?}"));
     }
+    // 发布更新不能覆盖便携版的用户存档。
+    if value
+        .split('/')
+        .next()
+        .is_some_and(|part| part.eq_ignore_ascii_case("profile"))
+    {
+        return Err("update package must not contain user profile files".into());
+    }
     let path = Path::new(value);
     if path.is_absolute()
         || path
@@ -156,8 +164,10 @@ fn parse_manifest(bytes: &[u8]) -> Result<Manifest, String> {
         return Err("unsupported update manifest schema".into());
     }
     validate_version(&manifest.version)?;
-    if manifest.package.name != "QmClient-windows.zip"
-        || manifest.package.size == 0
+    if !matches!(
+        manifest.package.name.as_str(),
+        "QmClient-windows.zip" | "QmClient-windows-portable.zip"
+    ) || manifest.package.size == 0
         || manifest.package.size > MAX_PACKAGE_SIZE
     {
         return Err("invalid update package metadata".into());
@@ -608,6 +618,10 @@ fn install_staged(
             .map_err(|error| rollback_install(error, &applied, backup))?;
         let source = staging.join(&relative);
         let target = install.join(&relative);
+        // storage.cfg 仍供服务端使用，更新保留既有文件；客户端存储由构建决定。
+        if signed.path.eq_ignore_ascii_case("storage.cfg") && target.exists() {
+            continue;
+        }
         if let Some(parent) = target.parent() {
             if let Err(error) = fs::create_dir_all(parent) {
                 return Err(rollback_install(
@@ -991,6 +1005,23 @@ mod tests {
     }
 
     #[test]
+    fn portable_metadata_keeps_the_signed_package_variant() {
+        let bytes = test_manifest(&[
+            ("DDNet.exe", b"client"),
+            ("DDNet-Server.exe", b"server"),
+            ("QmClient-Updater.exe", b"updater"),
+        ]);
+        let mut value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        value["package"]["name"] = serde_json::json!("QmClient-windows-portable.zip");
+        let bytes = serde_json::to_vec(&value).unwrap();
+        let manifest = parse_manifest(&bytes).unwrap();
+        assert_eq!(manifest.package.name, "QmClient-windows-portable.zip");
+        assert!(parse_setup_manifest(&bytes).is_err());
+        value["package"]["name"] = serde_json::json!("unknown.zip");
+        assert!(parse_manifest(&serde_json::to_vec(&value).unwrap()).is_err());
+    }
+
+    #[test]
     fn signed_setup_metadata_is_verified_and_tampering_is_rejected() {
         let key = SigningKey::from_bytes(&TEST_SEED);
         let bytes = serde_json::to_vec(&serde_json::json!({
@@ -1140,6 +1171,8 @@ mod tests {
             "data//file.txt",
             "data/file.",
             "data/file ",
+            "profile/settings.cfg",
+            "PROFILE/qmclient/settings.cfg",
         ] {
             assert!(validate_relative_path(path).is_err(), "accepted {path}");
         }
@@ -1195,6 +1228,63 @@ mod tests {
         fs::write(&package, zip_bytes.into_inner()).unwrap();
         extract_bootstrap_updater(&package, &updater, &manifest).unwrap();
         assert_eq!(fs::read(updater).unwrap(), b"updater");
+    }
+
+    #[test]
+    fn zip_upgrade_preserves_server_config_and_portable_profile() {
+        let root = tempdir().unwrap();
+        let staging = root.path().join("staging");
+        let backup = root.path().join("backup");
+        let install = root.path().join("install");
+        fs::create_dir_all(&staging).unwrap();
+        fs::create_dir_all(&backup).unwrap();
+        fs::create_dir_all(install.join("profile")).unwrap();
+        fs::write(staging.join("storage.cfg"), b"server default").unwrap();
+        fs::write(staging.join("DDNet.exe"), b"new portable client").unwrap();
+        fs::write(install.join("DDNet.exe"), b"old portable client").unwrap();
+        fs::write(install.join("storage.cfg"), b"custom user policy").unwrap();
+        fs::write(install.join("profile/settings.cfg"), b"user settings").unwrap();
+        let manifest = Manifest {
+            schema: 1,
+            version: "3.4".into(),
+            package: Package {
+                name: "QmClient-windows.zip".into(),
+                size: 1,
+                sha256: "00".repeat(32),
+            },
+            files: vec![
+                ManifestFile {
+                    path: "storage.cfg".into(),
+                    size: 14,
+                    sha256: "00".repeat(32),
+                },
+                ManifestFile {
+                    path: "DDNet.exe".into(),
+                    size: 19,
+                    sha256: "00".repeat(32),
+                },
+            ],
+        };
+        assert!(install_staged(&staging, &backup, &install, &manifest).is_ok());
+        assert_eq!(
+            fs::read(install.join("storage.cfg")).unwrap(),
+            b"custom user policy"
+        );
+        assert_eq!(
+            fs::read(install.join("profile/settings.cfg")).unwrap(),
+            b"user settings"
+        );
+        assert_eq!(
+            fs::read(install.join("DDNet.exe")).unwrap(),
+            b"new portable client"
+        );
+        fs::write(staging.join("DDNet.exe"), b"next portable client").unwrap();
+        fs::remove_file(install.join("storage.cfg")).unwrap();
+        assert!(install_staged(&staging, &backup, &install, &manifest).is_ok());
+        assert_eq!(
+            fs::read(install.join("storage.cfg")).unwrap(),
+            b"server default"
+        );
     }
 
     #[test]

@@ -60,6 +60,30 @@ class SignUpdateReleaseTest(unittest.TestCase):
 			with self.assertRaises(InvalidSignature):
 				public.verify((root / "QmClient-Setup.exe.sig").read_bytes(), SIGN_UPDATE_RELEASE.PACKAGE_SIGNATURE_CONTEXT + hashlib.sha256(b"changed").digest())
 
+	def test_release_rejects_embedded_portable_user_profile(self) -> None:
+		with tempfile.TemporaryDirectory(dir=REPO_ROOT / "tmp") as directory:
+			package = Path(directory) / "QmClient-windows-portable.zip"
+			self._write_package(package)
+			with zipfile.ZipFile(package, "a") as archive:
+				archive.writestr("PROFILE/qmclient/settings.cfg", b"user data")
+			with self.assertRaisesRegex(ValueError, "must not contain user profile"):
+				SIGN_UPDATE_RELEASE.build_manifest(package, "v3.4")
+
+	def test_portable_signatures_use_separate_asset_names(self) -> None:
+		with tempfile.TemporaryDirectory(dir=REPO_ROOT / "tmp") as directory:
+			root = Path(directory)
+			package = root / "QmClient-windows-portable.zip"
+			self._write_package(package)
+			outputs = SIGN_UPDATE_RELEASE.sign_release(package=package, version="v3.4", private_key_base64=base64.b64encode(self.PRIVATE_SEED).decode(), output_dir=root, expected_public_key=self.PUBLIC_KEY)
+			self.assertEqual(outputs.manifest.name, "QmClient-windows-portable-update.json")
+			self.assertEqual(outputs.package_signature.name, "QmClient-windows-portable.zip.sig")
+			content = outputs.manifest.read_bytes()
+			self.assertEqual(json.loads(content)["package"]["name"], package.name)
+			public = Ed25519PublicKey.from_public_bytes(self.PUBLIC_KEY)
+			public.verify(outputs.manifest_signature.read_bytes(), content)
+			public.verify(outputs.package_signature.read_bytes(), SIGN_UPDATE_RELEASE.PACKAGE_SIGNATURE_CONTEXT + hashlib.sha256(package.read_bytes()).digest())
+			self.assertFalse((root / "QmClient-windows-update.json").exists())
+
 	def _write_package(self, path: Path, *, include_server: bool = True) -> None:
 		files = {
 			"DDNet.exe": b"client",
@@ -166,6 +190,8 @@ class SignUpdateReleaseTest(unittest.TestCase):
 	def test_rejects_unsafe_or_case_insensitive_duplicate_paths(self) -> None:
 		for entries in (
 			[("../DDNet.exe", b"bad")],
+			[("profile/qmclient/settings.cfg", b"user data")],
+			[("PROFILE/settings.cfg", b"user data")],
 			[("DDNet.exe", b"one"), ("ddnet.exe", b"two")],
 			[("data//file.txt", b"bad")],
 			[("data/NUL.txt", b"bad")],

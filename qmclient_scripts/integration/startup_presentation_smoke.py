@@ -35,7 +35,7 @@ class StartupEnvironment:
 			"cl_save_settings 0", "cl_show_welcome 0", "qm_auto_update 0", "qm_steam_auto_launch 0",
 			"cl_languagefile languages/simplified_chinese.txt", "tc_custom_font DejaVu Sans",
 			"tc_custom_font_weight 900", *config]
-		self.client = Process("client", arguments, self.temp_dir, fifo_command="cl_input_fifo", pipe_prefix="qmclient_startup_")
+		self.client = Process("client", arguments, self.temp_dir, fifo_command="cl_input_fifo", pipe_prefix="qmclient_startup_", env={"QMCLIENT_TEST_STORAGE_ROOT": str(self.temp_dir)} if sys.platform == "win32" else None)
 		return self.client
 
 	def finish_startup(self) -> None:

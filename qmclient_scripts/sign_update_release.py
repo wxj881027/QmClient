@@ -81,6 +81,8 @@ def _validate_archive_path(name: str) -> str:
 	if not name or "\\" in name or "\0" in name or ":" in name:
 		raise ValueError(f"unsafe archive path: {name!r}")
 	raw_parts = name.split("/")
+	if raw_parts[0].casefold() == "profile":
+		raise ValueError("update package must not contain user profile files")
 	path = PurePosixPath(name)
 	if path.is_absolute() or any(part in {"", ".", ".."} or part.endswith((".", " ")) for part in raw_parts):
 		raise ValueError(f"unsafe archive path: {name!r}")
@@ -147,8 +149,8 @@ def _hash_stream(stream) -> str:
 def build_manifest(package: Path, version: str) -> dict[str, object]:
 	package = package.resolve(strict=True)
 	package_size = package.stat().st_size
-	if package.name != "QmClient-windows.zip":
-		raise ValueError("package must be named QmClient-windows.zip")
+	if package.name not in {"QmClient-windows.zip", "QmClient-windows-portable.zip"}:
+		raise ValueError("package must be named QmClient-windows.zip or QmClient-windows-portable.zip")
 	if package_size <= 0 or package_size > MAX_PACKAGE_SIZE:
 		raise ValueError("package size is outside the supported range")
 
@@ -223,9 +225,10 @@ def sign_release(
 		raise ValueError("update manifest exceeds the supported size")
 	private_key = _load_private_key(private_key_base64, expected_public_key)
 	output_dir.mkdir(parents=True, exist_ok=True)
-	manifest_path = output_dir / "QmClient-windows-update.json"
-	manifest_signature_path = output_dir / "QmClient-windows-update.json.sig"
-	package_signature_path = output_dir / "QmClient-windows.zip.sig"
+	stem = package.stem
+	manifest_path = output_dir / f"{stem}-update.json"
+	manifest_signature_path = output_dir / f"{stem}-update.json.sig"
+	package_signature_path = output_dir / f"{package.name}.sig"
 	manifest_path.write_bytes(manifest_bytes)
 	manifest_signature_path.write_bytes(private_key.sign(manifest_bytes))
 	package_signature_path.write_bytes(private_key.sign(PACKAGE_SIGNATURE_CONTEXT + bytes.fromhex(str(manifest["package"]["sha256"]))))

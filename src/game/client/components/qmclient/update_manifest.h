@@ -28,9 +28,9 @@ struct SQmClientUpdateRelease
 };
 
 // 安装标记与完整 Setup 附件共同决定更新路径，旧发布保持 ZIP 回退。
-inline bool UseQmClientSetupUpdate(bool SetupInstalled, const SQmClientUpdateRelease &Release) { return SetupInstalled && Release.HasSetup(); }
+inline bool UseQmClientSetupUpdate(bool SetupInstalled, const SQmClientUpdateRelease &Release, bool PortableBuild = false) { return !PortableBuild && SetupInstalled && Release.HasSetup(); }
 
-bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateManifest &Manifest, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild = false, bool SetupPackage = false);
-bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateRelease &Release, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild = false);
+bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateManifest &Manifest, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild = false, bool SetupPackage = false, bool PortableBuild = false);
+bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateRelease &Release, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild = false, bool PortableBuild = false);
 
 #endif

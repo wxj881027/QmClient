@@ -184,6 +184,17 @@ option(QM_DISABLE_PARALLEL_COMPILE "Disable /MP for compiler warnings-sensitive 
 option(QM_MSVC_USE_EMBEDDED_DEBUG_INFO "Use embedded MSVC debug information instead of per-target PDB files" OFF)
 option(QM_MSVC_ANALYZE "Enable MSVC /analyze static analysis (Windows only)" OFF)
 option(QM_STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
+option(QMCLIENT_PORTABLE "Build a dedicated Windows portable client using only executable-relative profile" OFF)
+option(QMCLIENT_TEST_STORAGE "Enable isolated storage in a non-release test client" OFF)
+if((QMCLIENT_PORTABLE OR QMCLIENT_TEST_STORAGE) AND NOT TARGET_OS STREQUAL "windows")
+  message(FATAL_ERROR "QmClient dedicated storage builds currently require Windows")
+endif()
+if(QMCLIENT_PORTABLE AND QMCLIENT_TEST_STORAGE)
+  message(FATAL_ERROR "Portable and isolated test builds must use separate build directories")
+endif()
+if(QMCLIENT_TEST_STORAGE AND NOT DEV)
+  message(FATAL_ERROR "QMCLIENT_TEST_STORAGE is only allowed with DEV=ON; test builds cannot be packaged")
+endif()
 option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bundled fonts" OFF)
 
 if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
@@ -3144,6 +3155,7 @@ if(CLIENT)
     checksum.h
     client.cpp
     client.h
+    qm_storage_mode.h
     demoedit.cpp
     demoedit.h
     discord.cpp
@@ -4008,6 +4020,11 @@ add_dependencies(game-client qm-icon-morph)
       PROPERTY OUTPUT_NAME ${CLIENT_EXECUTABLE}
   )
   target_link_libraries(game-client game-client-common)
+  if(QMCLIENT_PORTABLE)
+    target_compile_definitions(game-client PRIVATE CONF_QMCLIENT_PORTABLE)
+  elseif(QMCLIENT_TEST_STORAGE)
+    target_compile_definitions(game-client PRIVATE CONF_QMCLIENT_TEST_STORAGE)
+  endif()
   if(TARGET_OS STREQUAL "ios")
     set(IOS_INFO_PLIST "${PROJECT_BINARY_DIR}/ios-Info.plist")
     configure_file("${PROJECT_SOURCE_DIR}/scripts/ios/files/Info.plist.in" "${IOS_INFO_PLIST}")
@@ -5351,7 +5368,11 @@ if(TARGET_OS AND TARGET_BITS)
   endif()
 endif()
 
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
+if(QMCLIENT_PORTABLE)
+  set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-portable-${CPACK_SYSTEM_NAME})
+else()
+  set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
+endif()
 set(CPACK_ARCHIVE_PORTABLE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-src)
 set(CPACK_SOURCE_FILES
@@ -5450,7 +5471,11 @@ set(CPACK_GEN_FILES
 )
 
 if(TARGET_OS STREQUAL "windows")
-  list(APPEND CPACK_FILES other/config_directory.bat)
+  if(QMCLIENT_PORTABLE)
+    list(APPEND CPACK_FILES qmclient_scripts/portable/config_directory.bat)
+  else()
+    list(APPEND CPACK_FILES other/config_directory.bat)
+  endif()
 else()
   list(APPEND CPACK_FILES other/config_directory.sh)
 endif()
@@ -5710,6 +5735,10 @@ foreach(ext zip tar.gz tar.xz 7z)
   set(TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG}/${CPACK_PACKAGE_FILE_NAME})
 
   set(COPY_FILE_COMMANDS)
+  if(QMCLIENT_TEST_STORAGE)
+    # 隔离测试客户端不允许作为发布包分发。
+    list(APPEND COPY_FILE_COMMANDS COMMAND ${CMAKE_COMMAND} -E false)
+  endif()
   set(COPY_DIR_COMMANDS)
   set(COPY_TARGET_COMMANDS)
   set(STRIP_TARGET_COMMANDS)
@@ -5752,7 +5781,7 @@ foreach(ext zip tar.gz tar.xz 7z)
     ${COPY_TARGET_COMMANDS}
     ${STRIP_TARGET_COMMANDS}
     ${PACKAGE_COMMAND}
-    DEPENDS ${CPACK_TARGETS}
+    DEPENDS ${CPACK_TARGETS} ${CPACK_FILES}
   )
   add_custom_target(package_${EXT_SLUG} DEPENDS ${CPACK_PACKAGE_FILE_NAME}.${ext})
   list(APPEND PACKAGE_TARGETS package_${EXT_SLUG})

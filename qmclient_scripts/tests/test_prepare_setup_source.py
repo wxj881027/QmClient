@@ -39,6 +39,16 @@ class PrepareSetupSourceTest(unittest.TestCase):
 		MODULE.prepare(self.source, self.data, self.output)
 		self.assertEqual((self.output / "DDNet.exe").read_bytes(), b"client")
 
+	def test_portable_or_test_build_preserves_existing_setup_payload(self) -> None:
+		self.output.mkdir()
+		(self.output / "previous.txt").write_bytes(b"old")
+		for option in ("QMCLIENT_PORTABLE", "QMCLIENT_TEST_STORAGE"):
+			with self.subTest(option=option):
+				(self.source / "CMakeCache.txt").write_text(f"{option}:BOOL=ON\n", encoding="utf-8")
+				with self.assertRaisesRegex(ValueError, "normal client build"):
+					MODULE.prepare(self.source, self.data, self.output)
+				self.assertEqual((self.output / "previous.txt").read_bytes(), b"old")
+
 	def test_missing_executable_preserves_previous_payload(self) -> None:
 		(self.source / "DDNet-Server.exe").unlink()
 		self.output.mkdir()

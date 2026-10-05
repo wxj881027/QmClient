@@ -218,3 +218,35 @@ TEST(QmClientUpdateManifest, ReleaseFindsSetupAssetsAlongsideLegacyZip)
 	EXPECT_NE(str_find(Release.m_aPackageUrl, "QmClient-windows.zip"), nullptr);
 	EXPECT_NE(str_find(Release.m_aSetupUrl, "QmClient-Setup.exe"), nullptr);
 }
+
+TEST(QmClientUpdateManifest, PortableManifestCannotCrossNormalPackageBoundary)
+{
+	const char *pJson = R"({"schema":1,"version":"2.80.0","package":{"name":"QmClient-windows-portable.zip","size":123,"sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},"files":[]})";
+	SQmClientUpdateManifest Manifest;
+	char aError[256];
+	EXPECT_TRUE(ParseQmClientUpdateManifest(pJson, str_length(pJson), "2.79.21", Manifest, aError, sizeof(aError), false, false, true));
+	EXPECT_FALSE(ParseQmClientUpdateManifest(pJson, str_length(pJson), "2.79.21", Manifest, aError, sizeof(aError)));
+}
+
+TEST(QmClientUpdateManifest, PortableReleaseRequiresPortableAssetsAndNeverUsesSetup)
+{
+	CJsonStringWriter Writer;
+	WriteRelease(Writer, "v2.80.0", false);
+	std::string Json = Writer.GetOutputString();
+	SQmClientUpdateRelease Release;
+	char aError[256];
+	EXPECT_FALSE(ParseQmClientUpdateRelease(Json.c_str(), Json.size(), "2.79.21", Release, aError, sizeof(aError), false, true));
+	size_t Offset = 0;
+	while((Offset = Json.find("QmClient-windows", Offset)) != std::string::npos)
+	{
+		Json.insert(Offset + 16, "-portable");
+		Offset += 25;
+	}
+	ASSERT_TRUE(ParseQmClientUpdateRelease(Json.c_str(), Json.size(), "2.79.21", Release, aError, sizeof(aError), false, true)) << aError;
+	EXPECT_NE(std::string(Release.m_aPackageUrl).find("QmClient-windows-portable.zip"), std::string::npos);
+	str_copy(Release.m_aSetupUrl, "setup");
+	str_copy(Release.m_aSetupSignatureUrl, "signature");
+	str_copy(Release.m_aSetupManifestUrl, "manifest");
+	str_copy(Release.m_aSetupManifestSignatureUrl, "signature");
+	EXPECT_FALSE(UseQmClientSetupUpdate(true, Release, true));
+}

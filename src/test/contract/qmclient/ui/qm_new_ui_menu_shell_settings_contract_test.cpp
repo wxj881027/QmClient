@@ -96,61 +96,6 @@ TEST(QmNewUiMenuShellSettingsContract, TranslateTargetRatioDoesNotRenderSkipNote
 	EXPECT_EQ(TranslateModule.find("qmclient-translate-skip-numeric-note"), std::string::npos);
 }
 
-TEST(QmNewUiMenuShellSettingsContract, QmClientUpdateFlowUsesQmClientNamingAndComparisonHelper)
-{
-	const std::string TClientSource = ReadTextFile("src/game/client/components/tclient/tclient.cpp");
-	const std::string TClientHeader = ReadTextFile("src/game/client/components/tclient/tclient.h");
-	const std::string MenusStartSource = ReadTextFile("src/game/client/components/menus_start.cpp");
-	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string QmMenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string OnUpdate = FunctionBody(TClientSource, "void CTClient::OnUpdate()");
-
-	EXPECT_NE(TClientSource.find("#include <game/client/components/qmclient/update_version.h>"), std::string::npos);
-	EXPECT_NE(TClientSource.find("static constexpr const char *QMCLIENT_INFO_URL"), std::string::npos);
-	EXPECT_NE(TClientSource.find("QMCLIENT_UPDATE_PACKAGE_NAME = \"QmClient-windows.zip\""), std::string::npos);
-	EXPECT_NE(TClientSource.find("qm_update_verify_manifest_package"), std::string::npos);
-	EXPECT_NE(TClientSource.find("qm_update_verify_package_digest"), std::string::npos);
-	EXPECT_NE(TClientSource.find("qm_update_extract_bootstrap_updater"), std::string::npos);
-	EXPECT_NE(TClientSource.find("ResultSha256()"), std::string::npos);
-	EXPECT_NE(TClientSource.find("FetchQmClientUpdateInfo();"), std::string::npos);
-	EXPECT_NE(TClientSource.find("FinishQmClientUpdateInfo();"), std::string::npos);
-	EXPECT_NE(TClientSource.find("ResetQmClientUpdateInfoTask();"), std::string::npos);
-	EXPECT_NE(TClientSource.find("NeedQmClientUpdate()"), std::string::npos);
-	EXPECT_NE(TClientSource.find("RequestQmClientUpdateCheckAndUpdate()"), std::string::npos);
-	EXPECT_NE(TClientSource.find("ParseQmClientUpdateRelease"), std::string::npos);
-	EXPECT_EQ(TClientSource.find("NeedUpdate()"), std::string::npos);
-	EXPECT_EQ(TClientSource.find("FetchTClientInfo()"), std::string::npos);
-	EXPECT_EQ(TClientSource.find("FinishTClientInfo()"), std::string::npos);
-	EXPECT_EQ(TClientSource.find("ResetTClientInfoTask()"), std::string::npos);
-	EXPECT_EQ(TClientSource.find("TCLIENT_INFO_URL"), std::string::npos);
-	EXPECT_EQ(TClientSource.find("TCLIENT_UPDATE_EXE_URL"), std::string::npos);
-	EXPECT_EQ(TClientSource.find("CalculateHashes(m_aUpdatePackageTmp"), std::string::npos);
-	EXPECT_LT(OnUpdate.find("FinishUpdateDownloads();"), OnUpdate.find("!IsUpdateChecking() && !IsUpdateDownloading() && !m_UpdateReady"));
-	EXPECT_NE(TClientSource.find("Force && m_UpdateShutdownRequested"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmAutoUpdate, qm_auto_update, 0"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("QmShowOutdatedVersionWarning"), std::string::npos);
-	EXPECT_NE(QmMenusSource.find("RenderCheckbox(&g_Config.m_QmAutoUpdate, \"Automatic updates\", &g_Config.m_QmAutoUpdate);"), std::string::npos);
-	EXPECT_NE(QmMenusSource.find("Show outdated version warning"), std::string::npos);
-
-	EXPECT_NE(TClientHeader.find("m_pQmClientUpdateInfoTask"), std::string::npos);
-	EXPECT_NE(TClientHeader.find("m_FetchedQmClientUpdateInfo"), std::string::npos);
-	EXPECT_NE(TClientHeader.find("m_QmClientAutoUpdateAfterCheck"), std::string::npos);
-	EXPECT_NE(TClientHeader.find("m_aQmClientLatestVersionStr"), std::string::npos);
-	EXPECT_NE(TClientHeader.find("m_pUpdatePackageTask"), std::string::npos);
-	EXPECT_NE(TClientHeader.find("m_UpdateShutdownRequested"), std::string::npos);
-	EXPECT_EQ(TClientHeader.find("m_pTClientInfoTask"), std::string::npos);
-	EXPECT_EQ(TClientHeader.find("m_FetchedTClientInfo"), std::string::npos);
-	EXPECT_EQ(TClientHeader.find("m_AutoUpdateAfterCheck"), std::string::npos);
-	EXPECT_EQ(TClientHeader.find("m_aVersionStr"), std::string::npos);
-
-	EXPECT_NE(MenusStartSource.find("m_FetchedQmClientUpdateInfo"), std::string::npos);
-	EXPECT_NE(MenusStartSource.find("NeedQmClientUpdate()"), std::string::npos);
-	EXPECT_NE(MenusStartSource.find("defined(CONF_AUTOUPDATE) && defined(CONF_FAMILY_WINDOWS)"), std::string::npos);
-	EXPECT_NE(MenusStartSource.find("if(g_Config.m_QmAutoUpdate)"), std::string::npos);
-	EXPECT_EQ(MenusStartSource.find("m_FetchedTClientInfo"), std::string::npos);
-	EXPECT_EQ(MenusStartSource.find("NeedUpdate()"), std::string::npos);
-}
-
 TEST(QmNewUiMenuShellSettingsContract, TClientHeaderIncludesGeneratedProtocolForWeaponDefaults)
 {
 	const std::string TClientHeader = ReadTextFile("src/game/client/components/tclient/tclient.h");

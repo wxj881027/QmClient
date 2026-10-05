@@ -47,6 +47,8 @@ public:
 		BASIC,
 		SERVER,
 		CLIENT,
+		CLIENT_PORTABLE,
+		CLIENT_TEST,
 	};
 
 	virtual int NumPaths() const = 0;

@@ -50,7 +50,7 @@ namespace
 		return true;
 	}
 
-	bool ParseReleaseObject(const json_value *pRoot, const char *pCurrentVersion, SQmClientUpdateRelease &Release, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild)
+	bool ParseReleaseObject(const json_value *pRoot, const char *pCurrentVersion, SQmClientUpdateRelease &Release, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild, bool PortableBuild)
 	{
 		if(!pRoot || pRoot->type != json_object)
 			return false;
@@ -79,10 +79,10 @@ namespace
 			bool m_Optional = false;
 		};
 		SExpectedAsset aExpected[] = {
-			{"QmClient-windows.zip", Release.m_aPackageUrl, sizeof(Release.m_aPackageUrl)},
-			{"QmClient-windows.zip.sig", Release.m_aPackageSignatureUrl, sizeof(Release.m_aPackageSignatureUrl)},
-			{"QmClient-windows-update.json", Release.m_aManifestUrl, sizeof(Release.m_aManifestUrl)},
-			{"QmClient-windows-update.json.sig", Release.m_aManifestSignatureUrl, sizeof(Release.m_aManifestSignatureUrl)},
+			{PortableBuild ? "QmClient-windows-portable.zip" : "QmClient-windows.zip", Release.m_aPackageUrl, sizeof(Release.m_aPackageUrl)},
+			{PortableBuild ? "QmClient-windows-portable.zip.sig" : "QmClient-windows.zip.sig", Release.m_aPackageSignatureUrl, sizeof(Release.m_aPackageSignatureUrl)},
+			{PortableBuild ? "QmClient-windows-portable-update.json" : "QmClient-windows-update.json", Release.m_aManifestUrl, sizeof(Release.m_aManifestUrl)},
+			{PortableBuild ? "QmClient-windows-portable-update.json.sig" : "QmClient-windows-update.json.sig", Release.m_aManifestSignatureUrl, sizeof(Release.m_aManifestSignatureUrl)},
 			{"QmClient-Setup.exe", Release.m_aSetupUrl, sizeof(Release.m_aSetupUrl), false, true},
 			{"QmClient-Setup.exe.sig", Release.m_aSetupSignatureUrl, sizeof(Release.m_aSetupSignatureUrl), false, true},
 			{"QmClient-windows-setup-update.json", Release.m_aSetupManifestUrl, sizeof(Release.m_aSetupManifestUrl), false, true},
@@ -96,6 +96,8 @@ namespace
 				continue;
 			for(auto &Expected : aExpected)
 			{
+				if(PortableBuild && Expected.m_Optional)
+					continue;
 				if(str_comp(json_string_get(pName), Expected.m_pName) != 0)
 					continue;
 				if(Expected.m_Found || !ReadReleaseAsset(pAsset, Expected.m_pName, Expected.m_pUrl, Expected.m_UrlSize))
@@ -116,7 +118,7 @@ namespace
 	}
 }
 
-bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateRelease &Release, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild)
+bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateRelease &Release, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild, bool PortableBuild)
 {
 	Release = {};
 	SetError(pError, ErrorSize, "Invalid GitHub release metadata");
@@ -126,7 +128,7 @@ bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *
 	if(!Root)
 		return false;
 	if(Root->type == json_object)
-		return ParseReleaseObject(Root.get(), pCurrentVersion, Release, pError, ErrorSize, LocalIsDevelopmentBuild);
+		return ParseReleaseObject(Root.get(), pCurrentVersion, Release, pError, ErrorSize, LocalIsDevelopmentBuild, PortableBuild);
 	if(Root->type != json_array)
 		return false;
 
@@ -135,7 +137,7 @@ bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *
 	{
 		SQmClientUpdateRelease Candidate;
 		char aCandidateError[256];
-		if(ParseReleaseObject(json_array_get(Root.get(), Index), pCurrentVersion, Candidate, aCandidateError, sizeof(aCandidateError), LocalIsDevelopmentBuild) &&
+		if(ParseReleaseObject(json_array_get(Root.get(), Index), pCurrentVersion, Candidate, aCandidateError, sizeof(aCandidateError), LocalIsDevelopmentBuild, PortableBuild) &&
 			(Release.m_aVersion[0] == '\0' || IsQmClientRemoteVersionNewer(Candidate.m_aVersion, Release.m_aVersion, LocalIsDevelopmentBuild)))
 			Release = Candidate;
 	}
@@ -144,11 +146,11 @@ bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *
 	return Found;
 }
 
-bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateManifest &Manifest, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild, bool SetupPackage)
+bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateManifest &Manifest, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild, bool SetupPackage, bool PortableBuild)
 {
 	Manifest = {};
 	SetError(pError, ErrorSize, "Invalid update manifest");
-	if(pJson == nullptr || JsonSize == 0 || JsonSize > std::numeric_limits<unsigned>::max())
+	if((PortableBuild && SetupPackage) || pJson == nullptr || JsonSize == 0 || JsonSize > std::numeric_limits<unsigned>::max())
 		return false;
 	TJson Root(JsonParse(pJson, static_cast<unsigned>(JsonSize)), json_value_free);
 	if(!Root || Root->type != json_object)
@@ -171,7 +173,7 @@ bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char 
 	const json_value *pName = json_object_get(pPackage, "name");
 	const json_value *pSize = json_object_get(pPackage, "size");
 	const json_value *pSha256 = json_object_get(pPackage, "sha256");
-	if(!pName || !pSize || !pSha256 || pName->type != json_string || str_comp(json_string_get(pName), SetupPackage ? "QmClient-Setup.exe" : "QmClient-windows.zip") != 0 ||
+	if(!pName || !pSize || !pSha256 || pName->type != json_string || str_comp(json_string_get(pName), SetupPackage ? "QmClient-Setup.exe" : (PortableBuild ? "QmClient-windows-portable.zip" : "QmClient-windows.zip")) != 0 ||
 		pSize->type != json_integer || pSize->u.integer <= 0 || static_cast<uint64_t>(pSize->u.integer) > MAX_UPDATE_PACKAGE_SIZE ||
 		pSha256->type != json_string || sha256_from_str(&Manifest.m_PackageSha256, json_string_get(pSha256)) != 0)
 	{

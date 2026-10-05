@@ -12,6 +12,11 @@ def prepare(source: Path, data: Path, output: Path) -> None:
 	source = source.resolve(strict=True)
 	data = data.resolve(strict=True)
 	output = output.resolve()
+	cache = source / "CMakeCache.txt"
+	if cache.is_file():
+		options = dict(line.split("=", 1) for line in cache.read_text(encoding="utf-8").splitlines() if "=" in line and not line.startswith(("#", "//")))
+		if any(options.get(f"{name}:BOOL", "OFF").upper() in {"ON", "TRUE", "YES", "1"} for name in ("QMCLIENT_PORTABLE", "QMCLIENT_TEST_STORAGE")):
+			raise ValueError("Setup requires a normal client build; portable and isolated test builds cannot be installed")
 	if not source.is_dir() or not data.is_dir():
 		raise ValueError("source and data must be directories")
 	temporary = output.with_name(f".{output.name}.tmp").resolve()

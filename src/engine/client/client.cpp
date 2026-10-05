@@ -6,6 +6,7 @@
 #include "demoedit.h"
 #include "friends.h"
 #include "perf_file_logger.h"
+#include "qm_storage_mode.h"
 #include "serverbrowser.h"
 
 #include <base/crashdump.h>
@@ -6367,15 +6368,22 @@ static bool SaveUnknownDomainCommandCallback(const char *pCommand, void *pUser)
 	return true;
 }
 
+// Windows 发布客户端只从固定存档目录自动读取配置；资源目录不承载玩家配置。
+#if defined(CONF_FAMILY_WINDOWS)
+static constexpr int CLIENT_CONFIG_STORAGE_TYPE = IStorage::TYPE_SAVE;
+#else
+static constexpr int CLIENT_CONFIG_STORAGE_TYPE = IStorage::TYPE_ALL;
+#endif
+
 static const char *GetConfigLoadPath(IStorage *pStorage, const CConfigDomain &ConfigDomain)
 {
 	if(ConfigDomain.m_aConfigPath == nullptr)
 		return nullptr;
-	if(pStorage->FileExists(ConfigDomain.m_aConfigPath, IStorage::TYPE_ALL))
+	if(pStorage->FileExists(ConfigDomain.m_aConfigPath, CLIENT_CONFIG_STORAGE_TYPE))
 		return ConfigDomain.m_aConfigPath;
-	if(ConfigDomain.m_aPreviousConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aPreviousConfigPath, IStorage::TYPE_ALL))
+	if(ConfigDomain.m_aPreviousConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aPreviousConfigPath, CLIENT_CONFIG_STORAGE_TYPE))
 		return ConfigDomain.m_aPreviousConfigPath;
-	if(ConfigDomain.m_aLegacyConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aLegacyConfigPath, IStorage::TYPE_ALL))
+	if(ConfigDomain.m_aLegacyConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aLegacyConfigPath, CLIENT_CONFIG_STORAGE_TYPE))
 		return ConfigDomain.m_aLegacyConfigPath;
 	return nullptr;
 }
@@ -6774,7 +6782,7 @@ int main(int argc, const char **argv)
 		MemoryLogger.SetParent(log_get_scope_logger());
 		{
 			CLogScope LogScope(&MemoryLogger);
-			pStorage = CreateStorage(IStorage::EInitializationType::CLIENT, argc, argv);
+			pStorage = CreateStorage(QmClientStorageMode(), argc, argv);
 		}
 		if(!pStorage)
 		{
@@ -6876,7 +6884,7 @@ int main(int argc, const char **argv)
 
 			SSaveUnknownCommandContext UnknownCommandContext{pConfigManager, ConfigDomain};
 			pConsole->SetUnknownCommandCallback(SaveUnknownDomainCommandCallback, &UnknownCommandContext);
-			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED))
+			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE))
 			{
 				pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 				char aError[2048];
@@ -6890,13 +6898,13 @@ int main(int argc, const char **argv)
 		}
 	}
 
-	if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, IStorage::TYPE_ALL))
+	if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, CLIENT_CONFIG_STORAGE_TYPE))
 	{
-		pConsole->ExecuteFile(AUTOEXEC_CLIENT_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
+		pConsole->ExecuteFile(AUTOEXEC_CLIENT_FILE, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE);
 	}
 	else // fallback
 	{
-		pConsole->ExecuteFile(AUTOEXEC_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
+		pConsole->ExecuteFile(AUTOEXEC_FILE, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE);
 	}
 
 	if(g_Config.m_ClConfigVersion < 1)

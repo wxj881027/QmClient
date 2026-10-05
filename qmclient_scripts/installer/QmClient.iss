@@ -1,6 +1,6 @@
-; 完整离线安装器；载荷来自与便携包相同的发布目录。
+; 完整离线安装器；载荷只能来自普通客户端构建目录。
 #ifndef SourceDir
-  #error SourceDir must point to the portable package directory
+  #error SourceDir must point to the normal client setup payload directory
 #endif
 #ifndef AppVersion
   #error AppVersion must contain the QmClient version

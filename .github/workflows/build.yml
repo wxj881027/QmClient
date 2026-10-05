@@ -64,6 +64,12 @@ jobs:
             package_ext: zip
             output_name: QmClient-windows.zip
             artifact_name: packaged-windows
+          - name: Windows Portable
+            os: windows-2022
+            portable: true
+            package_ext: zip
+            output_name: QmClient-windows-portable.zip
+            artifact_name: packaged-windows-portable
           - name: macOS
             os: macos-26
             package_ext: dmg
@@ -93,7 +99,7 @@ jobs:
           python-version: "3.12"
 
       - name: Setup Inno Setup (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && !matrix.portable
         shell: pwsh
         run: choco install innosetup --no-progress -y
 
@@ -229,26 +235,46 @@ jobs:
                 -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
                 -DPREFER_BUNDLED_LIBS=ON -DCMAKE_OBJECT_PATH_MAX=1024
                 -DQM_MSVC_USE_EMBEDDED_DEBUG_INFO=ON
+                -DQMCLIENT_PORTABLE=${{ matrix.portable && 'ON' || 'OFF' }}
               )
               ;;
           esac
-          cmake -S . -B build "${ARGS[@]}"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            MSYS_NO_PATHCONV=1 cmd.exe /c "qmclient_scripts\cmake-windows.cmd" -S . -B build "${ARGS[@]}"
+          else
+            cmake -S . -B build "${ARGS[@]}"
+          fi
 
       - name: Build client
         shell: bash
-        run: cmake --build build --target game-client --parallel
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            MSYS_NO_PATHCONV=1 cmd.exe /c "qmclient_scripts\cmake-windows.cmd" --build build --target game-client --parallel
+          else
+            cmake --build build --target game-client --parallel
+          fi
 
       - name: Run tests
         if: ${{ env.RELEASE_TAG != '' || !inputs.skip_tests }}
         shell: bash
-        run: cmake --build build --target run_tests --parallel
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            MSYS_NO_PATHCONV=1 cmd.exe /c "qmclient_scripts\cmake-windows.cmd" --build build --target run_tests --parallel
+          else
+            cmake --build build --target run_tests --parallel
+          fi
 
       - name: Package
         shell: bash
-        run: cmake --build build --target package_default --parallel
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            MSYS_NO_PATHCONV=1 cmd.exe /c "qmclient_scripts\cmake-windows.cmd" --build build --target package_default --parallel
+          else
+            cmake --build build --target package_default --parallel
+          fi
 
       - name: Build complete Windows setup
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && !matrix.portable
         shell: pwsh
         run: |
           $source = (Resolve-Path build).Path
@@ -274,18 +300,20 @@ jobs:
               pkg="$(find build -type f -name "QmClient*.$ext" ! -name "*-src*" 2>/dev/null | head -n 1)"
               [ -z "$pkg" ] && pkg="$(find build -type f -name "*.$ext" ! -name "*-src*" 2>/dev/null | head -n 1)"
               if [ -n "$pkg" ]; then
-                cp "$pkg" "dist/QmClient-windows.$ext"
-                echo "Found: $pkg -> dist/QmClient-windows.$ext"
+                cp "$pkg" "dist/${{ matrix.portable && 'QmClient-windows-portable' || 'QmClient-windows' }}.$ext"
+                echo "Found: $pkg -> dist/${{ matrix.portable && 'QmClient-windows-portable' || 'QmClient-windows' }}.$ext"
                 found=true
               fi
             done
-            setup_pkg="$(find build -type f -name 'QmClient-Setup.exe' 2>/dev/null | head -n 1)"
-            if [ -z "$setup_pkg" ]; then
-              echo "No QmClient-Setup.exe found under build/"
-              exit 1
+            if [ "${{ matrix.portable }}" != "true" ]; then
+              setup_pkg="$(find build -type f -name 'QmClient-Setup.exe' 2>/dev/null | head -n 1)"
+              if [ -z "$setup_pkg" ]; then
+                echo "No QmClient-Setup.exe found under build/"
+                exit 1
+              fi
+              cp "$setup_pkg" "dist/QmClient-Setup.exe"
+              echo "Found: $setup_pkg -> dist/QmClient-Setup.exe"
             fi
-            cp "$setup_pkg" "dist/QmClient-Setup.exe"
-            echo "Found: $setup_pkg -> dist/QmClient-Setup.exe"
             if [ "$found" = "false" ]; then
               echo "No zip or 7z package found under build/"
               exit 1
@@ -312,7 +340,7 @@ jobs:
           from pathlib import Path
           import zipfile
 
-          package = Path("dist/QmClient-windows.zip")
+          package = Path("dist/${{ matrix.output_name }}")
           required = {"DDNet.exe", "DDNet-Server.exe", "QmClient-Updater.exe"}
           with zipfile.ZipFile(package) as archive:
               infos = [info for info in archive.infolist() if not info.is_dir()]
@@ -393,7 +421,7 @@ jobs:
             echo "- **Status**: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ runner.os }}" = "Windows" ]; then
-            echo "- **Artifacts**: QmClient-Setup.exe, QmClient-windows.zip, QmClient-windows.7z" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Artifacts**: ${{ matrix.output_name }} and matching 7z${{ !matrix.portable && ', QmClient-Setup.exe' || '' }}" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- **Artifact**: ${{ matrix.output_name }}" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -678,6 +706,12 @@ jobs:
             --private-key-env QM_UPDATE_ED25519_PRIVATE_KEY \
             --normalize-package \
             --output-dir release-assets
+          .update-signing-venv/bin/python qmclient_scripts/sign_update_release.py \
+            --package release-assets/QmClient-windows-portable.zip \
+            --version "${RELEASE_TAG}" \
+            --private-key-env QM_UPDATE_ED25519_PRIVATE_KEY \
+            --normalize-package \
+            --output-dir release-assets
 
       - name: Generate release notes
         env:
@@ -714,6 +748,11 @@ jobs:
             release-assets/QmClient-windows-update.json
             release-assets/QmClient-windows-update.json.sig
             release-assets/QmClient-windows.7z
+            release-assets/QmClient-windows-portable.zip
+            release-assets/QmClient-windows-portable.zip.sig
+            release-assets/QmClient-windows-portable-update.json
+            release-assets/QmClient-windows-portable-update.json.sig
+            release-assets/QmClient-windows-portable.7z
             release-assets/QmClient-Setup.exe
             release-assets/QmClient-Setup.exe.sig
             release-assets/QmClient-windows-setup-update.json
@@ -734,7 +773,7 @@ jobs:
           from pathlib import Path
 
           release = json.loads(Path("release-state.json").read_text())
-          expected = {"QmClient-windows.zip", "QmClient-windows.zip.sig", "QmClient-windows-update.json", "QmClient-windows-update.json.sig", "QmClient-windows.7z", "QmClient-Setup.exe", "QmClient-Setup.exe.sig", "QmClient-windows-setup-update.json", "QmClient-windows-setup-update.json.sig", "QmClient-ubuntu.tar.xz", "QmClient-macOS.dmg", "QmClient-android.apk", "QmClient-android.aab"}
+          expected = {"QmClient-windows-portable.zip", "QmClient-windows-portable.zip.sig", "QmClient-windows-portable-update.json", "QmClient-windows-portable-update.json.sig", "QmClient-windows-portable.7z", "QmClient-windows.zip", "QmClient-windows.zip.sig", "QmClient-windows-update.json", "QmClient-windows-update.json.sig", "QmClient-windows.7z", "QmClient-Setup.exe", "QmClient-Setup.exe.sig", "QmClient-windows-setup-update.json", "QmClient-windows-setup-update.json.sig", "QmClient-ubuntu.tar.xz", "QmClient-macOS.dmg", "QmClient-android.apk", "QmClient-android.aab"}
           assert release["isDraft"] and release["tagName"] == os.environ["RELEASE_TAG"]
           assert release["isPrerelease"] == ("-preview." in os.environ["RELEASE_TAG"])
           assets = {asset["name"]: asset for asset in release["assets"]}
