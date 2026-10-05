@@ -3231,6 +3231,38 @@ turkish = "Rastgele bir skin oluştur"
 polish = "Stwórz losowy skin"
 
 [[message]]
+key = "Copy skin from dummy"
+[message.translations]
+simplified_chinese = "复制分身皮肤"
+traditional_chinese = "複製分身皮膚"
+japanese = "ダミーのスキンをコピー"
+korean = "더미 스킨 복사"
+russian = "Скопировать скин дамми"
+german = "Skin vom Dummy kopieren"
+spanish = "Copiar el skin del dummy"
+french = "Copier le skin du double"
+brazilian_portuguese = "Copiar a skin do dummy"
+portuguese = "Copiar a skin do dummy"
+turkish = "Dummy skinini kopyala"
+polish = "Kopiuj skina z kukły"
+
+[[message]]
+key = "Copy skin from player"
+[message.translations]
+simplified_chinese = "复制玩家皮肤"
+traditional_chinese = "複製玩家皮膚"
+japanese = "プレイヤーのスキンをコピー"
+korean = "플레이어 스킨 복사"
+russian = "Скопировать скин игрока"
+german = "Skin vom Spieler kopieren"
+spanish = "Copiar el skin del jugador"
+french = "Copier le skin du joueur"
+brazilian_portuguese = "Copiar a skin do jogador"
+portuguese = "Copiar a skin do jogador"
+turkish = "Oyuncu skinini kopyala"
+polish = "Kopiuj skina od gracza"
+
+[[message]]
 key = "Credits"
 [message.translations]
 simplified_chinese = "制作名单"

@@ -230,6 +230,10 @@ class CScoreboard : public CComponent
 		CButtonContainer m_MuteAction;
 		CButtonContainer m_EmoticonAction;
 		CButtonContainer m_CopySkinAction;
+		// 复制皮肤 ID：把目标皮肤名写入剪贴板，与一键换装的 m_CopySkinAction 并列。
+		CButtonContainer m_CopySkinIdAction;
+		// 复制玩家名字：把目标玩家名写入剪贴板，行为与 ESC 玩家页的 Copy name 一致。
+		CButtonContainer m_CopyNameAction;
 
 		CButtonContainer m_SpectateButton;
 

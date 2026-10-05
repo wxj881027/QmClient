@@ -2516,6 +2516,15 @@ Copy name option color
 Copy skin
 == Копировать скин
 
+Copy skin from dummy
+== Скопировать скин дамми
+
+Copy skin from player
+== Скопировать скин игрока
+
+Copy skin ID
+== Копировать ID скина
+
 Copy skin option color
 == Цвет опции копирования скина
 

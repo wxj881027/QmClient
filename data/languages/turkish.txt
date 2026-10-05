@@ -2516,6 +2516,15 @@ Copy name option color
 Copy skin
 == Skin'i kopyala
 
+Copy skin from dummy
+== Dummy skinini kopyala
+
+Copy skin from player
+== Oyuncu skinini kopyala
+
+Copy skin ID
+== Skin ID'sini kopyala
+
 Copy skin option color
 == Kopyala cilt seçeneği rengi
 

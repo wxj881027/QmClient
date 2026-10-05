@@ -12,7 +12,6 @@
 #include <base/system.h>
 
 #include <engine/graphics.h>
-#include <engine/shared/config.h>
 #include <engine/textrender.h>
 
 #include <game/client/components/menus.h>
@@ -129,7 +128,9 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		const EFontPreset PreviousFontPreset = Ctx.m_pTextRender->GetFontPreset();
 		CUiScopedSurfaceText HeaderSurfaceText(Ctx.m_pTextRender, Surface);
 		ColorRGBA TitleColor = ResolveConfiguredTextColor(Surface);
-		if(VisualOptions.m_RainbowTitles && g_Config.m_QmUiTextColorMode == 0)
+		// 彩虹标题由「彩虹卡片标题」独立开关控制，优先于全局文本颜色模式；
+		// 文本颜色模式只约束普通文本，不得覆盖卡片标题的彩虹流动效果。
+		if(VisualOptions.m_RainbowTitles)
 		{
 			const float TimePhase = (float)time_get() / (float)time_freq() * 0.08f;
 			const float IdPhase = Spec.m_pStableId != nullptr ? (float)(str_quickhash(Spec.m_pStableId) & 0xffff) / 65535.0f : 0.0f;

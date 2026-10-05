@@ -837,6 +837,9 @@ Copy info
 Copy name
 Copy name option color
 Copy skin
+Copy skin from dummy
+Copy skin from player
+Copy skin ID
 Copy skin option color
 Could not add the player as a friend
 Could not check for existing player with your name. Check your internet connection.

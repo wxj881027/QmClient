@@ -2516,6 +2516,15 @@ Copy name option color
 Copy skin
 == 复制皮肤
 
+Copy skin from dummy
+== 复制分身皮肤
+
+Copy skin from player
+== 复制玩家皮肤
+
+Copy skin ID
+== 复制皮肤 ID
+
 Copy skin option color
 == 复制皮肤选项颜色
 

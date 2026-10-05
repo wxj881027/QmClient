@@ -2516,6 +2516,15 @@ Copy name option color
 Copy skin
 == 스킨 복사
 
+Copy skin from dummy
+== 더미 스킨 복사
+
+Copy skin from player
+== 플레이어 스킨 복사
+
+Copy skin ID
+== 스킨 ID 복사
+
 Copy skin option color
 == 스킨 옵션 색상 복사
 

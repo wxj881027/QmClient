@@ -2516,6 +2516,15 @@ Copy name option color
 Copy skin
 == Copiar skin
 
+Copy skin from dummy
+== Copiar el skin del dummy
+
+Copy skin from player
+== Copiar el skin del jugador
+
+Copy skin ID
+== Copiar ID del skin
+
 Copy skin option color
 == Color de opciones de copia de skin
 

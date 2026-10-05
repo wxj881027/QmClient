@@ -2516,6 +2516,15 @@ Copy name option color
 Copy skin
 == スキンをコピー
 
+Copy skin from dummy
+== ダミーのスキンをコピー
+
+Copy skin from player
+== プレイヤーのスキンをコピー
+
+Copy skin ID
+== スキンIDをコピー
+
 Copy skin option color
 == スキンオプションの色をコピー
 

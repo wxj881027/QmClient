@@ -36,7 +36,7 @@ TEST(SettingsTeeLayout, EditorControlsStayInsideMeasuredHeightWithoutOverlapping
 			const CUIRect Bounds{10.0f, 20.0f, Width, Layout.m_Height};
 			std::vector<CUIRect> vControls{Layout.m_aPreviews[0], Layout.m_aPreviews[1], Layout.m_TargetLabel,
 				Layout.m_Identity, Layout.m_SkinLabel, Layout.m_SkinInput, Layout.m_RandomSkin,
-				Layout.m_Eyes, Layout.m_CustomColors, Layout.m_RandomColors};
+				Layout.m_CopyOtherSkin, Layout.m_Eyes, Layout.m_CustomColors, Layout.m_RandomColors};
 			if(Colors)
 			{
 				vControls.push_back(Layout.m_Colors.m_BodyGroup);

@@ -1,6 +1,22 @@
 # 计分板复制皮肤提示
 
 [[message]]
+key = "Copy skin ID"
+[message.translations]
+simplified_chinese = "复制皮肤 ID"
+traditional_chinese = "複製皮膚 ID"
+japanese = "スキンIDをコピー"
+korean = "스킨 ID 복사"
+russian = "Копировать ID скина"
+german = "Skin-ID kopieren"
+spanish = "Copiar ID del skin"
+french = "Copier l'ID du skin"
+brazilian_portuguese = "Copiar ID do skin"
+portuguese = "Copiar ID do skin"
+turkish = "Skin ID'sini kopyala"
+polish = "Kopiuj ID skina"
+
+[[message]]
 key = "Skin copying is only available for 0.6 skins"
 [message.translations]
 simplified_chinese = "仅支持复制 0.6 皮肤"
