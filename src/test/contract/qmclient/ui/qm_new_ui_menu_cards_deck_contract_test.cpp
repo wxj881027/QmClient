@@ -65,17 +65,17 @@ TEST(QmNewUiMenuCardsDeckContract, SettingsCardDeckPreLayoutUsesTheLastVisibleAn
 	EXPECT_NE(SettingsDeck.find("SettingsCardDeckResolveCollapsed(HasCustomCollapsedState, HasCustomCollapsedState && Card.m_pDefinition->m_IsCollapsed(), Runtime.m_DefaultCollapsed)"), std::string::npos);
 	EXPECT_NE(SettingsDeck.find("m_PreLayoutInput(PreLayoutFrame.m_ContentRect)"), std::string::npos);
 	EXPECT_NE(SettingsDeck.find("Runtime.m_LastDrawOffsetY = State.m_DrawOffsetY;"), std::string::npos);
-	EXPECT_NE(ButtonLogic.find("if(PreLayoutInput() && Inside && !IsPopupOpen())"), std::string::npos);
+	EXPECT_NE(ButtonLogic.find("const bool AllowCurrentPress = UseCurrentHit || (PreLayoutInput() && !IsPopupOpen());"), std::string::npos);
 	EXPECT_NE(ButtonLogic.find("m_pHotItem = pId;"), std::string::npos);
 	EXPECT_NE(ButtonLogic.find("m_pBecomingHotItem = pId;"), std::string::npos);
-	EXPECT_NE(ButtonLogic.find("PreLayoutCurrentFramePress && MouseButtonClicked(Button)"), std::string::npos);
+	EXPECT_NE(ButtonLogic.find("AllowCurrentPress ? QmButtonCurrentPress("), std::string::npos);
 	EXPECT_LT(ButtonLogic.find("m_pHotItem = pId;"), ButtonLogic.find("SetActiveItem(pId);"));
 }
 
 TEST(QmNewUiMenuCardsDeckContract, DeckPreLayoutPressClearsStaleActiveInput)
 {
 	const std::string UiSource = ReadTextFile("src/game/client/ui.cpp");
-	const size_t PreLayoutPress = UiSource.find("if(PreLayoutInput() && Inside && !IsPopupOpen())");
+	const size_t PreLayoutPress = UiSource.find("const bool AllowCurrentPress = UseCurrentHit || (PreLayoutInput() && !IsPopupOpen());");
 	ASSERT_NE(PreLayoutPress, std::string::npos);
 	const size_t PreLayoutPressEnd = UiSource.find("int CUi::DoDraggableButtonLogic", PreLayoutPress);
 	ASSERT_NE(PreLayoutPressEnd, std::string::npos);
@@ -207,9 +207,10 @@ TEST(QmNewUiMenuCardsDeckContract, TClientSettingsTabsRenderAllSlotsWithVisibleC
 	EXPECT_EQ(Source.find("m_TcTClientSettingsTabs"), std::string::npos);
 	EXPECT_EQ(Source.find("TCLIENT_TAB_INFO"), std::string::npos);
 	EXPECT_NE(RenderSettingsTClient.find("TabBar.w / NUMBER_OF_TCLIENT_TABS"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == 0"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClient.find("VisibleTabIndex == NUMBER_OF_TCLIENT_TABS - 1"), std::string::npos);
+	// 页签槽位化重构后不再有可见索引位图：每个页签固定分配槽位，容器经共享 CapsuleTabBarChrome 先画。
+	EXPECT_NE(RenderSettingsTClient.find("aTClientTabPages[NumTClientTabs] = Tab;"), std::string::npos);
+	EXPECT_NE(RenderSettingsTClient.find("CapsuleTabBarChrome(TClientTabBarCtx"), std::string::npos);
+	EXPECT_NE(RenderSettingsTClient.find("for(int TabIndex = 0; TabIndex < NumTClientTabs; ++TabIndex)"), std::string::npos);
 }
 
 TEST(QmNewUiMenuCardsDeckContract, TClientProfilesUsesPublicCardDeck)

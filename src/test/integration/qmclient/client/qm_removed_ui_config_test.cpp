@@ -21,7 +21,7 @@ namespace
 			m_pStorage = m_TestInfo.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 			m_pKernel.reset(IKernel::Create());
-			m_pConsole.reset(CreateConsole(CFGFLAG_CLIENT));
+			m_pConsole = CreateConsole(CFGFLAG_CLIENT);
 			m_pConfigManager.reset(CreateConfigManager());
 			m_pKernel->RegisterInterface(m_pStorage.get(), false);
 			m_pKernel->RegisterInterface(m_pConsole.get(), false);

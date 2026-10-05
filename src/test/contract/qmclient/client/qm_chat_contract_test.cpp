@@ -133,7 +133,8 @@ TEST(QmFastPracticeCommands, ResetRecapturesAnchorFromSnapshotAndServerInputIsNe
 	const std::string LockBody = SourceFunctionBody(Source, "void CFastPractice::CaptureServerLockedInputs()");
 	EXPECT_NE(LockBody.find("Input.m_Direction = 0;"), std::string::npos);
 	EXPECT_NE(LockBody.find("Input.m_Jump = 0;"), std::string::npos);
-	EXPECT_NE(LockBody.find("Input.m_Hook = 0;"), std::string::npos);
+	// 钩子被有意保留（避免挂墙本体松钩掉落），只释放移动、跳跃与开火。
+	EXPECT_EQ(LockBody.find("Input.m_Hook = 0;"), std::string::npos);
 }
 
 TEST(QmFastPracticeCommands, LateDummyAttachKeepsSessionAnchorAndSpectatorInputLocked)
