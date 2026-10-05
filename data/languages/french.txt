@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Revenir automatiquement à l'élément par défaut lorsqu'un sprite d'un élément personnalisé est entièrement transparent ; désactivez pour garder les sprites vides invisibles (par exemple pour masquer des effets)
 
-Automatically launch Steam when the client is started externally
-== Lancer automatiquement Steam lorsque le client est démarré de l'extérieur
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== Lancer automatiquement Steam lorsque le client est démarré de l'extérieur, afin que Steam suive votre temps de jeu
 
 Automatically re-join team 0 after finish (only if unlocked).
 == Rejoindre automatiquement l'équipe 0 après l'arrivée (seulement si déverrouillé)

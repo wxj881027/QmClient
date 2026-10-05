@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == 自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）
 
-Automatically launch Steam when the client is started externally
-== 客户端从外部启动时自动启动 Steam
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== 客户端从外部启动时自动启动 Steam，用于 Steam 统计游戏时长
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 完赛后自动回到 0 队（仅未锁定时）

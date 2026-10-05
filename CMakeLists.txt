@@ -3192,6 +3192,8 @@ if(CLIENT)
     sound.h
     sqlite.cpp
     steam.cpp
+    steam_probe.cpp
+    steam_probe.h
     text.cpp
     text_sweep.h
     updater.cpp
@@ -5148,6 +5150,10 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_net_benchmark.cpp
     src/test/benchmark/qm_snapshot_benchmark.cpp
     src/test/benchmark/qm_font_raster_benchmark.cpp
+    src/test/benchmark/qm_steam_benchmark.cpp
+    # Steam 客户端探测链（SteamFindClient 基准；依赖 steam_api 的链接桩）
+    src/engine/client/steam.cpp
+    src/engine/client/steam_probe.cpp
     # 动画实现（testrunner 的 TESTS_EXTRA 同款集合）
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmAnimationBackend.cpp
@@ -5163,6 +5169,10 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   )
   add_dependencies(qm-benchmarks generate_protocol)
   target_link_libraries(qm-benchmarks ${PNG_LIBRARIES} ${WebP_LIBRARIES} benchmark::benchmark ${FREETYPE_LIBRARIES} ${LIBS_SERVER})
+  if(TARGET steam_api)
+    # steam.cpp 只在链接期需要 SteamAPI 符号；探测链本身不调用任何 SteamAPI 函数
+    target_link_libraries(qm-benchmarks steam_api)
+  endif()
   target_include_directories(qm-benchmarks PRIVATE ${FREETYPE_INCLUDE_DIRS})
   if(TARGET_OS STREQUAL "windows")
     target_link_libraries(qm-benchmarks bcrypt winhttp ws2_32)

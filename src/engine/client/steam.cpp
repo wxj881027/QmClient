@@ -1,3 +1,6 @@
+#include "steam_probe.h"
+
+#include <base/fs.h>
 #include <base/system.h>
 
 #include <engine/shared/config.h>
@@ -160,13 +163,87 @@ namespace
 
 } // namespace
 
+#if defined(CONF_FAMILY_UNIX)
+namespace
+{
+	// Unix 智能识别：标准安装脚本位置与常见二进制路径。
+	bool SteamFindClientUnix(char *pBuffer, int BufferSize)
+	{
+#if defined(CONF_PLATFORM_MACOS)
+		if(fs_is_dir("/Applications/Steam.app"))
+		{
+			str_copy(pBuffer, "/Applications/Steam.app", BufferSize);
+			return true;
+		}
+		return false;
+#else
+		const char *apSystemCandidates[] = {"/usr/bin/steam", "/usr/local/bin/steam"};
+		for(const char *pCandidate : apSystemCandidates)
+		{
+			if(fs_is_file(pCandidate))
+			{
+				str_copy(pBuffer, pCandidate, BufferSize);
+				return true;
+			}
+		}
+		const char *pHome = getenv("HOME");
+		if(pHome == nullptr || pHome[0] == '\0')
+			return false;
+		char aPath[1024];
+		const char *apHomeCandidates[] = {
+			".steam/steam/steam.sh",
+			".steam/root/steam.sh",
+			".local/share/Steam/steam.sh",
+		};
+		for(const char *pCandidate : apHomeCandidates)
+		{
+			str_format(aPath, (int)sizeof(aPath), "%s/%s", pHome, pCandidate);
+			if(fs_is_file(aPath))
+			{
+				str_copy(pBuffer, aPath, BufferSize);
+				return true;
+			}
+		}
+		return false;
+#endif
+	}
+} // namespace
+#endif
+
+bool SteamFindClient(char *pBuffer, int BufferSize)
+{
+#if defined(CONF_PLATFORM_ANDROID)
+	return false;
+#elif defined(CONF_FAMILY_WINDOWS)
+	return SteamProbeFindClientWindows(pBuffer, BufferSize);
+#else
+	return SteamFindClientUnix(pBuffer, BufferSize);
+#endif
+}
+
 bool SteamOpenClient()
 {
 #if defined(CONF_PLATFORM_ANDROID)
 	return false;
 #else
+	// 智能识别：先定位 Steam 客户端再启动；未安装时直接放弃，
+	// 绝不把找不到的名字交给 shell，避免触发系统「找不到文件」弹窗。
+	char aSteamPath[1024];
+	if(!SteamFindClient(aSteamPath, (int)sizeof(aSteamPath)))
+	{
+		dbg_msg("steam", "steam client not found, skip launch");
+		return false;
+	}
+	if(g_Config.m_Debug)
+		dbg_msg("steam", "found steam client: '%s'", aSteamPath);
+#if defined(CONF_PLATFORM_MACOS)
+	// macOS：用 open 启动检测到的应用包。
+	const char *apOpenArguments[] = {aSteamPath};
+	return shell_execute("open", EShellExecuteWindowState::BACKGROUND, apOpenArguments, 1) != INVALID_PROCESS;
+#else
 	const char *apArguments[] = {STEAM_SILENT_ARGUMENT};
-	return shell_execute("steam.exe", EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
+	return shell_execute(aSteamPath, EShellExecuteWindowState::BACKGROUND, apArguments, 1) != INVALID_PROCESS;
+#endif
 #endif
 }
 

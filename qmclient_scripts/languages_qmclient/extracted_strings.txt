@@ -407,7 +407,7 @@ Automatically close the current chat after waking from freeze
 Automatically create statboard csv
 Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
-Automatically launch Steam when the client is started externally
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
 Automatically re-join team 0 after finish (only if unlocked).
 Automatically record demos
 Automatically record replays

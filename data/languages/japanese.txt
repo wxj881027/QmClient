@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == カスタムアセットのスプライトが完全に透明な場合は自動的に既定のアセットへ戻します。オフにすると空白スプライトは非表示のままになります（エフェクトを隠す用途など）
 
-Automatically launch Steam when the client is started externally
-== クライアントを外部から起動したとき Steam を自動起動
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== クライアントを外部から起動したとき Steam を自動起動（Steam のプレイ時間統計用）
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 完走後に自動でチーム 0 に再参加（ロック解除時のみ）

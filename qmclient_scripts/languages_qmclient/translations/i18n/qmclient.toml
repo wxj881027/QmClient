@@ -2383,20 +2383,20 @@ turkish = "Özel bir varlığın sprite'ı tamamen saydamsa otomatik olarak vars
 polish = "Automatycznie wracaj do domyślnego zasobu, gdy sprite zasobu niestandardowego jest całkowicie przezroczysty; wyłącz, aby puste sprite'y pozostały niewidoczne (np. do ukrywania efektów)"
 
 [[message]]
-key = "Automatically launch Steam when the client is started externally"
+key = "Automatically launch Steam when the client is started externally, so Steam can track your playtime"
 [message.translations]
-simplified_chinese = "客户端从外部启动时自动启动 Steam"
-traditional_chinese = "用外部方式啟動客戶端時自動啟動 Steam"
-japanese = "クライアントを外部から起動したとき Steam を自動起動"
-korean = "클라이언트를 외부에서 시작할 때 Steam 자동 실행"
-russian = "Автоматически запускать Steam при внешнем запуске клиента"
-german = "Steam automatisch starten, wenn der Client extern gestartet wird"
-spanish = "Iniciar Steam automáticamente al iniciar el cliente externamente"
-french = "Lancer automatiquement Steam lorsque le client est démarré de l'extérieur"
-brazilian_portuguese = "Iniciar o Steam automaticamente quando o cliente for iniciado externamente"
-portuguese = "Iniciar o Steam automaticamente quando o cliente for iniciado externamente"
-turkish = "İstemci harici olarak başlatıldığında Steam'i otomatik aç"
-polish = "Uruchamiaj Steam automatycznie przy zewnętrznym uruchomieniu klienta"
+simplified_chinese = "客户端从外部启动时自动启动 Steam，用于 Steam 统计游戏时长"
+traditional_chinese = "用外部方式啟動客戶端時自動啟動 Steam，用於 Steam 統計遊戲時數"
+japanese = "クライアントを外部から起動したとき Steam を自動起動（Steam のプレイ時間統計用）"
+korean = "클라이언트를 외부에서 시작할 때 Steam 자동 실행(플레이 시간 집계용)"
+russian = "Автоматически запускать Steam при внешнем запуске клиента, чтобы Steam учитывал время игры"
+german = "Steam automatisch starten, wenn der Client extern gestartet wird, damit Steam deine Spielzeit erfassen kann"
+spanish = "Iniciar Steam automáticamente al iniciar el cliente externamente, para que Steam registre tu tiempo de juego"
+french = "Lancer automatiquement Steam lorsque le client est démarré de l'extérieur, afin que Steam suive votre temps de jeu"
+brazilian_portuguese = "Iniciar o Steam automaticamente quando o cliente for iniciado externamente, para que o Steam registre seu tempo de jogo"
+portuguese = "Iniciar o Steam automaticamente quando o cliente for iniciado externamente, para que o Steam registe o tempo de jogo"
+turkish = "İstemci harici olarak başlatıldığında Steam'i otomatik aç, böylece Steam oyun sürenizi kaydedebilir"
+polish = "Uruchamiaj Steam automatycznie przy zewnętrznym uruchomieniu klienta, aby Steam rejestrował twój czas gry"
 
 [[message]]
 key = "Automatically switch hammer/gun in Gores mode"

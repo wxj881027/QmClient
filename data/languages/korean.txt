@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == 사용자 지정 에셋 스프라이트가 완전히 투명하면 자동으로 기본 에셋으로 대체합니다. 끄면 빈 스프라이트가 보이지 않는 상태로 유지됩니다 (효과 숨기기 등)
 
-Automatically launch Steam when the client is started externally
-== 클라이언트를 외부에서 시작할 때 Steam 자동 실행
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== 클라이언트를 외부에서 시작할 때 Steam 자동 실행(플레이 시간 집계용)
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 완주 후 자동으로 0팀 재가입 (잠금 해제된 경우에만)

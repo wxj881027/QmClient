@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Özel bir varlığın sprite'ı tamamen saydamsa otomatik olarak varsayılan varlığa geri dön; boş sprite'ları görünmez tutmak için kapat (örneğin efektleri gizlemek için)
 
-Automatically launch Steam when the client is started externally
-== İstemci harici olarak başlatıldığında Steam'i otomatik aç
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== İstemci harici olarak başlatıldığında Steam'i otomatik aç, böylece Steam oyun sürenizi kaydedebilir
 
 Automatically re-join team 0 after finish (only if unlocked).
 == Bitişten sonra otomatik olarak 0 takımına yeniden katıl (yalnızca kilitli değilse)
