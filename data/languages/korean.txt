@@ -2960,6 +2960,15 @@ Deep unfreeze tile outline color
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == 딥플라이 모드 (0=일반, 1=DF, 2=HDF, 3=사용자 정의)
 
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: 매월 50만 자(deepl.com에서 등록; 무료 키는 :fx로 끝남)
+
+DeepL API Key (free keys end with :fx)
+== DeepL API 키(무료 키는 :fx로 끝남)
+
 DeepSeek
 == DeepSeek
 
@@ -13042,6 +13051,9 @@ Translation queue full, sending original
 
 Translation service
 == 번역 서비스
+
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== 번역 서비스가 번역문 대신 안내를 반환했습니다(이 메시지에 필터링된 단어가 포함되어 있을 수 있음)
 
 Translation Settings
 == 번역 설정

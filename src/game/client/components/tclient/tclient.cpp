@@ -3077,10 +3077,14 @@ void CTClient::StartUpdateDownload()
 	m_UpdateCheckFailed = false;
 	m_UpdateFailureNoticeShown = false;
 	m_UpdateFailureExitAt = 0;
-	IStorage::FormatTmpPath(m_aUpdatePackageTmp, sizeof(m_aUpdatePackageTmp), QMCLIENT_UPDATE_PACKAGE_NAME);
-	IStorage::FormatTmpPath(m_aUpdatePackageSignatureTmp, sizeof(m_aUpdatePackageSignatureTmp), QMCLIENT_UPDATE_PACKAGE_SIGNATURE_NAME);
-	IStorage::FormatTmpPath(m_aUpdateManifestTmp, sizeof(m_aUpdateManifestTmp), QMCLIENT_UPDATE_MANIFEST_NAME);
-	IStorage::FormatTmpPath(m_aUpdateManifestSignatureTmp, sizeof(m_aUpdateManifestSignatureTmp), QMCLIENT_UPDATE_MANIFEST_SIGNATURE_NAME);
+	// 安装版使用 Setup 更新卸载记录；便携版和旧 Release 保留 ZIP 流程。
+	char aSetupMarker[IO_MAX_PATH_LENGTH];
+	Storage()->GetBinaryPath("QmClient-Setup.ini", aSetupMarker, sizeof(aSetupMarker));
+	m_UpdateUseSetup = UseQmClientSetupUpdate(fs_is_file(aSetupMarker), m_UpdateRelease);
+	IStorage::FormatTmpPath(m_aUpdatePackageTmp, sizeof(m_aUpdatePackageTmp), m_UpdateUseSetup ? "QmClient-Setup.exe" : QMCLIENT_UPDATE_PACKAGE_NAME);
+	IStorage::FormatTmpPath(m_aUpdatePackageSignatureTmp, sizeof(m_aUpdatePackageSignatureTmp), m_UpdateUseSetup ? "QmClient-Setup.exe.sig" : QMCLIENT_UPDATE_PACKAGE_SIGNATURE_NAME);
+	IStorage::FormatTmpPath(m_aUpdateManifestTmp, sizeof(m_aUpdateManifestTmp), m_UpdateUseSetup ? "QmClient-windows-setup-update.json" : QMCLIENT_UPDATE_MANIFEST_NAME);
+	IStorage::FormatTmpPath(m_aUpdateManifestSignatureTmp, sizeof(m_aUpdateManifestSignatureTmp), m_UpdateUseSetup ? "QmClient-windows-setup-update.json.sig" : QMCLIENT_UPDATE_MANIFEST_SIGNATURE_NAME);
 
 	const auto StartDownload = [&](std::shared_ptr<IHttpRequest> &pTask, const char *pUrl, const char *pDestination, int64_t MaxResponseSize) {
 		pTask = HttpGet(pUrl);
@@ -3091,10 +3095,10 @@ void CTClient::StartUpdateDownload()
 		pTask->WriteToFile(Storage(), pDestination, IStorage::TYPE_SAVE);
 		Http()->Run(pTask);
 	};
-	StartDownload(m_pUpdatePackageTask, m_UpdateRelease.m_aPackageUrl, m_aUpdatePackageTmp, QMCLIENT_UPDATE_MAX_PACKAGE_SIZE);
-	StartDownload(m_pUpdatePackageSignatureTask, m_UpdateRelease.m_aPackageSignatureUrl, m_aUpdatePackageSignatureTmp, 64);
-	StartDownload(m_pUpdateManifestTask, m_UpdateRelease.m_aManifestUrl, m_aUpdateManifestTmp, QMCLIENT_UPDATE_MAX_MANIFEST_SIZE);
-	StartDownload(m_pUpdateManifestSignatureTask, m_UpdateRelease.m_aManifestSignatureUrl, m_aUpdateManifestSignatureTmp, 64);
+	StartDownload(m_pUpdatePackageTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupUrl : m_UpdateRelease.m_aPackageUrl, m_aUpdatePackageTmp, QMCLIENT_UPDATE_MAX_PACKAGE_SIZE);
+	StartDownload(m_pUpdatePackageSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl, m_aUpdatePackageSignatureTmp, 64);
+	StartDownload(m_pUpdateManifestTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestUrl : m_UpdateRelease.m_aManifestUrl, m_aUpdateManifestTmp, QMCLIENT_UPDATE_MAX_MANIFEST_SIZE);
+	StartDownload(m_pUpdateManifestSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestSignatureUrl : m_UpdateRelease.m_aManifestSignatureUrl, m_aUpdateManifestSignatureTmp, 64);
 #endif
 }
 
@@ -3271,7 +3275,8 @@ void CTClient::FinishUpdateDownloads()
 	char aError[256] = "";
 	uint64_t SignedPackageSize = 0;
 	uint8_t aSignedPackageDigest[SHA256_DIGEST_LENGTH] = {};
-	if(!qm_update_verify_manifest_package(ManifestData.get(), ManifestSize, ManifestSignatureData.get(), ManifestSignatureSize,
+	const auto VerifyManifest = m_UpdateUseSetup ? qm_update_verify_setup_manifest : qm_update_verify_manifest_package;
+	if(!VerifyManifest(ManifestData.get(), ManifestSize, ManifestSignatureData.get(), ManifestSignatureSize,
 		   &SignedPackageSize, aSignedPackageDigest, sizeof(aSignedPackageDigest), aError, sizeof(aError)))
 	{
 		Fail(aError);
@@ -3279,7 +3284,7 @@ void CTClient::FinishUpdateDownloads()
 	}
 
 	SQmClientUpdateManifest Manifest;
-	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD) ||
+	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD, m_UpdateUseSetup) ||
 		str_comp(Manifest.m_aVersion, m_UpdateRelease.m_aVersion) != 0 ||
 		Manifest.m_PackageSize != SignedPackageSize || mem_comp(Manifest.m_PackageSha256.data, aSignedPackageDigest, sizeof(aSignedPackageDigest)) != 0)
 	{
@@ -3310,6 +3315,26 @@ void CTClient::FinishUpdateDownloads()
 	char aPackagePath[IO_MAX_PATH_LENGTH] = "";
 	char aInstallerPath[IO_MAX_PATH_LENGTH] = "";
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aPackagePath, sizeof(aPackagePath));
+	if(m_UpdateUseSetup)
+	{
+		// 下载临时名以 .tmp 结尾，Windows 执行带参数的程序必须保留 .exe 扩展名。
+		char aSetupRelativePath[IO_MAX_PATH_LENGTH];
+		str_format(aSetupRelativePath, sizeof(aSetupRelativePath), "qmclient/QmClient-Setup-%d.exe", pid());
+		if(!Storage()->RenameFile(m_aUpdatePackageTmp, aSetupRelativePath, IStorage::TYPE_SAVE))
+		{
+			Fail("Failed to prepare the Setup executable");
+			return;
+		}
+		str_copy(m_aUpdatePackageTmp, aSetupRelativePath);
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aInstallerPath, sizeof(aInstallerPath));
+		str_copy(m_aUpdateInstallerTmp, aInstallerPath);
+		m_UpdateReady = true;
+		m_UpdateCheckFailed = false;
+		m_aUpdateError[0] = '\0';
+		ResetUpdateDownloadTasks();
+		Client()->AddWarning(SWarning(Localize("Update notice"), Localize("The update is ready and will be installed when you exit.")));
+		return;
+	}
 	str_format(m_aUpdateInstallerTmp, sizeof(m_aUpdateInstallerTmp), "qmclient/QmClient-Updater-%d.exe", pid());
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateInstallerTmp, aInstallerPath, sizeof(aInstallerPath));
 	str_copy(m_aUpdateInstallerTmp, aInstallerPath, sizeof(m_aUpdateInstallerTmp));
@@ -3356,6 +3381,26 @@ bool CTClient::LaunchUpdateInstaller()
 		return false;
 	}
 
+	if(m_UpdateUseSetup)
+	{
+		// 退出可能晚于下载数小时：启动前重新校验磁盘文件，不能只信任下载时的哈希。
+		char aError[256];
+		if(!qm_update_verify_setup_files(aPackagePath, aPackageSignaturePath, aManifestPath, aManifestSignaturePath, QMCLIENT_VERSION, aError, sizeof(aError)))
+		{
+			log_error("qm-update", "Setup validation before launch failed: %s", aError);
+			RemoveUpdateTempFiles();
+			return false;
+		}
+		char aDirectoryArgument[IO_MAX_PATH_LENGTH + 8];
+		str_format(aDirectoryArgument, sizeof(aDirectoryArgument), "/DIR=%s", aInstallPath);
+		const char *apSetupArguments[] = {"/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", aDirectoryArgument};
+		const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apSetupArguments, std::size(apSetupArguments));
+		if(Process == INVALID_PROCESS)
+			return false;
+		CloseHandle(static_cast<HANDLE>(Process));
+		m_UpdateInstallerStarted = true;
+		return true;
+	}
 	char aPid[32];
 	str_format(aPid, sizeof(aPid), "%d", pid());
 	const char *apArguments[] = {

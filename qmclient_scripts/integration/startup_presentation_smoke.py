@@ -77,7 +77,7 @@ def smoke_cjk_family_selected(env: StartupEnvironment) -> None:
 def smoke_missing_cjk_family(env: StartupEnvironment) -> None:
 	client = env.start(["tc_custom_font_cjk QmClient Missing Test Font"])
 	family, _ = first_cjk_glyph(client)
-	if family != "LXGW WenKai":
+	if family != "Source Han Sans SC":
 		raise AssertionError(f"missing custom CJK face did not follow the configured default chain: {family!r}")
 	env.finish_startup()
 	env.quit()
@@ -93,9 +93,9 @@ def smoke_cjk_custom_family(env: StartupEnvironment) -> None:
 
 
 def smoke_cjk_category_independent(env: StartupEnvironment) -> None:
-	# 主链与 CJK 分类各走各的：全局字体选霞鹜文楷时，CJK 分类面仍按自身
+	# 主链与 CJK 分类各走各的：全局字体选 DejaVu Sans 时，CJK 分类面仍按自身
 	# 配置解析到思源黑体，不被主链吞掉（全局字体增强不影响分类语义）。
-	client = env.start(["tc_custom_font LXGW WenKai Regular", "tc_custom_font_cjk Source Han Sans SC"])
+	client = env.start(["tc_custom_font DejaVu Sans", "tc_custom_font_cjk Source Han Sans SC"])
 	family, _ = first_cjk_glyph(client)
 	if family != "Source Han Sans SC":
 		raise AssertionError(f"first CJK glyph used {family!r}; expected the CJK category face to stay independent of the main chain")

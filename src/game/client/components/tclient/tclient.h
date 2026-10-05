@@ -511,6 +511,7 @@ public:
 	bool m_UpdateShutdownRequested = false;
 	bool m_UpdateInstallerStarted = false;
 	bool m_UpdateReady = false;
+	bool m_UpdateUseSetup = false;
 	bool m_UpdateCheckFailed = false;
 	bool m_UpdateFailureNoticeShown = false;
 	bool m_UpdateAutoEnabled = false;

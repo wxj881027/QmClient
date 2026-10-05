@@ -92,6 +92,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Setup Inno Setup (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
       - name: Validate and update version from tag
         if: env.RELEASE_TAG != ''
         shell: bash
@@ -242,6 +247,22 @@ jobs:
         shell: bash
         run: cmake --build build --target package_default --parallel
 
+      - name: Build complete Windows setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $source = (Resolve-Path build).Path
+          $setupSource = Join-Path (Resolve-Path build).Path 'setup-source'
+          & "${{ steps.setup-python.outputs.python-path }}" qmclient_scripts/prepare_setup_source.py --source $source --data (Resolve-Path data).Path --output $setupSource
+          if ($LASTEXITCODE -ne 0) { throw 'Setup payload preparation failed' }
+          $versionHeader = Get-Content src/game/version.h -Raw
+          $version = [regex]::Match($versionHeader, '#define QMCLIENT_BASE_VERSION "([^"]+)"').Groups[1].Value
+          $preview = [int][regex]::Match($versionHeader, '#define QMCLIENT_PREVIEW_NUMBER (\d+)').Groups[1].Value
+          if ($preview -gt 0) { $version += "-preview.$preview" }
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          & $compiler "/DSourceDir=$setupSource" "/DAppVersion=$version" "/DOutputDir=$((Resolve-Path build).Path)" qmclient_scripts/installer/QmClient.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Setup compilation failed' }
+
       - name: Collect package
         shell: bash
         run: |
@@ -258,6 +279,13 @@ jobs:
                 found=true
               fi
             done
+            setup_pkg="$(find build -type f -name 'QmClient-Setup.exe' 2>/dev/null | head -n 1)"
+            if [ -z "$setup_pkg" ]; then
+              echo "No QmClient-Setup.exe found under build/"
+              exit 1
+            fi
+            cp "$setup_pkg" "dist/QmClient-Setup.exe"
+            echo "Found: $setup_pkg -> dist/QmClient-Setup.exe"
             if [ "$found" = "false" ]; then
               echo "No zip or 7z package found under build/"
               exit 1
@@ -365,7 +393,7 @@ jobs:
             echo "- **Status**: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ runner.os }}" = "Windows" ]; then
-            echo "- **Artifacts**: QmClient-windows.zip, QmClient-windows.7z" >> "$GITHUB_STEP_SUMMARY"
+            echo "- **Artifacts**: QmClient-Setup.exe, QmClient-windows.zip, QmClient-windows.7z" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- **Artifact**: ${{ matrix.output_name }}" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -645,6 +673,7 @@ jobs:
           fi
           .update-signing-venv/bin/python qmclient_scripts/sign_update_release.py \
             --package release-assets/QmClient-windows.zip \
+            --setup release-assets/QmClient-Setup.exe \
             --version "${RELEASE_TAG}" \
             --private-key-env QM_UPDATE_ED25519_PRIVATE_KEY \
             --normalize-package \
@@ -685,6 +714,10 @@ jobs:
             release-assets/QmClient-windows-update.json
             release-assets/QmClient-windows-update.json.sig
             release-assets/QmClient-windows.7z
+            release-assets/QmClient-Setup.exe
+            release-assets/QmClient-Setup.exe.sig
+            release-assets/QmClient-windows-setup-update.json
+            release-assets/QmClient-windows-setup-update.json.sig
             release-assets/QmClient-ubuntu.tar.xz
             release-assets/QmClient-macOS.dmg
             release-assets/QmClient-android.apk
@@ -701,7 +734,7 @@ jobs:
           from pathlib import Path
 
           release = json.loads(Path("release-state.json").read_text())
-          expected = {"QmClient-windows.zip", "QmClient-windows.zip.sig", "QmClient-windows-update.json", "QmClient-windows-update.json.sig", "QmClient-windows.7z", "QmClient-ubuntu.tar.xz", "QmClient-macOS.dmg", "QmClient-android.apk", "QmClient-android.aab"}
+          expected = {"QmClient-windows.zip", "QmClient-windows.zip.sig", "QmClient-windows-update.json", "QmClient-windows-update.json.sig", "QmClient-windows.7z", "QmClient-Setup.exe", "QmClient-Setup.exe.sig", "QmClient-windows-setup-update.json", "QmClient-windows-setup-update.json.sig", "QmClient-ubuntu.tar.xz", "QmClient-macOS.dmg", "QmClient-android.apk", "QmClient-android.aab"}
           assert release["isDraft"] and release["tagName"] == os.environ["RELEASE_TAG"]
           assert release["isPrerelease"] == ("-preview." in os.environ["RELEASE_TAG"])
           assets = {asset["name"]: asset for asset in release["assets"]}

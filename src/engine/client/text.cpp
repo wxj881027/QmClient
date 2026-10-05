@@ -4,6 +4,7 @@
 #include "glyph_lookup_cache.h"
 #include "glyph_outline.h"
 #include "qm_font_category.h"
+#include "qm_font_resource_policy.h"
 #include "text_layout_string.h"
 #include "text_sweep.h"
 #include "text_word_cursor.h"
@@ -1182,22 +1183,31 @@ public:
 		}
 	}
 
-	bool TrySetIconStyleFaceByName(const char *pFamilyName, FT_Face &Face)
-	{
-		Face = GetFaceByName(pFamilyName);
-		return Face != nullptr;
-	}
-
 	// QmClient: 图标字重样式面。名字来自 index.json 的 'icon styles' 键，
-	// 缺省沿用随包 Phosphor 命名约定；对应样式缺字时保持原 face 不动。
+	// 缺省沿用随包 Phosphor 命名约定；对应样式缺失时回退到当前样式或 regular。
 	void SetIconStyleFacesByName(const char *pLight, const char *pFill, const char *pDuotone)
 	{
 		if(pLight != nullptr)
-			TrySetIconStyleFaceByName(pLight, m_IconLightFace);
+		{
+			const FT_Face Candidate = GetFaceByName(pLight);
+			if(Candidate == nullptr)
+				log_warn("textrender", "The light icon font face '%s' could not be found, falling back", pLight);
+			m_IconLightFace = ResolveFontFaceWithFallback(Candidate, m_IconLightFace, m_IconRegularFace);
+		}
 		if(pFill != nullptr)
-			TrySetIconStyleFaceByName(pFill, m_IconFillFace);
+		{
+			const FT_Face Candidate = GetFaceByName(pFill);
+			if(Candidate == nullptr)
+				log_warn("textrender", "The fill icon font face '%s' could not be found, falling back", pFill);
+			m_IconFillFace = ResolveFontFaceWithFallback(Candidate, m_IconFillFace, m_IconRegularFace);
+		}
 		if(pDuotone != nullptr)
-			TrySetIconStyleFaceByName(pDuotone, m_IconDuotoneFace);
+		{
+			const FT_Face Candidate = GetFaceByName(pDuotone);
+			if(Candidate == nullptr)
+				log_warn("textrender", "The duotone icon font face '%s' could not be found, falling back", pDuotone);
+			m_IconDuotoneFace = ResolveFontFaceWithFallback(Candidate, m_IconDuotoneFace, m_IconRegularFace);
+		}
 	}
 
 	void SetIconFontWeight(const int Weight)
@@ -2350,6 +2360,11 @@ public:
 		std::sort(vFontFiles.begin(), vFontFiles.end());
 		for(const std::string &FilePath : vFontFiles)
 		{
+			if(IsLegacyBundledIconFontPath(FilePath.c_str()))
+			{
+				log_info("textrender", "Ignoring legacy bundled icon font '%s'", FilePath.c_str());
+				continue;
+			}
 			// 字体商店下载后会触发重扫：跳过已加载的文件，避免重复建 face 与重复占内存。
 			const bool AlreadyLoaded = std::find_if(m_vLoadedCustomFontPaths.begin(), m_vLoadedCustomFontPaths.end(), [&FilePath](const std::string &Loaded) {
 				return str_comp_nocase(Loaded.c_str(), FilePath.c_str()) == 0;

@@ -831,6 +831,26 @@ private:
 	// MyMemory 单次查询上限 500 字节
 	static constexpr size_t MAX_QUERY_BYTES = 500;
 
+	// 源文本：供"返回内容是服务提示而非译文"的启发式比对（如结果插入源文本没有的链接）。
+	std::string m_QueryText;
+
+	// MyMemory 的翻译记忆语料（KDE 等）对短句/含屏蔽词输入可能返回整段翻译指导样板
+	// 而非译文（例：kturtle 的 "You are about to translate the 'Backward': COMMAND..."）。
+	// 识别特征：已知的翻译指导措辞，或结果带源文本中不存在的链接。
+	bool ResultLooksLikeServiceNotice(const char *pResultText) const
+	{
+		if(!pResultText || pResultText[0] == '\0')
+			return false;
+		if(str_find_nocase(pResultText, "translator.php") ||
+			str_find_nocase(pResultText, "You are about to translate") ||
+			str_find_nocase(pResultText, "on how to translate it"))
+			return true;
+		const bool ResultHasLink = str_find_nocase(pResultText, "http://") != nullptr ||
+					   str_find_nocase(pResultText, "https://") != nullptr;
+		const bool SourceHasLink = str_find_nocase(m_QueryText.c_str(), "http") != nullptr;
+		return ResultHasLink && !SourceHasLink;
+	}
+
 	// MyMemory 使用 RFC3066 语言码，简体中文需写作 zh-CN
 	static const char *EncodeLangCode(const char *pCode)
 	{
@@ -909,6 +929,14 @@ private:
 			return false;
 		}
 
+		// 翻译记忆命中的服务提示样板按失败处理，由调用方展示本地化固定文案
+		if(ResultLooksLikeServiceNotice(pTranslatedText->u.string.ptr))
+		{
+			Out.m_Notice = ETranslateNotice::SERVICE_NOTICE;
+			str_copy(Out.m_Text, "MyMemory returned a service notice instead of a translation");
+			return false;
+		}
+
 		if(Status != 200)
 		{
 			str_format(Out.m_Text, sizeof(Out.m_Text), "MyMemory error %d: %.120s", Status, pTranslatedText->u.string.ptr);
@@ -955,6 +983,8 @@ public:
 
 	CTranslateBackendMymemory(IHttp &Http, const char *pText, const char *pTarget, const char *pSource, FTranslateRequestFactory pCreateRequest) : ITranslateBackendHttp(pCreateRequest)
 	{
+		m_QueryText = pText ? pText : "";
+
 		// 按 UTF-8 边界截断到 MyMemory 500 字节上限
 		char aQuery[MAX_QUERY_BYTES + 1];
 		size_t Copy = 0;
@@ -980,6 +1010,190 @@ public:
 		str_append(aBuf, EncodeTarget(pTarget), sizeof(aBuf));
 
 		PrepareHttpRequest(aBuf);
+		Http.Run(m_pHttpRequest);
+	}
+};
+
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+class CTranslateBackendDeepl : public ITranslateBackendHttp
+{
+private:
+	// DeepL 语言码使用大写；官方语言表无 ZH-TW，繁体目标为 ZH-HANT（仅目标），源语言用基础码 ZH
+	static std::string UpperLanguageCode(const char *pCode)
+	{
+		std::string Upper = pCode ? pCode : "";
+		for(char &c : Upper)
+			c = (c >= 'a' && c <= 'z') ? static_cast<char>(c - 'a' + 'A') : c;
+		return Upper;
+	}
+
+	bool ParseResponseJson(const json_value *pObj, CTranslateResponse &Out)
+	{
+		if(!pObj)
+		{
+			str_copy(Out.m_Text, "Response is not JSON");
+			return false;
+		}
+		if(pObj->type != json_object)
+		{
+			str_copy(Out.m_Text, "Response is not object");
+			return false;
+		}
+
+		const json_value *pTranslations = json_object_get(pObj, "translations");
+		if(pTranslations == &json_value_none || pTranslations->type != json_array)
+		{
+			str_copy(Out.m_Text, "No translations");
+			return false;
+		}
+		if(pTranslations->u.array.length <= 0)
+		{
+			str_copy(Out.m_Text, "translations is empty");
+			return false;
+		}
+
+		const json_value *pTranslation = pTranslations->u.array.values[0];
+		if(!pTranslation || pTranslation->type != json_object)
+		{
+			str_copy(Out.m_Text, "translation is not object");
+			return false;
+		}
+
+		const json_value *pText = json_object_get(pTranslation, "text");
+		if(pText == &json_value_none || pText->type != json_string)
+		{
+			str_copy(Out.m_Text, "No translation text");
+			return false;
+		}
+
+		if(pText->u.string.length == 0 || pText->u.string.length >= sizeof(Out.m_Text))
+		{
+			str_copy(Out.m_Text, "DeepL translation is empty or exceeds buffer capacity");
+			return false;
+		}
+
+		const json_value *pDetected = json_object_get(pTranslation, "detected_source_language");
+		if(pDetected != &json_value_none && pDetected->type == json_string)
+			str_copy(Out.m_Language, pDetected->u.string.ptr);
+		else
+			Out.m_Language[0] = '\0';
+
+		str_copy(Out.m_Text, pText->u.string.ptr);
+		return true;
+	}
+
+	// 非 200 时也走 ParseResponse：给出 403/429/456 的针对性错误说明
+	bool ParseHttpError() const override
+	{
+		return true;
+	}
+
+protected:
+	bool ParseResponse(CTranslateResponse &Out) override
+	{
+		const int StatusCode = m_pHttpRequest->StatusCode();
+		if(StatusCode >= 400)
+		{
+			const char *pMeaning = nullptr;
+			if(StatusCode == 403)
+				pMeaning = "DeepL: invalid API key or wrong endpoint tier (free keys end with :fx)";
+			else if(StatusCode == 429)
+				pMeaning = "DeepL: too many requests, try again later";
+			else if(StatusCode == 456)
+				pMeaning = "DeepL: monthly character quota exceeded";
+			if(pMeaning)
+			{
+				str_copy(Out.m_Text, pMeaning);
+				return false;
+			}
+			str_format(Out.m_Text, sizeof(Out.m_Text), "DeepL HTTP %d", StatusCode);
+			// 其余错误读取响应体的 message 字段补充细节
+			json_value *pObj = m_pHttpRequest->ResultJson();
+			if(pObj && pObj->type == json_object)
+			{
+				const json_value *pMessage = json_object_get(pObj, "message");
+				if(pMessage != &json_value_none && pMessage->type == json_string)
+					str_format(Out.m_Text, sizeof(Out.m_Text), "DeepL HTTP %d: %.200s", StatusCode, pMessage->u.string.ptr);
+			}
+			json_value_free(pObj);
+			return false;
+		}
+
+		json_value *pObj = m_pHttpRequest->ResultJson();
+		const bool Result = ParseResponseJson(pObj, Out);
+		json_value_free(pObj);
+		return Result;
+	}
+
+public:
+	const char *EncodeTarget(const char *pTarget) const override
+	{
+		// 接口按值语义消费返回串，但可能连续调用两次（CompareTargets），
+		// 用双槽位轮换缓冲避免悬空与互相覆盖。
+		static char aBuf[2][16];
+		static int Slot = 0;
+		char *pBuf = aBuf[Slot];
+		Slot = (Slot + 1) % 2;
+		const char *pCode = (pTarget && pTarget[0] != '\0') ? pTarget : DefaultConfig::QmTranslateTarget;
+		if(str_comp_nocase(pCode, "zh") == 0)
+		{
+			str_copy(pBuf, "ZH", 16);
+			return pBuf;
+		}
+		if(str_comp_nocase(pCode, "zh-tw") == 0)
+		{
+			str_copy(pBuf, "ZH-HANT", 16);
+			return pBuf;
+		}
+		str_copy(pBuf, UpperLanguageCode(pCode).c_str(), 16);
+		return pBuf;
+	}
+
+	const char *Name() const override
+	{
+		return "DeepL";
+	}
+
+	CTranslateBackendDeepl(IHttp &Http, const char *pText, const char *pTarget, const char *pSource, FTranslateRequestFactory pCreateRequest) : ITranslateBackendHttp(pCreateRequest)
+	{
+		// 免费 key 以 ":fx" 结尾，使用 api-free.deepl.com；Pro key 使用 api.deepl.com（官方 CLI 同款判别）
+		const char *pApiKey = g_Config.m_QmTranslateDeeplKey;
+		if(pApiKey[0] == '\0')
+		{
+			SetInitError("Missing API Key: configure the DeepL API key in settings (free keys end with :fx)");
+			return;
+		}
+
+		const char *pUrl = str_endswith_nocase(pApiKey, ":fx") != nullptr ? "https://api-free.deepl.com/v2/translate" : "https://api.deepl.com/v2/translate";
+
+		CJsonStringWriter Json;
+		Json.BeginObject();
+		Json.WriteAttribute("text");
+		Json.BeginArray();
+		Json.WriteStrValue(pText);
+		Json.EndArray();
+		Json.WriteAttribute("target_lang");
+		Json.WriteStrValue(EncodeTarget(pTarget));
+		if(HasExplicitTranslateSource(pSource))
+		{
+			Json.WriteAttribute("source_lang");
+			// 源语言只接受基础码：繁体源同样按 ZH 提交
+			const char *pSourceCode = str_comp_nocase(NormalizeTranslateSource(pSource), "zh-tw") == 0 ? "zh" : NormalizeTranslateSource(pSource);
+			const std::string SourceLang = UpperLanguageCode(pSourceCode);
+			Json.WriteStrValue(SourceLang.c_str());
+		}
+		Json.EndObject();
+		const std::string Payload = Json.GetOutputString();
+
+		m_pHttpRequest = m_pCreateRequest(pUrl);
+		m_pHttpRequest->LogProgress(HTTPLOG::FAILURE);
+		m_pHttpRequest->FailOnErrorStatus(false);
+		m_pHttpRequest->Timeout(CTimeout{10000, 30000, 500, 10});
+		m_pHttpRequest->HeaderString("Content-Type", "application/json");
+		char aAuthorization[512];
+		str_format(aAuthorization, sizeof(aAuthorization), "DeepL-Auth-Key %s", pApiKey);
+		m_pHttpRequest->HeaderString("Authorization", aAuthorization);
+		m_pHttpRequest->Post(reinterpret_cast<const unsigned char *>(Payload.data()), Payload.size());
 		Http.Run(m_pHttpRequest);
 	}
 };
@@ -1316,6 +1530,8 @@ std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const cha
 		return std::make_unique<CTranslateBackendFtapi>(Http, pText, pTarget, pCreateRequest);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0)
 		return std::make_unique<CTranslateBackendMymemory>(Http, pText, pTarget, pSource, pCreateRequest);
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0)
+		return std::make_unique<CTranslateBackendDeepl>(Http, pText, pTarget, pSource, pCreateRequest);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0)
 		return std::make_unique<CTranslateBackendTencentCloud>(Http, pText, pTarget, pSource, pCreateRequest);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
@@ -1371,6 +1587,10 @@ int GetTranslateConcurrency()
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0)
 	{
 		return 1; // MyMemory 匿名配额有限，默认 1
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0)
+	{
+		return 2; // DeepL 免费档按月配额计费，无严格并发限制，保守取 2
 	}
 
 	// 未知后端默认 3

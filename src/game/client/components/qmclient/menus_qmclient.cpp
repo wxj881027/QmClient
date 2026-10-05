@@ -1937,6 +1937,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
 	const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
 	const bool IsMymemoryBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0;
+	const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 	// MyMemory 免注册说明
@@ -1945,6 +1946,23 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		Content.HSplitTop(SmallSize, &Row, &Content);
 		Row.VMargin(LabelWidth, &Row);
 		Ui()->DoLabel(&Row, Localize("MyMemory needs no registration (anonymous daily quota)"), SmallSize, TEXTALIGN_ML);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+
+	// DeepL 说明与 API Key 输入
+	if(IsDeeplBackend)
+	{
+		Content.HSplitTop(SmallSize, &Row, &Content);
+		Row.VMargin(LabelWidth, &Row);
+		Ui()->DoLabel(&Row, Localize("DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)"), SmallSize, TEXTALIGN_ML);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
+		RenderLabel("qmclient-translate-deepl-key", &LabelCol, Localize("API key"), BodySize);
+		static CLineInput s_TranslateDeeplKey(g_Config.m_QmTranslateDeeplKey, sizeof(g_Config.m_QmTranslateDeeplKey));
+		s_TranslateDeeplKey.SetHidden(true);
+		ui_widget::InputField(TextInputCtx, &s_TranslateDeeplKey, ControlCol, "", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 
@@ -4314,9 +4332,12 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 			const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0;
 			const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
 			const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
+			const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
 			float Height = Rows(9.0f) + LineHeight * 1.6f + LineSpacing * 1.35f;
 			if(IsFtapiBackend)
 				Height += Row() + LineHeight * 0.8f + LineSpacing;
+			if(IsDeeplBackend)
+				Height += Row() + LineHeight * 0.8f + LineSpacing * 1.5f;
 			if(IsTencentCloudBackend)
 				Height += Row() * 4.0f;
 			else if(IsLibreTranslateBackend)

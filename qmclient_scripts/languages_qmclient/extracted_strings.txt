@@ -985,6 +985,9 @@ Deep unfreeze color
 Deep unfreeze opacity
 Deep unfreeze tile outline color
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
+DeepL API
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+DeepL API Key (free keys end with :fx)
 DeepSeek
 DeepSeek API Key
 DeepSeek API key
@@ -4346,6 +4349,7 @@ Translation menu normal color
 Translation menu selected color
 Translation queue full, sending original
 Translation service
+Translation service returned a notice instead of a translation (the message may contain filtered words)
 Translation Settings
 transmits your player name to info.ddnet.org
 Troubleshooting suggestions

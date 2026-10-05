@@ -1938,21 +1938,9 @@ set(EXPECTED_DATA
   fonts/DejaVuSans.ttf
   fonts/GlowSansJ-Compressed-Book.otf
   fonts/NotoEmoji-Regular.ttf
-  fonts/NotoSansBalinese-Regular.ttf
-  fonts/NotoSansBamum-Regular.ttf
-  fonts/NotoSansBatak-Regular.ttf
-  fonts/NotoSansEgyptianHieroglyphs-Regular.ttf
-  fonts/NotoSansJavanese-Regular.ttf
   fonts/NotoSansMath-Regular.ttf
-  fonts/NotoSansOriya-Regular.ttf
-  fonts/NotoSansSC-VF.ttf
   fonts/NotoSansSymbols-Regular.ttf
   fonts/NotoSansSymbols2-Regular.ttf
-  fonts/NotoSansTaiLe-Regular.ttf
-  fonts/NotoSansThai-Regular.ttf
-  fonts/NotoSansVai-Regular.ttf
-  fonts/NotoSansYi-Regular.ttf
-  fonts/NotoSerifTibetan-Regular.ttf
   fonts/SourceHanSans.ttc
   fonts/index.json
   game.png
@@ -4644,6 +4632,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_graphics_backend_fallback_contract_test.cpp
     src/test/unit/qmclient/client/qm_graphics_opengl_probe_contract_test.cpp
     src/test/unit/qmclient/client/qm_font_category_test.cpp
+    src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/contract/qmclient/client/qm_screenshot_gallery_contract_test.cpp
@@ -5753,7 +5742,7 @@ foreach(ext zip tar.gz tar.xz 7z)
     if(NOT 7Z_EXECUTABLE)
       continue()
     endif()
-    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${7Z_EXECUTABLE} a -t7z -mx=5 ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${CPACK_PACKAGE_FILE_NAME}/)
+    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${7Z_EXECUTABLE} a -t7z -mx=9 -m0=lzma2 -ms=on ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${CPACK_PACKAGE_FILE_NAME}/)
   endif()
   add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.${ext}
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${TMPDIR}

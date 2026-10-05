@@ -2960,6 +2960,15 @@ Deep unfreeze tile outline color
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly 模式（0=正常，1=DF，2=HDF，3=自定义）
 
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free：每月 50 万字符（在 deepl.com 注册；免费密钥以 :fx 结尾）
+
+DeepL API Key (free keys end with :fx)
+== DeepL API 密钥（免费密钥以 :fx 结尾）
+
 DeepSeek
 == DeepSeek
 
@@ -13042,6 +13051,9 @@ Translation queue full, sending original
 
 Translation service
 == 翻译服务
+
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== 翻译服务返回的是提示而非译文（该消息可能包含屏蔽词）
 
 Translation Settings
 == 翻译设置

@@ -151,7 +151,6 @@ TEST(QmNewUiMenuRenderSettingsPagesContract, CountryPopupOwnsWheelAndBlocksTheSe
 	EXPECT_NE(DDNet.find("PopupMapPicker, PopupProps", MapPickerId), std::string::npos);
 }
 
-
 TEST(QmNewUiMenuRenderSettingsPagesContract, SettingsSubTabPagesUseTheSharedLayoutContract)
 {
 	const std::string Settings = ReadTextFile("src/game/client/components/menus_settings.cpp");

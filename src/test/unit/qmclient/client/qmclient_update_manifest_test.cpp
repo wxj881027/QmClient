@@ -175,3 +175,46 @@ TEST(QmClientUpdateManifest, PreviewManifestRequiresAnOptedInClientAndNewerBatch
 	EXPECT_STREQ(Manifest.m_aVersion, "3.4-preview.2");
 	EXPECT_FALSE(ParseQmClientUpdateManifest(pJson, str_length(pJson), "3.4-preview.2", Manifest, aError, sizeof(aError), true));
 }
+
+TEST(QmClientUpdateManifest, SetupSelectionRequiresInstalledMarkerAndCompleteAssets)
+{
+	SQmClientUpdateRelease Release;
+	EXPECT_FALSE(UseQmClientSetupUpdate(true, Release));
+	str_copy(Release.m_aSetupUrl, "setup");
+	str_copy(Release.m_aSetupSignatureUrl, "signature");
+	str_copy(Release.m_aSetupManifestUrl, "manifest");
+	EXPECT_FALSE(UseQmClientSetupUpdate(true, Release));
+	str_copy(Release.m_aSetupManifestSignatureUrl, "manifest-signature");
+	EXPECT_TRUE(UseQmClientSetupUpdate(true, Release));
+	EXPECT_FALSE(UseQmClientSetupUpdate(false, Release));
+}
+
+TEST(QmClientUpdateManifest, SetupManifestCannotBeUsedAsZipAndMustBeNewer)
+{
+	const std::string Json = R"({"schema":1,"version":"3.4","package":{"name":"QmClient-Setup.exe","size":10,"sha256":")" + std::string(64, 'a') + R"("},"files":[]})";
+	SQmClientUpdateManifest Manifest;
+	char aError[256];
+	EXPECT_TRUE(ParseQmClientUpdateManifest(Json.c_str(), Json.size(), "3.3", Manifest, aError, sizeof(aError), false, true));
+	EXPECT_EQ(Manifest.m_PackageSize, 10u);
+	EXPECT_FALSE(ParseQmClientUpdateManifest(Json.c_str(), Json.size(), "3.3", Manifest, aError, sizeof(aError)));
+	EXPECT_FALSE(ParseQmClientUpdateManifest(Json.c_str(), Json.size(), "3.4", Manifest, aError, sizeof(aError), false, true));
+}
+
+TEST(QmClientUpdateManifest, ReleaseFindsSetupAssetsAlongsideLegacyZip)
+{
+	CJsonStringWriter Writer;
+	WriteRelease(Writer, "v3.4", false);
+	std::string Json = Writer.GetOutputString();
+	const size_t ArrayEnd = Json.rfind(']');
+	ASSERT_NE(ArrayEnd, std::string::npos);
+	std::string Assets;
+	for(const char *pName : {"QmClient-Setup.exe", "QmClient-Setup.exe.sig", "QmClient-windows-setup-update.json", "QmClient-windows-setup-update.json.sig"})
+		Assets += std::string(",{\"name\":\"") + pName + "\",\"browser_download_url\":\"https://github.com/wxj881027/QmClient/releases/download/v3.4/" + pName + "\"}";
+	Json.insert(ArrayEnd, Assets);
+	SQmClientUpdateRelease Release;
+	char aError[256];
+	ASSERT_TRUE(ParseQmClientUpdateRelease(Json.c_str(), Json.size(), "3.3", Release, aError, sizeof(aError)));
+	EXPECT_TRUE(Release.HasSetup());
+	EXPECT_NE(str_find(Release.m_aPackageUrl, "QmClient-windows.zip"), nullptr);
+	EXPECT_NE(str_find(Release.m_aSetupUrl, "QmClient-Setup.exe"), nullptr);
+}

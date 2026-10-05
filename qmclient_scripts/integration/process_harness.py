@@ -182,8 +182,8 @@ class ProcessEnvironment:
 			if not binary.is_file():
 				raise RuntimeError(f"missing binary: {binary}")
 		self._temp_dir = Path(tempfile.mkdtemp(prefix=temp_prefix, dir=self._build_dir))
-		# 客户端启动阶段会把 bundled icon fonts 安装到这个存储子目录。
-		# 预先创建父目录，避免最小冒烟被环境准备错误掩盖。
+		# 为用户字体商店和历史残留场景预先创建用户字体目录。
+		# 随包 Phosphor 不再复制到这里，旧目录中的 Phosphor 文件也不会被加载。
 		(self._temp_dir / "qmclient" / "fonts").mkdir(parents=True, exist_ok=True)
 		self._server: Process | None = None
 		self._client: Process | None = None

@@ -2960,6 +2960,15 @@ Deep unfreeze tile outline color
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly modu (0=normal, 1=DF, 2=HDF, 3=özel)
 
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: Ayda 500.000 karakter (deepl.com'da kaydolun; ücretsiz anahtarlar :fx ile biter)
+
+DeepL API Key (free keys end with :fx)
+== DeepL API Anahtarı (ücretsiz anahtarlar :fx ile biter)
+
 DeepSeek
 == DeepSeek
 
@@ -13042,6 +13051,9 @@ Translation queue full, sending original
 
 Translation service
 == Çeviri hizmeti
+
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== Çeviri servisi çeviri yerine bir bildirim döndürdü (ileti filtrelenmiş kelimeler içerebilir)
 
 Translation Settings
 == Çeviri Ayarları

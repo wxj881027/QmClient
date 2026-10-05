@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import shutil
 import sys
 import time
 from collections.abc import Callable
@@ -209,6 +210,26 @@ def scenario_vector_font_and_icon_resources(env: ProcessEnvironment) -> None:
 	_quit_client(env)
 
 
+def scenario_legacy_icon_font_residual_ignored(env: ProcessEnvironment) -> None:
+	"""旧版本复制到用户目录的 Phosphor 不应进入字体 face 池。"""
+	legacy_dir = env.path("qmclient", "fonts", "Phosphor")
+	legacy_dir.mkdir(parents=True, exist_ok=True)
+	shutil.copy2(
+		env.build_dir / "data" / "fonts" / "Phosphor" / "Phosphor-Regular.ttf",
+		legacy_dir / "Phosphor-Regular.ttf",
+	)
+
+	env.start_client([], connect=False)
+	env.client.wait_for(
+		lambda line: "Ignoring legacy bundled icon font 'qmclient/fonts/Phosphor/Phosphor-Regular.ttf'" in line,
+		"legacy icon font residual rejection",
+		15,
+	)
+	if any("Loaded" in line and "qmclient/fonts/Phosphor/" in line for line in env.client._lines):
+		raise AssertionError("legacy Phosphor residual was loaded into the font face pool")
+	_quit_client(env)
+
+
 def scenario_connection_failure_recovery(env: ProcessEnvironment) -> None:
 	"""验证服务端断开后客户端报告离线并可正常退出。"""
 	port = env.start_server()
@@ -318,6 +339,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"slow_asset_loading_no_false_hang": scenario_slow_asset_loading_no_false_hang,
 	"startup_saved_favorites": scenario_startup_saved_favorites,
 	"vector_font_and_icon_resources": scenario_vector_font_and_icon_resources,
+	"legacy_icon_font_residual_ignored": scenario_legacy_icon_font_residual_ignored,
 }
 
 

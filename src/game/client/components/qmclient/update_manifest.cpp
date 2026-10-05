@@ -76,12 +76,17 @@ namespace
 			char *m_pUrl;
 			size_t m_UrlSize;
 			bool m_Found = false;
+			bool m_Optional = false;
 		};
 		SExpectedAsset aExpected[] = {
 			{"QmClient-windows.zip", Release.m_aPackageUrl, sizeof(Release.m_aPackageUrl)},
 			{"QmClient-windows.zip.sig", Release.m_aPackageSignatureUrl, sizeof(Release.m_aPackageSignatureUrl)},
 			{"QmClient-windows-update.json", Release.m_aManifestUrl, sizeof(Release.m_aManifestUrl)},
 			{"QmClient-windows-update.json.sig", Release.m_aManifestSignatureUrl, sizeof(Release.m_aManifestSignatureUrl)},
+			{"QmClient-Setup.exe", Release.m_aSetupUrl, sizeof(Release.m_aSetupUrl), false, true},
+			{"QmClient-Setup.exe.sig", Release.m_aSetupSignatureUrl, sizeof(Release.m_aSetupSignatureUrl), false, true},
+			{"QmClient-windows-setup-update.json", Release.m_aSetupManifestUrl, sizeof(Release.m_aSetupManifestUrl), false, true},
+			{"QmClient-windows-setup-update.json.sig", Release.m_aSetupManifestSignatureUrl, sizeof(Release.m_aSetupManifestSignatureUrl), false, true},
 		};
 		for(unsigned Index = 0; Index < pAssets->u.array.length; ++Index)
 		{
@@ -100,7 +105,7 @@ namespace
 		}
 		for(const auto &Expected : aExpected)
 		{
-			if(!Expected.m_Found)
+			if(!Expected.m_Found && !Expected.m_Optional)
 			{
 				SetError(pError, ErrorSize, "GitHub release is missing a required update asset");
 				return false;
@@ -139,7 +144,7 @@ bool ParseQmClientUpdateRelease(const char *pJson, size_t JsonSize, const char *
 	return Found;
 }
 
-bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateManifest &Manifest, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild)
+bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char *pCurrentVersion, SQmClientUpdateManifest &Manifest, char *pError, size_t ErrorSize, bool LocalIsDevelopmentBuild, bool SetupPackage)
 {
 	Manifest = {};
 	SetError(pError, ErrorSize, "Invalid update manifest");
@@ -166,7 +171,7 @@ bool ParseQmClientUpdateManifest(const char *pJson, size_t JsonSize, const char 
 	const json_value *pName = json_object_get(pPackage, "name");
 	const json_value *pSize = json_object_get(pPackage, "size");
 	const json_value *pSha256 = json_object_get(pPackage, "sha256");
-	if(!pName || !pSize || !pSha256 || pName->type != json_string || str_comp(json_string_get(pName), "QmClient-windows.zip") != 0 ||
+	if(!pName || !pSize || !pSha256 || pName->type != json_string || str_comp(json_string_get(pName), SetupPackage ? "QmClient-Setup.exe" : "QmClient-windows.zip") != 0 ||
 		pSize->type != json_integer || pSize->u.integer <= 0 || static_cast<uint64_t>(pSize->u.integer) > MAX_UPDATE_PACKAGE_SIZE ||
 		pSha256->type != json_string || sha256_from_str(&Manifest.m_PackageSha256, json_string_get(pSha256)) != 0)
 	{

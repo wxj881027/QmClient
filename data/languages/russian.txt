@@ -2960,6 +2960,15 @@ Deep unfreeze tile outline color
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Режим Deepfly (0=нормальный, 1=DF, 2=HDF, 3=пользовательский)
 
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: 500 000 символов в месяц (регистрация на deepl.com; бесплатные ключи заканчиваются на :fx)
+
+DeepL API Key (free keys end with :fx)
+== API-ключ DeepL (бесплатные ключи заканчиваются на :fx)
+
 DeepSeek
 == DeepSeek
 
@@ -13042,6 +13051,9 @@ Translation queue full, sending original
 
 Translation service
 == Сервис перевода
+
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== Сервис перевода вернул уведомление вместо перевода (возможно, сообщение содержит запрещённые слова)
 
 Translation Settings
 == Настройки перевода

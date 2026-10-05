@@ -715,6 +715,9 @@ MACRO_CONFIG_STR(QmTranslateTcRegion, qm_translate_tc_region, 32, "ap-guangzhou"
 MACRO_CONFIG_STR(QmTranslateLibreEndpoint, qm_translate_libre_endpoint, 256, "http://localhost:5000", CFGFLAG_CLIENT | CFGFLAG_SAVE, "LibreTranslate endpoint")
 MACRO_CONFIG_STR(QmTranslateLibreKey, qm_translate_libre_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "LibreTranslate API Key")
 
+// Translate - DeepL - DeepL API（免费档 50 万字符/月，key 以 :fx 结尾）
+MACRO_CONFIG_STR(QmTranslateDeeplKey, qm_translate_deepl_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "DeepL API Key (free keys end with :fx)")
+
 // Translate Button Colors - 翻译按钮自定义颜色
 MACRO_CONFIG_INT(QmTranslateColorAlphaMigrated, qm_translate_color_alpha_migrated, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation color alpha migration completed flag")
 MACRO_CONFIG_COL(QmTranslateBtnColorDisabled, qm_translate_btn_color_disabled, 0xD1000029, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Translation button cancel color")

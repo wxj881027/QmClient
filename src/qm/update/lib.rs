@@ -784,6 +784,90 @@ pub unsafe fn ffi_verify_manifest_package(
     result.is_ok()
 }
 
+// Setup 清单独立发布，旧客户端的 ZIP 清单格式保持兼容。
+fn parse_setup_manifest(bytes: &[u8]) -> Result<Manifest, String> {
+    if bytes.is_empty() || bytes.len() > MAX_MANIFEST_SIZE {
+        return Err("setup manifest size is outside the supported range".into());
+    }
+    let manifest: Manifest = serde_json::from_slice(bytes)
+        .map_err(|error| format!("invalid setup manifest: {error}"))?;
+    validate_version(&manifest.version)?;
+    if manifest.schema != 1
+        || manifest.package.name != "QmClient-Setup.exe"
+        || manifest.package.size == 0
+        || manifest.package.size > MAX_PACKAGE_SIZE
+        || !manifest.files.is_empty()
+    {
+        return Err("invalid setup package metadata".into());
+    }
+    parse_hash(&manifest.package.sha256)?;
+    Ok(manifest)
+}
+
+fn verify_setup_manifest(
+    bytes: &[u8],
+    signature: &[u8],
+    key: &[u8; 32],
+) -> Result<Manifest, String> {
+    verify_signature_with_key(bytes, signature, key)?;
+    parse_setup_manifest(bytes)
+}
+
+/// 校验独立 Setup 清单，并返回签名覆盖的安装器大小与摘要。
+pub unsafe fn ffi_verify_setup_manifest(
+    manifest: *const u8,
+    manifest_size: usize,
+    signature: *const u8,
+    signature_size: usize,
+    package_size: *mut u64,
+    package_digest: *mut u8,
+    package_digest_size: usize,
+    error: *mut c_char,
+    error_size: usize,
+) -> bool {
+    let result = input_bytes(manifest, manifest_size)
+        .and_then(|bytes| input_bytes(signature, signature_size).map(|sig| (bytes, sig)))
+        .and_then(|(bytes, sig)| verify_setup_manifest(bytes, sig, &PUBLIC_KEY))
+        .and_then(|manifest| {
+            if package_size.is_null() || package_digest.is_null() || package_digest_size != 32 {
+                return Err("invalid setup metadata output".into());
+            }
+            let digest = parse_hash(&manifest.package.sha256)?;
+            *package_size = manifest.package.size;
+            std::ptr::copy_nonoverlapping(digest.as_ptr(), package_digest, digest.len());
+            Ok(())
+        });
+    if let Err(message) = &result {
+        write_error(message, error, error_size);
+    }
+    result.is_ok()
+}
+
+/// 启动前重新校验磁盘上的 Setup、清单和签名。
+pub unsafe fn ffi_verify_setup_files(
+    package_path: *const c_char,
+    package_signature_path: *const c_char,
+    manifest_path: *const c_char,
+    manifest_signature_path: *const c_char,
+    current_version: *const c_char,
+    error: *mut c_char,
+    error_size: usize,
+) -> bool {
+    let result = (|| {
+        let package = input_path(package_path)?;
+        let package_sig = read_limited(input_path(package_signature_path)?, 64)?;
+        let bytes = read_limited(input_path(manifest_path)?, MAX_MANIFEST_SIZE)?;
+        let sig = read_limited(input_path(manifest_signature_path)?, 64)?;
+        let manifest = verify_setup_manifest(&bytes, &sig, &PUBLIC_KEY)?;
+        validate_not_downgrade(&manifest.version, input_string(current_version)?)?;
+        validate_package(package, &package_sig, &manifest)
+    })();
+    if let Err(message) = &result {
+        write_error(message, error, error_size);
+    }
+    result.is_ok()
+}
+
 /// Verifies a detached package signature over the signed SHA-256 digest.
 pub unsafe fn ffi_verify_package_digest(
     digest: *const u8,
@@ -904,6 +988,45 @@ mod tests {
             "files": entries,
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn signed_setup_metadata_is_verified_and_tampering_is_rejected() {
+        let key = SigningKey::from_bytes(&TEST_SEED);
+        let bytes = serde_json::to_vec(&serde_json::json!({
+            "schema": 1, "version": "3.4", "package": {
+                "name": "QmClient-Setup.exe", "size": 12, "sha256": "ab".repeat(32)
+            }, "files": []
+        }))
+        .unwrap();
+        let sig = key.sign(&bytes).to_bytes();
+        let result = verify_setup_manifest(&bytes, &sig, key.verifying_key().as_bytes()).unwrap();
+        assert_eq!(result.package.size, 12);
+        assert_eq!(parse_hash(&result.package.sha256).unwrap(), [0xab; 32]);
+        let mut changed = bytes.clone();
+        changed[0] ^= 1;
+        assert!(verify_setup_manifest(&changed, &sig, key.verifying_key().as_bytes()).is_err());
+        assert!(parse_manifest(&bytes).is_err());
+    }
+
+    #[test]
+    fn setup_metadata_rejects_wrong_asset_invalid_hash_and_empty_package() {
+        for (name, size, hash) in [
+            ("other.exe", 12, "ab".repeat(32)),
+            ("QmClient-Setup.exe", 0, "ab".repeat(32)),
+            ("QmClient-Setup.exe", 12, "invalid".to_string()),
+        ] {
+            let bytes = serde_json::to_vec(&serde_json::json!({
+                "schema": 1, "version": "3.4", "package": {
+                    "name": name, "size": size, "sha256": hash
+                }, "files": []
+            }))
+            .unwrap();
+            assert!(
+                parse_setup_manifest(&bytes).is_err(),
+                "{name} {size} {hash}"
+            );
+        }
     }
 
     #[test]

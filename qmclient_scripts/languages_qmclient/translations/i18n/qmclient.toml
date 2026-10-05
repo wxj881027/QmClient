@@ -6239,6 +6239,54 @@ turkish = "Deepfly modu (0=normal, 1=DF, 2=HDF, 3=özel)"
 polish = "Tryb Deepfly (0=normalny, 1=DF, 2=HDF, 3=niestandardowy)"
 
 [[message]]
+key = "DeepL API"
+[message.translations]
+simplified_chinese = "DeepL API"
+traditional_chinese = "DeepL API"
+japanese = "DeepL API"
+korean = "DeepL API"
+russian = "DeepL API"
+german = "DeepL API"
+spanish = "API de DeepL"
+french = "API DeepL"
+brazilian_portuguese = "API do DeepL"
+portuguese = "API do DeepL"
+turkish = "DeepL API"
+polish = "API DeepL"
+
+[[message]]
+key = "DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)"
+[message.translations]
+simplified_chinese = "DeepL API Free：每月 50 万字符（在 deepl.com 注册；免费密钥以 :fx 结尾）"
+traditional_chinese = "DeepL API Free：每月 50 萬字元（在 deepl.com 註冊；免費金鑰以 :fx 結尾）"
+japanese = "DeepL API Free：月間50万文字（deepl.comで登録；無料キーは :fx で終わります）"
+korean = "DeepL API Free: 매월 50만 자(deepl.com에서 등록; 무료 키는 :fx로 끝남)"
+russian = "DeepL API Free: 500 000 символов в месяц (регистрация на deepl.com; бесплатные ключи заканчиваются на :fx)"
+german = "DeepL API Free: 500.000 Zeichen pro Monat (Registrierung unter deepl.com; kostenlose Schlüssel enden auf :fx)"
+spanish = "DeepL API Free: 500.000 caracteres al mes (regístrate en deepl.com; las claves gratuitas terminan en :fx)"
+french = "DeepL API Free : 500 000 caractères par mois (inscription sur deepl.com ; les clés gratuites se terminent par :fx)"
+brazilian_portuguese = "DeepL API Free: 500.000 caracteres por mês (registre-se em deepl.com; chaves gratuitas terminam com :fx)"
+portuguese = "DeepL API Free: 500.000 carateres por mês (registe-se em deepl.com; as chaves gratuitas terminam em :fx)"
+turkish = "DeepL API Free: Ayda 500.000 karakter (deepl.com'da kaydolun; ücretsiz anahtarlar :fx ile biter)"
+polish = "DeepL API Free: 500 000 znaków miesięcznie (zarejestruj się na deepl.com; darmowe klucze kończą się na :fx)"
+
+[[message]]
+key = "DeepL API Key (free keys end with :fx)"
+[message.translations]
+simplified_chinese = "DeepL API 密钥（免费密钥以 :fx 结尾）"
+traditional_chinese = "DeepL API 金鑰（免費金鑰以 :fx 結尾）"
+japanese = "DeepL API キー（無料キーは :fx で終わります）"
+korean = "DeepL API 키(무료 키는 :fx로 끝남)"
+russian = "API-ключ DeepL (бесплатные ключи заканчиваются на :fx)"
+german = "DeepL API-Schlüssel (kostenlose Schlüssel enden auf :fx)"
+spanish = "Clave de API de DeepL (las claves gratuitas terminan en :fx)"
+french = "Clé API DeepL (les clés gratuites se terminent par :fx)"
+brazilian_portuguese = "Chave da API DeepL (chaves gratuitas terminam com :fx)"
+portuguese = "Chave da API DeepL (as chaves gratuitas terminam em :fx)"
+turkish = "DeepL API Anahtarı (ücretsiz anahtarlar :fx ile biter)"
+polish = "Klucz API DeepL (darmowe klucze kończą się na :fx)"
+
+[[message]]
 key = "DeepSeek"
 [message.translations]
 simplified_chinese = "DeepSeek"
@@ -29426,6 +29474,22 @@ brazilian_portuguese = "Cor do menu de tradução quando selecionado"
 portuguese = "Cor do menu de tradução quando selecionado"
 turkish = "Çeviri menüsü seçili rengi"
 polish = "Kolor zaznaczonego elementu w menu tłumaczenia"
+
+[[message]]
+key = "Translation service returned a notice instead of a translation (the message may contain filtered words)"
+[message.translations]
+simplified_chinese = "翻译服务返回的是提示而非译文（该消息可能包含屏蔽词）"
+traditional_chinese = "翻譯服務傳回的是提示而非譯文（該訊息可能包含屏蔽詞）"
+japanese = "翻訳サービスが訳文ではなく通知を返しました（このメッセージにはフィルター対象の語が含まれている可能性があります）"
+korean = "번역 서비스가 번역문 대신 안내를 반환했습니다(이 메시지에 필터링된 단어가 포함되어 있을 수 있음)"
+russian = "Сервис перевода вернул уведомление вместо перевода (возможно, сообщение содержит запрещённые слова)"
+german = "Der Übersetzungsdienst gab einen Hinweis statt einer Übersetzung zurück (die Nachricht könnte gefilterte Wörter enthalten)"
+spanish = "El servicio de traducción devolvió un aviso en lugar de una traducción (el mensaje puede contener palabras filtradas)"
+french = "Le service de traduction a renvoyé un avis au lieu d'une traduction (le message contient peut-être des mots filtrés)"
+brazilian_portuguese = "O serviço de tradução retornou um aviso em vez de uma tradução (a mensagem pode conter palavras filtradas)"
+portuguese = "O serviço de tradução devolveu um aviso em vez de uma tradução (a mensagem pode conter palavras filtradas)"
+turkish = "Çeviri servisi çeviri yerine bir bildirim döndürdü (ileti filtrelenmiş kelimeler içerebilir)"
+polish = "Usługa tłumaczenia zwróciła komunikat zamiast tłumaczenia (wiadomość może zawierać filtrowane słowa)"
 
 [[message]]
 key = "Troubleshooting suggestions"
