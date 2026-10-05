@@ -168,8 +168,8 @@ TEST(QmHudMediaIslandSource, BothLayoutPathsShareTheSameMainCapsuleReservation)
 	const std::string IslandBody = FunctionBody(Source, "void CHud::RenderMediaIsland()");
 
 	EXPECT_NE(Header.find("bool HasVisibleCountdownSatellite() const"), std::string::npos);
-	EXPECT_NE(AvoidanceBody.find("QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, m_MediaIslandAnimState.HasVisibleCountdownSatellite())"), std::string::npos);
-	EXPECT_NE(IslandBody.find("QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, AnimState.HasVisibleCountdownSatellite())"), std::string::npos);
+	EXPECT_NE(AvoidanceBody.find("QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, m_MediaIslandAnimState.HasVisibleCountdownSatellite(), TimerCapsule.m_Visible)"), std::string::npos);
+	EXPECT_NE(IslandBody.find("QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, ShowTeam, AnimState.HasVisibleCountdownSatellite(), TimerCapsule.m_Visible)"), std::string::npos);
 	// 回归护栏：状态区不再算主胶囊内容，观战卫星也不再作为保留依据。
 	EXPECT_EQ(IslandBody.find("ShowTeam || ShowInfoStack"), std::string::npos);
 	EXPECT_EQ(IslandBody.find("QmHudMediaIslandShouldReserveMainCapsule(HasMediaState, HasSpectatorSatellitePresentation"), std::string::npos);

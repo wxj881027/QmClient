@@ -137,7 +137,8 @@ TEST(QmNewUiMenuRenderSettingsPagesContract, CountryPopupOwnsWheelAndBlocksTheSe
 	ASSERT_FALSE(DDNet.empty());
 	EXPECT_NE(Popup.find("s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);"), std::string::npos);
 	EXPECT_NE(Popup.find("s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_GRID);"), std::string::npos);
-	EXPECT_NE(Identity.find("PopupProps.m_BlockUnderlyingScroll = true;"), std::string::npos);
+	// 弹窗属性统一改由共享 SecondaryPanelProperties() 提供（其内部设置 m_BlockUnderlyingScroll = true）。
+	EXPECT_NE(Identity.find("const SPopupMenuProperties PopupProps = ui_widget::SecondaryPanelProperties();"), std::string::npos);
 	EXPECT_NE(Identity.find("PopupSettingsCountrySelection, PopupProps"), std::string::npos);
 	EXPECT_NE(MapPopup.find("s_ListBox.SetWheelOwnerPriority(EUiWheelOwnerPriority::POPUP);"), std::string::npos);
 	EXPECT_NE(MapPopup.find("s_ListBox.SetScrollProfile(EQmScrollProfile::POPUP_LIST);"), std::string::npos);
