@@ -2520,12 +2520,6 @@ set(EXPECTED_DATA
   wordlist.txt
 )
 
-file(GLOB_RECURSE QMCLIENT_BUNDLED_FONT_FILES
-  LIST_DIRECTORIES false
-  RELATIVE "${PROJECT_SOURCE_DIR}/data"
-  "${PROJECT_SOURCE_DIR}/data/qmclient/fonts/*"
-)
-list(APPEND EXPECTED_DATA ${QMCLIENT_BUNDLED_FONT_FILES})
 set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;wv" data ${EXPECTED_DATA})
 
 ########################################################################
@@ -2663,14 +2657,14 @@ add_custom_command(OUTPUT ${QM_ICON_MORPH_GENERATED}
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/src/generated
   COMMAND ${Python3_EXECUTABLE}
     qmclient_scripts/qm_build_icon_morph.py
-    --fonts-dir data/qmclient/fonts/Phosphor
+    --fonts-dir data/fonts/Phosphor
     --codepoints datasrc/qm_icons/phosphor.codepoints
     --output ${QM_ICON_MORPH_GENERATED}
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   DEPENDS
     qmclient_scripts/qm_build_icon_morph.py
     datasrc/qm_icons/phosphor.codepoints
-    data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
+    data/fonts/Phosphor/Phosphor-Bold.ttf
   COMMENT "Building QmClient eye path morph data"
 )
 add_custom_target(qm-icon-morph DEPENDS ${QM_ICON_MORPH_GENERATED})
@@ -2704,7 +2698,7 @@ add_custom_target(qm-icon-msdf-atlas
   COMMAND ${Python3_EXECUTABLE}
     qmclient_scripts/qm_build_icon_msdf_font.py
     --tool cmake-build-official/bin/Release/msdf-atlas-gen.exe
-    --fonts-dir data/qmclient/fonts/Phosphor
+    --fonts-dir data/fonts/Phosphor
     --codepoints datasrc/qm_icons/phosphor.codepoints
     --output data/qmclient/icons
     --styles ${QM_ICON_MSDF_STYLES}
@@ -2713,11 +2707,11 @@ add_custom_target(qm-icon-msdf-atlas
     qmclient_scripts/qm_build_icon_msdf_font.py
     qmclient_scripts/qm_icon_msdf_official.py
     datasrc/qm_icons/phosphor.codepoints
-    data/qmclient/fonts/Phosphor/Phosphor-Regular.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Light.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Fill.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Duotone.ttf
+    data/fonts/Phosphor/Phosphor-Regular.ttf
+    data/fonts/Phosphor/Phosphor-Light.ttf
+    data/fonts/Phosphor/Phosphor-Bold.ttf
+    data/fonts/Phosphor/Phosphor-Fill.ttf
+    data/fonts/Phosphor/Phosphor-Duotone.ttf
   COMMENT "Building QmClient Phosphor MSDF icon atlases from bundled fonts"
 )
 

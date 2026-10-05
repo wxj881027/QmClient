@@ -204,7 +204,7 @@ def scenario_vector_font_and_icon_resources(env: ProcessEnvironment) -> None:
 	for line in env.client._lines:
 		if "Bundled 'Phosphor' icon face is unavailable" in line:
 			raise AssertionError("the bundled Phosphor icon face was not available")
-		if "Failed to open/read font file 'qmclient/fonts" in line:
+		if "Failed to open/read font file 'fonts/" in line:
 			raise AssertionError(f"bundled font path was malformed: {line}")
 	_quit_client(env)
 

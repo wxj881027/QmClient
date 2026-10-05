@@ -9,7 +9,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPO_ROOT / "qmclient_scripts/qm_build_icon_morph.py"
-FONTS_DIR = REPO_ROOT / "data/qmclient/fonts/Phosphor"
+FONTS_DIR = REPO_ROOT / "data/fonts/Phosphor"
 CODEPOINTS = REPO_ROOT / "datasrc/qm_icons/phosphor.codepoints"
 sys.path.insert(0, str(SCRIPT_PATH.parent))
 SPEC = importlib.util.spec_from_file_location("qm_build_icon_morph", SCRIPT_PATH)

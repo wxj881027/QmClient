@@ -12,7 +12,7 @@
 namespace
 {
 	// 使用当前源码字体，独立于调用者的工作目录。
-	constexpr const char *CJK_FONT_PATH = DDNET_TEST_SOURCE_DIR "/data/fonts/NotoSansSC-VF.ttf";
+	constexpr const char *CJK_FONT_PATH = DDNET_TEST_SOURCE_DIR "/data/fonts/霞鹜新晰黑.ttf";
 	constexpr int NUM_GLYPHS = 256;
 } // namespace
 

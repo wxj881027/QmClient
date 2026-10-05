@@ -11,6 +11,6 @@ TEST(QmFontIconsContract, FontIndexKeepsIconFacesInSyncWithCodepoints)
 	EXPECT_NE(Index.find("\"Noto Emoji\",\n        \"Phosphor\""), std::string::npos);
 	EXPECT_EQ(Index.find("Phosphor-Regular.ttf"), std::string::npos);
 	EXPECT_EQ(Index.find("Phosphor-Bold.ttf"), std::string::npos);
-	EXPECT_FALSE(ReadTestSourceFile("data/qmclient/fonts/Phosphor/Phosphor-Regular.ttf").empty());
-	EXPECT_FALSE(ReadTestSourceFile("data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf").empty());
+	EXPECT_FALSE(ReadTestSourceFile("data/fonts/Phosphor/Phosphor-Regular.ttf").empty());
+	EXPECT_FALSE(ReadTestSourceFile("data/fonts/Phosphor/Phosphor-Bold.ttf").empty());
 }

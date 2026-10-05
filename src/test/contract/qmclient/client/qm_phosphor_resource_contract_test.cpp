@@ -26,11 +26,11 @@ namespace
 TEST(QmPhosphorResourceContract, WeightFontsRemainBundled)
 {
 	const std::array<const char *, 5> apFonts = {
-		"data/qmclient/fonts/Phosphor/Phosphor-Regular.ttf",
-		"data/qmclient/fonts/Phosphor/Phosphor-Light.ttf",
-		"data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf",
-		"data/qmclient/fonts/Phosphor/Phosphor-Fill.ttf",
-		"data/qmclient/fonts/Phosphor/Phosphor-Duotone.ttf",
+		"data/fonts/Phosphor/Phosphor-Regular.ttf",
+		"data/fonts/Phosphor/Phosphor-Light.ttf",
+		"data/fonts/Phosphor/Phosphor-Bold.ttf",
+		"data/fonts/Phosphor/Phosphor-Fill.ttf",
+		"data/fonts/Phosphor/Phosphor-Duotone.ttf",
 	};
 	for(const char *pPath : apFonts)
 	{

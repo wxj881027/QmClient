@@ -12,7 +12,7 @@ manifest 声明 secondary_mask: alpha —— 与着色器契约保持不变。
 用法（官方工具构建见 qm_build_icon_msdf_official.py；需 freetype/png/zlib DLL 在 PATH）：
   py -3 qmclient_scripts/qm_build_icon_msdf_font.py \
     --tool cmake-build-official/bin/Release/msdf-atlas-gen.exe \
-    --fonts-dir data/qmclient/fonts/Phosphor \
+    --fonts-dir data/fonts/Phosphor \
     --codepoints datasrc/qm_icons/phosphor.codepoints \
     --output data/qmclient/icons --styles duotone light regular bold fill
 """

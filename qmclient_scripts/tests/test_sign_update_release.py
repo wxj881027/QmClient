@@ -241,11 +241,11 @@ class SignUpdateReleaseTest(unittest.TestCase):
                 archive.writestr("QmClient-3.0-win64/DDNet-Server.exe", b"server")
                 archive.writestr("QmClient-3.0-win64/QmClient-Updater.exe", b"updater")
                 archive.writestr(
-                    "QmClient-3.0-win64/data/qmclient/fonts/霞鹜新致宋.ttf",
+                    "QmClient-3.0-win64/data/fonts/霞鹜新致宋.ttf",
                     b"zhi-song",
                 )
                 archive.writestr(
-                    "QmClient-3.0-win64/data/qmclient/fonts/霞鹜新晰黑.ttf",
+                    "QmClient-3.0-win64/data/fonts/霞鹜新晰黑.ttf",
                     b"xi-hei",
                 )
 
@@ -258,17 +258,17 @@ class SignUpdateReleaseTest(unittest.TestCase):
                         "DDNet.exe",
                         "DDNet-Server.exe",
                         "QmClient-Updater.exe",
-                        "data/qmclient/fonts/霞鹜新致宋.ttf",
-                        "data/qmclient/fonts/霞鹜新晰黑.ttf",
+                        "data/fonts/霞鹜新致宋.ttf",
+                        "data/fonts/霞鹜新晰黑.ttf",
                     },
                 )
                 self.assertEqual(
-                    archive.read("data/qmclient/fonts/霞鹜新晰黑.ttf"), b"xi-hei"
+                    archive.read("data/fonts/霞鹜新晰黑.ttf"), b"xi-hei"
                 )
             manifest = SIGN_UPDATE_RELEASE.build_manifest(package, "v3.3")
             self.assertEqual(manifest["version"], "3.3")
             self.assertIn(
-                "data/qmclient/fonts/霞鹜新致宋.ttf",
+                "data/fonts/霞鹜新致宋.ttf",
                 {entry["path"] for entry in manifest["files"]},
             )
 
@@ -281,10 +281,10 @@ class SignUpdateReleaseTest(unittest.TestCase):
                 archive.writestr("QmClient-3.0-win64/DDNet-Server.exe", b"server")
                 archive.writestr("QmClient-3.0-win64/QmClient-Updater.exe", b"updater")
                 archive.writestr(
-                    "QmClient-3.0-win64/data/qmclient/fonts/?????.ttf", b"one"
+                    "QmClient-3.0-win64/data/fonts/?????.ttf", b"one"
                 )
                 archive.writestr(
-                    "QmClient-3.0-win64/data/qmclient/fonts/?????.ttf", b"two"
+                    "QmClient-3.0-win64/data/fonts/?????.ttf", b"two"
                 )
 
             with self.assertRaisesRegex(ValueError, "duplicate archive path"):

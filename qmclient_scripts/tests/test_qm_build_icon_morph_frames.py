@@ -11,7 +11,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = REPO_ROOT / "qmclient_scripts"
 FRAMES_PATH = SCRIPTS / "qm_build_icon_morph_frames.py"
-FONTS_DIR = REPO_ROOT / "data/qmclient/fonts/Phosphor"
+FONTS_DIR = REPO_ROOT / "data/fonts/Phosphor"
 CODEPOINTS = REPO_ROOT / "datasrc/qm_icons/phosphor.codepoints"
 ATLAS_JSON = REPO_ROOT / "data/qmclient/icons/qm_icons_bold_msdf.json"
 ATLAS_PNG = REPO_ROOT / "data/qmclient/icons/qm_icons_bold_msdf.png"

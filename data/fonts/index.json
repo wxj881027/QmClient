@@ -1,52 +1,24 @@
 {
-    "font files": [
-        "DejaVuSans.ttf",
-        "GlowSansJ-Compressed-Book.otf",
-        "NotoSansSC-VF.ttf",
-        "NotoEmoji-Regular.ttf",
-        "NotoSansThai-Regular.ttf",
-        "SourceHanSans.ttc",
-        "NotoSansSymbols-Regular.ttf",
-        "NotoSansSymbols2-Regular.ttf",
-        "NotoSansMath-Regular.ttf",
-        "NotoSansJavanese-Regular.ttf",
-        "NotoSerifTibetan-Regular.ttf",
-        "NotoSansYi-Regular.ttf",
-        "NotoSansOriya-Regular.ttf",
-        "NotoSansBalinese-Regular.ttf",
-        "NotoSansTaiLe-Regular.ttf",
-        "NotoSansBatak-Regular.ttf",
-        "NotoSansVai-Regular.ttf",
-        "NotoSansBamum-Regular.ttf",
-        "NotoSansEgyptianHieroglyphs-Regular.ttf"
-    ],
     "default": "LXGW WenKai Regular",
     "language variants": {
         "japanese": "Glow Sans J Compressed Book",
         "korean": "Source Han Sans K",
-        "simplified_chinese": "Noto Sans SC",
-        "traditional_chinese": "Noto Sans SC"
+        "simplified_chinese": "Source Han Sans SC",
+        "traditional_chinese": "Source Han Sans TC"
     },
     "fallbacks": [
-        "Noto Sans SC",
-        "Noto Sans Thai",
         "Noto Emoji",
         "Phosphor",
         "Source Han Sans K",
         "Noto Sans Symbols",
         "Noto Sans Symbols 2",
-        "Noto Sans Math",
-        "Noto Sans Javanese",
-        "Noto Serif Tibetan",
-        "Noto Sans Yi",
-        "Noto Sans Oriya",
-        "Noto Sans Balinese",
-        "Noto Sans Tai Le",
-        "Noto Sans Batak",
-        "Noto Sans Vai",
-        "Noto Sans Bamum",
-        "Noto Sans Egyptian Hieroglyphs"
+        "Noto Sans Math"
     ],
     "icon": "Phosphor",
-    "icon bold": "Phosphor-Bold"
+    "icon bold": "Phosphor-Bold",
+    "icon styles": {
+        "light": "Phosphor-Light",
+        "fill": "Phosphor-Fill",
+        "duotone": "Phosphor-Duotone"
+    }
 }

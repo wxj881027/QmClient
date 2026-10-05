@@ -51,7 +51,9 @@ namespace
 			if(pStorage == nullptr || FT_Init_FreeType(&m_Library) != 0)
 				return false;
 
-			for(const char *pPath : {"fonts/NotoSansSC-VF.ttf", "fonts/DejaVuSans.ttf"})
+			// NotoSansSC-VF 已随字体减重移除：水印中文改用随包霞鹜新晰黑，
+			// DejaVu 仍作拉丁兜底。
+			for(const char *pPath : {"fonts/霞鹜新晰黑.ttf", "fonts/DejaVuSans.ttf"})
 			{
 				IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL);
 				if(File == nullptr)

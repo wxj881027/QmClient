@@ -1188,11 +1188,16 @@ public:
 		return Face != nullptr;
 	}
 
-	void SetIconStyleFacesByName()
+	// QmClient: 图标字重样式面。名字来自 index.json 的 'icon styles' 键，
+	// 缺省沿用随包 Phosphor 命名约定；对应样式缺字时保持原 face 不动。
+	void SetIconStyleFacesByName(const char *pLight, const char *pFill, const char *pDuotone)
 	{
-		TrySetIconStyleFaceByName("Phosphor-Light", m_IconLightFace);
-		TrySetIconStyleFaceByName("Phosphor-Fill", m_IconFillFace);
-		TrySetIconStyleFaceByName("Phosphor-Duotone", m_IconDuotoneFace);
+		if(pLight != nullptr)
+			TrySetIconStyleFaceByName(pLight, m_IconLightFace);
+		if(pFill != nullptr)
+			TrySetIconStyleFaceByName(pFill, m_IconFillFace);
+		if(pDuotone != nullptr)
+			TrySetIconStyleFaceByName(pDuotone, m_IconDuotoneFace);
 	}
 
 	void SetIconFontWeight(const int Weight)
@@ -1771,10 +1776,8 @@ class CTextRender : public IEngineTextRender
 	// 字体商店预览缓存：已通过 QmEnsurePreviewFace 加载过的文件路径（face 池内
 	// 的预览面与 face 同生命周期，会话内不卸载，避免字形图集残留悬空 face 指针）。
 	std::vector<std::string> m_vQmPreviewLoadedPaths;
-	std::vector<std::string> m_DefaultFontFaces;
-	// QmClient: 已加载的用户字体文件路径（重扫时跳过）与 CheckDefaultFaces 防重入标记。
+	// QmClient: 已加载的字体文件路径（目录扫描/商店重扫时跳过），覆盖随包与用户两个来源。
 	std::vector<std::string> m_vLoadedCustomFontPaths;
-	bool m_QmDefaultFacesChecked = false;
 
 	void ResetQmTextRuntimeBudgetCounters(bool ConsumeGlyphStats)
 	{
@@ -2248,25 +2251,6 @@ public:
 		return 0;
 	}
 	// TClient
-	void CheckDefaultFaces()
-	{
-		if(m_QmDefaultFacesChecked)
-			return;
-		m_QmDefaultFacesChecked = true;
-		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
-		{
-			char aFamilyStyle[256];
-			const char *pFamily = CurrentFace->family_name != nullptr ? CurrentFace->family_name : "";
-			const char *pStyle = CurrentFace->style_name != nullptr ? CurrentFace->style_name : "";
-			if(pFamily[0] != '\0' && pStyle[0] != '\0' && str_comp_nocase(pStyle, "Regular") != 0)
-				str_format(aFamilyStyle, sizeof(aFamilyStyle), "%s %s", pFamily, pStyle);
-			else
-				str_copy(aFamilyStyle, pFamily[0] != '\0' ? pFamily : FT_Get_Postscript_Name(CurrentFace));
-			ReplaceHyphensWithSpaces(aFamilyStyle);
-			m_DefaultFontFaces.emplace_back(aFamilyStyle);
-		}
-	}
-	// TClient
 	void UpdateCustomFontList()
 	{
 		std::vector<std::string> vAllFaces;
@@ -2299,13 +2283,10 @@ public:
 		}
 
 		m_CustomFontFaces.clear();
-		m_CustomFontFaces.emplace_back("DejaVu Sans");
 		for(const auto &Face : vAllFaces)
 		{
 			// 图标字体不作为正文字体候选。
 			if(str_find_nocase(Face.c_str(), "Phosphor") != nullptr)
-				continue;
-			if(std::find_if(m_DefaultFontFaces.begin(), m_DefaultFontFaces.end(), [&Face](const std::string &DefaultFace) { return str_comp_nocase(DefaultFace.c_str(), Face.c_str()) == 0; }) != m_DefaultFontFaces.end())
 				continue;
 			if(std::find_if(m_CustomFontFaces.begin(), m_CustomFontFaces.end(), [&Face](const std::string &Existing) { return str_comp_nocase(Existing.c_str(), Face.c_str()) == 0; }) == m_CustomFontFaces.end())
 				m_CustomFontFaces.push_back(Face);
@@ -2342,44 +2323,6 @@ public:
 		std::sort(m_CustomFontStyles.begin(), m_CustomFontStyles.end());
 	}
 	// TClient
-	// 随包图标字体首次使用时复制到用户目录，让 qmclient/fonts 自包含，用户无需手工放置。
-	void InstallBundledIconFonts()
-	{
-		for(const char *pName : {"Phosphor/Phosphor-Regular.ttf", "Phosphor/Phosphor-Bold.ttf", "Phosphor/Phosphor-Light.ttf", "Phosphor/Phosphor-Fill.ttf", "Phosphor/Phosphor-Duotone.ttf"})
-		{
-			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "qmclient/fonts/%s", pName);
-			if(Storage()->FileExists(aPath, IStorage::TYPE_SAVE))
-				continue;
-			void *pData = nullptr;
-			unsigned DataSize = 0;
-			if(!Storage()->ReadFile(aPath, IStorage::TYPE_ALL, &pData, &DataSize))
-			{
-				log_error("textrender", "Bundled icon font '%s' is missing", aPath);
-				continue;
-			}
-			Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-			Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
-			Storage()->CreateFolder("qmclient/fonts/Phosphor", IStorage::TYPE_SAVE);
-			IOHANDLE File = Storage()->OpenFile(aPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
-			if(File == nullptr)
-			{
-				log_error("textrender", "Failed to install bundled icon font '%s'", aPath);
-			}
-			else
-			{
-				const bool Written = io_write(File, pData, DataSize) == DataSize;
-				io_close(File);
-				if(Written)
-					log_info("textrender", "Installed bundled icon font '%s'", aPath);
-				else
-					log_error("textrender", "Failed to write bundled icon font '%s'", aPath);
-			}
-			free(pData);
-		}
-	}
-
-	// TClient
 	// 启动与字体重载共用配置入口，首次加载页绘制前就完成字体面和字重选择。
 	void ApplyConfiguredFonts()
 	{
@@ -2391,15 +2334,21 @@ public:
 		SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
 	}
 
+	// QmClient: 目录扫描统一建 face 池——随包 `fonts`（data/fonts）与用户域
+	// `qmclient/fonts`（字体商店下载安装处）两个来源。随包路径先扫：同族名
+	// face 先建池者优先生效；同名相对路径由存储层按层去重。用户存档中历史
+	// 复制的 qmclient/fonts/Phosphor 残留会额外入池一份 face（同族名不参与
+	// 正文字体候选），干净解压后消失，不单独过滤以免误伤随包同路径。
 	void LoadCustomFonts()
 	{
-		CheckDefaultFaces();
-		InstallBundledIconFonts();
-		std::vector<std::string> vCustomFonts;
-		SRecursiveFontScan Scan{this, "qmclient/fonts", &vCustomFonts};
-		Storage()->ListDirectory(IStorage::TYPE_ALL, "qmclient/fonts", RecursiveFontFileCallback, &Scan);
-		std::sort(vCustomFonts.begin(), vCustomFonts.end());
-		for(const std::string &FilePath : vCustomFonts)
+		std::vector<std::string> vFontFiles;
+		for(const char *pDirectory : {"fonts", "qmclient/fonts"})
+		{
+			SRecursiveFontScan Scan{this, pDirectory, &vFontFiles};
+			Storage()->ListDirectory(IStorage::TYPE_ALL, pDirectory, RecursiveFontFileCallback, &Scan);
+		}
+		std::sort(vFontFiles.begin(), vFontFiles.end());
+		for(const std::string &FilePath : vFontFiles)
 		{
 			// 字体商店下载后会触发重扫：跳过已加载的文件，避免重复建 face 与重复占内存。
 			const bool AlreadyLoaded = std::find_if(m_vLoadedCustomFontPaths.begin(), m_vLoadedCustomFontPaths.end(), [&FilePath](const std::string &Loaded) {
@@ -2565,7 +2514,11 @@ public:
 
 		bool Success = true;
 
-		// extract font file definitions
+		// QmClient: 目录扫描统一建 face 池（随包 fonts + 用户 qmclient/fonts），
+		// 再按 index.json 绑定角色；'font files' 键废弃，仅为旧索引保留加载兼容。
+		LoadCustomFonts();
+
+		// extract font file definitions（旧索引兼容：目录扫描已加载的同名文件跳过）
 		const json_value &FontFiles = (*pJsonData)["font files"];
 		if(FontFiles.type == json_array)
 		{
@@ -2580,6 +2533,11 @@ public:
 
 				char aFontName[IO_MAX_PATH_LENGTH];
 				str_format(aFontName, sizeof(aFontName), "fonts/%s", FontFiles[FontFileIndex].u.string.ptr);
+				const bool AlreadyLoaded = std::find_if(m_vLoadedCustomFontPaths.begin(), m_vLoadedCustomFontPaths.end(), [&aFontName](const std::string &Loaded) {
+					return str_comp_nocase(Loaded.c_str(), aFontName) == 0;
+				}) != m_vLoadedCustomFontPaths.end();
+				if(AlreadyLoaded)
+					continue;
 				void *pFontData;
 				unsigned FontDataSize;
 				if(Storage()->ReadFile(aFontName, IStorage::TYPE_ALL, &pFontData, &FontDataSize))
@@ -2587,6 +2545,7 @@ public:
 					if(LoadFontCollection(aFontName, static_cast<FT_Byte *>(pFontData), (FT_Long)FontDataSize))
 					{
 						m_vpFontData.push_back(pFontData);
+						m_vLoadedCustomFontPaths.push_back(aFontName);
 					}
 					else
 					{
@@ -2600,14 +2559,11 @@ public:
 				}
 			}
 		}
-		else
+		else if(FontFiles.type != json_none)
 		{
 			log_error("textrender", "Font index malformed: 'font files' must be an array");
 			Success = false;
 		}
-
-		// QmClient: 默认字体可来自 qmclient/fonts，先加载随包字体再解析默认字体面。
-		LoadCustomFonts();
 
 		// extract default family name
 		const json_value &DefaultFace = (*pJsonData)["default"];
@@ -2677,19 +2633,47 @@ public:
 			Success = false;
 		}
 
-		// FONT_ICON_* 与 QmIcon 的字形回退统一固定到随包 Phosphor，避免用户目录
-		// 中旧版 Font Awesome 索引触发无意义的缺字和粗体告警。
-		if(!m_pGlyphMap->TrySetIconFaceByName("Phosphor"))
+		// QmClient: 图标字体由 index.json 声明（'icon' / 'icon bold' / 'icon styles'），
+		// 缺省沿用随包 Phosphor 命名约定；本配置与 FONT_ICON_* 码位共同构成图标
+		// 渲染契约，正文全局字体（SetCustomFace）不参与图标字形解析。
+		const json_value &IconFamily = (*pJsonData)["icon"];
+		const char *pIconFamily = "Phosphor";
+		if(IconFamily.type == json_string && IconFamily.u.string.ptr[0] != '\0')
+			pIconFamily = IconFamily.u.string.ptr;
+
+		const json_value &IconBoldFamily = (*pJsonData)["icon bold"];
+		const char *pIconBoldFamily = "Phosphor-Bold";
+		if(IconBoldFamily.type == json_string)
+			pIconBoldFamily = IconBoldFamily.u.string.ptr[0] != '\0' ? IconBoldFamily.u.string.ptr : nullptr;
+
+		if(!m_pGlyphMap->TrySetIconFaceByName(pIconFamily))
 		{
-			log_error("textrender", "Bundled 'Phosphor' icon face is unavailable; icon glyphs will be missing");
+			log_error("textrender", "Bundled '%s' icon face is unavailable; icon glyphs will be missing", pIconFamily);
 			Success = false;
 		}
-		if(!m_pGlyphMap->TrySetIconBoldFaceByName("Phosphor-Bold"))
+		if(pIconBoldFamily == nullptr || !m_pGlyphMap->TrySetIconBoldFaceByName(pIconBoldFamily))
 		{
-			if(!m_pGlyphMap->TrySetIconBoldFaceByName("Phosphor"))
+			if(!m_pGlyphMap->TrySetIconBoldFaceByName(pIconFamily))
 				m_pGlyphMap->UseRegularFaceForIconBold();
 		}
-		m_pGlyphMap->SetIconStyleFacesByName();
+
+		const json_value &IconStyles = (*pJsonData)["icon styles"];
+		const char *pIconLight = "Phosphor-Light";
+		const char *pIconFill = "Phosphor-Fill";
+		const char *pIconDuotone = "Phosphor-Duotone";
+		if(IconStyles.type == json_object)
+		{
+			const json_value &Light = IconStyles["light"];
+			if(Light.type == json_string && Light.u.string.ptr[0] != '\0')
+				pIconLight = Light.u.string.ptr;
+			const json_value &Fill = IconStyles["fill"];
+			if(Fill.type == json_string && Fill.u.string.ptr[0] != '\0')
+				pIconFill = Fill.u.string.ptr;
+			const json_value &Duotone = IconStyles["duotone"];
+			if(Duotone.type == json_string && Duotone.u.string.ptr[0] != '\0')
+				pIconDuotone = Duotone.u.string.ptr;
+		}
+		m_pGlyphMap->SetIconStyleFacesByName(pIconLight, pIconFill, pIconDuotone);
 
 		if(const FT_Face IconFace = m_pGlyphMap->IconFace())
 		{
