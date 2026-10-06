@@ -163,7 +163,7 @@ TEST(QmFastPracticeCommands, PredictionLoopsReuseNormalPreInputAndFreezeSemantic
 	EXPECT_NE(VisualBody.find("VisualWorld.m_WorldConfig.m_PredictEvents = false;"), std::string::npos);
 }
 
-TEST(QmChatInteractions, ChatInputClipPaddingDoesNotExpandContentScrollArea)
+TEST(QmChatInteractions, ChatInputClipPaddingDoesNotExpandScrollAreaOrShiftText)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/chat.cpp");
 	const std::string Body = SourceFunctionBody(Source, "void CChat::OnRender()");
@@ -176,8 +176,8 @@ TEST(QmChatInteractions, ChatInputClipPaddingDoesNotExpandContentScrollArea)
 	EXPECT_NE(Body.find("InputContentRect.w + 2.0f * InputClipPaddingX"), std::string::npos);
 	EXPECT_NE(Body.find("const CUIRect InputContentRect"), std::string::npos);
 	EXPECT_NE(Body.find("const CUIRect InputClippingRect"), std::string::npos);
-	EXPECT_NE(Body.find("InputContentRect.y + InputClipPaddingTop - ScrollOffset"), std::string::npos);
-	EXPECT_NE(Body.find("m_Input.GetCaretPosition().y - InputClipPaddingTop - ScrollOffsetChange"), std::string::npos);
+	EXPECT_NE(Body.find("InputContentRect.y - ScrollOffset"), std::string::npos);
+	EXPECT_NE(Body.find("m_Input.GetCaretPosition().y - ScrollOffsetChange"), std::string::npos);
 	EXPECT_NE(Body.find("CaretPositionY < InputContentRect.y"), std::string::npos);
 	EXPECT_NE(Body.find("InputContentRect.y + InputContentRect.h"), std::string::npos);
 	EXPECT_NE(Body.find("Graphics()->ClipEnable((int)(InputClippingRect.x * XScale)"), std::string::npos);
