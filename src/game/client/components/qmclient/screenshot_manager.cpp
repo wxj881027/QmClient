@@ -51,9 +51,9 @@ namespace
 			if(pStorage == nullptr || FT_Init_FreeType(&m_Library) != 0)
 				return false;
 
-			// NotoSansSC-VF 已随字体减重移除：水印中文改用随包霞鹜新晰黑，
-			// DejaVu 仍作拉丁兜底。
-			for(const char *pPath : {"fonts/霞鹜新晰黑.ttf", "fonts/DejaVuSans.ttf"})
+			// 水印与当前随包中文资源保持一致；从集合中选择简体中文的字面，
+			// 缺失或损坏时仍可用 DejaVu 导出拉丁文本。
+			for(const char *pPath : {"fonts/SourceHanSans.ttc", "fonts/DejaVuSans.ttf"})
 			{
 				IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL);
 				if(File == nullptr)
@@ -71,7 +71,23 @@ namespace
 				m_vData.assign(static_cast<unsigned char *>(pData), static_cast<unsigned char *>(pData) + DataSize);
 				free(pData);
 				if(FT_New_Memory_Face(m_Library, m_vData.data(), static_cast<FT_Long>(m_vData.size()), 0, &m_Face) == 0)
+				{
+					// TTC 的默认字面是日文，不依赖当前集合中的简体字面序号。
+					for(FT_Long FaceIndex = 1; FaceIndex < m_Face->num_faces; ++FaceIndex)
+					{
+						FT_Face Candidate = nullptr;
+						if(FT_New_Memory_Face(m_Library, m_vData.data(), static_cast<FT_Long>(m_vData.size()), FaceIndex, &Candidate) != 0)
+							continue;
+						if(Candidate->family_name != nullptr && str_comp(Candidate->family_name, "Source Han Sans SC") == 0)
+						{
+							FT_Done_Face(m_Face);
+							m_Face = Candidate;
+							break;
+						}
+						FT_Done_Face(Candidate);
+					}
 					return true;
+				}
 				m_vData.clear();
 			}
 
@@ -85,11 +101,14 @@ namespace
 
 		bool LoadGlyph(int Codepoint)
 		{
-			if(m_Face == nullptr || FT_Load_Char(m_Face, static_cast<FT_ULong>(Codepoint), FT_LOAD_RENDER | FT_LOAD_NO_BITMAP) == 0)
-				return m_Face != nullptr;
+			if(m_Face == nullptr)
+				return false;
+			// FreeType 加载缺字字形也会成功，必须先检查 cmap 才能避免导出方框。
+			if(FT_Get_Char_Index(m_Face, static_cast<FT_ULong>(Codepoint)) != 0 && FT_Load_Char(m_Face, static_cast<FT_ULong>(Codepoint), FT_LOAD_RENDER | FT_LOAD_NO_BITMAP) == 0)
+				return true;
 			if(Codepoint == '?')
 				return false;
-			return FT_Load_Char(m_Face, static_cast<FT_ULong>('?'), FT_LOAD_RENDER | FT_LOAD_NO_BITMAP) == 0;
+			return FT_Get_Char_Index(m_Face, static_cast<FT_ULong>('?')) != 0 && FT_Load_Char(m_Face, static_cast<FT_ULong>('?'), FT_LOAD_RENDER | FT_LOAD_NO_BITMAP) == 0;
 		}
 
 		int TextWidth(const std::string &Text) const

@@ -876,37 +876,11 @@ void CMenusIngameTouchControls::RenderTouchButtonBrowser(CUIRect MainView)
 				TextRender()->SetRenderFlags(0);
 				TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 				EditBox.VSplitLeft(LabelRect.w, &LeftButton, &EditBox);
-				const char *pLabel = pButton->m_pBehavior->GetLabel().m_pLabel;
-				const auto LabelType = pButton->m_pBehavior->GetLabel().m_Type;
-				if(LabelType == CTouchControls::CButtonLabel::EType::PLAIN)
-				{
-					SLabelProperties Props;
-					Props.m_MaxWidth = LeftButton.w;
-					Props.m_EnableWidthCheck = false;
-					Props.m_EllipsisAtEnd = true;
-					Ui()->DoLabel(&LeftButton, pLabel, FONTSIZE, TEXTALIGN_ML, Props);
-				}
-				else if(LabelType == CTouchControls::CButtonLabel::EType::LOCALIZED)
-				{
-					pLabel = Localize(pLabel);
-					SLabelProperties Props;
-					Props.m_MaxWidth = LeftButton.w;
-					Props.m_EnableWidthCheck = false;
-					Props.m_EllipsisAtEnd = true;
-					Ui()->DoLabel(&LeftButton, pLabel, FONTSIZE, TEXTALIGN_ML, Props);
-				}
-				else if(LabelType == CTouchControls::CButtonLabel::EType::ICON)
-				{
-					SLabelProperties Props;
-					Props.m_MaxWidth = LeftButton.w;
-					Props.m_EnableWidthCheck = false;
-					Props.m_EllipsisAtEnd = true;
-					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-					Ui()->DoLabel(&LeftButton, pLabel, FONTSIZE, TEXTALIGN_ML, Props);
-					TextRender()->SetRenderFlags(0);
-					TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-				}
+				SLabelProperties LabelProps;
+				LabelProps.m_MaxWidth = LeftButton.w;
+				LabelProps.m_EnableWidthCheck = false;
+				LabelProps.m_EllipsisAtEnd = true;
+				GameClient()->m_TouchControls.RenderButtonLabel(pButton->m_pBehavior->GetLabel(), LeftButton, FONTSIZE, TEXTALIGN_ML, LabelProps);
 				EditBox.VSplitLeft(SUBMARGIN, nullptr, &EditBox);
 				EditBox.VSplitLeft(CommandRect.w, &LeftButton, &EditBox);
 				std::string Command = DetermineTouchButtonCommandLabel(pButton);

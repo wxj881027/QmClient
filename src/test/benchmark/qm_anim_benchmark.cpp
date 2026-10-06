@@ -18,6 +18,8 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
 #include <game/client/components/scoreboard.h>
+#include <game/client/qm_icon_label.h>
+#include <game/client/qm_icon_label_runs.h>
 #include <game/client/ui.h>
 
 #include <benchmark/benchmark.h>
@@ -380,3 +382,56 @@ static void BM_IconButtonFeedback(benchmark::State &State)
 	}
 }
 BENCHMARK(BM_IconButtonFeedback)->Arg(0)->Arg(1)->Arg(2);
+
+// 每轮解析一个真实标签：正文快速拒绝、单图标与组合图标，计时包含识别与布局。
+static void BM_IconLabelResolve(benchmark::State &State)
+{
+	const std::string Loading = std::string(FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT) + FontIcons::FONT_ICON_ELLIPSIS;
+	const char *pText = State.range(0) == 0 ? "Settings" : (State.range(0) == 1 ? FontIcons::FONT_ICON_STAR : Loading.c_str());
+	const EFontPreset Preset = State.range(0) == 0 ? EFontPreset::DEFAULT_FONT : EFontPreset::ICON_FONT;
+	const CUIRect Rect{0, 0, 40, 20};
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(pText);
+		const auto Icons = QmIconLabelGlyphs(Preset, pText);
+		benchmark::DoNotOptimize(Icons);
+		if(Icons.m_Count > 0)
+			benchmark::DoNotOptimize(QmIconLabelRect(Rect, 16, TEXTALIGN_MC));
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_IconLabelResolve)->Arg(0)->Arg(1)->Arg(2);
+
+// 测量一条混合按钮标签的两遍分段，覆盖生产测量与绘制的无分配解析成本。
+static void BM_IconLabelRuns(benchmark::State &State)
+{
+	const std::string Labels[] = {
+		std::string(FontIcons::FONT_ICON_LIST_UL) + "12",
+		std::string("菜单12") + FontIcons::FONT_ICON_GEAR,
+		std::string("\xEF\x83\x89") + "3" + FontIcons::FONT_ICON_STAR};
+	const char *pText = Labels[State.range(0)].c_str();
+	int ExpectedRuns = State.range(0) == 2 ? 3 : 2;
+	int PreflightRuns = 0;
+	const bool Valid = QmVisitIconLabelRuns(pText, [&](const auto &) { ++PreflightRuns; });
+	if(!Valid || PreflightRuns != ExpectedRuns)
+	{
+		State.SkipWithError("icon label run preflight failed");
+		return;
+	}
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(pText);
+		for(int Pass = 0; Pass < 2; ++Pass)
+		{
+			int Bytes = 0;
+			QmVisitIconLabelRuns(pText, [&](const SQmIconLabelRun &Run) {
+				Bytes += Run.m_Length;
+				benchmark::DoNotOptimize(Run.m_Icon);
+				benchmark::DoNotOptimize(Run.m_pFallback);
+			});
+			benchmark::DoNotOptimize(Bytes);
+		}
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_IconLabelRuns)->Arg(0)->Arg(1)->Arg(2);

@@ -43,7 +43,6 @@ static constexpr int VOICE_MAX_CAPTURE_FRAMES_PER_UPDATE = 3;
 static constexpr int VOICE_CONFIG_SNAPSHOT_INTERVAL_MS = 50;
 static constexpr int VOICE_OVERLAY_VISIBLE_MS = 180;
 static constexpr int VOICE_OVERLAY_MAX_SPEAKERS = 5;
-static constexpr const char *s_pVoiceOverlayMicIcon = "\xEF\x84\xB0";
 
 void CVoiceOverlayState::Reset()
 {
@@ -2565,9 +2564,8 @@ void CRClientVoice::RenderSpeakerOverlay() NO_THREAD_SAFETY_ANALYSIS
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 	pTextRender->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.40f);
 
-	pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 	const float UserIconWidth = UserIconFontSize;
-	const float MicIconWidth = pTextRender->TextWidth(IconFontSize, s_pVoiceOverlayMicIcon);
+	const float MicIconWidth = IconFontSize;
 	pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
 	float PanelWidth = 0.0f;
 	for(int EntryIndex = 0; EntryIndex < EntryCount; ++EntryIndex)
@@ -2604,9 +2602,7 @@ void CRClientVoice::RenderSpeakerOverlay() NO_THREAD_SAFETY_ANALYSIS
 
 		const float MicIconX = RowX + RowWidth - RowPaddingX - MicIconWidth;
 		const float MicIconY = RowY + (RowHeight - IconFontSize) * 0.5f - 0.5f;
-		pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
-		pTextRender->TextColor(1.0f, 1.0f, 1.0f, 0.90f);
-		pTextRender->Text(MicIconX, MicIconY, IconFontSize, s_pVoiceOverlayMicIcon, -1.0f);
+		m_pGameClient->Ui()->DrawQmIconAt(MicIconX, MicIconY, IconFontSize, EQmIcon::MICROPHONE, FontIcons::FONT_ICON_MICROPHONE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.90f));
 
 		const float NameX = RowX + RowPaddingX + UserBoxWidth + UserToNameGap;
 		const float NameY = RowY + (RowHeight - NameFontSize) * 0.5f - 0.5f;

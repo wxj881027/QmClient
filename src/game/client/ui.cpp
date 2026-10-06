@@ -7,6 +7,7 @@
 #include "QmUi/UiSurface.h"
 #include "QmUi/UiSurfaceText.h"
 #include "components/qmclient/perf_logging.h"
+#include "qm_icon_label.h"
 #include "qm_icon_manager.h"
 #include "ui_scrollregion.h"
 
@@ -123,6 +124,9 @@ void CUIElement::SUIElementRect::Reset()
 	m_TextOutlineColor = ColorRGBA(-1, -1, -1, -1);
 	m_QuadColor = ColorRGBA(-1, -1, -1, -1);
 	m_ReadCursorGlyphCount = -1;
+	m_aQmIcons.fill(EQmIcon::COUNT);
+	m_NumQmIcons = 0;
+	m_FontPreset = EFontPreset::DEFAULT_FONT;
 }
 
 void CUIElement::SUIElementRect::Draw(const CUIRect *pRect, ColorRGBA Color, int Corners, float Rounding)
@@ -1331,6 +1335,10 @@ vec2 CUi::CalcAlignedCursorPos(const CUIRect *pRect, vec2 TextSize, int Align, c
 
 CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps) const
 {
+	const SQmIconLabelGlyphs Icons = QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText);
+	if(TryDrawQmIconLabels(*pRect, Icons.m_aIcons.data(), Icons.m_Count, Size, Align, TextRender()->GetTextColor()))
+		return CLabelResult{};
+
 	const int Flags = GetFlagsForLabelProperties(LabelProps, nullptr);
 	const SCursorAndBoundingBox TextBounds = CalcFontSizeCursorHeightAndBoundingBox(TextRender(), pText, Flags, Size, pRect->w, LabelProps);
 	const vec2 CursorPos = CalcAlignedCursorPos(pRect, TextBounds.m_TextSize, Align, TextBounds.m_LineCount == 1 ? &TextBounds.m_BiggestCharacterHeight : nullptr);
@@ -1343,11 +1351,17 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 	Cursor.m_LineWidth = (float)LabelProps.m_MaxWidth;
 	FlushQuadBatch();
 	TextRender()->TextEx(&Cursor, pText, -1);
+	if(m_pQmIconManager != nullptr && Icons.m_Count > 0)
+		m_pQmIconManager->RecordFontFallback(Icons.m_Count);
 	return CLabelResult{.m_Truncated = Cursor.m_Truncated};
 }
 
 void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor) const
 {
+	const auto Icons = pReadCursor == nullptr ? QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText, StrLen) : SQmIconLabelGlyphs{};
+	RectEl.m_aQmIcons = Icons.m_aIcons;
+	RectEl.m_NumQmIcons = Icons.m_Count;
+	RectEl.m_FontPreset = TextRender()->GetFontPreset();
 	const int Flags = GetFlagsForLabelProperties(LabelProps, pReadCursor);
 	const SCursorAndBoundingBox TextBounds = CalcFontSizeCursorHeightAndBoundingBox(TextRender(), pText, Flags, Size, pRect->w, LabelProps);
 
@@ -1385,11 +1399,15 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 {
 	if(pRect == nullptr || !RectEl.m_UITextContainer.Valid())
 		return;
+	if(TryDrawQmIconLabels(*pRect, RectEl.m_aQmIcons.data(), RectEl.m_NumQmIcons, RectEl.m_FontSize, Align, RectEl.m_TextColor))
+		return;
 
 	const float *pBiggestCharHeight = RectEl.m_LineCount == 1 ? &RectEl.m_BiggestCharacterHeight : nullptr;
 	const vec2 CursorPos = CalcAlignedCursorPos(pRect, vec2(RectEl.m_Cursor.m_LongestLineWidth, RectEl.m_Cursor.Height()), Align, pBiggestCharHeight);
 	FlushQuadBatch();
 	TextRender()->RenderTextContainer(RectEl.m_UITextContainer, RectEl.m_TextColor, RectEl.m_TextOutlineColor, CursorPos.x, CursorPos.y);
+	if(m_pQmIconManager != nullptr && RectEl.m_NumQmIcons > 0)
+		m_pQmIconManager->RecordFontFallback(RectEl.m_NumQmIcons);
 }
 
 void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated) const
@@ -1398,7 +1416,8 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	const int ReadCursorGlyphCount = pReadCursor == nullptr ? -1 : pReadCursor->m_GlyphCount;
 	bool NeedsRecreate = false;
 	bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();
-	bool StyleChanged = RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
+	const auto Icons = pReadCursor == nullptr ? QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText, StrLen) : SQmIconLabelGlyphs{};
+	bool StyleChanged = RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
 	if(ColorChanged)
 	{
 		RectEl.m_TextColor = TextRender()->GetTextColor();
@@ -1939,10 +1958,33 @@ int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText
 	return Enabled ? DoButtonLogic(pButtonContainer, Checked, pRect, Flags) : 0;
 }
 
+bool CUi::TryDrawQmIconLabels(const CUIRect &Rect, const EQmIcon *pIcons, int Count, float Size, int Align, const ColorRGBA &Color) const
+{
+	if(Count <= 0 || m_pQmIconManager == nullptr || m_pQmIconManager->PreferFontFallback())
+		return false;
+	const float Side = std::max(0.0f, std::min(Size, std::min(Rect.w / Count, Rect.h)));
+	if(Side <= 0.0f)
+		return false;
+	CUIRect Group = QmIconLabelRect(Rect, Side, Align);
+	const float Width = Side * Count;
+	Group.x = Rect.x + ((Align & TEXTALIGN_CENTER) ? (Rect.w - Width) * 0.5f : ((Align & TEXTALIGN_RIGHT) ? Rect.w - Width : 0.0f));
+	FlushQuadBatch();
+	for(int Index = 0; Index < Count; ++Index)
+	{
+		m_pQmIconManager->RenderIcon(pIcons[Index], Group, Color);
+		Group.x += Side;
+	}
+	return true;
+}
+
 bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color) const
 {
-	if(m_pQmIconManager != nullptr && !m_pQmIconManager->PreferFontFallback() && m_pQmIconManager->RenderIcon(Icon, Rect, Color))
-		return true;
+	if(m_pQmIconManager != nullptr && !m_pQmIconManager->PreferFontFallback())
+	{
+		FlushQuadBatch();
+		if(m_pQmIconManager->RenderIcon(Icon, Rect, Color))
+			return true;
+	}
 
 	// 图集未就绪或该图标缺失时回退到 TTF 字形，保证图标仍然可见。
 	if(pFallbackIcon == nullptr || pFallbackIcon[0] == '\0')
@@ -1964,21 +2006,7 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 
 CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align, const SLabelProperties &LabelProps) const
 {
-	// 图集图标按字号取正方形，并按对齐方式落在 pRect 内。
-	const float Side = minimum(Size, minimum(pRect->w, pRect->h));
-	CUIRect IconRect;
-	IconRect.w = Side;
-	IconRect.h = Side;
-	IconRect.x = pRect->x;
-	IconRect.y = pRect->y;
-	if(Align & TEXTALIGN_CENTER)
-		IconRect.x = pRect->x + (pRect->w - Side) * 0.5f;
-	else if(Align & TEXTALIGN_RIGHT)
-		IconRect.x = pRect->x + pRect->w - Side;
-	if(Align & TEXTALIGN_MIDDLE)
-		IconRect.y = pRect->y + (pRect->h - Side) * 0.5f;
-	else if(Align & TEXTALIGN_BOTTOM)
-		IconRect.y = pRect->y + pRect->h - Side;
+	const CUIRect IconRect = QmIconLabelRect(*pRect, Size, Align);
 
 	if(DrawQmIcon(IconRect, Icon, pFallbackIcon, TextRender()->GetTextColor()))
 		return CLabelResult{};

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import subprocess
 import sys
 import uuid
@@ -27,11 +28,34 @@ def file_digest(path: Path) -> str:
 def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace: Path) -> None:
 	# 编译输入须使用独立 SetupAppId，不能修改正式安装的卸载登记。
 	install = workspace / "installed"
+	# 在执行安装前固定完整载荷清单；同一清单用于覆盖升级与卸载验证。
+	payload_hashes = {path.relative_to(payload).as_posix(): file_digest(path) for path in sorted(payload.rglob("*")) if path.is_file()}
+	if not payload_hashes:
+		raise AssertionError("Setup payload contains no files")
+	for required in (
+		"DDNet.exe",
+		"DDNet-Server.exe",
+		"qm-nmt-helper.exe",
+		"qm-soda-helper.exe",
+		"qm-music-helper.exe",
+		"qm-nmt-hook64.dll",
+		"qm-nmt-bootstrap.dll",
+		"data/shader/vulkan/textured_msdf.vert.spv",
+		"data/shader/vulkan/textured_msdf.frag.spv",
+	):
+		if required not in payload_hashes:
+			raise AssertionError(f"Setup payload is missing required runtime file: {required}")
+	(workspace / "payload-sha256.json").write_text(json.dumps(payload_hashes, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+	print(f"verifying {len(payload_hashes)} payload files, including {sum(name.endswith('.spv') for name in payload_hashes)} Vulkan shaders", flush=True)
 	for executable, name in ((previous, "previous"), (current, "current")):
 		if name == "current":
 			if not (install / "QmClient-Setup.ini").is_file():
 				raise AssertionError("previous Setup did not create the installed marker")
-			(install / "DDNet.exe").write_bytes(b"old executable to replace")
+			# 损坏旧载荷中的同名文件，证明每项都由本次 Setup 实际覆盖。
+			for relative in payload_hashes:
+				old_path = install / relative
+				if old_path.is_file():
+					old_path.write_bytes(b"old payload file to replace")
 			old_font = install / "data/fonts/霞鹜文楷/LXGWWenKai-Regular.ttf"
 			old_font.parent.mkdir(parents=True, exist_ok=True)
 			old_font.write_bytes(b"obsolete bundled font")
@@ -39,16 +63,22 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 			old_asset = install / "data/qmclient/gui_logo.png"
 			old_asset.write_bytes(b"old asset to replace")
 		run_process([str(executable), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/NOICONS", f"/DIR={install}", f"/LOG={workspace / (name + '.log')}"])
-	for relative in ("DDNet.exe", "DDNet-Server.exe", "data/qmclient/gui_logo.png"):
-		if file_digest(install / relative) != file_digest(payload / relative):
+	for relative, expected_digest in payload_hashes.items():
+		installed_path = install / relative
+		if not installed_path.is_file():
+			raise AssertionError(f"upgrade did not install {relative}")
+		if file_digest(installed_path) != expected_digest:
 			raise AssertionError(f"upgrade did not replace {relative}")
 	if (install / "data/fonts/霞鹜文楷/LXGWWenKai-Regular.ttf").exists():
 		raise AssertionError("obsolete bundled font survived Setup upgrade")
 	if (install / "user-owned.txt").read_bytes() != b"preserve this file":
 		raise AssertionError("upgrade changed a user-owned file")
 	run_process([str(install / "unins000.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", f"/LOG={workspace / 'uninstall.log'}"])
-	if (install / "DDNet.exe").exists() or (install / "QmClient-Setup.ini").exists():
-		raise AssertionError("uninstall left installed executable or marker")
+	for relative in payload_hashes:
+		if (install / relative).exists():
+			raise AssertionError(f"uninstall left installed payload file: {relative}")
+	if (install / "QmClient-Setup.ini").exists():
+		raise AssertionError("uninstall left installed marker")
 	if (install / "user-owned.txt").read_bytes() != b"preserve this file":
 		raise AssertionError("uninstall removed a user-owned file")
 

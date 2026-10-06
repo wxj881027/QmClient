@@ -4311,8 +4311,8 @@ void CHud::RenderMediaIsland()
 	}
 	const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - PlannedUnifiedWidth);
 	const float TargetX = TimerCapsule.m_Visible ?
-		QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, TargetWidth, MainToTimerGap).m_MainX :
-		std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
+				      QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, TargetWidth, MainToTimerGap).m_MainX :
+				      std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
 	const float TargetBottomHeight = ShowBottomRow ? (BottomRowPaddingY * 2.0f + BottomRowLineHeight * BottomRowLineCount) : 0.0f;
 	const float TargetHeight = BaseIslandHeight + TargetBottomHeight;
 	const float TitleAlphaTarget = TrackDetailsExpanded && TitleWidth > 0.0f ? 1.0f : 0.0f;
@@ -4861,12 +4861,6 @@ void CHud::RenderMediaIsland()
 			TextRender()->TextColor(PreviousColor);
 			TextRender()->SetFontPreset(PreviousPreset);
 		};
-		if(IsOpenGlBackend())
-		{
-			RenderTextEye(FontIcons::FONT_ICON_EYE_SLASH, IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale), SpectatorIconPose.m_ClosedAlpha);
-			RenderTextEye(FontIcons::FONT_ICON_EYE, IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY), SpectatorIconPose.m_OpenAlpha);
-		}
-		else
 		{
 			// 等比契约的显式豁免只作用于这条眼睛动画（见常量处的说明）。
 			CQmIconManager *pIconManager = GameClient()->QmIconManager();

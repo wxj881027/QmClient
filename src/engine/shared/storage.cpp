@@ -479,6 +479,23 @@ namespace
 			m_aBinarydir[0] = '\0';
 		}
 
+		bool GetDataPath(const char *pFilename, char *pBuffer, unsigned BufferSize) const override
+		{
+			if(BufferSize == 0)
+				return false;
+			pBuffer[0] = '\0';
+			if(!m_aDatadir[0] || pFilename == nullptr || !pFilename[0] || pFilename[0] == '/' || pFilename[0] == '\\' || str_find(pFilename, ":") != nullptr || !fs_is_relative_path(pFilename) ||
+				str_find(pFilename, "../") != nullptr || str_find(pFilename, "..\\") != nullptr || str_comp(pFilename, "..") == 0 || str_endswith(pFilename, "/..") || str_endswith(pFilename, "\\.."))
+				return false;
+			char aPath[IO_MAX_PATH_LENGTH];
+			const size_t Length = static_cast<size_t>(str_length(m_aDatadir)) + 1 + str_length(pFilename);
+			if(Length >= sizeof(aPath) || Length >= BufferSize)
+				return false;
+			str_format(aPath, sizeof(aPath), "%s/%s", m_aDatadir, pFilename);
+			str_copy(pBuffer, aPath, BufferSize);
+			return true;
+		}
+
 		int NumPaths() const override
 		{
 			return m_NumPaths;

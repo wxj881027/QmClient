@@ -128,10 +128,11 @@ namespace
 			return;
 		const SQmIconDiagnostics &Total = s_Window.m_Total;
 		char aPayload[1024];
-		str_format(aPayload, sizeof(aPayload), "event=icon_summary sample_frames=%" PRIu64 " msdf_draws_max=%" PRIu64 " msdf_draws=%" PRIu64 " msdf_manager_call_run_max=%" PRIu64 " msdf_manager_call_run_1=%" PRIu64 " msdf_manager_call_run_2=%" PRIu64 " msdf_manager_call_run_3_4=%" PRIu64 " msdf_manager_call_run_5_8=%" PRIu64 " msdf_manager_call_run_9_16=%" PRIu64 " msdf_manager_call_run_17_32=%" PRIu64 " msdf_manager_call_run_33_64=%" PRIu64 " msdf_manager_call_run_65_plus=%" PRIu64 " reload_attempts=%" PRIu64 " reload_successes=%" PRIu64 " atlas_swaps=%" PRIu64 " texture_load_successes=%" PRIu64 " texture_load_failures=%" PRIu64 " texture_unloads=%" PRIu64,
+		str_format(aPayload, sizeof(aPayload), "event=icon_summary sample_frames=%" PRIu64 " msdf_draws_max=%" PRIu64 " msdf_draws=%" PRIu64 " font_fallback_draws=%" PRIu64 " msdf_manager_call_run_max=%" PRIu64 " msdf_manager_call_run_1=%" PRIu64 " msdf_manager_call_run_2=%" PRIu64 " msdf_manager_call_run_3_4=%" PRIu64 " msdf_manager_call_run_5_8=%" PRIu64 " msdf_manager_call_run_9_16=%" PRIu64 " msdf_manager_call_run_17_32=%" PRIu64 " msdf_manager_call_run_33_64=%" PRIu64 " msdf_manager_call_run_65_plus=%" PRIu64 " reload_attempts=%" PRIu64 " reload_successes=%" PRIu64 " atlas_swaps=%" PRIu64 " texture_load_successes=%" PRIu64 " texture_load_failures=%" PRIu64 " texture_unloads=%" PRIu64,
 			s_Window.m_Frames,
 			s_Window.m_MaxMsdfDraws,
 			Total.m_MsdfIconDraws,
+			Total.m_FontFallbackDraws,
 			Total.m_MaxMsdfManagerCallRun,
 			Total.m_MsdfManagerCallRunBuckets[0],
 			Total.m_MsdfManagerCallRunBuckets[1],

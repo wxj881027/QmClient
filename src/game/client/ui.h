@@ -306,6 +306,9 @@ public:
 
 		std::string m_Text;
 		int m_ReadCursorGlyphCount;
+		std::array<EQmIcon, 8> m_aQmIcons;
+		int m_NumQmIcons;
+		EFontPreset m_FontPreset;
 		float m_FontSize;
 		int m_TextAlign;
 		float m_LabelMaxWidth;
@@ -1147,6 +1150,7 @@ public:
 	int DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt);
 	// 图集优先、字形回退的图标绘制：pFallbackIcon 为 FontIcons::FONT_ICON_* 字形。
 	void SetQmIconManager(CQmIconManager *pQmIconManager) { m_pQmIconManager = pQmIconManager; }
+	bool TryDrawQmIconLabels(const CUIRect &Rect, const EQmIcon *pIcons, int Count, float Size, int Align, const ColorRGBA &Color) const;
 	bool DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const;
 	bool DrawQmIconAt(float x, float y, float Size, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const
 	{

@@ -3690,6 +3690,9 @@ if(CLIENT)
     projectile_data.h
     qm_icon_manager.cpp
     qm_icon_manager.h
+    qm_icon_label.h
+    qm_icon_label_runs.h
+    qm_icon_registry.inc
     qm_icon_morph.cpp
     qm_icon_morph.h
     qm_ime_candidate_popup.cpp
@@ -4986,6 +4989,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     )
   endif()
 
+  if(FREETYPE_FOUND)
+    list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp)
+    list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
+  endif()
+
   set(TARGET_TESTRUNNER testrunner)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL
     ${TESTS}
@@ -5003,6 +5011,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   )
   add_dependencies(${TARGET_TESTRUNNER} generate_protocol)
   target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+  if(FREETYPE_FOUND)
+    target_link_libraries(${TARGET_TESTRUNNER} ${FREETYPE_LIBRARIES})
+    target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FREETYPE_INCLUDE_DIRS})
+  endif()
   if(TARGET_OS STREQUAL "windows")
     target_link_libraries(${TARGET_TESTRUNNER} bcrypt winhttp ws2_32)
   endif()
@@ -5446,6 +5458,14 @@ endif()
 if(TARGET game-server)
   list(APPEND CPACK_TARGETS game-server)
 endif()
+# 安装器与归档共享运行时目标清单，工具程序不进入 Setup。
+if(TARGET_OS STREQUAL "windows" AND TARGET game-client AND TARGET game-server)
+  set(QMCLIENT_SETUP_RUNTIME_FILES "")
+  foreach(qm_setup_target ${CPACK_TARGETS})
+    string(APPEND QMCLIENT_SETUP_RUNTIME_FILES "$<TARGET_FILE_NAME:${qm_setup_target}>\n")
+  endforeach()
+  file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-setup-runtime.txt" CONTENT "${QMCLIENT_SETUP_RUNTIME_FILES}")
+endif()
 list(APPEND CPACK_TARGETS ${TARGET_TOOLS})
 
 if(STEAMAPI_KIND STREQUAL SHARED AND NOT STEAMAPI_RUNTIME_FILE_NAME)
@@ -5469,6 +5489,10 @@ set(CPACK_GEN_FILES
   ${VULKAN_SHADER_FILE_LIST}
   ${METAL_SHADER_FILE_LIST}
 )
+if(TARGET_OS STREQUAL "windows" AND TARGET game-client AND TARGET game-server)
+  string(REPLACE ";" "\n" QMCLIENT_SETUP_GENERATED_FILES "${CPACK_GEN_FILES}")
+  file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-setup-generated.txt" CONTENT "${QMCLIENT_SETUP_GENERATED_FILES}")
+endif()
 
 if(TARGET_OS STREQUAL "windows")
   if(QMCLIENT_PORTABLE)

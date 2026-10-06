@@ -24,102 +24,11 @@ class IStorage;
 
 enum class EQmIcon
 {
-	STAR = 0,
-	BOOKMARK,
-	SEARCH,
-	CLOSE,
-	EYE,
-	EYE_OFF,
-	CHEVRON_DOWN,
-	PLUS,
-	TRASH,
-	// 与 FontIcons::FONT_ICON_* 对应的图集图标，名字见 CQmIconManager::IconName。
-	MINUS,
-	LOCK,
-	HEART,
-	HEART_CRACK,
-	CIRCLE,
-	ARROW_ROTATE_LEFT,
-	ARROW_ROTATE_RIGHT,
-	FLAG_CHECKERED,
-	BAN,
-	CIRCLE_CHEVRON_DOWN,
-	KEY,
-	LANGUAGE,
-	SQUARE_MINUS,
-	SQUARE_PLUS,
-	SORT_UP,
-	SORT_DOWN,
-	TRIANGLE_EXCLAMATION,
-	HOUSE,
-	NEWSPAPER,
-	POWER_OFF,
-	GEAR,
-	PEN_TO_SQUARE,
-	CLAPPERBOARD,
-	EARTH_AMERICAS,
-	NETWORK_WIRED,
-	LIST_UL,
-	INFO,
-	TERMINAL,
-	USER,
-	SLASH,
-	PLAY,
-	PAUSE,
-	STOP,
-	CHEVRON_LEFT,
-	CHEVRON_RIGHT,
-	CHEVRON_UP,
-	BACKWARD,
-	FORWARD,
-	RIGHT_FROM_BRACKET,
-	RIGHT_TO_BRACKET,
-	ARROW_UP_RIGHT_FROM_SQUARE,
-	BACKWARD_STEP,
-	FORWARD_STEP,
-	BACKWARD_FAST,
-	FORWARD_FAST,
-	KEYBOARD,
-	ELLIPSIS,
-	FOLDER,
-	FOLDER_OPEN,
-	FOLDER_TREE,
-	FILM,
-	VIDEO,
-	MAP,
-	IMAGE,
-	MUSIC,
-	FILE,
-	PENCIL,
-	COPY,
-	ARROWS_LEFT_RIGHT,
-	ARROWS_UP_DOWN,
-	CIRCLE_PLAY,
-	BORDER_ALL,
-	EYE_DROPPER,
-	COMMENT,
-	COMMENT_SLASH,
-	DICE_ONE,
-	DICE_TWO,
-	DICE_THREE,
-	DICE_FOUR,
-	DICE_FIVE,
-	DICE_SIX,
-	LAYER_GROUP,
-	UNDO,
-	REDO,
-	ARROWS_ROTATE,
-	QUESTION,
-	CAMERA,
-	USERS,
-	// 媒体岛/观战倒计时用官方 Phosphor 图标（原自制 satellite 图标已移除）。
-	ARROWS_IN,
-	ARROWS_OUT,
-	SWAP,
-	SPEAKER_SLASH,
-	CHECK,
-	ARROW_LEFT,
-	ARROW_RIGHT,
+#define QM_ICON_ENTRY(Id, Name, Codepoint) Id,
+#define QM_ICON_ALIAS QM_ICON_ENTRY
+#include "qm_icon_registry.inc"
+#undef QM_ICON_ENTRY
+#undef QM_ICON_ALIAS
 	COUNT,
 };
 
@@ -169,6 +78,7 @@ struct SQmIconDiagnostics
 {
 	static constexpr size_t MSDF_RUN_BUCKET_COUNT = 8;
 	uint64_t m_MsdfIconDraws = 0;
+	uint64_t m_FontFallbackDraws = 0;
 	uint64_t m_MaxMsdfManagerCallRun = 0;
 	std::array<uint64_t, MSDF_RUN_BUCKET_COUNT> m_MsdfManagerCallRunBuckets{};
 	uint64_t m_ReloadAttempts = 0;
@@ -193,6 +103,7 @@ struct SQmIconDiagnosticsWindow
 			m_LastLog = Now;
 		++m_Frames;
 		m_Total.m_MsdfIconDraws += Frame.m_MsdfIconDraws;
+		m_Total.m_FontFallbackDraws += Frame.m_FontFallbackDraws;
 		m_Total.m_MaxMsdfManagerCallRun = std::max(m_Total.m_MaxMsdfManagerCallRun, Frame.m_MaxMsdfManagerCallRun);
 		for(size_t i = 0; i < SQmIconDiagnostics::MSDF_RUN_BUCKET_COUNT; ++i)
 			m_Total.m_MsdfManagerCallRunBuckets[i] += Frame.m_MsdfManagerCallRunBuckets[i];
@@ -435,6 +346,12 @@ public:
 	bool PreferFontFallback() const { return !IsReady(); }
 	int LoadedIconCount() const { return m_Atlas.LoadedIconCount(); }
 	SQmIconDiagnostics TakeDiagnostics() const;
+	// 仅计数实际提交的字体兜底绘制，关闭诊断时不维护每帧计数。
+	void RecordFontFallback(int Count = 1) const
+	{
+		if(m_DiagnosticsEnabled && Count > 0)
+			m_Diagnostics.m_FontFallbackDraws += static_cast<uint64_t>(Count);
+	}
 
 	// PreserveAspect=false 仅供刻意的各向异性动画使用（例如观战眼睛的纵向压扁展开）；
 	// 默认等比，避免图标按字形宽高比被拉伸。
@@ -448,115 +365,48 @@ public:
 
 	static const char *IconName(EQmIcon Icon)
 	{
-		// 枚举 -> 图集格子名。新增图标时只在这张表里登记一次。
-		struct SEntry
+		switch(Icon)
 		{
-			EQmIcon m_Icon;
-			const char *m_pName;
-		};
-		static constexpr SEntry s_aEntries[] = {
-			{EQmIcon::STAR, "star"},
-			{EQmIcon::BOOKMARK, "bookmark"},
-			{EQmIcon::SEARCH, "magnifying-glass"},
-			{EQmIcon::CLOSE, "x"},
-			{EQmIcon::EYE, "eye"},
-			{EQmIcon::EYE_OFF, "eye-slash"},
-			{EQmIcon::CHEVRON_DOWN, "chevron-down"},
-			{EQmIcon::PLUS, "plus"},
-			{EQmIcon::TRASH, "trash"},
-			{EQmIcon::MINUS, "minus"},
-			{EQmIcon::LOCK, "lock"},
-			{EQmIcon::HEART, "heart"},
-			{EQmIcon::HEART_CRACK, "heart-break"},
-			{EQmIcon::CIRCLE, "circle"},
-			{EQmIcon::ARROW_ROTATE_LEFT, "arrow-counter-clockwise"},
-			{EQmIcon::ARROW_ROTATE_RIGHT, "arrow-clockwise"},
-			{EQmIcon::FLAG_CHECKERED, "flag-checkered"},
-			{EQmIcon::BAN, "prohibit"},
-			{EQmIcon::CIRCLE_CHEVRON_DOWN, "caret-circle-down"},
-			{EQmIcon::KEY, "key"},
-			{EQmIcon::LANGUAGE, "translate"},
-			{EQmIcon::SQUARE_MINUS, "minus-square"},
-			{EQmIcon::SQUARE_PLUS, "plus-square"},
-			{EQmIcon::SORT_UP, "sort-ascending"},
-			{EQmIcon::SORT_DOWN, "sort-descending"},
-			{EQmIcon::TRIANGLE_EXCLAMATION, "warning"},
-			{EQmIcon::HOUSE, "house"},
-			{EQmIcon::NEWSPAPER, "newspaper"},
-			{EQmIcon::POWER_OFF, "power"},
-			{EQmIcon::GEAR, "gear"},
-			{EQmIcon::PEN_TO_SQUARE, "pencil-simple"},
-			{EQmIcon::CLAPPERBOARD, "film-slate"},
-			{EQmIcon::EARTH_AMERICAS, "globe-hemisphere-west"},
-			{EQmIcon::NETWORK_WIRED, "network"},
-			{EQmIcon::LIST_UL, "list"},
-			{EQmIcon::INFO, "info"},
-			{EQmIcon::TERMINAL, "terminal"},
-			{EQmIcon::USER, "user"},
-			{EQmIcon::SLASH, "line-segment"},
-			{EQmIcon::PLAY, "play"},
-			{EQmIcon::PAUSE, "pause"},
-			{EQmIcon::STOP, "stop"},
-			{EQmIcon::CHEVRON_LEFT, "caret-left"},
-			{EQmIcon::CHEVRON_RIGHT, "caret-right"},
-			{EQmIcon::CHEVRON_UP, "caret-up"},
-			{EQmIcon::BACKWARD, "skip-back"},
-			{EQmIcon::FORWARD, "skip-forward"},
-			{EQmIcon::RIGHT_FROM_BRACKET, "sign-out"},
-			{EQmIcon::RIGHT_TO_BRACKET, "sign-in"},
-			{EQmIcon::ARROW_UP_RIGHT_FROM_SQUARE, "arrow-square-out"},
-			{EQmIcon::BACKWARD_STEP, "backward-step"},
-			{EQmIcon::FORWARD_STEP, "forward-step"},
-			{EQmIcon::BACKWARD_FAST, "rewind"},
-			{EQmIcon::FORWARD_FAST, "fast-forward"},
-			{EQmIcon::KEYBOARD, "keyboard"},
-			{EQmIcon::ELLIPSIS, "dots-three"},
-			{EQmIcon::FOLDER, "folder"},
-			{EQmIcon::FOLDER_OPEN, "folder-open"},
-			{EQmIcon::FOLDER_TREE, "tree-structure"},
-			{EQmIcon::FILM, "film-strip"},
-			{EQmIcon::VIDEO, "video"},
-			{EQmIcon::MAP, "map-trifold"},
-			{EQmIcon::IMAGE, "image"},
-			{EQmIcon::MUSIC, "music-notes"},
-			{EQmIcon::FILE, "file"},
-			{EQmIcon::PENCIL, "pencil"},
-			{EQmIcon::COPY, "copy"},
-			{EQmIcon::ARROWS_LEFT_RIGHT, "arrows-left-right"},
-			{EQmIcon::ARROWS_UP_DOWN, "arrows-vertical"},
-			{EQmIcon::CIRCLE_PLAY, "play-circle"},
-			{EQmIcon::BORDER_ALL, "grid-four"},
-			{EQmIcon::EYE_DROPPER, "eyedropper"},
-			{EQmIcon::COMMENT, "chat"},
-			{EQmIcon::COMMENT_SLASH, "chat-slash"},
-			{EQmIcon::DICE_ONE, "dice-one"},
-			{EQmIcon::DICE_TWO, "dice-two"},
-			{EQmIcon::DICE_THREE, "dice-three"},
-			{EQmIcon::DICE_FOUR, "dice-four"},
-			{EQmIcon::DICE_FIVE, "dice-five"},
-			{EQmIcon::DICE_SIX, "dice-six"},
-			{EQmIcon::LAYER_GROUP, "stack"},
-			{EQmIcon::UNDO, "arrow-u-up-left"},
-			{EQmIcon::REDO, "arrow-u-up-right"},
-			{EQmIcon::ARROWS_ROTATE, "arrows-clockwise"},
-			{EQmIcon::QUESTION, "question"},
-			{EQmIcon::CAMERA, "camera"},
-			{EQmIcon::USERS, "users"},
-			// 媒体岛/观战倒计时（原自制 satellite 图标的官方替代）
-			{EQmIcon::ARROWS_IN, "arrows-in"},
-			{EQmIcon::ARROWS_OUT, "arrows-out"},
-			{EQmIcon::SWAP, "swap"},
-			{EQmIcon::SPEAKER_SLASH, "speaker-slash"},
-			{EQmIcon::CHECK, "check"},
-			{EQmIcon::ARROW_LEFT, "arrow-left"},
-			{EQmIcon::ARROW_RIGHT, "arrow-right"},
-		};
-		for(const SEntry &Entry : s_aEntries)
-		{
-			if(Entry.m_Icon == Icon)
-				return Entry.m_pName;
+#define QM_ICON_ENTRY(Id, Name, Codepoint) \
+	case EQmIcon::Id: return Name;
+#define QM_ICON_ALIAS QM_ICON_ENTRY
+#include "qm_icon_registry.inc"
+#undef QM_ICON_ENTRY
+#undef QM_ICON_ALIAS
+		default: return "";
 		}
-		return "";
+	}
+
+	// 仅接受一个完整字形，正文与混合文本不进入图标绘制路径。
+	static EQmIcon IconFromGlyph(const char *pText, int Length = -1)
+	{
+		if(pText == nullptr || Length == 0)
+			return EQmIcon::COUNT;
+		char aGlyph[5];
+		if(Length >= 0)
+		{
+			if(Length > 4)
+				return EQmIcon::COUNT;
+			mem_copy(aGlyph, pText, Length);
+			aGlyph[Length] = '\0';
+			pText = aGlyph;
+		}
+		if(!pText[0])
+			return EQmIcon::COUNT;
+		const char *pEnd = pText;
+		const int Codepoint = str_utf8_decode(&pEnd);
+		if((Length < 0 && *pEnd != '\0') || (Length >= 0 && pEnd - pText != Length))
+			return EQmIcon::COUNT;
+		switch(Codepoint)
+		{
+#define QM_ICON_ENTRY(Id, Name, Codepoint) \
+	case Codepoint: return EQmIcon::Id;
+#define QM_ICON_ALIAS(Id, Name, Codepoint)
+#include "qm_icon_registry.inc"
+#undef QM_ICON_ENTRY
+#undef QM_ICON_ALIAS
+		default: return EQmIcon::COUNT;
+		}
 	}
 
 private:

@@ -47,3 +47,11 @@ CI 的普通 Windows 行构建正常 ZIP、7z 和 Setup；Windows Portable 行�
 - 移除了两项只依赖调用源码文本的旧测试；配置迁移的生产接口测试、更新清单和 Rust 校验测试及真实进程持久化场景保留。没有以匹配新的调用文本代替行为验证。
 
 本轮没有运行真实 GitHub 上传和远程自动更新，也没有验证其他操作系统的运行时路径；便携专用构建当前仅用于 Windows。
+
+## 安装载荷完整性
+
+Setup 载荷由 CMake 的 CPACK_TARGETS 与 CPACK_GEN_FILES 分别生成运行时和生成资源清单，准备器复用清单，不单独维护辅助程序列表。安装包包含构建启用的网易云、汽水、QQ/酷狗音乐 helper，以及对应 Hook/bootstrap DLL。生成的 Vulkan shader（包括 textured_msdf 的顶点与片段 SPV）覆盖同名源码资源后进入载荷，避免安装版有图集却缺少所需 shader。缺少清单项时准备失败并保留上一份载荷。
+
+此前安装生命周期验证仅证明安装、覆盖和卸载行为，不能证明载荷完整；新验证同时按载荷实际文件哈希核对已安装文件。字体与图集问题使用 qmclient_scripts/integration/icon_resources_smoke.py 在隔离便携客户端中验证。
+
+2026-10-07，更新后的实际 Setup 在独立测试 AppId 下完成安装、全载荷损坏后覆盖重装与卸载，逐项核对 1116 个载荷文件哈希，含三个 helper、Hook/bootstrap DLL 和 46 个 Vulkan SPV；未知用户文件保留，旧随包字体清理。证据 tmp/icon-fix-setup-smoke.log 与 tmp/setup-upgrade-dc8a9c55a32c42748c85e8641fe73782/payload-sha256.json。此测试不启动已安装客户端、不接触正式安装目录；GitHub 上传与远程自动更新仍未运行。

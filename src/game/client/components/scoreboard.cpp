@@ -34,6 +34,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <utility>
 #include <vector>
 
 namespace
@@ -1582,9 +1583,27 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 			if(ClientId >= 0 && (GameClient()->m_aClients[ClientId].m_Foe || GameClient()->m_aClients[ClientId].m_ChatIgnore))
 			{
+				// 保留文字游标的测量和省略规则，实际图标走统一图集绘制。
+				const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
 				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-				TextRender()->TextEx(&Cursor, FontIcons::FONT_ICON_COMMENT_SLASH);
-				TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+				CTextCursor IconCursor = Cursor;
+				IconCursor.m_Flags &= ~TEXTFLAG_RENDER;
+				TextRender()->TextEx(&IconCursor, FontIcons::FONT_ICON_COMMENT_SLASH);
+				TextRender()->SetFontPreset(PreviousPreset);
+				if(IconCursor.m_GlyphCount > Cursor.m_GlyphCount && !IconCursor.m_Truncated)
+				{
+					const CUIRect IconRect = {Cursor.m_X, Cursor.m_Y, IconCursor.m_X - Cursor.m_X, FontSize};
+					Ui()->DrawQmIcon(IconRect, EQmIcon::COMMENT_SLASH, FontIcons::FONT_ICON_COMMENT_SLASH, NameColor);
+				}
+				else if(IconCursor.m_Truncated)
+				{
+					// 连单个图标都放不下时，仍由原文字布局输出省略号。
+					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+					TextRender()->TextEx(&Cursor, FontIcons::FONT_ICON_COMMENT_SLASH);
+					TextRender()->SetFontPreset(PreviousPreset);
+				}
+				IconCursor.m_Flags = Cursor.m_Flags;
+				Cursor = std::move(IconCursor);
 			}
 
 			// TClient

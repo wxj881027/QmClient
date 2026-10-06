@@ -277,12 +277,13 @@ bool CQmIconManager::LoadMsdfManifest(CQmIconAtlas &Atlas)
 	str_format(aManifestPath, sizeof(aManifestPath), QM_ICON_MSDF_MANIFEST_PATTERN, IconAtlasWeightName(NormalizeQmIconWeight(g_Config.m_QmUiIconWeight)));
 
 	ClearAtlas(Atlas);
-	if(!m_pStorage->FileExists(aManifestPath, IStorage::TYPE_ALL))
+	char aBundledManifestPath[IO_MAX_PATH_LENGTH];
+	if(!m_pStorage->GetDataPath(aManifestPath, aBundledManifestPath, sizeof(aBundledManifestPath)))
 		return false;
 
 	void *pFileData = nullptr;
 	unsigned FileSize = 0;
-	if(!m_pStorage->ReadFile(aManifestPath, IStorage::TYPE_ALL, &pFileData, &FileSize))
+	if(!m_pStorage->ReadFile(aBundledManifestPath, IStorage::TYPE_ABSOLUTE, &pFileData, &FileSize))
 		return false;
 
 	char aError[256] = "";
@@ -361,7 +362,10 @@ bool CQmIconManager::LoadMsdfManifest(CQmIconAtlas &Atlas)
 		std::array<CQmIconAtlas::SEntry, static_cast<size_t>(CQmIconAtlas::MORPH_FRAME_CAPACITY)> aMorphFrames{};
 		const int MorphFrameCount = ParseMorphFrames(pRoot, AtlasWidth, AtlasHeight, aMorphFrames);
 
-		IGraphics::CTextureHandle Texture = m_pGraphics->LoadTexture(pImagePath, IStorage::TYPE_ALL, IGraphics::TEXLOAD_NO_MIPMAPS);
+		char aBundledImagePath[IO_MAX_PATH_LENGTH];
+		if(!m_pStorage->GetDataPath(pImagePath, aBundledImagePath, sizeof(aBundledImagePath)))
+			break;
+		IGraphics::CTextureHandle Texture = m_pGraphics->LoadTexture(aBundledImagePath, IStorage::TYPE_ABSOLUTE, IGraphics::TEXLOAD_NO_MIPMAPS);
 		if(!QmIconTextureCanCommit(Texture.IsValid(), Texture.IsNullTexture()))
 		{
 			if(m_DiagnosticsEnabled)
