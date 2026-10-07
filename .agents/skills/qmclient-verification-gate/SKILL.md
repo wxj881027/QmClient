@@ -43,15 +43,15 @@ python qmclient_scripts/gate/check_gate.py --mode full
 
 ## 构建与测试入口
 
-Windows 使用封装入口，避免依赖会话已加载 MSVC 环境：
+Windows 使用封装入口，避免依赖会话已加载 MSVC 环境。示例使用无配置时的单个重构建默认值 -j 6；有匹配机器配置时按其中的并行数和总预算调整，配置发现与资源协调遵循根 AGENTS.md。每个固定槽位复用自己的默认构建目录：
 
 ```text
-qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 14
-qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target run_cxx_tests -j 14
-qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target run_rust_tests -j 14
+qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 6
+qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target run_cxx_tests -j 6
+qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target run_rust_tests -j 6
 ```
 
-Linux/macOS 使用 `cmake --build cmake-build-release --target <目标> -j 14`。首次配置与 WSL 目录选择见 [build-platforms.md](references/build-platforms.md)。已有 build 目录只在需要时重新配置。
+Linux/macOS 使用 `cmake --build cmake-build-release --target <目标> -j 6`。首次配置与 WSL 目录选择见 [build-platforms.md](references/build-platforms.md)。已有 build 目录只在需要时重新配置。
 
 同一 build 目录的 `game-client`、`testrunner`、`run_cxx_tests`、`run_rust_tests`、`qm-benchmarks`、`run_cxx_benchmarks`、`package_default` 及会调用它们的 gate 必须串行；并行需独立 build 目录。Windows 封装入口会按构建目录获取系统文件锁；遇到占用时自动等待，最长 10 分钟后报告失败。不要绕过封装直接调用 CMake/Ninja。
 
@@ -60,5 +60,7 @@ Linux/macOS 使用 `cmake --build cmake-build-release --target <目标> -j 14`�
 ## 视觉与证据
 
 UI/HUD/动画改变后构建并运行当前工作区的开发实例，检查目标场景；布局涉及缩放时加一个非默认比例，交互仅查相关输入和状态。视觉交付按需保留截图；无法启动或缺少设备时说明实际缺口。
+
+普通进程烟测遵循根规则使用窗口化并尽量后台最小化启动；前台交互、截图或渲染检查不能用最小化结果替代。人工验证命令写明实际槽位的绝对路径，示例见 [固定 Worktree 开发与集成](../../../docs/规格/2026-10-07-固定Worktree开发与集成.md)。
 
 记录执行命令、关键结果、覆盖范围和剩余问题即可；小任务写最终回复，长任务写已有计划或报告。未执行的运行时、视觉、性能或跨平台检查不能用构建成功替代，也不要把本来不适用的检查列成缺口。

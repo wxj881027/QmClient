@@ -13,6 +13,8 @@ docs/dyl/BestClient/
 !/.agents/**/
 !/.agents/**/*.md
 !/.agents/**/agents/openai.yaml
+!/.agents/machine.example.json
+/.agents/machine.local.json
 .codex/
 .codegraph/
 .env

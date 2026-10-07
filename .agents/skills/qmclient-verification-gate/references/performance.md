@@ -16,7 +16,7 @@
 
 ```text
 qmclient_scripts/cmake-windows.cmd -G Ninja -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release -DSERVER=ON -DDOWNLOAD_BENCHMARK=ON
-qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target qm-benchmarks -j 14
+qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target qm-benchmarks -j 6
 ```
 
 Linux/macOS 使用 `cmake` 配置和构建同名目标，跨平台验证使用独立 build 目录；不复用 Windows CMakeCache。Benchmark 的配置、构建和运行与同一目录的测试、打包、gate 必须串行。

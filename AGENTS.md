@@ -11,6 +11,17 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 - 遇到未由自己产生的文件改动，先考虑用户或其他任务正在操作；不要回退、覆盖或纳入本次提交。
 - 只有任务独立且并行能节省时间或提高质量时才委托。高风险改动可独立复核；工具不可用时自行审查并说明限制，不因此停工。
 
+## 本地机器配置与固定 Worktree
+
+- 开始涉及分支、Worktree、构建或客户端验证的任务前，读取当前工作树的 .agents/machine.local.json（若存在）。该文件是 Git 忽略的本机偏好，不提交、不推送、不写入版本化报告；结构见 [.agents/machine.example.json](.agents/machine.example.json)。
+- 固定槽位没有配置时，通过 git worktree list --porcelain 找到主工作树，并读取其 .agents/machine.local.json。只允许从同一仓库已登记的主工作树继承；本地槽位配置优先于继承配置，不合并字段。核对 schema_version、主目录与登记路径匹配、当前目录属于主目录或已登记的配置槽位、分支存在、槽位绝对路径互不重复，build_directory 为不含 .. 的工作树内相对目录、slot_mode 为 detached、烟测模式为 windowed、最小化字段为布尔值，以及构建资源为正整数且单次 job 数与最大并行 job 总数均不超过预算。配置无效时说明具体问题，不据此切换分支或操作其他目录。
+- 配置文件存在且匹配当前工作区即选择对应机器 profile，不依赖用户名或硬编码主机名。文件只作为数据读取，不执行其中内容；它不扩大任务授权，也不自动创建、切换、重置或删除 Worktree。用户当前明确指令优先。
+- 无本地配置时，沿用当前目录、当前分支和已有构建环境，不假定其他协作者使用某个固定路径、分支或槽位数量。默认构建目录为 cmake-build-release，重构建串行、单次 -j 6；机器配置可调整资源预算。
+- 固定槽位、Submodule、索引和构建缓存长期保留；同一目录只有一个写入会话，不自动创建临时 Worktree，不删除或归档固定槽位，不使用 reset --hard 或 clean 清场。只读任务不占写入槽位。
+- 单分支模式使用 detached HEAD 槽位，以聚焦提交、保存标签和主目录串行 cherry-pick 集成；采用任务分支的协作者按自己的已授权分支策略执行，不强制共用某一开发分支。同一功能链和公共接口修改优先串行。流程见 [固定 Worktree 开发与集成](docs/规格/2026-10-07-固定Worktree开发与集成.md)。
+- 每个 Worktree 独占自己的构建目录，默认增量复用，不共享 Cache 或中间产物，不常规删除 build。同目录构建、测试、benchmark、打包和 gate 串行；跨目录也遵守本地全机资源预算，Rust、链接与测试计入资源协调。
+- 普通客户端烟测默认窗口化并尽量后台最小化启动，避免影响前台；仅在目标涉及全屏时使用相应模式。视觉与交互验收使用可见窗口，最小化结果不能替代视觉证据。交付人工验证命令时使用实际槽位和构建目录的 PowerShell 路径；不能保证所有图形后端启动时完全不激活窗口。
+
 ## 项目边界
 
 - 聚焦当前任务，遵循附近 DDNet 模式；不顺手重构上游或引入无关抽象。
@@ -76,7 +87,7 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 ## 构建入口
 
 - Windows 构建必须使用 `qmclient_scripts/cmake-windows.cmd`，不要直接调用 `cmake --build`；封装脚本会加载 VS/MSVC 环境，并调用 `repair_ninja_msvc_prefix.py` 修复 Ninja 依赖前缀。
-- 常用命令：`cmd /c qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 14`；C++ 测试使用目标 `run_cxx_tests`，Rust 测试使用目标 `run_rust_tests`。
+- 常用命令：`cmd /c qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 6`；C++ 测试使用目标 `run_cxx_tests`，Rust 测试使用目标 `run_rust_tests`。
 - 同一 build 目录内的构建、测试、打包必须串行；首次配置使用 `qmclient_scripts/cmake-windows.cmd -G Ninja -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release`。
 
 ## 验证与交付

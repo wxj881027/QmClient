@@ -6,6 +6,10 @@
 
 测试书写由根 `AGENTS.md` 维护质量边界，`src/test/AGENTS.md` 提供目录内的执行入口；`src/test/benchmark/AGENTS.md` 路由到 verification skill 的性能参考。目录规则继承根规则，不另设验证、授权或性能证据标准。README 只提供导航，不承担必须读取的规则入口。
 
+## 本地机器偏好
+
+机器路径、集成分支、固定槽位与资源预算配置在 Git 忽略的 `machine.local.json`；从 [machine.example.json](machine.example.json) 复制后按机器修改。配置发现、校验、继承与授权边界由根 `AGENTS.md` 维护；配置不是自动执行脚本，不保存凭据。
+
 ## 维护原则
 
 - 每条规则只有一个维护位置，其他入口引用即可；引用不表示必须加载全部关联文件。

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "profile": "my-machine",
+  "primary_worktree": "C:/Projects/QmClient",
+  "integration_branch": "your-development-branch",
+  "slot_mode": "detached",
+  "worktree_slots": [
+    "C:/Projects/QmClient-wt-1",
+    "C:/Projects/QmClient-wt-2"
+  ],
+  "build_directory": "cmake-build-release",
+  "build_jobs_single": 6,
+  "build_jobs_per_slot_parallel": 3,
+  "max_concurrent_heavy_builds": 2,
+  "total_build_job_budget": 6,
+  "client_smoke_window_mode": "windowed",
+  "client_smoke_start_minimized": true
+}
