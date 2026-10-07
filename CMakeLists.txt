@@ -5186,6 +5186,9 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_net_benchmark.cpp
     src/test/benchmark/qm_snapshot_benchmark.cpp
     src/test/benchmark/qm_font_raster_benchmark.cpp
+    src/test/benchmark/qm_icon_render_benchmark.cpp
+    src/engine/client/text.cpp
+    src/game/client/qm_icon_manager.cpp
     src/test/benchmark/qm_steam_benchmark.cpp
     # Steam 客户端探测链（SteamFindClient 基准；依赖 steam_api 的链接桩）
     src/engine/client/steam.cpp
