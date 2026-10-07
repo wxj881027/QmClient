@@ -1,0 +1,4 @@
+find_package(PkgConfig QUIET)
+pkg_check_modules(DBUS QUIET dbus-1)
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(DBus DEFAULT_MSG DBUS_LIBRARIES DBUS_INCLUDE_DIRS)

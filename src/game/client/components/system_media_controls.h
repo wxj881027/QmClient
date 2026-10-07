@@ -93,6 +93,21 @@ namespace SystemMediaControls
 #define SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED 0
 #endif
 
+// Windows 之外的平台改用 MPRIS（org.mpris.MediaPlayer2）D-Bus 接口，
+// 由 CMake 在找到 libdbus-1 时定义 CONF_MPRIS。
+#if !SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED && defined(CONF_FAMILY_UNIX) && defined(CONF_MPRIS)
+#define SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED 1
+#else
+#define SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED 0
+#endif
+
+// 两个后端共用同一份后台线程状态，因此共享部分只在任一后端可用时编译。
+#if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED || SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+#define SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED 1
+#else
+#define SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED 0
+#endif
+
 class CSystemMediaControls : public CComponent
 {
 public:
@@ -132,6 +147,13 @@ public:
 
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
 	struct SWinrt;
+#endif
+
+#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+	struct SMpris;
+#endif
+
+#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 	struct SShared;
 #endif
 
@@ -163,11 +185,25 @@ private:
 	bool m_NeteaseHookReadFrameInitialized = false;
 #if SYSTEM_MEDIA_CONTROLS_WINRT_ENABLED
 	std::unique_ptr<SWinrt> m_pWinrt;
+#endif
+#if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+	std::unique_ptr<SMpris> m_pMpris;
+#endif
+#if SYSTEM_MEDIA_CONTROLS_BACKEND_ENABLED
 	std::unique_ptr<SShared> m_pShared;
 	std::thread m_Thread;
 	std::atomic_bool m_StopThread{false};
 
 	void ThreadMain();
+
+	// 主线程持有的后端状态；同一时间只有一个后端存在，因此这里无需再加后端分支。
+	SState *MainState();
+	const SState *MainState() const;
+	bool MainHasMedia() const;
+	void SetMainHasMedia(bool HasMedia);
+
+	// 只在开关打开、共享状态已就绪且当前确实有媒体时返回主线程状态。
+	const SState *ActiveState() const;
 #endif
 };
 
