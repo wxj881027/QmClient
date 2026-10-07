@@ -3090,7 +3090,10 @@ void CChat::OnRender()
 		float ScrollOffsetChange = m_Input.GetScrollOffsetChange();
 
 		m_Input.Activate(EInputPriority::CHAT); // Ensure that the input is active
-		const CUIRect InputCursorRect = {InputContentRect.x, InputContentRect.y + InputClipPaddingTop - ScrollOffset, 0.0f, 0.0f};
+		// 输入内容与前缀标签（「全体」/「队伍」/「聊天」，见上方 pInputModeLabel 的 TextEx）
+		// 共用 InputContentRect.y 作为首行起点。防裁切只需把 InputClippingRect 向上扩
+		// InputClipPaddingTop，不能在文本这里再加一次，否则输入内容会比前缀低一个 padding。
+		const CUIRect InputCursorRect = {InputContentRect.x, InputContentRect.y - ScrollOffset, 0.0f, 0.0f};
 		const bool WasChanged = m_Input.WasChanged();
 		const bool WasCursorChanged = m_Input.WasCursorChanged();
 		const bool Changed = WasChanged || WasCursorChanged;
@@ -3099,7 +3102,8 @@ void CChat::OnRender()
 		Graphics()->ClipDisable();
 
 		// Scroll up or down to keep the caret inside the content rect.
-		const float CaretPositionY = m_Input.GetCaretPosition().y - InputClipPaddingTop - ScrollOffsetChange;
+		// 光标与文本同基准（首行起点即 InputContentRect.y），无需再扣除顶部 padding。
+		const float CaretPositionY = m_Input.GetCaretPosition().y - ScrollOffsetChange;
 		if(CaretPositionY < InputContentRect.y)
 			ScrollOffsetChange -= InputContentRect.y - CaretPositionY;
 		else if(CaretPositionY + InputCursor.m_FontSize > InputContentRect.y + InputContentRect.h)
