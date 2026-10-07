@@ -2375,6 +2375,69 @@ PROCESS shell_execute(const char *file, EShellExecuteWindowState window_state, c
 #endif
 }
 
+#if defined(CONF_FAMILY_WINDOWS)
+PROCESS shell_execute_owned(const char *file, const char **arguments, size_t num_arguments)
+{
+	dbg_assert((arguments == nullptr) == (num_arguments == 0), "Invalid number of arguments");
+	// 不可继承的 Job 句柄只由父进程持有；崩溃、_Exit 和强杀也会关闭它。
+	static HANDLE s_Job = []() -> HANDLE {
+		HANDLE Job = CreateJobObjectW(nullptr, nullptr);
+		if(Job == nullptr)
+			return nullptr;
+		JOBOBJECT_EXTENDED_LIMIT_INFORMATION Limits{};
+		Limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+		if(!SetInformationJobObject(Job, JobObjectExtendedLimitInformation, &Limits, sizeof(Limits)))
+		{
+			CloseHandle(Job);
+			return nullptr;
+		}
+		return Job;
+	}();
+	if(s_Job == nullptr)
+		return INVALID_PROCESS;
+	const std::wstring WideFile = windows_utf8_to_wide(file);
+	std::wstring CommandLine = L"\"" + WideFile + L"\" " + windows_args_to_wide(arguments, num_arguments);
+	// 即使子线程挂起，创建与事后 Assign 之间父进程死亡仍会遗留子进程。
+	// Job 必须作为 CreateProcess 的扩展属性，在内核创建时原子关联。
+	SIZE_T AttributeBytes = 0;
+	InitializeProcThreadAttributeList(nullptr, 1, 0, &AttributeBytes);
+	if(AttributeBytes == 0)
+		return INVALID_PROCESS;
+	auto *pAttributes = static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(HeapAlloc(GetProcessHeap(), 0, AttributeBytes));
+	if(pAttributes == nullptr)
+		return INVALID_PROCESS;
+	if(!InitializeProcThreadAttributeList(pAttributes, 1, 0, &AttributeBytes))
+	{
+		HeapFree(GetProcessHeap(), 0, pAttributes);
+		return INVALID_PROCESS;
+	}
+	// SDK 将 JOB_LIST 的名称限制到 Win10 宏；保留其他代码的最低平台定义，
+	// 用稳定属性编号动态探测。Win10 / Server 2016 以下或受限环境拒绝启动。
+	constexpr DWORD_PTR JobListAttribute = ProcThreadAttributeValue(13, FALSE, TRUE, FALSE);
+	if(!UpdateProcThreadAttribute(pAttributes, 0, JobListAttribute, &s_Job, sizeof(s_Job), nullptr, nullptr))
+	{
+		log_error("process", "atomic parent-owned process creation requires job-list support (Windows 10 / Server 2016 or newer), error %lu", GetLastError());
+		DeleteProcThreadAttributeList(pAttributes);
+		HeapFree(GetProcessHeap(), 0, pAttributes);
+		return INVALID_PROCESS;
+	}
+	STARTUPINFOEXW StartupInfo{};
+	StartupInfo.StartupInfo.cb = sizeof(StartupInfo);
+	StartupInfo.StartupInfo.dwFlags = STARTF_USESHOWWINDOW;
+	StartupInfo.StartupInfo.wShowWindow = SW_HIDE;
+	StartupInfo.lpAttributeList = pAttributes;
+	PROCESS_INFORMATION ProcessInfo{};
+	const BOOL Created = CreateProcessW(WideFile.c_str(), CommandLine.data(), nullptr, nullptr, FALSE,
+		CREATE_NO_WINDOW | EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr, &StartupInfo.StartupInfo, &ProcessInfo);
+	DeleteProcThreadAttributeList(pAttributes);
+	HeapFree(GetProcessHeap(), 0, pAttributes);
+	if(!Created)
+		return INVALID_PROCESS;
+	CloseHandle(ProcessInfo.hThread);
+	return ProcessInfo.hProcess;
+}
+#endif
+
 int kill_process(PROCESS process)
 {
 #if defined(CONF_FAMILY_WINDOWS)

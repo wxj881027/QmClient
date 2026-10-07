@@ -19,10 +19,10 @@
 #include <engine/gfx/image_manipulation.h>
 #include <engine/image.h>
 
-#include <game/client/components/qmclient/perf_logging.h>
-#include <game/client/components/qmclient/prepared_media_art.h>
 #include <game/client/components/qmclient/media_volume_logic.h>
+#include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/player_volume.h>
+#include <game/client/components/qmclient/prepared_media_art.h>
 
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Foundation.h>
@@ -43,6 +43,8 @@
 #endif
 
 #if SYSTEM_MEDIA_CONTROLS_MPRIS_ENABLED
+#include "system_media_controls_mpris_policy.h"
+
 #include <base/str.h>
 
 #include <game/client/components/qmclient/media_volume_logic.h>
@@ -52,6 +54,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -98,6 +101,7 @@ struct SMediaCommand
 {
 	ECommand m_Type;
 	std::string m_SourceAppId;
+	uint64_t m_Generation = 0;
 };
 
 struct CSystemMediaControls::SShared
@@ -882,7 +886,6 @@ struct CSystemMediaControls::SMpris
 	bool m_HasMedia = false;
 };
 
-static constexpr int MPRIS_CALL_TIMEOUT_MS = 1000;
 static constexpr int MPRIS_POLL_INTERVAL_MS = 500;
 static constexpr const char *MPRIS_NAME_PREFIX = "org.mpris.MediaPlayer2.";
 static constexpr const char *MPRIS_OBJECT_PATH = "/org/mpris/MediaPlayer2";
@@ -892,12 +895,40 @@ static constexpr const char *DBUS_SERVICE_NAME = "org.freedesktop.DBus";
 static constexpr const char *DBUS_OBJECT_PATH = "/org/freedesktop/DBus";
 static constexpr const char *DBUS_INTERFACE_NAME = "org.freedesktop.DBus";
 
+static thread_local const std::atomic_bool *s_pMprisStop = nullptr;
+static thread_local const SystemMediaControls::CMprisPollBudget *s_pMprisBudget = nullptr;
+static thread_local int s_MprisReservedMs = 0;
+static int64_t MprisNowMs() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
+static bool MprisRequestAllowed() { return s_pMprisStop != nullptr && s_pMprisBudget != nullptr && s_pMprisBudget->Remaining(MprisNowMs(), s_pMprisStop->load()) > s_MprisReservedMs; }
+
 static DBusMessage *MprisSendBlocking(DBusConnection *pConnection, DBusMessage *pRequest)
 {
 	if(pRequest == nullptr)
 		return nullptr;
-	DBusMessage *pReply = dbus_connection_send_with_reply_and_block(pConnection, pRequest, MPRIS_CALL_TIMEOUT_MS, nullptr);
+	if(!MprisRequestAllowed())
+	{
+		dbus_message_unref(pRequest);
+		return nullptr;
+	}
+	DBusPendingCall *pPending = nullptr;
+	// 单次请求最多 250ms，且不能超出整轮预算；超时服务不会吃掉全部发现时间。
+	const int Timeout = SystemMediaControls::MprisRequestTimeout(s_pMprisBudget->Remaining(MprisNowMs(), s_pMprisStop->load()), s_MprisReservedMs);
+	const SystemMediaControls::CMprisPollBudget RequestBudget(MprisNowMs(), Timeout);
+	const bool Sent = dbus_connection_send_with_reply(pConnection, pRequest, &pPending, Timeout) != FALSE;
 	dbus_message_unref(pRequest);
+	if(!Sent || pPending == nullptr)
+	{
+		if(pPending != nullptr)
+			dbus_pending_call_unref(pPending);
+		return nullptr;
+	}
+	const bool Completed = SystemMediaControls::MprisWaitForReply(RequestBudget, [] { return s_pMprisStop->load(); }, [] { return MprisNowMs(); }, [pPending] { return dbus_pending_call_get_completed(pPending) != FALSE; }, [pConnection](int Slice) { return dbus_connection_read_write_dispatch(pConnection, Slice) != FALSE; });
+	DBusMessage *pReply = nullptr;
+	if(Completed)
+		pReply = dbus_pending_call_steal_reply(pPending);
+	else
+		dbus_pending_call_cancel(pPending);
+	dbus_pending_call_unref(pPending);
 	if(pReply != nullptr && dbus_message_get_type(pReply) != DBUS_MESSAGE_TYPE_METHOD_RETURN)
 	{
 		// 播放器已经退出或属性不存在时返回的是错误消息，这里统一当成"没有数据"。
@@ -979,6 +1010,19 @@ static bool MprisGetString(const DBusMessageIter *pDict, const char *pName, std:
 	return true;
 }
 
+static bool MprisGetTrackId(const DBusMessageIter *pDict, std::string &Value)
+{
+	DBusMessageIter Iterator;
+	if(!MprisFindEntry(pDict, "mpris:trackid", &Iterator) || dbus_message_iter_get_arg_type(&Iterator) != DBUS_TYPE_OBJECT_PATH)
+		return false;
+	const char *pPath = nullptr;
+	dbus_message_iter_get_basic(&Iterator, &pPath);
+	if(pPath == nullptr)
+		return false;
+	Value = pPath;
+	return true;
+}
+
 // MPRIS 的 xesam:artist 是字符串数组，这里只取第一个，避免拼接出奇怪的署名。
 static bool MprisGetStringArrayFirst(const DBusMessageIter *pDict, const char *pName, std::string &Value)
 {
@@ -1056,6 +1100,27 @@ static bool MprisListPlayers(DBusConnection *pConnection, std::vector<std::strin
 }
 
 // Position 不在 GetAll 的结果里（部分播放器刻意省略），需要单独读一次。
+static std::string MprisGetOwner(DBusConnection *pConnection, const char *pName)
+{
+	DBusMessage *pRequest = dbus_message_new_method_call(DBUS_SERVICE_NAME, DBUS_OBJECT_PATH, DBUS_INTERFACE_NAME, "GetNameOwner");
+	if(pRequest == nullptr)
+		return {};
+	if(!dbus_message_append_args(pRequest, DBUS_TYPE_STRING, &pName, DBUS_TYPE_INVALID))
+	{
+		dbus_message_unref(pRequest);
+		return {};
+	}
+	DBusMessage *pReply = MprisSendBlocking(pConnection, pRequest);
+	if(pReply == nullptr)
+		return {};
+	const char *pOwner = nullptr;
+	std::string Owner;
+	if(dbus_message_get_args(pReply, nullptr, DBUS_TYPE_STRING, &pOwner, DBUS_TYPE_INVALID) && pOwner != nullptr)
+		Owner = pOwner;
+	dbus_message_unref(pReply);
+	return Owner;
+}
+
 static bool MprisGetPosition(DBusConnection *pConnection, const char *pDestination, int64_t &PositionUs)
 {
 	DBusMessage *pReply = MprisPropertiesGet(pConnection, pDestination, MPRIS_PLAYER_INTERFACE, "Position");
@@ -1097,11 +1162,10 @@ static bool MprisSetVolume(DBusConnection *pConnection, const char *pDestination
 	dbus_message_iter_append_basic(&Variant, DBUS_TYPE_DOUBLE, &Level);
 	dbus_message_iter_close_container(&Iterator, &Variant);
 
-	// 音量只是跟随滑块，不需要等待回执，发出去即可。
+	// 异步发送由短片 dispatch 推进，不在退出路径执行可能阻塞的 flush。
 	const bool Sent = dbus_connection_send(pConnection, pRequest, nullptr) != FALSE;
 	dbus_message_unref(pRequest);
-	if(Sent)
-		dbus_connection_flush(pConnection);
+
 	return Sent;
 }
 
@@ -1117,8 +1181,7 @@ static void MprisInvokeCommand(DBusConnection *pConnection, const char *pDestina
 	DBusMessage *pRequest = dbus_message_new_method_call(pDestination, MPRIS_OBJECT_PATH, MPRIS_PLAYER_INTERFACE, pMember);
 	if(pRequest == nullptr)
 		return;
-	if(dbus_connection_send(pConnection, pRequest, nullptr) != FALSE)
-		dbus_connection_flush(pConnection);
+	dbus_connection_send(pConnection, pRequest, nullptr);
 	dbus_message_unref(pRequest);
 }
 
@@ -1140,7 +1203,10 @@ void CSystemMediaControls::ThreadMain()
 	SPlainState State{};
 	bool HasMedia = false;
 	std::string ActiveName;
-	uint64_t VolumeGeneration = 0;
+	SystemMediaControls::CMprisSessionIdentity SessionIdentity;
+	SystemMediaControls::CMprisTrackIdentity TrackIdentity;
+	SystemMediaControls::CMprisCandidateScheduler CandidateScheduler;
+	s_pMprisStop = &m_StopThread;
 	SystemMediaControls::CTimelineGenerationTracker TimelineGenerationTracker;
 	std::vector<std::string> Players;
 
@@ -1172,35 +1238,37 @@ void CSystemMediaControls::ThreadMain()
 				State = SPlainState{};
 				ActiveName.clear();
 				TimelineGenerationTracker.Reset();
-				dbus_connection_read_write_dispatch(pConnection, MPRIS_POLL_INTERVAL_MS);
+				SessionIdentity.Clear();
+				TrackIdentity.Clear();
+				if(!dbus_connection_read_write_dispatch(pConnection, MPRIS_POLL_INTERVAL_MS))
+					break;
 				continue;
 			}
 
+			const SystemMediaControls::CMprisPollBudget PollBudget(MprisNowMs(), 1000);
+			s_pMprisBudget = &PollBudget;
+			s_MprisReservedMs = 200;
 			MprisListPlayers(pConnection, Players);
-			// 优先沿用上一次选中的播放器，避免暂停时在多个播放器之间来回跳。
-			for(size_t Index = 0; Index < Players.size(); ++Index)
-			{
-				if(Players[Index] == ActiveName)
-				{
-					std::swap(Players[0], Players[Index]);
-					break;
-				}
-			}
 
 			// 一次 GetAll 同时拿到播放状态和全部属性，顺便选出目标播放器。
 			DBusMessage *pSelected = nullptr;
 			std::string SelectedName;
+			std::string SelectedOwner;
 			DBusMessageIter SelectedProperties;
 			int BestScore = -1;
-			for(const std::string &Name : Players)
-			{
-				DBusMessage *pReply = MprisPropertiesGetAll(pConnection, Name.c_str(), MPRIS_PLAYER_INTERFACE);
+			CandidateScheduler.Visit(Players, ActiveName, PollBudget, [] { return MprisNowMs(); }, [&] { return m_StopThread.load(); }, [&](const std::string &Name) {
+				if(!MprisRequestAllowed())
+					return false;
+				const std::string Owner = MprisGetOwner(pConnection, Name.c_str());
+				if(Owner.empty())
+					return true;
+				DBusMessage *pReply = MprisPropertiesGetAll(pConnection, Owner.c_str(), MPRIS_PLAYER_INTERFACE);
 				DBusMessageIter Properties;
 				if(!MprisPropertyDict(pReply, &Properties))
 				{
 					if(pReply != nullptr)
 						dbus_message_unref(pReply);
-					continue;
+					return true;
 				}
 				std::string PlaybackStatus;
 				MprisGetString(&Properties, "PlaybackStatus", PlaybackStatus);
@@ -1216,17 +1284,25 @@ void CSystemMediaControls::ThreadMain()
 						dbus_message_unref(pSelected);
 					pSelected = pReply;
 					SelectedName = Name;
+					SelectedOwner = Owner;
 					SelectedProperties = Properties;
 					BestScore = Score;
 					if(Score == 2)
-						break;
+						return false;
 				}
 				else
 				{
 					dbus_message_unref(pReply);
 				}
-			}
+				return true; });
+			s_MprisReservedMs = 0;
 
+			if(m_StopThread.load())
+			{
+				if(pSelected != nullptr)
+					dbus_message_unref(pSelected);
+				break;
+			}
 			if(pSelected == nullptr)
 			{
 				if(HasMedia)
@@ -1235,17 +1311,22 @@ void CSystemMediaControls::ThreadMain()
 				State = SPlainState{};
 				ActiveName.clear();
 				TimelineGenerationTracker.Reset();
-				dbus_connection_read_write_dispatch(pConnection, MPRIS_POLL_INTERVAL_MS);
+				SessionIdentity.Clear();
+				TrackIdentity.Clear();
+				if(!dbus_connection_read_write_dispatch(pConnection, MPRIS_POLL_INTERVAL_MS))
+					break;
 				continue;
 			}
 
-			const bool SourceChanged = SelectedName != ActiveName;
+			const bool SourceChanged = SessionIdentity.Update(SelectedName, SelectedOwner);
+			const SPlainState PreviousState = State;
+			// 属性是完整的本轮快照：缺失标题、艺术家、专辑和能力必须清空旧值。
+			State = SPlainState{};
 			if(SourceChanged)
 			{
 				// 换播放器时旧标题不能和新来源混在一起，世代号也一起翻新。
 				State = SPlainState{};
 				ActiveName = SelectedName;
-				++VolumeGeneration;
 				TimelineGenerationTracker.Reset();
 			}
 			str_copy(State.m_aSourceAppId, SelectedName.c_str() + str_length(MPRIS_NAME_PREFIX), sizeof(State.m_aSourceAppId));
@@ -1275,21 +1356,25 @@ void CSystemMediaControls::ThreadMain()
 				State.m_Playing = false;
 			}
 
-			bool CanControl = false;
-			MprisGetBool(&Properties, "CanControl", CanControl);
-			MprisGetBool(&Properties, "CanPlay", State.m_CanPlay);
-			MprisGetBool(&Properties, "CanPause", State.m_CanPause);
-			MprisGetBool(&Properties, "CanGoPrevious", State.m_CanPrev);
-			MprisGetBool(&Properties, "CanGoNext", State.m_CanNext);
-
+			SystemMediaControls::SMprisPropertiesSnapshot Snapshot;
+			MprisGetBool(&Properties, "CanControl", Snapshot.m_CanControl);
+			MprisGetBool(&Properties, "CanPlay", Snapshot.m_CanPlay);
+			MprisGetBool(&Properties, "CanPause", Snapshot.m_CanPause);
+			MprisGetBool(&Properties, "CanGoPrevious", Snapshot.m_CanPrev);
+			MprisGetBool(&Properties, "CanGoNext", Snapshot.m_CanNext);
+			Snapshot.ApplyControlAvailability();
+			State.m_CanPlay = Snapshot.m_CanPlay;
+			State.m_CanPause = Snapshot.m_CanPause;
+			State.m_CanPrev = Snapshot.m_CanPrev;
+			State.m_CanNext = Snapshot.m_CanNext;
 			double PlaybackRate = 1.0;
-			State.m_PlaybackRate = MprisGetDouble(&Properties, "Rate", PlaybackRate) && PlaybackRate > 0.0 ? PlaybackRate : 1.0;
+			State.m_PlaybackRate = MprisGetDouble(&Properties, "Rate", PlaybackRate) && std::isfinite(PlaybackRate) && PlaybackRate > 0.0 ? PlaybackRate : 1.0;
 
 			double Volume = 0.0;
-			if(MprisGetDouble(&Properties, "Volume", Volume))
+			if(MprisGetDouble(&Properties, "Volume", Volume) && std::isfinite(Volume))
 			{
 				// 规范里 Volume 只在 CanControl 为真时可写，没有单独的 CanSetVolume。
-				State.m_CanSetVolume = CanControl;
+				State.m_CanSetVolume = Snapshot.m_CanControl;
 				State.m_Volume = static_cast<float>(std::clamp(Volume, 0.0, 1.0));
 			}
 			else
@@ -1297,16 +1382,16 @@ void CSystemMediaControls::ThreadMain()
 				State.m_CanSetVolume = false;
 				State.m_Volume = 0.0f;
 			}
-			State.m_VolumeGeneration = VolumeGeneration;
+			State.m_VolumeGeneration = SessionIdentity.Generation();
 
 			std::optional<QmMediaVolume::SRequest> VolumeRequest;
 			{
 				std::scoped_lock Lock(m_pShared->m_Mutex);
-				VolumeRequest = m_pShared->m_PendingVolume.Take(VolumeGeneration);
+				VolumeRequest = m_pShared->m_PendingVolume.Take(SessionIdentity.Generation());
 			}
 			if(VolumeRequest.has_value() && State.m_CanSetVolume)
 			{
-				MprisSetVolume(pConnection, SelectedName.c_str(), VolumeRequest->m_Level);
+				MprisSetVolume(pConnection, SelectedOwner.c_str(), VolumeRequest->m_Level);
 				State.m_Volume = VolumeRequest->m_Level;
 			}
 
@@ -1316,34 +1401,42 @@ void CSystemMediaControls::ThreadMain()
 			{
 				DBusMessageIter MetadataDict;
 				dbus_message_iter_recurse(&Metadata, &MetadataDict);
-				std::string Text;
-				if(MprisGetString(&MetadataDict, "xesam:title", Text) && !Text.empty())
-					str_copy(State.m_aTitle, Text.c_str(), sizeof(State.m_aTitle));
-				if(MprisGetStringArrayFirst(&MetadataDict, "xesam:artist", Text) && !Text.empty())
-					str_copy(State.m_aArtist, Text.c_str(), sizeof(State.m_aArtist));
-				if(MprisGetString(&MetadataDict, "xesam:album", Text) && !Text.empty())
-					str_copy(State.m_aAlbum, Text.c_str(), sizeof(State.m_aAlbum));
+				MprisGetString(&MetadataDict, "xesam:title", Snapshot.m_Title);
+				MprisGetStringArrayFirst(&MetadataDict, "xesam:artist", Snapshot.m_Artist);
+				MprisGetString(&MetadataDict, "xesam:album", Snapshot.m_Album);
+				MprisGetTrackId(&MetadataDict, Snapshot.m_TrackId);
 
 				int64_t LengthUs = 0;
 				if(MprisGetInt64(&MetadataDict, "mpris:length", LengthUs) && LengthUs > 0)
-					Duration100ns = LengthUs * 10;
+					Duration100ns = SystemMediaControls::MprisMicrosecondsTo100ns(LengthUs);
 			}
 
+			str_copy(State.m_aTitle, Snapshot.m_Title.c_str(), sizeof(State.m_aTitle));
+			str_copy(State.m_aArtist, Snapshot.m_Artist.c_str(), sizeof(State.m_aArtist));
+			str_copy(State.m_aAlbum, Snapshot.m_Album.c_str(), sizeof(State.m_aAlbum));
+			if(SourceChanged)
+				TrackIdentity.Clear();
+			const bool TrackChanged = TrackIdentity.Update(Snapshot);
+			if(TrackChanged)
+				TimelineGenerationTracker.Reset();
 			int64_t PositionUs = 0;
-			MprisGetPosition(pConnection, SelectedName.c_str(), PositionUs);
+			const bool HasPosition = MprisGetPosition(pConnection, SelectedOwner.c_str(), PositionUs);
 
 			// Position 是查询当刻的实时值，因此不做 LastUpdatedTime 折算。
 			SystemMediaControls::STimelineProperties TimelineProperties;
 			TimelineProperties.m_Start100ns = 0;
 			TimelineProperties.m_End100ns = Duration100ns;
-			TimelineProperties.m_Position100ns = PositionUs * 10;
+			TimelineProperties.m_Position100ns = SystemMediaControls::MprisMicrosecondsTo100ns(PositionUs);
 			TimelineProperties.m_LastUpdatedUtc100ns = 0;
 			const SystemMediaControls::STimelineSnapshot TimelineSnapshot = SystemMediaControls::NormalizeTimelineProperties(
 				TimelineProperties, 0, time_get_impl(), time_freq());
-			State.m_PositionMs = TimelineSnapshot.m_PositionMs;
 			State.m_DurationMs = TimelineSnapshot.m_DurationMs;
-			State.m_PositionUpdatedTick = TimelineSnapshot.m_PositionUpdatedTick;
-			State.m_TimelineGeneration = TimelineGenerationTracker.Update(TimelineProperties);
+			const SystemMediaControls::SMprisPosition Position = SystemMediaControls::MprisResolvePosition(SourceChanged || TrackChanged, HasPosition,
+				{PreviousState.m_PositionMs, PreviousState.m_PositionUpdatedTick, PreviousState.m_TimelineGeneration},
+				{TimelineSnapshot.m_PositionMs, TimelineSnapshot.m_PositionUpdatedTick, HasPosition ? TimelineGenerationTracker.Update(TimelineProperties) : 0});
+			State.m_PositionMs = Position.m_PositionMs;
+			State.m_PositionUpdatedTick = Position.m_UpdatedTick;
+			State.m_TimelineGeneration = Position.m_Generation;
 
 			HasMedia = true;
 			{
@@ -1359,9 +1452,11 @@ void CSystemMediaControls::ThreadMain()
 			}
 			for(const SMediaCommand &Command : Commands)
 			{
-				if(!g_Config.m_QmSmtcEnable || Command.m_SourceAppId != State.m_aSourceAppId)
+				if(!g_Config.m_QmSmtcEnable || !SessionIdentity.Accepts(Command.m_Generation))
 					continue;
-				MprisInvokeCommand(pConnection, SelectedName.c_str(), Command.m_Type);
+				if(m_StopThread.load())
+					break;
+				MprisInvokeCommand(pConnection, SelectedOwner.c_str(), Command.m_Type);
 			}
 
 			dbus_message_unref(pSelected);
@@ -1377,9 +1472,14 @@ void CSystemMediaControls::ThreadMain()
 		State = SPlainState{};
 		ActiveName.clear();
 		TimelineGenerationTracker.Reset();
+		SessionIdentity.Clear();
+		TrackIdentity.Clear();
 		dbus_connection_close(pConnection);
 		dbus_connection_unref(pConnection);
 	}
+	s_pMprisBudget = nullptr;
+	s_MprisReservedMs = 0;
+	s_pMprisStop = nullptr;
 }
 #endif
 
@@ -1619,7 +1719,7 @@ void CSystemMediaControls::Previous()
 	if(pMainState == nullptr)
 		return;
 	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::Prev, pMainState->m_aSourceAppId});
+	m_pShared->m_Commands.push_back({ECommand::Prev, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
 #endif
 }
 
@@ -1630,7 +1730,7 @@ void CSystemMediaControls::PlayPause()
 	if(pMainState == nullptr)
 		return;
 	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::PlayPause, pMainState->m_aSourceAppId});
+	m_pShared->m_Commands.push_back({ECommand::PlayPause, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
 #endif
 }
 
@@ -1641,7 +1741,7 @@ void CSystemMediaControls::Next()
 	if(pMainState == nullptr)
 		return;
 	std::scoped_lock Lock(m_pShared->m_Mutex);
-	m_pShared->m_Commands.push_back({ECommand::Next, pMainState->m_aSourceAppId});
+	m_pShared->m_Commands.push_back({ECommand::Next, pMainState->m_aSourceAppId, pMainState->m_VolumeGeneration});
 #endif
 }
 

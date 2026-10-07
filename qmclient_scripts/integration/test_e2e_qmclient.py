@@ -24,6 +24,7 @@ class QmClientE2ERunnerTest(unittest.TestCase):
 				"slow_asset_loading_no_false_hang",
 				"startup_saved_favorites",
 				"vector_font_and_icon_resources",
+				"legacy_icon_font_residual_ignored",
 			},
 		)
 

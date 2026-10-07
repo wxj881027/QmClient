@@ -48,22 +48,22 @@ struct SQmChatEmojiDefinition
 };
 
 inline constexpr std::array<SQmChatEmojiDefinition, QM_CHAT_EMOJI_COUNT> QM_CHAT_EMOJI_DEFINITIONS = {{
-	{":ax", EQmChatEmoji::LOVE, "qmclient/chat_emojis/love.png"},
-	{":bx", EQmChatEmoji::NO, "qmclient/chat_emojis/no.png"},
-	{":fd", EQmChatEmoji::OPPOSE, "qmclient/chat_emojis/oppose.png"},
-	{":gg", EQmChatEmoji::AWKWARD, "qmclient/chat_emojis/awkward.png"},
-	{":gx", EQmChatEmoji::KNEEL, "qmclient/chat_emojis/kneel.png"},
-	{":hh", EQmChatEmoji::HEHE, "qmclient/chat_emojis/hehe.png"},
-	{":mr", EQmChatEmoji::INSULT, "qmclient/chat_emojis/insult.png"},
-	{":mm", EQmChatEmoji::CUTE, "qmclient/chat_emojis/cute.png"},
-	{":sq", EQmChatEmoji::ANGRY, "qmclient/chat_emojis/angry.png"},
-	{":sd", EQmChatEmoji::DEAD, "qmclient/chat_emojis/dead.png"},
-	{":ty", EQmChatEmoji::AGREE, "qmclient/chat_emojis/agree.png"},
-	{":tx", EQmChatEmoji::SURRENDER, "qmclient/chat_emojis/surrender.png"},
-	{":wd", EQmChatEmoji::SMELL, "qmclient/chat_emojis/smell.png"},
-	{":wh", EQmChatEmoji::QUESTION, "qmclient/chat_emojis/question.png"},
-	{":zj", EQmChatEmoji::SHOCKED, "qmclient/chat_emojis/shocked.png"},
-	{":zc", EQmChatEmoji::SUPPORT, "qmclient/chat_emojis/support.png"},
+	{":ax", EQmChatEmoji::LOVE, "qmclient/chat_emojis/love.webp"},
+	{":bx", EQmChatEmoji::NO, "qmclient/chat_emojis/no.webp"},
+	{":fd", EQmChatEmoji::OPPOSE, "qmclient/chat_emojis/oppose.webp"},
+	{":gg", EQmChatEmoji::AWKWARD, "qmclient/chat_emojis/awkward.webp"},
+	{":gx", EQmChatEmoji::KNEEL, "qmclient/chat_emojis/kneel.webp"},
+	{":hh", EQmChatEmoji::HEHE, "qmclient/chat_emojis/hehe.webp"},
+	{":mr", EQmChatEmoji::INSULT, "qmclient/chat_emojis/insult.webp"},
+	{":mm", EQmChatEmoji::CUTE, "qmclient/chat_emojis/cute.webp"},
+	{":sq", EQmChatEmoji::ANGRY, "qmclient/chat_emojis/angry.webp"},
+	{":sd", EQmChatEmoji::DEAD, "qmclient/chat_emojis/dead.webp"},
+	{":ty", EQmChatEmoji::AGREE, "qmclient/chat_emojis/agree.webp"},
+	{":tx", EQmChatEmoji::SURRENDER, "qmclient/chat_emojis/surrender.webp"},
+	{":wd", EQmChatEmoji::SMELL, "qmclient/chat_emojis/smell.webp"},
+	{":wh", EQmChatEmoji::QUESTION, "qmclient/chat_emojis/question.webp"},
+	{":zj", EQmChatEmoji::SHOCKED, "qmclient/chat_emojis/shocked.webp"},
+	{":zc", EQmChatEmoji::SUPPORT, "qmclient/chat_emojis/support.webp"},
 }};
 
 // 半角 ':' 或全角 '：'（U+FF1A）开头时返回冒号 UTF-8 字节数，否则返回 0。

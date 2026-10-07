@@ -25,6 +25,8 @@
 #include <game/client/components/qmclient/route_start_index.h>
 #include <game/client/components/qmclient/route_visited.h>
 #include <game/client/components/qmclient/update_manifest.h>
+#include <game/client/components/qmclient/update_proxy.h>
+#include <game/client/components/qmclient/update_survey.h>
 #include <game/client/components/tclient/map_history.h>
 #include <game/client/components/tclient/swap_countdown_message.h>
 
@@ -163,7 +165,11 @@ class CTClient : public CComponent
 	void ResetFinishRenameState(int Dummy = -1);
 	void DoFinishCheck();
 	const char *CurrentCommunityIdForFinishCheck() const;
-	void StartUpdateDownload();
+	void StartUpdateDownload(bool NextSource = false);
+	void StartUpdateSourceSurvey();
+	void PollUpdateRequests();
+	void RunUpdateHttp(std::shared_ptr<IHttpRequest> pRequest);
+	void PollUpdateProxyRequests();
 	void ResetUpdateDownloadTasks();
 	void RemoveUpdateTempFiles();
 	bool LaunchUpdateInstaller();
@@ -480,15 +486,21 @@ public:
 	std::shared_ptr<IHttpRequest> m_pUpdatePackageSignatureTask = nullptr;
 	std::shared_ptr<IHttpRequest> m_pUpdateManifestTask = nullptr;
 	std::shared_ptr<IHttpRequest> m_pUpdateManifestSignatureTask = nullptr;
+	void InitUpdateLifecycle();
+	void TickUpdateLifecycle();
+	void ShutdownUpdateLifecycle();
+	void RegisterUpdateCommands();
+	std::shared_ptr<IHttpRequest> CreateUpdateInfoRequest(const std::string &Url, bool Direct = false);
 	void FetchQmClientUpdateInfo();
 	void FinishQmClientUpdateInfo();
 	void ResetQmClientUpdateInfoTask();
 	bool NeedQmClientUpdate();
 	void RequestQmClientUpdateCheckAndUpdate();
+	void CancelQmClientUpdate();
 	bool IsUpdateChecking() const { return m_pQmClientUpdateInfoTask != nullptr; }
 	bool IsUpdateDownloading() const
 	{
-		return m_pUpdatePackageTask != nullptr ||
+		return m_UpdateSurvey.Running() || m_pUpdatePackageTask != nullptr ||
 		       m_pUpdatePackageSignatureTask != nullptr ||
 		       m_pUpdateManifestTask != nullptr ||
 		       m_pUpdateManifestSignatureTask != nullptr;
@@ -507,11 +519,30 @@ public:
 	char m_aUpdateManifestTmp[IO_MAX_PATH_LENGTH] = "";
 	char m_aUpdateManifestSignatureTmp[IO_MAX_PATH_LENGTH] = "";
 	char m_aUpdateInstallerTmp[IO_MAX_PATH_LENGTH] = "";
+	char m_aUpdateAssetDirectory[IO_MAX_PATH_LENGTH] = "";
+	uint64_t m_UpdateDownloadSession = 0;
 	SQmClientUpdateRelease m_UpdateRelease;
+	uint64_t m_UpdateInfoRevision = 0;
+	qm_update::CSourceRegistry m_UpdateSources;
+	qm_update::CUpdateRequest m_UpdateMetadataRequest;
+	qm_update::CSourceAttempt m_UpdateDownloadAttempt;
+	qm_update::CSourceSurvey m_UpdateSurvey;
+	struct SPendingUpdateProxy
+	{
+		std::shared_ptr<qm_update::CSystemProxyJob> m_pJob;
+		std::shared_ptr<IHttpRequest> m_pRequest;
+		double m_Start;
+	};
+	std::vector<SPendingUpdateProxy> m_vUpdateProxyRequests;
+	qm_update::CProgressDeadline m_UpdateDeadlines[4];
+	bool m_UpdatePopupRequested = false;
 	bool m_UpdateShutdownRequested = false;
 	bool m_UpdateInstallerStarted = false;
 	bool m_UpdateReady = false;
+	bool m_UpdateUseSetup = false;
+	bool m_UpdateDownloadDirect = false;
 	bool m_UpdateCheckFailed = false;
+	bool m_UpdateNetworkError = false;
 	bool m_UpdateFailureNoticeShown = false;
 	bool m_UpdateAutoEnabled = false;
 	int64_t m_UpdateFailureExitAt = 0;

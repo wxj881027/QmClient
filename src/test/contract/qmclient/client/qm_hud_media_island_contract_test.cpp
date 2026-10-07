@@ -13,8 +13,7 @@ TEST(QmHudMediaIslandSource, RemovedTuningSatelliteDoesNotRemain)
 	const std::string CountdownLogic = ReadTestSourceFile("src/game/client/components/hud_media_island_logic.h");
 	const std::string Menus = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 	const std::string Config = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string IconHeader = ReadTestSourceFile("src/game/client/qm_icon_manager.h");
-	const std::string IconSource = ReadTestSourceFile("src/game/client/qm_icon_manager.cpp");
+	const std::string IconHeader = ReadTestSourceFile("src/game/client/qm_icon.h");
 
 	EXPECT_EQ(Source.find("TuneZoneEffect"), std::string::npos);
 	EXPECT_EQ(Header.find("TuneZoneEffect"), std::string::npos);
@@ -22,7 +21,6 @@ TEST(QmHudMediaIslandSource, RemovedTuningSatelliteDoesNotRemain)
 	EXPECT_EQ(Menus.find("qmclient-dynamic-island-tune-zone-icon-legend"), std::string::npos);
 	EXPECT_EQ(Config.find("QmHudIslandShowTuneZoneEffects"), std::string::npos);
 	EXPECT_EQ(IconHeader.find("TUNE_GRAVITY"), std::string::npos);
-	EXPECT_EQ(IconSource.find("tune-gravity"), std::string::npos);
 }
 
 TEST(QmHudMediaIslandSource, DynamicIslandUsesCompactSharedSpacing)

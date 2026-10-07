@@ -1,7 +1,7 @@
 #include "tooltips.h"
 
-#include <game/client/ui.h>
 #include <game/client/gameclient.h>
+#include <game/client/ui.h>
 
 #include <algorithm>
 
@@ -51,12 +51,17 @@ void CTooltips::DoToolTipForRect(const void *pId, const CUIRect *pNearRect, cons
 	DoToolTip(pId, pNearRect, pText, WidthHint, Small ? 10.0f : 14.0f, Small, true);
 }
 
+void CTooltips::DoInfoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize)
+{
+	DoToolTip(pId, pNearRect, pText, WidthHint, FontSize, false, true, true);
+}
+
 void CTooltips::DoSmallToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint)
 {
 	DoToolTip(pId, pNearRect, pText, WidthHint, FontSize, true, true);
 }
 
-void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, const float FontSize, const bool SmallInstant, const bool HoverByRect)
+void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, const float FontSize, const bool SmallInstant, const bool HoverByRect, const bool Immediate)
 {
 	uintptr_t Id = reinterpret_cast<uintptr_t>(pId);
 	const auto &[Entry, WasInserted] = m_Tooltips.emplace(Id, CTooltip{
@@ -75,6 +80,7 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	Tooltip.m_FontSize = std::max(1.0f, FontSize);
 	Tooltip.m_WidthHint = WidthHint;
 	Tooltip.m_HoverByRect = HoverByRect;
+	Tooltip.m_Immediate = Immediate;
 	if(Tooltip.m_SmallInstant != SmallInstant)
 		Tooltip.m_FadeTime = SmallInstant ? 0.0f : 0.75f;
 	Tooltip.m_SmallInstant = SmallInstant;
@@ -83,7 +89,7 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 
 	Tooltip.m_OnScreen = true;
 
-	if(HoverByRect ? Ui()->MouseHovered(pNearRect) : Ui()->HotItem() == Tooltip.m_pId)
+	if(QmTooltipHovered(Tooltip, *Ui()))
 	{
 		SetActiveTooltip(Tooltip);
 	}
@@ -95,7 +101,7 @@ void CTooltips::OnRender()
 	{
 		CTooltip &Tooltip = m_ActiveTooltip.value();
 
-		if((!Tooltip.m_HoverByRect && Ui()->HotItem() != Tooltip.m_pId) || !Tooltip.m_Rect.Inside(Ui()->MousePos()))
+		if(!QmTooltipHovered(Tooltip, *Ui()))
 		{
 			Tooltip.m_OnScreen = false;
 			ClearActiveTooltip();
@@ -112,12 +118,12 @@ void CTooltips::OnRender()
 		m_PreviousTooltip.emplace(Tooltip);
 
 		// 小字提示立即显示，普通提示继续使用原有延迟和淡入。
-		const float SecondsBeforeFadeIn = Tooltip.m_SmallInstant ? 0.0f : Tooltip.m_FadeTime;
+		const float SecondsBeforeFadeIn = (Tooltip.m_SmallInstant || Tooltip.m_Immediate) ? 0.0f : Tooltip.m_FadeTime;
 
 		const float SecondsSinceActivation = (time_get() - m_HoverTime) / (float)time_freq();
 		if(SecondsSinceActivation < SecondsBeforeFadeIn)
 			return;
-		const float SecondsFadeIn = Tooltip.m_SmallInstant ? 0.0f : 0.25f;
+		const float SecondsFadeIn = (Tooltip.m_SmallInstant || Tooltip.m_Immediate) ? 0.0f : 0.25f;
 		const float AlphaFactor = SecondsSinceActivation < SecondsBeforeFadeIn + SecondsFadeIn ? (SecondsSinceActivation - SecondsBeforeFadeIn) / SecondsFadeIn : 1.0f;
 		CUiScopedGaussianBlur GaussianBlurScope(Ui(), AlphaFactor);
 
@@ -173,6 +179,10 @@ void CTooltips::OnRender()
 		Cursor.SetPosition(Rect.TopLeft());
 		Cursor.m_FontSize = FontSize;
 		Cursor.m_LineWidth = TextWidth;
+		// 极窄视口或超长说明按可见行数收口，保留省略提示，避免文字溢出气泡。
+		const int VisibleLines = QmTooltipVisibleLines(Rect.h, FontSize);
+		const bool Truncated = BoundingBox.m_H > Rect.h;
+		Cursor.m_MaxLines = Truncated ? std::max(1, VisibleLines - 1) : 0;
 
 		STextContainerIndex TextContainerIndex;
 		const unsigned OldRenderFlags = TextRender()->GetRenderFlags();
@@ -186,7 +196,20 @@ void CTooltips::OnRender()
 			TextColor.a *= AlphaFactor;
 			ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
 			OutlineColor.a *= AlphaFactor;
-			TextRender()->RenderTextContainer(TextContainerIndex, TextColor, OutlineColor);
+			Ui()->ClipEnable(&Rect);
+			if(!Truncated || VisibleLines > 1)
+				TextRender()->RenderTextContainer(TextContainerIndex, TextColor, OutlineColor);
+			if(Truncated)
+			{
+				CUIRect End = Rect;
+				End.y += std::max(0, VisibleLines - 1) * FontSize;
+				End.h = FontSize;
+				const ColorRGBA OldColor = TextRender()->GetTextColor();
+				TextRender()->TextColor(TextColor);
+				Ui()->DoLabel(&End, "…", FontSize, TEXTALIGN_TL);
+				TextRender()->TextColor(OldColor);
+			}
+			Ui()->ClipDisable();
 		}
 
 		TextRender()->DeleteTextContainer(TextContainerIndex);

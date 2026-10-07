@@ -16,15 +16,15 @@
 
 static_assert(std::is_base_of_v<CGLSLTWProgram, CGLSLMediaIslandSdfProgram>);
 static_assert(std::is_base_of_v<CGLSLTWProgram, CGLSLRoundedRectSdfProgram>);
-static_assert(std::is_base_of_v<CGLSLTWProgram, CGLSLTexturedMsdfProgram>);
+static_assert(std::is_base_of_v<CGLSLTWProgram, CGLSLProceduralRingProgram>);
 static_assert(std::is_base_of_v<CGLSLTWProgram, CGLSLGaussianBlurProgram>);
 
 static_assert(std::is_base_of_v<CGLSL_ESTWProgram, CGLSL_ESMediaIslandSdfProgram>);
 static_assert(std::is_base_of_v<CGLSL_ESTWProgram, CGLSL_ESRoundedRectSdfProgram>);
-static_assert(std::is_base_of_v<CGLSL_ESTWProgram, CGLSL_ESTexturedMsdfProgram>);
+static_assert(std::is_base_of_v<CGLSL_ESTWProgram, CGLSL_ESProceduralRingProgram>);
 static_assert(std::is_base_of_v<CGLSL_ESTWProgram, CGLSL_ESGaussianBlurProgram>);
 
 static_assert(!std::is_same_v<CGLSLMediaIslandSdfProgram, CGLSL_ESMediaIslandSdfProgram>);
 static_assert(!std::is_same_v<CGLSLRoundedRectSdfProgram, CGLSL_ESRoundedRectSdfProgram>);
-static_assert(!std::is_same_v<CGLSLTexturedMsdfProgram, CGLSL_ESTexturedMsdfProgram>);
+static_assert(!std::is_same_v<CGLSLProceduralRingProgram, CGLSL_ESProceduralRingProgram>);
 static_assert(!std::is_same_v<CGLSLGaussianBlurProgram, CGLSL_ESGaussianBlurProgram>);

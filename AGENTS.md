@@ -11,6 +11,29 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 - 遇到未由自己产生的文件改动，先考虑用户或其他任务正在操作；不要回退、覆盖或纳入本次提交。
 - 只有任务独立且并行能节省时间或提高质量时才委托。高风险改动可独立复核；工具不可用时自行审查并说明限制，不因此停工。
 
+## 会话启动与交接
+
+每个新会话开始执行仓库任务前，先完成以下识别，不依赖旧聊天记忆；只读任务只核对所需信息，不占用写入槽位。
+
+1. 确认当前工作目录，运行 git status --short、git branch --show-current、git rev-parse HEAD 和 git worktree list --porcelain，识别当前目录是主工作树还是关联槽位。关联 Worktree 在 Codex 中作为 Local 项目使用；Local 不改变其 Git Worktree 身份。
+2. 按下节发现并核对 .agents/machine.local.json，确认本机集成分支、固定槽位、构建目录、job 预算和窗口偏好。不得根据项目名称、空的分支名称或其他开发者配置猜测；detached HEAD 是单分支槽位的正常状态，不因此新建分支或重建 Worktree。
+3. 有匹配机器配置时，读取其 primary_worktree 下的 .agents/worktree-state.local.json（若存在）。该文件由现有 .agents 忽略规则排除，只记录本机槽位的任务、会话占用、基线与交付 SHA、构建对应源码状态、验证证据和待办，不保存凭据或新增授权。记录缺失、过期或不一致时以实际 Git、进程和任务状态为准，不把记录当互斥锁，不把“空闲”当作没有其他会话写入的证明。
+4. 写入或切换前检查本槽位的活跃会话、未提交修改及未集成提交；构建前核对进程占用和全机资源预算。只在当前任务明确授权的目录写入，不把主目录已有成果、其他槽位任务或临时历史 Worktree 纳入本任务。
+5. 使用已有构建目录前核对 CMakeCache 的源码路径和配置，运行客户端前确保二进制针对当前源码完成构建。源码同步不会更新二进制；旧 exe 存在不表示槽位已完成当前版本的运行验证。默认增量构建，不为新会话重新初始化 Submodule、删除缓存或自动创建 Worktree。
+
+任务结束或交接时，更新已有任务文档；有匹配机器配置时同步更新主工作树的本地槽位记录，只更新本任务负责的条目，不覆盖其他任务记录。注明实际 SHA、是否存在未提交修改、最后成功构建的源码版本、验证范围和剩余动作；无法确认的信息写明未知。共享文件不是自动调度器，并行更新需协调。仅涉及本地环境的状态不写入版本化文档；重要功能决策与验证证据仍按文档规则维护。
+
+## 本地机器配置与固定 Worktree
+
+- 每个新会话启动时按上节读取当前工作树的 .agents/machine.local.json（若存在）。该文件是 Git 忽略的本机偏好，不提交、不推送、不写入版本化报告；结构见 [.agents/machine.example.json](.agents/machine.example.json)。
+- 固定槽位没有配置时，通过 git worktree list --porcelain 找到主工作树，并读取其 .agents/machine.local.json。只允许从同一仓库已登记的主工作树继承；本地槽位配置优先于继承配置，不合并字段。核对 schema_version、主目录与登记路径匹配、当前目录属于主目录或已登记的配置槽位、分支存在、槽位绝对路径互不重复，build_directory 为不含 .. 的工作树内相对目录、slot_mode 为 detached、烟测模式为 windowed、最小化字段为布尔值，以及构建资源为正整数且单次 job 数与最大并行 job 总数均不超过预算。配置无效时说明具体问题，不据此切换分支或操作其他目录。
+- 配置文件存在且匹配当前工作区即选择对应机器 profile，不依赖用户名或硬编码主机名。文件只作为数据读取，不执行其中内容；它不扩大任务授权，也不自动创建、切换、重置或删除 Worktree。用户当前明确指令优先。
+- 无本地配置时，沿用当前目录、当前分支和已有构建环境，不假定其他协作者使用某个固定路径、分支或槽位数量。默认构建目录为 cmake-build-release，重构建串行、单次 -j 6；机器配置可调整资源预算。
+- 固定槽位、Submodule、索引和构建缓存长期保留；同一目录只有一个写入会话，不自动创建临时 Worktree，不删除或归档固定槽位，不使用 reset --hard 或 clean 清场。只读任务不占写入槽位。
+- 单分支模式使用 detached HEAD 槽位，以聚焦提交、保存标签和主目录串行 cherry-pick 集成；采用任务分支的协作者按自己的已授权分支策略执行，不强制共用某一开发分支。同一功能链和公共接口修改优先串行。流程见 [固定 Worktree 开发与集成](docs/规格/2026-10-07-固定Worktree开发与集成.md)。
+- 每个 Worktree 独占自己的构建目录，默认增量复用，不共享 Cache 或中间产物，不常规删除 build。同目录构建、测试、benchmark、打包和 gate 串行；跨目录也遵守本地全机资源预算，Rust、链接与测试计入资源协调。
+- 普通客户端烟测默认窗口化并尽量后台最小化启动，避免影响前台；仅在目标涉及全屏时使用相应模式。视觉与交互验收使用可见窗口，最小化结果不能替代视觉证据。交付人工验证命令时使用实际槽位和构建目录的 PowerShell 路径；不能保证所有图形后端启动时完全不激活窗口。
+
 ## 项目边界
 
 - 聚焦当前任务，遵循附近 DDNet 模式；不顺手重构上游或引入无关抽象。
@@ -76,7 +99,7 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 ## 构建入口
 
 - Windows 构建必须使用 `qmclient_scripts/cmake-windows.cmd`，不要直接调用 `cmake --build`；封装脚本会加载 VS/MSVC 环境，并调用 `repair_ninja_msvc_prefix.py` 修复 Ninja 依赖前缀。
-- 常用命令：`cmd /c qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 14`；C++ 测试使用目标 `run_cxx_tests`，Rust 测试使用目标 `run_rust_tests`。
+- 常用命令：`cmd /c qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target game-client -j 6`；C++ 测试使用目标 `run_cxx_tests`，Rust 测试使用目标 `run_rust_tests`。
 - 同一 build 目录内的构建、测试、打包必须串行；首次配置使用 `qmclient_scripts/cmake-windows.cmd -G Ninja -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release`。
 
 ## 验证与交付
@@ -91,7 +114,8 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 ## 文档权威
 
 - 本文件负责全局边界，skills 负责专项操作，`references/` 仅放按需资料。项目文档按内容归入现有目录：当前功能设计、方案和实施安排放 `docs/规格/`；历史调研、修复记录和被替代的方案放 `docs/归档/`。
-- 新增项目文档使用中文文件名，历史记录可加日期前缀；正文用清楚的中文说明目标、行为和实现安排，按内容组织，不套用 skill、审查报告或提交模板。
+- 新增项目说明文档统一使用 `YYYY-MM-DD-中文主题.md` 日期前缀，日期取本地创建日期；`AGENTS.md`、`README.md`、`SKILL.md` 等固定规则或导航入口沿用既定名称。正文清楚说明目标、行为和实现安排，不套用 skill、审查报告或提交模板。
+- 优先更新已有文档，不为每轮测试、提交或审查重复新建报告；同一任务的阶段证据集中维护。已完成的实施安排、阶段验收和修复记录及时移入 `docs/归档/` 并标注历史状态，仍有效的功能规格和未完成验收清单保留在 `docs/规格/`，归档时同步修正引用。
 - 采用与当前任务相符且仍有效的文档；`draft` 仅在用户采纳后作为实现依据，无状态文档须核对现状，不能仅凭日期认定有效。
 - 归档、过时或被替代的文档仅作历史线索。保留历史记录，以状态或 supersedes 标记替代关系。
 - 重要决策、长任务进度和交接证据写入版本化文档；小任务可直接在最终回复交付，不强制新建计划或报告。

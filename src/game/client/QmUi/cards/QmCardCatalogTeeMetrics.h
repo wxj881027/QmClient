@@ -46,6 +46,7 @@ struct SSettingsTeeEditorLayout
 	CUIRect m_SkinLabel;
 	CUIRect m_SkinInput;
 	CUIRect m_RandomSkin;
+	CUIRect m_CopyOtherSkin;
 	CUIRect m_Eyes;
 	CUIRect m_CustomColors;
 	CUIRect m_RandomColors;
@@ -80,6 +81,9 @@ inline SSettingsTeeEditorLayout ResolveSettingsTeeEditorLayout(const CUIRect &Vi
 	Layout.m_Identity = NextRow(IdentityHeight);
 	CUIRect SkinRow = NextRow(Metrics.m_InputHeight);
 	SkinRow.VSplitLeft(std::min(SkinRow.w * 0.28f, 84.0f * Metrics.m_UiScale), &Layout.m_SkinLabel, &SkinRow);
+	// 皮肤行右侧依次为输入框、随机按钮与「从对方复制」按钮，两个图标按钮等宽并各占一个间隔。
+	SkinRow.VSplitRight(Metrics.m_ButtonHeight, &SkinRow, &Layout.m_CopyOtherSkin);
+	SkinRow.VSplitRight(std::min(Gap, SkinRow.w), nullptr, nullptr);
 	SkinRow.VSplitRight(Metrics.m_ButtonHeight, &Layout.m_SkinInput, &Layout.m_RandomSkin);
 	Layout.m_SkinInput.VSplitRight(Gap, &Layout.m_SkinInput, nullptr);
 	Layout.m_Eyes = NextRow(ResolveSettingsTeeEmoteSliderLayout({}, Metrics).m_Height);

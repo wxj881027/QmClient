@@ -8,6 +8,7 @@
 #include <iterator>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace QmUpdate
@@ -170,10 +171,18 @@ namespace QmUpdate
 		if(!UpdaterPath.is_absolute() || !Package.is_absolute() || !PackageSignature.is_absolute() || !Manifest.is_absolute() || !ManifestSignature.is_absolute() || !Install.is_absolute())
 			return false;
 		const std::wstring Session = std::to_wstring(SessionPid);
-		if(Package.filename() != L"QmClient-windows.zip." + Session + L".tmp" ||
-			PackageSignature.filename() != L"QmClient-windows.zip.sig." + Session + L".tmp" ||
-			Manifest.filename() != L"QmClient-windows-update.json." + Session + L".tmp" ||
-			ManifestSignature.filename() != L"QmClient-windows-update.json.sig." + Session + L".tmp")
+		bool Matched = false;
+		for(const auto &Names : {std::pair{L"QmClient-windows.zip", L"QmClient-windows-update.json"},
+			    std::pair{L"QmClient-windows-portable.zip", L"QmClient-windows-portable-update.json"},
+			    std::pair{L"QmClient-windows.7z", L"QmClient-windows-7z-update.json"},
+			    std::pair{L"QmClient-windows-portable.7z", L"QmClient-windows-portable-7z-update.json"}})
+		{
+			Matched |= Package.filename() == std::wstring(Names.first) + L"." + Session + L".tmp" &&
+				   PackageSignature.filename() == std::wstring(Names.first) + L".sig." + Session + L".tmp" &&
+				   Manifest.filename() == std::wstring(Names.second) + L"." + Session + L".tmp" &&
+				   ManifestSignature.filename() == std::wstring(Names.second) + L".sig." + Session + L".tmp";
+		}
+		if(!Matched)
 			return false;
 		const std::filesystem::path AssetDirectory = Package.parent_path();
 		return PathEquals(PackageSignature.parent_path(), AssetDirectory) && PathEquals(Manifest.parent_path(), AssetDirectory) &&

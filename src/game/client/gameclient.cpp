@@ -118,37 +118,21 @@ namespace
 		QmPerfLogPayload("perf/settings-warmup", aPayload, pClient, "settings:tee");
 	}
 
-	void LogQmIconDiagnostics(const SQmIconDiagnostics &Diagnostics, const IClient *pClient)
+	void LogQmIconDiagnostics(const IClient *pClient)
 	{
+		const uint64_t Draws = CQmIconDrawDiagnostics::Take();
 		if(!QmPerfEnabled())
 			return;
-		static SQmIconDiagnosticsWindow s_Window;
-		const int64_t Now = time_get();
-		if(!s_Window.Add(Diagnostics, Now, time_freq()))
+		static uint64_t s_Draws = 0;
+		static int64_t s_LastLog = 0;
+		s_Draws += Draws;
+		if(time_get() - s_LastLog < time_freq())
 			return;
-		const SQmIconDiagnostics &Total = s_Window.m_Total;
-		char aPayload[1024];
-		str_format(aPayload, sizeof(aPayload), "event=icon_summary sample_frames=%" PRIu64 " msdf_draws_max=%" PRIu64 " msdf_draws=%" PRIu64 " msdf_manager_call_run_max=%" PRIu64 " msdf_manager_call_run_1=%" PRIu64 " msdf_manager_call_run_2=%" PRIu64 " msdf_manager_call_run_3_4=%" PRIu64 " msdf_manager_call_run_5_8=%" PRIu64 " msdf_manager_call_run_9_16=%" PRIu64 " msdf_manager_call_run_17_32=%" PRIu64 " msdf_manager_call_run_33_64=%" PRIu64 " msdf_manager_call_run_65_plus=%" PRIu64 " reload_attempts=%" PRIu64 " reload_successes=%" PRIu64 " atlas_swaps=%" PRIu64 " texture_load_successes=%" PRIu64 " texture_load_failures=%" PRIu64 " texture_unloads=%" PRIu64,
-			s_Window.m_Frames,
-			s_Window.m_MaxMsdfDraws,
-			Total.m_MsdfIconDraws,
-			Total.m_MaxMsdfManagerCallRun,
-			Total.m_MsdfManagerCallRunBuckets[0],
-			Total.m_MsdfManagerCallRunBuckets[1],
-			Total.m_MsdfManagerCallRunBuckets[2],
-			Total.m_MsdfManagerCallRunBuckets[3],
-			Total.m_MsdfManagerCallRunBuckets[4],
-			Total.m_MsdfManagerCallRunBuckets[5],
-			Total.m_MsdfManagerCallRunBuckets[6],
-			Total.m_MsdfManagerCallRunBuckets[7],
-			Total.m_ReloadAttempts,
-			Total.m_ReloadSuccesses,
-			Total.m_AtlasSwaps,
-			Total.m_TextureLoads,
-			Total.m_TextureLoadFailures,
-			Total.m_TextureUnloads);
+		char aPayload[128];
+		str_format(aPayload, sizeof(aPayload), "event=icon_summary ttf_draws=%" PRIu64, s_Draws);
 		QmPerfLogPayloadForce("perf/icons", aPayload, pClient);
-		s_Window.Clear(Now);
+		s_Draws = 0;
+		s_LastLog = time_get();
 	}
 
 } // namespace
@@ -903,15 +887,6 @@ static void MigrateTranslateUiColorAlphaConfig(const IConfigManager *pConfigMana
 	g_Config.m_QmTranslateColorAlphaMigrated = Migrated ? 1 : 0;
 }
 
-static void MigrateQmUiIconDuotoneSecondaryColor(const IConfigManager *pConfigManager)
-{
-	if(g_Config.m_QmUiIconDuotoneSecondaryColorMigrated)
-		return;
-	const EColorInputAlphaMode InputAlphaMode = pConfigManager != nullptr ? pConfigManager->ColorValueInputAlphaMode("qm_ui_icon_duotone_secondary_color") : EColorInputAlphaMode::PACKED;
-	MigrateLegacyQmUiIconDuotoneSecondaryColor(g_Config.m_QmUiIconDuotoneSecondaryColor, DefaultConfig::QmUiIconDuotoneSecondaryColor, InputAlphaMode);
-	g_Config.m_QmUiIconDuotoneSecondaryColorMigrated = 1;
-}
-
 static void GenerateTimeoutCode(char *pTimeoutCode)
 {
 	if(pTimeoutCode[0] == '\0' || str_comp(pTimeoutCode, "hGuEYnfxicsXGwFq") == 0)
@@ -949,7 +924,6 @@ void CGameClient::OnInit()
 	MigrateJumpHintConfig();
 	MigrateNameplateShowScopeConfig();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
-	MigrateQmUiIconDuotoneSecondaryColor(ConfigManager());
 
 	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
 	{
@@ -1016,9 +990,6 @@ void CGameClient::OnInit()
 	m_UiRuntimeV2.Init(this);
 	m_RenderTools.Init(Graphics(), TextRender(), this); // TClient
 	m_RenderMap.Init(Graphics(), TextRender());
-	m_QmIconManager.Init(Graphics(), Storage(), Console());
-	// 遗留 UI（CUi）的图标绘制走图集优先、字形回退。
-	m_UI.SetQmIconManager(&m_QmIconManager);
 	m_AppliedQmUiIconWeight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
 
 	if(GIT_SHORTREV_HASH)
@@ -1129,6 +1100,14 @@ void CGameClient::OnInit()
 	// window not being focused after starting client.
 	Graphics()->SetWindowGrab(true);
 
+	// 加载界面内完成有限图标字号计划；每次最多 24 个且 1ms 后让出，始终刷新 loading。
+	// 慢设备超过 250ms 的总预算时，由后续帧继续执行，启动不会无限阻塞。
+	const int64_t IconWarmupStart = time_get();
+	do
+	{
+		m_Menus.RenderLoading(pLoadingDDNetCaption, pLoadingMessageAssets, 0);
+		PrewarmQmIconGlyphs(24, time_freq() / 1000);
+	} while(!m_QmIconPrewarm.Complete() && time_get() - IconWarmupStart < time_freq() / 4);
 	PrewarmSettingsRuntimeCachesDuringLoading(pLoadingDDNetCaption, pLoadingMessageAssets);
 
 	CChecksumData *pChecksum = Client()->ChecksumData();
@@ -1222,11 +1201,10 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 
 void CGameClient::OnUpdate()
 {
-	// Vulkan swapchain 重建在渲染线程执行，能力状态可能晚于窗口 resize 回调变化。
-	// 这里仅在 DPI、图标配置或 MSDF capability 变化时重载 atlas。
+	// 字体配置变化通过统一窗口失效路径清理缓存。
 	SyncQmUiIconWeight();
 	SyncQmCustomFontWeight();
-	m_QmIconManager.RefreshForCurrentDpi();
+	PrewarmQmIconGlyphs(24, time_freq() / 1000);
 
 	const bool TeeSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_TEE;
 	const bool AssetsSettingsActive = m_Menus.IsSettingsPageActive() && g_Config.m_UiSettingsPage == CMenus::SETTINGS_ASSETS;
@@ -1300,6 +1278,29 @@ void CGameClient::OnUpdate()
 	RecordDemoInputWheelEvent();
 }
 
+void CGameClient::PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks)
+{
+	if(MaxGlyphs <= 0 || BudgetTicks <= 0)
+		return;
+	const float ScreenHeight = Ui()->Screen()->h;
+	if(ScreenHeight <= 0.0f || Graphics()->ScreenHeight() <= 0)
+		return;
+	m_QmIconPrewarm.Configure(Graphics()->ScreenHeight() / ScreenHeight, g_Config.m_QmUiIconWeight);
+	if(m_QmIconPrewarm.Complete())
+		return;
+	const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	const int64_t Start = time_get();
+	int Codepoint, PixelSize;
+	for(int Count = 0; Count < MaxGlyphs && m_QmIconPrewarm.Next(Codepoint, PixelSize); ++Count)
+	{
+		TextRender()->QmPrewarmGlyph(Codepoint, PixelSize);
+		if(time_get() - Start >= BudgetTicks)
+			break;
+	}
+	TextRender()->SetFontPreset(PreviousPreset);
+}
+
 void CGameClient::SyncQmUiIconWeight()
 {
 	const int Weight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);
@@ -1308,7 +1309,6 @@ void CGameClient::SyncQmUiIconWeight()
 
 	m_AppliedQmUiIconWeight = Weight;
 	TextRender()->SetIconFontWeight(Weight);
-	m_QmIconManager.RefreshForCurrentDpi();
 	OnWindowResize();
 }
 
@@ -1924,6 +1924,7 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
 	// qm_blank_asset_fallback 兜底轮询：设置页直改 g_Config、控制台命令等任何来源改值后，
 	// 下一帧在这里触发自定义素材热重载（-1 表示初始素材尚未加载）。
 	if(m_LastBlankAssetFallback >= 0 && g_Config.m_QmBlankAssetFallback != m_LastBlankAssetFallback)
@@ -2085,11 +2086,9 @@ void CGameClient::OnRender()
 	// 该函数此前只有声明和定义、没有调用点，导致 qm_perf_stutter_diagnostics
 	// 开启后永远不会产生 perf/stutter 报告；这里在渲染帧末尾统一消费。
 	ProcessQmStutterFrame();
+	LogQmIconDiagnostics(Client());
 
 	m_pFrameScheduler->EndFrame();
-	if(QmPerfEnabled())
-		LogQmIconDiagnostics(m_QmIconManager.TakeDiagnostics(), Client());
-
 	// resend player and dummy info if it was filtered by server
 	if(m_aLocalIds[0] >= 0 && Client()->State() == IClient::STATE_ONLINE && !m_Menus.IsActive() && WasNewTick)
 	{
@@ -3197,7 +3196,6 @@ void CGameClient::OnShutdown()
 		pComponent->OnShutdown();
 
 	m_UI.OnShutdown();
-	m_QmIconManager.Shutdown();
 	m_LocalServer.KillServer();
 }
 
@@ -3242,11 +3240,11 @@ void CGameClient::OnFlagGrab(int TeamId)
 
 void CGameClient::OnWindowResize()
 {
+	m_QmIconPrewarm.Invalidate();
 	for(auto &pComponent : m_vpAll)
 		pComponent->OnWindowResize();
 
 	Ui()->OnWindowResize();
-	m_QmIconManager.RefreshForCurrentDpi();
 }
 
 void CGameClient::OnLanguageChange()
@@ -7609,12 +7607,11 @@ void CGameClient::OnGraphicsResourcesReset()
 	m_HudSkinLoaded = false;
 	m_ExtrasSkinLoaded = false;
 
-	m_QmIconManager.OnGraphicsResourcesReset();
-
 	LoadInitialGraphicsAssets();
 
 	// 文本渲染器缓存了字体纹理，必须同样重建。
 	TextRender()->OnGraphicsResourcesReset();
+	m_QmIconPrewarm.Invalidate();
 
 	log_info("gfx", "game assets reloaded after graphics resources reset");
 }

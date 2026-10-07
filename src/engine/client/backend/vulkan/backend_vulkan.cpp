@@ -1259,13 +1259,13 @@ private:
 	SPipelineContainer m_QuadPipeline;
 	SPipelineContainer m_QuadGroupedPipeline;
 
-	// ==== QmVulkan 扩展（可关闭）：SDF / MSDF / GaussianBlur 自定义管线 ====
+	// ==== QmVulkan 扩展（可关闭）：SDF / 解析环图 / GaussianBlur 自定义管线 ====
 	// 关闭时不创建、不暴露能力；Core 原生管线保持独立可跑。
 	SPipelineContainer m_MediaIslandSdfPipeline;
 	SPipelineContainer m_RoundedRectSdfPipeline;
-	SPipelineContainer m_TexturedMsdfPipeline;
-	bool m_TexturedMsdfPipelineValid = false;
-	bool m_TexturedMsdfPipelineRequired = false;
+	SPipelineContainer m_ProceduralRingPipeline;
+	bool m_ProceduralRingPipelineValid = false;
+	bool m_ProceduralRingPipelineRequired = false;
 	SPipelineContainer m_GaussianBlurPipeline;
 	bool m_GaussianBlurPipelineValid = false;
 	bool m_QmMediaIslandSdfPipelineValid = false;
@@ -1279,7 +1279,7 @@ private:
 
 	void QmEnhancedMarkDisabled(const qm_vulkan_ext::EDisableReason Reason);
 
-	void SyncTexturedMsdfCapability();
+	void SyncProceduralRingCapability();
 
 	std::vector<VkPipeline> m_vLastPipeline;
 
@@ -1599,7 +1599,7 @@ protected:
 			DestroyTextDescriptorSetLayout();
 			DestroyDescriptorSetLayouts();
 		}
-		SyncTexturedMsdfCapability();
+		SyncProceduralRingCapability();
 		m_pBackendCapabilities = nullptr;
 	}
 
@@ -6335,7 +6335,7 @@ public:
 
 	[[nodiscard]] bool CreateRoundedRectSdfGraphicsPipeline(const char *pVertName, const char *pFragName);
 
-	[[nodiscard]] bool CreateTexturedMsdfGraphicsPipeline(const char *pVertName, const char *pFragName);
+	[[nodiscard]] bool CreateProceduralRingGraphicsPipeline(const char *pVertName, const char *pFragName);
 
 	[[nodiscard]] bool CreateGaussianBlurGraphicsPipeline(const char *pVertName, const char *pFragName);
 
@@ -8309,7 +8309,7 @@ public:
 		m_pBackendCapabilities = pCommand->m_pCapabilities;
 		pCommand->m_pCapabilities->m_MediaIslandSdf = false;
 		pCommand->m_pCapabilities->m_RoundedRectSdf = false;
-		pCommand->m_pCapabilities->m_TexturedMsdf.store(false, std::memory_order_release);
+		pCommand->m_pCapabilities->m_ProceduralRing.store(false, std::memory_order_release);
 		pCommand->m_pCapabilities->m_RenderTargetGaussianBlur = false;
 		pCommand->m_pCapabilities->m_BackbufferCapture = false;
 		pCommand->m_pCapabilities->m_RenderTargetExternalPassRequiresSingleSample = true;
@@ -8370,7 +8370,7 @@ public:
 		// QmVulkan 扩展能力仅在对应管线真实可用时暴露；关闭扩展时保持纯净化。
 		pCommand->m_pCapabilities->m_MediaIslandSdf = m_QmMediaIslandSdfPipelineValid;
 		pCommand->m_pCapabilities->m_RoundedRectSdf = m_QmRoundedRectSdfPipelineValid;
-		SyncTexturedMsdfCapability();
+		SyncProceduralRingCapability();
 		pCommand->m_pCapabilities->m_RenderTargets = SupportsRenderTargetReadback();
 		pCommand->m_pCapabilities->m_RenderTargetGaussianBlur = SupportsRenderTargetGaussianBlur();
 		pCommand->m_pCapabilities->m_BackbufferCapture = SupportsBackbufferCapture();
@@ -8431,7 +8431,7 @@ public:
 		DestroyIndexBuffer(m_RenderIndexBuffer, m_RenderIndexBufferMemory);
 
 		CleanupVulkan<true>(m_SwapChainImageCount);
-		SyncTexturedMsdfCapability();
+		SyncProceduralRingCapability();
 		m_pBackendCapabilities = nullptr;
 
 		return true;
@@ -8629,13 +8629,13 @@ public:
 
 	void Cmd_RenderRoundedRectSdf_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_RenderRoundedRectSdf *pCommand);
 
-	void Cmd_RenderTexturedMsdf_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_RenderTexturedMsdf *pCommand);
+	void Cmd_RenderProceduralRing_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_RenderProceduralRing *pCommand);
 
 	[[nodiscard]] bool Cmd_RenderMediaIslandSdf(const CCommandBuffer::SCommand_RenderMediaIslandSdf *pCommand, SRenderCommandExecuteBuffer &ExecBuffer);
 
 	[[nodiscard]] bool Cmd_RenderRoundedRectSdf(const CCommandBuffer::SCommand_RenderRoundedRectSdf *pCommand, SRenderCommandExecuteBuffer &ExecBuffer);
 
-	[[nodiscard]] bool Cmd_RenderTexturedMsdf(const CCommandBuffer::SCommand_RenderTexturedMsdf *pCommand, SRenderCommandExecuteBuffer &ExecBuffer);
+	[[nodiscard]] bool Cmd_RenderProceduralRing(const CCommandBuffer::SCommand_RenderProceduralRing *pCommand, SRenderCommandExecuteBuffer &ExecBuffer);
 
 	[[nodiscard]] bool Cmd_ReadPixel(const CCommandBuffer::SCommand_TrySwapAndReadPixel *pCommand)
 	{

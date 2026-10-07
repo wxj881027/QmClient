@@ -14,14 +14,19 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmTree.h>
+#include <game/client/QmUi/UiButtonStyle.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
 #include <game/client/components/scoreboard.h>
+#include <game/client/qm_icon.h>
+#include <game/client/qm_icon_label.h>
+#include <game/client/qm_icon_label_runs.h>
 #include <game/client/ui.h>
 
 #include <benchmark/benchmark.h>
 
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -380,3 +385,110 @@ static void BM_IconButtonFeedback(benchmark::State &State)
 	}
 }
 BENCHMARK(BM_IconButtonFeedback)->Arg(0)->Arg(1)->Arg(2);
+
+// 每轮解析一个次级按钮表面；分别测空闲、悬浮、按下和禁用，不包含 GPU 绘制。
+static void BM_SecondaryButtonStyle(benchmark::State &State)
+{
+	ColorRGBA Surface(0.2f, 0.4f, 0.6f, 0.25f), Backdrop(0.1f, 0.1f, 0.1f, 1);
+	bool Enabled = State.range(0) != 3;
+	bool Hovered = State.range(0) != 0;
+	bool Pressed = State.range(0) == 2;
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Surface);
+		benchmark::DoNotOptimize(Backdrop);
+		benchmark::DoNotOptimize(Enabled);
+		benchmark::DoNotOptimize(Hovered);
+		benchmark::DoNotOptimize(Pressed);
+		const auto Style = ResolveUiSecondaryButtonStyle(Surface, Backdrop, Enabled, Hovered, Pressed);
+		benchmark::DoNotOptimize(Style);
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_SecondaryButtonStyle)->Arg(0)->Arg(1)->Arg(2)->Arg(3);
+
+// 每轮解析一个真实标签：正文快速拒绝、单图标与组合图标，计时包含识别与布局。
+static void BM_IconLabelResolve(benchmark::State &State)
+{
+	const std::string Loading = std::string(FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT) + FontIcons::FONT_ICON_ELLIPSIS;
+	const char *pText = State.range(0) == 0 ? "Settings" : (State.range(0) == 1 ? FontIcons::FONT_ICON_STAR : Loading.c_str());
+	const EFontPreset Preset = State.range(0) == 0 ? EFontPreset::DEFAULT_FONT : EFontPreset::ICON_FONT;
+	const CUIRect Rect{0, 0, 40, 20};
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(pText);
+		const auto Icons = QmIconLabelGlyphs(Preset, pText);
+		benchmark::DoNotOptimize(Icons);
+		if(Icons.m_Count > 0)
+			benchmark::DoNotOptimize(QmIconLabelRect(Rect, 16, TEXTALIGN_MC));
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_IconLabelResolve)->Arg(0)->Arg(1)->Arg(2);
+
+// 测量一条混合按钮标签的两遍分段，覆盖生产测量与绘制的无分配解析成本。
+static void BM_IconLabelRuns(benchmark::State &State)
+{
+	const std::string Labels[] = {
+		std::string(FontIcons::FONT_ICON_LIST_UL) + "12",
+		std::string("菜单12") + FontIcons::FONT_ICON_GEAR,
+		std::string("\xEF\x83\x89") + "3" + FontIcons::FONT_ICON_STAR};
+	const char *pText = Labels[State.range(0)].c_str();
+	int ExpectedRuns = State.range(0) == 2 ? 3 : 2;
+	int PreflightRuns = 0;
+	const bool Valid = QmVisitIconLabelRuns(pText, [&](const auto &) { ++PreflightRuns; });
+	if(!Valid || PreflightRuns != ExpectedRuns)
+	{
+		State.SkipWithError("icon label run preflight failed");
+		return;
+	}
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(pText);
+		for(int Pass = 0; Pass < 2; ++Pass)
+		{
+			int Bytes = 0;
+			QmVisitIconLabelRuns(pText, [&](const SQmIconLabelRun &Run) {
+				Bytes += Run.m_Length;
+				benchmark::DoNotOptimize(Run.m_Icon);
+				benchmark::DoNotOptimize(Run.m_pFallback);
+			});
+			benchmark::DoNotOptimize(Bytes);
+		}
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_IconLabelRuns)->Arg(0)->Arg(1)->Arg(2);
+
+// 单次解析本体与保护色，分别测量已知 UI 背景和未知地图背景；准备与恢复不计时。
+static void BM_IconColorResolve(benchmark::State &State)
+{
+	const double OriginalTime = CQmIconFrameColorClock::Time();
+	CQmIconFrameColorClock::BeginFrame(1.25);
+	const int OriginalPreset = g_Config.m_QmUiIconColor;
+	const int OriginalEnabled = g_Config.m_QmUiIconCustomColorEnabled;
+	const unsigned OriginalCustom = g_Config.m_QmUiIconCustomColor;
+	g_Config.m_QmUiIconColor = static_cast<int>(State.range(0));
+	g_Config.m_QmUiIconCustomColorEnabled = static_cast<int>(State.range(1));
+	g_Config.m_QmUiIconCustomColor = ColorHSLA(0.37f, 0.8f, 0.45f).Pack(false);
+	CUiScopedSurfaceText Surface(nullptr, ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f), State.range(2) != 0);
+	ColorRGBA Input(1.0f, 0.85f, 0.3f, 0.65f);
+	const ColorRGBA Preflight = ConfiguredQmUiIconColor(Input);
+	const ColorRGBA OutlinePreflight = ConfiguredQmUiIconContrastColor(Preflight);
+	if(!std::isfinite(Preflight.r) || !std::isfinite(Preflight.g) || !std::isfinite(Preflight.b) || Preflight.a != Input.a || !std::isfinite(OutlinePreflight.r) || !std::isfinite(OutlinePreflight.g) || !std::isfinite(OutlinePreflight.b) || !std::isfinite(OutlinePreflight.a) || OutlinePreflight.a < 0.0f || OutlinePreflight.a > Input.a * 0.35f)
+		State.SkipWithError("icon color must preserve state alpha and bounded finite surface protection");
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Input);
+		const ColorRGBA Output = ConfiguredQmUiIconColor(Input);
+		const ColorRGBA Outline = ConfiguredQmUiIconContrastColor(Output);
+		benchmark::DoNotOptimize(Output);
+		benchmark::DoNotOptimize(Outline);
+	}
+	CQmIconFrameColorClock::BeginFrame(OriginalTime);
+	g_Config.m_QmUiIconColor = OriginalPreset;
+	g_Config.m_QmUiIconCustomColorEnabled = OriginalEnabled;
+	g_Config.m_QmUiIconCustomColor = OriginalCustom;
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_IconColorResolve)->Args({1, 0, 0})->Args({2, 0, 0})->Args({4, 0, 0})->Args({1, 1, 0})->Args({4, 1, 0})->Args({1, 0, 1})->Args({2, 0, 1})->Args({4, 0, 1})->Args({1, 1, 1})->Args({4, 1, 1});

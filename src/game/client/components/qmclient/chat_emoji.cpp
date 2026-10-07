@@ -38,7 +38,8 @@ void CQmChatEmoji::StartNextLoad() const
 			log_error("chat_emoji", "Failed to read '%s'", Path.c_str());
 			return;
 		}
-		const bool Loaded = CImageLoader::LoadPng(pData, Size, Path.c_str(), Image) || CImageLoader::LoadWebP(pData, Size, Path.c_str(), Image);
+		// 随包表情统一为无损 WebP，避免先尝试 PNG 解码产生错误日志。
+		const bool Loaded = CImageLoader::LoadWebP(pData, Size, Path.c_str(), Image);
 		free(pData);
 		if(Loaded)
 			ConvertToRgba(Image);

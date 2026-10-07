@@ -15,8 +15,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/lineinput.h>
-#include <game/client/qm_icon_manager.h>
-#include <game/client/qm_icon_morph.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
 #include <game/localization.h>
@@ -110,48 +109,20 @@ namespace ui_widget
 			const bool HasQmIcon = QmIcon >= 0 && QmIcon < static_cast<int>(EQmIcon::COUNT);
 			if((pIcon == nullptr && !HasQmIcon) || Rect.w <= 0.0f || Rect.h <= 0.0f)
 				return;
-			// eye 与 eye-slash 在 Phosphor 里是同一套眼眶几何（斜线只是额外伸出眼框），
-			// 图集也按 em 框归一化，所以两者以**同一尺寸**绘制即可。历史上给 eye-off
-			// 乘过 1.15 / 1.25 的补偿，反而让眼睛看起来一大一小。
+			const float IconSide = minimum(Rect.w, Rect.h) * 0.58f;
 			const bool IsEyeMorphIcon = QmIcon == static_cast<int>(EQmIcon::EYE) || QmIcon == static_cast<int>(EQmIcon::EYE_OFF);
-			const float BaseIconSide = minimum(Rect.w, Rect.h) * 0.58f;
-			const float IconSide = BaseIconSide;
-			if(HasQmIcon && Ctx.m_pIconManager != nullptr)
+			if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pAnim != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0)
 			{
-				const CUIRect IconRect{Rect.x + (Rect.w - IconSide) * 0.5f, Rect.y + (Rect.h - IconSide) * 0.5f, IconSide, IconSide};
-				if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pAnim != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0)
+				const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xE1E0A11ull, reinterpret_cast<uint64_t>(pAnimationId));
+				const float Target = QmIcon == static_cast<int>(EQmIcon::EYE_OFF) ? 1.0f : 0.0f;
+				const float Progress = std::clamp(ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::SCALE, Target, ui_token::motion::TOGGLE, 2), 0.0f, 1.0f);
+				if(Ctx.m_pAnim->HasActiveAnimation(NodeKey, EUiAnimProperty::SCALE))
 				{
-					const uint64_t MorphNodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xE1E0A11ull, reinterpret_cast<uint64_t>(pAnimationId));
-					const float MorphTarget = QmIcon == static_cast<int>(EQmIcon::EYE_OFF) ? 1.0f : 0.0f;
-					const float MorphProgress = ResolveUiAnimSpringValue(*Ctx.m_pAnim, MorphNodeKey, EUiAnimProperty::SCALE, MorphTarget, ui_token::motion::TOGGLE, 2);
-					const bool MorphActive = Ctx.m_pAnim->HasActiveAnimation(MorphNodeKey, EUiAnimProperty::SCALE);
-					// 眼睛切换优先用几何 morph（带状四边形插值）：样例来自随包
-					// Phosphor-Bold.ttf，几何映射与历史 SVG 逐轮廓对齐过（含 y 翻转，
-					// 见 qmclient_scripts/qm_build_icon_morph.py），同一表面的内外轮廓
-					// 共享一套刚体参数。无样例（非 Bold 字重）时退回交叉淡化。
-					if(MorphActive)
-					{
-						// 优先走预烘焙 MSDF 关键帧：形变与图标同一条抗锯齿路径，
-						// 不依赖 FSAA，也不会有几何直出的亚像素散点；
-						// 图集没有关键帧（非 Bold 或旧数据）时退回几何 morph。
-						if(Ctx.m_pIconManager->RenderMorphFrames(IconRect, Color, MorphProgress))
-							return;
-						if(RenderQmEyeMorph(Ctx.m_pUi->Graphics(), g_Config.m_QmUiIconWeight, IconRect, Color, MorphProgress))
-							return;
-						const float CrossProgress = std::clamp(MorphProgress, 0.0f, 1.0f);
-						const float AlphaEye = Color.a * (1.0f - CrossProgress);
-						const float AlphaOff = Color.a * CrossProgress;
-						bool Drawn = false;
-						if(AlphaEye > 0.01f)
-							Drawn = Ctx.m_pIconManager->RenderIcon(EQmIcon::EYE, IconRect, ColorRGBA(Color.r, Color.g, Color.b, AlphaEye));
-						if(AlphaOff > 0.01f)
-							Drawn = Ctx.m_pIconManager->RenderIcon(EQmIcon::EYE_OFF, IconRect, ColorRGBA(Color.r, Color.g, Color.b, AlphaOff)) || Drawn;
-						if(Drawn)
-							return;
-					}
-				}
-				if(!Ctx.m_pIconManager->PreferFontFallback() && Ctx.m_pIconManager->RenderIcon(static_cast<EQmIcon>(QmIcon), IconRect, Color))
+					const CUIRect IconRect{Rect.x + (Rect.w - IconSide) * 0.5f, Rect.y + (Rect.h - IconSide) * 0.5f, IconSide, IconSide};
+					Ctx.m_pUi->DrawQmIcon(IconRect, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, Color.WithMultipliedAlpha(1.0f - Progress));
+					Ctx.m_pUi->DrawQmIcon(IconRect, EQmIcon::EYE_OFF, FontIcons::FONT_ICON_EYE_SLASH, Color.WithMultipliedAlpha(Progress));
 					return;
+				}
 			}
 			if(pIcon == nullptr)
 				return;
@@ -239,7 +210,7 @@ namespace ui_widget
 		}
 		DrawTextFieldFocusBorder(Ctx, pInput, Layout.m_FocusRingRect, Options.m_Mode == EInputFieldMode::MULTILINE);
 
-		const ColorRGBA InputIconColor = ResolveUiSurfaceIconColor(PlateColor, ConfiguredQmUiIconColor(Ctx.m_pUi->TextRender()->GetTextColor()));
+		const ColorRGBA InputIconColor = ResolveUiSurfaceIconColor(PlateColor, Ctx.m_pUi->TextRender()->GetTextColor());
 		const char *pLeadingIcon = Options.m_pLeadingIcon != nullptr ? Options.m_pLeadingIcon : (Search ? FontIcons::FONT_ICON_MAGNIFYING_GLASS : nullptr);
 		const int LeadingQmIcon = Options.m_LeadingQmIcon >= 0 ? Options.m_LeadingQmIcon : (Search ? static_cast<int>(EQmIcon::SEARCH) : -1);
 		DrawInputFieldIcon(Ctx, Layout.m_IconRect, pLeadingIcon, InputIconColor, LeadingQmIcon);

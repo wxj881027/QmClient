@@ -6,6 +6,7 @@
 #include "demoedit.h"
 #include "friends.h"
 #include "perf_file_logger.h"
+#include "qm_storage_mode.h"
 #include "serverbrowser.h"
 
 #include <base/crashdump.h>
@@ -126,6 +127,8 @@ static bool gs_QmTestMainThreadAssert = false;
 // QmClient: 测试专用注入开关（--qm-test-main-thread-stall），供进程级回归测试在
 // 主循环内模拟一次长时间阻塞，验证看门狗使用单调时钟后能真实报告卡死。
 static bool gs_QmTestMainThreadStall = false;
+// 进程回归注入最终清理卡死，验证隐藏窗口后的强制退出。
+static bool gs_QmTestShutdownCleanupStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
 static constexpr const char *gs_pQmLifecycleMarkerFile = "qmclient/lifecycle_pending.marker";
 #if defined(CONF_FAMILY_WINDOWS)
@@ -4769,8 +4772,7 @@ void CClient::Run()
 	m_pTextRender->Shutdown();
 	dbg_msg("perf/client", "event=shutdown_step step=text_render");
 
-	// 清理已经完成，后续显示的崩溃报告需要保持到用户主动关闭。
-	StopForcedExitWatchdog();
+	// 看门狗由 main 在图形、kernel 和 SDL 清理完成后解除。
 	dbg_msg("perf/client", "event=shutdown_step step=done");
 }
 
@@ -6367,15 +6369,22 @@ static bool SaveUnknownDomainCommandCallback(const char *pCommand, void *pUser)
 	return true;
 }
 
+// Windows 发布客户端只从固定存档目录自动读取配置；资源目录不承载玩家配置。
+#if defined(CONF_FAMILY_WINDOWS)
+static constexpr int CLIENT_CONFIG_STORAGE_TYPE = IStorage::TYPE_SAVE;
+#else
+static constexpr int CLIENT_CONFIG_STORAGE_TYPE = IStorage::TYPE_ALL;
+#endif
+
 static const char *GetConfigLoadPath(IStorage *pStorage, const CConfigDomain &ConfigDomain)
 {
 	if(ConfigDomain.m_aConfigPath == nullptr)
 		return nullptr;
-	if(pStorage->FileExists(ConfigDomain.m_aConfigPath, IStorage::TYPE_ALL))
+	if(pStorage->FileExists(ConfigDomain.m_aConfigPath, CLIENT_CONFIG_STORAGE_TYPE))
 		return ConfigDomain.m_aConfigPath;
-	if(ConfigDomain.m_aPreviousConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aPreviousConfigPath, IStorage::TYPE_ALL))
+	if(ConfigDomain.m_aPreviousConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aPreviousConfigPath, CLIENT_CONFIG_STORAGE_TYPE))
 		return ConfigDomain.m_aPreviousConfigPath;
-	if(ConfigDomain.m_aLegacyConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aLegacyConfigPath, IStorage::TYPE_ALL))
+	if(ConfigDomain.m_aLegacyConfigPath != nullptr && pStorage->FileExists(ConfigDomain.m_aLegacyConfigPath, CLIENT_CONFIG_STORAGE_TYPE))
 		return ConfigDomain.m_aLegacyConfigPath;
 	return nullptr;
 }
@@ -6432,6 +6441,8 @@ int main(int argc, const char **argv)
 			gs_QmTestMainThreadAssert = true;
 		if(str_comp(argv[i], "--qm-test-main-thread-stall") == 0)
 			gs_QmTestMainThreadStall = true;
+		if(str_comp(argv[i], "--qm-test-shutdown-cleanup-stall") == 0)
+			gs_QmTestShutdownCleanupStall = true;
 	}
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -6613,6 +6624,7 @@ int main(int argc, const char **argv)
 	};
 	std::function<void()> PerformAllCleanup = [PerformCleanup, PerformFinalCleanup]() mutable {
 		PerformCleanup();
+		StopForcedExitWatchdog();
 		PerformFinalCleanup();
 	};
 
@@ -6630,6 +6642,11 @@ int main(int argc, const char **argv)
 	CleanerFunctions.emplace([pKernel, pClient]() {
 		// Ensure that the assert handler doesn't use the client/graphics after they've been destroyed
 		dbg_assert_set_handler(nullptr);
+		if(gs_QmTestShutdownCleanupStall)
+		{
+			log_info("client", "qm test final cleanup stalled");
+			std::this_thread::sleep_for(std::chrono::seconds(30));
+		}
 		pKernel->Shutdown();
 		delete pKernel;
 		delete pClient;
@@ -6774,7 +6791,7 @@ int main(int argc, const char **argv)
 		MemoryLogger.SetParent(log_get_scope_logger());
 		{
 			CLogScope LogScope(&MemoryLogger);
-			pStorage = CreateStorage(IStorage::EInitializationType::CLIENT, argc, argv);
+			pStorage = CreateStorage(QmClientStorageMode(), argc, argv);
 		}
 		if(!pStorage)
 		{
@@ -6876,7 +6893,7 @@ int main(int argc, const char **argv)
 
 			SSaveUnknownCommandContext UnknownCommandContext{pConfigManager, ConfigDomain};
 			pConsole->SetUnknownCommandCallback(SaveUnknownDomainCommandCallback, &UnknownCommandContext);
-			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED))
+			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE))
 			{
 				pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 				char aError[2048];
@@ -6890,13 +6907,13 @@ int main(int argc, const char **argv)
 		}
 	}
 
-	if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, IStorage::TYPE_ALL))
+	if(pStorage->FileExists(AUTOEXEC_CLIENT_FILE, CLIENT_CONFIG_STORAGE_TYPE))
 	{
-		pConsole->ExecuteFile(AUTOEXEC_CLIENT_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
+		pConsole->ExecuteFile(AUTOEXEC_CLIENT_FILE, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE);
 	}
 	else // fallback
 	{
-		pConsole->ExecuteFile(AUTOEXEC_FILE, IConsole::CLIENT_ID_UNSPECIFIED);
+		pConsole->ExecuteFile(AUTOEXEC_FILE, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE);
 	}
 
 	if(g_Config.m_ClConfigVersion < 1)
@@ -7084,6 +7101,8 @@ int main(int argc, const char **argv)
 	crashdump_mark_shutdown_begin(nullptr);
 
 	PerformCleanup();
+	// 驱动与 SDL 销毁也属于退出保护范围；后面的用户提示允许保持打开。
+	StopForcedExitWatchdog();
 
 	crashdump_mark_shutdown_end();
 

@@ -80,7 +80,8 @@ TEST_F(CQmRemovedUiConfig, SavingLegacyFileDropsUiSwitchAndPreservesOtherSetting
 	m_pConsole->SetUnknownCommandCallback([](const char *pCommand, void *pUser) {
 		static_cast<IConfigManager *>(pUser)->StoreUnknownCommand(pCommand);
 		return true;
-	}, m_pConfigManager.get());
+	},
+		m_pConfigManager.get());
 	ASSERT_TRUE(m_pConsole->ExecuteFile("legacy-ui.cfg", IConsole::CLIENT_ID_UNSPECIFIED, false, IStorage::TYPE_SAVE));
 	EXPECT_EQ(g_Config.m_ClShowhud, 0);
 

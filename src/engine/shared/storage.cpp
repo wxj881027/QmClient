@@ -9,13 +9,10 @@
 #include <engine/shared/linereader.h>
 #include <engine/storage.h>
 
-#include <unordered_set>
-
-#ifdef CONF_PLATFORM_HAIKU
-#include <cstdlib>
-#endif
-
 #include <zlib.h>
+
+#include <cstdlib>
+#include <unordered_set>
 
 bool StoragePathFromExecutable(const char *pExecutablePath, const char *pRelativePath, char *pBuffer, unsigned BufferSize)
 {
@@ -35,6 +32,11 @@ bool StoragePathFromExecutable(const char *pExecutablePath, const char *pRelativ
 	}
 
 	const int DirectoryLength = (int)(pLastSeparator - pExecutablePath);
+	if(static_cast<size_t>(DirectoryLength) + 1 + str_length(pRelativePath) >= BufferSize)
+	{
+		pBuffer[0] = '\0';
+		return false;
+	}
 	if(DirectoryLength == 0)
 		str_format(pBuffer, BufferSize, "/%s", pRelativePath);
 	else
@@ -53,29 +55,62 @@ namespace
 		char m_aDatadir[IO_MAX_PATH_LENGTH] = "";
 		char m_aCurrentdir[IO_MAX_PATH_LENGTH] = "";
 		char m_aBinarydir[IO_MAX_PATH_LENGTH] = "";
+		char m_aExecutablePath[IO_MAX_PATH_LENGTH] = "";
 
 	public:
 		bool Init(EInitializationType InitializationType, int NumArgs, const char **ppArguments)
 		{
 			dbg_assert(NumArgs > 0, "Expected at least one argument");
 			const char *pExecutablePath = ppArguments[0];
+			// 便携存储锚定实际程序位置，不能被快捷方式的工作目录影响。
+			if(fs_executable_path(m_aExecutablePath, sizeof(m_aExecutablePath)) == 0)
+				pExecutablePath = m_aExecutablePath;
+			else
+				str_copy(m_aExecutablePath, pExecutablePath);
 
-			FindUserDirectory();
-			FindDataDirectory(pExecutablePath);
+			if(InitializationType != EInitializationType::CLIENT_PORTABLE)
+				FindUserDirectory();
+			FindDataDirectory(pExecutablePath, InitializationType == EInitializationType::CLIENT_PORTABLE);
 			FindCurrentDirectory();
 			FindBinaryDirectory(pExecutablePath);
 
-			if(!LoadPathsFromFile(pExecutablePath))
+			const bool IsClient = InitializationType == EInitializationType::CLIENT ||
+					      InitializationType == EInitializationType::CLIENT_PORTABLE || InitializationType == EInitializationType::CLIENT_TEST;
+#if defined(CONF_FAMILY_WINDOWS)
+			if(IsClient)
 			{
-				return false;
-			}
-
-			if(!m_NumPaths)
-			{
-				if(!AddDefaultPaths())
+				// 生产客户端忽略 storage.cfg：普通版固定用户目录，便携版固定程序旁 profile。
+				const char *pTestRoot = std::getenv("QMCLIENT_TEST_STORAGE_ROOT");
+				if(InitializationType == EInitializationType::CLIENT_TEST)
 				{
-					return false;
+					if(!pTestRoot || !AddPath(pTestRoot))
+						return false;
 				}
+				else if(InitializationType == EInitializationType::CLIENT_PORTABLE)
+				{
+					if(!AddPath("$EXEDIR/profile"))
+						return false;
+				}
+				else
+				{
+					// 防止回归 runner 误用生产构建而污染真实用户存档。
+					if(pTestRoot)
+					{
+						log_error("storage", "isolated process tests require a QMCLIENT_TEST_STORAGE build");
+						return false;
+					}
+					if(!AddPath("$USERDIR"))
+						return false;
+				}
+				AddPath("$DATADIR");
+			}
+			else
+#endif
+			{
+				if(!LoadPathsFromFile(pExecutablePath))
+					return false;
+				if(!m_NumPaths && !AddDefaultPaths())
+					return false;
 			}
 
 			if(InitializationType == EInitializationType::BASIC)
@@ -94,7 +129,7 @@ namespace
 			}
 
 			bool Success = true;
-			if(InitializationType == EInitializationType::CLIENT)
+			if(IsClient)
 			{
 				static constexpr const char *CLIENT_DIRS[] = {
 					"assets",
@@ -241,6 +276,26 @@ namespace
 					return false;
 				}
 			}
+			else if(!str_comp(pPath, "$EXEDIR/profile"))
+			{
+				char aProfile[IO_MAX_PATH_LENGTH];
+				if(!StoragePathFromExecutable(m_aExecutablePath, "profile", aProfile, sizeof(aProfile)))
+					return false;
+				// 首次启动自动创建便携存档；失败终止初始化，不悄悄回落用户目录。
+				if(m_NumPaths == 0 && (fs_makedir_rec_for(aProfile) != 0 || fs_makedir(aProfile) != 0))
+				{
+					log_error("storage", "cannot create portable profile directory '%s'", aProfile);
+					return false;
+				}
+				if(!fs_is_dir(aProfile))
+				{
+					log_error("storage", "portable profile path is not a directory '%s'", aProfile);
+					return false;
+				}
+				str_copy(m_aaStoragePaths[m_NumPaths++], aProfile);
+				log_info("storage", "added executable profile path '%s'", aProfile);
+				return true;
+			}
 			else if(!str_comp(pPath, "$CURRENTDIR"))
 			{
 				m_aaStoragePaths[m_NumPaths++][0] = '\0';
@@ -293,7 +348,7 @@ namespace
 #endif
 		}
 
-		void FindDataDirectory(const char *pArgv0)
+		void FindDataDirectory(const char *pArgv0, bool ExecutableOnly = false)
 		{
 			// 1) prefer data next to the executable so shortcut working directories cannot shadow it
 			const char *pExecutablePath = pArgv0;
@@ -315,6 +370,10 @@ namespace
 				str_copy(m_aDatadir, aExecutableDataPath, sizeof(m_aDatadir));
 				return;
 			}
+
+			// 便携发布只读取随程序分发的资源，工作目录不能接管资源搜索。
+			if(ExecutableOnly)
+				return;
 
 #if defined(DATA_DIR)
 			// 2) use compiled-in data-dir if present
@@ -418,6 +477,23 @@ namespace
 
 			// no binary directory found, use $PATH on Posix, $PWD on Windows
 			m_aBinarydir[0] = '\0';
+		}
+
+		bool GetDataPath(const char *pFilename, char *pBuffer, unsigned BufferSize) const override
+		{
+			if(BufferSize == 0)
+				return false;
+			pBuffer[0] = '\0';
+			if(!m_aDatadir[0] || pFilename == nullptr || !pFilename[0] || pFilename[0] == '/' || pFilename[0] == '\\' || str_find(pFilename, ":") != nullptr || !fs_is_relative_path(pFilename) ||
+				str_find(pFilename, "../") != nullptr || str_find(pFilename, "..\\") != nullptr || str_comp(pFilename, "..") == 0 || str_endswith(pFilename, "/..") || str_endswith(pFilename, "\\.."))
+				return false;
+			char aPath[IO_MAX_PATH_LENGTH];
+			const size_t Length = static_cast<size_t>(str_length(m_aDatadir)) + 1 + str_length(pFilename);
+			if(Length >= sizeof(aPath) || Length >= BufferSize)
+				return false;
+			str_format(aPath, sizeof(aPath), "%s/%s", m_aDatadir, pFilename);
+			str_copy(pBuffer, aPath, BufferSize);
+			return true;
 		}
 
 		int NumPaths() const override

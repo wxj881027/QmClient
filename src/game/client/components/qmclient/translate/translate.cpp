@@ -321,7 +321,10 @@ void CTranslate::OnRender()
 			if(!Completed.m_Success)
 			{
 				char aBuf[sizeof(Response.m_Text)];
-				str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Response.m_Text);
+				if(Response.m_Notice == ETranslateNotice::SERVICE_NOTICE)
+					str_copy(aBuf, Localize("Translation service returned a notice instead of a translation (the message may contain filtered words)"));
+				else
+					str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Response.m_Text);
 				GameClient()->m_Chat.Echo(aBuf);
 			}
 			if(!Completed.m_SendText.empty())
@@ -340,7 +343,13 @@ void CTranslate::OnRender()
 		else
 		{
 			char aBuf[sizeof(Response.m_Text)];
-			str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Response.m_Text);
+			// 失败标记供聊天错误样式与本地化提示分支使用
+			Response.m_Error = true;
+			// 服务提示（翻译记忆样板/屏蔽说明等）按固定本地化文案展示，不透出英文原文
+			if(Response.m_Notice == ETranslateNotice::SERVICE_NOTICE)
+				str_copy(aBuf, Localize("Translation service returned a notice instead of a translation (the message may contain filtered words)"));
+			else
+				str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Response.m_Text);
 			// 配额提示按连接节流；消除进度文本后也刷新聊天布局。
 			bool SuppressNotice = false;
 			if(str_comp(Job.m_pBackend->Name(), "MyMemory") == 0 && str_find_nocase(aBuf, "daily anonymous quota reached"))

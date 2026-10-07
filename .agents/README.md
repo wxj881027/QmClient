@@ -2,9 +2,13 @@
 
 项目级入口为 `.agents/skills/<name>/SKILL.md`，供本地 agent 工具共用。入口按操作职责组织；合并时同步迁移参考、agent 描述和任务路由，避免为同一操作保留多个规则来源。
 
-`AGENTS.md` 管全局授权、项目边界和任务路由；skill 管一项操作；`references/` 放按需命令或检查参考。功能设计、方案和实施安排放 `docs/规格/`；历史调研、修复记录和被替代的方案放 `docs/归档/`。新增文档使用中文文件名，正文按实际内容组织，不套用 skill 模板，也不再创建工具或插件专属的文档目录。
+`AGENTS.md` 管全局授权、项目边界和任务路由；skill 管一项操作；`references/` 放按需命令或检查参考。功能设计、方案和实施安排放 `docs/规格/`；历史调研、修复记录和被替代的方案放 `docs/归档/`。新增说明文档的日期命名、复用与归档遵循根 `AGENTS.md`，正文按实际内容组织，不套用 skill 模板，也不再创建工具或插件专属的文档目录。
 
 测试书写由根 `AGENTS.md` 维护质量边界，`src/test/AGENTS.md` 提供目录内的执行入口；`src/test/benchmark/AGENTS.md` 路由到 verification skill 的性能参考。目录规则继承根规则，不另设验证、授权或性能证据标准。README 只提供导航，不承担必须读取的规则入口。
+
+## 本地机器偏好
+
+机器路径、集成分支、固定槽位与资源预算配置在 Git 忽略的 `machine.local.json`；从 [machine.example.json](machine.example.json) 复制后按机器修改。会话启动、配置发现、校验、继承与授权边界由根 `AGENTS.md` 维护；本地槽位交接状态保存在主工作树的 `worktree-state.local.json`，新会话按根规则核对后使用；配置不是自动执行脚本，不保存凭据。
 
 ## 维护原则
 

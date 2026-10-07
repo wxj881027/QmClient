@@ -5,10 +5,12 @@
 #include <base/log.h>
 #include <base/str.h>
 #include <base/thread.h>
+#include <base/time.h>
 
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
+#include <charconv>
 #include <cstring>
 #include <limits>
 #include <string>
@@ -127,7 +129,7 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 		curl_easy_setopt(pHandle, CURLOPT_FAILONERROR, 1L);
 	}
 	curl_easy_setopt(pHandle, CURLOPT_URL, m_aUrl);
-	if(m_aProxy[0] != '\0')
+	if(m_ProxyConfigured)
 		curl_easy_setopt(pHandle, CURLOPT_PROXY, m_aProxy);
 	curl_easy_setopt(pHandle, CURLOPT_NOSIGNAL, 1L);
 	curl_easy_setopt(pHandle, CURLOPT_USERAGENT, USER_AGENT_STRING);
@@ -194,6 +196,25 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 	return true;
 }
 
+std::optional<int64_t> CHttpRequestCurl::ParseRetryAfter(std::string_view Value, int64_t Now)
+{
+	const auto First = Value.find_first_not_of(" \t\r\n");
+	if(First == std::string_view::npos)
+		return std::nullopt;
+	Value = Value.substr(First, Value.find_last_not_of(" \t\r\n") - First + 1);
+	if((Value.front() >= '0' && Value.front() <= '9') || Value.front() == '-')
+	{
+		int64_t Seconds;
+		const auto Result = std::from_chars(Value.data(), Value.data() + Value.size(), Seconds);
+		if(Result.ec != std::errc() || Result.ptr != Value.data() + Value.size() || Seconds < 0)
+			return std::nullopt;
+		return Seconds;
+	}
+	const std::string Text(Value);
+	const int64_t Date = curl_getdate(Text.c_str(), nullptr);
+	return Date < 0 ? std::nullopt : std::optional<int64_t>(std::max<int64_t>(0, Date - Now));
+}
+
 size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
 {
 	// `pHeader` is NOT null-terminated.
@@ -210,6 +231,7 @@ size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
 		m_ResponseHeadersEnded = false;
 		m_ResultDate = {};
 		m_ResultLastModified = {};
+		m_ResultRetryAfterSeconds = {};
 	}
 
 	static const char DATE[] = "Date: ";
@@ -237,6 +259,14 @@ size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
 		}
 	}
 
+	// 429 的等待窗口同时支持秒数和 HTTP 日期；只在请求完成后跨线程读取。
+	static const char RETRY_AFTER[] = "Retry-After: ";
+	if(HeaderSize > sizeof(RETRY_AFTER) && str_startswith_nocase(pHeader, RETRY_AFTER))
+	{
+		char aValue[128];
+		str_truncate(aValue, sizeof(aValue), pHeader + sizeof(RETRY_AFTER) - 1, HeaderSize - sizeof(RETRY_AFTER));
+		m_ResultRetryAfterSeconds = ParseRetryAfter(aValue, time_timestamp());
+	}
 	return HeaderSize;
 }
 
@@ -473,7 +503,6 @@ void CHttpCurl::RunLoop()
 				}
 				auto pRequest = std::move(RequestIt->second);
 				m_RunningRequests.erase(RequestIt);
-
 				pRequest->OnCompletionInternal(pMsg->easy_handle, pMsg->data.result);
 				curl_multi_remove_handle(m_pMultiH, pMsg->easy_handle);
 				curl_easy_cleanup(pMsg->easy_handle);
@@ -489,6 +518,13 @@ void CHttpCurl::RunLoop()
 		while(!NewRequests.empty())
 		{
 			auto &pRequest = NewRequests.front();
+			if(pRequest->IsAbortRequested())
+			{
+				pRequest->m_AbortTriggeredByProgressCallback = true;
+				pRequest->OnCompletionInternal(nullptr, CURLE_ABORTED_BY_CALLBACK);
+				NewRequests.pop_front();
+				continue;
+			}
 			if(g_Config.m_DbgHttp)
 				log_debug("http", "task: %s %s", CHttpRequestCurl::GetRequestType(pRequest->m_Type), pRequest->m_aUrl);
 

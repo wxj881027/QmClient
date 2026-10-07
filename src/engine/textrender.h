@@ -99,16 +99,16 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_NEWSPAPER = "\xEE\x8D\x84";
 	[[maybe_unused]] static const char *FONT_ICON_POWER_OFF = "\xEE\x8F\x9A";
 	[[maybe_unused]] static const char *FONT_ICON_GEAR = "\xEE\x89\xB0";
-	[[maybe_unused]] static const char *FONT_ICON_PEN_TO_SQUARE = "\xEE\x8E\xAA";
+	[[maybe_unused]] static const char *FONT_ICON_PEN_TO_SQUARE = "\xEE\x8E\xB4";
 	[[maybe_unused]] static const char *FONT_ICON_CLAPPERBOARD = "\xEE\xA3\x82";
 	[[maybe_unused]] static const char *FONT_ICON_EARTH_AMERICAS = "\xEE\x8A\x8C";
 	[[maybe_unused]] static const char *FONT_ICON_NETWORK_WIRED = "\xEE\xB7\x9E";
-	[[maybe_unused]] static const char *FONT_ICON_LIST_UL = "\xEE\x8B\xB2";
+	[[maybe_unused]] static const char *FONT_ICON_LIST_UL = "\xEE\x8B\xB0";
 	[[maybe_unused]] static const char *FONT_ICON_INFO = "\xEE\x8B\x8E";
 	[[maybe_unused]] static const char *FONT_ICON_TERMINAL = "\xEE\x91\xBE";
 	[[maybe_unused]] static const char *FONT_ICON_USER = "\xEE\x93\x82";
 
-	[[maybe_unused]] static const char *FONT_ICON_SLASH = "\xEE\x8F\xA0";
+	[[maybe_unused]] static const char *FONT_ICON_SLASH = "\xEE\x9B\x92";
 	[[maybe_unused]] static const char *FONT_ICON_PLAY = "\xEE\x8F\x90";
 	[[maybe_unused]] static const char *FONT_ICON_PAUSE = "\xEE\x8E\x9E";
 	[[maybe_unused]] static const char *FONT_ICON_STOP = "\xEE\x91\xAC";
@@ -116,15 +116,15 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_CHEVRON_RIGHT = "\xEE\x84\xBA";
 	[[maybe_unused]] static const char *FONT_ICON_CHEVRON_UP = "\xEE\x84\xBC";
 	[[maybe_unused]] static const char *FONT_ICON_CHEVRON_DOWN = "\xEE\x84\xB6";
-	[[maybe_unused]] static const char *FONT_ICON_BACKWARD = "\xEE\x9A\xA8";
-	[[maybe_unused]] static const char *FONT_ICON_FORWARD = "\xEE\x9A\xA6";
+	[[maybe_unused]] static const char *FONT_ICON_BACKWARD = "\xEE\x96\xA4";
+	[[maybe_unused]] static const char *FONT_ICON_FORWARD = "\xEE\x96\xA6";
 	[[maybe_unused]] static const char *FONT_ICON_RIGHT_FROM_BRACKET = "\xEE\x90\xAA";
 	[[maybe_unused]] static const char *FONT_ICON_RIGHT_TO_BRACKET = "\xEE\x90\xA8";
 	[[maybe_unused]] static const char *FONT_ICON_ARROW_UP_RIGHT_FROM_SQUARE = "\xEE\x97\x9E";
 	[[maybe_unused]] static const char *FONT_ICON_BACKWARD_STEP = "\xEE\x96\xA4";
 	[[maybe_unused]] static const char *FONT_ICON_FORWARD_STEP = "\xEE\x96\xA6";
-	[[maybe_unused]] static const char *FONT_ICON_BACKWARD_FAST = "\xEE\x84\xA8";
-	[[maybe_unused]] static const char *FONT_ICON_FORWARD_FAST = "\xEE\x84\xAA";
+	[[maybe_unused]] static const char *FONT_ICON_BACKWARD_FAST = "\xEE\x9A\xA8";
+	[[maybe_unused]] static const char *FONT_ICON_FORWARD_FAST = "\xEE\x9A\xA6";
 	[[maybe_unused]] static const char *FONT_ICON_KEYBOARD = "\xEE\x8B\x98";
 	[[maybe_unused]] static const char *FONT_ICON_ELLIPSIS = "\xEE\x87\xBE";
 
@@ -135,7 +135,7 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_VIDEO = "\xEE\x9D\x80";
 	[[maybe_unused]] static const char *FONT_ICON_MAP = "\xEE\x8C\x9A";
 	[[maybe_unused]] static const char *FONT_ICON_IMAGE = "\xEE\x8B\x8A";
-	[[maybe_unused]] static const char *FONT_ICON_MUSIC = "\xEE\x8C\xBC";
+	[[maybe_unused]] static const char *FONT_ICON_MUSIC = "\xEE\x8D\x80";
 	[[maybe_unused]] static const char *FONT_ICON_FILE = "\xEE\x88\xB0";
 
 	[[maybe_unused]] static const char *FONT_ICON_PENCIL = "\xEE\x8E\xAE";
@@ -143,7 +143,7 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_TRASH = "\xEE\x92\xA6";
 
 	[[maybe_unused]] static const char *FONT_ICON_ARROWS_LEFT_RIGHT = "\xEE\x82\xA0";
-	[[maybe_unused]] static const char *FONT_ICON_ARROWS_UP_DOWN = "\xEE\x82\x98";
+	[[maybe_unused]] static const char *FONT_ICON_ARROWS_UP_DOWN = "\xEE\xAC\x84";
 	[[maybe_unused]] static const char *FONT_ICON_CIRCLE_PLAY = "\xEE\x8F\x92";
 	[[maybe_unused]] static const char *FONT_ICON_BORDER_ALL = "\xEE\x8A\x96";
 	[[maybe_unused]] static const char *FONT_ICON_EYE = "\xEE\x88\xA0";
@@ -160,8 +160,8 @@ namespace FontIcons
 	[[maybe_unused]] static const char *FONT_ICON_DICE_SIX = "\xEE\x87\xB4";
 
 	[[maybe_unused]] static const char *FONT_ICON_LAYER_GROUP = "\xEE\x91\xA6";
-	[[maybe_unused]] static const char *FONT_ICON_UNDO = "\xEE\x80\xA4";
-	[[maybe_unused]] static const char *FONT_ICON_REDO = "\xEE\x80\xA6";
+	[[maybe_unused]] static const char *FONT_ICON_UNDO = "\xEE\x82\x8A";
+	[[maybe_unused]] static const char *FONT_ICON_REDO = "\xEE\x82\x8C";
 
 	[[maybe_unused]] static const char *FONT_ICON_ARROWS_ROTATE = "\xEE\x82\x94";
 	[[maybe_unused]] static const char *FONT_ICON_QUESTION = "\xEE\x8F\xA8";
@@ -171,8 +171,11 @@ namespace FontIcons
 	// TClient
 	[[maybe_unused]] static const char *FONT_ICON_USERS = "\xEE\x93\x96";
 
+	[[maybe_unused]] static const char *FONT_ICON_MICROPHONE = "\xEE\x8C\xA6";
+
 	// 全部图标字形，供图标字体自检与测试遍历使用；新增 FONT_ICON_* 常量时必须同步加入。
 	inline const char *const FONT_ICON_ALL[] = {
+		FONT_ICON_MICROPHONE,
 		FONT_ICON_PLUS,
 		FONT_ICON_MINUS,
 		FONT_ICON_LOCK,
@@ -476,6 +479,19 @@ class ITextRender : public IInterface
 public:
 	virtual std::vector<std::string> *GetCustomFaces() = 0; // TClient
 	virtual std::vector<std::string> *GetCustomFontStyles(const char *pFamily) = 0; // TClient
+	// 查询真实 face 的排版族与样式；不切换字体、不加载文件，名称缺失时清空输出。
+	virtual bool QmResolveCustomFont(const char *, std::string &Family, std::string &Style)
+	{
+		Family.clear();
+		Style.clear();
+		return false;
+	}
+	// 显式查询字体族默认面并输出可往返的配置名；同名 face 冲突时输出完整样式名。
+	virtual bool QmFontFamilyDefaultConfig(const char *, std::string &Config)
+	{
+		Config.clear();
+		return false;
+	}
 	virtual void SetCustomFace(const char *pFace) = 0; // TClient
 	// 临时预览只改变字形选择，不改变配置字体角色或共享字重；nullptr 结束预览。
 	virtual void SetFontPreviewFace(const char *pFace) = 0;

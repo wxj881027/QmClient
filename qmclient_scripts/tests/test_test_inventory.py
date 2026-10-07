@@ -22,6 +22,24 @@ class TestInventoryTest(unittest.TestCase):
 		text = 'std::ifstream File(TestSourcePath(pRelativePath));'
 		self.assertEqual(count_source_reads(text), 0)
 
+	def test_binary_font_input_is_behavior_but_text_and_source_reads_remain_contracts(self):
+		binary = 'std::ifstream File(TestSourcePath("data/fonts/中文.ttf"), std::ios::binary);'
+		self.assertEqual(count_source_reads(binary), 0)
+		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/index.json"), std::ios::binary);'), 1)
+		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/font.ttf"));'), 1)
+		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("src/font.cpp"), std::ios::binary);'), 1)
+		self.assertEqual(count_source_reads(binary + '\nReadRepoFile("data/fonts/font.ttf");'), 1)
+
+	def test_inventory_classifies_real_binary_font_fixture_as_behavior(self):
+		with tempfile.TemporaryDirectory() as directory:
+			root = Path(directory)
+			(root / "src/test/unit").mkdir(parents=True)
+			(root / "src/test/unit/font_test.cpp").write_text(
+				'TEST(Font, LoadsCollection) { std::ifstream File(TestSourcePath("data/fonts/font.ttc"), std::ios::binary); FT_New_Memory_Face(Library, Bytes.data(), Bytes.size(), 0, &Face); }', encoding="utf-8")
+			inventory = build_inventory(root)
+		self.assertEqual(inventory["cpp_files"][0]["type"], "unit_or_behavior")
+		self.assertEqual(inventory["structural_violations"], [])
+
 	def test_temp_file_reader_is_not_a_source_contract(self):
 		text = 'std::ifstream File(Info.Filename());'
 		self.assertEqual(count_source_reads(text), 0)

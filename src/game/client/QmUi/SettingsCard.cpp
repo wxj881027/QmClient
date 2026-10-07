@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "SettingsCard.h"
 
+#include "SettingsCardInfo.h"
 #include "SettingsPageLayout.h"
 #include "UiContext.h"
 #include "UiSurface.h"
@@ -12,11 +13,10 @@
 #include <base/system.h>
 
 #include <engine/graphics.h>
-#include <engine/shared/config.h>
 #include <engine/textrender.h>
 
 #include <game/client/components/menus.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 
 #include <algorithm>
@@ -32,49 +32,44 @@ namespace
 
 	void RenderSettingsCardLabel(const IUiContext &Ctx, const SSettingsCardSpec &Spec, bool Subtitle, const CUIRect &Rect, const char *pText, float Size, const SLabelProperties &Props)
 	{
-		if(Ctx.m_pMenus == nullptr || Spec.m_pStableId == nullptr || Spec.m_pStableId[0] == '\0')
-		{
-			Ctx.m_pUi->DoLabel(&Rect, pText, Size, TEXTALIGN_ML, Props);
-			return;
-		}
+		ExecuteSettingsCardLabel(Rect, [&]() {
+			if(Ctx.m_pMenus == nullptr || Spec.m_pStableId == nullptr || Spec.m_pStableId[0] == '\0')
+			{
+				Ctx.m_pUi->DoLabel(&Rect, pText, Size, TEXTALIGN_ML, Props);
+				return;
+			}
 
-		// 卡片 stable ID 跨设置页唯一；公开的设置文字池入口同时处理预布局收集与渲染。
-		char aTextId[256];
-		str_format(aTextId, sizeof(aTextId), "settings-card-%s:%s", Subtitle ? "subtitle" : "title", Spec.m_pStableId);
-		Ctx.m_pMenus->DoSettingsMenuLabel(-1, -1, -1, aTextId, &Rect, pText, Size, TEXTALIGN_ML, Props);
+			// 卡片 stable ID 跨设置页唯一；公开的设置文字池入口同时处理预布局收集与渲染。
+			char aTextId[256];
+			str_format(aTextId, sizeof(aTextId), "settings-card-%s:%s", Subtitle ? "subtitle" : "title", Spec.m_pStableId);
+			Ctx.m_pMenus->DoSettingsMenuLabel(-1, -1, -1, aTextId, &Rect, pText, Size, TEXTALIGN_ML, Props);
+		});
 	}
 
 }
 
-void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, const bool Collapsed, const float DrawAlpha)
+void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, const EQmIcon Icon, const char *pGlyph, const float DrawAlpha)
 {
 	if(Ctx.m_pUi == nullptr)
 		return;
 	const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
 	const bool Hovered = Ctx.m_pUi->MouseHovered(&Rect);
 	const float Alpha = std::clamp(DrawAlpha, 0.0f, 1.0f);
-	const float PixelSize = Ctx.m_pUi->PixelSize();
 	const CUIRect &ChromeRect = Rect;
 	const float Radius = std::min(ui_token::radius::TIGHT * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.25f);
 	const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? 0.28f : 0.18f) * Alpha);
 	DrawRoundedSurface(Ctx, ChromeRect, ChromeColor, ChromeColor, Radius);
 	const float IconSize = std::clamp(ui_token::font::BODY * UiScale, 10.0f, ui_token::font::BODY);
-	const ColorRGBA IconColor = ResolveUiSurfaceIconColor(ChromeColor, ConfiguredQmUiIconColor(Ctx.m_pUi->TextRender()->GetTextColor().WithAlpha(Alpha)));
+	const ColorRGBA IconColor = ResolveUiSurfaceIconColor(ChromeColor, Ctx.m_pUi->TextRender()->GetTextColor().WithAlpha(Alpha));
 	ITextRender *pTextRender = Ctx.m_pUi->TextRender();
-	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
-	const ColorRGBA PreviousOutlineColor = pTextRender->GetTextOutlineColor();
-	const ColorRGBA PreviousSelectionColor = pTextRender->GetTextSelectionColor();
-	const unsigned PreviousFlags = pTextRender->GetRenderFlags();
-	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
-	pTextRender->TextColor(IconColor);
-	pTextRender->SetFontPreset(EFontPreset::ICON_FONT_BOLD);
-	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	Ctx.m_pUi->DoLabel_QmIcon(&ChromeRect, Collapsed ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP, Collapsed ? FontIcons::FONT_ICON_CHEVRON_DOWN : FontIcons::FONT_ICON_CHEVRON_UP, IconSize, TEXTALIGN_MC);
-	pTextRender->SetRenderFlags(PreviousFlags);
-	pTextRender->SetFontPreset(PreviousPreset);
-	pTextRender->TextOutlineColor(PreviousOutlineColor);
-	pTextRender->TextSelectionColor(PreviousSelectionColor);
-	pTextRender->TextColor(PreviousColor);
+	ExecuteSettingsCardHeaderIcon(*pTextRender, IconColor, [&]() {
+		Ctx.m_pUi->DoLabel_QmIcon(&ChromeRect, Icon, pGlyph, IconSize, TEXTALIGN_MC);
+	});
+}
+
+void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, const bool Collapsed, const float DrawAlpha)
+{
+	RenderSettingsCardHeaderIcon(Ctx, Rect, Collapsed ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP, Collapsed ? FontIcons::FONT_ICON_CHEVRON_DOWN : FontIcons::FONT_ICON_CHEVRON_UP, DrawAlpha);
 }
 
 SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const CUIRect &Slot, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardMeasure &Measure, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction, const FSettingsCardRenderMeasured &RenderMeasured, bool *pPointerInside)
@@ -90,7 +85,14 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 {
 	const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
 	SSettingsCardVisualState DrawState = State;
-	const SSettingsCardFrame DrawFrame = ResolveSettingsCardDrawFrame(Frame, State.m_DrawOffsetX, State.m_DrawOffsetY);
+	SSettingsCardFrame DrawFrame = ResolveSettingsCardDrawFrame(Frame, State.m_DrawOffsetX, State.m_DrawOffsetY);
+	CUIRect InfoButton;
+	if(Spec.m_pInfo != nullptr && Spec.m_pInfo[0] != '\0')
+	{
+		InfoButton = ResolveSettingsCardInfoRect(DrawFrame);
+		DrawFrame.m_TitleRect.w = std::max(0.0f, InfoButton.x - DrawFrame.m_TitleRect.x - ui_token::spacing::XS);
+		DrawFrame.m_SubtitleRect.w = DrawFrame.m_TitleRect.w;
+	}
 	DrawState.m_PointerInside = Ctx.m_pUi != nullptr && Ctx.m_pUi->MouseHovered(&DrawFrame.m_Rect);
 	if(pPointerInside != nullptr)
 		*pPointerInside = DrawState.m_PointerInside;
@@ -129,7 +131,9 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		const EFontPreset PreviousFontPreset = Ctx.m_pTextRender->GetFontPreset();
 		CUiScopedSurfaceText HeaderSurfaceText(Ctx.m_pTextRender, Surface);
 		ColorRGBA TitleColor = ResolveConfiguredTextColor(Surface);
-		if(VisualOptions.m_RainbowTitles && g_Config.m_QmUiTextColorMode == 0)
+		// 彩虹标题由「彩虹卡片标题」独立开关控制，优先于全局文本颜色模式；
+		// 文本颜色模式只约束普通文本，不得覆盖卡片标题的彩虹流动效果。
+		if(VisualOptions.m_RainbowTitles)
 		{
 			const float TimePhase = (float)time_get() / (float)time_freq() * 0.08f;
 			const float IdPhase = Spec.m_pStableId != nullptr ? (float)(str_quickhash(Spec.m_pStableId) & 0xffff) / 65535.0f : 0.0f;
@@ -162,6 +166,9 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		if(DrawCardChrome && DrawState.m_ShowDefaultCollapseButton)
 			RenderSettingsCardCollapseButton(Ctx, DrawFrame.m_HandleRect, DrawState.m_Collapsed, DrawState.m_DrawAlpha);
 	}
+
+	if(DrawCardChrome)
+		RenderSettingsCardInfo(Ctx, Spec, InfoButton, DrawState.m_DrawAlpha);
 
 	if(HeaderAction && DrawCardChrome)
 		HeaderAction(DrawFrame, DrawState.m_Collapsed);

@@ -48,7 +48,18 @@ DIRECT_REPO_READ = re.compile(
 
 
 def count_source_reads(text: str) -> int:
-	return len(SOURCE_READ.findall(text)) - len(SOURCE_DEFINITION.findall(text)) + len(DIRECT_REPO_READ.findall(text))
+	# 二进制数据资源是生产解析器的输入，不是源码合同；仅排除明确以 binary
+	# 打开的字体资源。源码、文本清单以及 ReadRepoFile 等合同 helper 仍全部计数。
+	binary_font_reads = {
+		match.start(1)
+		for match in re.finditer(
+			r'std::ifstream\s+\w+\s*\(\s*(TestSourcePath\s*\(\s*"data/[^"\n]+\.(?:ttf|otf|ttc)"\s*\))\s*,\s*std::ios::binary\s*\)',
+			text,
+			re.IGNORECASE,
+		)
+	}
+	direct_reads = sum(match.start() not in binary_font_reads for match in DIRECT_REPO_READ.finditer(text))
+	return len(SOURCE_READ.findall(text)) - len(SOURCE_DEFINITION.findall(text)) + direct_reads
 
 
 def cpp_test_files(root: Path) -> list[Path]:

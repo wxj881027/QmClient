@@ -199,9 +199,9 @@ TEST_F(CTranslateBackendTest, ConcurrencyUsesProductionDefaultsAndUserOverride)
 		g_Config.m_QmTranslateLlmProvider = i;
 		EXPECT_EQ(GetTranslateConcurrency(), aExpected[i]);
 	}
-	const char *apBackends[] = {"mymemory", "ftapi", "libretranslate", "tencentcloud", "unknown"};
-	const int aBackendExpected[] = {1, 1, 2, 5, 3};
-	for(int i = 0; i < 5; ++i)
+	const char *apBackends[] = {"mymemory", "ftapi", "libretranslate", "tencentcloud", "deepl", "unknown"};
+	const int aBackendExpected[] = {1, 1, 2, 5, 2, 3};
+	for(size_t i = 0; i < std::size(apBackends); ++i)
 	{
 		SCOPED_TRACE(apBackends[i]);
 		str_copy(g_Config.m_QmTranslateBackend, apBackends[i]);
@@ -216,7 +216,8 @@ TEST_F(CTranslateBackendTest, AllConfiguredBackendsHaveFiniteDeadlineAndAbortOnD
 {
 	str_copy(g_Config.m_QmTranslateTcSecretId, "fake-id");
 	str_copy(g_Config.m_QmTranslateTcSecretKey, "fake-secret");
-	for(const char *pBackend : {"llm", "libretranslate", "mymemory", "ftapi", "tencentcloud"})
+	str_copy(g_Config.m_QmTranslateDeeplKey, "fake-key:fx");
+	for(const char *pBackend : {"llm", "libretranslate", "mymemory", "ftapi", "tencentcloud", "deepl"})
 	{
 		SCOPED_TRACE(pBackend);
 		str_copy(g_Config.m_QmTranslateBackend, pBackend);
@@ -254,6 +255,120 @@ TEST_F(CTranslateBackendTest, MymemoryQuotaWarningIsFailure)
 	EXPECT_NE(str_find(Response.m_Text, "daily anonymous quota reached"), nullptr);
 }
 
+TEST_F(CTranslateBackendTest, MymemoryTranslationMemoryBoilerplateIsServiceNotice)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	auto pBackend = Create("没礼貌", "en", "zh-CN");
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"responseData":{"translatedText":"You are about to translate the &apos;Backward&apos;: COMMAND, there are some rules on how to translate it. Please see http://edu.kde.org/kturtle/translator.php to learn how to properly translate it."},"responseStatus":200})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::SERVICE_NOTICE);
+	// m_Error 由 CTranslate::OnRender 统一置位（组件层），后端只负责分类
+	EXPECT_NE(str_find(Response.m_Text, "service notice"), nullptr);
+}
+
+TEST_F(CTranslateBackendTest, MymemoryLinkOnlyInResultIsServiceNotice)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	// 结果带链接而源文本没有：命中启发式兜底
+	auto pNotice = Create("大家好", "en", "zh-CN");
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"responseData":{"translatedText":"see http://example.org/rules before posting"},"responseStatus":200})");
+	CTranslateResponse Notice;
+	EXPECT_EQ(pNotice->Update(Notice), std::optional<bool>(false));
+	EXPECT_EQ(Notice.m_Notice, ETranslateNotice::SERVICE_NOTICE);
+	// 源文本本身带链接：正常译文，不误杀
+	auto pNormal = Create("see https://example.org/page", "zh", "en");
+	m_Http.m_vSubmissions[1].m_pRequest->Finish(R"({"responseData":{"translatedText":"请查看 https://example.org/page"},"responseStatus":200})");
+	CTranslateResponse Normal;
+	EXPECT_EQ(pNormal->Update(Normal), std::optional<bool>(true));
+	EXPECT_STREQ(Normal.m_Text, "请查看 https://example.org/page");
+	EXPECT_EQ(Normal.m_Notice, ETranslateNotice::NONE);
+}
+
+TEST_F(CTranslateBackendTest, MymemoryShortTranslationIsNotNotice)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
+	auto pBackend = Create("没礼貌", "en", "zh-CN");
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"responseData":{"translatedText":"Rude"},"responseStatus":200})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(true));
+	EXPECT_STREQ(Response.m_Text, "Rude");
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::NONE);
+}
+
+TEST_F(CTranslateBackendTest, DeeplFreeKeyUsesFreeHostAndAuthHeader)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "deepl");
+	str_copy(g_Config.m_QmTranslateDeeplKey, "279a2e9d-83b3-c416-7e2d-f721593e42a0:fx");
+	auto pFree = Create("hello", "zh", "auto");
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	EXPECT_NE(str_find(m_Http.m_vSubmissions[0].m_pRequest->Url(), "https://api-free.deepl.com/v2/translate"), nullptr);
+	EXPECT_STREQ(m_Http.m_vSubmissions[0].m_Method.c_str(), "POST");
+	ASSERT_EQ(m_Http.m_vSubmissions[0].m_pRequest->m_vHeaders.size(), 2u);
+	EXPECT_STREQ(m_Http.m_vSubmissions[0].m_pRequest->m_vHeaders[0].c_str(), "Content-Type: application/json");
+	EXPECT_STREQ(m_Http.m_vSubmissions[0].m_pRequest->m_vHeaders[1].c_str(), "Authorization: DeepL-Auth-Key 279a2e9d-83b3-c416-7e2d-f721593e42a0:fx");
+	// auto 源不提交 source_lang
+	EXPECT_EQ(str_find(m_Http.m_vSubmissions[0].m_Body.c_str(), "source_lang"), nullptr);
+	// Pro key 走 api.deepl.com
+	str_copy(g_Config.m_QmTranslateDeeplKey, "pro-key-without-suffix");
+	auto pPro = Create();
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 2u);
+	EXPECT_NE(str_find(m_Http.m_vSubmissions[1].m_pRequest->Url(), "https://api.deepl.com/v2/translate"), nullptr);
+}
+
+TEST_F(CTranslateBackendTest, DeeplParsesTranslationAndDetectedLanguage)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "deepl");
+	str_copy(g_Config.m_QmTranslateDeeplKey, "test-key:fx");
+	auto pBackend = Create();
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"translations":[{"detected_source_language":"EN","text":"你好","billed_characters":5}]})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(true));
+	EXPECT_STREQ(Response.m_Text, "你好");
+	EXPECT_STREQ(Response.m_Language, "EN");
+}
+
+TEST_F(CTranslateBackendTest, DeeplExplicitSourceAndTraditionalTargetMapping)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "deepl");
+	str_copy(g_Config.m_QmTranslateDeeplKey, "test-key:fx");
+	auto pBackend = Create("hello", "zh-TW", "zh");
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	const auto &Body = m_Http.m_vSubmissions[0].m_Body;
+	json_value *pJson = JsonParse(Body.c_str(), Body.size());
+	ASSERT_NE(pJson, nullptr);
+	// 繁体目标为 ZH-HANT；源语言用基础码 ZH
+	EXPECT_STREQ(json_object_get(pJson, "target_lang")->u.string.ptr, "ZH-HANT");
+	EXPECT_STREQ(json_object_get(pJson, "source_lang")->u.string.ptr, "ZH");
+	json_value_free(pJson);
+}
+
+TEST_F(CTranslateBackendTest, DeeplMissingKeyIsTerminalWithoutHttp)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "deepl");
+	g_Config.m_QmTranslateDeeplKey[0] = '\0';
+	auto pBackend = Create();
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_NE(str_find(Response.m_Text, "Missing API Key"), nullptr);
+	EXPECT_TRUE(m_Http.m_vSubmissions.empty());
+}
+
+TEST_F(CTranslateBackendTest, DeeplQuotaAndAuthErrorsAreDescriptive)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "deepl");
+	str_copy(g_Config.m_QmTranslateDeeplKey, "test-key:fx");
+	auto pQuota = Create();
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"message":"Quota exceeded"})", 456);
+	CTranslateResponse Response;
+	EXPECT_EQ(pQuota->Update(Response), std::optional<bool>(false));
+	EXPECT_NE(str_find(Response.m_Text, "quota exceeded"), nullptr);
+	auto pAuth = Create();
+	m_Http.m_vSubmissions[1].m_pRequest->Finish(R"({"message":"Wrong key"})", 403);
+	EXPECT_EQ(pAuth->Update(Response), std::optional<bool>(false));
+	EXPECT_NE(str_find(Response.m_Text, "invalid API key"), nullptr);
+}
+
 TEST_F(CTranslateBackendTest, OutputExceedingChatCapacityIsRejectedWithoutPartialTranslation)
 {
 	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://capacity.test/v1/responses");
@@ -279,4 +394,20 @@ TEST_F(CTranslateBackendTest, BuiltInPromptPreservesTailAndExplicitSourceHint)
 	EXPECT_NE(str_find(pPrompt, "input language is en"), nullptr);
 	EXPECT_NE(str_find(pPrompt, "message into zh"), nullptr);
 	json_value_free(pJson);
+}
+
+TEST_F(CTranslateBackendTest, DeeplRejectsEmptyAndOversizedTranslationWithoutPublishingPartialText)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "deepl");
+	str_copy(g_Config.m_QmTranslateDeeplKey, "test-key:fx");
+	for(const std::string &Text : {std::string(), std::string(1024, 'x')})
+	{
+		SCOPED_TRACE(Text.size());
+		auto pBackend = Create();
+		const std::string Body = "{\"translations\":[{\"text\":\"" + Text + "\"}]}";
+		m_Http.m_vSubmissions.back().m_pRequest->Finish(Body.c_str());
+		CTranslateResponse Response;
+		EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+		EXPECT_NE(str_find(Response.m_Text, "empty or exceeds buffer capacity"), nullptr);
+	}
 }

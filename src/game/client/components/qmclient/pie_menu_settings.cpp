@@ -13,7 +13,7 @@
 #include <game/client/components/pie_menu_logic.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -204,7 +204,8 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			const EFontPreset PreviousFont = TextRender()->GetFontPreset();
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			const float IconWidth = TextRender()->TextWidth(IconSize, Entry.m_pIcon);
-			TextRender()->Text(ItemPos.x - IconWidth * 0.5f, ItemPos.y - IconSize * 0.5f, IconSize, Entry.m_pIcon);
+			const CUIRect IconRect{ItemPos.x - IconWidth * 0.5f, ItemPos.y - IconSize * 0.5f, IconWidth, IconSize};
+			Ui()->DoLabel(&IconRect, Entry.m_pIcon, IconSize, TEXTALIGN_MC);
 			TextRender()->SetFontPreset(PreviousFont);
 		}
 		const int FocusedSector = HoveredSector >= 0 ? HoveredSector : PopupSectorIndex;

@@ -6,10 +6,19 @@
 #include <memory>
 #include <optional>
 
+// 服务返回内容分类：NONE 为正常失败/成功；SERVICE_NOTICE 表示后端返回的是
+// 服务端提示文本（如 TM 样板、屏蔽说明）而非译文，由调用方给出本地化固定文案。
+enum class ETranslateNotice
+{
+	NONE = 0,
+	SERVICE_NOTICE,
+};
+
 class CTranslateResponse
 {
 public:
 	bool m_Error = false;
+	ETranslateNotice m_Notice = ETranslateNotice::NONE;
 	char m_Text[1024] = "";
 	char m_Language[16] = "";
 };

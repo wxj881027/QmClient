@@ -7,10 +7,8 @@
 #include <base/sphore.h>
 
 #include <atomic>
-#include <condition_variable>
 #include <deque>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 /**
@@ -142,11 +140,6 @@ class CJobPool
 
 	CLock m_LockRunning;
 	std::deque<std::shared_ptr<IJob>> m_RunningJobs GUARDED_BY(m_LockRunning);
-
-	// Shutdown coordination: used to implement a timed wait during Shutdown().
-	std::mutex m_ShutdownWaitMutex;
-	std::condition_variable m_ShutdownWaitCv;
-	std::atomic<int> m_ActiveThreadCount;
 
 	static void WorkerThread(void *pUser) NO_THREAD_SAFETY_ANALYSIS;
 	void RunLoop() NO_THREAD_SAFETY_ANALYSIS;

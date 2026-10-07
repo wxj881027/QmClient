@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Automatisch auf das Standard-Asset zurückfallen, wenn ein Sprite eines eigenen Assets vollständig transparent ist; deaktivieren, um leere Sprites unsichtbar zu lassen (z. B. zum Ausblenden von Effekten)
 
-Automatically launch Steam when the client is started externally
-== Steam automatisch starten, wenn der Client extern gestartet wird
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== Steam automatisch starten, wenn der Client extern gestartet wird, damit Steam deine Spielzeit erfassen kann
 
 Automatically re-join team 0 after finish (only if unlocked).
 == Nach Zielankunft automatisch wieder Team 0 beitreten (nur wenn freigeschaltet)
@@ -1855,6 +1855,9 @@ Cheats are enabled on this server
 
 check ddnet-saves.txt in config_directory.
 == Prüfe ddnet-saves.txt im config_directory.
+
+Check for updates
+== Nach Updates suchen
 
 Check if voice server address is reachable
 == Überprüfe, ob die Sprachserveradresse erreichbar ist
@@ -2516,6 +2519,15 @@ Copy name option color
 Copy skin
 == Skin kopieren
 
+Copy skin from dummy
+== Skin vom Dummy kopieren
+
+Copy skin from player
+== Skin vom Spieler kopieren
+
+Copy skin ID
+== Skin-ID kopieren
+
 Copy skin option color
 == Farbe der Skin-Optionen kopieren
 
@@ -2950,6 +2962,15 @@ Deep unfreeze tile outline color
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly-Modus (0=Normal, 1=DF, 2=HDF, 3=Benutzerdefiniert)
+
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: 500.000 Zeichen pro Monat (Registrierung unter deepl.com; kostenlose Schlüssel enden auf :fx)
+
+DeepL API Key (free keys end with :fx)
+== DeepL API-Schlüssel (kostenlose Schlüssel enden auf :fx)
 
 DeepSeek
 == DeepSeek
@@ -3568,12 +3589,6 @@ dumps all sqlservers readservers = r, writeservers = w
 
 Dumps the antibot status
 == Gibt den Antibot-Status aus
-
-Duotone
-== Duoton
-
-Duotone icon secondary color alpha migration completed flag
-== Flag für abgeschlossene Alpha-Migration der sekundären Duotone-Symbolfarbe
 
 Duplicate
 == Duplizieren
@@ -4348,9 +4363,6 @@ Failed
 
 Failed saving the replay!
 == Fehler beim Speichern der Wiederholung!
-
-Failed to check for updates
-== Update-Prüfung fehlgeschlagen
 
 Failed to copy main asset image.
 == Haupt-Asset-Bild konnte nicht kopiert werden.
@@ -6086,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == Letzte erfolgreiche Synchronisierung: %s
 
+Last verified approved update source
+== Zuletzt überprüfte freigegebene Updatequelle
+
 Latency
 == Latenz
 
@@ -7280,6 +7295,9 @@ Netversion
 Network
 == Netzwerk
 
+Network error
+== Netzwerkfehler
+
 Network timeout
 == Netzwerk-Timeout
 
@@ -7385,6 +7403,9 @@ No chat message to translate
 No code
 == Kein Code
 
+No compatible Windows update package for this version
+== Kein kompatibles Windows-Updatepaket für diese Version verfügbar
+
 No controller found. Plug in a controller.
 == Kein Controller gefunden. Schließe einen Controller an.
 
@@ -7402,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == Keine Regisseur-Spieler verfügbar
+
+No downloadable portable package for this version
+== Für diese Version ist noch kein portables Paket verfügbar
 
 No empty team left.
 == Kein leeres Team mehr übrig.
@@ -7489,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == Keine zuletzt verwendeten Skins
+
+No release notes provided
+== Für diese Version sind keine Hinweise vorhanden
 
 No results
 == Keine Ergebnisse
@@ -8747,14 +8774,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Benutzerdefinierte Qm-UI-Symbolfarbe
 
-Qm UI duotone secondary icon color
-== Sekundärfarbe der Duotone-Symbole der Qm-UI
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm-UI-Symbolfarbe: 1=Weiß, 2=Schwarz, 3=Benutzerdefiniert, 4=Regenbogen
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Qm-UI-Symbolstil: 0=Normal, 1=Fett, 2=Dünn, 3=Gefüllt, 4=Leicht, 5=Duoton
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Qm-UI-Symbolstil: 0=Normal, 1=Fett, 2=Leicht (alter Wert), 3=Gefüllt, 4=Leicht, 5=Fett (alter Wert)
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue: Index muss zwischen 1 und %d liegen
@@ -9140,6 +9164,9 @@ Relative X position of the draggable back button
 Relative Y position of the draggable back button
 == Relative Y-Position des verschiebbaren Zurück-Buttons
 
+Release notes
+== Versionshinweise
+
 Reload
 == Neu laden
 
@@ -9511,6 +9538,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == KCP-fähigen Client für Session-Upgrade verlangen (während Graustufenphase deaktiviert für Fallback)
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== Bei aktiviertem qm_graphics_trace Schriften erneut durchsuchen und die aufgelöste Unicode-Schrift und Glyphe abfragen
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == Rescue ist auf diesem Server nicht aktiviert und du bist in keinem Team mit /practice. Beachte, dass du mit aktiviertem Übungsmodus keine Rangliste erhalten kannst.
@@ -12494,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == Der Name "default" ist reserviert.
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== Der alte Ordner qmclient/fonts wird nicht mehr durchsucht. Verschiebe eigene Schriftarten manuell nach fonts/fonts_store im Konfigurationsordner. Die normale Version verwendet den Benutzer-Konfigurationsordner, die portable Version profile. Die mitgelieferten Schriftarten in data/fonts müssen nicht verschoben werden.
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Der Spieler, dem du geflüstert hast, ist noch nicht zurück oder hat das Spiel verlassen. Warte oder flüstere jemand anderem
 
@@ -13034,6 +13067,9 @@ Translation queue full, sending original
 Translation service
 == Übersetzungsdienst
 
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== Der Übersetzungsdienst gab einen Hinweis statt einer Übersetzung zurück (die Nachricht könnte gefilterte Wörter enthalten)
+
 Translation Settings
 == Übersetzungseinstellungen
 
@@ -13132,9 +13168,6 @@ UI icon color
 
 UI icon custom color
 == Benutzerdefinierte Farbe der UI-Symbole
-
-UI icon duotone secondary color
-== Sekundärfarbe der Duotone-UI-Symbole
 
 UI icon style
 == Stil der UI-Symbole
@@ -13361,6 +13394,9 @@ Update notice
 Update or add a specific war group
 == Eine bestimmte Kriegsgruppe aktualisieren oder hinzufügen
 
+Update package available
+== Updatepaket für diese Version verfügbar
+
 Update Rate
 == Aktualisierungsrate
 
@@ -13433,6 +13469,9 @@ Use current name
 Use custom skins instead of the ninja tee
 == Benutzerdefinierte Skins anstelle des Ninja-Tees verwenden
 
+Use custom UI icon color
+== Benutzerdefinierte Farbe für UI-Symbole verwenden
+
 Use default flags on scoreboard
 == Standardflaggen auf der Anzeigetafel verwenden
 
@@ -13475,9 +13514,6 @@ Use large emote
 Use mouse sensitivity when dynamic camera is on
 == Mausempfindlichkeit bei aktivierter dynamischer Kamera verwenden
 
-Use MSDF icon pipeline when enhanced rendering is active
-== MSDF-Symbol-Pipeline bei aktiviertem erweitertem Rendering verwenden
-
 Use multi-char replacement based on word length
 == Mehrzeichenersatz basierend auf Wortlänge verwenden
 
@@ -13510,6 +13546,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == Vorab-Eingabe zur Vorhersage anderer Spieler für genauere Eingabevorhersage verwenden
+
+Use procedural ring pipeline when enhanced rendering is active
+== Prozedurale Ring-Pipeline bei aktiviertem erweitertem Rendering verwenden
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == SDF-Pipelines für Dynamic Island und abgerundete Rechtecke bei aktiviertem erweitertem Rendering verwenden

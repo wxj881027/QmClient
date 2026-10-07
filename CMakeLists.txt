@@ -185,7 +185,17 @@ option(QM_DISABLE_PARALLEL_COMPILE "Disable /MP for compiler warnings-sensitive 
 option(QM_MSVC_USE_EMBEDDED_DEBUG_INFO "Use embedded MSVC debug information instead of per-target PDB files" OFF)
 option(QM_MSVC_ANALYZE "Enable MSVC /analyze static analysis (Windows only)" OFF)
 option(QM_STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
-option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bundled fonts" OFF)
+option(QMCLIENT_PORTABLE "Build a dedicated Windows portable client using only executable-relative profile" OFF)
+option(QMCLIENT_TEST_STORAGE "Enable isolated storage in a non-release test client" OFF)
+if((QMCLIENT_PORTABLE OR QMCLIENT_TEST_STORAGE) AND NOT TARGET_OS STREQUAL "windows")
+  message(FATAL_ERROR "QmClient dedicated storage builds currently require Windows")
+endif()
+if(QMCLIENT_PORTABLE AND QMCLIENT_TEST_STORAGE)
+  message(FATAL_ERROR "Portable and isolated test builds must use separate build directories")
+endif()
+if(QMCLIENT_TEST_STORAGE AND NOT DEV)
+  message(FATAL_ERROR "QMCLIENT_TEST_STORAGE is only allowed with DEV=ON; test builds cannot be packaged")
+endif()
 
 if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   add_subdirectory(vendor/minhook EXCLUDE_FROM_ALL)
@@ -797,6 +807,9 @@ find_package(Opusfile)
 find_package(PNG)
 find_package(Python3)
 find_package(WebP)
+if(CLIENT AND NOT WebP_FOUND)
+  message(FATAL_ERROR "QmClient client requires WebP for bundled chat emojis and friend-link icons")
+endif()
 find_package(Rust)
 find_package(SDL2)
 find_package(SQLite3)
@@ -1094,8 +1107,11 @@ else()
   if(MPRIS)
     find_package(DBus)
   endif()
-  set(PLATFORM_CLIENT_LIBS ${OPENGL_gl_LIBRARY} ${NOTIFY_LIBRARIES} ${DBUS_LIBRARIES})
-  set(PLATFORM_CLIENT_INCLUDE_DIRS ${OPENGL_INCLUDE_DIR} ${NOTIFY_INCLUDE_DIRS} ${DBUS_INCLUDE_DIRS})
+  set(PLATFORM_CLIENT_LIBS ${OPENGL_gl_LIBRARY} ${NOTIFY_LIBRARIES})
+  set(PLATFORM_CLIENT_INCLUDE_DIRS ${OPENGL_INCLUDE_DIR} ${NOTIFY_INCLUDE_DIRS})
+  if(MPRIS AND DBus_FOUND)
+    list(APPEND PLATFORM_CLIENT_LIBS PkgConfig::DBUS)
+  endif()
   set(PLATFORM_CLIENT)
   if(TARGET_OS STREQUAL "linux")
     set(PLATFORM_LIBS)
@@ -1539,7 +1555,7 @@ set(EXPECTED_DATA
   audio/hook_noattach-02.wv
   audio/hook_noattach-03.wv
   audio/music_menu.wv
-  audio/qm_festive_haoyunlai.mp3
+  audio/crash_music/qm_festive_haoyunlai.opus
   audio/sfx_ctf_cap_pl.wv
   audio/sfx_ctf_drop.wv
   audio/sfx_ctf_grab_en.wv
@@ -1945,22 +1961,11 @@ set(EXPECTED_DATA
   fonts/DejaVuSans.ttf
   fonts/GlowSansJ-Compressed-Book.otf
   fonts/NotoEmoji-Regular.ttf
-  fonts/NotoSansBalinese-Regular.ttf
-  fonts/NotoSansBamum-Regular.ttf
-  fonts/NotoSansBatak-Regular.ttf
-  fonts/NotoSansEgyptianHieroglyphs-Regular.ttf
-  fonts/NotoSansJavanese-Regular.ttf
   fonts/NotoSansMath-Regular.ttf
-  fonts/NotoSansOriya-Regular.ttf
-  fonts/NotoSansSC-VF.ttf
   fonts/NotoSansSymbols-Regular.ttf
   fonts/NotoSansSymbols2-Regular.ttf
-  fonts/NotoSansTaiLe-Regular.ttf
-  fonts/NotoSansThai-Regular.ttf
-  fonts/NotoSansVai-Regular.ttf
-  fonts/NotoSansYi-Regular.ttf
-  fonts/NotoSerifTibetan-Regular.ttf
   fonts/SourceHanSans.ttc
+  fonts/fonts_store/font_catalog.json
   fonts/index.json
   game.png
   gui_buttons.png
@@ -2015,17 +2020,6 @@ set(EXPECTED_DATA
   languages/traditional_chinese.txt
   languages/turkish.txt
   languages/ukrainian.txt
-  qmclient/icons/README.md
-  qmclient/icons/qm_icons_bold_msdf.json
-  qmclient/icons/qm_icons_bold_msdf.png
-  qmclient/icons/qm_icons_fill_msdf.json
-  qmclient/icons/qm_icons_fill_msdf.png
-  qmclient/icons/qm_icons_light_msdf.json
-  qmclient/icons/qm_icons_light_msdf.png
-  qmclient/icons/qm_icons_duotone_msdf.json
-  qmclient/icons/qm_icons_duotone_msdf.png
-  qmclient/icons/qm_icons_regular_msdf.json
-  qmclient/icons/qm_icons_regular_msdf.png
   mapres/basic_freeze.png
   mapres/bg_cloud1.png
   mapres/bg_cloud2.png
@@ -2210,22 +2204,28 @@ set(EXPECTED_DATA
   menuimages/settings.png
   particles.png
   qmclient/builtinscripts/sayemoticon.chai
-  qmclient/chat_emojis/agree.png
-  qmclient/chat_emojis/angry.png
-  qmclient/chat_emojis/awkward.png
-  qmclient/chat_emojis/cute.png
-  qmclient/chat_emojis/dead.png
-  qmclient/chat_emojis/hehe.png
-  qmclient/chat_emojis/insult.png
-  qmclient/chat_emojis/kneel.png
-  qmclient/chat_emojis/love.png
-  qmclient/chat_emojis/no.png
-  qmclient/chat_emojis/oppose.png
-  qmclient/chat_emojis/question.png
-  qmclient/chat_emojis/shocked.png
-  qmclient/chat_emojis/smell.png
-  qmclient/chat_emojis/support.png
-  qmclient/chat_emojis/surrender.png
+  qmclient/friendlinks/ddnet.webp
+  qmclient/friendlinks/ddrace.webp
+  qmclient/friendlinks/ddstats.webp
+  qmclient/friendlinks/qmclient.webp
+  qmclient/friendlinks/shengyan.webp
+  qmclient/friendlinks/teedata.webp
+  qmclient/chat_emojis/agree.webp
+  qmclient/chat_emojis/angry.webp
+  qmclient/chat_emojis/awkward.webp
+  qmclient/chat_emojis/cute.webp
+  qmclient/chat_emojis/dead.webp
+  qmclient/chat_emojis/hehe.webp
+  qmclient/chat_emojis/insult.webp
+  qmclient/chat_emojis/kneel.webp
+  qmclient/chat_emojis/love.webp
+  qmclient/chat_emojis/no.webp
+  qmclient/chat_emojis/oppose.webp
+  qmclient/chat_emojis/question.webp
+  qmclient/chat_emojis/shocked.webp
+  qmclient/chat_emojis/smell.webp
+  qmclient/chat_emojis/support.webp
+  qmclient/chat_emojis/surrender.webp
   qmclient/gui_logo.png
   qmclient/map_difficulty.sql
   race_flag.png
@@ -2235,8 +2235,8 @@ set(EXPECTED_DATA
   shader/media_island_sdf.vert
   shader/rounded_rect_sdf.frag
   shader/rounded_rect_sdf.vert
-  shader/textured_msdf.frag
-  shader/textured_msdf.vert
+  shader/procedural_ring.frag
+  shader/procedural_ring.vert
   shader/pipeline.frag
   shader/pipeline.vert
   shader/prim.frag
@@ -2259,8 +2259,8 @@ set(EXPECTED_DATA
   shader/vulkan/media_island_sdf.vert
   shader/vulkan/rounded_rect_sdf.frag
   shader/vulkan/rounded_rect_sdf.vert
-  shader/vulkan/textured_msdf.frag
-  shader/vulkan/textured_msdf.vert
+  shader/vulkan/procedural_ring.frag
+  shader/vulkan/procedural_ring.vert
   shader/vulkan/prim.frag
   shader/vulkan/prim.vert
   shader/vulkan/prim3d.frag
@@ -2506,34 +2506,20 @@ set(EXPECTED_DATA
   skins7/x_ninja.json
   skins7/xmas_hat.png
   strong_weak.png
-  themes/auto.png
-  themes/autumn.png
   themes/autumn_day.map
   themes/autumn_night.map
-  themes/heavens.png
   themes/heavens_day.map
   themes/heavens_night.map
-  themes/jungle.png
   themes/jungle_day.map
   themes/jungle_night.map
   themes/newyear.map
-  themes/newyear.png
-  themes/none.png
-  themes/rand.png
-  themes/winter.png
   themes/winter_day.map
   themes/winter_night.map
   touch_controls.json
   wordlist.txt
 )
 
-file(GLOB_RECURSE QMCLIENT_BUNDLED_FONT_FILES
-  LIST_DIRECTORIES false
-  RELATIVE "${PROJECT_SOURCE_DIR}/data"
-  "${PROJECT_SOURCE_DIR}/data/qmclient/fonts/*"
-)
-list(APPEND EXPECTED_DATA ${QMCLIENT_BUNDLED_FONT_FILES})
-set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;wv" data ${EXPECTED_DATA})
+set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;opus;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;webp;wv" data ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND SHARED LIBS
@@ -2663,24 +2649,6 @@ add_custom_target(generate_content_types
     src/generated/data_types.h
 )
 
-# 眼睛 morph 的采样几何数据：从随包 Phosphor-Bold.ttf 提取字形轮廓生成，
-# 被 src/game/client/qm_icon_morph.cpp 直接包含（见 qm_build_icon_morph.py）。
-set(QM_ICON_MORPH_GENERATED ${PROJECT_BINARY_DIR}/src/generated/qm_icon_morph_generated.inc)
-add_custom_command(OUTPUT ${QM_ICON_MORPH_GENERATED}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/src/generated
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_morph.py
-    --fonts-dir data/qmclient/fonts/Phosphor
-    --codepoints datasrc/qm_icons/phosphor.codepoints
-    --output ${QM_ICON_MORPH_GENERATED}
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS
-    qmclient_scripts/qm_build_icon_morph.py
-    datasrc/qm_icons/phosphor.codepoints
-    data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
-  COMMENT "Building QmClient eye path morph data"
-)
-add_custom_target(qm-icon-morph DEPENDS ${QM_ICON_MORPH_GENERATED})
 
 generate_source7("src/generated/protocol7.cpp" "network_source")
 generate_source7("src/generated/protocol7.h" "network_header")
@@ -2703,36 +2671,6 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
   DEPENDS
     scripts/wordlist.py
 )
-
-# 图标源是随包 Phosphor TTF（全量字形）+ 官方码点映射；精选 SVG 子集已移除。
-# msdfgen / msdf-atlas-gen 只用于资源制作。生成产物已提交，普通构建不依赖本机安装。
-set(QM_ICON_MSDF_STYLES duotone light regular bold fill)
-add_custom_target(qm-icon-msdf-atlas
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_msdf_font.py
-    --tool cmake-build-official/bin/Release/msdf-atlas-gen.exe
-    --fonts-dir data/qmclient/fonts/Phosphor
-    --codepoints datasrc/qm_icons/phosphor.codepoints
-    --output data/qmclient/icons
-    --styles ${QM_ICON_MSDF_STYLES}
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS
-    qmclient_scripts/qm_build_icon_msdf_font.py
-    qmclient_scripts/qm_icon_msdf_official.py
-    datasrc/qm_icons/phosphor.codepoints
-    data/qmclient/fonts/Phosphor/Phosphor-Regular.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Light.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Fill.ttf
-    data/qmclient/fonts/Phosphor/Phosphor-Duotone.ttf
-  COMMENT "Building QmClient Phosphor MSDF icon atlases from bundled fonts"
-)
-
-if(QM_BUILD_ICON_ATLAS)
-  if(TARGET sync_runtime_data)
-    add_dependencies(sync_runtime_data qm-icon-msdf-atlas)
-  endif()
-endif()
 
 ########################################################################
 # SHARED
@@ -3062,7 +3000,7 @@ set(LIBS
 )
 
 # Targets
-add_library(engine-gfx EXCLUDE_FROM_ALL OBJECT ${ENGINE_GFX})
+add_library(engine-gfx EXCLUDE_FROM_ALL OBJECT ${ENGINE_GFX} src/generated/data_types.h)
 target_include_directories(engine-gfx PRIVATE ${PNG_INCLUDE_DIRS})
 if(WebP_FOUND)
   target_compile_definitions(engine-gfx PRIVATE CONF_WEBP)
@@ -3075,7 +3013,6 @@ add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_EXTERNAL} ${ENGINE_IN
 add_library(game-shared EXCLUDE_FROM_ALL OBJECT ${GAME_SHARED} ${GAME_GENERATED_SHARED})
 add_dependencies(engine-shared generate_protocol)
 add_dependencies(game-shared generate_protocol)
-add_dependencies(game-shared qm-icon-morph)
 if(TARGET_OS STREQUAL "ios")
   add_dependencies(game-shared generate_content_types)
 endif()
@@ -3169,6 +3106,7 @@ if(CLIENT)
     checksum.h
     client.cpp
     client.h
+    qm_storage_mode.h
     demoedit.cpp
     demoedit.h
     discord.cpp
@@ -3205,7 +3143,11 @@ if(CLIENT)
     sound.h
     sqlite.cpp
     steam.cpp
+    steam_probe.cpp
+    steam_probe.h
     text.cpp
+    qm_font_names.h
+    qm_font_name_match.h
     text_sweep.h
     updater.cpp
     updater.h
@@ -3254,6 +3196,8 @@ if(CLIENT)
     QmUi/QmTree.h
     QmUi/SecondaryPanel.h
     QmUi/SettingsCard.cpp
+    QmUi/SettingsCardInfo.cpp
+    QmUi/SettingsCardInfo.h
     QmUi/SettingsCard.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
@@ -3575,9 +3519,16 @@ if(CLIENT)
     components/qmclient/translate/translate_ui_settings.cpp
     components/qmclient/translate/translate_ui_settings.h
     components/qmclient/update_version.cpp
+    components/qmclient/font_download_storage.h
     components/qmclient/update_version.h
     components/qmclient/update_manifest.cpp
     components/qmclient/update_manifest.h
+    components/qmclient/update_sources.h
+    components/qmclient/update_request.h
+    components/qmclient/update_survey.h
+    components/qmclient/update_proxy.h
+    components/qmclient/update_proxy.cpp
+    components/qmclient/update_client.cpp
     components/qmclient/voice/voice_capture_pipeline.cpp
     components/qmclient/voice/voice_capture_pipeline.h
     components/qmclient/voice/voice_component.cpp
@@ -3616,6 +3567,7 @@ if(CLIENT)
     components/system_media_controls.cpp
     components/system_media_controls.h
     components/system_media_controls_timeline.h
+    components/system_media_controls_mpris_policy.h
     components/tclient/background_particles.cpp
     components/tclient/background_particles.h
     components/tclient/bg_draw.cpp
@@ -3699,10 +3651,13 @@ if(CLIENT)
     prediction/gameworld.h
     projectile_data.cpp
     projectile_data.h
-    qm_icon_manager.cpp
-    qm_icon_manager.h
-    qm_icon_morph.cpp
-    qm_icon_morph.h
+    qm_icon.h
+    qm_icon_prewarm.h
+    qm_icon_color_policy.h
+    qm_icon_font_render.h
+    qm_icon_label.h
+    qm_icon_label_runs.h
+    qm_icon_registry.inc
     qm_ime_candidate_popup.cpp
     qm_ime_candidate_popup.h
     qm_ime_manager.cpp
@@ -3940,7 +3895,7 @@ if(CLIENT)
     target_link_libraries(game-client-common INTERFACE "-framework Metal" "-framework QuartzCore")
   endif()
   # Linux/BSD 用 MPRIS 替代 Windows 的 SMTC；找不到 libdbus-1 时自动退化为无媒体集成。
-  if(DBus_FOUND)
+  if(MPRIS AND DBus_FOUND)
     target_compile_definitions(game-client-common INTERFACE CONF_MPRIS)
   endif()
 
@@ -4002,9 +3957,6 @@ if(CLIENT)
     )
   endif()
   add_dependencies(game-client generate_content_types)
-# qm_icon_morph.cpp（game-client）直接包含生成的 morph 数据，必须等生成目标完成：
-# 只挂在 game-shared 上无法保证干净构建时对象先于 .inc 编译。
-add_dependencies(game-client qm-icon-morph)
   if(TARGET qm-nmt-hook64)
     add_dependencies(game-client qm-nmt-hook64 qm-nmt-helper qm-nmt-bootstrap)
     add_custom_command(TARGET game-client POST_BUILD
@@ -4035,6 +3987,11 @@ add_dependencies(game-client qm-icon-morph)
       PROPERTY OUTPUT_NAME ${CLIENT_EXECUTABLE}
   )
   target_link_libraries(game-client game-client-common)
+  if(QMCLIENT_PORTABLE)
+    target_compile_definitions(game-client PRIVATE CONF_QMCLIENT_PORTABLE)
+  elseif(QMCLIENT_TEST_STORAGE)
+    target_compile_definitions(game-client PRIVATE CONF_QMCLIENT_TEST_STORAGE)
+  endif()
   if(TARGET_OS STREQUAL "ios")
     set(IOS_INFO_PLIST "${PROJECT_BINARY_DIR}/ios-Info.plist")
     configure_file("${PROJECT_SOURCE_DIR}/scripts/ios/files/Info.plist.in" "${IOS_INFO_PLIST}")
@@ -4101,6 +4058,20 @@ add_dependencies(game-client qm-icon-morph)
   list(APPEND TARGETS_LINK game-client)
 
   if(TARGET_OS STREQUAL "windows")
+    # 显式真实网络验收工具，不加入默认构建或离线测试。
+    add_executable(qm-update-download-probe EXCLUDE_FROM_ALL
+      qmclient_scripts/integration/update_download_probe.cpp
+      src/game/client/components/qmclient/update_proxy.cpp
+      src/game/client/components/qmclient/update_manifest.cpp
+      src/game/client/components/qmclient/update_version.cpp
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+      ${DEPS}
+    )
+    target_link_libraries(qm-update-download-probe PRIVATE ${LIBS} winhttp bcrypt ws2_32)
+    list(APPEND TARGETS_OWN qm-update-download-probe)
+    list(APPEND TARGETS_LINK qm-update-download-probe)
     add_executable(qm-client-updater WIN32 src/qm/update/updater_main.cpp)
     set_property(TARGET qm-client-updater PROPERTY OUTPUT_NAME QmClient-Updater)
     target_link_libraries(qm-client-updater rust_qm_update ${PLATFORM_LIBS} comctl32.lib)
@@ -4468,6 +4439,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
+    src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/QmAnimTest.cpp
     src/test/unit/qmclient/ui/QmAnimSpringTest.cpp
     src/test/unit/qmclient/ui/QmAnimCoreTest.cpp
@@ -4478,20 +4450,14 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/map_browser_filter_slider_test.cpp
     src/test/unit/qmclient/ui/QmAnimScrollTest.cpp
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
-    src/test/contract/qmclient/ui/qm_icon_atlas_contract_test.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
-    src/test/unit/qmclient/ui/qm_icon_color_migration_test.cpp
     src/test/unit/qmclient/ui/qm_font_icon_cmap_test.cpp
-    src/test/contract/qmclient/ui/qm_icon_shader_contract_test.cpp
-    src/test/unit/qmclient/client/qm_msdf_param_encoding_test.cpp
-    src/test/contract/qmclient/ui/qm_icon_loader_contract_test.cpp
     src/test/unit/qmclient/client/qm_render_pipeline_contract_test.cpp
-    src/test/contract/qmclient/ui/qm_icon_glyph_contract_test.cpp
     src/test/contract/qmclient/client/qm_phosphor_resource_contract_test.cpp
-    src/test/contract/qmclient/ui/qm_icon_weight_contract_test.cpp
     src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
     src/test/unit/qmclient/ui/QmLayoutTest.cpp
+    src/test/unit/qmclient/ui/qm_secondary_button_style_test.cpp
     src/test/contract/qmclient/client/qm_afk_presentation_contract_test.cpp
     src/test/unit/qmclient/client/qm_blank_asset_fallback_test.cpp
     src/test/unit/qmclient/client/qm_spectator_selector_layout_test.cpp
@@ -4508,6 +4474,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/player_points_parse_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
+    src/test/integration/qmclient/client/qm_chat_emoji_resource_test.cpp
+    src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
@@ -4559,6 +4527,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/image_test.cpp
     src/test/unit/base/io_test.cpp
     src/test/contract/base/ios_runtime_contract_test.cpp
+    src/test/support/qm_exit_process_probe.cpp
+    src/test/support/qm_exit_process_probe.h
     src/test/unit/engine/jobs_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
@@ -4616,6 +4586,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
     src/test/unit/qmclient/client/qm_media_island_track_state_test.cpp
     src/test/unit/qmclient/client/qm_media_volume_test.cpp
+    src/test/unit/qmclient/client/qm_mpris_policy_test.cpp
     src/test/unit/qmclient/client/qm_media_island_layout_test.cpp
     src/test/contract/qmclient/client/qm_hud_media_island_contract_test.cpp
     src/test/unit/qmclient/client/qm_hud_frozen_tee_state_test.cpp
@@ -4647,6 +4618,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_camera_aspect_ratio_contract_test.cpp
     src/test/contract/qmclient/settings/settings_card_translation_contract_test.cpp
     src/test/contract/qmclient/settings/settings_player_info_contract_test.cpp
+    src/test/unit/qmclient/settings/settings_font_selection_test.cpp
+    src/test/unit/qmclient/settings/settings_icon_options_test.cpp
     src/test/unit/qmclient/settings/settings_page_layout_test.cpp
     src/test/unit/qmclient/settings/settings_tee_emote_slider_test.cpp
     src/test/unit/qmclient/settings/settings_tee_layout_test.cpp
@@ -4659,6 +4632,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_graphics_backend_fallback_contract_test.cpp
     src/test/unit/qmclient/client/qm_graphics_opengl_probe_contract_test.cpp
     src/test/unit/qmclient/client/qm_font_category_test.cpp
+    src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/contract/qmclient/client/qm_screenshot_gallery_contract_test.cpp
@@ -4735,6 +4709,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_rank_demo_manifest_test.cpp
     src/test/unit/qmclient/client/qmclient_update_version_test.cpp
     src/test/unit/qmclient/client/qmclient_update_manifest_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_sources_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_http_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_proxy_test.cpp
+    src/test/integration/qmclient/client/qmclient_update_request_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
@@ -4954,6 +4932,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/qm_realtime.cpp
     src/game/client/components/qmclient/update_version.cpp
     src/game/client/components/qmclient/update_manifest.cpp
+    src/game/client/components/qmclient/update_proxy.cpp
     src/game/client/components/qmclient/qmclient_utils.cpp
     src/game/client/components/qmclient/qm_map_upload.cpp
     src/game/client/components/qmclient/qm_title_style.cpp
@@ -4995,6 +4974,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     )
   endif()
 
+  if(FREETYPE_FOUND)
+    list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
+    list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
+  endif()
+
   set(TARGET_TESTRUNNER testrunner)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL
     ${TESTS}
@@ -5012,6 +4996,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   )
   add_dependencies(${TARGET_TESTRUNNER} generate_protocol)
   target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+  if(FREETYPE_FOUND)
+    target_link_libraries(${TARGET_TESTRUNNER} ${FREETYPE_LIBRARIES})
+    target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FREETYPE_INCLUDE_DIRS})
+  endif()
   if(TARGET_OS STREQUAL "windows")
     target_link_libraries(${TARGET_TESTRUNNER} bcrypt winhttp ws2_32)
   endif()
@@ -5155,6 +5143,9 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
     src/test/benchmark/qm_str_benchmark.cpp
+    src/test/benchmark/qm_update_benchmark.cpp
+    src/game/client/components/qmclient/update_manifest.cpp
+    src/game/client/components/qmclient/update_version.cpp
     src/test/benchmark/qm_anim_benchmark.cpp
     src/test/benchmark/qm_text_benchmark.cpp
     src/test/benchmark/qm_translate_benchmark.cpp
@@ -5165,6 +5156,12 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_net_benchmark.cpp
     src/test/benchmark/qm_snapshot_benchmark.cpp
     src/test/benchmark/qm_font_raster_benchmark.cpp
+    src/test/benchmark/qm_icon_render_benchmark.cpp
+    src/engine/client/text.cpp
+    src/test/benchmark/qm_steam_benchmark.cpp
+    # Steam 客户端探测链（SteamFindClient 基准；依赖 steam_api 的链接桩）
+    src/engine/client/steam.cpp
+    src/engine/client/steam_probe.cpp
     # 动画实现（testrunner 的 TESTS_EXTRA 同款集合）
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmAnimationBackend.cpp
@@ -5180,6 +5177,10 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   )
   add_dependencies(qm-benchmarks generate_protocol)
   target_link_libraries(qm-benchmarks ${PNG_LIBRARIES} ${WebP_LIBRARIES} benchmark::benchmark ${FREETYPE_LIBRARIES} ${LIBS_SERVER})
+  if(TARGET steam_api)
+    # steam.cpp 只在链接期需要 SteamAPI 符号；探测链本身不调用任何 SteamAPI 函数
+    target_link_libraries(qm-benchmarks steam_api)
+  endif()
   target_include_directories(qm-benchmarks PRIVATE ${FREETYPE_INCLUDE_DIRS})
   if(TARGET_OS STREQUAL "windows")
     target_link_libraries(qm-benchmarks bcrypt winhttp ws2_32)
@@ -5369,7 +5370,11 @@ if(TARGET_OS AND TARGET_BITS)
   endif()
 endif()
 
-set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
+if(QMCLIENT_PORTABLE)
+  set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-portable-${CPACK_SYSTEM_NAME})
+else()
+  set(CPACK_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME})
+endif()
 set(CPACK_ARCHIVE_PORTABLE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-src)
 set(CPACK_SOURCE_FILES
@@ -5404,17 +5409,25 @@ endforeach()
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME ${PROJECT_NAME})
 
 if(TOOLS)
-  set(TARGET_TOOLS
-    config_retrieve
-    config_store
-    demo_extract_chat
-    dilate
-    map_convert_07
-    map_diff
-    map_extract
-  )
-  if(EGL_FOUND)
-    list(APPEND TARGET_TOOLS map_render)
+  if(TARGET_OS STREQUAL "windows")
+    # 普通归档收录完整实用工具；便携版只收运行依赖，工具从单一清单选择。
+    set(TARGET_TOOLS)
+    if(NOT QMCLIENT_PORTABLE)
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/qmclient_scripts/windows_release_tools.txt")
+      file(STRINGS "${PROJECT_SOURCE_DIR}/qmclient_scripts/windows_release_tools.txt" QMCLIENT_RELEASE_TOOLS)
+      foreach(qm_tool ${QMCLIENT_RELEASE_TOOLS})
+        if(TARGET ${qm_tool})
+          list(APPEND TARGET_TOOLS ${qm_tool})
+        elseif(NOT qm_tool STREQUAL "map_render")
+          message(FATAL_ERROR "Missing Windows release tool target: ${qm_tool}")
+        endif()
+      endforeach()
+    endif()
+  else()
+    set(TARGET_TOOLS config_retrieve config_store demo_extract_chat dilate map_convert_07 map_diff map_extract)
+    if(EGL_FOUND)
+      list(APPEND TARGET_TOOLS map_render)
+    endif()
   endif()
 else()
   set(TARGET_TOOLS)
@@ -5443,6 +5456,21 @@ endif()
 if(TARGET game-server)
   list(APPEND CPACK_TARGETS game-server)
 endif()
+# 安装器与归档共享运行时目标清单，工具程序不进入 Setup。
+if(TARGET_OS STREQUAL "windows" AND TARGET game-client AND TARGET game-server)
+  set(QMCLIENT_SETUP_RUNTIME_FILES "")
+  foreach(qm_setup_target ${CPACK_TARGETS})
+    string(APPEND QMCLIENT_SETUP_RUNTIME_FILES "$<TARGET_FILE_NAME:${qm_setup_target}>\n")
+  endforeach()
+  file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-setup-runtime.txt" CONTENT "${QMCLIENT_SETUP_RUNTIME_FILES}")
+endif()
+if(TARGET_OS STREQUAL "windows")
+  set(QMCLIENT_ARCHIVE_TOOL_FILES "")
+  foreach(qm_tool ${TARGET_TOOLS})
+    string(APPEND QMCLIENT_ARCHIVE_TOOL_FILES "$<TARGET_FILE_NAME:${qm_tool}>\n")
+  endforeach()
+  file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-archive-tools.txt" CONTENT "${QMCLIENT_ARCHIVE_TOOL_FILES}")
+endif()
 list(APPEND CPACK_TARGETS ${TARGET_TOOLS})
 
 if(STEAMAPI_KIND STREQUAL SHARED AND NOT STEAMAPI_RUNTIME_FILE_NAME)
@@ -5466,9 +5494,17 @@ set(CPACK_GEN_FILES
   ${VULKAN_SHADER_FILE_LIST}
   ${METAL_SHADER_FILE_LIST}
 )
+if(TARGET_OS STREQUAL "windows" AND TARGET game-client AND TARGET game-server)
+  string(REPLACE ";" "\n" QMCLIENT_SETUP_GENERATED_FILES "${CPACK_GEN_FILES}")
+  file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-setup-generated.txt" CONTENT "${QMCLIENT_SETUP_GENERATED_FILES}")
+endif()
 
 if(TARGET_OS STREQUAL "windows")
-  list(APPEND CPACK_FILES other/config_directory.bat)
+  if(QMCLIENT_PORTABLE)
+    list(APPEND CPACK_FILES qmclient_scripts/portable/config_directory.bat)
+  else()
+    list(APPEND CPACK_FILES other/config_directory.bat)
+  endif()
 else()
   list(APPEND CPACK_FILES other/config_directory.sh)
 endif()
@@ -5728,6 +5764,10 @@ foreach(ext zip tar.gz tar.xz 7z)
   set(TMPDIR pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG}/${CPACK_PACKAGE_FILE_NAME})
 
   set(COPY_FILE_COMMANDS)
+  if(QMCLIENT_TEST_STORAGE)
+    # 隔离测试客户端不允许作为发布包分发。
+    list(APPEND COPY_FILE_COMMANDS COMMAND ${CMAKE_COMMAND} -E false)
+  endif()
   set(COPY_DIR_COMMANDS)
   set(COPY_TARGET_COMMANDS)
   set(STRIP_TARGET_COMMANDS)
@@ -5760,7 +5800,11 @@ foreach(ext zip tar.gz tar.xz 7z)
     if(NOT 7Z_EXECUTABLE)
       continue()
     endif()
-    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${7Z_EXECUTABLE} a -t7z -mx=5 ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${CPACK_PACKAGE_FILE_NAME}/)
+    # 7z a 会保留旧归档中已从载荷删除的文件，重打包须先移除单个输出归档。
+    set(PACKAGE_COMMAND
+      COMMAND ${CMAKE_COMMAND} -E rm -f ${PROJECT_BINARY_DIR}/${CPACK_PACKAGE_FILE_NAME}.${ext}
+      COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${7Z_EXECUTABLE} a -t7z -mx=9 -m0=lzma2 -ms=on ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${CPACK_PACKAGE_FILE_NAME}/
+    )
   endif()
   add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.${ext}
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${TMPDIR}
@@ -5770,7 +5814,7 @@ foreach(ext zip tar.gz tar.xz 7z)
     ${COPY_TARGET_COMMANDS}
     ${STRIP_TARGET_COMMANDS}
     ${PACKAGE_COMMAND}
-    DEPENDS ${CPACK_TARGETS}
+    DEPENDS ${CPACK_TARGETS} ${CPACK_FILES}
   )
   add_custom_target(package_${EXT_SLUG} DEPENDS ${CPACK_PACKAGE_FILE_NAME}.${ext})
   list(APPEND PACKAGE_TARGETS package_${EXT_SLUG})
@@ -5789,6 +5833,24 @@ elseif(TARGET_OS STREQUAL "mac")
   add_custom_target(package_default DEPENDS package_${PACKAGE_DEFAULT})
 else()
   add_custom_target(package_default DEPENDS package_${PACKAGE_DEFAULT})
+endif()
+
+# 本地 Windows 完整发布入口；普通客户端编译不触发打包和发布目录写入。
+if(TARGET_OS STREQUAL "windows" AND NOT QMCLIENT_PORTABLE AND NOT QMCLIENT_TEST_STORAGE)
+  set(QMCLIENT_RELEASE_DIRECTORY "${PROJECT_SOURCE_DIR}/QmClient_Release" CACHE PATH "Local Windows release artifact directory")
+  set(QMCLIENT_RELEASE_JOBS 6 CACHE STRING "Jobs for the isolated portable release build")
+  add_custom_target(package_windows_release
+    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/package_windows_release.py
+      --build-dir ${PROJECT_BINARY_DIR}
+      --output-dir ${QMCLIENT_RELEASE_DIRECTORY}
+      --package-name ${CPACK_PACKAGE_FILE_NAME}
+      --portable-package-name ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-portable-${CPACK_SYSTEM_NAME}
+      --version ${CPACK_PACKAGE_VERSION}
+      --jobs ${QMCLIENT_RELEASE_JOBS}
+    DEPENDS package_7z
+    VERBATIM
+    USES_TERMINAL
+  )
 endif()
 
 add_custom_target(package_all DEPENDS ${PACKAGE_TARGETS})

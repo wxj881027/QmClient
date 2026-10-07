@@ -9,7 +9,7 @@
 #include <game/client/components/qmclient/score_hud_layout.h>
 #include <game/client/components/qmclient/scoreboard_team_modes.h>
 #include <game/client/components/scoreboard.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/map/render_map.h>
 #include <game/mapitems.h>
 

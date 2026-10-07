@@ -8,7 +8,6 @@
 #include <base/thread.h>
 
 #include <algorithm>
-#include <chrono>
 
 IJob::IJob() :
 	m_pNext(nullptr),
@@ -107,6 +106,9 @@ void CJobPool::RunLoop()
 			{
 				const CLockScope LockScope(m_LockRunning);
 				m_RunningJobs.push_back(pJob);
+				// 注册与关闭可能交错，补发取消避免漏掉刚取出的作业。
+				if(m_Shutdown)
+					pJob->Abort();
 			}
 			pJob->Run();
 			{
@@ -130,13 +132,6 @@ void CJobPool::RunLoop()
 			break;
 		}
 	}
-
-	// Notify Shutdown() that this worker thread is about to exit.
-	{
-		std::lock_guard<std::mutex> Lock(m_ShutdownWaitMutex);
-		m_ActiveThreadCount.fetch_sub(1, std::memory_order_release);
-	}
-	m_ShutdownWaitCv.notify_all();
 }
 
 void CJobPool::Init(int NumThreads)
@@ -152,7 +147,6 @@ void CJobPool::Init(int NumThreads)
 	// start worker threads
 	char aName[16]; // unix kernel length limit
 	m_vpThreads.reserve(NumThreads);
-	m_ActiveThreadCount.store(NumThreads, std::memory_order_release);
 	for(int i = 0; i < NumThreads; i++)
 	{
 		str_format(aName, sizeof(aName), "CJobPool W%d", i);
@@ -210,27 +204,11 @@ void CJobPool::Shutdown()
 		sphore_signal(&m_Semaphore);
 	}
 
-	// Wait up to 5 seconds for all worker threads to finish.
-	// If a non-abortable job is still running after the timeout, we detach the
-	// remaining threads instead of blocking the shutdown sequence indefinitely.
-	// The process is about to exit anyway, so the OS will clean up the threads.
-	{
-		std::unique_lock<std::mutex> Lock(m_ShutdownWaitMutex);
-		const bool AllDone = m_ShutdownWaitCv.wait_for(Lock, std::chrono::seconds(5),
-			[this]() { return m_ActiveThreadCount.load(std::memory_order_acquire) == 0; });
-		if(!AllDone)
-		{
-			log_warn("jobpool", "shutdown timed out after 5 seconds, %d worker thread(s) did not finish in time, detaching",
-				m_ActiveThreadCount.load(std::memory_order_relaxed));
-		}
-	}
-
-	// Detach all threads. Threads that already exited are simply reclaimed;
-	// threads that are still running will continue until they finish and
-	// have their resources freed automatically.
+	// 作业可能持有引擎对象，线程不能在所属对象析构之后继续运行。
+	// 等待真实结束；客户端退出看门狗负责不可取消作业卡死时的进程级兜底。
 	for(void *pThread : m_vpThreads)
 	{
-		thread_detach(pThread);
+		thread_wait(pThread);
 	}
 
 	m_vpThreads.clear();
@@ -239,23 +217,17 @@ void CJobPool::Shutdown()
 
 void CJobPool::Add(std::shared_ptr<IJob> pJob)
 {
+	// 与关闭同步检查和发信号，避免向已销毁的信号量提交作业。
+	const CLockScope LockScope(m_Lock);
 	if(m_Shutdown)
 	{
-		// no jobs are accepted when the job pool is already shutting down
 		pJob->Abort();
 		return;
 	}
-
-	// add job to queue
-	{
-		const CLockScope LockScope(m_Lock);
-		if(m_pLastJob)
-			m_pLastJob->m_pNext = pJob;
-		m_pLastJob = std::move(pJob);
-		if(!m_pFirstJob)
-			m_pFirstJob = m_pLastJob;
-	}
-
-	// signal a worker thread that a job is available
+	if(m_pLastJob)
+		m_pLastJob->m_pNext = pJob;
+	m_pLastJob = std::move(pJob);
+	if(!m_pFirstJob)
+		m_pFirstJob = m_pLastJob;
 	sphore_signal(&m_Semaphore);
 }

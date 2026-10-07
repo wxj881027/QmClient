@@ -86,3 +86,20 @@ TEST(QmUpdateArguments, PermissionDetectionUsesStableMarker)
 	EXPECT_FALSE(QmUpdate::IsPermissionError("Access is denied"));
 	EXPECT_FALSE(QmUpdate::IsPermissionError("permission denied"));
 }
+
+TEST(QmUpdateArguments, NormalAndPortableSevenZipRequireMatchingSignatureAndManifestPaths)
+{
+	for(const auto &Stem : {L"QmClient-windows", L"QmClient-windows-portable"})
+	{
+		QmUpdate::SArguments Arguments;
+		ASSERT_TRUE(QmUpdate::ParseArguments(RequiredArguments(L"42"), Arguments));
+		const auto Directory = std::filesystem::path(Arguments.m_Package).parent_path();
+		Arguments.m_Package = (Directory / (std::wstring(Stem) + L".7z.42.tmp")).wstring();
+		Arguments.m_PackageSignature = (Directory / (std::wstring(Stem) + L".7z.sig.42.tmp")).wstring();
+		Arguments.m_Manifest = (Directory / (std::wstring(Stem) + L"-7z-update.json.42.tmp")).wstring();
+		Arguments.m_ManifestSignature = (Directory / (std::wstring(Stem) + L"-7z-update.json.sig.42.tmp")).wstring();
+		EXPECT_TRUE(QmUpdate::ValidateSessionPaths(Arguments, UpdaterPath(42)));
+		Arguments.m_ManifestSignature = (Directory / L"QmClient-windows-update.json.sig.42.tmp").wstring();
+		EXPECT_FALSE(QmUpdate::ValidateSessionPaths(Arguments, UpdaterPath(42)));
+	}
+}

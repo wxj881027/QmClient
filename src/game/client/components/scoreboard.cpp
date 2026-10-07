@@ -26,7 +26,7 @@
 #include <game/client/components/qmclient/scoreboard_skin.h>
 #include <game/client/components/statboard.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
@@ -34,6 +34,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <utility>
 #include <vector>
 
 namespace
@@ -1403,7 +1404,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				m_ScoreboardPopupContext.m_ClientId = ClientId;
 				m_ScoreboardPopupContext.m_IsLocal = GameClient()->m_aLocalIds[0] == ClientId ||
 								     (Client()->DummyConnected() && GameClient()->m_aLocalIds[1] == ClientId);
-				Ui()->DoPopupMenu(&m_ScoreboardPopupContext, Ui()->MouseX(), Ui()->MouseY(), m_ScoreboardPopupContext.m_IsLocal ? 110.0f : 145.0f, m_ScoreboardPopupContext.m_IsLocal ? 58.5f : 87.5f, &m_ScoreboardPopupContext, PopupScoreboard);
+				Ui()->DoPopupMenu(&m_ScoreboardPopupContext, Ui()->MouseX(), Ui()->MouseY(), m_ScoreboardPopupContext.m_IsLocal ? 110.0f : 210.0f, m_ScoreboardPopupContext.m_IsLocal ? 58.5f : 87.5f, &m_ScoreboardPopupContext, PopupScoreboard);
 			}
 
 			if(Ui()->HotItem() == &ClientData ||
@@ -1582,9 +1583,27 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 			if(ClientId >= 0 && (GameClient()->m_aClients[ClientId].m_Foe || GameClient()->m_aClients[ClientId].m_ChatIgnore))
 			{
+				// 保留文字游标的测量和省略规则，实际图标走统一图集绘制。
+				const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
 				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-				TextRender()->TextEx(&Cursor, FontIcons::FONT_ICON_COMMENT_SLASH);
-				TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+				CTextCursor IconCursor = Cursor;
+				IconCursor.m_Flags &= ~TEXTFLAG_RENDER;
+				TextRender()->TextEx(&IconCursor, FontIcons::FONT_ICON_COMMENT_SLASH);
+				TextRender()->SetFontPreset(PreviousPreset);
+				if(IconCursor.m_GlyphCount > Cursor.m_GlyphCount && !IconCursor.m_Truncated)
+				{
+					const CUIRect IconRect = {Cursor.m_X, Cursor.m_Y, IconCursor.m_X - Cursor.m_X, FontSize};
+					Ui()->DrawQmIcon(IconRect, EQmIcon::COMMENT_SLASH, FontIcons::FONT_ICON_COMMENT_SLASH, NameColor);
+				}
+				else if(IconCursor.m_Truncated)
+				{
+					// 连单个图标都放不下时，仍由原文字布局输出省略号。
+					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+					TextRender()->TextEx(&Cursor, FontIcons::FONT_ICON_COMMENT_SLASH);
+					TextRender()->SetFontPreset(PreviousPreset);
+				}
+				IconCursor.m_Flags = Cursor.m_Flags;
+				Cursor = std::move(IconCursor);
 			}
 
 			// TClient
@@ -2321,7 +2340,7 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 
 	if(!pPopupContext->m_IsLocal)
 	{
-		const int ActionsNum = 4;
+		const int ActionsNum = 6;
 		const float ActionSize = 25.0f;
 		const float ActionSpacing = minimum(17.5f, (View.w - (ActionsNum * ActionSize)) / (ActionsNum - 1));
 		const float ActionsWidth = ActionsNum * ActionSize + (ActionsNum - 1) * ActionSpacing;
@@ -2395,10 +2414,19 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 		}
 		pScoreboard->GameClient()->m_Tooltips.DoToolTip(&pPopupContext->m_EmoticonAction, &Action, Client.m_EmoticonIgnore ? Localize("Unmute emoticons") : Localize("Mute emoticons"));
 
+		// 复制玩家名字：把目标玩家名写入剪贴板，不改任何配置；与 ESC 玩家页 Copy name 同源。
 		Action = CUiV2LegacyAdapter::ToCUIRect(vActions[3].m_Box);
+		const bool CanCopyName = Client.m_aName[0] != '\0';
+		if(pUi->DoButton_FontIcon(&pPopupContext->m_CopyNameAction, FontIcons::FONT_ICON_USER, 0, &Action, BUTTONFLAG_LEFT, ActionCorners, CanCopyName) && CanCopyName)
+		{
+			pScoreboard->Input()->SetClipboardText(Client.m_aName);
+		}
+		pScoreboard->GameClient()->m_Tooltips.DoToolTip(&pPopupContext->m_CopyNameAction, &Action, Localize("Copy name"));
+
+		Action = CUiV2LegacyAdapter::ToCUIRect(vActions[4].m_Box);
 		const bool Sixup = pScoreboard->Client()->IsSixup();
 		const bool CanCopySkin = !Sixup && pScoreboard->Client()->State() == IClient::STATE_ONLINE;
-		if(pUi->DoButton_FontIcon(&pPopupContext->m_CopySkinAction, FontIcons::FONT_ICON_COPY, 0, &Action, BUTTONFLAG_LEFT, ActionCorners, CanCopySkin) && CanCopySkin)
+		if(pUi->DoButton_FontIcon(&pPopupContext->m_CopySkinAction, FontIcons::FONT_ICON_EYE_DROPPER, 0, &Action, BUTTONFLAG_LEFT, ActionCorners, CanCopySkin) && CanCopySkin)
 		{
 			if(QmCopyScoreboardSkin(g_Config, Sixup, Client.m_aSkinName, Client.m_UseCustomColor, Client.m_ColorBody, Client.m_ColorFeet))
 			{
@@ -2408,16 +2436,25 @@ CUi::EPopupMenuFunctionResult CScoreboard::PopupScoreboard(void *pContext, CUIRe
 					pScoreboard->GameClient()->SendInfo(false);
 			}
 		}
+		char aSkinName[128];
+		str_format(aSkinName, sizeof(aSkinName), Localize("Skin: %s"), Client.m_aSkinName);
 		char aSkinTooltip[256];
 		if(Sixup)
 			str_copy(aSkinTooltip, Localize("Skin copying is only available for 0.6 skins"));
 		else
-		{
-			char aSkinName[128];
-			str_format(aSkinName, sizeof(aSkinName), Localize("Skin: %s"), Client.m_aSkinName);
 			str_format(aSkinTooltip, sizeof(aSkinTooltip), "%s\n%s", Localize("Copy skin"), aSkinName);
-		}
 		pScoreboard->GameClient()->m_Tooltips.DoToolTip(&pPopupContext->m_CopySkinAction, &Action, aSkinTooltip, 240.0f);
+
+		// 复制皮肤 ID：只把皮肤名写入剪贴板，不改动自身皮肤配置；0.7 玩家同样可用（其 m_aSkinName 为 body 部件名）。
+		Action = CUiV2LegacyAdapter::ToCUIRect(vActions[5].m_Box);
+		const bool CanCopySkinId = Client.m_aSkinName[0] != '\0';
+		if(pUi->DoButton_FontIcon(&pPopupContext->m_CopySkinIdAction, FontIcons::FONT_ICON_COPY, 0, &Action, BUTTONFLAG_LEFT, ActionCorners, CanCopySkinId) && CanCopySkinId)
+		{
+			pScoreboard->Input()->SetClipboardText(Client.m_aSkinName);
+		}
+		char aSkinIdTooltip[256];
+		str_format(aSkinIdTooltip, sizeof(aSkinIdTooltip), "%s\n%s", Localize("Copy skin ID"), aSkinName);
+		pScoreboard->GameClient()->m_Tooltips.DoToolTip(&pPopupContext->m_CopySkinIdAction, &Action, aSkinIdTooltip, 240.0f);
 	}
 
 	const float ButtonSize = 17.5f;

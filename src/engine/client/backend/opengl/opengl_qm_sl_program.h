@@ -34,17 +34,15 @@ public:
 	int m_LocData;
 };
 
-class CGLSLTexturedMsdfProgram : public CGLSLTWProgram
+class CGLSLProceduralRingProgram : public CGLSLTWProgram
 {
 public:
-	CGLSLTexturedMsdfProgram() :
-		m_LocParams(-1),
-		m_LocSecondaryColor(-1)
+	CGLSLProceduralRingProgram() :
+		m_LocParams(-1)
 	{
 	}
 
 	int m_LocParams;
-	int m_LocSecondaryColor;
 };
 
 class CGLSLGaussianBlurProgram : public CGLSLTWProgram

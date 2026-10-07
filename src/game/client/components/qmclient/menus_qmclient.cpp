@@ -64,7 +64,7 @@
 #include <game/client/components/tclient/bindwheel.h>
 #include <game/client/components/tclient/trails.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/render.h>
 #include <game/client/skin.h>
 #include <game/client/ui.h>
@@ -1937,6 +1937,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
 	const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
 	const bool IsMymemoryBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0;
+	const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 	// MyMemory 免注册说明
@@ -1945,6 +1946,23 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		Content.HSplitTop(SmallSize, &Row, &Content);
 		Row.VMargin(LabelWidth, &Row);
 		Ui()->DoLabel(&Row, Localize("MyMemory needs no registration (anonymous daily quota)"), SmallSize, TEXTALIGN_ML);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+
+	// DeepL 说明与 API Key 输入
+	if(IsDeeplBackend)
+	{
+		Content.HSplitTop(SmallSize, &Row, &Content);
+		Row.VMargin(LabelWidth, &Row);
+		Ui()->DoLabel(&Row, Localize("DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)"), SmallSize, TEXTALIGN_ML);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
+		RenderLabel("qmclient-translate-deepl-key", &LabelCol, Localize("API key"), BodySize);
+		static CLineInput s_TranslateDeeplKey(g_Config.m_QmTranslateDeeplKey, sizeof(g_Config.m_QmTranslateDeeplKey));
+		s_TranslateDeeplKey.SetHidden(true);
+		ui_widget::InputField(TextInputCtx, &s_TranslateDeeplKey, ControlCol, "", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 
@@ -4314,9 +4332,12 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 			const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0;
 			const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
 			const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
+			const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
 			float Height = Rows(9.0f) + LineHeight * 1.6f + LineSpacing * 1.35f;
 			if(IsFtapiBackend)
 				Height += Row() + LineHeight * 0.8f + LineSpacing;
+			if(IsDeeplBackend)
+				Height += Row() + LineHeight * 0.8f + LineSpacing * 1.5f;
 			if(IsTencentCloudBackend)
 				Height += Row() * 4.0f;
 			else if(IsLibreTranslateBackend)
@@ -4900,7 +4921,6 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		Ctx.m_pTooltips = &GameClient()->m_Tooltips;
 		Ctx.m_pAnim = PrewarmOnly ? nullptr : &GameClient()->UiRuntimeV2()->AnimRuntime();
 		Ctx.m_pTree = PrewarmOnly ? nullptr : &GameClient()->UiRuntimeV2()->Tree();
-		Ctx.m_pIconManager = GameClient()->QmIconManager();
 		Ctx.m_ScopeHash = MakeUiScopeHash("qm_ui_dogfood");
 		Ctx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
 		RenderQmUiDogfood(Ctx, MainView);
@@ -5548,4 +5568,214 @@ void CMenus::RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeigh
 	RenderValue("qmclient-gores-drown-board-max-players", "Players shown", &s_QmGoresDrownBoardMaxPlayersInputId, &g_Config.m_QmGoresDrownBoardMaxPlayers, 1, 16);
 	RenderValue("qmclient-gores-drown-board-opacity", "Card opacity", &s_QmGoresDrownBoardOpacityInputId, &g_Config.m_QmGoresDrownBoardOpacity, 0, 100, "%");
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoardShowTee, "Show player Tee", Localize("Show player Tee"), &g_Config.m_QmGoresDrownBoardShowTee);
+}
+
+void CMenus::RenderQmUpdatePopup(CUIRect Screen)
+{
+	auto &Update = GameClient()->m_TClient;
+	const int State = Update.IsUpdateChecking() ? 1 : Update.IsUpdateDownloading() ? 2 :
+						  Update.m_UpdateReady                 ? 3 :
+						  Update.m_UpdateCheckFailed           ? 4 :
+											 0;
+	if(State != m_QmUpdatePopupState)
+	{
+		m_QmUpdatePopupState = State;
+		log_info("qm-update", "popup_state=%d", State);
+	}
+	const IUiContext Ctx = SettingsUiContext("qm_update_popup");
+	const float Scale = std::clamp(g_Config.m_QmUiScale / 100.0f, 0.5f, 2.0f);
+	const float Padding = std::min(ui_token::spacing::LG * Scale, Screen.w * 0.04f);
+	const float Gap = std::min(ui_token::spacing::MD * Scale, Screen.w * 0.02f);
+	const float BodySize = ui_token::font::BODY * Scale;
+	const float TitleSize = ui_token::font::TITLE * Scale;
+	Screen.Draw(ui_token::color::SURFACE_OVERLAY, IGraphics::CORNER_NONE, 0.0f);
+	CUIRect Panel = Screen;
+	Panel.w = std::min(600.0f * Scale, std::max(0.0f, Screen.w - 2 * Padding));
+	Panel.h = std::min(350.0f * Scale, std::max(0.0f, Screen.h - 2 * Padding));
+	Panel.x += (Screen.w - Panel.w) * 0.5f;
+	Panel.y += (Screen.h - Panel.h) * 0.5f;
+	DrawRoundedSurface(Ctx, Panel, ui_token::color::SURFACE_ELEVATED, ui_token::color::BORDER_SUBTLE, ui_token::radius::CARD);
+	CUIRect Content;
+	Panel.Margin(Padding, &Content);
+	CUIRect Row;
+	Content.HSplitTop(TitleSize * 1.5f, &Row, &Content);
+	Ui()->DoLabel(&Row, Localize("Update"), TitleSize, TEXTALIGN_ML);
+	CUIRect Buttons;
+	Content.HSplitBottom(BodySize * 2.4f, &Content, &Buttons);
+	Content.HSplitBottom(Gap, &Content, nullptr);
+	// 下载能力固定在操作区上方，说明可独立滚动，缺包提示不会被长说明挤掉。
+#if defined(CONF_QMCLIENT_PORTABLE)
+	constexpr bool QmUpdatePortableBuild = true;
+#else
+	constexpr bool QmUpdatePortableBuild = false;
+#endif
+	if(Update.m_FetchedQmClientUpdateInfo)
+	{
+		const bool PackageAvailable = Update.m_UpdateRelease.m_PackageAvailable || Update.m_UpdateUseSetup;
+		const char *pPackage = PackageAvailable      ? Localize("Update package available") :
+				       QmUpdatePortableBuild ? Localize("No downloadable portable package for this version") :
+							       Localize("No compatible Windows update package for this version");
+		CUIRect Availability;
+		Content.HSplitBottom(QmWrappedLineCount(TextRender(), BodySize, pPackage, std::max(1.0f, Content.w)) * BodySize * 1.6f + Gap, &Content, &Availability);
+		Ui()->DoLabel(&Availability, pPackage, BodySize, TEXTALIGN_TL, {.m_MaxWidth = Availability.w});
+	}
+	static CScrollRegion s_ScrollRegion;
+	if(m_QmUpdateScrollReset)
+	{
+		s_ScrollRegion.Reset();
+		m_QmUpdateScrollReset = false;
+	}
+	CScrollRegionParams ScrollParams;
+	ScrollParams.m_ScrollUnit = BodySize * 3;
+	vec2 ScrollOffset;
+	s_ScrollRegion.Begin(&Content, &ScrollOffset, &ScrollParams);
+	Content.x += ScrollOffset.x;
+	Content.y += ScrollOffset.y;
+	const auto Label = [&](const CUIRect &Rect, const char *pText, float FontSize, int Alignment) {
+		if(s_ScrollRegion.AddRect(Rect))
+			Ui()->DoLabel(&Rect, pText, FontSize, Alignment, {.m_MaxWidth = Rect.w});
+	};
+	const char *pStatus = Localize("Update");
+	if(Update.m_UpdateCheckFailed)
+		pStatus = Update.m_UpdateNetworkError ? Localize("Network error") : Localize("Update failed. Please try again");
+	else if(Update.m_UpdateReady)
+		pStatus = Localize("The update is ready and will be installed when you exit.");
+	else if(Update.IsUpdateChecking())
+		pStatus = Localize("(Fetching Update Info)");
+	else if(Update.IsUpdateDownloading())
+		pStatus = Localize("Downloading update...");
+	else if(Update.NeedQmClientUpdate())
+		pStatus = Localize("(Update required)");
+	else if(Update.m_FetchedQmClientUpdateInfo)
+		pStatus = Localize("You are already on the latest version");
+	Content.HSplitTop(QmWrappedLineCount(TextRender(), BodySize, pStatus, std::max(1.0f, Content.w)) * BodySize * 1.6f + Gap, &Row, &Content);
+	Label(Row, pStatus, BodySize, TEXTALIGN_TL);
+	char aVersion[128];
+	const bool DifferentVersion = Update.m_FetchedQmClientUpdateInfo && str_comp(CLIENT_RELEASE_VERSION, Update.m_UpdateRelease.m_aVersion) != 0;
+	str_format(aVersion, sizeof(aVersion), "QmClient %s%s%s", CLIENT_RELEASE_VERSION,
+		DifferentVersion ? " → " : "", DifferentVersion ? Update.m_UpdateRelease.m_aVersion : "");
+	Content.HSplitTop(BodySize * 1.7f, &Row, &Content);
+	Label(Row, aVersion, BodySize, TEXTALIGN_ML);
+	if(Update.IsUpdateDownloading() && Update.m_pUpdatePackageTask)
+	{
+		const auto &Task = Update.m_pUpdatePackageTask;
+		char aProgress[128];
+		str_format(aProgress, sizeof(aProgress), "%.1f / %.1f MiB (%d%%)", Task->Current() / 1048576.0, Task->Size() / 1048576.0, Task->Progress());
+		Content.HSplitTop(BodySize * 1.7f, &Row, &Content);
+		Label(Row, aProgress, BodySize, TEXTALIGN_ML);
+		CUIRect Bar;
+		Content.HSplitTop(std::max(2.0f, Gap * 0.5f), &Bar, &Content);
+		if(s_ScrollRegion.AddRect(Bar))
+		{
+			DrawRoundedSurface(Ctx, Bar, ui_token::color::BORDER_SUBTLE, ColorRGBA(), ui_token::radius::CARD);
+			Bar.w *= std::clamp(Task->Progress() / 100.0f, 0.0f, 1.0f);
+			DrawRoundedSurface(Ctx, Bar, ui_token::color::ACCENT_PRIMARY_DIM, ColorRGBA(), ui_token::radius::CARD);
+		}
+	}
+	const auto *pSource = Update.IsUpdateChecking() ? Update.m_UpdateMetadataRequest.Source() : Update.m_UpdateDownloadAttempt.Current();
+	if(pSource && (Update.IsUpdateChecking() || Update.IsUpdateDownloading()))
+	{
+		Content.HSplitTop(BodySize * 1.7f, &Row, &Content);
+		Label(Row, pSource->m_Prefix.empty() ? "GitHub" : pSource->m_Prefix.c_str(), BodySize, TEXTALIGN_ML);
+	}
+	if(Update.m_UpdateCheckFailed && Update.m_aUpdateError[0])
+	{
+		Content.HSplitTop(QmWrappedLineCount(TextRender(), BodySize, Update.m_aUpdateError, std::max(1.0f, Content.w)) * BodySize * 1.6f + Gap, &Row, &Content);
+		Label(Row, Update.m_aUpdateError, BodySize, TEXTALIGN_TL);
+	}
+	if(Update.m_FetchedQmClientUpdateInfo)
+	{
+		Content.HSplitTop(BodySize * 1.8f, &Row, &Content);
+		Label(Row, Localize("Release notes"), BodySize, TEXTALIGN_ML);
+		// 按元数据/字体/宽度版本缓存段落和测量；每帧只绘制滚动区域内的段落。
+		struct SNoteParagraph
+		{
+			std::string m_Text;
+			float m_FontScale = 1;
+			float m_Height = 0;
+		};
+		static std::vector<SNoteParagraph> s_vNotes;
+		static uint64_t s_NotesRevision = UINT64_MAX, s_FontRevision = UINT64_MAX;
+		static float s_NotesWidth = -1, s_NotesSize = -1;
+		if(s_NotesRevision != Update.m_UpdateInfoRevision)
+		{
+			s_vNotes.clear();
+			for(const auto &Block : qm_md::Parse(Update.m_UpdateRelease.m_Notes.c_str()))
+			{
+				SNoteParagraph Paragraph;
+				if(Block.m_Kind == qm_md::EBlockKind::BULLET)
+					Paragraph.m_Text = "• ";
+				else if(Block.m_Kind == qm_md::EBlockKind::NUMBERED)
+					Paragraph.m_Text = std::to_string(Block.m_Number) + ". ";
+				for(const auto &Span : Block.m_vSpans)
+					Paragraph.m_Text += Span.m_Text;
+				// 发布说明中的链接与设置标记仅作文本，不执行第三方动作。
+				if(Block.m_Kind == qm_md::EBlockKind::SETTINGS_BUTTON)
+					Paragraph.m_Text = Block.m_SettingsLabel;
+				if(Block.m_Kind == qm_md::EBlockKind::HEADING1 || Block.m_Kind == qm_md::EBlockKind::HEADING2 || Block.m_Kind == qm_md::EBlockKind::HEADING3)
+					Paragraph.m_FontScale = 1.15f;
+				if(!Paragraph.m_Text.empty())
+					s_vNotes.push_back(std::move(Paragraph));
+			}
+			s_NotesRevision = Update.m_UpdateInfoRevision;
+			s_NotesWidth = -1;
+		}
+		if(s_vNotes.empty())
+		{
+			Content.HSplitTop(BodySize * 1.7f, &Row, &Content);
+			Label(Row, Localize("No release notes provided"), BodySize, TEXTALIGN_TL);
+		}
+		else
+		{
+			if(s_NotesWidth != Content.w || s_NotesSize != BodySize || s_FontRevision != TextRender()->GlyphAtlasRevision())
+			{
+				for(auto &Paragraph : s_vNotes)
+				{
+					const float Size = BodySize * Paragraph.m_FontScale;
+					Paragraph.m_Height = QmWrappedLineCount(TextRender(), Size, Paragraph.m_Text.c_str(), std::max(1.0f, Content.w)) * Size * 1.6f + Gap * 0.5f;
+				}
+				s_NotesWidth = Content.w;
+				s_NotesSize = BodySize;
+				s_FontRevision = TextRender()->GlyphAtlasRevision();
+			}
+			for(const auto &Paragraph : s_vNotes)
+			{
+				Content.HSplitTop(Paragraph.m_Height, &Row, &Content);
+				Label(Row, Paragraph.m_Text.c_str(), BodySize * Paragraph.m_FontScale, TEXTALIGN_TL);
+			}
+		}
+	}
+	s_ScrollRegion.End();
+	// 按可用宽度均分按钮；长译文由共享按钮的文本适配处理。
+	CUIRect Action, Manual, Close;
+	const float ButtonWidth = std::max(0.0f, (Buttons.w - 2 * Gap) / 3);
+	Buttons.VSplitLeft(ButtonWidth, &Action, &Buttons);
+	Buttons.VSplitLeft(Gap, nullptr, &Buttons);
+	Buttons.VSplitLeft(ButtonWidth, &Manual, &Buttons);
+	Buttons.VSplitLeft(Gap, nullptr, &Close);
+	static CButtonContainer s_Action, s_Manual, s_Close;
+	const bool Busy = Update.IsUpdateChecking() || Update.IsUpdateDownloading();
+	// 缺包时仍可重新检查发布者后补的附件；下载能力由生产包选择器阻断。
+	const char *pAction = Busy ? Localize("Cancel") : Update.m_UpdateReady                                      ? Localize("Quit") :
+						  Update.m_FetchedQmClientUpdateInfo && !Update.m_UpdateCheckFailed ? Localize("Check for updates") :
+														      Localize("Retry");
+	if(ui_widget::PrimaryButton(Ctx, &s_Action, pAction, Action))
+	{
+		if(Busy)
+		{
+			Update.CancelQmClientUpdate();
+			m_Popup = POPUP_NONE;
+		}
+		else if(Update.m_UpdateReady)
+			Client()->Quit();
+		else
+			Update.RequestQmClientUpdateCheckAndUpdate();
+	}
+	if(ui_widget::SecondaryButton(Ctx, &s_Manual, "GitHub", Manual))
+		Client()->ViewLink(qm_update::MANUAL_DOWNLOAD_URL);
+	if(ui_widget::SecondaryButton(Ctx, &s_Close, Localize("Close"), Close) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+	{
+		Update.m_UpdatePopupRequested = false;
+		m_Popup = POPUP_NONE;
+	}
 }

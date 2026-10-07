@@ -496,6 +496,7 @@ class Client(Runnable):
 				f"conn_timeout {test_env.runner.conn_timeout}",
 			]
 			+ extra_args,
+			extra_env_vars={"QMCLIENT_TEST_STORAGE_ROOT": os.path.abspath(test_env.tmp_dir)} if os.name == "nt" else {},
 		)
 		test_env.num_clients += 1
 

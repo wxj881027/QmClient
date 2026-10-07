@@ -21,6 +21,7 @@
 #include <game/client/components/spectator.h>
 #include <game/client/components/voting.h>
 #include <game/client/gameclient.h>
+#include <game/client/qm_icon_label_runs.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -270,6 +271,61 @@ bool CTouchControls::CTouchButton::IsVisible() const
 	return m_VisibilityCached;
 }
 
+// ICON 标签可以包含图标和编号，存档仍只保存原字符串与 label-type。
+void CTouchControls::RenderButtonLabel(const CButtonLabel &Label, const CUIRect &Rect, float FontSize, int Align, const SLabelProperties &Props) const
+{
+	if(Label.m_Type != CButtonLabel::EType::ICON)
+	{
+		const char *pText = Label.m_Type == CButtonLabel::EType::LOCALIZED ? Localize(Label.m_pLabel) : Label.m_pLabel;
+		Ui()->DoLabel(&Rect, pText, FontSize, Align, Props);
+		return;
+	}
+	if(Label.m_pLabel == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f || FontSize <= 0.0f)
+		return;
+
+	const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	// 两次调用无分配分段器完成测量和绘制，正文与图标共享布局尺寸。
+	float Width = 0.0f;
+	QmVisitIconLabelRuns(Label.m_pLabel, [&](const SQmIconLabelRun &Run) {
+		Width += Run.m_IsIcon ? FontSize : TextRender()->TextWidth(FontSize, Run.m_pText, Run.m_Length);
+	});
+	if(Width > 0.0f)
+	{
+		const float Size = minimum(FontSize, minimum(Rect.h, FontSize * Rect.w / Width));
+		Width *= Size / FontSize;
+		float X = Rect.x;
+		if(Align & TEXTALIGN_CENTER)
+			X += (Rect.w - Width) / 2.0f;
+		else if(Align & TEXTALIGN_RIGHT)
+			X += Rect.w - Width;
+		float Y = Rect.y;
+		if(Align & TEXTALIGN_MIDDLE)
+			Y += (Rect.h - Size) / 2.0f;
+		else if(Align & TEXTALIGN_BOTTOM)
+			Y += Rect.h - Size;
+		QmVisitIconLabelRuns(Label.m_pLabel, [&](const SQmIconLabelRun &Run) {
+			if(Run.m_IsIcon)
+			{
+				char aGlyph[5];
+				mem_copy(aGlyph, Run.m_pText, Run.m_Length);
+				aGlyph[Run.m_Length] = '\0';
+				Ui()->DrawQmIconAt(X, Y, Size, Run.m_Icon, Run.m_pFallback != nullptr ? Run.m_pFallback : aGlyph, TextRender()->GetTextColor());
+				X += Size;
+			}
+			else
+			{
+				CTextCursor Cursor;
+				Cursor.SetPosition(vec2(X, Y));
+				Cursor.m_FontSize = Size;
+				TextRender()->TextEx(&Cursor, Run.m_pText, Run.m_Length);
+				X = Cursor.m_X;
+			}
+		});
+	}
+	TextRender()->SetFontPreset(PreviousPreset);
+}
+
 // TODO: Optimization: Use text and quad containers for rendering
 void CTouchControls::CTouchButton::Render(std::optional<bool> Selected, std::optional<CUnitRect> Rect) const
 {
@@ -313,19 +369,7 @@ void CTouchControls::CTouchButton::Render(std::optional<bool> Selected, std::opt
 	ScreenRect.Margin(10.0f, &LabelRect);
 	SLabelProperties LabelProps;
 	LabelProps.m_MaxWidth = LabelRect.w;
-	if(LabelData.m_Type == CButtonLabel::EType::ICON)
-	{
-		m_pTouchControls->TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		m_pTouchControls->TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-		m_pTouchControls->Ui()->DoLabel(&LabelRect, LabelData.m_pLabel, FontSize, TEXTALIGN_MC, LabelProps);
-		m_pTouchControls->TextRender()->SetRenderFlags(0);
-		m_pTouchControls->TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-	}
-	else
-	{
-		const char *pLabel = LabelData.m_Type == CButtonLabel::EType::LOCALIZED ? Localize(LabelData.m_pLabel) : LabelData.m_pLabel;
-		m_pTouchControls->Ui()->DoLabel(&LabelRect, pLabel, FontSize, TEXTALIGN_MC, LabelProps);
-	}
+	m_pTouchControls->RenderButtonLabel(LabelData, LabelRect, FontSize, TEXTALIGN_MC, LabelProps);
 }
 
 void CTouchControls::CTouchButton::WriteToConfiguration(CJsonWriter *pWriter)
@@ -432,7 +476,7 @@ void CTouchControls::CPredefinedTouchButtonBehavior::WriteToConfiguration(CJsonW
 // Ingame menu button: always opens ingame menu.
 CTouchControls::CButtonLabel CTouchControls::CIngameMenuTouchButtonBehavior::GetLabel() const
 {
-	return {CButtonLabel::EType::ICON, "\xEF\x85\x8E"};
+	return {CButtonLabel::EType::ICON, FontIcons::FONT_ICON_GEAR};
 }
 
 void CTouchControls::CIngameMenuTouchButtonBehavior::OnDeactivate(bool ByFinger)
@@ -451,11 +495,11 @@ CTouchControls::CExtraMenuTouchButtonBehavior::CExtraMenuTouchButtonBehavior(int
 {
 	if(m_Number == 0)
 	{
-		str_copy(m_aLabel, "\xEF\x83\x89");
+		str_copy(m_aLabel, FontIcons::FONT_ICON_LIST_UL);
 	}
 	else
 	{
-		str_format(m_aLabel, sizeof(m_aLabel), "\xEF\x83\x89%d", m_Number + 1);
+		str_format(m_aLabel, sizeof(m_aLabel), "%s%d", FontIcons::FONT_ICON_LIST_UL, m_Number + 1);
 	}
 }
 
@@ -463,7 +507,7 @@ CTouchControls::CButtonLabel CTouchControls::CExtraMenuTouchButtonBehavior::GetL
 {
 	if(m_Active && time_get_nanoseconds() - m_ActivationStartTime >= LONG_TOUCH_DURATION)
 	{
-		return {CButtonLabel::EType::ICON, "\xEF\x95\x90"};
+		return {CButtonLabel::EType::ICON, FontIcons::FONT_ICON_GEAR};
 	}
 	else
 	{

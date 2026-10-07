@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == 自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）
 
-Automatically launch Steam when the client is started externally
-== 客户端从外部启动时自动启动 Steam
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== 客户端从外部启动时自动启动 Steam，用于 Steam 统计游戏时长
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 完赛后自动回到 0 队（仅未锁定时）
@@ -1855,6 +1855,9 @@ Cheats are enabled on this server
 
 check ddnet-saves.txt in config_directory.
 == 请查看 config_directory 下的 ddnet-saves.txt。
+
+Check for updates
+== 检查更新
 
 Check if voice server address is reachable
 == 建议检查语音服务器地址是否可用
@@ -2516,6 +2519,15 @@ Copy name option color
 Copy skin
 == 复制皮肤
 
+Copy skin from dummy
+== 复制分身皮肤
+
+Copy skin from player
+== 复制玩家皮肤
+
+Copy skin ID
+== 复制皮肤 ID
+
 Copy skin option color
 == 复制皮肤选项颜色
 
@@ -2950,6 +2962,15 @@ Deep unfreeze tile outline color
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly 模式（0=正常，1=DF，2=HDF，3=自定义）
+
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free：每月 50 万字符（在 deepl.com 注册；免费密钥以 :fx 结尾）
+
+DeepL API Key (free keys end with :fx)
+== DeepL API 密钥（免费密钥以 :fx 结尾）
 
 DeepSeek
 == DeepSeek
@@ -3568,12 +3589,6 @@ dumps all sqlservers readservers = r, writeservers = w
 
 Dumps the antibot status
 == 导出反机器人状态
-
-Duotone
-== 双色调
-
-Duotone icon secondary color alpha migration completed flag
-== 双色调图标次要颜色 Alpha 迁移完成标记
 
 Duplicate
 == 复制
@@ -4348,9 +4363,6 @@ Failed
 
 Failed saving the replay!
 == 保存回放失败！
-
-Failed to check for updates
-== 检查更新失败
 
 Failed to copy main asset image.
 == 复制主要资源图片失败。
@@ -6086,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == 上次成功同步：%s
 
+Last verified approved update source
+== 上次验证成功的已批准更新源
+
 Latency
 == 延迟
 
@@ -7280,6 +7295,9 @@ Netversion
 Network
 == 网络
 
+Network error
+== 网络错误
+
 Network timeout
 == 网络超时
 
@@ -7385,6 +7403,9 @@ No chat message to translate
 No code
 == 无代码
 
+No compatible Windows update package for this version
+== 此版本暂无匹配的 Windows 更新包
+
 No controller found. Plug in a controller.
 == 未检测到任何手柄。请连接手柄。
 
@@ -7402,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == 暂无可导播玩家
+
+No downloadable portable package for this version
+== 此版本暂无可下载的便携包
 
 No empty team left.
 == 已经没有空队伍了
@@ -7489,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == 暂无最近使用的皮肤
+
+No release notes provided
+== 此版本未提供更新说明
 
 No results
 == 无结果
@@ -8747,14 +8774,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Qm 界面图标自定义颜色
 
-Qm UI duotone secondary icon color
-== Qm 界面双色调图标次要颜色
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm 界面图标颜色：1=白色，2=黑色，3=自定义，4=彩虹
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Qm 界面图标样式：0=常规，1=粗体，2=细体，3=填充，4=轻体，5=双色调
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Qm 界面图标样式：0=常规，1=粗体，2=轻体（旧值），3=填充，4=轻体，5=粗体（旧值）
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue：序号必须在 1 到 %d 之间
@@ -9140,6 +9164,9 @@ Relative X position of the draggable back button
 Relative Y position of the draggable back button
 == 可拖动虚拟返回按钮的相对 Y 位置
 
+Release notes
+== 更新说明
+
 Reload
 == 重新加载
 
@@ -9511,6 +9538,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == 要求支持 KCP 的客户端升级会话（灰度发布期间保持关闭以支持回退）
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== 启用 qm_graphics_trace 时，重新扫描字体并查询解析后的 Unicode 字体面和字形
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 本服未开启救援功能，且你所在队伍也没有开启 /practice。注意：练习模式下无法获得排名
@@ -12494,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == “default” 是保留名称。
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== 旧目录 qmclient/fonts 已停止扫描。请将自定义字体手动移动到配置目录下的 fonts/fonts_store。普通版使用用户配置目录，便携版使用 profile。data/fonts 中随客户端提供的字体无需移动。
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重连或已离开。请稍等，或改与他人私聊
 
@@ -13034,6 +13067,9 @@ Translation queue full, sending original
 Translation service
 == 翻译服务
 
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== 翻译服务返回的是提示而非译文（该消息可能包含屏蔽词）
+
 Translation Settings
 == 翻译设置
 
@@ -13132,9 +13168,6 @@ UI icon color
 
 UI icon custom color
 == 界面图标自定义颜色
-
-UI icon duotone secondary color
-== 界面双色调图标次要颜色
 
 UI icon style
 == 界面图标样式
@@ -13361,6 +13394,9 @@ Update notice
 Update or add a specific war group
 == 更新或添加指定敌对分组
 
+Update package available
+== 此版本有可下载的更新包
+
 Update Rate
 == 客户端刷新率
 
@@ -13433,6 +13469,9 @@ Use current name
 Use custom skins instead of the ninja tee
 == 使用自定义皮肤代替忍者 Tee
 
+Use custom UI icon color
+== 使用自定义图标颜色
+
 Use default flags on scoreboard
 == 在计分板上使用默认旗帜
 
@@ -13475,9 +13514,6 @@ Use large emote
 Use mouse sensitivity when dynamic camera is on
 == 启用动态摄像机时使用鼠标灵敏度
 
-Use MSDF icon pipeline when enhanced rendering is active
-== 启用增强渲染时使用 MSDF 图标管线
-
 Use multi-char replacement based on word length
 == 根据词语长度使用多字符替换
 
@@ -13510,6 +13546,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == 使用预输入预测其他玩家以获得更精确的输入预测
+
+Use procedural ring pipeline when enhanced rendering is active
+== 启用增强渲染时使用程序化圆环管线
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == 启用增强渲染时，为灵动岛和圆角矩形使用 SDF 管线

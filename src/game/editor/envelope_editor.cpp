@@ -11,7 +11,7 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/editor/editor.h>
 #include <game/editor/editor_actions.h>
 #include <game/editor/mapitems/envelope.h>

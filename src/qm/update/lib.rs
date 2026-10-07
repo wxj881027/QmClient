@@ -106,6 +106,14 @@ fn validate_relative_path(value: &str) -> Result<PathBuf, String> {
     {
         return Err(format!("unsafe update path: {value:?}"));
     }
+    // 发布更新不能覆盖便携版的用户存档。
+    if value
+        .split('/')
+        .next()
+        .is_some_and(|part| part.eq_ignore_ascii_case("profile"))
+    {
+        return Err("update package must not contain user profile files".into());
+    }
     let path = Path::new(value);
     if path.is_absolute()
         || path
@@ -156,8 +164,13 @@ fn parse_manifest(bytes: &[u8]) -> Result<Manifest, String> {
         return Err("unsupported update manifest schema".into());
     }
     validate_version(&manifest.version)?;
-    if manifest.package.name != "QmClient-windows.zip"
-        || manifest.package.size == 0
+    if !matches!(
+        manifest.package.name.as_str(),
+        "QmClient-windows.zip"
+            | "QmClient-windows-portable.zip"
+            | "QmClient-windows.7z"
+            | "QmClient-windows-portable.7z"
+    ) || manifest.package.size == 0
         || manifest.package.size > MAX_PACKAGE_SIZE
     {
         return Err("invalid update package metadata".into());
@@ -341,6 +354,15 @@ fn validate_package(
     package_signature: &[u8],
     manifest: &Manifest,
 ) -> Result<(), String> {
+    validate_package_with_key(package_path, package_signature, manifest, &PUBLIC_KEY)
+}
+
+fn validate_package_with_key(
+    package_path: &Path,
+    package_signature: &[u8],
+    manifest: &Manifest,
+    key: &[u8; 32],
+) -> Result<(), String> {
     validate_regular_file(package_path, "failed opening update package")?;
     let package = File::open(package_path)
         .map_err(|error| format_io_error("failed opening update package", &error))?;
@@ -348,11 +370,7 @@ fn validate_package(
     if size != manifest.package.size || digest != parse_hash(&manifest.package.sha256)? {
         return Err("update package size or SHA-256 does not match the signed manifest".into());
     }
-    verify_signature_with_key(
-        &package_signature_message(&digest),
-        package_signature,
-        &PUBLIC_KEY,
-    )
+    verify_signature_with_key(&package_signature_message(&digest), package_signature, key)
 }
 
 fn copy_exact(
@@ -411,7 +429,87 @@ fn unique_child(root: &Path, prefix: &str) -> Result<PathBuf, String> {
     Err("failed creating a unique update working directory".into())
 }
 
+// 7z 的启动器提取和完整解包共用同一条签名路径与属性规则。
+fn validate_sevenzip_entry<'a>(
+    entry: &sevenz_rust::SevenZArchiveEntry,
+    expected: &HashMap<String, &'a ManifestFile>,
+    seen: &mut HashSet<String>,
+) -> Result<Option<(&'a ManifestFile, PathBuf)>, String> {
+    let relative = validate_relative_path(&entry.name)?;
+    let unix_kind = (entry.windows_attributes >> 16) & 0o170000;
+    if entry.windows_attributes & 0x400 != 0 || unix_kind == 0o120000 || entry.is_anti_item {
+        return Err(format!("invalid 7z entry attributes: {}", entry.name));
+    }
+    if entry.is_directory {
+        return Ok(None);
+    }
+    let key = entry.name.to_lowercase();
+    let signed = *expected
+        .get(&key)
+        .ok_or_else(|| format!("7z contains an unsigned file: {}", entry.name))?;
+    if signed.path != entry.name || !seen.insert(key) || entry.size != signed.size {
+        return Err(format!(
+            "duplicate, case-mismatched or wrong-sized 7z entry: {}",
+            entry.name
+        ));
+    }
+    Ok(Some((signed, relative)))
+}
+
+// 不使用库的默认落盘回调，所有落盘内容必须在签名清单中。
+fn extract_sevenzip(
+    package_path: &Path,
+    staging: &Path,
+    manifest: &Manifest,
+) -> Result<(), String> {
+    validate_regular_file(package_path, "failed opening update package")?;
+    let package =
+        File::open(package_path).map_err(|e| format_io_error("failed opening 7z package", &e))?;
+    let length = package.metadata().map_err(|e| e.to_string())?.len();
+    let mut archive =
+        sevenz_rust::SevenZReader::new(package, length, sevenz_rust::Password::empty())
+            .map_err(|e| format!("invalid 7z update package: {e}"))?;
+    let expected: HashMap<_, _> = manifest
+        .files
+        .iter()
+        .map(|f| (f.path.to_lowercase(), f))
+        .collect();
+    let mut extracted = HashSet::new();
+    archive
+        .for_each_entries(|entry, reader| {
+            let action = (|| -> Result<(), String> {
+                let Some((signed, relative)) =
+                    validate_sevenzip_entry(entry, &expected, &mut extracted)?
+                else {
+                    return Ok(());
+                };
+                let path = staging.join(relative);
+                if let Some(parent) = path.parent() {
+                    fs::create_dir_all(parent)
+                        .map_err(|e| format_io_error("failed creating staging directory", &e))?;
+                }
+                let mut output = File::create(path)
+                    .map_err(|e| format_io_error("failed creating 7z output", &e))?;
+                let digest = copy_exact(reader, &mut output, signed.size)?;
+                output.flush().map_err(|e| e.to_string())?;
+                if digest != parse_hash(&signed.sha256)? {
+                    return Err(format!("staged file hash mismatch: {}", signed.path));
+                }
+                Ok(())
+            })();
+            action.map(|_| true).map_err(sevenz_rust::Error::other)
+        })
+        .map_err(|e| e.to_string())?;
+    if extracted.len() != expected.len() {
+        return Err("7z does not contain every file in the signed manifest".into());
+    }
+    Ok(())
+}
+
 fn extract_package(package_path: &Path, staging: &Path, manifest: &Manifest) -> Result<(), String> {
+    if manifest.package.name.ends_with(".7z") {
+        return extract_sevenzip(package_path, staging, manifest);
+    }
     validate_regular_file(package_path, "failed opening update package")?;
     let package = File::open(package_path)
         .map_err(|error| format_io_error("failed opening update package", &error))?;
@@ -474,6 +572,67 @@ fn extract_package(package_path: &Path, staging: &Path, manifest: &Manifest) -> 
     Ok(())
 }
 
+// 启动阶段只解码 updater 所在的压缩块，完整逐文件校验由独立安装器执行。
+fn extract_sevenzip_bootstrap(
+    package_path: &Path,
+    destination: &Path,
+    manifest: &Manifest,
+) -> Result<(), String> {
+    validate_regular_file(package_path, "failed opening update package")?;
+    let archive = sevenz_rust::Archive::open(package_path).map_err(|e| e.to_string())?;
+    let expected: HashMap<_, _> = manifest
+        .files
+        .iter()
+        .map(|f| (f.path.to_lowercase(), f))
+        .collect();
+    let mut seen = HashSet::new();
+    let mut updater_index = None;
+    for (index, entry) in archive.files.iter().enumerate() {
+        if validate_sevenzip_entry(entry, &expected, &mut seen)?.is_some()
+            && entry.name == "QmClient-Updater.exe"
+        {
+            updater_index = Some(index);
+        }
+    }
+    if seen.len() != expected.len() {
+        return Err("7z does not contain every file in the signed manifest".into());
+    }
+    let index = updater_index.ok_or("7z is missing QmClient-Updater.exe")?;
+    let folder =
+        archive.stream_map.file_folder_index[index].ok_or("updater has no executable content")?;
+    let mut source = File::open(package_path).map_err(|e| e.to_string())?;
+    let decoder = sevenz_rust::BlockDecoder::new(folder, &archive, &[], &mut source);
+    let mut written = false;
+    let result = decoder.for_each_entries(&mut |entry, reader| {
+        if entry.name != "QmClient-Updater.exe" {
+            io::copy(reader, &mut io::sink())
+                .map_err(|e| sevenz_rust::Error::other(e.to_string()))?;
+            return Ok(true);
+        }
+        let signed = expected.get(&entry.name.to_lowercase()).unwrap();
+        let result = (|| -> Result<(), String> {
+            let mut output = File::create(destination).map_err(|e| e.to_string())?;
+            let digest = copy_exact(reader, &mut output, signed.size)?;
+            output.flush().map_err(|e| e.to_string())?;
+            if digest != parse_hash(&signed.sha256)? {
+                return Err("bootstrap updater hash mismatch".into());
+            }
+            Ok(())
+        })();
+        result.map_err(sevenz_rust::Error::other)?;
+        written = true;
+        Ok(false)
+    });
+    if let Err(error) = result {
+        let _ = fs::remove_file(destination);
+        return Err(error.to_string());
+    }
+    if !written {
+        return Err("7z is missing updater content".into());
+    }
+    Ok(())
+}
+
 fn extract_bootstrap_updater(
     package_path: &Path,
     destination: &Path,
@@ -485,6 +644,9 @@ fn extract_bootstrap_updater(
         .iter()
         .find(|file| file.path == UPDATER_NAME)
         .ok_or_else(|| format!("update package is missing {UPDATER_NAME}"))?;
+    if manifest.package.name.ends_with(".7z") {
+        return extract_sevenzip_bootstrap(package_path, destination, manifest);
+    }
     validate_regular_file(package_path, "failed opening update package")?;
     let package = File::open(package_path)
         .map_err(|error| format_io_error("failed opening update package", &error))?;
@@ -608,6 +770,10 @@ fn install_staged(
             .map_err(|error| rollback_install(error, &applied, backup))?;
         let source = staging.join(&relative);
         let target = install.join(&relative);
+        // storage.cfg 仍供服务端使用，更新保留既有文件；客户端存储由构建决定。
+        if signed.path.eq_ignore_ascii_case("storage.cfg") && target.exists() {
+            continue;
+        }
         if let Some(parent) = target.parent() {
             if let Err(error) = fs::create_dir_all(parent) {
                 return Err(rollback_install(
@@ -668,12 +834,34 @@ fn apply_update(
     install_path: &Path,
     current_version: &str,
 ) -> Result<(), String> {
+    apply_update_with_key(
+        package_path,
+        package_signature_path,
+        manifest_path,
+        manifest_signature_path,
+        install_path,
+        current_version,
+        &PUBLIC_KEY,
+    )
+}
+
+// 生产入口固定内嵌公钥，内部依赖注入允许测试覆盖完整验签与安装事务。
+fn apply_update_with_key(
+    package_path: &Path,
+    package_signature_path: &Path,
+    manifest_path: &Path,
+    manifest_signature_path: &Path,
+    install_path: &Path,
+    current_version: &str,
+    key: &[u8; 32],
+) -> Result<(), String> {
     let manifest_bytes = read_limited(manifest_path, MAX_MANIFEST_SIZE)?;
     let manifest_signature = read_limited(manifest_signature_path, 64)?;
-    let manifest = verify_manifest(&manifest_bytes, &manifest_signature)?;
+    verify_signature_with_key(&manifest_bytes, &manifest_signature, key)?;
+    let manifest = parse_manifest(&manifest_bytes)?;
     validate_not_downgrade(&manifest.version, current_version)?;
     let package_signature = read_limited(package_signature_path, 64)?;
-    validate_package(package_path, &package_signature, &manifest)?;
+    validate_package_with_key(package_path, &package_signature, &manifest, key)?;
     validate_install_root(install_path)?;
     let staging = unique_child(install_path, "qm-update-staging")?;
     let backup = match unique_child(install_path, "qm-update-backup") {
@@ -778,6 +966,90 @@ pub unsafe fn ffi_verify_manifest_package(
             std::ptr::copy_nonoverlapping(digest.as_ptr(), package_digest, digest.len());
             Ok(())
         });
+    if let Err(message) = &result {
+        write_error(message, error, error_size);
+    }
+    result.is_ok()
+}
+
+// Setup 清单独立发布，旧客户端的 ZIP 清单格式保持兼容。
+fn parse_setup_manifest(bytes: &[u8]) -> Result<Manifest, String> {
+    if bytes.is_empty() || bytes.len() > MAX_MANIFEST_SIZE {
+        return Err("setup manifest size is outside the supported range".into());
+    }
+    let manifest: Manifest = serde_json::from_slice(bytes)
+        .map_err(|error| format!("invalid setup manifest: {error}"))?;
+    validate_version(&manifest.version)?;
+    if manifest.schema != 1
+        || manifest.package.name != "QmClient-Setup.exe"
+        || manifest.package.size == 0
+        || manifest.package.size > MAX_PACKAGE_SIZE
+        || !manifest.files.is_empty()
+    {
+        return Err("invalid setup package metadata".into());
+    }
+    parse_hash(&manifest.package.sha256)?;
+    Ok(manifest)
+}
+
+fn verify_setup_manifest(
+    bytes: &[u8],
+    signature: &[u8],
+    key: &[u8; 32],
+) -> Result<Manifest, String> {
+    verify_signature_with_key(bytes, signature, key)?;
+    parse_setup_manifest(bytes)
+}
+
+/// 校验独立 Setup 清单，并返回签名覆盖的安装器大小与摘要。
+pub unsafe fn ffi_verify_setup_manifest(
+    manifest: *const u8,
+    manifest_size: usize,
+    signature: *const u8,
+    signature_size: usize,
+    package_size: *mut u64,
+    package_digest: *mut u8,
+    package_digest_size: usize,
+    error: *mut c_char,
+    error_size: usize,
+) -> bool {
+    let result = input_bytes(manifest, manifest_size)
+        .and_then(|bytes| input_bytes(signature, signature_size).map(|sig| (bytes, sig)))
+        .and_then(|(bytes, sig)| verify_setup_manifest(bytes, sig, &PUBLIC_KEY))
+        .and_then(|manifest| {
+            if package_size.is_null() || package_digest.is_null() || package_digest_size != 32 {
+                return Err("invalid setup metadata output".into());
+            }
+            let digest = parse_hash(&manifest.package.sha256)?;
+            *package_size = manifest.package.size;
+            std::ptr::copy_nonoverlapping(digest.as_ptr(), package_digest, digest.len());
+            Ok(())
+        });
+    if let Err(message) = &result {
+        write_error(message, error, error_size);
+    }
+    result.is_ok()
+}
+
+/// 启动前重新校验磁盘上的 Setup、清单和签名。
+pub unsafe fn ffi_verify_setup_files(
+    package_path: *const c_char,
+    package_signature_path: *const c_char,
+    manifest_path: *const c_char,
+    manifest_signature_path: *const c_char,
+    current_version: *const c_char,
+    error: *mut c_char,
+    error_size: usize,
+) -> bool {
+    let result = (|| {
+        let package = input_path(package_path)?;
+        let package_sig = read_limited(input_path(package_signature_path)?, 64)?;
+        let bytes = read_limited(input_path(manifest_path)?, MAX_MANIFEST_SIZE)?;
+        let sig = read_limited(input_path(manifest_signature_path)?, 64)?;
+        let manifest = verify_setup_manifest(&bytes, &sig, &PUBLIC_KEY)?;
+        validate_not_downgrade(&manifest.version, input_string(current_version)?)?;
+        validate_package(package, &package_sig, &manifest)
+    })();
     if let Err(message) = &result {
         write_error(message, error, error_size);
     }
@@ -907,6 +1179,62 @@ mod tests {
     }
 
     #[test]
+    fn portable_metadata_keeps_the_signed_package_variant() {
+        let bytes = test_manifest(&[
+            ("DDNet.exe", b"client"),
+            ("DDNet-Server.exe", b"server"),
+            ("QmClient-Updater.exe", b"updater"),
+        ]);
+        let mut value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        value["package"]["name"] = serde_json::json!("QmClient-windows-portable.zip");
+        let bytes = serde_json::to_vec(&value).unwrap();
+        let manifest = parse_manifest(&bytes).unwrap();
+        assert_eq!(manifest.package.name, "QmClient-windows-portable.zip");
+        assert!(parse_setup_manifest(&bytes).is_err());
+        value["package"]["name"] = serde_json::json!("unknown.zip");
+        assert!(parse_manifest(&serde_json::to_vec(&value).unwrap()).is_err());
+    }
+
+    #[test]
+    fn signed_setup_metadata_is_verified_and_tampering_is_rejected() {
+        let key = SigningKey::from_bytes(&TEST_SEED);
+        let bytes = serde_json::to_vec(&serde_json::json!({
+            "schema": 1, "version": "3.4", "package": {
+                "name": "QmClient-Setup.exe", "size": 12, "sha256": "ab".repeat(32)
+            }, "files": []
+        }))
+        .unwrap();
+        let sig = key.sign(&bytes).to_bytes();
+        let result = verify_setup_manifest(&bytes, &sig, key.verifying_key().as_bytes()).unwrap();
+        assert_eq!(result.package.size, 12);
+        assert_eq!(parse_hash(&result.package.sha256).unwrap(), [0xab; 32]);
+        let mut changed = bytes.clone();
+        changed[0] ^= 1;
+        assert!(verify_setup_manifest(&changed, &sig, key.verifying_key().as_bytes()).is_err());
+        assert!(parse_manifest(&bytes).is_err());
+    }
+
+    #[test]
+    fn setup_metadata_rejects_wrong_asset_invalid_hash_and_empty_package() {
+        for (name, size, hash) in [
+            ("other.exe", 12, "ab".repeat(32)),
+            ("QmClient-Setup.exe", 0, "ab".repeat(32)),
+            ("QmClient-Setup.exe", 12, "invalid".to_string()),
+        ] {
+            let bytes = serde_json::to_vec(&serde_json::json!({
+                "schema": 1, "version": "3.4", "package": {
+                    "name": name, "size": size, "sha256": hash
+                }, "files": []
+            }))
+            .unwrap();
+            assert!(
+                parse_setup_manifest(&bytes).is_err(),
+                "{name} {size} {hash}"
+            );
+        }
+    }
+
+    #[test]
     fn signature_verification_rejects_tampering() {
         let key = SigningKey::from_bytes(&TEST_SEED);
         let message = b"signed manifest";
@@ -1017,6 +1345,8 @@ mod tests {
             "data//file.txt",
             "data/file.",
             "data/file ",
+            "profile/settings.cfg",
+            "PROFILE/qmclient/settings.cfg",
         ] {
             assert!(validate_relative_path(path).is_err(), "accepted {path}");
         }
@@ -1072,6 +1402,311 @@ mod tests {
         fs::write(&package, zip_bytes.into_inner()).unwrap();
         extract_bootstrap_updater(&package, &updater, &manifest).unwrap();
         assert_eq!(fs::read(updater).unwrap(), b"updater");
+    }
+
+    fn sevenzip_fixture(root: &Path, files: &[(&str, &[u8])]) -> (PathBuf, Manifest) {
+        let package = root.join("package.7z");
+        let mut writer = sevenz_rust::SevenZWriter::create(&package).unwrap();
+        for (name, bytes) in files {
+            let mut entry = sevenz_rust::SevenZArchiveEntry::new();
+            entry.name = (*name).into();
+            writer
+                .push_archive_entry(entry, Some(Cursor::new(*bytes)))
+                .unwrap();
+        }
+        writer.finish().unwrap();
+        let mut value: serde_json::Value = serde_json::from_slice(&test_manifest(files)).unwrap();
+        value["package"]["name"] = serde_json::json!("QmClient-windows.7z");
+        let manifest = parse_manifest(&serde_json::to_vec(&value).unwrap()).unwrap();
+        (package, manifest)
+    }
+
+    struct SignedInstallFixture {
+        root: tempfile::TempDir,
+        package: PathBuf,
+        signature: PathBuf,
+        manifest: PathBuf,
+        manifest_signature: PathBuf,
+        install: PathBuf,
+        key: SigningKey,
+    }
+
+    impl SignedInstallFixture {
+        fn new(portable: bool) -> Self {
+            let root = tempdir().unwrap();
+            let files: &[(&str, &[u8])] = &[
+                ("DDNet.exe", b"new client"),
+                ("DDNet-Server.exe", b"new server"),
+                ("QmClient-Updater.exe", b"new updater"),
+                ("storage.cfg", b"default policy"),
+            ];
+            let (package, _) = sevenzip_fixture(root.path(), files);
+            let bytes = fs::read(&package).unwrap();
+            let digest: [u8; 32] = Sha256::digest(&bytes).into();
+            let mut value: serde_json::Value =
+                serde_json::from_slice(&test_manifest(files)).unwrap();
+            value["version"] = serde_json::json!("3.4");
+            value["package"] = serde_json::json!({
+                "name": if portable { "QmClient-windows-portable.7z" } else { "QmClient-windows.7z" },
+                "size": bytes.len(), "sha256": format!("{:x}", Sha256::digest(&bytes)),
+            });
+            let key = SigningKey::from_bytes(&TEST_SEED);
+            let manifest = root.path().join("manifest.json");
+            let manifest_signature = root.path().join("manifest.sig");
+            let signature = root.path().join("package.sig");
+            let manifest_bytes = serde_json::to_vec(&value).unwrap();
+            fs::write(&manifest, &manifest_bytes).unwrap();
+            fs::write(&manifest_signature, key.sign(&manifest_bytes).to_bytes()).unwrap();
+            fs::write(
+                &signature,
+                key.sign(&package_signature_message(&digest)).to_bytes(),
+            )
+            .unwrap();
+            let install = root.path().join("install");
+            fs::create_dir_all(install.join("profile")).unwrap();
+            fs::create_dir_all(install.join("data/qmclient")).unwrap();
+            fs::write(
+                install.join("data/qmclient/gui_logo.png"),
+                b"installed logo",
+            )
+            .unwrap();
+            fs::write(install.join("DDNet.exe"), b"old client").unwrap();
+            fs::write(install.join("storage.cfg"), b"custom policy").unwrap();
+            fs::write(install.join("profile/settings.cfg"), b"user settings").unwrap();
+            Self {
+                root,
+                package,
+                signature,
+                manifest,
+                manifest_signature,
+                install,
+                key,
+            }
+        }
+        fn apply(&self) -> Result<(), String> {
+            apply_update_with_key(
+                &self.package,
+                &self.signature,
+                &self.manifest,
+                &self.manifest_signature,
+                &self.install,
+                "3.3",
+                self.key.verifying_key().as_bytes(),
+            )
+        }
+        fn assert_old_data(&self) {
+            assert_eq!(
+                fs::read(self.install.join("DDNet.exe")).unwrap(),
+                b"old client"
+            );
+            assert_eq!(
+                fs::read(self.install.join("storage.cfg")).unwrap(),
+                b"custom policy"
+            );
+            assert_eq!(
+                fs::read(self.install.join("profile/settings.cfg")).unwrap(),
+                b"user settings"
+            );
+        }
+    }
+
+    #[test]
+    fn signed_sevenzip_install_preserves_user_data_for_normal_and_portable() {
+        for portable in [false, true] {
+            let fixture = SignedInstallFixture::new(portable);
+            fixture.apply().unwrap();
+            assert_eq!(
+                fs::read(fixture.install.join("DDNet.exe")).unwrap(),
+                b"new client"
+            );
+            assert_eq!(
+                fs::read(fixture.install.join("DDNet-Server.exe")).unwrap(),
+                b"new server"
+            );
+            assert_eq!(
+                fs::read(fixture.install.join("storage.cfg")).unwrap(),
+                b"custom policy"
+            );
+            assert_eq!(
+                fs::read(fixture.install.join("profile/settings.cfg")).unwrap(),
+                b"user settings"
+            );
+            assert!(!fs::read_dir(&fixture.install).unwrap().any(|entry| entry
+                .unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".qm-update")));
+        }
+    }
+
+    #[test]
+    fn tampered_sevenzip_package_does_not_change_installation() {
+        let fixture = SignedInstallFixture::new(false);
+        let mut bytes = fs::read(&fixture.package).unwrap();
+        let end = bytes.len() - 1;
+        bytes[end] ^= 1;
+        fs::write(&fixture.package, bytes).unwrap();
+        assert!(fixture.apply().unwrap_err().contains("SHA-256"));
+        fixture.assert_old_data();
+        assert_eq!(fs::read_dir(&fixture.install).unwrap().count(), 4);
+    }
+
+    #[test]
+    fn invalid_manifest_or_package_signature_does_not_change_installation() {
+        for manifest_signature in [true, false] {
+            let fixture = SignedInstallFixture::new(true);
+            fs::write(
+                if manifest_signature {
+                    &fixture.manifest_signature
+                } else {
+                    &fixture.signature
+                },
+                [0; 64],
+            )
+            .unwrap();
+            assert!(fixture.apply().unwrap_err().contains("signature"));
+            fixture.assert_old_data();
+            assert_eq!(fs::read_dir(&fixture.install).unwrap().count(), 4);
+        }
+    }
+
+    #[test]
+    fn signed_sevenzip_transaction_restores_client_when_later_target_is_directory() {
+        let fixture = SignedInstallFixture::new(false);
+        fs::create_dir(fixture.install.join("DDNet-Server.exe")).unwrap();
+        let result = fixture.apply();
+        assert!(result.unwrap_err().contains("not a regular file"));
+        fixture.assert_old_data();
+        assert!(fixture.install.join("DDNet-Server.exe").is_dir());
+        assert!(fixture.root.path().exists());
+    }
+
+    #[test]
+    fn sevenzip_extracts_signed_files_and_bootstrap() {
+        let root = tempdir().unwrap();
+        let files: &[(&str, &[u8])] = &[
+            ("DDNet.exe", b"client"),
+            ("DDNet-Server.exe", b"server"),
+            ("QmClient-Updater.exe", b"updater"),
+            ("data/example.txt", b"asset"),
+        ];
+        let (package, manifest) = sevenzip_fixture(root.path(), files);
+        let staging = root.path().join("staging");
+        fs::create_dir(&staging).unwrap();
+        extract_package(&package, &staging, &manifest).unwrap();
+        assert_eq!(
+            fs::read(staging.join("data/example.txt")).unwrap(),
+            b"asset"
+        );
+        let bootstrap = root.path().join("bootstrap.exe");
+        extract_bootstrap_updater(&package, &bootstrap, &manifest).unwrap();
+        assert_eq!(fs::read(bootstrap).unwrap(), b"updater");
+    }
+
+    #[test]
+    fn sevenzip_unsigned_file_and_hash_mismatch_reject_bootstrap() {
+        let root = tempdir().unwrap();
+        let files: &[(&str, &[u8])] = &[
+            ("DDNet.exe", b"client"),
+            ("DDNet-Server.exe", b"server"),
+            ("QmClient-Updater.exe", b"updater"),
+        ];
+        let (package, mut manifest) = sevenzip_fixture(root.path(), files);
+        let bootstrap = root.path().join("bootstrap.exe");
+        manifest.files.retain(|entry| entry.path != "DDNet.exe");
+        assert!(extract_bootstrap_updater(&package, &bootstrap, &manifest)
+            .unwrap_err()
+            .contains("unsigned"));
+        assert!(!bootstrap.exists());
+        let (_, mut manifest) = sevenzip_fixture(root.path(), files);
+        manifest
+            .files
+            .iter_mut()
+            .find(|entry| entry.path == "QmClient-Updater.exe")
+            .unwrap()
+            .sha256 = "00".repeat(32);
+        assert!(extract_bootstrap_updater(&package, &bootstrap, &manifest)
+            .unwrap_err()
+            .contains("hash mismatch"));
+        assert!(!bootstrap.exists());
+    }
+
+    #[test]
+    fn sevenzip_missing_signed_file_rejects_package() {
+        let root = tempdir().unwrap();
+        let files: &[(&str, &[u8])] = &[
+            ("DDNet.exe", b"client"),
+            ("DDNet-Server.exe", b"server"),
+            ("QmClient-Updater.exe", b"updater"),
+        ];
+        let (package, mut manifest) = sevenzip_fixture(root.path(), files);
+        manifest.files.push(ManifestFile {
+            path: "missing.txt".into(),
+            size: 1,
+            sha256: "00".repeat(32),
+        });
+        let staging = root.path().join("staging");
+        fs::create_dir(&staging).unwrap();
+        assert!(extract_package(&package, &staging, &manifest)
+            .unwrap_err()
+            .contains("every file"));
+    }
+
+    #[test]
+    fn zip_upgrade_preserves_server_config_and_portable_profile() {
+        let root = tempdir().unwrap();
+        let staging = root.path().join("staging");
+        let backup = root.path().join("backup");
+        let install = root.path().join("install");
+        fs::create_dir_all(&staging).unwrap();
+        fs::create_dir_all(&backup).unwrap();
+        fs::create_dir_all(install.join("profile")).unwrap();
+        fs::write(staging.join("storage.cfg"), b"server default").unwrap();
+        fs::write(staging.join("DDNet.exe"), b"new portable client").unwrap();
+        fs::write(install.join("DDNet.exe"), b"old portable client").unwrap();
+        fs::write(install.join("storage.cfg"), b"custom user policy").unwrap();
+        fs::write(install.join("profile/settings.cfg"), b"user settings").unwrap();
+        let manifest = Manifest {
+            schema: 1,
+            version: "3.4".into(),
+            package: Package {
+                name: "QmClient-windows.zip".into(),
+                size: 1,
+                sha256: "00".repeat(32),
+            },
+            files: vec![
+                ManifestFile {
+                    path: "storage.cfg".into(),
+                    size: 14,
+                    sha256: "00".repeat(32),
+                },
+                ManifestFile {
+                    path: "DDNet.exe".into(),
+                    size: 19,
+                    sha256: "00".repeat(32),
+                },
+            ],
+        };
+        assert!(install_staged(&staging, &backup, &install, &manifest).is_ok());
+        assert_eq!(
+            fs::read(install.join("storage.cfg")).unwrap(),
+            b"custom user policy"
+        );
+        assert_eq!(
+            fs::read(install.join("profile/settings.cfg")).unwrap(),
+            b"user settings"
+        );
+        assert_eq!(
+            fs::read(install.join("DDNet.exe")).unwrap(),
+            b"new portable client"
+        );
+        fs::write(staging.join("DDNet.exe"), b"next portable client").unwrap();
+        fs::remove_file(install.join("storage.cfg")).unwrap();
+        assert!(install_staged(&staging, &backup, &install, &manifest).is_ok());
+        assert_eq!(
+            fs::read(install.join("storage.cfg")).unwrap(),
+            b"server default"
+        );
     }
 
     #[test]

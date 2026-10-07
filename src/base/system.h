@@ -978,6 +978,11 @@ enum class EShellExecuteWindowState
  */
 PROCESS shell_execute(const char *file, EShellExecuteWindowState window_state, const char **arguments = nullptr, size_t num_arguments = 0);
 
+#if defined(CONF_FAMILY_WINDOWS)
+// 原子创建受父进程生命周期约束的隐藏子进程；需要 Win10 / Server 2016 的 Job-list 能力，不能建立约束时不启动。
+PROCESS shell_execute_owned(const char *file, const char **arguments = nullptr, size_t num_arguments = 0);
+#endif
+
 /**
  * Sends kill signal to a process.
  *

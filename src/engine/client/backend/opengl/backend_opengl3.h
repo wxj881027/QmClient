@@ -18,7 +18,7 @@ class CGLSLSpriteMultipleProgram;
 class CGLSLTextProgram;
 class CGLSLMediaIslandSdfProgram;
 class CGLSLRoundedRectSdfProgram;
-class CGLSLTexturedMsdfProgram;
+class CGLSLProceduralRingProgram;
 class CGLSLGaussianBlurProgram;
 
 #define MAX_STREAM_BUFFER_COUNT 10
@@ -46,8 +46,8 @@ protected:
 	bool m_MediaIslandSdfProgramValid;
 	CGLSLRoundedRectSdfProgram *m_pRoundedRectSdfProgram;
 	bool m_RoundedRectSdfProgramValid;
-	CGLSLTexturedMsdfProgram *m_pTexturedMsdfProgram;
-	bool m_TexturedMsdfProgramValid;
+	CGLSLProceduralRingProgram *m_pProceduralRingProgram;
+	bool m_ProceduralRingProgramValid;
 	CGLSLGaussianBlurProgram *m_pGaussianBlurProgram;
 	bool m_GaussianBlurProgramValid;
 
@@ -121,7 +121,7 @@ protected:
 	void Cmd_Render(const CCommandBuffer::SCommand_Render *pCommand) override;
 	void Cmd_RenderMediaIslandSdf(const CCommandBuffer::SCommand_RenderMediaIslandSdf *pCommand) override;
 	void Cmd_RenderRoundedRectSdf(const CCommandBuffer::SCommand_RenderRoundedRectSdf *pCommand) override;
-	void Cmd_RenderTexturedMsdf(const CCommandBuffer::SCommand_RenderTexturedMsdf *pCommand) override;
+	void Cmd_RenderProceduralRing(const CCommandBuffer::SCommand_RenderProceduralRing *pCommand) override;
 	void Cmd_RenderTex3D(const CCommandBuffer::SCommand_RenderTex3D *pCommand) override;
 	void Cmd_RenderTarget_Draw(const CCommandBuffer::SCommand_RenderTarget_Draw *pCommand) override;
 	void Cmd_RenderTarget_CaptureBackbuffer(const CCommandBuffer::SCommand_RenderTarget_CaptureBackbuffer *pCommand) override;

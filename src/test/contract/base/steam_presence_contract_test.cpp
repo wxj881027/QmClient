@@ -41,19 +41,26 @@ TEST(SteamPresence, KeepsBrandPresenceWhenGameInfoClears)
 	EXPECT_NE(ClearGameInfoBody.find("ResetClientPresence();"), std::string::npos);
 }
 
-TEST(SteamPresence, OpensSteamInBackground)
+TEST(SteamPresence, LaunchesOnlyAfterClientDetection)
 {
+	// 无法在单测中真实拉起/拦截 Steam 进程，此约束只能以最小源码合同固化：
+	// 启动前必须先智能识别客户端，未安装时绝不把名字交给 shell（系统弹窗根因）。
 	const std::string Source = ReadTestSourceFile("src/engine/client/steam.cpp");
 	const size_t FunctionPos = Source.find("bool SteamOpenClient()");
 	ASSERT_NE(FunctionPos, std::string::npos);
 	const size_t FunctionEnd = Source.find("\n}\n\nISteam *CreateSteam", FunctionPos);
 	ASSERT_NE(FunctionEnd, std::string::npos);
 	const std::string FunctionBody = Source.substr(FunctionPos, FunctionEnd - FunctionPos);
+	EXPECT_NE(FunctionBody.find("SteamFindClient("), std::string::npos);
+	const size_t DetectPos = FunctionBody.find("SteamFindClient(");
+	const size_t LaunchPos = FunctionBody.find("shell_execute(");
+	EXPECT_NE(LaunchPos, std::string::npos);
+	EXPECT_LT(DetectPos, LaunchPos);
 	EXPECT_NE(FunctionBody.find("EShellExecuteWindowState::BACKGROUND"), std::string::npos);
-	EXPECT_NE(FunctionBody.find("shell_execute(\"steam.exe\""), std::string::npos);
-	EXPECT_NE(Source.find("STEAM_SILENT_ARGUMENT = \"-silent\""), std::string::npos);
+	EXPECT_EQ(FunctionBody.find("shell_execute(\"steam.exe\""), std::string::npos);
 	EXPECT_EQ(FunctionBody.find("steam://open/main"), std::string::npos);
 	EXPECT_EQ(FunctionBody.find("open_link("), std::string::npos);
+	EXPECT_NE(Source.find("STEAM_SILENT_ARGUMENT = \"-silent\""), std::string::npos);
 }
 
 TEST(SteamPresence, AutoLaunchDefaultsToDisabled)

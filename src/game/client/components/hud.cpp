@@ -31,7 +31,8 @@
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
+#include <game/client/qm_icon_font_render.h>
 #include <game/layers.h>
 #include <game/localization.h>
 #include <game/mapitems.h>
@@ -4311,8 +4312,8 @@ void CHud::RenderMediaIsland()
 	}
 	const float MaxTargetX = std::max(ScreenPadding, m_Width - ScreenPadding - PlannedUnifiedWidth);
 	const float TargetX = TimerCapsule.m_Visible ?
-		QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, TargetWidth, MainToTimerGap).m_MainX :
-		std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
+				      QmHudMediaIslandAnchorTimer(m_Width * 0.5f, TimerCapsule.m_BoxW, TargetWidth, MainToTimerGap).m_MainX :
+				      std::clamp(m_Width * 0.5f - PlannedUnifiedWidth * 0.5f, ScreenPadding, MaxTargetX);
 	const float TargetBottomHeight = ShowBottomRow ? (BottomRowPaddingY * 2.0f + BottomRowLineHeight * BottomRowLineCount) : 0.0f;
 	const float TargetHeight = BaseIslandHeight + TargetBottomHeight;
 	const float TitleAlphaTarget = TrackDetailsExpanded && TitleWidth > 0.0f ? 1.0f : 0.0f;
@@ -4852,33 +4853,21 @@ void CHud::RenderMediaIsland()
 			if(Alpha <= 0.001f)
 				return;
 			const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
-			const ColorRGBA PreviousColor = TextRender()->GetTextColor();
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			const float GlyphSize = Rect.h;
 			const float GlyphWidth = TextRender()->TextWidth(GlyphSize, pGlyph);
-			TextRender()->TextColor(0.98f, 0.99f, 1.0f, IconAlpha * Alpha);
-			TextRender()->Text(Rect.x + (Rect.w - GlyphWidth) * 0.5f, Rect.y, GlyphSize, pGlyph, -1.0f);
-			TextRender()->TextColor(PreviousColor);
+			const ColorRGBA IconColor = ConfiguredQmUiIconColor(ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * Alpha));
+			CTextCursor Cursor;
+			Cursor.SetPosition(vec2(Rect.x + (Rect.w - GlyphWidth) * 0.5f, Rect.y));
+			Cursor.m_FontSize = GlyphSize;
+			Cursor.m_LineWidth = -1.0f;
+			QmRenderImmediateFontIcon(*TextRender(), &Cursor, pGlyph, -1, IconColor, ConfiguredQmUiIconContrastColor(IconColor));
 			TextRender()->SetFontPreset(PreviousPreset);
 		};
-		if(IsOpenGlBackend())
-		{
-			RenderTextEye(FontIcons::FONT_ICON_EYE_SLASH, IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale), SpectatorIconPose.m_ClosedAlpha);
-			RenderTextEye(FontIcons::FONT_ICON_EYE, IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY), SpectatorIconPose.m_OpenAlpha);
-		}
-		else
-		{
-			// 等比契约的显式豁免只作用于这条眼睛动画（见常量处的说明）。
-			CQmIconManager *pIconManager = GameClient()->QmIconManager();
-			const CUIRect ClosedRect = IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale);
-			const CUIRect OpenRect = IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY);
-			if(!pIconManager || pIconManager->PreferFontFallback() ||
-				!pIconManager->RenderIcon(EQmIcon::EYE_OFF, ClosedRect, ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * SpectatorIconPose.m_ClosedAlpha), QM_HUD_SPECTATOR_EYE_PRESERVE_ASPECT))
-				RenderTextEye(FontIcons::FONT_ICON_EYE_SLASH, ClosedRect, SpectatorIconPose.m_ClosedAlpha);
-			if(!pIconManager || pIconManager->PreferFontFallback() ||
-				!pIconManager->RenderIcon(EQmIcon::EYE, OpenRect, ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * SpectatorIconPose.m_OpenAlpha), QM_HUD_SPECTATOR_EYE_PRESERVE_ASPECT))
-				RenderTextEye(FontIcons::FONT_ICON_EYE, OpenRect, SpectatorIconPose.m_OpenAlpha);
-		}
+		const CUIRect ClosedRect = IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale);
+		const CUIRect OpenRect = IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY);
+		RenderTextEye(FontIcons::FONT_ICON_EYE_SLASH, ClosedRect, SpectatorIconPose.m_ClosedAlpha);
+		RenderTextEye(FontIcons::FONT_ICON_EYE, OpenRect, SpectatorIconPose.m_OpenAlpha);
 		const float CountAlpha = QmHudMediaIslandSpectatorCountAlpha(ShowSpectator, SpectatorIconPose);
 		if(CountAlpha > 0.001f)
 		{

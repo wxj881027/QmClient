@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == Özel bir varlığın sprite'ı tamamen saydamsa otomatik olarak varsayılan varlığa geri dön; boş sprite'ları görünmez tutmak için kapat (örneğin efektleri gizlemek için)
 
-Automatically launch Steam when the client is started externally
-== İstemci harici olarak başlatıldığında Steam'i otomatik aç
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== İstemci harici olarak başlatıldığında Steam'i otomatik aç, böylece Steam oyun sürenizi kaydedebilir
 
 Automatically re-join team 0 after finish (only if unlocked).
 == Bitişten sonra otomatik olarak 0 takımına yeniden katıl (yalnızca kilitli değilse)
@@ -1855,6 +1855,9 @@ Cheats are enabled on this server
 
 check ddnet-saves.txt in config_directory.
 == config_directory içindeki ddnet-saves.txt dosyasını kontrol edin.
+
+Check for updates
+== Güncellemeleri kontrol et
 
 Check if voice server address is reachable
 == Ses sunucusu adresine erişilebilirliği kontrol edin
@@ -2516,6 +2519,15 @@ Copy name option color
 Copy skin
 == Skin'i kopyala
 
+Copy skin from dummy
+== Dummy skinini kopyala
+
+Copy skin from player
+== Oyuncu skinini kopyala
+
+Copy skin ID
+== Skin ID'sini kopyala
+
 Copy skin option color
 == Kopyala cilt seçeneği rengi
 
@@ -2950,6 +2962,15 @@ Deep unfreeze tile outline color
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly modu (0=normal, 1=DF, 2=HDF, 3=özel)
+
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: Ayda 500.000 karakter (deepl.com'da kaydolun; ücretsiz anahtarlar :fx ile biter)
+
+DeepL API Key (free keys end with :fx)
+== DeepL API Anahtarı (ücretsiz anahtarlar :fx ile biter)
 
 DeepSeek
 == DeepSeek
@@ -3568,12 +3589,6 @@ dumps all sqlservers readservers = r, writeservers = w
 
 Dumps the antibot status
 == Antibot durumunu döker
-
-Duotone
-== Çift ton
-
-Duotone icon secondary color alpha migration completed flag
-== Duotone simge ikincil renk alfa geçişi tamamlandı işareti
 
 Duplicate
 == Çoğalt
@@ -4348,9 +4363,6 @@ Failed
 
 Failed saving the replay!
 == Kayıt kaydedilemedi!
-
-Failed to check for updates
-== Güncelleme kontrolü başarısız oldu
 
 Failed to copy main asset image.
 == Ana varlık görüntüsü kopyalanamadı.
@@ -6086,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == Son başarılı eşitleme: %s
 
+Last verified approved update source
+== Son doğrulanan onaylı güncelleme kaynağı
+
 Latency
 == Gecikme
 
@@ -7280,6 +7295,9 @@ Netversion
 Network
 == Ağ
 
+Network error
+== Ağ hatası
+
 Network timeout
 == Ağ zaman aşımı
 
@@ -7385,6 +7403,9 @@ No chat message to translate
 No code
 == Kod yok
 
+No compatible Windows update package for this version
+== Bu sürüm için uyumlu Windows güncelleme paketi yok
+
 No controller found. Plug in a controller.
 == Kumanda bulunamadı. Bir kumanda bağlayın.
 
@@ -7402,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == Kullanılabilir yönetmen oyuncusu yok
+
+No downloadable portable package for this version
+== Bu sürüm için indirilebilir taşınabilir paket henüz yok
 
 No empty team left.
 == Boş takım kalmadı.
@@ -7489,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == Son kullanılan görünüm yok
+
+No release notes provided
+== Bu sürüm için not sağlanmadı
 
 No results
 == Sonuç yok
@@ -8747,14 +8774,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Qm arayüzü simgesi özel rengi
 
-Qm UI duotone secondary icon color
-== Qm arayüzü Duotone simgelerinin ikincil rengi
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm arayüz simgesi rengi: 1=Beyaz, 2=Siyah, 3=Özel, 4=Gökkuşağı
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Qm arayüz simgesi stili: 0=Normal, 1=Kalın, 2=İnce, 3=Dolgulu, 4=Hafif, 5=Çift ton
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Qm arayüz simgesi stili: 0=Normal, 1=Kalın, 2=Hafif (eski değer), 3=Dolgulu, 4=Hafif, 5=Kalın (eski değer)
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue: indeks 1 ile %d arasında olmalıdır
@@ -9140,6 +9164,9 @@ Relative X position of the draggable back button
 Relative Y position of the draggable back button
 == Sürüklenebilir geri düğmesinin bağıl Y konumu
 
+Release notes
+== Sürüm notları
+
 Reload
 == Yeniden yükle
 
@@ -9511,6 +9538,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == KCP uyumlu istemcinin oturumu yükseltmesini gerektir (geri dönüş için gri tonlama sırasında kapalı tut)
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== qm_graphics_trace etkinken yazı tiplerini yeniden tara ve çözümlenen Unicode yazı tipi yüzünü ve glifi sorgula
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == Kurtarma bu sunucuda etkin değil ve /practice açık bir takımda değilsiniz. Antrenman açıkken sıralama kazanamayacağınızı unutmayın.
@@ -12494,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == "default" adı ayrılmıştır.
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== Eski qmclient/fonts klasörü artık taranmıyor. Özel yazı tiplerinizi yapılandırma klasöründeki fonts/fonts_store konumuna elle taşıyın. Normal sürüm kullanıcı yapılandırma klasörünü, taşınabilir sürüm profile klasörünü kullanır. data/fonts içindeki birlikte gelen yazı tiplerinin taşınması gerekmez.
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Fısıldadığınız oyuncu henüz yeniden bağlanmadı veya oyundan ayrıldı. Biraz bekleyin ya da başka birine fısıldayın
 
@@ -13034,6 +13067,9 @@ Translation queue full, sending original
 Translation service
 == Çeviri hizmeti
 
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== Çeviri servisi çeviri yerine bir bildirim döndürdü (ileti filtrelenmiş kelimeler içerebilir)
+
 Translation Settings
 == Çeviri Ayarları
 
@@ -13132,9 +13168,6 @@ UI icon color
 
 UI icon custom color
 == Özel arayüz simgesi rengi
-
-UI icon duotone secondary color
-== Duotone arayüz simgelerinin ikincil rengi
 
 UI icon style
 == Arayüz simgesi stili
@@ -13361,6 +13394,9 @@ Update notice
 Update or add a specific war group
 == Belirli bir savaş grubunu güncelle veya ekle
 
+Update package available
+== Bu sürüm için güncelleme paketi mevcut
+
 Update Rate
 == Güncelleme Hızı
 
@@ -13433,6 +13469,9 @@ Use current name
 Use custom skins instead of the ninja tee
 == Ninja tee yerine özel görünümler kullan
 
+Use custom UI icon color
+== Arayüz simgelerinde özel renk kullan
+
 Use default flags on scoreboard
 == Skor tablosunda varsayılan bayrakları kullan
 
@@ -13475,9 +13514,6 @@ Use large emote
 Use mouse sensitivity when dynamic camera is on
 == Dinamik kamera açıkken fare hassasiyetini kullan
 
-Use MSDF icon pipeline when enhanced rendering is active
-== Gelişmiş işleme etkin olduğunda MSDF simge işlem hattını kullan
-
 Use multi-char replacement based on word length
 == Kelime uzunluğuna göre çok karakterli değiştirme kullan
 
@@ -13510,6 +13546,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == Daha doğru girdi tahmini için diğer oyuncuları tahmin etmek üzere ön girdi kullan
+
+Use procedural ring pipeline when enhanced rendering is active
+== Gelişmiş işleme etkin olduğunda prosedürel halka işlem hattını kullan
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == Gelişmiş işleme etkin olduğunda Dynamic Island ve yuvarlatılmış dikdörtgenler için SDF işlem hatlarını kullan

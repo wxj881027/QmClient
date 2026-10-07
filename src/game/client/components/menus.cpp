@@ -57,7 +57,7 @@
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 
@@ -676,7 +676,6 @@ IUiContext CMenus::SettingsUiContext(const char *pScope, const float UiScale)
 	Context.m_pUi = Ui();
 	Context.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
 	Context.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
-	Context.m_pIconManager = GameClient()->QmIconManager();
 	Context.m_pMenus = this;
 	Context.m_pTooltips = &GameClient()->m_Tooltips;
 	Context.m_pTextRender = TextRender();
@@ -2436,22 +2435,6 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		SetDemoBrowserSource(Source);
 		NewPage = PAGE_DEMOS;
 	};
-	auto RenderFavoriteMapsIcon = [&](const CUIRect &Tab, const bool OnIndicator) {
-		const float IconSide = minimum(Tab.w, Tab.h) * 0.56f;
-		const CUIRect IconRect{Tab.x + (Tab.w - IconSide) * 0.5f, Tab.y + (Tab.h - IconSide) * 0.5f, IconSide, IconSide};
-		// 滑块上的图标必须是深色：qm_ui_icon_color 默认强制白色，压在亮滑块上会看不见。
-		const ColorRGBA IconColor = OnIndicator ? MenuCapsuleTabActiveLabelColor() : ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-		if(!GameClient()->QmIconManager()->PreferFontFallback() && GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, IconRect, IconColor))
-			return;
-
-		const unsigned OldFlags = TextRender()->GetRenderFlags();
-		const EFontPreset OldPreset = TextRender()->GetFontPreset();
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		Ui()->DoLabel_QmIcon(&Tab, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, IconSide, TEXTALIGN_MC);
-		TextRender()->SetRenderFlags(OldFlags);
-		TextRender()->SetFontPreset(OldPreset);
-	};
 	// 统一边距基准：全局安全区（8px）已提供到窗口上/左/右的距离，
 	// 导航胶囊行直接对齐安全区边缘、不再额外内缩；导航栏高度余下的
 	// MENU_MENUBAR_GAP_NEW（8px）就是导航→内容的间隙。
@@ -2569,7 +2552,6 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			int m_Page;
 			EQmIcon m_Icon;
 			const char *m_pIcon;
-			bool m_bFavoriteMapsIcon;
 			const CCommunityIcon *m_pCommunityIcon;
 			const char *m_pTooltip;
 			float m_AppearStrength;
@@ -2578,8 +2560,8 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		CUIRect aStartTabSlots[std::size(s_aStartTabButtons)];
 		int NumStartTabs = 0;
 		int ActiveStartTab = -1;
-		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const bool FavoriteMapsIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot) {
-			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, FavoriteMapsIcon, pCommunityIcon, pTooltip, AppearStrength};
+		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot) {
+			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength};
 			aStartTabSlots[NumStartTabs] = Slot;
 			if(ActivePage == Page)
 				ActiveStartTab = NumStartTabs;
@@ -2587,21 +2569,21 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		};
 		{
 			const int aFixedPages[] = {PAGE_INTERNET, PAGE_LAN, PAGE_FAVORITES, PAGE_FAVORITE_MAPS};
-			const EQmIcon aFixedIcons[] = {EQmIcon::EARTH_AMERICAS, EQmIcon::NETWORK_WIRED, EQmIcon::STAR, EQmIcon::COUNT};
-			const char *const apFixedIcons[] = {FONT_ICON_EARTH_AMERICAS, FONT_ICON_NETWORK_WIRED, FONT_ICON_STAR, ""};
+			const EQmIcon aFixedIcons[] = {EQmIcon::EARTH_AMERICAS, EQmIcon::NETWORK_WIRED, EQmIcon::STAR, EQmIcon::BOOKMARK};
+			const char *const apFixedIcons[] = {FONT_ICON_EARTH_AMERICAS, FONT_ICON_NETWORK_WIRED, FONT_ICON_STAR, FONT_ICON_BOOKMARK};
 			const char *const apFixedTooltips[] = {Localize("Internet"), Localize("LAN"), Localize("Favorites"), Localize("Favorite map")};
 			CUIRect TabsRemainder = Box;
 			// 主菜单入口并入左侧滑块导航：作为第一个槽位，点击回到主菜单。
 			CUIRect HomeTabSlot;
 			TabsRemainder.VSplitLeft(BrowserButtonWidth, &HomeTabSlot, &TabsRemainder);
-			AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE, false, nullptr, Localize("Main menu"), 1.0f, HomeTabSlot);
+			AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE, nullptr, Localize("Main menu"), 1.0f, HomeTabSlot);
 			for(size_t Fixed = 0; Fixed < std::size(aFixedPages); ++Fixed)
 			{
 				if(NumStartTabs > 0)
 					TabsRemainder.VSplitLeft(MenubarItemGap, nullptr, &TabsRemainder);
 				CUIRect Slot;
 				TabsRemainder.VSplitLeft(BrowserButtonWidth, &Slot, &TabsRemainder);
-				AddStartTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], Fixed == std::size(aFixedPages) - 1, nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
+				AddStartTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
 			}
 
 			static const uint64_t s_FavoriteCommunityAppearScopeHash = static_cast<uint64_t>(str_quickhash("menu_favorite_community_tab_appear"));
@@ -2632,7 +2614,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 				Slot.w = RevealWidth;
 
 				const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumStartTabs - 5);
-				AddStartTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, false, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
+				AddStartTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
 			}
 			// 右侧图标簇紧接着页签右边排，中间不留额外空白。
 			Box = TabsRemainder;
@@ -2687,8 +2669,6 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			{
 				NewPage = Tab.m_Page;
 			}
-			if(Tab.m_bFavoriteMapsIcon)
-				RenderFavoriteMapsIcon(aStartTabSlots[TabIndex], TabActive);
 			GameClient()->m_Tooltips.DoToolTip(&s_aStartTabButtons[TabIndex], &aStartTabSlots[TabIndex], Tab.m_pTooltip);
 		}
 
@@ -3436,8 +3416,8 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		float MouseAngle = std::atan2(MouseDelta.y, MouseDelta.x);
 		if(MouseAngle < -pi / 2.0f)
 			MouseAngle += 2.0f * pi;
-		const bool UseMsdfRing = Graphics()->HasTexturedMsdf();
-		if(!UseMsdfRing)
+		const bool UseProceduralRing = Graphics()->HasProceduralRing();
+		if(!UseProceduralRing)
 		{
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
@@ -3463,12 +3443,11 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			const float Sweep = 2.0f * pi * ChartWeight / (float)TotalChartWeight;
 			if(Sweep <= 0.0f)
 				continue;
-			if(UseMsdfRing)
+			if(UseProceduralRing)
 			{
-				IGraphics::STexturedMsdfParams Params;
+				IGraphics::SProceduralRingParams Params;
 				Params.m_Rect = vec4(ChartCenter.x - ChartRadius, ChartCenter.y - ChartRadius, ChartRadius * 2.0f, ChartRadius * 2.0f);
 				Params.m_Color = aModeColors[Index % std::size(aModeColors)];
-				Params.m_ProceduralRing = true;
 				Params.m_RingInnerRadius = ChartInnerRadius / (ChartRadius * 2.0f);
 				Params.m_RingOuterRadius = 0.5f;
 				// 角度边缘至少覆盖一个像素的导数范围，避免相邻扇区之间出现
@@ -3476,7 +3455,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 				const float AngularOverlap = maximum(0.012f, 4.0f / ChartRadius);
 				Params.m_RingStartAngle = StartAngle - AngularOverlap;
 				Params.m_RingEndAngle = StartAngle + Sweep + AngularOverlap;
-				Graphics()->RenderTexturedMsdf(Params);
+				Graphics()->RenderProceduralRing(Params);
 			}
 			else
 			{
@@ -3499,7 +3478,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 				HoveredMode = (int)Index;
 			StartAngle += Sweep;
 		}
-		if(!UseMsdfRing)
+		if(!UseProceduralRing)
 			Graphics()->QuadsEnd();
 	}
 	if(HoveredMode >= 0)
@@ -4445,6 +4424,11 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	const bool DemoDisplayExpanded = m_DemoExportDisplayExpanded;
 	const float DemoRenderContentHeight = qm_demo_ui::RenderContentHeight(DemoDisplayExpanded, Client()->State() == IClient::STATE_ONLINE);
 #endif
+	if(m_Popup == POPUP_QM_UPDATE)
+	{
+		RenderQmUpdatePopup(Screen);
+		return;
+	}
 	// QmClient 新功能弹窗自带完整布局(标题/滚动条目/按钮)，不复用通用弹窗骨架。
 	if(m_Popup == POPUP_QM_NEW_FEATURES)
 	{
@@ -7894,6 +7878,11 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
+	if(GameClient()->m_TClient.m_UpdatePopupRequested && m_MenuActive && m_Popup == POPUP_NONE)
+	{
+		GameClient()->m_TClient.m_UpdatePopupRequested = false;
+		ShowQmUpdatePopup();
+	}
 	CPerfTimer FrameTimer;
 	m_QmMapUpload.Poll();
 
@@ -8374,6 +8363,17 @@ void CMenus::SetShowStart(bool ShowStart)
 void CMenus::ShowQuitPopup()
 {
 	m_Popup = POPUP_QUIT;
+}
+
+void CMenus::ShowQmUpdatePopup()
+{
+	MarkMenuInteraction();
+	m_QmUpdateScrollReset = true;
+	m_QmUpdatePopupState = -1;
+	auto &Update = GameClient()->m_TClient;
+	if(!Update.m_FetchedQmClientUpdateInfo && !Update.m_UpdateCheckFailed && !Update.m_UpdateReady && !Update.IsUpdateChecking() && !Update.IsUpdateDownloading())
+		Update.RequestQmClientUpdateCheckAndUpdate();
+	m_Popup = POPUP_QM_UPDATE;
 }
 
 void CMenus::ShowQmNewFeaturesPopup()

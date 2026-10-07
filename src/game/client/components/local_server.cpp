@@ -9,6 +9,8 @@
 
 bool CLocalServer::RunServer(const std::vector<const char *> &vpArguments)
 {
+	if(IsServerRunning())
+		return true;
 	secure_random_password(m_aRconPassword, sizeof(m_aRconPassword), 16);
 	char aAuthCommand[64 + sizeof(m_aRconPassword)];
 	str_format(aAuthCommand, sizeof(aAuthCommand), "auth_add %s admin %s", DEFAULT_SAVED_RCON_USER, m_aRconPassword);
@@ -41,7 +43,11 @@ bool CLocalServer::RunServer(const std::vector<const char *> &vpArguments)
 	// No / in binary path means to search in $PATH, so it is expected that the file can't be opened. Just try executing anyway.
 	if(str_find(aBuf, "/") == nullptr || fs_is_file(aBuf))
 	{
+#if defined(CONF_FAMILY_WINDOWS)
+		m_Process = shell_execute_owned(aBuf, vpArgumentsWithAuth.data(), vpArgumentsWithAuth.size());
+#else
 		m_Process = shell_execute(aBuf, EShellExecuteWindowState::BACKGROUND, vpArgumentsWithAuth.data(), vpArgumentsWithAuth.size());
+#endif
 		if(m_Process != INVALID_PROCESS)
 		{
 			GameClient()->m_Menus.ForceRefreshLanPage();

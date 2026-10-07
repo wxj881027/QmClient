@@ -47,9 +47,13 @@ public:
 		BASIC,
 		SERVER,
 		CLIENT,
+		CLIENT_PORTABLE,
+		CLIENT_TEST,
 	};
 
 	virtual int NumPaths() const = 0;
+	// 只读随包资源路径，不经过用户目录的覆盖搜索；失败时清空输出。
+	virtual bool GetDataPath(const char *pFilename, char *pBuffer, unsigned BufferSize) const = 0;
 
 	virtual void ListDirectory(int Type, const char *pPath, FS_LISTDIR_CALLBACK pfnCallback, void *pUser) = 0;
 	virtual void ListDirectoryInfo(int Type, const char *pPath, FS_LISTDIR_CALLBACK_FILEINFO pfnCallback, void *pUser) = 0;

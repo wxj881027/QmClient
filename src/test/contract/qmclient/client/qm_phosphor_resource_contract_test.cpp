@@ -1,5 +1,5 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
@@ -25,12 +25,11 @@ namespace
 // 本合同钉住资源侧的三个不变量：TTF 随包、码点映射随包、运行时图标名全部可解析。
 TEST(QmPhosphorResourceContract, WeightFontsRemainBundled)
 {
-	const std::array<const char *, 5> apFonts = {
-		"data/qmclient/fonts/Phosphor/Phosphor-Regular.ttf",
-		"data/qmclient/fonts/Phosphor/Phosphor-Light.ttf",
-		"data/qmclient/fonts/Phosphor/Phosphor-Bold.ttf",
-		"data/qmclient/fonts/Phosphor/Phosphor-Fill.ttf",
-		"data/qmclient/fonts/Phosphor/Phosphor-Duotone.ttf",
+	const std::array<const char *, 4> apFonts = {
+		"data/fonts/Phosphor/Phosphor-Regular.ttf",
+		"data/fonts/Phosphor/Phosphor-Light.ttf",
+		"data/fonts/Phosphor/Phosphor-Bold.ttf",
+		"data/fonts/Phosphor/Phosphor-Fill.ttf",
 	};
 	for(const char *pPath : apFonts)
 	{
@@ -67,11 +66,10 @@ TEST(QmPhosphorResourceContract, CodepointsCoverEveryRuntimeIconName)
 	}
 	EXPECT_GE(Names.size(), 1400u) << "official Phosphor mapping looks truncated";
 
-	// 运行时每个枚举图标的图集名都必须能在官方映射中找到码点，
-	// 否则全量图集烘焙后该图标缺失，整个 MSDF 图集会被运行时拒载。
+	// 运行时语义名称必须属于随包官方码点清单。
 	for(int IconIndex = 0; IconIndex < static_cast<int>(EQmIcon::COUNT); ++IconIndex)
 	{
-		const char *pIconName = CQmIconManager::IconName(static_cast<EQmIcon>(IconIndex));
+		const char *pIconName = CQmIconRegistry::IconName(static_cast<EQmIcon>(IconIndex));
 		ASSERT_NE(pIconName[0], '\0');
 		EXPECT_NE(Names.find(pIconName), Names.end()) << pIconName;
 	}

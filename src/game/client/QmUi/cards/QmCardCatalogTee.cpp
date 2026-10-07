@@ -33,7 +33,7 @@
 #include <game/client/components/qmclient/tee_skin_apply.h>
 #include <game/client/components/skins.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/skin.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
@@ -761,6 +761,21 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		GameClient()->m_Skins.RecordRecentSkin(Target);
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_RandomSkin, &Layout.m_RandomSkin, Localize("Create a random skin"));
+
+	static CButtonContainer s_CopyOtherSkin;
+	if(Ui()->DoButton_QmIcon(&s_CopyOtherSkin, EQmIcon::COPY, FONT_ICON_COPY, 0, &Layout.m_CopyOtherSkin, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
+	{
+		// 一键把另一侧（本体/分身）的皮肤与配色状态复制到当前编辑对象，与双击应用共用同一套字段语义。
+		CommitSettingsTeeSkinEdits();
+		const SQmRecentTeeSkin Other = QmCurrentTeeSkin(g_Config, !m_Dummy);
+		QmApplyTeeSkinToTarget(g_Config, m_Dummy ? ETeeSkinApplyTarget::DUMMY : ETeeSkinApplyTarget::MAIN,
+			Other.m_Name.c_str(), true, Other.m_UseCustomColor, Other.m_ColorBody, Other.m_ColorFeet);
+		SetNeedSendInfo(m_Dummy);
+		m_SkinListScrollToSelected = true;
+		GameClient()->m_Skins.SkinList(Target).ForceRefresh();
+		GameClient()->m_Skins.RecordRecentSkin(Target);
+	}
+	GameClient()->m_Tooltips.DoToolTip(&s_CopyOtherSkin, &Layout.m_CopyOtherSkin, m_Dummy ? Localize("Copy skin from player") : Localize("Copy skin from dummy"));
 
 	CTeeRenderInfo EyeInfo;
 	EyeInfo.Apply(GameClient()->m_Skins.Find(pSkinName[0] == '\0' ? "default" : pSkinName));

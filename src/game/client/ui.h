@@ -22,7 +22,6 @@
 #include <vector>
 
 class CScrollRegion;
-class CQmIconManager;
 enum class EQmIcon;
 class IClient;
 class IGraphics;
@@ -306,6 +305,9 @@ public:
 
 		std::string m_Text;
 		int m_ReadCursorGlyphCount;
+		std::array<EQmIcon, 8> m_aQmIcons;
+		int m_NumQmIcons;
+		EFontPreset m_FontPreset;
 		float m_FontSize;
 		int m_TextAlign;
 		float m_LabelMaxWidth;
@@ -828,8 +830,22 @@ private:
 	IGraphics *m_pGraphics;
 	IInput *m_pInput;
 	ITextRender *m_pTextRender;
-	CQmIconManager *m_pQmIconManager = nullptr;
 	float m_BackgroundAlphaScale = 1.0f;
+	struct SQmCachedIconLabel
+	{
+		std::string m_Text;
+		float m_FontSize;
+		float m_PixelScale;
+		float m_PixelScaleX;
+		int m_Weight;
+		EFontPreset m_Preset;
+		unsigned m_Flags;
+		STextContainerIndex m_Container;
+		vec2 m_Size;
+		float m_BiggestCharacterHeight;
+	};
+	mutable std::vector<SQmCachedIconLabel> m_vQmCachedIconLabels;
+	bool DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Size, int Align, int Count) const;
 
 	std::vector<CUIElement *> m_vpOwnUIElements; // ui elements maintained by CUi class
 	std::vector<CUIElement *> m_vpUIElements;
@@ -1146,7 +1162,6 @@ public:
 	void DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL, bool Enabled = true);
 	int DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt);
 	// 图集优先、字形回退的图标绘制：pFallbackIcon 为 FontIcons::FONT_ICON_* 字形。
-	void SetQmIconManager(CQmIconManager *pQmIconManager) { m_pQmIconManager = pQmIconManager; }
 	bool DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const;
 	bool DrawQmIconAt(float x, float y, float Size, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const
 	{
@@ -1291,6 +1306,8 @@ public:
 		// QmClient: 按条目渲染字体前先检查该名字能否解析为已加载的 face（商店
 		// 搜索弹层的条目是未安装的在线字体，缺字时静默跳过切换，避免逐帧失败日志）。
 		bool m_FontFaceAvailabilityCheck = false;
+		// 字体族列表以默认面预览；样式与商店 face 列表保持完整配置名语义。
+		bool m_FontFamilySelection = false;
 
 		SSelectionPopupContext();
 		void Reset();

@@ -2,6 +2,14 @@
 
 这里放 QmClient 专属的真实进程冒烟和端到端测试。根目录 `scripts/` 是 DDNet 上游同步区，不在其中增加 QmClient 场景。
 
+Windows 的普通版和便携版均忽略 `storage.cfg`。通用进程测试需要独立的 `DEV=ON、QMCLIENT_TEST_STORAGE=ON` 构建，runner 通过 `QMCLIENT_TEST_STORAGE_ROOT` 指向各场景临时目录。误用普通发布构建时初始化会失败；测试构建禁止打包，不用于发布。Linux/macOS 沿用原隔离方式。
+
+便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证 `profile/` 随目录搬家、忽略目录外配置及不可写时不回退：
+
+```text
+python qmclient_scripts/integration/e2e_storage_modes.py cmake-build-portable
+```
+
 运行最小冒烟集：
 
 ```text
@@ -32,3 +40,19 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> demo_recording
 注意：`crash_dialog_smoke.py` 是视觉测试，必须让窗口真实出现在屏幕上抓帧（烟花动画、正文、按钮渲染），运行时会在桌面弹出多个可见窗口约 20 秒，请在方便时运行。弹窗逻辑的静默回归由 E2E 场景 `assert_dialog_no_false_hang` 覆盖（窗口以 `QMCLIENT_TEST_HIDE_DIALOG` 隐藏，不会打扰桌面）。
 
 进程测试必须从外部可观察结果断言启动、连接、日志、退出和失败回退。客户端或服务端崩溃必须失败，不得通过放宽超时或忽略退出码掩盖。
+
+字体资源真实进程回归使用专用便携客户端，不依赖已安装系统字体：
+
+```text
+python qmclient_scripts/integration/font_resources_smoke.py --client cmake-build-portable/DDNet.exe
+```
+
+脚本在 tmp 内生成合法 TTF/TTC，并通过 qm_graphics_trace 下的 qm_font_diagnostics 查询真实字体族、样式、FreeType glyph 索引及无缩放 advance。七个场景覆盖商店下载目录与用户目录的 Unicode 名称、仅 data 字体与 Book 样式、损坏用户同路径字体不遮住 data 字体、TTC 多族多面及跨目录重复加载、随包 Poppins／Source Han Sans 的家族样式分组，以及真实家族与旧样式别名冲突后的选择恢复。重复查询和动态添加集合副本后断言字体池大小不变；这是进程冒烟回归，不代表下拉菜单截图或完整玩家端到端流程通过。
+
+退出生命周期的 Windows 进程回归使用专用便携构建，同时构建 `game-client`、`game-server` 和 `testrunner`：
+
+```powershell
+python qmclient_scripts/integration/exit_lifecycle_smoke.py --build-dir tmp/session-acceptance-build
+```
+
+覆盖正常最终清理、最终清理卡死后的看门狗强制退出并保留已保存配置，以及本地服务器在父进程正常退出、`_Exit`、外部强杀和 `CreateProcess` 尚未返回的创建窗口中被杀后的终止。Windows 本地服务器使用原子 Job-list 创建能力，需要 Windows 10 / Server 2016 或更新版本；能力不可用时拒绝启动。测试只运行工作区副本，服务器使用隔离的 `storage.cfg`，不会读取真实用户配置。

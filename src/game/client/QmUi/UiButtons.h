@@ -19,7 +19,7 @@ namespace ui_widget
 	// click. Falls back to a flat disabled rendering when Disabled is set.
 	bool PrimaryButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled = false);
 
-	// Border-only button (transparent fill, subtle border, accent on hover).
+	// 次级按钮沿用控件背景配置，悬浮/按下时增加可辨识的背景和边框反馈。
 	bool SecondaryButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled = false);
 
 	// Icon-only button. pIcon is a FONT_ICON_* UTF-8 string. Wraps CUi::DoButton_FontIcon

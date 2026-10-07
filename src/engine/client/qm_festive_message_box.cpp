@@ -12,6 +12,7 @@
 #include <windows.h>
 
 #include <mmsystem.h>
+#include <opusfile.h>
 #include <wingdi.h>
 
 #if !defined(WM_DPICHANGED)
@@ -20,11 +21,15 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <iterator>
 #include <memory>
+#include <new>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace
@@ -712,7 +717,7 @@ namespace
 		if(Separator == std::wstring::npos)
 			return {};
 		ModuleDirectory.resize(Separator);
-		for(const wchar_t *pRelativePath : {L"data/audio/qm_festive_haoyunlai.mp3", L"data/audio/qm_festive_haoyunlai.wav", L"data/audio/好运来.wav", L"data/好运来.wav"})
+		for(const wchar_t *pRelativePath : {L"data/audio/crash_music/qm_festive_haoyunlai.opus"})
 		{
 			const std::wstring Candidate = ModuleDirectory + L"/" + pRelativePath;
 			if(GetFileAttributesW(Candidate.c_str()) != INVALID_FILE_ATTRIBUTES)
@@ -721,21 +726,155 @@ namespace
 		return {};
 	}
 
+	// 崩溃窗口不能复用可能已损坏的 SDL/游戏音频状态；独立解码并交给 WinMM。
+	class CFestiveMusicPlayer
+	{
+		std::atomic<bool> m_Stop{false};
+		std::thread m_Worker;
+
+		void Play(const std::wstring &Path)
+		{
+			FILE *pFile = _wfopen(Path.c_str(), L"rb");
+			if(pFile == nullptr)
+				return;
+			const OpusFileCallbacks Callbacks{
+				[](void *pStream, unsigned char *pData, int Size) {
+					FILE *pInput = static_cast<FILE *>(pStream);
+					const size_t Read = fread(pData, 1, Size, pInput);
+					return ferror(pInput) ? -1 : static_cast<int>(Read);
+				},
+				[](void *pStream, opus_int64 Offset, int Whence) { return _fseeki64(static_cast<FILE *>(pStream), Offset, Whence); },
+				[](void *pStream) -> opus_int64 { return _ftelli64(static_cast<FILE *>(pStream)); },
+				[](void *pStream) { return fclose(static_cast<FILE *>(pStream)); }};
+			OggOpusFile *pDecoder = op_open_callbacks(pFile, &Callbacks, nullptr, 0, nullptr);
+			if(pDecoder == nullptr)
+			{
+				fclose(pFile);
+				return;
+			}
+			// 驱动异常未归还缓冲时需要保留其内存，不能让栈析构造成驱动悬垂访问。
+			struct SAudioBuffers
+			{
+				std::array<std::array<opus_int16, 4096>, 4> m_aSamples{};
+				std::array<WAVEHDR, 4> m_aHeaders{};
+			};
+			std::unique_ptr<SAudioBuffers> pBuffers(new(std::nothrow) SAudioBuffers);
+			if(!pBuffers || m_Stop.load())
+			{
+				op_free(pDecoder);
+				return;
+			}
+			WAVEFORMATEX Format{};
+			Format.wFormatTag = WAVE_FORMAT_PCM;
+			Format.nChannels = 2;
+			Format.nSamplesPerSec = 48000;
+			Format.wBitsPerSample = 16;
+			Format.nBlockAlign = 4;
+			Format.nAvgBytesPerSec = Format.nSamplesPerSec * Format.nBlockAlign;
+			HWAVEOUT Output = nullptr;
+			if(waveOutOpen(&Output, WAVE_MAPPER, &Format, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR)
+			{
+				op_free(pDecoder);
+				return;
+			}
+			auto &aSamples = pBuffers->m_aSamples;
+			auto &aHeaders = pBuffers->m_aHeaders;
+			bool Failed = false;
+			int EmptyReads = 0;
+			while(!m_Stop.load() && !Failed)
+			{
+				bool Submitted = false;
+				for(size_t Index = 0; Index < aHeaders.size() && !m_Stop.load(); ++Index)
+				{
+					WAVEHDR &Header = aHeaders[Index];
+					if((Header.dwFlags & WHDR_PREPARED) != 0)
+					{
+						if((Header.dwFlags & WHDR_DONE) == 0)
+							continue;
+						if(waveOutUnprepareHeader(Output, &Header, sizeof(Header)) != MMSYSERR_NOERROR)
+						{
+							Failed = true;
+							break;
+						}
+					}
+					const int Frames = op_read_stereo(pDecoder, aSamples[Index].data(), static_cast<int>(aSamples[Index].size()));
+					if(Frames <= 0)
+					{
+						// 空文件、损坏流或无法回绕时停止，避免后台忙循环。
+						if(Frames < 0 || ++EmptyReads > 1 || op_pcm_seek(pDecoder, 0) != 0)
+							Failed = true;
+						break;
+					}
+					EmptyReads = 0;
+					Header = {};
+					Header.lpData = reinterpret_cast<char *>(aSamples[Index].data());
+					Header.dwBufferLength = Frames * Format.nBlockAlign;
+					if(waveOutPrepareHeader(Output, &Header, sizeof(Header)) != MMSYSERR_NOERROR ||
+						waveOutWrite(Output, &Header, sizeof(Header)) != MMSYSERR_NOERROR)
+					{
+						Failed = true;
+						break;
+					}
+					Submitted = true;
+				}
+				if(!Submitted)
+					Sleep(5);
+			}
+			// 先归还驱动持有的缓冲区；最多重试五次（额外等待 25ms），不因 WAVERR_STILLPLAYING 无限轮询。
+			bool Released = false;
+			for(int Attempt = 0; Attempt < 5 && !Released; ++Attempt)
+			{
+				waveOutReset(Output);
+				Released = true;
+				for(WAVEHDR &Header : aHeaders)
+					if((Header.dwFlags & WHDR_PREPARED) != 0 && waveOutUnprepareHeader(Output, &Header, sizeof(Header)) != MMSYSERR_NOERROR)
+						Released = false;
+				if(!Released)
+					Sleep(5);
+			}
+			if(!Released || waveOutClose(Output) != MMSYSERR_NOERROR)
+			{
+				// 故障驱动仍可能引用头和 PCM：仅此异常路径保留至进程结束，避免 UAF。
+				pBuffers.release();
+			}
+			op_free(pDecoder);
+		}
+
+	public:
+		~CFestiveMusicPlayer() { Stop(); }
+		void Start(const std::wstring &Path)
+		{
+			Stop();
+			if(Path.empty())
+				return;
+			m_Stop.store(false);
+			try
+			{
+				m_Worker = std::thread([this, Path] { Play(Path); });
+			}
+			catch(...)
+			{
+				// 线程资源不足时仍允许用户操作崩溃报告窗口。
+			}
+		}
+		void Stop()
+		{
+			m_Stop.store(true);
+			if(m_Worker.joinable())
+				m_Worker.join();
+		}
+	};
+
+	CFestiveMusicPlayer gs_MusicPlayer;
+
 	void StartFestiveMusic()
 	{
-		const std::wstring Path = FindFestiveMusicPath();
-		if(Path.empty())
-			return;
-
-		mciSendStringW(L"close qm_festive_bgm", nullptr, 0, nullptr);
-		std::wstring OpenCommand = L"open \"" + Path + L"\" type mpegvideo alias qm_festive_bgm";
-		if(mciSendStringW(OpenCommand.c_str(), nullptr, 0, nullptr) == 0)
-			mciSendStringW(L"play qm_festive_bgm repeat", nullptr, 0, nullptr);
+		gs_MusicPlayer.Start(FindFestiveMusicPath());
 	}
 
 	void StopFestiveMusic()
 	{
-		mciSendStringW(L"close qm_festive_bgm", nullptr, 0, nullptr);
+		gs_MusicPlayer.Stop();
 	}
 
 	// 只让边框环带进入重绘区域，正文 EDIT 和按钮不会随动画反复重画。

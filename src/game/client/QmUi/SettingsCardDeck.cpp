@@ -3,13 +3,15 @@
 #include "QmAnimResolve.h"
 #include "QmCardRegistry.h"
 #include "SettingsCardCollapseState.h"
+#include "SettingsCardInfo.h"
 #include "SettingsCardWidth.h"
 #include "UiContext.h"
 
 #include <base/system.h>
 
-#include <game/client/ui_scrollregion.h>
 #include <game/client/components/tooltips.h>
+#include <game/client/qm_icon.h>
+#include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -349,8 +351,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 					AppendCard(StateIndex, 0, DrawLayout.m_ContentViewport, FullPlan);
 					LeftPlan.SetCursorY(FullPlan.CursorY());
 					RightPlan.SetCursorY(FullPlan.CursorY());
-				}
-			}, VisualOptions.m_LeadingFullWidthCards);
+				} }, VisualOptions.m_LeadingFullWidthCards);
 		}
 		else if(DrawLayout.m_TwoColumns)
 		{
@@ -362,9 +363,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 		else
 		{
 			CSettingsCardColumnFramePlan ColumnPlan(DrawLayout.m_ContentViewport.y, DrawLayout.m_CardGap);
-			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) {
-				AppendCard(StateIndex, Column, DrawLayout.m_ContentViewport, ColumnPlan);
-			}, VisualOptions.m_LeadingFullWidthCards);
+			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) { AppendCard(StateIndex, Column, DrawLayout.m_ContentViewport, ColumnPlan); }, VisualOptions.m_LeadingFullWidthCards);
 		}
 	};
 
@@ -553,7 +552,8 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 		for(const SPreparedCard &Card : m_vPreparedCards)
 		{
 			const bool InHeader = PointInRect(Card.m_Frame.m_HeaderRect, Input.m_MouseX, Input.m_MouseY);
-			const bool InHeaderAction = PointInRect(Card.m_Frame.m_HandleRect, Input.m_MouseX, Input.m_MouseY) || PointInRect(SettingsCardWidthButtonRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY);
+			const bool InHeaderAction = PointInRect(Card.m_Frame.m_HandleRect, Input.m_MouseX, Input.m_MouseY) || PointInRect(SettingsCardWidthButtonRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY) ||
+						    (Card.m_pDefinition->m_Spec.m_pInfo != nullptr && Card.m_pDefinition->m_Spec.m_pInfo[0] != '\0' && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
 			if(InHeader && !InHeaderAction)
 			{
 				m_Drag.m_StateIndex = Card.m_StateIndex;
@@ -744,16 +744,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 				const CUIRect Button = SettingsCardWidthButtonRect(DrawFrame);
 				if(Ctx.m_pTextRender != nullptr && Ctx.m_pUi != nullptr)
 				{
-					const auto Font = Ctx.m_pTextRender->GetFontPreset();
-					const auto Flags = Ctx.m_pTextRender->GetRenderFlags();
-					const ColorRGBA Color = Ctx.m_pTextRender->GetTextColor();
-					Ctx.m_pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
-					Ctx.m_pTextRender->SetRenderFlags(TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | TEXT_RENDER_FLAG_NO_X_BEARING | TEXT_RENDER_FLAG_NO_Y_BEARING);
-					Ctx.m_pTextRender->TextColor(Color.WithMultipliedAlpha(State.m_DrawAlpha));
-					Ctx.m_pUi->DoLabel(&Button, Card.m_Column == 0 ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, Button.h * 0.65f, TEXTALIGN_MC);
-					Ctx.m_pTextRender->SetFontPreset(Font);
-					Ctx.m_pTextRender->SetRenderFlags(Flags);
-					Ctx.m_pTextRender->TextColor(Color);
+					RenderSettingsCardHeaderIcon(Ctx, Button, Card.m_Column == 0 ? EQmIcon::BORDER_ALL : EQmIcon::ARROWS_LEFT_RIGHT, Card.m_Column == 0 ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, State.m_DrawAlpha);
 					if(Ctx.m_pTooltips != nullptr)
 						Ctx.m_pTooltips->DoSmallToolTip(&Runtime.m_WidthButtonId, &Button, Card.m_Column == 0 ? Localize("Default width") : Localize("Full width"), 10.0f * Ctx.m_UiScale);
 				}

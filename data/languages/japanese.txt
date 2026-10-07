@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == カスタムアセットのスプライトが完全に透明な場合は自動的に既定のアセットへ戻します。オフにすると空白スプライトは非表示のままになります（エフェクトを隠す用途など）
 
-Automatically launch Steam when the client is started externally
-== クライアントを外部から起動したとき Steam を自動起動
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== クライアントを外部から起動したとき Steam を自動起動（Steam のプレイ時間統計用）
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 完走後に自動でチーム 0 に再参加（ロック解除時のみ）
@@ -1855,6 +1855,9 @@ Cheats are enabled on this server
 
 check ddnet-saves.txt in config_directory.
 == config_directory の ddnet-saves.txt を確認してください。
+
+Check for updates
+== 更新を確認
 
 Check if voice server address is reachable
 == 音声サーバーアドレスに到達可能か確認する
@@ -2516,6 +2519,15 @@ Copy name option color
 Copy skin
 == スキンをコピー
 
+Copy skin from dummy
+== ダミーのスキンをコピー
+
+Copy skin from player
+== プレイヤーのスキンをコピー
+
+Copy skin ID
+== スキンIDをコピー
+
 Copy skin option color
 == スキンオプションの色をコピー
 
@@ -2950,6 +2962,15 @@ Deep unfreeze tile outline color
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == Deepfly モード（0=通常、1=DF、2=HDF、3=カスタム）
+
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free：月間50万文字（deepl.comで登録；無料キーは :fx で終わります）
+
+DeepL API Key (free keys end with :fx)
+== DeepL API キー（無料キーは :fx で終わります）
 
 DeepSeek
 == DeepSeek
@@ -3568,12 +3589,6 @@ dumps all sqlservers readservers = r, writeservers = w
 
 Dumps the antibot status
 == アンチボットステータスをダンプ
-
-Duotone
-== デュオトーン
-
-Duotone icon secondary color alpha migration completed flag
-== デュオトーン アイコン第 2 色の Alpha 移行完了フラグ
 
 Duplicate
 == 複製
@@ -4348,9 +4363,6 @@ Failed
 
 Failed saving the replay!
 == リプレイの保存に失敗しました！
-
-Failed to check for updates
-== アップデートの確認に失敗しました
 
 Failed to copy main asset image.
 == メインアセット画像のコピーに失敗しました。
@@ -6086,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == 前回の同期成功: %s
 
+Last verified approved update source
+== 前回検証に成功した承認済みの更新元
+
 Latency
 == レイテンシ
 
@@ -7280,6 +7295,9 @@ Netversion
 Network
 == ネットワーク
 
+Network error
+== ネットワークエラー
+
 Network timeout
 == ネットワークタイムアウト
 
@@ -7385,6 +7403,9 @@ No chat message to translate
 No code
 == コードなし
 
+No compatible Windows update package for this version
+== このバージョンに対応する Windows 更新パッケージはありません
+
 No controller found. Plug in a controller.
 == コントローラーが見つかりません。コントローラーを接続してください。
 
@@ -7402,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == 利用可能なディレクタープレイヤーがいません
+
+No downloadable portable package for this version
+== このバージョンのポータブル版パッケージはまだありません
 
 No empty team left.
 == 空いているチームはもうありません。
@@ -7489,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == 最近使ったスキンはありません
+
+No release notes provided
+== このバージョンのリリースノートはありません
 
 No results
 == 結果なし
@@ -8747,14 +8774,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Qm UI アイコンのカスタム色
 
-Qm UI duotone secondary icon color
-== Qm UI デュオトーンアイコンの副色
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm UI アイコンの色: 1=白、2=黒、3=カスタム、4=虹色
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Qm UI アイコンのスタイル: 0=標準、1=太字、2=細字、3=塗りつぶし、4=ライト、5=デュオトーン
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Qm UI アイコンのスタイル: 0=標準、1=太字、2=ライト（旧設定）、3=塗りつぶし、4=ライト、5=太字（旧設定）
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue：インデックスは 1 から %d の間でなければなりません
@@ -9140,6 +9164,9 @@ Relative X position of the draggable back button
 Relative Y position of the draggable back button
 == ドラッグ可能な戻るボタンの相対 Y 位置
 
+Release notes
+== リリースノート
+
 Reload
 == 再読み込み
 
@@ -9511,6 +9538,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == KCP 対応クライアントにセッションアップグレードを要求（グレースケール中はフォールバックのためにオフのまま）
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== qm_graphics_trace が有効なとき、フォントを再走査して解決済みの Unicode フォントフェイスとグリフを照会
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == このサーバーではレスキューが有効ではなく、/practice が有効なチームにも参加していません。練習モードではランクを獲得できないことに注意してください。
@@ -12494,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == 「default」という名前は予約されています。
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== 旧ディレクトリ qmclient/fonts は読み込まれなくなりました。カスタムフォントを設定ディレクトリ内の fonts/fonts_store に手動で移動してください。通常版はユーザー設定ディレクトリ、ポータブル版は profile を使用します。data/fonts に同梱されているフォントを移動する必要はありません。
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == あなたがささやき中だったプレイヤーは、まだ再接続していないか退出しました。少し待つか、別の相手にささやいてください
 
@@ -13034,6 +13067,9 @@ Translation queue full, sending original
 Translation service
 == 翻訳サービス
 
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== 翻訳サービスが訳文ではなく通知を返しました（このメッセージにはフィルター対象の語が含まれている可能性があります）
+
 Translation Settings
 == 翻訳設定
 
@@ -13132,9 +13168,6 @@ UI icon color
 
 UI icon custom color
 == UI アイコンのカスタム色
-
-UI icon duotone secondary color
-== UI アイコンのデュオトーン副色
 
 UI icon style
 == UI アイコンのスタイル
@@ -13361,6 +13394,9 @@ Update notice
 Update or add a specific war group
 == 特定の敵対グループを更新または追加
 
+Update package available
+== このバージョンの更新パッケージをダウンロードできます
+
 Update Rate
 == 更新レート
 
@@ -13433,6 +13469,9 @@ Use current name
 Use custom skins instead of the ninja tee
 == ニンジャ Tee の代わりにカスタムスキンを使用
 
+Use custom UI icon color
+== UI アイコンにカスタム色を使用
+
 Use default flags on scoreboard
 == スコアボードでデフォルトの国旗を使用
 
@@ -13475,9 +13514,6 @@ Use large emote
 Use mouse sensitivity when dynamic camera is on
 == 動的カメラオン時にマウス感度を使用
 
-Use MSDF icon pipeline when enhanced rendering is active
-== 拡張レンダリング有効時に MSDF アイコンパイプラインを使用
-
 Use multi-char replacement based on word length
 == 単語の長さに基づいて複数文字置換を使用
 
@@ -13510,6 +13546,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == プリ入力を使用して他のプレイヤーを予測し、より正確な入力予測を実現
+
+Use procedural ring pipeline when enhanced rendering is active
+== 拡張レンダリング有効時に手続き型リングパイプラインを使用
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == 拡張レンダリング有効時に Dynamic Island と角丸矩形で SDF パイプラインを使用

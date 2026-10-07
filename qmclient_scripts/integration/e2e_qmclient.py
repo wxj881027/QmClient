@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import shutil
 import sys
 import time
 from collections.abc import Callable
@@ -196,16 +197,35 @@ def scenario_vector_font_and_icon_resources(env: ProcessEnvironment) -> None:
 	# 打开真实设置页，确保 UI 图标绘制路径实际运行，而不是只验证资源文件存在。
 	env.client.command("ui_page 16")
 	time.sleep(2.0)
-	for style in ("light", "regular", "bold", "fill", "duotone"):
-		icon_manifest = env.build_dir / "data" / "qmclient" / "icons" / f"qm_icons_{style}_msdf.json"
-		manifest = json.loads(icon_manifest.read_text(encoding="utf-8"))
-		if manifest.get("kind") != "mtsdf" or manifest.get("distance_field") != "mtsdf" or manifest.get("alpha_sdf") is not True:
-			raise AssertionError(f"Phosphor {style} icon atlas is not an MTSDF resource: {icon_manifest}")
+	for style in ("Regular", "Bold", "Light", "Fill"):
+		font = env.build_dir / "data" / "fonts" / "Phosphor" / f"Phosphor-{style}.ttf"
+		if not font.is_file():
+			raise AssertionError(f"Bundled Phosphor font is missing: {font}")
 	for line in env.client._lines:
 		if "Bundled 'Phosphor' icon face is unavailable" in line:
 			raise AssertionError("the bundled Phosphor icon face was not available")
-		if "Failed to open/read font file 'qmclient/fonts" in line:
+		if "Failed to open/read font file 'fonts/" in line:
 			raise AssertionError(f"bundled font path was malformed: {line}")
+	_quit_client(env)
+
+
+def scenario_legacy_icon_font_residual_ignored(env: ProcessEnvironment) -> None:
+	"""用户 fonts 下的 Phosphor 副本不应进入字体 face 池。"""
+	legacy_dir = env.path("fonts", "Phosphor")
+	legacy_dir.mkdir(parents=True, exist_ok=True)
+	shutil.copy2(
+		env.build_dir / "data" / "fonts" / "Phosphor" / "Phosphor-Regular.ttf",
+		legacy_dir / "Phosphor-Regular.ttf",
+	)
+
+	env.start_client([], connect=False)
+	env.client.wait_for(
+		lambda line: "Ignoring user copy of bundled icon font 'fonts/Phosphor/Phosphor-Regular.ttf'" in line,
+		"legacy icon font residual rejection",
+		15,
+	)
+	if any("Loaded" in line and "fonts/Phosphor/" in line for line in env.client._lines):
+		raise AssertionError("legacy Phosphor residual was loaded into the font face pool")
 	_quit_client(env)
 
 
@@ -318,6 +338,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"slow_asset_loading_no_false_hang": scenario_slow_asset_loading_no_false_hang,
 	"startup_saved_favorites": scenario_startup_saved_favorites,
 	"vector_font_and_icon_resources": scenario_vector_font_and_icon_resources,
+	"legacy_icon_font_residual_ignored": scenario_legacy_icon_font_residual_ignored,
 }
 
 

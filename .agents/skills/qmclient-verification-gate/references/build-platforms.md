@@ -18,7 +18,7 @@ Windows 宿主验证 Linux 时可用 WSL Ubuntu 的 GCC/G++、CMake、Ninja 和 
 
 ```sh
 cmake -G Ninja -S . -B cmake-build-linux-release -DCMAKE_BUILD_TYPE=Release -DDOWNLOAD_GTEST=ON
-cmake --build cmake-build-linux-release --target game-client -j 14
+cmake --build cmake-build-linux-release --target game-client -j 6
 ```
 
 需要测试或打包时将目标换为 `run_cxx_tests`、`run_rust_tests` 或 `package_default`，串行执行。严格构建/分析目录由相应 gate 管理，不为普通小修改额外配置。

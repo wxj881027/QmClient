@@ -89,3 +89,51 @@ pub unsafe extern "C" fn qm_update_extract_bootstrap_updater(
         error_size,
     )
 }
+
+/// 校验独立 Setup 清单，保持旧 ZIP 清单接口兼容。
+#[no_mangle]
+pub unsafe extern "C" fn qm_update_verify_setup_manifest(
+    manifest: *const u8,
+    manifest_size: usize,
+    signature: *const u8,
+    signature_size: usize,
+    package_size: *mut u64,
+    package_digest: *mut u8,
+    package_digest_size: usize,
+    error: *mut c_char,
+    error_size: usize,
+) -> bool {
+    ::qm_update::ffi_verify_setup_manifest(
+        manifest,
+        manifest_size,
+        signature,
+        signature_size,
+        package_size,
+        package_digest,
+        package_digest_size,
+        error,
+        error_size,
+    )
+}
+
+/// 启动前重新校验 Setup 安装器及其签名。
+#[no_mangle]
+pub unsafe extern "C" fn qm_update_verify_setup_files(
+    package_path: *const c_char,
+    package_signature_path: *const c_char,
+    manifest_path: *const c_char,
+    manifest_signature_path: *const c_char,
+    current_version: *const c_char,
+    error: *mut c_char,
+    error_size: usize,
+) -> bool {
+    ::qm_update::ffi_verify_setup_files(
+        package_path,
+        package_signature_path,
+        manifest_path,
+        manifest_signature_path,
+        current_version,
+        error,
+        error_size,
+    )
+}

@@ -39,7 +39,7 @@
 #include <game/client/components/touch_controls.h>
 #include <game/client/frame_scheduler.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
@@ -2909,7 +2909,6 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		int m_Page;
 		EQmIcon m_Icon;
 		const char *m_pIcon;
-		bool m_bFavoriteMapsIcon;
 		const CCommunityIcon *m_pCommunityIcon;
 		const char *m_pTooltip;
 		float m_AppearStrength;
@@ -2918,8 +2917,8 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	CUIRect aServerTabSlots[std::size(s_aServerTabButtons)];
 	int NumServerTabs = 0;
 	int ActiveServerTab = -1;
-	auto AddServerTab = [&](int Page, EQmIcon Icon, const char *pIcon, bool FavoriteMapsIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, float AppearStrength, const CUIRect &Slot) {
-		aServerTabs[NumServerTabs] = {Page, Icon, pIcon, FavoriteMapsIcon, pCommunityIcon, pTooltip, AppearStrength};
+	auto AddServerTab = [&](int Page, EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, float AppearStrength, const CUIRect &Slot) {
+		aServerTabs[NumServerTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength};
 		aServerTabSlots[NumServerTabs] = Slot;
 		if(g_Config.m_UiPage == Page)
 			ActiveServerTab = NumServerTabs;
@@ -2931,8 +2930,8 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 	CUIRect TabsRemainder = TabBar;
 	{
 		const int aFixedPages[] = {PAGE_INTERNET, PAGE_LAN, PAGE_FAVORITES, PAGE_FAVORITE_MAPS};
-		const EQmIcon aFixedIcons[] = {EQmIcon::EARTH_AMERICAS, EQmIcon::NETWORK_WIRED, EQmIcon::STAR, EQmIcon::COUNT};
-		const char *const apFixedIcons[] = {FONT_ICON_EARTH_AMERICAS, FONT_ICON_NETWORK_WIRED, FONT_ICON_STAR, ""};
+		const EQmIcon aFixedIcons[] = {EQmIcon::EARTH_AMERICAS, EQmIcon::NETWORK_WIRED, EQmIcon::STAR, EQmIcon::BOOKMARK};
+		const char *const apFixedIcons[] = {FONT_ICON_EARTH_AMERICAS, FONT_ICON_NETWORK_WIRED, FONT_ICON_STAR, FONT_ICON_BOOKMARK};
 		const char *const apFixedTooltips[] = {Localize("Internet"), Localize("LAN"), Localize("Favorites"), Localize("Favorite map")};
 		for(size_t Fixed = 0; Fixed < std::size(aFixedPages); ++Fixed)
 		{
@@ -2940,7 +2939,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 				TabsRemainder.VSplitLeft(ServerTabGap, nullptr, &TabsRemainder);
 			CUIRect Slot;
 			TabsRemainder.VSplitLeft(ServerTabWidth, &Slot, &TabsRemainder);
-			AddServerTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], Fixed == std::size(aFixedPages) - 1, nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
+			AddServerTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
 		}
 	}
 
@@ -2969,7 +2968,7 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		Slot.w = RevealWidth;
 
 		const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumServerTabs - 4);
-		AddServerTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, false, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
+		AddServerTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
 	}
 
 	const IUiContext TabBarCtx = TabBarUiContext();
@@ -2991,27 +2990,6 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		if(DoMenuTabV2_QmIcon(&s_aServerTabButtons[TabIndex], Tab.m_Icon, Tab.m_pIcon, TabActive, &Slot, IGraphics::CORNER_ALL, &InactiveColor, &ActiveColor, &HoverColor, Tab.m_pCommunityIcon, nullptr, MENU_MENUBAR_CONTENT_SCALE_NEW, true))
 		{
 			NewPage = Tab.m_Page;
-		}
-		if(Tab.m_bFavoriteMapsIcon)
-		{
-			// 收藏地图页签：图标走图集渲染（失败回退字体图标）；滑块上的
-			// 图标用滑块同款深色，避免默认白图标压亮滑块不可见。
-			const float IconSide = minimum(Slot.w, Slot.h) * 0.56f;
-			const CUIRect IconRect{Slot.x + (Slot.w - IconSide) * 0.5f, Slot.y + (Slot.h - IconSide) * 0.5f, IconSide, IconSide};
-			const ColorRGBA IconColor = TabActive ? ui_widget::CapsuleTabBarActiveLabelColor(BrowserPanelColor()) : ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
-			if(GameClient()->QmIconManager()->PreferFontFallback() || !GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, IconRect, IconColor))
-			{
-				const unsigned OldFlags = TextRender()->GetRenderFlags();
-				const EFontPreset OldPreset = TextRender()->GetFontPreset();
-				const ColorRGBA OldTextColor = TextRender()->GetTextColor();
-				TextRender()->TextColor(IconColor);
-				TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-				TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-				Ui()->DoLabel_QmIcon(&IconRect, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, IconSide, TEXTALIGN_MC);
-				TextRender()->SetRenderFlags(OldFlags);
-				TextRender()->SetFontPreset(OldPreset);
-				TextRender()->TextColor(OldTextColor);
-			}
 		}
 		GameClient()->m_Tooltips.DoToolTip(&s_aServerTabButtons[TabIndex], &Slot, Tab.m_pTooltip);
 	}

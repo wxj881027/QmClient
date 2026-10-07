@@ -1,4 +1,4 @@
-"""生成 data/qmclient/font_catalog.json —— 字体商店在线字体目录。
+"""生成 data/fonts/fonts_store/font_catalog.json —— 字体商店在线字体目录。
 
 数据来源：
 1. google/fonts 仓库文件树（api.github.com 一次递归 tree 请求），得到每个字体的
@@ -44,7 +44,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_OUT = REPO_ROOT / "data" / "qmclient" / "font_catalog.json"
+DEFAULT_OUT = REPO_ROOT / "data" / "fonts" / "fonts_store" / "font_catalog.json"
 TREE_URL = "https://api.github.com/repos/google/fonts/git/trees/main?recursive=1"
 GFM_PKG_URL = "https://registry.npmmirror.com/google-font-metadata/latest"
 GF_META_URL = "https://fonts.google.com/metadata/fonts"

@@ -35,7 +35,7 @@ class StartupEnvironment:
 			"cl_save_settings 0", "cl_show_welcome 0", "qm_auto_update 0", "qm_steam_auto_launch 0",
 			"cl_languagefile languages/simplified_chinese.txt", "tc_custom_font DejaVu Sans",
 			"tc_custom_font_weight 900", *config]
-		self.client = Process("client", arguments, self.temp_dir, fifo_command="cl_input_fifo", pipe_prefix="qmclient_startup_")
+		self.client = Process("client", arguments, self.temp_dir, fifo_command="cl_input_fifo", pipe_prefix="qmclient_startup_", env={"QMCLIENT_TEST_STORAGE_ROOT": str(self.temp_dir)} if sys.platform == "win32" else None)
 		return self.client
 
 	def finish_startup(self) -> None:
@@ -63,35 +63,10 @@ def first_cjk_glyph(client: Process) -> tuple[str, int]:
 	return match.group(1), int(match.group(2))
 
 
-def smoke_cjk_default_weight(env: StartupEnvironment) -> None:
-	client = env.start(["tc_custom_font_cjk Noto Sans SC", "tc_custom_font_weight_cjk 400"])
-	family, weight = first_cjk_glyph(client)
-	if (family, weight) != ("Noto Sans SC", 400):
-		raise AssertionError(f"first CJK glyph used {family!r} weight={weight}; expected the configured CJK weight 400")
-	env.finish_startup()
-	env.quit()
-
-
-def smoke_cjk_nondefault_weight(env: StartupEnvironment) -> None:
-	client = env.start(["tc_custom_font_cjk Noto Sans SC", "tc_custom_font_weight_cjk 550"])
-	family, weight = first_cjk_glyph(client)
-	if (family, weight) != ("Noto Sans SC", 550):
-		raise AssertionError(f"first CJK glyph used {family!r} weight={weight}; expected configured weight 550")
-	env.finish_startup()
-	env.quit()
-
-
-def smoke_missing_cjk_family(env: StartupEnvironment) -> None:
-	client = env.start(["tc_custom_font_cjk QmClient Missing Test Font"])
-	family, weight = first_cjk_glyph(client)
-	if (family, weight) != ("Noto Sans SC", 900):
-		raise AssertionError(f"missing custom CJK face did not follow the configured default chain: {family!r}, {weight}")
-	env.finish_startup()
-	env.quit()
-
-
-def smoke_cjk_custom_family(env: StartupEnvironment) -> None:
-	client = env.start(["tc_custom_font_cjk Source Han Sans SC"])
+def smoke_cjk_family_selected(env: StartupEnvironment) -> None:
+	# NotoSansSC-VF 已随字体减重移除：场景改用随包静态中文字体（思源黑体 SC），
+	# 断言 CJK 分类面按配置解析；字重轴数值不再断言（静态 face 无 wght 轴）。
+	client = env.start(["tc_custom_font_cjk Source Han Sans SC", "tc_custom_font_weight_cjk 400"])
 	family, _ = first_cjk_glyph(client)
 	if family != "Source Han Sans SC":
 		raise AssertionError(f"first CJK glyph used {family!r}; expected the configured CJK family")
@@ -99,11 +74,31 @@ def smoke_cjk_custom_family(env: StartupEnvironment) -> None:
 	env.quit()
 
 
-def smoke_shared_font_weight(env: StartupEnvironment) -> None:
-	client = env.start(["tc_custom_font Noto Sans SC", "tc_custom_font_cjk Noto Sans SC", "tc_custom_font_weight_cjk 400"])
-	family, weight = first_cjk_glyph(client)
-	if (family, weight) != ("Noto Sans SC", 900):
-		raise AssertionError(f"a shared Latin/CJK face used {family!r} weight={weight}; expected Latin weight 900")
+def smoke_missing_cjk_family(env: StartupEnvironment) -> None:
+	client = env.start(["tc_custom_font_cjk QmClient Missing Test Font"])
+	family, _ = first_cjk_glyph(client)
+	if family != "Source Han Sans SC":
+		raise AssertionError(f"missing custom CJK face did not follow the configured default chain: {family!r}")
+	env.finish_startup()
+	env.quit()
+
+
+def smoke_cjk_custom_family(env: StartupEnvironment) -> None:
+	client = env.start(["tc_custom_font_cjk Source Han Sans K"])
+	family, _ = first_cjk_glyph(client)
+	if family != "Source Han Sans K":
+		raise AssertionError(f"first CJK glyph used {family!r}; expected the configured CJK family")
+	env.finish_startup()
+	env.quit()
+
+
+def smoke_cjk_category_independent(env: StartupEnvironment) -> None:
+	# 主链与 CJK 分类各走各的：全局字体选 DejaVu Sans 时，CJK 分类面仍按自身
+	# 配置解析到思源黑体，不被主链吞掉（全局字体增强不影响分类语义）。
+	client = env.start(["tc_custom_font DejaVu Sans", "tc_custom_font_cjk Source Han Sans SC"])
+	family, _ = first_cjk_glyph(client)
+	if family != "Source Han Sans SC":
+		raise AssertionError(f"first CJK glyph used {family!r}; expected the CJK category face to stay independent of the main chain")
 	env.finish_startup()
 	env.quit()
 
@@ -136,11 +131,10 @@ def smoke_vulkan_window_presentation(env: StartupEnvironment) -> None:
 
 
 SMOKE_TESTS = {
-	"cjk_default_weight": smoke_cjk_default_weight,
+	"cjk_family_selected": smoke_cjk_family_selected,
 	"cjk_custom_family": smoke_cjk_custom_family,
-	"cjk_nondefault_weight": smoke_cjk_nondefault_weight,
 	"missing_cjk_family": smoke_missing_cjk_family,
-	"shared_font_weight": smoke_shared_font_weight,
+	"cjk_category_independent": smoke_cjk_category_independent,
 	"window_presentation": smoke_window_presentation,
 	"vulkan_window_presentation": smoke_vulkan_window_presentation,
 }

@@ -17,9 +17,10 @@
 #include <game/client/QmUi/QmLegacy.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 #include <game/version.h>
@@ -483,6 +484,14 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 		char aTBuf[64];
 		str_format(aTBuf, sizeof(aTBuf), CLIENT_NAME " %s", CLIENT_RELEASE_VERSION);
 		Ui()->DoLabel(&TClientVersion, aTBuf, 14.0f, TEXTALIGN_MR);
+#if defined(CONF_FAMILY_WINDOWS)
+		CUIRect UpdateEntry = TClientVersion;
+		UpdateEntry.w = std::min(UpdateEntry.w, TextRender()->TextWidth(14.0f, aTBuf) + 2 * ui_token::spacing::SM);
+		UpdateEntry.x = TClientVersion.x + TClientVersion.w - UpdateEntry.w;
+		static CButtonContainer s_UpdateEntry;
+		if(Ui()->DoButtonLogic(&s_UpdateEntry, 0, &UpdateEntry, BUTTONFLAG_LEFT))
+			GameClient()->m_Menus.ShowQmUpdatePopup();
+#endif
 #if defined(CONF_AUTOUPDATE) && defined(CONF_FAMILY_WINDOWS)
 		if(g_Config.m_QmAutoUpdate)
 		{
@@ -491,7 +500,9 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 			UpdateToDateText.VSplitRight(40.0f, &UpdateToDateText, nullptr);
 			if(GameClient()->m_TClient.m_UpdateCheckFailed)
 			{
-				Ui()->DoLabel(&UpdateToDateText, Localize("Update failed. Please try again"), 14.0f, TEXTALIGN_MR);
+				static CButtonContainer s_UpdateRetry;
+				if(GameClient()->m_Menus.DoButton_Menu(&s_UpdateRetry, Localize("Update failed. Please try again"), 0, &UpdateToDateText))
+					GameClient()->m_Menus.ShowQmUpdatePopup();
 			}
 			else if(!GameClient()->m_TClient.m_FetchedQmClientUpdateInfo)
 			{

@@ -634,11 +634,8 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 	float IconSize = minimum(45.0f * Scale, AvailableWidth * 0.65f);
 
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, ContentAlpha);
-	const EFontPreset PreviousFont = TextRender()->GetFontPreset();
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	float IconWidth = TextRender()->TextWidth(IconSize, pIcon);
-	TextRender()->Text(ItemPos.x - IconWidth / 2.0f, ItemPos.y - IconSize / 2.0f - 14.0f * Scale, IconSize, pIcon);
-	TextRender()->SetFontPreset(PreviousFont);
+	// 旧字形入口也统一从图标注册表解析，图集不可用时才交给随包字体。
+	Ui()->DrawQmIconAt(ItemPos.x - IconSize / 2.0f, ItemPos.y - IconSize / 2.0f - 14.0f * Scale, IconSize, CQmIconRegistry::IconFromGlyph(pIcon), pIcon, ColorRGBA(1.0f, 1.0f, 1.0f, ContentAlpha));
 
 	// Draw label below icon
 	const char *pName = GetOptionName(Option);

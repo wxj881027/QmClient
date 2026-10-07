@@ -18,6 +18,7 @@
 #include <vector>
 
 class CJsonWriter;
+struct SLabelProperties;
 typedef struct _json_value json_value;
 
 class CTouchControls : public CComponent
@@ -142,6 +143,9 @@ public:
 		EType m_Type;
 		const char *m_pLabel;
 	};
+
+	// 游戏内按钮、编辑列表和样例共用标签绘制，图标与编号分别选择字体。
+	void RenderButtonLabel(const CButtonLabel &Label, const CUIRect &Rect, float FontSize, int Align, const SLabelProperties &Props) const;
 
 private:
 	static constexpr const char *const DIRECT_TOUCH_INGAME_MODE_NAMES[(int)EDirectTouchIngameMode::NUM_STATES] = {"disabled", "action", "aim", "aim-relative", "fire", "hook"};

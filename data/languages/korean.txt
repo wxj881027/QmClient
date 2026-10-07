@@ -1226,8 +1226,8 @@ Automatically enable Gores auto-switch in Gores game mode
 Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)
 == 사용자 지정 에셋 스프라이트가 완전히 투명하면 자동으로 기본 에셋으로 대체합니다. 끄면 빈 스프라이트가 보이지 않는 상태로 유지됩니다 (효과 숨기기 등)
 
-Automatically launch Steam when the client is started externally
-== 클라이언트를 외부에서 시작할 때 Steam 자동 실행
+Automatically launch Steam when the client is started externally, so Steam can track your playtime
+== 클라이언트를 외부에서 시작할 때 Steam 자동 실행(플레이 시간 집계용)
 
 Automatically re-join team 0 after finish (only if unlocked).
 == 완주 후 자동으로 0팀 재가입 (잠금 해제된 경우에만)
@@ -1855,6 +1855,9 @@ Cheats are enabled on this server
 
 check ddnet-saves.txt in config_directory.
 == config_directory 의 ddnet-saves.txt 를 확인하세요.
+
+Check for updates
+== 업데이트 확인
 
 Check if voice server address is reachable
 == 음성 서버 주소에 연결 가능한지 확인
@@ -2516,6 +2519,15 @@ Copy name option color
 Copy skin
 == 스킨 복사
 
+Copy skin from dummy
+== 더미 스킨 복사
+
+Copy skin from player
+== 플레이어 스킨 복사
+
+Copy skin ID
+== 스킨 ID 복사
+
 Copy skin option color
 == 스킨 옵션 색상 복사
 
@@ -2950,6 +2962,15 @@ Deep unfreeze tile outline color
 
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 == 딥플라이 모드 (0=일반, 1=DF, 2=HDF, 3=사용자 정의)
+
+DeepL API
+== DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: 매월 50만 자(deepl.com에서 등록; 무료 키는 :fx로 끝남)
+
+DeepL API Key (free keys end with :fx)
+== DeepL API 키(무료 키는 :fx로 끝남)
 
 DeepSeek
 == DeepSeek
@@ -3568,12 +3589,6 @@ dumps all sqlservers readservers = r, writeservers = w
 
 Dumps the antibot status
 == 안티봇 상태 덤프
-
-Duotone
-== 듀오톤
-
-Duotone icon secondary color alpha migration completed flag
-== 듀오톤 아이콘 보조 색상 알파 마이그레이션 완료 플래그
 
 Duplicate
 == 복제
@@ -4348,9 +4363,6 @@ Failed
 
 Failed saving the replay!
 == 리플레이 저장 실패!
-
-Failed to check for updates
-== 업데이트 확인 실패
 
 Failed to copy main asset image.
 == 주요 에셋 이미지를 복사하지 못했습니다.
@@ -6086,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == 마지막 동기화 성공: %s
 
+Last verified approved update source
+== 마지막으로 검증에 성공한 승인된 업데이트 소스
+
 Latency
 == 지연 시간
 
@@ -7280,6 +7295,9 @@ Netversion
 Network
 == 네트워크
 
+Network error
+== 네트워크 오류
+
 Network timeout
 == 네트워크 타임아웃
 
@@ -7385,6 +7403,9 @@ No chat message to translate
 No code
 == 코드 없음
 
+No compatible Windows update package for this version
+== 이 버전과 호환되는 Windows 업데이트 패키지가 없습니다
+
 No controller found. Plug in a controller.
 == 컨트롤러를 찾을 수 없습니다. 컨트롤러를 연결하세요.
 
@@ -7402,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == 사용 가능한 감독 플레이어 없음
+
+No downloadable portable package for this version
+== 이 버전의 포터블 패키지는 아직 다운로드할 수 없습니다
 
 No empty team left.
 == 빈 팀이 없습니다.
@@ -7489,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == 최근 사용한 스킨 없음
+
+No release notes provided
+== 이 버전의 업데이트 내용이 없습니다
 
 No results
 == 결과 없음
@@ -8747,14 +8774,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Qm UI 아이콘 사용자 지정 색상
 
-Qm UI duotone secondary icon color
-== Qm UI 듀오톤 아이콘 보조 색상
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm UI 아이콘 색상: 1=흰색, 2=검정, 3=사용자 지정, 4=무지개
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Qm UI 아이콘 스타일: 0=보통, 1=굵게, 2=얇게, 3=채우기, 4=라이트, 5=듀오톤
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Qm UI 아이콘 스타일: 0=보통, 1=굵게, 2=라이트(이전 값), 3=채우기, 4=라이트, 5=굵게(이전 값)
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue: 인덱스는 1에서 %d 사이여야 합니다.
@@ -9140,6 +9164,9 @@ Relative X position of the draggable back button
 Relative Y position of the draggable back button
 == 드래그 가능한 뒤로 가기 버튼의 상대적 Y 위치
 
+Release notes
+== 업데이트 내용
+
 Reload
 == 다시 불러오기
 
@@ -9511,6 +9538,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == KCP 지원 클라이언트가 세션을 업그레이드하도록 요구 (그레이스케일 중에는 fallback을 위해 꺼두기)
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== qm_graphics_trace가 활성화되면 글꼴을 다시 검색하고 해석된 Unicode 글꼴 페이스와 글리프를 조회
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 이 서버에서 Rescue 가 활성화되어 있지 않으며 /practice 가 켜진 팀에도 속해 있지 않습니다. 연습 모드에서는 순위를 얻을 수 없습니다.
@@ -12494,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == "default" 이름은 예약되어 있습니다.
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== 이전 qmclient/fonts 폴더는 더 이상 검색하지 않습니다. 사용자 지정 글꼴을 설정 폴더의 fonts/fonts_store로 직접 옮겨 주세요. 일반 버전은 사용자 설정 폴더를, 포터블 버전은 profile을 사용합니다. data/fonts에 포함된 기본 글꼴은 옮길 필요가 없습니다.
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 귓속말 상대가 아직 재접속하지 않았거나 게임을 떠났습니다. 잠시 기다리거나 다른 사람에게 귓속말하세요
 
@@ -13034,6 +13067,9 @@ Translation queue full, sending original
 Translation service
 == 번역 서비스
 
+Translation service returned a notice instead of a translation (the message may contain filtered words)
+== 번역 서비스가 번역문 대신 안내를 반환했습니다(이 메시지에 필터링된 단어가 포함되어 있을 수 있음)
+
 Translation Settings
 == 번역 설정
 
@@ -13132,9 +13168,6 @@ UI icon color
 
 UI icon custom color
 == UI 아이콘 사용자 지정 색상
-
-UI icon duotone secondary color
-== UI 듀오톤 아이콘 보조 색상
 
 UI icon style
 == UI 아이콘 스타일
@@ -13361,6 +13394,9 @@ Update notice
 Update or add a specific war group
 == 특정 전쟁 그룹 업데이트 또는 추가
 
+Update package available
+== 이 버전의 업데이트 패키지를 다운로드할 수 있습니다
+
 Update Rate
 == 업데이트 속도
 
@@ -13433,6 +13469,9 @@ Use current name
 Use custom skins instead of the ninja tee
 == 닌자 티 대신 사용자 정의 스킨 사용
 
+Use custom UI icon color
+== UI 아이콘에 사용자 지정 색상 사용
+
 Use default flags on scoreboard
 == 점수판에 기본 국기 사용
 
@@ -13475,9 +13514,6 @@ Use large emote
 Use mouse sensitivity when dynamic camera is on
 == 동적 카메라가 켜져 있을 때 마우스 감도 사용
 
-Use MSDF icon pipeline when enhanced rendering is active
-== 향상된 렌더링이 활성화되면 MSDF 아이콘 파이프라인 사용
-
 Use multi-char replacement based on word length
 == 단어 길이에 따른 다중 문자 대체 사용
 
@@ -13510,6 +13546,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == 사전 입력을 사용하여 다른 플레이어를 예측해 더 정확한 입력 예측
+
+Use procedural ring pipeline when enhanced rendering is active
+== 향상된 렌더링이 활성화되면 절차적 링 파이프라인 사용
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == 향상된 렌더링이 활성화되면 Dynamic Island 및 둥근 사각형에 SDF 파이프라인 사용

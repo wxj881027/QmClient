@@ -80,37 +80,6 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShutdownReleasesUiResourcesBeforeRenderer
 	EXPECT_LT(ComponentsShutdown, UiShutdownCall);
 }
 
-TEST(QmNewUiMenuRenderSurfaceContract, GraphicsIconCardSupportsDynamicCustomColorAndFourWeights)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string Graphics = FunctionBody(Source, "void CMenus::RenderSettingsGraphics(CUIRect MainView)");
-	ASSERT_FALSE(Graphics.empty());
-	EXPECT_NE(Graphics.find("s_aGraphicsIconColorButtons[4]"), std::string::npos);
-	EXPECT_NE(Graphics.find("s_aGraphicsIconWeightButtons[5]"), std::string::npos);
-	EXPECT_NE(Graphics.find("Localize(\"Custom\")"), std::string::npos);
-	EXPECT_NE(Graphics.find("Localize(\"Rainbow\")"), std::string::npos);
-	// Thin 未随包字体，设置页不再提供该样式。
-	EXPECT_EQ(Graphics.find("Localize(\"Thin\")"), std::string::npos);
-	EXPECT_NE(Graphics.find("Localize(\"Fill\")"), std::string::npos);
-	// 图标风格分段控件：索引 -> 配置值表必须唯一一份、由绘制与点击路径共用。
-	// 历史上点击路径残留了含 Thin 的 6 项旧表，导致点击整体错位一位。
-	EXPECT_NE(Source.find("constexpr int s_aIconWeightValues[] = {4, 0, 1, 3, 5};"), std::string::npos);
-	EXPECT_EQ(Source.find("{2, 0, 1, 3, 4, 5}"), std::string::npos);
-	EXPECT_NE(Source.find("QmIconWeightSegmentIndex(g_Config.m_QmUiIconWeight)"), std::string::npos);
-	EXPECT_NE(Source.find("const int NewWeight = s_aIconWeightValues[NewValue];"), std::string::npos);
-	EXPECT_NE(Graphics.find("DoLine_ColorPicker(&s_GraphicsIconCustomColorResetId"), std::string::npos);
-	EXPECT_NE(Graphics.find("vCards.back().m_MeasureRevision = static_cast<uint64_t>(g_Config.m_QmUiIconColor == 3) |"), std::string::npos);
-	EXPECT_NE(Graphics.find("vCards.back().m_PreLayoutInput = [this, GraphicsMetrics]"), std::string::npos);
-	EXPECT_NE(Graphics.find("g_Config.m_QmUiIconColor == 3 && NormalizeQmIconWeight"), std::string::npos);
-	EXPECT_NE(Graphics.find("g_Config.m_QmUiIconColor == 3 || NormalizeQmIconWeight"), std::string::npos);
-	EXPECT_NE(Graphics.find("std::initializer_list<float>{GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight}"), std::string::npos);
-
-	const std::string Config = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	EXPECT_NE(Config.find("MACRO_CONFIG_COL(QmUiIconCustomColor, qm_ui_icon_custom_color"), std::string::npos);
-	EXPECT_NE(Config.find("Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow"), std::string::npos);
-	EXPECT_NE(Config.find("MACRO_CONFIG_COL(QmUiIconDuotoneSecondaryColor, qm_ui_icon_duotone_secondary_color"), std::string::npos);
-}
-
 TEST(QmNewUiMenuRenderSurfaceContract, RoundedUiSurfacesUseClampedGeometryAndSharedPaths)
 {
 	const SRoundedRectGeometry Geometry = ResolveRoundedRectGeometry(0.24f, 0.74f, 10.32f, 4.19f, 3.9f, 0.5f);

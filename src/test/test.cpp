@@ -7,6 +7,7 @@
 #include <engine/storage.h>
 
 #include <gtest/gtest.h>
+#include <test/support/qm_exit_process_probe.h>
 
 #include <algorithm>
 #include <fstream>
@@ -202,6 +203,8 @@ int main(int argc, const char **argv)
 {
 	CCmdlineFix CmdlineFix(&argc, &argv);
 	log_set_global_logger_default();
+	if(const auto Result = QmExitProcessProbe(argc, argv))
+		return *Result;
 	::testing::InitGoogleTest(&argc, const_cast<char **>(argv));
 	GTEST_FLAG_SET(death_test_style, "threadsafe");
 	net_init();

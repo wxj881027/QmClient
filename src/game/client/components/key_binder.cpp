@@ -7,7 +7,7 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/components/binds.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
