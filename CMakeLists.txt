@@ -807,6 +807,9 @@ find_package(Opusfile)
 find_package(PNG)
 find_package(Python3)
 find_package(WebP)
+if(CLIENT AND NOT WebP_FOUND)
+  message(FATAL_ERROR "QmClient client requires WebP for bundled chat emojis and friend-link icons")
+endif()
 find_package(Rust)
 find_package(SDL2)
 find_package(SQLite3)
@@ -1962,6 +1965,7 @@ set(EXPECTED_DATA
   fonts/NotoSansSymbols-Regular.ttf
   fonts/NotoSansSymbols2-Regular.ttf
   fonts/SourceHanSans.ttc
+  fonts/fonts_store/font_catalog.json
   fonts/index.json
   game.png
   gui_buttons.png
@@ -2200,22 +2204,28 @@ set(EXPECTED_DATA
   menuimages/settings.png
   particles.png
   qmclient/builtinscripts/sayemoticon.chai
-  qmclient/chat_emojis/agree.png
-  qmclient/chat_emojis/angry.png
-  qmclient/chat_emojis/awkward.png
-  qmclient/chat_emojis/cute.png
-  qmclient/chat_emojis/dead.png
-  qmclient/chat_emojis/hehe.png
-  qmclient/chat_emojis/insult.png
-  qmclient/chat_emojis/kneel.png
-  qmclient/chat_emojis/love.png
-  qmclient/chat_emojis/no.png
-  qmclient/chat_emojis/oppose.png
-  qmclient/chat_emojis/question.png
-  qmclient/chat_emojis/shocked.png
-  qmclient/chat_emojis/smell.png
-  qmclient/chat_emojis/support.png
-  qmclient/chat_emojis/surrender.png
+  qmclient/friendlinks/ddnet.webp
+  qmclient/friendlinks/ddrace.webp
+  qmclient/friendlinks/ddstats.webp
+  qmclient/friendlinks/qmclient.webp
+  qmclient/friendlinks/shengyan.webp
+  qmclient/friendlinks/teedata.webp
+  qmclient/chat_emojis/agree.webp
+  qmclient/chat_emojis/angry.webp
+  qmclient/chat_emojis/awkward.webp
+  qmclient/chat_emojis/cute.webp
+  qmclient/chat_emojis/dead.webp
+  qmclient/chat_emojis/hehe.webp
+  qmclient/chat_emojis/insult.webp
+  qmclient/chat_emojis/kneel.webp
+  qmclient/chat_emojis/love.webp
+  qmclient/chat_emojis/no.webp
+  qmclient/chat_emojis/oppose.webp
+  qmclient/chat_emojis/question.webp
+  qmclient/chat_emojis/shocked.webp
+  qmclient/chat_emojis/smell.webp
+  qmclient/chat_emojis/support.webp
+  qmclient/chat_emojis/surrender.webp
   qmclient/gui_logo.png
   qmclient/map_difficulty.sql
   race_flag.png
@@ -2509,7 +2519,7 @@ set(EXPECTED_DATA
   wordlist.txt
 )
 
-set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;opus;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;wv" data ${EXPECTED_DATA})
+set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;opus;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;webp;wv" data ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND SHARED LIBS
@@ -2990,7 +3000,7 @@ set(LIBS
 )
 
 # Targets
-add_library(engine-gfx EXCLUDE_FROM_ALL OBJECT ${ENGINE_GFX})
+add_library(engine-gfx EXCLUDE_FROM_ALL OBJECT ${ENGINE_GFX} src/generated/data_types.h)
 target_include_directories(engine-gfx PRIVATE ${PNG_INCLUDE_DIRS})
 if(WebP_FOUND)
   target_compile_definitions(engine-gfx PRIVATE CONF_WEBP)
@@ -3186,6 +3196,8 @@ if(CLIENT)
     QmUi/QmTree.h
     QmUi/SecondaryPanel.h
     QmUi/SettingsCard.cpp
+    QmUi/SettingsCardInfo.cpp
+    QmUi/SettingsCardInfo.h
     QmUi/SettingsCard.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
@@ -4427,6 +4439,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
+    src/test/unit/qmclient/ui/settings_card_info_test.cpp
     src/test/unit/qmclient/ui/QmAnimTest.cpp
     src/test/unit/qmclient/ui/QmAnimSpringTest.cpp
     src/test/unit/qmclient/ui/QmAnimCoreTest.cpp
@@ -4441,7 +4454,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
     src/test/unit/qmclient/ui/qm_font_icon_cmap_test.cpp
     src/test/unit/qmclient/client/qm_render_pipeline_contract_test.cpp
-    src/test/contract/qmclient/ui/qm_icon_glyph_contract_test.cpp
     src/test/contract/qmclient/client/qm_phosphor_resource_contract_test.cpp
     src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
     src/test/unit/qmclient/ui/QmLayoutTest.cpp
@@ -4462,6 +4474,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/player_points_parse_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
+    src/test/integration/qmclient/client/qm_chat_emoji_resource_test.cpp
+    src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
@@ -4513,6 +4527,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/image_test.cpp
     src/test/unit/base/io_test.cpp
     src/test/contract/base/ios_runtime_contract_test.cpp
+    src/test/support/qm_exit_process_probe.cpp
+    src/test/support/qm_exit_process_probe.h
     src/test/unit/engine/jobs_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
@@ -4698,7 +4714,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qmclient_update_proxy_test.cpp
     src/test/integration/qmclient/client/qmclient_update_request_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
-    src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp

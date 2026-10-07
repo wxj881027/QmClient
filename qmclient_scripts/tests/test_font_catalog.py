@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""字体商店目录契约：data/qmclient/font_catalog.json 结构、路径安全与体量预算。
+"""字体商店目录契约：data/fonts/fonts_store/font_catalog.json 结构、路径安全与体量预算。
 
 目录由 C++ 侧 json-parser 读取（不支持注释/尾逗号），仓库路径在运行时拼接为
 ghproxy.net / ghfast.top / raw.githubusercontent.com 下载链，基名直接落盘到
-qmclient/fonts 与 qmclient/fontcache，这里锁住结构与路径安全约束。
+fonts/fonts_store 与 qmclient/fontcache，这里锁住结构与路径安全约束。
 """
 
 from pathlib import Path
@@ -13,7 +13,7 @@ import unittest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CATALOG_PATH = REPO_ROOT / "data" / "qmclient" / "font_catalog.json"
+CATALOG_PATH = REPO_ROOT / "data" / "fonts" / "fonts_store" / "font_catalog.json"
 MAX_CATALOG_BYTES = 700 * 1024
 # google/fonts 仓库相对路径：许可目录/族目录/文件名，且族目录段不得是 static（可变字体已覆盖）。
 PATH_RE = re.compile(r"^(?:ofl|apache|ufl)/(?!static/)[a-z0-9_\-]+/[A-Za-z0-9_\[\](),\-]+\.ttf$")

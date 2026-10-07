@@ -12524,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == "default" adı ayrılmıştır.
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== Eski qmclient/fonts klasörü artık taranmıyor. Özel yazı tiplerinizi yapılandırma klasöründeki fonts/fonts_store konumuna elle taşıyın. Normal sürüm kullanıcı yapılandırma klasörünü, taşınabilir sürüm profile klasörünü kullanır. data/fonts içindeki birlikte gelen yazı tiplerinin taşınması gerekmez.
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Fısıldadığınız oyuncu henüz yeniden bağlanmadı veya oyundan ayrıldı. Biraz bekleyin ya da başka birine fısıldayın
 

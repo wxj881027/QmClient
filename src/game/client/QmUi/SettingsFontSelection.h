@@ -1,8 +1,44 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSFONTSELECTION_H
 #define GAME_CLIENT_QMUI_SETTINGSFONTSELECTION_H
 
+#include <engine/client/qm_font_name_match.h>
+
 #include <string>
+#include <utility>
 #include <vector>
+
+struct SQmResolvedFontSelection
+{
+	std::string m_Family;
+	std::string m_Config;
+};
+
+// 绘制与布局使用同一真实 face 查询；族名配置保留可变字重语义，不被 Regular 样式覆盖。
+template<typename TResolver>
+SQmResolvedFontSelection QmResolveSettingsFontSelection(const char *pConfig, TResolver &&Resolver)
+{
+	const char *pName = pConfig != nullptr ? pConfig : "";
+	SQmResolvedFontSelection Result{pName, pName};
+	std::string Family, Style;
+	if(!Resolver(pName, Family, Style) || Family.empty())
+		return Result;
+	Result.m_Family = Family;
+	Result.m_Config = QmFontNamesEqual(pName, Family.c_str()) || Style.empty() ? Family : Family + " " + Style;
+	return Result;
+}
+
+// 可变字重完成/条目选择也必须保留族查询的可往返配置，不能无条件剥掉样式段。
+// 返回值表示需要切换配置；失败、容量不足和等价配置均保持当前值。
+template<typename TResolver>
+bool QmResolveVariableFontSelection(const char *pFamily, const char *pCurrent, size_t Capacity, TResolver &&Resolver, std::string &Config)
+{
+	Config = pCurrent != nullptr ? pCurrent : "";
+	std::string FamilyConfig;
+	if(!Resolver(pFamily != nullptr ? pFamily : "", FamilyConfig) || FamilyConfig.empty() || FamilyConfig.size() >= Capacity || QmFontNamesEqual(Config.c_str(), FamilyConfig.c_str()))
+		return false;
+	Config = std::move(FamilyConfig);
+	return true;
+}
 
 // 配置可能来自旧版 PostScript 名称；分隔符差异不能让可用字体显示为空。
 inline bool QmFontFamilyMatchesConfig(const char *pConfig, const char *pFamily)

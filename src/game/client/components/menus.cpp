@@ -2435,21 +2435,6 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		SetDemoBrowserSource(Source);
 		NewPage = PAGE_DEMOS;
 	};
-	auto RenderFavoriteMapsIcon = [&](const CUIRect &Tab, const bool OnIndicator) {
-		const float IconSide = minimum(Tab.w, Tab.h) * 0.56f;
-		const CUIRect IconRect{Tab.x + (Tab.w - IconSide) * 0.5f, Tab.y + (Tab.h - IconSide) * 0.5f, IconSide, IconSide};
-		// 状态色作为输入，全局图标色在最终绘制时统一应用。
-		const ColorRGBA IconColor = OnIndicator ? MenuCapsuleTabActiveLabelColor() : ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-		return;
-
-		const unsigned OldFlags = TextRender()->GetRenderFlags();
-		const EFontPreset OldPreset = TextRender()->GetFontPreset();
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-		Ui()->DoLabel_QmIcon(&Tab, EQmIcon::BOOKMARK, FONT_ICON_BOOKMARK, IconSide, TEXTALIGN_MC);
-		TextRender()->SetRenderFlags(OldFlags);
-		TextRender()->SetFontPreset(OldPreset);
-	};
 	// 统一边距基准：全局安全区（8px）已提供到窗口上/左/右的距离，
 	// 导航胶囊行直接对齐安全区边缘、不再额外内缩；导航栏高度余下的
 	// MENU_MENUBAR_GAP_NEW（8px）就是导航→内容的间隙。
@@ -2567,7 +2552,6 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			int m_Page;
 			EQmIcon m_Icon;
 			const char *m_pIcon;
-			bool m_bFavoriteMapsIcon;
 			const CCommunityIcon *m_pCommunityIcon;
 			const char *m_pTooltip;
 			float m_AppearStrength;
@@ -2576,8 +2560,8 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		CUIRect aStartTabSlots[std::size(s_aStartTabButtons)];
 		int NumStartTabs = 0;
 		int ActiveStartTab = -1;
-		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const bool FavoriteMapsIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot) {
-			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, FavoriteMapsIcon, pCommunityIcon, pTooltip, AppearStrength};
+		auto AddStartTab = [&](const int Page, const EQmIcon Icon, const char *pIcon, const CCommunityIcon *pCommunityIcon, const char *pTooltip, const float AppearStrength, const CUIRect &Slot) {
+			aStartTabs[NumStartTabs] = {Page, Icon, pIcon, pCommunityIcon, pTooltip, AppearStrength};
 			aStartTabSlots[NumStartTabs] = Slot;
 			if(ActivePage == Page)
 				ActiveStartTab = NumStartTabs;
@@ -2585,21 +2569,21 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		};
 		{
 			const int aFixedPages[] = {PAGE_INTERNET, PAGE_LAN, PAGE_FAVORITES, PAGE_FAVORITE_MAPS};
-			const EQmIcon aFixedIcons[] = {EQmIcon::EARTH_AMERICAS, EQmIcon::NETWORK_WIRED, EQmIcon::STAR, EQmIcon::COUNT};
-			const char *const apFixedIcons[] = {FONT_ICON_EARTH_AMERICAS, FONT_ICON_NETWORK_WIRED, FONT_ICON_STAR, ""};
+			const EQmIcon aFixedIcons[] = {EQmIcon::EARTH_AMERICAS, EQmIcon::NETWORK_WIRED, EQmIcon::STAR, EQmIcon::BOOKMARK};
+			const char *const apFixedIcons[] = {FONT_ICON_EARTH_AMERICAS, FONT_ICON_NETWORK_WIRED, FONT_ICON_STAR, FONT_ICON_BOOKMARK};
 			const char *const apFixedTooltips[] = {Localize("Internet"), Localize("LAN"), Localize("Favorites"), Localize("Favorite map")};
 			CUIRect TabsRemainder = Box;
 			// 主菜单入口并入左侧滑块导航：作为第一个槽位，点击回到主菜单。
 			CUIRect HomeTabSlot;
 			TabsRemainder.VSplitLeft(BrowserButtonWidth, &HomeTabSlot, &TabsRemainder);
-			AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE, false, nullptr, Localize("Main menu"), 1.0f, HomeTabSlot);
+			AddStartTab(-1, EQmIcon::HOUSE, FONT_ICON_HOUSE, nullptr, Localize("Main menu"), 1.0f, HomeTabSlot);
 			for(size_t Fixed = 0; Fixed < std::size(aFixedPages); ++Fixed)
 			{
 				if(NumStartTabs > 0)
 					TabsRemainder.VSplitLeft(MenubarItemGap, nullptr, &TabsRemainder);
 				CUIRect Slot;
 				TabsRemainder.VSplitLeft(BrowserButtonWidth, &Slot, &TabsRemainder);
-				AddStartTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], Fixed == std::size(aFixedPages) - 1, nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
+				AddStartTab(aFixedPages[Fixed], aFixedIcons[Fixed], apFixedIcons[Fixed], nullptr, apFixedTooltips[Fixed], 1.0f, Slot);
 			}
 
 			static const uint64_t s_FavoriteCommunityAppearScopeHash = static_cast<uint64_t>(str_quickhash("menu_favorite_community_tab_appear"));
@@ -2630,7 +2614,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 				Slot.w = RevealWidth;
 
 				const int Page = PAGE_FAVORITE_COMMUNITY_1 + (NumStartTabs - 5);
-				AddStartTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, false, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
+				AddStartTab(Page, EQmIcon::ELLIPSIS, FONT_ICON_ELLIPSIS, m_CommunityIcons.Find(pCommunity->Id()), pCommunity->Name(), AppearStrength, Slot);
 			}
 			// 右侧图标簇紧接着页签右边排，中间不留额外空白。
 			Box = TabsRemainder;
@@ -2685,8 +2669,6 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 			{
 				NewPage = Tab.m_Page;
 			}
-			if(Tab.m_bFavoriteMapsIcon)
-				RenderFavoriteMapsIcon(aStartTabSlots[TabIndex], TabActive);
 			GameClient()->m_Tooltips.DoToolTip(&s_aStartTabButtons[TabIndex], &aStartTabSlots[TabIndex], Tab.m_pTooltip);
 		}
 

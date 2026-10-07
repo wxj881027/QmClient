@@ -5,12 +5,45 @@
 
 #include "SettingsCardGeometry.h"
 
+#include <engine/textrender.h>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <functional>
 
 struct IUiContext;
+enum class EQmIcon;
+
+// 所有卡片标题操作共享图标状态边界，绘制结束后完整恢复正文渲染状态。
+template<typename TTextRender, typename TDraw>
+void ExecuteSettingsCardHeaderIcon(TTextRender &TextRender, ColorRGBA Color, TDraw &&Draw)
+{
+	const ColorRGBA PreviousColor = TextRender.GetTextColor();
+	const ColorRGBA PreviousOutline = TextRender.GetTextOutlineColor();
+	const ColorRGBA PreviousSelection = TextRender.GetTextSelectionColor();
+	const unsigned PreviousFlags = TextRender.GetRenderFlags();
+	const EFontPreset PreviousPreset = TextRender.GetFontPreset();
+	TextRender.TextColor(Color);
+	TextRender.SetFontPreset(EFontPreset::ICON_FONT_BOLD);
+	TextRender.SetRenderFlags(TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | TEXT_RENDER_FLAG_NO_X_BEARING | TEXT_RENDER_FLAG_NO_Y_BEARING | TEXT_RENDER_FLAG_NO_OVERSIZE);
+	Draw();
+	TextRender.SetRenderFlags(PreviousFlags);
+	TextRender.SetFontPreset(PreviousPreset);
+	TextRender.TextOutlineColor(PreviousOutline);
+	TextRender.TextSelectionColor(PreviousSelection);
+	TextRender.TextColor(PreviousColor);
+}
+
+// 零宽会在文字引擎中关闭限宽；共享标题入口仅提交可见文字区域。
+template<typename TDraw>
+inline void ExecuteSettingsCardLabel(const CUIRect &Rect, TDraw &&Draw)
+{
+	if(Rect.w > 0.0f && Rect.h > 0.0f)
+		Draw();
+}
+
+void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, EQmIcon Icon, const char *pGlyph, float DrawAlpha = 1.0f);
 
 struct SSettingsCardDeckVisualOptions
 {

@@ -50,28 +50,28 @@ TEST_F(CQmFontDownloadStorage, FreshSaveRootCreatesParentsAndUsesDownloadedFonts
 	EXPECT_TRUE(qm_font_download::EnsureDirectory(*m_pStorage));
 	char aTarget[IO_MAX_PATH_LENGTH];
 	ASSERT_TRUE(qm_font_download::TargetPath("用户 Font.ttf", aTarget, sizeof(aTarget)));
-	EXPECT_STREQ(aTarget, "fonts/downloaded_fonts/用户 Font.ttf");
+	EXPECT_STREQ(aTarget, "fonts/fonts_store/用户 Font.ttf");
 	WriteFile(aTarget, "font-bytes");
 	EXPECT_TRUE(qm_font_download::Installed(*m_pStorage, "用户 Font.ttf"));
 	EXPECT_FALSE(m_pStorage->FolderExists("qmclient/fonts", IStorage::TYPE_SAVE));
 	char aDirectory[IO_MAX_PATH_LENGTH];
 	ASSERT_TRUE(qm_font_download::CompleteDirectoryPath(*m_pStorage, aDirectory, sizeof(aDirectory)));
-	EXPECT_EQ(std::filesystem::path(aDirectory), std::filesystem::path(m_Info.StoragePath()) / "fonts" / "downloaded_fonts");
+	EXPECT_EQ(std::filesystem::path(aDirectory), std::filesystem::path(m_Info.StoragePath()) / "fonts" / "fonts_store");
 }
 
-TEST_F(CQmFontDownloadStorage, LegacyDownloadsRemainInstalledAndUnknownFilesAreUntouched)
+TEST_F(CQmFontDownloadStorage, LegacyFilesAreNotInstalledAndRemainUntouched)
 {
 	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE));
 	ASSERT_TRUE(m_pStorage->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE));
 	WriteFile("qmclient/fonts/Old.ttf", "old-font");
 	WriteFile("qmclient/fonts/personal-data.bin", "unknown-user-data");
-	EXPECT_TRUE(qm_font_download::Installed(*m_pStorage, "Old.ttf"));
+	EXPECT_FALSE(qm_font_download::Installed(*m_pStorage, "Old.ttf"));
 	EXPECT_FALSE(qm_font_download::Installed(*m_pStorage, "Missing.ttf"));
 	ASSERT_TRUE(qm_font_download::EnsureDirectory(*m_pStorage));
-	WriteFile("fonts/downloaded_fonts/Old.ttf", "new-font");
+	WriteFile("fonts/fonts_store/Old.ttf", "new-font");
 	EXPECT_TRUE(qm_font_download::Installed(*m_pStorage, "Old.ttf"));
 	EXPECT_EQ(ReadFile("qmclient/fonts/Old.ttf"), "old-font");
-	EXPECT_EQ(ReadFile("fonts/downloaded_fonts/Old.ttf"), "new-font");
+	EXPECT_EQ(ReadFile("fonts/fonts_store/Old.ttf"), "new-font");
 	EXPECT_EQ(ReadFile("qmclient/fonts/personal-data.bin"), "unknown-user-data");
 }
 
@@ -98,4 +98,16 @@ TEST_F(CQmFontDownloadStorage, RejectsTraversalAndTooSmallDestinationWithoutInst
 	char aTiny[4] = "old";
 	EXPECT_FALSE(qm_font_download::TargetPath("valid.otf", aTiny, sizeof(aTiny)));
 	EXPECT_STREQ(aTiny, "");
+}
+
+TEST_F(CQmFontDownloadStorage, UnreleasedDownloadDirectoryIsNotInstalledAndIsNotModified)
+{
+	ASSERT_TRUE(m_pStorage->CreateFolder("fonts", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(m_pStorage->CreateFolder("fonts/downloaded_fonts", IStorage::TYPE_SAVE));
+	WriteFile("fonts/downloaded_fonts/Previous.otf", "previous-font");
+	ASSERT_TRUE(qm_font_download::EnsureDirectory(*m_pStorage));
+	EXPECT_FALSE(qm_font_download::Installed(*m_pStorage, "Previous.otf"));
+	EXPECT_FALSE(m_pStorage->FileExists("fonts/fonts_store/Previous.otf", IStorage::TYPE_SAVE));
+	EXPECT_FALSE(m_pStorage->FolderExists("qmclient/fonts", IStorage::TYPE_SAVE));
+	EXPECT_EQ(ReadFile("fonts/downloaded_fonts/Previous.otf"), "previous-font");
 }

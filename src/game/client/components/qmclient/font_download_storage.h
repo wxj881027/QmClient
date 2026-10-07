@@ -1,4 +1,4 @@
-// 字体商店只写 TYPE_SAVE 下的下载目录，旧目录仅用于兼容已安装判断。
+// 字体商店只写 TYPE_SAVE 下的 fonts_store 目录；旧目录由用户手动迁移。
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_DOWNLOAD_STORAGE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_FONT_DOWNLOAD_STORAGE_H
 
@@ -10,7 +10,7 @@
 
 namespace qm_font_download
 {
-	inline constexpr const char *DIRECTORY = "fonts/downloaded_fonts";
+	inline constexpr const char *DIRECTORY = "fonts/fonts_store";
 
 	inline bool ValidFilename(const std::string &File)
 	{
@@ -41,10 +41,6 @@ namespace qm_font_download
 		char aPath[IO_MAX_PATH_LENGTH];
 		if(!TargetPath(File, aPath, sizeof(aPath)))
 			return false;
-		if(Storage.FileExists(aPath, IStorage::TYPE_SAVE))
-			return true;
-		// 保留旧已下载字体和用户自己放入的字体；不搬动未知文件，不覆盖新目录文件。
-		str_format(aPath, sizeof(aPath), "qmclient/fonts/%s", File.c_str());
 		return Storage.FileExists(aPath, IStorage::TYPE_SAVE);
 	}
 

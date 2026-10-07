@@ -12524,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == Le nom "default" est réservé.
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== L’ancien dossier qmclient/fonts n’est plus analysé. Déplacez manuellement vos polices personnalisées vers fonts/fonts_store dans le dossier de configuration. La version normale utilise le dossier de configuration utilisateur ; la version portable utilise profile. Les polices fournies dans data/fonts n’ont pas besoin d’être déplacées.
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Le joueur à qui vous chuchotiez ne s'est pas encore reconnecté ou a quitté. Attendez ou chuchotez à quelqu'un d'autre
 

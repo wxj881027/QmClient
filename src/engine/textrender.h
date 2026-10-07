@@ -479,6 +479,19 @@ class ITextRender : public IInterface
 public:
 	virtual std::vector<std::string> *GetCustomFaces() = 0; // TClient
 	virtual std::vector<std::string> *GetCustomFontStyles(const char *pFamily) = 0; // TClient
+	// 查询真实 face 的排版族与样式；不切换字体、不加载文件，名称缺失时清空输出。
+	virtual bool QmResolveCustomFont(const char *, std::string &Family, std::string &Style)
+	{
+		Family.clear();
+		Style.clear();
+		return false;
+	}
+	// 显式查询字体族默认面并输出可往返的配置名；同名 face 冲突时输出完整样式名。
+	virtual bool QmFontFamilyDefaultConfig(const char *, std::string &Config)
+	{
+		Config.clear();
+		return false;
+	}
 	virtual void SetCustomFace(const char *pFace) = 0; // TClient
 	// 临时预览只改变字形选择，不改变配置字体角色或共享字重；nullptr 结束预览。
 	virtual void SetFontPreviewFace(const char *pFace) = 0;

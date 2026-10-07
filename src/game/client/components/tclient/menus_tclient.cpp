@@ -1254,9 +1254,9 @@ void CMenus::ConfigureSettingsCardSection(SSettingsSection &Section, const char 
 }
 
 // ============ QmClient 字体商店 ============
-// 可搜索的在线字体目录：data/qmclient/font_catalog.json 覆盖 Google Fonts 全量
+// 可搜索的在线字体目录：data/fonts/fonts_store/font_catalog.json 覆盖 Google Fonts 全量
 // 字体族（族名/分类/google/fonts 仓库路径），随包发行且用户目录同名文件可整体
-// 覆盖。字体文件本体不随包——搜索命中后按需下载安装到 fonts/downloaded_fonts（逐文件
+// 覆盖。字体文件本体不随包——搜索命中后按需下载安装到 fonts/fonts_store（逐文件
 // 串行，镜像链 ghproxy.net → ghfast.top → raw.githubusercontent.com）；预览按需
 // 下载到 qmclient/fontcache 并临时加载为预览面（不进字体族列表）。安装与预览
 // 共用“同一时刻最多一个下载”的串行通道，安装任务优先。
@@ -1338,7 +1338,7 @@ namespace fontstore
 		void *pCatalogData = nullptr;
 		unsigned CatalogSize = 0;
 		// TYPE_ALL 会先搜用户目录再搜数据目录：用户侧同名目录可整体覆盖随包目录。
-		if(!pStorage->ReadFile("qmclient/font_catalog.json", IStorage::TYPE_ALL, &pCatalogData, &CatalogSize))
+		if(!pStorage->ReadFile("fonts/fonts_store/font_catalog.json", IStorage::TYPE_ALL, &pCatalogData, &CatalogSize))
 			return;
 
 		json_value *pJson = json_parse((json_char *)pCatalogData, CatalogSize);
@@ -1404,7 +1404,7 @@ namespace fontstore
 		}
 		else
 		{
-			log_warn("fontstore", "Failed to parse font catalog data/qmclient/font_catalog.json");
+			log_warn("fontstore", "Failed to parse font catalog data/fonts/fonts_store/font_catalog.json");
 		}
 		json_value_free(pJson);
 		free(pCatalogData);
@@ -2033,7 +2033,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 			// 预览区：暗底方框（与字体卡预览同款：黑 30% 半透明、无边框），
 			// 内容（族名 + 固定样例两行 [ + 状态提示]）在暗底内垂直居中，
 			// 消除顶部对齐留下的底部空白；缺字部分沿回退链渲染。
-			const bool FaceReady = Family.m_Installed || Family.m_PreviewReady;
+			std::string PreviewConfig;
+			const bool FaceReady = (Family.m_Installed || Family.m_PreviewReady) && pTextRender->QmFontFamilyDefaultConfig(Family.m_Name.c_str(), PreviewConfig);
 			const char *pHint = nullptr;
 			if(!FaceReady)
 			{
@@ -2049,7 +2050,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 			const float ContentH = pHint != nullptr ? 55.0f : 41.0f;
 			const float PreviewY = Preview.y + std::max(0.0f, (Preview.h - ContentH) * 0.5f);
 			if(FaceReady)
-				pTextRender->SetFontPreviewFace(Family.m_Name.c_str());
+				pTextRender->SetFontPreviewFace(PreviewConfig.c_str());
 			pTextRender->TextColor(pTextRender->DefaultTextColor().WithAlpha(FaceReady ? 1.0f : 0.45f));
 			pTextRender->Text(Preview.x, PreviewY, 12.0f, Family.m_Name.c_str(), Preview.w);
 			// 固定样例文案：拉丁+数字 与 CJK（汉字/假名）各一行，直观展示该
@@ -2168,13 +2169,18 @@ namespace
 		}
 	}
 
-	// 从配置值解析族名：配置可能是 "Family" 或 "Family Style"，与字体族列表
-	// 前缀匹配后取族名段，供样式查询与可变轴查询使用。
-	void QmExtractConfigFamily(const char *pConfig, const std::vector<std::string> &vFamilies, char *pBuffer, size_t BufferSize)
+	// 族与样式均查询真实已加载 face。旧配置别名不会变成新的候选族，
+	// 缺失字体保留原配置显示；不在绘制时改写用户配置。
+	void QmExtractConfigFamily(ITextRender *pTextRender, const char *pConfig, char *pBuffer, size_t BufferSize, std::string &CanonicalConfig)
 	{
-		const int Selected = QmFontFamilySelection(pConfig, vFamilies);
-		const char *pFamily = Selected >= 0 ? vFamilies[Selected].c_str() : pConfig;
-		str_copy(pBuffer, pFamily, BufferSize);
+		const SQmResolvedFontSelection Selection = QmResolveSettingsFontSelection(pConfig,
+			[pTextRender](const char *pName, std::string &Family, std::string &Style) { return pTextRender->QmResolveCustomFont(pName, Family, Style); });
+		str_copy(pBuffer, Selection.m_Family.c_str(), BufferSize);
+		// 与字体族列表的显示规则一致；配置保留真实名称，匹配忽略旧版分隔符。
+		for(char *pChr = pBuffer; *pChr != '\0'; ++pChr)
+			if(*pChr == '-')
+				*pChr = ' ';
+		CanonicalConfig = Selection.m_Config;
 	}
 
 	// 计算字重下拉的选中项：配置含样式段时匹配静态条目；族名配置下可变字体
@@ -2185,12 +2191,12 @@ namespace
 		for(size_t i = 0; i < vEntries.size(); ++i)
 		{
 			const SQmFontWeightEntry &Entry = vEntries[i];
-			if(Entry.m_pFullStyle && str_comp_nocase(pConfig, Entry.m_pFullStyle->c_str()) == 0)
+			if(Entry.m_pFullStyle && QmFontNamesEqual(pConfig, Entry.m_pFullStyle->c_str()))
 				Selected = (int)i;
 		}
 		if(Selected >= 0)
 			return Selected;
-		if(str_comp_nocase(pConfig, pFamilyDisplay) == 0)
+		if(QmFontNamesEqual(pConfig, pFamilyDisplay))
 		{
 			int Best = -1;
 			int BestDist = std::numeric_limits<int>::max();
@@ -2275,9 +2281,12 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	// 英文族可变字重判定：可变族不放字重下拉，改由下方专用滑杆行承载任意
 	// 字重值（轴真实范围）。判定在测量与渲染两趟一致，驱动卡片高度过渡动画。
 	char aLatinFamily[256];
-	QmExtractConfigFamily(g_Config.m_TcCustomFont, *TextRender()->GetCustomFaces(), aLatinFamily, sizeof(aLatinFamily));
+	std::string LatinCanonicalConfig;
+	QmExtractConfigFamily(TextRender(), g_Config.m_TcCustomFont, aLatinFamily, sizeof(aLatinFamily), LatinCanonicalConfig);
 	int LatinVarMin = 100, LatinVarMax = 900;
-	const bool LatinVariable = TextRender()->CustomFontWeightRange(aLatinFamily, LatinVarMin, LatinVarMax);
+	std::string LatinFamilyDefaultConfig;
+	const bool LatinFamilyAvailable = TextRender()->QmFontFamilyDefaultConfig(aLatinFamily, LatinFamilyDefaultConfig);
+	const bool LatinVariable = LatinFamilyAvailable && TextRender()->CustomFontWeightRange(LatinFamilyDefaultConfig.c_str(), LatinVarMin, LatinVarMax);
 	if(Render)
 	{
 		Button.VSplitLeft(100.0f, &Label, &Button);
@@ -2289,9 +2298,10 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		s_FontDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_FontDropDownScrollRegion;
 		s_FontDropDownState.m_SelectionPopupContext.m_SpecialFontRenderMode = true;
 		s_FontDropDownState.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = true;
+		s_FontDropDownState.m_SelectionPopupContext.m_FontFamilySelection = true;
 		const auto &CustomFaces = *TextRender()->GetCustomFaces();
 		static size_t s_FontPrewarmIndex = 0;
-		if(s_FontSelection.Update(CustomFaces, g_Config.m_TcCustomFont, nullptr, Localize("Default")))
+		if(s_FontSelection.Update(CustomFaces, aLatinFamily, nullptr, Localize("Default")))
 			s_FontPrewarmIndex = 0;
 		const auto &s_FontDropDownNamesOwned = s_FontSelection.Families();
 		const auto &s_FontDropDownNames = s_FontSelection.Names();
@@ -2308,9 +2318,10 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			Button.VSplitRight(MarginSmall, &Button, nullptr);
 		}
 		const int FontSelectedNew = DoSettingsDropDown(&Button, FontSelectedOld, s_FontDropDownNames.data(), s_FontDropDownNames.size(), s_FontDropDownState);
-		if(FontSelectedOld != FontSelectedNew && s_FontSelection.IsFamilySelection(FontSelectedNew))
+		std::string LatinSelectedConfig;
+		if(FontSelectedOld != FontSelectedNew && s_FontSelection.IsFamilySelection(FontSelectedNew) && TextRender()->QmFontFamilyDefaultConfig(s_FontDropDownNames[FontSelectedNew], LatinSelectedConfig) && LatinSelectedConfig.size() < sizeof(g_Config.m_TcCustomFont))
 		{
-			str_copy(g_Config.m_TcCustomFont, s_FontDropDownNames[FontSelectedNew]);
+			str_copy(g_Config.m_TcCustomFont, LatinSelectedConfig.c_str());
 			s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
@@ -2333,7 +2344,9 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		if(!Ui()->IsPopupOpen(&s_FontDropDownState.m_SelectionPopupContext) && s_FontPrewarmIndex < s_FontDropDownNamesOwned.size())
 		{
 			const std::string &PrewarmFace = s_FontDropDownNamesOwned[s_FontPrewarmIndex];
-			TextRender()->SetFontPreviewFace(PrewarmFace.c_str());
+			std::string PrewarmConfig;
+			const bool PrewarmAvailable = TextRender()->QmFontFamilyDefaultConfig(PrewarmFace.c_str(), PrewarmConfig);
+			TextRender()->SetFontPreviewFace(PrewarmAvailable ? PrewarmConfig.c_str() : nullptr);
 			TextRender()->TextColor(TextRender()->DefaultTextColor().WithAlpha(0.0f));
 			TextRender()->Text(Button.x, Button.y, FontSize, PrewarmFace.c_str(), -1.0f);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -2357,7 +2370,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			s_LatinWeightLabels.reserve(s_LatinWeightEntries.size());
 			for(const SQmFontWeightEntry &Entry : s_LatinWeightEntries)
 				s_LatinWeightLabels.push_back(Entry.m_Label.c_str());
-			const int LatinWeightSelected = QmSelectFontWeightEntry(s_LatinWeightEntries, g_Config.m_TcCustomFont, aLatinFamily, g_Config.m_TcCustomFontWeight);
+			const int LatinWeightSelected = QmSelectFontWeightEntry(s_LatinWeightEntries, LatinCanonicalConfig.c_str(), aLatinFamily, g_Config.m_TcCustomFontWeight);
 			CUi::SDropDownProperties LatinWeightProperties;
 			LatinWeightProperties.m_Enabled = !s_LatinStylesOwned.empty();
 			const int LatinWeightNew = DoSettingsDropDown(&WeightButton, LatinWeightSelected, s_LatinWeightLabels.data(), s_LatinWeightLabels.size(), s_LatinWeightState, LatinWeightProperties);
@@ -2367,9 +2380,10 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				bool Changed = false;
 				if(Entry.m_Variable)
 				{
-					if(str_comp_nocase(g_Config.m_TcCustomFont, aLatinFamily) != 0)
+					std::string VariableConfig;
+					if(QmResolveVariableFontSelection(aLatinFamily, g_Config.m_TcCustomFont, sizeof(g_Config.m_TcCustomFont), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
 					{
-						str_copy(g_Config.m_TcCustomFont, aLatinFamily);
+						str_copy(g_Config.m_TcCustomFont, VariableConfig.c_str());
 						Changed = true;
 					}
 					if(g_Config.m_TcCustomFontWeight != Entry.m_Value)
@@ -2409,10 +2423,11 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		RenderQmSettingsSliderWithValueInput(&s_LatinWeightSliderId, Button, &g_Config.m_TcCustomFontWeight, LatinVarMin, LatinVarMax, "", false);
 		static SQmWeightThrottleState s_LatinWeightThrottle;
 		QmTickVariableWeightThrottle(s_LatinWeightThrottle, g_Config.m_TcCustomFontWeight, Client()->GlobalTime(), [this](int Weight) { TextRender()->SetCustomFontWeight(Weight); }, [&]() {
-				// 归一为族名：可变字重只对族 face 生效，样式段配置会挡住轴调节。
-				if(str_comp_nocase(g_Config.m_TcCustomFont, aLatinFamily) != 0)
-				{
-					str_copy(g_Config.m_TcCustomFont, aLatinFamily);
+				// 权重应用于真实 face；收尾只使用族 API 的可往返配置，保留消歧所需样式。
+				std::string VariableConfig;
+					if(QmResolveVariableFontSelection(aLatinFamily, g_Config.m_TcCustomFont, sizeof(g_Config.m_TcCustomFont), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
+					{
+						str_copy(g_Config.m_TcCustomFont, VariableConfig.c_str());
 					TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
 				}
 				s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
@@ -2428,9 +2443,12 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	// CJK 族可变字重判定：可变族不放字重下拉，改由下方专用滑杆行承载任意
 	// 字重值。CJK 未设置（跟随英文）时视为不可变，维持占位下拉不变。
 	char aCjkFamily[256];
-	QmExtractConfigFamily(g_Config.m_TcCustomFontCjk, *TextRender()->GetCustomFaces(), aCjkFamily, sizeof(aCjkFamily));
+	std::string CjkCanonicalConfig;
+	QmExtractConfigFamily(TextRender(), g_Config.m_TcCustomFontCjk, aCjkFamily, sizeof(aCjkFamily), CjkCanonicalConfig);
 	int CjkVarMin = 100, CjkVarMax = 900;
-	const bool CjkVariable = aCjkFamily[0] != '\0' && TextRender()->CustomFontWeightRange(aCjkFamily, CjkVarMin, CjkVarMax);
+	std::string CjkFamilyDefaultConfig;
+	const bool CjkFamilyAvailable = TextRender()->QmFontFamilyDefaultConfig(aCjkFamily, CjkFamilyDefaultConfig);
+	const bool CjkVariable = CjkFamilyAvailable && TextRender()->CustomFontWeightRange(CjkFamilyDefaultConfig.c_str(), CjkVarMin, CjkVarMax);
 	if(Render)
 	{
 		Button.VSplitLeft(100.0f, &Label, &Button);
@@ -2445,6 +2463,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		s_CjkDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_CjkDropDownScrollRegion;
 		s_CjkDropDownState.m_SelectionPopupContext.m_SpecialFontRenderMode = true;
 		s_CjkDropDownState.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = true;
+		s_CjkDropDownState.m_SelectionPopupContext.m_FontFamilySelection = true;
 		const auto &CustomFaces = *TextRender()->GetCustomFaces();
 		if(s_CjkFacesSource != CustomFaces || s_CjkConfigSource != g_Config.m_TcCustomFontCjk)
 		{
@@ -2456,12 +2475,14 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			s_CjkEligibleFamilies.clear();
 			for(const auto &FaceName : CustomFaces)
 			{
-				const bool IsCurrentConfig = QmFontFamilyMatchesConfig(g_Config.m_TcCustomFontCjk, FaceName.c_str());
-				if(IsCurrentConfig || TextRender()->QmFaceHasCjk(FaceName.c_str()))
+				const bool IsCurrentConfig = QmFontNamesEqual(aCjkFamily, FaceName.c_str());
+				std::string FamilyDefaultConfig;
+				const bool FamilyAvailable = TextRender()->QmFontFamilyDefaultConfig(FaceName.c_str(), FamilyDefaultConfig);
+				if(IsCurrentConfig || (FamilyAvailable && TextRender()->QmFaceHasCjk(FamilyDefaultConfig.c_str())))
 					s_CjkEligibleFamilies.push_back(FaceName);
 			}
 		}
-		s_CjkSelection.Update(s_CjkEligibleFamilies, g_Config.m_TcCustomFontCjk, Localize("(Follow English font)"), Localize("Default"));
+		s_CjkSelection.Update(s_CjkEligibleFamilies, aCjkFamily, Localize("(Follow English font)"), Localize("Default"));
 		const auto &s_CjkDropDownNamesOwned = s_CjkSelection.Families();
 		const auto &s_CjkDropDownNames = s_CjkSelection.Names();
 		CUIRect CjkWeightButton;
@@ -2472,12 +2493,14 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		}
 		const int CjkSelectedOld = s_CjkSelection.Selected();
 		const int CjkSelectedNew = DoSettingsDropDown(&Button, CjkSelectedOld, s_CjkDropDownNames.data(), s_CjkDropDownNames.size(), s_CjkDropDownState);
-		if(CjkSelectedNew != CjkSelectedOld && CjkSelectedNew >= 0 && (size_t)CjkSelectedNew <= s_CjkDropDownNamesOwned.size())
+		std::string CjkSelectedConfig;
+		const bool CjkSelectionAvailable = CjkSelectedNew == 0 || (CjkSelectedNew > 0 && (size_t)CjkSelectedNew <= s_CjkDropDownNamesOwned.size() && TextRender()->QmFontFamilyDefaultConfig(s_CjkDropDownNamesOwned[CjkSelectedNew - 1].c_str(), CjkSelectedConfig) && CjkSelectedConfig.size() < sizeof(g_Config.m_TcCustomFontCjk));
+		if(CjkSelectedNew != CjkSelectedOld && CjkSelectionAvailable)
 		{
 			if(CjkSelectedNew == 0)
 				g_Config.m_TcCustomFontCjk[0] = '\0';
 			else
-				str_copy(g_Config.m_TcCustomFontCjk, s_CjkDropDownNamesOwned[CjkSelectedNew - 1].c_str());
+				str_copy(g_Config.m_TcCustomFontCjk, CjkSelectedConfig.c_str());
 			s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			TextRender()->SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
@@ -2502,7 +2525,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			s_CjkWeightLabels.reserve(s_CjkWeightEntries.size());
 			for(const SQmFontWeightEntry &Entry : s_CjkWeightEntries)
 				s_CjkWeightLabels.push_back(Entry.m_Label.c_str());
-			const int CjkWeightSelected = QmSelectFontWeightEntry(s_CjkWeightEntries, g_Config.m_TcCustomFontCjk, aCjkFamily, g_Config.m_TcCustomFontWeightCjk);
+			const int CjkWeightSelected = QmSelectFontWeightEntry(s_CjkWeightEntries, CjkCanonicalConfig.c_str(), aCjkFamily, g_Config.m_TcCustomFontWeightCjk);
 			CUi::SDropDownProperties CjkWeightProperties;
 			CjkWeightProperties.m_Enabled = !s_CjkStylesOwned.empty();
 			const int CjkWeightNew = DoSettingsDropDown(&CjkWeightButton, CjkWeightSelected, s_CjkWeightLabels.data(), s_CjkWeightLabels.size(), s_CjkWeightState, CjkWeightProperties);
@@ -2512,9 +2535,10 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				bool Changed = false;
 				if(Entry.m_Variable && aCjkFamily[0] != '\0')
 				{
-					if(str_comp_nocase(g_Config.m_TcCustomFontCjk, aCjkFamily) != 0)
+					std::string VariableConfig;
+					if(QmResolveVariableFontSelection(aCjkFamily, g_Config.m_TcCustomFontCjk, sizeof(g_Config.m_TcCustomFontCjk), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
 					{
-						str_copy(g_Config.m_TcCustomFontCjk, aCjkFamily);
+						str_copy(g_Config.m_TcCustomFontCjk, VariableConfig.c_str());
 						Changed = true;
 					}
 					if(g_Config.m_TcCustomFontWeightCjk != Entry.m_Value)
@@ -2554,9 +2578,10 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		static SQmWeightThrottleState s_CjkWeightThrottle;
 		QmTickVariableWeightThrottle(s_CjkWeightThrottle, g_Config.m_TcCustomFontWeightCjk, Client()->GlobalTime(), [this](int Weight) { TextRender()->SetCustomFontWeightCjk(Weight); }, [&]() {
 				// 归一为族名：可变字重只对族 face 生效，样式段配置会挡住轴调节。
-				if(str_comp_nocase(g_Config.m_TcCustomFontCjk, aCjkFamily) != 0)
-				{
-					str_copy(g_Config.m_TcCustomFontCjk, aCjkFamily);
+				std::string VariableConfig;
+					if(QmResolveVariableFontSelection(aCjkFamily, g_Config.m_TcCustomFontCjk, sizeof(g_Config.m_TcCustomFontCjk), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
+					{
+						str_copy(g_Config.m_TcCustomFontCjk, VariableConfig.c_str());
 					TextRender()->SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
 				}
 				s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
@@ -2577,18 +2602,24 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		s_IconsDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_IconsDropDownScrollRegion;
 		s_IconsDropDownState.m_SelectionPopupContext.m_SpecialFontRenderMode = true;
 		s_IconsDropDownState.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = true;
+		s_IconsDropDownState.m_SelectionPopupContext.m_FontFamilySelection = true;
 		const auto &CustomFaces = *TextRender()->GetCustomFaces();
-		s_IconsSelection.Update(CustomFaces, g_Config.m_TcCustomFontIcons, Localize("(Follow Chinese font)"), Localize("Default"));
+		char aIconsFamily[256];
+		std::string IconsCanonicalConfig;
+		QmExtractConfigFamily(TextRender(), g_Config.m_TcCustomFontIcons, aIconsFamily, sizeof(aIconsFamily), IconsCanonicalConfig);
+		s_IconsSelection.Update(CustomFaces, aIconsFamily, Localize("(Follow Chinese font)"), Localize("Default"));
 		const auto &s_IconsDropDownNamesOwned = s_IconsSelection.Families();
 		const auto &s_IconsDropDownNames = s_IconsSelection.Names();
 		const int IconsSelectedOld = s_IconsSelection.Selected();
 		const int IconsSelectedNew = DoSettingsDropDown(&Button, IconsSelectedOld, s_IconsDropDownNames.data(), s_IconsDropDownNames.size(), s_IconsDropDownState);
-		if(IconsSelectedNew != IconsSelectedOld && IconsSelectedNew >= 0 && (size_t)IconsSelectedNew <= CustomFaces.size())
+		std::string IconsSelectedConfig;
+		const bool IconsSelectionAvailable = IconsSelectedNew == 0 || (IconsSelectedNew > 0 && (size_t)IconsSelectedNew <= CustomFaces.size() && TextRender()->QmFontFamilyDefaultConfig(s_IconsDropDownNamesOwned[IconsSelectedNew - 1].c_str(), IconsSelectedConfig) && IconsSelectedConfig.size() < sizeof(g_Config.m_TcCustomFontIcons));
+		if(IconsSelectedNew != IconsSelectedOld && IconsSelectionAvailable)
 		{
 			if(IconsSelectedNew == 0)
 				g_Config.m_TcCustomFontIcons[0] = '\0';
 			else
-				str_copy(g_Config.m_TcCustomFontIcons, s_IconsDropDownNamesOwned[IconsSelectedNew - 1].c_str());
+				str_copy(g_Config.m_TcCustomFontIcons, IconsSelectedConfig.c_str());
 			s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			TextRender()->SetCustomFaceIcons(g_Config.m_TcCustomFontIcons);
@@ -5050,6 +5081,8 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				CTClientSettingsCardFrameBinding *pBinding = &s_aDeckCardBindings[Index];
 				SSettingsCardDefinition Definition;
 				Definition.m_Spec = {s_aDeckCardSpecs[Index].first, Localize(s_aDeckCardSpecs[Index].second), qm_card_registry::ResolveLocalizedDescription(s_aDeckCardSpecs[Index].first)};
+				if(str_comp(Definition.m_Spec.m_pStableId, "tclient:font") == 0)
+					Definition.m_Spec.m_pInfo = Localize("The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.");
 				Definition.m_Measure = [pBinding](float ContentWidth) { return pBinding->Measure(ContentWidth); };
 				Definition.m_RenderMeasured = [pBinding](CUIRect &Content) { pBinding->Render(Content); };
 				Definition.m_MeasureRevision = HashTClientSettingsCardLayout(s_aDeckCardSpecs[Index].first);

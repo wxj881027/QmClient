@@ -1306,6 +1306,8 @@ public:
 		// QmClient: 按条目渲染字体前先检查该名字能否解析为已加载的 face（商店
 		// 搜索弹层的条目是未安装的在线字体，缺字时静默跳过切换，避免逐帧失败日志）。
 		bool m_FontFaceAvailabilityCheck = false;
+		// 字体族列表以默认面预览；样式与商店 face 列表保持完整配置名语义。
+		bool m_FontFamilySelection = false;
 
 		SSelectionPopupContext();
 		void Reset();

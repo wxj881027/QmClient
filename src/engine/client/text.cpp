@@ -448,6 +448,8 @@ private:
 	std::vector<FT_Face> m_QmPreviewFaces;
 	std::vector<FT_Face> m_vFtFaces;
 	std::unordered_map<FT_Face, SQmFontFaceNames> m_QmFaceNames;
+	CQmFontFaceLookupCache m_QmFaceLookupCache;
+	CQmFontFaceLookupCache m_QmFamilyLookupCache;
 	std::shared_ptr<uint64_t> m_pGlyphAtlasRevision = std::make_shared<uint64_t>(1);
 	std::bitset<MAX_FONT_SIZE + 1> m_QmNameplateGlyphSizes;
 	size_t m_QmNameplateGlyphCount = 0;
@@ -475,53 +477,17 @@ private:
 
 	FT_Face GetFaceByName(const char *pFamilyName)
 	{
-		if(pFamilyName == nullptr || pFamilyName[0] == '\0')
-			return nullptr;
+		return m_QmFaceLookupCache.Resolve(pFamilyName, [this](const char *pName) { return FindFaceByName(pName); });
+	}
 
-		FT_Face FamilyNameMatch = nullptr;
-		FT_Face PreferredFamilyMatch = nullptr;
-		char aFamilyStyleName[FONT_NAME_SIZE];
-		char aRequestedName[FONT_NAME_SIZE];
-		str_copy(aRequestedName, pFamilyName);
-		ReplaceHyphensWithSpaces(aRequestedName);
+	FT_Face FindFaceByName(const char *pFamilyName)
+	{
+		return QmResolveFontFaceName(pFamilyName, m_vFtFaces, m_QmFaceNames);
+	}
 
-		for(const auto &CurrentFace : m_vFtFaces)
-		{
-			// Best match: font face with matching family and style name
-			str_format(aFamilyStyleName, sizeof(aFamilyStyleName), "%s %s", FamilyName(CurrentFace), StyleName(CurrentFace));
-			char aNormalizedFamilyStyle[FONT_NAME_SIZE];
-			str_copy(aNormalizedFamilyStyle, aFamilyStyleName);
-			ReplaceHyphensWithSpaces(aNormalizedFamilyStyle);
-			if(QmFontNamesEqual(aRequestedName, aNormalizedFamilyStyle))
-			{
-				return CurrentFace;
-			}
-
-			// Second best match: font face with matching family
-			char aNormalizedFamily[FONT_NAME_SIZE];
-			str_copy(aNormalizedFamily, FamilyName(CurrentFace) != nullptr ? FamilyName(CurrentFace) : "");
-			ReplaceHyphensWithSpaces(aNormalizedFamily);
-			if(QmFontNamesEqual(aRequestedName, aNormalizedFamily))
-			{
-				if(FamilyNameMatch == nullptr)
-					FamilyNameMatch = CurrentFace;
-				if(StyleName(CurrentFace) != nullptr && (str_comp_nocase(StyleName(CurrentFace), "Regular") == 0 || str_comp_nocase(StyleName(CurrentFace), "Book") == 0 || str_comp_nocase(StyleName(CurrentFace), "Normal") == 0 || str_comp_nocase(StyleName(CurrentFace), "Medium") == 0))
-					PreferredFamilyMatch = CurrentFace;
-			}
-
-			// TClient
-			// Third best match: match the fucking font name
-			char aBuf[256];
-			const char *pPostscriptName = FT_Get_Postscript_Name(CurrentFace);
-			str_copy(aBuf, pPostscriptName != nullptr ? pPostscriptName : "");
-			ReplaceHyphensWithSpaces(aBuf);
-			if(!FamilyNameMatch && QmFontNamesEqual(aRequestedName, aBuf))
-			{
-				FamilyNameMatch = CurrentFace;
-			}
-		}
-
-		return PreferredFamilyMatch != nullptr ? PreferredFamilyMatch : FamilyNameMatch;
+	FT_Face GetFaceByFamily(const char *pFamily)
+	{
+		return m_QmFamilyLookupCache.Resolve(pFamily, [this](const char *pName) { return QmResolveFontFamilyName(pName, m_vFtFaces, m_QmFaceNames); });
 	}
 
 	bool IncreaseGlyphMapSize()
@@ -924,6 +890,16 @@ public:
 	const char *FamilyName(FT_Face Face) const { return m_QmFaceNames.at(Face).m_Family.c_str(); }
 	const char *StyleName(FT_Face Face) const { return m_QmFaceNames.at(Face).m_Style.c_str(); }
 	FT_Face QmDiagnosticFace(const char *pName) { return GetFaceByName(pName); }
+	bool ResolveFontSelection(const char *pName, std::string &Family, std::string &Style)
+	{
+		FT_Face Face = GetFaceByName(pName);
+		return QmFontSelectionNames(Face != nullptr ? &m_QmFaceNames.at(Face) : nullptr, Family, Style);
+	}
+
+	bool FamilyDefaultConfig(const char *pFamily, std::string &Config)
+	{
+		return QmFontFamilySelectionConfig(GetFaceByFamily(pFamily), m_QmFaceNames, [this](const char *pName) { return GetFaceByName(pName); }, Config);
+	}
 
 	// 图形设备重建后调用：字形的 CPU 侧位图数据（m_apTextureData）与图集分配都还在，
 	// 因此只需要把字体纹理重新上传到新设备。旧句柄因为设备纪元自增已经失效，
@@ -953,6 +929,8 @@ public:
 	{
 		m_vFtFaces.push_back(Face);
 		m_QmFaceNames.emplace(Face, QmFontFaceNames(Face));
+		m_QmFaceLookupCache.Reset();
+		m_QmFamilyLookupCache.Reset();
 	}
 
 	bool SetDefaultFaceByName(const char *pFamilyName)
@@ -998,6 +976,11 @@ public:
 	bool QmHasFace(const char *pFace)
 	{
 		return pFace != nullptr && pFace[0] != '\0' && GetFaceByName(pFace) != nullptr;
+	}
+
+	bool QmHasFamily(const char *pFamily)
+	{
+		return GetFaceByFamily(pFamily) != nullptr;
 	}
 
 	// QmClient: 查询名字（族名或族名+样式）对应的 face 是否覆盖任一 CJK 字形。
@@ -2018,7 +2001,7 @@ class CTextRender : public IEngineTextRender
 	// pvLoadedFaces 可选：收集本次实际加载成功的 face（商店预览加载用它标记预览 face）。
 	// QmLogLoadedFaces 可选：按需加载路径（商店预览/分类字体）传 false——这类加载完全由
 	// UI 触发，一次可能批量加载几十个族，逐 face 的成功日志只保留给启动期静态加载
-	// （fonts/ 与 qmclient/fonts），避免控制台刷屏；加载失败的错误日志不受影响。
+	// （fonts/ 及其子目录），避免控制台刷屏；加载失败的错误日志不受影响。
 	bool LoadFontCollection(const char *pFontName, const FT_Byte *pFontData, FT_Long FontDataSize, std::vector<FT_Face> *pvLoadedFaces = nullptr, bool QmLogLoadedFaces = true)
 	{
 		FT_Face FtFace;
@@ -2183,7 +2166,7 @@ public:
 		pVector->emplace_back(pFilename);
 		return 0;
 	}
-	// TClient：递归收集字体文件，保留目录名以支持 qmclient/fonts 下的字体包。
+	// TClient：递归收集字体文件，保留目录名以支持 fonts/fonts_store 下的字体包。
 	struct SQmScannedFontFile
 	{
 		std::string m_Path;
@@ -2204,6 +2187,9 @@ public:
 		str_format(aRelativePath, sizeof(aRelativePath), "%s/%s", pScan->m_Directory.c_str(), pFilename);
 		if(IsDir)
 		{
+			// 未发布过的旧商店目录不做兼容读取；未知常规字体子目录仍正常递归。
+			if(str_comp_nocase(aRelativePath, "fonts/downloaded_fonts") == 0)
+				return 0;
 			SRecursiveFontScan Child{pScan->m_pThis, aRelativePath, pScan->m_pFiles};
 			pScan->m_pThis->Storage()->ListDirectory(StorageType, aRelativePath, RecursiveFontFileCallback, &Child);
 			return 0;
@@ -2254,20 +2240,6 @@ public:
 		ReplaceHyphensWithSpaces(aTargetFamily);
 		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
 		{
-			if(m_pGlyphMap->FamilyName(CurrentFace) == nullptr || m_pGlyphMap->StyleName(CurrentFace) == nullptr)
-				continue;
-			char aFamilyStyle[FONT_NAME_SIZE];
-			str_format(aFamilyStyle, sizeof(aFamilyStyle), "%s %s", m_pGlyphMap->FamilyName(CurrentFace), m_pGlyphMap->StyleName(CurrentFace));
-			ReplaceHyphensWithSpaces(aFamilyStyle);
-			if(QmFontNamesEqual(aFamilyStyle, aTargetFamily))
-			{
-				str_copy(aTargetFamily, m_pGlyphMap->FamilyName(CurrentFace));
-				ReplaceHyphensWithSpaces(aTargetFamily);
-				break;
-			}
-		}
-		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
-		{
 			char aNormalizedFamily[FONT_NAME_SIZE];
 			str_copy(aNormalizedFamily, m_pGlyphMap->FamilyName(CurrentFace));
 			ReplaceHyphensWithSpaces(aNormalizedFamily);
@@ -2294,11 +2266,11 @@ public:
 	}
 
 	// 正文与字体商店仍扫描可搜索目录；内置 Phosphor 单独从 DATADIR 加载，
-	// 不读取用户目录中同路径或旧 qmclient/fonts/Phosphor 的历史副本。
+	// 不读取用户目录中 fonts/Phosphor 下的历史副本。
 	void LoadCustomFonts()
 	{
 		std::vector<SQmScannedFontFile> vFontFiles;
-		for(const char *pDirectory : {"fonts", "qmclient/fonts"})
+		for(const char *pDirectory : {"fonts"})
 		{
 			// TYPE_ALL 的目录合并会先按文件名去重，坏用户文件会令同名随包文件根本不进入扫描。
 			// 按实际存储来源分别枚举，读取与递归继续保持该来源。
@@ -2317,9 +2289,9 @@ public:
 			const std::string SourceKey = std::to_string(File.m_StorageType) + ":" + FilePath;
 			if(m_QmLoadedFontSources.find(SourceKey) != m_QmLoadedFontSources.end())
 				continue;
-			if(IsLegacyBundledIconFontPath(FilePath.c_str()) || str_startswith_nocase(FilePath.c_str(), "fonts/Phosphor/") != nullptr)
+			if(str_startswith_nocase(FilePath.c_str(), "fonts/Phosphor/") != nullptr)
 			{
-				log_info("textrender", "Ignoring legacy bundled icon font '%s'", FilePath.c_str());
+				log_info("textrender", "Ignoring user copy of bundled icon font '%s'", FilePath.c_str());
 				continue;
 			}
 			// 按真实存储来源去重，用户同名文件不能遮住另一来源中的有效字体。
@@ -2365,7 +2337,18 @@ public:
 		for(const std::string &Family : pThis->m_CustomFontFaces)
 			log_info("textrender/font", "event=font_family family='%s'", Family.c_str());
 		const char *pRequested = pResult->GetString(0);
-		pThis->UpdateCustomFontStyles(pRequested);
+		std::string SelectionFamily, SelectionStyle;
+		const bool SelectionResolved = pThis->QmResolveCustomFont(pRequested, SelectionFamily, SelectionStyle);
+		log_info("textrender/font", "event=font_selection request='%s' resolved=%d family='%s' style='%s'", pRequested, SelectionResolved ? 1 : 0, SelectionFamily.c_str(), SelectionStyle.c_str());
+		std::string FamilyConfig;
+		const bool FamilyResolved = pThis->QmFontFamilyDefaultConfig(pRequested, FamilyConfig);
+		int FamilyWeightMin = 0, FamilyWeightMax = 0;
+		const bool FamilyVariable = FamilyResolved && pThis->CustomFontWeightRange(FamilyConfig.c_str(), FamilyWeightMin, FamilyWeightMax);
+		const bool FamilyCjk = FamilyResolved && pThis->QmFaceHasCjk(FamilyConfig.c_str());
+		log_info("textrender/font", "event=font_family_selection request='%s' resolved=%d config='%s' cjk=%d variable=%d min=%d max=%d", pRequested, FamilyResolved ? 1 : 0, FamilyConfig.c_str(), FamilyCjk ? 1 : 0, FamilyVariable ? 1 : 0, FamilyWeightMin, FamilyWeightMax);
+		for(const std::string &Style : *pThis->GetCustomFontStyles(pRequested))
+			log_info("textrender/font", "event=font_family_style request='%s' face='%s'", pRequested, Style.c_str());
+		pThis->UpdateCustomFontStyles(SelectionResolved ? SelectionFamily.c_str() : pRequested);
 		for(const std::string &Style : pThis->m_CustomFontStyles)
 			log_info("textrender/font", "event=font_style request='%s' face='%s'", pRequested, Style.c_str());
 		FT_Face Face = pThis->m_pGlyphMap->QmDiagnosticFace(pRequested);
@@ -2402,6 +2385,15 @@ public:
 		UpdateCustomFontStyles(pFamily);
 		return &m_CustomFontStyles;
 	}
+	bool QmResolveCustomFont(const char *pName, std::string &Family, std::string &Style) override
+	{
+		return m_pGlyphMap->ResolveFontSelection(pName, Family, Style);
+	}
+	bool QmFontFamilyDefaultConfig(const char *pFamily, std::string &Config) override
+	{
+		return m_pGlyphMap->FamilyDefaultConfig(pFamily, Config);
+	}
+
 	// TClient
 	void SetCustomFace(const char *pFace) override
 	{
@@ -2465,11 +2457,11 @@ public:
 	{
 		if(pFamily == nullptr || pFamily[0] == '\0' || pFilePath == nullptr || pFilePath[0] == '\0')
 			return false;
-		if(m_pGlyphMap->QmHasFace(pFamily))
+		if(m_pGlyphMap->QmHasFamily(pFamily))
 			return true;
 		const std::string Path(pFilePath);
 		if(std::find_if(m_vQmPreviewLoadedPaths.begin(), m_vQmPreviewLoadedPaths.end(), [&Path](const std::string &Loaded) { return str_comp_nocase(Loaded.c_str(), Path.c_str()) == 0; }) != m_vQmPreviewLoadedPaths.end())
-			return m_pGlyphMap->QmHasFace(pFamily);
+			return m_pGlyphMap->QmHasFamily(pFamily);
 		void *pFontData = nullptr;
 		unsigned FontDataSize = 0;
 		if(!Storage()->ReadFile(pFilePath, IStorage::TYPE_ALL, &pFontData, &FontDataSize))
@@ -2487,7 +2479,7 @@ public:
 			// 新 face 可能是可变字体：把当前分类字重立即应用上去（坐标未变化时不会动图集）。
 			m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
 			m_pGlyphMap->SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
-			return m_pGlyphMap->QmHasFace(pFamily);
+			return m_pGlyphMap->QmHasFamily(pFamily);
 		}
 		free(pFontData);
 		return false;
@@ -2586,7 +2578,7 @@ public:
 
 		bool Success = IconFontsLoaded;
 
-		// QmClient: 目录扫描统一建 face 池（随包 fonts + 用户 qmclient/fonts），
+		// QmClient: 目录扫描统一建 face 池（随包与用户 fonts 目录），
 		// 再按 index.json 绑定角色；'font files' 键废弃，仅为旧索引保留加载兼容。
 		LoadCustomFonts();
 

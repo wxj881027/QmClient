@@ -47,4 +47,12 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> demo_recording
 python qmclient_scripts/integration/font_resources_smoke.py --client cmake-build-portable/DDNet.exe
 ```
 
-脚本在 tmp 内生成合法 TTF/TTC，并通过 qm_graphics_trace 下的 qm_font_diagnostics 查询真实字体族、样式、FreeType glyph 索引及无缩放 advance。四个场景覆盖仅用户目录中文名称、仅 data 字体与 Book 样式、损坏用户同路径字体不遮住 data 字体、TTC 多族多面及跨目录重复加载。重复查询和动态添加集合副本后断言字体池大小不变；这是进程冒烟回归，不代表下拉菜单截图或完整玩家端到端流程通过。
+脚本在 tmp 内生成合法 TTF/TTC，并通过 qm_graphics_trace 下的 qm_font_diagnostics 查询真实字体族、样式、FreeType glyph 索引及无缩放 advance。七个场景覆盖商店下载目录与用户目录的 Unicode 名称、仅 data 字体与 Book 样式、损坏用户同路径字体不遮住 data 字体、TTC 多族多面及跨目录重复加载、随包 Poppins／Source Han Sans 的家族样式分组，以及真实家族与旧样式别名冲突后的选择恢复。重复查询和动态添加集合副本后断言字体池大小不变；这是进程冒烟回归，不代表下拉菜单截图或完整玩家端到端流程通过。
+
+退出生命周期的 Windows 进程回归使用专用便携构建，同时构建 `game-client`、`game-server` 和 `testrunner`：
+
+```powershell
+python qmclient_scripts/integration/exit_lifecycle_smoke.py --build-dir tmp/session-acceptance-build
+```
+
+覆盖正常最终清理、最终清理卡死后的看门狗强制退出并保留已保存配置，以及本地服务器在父进程正常退出、`_Exit`、外部强杀和 `CreateProcess` 尚未返回的创建窗口中被杀后的终止。Windows 本地服务器使用原子 Job-list 创建能力，需要 Windows 10 / Server 2016 或更新版本；能力不可用时拒绝启动。测试只运行工作区副本，服务器使用隔离的 `storage.cfg`，不会读取真实用户配置。

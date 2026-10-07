@@ -75,3 +75,63 @@ TEST(SettingsFontSelection, EmptyConfigurationWithoutFamiliesDisplaysDefaultLabe
 	ASSERT_TRUE(Selection.Update({}, "", nullptr, "默认"));
 	EXPECT_STREQ(Selection.Names()[0], "默认");
 }
+
+TEST(SettingsFontSelection, ResolvedLegacyAliasesSelectCanonicalFamilyAndRealFaceStyle)
+{
+	struct SCase
+	{
+		const char *m_pConfig;
+		const char *m_pFamily;
+		const char *m_pStyle;
+	};
+	for(const auto &Case : {SCase{"Poppins Light Regular", "Poppins", "Light"}, SCase{"Source Han Sans SC", "Source Han Sans", "SC Regular"}, SCase{"SourceHanSansHWSC", "Source Han Sans", "HW SC Regular"}})
+	{
+		SCOPED_TRACE(Case.m_pConfig);
+		const auto Selection = QmResolveSettingsFontSelection(Case.m_pConfig, [&](const char *pName, std::string &Family, std::string &Style) {
+			EXPECT_STREQ(pName, Case.m_pConfig);
+			Family = Case.m_pFamily;
+			Style = Case.m_pStyle;
+			return true;
+		});
+		EXPECT_EQ(Selection.m_Family, Case.m_pFamily);
+		EXPECT_EQ(Selection.m_Config, std::string(Case.m_pFamily) + " " + Case.m_pStyle);
+		CSettingsFontSelection Families;
+		Families.Update({"Poppins", "Source Han Sans"}, Selection.m_Family.c_str(), nullptr, "Default");
+		EXPECT_TRUE(Families.IsFamilySelection(Families.Selected()));
+		EXPECT_STREQ(Families.Names()[Families.Selected()], Case.m_pFamily);
+	}
+}
+
+TEST(SettingsFontSelection, FamilyOnlyVariableConfigurationDoesNotBecomeStaticRegularSelection)
+{
+	for(const char *pConfig : {"Example Font", "ExampleFont", "example-font"})
+	{
+		SCOPED_TRACE(pConfig);
+		const auto Selection = QmResolveSettingsFontSelection(pConfig, [](const char *, std::string &Family, std::string &Style) {
+			Family = "Example Font";
+			Style = "Regular";
+			return true;
+		});
+		EXPECT_EQ(Selection.m_Family, "Example Font");
+		// 字重选择仍进入 family-only 的 CurWeight 分支，不被固定 Regular 条目抢先匹配。
+		EXPECT_EQ(Selection.m_Config, "Example Font");
+	}
+}
+
+TEST(SettingsFontSelection, MissingOrEmptyConfigurationPreservesRawValueWithoutGuessingFamily)
+{
+	for(const char *pConfig : {"Poppins Missing Style", "SourceHanSansOther", ""})
+	{
+		SCOPED_TRACE(pConfig);
+		const auto Selection = QmResolveSettingsFontSelection(pConfig, [](const char *, std::string &Family, std::string &Style) {
+			Family = "stale";
+			Style = "stale";
+			return false;
+		});
+		EXPECT_EQ(Selection.m_Family, pConfig);
+		EXPECT_EQ(Selection.m_Config, pConfig);
+	}
+	const auto Empty = QmResolveSettingsFontSelection(nullptr, [](const char *pName, std::string &, std::string &) { EXPECT_STREQ(pName, ""); return false; });
+	EXPECT_TRUE(Empty.m_Family.empty());
+	EXPECT_TRUE(Empty.m_Config.empty());
+}

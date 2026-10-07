@@ -210,8 +210,8 @@ def scenario_vector_font_and_icon_resources(env: ProcessEnvironment) -> None:
 
 
 def scenario_legacy_icon_font_residual_ignored(env: ProcessEnvironment) -> None:
-	"""旧版本复制到用户目录的 Phosphor 不应进入字体 face 池。"""
-	legacy_dir = env.path("qmclient", "fonts", "Phosphor")
+	"""用户 fonts 下的 Phosphor 副本不应进入字体 face 池。"""
+	legacy_dir = env.path("fonts", "Phosphor")
 	legacy_dir.mkdir(parents=True, exist_ok=True)
 	shutil.copy2(
 		env.build_dir / "data" / "fonts" / "Phosphor" / "Phosphor-Regular.ttf",
@@ -220,11 +220,11 @@ def scenario_legacy_icon_font_residual_ignored(env: ProcessEnvironment) -> None:
 
 	env.start_client([], connect=False)
 	env.client.wait_for(
-		lambda line: "Ignoring legacy bundled icon font 'qmclient/fonts/Phosphor/Phosphor-Regular.ttf'" in line,
+		lambda line: "Ignoring user copy of bundled icon font 'fonts/Phosphor/Phosphor-Regular.ttf'" in line,
 		"legacy icon font residual rejection",
 		15,
 	)
-	if any("Loaded" in line and "qmclient/fonts/Phosphor/" in line for line in env.client._lines):
+	if any("Loaded" in line and "fonts/Phosphor/" in line for line in env.client._lines):
 		raise AssertionError("legacy Phosphor residual was loaded into the font face pool")
 	_quit_client(env)
 

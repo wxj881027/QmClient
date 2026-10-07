@@ -12524,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == “default” 是保留名稱。
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== 舊目錄 qmclient/fonts 已停止掃描。請將自訂字型手動移至設定目錄下的 fonts/fonts_store。一般版使用使用者設定目錄，可攜版使用 profile。data/fonts 中隨用戶端提供的字型無須移動。
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重連或已離開。請稍等，或改與他人私聊
 

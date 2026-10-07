@@ -600,6 +600,7 @@ void CUi::SSelectionPopupContext::Reset()
 	m_PopupPolicy = {};
 	m_SpecialFontRenderMode = false;
 	m_FontFaceAvailabilityCheck = false;
+	m_FontFamilySelection = false;
 }
 
 CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, bool Active)
@@ -680,8 +681,9 @@ CUi::EPopupMenuFunctionResult CUi::PopupSelection(void *pContext, CUIRect View, 
 			// 未安装的在线字体，只有预览面已加载的条目才切换，避免逐帧失败日志。
 			if(pSelectionPopup->m_SpecialFontRenderMode)
 			{
-				const bool FaceAvailable = !pSelectionPopup->m_FontFaceAvailabilityCheck || pUI->TextRender()->QmHasCustomFace(Entry.c_str());
-				pUI->TextRender()->SetFontPreviewFace(FaceAvailable ? Entry.c_str() : nullptr);
+				std::string PreviewName = Entry;
+				const bool FaceAvailable = pSelectionPopup->m_FontFamilySelection ? pUI->TextRender()->QmFontFamilyDefaultConfig(Entry.c_str(), PreviewName) : !pSelectionPopup->m_FontFaceAvailabilityCheck || pUI->TextRender()->QmHasCustomFace(Entry.c_str());
+				pUI->TextRender()->SetFontPreviewFace(FaceAvailable ? PreviewName.c_str() : nullptr);
 			}
 			// 活动项与悬浮项使用同一种整行背景，避免左侧竖条与条目背景重叠。
 			CButtonContainer *pButton = &pSelectionPopup->m_vButtonContainers[Index];
@@ -937,10 +939,12 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		CScrollRegion *pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion;
 		const bool SpecialFontRenderMode = State.m_SelectionPopupContext.m_SpecialFontRenderMode;
 		const bool FontFaceAvailabilityCheck = State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck;
+		const bool FontFamilySelection = State.m_SelectionPopupContext.m_FontFamilySelection;
 		State.m_SelectionPopupContext.Reset();
 		State.m_SelectionPopupContext.m_pScrollRegion = pScrollRegion != nullptr ? pScrollRegion : State.m_pScrollRegion;
 		State.m_SelectionPopupContext.m_SpecialFontRenderMode = SpecialFontRenderMode;
 		State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = FontFaceAvailabilityCheck;
+		State.m_SelectionPopupContext.m_FontFamilySelection = FontFamilySelection;
 		const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
 		State.m_SelectionPopupContext.m_Props.m_BorderColor = Theme.m_Border;
 		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = Theme.m_Surface;

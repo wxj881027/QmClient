@@ -6,6 +6,7 @@
 #include <base/system.h>
 #include <base/types.h>
 
+#include <engine/gfx/image_loader.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
@@ -492,19 +493,21 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 		static IGraphics::CTextureHandle s_aSiteIcons[ICON_COUNT];
 		static bool s_aSiteIconsAttempted[ICON_COUNT] = {};
 		const char *const apSiteIconPaths[ICON_COUNT] = {
-			"qmclient/friendlinks/ddrace.png",
-			"qmclient/friendlinks/ddnet.png",
-			"qmclient/friendlinks/qmclient.png",
-			"qmclient/friendlinks/shengyan.png",
-			"qmclient/friendlinks/teedata.png",
-			"qmclient/friendlinks/ddstats.png",
+			"qmclient/friendlinks/ddrace.webp",
+			"qmclient/friendlinks/ddnet.webp",
+			"qmclient/friendlinks/qmclient.webp",
+			"qmclient/friendlinks/shengyan.webp",
+			"qmclient/friendlinks/teedata.webp",
+			"qmclient/friendlinks/ddstats.webp",
 		};
 		for(int i = 0; i < ICON_COUNT; ++i)
 		{
 			if(!s_aSiteIconsAttempted[i])
 			{
 				s_aSiteIconsAttempted[i] = true;
-				s_aSiteIcons[i] = Graphics()->LoadTexture(apSiteIconPaths[i], IStorage::TYPE_ALL);
+				CImageInfo Image;
+				if(CImageLoader::LoadWebP(Storage()->OpenFile(apSiteIconPaths[i], IOFLAG_READ, IStorage::TYPE_ALL), apSiteIconPaths[i], Image))
+					s_aSiteIcons[i] = Graphics()->LoadTextureRawMove(Image, 0, apSiteIconPaths[i]);
 			}
 		}
 		CUIRect Row, LeftButton, RightButton;

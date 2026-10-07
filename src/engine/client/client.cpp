@@ -127,6 +127,8 @@ static bool gs_QmTestMainThreadAssert = false;
 // QmClient: 测试专用注入开关（--qm-test-main-thread-stall），供进程级回归测试在
 // 主循环内模拟一次长时间阻塞，验证看门狗使用单调时钟后能真实报告卡死。
 static bool gs_QmTestMainThreadStall = false;
+// 进程回归注入最终清理卡死，验证隐藏窗口后的强制退出。
+static bool gs_QmTestShutdownCleanupStall = false;
 static constexpr const char *gs_pQmCrashDumpDir = "dumps/QmClient_Crash";
 static constexpr const char *gs_pQmLifecycleMarkerFile = "qmclient/lifecycle_pending.marker";
 #if defined(CONF_FAMILY_WINDOWS)
@@ -4770,8 +4772,7 @@ void CClient::Run()
 	m_pTextRender->Shutdown();
 	dbg_msg("perf/client", "event=shutdown_step step=text_render");
 
-	// 清理已经完成，后续显示的崩溃报告需要保持到用户主动关闭。
-	StopForcedExitWatchdog();
+	// 看门狗由 main 在图形、kernel 和 SDL 清理完成后解除。
 	dbg_msg("perf/client", "event=shutdown_step step=done");
 }
 
@@ -6440,6 +6441,8 @@ int main(int argc, const char **argv)
 			gs_QmTestMainThreadAssert = true;
 		if(str_comp(argv[i], "--qm-test-main-thread-stall") == 0)
 			gs_QmTestMainThreadStall = true;
+		if(str_comp(argv[i], "--qm-test-shutdown-cleanup-stall") == 0)
+			gs_QmTestShutdownCleanupStall = true;
 	}
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -6621,6 +6624,7 @@ int main(int argc, const char **argv)
 	};
 	std::function<void()> PerformAllCleanup = [PerformCleanup, PerformFinalCleanup]() mutable {
 		PerformCleanup();
+		StopForcedExitWatchdog();
 		PerformFinalCleanup();
 	};
 
@@ -6638,6 +6642,11 @@ int main(int argc, const char **argv)
 	CleanerFunctions.emplace([pKernel, pClient]() {
 		// Ensure that the assert handler doesn't use the client/graphics after they've been destroyed
 		dbg_assert_set_handler(nullptr);
+		if(gs_QmTestShutdownCleanupStall)
+		{
+			log_info("client", "qm test final cleanup stalled");
+			std::this_thread::sleep_for(std::chrono::seconds(30));
+		}
 		pKernel->Shutdown();
 		delete pKernel;
 		delete pClient;
@@ -7092,6 +7101,8 @@ int main(int argc, const char **argv)
 	crashdump_mark_shutdown_begin(nullptr);
 
 	PerformCleanup();
+	// 驱动与 SDL 销毁也属于退出保护范围；后面的用户提示允许保持打开。
+	StopForcedExitWatchdog();
 
 	crashdump_mark_shutdown_end();
 

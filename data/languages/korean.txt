@@ -12524,6 +12524,9 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == "default" 이름은 예약되어 있습니다.
 
+The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
+== 이전 qmclient/fonts 폴더는 더 이상 검색하지 않습니다. 사용자 지정 글꼴을 설정 폴더의 fonts/fonts_store로 직접 옮겨 주세요. 일반 버전은 사용자 설정 폴더를, 포터블 버전은 profile을 사용합니다. data/fonts에 포함된 기본 글꼴은 옮길 필요가 없습니다.
+
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 귓속말 상대가 아직 재접속하지 않았거나 게임을 떠났습니다. 잠시 기다리거나 다른 사람에게 귓속말하세요
 
