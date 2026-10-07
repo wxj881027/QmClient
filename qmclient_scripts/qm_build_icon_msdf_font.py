@@ -5,16 +5,12 @@
 再把生成的字形逐个裁剪进 64×64 网格单元，产出与运行时契约一致的
 data/qmclient/icons/qm_icons_<style>_msdf.{png,json}（icons 按官方图标名索引）。
 
-duotone 的双层编码来自字体本身：偶数码点是 primary 层，奇数码点（cp+1）是
-secondary 层。RGB 放 primary 的 MSDF，Alpha 放 secondary 的真 SDF，
-manifest 声明 secondary_mask: alpha —— 与着色器契约保持不变。
-
 用法（官方工具构建见 qm_build_icon_msdf_official.py；需 freetype/png/zlib DLL 在 PATH）：
   py -3 qmclient_scripts/qm_build_icon_msdf_font.py \
     --tool cmake-build-official/bin/Release/msdf-atlas-gen.exe \
     --fonts-dir data/fonts/Phosphor \
     --codepoints datasrc/qm_icons/phosphor.codepoints \
-    --output data/qmclient/icons --styles duotone light regular bold fill
+    --output data/qmclient/icons --styles light regular bold fill
 """
 
 from __future__ import annotations
@@ -32,9 +28,8 @@ PADDING = 8  # 官方工具的字形内边距（pxrange 出血空间）
 GRID_MARGIN = 12  # 网格单元的额外间距：字形外轮廓可略超 em 框（实测最大 ~70px）
 CELL_SIZE = FIELD_SIZE + GRID_MARGIN * 2
 
-STYLES = ("duotone", "light", "regular", "bold", "fill")
+STYLES = ("light", "regular", "bold", "fill")
 FONT_NAMES = {
-    "duotone": "Phosphor-Duotone.ttf",
     "light": "Phosphor-Light.ttf",
     "regular": "Phosphor-Regular.ttf",
     "bold": "Phosphor-Bold.ttf",
@@ -161,17 +156,13 @@ def bake_style(style: str, args: argparse.Namespace, icons: dict[str, int]) -> N
         raise SystemExit(f"missing bundled font: {font}")
     cmap = font_cmap(font)
 
-    # duotone：primary=偶数码点，secondary=奇数码点（cp+1）
     # 新旧官方名可能共用同一码点：多个名字共享同一个网格格子。
     primaries: dict[str, int] = {}
-    secondaries: dict[str, int] = {}
     for name, cp in sorted(icons.items()):
         if cp not in cmap:
             print(f"  skip {name}: U+{cp:04X} not in {font.name}")
             continue
         primaries[name] = cp
-        if style == "duotone" and (cp + 1) in cmap:
-            secondaries[name] = cp + 1
     if not primaries:
         raise SystemExit(f"{style}: no requested codepoints covered by {font.name}")
     missing = sorted(set(icons) - set(primaries))
@@ -192,9 +183,6 @@ def bake_style(style: str, args: argparse.Namespace, icons: dict[str, int]) -> N
         unpacked = [cp for cp in primaries.values() if cp not in packed]
         if unpacked:
             raise SystemExit(f"{style}: primary page dropped U+{unpacked[0]:04X}; page too small")
-        secondary_manifest, secondary_png = None, None
-        if style == "duotone" and secondaries:
-            secondary_manifest, secondary_png = bake_page(sorted(secondaries.values()), f"{style}_secondary")
 
         # 方形网格布局：格子按唯一码点分配（同码点的别名共享格子），名字排序保证确定性。
         names = sorted(primaries)
@@ -222,7 +210,6 @@ def bake_style(style: str, args: argparse.Namespace, icons: dict[str, int]) -> N
         atlas = Image.new("RGBA", (atlas_w, atlas_h), (0, 0, 0, 255))
         icons_out: dict[str, dict[str, int]] = {}
         glyphs_primary = primary_manifest["glyphs"]
-        glyphs_secondary = secondary_manifest["glyphs"] if secondary_manifest else {}
 
         pasted: set[int] = set()
         for name in names:
@@ -232,21 +219,6 @@ def bake_style(style: str, args: argparse.Namespace, icons: dict[str, int]) -> N
             gx, gy = int(glyph["x"]), int(glyph["y"])
             gw, gh = int(glyph["w"]), int(glyph["h"])
             piece = primary_png.crop((gx, gy, gx + gw, gy + gh))
-            if style == "duotone":
-                # Alpha 通道换成 secondary 层的真 SDF，按平面原点 (bx,by) 对齐两层
-                # （两层字形包围盒不同，位图尺寸也不同）；没有 secondary 的图标
-                # 保持全 0（远离字形 → 覆盖度恒 0），与旧管线的 required=False 语义一致。
-                sec_cp = secondaries.get(name)
-                alpha_field = Image.new("L", (gw, gh), 0)
-                if sec_cp is not None and str(sec_cp) in glyphs_secondary:
-                    sg = glyphs_secondary[str(sec_cp)]
-                    sx, sy = int(sg["x"]), int(sg["y"])
-                    sw, sh = int(sg["w"]), int(sg["h"])
-                    sec_crop = secondary_png.crop((sx, sy, sx + sw, sy + sh)).getchannel("A")
-                    dx = int(round(float(sg["bx"]) - float(glyph["bx"])))
-                    dy = int(round(float(sg["by"]) - float(glyph["by"])))
-                    alpha_field.paste(sec_crop, (dx, dy))
-                piece = Image.merge("RGBA", (piece.getchannel("R"), piece.getchannel("G"), piece.getchannel("B"), alpha_field))
             column = index % columns
             row = index // columns
             cell_x = column * CELL_SIZE
@@ -285,8 +257,6 @@ def bake_style(style: str, args: argparse.Namespace, icons: dict[str, int]) -> N
         if frame_count:
             morph_frames_out = bake_morph_frames(args, atlas, columns, len(cell_of_cp), icons_out, temp_dir)
             manifest["morph_frames"] = morph_frames_out
-        if style == "duotone":
-            manifest["secondary_mask"] = "alpha"
         atlas.save(args.output / image_name, optimize=True)
         (args.output / f"qm_icons_{style}_msdf.json").write_text(
             json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"

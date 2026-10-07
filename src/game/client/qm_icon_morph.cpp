@@ -3,6 +3,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "qm_icon_morph.h"
 
+#include "qm_icon_manager.h"
+
 #include <engine/graphics.h>
 
 #include <generated/qm_icon_morph_generated.inc>
@@ -66,7 +68,7 @@ bool RenderQmEyeMorph(IGraphics *pGraphics, const int Weight, const CUIRect &Rec
 	std::array<IGraphics::CFreeformItem, QM_ICON_MORPH_SAMPLE_COUNT> aSegments{};
 	pGraphics->TextureClear();
 	pGraphics->QuadsBegin();
-	pGraphics->SetColor(Color);
+	pGraphics->SetColor(ConfiguredQmUiIconColor(Color));
 	for(int SurfaceIndex = 0; SurfaceIndex < pPlan->m_NumSurfaces; ++SurfaceIndex)
 	{
 		const SQmIconMorphSurfaceData &Surface = pPlan->m_pSurfaces[SurfaceIndex];

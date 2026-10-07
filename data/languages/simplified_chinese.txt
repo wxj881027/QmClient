@@ -3587,12 +3587,6 @@ dumps all sqlservers readservers = r, writeservers = w
 Dumps the antibot status
 == 导出反机器人状态
 
-Duotone
-== 双色调
-
-Duotone icon secondary color alpha migration completed flag
-== 双色调图标次要颜色 Alpha 迁移完成标记
-
 Duplicate
 == 复制
 
@@ -8765,14 +8759,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Qm 界面图标自定义颜色
 
-Qm UI duotone secondary icon color
-== Qm 界面双色调图标次要颜色
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm 界面图标颜色：1=白色，2=黑色，3=自定义，4=彩虹
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Qm 界面图标样式：0=常规，1=粗体，2=细体，3=填充，4=轻体，5=双色调
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Qm 界面图标样式：0=常规，1=粗体，2=轻体（旧值），3=填充，4=轻体，5=粗体（旧值）
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue：序号必须在 1 到 %d 之间
@@ -9529,6 +9520,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == 要求支持 KCP 的客户端升级会话（灰度发布期间保持关闭以支持回退）
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== 启用 qm_graphics_trace 时，重新扫描字体并查询解析后的 Unicode 字体面和字形
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == 本服未开启救援功能，且你所在队伍也没有开启 /practice。注意：练习模式下无法获得排名
@@ -13154,9 +13148,6 @@ UI icon color
 UI icon custom color
 == 界面图标自定义颜色
 
-UI icon duotone secondary color
-== 界面双色调图标次要颜色
-
 UI icon style
 == 界面图标样式
 
@@ -13453,6 +13444,9 @@ Use current name
 
 Use custom skins instead of the ninja tee
 == 使用自定义皮肤代替忍者 Tee
+
+Use custom UI icon color
+== 使用自定义图标颜色
 
 Use default flags on scoreboard
 == 在计分板上使用默认旗帜

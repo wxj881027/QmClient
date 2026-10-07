@@ -2439,8 +2439,8 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 	auto RenderFavoriteMapsIcon = [&](const CUIRect &Tab, const bool OnIndicator) {
 		const float IconSide = minimum(Tab.w, Tab.h) * 0.56f;
 		const CUIRect IconRect{Tab.x + (Tab.w - IconSide) * 0.5f, Tab.y + (Tab.h - IconSide) * 0.5f, IconSide, IconSide};
-		// 滑块上的图标必须是深色：qm_ui_icon_color 默认强制白色，压在亮滑块上会看不见。
-		const ColorRGBA IconColor = OnIndicator ? MenuCapsuleTabActiveLabelColor() : ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		// 状态色作为输入，全局图标色在最终绘制时统一应用。
+		const ColorRGBA IconColor = OnIndicator ? MenuCapsuleTabActiveLabelColor() : ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 		if(!GameClient()->QmIconManager()->PreferFontFallback() && GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, IconRect, IconColor))
 			return;
 

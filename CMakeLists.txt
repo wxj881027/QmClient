@@ -2014,8 +2014,6 @@ set(EXPECTED_DATA
   qmclient/icons/qm_icons_fill_msdf.png
   qmclient/icons/qm_icons_light_msdf.json
   qmclient/icons/qm_icons_light_msdf.png
-  qmclient/icons/qm_icons_duotone_msdf.json
-  qmclient/icons/qm_icons_duotone_msdf.png
   qmclient/icons/qm_icons_regular_msdf.json
   qmclient/icons/qm_icons_regular_msdf.png
   mapres/basic_freeze.png
@@ -2692,7 +2690,7 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
 
 # 图标源是随包 Phosphor TTF（全量字形）+ 官方码点映射；精选 SVG 子集已移除。
 # msdfgen / msdf-atlas-gen 只用于资源制作。生成产物已提交，普通构建不依赖本机安装。
-set(QM_ICON_MSDF_STYLES duotone light regular bold fill)
+set(QM_ICON_MSDF_STYLES light regular bold fill)
 add_custom_target(qm-icon-msdf-atlas
   COMMAND ${Python3_EXECUTABLE}
     qmclient_scripts/qm_build_icon_msdf_font.py
@@ -2710,7 +2708,6 @@ add_custom_target(qm-icon-msdf-atlas
     data/fonts/Phosphor/Phosphor-Light.ttf
     data/fonts/Phosphor/Phosphor-Bold.ttf
     data/fonts/Phosphor/Phosphor-Fill.ttf
-    data/fonts/Phosphor/Phosphor-Duotone.ttf
   COMMENT "Building QmClient Phosphor MSDF icon atlases from bundled fonts"
 )
 
@@ -3195,6 +3192,8 @@ if(CLIENT)
     steam_probe.cpp
     steam_probe.h
     text.cpp
+    qm_font_names.h
+    qm_font_name_match.h
     text_sweep.h
     updater.cpp
     updater.h
@@ -3690,6 +3689,7 @@ if(CLIENT)
     projectile_data.h
     qm_icon_manager.cpp
     qm_icon_manager.h
+    qm_icon_color_policy.h
     qm_icon_label.h
     qm_icon_label_runs.h
     qm_icon_registry.inc
@@ -4474,7 +4474,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/ui/qm_icon_atlas_contract_test.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
-    src/test/unit/qmclient/ui/qm_icon_color_migration_test.cpp
     src/test/unit/qmclient/ui/qm_font_icon_cmap_test.cpp
     src/test/contract/qmclient/ui/qm_icon_shader_contract_test.cpp
     src/test/unit/qmclient/client/qm_msdf_param_encoding_test.cpp
@@ -4640,6 +4639,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_camera_aspect_ratio_contract_test.cpp
     src/test/contract/qmclient/settings/settings_card_translation_contract_test.cpp
     src/test/contract/qmclient/settings/settings_player_info_contract_test.cpp
+    src/test/unit/qmclient/settings/settings_font_selection_test.cpp
+    src/test/unit/qmclient/settings/settings_icon_options_test.cpp
     src/test/unit/qmclient/settings/settings_page_layout_test.cpp
     src/test/unit/qmclient/settings/settings_tee_emote_slider_test.cpp
     src/test/unit/qmclient/settings/settings_tee_layout_test.cpp
@@ -4990,7 +4991,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
 
   if(FREETYPE_FOUND)
-    list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp)
+    list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
     list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
   endif()
 
@@ -5419,17 +5420,25 @@ endforeach()
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME ${PROJECT_NAME})
 
 if(TOOLS)
-  set(TARGET_TOOLS
-    config_retrieve
-    config_store
-    demo_extract_chat
-    dilate
-    map_convert_07
-    map_diff
-    map_extract
-  )
-  if(EGL_FOUND)
-    list(APPEND TARGET_TOOLS map_render)
+  if(TARGET_OS STREQUAL "windows")
+    # 普通归档收录完整实用工具；便携版只收运行依赖，工具从单一清单选择。
+    set(TARGET_TOOLS)
+    if(NOT QMCLIENT_PORTABLE)
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/qmclient_scripts/windows_release_tools.txt")
+      file(STRINGS "${PROJECT_SOURCE_DIR}/qmclient_scripts/windows_release_tools.txt" QMCLIENT_RELEASE_TOOLS)
+      foreach(qm_tool ${QMCLIENT_RELEASE_TOOLS})
+        if(TARGET ${qm_tool})
+          list(APPEND TARGET_TOOLS ${qm_tool})
+        elseif(NOT qm_tool STREQUAL "map_render")
+          message(FATAL_ERROR "Missing Windows release tool target: ${qm_tool}")
+        endif()
+      endforeach()
+    endif()
+  else()
+    set(TARGET_TOOLS config_retrieve config_store demo_extract_chat dilate map_convert_07 map_diff map_extract)
+    if(EGL_FOUND)
+      list(APPEND TARGET_TOOLS map_render)
+    endif()
   endif()
 else()
   set(TARGET_TOOLS)
@@ -5465,6 +5474,13 @@ if(TARGET_OS STREQUAL "windows" AND TARGET game-client AND TARGET game-server)
     string(APPEND QMCLIENT_SETUP_RUNTIME_FILES "$<TARGET_FILE_NAME:${qm_setup_target}>\n")
   endforeach()
   file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-setup-runtime.txt" CONTENT "${QMCLIENT_SETUP_RUNTIME_FILES}")
+endif()
+if(TARGET_OS STREQUAL "windows")
+  set(QMCLIENT_ARCHIVE_TOOL_FILES "")
+  foreach(qm_tool ${TARGET_TOOLS})
+    string(APPEND QMCLIENT_ARCHIVE_TOOL_FILES "$<TARGET_FILE_NAME:${qm_tool}>\n")
+  endforeach()
+  file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/qmclient-archive-tools.txt" CONTENT "${QMCLIENT_ARCHIVE_TOOL_FILES}")
 endif()
 list(APPEND CPACK_TARGETS ${TARGET_TOOLS})
 
@@ -5795,7 +5811,11 @@ foreach(ext zip tar.gz tar.xz 7z)
     if(NOT 7Z_EXECUTABLE)
       continue()
     endif()
-    set(PACKAGE_COMMAND COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${7Z_EXECUTABLE} a -t7z -mx=9 -m0=lzma2 -ms=on ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${CPACK_PACKAGE_FILE_NAME}/)
+    # 7z a 会保留旧归档中已从载荷删除的文件，重打包须先移除单个输出归档。
+    set(PACKAGE_COMMAND
+      COMMAND ${CMAKE_COMMAND} -E rm -f ${PROJECT_BINARY_DIR}/${CPACK_PACKAGE_FILE_NAME}.${ext}
+      COMMAND ${CMAKE_COMMAND} -E chdir pack_${CPACK_PACKAGE_FILE_NAME}_${EXT_SLUG} ${7Z_EXECUTABLE} a -t7z -mx=9 -m0=lzma2 -ms=on ../${CPACK_PACKAGE_FILE_NAME}.${ext} ${CPACK_PACKAGE_FILE_NAME}/
+    )
   endif()
   add_custom_command(OUTPUT ${CPACK_PACKAGE_FILE_NAME}.${ext}
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${TMPDIR}

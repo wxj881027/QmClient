@@ -904,15 +904,6 @@ static void MigrateTranslateUiColorAlphaConfig(const IConfigManager *pConfigMana
 	g_Config.m_QmTranslateColorAlphaMigrated = Migrated ? 1 : 0;
 }
 
-static void MigrateQmUiIconDuotoneSecondaryColor(const IConfigManager *pConfigManager)
-{
-	if(g_Config.m_QmUiIconDuotoneSecondaryColorMigrated)
-		return;
-	const EColorInputAlphaMode InputAlphaMode = pConfigManager != nullptr ? pConfigManager->ColorValueInputAlphaMode("qm_ui_icon_duotone_secondary_color") : EColorInputAlphaMode::PACKED;
-	MigrateLegacyQmUiIconDuotoneSecondaryColor(g_Config.m_QmUiIconDuotoneSecondaryColor, DefaultConfig::QmUiIconDuotoneSecondaryColor, InputAlphaMode);
-	g_Config.m_QmUiIconDuotoneSecondaryColorMigrated = 1;
-}
-
 static void GenerateTimeoutCode(char *pTimeoutCode)
 {
 	if(pTimeoutCode[0] == '\0' || str_comp(pTimeoutCode, "hGuEYnfxicsXGwFq") == 0)
@@ -950,7 +941,6 @@ void CGameClient::OnInit()
 	MigrateJumpHintConfig();
 	MigrateNameplateShowScopeConfig();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
-	MigrateQmUiIconDuotoneSecondaryColor(ConfigManager());
 
 	// 启动赞助提醒：跨过阈值才写盘，避免每次启动都重写配置文件。
 	{
@@ -1925,6 +1915,7 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
 	// qm_blank_asset_fallback 兜底轮询：设置页直改 g_Config、控制台命令等任何来源改值后，
 	// 下一帧在这里触发自定义素材热重载（-1 表示初始素材尚未加载）。
 	if(m_LastBlankAssetFallback >= 0 && g_Config.m_QmBlankAssetFallback != m_LastBlankAssetFallback)

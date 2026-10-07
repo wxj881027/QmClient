@@ -239,7 +239,7 @@ namespace ui_widget
 		}
 		DrawTextFieldFocusBorder(Ctx, pInput, Layout.m_FocusRingRect, Options.m_Mode == EInputFieldMode::MULTILINE);
 
-		const ColorRGBA InputIconColor = ResolveUiSurfaceIconColor(PlateColor, ConfiguredQmUiIconColor(Ctx.m_pUi->TextRender()->GetTextColor()));
+		const ColorRGBA InputIconColor = ResolveUiSurfaceIconColor(PlateColor, Ctx.m_pUi->TextRender()->GetTextColor());
 		const char *pLeadingIcon = Options.m_pLeadingIcon != nullptr ? Options.m_pLeadingIcon : (Search ? FontIcons::FONT_ICON_MAGNIFYING_GLASS : nullptr);
 		const int LeadingQmIcon = Options.m_LeadingQmIcon >= 0 ? Options.m_LeadingQmIcon : (Search ? static_cast<int>(EQmIcon::SEARCH) : -1);
 		DrawInputFieldIcon(Ctx, Layout.m_IconRect, pLeadingIcon, InputIconColor, LeadingQmIcon);

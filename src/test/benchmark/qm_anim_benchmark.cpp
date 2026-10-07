@@ -20,10 +20,12 @@
 #include <game/client/components/scoreboard.h>
 #include <game/client/qm_icon_label.h>
 #include <game/client/qm_icon_label_runs.h>
+#include <game/client/qm_icon_manager.h>
 #include <game/client/ui.h>
 
 #include <benchmark/benchmark.h>
 
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -435,3 +437,35 @@ static void BM_IconLabelRuns(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_IconLabelRuns)->Arg(0)->Arg(1)->Arg(2);
+
+// 单次解析图标最终本体与对比描边，包含配置读取、自定义开关及彩虹帧内采样。
+static void BM_IconColorResolve(benchmark::State &State)
+{
+	const double OriginalTime = CQmIconFrameColorClock::Time();
+	CQmIconFrameColorClock::BeginFrame(1.25);
+	const int OriginalPreset = g_Config.m_QmUiIconColor;
+	const int OriginalEnabled = g_Config.m_QmUiIconCustomColorEnabled;
+	const unsigned OriginalCustom = g_Config.m_QmUiIconCustomColor;
+	g_Config.m_QmUiIconColor = static_cast<int>(State.range(0));
+	g_Config.m_QmUiIconCustomColorEnabled = static_cast<int>(State.range(1));
+	g_Config.m_QmUiIconCustomColor = ColorHSLA(0.37f, 0.8f, 0.45f).Pack(false);
+	ColorRGBA Input(1.0f, 0.85f, 0.3f, 0.65f);
+	const ColorRGBA Preflight = ConfiguredQmUiIconColor(Input);
+	const ColorRGBA OutlinePreflight = ConfiguredQmUiIconContrastColor(Preflight);
+	if(!std::isfinite(Preflight.r) || !std::isfinite(Preflight.g) || !std::isfinite(Preflight.b) || Preflight.a != Input.a || !std::isfinite(OutlinePreflight.r) || OutlinePreflight.a != Input.a)
+		State.SkipWithError("icon color must be finite and preserve state alpha");
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Input);
+		const ColorRGBA Output = ConfiguredQmUiIconColor(Input);
+		const ColorRGBA Outline = ConfiguredQmUiIconContrastColor(Output);
+		benchmark::DoNotOptimize(Output);
+		benchmark::DoNotOptimize(Outline);
+	}
+	CQmIconFrameColorClock::BeginFrame(OriginalTime);
+	g_Config.m_QmUiIconColor = OriginalPreset;
+	g_Config.m_QmUiIconCustomColorEnabled = OriginalEnabled;
+	g_Config.m_QmUiIconCustomColor = OriginalCustom;
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_IconColorResolve)->Args({1, 0})->Args({2, 0})->Args({4, 0})->Args({1, 1})->Args({4, 1});

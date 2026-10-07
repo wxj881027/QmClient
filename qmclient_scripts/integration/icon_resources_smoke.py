@@ -23,8 +23,8 @@ except ModuleNotFoundError:
 	from process_harness import Process, log_message
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-STYLES = ("Regular", "Bold", "Light", "Fill", "Duotone")
-WEIGHTS = ("regular", "bold", "light", "fill", "light", "duotone")
+STYLES = ("Regular", "Bold", "Light", "Fill")
+WEIGHTS = ("regular", "bold", "light", "fill", "light", "bold")
 
 
 def wait_new(client: Process, offset: int, predicate: Callable[[str], bool], description: str, timeout: float = 30.0) -> str:

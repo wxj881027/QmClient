@@ -37,7 +37,7 @@ TEST(QmIconPolicy, InvalidWeightsUseRegularFallback)
 	EXPECT_EQ(NormalizeQmIconWeight(2), 2);
 	EXPECT_EQ(NormalizeQmIconWeight(3), 3);
 	EXPECT_EQ(NormalizeQmIconWeight(4), 4);
-	EXPECT_EQ(NormalizeQmIconWeight(5), 5);
+	EXPECT_EQ(NormalizeQmIconWeight(5), 1);
 	EXPECT_EQ(NormalizeQmIconWeight(6), 1);
 }
 
@@ -114,11 +114,6 @@ TEST(QmIconAtlas, UiTintPreservesSemanticAlpha)
 	EXPECT_FLOAT_EQ(Rainbow.g, ExpectedRainbow.g);
 	EXPECT_FLOAT_EQ(Rainbow.b, ExpectedRainbow.b);
 	EXPECT_FLOAT_EQ(Rainbow.a, SemanticColor.a);
-	const unsigned OriginalSecondaryColor = g_Config.m_QmUiIconDuotoneSecondaryColor;
-	g_Config.m_QmUiIconDuotoneSecondaryColor = 0xFFFFFFFF;
-	const ColorRGBA Secondary = ConfiguredQmUiIconSecondaryColor(SemanticColor);
-	g_Config.m_QmUiIconDuotoneSecondaryColor = OriginalSecondaryColor;
-	EXPECT_FLOAT_EQ(Secondary.a, SemanticColor.a);
 }
 
 TEST(QmIconGeometry, IconDrawsPreserveGlyphAspectRatio)
@@ -361,4 +356,163 @@ TEST(QmIconLabelRuns, EmptyAndNullLabelsDoNotVisitRuns)
 	EXPECT_TRUE(QmVisitIconLabelRuns(nullptr, [&](const auto &) { ++Visits; }));
 	EXPECT_TRUE(QmVisitIconLabelRuns("", [&](const auto &) { ++Visits; }));
 	EXPECT_EQ(Visits, 0);
+}
+
+namespace
+{
+	class CQmConfiguredIconColorTest : public ::testing::Test
+	{
+		int m_Preset = g_Config.m_QmUiIconColor;
+		int m_CustomEnabled = g_Config.m_QmUiIconCustomColorEnabled;
+		unsigned m_CustomColor = g_Config.m_QmUiIconCustomColor;
+
+	protected:
+		void TearDown() override
+		{
+			g_Config.m_QmUiIconColor = m_Preset;
+			g_Config.m_QmUiIconCustomColorEnabled = m_CustomEnabled;
+			g_Config.m_QmUiIconCustomColor = m_CustomColor;
+		}
+	};
+}
+
+TEST_F(CQmConfiguredIconColorTest, CustomSwitchOverridesEveryPresetAndKeepsStateAlpha)
+{
+	g_Config.m_QmUiIconCustomColorEnabled = 1;
+	g_Config.m_QmUiIconCustomColor = ColorHSLA(0.37f, 0.8f, 0.45f).Pack(false);
+	const ColorRGBA Expected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiIconCustomColor));
+	for(int Preset : {1, 2, 4})
+	{
+		g_Config.m_QmUiIconColor = Preset;
+		for(float Alpha : {0.0f, 0.17f, 0.65f, 1.0f})
+		{
+			SCOPED_TRACE(::testing::Message() << "preset=" << Preset << " alpha=" << Alpha);
+			const ColorRGBA Actual = ConfiguredQmUiIconColor(ColorRGBA(1.0f, 0.85f, 0.3f, Alpha));
+			EXPECT_FLOAT_EQ(Actual.r, Expected.r);
+			EXPECT_FLOAT_EQ(Actual.g, Expected.g);
+			EXPECT_FLOAT_EQ(Actual.b, Expected.b);
+			EXPECT_FLOAT_EQ(Actual.a, Alpha);
+		}
+	}
+}
+
+TEST_F(CQmConfiguredIconColorTest, TurningCustomOffImmediatelyRestoresPreset)
+{
+	g_Config.m_QmUiIconColor = 2;
+	g_Config.m_QmUiIconCustomColorEnabled = 1;
+	g_Config.m_QmUiIconCustomColor = ColorHSLA(0.37f, 0.8f, 0.45f).Pack(false);
+	const ColorRGBA StateColor(0.4f, 0.6f, 0.8f, 0.35f);
+	EXPECT_NE(ConfiguredQmUiIconColor(StateColor).g, 0.0f);
+	g_Config.m_QmUiIconCustomColorEnabled = 0;
+	const ColorRGBA Actual = ConfiguredQmUiIconColor(StateColor);
+	EXPECT_FLOAT_EQ(Actual.r, 0.0f);
+	EXPECT_FLOAT_EQ(Actual.g, 0.0f);
+	EXPECT_FLOAT_EQ(Actual.b, 0.0f);
+	EXPECT_FLOAT_EQ(Actual.a, StateColor.a);
+}
+
+TEST_F(CQmConfiguredIconColorTest, LegacyCustomPresetStillUsesSavedColor)
+{
+	g_Config.m_QmUiIconColor = 3;
+	g_Config.m_QmUiIconCustomColorEnabled = 0;
+	g_Config.m_QmUiIconCustomColor = ColorHSLA(0.37f, 0.8f, 0.45f).Pack(false);
+	const ColorRGBA Expected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiIconCustomColor));
+	const ColorRGBA Actual = ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 0.6f));
+	EXPECT_FLOAT_EQ(Actual.r, Expected.r);
+	EXPECT_FLOAT_EQ(Actual.g, Expected.g);
+	EXPECT_FLOAT_EQ(Actual.b, Expected.b);
+	EXPECT_FLOAT_EQ(Actual.a, 0.6f);
+}
+
+TEST_F(CQmConfiguredIconColorTest, SemanticOverlayScopeRestoresNestedDrawingPolicy)
+{
+	g_Config.m_QmUiIconColor = 1;
+	g_Config.m_QmUiIconCustomColorEnabled = 0;
+	const ColorRGBA Overlay(1.0f, 0.0f, 0.0f, 0.8f);
+	EXPECT_FLOAT_EQ(ConfiguredQmUiIconColor(Overlay).g, 1.0f);
+	{
+		const CQmIconSemanticColorScope Outer;
+		EXPECT_EQ(ConfiguredQmUiIconColor(Overlay), Overlay);
+		{
+			const CQmIconSemanticColorScope Inner;
+			EXPECT_EQ(ConfiguredQmUiIconColor(Overlay), Overlay);
+		}
+		EXPECT_EQ(ConfiguredQmUiIconColor(Overlay), Overlay);
+	}
+	EXPECT_FLOAT_EQ(ConfiguredQmUiIconColor(Overlay).g, 1.0f);
+}
+
+TEST(QmIconPolicy, ContrastOutlinePreservesPrimaryAndStateAlpha)
+{
+	struct SCase
+	{
+		ColorRGBA m_Primary;
+		float m_ExpectedChannel;
+		float m_ReferenceLuminance;
+	};
+	// 参考亮度使用标准 sRGB 原色系数，与生产转换实现独立。
+	const SCase aCases[] = {
+		{ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), 1.0f, 0.0f},
+		{ColorRGBA(1.0f, 1.0f, 1.0f, 0.17f), 0.0f, 1.0f},
+		{ColorRGBA(1.0f, 0.0f, 0.0f, 0.65f), 0.0f, 0.2126f},
+		{ColorRGBA(0.0f, 1.0f, 0.0f, 1.0f), 0.0f, 0.7152f},
+		{ColorRGBA(0.0f, 0.0f, 1.0f, 0.35f), 1.0f, 0.0722f},
+	};
+	for(const SCase &Case : aCases)
+	{
+		SCOPED_TRACE(::testing::Message() << "RGB=" << Case.m_Primary.r << "," << Case.m_Primary.g << "," << Case.m_Primary.b);
+		const ColorRGBA Original = Case.m_Primary;
+		const ColorRGBA Outline = QmUiIconContrastColor(Case.m_Primary);
+		EXPECT_EQ(Case.m_Primary, Original);
+		EXPECT_FLOAT_EQ(Outline.r, Case.m_ExpectedChannel);
+		EXPECT_FLOAT_EQ(Outline.g, Case.m_ExpectedChannel);
+		EXPECT_FLOAT_EQ(Outline.b, Case.m_ExpectedChannel);
+		EXPECT_FLOAT_EQ(Outline.a, Case.m_Primary.a);
+		const float Contrast = Case.m_ExpectedChannel == 1.0f ? 1.05f / (Case.m_ReferenceLuminance + 0.05f) : (Case.m_ReferenceLuminance + 0.05f) / 0.05f;
+		EXPECT_GE(Contrast, 4.5f);
+	}
+}
+
+TEST(QmIconPolicy, CustomDarkAndLightColorsGetOppositeOutline)
+{
+	const ColorRGBA Dark = QmUiIconColor(ColorRGBA(1, 1, 1, 0.42f), 3, ColorHSLA(0.6f, 0.8f, 0.08f).Pack(false));
+	const ColorRGBA Light = QmUiIconColor(ColorRGBA(0, 0, 0, 0.73f), 3, ColorHSLA(0.12f, 0.8f, 0.92f).Pack(false));
+	const ColorRGBA DarkOutline = QmUiIconContrastColor(Dark);
+	const ColorRGBA LightOutline = QmUiIconContrastColor(Light);
+	EXPECT_FLOAT_EQ(DarkOutline.r, 1.0f);
+	EXPECT_FLOAT_EQ(DarkOutline.a, Dark.a);
+	EXPECT_FLOAT_EQ(LightOutline.r, 0.0f);
+	EXPECT_FLOAT_EQ(LightOutline.a, Light.a);
+}
+
+TEST(QmIconPolicy, RainbowRemainsSmoothAfterLongUptimeAndAcrossCycleBoundary)
+{
+	const ColorRGBA Input(1, 1, 1, 0.42f);
+	const double LongTime = 1000000000.0 + 1.25;
+	const ColorRGBA Start = QmUiIconColor(Input, 4, 0, LongTime);
+	const ColorRGBA Next = QmUiIconColor(Input, 4, 0, LongTime + 1.0 / 144.0);
+	EXPECT_NE(Start, Next);
+	EXPECT_LT(std::abs(Start.r - Next.r) + std::abs(Start.g - Next.g) + std::abs(Start.b - Next.b), 0.02f);
+	EXPECT_EQ(Start, QmUiIconColor(Input, 4, 0, 1.25));
+	const ColorRGBA Before = QmUiIconColor(Input, 4, 0, 4.999);
+	const ColorRGBA After = QmUiIconColor(Input, 4, 0, 5.001);
+	EXPECT_LT(std::abs(Before.r - After.r) + std::abs(Before.g - After.g) + std::abs(Before.b - After.b), 0.01f);
+	EXPECT_FLOAT_EQ(Next.a, Input.a);
+}
+
+TEST_F(CQmConfiguredIconColorTest, RainbowUsesOneFrameSampleAndStableOutline)
+{
+	const double OriginalTime = CQmIconFrameColorClock::Time();
+	g_Config.m_QmUiIconColor = 4;
+	g_Config.m_QmUiIconCustomColorEnabled = 0;
+	CQmIconFrameColorClock::BeginFrame(1000000001.25);
+	const ColorRGBA First = ConfiguredQmUiIconColor(ColorRGBA(1, 1, 1, 0.65f));
+	EXPECT_EQ(First, ConfiguredQmUiIconColor(ColorRGBA(0, 0, 0, 0.65f)));
+	for(int Frame = 0; Frame < 720; ++Frame)
+	{
+		CQmIconFrameColorClock::BeginFrame(Frame / 144.0);
+		const ColorRGBA Outline = ConfiguredQmUiIconContrastColor(ConfiguredQmUiIconColor(ColorRGBA(1, 1, 1, 0.65f)));
+		EXPECT_EQ(Outline, ColorRGBA(0, 0, 0, 0.65f));
+	}
+	CQmIconFrameColorClock::BeginFrame(OriginalTime);
 }

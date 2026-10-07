@@ -88,7 +88,8 @@ class ReleaseWorkflowContractTest(unittest.TestCase):
 	def test_windows_package_verification_rejects_lossy_names(self) -> None:
 		workflow = (REPO_ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
 
-		self.assertIn("Windows package has lossy file names", workflow)
+		self.assertIn("qmclient_scripts/verify_windows_package.py", workflow)
+		self.assertIn("--tools-manifest build/qmclient-archive-tools.txt", workflow)
 		# 该步骤会打印非 ASCII 文件名，而 Windows 运行器的 stdout 是 cp1252：
 		# 没有显式 UTF-8 输出时会以 UnicodeEncodeError 让构建失败。
 		step = workflow.index("Verify Windows update package contents")

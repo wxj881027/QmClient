@@ -25,12 +25,11 @@ namespace
 // 本合同钉住资源侧的三个不变量：TTF 随包、码点映射随包、运行时图标名全部可解析。
 TEST(QmPhosphorResourceContract, WeightFontsRemainBundled)
 {
-	const std::array<const char *, 5> apFonts = {
+	const std::array<const char *, 4> apFonts = {
 		"data/fonts/Phosphor/Phosphor-Regular.ttf",
 		"data/fonts/Phosphor/Phosphor-Light.ttf",
 		"data/fonts/Phosphor/Phosphor-Bold.ttf",
 		"data/fonts/Phosphor/Phosphor-Fill.ttf",
-		"data/fonts/Phosphor/Phosphor-Duotone.ttf",
 	};
 	for(const char *pPath : apFonts)
 	{

@@ -44,6 +44,9 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [InstallDelete]
 ; 只清理已知旧发布文件，不递归删除安装目录或用户资源。
+Type: files; Name: "{app}\data\fonts\Phosphor\Phosphor-Duotone.ttf"
+Type: files; Name: "{app}\data\qmclient\icons\qm_icons_duotone_msdf.json"
+Type: files; Name: "{app}\data\qmclient\icons\qm_icons_duotone_msdf.png"
 Type: files; Name: "{app}\data\fonts\NotoSansBalinese-Regular.ttf"
 Type: files; Name: "{app}\data\fonts\NotoSansBamum-Regular.ttf"
 Type: files; Name: "{app}\data\fonts\NotoSansBatak-Regular.ttf"

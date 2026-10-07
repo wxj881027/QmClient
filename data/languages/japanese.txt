@@ -3587,12 +3587,6 @@ dumps all sqlservers readservers = r, writeservers = w
 Dumps the antibot status
 == アンチボットステータスをダンプ
 
-Duotone
-== デュオトーン
-
-Duotone icon secondary color alpha migration completed flag
-== デュオトーン アイコン第 2 色の Alpha 移行完了フラグ
-
 Duplicate
 == 複製
 
@@ -8765,14 +8759,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Qm UI アイコンのカスタム色
 
-Qm UI duotone secondary icon color
-== Qm UI デュオトーンアイコンの副色
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm UI アイコンの色: 1=白、2=黒、3=カスタム、4=虹色
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Qm UI アイコンのスタイル: 0=標準、1=太字、2=細字、3=塗りつぶし、4=ライト、5=デュオトーン
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Qm UI アイコンのスタイル: 0=標準、1=太字、2=ライト（旧設定）、3=塗りつぶし、4=ライト、5=太字（旧設定）
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue：インデックスは 1 から %d の間でなければなりません
@@ -9529,6 +9520,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == KCP 対応クライアントにセッションアップグレードを要求（グレースケール中はフォールバックのためにオフのまま）
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== qm_graphics_trace が有効なとき、フォントを再走査して解決済みの Unicode フォントフェイスとグリフを照会
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == このサーバーではレスキューが有効ではなく、/practice が有効なチームにも参加していません。練習モードではランクを獲得できないことに注意してください。
@@ -13154,9 +13148,6 @@ UI icon color
 UI icon custom color
 == UI アイコンのカスタム色
 
-UI icon duotone secondary color
-== UI アイコンのデュオトーン副色
-
 UI icon style
 == UI アイコンのスタイル
 
@@ -13453,6 +13444,9 @@ Use current name
 
 Use custom skins instead of the ninja tee
 == ニンジャ Tee の代わりにカスタムスキンを使用
+
+Use custom UI icon color
+== UI アイコンにカスタム色を使用
 
 Use default flags on scoreboard
 == スコアボードでデフォルトの国旗を使用

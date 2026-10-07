@@ -5750,6 +5750,7 @@ void CEditor::OnInput(const IInput::CEvent &Event)
 
 void CEditor::OnRender()
 {
+	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
 	Ui()->SetMouseSlow(false);
 
 	// toggle gui

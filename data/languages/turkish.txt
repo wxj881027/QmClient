@@ -3587,12 +3587,6 @@ dumps all sqlservers readservers = r, writeservers = w
 Dumps the antibot status
 == Antibot durumunu döker
 
-Duotone
-== Çift ton
-
-Duotone icon secondary color alpha migration completed flag
-== Duotone simge ikincil renk alfa geçişi tamamlandı işareti
-
 Duplicate
 == Çoğalt
 
@@ -8765,14 +8759,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Qm arayüzü simgesi özel rengi
 
-Qm UI duotone secondary icon color
-== Qm arayüzü Duotone simgelerinin ikincil rengi
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Qm arayüz simgesi rengi: 1=Beyaz, 2=Siyah, 3=Özel, 4=Gökkuşağı
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Qm arayüz simgesi stili: 0=Normal, 1=Kalın, 2=İnce, 3=Dolgulu, 4=Hafif, 5=Çift ton
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Qm arayüz simgesi stili: 0=Normal, 1=Kalın, 2=Hafif (eski değer), 3=Dolgulu, 4=Hafif, 5=Kalın (eski değer)
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue: indeks 1 ile %d arasında olmalıdır
@@ -9529,6 +9520,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == KCP uyumlu istemcinin oturumu yükseltmesini gerektir (geri dönüş için gri tonlama sırasında kapalı tut)
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== qm_graphics_trace etkinken yazı tiplerini yeniden tara ve çözümlenen Unicode yazı tipi yüzünü ve glifi sorgula
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == Kurtarma bu sunucuda etkin değil ve /practice açık bir takımda değilsiniz. Antrenman açıkken sıralama kazanamayacağınızı unutmayın.
@@ -13154,9 +13148,6 @@ UI icon color
 UI icon custom color
 == Özel arayüz simgesi rengi
 
-UI icon duotone secondary color
-== Duotone arayüz simgelerinin ikincil rengi
-
 UI icon style
 == Arayüz simgesi stili
 
@@ -13453,6 +13444,9 @@ Use current name
 
 Use custom skins instead of the ninja tee
 == Ninja tee yerine özel görünümler kullan
+
+Use custom UI icon color
+== Arayüz simgelerinde özel renk kullan
 
 Use default flags on scoreboard
 == Skor tablosunda varsayılan bayrakları kullan

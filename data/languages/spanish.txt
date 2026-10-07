@@ -3587,12 +3587,6 @@ dumps all sqlservers readservers = r, writeservers = w
 Dumps the antibot status
 == Vuelca el estado antibot
 
-Duotone
-== Dúotono
-
-Duotone icon secondary color alpha migration completed flag
-== Indicador de migración de alfa del color secundario de iconos duotono completada
-
 Duplicate
 == Duplicar
 
@@ -8765,14 +8759,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Color personalizado de iconos de Qm UI
 
-Qm UI duotone secondary icon color
-== Color secundario de los iconos duotono de Qm UI
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Color de los iconos de Qm UI: 1=blanco, 2=negro, 3=personalizado, 4=arcoíris
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Estilo de iconos de Qm UI: 0=normal, 1=negrita, 2=fino, 3=relleno, 4=ligera, 5=dúotono
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Estilo de iconos de Qm UI: 0=normal, 1=negrita, 2=ligera (valor antiguo), 3=relleno, 4=ligera, 5=negrita (valor antiguo)
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue: el índice debe estar entre 1 y %d
@@ -9529,6 +9520,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == Requerir cliente compatible con KCP para actualizar sesión (mantener apagado durante escala de grises para retroceso)
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== Con qm_graphics_trace activado, volver a explorar las fuentes y consultar la fuente y el glifo Unicode resueltos
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == El rescate no está activado en este servidor y no estás en un equipo con /practice activado. Ten en cuenta que no puedes obtener un rango con la práctica activada.
@@ -13154,9 +13148,6 @@ UI icon color
 UI icon custom color
 == Color personalizado de los iconos de la interfaz
 
-UI icon duotone secondary color
-== Color secundario de los iconos de interfaz duotono
-
 UI icon style
 == Estilo de los iconos de la interfaz
 
@@ -13453,6 +13444,9 @@ Use current name
 
 Use custom skins instead of the ninja tee
 == Usar pieles personalizadas en lugar del tee ninja
+
+Use custom UI icon color
+== Usar un color personalizado para los iconos de la interfaz
 
 Use default flags on scoreboard
 == Usar banderas predeterminadas en la tabla de puntuaciones

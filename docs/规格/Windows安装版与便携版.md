@@ -55,3 +55,23 @@ Setup 载荷由 CMake 的 CPACK_TARGETS 与 CPACK_GEN_FILES 分别生成运行�
 此前安装生命周期验证仅证明安装、覆盖和卸载行为，不能证明载荷完整；新验证同时按载荷实际文件哈希核对已安装文件。字体与图集问题使用 qmclient_scripts/integration/icon_resources_smoke.py 在隔离便携客户端中验证。
 
 2026-10-07，更新后的实际 Setup 在独立测试 AppId 下完成安装、全载荷损坏后覆盖重装与卸载，逐项核对 1116 个载荷文件哈希，含三个 helper、Hook/bootstrap DLL 和 46 个 Vulkan SPV；未知用户文件保留，旧随包字体清理。证据 tmp/icon-fix-setup-smoke.log 与 tmp/setup-upgrade-dc8a9c55a32c42748c85e8641fe73782/payload-sha256.json。此测试不启动已安装客户端、不接触正式安装目录；GitHub 上传与远程自动更新仍未运行。
+
+## Windows 发布类型与工具收录
+
+Windows 面向玩家保持三种分发：普通完整归档（ZIP、7z）、安装器 EXE、独立便携归档（ZIP、7z）。签名与更新清单是自动更新附件，不是额外客户端类型。普通归档及安装版使用用户目录，便携版仅识别程序旁的 profile。
+
+普通 ZIP、7z 包含客户端运行依赖及完整实用工具。工具选择以 qmclient_scripts/windows_release_tools.txt 为唯一清单：地图转换、提取、差异比较、包络查找、生成、优化、替换区域与图片、重存和检查，配置嵌入与提取，demo 聊天提取，图片边缘处理，以及 twping、STUN、UUID、Unicode 混淆检查。map_render 仅在构建具备 EGL 时加入。工具可执行文件与客户端放在同一级，复用同级 DLL；不移入 tools 子目录，以免 Windows 子进程找不到依赖或增加重复 DLL。
+
+Setup 与便携归档只包含运行依赖：DDNet、DDNet-Server、QmClient-Updater，以及构建启用的网易云、汽水、QQ/酷狗音乐 helper 和对应 DLL。Setup 在安装后另生成卸载程序。完整归档工具不进入 Setup 与便携包。
+
+testrunner、qm-nmt-tests、Google Benchmark 程序和 dummy_map、crapnet、packetgen 开发测试工具不发布。发布按目标清单收集，不复制整个构建目录。CMake 为归档生成 qmclient-archive-tools.txt，并为 Setup 与归档共同生成运行时清单；CI 校验真实 ZIP 与 7z 中 EXE 的完整集合，阻断工具遗漏、测试程序混入、便携包带工具及重复 EXE。ZIP 和 7z 复用同一份打包目标清单。
+
+工具中的 uuid 使用 DDNet 的名称派生 UUID 算法，用于地图扩展项、扩展消息等标识的制作和诊断，不是随机 UUID 生成器；unicode_confusables 比较两个字符串的混淆字符归一结果，用于昵称冒充等问题的离线排查，不参与客户端日常运行。两者作为轻量诊断工具纳入普通完整归档，不进入 Setup 或便携包。
+
+安装升级只精确删除旧版 Phosphor-Duotone.ttf 与双色调 JSON、PNG 三个随包文件；不删除整目录，不处理用户目录资源。归档校验同时拒绝这三个已移除文件，避免旧打包缓存将它们带回发布。
+
+本地重复打包揭示了 7z 的旧文件保留行为：7z a 更新已有归档时，不会移除当前载荷已删除的条目，曾使便携包残留旧工具和双色调资源。7z 打包命令现每次精确移除构建目录中的单个归档输出后再创建，不能复用旧归档内容；CI 与本地均校验实际 ZIP、7z 条目集合。
+
+2026-10-07，图标颜色与工具收录阶段的便携客户端（包含全局图标颜色与自适应描边）重新构建并生成 ZIP、7z，两个归档的运行程序集合及删除资源约束均通过，证据 tmp/windows-packages-portable-final-build.log 与 tmp/windows-packages-portable-final-verify.log。新版 normal 载荷在独立 AppId 下编译 Setup，真实安装、全载荷损坏后的覆盖重装、四项旧资源清理及卸载保留未知用户文件通过；逐项验证 1113 个载荷文件和 46 个 Vulkan shader，Setup 载荷仅含六个运行 EXE。证据 tmp/windows-release-setup-final-smoke.log 与 tmp/setup-upgrade-bf206166c85844539f225066c50643a3/payload-sha256.json。此处覆盖重装使用同一新版 Setup 两次，并在两次之间模拟旧文件，不代表已运行真实 GitHub 更新或历史版本客户端。
+
+该阶段实际普通归档包含 24 个 EXE：六个运行程序与 18 个工具；本机构建未找到 EGL，因此候选清单中的 map_render 未发布。便携归档和 Setup 各包含六个运行 EXE，不带工具。归档校验器相关 ZIP/7z 行为测试、CI 合同与 Setup 载荷测试合计 34 项通过，包含真实 7z 创建、读取和污染拒绝；重复真实便携打包从旧资源残留失败恢复为校验通过。记录覆盖上述图标和分发阶段；后续字体选择审查若继续修改生产代码，需重建相应交付物，不能沿用本阶段二进制作为最新验证。

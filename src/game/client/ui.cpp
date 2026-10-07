@@ -1350,7 +1350,20 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 	Cursor.m_vColorSplits = LabelProps.m_vColorSplits;
 	Cursor.m_LineWidth = (float)LabelProps.m_MaxWidth;
 	FlushQuadBatch();
+	const ColorRGBA OriginalColor = TextRender()->GetTextColor();
+	const ColorRGBA OriginalOutlineColor = TextRender()->GetTextOutlineColor();
+	if(Icons.m_Count > 0)
+	{
+		const ColorRGBA IconColor = ConfiguredQmUiIconColor(OriginalColor);
+		TextRender()->TextColor(IconColor);
+		TextRender()->TextOutlineColor(ConfiguredQmUiIconContrastColor(IconColor));
+	}
 	TextRender()->TextEx(&Cursor, pText, -1);
+	if(Icons.m_Count > 0)
+	{
+		TextRender()->TextColor(OriginalColor);
+		TextRender()->TextOutlineColor(OriginalOutlineColor);
+	}
 	if(m_pQmIconManager != nullptr && Icons.m_Count > 0)
 		m_pQmIconManager->RecordFontFallback(Icons.m_Count);
 	return CLabelResult{.m_Truncated = Cursor.m_Truncated};
@@ -1405,7 +1418,10 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 	const float *pBiggestCharHeight = RectEl.m_LineCount == 1 ? &RectEl.m_BiggestCharacterHeight : nullptr;
 	const vec2 CursorPos = CalcAlignedCursorPos(pRect, vec2(RectEl.m_Cursor.m_LongestLineWidth, RectEl.m_Cursor.Height()), Align, pBiggestCharHeight);
 	FlushQuadBatch();
-	TextRender()->RenderTextContainer(RectEl.m_UITextContainer, RectEl.m_TextColor, RectEl.m_TextOutlineColor, CursorPos.x, CursorPos.y);
+	// 颜色在绘制时解析，彩虹和即时切换无需重建缓存文本容器。
+	const ColorRGBA Color = RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(RectEl.m_TextColor) : RectEl.m_TextColor;
+	const ColorRGBA OutlineColor = RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor;
+	TextRender()->RenderTextContainer(RectEl.m_UITextContainer, Color, OutlineColor, CursorPos.x, CursorPos.y);
 	if(m_pQmIconManager != nullptr && RectEl.m_NumQmIcons > 0)
 		m_pQmIconManager->RecordFontFallback(RectEl.m_NumQmIcons);
 }
@@ -1902,7 +1918,15 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 	if(UIElement.Rect(0)->m_UITextContainer.Valid())
 		FlushQuadBatch();
 	if(UIElement.Rect(0)->m_UITextContainer.Valid())
-		TextRender()->RenderTextContainer(UIElement.Rect(0)->m_UITextContainer, ColorText, ColorTextOutline);
+	{
+		const CUIElement::SUIElementRect &Label = *UIElement.Rect(0);
+		if(!TryDrawQmIconLabels(Text, Label.m_aQmIcons.data(), Label.m_NumQmIcons, FontSize, TEXTALIGN_MC, ColorText))
+		{
+			const ColorRGBA LabelColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(ColorText) : ColorText;
+			const ColorRGBA LabelOutlineColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(LabelColor) : ColorTextOutline;
+			TextRender()->RenderTextContainer(Label.m_UITextContainer, LabelColor, LabelOutlineColor);
+		}
+	}
 	if(!Enabled)
 		return 0;
 	return DoButtonLogic(pId, Props.m_Checked, pRect, Props.m_Flags);
@@ -1924,7 +1948,7 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 
-	TextRender()->TextColor(ResolveUiSurfaceIconColor(SurfaceText.Surface(), ConfiguredQmUiIconColor(ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(TextRender()->GetTextColor().a))));
+	TextRender()->TextColor(ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(TextRender()->GetTextColor().a));
 
 	CUIRect Label;
 	pRect->HMargin(2.0f, &Label);
@@ -1932,6 +1956,7 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 
 	if(!Enabled)
 	{
+		const CQmIconSemanticColorScope SemanticColorScope;
 		TextRender()->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
 		TextRender()->TextOutlineColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
 		DoLabel_QmIcon(&Label, EQmIcon::SLASH, FONT_ICON_SLASH, Label.h * ms_FontmodHeight, TEXTALIGN_MC);
@@ -1994,7 +2019,7 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 	const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
-	pTextRender->TextColor(Color);
+	pTextRender->TextColor(ConfiguredQmUiIconColor(Color));
 	pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	DoLabel(&Rect, pFallbackIcon, QmIconFallbackFontSize(Rect), TEXTALIGN_MC);
@@ -2034,11 +2059,12 @@ int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const
 	IconRect.y = Label.y + (Label.h - IconSide) * 0.5f;
 	IconRect.w = IconSide;
 	IconRect.h = IconSide;
-	DrawQmIcon(IconRect, Icon, pFallbackIcon, ResolveUiSurfaceIconColor(SurfaceText.Surface(), ConfiguredQmUiIconColor(ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(TextRender()->GetTextColor().a))));
+	DrawQmIcon(IconRect, Icon, pFallbackIcon, ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(TextRender()->GetTextColor().a));
 
 	if(!Enabled)
 	{
 		// 与 DrawButton_FontIcon 保持一致：禁用时叠加红色斜杠。
+		const CQmIconSemanticColorScope SemanticColorScope;
 		DrawQmIcon(IconRect, EQmIcon::SLASH, FONT_ICON_SLASH, ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
 	}
 	TextRender()->TextOutlineColor(PreviousOutlineColor);

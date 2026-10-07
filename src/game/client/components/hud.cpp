@@ -4853,12 +4853,16 @@ void CHud::RenderMediaIsland()
 				return;
 			const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
 			const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+			const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			const float GlyphSize = Rect.h;
 			const float GlyphWidth = TextRender()->TextWidth(GlyphSize, pGlyph);
-			TextRender()->TextColor(0.98f, 0.99f, 1.0f, IconAlpha * Alpha);
+			const ColorRGBA IconColor = ConfiguredQmUiIconColor(ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * Alpha));
+			TextRender()->TextColor(IconColor);
+			TextRender()->TextOutlineColor(ConfiguredQmUiIconContrastColor(IconColor));
 			TextRender()->Text(Rect.x + (Rect.w - GlyphWidth) * 0.5f, Rect.y, GlyphSize, pGlyph, -1.0f);
 			TextRender()->TextColor(PreviousColor);
+			TextRender()->TextOutlineColor(PreviousOutlineColor);
 			TextRender()->SetFontPreset(PreviousPreset);
 		};
 		{

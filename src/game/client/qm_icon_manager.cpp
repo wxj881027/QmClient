@@ -33,7 +33,6 @@ namespace
 		case 2: return "light";
 		case 3: return "fill";
 		case 4: return "light";
-		case 5: return "duotone";
 		}
 		return "bold";
 	}
@@ -473,14 +472,19 @@ bool CQmIconManager::RenderAtlasEntry(const CQmIconAtlas::SEntry &Entry, const C
 	Params.m_Texture = m_Atlas.m_Texture;
 	Params.m_Rect = vec4(Aligned.x, Aligned.y, Aligned.w, Aligned.h);
 	Params.m_UvRect = vec4(Entry.m_U0, Entry.m_V0, Entry.m_U1, Entry.m_V1);
-	Params.m_Color = Color;
-	Params.m_SecondaryColor = ConfiguredQmUiIconSecondaryColor(Color);
+	Params.m_Color = ConfiguredQmUiIconColor(Color);
+	Params.m_SecondaryColor = Params.m_Color;
 	Params.m_PxRange = m_Atlas.m_PxRange;
 	Params.m_AtlasWidth = static_cast<float>(m_Atlas.m_Width);
 	Params.m_AtlasHeight = static_cast<float>(m_Atlas.m_Height);
 	Params.m_UseTrueSdf = m_Atlas.m_UseTrueSdf && !m_Atlas.HasSecondaryMask();
 	Params.m_UseSecondarySdf = m_Atlas.HasSecondaryMask();
 	Params.m_Rotation = Rotation;
+	// 现有 shader 在正描边宽度下仅输出外环，随后本体覆盖保持用户 RGB。
+	IGraphics::STexturedMsdfParams OutlineParams = Params;
+	OutlineParams.m_Color = ConfiguredQmUiIconContrastColor(Params.m_Color);
+	OutlineParams.m_OutlineWidthPx = 0.85f;
+	m_pGraphics->RenderTexturedMsdf(OutlineParams);
 	m_pGraphics->RenderTexturedMsdf(Params);
 	return true;
 }

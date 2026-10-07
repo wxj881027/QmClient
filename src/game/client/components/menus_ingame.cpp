@@ -2994,11 +2994,10 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		}
 		if(Tab.m_bFavoriteMapsIcon)
 		{
-			// 收藏地图页签：图标走图集渲染（失败回退字体图标）；滑块上的
-			// 图标用滑块同款深色，避免默认白图标压亮滑块不可见。
+			// 收藏地图页签优先图集、失败回退字体；两条路径最终统一应用全局图标色。
 			const float IconSide = minimum(Slot.w, Slot.h) * 0.56f;
 			const CUIRect IconRect{Slot.x + (Slot.w - IconSide) * 0.5f, Slot.y + (Slot.h - IconSide) * 0.5f, IconSide, IconSide};
-			const ColorRGBA IconColor = TabActive ? ui_widget::CapsuleTabBarActiveLabelColor(BrowserPanelColor()) : ConfiguredQmUiIconColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+			const ColorRGBA IconColor = TabActive ? ui_widget::CapsuleTabBarActiveLabelColor(BrowserPanelColor()) : ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 			if(GameClient()->QmIconManager()->PreferFontFallback() || !GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, IconRect, IconColor))
 			{
 				const unsigned OldFlags = TextRender()->GetRenderFlags();

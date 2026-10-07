@@ -1194,8 +1194,6 @@ Dump the current savestring
 Dump zone tuning in zone x
 dumps all sqlservers readservers = r, writeservers = w
 Dumps the antibot status
-Duotone
-Duotone icon secondary color alpha migration completed flag
 Duplicate
 Duration
 Duration in seconds to mute a player for spam triggering. 0 = off
@@ -2920,9 +2918,8 @@ Pyramid
 q = Connection quality
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
-Qm UI duotone secondary icon color
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
 qm_profile_queue: index must be between 1 and %d
 QmClient
 QmClient chat log
@@ -3175,6 +3172,7 @@ Request to swap positions with %s
 Request to swap your tee with another team member
 Requesting to join the game
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 Rescue mode changed to auto.
 Rescue mode changed to manual.
@@ -4383,7 +4381,6 @@ UI color
 UI controller sens.
 UI icon color
 UI icon custom color
-UI icon duotone secondary color
 UI icon style
 UI motion level
 UI mouse sens.
@@ -4483,6 +4480,7 @@ Use compact list view for config variables
 Use current map as background
 Use current name
 Use custom skins instead of the ninja tee
+Use custom UI icon color
 Use default flags on scoreboard
 Use default input
 Use default output

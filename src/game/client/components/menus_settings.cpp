@@ -26,6 +26,7 @@
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
+#include <game/client/QmUi/SettingsIconOptions.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiForms.h>
@@ -126,7 +127,6 @@ namespace
 	{
 		QmPerfLogStage("perf/menu", pStage, DurationMs, Force, pClient, nullptr, nullptr, pExtra);
 	}
-
 
 }
 
@@ -246,7 +246,7 @@ namespace
 	// UI 图标风格分段控件：段索引 -> 配置值。Thin 未随包（值 2 仍兼容，渲染为 Light），
 	// 不再提供按钮，因此索引与配置值不是同一个序列。绘制与点击路径必须共用这一张表——
 	// 历史上点击路径残留了含 Thin 的 6 项旧表，导致点击整体错位一位（点「双色调」选中「轻体」）。
-	constexpr int s_aIconWeightValues[] = {4, 0, 1, 3, 5};
+	constexpr int s_aIconWeightValues[] = {4, 0, 1, 3};
 
 	int QmIconWeightSegmentIndex(const int Weight)
 	{
@@ -1423,15 +1423,14 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 													    MakeSettingsContentFlowEntry(GraphicsMetrics.m_LineHeight)});
 	const uint64_t GraphicsVisualMeasureRevision = static_cast<uint64_t>(GraphicsVisualTextCustomVisible);
 	const float GraphicsVisualMinCardHeight = VisualChromeHeight + GraphicsVisualContentHeight;
-	const float GraphicsIconsContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight});
+	const float GraphicsIconsContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight});
 	const float GraphicsIconsMinCardHeight = IconsChromeHeight + GraphicsIconsContentHeight;
 	const float GraphicsInteractionContentHeight = ResolveSettingsContentFlowHeight(GraphicsMetrics, {GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight});
 	const float GraphicsInteractionMinCardHeight = InteractionChromeHeight + GraphicsInteractionContentHeight;
-	static CButtonContainer s_aGraphicsIconColorButtons[4];
-	static CButtonContainer s_aGraphicsIconWeightButtons[5];
+	static CButtonContainer s_aGraphicsIconColorButtons[3];
+	static CButtonContainer s_aGraphicsIconWeightButtons[4];
 	static CButtonContainer s_aGraphicsBlurModeButtons[3];
 	static CButtonContainer s_GraphicsIconCustomColorResetId;
-	static CButtonContainer s_GraphicsIconDuotoneSecondaryColorResetId;
 
 	const bool RenderOnly = Ui()->RenderOnly();
 	const auto BuildDefinitions = [this, pModesDefault, pDisplayDefault, pVisualDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesMinCardHeight, ModesChromeHeight, GraphicsDisplayMinCardHeight, DisplayChromeHeight, GraphicsVisualMinCardHeight, VisualChromeHeight, GraphicsVisualMeasureRevision, GraphicsIconsMinCardHeight, IconsChromeHeight, GraphicsInteractionMinCardHeight, InteractionChromeHeight, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, FoundBackendCount, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
@@ -1906,25 +1905,30 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				g_Config.m_QmUiCardRainbowTitles ^= 1; }, GraphicsVisualMeasureRevision);
 		AddCard(IconsSpec, GraphicsIconsMinCardHeight, IconsChromeHeight, [this, GraphicsMetrics, BodySize](CUIRect ContentRect) {
 			CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);
-			const bool CustomColor = g_Config.m_QmUiIconColor == 3;
-			const bool DuotoneStyle = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight) == 5;
-			const auto DoIconChoiceRow = [this, BodySize](CUIRect Row, const char *pLabel, const char *const *ppLabels, int Count, int Current, CButtonContainer *pButtons, auto &&OnChanged) {
-				CUIRect Label, Segments;
-				Row.VSplitLeft(std::clamp(Row.w * 0.36f, 96.0f, 150.0f), &Label, &Segments);
-				Segments.VSplitLeft(8.0f, nullptr, &Segments);
+			const bool CustomColor = qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled);
+			const auto DoIconChoiceRow = [this, GraphicsMetrics, BodySize](CUIRect Row, const char *pLabel, const char *const *ppLabels, int Count, int Current, CButtonContainer *pButtons, auto &&OnChanged) {
+				const SSettingsRadioRowLayout Layout = ResolveSettingsRadioRowLayout(Row, Count, GraphicsMetrics);
+				CUIRect Label = Layout.m_LabelRect;
+				CUIRect Segments = Layout.m_ButtonsRect;
 				Ui()->DoLabel(&Label, pLabel, BodySize, TEXTALIGN_ML);
 				const int ClickedSegment = DoSegmentedChoice(pButtons, ppLabels, Count, Current, Segments);
 				if(ClickedSegment != Current)
 					OnChanged(ClickedSegment);
 			};
-			const char *apIconColorLabels[] = {Localize("White"), Localize("Black"), Localize("Custom"), Localize("Rainbow")};
+			const char *apIconColorLabels[] = {Localize("White"), Localize("Black"), Localize("Rainbow")};
 			// Thin 未随包字体，不再提供该样式；weight 2 配置值仍兼容（渲染为 Light）。
-			const char *apIconWeightLabels[] = {Localize("Light"), Localize("Regular"), Localize("Bold"), Localize("Fill"), Localize("Duotone")};
+			const char *apIconWeightLabels[] = {Localize("Light"), Localize("Regular"), Localize("Bold"), Localize("Fill")};
 			const int IconWeightIndex = QmIconWeightSegmentIndex(g_Config.m_QmUiIconWeight);
-			DoIconChoiceRow(Rows.NextLine(), Localize("UI icon color"), apIconColorLabels, std::size(apIconColorLabels), std::clamp(g_Config.m_QmUiIconColor, 1, 4) - 1, s_aGraphicsIconColorButtons, [this](int NewValue) {
-				g_Config.m_QmUiIconColor = NewValue + 1;
+			DoIconChoiceRow(Rows.Next(ResolveSettingsRadioRowLayout(ContentRect, 3, GraphicsMetrics).m_Height), Localize("UI icon color"), apIconColorLabels, std::size(apIconColorLabels), qm_icon_settings::PresetIndex(g_Config.m_QmUiIconColor), s_aGraphicsIconColorButtons, [this](int NewValue) {
+				qm_icon_settings::SelectPreset(NewValue, g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled);
 				Client()->OnWindowResize();
 			});
+			CUIRect CustomToggleRow = Rows.NextLine();
+			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiIconCustomColorEnabled, "graphics-custom-icon-color", Localize("Use custom UI icon color"), CustomColor, &CustomToggleRow))
+			{
+				qm_icon_settings::ToggleCustomColor(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled);
+				Client()->OnWindowResize();
+			}
 			if(CustomColor)
 			{
 				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
@@ -1932,14 +1936,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				CUIRect CustomColorRow = Rows.NextButton();
 				DoLine_ColorPicker(&s_GraphicsIconCustomColorResetId, ColorMetrics, &CustomColorRow, Localize("UI icon custom color"), &g_Config.m_QmUiIconCustomColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, false, false);
 			}
-			if(DuotoneStyle)
-			{
-				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
-				ColorMetrics.m_LineSpacing = 0.0f;
-				CUIRect SecondaryColorRow = Rows.NextButton();
-				DoLine_ColorPicker(&s_GraphicsIconDuotoneSecondaryColorResetId, ColorMetrics, &SecondaryColorRow, Localize("UI icon duotone secondary color"), &g_Config.m_QmUiIconDuotoneSecondaryColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, true, false);
-			}
-			DoIconChoiceRow(Rows.NextLine(), Localize("UI icon style"), apIconWeightLabels, std::size(apIconWeightLabels), IconWeightIndex, s_aGraphicsIconWeightButtons, [this](int NewValue) {
+			DoIconChoiceRow(Rows.Next(ResolveSettingsRadioRowLayout(ContentRect, 4, GraphicsMetrics).m_Height), Localize("UI icon style"), apIconWeightLabels, std::size(apIconWeightLabels), IconWeightIndex, s_aGraphicsIconWeightButtons, [this](int NewValue) {
 				const int NewWeight = s_aIconWeightValues[NewValue];
 				if(NewWeight == NormalizeQmIconWeight(g_Config.m_QmUiIconWeight))
 					return;
@@ -1947,21 +1944,18 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				GameClient()->SyncQmUiIconWeight();
 			});
 		});
-		vCards.back().m_Measure = [GraphicsMetrics](float) {
-			return ResolveSettingsContentFlowHeight(GraphicsMetrics, (g_Config.m_QmUiIconColor == 3 && NormalizeQmIconWeight(g_Config.m_QmUiIconWeight) == 5) ? std::initializer_list<float>{GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight} : g_Config.m_QmUiIconColor == 3 || NormalizeQmIconWeight(g_Config.m_QmUiIconWeight) == 5 ? std::initializer_list<float>{GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_ButtonHeight, GraphicsMetrics.m_LineHeight} :
-																																																				std::initializer_list<float>{GraphicsMetrics.m_LineHeight, GraphicsMetrics.m_LineHeight});
+		vCards.back().m_Measure = [GraphicsMetrics](float Width) {
+			return qm_icon_settings::ContentHeight(GraphicsMetrics, qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled), Width);
 		};
-		vCards.back().m_MeasureRevision = static_cast<uint64_t>(g_Config.m_QmUiIconColor == 3) | (static_cast<uint64_t>(NormalizeQmIconWeight(g_Config.m_QmUiIconWeight) == 5) << 1);
+		vCards.back().m_MeasureRevision = static_cast<uint64_t>(qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled));
 		vCards.back().m_PreLayoutInput = [this, GraphicsMetrics](CUIRect ContentRect) {
 			if(m_MenuTextPlanCollecting)
 				return false;
 			bool Changed = false;
-			const bool CustomColor = g_Config.m_QmUiIconColor == 3;
-			const bool DuotoneStyle = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight) == 5;
-			const auto ProcessChoiceRow = [this, &Changed](CUIRect Row, int Current, int Count, CButtonContainer *pButtons, auto &&OnChanged) {
-				CUIRect Label, Segments;
-				Row.VSplitLeft(std::clamp(Row.w * 0.36f, 96.0f, 150.0f), &Label, &Segments);
-				Segments.VSplitLeft(8.0f, nullptr, &Segments);
+			const bool CustomColor = qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled);
+			const auto ProcessChoiceRow = [this, GraphicsMetrics, &Changed](CUIRect Row, int Current, int Count, CButtonContainer *pButtons, auto &&OnChanged) {
+				const SSettingsRadioRowLayout Layout = ResolveSettingsRadioRowLayout(Row, Count, GraphicsMetrics);
+				CUIRect Segments = Layout.m_ButtonsRect;
 				// 预布局只接手点击，轨道与滑块由正式渲染阶段绘制。
 				CUIRect aSegmentSlots[8];
 				CUIRect SegmentsRemainder = Segments;
@@ -1978,11 +1972,18 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				}
 			};
 			CSettingsContentRowFlow Rows(ContentRect, GraphicsMetrics);
-			CUIRect Row = Rows.NextLine();
-			ProcessChoiceRow(Row, std::clamp(g_Config.m_QmUiIconColor, 1, 4) - 1, 4, s_aGraphicsIconColorButtons, [this](int NewValue) {
-				g_Config.m_QmUiIconColor = NewValue + 1;
+			CUIRect Row = Rows.Next(ResolveSettingsRadioRowLayout(ContentRect, 3, GraphicsMetrics).m_Height);
+			ProcessChoiceRow(Row, qm_icon_settings::PresetIndex(g_Config.m_QmUiIconColor), 3, s_aGraphicsIconColorButtons, [this](int NewValue) {
+				qm_icon_settings::SelectPreset(NewValue, g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled);
 				Client()->OnWindowResize();
 			});
+			CUIRect CustomToggleRow = Rows.NextLine();
+			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiIconCustomColorEnabled, "graphics-custom-icon-color", Localize("Use custom UI icon color"), CustomColor, &CustomToggleRow))
+			{
+				qm_icon_settings::ToggleCustomColor(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled);
+				Client()->OnWindowResize();
+				Changed = true;
+			}
 			if(CustomColor)
 			{
 				const unsigned int OldCustomColor = g_Config.m_QmUiIconCustomColor;
@@ -1992,18 +1993,9 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				DoLine_ColorPicker(&s_GraphicsIconCustomColorResetId, ColorMetrics, &CustomColorRow, Localize("UI icon custom color"), &g_Config.m_QmUiIconCustomColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, false, false);
 				Changed = Changed || OldCustomColor != g_Config.m_QmUiIconCustomColor;
 			}
-			if(DuotoneStyle)
-			{
-				const unsigned OldSecondaryColor = g_Config.m_QmUiIconDuotoneSecondaryColor;
-				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
-				ColorMetrics.m_LineSpacing = 0.0f;
-				CUIRect SecondaryColorRow = Rows.NextButton();
-				DoLine_ColorPicker(&s_GraphicsIconDuotoneSecondaryColorResetId, ColorMetrics, &SecondaryColorRow, Localize("UI icon duotone secondary color"), &g_Config.m_QmUiIconDuotoneSecondaryColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, true, false);
-				Changed = Changed || OldSecondaryColor != g_Config.m_QmUiIconDuotoneSecondaryColor;
-			}
 			const int IconWeightIndex = QmIconWeightSegmentIndex(g_Config.m_QmUiIconWeight);
-			Row = Rows.NextLine();
-			ProcessChoiceRow(Row, IconWeightIndex, 5, s_aGraphicsIconWeightButtons, [this](int NewValue) {
+			Row = Rows.Next(ResolveSettingsRadioRowLayout(ContentRect, 4, GraphicsMetrics).m_Height);
+			ProcessChoiceRow(Row, IconWeightIndex, 4, s_aGraphicsIconWeightButtons, [this](int NewValue) {
 				const int NewWeight = s_aIconWeightValues[NewValue];
 				if(NewWeight == NormalizeQmIconWeight(g_Config.m_QmUiIconWeight))
 					return;

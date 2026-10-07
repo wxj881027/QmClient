@@ -3587,12 +3587,6 @@ dumps all sqlservers readservers = r, writeservers = w
 Dumps the antibot status
 == Выгружает статус антибота
 
-Duotone
-== Дуотон
-
-Duotone icon secondary color alpha migration completed flag
-== Флаг завершения переноса альфа-канала вторичного цвета двухцветных значков
-
 Duplicate
 == Дублировать
 
@@ -8765,14 +8759,11 @@ Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 Qm UI custom icon color
 == Пользовательский цвет значков Qm UI
 
-Qm UI duotone secondary icon color
-== Вторичный цвет двухцветных значков Qm UI
-
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 == Цвет значков Qm UI: 1=белый, 2=черный, 3=пользовательский, 4=радуга
 
-Qm UI icon style: 0=Regular, 1=Bold, 2=Thin, 3=Fill, 4=Light, 5=Duotone
-== Стиль значков Qm UI: 0=обычный, 1=жирный, 2=тонкий, 3=заливка, 4=лёгкий, 5=дуотон
+Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
+== Стиль значков Qm UI: 0=обычный, 1=жирный, 2=лёгкий (старое значение), 3=заливка, 4=лёгкий, 5=жирный (старое значение)
 
 qm_profile_queue: index must be between 1 and %d
 == qm_profile_queue: индекс должен быть от 1 до %d
@@ -9529,6 +9520,9 @@ Requesting to join the game
 
 Require KCP-capable client to upgrade session (keep off during grayscale for fallback)
 == Требовать клиент с поддержкой KCP для обновления сессии (отключать во время серого периода для fallback)
+
+Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled
+== При включённом qm_graphics_trace повторно сканировать шрифты и запрашивать выбранное начертание и глиф Unicode
 
 Rescue is not enabled on this server and you're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 == Rescue не включён на этом сервере, и вы не в команде с включённым /practice. Обратите внимание, что с включённым тренировочным режимом нельзя получить рейтинг.
@@ -13154,9 +13148,6 @@ UI icon color
 UI icon custom color
 == Пользовательский цвет значков интерфейса
 
-UI icon duotone secondary color
-== Вторичный цвет двухцветных значков интерфейса
-
 UI icon style
 == Стиль значков интерфейса
 
@@ -13453,6 +13444,9 @@ Use current name
 
 Use custom skins instead of the ninja tee
 == Использовать пользовательские скины вместо скина ниндзя
+
+Use custom UI icon color
+== Использовать свой цвет значков интерфейса
 
 Use default flags on scoreboard
 == Использовать флаги по умолчанию на табло

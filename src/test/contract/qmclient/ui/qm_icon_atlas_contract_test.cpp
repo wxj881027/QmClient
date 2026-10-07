@@ -72,7 +72,7 @@ namespace
 TEST(QmIconAtlas, GeneratedMsdfManifestsContainEveryRuntimeIcon)
 {
 	// Thin 未随包字体，不再烘焙（weight 2 复用 light 图集）。
-	constexpr const char *apWeights[] = {"regular", "bold", "fill", "light", "duotone"};
+	constexpr const char *apWeights[] = {"regular", "bold", "fill", "light"};
 	for(const char *pWeight : apWeights)
 	{
 		char aPath[IO_MAX_PATH_LENGTH];
@@ -128,15 +128,6 @@ TEST(QmIconAtlas, GeneratedMsdfManifestsContainEveryRuntimeIcon)
 			EXPECT_LE(Y + H, AtlasHeight) << pIconName;
 		}
 	}
-}
-
-TEST(QmIconAtlas, DuotoneManifestDeclaresSecondaryMask)
-{
-	const std::string Json = ReadTextFile("data/qmclient/icons/qm_icons_duotone_msdf.json");
-	const std::unique_ptr<json_value, decltype(&json_value_free)> Root(JsonParse(Json.c_str(), Json.size()), json_value_free);
-	ASSERT_NE(Root, nullptr);
-	EXPECT_STREQ(JsonString(Root.get(), "distance_field"), "mtsdf");
-	EXPECT_STREQ(JsonString(Root.get(), "secondary_mask"), "alpha");
 }
 
 TEST(QmIconAtlasContract, BoldAtlasCarriesMorphKeyFrames)

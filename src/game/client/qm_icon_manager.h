@@ -4,6 +4,8 @@
 #ifndef GAME_CLIENT_QM_ICON_MANAGER_H
 #define GAME_CLIENT_QM_ICON_MANAGER_H
 
+#include "qm_icon_color_policy.h"
+
 #include <base/color.h>
 #include <base/system.h>
 
@@ -150,7 +152,8 @@ inline std::array<int, 3> QmIconAtlasScaleFallbackOrder(const int PreferredScale
 
 inline int NormalizeQmIconWeight(const int Weight)
 {
-	return Weight >= 0 && Weight <= 5 ? Weight : 1;
+	// 旧双色调和非法配置回退到默认 Bold；Thin 与 Light 共享同一套资源。
+	return Weight >= 0 && Weight <= 4 ? Weight : 1;
 }
 
 // FontIcon 回退使用与 MSDF 图标相同的目标方框边长，避免两条路径出现尺寸漂移。
@@ -209,7 +212,7 @@ inline SQmIconMorphFrameBlend QmIconMorphFrameBlend(const float Progress, const 
 	return {Index0, Index1, 1.0f - Alpha1, Alpha1};
 }
 
-inline ColorRGBA QmUiIconColor(const ColorRGBA &Color, const int ConfiguredColor, const unsigned int CustomColor = 0xFFFFFFFF, const float RainbowTime = 0.0f)
+inline ColorRGBA QmUiIconColor(const ColorRGBA &Color, const int ConfiguredColor, const unsigned int CustomColor = 0xFFFFFFFF, const double RainbowTime = 0.0)
 {
 	ColorRGBA Result;
 	switch(ConfiguredColor)
@@ -222,7 +225,7 @@ inline ColorRGBA QmUiIconColor(const ColorRGBA &Color, const int ConfiguredColor
 		Result.a = Color.a;
 		break;
 	case 4:
-		Result = color_cast<ColorRGBA>(ColorHSLA(std::fmod(RainbowTime * 0.2f, 1.0f), 0.75f, 0.6f, Color.a));
+		Result = color_cast<ColorRGBA>(ColorHSLA(static_cast<float>(std::fmod(std::fmod(RainbowTime, 5.0) + 5.0, 5.0) / 5.0), 0.75f, 0.6f, Color.a));
 		break;
 	case 1:
 	default:
@@ -232,33 +235,48 @@ inline ColorRGBA QmUiIconColor(const ColorRGBA &Color, const int ConfiguredColor
 	return Result;
 }
 
-// 配置驱动的图标颜色（供 UI 各处与契约测试共用）。定义留在头文件内联：testrunner 不链接
-// 任何客户端源文件，若把定义放在 qm_icon_manager.cpp，测试调用它就会链接失败
-// （LNK2001: 无法解析的外部符号 ConfiguredQmUiIconSecondaryColor）。
+// 仅对禁用覆盖层等必须保持语义色的绘制使用；作用域退出恢复嵌套前的策略。
+class CQmIconSemanticColorScope
+{
+	inline static thread_local bool s_KeepSemanticColor = false;
+	bool m_Previous;
+
+public:
+	CQmIconSemanticColorScope() : m_Previous(s_KeepSemanticColor) { s_KeepSemanticColor = true; }
+	~CQmIconSemanticColorScope() { s_KeepSemanticColor = m_Previous; }
+	CQmIconSemanticColorScope(const CQmIconSemanticColorScope &) = delete;
+	CQmIconSemanticColorScope &operator=(const CQmIconSemanticColorScope &) = delete;
+	static bool Active() { return s_KeepSemanticColor; }
+};
+
+// 每帧只采样一次时钟，先以 double 缩到五秒周期，再参与 RGB 运算。
+class CQmIconFrameColorClock
+{
+	inline static double s_Time = 0.0;
+
+public:
+	static void BeginFrame(double Time) { s_Time = std::isfinite(Time) ? std::fmod(Time, 5.0) : 0.0; }
+	static double Time() { return s_Time; }
+};
+
+// 图集、几何 morph 与字体回退在最终绘制时使用同一颜色策略，保留各自状态 alpha。
 inline ColorRGBA ConfiguredQmUiIconColor(const ColorRGBA &Color)
 {
-	if(g_Config.m_QmUiIconColor != 4)
-		return QmUiIconColor(Color, g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColor);
+	if(CQmIconSemanticColorScope::Active())
+		return Color;
+	const int Preset = qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled) ? 3 : g_Config.m_QmUiIconColor;
+	if(Preset != 4)
+		return QmUiIconColor(Color, Preset, g_Config.m_QmUiIconCustomColor);
 
-	const float Time = static_cast<float>(time_get()) / static_cast<float>(time_freq());
-	return QmUiIconColor(Color, g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColor, Time);
+	return QmUiIconColor(Color, Preset, g_Config.m_QmUiIconCustomColor, CQmIconFrameColorClock::Time());
 }
 
-inline ColorRGBA ConfiguredQmUiIconSecondaryColor(const ColorRGBA &Color)
+// 彩虹本体连续变化时保持深色描边，避免跨亮度阈值时黑白描边闪变。
+inline ColorRGBA ConfiguredQmUiIconContrastColor(const ColorRGBA &Primary)
 {
-	ColorRGBA Result = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiIconDuotoneSecondaryColor, true));
-	Result.a *= Color.a;
-	return Result;
-}
-
-// CFGFLAG_COLALPHA 将旧的六位 RGB 图标颜色扩展为带 Alpha 的 packed 颜色。
-// 显式 Alpha 和已有非零 packed Alpha 保留，避免覆盖用户选择的透明度。
-constexpr bool MigrateLegacyQmUiIconDuotoneSecondaryColor(unsigned &Color, const unsigned DefaultColor, const EColorInputAlphaMode InputAlphaMode = EColorInputAlphaMode::PACKED)
-{
-	if(InputAlphaMode == EColorInputAlphaMode::EXPLICIT || (InputAlphaMode == EColorInputAlphaMode::PACKED && (Color & 0xFF000000u) != 0))
-		return false;
-	Color = (Color & 0x00FFFFFFu) | (DefaultColor & 0xFF000000u);
-	return true;
+	if(!CQmIconSemanticColorScope::Active() && g_Config.m_QmUiIconColor == 4 && !qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled))
+		return ColorRGBA(0.0f, 0.0f, 0.0f, Primary.a);
+	return QmUiIconContrastColor(Primary);
 }
 
 struct SQmIconStyle

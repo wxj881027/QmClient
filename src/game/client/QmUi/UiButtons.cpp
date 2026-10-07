@@ -20,16 +20,6 @@ namespace ui_widget
 
 	namespace
 	{
-		SQmIconStyle ConfiguredIconStyle()
-		{
-			SQmIconStyle IconStyle;
-			IconStyle.m_Normal = ConfiguredQmUiIconColor(IconStyle.m_Normal);
-			IconStyle.m_Hover = ConfiguredQmUiIconColor(IconStyle.m_Hover);
-			IconStyle.m_Active = ConfiguredQmUiIconColor(IconStyle.m_Active);
-			IconStyle.m_Disabled = ConfiguredQmUiIconColor(IconStyle.m_Disabled);
-			return IconStyle;
-		}
-
 		void RenderQmGlyphIcon(const IUiContext &Ctx, const CUIRect &Rect, const char *pIcon, const ColorRGBA &Color)
 		{
 			ITextRender *pTextRender = Ctx.m_pUi->TextRender();
@@ -68,7 +58,8 @@ namespace ui_widget
 			// 强度并入动画目标，按下时使用较短的过渡。
 			const bool HoverPrev = Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 			const bool Pressed = Ctx.m_pUi->CheckActiveItem(pBtn);
-			ColorRGBA Target = DrawBorder ? ResolveConfiguredControlSurface() : HoverPrev || Pressed ? Hover : Idle;
+			ColorRGBA Target = DrawBorder ? ResolveConfiguredControlSurface() : HoverPrev || Pressed ? Hover :
+														   Idle;
 			if(!DrawBorder)
 				Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
 			ColorRGBA Resolved = Target;
@@ -123,7 +114,7 @@ namespace ui_widget
 		const ColorRGBA Surface = CompositeUiSurface(BgColor, CUiScopedSurfaceText::CurrentSurface());
 		const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, !Disabled, Ctx.m_pUi->MouseHovered(&Rect), Pressed && Ctx.m_pUi->MouseButton(0));
 		DrawRoundedSurface(Ctx, Rect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), ui_token::radius::BASE, ui_token::feedback::ICON_BORDER_WIDTH);
-		const SQmIconStyle IconStyle = ConfiguredIconStyle();
+		const SQmIconStyle IconStyle;
 		const EQmIconState IconState = Disabled ? EQmIconState::DISABLED : (Pressed ? EQmIconState::ACTIVE : HoverPrev ? EQmIconState::HOVER :
 																 EQmIconState::NORMAL);
 		RenderQmGlyphIcon(Ctx, Rect, pIcon, ResolveUiSurfaceIconColor(CompositeUiSurface(BgColor, Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : ui_token::color::SURFACE_BACKDROP), IconStyle.Color(IconState)));
@@ -162,7 +153,7 @@ namespace ui_widget
 		IconRect.y = Rect.y + (Rect.h - IconSide) * 0.5f;
 		const EQmIconState IconState = Disabled ? EQmIconState::DISABLED : (Pressed ? EQmIconState::ACTIVE : HoverPrev ? EQmIconState::HOVER :
 																 EQmIconState::NORMAL);
-		const SQmIconStyle IconStyle = ConfiguredIconStyle();
+		const SQmIconStyle IconStyle;
 		const ColorRGBA IconColor = ResolveUiSurfaceIconColor(CompositeUiSurface(BgColor, Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : ui_token::color::SURFACE_BACKDROP), IconStyle.Color(IconState));
 		if(Ctx.m_pIconManager == nullptr || (Ctx.m_pIconManager->PreferFontFallback() && pFallbackIcon != nullptr && pFallbackIcon[0] != '\0') || !Ctx.m_pIconManager->RenderIcon(Icon, IconRect, IconColor))
 		{

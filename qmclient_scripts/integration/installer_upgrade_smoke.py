@@ -12,6 +12,12 @@ import uuid
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+OBSOLETE_BUNDLED_FILES = (
+	"data/fonts/霞鹜文楷/LXGWWenKai-Regular.ttf",
+	"data/fonts/Phosphor/Phosphor-Duotone.ttf",
+	"data/qmclient/icons/qm_icons_duotone_msdf.json",
+	"data/qmclient/icons/qm_icons_duotone_msdf.png",
+)
 
 
 def run_process(arguments: list[str]) -> None:
@@ -56,9 +62,10 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 				old_path = install / relative
 				if old_path.is_file():
 					old_path.write_bytes(b"old payload file to replace")
-			old_font = install / "data/fonts/霞鹜文楷/LXGWWenKai-Regular.ttf"
-			old_font.parent.mkdir(parents=True, exist_ok=True)
-			old_font.write_bytes(b"obsolete bundled font")
+			for relative in OBSOLETE_BUNDLED_FILES:
+				old_resource = install / relative
+				old_resource.parent.mkdir(parents=True, exist_ok=True)
+				old_resource.write_bytes(b"obsolete bundled resource")
 			(install / "user-owned.txt").write_bytes(b"preserve this file")
 			old_asset = install / "data/qmclient/gui_logo.png"
 			old_asset.write_bytes(b"old asset to replace")
@@ -69,8 +76,9 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 			raise AssertionError(f"upgrade did not install {relative}")
 		if file_digest(installed_path) != expected_digest:
 			raise AssertionError(f"upgrade did not replace {relative}")
-	if (install / "data/fonts/霞鹜文楷/LXGWWenKai-Regular.ttf").exists():
-		raise AssertionError("obsolete bundled font survived Setup upgrade")
+	for relative in OBSOLETE_BUNDLED_FILES:
+		if (install / relative).exists():
+			raise AssertionError(f"obsolete bundled resource survived Setup upgrade: {relative}")
 	if (install / "user-owned.txt").read_bytes() != b"preserve this file":
 		raise AssertionError("upgrade changed a user-owned file")
 	run_process([str(install / "unins000.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", f"/LOG={workspace / 'uninstall.log'}"])

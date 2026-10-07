@@ -465,6 +465,7 @@ protected:
 	bool m_UseTextEffects = false;
 	bool m_ReuseTextContainer = false;
 	virtual ColorRGBA GetRenderTextColor() const { return m_Color; }
+	virtual ColorRGBA GetRenderOutlineColor(const ColorRGBA &) const { return s_OutlineColor; }
 	virtual float ExtraVerticalPadding() const { return 0.0f; }
 
 	CNamePlatePartText(CGameClient &This) :
@@ -581,7 +582,9 @@ public:
 		if(!m_TextContainerIndex.Valid())
 			return;
 
-		This.RenderTools()->RenderTextContainerWithEffects(m_TextContainerIndex, BuildQmNameplateTextStyle(This, GetRenderTextColor(), m_UseTextEffects), Pos.x - m_RenderSize.x / 2.0f, Pos.y - m_RenderSize.y / 2.0f);
+		SQmTextEffectRenderStyle Style = BuildQmNameplateTextStyle(This, GetRenderTextColor(), m_UseTextEffects);
+		Style.m_OutlineColor = GetRenderOutlineColor(Style.m_TextColor);
+		This.RenderTools()->RenderTextContainerWithEffects(m_TextContainerIndex, Style, Pos.x - m_RenderSize.x / 2.0f, Pos.y - m_RenderSize.y / 2.0f);
 	}
 };
 
@@ -1403,6 +1406,9 @@ private:
 	float m_FontSize = -INFINITY;
 
 protected:
+	ColorRGBA GetRenderTextColor() const override { return ConfiguredQmUiIconColor(m_Color); }
+	// 名牌特效渲染器会统一乘本体 alpha，这里描边保持不透明以免重复相乘。
+	ColorRGBA GetRenderOutlineColor(const ColorRGBA &TextColor) const override { return ConfiguredQmUiIconContrastColor(TextColor).WithAlpha(1.0f); }
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = (Data.m_InGame && This.Client()->State() != IClient::STATE_DEMOPLAYBACK && (This.m_aClients[Data.m_ClientId].m_Foe || This.m_aClients[Data.m_ClientId].m_ChatIgnore));
