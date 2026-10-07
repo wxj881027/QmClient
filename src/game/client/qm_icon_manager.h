@@ -13,6 +13,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/QmUi/QmTheme.h>
+#include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -271,12 +272,16 @@ inline ColorRGBA ConfiguredQmUiIconColor(const ColorRGBA &Color)
 	return QmUiIconColor(Color, Preset, g_Config.m_QmUiIconCustomColor, CQmIconFrameColorClock::Time());
 }
 
-// 彩虹本体连续变化时保持深色描边，避免跨亮度阈值时黑白描边闪变。
+// 字体回退、图集和 morph 共用实际背景保护策略。
 inline ColorRGBA ConfiguredQmUiIconContrastColor(const ColorRGBA &Primary)
 {
-	if(!CQmIconSemanticColorScope::Active() && g_Config.m_QmUiIconColor == 4 && !qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled))
-		return ColorRGBA(0.0f, 0.0f, 0.0f, Primary.a);
-	return QmUiIconContrastColor(Primary);
+	if(CUiScopedSurfaceText::HasKnownSurface())
+		return QmUiIconSurfaceProtection(Primary, CUiScopedSurfaceText::CurrentSurface());
+	// 地图像素未知时保留弱保护，不能把默认深色背板当作真实背景。
+	// 彩虹固定深色保护，不随本体亮度越界而黑白闪变。
+	const bool Rainbow = !CQmIconSemanticColorScope::Active() && g_Config.m_QmUiIconColor == 4 && !qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled);
+	const ColorRGBA Protection = Rainbow ? ColorRGBA(0, 0, 0, Primary.a) : QmUiIconContrastColor(Primary);
+	return Protection.WithMultipliedAlpha(0.35f);
 }
 
 struct SQmIconStyle

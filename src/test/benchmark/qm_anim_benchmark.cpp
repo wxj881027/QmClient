@@ -438,7 +438,7 @@ static void BM_IconLabelRuns(benchmark::State &State)
 }
 BENCHMARK(BM_IconLabelRuns)->Arg(0)->Arg(1)->Arg(2);
 
-// 单次解析图标最终本体与对比描边，包含配置读取、自定义开关及彩虹帧内采样。
+// 单次解析本体与保护色，分别测量已知 UI 背景和未知地图背景；准备与恢复不计时。
 static void BM_IconColorResolve(benchmark::State &State)
 {
 	const double OriginalTime = CQmIconFrameColorClock::Time();
@@ -449,11 +449,12 @@ static void BM_IconColorResolve(benchmark::State &State)
 	g_Config.m_QmUiIconColor = static_cast<int>(State.range(0));
 	g_Config.m_QmUiIconCustomColorEnabled = static_cast<int>(State.range(1));
 	g_Config.m_QmUiIconCustomColor = ColorHSLA(0.37f, 0.8f, 0.45f).Pack(false);
+	CUiScopedSurfaceText Surface(nullptr, ColorRGBA(0.8f, 0.8f, 0.8f, 1.0f), State.range(2) != 0);
 	ColorRGBA Input(1.0f, 0.85f, 0.3f, 0.65f);
 	const ColorRGBA Preflight = ConfiguredQmUiIconColor(Input);
 	const ColorRGBA OutlinePreflight = ConfiguredQmUiIconContrastColor(Preflight);
-	if(!std::isfinite(Preflight.r) || !std::isfinite(Preflight.g) || !std::isfinite(Preflight.b) || Preflight.a != Input.a || !std::isfinite(OutlinePreflight.r) || OutlinePreflight.a != Input.a)
-		State.SkipWithError("icon color must be finite and preserve state alpha");
+	if(!std::isfinite(Preflight.r) || !std::isfinite(Preflight.g) || !std::isfinite(Preflight.b) || Preflight.a != Input.a || !std::isfinite(OutlinePreflight.r) || !std::isfinite(OutlinePreflight.g) || !std::isfinite(OutlinePreflight.b) || !std::isfinite(OutlinePreflight.a) || OutlinePreflight.a < 0.0f || OutlinePreflight.a > Input.a * 0.35f)
+		State.SkipWithError("icon color must preserve state alpha and bounded finite surface protection");
 	for(auto _ : State)
 	{
 		benchmark::DoNotOptimize(Input);
@@ -468,4 +469,4 @@ static void BM_IconColorResolve(benchmark::State &State)
 	g_Config.m_QmUiIconCustomColor = OriginalCustom;
 	State.SetItemsProcessed(State.iterations());
 }
-BENCHMARK(BM_IconColorResolve)->Args({1, 0})->Args({2, 0})->Args({4, 0})->Args({1, 1})->Args({4, 1});
+BENCHMARK(BM_IconColorResolve)->Args({1, 0, 0})->Args({2, 0, 0})->Args({4, 0, 0})->Args({1, 1, 0})->Args({4, 1, 0})->Args({1, 0, 1})->Args({2, 0, 1})->Args({4, 0, 1})->Args({1, 1, 1})->Args({4, 1, 1});

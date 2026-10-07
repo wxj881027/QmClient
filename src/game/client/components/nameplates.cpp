@@ -1407,8 +1407,8 @@ private:
 
 protected:
 	ColorRGBA GetRenderTextColor() const override { return ConfiguredQmUiIconColor(m_Color); }
-	// 名牌特效渲染器会统一乘本体 alpha，这里描边保持不透明以免重复相乘。
-	ColorRGBA GetRenderOutlineColor(const ColorRGBA &TextColor) const override { return ConfiguredQmUiIconContrastColor(TextColor).WithAlpha(1.0f); }
+	// 名牌特效渲染器统一乘本体 alpha；这里仅返回相对保护强度，避免 alpha 平方。
+	ColorRGBA GetRenderOutlineColor(const ColorRGBA &TextColor) const override { return ConfiguredQmUiIconContrastColor(TextColor.WithAlpha(1.0f)); }
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = (Data.m_InGame && This.Client()->State() != IClient::STATE_DEMOPLAYBACK && (This.m_aClients[Data.m_ClientId].m_Foe || This.m_aClients[Data.m_ClientId].m_ChatIgnore));

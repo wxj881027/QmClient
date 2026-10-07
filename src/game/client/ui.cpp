@@ -7,6 +7,7 @@
 #include "QmUi/UiSurface.h"
 #include "QmUi/UiSurfaceText.h"
 #include "components/qmclient/perf_logging.h"
+#include "qm_icon_font_render.h"
 #include "qm_icon_label.h"
 #include "qm_icon_manager.h"
 #include "ui_scrollregion.h"
@@ -1350,20 +1351,13 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 	Cursor.m_vColorSplits = LabelProps.m_vColorSplits;
 	Cursor.m_LineWidth = (float)LabelProps.m_MaxWidth;
 	FlushQuadBatch();
-	const ColorRGBA OriginalColor = TextRender()->GetTextColor();
-	const ColorRGBA OriginalOutlineColor = TextRender()->GetTextOutlineColor();
 	if(Icons.m_Count > 0)
 	{
-		const ColorRGBA IconColor = ConfiguredQmUiIconColor(OriginalColor);
-		TextRender()->TextColor(IconColor);
-		TextRender()->TextOutlineColor(ConfiguredQmUiIconContrastColor(IconColor));
+		const ColorRGBA IconColor = ConfiguredQmUiIconColor(TextRender()->GetTextColor());
+		QmRenderImmediateFontIcon(*TextRender(), &Cursor, pText, -1, IconColor, ConfiguredQmUiIconContrastColor(IconColor));
 	}
-	TextRender()->TextEx(&Cursor, pText, -1);
-	if(Icons.m_Count > 0)
-	{
-		TextRender()->TextColor(OriginalColor);
-		TextRender()->TextOutlineColor(OriginalOutlineColor);
-	}
+	else
+		TextRender()->TextEx(&Cursor, pText, -1);
 	if(m_pQmIconManager != nullptr && Icons.m_Count > 0)
 		m_pQmIconManager->RecordFontFallback(Icons.m_Count);
 	return CLabelResult{.m_Truncated = Cursor.m_Truncated};

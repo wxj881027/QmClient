@@ -1,4 +1,5 @@
 // 图标策略直接验证生产接口；图集资源清单由独立合同验证。
+#include <game/client/qm_icon_font_render.h>
 #include <game/client/qm_icon_label.h>
 #include <game/client/qm_icon_label_runs.h>
 #include <game/client/qm_icon_manager.h>
@@ -512,7 +513,191 @@ TEST_F(CQmConfiguredIconColorTest, RainbowUsesOneFrameSampleAndStableOutline)
 	{
 		CQmIconFrameColorClock::BeginFrame(Frame / 144.0);
 		const ColorRGBA Outline = ConfiguredQmUiIconContrastColor(ConfiguredQmUiIconColor(ColorRGBA(1, 1, 1, 0.65f)));
-		EXPECT_EQ(Outline, ColorRGBA(0, 0, 0, 0.65f));
+		EXPECT_EQ(Outline, ColorRGBA(0, 0, 0, 0.65f * 0.35f));
 	}
 	CQmIconFrameColorClock::BeginFrame(OriginalTime);
+}
+
+TEST(QmIconSurfaceProtection, ReadableWhiteAndBlackNeedNoExtraContour)
+{
+	EXPECT_FLOAT_EQ(QmUiIconSurfaceProtection(ColorRGBA(1, 1, 1, 1), ColorRGBA(0.1f, 0.1f, 0.1f, 1)).a, 0.0f);
+	EXPECT_FLOAT_EQ(QmUiIconSurfaceProtection(ColorRGBA(0, 0, 0, 1), ColorRGBA(0.8f, 0.8f, 0.8f, 1)).a, 0.0f);
+}
+
+TEST(QmIconSurfaceProtection, MatchingSurfaceUsesWeakProtectionAndPreservesStateAlpha)
+{
+	const ColorRGBA Surface(0.8f, 0.8f, 0.8f, 1);
+	const ColorRGBA Protection = QmUiIconSurfaceProtection(Surface, Surface);
+	EXPECT_EQ(Protection, ColorRGBA(0, 0, 0, 0.35f));
+	const ColorRGBA Disabled = QmUiIconSurfaceProtection(Surface.WithAlpha(0.25f), Surface);
+	EXPECT_FLOAT_EQ(Disabled.a, Protection.a * 0.25f);
+	EXPECT_FLOAT_EQ(QmUiIconSurfaceProtection(Surface.WithAlpha(0), Surface).a, 0);
+}
+
+TEST(QmIconSurfaceProtection, RainbowKeepsOutlineRgbAndChangesProtectionContinuously)
+{
+	for(const ColorRGBA Surface : {ColorRGBA(0.1f, 0.1f, 0.1f, 1), ColorRGBA(0.8f, 0.8f, 0.8f, 1)})
+	{
+		ColorRGBA Previous = QmUiIconSurfaceProtection(QmUiIconColor(ColorRGBA(1, 1, 1, 1), 4, 0, 0), Surface);
+		for(int Frame = 1; Frame <= 720; ++Frame)
+		{
+			const ColorRGBA Current = QmUiIconSurfaceProtection(QmUiIconColor(ColorRGBA(1, 1, 1, 1), 4, 0, Frame / 144.0), Surface);
+			EXPECT_FLOAT_EQ(Current.r, Previous.r);
+			EXPECT_FLOAT_EQ(Current.g, Previous.g);
+			EXPECT_FLOAT_EQ(Current.b, Previous.b);
+			EXPECT_LT(std::abs(Current.a - Previous.a), 0.025f);
+			Previous = Current;
+		}
+	}
+}
+
+TEST(QmIconSurfaceProtection, NestedSurfaceScopeRestoresParentProtection)
+{
+	const ColorRGBA Original = CUiScopedSurfaceText::CurrentSurface();
+	{
+		CUiScopedSurfaceText Parent(nullptr, ColorRGBA(0.1f, 0.1f, 0.1f, 1));
+		EXPECT_FLOAT_EQ(ConfiguredQmUiIconContrastColor(ColorRGBA(1, 1, 1, 1)).a, 0);
+		{
+			CUiScopedSurfaceText Child(nullptr, ColorRGBA(1, 1, 1, 1));
+			EXPECT_GT(ConfiguredQmUiIconContrastColor(ColorRGBA(1, 1, 1, 1)).a, 0);
+		}
+		EXPECT_FLOAT_EQ(ConfiguredQmUiIconContrastColor(ColorRGBA(1, 1, 1, 1)).a, 0);
+	}
+	EXPECT_EQ(CUiScopedSurfaceText::CurrentSurface(), Original);
+}
+
+TEST(QmIconSurfaceProtection, UnknownWorldBackgroundKeepsWeakProtectionAcrossNestedScopes)
+{
+	ASSERT_FALSE(CUiScopedSurfaceText::HasKnownSurface());
+	const ColorRGBA Primary(1, 1, 1, 0.5f);
+	const ColorRGBA Unknown = ConfiguredQmUiIconContrastColor(Primary);
+	EXPECT_EQ(Unknown, ColorRGBA(0, 0, 0, 0.175f));
+	{
+		CUiScopedSurfaceText Transparent(nullptr, ColorRGBA(0, 0, 0, 0));
+		EXPECT_FALSE(CUiScopedSurfaceText::HasKnownSurface());
+		EXPECT_EQ(ConfiguredQmUiIconContrastColor(Primary), Unknown);
+		{
+			CUiScopedSurfaceText Translucent(nullptr, ColorRGBA(0, 0, 0, 0.5f));
+			EXPECT_FALSE(CUiScopedSurfaceText::HasKnownSurface());
+			EXPECT_EQ(ConfiguredQmUiIconContrastColor(Primary), Unknown);
+		}
+		{
+			CUiScopedSurfaceText Known(nullptr, ColorRGBA(0.1f, 0.1f, 0.1f, 1));
+			EXPECT_TRUE(CUiScopedSurfaceText::HasKnownSurface());
+			EXPECT_FLOAT_EQ(ConfiguredQmUiIconContrastColor(Primary).a, 0);
+			{
+				CUiScopedSurfaceText Disabled(nullptr, ColorRGBA(1, 1, 1, 1), false);
+				EXPECT_TRUE(CUiScopedSurfaceText::HasKnownSurface());
+				EXPECT_FLOAT_EQ(ConfiguredQmUiIconContrastColor(Primary).a, 0);
+			}
+		}
+		EXPECT_FALSE(CUiScopedSurfaceText::HasKnownSurface());
+		EXPECT_EQ(ConfiguredQmUiIconContrastColor(Primary), Unknown);
+	}
+	EXPECT_FALSE(CUiScopedSurfaceText::HasKnownSurface());
+	EXPECT_EQ(ConfiguredQmUiIconContrastColor(Primary), Unknown);
+}
+
+namespace
+{
+	struct SFontIconRenderObserver
+	{
+		ColorRGBA m_Color{0.2f, 0.3f, 0.4f, 0.5f};
+		ColorRGBA m_Outline{0.7f, 0.6f, 0.5f, 0.4f};
+		unsigned m_Flags = TEXT_RENDER_FLAG_NO_X_BEARING;
+		ColorRGBA m_BuildColor;
+		ColorRGBA m_DrawnColor;
+		ColorRGBA m_DrawnProtection;
+		int m_Draws = 0;
+		int m_Deletes = 0;
+		bool m_CreateValid = true;
+		ColorRGBA GetTextColor() const { return m_Color; }
+		ColorRGBA GetTextOutlineColor() const { return m_Outline; }
+		unsigned GetRenderFlags() const { return m_Flags; }
+		void TextColor(ColorRGBA Color) { m_Color = Color; }
+		void TextOutlineColor(ColorRGBA Color) { m_Outline = Color; }
+		void SetRenderFlags(unsigned Flags) { m_Flags = Flags; }
+		void CreateTextContainer(STextContainerIndex &Container, CTextCursor *pCursor, const char *, int)
+		{
+			m_BuildColor = m_Color;
+			EXPECT_TRUE(pCursor->m_vColorSplits.empty());
+			EXPECT_NE(m_Flags & TEXT_RENDER_FLAG_ONE_TIME_USE, 0u);
+			pCursor->m_X += 7.0f;
+			if(m_CreateValid)
+				Container.m_Index = 0;
+		}
+		void RenderTextContainer(STextContainerIndex, ColorRGBA Color, ColorRGBA Protection)
+		{
+			++m_Draws;
+			m_DrawnColor = Color;
+			m_DrawnProtection = Protection;
+		}
+		void DeleteTextContainer(STextContainerIndex &Container)
+		{
+			++m_Deletes;
+			Container.Reset();
+		}
+	};
+}
+
+TEST(QmIconImmediateFont, WhiteVerticesPreserveActualProtectionAlphaAndRestoreCallerState)
+{
+	SFontIconRenderObserver Render;
+	const ColorRGBA PreviousColor = Render.m_Color;
+	const ColorRGBA PreviousOutline = Render.m_Outline;
+	const unsigned PreviousFlags = Render.m_Flags;
+	const ColorRGBA Primary(0.9f, 0.8f, 0.2f, 0.25f);
+	const ColorRGBA Protection(0, 0, 0, 0.0875f);
+	CTextCursor Cursor;
+	Cursor.m_Flags = TEXTFLAG_RENDER;
+	Cursor.m_X = 10;
+	Cursor.m_vColorSplits.emplace_back(0, 1, ColorRGBA(0.2f, 0.4f, 0.8f, 0.3f), ColorRGBA(0.8f, 0.4f, 0.2f, 0.7f));
+	const auto SavedSplit = Cursor.m_vColorSplits.front();
+	QmRenderImmediateFontIcon(Render, &Cursor, "icon", -1, Primary, Protection);
+	EXPECT_EQ(Render.m_BuildColor, ColorRGBA(1, 1, 1, 1));
+	EXPECT_EQ(Render.m_DrawnColor, Primary);
+	EXPECT_EQ(Render.m_DrawnProtection, Protection);
+	EXPECT_EQ(Render.m_Color, PreviousColor);
+	EXPECT_EQ(Render.m_Outline, PreviousOutline);
+	EXPECT_EQ(Render.m_Flags, PreviousFlags);
+	EXPECT_FLOAT_EQ(Cursor.m_X, 17);
+	ASSERT_EQ(Cursor.m_vColorSplits.size(), 1u);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_CharIndex, SavedSplit.m_CharIndex);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_Length, SavedSplit.m_Length);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_Color, SavedSplit.m_Color);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_ColorEnd, SavedSplit.m_ColorEnd);
+	EXPECT_EQ(Render.m_Draws, 1);
+	EXPECT_EQ(Render.m_Deletes, 1);
+}
+
+TEST(QmIconImmediateFont, LayoutOnlyPreservesStateWithoutDrawingAndReleasesContainer)
+{
+	SFontIconRenderObserver Render;
+	Render.m_CreateValid = true;
+	const ColorRGBA Previous = Render.m_Color;
+	CTextCursor Cursor;
+	Cursor.m_Flags = 0;
+	Cursor.m_vColorSplits.emplace_back(0, 1, Previous);
+	QmRenderImmediateFontIcon(Render, &Cursor, "icon", -1, ColorRGBA(1, 1, 1, 1), ColorRGBA(0, 0, 0, 0));
+	EXPECT_EQ(Render.m_Draws, 0);
+	EXPECT_EQ(Render.m_Deletes, 1);
+	EXPECT_EQ(Render.m_Color, Previous);
+	ASSERT_EQ(Cursor.m_vColorSplits.size(), 1u);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_Color, Previous);
+}
+
+TEST(QmIconImmediateFont, FailedCreationPreservesStateWithoutDrawingAndReleasesContainer)
+{
+	SFontIconRenderObserver Render;
+	Render.m_CreateValid = false;
+	const ColorRGBA Previous = Render.m_Color;
+	CTextCursor Cursor;
+	Cursor.m_Flags = TEXTFLAG_RENDER;
+	Cursor.m_vColorSplits.emplace_back(0, 1, Previous);
+	QmRenderImmediateFontIcon(Render, &Cursor, "icon", -1, ColorRGBA(1, 1, 1, 1), ColorRGBA(0, 0, 0, 0));
+	EXPECT_EQ(Render.m_Draws, 0);
+	EXPECT_EQ(Render.m_Deletes, 1);
+	EXPECT_EQ(Render.m_Color, Previous);
+	ASSERT_EQ(Cursor.m_vColorSplits.size(), 1u);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_Color, Previous);
 }

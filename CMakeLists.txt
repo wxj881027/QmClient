@@ -1105,8 +1105,11 @@ else()
   if(MPRIS)
     find_package(DBus)
   endif()
-  set(PLATFORM_CLIENT_LIBS ${OPENGL_gl_LIBRARY} ${NOTIFY_LIBRARIES} ${DBUS_LIBRARIES})
-  set(PLATFORM_CLIENT_INCLUDE_DIRS ${OPENGL_INCLUDE_DIR} ${NOTIFY_INCLUDE_DIRS} ${DBUS_INCLUDE_DIRS})
+  set(PLATFORM_CLIENT_LIBS ${OPENGL_gl_LIBRARY} ${NOTIFY_LIBRARIES})
+  set(PLATFORM_CLIENT_INCLUDE_DIRS ${OPENGL_INCLUDE_DIR} ${NOTIFY_INCLUDE_DIRS})
+  if(MPRIS AND DBus_FOUND)
+    list(APPEND PLATFORM_CLIENT_LIBS PkgConfig::DBUS)
+  endif()
   set(PLATFORM_CLIENT)
   if(TARGET_OS STREQUAL "linux")
     set(PLATFORM_LIBS)
@@ -3611,6 +3614,7 @@ if(CLIENT)
     components/system_media_controls.cpp
     components/system_media_controls.h
     components/system_media_controls_timeline.h
+    components/system_media_controls_mpris_policy.h
     components/tclient/background_particles.cpp
     components/tclient/background_particles.h
     components/tclient/bg_draw.cpp
@@ -3697,6 +3701,7 @@ if(CLIENT)
     qm_icon_manager.cpp
     qm_icon_manager.h
     qm_icon_color_policy.h
+    qm_icon_font_render.h
     qm_icon_label.h
     qm_icon_label_runs.h
     qm_icon_registry.inc
@@ -3939,7 +3944,7 @@ if(CLIENT)
     target_link_libraries(game-client-common INTERFACE "-framework Metal" "-framework QuartzCore")
   endif()
   # Linux/BSD 用 MPRIS 替代 Windows 的 SMTC；找不到 libdbus-1 时自动退化为无媒体集成。
-  if(DBus_FOUND)
+  if(MPRIS AND DBus_FOUND)
     target_compile_definitions(game-client-common INTERFACE CONF_MPRIS)
   endif()
 
@@ -4619,6 +4624,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_media_island_motion_test.cpp
     src/test/unit/qmclient/client/qm_media_island_track_state_test.cpp
     src/test/unit/qmclient/client/qm_media_volume_test.cpp
+    src/test/unit/qmclient/client/qm_mpris_policy_test.cpp
     src/test/unit/qmclient/client/qm_media_island_layout_test.cpp
     src/test/contract/qmclient/client/qm_hud_media_island_contract_test.cpp
     src/test/unit/qmclient/client/qm_hud_frozen_tee_state_test.cpp

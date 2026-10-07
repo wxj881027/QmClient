@@ -31,6 +31,7 @@
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
+#include <game/client/qm_icon_font_render.h>
 #include <game/client/qm_icon_manager.h>
 #include <game/layers.h>
 #include <game/localization.h>
@@ -4852,17 +4853,15 @@ void CHud::RenderMediaIsland()
 			if(Alpha <= 0.001f)
 				return;
 			const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
-			const ColorRGBA PreviousColor = TextRender()->GetTextColor();
-			const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
 			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 			const float GlyphSize = Rect.h;
 			const float GlyphWidth = TextRender()->TextWidth(GlyphSize, pGlyph);
 			const ColorRGBA IconColor = ConfiguredQmUiIconColor(ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * Alpha));
-			TextRender()->TextColor(IconColor);
-			TextRender()->TextOutlineColor(ConfiguredQmUiIconContrastColor(IconColor));
-			TextRender()->Text(Rect.x + (Rect.w - GlyphWidth) * 0.5f, Rect.y, GlyphSize, pGlyph, -1.0f);
-			TextRender()->TextColor(PreviousColor);
-			TextRender()->TextOutlineColor(PreviousOutlineColor);
+			CTextCursor Cursor;
+			Cursor.SetPosition(vec2(Rect.x + (Rect.w - GlyphWidth) * 0.5f, Rect.y));
+			Cursor.m_FontSize = GlyphSize;
+			Cursor.m_LineWidth = -1.0f;
+			QmRenderImmediateFontIcon(*TextRender(), &Cursor, pGlyph, -1, IconColor, ConfiguredQmUiIconContrastColor(IconColor));
 			TextRender()->SetFontPreset(PreviousPreset);
 		};
 		{

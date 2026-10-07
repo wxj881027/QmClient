@@ -484,7 +484,8 @@ bool CQmIconManager::RenderAtlasEntry(const CQmIconAtlas::SEntry &Entry, const C
 	IGraphics::STexturedMsdfParams OutlineParams = Params;
 	OutlineParams.m_Color = ConfiguredQmUiIconContrastColor(Params.m_Color);
 	OutlineParams.m_OutlineWidthPx = 0.85f;
-	m_pGraphics->RenderTexturedMsdf(OutlineParams);
+	if(OutlineParams.m_Color.a > 0.001f)
+		m_pGraphics->RenderTexturedMsdf(OutlineParams);
 	m_pGraphics->RenderTexturedMsdf(Params);
 	return true;
 }
