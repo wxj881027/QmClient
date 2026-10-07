@@ -8,7 +8,7 @@
 
 ## 本地机器偏好
 
-机器路径、集成分支、固定槽位与资源预算配置在 Git 忽略的 `machine.local.json`；从 [machine.example.json](machine.example.json) 复制后按机器修改。配置发现、校验、继承与授权边界由根 `AGENTS.md` 维护；配置不是自动执行脚本，不保存凭据。
+机器路径、集成分支、固定槽位与资源预算配置在 Git 忽略的 `machine.local.json`；从 [machine.example.json](machine.example.json) 复制后按机器修改。会话启动、配置发现、校验、继承与授权边界由根 `AGENTS.md` 维护；本地槽位交接状态保存在主工作树的 `worktree-state.local.json`，新会话按根规则核对后使用；配置不是自动执行脚本，不保存凭据。
 
 ## 维护原则
 
