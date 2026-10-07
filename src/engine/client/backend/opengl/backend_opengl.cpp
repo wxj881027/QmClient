@@ -337,7 +337,7 @@ bool CCommandProcessorFragment_OpenGL::GetPresentedImageData(uint32_t &Width, ui
 bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 {
 	m_pBackendCapabilities = pCommand->m_pCapabilities;
-	m_pBackendCapabilities->m_TexturedMsdf.store(false, std::memory_order_release);
+	m_pBackendCapabilities->m_ProceduralRing.store(false, std::memory_order_release);
 	m_IsOpenGLES = pCommand->m_RequestedBackend == BACKEND_TYPE_OPENGL_ES;
 
 	*pCommand->m_pReadPresentedImageDataFunc = [this](uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData) {
@@ -1190,8 +1190,8 @@ ERunCommandReturnTypes CCommandProcessorFragment_OpenGL::RunCommand(const CComma
 	case CCommandBuffer::CMD_RENDER_ROUNDED_RECT_SDF:
 		Cmd_RenderRoundedRectSdf(static_cast<const CCommandBuffer::SCommand_RenderRoundedRectSdf *>(pBaseCommand));
 		break;
-	case CCommandBuffer::CMD_RENDER_TEXTURED_MSDF:
-		Cmd_RenderTexturedMsdf(static_cast<const CCommandBuffer::SCommand_RenderTexturedMsdf *>(pBaseCommand));
+	case CCommandBuffer::CMD_RENDER_PROCEDURAL_RING:
+		Cmd_RenderProceduralRing(static_cast<const CCommandBuffer::SCommand_RenderProceduralRing *>(pBaseCommand));
 		break;
 	case CCommandBuffer::CMD_RENDER_TEX3D:
 		Cmd_RenderTex3D(static_cast<const CCommandBuffer::SCommand_RenderTex3D *>(pBaseCommand));

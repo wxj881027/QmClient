@@ -13490,9 +13490,6 @@ Use large emote
 Use mouse sensitivity when dynamic camera is on
 == Dinamik kamera açıkken fare hassasiyetini kullan
 
-Use MSDF icon pipeline when enhanced rendering is active
-== Gelişmiş işleme etkin olduğunda MSDF simge işlem hattını kullan
-
 Use multi-char replacement based on word length
 == Kelime uzunluğuna göre çok karakterli değiştirme kullan
 
@@ -13525,6 +13522,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == Daha doğru girdi tahmini için diğer oyuncuları tahmin etmek üzere ön girdi kullan
+
+Use procedural ring pipeline when enhanced rendering is active
+== Gelişmiş işleme etkin olduğunda prosedürel halka işlem hattını kullan
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == Gelişmiş işleme etkin olduğunda Dynamic Island ve yuvarlatılmış dikdörtgenler için SDF işlem hatlarını kullan

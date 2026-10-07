@@ -13,6 +13,29 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OBSOLETE_BUNDLED_FILES = (
+	"data/audio/qm_festive_haoyunlai.mp3",
+	"data/qmclient/icons/qm_icons_regular_msdf.json",
+	"data/qmclient/icons/qm_icons_regular_msdf.png",
+	"data/qmclient/icons/qm_icons_bold_msdf.json",
+	"data/qmclient/icons/qm_icons_bold_msdf.png",
+	"data/qmclient/icons/qm_icons_light_msdf.json",
+	"data/qmclient/icons/qm_icons_light_msdf.png",
+	"data/qmclient/icons/qm_icons_fill_msdf.json",
+	"data/qmclient/icons/qm_icons_fill_msdf.png",
+	"data/themes/auto.png",
+	"data/themes/autumn.png",
+	"data/themes/heavens.png",
+	"data/themes/jungle.png",
+	"data/themes/newyear.png",
+	"data/themes/none.png",
+	"data/themes/rand.png",
+	"data/themes/winter.png",
+	"data/shader/textured_msdf.frag",
+	"data/shader/textured_msdf.vert",
+	"data/shader/vulkan/textured_msdf.frag",
+	"data/shader/vulkan/textured_msdf.vert",
+	"data/shader/vulkan/textured_msdf.frag.spv",
+	"data/shader/vulkan/textured_msdf.vert.spv",
 	"data/fonts/霞鹜文楷/LXGWWenKai-Regular.ttf",
 	"data/fonts/Phosphor/Phosphor-Duotone.ttf",
 	"data/qmclient/icons/qm_icons_duotone_msdf.json",
@@ -46,8 +69,8 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 		"qm-music-helper.exe",
 		"qm-nmt-hook64.dll",
 		"qm-nmt-bootstrap.dll",
-		"data/shader/vulkan/textured_msdf.vert.spv",
-		"data/shader/vulkan/textured_msdf.frag.spv",
+		"data/shader/vulkan/procedural_ring.vert.spv",
+		"data/shader/vulkan/procedural_ring.frag.spv",
 	):
 		if required not in payload_hashes:
 			raise AssertionError(f"Setup payload is missing required runtime file: {required}")

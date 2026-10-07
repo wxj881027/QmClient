@@ -185,7 +185,7 @@ public:
 
 		CMD_RENDER_MEDIA_ISLAND_SDF,
 		CMD_RENDER_ROUNDED_RECT_SDF,
-		CMD_RENDER_TEXTURED_MSDF,
+		CMD_RENDER_PROCEDURAL_RING,
 
 		CMD_COUNT,
 	};
@@ -271,13 +271,12 @@ public:
 		SVertex *m_pVertices = nullptr;
 	};
 
-	struct SCommand_RenderTexturedMsdf : public SCommand
+	struct SCommand_RenderProceduralRing : public SCommand
 	{
-		SCommand_RenderTexturedMsdf() :
-			SCommand(CMD_RENDER_TEXTURED_MSDF) {}
+		SCommand_RenderProceduralRing() :
+			SCommand(CMD_RENDER_PROCEDURAL_RING) {}
 		SState m_State;
-		vec4 m_MsdfParams{};
-		vec4 m_MsdfSecondaryColor{1.0f, 1.0f, 1.0f, 1.0f};
+		vec4 m_RingParams{};
 		EPrimitiveType m_PrimType = EPrimitiveType::QUADS;
 		unsigned m_PrimCount = 1;
 		SVertex *m_pVertices = nullptr;
@@ -927,7 +926,7 @@ public:
 	virtual bool IsConfigModernAPI() { return false; }
 	virtual bool HasMediaIslandSdf() { return false; }
 	virtual bool HasRoundedRectSdf() { return false; }
-	virtual bool HasTexturedMsdf() { return false; }
+	virtual bool HasProceduralRing() { return false; }
 	virtual bool UseTrianglesAsQuad() { return false; }
 	virtual bool HasTileBuffering() { return false; }
 	virtual bool HasQuadBuffering() { return false; }
@@ -1029,8 +1028,8 @@ class CGraphics_Threaded : public IEngineGraphics
 	double m_MacosGraphicsDiagnosticSubmitMsSum = 0.0;
 	double m_MacosFrameSerializationWaitMsSum = 0.0;
 	uint64_t m_MacosFrameSerializationWaitCount = 0;
-	uint64_t m_MsdfCommandCount = 0;
-	uint64_t m_MsdfFlushCount = 0;
+	uint64_t m_RingCommandCount = 0;
+	uint64_t m_RingFlushCount = 0;
 	uint64_t m_RoundedRectSdfCommandCount = 0;
 	uint64_t m_RoundedRectSdfFlushCount = 0;
 	uint64_t m_BufferedTextCommandCount = 0;
@@ -1520,7 +1519,7 @@ public:
 	void RenderMediaIslandSdf(const IGraphics::SMediaIslandSdfParams &Params, CRenderTargetHandle Backdrop = CRenderTargetHandle()) override;
 	void RenderRoundedRectSdf(const IGraphics::SRoundedRectSdfParams &Params) override;
 	void DrawRoundedRectAntialias(float x, float y, float w, float h, float Radius, int Corners, const ColorRGBA &Color) override;
-	void RenderTexturedMsdf(const IGraphics::STexturedMsdfParams &Params) override;
+	void RenderProceduralRing(const IGraphics::SProceduralRingParams &Params) override;
 
 	// modern GL functions
 	int CreateBufferObject(size_t UploadDataSize, void *pUploadData, int CreateFlags, bool IsMovedPointer = false) override;
@@ -1605,7 +1604,7 @@ public:
 	bool IsConfigModernAPI() override { return m_pBackend->IsConfigModernAPI(); }
 	bool HasMediaIslandSdf() override { return m_pBackend->HasMediaIslandSdf(); }
 	bool HasRoundedRectSdf() override { return m_pBackend->HasRoundedRectSdf(); }
-	bool HasTexturedMsdf() override { return m_pBackend->HasTexturedMsdf(); }
+	bool HasProceduralRing() override { return m_pBackend->HasProceduralRing(); }
 	bool IsTileBufferingEnabled() override { return m_GLTileBufferingEnabled; }
 	bool IsQuadBufferingEnabled() override { return m_GLQuadBufferingEnabled; }
 	bool IsTextBufferingEnabled() override { return m_GLTextBufferingEnabled; }

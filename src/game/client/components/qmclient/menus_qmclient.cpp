@@ -64,7 +64,7 @@
 #include <game/client/components/tclient/bindwheel.h>
 #include <game/client/components/tclient/trails.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/render.h>
 #include <game/client/skin.h>
 #include <game/client/ui.h>
@@ -4921,7 +4921,6 @@ void CMenus::RenderSettingsQmClientContent(CUIRect MainView, bool PrewarmOnly)
 		Ctx.m_pTooltips = &GameClient()->m_Tooltips;
 		Ctx.m_pAnim = PrewarmOnly ? nullptr : &GameClient()->UiRuntimeV2()->AnimRuntime();
 		Ctx.m_pTree = PrewarmOnly ? nullptr : &GameClient()->UiRuntimeV2()->Tree();
-		Ctx.m_pIconManager = GameClient()->QmIconManager();
 		Ctx.m_ScopeHash = MakeUiScopeHash("qm_ui_dogfood");
 		Ctx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
 		RenderQmUiDogfood(Ctx, MainView);

@@ -14,7 +14,7 @@
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/bind_editor.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/localization.h>
 
 #include <algorithm>

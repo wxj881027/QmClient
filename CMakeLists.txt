@@ -196,7 +196,6 @@ endif()
 if(QMCLIENT_TEST_STORAGE AND NOT DEV)
   message(FATAL_ERROR "QMCLIENT_TEST_STORAGE is only allowed with DEV=ON; test builds cannot be packaged")
 endif()
-option(QM_BUILD_ICON_ATLAS "Build QmClient Phosphor MTSDF icon atlases from bundled fonts" OFF)
 
 if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
   add_subdirectory(vendor/minhook EXCLUDE_FROM_ALL)
@@ -1553,7 +1552,7 @@ set(EXPECTED_DATA
   audio/hook_noattach-02.wv
   audio/hook_noattach-03.wv
   audio/music_menu.wv
-  audio/qm_festive_haoyunlai.mp3
+  audio/crash_music/qm_festive_haoyunlai.opus
   audio/sfx_ctf_cap_pl.wv
   audio/sfx_ctf_drop.wv
   audio/sfx_ctf_grab_en.wv
@@ -2017,15 +2016,6 @@ set(EXPECTED_DATA
   languages/traditional_chinese.txt
   languages/turkish.txt
   languages/ukrainian.txt
-  qmclient/icons/README.md
-  qmclient/icons/qm_icons_bold_msdf.json
-  qmclient/icons/qm_icons_bold_msdf.png
-  qmclient/icons/qm_icons_fill_msdf.json
-  qmclient/icons/qm_icons_fill_msdf.png
-  qmclient/icons/qm_icons_light_msdf.json
-  qmclient/icons/qm_icons_light_msdf.png
-  qmclient/icons/qm_icons_regular_msdf.json
-  qmclient/icons/qm_icons_regular_msdf.png
   mapres/basic_freeze.png
   mapres/bg_cloud1.png
   mapres/bg_cloud2.png
@@ -2235,8 +2225,8 @@ set(EXPECTED_DATA
   shader/media_island_sdf.vert
   shader/rounded_rect_sdf.frag
   shader/rounded_rect_sdf.vert
-  shader/textured_msdf.frag
-  shader/textured_msdf.vert
+  shader/procedural_ring.frag
+  shader/procedural_ring.vert
   shader/pipeline.frag
   shader/pipeline.vert
   shader/prim.frag
@@ -2259,8 +2249,8 @@ set(EXPECTED_DATA
   shader/vulkan/media_island_sdf.vert
   shader/vulkan/rounded_rect_sdf.frag
   shader/vulkan/rounded_rect_sdf.vert
-  shader/vulkan/textured_msdf.frag
-  shader/vulkan/textured_msdf.vert
+  shader/vulkan/procedural_ring.frag
+  shader/vulkan/procedural_ring.vert
   shader/vulkan/prim.frag
   shader/vulkan/prim.vert
   shader/vulkan/prim3d.frag
@@ -2506,28 +2496,20 @@ set(EXPECTED_DATA
   skins7/x_ninja.json
   skins7/xmas_hat.png
   strong_weak.png
-  themes/auto.png
-  themes/autumn.png
   themes/autumn_day.map
   themes/autumn_night.map
-  themes/heavens.png
   themes/heavens_day.map
   themes/heavens_night.map
-  themes/jungle.png
   themes/jungle_day.map
   themes/jungle_night.map
   themes/newyear.map
-  themes/newyear.png
-  themes/none.png
-  themes/rand.png
-  themes/winter.png
   themes/winter_day.map
   themes/winter_night.map
   touch_controls.json
   wordlist.txt
 )
 
-set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;wv" data ${EXPECTED_DATA})
+set_glob(DATA GLOB_RECURSE "cfg;chai;frag;html;json;map;md;mp3;opus;otf;OTF;png;rules;sql;ttc;TTC;ttf;TTF;txt;vert;wv" data ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND SHARED LIBS
@@ -2657,24 +2639,6 @@ add_custom_target(generate_content_types
     src/generated/data_types.h
 )
 
-# 眼睛 morph 的采样几何数据：从随包 Phosphor-Bold.ttf 提取字形轮廓生成，
-# 被 src/game/client/qm_icon_morph.cpp 直接包含（见 qm_build_icon_morph.py）。
-set(QM_ICON_MORPH_GENERATED ${PROJECT_BINARY_DIR}/src/generated/qm_icon_morph_generated.inc)
-add_custom_command(OUTPUT ${QM_ICON_MORPH_GENERATED}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/src/generated
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_morph.py
-    --fonts-dir data/fonts/Phosphor
-    --codepoints datasrc/qm_icons/phosphor.codepoints
-    --output ${QM_ICON_MORPH_GENERATED}
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS
-    qmclient_scripts/qm_build_icon_morph.py
-    datasrc/qm_icons/phosphor.codepoints
-    data/fonts/Phosphor/Phosphor-Bold.ttf
-  COMMENT "Building QmClient eye path morph data"
-)
-add_custom_target(qm-icon-morph DEPENDS ${QM_ICON_MORPH_GENERATED})
 
 generate_source7("src/generated/protocol7.cpp" "network_source")
 generate_source7("src/generated/protocol7.h" "network_header")
@@ -2697,35 +2661,6 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
   DEPENDS
     scripts/wordlist.py
 )
-
-# 图标源是随包 Phosphor TTF（全量字形）+ 官方码点映射；精选 SVG 子集已移除。
-# msdfgen / msdf-atlas-gen 只用于资源制作。生成产物已提交，普通构建不依赖本机安装。
-set(QM_ICON_MSDF_STYLES light regular bold fill)
-add_custom_target(qm-icon-msdf-atlas
-  COMMAND ${Python3_EXECUTABLE}
-    qmclient_scripts/qm_build_icon_msdf_font.py
-    --tool cmake-build-official/bin/Release/msdf-atlas-gen.exe
-    --fonts-dir data/fonts/Phosphor
-    --codepoints datasrc/qm_icons/phosphor.codepoints
-    --output data/qmclient/icons
-    --styles ${QM_ICON_MSDF_STYLES}
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  DEPENDS
-    qmclient_scripts/qm_build_icon_msdf_font.py
-    qmclient_scripts/qm_icon_msdf_official.py
-    datasrc/qm_icons/phosphor.codepoints
-    data/fonts/Phosphor/Phosphor-Regular.ttf
-    data/fonts/Phosphor/Phosphor-Light.ttf
-    data/fonts/Phosphor/Phosphor-Bold.ttf
-    data/fonts/Phosphor/Phosphor-Fill.ttf
-  COMMENT "Building QmClient Phosphor MSDF icon atlases from bundled fonts"
-)
-
-if(QM_BUILD_ICON_ATLAS)
-  if(TARGET sync_runtime_data)
-    add_dependencies(sync_runtime_data qm-icon-msdf-atlas)
-  endif()
-endif()
 
 ########################################################################
 # SHARED
@@ -3068,7 +3003,6 @@ add_library(engine-shared EXCLUDE_FROM_ALL OBJECT ${ENGINE_EXTERNAL} ${ENGINE_IN
 add_library(game-shared EXCLUDE_FROM_ALL OBJECT ${GAME_SHARED} ${GAME_GENERATED_SHARED})
 add_dependencies(engine-shared generate_protocol)
 add_dependencies(game-shared generate_protocol)
-add_dependencies(game-shared qm-icon-morph)
 if(TARGET_OS STREQUAL "ios")
   add_dependencies(game-shared generate_content_types)
 endif()
@@ -3573,6 +3507,7 @@ if(CLIENT)
     components/qmclient/translate/translate_ui_settings.cpp
     components/qmclient/translate/translate_ui_settings.h
     components/qmclient/update_version.cpp
+    components/qmclient/font_download_storage.h
     components/qmclient/update_version.h
     components/qmclient/update_manifest.cpp
     components/qmclient/update_manifest.h
@@ -3698,15 +3633,13 @@ if(CLIENT)
     prediction/gameworld.h
     projectile_data.cpp
     projectile_data.h
-    qm_icon_manager.cpp
-    qm_icon_manager.h
+    qm_icon.h
+    qm_icon_prewarm.h
     qm_icon_color_policy.h
     qm_icon_font_render.h
     qm_icon_label.h
     qm_icon_label_runs.h
     qm_icon_registry.inc
-    qm_icon_morph.cpp
-    qm_icon_morph.h
     qm_ime_candidate_popup.cpp
     qm_ime_candidate_popup.h
     qm_ime_manager.cpp
@@ -4006,9 +3939,6 @@ if(CLIENT)
     )
   endif()
   add_dependencies(game-client generate_content_types)
-# qm_icon_morph.cpp（game-client）直接包含生成的 morph 数据，必须等生成目标完成：
-# 只挂在 game-shared 上无法保证干净构建时对象先于 .inc 编译。
-add_dependencies(game-client qm-icon-morph)
   if(TARGET qm-nmt-hook64)
     add_dependencies(game-client qm-nmt-hook64 qm-nmt-helper qm-nmt-bootstrap)
     add_custom_command(TARGET game-client POST_BUILD
@@ -4487,17 +4417,12 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/map_browser_filter_slider_test.cpp
     src/test/unit/qmclient/ui/QmAnimScrollTest.cpp
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
-    src/test/contract/qmclient/ui/qm_icon_atlas_contract_test.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
     src/test/unit/qmclient/ui/qm_font_icon_cmap_test.cpp
-    src/test/contract/qmclient/ui/qm_icon_shader_contract_test.cpp
-    src/test/unit/qmclient/client/qm_msdf_param_encoding_test.cpp
-    src/test/contract/qmclient/ui/qm_icon_loader_contract_test.cpp
     src/test/unit/qmclient/client/qm_render_pipeline_contract_test.cpp
     src/test/contract/qmclient/ui/qm_icon_glyph_contract_test.cpp
     src/test/contract/qmclient/client/qm_phosphor_resource_contract_test.cpp
-    src/test/contract/qmclient/ui/qm_icon_weight_contract_test.cpp
     src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
     src/test/unit/qmclient/ui/QmLayoutTest.cpp
     src/test/contract/qmclient/client/qm_afk_presentation_contract_test.cpp
@@ -4748,6 +4673,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qmclient_update_version_test.cpp
     src/test/unit/qmclient/client/qmclient_update_manifest_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
+    src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
@@ -5188,7 +5114,6 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_font_raster_benchmark.cpp
     src/test/benchmark/qm_icon_render_benchmark.cpp
     src/engine/client/text.cpp
-    src/game/client/qm_icon_manager.cpp
     src/test/benchmark/qm_steam_benchmark.cpp
     # Steam 客户端探测链（SteamFindClient 基准；依赖 steam_api 的链接桩）
     src/engine/client/steam.cpp

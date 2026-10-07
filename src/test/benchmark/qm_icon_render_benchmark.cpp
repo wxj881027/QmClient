@@ -1,4 +1,4 @@
-// 对照生产图集与生产字体缓存：设备调用只计数，不创建 GPU 命令或测 GPU。
+// 测量生产字体缓存与即时容器：设备调用只计数，不创建 GPU 命令或测 GPU。
 #include <base/system.h>
 
 #include <engine/console.h>
@@ -7,8 +7,9 @@
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
+#include <game/client/qm_icon.h>
 #include <game/client/qm_icon_font_render.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon_prewarm.h>
 
 #include <benchmark/benchmark.h>
 #include <test/support/icon_benchmark_graphics.h>
@@ -50,12 +51,11 @@ namespace
 
 	public:
 		CIconBenchmarkGraphics m_Graphics;
-		CQmIconManager m_Icons;
 		std::unique_ptr<IEngineTextRender> m_pText;
 		std::array<STextContainerIndex, NUM_ICONS> m_aContainers;
 		std::array<std::string, NUM_ICONS> m_aGlyphs;
 		bool m_Ready = false;
-		explicit CIconRenderFixture(bool Atlas) : m_pKernel(IKernel::Create()), m_pConsole(CreateConsole(CFGFLAG_CLIENT))
+		explicit CIconRenderFixture() : m_pKernel(IKernel::Create()), m_pConsole(CreateConsole(CFGFLAG_CLIENT))
 		{
 			g_Config.m_QmPerfDebug = g_Config.m_QmPerfLogfile = g_Config.m_QmPerfStutterDiagnostics = 0;
 			g_Config.m_QmUiIconWeight = 0;
@@ -78,22 +78,14 @@ namespace
 				char aGlyph[5] = {};
 				str_utf8_encode(aGlyph, ICONS[i].m_Codepoint);
 				m_aGlyphs[i] = aGlyph;
-				if(CQmIconManager::IconFromGlyph(aGlyph) != ICONS[i].m_Id)
+				if(CQmIconRegistry::IconFromGlyph(aGlyph) != ICONS[i].m_Id)
 					return;
 			}
-			if(Atlas)
-			{
-				m_Icons.Init(&m_Graphics, m_pStorage.get(), m_pConsole.get());
-				m_Ready = m_Icons.Reload();
-			}
-			else
-			{
-				m_pText.reset(CreateEngineTextRender());
-				m_pKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
-				m_pText->Init();
-				m_Ready = m_pText->LoadFonts();
-				m_pText->SetFontPreset(EFontPreset::ICON_FONT);
-			}
+			m_pText.reset(CreateEngineTextRender());
+			m_pKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
+			m_pText->Init();
+			m_Ready = m_pText->LoadFonts();
+			m_pText->SetFontPreset(EFontPreset::ICON_FONT);
 		}
 		~CIconRenderFixture()
 		{
@@ -104,7 +96,6 @@ namespace
 						m_pText->DeleteTextContainer(Container);
 				m_pText->Shutdown();
 			}
-			m_Icons.Shutdown();
 		}
 		void PrepareCached(int Size)
 		{
@@ -126,16 +117,7 @@ namespace
 			const ColorRGBA Outline = ConfiguredQmUiIconContrastColor(Fill);
 			for(int i = 0; i < NUM_ICONS; ++i)
 			{
-				if(Path == 0)
-				{
-					CUIRect Rect;
-					Rect.x = i * (Size + 4);
-					Rect.y = 0;
-					Rect.w = Rect.h = Size;
-					if(!m_Icons.RenderIcon(ICONS[i].m_Id, Rect, ColorRGBA(1, 1, 1, 1)))
-						throw std::logic_error("atlas did not draw benchmark icon");
-				}
-				else if(Path == 1)
+				if(Path == 1)
 					m_pText->RenderTextContainer(m_aContainers[i], Fill, Outline);
 				else
 				{
@@ -155,7 +137,7 @@ namespace
 			const int Path = static_cast<int>(State.range(0));
 			const int Size = static_cast<int>(State.range(1));
 			const bool LowContrast = State.range(2) != 0;
-			CIconRenderFixture Fixture(Path == 0);
+			CIconRenderFixture Fixture;
 			if(!Fixture.m_Ready)
 			{
 				State.SkipWithError("bundled production resources failed to load");
@@ -176,7 +158,7 @@ namespace
 				Fixture.Draw(Path, Size, LowContrast);
 				benchmark::ClobberMemory();
 			}
-			const uint64_t ExpectedDraws = State.iterations() * NUM_ICONS * (Path == 0 && LowContrast ? 2 : 1);
+			const uint64_t ExpectedDraws = State.iterations() * NUM_ICONS;
 			if(Fixture.m_Graphics.m_Draws != ExpectedDraws || Fixture.m_Graphics.m_Quads != ExpectedDraws || Fixture.m_Graphics.m_Uploads != 0 || Fixture.m_Graphics.m_UploadBytes != 0 || (Path == 1 && Fixture.m_Graphics.m_BufferBytes != 0))
 			{
 				State.SkipWithError("warm batch draw count or zero-upload invariant failed");
@@ -188,15 +170,15 @@ namespace
 			State.counters["upload_bytes_per_batch"] = Fixture.m_Graphics.m_UploadBytes / Batches;
 			State.counters["container_bytes_per_batch"] = Fixture.m_Graphics.m_BufferBytes / Batches;
 			State.SetItemsProcessed(State.iterations() * NUM_ICONS);
-			State.SetLabel(Path == 0 ? "mtsdf;warm;cpu-before-device;no-gpu" : Path == 1 ? "ttf-cached-container;warm;cpu-before-device;no-gpu" :
-												       "ttf-immediate;warm;cpu-before-device;no-gpu");
+			State.SetLabel(Path == 1 ? "ttf-cached-container;warm;cpu-before-device;no-gpu" :
+						   "ttf-immediate;warm;cpu-before-device;no-gpu");
 		}
 		catch(const std::exception &Error)
 		{
 			State.SkipWithError(Error.what());
 		}
 	}
-	BENCHMARK(BM_IconRenderCpuBoundary)->ArgsProduct({{0, 1, 2}, {16, 24, 36}, {0, 1}});
+	BENCHMARK(BM_IconRenderCpuBoundary)->ArgsProduct({{1, 2}, {16, 24, 36}, {0, 1}});
 
 	// 首批字形准备：全新生产 renderer 的初始化与字体文件加载不计时。
 	// 固定批次数，避免完整字体 fixture 准备把自适应迭代拖成长时间运行。
@@ -210,7 +192,7 @@ namespace
 			std::unique_ptr<CIconRenderFixture> pFixture;
 			try
 			{
-				pFixture = std::make_unique<CIconRenderFixture>(false);
+				pFixture = std::make_unique<CIconRenderFixture>();
 				if(!pFixture->m_Ready)
 					throw std::logic_error("fresh bundled font fixture failed");
 				pFixture->m_Graphics.ResetCounters();
@@ -260,68 +242,26 @@ namespace
 	// 固定短批次的 CPU 累计值可能被 Windows 计时精度舍入为零，速率按实际经过时间计算。
 	BENCHMARK(BM_IconFreshGlyphsCpuBoundary)->Arg(16)->Arg(24)->Arg(36)->Iterations(16)->UseRealTime();
 
-	// 生产图集重载包含 manifest/PNG 文件读取、解析、解码与 CPU 资源替换；OS 缓存已预热。
-	void BM_IconAtlasReloadCpuBoundary(benchmark::State &State)
-	{
-		try
-		{
-			CIconRenderFixture Fixture(true);
-			if(!Fixture.m_Ready)
-			{
-				State.SkipWithError("atlas fixture failed");
-				return;
-			}
-			Fixture.m_Graphics.ResetCounters();
-			Fixture.m_Graphics.m_ValidateLifecycle = false;
-			for(auto _ : State)
-			{
-				if(!Fixture.m_Icons.Reload())
-				{
-					State.SkipWithError("production atlas reload failed");
-					break;
-				}
-				benchmark::ClobberMemory();
-			}
-			if(!State.skipped())
-			{
-				if(Fixture.m_Graphics.m_Uploads != static_cast<uint64_t>(State.iterations()) || Fixture.m_Graphics.m_UploadBytes == 0)
-				{
-					State.SkipWithError("atlas reload did not decode/upload each iteration");
-					return;
-				}
-				State.counters["upload_bytes_per_reload"] = static_cast<double>(Fixture.m_Graphics.m_UploadBytes) / State.iterations();
-				State.SetItemsProcessed(State.iterations());
-			}
-			State.SetLabel("mtsdf-regular-reload;os-cache-warm;io-json-png;device-upload-excluded");
-		}
-		catch(const std::exception &Error)
-		{
-			State.SkipWithError(Error.what());
-		}
-	}
-	BENCHMARK(BM_IconAtlasReloadCpuBoundary)->Iterations(16);
-
 	// 每批在三个已预热字号间切换；新字号首次建立成本由 FreshGlyphs 单独测量。
 	void BM_IconWarmSizeSwitchCpuBoundary(benchmark::State &State)
 	{
 		try
 		{
-			const int Path = static_cast<int>(State.range(0));
-			CIconRenderFixture Fixture(Path == 0);
+			CIconRenderFixture Fixture;
 			if(!Fixture.m_Ready)
 			{
 				State.SkipWithError("size-switch fixture failed");
 				return;
 			}
 			for(int Size : {16, 24, 36})
-				Fixture.Draw(Path == 0 ? 0 : 2, Size, false);
+				Fixture.Draw(2, Size, false);
 			Fixture.m_Graphics.ResetCounters();
 			Fixture.m_Graphics.m_ValidateLifecycle = false;
 			int Index = 0;
 			const int Sizes[] = {16, 24, 36};
 			for(auto _ : State)
 			{
-				Fixture.Draw(Path == 0 ? 0 : 2, Sizes[Index++ % 3], false);
+				Fixture.Draw(2, Sizes[Index++ % 3], false);
 				benchmark::ClobberMemory();
 			}
 			if(Fixture.m_Graphics.m_Draws != static_cast<uint64_t>(State.iterations()) * NUM_ICONS || Fixture.m_Graphics.m_Uploads != 0)
@@ -330,12 +270,72 @@ namespace
 				return;
 			}
 			State.SetItemsProcessed(State.iterations() * NUM_ICONS);
-			State.SetLabel(Path == 0 ? "mtsdf;warm16-24-36-switch;cpu-before-device;no-gpu" : "ttf-immediate;warm16-24-36-switch;cpu-before-device;no-gpu");
+			State.SetLabel("ttf-immediate;warm16-24-36-switch;cpu-before-device;no-gpu");
 		}
 		catch(const std::exception &Error)
 		{
 			State.SkipWithError(Error.what());
 		}
 	}
-	BENCHMARK(BM_IconWarmSizeSwitchCpuBoundary)->Arg(0)->Arg(1);
+	BENCHMARK(BM_IconWarmSizeSwitchCpuBoundary);
+
+	// 生产预热计划必须覆盖真实小数字号：首次绘制即零字形上传，不靠先画一遍预热。
+	void BM_IconPrewarmedFractionalSizeCpuBoundary(benchmark::State &State)
+	{
+		try
+		{
+			CIconRenderFixture Fixture;
+			if(!Fixture.m_Ready)
+			{
+				State.SkipWithError("prewarm fixture failed");
+				return;
+			}
+			const int Weight = static_cast<int>(State.range(0));
+			g_Config.m_QmUiIconWeight = Weight;
+			Fixture.m_pText->SetIconFontWeight(Weight);
+			CQmIconPrewarmPlan Plan;
+			Plan.Configure(1.5f, Weight);
+			int Codepoint, PixelSize;
+			while(Plan.Next(Codepoint, PixelSize))
+				Fixture.m_pText->QmPrewarmGlyph(Codepoint, PixelSize);
+			// 生产主循环在预热帧末提交合批脏区；不绘制图标也必须完成这一步。
+			// 否则首次绘制提交预热产生的上传，会被误判成缓存缺失。
+			Fixture.m_pText->QmTextFrameEnd();
+			Fixture.m_Graphics.ResetCounters();
+			const auto Draw = [&]() {
+				for(int i = 0; i < NUM_ICONS; ++i)
+				{
+					CTextCursor Cursor;
+					// 替身屏幕映射为一像素/单位，因此将实际 1.5 倍比例乘入逻辑字号。
+					Cursor.m_FontSize = (14 * 0.8f) * 1.5f;
+					QmRenderImmediateFontIcon(*Fixture.m_pText, &Cursor, Fixture.m_aGlyphs[i].c_str(), -1, ColorRGBA(1, 1, 1, 1), ColorRGBA(0, 0, 0, 0));
+				}
+			};
+			Draw();
+			if(Fixture.m_Graphics.m_Uploads != 0 || Fixture.m_Graphics.m_Draws != NUM_ICONS)
+			{
+				State.SkipWithError("first fractional icon drawing missed production prewarm");
+				return;
+			}
+			Fixture.m_Graphics.ResetCounters();
+			Fixture.m_Graphics.m_ValidateLifecycle = false;
+			for(auto _ : State)
+			{
+				Draw();
+				benchmark::ClobberMemory();
+			}
+			if(Fixture.m_Graphics.m_Uploads != 0)
+			{
+				State.SkipWithError("prewarmed fractional glyph uploaded during steady state");
+				return;
+			}
+			State.SetItemsProcessed(State.iterations() * NUM_ICONS);
+			State.SetLabel("ttf-production-prewarm;fractional16.8px;first-draw-zero-upload;no-gpu");
+		}
+		catch(const std::exception &Error)
+		{
+			State.SkipWithError(Error.what());
+		}
+	}
+	BENCHMARK(BM_IconPrewarmedFractionalSizeCpuBoundary)->Arg(0)->Arg(1)->Arg(3)->Arg(4);
 } // namespace

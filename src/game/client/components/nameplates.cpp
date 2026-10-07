@@ -1434,10 +1434,6 @@ public:
 
 	void Render(CGameClient &This, vec2 Pos) const override
 	{
-		// 文字容器仅保留布局尺寸及失败回退；正常绘制使用当前字重的 MTSDF。
-		const CUIRect IconRect = {Pos.x - m_RenderSize.x / 2.0f, Pos.y - m_RenderSize.y / 2.0f, m_RenderSize.x, m_RenderSize.y};
-		if(This.QmIconManager()->RenderIcon(EQmIcon::COMMENT_SLASH, IconRect, m_Color))
-			return;
 		CNamePlatePartText::Render(This, Pos);
 	}
 };

@@ -35,7 +35,7 @@
 #include <game/client/components/qmclient/map_history_ui.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
@@ -2669,7 +2669,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				++FriendTooltipIndex;
 				const bool IsOffline = Friend.ServerInfo() == nullptr;
 				const bool FollowingThisFriend = GameClient()->m_PieMenu.IsFollowingPlayer(Friend.Name(), Friend.Clan()) ||
-					(m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
+								 (m_FriendAutoFollowState.m_Active && str_comp(m_FriendAutoFollowState.m_aName, Friend.Name()) == 0 && str_comp(m_FriendAutoFollowState.m_aClan, Friend.Clan()) == 0);
 				const bool InSelectedServer = m_SelectedIndex >= 0 && Friend.ServerInfo() && Friend.ServerInfo()->m_ServerIndex == ServerBrowser()->SortedGet(m_SelectedIndex)->m_ServerIndex;
 				const ColorRGBA Color = PlayerBackgroundColor(Friend.FriendState() == IFriends::FRIEND_PLAYER, Friend.FriendState() == IFriends::FRIEND_CLAN, IsOffline ? true : Friend.IsAfk(), InSelectedServer, Inside);
 				DrawRoundedSurface(Ui(), Rect, Color, ColorRGBA(), 5.0f);

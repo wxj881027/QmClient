@@ -19,9 +19,9 @@ inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vu
 	m_QmEnhancedDisableReason = Reason;
 	m_QmMediaIslandSdfPipelineValid = false;
 	m_QmRoundedRectSdfPipelineValid = false;
-	m_TexturedMsdfPipelineValid = false;
+	m_ProceduralRingPipelineValid = false;
 	m_GaussianBlurPipelineValid = false;
-	SyncTexturedMsdfCapability();
+	SyncProceduralRingCapability();
 	if(m_pBackendCapabilities != nullptr)
 	{
 		m_pBackendCapabilities->m_MediaIslandSdf = false;
@@ -31,10 +31,10 @@ inline void CCommandProcessorFragment_Vulkan::QmEnhancedMarkDisabled(const qm_vu
 	log_info("vulkan", "Qm enhanced rendering disabled: %s", qm_vulkan_ext::DisableReasonLabel(Reason));
 }
 
-inline void CCommandProcessorFragment_Vulkan::SyncTexturedMsdfCapability()
+inline void CCommandProcessorFragment_Vulkan::SyncProceduralRingCapability()
 {
 	if(m_pBackendCapabilities != nullptr)
-		m_pBackendCapabilities->m_TexturedMsdf.store(m_TexturedMsdfPipelineValid, std::memory_order_release);
+		m_pBackendCapabilities->m_ProceduralRing.store(m_ProceduralRingPipelineValid, std::memory_order_release);
 }
 
 inline bool CCommandProcessorFragment_Vulkan::CreateMediaIslandSdfGraphicsPipeline(const char *pVertName, const char *pFragName)
@@ -81,14 +81,14 @@ inline bool CCommandProcessorFragment_Vulkan::CreateRoundedRectSdfGraphicsPipeli
 	return Ret;
 }
 
-inline bool CCommandProcessorFragment_Vulkan::CreateTexturedMsdfGraphicsPipeline(const char *pVertName, const char *pFragName)
+inline bool CCommandProcessorFragment_Vulkan::CreateProceduralRingGraphicsPipeline(const char *pVertName, const char *pFragName)
 {
 	std::array<VkVertexInputAttributeDescription, 3> aAttributeDescriptions = {};
 	aAttributeDescriptions[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
 	aAttributeDescriptions[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2};
 	aAttributeDescriptions[2] = {2, 0, VK_FORMAT_R8G8B8A8_UNORM, sizeof(float) * (2 + 2)};
 
-	std::array<VkDescriptorSetLayout, 2> aSetLayouts = {m_StandardTexturedDescriptorSetLayout, m_QuadUniformDescriptorSetLayout};
+	std::array<VkDescriptorSetLayout, 1> aSetLayouts = {m_QuadUniformDescriptorSetLayout};
 	std::array<VkPushConstantRange, 1> aPushConstants{};
 	aPushConstants[0] = {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUniformGPos)};
 
@@ -97,7 +97,7 @@ inline bool CCommandProcessorFragment_Vulkan::CreateTexturedMsdfGraphicsPipeline
 	{
 		for(size_t j = 0; j < VULKAN_BACKEND_CLIP_MODE_COUNT; ++j)
 		{
-			Ret &= CreateGraphicsPipeline<true>(pVertName, pFragName, m_TexturedMsdfPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j), false, VK_NULL_HANDLE, VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM, true, false);
+			Ret &= CreateGraphicsPipeline<true>(pVertName, pFragName, m_ProceduralRingPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_NOT_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j), false, VK_NULL_HANDLE, VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM, true, false);
 		}
 	}
 	return Ret;
@@ -140,10 +140,8 @@ inline void CCommandProcessorFragment_Vulkan::Cmd_RenderRoundedRectSdf_FillExecu
 	ExecBufferFillDynamicStates(pCommand->m_State, ExecBuffer);
 }
 
-inline void CCommandProcessorFragment_Vulkan::Cmd_RenderTexturedMsdf_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_RenderTexturedMsdf *pCommand)
+inline void CCommandProcessorFragment_Vulkan::Cmd_RenderProceduralRing_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_RenderProceduralRing *pCommand)
 {
-	const size_t AddressModeIndex = GetAddressModeIndex(pCommand->m_State);
-	ExecBuffer.m_aDescriptors[0] = m_vTextures[pCommand->m_State.m_Texture].m_aVKStandardTexturedDescrSets[AddressModeIndex];
 	ExecBuffer.m_IndexBuffer = m_IndexBuffer;
 	ExecBuffer.m_EstimatedRenderCallCount = 1;
 	ExecBufferFillDynamicStates(pCommand->m_State, ExecBuffer);
@@ -233,9 +231,9 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderRoundedRectSdf(const CCo
 	return true;
 }
 
-inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTexturedMsdf(const CCommandBuffer::SCommand_RenderTexturedMsdf *pCommand, SRenderCommandExecuteBuffer &ExecBuffer)
+inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderProceduralRing(const CCommandBuffer::SCommand_RenderProceduralRing *pCommand, SRenderCommandExecuteBuffer &ExecBuffer)
 {
-	if(!m_TexturedMsdfPipelineValid)
+	if(!m_ProceduralRingPipelineValid)
 		return true;
 
 	std::array<float, (size_t)4 * 2> m;
@@ -248,8 +246,8 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTexturedMsdf(const CComm
 	GetStateIndices(ExecBuffer, pCommand->m_State, IsTextured, BlendModeIndex, DynamicIndex, AddressModeIndex);
 	(void)IsTextured;
 	(void)AddressModeIndex;
-	auto &PipeLayout = GetPipeLayout(m_TexturedMsdfPipeline, true, BlendModeIndex, DynamicIndex);
-	auto &PipeLine = GetPipeline(m_TexturedMsdfPipeline, true, BlendModeIndex, DynamicIndex);
+	auto &PipeLayout = GetPipeLayout(m_ProceduralRingPipeline, false, BlendModeIndex, DynamicIndex);
+	auto &PipeLine = GetPipeline(m_ProceduralRingPipeline, false, BlendModeIndex, DynamicIndex);
 
 	VkCommandBuffer *pCommandBuffer;
 	if(!GetGraphicCommandBuffer(pCommandBuffer, ExecBuffer.m_ThreadIndex))
@@ -264,12 +262,11 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTexturedMsdf(const CComm
 		return false;
 	BindVertexBuffer(ExecBuffer.m_ThreadIndex, CommandBuffer, VKBuffer, (VkDeviceSize)BufferOff);
 	BindIndexBuffer(ExecBuffer.m_ThreadIndex, CommandBuffer, ExecBuffer.m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-	BindDescriptorSet(ExecBuffer.m_ThreadIndex, CommandBuffer, PipeLayout, 0, ExecBuffer.m_aDescriptors[0]);
 
 	SDeviceDescriptorSet UniDescrSet;
-	if(!GetUniformBufferObject(ExecBuffer.m_ThreadIndex, true, UniDescrSet, 1, &pCommand->m_MsdfParams, sizeof(pCommand->m_MsdfParams)))
+	if(!GetUniformBufferObject(ExecBuffer.m_ThreadIndex, true, UniDescrSet, 1, &pCommand->m_RingParams, sizeof(pCommand->m_RingParams)))
 		return false;
-	BindDescriptorSet(ExecBuffer.m_ThreadIndex, CommandBuffer, PipeLayout, 1, UniDescrSet);
+	BindDescriptorSet(ExecBuffer.m_ThreadIndex, CommandBuffer, PipeLayout, 0, UniDescrSet);
 	vkCmdPushConstants(CommandBuffer, PipeLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUniformGPos), m.data());
 	DrawIndexed(ExecBuffer.m_ThreadIndex, CommandBuffer, 6, 1, 0, 0, 0);
 	return true;
@@ -280,7 +277,7 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 	// ==== QmVulkan 扩展管线：仅在增强渲染启用时创建 ====
 	m_QmMediaIslandSdfPipelineValid = false;
 	m_QmRoundedRectSdfPipelineValid = false;
-	m_TexturedMsdfPipelineValid = false;
+	m_ProceduralRingPipelineValid = false;
 	m_GaussianBlurPipelineValid = false;
 	if(QmEnhancedShouldLoad())
 	{
@@ -302,28 +299,28 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 				QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::PIPELINE_CREATE_FAILED);
 			}
 		}
-		if(!m_QmEnhancedSessionDisabled && g_Config.m_QmEnhancedMsdf)
+		if(!m_QmEnhancedSessionDisabled && g_Config.m_QmEnhancedProceduralRing)
 		{
-			m_TexturedMsdfPipelineValid = CreateTexturedMsdfGraphicsPipeline("shader/vulkan/textured_msdf.vert.spv", "shader/vulkan/textured_msdf.frag.spv");
-			SyncTexturedMsdfCapability();
-			if(!m_TexturedMsdfPipelineValid)
+			m_ProceduralRingPipelineValid = CreateProceduralRingGraphicsPipeline("shader/vulkan/procedural_ring.vert.spv", "shader/vulkan/procedural_ring.frag.spv");
+			SyncProceduralRingCapability();
+			if(!m_ProceduralRingPipelineValid)
 			{
-				m_TexturedMsdfPipeline.Destroy(m_VKDevice);
-				if(m_TexturedMsdfPipelineRequired)
+				m_ProceduralRingPipeline.Destroy(m_VKDevice);
+				if(m_ProceduralRingPipelineRequired)
 				{
-					SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Recreating the textured MSDF pipeline failed.");
+					SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Recreating the procedural ring pipeline failed.");
 					return -1;
 				}
-				SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, "Textured MSDF pipeline unavailable, falling back to alpha icon atlas.");
+				SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, "Procedural ring pipeline unavailable, falling back to geometry.");
 			}
 			else
 			{
-				m_TexturedMsdfPipelineRequired = true;
+				m_ProceduralRingPipelineRequired = true;
 			}
 		}
 		else
 		{
-			SyncTexturedMsdfCapability();
+			SyncProceduralRingCapability();
 		}
 		if(!m_QmEnhancedSessionDisabled && g_Config.m_QmEnhancedBlur)
 		{
@@ -334,7 +331,7 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 	}
 	else
 	{
-		SyncTexturedMsdfCapability();
+		SyncProceduralRingCapability();
 	}
 	return 0;
 }
@@ -343,9 +340,9 @@ inline void CCommandProcessorFragment_Vulkan::CleanupQmPipelines()
 {
 	m_MediaIslandSdfPipeline.Destroy(m_VKDevice);
 	m_RoundedRectSdfPipeline.Destroy(m_VKDevice);
-	m_TexturedMsdfPipeline.Destroy(m_VKDevice);
-	m_TexturedMsdfPipelineValid = false;
-	SyncTexturedMsdfCapability();
+	m_ProceduralRingPipeline.Destroy(m_VKDevice);
+	m_ProceduralRingPipelineValid = false;
+	SyncProceduralRingCapability();
 	m_GaussianBlurPipeline.Destroy(m_VKDevice);
 	m_GaussianBlurPipelineValid = false;
 }
@@ -354,7 +351,7 @@ inline void CCommandProcessorFragment_Vulkan::RegisterQmPipelineCommands()
 {
 	m_aCommandCallbacks[CommandBufferCMDOff(CCommandBuffer::CMD_RENDER_MEDIA_ISLAND_SDF)] = {true, [this](SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand *pBaseCommand) { Cmd_RenderMediaIslandSdf_FillExecuteBuffer(ExecBuffer, static_cast<const CCommandBuffer::SCommand_RenderMediaIslandSdf *>(pBaseCommand)); }, [this](const CCommandBuffer::SCommand *pBaseCommand, SRenderCommandExecuteBuffer &ExecBuffer) { return Cmd_RenderMediaIslandSdf(static_cast<const CCommandBuffer::SCommand_RenderMediaIslandSdf *>(pBaseCommand), ExecBuffer); }};
 	m_aCommandCallbacks[CommandBufferCMDOff(CCommandBuffer::CMD_RENDER_ROUNDED_RECT_SDF)] = {true, [this](SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand *pBaseCommand) { Cmd_RenderRoundedRectSdf_FillExecuteBuffer(ExecBuffer, static_cast<const CCommandBuffer::SCommand_RenderRoundedRectSdf *>(pBaseCommand)); }, [this](const CCommandBuffer::SCommand *pBaseCommand, SRenderCommandExecuteBuffer &ExecBuffer) { return Cmd_RenderRoundedRectSdf(static_cast<const CCommandBuffer::SCommand_RenderRoundedRectSdf *>(pBaseCommand), ExecBuffer); }};
-	m_aCommandCallbacks[CommandBufferCMDOff(CCommandBuffer::CMD_RENDER_TEXTURED_MSDF)] = {true, [this](SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand *pBaseCommand) { Cmd_RenderTexturedMsdf_FillExecuteBuffer(ExecBuffer, static_cast<const CCommandBuffer::SCommand_RenderTexturedMsdf *>(pBaseCommand)); }, [this](const CCommandBuffer::SCommand *pBaseCommand, SRenderCommandExecuteBuffer &ExecBuffer) { return Cmd_RenderTexturedMsdf(static_cast<const CCommandBuffer::SCommand_RenderTexturedMsdf *>(pBaseCommand), ExecBuffer); }};
+	m_aCommandCallbacks[CommandBufferCMDOff(CCommandBuffer::CMD_RENDER_PROCEDURAL_RING)] = {true, [this](SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand *pBaseCommand) { Cmd_RenderProceduralRing_FillExecuteBuffer(ExecBuffer, static_cast<const CCommandBuffer::SCommand_RenderProceduralRing *>(pBaseCommand)); }, [this](const CCommandBuffer::SCommand *pBaseCommand, SRenderCommandExecuteBuffer &ExecBuffer) { return Cmd_RenderProceduralRing(static_cast<const CCommandBuffer::SCommand_RenderProceduralRing *>(pBaseCommand), ExecBuffer); }};
 }
 
 #endif

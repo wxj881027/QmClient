@@ -30,7 +30,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 #include <game/mapitems.h>

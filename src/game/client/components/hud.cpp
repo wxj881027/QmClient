@@ -31,8 +31,8 @@
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
+#include <game/client/qm_icon.h>
 #include <game/client/qm_icon_font_render.h>
-#include <game/client/qm_icon_manager.h>
 #include <game/layers.h>
 #include <game/localization.h>
 #include <game/mapitems.h>
@@ -4864,18 +4864,10 @@ void CHud::RenderMediaIsland()
 			QmRenderImmediateFontIcon(*TextRender(), &Cursor, pGlyph, -1, IconColor, ConfiguredQmUiIconContrastColor(IconColor));
 			TextRender()->SetFontPreset(PreviousPreset);
 		};
-		{
-			// 等比契约的显式豁免只作用于这条眼睛动画（见常量处的说明）。
-			CQmIconManager *pIconManager = GameClient()->QmIconManager();
-			const CUIRect ClosedRect = IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale);
-			const CUIRect OpenRect = IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY);
-			if(!pIconManager || pIconManager->PreferFontFallback() ||
-				!pIconManager->RenderIcon(EQmIcon::EYE_OFF, ClosedRect, ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * SpectatorIconPose.m_ClosedAlpha), QM_HUD_SPECTATOR_EYE_PRESERVE_ASPECT))
-				RenderTextEye(FontIcons::FONT_ICON_EYE_SLASH, ClosedRect, SpectatorIconPose.m_ClosedAlpha);
-			if(!pIconManager || pIconManager->PreferFontFallback() ||
-				!pIconManager->RenderIcon(EQmIcon::EYE, OpenRect, ColorRGBA(0.98f, 0.99f, 1.0f, IconAlpha * SpectatorIconPose.m_OpenAlpha), QM_HUD_SPECTATOR_EYE_PRESERVE_ASPECT))
-				RenderTextEye(FontIcons::FONT_ICON_EYE, OpenRect, SpectatorIconPose.m_OpenAlpha);
-		}
+		const CUIRect ClosedRect = IconRect(SpectatorIconPose.m_ClosedScale, SpectatorIconPose.m_ClosedScale);
+		const CUIRect OpenRect = IconRect(SpectatorIconPose.m_OpenScaleX, SpectatorIconPose.m_OpenScaleY);
+		RenderTextEye(FontIcons::FONT_ICON_EYE_SLASH, ClosedRect, SpectatorIconPose.m_ClosedAlpha);
+		RenderTextEye(FontIcons::FONT_ICON_EYE, OpenRect, SpectatorIconPose.m_OpenAlpha);
 		const float CountAlpha = QmHudMediaIslandSpectatorCountAlpha(ShowSpectator, SpectatorIconPose);
 		if(CountAlpha > 0.001f)
 		{

@@ -484,7 +484,7 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Shutdown(const SCommand_Shutdown *
 {
 	if(m_pBackendCapabilities != nullptr)
 	{
-		m_pBackendCapabilities->m_TexturedMsdf.store(false, std::memory_order_release);
+		m_pBackendCapabilities->m_ProceduralRing.store(false, std::memory_order_release);
 		m_pBackendCapabilities = nullptr;
 	}
 

@@ -29,8 +29,8 @@ void CCommandProcessorFragment_OpenGL3_3::AllocateQmPrograms()
 	m_MediaIslandSdfProgramValid = false;
 	m_pRoundedRectSdfProgram = new CGLSLRoundedRectSdfProgram;
 	m_RoundedRectSdfProgramValid = false;
-	m_pTexturedMsdfProgram = new CGLSLTexturedMsdfProgram;
-	m_TexturedMsdfProgramValid = false;
+	m_pProceduralRingProgram = new CGLSLProceduralRingProgram;
+	m_ProceduralRingProgramValid = false;
 	m_pGaussianBlurProgram = new CGLSLGaussianBlurProgram;
 	m_GaussianBlurProgramValid = false;
 }
@@ -85,41 +85,35 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 	{
 		CGLSL VertexShader;
 		CGLSL FragmentShader;
-		// QmClient: 图标 MSDF 使用现代 GLSL 输入/输出和导数函数；显式声明
+		// QmClient: 解析环图 使用现代 GLSL 输入/输出和导数函数；显式声明
 		// 现代路径，避免 OpenGL 初始化时误走兼容 shader 转换分支。
 		ShaderCompiler.AddDefine("TW_MODERN_GL", "");
-		VertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/textured_msdf.vert", GL_VERTEX_SHADER);
-		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/textured_msdf.frag", GL_FRAGMENT_SHADER);
+		VertexShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/procedural_ring.vert", GL_VERTEX_SHADER);
+		FragmentShader.LoadShader(&ShaderCompiler, pCommand->m_pStorage, "shader/procedural_ring.frag", GL_FRAGMENT_SHADER);
 		ShaderCompiler.ClearDefines();
 
-		m_pTexturedMsdfProgram->CreateProgram();
-		const bool VertexAdded = m_pTexturedMsdfProgram->AddShader(&VertexShader);
-		const bool FragmentAdded = m_pTexturedMsdfProgram->AddShader(&FragmentShader);
-		const bool Linked = VertexAdded && FragmentAdded && m_pTexturedMsdfProgram->LinkProgram();
+		m_pProceduralRingProgram->CreateProgram();
+		const bool VertexAdded = m_pProceduralRingProgram->AddShader(&VertexShader);
+		const bool FragmentAdded = m_pProceduralRingProgram->AddShader(&FragmentShader);
+		const bool Linked = VertexAdded && FragmentAdded && m_pProceduralRingProgram->LinkProgram();
 		if(Linked)
 		{
-			UseProgram(m_pTexturedMsdfProgram);
-			m_pTexturedMsdfProgram->m_LocPos = m_pTexturedMsdfProgram->GetUniformLoc("gPos");
-			m_pTexturedMsdfProgram->m_LocTextureSampler = m_pTexturedMsdfProgram->GetUniformLoc("gTextureSampler");
-			m_pTexturedMsdfProgram->m_LocParams = m_pTexturedMsdfProgram->GetUniformLoc("gMsdfParams");
-			m_pTexturedMsdfProgram->m_LocSecondaryColor = m_pTexturedMsdfProgram->GetUniformLoc("gMsdfSecondaryColor");
-			m_TexturedMsdfProgramValid = m_pTexturedMsdfProgram->m_LocPos >= 0 && m_pTexturedMsdfProgram->m_LocTextureSampler >= 0 && m_pTexturedMsdfProgram->m_LocParams >= 0 && m_pTexturedMsdfProgram->m_LocSecondaryColor >= 0;
-			if(m_TexturedMsdfProgramValid)
-				m_pTexturedMsdfProgram->SetUniform(m_pTexturedMsdfProgram->m_LocTextureSampler, 0);
+			UseProgram(m_pProceduralRingProgram);
+			m_pProceduralRingProgram->m_LocPos = m_pProceduralRingProgram->GetUniformLoc("gPos");
+			m_pProceduralRingProgram->m_LocParams = m_pProceduralRingProgram->GetUniformLoc("gRingParams");
+			m_ProceduralRingProgramValid = m_pProceduralRingProgram->m_LocPos >= 0 && m_pProceduralRingProgram->m_LocParams >= 0;
 		}
-		log_info("gfx/opengl", "Textured MSDF program: vertex=%d fragment=%d linked=%d uniforms=%d/%d/%d/%d valid=%d context=%d.%d.%d",
+		log_info("gfx/opengl", "Procedural ring program: vertex=%d fragment=%d linked=%d uniforms=%d/%d valid=%d context=%d.%d.%d",
 			VertexAdded,
 			FragmentAdded,
 			Linked,
-			m_pTexturedMsdfProgram->m_LocPos,
-			m_pTexturedMsdfProgram->m_LocTextureSampler,
-			m_pTexturedMsdfProgram->m_LocParams,
-			m_pTexturedMsdfProgram->m_LocSecondaryColor,
-			m_TexturedMsdfProgramValid,
+			m_pProceduralRingProgram->m_LocPos,
+			m_pProceduralRingProgram->m_LocParams,
+			m_ProceduralRingProgramValid,
 			ShaderMajor,
 			ShaderMinor,
 			ShaderPatch);
-		pCommand->m_pCapabilities->m_TexturedMsdf.store(m_TexturedMsdfProgramValid, std::memory_order_release);
+		pCommand->m_pCapabilities->m_ProceduralRing.store(m_ProceduralRingProgramValid, std::memory_order_release);
 	}
 	{
 		CGLSL VertexShader;
@@ -164,7 +158,7 @@ void CCommandProcessorFragment_OpenGL3_3::UnloadQmPrograms()
 {
 	m_pMediaIslandSdfProgram->DeleteProgram();
 	m_pRoundedRectSdfProgram->DeleteProgram();
-	m_pTexturedMsdfProgram->DeleteProgram();
+	m_pProceduralRingProgram->DeleteProgram();
 	m_pGaussianBlurProgram->DeleteProgram();
 }
 
@@ -176,9 +170,9 @@ void CCommandProcessorFragment_OpenGL3_3::FreeQmPrograms()
 	delete m_pRoundedRectSdfProgram;
 	m_pRoundedRectSdfProgram = nullptr;
 	m_RoundedRectSdfProgramValid = false;
-	delete m_pTexturedMsdfProgram;
-	m_pTexturedMsdfProgram = nullptr;
-	m_TexturedMsdfProgramValid = false;
+	delete m_pProceduralRingProgram;
+	m_pProceduralRingProgram = nullptr;
+	m_ProceduralRingProgramValid = false;
 	delete m_pGaussianBlurProgram;
 	m_pGaussianBlurProgram = nullptr;
 	m_GaussianBlurProgramValid = false;
@@ -252,15 +246,14 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderRoundedRectSdf(const CComman
 	m_LastStreamBuffer = (m_LastStreamBuffer + 1 >= MAX_STREAM_BUFFER_COUNT ? 0 : m_LastStreamBuffer + 1);
 }
 
-void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderTexturedMsdf(const CCommandBuffer::SCommand_RenderTexturedMsdf *pCommand)
+void CCommandProcessorFragment_OpenGL3_3::Cmd_RenderProceduralRing(const CCommandBuffer::SCommand_RenderProceduralRing *pCommand)
 {
-	if(!m_TexturedMsdfProgramValid || pCommand->m_pVertices == nullptr || pCommand->m_PrimCount == 0 || m_pTexturedMsdfProgram == nullptr)
+	if(!m_ProceduralRingProgramValid || pCommand->m_pVertices == nullptr || pCommand->m_PrimCount == 0 || m_pProceduralRingProgram == nullptr)
 		return;
 
-	UseProgram(m_pTexturedMsdfProgram);
-	SetState(pCommand->m_State, m_pTexturedMsdfProgram);
-	m_pTexturedMsdfProgram->SetUniformVec4(m_pTexturedMsdfProgram->m_LocParams, 1, (const float *)&pCommand->m_MsdfParams);
-	m_pTexturedMsdfProgram->SetUniformVec4(m_pTexturedMsdfProgram->m_LocSecondaryColor, 1, (const float *)&pCommand->m_MsdfSecondaryColor);
+	UseProgram(m_pProceduralRingProgram);
+	SetState(pCommand->m_State, m_pProceduralRingProgram);
+	m_pProceduralRingProgram->SetUniformVec4(m_pProceduralRingProgram->m_LocParams, 1, (const float *)&pCommand->m_RingParams);
 	UploadStreamBufferData(pCommand->m_PrimType, pCommand->m_pVertices, sizeof(CCommandBuffer::SVertex), pCommand->m_PrimCount);
 	glBindVertexArray(m_aPrimitiveDrawVertexId[m_LastStreamBuffer]);
 	if(m_aLastIndexBufferBound[m_LastStreamBuffer] != m_QuadDrawIndexBufferId)

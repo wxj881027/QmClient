@@ -9,7 +9,30 @@ from pathlib import Path, PurePosixPath
 import zipfile
 import subprocess
 
-REMOVED_ICON_RESOURCES = {
+REMOVED_BUNDLED_RESOURCES = {
+	"data/audio/qm_festive_haoyunlai.mp3",
+	"data/qmclient/icons/qm_icons_regular_msdf.json",
+	"data/qmclient/icons/qm_icons_regular_msdf.png",
+	"data/qmclient/icons/qm_icons_bold_msdf.json",
+	"data/qmclient/icons/qm_icons_bold_msdf.png",
+	"data/qmclient/icons/qm_icons_light_msdf.json",
+	"data/qmclient/icons/qm_icons_light_msdf.png",
+	"data/qmclient/icons/qm_icons_fill_msdf.json",
+	"data/qmclient/icons/qm_icons_fill_msdf.png",
+	"data/themes/auto.png",
+	"data/themes/autumn.png",
+	"data/themes/heavens.png",
+	"data/themes/jungle.png",
+	"data/themes/newyear.png",
+	"data/themes/none.png",
+	"data/themes/rand.png",
+	"data/themes/winter.png",
+	"data/shader/textured_msdf.frag",
+	"data/shader/textured_msdf.vert",
+	"data/shader/vulkan/textured_msdf.frag",
+	"data/shader/vulkan/textured_msdf.vert",
+	"data/shader/vulkan/textured_msdf.frag.spv",
+	"data/shader/vulkan/textured_msdf.vert.spv",
 	"data/fonts/Phosphor/Phosphor-Duotone.ttf",
 	"data/qmclient/icons/qm_icons_duotone_msdf.json",
 	"data/qmclient/icons/qm_icons_duotone_msdf.png",
@@ -56,10 +79,10 @@ def verify(package: Path, runtime_manifest: Path, tools_manifest: Path, portable
 	if any("?" in name or "\ufffd" in name for name in names):
 		raise ValueError("Windows package has lossy file names")
 	# 删除后的随包资源不能由旧打包缓存重新带回。
-	removed = {name.casefold() for name in REMOVED_ICON_RESOURCES}
+	removed = {name.casefold() for name in REMOVED_BUNDLED_RESOURCES}
 	obsolete = [name for name in names if "/" in name and name.split("/", 1)[1].casefold() in removed]
 	if obsolete:
-		raise ValueError(f"removed icon resources present in Windows package: {obsolete}")
+		raise ValueError(f"removed bundled resources present in Windows package: {obsolete}")
 	executables = [name for name in names if name.casefold().endswith(".exe")]
 	counts = Counter(PurePosixPath(name).name.casefold() for name in executables)
 	expected_names = {name.casefold() for name in expected}

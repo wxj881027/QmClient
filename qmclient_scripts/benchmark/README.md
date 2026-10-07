@@ -61,22 +61,22 @@ python -m unittest qmclient_scripts.tests.test_benchmark_results qmclient_script
 
 单元测试调用生产摘要接口；集成测试用真实 fake 子进程验证参数、日志、错误、超时、编码和输出保留。fake 只实现外部进程协议，不复制测量统计实现。真实 `qm-benchmarks` 全量 smoke 与过滤重复测量作为独立证据，不能称客户端玩家端到端测试。
 
-## Phosphor 图集与字体 CPU 对照
+## Phosphor 字体 CPU 性能
 
-入口调用真实 `CQmIconManager` 与 `CTextRender`，设备接口仅计数，不执行 `graphics_threaded` 命令构造或 GPU 工作。每批使用注册表前 24 个相同图标，像素映射 1:1；字号 16／24／36，Regular 样式。不得把本结果称 GPU 或整帧性能。
+入口调用真实 `CTextRender`，设备接口仅计数，不执行 `graphics_threaded` 命令构造或 GPU 工作。每批使用注册表前 24 个相同图标，像素映射 1:1；字号 16／24／36，Regular 样式。不得把本结果称 GPU 或整帧性能。
 
 ```text
-python qmclient_scripts/benchmark/run.py --filter "BM_Icon(RenderCpuBoundary|FreshGlyphsCpuBoundary|AtlasReloadCpuBoundary|WarmSizeSwitchCpuBoundary)" --smoke
-python qmclient_scripts/benchmark/run.py --filter "BM_Icon(RenderCpuBoundary|FreshGlyphsCpuBoundary|AtlasReloadCpuBoundary|WarmSizeSwitchCpuBoundary)" --min-time 0.2 --warmup 0 --repetitions 5
+python qmclient_scripts/benchmark/run.py --filter "BM_Icon(RenderCpuBoundary|FreshGlyphsCpuBoundary|WarmSizeSwitchCpuBoundary)" --smoke
+python qmclient_scripts/benchmark/run.py --filter "BM_Icon(RenderCpuBoundary|FreshGlyphsCpuBoundary|WarmSizeSwitchCpuBoundary)" --min-time 0.2 --warmup 0 --repetitions 5
 ```
 
 | case | 范围 | 参数与单位 |
 |---|---|---|
-| BM_IconRenderCpuBoundary | 字形／图集已准备后的绘制 CPU 逻辑；TTF 缓存容器与即时容器分别报告 | path 0=MTSDF、1=缓存TTF、2=即时TTF；第二参数字号；第三参数0=高对比、1=低对比；每迭代24图标 |
-| BM_IconFreshGlyphsCpuBoundary | 新生产 renderer 首次生成24个字形及即时绘制；初始化、字体文件加载和销毁不计时 | 字号；每重复固定16个真实fresh批次；不能与AtlasReload横比为完整冷启动 |
-| BM_IconAtlasReloadCpuBoundary | OS文件缓存预热的完整Regular图集读取、JSON解析、PNG解码和CPU资源替换 | 每迭代一次整张图集；设备上传耗时不计，只记字节 |
-| BM_IconWarmSizeSwitchCpuBoundary | 三种字号预热后按16→24→36循环切换 | 0=MTSDF、1=即时TTF；每迭代24图标，无新字形上传 |
+| BM_IconRenderCpuBoundary | 字形已准备后的绘制 CPU 逻辑；TTF 缓存容器与即时容器分别报告 | path 1=缓存TTF、2=即时TTF；第二参数字号；第三参数0=高对比、1=低对比；每迭代24图标 |
+| BM_IconFreshGlyphsCpuBoundary | 新生产 renderer 首次生成24个字形及即时绘制；初始化、字体文件加载和销毁不计时 | 字号；每重复固定16个真实fresh批次；不代表完整冷启动 |
+| BM_IconPrewarmedFractionalSizeCpuBoundary | 生产预热队列覆盖分数字号后首次绘制，四字重均要求零字形上传 | 0/1/3/4=Regular/Bold/Light/Fill；每迭代24图标 |
+| BM_IconWarmSizeSwitchCpuBoundary | 三种字号预热后按16→24→36循环切换 | 即时TTF；每迭代24图标，无新字形上传 |
 
 Warm结果在结束时检查实际图标／绘制数与零上传；首次字形生成强制检查实际上传。设备生命周期验证放在测量外，避免TTF设备替身的哈希表维护影响对照。原生结果中的 `upload_bytes_per_batch`、`container_bytes_per_batch` 和绘制计数属于接口边界观察，不等于实测显存或GPU带宽。按实际batch耗时除以24可计算ns/icon，不能把batch直接标成单图标。
 
-此矩阵应使用 `--warmup 0`：各稳态 case 已自行准备并预热真实缓存；固定首批字形／重载 case 不需要框架额外预热。Google Benchmark 1.9.4 会把全局非零预热应用到固定批次，计时外字体初始化可能因此放大到很长的实际运行时间。短时首批字形 case 使用 `UseRealTime`，吞吐率基于实际经过时间，不能把Windows舍入为零的CPU累计时间解读为零成本。
+此矩阵应使用 `--warmup 0`：各稳态 case 已自行准备并预热真实缓存；固定首批字形 case 不需要框架额外预热。Google Benchmark 1.9.4 会把全局非零预热应用到固定批次，计时外字体初始化可能因此放大到很长的实际运行时间。短时首批字形 case 使用 `UseRealTime`，吞吐率基于实际经过时间，不能把Windows舍入为零的CPU累计时间解读为零成本。

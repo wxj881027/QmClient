@@ -4495,7 +4495,6 @@ Use high bandwidth mode (doubles server bandwidth, LAN only)
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 Use large emote
 Use mouse sensitivity when dynamic camera is on
-Use MSDF icon pipeline when enhanced rendering is active
 Use multi-char replacement based on word length
 Use native UI for IME (may break IME in fullscreen mode, requires restart)
 Use new smoothing algorithm
@@ -4507,6 +4506,7 @@ Use old rainbow team colors (restores old behavior)
 Use original style
 Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
+Use procedural ring pipeline when enhanced rendering is active
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 Use skin color for frozen Tee's feet
 Use skin color when Tee is frozen

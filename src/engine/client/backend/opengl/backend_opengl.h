@@ -140,7 +140,7 @@ protected:
 	virtual void Cmd_Render(const CCommandBuffer::SCommand_Render *pCommand);
 	virtual void Cmd_RenderMediaIslandSdf(const CCommandBuffer::SCommand_RenderMediaIslandSdf *pCommand) {}
 	virtual void Cmd_RenderRoundedRectSdf(const CCommandBuffer::SCommand_RenderRoundedRectSdf *pCommand) {}
-	virtual void Cmd_RenderTexturedMsdf(const CCommandBuffer::SCommand_RenderTexturedMsdf *pCommand) {}
+	virtual void Cmd_RenderProceduralRing(const CCommandBuffer::SCommand_RenderProceduralRing *pCommand) {}
 	virtual void Cmd_RenderTex3D(const CCommandBuffer::SCommand_RenderTex3D *pCommand) { dbg_assert_failed("Call of unsupported Cmd_RenderTex3D"); }
 	virtual void Cmd_RenderTarget_Create(const CCommandBuffer::SCommand_RenderTarget_Create *pCommand);
 	virtual void Cmd_RenderTarget_Destroy(const CCommandBuffer::SCommand_RenderTarget_Destroy *pCommand);

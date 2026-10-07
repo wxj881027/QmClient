@@ -13490,9 +13490,6 @@ Use large emote
 Use mouse sensitivity when dynamic camera is on
 == 開啟動態攝像頭時使用鼠標感應
 
-Use MSDF icon pipeline when enhanced rendering is active
-== 啟用增強渲染時使用 MSDF 圖示管線
-
 Use multi-char replacement based on word length
 == 根據詞語長度使用多字符替換
 
@@ -13525,6 +13522,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == 使用預輸入預測其他玩家以獲得更精確的輸入預測
+
+Use procedural ring pipeline when enhanced rendering is active
+== 啟用增強渲染時使用程序化圓環管線
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == 啟用增強渲染時，為動態島和圓角矩形使用 SDF 管線

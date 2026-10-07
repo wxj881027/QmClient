@@ -127,11 +127,11 @@ class PrepareSetupSourceTest(unittest.TestCase):
 		self.assertEqual((self.output / "previous.txt").read_bytes(), b"old")
 
 	def test_generated_shader_uses_built_binary_instead_of_stale_repository_data(self) -> None:
-		name = "data/shader/vulkan/textured_msdf.frag.spv"
+		name = "data/shader/vulkan/procedural_ring.frag.spv"
 		built = self.source / name
 		built.parent.mkdir(parents=True)
 		built.write_bytes(b"compiled-shader")
-		stale = self.data / "shader/vulkan/textured_msdf.frag.spv"
+		stale = self.data / "shader/vulkan/procedural_ring.frag.spv"
 		stale.parent.mkdir(parents=True)
 		stale.write_bytes(b"stale-shader")
 		(self.source / "qmclient-setup-generated.txt").write_text(name, encoding="utf-8")
@@ -140,7 +140,7 @@ class PrepareSetupSourceTest(unittest.TestCase):
 		self.assertEqual(stale.read_bytes(), b"stale-shader")
 
 	def test_missing_generated_shader_preserves_previous_payload(self) -> None:
-		(self.source / "qmclient-setup-generated.txt").write_text("data/shader/vulkan/textured_msdf.frag.spv", encoding="utf-8")
+		(self.source / "qmclient-setup-generated.txt").write_text("data/shader/vulkan/procedural_ring.frag.spv", encoding="utf-8")
 		self.output.mkdir()
 		(self.output / "previous.txt").write_bytes(b"old")
 		with self.assertRaisesRegex(ValueError, "missing required generated asset"):

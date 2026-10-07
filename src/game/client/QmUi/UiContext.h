@@ -13,7 +13,6 @@
 class CUi;
 class CMenus;
 class CUiV2Tree;
-class CQmIconManager;
 class CTooltips;
 class ITextRender;
 struct SUiTheme;
@@ -28,7 +27,6 @@ struct IUiContext
 	CUi *m_pUi = nullptr;
 	CUiV2AnimationRuntime *m_pAnim = nullptr;
 	CUiV2Tree *m_pTree = nullptr;
-	CQmIconManager *m_pIconManager = nullptr;
 	CMenus *m_pMenus = nullptr;
 	CTooltips *m_pTooltips = nullptr;
 	ITextRender *m_pTextRender = nullptr;

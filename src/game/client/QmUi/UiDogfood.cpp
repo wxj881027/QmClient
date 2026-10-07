@@ -14,7 +14,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/lineinput.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
 #include <game/localization.h>

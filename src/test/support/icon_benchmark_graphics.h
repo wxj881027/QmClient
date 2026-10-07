@@ -162,7 +162,7 @@ public:
 	void RenderMediaIslandSdf(const SMediaIslandSdfParams &Params, CRenderTargetHandle Backdrop = CRenderTargetHandle()) override { throw std::logic_error("unexpected graphics boundary: RenderMediaIslandSdf"); }
 	void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override { throw std::logic_error("unexpected graphics boundary: RenderRoundedRectSdf"); }
 	void DrawRoundedRectAntialias(float x, float y, float w, float h, float Radius, int Corners, const ColorRGBA &Color) override { throw std::logic_error("unexpected graphics boundary: DrawRoundedRectAntialias"); }
-	void RenderTexturedMsdf(const STexturedMsdfParams &Params) override
+	void RenderProceduralRing(const SProceduralRingParams &Params) override
 	{
 		++m_Draws;
 		++m_Quads;
@@ -216,7 +216,7 @@ public:
 	bool IsConfigModernAPI() override { throw std::logic_error("unexpected graphics boundary: IsConfigModernAPI"); }
 	bool HasMediaIslandSdf() override { throw std::logic_error("unexpected graphics boundary: HasMediaIslandSdf"); }
 	bool HasRoundedRectSdf() override { throw std::logic_error("unexpected graphics boundary: HasRoundedRectSdf"); }
-	bool HasTexturedMsdf() override { return true; }
+	bool HasProceduralRing() override { return true; }
 	bool IsTileBufferingEnabled() override { throw std::logic_error("unexpected graphics boundary: IsTileBufferingEnabled"); }
 	bool IsQuadBufferingEnabled() override { throw std::logic_error("unexpected graphics boundary: IsQuadBufferingEnabled"); }
 	bool IsTextBufferingEnabled() override { return true; }

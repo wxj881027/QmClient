@@ -19,7 +19,7 @@
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 #include <game/version.h>

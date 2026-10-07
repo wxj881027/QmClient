@@ -95,11 +95,11 @@ class VerifyWindowsPackageTest(unittest.TestCase):
 		with self.assertRaisesRegex(ValueError, "extra"):
 			MODULE.verify(package, self.runtime, self.tools, False)
 
-	def test_removed_duotone_resources_are_rejected(self) -> None:
-		for relative in MODULE.REMOVED_ICON_RESOURCES:
+	def test_removed_bundled_resources_are_rejected(self) -> None:
+		for relative in MODULE.REMOVED_BUNDLED_RESOURCES:
 			with self.subTest(relative=relative):
 				self.write_package(extra=(f"QmClient/{relative}",))
-				with self.assertRaisesRegex(ValueError, "removed icon resources"):
+				with self.assertRaisesRegex(ValueError, "removed bundled resources"):
 					MODULE.verify(self.package, self.runtime, self.tools, False)
 
 	def test_lossy_resource_name_rejects_package(self) -> None:

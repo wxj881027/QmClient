@@ -19,7 +19,7 @@
 #include <game/client/components/qmclient/spectator_selector_layout.h>
 #include <game/client/components/qmclient/spectator_tele_search.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -44,8 +44,8 @@ namespace
 		pTextRender->TextColor(Color);
 		pTextRender->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |
-			ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
-			ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
+					    ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
+					    ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 		pUi->DoLabel(&Rect, QM_FRIEND_HEART_ICON, Size, TEXTALIGN_MC);
 
 		pTextRender->SetRenderFlags(PreviousFlags);

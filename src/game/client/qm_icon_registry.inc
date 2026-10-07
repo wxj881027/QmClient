@@ -1,4 +1,4 @@
-// 图标语义、图集名与 Phosphor 码位的唯一注册表；别名不重复生成码位分支。
+// 图标语义、官方名称与 Phosphor 码位的唯一注册表；别名不重复生成码位分支。
 QM_ICON_ENTRY(STAR, "star", 0xE46A)
 QM_ICON_ENTRY(BOOKMARK, "bookmark", 0xE0E8)
 QM_ICON_ENTRY(SEARCH, "magnifying-glass", 0xE30C)

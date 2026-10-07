@@ -13490,9 +13490,6 @@ Use large emote
 Use mouse sensitivity when dynamic camera is on
 == Использовать чувствительность мыши при включённой динамической камере
 
-Use MSDF icon pipeline when enhanced rendering is active
-== Использовать конвейер значков MSDF при включённом расширенном рендеринге
-
 Use multi-char replacement based on word length
 == Использовать замену несколькими символами в зависимости от длины слова
 
@@ -13525,6 +13522,9 @@ Use original style for Dynamic Island
 
 Use pre-input to predict other players for more accurate input prediction
 == Использовать предварительный ввод для прогнозирования других игроков для более точного прогнозирования ввода
+
+Use procedural ring pipeline when enhanced rendering is active
+== Использовать процедурный конвейер колец при включённом расширенном рендеринге
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == Использовать конвейеры SDF для Dynamic Island и скруглённых прямоугольников при включённом расширенном рендеринге

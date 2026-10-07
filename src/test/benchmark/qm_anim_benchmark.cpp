@@ -18,9 +18,9 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
 #include <game/client/components/scoreboard.h>
+#include <game/client/qm_icon.h>
 #include <game/client/qm_icon_label.h>
 #include <game/client/qm_icon_label_runs.h>
-#include <game/client/qm_icon_manager.h>
 #include <game/client/ui.h>
 
 #include <benchmark/benchmark.h>

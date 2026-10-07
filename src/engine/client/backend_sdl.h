@@ -145,7 +145,7 @@ struct SBackendCapabilities
 	bool m_ShaderSupport = false;
 	bool m_MediaIslandSdf = false;
 	bool m_RoundedRectSdf = false;
-	std::atomic<bool> m_TexturedMsdf{false};
+	std::atomic<bool> m_ProceduralRing{false};
 	bool m_RenderTargets = false;
 	bool m_RenderTargetGaussianBlur = false;
 	bool m_BackbufferCapture = false;
@@ -179,7 +179,7 @@ struct SBackendCapabilities
 		m_ShaderSupport = false;
 		m_MediaIslandSdf = false;
 		m_RoundedRectSdf = false;
-		m_TexturedMsdf.store(false, std::memory_order_relaxed);
+		m_ProceduralRing.store(false, std::memory_order_relaxed);
 		m_RenderTargets = false;
 		m_RenderTargetGaussianBlur = false;
 		m_BackbufferCapture = false;
@@ -353,7 +353,7 @@ public:
 	}
 	bool HasMediaIslandSdf() override { return m_Capabilities.m_MediaIslandSdf; }
 	bool HasRoundedRectSdf() override { return m_Capabilities.m_RoundedRectSdf; }
-	bool HasTexturedMsdf() override { return m_Capabilities.m_TexturedMsdf.load(std::memory_order_acquire); }
+	bool HasProceduralRing() override { return m_Capabilities.m_ProceduralRing.load(std::memory_order_acquire); }
 	bool UseTrianglesAsQuad() override { return m_Capabilities.m_TrianglesAsQuads; }
 	bool HasTileBuffering() override { return m_Capabilities.m_TileBuffering; }
 	bool HasQuadBuffering() override { return m_Capabilities.m_QuadBuffering; }

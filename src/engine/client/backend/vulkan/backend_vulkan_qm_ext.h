@@ -1,7 +1,7 @@
 #ifndef ENGINE_CLIENT_BACKEND_VULKAN_BACKEND_VULKAN_QM_EXT_H
 #define ENGINE_CLIENT_BACKEND_VULKAN_BACKEND_VULKAN_QM_EXT_H
 
-// QmVulkan 扩展：SDF / GaussianBlur / MSDF 自定义管线的开关与回退状态。
+// QmVulkan 扩展：SDF / GaussianBlur / 解析环图 自定义管线的开关与回退状态。
 // 与 Core 原生 Vulkan 管线分离——关闭扩展时不创建、不暴露这些能力，
 // 灵动岛/圆环走几何或 CPU 兜底，避免部分驱动上 Driver Lost。
 namespace qm_vulkan_ext

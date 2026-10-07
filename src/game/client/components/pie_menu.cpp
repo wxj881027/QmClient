@@ -635,7 +635,7 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, ContentAlpha);
 	// 旧字形入口也统一从图标注册表解析，图集不可用时才交给随包字体。
-	Ui()->DrawQmIconAt(ItemPos.x - IconSize / 2.0f, ItemPos.y - IconSize / 2.0f - 14.0f * Scale, IconSize, CQmIconManager::IconFromGlyph(pIcon), pIcon, ColorRGBA(1.0f, 1.0f, 1.0f, ContentAlpha));
+	Ui()->DrawQmIconAt(ItemPos.x - IconSize / 2.0f, ItemPos.y - IconSize / 2.0f - 14.0f * Scale, IconSize, CQmIconRegistry::IconFromGlyph(pIcon), pIcon, ColorRGBA(1.0f, 1.0f, 1.0f, ContentAlpha));
 
 	// Draw label below icon
 	const char *pName = GetOptionName(Option);

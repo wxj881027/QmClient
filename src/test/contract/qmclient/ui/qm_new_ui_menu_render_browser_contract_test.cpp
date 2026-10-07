@@ -118,20 +118,6 @@ TEST(QmNewUiMenuRenderBrowserContract, BrowserSearchUsesSharedIconAndExcludeKeep
 	EXPECT_NE(Browser.find("DoToolTip(&s_ExcludeInput, &QuickExclude"), std::string::npos);
 }
 
-TEST(QmNewUiMenuRenderBrowserContract, IngameFavoriteMapsUsesSharedBookmarkIcon)
-{
-	const std::string Ingame = FunctionBody(ReadTextFile("src/game/client/components/menus_ingame.cpp"), "void CMenus::RenderInGameNetwork(CUIRect MainView)");
-
-	ASSERT_FALSE(Ingame.empty());
-	// 收藏地图并入统一页签槽位数组（DoMenuTabV2_QmIcon），书签图标语义由 m_bFavoriteMapsIcon 分支承接。
-	EXPECT_NE(Ingame.find("const int aFixedPages[] = {PAGE_INTERNET, PAGE_LAN, PAGE_FAVORITES, PAGE_FAVORITE_MAPS};"), std::string::npos);
-	EXPECT_NE(Ingame.find("Tab.m_bFavoriteMapsIcon"), std::string::npos);
-	EXPECT_NE(Ingame.find("QmIconManager()->RenderIcon(EQmIcon::BOOKMARK"), std::string::npos);
-	EXPECT_NE(Ingame.find("FONT_ICON_BOOKMARK"), std::string::npos);
-	EXPECT_NE(Ingame.find("TextRender()->TextColor(OldTextColor)"), std::string::npos);
-	EXPECT_EQ(Ingame.find("\xF0\x9F\x94\x96"), std::string::npos);
-}
-
 TEST(QmNewUiMenuRenderBrowserContract, GraphicsCurrentModeLabelSanitizesScaleAndAspectRatio)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");

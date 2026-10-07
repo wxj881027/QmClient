@@ -237,7 +237,7 @@ TEST(GraphicsBackendContract, BackendCapabilitiesDefaultToUnsupported)
 	EXPECT_FALSE(Capabilities.m_2DArrayTextures);
 	EXPECT_FALSE(Capabilities.m_2DArrayTexturesAsExtension);
 	EXPECT_FALSE(Capabilities.m_ShaderSupport);
-	EXPECT_FALSE(Capabilities.m_TexturedMsdf.load(std::memory_order_relaxed));
+	EXPECT_FALSE(Capabilities.m_ProceduralRing.load(std::memory_order_relaxed));
 	EXPECT_FALSE(Capabilities.m_RenderTargets);
 	EXPECT_FALSE(Capabilities.m_RenderTargetGaussianBlur);
 	EXPECT_FALSE(Capabilities.m_BackbufferCapture);
@@ -267,7 +267,7 @@ TEST(GraphicsBackendContract, BackendCapabilitiesResetClearsPreviousBackendState
 	Capabilities.m_ShaderSupport = true;
 	Capabilities.m_MediaIslandSdf = true;
 	Capabilities.m_RoundedRectSdf = true;
-	Capabilities.m_TexturedMsdf.store(true, std::memory_order_relaxed);
+	Capabilities.m_ProceduralRing.store(true, std::memory_order_relaxed);
 	Capabilities.m_RenderTargets = true;
 	Capabilities.m_RenderTargetGaussianBlur = true;
 	Capabilities.m_BackbufferCapture = true;
@@ -295,7 +295,7 @@ TEST(GraphicsBackendContract, BackendCapabilitiesResetClearsPreviousBackendState
 	EXPECT_FALSE(Capabilities.m_ShaderSupport);
 	EXPECT_FALSE(Capabilities.m_MediaIslandSdf);
 	EXPECT_FALSE(Capabilities.m_RoundedRectSdf);
-	EXPECT_FALSE(Capabilities.m_TexturedMsdf.load(std::memory_order_relaxed));
+	EXPECT_FALSE(Capabilities.m_ProceduralRing.load(std::memory_order_relaxed));
 	EXPECT_FALSE(Capabilities.m_RenderTargets);
 	EXPECT_FALSE(Capabilities.m_RenderTargetGaussianBlur);
 	EXPECT_FALSE(Capabilities.m_BackbufferCapture);

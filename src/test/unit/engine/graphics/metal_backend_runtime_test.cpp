@@ -135,9 +135,9 @@ namespace
 				return false;
 			}
 
-			if(!m_Capabilities.m_RenderTargets || !m_Capabilities.m_RenderTargetGaussianBlur || !m_Capabilities.m_BackbufferCapture || !m_Capabilities.m_MediaIslandSdf || !m_Capabilities.m_RoundedRectSdf || !m_Capabilities.m_TexturedMsdf.load(std::memory_order_acquire))
+			if(!m_Capabilities.m_RenderTargets || !m_Capabilities.m_RenderTargetGaussianBlur || !m_Capabilities.m_BackbufferCapture || !m_Capabilities.m_MediaIslandSdf || !m_Capabilities.m_RoundedRectSdf || !m_Capabilities.m_ProceduralRing.load(std::memory_order_acquire))
 			{
-				m_Error = "Metal did not publish P3/P4 SDF and MSDF capabilities";
+				m_Error = "Metal did not publish P3/P4 SDF and procedural-ring capabilities";
 				return false;
 			}
 			return true;
@@ -172,7 +172,7 @@ namespace
 			return m_ReadPresentedImageData && m_ReadPresentedImageData(Width, Height, Format, vData);
 		}
 
-		bool HasTexturedMsdf() const { return m_Capabilities.m_TexturedMsdf.load(std::memory_order_acquire); }
+		bool HasProceduralRing() const { return m_Capabilities.m_ProceduralRing.load(std::memory_order_acquire); }
 		const std::string &Error() const { return m_Error; }
 	};
 
@@ -265,37 +265,19 @@ namespace
 		return RunCommand(pBackend, &Render);
 	}
 
-	bool CreateWhiteMsdfTexture(CCommandProcessorFragment_GLBase *pBackend, int Slot)
-	{
-		uint8_t *pData = static_cast<uint8_t *>(malloc(4));
-		if(pData == nullptr)
-			return false;
-		pData[0] = 255;
-		pData[1] = 255;
-		pData[2] = 255;
-		pData[3] = 255;
-		CCommandBuffer::SCommand_Texture_Create Create;
-		Create.m_Slot = Slot;
-		Create.m_Width = 1;
-		Create.m_Height = 1;
-		Create.m_Flags = TextureFlag::NO_MIPMAPS;
-		Create.m_pData = pData;
-		return RunCommand(pBackend, &Create);
-	}
-
-	bool RenderTexturedMsdf(CCommandProcessorFragment_GLBase *pBackend, float Width, float Height, int TextureSlot, CCommandBuffer::SColor Color)
+	bool RenderProceduralRing(CCommandProcessorFragment_GLBase *pBackend, float Width, float Height, CCommandBuffer::SColor Color)
 	{
 		auto aVertices = SdfQuadVertices(Width, Height);
 		for(CCommandBuffer::SVertex &Vertex : aVertices)
 			Vertex.m_Color = Color;
-		CCommandBuffer::SCommand_RenderTexturedMsdf Render;
+		CCommandBuffer::SCommand_RenderProceduralRing Render;
 		Render.m_State.m_BlendMode = EBlendMode::ALPHA;
 		Render.m_State.m_WrapMode = EWrapMode::CLAMP;
-		Render.m_State.m_Texture = TextureSlot;
+		Render.m_State.m_Texture = -1;
 		Render.m_State.m_ScreenTL = {0.0f, 0.0f};
 		Render.m_State.m_ScreenBR = {Width, Height};
 		Render.m_State.m_ClipEnable = false;
-		Render.m_MsdfParams = {4.0f, 1.0f, 1.0f, 0.0f};
+		Render.m_RingParams = {0.2f, 0.5f, 0.0f, 6.2831853f};
 		Render.m_PrimType = EPrimitiveType::QUADS;
 		Render.m_PrimCount = 1;
 		Render.m_pVertices = aVertices.data();
@@ -686,7 +668,7 @@ TEST(MetalBackendRuntime, QmSdfPipelinesRenderBackdropAlphaAndClip)
 	RoundedRectImage.Free();
 }
 
-TEST(MetalBackendRuntime, TexturedMsdfPipelineRendersTintAndOpacity)
+TEST(MetalBackendRuntime, ProceduralRingPipelineRendersTintAndOpacity)
 {
 	CMetalRuntimeBackend Runtime;
 	ASSERT_TRUE(Runtime.Init()) << Runtime.Error();
@@ -694,12 +676,11 @@ TEST(MetalBackendRuntime, TexturedMsdfPipelineRendersTintAndOpacity)
 	ASSERT_NE(pBackend, nullptr);
 
 	pBackend->StartCommands(4, 1);
-	ASSERT_TRUE(CreateWhiteMsdfTexture(pBackend, 0));
 	CCommandBuffer::SCommand_Clear Clear;
 	Clear.m_Color = {0.0f, 0.0f, 0.0f, 1.0f};
 	Clear.m_ForceClear = true;
 	ASSERT_TRUE(RunCommand(pBackend, &Clear));
-	ASSERT_TRUE(RenderTexturedMsdf(pBackend, 32.0f, 32.0f, 0, {0, 128, 255, 128}));
+	ASSERT_TRUE(RenderProceduralRing(pBackend, 32.0f, 32.0f, {0, 128, 255, 128}));
 	CImageInfo Image;
 	bool Swapped = false;
 	CCommandBuffer::SCommand_TrySwapAndScreenshot Screenshot;
@@ -711,7 +692,7 @@ TEST(MetalBackendRuntime, TexturedMsdfPipelineRendersTintAndOpacity)
 
 	ASSERT_NE(Image.m_pData, nullptr);
 	const auto *pPixels = static_cast<const uint8_t *>(Image.m_pData);
-	const size_t Center = (16U * Image.m_Width + 16U) * 4U;
+	const size_t Center = (16U * Image.m_Width + 27U) * 4U;
 	EXPECT_LE(pPixels[Center + 0], 2);
 	EXPECT_NEAR(pPixels[Center + 1], 64, 2);
 	EXPECT_NEAR(pPixels[Center + 2], 128, 2);
@@ -741,7 +722,7 @@ TEST(MetalBackendRuntime, MultiSamplingAndResizeRecreateNativePresentedResources
 			GTEST_SKIP() << "Metal device does not support 4x MSAA";
 		ASSERT_EQ(ActualCount, RequestedCount);
 		pBackend->EndCommands();
-		ASSERT_TRUE(Runtime.HasTexturedMsdf());
+		ASSERT_TRUE(Runtime.HasProceduralRing());
 
 		pBackend->StartCommands(3, 2);
 		CCommandBuffer::SCommand_Clear Clear;

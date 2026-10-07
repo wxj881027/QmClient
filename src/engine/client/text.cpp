@@ -1154,8 +1154,7 @@ public:
 
 	void SetIconFontWeight(const int Weight)
 	{
-		// 与图集侧保持相同的旧配置归一化：非法值按 Bold 处理，避免
-		// MTSDF 已切到 Bold 而字体回退仍落到 Regular。
+		// 旧配置及非法字重统一归一化，非法值按 Bold 处理。
 		const int NormalizedWeight = Weight >= 0 && Weight <= 4 ? Weight : 1;
 		FT_Face Face = m_IconRegularFace;
 		switch(NormalizedWeight)

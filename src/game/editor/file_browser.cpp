@@ -7,7 +7,7 @@
 #include <engine/sound.h>
 #include <engine/storage.h>
 
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/editor/editor.h>
 #include <game/localization.h>
 

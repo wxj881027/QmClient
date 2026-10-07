@@ -26,7 +26,7 @@
 #include <game/client/components/qmclient/scoreboard_skin.h>
 #include <game/client/components/statboard.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 

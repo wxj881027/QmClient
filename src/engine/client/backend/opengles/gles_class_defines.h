@@ -20,7 +20,7 @@
 #define CGLSLTileProgram CGLSL_ESTileProgram
 #define CGLSLMediaIslandSdfProgram CGLSL_ESMediaIslandSdfProgram
 #define CGLSLRoundedRectSdfProgram CGLSL_ESRoundedRectSdfProgram
-#define CGLSLTexturedMsdfProgram CGLSL_ESTexturedMsdfProgram
+#define CGLSLProceduralRingProgram CGLSL_ESProceduralRingProgram
 #define CGLSLGaussianBlurProgram CGLSL_ESGaussianBlurProgram
 #else
 #undef CCommandProcessorFragment_OpenGL3_3
@@ -39,6 +39,6 @@
 #undef CGLSLTileProgram
 #undef CGLSLMediaIslandSdfProgram
 #undef CGLSLRoundedRectSdfProgram
-#undef CGLSLTexturedMsdfProgram
+#undef CGLSLProceduralRingProgram
 #undef CGLSLGaussianBlurProgram
 #endif

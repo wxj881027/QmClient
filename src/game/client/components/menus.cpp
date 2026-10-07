@@ -57,7 +57,7 @@
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 
@@ -676,7 +676,6 @@ IUiContext CMenus::SettingsUiContext(const char *pScope, const float UiScale)
 	Context.m_pUi = Ui();
 	Context.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
 	Context.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
-	Context.m_pIconManager = GameClient()->QmIconManager();
 	Context.m_pMenus = this;
 	Context.m_pTooltips = &GameClient()->m_Tooltips;
 	Context.m_pTextRender = TextRender();
@@ -2441,8 +2440,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		const CUIRect IconRect{Tab.x + (Tab.w - IconSide) * 0.5f, Tab.y + (Tab.h - IconSide) * 0.5f, IconSide, IconSide};
 		// 状态色作为输入，全局图标色在最终绘制时统一应用。
 		const ColorRGBA IconColor = OnIndicator ? MenuCapsuleTabActiveLabelColor() : ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-		if(!GameClient()->QmIconManager()->PreferFontFallback() && GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, IconRect, IconColor))
-			return;
+		return;
 
 		const unsigned OldFlags = TextRender()->GetRenderFlags();
 		const EFontPreset OldPreset = TextRender()->GetFontPreset();
@@ -3436,8 +3434,8 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		float MouseAngle = std::atan2(MouseDelta.y, MouseDelta.x);
 		if(MouseAngle < -pi / 2.0f)
 			MouseAngle += 2.0f * pi;
-		const bool UseMsdfRing = Graphics()->HasTexturedMsdf();
-		if(!UseMsdfRing)
+		const bool UseProceduralRing = Graphics()->HasProceduralRing();
+		if(!UseProceduralRing)
 		{
 			Graphics()->TextureClear();
 			Graphics()->QuadsBegin();
@@ -3463,12 +3461,11 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			const float Sweep = 2.0f * pi * ChartWeight / (float)TotalChartWeight;
 			if(Sweep <= 0.0f)
 				continue;
-			if(UseMsdfRing)
+			if(UseProceduralRing)
 			{
-				IGraphics::STexturedMsdfParams Params;
+				IGraphics::SProceduralRingParams Params;
 				Params.m_Rect = vec4(ChartCenter.x - ChartRadius, ChartCenter.y - ChartRadius, ChartRadius * 2.0f, ChartRadius * 2.0f);
 				Params.m_Color = aModeColors[Index % std::size(aModeColors)];
-				Params.m_ProceduralRing = true;
 				Params.m_RingInnerRadius = ChartInnerRadius / (ChartRadius * 2.0f);
 				Params.m_RingOuterRadius = 0.5f;
 				// 角度边缘至少覆盖一个像素的导数范围，避免相邻扇区之间出现
@@ -3476,7 +3473,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 				const float AngularOverlap = maximum(0.012f, 4.0f / ChartRadius);
 				Params.m_RingStartAngle = StartAngle - AngularOverlap;
 				Params.m_RingEndAngle = StartAngle + Sweep + AngularOverlap;
-				Graphics()->RenderTexturedMsdf(Params);
+				Graphics()->RenderProceduralRing(Params);
 			}
 			else
 			{
@@ -3499,7 +3496,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 				HoveredMode = (int)Index;
 			StartAngle += Sweep;
 		}
-		if(!UseMsdfRing)
+		if(!UseProceduralRing)
 			Graphics()->QuadsEnd();
 	}
 	if(HoveredMode >= 0)

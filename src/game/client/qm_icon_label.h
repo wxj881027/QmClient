@@ -2,7 +2,7 @@
 #ifndef GAME_CLIENT_QM_ICON_LABEL_H
 #define GAME_CLIENT_QM_ICON_LABEL_H
 
-#include "qm_icon_manager.h"
+#include "qm_icon.h"
 
 #include <engine/textrender.h>
 
@@ -10,7 +10,7 @@ inline EQmIcon QmIconForLabel(EFontPreset Preset, const char *pText, int Length 
 {
 	if(Preset != EFontPreset::ICON_FONT && Preset != EFontPreset::ICON_FONT_BOLD)
 		return EQmIcon::COUNT;
-	return CQmIconManager::IconFromGlyph(pText, Length);
+	return CQmIconRegistry::IconFromGlyph(pText, Length);
 }
 
 inline CUIRect QmIconLabelRect(const CUIRect &Rect, float Size, int Align)
@@ -50,7 +50,7 @@ inline SQmIconLabelGlyphs QmIconLabelGlyphs(EFontPreset Preset, const char *pTex
 		const int Bytes = Lead < 0x80 ? 1 : (Lead < 0xE0 ? 2 : (Lead < 0xF0 ? 3 : 4));
 		if(Bytes > Length)
 			return {};
-		const EQmIcon Icon = CQmIconManager::IconFromGlyph(pText, Bytes);
+		const EQmIcon Icon = CQmIconRegistry::IconFromGlyph(pText, Bytes);
 		if(Icon == EQmIcon::COUNT)
 			return {};
 		Result.m_aIcons[Result.m_Count++] = Icon;

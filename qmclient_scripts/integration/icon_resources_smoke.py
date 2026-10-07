@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""真实便携客户端的图标资源冒烟：隔离 profile、用户覆盖与 MTSDF 失败回退。"""
+"""真实便携客户端的图标资源冒烟：隔离 profile、用户覆盖与统一 TTF 图标绘制。"""
 
 from __future__ import annotations
 
@@ -115,25 +115,18 @@ def icon_draw_count(line: str, key: str) -> int | None:
 	return value if type(value) is int and value >= 0 else None
 
 
-def msdf_draws(line: str) -> int | None:
-	return icon_draw_count(line, "msdf_draws")
+def ttf_draws(line: str) -> int | None:
+	return icon_draw_count(line, "ttf_draws")
 
 
-def font_fallback_draws(line: str) -> int | None:
-	return icon_draw_count(line, "font_fallback_draws")
-
-
-def prepare_client(source: Path, directory: Path, atlas: bool) -> None:
+def prepare_client(source: Path, directory: Path) -> None:
 	directory.mkdir()
 	shutil.copy2(source, directory / source.name)
 	for dll in source.parent.glob("*.dll"):
 		shutil.copy2(dll, directory / dll.name)
 
-	def ignore(path: str, names: list[str]) -> list[str]:
-		return ["icons"] if not atlas and Path(path) == REPO_ROOT / "data/qmclient" and "icons" in names else []
-
 	# 必须从干净源码复制资源，不能让 build/data 残留的已删除字体掩盖回归。
-	shutil.copytree(REPO_ROOT / "data", directory / "data", ignore=ignore)
+	shutil.copytree(REPO_ROOT / "data", directory / "data")
 	# Windows shader 由构建生成；只叠加这类生成依赖，不叠加字体或图集。
 	shaders = source.parent / "data/shader"
 	if shaders.is_dir():
@@ -164,9 +157,9 @@ def assert_bundled_fonts(client: Process, directory: Path) -> None:
 			raise AssertionError(f"{style} loaded outside isolated bundled data: {actual}")
 
 
-def scenario(source: Path, workspace: Path, name: str, atlas: bool, hostile: bool, proxy: str, backend: str = "OpenGL", require_screenshot: bool = False) -> dict[str, object]:
+def scenario(source: Path, workspace: Path, name: str, hostile: bool, proxy: str, backend: str = "OpenGL", require_screenshot: bool = False) -> dict[str, object]:
 	directory = workspace / name
-	prepare_client(source, directory, atlas)
+	prepare_client(source, directory)
 	profile = directory / "profile"
 	if hostile:
 		poison_user_resources(profile)
@@ -214,17 +207,8 @@ def scenario(source: Path, workspace: Path, name: str, atlas: bool, hostile: boo
 			client.command(f"qm_ui_icon_weight {weight}")
 			client.command(f"echo qm_icon_weight_{weight}")
 			wait_new(client, offset, lambda line, weight=weight: f"qm_icon_weight_{weight}" in line, "weight command processed")
-			if atlas:
-				if weight == 0:
-					client.wait_for(lambda line: f"MTSDF icon atlas ready: weight={style} " in line, f"{style} atlas startup", 30)
-				else:
-					wait_new(client, offset, lambda line, style=style: f"MTSDF icon atlas ready: weight={style} " in line, f"{style} atlas reload")
-				line = wait_perf_summary(client, profile, perf_offsets, lambda line: (msdf_draws(line) or 0) > 0, "actual MTSDF drawing")
-			else:
-				line = wait_perf_summary(client, profile, perf_offsets, lambda line: msdf_draws(line) == 0 and (font_fallback_draws(line) or 0) > 0, "actual font fallback drawing without atlas")
-				if any("MTSDF icon atlas ready:" in raw for raw in client._lines):
-					raise AssertionError("missing bundled atlas unexpectedly loaded from a foreign directory")
-			observations.append({"weight": weight, "atlas_style": style, "diagnostic": line})
+			line = wait_perf_summary(client, profile, perf_offsets, lambda line: (ttf_draws(line) or 0) > 0, "actual bundled TTF icon drawing")
+			observations.append({"weight": weight, "font_style": style, "diagnostic": line})
 		client.command("qm_ui_scale 125")
 		client.command("screenshot")
 		client.command("echo qm_icon_capture_requested")
@@ -241,7 +225,7 @@ def scenario(source: Path, workspace: Path, name: str, atlas: bool, hostile: boo
 			raise AssertionError("icon smoke client did not exit normally")
 		if (cwd / "qmclient/settings.cfg").exists():
 			raise AssertionError("client wrote settings outside isolated profile")
-		return {"scenario": name, "status": "passed", "atlas": atlas, "backend": backend, "weights": observations, "capture_status": capture_status, "screenshots": [str(file) for file in profile.rglob("screenshot*.png")]}
+		return {"scenario": name, "status": "passed", "icon_path": "bundled-ttf", "backend": backend, "weights": observations, "capture_status": capture_status, "screenshots": [str(file) for file in profile.rglob("screenshot*.png")]}
 	finally:
 		client.stop()
 		(directory / "client.log").write_text("\n".join(client._lines) + "\n", encoding="utf-8")
@@ -269,8 +253,8 @@ def main() -> int:
 	proxy_reservation.bind(("127.0.0.1", 0))
 	proxy = f"http://127.0.0.1:{proxy_reservation.getsockname()[1]}"
 	try:
-		for name, atlas, hostile, backend in (("clean-profile", True, False, "OpenGL"), ("hostile-user-resources", True, True, "OpenGL"), ("missing-atlas-fallback", False, True, "OpenGL"), ("vulkan-bundled-resources", True, True, "Vulkan")):
-			results.append(scenario(source, workspace, name, atlas, hostile, proxy, backend, args.require_screenshot))
+		for name, hostile, backend in (("clean-profile", False, "OpenGL"), ("hostile-user-resources", True, "OpenGL"), ("vulkan-bundled-resources", True, "Vulkan")):
+			results.append(scenario(source, workspace, name, hostile, proxy, backend, args.require_screenshot))
 			print(f"PASS {name}", flush=True)
 		return 0
 	except Exception as error:

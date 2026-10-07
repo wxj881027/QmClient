@@ -2883,34 +2883,26 @@ void CGraphics_Threaded::DrawRoundedRectAntialias(const float x, const float y, 
 	QuadsEnd();
 }
 
-void CGraphics_Threaded::RenderTexturedMsdf(const IGraphics::STexturedMsdfParams &Params)
+void CGraphics_Threaded::RenderProceduralRing(const IGraphics::SProceduralRingParams &Params)
 {
-	if((!Params.m_ProceduralRing && (!Params.m_Texture.IsValid() || !IsTextureHandleAllocated(Params.m_Texture) || Params.m_PxRange <= 0.0f || Params.m_AtlasWidth <= 0.0f || Params.m_AtlasHeight <= 0.0f)) || Params.m_Rect.z <= 0.0f || Params.m_Rect.w <= 0.0f || Params.m_Color.a <= 0.0f)
+	if(Params.m_RingInnerRadius < 0.0f || Params.m_RingOuterRadius <= Params.m_RingInnerRadius || Params.m_RingEndAngle <= Params.m_RingStartAngle || Params.m_Rect.z <= 0.0f || Params.m_Rect.w <= 0.0f || Params.m_Color.a <= 0.0f)
 		return;
 
 	if(m_NumVertices > 0)
 	{
 #if defined(CONF_PLATFORM_MACOS)
 		if(m_MacosGraphicsDiagnosticsEnabled)
-			m_MsdfFlushCount++;
+			m_RingFlushCount++;
 #endif
 		FlushVertices();
 	}
 
-	CCommandBuffer::SCommand_RenderTexturedMsdf Cmd;
+	CCommandBuffer::SCommand_RenderProceduralRing Cmd;
 	Cmd.m_State = m_State;
 	Cmd.m_State.m_BlendMode = EBlendMode::ALPHA;
 	Cmd.m_State.m_WrapMode = EWrapMode::CLAMP;
-	Cmd.m_State.m_Texture = Params.m_ProceduralRing ? m_NullTexture.Id() : Params.m_Texture.Id();
-	float MsdfW = qm_msdf_param::EncodeMsdf(std::abs(Params.m_OutlineWidthPx));
-	// w 的三种状态互斥（普通 MSDF / Alpha 真 SDF / Duotone），编码契约见 qm_msdf_param。
-	// 必须用 else if：若两个分支都执行，Duotone 哨兵会被真 SDF 编码覆盖。
-	if(!Params.m_ProceduralRing && Params.m_UseSecondarySdf)
-		MsdfW = qm_msdf_param::DUOTONE_W;
-	else if(!Params.m_ProceduralRing && Params.m_UseTrueSdf)
-		MsdfW = qm_msdf_param::EncodeTrueSdf(std::abs(Params.m_OutlineWidthPx));
-	Cmd.m_MsdfParams = Params.m_ProceduralRing ? vec4(-Params.m_RingInnerRadius, Params.m_RingOuterRadius, Params.m_RingStartAngle, Params.m_RingEndAngle) : vec4(Params.m_PxRange, Params.m_AtlasWidth, Params.m_AtlasHeight, MsdfW);
-	Cmd.m_MsdfSecondaryColor = vec4(Params.m_SecondaryColor.r, Params.m_SecondaryColor.g, Params.m_SecondaryColor.b, Params.m_SecondaryColor.a);
+	Cmd.m_State.m_Texture = -1;
+	Cmd.m_RingParams = vec4(Params.m_RingInnerRadius, Params.m_RingOuterRadius, Params.m_RingStartAngle, Params.m_RingEndAngle);
 
 	const float CenterX = Params.m_Rect.x + Params.m_Rect.z * 0.5f;
 	const float CenterY = Params.m_Rect.y + Params.m_Rect.w * 0.5f;
@@ -2927,7 +2919,7 @@ void CGraphics_Threaded::RenderTexturedMsdf(const IGraphics::STexturedMsdfParams
 	aVertices[1].m_Pos = Rotate(Params.m_Rect.x + Params.m_Rect.z, Params.m_Rect.y);
 	aVertices[2].m_Pos = Rotate(Params.m_Rect.x + Params.m_Rect.z, Params.m_Rect.y + Params.m_Rect.w);
 	aVertices[3].m_Pos = Rotate(Params.m_Rect.x, Params.m_Rect.y + Params.m_Rect.w);
-	const vec4 UvRect = Params.m_ProceduralRing ? vec4(0.0f, 0.0f, 1.0f, 1.0f) : Params.m_UvRect;
+	const vec4 UvRect = vec4(0.0f, 0.0f, 1.0f, 1.0f);
 	aVertices[0].m_Tex = vec2(UvRect.x, UvRect.y);
 	aVertices[1].m_Tex = vec2(UvRect.z, UvRect.y);
 	aVertices[2].m_Tex = vec2(UvRect.z, UvRect.w);
@@ -2945,7 +2937,7 @@ void CGraphics_Threaded::RenderTexturedMsdf(const IGraphics::STexturedMsdfParams
 	m_pCommandBuffer->AddRenderCalls(1);
 #if defined(CONF_PLATFORM_MACOS)
 	if(m_MacosGraphicsDiagnosticsEnabled)
-		m_MsdfCommandCount++;
+		m_RingCommandCount++;
 #endif
 }
 
@@ -4675,8 +4667,8 @@ void CGraphics_Threaded::Swap()
 			m_MacosGraphicsDiagnosticSubmitMsSum = 0.0;
 			m_MacosFrameSerializationWaitMsSum = 0.0;
 			m_MacosFrameSerializationWaitCount = 0;
-			m_MsdfCommandCount = 0;
-			m_MsdfFlushCount = 0;
+			m_RingCommandCount = 0;
+			m_RingFlushCount = 0;
 			m_RoundedRectSdfCommandCount = 0;
 			m_RoundedRectSdfFlushCount = 0;
 			m_BufferedTextCommandCount = 0;
@@ -4702,14 +4694,14 @@ void CGraphics_Threaded::Swap()
 			{
 				const double FrameSerializationWaitMsAvg = m_MacosFrameSerializationWaitCount > 0 ? m_MacosFrameSerializationWaitMsSum / (double)m_MacosFrameSerializationWaitCount : 0.0;
 				const int UnlimitedConfig = g_Config.m_GfxVsync == 0 && g_Config.m_GfxRefreshRate == 0 && g_Config.m_ClRefreshRate == 0;
-				dbg_msg("perf/macos_graphics", "event=frame_submit sample_frames=120 submit_duration_ms_sum=%.3f submit_duration_ms_avg=%.3f frame_serialization_wait_count=%" PRIu64 " frame_serialization_wait_ms_sum=%.3f frame_serialization_wait_ms_avg=%.3f unlimited_config=%d vsync=%d gfx_refresh_rate=%d cl_refresh_rate=%d cl_refresh_rate_inactive=%d debug=%d dbg_graphs=%d async_render_old=%d backend=%s renderer=%s vendor=%s drawable_width=%d drawable_height=%d hidpi_scale=%.3f fullscreen=%d fsaa=%u refresh_hz=%d msdf_commands_sum=%" PRIu64 " msdf_flushes_sum=%" PRIu64 " rounded_sdf_commands_sum=%" PRIu64 " rounded_sdf_flushes_sum=%" PRIu64 " buffered_text_commands_sum=%" PRIu64 " buffered_text_no_container_sum=%" PRIu64 " buffered_text_zero_quad_sum=%" PRIu64,
-					m_MacosGraphicsDiagnosticSubmitMsSum, m_MacosGraphicsDiagnosticSubmitMsSum / 120.0, m_MacosFrameSerializationWaitCount, m_MacosFrameSerializationWaitMsSum, FrameSerializationWaitMsAvg, UnlimitedConfig, g_Config.m_GfxVsync, g_Config.m_GfxRefreshRate, g_Config.m_ClRefreshRate, g_Config.m_ClRefreshRateInactive, g_Config.m_Debug, g_Config.m_DbgGraphs, g_Config.m_GfxAsyncRenderOld, pBackend, GetRendererString(), GetVendorString(), m_ScreenWidth, m_ScreenHeight, m_ScreenHiDPIScale, g_Config.m_GfxFullscreen, m_MultiSamplingCount, m_ScreenRefreshRate, m_MsdfCommandCount, m_MsdfFlushCount, m_RoundedRectSdfCommandCount, m_RoundedRectSdfFlushCount, m_BufferedTextCommandCount, m_BufferedTextNoContainerCount, m_BufferedTextZeroQuadCount);
+				dbg_msg("perf/macos_graphics", "event=frame_submit sample_frames=120 submit_duration_ms_sum=%.3f submit_duration_ms_avg=%.3f frame_serialization_wait_count=%" PRIu64 " frame_serialization_wait_ms_sum=%.3f frame_serialization_wait_ms_avg=%.3f unlimited_config=%d vsync=%d gfx_refresh_rate=%d cl_refresh_rate=%d cl_refresh_rate_inactive=%d debug=%d dbg_graphs=%d async_render_old=%d backend=%s renderer=%s vendor=%s drawable_width=%d drawable_height=%d hidpi_scale=%.3f fullscreen=%d fsaa=%u refresh_hz=%d ring_commands_sum=%" PRIu64 " ring_flushes_sum=%" PRIu64 " rounded_sdf_commands_sum=%" PRIu64 " rounded_sdf_flushes_sum=%" PRIu64 " buffered_text_commands_sum=%" PRIu64 " buffered_text_no_container_sum=%" PRIu64 " buffered_text_zero_quad_sum=%" PRIu64,
+					m_MacosGraphicsDiagnosticSubmitMsSum, m_MacosGraphicsDiagnosticSubmitMsSum / 120.0, m_MacosFrameSerializationWaitCount, m_MacosFrameSerializationWaitMsSum, FrameSerializationWaitMsAvg, UnlimitedConfig, g_Config.m_GfxVsync, g_Config.m_GfxRefreshRate, g_Config.m_ClRefreshRate, g_Config.m_ClRefreshRateInactive, g_Config.m_Debug, g_Config.m_DbgGraphs, g_Config.m_GfxAsyncRenderOld, pBackend, GetRendererString(), GetVendorString(), m_ScreenWidth, m_ScreenHeight, m_ScreenHiDPIScale, g_Config.m_GfxFullscreen, m_MultiSamplingCount, m_ScreenRefreshRate, m_RingCommandCount, m_RingFlushCount, m_RoundedRectSdfCommandCount, m_RoundedRectSdfFlushCount, m_BufferedTextCommandCount, m_BufferedTextNoContainerCount, m_BufferedTextZeroQuadCount);
 				m_MacosGraphicsDiagnosticFrameCount = 0;
 				m_MacosGraphicsDiagnosticSubmitMsSum = 0.0;
 				m_MacosFrameSerializationWaitMsSum = 0.0;
 				m_MacosFrameSerializationWaitCount = 0;
-				m_MsdfCommandCount = 0;
-				m_MsdfFlushCount = 0;
+				m_RingCommandCount = 0;
+				m_RingFlushCount = 0;
 				m_RoundedRectSdfCommandCount = 0;
 				m_RoundedRectSdfFlushCount = 0;
 				m_BufferedTextCommandCount = 0;

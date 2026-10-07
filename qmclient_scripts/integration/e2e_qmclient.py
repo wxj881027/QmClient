@@ -197,11 +197,10 @@ def scenario_vector_font_and_icon_resources(env: ProcessEnvironment) -> None:
 	# 打开真实设置页，确保 UI 图标绘制路径实际运行，而不是只验证资源文件存在。
 	env.client.command("ui_page 16")
 	time.sleep(2.0)
-	for style in ("light", "regular", "bold", "fill", "duotone"):
-		icon_manifest = env.build_dir / "data" / "qmclient" / "icons" / f"qm_icons_{style}_msdf.json"
-		manifest = json.loads(icon_manifest.read_text(encoding="utf-8"))
-		if manifest.get("kind") != "mtsdf" or manifest.get("distance_field") != "mtsdf" or manifest.get("alpha_sdf") is not True:
-			raise AssertionError(f"Phosphor {style} icon atlas is not an MTSDF resource: {icon_manifest}")
+	for style in ("Regular", "Bold", "Light", "Fill"):
+		font = env.build_dir / "data" / "fonts" / "Phosphor" / f"Phosphor-{style}.ttf"
+		if not font.is_file():
+			raise AssertionError(f"Bundled Phosphor font is missing: {font}")
 	for line in env.client._lines:
 		if "Bundled 'Phosphor' icon face is unavailable" in line:
 			raise AssertionError("the bundled Phosphor icon face was not available")

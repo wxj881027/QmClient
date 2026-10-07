@@ -3,7 +3,8 @@
 #ifndef GAME_CLIENT_GAMECLIENT_H
 #define GAME_CLIENT_GAMECLIENT_H
 
-#include "qm_icon_manager.h"
+#include "qm_icon.h"
+#include "qm_icon_prewarm.h"
 #include "qm_ime_manager.h"
 #include "render.h"
 
@@ -398,7 +399,7 @@ private:
 	CCollision m_Collision;
 	CUi m_UI;
 	CUiRuntimeV2 m_UiRuntimeV2;
-	CQmIconManager m_QmIconManager;
+	CQmIconPrewarmPlan m_QmIconPrewarm;
 	int m_AppliedQmUiIconWeight = -1;
 	int m_AppliedQmCustomFontWeight = -1;
 	CQmImeManager m_QmImeManager;
@@ -497,9 +498,8 @@ public:
 	class CUi *Ui() { return &m_UI; }
 	class CUiRuntimeV2 *UiRuntimeV2() { return &m_UiRuntimeV2; }
 	const class CUiRuntimeV2 *UiRuntimeV2() const { return &m_UiRuntimeV2; }
-	class CQmIconManager *QmIconManager() { return &m_QmIconManager; }
-	const class CQmIconManager *QmIconManager() const { return &m_QmIconManager; }
 	void SyncQmUiIconWeight();
+	void PrewarmQmIconGlyphs(int MaxGlyphs, int64_t BudgetTicks);
 	void SyncQmCustomFontWeight();
 	class ISound *Sound() const { return m_pSound; }
 	class IInput *Input() const { return m_pInput; }

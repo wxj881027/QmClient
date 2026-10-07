@@ -17,7 +17,7 @@
 
 #include <game/client/components/qmclient/qmclient.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 
 #if defined(CONF_PLATFORM_ANDROID)
 #include <android/android_main.h>

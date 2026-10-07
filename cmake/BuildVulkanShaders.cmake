@@ -137,9 +137,9 @@ generate_shader_file("" "" "media_island_sdf.vert" "media_island_sdf.vert.spv")
 generate_shader_file("" "" "rounded_rect_sdf.frag" "rounded_rect_sdf.frag.spv")
 generate_shader_file("" "" "rounded_rect_sdf.vert" "rounded_rect_sdf.vert.spv")
 
-# Textured MSDF icons
-generate_shader_file("" "" "textured_msdf.frag" "textured_msdf.frag.spv")
-generate_shader_file("" "" "textured_msdf.vert" "textured_msdf.vert.spv")
+# Procedural statistics ring
+generate_shader_file("" "" "procedural_ring.frag" "procedural_ring.frag.spv")
+generate_shader_file("" "" "procedural_ring.vert" "procedural_ring.vert.spv")
 
 # Quad layer
 generate_shader_file("" "" "quad.frag" "quad.frag.spv")

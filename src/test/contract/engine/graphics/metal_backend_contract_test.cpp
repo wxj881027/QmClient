@@ -496,27 +496,6 @@ TEST(MetalBackendContract, QmSdfCommandsUseMatchedPipelinesAndLayout)
 	EXPECT_NE(Shader.find("MEDIA_ISLAND_BACKDROP_UV = 44"), std::string::npos);
 }
 
-TEST(MetalBackendContract, TexturedMsdfUsesDedicatedPipelinesAndAtomicCapability)
-{
-	const std::string Source = ReadTestSourceFile("src/engine/client/backend/metal/backend_metal.mm");
-	EXPECT_NE(Source.find("CreateTexturedMsdfPipelineStates"), std::string::npos);
-	EXPECT_NE(Source.find("m_aTexturedMsdfPipelines"), std::string::npos);
-	EXPECT_NE(Source.find("m_aMultiSampleTexturedMsdfPipelines"), std::string::npos);
-	EXPECT_NE(Source.find("CMD_RENDER_TEXTURED_MSDF"), std::string::npos);
-	EXPECT_NE(Source.find("bool DrawTexturedMsdf"), std::string::npos);
-	EXPECT_NE(Source.find("setFragmentTexture:Texture.m_Texture atIndex:0"), std::string::npos);
-	EXPECT_NE(Source.find("setFragmentBuffer:Frame.m_VertexBuffer offset:ParamsOffset atIndex:1"), std::string::npos);
-	EXPECT_NE(Source.find("m_TexturedMsdf.store(TexturedMsdfPipelinesAvailable, std::memory_order_release)"), std::string::npos);
-	EXPECT_NE(Source.find("m_TexturedMsdf.store(false, std::memory_order_release)"), std::string::npos);
-	EXPECT_NE(Source.find("CreateTexturedMsdfPipelineStates(SupportedCount, m_aMultiSampleTexturedMsdfPipelines)"), std::string::npos);
-
-	const std::string Shader = ReadTestSourceFile("data/shader/metal/qmclient.metal");
-	EXPECT_NE(Shader.find("qmclient_textured_msdf_fragment"), std::string::npos);
-	EXPECT_NE(Shader.find("QmClientMedian"), std::string::npos);
-	EXPECT_NE(Shader.find("fwidth(Input.m_TexCoord)"), std::string::npos);
-	EXPECT_NE(Shader.find("Input.m_Color.a * Opacity"), std::string::npos);
-}
-
 TEST(MetalBackendContract, ShaderManifestCoversAllBackendFamiliesAndMetalEntrypoints)
 {
 	const std::string MetalShader = ReadTestSourceFile("data/shader/metal/qmclient.metal");

@@ -22,7 +22,6 @@
 #include <vector>
 
 class CScrollRegion;
-class CQmIconManager;
 enum class EQmIcon;
 class IClient;
 class IGraphics;
@@ -831,8 +830,22 @@ private:
 	IGraphics *m_pGraphics;
 	IInput *m_pInput;
 	ITextRender *m_pTextRender;
-	CQmIconManager *m_pQmIconManager = nullptr;
 	float m_BackgroundAlphaScale = 1.0f;
+	struct SQmCachedIconLabel
+	{
+		std::string m_Text;
+		float m_FontSize;
+		float m_PixelScale;
+		float m_PixelScaleX;
+		int m_Weight;
+		EFontPreset m_Preset;
+		unsigned m_Flags;
+		STextContainerIndex m_Container;
+		vec2 m_Size;
+		float m_BiggestCharacterHeight;
+	};
+	mutable std::vector<SQmCachedIconLabel> m_vQmCachedIconLabels;
+	bool DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Size, int Align, int Count) const;
 
 	std::vector<CUIElement *> m_vpOwnUIElements; // ui elements maintained by CUi class
 	std::vector<CUIElement *> m_vpUIElements;
@@ -1149,8 +1162,6 @@ public:
 	void DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA Color, int Corners = IGraphics::CORNER_ALL, bool Enabled = true);
 	int DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt);
 	// 图集优先、字形回退的图标绘制：pFallbackIcon 为 FontIcons::FONT_ICON_* 字形。
-	void SetQmIconManager(CQmIconManager *pQmIconManager) { m_pQmIconManager = pQmIconManager; }
-	bool TryDrawQmIconLabels(const CUIRect &Rect, const EQmIcon *pIcons, int Count, float Size, int Align, const ColorRGBA &Color) const;
 	bool DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const;
 	bool DrawQmIconAt(float x, float y, float Size, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f)) const
 	{

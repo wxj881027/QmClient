@@ -74,83 +74,23 @@ fragment float4 qmclient_textured_fragment(SMetalVertexOut Input [[stage_in]], t
 	return Texture.sample(Sampler, Input.m_TexCoord) * Input.m_Color;
 }
 
-float QmClientMedian(float3 Value)
+fragment float4 qmclient_procedural_ring_fragment(SMetalVertexOut Input [[stage_in]], constant float4 &RingParams [[buffer(1)]])
 {
-	return max(min(Value.r, Value.g), min(max(Value.r, Value.g), Value.b));
-}
-
-struct QmClientMsdfParams
-{
-	float4 m_Params;
-	float4 m_SecondaryColor;
-};
-
-fragment float4 qmclient_textured_msdf_fragment(SMetalVertexOut Input [[stage_in]], texture2d<float> Texture [[texture(0)]], sampler Sampler [[sampler(0)]], constant QmClientMsdfParams &Msdf [[buffer(1)]])
-{
-	const float4 MsdfParams = Msdf.m_Params;
-	if(MsdfParams.x < 0.0)
-	{
-		const float InnerRadius = -MsdfParams.x;
-		const float OuterRadius = MsdfParams.y;
-		const float Sweep = max(MsdfParams.w - MsdfParams.z, 0.0);
-		const float2 Point = Input.m_TexCoord - float2(0.5);
-		const float Radius = length(Point);
-		const float RadialDistance = max(InnerRadius - Radius, Radius - OuterRadius);
-		const float RadialFeather = max(fwidth(Radius), 0.0005);
-		const float RadialCoverage = 1.0 - smoothstep(-RadialFeather * 0.5, RadialFeather * 0.5, RadialDistance);
-		const float Angle = atan2(Point.y, Point.x);
-		float RelativeAngle = fmod(Angle - MsdfParams.z, 6.28318530718);
-		if(RelativeAngle < 0.0)
-			RelativeAngle += 6.28318530718;
-		const float AngularFeather = max(fwidth(Angle), 0.0015);
-		const float AngularCoverage = Sweep >= 6.2830 ? 1.0 : smoothstep(0.0, AngularFeather, RelativeAngle) * smoothstep(0.0, AngularFeather, Sweep - RelativeAngle);
-		return float4(Input.m_Color.rgb, Input.m_Color.a * RadialCoverage * AngularCoverage);
-	}
-	const float4 Sample = Texture.sample(Sampler, Input.m_TexCoord);
-		const float TrueSignedDistance = Sample.a - 0.5;
-		// w 编码契约见 src/engine/graphics.h 的 qm_msdf_param 命名空间，三个后端必须一致：
-		//   w > 0 → 普通 MSDF（w = 描边宽度）；-0.001 < w < 0 → Duotone；w <= -0.001 → Alpha 真 SDF。
-		// 注意 Duotone 区间必须严格避开真 SDF 的描边编码，否则带描边的真 SDF 字形会被误判。
-		const bool UseTrueSdf = MsdfParams.w <= -0.001;
-		const bool UseSecondarySdf = MsdfParams.w < 0.0 && !UseTrueSdf;
-		const float SignedDistance = UseTrueSdf ? TrueSignedDistance : QmClientMedian(Sample.rgb) - 0.5;
-		const float2 UnitRange = float2(MsdfParams.x) / MsdfParams.yz;
-		const float2 ScreenTexSize = 1.0 / fwidth(Input.m_TexCoord);
-		const float ScreenPxRange = max(0.5 * dot(UnitRange, ScreenTexSize), 1.0);
-		const float RequestedOutline = UseTrueSdf ? max(-MsdfParams.w - 0.001, 0.0) : MsdfParams.w;
-		if(RequestedOutline > 0.0)
-	{
-		// 距离场在当前 quad 上最多只能表示约 0.5 * ScreenPxRange 的外扩。
-		// 超出这个范围会把 atlas 背景也推成不透明矩形；限制到留出一个抗锯齿像素的可表示范围。
-		const float MaxRepresentableOutline = max(0.0, 0.5 * ScreenPxRange - 0.5);
-			const float OutlineWidth = min(RequestedOutline, MaxRepresentableOutline);
-		const float FillCoverage = clamp(SignedDistance * ScreenPxRange + 0.5, 0.0, 1.0);
-		// 描边直接沿同一 signed distance 外扩，避免邻字形 UV 串采样造成孤立白点。
-		// MTSDF alpha is a true single-channel distance, so the outer edge does
-		// not inherit MSDF corner-channel interpolation artifacts.
-		if(UseTrueSdf)
-		{
-			const float OuterCoverage = clamp(TrueSignedDistance * ScreenPxRange + OutlineWidth + 0.5, 0.0, 1.0);
-			const float OutlineCoverage = max(OuterCoverage - FillCoverage, 0.0);
-			return float4(Input.m_Color.rgb, Input.m_Color.a * OutlineCoverage);
-		}
-		const float OuterCoverage = clamp(SignedDistance * ScreenPxRange + OutlineWidth + 0.5, 0.0, 1.0);
-		const float OutlineCoverage = max(OuterCoverage - FillCoverage, 0.0);
-		return float4(Input.m_Color.rgb, Input.m_Color.a * OutlineCoverage);
-	}
-	const float Opacity = clamp(SignedDistance * ScreenPxRange + 0.5, 0.0, 1.0);
-	if(UseSecondarySdf)
-	{
-		// Duotone atlas：RGB 与 Alpha 是同一 px_range 下的两张距离场（primary / secondary），
-		// 因此复用 ScreenPxRange 解码 secondary 覆盖，缩放到任意尺寸都保持锐利边缘。
-		const float SecondaryCoverage = clamp((Sample.a - 0.5) * ScreenPxRange + 0.5, 0.0, 1.0);
-		const float3 SecondaryColor = Msdf.m_SecondaryColor.rgb;
-		const float SecondaryAlpha = SecondaryCoverage * Msdf.m_SecondaryColor.a;
-		const float Alpha = max(Opacity, SecondaryAlpha);
-		const float3 Color = mix(SecondaryColor, Input.m_Color.rgb, Opacity);
-		return float4(Color, Input.m_Color.a * Alpha);
-	}
-	return float4(Input.m_Color.rgb, Input.m_Color.a * Opacity);
+	const float InnerRadius = RingParams.x;
+	const float OuterRadius = RingParams.y;
+	const float Sweep = max(RingParams.w - RingParams.z, 0.0);
+	const float2 Point = Input.m_TexCoord - float2(0.5);
+	const float Radius = length(Point);
+	const float RadialDistance = max(InnerRadius - Radius, Radius - OuterRadius);
+	const float RadialFeather = max(fwidth(Radius), 0.0005);
+	const float RadialCoverage = 1.0 - smoothstep(-RadialFeather * 0.5, RadialFeather * 0.5, RadialDistance);
+	const float Angle = atan2(Point.y, Point.x);
+	float RelativeAngle = fmod(Angle - RingParams.z, 6.28318530718);
+	if(RelativeAngle < 0.0)
+		RelativeAngle += 6.28318530718;
+	const float AngularFeather = max(fwidth(Angle), 0.0015);
+	const float AngularCoverage = Sweep >= 6.2830 ? 1.0 : smoothstep(0.0, AngularFeather, RelativeAngle) * smoothstep(0.0, AngularFeather, Sweep - RelativeAngle);
+	return float4(Input.m_Color.rgb, Input.m_Color.a * RadialCoverage * AngularCoverage);
 }
 
 float RoundedRectDistance(float2 Point, float2 HalfSize, float Radius)

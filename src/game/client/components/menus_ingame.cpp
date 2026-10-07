@@ -39,7 +39,7 @@
 #include <game/client/components/touch_controls.h>
 #include <game/client/frame_scheduler.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
@@ -2994,11 +2994,10 @@ void CMenus::RenderInGameNetwork(CUIRect MainView)
 		}
 		if(Tab.m_bFavoriteMapsIcon)
 		{
-			// 收藏地图页签优先图集、失败回退字体；两条路径最终统一应用全局图标色。
+			// 收藏地图页签使用随包字体，并统一应用全局图标色。
 			const float IconSide = minimum(Slot.w, Slot.h) * 0.56f;
 			const CUIRect IconRect{Slot.x + (Slot.w - IconSide) * 0.5f, Slot.y + (Slot.h - IconSide) * 0.5f, IconSide, IconSide};
 			const ColorRGBA IconColor = TabActive ? ui_widget::CapsuleTabBarActiveLabelColor(BrowserPanelColor()) : ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-			if(GameClient()->QmIconManager()->PreferFontFallback() || !GameClient()->QmIconManager()->RenderIcon(EQmIcon::BOOKMARK, IconRect, IconColor))
 			{
 				const unsigned OldFlags = TextRender()->GetRenderFlags();
 				const EFontPreset OldPreset = TextRender()->GetFontPreset();

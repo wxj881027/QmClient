@@ -2,7 +2,7 @@
 #ifndef GAME_CLIENT_QM_ICON_LABEL_RUNS_H
 #define GAME_CLIENT_QM_ICON_LABEL_RUNS_H
 
-#include "qm_icon_manager.h"
+#include "qm_icon.h"
 
 #include <engine/textrender.h>
 
@@ -43,7 +43,7 @@ bool QmVisitIconLabelRuns(const char *pText, F &&Visit)
 		SQmIconLabelRun Run{pStart, static_cast<int>(pCursor - pStart), IsIcon, EQmIcon::COUNT, nullptr};
 		if(IsIcon)
 		{
-			Run.m_Icon = CQmIconManager::IconFromGlyph(pStart, Run.m_Length);
+			Run.m_Icon = CQmIconRegistry::IconFromGlyph(pStart, Run.m_Length);
 			// 已有配置仅在绘制时映射，保持原标签与编号不变。
 			if(Codepoint == 0xF0C9)
 			{

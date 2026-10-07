@@ -30,7 +30,7 @@
 #include <game/client/components/camera.h>
 #include <game/client/gameclient.h>
 #include <game/client/lineinput.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
 #include <game/client/ui_scrollregion.h>
@@ -5507,7 +5507,6 @@ void CEditor::Init()
 	m_pSound = Kernel()->RequestInterface<ISound>();
 	m_UI.Init(Kernel());
 	// 编辑器拥有独立 CUi，但图标资源与客户端共享，避免永远落入字体回退。
-	m_UI.SetQmIconManager(static_cast<CGameClient *>(Kernel()->RequestInterface<IGameClient>())->QmIconManager());
 	str_copy(m_aCollabStatus, Localize("Not in a collaboration room", "Editor"));
 	m_UI.SetPopupMenuClosedCallback([this]() {
 		m_PopupEventWasActivated = false;
@@ -5688,7 +5687,6 @@ void CEditor::HandleWriterFinishJobs()
 
 void CEditor::OnUpdate()
 {
-	static_cast<CGameClient *>(Kernel()->RequestInterface<IGameClient>())->QmIconManager()->RefreshForCurrentDpi();
 	CUIElementBase::Init(Ui()); // update static pointer because game and editor use separate UI
 
 	if(!m_EditorWasUsedBefore)

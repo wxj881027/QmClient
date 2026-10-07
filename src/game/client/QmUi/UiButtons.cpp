@@ -11,7 +11,7 @@
 #include <engine/graphics.h>
 
 #include <game/client/components/menus.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 #include <game/client/ui_rect.h>
 
@@ -29,7 +29,7 @@ namespace ui_widget
 			pTextRender->TextColor(Color);
 			pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 			pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-			Ctx.m_pUi->DoLabel(&Rect, pIcon, QmIconFallbackFontSize(Rect), TEXTALIGN_MC);
+			Ctx.m_pUi->DoLabel(&Rect, pIcon, QmIconFontSize(Rect), TEXTALIGN_MC);
 			pTextRender->SetRenderFlags(PreviousFlags);
 			pTextRender->SetFontPreset(PreviousPreset);
 			pTextRender->TextColor(PreviousColor);
@@ -155,10 +155,7 @@ namespace ui_widget
 																 EQmIconState::NORMAL);
 		const SQmIconStyle IconStyle;
 		const ColorRGBA IconColor = ResolveUiSurfaceIconColor(CompositeUiSurface(BgColor, Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : ui_token::color::SURFACE_BACKDROP), IconStyle.Color(IconState));
-		if(Ctx.m_pIconManager == nullptr || (Ctx.m_pIconManager->PreferFontFallback() && pFallbackIcon != nullptr && pFallbackIcon[0] != '\0') || !Ctx.m_pIconManager->RenderIcon(Icon, IconRect, IconColor))
-		{
-			RenderQmGlyphIcon(Ctx, IconRect, pFallbackIcon, IconColor);
-		}
+		RenderQmGlyphIcon(Ctx, IconRect, pFallbackIcon, IconColor);
 
 		return Result != 0;
 	}

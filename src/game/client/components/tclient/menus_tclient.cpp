@@ -36,6 +36,7 @@
 #include <game/client/components/countryflags.h>
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/font_download_storage.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/section_loader.h>
 #include <game/client/components/skins.h>
@@ -43,7 +44,7 @@
 #include <game/client/components/tclient/bindwheel.h>
 #include <game/client/components/tclient/trails.h>
 #include <game/client/gameclient.h>
-#include <game/client/qm_icon_manager.h>
+#include <game/client/qm_icon.h>
 #include <game/client/render.h>
 #include <game/client/skin.h>
 #include <game/client/ui.h>
@@ -1255,7 +1256,7 @@ void CMenus::ConfigureSettingsCardSection(SSettingsSection &Section, const char 
 // ============ QmClient 字体商店 ============
 // 可搜索的在线字体目录：data/qmclient/font_catalog.json 覆盖 Google Fonts 全量
 // 字体族（族名/分类/google/fonts 仓库路径），随包发行且用户目录同名文件可整体
-// 覆盖。字体文件本体不随包——搜索命中后按需下载安装到 qmclient/fonts（逐文件
+// 覆盖。字体文件本体不随包——搜索命中后按需下载安装到 fonts/downloaded_fonts（逐文件
 // 串行，镜像链 ghproxy.net → ghfast.top → raw.githubusercontent.com）；预览按需
 // 下载到 qmclient/fontcache 并临时加载为预览面（不进字体族列表）。安装与预览
 // 共用“同一时刻最多一个下载”的串行通道，安装任务优先。
@@ -1316,12 +1317,7 @@ namespace fontstore
 
 	bool IsValidFontFileName(const std::string &File)
 	{
-		return !File.empty() &&
-		       File.find('/') == std::string::npos &&
-		       File.find('\\') == std::string::npos &&
-		       File.find("..") == std::string::npos &&
-		       (str_endswith_nocase(File.c_str(), ".ttf") != nullptr ||
-			       str_endswith_nocase(File.c_str(), ".otf") != nullptr);
+		return qm_font_download::ValidFilename(File);
 	}
 
 	// 仓库相对路径会拼进下载 URL 与落盘路径：锁死形态，禁止任何穿越写法。
@@ -1454,9 +1450,7 @@ namespace fontstore
 		for(SFamily &Family : Catalog(pStorage).m_vFamilies)
 		{
 			Family.m_Installed = std::all_of(Family.m_vEntryIndices.begin(), Family.m_vEntryIndices.end(), [&](size_t EntryIndex) {
-				char aPath[IO_MAX_PATH_LENGTH];
-				str_format(aPath, sizeof(aPath), "qmclient/fonts/%s", vEntries[EntryIndex].m_File.c_str());
-				return pStorage->FileExists(aPath, IStorage::TYPE_SAVE);
+				return qm_font_download::Installed(*pStorage, vEntries[EntryIndex].m_File);
 			});
 		}
 	}
@@ -1544,10 +1538,20 @@ namespace fontstore
 	// Done() 恒 false、Progress() 恒 0（安装卡 0% 不动、预览卡「加载中」不减的根因）。
 	std::shared_ptr<IHttpRequest> StartRequest(IHttp *pHttp, IStorage *pStorage, const char *pDir, const std::string &File, const std::vector<std::string> &vUrls, size_t UrlIndex)
 	{
+		if(UrlIndex >= vUrls.size())
+			return nullptr;
 		char aDest[IO_MAX_PATH_LENGTH];
-		str_format(aDest, sizeof(aDest), "%s/%s", pDir, File.c_str());
-		pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-		pStorage->CreateFolder(pDir, IStorage::TYPE_SAVE);
+		if(str_comp(pDir, qm_font_download::DIRECTORY) == 0)
+		{
+			if(!qm_font_download::TargetPath(File, aDest, sizeof(aDest)) || !qm_font_download::EnsureDirectory(*pStorage))
+				return nullptr;
+		}
+		else
+		{
+			str_format(aDest, sizeof(aDest), "%s/%s", pDir, File.c_str());
+			pStorage->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+			pStorage->CreateFolder(pDir, IStorage::TYPE_SAVE);
+		}
 		std::shared_ptr<IHttpRequest> pRequest(CreateHttpRequest(vUrls[UrlIndex].c_str()));
 		pRequest->WriteToFile(pStorage, aDest, IStorage::TYPE_SAVE);
 		pRequest->Timeout(CTimeout{4000, 0, 500, 5});
@@ -1568,7 +1572,13 @@ namespace fontstore
 	{
 		std::vector<SEntry> &vEntries = Entries(pStorage);
 		const SEntry &Entry = vEntries[Families(pStorage)[Job.m_FamilyIndex].m_vEntryIndices[Job.m_FileCursor]];
-		Job.m_pRequest = StartRequest(pHttp, pStorage, "qmclient/fonts", Entry.m_File, EntryDownloadUrls(Entry), Job.m_UrlIndex);
+		Job.m_pRequest = StartRequest(pHttp, pStorage, qm_font_download::DIRECTORY, Entry.m_File, EntryDownloadUrls(Entry), Job.m_UrlIndex);
+		if(Job.m_pRequest == nullptr)
+		{
+			Job.m_Failed = true;
+			s_StateVersion++;
+			log_warn("fontstore", "Could not create font download target for '%s'", Entry.m_File.c_str());
+		}
 	}
 
 	// UI 发起安装（含重试）：同一族同时只允许一个任务；已存在的文件直接跳过，
@@ -1586,9 +1596,7 @@ namespace fontstore
 		std::vector<SEntry> &vEntries = Entries(pStorage);
 		while(Job.m_FileCursor < Family.m_vEntryIndices.size())
 		{
-			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "qmclient/fonts/%s", vEntries[Family.m_vEntryIndices[Job.m_FileCursor]].m_File.c_str());
-			if(!pStorage->FileExists(aPath, IStorage::TYPE_SAVE))
+			if(!qm_font_download::Installed(*pStorage, vEntries[Family.m_vEntryIndices[Job.m_FileCursor]].m_File))
 				break;
 			++Job.m_FileCursor;
 		}
@@ -1664,8 +1672,14 @@ namespace fontstore
 				if(Job.m_UrlIndex < vUrls.size())
 				{
 					log_info("fontstore", "Retrying '%s' via next mirror", Entry.m_File.c_str());
-					Job.m_pRequest = StartRequest(pHttp, pStorage, "qmclient/fonts", Entry.m_File, vUrls, Job.m_UrlIndex);
-					InstallActive = true;
+					Job.m_pRequest = StartRequest(pHttp, pStorage, qm_font_download::DIRECTORY, Entry.m_File, vUrls, Job.m_UrlIndex);
+					if(Job.m_pRequest == nullptr)
+					{
+						Job.m_Failed = true;
+						s_StateVersion++;
+					}
+					else
+						InstallActive = true;
 				}
 				else
 				{
@@ -1686,9 +1700,7 @@ namespace fontstore
 				SFamily &Family = vFamilies[Job.m_FamilyIndex];
 				while(Job.m_FileCursor < Family.m_vEntryIndices.size())
 				{
-					char aPath[IO_MAX_PATH_LENGTH];
-					str_format(aPath, sizeof(aPath), "qmclient/fonts/%s", vEntries[Family.m_vEntryIndices[Job.m_FileCursor]].m_File.c_str());
-					if(!pStorage->FileExists(aPath, IStorage::TYPE_SAVE))
+					if(!qm_font_download::Installed(*pStorage, vEntries[Family.m_vEntryIndices[Job.m_FileCursor]].m_File))
 						break;
 					++Job.m_FileCursor;
 				}
@@ -2311,11 +2323,9 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		static CButtonContainer s_FontDirectoryId;
 		if(Ui()->DoButton_QmIcon(&s_FontDirectoryId, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
 		{
-			Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-			Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
 			char aBuf[IO_MAX_PATH_LENGTH];
-			Storage()->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/fonts", aBuf, sizeof(aBuf));
-			Client()->ViewFile(aBuf);
+			if(qm_font_download::CompleteDirectoryPath(*Storage(), aBuf, sizeof(aBuf)))
+				Client()->ViewFile(aBuf);
 		}
 		// 预热字体预览字形：弹层关闭时每帧只切换一个候选字体，把该字体标签
 		// 的字形以全透明提前光栅化进图集。否则弹层首帧要集中为所有可见候选
@@ -3191,11 +3201,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					static CButtonContainer s_FontDirectoryId;
 					if(Ui()->DoButton_QmIcon(&s_FontDirectoryId, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
 					{
-						Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-						Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
 						char aBuf[IO_MAX_PATH_LENGTH];
-						Storage()->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/fonts", aBuf, sizeof(aBuf));
-						Client()->ViewFile(aBuf);
+						if(qm_font_download::CompleteDirectoryPath(*Storage(), aBuf, sizeof(aBuf)))
+							Client()->ViewFile(aBuf);
 					}
 					LogSettingsStage("tclient_settings_left_visual_font_dropdown", FontDropDownTimer);
 				}
@@ -3297,11 +3305,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				static CButtonContainer s_FontDirectoryId;
 				if(Ui()->DoButton_QmIcon(&s_FontDirectoryId, EQmIcon::FOLDER, FONT_ICON_FOLDER, 0, &FontDirectory, IGraphics::CORNER_ALL))
 				{
-					Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
-					Storage()->CreateFolder("qmclient/fonts", IStorage::TYPE_SAVE);
 					char aBuf[IO_MAX_PATH_LENGTH];
-					Storage()->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/fonts", aBuf, sizeof(aBuf));
-					Client()->ViewFile(aBuf);
+					if(qm_font_download::CompleteDirectoryPath(*Storage(), aBuf, sizeof(aBuf)))
+						Client()->ViewFile(aBuf);
 				}
 			}
 			else

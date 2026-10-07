@@ -25,7 +25,7 @@ except ModuleNotFoundError:
 	from process_harness import Process
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCENARIOS = ("user-only-unicode-name", "data-only-family-and-book", "corrupt-user-shadow-falls-back", "collection-and-cross-directory-duplicates")
+SCENARIOS = ("downloaded-font-unicode-name", "user-only-unicode-name", "data-only-family-and-book", "corrupt-user-shadow-falls-back", "collection-and-cross-directory-duplicates")
 
 
 def fixture_font(family: str, style: str = "Regular", bad_english_name: bool = False) -> TTFont:
@@ -83,6 +83,10 @@ def write_collection(path: Path, families: tuple[str, str]) -> None:
 def create_scenario_fonts(directory: Path, name: str) -> list[tuple[str, tuple[str, ...]]]:
 	profile = directory / "profile"
 	data = directory / "data"
+	if name == "downloaded-font-unicode-name":
+		family = "Qm商店下载字体"
+		write_font(profile / "fonts/downloaded_fonts/downloaded-user.ttf", family, "Book", True)
+		return [(family, ("Book",))]
 	if name == "user-only-unicode-name":
 		family = "Qm字体中文族"
 		write_font(profile / "qmclient/fonts/only-user.ttf", family, "Book", True)
@@ -130,7 +134,7 @@ def probe_font(client: Process, request: str, family: str, style: str, codepoint
 
 def run_font_scenario(source: Path, workspace: Path, name: str, proxy: str) -> dict[str, object]:
 	directory = workspace / name
-	prepare_client(source, directory, True)
+	prepare_client(source, directory)
 	expected = create_scenario_fonts(directory, name)
 	cwd = directory / "foreign-cwd"
 	cwd.mkdir()
@@ -193,6 +197,10 @@ def run_font_scenario(source: Path, workspace: Path, name: str, proxy: str) -> d
 		(directory / "client.log").write_text("\n".join(client._lines) + "\n", encoding="utf-8")
 
 
+def smoke_downloaded_font_unicode_name(source: Path, workspace: Path, proxy: str) -> dict[str, object]:
+	return run_font_scenario(source, workspace, "downloaded-font-unicode-name", proxy)
+
+
 def smoke_user_only_unicode_name(source: Path, workspace: Path, proxy: str) -> dict[str, object]:
 	return run_font_scenario(source, workspace, "user-only-unicode-name", proxy)
 
@@ -225,7 +233,7 @@ def main() -> int:
 	reservation.bind(("127.0.0.1", 0))
 	proxy = f"http://127.0.0.1:{reservation.getsockname()[1]}"
 	try:
-		for run in (smoke_user_only_unicode_name, smoke_data_only_family_and_book, smoke_corrupt_user_shadow_falls_back, smoke_collection_and_cross_directory_duplicates):
+		for run in (smoke_downloaded_font_unicode_name, smoke_user_only_unicode_name, smoke_data_only_family_and_book, smoke_corrupt_user_shadow_falls_back, smoke_collection_and_cross_directory_duplicates):
 			result = run(source, workspace, proxy)
 			results.append(result)
 			print(f"PASS {result['scenario']}", flush=True)
