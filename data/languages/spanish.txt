@@ -1856,6 +1856,9 @@ Cheats are enabled on this server
 check ddnet-saves.txt in config_directory.
 == Consulta ddnet-saves.txt en config_directory.
 
+Check for updates
+== Buscar actualizaciones
+
 Check if voice server address is reachable
 == Verifica si la dirección del servidor de voz es accesible
 
@@ -4361,9 +4364,6 @@ Failed
 Failed saving the replay!
 == ¡Falló al guardar la repetición!
 
-Failed to check for updates
-== Error al buscar actualizaciones
-
 Failed to copy main asset image.
 == Error al copiar la imagen del activo principal.
 
@@ -6098,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == Última sincronización correcta: %s
 
+Last verified approved update source
+== Última fuente de actualización aprobada y verificada
+
 Latency
 == Latencia
 
@@ -7292,6 +7295,9 @@ Netversion
 Network
 == Red
 
+Network error
+== Error de red
+
 Network timeout
 == Tiempo de espera de red
 
@@ -7397,6 +7403,9 @@ No chat message to translate
 No code
 == Sin código
 
+No compatible Windows update package for this version
+== No hay un paquete de actualización de Windows compatible con esta versión
+
 No controller found. Plug in a controller.
 == No se encontró ningún mando. Conecta un mando.
 
@@ -7414,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == No hay jugadores directores disponibles
+
+No downloadable portable package for this version
+== Aún no hay un paquete portátil para esta versión
 
 No empty team left.
 == No queda ningún equipo vacío.
@@ -7501,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == No hay aspectos usados recientemente
+
+No release notes provided
+== No se proporcionaron notas para esta versión
 
 No results
 == Sin resultados
@@ -9148,6 +9163,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Posición Y relativa del botón de retroceso arrastrable
+
+Release notes
+== Notas de la versión
 
 Reload
 == Recargar
@@ -13372,6 +13390,9 @@ Update notice
 
 Update or add a specific war group
 == Actualizar o añadir un grupo de guerra específico
+
+Update package available
+== Hay un paquete de actualización para esta versión
 
 Update Rate
 == Tasa de actualización

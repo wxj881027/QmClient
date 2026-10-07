@@ -68,7 +68,12 @@ public:
 	long RequestTimeoutMs() const { return m_Timeout.m_TimeoutMs; }
 	// Skip the download if the local file is newer or as new as the remote file.
 	void MaxResponseSize(int64_t MaxResponseSize) { m_MaxResponseSize = MaxResponseSize; }
-	void Proxy(const char *pProxy) { str_copy(m_aProxy, pProxy != nullptr ? pProxy : ""); }
+	// 显式空代理表示强制直连；未设置才继承 curl 的环境代理。
+	void Proxy(const char *pProxy)
+	{
+		m_ProxyConfigured = true;
+		str_copy(m_aProxy, pProxy != nullptr ? pProxy : "");
+	}
 	const char *ProxyUrl() const { return m_aProxy; }
 	void AllowInsecureProtocol(bool Allow = true) { m_AllowInsecureProtocol = Allow; }
 	void LogProgress(HTTPLOG LogProgress) { m_LogProgress = LogProgress; }
@@ -138,8 +143,11 @@ public:
 	const SHA256_DIGEST &ResultSha256() const;
 
 	int StatusCode() const;
+	// 请求完成后可读取失败响应的状态码；无 HTTP 响应时为零。
+	int CompletedStatusCode() const;
 	std::optional<int64_t> ResultAgeSeconds() const;
 	std::optional<int64_t> ResultLastModified() const;
+	std::optional<int64_t> ResultRetryAfterSeconds() const { return m_ResultRetryAfterSeconds; }
 
 protected:
 	static const char *const USER_AGENT_STRING;
@@ -156,6 +164,7 @@ protected:
 	// Request
 	char m_aUrl[2048] = "";
 	char m_aProxy[256] = "";
+	bool m_ProxyConfigured = false;
 	REQUEST m_Type = REQUEST::GET;
 	unsigned char *m_pBody = nullptr;
 	size_t m_BodyLength = 0;
@@ -179,6 +188,7 @@ protected:
 	int m_StatusCode = 0;
 	std::optional<int64_t> m_ResultDate = std::nullopt;
 	std::optional<int64_t> m_ResultLastModified = std::nullopt;
+	std::optional<int64_t> m_ResultRetryAfterSeconds = std::nullopt;
 
 	bool m_WriteToMemory = true;
 	bool m_WriteToFile = false;

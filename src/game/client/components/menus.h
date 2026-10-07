@@ -2627,6 +2627,8 @@ public:
 	// 启动赞助提醒（灵动岛）的两段式状态（掉落/展开进度 + 停留倒计时）。
 	qm_island::SNoticeState m_QmSponsorNudgeNotice;
 	bool m_QmNewFeaturesScrollReset = true;
+	bool m_QmUpdateScrollReset = true;
+	int m_QmUpdatePopupState = -1;
 	int m_TClientSettingsTab = 0;
 	int m_AppearanceSettingsTab = APPEARANCE_TAB_HUD;
 	CLineInputBuffered<128> m_GlobalCardSearchInput;
@@ -2715,6 +2717,7 @@ public:
 		POPUP_WARNING,
 		POPUP_SAVE_SKIN,
 		POPUP_QM_NEW_FEATURES,
+		POPUP_QM_UPDATE,
 	};
 
 	enum
@@ -2732,6 +2735,8 @@ public:
 	void ShowQuitPopup();
 	void ShowQmNewFeaturesPopup();
 	void RenderQmNewFeaturesPopup(CUIRect Screen);
+	void RenderQmUpdatePopup(CUIRect Screen);
+	void ShowQmUpdatePopup();
 	void LoadSettingsRuntimeCacheMetadata();
 	void SaveSettingsRuntimeCacheMetadata();
 	void PrewarmVisibleSettingsResources(CUIRect MainView);

@@ -14,6 +14,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmTree.h>
+#include <game/client/QmUi/UiButtonStyle.h>
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
@@ -384,6 +385,27 @@ static void BM_IconButtonFeedback(benchmark::State &State)
 	}
 }
 BENCHMARK(BM_IconButtonFeedback)->Arg(0)->Arg(1)->Arg(2);
+
+// 每轮解析一个次级按钮表面；分别测空闲、悬浮、按下和禁用，不包含 GPU 绘制。
+static void BM_SecondaryButtonStyle(benchmark::State &State)
+{
+	ColorRGBA Surface(0.2f, 0.4f, 0.6f, 0.25f), Backdrop(0.1f, 0.1f, 0.1f, 1);
+	bool Enabled = State.range(0) != 3;
+	bool Hovered = State.range(0) != 0;
+	bool Pressed = State.range(0) == 2;
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Surface);
+		benchmark::DoNotOptimize(Backdrop);
+		benchmark::DoNotOptimize(Enabled);
+		benchmark::DoNotOptimize(Hovered);
+		benchmark::DoNotOptimize(Pressed);
+		const auto Style = ResolveUiSecondaryButtonStyle(Surface, Backdrop, Enabled, Hovered, Pressed);
+		benchmark::DoNotOptimize(Style);
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_SecondaryButtonStyle)->Arg(0)->Arg(1)->Arg(2)->Arg(3);
 
 // 每轮解析一个真实标签：正文快速拒绝、单图标与组合图标，计时包含识别与布局。
 static void BM_IconLabelResolve(benchmark::State &State)

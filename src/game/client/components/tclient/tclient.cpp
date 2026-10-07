@@ -9,7 +9,6 @@
 
 #include <engine/client.h>
 #include <engine/client/enums.h>
-#include <engine/client/qm_storage_mode.h>
 #include <engine/engine.h>
 #include <engine/external/regex.h>
 #include <engine/external/tinyexpr.h>
@@ -32,8 +31,6 @@
 #include <game/client/components/qmclient/data_version.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/components/qmclient/modes.h>
-#include <game/client/components/qmclient/update_manifest.h>
-#include <game/client/components/qmclient/update_version.h>
 #include <game/client/components/qmclient/weapon_animation.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
@@ -43,10 +40,6 @@
 #include <game/localization.h>
 #include <game/mapitems.h>
 #include <game/version.h>
-
-#if defined(CONF_FAMILY_WINDOWS)
-#include <engine/shared/qm_update.h>
-#endif
 
 #include <algorithm>
 #include <array>
@@ -66,18 +59,6 @@
 #include <windows.h>
 #endif
 
-static constexpr int64_t QMCLIENT_UPDATE_RETRY_INTERVAL = 15 * 60;
-#if defined(CONF_FAMILY_WINDOWS)
-static constexpr const char *QMCLIENT_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases/latest";
-static constexpr const char *QMCLIENT_PREVIEW_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases?per_page=100";
-static constexpr const char *QMCLIENT_UPDATE_PACKAGE_NAME = IsQmClientPortableBuild() ? "QmClient-windows-portable.zip" : "QmClient-windows.zip";
-static constexpr const char *QMCLIENT_UPDATE_PACKAGE_SIGNATURE_NAME = IsQmClientPortableBuild() ? "QmClient-windows-portable.zip.sig" : "QmClient-windows.zip.sig";
-static constexpr const char *QMCLIENT_UPDATE_MANIFEST_NAME = IsQmClientPortableBuild() ? "QmClient-windows-portable-update.json" : "QmClient-windows-update.json";
-static constexpr const char *QMCLIENT_UPDATE_MANIFEST_SIGNATURE_NAME = IsQmClientPortableBuild() ? "QmClient-windows-portable-update.json.sig" : "QmClient-windows-update.json.sig";
-static constexpr int64_t QMCLIENT_UPDATE_MAX_PACKAGE_SIZE = 5LL * 1024 * 1024 * 1024;
-static constexpr int64_t QMCLIENT_UPDATE_MAX_MANIFEST_SIZE = 32 * 1024 * 1024;
-static constexpr int64_t QMCLIENT_UPDATE_CHECK_INTERVAL = 6 * 60 * 60;
-#endif
 static constexpr const char *MAP_CATEGORY_CACHE_FILE = "qmclient/map_categories.json";
 static constexpr int64_t MAP_CATEGORY_CACHE_SAVE_DELAY_SEC = 5;
 static constexpr const char *MAP_NOTES_FILE = "qmclient/map_notes.json";
@@ -606,9 +587,7 @@ void CTClient::OnInit()
 {
 	// 字体配置已在 LoadFonts 中应用，不能等本组件初始化时才切换加载页字体。
 	m_pGraphics = Kernel()->RequestInterface<IEngineGraphics>();
-	m_UpdateAutoEnabled = g_Config.m_QmAutoUpdate != 0;
-	if(g_Config.m_QmAutoUpdate)
-		FetchQmClientUpdateInfo();
+	InitUpdateLifecycle();
 
 	// 先在 qmclient/ 目录找，找不到再返回上一级目录找
 	const bool MissingQmClientFolder = !Storage()->FolderExists("qmclient", IStorage::TYPE_ALL);
@@ -639,22 +618,8 @@ void CTClient::OnInit()
 
 void CTClient::OnShutdown()
 {
+	ShutdownUpdateLifecycle();
 	ResetGoresConfigOverrides();
-	auto AbortTask = [](std::shared_ptr<IHttpRequest> &pTask) {
-		if(pTask)
-		{
-			pTask->Abort();
-			pTask = nullptr;
-		}
-	};
-
-	AbortTask(m_pQmClientUpdateInfoTask);
-	AbortTask(m_pUpdatePackageTask);
-	AbortTask(m_pUpdatePackageSignatureTask);
-	AbortTask(m_pUpdateManifestTask);
-	AbortTask(m_pUpdateManifestSignatureTask);
-	if(!m_UpdateInstallerStarted)
-		RemoveUpdateTempFiles();
 	EndMapHistorySession(true);
 	if(m_MapHistoryDirty)
 		SaveMapHistory();
@@ -1823,6 +1788,7 @@ void CTClient::ConCalc(IConsole::IResult *pResult, void *pUserData)
 
 void CTClient::OnConsoleInit()
 {
+	RegisterUpdateCommands();
 	Console()->Register("calc", "r[expression]", CFGFLAG_CLIENT, ConCalc, this, "Evaluate an expression");
 	Console()->Register("airrescue", "", CFGFLAG_CLIENT, ConAirRescue, this, "Rescue to a nearby air tile");
 
@@ -2086,98 +2052,12 @@ void CTClient::OnUpdate()
 			SoloSplitUpdate();
 	}
 	UpdateLocalSaveRestore();
-#if defined(CONF_FAMILY_WINDOWS)
-	const bool AutoUpdateEnabled = g_Config.m_QmAutoUpdate != 0;
-	if(AutoUpdateEnabled != m_UpdateAutoEnabled && !m_UpdateShutdownRequested)
-	{
-		m_UpdateAutoEnabled = AutoUpdateEnabled;
-		if(AutoUpdateEnabled)
-			m_UpdateNextCheck = 0;
-		else
-		{
-			ResetUpdateTasks();
-			RemoveUpdateTempFiles();
-			m_UpdateReady = false;
-			m_UpdateCheckFailed = false;
-			m_UpdateFailureExitAt = 0;
-			m_FetchedQmClientUpdateInfo = false;
-		}
-	}
-#endif
-	StartUpdateCheckIfDue();
+	TickUpdateLifecycle();
 
 	if(m_QmAspectApplyPending)
 	{
 		m_QmAspectApplyPending = false;
 		SetForcedAspect();
-	}
-
-	if(m_pQmClientUpdateInfoTask)
-	{
-		if(m_pQmClientUpdateInfoTask->Done())
-		{
-			const bool InfoOk = m_pQmClientUpdateInfoTask->State() == EHttpState::DONE;
-			if(InfoOk)
-				FinishQmClientUpdateInfo();
-			else
-			{
-				m_UpdateCheckFailed = true;
-				m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-				if(m_UpdateShutdownRequested)
-					m_UpdateFailureExitAt = time_get() + 2 * time_freq();
-			}
-			ResetQmClientUpdateInfoTask();
-
-			if(m_QmClientAutoUpdateAfterCheck)
-			{
-				if(!InfoOk || !m_FetchedQmClientUpdateInfo || m_UpdateCheckFailed)
-				{
-					Client()->AddWarning(SWarning(Localize("Update"), Localize("Failed to check for updates")));
-				}
-				else if(!NeedQmClientUpdate())
-				{
-					Client()->AddWarning(SWarning(Localize("Update notice"), Localize("You are already on the latest version")));
-				}
-				else
-				{
-					Client()->AddWarning(SWarning(Localize("Update notice"), Localize("Downloading update...")));
-				}
-				m_QmClientAutoUpdateAfterCheck = false;
-			}
-		}
-	}
-	if(m_pUpdatePackageTask && m_pUpdatePackageSignatureTask && m_pUpdateManifestTask && m_pUpdateManifestSignatureTask &&
-		m_pUpdatePackageTask->Done() && m_pUpdatePackageSignatureTask->Done() && m_pUpdateManifestTask->Done() && m_pUpdateManifestSignatureTask->Done() &&
-		!m_UpdateReady && !m_UpdateCheckFailed)
-	{
-		FinishUpdateDownloads();
-	}
-	if(m_UpdateShutdownRequested && !IsUpdateChecking() && !IsUpdateDownloading() && !m_UpdateReady && !m_UpdateCheckFailed)
-	{
-		m_UpdateShutdownRequested = false;
-		Client()->Quit();
-	}
-
-	if(m_UpdateShutdownRequested && (m_UpdateReady || m_UpdateCheckFailed) &&
-		(!m_UpdateCheckFailed || m_UpdateFailureExitAt == 0 || time_get() >= m_UpdateFailureExitAt))
-	{
-		if(m_UpdateReady && !m_UpdateInstallerStarted)
-		{
-			if(!LaunchUpdateInstaller())
-			{
-				m_UpdateReady = false;
-				m_UpdateCheckFailed = true;
-				m_UpdateFailureExitAt = time_get() + 2 * time_freq();
-				RemoveUpdateTempFiles();
-				Client()->AddWarning(SWarning(Localize("Update"), Localize("Update failed. Please try again")));
-			}
-		}
-		if((!m_UpdateReady || m_UpdateInstallerStarted || m_UpdateCheckFailed) &&
-			(!m_UpdateCheckFailed || m_UpdateFailureExitAt == 0 || time_get() >= m_UpdateFailureExitAt))
-		{
-			m_UpdateShutdownRequested = false;
-			Client()->Quit();
-		}
 	}
 
 	DoFinishCheck();
@@ -3046,426 +2926,6 @@ void CTClient::CheckFriendEnterGreet()
 	m_FriendEnterPendingNames.append(NewNames);
 	if(m_FriendEnterPendingSendAt <= 0.0f)
 		m_FriendEnterPendingSendAt = Now + FriendEnterGreetDelaySeconds;
-}
-
-bool CTClient::NeedQmClientUpdate()
-{
-	return str_comp(m_aQmClientLatestVersionStr, "0") != 0;
-}
-
-void CTClient::RequestQmClientUpdateCheckAndUpdate()
-{
-	if(IsUpdateChecking() || IsUpdateDownloading())
-		return;
-
-	m_QmClientAutoUpdateAfterCheck = true;
-	m_FetchedQmClientUpdateInfo = false;
-	m_UpdateCheckFailed = false;
-	FetchQmClientUpdateInfo();
-}
-
-void CTClient::StartUpdateDownload()
-{
-#if !defined(CONF_FAMILY_WINDOWS)
-	return;
-#else
-	if(IsUpdateDownloading())
-		return;
-
-	ResetUpdateDownloadTasks();
-	RemoveUpdateTempFiles();
-	m_UpdateReady = false;
-	m_UpdateCheckFailed = false;
-	m_UpdateFailureNoticeShown = false;
-	m_UpdateFailureExitAt = 0;
-	// 安装版使用 Setup 更新卸载记录；便携版和旧 Release 保留 ZIP 流程。
-	char aSetupMarker[IO_MAX_PATH_LENGTH];
-	Storage()->GetBinaryPath("QmClient-Setup.ini", aSetupMarker, sizeof(aSetupMarker));
-	m_UpdateUseSetup = UseQmClientSetupUpdate(fs_is_file(aSetupMarker), m_UpdateRelease, IsQmClientPortableBuild());
-	IStorage::FormatTmpPath(m_aUpdatePackageTmp, sizeof(m_aUpdatePackageTmp), m_UpdateUseSetup ? "QmClient-Setup.exe" : QMCLIENT_UPDATE_PACKAGE_NAME);
-	IStorage::FormatTmpPath(m_aUpdatePackageSignatureTmp, sizeof(m_aUpdatePackageSignatureTmp), m_UpdateUseSetup ? "QmClient-Setup.exe.sig" : QMCLIENT_UPDATE_PACKAGE_SIGNATURE_NAME);
-	IStorage::FormatTmpPath(m_aUpdateManifestTmp, sizeof(m_aUpdateManifestTmp), m_UpdateUseSetup ? "QmClient-windows-setup-update.json" : QMCLIENT_UPDATE_MANIFEST_NAME);
-	IStorage::FormatTmpPath(m_aUpdateManifestSignatureTmp, sizeof(m_aUpdateManifestSignatureTmp), m_UpdateUseSetup ? "QmClient-windows-setup-update.json.sig" : QMCLIENT_UPDATE_MANIFEST_SIGNATURE_NAME);
-
-	const auto StartDownload = [&](std::shared_ptr<IHttpRequest> &pTask, const char *pUrl, const char *pDestination, int64_t MaxResponseSize) {
-		pTask = HttpGet(pUrl);
-		pTask->Timeout(CTimeout{10000, 0, 8192, 20});
-		pTask->MaxResponseSize(MaxResponseSize);
-		pTask->SkipByFileTime(false);
-		pTask->LogProgress(HTTPLOG::FAILURE);
-		pTask->WriteToFile(Storage(), pDestination, IStorage::TYPE_SAVE);
-		Http()->Run(pTask);
-	};
-	StartDownload(m_pUpdatePackageTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupUrl : m_UpdateRelease.m_aPackageUrl, m_aUpdatePackageTmp, QMCLIENT_UPDATE_MAX_PACKAGE_SIZE);
-	StartDownload(m_pUpdatePackageSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl, m_aUpdatePackageSignatureTmp, 64);
-	StartDownload(m_pUpdateManifestTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestUrl : m_UpdateRelease.m_aManifestUrl, m_aUpdateManifestTmp, QMCLIENT_UPDATE_MAX_MANIFEST_SIZE);
-	StartDownload(m_pUpdateManifestSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestSignatureUrl : m_UpdateRelease.m_aManifestSignatureUrl, m_aUpdateManifestSignatureTmp, 64);
-#endif
-}
-
-void CTClient::ResetUpdateDownloadTasks()
-{
-	const auto ResetTask = [](std::shared_ptr<IHttpRequest> &pTask) {
-		if(pTask)
-			pTask->Abort();
-		pTask = nullptr;
-	};
-	ResetTask(m_pUpdatePackageTask);
-	ResetTask(m_pUpdatePackageSignatureTask);
-	ResetTask(m_pUpdateManifestTask);
-	ResetTask(m_pUpdateManifestSignatureTask);
-}
-
-void CTClient::RemoveUpdateTempFiles()
-{
-	if(m_aUpdatePackageTmp[0] != '\0')
-		Storage()->RemoveFile(m_aUpdatePackageTmp, IStorage::TYPE_SAVE);
-	if(m_aUpdatePackageSignatureTmp[0] != '\0')
-		Storage()->RemoveFile(m_aUpdatePackageSignatureTmp, IStorage::TYPE_SAVE);
-	if(m_aUpdateManifestTmp[0] != '\0')
-		Storage()->RemoveFile(m_aUpdateManifestTmp, IStorage::TYPE_SAVE);
-	if(m_aUpdateManifestSignatureTmp[0] != '\0')
-		Storage()->RemoveFile(m_aUpdateManifestSignatureTmp, IStorage::TYPE_SAVE);
-	if(m_aUpdateInstallerTmp[0] != '\0' && !m_UpdateInstallerStarted)
-	{
-		Storage()->RemoveFile(m_aUpdateInstallerTmp, IStorage::TYPE_ABSOLUTE);
-	}
-	if(!m_UpdateInstallerStarted)
-		m_aUpdateInstallerTmp[0] = '\0';
-	m_aUpdatePackageTmp[0] = '\0';
-	m_aUpdatePackageSignatureTmp[0] = '\0';
-	m_aUpdateManifestTmp[0] = '\0';
-	m_aUpdateManifestSignatureTmp[0] = '\0';
-}
-
-void CTClient::ResetUpdateTasks()
-{
-	ResetQmClientUpdateInfoTask();
-	ResetUpdateDownloadTasks();
-}
-
-void CTClient::ResetQmClientUpdateInfoTask()
-{
-	if(m_pQmClientUpdateInfoTask)
-	{
-		m_pQmClientUpdateInfoTask->Abort();
-		m_pQmClientUpdateInfoTask = NULL;
-	}
-}
-
-void CTClient::FetchQmClientUpdateInfo()
-{
-#if !defined(CONF_FAMILY_WINDOWS)
-	return;
-#else
-	if(m_pQmClientUpdateInfoTask && !m_pQmClientUpdateInfoTask->Done())
-		return;
-	m_FetchedQmClientUpdateInfo = false;
-	m_UpdateCheckFailed = false;
-	m_UpdateFailureNoticeShown = false;
-	m_UpdateFailureExitAt = 0;
-	m_aUpdateError[0] = '\0';
-	m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_CHECK_INTERVAL;
-	m_pQmClientUpdateInfoTask = HttpGet(QMCLIENT_IS_DEVELOPMENT_BUILD ? QMCLIENT_PREVIEW_INFO_URL : QMCLIENT_INFO_URL);
-	m_pQmClientUpdateInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
-	m_pQmClientUpdateInfoTask->MaxResponseSize(4 * 1024 * 1024);
-	m_pQmClientUpdateInfoTask->LogProgress(HTTPLOG::FAILURE);
-	Http()->Run(m_pQmClientUpdateInfoTask);
-#endif
-}
-
-void CTClient::FinishQmClientUpdateInfo()
-{
-	unsigned char *pResult = nullptr;
-	size_t ResultSize = 0;
-	m_pQmClientUpdateInfoTask->Result(&pResult, &ResultSize);
-	char aError[256];
-	SQmClientUpdateRelease Release;
-	if(!ParseQmClientUpdateRelease(reinterpret_cast<const char *>(pResult), ResultSize, QMCLIENT_VERSION, Release, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD, IsQmClientPortableBuild()))
-	{
-		m_FetchedQmClientUpdateInfo = true;
-		m_aQmClientLatestVersionStr[0] = '0';
-		m_aQmClientLatestVersionStr[1] = '\0';
-		if(str_comp(aError, "GitHub release version is not newer") != 0)
-		{
-			m_UpdateCheckFailed = true;
-			m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-			str_copy(m_aUpdateError, aError, sizeof(m_aUpdateError));
-			log_error("qm-update", "release metadata rejected: %s", m_aUpdateError);
-		}
-		return;
-	}
-	m_UpdateRelease = Release;
-	str_copy(m_aQmClientLatestVersionStr, Release.m_aVersion, sizeof(m_aQmClientLatestVersionStr));
-	m_FetchedQmClientUpdateInfo = true;
-	m_UpdateCheckFailed = false;
-	StartUpdateDownload();
-}
-
-void CTClient::StartUpdateCheckIfDue()
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	if(!g_Config.m_QmAutoUpdate || m_UpdateShutdownRequested || m_UpdateReady || IsUpdateChecking() || IsUpdateDownloading())
-		return;
-	if(m_UpdateNextCheck == 0 || time_get() >= m_UpdateNextCheck)
-		FetchQmClientUpdateInfo();
-#endif
-}
-
-void CTClient::FinishUpdateDownloads()
-{
-#if !defined(CONF_FAMILY_WINDOWS)
-	return;
-#else
-	auto Fail = [&](const char *pMessage) {
-		m_UpdateReady = false;
-		m_UpdateCheckFailed = true;
-		m_UpdateNextCheck = time_get() + time_freq() * QMCLIENT_UPDATE_RETRY_INTERVAL;
-		str_copy(m_aUpdateError, pMessage != nullptr && pMessage[0] != '\0' ? pMessage : "Update failed", sizeof(m_aUpdateError));
-		log_error("qm-update", "update download or validation failed: %s", m_aUpdateError);
-		ResetUpdateDownloadTasks();
-		RemoveUpdateTempFiles();
-		if(m_UpdateShutdownRequested)
-			m_UpdateFailureExitAt = time_get() + 2 * time_freq();
-		if(!m_UpdateFailureNoticeShown)
-		{
-			Client()->AddWarning(SWarning(Localize("Update"), Localize("Update failed. Please try again")));
-			m_UpdateFailureNoticeShown = true;
-		}
-	};
-
-	const auto IsSuccessful = [](const std::shared_ptr<IHttpRequest> &pTask) {
-		return pTask && pTask->State() == EHttpState::DONE;
-	};
-	if(!IsSuccessful(m_pUpdatePackageTask) || !IsSuccessful(m_pUpdatePackageSignatureTask) ||
-		!IsSuccessful(m_pUpdateManifestTask) || !IsSuccessful(m_pUpdateManifestSignatureTask))
-	{
-		Fail("One or more update assets failed to download");
-		return;
-	}
-
-	using TUpdateData = std::unique_ptr<unsigned char, void (*)(void *)>;
-	TUpdateData ManifestData(nullptr, std::free);
-	TUpdateData ManifestSignatureData(nullptr, std::free);
-	TUpdateData PackageSignatureData(nullptr, std::free);
-	unsigned ManifestSize = 0;
-	unsigned ManifestSignatureSize = 0;
-	unsigned PackageSignatureSize = 0;
-	void *pRawData = nullptr;
-	if(!Storage()->ReadFile(m_aUpdateManifestTmp, IStorage::TYPE_SAVE, &pRawData, &ManifestSize))
-	{
-		Fail("Failed to read the downloaded update manifest");
-		return;
-	}
-	ManifestData.reset(static_cast<unsigned char *>(pRawData));
-	pRawData = nullptr;
-	if(!Storage()->ReadFile(m_aUpdateManifestSignatureTmp, IStorage::TYPE_SAVE, &pRawData, &ManifestSignatureSize))
-	{
-		Fail("Failed to read the downloaded manifest signature");
-		return;
-	}
-	ManifestSignatureData.reset(static_cast<unsigned char *>(pRawData));
-	pRawData = nullptr;
-	if(!Storage()->ReadFile(m_aUpdatePackageSignatureTmp, IStorage::TYPE_SAVE, &pRawData, &PackageSignatureSize))
-	{
-		Fail("Failed to read the downloaded package signature");
-		return;
-	}
-	PackageSignatureData.reset(static_cast<unsigned char *>(pRawData));
-
-	char aError[256] = "";
-	uint64_t SignedPackageSize = 0;
-	uint8_t aSignedPackageDigest[SHA256_DIGEST_LENGTH] = {};
-	const auto VerifyManifest = m_UpdateUseSetup ? qm_update_verify_setup_manifest : qm_update_verify_manifest_package;
-	if(!VerifyManifest(ManifestData.get(), ManifestSize, ManifestSignatureData.get(), ManifestSignatureSize,
-		   &SignedPackageSize, aSignedPackageDigest, sizeof(aSignedPackageDigest), aError, sizeof(aError)))
-	{
-		Fail(aError);
-		return;
-	}
-
-	SQmClientUpdateManifest Manifest;
-	if(!ParseQmClientUpdateManifest(reinterpret_cast<const char *>(ManifestData.get()), ManifestSize, QMCLIENT_VERSION, Manifest, aError, sizeof(aError), QMCLIENT_IS_DEVELOPMENT_BUILD, m_UpdateUseSetup, IsQmClientPortableBuild()) ||
-		str_comp(Manifest.m_aVersion, m_UpdateRelease.m_aVersion) != 0 ||
-		Manifest.m_PackageSize != SignedPackageSize || mem_comp(Manifest.m_PackageSha256.data, aSignedPackageDigest, sizeof(aSignedPackageDigest)) != 0)
-	{
-		Fail(aError[0] != '\0' ? aError : "Update manifest does not match the selected release");
-		return;
-	}
-
-	const SHA256_DIGEST ActualDigest = m_pUpdatePackageTask->ResultSha256();
-	IOHANDLE PackageFile = Storage()->OpenFile(m_aUpdatePackageTmp, IOFLAG_READ, IStorage::TYPE_SAVE);
-	const int64_t ActualSize = PackageFile ? io_length(PackageFile) : -1;
-	if(PackageFile)
-		io_close(PackageFile);
-	if(ActualSize < 0 || static_cast<uint64_t>(ActualSize) != SignedPackageSize || ActualDigest != Manifest.m_PackageSha256)
-	{
-		Fail("Downloaded update package size or SHA-256 is invalid");
-		return;
-	}
-	if(!qm_update_verify_package_digest(ActualDigest.data, sizeof(ActualDigest.data), PackageSignatureData.get(), PackageSignatureSize, aError, sizeof(aError)))
-	{
-		Fail(aError);
-		return;
-	}
-	if(!Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE))
-	{
-		Fail("Failed to create the update working directory");
-		return;
-	}
-	char aPackagePath[IO_MAX_PATH_LENGTH] = "";
-	char aInstallerPath[IO_MAX_PATH_LENGTH] = "";
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aPackagePath, sizeof(aPackagePath));
-	if(m_UpdateUseSetup)
-	{
-		// 下载临时名以 .tmp 结尾，Windows 执行带参数的程序必须保留 .exe 扩展名。
-		char aSetupRelativePath[IO_MAX_PATH_LENGTH];
-		str_format(aSetupRelativePath, sizeof(aSetupRelativePath), "qmclient/QmClient-Setup-%d.exe", pid());
-		if(!Storage()->RenameFile(m_aUpdatePackageTmp, aSetupRelativePath, IStorage::TYPE_SAVE))
-		{
-			Fail("Failed to prepare the Setup executable");
-			return;
-		}
-		str_copy(m_aUpdatePackageTmp, aSetupRelativePath);
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aInstallerPath, sizeof(aInstallerPath));
-		str_copy(m_aUpdateInstallerTmp, aInstallerPath);
-		m_UpdateReady = true;
-		m_UpdateCheckFailed = false;
-		m_aUpdateError[0] = '\0';
-		ResetUpdateDownloadTasks();
-		Client()->AddWarning(SWarning(Localize("Update notice"), Localize("The update is ready and will be installed when you exit.")));
-		return;
-	}
-	str_format(m_aUpdateInstallerTmp, sizeof(m_aUpdateInstallerTmp), "qmclient/QmClient-Updater-%d.exe", pid());
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateInstallerTmp, aInstallerPath, sizeof(aInstallerPath));
-	str_copy(m_aUpdateInstallerTmp, aInstallerPath, sizeof(m_aUpdateInstallerTmp));
-	Storage()->RemoveFile(aInstallerPath, IStorage::TYPE_ABSOLUTE);
-	if(!qm_update_extract_bootstrap_updater(aPackagePath, ManifestData.get(), ManifestSize,
-		   ManifestSignatureData.get(), ManifestSignatureSize, aInstallerPath, aError, sizeof(aError)))
-	{
-		Fail(aError);
-		return;
-	}
-
-	m_UpdateReady = true;
-	m_UpdateCheckFailed = false;
-	m_aUpdateError[0] = '\0';
-	ResetUpdateDownloadTasks();
-	Client()->AddWarning(SWarning(Localize("Update notice"), Localize("The update is ready and will be installed when you exit.")));
-#endif
-}
-
-bool CTClient::LaunchUpdateInstaller()
-{
-#if !defined(CONF_FAMILY_WINDOWS)
-	return false;
-#else
-	if(!m_UpdateReady || m_UpdateInstallerStarted)
-		return m_UpdateInstallerStarted;
-
-	char aPackagePath[IO_MAX_PATH_LENGTH] = "";
-	char aPackageSignaturePath[IO_MAX_PATH_LENGTH] = "";
-	char aManifestPath[IO_MAX_PATH_LENGTH] = "";
-	char aManifestSignaturePath[IO_MAX_PATH_LENGTH] = "";
-	char aInstallPath[IO_MAX_PATH_LENGTH] = "";
-	if(!fs_is_file(m_aUpdateInstallerTmp))
-		return false;
-
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aPackagePath, sizeof(aPackagePath));
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageSignatureTmp, aPackageSignaturePath, sizeof(aPackageSignaturePath));
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateManifestTmp, aManifestPath, sizeof(aManifestPath));
-	Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdateManifestSignatureTmp, aManifestSignaturePath, sizeof(aManifestSignaturePath));
-	Storage()->GetBinaryPathAbsolute(PLAT_CLIENT_EXEC, aInstallPath, sizeof(aInstallPath));
-	if(fs_parent_dir(aInstallPath) != 0)
-	{
-		RemoveUpdateTempFiles();
-		return false;
-	}
-
-	if(m_UpdateUseSetup)
-	{
-		// 退出可能晚于下载数小时：启动前重新校验磁盘文件，不能只信任下载时的哈希。
-		char aError[256];
-		if(!qm_update_verify_setup_files(aPackagePath, aPackageSignaturePath, aManifestPath, aManifestSignaturePath, QMCLIENT_VERSION, aError, sizeof(aError)))
-		{
-			log_error("qm-update", "Setup validation before launch failed: %s", aError);
-			RemoveUpdateTempFiles();
-			return false;
-		}
-		char aDirectoryArgument[IO_MAX_PATH_LENGTH + 8];
-		str_format(aDirectoryArgument, sizeof(aDirectoryArgument), "/DIR=%s", aInstallPath);
-		const char *apSetupArguments[] = {"/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", aDirectoryArgument};
-		const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apSetupArguments, std::size(apSetupArguments));
-		if(Process == INVALID_PROCESS)
-			return false;
-		CloseHandle(static_cast<HANDLE>(Process));
-		m_UpdateInstallerStarted = true;
-		return true;
-	}
-	char aPid[32];
-	str_format(aPid, sizeof(aPid), "%d", pid());
-	const char *apArguments[] = {
-		"--parent-pid",
-		aPid,
-		"--package",
-		aPackagePath,
-		"--package-signature",
-		aPackageSignaturePath,
-		"--manifest",
-		aManifestPath,
-		"--manifest-signature",
-		aManifestSignaturePath,
-		"--install",
-		aInstallPath,
-	};
-	const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
-	if(Process == INVALID_PROCESS)
-	{
-		RemoveUpdateTempFiles();
-		return false;
-	}
-	CloseHandle(static_cast<HANDLE>(Process));
-	m_UpdateInstallerStarted = true;
-	return true;
-#endif
-}
-
-bool CTClient::PrepareForShutdown(bool Force)
-{
-#if defined(CONF_FAMILY_WINDOWS)
-	if(m_UpdateInstallerStarted)
-		return false;
-	if(Force && m_UpdateShutdownRequested && (m_UpdateReady || IsUpdateChecking() || IsUpdateDownloading()))
-	{
-		ResetUpdateTasks();
-		RemoveUpdateTempFiles();
-		return false;
-	}
-	if(m_UpdateReady)
-	{
-		m_UpdateShutdownRequested = true;
-		return true;
-	}
-	if(!g_Config.m_QmAutoUpdate || m_UpdateCheckFailed)
-		return false;
-	if(IsUpdateChecking() || IsUpdateDownloading())
-	{
-		m_UpdateShutdownRequested = true;
-		return true;
-	}
-#else
-	(void)Force;
-#endif
-	return false;
-}
-
-const char *CTClient::UpdateShutdownMessage() const
-{
-	if(m_UpdateCheckFailed)
-		return Localize("Update failed. Please try again");
-	if(m_UpdateReady)
-		return Localize("Installing update. Please wait...");
-	return Localize("Downloading update...");
 }
 
 void CTClient::QueueAspectApply()

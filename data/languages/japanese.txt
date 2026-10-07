@@ -1856,6 +1856,9 @@ Cheats are enabled on this server
 check ddnet-saves.txt in config_directory.
 == config_directory の ddnet-saves.txt を確認してください。
 
+Check for updates
+== 更新を確認
+
 Check if voice server address is reachable
 == 音声サーバーアドレスに到達可能か確認する
 
@@ -4361,9 +4364,6 @@ Failed
 Failed saving the replay!
 == リプレイの保存に失敗しました！
 
-Failed to check for updates
-== アップデートの確認に失敗しました
-
 Failed to copy main asset image.
 == メインアセット画像のコピーに失敗しました。
 
@@ -6098,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == 前回の同期成功: %s
 
+Last verified approved update source
+== 前回検証に成功した承認済みの更新元
+
 Latency
 == レイテンシ
 
@@ -7292,6 +7295,9 @@ Netversion
 Network
 == ネットワーク
 
+Network error
+== ネットワークエラー
+
 Network timeout
 == ネットワークタイムアウト
 
@@ -7397,6 +7403,9 @@ No chat message to translate
 No code
 == コードなし
 
+No compatible Windows update package for this version
+== このバージョンに対応する Windows 更新パッケージはありません
+
 No controller found. Plug in a controller.
 == コントローラーが見つかりません。コントローラーを接続してください。
 
@@ -7414,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == 利用可能なディレクタープレイヤーがいません
+
+No downloadable portable package for this version
+== このバージョンのポータブル版パッケージはまだありません
 
 No empty team left.
 == 空いているチームはもうありません。
@@ -7501,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == 最近使ったスキンはありません
+
+No release notes provided
+== このバージョンのリリースノートはありません
 
 No results
 == 結果なし
@@ -9148,6 +9163,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == ドラッグ可能な戻るボタンの相対 Y 位置
+
+Release notes
+== リリースノート
 
 Reload
 == 再読み込み
@@ -13372,6 +13390,9 @@ Update notice
 
 Update or add a specific war group
 == 特定の敵対グループを更新または追加
+
+Update package available
+== このバージョンの更新パッケージをダウンロードできます
 
 Update Rate
 == 更新レート

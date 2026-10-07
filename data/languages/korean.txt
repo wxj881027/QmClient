@@ -1856,6 +1856,9 @@ Cheats are enabled on this server
 check ddnet-saves.txt in config_directory.
 == config_directory 의 ddnet-saves.txt 를 확인하세요.
 
+Check for updates
+== 업데이트 확인
+
 Check if voice server address is reachable
 == 음성 서버 주소에 연결 가능한지 확인
 
@@ -4361,9 +4364,6 @@ Failed
 Failed saving the replay!
 == 리플레이 저장 실패!
 
-Failed to check for updates
-== 업데이트 확인 실패
-
 Failed to copy main asset image.
 == 주요 에셋 이미지를 복사하지 못했습니다.
 
@@ -6098,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == 마지막 동기화 성공: %s
 
+Last verified approved update source
+== 마지막으로 검증에 성공한 승인된 업데이트 소스
+
 Latency
 == 지연 시간
 
@@ -7292,6 +7295,9 @@ Netversion
 Network
 == 네트워크
 
+Network error
+== 네트워크 오류
+
 Network timeout
 == 네트워크 타임아웃
 
@@ -7397,6 +7403,9 @@ No chat message to translate
 No code
 == 코드 없음
 
+No compatible Windows update package for this version
+== 이 버전과 호환되는 Windows 업데이트 패키지가 없습니다
+
 No controller found. Plug in a controller.
 == 컨트롤러를 찾을 수 없습니다. 컨트롤러를 연결하세요.
 
@@ -7414,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == 사용 가능한 감독 플레이어 없음
+
+No downloadable portable package for this version
+== 이 버전의 포터블 패키지는 아직 다운로드할 수 없습니다
 
 No empty team left.
 == 빈 팀이 없습니다.
@@ -7501,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == 최근 사용한 스킨 없음
+
+No release notes provided
+== 이 버전의 업데이트 내용이 없습니다
 
 No results
 == 결과 없음
@@ -9148,6 +9163,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == 드래그 가능한 뒤로 가기 버튼의 상대적 Y 위치
+
+Release notes
+== 업데이트 내용
 
 Reload
 == 다시 불러오기
@@ -13372,6 +13390,9 @@ Update notice
 
 Update or add a specific war group
 == 특정 전쟁 그룹 업데이트 또는 추가
+
+Update package available
+== 이 버전의 업데이트 패키지를 다운로드할 수 있습니다
 
 Update Rate
 == 업데이트 속도

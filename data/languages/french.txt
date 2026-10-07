@@ -1856,6 +1856,9 @@ Cheats are enabled on this server
 check ddnet-saves.txt in config_directory.
 == Consultez ddnet-saves.txt dans config_directory.
 
+Check for updates
+== Rechercher des mises à jour
+
 Check if voice server address is reachable
 == Vérifiez si l'adresse du serveur vocal est accessible
 
@@ -4361,9 +4364,6 @@ Failed
 Failed saving the replay!
 == Échec de la sauvegarde de la rediffusion !
 
-Failed to check for updates
-== Échec de la vérification des mises à jour
-
 Failed to copy main asset image.
 == Échec de la copie de l'image de l'élément principal.
 
@@ -6098,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == Dernière synchronisation réussie : %s
 
+Last verified approved update source
+== Dernière source de mise à jour autorisée et vérifiée
+
 Latency
 == Latence
 
@@ -7292,6 +7295,9 @@ Netversion
 Network
 == Réseau
 
+Network error
+== Erreur réseau
+
 Network timeout
 == Délai d'expiration réseau
 
@@ -7397,6 +7403,9 @@ No chat message to translate
 No code
 == Aucun code
 
+No compatible Windows update package for this version
+== Aucun paquet de mise à jour Windows compatible avec cette version
+
 No controller found. Plug in a controller.
 == Aucune manette trouvée. Branchez une manette.
 
@@ -7414,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == Aucun joueur réalisateur disponible
+
+No downloadable portable package for this version
+== Aucun paquet portable disponible pour cette version
 
 No empty team left.
 == Il ne reste plus d'équipe vide.
@@ -7501,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == Aucun skin utilisé récemment
+
+No release notes provided
+== Aucune note fournie pour cette version
 
 No results
 == Aucun résultat
@@ -9148,6 +9163,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Position Y relative du bouton de retour déplaçable
+
+Release notes
+== Notes de version
 
 Reload
 == Recharger
@@ -13372,6 +13390,9 @@ Update notice
 
 Update or add a specific war group
 == Mettre à jour ou ajouter un groupe ennemi spécifique
+
+Update package available
+== Un paquet de mise à jour est disponible pour cette version
 
 Update Rate
 == Taux de rafraîchissement

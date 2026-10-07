@@ -668,6 +668,8 @@ jobs:
       - name: Prepare Windows update signing environment
         run: |
           set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
           python3 -m venv .update-signing-venv
           .update-signing-venv/bin/python -m pip install cryptography==45.0.6
 
@@ -682,6 +684,7 @@ jobs:
           fi
           .update-signing-venv/bin/python qmclient_scripts/sign_update_release.py \
             --package release-assets/QmClient-windows.zip \
+            --sevenzip-package release-assets/QmClient-windows.7z \
             --setup release-assets/QmClient-Setup.exe \
             --version "${RELEASE_TAG}" \
             --private-key-env QM_UPDATE_ED25519_PRIVATE_KEY \
@@ -689,6 +692,7 @@ jobs:
             --output-dir release-assets
           .update-signing-venv/bin/python qmclient_scripts/sign_update_release.py \
             --package release-assets/QmClient-windows-portable.zip \
+            --sevenzip-package release-assets/QmClient-windows-portable.7z \
             --version "${RELEASE_TAG}" \
             --private-key-env QM_UPDATE_ED25519_PRIVATE_KEY \
             --normalize-package \
@@ -729,11 +733,17 @@ jobs:
             release-assets/QmClient-windows-update.json
             release-assets/QmClient-windows-update.json.sig
             release-assets/QmClient-windows.7z
+            release-assets/QmClient-windows.7z.sig
+            release-assets/QmClient-windows-7z-update.json
+            release-assets/QmClient-windows-7z-update.json.sig
             release-assets/QmClient-windows-portable.zip
             release-assets/QmClient-windows-portable.zip.sig
             release-assets/QmClient-windows-portable-update.json
             release-assets/QmClient-windows-portable-update.json.sig
             release-assets/QmClient-windows-portable.7z
+            release-assets/QmClient-windows-portable.7z.sig
+            release-assets/QmClient-windows-portable-7z-update.json
+            release-assets/QmClient-windows-portable-7z-update.json.sig
             release-assets/QmClient-Setup.exe
             release-assets/QmClient-Setup.exe.sig
             release-assets/QmClient-windows-setup-update.json
@@ -754,7 +764,7 @@ jobs:
           from pathlib import Path
 
           release = json.loads(Path("release-state.json").read_text())
-          expected = {"QmClient-windows-portable.zip", "QmClient-windows-portable.zip.sig", "QmClient-windows-portable-update.json", "QmClient-windows-portable-update.json.sig", "QmClient-windows-portable.7z", "QmClient-windows.zip", "QmClient-windows.zip.sig", "QmClient-windows-update.json", "QmClient-windows-update.json.sig", "QmClient-windows.7z", "QmClient-Setup.exe", "QmClient-Setup.exe.sig", "QmClient-windows-setup-update.json", "QmClient-windows-setup-update.json.sig", "QmClient-ubuntu.tar.xz", "QmClient-macOS.dmg", "QmClient-android.apk", "QmClient-android.aab"}
+          expected = {"QmClient-windows-portable.zip", "QmClient-windows-portable.zip.sig", "QmClient-windows-portable-update.json", "QmClient-windows-portable-update.json.sig", "QmClient-windows-portable.7z", "QmClient-windows-portable.7z.sig", "QmClient-windows-portable-7z-update.json", "QmClient-windows-portable-7z-update.json.sig", "QmClient-windows.zip", "QmClient-windows.zip.sig", "QmClient-windows-update.json", "QmClient-windows-update.json.sig", "QmClient-windows.7z", "QmClient-windows.7z.sig", "QmClient-windows-7z-update.json", "QmClient-windows-7z-update.json.sig", "QmClient-Setup.exe", "QmClient-Setup.exe.sig", "QmClient-windows-setup-update.json", "QmClient-windows-setup-update.json.sig", "QmClient-ubuntu.tar.xz", "QmClient-macOS.dmg", "QmClient-android.apk", "QmClient-android.aab"}
           assert release["isDraft"] and release["tagName"] == os.environ["RELEASE_TAG"]
           assert release["isPrerelease"] == ("-preview." in os.environ["RELEASE_TAG"])
           assets = {asset["name"]: asset for asset in release["assets"]}

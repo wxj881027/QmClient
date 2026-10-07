@@ -76,6 +76,7 @@ MACRO_CONFIG_INT(QmScreenshotWatermarkPosition, qm_screenshot_watermark_position
 MACRO_CONFIG_STR(QmScreenshotWatermarkText, qm_screenshot_watermark_text, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark custom text")
 MACRO_CONFIG_INT(QmScoreboardOpacity, qm_scoreboard_opacity, 16, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard transparency")
 MACRO_CONFIG_INT(QmShowOutdatedVersionWarning, qm_show_outdated_version_warning, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show outdated version warning")
+MACRO_CONFIG_STR(QmUpdateRecentSource, qm_update_recent_source, 128, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last verified approved update source")
 MACRO_CONFIG_INT(QmAutoUpdate, qm_auto_update, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically check for stable updates and install them on exit")
 MACRO_CONFIG_INT(QmImeAutoManage, qm_ime_auto_manage, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto enable/disable IME on text focus")
 MACRO_CONFIG_INT(QmNewIme, qm_new_ime, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable new IME candidate bar")

@@ -4442,6 +4442,11 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	const bool DemoDisplayExpanded = m_DemoExportDisplayExpanded;
 	const float DemoRenderContentHeight = qm_demo_ui::RenderContentHeight(DemoDisplayExpanded, Client()->State() == IClient::STATE_ONLINE);
 #endif
+	if(m_Popup == POPUP_QM_UPDATE)
+	{
+		RenderQmUpdatePopup(Screen);
+		return;
+	}
 	// QmClient 新功能弹窗自带完整布局(标题/滚动条目/按钮)，不复用通用弹窗骨架。
 	if(m_Popup == POPUP_QM_NEW_FEATURES)
 	{
@@ -7891,6 +7896,11 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
+	if(GameClient()->m_TClient.m_UpdatePopupRequested && m_MenuActive && m_Popup == POPUP_NONE)
+	{
+		GameClient()->m_TClient.m_UpdatePopupRequested = false;
+		ShowQmUpdatePopup();
+	}
 	CPerfTimer FrameTimer;
 	m_QmMapUpload.Poll();
 
@@ -8371,6 +8381,17 @@ void CMenus::SetShowStart(bool ShowStart)
 void CMenus::ShowQuitPopup()
 {
 	m_Popup = POPUP_QUIT;
+}
+
+void CMenus::ShowQmUpdatePopup()
+{
+	MarkMenuInteraction();
+	m_QmUpdateScrollReset = true;
+	m_QmUpdatePopupState = -1;
+	auto &Update = GameClient()->m_TClient;
+	if(!Update.m_FetchedQmClientUpdateInfo && !Update.m_UpdateCheckFailed && !Update.m_UpdateReady && !Update.IsUpdateChecking() && !Update.IsUpdateDownloading())
+		Update.RequestQmClientUpdateCheckAndUpdate();
+	m_Popup = POPUP_QM_UPDATE;
 }
 
 void CMenus::ShowQmNewFeaturesPopup()

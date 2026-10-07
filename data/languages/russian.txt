@@ -1856,6 +1856,9 @@ Cheats are enabled on this server
 check ddnet-saves.txt in config_directory.
 == Проверьте ddnet-saves.txt в config_directory.
 
+Check for updates
+== Проверить обновления
+
 Check if voice server address is reachable
 == Проверьте, доступен ли адрес голосового сервера.
 
@@ -4361,9 +4364,6 @@ Failed
 Failed saving the replay!
 == Не удалось сохранить повтор!
 
-Failed to check for updates
-== Не удалось проверить обновления
-
 Failed to copy main asset image.
 == Не удалось скопировать основное изображение ресурса.
 
@@ -6098,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == Последняя успешная синхронизация: %s
 
+Last verified approved update source
+== Последний проверенный разрешённый источник обновления
+
 Latency
 == Задержка
 
@@ -7292,6 +7295,9 @@ Netversion
 Network
 == Сеть
 
+Network error
+== Ошибка сети
+
 Network timeout
 == Тайм-аут сети
 
@@ -7397,6 +7403,9 @@ No chat message to translate
 No code
 == Нет кода
 
+No compatible Windows update package for this version
+== Совместимый пакет обновления Windows для этой версии недоступен
+
 No controller found. Plug in a controller.
 == Контроллер не найден. Подключите контроллер.
 
@@ -7414,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == Нет доступных игроков для режиссуры
+
+No downloadable portable package for this version
+== Переносимый пакет для этой версии пока недоступен
 
 No empty team left.
 == Не осталось пустых команд.
@@ -7501,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == Нет недавно использованных скинов
+
+No release notes provided
+== Примечания к этому выпуску не предоставлены
 
 No results
 == Нет результатов
@@ -9148,6 +9163,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Относительная позиция Y перетаскиваемой кнопки «Назад»
+
+Release notes
+== Примечания к выпуску
 
 Reload
 == Перезагрузить
@@ -13372,6 +13390,9 @@ Update notice
 
 Update or add a specific war group
 == Обновить или добавить конкретную вражескую группу
+
+Update package available
+== Пакет обновления для этой версии доступен
 
 Update Rate
 == Частота обновления

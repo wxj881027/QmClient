@@ -4,6 +4,7 @@
 #include "UiButtons.h"
 
 #include "QmAnimResolve.h"
+#include "UiButtonStyle.h"
 #include "UiSurface.h"
 #include "UiSurfaceText.h"
 #include "UiTokens.h"
@@ -58,8 +59,15 @@ namespace ui_widget
 			// 强度并入动画目标，按下时使用较短的过渡。
 			const bool HoverPrev = Ctx.m_pUi->HotItem() == static_cast<const void *>(pBtn);
 			const bool Pressed = Ctx.m_pUi->CheckActiveItem(pBtn);
-			ColorRGBA Target = DrawBorder ? ResolveConfiguredControlSurface() : HoverPrev || Pressed ? Hover :
-														   Idle;
+			ColorRGBA Target = HoverPrev || Pressed ? Hover : Idle;
+			ColorRGBA Border = ui_token::color::BORDER_SUBTLE;
+			if(DrawBorder)
+			{
+				const ColorRGBA Backdrop = Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : CUiScopedSurfaceText::CurrentSurface();
+				const auto Style = ResolveUiSecondaryButtonStyle(ResolveConfiguredControlSurface(), Backdrop, true, Ctx.m_pUi->MouseHovered(&Rect), Pressed && Ctx.m_pUi->MouseButton(0));
+				Target = Style.m_Fill;
+				Border = Style.m_Border;
+			}
 			if(!DrawBorder)
 				Target.a *= Ctx.m_pUi->ButtonColorMul(pBtn);
 			ColorRGBA Resolved = Target;
@@ -71,7 +79,7 @@ namespace ui_widget
 			}
 
 			CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), CompositeUiSurface(Resolved, Ctx.m_pTheme ? Ctx.m_pTheme->m_Surface : ui_token::color::SURFACE_BACKDROP));
-			DrawRoundedSurface(Ctx, Rect, Resolved, ui_token::color::BORDER_SUBTLE, ui_token::radius::BASE, DrawBorder ? Ctx.m_pUi->PixelSize() : 0.0f);
+			DrawRoundedSurface(Ctx, Rect, Resolved, Border, ui_token::radius::BASE, DrawBorder ? Ctx.m_pUi->PixelSize() : 0.0f);
 			Ctx.m_pUi->DoLabel(&Rect, pText, ui_token::font::BODY, TEXTALIGN_MC);
 			const int Result = Ctx.m_pUi->DoButtonLogic(pBtn, 0, &Rect, BUTTONFLAG_LEFT);
 			return Result != 0;
@@ -86,8 +94,7 @@ namespace ui_widget
 
 	bool SecondaryButton(const IUiContext &Ctx, CButtonContainer *pBtn, const char *pText, const CUIRect &Rect, bool Disabled)
 	{
-		// Idle is fully transparent so only the border shows; on hover, tint
-		// gently toward ACCENT_PRIMARY_DIM.
+		// 背景沿用控件配置，悬浮和按下反馈由共享样式按实际表面明暗解析。
 		const ColorRGBA Idle{0.0f, 0.0f, 0.0f, 0.0f};
 		const ColorRGBA Accent = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
 		return DoStyledButton(Ctx, pBtn, pText, Rect, Disabled, Idle, Accent.WithAlpha(0.18f), true);

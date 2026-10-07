@@ -3511,6 +3511,12 @@ if(CLIENT)
     components/qmclient/update_version.h
     components/qmclient/update_manifest.cpp
     components/qmclient/update_manifest.h
+    components/qmclient/update_sources.h
+    components/qmclient/update_request.h
+    components/qmclient/update_survey.h
+    components/qmclient/update_proxy.h
+    components/qmclient/update_proxy.cpp
+    components/qmclient/update_client.cpp
     components/qmclient/voice/voice_capture_pipeline.cpp
     components/qmclient/voice/voice_capture_pipeline.h
     components/qmclient/voice/voice_component.cpp
@@ -4040,6 +4046,20 @@ if(CLIENT)
   list(APPEND TARGETS_LINK game-client)
 
   if(TARGET_OS STREQUAL "windows")
+    # 显式真实网络验收工具，不加入默认构建或离线测试。
+    add_executable(qm-update-download-probe EXCLUDE_FROM_ALL
+      qmclient_scripts/integration/update_download_probe.cpp
+      src/game/client/components/qmclient/update_proxy.cpp
+      src/game/client/components/qmclient/update_manifest.cpp
+      src/game/client/components/qmclient/update_version.cpp
+      $<TARGET_OBJECTS:engine-shared>
+      $<TARGET_OBJECTS:game-shared>
+      $<TARGET_OBJECTS:rust-bridge-shared>
+      ${DEPS}
+    )
+    target_link_libraries(qm-update-download-probe PRIVATE ${LIBS} winhttp bcrypt ws2_32)
+    list(APPEND TARGETS_OWN qm-update-download-probe)
+    list(APPEND TARGETS_LINK qm-update-download-probe)
     add_executable(qm-client-updater WIN32 src/qm/update/updater_main.cpp)
     set_property(TARGET qm-client-updater PROPERTY OUTPUT_NAME QmClient-Updater)
     target_link_libraries(qm-client-updater rust_qm_update ${PLATFORM_LIBS} comctl32.lib)
@@ -4425,6 +4445,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_phosphor_resource_contract_test.cpp
     src/test/contract/qmclient/ui/qm_font_icon_resource_contract_test.cpp
     src/test/unit/qmclient/ui/QmLayoutTest.cpp
+    src/test/unit/qmclient/ui/qm_secondary_button_style_test.cpp
     src/test/contract/qmclient/client/qm_afk_presentation_contract_test.cpp
     src/test/unit/qmclient/client/qm_blank_asset_fallback_test.cpp
     src/test/unit/qmclient/client/qm_spectator_selector_layout_test.cpp
@@ -4672,6 +4693,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_rank_demo_manifest_test.cpp
     src/test/unit/qmclient/client/qmclient_update_version_test.cpp
     src/test/unit/qmclient/client/qmclient_update_manifest_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_sources_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_http_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_proxy_test.cpp
+    src/test/integration/qmclient/client/qmclient_update_request_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
@@ -4892,6 +4917,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/qm_realtime.cpp
     src/game/client/components/qmclient/update_version.cpp
     src/game/client/components/qmclient/update_manifest.cpp
+    src/game/client/components/qmclient/update_proxy.cpp
     src/game/client/components/qmclient/qmclient_utils.cpp
     src/game/client/components/qmclient/qm_map_upload.cpp
     src/game/client/components/qmclient/qm_title_style.cpp
@@ -5102,6 +5128,9 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
     src/test/benchmark/qm_str_benchmark.cpp
+    src/test/benchmark/qm_update_benchmark.cpp
+    src/game/client/components/qmclient/update_manifest.cpp
+    src/game/client/components/qmclient/update_version.cpp
     src/test/benchmark/qm_anim_benchmark.cpp
     src/test/benchmark/qm_text_benchmark.cpp
     src/test/benchmark/qm_translate_benchmark.cpp

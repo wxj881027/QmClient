@@ -2,7 +2,7 @@
 name = "qm-update"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.63"
+rust-version = "1.70"
 publish = false
 license = "Zlib"
 
@@ -17,5 +17,8 @@ serde_json = "=1.0.140"
 sha2 = "=0.10.8"
 zip = { version = "=0.6.6", default-features = false, features = ["deflate"] }
 
+sevenz-rust = { version = "=0.6.1", default-features = false }
+
 [dev-dependencies]
 tempfile = "=3.19.1"
+sevenz-rust = { version = "=0.6.1", features = ["compress"] }

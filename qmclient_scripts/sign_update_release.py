@@ -11,6 +11,8 @@ import os
 import shutil
 import stat
 import sys
+import subprocess
+import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 from typing import NamedTuple
@@ -197,6 +199,56 @@ def build_manifest(package: Path, version: str) -> dict[str, object]:
 	}
 
 
+def sign_sevenzip_release(
+	*,
+	package: Path,
+	sevenzip_package: Path,
+	version: str,
+	private_key_base64: str,
+	output_dir: Path,
+	expected_public_key: bytes = EXPECTED_PUBLIC_KEY,
+) -> SignedReleaseOutputs:
+	"""从校验并规范化后的 ZIP 生成完整 7z，签署其独立摘要。"""
+	manifest = build_manifest(package, version)
+	expected_name = package.name.replace(".zip", ".7z")
+	if sevenzip_package.name != expected_name:
+		raise ValueError("7z package name must match the normal or portable ZIP")
+	output_dir.mkdir(parents=True, exist_ok=True)
+	with tempfile.TemporaryDirectory(prefix="sevenzip-", dir=output_dir) as directory:
+		root = Path(directory)
+		with zipfile.ZipFile(package, "r") as archive:
+			for item in manifest["files"]:
+				path = root / str(item["path"])
+				path.parent.mkdir(parents=True, exist_ok=True)
+				with archive.open(str(item["path"]), "r") as source, path.open("wb") as target:
+					shutil.copyfileobj(source, target, length=1024 * 1024)
+		# 非 solid 包允许逐文件验证，安装器不依赖机器上安装的 7z。
+		temporary_package = root.parent / (sevenzip_package.name + ".signing.tmp")
+		try:
+			if temporary_package.exists():
+				raise ValueError("7z signing temporary output already exists")
+			subprocess.run(["7z", "a", "-t7z", "-mx=5", "-ms=off", "-m0=lzma2", str(temporary_package.resolve()), "."], cwd=root, check=True, capture_output=True, timeout=1800)
+			with temporary_package.open("rb") as source:
+				digest = _hash_stream(source)
+			manifest["package"] = {"name": sevenzip_package.name, "size": temporary_package.stat().st_size, "sha256": digest}
+			if not 0 < int(manifest["package"]["size"]) <= MAX_PACKAGE_SIZE:
+				raise ValueError("7z package exceeds the supported size")
+			content = (json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+			if len(content) > MAX_MANIFEST_SIZE:
+				raise ValueError("update manifest exceeds the supported size")
+			key = _load_private_key(private_key_base64, expected_public_key)
+			stem = sevenzip_package.stem + "-7z"
+			outputs = SignedReleaseOutputs(output_dir / (stem + "-update.json"), output_dir / (stem + "-update.json.sig"), output_dir / (sevenzip_package.name + ".sig"))
+			temporary_package.replace(sevenzip_package)
+			outputs.manifest.write_bytes(content)
+			outputs.manifest_signature.write_bytes(key.sign(content))
+			outputs.package_signature.write_bytes(key.sign(PACKAGE_SIGNATURE_CONTEXT + bytes.fromhex(digest)))
+			return outputs
+		finally:
+			if temporary_package.exists():
+				temporary_package.unlink()
+
+
 def _load_private_key(private_key_base64: str, expected_public_key: bytes) -> Ed25519PrivateKey:
 	try:
 		key = base64.b64decode(private_key_base64.strip(), validate=True)
@@ -259,6 +311,7 @@ def main() -> int:
 	parser = argparse.ArgumentParser(description="Create and Ed25519-sign the QmClient Windows update manifest")
 	parser.add_argument("--package", type=Path, required=True)
 	parser.add_argument("--setup", type=Path)
+	parser.add_argument("--sevenzip-package", type=Path)
 	parser.add_argument("--version", required=True)
 	key_group = parser.add_mutually_exclusive_group(required=True)
 	key_group.add_argument("--private-key-base64")
@@ -277,6 +330,8 @@ def main() -> int:
 		private_key_base64=private_key,
 		output_dir=args.output_dir,
 	)
+	if args.sevenzip_package is not None:
+		sign_sevenzip_release(package=args.package, sevenzip_package=args.sevenzip_package, version=args.version, private_key_base64=private_key, output_dir=args.output_dir)
 	if args.setup is not None:
 		sign_setup_release(setup=args.setup, version=args.version, private_key_base64=private_key, output_dir=args.output_dir)
 	return 0

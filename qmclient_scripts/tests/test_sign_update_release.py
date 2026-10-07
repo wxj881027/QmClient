@@ -5,6 +5,8 @@ import base64
 import importlib.util
 import hashlib
 import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 import zipfile
@@ -41,6 +43,37 @@ if CRYPTOGRAPHY_AVAILABLE:
 class SignUpdateReleaseTest(unittest.TestCase):
 	PRIVATE_SEED = bytes(range(32))
 	PUBLIC_KEY = Ed25519PrivateKey.from_private_bytes(PRIVATE_SEED).public_key().public_bytes(Encoding.Raw, PublicFormat.Raw) if CRYPTOGRAPHY_AVAILABLE else b""
+
+	@unittest.skipUnless(shutil.which("7z"), "7z CLI is required for full-package signing")
+	def test_sevenzip_full_package_signatures_and_paths_match_archive(self) -> None:
+		with tempfile.TemporaryDirectory(dir=REPO_ROOT / "tmp") as directory:
+			root = Path(directory)
+			package = root / "QmClient-windows-portable.zip"
+			self._write_package(package)
+			archive = root / "QmClient-windows-portable.7z"
+			outputs = SIGN_UPDATE_RELEASE.sign_sevenzip_release(package=package, sevenzip_package=archive, version="v3.4", private_key_base64=base64.b64encode(self.PRIVATE_SEED).decode(), output_dir=root, expected_public_key=self.PUBLIC_KEY)
+			content = outputs.manifest.read_bytes()
+			manifest = json.loads(content)
+			self.assertEqual(outputs.manifest.name, "QmClient-windows-portable-7z-update.json")
+			self.assertEqual(manifest["package"]["name"], archive.name)
+			self.assertEqual(manifest["package"]["sha256"], hashlib.sha256(archive.read_bytes()).hexdigest())
+			public = Ed25519PublicKey.from_public_bytes(self.PUBLIC_KEY)
+			public.verify(outputs.manifest_signature.read_bytes(), content)
+			public.verify(outputs.package_signature.read_bytes(), SIGN_UPDATE_RELEASE.PACKAGE_SIGNATURE_CONTEXT + hashlib.sha256(archive.read_bytes()).digest())
+			extracted = root / "extracted"
+			subprocess.run(["7z", "x", "-y", str(archive), "-o" + str(extracted)], check=True, capture_output=True, timeout=30)
+			for item in manifest["files"]:
+				actual = extracted / item["path"]
+				self.assertEqual(actual.stat().st_size, item["size"])
+				self.assertEqual(hashlib.sha256(actual.read_bytes()).hexdigest(), item["sha256"])
+
+	def test_sevenzip_rejects_cross_variant_output_name(self) -> None:
+		with tempfile.TemporaryDirectory(dir=REPO_ROOT / "tmp") as directory:
+			root = Path(directory)
+			package = root / "QmClient-windows.zip"
+			self._write_package(package)
+			with self.assertRaisesRegex(ValueError, "name must match"):
+				SIGN_UPDATE_RELEASE.sign_sevenzip_release(package=package, sevenzip_package=root / "QmClient-windows-portable.7z", version="v3.4", private_key_base64=base64.b64encode(self.PRIVATE_SEED).decode(), output_dir=root, expected_public_key=self.PUBLIC_KEY)
 
 	def test_setup_signature_and_manifest_match_executable(self) -> None:
 		with tempfile.TemporaryDirectory(dir=REPO_ROOT / "tmp") as directory:

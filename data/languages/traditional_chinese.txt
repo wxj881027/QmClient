@@ -1856,6 +1856,9 @@ Cheats are enabled on this server
 check ddnet-saves.txt in config_directory.
 == 請查看 config_directory 下的 ddnet-saves.txt。
 
+Check for updates
+== 檢查更新
+
 Check if voice server address is reachable
 == 建議檢查語音伺服器地址是否可用
 
@@ -4361,9 +4364,6 @@ Failed
 Failed saving the replay!
 == 保存回放失敗！
 
-Failed to check for updates
-== 檢查更新失敗
-
 Failed to copy main asset image.
 == 複製主要資源圖片失敗。
 
@@ -6098,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == 上次成功同步：%s
 
+Last verified approved update source
+== 上次驗證成功的已核准更新來源
+
 Latency
 == 延遲
 
@@ -7292,6 +7295,9 @@ Netversion
 Network
 == 網絡
 
+Network error
+== 網路錯誤
+
 Network timeout
 == 網絡超時
 
@@ -7397,6 +7403,9 @@ No chat message to translate
 No code
 == 無代碼
 
+No compatible Windows update package for this version
+== 此版本暫無相容的 Windows 更新套件
+
 No controller found. Plug in a controller.
 == 未檢測到任何手柄。請連接手柄。
 
@@ -7414,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == 暫無可導播玩家
+
+No downloadable portable package for this version
+== 此版本暫無可下載的可攜式套件
 
 No empty team left.
 == 已經沒有空隊伍了
@@ -7501,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == 暫無最近使用的皮膚
+
+No release notes provided
+== 此版本未提供更新說明
 
 No results
 == 無結果
@@ -9148,6 +9163,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Relative Y position of the draggable back button
+
+Release notes
+== 更新說明
 
 Reload
 == 重新加載
@@ -13372,6 +13390,9 @@ Update notice
 
 Update or add a specific war group
 == 更新或添加指定敵對分組
+
+Update package available
+== 此版本有可下載的更新套件
 
 Update Rate
 == 更新率

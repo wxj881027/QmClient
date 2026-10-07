@@ -1856,6 +1856,9 @@ Cheats are enabled on this server
 check ddnet-saves.txt in config_directory.
 == config_directory içindeki ddnet-saves.txt dosyasını kontrol edin.
 
+Check for updates
+== Güncellemeleri kontrol et
+
 Check if voice server address is reachable
 == Ses sunucusu adresine erişilebilirliği kontrol edin
 
@@ -4361,9 +4364,6 @@ Failed
 Failed saving the replay!
 == Kayıt kaydedilemedi!
 
-Failed to check for updates
-== Güncelleme kontrolü başarısız oldu
-
 Failed to copy main asset image.
 == Ana varlık görüntüsü kopyalanamadı.
 
@@ -6098,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == Son başarılı eşitleme: %s
 
+Last verified approved update source
+== Son doğrulanan onaylı güncelleme kaynağı
+
 Latency
 == Gecikme
 
@@ -7292,6 +7295,9 @@ Netversion
 Network
 == Ağ
 
+Network error
+== Ağ hatası
+
 Network timeout
 == Ağ zaman aşımı
 
@@ -7397,6 +7403,9 @@ No chat message to translate
 No code
 == Kod yok
 
+No compatible Windows update package for this version
+== Bu sürüm için uyumlu Windows güncelleme paketi yok
+
 No controller found. Plug in a controller.
 == Kumanda bulunamadı. Bir kumanda bağlayın.
 
@@ -7414,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == Kullanılabilir yönetmen oyuncusu yok
+
+No downloadable portable package for this version
+== Bu sürüm için indirilebilir taşınabilir paket henüz yok
 
 No empty team left.
 == Boş takım kalmadı.
@@ -7501,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == Son kullanılan görünüm yok
+
+No release notes provided
+== Bu sürüm için not sağlanmadı
 
 No results
 == Sonuç yok
@@ -9148,6 +9163,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Sürüklenebilir geri düğmesinin bağıl Y konumu
+
+Release notes
+== Sürüm notları
 
 Reload
 == Yeniden yükle
@@ -13372,6 +13390,9 @@ Update notice
 
 Update or add a specific war group
 == Belirli bir savaş grubunu güncelle veya ekle
+
+Update package available
+== Bu sürüm için güncelleme paketi mevcut
 
 Update Rate
 == Güncelleme Hızı

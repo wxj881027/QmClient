@@ -14,6 +14,7 @@
 #include <deque>
 #include <mutex>
 #include <optional>
+#include <string_view>
 #include <unordered_map>
 
 class CHttpRequestCurl : public IHttpRequest
@@ -25,6 +26,7 @@ public:
 	~CHttpRequestCurl() override;
 
 	void Header(const char *pNameColonValue) override;
+	static std::optional<int64_t> ParseRetryAfter(std::string_view Value, int64_t Now);
 
 private:
 	curl_slist *m_pRequestHeaders = nullptr;

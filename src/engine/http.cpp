@@ -185,6 +185,12 @@ int IHttpRequest::StatusCode() const
 	return m_StatusCode;
 }
 
+int IHttpRequest::CompletedStatusCode() const
+{
+	dbg_assert(Done(), "Request not completed");
+	return m_StatusCode;
+}
+
 std::optional<int64_t> IHttpRequest::ResultAgeSeconds() const
 {
 	dbg_assert(State() == EHttpState::DONE, "Request not done");

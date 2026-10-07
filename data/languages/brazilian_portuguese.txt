@@ -1856,6 +1856,9 @@ Cheats are enabled on this server
 check ddnet-saves.txt in config_directory.
 == Verifique ddnet-saves.txt em config_directory.
 
+Check for updates
+== Verificar atualizações
+
 Check if voice server address is reachable
 == Verifique se o endereço do servidor de voz está acessível
 
@@ -4361,9 +4364,6 @@ Failed
 Failed saving the replay!
 == Falha ao salvar o replay!
 
-Failed to check for updates
-== Falha ao verificar atualizações
-
 Failed to copy main asset image.
 == Falha ao copiar imagem do asset principal.
 
@@ -6098,6 +6098,9 @@ Last page in console
 Last successful sync: %s
 == Última sincronização bem-sucedida: %s
 
+Last verified approved update source
+== Última fonte de atualização aprovada e verificada
+
 Latency
 == Latência
 
@@ -7292,6 +7295,9 @@ Netversion
 Network
 == Rede
 
+Network error
+== Erro de rede
+
 Network timeout
 == Timeout de rede
 
@@ -7397,6 +7403,9 @@ No chat message to translate
 No code
 == Sem código
 
+No compatible Windows update package for this version
+== Nenhum pacote de atualização do Windows compatível com esta versão
+
 No controller found. Plug in a controller.
 == Nenhum controle encontrado. Conecte um controle.
 
@@ -7414,6 +7423,9 @@ No demo with this filename exists
 
 No director players available
 == Nenhum jogador diretor disponível
+
+No downloadable portable package for this version
+== Ainda não há pacote portátil para esta versão
 
 No empty team left.
 == Nenhum time vazio restante.
@@ -7501,6 +7513,9 @@ No Rank 1 replays cached yet. Search and download from the Rank 1 page.
 
 No recently used skins
 == Nenhuma skin usada recentemente
+
+No release notes provided
+== Nenhuma nota fornecida para esta versão
 
 No results
 == Sem resultados
@@ -9148,6 +9163,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Posição Y relativa do botão de voltar arrastável
+
+Release notes
+== Notas da versão
 
 Reload
 == Recarregar
@@ -13372,6 +13390,9 @@ Update notice
 
 Update or add a specific war group
 == Atualizar ou adicionar um grupo de guerra específico
+
+Update package available
+== Pacote de atualização disponível para esta versão
 
 Update Rate
 == Taxa de atualização
