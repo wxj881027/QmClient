@@ -37,3 +37,19 @@
 Windows 环境没有可用 WSL Linux 发行版；Linux/BSD 后端编译和真实播放器启停、断线重连、退出耗时尚未验收。现有 Linux CI 已安装 libdbus-1-dev，仍需等待本次提交运行结果。
 
 字体原有四项真实进程证据保持有效。删除按钮精确页面、完整彩虹动画、长译文与弹层鼠标专项路径仍未完成视觉／交互验收。真实 ZIP/7z 规则与隔离 Setup 1113 项载荷哈希证据早于最新字体和图标修复；最终发布前需重新打包。GitHub 正式发布、玩家在线升级及真实安装环境升级未执行。
+
+## 2026-10-07 发布载荷补验
+
+当前63df1261e6代码重新生成普通ZIP／7z及独立portable ZIP／7z，四个实际归档的EXE清单校验通过。记录：tmp/release-acceptance-normal-package.log、tmp/release-acceptance-portable-package.log、tmp/release-acceptance-normal-verify.log、tmp/release-acceptance-portable-verify-corrected.log。便携验证首次误用普通包文件名，改为实际portable文件名后通过。
+
+便携存储真实进程再次通过目录搬家、目录外配置隔离、profile不可用和普通版拒绝存储覆盖；第一次在构建占用EXE时失败，构建完成后串行复测通过。证据tmp/release-acceptance-storage-e2e-retry.log。签名／Setup载荷／归档校验42项测试在工作区隔离cryptography依赖下全部通过，无跳过；tmp/release-acceptance-sign-packaging-tests-with-crypto.log。
+
+最新Setup在独立测试AppId下编译并完成安装、全载荷损坏后的覆盖重装、废弃资源清理与卸载保留未知文件；逐项核对1113文件和46个SPV。证据tmp/release-acceptance-setup-lifecycle.log，产物tmp/release-acceptance-setup/output/QmClient-Setup.exe。该程序是隔离AppId验收产物，不能当作正式发布Setup。编译仍报告中文语言文件缺少部分Inno消息并回退英文；需在安装向导人工验收中确认，不能称完整中文安装体验通过。
+
+上文“载荷早于最新代码”的缺口已由本次重打包补齐；GitHub正式签名上传、真实历史Setup升级、跨平台后端与专项视觉仍待验收。具体步骤和通过标准见《发布人工验收清单》。
+
+## 图标性能决策边界
+
+TTF路径按face／字符／字号／名牌标记缓存字形，已缓存的字形不重复FreeType栅格化；文本容器还能缓存布局和顶点。当前MTSDF路径按图标提交独立绘制，低对比保护会增加一次外环提交。两者稳态均绘制纹理，不能把“离线烘焙”直接等同更快。MSDF主要可验证价值是跨尺寸表示及尖角质量；当前alpha本体尚未体现RGB多通道优势。
+
+完整atlas PNG＋JSON原始13.14MiB、独立7z11.77MiB；四TTF原始1.88MiB、独立7z551.5KiB。每样式2808² RGBA像素30.08MiB，切换时新旧临时共存理论60.16MiB，不是驱动实测显存。证据tmp/icon-atlas-size-audit.json。仅有颜色策略CPU微基准，没有TTF与MTSDF同条件整帧／GPU比较，所以暂不决定替换主路径，也不声称谁更快。比较应固定图标集、尺寸、后端、机器与透明度，分冷启动／首次使用／稳定缓存／样式字号切换，测CPU提交、GPU时间、draw调用、上传、内存及p95／p99帧时，而不是只看平均FPS。
