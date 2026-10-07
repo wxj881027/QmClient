@@ -11,6 +11,8 @@ import sys
 import uuid
 from pathlib import Path
 
+from windows_setup_ui import assert_setup_directory_page
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OBSOLETE_BUNDLED_FILES = (
 	"data/qmclient/font_catalog.json",
@@ -99,8 +101,12 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 			raise AssertionError(f"Setup payload is missing required runtime file: {required}")
 	(workspace / "payload-sha256.json").write_text(json.dumps(payload_hashes, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 	print(f"verifying {len(payload_hashes)} payload files, including {sum(name.endswith('.spv') for name in payload_hashes)} Vulkan shaders", flush=True)
+	assert_setup_directory_page(current, install, override=True)
+	print("PASS first-install directory page", flush=True)
 	for executable, name in ((previous, "previous"), (current, "current")):
 		if name == "current":
+			assert_setup_directory_page(current, install, override=False)
+			print("PASS upgrade directory page and previous path", flush=True)
 			if not (install / "QmClient-Setup.ini").is_file():
 				raise AssertionError("previous Setup did not create the installed marker")
 			# 损坏旧载荷中的同名文件，证明每项都由本次 Setup 实际覆盖。
@@ -136,16 +142,22 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 	if (install / "user-owned.txt").read_bytes() != b"preserve this file":
 		raise AssertionError("uninstall removed a user-owned file")
 
+	assert_setup_directory_page(current, workspace / "reinstalled", override=True)
+	print("PASS reinstall directory page", flush=True)
+
 
 def main() -> int:
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("--previous", type=Path, required=True)
 	parser.add_argument("--current", type=Path, required=True)
 	parser.add_argument("--payload", type=Path, required=True)
+	parser.add_argument("--workspace", type=Path, help="workspace-local isolated test output directory")
 	args = parser.parse_args()
 	if sys.platform != "win32":
 		parser.error("Windows is required")
-	workspace = REPO_ROOT / "tmp" / f"setup-upgrade-{uuid.uuid4().hex}"
+	workspace = args.workspace.resolve() if args.workspace else REPO_ROOT / "tmp" / f"setup-upgrade-{uuid.uuid4().hex}"
+	if REPO_ROOT not in workspace.parents:
+		parser.error("--workspace must be inside the current repository")
 	workspace.mkdir(parents=True)
 	print(f"artifacts: {workspace}", flush=True)
 	smoke_setup_upgrade(args.previous.resolve(strict=True), args.current.resolve(strict=True), args.payload.resolve(strict=True), workspace)

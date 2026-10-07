@@ -32,6 +32,8 @@ UninstallDisplayIcon={app}\DDNet.exe
 CloseApplications=yes
 RestartApplications=no
 DisableProgramGroupPage=yes
+; 交互安装始终允许确认目录，旧安装路径仅用于预填。
+DisableDirPage=no
 UsePreviousAppDir=yes
 UsePreviousTasks=yes
 UninstallLogMode=append
@@ -40,7 +42,7 @@ UninstallLogMode=append
 Name: "zh_cn"; MessagesFile: "QmClient-zh_CN.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
 
 [InstallDelete]
 ; 迁移商店索引和无损 WebP 后，仅删除已知旧随包资源。
@@ -154,4 +156,4 @@ Name: "{group}\QmClient"; Filename: "{app}\DDNet.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\QmClient"; Filename: "{app}\DDNet.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\DDNet.exe"; Description: "Launch QmClient"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\DDNet.exe"; Description: "{cm:LaunchProgram,QmClient}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
