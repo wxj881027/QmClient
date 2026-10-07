@@ -80,6 +80,10 @@ namespace qm_update
 			std::unordered_set<std::string> Groups;
 			std::unordered_set<std::string> Urls;
 			std::vector<CSource> vResult;
+			// 检测先使用系统代理或直连访问官方，失败后才换镜像；限流仍遵守冷却。
+			const auto OfficialDegraded = m_DegradedUntil.find("github");
+			if(OfficialDegraded == m_DegradedUntil.end() || Now >= OfficialDegraded->second)
+				vResult.push_back({"", "github", 0, RELEASE | RAW | API});
 			for(const auto &Source : vSorted)
 			{
 				const auto Degraded = m_DegradedUntil.find(Source.m_Group);
@@ -91,10 +95,6 @@ namespace qm_update
 				Urls.insert(Source.m_Prefix + OfficialUrl);
 				vResult.push_back(Source);
 			}
-			// 官方入口保留一次；仅显式 Retry-After 暂时禁止再次请求。
-			const auto OfficialDegraded = m_DegradedUntil.find("github");
-			if(OfficialDegraded == m_DegradedUntil.end() || Now >= OfficialDegraded->second)
-				vResult.push_back({"", "github", 1000, RELEASE | RAW | API});
 			return vResult;
 		}
 

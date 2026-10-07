@@ -75,14 +75,15 @@ namespace
 	};
 }
 
-TEST_F(QmUpdateRequest, FirstSourceTimeoutThenOfficialMetadataSucceeds)
+TEST_F(QmUpdateRequest, OfficialMetadataTimeoutThenMirrorSucceeds)
 {
 	Begin();
+	ASSERT_EQ(m_vResponses[0]->Url(), s_Api);
 	EXPECT_EQ(m_Request.Poll(10), EState::RUNNING);
 	ASSERT_TRUE(m_vResponses[0]->IsAbortRequested());
 	EXPECT_EQ(m_Request.Poll(10.1), EState::RUNNING);
 	ASSERT_EQ(m_vResponses.size(), 2U);
-	EXPECT_EQ(m_vResponses[1]->Url(), s_Api);
+	EXPECT_EQ(m_vResponses[1]->Url(), "https://gh-proxy.com/" + s_Api);
 	m_vResponses[1]->Reply(200, ReleaseJson());
 	EXPECT_EQ(m_Request.Poll(11), EState::SUCCEEDED);
 	EXPECT_EQ(m_Request.Poll(12), EState::SUCCEEDED);
@@ -153,19 +154,19 @@ TEST_F(QmUpdateRequest, WrongHashAndHtmlPackagesNeverBecomeSuccessful)
 	m_vResponses[1]->Reply(200, "corrupt package");
 	EXPECT_EQ(m_Request.Poll(2), EState::RUNNING);
 	ASSERT_EQ(m_vResponses.size(), 3U);
-	EXPECT_EQ(m_vResponses[2]->Url(), s_Asset);
+	EXPECT_EQ(m_vResponses[2]->Url(), "https://ghfast.top/" + s_Asset);
 	m_vResponses[2]->Reply(200, Good);
 	EXPECT_EQ(m_Request.Poll(3), EState::SUCCEEDED);
 }
 
-TEST_F(QmUpdateRequest, RateLimitDegradesServiceWithoutImmediateRetry)
+TEST_F(QmUpdateRequest, OfficialRateLimitFallsBackToMirrorWithoutImmediateRetry)
 {
 	Begin();
 	m_vResponses[0]->Reply(429, "rate limit", 900);
 	EXPECT_EQ(m_Request.Poll(1), EState::RUNNING);
 	const auto Candidates = m_Sources.Candidates(s_Api, qm_update::API, 600);
 	ASSERT_EQ(Candidates.size(), 1U);
-	EXPECT_EQ(Candidates[0].m_Group, "github");
+	EXPECT_EQ(Candidates[0].m_Group, "gh-proxy");
 	EXPECT_EQ(m_vResponses.size(), 2U);
 }
 
@@ -216,36 +217,116 @@ TEST_F(QmUpdateRequest, NoDataProgressAfterPartialDownloadFallsBack)
 	EXPECT_EQ(m_Request.Poll(22), EState::SUCCEEDED);
 }
 
-TEST_F(QmUpdateRequest, SurveySelectsFastestReachableServiceAndKeepsOfficialLast)
+TEST_F(QmUpdateRequest, OfficialMetadataSuccessDoesNotRequestAMirror)
+{
+	Begin();
+	ASSERT_EQ(m_vResponses.size(), 1U);
+	EXPECT_EQ(m_vResponses.front()->Url(), s_Api);
+	m_vResponses.front()->Reply(200, ReleaseJson());
+	EXPECT_EQ(m_Request.Poll(1), EState::SUCCEEDED);
+	EXPECT_EQ(m_vResponses.size(), 1U);
+}
+
+TEST_F(QmUpdateRequest, SurveyPrefersReachableOfficialOverFasterMirrors)
 {
 	qm_update::CSourceSurvey Survey;
 	Survey.Begin(m_Sources.Candidates(s_Asset, qm_update::RELEASE, 0), s_Asset + ".sig", 0,
 		[this](const std::string &Url) { auto Request = std::make_shared<CResponse>(Url); m_vResponses.push_back(Request); return Request; });
-	ASSERT_EQ(m_vResponses.size(), 2U);
-	m_vResponses[1]->Reply(200, std::string(64, 'a'));
+	ASSERT_EQ(m_vResponses.size(), 3U);
+	EXPECT_EQ(m_vResponses[0]->Url(), s_Asset + ".sig");
+	m_vResponses[2]->Reply(200, std::string(64, 'a'));
 	EXPECT_FALSE(Survey.Poll(m_Sources, 1));
-	m_vResponses[0]->Reply(200, std::string(64, 'b'));
+	m_vResponses[1]->Reply(200, std::string(64, 'b'));
+	EXPECT_FALSE(Survey.Poll(m_Sources, 2));
+	m_vResponses[0]->Reply(200, std::string(64, 'c'));
 	ASSERT_TRUE(Survey.Poll(m_Sources, 3));
 	const auto Candidates = Survey.Candidates();
 	ASSERT_EQ(Candidates.size(), 3U);
-	EXPECT_EQ(Candidates[0].m_Group, "ghproxy");
-	EXPECT_EQ(Candidates[1].m_Group, "gh-proxy");
-	EXPECT_EQ(Candidates[2].m_Group, "github");
+	EXPECT_EQ(Candidates[0].m_Group, "github");
+	EXPECT_EQ(Candidates[1].m_Group, "ghproxy");
+	EXPECT_EQ(Candidates[2].m_Group, "gh-proxy");
 	EXPECT_TRUE(m_Sources.Recent().empty());
 }
 
-TEST_F(QmUpdateRequest, FailedSurveySourcesLeaveOnlyOfficialFallback)
+TEST_F(QmUpdateRequest, UnreachableOfficialAndInvalidMirrorLeaveTheHealthyMirror)
 {
 	qm_update::CSourceSurvey Survey;
 	Survey.Begin(m_Sources.Candidates(s_Asset, qm_update::RELEASE, 0), s_Asset + ".sig", 0,
 		[this](const std::string &Url) { auto Request = std::make_shared<CResponse>(Url); m_vResponses.push_back(Request); return Request; });
-	m_vResponses[0]->Reply(200, "<html>blocked</html>");
-	EXPECT_FALSE(Survey.Poll(m_Sources, 10));
-	EXPECT_TRUE(m_vResponses[1]->IsAbortRequested());
-	ASSERT_TRUE(Survey.Poll(m_Sources, 10.1));
+	ASSERT_EQ(m_vResponses.size(), 3U);
+	m_vResponses[0]->Interrupted();
+	m_vResponses[1]->Reply(200, "<html>blocked</html>");
+	m_vResponses[2]->Reply(200, std::string(64, 's'));
+	ASSERT_TRUE(Survey.Poll(m_Sources, 1));
 	const auto Candidates = Survey.Candidates();
 	ASSERT_EQ(Candidates.size(), 1U);
-	EXPECT_EQ(Candidates.front().m_Group, "github");
+	EXPECT_EQ(Candidates.front().m_Group, "ghproxy");
+}
+
+TEST_F(QmUpdateRequest, AllSurveyRoutesFailWithoutAnUnprobedOfficialFallback)
+{
+	qm_update::CSourceSurvey Survey;
+	Survey.Begin(m_Sources.Candidates(s_Asset, qm_update::RELEASE, 0), s_Asset + ".sig", 0,
+		[this](const std::string &Url) { auto Request = std::make_shared<CResponse>(Url); m_vResponses.push_back(Request); return Request; });
+	EXPECT_FALSE(Survey.Poll(m_Sources, 10));
+	for(const auto &Response : m_vResponses)
+		EXPECT_TRUE(Response->IsAbortRequested());
+	EXPECT_TRUE(Survey.Poll(m_Sources, 10.1));
+	EXPECT_TRUE(Survey.Candidates().empty());
+}
+
+TEST_F(QmUpdateRequest, SurveyRetriesBrokenOfficialSystemProxyThroughDirectOnce)
+{
+	qm_update::CSourceSurvey Survey;
+	int DirectCount = 0;
+	Survey.Begin(m_Sources.Candidates(s_Asset, qm_update::RELEASE, 0), s_Asset + ".sig", 0, [this](const std::string &Url) { auto Response = std::make_shared<CResponse>(Url); if(Url == s_Asset + ".sig") Response->Proxy("http://127.0.0.1:7890"); m_vResponses.push_back(Response); return Response; }, [this, &DirectCount](const std::string &Url) { ++DirectCount; auto Response = std::make_shared<CResponse>(Url); Response->Proxy(""); m_vResponses.push_back(Response); return Response; });
+	ASSERT_EQ(m_vResponses.size(), 3U);
+	m_vResponses[0]->Interrupted();
+	m_vResponses[1]->Reply(200, std::string(64, 'm'));
+	m_vResponses[2]->Reply(200, std::string(64, 'm'));
+	EXPECT_FALSE(Survey.Poll(m_Sources, 1));
+	ASSERT_EQ(DirectCount, 1);
+	ASSERT_EQ(m_vResponses.size(), 4U);
+	EXPECT_EQ(m_vResponses.back()->Url(), s_Asset + ".sig");
+	EXPECT_STREQ(m_vResponses.back()->ProxyUrl(), "");
+	m_vResponses.back()->Reply(200, std::string(64, 'o'));
+	ASSERT_TRUE(Survey.Poll(m_Sources, 2));
+	EXPECT_EQ(Survey.Candidates().front().m_Group, "github");
+	EXPECT_TRUE(Survey.Poll(m_Sources, 100));
+	EXPECT_EQ(DirectCount, 1);
+}
+
+TEST_F(QmUpdateRequest, SurveyOfficialRateLimitDoesNotRetryAnotherRoute)
+{
+	qm_update::CSourceSurvey Survey;
+	int DirectCount = 0;
+	Survey.Begin(m_Sources.Candidates(s_Asset, qm_update::RELEASE, 0), s_Asset + ".sig", 0, [this](const std::string &Url) { auto Response = std::make_shared<CResponse>(Url); Response->Proxy("http://127.0.0.1:7890"); m_vResponses.push_back(Response); return Response; }, [&DirectCount](const std::string &Url) { ++DirectCount; return std::make_shared<CResponse>(Url); });
+	m_vResponses[0]->Reply(429, "wait", 900);
+	m_vResponses[1]->Reply(200, std::string(64, 'm'));
+	m_vResponses[2]->Reply(200, std::string(64, 'm'));
+	ASSERT_TRUE(Survey.Poll(m_Sources, 1));
+	EXPECT_EQ(DirectCount, 0);
+	for(const auto &Candidate : Survey.Candidates())
+		EXPECT_NE(Candidate.m_Group, "github");
+	for(const auto &Candidate : m_Sources.Candidates(s_Asset, qm_update::RELEASE, 899))
+		EXPECT_NE(Candidate.m_Group, "github");
+	EXPECT_EQ(m_Sources.Candidates(s_Asset, qm_update::RELEASE, 901).front().m_Group, "github");
+}
+
+TEST_F(QmUpdateRequest, SurveySystemProxyResolutionDoesNotConsumeTransferBudget)
+{
+	qm_update::CSourceSurvey Survey;
+	qm_update::CSourceRegistry Sources({});
+	Survey.Begin(Sources.Candidates(s_Asset, qm_update::RELEASE, 0), s_Asset + ".sig", 0,
+		[this](const std::string &Url) { auto Response = std::make_shared<CResponse>(Url); m_vResponses.push_back(Response); return Response; });
+	Survey.BeginTransfer(m_vResponses.front(), 8);
+	EXPECT_FALSE(Survey.Poll(Sources, 10));
+	EXPECT_FALSE(m_vResponses.front()->IsAbortRequested());
+	EXPECT_FALSE(Survey.Poll(Sources, 17.9));
+	m_vResponses.front()->Reply(200, std::string(64, 'o'));
+	EXPECT_TRUE(Survey.Poll(Sources, 18));
+	ASSERT_EQ(Survey.Candidates().size(), 1U);
+	EXPECT_EQ(Survey.Candidates().front().m_Group, "github");
 }
 
 TEST_F(QmUpdateRequest, CancelSurveyAbortsAllRequestsAndReturnsNoCandidate)
@@ -510,16 +591,16 @@ TEST_F(QmUpdateRequest, RecheckAfterPortableAssetsArePublishedEnablesDownloadWit
 TEST_F(QmUpdateRequest, Official429WithoutRetryAfterCoolsDownBeforeUserCanRecheck)
 {
 	Begin();
-	m_vResponses[0]->Reply(503, "mirror unavailable");
+	ASSERT_EQ(m_vResponses[0]->Url(), s_Api);
+	m_vResponses[0]->Reply(429, "rate limited");
 	ASSERT_EQ(m_Request.Poll(1), EState::RUNNING);
 	ASSERT_EQ(m_vResponses.size(), 2U);
-	ASSERT_EQ(m_vResponses.back()->Url(), s_Api);
-	m_vResponses.back()->Reply(429, "rate limited");
+	m_vResponses.back()->Reply(503, "mirror unavailable");
 	EXPECT_EQ(m_Request.Poll(2), EState::FAILED);
 	EXPECT_TRUE(m_Sources.Candidates(s_Api, qm_update::API, 3).empty());
 	const auto Recovered = m_Sources.Candidates(s_Api, qm_update::API, 303);
 	ASSERT_FALSE(Recovered.empty());
-	EXPECT_EQ(Recovered.back().m_Group, "github");
+	EXPECT_EQ(Recovered.front().m_Group, "github");
 }
 
 TEST(QmUpdateRetryDelay, MissingHeaderUsesBoundedCooldownAndLongerServerDelayIsPreserved)

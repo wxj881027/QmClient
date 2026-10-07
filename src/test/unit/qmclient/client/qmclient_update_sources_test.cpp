@@ -13,18 +13,18 @@ TEST(QmUpdateSources, GroupsAndDuplicateUrlsAreDeduplicated)
 	qm_update::CSourceRegistry Sources({{"https://mirror/", "one", 10, qm_update::RELEASE}, {"https://node/", "one", 20, qm_update::RELEASE}, {"https://mirror/", "two", 30, qm_update::RELEASE}});
 	const auto Candidates = Sources.Candidates(s_Asset, qm_update::RELEASE, 0);
 	ASSERT_EQ(Candidates.size(), 2U);
-	EXPECT_EQ(Candidates.front().m_Prefix, "https://mirror/");
-	EXPECT_EQ(Candidates.back().m_Prefix, "");
+	EXPECT_EQ(Candidates.front().m_Prefix, "");
+	EXPECT_EQ(Candidates.back().m_Prefix, "https://mirror/");
 }
 
-TEST(QmUpdateSources, RecentApprovedNodeMovesAheadOfGroupSibling)
+TEST(QmUpdateSources, RecentApprovedMirrorCannotDisplaceOfficial)
 {
 	qm_update::CSourceRegistry Sources;
 	Sources.SetRecent("https://gh-proxy.org/");
 	const auto Candidates = Sources.Candidates(s_Api, qm_update::API, 0);
 	ASSERT_EQ(Candidates.size(), 2U);
-	EXPECT_EQ(Candidates.front().m_Prefix, "https://gh-proxy.org/");
-	EXPECT_EQ(Candidates.back().m_Group, "github");
+	EXPECT_EQ(Candidates.front().m_Group, "github");
+	EXPECT_EQ(Candidates[1].m_Prefix, "https://gh-proxy.org/");
 }
 
 TEST(QmUpdateSources, DisabledAndUnapprovedRecentSourcesAreNeverUsed)
@@ -35,7 +35,8 @@ TEST(QmUpdateSources, DisabledAndUnapprovedRecentSourcesAreNeverUsed)
 		Sources.SetRecent(Recent);
 		const auto Candidates = Sources.Candidates(s_Api, qm_update::API, 0);
 		ASSERT_FALSE(Candidates.empty());
-		EXPECT_NE(Candidates.front().m_Prefix, Recent);
+		for(const auto &Candidate : Candidates)
+			EXPECT_NE(Candidate.m_Prefix, Recent);
 	}
 }
 
@@ -44,20 +45,21 @@ TEST(QmUpdateSources, ReleaseOnlyServicesAreNotApiMirrors)
 	qm_update::CSourceRegistry Sources;
 	const auto Candidates = Sources.Candidates(s_Api, qm_update::API, 0);
 	ASSERT_EQ(Candidates.size(), 2U);
-	EXPECT_EQ(Candidates[0].m_Group, "gh-proxy");
-	EXPECT_EQ(Candidates[1].m_Group, "github");
+	EXPECT_EQ(Candidates[0].m_Group, "github");
+	EXPECT_EQ(Candidates[1].m_Group, "gh-proxy");
 }
 
 TEST(QmUpdateSources, FailureDegradesWholeServiceAndRecoveryRestoresIt)
 {
 	qm_update::CSourceRegistry Sources;
 	const auto Initial = Sources.Candidates(s_Asset, qm_update::RELEASE, 0);
-	Sources.Failed(Initial.front(), 10, 600);
+	Sources.Failed(Initial[1], 10, 600);
 	const auto Degraded = Sources.Candidates(s_Asset, qm_update::RELEASE, 609);
 	ASSERT_EQ(Degraded.size(), 2U);
-	EXPECT_NE(Degraded.front().m_Group, Initial.front().m_Group);
+	for(const auto &Candidate : Degraded)
+		EXPECT_NE(Candidate.m_Group, Initial[1].m_Group);
 	EXPECT_EQ(Sources.Candidates(s_Asset, qm_update::RELEASE, 610).size(), 3U);
-	Sources.Succeeded(Initial.front());
+	Sources.Succeeded(Initial[1]);
 	EXPECT_EQ(Sources.Candidates(s_Asset, qm_update::RELEASE, 20).size(), 3U);
 }
 

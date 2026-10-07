@@ -184,15 +184,21 @@ void CTClient::StartUpdateSourceSurvey()
 		return;
 	const char *pSignatureUrl = m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl;
 	const double Now = time_get() / static_cast<double>(time_freq());
-	m_UpdateSurvey.Begin(m_UpdateSources.Candidates(pSignatureUrl, qm_update::RELEASE, Now), pSignatureUrl, Now,
-		[this](const std::string &Url) -> std::shared_ptr<IHttpRequest> {
-			std::shared_ptr<IHttpRequest> pRequest = HttpGet(Url.c_str());
-			pRequest->Timeout(CTimeout{5000, 10000, 1, 10});
-			pRequest->MaxResponseSize(64);
-			pRequest->LogProgress(HTTPLOG::FAILURE);
+	const auto StartProbe = [this](const std::string &Url, bool Direct) -> std::shared_ptr<IHttpRequest> {
+		std::shared_ptr<IHttpRequest> pRequest = HttpGet(Url.c_str());
+		pRequest->Timeout(CTimeout{5000, 10000, 1, 10});
+		pRequest->MaxResponseSize(64);
+		pRequest->LogProgress(HTTPLOG::FAILURE);
+		if(Direct)
+		{
+			pRequest->Proxy("");
+			Http()->Run(pRequest);
+		}
+		else
 			RunUpdateHttp(pRequest);
-			return pRequest;
-		});
+		return pRequest;
+	};
+	m_UpdateSurvey.Begin(m_UpdateSources.Candidates(pSignatureUrl, qm_update::RELEASE, Now), pSignatureUrl, Now, [StartProbe](const std::string &Url) { return StartProbe(Url, false); }, [StartProbe](const std::string &Url) { return StartProbe(Url, true); });
 	if(!m_UpdateSurvey.Running())
 		StartUpdateDownload();
 }
@@ -430,6 +436,7 @@ void CTClient::PollUpdateProxyRequests()
 		// 只在主线程移交 HTTP；后台任务不持有 Http 指针，退出时不存在晚到 Run。
 		if(It->m_pJob->State() == IJob::STATE_DONE && It->m_pJob->HasDecision())
 			It->m_pRequest->Proxy(It->m_pJob->Proxy().c_str());
+		m_UpdateSurvey.BeginTransfer(It->m_pRequest, Now);
 		if(It->m_pRequest == m_UpdateMetadataRequest.Request())
 			m_UpdateMetadataRequest.BeginTransfer(Now);
 		const std::shared_ptr<IHttpRequest> apTasks[] = {m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
