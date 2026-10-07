@@ -11,7 +11,7 @@ import sys
 import uuid
 from pathlib import Path
 
-from windows_setup_ui import assert_setup_directory_page
+from windows_setup_ui import assert_setup_completion_page, assert_setup_directory_page
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OBSOLETE_BUNDLED_FILES = (
@@ -122,6 +122,8 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 			old_asset = install / "data/qmclient/gui_logo.png"
 			old_asset.write_bytes(b"old asset to replace")
 		run_process([str(executable), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/NOICONS", f"/DIR={install}", f"/LOG={workspace / (name + '.log')}"])
+	assert_setup_completion_page(current, install)
+	print("PASS completion page has one Finish instruction", flush=True)
 	for relative, expected_digest in payload_hashes.items():
 		installed_path = install / relative
 		if not installed_path.is_file():

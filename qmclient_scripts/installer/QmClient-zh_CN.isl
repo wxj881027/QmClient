@@ -194,8 +194,8 @@ ComponentsDiskSpaceMBLabel=当前选择的组件需要至少 [mb] MB 的磁盘�
 
 ; *** "Select Additional Tasks" wizard page
 WizardSelectTasks=选择附加任务
-SelectTasksDesc=选择附加任务
-SelectTasksLabel2=选择安装程序需要执行的附加任务。
+SelectTasksDesc=需要执行哪些附加任务？
+SelectTasksLabel2=勾选需要的选项，然后点击“下一步”。
 
 ; *** "Select Start Menu Folder" wizard page
 WizardSelectProgramGroup=选择开始菜单文件夹
@@ -211,8 +211,8 @@ NoProgramGroupCheck2=不创建开始菜单文件夹(&D)
 ; *** "Ready to Install" wizard page
 WizardReady=准备安装
 ReadyLabel1=安装程序已准备就绪
-ReadyLabel2a=单击“安装”开始安装。%n%n
-ReadyLabel2b=点击“安装”继续此安装程序。
+ReadyLabel2a=点击“安装”开始安装。如需修改设置，点击“上一步”。
+ReadyLabel2b=点击“安装”开始安装。
 ReadyMemoUserInfo=用户信息：
 ReadyMemoDir=目标位置：
 ReadyMemoType=安装类型：
@@ -261,7 +261,7 @@ InstallingLabel=安装程序正在安装 [name] 到您的计算机，请稍候�
 ; *** "Setup Completed" wizard page
 FinishedHeadingLabel=完成 QmClient 安装
 FinishedLabelNoIcons=QmClient 已安装到您的计算机。
-FinishedLabel=QmClient 已安装到您的计算机。%n%n单击“完成”退出安装程序。
+FinishedLabel=QmClient 已安装到您的计算机。
 ClickFinish=点击“完成”退出安装程序。
 FinishedRestartLabel=为完成 [name] 的安装，安装程序必须重新启动您的计算机。要立即重启吗？
 FinishedRestartMessage=为完成 [name] 的安装，安装程序必须重新启动您的计算机。%n%n要立即重启吗？

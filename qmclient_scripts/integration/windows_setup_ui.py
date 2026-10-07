@@ -10,6 +10,14 @@ from pathlib import Path
 
 
 def assert_setup_directory_page(setup: Path, expected: Path, *, override: bool) -> None:
+	_inspect_setup_wizard(setup, expected, override=override, completion=False)
+
+
+def assert_setup_completion_page(setup: Path, install: Path) -> None:
+	_inspect_setup_wizard(setup, install, override=True, completion=True)
+
+
+def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, completion: bool) -> None:
 	# Setup 的加载器会产生子进程，窗口和清理范围均限定在本次进程树。
 	kernel = ctypes.WinDLL("kernel32", use_last_error=True)
 	user = ctypes.WinDLL("user32", use_last_error=True)
@@ -43,7 +51,7 @@ def assert_setup_directory_page(setup: Path, expected: Path, *, override: bool) 
 	startup = subprocess.STARTUPINFO()
 	startup.dwFlags = subprocess.STARTF_USESHOWWINDOW
 	startup.wShowWindow = 7
-	arguments = [str(setup), "/LANG=zh_cn"]
+	arguments = [str(setup), "/LANG=zh_cn", "/NORESTART", "/NOICONS"]
 	if override:
 		arguments.append(f"/DIR={expected}")
 	process = subprocess.Popen(arguments, startupinfo=startup)
@@ -78,9 +86,10 @@ def assert_setup_directory_page(setup: Path, expected: Path, *, override: bool) 
 			user.SendMessageTimeoutW(handle, 0x000D, len(buffer), ctypes.addressof(buffer), 2, 2000, ctypes.byref(result))
 		return buffer.value
 
-	deadline = time.monotonic() + 30
+	deadline = time.monotonic() + (180 if completion else 30)
 	last_next = None
 	observed = []
+	install_clicked = False
 	try:
 		while time.monotonic() < deadline:
 			pids = descendants()
@@ -103,22 +112,35 @@ def assert_setup_directory_page(setup: Path, expected: Path, *, override: bool) 
 				user.EnumChildWindows(window, collect_control, 0)
 				observed = [(kind, value) for _, kind, value in controls]
 				for handle, kind, value in controls:
-					if kind.endswith("Edit") and value and Path(value) == expected:
+					if not completion and kind.endswith("Edit") and value and Path(value) == expected:
 						if not user.IsWindowEnabled(handle):
 							raise AssertionError("installation directory cannot be edited")
 						return
 				buttons = [(handle, value) for handle, kind, value in controls if kind == "TNewButton" and user.IsWindowEnabled(handle)]
-				if any(value.replace("&", "").strip() in {"安装", "Install"} for _, value in buttons):
-					raise AssertionError(f"Setup skipped the editable directory page: {observed}")
+				if completion and any(value.replace("&", "").strip() in {"完成", "Finish"} for _, value in buttons):
+					labels = [value for _, kind, value in controls if kind == "TNewStaticText"]
+					if sum(value.count("退出安装程序") for value in labels) != 1:
+						raise AssertionError(f"completion page must explain Finish exactly once: {labels}")
+					if not any("QmClient 已安装到您的计算机。" in value for value in labels):
+						raise AssertionError(f"completion page lost the installation result: {labels}")
+					return
+				for handle, value in buttons:
+					if value.replace("&", "").strip() in {"安装", "Install"}:
+						if not completion:
+							raise AssertionError(f"Setup skipped the editable directory page: {observed}")
+						if not install_clicked:
+							install_clicked = True
+							result = ctypes.c_size_t()
+							user.SendMessageTimeoutW(handle, 0x00F5, 0, 0, 2, 2000, ctypes.byref(result))
 				for handle, value in buttons:
 					if value.replace("&", "").strip() in {"下一步", "Next >", "Next"} and last_next != observed:
 						last_next = observed
 						result = ctypes.c_size_t()
 						user.SendMessageTimeoutW(handle, 0x00F5, 0, 0, 2, 2000, ctypes.byref(result))
 			threading.Event().wait(0.05)
-		raise AssertionError(f"directory page not observed within 30 seconds: {observed}")
+		raise AssertionError(f"Setup page not observed before timeout: completion={completion}, controls={observed}")
 	finally:
-		# 探针从不点击安装；关闭本次测试向导，避免测试失败留下窗口或进程。
+		# 目录探针不点击安装；完成页探针不点击完成，防止启动普通客户端污染用户配置。
 		for pid in descendants() - {process.pid}:
 			handle = kernel.OpenProcess(1, False, pid)
 			if handle:
