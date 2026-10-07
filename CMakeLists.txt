@@ -5835,6 +5835,24 @@ else()
   add_custom_target(package_default DEPENDS package_${PACKAGE_DEFAULT})
 endif()
 
+# 本地 Windows 完整发布入口；普通客户端编译不触发打包和发布目录写入。
+if(TARGET_OS STREQUAL "windows" AND NOT QMCLIENT_PORTABLE AND NOT QMCLIENT_TEST_STORAGE)
+  set(QMCLIENT_RELEASE_DIRECTORY "${PROJECT_SOURCE_DIR}/QmClient_Release" CACHE PATH "Local Windows release artifact directory")
+  set(QMCLIENT_RELEASE_JOBS 6 CACHE STRING "Jobs for the isolated portable release build")
+  add_custom_target(package_windows_release
+    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/qmclient_scripts/package_windows_release.py
+      --build-dir ${PROJECT_BINARY_DIR}
+      --output-dir ${QMCLIENT_RELEASE_DIRECTORY}
+      --package-name ${CPACK_PACKAGE_FILE_NAME}
+      --portable-package-name ${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-portable-${CPACK_SYSTEM_NAME}
+      --version ${CPACK_PACKAGE_VERSION}
+      --jobs ${QMCLIENT_RELEASE_JOBS}
+    DEPENDS package_7z
+    VERBATIM
+    USES_TERMINAL
+  )
+endif()
+
 add_custom_target(package_all DEPENDS ${PACKAGE_TARGETS})
 
 # Unset these variables, they might do something in the future of CPack.

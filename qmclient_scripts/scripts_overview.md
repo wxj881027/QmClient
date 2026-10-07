@@ -275,3 +275,5 @@ python3 qmclient_scripts/gate/check_gate.py --mode default --explain-scope --rep
 - 不要绕开 `qmclient_scripts/gate/check_gate.py` 自己临时拼一套等价门禁
 - 不要把 `qmclient_scripts/` 根目录当成完全平级；门禁相关内容统一以 `gate/` 为准
 - 不要在 QmClient gate 或 workflow 中直接调用根目录 `scripts/` 下的 QmClient 特化脚本；改用 `qmclient_scripts/` 复制件
+
+本地 Windows 三种发布产物统一入口：`qmclient_scripts/cmake-windows.cmd --build cmake-build-release --target package_windows_release -j 6`。普通版完整工具包为 7z，专用便携版在同一目录的 `portable-build` 中生成 ZIP，Setup 使用普通版载荷；校验后自动汇总到 `QmClient_Release` 并生成 `SHA256SUMS.txt`。执行 `game-client` 不触发打包；发布入口不签名、不上传或公开 Release。
