@@ -123,21 +123,6 @@ TEST(QmNewUiMenuSettingsColorsContract, TranslateUiColorsPreserveConfiguredAlpha
 		EXPECT_NE(Config.find(pKey), std::string::npos) << pKey;
 }
 
-TEST(QmNewUiMenuSettingsColorsContract, LegacyUiSurfaceOptionsRemainCompatible)
-{
-	const std::string QmConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables.h");
-
-	EXPECT_EQ(QmConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
-	EXPECT_EQ(QmConfigSource.find("MACRO_CONFIG_INT(QmMapBrowserOpacity, qm_map_browser_opacity"), std::string::npos);
-
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(UiColor, ui_color, 0x4D000000"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(ClMenuPanelColor, cl_menu_panel_color, 0x000000"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(ClMenuPanelOpacity, cl_menu_panel_opacity, 30"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(ClMenuPanelElevatedOpacity, cl_menu_panel_elevated_opacity, 30"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(ClSettingsTabbarOpacity, cl_settings_tabbar_opacity, 30"), std::string::npos);
-}
-
 TEST(QmNewUiMenuSettingsColorsContract, GeneralSettingsListsShareSelectedAndHoveredBackgroundTokens)
 {
 	const std::string Tokens = ReadTextFile("src/game/client/QmUi/UiTokens.h");

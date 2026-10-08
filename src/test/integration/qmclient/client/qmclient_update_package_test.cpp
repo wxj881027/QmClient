@@ -242,7 +242,7 @@ TEST_F(QmPackageDownload, ValidSegmentsWithRetryAfterStillMergeSuccessfully)
 	for(size_t Index = 1; Index <= 4; ++Index)
 	{
 		const auto Range = *m_vRequests[Index]->Range();
-		m_vRequests[Index]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), Range, EHttpState::DONE, 300 * Index);
+		m_vRequests[Index]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), CHttpByteRange{Range.m_First, Range.m_Last, static_cast<int64_t>(m_Body.size())}, EHttpState::DONE, 300 * Index);
 		m_Download->Poll(2);
 		EXPECT_NE(m_Download->State(), EHttpState::ERROR);
 	}
@@ -277,7 +277,7 @@ TEST_F(QmPackageDownload, SuccessfulSegmentCooldownPreventsLaterWholeFileFallbac
 {
 	Probe();
 	const auto Range = *m_vRequests[1]->Range();
-	m_vRequests[1]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), Range, EHttpState::DONE, 600);
+	m_vRequests[1]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), CHttpByteRange{Range.m_First, Range.m_Last, static_cast<int64_t>(m_Body.size())}, EHttpState::DONE, 600);
 	m_Download->Poll(2);
 	ASSERT_EQ(m_Download->State(), EHttpState::RUNNING);
 	m_vRequests[2]->Reply(200, "", {}, EHttpState::ERROR);
@@ -315,7 +315,7 @@ TEST_F(QmPackageDownload, PositiveRetryAfterOnSuccessfulSegmentPreventsRetry)
 	Probe();
 	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR);
 	const auto Range = *m_vRequests[2]->Range();
-	m_vRequests[2]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), Range, EHttpState::DONE, 600);
+	m_vRequests[2]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), CHttpByteRange{Range.m_First, Range.m_Last, static_cast<int64_t>(m_Body.size())}, EHttpState::DONE, 600);
 	m_Download->Poll(2);
 	EXPECT_EQ(m_vRequests.size(), 5U);
 	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);

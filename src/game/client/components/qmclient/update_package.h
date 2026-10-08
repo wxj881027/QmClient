@@ -212,8 +212,8 @@ namespace qm_update
 				return Request->StatusCode() == 200 ||
 				       (Request->StatusCode() == 206 && Range && Range->m_First == 0 && Range->m_Last == 0 && Range->m_Total > 0 && Range->m_Total <= m_MaxSize);
 			return Part.m_Range ? Request->StatusCode() == 206 && Range && Range->m_Total == Part.m_Range->m_Total &&
-					     Range->m_First == Part.m_Range->m_First && Range->m_Last == Part.m_Range->m_Last :
-					     Request->StatusCode() == 200;
+						      Range->m_First == Part.m_Range->m_First && Range->m_Last == Part.m_Range->m_Last :
+					      Request->StatusCode() == 200;
 		}
 		void Fail(const std::shared_ptr<IHttpRequest> &Request)
 		{

@@ -18,9 +18,11 @@
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <winsock2.h>
+
 #include <ws2tcpip.h>
 #else
 #include <arpa/inet.h>
+
 #include <csignal>
 #endif
 
@@ -251,8 +253,9 @@ bool CHttpRequestCurl::ProxyBypassed(std::string_view Host, std::string_view Lis
 		return false;
 	unsigned char aHost[16] = {};
 	const std::string HostText(Host);
-	const int Family = inet_pton(AF_INET, HostText.c_str(), aHost) == 1 ? AF_INET :
-		inet_pton(AF_INET6, HostText.c_str(), aHost) == 1 ? AF_INET6 : AF_UNSPEC;
+	const int Family = inet_pton(AF_INET, HostText.c_str(), aHost) == 1  ? AF_INET :
+			   inet_pton(AF_INET6, HostText.c_str(), aHost) == 1 ? AF_INET6 :
+									       AF_UNSPEC;
 	if(Family == AF_UNSPEC && Host.back() == '.')
 		Host.remove_suffix(1);
 	while(!List.empty())
@@ -465,7 +468,7 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 				const auto *pVersion = curl_version_info(CURLVERSION_NOW);
 				const bool FinalProxyKnown = UsedProxyResult.has_value() && m_StatusCode >= 200 && (m_StatusCode < 300 || m_StatusCode >= 400);
 				const bool BypassEvidence = pNoProxy && (FinalProxyKnown ? ProxyBypassed(pHost, pNoProxy) :
-					pVersion && ProxyBypassEvidence(pHost, pNoProxy, pVersion->version_num));
+											   pVersion && ProxyBypassEvidence(pHost, pNoProxy, pVersion->version_num));
 				if(ProxyFallbackBypassed(m_StatusCode, UsedProxyResult, BypassEvidence))
 				{
 					m_aProxy[0] = '\0';
