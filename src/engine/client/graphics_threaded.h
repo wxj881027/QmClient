@@ -1022,6 +1022,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	bool m_DoScreenshot;
 	char m_aScreenshotName[IO_MAX_PATH_LENGTH];
 	FScreenshotCallback m_pfnScreenshotCallback;
+	FScreenshotProcessor m_pfnScreenshotProcessor;
 #if defined(CONF_PLATFORM_MACOS)
 	bool m_MacosGraphicsDiagnosticsEnabled = false;
 	uint32_t m_MacosGraphicsDiagnosticFrameCount = 0;
@@ -1576,7 +1577,7 @@ public:
 
 	void ReadPixel(ivec2 Position, ColorRGBA *pColor) override;
 	void TakeScreenshot(const char *pFilename) override;
-	void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback) override;
+	void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor = nullptr) override;
 	void TakeCustomScreenshot(const char *pFilename) override;
 	void ReadFramebuffer(CImageInfo &Image);
 	void SetScreenSize(int Width, int Height);

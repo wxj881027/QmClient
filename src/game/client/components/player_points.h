@@ -9,32 +9,11 @@
 #include <engine/sqlite.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/player_points_state.h>
 
 #include <map>
 #include <memory>
 #include <string>
-
-enum class EPointsStatus
-{
-	NOT_REQUESTED,
-	FETCHING,
-	READY,
-	FAILED
-};
-
-struct SPlayerPointsEntry
-{
-	int m_Points = 0;
-	EPointsStatus m_Status = EPointsStatus::NOT_REQUESTED;
-	int64_t m_LastSuccessTime = 0; // timestamp
-	int64_t m_LastFailTime = 0; // timestamp for failed requests
-};
-
-struct SPlayerPointsResult
-{
-	EPointsStatus m_Status;
-	int m_Points;
-};
 
 struct SPlayerPointsParseResult
 {
@@ -62,17 +41,18 @@ inline SPlayerPointsParseResult ExtractPlayerPointsJson(const json_value *pRoot)
 class CPlayerPoints : public CComponent
 {
 private:
-	// Cache: player name -> points data
-	std::map<std::string, SPlayerPointsEntry> m_Cache;
+	CQmPlayerPointsCache m_Cache;
 
-	// Active HTTP requests: player name -> request
-	std::map<std::string, std::shared_ptr<IHttpRequest>> m_ActiveRequests;
+	struct SRequestSlot
+	{
+		std::shared_ptr<IHttpRequest> m_pRequest;
+		CQmPlayerPointsCache::SRequestToken m_Token;
+	};
+	std::map<std::string, SRequestSlot> m_ActiveRequests;
 	// 已完成的 HTTP 响应每个玩家最多交给一个后台任务解析。
 	std::map<std::string, std::shared_ptr<IJob>> m_ParseJobs;
 
 	// Constants
-	static constexpr int64_t CACHE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
-	static constexpr int64_t FAIL_RETRY_DELAY_MS = 30 * 1000; // 30 seconds
 	static constexpr int MAX_CONCURRENT_REQUESTS = 2;
 
 	CSqlite m_pDb;
@@ -83,11 +63,14 @@ private:
 	void StartRequest(const char *pPlayerName);
 	void ProcessCompletedRequests();
 	void StoreToDb(const char *pPlayerName, int Points);
+	void CancelRequests(bool NewServer = false);
 
 public:
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
 	void OnShutdown() override;
+	void OnReset() override;
+	void OnStateChange(int NewState, int OldState) override;
 	void OnRender() override;
 
 	// Public interface

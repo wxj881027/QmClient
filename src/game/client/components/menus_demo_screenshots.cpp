@@ -5,9 +5,11 @@
 
 #include <base/system.h>
 
+#include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
+#include <game/client/ui_scrollregion.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -70,16 +72,6 @@ namespace
 		return {Rect.x + (Rect.w - Width * Scale) * 0.5f, Rect.y + (Rect.h - Height * Scale) * 0.5f, Width * Scale, Height * Scale};
 	}
 
-	CQmScreenshotManager::SWatermarkOptions CurrentWatermarkOptions()
-	{
-		CQmScreenshotManager::SWatermarkOptions Options;
-		Options.m_ShowTimestamp = g_Config.m_QmScreenshotWatermarkTimestamp != 0;
-		Options.m_ShowMapName = g_Config.m_QmScreenshotWatermarkMap != 0;
-		Options.m_CustomText = g_Config.m_QmScreenshotWatermarkText;
-		Options.m_Position = (CQmScreenshotManager::EWatermarkPosition)std::clamp(g_Config.m_QmScreenshotWatermarkPosition, 0, 3);
-		return Options;
-	}
-
 	void FormatScreenshotFileSize(int64_t SizeBytes, char *pBuf, size_t BufSize)
 	{
 		const float SizeKiB = SizeBytes / 1024.0f;
@@ -123,8 +115,8 @@ void CMenus::RenderDemoScreenshotWatermarkPreview(CUIRect PreviewRect, const CDe
 
 	char aSourcePath[IO_MAX_PATH_LENGTH];
 	str_format(aSourcePath, sizeof(aSourcePath), "%s/%s", m_aCurrentDemoFolder, Item.m_aFilename);
-	const CQmScreenshotManager::SWatermarkOptions Options = CurrentWatermarkOptions();
-	const std::string Text = m_ScreenshotManager.BuildWatermarkText(Storage(), aSourcePath, Item.m_StorageType, Options, Client()->GetCurrentMap());
+	const CQmScreenshotManager::SWatermarkOptions Options = CQmScreenshotManager::CurrentWatermarkOptions();
+	const std::string Text = m_ScreenshotManager.BuildWatermarkText(Storage(), aSourcePath, Item.m_StorageType, Options);
 	if(Text.empty() || ImageRect.w <= 0.0f || ImageRect.h <= 0.0f)
 		return;
 
@@ -146,7 +138,14 @@ void CMenus::RenderDemoScreenshotWatermarkPreview(CUIRect PreviewRect, const CDe
 void CMenus::RenderDemoScreenshotDetails(CUIRect Contents, const CDemoItem &Item, float FontSize)
 {
 	const float Gap = 6.0f;
+	static CScrollRegion s_DetailsScroll;
+	vec2 ScrollOffset;
+	s_DetailsScroll.Begin(&Contents, &ScrollOffset);
+	Contents.y += ScrollOffset.y;
 	const float PreviewHeight = std::clamp(Contents.w * 0.72f, 92.0f, 170.0f);
+	const float WatermarkHeight = 18.0f + 5.0f * 24.0f + 14.0f;
+	Contents.h = PreviewHeight + 72.0f + 2.0f * Gap + WatermarkHeight;
+	s_DetailsScroll.AddRect(Contents);
 	CUIRect PreviewCard;
 	Contents.HSplitTop(std::min(PreviewHeight, Contents.h), &PreviewCard, &Contents);
 	PreviewCard.Draw(MenuPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::BASE);
@@ -185,7 +184,6 @@ void CMenus::RenderDemoScreenshotDetails(CUIRect Contents, const CDemoItem &Item
 	Ui()->DoLabel(&Right, aValue, 9.0f, TEXTALIGN_ML, ValueProperties);
 
 	Contents.HSplitTop(Gap, nullptr, &Contents);
-	const float WatermarkHeight = std::min(190.0f, std::max(0.0f, Contents.h));
 	CUIRect WatermarkCard;
 	Contents.HSplitTop(WatermarkHeight, &WatermarkCard, &Contents);
 	WatermarkCard.Draw(MenuPanelColor(0.72f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
@@ -193,32 +191,17 @@ void CMenus::RenderDemoScreenshotDetails(CUIRect Contents, const CDemoItem &Item
 	WatermarkCard.HSplitTop(18.0f, &Row, &WatermarkCard);
 	Ui()->DoLabel(&Row, Localize("Watermark"), FontSize, TEXTALIGN_ML);
 
-	WatermarkCard.HSplitTop(22.0f, &Row, &WatermarkCard);
-	if(DoButton_CheckBox(&g_Config.m_QmScreenshotWatermarkTimestamp, Localize("Timestamp"), g_Config.m_QmScreenshotWatermarkTimestamp, &Row))
-		g_Config.m_QmScreenshotWatermarkTimestamp ^= 1;
-	WatermarkCard.HSplitTop(22.0f, &Row, &WatermarkCard);
-	if(DoButton_CheckBox(&g_Config.m_QmScreenshotWatermarkMap, Localize("Map name"), g_Config.m_QmScreenshotWatermarkMap, &Row))
-		g_Config.m_QmScreenshotWatermarkMap ^= 1;
-
-	WatermarkCard.HSplitTop(24.0f, &Row, &WatermarkCard);
-	static CLineInput s_WatermarkTextInput(g_Config.m_QmScreenshotWatermarkText, sizeof(g_Config.m_QmScreenshotWatermarkText));
-	const IUiContext WatermarkTextContext = SettingsUiContext("screenshot_watermark_text");
-	ui_widget::SInputFieldOptions WatermarkTextOptions;
-	WatermarkTextOptions.m_pPlaceholder = Localize("Custom watermark text");
-	WatermarkTextOptions.m_FontSize = FontSize;
-	if(ui_widget::InputField(WatermarkTextContext, &s_WatermarkTextInput, Row, WatermarkTextOptions).m_Changed)
-		str_copy(g_Config.m_QmScreenshotWatermarkText, s_WatermarkTextInput.GetString());
-
-	WatermarkCard.HSplitTop(24.0f, &Row, &WatermarkCard);
-	static CUi::SDropDownState s_WatermarkPositionDropDownState;
-	const char *apWatermarkPositions[] = {Localize("Bottom left"), Localize("Bottom right"), Localize("Top left"), Localize("Top right")};
-	const int Position = std::clamp(g_Config.m_QmScreenshotWatermarkPosition, 0, 3);
-	const int NewPosition = Ui()->DoDropDown(&Row, Position, apWatermarkPositions, std::size(apWatermarkPositions), s_WatermarkPositionDropDownState);
-	if(NewPosition >= 0 && NewPosition < 4)
-		g_Config.m_QmScreenshotWatermarkPosition = NewPosition;
+	qm_card_catalog::SQmCardBuildContext WatermarkCtx;
+	WatermarkCtx.m_pMenus = this;
+	WatermarkCtx.m_UiContext = SettingsUiContext("screenshot_watermark_settings");
+	WatermarkCtx.m_Metrics.m_LineHeight = 22.0f;
+	WatermarkCtx.m_Metrics.m_LineSpacing = 2.0f;
+	WatermarkCtx.m_Metrics.m_BodySize = FontSize;
+	qm_card_catalog::QmCardRenderHook::RenderScreenshotWatermarkSettings(WatermarkCtx, WatermarkCard);
 
 	// 先处理控件，再绘制预览，使开关、文本和位置在同一帧生效。
 	RenderDemoScreenshotWatermarkPreview(PreviewCard, Item);
+	s_DetailsScroll.End();
 }
 
 bool CMenus::DoDemoScreenshotWatermarkButton(const CUIRect &Rect)
@@ -250,8 +233,8 @@ bool CMenus::ApplyDemoScreenshotWatermark(const CDemoItem &Item)
 		pExtension = aTargetPath + str_length(aTargetPath);
 	str_copy(pExtension, "_watermarked.png", sizeof(aTargetPath) - (pExtension - aTargetPath));
 
-	const CQmScreenshotManager::SWatermarkOptions Options = CurrentWatermarkOptions();
-	const bool Saved = m_ScreenshotManager.ApplyWatermark(Storage(), aSourcePath, Item.m_StorageType, aTargetPath, Options, Client()->GetCurrentMap());
+	const CQmScreenshotManager::SWatermarkOptions Options = CQmScreenshotManager::CurrentWatermarkOptions();
+	const bool Saved = m_ScreenshotManager.ApplyWatermark(Storage(), aSourcePath, Item.m_StorageType, aTargetPath, Options);
 	if(Saved)
 	{
 		m_DemoScreenshotPreviewLoadFailed = false;

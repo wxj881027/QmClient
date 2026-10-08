@@ -5,6 +5,7 @@
 
 #include <engine/image.h>
 
+#include <string>
 #include <vector>
 
 class CByteBufferReader
@@ -56,8 +57,10 @@ public:
 	static bool LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Image);
 	static bool LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image);
 
-	static bool SavePng(CByteBufferWriter &Writer, const CImageInfo &Image);
-	static bool SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image);
+	// Comment 使用 UTF-8 iTXt 写在像素前；读取只扫描 PNG 头，不解码图片。
+	static bool ReadPngComment(IOHANDLE File, const char *pFilename, std::string &Comment);
+	static bool SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, const char *pComment = nullptr);
+	static bool SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image, const char *pComment = nullptr);
 
 	static bool SaveWebP(CByteBufferWriter &Writer, const CImageInfo &Image);
 	static bool SaveWebP(IOHANDLE File, const char *pFilename, const CImageInfo &Image);

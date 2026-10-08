@@ -88,12 +88,25 @@ public:
 	void PumpThumbnails(IGraphics *pGraphics, IStorage *pStorage, IEngine *pEngine, CGpuUploadLimiter *pLimiter);
 	void ClearThumbnails(IGraphics *pGraphics);
 
-	std::string BuildWatermarkText(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const SWatermarkOptions &Options, const char *pMapName) const;
+	// 请求时保存时间、地图及配置的值快照；后台处理不访问菜单或当前连接状态。
+	static SWatermarkOptions CurrentWatermarkOptions();
+	static IGraphics::FScreenshotProcessor CaptureProcessor(IStorage *pStorage, bool Watermark, const SWatermarkOptions &Options, const char *pMapName, time_t Timestamp);
+
+	std::string BuildWatermarkText(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const SWatermarkOptions &Options) const;
 
 	// 从指定存储路径读取图片，合成水印后写入用户保存目录。源文件不会被覆盖。
-	bool ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options, const char *pMapName) const;
+	bool ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const;
 
 private:
+	struct SCaptureMetadata
+	{
+		std::string m_Timestamp;
+		std::string m_MapName;
+		std::string m_Comment;
+	};
+	const SCaptureMetadata &CaptureMetadata(IStorage *pStorage, const char *pPath, int StorageType) const;
+	static bool DrawWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, EWatermarkPosition Position);
+
 	struct SScanContext
 	{
 		std::vector<SEntry> *m_pEntries;
@@ -119,6 +132,7 @@ private:
 	static std::string ThumbnailKey(const char *pPath, int StorageType);
 
 	std::vector<SEntry> m_vEntries;
+	mutable std::unordered_map<std::string, SCaptureMetadata> m_CaptureMetadata;
 	std::unordered_map<std::string, SThumbnailEntry> m_vThumbnails;
 	// 本帧按可见顺序排队的缩略图键：只在当前可见项上启动后台任务，滚动过快不会堆积陈旧请求。
 	std::vector<std::string> m_vThumbnailRequests;

@@ -445,6 +445,7 @@ public:
 	virtual int RenderThrottleRefreshRate() const = 0;
 	virtual void OnStateChange(int NewState, int OldState) = 0;
 	virtual void OnScreenshotTaken(class CImageInfo &&Image) = 0;
+	virtual IGraphics::FScreenshotProcessor ScreenshotProcessor() = 0;
 	virtual void OnConnected() = 0;
 	virtual void OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dummy) = 0;
 	virtual void OnClientBrandsMessage(CUnpacker *pUnpacker) = 0;

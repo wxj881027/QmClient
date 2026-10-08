@@ -7326,7 +7326,9 @@ void CHud::RenderGoresDrownBoard()
 	const bool HasLocalClient = LocalId >= 0 && LocalId < MAX_CLIENTS && GameClient()->m_aClients[LocalId].m_Active;
 	if(!HasLocalClient && !Preview)
 		return;
-	const int LocalTeam = HasLocalClient ? GameClient()->m_aClients[LocalId].m_Team : -1;
+	const int LocalTeam = HasLocalClient ? GameClient()->m_Teams.Team(LocalId) : -1;
+	if(!CQmGoresDrownTracker::IsTrackedTeam(LocalTeam) && !Preview)
+		return;
 
 	struct SEntry
 	{
@@ -7338,7 +7340,7 @@ void CHud::RenderGoresDrownBoard()
 	{
 		if(!GameClient()->m_aClients[ClientId].m_Active ||
 			!GameClient()->m_Snap.m_apPlayerInfos[ClientId] ||
-			(LocalTeam >= 0 && GameClient()->m_aClients[ClientId].m_Team != LocalTeam))
+			!CQmGoresDrownTracker::IsSameTrackedTeam(LocalTeam, GameClient()->m_Teams.Team(ClientId)))
 			continue;
 		vEntries.push_back({ClientId, GameClient()->m_TClient.GetGoresDrownCount(ClientId)});
 	}

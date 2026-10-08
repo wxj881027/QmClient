@@ -136,7 +136,9 @@ namespace qm_card_catalog
 		static bool BuildStandardCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static uint64_t PrepareControlsCards(CMenus *pMenus, float ContentWidth, bool ReadOnly, CScrollRegion *pScrollRegion);
 		static bool BuildControlsCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		static void RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content);
 		static bool BuildGeneralCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		static bool BuildConfigFilesCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildTeeCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);

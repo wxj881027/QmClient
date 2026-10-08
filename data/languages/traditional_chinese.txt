@@ -1220,6 +1220,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 自動更新
 
+Automatically add a watermark to screenshots
+== 截圖時自動加入浮水印
+
 Automatically adds voting options for all maps
 == 自動為所有地圖添加投票選項
 
@@ -2240,6 +2243,9 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 == 兼容其他伺服器的類似單人區域提示
 
+Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
+== 完整還原會取代所列檔案，匯入前先儲存備份，完成後重新啟動用戶端。
+
 Complete snapshots are arriving late or not arriving
 == 完整快照到達延遲或未到達
 
@@ -2287,6 +2293,30 @@ Configs
 
 Configuration
 == 配置
+
+Configuration package already exists.
+== 配置包已存在。
+
+Configuration package exported.
+== 配置包已匯出。
+
+Configuration package is missing required files.
+== 配置包缺少必要檔案。
+
+Configuration package is too large.
+== 配置包過大。
+
+Configuration packages
+== 配置包
+
+Configuration restore failed; previous files were restored.
+== 配置還原失敗，已復原原有檔案。
+
+Configuration restore failed; recover from the saved backup.
+== 配置還原失敗，請從已儲存的備份還原。
+
+Configuration restore temporary files already exist.
+== 配置還原的暫存檔案已存在。
 
 Configure background 3D particle effects
 == 配置背景 3D 粒子效果
@@ -2549,6 +2579,9 @@ Copied
 Copy
 == 複製
 
+Copy a .qmconfig file into the package folder, then refresh.
+== 將 .qmconfig 檔案放入配置包資料夾後重新整理。
+
 Copy info
 == 複製伺服器信息
 
@@ -2575,6 +2608,9 @@ Copy skin option color
 
 Could not add the player as a friend
 == 無法將該玩家加入好友
+
+Could not back up configuration files.
+== 無法備份配置檔案。
 
 Could not check for existing player with your name. Check your internet connection.
 == 無法驗證是否已存在相同名稱的玩家。請檢查你的網絡連接。
@@ -2603,6 +2639,9 @@ Could not get current server address
 Could not get server list from master server
 == 無法從主伺服器獲取伺服器列表
 
+Could not list configuration files.
+== 無法列出配置檔案。
+
 Could not load default touch controls from file. See local console for details.
 == 無法從文件加載默認觸控設置。檢查本地控制台以獲取詳情。
 
@@ -2624,11 +2663,20 @@ Could not preview this image
 Could not query points for %s
 == 無法查詢 %s 的積分
 
+Could not read configuration files.
+== 無法讀取配置檔案。
+
+Could not read configuration package.
+== 無法讀取配置包。
+
 Could not read the map file.
 == 無法讀取地圖檔案。
 
 Could not resolve connect address '%s'. See local console for details.
 == 無法解析連接地址 '%s'。檢查本地控制台以獲取詳情。
+
+Could not save configuration package.
+== 無法儲存配置包。
 
 Could not save downloaded map. Try manually deleting this file: %s
 == 地圖下載失敗，請嘗試手動刪除此文件：%s
@@ -2638,6 +2686,9 @@ Could not save title credential
 
 Could not save touch controls to file. See local console for details.
 == 無法將觸控設置保存到文件。檢查本地控制台以獲取詳情。
+
+Could not stage configuration restore.
+== 無法準備配置還原檔案。
 
 Count players only
 == 屏蔽旁觀位
@@ -4355,6 +4406,9 @@ Expanded dropdown background opacity percentage
 Export
 == 導出
 
+Export configuration package
+== 匯出配置包
+
 Export cut as a separate demo
 == 另存為新回放文件
 
@@ -5627,6 +5681,12 @@ IME selection background color
 IME text color
 == 輸入法文字顏色
 
+Import and restart
+== 匯入並重新啟動
+
+Import configuration package
+== 匯入配置包
+
 Import from clipboard
 == 從剪貼板導入
 
@@ -5855,6 +5915,15 @@ Invalid client id to move to spectators
 Invalid command or parameters.
 == 指令或參數無效。
 
+Invalid configuration package metadata.
+== 配置包中繼資料無效。
+
+Invalid configuration package path.
+== 配置包路徑無效。
+
+Invalid configuration package.
+== 配置包無效。
+
 Invalid Demo
 == 回放文件無效或已損壞
 
@@ -5866,6 +5935,9 @@ Invalid map file or filename.
 
 Invalid option
 == 無效的投票選項
+
+Invalid or duplicate configuration path.
+== 配置路徑無效或重複。
 
 Invalid save number. Use a number from the save list.
 == 存檔序號無效，請使用清單中的序號。
@@ -7928,6 +8000,9 @@ Open map editor
 Open modal
 == 開啟彈窗
 
+Open package folder
+== 開啟配置包資料夾
+
 Open pie menu
 == 打開餅菜單
 
@@ -9596,6 +9671,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == 用默認皮膚替換非好友皮膚
 
+Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
+== 取代設定、按鍵綁定和所列 cfg 檔案並重新啟動？將先備份目前配置。
+
 Replace skin with one having this prefix (e.g. cats, santa)
 == 將皮膚替換為帶有此前綴的皮膚（例如小貓、聖誕老人）
 
@@ -9823,6 +9901,9 @@ Restore a recently used Tee skin
 
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 是否恢復雙人存檔？/qm Yes 讀取最新一筆，/qm Yes 序號 選擇其他存檔，/qm No 忽略本次提示。
+
+Restore configuration package
+== 還原配置包
 
 Restore Kugou files
 == 還原酷狗原始檔案
@@ -10292,6 +10373,9 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == 下個檢查點見。
 
+Select a configuration package to preview its contents.
+== 選擇配置包以預覽內容。
+
 Select a saved .map file (client limit: 64 MiB).
 == 選擇已儲存的 .map 檔案（用戶端上限：64 MiB）。
 
@@ -10588,6 +10672,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 設置頁右側設置欄透明度
+
+Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
+== 包含設定、按鍵綁定、外觀配置、聊天綁定和敵對列表。請在下方選擇額外的 cfg 檔案。
 
 Severe
 == 嚴重
@@ -13186,6 +13273,9 @@ Token to register this server to a specific community
 
 Tomato
 == 番茄
+
+Too many configuration files.
+== 配置檔案過多。
 
 Too many translation tasks
 == 翻譯任務過多

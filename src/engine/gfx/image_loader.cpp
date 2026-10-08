@@ -383,7 +383,67 @@ static int PngColorTypeFromFormat(CImageInfo::EImageFormat Format)
 	}
 }
 
-bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image)
+bool CImageLoader::ReadPngComment(IOHANDLE File, const char *pFilename, std::string &Comment)
+{
+	Comment.clear();
+	if(File == nullptr)
+		return false;
+
+	CUserErrorStruct UserErrorStruct = {nullptr, pFilename, {}};
+	png_structp pPngStruct = png_create_read_struct(PNG_LIBPNG_VER_STRING, &UserErrorStruct, PngErrorCallback, PngWarningCallback);
+	if(pPngStruct == nullptr)
+	{
+		io_close(File);
+		return false;
+	}
+	png_infop pPngInfo = png_create_info_struct(pPngStruct);
+	if(pPngInfo == nullptr)
+	{
+		png_destroy_read_struct(&pPngStruct, nullptr, nullptr);
+		io_close(File);
+		return false;
+	}
+	if(setjmp(UserErrorStruct.m_JmpBuf))
+	{
+		png_destroy_read_struct(&pPngStruct, &pPngInfo, nullptr);
+		io_close(File);
+		return false;
+	}
+
+	// 元数据来自可移动的截图文件，限制辅助 chunk 的分配与数量。
+#if defined(PNG_SET_USER_LIMITS_SUPPORTED)
+	png_set_chunk_malloc_max(pPngStruct, 4096);
+	png_set_chunk_cache_max(pPngStruct, 16);
+#endif
+	struct SMetadataInput
+	{
+		IOHANDLE m_File;
+		size_t m_Remaining;
+	} Input{File, 64 * 1024};
+	png_set_read_fn(pPngStruct, &Input, [](png_structp pPng, png_bytep pBytes, png_size_t Count) {
+		auto *pInput = static_cast<SMetadataInput *>(png_get_io_ptr(pPng));
+		if(Count > pInput->m_Remaining || io_read(pInput->m_File, pBytes, Count) != Count)
+			png_error(pPng, "PNG metadata exceeds read budget or is truncated");
+		pInput->m_Remaining -= Count;
+	});
+	png_read_info(pPngStruct, pPngInfo);
+	png_textp pText = nullptr;
+	const int Count = png_get_text(pPngStruct, pPngInfo, &pText, nullptr);
+	for(int Index = 0; Index < Count; ++Index)
+	{
+		if(pText[Index].key == nullptr || str_comp(pText[Index].key, "Comment") != 0 || pText[Index].text == nullptr)
+			continue;
+		const size_t Length = pText[Index].compression == PNG_ITXT_COMPRESSION_NONE || pText[Index].compression == PNG_ITXT_COMPRESSION_zTXt ? pText[Index].itxt_length : pText[Index].text_length;
+		if(Length <= 4096)
+			Comment.assign(pText[Index].text, Length);
+		break;
+	}
+	png_destroy_read_struct(&pPngStruct, &pPngInfo, nullptr);
+	io_close(File);
+	return true;
+}
+
+bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, const char *pComment)
 {
 	png_structp pPngStruct = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 	if(pPngStruct == nullptr)
@@ -403,6 +463,17 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image)
 	png_set_write_fn(pPngStruct, (png_bytep)&Writer, PngWriteDataCallback, PngOutputFlushCallback);
 
 	png_set_IHDR(pPngStruct, pPngInfo, Image.m_Width, Image.m_Height, 8, PngColorTypeFromFormat(Image.m_Format), PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+	if(pComment != nullptr && pComment[0] != '\0')
+	{
+		png_text Text = {};
+		Text.compression = PNG_ITXT_COMPRESSION_NONE;
+		Text.key = const_cast<char *>("Comment");
+		Text.text = const_cast<char *>(pComment);
+		Text.itxt_length = str_length(pComment);
+		Text.lang = const_cast<char *>("");
+		Text.lang_key = const_cast<char *>("");
+		png_set_text(pPngStruct, pPngInfo, &Text, 1);
+	}
 	png_write_info(pPngStruct, pPngInfo);
 
 	png_bytepp pRowPointers = new png_bytep[Image.m_Height];
@@ -429,7 +500,7 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image)
 	return true;
 }
 
-bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image)
+bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInfo &Image, const char *pComment)
 {
 	if(!File)
 	{
@@ -438,7 +509,7 @@ bool CImageLoader::SavePng(IOHANDLE File, const char *pFilename, const CImageInf
 	}
 
 	CByteBufferWriter Writer;
-	if(!CImageLoader::SavePng(Writer, Image))
+	if(!CImageLoader::SavePng(Writer, Image, pComment))
 	{
 		// error already logged
 		io_close(File);

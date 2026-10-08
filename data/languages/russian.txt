@@ -1220,6 +1220,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Автоматические обновления
 
+Automatically add a watermark to screenshots
+== Автоматически добавлять водяной знак на снимки экрана
+
 Automatically adds voting options for all maps
 == Автоматически добавляет варианты голосования для всех карт
 
@@ -2240,6 +2243,9 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 == Совместимость с подсказками одиночной зоны на других серверах
 
+Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
+== Полное восстановление заменяет перечисленные файлы. Перед импортом сохраняется резервная копия. Клиент будет перезапущен.
+
 Complete snapshots are arriving late or not arriving
 == Полные снапшоты приходят с задержкой или не приходят
 
@@ -2287,6 +2293,30 @@ Configs
 
 Configuration
 == Конфигурация
+
+Configuration package already exists.
+== Пакет настроек уже существует.
+
+Configuration package exported.
+== Пакет настроек экспортирован.
+
+Configuration package is missing required files.
+== В пакете настроек отсутствуют обязательные файлы.
+
+Configuration package is too large.
+== Пакет настроек слишком большой.
+
+Configuration packages
+== Пакеты настроек
+
+Configuration restore failed; previous files were restored.
+== Восстановление настроек не удалось; прежние файлы восстановлены.
+
+Configuration restore failed; recover from the saved backup.
+== Восстановление настроек не удалось; восстановите настройки из сохранённой резервной копии.
+
+Configuration restore temporary files already exist.
+== Временные файлы восстановления настроек уже существуют.
 
 Configure background 3D particle effects
 == Настройка фоновых 3D-частиц
@@ -2549,6 +2579,9 @@ Copied
 Copy
 == Копировать
 
+Copy a .qmconfig file into the package folder, then refresh.
+== Скопируйте файл .qmconfig в папку пакетов, затем обновите список.
+
 Copy info
 == Копировать информацию
 
@@ -2575,6 +2608,9 @@ Copy skin option color
 
 Could not add the player as a friend
 == Не удалось добавить игрока в друзья
+
+Could not back up configuration files.
+== Не удалось создать резервную копию файлов настроек.
 
 Could not check for existing player with your name. Check your internet connection.
 == Не удалось проверить существующего игрока с вашим именем. Проверьте подключение к интернету.
@@ -2603,6 +2639,9 @@ Could not get current server address
 Could not get server list from master server
 == Не удалось получить список серверов от мастер-сервера
 
+Could not list configuration files.
+== Не удалось получить список файлов настроек.
+
 Could not load default touch controls from file. See local console for details.
 == Не удалось загрузить стандартное сенсорное управление из файла. Подробности в локальной консоли.
 
@@ -2624,11 +2663,20 @@ Could not preview this image
 Could not query points for %s
 == Не удалось запросить очки игрока %s
 
+Could not read configuration files.
+== Не удалось прочитать файлы настроек.
+
+Could not read configuration package.
+== Не удалось прочитать пакет настроек.
+
 Could not read the map file.
 == Не удалось прочитать файл карты.
 
 Could not resolve connect address '%s'. See local console for details.
 == Не удалось разрешить адрес подключения '%s'. Подробности смотрите в локальной консоли.
+
+Could not save configuration package.
+== Не удалось сохранить пакет настроек.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == Не удалось сохранить загруженную карту. Попробуйте вручную удалить этот файл: %s
@@ -2638,6 +2686,9 @@ Could not save title credential
 
 Could not save touch controls to file. See local console for details.
 == Не удалось сохранить сенсорное управление в файл. Подробности в локальной консоли.
+
+Could not stage configuration restore.
+== Не удалось подготовить файлы для восстановления настроек.
 
 Count players only
 == Только игроки
@@ -4355,6 +4406,9 @@ Expanded dropdown background opacity percentage
 Export
 == Экспорт
 
+Export configuration package
+== Экспортировать пакет настроек
+
 Export cut as a separate demo
 == Экспортировать отрезок как отдельное демо
 
@@ -5627,6 +5681,12 @@ IME selection background color
 IME text color
 == Цвет текста IME
 
+Import and restart
+== Импортировать и перезапустить
+
+Import configuration package
+== Импортировать пакет настроек
+
 Import from clipboard
 == Импорт из буфера обмена
 
@@ -5855,6 +5915,15 @@ Invalid client id to move to spectators
 Invalid command or parameters.
 == Недопустимая команда или параметры.
 
+Invalid configuration package metadata.
+== Некорректные метаданные пакета настроек.
+
+Invalid configuration package path.
+== Некорректный путь к пакету настроек.
+
+Invalid configuration package.
+== Некорректный пакет настроек.
+
 Invalid Demo
 == Недействительное демо
 
@@ -5866,6 +5935,9 @@ Invalid map file or filename.
 
 Invalid option
 == Неверная опция
+
+Invalid or duplicate configuration path.
+== Некорректный или повторяющийся путь к файлу настроек.
 
 Invalid save number. Use a number from the save list.
 == Неверный номер сохранения. Выберите номер из списка.
@@ -7928,6 +8000,9 @@ Open map editor
 Open modal
 == Открыть модальное окно
 
+Open package folder
+== Открыть папку пакетов
+
 Open pie menu
 == Открыть круговое меню
 
@@ -9596,6 +9671,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == Символы замены
 
+Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
+== Заменить настройки, привязки клавиш и перечисленные файлы cfg, затем перезапустить клиент? Сначала будет создана резервная копия текущих настроек.
+
 Replace skin with one having this prefix (e.g. cats, santa)
 == Заменить скин на скин с этим префиксом (например, cats, santa)
 
@@ -9823,6 +9901,9 @@ Restore a recently used Tee skin
 
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == Восстановить сохранение для двоих? /qm Yes — последнее, /qm Yes номер — другое, /qm No — отмена.
+
+Restore configuration package
+== Восстановить пакет настроек
 
 Restore Kugou files
 == Восстановить файлы Kugou
@@ -10292,6 +10373,9 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == Увидимся на следующей контрольной точке.
 
+Select a configuration package to preview its contents.
+== Выберите пакет настроек для предварительного просмотра содержимого.
+
 Select a saved .map file (client limit: 64 MiB).
 == Выберите сохранённый файл .map (лимит клиента: 64 MiB).
 
@@ -10588,6 +10672,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Прозрачность правой панели страницы настроек
+
+Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
+== Включены настройки, привязки клавиш, профили скинов, чат-привязки и список врагов. Ниже выберите дополнительные файлы cfg.
 
 Severe
 == Серьёзно
@@ -13186,6 +13273,9 @@ Token to register this server to a specific community
 
 Tomato
 == Помидор
+
+Too many configuration files.
+== Слишком много файлов настроек.
 
 Too many translation tasks
 == Слишком много задач перевода

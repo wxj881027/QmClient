@@ -1220,6 +1220,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 自动更新
 
+Automatically add a watermark to screenshots
+== 截图时自动添加水印
+
 Automatically adds voting options for all maps
 == 自动为所有地图添加投票选项
 
@@ -2240,6 +2243,9 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 == 兼容其他服务器的类似单人区域提示
 
+Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
+== 完整恢复会替换所列文件，导入前先保存备份，完成后重启客户端。
+
 Complete snapshots are arriving late or not arriving
 == 完整快照到达延迟或未到达
 
@@ -2287,6 +2293,30 @@ Configs
 
 Configuration
 == 配置
+
+Configuration package already exists.
+== 配置包已存在。
+
+Configuration package exported.
+== 配置包已导出。
+
+Configuration package is missing required files.
+== 配置包缺少必需文件。
+
+Configuration package is too large.
+== 配置包过大。
+
+Configuration packages
+== 配置包
+
+Configuration restore failed; previous files were restored.
+== 配置恢复失败，已还原原有文件。
+
+Configuration restore failed; recover from the saved backup.
+== 配置恢复失败，请从已保存的备份恢复。
+
+Configuration restore temporary files already exist.
+== 配置恢复的临时文件已存在。
 
 Configure background 3D particle effects
 == 配置背景 3D 粒子效果
@@ -2549,6 +2579,9 @@ Copied
 Copy
 == 复制
 
+Copy a .qmconfig file into the package folder, then refresh.
+== 将 .qmconfig 文件放入配置包文件夹后刷新。
+
 Copy info
 == 复制服务器信息
 
@@ -2575,6 +2608,9 @@ Copy skin option color
 
 Could not add the player as a friend
 == 无法将该玩家添加为好友
+
+Could not back up configuration files.
+== 无法备份配置文件。
 
 Could not check for existing player with your name. Check your internet connection.
 == 无法验证是否已存在相同名称的玩家。请检查你的网络连接。
@@ -2603,6 +2639,9 @@ Could not get current server address
 Could not get server list from master server
 == 无法从主服务器获取服务器列表
 
+Could not list configuration files.
+== 无法列出配置文件。
+
 Could not load default touch controls from file. See local console for details.
 == 无法从文件加载默认触控设置。检查本地控制台以获取详情。
 
@@ -2624,11 +2663,20 @@ Could not preview this image
 Could not query points for %s
 == 无法查询 %s 的积分
 
+Could not read configuration files.
+== 无法读取配置文件。
+
+Could not read configuration package.
+== 无法读取配置包。
+
 Could not read the map file.
 == 无法读取地图文件。
 
 Could not resolve connect address '%s'. See local console for details.
 == 无法解析连接地址 '%s'。检查本地控制台以获取详情。
+
+Could not save configuration package.
+== 无法保存配置包。
 
 Could not save downloaded map. Try manually deleting this file: %s
 == 地图下载失败，请尝试手动删除此文件：%s
@@ -2638,6 +2686,9 @@ Could not save title credential
 
 Could not save touch controls to file. See local console for details.
 == 无法将触控设置保存到文件。检查本地控制台以获取详情。
+
+Could not stage configuration restore.
+== 无法准备配置恢复文件。
 
 Count players only
 == 屏蔽旁观位
@@ -4355,6 +4406,9 @@ Expanded dropdown background opacity percentage
 Export
 == 导出
 
+Export configuration package
+== 导出配置包
+
 Export cut as a separate demo
 == 另存为新回放文件
 
@@ -5627,6 +5681,12 @@ IME selection background color
 IME text color
 == 输入法文字颜色
 
+Import and restart
+== 导入并重启
+
+Import configuration package
+== 导入配置包
+
 Import from clipboard
 == 从剪贴板导入
 
@@ -5855,6 +5915,15 @@ Invalid client id to move to spectators
 Invalid command or parameters.
 == 命令或参数无效。
 
+Invalid configuration package metadata.
+== 配置包元数据无效。
+
+Invalid configuration package path.
+== 配置包路径无效。
+
+Invalid configuration package.
+== 配置包无效。
+
 Invalid Demo
 == 回放文件无效或已损坏
 
@@ -5866,6 +5935,9 @@ Invalid map file or filename.
 
 Invalid option
 == 无效的投票选项
+
+Invalid or duplicate configuration path.
+== 配置路径无效或重复。
 
 Invalid save number. Use a number from the save list.
 == 存档序号无效，请使用列表中的序号。
@@ -7928,6 +8000,9 @@ Open map editor
 Open modal
 == 打开模态框
 
+Open package folder
+== 打开配置包文件夹
+
 Open pie menu
 == 打开饼菜单
 
@@ -9596,6 +9671,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == 用默认皮肤替换非好友皮肤
 
+Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
+== 替换设置、按键绑定和所列 cfg 文件并重启？将先备份当前配置。
+
 Replace skin with one having this prefix (e.g. cats, santa)
 == 将皮肤替换为带有此前缀的皮肤（例如小猫、圣诞老人）
 
@@ -9823,6 +9901,9 @@ Restore a recently used Tee skin
 
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 是否恢复双人存档？/qm Yes 读取最新一条，/qm Yes 序号 选择其他存档，/qm No 忽略本次提示。
+
+Restore configuration package
+== 恢复配置包
 
 Restore Kugou files
 == 恢复酷狗原始文件
@@ -10292,6 +10373,9 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == 下个检查点见。
 
+Select a configuration package to preview its contents.
+== 选择配置包以预览内容。
+
 Select a saved .map file (client limit: 64 MiB).
 == 选择已保存的 .map 文件（客户端上限：64 MiB）。
 
@@ -10588,6 +10672,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 设置页右侧设置栏透明度
+
+Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
+== 包含设置、按键绑定、皮肤配置、聊天绑定和战争名单。请在下方选择额外的 cfg 文件。
 
 Severe
 == 严重
@@ -13186,6 +13273,9 @@ Token to register this server to a specific community
 
 Tomato
 == 番茄
+
+Too many configuration files.
+== 配置文件过多。
 
 Too many translation tasks
 == 翻译任务过多

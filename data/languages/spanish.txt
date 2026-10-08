@@ -1220,6 +1220,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Actualizaciones automáticas
 
+Automatically add a watermark to screenshots
+== Añadir automáticamente una marca de agua a las capturas de pantalla
+
 Automatically adds voting options for all maps
 == Añade automáticamente opciones de votación para todos los mapas
 
@@ -2240,6 +2243,9 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 == Compatible con indicaciones de zona individual similar de otros servidores
 
+Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
+== La restauración completa reemplaza los archivos de la lista. Se guarda una copia de seguridad antes de importar. El cliente se reiniciará.
+
 Complete snapshots are arriving late or not arriving
 == Las instantáneas completas llegan tarde o no llegan
 
@@ -2287,6 +2293,30 @@ Configs
 
 Configuration
 == Configuración
+
+Configuration package already exists.
+== El paquete de configuración ya existe.
+
+Configuration package exported.
+== Paquete de configuración exportado.
+
+Configuration package is missing required files.
+== Faltan archivos necesarios en el paquete de configuración.
+
+Configuration package is too large.
+== El paquete de configuración es demasiado grande.
+
+Configuration packages
+== Paquetes de configuración
+
+Configuration restore failed; previous files were restored.
+== No se pudo restaurar la configuración; se recuperaron los archivos anteriores.
+
+Configuration restore failed; recover from the saved backup.
+== No se pudo restaurar la configuración; recupérela desde la copia de seguridad guardada.
+
+Configuration restore temporary files already exist.
+== Ya existen archivos temporales para restaurar la configuración.
 
 Configure background 3D particle effects
 == Configurar efectos de partículas 3D de fondo
@@ -2549,6 +2579,9 @@ Copied
 Copy
 == Copiar
 
+Copy a .qmconfig file into the package folder, then refresh.
+== Copia un archivo .qmconfig a la carpeta de paquetes y actualiza la lista.
+
 Copy info
 == Copiar información
 
@@ -2575,6 +2608,9 @@ Copy skin option color
 
 Could not add the player as a friend
 == No se pudo añadir al jugador como amigo
+
+Could not back up configuration files.
+== No se pudo crear una copia de seguridad de los archivos de configuración.
 
 Could not check for existing player with your name. Check your internet connection.
 == No se pudo comprobar si ya existe un jugador con tu nombre. Revisa tu conexión a internet.
@@ -2603,6 +2639,9 @@ Could not get current server address
 Could not get server list from master server
 == No se pudo obtener la lista de servidores del servidor maestro
 
+Could not list configuration files.
+== No se pudieron listar los archivos de configuración.
+
 Could not load default touch controls from file. See local console for details.
 == No se pudieron cargar los controles táctiles predeterminados desde el archivo. Consulta la consola local para más detalles.
 
@@ -2624,11 +2663,20 @@ Could not preview this image
 Could not query points for %s
 == No se pudieron consultar los puntos de %s
 
+Could not read configuration files.
+== No se pudieron leer los archivos de configuración.
+
+Could not read configuration package.
+== No se pudo leer el paquete de configuración.
+
 Could not read the map file.
 == No se pudo leer el archivo del mapa.
 
 Could not resolve connect address '%s'. See local console for details.
 == No se pudo resolver la dirección de conexión '%s'. Consulta la consola local para más detalles.
+
+Could not save configuration package.
+== No se pudo guardar el paquete de configuración.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == No se pudo guardar el mapa descargado. Intenta eliminar manualmente este archivo: %s
@@ -2638,6 +2686,9 @@ Could not save title credential
 
 Could not save touch controls to file. See local console for details.
 == No se pudieron guardar los controles táctiles en el archivo. Consulta la consola local para más detalles.
+
+Could not stage configuration restore.
+== No se pudieron preparar los archivos para restaurar la configuración.
 
 Count players only
 == Contar solo jugadores
@@ -4355,6 +4406,9 @@ Expanded dropdown background opacity percentage
 Export
 == Exportar
 
+Export configuration package
+== Exportar paquete de configuración
+
 Export cut as a separate demo
 == Exportar corte como una demo separada
 
@@ -5627,6 +5681,12 @@ IME selection background color
 IME text color
 == Color del texto del IME
 
+Import and restart
+== Importar y reiniciar
+
+Import configuration package
+== Importar paquete de configuración
+
 Import from clipboard
 == Importar desde el portapapeles
 
@@ -5855,6 +5915,15 @@ Invalid client id to move to spectators
 Invalid command or parameters.
 == Comando o parámetros no válidos.
 
+Invalid configuration package metadata.
+== Metadatos del paquete de configuración no válidos.
+
+Invalid configuration package path.
+== Ruta del paquete de configuración no válida.
+
+Invalid configuration package.
+== Paquete de configuración no válido.
+
 Invalid Demo
 == Demo no válida
 
@@ -5866,6 +5935,9 @@ Invalid map file or filename.
 
 Invalid option
 == Opción no válida
+
+Invalid or duplicate configuration path.
+== Ruta de configuración no válida o duplicada.
 
 Invalid save number. Use a number from the save list.
 == Número de partida inválido. Usa un número de la lista.
@@ -7928,6 +8000,9 @@ Open map editor
 Open modal
 == Abrir modal
 
+Open package folder
+== Abrir carpeta de paquetes
+
 Open pie menu
 == Abrir menú circular
 
@@ -9596,6 +9671,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == Reemplazar skins de no amigos con la predeterminada
 
+Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
+== ¿Reemplazar los ajustes, binds y archivos cfg de la lista y reiniciar? Primero se hará una copia de seguridad de la configuración actual.
+
 Replace skin with one having this prefix (e.g. cats, santa)
 == Reemplazar skin con una que tenga este prefijo (ej. gatos, santa)
 
@@ -9823,6 +9901,9 @@ Restore a recently used Tee skin
 
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == ¿Restaurar una partida de dos jugadores? /qm Yes carga la más reciente; /qm Yes número elige otra; /qm No descarta.
+
+Restore configuration package
+== Restaurar paquete de configuración
 
 Restore Kugou files
 == Restaurar archivos de Kugou
@@ -10292,6 +10373,9 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == Nos vemos en el próximo punto de control.
 
+Select a configuration package to preview its contents.
+== Selecciona un paquete de configuración para ver su contenido.
+
 Select a saved .map file (client limit: 64 MiB).
 == Selecciona un archivo .map guardado (límite del cliente: 64 MiB).
 
@@ -10588,6 +10672,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Opacidad del panel derecho de la página de configuración
+
+Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
+== Se incluyen ajustes, binds, perfiles de skin, binds de chat y la lista de guerra. Selecciona abajo otros archivos cfg.
 
 Severe
 == Grave
@@ -13186,6 +13273,9 @@ Token to register this server to a specific community
 
 Tomato
 == Tomate
+
+Too many configuration files.
+== Demasiados archivos de configuración.
 
 Too many translation tasks
 == Demasiadas tareas de traducción

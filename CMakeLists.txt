@@ -3259,6 +3259,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
     QmUi/cards/QmCardCatalogGeneral.cpp
+    QmUi/cards/QmConfigPackageCard.cpp
     QmUi/cards/QmCardCatalogPlayer.cpp
     QmUi/cards/QmCardCatalogGraphics.cpp
     QmUi/cards/QmCardCatalogSound.cpp
@@ -3415,6 +3416,8 @@ if(CLIENT)
     components/pie_menu_logic.h
     components/player_points.cpp
     components/player_points.h
+    components/qmclient/player_points_state.h
+    components/qmclient/gores_drown_tracker.h
     components/players.cpp
     components/players.h
     components/qm_console_log_filter.h
@@ -3557,6 +3560,8 @@ if(CLIENT)
     components/qmclient/screenshot_image_job.cpp
     components/qmclient/screenshot_image_job.h
     components/qmclient/screenshot_manager.cpp
+    components/qmclient/config_package.cpp
+    components/qmclient/config_package.h
     components/qmclient/screenshot_manager.h
     components/qmclient/scripting.cpp
     components/qmclient/scripting.h
@@ -4554,6 +4559,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/monitoring/qm_perf_json_test.cpp
     src/test/unit/qmclient/monitoring/qm_device_sampler_lifecycle_test.cpp
     src/test/unit/client/player_points_parse_test.cpp
+    src/test/unit/qmclient/client/qm_player_points_cache_test.cpp
+    src/test/unit/qmclient/client/qm_gores_drown_tracker_test.cpp
     src/test/unit/qmclient/client/qm_trail_geometry_test.cpp
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
     src/test/integration/qmclient/client/qm_chat_emoji_resource_test.cpp
@@ -4689,6 +4696,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_hud_notifications_state_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_presentation_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_geometry_test.cpp
+    src/test/unit/qmclient/client/qm_hud_editor_geometry_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_rules_test.cpp
     src/test/contract/qmclient/client/qm_hud_notifications_contract_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_legacy_contract_test.cpp
@@ -4855,6 +4863,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/settings_card_width_test.cpp
     src/test/unit/qmclient/client/qm_weapon_trajectory_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_watermark_test.cpp
+    src/test/unit/qmclient/client/qm_config_package_test.cpp
+    src/test/integration/qmclient/client/qm_config_package_storage_test.cpp
     src/test/unit/qmclient/client/qm_screenshot_image_policy_test.cpp
     src/test/unit/qmclient/client/qm_friend_menu_policy_test.cpp
     src/test/unit/qmclient/ui/qm_rounded_surface_geometry_test.cpp
@@ -4968,6 +4978,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
+    src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/test/support/render_tee_offset_helpers.cpp
     src/game/client/components/section_loader.cpp

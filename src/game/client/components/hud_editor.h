@@ -23,6 +23,44 @@ namespace QmHudEditor
 	// 未重合时保留拖拽后的原始位置与样式。容差只用于吸收浮点误差。
 	inline constexpr float EDGE_COINCIDENCE_DISTANCE = EPSILON;
 
+	// 绘制后才知道实际边界的元素，下一帧继续使用同一套局部可见矩形。
+	class CMeasuredVisibleRect
+	{
+		bool m_Valid = false;
+		float m_BaseWidth = 0.0f;
+		float m_BaseHeight = 0.0f;
+		CUIRect m_RelativeRect{};
+
+	public:
+		void Observe(const CUIRect &TransformRect, const CUIRect &TargetUiRect, const CUIRect &RenderedUiRect)
+		{
+			if(TransformRect.w <= EPSILON || TransformRect.h <= EPSILON || TargetUiRect.w <= EPSILON || TargetUiRect.h <= EPSILON ||
+				RenderedUiRect.w <= 0.0f || RenderedUiRect.h <= 0.0f)
+				return;
+			m_BaseWidth = TransformRect.w;
+			m_BaseHeight = TransformRect.h;
+			m_RelativeRect = {
+				(RenderedUiRect.x - TargetUiRect.x) / TargetUiRect.w,
+				(RenderedUiRect.y - TargetUiRect.y) / TargetUiRect.h,
+				RenderedUiRect.w / TargetUiRect.w,
+				RenderedUiRect.h / TargetUiRect.h};
+			m_Valid = true;
+		}
+
+		CUIRect Resolve(const CUIRect &TransformRect, const CUIRect &FallbackRect) const
+		{
+			// 显式提供边界的调用方仍以当帧测量为准；尺寸变化时丢弃旧内容的测量。
+			if(!m_Valid || std::fabs(TransformRect.w - m_BaseWidth) > EPSILON || std::fabs(TransformRect.h - m_BaseHeight) > EPSILON ||
+				FallbackRect.x != TransformRect.x || FallbackRect.y != TransformRect.y || FallbackRect.w != TransformRect.w || FallbackRect.h != TransformRect.h)
+				return FallbackRect;
+			return {
+				TransformRect.x + m_RelativeRect.x * TransformRect.w,
+				TransformRect.y + m_RelativeRect.y * TransformRect.h,
+				m_RelativeRect.w * TransformRect.w,
+				m_RelativeRect.h * TransformRect.h};
+		}
+	};
+
 	struct SAxisReference
 	{
 		float m_Position = 0.0f;
@@ -69,11 +107,19 @@ namespace QmHudEditor
 		return SnapAxisToScreenEdgesEx(Position, Size, ScreenStart, ScreenSize);
 	}
 
-	// 沿用布局格式：0/1 表示可见边贴边，中间值保存变换锚点占屏幕的比例。
+	// 沿用布局字段：0/1 表示可见边贴边，旧的正值仍保存变换锚点比例。
+	// 锚点越出屏幕时，以 [-2,-1] 保存可见边比例，避免把合法内容位置误当成贴边。
+	inline float ClampStoredAxisPosition(float Position)
+	{
+		return std::clamp(Position, -2.0f, 1.0f);
+	}
+
 	inline float RestoreAxisAnchor(float NormalizedPosition, float Size, float ScreenStart, float ScreenSize, float VisibleEdgeOffset)
 	{
 		float Position = ScreenStart + NormalizedPosition * ScreenSize;
-		if(NormalizedPosition <= 0.0f)
+		if(NormalizedPosition <= -1.0f)
+			Position = ScreenStart + (-NormalizedPosition - 1.0f) * ScreenSize - VisibleEdgeOffset;
+		else if(NormalizedPosition <= 0.0f)
 			Position = ScreenStart - VisibleEdgeOffset;
 		else if(NormalizedPosition >= 1.0f)
 			Position = ScreenStart + std::max(0.0f, ScreenSize - Size) - VisibleEdgeOffset;
@@ -86,7 +132,11 @@ namespace QmHudEditor
 			return 0.0f;
 		if(std::fabs(Position + VisibleEdgeOffset + Size - ScreenStart - ScreenSize) <= EDGE_COINCIDENCE_DISTANCE)
 			return 1.0f;
-		return std::clamp((Position - ScreenStart) / ScreenSize, 0.0f, 1.0f);
+		const float AnchorFraction = (Position - ScreenStart) / ScreenSize;
+		// 也避开整数布局精度会舍入成 0/1 的保留值。
+		if(AnchorFraction <= 0.0001f || AnchorFraction >= 0.9999f)
+			return -1.0f - std::clamp((Position + VisibleEdgeOffset - ScreenStart) / ScreenSize, 0.0f, 1.0f);
+		return AnchorFraction;
 	}
 
 	// 一个轴上的最终落点：先试屏幕边重合吸附，再试屏幕中线与其它 HUD 模块的对齐参考线。
@@ -345,6 +395,9 @@ private:
 	{
 		EHudEditorElement m_Element = EHudEditorElement::HudMain;
 		CUIRect m_Rect{};
+		CUIRect m_TransformRect{};
+		CUIRect m_TargetUiRect{};
+		bool m_ReportedVisibleRect = false;
 		float m_BaseWidth = 0.0f;
 		float m_BaseHeight = 0.0f;
 		float m_StateOffsetX = 0.0f;
@@ -372,6 +425,7 @@ private:
 	vec2 m_DragGrabOffset = vec2(0.0f, 0.0f);
 	char m_aLayoutCache[2048] = {};
 	std::array<SElementState, ELEMENT_COUNT> m_aElementStates{};
+	std::array<QmHudEditor::CMeasuredVisibleRect, ELEMENT_COUNT> m_aMeasuredVisibleRects{};
 	std::vector<SVisibleElement> m_vVisibleElements;
 	bool m_InteractionUiActive = false;
 	bool m_JumpHintTextEditorActive = false;

@@ -2080,6 +2080,7 @@ protected:
 #if defined(CONF_VIDEORECORDER)
 	void PopupConfirmDemoReplaceVideo();
 #endif
+	void PopupConfirmRestoreConfigPackage();
 	void RenderMenubar(CUIRect Box, IClient::EClientState ClientState);
 	void RenderNews(CUIRect MainView);
 	void RenderStatistics(CUIRect MainView);

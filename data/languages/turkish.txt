@@ -1220,6 +1220,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == Otomatik güncellemeler
 
+Automatically add a watermark to screenshots
+== Ekran görüntülerine otomatik olarak filigran ekle
+
 Automatically adds voting options for all maps
 == Tüm haritalar için otomatik olarak oylama seçenekleri ekler
 
@@ -2240,6 +2243,9 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 == Diğer sunucuların benzer tek kişilik alan ipuçlarıyla uyumlu
 
+Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
+== Tam geri yükleme, listelenen dosyaları değiştirir. İçe aktarmadan önce yedek kaydedilir. İstemci yeniden başlatılır.
+
 Complete snapshots are arriving late or not arriving
 == Tam anlık görüntüler geç geliyor veya hiç gelmiyor
 
@@ -2287,6 +2293,30 @@ Configs
 
 Configuration
 == Yapılandırma
+
+Configuration package already exists.
+== Yapılandırma paketi zaten var.
+
+Configuration package exported.
+== Yapılandırma paketi dışa aktarıldı.
+
+Configuration package is missing required files.
+== Yapılandırma paketinde gerekli dosyalar eksik.
+
+Configuration package is too large.
+== Yapılandırma paketi çok büyük.
+
+Configuration packages
+== Yapılandırma paketleri
+
+Configuration restore failed; previous files were restored.
+== Yapılandırma geri yüklenemedi; önceki dosyalar geri yüklendi.
+
+Configuration restore failed; recover from the saved backup.
+== Yapılandırma geri yüklenemedi; kaydedilen yedekten geri yükleyin.
+
+Configuration restore temporary files already exist.
+== Yapılandırmayı geri yüklemek için kullanılan geçici dosyalar zaten var.
 
 Configure background 3D particle effects
 == Arka plan 3D parçacık efektlerini yapılandır
@@ -2549,6 +2579,9 @@ Copied
 Copy
 == Kopyala
 
+Copy a .qmconfig file into the package folder, then refresh.
+== Bir .qmconfig dosyasını paket klasörüne kopyalayıp listeyi yenileyin.
+
 Copy info
 == Bilgiyi kopyala
 
@@ -2575,6 +2608,9 @@ Copy skin option color
 
 Could not add the player as a friend
 == Oyuncu arkadaş olarak eklenemedi
+
+Could not back up configuration files.
+== Yapılandırma dosyaları yedeklenemedi.
 
 Could not check for existing player with your name. Check your internet connection.
 == Adınızla mevcut bir oyuncu kontrol edilemedi. İnternet bağlantınızı kontrol edin.
@@ -2603,6 +2639,9 @@ Could not get current server address
 Could not get server list from master server
 == Ana sunucudan sunucu listesi alınamadı
 
+Could not list configuration files.
+== Yapılandırma dosyaları listelenemedi.
+
 Could not load default touch controls from file. See local console for details.
 == Varsayılan dokunmatik kontroller dosyadan yüklenemedi. Ayrıntılar için yerel konsola bakın.
 
@@ -2624,11 +2663,20 @@ Could not preview this image
 Could not query points for %s
 == %s için puanlar sorgulanamadı
 
+Could not read configuration files.
+== Yapılandırma dosyaları okunamadı.
+
+Could not read configuration package.
+== Yapılandırma paketi okunamadı.
+
 Could not read the map file.
 == Harita dosyası okunamadı.
 
 Could not resolve connect address '%s'. See local console for details.
 == '%s' bağlantı adresi çözülemedi. Ayrıntılar için yerel konsola bakın.
+
+Could not save configuration package.
+== Yapılandırma paketi kaydedilemedi.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == İndirilen harita kaydedilemedi. Bu dosyayı manuel olarak silmeyi deneyin: %s
@@ -2638,6 +2686,9 @@ Could not save title credential
 
 Could not save touch controls to file. See local console for details.
 == Dokunmatik kontroller dosyaya kaydedilemedi. Ayrıntılar için yerel konsolu kontrol edin.
+
+Could not stage configuration restore.
+== Yapılandırmayı geri yüklemek için dosyalar hazırlanamadı.
 
 Count players only
 == Sadece oyuncuları say
@@ -4355,6 +4406,9 @@ Expanded dropdown background opacity percentage
 Export
 == Dışa aktar
 
+Export configuration package
+== Yapılandırma paketini dışa aktar
+
 Export cut as a separate demo
 == Kesimi ayrı bir demo olarak dışa aktar
 
@@ -5627,6 +5681,12 @@ IME selection background color
 IME text color
 == IME metin rengi
 
+Import and restart
+== İçe aktar ve yeniden başlat
+
+Import configuration package
+== Yapılandırma paketini içe aktar
+
 Import from clipboard
 == Panodan içe aktar
 
@@ -5855,6 +5915,15 @@ Invalid client id to move to spectators
 Invalid command or parameters.
 == Geçersiz komut veya parametreler.
 
+Invalid configuration package metadata.
+== Yapılandırma paketinin meta verileri geçersiz.
+
+Invalid configuration package path.
+== Yapılandırma paketinin yolu geçersiz.
+
+Invalid configuration package.
+== Yapılandırma paketi geçersiz.
+
 Invalid Demo
 == Geçersiz Demo
 
@@ -5866,6 +5935,9 @@ Invalid map file or filename.
 
 Invalid option
 == Geçersiz seçenek
+
+Invalid or duplicate configuration path.
+== Yapılandırma yolu geçersiz veya yinelenmiş.
 
 Invalid save number. Use a number from the save list.
 == Geçersiz kayıt numarası. Listedeki bir numarayı kullanın.
@@ -7928,6 +8000,9 @@ Open map editor
 Open modal
 == Modalı aç
 
+Open package folder
+== Paket klasörünü aç
+
 Open pie menu
 == Pasta menüsünü aç
 
@@ -9596,6 +9671,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == Arkadaş olmayan derileri varsayılanla değiştir
 
+Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
+== Ayarlar, tuş atamaları ve listelenen cfg dosyaları değiştirilip yeniden başlatılsın mı? Önce mevcut yapılandırma yedeklenir.
+
 Replace skin with one having this prefix (e.g. cats, santa)
 == Bu öneke sahip bir skin ile değiştir (ör. kediler, noel baba)
 
@@ -9823,6 +9901,9 @@ Restore a recently used Tee skin
 
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == İki kişilik kayıt geri yüklensin mi? /qm Yes en yeniyi yükler; /qm Yes numara başka kayıt seçer; /qm No kapatır.
+
+Restore configuration package
+== Yapılandırma paketini geri yükle
 
 Restore Kugou files
 == Kugou dosyalarını geri yükle
@@ -10292,6 +10373,9 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == Sonraki kontrol noktasında görüşürüz.
 
+Select a configuration package to preview its contents.
+== İçeriğini önizlemek için bir yapılandırma paketi seçin.
+
 Select a saved .map file (client limit: 64 MiB).
 == Kaydedilmiş bir .map dosyası seçin (istemci sınırı: 64 MiB).
 
@@ -10588,6 +10672,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == Ayarlar sayfası sağ panel opaklığı
+
+Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
+== Ayarlar, tuş atamaları, görünüm profilleri, sohbet bağlantıları ve savaş listesi dahildir. Aşağıdan ek cfg dosyalarını seçin.
 
 Severe
 == Ciddi
@@ -13186,6 +13273,9 @@ Token to register this server to a specific community
 
 Tomato
 == Domates
+
+Too many configuration files.
+== Çok fazla yapılandırma dosyası var.
 
 Too many translation tasks
 == Çok fazla çeviri görevi

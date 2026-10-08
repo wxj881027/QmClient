@@ -454,6 +454,15 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_adeck_general_recording[] = {
+			{Localizable("Automatically add a watermark to screenshots"), nullptr, "截图自动水印 时间戳 地图名 自定义文本"},
+			{Localizable("Custom watermark text"), nullptr, "截图水印文本"},
+			{Localizable("Timestamp"), nullptr, "截图时间戳"},
+			{Localizable("Map name"), nullptr, "截图地图名"},
+			{nullptr, "qm_screenshot_watermark", nullptr},
+			{nullptr, "qm_screenshot_watermark_timestamp", nullptr},
+			{nullptr, "qm_screenshot_watermark_map", nullptr},
+			{nullptr, "qm_screenshot_watermark_position", nullptr},
+			{nullptr, "qm_screenshot_watermark_text", nullptr},
 			{Localizable("Automatically create statboard csv"), nullptr, "自动将统计板导出为 csv 文件"},
 			{Localizable("Automatically record demos"), nullptr, "自动录制回放"},
 			{Localizable("Automatically take game over screenshot"), nullptr, "自动对游戏结束画面截图"},
@@ -472,6 +481,10 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_adeck_tclient_info_files[] = {
+			{Localizable("Configuration packages"), nullptr, "配置包 打包 qmconfig"},
+			{Localizable("Export configuration package"), nullptr, "导出 配置 备份 bind cfg"},
+			{Localizable("Import configuration package"), nullptr, "导入 配置 恢复 bind cfg"},
+			{Localizable("Import and restart"), nullptr, "恢复 重启"},
 			{Localizable("Chat Binds"), nullptr, "聊天绑定"},
 			{Localizable("Profiles"), nullptr, "配置文件"},
 			{Localizable("QmClient Settings"), nullptr, "QmClient 设置"},
