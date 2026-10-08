@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 PAGE_STABLE_IDS = {
-	"general": ("deck:general-game", "deck:general-language", "deck:general-client", "deck:general-recording"),
+	"general": ("deck:general-game", "deck:general-language", "deck:general-client", "deck:general-recording", "deck:tclient-info-files"),
 	"player": ("deck:player-identity", "deck:player-country"),
 	"tee": ("deck:tee-identity", "deck:tee-skin-options", "deck:tee-skin-list", "deck:tee-skin-queue", "qm:skin_appearance", "deck:tee-glow"),
 	"tee7": ("deck:tee7-editor",),
@@ -144,6 +144,7 @@ PAGE_FUNCTIONS = {
 }
 
 PRODUCER_COMPLETE_PAGES = {
+	"general",
 	"tee",
 	"appearance",
 	"qmclient_hud",
@@ -230,7 +231,7 @@ PAGE_ALLOWED_FORBIDDEN_CALLS = {
 STRICT_LEGACY_PAGES = {"general", "player", "tee", "tee7", "graphics", "sound", "ddnet", "appearance", "controls"}
 DECK_LEGACY_FORBIDDEN = ("BeginSettingsCardDeck(", "BeginSettingsCardDeckCard(")
 PAGE_REQUIRED = {
-	"general": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::NumericField("),
+	"general": ("SettingsCardDeckForRenderPass().RenderCached(", "qm_card_catalog::BuildCards("),
 	"player": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::InputField("),
 	"tee": ("SettingsCardDeckForRenderPass().RenderCached(", "ResolveSettingsCardDefinitionsRevision("),
 	"tee7": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::InputField(", "EQmScrollProfile::SETTINGS_GRID"),
@@ -316,12 +317,14 @@ _NAVIGATION_SOURCE = Path("src/game/client/components/menus.cpp")
 # 卡片生产的归属：页面声明「这一页有哪些卡片」，具体生产在全局卡片目录的分类模块里（N3）。
 _CATALOGUE_SOURCE = Path("src/game/client/QmUi/cards/QmCardCatalogIds.cpp")
 PAGE_CATALOGUE_LIST = {
+	"general": "GeneralCardStableIds",
 	"tee": "TeeCardStableIds",
 	"qmclient_hud": "HudCardStableIds",
 	"qmclient_function": "FunctionCardStableIds",
 	"qmclient_visual": "VisualCardStableIds",
 }
 _CATALOGUE_LIST_STATICS = {
+	"GeneralCardStableIds": "s_vGeneralCards",
 	"TeeCardStableIds": "s_vTeeCards",
 	"HudCardStableIds": "s_vHudCards",
 	"FunctionCardStableIds": "s_vFunctionCards",

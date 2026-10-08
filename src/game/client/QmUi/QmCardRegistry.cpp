@@ -12,6 +12,44 @@
 
 namespace qm_card_registry
 {
+	static constexpr SCardSettingSearch s_aGeneralGameSettings[] = {
+		{Localizable("Dynamic Camera"), "cl_dyncam"},
+		{Localizable("Dynamic Camera"), "cl_mouse_followfactor"},
+		{Localizable("Smooth Dynamic Camera"), "cl_dyncam_smoothness"},
+		{Localizable("Smooth Dynamic Camera"), "cl_dyncam_stabilizing"},
+		{Localizable("Switch weapon on pickup"), "cl_autoswitch_weapons"},
+		{Localizable("Switch weapon when out of ammo"), "cl_autoswitch_weapons_out_of_ammo"},
+	};
+	static constexpr SCardSettingSearch s_aGeneralLanguageSettings[] = {
+		{Localizable("Language"), "cl_languagefile"},
+	};
+	static constexpr SCardSettingSearch s_aGeneralClientSettings[] = {
+		{Localizable("Skip the main menu"), "cl_skip_start_menu"},
+		{Localizable("Update Rate"), "cl_refresh_rate"},
+		{Localizable("Save power by lowering update rate (higher input latency)"), "cl_refresh_rate"},
+		{nullptr, "cl_menu_map"},
+		{Localizable("Settings file"), nullptr},
+		{Localizable("Saves file"), nullptr},
+		{Localizable("Config directory"), nullptr},
+		{Localizable("Themes directory"), nullptr},
+	};
+	static constexpr SCardSettingSearch s_aGeneralRecordingSettings[] = {
+		{Localizable("Automatically record demos"), "cl_auto_demo_record"},
+		{Localizable("Max demos"), "cl_auto_demo_max"},
+		{Localizable("Automatically take game over screenshot"), "cl_auto_screenshot"},
+		{Localizable("Max Screenshots"), "cl_auto_screenshot_max"},
+		{Localizable("Automatically take statboard screenshot"), "cl_auto_statboard_screenshot"},
+		{Localizable("Max Screenshots"), "cl_auto_statboard_screenshot_max"},
+		{Localizable("Automatically create statboard csv"), "cl_auto_csv"},
+		{Localizable("Max CSVs"), "cl_auto_csv_max"},
+	};
+	static constexpr SCardSettingSearch s_aGeneralConfigFilesSettings[] = {
+		{Localizable("QmClient Settings"), nullptr},
+		{Localizable("Profiles"), nullptr},
+		{Localizable("War List"), nullptr},
+		{Localizable("Chat Binds"), nullptr},
+	};
+
 	// 设置项按所属卡登记，搜索使用原文、本地化标签和配置名，不依赖卡片是否打开过。
 	static constexpr SCardSettingSearch s_aPlayerStatsSettings[] = {
 		{Localizable("Show player stats HUD"), "qm_player_stats_hud"},
@@ -270,11 +308,11 @@ namespace qm_card_registry
 			{"deck:tclient-info-developers", "credits-links", ECardColumn::Left, 1, "TClient Developers", "tclient developers links discord website github support tater sollybunny pebox teero chillerdragon", "View the developers, contributors, and project links"},
 			{"deck:global-search-input", "global-search", ECardColumn::Full, 0, "Feature Search", "global search feature cards", "Search settings by title, feature, or keyword"},
 			{"deck:global-search-results", "global-search", ECardColumn::Full, 1, "Search", "global search result cards", "Open a matching settings card directly"},
-			{"deck:general-game", "general", ECardColumn::Left, 0, Localizable("Game"), "general game camera weapon", "Configure camera, weapon, and gameplay defaults"},
-			{"deck:general-language", "general", ECardColumn::Right, 0, Localizable("Language"), "general language localization", "Choose the language used by the client"},
-			{"deck:general-client", "general", ECardColumn::Left, 1, Localizable("Client"), "general client theme files", "Manage client theme and menu preferences"},
-			{"deck:general-recording", "general", ECardColumn::Right, 1, Localizable("Demo"), "general demo screenshot csv recording", "Automate demos, screenshots, and match exports"},
-			{"deck:tclient-info-files", "general", ECardColumn::Right, 2, "Config Files", "config files settings profiles war list chat binds", "Open TClient configuration file locations"},
+			{"deck:general-game", "general", ECardColumn::Left, 0, Localizable("Game"), "general game camera weapon 动态镜头 dongtai jingtou 平滑 pinghua 拾取切枪 shiqu qieqiang 弹药 danyao", "Configure camera, weapon, and gameplay defaults", nullptr, nullptr, s_aGeneralGameSettings, std::size(s_aGeneralGameSettings)},
+			{"deck:general-language", "general", ECardColumn::Right, 0, Localizable("Language"), "general language localization 语言 yuyan 中文 zhongwen 英文 yingwen", "Choose the language used by the client", nullptr, nullptr, s_aGeneralLanguageSettings, std::size(s_aGeneralLanguageSettings)},
+			{"deck:general-client", "general", ECardColumn::Left, 1, Localizable("Client"), "general client theme files 主菜单 zhucaidan 更新频率 gengxin pinlv 省电 shengdian 主题 zhuti 配置目录 peizhi mulu 存档 cundang", "Manage client theme and menu preferences", nullptr, nullptr, s_aGeneralClientSettings, std::size(s_aGeneralClientSettings)},
+			{"deck:general-recording", "general", ECardColumn::Right, 1, Localizable("Demo"), "general demo screenshot csv recording 自动录像 zidong luxiang 截图 jietu 计分板 jifenban 导出 daochu", "Automate demos, screenshots, and match exports", nullptr, nullptr, s_aGeneralRecordingSettings, std::size(s_aGeneralRecordingSettings)},
+			{"deck:tclient-info-files", "general", ECardColumn::Right, 2, "Config Files", "config files settings profiles war list chat binds 配置文件 peizhi wenjian 配置方案 peizhi fangan 战争列表 zhanzheng liebiao 聊天绑定 liaotian bangding", "Open TClient configuration file locations", nullptr, nullptr, s_aGeneralConfigFilesSettings, std::size(s_aGeneralConfigFilesSettings)},
 			{"deck:player-identity", "player", ECardColumn::Left, 0, Localizable("Player"), "player dummy name clan identity", "Edit player and dummy identity information"},
 			{"deck:player-country", "player", ECardColumn::Right, 0, Localizable("Choose country flag"), "player dummy country flag", "Select the country flag for each player"},
 			{"deck:tee-identity", "tee", ECardColumn::Full, 0, "Player preview", "tee player dummy identity preview colors eyes name clan 本体 分身 配色 表情", "Preview player and dummy appearance"},

@@ -28,52 +28,6 @@
 #include <sstream>
 #include <string>
 
-TEST(QmNewUiMenuRenderSettingsPagesContract, GeneralStandardPageUsesUnifiedSettingsStack)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string Menus = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string General = FunctionBody(Source, "void CMenus::RenderSettingsGeneral(CUIRect MainView)");
-	const std::string NumericLabelBridge = FunctionBody(Menus, "bool CMenus::PrepareSettingsNumericFieldLabel(");
-	ASSERT_FALSE(General.empty());
-	ASSERT_FALSE(NumericLabelBridge.empty());
-	EXPECT_NE(General.find("SettingsPageLayout("), std::string::npos);
-	EXPECT_NE(General.find("SSettingsCardDefinition"), std::string::npos);
-	EXPECT_NE(General.find("SettingsCardDeckForRenderPass().RenderCached("), std::string::npos);
-	EXPECT_NE(General.find("CQmScrollState"), std::string::npos);
-	EXPECT_NE(General.find("const SQmResolvedScrollPolicy ScrollPolicy = QmResolveScrollPolicy("), std::string::npos);
-	EXPECT_NE(General.find("QmScrollRegionParamsFromPolicy(ScrollPolicy)"), std::string::npos);
-	EXPECT_EQ(General.find("(void)QmResolveScrollPolicy("), std::string::npos);
-	EXPECT_NE(General.find("PrepareSettingsNumericFieldLabel("), std::string::npos);
-	EXPECT_NE(NumericLabelBridge.find("if(m_MenuTextPlanCollecting)"), std::string::npos);
-	EXPECT_NE(NumericLabelBridge.find("CollectMenuTextPlanItem(MENU_TEXT_SCOPE_SETTINGS"), std::string::npos);
-	EXPECT_NE(General.find("ui_widget::NumericField("), std::string::npos);
-	EXPECT_NE(General.find("const auto IsGeneralDynamicCameraEnabled"), std::string::npos);
-	EXPECT_NE(General.find("ResolveSettingsGeneralGameContentHeight(GeneralMetrics, IsGeneralDynamicCameraEnabled())"), std::string::npos);
-	EXPECT_NE(General.find("vCards.back().m_PreLayoutInput = [this, GeneralMetrics, IsGeneralDynamicCameraEnabled]"), std::string::npos);
-	EXPECT_NE(General.find("ResolveSettingsGeneralLanguageListGeometry("), std::string::npos);
-	EXPECT_NE(General.find("ResolveSettingsGeneralThemeListGeometry("), std::string::npos);
-	EXPECT_NE(General.find("RenderLanguageSelection(Content, &GeneralMetrics);"), std::string::npos);
-	EXPECT_NE(General.find("RenderThemeSelection(Content, &GeneralMetrics);"), std::string::npos);
-	EXPECT_NE(General.find("ResolveSettingsGeneralLayoutRevision("), std::string::npos);
-	EXPECT_NE(General.find("Content.h = std::min(Content.h, GeneralLanguageListHeight);"), std::string::npos);
-	EXPECT_NE(General.find("Content.h = std::min(Content.h, GeneralThemeListHeight);"), std::string::npos);
-	EXPECT_NE(General.find("Row.VSplitMid(&LeftButton, &RightButton, GeneralMetrics.m_LineSpacing);"), std::string::npos);
-	EXPECT_EQ(General.find("maximum(300.0f * UiScale, GeneralPage.m_ScrollViewport.h - 100.0f * UiScale)"), std::string::npos);
-	EXPECT_NE(General.find("deck:general-game"), std::string::npos);
-	EXPECT_NE(General.find("deck:general-language"), std::string::npos);
-	EXPECT_NE(General.find("deck:general-client"), std::string::npos);
-	EXPECT_NE(General.find("deck:general-recording"), std::string::npos);
-	EXPECT_NE(General.find("RecordingDefinition.m_MeasureRevision"), std::string::npos);
-	EXPECT_NE(General.find("RecordingDefinition.m_PreLayoutInput"), std::string::npos);
-	EXPECT_NE(General.find("RecordingDefinition.m_VisibilityController = true;"), std::string::npos);
-	EXPECT_NE(General.find("return 4.0f * GeneralMetrics.m_RowStep + EnabledRows * (GeneralMetrics.m_RowStep + GeneralMetrics.m_LineSpacing);"), std::string::npos);
-	EXPECT_EQ(General.find("AddCard(RecordingSpec"), std::string::npos);
-	EXPECT_EQ(General.find("BeginSettingsCardDeck("), std::string::npos);
-	EXPECT_EQ(General.find("DoSettingsScrollbarOption("), std::string::npos);
-	EXPECT_EQ(General.find("Ui()->DoEditBox("), std::string::npos);
-	EXPECT_EQ(General.find("Ui()->DoScrollbarH("), std::string::npos);
-}
-
 TEST(QmNewUiMenuRenderSettingsPagesContract, SettingsCardContentHeightsExcludeSharedHeaderChrome)
 {
 	const std::string ControlsSource = ReadTextFile("src/game/client/components/menus_settings_controls.cpp");
