@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == 음소거 해제：
 
+Unmuted
+== 음소거 해제됨
+
 Unpredictable ghost opacity (0-100)
 == 예측 불가능한 유령 불투명도 (0-100)
 

@@ -4537,6 +4537,7 @@ Unmute player with client ID
 Unmute player with IP address
 Unmute player with list index
 Unmute:
+Unmuted
 Unpredictable ghost opacity (0-100)
 Unpredictable shadow tee transparency (0 invisible, 100 fully visible)
 Unpredicted ghost opacity

@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == Odcisz:
 
+Unmuted
+== Dźwięk włączony
+
 Unpredictable ghost opacity (0-100)
 == Nieprzezroczystość ducha nieprzewidywalnego (0-100)
 

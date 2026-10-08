@@ -945,7 +945,10 @@ void CScoreboard::RenderSoundMuteBar(CUIRect ScoreboardRect)
 	if(Anchor.w <= 0.0f || Anchor.h <= 0.0f)
 		Anchor = {ColumnX, ColumnY + InfoIndex * (ButtonSize + Gap), ButtonSize, ButtonSize};
 
-	const char *pTitle = gs_aSoundMuteButtonDefs[InfoIndex].m_pTitle;
+	const bool Muted = g_Config.*gs_aSoundMuteButtonDefs[InfoIndex].m_pConfig != 0;
+	char aTitle[256];
+	str_format(aTitle, sizeof(aTitle), "%s (%s)", gs_aSoundMuteButtonDefs[InfoIndex].m_pTitle, Muted ? Localize("Muted") : Localize("Unmuted"));
+	const char *pTitle = aTitle;
 	const char *pDescription = gs_aSoundMuteButtonDefs[InfoIndex].m_pDescription;
 	const float TitleFontSize = 10.0f;
 	const float BodyFontSize = 9.0f;

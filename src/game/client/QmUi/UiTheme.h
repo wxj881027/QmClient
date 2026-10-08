@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 // 透明表面先与底层合成，完全透明时由底层决定前景，避免按不可见 RGB 选色。
 inline ColorRGBA CompositeUiSurface(ColorRGBA Surface, ColorRGBA Backdrop = ui_token::color::SURFACE_BACKDROP)
@@ -152,6 +153,12 @@ inline ColorRGBA ResolveUiControlSurface(unsigned BackgroundColor, int Opacity, 
 inline ColorRGBA ResolveConfiguredControlSurface(bool Enabled = true)
 {
 	return ResolveUiControlSurface(g_Config.m_QmUiDropdownColor, g_Config.m_QmUiDropdownOpacity, Enabled);
+}
+
+// 显式状态色保留原始透明度，普通图标按钮才回退到配置表面。
+inline ColorRGBA ResolveConfiguredIconButtonSurface(const std::optional<ColorRGBA> &ButtonColor, bool Enabled = true)
+{
+	return ButtonColor.value_or(ResolveConfiguredControlSurface(Enabled));
 }
 
 inline ColorRGBA ResolveConfiguredDropdownSurface()

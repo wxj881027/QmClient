@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == ミュート解除：
 
+Unmuted
+== ミュート解除済み
+
 Unpredictable ghost opacity (0-100)
 == 予測不可能なゴーストの不透明度（0-100）
 

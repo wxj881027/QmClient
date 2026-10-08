@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == Sessizi Kaldır:
 
+Unmuted
+== Sessiz değil
+
 Unpredictable ghost opacity (0-100)
 == Tahmin edilemez hayalet opaklığı (0-100)
 
