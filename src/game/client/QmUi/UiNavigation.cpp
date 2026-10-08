@@ -95,6 +95,9 @@ namespace ui_widget
 
 		CUIRect Capsule;
 		RowRect.Margin(-Style.m_CapsulePadding, &Capsule);
+		// 圆角表面直绘不自动模糊；只给容器补背景，避免滑块与槽位底色重复覆盖。
+		if(Style.m_CapsuleColor.a > 0.0f && Style.m_CapsuleColor.a < 1.0f && Ctx.m_pUi->GaussianBlurScopeActive())
+			Ctx.m_pUi->RenderGaussianBlur(Capsule, Ctx.m_pUi->GaussianBlurScopeAlpha(), IGraphics::CORNER_ALL, ui_token::radius::PILL);
 		DrawRoundedSurface(Ctx, Capsule, Style.m_CapsuleColor, ColorRGBA(), ui_token::radius::PILL);
 
 		// 单槽位自定义底色：压在容器上、藏在滑块下，几何与滑块一致（同内缩的胶囊形），
