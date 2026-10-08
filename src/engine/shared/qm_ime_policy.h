@@ -4,6 +4,8 @@
 
 #include <base/detect.h>
 
+#include <engine/keys.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -95,6 +97,21 @@ inline bool QmImeShouldSuppressStaleCandidateReload(bool SuppressFlag, bool IsOp
 	if(IsOpenNotify)
 		return false;
 	return SuppressFlag;
+}
+
+// 正在输入法组合输入期间，回车、退格、删除与方向键由 IME 内部消费，避免误篡改外部输入框内容。
+inline bool QmImeKeyConsumedByComposition(int Key)
+{
+	return Key == KEY_BACKSPACE || Key == KEY_DELETE ||
+	       Key == KEY_LEFT || Key == KEY_RIGHT ||
+	       Key == KEY_HOME || Key == KEY_END ||
+	       Key == KEY_RETURN || Key == KEY_KP_ENTER;
+}
+
+// 空文本输入事件仅代表 IME 状态重置或刷新，不得用于替换已有文本或清空选区。
+inline bool QmImeTextEventShouldMutateBuffer(const char *pText)
+{
+	return pText != nullptr && pText[0] != '\0';
 }
 
 #endif

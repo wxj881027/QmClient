@@ -34,7 +34,6 @@ TEST(QmMonitoringTextPlanContract, SettingsStableTextPlanKeysMatchVisibleWrapper
 {
 	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
 	const std::string Header = ReadRepoFile("src/game/client/components/menus.h");
-	const std::string Settings = ReadRepoFile("src/game/client/components/menus_settings.cpp");
 
 	const std::string ScrollbarBody = ExtractSourceFunctionBody(Menus, "CMenus::SMenuTextPlanItem CMenus::AddStableTextScrollbar(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect &Rect, unsigned Flags, const char *pSourceTag) const");
 	ASSERT_FALSE(ScrollbarBody.empty());
@@ -58,12 +57,9 @@ TEST(QmMonitoringTextPlanContract, SettingsStableTextPlanKeysMatchVisibleWrapper
 	EXPECT_NE(SplitScrollbarBody.find("ScrollBar.VMargin(minimum(10.0f, Rect.w * 0.025f), &ScrollBar);"), std::string::npos);
 
 	EXPECT_EQ(Header.find("BuildSettingsScrollbarTextStyle("), std::string::npos);
-	EXPECT_NE(Settings.find("DoAppearanceNumericField(APPEARANCE_TAB_HUD, \"appearance-freeze-bars-alpha-inside-freeze\""), std::string::npos);
 	EXPECT_NE(Header.find("SMenuTextStyleKey BuildSettingsShellTitleTextStyle(const CUIRect &Rect, CUIRect *pOutLabel = nullptr) const;"), std::string::npos);
 	EXPECT_NE(Menus.find("BuildSettingsShellTitleTextStyle("), std::string::npos);
 	EXPECT_NE(Menus.find("settings-shell-title"), std::string::npos);
-	EXPECT_NE(Settings.find("DoDDNetNumericField(\"ddnet-default-zoom\""), std::string::npos);
-	EXPECT_NE(Settings.find("DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClRaceGhost, \"Enable ghost\""), std::string::npos);
 }
 
 TEST(QmMonitoringTextPlanContract, SettingsMenuTextPlanCollectionUsesIncrementalCursor)

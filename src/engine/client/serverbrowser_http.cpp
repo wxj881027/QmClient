@@ -1,5 +1,6 @@
 #include "serverbrowser_http.h"
 
+#include "qm_serverlist_cache.h"
 #include "serverbrowser_http_parse.h"
 
 #include <base/lock.h>
@@ -62,6 +63,8 @@ namespace
 		bool GetBestUrl(const char **pBestUrl) const;
 		void Shutdown();
 		void Reset();
+		void RejectBestUrl();
+		void ClearRejectedUrls();
 		bool IsRefreshing() const { return m_pJob && !m_pJob->Done(); }
 		void Refresh();
 
@@ -72,6 +75,7 @@ namespace
 		{
 		public:
 			std::atomic_int m_BestIndex{-1};
+			std::atomic_bool m_aRejected[MAX_URLS]{};
 			// Constant after construction.
 			VALIDATOR m_pfnValidator;
 			int m_NumUrls;
@@ -117,6 +121,7 @@ namespace
 		m_pData = std::make_shared<CData>();
 		m_pData->m_pfnValidator = pfnValidator;
 		m_pData->m_NumUrls = NumUrls;
+		ClearRejectedUrls();
 		for(int i = 0; i < m_pData->m_NumUrls; i++)
 		{
 			str_copy(m_pData->m_aaUrls[i], ppUrls[i]);
@@ -131,13 +136,15 @@ namespace
 	int CChooseMaster::GetBestIndex() const
 	{
 		int BestIndex = m_pData->m_BestIndex.load();
+		if(BestIndex >= 0 && m_pData->m_aRejected[BestIndex].load())
+			BestIndex = -1;
 		if(BestIndex >= 0)
 		{
 			return BestIndex;
 		}
 		else
 		{
-			return m_PreviousBestIndex;
+			return m_PreviousBestIndex >= 0 && !m_pData->m_aRejected[m_PreviousBestIndex].load() ? m_PreviousBestIndex : -1;
 		}
 	}
 
@@ -166,6 +173,20 @@ namespace
 	{
 		m_PreviousBestIndex = -1;
 		m_pData->m_BestIndex.store(-1);
+	}
+
+	void CChooseMaster::RejectBestUrl()
+	{
+		const int Index = GetBestIndex();
+		if(Index >= 0)
+			m_pData->m_aRejected[Index].store(true);
+		Reset();
+	}
+
+	void CChooseMaster::ClearRejectedUrls()
+	{
+		for(int Index = 0; Index < m_pData->m_NumUrls; ++Index)
+			m_pData->m_aRejected[Index].store(false);
 	}
 
 	void CChooseMaster::Refresh()
@@ -227,6 +248,8 @@ namespace
 			aTimeMs[i] = -1;
 			aAgeS[i] = SanitizeAge({});
 			const char *pUrl = m_pData->m_aaUrls[aRandomized[i]];
+			if(m_pData->m_aRejected[aRandomized[i]].load())
+				continue;
 			std::shared_ptr<IHttpRequest> pHead = HttpHead(pUrl);
 			pHead->Timeout(Timeout);
 			pHead->LogProgress(HTTPLOG::FAILURE);
@@ -302,7 +325,7 @@ namespace
 		int BestAge = 0;
 		for(int i = 0; i < m_pData->m_NumUrls; i++)
 		{
-			if(aTimeMs[i] < 0)
+			if(aTimeMs[i] < 0 || m_pData->m_aRejected[aRandomized[i]].load())
 			{
 				continue;
 			}
@@ -360,17 +383,18 @@ namespace
 		void Shutdown() override;
 		void Update() override;
 		bool IsRefreshing() const override { return m_State != STATE_DONE && m_State != STATE_NO_MASTER; }
-		bool IsError() const override { return m_State == STATE_NO_MASTER; }
+		bool IsError() const override { return m_State == STATE_NO_MASTER || m_Cache.HasRefreshFailed(); }
+		bool IsStale() const override { return m_Cache.IsStale(time_get() / time_freq()); }
 		void Refresh() override;
 		bool GetBestUrl(const char **pBestUrl) const override { return m_pChooseMaster->GetBestUrl(pBestUrl); }
 
 		int NumServers() const override
 		{
-			return m_vServers.size();
+			return m_Cache.Servers().size();
 		}
 		const CServerInfo &Server(int Index) const override
 		{
-			return m_vServers[Index];
+			return m_Cache.Servers()[Index];
 		}
 
 	private:
@@ -393,7 +417,7 @@ namespace
 		std::shared_ptr<CServerListParseJob> m_pParseJob;
 		std::unique_ptr<CChooseMaster> m_pChooseMaster;
 
-		std::vector<CServerInfo> m_vServers;
+		CQmServerListCache<CServerInfo> m_Cache;
 	};
 
 	CServerBrowserHttp::CServerBrowserHttp(IEngine *pEngine, IHttp *pHttp, const char **ppUrls, int NumUrls, int PreviousBestIndex) :
@@ -432,6 +456,7 @@ namespace
 				{
 					log_error("serverbrowser_http", "no working serverlist URL found");
 					m_State = STATE_NO_MASTER;
+					m_Cache.RefreshFailed();
 				}
 				return;
 			}
@@ -456,16 +481,17 @@ namespace
 		{
 			if(m_pParseJob->State() != IJob::STATE_DONE)
 				return;
-			const bool Success = m_pParseJob->m_Success;
+			const bool Success = m_pParseJob->m_Success && !m_pParseJob->m_vServers.empty();
 			const int Age = m_pParseJob->m_Age;
 			if(Success)
-				m_vServers = std::move(m_pParseJob->m_vServers);
+				m_Cache.Publish(std::move(m_pParseJob->m_vServers), Age, time_get() / time_freq());
 			m_pParseJob.reset();
 			m_State = STATE_DONE;
 			if(!Success)
 			{
 				log_error("serverbrowser_http", "failed getting serverlist, trying to find best URL");
-				m_pChooseMaster->Reset();
+				m_Cache.RefreshFailed();
+				m_pChooseMaster->RejectBestUrl();
 				m_State = STATE_WANTREFRESH;
 				m_pChooseMaster->Refresh();
 			}
@@ -483,6 +509,8 @@ namespace
 	}
 	void CServerBrowserHttp::Refresh()
 	{
+		if(m_State == STATE_DONE || m_State == STATE_NO_MASTER)
+			m_pChooseMaster->ClearRejectedUrls();
 		if(m_State == STATE_WANTREFRESH || m_State == STATE_REFRESHING || m_State == STATE_PARSING || m_State == STATE_NO_MASTER)
 		{
 			if(m_State == STATE_NO_MASTER)
@@ -506,13 +534,14 @@ namespace
 	bool CServerBrowserHttp::Validate(json_value *pJson)
 	{
 		std::vector<CServerInfo> vServers;
-		return ServerBrowserParseHttpList(pJson, &vServers);
+		return ServerBrowserParseHttpList(pJson, &vServers) || vServers.empty();
 	}
 	const char *DEFAULT_SERVERLIST_URLS[] = {
 		"https://master1.ddnet.org/ddnet/15/servers.json",
 		"https://master2.ddnet.org/ddnet/15/servers.json",
 		"https://master3.ddnet.org/ddnet/15/servers.json",
 		"https://master4.ddnet.org/ddnet/15/servers.json",
+		"https://qmclient.icu/ddnet/15/servers.json",
 	};
 
 } // namespace

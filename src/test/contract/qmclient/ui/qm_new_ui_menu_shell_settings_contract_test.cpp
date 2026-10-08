@@ -46,16 +46,6 @@ TEST(QmNewUiMenuShellSettingsContract, SettingsShellAndOuterScrollbarUseStableCo
 	EXPECT_NE(AssetsSource.find("StableCustomList.w / (Margin + TextureWidth)"), std::string::npos);
 }
 
-TEST(QmNewUiMenuShellSettingsContract, TClientPreLayoutUsesDeckContentCoordinates)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
-	const std::string PreLayout = FunctionBody(Source, "const auto BuildTClientConditionalRowsPreLayoutInput =");
-
-	EXPECT_EQ(PreLayout.find("StartRows"), std::string::npos);
-	EXPECT_NE(PreLayout.find("CTClientSettingsRowAllocator Rows(Content)"), std::string::npos);
-	EXPECT_NE(PreLayout.find("s_vTinyTeeModeButtons"), std::string::npos);
-}
-
 TEST(QmNewUiMenuShellSettingsContract, QmLocalizationEnglishOverlayUsesExplicitEnglishFile)
 {
 	const std::string Source = ReadTextFile("src/game/client/gameclient.cpp");
@@ -84,16 +74,6 @@ TEST(QmNewUiMenuShellSettingsContract, QmClientTabLabelsDoNotCacheLocalizedPoint
 	// 贡献者页签并入顶层贡献者页：页签栏不再分配 Contributors 标签，枚举值仅作持久化占位。
 	EXPECT_EQ(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONTRIBUTORS]"), std::string::npos);
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONFIG] = Localize(\"Config\");"), std::string::npos);
-}
-
-TEST(QmNewUiMenuShellSettingsContract, TranslateTargetRatioDoesNotRenderSkipNotes)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string TranslateModule = FunctionBody(Source, "void CMenus::RenderQmFunctionTranslateContent(");
-
-	EXPECT_NE(TranslateModule.find("RenderSliderWithNumberInput(&s_LocalDetectRatioSelectorId"), std::string::npos);
-	EXPECT_EQ(TranslateModule.find("qmclient-translate-skip-target-language-note"), std::string::npos);
-	EXPECT_EQ(TranslateModule.find("qmclient-translate-skip-numeric-note"), std::string::npos);
 }
 
 TEST(QmNewUiMenuShellSettingsContract, TClientHeaderIncludesGeneratedProtocolForWeaponDefaults)

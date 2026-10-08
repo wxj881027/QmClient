@@ -1205,6 +1205,9 @@ Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
+Automatic (Qm service)
+== Автоматически (служба Qm)
+
 Automatic effect LOD when crowded
 == Автоупрощение эффектов при скоплении
 
@@ -2753,12 +2756,6 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 == Свой шрифт для латинского текста (семейство или семейство + стиль)
 
-Custom font weight (variable fonts)
-== Толщина своего шрифта (вариативные шрифты)
-
-Custom Font:
-== Пользовательский шрифт:
-
 Custom prompt template
 == Пользовательский шаблон промпта
 
@@ -2990,6 +2987,9 @@ Debug SQL.
 Debug tile layer clipping.
 == Отладка обрезки тайловых слоёв.
 
+Decorative throws
+== Декоративные броски
+
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Адрес выделенного WebSocket (пусто — используется wss://qmclient.icu/ws)
 
@@ -3016,6 +3016,9 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 
 DeepL API
 == DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: 500 000 символов в месяц (регистрация на deepl.com; бесплатные ключи заканчиваются на :fx)
 
 DeepL API Key (free keys end with :fx)
 == API-ключ DeepL (бесплатные ключи заканчиваются на :fx)
@@ -3722,6 +3725,9 @@ Edit touch controls
 Editor
 == Редактор
 
+Egg
+== Яйцо
+
 Elastic
 == Эластичный
 
@@ -3844,6 +3850,9 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Включить пользовательский запас предсказания при заморозке
+
+Enable decorative grass, tomato and egg throws
+== Включить декоративные броски травы, помидоров и яиц
 
 Enable Deleting
 == Включить удаление
@@ -5138,6 +5147,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Уровень трассировки графики: 0 = выкл., 1 = периодическая сводка, 2 = сводка и медленные кадры, 3 = подробная трассировка бэкенда
 
+Grass
+== Трава
+
 Greek
 == Греческий
 
@@ -5592,7 +5604,7 @@ Ignored legacy Dynamic Island edge margin
 == Устаревший отступ от края Dynamic Island игнорируется
 
 IME
-== IME
+== Метод ввода
 
 IME background color
 == Цвет фона IME
@@ -5614,9 +5626,6 @@ IME text color
 
 Import from clipboard
 == Импорт из буфера обмена
-
-Improved Anti Ping
-== Улучшенный Anti Ping
 
 Improved anti ping
 == Улучшенный антипинг
@@ -6004,6 +6013,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Оставлять окно голосования открытым после голосования
+
+Key
+== Клавиша
 
 Key binds
 == Привязки клавиш
@@ -8384,9 +8396,6 @@ Player feet skin
 Player hands color
 == Цвет рук игрока
 
-Player Indicator
-== Индикатор игрока
-
 Player indicator
 == Индикатор игрока
 
@@ -10444,6 +10453,12 @@ Server kick/spec votes are no longer actively moderated.
 
 Server kick/spec votes will now be actively moderated.
 == Голосования за кик/спек на сервере теперь будут контролироваться активным модератором.
+
+Server list is more than five minutes old
+== Список серверов не обновлялся более пяти минут
+
+Server list refresh failed; showing the previous list
+== Не удалось обновить список серверов; показан предыдущий список
 
 Server name
 == Имя сервера
@@ -12722,9 +12737,6 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == Имя "default" зарезервировано.
 
-The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
-== Старая папка qmclient/fonts больше не сканируется. Вручную переместите свои шрифты в fonts/fonts_store внутри папки настроек. Обычная версия использует пользовательскую папку настроек, переносная — profile. Шрифты, поставляемые в data/fonts, перемещать не нужно.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Игрок, с которым вы шептались, ещё не переподключился или вышел. Подождите или напишите другому
 
@@ -12880,6 +12892,21 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Эту подсказку предоставляет ui_widget::Tooltip — тонкая обёртка над CTooltips.
+
+Throw a decorative grass, tomato or egg projectile
+== Бросить декоративную траву, помидор или яйцо
+
+Throw egg key
+== Клавиша броска яйца
+
+Throw grass key
+== Клавиша броска травы
+
+Throw tomato key
+== Клавиша броска помидора
+
+Throwables
+== Предметы для броска
 
 Tick delay before executing qm_execute_on_join
 == Задержка в тиках перед выполнением qm_execute_on_join
@@ -13153,6 +13180,9 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Токен для регистрации этого сервера в определённом сообществе
+
+Tomato
+== Помидор
 
 Too many translation tasks
 == Слишком много задач перевода
@@ -13450,9 +13480,6 @@ UI size percentage
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == Не удалось удалить %d выбранных элементов. Первый неудачный элемент: «%s».
-
-Unable to delete skin
-== Не удалось удалить скин
 
 Unable to delete the demo '%s'
 == Не удалось удалить демо «%s»

@@ -117,6 +117,8 @@ class CEmoticon : public CComponent
 
 	vec2 m_SelectorMouse;
 	int m_SelectedEmote;
+	bool m_ThrowTab = false;
+	int m_SelectedThrow = -1;
 	int m_SelectedEyeEmote;
 	SQmLocalBlinkState m_aLocalBlinkStates[NUM_DUMMIES];
 
@@ -141,6 +143,8 @@ class CEmoticon : public CComponent
 	static void ConToggleLaunchMode(IConsole::IResult *pResult, void *pUserData);
 	void ToggleLaunchMode();
 	void UpdateSelection();
+	bool TrySelectThrowTab(vec2 Pointer);
+	void RenderSelectorTabs(vec2 Center, float Alpha);
 	void SetActive(bool Active);
 	void RenderProjectiles();
 	void SpawnProjectile(vec2 Position, vec2 Direction, int Emoticon, bool Super, int OwnerClientId);

@@ -1,4 +1,5 @@
 # 请抬头享受阳光｜日子很好 我很我---------致咩子
+
 [[message]]
 key = "%d dummies"
 [message.translations]
@@ -2163,3 +2164,35 @@ brazilian_portuguese = "Arraste para reordenar; clique para expandir ou recolher
 portuguese = "Arraste para reordenar; clique para expandir ou recolher. Clique com o botão direito ou use a engrenagem para gerir categorias"
 turkish = "Sıralamayı değiştirmek için sürükleyin; genişletmek veya daraltmak için tıklayın. Kategorileri yönetmek için sağ tıklayın veya dişli simgesini kullanın"
 polish = "Przeciągnij, aby zmienić kolejność; kliknij, aby rozwinąć lub zwinąć. Kliknij prawym przyciskiem lub użyj koła zębatego, aby zarządzać kategoriami"
+
+[[message]]
+key = "Server list is more than five minutes old"
+[message.translations]
+simplified_chinese = "服务器列表已超过五分钟未更新"
+traditional_chinese = "伺服器列表已超過五分鐘未更新"
+japanese = "サーバー一覧は五分以上更新されていません"
+korean = "서버 목록이 오 분 넘게 갱신되지 않았습니다"
+russian = "Список серверов не обновлялся более пяти минут"
+german = "Die Serverliste ist älter als fünf Minuten"
+spanish = "La lista de servidores tiene más de cinco minutos"
+french = "La liste des serveurs date de plus de cinq minutes"
+brazilian_portuguese = "A lista de servidores tem mais de cinco minutos"
+portuguese = "A lista de servidores tem mais de cinco minutos"
+turkish = "Sunucu listesi beş dakikadan eski"
+polish = "Lista serwerów ma więcej niż pięć minut"
+
+[[message]]
+key = "Server list refresh failed; showing the previous list"
+[message.translations]
+simplified_chinese = "服务器列表刷新失败，正在显示上次列表"
+traditional_chinese = "伺服器列表重新整理失敗，正在顯示上次列表"
+japanese = "サーバー一覧の更新に失敗したため、前の一覧を表示しています"
+korean = "서버 목록을 새로 고치지 못해 이전 목록을 표시합니다"
+russian = "Не удалось обновить список серверов; показан предыдущий список"
+german = "Serverliste konnte nicht aktualisiert werden; die vorherige Liste wird angezeigt"
+spanish = "No se pudo actualizar la lista de servidores; se muestra la anterior"
+french = "Échec de l’actualisation des serveurs ; la liste précédente est affichée"
+brazilian_portuguese = "Falha ao atualizar a lista de servidores; exibindo a lista anterior"
+portuguese = "Falha ao atualizar a lista de servidores; a mostrar a lista anterior"
+turkish = "Sunucu listesi yenilenemedi; önceki liste gösteriliyor"
+polish = "Nie udało się odświeżyć listy serwerów; wyświetlono poprzednią listę"

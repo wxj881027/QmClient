@@ -1205,6 +1205,9 @@ Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 == 自动处理录像、截图和比赛导出
 
+Automatic (Qm service)
+== 自动（Qm 服务）
+
 Automatic effect LOD when crowded
 == 同屏拥挤时自动降低特效
 
@@ -2753,12 +2756,6 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 == 拉丁文本的自定义字体（字族，或字族 + 样式）
 
-Custom font weight (variable fonts)
-== 自定义字体字重（可变字体）
-
-Custom Font:
-== 自定义字体：
-
 Custom prompt template
 == 自定义提示词模板
 
@@ -2990,6 +2987,9 @@ Debug SQL.
 Debug tile layer clipping.
 == 调试图块图层裁剪
 
+Decorative throws
+== 装饰投掷物
+
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 专用 WebSocket 地址（留空使用 wss://qmclient.icu/ws）
 
@@ -3016,6 +3016,9 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 
 DeepL API
 == DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free：每月 50 万字符（在 deepl.com 注册；免费密钥以 :fx 结尾）
 
 DeepL API Key (free keys end with :fx)
 == DeepL API 密钥（免费密钥以 :fx 结尾）
@@ -3722,6 +3725,9 @@ Edit touch controls
 Editor
 == 编辑器
 
+Egg
+== 鸡蛋
+
 Elastic
 == 弹性
 
@@ -3844,6 +3850,9 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == 冻结时启用自定义预测边距
+
+Enable decorative grass, tomato and egg throws
+== 启用草、番茄和鸡蛋装饰投掷物
 
 Enable Deleting
 == 启用删除
@@ -5138,6 +5147,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 图形跟踪级别：0 = 关闭，1 = 定期摘要，2 = 摘要和慢帧，3 = 详细后端跟踪
 
+Grass
+== 草
+
 Greek
 == 希腊文
 
@@ -5592,7 +5604,7 @@ Ignored legacy Dynamic Island edge margin
 == 已忽略旧版灵动岛边缘外边距
 
 IME
-== IME
+== 输入法
 
 IME background color
 == IME 背景颜色
@@ -5614,9 +5626,6 @@ IME text color
 
 Import from clipboard
 == 从剪贴板导入
-
-Improved Anti Ping
-== 改进 Anti Ping
 
 Improved anti ping
 == 改进版延迟补偿
@@ -6004,6 +6013,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 投票后不关闭投票窗口
+
+Key
+== 按键
 
 Key binds
 == 按键绑定
@@ -8384,9 +8396,6 @@ Player feet skin
 Player hands color
 == 玩家手部颜色
 
-Player Indicator
-== 玩家指示器
-
 Player indicator
 == 玩家指示器
 
@@ -10444,6 +10453,12 @@ Server kick/spec votes are no longer actively moderated.
 
 Server kick/spec votes will now be actively moderated.
 == 服务器的踢人/旁观投票现在会被主动管理员模式接管
+
+Server list is more than five minutes old
+== 服务器列表已超过五分钟未更新
+
+Server list refresh failed; showing the previous list
+== 服务器列表刷新失败，正在显示上次列表
 
 Server name
 == 服务器名称
@@ -12722,9 +12737,6 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == “default” 是保留名称。
 
-The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
-== 旧目录 qmclient/fonts 已停止扫描。请将自定义字体手动移动到配置目录下的 fonts/fonts_store。普通版使用用户配置目录，便携版使用 profile。data/fonts 中随客户端提供的字体无需移动。
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重连或已离开。请稍等，或改与他人私聊
 
@@ -12880,6 +12892,21 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 此提示由 ui_widget::Tooltip 提供——一个基于 CTooltips 的薄层封装。
+
+Throw a decorative grass, tomato or egg projectile
+== 投掷草、番茄或鸡蛋装饰物
+
+Throw egg key
+== 投鸡蛋按键
+
+Throw grass key
+== 投草按键
+
+Throw tomato key
+== 投番茄按键
+
+Throwables
+== 投掷物
 
 Tick delay before executing qm_execute_on_join
 == 执行 qm_execute_on_join 前的延迟（tick）
@@ -13153,6 +13180,9 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == 用于将此服务器注册到特定社区的令牌
+
+Tomato
+== 番茄
 
 Too many translation tasks
 == 翻译任务过多
@@ -13450,9 +13480,6 @@ UI size percentage
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == 无法删除 %d 个选中项。第一个失败项是“%s”。
-
-Unable to delete skin
-== 无法删除皮肤
 
 Unable to delete the demo '%s'
 == 无法删除回放文件“%s”

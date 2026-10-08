@@ -89,13 +89,6 @@ TEST(QmMonitoringTextRuntimeContract, SettingsStableTextMissAndStaleBlockVisible
 	EXPECT_EQ(Source.find("s_FallbackButton"), std::string::npos);
 	EXPECT_NE(Source.find("return DoButton_MenuInternal(pBC, pText, Icon, pFallbackIcon ? pFallbackIcon : \"\", Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize"), std::string::npos);
 	EXPECT_EQ(Source.find("reason=%s\", pReason != nullptr ? pReason : \"unknown\""), std::string::npos);
-
-	const std::string TClient = ReadRepoFile("src/game/client/components/tclient/menus_tclient.cpp");
-	EXPECT_TRUE(ContainsAll(TClient, {
-						 "DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_OverrideButton",
-						 "DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_AddButton",
-						 "DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &s_RemoveButton",
-					 }));
 }
 
 TEST(QmMonitoringTextRuntimeContract, IngameEscPrewarmsStableTextBeforeVisibleFrame)

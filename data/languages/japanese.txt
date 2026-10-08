@@ -1205,6 +1205,9 @@ Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
+Automatic (Qm service)
+== 自動（Qm サービス）
+
 Automatic effect LOD when crowded
 == 密集時にエフェクトを自動で軽量化
 
@@ -2753,12 +2756,6 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 == ラテン文字用のカスタムフォント（ファミリー、またはファミリー + スタイル）
 
-Custom font weight (variable fonts)
-== カスタムフォントの太さ（可変フォント）
-
-Custom Font:
-== カスタムフォント：
-
 Custom prompt template
 == カスタムプロンプトテンプレート
 
@@ -2990,6 +2987,9 @@ Debug SQL.
 Debug tile layer clipping.
 == デバッグタイルレイヤークリッピング
 
+Decorative throws
+== 装飾用の投げ物
+
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 専用 WebSocket エンドポイント（空欄なら wss://qmclient.icu/ws を使用）
 
@@ -3016,6 +3016,9 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 
 DeepL API
 == DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free：月間50万文字（deepl.comで登録；無料キーは :fx で終わります）
 
 DeepL API Key (free keys end with :fx)
 == DeepL API キー（無料キーは :fx で終わります）
@@ -3722,6 +3725,9 @@ Edit touch controls
 Editor
 == エディター
 
+Egg
+== 卵
+
 Elastic
 == エラスティック
 
@@ -3844,6 +3850,9 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == フリーズ時にカスタム予測マージンを有効化
+
+Enable decorative grass, tomato and egg throws
+== 草・トマト・卵の装飾用投げ物を有効にする
 
 Enable Deleting
 == 削除を有効化
@@ -5138,6 +5147,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == グラフィックス追跡レベル：0 = オフ、1 = 定期サマリー、2 = サマリーと遅いフレーム、3 = 詳細なバックエンド追跡
 
+Grass
+== 草
+
 Greek
 == ギリシャ文字
 
@@ -5592,7 +5604,7 @@ Ignored legacy Dynamic Island edge margin
 == 旧式ダイナミックアイランドの端の余白は無視されます
 
 IME
-== IME
+== 入力メソッド
 
 IME background color
 == IME 背景色
@@ -5614,9 +5626,6 @@ IME text color
 
 Import from clipboard
 == クリップボードからインポート
-
-Improved Anti Ping
-== 改良版 Anti Ping
 
 Improved anti ping
 == 改善されたアンチピング
@@ -6004,6 +6013,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 投票後も投票ウィンドウを開いたままにする
+
+Key
+== キー
 
 Key binds
 == キーバインド
@@ -8384,9 +8396,6 @@ Player feet skin
 Player hands color
 == プレイヤーの手の色
 
-Player Indicator
-== プレイヤーインジケーター
-
 Player indicator
 == プレイヤーインジケーター
 
@@ -10444,6 +10453,12 @@ Server kick/spec votes are no longer actively moderated.
 
 Server kick/spec votes will now be actively moderated.
 == サーバーのキック/観戦投票は、アクティブモデレーションの対象になりました。
+
+Server list is more than five minutes old
+== サーバー一覧は五分以上更新されていません
+
+Server list refresh failed; showing the previous list
+== サーバー一覧の更新に失敗したため、前の一覧を表示しています
 
 Server name
 == サーバー名
@@ -12722,9 +12737,6 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == 「default」という名前は予約されています。
 
-The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
-== 旧ディレクトリ qmclient/fonts は読み込まれなくなりました。カスタムフォントを設定ディレクトリ内の fonts/fonts_store に手動で移動してください。通常版はユーザー設定ディレクトリ、ポータブル版は profile を使用します。data/fonts に同梱されているフォントを移動する必要はありません。
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == あなたがささやき中だったプレイヤーは、まだ再接続していないか退出しました。少し待つか、別の相手にささやいてください
 
@@ -12880,6 +12892,21 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == このツールチップは ui_widget::Tooltip が提供しています。CTooltips の薄いラッパーです。
+
+Throw a decorative grass, tomato or egg projectile
+== 草・トマト・卵の装飾物を投げる
+
+Throw egg key
+== 卵を投げるキー
+
+Throw grass key
+== 草を投げるキー
+
+Throw tomato key
+== トマトを投げるキー
+
+Throwables
+== 投げ物
 
 Tick delay before executing qm_execute_on_join
 == qm_execute_on_join 実行前の遅延（tick）
@@ -13153,6 +13180,9 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == このサーバーを特定のコミュニティに登録するためのトークン
+
+Tomato
+== トマト
 
 Too many translation tasks
 == 翻訳タスクが多すぎます
@@ -13450,9 +13480,6 @@ UI size percentage
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == 選択した %d 個のアイテムを削除できませんでした。最初に失敗したアイテムは「%s」です。
-
-Unable to delete skin
-== スキンを削除できません
 
 Unable to delete the demo '%s'
 == デモ「%s」を削除できませんでした

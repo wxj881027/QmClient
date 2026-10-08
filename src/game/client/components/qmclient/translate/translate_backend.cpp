@@ -1506,6 +1506,8 @@ std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const cha
 {
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "baidu") == 0)
 		return CreateBaiduTranslateBackend(Http, pText, pTarget, pSource, pCreateRequest);
+	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "auto") == 0)
+		return CreateTranslateBackendAutomatic(Http, pText, pTarget, pSource, pCreateRequest);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0)
 		return std::make_unique<CTranslateBackendLibretranslate>(Http, pText, pTarget, pSource, pCreateRequest);
 	if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
@@ -1565,6 +1567,10 @@ int GetTranslateConcurrency()
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0)
 	{
 		return 1; // FTAPI 默认 1（防止过载）
+	}
+	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "auto") == 0)
+	{
+		return 1; // 自动链路的总并发由中心服务控制。
 	}
 	else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0)
 	{

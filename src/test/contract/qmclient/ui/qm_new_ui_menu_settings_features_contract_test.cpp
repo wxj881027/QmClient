@@ -21,16 +21,6 @@
 #include <test/support/qmclient_source_contract_test.h>
 #include <test/test.h>
 
-TEST(QmNewUiMenuSettingsFeaturesContract, DynamicIslandSettingsOmitsEdgeMarginControl)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string Body = FunctionBody(Source, "void CMenus::RenderQmHudDynamicIslandContent(");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_EQ(Body.find("QmHudIslandEdgeMargin"), std::string::npos);
-	EXPECT_EQ(Body.find("Localize(\"Edge margin\")"), std::string::npos);
-}
-
 TEST(QmNewUiMenuSettingsFeaturesContract, DynamicIslandEdgeMarginIsOnlyAnIgnoredLegacyCommand)
 {
 	const std::string Config = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
@@ -55,26 +45,13 @@ TEST(QmNewUiMenuSettingsFeaturesContract, ProcessPrioritySettingIsRemoved)
 	EXPECT_EQ(ClientSource.find("qm_process_high_priority"), std::string::npos);
 }
 
+// 卡片实现迁移终态：生产目标注册独立模块，宿主和迷你功能模块不再承载它。
 TEST(QmNewUiMenuSettingsFeaturesContract, ScoreboardSettingsLiveInDedicatedCardModule)
 {
-	const std::string MenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string ScoreboardCardSource = ReadTextFile("src/game/client/QmUi/cards/QmCardCatalogBetterScoreboard.cpp");
-	const std::string MiniFeaturesBody = FunctionBody(MenusSource, "void CMenus::RenderQmFunctionMiniFeaturesContent(");
-	ASSERT_FALSE(MiniFeaturesBody.empty());
-	ASSERT_FALSE(ScoreboardCardSource.empty());
-
-	for(const char *pConfig : {"m_QmBetterScoreboard", "m_QmScoreboardPoints", "m_QmScoreboardOnDeath", "m_QmScoreboardScroll", "m_QmScoreboardFilter"})
-	{
-		EXPECT_EQ(MiniFeaturesBody.find(pConfig), std::string::npos) << pConfig;
-		EXPECT_NE(ScoreboardCardSource.find(pConfig), std::string::npos) << pConfig;
-	}
-	EXPECT_NE(ScoreboardCardSource.find("void CMenus::RenderQmFunctionBetterScoreboardContent("), std::string::npos);
-	size_t PreviousControlPosition = 0;
-	for(const char *pControl : {"Better scoreboard", "Scoreboard point check", "Show scoreboard after death", "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers", "Scoreboard filter: only show players whose name or clan contains this text"})
-	{
-		const size_t Position = ScoreboardCardSource.find(pControl);
-		ASSERT_NE(Position, std::string::npos) << pControl;
-		EXPECT_GT(Position, PreviousControlPosition) << pControl;
-		PreviousControlPosition = Position;
-	}
+	const std::string Build = ReadTextFile("CMakeLists.txt");
+	const std::string Menus = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string FunctionCards = ReadTextFile("src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp");
+	EXPECT_NE(Build.find("QmUi/cards/QmCardCatalogBetterScoreboard.cpp"), std::string::npos);
+	EXPECT_EQ(Menus.find("void CMenus::RenderQmFunctionBetterScoreboardContent("), std::string::npos);
+	EXPECT_EQ(FunctionCards.find("void CMenus::RenderQmFunctionBetterScoreboardContent("), std::string::npos);
 }

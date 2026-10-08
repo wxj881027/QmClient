@@ -42,6 +42,9 @@ CMakeLists.txt text eol=lf
 *.txt text eol=lf
 *.rst text eol=lf
 
+# Wiki 同步补丁须保留 LF，CRLF 会使零上下文补丁与基线不匹配。
+"docs/规格/2026-10-08-Wiki待办同步.patch" text eol=lf
+
 # 本地化 key 可以以空格结尾，用于和后续编辑器控件拼接。生成产物必须逐字保留该空格。
 data/languages/*.txt whitespace=-trailing-space
 qmclient_scripts/languages_qmclient/extracted_strings.txt whitespace=-trailing-space

@@ -13,6 +13,7 @@
 #include <vector>
 
 class CMenus;
+class CScrollRegion;
 
 // 全局卡片目录：每张设置卡片的构造入口（标题/测量/重测版本/预布局输入/内容渲染）
 // 都由卡片模块文件自己提供，页面只声明"这个页面有哪些卡片"。
@@ -29,15 +30,33 @@ namespace qm_card_catalog
 	const std::vector<const char *> &TitleCardStableIds();
 	const std::vector<const char *> &TeeCardStableIds();
 	const std::vector<const char *> &GeneralCardStableIds();
+	const std::vector<const char *> &ControlsCardStableIds();
 	uint64_t GeneralMeasureContentRevision();
 	uint64_t NameplateMeasureContentRevision();
 	uint64_t BlockWordsLayoutRevision();
+	uint64_t FavoriteMapsLayoutRevision(size_t Count);
 
 	// 该 stableId 是否有可构造的卡片模块（用于搜索页过滤与页面自检）。
 	bool HasCardModule(const char *pStableId);
+	bool IsStandardCard(const char *pStableId);
+	int StandardCardFamily(const char *pStableId);
+	const std::vector<const char *> &CatalogPageStableIds(const char *pTab);
 	// 全目录卡片的重测版本聚合（任一卡的内容高度依赖项变化即失效），页面把它折进 DefinitionsRevision。
 	// 列表数量由页面提供，让异步资源加载也能触发搜索页重新测量。
 	uint64_t MeasureContentRevision(size_t LanguageCount = 0, size_t ThemeCount = 0);
+
+	enum class ETClientCardPass
+	{
+		MEASURE,
+		RENDER,
+		REVISION
+	};
+	struct STClientCardResult
+	{
+		float m_Height = 0.0f;
+		uint64_t m_Revision = 0;
+	};
+	bool IsTClientCard(const char *pStableId);
 
 	// 功能分类卡片的布局版本。编辑行与文本缓存由各自卡片模块维护，
 	// 页面和搜索页使用同一份状态进行测量。
@@ -62,6 +81,7 @@ namespace qm_card_catalog
 		SSettingsContentMetrics m_Metrics{};
 		float m_LabelWidth = 0.0f;
 		IUiContext m_UiContext{};
+		CScrollRegion *m_pScrollRegion = nullptr;
 		// 卡片内容基座（QmSettingsCardStyle）：卡片模块的渲染参数不依赖页面类型。
 		float m_Padding = 14.0f;
 		float m_CornerRadius = 10.0f;
@@ -108,6 +128,14 @@ namespace qm_card_catalog
 	// 这里显式列出“卡片可以调用哪些渲染/输入助手”，避免把整类成员公开出去。
 	struct QmCardRenderHook
 	{
+		static STClientCardResult RunTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, ETClientCardPass Pass);
+		static uint64_t PrepareTClientCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vIds);
+		static bool BuildTClientCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		static uint64_t PrepareStandardCardFamily(const SQmCardBuildContext &Ctx, int Family, std::vector<SSettingsCardDefinition> *pCards);
+		static uint64_t PrepareStandardCards(const SQmCardBuildContext &Ctx, const std::vector<const char *> &vStableIds);
+		static bool BuildStandardCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+		static uint64_t PrepareControlsCards(CMenus *pMenus, float ContentWidth, bool ReadOnly, CScrollRegion *pScrollRegion);
+		static bool BuildControlsCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildGeneralCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);

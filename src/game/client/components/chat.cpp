@@ -1107,6 +1107,11 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	}
 	else if(Event.m_Flags & IInput::FLAG_PRESS && (Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER))
 	{
+		if(Input()->HasComposition())
+		{
+			return true;
+		}
+
 		if(m_ServerCommandsNeedSorting)
 		{
 			std::sort(m_vServerCommands.begin(), m_vServerCommands.end());

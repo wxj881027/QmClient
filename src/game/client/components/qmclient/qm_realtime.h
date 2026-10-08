@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QM_REALTIME_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QM_REALTIME_H
 
+#include <base/vmath.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -26,6 +28,7 @@ enum class EQmRealtimeEvent
 	TITLE_PROFILE,
 	TITLE_STATUS,
 	EMOTICON,
+	DECORATIVE_THROW,
 	ERROR,
 };
 
@@ -43,6 +46,13 @@ struct SQmRealtimeMessage
 	int m_BroadcastVersion = 0;
 	bool m_HasTitles = false;
 	std::shared_ptr<const json_value> m_pTitlePayload;
+	bool m_HasDecorativeThrow = false;
+	int m_ThrowType = -1;
+	vec2 m_ThrowOrigin = vec2(0.0f, 0.0f);
+	vec2 m_ThrowDirection = vec2(0.0f, 0.0f);
+	std::string m_ThrowClientId;
+	std::string m_ThrowPlayerName;
+	std::string m_ThrowServerAddress;
 	bool m_HasEmoticon = false;
 	int m_Emoticon = -1;
 	int m_PlayerId = -1;

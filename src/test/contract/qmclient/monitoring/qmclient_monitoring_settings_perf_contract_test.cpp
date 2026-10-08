@@ -28,7 +28,7 @@ TEST(QmMonitoringSettingsPerfContract, SettingsUiBudgetTelemetryExists)
 {
 	const std::string Header = ReadRepoFile("src/game/client/components/menus.h");
 	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
-	const std::string TClient = ReadRepoFile("src/game/client/components/tclient/menus_tclient.cpp");
+	const std::string TClient = ReadRepoFile("src/game/client/QmUi/cards/QmCardCatalogStandard.cpp");
 	const std::string Assets = ReadRepoFile("src/game/client/components/menus_settings_assets.cpp");
 
 	EXPECT_NE(Header.find("struct SSettingsUiBudgetFrame"), std::string::npos);

@@ -4,9 +4,11 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 
 #include <algorithm>
+#include <map>
 #include <vector>
 
 namespace qm_card_catalog
@@ -94,6 +96,18 @@ namespace qm_card_catalog
 			"deck:qmclient-contributors-title-display",
 		};
 
+		const std::vector<const char *> s_vControlsCards = {
+			"deck:controls-mouse",
+			"deck:controls-controller",
+			"deck:controls-movement",
+			"deck:controls-weapon",
+			"deck:controls-voting",
+			"deck:controls-chat",
+			"deck:controls-dummy",
+			"deck:controls-miscellaneous",
+			"deck:controls-custom",
+		};
+
 		const std::vector<const char *> s_vGeneralCards = {
 			"deck:general-game",
 			"deck:general-language",
@@ -158,7 +172,12 @@ namespace qm_card_catalog
 
 	bool HasCardModule(const char *pStableId)
 	{
-		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId) || ContainsStableId(s_vGeneralCards, pStableId);
+		return IsTClientCard(pStableId) || IsStandardCard(pStableId) || ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId) || ContainsStableId(s_vGeneralCards, pStableId) || ContainsStableId(s_vControlsCards, pStableId);
+	}
+
+	const std::vector<const char *> &ControlsCardStableIds()
+	{
+		return s_vControlsCards;
 	}
 
 	const std::vector<const char *> &GeneralCardStableIds()
@@ -197,3 +216,57 @@ namespace qm_card_catalog
 		return Revision;
 	}
 } // namespace qm_card_catalog
+
+namespace qm_card_catalog
+{
+	namespace
+	{
+		constexpr const char *s_apStandardTabs[] = {
+			"player", "graphics", "sound", "ddnet", "appearance-hud", "appearance-chat",
+			"appearance-name-plate", "appearance-hook-collision", "appearance-info-messages", "appearance-laser", "tee7"};
+
+	}
+
+	int StandardCardFamily(const char *pStableId)
+	{
+		if(pStableId == nullptr || str_startswith(pStableId, "deck:") == nullptr)
+			return -1;
+		const auto *pDefault = qm_card_registry::FindByStableId(pStableId);
+		if(pDefault == nullptr || pDefault->m_pDefaultTab == nullptr)
+			return -1;
+		for(size_t Index = 0; Index < std::size(s_apStandardTabs); ++Index)
+			if(str_comp(pDefault->m_pDefaultTab, s_apStandardTabs[Index]) == 0)
+				return (int)Index;
+		return -1;
+	}
+
+	bool IsStandardCard(const char *pStableId)
+	{
+		return StandardCardFamily(pStableId) >= 0;
+	}
+	bool IsTClientCard(const char *pStableId)
+	{
+		const auto *pDefault = qm_card_registry::FindByStableId(pStableId);
+		if(pDefault == nullptr || pDefault->m_pDefaultTab == nullptr || pDefault->m_pNavigationStableId != nullptr)
+			return false;
+		constexpr const char *s_apTabs[] = {"tclient", "tclient-bind-wheel", "tclient-chat-binds", "tclient-warlist", "tclient-status-bar", "tclient-profiles", "tclient-configs"};
+		for(const char *pTab : s_apTabs)
+			if(str_comp(pDefault->m_pDefaultTab, pTab) == 0)
+				return true;
+		return false;
+	}
+
+	const std::vector<const char *> &CatalogPageStableIds(const char *pTab)
+	{
+		static const auto s_Cards = [] {
+			std::map<std::string, std::vector<const char *>> Cards;
+			for(const auto &Default : qm_card_registry::Defaults())
+				if(IsStandardCard(Default.m_pStableId) || IsTClientCard(Default.m_pStableId))
+					Cards[Default.m_pDefaultTab].push_back(Default.m_pStableId);
+			return Cards;
+		}();
+		static const std::vector<const char *> s_Empty;
+		const auto It = s_Cards.find(pTab != nullptr ? pTab : "");
+		return It != s_Cards.end() ? It->second : s_Empty;
+	}
+}

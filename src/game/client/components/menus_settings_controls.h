@@ -3,6 +3,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_MENUS_SETTINGS_CONTROLS_H
 #define GAME_CLIENT_COMPONENTS_MENUS_SETTINGS_CONTROLS_H
 
+#include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/component.h>
 #include <game/client/components/binds.h>
 #include <game/client/lineinput.h>
@@ -11,6 +12,13 @@
 
 #include <cstdint>
 #include <vector>
+
+struct SSettingsCardDefinition;
+namespace qm_card_catalog
+{
+	struct SQmCardBuildContext;
+	struct QmCardRenderHook;
+}
 
 enum class EBindOptionGroup
 {
@@ -62,6 +70,14 @@ public:
 	void Render(CUIRect MainView);
 
 private:
+	friend struct qm_card_catalog::QmCardRenderHook;
+	SSettingsContentMetrics m_CardMetrics{};
+	CScrollRegion *m_pCardScrollRegion = nullptr;
+	void PrepareSettingsCards(const SSettingsContentMetrics &Metrics, bool ReadOnly, CScrollRegion *pScrollRegion);
+	uint64_t SettingsCardsRevision(bool ReadOnly) const;
+	bool BuildSettingsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
+	static const char *BindGroupCardStableId(EBindOptionGroup Group);
+	static void SyncBindGroupExpanded(bool *pExpanded);
 	bool m_aBindGroupExpanded[(int)EBindOptionGroup::NUM];
 	CButtonContainer m_aBindGroupExpandButtons[(int)EBindOptionGroup::NUM];
 	std::vector<CBindOption> m_vBindOptions;
@@ -81,7 +97,6 @@ private:
 
 	float MeasureSettingsBindsHeight(EBindOptionGroup Group) const;
 	void RenderSettingsBinds(EBindOptionGroup Group, CUIRect View, bool ReadOnly);
-	void RenderSettingsBindCard(EBindOptionGroup Group, CUIRect View, bool ReadOnly);
 
 	float MeasureSettingsMouseHeight() const;
 	void RenderSettingsMouse(CUIRect View);
