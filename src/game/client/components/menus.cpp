@@ -60,6 +60,7 @@
 #include <game/client/qm_icon.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
+#include <game/version.h>
 
 #include <algorithm>
 #include <chrono>
@@ -4110,6 +4111,9 @@ void CMenus::Render()
 	break;
 
 	case IClient::STATE_OFFLINE:
+		if(QmNewsShouldAnnounce(true, m_ShowStart, m_Popup != POPUP_NONE,
+			str_comp(g_Config.m_QmNewsReadRelease, CLIENT_RELEASE_VERSION) != 0, GameClient()->m_QmClient.HasUnreadQmNews()))
+			ShowQmNewFeaturesPopup();
 		if(m_Popup != POPUP_NONE)
 		{
 			CPerfTimer StageTimer;
@@ -6454,11 +6458,11 @@ CUIElement &CMenus::MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int
 {
 	const uint64_t LanguageHash = str_quickhash(g_Config.m_ClLanguagefile);
 	// 分类字体（中文/图标符号）与各分类可变字重改变文本外观，一并计入菜单文本池字体键。
-	const uint64_t FontHash = str_quickhash(g_Config.m_TcCustomFont) * 31 +
-				  str_quickhash(g_Config.m_TcCustomFontCjk) * 131 +
-				  str_quickhash(g_Config.m_TcCustomFontIcons) * 1013 +
-				  (uint64_t)g_Config.m_TcCustomFontWeight * 10007 +
-				  (uint64_t)g_Config.m_TcCustomFontWeightCjk * 100003;
+	const uint64_t FontHash = str_quickhash(g_Config.m_QmCustomFont) * 31 +
+				  str_quickhash(g_Config.m_QmCustomFontCjk) * 131 +
+				  str_quickhash(g_Config.m_QmCustomFontIcons) * 1013 +
+				  (uint64_t)g_Config.m_QmCustomFontWeight * 10007 +
+				  (uint64_t)g_Config.m_QmCustomFontWeightCjk * 100003;
 	if(m_MenuTextPoolLanguageHash == 0 || m_MenuTextPoolFontHash == 0)
 	{
 		m_MenuTextPoolLanguageHash = LanguageHash;

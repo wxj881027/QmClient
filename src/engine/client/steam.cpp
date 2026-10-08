@@ -1,3 +1,4 @@
+#include "steam_client_path.h"
 #include "steam_probe.h"
 
 #include <base/fs.h>
@@ -14,6 +15,20 @@ namespace
 {
 
 	constexpr const char *STEAM_SILENT_ARGUMENT = "-silent";
+	const char *SteamSourceName(ESteamClientSource Source)
+	{
+		switch(Source)
+		{
+		case ESteamClientSource::NOT_FOUND: return "not found";
+		case ESteamClientSource::MANUAL: return "manual path";
+		case ESteamClientSource::REGISTRY: return "registry";
+		case ESteamClientSource::RUNNING_PROCESS: return "running process";
+		case ESteamClientSource::COMMON_DIRECTORY: return "common directory";
+		case ESteamClientSource::ENVIRONMENT_PATH: return "PATH";
+		case ESteamClientSource::PLATFORM_DIRECTORY: return "platform directory";
+		}
+		return "unknown";
+	}
 
 	class CSteam : public ISteam
 	{
@@ -210,15 +225,59 @@ namespace
 } // namespace
 #endif
 
-bool SteamFindClient(char *pBuffer, int BufferSize)
+bool SteamFindClient(char *pBuffer, int BufferSize, ESteamClientSource *pSource, const char *pManualPath)
 {
+	if(pSource != nullptr)
+		*pSource = ESteamClientSource::NOT_FOUND;
+	if(pBuffer == nullptr || BufferSize <= 0)
+		return false;
+	pBuffer[0] = '\0';
 #if defined(CONF_PLATFORM_ANDROID)
 	return false;
-#elif defined(CONF_FAMILY_WINDOWS)
-	return SteamProbeFindClientWindows(pBuffer, BufferSize);
 #else
-	return SteamFindClientUnix(pBuffer, BufferSize);
+	bool ManualFound = false;
+#if defined(CONF_FAMILY_WINDOWS)
+	ManualFound = SteamProbeValidateManualPath(pManualPath, pBuffer, BufferSize);
+#else
+#if defined(CONF_PLATFORM_MACOS)
+	const std::string ManualPath = SteamManualPathCandidate(pManualPath, ESteamClientPlatform::MACOS);
+	ManualFound = !ManualPath.empty() && fs_is_dir(ManualPath.c_str());
+#else
+	const std::string ManualPath = SteamManualPathCandidate(pManualPath, ESteamClientPlatform::UNIX);
+	ManualFound = !ManualPath.empty() && fs_is_file(ManualPath.c_str());
 #endif
+	if(ManualFound)
+		str_copy(pBuffer, ManualPath.c_str(), BufferSize);
+#endif
+	if(ManualFound)
+	{
+		if(pSource != nullptr)
+			*pSource = ESteamClientSource::MANUAL;
+		return true;
+	}
+#if defined(CONF_FAMILY_WINDOWS)
+	return SteamProbeFindClientWindows(pBuffer, BufferSize, pSource);
+#else
+	const bool Found = SteamFindClientUnix(pBuffer, BufferSize);
+	if(Found && pSource != nullptr)
+		*pSource = ESteamClientSource::PLATFORM_DIRECTORY;
+	return Found;
+#endif
+#endif
+}
+
+SSteamClientInfo SteamInspectClient(const char *pManualPath)
+{
+	SSteamClientInfo Info;
+	SteamFindClient(Info.m_aPath, sizeof(Info.m_aPath), &Info.m_Source, pManualPath);
+	Info.m_ManualPathRejected = pManualPath != nullptr && pManualPath[0] != '\0' && Info.m_Source != ESteamClientSource::MANUAL;
+#if defined(CONF_FAMILY_WINDOWS)
+	char aRunningPath[1024];
+	Info.m_Running = SteamProbePathFromRunningProcess(aRunningPath, sizeof(aRunningPath));
+	Info.m_RunningKnown = true;
+#endif
+	dbg_msg("steam", "detection: source=%s, path='%s', manual_rejected=%d", SteamSourceName(Info.m_Source), Info.m_aPath, Info.m_ManualPathRejected);
+	return Info;
 }
 
 bool SteamOpenClient()
@@ -229,13 +288,14 @@ bool SteamOpenClient()
 	// 智能识别：先定位 Steam 客户端再启动；未安装时直接放弃，
 	// 绝不把找不到的名字交给 shell，避免触发系统「找不到文件」弹窗。
 	char aSteamPath[1024];
-	if(!SteamFindClient(aSteamPath, (int)sizeof(aSteamPath)))
+	ESteamClientSource Source;
+	if(!SteamFindClient(aSteamPath, (int)sizeof(aSteamPath), &Source, g_Config.m_QmSteamClientPath))
 	{
 		dbg_msg("steam", "steam client not found, skip launch");
 		return false;
 	}
 	if(g_Config.m_Debug)
-		dbg_msg("steam", "found steam client: '%s'", aSteamPath);
+		dbg_msg("steam", "found steam client: '%s', source=%s", aSteamPath, SteamSourceName(Source));
 #if defined(CONF_PLATFORM_MACOS)
 	// macOS：用 open 启动检测到的应用包。
 	const char *apOpenArguments[] = {aSteamPath};

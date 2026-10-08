@@ -77,7 +77,7 @@ namespace qm_card_catalog
 			};
 			// 自定义折叠状态由此处的回调切换，卡头只绘制与该输入处理对应的按钮。
 			const IUiContext CardCtx = Ctx.m_UiContext;
-			Out.m_HeaderAction = [CardCtx](const SSettingsCardFrame &Frame, const bool Collapsed) { RenderSettingsCardCollapseButton(CardCtx, Frame.m_HandleRect, Collapsed); };
+			Out.m_HeaderAction = [CardCtx, pCollapseButtons, Index](const SSettingsCardFrame &Frame, const bool Collapsed) { RenderSettingsCardCollapseButton(CardCtx, Frame.m_HandleRect, Collapsed, 1.0f, &pCollapseButtons[Index]); };
 		}
 		Out.m_MeasureRevision = MeasureRevision;
 		Out.m_PreLayoutInput = std::move(PreLayoutInput);

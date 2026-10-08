@@ -13,7 +13,16 @@ namespace qm_pie_menu_ui
 		return UnitsPerPixel(Screen.m_BottomRight - Screen.m_TopLeft, pGraphics->ScreenSize());
 	}
 
-	inline ColorRGBA OptionColor(ColorRGBA Color, bool Highlighted)
+	inline ColorRGBA SelectionTint(ColorRGBA Color, ColorRGBA Tint)
+	{
+		const float Strength = std::clamp(Tint.a, 0.0f, 1.0f);
+		Color.r += (Tint.r - Color.r) * Strength;
+		Color.g += (Tint.g - Color.g) * Strength;
+		Color.b += (Tint.b - Color.b) * Strength;
+		return Color;
+	}
+
+	inline ColorRGBA OptionColor(ColorRGBA Color, bool Highlighted, ColorRGBA Tint = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f))
 	{
 		if(Highlighted)
 		{
@@ -21,6 +30,7 @@ namespace qm_pie_menu_ui
 			Color.g = std::min(Color.g * 1.3f, 1.0f);
 			Color.b = std::min(Color.b * 1.3f, 1.0f);
 			Color.a = std::min(Color.a * 1.2f, 1.0f);
+			Color = SelectionTint(Color, Tint);
 		}
 		return Color;
 	}

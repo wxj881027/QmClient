@@ -237,9 +237,12 @@ void CUi::RenderPopupMenus()
 
 		// 先保存关闭意图，绘制完成后释放输入深度，再运行关闭回调。
 		// 作用域兜底保证提前退出也不会泄漏深度，防止底层页面抢占弹窗拖拽。
-		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, MouseButtonClicked(0) != 0, MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId};
+		const bool InsideGroup = std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [this](const SPopupMenu &Menu) {
+			return !Menu.m_Closing && MouseInside(&Menu.m_Rect) && (!Menu.m_Props.m_ClipToViewport || MouseInside(&Menu.m_Props.m_Viewport));
+		});
+		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, MouseButtonClicked(0) != 0, MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId, InsideGroup};
 		const EQmPopupPointerAction PointerAction = QmResolvePopupPointerAction(PointerInput);
-		const bool CloseBeforeRender = PointerAction == EQmPopupPointerAction::CLOSE;
+		const bool CloseBeforeRender = PointerAction == EQmPopupPointerAction::CLOSE || PointerAction == EQmPopupPointerAction::CLOSE_GROUP;
 		if(PointerAction == EQmPopupPointerAction::CAPTURE)
 			SetActiveItem(pId);
 		else if(PointerAction == EQmPopupPointerAction::RELEASE)
@@ -372,6 +375,12 @@ void CUi::RenderPopupMenus()
 		PopupInputScope.Release();
 		if(CloseBeforeRender)
 		{
+			// 点击父层只收起子层；点击整组外部则一起关闭，避免留下遮挡页面的父层。
+			if(PointerAction == EQmPopupPointerAction::CLOSE_GROUP)
+			{
+				ClosePopupMenus();
+				break;
+			}
 			ClosePopupMenu(pId);
 			--i;
 		}

@@ -104,6 +104,8 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::GoresDrownBoard, EQmModuleColumn::Right, 23, "gores_drown_board"},
 		{EQmModuleId::BetterScoreboard, EQmModuleColumn::Left, 6, "better_scoreboard"},
 		{EQmModuleId::Ime, EQmModuleColumn::Left, 19, "ime"},
+		{EQmModuleId::AppearancePreset, EQmModuleColumn::Full, 1, "appearance_preset"},
+		{EQmModuleId::Tooltip, EQmModuleColumn::Left, 9, "tooltip"},
 	};
 }
 

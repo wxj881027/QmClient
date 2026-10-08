@@ -2705,7 +2705,7 @@ void CServerBrowser::CleanFilters()
 	// list is available, otherwise valid custom entries from the config are
 	// cleaned too early and get lost on next save.
 	const bool CustomCommunitiesCanStillBeLoaded =
-		g_Config.m_TcCustomCommunitiesUrl[0] != '\0' && m_CustomCommunitiesFunction == nullptr;
+		g_Config.m_QmCustomCommunitiesUrl[0] != '\0' && m_CustomCommunitiesFunction == nullptr;
 	if(CustomCommunitiesCanStillBeLoaded)
 		return;
 

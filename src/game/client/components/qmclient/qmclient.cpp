@@ -1699,6 +1699,21 @@ void CQmClient::SendQmRealtimeStop()
 	m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size());
 }
 
+bool CQmClient::HasUnreadQmNews() const
+{
+	return m_QmMarkdownBroadcast.IsUnread(g_Config.m_QmNewsReadVersion, g_Config.m_QmNewsReadContentId);
+}
+
+void CQmClient::MarkQmNewsRead()
+{
+	str_copy(g_Config.m_QmNewsReadRelease, CLIENT_RELEASE_VERSION);
+	if(m_QmMarkdownBroadcast.HasMarkdown() && m_QmMarkdownBroadcast.Version() >= g_Config.m_QmNewsReadVersion)
+	{
+		g_Config.m_QmNewsReadVersion = m_QmMarkdownBroadcast.Version();
+		str_copy(g_Config.m_QmNewsReadContentId, m_QmMarkdownBroadcast.ContentId());
+	}
+}
+
 void CQmClient::SaveQmMarkdownBroadcastCache()
 {
 	char aPath[IO_MAX_PATH_LENGTH];

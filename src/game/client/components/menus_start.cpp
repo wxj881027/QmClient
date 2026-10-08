@@ -301,7 +301,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 				NewPage = CMenus::PAGE_SETTINGS;
 
 			static CButtonContainer s_QmNewFeaturesButton;
-			if(ui_widget::SecondaryButton(Ctx, &s_QmNewFeaturesButton, Localize("New features"), NewFeaturesButton))
+			if(ui_widget::SecondaryButton(Ctx, &s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), NewFeaturesButton))
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			static CButtonContainer s_LocalServerButton;
@@ -423,7 +423,7 @@ void CMenusStart::RenderStartMenuImpl(CUIRect MainView, bool UseV2Layout)
 
 			// 新功能入口：紧贴「退出」上方，打开内置新功能弹窗。
 			static CButtonContainer s_QmNewFeaturesButton;
-			if(GameClient()->m_Menus.DoButton_Menu(&s_QmNewFeaturesButton, Localize("New features"), 0, &NewFeaturesButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+			if(GameClient()->m_Menus.DoButton_Menu(&s_QmNewFeaturesButton, GameClient()->m_QmClient.HasUnreadQmNews() ? Localize("New features (unread)") : Localize("New features"), 0, &NewFeaturesButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 				GameClient()->m_Menus.ShowQmNewFeaturesPopup();
 
 			ScaledButton = ScaleButtonRect(aMenuButtons[2], s_aMenuButtonScale[2]);

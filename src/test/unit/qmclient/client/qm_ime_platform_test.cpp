@@ -7,6 +7,70 @@
 
 #include <string>
 
+TEST(QmImeFocus, ClosedOwnersRejectStaleActiveInputs)
+{
+	for(const auto Priority : {EInputPriority::NONE, EInputPriority::UI, EInputPriority::CHAT, EInputPriority::CONSOLE})
+		EXPECT_FALSE(QmImeHasLiveInputOwner(Priority, false, false, false, false, false));
+	EXPECT_FALSE(QmImeHasLiveInputOwner(EInputPriority::CHAT, true, false, true, false, false));
+	EXPECT_FALSE(QmImeHasLiveInputOwner(EInputPriority::CONSOLE, true, true, false, false, false));
+}
+
+TEST(QmImeFocus, OpenTextOwnersKeepTheirOwnPriority)
+{
+	EXPECT_TRUE(QmImeHasLiveInputOwner(EInputPriority::UI, true, false, false, false, false));
+	EXPECT_TRUE(QmImeHasLiveInputOwner(EInputPriority::UI, false, false, false, true, false));
+	EXPECT_TRUE(QmImeHasLiveInputOwner(EInputPriority::CHAT, false, true, false, false, false));
+	EXPECT_TRUE(QmImeHasLiveInputOwner(EInputPriority::CONSOLE, false, false, true, false, false));
+}
+
+TEST(QmImeFocus, ChatPopupInputExpiresWithChatOwner)
+{
+	EXPECT_TRUE(QmImeHasLiveInputOwner(EInputPriority::UI, false, true, false, false, true));
+	EXPECT_FALSE(QmImeHasLiveInputOwner(EInputPriority::UI, false, true, false, false, false));
+	EXPECT_FALSE(QmImeHasLiveInputOwner(EInputPriority::UI, false, false, false, false, true));
+}
+
+TEST(QmImeTextInputSession, FocusStartsOnceAndStopsOnRelease)
+{
+	CQmImeTextInputSession Session;
+	using EAction = CQmImeTextInputSession::EAction;
+	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(false), EAction::STOP);
+	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
+}
+
+TEST(QmImeTextInputSession, EditorOwnsInputUntilClientReturns)
+{
+	CQmImeTextInputSession Session;
+	using EAction = CQmImeTextInputSession::EAction;
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_TRUE(Session.SetClientOwnership(false));
+	EXPECT_FALSE(Session.ClientOwnsInput());
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
+
+	EXPECT_TRUE(Session.SetClientOwnership(true));
+	EXPECT_EQ(Session.UpdateFocus(false), EAction::NONE);
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+}
+
+TEST(QmImeTextInputSession, RepeatedOwnershipDoesNotRestartComposition)
+{
+	CQmImeTextInputSession Session;
+	using EAction = CQmImeTextInputSession::EAction;
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_FALSE(Session.SetClientOwnership(true));
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
+	Session.ResetFocus();
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::START);
+	EXPECT_TRUE(Session.SetClientOwnership(false));
+	Session.ResetFocus();
+	EXPECT_FALSE(Session.SetClientOwnership(false));
+	EXPECT_EQ(Session.UpdateFocus(true), EAction::NONE);
+}
+
 TEST(QmImePlatform, SystemCandidateUiPolicyMatchesPlatform)
 {
 #if defined(CONF_FAMILY_WINDOWS)

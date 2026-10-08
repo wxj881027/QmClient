@@ -22,7 +22,7 @@ namespace
 TEST(TranslateResponses, EmptyTopLevelFallsBackToAllMessageSegments)
 {
 	SLlmParseResult Result;
-	ASSERT_TRUE(Parse(R"({"output_text":"","output":[{"type":"reasoning","content":[]},{"type":"message","content":[{"type":"output_text","text":""},{"type":"output_text","text":"你"},{"type":"refusal","refusal":"ignored"}]},{"type":"message","content":[{"type":"output_text","text":"好"}]}]})", Result));
+	ASSERT_TRUE(Parse(R"({"output_text":"","output":[{"type":"reasoning","content":[]},{"type":"message","content":[{"type":"output_text","text":""},{"type":"output_text","text":"你"}]},{"type":"message","content":[{"type":"output_text","text":"好"}]}]})", Result));
 	EXPECT_STREQ(Result.m_aText, "你好");
 }
 
@@ -65,4 +65,40 @@ TEST(TranslateResponses, RepeatedParseClearsPreviousErrorAndText)
 	EXPECT_STREQ(Result.m_aError, "");
 	EXPECT_FALSE(Parse("{}", Result));
 	EXPECT_STREQ(Result.m_aText, "");
+}
+
+TEST(TranslateResponses, RefusalDiscardsTopLevelAndPartialTranslation)
+{
+	SLlmParseResult Result;
+	EXPECT_FALSE(Parse(R"({"output_text":"partial","output":[{"type":"message","content":[{"type":"output_text","text":"partial"},{"type":"refusal","refusal":"A long provider explanation"}]}]})", Result));
+	EXPECT_TRUE(Result.m_Refused);
+	EXPECT_FALSE(Result.m_Success);
+	EXPECT_STREQ(Result.m_aText, "");
+	EXPECT_EQ(str_find(Result.m_aError, "A long provider"), nullptr);
+}
+
+TEST(TranslateResponses, ContentFilterReasonIsRefusal)
+{
+	SLlmParseResult Result;
+	EXPECT_FALSE(Parse(R"({"status":"incomplete","incomplete_details":{"reason":"content_filter"},"output_text":"partial"})", Result));
+	EXPECT_TRUE(Result.m_Refused);
+	EXPECT_STREQ(Result.m_aText, "");
+}
+
+TEST(TranslateResponses, OrdinaryTextAboutRefusalIsStillTranslation)
+{
+	SLlmParseResult Result;
+	ASSERT_TRUE(Parse(R"({"output_text":"I cannot translate this sentence."})", Result));
+	EXPECT_FALSE(Result.m_Refused);
+	EXPECT_STREQ(Result.m_aText, "I cannot translate this sentence.");
+}
+
+TEST(TranslateResponses, LaterSuccessClearsRefusal)
+{
+	SLlmParseResult Result;
+	EXPECT_FALSE(Parse(R"({"error":{"code":"content_policy_violation","message":"blocked"}})", Result));
+	ASSERT_TRUE(Result.m_Refused);
+	ASSERT_TRUE(Parse(R"({"output_text":"恢复"})", Result));
+	EXPECT_FALSE(Result.m_Refused);
+	EXPECT_STREQ(Result.m_aText, "恢复");
 }

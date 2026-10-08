@@ -800,6 +800,9 @@ API key
 Appearance
 == Görünüm
 
+Appearance of help bubbles outside settings cards
+== Ayar kartları dışındaki yardım balonlarının görünümü
+
 Append to log file instead of overwriting
 == Günlük dosyasının üzerine yazmak yerine sonuna ekle
 
@@ -836,6 +839,9 @@ Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 == Tahmin için bir sonraki tick'ten önce girdiyi erken uygula
 
+Apply Qm recommended appearance
+== Qm önerilen görünümünü uygula
+
 Apply quick input to other Tees as well
 == Hızlı girdiyi diğer Tee'lere de uygula
 
@@ -847,6 +853,9 @@ Apply this preset
 
 Apply watermark
 == Filigranı uygula
+
+Applying this preset changes the appearance settings listed below.
+== Bu ön ayar aşağıdaki görünüm ayarlarını değiştirir.
 
 Arabic
 == Arapça
@@ -1288,6 +1297,9 @@ Axiom score request failed
 
 Axis
 == Eksen
+
+Backdrop blur
+== Arka plan bulanıklığı
 
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 == Arka plan bulanıklığı algoritması: 0=Gauss, 1=Kawase, 2=Dual Kawase
@@ -1733,11 +1745,11 @@ Censor replacement character
 Censor word list (comma-separated)
 == Engellenen kelime listesi (virgülle ayırın)
 
-Center line color (requires tc_show_center)
-== Merkez çizgisi rengi (tc_show_center gerektirir)
+Center line color (requires qm_show_center)
+== Merkez çizgisi rengi (qm_show_center gerektirir)
 
-Center line width (requires tc_show_center)
-== Merkez çizgisi genişliği (tc_show_center gerektirir)
+Center line width (requires qm_show_center)
+== Merkez çizgisi genişliği (qm_show_center gerektirir)
 
 Change indicator offset based on distance to other tees
 == Gösterge ofsetini diğer teelere olan mesafeye göre değiştir
@@ -1871,6 +1883,9 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == Adınızla mevcut bir oyuncu kontrol ediliyor
 
+Checking Steam...
+== Steam kontrol ediliyor…
+
 Chinese (Simplified)
 == Çince (Basitleştirilmiş)
 
@@ -1909,6 +1924,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == Sinematik kamera
+
+CJK font
+== CJK yazı tipi
+
+CJK font weight
+== CJK yazı tipi kalınlığı
 
 CJK font weight:
 == CJK yazı tipi kalınlığı:
@@ -2159,8 +2180,8 @@ Command
 Command completion
 == Komut tamamlama
 
-Command executed by tc_mod_weapon, target id appended at end
-== tc_mod_weapon tarafından yürütülen komut, hedef id sona eklenir
+Command executed by qm_mod_weapon, target id appended at end
+== qm_mod_weapon tarafından yürütülen komut, hedef id sona eklenir
 
 Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)
 == Birini işaret edip ateş ederken yürütülen komut (varsayılan kill, yalnızca uzak konsol kimlik doğrulandığında çalışır)
@@ -2540,6 +2561,9 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == Dublör bağlanamadı
 
+Could not connect to the translation service. Please try again later.
+== Çeviri servisine bağlanılamadı. Daha sonra tekrar deneyin.
+
 Could not create report scan request
 == Rapor tarama isteği oluşturulamadı
 
@@ -2795,6 +2819,9 @@ Cyrillic
 d = Prediction latency
 == d = Tahmin gecikmesi
 
+Dark translucent
+== Koyu yarı saydam
+
 Darken Tee color when frozen (0-100)
 == Donduğunda Tee rengini koyulaştır (0-100)
 
@@ -2993,6 +3020,9 @@ Default
 default
 == varsayılan
 
+Default appearance profile migration version
+== Varsayılan görünüm profili geçiş sürümü
+
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 == Zaman için varsayılan görüntüleme modu: oyun/tur zamanlayıcısı veya yayın. 0 = oyun/tur zamanlayıcısı, 1 = yayın, 2 = 0+1, 3 = yok
 
@@ -3116,24 +3146,6 @@ Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <
 Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
 == Kullanımdan kaldırıldı. 'vote_muteid <client_id> <saniye> <sebep>' veya 'vote_muteip <ip> <saniye> <sebep>' kullanın
 
-Deprecated: jump hint color, migrated to qm_jump_hint_color on startup
-== Kullanımdan kaldırıldı: zıplama ipucu rengi, başlangıçta qm_jump_hint_color'a taşındı
-
-Deprecated: jump hint font size, migrated to qm_jump_hint_size on startup
-== Kullanımdan kaldırıldı: zıplama ipucu yazı tipi boyutu, başlangıçta qm_jump_hint_size'a taşındı
-
-Deprecated: jump hint text, migrated to qm_jump_hint_text on startup (use \n for newline)
-== Kullanımdan kaldırıldı: zıplama ipucu metni, başlangıçta qm_jump_hint_text'e taşındı (yeni satır için \n kullanın)
-
-Deprecated: jump hint toggle, migrated to qm_jump_hint on startup
-== Kullanımdan kaldırıldı: zıplama ipucu geçişi, başlangıçta qm_jump_hint'a taşındı
-
-Deprecated: jump hint X position, migrated to qm_jump_hint_x on startup
-== Kullanımdan kaldırıldı: zıplama ipucu X konumu, başlangıçta qm_jump_hint_x'e taşındı
-
-Deprecated: jump hint Y position, migrated to qm_jump_hint_y on startup
-== Kullanımdan kaldırıldı: zıplama ipucu Y konumu, başlangıçta qm_jump_hint_y'ye taşındı
-
 Depth freeze tile overlay alpha (0-100)
 == Derin donma karo kaplama alfa (0-100).
 
@@ -3157,6 +3169,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == Özel sunuculardan uyumlu solo ipuçlarını algıla.
+
+Detect Steam again
+== Steam'i yeniden algıla
 
 Detection distance
 == Algılama mesafesi
@@ -3713,6 +3728,9 @@ Emoticon
 Emoticon ID
 == İfade Kimliği
 
+Emoticon projectile duration
+== Fırlatılan ifade süresi
+
 Emoticon shadow
 == İfade gölgesi
 
@@ -4165,6 +4183,9 @@ Enter solo split mode
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Sponsor kodunu gir ve "Kullan" düğmesine bas, ardından unvanı yaz ve "Kaydet"e bas. Tek bir takma ada bağlamak için "Yalnızca bu takma adla göster" seçeneğini işaretle.
+
+Enter the Steam client program path, without command arguments
+== Başlatma bağımsız değişkenleri olmadan Steam istemci yolunu girin
 
 Enter Username
 == Kullanıcı Adı Gir
@@ -4976,6 +4997,9 @@ Global card ordering old config migration completed flag
 Global toggle key
 == Genel açma/kapama tuşu
 
+Global UI size
+== Genel arayüz boyutu
+
 Global UI size percentage
 == Genel arayüz boyutu yüzdesi
 
@@ -5540,6 +5564,21 @@ IME
 IME background color
 == IME arka plan rengi
 
+IME font size
+== IME yazı boyutu
+
+IME font size percentage
+== IME yazı boyutu (%)
+
+IME selected text color
+== IME seçili metin rengi
+
+IME selection background color
+== IME seçim arka plan rengi
+
+IME text color
+== IME metin rengi
+
 Import from clipboard
 == Panodan içe aktar
 
@@ -5936,6 +5975,18 @@ Keep vote window open after voting
 Key binds
 == Tuş atamaları
 
+Key press count color
+== Tuş sayacı rengi
+
+Key press count font size
+== Tuş sayacı yazı boyutu
+
+Key press count font size percentage
+== Tuş sayacı yazı boyutu (%)
+
+Key press count label
+== Tuş sayacı ön eki
+
 Key press icon size
 == Tuş basma simgesi boyutu
 
@@ -6101,11 +6152,26 @@ Last successful sync: %s
 Last verified approved update source
 == Son doğrulanan onaylı güncelleme kaynağı
 
+Last viewed announcement content revision
+== Son okunan duyuru içeriği revizyonu
+
+Last viewed announcement version
+== Son okunan duyuru sürümü
+
+Last viewed client release notes
+== Son okunan istemci sürüm notları
+
 Latency
 == Gecikme
 
 Latency Jitter
 == Gecikme dalgalanması
+
+Latin font
+== Latin yazı tipi
+
+Latin font weight
+== Latin yazı tipi kalınlığı
 
 Launch count threshold for the next sponsor reminder
 == Sonraki hatırlatma için başlatma eşiği
@@ -6458,6 +6524,12 @@ Lose weapons when teleporting (useful for race maps)
 Low to high
 == Düşükten yükseğe
 
+LXGW WenKai is available.
+== LXGW WenKai kullanılabilir.
+
+LXGW WenKai is unavailable. Current fonts and weights will be kept.
+== LXGW WenKai kullanılamıyor. Mevcut yazı tipleri ve kalınlıkları korunacak.
+
 Lyrics
 == Şarkı sözleri
 
@@ -6535,6 +6607,9 @@ Manual scope
 
 Manual source file
 == Manuel kaynak dosyası
+
+Manual Steam path is invalid; using automatic detection
+== Elle girilen Steam yolu geçersiz; otomatik algılama kullanılıyor
 
 Manual target
 == Manuel hedef
@@ -6832,6 +6907,12 @@ Menu option - normal
 
 Menu option - selected
 == Menü seçeneği - seçili
+
+Menu panel color
+== Menü paneli rengi
+
+Menu panel opacity
+== Menü paneli opaklığı
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == Bu pencere içinde (milisaniye) art arda gelen aynı echo mesajlarını birleştir (0 birleştirmeyi kapatır)
@@ -7178,8 +7259,8 @@ Name plates offset
 Name plates size
 == İsim plakası boyutu
 
-Name to change to near finish (when tc_change_name_near_finish enabled)
-== Bitişe yakın değiştirilecek isim (tc_change_name_near_finish etkinleştirildiğinde)
+Name to change to near finish (when qm_change_name_near_finish enabled)
+== Bitişe yakın değiştirilecek isim (qm_change_name_near_finish etkinleştirildiğinde)
 
 Name:
 == İsim:
@@ -7315,6 +7396,9 @@ New category name
 
 New features
 == Yeni özellikler
+
+New features (unread)
+== Yeni özellikler (okunmadı)
 
 New IME
 == Yeni IME
@@ -8153,6 +8237,18 @@ Pickup range
 Pie menu
 == Pasta menüsü
 
+Pie menu effects
+== Dairesel menü açılma ve kapanma efektleri
+
+Pie menu highlight tint
+== Dairesel menü seçim tonu
+
+Pie menu highlight tint (alpha controls tint strength)
+== Dairesel menü seçim tonu (alfa yoğunluğu belirler)
+
+Pie menu opening and closing effects
+== Dairesel menü açılma ve kapanma efektleri
+
 Pie menu rename list (separate with |, e.g., name1|name2)
 == Pasta menüsü yeniden adlandırma listesi (| ile ayırın, örn: Xuanmeng1|Xuanmeng2)
 
@@ -8429,6 +8525,9 @@ Popup & dropdown blur
 Popup animation
 == Açılır animasyon
 
+Popup blur
+== Açılır panel bulanıklığı
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == İstemci-sunucu bağlantısı için port (0=rastgele, >=1024 manuel port ayarlar)
 
@@ -8572,6 +8671,9 @@ Preview
 
 Preview 'Hook collisions' being pressed
 == 'Kanca Çarpışmaları'na basıldığında önizleme
+
+Preview and apply a fixed appearance preset
+== Sabit bir görünüm ön ayarını incele ve uygula
 
 Preview built with %d skipped slot(s).
 == Önizleme %d atlanan yuva ile oluşturuldu.
@@ -8770,6 +8872,9 @@ q = Connection quality
 
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm gelişmiş işleme: 0=kapalı (saf Vulkan), 1=otomatik geri dönüş, 2=zorla açık
+
+Qm recommended appearance
+== Qm önerilen görünümü
 
 Qm UI custom icon color
 == Qm arayüzü simgesi özel rengi
@@ -9482,6 +9587,9 @@ Replays directory
 Reply
 == Yanıtla
 
+Reply content
+== Yanıt içeriği
+
 Reply to messages from muted players
 == Sessize alınmış oyunculardan gelen mesajlara yanıt ver
 
@@ -9590,6 +9698,9 @@ Reset column widths
 Reset controls
 == Kontrolleri sıfırla
 
+Reset count appearance
+== Sayaç görünümünü sıfırla
+
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 == Her harita değişikliğinden sonra DDRace ayarını sıfırla (sv_hit, sv_endless_drag, sv_old_laser)
 
@@ -9602,11 +9713,20 @@ Reset dummy
 Reset filter
 == Filtreyi sıfırla
 
+Reset IME appearance
+== IME görünümünü sıfırla
+
+Reset key press counts
+== Tuş basma sayılarını sıfırla
+
 Reset layout
 == Düzeni sıfırla
 
 Reset mouse position when opening bind wheel
 == Bağlama tekerleğini açarken fare konumunu sıfırla
+
+Reset pie menu appearance
+== Dairesel menü görünümünü sıfırla
 
 Reset position of mouse when opening bindwheel
 == Bind tekerleğini açarken farenin konumunu sıfırla
@@ -9619,6 +9739,12 @@ Reset stats when joining a server
 
 Reset to defaults
 == Varsayılana sıfırla
+
+Reset tooltip appearance
+== Araç ipucu görünümünü sıfırla
+
+Reset translation colors
+== Çeviri renklerini sıfırla
 
 Reset tuning after each map change
 == Her harita değişikliğinden sonra ayarı sıfırla
@@ -9781,6 +9907,9 @@ Rule line 8.
 
 Rule line 9.
 == Kural satırı 9.
+
+Rule list
+== Kural listesi
 
 Run "hot_reload" on local server with rcon auth on map save
 == Harita kaydında rcon yetkilendirmesi ile yerel sunucuda "hot_reload" çalıştır
@@ -10172,9 +10301,6 @@ Self and friends
 Self only
 == Yalnızca kendim
 
-Send
-== Gönderme
-
 Send & Receive
 == Gönder ve Al
 
@@ -10402,6 +10528,9 @@ Settings card titles use rainbow colors
 
 Settings file
 == Ayarlar dosyası
+
+Settings page opacity
+== Ayarlar sayfası opaklığı
 
 Settings page right panel opacity
 == Ayarlar sayfası sağ panel opaklığı
@@ -10894,6 +11023,9 @@ Show katan on frozen players
 
 Show katana on frozen players (restores old behavior)
 == Donmuş oyuncularda kılıcı göster (eski davranışı geri yükler)
+
+Show key press counts
+== Tuş basma sayılarını göster
 
 Show key presses
 == Tuş basışlarını göster
@@ -11942,8 +12074,23 @@ Status normal, check details below if still experiencing issues
 Status Scheme:
 == Durum Şeması:
 
+Steam client path (leave empty to detect automatically)
+== Steam istemci yolu (otomatik algılama için boş bırakın)
+
 Steam integration
 == Steam entegrasyonu
+
+Steam is installed
+== Steam yüklü
+
+Steam is installed but not running
+== Steam yüklü ancak çalışmıyor
+
+Steam is running
+== Steam çalışıyor
+
+Steam not found
+== Steam bulunamadı
 
 Steam profile name
 == Steam profil adı
@@ -12473,6 +12620,9 @@ Tencent Cloud Translation SecretKey
 Text alpha
 == Metin alfası
 
+Text before each key press count
+== Tuş sayacı ön eki
+
 Text color
 == Metin rengi
 
@@ -12677,8 +12827,8 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Bu ipucu ui_widget::Tooltip tarafından sağlanır; CTooltips üzerinde ince bir sarmalayıcıdır.
 
-Tick delay before executing tc_execute_on_join
-== tc_execute_on_join yürütülmeden önceki tick gecikmesi
+Tick delay before executing qm_execute_on_join
+== qm_execute_on_join yürütülmeden önceki tick gecikmesi
 
 Ticks after freeze before applying max prediction reduction
 == Maksimum tahmin azaltması uygulanmadan önce donma sonrası tick sayısı
@@ -12956,6 +13106,24 @@ Too many translation tasks
 Toolbox page
 == Araç kutusu sayfası
 
+Tooltip background color
+== Araç ipucu arka plan rengi
+
+Tooltip bounce animation
+== Araç ipucu sıçrama animasyonu
+
+Tooltip font size
+== Araç ipucu yazı boyutu
+
+Tooltip preview
+== Araç ipucu ön izlemesi
+
+Tooltip text color
+== Araç ipucu metin rengi
+
+Tooltips
+== Araç ipuçları
+
 Top left
 == Sol üst
 
@@ -13067,14 +13235,32 @@ Translation queue full, sending original
 Translation service
 == Çeviri hizmeti
 
-Translation service returned a notice instead of a translation (the message may contain filtered words)
-== Çeviri servisi çeviri yerine bir bildirim döndürdü (ileti filtrelenmiş kelimeler içerebilir)
+Translation service authentication failed. Check the API key and service address.
+== Çeviri servisi kimlik doğrulaması başarısız. API anahtarını ve servis adresini kontrol edin.
+
+Translation service is rate limited. Please try again later.
+== Çeviri servisine çok fazla istek gönderildi. Daha sonra tekrar deneyin.
+
+Translation service is temporarily unavailable. Please try again later.
+== Çeviri servisi geçici olarak kullanılamıyor. Daha sonra tekrar deneyin.
+
+Translation service quota is exhausted. Choose another service or try again later.
+== Çeviri servisi kotası tükendi. Başka bir servis seçin veya daha sonra tekrar deneyin.
+
+Translation service refused this content. Please edit it and try again.
+== Çeviri servisi bu içeriği reddetti. Düzenleyip tekrar deneyin.
+
+Translation service returned a notice instead of a translation
+== Çeviri servisi çeviri yerine bir bildirim döndürdü
 
 Translation Settings
 == Çeviri Ayarları
 
 transmits your player name to info.ddnet.org
 == oyuncu adınızı info.ddnet.org'a iletir
+
+Trigger limits
+== Tetikleme sınırları
 
 Troubleshooting suggestions
 == Sorun giderme önerileri
@@ -13156,6 +13342,9 @@ UDP seems to be filtered.
 
 UDP socket not open
 == UDP soketi açık değil
+
+UI animations
+== Arayüz animasyonları
 
 UI color
 == Arayüz rengi
@@ -13573,6 +13762,9 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Üzerine gelinen bir modülü fare tekerleği ile %5 oranında ölçeklendir
+
+Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
+== Ana hesap ve dummy için Axiom'da kayıtlı parolaları ayrı ayrı girin. Bu seçenek hesap oluşturmaz.
 
 Use the scoreboard cursor mode to scroll the list
 == Listeyi kaydırmak için skor tablosu imleç modunu kullanın

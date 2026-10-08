@@ -55,7 +55,7 @@ TEST(QmWarListEnemyChat, FilteringKeepsChatLogPersistenceIndependent)
 	EXPECT_NE(AddLine.find("g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
 	EXPECT_NE(AddLine.find("GameClient()->m_WarList.IsEnemy(ClientId)"), std::string::npos);
 	EXPECT_NE(AddLine.find("GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
-	EXPECT_EQ(AddLine.find("m_TcWarList && g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
+	EXPECT_EQ(AddLine.find("m_QmWarList && g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
 	EXPECT_EQ(OnMessage.find("m_QmWarListBlockEnemyChat"), std::string::npos);
 	EXPECT_NE(WarListSettings.find("&g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
 	EXPECT_NE(WarListSettings.find("\"tclient-warlist-block-enemy-chat\""), std::string::npos);

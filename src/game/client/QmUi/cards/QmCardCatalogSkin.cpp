@@ -111,6 +111,8 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 	Slider(Hue, "qmclient-cycle-tee-hue-speed", Localize("Hue speed"), &s_HueSpeedId, g_Config.m_QmCycleTeeHue ? &g_Config.m_QmCycleTeeHueSpeed : &DisabledSpeed, 0, 360, "°/s");
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	RenderQmVisualCheckbox(Shadow, LineHeight, LineSpacing, &g_Config.m_QmEmoticonShadow, "Emoticon shadow", Localize("Emoticon shadow"), &g_Config.m_QmEmoticonShadow);
+	static int s_ProjectileDurationId;
+	Slider(Shadow, "qmclient-emoticon-projectile-duration", Localize("Emoticon projectile duration"), &s_ProjectileDurationId, &g_Config.m_QmEmoticonProjectileDuration, 1, 10, " s");
 	Content.HSplitTop(Layout.m_Height, nullptr, &Content);
 }
 void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)

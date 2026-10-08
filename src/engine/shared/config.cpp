@@ -9,6 +9,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/console.h>
 #include <engine/shared/protocol.h>
+#include <engine/shared/qm_legacy_config.h>
 #include <engine/shared/qm_removed_config.h>
 #include <engine/storage.h>
 
@@ -271,6 +272,7 @@ void SIntConfigVariable::CommandCallback(IConsole::IResult *pResult, void *pUser
 		}
 
 		*pData->m_pVariable = Value;
+		pData->m_HasExplicitValue = true;
 		if(pResult->m_ClientId != IConsole::CLIENT_ID_GAME)
 			pData->m_OldValue = Value;
 	}
@@ -339,6 +341,7 @@ void SColorConfigVariable::CommandCallback(IConsole::IResult *pResult, void *pUs
 		const unsigned Value = Color.Pack(pData->m_DarkestLighting, pData->m_Alpha);
 
 		*pData->m_pVariable = Value;
+		pData->m_HasExplicitValue = true;
 		pData->m_LastInputAlphaMode = pData->m_Alpha ? ColorInputAlphaMode(pResult->GetString(0)) : EColorInputAlphaMode::PACKED;
 		if(pResult->m_ClientId != IConsole::CLIENT_ID_GAME)
 			pData->m_OldValue = Value;
@@ -428,6 +431,7 @@ void SStringConfigVariable::CommandCallback(IConsole::IResult *pResult, void *pU
 
 		const char *pString = pResult->GetString(0);
 		str_copy(pData->m_pStr, pString, pData->m_MaxSize);
+		pData->m_HasExplicitValue = true;
 
 		if(pResult->m_ClientId != IConsole::CLIENT_ID_GAME)
 			str_copy(pData->m_pOldValue, pData->m_pStr, pData->m_MaxSize);
@@ -569,6 +573,7 @@ void CConfigManager::Init()
 
 void CConfigManager::Reset(const char *pScriptName)
 {
+	pScriptName = QmLegacyConfig::CanonicalName(pScriptName);
 	for(SConfigVariable *pVariable : m_vpAllVariables)
 	{
 		if((pVariable->m_Flags & m_pConsole->FlagMask()) != 0 && str_comp(pScriptName, pVariable->m_pScriptName) == 0)
@@ -834,7 +839,7 @@ void CConfigManager::Con_Toggle(IConsole::IResult *pResult, void *pUserData)
 	CConfigManager *pConfigManager = static_cast<CConfigManager *>(pUserData);
 	IConsole *pConsole = pConfigManager->m_pConsole;
 
-	const char *pScriptName = pResult->GetString(0);
+	const char *pScriptName = QmLegacyConfig::CanonicalName(pResult->GetString(0));
 	for(SConfigVariable *pVariable : pConfigManager->m_vpAllVariables)
 	{
 		if((pVariable->m_Flags & pConsole->FlagMask()) == 0 ||
@@ -873,7 +878,7 @@ void CConfigManager::Con_ToggleStroke(IConsole::IResult *pResult, void *pUserDat
 	CConfigManager *pConfigManager = static_cast<CConfigManager *>(pUserData);
 	IConsole *pConsole = pConfigManager->m_pConsole;
 
-	const char *pScriptName = pResult->GetString(1);
+	const char *pScriptName = QmLegacyConfig::CanonicalName(pResult->GetString(1));
 	for(SConfigVariable *pVariable : pConfigManager->m_vpAllVariables)
 	{
 		if((pVariable->m_Flags & pConsole->FlagMask()) == 0 ||
@@ -896,7 +901,7 @@ void CConfigManager::Con_ToggleRestore(IConsole::IResult *pResult, void *pUserDa
 	CConfigManager *pConfigManager = static_cast<CConfigManager *>(pUserData);
 	IConsole *pConsole = pConfigManager->m_pConsole;
 
-	const char *pScriptName = pResult->GetString(1);
+	const char *pScriptName = QmLegacyConfig::CanonicalName(pResult->GetString(1));
 	for(SConfigVariable *pVariable : pConfigManager->m_vpAllVariables)
 	{
 		if((pVariable->m_Flags & pConsole->FlagMask()) == 0 ||

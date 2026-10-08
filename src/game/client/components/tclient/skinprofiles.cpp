@@ -73,20 +73,20 @@ void CSkinProfiles::AddProfile(int BodyColor, int FeetColor, int CountryFlag, in
 
 void CSkinProfiles::ApplyProfile(int Dummy, const CProfile &Profile)
 {
-	if(g_Config.m_TcProfileSkin && strlen(Profile.m_SkinName) != 0)
+	if(g_Config.m_QmProfileSkin && strlen(Profile.m_SkinName) != 0)
 		str_copy(Dummy ? g_Config.m_ClDummySkin : g_Config.m_ClPlayerSkin, Profile.m_SkinName);
-	if(g_Config.m_TcProfileColors && Profile.m_BodyColor != -1 && Profile.m_FeetColor != -1)
+	if(g_Config.m_QmProfileColors && Profile.m_BodyColor != -1 && Profile.m_FeetColor != -1)
 	{
 		(Dummy ? g_Config.m_ClDummyColorBody : g_Config.m_ClPlayerColorBody) = Profile.m_BodyColor;
 		(Dummy ? g_Config.m_ClDummyColorFeet : g_Config.m_ClPlayerColorFeet) = Profile.m_FeetColor;
 	}
-	if(g_Config.m_TcProfileEmote && Profile.m_Emote != -1)
+	if(g_Config.m_QmProfileEmote && Profile.m_Emote != -1)
 		(Dummy ? g_Config.m_ClDummyDefaultEyes : g_Config.m_ClPlayerDefaultEyes) = Profile.m_Emote;
-	if(g_Config.m_TcProfileName && strlen(Profile.m_Name) != 0)
+	if(g_Config.m_QmProfileName && strlen(Profile.m_Name) != 0)
 		str_copy(Dummy ? g_Config.m_ClDummyName : g_Config.m_PlayerName, Profile.m_Name); // TODO m_ClPlayerName
-	if(g_Config.m_TcProfileClan && (strlen(Profile.m_Clan) != 0 || g_Config.m_TcProfileOverwriteClanWithEmpty))
+	if(g_Config.m_QmProfileClan && (strlen(Profile.m_Clan) != 0 || g_Config.m_QmProfileOverwriteClanWithEmpty))
 		str_copy(Dummy ? g_Config.m_ClDummyClan : g_Config.m_PlayerClan, Profile.m_Clan); // TODO m_ClPlayerClan
-	if(g_Config.m_TcProfileFlag && Profile.m_CountryFlag != -2)
+	if(g_Config.m_QmProfileFlag && Profile.m_CountryFlag != -2)
 		(Dummy ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry) = Profile.m_CountryFlag;
 	GameClient()->m_Skins.m_SkinList.ForceRefresh(); // Prevent segfault
 	if(Dummy)

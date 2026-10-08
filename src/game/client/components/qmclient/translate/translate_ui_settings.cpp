@@ -46,4 +46,15 @@ void NTranslateUiSettings::RenderTranslateUiModule(CMenus *pMenus, CUIRect &Card
 		Localize("Menu option - normal"), &g_Config.m_QmTranslateMenuOptionNormal,
 		color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmTranslateMenuOptionNormal, true)), true, nullptr, true);
 	CardContent.HSplitTop(LineSpacing, nullptr, &CardContent);
+	CardContent.HSplitTop(LineHeight, &Row, &CardContent);
+	static CButtonContainer s_ResetAppearance;
+	if(pMenus->DoButton_Menu(&s_ResetAppearance, Localize("Reset translation colors"), 0, &Row) && !pMenus->Ui()->RenderOnly())
+	{
+		g_Config.m_QmTranslateBtnColorDisabled = DefaultConfig::QmTranslateBtnColorDisabled;
+		g_Config.m_QmTranslateBtnColorEnabled = DefaultConfig::QmTranslateBtnColorEnabled;
+		g_Config.m_QmTranslateMenuBgColor = DefaultConfig::QmTranslateMenuBgColor;
+		g_Config.m_QmTranslateMenuOptionSelected = DefaultConfig::QmTranslateMenuOptionSelected;
+		g_Config.m_QmTranslateMenuOptionNormal = DefaultConfig::QmTranslateMenuOptionNormal;
+	}
+	CardContent.HSplitTop(LineSpacing, nullptr, &CardContent);
 }

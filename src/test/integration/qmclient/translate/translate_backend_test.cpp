@@ -83,6 +83,46 @@ TEST_F(CTranslateBackendTest, ChatSuccessUsesSharedParser)
 	EXPECT_STREQ(Response.m_Text, "你好");
 }
 
+TEST_F(CTranslateBackendTest, StructuredRefusalReachesNoticeWithoutApiFallback)
+{
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://refusal.test/v1");
+	auto pBackend = Create();
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"choices":[{"message":{"refusal":"Provider explanation","content":null}}]})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::CONTENT_REFUSED);
+	EXPECT_EQ(str_find(Response.m_Text, "Provider explanation"), nullptr);
+	EXPECT_EQ(m_Http.m_vSubmissions.size(), 1u);
+}
+
+TEST_F(CTranslateBackendTest, HttpPolicyErrorIsRefusalRatherThanAuthentication)
+{
+	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://policy.test/v1/chat/completions");
+	auto pBackend = Create();
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"error":{"code":"content_policy_violation","message":"Provider explanation"}})", 403);
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::CONTENT_REFUSED);
+}
+
+TEST_F(CTranslateBackendTest, HttpErrorsExposeStableNoticeCategories)
+{
+	struct SCase
+	{
+		int m_Status;
+		ETranslateNotice m_Notice;
+	};
+	for(const auto &Case : {SCase{401, ETranslateNotice::AUTHENTICATION}, SCase{429, ETranslateNotice::RATE_LIMIT}, SCase{503, ETranslateNotice::SERVICE_UNAVAILABLE}})
+	{
+		SCOPED_TRACE(Case.m_Status);
+		auto pBackend = Create();
+		m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"error":{"message":"detail"}})", Case.m_Status);
+		CTranslateResponse Response;
+		EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+		EXPECT_EQ(Response.m_Notice, Case.m_Notice);
+	}
+}
+
 TEST_F(CTranslateBackendTest, MalformedChatResponseFails)
 {
 	str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://malformed.test/v1/chat/completions");
@@ -267,15 +307,15 @@ TEST_F(CTranslateBackendTest, MymemoryTranslationMemoryBoilerplateIsServiceNotic
 	EXPECT_NE(str_find(Response.m_Text, "service notice"), nullptr);
 }
 
-TEST_F(CTranslateBackendTest, MymemoryLinkOnlyInResultIsServiceNotice)
+TEST_F(CTranslateBackendTest, MymemoryOrdinaryLinksAreNotServiceNotices)
 {
 	str_copy(g_Config.m_QmTranslateBackend, "mymemory");
-	// 结果带链接而源文本没有：命中启发式兜底
+	// 链接可能来自合法译文，不能仅因源文没有链接就判为拒绝。
 	auto pNotice = Create("大家好", "en", "zh-CN");
 	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"responseData":{"translatedText":"see http://example.org/rules before posting"},"responseStatus":200})");
 	CTranslateResponse Notice;
-	EXPECT_EQ(pNotice->Update(Notice), std::optional<bool>(false));
-	EXPECT_EQ(Notice.m_Notice, ETranslateNotice::SERVICE_NOTICE);
+	EXPECT_EQ(pNotice->Update(Notice), std::optional<bool>(true));
+	EXPECT_EQ(Notice.m_Notice, ETranslateNotice::NONE);
 	// 源文本本身带链接：正常译文，不误杀
 	auto pNormal = Create("see https://example.org/page", "zh", "en");
 	m_Http.m_vSubmissions[1].m_pRequest->Finish(R"({"responseData":{"translatedText":"请查看 https://example.org/page"},"responseStatus":200})");

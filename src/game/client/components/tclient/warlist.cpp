@@ -180,7 +180,7 @@ void CWarList::AddWarEntryInGame(int WarType, const char *pName, const char *pRe
 	{
 		str_copy(Entry.m_aName, pName);
 	}
-	if(!g_Config.m_TcWarListAllowDuplicates)
+	if(!g_Config.m_QmWarListAllowDuplicates)
 		RemoveWarEntryDuplicates(Entry.m_aName, Entry.m_aClan);
 
 	AddWarEntry(Entry.m_aName, Entry.m_aClan, Entry.m_aReason, Entry.m_pWarType->m_aWarName);
@@ -275,7 +275,7 @@ void CWarList::AddWarEntry(const char *pName, const char *pClan, const char *pRe
 	else if(str_comp(pName, "") != 0)
 		str_copy(Entry.m_aName, pName);
 
-	if(!g_Config.m_TcWarListAllowDuplicates)
+	if(!g_Config.m_QmWarListAllowDuplicates)
 		RemoveWarEntryDuplicates(pName, pClan);
 	m_vWarEntries.push_back(Entry);
 	MarkWarEntriesDirty();

@@ -800,6 +800,9 @@ API key
 Appearance
 == 遊戲界面
 
+Appearance of help bubbles outside settings cards
+== 設定卡片外的說明氣泡外觀
+
 Append to log file instead of overwriting
 == 追加到日誌文件而不是每次覆蓋
 
@@ -836,6 +839,9 @@ Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 == 在下一 tick 前提前應用輸入進行預測
 
+Apply Qm recommended appearance
+== 套用栖夢推薦外觀
+
 Apply quick input to other Tees as well
 == 對其他 Tee 也應用快速輸入
 
@@ -847,6 +853,9 @@ Apply this preset
 
 Apply watermark
 == 套用浮水印
+
+Applying this preset changes the appearance settings listed below.
+== 套用預設會修改下列外觀設定。
 
 Arabic
 == 阿拉伯文
@@ -1038,7 +1047,7 @@ Auto greet friends entering map
 == 自動問候進圖的好友
 
 Auto login Axiom server
-== 自動登錄 Axiom 伺服器
+== 自動登入 Axiom 伺服器帳號
 
 Auto manage IME while typing
 == 輸入時自動管理 IME
@@ -1288,6 +1297,9 @@ Axiom score request failed
 
 Axis
 == 軸
+
+Backdrop blur
+== 背景模糊
 
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 == 背景模糊演算法：0=高斯，1=Kawase，2=Dual Kawase
@@ -1733,11 +1745,11 @@ Censor replacement character
 Censor word list (comma-separated)
 == 屏蔽詞列表（用 , 分隔）
 
-Center line color (requires tc_show_center)
-== 中心線顏色（需啟用 tc_show_center）
+Center line color (requires qm_show_center)
+== 中心線顏色（需啟用 qm_show_center）
 
-Center line width (requires tc_show_center)
-== 中心線寬度（需啟用 tc_show_center）
+Center line width (requires qm_show_center)
+== 中心線寬度（需啟用 qm_show_center）
 
 Change indicator offset based on distance to other tees
 == 根據與其他 Tee 的距離更改指示器偏移量
@@ -1871,6 +1883,9 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == 正在查找該暱稱的 DDNet 記錄
 
+Checking Steam...
+== 正在偵測 Steam…
+
 Chinese (Simplified)
 == 中文（簡體）
 
@@ -1909,6 +1924,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == 電影鏡頭
+
+CJK font
+== 中日韓文字字型
+
+CJK font weight
+== 中日韓文字字重
 
 CJK font weight:
 == 中日韓字型字重：
@@ -2159,8 +2180,8 @@ Command
 Command completion
 == 指令補全
 
-Command executed by tc_mod_weapon, target id appended at end
-== tc_mod_weapon 執行的命令，目標 id 會附加在命令末尾
+Command executed by qm_mod_weapon, target id appended at end
+== qm_mod_weapon 執行的命令，目標 id 會附加在命令末尾
 
 Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)
 == 指向某人並射擊時執行命令（默認 kill，僅在遠程控制台已鑑權時生效）
@@ -2540,6 +2561,9 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == 無法連接分身
 
+Could not connect to the translation service. Please try again later.
+== 無法連線至翻譯服務，請稍後重試。
+
 Could not create report scan request
 == 創建舉報掃描請求失敗
 
@@ -2795,6 +2819,9 @@ Cyrillic
 d = Prediction latency
 == d = 預測延遲
 
+Dark translucent
+== 深色半透明
+
 Darken Tee color when frozen (0-100)
 == 凍結時加深 Tee 顏色（0-100）
 
@@ -2993,6 +3020,9 @@ Default
 default
 == 默認
 
+Default appearance profile migration version
+== 預設外觀設定遷移版本
+
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 == 顯示時間的默認方式是遊戲/回合計時器或廣播。0 = 遊戲/回合計時器，1 = 廣播，2 = 0+1，3 = 無
 
@@ -3116,24 +3146,6 @@ Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <
 Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
 == 已棄用。使用“vote_muteid <client_id> <秒數> <原因>”或“vote_muteip <ip> <秒數> <原因>”
 
-Deprecated: jump hint color, migrated to qm_jump_hint_color on startup
-== 已廢棄：跳躍提示顏色，啟動時遷移到 qm_jump_hint_color
-
-Deprecated: jump hint font size, migrated to qm_jump_hint_size on startup
-== 已廢棄：跳躍提示字體大小，啟動時遷移到 qm_jump_hint_size
-
-Deprecated: jump hint text, migrated to qm_jump_hint_text on startup (use \n for newline)
-== 已廢棄：跳躍提示文本，啟動時遷移到 qm_jump_hint_text（使用\n 換行）
-
-Deprecated: jump hint toggle, migrated to qm_jump_hint on startup
-== 已廢棄：跳躍提示開關，啟動時遷移到 qm_jump_hint
-
-Deprecated: jump hint X position, migrated to qm_jump_hint_x on startup
-== 已廢棄：跳躍提示水平位置，啟動時遷移到 qm_jump_hint_x
-
-Deprecated: jump hint Y position, migrated to qm_jump_hint_y on startup
-== 已廢棄：跳躍提示垂直位置，啟動時遷移到 qm_jump_hint_y
-
 Depth freeze tile overlay alpha (0-100)
 == 深度凍結圖塊疊加 Alpha (0-100)
 
@@ -3157,6 +3169,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == 檢測自訂伺服器的相容單人區域提示
+
+Detect Steam again
+== 重新偵測 Steam
 
 Detection distance
 == 檢測距離
@@ -3713,6 +3728,9 @@ Emoticon
 Emoticon ID
 == 表情 ID
 
+Emoticon projectile duration
+== 表情彈射時長
+
 Emoticon shadow
 == 表情陰影
 
@@ -4165,6 +4183,9 @@ Enter solo split mode
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == 填入贊助兌換碼並點「兌換」，寫下稱號後點「儲存」。勾選「僅在指定暱稱下顯示」可把稱號綁定到某一個暱稱。
+
+Enter the Steam client program path, without command arguments
+== 填寫 Steam 用戶端程式路徑，不要附帶啟動參數
 
 Enter Username
 == 輸入賬號名稱
@@ -4976,6 +4997,9 @@ Global card ordering old config migration completed flag
 Global toggle key
 == 全局開關鍵
 
+Global UI size
+== 整體介面大小
+
 Global UI size percentage
 == 全域 UI 大小百分比
 
@@ -5540,6 +5564,21 @@ IME
 IME background color
 == IME 背景顏色
 
+IME font size
+== 輸入法字級
+
+IME font size percentage
+== 輸入法字級 (%)
+
+IME selected text color
+== 輸入法選取文字顏色
+
+IME selection background color
+== 輸入法選取背景顏色
+
+IME text color
+== 輸入法文字顏色
+
 Import from clipboard
 == 從剪貼板導入
 
@@ -5936,6 +5975,18 @@ Keep vote window open after voting
 Key binds
 == 按鍵綁定
 
+Key press count color
+== 按鍵計數顏色
+
+Key press count font size
+== 按鍵計數字級
+
+Key press count font size percentage
+== 按鍵計數字級 (%)
+
+Key press count label
+== 按鍵計數前綴文字
+
 Key press icon size
 == 按鍵顯示圖標大小
 
@@ -6101,11 +6152,26 @@ Last successful sync: %s
 Last verified approved update source
 == 上次驗證成功的已核准更新來源
 
+Last viewed announcement content revision
+== 最近已讀的公告內容修訂
+
+Last viewed announcement version
+== 最近已讀的公告版本
+
+Last viewed client release notes
+== 最近已讀的用戶端版本說明
+
 Latency
 == 延遲
 
 Latency Jitter
 == 延遲抖動
+
+Latin font
+== 拉丁文字字型
+
+Latin font weight
+== 拉丁文字字重
 
 Launch count threshold for the next sponsor reminder
 == 下次贊助提醒的啟動次數閾值
@@ -6458,6 +6524,12 @@ Lose weapons when teleporting (useful for race maps)
 Low to high
 == 由低到高
 
+LXGW WenKai is available.
+== 霞鶩文楷可用。
+
+LXGW WenKai is unavailable. Current fonts and weights will be kept.
+== 找不到霞鶩文楷，將保留目前字型與字重。
+
 Lyrics
 == 歌詞
 
@@ -6535,6 +6607,9 @@ Manual scope
 
 Manual source file
 == 手動源文件
+
+Manual Steam path is invalid; using automatic detection
+== 手動填寫的 Steam 路徑無效，已改用自動偵測
 
 Manual target
 == 手動目標
@@ -6832,6 +6907,12 @@ Menu option - normal
 
 Menu option - selected
 == 菜單選項 - 選中
+
+Menu panel color
+== 選單面板顏色
+
+Menu panel opacity
+== 選單面板不透明度
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == 在此視窗（毫秒）內合併連續相同的 echo 訊息（0 表示不合併）
@@ -7178,8 +7259,8 @@ Name plates offset
 Name plates size
 == 暱稱大小
 
-Name to change to near finish (when tc_change_name_near_finish enabled)
-== 接近終點時要改成的名字（啟用 tc_change_name_near_finish 時生效）
+Name to change to near finish (when qm_change_name_near_finish enabled)
+== 接近終點時要改成的名字（啟用 qm_change_name_near_finish 時生效）
 
 Name:
 == 名稱：
@@ -7315,6 +7396,9 @@ New category name
 
 New features
 == 新功能
+
+New features (unread)
+== 新功能（未讀）
 
 New IME
 == 新版 IME
@@ -8153,6 +8237,18 @@ Pickup range
 Pie menu
 == 餅菜單
 
+Pie menu effects
+== 圓盤選單開合效果
+
+Pie menu highlight tint
+== 圓盤選單選取色調
+
+Pie menu highlight tint (alpha controls tint strength)
+== 圓盤選單選取色調（透明度控制著色強度）
+
+Pie menu opening and closing effects
+== 圓盤選單開合效果
+
 Pie menu rename list (separate with |, e.g., name1|name2)
 == 餅菜單改名名單（使用 | 分隔，如：璇夢 1|璇夢 2）
 
@@ -8429,6 +8525,9 @@ Popup & dropdown blur
 Popup animation
 == 彈出動畫
 
+Popup blur
+== 彈出面板模糊
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == 用於客戶端連接到伺服器的端口（0 選擇隨機端口，1024 或更高設置手動端口）
 
@@ -8572,6 +8671,9 @@ Preview
 
 Preview 'Hook collisions' being pressed
 == 預覽按下時的鉤子輔助線
+
+Preview and apply a fixed appearance preset
+== 檢視並套用固定的外觀預設
 
 Preview built with %d skipped slot(s).
 == 預覽已生成，但跳過了 %d 個槽位。
@@ -8770,6 +8872,9 @@ q = Connection quality
 
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm 增強渲染：0=關閉（純 Vulkan），1=自動回退，2=強制開啟
+
+Qm recommended appearance
+== 栖夢推薦外觀
 
 Qm UI custom icon color
 == Qm 介面圖示自訂顏色
@@ -9482,6 +9587,9 @@ Replays directory
 Reply
 == 回覆
 
+Reply content
+== 回覆內容
+
 Reply to messages from muted players
 == 回覆靜音玩家的消息
 
@@ -9590,6 +9698,9 @@ Reset column widths
 Reset controls
 == 恢復默認設置
 
+Reset count appearance
+== 還原計數預設外觀
+
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 == 每次地圖更改後是否重置 DDRace 調整（sv_hit、sv_endless_drag 和 sv_old_laser）
 
@@ -9602,11 +9713,20 @@ Reset dummy
 Reset filter
 == 重置篩選
 
+Reset IME appearance
+== 還原輸入法預設外觀
+
+Reset key press counts
+== 清零按鍵累計次數
+
 Reset layout
 == 重置佈局
 
 Reset mouse position when opening bind wheel
 == 打開綁定輪時重置鼠標位置
+
+Reset pie menu appearance
+== 還原圓盤選單預設外觀
 
 Reset position of mouse when opening bindwheel
 == 打開快捷綁定輪盤時重置鼠標位置
@@ -9619,6 +9739,12 @@ Reset stats when joining a server
 
 Reset to defaults
 == 恢復默認設置
+
+Reset tooltip appearance
+== 還原氣泡預設外觀
+
+Reset translation colors
+== 還原翻譯預設顏色
 
 Reset tuning after each map change
 == 每次地圖更改後是否重置調整
@@ -9781,6 +9907,9 @@ Rule line 8.
 
 Rule line 9.
 == 規則第 9 行
+
+Rule list
+== 規則清單
 
 Run "hot_reload" on local server with rcon auth on map save
 == 在本地伺服器上運行“hot_reload”，同時在地圖保存上進行 rcon 驗證
@@ -10172,9 +10301,6 @@ Self and friends
 Self only
 == 僅自己
 
-Send
-== 發送
-
 Send & Receive
 == 收發
 
@@ -10402,6 +10528,9 @@ Settings card titles use rainbow colors
 
 Settings file
 == 設置文件
+
+Settings page opacity
+== 設定頁不透明度
 
 Settings page right panel opacity
 == 設置頁右側設置欄透明度
@@ -10894,6 +11023,9 @@ Show katan on frozen players
 
 Show katana on frozen players (restores old behavior)
 == 在凍結玩家身上顯示武士刀（恢復舊行為）
+
+Show key press counts
+== 顯示按鍵累計次數
 
 Show key presses
 == 顯示按鍵
@@ -11942,8 +12074,23 @@ Status normal, check details below if still experiencing issues
 Status Scheme:
 == 狀態方案：
 
+Steam client path (leave empty to detect automatically)
+== Steam 用戶端路徑（留空自動偵測）
+
 Steam integration
 == Steam 整合
+
+Steam is installed
+== Steam 已安裝
+
+Steam is installed but not running
+== Steam 已安裝，尚未啟動
+
+Steam is running
+== Steam 已啟動
+
+Steam not found
+== 找不到 Steam
 
 Steam profile name
 ==  Steam 個人資料名稱
@@ -12473,6 +12620,9 @@ Tencent Cloud Translation SecretKey
 Text alpha
 == 文字透明度
 
+Text before each key press count
+== 按鍵計數前綴文字
+
 Text color
 == 文本顏色
 
@@ -12677,8 +12827,8 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 這個提示由 ui_widget::Tooltip 提供，它是 CTooltips 上的一層薄封裝。
 
-Tick delay before executing tc_execute_on_join
-== 執行 tc_execute_on_join 前的延遲（tick）
+Tick delay before executing qm_execute_on_join
+== 執行 qm_execute_on_join 前的延遲（tick）
 
 Ticks after freeze before applying max prediction reduction
 == 凍結後經過多少 tick 才應用最大預測減少
@@ -12956,6 +13106,24 @@ Too many translation tasks
 Toolbox page
 == 工具箱頁面
 
+Tooltip background color
+== 提示氣泡背景顏色
+
+Tooltip bounce animation
+== 提示氣泡回彈動畫
+
+Tooltip font size
+== 提示氣泡字級
+
+Tooltip preview
+== 提示氣泡預覽
+
+Tooltip text color
+== 提示氣泡文字顏色
+
+Tooltips
+== 提示氣泡
+
 Top left
 == 左上
 
@@ -13067,14 +13235,32 @@ Translation queue full, sending original
 Translation service
 == 翻譯服務
 
-Translation service returned a notice instead of a translation (the message may contain filtered words)
-== 翻譯服務傳回的是提示而非譯文（該訊息可能包含屏蔽詞）
+Translation service authentication failed. Check the API key and service address.
+== 翻譯服務驗證失敗，請檢查 API 金鑰和服務位址。
+
+Translation service is rate limited. Please try again later.
+== 翻譯請求過於頻繁，請稍後重試。
+
+Translation service is temporarily unavailable. Please try again later.
+== 翻譯服務暫時無法使用，請稍後重試。
+
+Translation service quota is exhausted. Choose another service or try again later.
+== 翻譯服務的額度已用完，請切換服務或稍後重試。
+
+Translation service refused this content. Please edit it and try again.
+== 翻譯服務拒絕處理這則內容，請修改後重試。
+
+Translation service returned a notice instead of a translation
+== 翻譯服務傳回了提示，未提供譯文
 
 Translation Settings
 == 翻譯設置
 
 transmits your player name to info.ddnet.org
 == 會將玩家暱稱發送到 info.ddnet.org
+
+Trigger limits
+== 觸發限制
 
 Troubleshooting suggestions
 == 建議排查
@@ -13156,6 +13342,9 @@ UDP seems to be filtered.
 
 UDP socket not open
 == UDP 套接字未打開
+
+UI animations
+== 介面動畫
 
 UI color
 == 用戶界面顏色
@@ -13573,6 +13762,9 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 將鼠標懸停在 HUD 模塊上並滾動滾輪可按 5% 縮放
+
+Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
+== 請分別填寫主號和分身在 Axiom 服註冊的密碼。此選項不會自動註冊帳號。
 
 Use the scoreboard cursor mode to scroll the list
 == 使用計分板游標模式滾動查看清單

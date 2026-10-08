@@ -30,6 +30,17 @@ const char *NormalizeTranslateSource(const char *pSource)
 
 namespace
 {
+	ETranslateNotice HttpErrorNotice(int StatusCode)
+	{
+		if(StatusCode == 401 || StatusCode == 403)
+			return ETranslateNotice::AUTHENTICATION;
+		if(StatusCode == 429)
+			return ETranslateNotice::RATE_LIMIT;
+		if(StatusCode >= 500 && StatusCode <= 599)
+			return ETranslateNotice::SERVICE_UNAVAILABLE;
+		return ETranslateNotice::NONE;
+	}
+
 	constexpr size_t TC3_HMAC_BLOCK_SIZE = 64;
 	constexpr const char *TENCENTCLOUD_TMT_ACTION = "TextTranslate";
 	constexpr const char *TENCENTCLOUD_TMT_VERSION = "2018-03-21";
@@ -407,6 +418,7 @@ protected:
 public:
 	std::optional<bool> Update(CTranslateResponse &Out) override
 	{
+		Out.m_Notice = ETranslateNotice::NONE;
 		if(m_aInitError[0] != '\0')
 		{
 			str_copy(Out.m_Text, m_aInitError);
@@ -422,9 +434,11 @@ public:
 		}
 		if(m_pHttpRequest->State() != EHttpState::DONE)
 		{
+			Out.m_Notice = ETranslateNotice::NETWORK_ERROR;
 			str_copy(Out.m_Text, "Curl error, see console");
 			return false;
 		}
+		Out.m_Notice = HttpErrorNotice(m_pHttpRequest->StatusCode());
 		if(m_pHttpRequest->StatusCode() != 200 && !ParseHttpError())
 		{
 			str_format(Out.m_Text, sizeof(Out.m_Text), "Got http code %d", m_pHttpRequest->StatusCode());
@@ -831,24 +845,19 @@ private:
 	// MyMemory 单次查询上限 500 字节
 	static constexpr size_t MAX_QUERY_BYTES = 500;
 
-	// 源文本：供"返回内容是服务提示而非译文"的启发式比对（如结果插入源文本没有的链接）。
+	// 保留源文本，避免把用户主动翻译的已知样板识别为服务提示。
 	std::string m_QueryText;
 
-	// MyMemory 的翻译记忆语料（KDE 等）对短句/含屏蔽词输入可能返回整段翻译指导样板
-	// 而非译文（例：kturtle 的 "You are about to translate the 'Backward': COMMAND..."）。
-	// 识别特征：已知的翻译指导措辞，或结果带源文本中不存在的链接。
+	// 只识别已知 KDE 翻译指导样板，普通链接或“如何翻译”等措辞不足以认定拒绝。
 	bool ResultLooksLikeServiceNotice(const char *pResultText) const
 	{
 		if(!pResultText || pResultText[0] == '\0')
 			return false;
-		if(str_find_nocase(pResultText, "translator.php") ||
-			str_find_nocase(pResultText, "You are about to translate") ||
-			str_find_nocase(pResultText, "on how to translate it"))
-			return true;
-		const bool ResultHasLink = str_find_nocase(pResultText, "http://") != nullptr ||
-					   str_find_nocase(pResultText, "https://") != nullptr;
-		const bool SourceHasLink = str_find_nocase(m_QueryText.c_str(), "http") != nullptr;
-		return ResultHasLink && !SourceHasLink;
+		if(str_find_nocase(m_QueryText.c_str(), "You are about to translate") || str_find_nocase(m_QueryText.c_str(), "kturtle/translator.php"))
+			return false;
+		return str_startswith_nocase(pResultText, "You are about to translate the ") &&
+		       str_find_nocase(pResultText, "on how to translate it") &&
+		       str_find_nocase(pResultText, "kturtle/translator.php");
 	}
 
 	// MyMemory 使用 RFC3066 语言码，简体中文需写作 zh-CN
@@ -923,7 +932,10 @@ private:
 		if(str_startswith_nocase(pTranslatedText->u.string.ptr, "MYMEMORY WARNING"))
 		{
 			if(str_find_nocase(pTranslatedText->u.string.ptr, "USED ALL AVAILABLE"))
+			{
+				Out.m_Notice = ETranslateNotice::QUOTA_EXCEEDED;
 				str_copy(Out.m_Text, "MyMemory: daily anonymous quota reached (resets tomorrow) - pick another service in settings");
+			}
 			else
 				str_format(Out.m_Text, sizeof(Out.m_Text), "MyMemory: %.120s", pTranslatedText->u.string.ptr);
 			return false;
@@ -939,6 +951,7 @@ private:
 
 		if(Status != 200)
 		{
+			Out.m_Notice = HttpErrorNotice(Status);
 			str_format(Out.m_Text, sizeof(Out.m_Text), "MyMemory error %d: %.120s", Status, pTranslatedText->u.string.ptr);
 			return false;
 		}
@@ -1100,7 +1113,10 @@ protected:
 			else if(StatusCode == 429)
 				pMeaning = "DeepL: too many requests, try again later";
 			else if(StatusCode == 456)
+			{
+				Out.m_Notice = ETranslateNotice::QUOTA_EXCEEDED;
 				pMeaning = "DeepL: monthly character quota exceeded";
+			}
 			if(pMeaning)
 			{
 				str_copy(Out.m_Text, pMeaning);
@@ -1220,6 +1236,8 @@ private:
 		Out.m_Language[0] = '\0';
 		if(!Success)
 		{
+			if(Parsed.m_Refused)
+				Out.m_Notice = ETranslateNotice::CONTENT_REFUSED;
 			str_copy(Out.m_Text, Parsed.m_aError);
 			return false;
 		}
@@ -1256,6 +1274,15 @@ protected:
 			json_value *pObj = m_pHttpRequest->ResultJson();
 			if(pObj)
 			{
+				SLlmParseResult Parsed;
+				ParseLlmResponseJson(pObj, Parsed);
+				if(Parsed.m_Refused)
+				{
+					Out.m_Notice = ETranslateNotice::CONTENT_REFUSED;
+					str_copy(Out.m_Text, Parsed.m_aError);
+					json_value_free(pObj);
+					return false;
+				}
 				const json_value *pError = json_object_get(pObj, "error");
 				if(pError != &json_value_none && pError->type == json_object)
 				{

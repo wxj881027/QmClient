@@ -185,11 +185,11 @@ private:
 
 	float CurrentWidth() const
 	{
-		return (float)g_Config.m_TcBgDrawWidth * m_This.m_Camera.m_Zoom;
+		return (float)g_Config.m_QmBgDrawWidth * m_This.m_Camera.m_Zoom;
 	}
 	ColorRGBA CurrentColor() const
 	{
-		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcBgDrawColor));
+		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmBgDrawColor));
 	}
 
 public:
@@ -424,7 +424,7 @@ bool CBgDraw::Load(const char *pFilename, bool Verbose)
 		CBgDrawItemData Data;
 		while(BgDrawFile::Read(Handle, Data) && (ItemsLoaded++) < MAX_ITEMS_TO_LOAD)
 		{
-			if((int)Queue.size() > g_Config.m_TcBgDrawMaxItems)
+			if((int)Queue.size() > g_Config.m_QmBgDrawMaxItems)
 			{
 				ItemsDiscarded += 1;
 				Queue.pop_front();
@@ -453,7 +453,7 @@ template<typename... T>
 CBgDrawItem *CBgDraw::AddItem(T &&...Aargs)
 {
 	MakeSpaceFor(1);
-	if(g_Config.m_TcBgDrawMaxItems == 0)
+	if(g_Config.m_QmBgDrawMaxItems == 0)
 		return nullptr;
 	m_pvItems->emplace_back(std::forward<T>(Aargs)...);
 	m_Dirty = true;
@@ -462,12 +462,12 @@ CBgDrawItem *CBgDraw::AddItem(T &&...Aargs)
 
 void CBgDraw::MakeSpaceFor(int Count)
 {
-	if(g_Config.m_TcBgDrawMaxItems == 0 || Count >= g_Config.m_TcBgDrawMaxItems)
+	if(g_Config.m_QmBgDrawMaxItems == 0 || Count >= g_Config.m_QmBgDrawMaxItems)
 	{
 		m_pvItems->clear();
 		return;
 	}
-	while((int)m_pvItems->size() + Count > g_Config.m_TcBgDrawMaxItems)
+	while((int)m_pvItems->size() + Count > g_Config.m_QmBgDrawMaxItems)
 	{
 		// Prevent floating pointer
 		for(std::optional<CBgDrawItem *> &ActiveItem : m_apActiveItems)
@@ -503,7 +503,7 @@ void CBgDraw::OnRender()
 	m_NextAutoSave -= Delta;
 	if(m_NextAutoSave < 0)
 	{
-		if(g_Config.m_TcBgDrawAutoSaveLoad)
+		if(g_Config.m_QmBgDrawAutoSaveLoad)
 			Save(nullptr, false);
 		m_NextAutoSave = AUTO_SAVE_INTERVAL;
 	}
@@ -569,7 +569,7 @@ void CBgDraw::OnRender()
 		else
 		{
 			Item.m_SecondsAge += Delta;
-			if(g_Config.m_TcBgDrawFadeTime > 0 && Item.m_SecondsAge > (float)g_Config.m_TcBgDrawFadeTime)
+			if(g_Config.m_QmBgDrawFadeTime > 0 && Item.m_SecondsAge > (float)g_Config.m_QmBgDrawFadeTime)
 				Item.m_Killed = true;
 		}
 		const bool InRangeX = Item.BoundingBox().m_Min.x < ScreenX1 && Item.BoundingBox().m_Max.x > ScreenX0;
@@ -604,14 +604,14 @@ void CBgDraw::OnStateChange(int NewState, int OldState)
 {
 	if(OldState == IClient::STATE_ONLINE || OldState == IClient::STATE_DEMOPLAYBACK)
 	{
-		if(g_Config.m_TcBgDrawAutoSaveLoad > 0)
+		if(g_Config.m_QmBgDrawAutoSaveLoad > 0)
 			Save(nullptr, true);
 	}
 	Reset();
 	m_NextAutoSave = AUTO_SAVE_INTERVAL;
 	if(NewState == IClient::STATE_ONLINE || NewState == IClient::STATE_DEMOPLAYBACK)
 	{
-		if(g_Config.m_TcBgDrawAutoSaveLoad > 0)
+		if(g_Config.m_QmBgDrawAutoSaveLoad > 0)
 			Load(nullptr, false);
 	}
 }

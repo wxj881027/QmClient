@@ -3,6 +3,8 @@
 
 #include <base/detect.h>
 
+enum class ESteamClientSource;
+
 #if defined(CONF_FAMILY_WINDOWS)
 
 // Steam 客户端探测链的内部实现（仅 Windows），供 steam.cpp 与 qm-benchmarks 使用。
@@ -13,7 +15,8 @@
 // → App Paths 默认值）→ 运行中的 steam.exe 进程 → 常见安装目录 → PATH 搜索。
 // 所有候选都经 fs_is_file 确认存在；找到时把 steam.exe 完整路径写入 pBuffer
 // 并返回 true，未安装或无法确定时返回 false。
-bool SteamProbeFindClientWindows(char *pBuffer, int BufferSize);
+bool SteamProbeFindClientWindows(char *pBuffer, int BufferSize, ESteamClientSource *pSource = nullptr);
+bool SteamProbeValidateManualPath(const char *pCandidate, char *pBuffer, int BufferSize);
 
 // 单层探测：枚举运行中的 steam.exe 进程并取其映像路径。这是探测链中最贵的
 // 一层（全系统进程快照），单独暴露供基准测量未安装 Steam 时冷路径的主导项。

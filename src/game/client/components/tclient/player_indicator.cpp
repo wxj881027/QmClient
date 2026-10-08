@@ -20,7 +20,7 @@ void CPlayerIndicator::OnRender()
 {
 	if(GameClient()->m_RankGhost.IsViewModeActive())
 		return;
-	if(g_Config.m_TcPlayerIndicator != 1)
+	if(g_Config.m_QmPlayerIndicator != 1)
 		return;
 
 	const int LocalClientId = GameClient()->m_Snap.m_LocalClientId;
@@ -38,9 +38,9 @@ void CPlayerIndicator::OnRender()
 
 	Graphics()->TextureClear();
 	ColorRGBA Col = ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f);
-	if(!(GameClient()->m_Teams.Team(LocalClientId) == 0 && g_Config.m_TcIndicatorTeamOnly))
+	if(!(GameClient()->m_Teams.Team(LocalClientId) == 0 && g_Config.m_QmIndicatorTeamOnly))
 	{
-		const bool HideVisible = g_Config.m_TcIndicatorHideVisible != 0;
+		const bool HideVisible = g_Config.m_QmIndicatorHideVisible != 0;
 		float ScreenX0 = 0.0f;
 		float ScreenY0 = 0.0f;
 		float ScreenX1 = 0.0f;
@@ -59,7 +59,7 @@ void CPlayerIndicator::OnRender()
 				!OtherTee.m_Spec &&
 				GameClient()->m_Snap.m_aCharacters[i].m_Active)
 			{
-				if(g_Config.m_TcPlayerIndicatorFreeze && !(OtherTee.m_FreezeEnd > 0 || OtherTee.m_DeepFrozen))
+				if(g_Config.m_QmPlayerIndicatorFreeze && !(OtherTee.m_FreezeEnd > 0 || OtherTee.m_DeepFrozen))
 					continue;
 
 				// Hide tees on our screen if the config is set to do so
@@ -68,30 +68,30 @@ void CPlayerIndicator::OnRender()
 
 				const vec2 Norm = DirectionTo(OtherTee.m_RenderPos, Position) * (-1.0f);
 
-				float Offset = g_Config.m_TcIndicatorOffset;
-				if(g_Config.m_TcIndicatorVariableDistance && g_Config.m_TcIndicatorMaxDistance > 0)
+				float Offset = g_Config.m_QmIndicatorOffset;
+				if(g_Config.m_QmIndicatorVariableDistance && g_Config.m_QmIndicatorMaxDistance > 0)
 				{
-					Offset = mix((float)g_Config.m_TcIndicatorOffset, (float)g_Config.m_TcIndicatorOffsetMax,
-						std::min(distance(Position, OtherTee.m_RenderPos) / (float)g_Config.m_TcIndicatorMaxDistance, 1.0f));
+					Offset = mix((float)g_Config.m_QmIndicatorOffset, (float)g_Config.m_QmIndicatorOffsetMax,
+						std::min(distance(Position, OtherTee.m_RenderPos) / (float)g_Config.m_QmIndicatorMaxDistance, 1.0f));
 				}
 
 				vec2 IndicatorPos(Norm.x * Offset + Position.x, Norm.y * Offset + Position.y);
 				CTeeRenderInfo TeeInfo = OtherTee.m_RenderInfo;
-				float Alpha = g_Config.m_TcIndicatorOpacity / 100.0f;
+				float Alpha = g_Config.m_QmIndicatorOpacity / 100.0f;
 				if(OtherTee.m_FreezeEnd > 0 || OtherTee.m_DeepFrozen)
 				{
 					// check if player is frozen or is getting saved
 					if(OtherCharacter.m_IsInFreeze == 0)
 					{
 						// player is on the way to get free again
-						Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcIndicatorSaved));
+						Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmIndicatorSaved));
 					}
 					else
 					{
 						// player is frozen
-						Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcIndicatorFreeze));
+						Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmIndicatorFreeze));
 					}
-					if(g_Config.m_TcIndicatorTees)
+					if(g_Config.m_QmIndicatorTees)
 					{
 						TeeInfo.m_ColorBody.r *= 0.4f;
 						TeeInfo.m_ColorBody.g *= 0.4f;
@@ -104,14 +104,14 @@ void CPlayerIndicator::OnRender()
 				}
 				else
 				{
-					Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcIndicatorAlive));
+					Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmIndicatorAlive));
 				}
 				bool HideIfNotWar = false;
 				ColorRGBA PrevCol = Col;
-				if(g_Config.m_TcWarListIndicator)
+				if(g_Config.m_QmWarListIndicator)
 				{
 					HideIfNotWar = true;
-					if(g_Config.m_TcWarListIndicatorAll)
+					if(g_Config.m_QmWarListIndicatorAll)
 					{
 						if(GameClient()->m_WarList.GetAnyWar(i))
 						{
@@ -119,7 +119,7 @@ void CPlayerIndicator::OnRender()
 							HideIfNotWar = false;
 						}
 					}
-					if(g_Config.m_TcWarListIndicatorTeam)
+					if(g_Config.m_QmWarListIndicatorTeam)
 					{
 						if(GameClient()->m_WarList.GetWarData(i).m_WarGroupMatches[2])
 						{
@@ -127,7 +127,7 @@ void CPlayerIndicator::OnRender()
 							HideIfNotWar = false;
 						}
 					}
-					if(g_Config.m_TcWarListIndicatorEnemy)
+					if(g_Config.m_QmWarListIndicatorEnemy)
 					{
 						if(GameClient()->m_WarList.GetWarData(i).m_WarGroupMatches[1])
 						{
@@ -139,14 +139,14 @@ void CPlayerIndicator::OnRender()
 
 				if(HideIfNotWar)
 					continue;
-				if(!g_Config.m_TcWarListIndicatorColors)
+				if(!g_Config.m_QmWarListIndicatorColors)
 					Col = PrevCol;
 
 				Col.a = Alpha;
 
-				TeeInfo.m_Size = g_Config.m_TcIndicatorRadius * 4.0f;
+				TeeInfo.m_Size = g_Config.m_QmIndicatorRadius * 4.0f;
 
-				if(g_Config.m_TcIndicatorTees)
+				if(g_Config.m_QmIndicatorTees)
 				{
 					RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeInfo, OtherTee.m_RenderCur.m_Emote, vec2(1.0f, 0.0f), IndicatorPos, Col.a);
 				}
@@ -154,7 +154,7 @@ void CPlayerIndicator::OnRender()
 				{
 					Graphics()->QuadsBegin();
 					Graphics()->SetColor(Col);
-					Graphics()->DrawCircle(IndicatorPos.x, IndicatorPos.y, g_Config.m_TcIndicatorRadius, 16);
+					Graphics()->DrawCircle(IndicatorPos.x, IndicatorPos.y, g_Config.m_QmIndicatorRadius, 16);
 					Graphics()->QuadsEnd();
 				}
 			}

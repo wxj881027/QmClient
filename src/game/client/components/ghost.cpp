@@ -393,7 +393,7 @@ void CGhost::OnRender()
 
 		// QmClient：转换侧以 WEAPON_NINJA 标记冻结段（幽灵格式无独立冻结字段）。
 		// 冻结表现完全复刻 demo 播放的玩家渲染（players.cpp）：冰冻着色 + 隐藏武器、
-		// 旧版卡塔纳手随 TClient 的 tc_frozen_katana、忍者皮肤随 cl_show_ninja
+		// 旧版卡塔纳手随 TClient 的 qm_frozen_katana、忍者皮肤随 cl_show_ninja
 		const bool GhostFrozen = Draw.m_Player.m_Weapon == WEAPON_NINJA;
 		unsigned FrozenFlags = 0;
 		int RenderWeapon = Draw.m_Player.m_Weapon;
@@ -401,9 +401,9 @@ void CGhost::OnRender()
 		{
 			FrozenFlags = TEE_EFFECT_FROZEN | TEE_NO_WEAPON;
 			// 数据中武器被用作冻结标记，还原为原始武器（DDRace 默认为锤）；
-			// 开启 tc_frozen_katana 时保留忍者武器以复现旧版卡塔纳手
+			// 开启 qm_frozen_katana 时保留忍者武器以复现旧版卡塔纳手
 			RenderWeapon = WEAPON_HAMMER;
-			if(g_Config.m_TcFreezeKatana > 0)
+			if(g_Config.m_QmFreezeKatana > 0)
 			{
 				RenderWeapon = WEAPON_NINJA;
 				FrozenFlags &= ~TEE_NO_WEAPON;
@@ -428,13 +428,13 @@ void CGhost::OnRender()
 					Draw.m_OwnRenderInfo.m_ColorBody = ColorRGBA(1, 1, 1);
 					Draw.m_OwnRenderInfo.m_ColorFeet = ColorRGBA(1, 1, 1);
 
-					// 与玩家侧 TClient 的彩色冻结皮肤一致（tc_color_freeze）
-					if(g_Config.m_TcColorFreeze)
+					// 与玩家侧 TClient 的彩色冻结皮肤一致（qm_color_freeze）
+					if(g_Config.m_QmColorFreeze)
 					{
 						const CTeeRenderInfo &OwnInfo = *Draw.m_pSharedRenderInfo;
 						Draw.m_OwnRenderInfo.m_CustomColoredSkin = OwnInfo.m_CustomColoredSkin;
-						Draw.m_OwnRenderInfo.m_ColorFeet = g_Config.m_TcColorFreezeFeet ? OwnInfo.m_ColorFeet : ColorRGBA(1, 1, 1);
-						const float Darken = (g_Config.m_TcColorFreezeDarken / 100.0f) * 0.5f + 0.5f;
+						Draw.m_OwnRenderInfo.m_ColorFeet = g_Config.m_QmColorFreezeFeet ? OwnInfo.m_ColorFeet : ColorRGBA(1, 1, 1);
+						const float Darken = (g_Config.m_QmColorFreezeDarken / 100.0f) * 0.5f + 0.5f;
 						const ColorRGBA Body = OwnInfo.m_CustomColoredSkin ? OwnInfo.m_ColorBody : ColorRGBA(1, 1, 1);
 						Draw.m_OwnRenderInfo.m_ColorBody = ColorRGBA(Body.r * Darken, Body.g * Darken, Body.b * Darken, 1.0f);
 					}

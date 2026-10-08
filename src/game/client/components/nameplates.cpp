@@ -1008,7 +1008,7 @@ protected:
 		}
 		m_Alpha = Data.m_Color.a;
 		// TClient
-		if(g_Config.m_TcWarList)
+		if(g_Config.m_QmWarList)
 		{
 			if(This.m_WarList.GetWarData(Data.m_ClientId).m_WarName)
 				m_Color = This.m_WarList.GetNameplateColor(Data.m_ClientId).WithAlpha(Data.m_Color.a);
@@ -1195,7 +1195,7 @@ public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = true;
-		if(g_Config.m_TcNameplateCountry == 0)
+		if(g_Config.m_QmNameplateCountry == 0)
 		{
 			m_Visible = false;
 			return;
@@ -1262,9 +1262,9 @@ public:
 		m_Radius = Data.m_FontSize / 3.0f;
 		m_Size = vec2(m_Radius, m_Radius) * 1.5f;
 		m_Visible = Data.m_InGame ? (
-						    (g_Config.m_TcNameplatePingCircle > 0 ||
+						    (g_Config.m_QmNameplatePingCircle > 0 ||
 							    (This.m_Scoreboard.IsActive() && pInfo && !pInfo->m_Local))) :
-					    (g_Config.m_TcNameplatePingCircle > 0);
+					    (g_Config.m_QmNameplatePingCircle > 0);
 		if(!m_Visible)
 			return;
 		int Ping = Data.m_InGame && pInfo ? pInfo->m_Latency : (1 + Data.m_ClientId) * 25;
@@ -1292,7 +1292,7 @@ protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
 		const CNetObj_PlayerInfo *pInfo = Data.m_InGame ? This.m_Snap.m_apPlayerInfos[Data.m_ClientId] : nullptr;
-		m_Visible = Data.m_InGame ? (pInfo && g_Config.m_TcNameplateSkins > (pInfo->m_Local ? 1 : 0)) : g_Config.m_TcNameplateSkins > 0;
+		m_Visible = Data.m_InGame ? (pInfo && g_Config.m_QmNameplateSkins > (pInfo->m_Local ? 1 : 0)) : g_Config.m_QmNameplateSkins > 0;
 		if(Data.m_InGame && This.ShouldHideStreamerSkin(Data.m_ClientId))
 			m_Visible = false;
 		if(!m_Visible)
@@ -1374,7 +1374,7 @@ private:
 protected:
 	bool UpdateNeeded(CGameClient &This, const CNamePlateData &Data) override
 	{
-		m_Visible = Data.m_InGame && g_Config.m_TcWarList != 0 && g_Config.m_TcWarListReason != 0;
+		m_Visible = Data.m_InGame && g_Config.m_QmWarList != 0 && g_Config.m_QmWarListReason != 0;
 		if(!m_Visible)
 			return false;
 		const CNetObj_PlayerInfo *pInfo = This.m_Snap.m_apPlayerInfos[Data.m_ClientId];
@@ -2247,7 +2247,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 
 	// TClient
-	if(Data.m_ShowName && !HideIdentity && g_Config.m_TcWarList && g_Config.m_TcWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
+	if(Data.m_ShowName && !HideIdentity && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
 		Data.m_ShowClan = true;
 	Data.m_Local = pPlayerInfo->m_Local;
 
@@ -2267,7 +2267,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 		FrameData.m_ShowCoordX = (CoordModuleAllowsCoords && g_Config.m_QmNameplateCoordX != 0) || FrameShowLocalAlignedCoordX;
 		FrameData.m_ShowCoordY = CoordModuleAllowsCoords && g_Config.m_QmNameplateCoordY != 0;
 		FrameData.m_ShowCoords = CoordModuleAllowsCoords || FrameShowLocalAlignedCoordX;
-		if(FrameData.m_ShowName && !HideIdentity && g_Config.m_TcWarList && g_Config.m_TcWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
+		if(FrameData.m_ShowName && !HideIdentity && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan && GameClient()->m_WarList.GetWarData(ClientId).m_WarClan)
 			FrameData.m_ShowClan = true;
 
 		CNamePlate &FrameNamePlate = m_pData->m_aNamePlateFrameReferences[ClientId];
@@ -3005,11 +3005,11 @@ void CNamePlates::OnRender()
 	const bool ShowCoords = (NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateCoords) || NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateCoordsOwn)) &&
 				(NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateCoordX) || NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateCoordY));
 	const bool RenderNames = NameplateRenderValue(ConfigManager(), &g_Config.m_QmNameplateShowScope) != QM_NAMEPLATE_SHOW_SCOPE_OFF;
-	const bool RenderClan = g_Config.m_ClNamePlatesClan || (g_Config.m_TcWarList && g_Config.m_TcWarListShowClan);
+	const bool RenderClan = g_Config.m_ClNamePlatesClan || (g_Config.m_QmWarList && g_Config.m_QmWarListShowClan);
 	const bool RenderClientIds = g_Config.m_Debug || g_Config.m_ClNamePlatesIds;
 	// 回放的强弱钩改成独立档位；调试模式下回放不强行显示（避免导出画面被调试标记污染）。
 	const bool RenderStrongWeak = DisplaySettings.StrongWeakEnabled();
-	const bool RenderTClientExtras = g_Config.m_TcNameplatePingCircle || g_Config.m_TcNameplateCountry || g_Config.m_TcNameplateSkins || (g_Config.m_TcWarList && g_Config.m_TcWarListReason);
+	const bool RenderTClientExtras = g_Config.m_QmNameplatePingCircle || g_Config.m_QmNameplateCountry || g_Config.m_QmNameplateSkins || (g_Config.m_QmWarList && g_Config.m_QmWarListReason);
 	const bool RenderDirection = ShowDirection != 0;
 	const bool RenderNameplates = RenderNames || RenderClan || RenderClientIds || RenderStrongWeak || RenderTClientExtras || RenderDirection || ShowCoords || ShowCoordXAlignHint;
 	const bool RenderChatBubbles = g_Config.m_QmChatBubble != 0 && !FocusModeHidesChat();
@@ -3060,7 +3060,7 @@ void CNamePlates::OnRender()
 				// TClient
 				if(GameClient()->m_aClients[i].m_IsVolleyBall)
 					continue;
-				// if(g_Config.m_TcRenderNameplateSpec > 0)
+				// if(g_Config.m_QmRenderNameplateSpec > 0)
 				//	continue;
 				const vec2 RenderPos = GameClient()->m_aClients[i].m_RenderPos;
 				if(RenderNameplates || RenderChatBubbles)

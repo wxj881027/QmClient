@@ -2258,11 +2258,11 @@ public:
 	void ApplyConfiguredFonts()
 	{
 		SetFontLanguageVariant(g_Config.m_ClLanguagefile);
-		SetCustomFace(g_Config.m_TcCustomFont);
-		SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
-		SetCustomFaceIcons(g_Config.m_TcCustomFontIcons);
-		SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
-		SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
+		SetCustomFace(g_Config.m_QmCustomFont);
+		SetCustomFaceCjk(g_Config.m_QmCustomFontCjk);
+		SetCustomFaceIcons(g_Config.m_QmCustomFontIcons);
+		SetCustomFontWeight(g_Config.m_QmCustomFontWeight);
+		SetCustomFontWeightCjk(g_Config.m_QmCustomFontWeightCjk);
 	}
 
 	// 正文与字体商店仍扫描可搜索目录；内置 Phosphor 单独从 DATADIR 加载，
@@ -2477,8 +2477,8 @@ public:
 			for(FT_Face Face : vLoadedFaces)
 				m_pGlyphMap->QmMarkPreviewFace(Face);
 			// 新 face 可能是可变字体：把当前分类字重立即应用上去（坐标未变化时不会动图集）。
-			m_pGlyphMap->SetCustomFontWeight(g_Config.m_TcCustomFontWeight);
-			m_pGlyphMap->SetCustomFontWeightCjk(g_Config.m_TcCustomFontWeightCjk);
+			m_pGlyphMap->SetCustomFontWeight(g_Config.m_QmCustomFontWeight);
+			m_pGlyphMap->SetCustomFontWeightCjk(g_Config.m_QmCustomFontWeightCjk);
 			return m_pGlyphMap->QmHasFamily(pFamily);
 		}
 		free(pFontData);

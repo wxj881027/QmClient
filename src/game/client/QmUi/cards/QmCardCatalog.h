@@ -29,14 +29,15 @@ namespace qm_card_catalog
 	const std::vector<const char *> &TitleCardStableIds();
 	const std::vector<const char *> &TeeCardStableIds();
 	uint64_t NameplateMeasureContentRevision();
+	uint64_t BlockWordsLayoutRevision();
 
 	// 该 stableId 是否有可构造的卡片模块（用于搜索页过滤与页面自检）。
 	bool HasCardModule(const char *pStableId);
 	// 全目录卡片的重测版本聚合（任一卡的内容高度依赖项变化即失效），页面把它折进 DefinitionsRevision。
 	uint64_t MeasureContentRevision();
 
-	// 函数分类卡片的布局版本状态：由菜单层每帧刷新（它持有这些缓存与计数），
-	// 卡片模块只读取，保证卡片的测量逻辑不再散落在页面函数里。
+	// 功能分类卡片的布局版本。编辑行与文本缓存由各自卡片模块维护，
+	// 页面和搜索页使用同一份状态进行测量。
 	struct SQmFunctionCardLayoutState
 	{
 		uint64_t m_BlockWordsRevision = 1;
@@ -45,6 +46,8 @@ namespace qm_card_catalog
 		bool m_KeywordRulesHalfFilled = false;
 		uint64_t m_FavoriteMapsRevision = 1;
 	};
+
+	void FillKeywordReplyLayoutState(SQmFunctionCardLayoutState &State);
 
 	// 卡片构造上下文：页面把自己的 UI 尺度、布局帧、折叠状态与持久化回调注入进来。
 	// 卡片模块只依赖本结构，不依赖任何页面函数局部状态。
@@ -93,6 +96,8 @@ namespace qm_card_catalog
 	bool BuildFunctionCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 	bool BuildHudCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 	bool BuildSteamCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
+	bool BuildAppearancePresetCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
+	bool BuildTooltipCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildBindCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 
 	// 卡片模块调用菜单内容渲染/输入助手的受控入口（CMenus 只对本结构开放友元）。
@@ -126,6 +131,9 @@ namespace qm_card_catalog
 		// CMenus::RenderQmFunctionMiniFeaturesContent / RenderQmHudBindStatusContent 仍需要
 		// 它们来排版，故桥接按**本地签名**保留并透传这两个参数（以本地实现为准，不改本地行为）。
 		static void RenderQmFunctionMiniFeaturesContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+		static void RenderQmSteamContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
+		static void RenderQmAppearancePresetContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
+		static void RenderQmTooltipContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
 		static void RenderQmFunctionImeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionBetterScoreboardContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionJumpHintContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
@@ -134,7 +142,7 @@ namespace qm_card_catalog
 		static void RenderQmFunctionBlockWordsContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionTranslateContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionKeywordReplyContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
-		static void RenderQmFunctionPieMenuContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CardCornerRadius, bool PrewarmOnly);
+		static void RenderQmFunctionPieMenuContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CardCornerRadius, bool PrewarmOnly, int MaxGridColumns);
 		static void RenderQmFunctionMapUploadContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 		static void RenderQmFunctionFavoriteMapsContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 		static void RenderQmFunctionHJAssistContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);

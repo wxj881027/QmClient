@@ -5,6 +5,7 @@
 
 #include <engine/console.h>
 #include <engine/keys.h>
+#include <engine/shared/qm_legacy_config.h>
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/shortcut_held_bind.h>
@@ -72,10 +73,11 @@ public:
 		char *pCopy = nullptr;
 		if(pCommand[0])
 		{
-			const int Size = str_length(pCommand) + 1;
+			const std::string Migrated = QmLegacyConfig::MigrateBindCommand(pCommand);
+			const int Size = static_cast<int>(Migrated.size()) + 1;
 			pCopy = static_cast<char *>(malloc(Size));
 			dbg_assert(pCopy != nullptr, "bind allocation failed");
-			str_copy(pCopy, pCommand, Size);
+			str_copy(pCopy, Migrated.c_str(), Size);
 		}
 		free(m_aapKeyBindings[Modifiers][Key]);
 		m_aapKeyBindings[Modifiers][Key] = pCopy;

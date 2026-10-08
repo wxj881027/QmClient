@@ -800,6 +800,9 @@ API key
 Appearance
 == Внешний вид
 
+Appearance of help bubbles outside settings cards
+== Оформление подсказок вне карточек настроек
+
 Append to log file instead of overwriting
 == Добавлять в файл журнала вместо перезаписи
 
@@ -836,6 +839,9 @@ Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 == Применять ввод заранее до следующего тика для предсказания
 
+Apply Qm recommended appearance
+== Применить рекомендуемый вид Qm
+
 Apply quick input to other Tees as well
 == Также применять быстрый ввод к другим Tee
 
@@ -847,6 +853,9 @@ Apply this preset
 
 Apply watermark
 == Применить водяной знак
+
+Applying this preset changes the appearance settings listed below.
+== Применение набора изменит перечисленные ниже настройки внешнего вида.
 
 Arabic
 == Арабский
@@ -1288,6 +1297,9 @@ Axiom score request failed
 
 Axis
 == Ось
+
+Backdrop blur
+== Размытие фона
 
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 == Алгоритм размытия фона: 0=Гаусс, 1=Kawase, 2=Dual Kawase
@@ -1733,11 +1745,11 @@ Censor replacement character
 Censor word list (comma-separated)
 == Список слов для блокировки (разделяйте запятыми)
 
-Center line color (requires tc_show_center)
-== Цвет центральной линии (требуется tc_show_center)
+Center line color (requires qm_show_center)
+== Цвет центральной линии (требуется qm_show_center)
 
-Center line width (requires tc_show_center)
-== Ширина центральной линии (требуется tc_show_center)
+Center line width (requires qm_show_center)
+== Ширина центральной линии (требуется qm_show_center)
 
 Change indicator offset based on distance to other tees
 == Смещать индикатор в зависимости от расстояния до других ти
@@ -1871,6 +1883,9 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == Проверка существующего игрока с вашим именем
 
+Checking Steam...
+== Проверка Steam…
+
 Chinese (Simplified)
 == Китайский (упрощённый)
 
@@ -1909,6 +1924,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == Кинематографическая камера
+
+CJK font
+== Шрифт CJK
+
+CJK font weight
+== Толщина шрифта CJK
 
 CJK font weight:
 == Насыщенность шрифта CJK:
@@ -2159,8 +2180,8 @@ Command
 Command completion
 == Дополнение команд
 
-Command executed by tc_mod_weapon, target id appended at end
-== Команда, выполняемая tc_mod_weapon, ID цели добавляется в конец
+Command executed by qm_mod_weapon, target id appended at end
+== Команда, выполняемая qm_mod_weapon, ID цели добавляется в конец
 
 Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)
 == Команда при прицеливании и стрельбе (по умолчанию kill, работает только при аутентификации удалённой консоли)
@@ -2540,6 +2561,9 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == Не удалось подключить дамми
 
+Could not connect to the translation service. Please try again later.
+== Не удалось подключиться к сервису перевода. Повторите попытку позже.
+
 Could not create report scan request
 == Не удалось создать запрос сканирования жалобы
 
@@ -2795,6 +2819,9 @@ Cyrillic
 d = Prediction latency
 == d = Задержка предсказания
 
+Dark translucent
+== Тёмный полупрозрачный
+
 Darken Tee color when frozen (0-100)
 == Затемнение цвета Tee при заморозке (0-100)
 
@@ -2993,6 +3020,9 @@ Default
 default
 == по умолчанию
 
+Default appearance profile migration version
+== Версия миграции настроек внешнего вида по умолчанию
+
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 == Режим отображения времени по умолчанию: игровой/раундовый таймер или трансляция. 0 = игровой/раундовый таймер, 1 = трансляция, 2 = 0+1, 3 = нет.
 
@@ -3116,24 +3146,6 @@ Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <
 Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
 == Устарело. Используйте 'vote_muteid <client_id> <seconds> <reason>' или 'vote_muteip <ip> <seconds> <reason>'
 
-Deprecated: jump hint color, migrated to qm_jump_hint_color on startup
-== Устарело: цвет подсказки прыжка, перенесено в qm_jump_hint_color при запуске
-
-Deprecated: jump hint font size, migrated to qm_jump_hint_size on startup
-== Устарело: размер шрифта подсказки прыжка, перенесено в qm_jump_hint_size при запуске
-
-Deprecated: jump hint text, migrated to qm_jump_hint_text on startup (use \n for newline)
-== Устарело: текст подсказки прыжка, перенесено в qm_jump_hint_text при запуске (используйте \n для новой строки)
-
-Deprecated: jump hint toggle, migrated to qm_jump_hint on startup
-== Устарело: переключатель подсказки прыжка, перенесено в qm_jump_hint при запуске
-
-Deprecated: jump hint X position, migrated to qm_jump_hint_x on startup
-== Устарело: позиция X подсказки прыжка, перенесено в qm_jump_hint_x при запуске
-
-Deprecated: jump hint Y position, migrated to qm_jump_hint_y on startup
-== Устарело: позиция Y подсказки прыжка, перенесено в qm_jump_hint_y при запуске
-
 Depth freeze tile overlay alpha (0-100)
 == Прозрачность наложения для плитки глубокой заморозки (0-100)
 
@@ -3157,6 +3169,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == Обнаружение совместимых подсказок соло на пользовательских серверах
+
+Detect Steam again
+== Повторно найти Steam
 
 Detection distance
 == Дистанция обнаружения
@@ -3713,6 +3728,9 @@ Emoticon
 Emoticon ID
 == ID эмоции
 
+Emoticon projectile duration
+== Длительность полёта смайлика
+
 Emoticon shadow
 == Тень эмотикона
 
@@ -4165,6 +4183,9 @@ Enter solo split mode
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Введите спонсорский код и нажмите «Активировать», затем впишите титул и нажмите «Сохранить». Включите «Показывать только с этим ником», чтобы привязать титул к одному нику.
+
+Enter the Steam client program path, without command arguments
+== Укажите путь к клиенту Steam без аргументов запуска
 
 Enter Username
 == Введите имя пользователя
@@ -4976,6 +4997,9 @@ Global card ordering old config migration completed flag
 Global toggle key
 == Глобальная клавиша переключения
 
+Global UI size
+== Общий размер интерфейса
+
 Global UI size percentage
 == Общий масштаб интерфейса в процентах
 
@@ -5540,6 +5564,21 @@ IME
 IME background color
 == Цвет фона IME
 
+IME font size
+== Размер шрифта IME
+
+IME font size percentage
+== Размер шрифта IME (%)
+
+IME selected text color
+== Цвет выбранного текста IME
+
+IME selection background color
+== Цвет фона выделения IME
+
+IME text color
+== Цвет текста IME
+
 Import from clipboard
 == Импорт из буфера обмена
 
@@ -5936,6 +5975,18 @@ Keep vote window open after voting
 Key binds
 == Привязки клавиш
 
+Key press count color
+== Цвет счётчика нажатий
+
+Key press count font size
+== Размер шрифта счётчика нажатий
+
+Key press count font size percentage
+== Размер шрифта счётчика нажатий (%)
+
+Key press count label
+== Префикс счётчика нажатий
+
 Key press icon size
 == Размер иконки нажатия клавиши
 
@@ -6101,11 +6152,26 @@ Last successful sync: %s
 Last verified approved update source
 == Последний проверенный разрешённый источник обновления
 
+Last viewed announcement content revision
+== Редакция последнего прочитанного объявления
+
+Last viewed announcement version
+== Версия последнего прочитанного объявления
+
+Last viewed client release notes
+== Последние прочитанные примечания к выпуску клиента
+
 Latency
 == Задержка
 
 Latency Jitter
 == Джиттер задержки
+
+Latin font
+== Латинский шрифт
+
+Latin font weight
+== Толщина латинского шрифта
 
 Launch count threshold for the next sponsor reminder
 == Порог числа запусков до следующего напоминания
@@ -6458,6 +6524,12 @@ Lose weapons when teleporting (useful for race maps)
 Low to high
 == От низкого к высокому
 
+LXGW WenKai is available.
+== Шрифт LXGW WenKai доступен.
+
+LXGW WenKai is unavailable. Current fonts and weights will be kept.
+== LXGW WenKai недоступен. Текущие шрифты и их толщина сохранятся.
+
 Lyrics
 == Текст песни
 
@@ -6535,6 +6607,9 @@ Manual scope
 
 Manual source file
 == Ручной исходный файл
+
+Manual Steam path is invalid; using automatic detection
+== Указанный путь Steam недействителен; используется автоопределение
 
 Manual target
 == Ручная цель
@@ -6832,6 +6907,12 @@ Menu option - normal
 
 Menu option - selected
 == Пункт меню - выбранный
+
+Menu panel color
+== Цвет панели меню
+
+Menu panel opacity
+== Непрозрачность панели меню
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == Объединять подряд идущие одинаковые сообщения echo в этом окне в миллисекундах (0 — не объединять)
@@ -7178,8 +7259,8 @@ Name plates offset
 Name plates size
 == Размер табличек с именами
 
-Name to change to near finish (when tc_change_name_near_finish enabled)
-== Имя для смены рядом с финишем (когда включено tc_change_name_near_finish)
+Name to change to near finish (when qm_change_name_near_finish enabled)
+== Имя для смены рядом с финишем (когда включено qm_change_name_near_finish)
 
 Name:
 == Имя:
@@ -7315,6 +7396,9 @@ New category name
 
 New features
 == Новые возможности
+
+New features (unread)
+== Новые возможности (не прочитано)
 
 New IME
 == Новый IME
@@ -8153,6 +8237,18 @@ Pickup range
 Pie menu
 == Круговое меню
 
+Pie menu effects
+== Эффекты открытия и закрытия кругового меню
+
+Pie menu highlight tint
+== Оттенок выделения кругового меню
+
+Pie menu highlight tint (alpha controls tint strength)
+== Оттенок выделения кругового меню (альфа задаёт силу оттенка)
+
+Pie menu opening and closing effects
+== Эффекты открытия и закрытия кругового меню
+
 Pie menu rename list (separate with |, e.g., name1|name2)
 == Список переименований в меню-пироге (разделитель |, напр.: Сюаньмэн1|Сюаньмэн2)
 
@@ -8429,6 +8525,9 @@ Popup & dropdown blur
 Popup animation
 == Анимация всплытия
 
+Popup blur
+== Размытие всплывающих панелей
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == Порт для подключения клиента к серверу (0 = случайный, >=1024 задаёт ручной порт)
 
@@ -8572,6 +8671,9 @@ Preview
 
 Preview 'Hook collisions' being pressed
 == Предпросмотр нажатия 'Столкновения крюка'
+
+Preview and apply a fixed appearance preset
+== Просмотр и применение фиксированного набора настроек внешнего вида
 
 Preview built with %d skipped slot(s).
 == Предпросмотр создан с пропуском %d слотов.
@@ -8770,6 +8872,9 @@ q = Connection quality
 
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Расширенный рендеринг Qm: 0=выкл. (чистый Vulkan), 1=автооткат, 2=вкл. принудительно
+
+Qm recommended appearance
+== Рекомендуемый вид Qm
 
 Qm UI custom icon color
 == Пользовательский цвет значков Qm UI
@@ -9482,6 +9587,9 @@ Replays directory
 Reply
 == Ответить
 
+Reply content
+== Текст ответа
+
 Reply to messages from muted players
 == Отвечать на сообщения от заглушённых игроков
 
@@ -9590,6 +9698,9 @@ Reset column widths
 Reset controls
 == Сбросить управление
 
+Reset count appearance
+== Сбросить оформление счётчика
+
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 == Сбрасывать настройки DDRace (sv_hit, sv_endless_drag, sv_old_laser) после каждой смены карты
 
@@ -9602,11 +9713,20 @@ Reset dummy
 Reset filter
 == Сбросить фильтр
 
+Reset IME appearance
+== Сбросить оформление IME
+
+Reset key press counts
+== Сбросить счётчики нажатий клавиш
+
 Reset layout
 == Сбросить расположение
 
 Reset mouse position when opening bind wheel
 == Сбрасывать позицию мыши при открытии колеса привязок
+
+Reset pie menu appearance
+== Сбросить оформление кругового меню
 
 Reset position of mouse when opening bindwheel
 == Сбросить позицию мыши при открытии колёсика привязок
@@ -9619,6 +9739,12 @@ Reset stats when joining a server
 
 Reset to defaults
 == Сброс на стандартные
+
+Reset tooltip appearance
+== Сбросить оформление подсказок
+
+Reset translation colors
+== Сбросить цвета перевода
 
 Reset tuning after each map change
 == Сбрасывать настройки после каждой смены карты
@@ -9781,6 +9907,9 @@ Rule line 8.
 
 Rule line 9.
 == Строка правил 9.
+
+Rule list
+== Список правил
 
 Run "hot_reload" on local server with rcon auth on map save
 == Запускать «hot_reload» на локальном сервере с rcon-авторизацией при сохранении карты
@@ -10172,9 +10301,6 @@ Self and friends
 Self only
 == Отправить
 
-Send
-== Отправка
-
 Send & Receive
 == Отправить эмоцию в воде
 
@@ -10402,6 +10528,9 @@ Settings card titles use rainbow colors
 
 Settings file
 == Файл настроек
+
+Settings page opacity
+== Непрозрачность страницы настроек
 
 Settings page right panel opacity
 == Прозрачность правой панели страницы настроек
@@ -10894,6 +11023,9 @@ Show katan on frozen players
 
 Show katana on frozen players (restores old behavior)
 == Показывать катану на замороженных игроках (восстанавливает старое поведение)
+
+Show key press counts
+== Показывать количество нажатий клавиш
 
 Show key presses
 == Показывать нажатия клавиш
@@ -11942,8 +12074,23 @@ Status normal, check details below if still experiencing issues
 Status Scheme:
 == Схема состояния:
 
+Steam client path (leave empty to detect automatically)
+== Путь к клиенту Steam (пусто — автоопределение)
+
 Steam integration
 == Интеграция со Steam
+
+Steam is installed
+== Steam установлен
+
+Steam is installed but not running
+== Steam установлен, но не запущен
+
+Steam is running
+== Steam запущен
+
+Steam not found
+== Steam не найден
 
 Steam profile name
 == Имя профиля Steam
@@ -12473,6 +12620,9 @@ Tencent Cloud Translation SecretKey
 Text alpha
 == Альфа текста
 
+Text before each key press count
+== Префикс счётчика нажатий
+
 Text color
 == Цвет текста
 
@@ -12677,8 +12827,8 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Эту подсказку предоставляет ui_widget::Tooltip — тонкая обёртка над CTooltips.
 
-Tick delay before executing tc_execute_on_join
-== Задержка в тиках перед выполнением tc_execute_on_join
+Tick delay before executing qm_execute_on_join
+== Задержка в тиках перед выполнением qm_execute_on_join
 
 Ticks after freeze before applying max prediction reduction
 == Тиков после заморозки до применения максимального уменьшения предсказания
@@ -12956,6 +13106,24 @@ Too many translation tasks
 Toolbox page
 == Страница инструментов
 
+Tooltip background color
+== Цвет фона подсказки
+
+Tooltip bounce animation
+== Упругая анимация подсказки
+
+Tooltip font size
+== Размер шрифта подсказки
+
+Tooltip preview
+== Предпросмотр подсказки
+
+Tooltip text color
+== Цвет текста подсказки
+
+Tooltips
+== Подсказки
+
 Top left
 == Слева вверху
 
@@ -13067,14 +13235,32 @@ Translation queue full, sending original
 Translation service
 == Сервис перевода
 
-Translation service returned a notice instead of a translation (the message may contain filtered words)
-== Сервис перевода вернул уведомление вместо перевода (возможно, сообщение содержит запрещённые слова)
+Translation service authentication failed. Check the API key and service address.
+== Ошибка авторизации сервиса перевода. Проверьте ключ API и адрес сервиса.
+
+Translation service is rate limited. Please try again later.
+== Слишком много запросов к сервису перевода. Повторите попытку позже.
+
+Translation service is temporarily unavailable. Please try again later.
+== Сервис перевода временно недоступен. Повторите попытку позже.
+
+Translation service quota is exhausted. Choose another service or try again later.
+== Лимит сервиса перевода исчерпан. Выберите другой сервис или повторите попытку позже.
+
+Translation service refused this content. Please edit it and try again.
+== Сервис перевода отказался обработать этот текст. Измените его и повторите попытку.
+
+Translation service returned a notice instead of a translation
+== Сервис перевода вернул уведомление вместо перевода
 
 Translation Settings
 == Настройки перевода
 
 transmits your player name to info.ddnet.org
 == передаёт ваше имя игрока на info.ddnet.org
+
+Trigger limits
+== Условия срабатывания
 
 Troubleshooting suggestions
 == Рекомендации по устранению неполадок
@@ -13156,6 +13342,9 @@ UDP seems to be filtered.
 
 UDP socket not open
 == UDP-сокет не открыт
+
+UI animations
+== Анимации интерфейса
 
 UI color
 == Цвет интерфейса
@@ -13573,6 +13762,9 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Используйте колесо мыши на наведённом модуле для масштабирования на 5%
+
+Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
+== Укажите отдельно пароли основного аккаунта и дамми, зарегистрированных на Axiom. Эта настройка не создаёт аккаунты.
 
 Use the scoreboard cursor mode to scroll the list
 == Для прокрутки списка используйте режим курсора таблицы

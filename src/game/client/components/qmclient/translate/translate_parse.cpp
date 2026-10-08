@@ -5,6 +5,29 @@
 
 #include <engine/shared/json.h>
 
+namespace
+{
+	bool JsonStringIs(const json_value *pValue, const char *pExpected)
+	{
+		return pValue->type == json_string && str_comp(pValue->u.string.ptr, pExpected) == 0;
+	}
+
+	bool IsContentRefusalError(const json_value *pError)
+	{
+		const json_value *pCode = json_object_get(pError, "code");
+		return JsonStringIs(pCode, "content_filter") || JsonStringIs(pCode, "content_policy_violation");
+	}
+
+	bool RefuseContent(SLlmParseResult &Out)
+	{
+		Out.m_Success = false;
+		Out.m_Refused = true;
+		Out.m_aText[0] = '\0';
+		str_copy(Out.m_aError, "Translation service refused this content");
+		return false;
+	}
+}
+
 bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 {
 	Out = {};
@@ -23,8 +46,10 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 	}
 
 	const json_value *pError = json_object_get(pObj, "error");
-	if(pError != &json_value_none)
+	if(pError != &json_value_none && pError->type != json_null)
 	{
+		if(IsContentRefusalError(pError))
+			return RefuseContent(Out);
 		const json_value *pMessage = json_object_get(pError, "message");
 		const char *pMessageStr = pMessage != &json_value_none && pMessage->type == json_string ? pMessage->u.string.ptr : "LLM API request failed";
 		str_copy(Out.m_aError, pMessageStr, sizeof(Out.m_aError));
@@ -77,6 +102,8 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 	}
 
 	const json_value *pMessage = json_object_get(pChoice, "message");
+	if(JsonStringIs(json_object_get(pChoice, "finish_reason"), "content_filter"))
+		return RefuseContent(Out);
 	if(pMessage == &json_value_none)
 	{
 		str_copy(Out.m_aError, "No message in choice", sizeof(Out.m_aError));
@@ -89,6 +116,9 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 		Out.m_Success = false;
 		return false;
 	}
+	const json_value *pRefusal = json_object_get(pMessage, "refusal");
+	if(pRefusal->type == json_string && pRefusal->u.string.length > 0)
+		return RefuseContent(Out);
 
 	const json_value *pContent = json_object_get(pMessage, "content");
 	if(pContent == &json_value_none)
@@ -125,9 +155,30 @@ bool ParseLlmResponsesJson(const json_value *pObj, SLlmParseResult &Out)
 	const json_value *pError = json_object_get(pObj, "error");
 	if(pError != &json_value_none && pError->type != json_null)
 	{
+		if(IsContentRefusalError(pError))
+			return RefuseContent(Out);
 		const json_value *pMessage = json_object_get(pError, "message");
 		str_copy(Out.m_aError, pMessage->type == json_string ? pMessage->u.string.ptr : "LLM API request failed");
 		return false;
+	}
+	if(JsonStringIs(json_object_get(json_object_get(pObj, "incomplete_details"), "reason"), "content_filter"))
+		return RefuseContent(Out);
+	// 顶层文本也可能伴随拒绝片段，先检查所有消息，避免发布部分译文。
+	const json_value *pOutput = json_object_get(pObj, "output");
+	if(pOutput->type == json_array)
+	{
+		for(size_t i = 0; i < pOutput->u.array.length; ++i)
+		{
+			const json_value *pItem = pOutput->u.array.values[i];
+			if(!JsonStringIs(json_object_get(pItem, "type"), "message"))
+				continue;
+			const json_value *pContent = json_object_get(pItem, "content");
+			if(pContent->type != json_array)
+				continue;
+			for(size_t j = 0; j < pContent->u.array.length; ++j)
+				if(JsonStringIs(json_object_get(pContent->u.array.values[j], "type"), "refusal"))
+					return RefuseContent(Out);
+		}
 	}
 	auto AppendText = [&](const json_value *pText) {
 		if(pText->type != json_string)
@@ -150,7 +201,6 @@ bool ParseLlmResponsesJson(const json_value *pObj, SLlmParseResult &Out)
 		Out.m_Success = true;
 		return true;
 	}
-	const json_value *pOutput = json_object_get(pObj, "output");
 	if(pOutput->type == json_array)
 	{
 		for(size_t i = 0; i < pOutput->u.array.length; ++i)

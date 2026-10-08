@@ -20,6 +20,19 @@ class CTranslateQueueTest : public CTranslateBackendTest
 {
 };
 
+TEST_F(CTranslateQueueTest, RefusedAutomaticOutgoingSendsOriginalRatherThanServiceText)
+{
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "original"), 1));
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"choices":[{"message":{"refusal":"Provider explanation","content":"partial"}}]})");
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_EQ(Done[0].m_SendText, "original");
+	EXPECT_EQ(Done[0].m_Job.m_pTranslateResponse->m_Notice, ETranslateNotice::CONTENT_REFUSED);
+	EXPECT_EQ(Queue.Size(), 0u);
+}
+
 TEST_F(CTranslateQueueTest, IncomingAndOutgoingShareCapacityInEitherOrder)
 {
 	for(bool OutgoingFirst : {false, true})

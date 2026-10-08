@@ -9,6 +9,8 @@
 
 #include <base/system.h>
 
+#include <engine/shared/config.h>
+
 #include <game/client/components/tooltips.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui_scrollregion.h>
@@ -274,6 +276,20 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			const bool HasCustomCollapsedState = static_cast<bool>(pDefinition->m_IsCollapsed);
 			const bool Collapsed = SettingsCardDeckResolveCollapsed(HasCustomCollapsedState, HasCustomCollapsedState && pDefinition->m_IsCollapsed(), Runtime.m_DefaultCollapsed);
 			const float ContentWidth = std::max(0.0f, Slot.w - 2.0f * ui_token::settings::CARD_PADDING * (Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f));
+			const bool HasHelp = Ctx.m_pTooltips != nullptr && Ctx.m_pTextRender != nullptr;
+			if(HasHelp)
+			{
+				const float HelpSize = ResolveSettingsSmallFontSize(Ctx.m_UiScale);
+				const uint64_t HelpRevision = (pDefinition->m_MeasureRevision * 1099511628211ULL ^ str_quickhash(g_Config.m_ClLanguagefile)) * 1099511628211ULL ^ Ctx.m_pTextRender->GlyphAtlasRevision();
+				if(Runtime.m_Help.Configure(ContentWidth, HelpSize, HelpRevision, pDefinition->m_Spec.m_pSubtitle, [&](const char *pText) {
+					return Ctx.m_pTextRender->TextBoundingBox(HelpSize, pText, -1, std::max(1.0f, ContentWidth)).m_H;
+				}))
+					CachedContentHeight = -1.0f;
+				const auto MeasureHelp = [&](const char *pText) { return Ctx.m_pTextRender->TextBoundingBox(HelpSize, pText, -1, std::max(1.0f, ContentWidth)).m_H; };
+				Runtime.m_Help.Register(0, pDefinition->m_Spec.m_pInfo, false, false, MeasureHelp);
+				Runtime.m_Help.Register(1, Localize("Default width"), false, false, MeasureHelp);
+				Runtime.m_Help.Register(2, Localize("Full width"), false, false, MeasureHelp);
+			}
 			if(std::abs(CachedContentWidth - ContentWidth) > 0.01f)
 			{
 				MeasuredGeometryChanged = MeasuredGeometryChanged || PreviousContentHeight >= 0.0f;
@@ -292,10 +308,12 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 				// m_Measure 是卡片定义的布局合同。模块卡片在构建时把它绑定到
 				// 内容探针；TClient 等旧卡片则继续使用自己的稳定高度测量，
 				// 因为部分预览内容只绘制到矩形，并不会消费 CUIRect。
+				CTooltips::CCardHelpScope HelpScope(Ctx.m_pTooltips, HasHelp ? &Runtime.m_Help : nullptr);
 				CachedContentHeight = pDefinition->m_Measure ? std::max(0.0f, pDefinition->m_Measure(ContentWidth)) : 0.0f;
 				MeasuredGeometryChanged = MeasuredGeometryChanged || SettingsCardDeckContentHeightChanged(PreviousContentHeight, CachedContentHeight);
 			}
-			const float TargetContentHeight = Collapsed ? 0.0f : std::max(0.0f, CachedContentHeight);
+			const float HelpHeight = HasHelp ? Runtime.m_Help.Height() + 4.0f * std::max(0.1f, Ctx.m_UiScale) : 0.0f;
+			const float TargetContentHeight = Collapsed ? 0.0f : std::max(0.0f, CachedContentHeight) + HelpHeight;
 			const bool HeightInitializedThisFrame = !Runtime.m_ContentHeightInitialized;
 			const bool HeightTargetChanged = Runtime.m_ContentHeightInitialized && std::abs(Runtime.m_LastContentHeightTarget - TargetContentHeight) > 0.01f;
 			const SSettingsCardHeightAnimationWork HeightWork = ResolveSettingsCardHeightAnimationWork(HeightInitializedThisFrame, HeightTargetChanged, Runtime.m_ContentHeightWasActive, Motion.m_ContentHeightDuration, m_Drag.Active() || Ctx.m_pAnim == nullptr);
@@ -327,7 +345,9 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			ContentHeightTargetChanged = ContentHeightTargetChanged || HeightTargetChanged;
 			ContentHeightAnimationActive = ContentHeightAnimationActive || Runtime.m_ContentHeightWasActive;
 			const float ContentHeight = std::max(0.0f, Runtime.m_AnimatedContentHeight);
-			const SSettingsCardFrame Frame = BuildSettingsCardFrame(Slot, pDefinition->m_Spec, ContentHeight, Ctx.m_UiScale);
+			const SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
+				BuildSettingsCardFrame(Slot, pDefinition->m_Spec, ContentHeight, Ctx.m_UiScale),
+				pDefinition->m_LeadingHeaderActionWidth, pDefinition->m_Spec.m_pInfo != nullptr && pDefinition->m_Spec.m_pInfo[0] != '\0');
 			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive});
 			ColumnPlan.Append(Frame.m_Rect.h);
 		};
@@ -392,7 +412,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			const bool ControllerVisible = pScrollRegion == nullptr || !pScrollRegion->RectClipped(PreLayoutFrame.m_Rect) || Card.m_pDefinition->m_RenderWhenClipped;
 			bool CardGeometryChanged = false;
 			const CUIRect WidthButton = SettingsCardWidthButtonRect(PreLayoutFrame);
-			if(ControllerVisible && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !m_Drag.Active() &&
+			if(ControllerVisible && WidthButton.w > 0.0f && WidthButton.h > 0.0f && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && !m_Drag.Active() &&
 				Ctx.m_pUi->DoButtonLogic(&Runtime.m_WidthButtonId, Card.m_Column == 0, &WidthButton, BUTTONFLAG_LEFT))
 			{
 				const auto *pDefault = qm_card_registry::FindByStableId(Card.m_pDefinition->m_Spec.m_pStableId);
@@ -553,6 +573,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 		{
 			const bool InHeader = PointInRect(Card.m_Frame.m_HeaderRect, Input.m_MouseX, Input.m_MouseY);
 			const bool InHeaderAction = PointInRect(Card.m_Frame.m_HandleRect, Input.m_MouseX, Input.m_MouseY) || PointInRect(SettingsCardWidthButtonRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY) ||
+						    (Card.m_Frame.m_LeadingHeaderActionRect.w > 0.0f && PointInRect(Card.m_Frame.m_LeadingHeaderActionRect, Input.m_MouseX, Input.m_MouseY)) ||
 						    (Card.m_pDefinition->m_Spec.m_pInfo != nullptr && Card.m_pDefinition->m_Spec.m_pInfo[0] != '\0' && PointInRect(ResolveSettingsCardInfoRect(Card.m_Frame), Input.m_MouseX, Input.m_MouseY));
 			if(InHeader && !InHeaderAction)
 			{
@@ -736,22 +757,24 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 						       !ContentHeightAnimationActive && !ReflowTargetChanged && !ReflowPositionActive;
 			bool PointerInsideDrawFrame = false;
 			SSettingsCardFrame Frame = Card.m_Frame;
-			Frame.m_TitleRect.w = std::max(0.0f, Frame.m_TitleRect.w - Frame.m_HandleRect.w - 4.0f);
-			Frame.m_SubtitleRect.w = Frame.m_TitleRect.w;
 			const auto HeaderAction = [&](const SSettingsCardFrame &DrawFrame, bool IsCollapsed) {
 				if(Card.m_pDefinition->m_HeaderAction)
 					Card.m_pDefinition->m_HeaderAction(DrawFrame, IsCollapsed);
+				if(Card.m_pDefinition->m_LeadingHeaderAction)
+					Card.m_pDefinition->m_LeadingHeaderAction(DrawFrame, IsCollapsed);
 				const CUIRect Button = SettingsCardWidthButtonRect(DrawFrame);
 				if(Ctx.m_pTextRender != nullptr && Ctx.m_pUi != nullptr)
 				{
-					RenderSettingsCardHeaderIcon(Ctx, Button, Card.m_Column == 0 ? EQmIcon::BORDER_ALL : EQmIcon::ARROWS_LEFT_RIGHT, Card.m_Column == 0 ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, State.m_DrawAlpha);
+					RenderSettingsCardHeaderIcon(Ctx, Button, Card.m_Column == 0 ? EQmIcon::BORDER_ALL : EQmIcon::ARROWS_LEFT_RIGHT, Card.m_Column == 0 ? FontIcons::FONT_ICON_BORDER_ALL : FontIcons::FONT_ICON_ARROWS_LEFT_RIGHT, State.m_DrawAlpha, &Runtime.m_WidthButtonId);
 					if(Ctx.m_pTooltips != nullptr)
 						Ctx.m_pTooltips->DoSmallToolTip(&Runtime.m_WidthButtonId, &Button, Card.m_Column == 0 ? Localize("Default width") : Localize("Full width"), 10.0f * Ctx.m_UiScale);
 				}
 			};
 			SettingsCard(Ctx, Frame, Card.m_pDefinition->m_Spec, State, VisualOptions,
 				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_Render : FSettingsCardRender{}, HeaderAction,
-				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_RenderMeasured : FSettingsCardRenderMeasured{}, &PointerInsideDrawFrame);
+				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_RenderMeasured : FSettingsCardRenderMeasured{}, &PointerInsideDrawFrame,
+				!Collapsed && Ctx.m_pTooltips != nullptr && Ctx.m_pTextRender != nullptr ? &Runtime.m_Help : nullptr,
+				!Collapsed ? Runtime.m_Help.Height() + 4.0f * std::max(0.1f, Ctx.m_UiScale) : 0.0f);
 			Runtime.m_PointerInsideLastFrame = PointerInsideDrawFrame;
 			if(Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly())
 			{

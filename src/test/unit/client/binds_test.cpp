@@ -42,6 +42,17 @@ TEST(Binds, RevisionTracksExternalBindReplacementAndPreservesModifierSlots)
 	EXPECT_STREQ(Binds.Get(KEY_MOUSE_2, 1 << KeyModifier::CTRL), "+hook");
 }
 
+TEST(Binds, StoresCanonicalConfigNamesWithoutChangingChatTextOrModifierSlots)
+{
+	CBindStorage Binds;
+	Binds.Bind(KEY_X, "toggle tc_show_chat_client 0 1;say tc_show_chat_client");
+	Binds.Bind(KEY_X, "tc_jump_hint 1", false, 1 << KeyModifier::CTRL);
+	EXPECT_STREQ(Binds.Get(KEY_X, KeyModifier::NONE), "toggle qm_show_chat_client 0 1;say tc_show_chat_client");
+	EXPECT_STREQ(Binds.Get(KEY_X, 1 << KeyModifier::CTRL), "qm_jump_hint 1");
+	Binds.Bind(KEY_X, Binds.Get(KEY_X, KeyModifier::NONE));
+	EXPECT_STREQ(Binds.Get(KEY_X, KeyModifier::NONE), "toggle qm_show_chat_client 0 1;say tc_show_chat_client");
+}
+
 TEST(Binds, RestrictsShiftOnlyBindWhenShortcutModifierIsPressedLater)
 {
 	EXPECT_TRUE(CBinds::ShouldRestrictUnmodifiedShiftBindOnModifierPress(CBindSlot(KEY_LSHIFT, KeyModifier::NONE), 1 << KeyModifier::CTRL));

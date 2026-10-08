@@ -622,7 +622,7 @@ void CEmoticon::RenderProjectiles()
 		}
 		Graphics()->QuadsSetRotation(Angle);
 		const float TeeAlpha = Projectile.m_OwnerClientId >= 0 && Projectile.m_OwnerClientId < MAX_CLIENTS ? GameClient()->m_Players.PlayerRenderAlpha(Projectile.m_OwnerClientId) : 1.0f;
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, std::clamp(Projectile.m_LifeTime * 2.0f, 0.0f, 1.0f) * TeeAlpha);
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Projectile.FadeAlpha() * TeeAlpha);
 		IGraphics::CQuadItem Quad(Position.x, Position.y, Size, Size);
 		Graphics()->QuadsDraw(&Quad, 1);
 	}
@@ -649,7 +649,7 @@ void CEmoticon::SpawnProjectile(vec2 Position, vec2 Direction, int Emoticon, boo
 		if(Projectile.m_LifeTime < pProjectile->m_LifeTime)
 			pProjectile = &Projectile;
 	}
-	pProjectile->Init(Position, Direction * 1200.0f + vec2(0.0f, -400.0f), Emoticon, Super ? 2.35f : 1.0f, OwnerClientId);
+	pProjectile->Init(Position, Direction * 1200.0f + vec2(0.0f, -400.0f), Emoticon, Super ? 2.35f : 1.0f, OwnerClientId, g_Config.m_QmEmoticonProjectileDuration);
 	pProjectile->m_Active = pProjectile->PlaceOutside(m_aCollisionMasks[Emoticon], [this](int X, int Y) {
 		return Collision()->CheckPoint(X * 32.0f + 16.0f, Y * 32.0f + 16.0f);
 	});

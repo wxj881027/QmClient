@@ -646,7 +646,7 @@ TEST(SettingsPageLayout, QmHudDynamicCardsMatchEveryVisibleState)
 	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, true, true), 120.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudPlayerStatsHeight(Metrics, true, false), 245.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudInputOverlayHeight(Metrics, false), 20.0f);
-	EXPECT_FLOAT_EQ(ResolveQmHudInputOverlayHeight(Metrics, true), 150.0f);
+	EXPECT_FLOAT_EQ(ResolveQmHudInputOverlayHeight(Metrics, true), 300.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Metrics, true, false), 390.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Metrics, true, true), 490.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudDummyMiniViewHeight(Metrics, false), 25.0f);

@@ -674,7 +674,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		Hue.m_Enabled = g_Config.m_QmCycleTeeHue != 0 && (!Dummy || g_Config.m_QmCycleTeeHueDummy != 0);
 		const bool CustomColors7 = Dummy ? (g_Config.m_ClDummy7UseCustomColorBody != 0 || g_Config.m_ClDummy7UseCustomColorFeet != 0) : (g_Config.m_ClPlayer7UseCustomColorBody != 0 || g_Config.m_ClPlayer7UseCustomColorFeet != 0);
 		Hue.m_PlayerUsesCustomColors = Key.m_UseCustomColor != 0 || CustomColors7;
-		Hue.m_TClientRainbowTees = g_Config.m_TcRainbowTees != 0;
+		Hue.m_TClientRainbowTees = g_Config.m_QmRainbowTees != 0;
 		Hue.m_SpeedDegreesPerSecond = g_Config.m_QmCycleTeeHueSpeed;
 		Hue.m_TimeSeconds = Now.count() / 1000000000.0;
 		Hue.m_SixupIndex = 0;

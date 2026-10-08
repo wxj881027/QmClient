@@ -198,6 +198,8 @@ struct SConfigVariable
 	// Note that this only applies to the console command and the SetValue function,
 	// but the underlying config variable can still be modified programmatically.
 	bool m_ReadOnly = false;
+	// 只记录通过控制台/配置文件成功赋值，查询和内置默认值不算用户选择。
+	bool m_HasExplicitValue = false;
 	// 临时写盘覆盖：运行时值被程序临时改写时，Save() 改写出这里保存的用户真实值，
 	// 避免把临时状态写进配置文件。目前只有整数变量读取这两个字段。
 	bool m_HasSaveValueOverride = false;

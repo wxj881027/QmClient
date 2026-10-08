@@ -265,6 +265,7 @@ AntiPing: predict other players
 AntiPing: predict weapons
 API key
 Appearance
+Appearance of help bubbles outside settings cards
 Append to log file instead of overwriting
 Applied to %d same-family part(s).
 Applies to single-color and rainbow overrides.
@@ -277,10 +278,12 @@ Apply a writable preset and edit first
 Apply Changes
 Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
+Apply Qm recommended appearance
 Apply quick input to other Tees as well
 Apply squishy Tee deformation to other players
 Apply this preset
 Apply watermark
+Applying this preset changes the appearance settings listed below.
 Arabic
 Are you sure that you want to delete %d selected items?
 Are you sure that you want to delete '%s'?
@@ -428,6 +431,7 @@ Axiom dummy password
 Axiom main account password
 Axiom score request failed
 Axis
+Backdrop blur
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 Backend to use (e.g. OpenGL or Vulkan)
 Background
@@ -576,8 +580,8 @@ Category
 Category name
 Censor replacement character
 Censor word list (comma-separated)
-Center line color (requires tc_show_center)
-Center line width (requires tc_show_center)
+Center line color (requires qm_show_center)
+Center line width (requires qm_show_center)
 Change indicator offset based on distance to other tees
 Change map
 Change ready state (0.7 only)
@@ -622,6 +626,7 @@ Check if voice server address is reachable
 Check input device, system default mic, and mic permission first
 Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
+Checking Steam...
 Chinese (Simplified)
 Chinese (Traditional)
 Chinese font:
@@ -635,6 +640,8 @@ Choose the menu font and cursor appearance
 Choose the menu font and font weight
 Choose the menu map and background colors
 Cinematic camera
+CJK font
+CJK font weight
 CJK font weight:
 Clamp mouse to screen
 Clan
@@ -718,7 +725,7 @@ Combo
 Comma-separated list of banned clients to be kicked on join
 Command
 Command completion
-Command executed by tc_mod_weapon, target id appended at end
+Command executed by qm_mod_weapon, target id appended at end
 Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)
 Command is not available on solo servers
 Command to run when joining server
@@ -845,6 +852,7 @@ Copy skin option color
 Could not add the player as a friend
 Could not check for existing player with your name. Check your internet connection.
 Could not connect dummy
+Could not connect to the translation service. Please try again later.
 Could not create report scan request
 Could not find a Tutorial server. Check your internet connection.
 Could not find online Tutorial server.\nStarting and connecting to local server…
@@ -930,6 +938,7 @@ Cycle custom Tee hue speed (deg/s)
 Cycle through emotes
 Cyrillic
 d = Prediction latency
+Dark translucent
 Darken Tee color when frozen (0-100)
 Data
 Data source
@@ -996,6 +1005,7 @@ DeepSeek endpoint (leave empty for default)
 DeepSeek model name
 Default
 default
+Default appearance profile migration version
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 Default input open failed
 Default length
@@ -1037,12 +1047,6 @@ Depending on the number of supplied arguments, teleport yourself to; (0.) where 
 Deprecated compatibility alias for qm_graphics_trace (macOS signposts)
 Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <seconds> <reason>'
 Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
-Deprecated: jump hint color, migrated to qm_jump_hint_color on startup
-Deprecated: jump hint font size, migrated to qm_jump_hint_size on startup
-Deprecated: jump hint text, migrated to qm_jump_hint_text on startup (use \n for newline)
-Deprecated: jump hint toggle, migrated to qm_jump_hint on startup
-Deprecated: jump hint X position, migrated to qm_jump_hint_x on startup
-Deprecated: jump hint Y position, migrated to qm_jump_hint_y on startup
 Depth freeze tile overlay alpha (0-100)
 Depth unfreeze tile overlay alpha (0-100)
 Deselect
@@ -1051,6 +1055,7 @@ Destroy player's bullets on death
 Destroy player's lasers on death
 Detailed reason
 Detect compatible solo prompts from custom servers
+Detect Steam again
 Detection distance
 Detection time
 DF
@@ -1236,6 +1241,7 @@ Emote ID to send when entering freeze (0-15)
 Emotes are disabled.
 Emoticon
 Emoticon ID
+Emoticon projectile duration
 Emoticon shadow
 Emoticons
 enable
@@ -1387,6 +1393,7 @@ Enter a CP number from 1 to 255.
 Enter Password
 Enter solo split mode
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
+Enter the Steam client program path, without command arguments
 Enter Username
 Enter your sponsor code
 Entities
@@ -1657,6 +1664,7 @@ Global card
 Global card ordering (format: stableId|tab|col|order; semicolon-separated)
 Global card ordering old config migration completed flag
 Global toggle key
+Global UI size
 Global UI size percentage
 Glow
 Glow alpha
@@ -1845,6 +1853,11 @@ Ignore voice distance attenuation
 Ignored legacy Dynamic Island edge margin
 IME
 IME background color
+IME font size
+IME font size percentage
+IME selected text color
+IME selection background color
+IME text color
 Import from clipboard
 Improved Anti Ping
 Improved anti ping
@@ -1977,6 +1990,10 @@ Keep hook when teleporting
 Keep unsent message on chat close
 Keep vote window open after voting
 Key binds
+Key press count color
+Key press count font size
+Key press count font size percentage
+Key press count label
 Key press icon size
 Key Presses
 Key Sticking: ?
@@ -2032,8 +2049,13 @@ Last entered
 Last page in console
 Last successful sync: %s
 Last verified approved update source
+Last viewed announcement content revision
+Last viewed announcement version
+Last viewed client release notes
 Latency
 Latency Jitter
+Latin font
+Latin font weight
 Launch count threshold for the next sponsor reminder
 Launch emote
 Launch emote key
@@ -2151,6 +2173,8 @@ Logout of rcon
 Long frames
 Lose weapons when teleporting (useful for race maps)
 Low to high
+LXGW WenKai is available.
+LXGW WenKai is unavailable. Current fonts and weights will be kept.
 Lyrics
 Magic: Spirit Script
 Main Asset
@@ -2177,6 +2201,7 @@ Manual
 Manual concurrency: %d
 Manual scope
 Manual source file
+Manual Steam path is invalid; using automatic detection
 Manual target
 Map
 Map browser difficulty star filter bitmask (bits 1-5)
@@ -2276,6 +2301,8 @@ Menu opacity (0-100)
 Menu opened. Press Esc key again to close menu.
 Menu option - normal
 Menu option - selected
+Menu panel color
+Menu panel opacity
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 Merge consecutive identical player messages within 2 seconds
 Merges chat messages repeated within a short time into a single line.
@@ -2391,7 +2418,7 @@ Name plate strength line X offset
 Name plate strength line Y offset
 Name plates offset
 Name plates size
-Name to change to near finish (when tc_change_name_near_finish enabled)
+Name to change to near finish (when qm_change_name_near_finish enabled)
 Name:
 Name: %s
 Nameplate count that still keeps full text effect quality; beyond it effect layers scale down by count (higher=keep more)
@@ -2437,6 +2464,7 @@ new
 New button
 New category name
 New features
+New features (unread)
 New IME
 New IME candidate bar background color
 New IME candidate bar opacity
@@ -2716,6 +2744,10 @@ Pick result: %s
 Pick the source that matches your music app and keep it playing; the lyrics follow automatically.
 Pickup range
 Pie menu
+Pie menu effects
+Pie menu highlight tint
+Pie menu highlight tint (alpha controls tint strength)
+Pie menu opening and closing effects
 Pie menu rename list (separate with |, e.g., name1|name2)
 Ping
 Ping the current server
@@ -2808,6 +2840,7 @@ Points unavailable
 Polished
 Popup & dropdown blur
 Popup animation
+Popup blur
 Port for client to server connection (0=random, >=1024 sets manual port)
 Port for dummy connection to server (0=random, >=1024 sets manual port)
 Port for master server registration, useful if behind NAT, otherwise just use sv_port
@@ -2856,6 +2889,7 @@ Press F2, log in, then use: change_map map_name
 Prev. weapon
 Preview
 Preview 'Hook collisions' being pressed
+Preview and apply a fixed appearance preset
 Preview built with %d skipped slot(s).
 Preview button visibility while the editor is active.
 Preview cut (P)
@@ -2922,6 +2956,7 @@ Puts you out of solo part
 Pyramid
 q = Connection quality
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
+Qm recommended appearance
 Qm UI custom icon color
 Qm UI icon color: 1=White, 2=Black, 3=Custom, 4=Rainbow
 Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)
@@ -3159,6 +3194,7 @@ Replay list: not loaded yet
 Replay list: up to date
 Replays directory
 Reply
+Reply content
 Reply to messages from muted players
 Reply to the last whisper target
 Reply to the last whisper target: %s
@@ -3195,16 +3231,22 @@ Reset chat on escape
 Reset colors
 Reset column widths
 Reset controls
+Reset count appearance
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 Reset default
 Reset dummy
 Reset filter
+Reset IME appearance
+Reset key press counts
 Reset layout
 Reset mouse position when opening bind wheel
+Reset pie menu appearance
 Reset position of mouse when opening bindwheel
 Reset stats on server join (0=persistent, 1=reset on join)
 Reset stats when joining a server
 Reset to defaults
+Reset tooltip appearance
+Reset translation colors
 Reset tuning after each map change
 Reset weapons when passing start tile
 Reset zone tuning in zone x or in all zones
@@ -3259,6 +3301,7 @@ Rule line 6.
 Rule line 7.
 Rule line 8.
 Rule line 9.
+Rule list
 Run "hot_reload" on local server with rcon auth on map save
 Run chai script
 Run on join
@@ -3389,7 +3432,6 @@ Selection
 Self
 Self and friends
 Self only
-Send
 Send & Receive
 Send a moderator alert message to player
 Send a server alert message to all players
@@ -3466,6 +3508,7 @@ Settings card default layout migration version
 Settings card states: stableId for collapsed, !stableId for expanded, separated by semicolons
 Settings card titles use rainbow colors
 Settings file
+Settings page opacity
 Settings page right panel opacity
 Severe
 Shape
@@ -3630,6 +3673,7 @@ Show jump hint based on fractional part of position
 Show jumps indicator
 Show katan on frozen players
 Show katana on frozen players (restores old behavior)
+Show key press counts
 Show key presses
 Show key presses (1 = others, 2 = all, 3 = own only)
 Show key stuck status
@@ -3979,7 +4023,12 @@ Status bar text color
 Status bar text opacity
 Status normal, check details below if still experiencing issues
 Status Scheme:
+Steam client path (leave empty to detect automatically)
 Steam integration
+Steam is installed
+Steam is installed but not running
+Steam is running
+Steam not found
 Steam profile name
 Still free after %d sponsors. Take a look?
 Stop following
@@ -4156,6 +4205,7 @@ Tencent Cloud Translation region
 Tencent Cloud Translation SecretId
 Tencent Cloud Translation SecretKey
 Text alpha
+Text before each key press count
 Text color
 Text color mode
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
@@ -4224,7 +4274,7 @@ This team is locked using /lock. Only members of the team can unlock it using /l
 This team started already
 This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
-Tick delay before executing tc_execute_on_join
+Tick delay before executing qm_execute_on_join
 Ticks after freeze before applying max prediction reduction
 tile
 Tile outlines
@@ -4317,6 +4367,12 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 Token to register this server to a specific community
 Too many translation tasks
 Toolbox page
+Tooltip background color
+Tooltip bounce animation
+Tooltip font size
+Tooltip preview
+Tooltip text color
+Tooltips
 Top left
 Top right
 Total
@@ -4354,9 +4410,15 @@ Translation menu normal color
 Translation menu selected color
 Translation queue full, sending original
 Translation service
-Translation service returned a notice instead of a translation (the message may contain filtered words)
+Translation service authentication failed. Check the API key and service address.
+Translation service is rate limited. Please try again later.
+Translation service is temporarily unavailable. Please try again later.
+Translation service quota is exhausted. Choose another service or try again later.
+Translation service refused this content. Please edit it and try again.
+Translation service returned a notice instead of a translation
 Translation Settings
 transmits your player name to info.ddnet.org
+Trigger limits
 Troubleshooting suggestions
 Try again
 Try reselecting input device, confirm default mic or headset mic is online
@@ -4384,6 +4446,7 @@ u = Snapshot latency
 UDP and TCP IP addresses seem to be different. Try disabling VPN, proxy or network accelerators.
 UDP seems to be filtered.
 UDP socket not open
+UI animations
 UI color
 UI controller sens.
 UI icon color
@@ -4523,6 +4586,7 @@ Use style colors
 Use team colors for name plates
 Use Tee icons instead of circles
 Use the mouse wheel on a hovered module to scale it by 5%
+Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
 Use the scoreboard cursor mode to scroll the list
 Use the selected tee trail style palette
 Use this after `add_favorite` to group favorites. Start with `begin_favorite_group`

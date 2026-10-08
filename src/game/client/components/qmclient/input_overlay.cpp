@@ -100,6 +100,65 @@ void CInputOverlay::OnWindowResize()
 		Element.m_LabelWidth = -1.0f;
 }
 
+bool CInputOverlay::HasCountingFocus() const
+{
+	return g_Config.m_QmInputOverlay && g_Config.m_QmInputOverlayKeyCounts &&
+		Client()->State() == IClient::STATE_ONLINE && Graphics()->WindowActive() && !g_Config.m_ClEditor &&
+		!GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_GameConsole.IsActive() &&
+		!GameClient()->m_HudEditor.IsActive() && !GameClient()->m_Spectator.IsActive() && !GameClient()->m_KeyBinder.IsActive() &&
+		!GameClient()->m_BindWheel.IsActive() && !GameClient()->m_PieMenu.IsActive() && !GameClient()->m_Emoticon.IsActive() &&
+		CLineInput::GetActiveInput() == nullptr;
+}
+
+void CInputOverlay::ObservePhysicalInput(const IInput::CEvent &Event, bool HadCountingFocus)
+{
+	bool Enabled = HasCountingFocus();
+	if(Enabled && (Event.m_Flags & IInput::FLAG_PRESS))
+	{
+		// 只统计当前布局声明的键，不让尚未显示的键在后台累计。
+		if(m_ConfigMode == EConfigMode::VECTOR)
+			Enabled = std::any_of(m_vElements.begin(), m_vElements.end(), [&](const SElement &Element) {
+				return (Element.m_InputKind == EInputKind::KEY && Element.m_Key == Event.m_Key) ||
+					(Element.m_InputKind == EInputKind::MOUSE && Element.m_MouseButton > 0 && KEY_MOUSE_1 + Element.m_MouseButton - 1 == Event.m_Key);
+			});
+		else
+			Enabled = std::any_of(m_vObsLayouts.begin(), m_vObsLayouts.end(), [&](const SObsLayout &Layout) {
+				return std::any_of(Layout.m_vElements.begin(), Layout.m_vElements.end(), [&](const SObsElement &Element) {
+					return (Element.m_InputKind == EObsInputKind::KEY && Element.m_Key == Event.m_Key) ||
+						(Element.m_InputKind == EObsInputKind::MOUSE && Element.m_MouseButton > 0 && KEY_MOUSE_1 + Element.m_MouseButton - 1 == Event.m_Key);
+				});
+			});
+	}
+	// 暂停计数时仍同步按下/松开状态，重新开启不会把长按算成新的一次。
+	m_KeyCounts.Observe(Event, HadCountingFocus, Enabled);
+}
+
+void CInputOverlay::RenderKeyCount(int Key, const CUIRect &Rect, float Opacity)
+{
+	if(!g_Config.m_QmInputOverlayKeyCounts || Client()->State() != IClient::STATE_ONLINE ||
+		Key <= KEY_UNKNOWN || Key >= KEY_LAST || Rect.w <= 0.0f || Rect.h <= 0.0f || Opacity <= 0.0f)
+		return;
+	char aCount[64];
+	str_format(aCount, sizeof(aCount), "%s%llu", g_Config.m_QmInputOverlayCountLabel, static_cast<unsigned long long>(m_KeyCounts.Count(Key)));
+	float TextSize = std::min(9.0f, Rect.h * 0.25f) * std::clamp(g_Config.m_QmInputOverlayCountSize, 50, 200) / 100.0f;
+	float TextWidth = TextRender()->TextWidth(TextSize, aCount);
+	const float AvailableWidth = Rect.w * 0.85f;
+	if(TextWidth > AvailableWidth)
+	{
+		TextSize *= AvailableWidth / TextWidth;
+		TextWidth = AvailableWidth;
+	}
+	const ColorRGBA PreviousColor = TextRender()->GetTextColor();
+	const ColorRGBA PreviousOutline = TextRender()->GetTextOutlineColor();
+	ColorRGBA CountColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmInputOverlayCountColor, true));
+	CountColor.a *= Opacity;
+	TextRender()->TextColor(CountColor);
+	TextRender()->TextOutlineColor(ColorRGBA(0.0f, 0.0f, 0.0f, Opacity));
+	TextRender()->Text(Rect.x + (Rect.w - TextWidth) * 0.5f, Rect.y + Rect.h - TextSize * 1.15f, TextSize, aCount);
+	TextRender()->TextColor(PreviousColor);
+	TextRender()->TextOutlineColor(PreviousOutline);
+}
+
 void CInputOverlay::OnRender()
 {
 	if(!g_Config.m_QmInputOverlay)
@@ -389,6 +448,21 @@ void CInputOverlay::OnRender()
 
 			Graphics()->QuadsSetRotation(0.0f);
 			Graphics()->QuadsEnd();
+			if(g_Config.m_QmInputOverlayKeyCounts)
+			{
+				Graphics()->TextureClear();
+				for(const SObsElement &Element : Layout.m_vElements)
+				{
+					const int Key = Element.m_InputKind == EObsInputKind::KEY ? Element.m_Key :
+						(Element.m_InputKind == EObsInputKind::MOUSE && Element.m_MouseButton > 0 ? KEY_MOUSE_1 + Element.m_MouseButton - 1 : KEY_UNKNOWN);
+					const bool Active = IsObsActive(Element);
+					if(Element.m_ActiveOnly && !Active)
+						continue;
+					const float W = (Element.m_MapW > 0.0f ? Element.m_MapW : Layout.m_DefaultWidth) * LayoutScale;
+					const float H = (Element.m_MapH > 0.0f ? Element.m_MapH : Layout.m_DefaultHeight) * LayoutScale;
+					RenderKeyCount(Key, {LayoutOriginX + Element.m_PosX * LayoutScale, LayoutOriginY + Element.m_PosY * LayoutScale, W, H}, Opacity * (Active ? 1.0f : m_ObsInactiveAlpha));
+				}
+			}
 		}
 
 		Graphics()->TextureClear();
@@ -541,6 +615,16 @@ void CInputOverlay::OnRender()
 		TextRender()->Text(TextX, TextY, TextSize, Element.m_Label.c_str());
 	}
 
+	if(g_Config.m_QmInputOverlayKeyCounts)
+	{
+		for(const SElement &Element : m_vElements)
+		{
+			const int Key = Element.m_InputKind == EInputKind::KEY ? Element.m_Key :
+				(Element.m_InputKind == EInputKind::MOUSE && Element.m_MouseButton > 0 ? KEY_MOUSE_1 + Element.m_MouseButton - 1 : KEY_UNKNOWN);
+			const float Skew = Element.m_Shape == EShape::PARALLELOGRAM ? Element.m_Skew * Scale : 0.0f;
+			RenderKeyCount(Key, {OriginX + Element.m_X * Scale + Skew * 0.5f, OriginY + Element.m_Y * Scale, Element.m_W * Scale, Element.m_H * Scale}, Opacity);
+		}
+	}
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	GameClient()->m_HudEditor.UpdateVisibleRect(EHudEditorElement::InputOverlay, OverlayRect);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);

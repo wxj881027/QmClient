@@ -52,7 +52,7 @@ TEST(TClientStatusBarScoreContract, RegistersUniqueScoreSchemeCode)
 	EXPECT_NE(ApplyScheme.find("for(char ItemLetter : ItemType.m_aLetters)"), std::string::npos);
 	EXPECT_NE(ApplyScheme.find("m_StatusBarItems.push_back(&ItemType);"), std::string::npos);
 	EXPECT_NE(UpdateScheme.find("pScheme[Index++] = pItem->m_aLetters[0];"), std::string::npos);
-	EXPECT_NE(Config.find("MACRO_CONFIG_STR(TcStatusBarScheme, tc_statusbar_scheme, 129,"), std::string::npos);
+	EXPECT_NE(Config.find("MACRO_CONFIG_STR(QmStatusBarScheme, qm_statusbar_scheme, 129,"), std::string::npos);
 	EXPECT_NE(Header.find("STATUSBAR_MAX_SIZE = 128"), std::string::npos);
 }
 
@@ -64,7 +64,7 @@ TEST(TClientStatusBarContract, IgnoresPlayerItemsForInvalidSpectatorIds)
 	const std::string PositionWidth = FunctionBody(Source, "float CStatusBar::PositionWidth()");
 	const std::string VelocityWidth = FunctionBody(Source, "float CStatusBar::VelocityWidth()");
 
-	EXPECT_NE(Source.find("static_assert(STATUSBAR_MAX_SIZE < sizeof(g_Config.m_TcStatusBarScheme));"), std::string::npos);
+	EXPECT_NE(Source.find("static_assert(STATUSBAR_MAX_SIZE < sizeof(g_Config.m_QmStatusBarScheme));"), std::string::npos);
 	EXPECT_NE(AngleWidth.find("if(!tclient_statusbar::IsValidPlayerId(m_PlayerId))"), std::string::npos);
 	EXPECT_NE(PingWidth.find("if(!tclient_statusbar::IsValidPlayerId(m_PlayerId) || !GameClient()->m_Snap.m_apPlayerInfos[m_PlayerId])"), std::string::npos);
 	EXPECT_NE(PositionWidth.find("if(!tclient_statusbar::IsValidPlayerId(m_PlayerId) || !GameClient()->m_Snap.m_apPlayerInfos[m_PlayerId])"), std::string::npos);
@@ -89,7 +89,7 @@ TEST(TClientStatusBarContract, RefreshesDynamicLayoutInputsBeforeRendering)
 	EXPECT_LT(RaceTimeUpdate, LayoutWidth);
 	EXPECT_NE(RaceRender.find("const int RaceTime = m_CurrentRaceTime;"), std::string::npos);
 	EXPECT_NE(Header.find("m_aAppliedStatusBarScheme"), std::string::npos);
-	EXPECT_NE(Render.find("str_comp(m_aAppliedStatusBarScheme, g_Config.m_TcStatusBarScheme) != 0"), std::string::npos);
+	EXPECT_NE(Render.find("str_comp(m_aAppliedStatusBarScheme, g_Config.m_QmStatusBarScheme) != 0"), std::string::npos);
 	EXPECT_NE(ApplyScheme.find("str_copy(m_aAppliedStatusBarScheme, pScheme"), std::string::npos);
 	EXPECT_NE(UpdateScheme.find("str_copy(m_aAppliedStatusBarScheme, pScheme"), std::string::npos);
 	EXPECT_NE(ConnectionWidth.find("ConnectionGradeLabel(GameClient()->m_QmMonitoring.Snapshot().m_Verdict.m_Grade)"), std::string::npos);
