@@ -140,6 +140,7 @@ namespace qm_update
 			bool m_Started = false;
 			unsigned m_Retries = 0;
 			std::shared_ptr<CPackageFileCleanup> m_pCleanup;
+			bool m_Completed = false;
 		};
 		enum class EPhase
 		{
@@ -178,6 +179,7 @@ namespace qm_update
 				Part.m_pRequest->SetProgressCallback(Part.m_pCleanup);
 			}
 			Part.m_Started = false;
+			Part.m_Completed = false;
 			m_Start(Part.m_pRequest);
 		}
 		void Complete(EHttpState State, int Status = 0, std::optional<SHA256_DIGEST> Digest = {})
@@ -190,11 +192,41 @@ namespace qm_update
 			}
 			m_WaitCondition.notify_all();
 		}
+		// 只读取已经发布完成的响应；保留探测、重试前和其他分段的批次结果。
+		void CollectResult(const std::shared_ptr<IHttpRequest> &Request)
+		{
+			const auto RetryAfter = Request->ResultRetryAfterSeconds();
+			if(RetryAfter && *RetryAfter > m_ResultRetryAfterSeconds.value_or(0))
+				m_ResultRetryAfterSeconds = RetryAfter;
+			m_ResultUsedProxy |= Request->CompletedUsedProxy();
+			if(Request->ProxyUrl()[0] != '\0')
+				Proxy(Request->ProxyUrl());
+		}
+		bool ValidResponse(const CPart &Part) const
+		{
+			const auto &Request = Part.m_pRequest;
+			if(Request->State() != EHttpState::DONE)
+				return false;
+			const auto Range = Request->ResultContentRange();
+			if(m_Phase == EPhase::PROBE)
+				return Request->StatusCode() == 200 ||
+				       (Request->StatusCode() == 206 && Range && Range->m_First == 0 && Range->m_Last == 0 && Range->m_Total > 0 && Range->m_Total <= m_MaxSize);
+			return Part.m_Range ? Request->StatusCode() == 206 && Range && Range->m_Total == Part.m_Range->m_Total &&
+					     Range->m_First == Part.m_Range->m_First && Range->m_Last == Part.m_Range->m_Last :
+					     Request->StatusCode() == 200;
+		}
 		void Fail(const std::shared_ptr<IHttpRequest> &Request)
 		{
-			m_ResultRetryAfterSeconds = Request->ResultRetryAfterSeconds();
-			m_ResultUsedProxy = Request->CompletedUsedProxy();
-			Proxy(Request->ProxyUrl());
+			int Status = Request->CompletedStatusCode();
+			// 先汇总整个批次，再取消；取消发布不能覆盖已完成响应的限流信息。
+			for(const auto &Part : m_vParts)
+			{
+				if(!Part.m_pRequest->Done())
+					continue;
+				CollectResult(Part.m_pRequest);
+				if(Part.m_pRequest->CompletedStatusCode() == 429)
+					Status = 429;
+			}
 			for(auto &Part : m_vParts)
 			{
 				if(Part.m_pCleanup)
@@ -202,7 +234,7 @@ namespace qm_update
 				if(!Part.m_pRequest->Done())
 					Part.m_pRequest->Abort();
 			}
-			Complete(EHttpState::ERROR, Request->CompletedStatusCode());
+			Complete(EHttpState::ERROR, Status);
 		}
 		void StartPayload(std::optional<int64_t> Size)
 		{
@@ -296,13 +328,28 @@ namespace qm_update
 						m_ResetSpeedWindow = true;
 					}
 				}
-				if(!Request->Done())
-				{
-					Finished = false;
-					if(Part.m_Started && Part.m_Deadline.Expired(Now, Request->Current()))
-						Request->Abort();
-				}
+				if(!Request->Done() && Part.m_Started && Part.m_Deadline.Expired(Now, Request->Current()))
+					Request->Abort();
 				Bytes += Request->Current();
+			}
+			// 先汇总已完成响应；成功响应的冷却仅阻止后续重试，不中断有效传输。
+			std::shared_ptr<IHttpRequest> Limited;
+			for(auto &Part : m_vParts)
+			{
+				// 本轮只处理此处已经发布的完成结果，后续扫描使用同一快照。
+				Part.m_Completed = Part.m_pRequest->Done();
+				Finished &= Part.m_Completed;
+				if(!Part.m_Completed)
+					continue;
+				CollectResult(Part.m_pRequest);
+				if(Part.m_pRequest->CompletedStatusCode() == 429 ||
+					(Part.m_pRequest->ResultRetryAfterSeconds().value_or(0) > 0 && !ValidResponse(Part)))
+					Limited = Part.m_pRequest;
+			}
+			if(Limited)
+			{
+				Fail(Limited);
+				return;
 			}
 			if(m_Phase == EPhase::PROBE)
 			{
@@ -310,10 +357,15 @@ namespace qm_update
 					return;
 				const auto Request = m_vParts.front().m_pRequest;
 				const auto Range = Request->ResultContentRange();
-				if(Request->State() == EHttpState::DONE && Range && Range->m_Total <= m_MaxSize)
+				if(Request->CompletedStatusCode() == 206 && ValidResponse(m_vParts.front()) && Range)
 					StartPayload(Range->m_Total);
 				else if(Request->CompletedStatusCode() == 200 || Request->CompletedStatusCode() == 206 || Request->CompletedStatusCode() == 416)
-					StartPayload({});
+				{
+					if(m_ResultRetryAfterSeconds.value_or(0) > 0)
+						Fail(Request);
+					else
+						StartPayload({});
+				}
 				else
 					Fail(Request);
 				return;
@@ -325,15 +377,17 @@ namespace qm_update
 			for(auto &Part : m_vParts)
 			{
 				const auto Request = Part.m_pRequest;
-				if(!Request->Done())
+				if(!Part.m_Completed)
 					continue;
 				const auto Range = Request->ResultContentRange();
-				const bool Valid = Request->State() == EHttpState::DONE &&
-						   (Part.m_Range ? Request->StatusCode() == 206 && Range && Range->m_Total == Part.m_Range->m_Total &&
-									   Range->m_First == Part.m_Range->m_First && Range->m_Last == Part.m_Range->m_Last :
-								   Request->StatusCode() == 200);
-				if(Valid)
+				if(ValidResponse(Part))
 					continue;
+				// 包括先前轮次与探测的成功响应冷却，不能通过换段或整包回退绕过。
+				if(m_ResultRetryAfterSeconds.value_or(0) > 0)
+				{
+					Fail(Request);
+					return;
+				}
 				// 探测支持 Range 不代表后续网关始终支持；整包回退仍需最终验签。
 				if(Part.m_Range && (Request->CompletedStatusCode() == 200 ||
 							   (Request->CompletedStatusCode() == 206 && (!Range || Range->m_Total != Part.m_Range->m_Total))))

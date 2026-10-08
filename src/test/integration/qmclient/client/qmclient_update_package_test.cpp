@@ -15,6 +15,13 @@ namespace
 		bool m_DeferredAbort = false;
 		explicit CPackageResponse(const std::string &Url) : IHttpRequest(Url.c_str()) {}
 		void Header(const char *) override {}
+		void UsedProxy() { m_ResultUsedProxy = true; }
+		void PendingRateLimit()
+		{
+			m_StatusCode = 429;
+			m_ResultRetryAfterSeconds = 600;
+			m_State = EHttpState::RUNNING;
+		}
 		std::optional<CHttpByteRange> Range() const { return m_ByteRange; }
 		void Running(double Bytes = 0)
 		{
@@ -171,6 +178,252 @@ TEST_F(QmPackageDownload, RateLimitDoesNotRetryAndPublishesCooldown)
 	EXPECT_EQ(m_vRequests.size(), 5U);
 	EXPECT_EQ(m_Download->CompletedStatusCode(), 429);
 	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+}
+
+TEST_F(QmPackageDownload, ExhaustedSegmentRetryCannotHideConcurrentRateLimit)
+{
+	Probe();
+	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR);
+	m_Download->Poll(2);
+	ASSERT_EQ(m_vRequests.size(), 6U);
+	m_vRequests[5]->Reply(503, "", {}, EHttpState::ERROR);
+	m_vRequests[2]->Reply(429, "", {}, EHttpState::ERROR, 600);
+	m_Download->Poll(3);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 429);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+	EXPECT_EQ(m_vRequests.size(), 6U);
+	EXPECT_TRUE(m_vRequests[3]->IsAbortRequested());
+	m_Download->Poll(4);
+	EXPECT_EQ(m_vRequests.size(), 6U);
+}
+
+TEST_F(QmPackageDownload, ConcurrentRateLimitPreventsPendingSegmentRetry)
+{
+	Probe();
+	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR);
+	m_vRequests[2]->Reply(429, "", {}, EHttpState::ERROR);
+	m_Download->Poll(2);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 429);
+	EXPECT_EQ(qm_update::SourceRetryDelay(m_Download.get()), 300);
+}
+
+TEST_F(QmPackageDownload, ConcurrentRateLimitPreventsWholeFileFallback)
+{
+	Probe();
+	m_vRequests[1]->Reply(200, "", {}, EHttpState::ERROR);
+	m_vRequests[2]->Reply(429, "", {}, EHttpState::ERROR, 600);
+	m_Download->Poll(2);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 429);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+}
+
+TEST_F(QmPackageDownload, BatchPublishesMaximumRetryAfterAndPrioritizes429)
+{
+	Probe();
+	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR, 900);
+	m_vRequests[2]->Reply(429, "", {}, EHttpState::ERROR, 600);
+	m_vRequests[3]->Reply(503, "", {}, EHttpState::ERROR, 1200);
+	m_Download->Poll(2);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 429);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 1200);
+	EXPECT_TRUE(m_vRequests[4]->IsAbortRequested());
+}
+
+TEST_F(QmPackageDownload, ValidSegmentsWithRetryAfterStillMergeSuccessfully)
+{
+	Probe();
+	for(size_t Index = 1; Index <= 4; ++Index)
+	{
+		const auto Range = *m_vRequests[Index]->Range();
+		m_vRequests[Index]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), Range, EHttpState::DONE, 300 * Index);
+		m_Download->Poll(2);
+		EXPECT_NE(m_Download->State(), EHttpState::ERROR);
+	}
+	Await();
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 1200);
+}
+
+TEST_F(QmPackageDownload, ValidRangeProbeWithRetryAfterStartsAndCompletesPayload)
+{
+	m_vRequests[0]->Reply(206, std::string_view(m_Body).substr(0, 1), CHttpByteRange{0, 0, static_cast<int64_t>(m_Body.size())}, EHttpState::DONE, 600);
+	m_Download->Poll(1);
+	ASSERT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->State(), EHttpState::RUNNING);
+	for(size_t Index = 1; Index <= 4; ++Index)
+		FinishPart(Index);
+	Await();
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+}
+
+TEST_F(QmPackageDownload, ValidWholeFileWithRetryAfterStillCompletes)
+{
+	m_vRequests[0]->Reply(200, "", {}, EHttpState::ERROR);
+	m_Download->Poll(1);
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(200, m_Body, {}, EHttpState::DONE, 600);
+	Await();
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+}
+
+TEST_F(QmPackageDownload, SuccessfulSegmentCooldownPreventsLaterWholeFileFallback)
+{
+	Probe();
+	const auto Range = *m_vRequests[1]->Range();
+	m_vRequests[1]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), Range, EHttpState::DONE, 600);
+	m_Download->Poll(2);
+	ASSERT_EQ(m_Download->State(), EHttpState::RUNNING);
+	m_vRequests[2]->Reply(200, "", {}, EHttpState::ERROR);
+	m_Download->Poll(3);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+}
+
+TEST_F(QmPackageDownload, ProbeCooldownPreventsLaterSegmentRetry)
+{
+	m_vRequests[0]->Reply(206, std::string_view(m_Body).substr(0, 1), CHttpByteRange{0, 0, static_cast<int64_t>(m_Body.size())}, EHttpState::DONE, 600);
+	m_Download->Poll(1);
+	ASSERT_EQ(m_vRequests.size(), 5U);
+	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR);
+	m_Download->Poll(2);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 503);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+}
+
+TEST_F(QmPackageDownload, Published429FailsEvenWhenTransportReportsDone)
+{
+	Probe();
+	m_vRequests[1]->Reply(429, "", {}, EHttpState::DONE);
+	m_Download->Poll(2);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 429);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+}
+
+TEST_F(QmPackageDownload, PositiveRetryAfterOnSuccessfulSegmentPreventsRetry)
+{
+	Probe();
+	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR);
+	const auto Range = *m_vRequests[2]->Range();
+	m_vRequests[2]->Reply(206, std::string_view(m_Body).substr(Range.m_First, Range.Length()), Range, EHttpState::DONE, 600);
+	m_Download->Poll(2);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+	EXPECT_EQ(qm_update::SourceRetryDelay(m_Download.get()), 600);
+}
+
+TEST_F(QmPackageDownload, FailurePreservesProxyRouteFromAnotherCompletedSegment)
+{
+	Probe();
+	m_vRequests[1]->Reply(404, "", {}, EHttpState::ERROR);
+	m_vRequests[2]->Proxy("http://127.0.0.1:12345");
+	FinishPart(2);
+	m_Download->Poll(2);
+	ASSERT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_STREQ(m_Download->ProxyUrl(), "http://127.0.0.1:12345");
+	qm_update::CSource Source{};
+	const std::shared_ptr<IHttpRequest> apRequests[] = {m_Download};
+	EXPECT_TRUE(qm_update::CanRetryOfficialDirect(&Source, false, apRequests));
+}
+
+TEST_F(QmPackageDownload, RetriedSegmentPreservesItsPreviousProxyRouteOnBatchFailure)
+{
+	Probe();
+	m_vRequests[1]->Proxy("http://127.0.0.1:12345");
+	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR);
+	m_Download->Poll(2);
+	ASSERT_EQ(m_vRequests.size(), 6U);
+	m_vRequests[5]->Reply(404, "", {}, EHttpState::ERROR);
+	m_Download->Poll(3);
+	ASSERT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_STREQ(m_Download->ProxyUrl(), "http://127.0.0.1:12345");
+}
+
+TEST_F(QmPackageDownload, PositiveRetryAfterWithout429PublishesMaximumCooldown)
+{
+	Probe();
+	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR, 600);
+	m_vRequests[2]->Reply(503, "", {}, EHttpState::ERROR, 900);
+	m_Download->Poll(2);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 503);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 900);
+}
+
+TEST_F(QmPackageDownload, FailurePreservesActualProxyUseFromAnotherSegment)
+{
+	Probe();
+	m_vRequests[1]->Reply(404, "", {}, EHttpState::ERROR);
+	m_vRequests[2]->UsedProxy();
+	FinishPart(2);
+	m_Download->Poll(2);
+	ASSERT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_TRUE(m_Download->CompletedUsedProxy());
+}
+
+TEST_F(QmPackageDownload, RateLimitFailureRemovesEveryCompletedPart)
+{
+	Probe();
+	FinishPart(3);
+	FinishPart(4);
+	m_vRequests[1]->Reply(503, "", {}, EHttpState::ERROR);
+	m_vRequests[2]->Reply(429, "", {}, EHttpState::ERROR, 600);
+	m_Download->Poll(2);
+	ASSERT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	for(unsigned Index = 0; Index < 4; ++Index)
+	{
+		char aPath[IO_MAX_PATH_LENGTH];
+		const std::string PartPath = "package.tmp.part" + std::to_string(Index);
+		m_Storage->GetCompletePath(IStorage::TYPE_SAVE, PartPath.c_str(), aPath, sizeof(aPath));
+		EXPECT_FALSE(fs_is_file(aPath)) << PartPath;
+	}
+}
+
+TEST_F(QmPackageDownload, RateLimitHeadersAreNotConsumedBeforeCompletionPublication)
+{
+	Probe();
+	FinishPart(1);
+	FinishPart(3);
+	FinishPart(4);
+	m_vRequests[2]->PendingRateLimit();
+	m_Download->Poll(2);
+	EXPECT_EQ(m_Download->State(), EHttpState::RUNNING);
+	EXPECT_FALSE(m_Download->ResultRetryAfterSeconds().has_value());
+	EXPECT_EQ(m_vRequests.size(), 5U);
+	m_vRequests[2]->Reply(429, "", {}, EHttpState::ERROR, 600);
+	m_Download->Poll(3);
+	EXPECT_EQ(m_Download->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 429);
+	EXPECT_EQ(m_Download->ResultRetryAfterSeconds(), 600);
+}
+
+TEST_F(QmPackageDownload, ZeroRetryAfterAllowsSegmentRetryAndSuccessfulRecovery)
+{
+	Probe();
+	FinishPart(1);
+	FinishPart(3);
+	FinishPart(4);
+	m_vRequests[2]->Reply(503, "", {}, EHttpState::ERROR, 0);
+	m_Download->Poll(2);
+	ASSERT_EQ(m_vRequests.size(), 6U);
+	EXPECT_EQ(m_Download->State(), EHttpState::RUNNING);
+	FinishPart(5);
+	Await();
+	EXPECT_EQ(m_Download->CompletedStatusCode(), 200);
+	EXPECT_EQ(qm_update::SourceRetryDelay(m_Download.get()), 0);
 }
 
 TEST_F(QmPackageDownload, CancelDuringSegmentsStopsRequestsAndCannotPublishCompletion)

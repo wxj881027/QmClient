@@ -84,6 +84,18 @@ def main() -> int:
         def do_GET(self):
             nonlocal stalled_segment_attempts
             requested_paths.append(self.path)
+            if self.path in ("/segment-redirect", "/segment-redirect-no-length"):
+                redirect_body = b"redirect body longer than the one-byte range probe"
+                self.send_response(302)
+                self.send_header("Location", "/segment-zip")
+                if self.path == "/segment-redirect":
+                    self.send_header("Content-Length", str(len(redirect_body)))
+                self.end_headers()
+                try:
+                    self.wfile.write(redirect_body)
+                except OSError:
+                    pass
+                return
             if self.path.startswith("/segment-"):
                 requested_range = self.headers.get("Range")
                 with segment_lock:
@@ -121,7 +133,7 @@ def main() -> int:
                 if partial:
                     range_first = first + 1 if self.path == "/segment-wrong" and first != last else first
                     self.send_header("Content-Range", f"bytes {range_first}-{last}/{len(payload)}")
-                self.send_header("Content-Length", str(last - first + 1))
+                self.send_header("Content-Length", str(last - first + 1 + (len(b"extra bytes outside the requested range") if self.path == "/segment-oversized" and first != last else 0)))
                 self.end_headers()
                 try:
                     result = payload[first:last + 1]
@@ -132,6 +144,8 @@ def main() -> int:
                         result = result[1:]
                     if self.path == "/segment-truncated" and first != last:
                         result = result[:len(result) // 2]
+                    elif self.path == "/segment-oversized" and first != last:
+                        result += b"extra bytes outside the requested range"
                     self.wfile.write(result)
                     self.wfile.flush()
                     if self.path == "/segment-truncated" and first != last:
@@ -139,12 +153,18 @@ def main() -> int:
                 except OSError:
                     pass
                 return
+            if self.path.endswith("/redirect-to-bypass"):
+                self.send_response(302)
+                self.send_header("Location", f"http://localhost:{server.server_port}/failed")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             if self.path == "/delayed":
                 release.wait(5)
             payload = b"<html>gateway error</html>" if self.path == "/html" else body
             if self.path in ("/sample-large", "/sample-no-length"):
                 payload = b"PK\x03\x04" + b"p" * (4 * 1024 * 1024)
-            self.send_response(429 if self.path == "/rate-limited" else 200)
+            self.send_response(429 if self.path == "/rate-limited" else 503 if self.path.endswith("/failed") else 200)
             if self.path == "/rate-limited":
                 self.send_header("Retry-After", "300")
             if self.path != "/sample-no-length":
@@ -166,9 +186,13 @@ def main() -> int:
     server.daemon_threads = True
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    # 保持端口占用但不监听，稳定触发连接失败，不依赖固定端口或外部进程。
+    unreachable = socket.socket()
+    unreachable.bind(("127.0.0.1", 0))
+    unreachable_port = unreachable.getsockname()[1]
     environment = dict(os.environ)
     for name in ("http_proxy", "https_proxy", "all_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"):
-        environment[name] = "http://127.0.0.1:1"
+        environment[name] = f"http://127.0.0.1:{unreachable_port}"
     environment.update(NO_PROXY="", no_proxy="")
     results = []
     try:
@@ -182,12 +206,12 @@ def main() -> int:
         queued = run_probe(probe, ["cancel-queued", f"http://127.0.0.1:{server.server_port}/queued"], timeout=10, env=environment)
         results.append(dict(queued, scenario="queued cancellation and same-engine recovery"))
         assert queued.get("success") and requested_paths.count("/queued") == 1, (queued, requested_paths)
-        for route in ("zip", "7z", "exe", "ignore", "wrong", "truncated", "limited", "stall"):
+        for route in ("zip", "7z", "exe", "ignore", "redirect", "redirect-no-length", "wrong", "truncated", "oversized", "limited", "stall"):
             path = output / f"segmented-{route}.tmp"
             budget = "35" if route == "stall" else "15"
             downloaded = run_probe(probe, ["segmented", f"http://127.0.0.1:{server.server_port}/segment-{route}", path.relative_to(REPO_ROOT).as_posix(), budget], timeout=40, env=environment)
             results.append(dict(downloaded, scenario=f"segmented-{route}"))
-            if route in ("wrong", "truncated", "limited"):
+            if route in ("wrong", "truncated", "oversized", "limited"):
                 assert not downloaded.get("success") and not path.exists(), downloaded
                 assert downloaded["requests"] <= 9, downloaded
                 if route == "limited":
@@ -229,6 +253,24 @@ def main() -> int:
         bypass_environment.update(NO_PROXY="127.0.0.1", no_proxy="127.0.0.1")
         bypassed, _ = fetch("file", "proxy-bypass.zip", "environment", env=bypass_environment)
         assert bypassed.get("success") and not bypassed["used_proxy"], bypassed
+        for pattern in ("127.0.0.1", "127.0.0.0/8", "*"):
+            bypass_failure_environment = dict(http_environment)
+            bypass_failure_environment.update(NO_PROXY=pattern, no_proxy=pattern)
+            failed_bypass, _ = fetch("failed", "failed-bypass-" + pattern.replace("/", "_").replace("*", "all") + ".zip", "environment", env=bypass_failure_environment)
+            assert not failed_bypass.get("success") and failed_bypass["http_status"] == 503, failed_bypass
+            assert not failed_bypass["used_proxy"] and not failed_bypass["proxy_route_selected"] and not failed_bypass["official_direct_retry_allowed"], failed_bypass
+        bypass_connection_environment = dict(environment)
+        bypass_connection_environment.update(NO_PROXY="127.0.0.1", no_proxy="127.0.0.1")
+        connection_failure = run_probe(probe, ["fetch", f"http://127.0.0.1:{unreachable_port}/failed", (output / "bypass-connection-failure.tmp").relative_to(REPO_ROOT).as_posix(), "environment", "5", "1048576"], timeout=10, env=bypass_connection_environment)
+        results.append(dict(connection_failure, scenario="bypassed proxy connection failure"))
+        assert not connection_failure.get("success") and connection_failure["http_status"] == 0, connection_failure
+        assert not connection_failure["proxy_route_selected"] and not connection_failure["official_direct_retry_allowed"], connection_failure
+        redirected_environment = dict(http_environment)
+        redirected_environment.update(NO_PROXY="localhost", no_proxy="localhost")
+        redirected = run_probe(probe, ["fetch", f"http://127.0.0.1:{server.server_port}/redirect-to-bypass", (output / "redirected-bypass-failure.tmp").relative_to(REPO_ROOT).as_posix(), "environment", "5", "1048576"], timeout=10, env=redirected_environment)
+        results.append(dict(redirected, scenario="redirect final host bypass failure"))
+        assert not redirected.get("success") and redirected["http_status"] == 503, redirected
+        assert not redirected["proxy_route_selected"] and not redirected["official_direct_retry_allowed"], redirected
         socks_environment = dict(environment)
         for name in ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"):
             socks_environment.pop(name, None)
@@ -249,6 +291,7 @@ def main() -> int:
     except Exception as error:
         result = {"status": "failed", "error": str(error), "scenarios": results}
     finally:
+        unreachable.close()
         release.set()
         stalled_segment_release.set()
         server.shutdown()

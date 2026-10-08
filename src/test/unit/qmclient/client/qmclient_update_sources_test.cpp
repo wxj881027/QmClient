@@ -75,6 +75,64 @@ TEST(QmUpdateSpeed, SegmentRetryProgressRegressionStartsANewWindow)
 	EXPECT_TRUE(Monitor.ShouldSwitch(11, 2048, 0, 1024 * 1024));
 }
 
+TEST(QmUpdateSpeed, RegressionWithinFirstWindowWaitsFiveSecondsFromCurrentBytes)
+{
+	qm_update::CDownloadSpeedMonitor Monitor;
+	Monitor.Begin(0);
+	EXPECT_FALSE(Monitor.ShouldSwitch(4, 800 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(4.1, 0, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(5, 200 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(9, 200 * 1024, 0, 1024 * 1024));
+	EXPECT_TRUE(Monitor.ShouldSwitch(9.1, 200 * 1024, 0, 1024 * 1024));
+}
+
+TEST(QmUpdateSpeed, RegressionAbovePreviousWindowBaselineUsesRetainedSegmentBytes)
+{
+	qm_update::CDownloadSpeedMonitor Monitor;
+	Monitor.Begin(0);
+	EXPECT_FALSE(Monitor.ShouldSwitch(5, 600 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(8, 1800 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(9, 1200 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(10, 1400 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(13.9, 1400 * 1024, 0, 1024 * 1024));
+	EXPECT_TRUE(Monitor.ShouldSwitch(14, 1400 * 1024, 0, 1024 * 1024));
+}
+
+TEST(QmUpdateSpeed, ConsecutiveRegressionsRestartWindowUntilProgressStabilizes)
+{
+	qm_update::CDownloadSpeedMonitor Monitor;
+	Monitor.Begin(0);
+	EXPECT_FALSE(Monitor.ShouldSwitch(4, 800 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(5, 600 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(9, 400 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(10, 400 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(13, 200 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(17.9, 200 * 1024, 0, 1024 * 1024));
+	EXPECT_TRUE(Monitor.ShouldSwitch(18, 200 * 1024, 0, 1024 * 1024));
+}
+
+TEST(QmUpdateSpeed, BeginClearsPreviousObservationAndNonzeroWindowBaseline)
+{
+	qm_update::CDownloadSpeedMonitor Monitor;
+	Monitor.Begin(0);
+	EXPECT_FALSE(Monitor.ShouldSwitch(5, 600 * 1024, 0, 1024 * 1024));
+	EXPECT_FALSE(Monitor.ShouldSwitch(6, 400 * 1024, 0, 1024 * 1024));
+	Monitor.Begin(20);
+	EXPECT_FALSE(Monitor.ShouldSwitch(24, 100 * 1024, 0, 1024 * 1024));
+	EXPECT_TRUE(Monitor.ShouldSwitch(25, 200 * 1024, 0, 1024 * 1024));
+}
+
+TEST(QmUpdateSpeed, RegressionWindowPreservesSpeedThresholdAndCompletionBoundary)
+{
+	qm_update::CDownloadSpeedMonitor Monitor;
+	Monitor.Begin(0);
+	EXPECT_FALSE(Monitor.ShouldSwitch(4, 800 * 1024, 0, 1024 * 1024, true));
+	EXPECT_FALSE(Monitor.ShouldSwitch(5, 200 * 1024, 0, 1024 * 1024, true));
+	EXPECT_FALSE(Monitor.ShouldSwitch(10, 700 * 1024, 0, 1024 * 1024, true));
+	EXPECT_FALSE(Monitor.ShouldSwitch(15, 1195 * 1024, 1451 * 1024, 1024 * 1024, true));
+	EXPECT_TRUE(Monitor.ShouldSwitch(20, 1690 * 1024, 1946 * 1024 + 1, 1024 * 1024, true));
+}
+
 TEST(QmUpdateSources, OnlyOfficialResourcesMayUseSystemOrEnvironmentProxy)
 {
 	EXPECT_TRUE(qm_update::UpdateUsesSystemProxy("https://github.com/wxj881027/QmClient/releases/download/v3.4/file.exe"));

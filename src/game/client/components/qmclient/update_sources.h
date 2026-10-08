@@ -150,6 +150,7 @@ namespace qm_update
 	{
 		double m_WindowStart = 0;
 		double m_WindowBytes = 0;
+		double m_LastObservedBytes = 0;
 
 	public:
 		static constexpr double WINDOW_SECONDS = 5;
@@ -158,11 +159,14 @@ namespace qm_update
 		{
 			m_WindowStart = Now;
 			m_WindowBytes = 0;
+			m_LastObservedBytes = 0;
 		}
 		bool ShouldSwitch(double Now, double Bytes, double Total, double AlternativeSpeed, bool Official = false)
 		{
-			// 分段重试会回退可见进度，不能用负吞吐触发换源。
-			if(Bytes < m_WindowBytes)
+			// 与上一观察值比较，窗口内的分段回退也必须重新等待完整窗口。
+			const bool ProgressRegressed = Bytes < m_LastObservedBytes;
+			m_LastObservedBytes = Bytes;
+			if(ProgressRegressed)
 			{
 				m_WindowStart = Now;
 				m_WindowBytes = Bytes;
