@@ -12834,3 +12834,35 @@ brazilian_portuguese = "Com qm_graphics_trace ativado, verificar novamente as fo
 portuguese = "Com qm_graphics_trace ativado, verificar novamente as fontes e consultar a fonte e o glifo Unicode resolvidos"
 turkish = "qm_graphics_trace etkinken yazı tiplerini yeniden tara ve çözümlenen Unicode yazı tipi yüzünü ve glifi sorgula"
 polish = "Gdy qm_graphics_trace jest włączone, ponownie skanuj czcionki i sprawdzaj wybrane odmiany czcionek oraz glify Unicode"
+
+[[message]]
+key = "Expand console"
+[message.translations]
+simplified_chinese = "展开控制台"
+traditional_chinese = "展開控制台"
+japanese = "コンソールを展開"
+korean = "콘솔 확장"
+russian = "Развернуть консоль"
+german = "Konsole vergrößern"
+spanish = "Expandir consola"
+french = "Agrandir la console"
+brazilian_portuguese = "Expandir console"
+portuguese = "Expandir consola"
+turkish = "Konsolu genişlet"
+polish = "Rozwiń konsolę"
+
+[[message]]
+key = "Collapse console"
+[message.translations]
+simplified_chinese = "收起控制台"
+traditional_chinese = "收起控制台"
+japanese = "コンソールを縮小"
+korean = "콘솔 축소"
+russian = "Уменьшить консоль"
+german = "Konsole verkleinern"
+spanish = "Contraer consola"
+french = "Réduire la console"
+brazilian_portuguese = "Recolher console"
+portuguese = "Recolher consola"
+turkish = "Konsolu daralt"
+polish = "Zwiń konsolę"

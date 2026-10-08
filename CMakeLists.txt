@@ -3393,6 +3393,7 @@ if(CLIENT)
     components/qmclient/collision_hitbox.cpp
     components/qmclient/collision_hitbox.h
     components/qmclient/colored_parts.h
+    components/qmclient/console_selection.h
     components/qmclient/data_version.h
     components/qmclient/demo_ui.h
     components/qmclient/emoticon_commands.h
@@ -4594,6 +4595,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_presentation_test.cpp
     src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
     src/test/unit/qmclient/client/qm_console_log_filter_test.cpp
+    src/test/unit/qmclient/client/qm_console_selection_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp
     src/test/unit/qmclient/client/qm_tclient_warlist_test.cpp
     src/test/contract/qmclient/client/qm_chat_contract_test.cpp

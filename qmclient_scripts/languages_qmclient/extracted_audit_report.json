@@ -1,8 +1,8 @@
 {
   "summary": {
-    "must_i18n": 8026,
-    "business_data": 10851,
-    "test_only": 5875,
+    "must_i18n": 8028,
+    "business_data": 10849,
+    "test_only": 5877,
     "needs_review": 473,
     "violation": 0
   },
@@ -18104,315 +18104,329 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1682,
+      "line": 1739,
       "text": "No chat log selected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1690,
+      "line": 1747,
       "text": "Messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1690,
+      "line": 1747,
       "text": "QmClient chat log",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1690,
+      "line": 1747,
       "text": "Total",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1708,
+      "line": 1765,
       "text": "Chat export cancelled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1732,
+      "line": 1789,
       "text": "Exported %d chat messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1737,
+      "line": 1794,
       "text": "Chat export cancelled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1739,
+      "line": 1796,
       "text": "Chat export failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1863,
+      "line": 1923,
       "text": "Searching",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1872,
+      "line": 1932,
       "text": "Enter Username",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1874,
+      "line": 1934,
       "text": "Enter Password",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1878,
+      "line": 1938,
       "text": "NOT CONNECTED",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2201,
+      "line": 2252,
       "text": "Help: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2204,
+      "line": 2255,
       "text": "Usage: %s %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2227,
+      "line": 2278,
       "text": "Match %d of %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2232,
+      "line": 2283,
       "text": "No results",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2623,
+      "line": 2644,
       "text": "Following",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2623,
+      "line": 2644,
       "text": "Lines %d - %d (%s)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2623,
+      "line": 2644,
       "text": "Locked",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2651,
+      "line": 2665,
+      "text": "Expand console",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 2666,
+      "text": "Collapse console",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 2685,
       "text": "Exporting chat images: %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2653,
+      "line": 2687,
       "text": "Preparing chat export: %d%%",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2656,
+      "line": 2690,
       "text": "Selected %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2673,
+      "line": 2707,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2674,
+      "line": 2708,
       "text": "Export selected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2675,
+      "line": 2709,
       "text": "Clear",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2676,
+      "line": 2710,
       "text": "Select all chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2708,
+      "line": 2742,
       "text": "All",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2709,
+      "line": 2743,
       "text": "Players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2710,
+      "line": 2744,
       "text": "System",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2711,
+      "line": 2745,
       "text": "Commands",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2712,
+      "line": 2746,
       "text": "Binds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2715,
+      "line": 2749,
       "text": "Select export",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2777,
+      "line": 2816,
       "text": "Loading commands…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2777,
+      "line": 2816,
       "text": "Loading maps…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2980,
+      "line": 3024,
       "text": "Clear local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2982,
+      "line": 3026,
       "text": "Toggle local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2983,
+      "line": 3027,
       "text": "Toggle remote console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2984,
+      "line": 3028,
       "text": "Clear local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2985,
+      "line": 3029,
       "text": "Clear remote console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2986,
+      "line": 3030,
       "text": "Write local console contents to a text file",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2987,
+      "line": 3031,
       "text": "Write remote console contents to a text file",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2989,
+      "line": 3033,
       "text": "Previous page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2990,
+      "line": 3034,
       "text": "Next page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2991,
+      "line": 3035,
       "text": "Last page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2992,
+      "line": 3036,
       "text": "First page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
@@ -68464,105 +68478,105 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 269,
+      "line": 267,
       "text": " chat/all: ",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 270,
+      "line": 268,
       "text": " chat/team: ",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 271,
+      "line": 269,
       "text": " chat/whisper: ",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 299,
+      "line": 297,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 329,
+      "line": 327,
       "text": "qmclient/chat_log",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 448,
+      "line": 446,
       "text": "console pointer must not be null",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 539,
+      "line": 537,
       "text": "sv_map",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 540,
+      "line": 538,
       "text": "change_map",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 542,
+      "line": 540,
       "text": "tune_reset",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 543,
+      "line": 541,
       "text": "toggle_tune",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 544,
+      "line": 542,
       "text": "tune_zone",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 547,
+      "line": 545,
       "text": "access_level",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 548,
+      "line": 546,
       "text": "+toggle",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 667,
+      "line": 665,
       "text": "local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 672,
+      "line": 670,
       "text": "remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -68590,101 +68604,87 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 911,
+      "line": 909,
       "text": "> %s",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 964,
+      "line": 962,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1077,
+      "line": 1074,
       "text": "%s%s%s",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1101,
+      "line": 1098,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1630,
+      "line": 1458,
+      "text": "chat/client",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1458,
+      "text": "xxxx-xx-xx xx:xx:xx x ",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1687,
       "text": "dumps/%s_dump_%s.txt",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1641,
+      "line": 1698,
       "text": "%s contents were written to '%s'",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1641,
+      "line": 1698,
       "text": "console",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1645,
+      "line": 1702,
       "text": "console",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1645,
+      "line": 1702,
       "text": "Failed to open '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1655,
+      "line": 1712,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 1682,
-      "text": "console",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 1689,
-      "text": "qmclient/chat_log/local_chat_export_%s_%lld",
-      "category": "business_data",
-      "reason": "console prompt, export, or formatting template"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 1708,
-      "text": "console",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 1737,
-      "text": "console",
-      "category": "business_data",
-      "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/console.cpp",
@@ -68695,322 +68695,322 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1863,
+      "line": 1746,
+      "text": "qmclient/chat_log/local_chat_export_%s_%lld",
+      "category": "business_data",
+      "reason": "console prompt, export, or formatting template"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1765,
+      "text": "console",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1794,
+      "text": "console",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1796,
+      "text": "console",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1923,
       "text": "%s: ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1870,
+      "line": 1930,
       "text": "rcon> ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1872,
+      "line": 1932,
       "text": "%s> ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1874,
+      "line": 1934,
       "text": "%s> ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1878,
+      "line": 1938,
       "text": "%s> ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1991,
+      "line": 2051,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2190,
+      "line": 2241,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2191,
+      "line": 2242,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2443,
-      "text": "chat/client",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 2443,
-      "text": "xxxx-xx-xx xx:xx:xx x ",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 2458,
+      "line": 2501,
       "text": "xxxx-xx-xx xx:xx:xx x chat/client: — ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2487,
+      "line": 2538,
       "text": "https://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2489,
+      "line": 2540,
       "text": "https://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2493,
+      "line": 2544,
       "text": "http://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2495,
+      "line": 2546,
       "text": "http://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2503,
+      "line": 2554,
       "text": "www.",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2505,
+      "line": 2556,
       "text": "https://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2578,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 2578,
-      "text": "\\n",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 2705,
+      "line": 2739,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2705,
+      "line": 2739,
       "text": " on ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2706,
+      "line": 2740,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2781,
+      "line": 2820,
       "text": " %d%%",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2980,
+      "line": 3024,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2980,
+      "line": 3024,
       "text": "clear",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2982,
+      "line": 3026,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2982,
+      "line": 3026,
       "text": "toggle_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2983,
+      "line": 3027,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2983,
+      "line": 3027,
       "text": "toggle_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2984,
+      "line": 3028,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2984,
+      "line": 3028,
       "text": "clear_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2985,
+      "line": 3029,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2985,
+      "line": 3029,
       "text": "clear_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2986,
+      "line": 3030,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2986,
+      "line": 3030,
       "text": "dump_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2987,
+      "line": 3031,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2987,
+      "line": 3031,
       "text": "dump_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2989,
+      "line": 3033,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2989,
+      "line": 3033,
       "text": "console_page_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2990,
+      "line": 3034,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2990,
+      "line": 3034,
       "text": "console_page_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2991,
+      "line": 3035,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2991,
+      "line": 3035,
       "text": "console_page_top",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2992,
+      "line": 3036,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2992,
+      "line": 3036,
       "text": "console_page_bottom",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2993,
+      "line": 3037,
       "text": "console_output_level",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -163801,6 +163801,20 @@
       "file": "src/test/unit/qmclient/client/qm_console_log_filter_test.cpp",
       "line": 89,
       "text": "no separator here",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/qmclient/client/qm_console_selection_test.cpp",
+      "line": 68,
+      "text": "A中文🙂B",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/qmclient/client/qm_console_selection_test.cpp",
+      "line": 69,
+      "text": "中文🙂",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },

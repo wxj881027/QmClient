@@ -2126,6 +2126,9 @@ Close the demo player
 Close window after changing settings
 == Закрыть окно после изменения настроек
 
+Collapse console
+== Уменьшить консоль
+
 Collision hitbox
 == Хитбокс столкновений
 
@@ -4321,6 +4324,9 @@ Existing Player
 
 Exit replay view
 == Выйти из просмотра реплея
+
+Expand console
+== Развернуть консоль
 
 Expanded dropdown background color
 == Цвет фона раскрытого списка
