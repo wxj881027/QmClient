@@ -87,7 +87,7 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("tc_custom*", EConfigTag::VISUAL);
 	RegisterTag("tc_tee*", EConfigTag::VISUAL);
 	RegisterTag("tc_dummy_color*", EConfigTag::VISUAL);
-	RegisterTag("tc_warlist*", EConfigTag::VISUAL);
+	RegisterTag("qm_warlist*", EConfigTag::VISUAL);
 	RegisterTag("cl_skin*", EConfigTag::VISUAL);
 	RegisterTag("cl_camera*", EConfigTag::VISUAL);
 	RegisterTag("cl_zoom*", EConfigTag::VISUAL);
@@ -189,7 +189,7 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*whitelist*", EConfigTag::SOCIAL);
 	RegisterTag("*blacklist*", EConfigTag::SOCIAL);
 	RegisterTag("*mute*", EConfigTag::SOCIAL);
-	RegisterTag("tc_warlist*", EConfigTag::SOCIAL);
+	RegisterTag("qm_warlist*", EConfigTag::SOCIAL);
 	RegisterTag("tc_trademark*", EConfigTag::SOCIAL);
 	RegisterTag("tc_friend*", EConfigTag::SOCIAL);
 	RegisterTag("cl_friends*", EConfigTag::SOCIAL);

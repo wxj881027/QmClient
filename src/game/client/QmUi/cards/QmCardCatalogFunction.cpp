@@ -4,12 +4,120 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/UiForms.h>
+
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
 #include <algorithm>
 #include <cmath>
+
+void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	CUIRect Row, LabelColumn, ControlColumn;
+	auto RenderCheckbox = [this, &Content, &Row, LineHeight, LineSpacing, PrewarmOnly](const void *pId, const char *pText, int *pValue) {
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		RenderQmFunctionCheckbox(pId, pText, Localize(pText), pValue, &Row, PrewarmOnly);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	};
+	RenderCheckbox(&g_Config.m_QmBlockWordsShowConsole, Localizable("Show blocked words in console"), &g_Config.m_QmBlockWordsShowConsole);
+	static CButtonContainer s_BlockWordsConsoleColorId;
+	DoLine_ColorPicker(&s_BlockWordsConsoleColorId, CurrentSettingsContentMetrics(), &Content, Localize("Console color"), &g_Config.m_QmBlockWordsConsoleColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+	RenderCheckbox(&g_Config.m_QmBlockWordsEnabled, Localizable("Enable word filter list"), &g_Config.m_QmBlockWordsEnabled);
+
+	const int BlockWordsAction = g_Config.m_QmBlockWordsAction;
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-word-filter-action", &LabelColumn, Localize("Behavior"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+	CUIRect ActionRow = ControlColumn;
+	CUIRect ActionButton;
+	static CButtonContainer s_BlockWordsActionReplace, s_BlockWordsActionHide;
+	const float ActionWidth = ActionRow.w / 2.0f;
+	ActionRow.VSplitLeft(ActionWidth, &ActionButton, &ActionRow);
+	if(DoButtonLineSize_Menu(&s_BlockWordsActionReplace, Localize("Replace mode"), BlockWordsAction == 0, &ActionButton, LineHeight, false, 0, IGraphics::CORNER_L, ui_token::radius::BASE, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		g_Config.m_QmBlockWordsAction = 0;
+	if(DoButtonLineSize_Menu(&s_BlockWordsActionHide, Localize("Hide player messages"), BlockWordsAction == 1, &ActionRow, LineHeight, false, 0, IGraphics::CORNER_R, ui_token::radius::BASE, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		g_Config.m_QmBlockWordsAction = 1;
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+	if(BlockWordsAction == 0)
+	{
+		RenderCheckbox(&g_Config.m_QmBlockWordsMultiReplace, Localizable("Use multi-char replacement based on word length"), &g_Config.m_QmBlockWordsMultiReplace);
+
+		static CLineInputBuffered<8> s_BlockWordsReplaceInput;
+		static bool s_BlockWordsReplaceInited = false;
+		if(!s_BlockWordsReplaceInited)
+		{
+			s_BlockWordsReplaceInput.Set(g_Config.m_QmBlockWordsReplacementChar);
+			s_BlockWordsReplaceInited = true;
+		}
+		else if(!s_BlockWordsReplaceInput.IsActive() && str_comp(s_BlockWordsReplaceInput.GetString(), g_Config.m_QmBlockWordsReplacementChar) != 0)
+		{
+			s_BlockWordsReplaceInput.Set(g_Config.m_QmBlockWordsReplacementChar);
+		}
+		s_BlockWordsReplaceInput.SetEmptyText("*");
+		IUiContext ReplacementInputCtx = SettingsUiContext("settings_qmclient_block_words_text_inputs", UiScale);
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-word-filter-replacement-chars", &LabelColumn, Localize("Replacement chars"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		if(ui_widget::InputField(ReplacementInputCtx, &s_BlockWordsReplaceInput, ControlColumn, "*", BodySize))
+		{
+			char aReplacement[8];
+			str_utf8_truncate(aReplacement, sizeof(aReplacement), s_BlockWordsReplaceInput.GetString(), 1);
+			if(aReplacement[0] == '\0')
+				str_copy(aReplacement, "*", sizeof(aReplacement));
+			str_copy(g_Config.m_QmBlockWordsReplacementChar, aReplacement, sizeof(g_Config.m_QmBlockWordsReplacementChar));
+		}
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-word-filter-match-mode", &LabelColumn, Localize("Mode"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		CUIRect ModeRow = ControlColumn;
+		CUIRect ModeButton;
+		static CButtonContainer s_BlockWordsModeRegex, s_BlockWordsModeFull, s_BlockWordsModeBoth;
+		const float ModeWidth = ModeRow.w / 3.0f;
+		ModeRow.VSplitLeft(ModeWidth, &ModeButton, &ModeRow);
+		if(DoButtonLineSize_Menu(&s_BlockWordsModeRegex, Localize("Regular expression"), g_Config.m_QmBlockWordsMode == 0, &ModeButton, LineHeight, false, 0, IGraphics::CORNER_L, ui_token::radius::BASE, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+			g_Config.m_QmBlockWordsMode = 0;
+		ModeRow.VSplitLeft(ModeWidth, &ModeButton, &ModeRow);
+		if(DoButtonLineSize_Menu(&s_BlockWordsModeFull, Localize("Literal"), g_Config.m_QmBlockWordsMode == 1, &ModeButton, LineHeight, false, 0, IGraphics::CORNER_NONE, ui_token::radius::BASE, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+			g_Config.m_QmBlockWordsMode = 1;
+		if(DoButtonLineSize_Menu(&s_BlockWordsModeBoth, Localize("Both"), g_Config.m_QmBlockWordsMode == 2, &ModeRow, LineHeight, false, 0, IGraphics::CORNER_R, ui_token::radius::BASE, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+			g_Config.m_QmBlockWordsMode = 2;
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+
+	static CLineInputBuffered<1024> s_BlockWordsInput;
+	static bool s_BlockWordsInited = false;
+	if(!s_BlockWordsInited)
+	{
+		s_BlockWordsInput.Set(g_Config.m_QmBlockWordsList);
+		s_BlockWordsInited = true;
+	}
+	else if(!s_BlockWordsInput.IsActive() && str_comp(s_BlockWordsInput.GetString(), g_Config.m_QmBlockWordsList) != 0)
+	{
+		s_BlockWordsInput.Set(g_Config.m_QmBlockWordsList);
+	}
+	s_BlockWordsInput.SetEmptyText(Localize("Separate with commas"));
+	const float InputLineSpacing = std::clamp(2.0f * UiScale, 1.0f, 2.0f);
+	const float InputHeight = qm_card_catalog::CalcQiaFenInputHeight(TextRender(), s_BlockWordsInput.GetString(), Content.w - LabelWidth, BodySize, InputLineSpacing, LineHeight);
+	Content.HSplitTop(InputHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-word-filter-label", &LabelColumn, Localize("Word Filter"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+	IUiContext ListInputCtx = SettingsUiContext("qmclient_block_words_input", UiScale);
+	ui_widget::SInputFieldOptions InputOptions;
+	InputOptions.m_Mode = ui_widget::EInputFieldMode::MULTILINE;
+	InputOptions.m_pPlaceholder = Localize("Separate with commas");
+	InputOptions.m_FontSize = BodySize;
+	InputOptions.m_LineSpacing = InputLineSpacing;
+	InputOptions.m_TextAlign = TEXTALIGN_ML;
+	if(ui_widget::InputField(ListInputCtx, &s_BlockWordsInput, ControlColumn, InputOptions).m_Changed)
+	{
+		str_copy(g_Config.m_QmBlockWordsList, s_BlockWordsInput.GetString(), sizeof(g_Config.m_QmBlockWordsList));
+	}
+}
 
 void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
@@ -49,6 +157,19 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 // 收藏地图卡片的内容量直接读取收藏数量。
 namespace qm_card_catalog
 {
+	uint64_t BlockWordsLayoutRevision()
+	{
+		// 原页面和搜索页都从配置同步，不依赖先打开功能页来刷新高度。
+		static std::string s_PreviousWords;
+		static uint64_t s_Revision = 1;
+		if(s_PreviousWords != g_Config.m_QmBlockWordsList)
+		{
+			s_PreviousWords = g_Config.m_QmBlockWordsList;
+			++s_Revision;
+		}
+		return s_Revision;
+	}
+
 	namespace
 	{
 		using qm_module::EQmModuleId;
@@ -64,12 +185,12 @@ namespace qm_card_catalog
 			switch(Id)
 			{
 			case EQmModuleId::GoresActor:
-				return !g_Config.m_TcFreezeChatEnabled ? Row() : Row() * (g_Config.m_TcFreezeChatEmoticon ? 5.0f : 4.0f);
+				return !g_Config.m_QmFreezeChatEnabled ? Row() : Row() * (g_Config.m_QmFreezeChatEmoticon ? 5.0f : 4.0f);
 			case EQmModuleId::Gores:
 				return Row() * (3.0f + (g_Config.m_QmAxiomAutoLogin ? 2.0f : 0.0f) + ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 7.0f : 0.0f)) + LineHeight;
 			case EQmModuleId::KeyBinds: return Rows(8.0f);
 			case EQmModuleId::Emoticons: return Rows(3.0f);
-			case EQmModuleId::Ime: return Rows(2.0f) + LineHeight + LineSpacing;
+			case EQmModuleId::Ime: return Rows(8.0f);
 			case EQmModuleId::BetterScoreboard: return Rows(5.0f);
 			case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(QmCardRenderHook::TextRenderer(pMenus), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
 			case EQmModuleId::Translate:
@@ -93,7 +214,7 @@ namespace qm_card_catalog
 				}
 				return Height;
 			}
-			case EQmModuleId::TranslateUi: return Rows(5.0f);
+			case EQmModuleId::TranslateUi: return Rows(6.0f);
 			case EQmModuleId::QiaFen:
 				return Row() * (4.0f + (float)Layout.m_KeywordRulesCount) + (Layout.m_KeywordRulesHalfFilled ? Row() : 0.0f);
 			case EQmModuleId::PieMenu:
@@ -239,7 +360,10 @@ namespace qm_card_catalog
 			Add(Id, "qm:qiafen", "Keyword Reply", "I am a robot", [pMenus, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionKeywordReplyContent(pMenus, Content, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		case EQmModuleId::PieMenu:
-			Add(Id, "qm:pie_menu", "Pie Menu", "Quick action menu for players", [pMenus, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, ButtonHeight, CardPadding, CardCornerRadius, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionPieMenuContent(pMenus, Content, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, ButtonHeight, CardPadding, CardCornerRadius, ReadOnly); });
+			Add(Id, "qm:pie_menu", "Pie Menu", "Quick action menu for players", [pMenus, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, ButtonHeight, CardPadding, CardCornerRadius, ReadOnly, Page = Ctx.m_Page](CUIRect &Content) {
+				const bool FullWidth = !Page.m_TwoColumns || Content.w > (Page.m_ContentViewport.w + Page.m_aColumns[0].w) * 0.5f - 2.0f * CardPadding;
+				qm_card_catalog::QmCardRenderHook::RenderQmFunctionPieMenuContent(pMenus, Content, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, ButtonHeight, CardPadding, CardCornerRadius, ReadOnly, FullWidth ? 4 : 2);
+			});
 			return true;
 		case EQmModuleId::MapUpload:
 			Add(Id, "qm:map_upload", "Map upload", "Upload a saved map to the public test server", [pMenus, LineHeight, BodySize, LineSpacing, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmFunctionMapUploadContent(pMenus, Content, LineHeight, BodySize, LineSpacing, ReadOnly); });

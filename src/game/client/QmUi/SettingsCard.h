@@ -13,6 +13,7 @@
 #include <functional>
 
 struct IUiContext;
+class CSettingsCardHelp;
 enum class EQmIcon;
 
 // 所有卡片标题操作共享图标状态边界，绘制结束后完整恢复正文渲染状态。
@@ -43,7 +44,7 @@ inline void ExecuteSettingsCardLabel(const CUIRect &Rect, TDraw &&Draw)
 		Draw();
 }
 
-void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, EQmIcon Icon, const char *pGlyph, float DrawAlpha = 1.0f);
+void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, EQmIcon Icon, const char *pGlyph, float DrawAlpha = 1.0f, const void *pId = nullptr);
 
 struct SSettingsCardDeckVisualOptions
 {
@@ -161,7 +162,7 @@ inline CUIRect ResolveSettingsCardInteractionBorderRect(const CUIRect &SurfaceRe
 
 inline SSettingsCardFrame ResolveSettingsCardDrawFrame(SSettingsCardFrame Frame, const float OffsetX, const float OffsetY)
 {
-	for(CUIRect *pRect : {&Frame.m_Rect, &Frame.m_HeaderRect, &Frame.m_TitleRect, &Frame.m_SubtitleRect, &Frame.m_HandleRect, &Frame.m_ContentRect})
+	for(CUIRect *pRect : {&Frame.m_Rect, &Frame.m_HeaderRect, &Frame.m_TitleRect, &Frame.m_SubtitleRect, &Frame.m_HandleRect, &Frame.m_ContentRect, &Frame.m_LeadingHeaderActionRect})
 	{
 		pRect->x += OffsetX;
 		pRect->y += OffsetY;
@@ -242,9 +243,9 @@ inline float ResolveSettingsCardContentHeight(const FSettingsCardRenderMeasured 
 	return std::clamp(SETTINGS_CARD_CONTENT_MEASURE_PROBE_HEIGHT - Probe.h, 0.0f, SETTINGS_CARD_CONTENT_MEASURE_PROBE_HEIGHT);
 }
 
-void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, bool Collapsed, float DrawAlpha = 1.0f);
+void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, bool Collapsed, float DrawAlpha = 1.0f, const void *pId = nullptr);
 
 SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const CUIRect &Slot, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardMeasure &Measure, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction = {}, const FSettingsCardRenderMeasured &RenderMeasured = {}, bool *pPointerInside = nullptr);
-SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame &Frame, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction = {}, const FSettingsCardRenderMeasured &RenderMeasured = {}, bool *pPointerInside = nullptr);
+SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame &Frame, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction = {}, const FSettingsCardRenderMeasured &RenderMeasured = {}, bool *pPointerInside = nullptr, CSettingsCardHelp *pHelp = nullptr, float HelpHeight = 0.0f);
 
 #endif

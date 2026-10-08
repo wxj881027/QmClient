@@ -135,6 +135,8 @@ namespace qm_module
 		case EQmModuleId::GoresDrownBoard: return "qm:gores_drown_board";
 		case EQmModuleId::BetterScoreboard: return "qm:better_scoreboard";
 		case EQmModuleId::Ime: return "qm:ime";
+		case EQmModuleId::AppearancePreset: return "qm:appearance_preset";
+		case EQmModuleId::Tooltip: return "qm:tooltip";
 		}
 		return nullptr;
 	}

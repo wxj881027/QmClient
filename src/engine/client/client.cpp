@@ -41,6 +41,7 @@
 #include <engine/shared/client_brand.h>
 #include <engine/shared/compression.h>
 #include <engine/shared/config.h>
+#include <engine/shared/qm_default_profile.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/filecollection.h>
@@ -910,7 +911,7 @@ void CClient::SendInput()
 			m_aInputs[i][m_aCurrentInput[i]].m_Tick = m_aPredTick[g_Config.m_ClDummy];
 			m_aInputs[i][m_aCurrentInput[i]].m_PredictedTime = m_PredictedTime.Get(Now);
 			m_aInputs[i][m_aCurrentInput[i]].m_PredictionMargin = PredictionMargin() * time_freq() / 1000;
-			if(g_Config.m_TcSmoothPredictionMargin)
+			if(g_Config.m_QmSmoothPredictionMargin)
 				m_aInputs[i][m_aCurrentInput[i]].m_PredictionMargin = m_PredictedTime.GetMargin(Now);
 			m_aInputs[i][m_aCurrentInput[i]].m_Time = Now;
 
@@ -1261,7 +1262,7 @@ void CClient::Connect(const char *pAddress, const char *pPassword)
 	if(!m_SendPassword)
 	{
 		m_pGameClient->SetConnectInfo(&aConnectAddrs[0]);
-		m_pConsole->ExecuteLine(g_Config.m_TcExecuteOnConnect, IConsole::CLIENT_ID_UNSPECIFIED);
+		m_pConsole->ExecuteLine(g_Config.m_QmExecuteOnConnect, IConsole::CLIENT_ID_UNSPECIFIED);
 	}
 	m_pGameClient->SetConnectInfo(nullptr);
 
@@ -2865,7 +2866,7 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 				if(m_aInputs[Conn][k].m_Tick == InputPredTick)
 				{
 					Target = m_aInputs[Conn][k].m_PredictedTime + (Now - m_aInputs[Conn][k].m_Time);
-					if(g_Config.m_TcSmoothPredictionMargin)
+					if(g_Config.m_QmSmoothPredictionMargin)
 						Target = Target - (int64_t)((TimeLeft / 1000.0f) * time_freq()) + m_aInputs[Conn][k].m_PredictionMargin;
 					else
 						Target = Target - (int64_t)((TimeLeft / 1000.0f) * time_freq());
@@ -3109,11 +3110,11 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 					m_aReceivedSnapshots[Conn]++;
 
 					// TClient
-					if(!m_aExecuteOnJoinDone[Conn] && m_aReceivedSnapshots[Conn] > g_Config.m_TcExecuteOnJoinDelay)
+					if(!m_aExecuteOnJoinDone[Conn] && m_aReceivedSnapshots[Conn] > g_Config.m_QmExecuteOnJoinDelay)
 					{
 						m_aExecuteOnJoinDone[Conn] = true;
-						if(g_Config.m_TcExecuteOnJoin[0] != '\0')
-							m_pConsole->ExecuteLine(g_Config.m_TcExecuteOnJoin, IConsole::CLIENT_ID_UNSPECIFIED);
+						if(g_Config.m_QmExecuteOnJoin[0] != '\0')
+							m_pConsole->ExecuteLine(g_Config.m_QmExecuteOnJoin, IConsole::CLIENT_ID_UNSPECIFIED);
 					}
 
 					// we got two snapshots until we see us self as connected
@@ -4113,15 +4114,15 @@ void CClient::Update()
 	if(MainThreadStagePerf)
 	{
 		CPerfTimer StageTimer;
-		Discord()->Update(g_Config.m_TcDiscordRPC);
+		Discord()->Update(g_Config.m_QmDiscordRPC);
 		Steam()->Update();
 		char aExtra[64];
-		str_format(aExtra, sizeof(aExtra), "rpc=%d", g_Config.m_TcDiscordRPC);
+		str_format(aExtra, sizeof(aExtra), "rpc=%d", g_Config.m_QmDiscordRPC);
 		QmPerfLogStage("perf/main_thread", "discord_steam_update", StageTimer.ElapsedMs(), false, this, nullptr, nullptr, aExtra);
 	}
 	else
 	{
-		Discord()->Update(g_Config.m_TcDiscordRPC);
+		Discord()->Update(g_Config.m_QmDiscordRPC);
 		Steam()->Update();
 	}
 	if(Steam()->GetConnectAddress())
@@ -6873,6 +6874,7 @@ int main(int argc, const char **argv)
 
 	// execute config file
 	bool LoadedClientConfig = false;
+	bool LoadedQmConfig = false;
 	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
 	{
 		std::vector<const char *> vConfigPaths;
@@ -6888,6 +6890,7 @@ int main(int argc, const char **argv)
 		for(const char *pConfigPath : vConfigPaths)
 		{
 			LoadedClientConfig = true;
+			LoadedQmConfig |= ConfigDomain == ConfigDomain::QMCLIENT && str_comp(pConfigPath, "settings_ddnet.cfg") != 0;
 			if(s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath != nullptr && str_comp(pConfigPath, s_aConfigDomains[ConfigDomain].m_aPreviousConfigPath) == 0)
 				gs_aLoadedPreviousConfigPath[ConfigDomain] = true;
 
@@ -6915,6 +6918,10 @@ int main(int argc, const char **argv)
 	{
 		pConsole->ExecuteFile(AUTOEXEC_FILE, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE);
 	}
+
+	QmInitializeDefaultProfile(g_Config, LoadedQmConfig, [pConfigManager](const char *pName) {
+		return QmConfigValueWasExplicitlySet(*pConfigManager, pName);
+	});
 
 	if(g_Config.m_ClConfigVersion < 1)
 	{
@@ -7263,7 +7270,7 @@ void CClient::GetSmoothFreezeTick(int *pSmoothTick, float *pSmoothIntraTick, flo
 	int64_t PredTime = m_PredictedTime.Get(time_get());
 	GameTime = std::min(GameTime, PredTime);
 
-	int64_t UpperPredTime = std::clamp(PredTime - (time_freq() / 50) * g_Config.m_TcUnfreezeLagTicks, GameTime, PredTime);
+	int64_t UpperPredTime = std::clamp(PredTime - (time_freq() / 50) * g_Config.m_QmUnfreezeLagTicks, GameTime, PredTime);
 	int64_t LowestPredTime = std::clamp(PredTime, GameTime, UpperPredTime);
 	int64_t SmoothTime = std::clamp(LowestPredTime + (int64_t)(MixAmount * (PredTime - LowestPredTime)), LowestPredTime, PredTime);
 
@@ -7314,8 +7321,8 @@ void CClient::UpdatePredictionMargin()
 	}
 
 	SQmFastInputSettings Settings;
-	Settings.m_Enabled = g_Config.m_TcFastInput != 0;
-	Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
+	Settings.m_Enabled = g_Config.m_QmFastInput != 0;
+	Settings.m_FastAmountMs = g_Config.m_QmFastInputAmount;
 	Settings.m_BasePredictionMarginMs = g_Config.m_ClPredictionMargin;
 	const int BaseMargin = QmFastInputBasePredictionMarginMs(Settings);
 	if(!g_Config.m_QmAutoMargin)

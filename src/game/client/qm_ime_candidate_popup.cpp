@@ -262,7 +262,13 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 
 	IGraphics *pGraphics = pGameClient->Graphics();
 	ITextRender *pTextRender = pGameClient->TextRender();
-	const qm_theme::SImeTheme &Ime = qm_theme::ImeTheme(true);
+	qm_theme::SImeTheme Ime = qm_theme::ImeTheme(true);
+	Ime.m_Text = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeTextColor, true));
+	Ime.m_TextSelected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeSelectedTextColor, true));
+	Ime.m_SelectedBg = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeSelectedColor, true));
+	const float FontScale = std::clamp(g_Config.m_QmImeFontSize, 75, 200) / 100.0f;
+	Ime.m_FontCandidate *= FontScale;
+	Ime.m_FontComposition *= FontScale;
 	const float UserOpacity = std::clamp(g_Config.m_QmImeOpacity, 0, 100) / 100.0f;
 	const unsigned OldRenderFlags = pTextRender->GetRenderFlags();
 	pTextRender->SetRenderFlags(OldRenderFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);

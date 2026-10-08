@@ -4,6 +4,7 @@
 #define ENGINE_SHARED_CONSOLE_H
 
 #include "memheap.h"
+#include "qm_legacy_config.h"
 
 #include <engine/console.h>
 #include <engine/storage.h>
@@ -62,6 +63,7 @@ class CConsole : public IConsole
 	};
 
 	CExecFile *m_pFirstExec;
+	QmLegacyConfig::CWritePrecedence m_QmConfigWrites;
 	IStorage *m_pStorage;
 
 	CCommand *m_pRecycleList;

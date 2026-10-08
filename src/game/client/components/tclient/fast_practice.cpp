@@ -71,7 +71,7 @@ namespace
 	{
 		SQmFastInputSettings Settings;
 		Settings.m_Enabled = pGameClient->TClientComponent().IsFastInputActive();
-		Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
+		Settings.m_FastAmountMs = g_Config.m_QmFastInputAmount;
 		return QmEffectiveFastInputOffsetTicks(Settings);
 	}
 
@@ -82,7 +82,7 @@ namespace
 
 	bool EffectiveFastInputOthers(const CGameClient *pGameClient)
 	{
-		return QmEffectiveFastInputOthers(pGameClient->TClientComponent().IsFastInputActive(), g_Config.m_TcFastInputOthers != 0);
+		return QmEffectiveFastInputOthers(pGameClient->TClientComponent().IsFastInputActive(), g_Config.m_QmFastInputOthers != 0);
 	}
 
 	bool IsFrozenState(const CCharacter *pChar)

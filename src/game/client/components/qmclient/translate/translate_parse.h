@@ -6,6 +6,7 @@
 struct SLlmParseResult
 {
 	bool m_Success;
+	bool m_Refused;
 	char m_aText[4096];
 	char m_aError[512];
 };

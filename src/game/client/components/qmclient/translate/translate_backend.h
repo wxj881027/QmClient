@@ -6,12 +6,17 @@
 #include <memory>
 #include <optional>
 
-// 服务返回内容分类：NONE 为正常失败/成功；SERVICE_NOTICE 表示后端返回的是
-// 服务端提示文本（如 TM 样板、屏蔽说明）而非译文，由调用方给出本地化固定文案。
+// 确定的服务提示、拒绝和错误由调用方显示本地化短文案；NONE 沿用原有结果处理。
 enum class ETranslateNotice
 {
 	NONE = 0,
 	SERVICE_NOTICE,
+	CONTENT_REFUSED,
+	AUTHENTICATION,
+	RATE_LIMIT,
+	QUOTA_EXCEEDED,
+	NETWORK_ERROR,
+	SERVICE_UNAVAILABLE,
 };
 
 class CTranslateResponse

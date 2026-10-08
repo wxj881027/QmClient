@@ -594,7 +594,7 @@ void CVoting::Render()
 	}
 
 	// TClient
-	if(g_Config.m_TcMiniVoteHud > 0)
+	if(g_Config.m_QmMiniVoteHud > 0)
 	{
 		GameClient()->m_TClient.RenderMiniVoteHud(HudEditorPreview);
 		return;
@@ -700,7 +700,7 @@ void CVoting::RenderScoreboard(const CUIRect &Scoreboard, bool Interactive, floa
 		return;
 	}
 
-	const SQmScoreboardVoteLayout Layout = QmScoreboardVoteLayout(*Ui()->Screen(), Scoreboard, g_Config.m_TcMiniVoteHud > 0);
+	const SQmScoreboardVoteLayout Layout = QmScoreboardVoteLayout(*Ui()->Screen(), Scoreboard, g_Config.m_QmMiniVoteHud > 0);
 	if(Layout.m_Scale <= 0.0f)
 	{
 		ResetScoreboardVoteInteraction();

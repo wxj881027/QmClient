@@ -595,6 +595,12 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bo
 							str_format(aBuf, sizeof(aBuf), "Invalid arguments. Usage: %s %s", pCommand->m_pName, pCommand->m_pParams);
 						Print(OUTPUT_LEVEL_STANDARD, "chatresp", aBuf);
 					}
+					else if((m_FlagMask & CFGFLAG_CLIENT) != 0 && !m_QmConfigWrites.ShouldExecute(Result.m_pCommand, Result.NumArguments() > 0, m_pFirstExec != nullptr))
+					{
+						// 新名称优先，只跳过当前旧键，后面的分号命令照常执行。
+						pStr = pNextPart;
+						continue;
+					}
 					else if(m_StoreCommands && pCommand->m_Flags & CFGFLAG_STORE)
 					{
 						m_vExecutionQueue.emplace_back(pCommand, Result);
@@ -725,6 +731,8 @@ int CConsole::PossibleCommands(const char *pStr, int FlagMask, bool Temp, FPossi
 
 CConsole::CCommand *CConsole::FindCommand(const char *pName, int FlagMask)
 {
+	if((FlagMask & CFGFLAG_CLIENT) != 0)
+		pName = QmLegacyConfig::CanonicalName(pName);
 	for(CCommand *pCommand = m_pFirstCommand; pCommand; pCommand = pCommand->Next())
 	{
 		if(pCommand->m_Flags & FlagMask)
@@ -1176,6 +1184,8 @@ void CConsole::StoreCommands(bool Store)
 
 const IConsole::ICommandInfo *CConsole::GetCommandInfo(const char *pName, int FlagMask, bool Temp)
 {
+	if(!Temp && (FlagMask & CFGFLAG_CLIENT) != 0)
+		pName = QmLegacyConfig::CanonicalName(pName);
 	for(CCommand *pCommand = m_pFirstCommand; pCommand; pCommand = pCommand->Next())
 	{
 		if(pCommand->m_Flags & FlagMask && pCommand->m_Temp == Temp)

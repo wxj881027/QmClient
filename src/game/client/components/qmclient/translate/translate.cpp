@@ -50,23 +50,33 @@ namespace
 		return qm_translate::AnalyzeLanguage(pText, aPlayers.data(), NumPlayers);
 	}
 
-	bool PassLocalDetectThreshold(int Count, int Total)
-	{
-		return qm_translate::PassLocalDetectThreshold(Count, Total, g_Config.m_QmTranslateLocalDetectRatio);
-	}
-
-	bool IsPredominantlyNumeric(const SLocalLanguageStats &Stats)
-	{
-		return qm_translate::IsPredominantlyNumeric(Stats, g_Config.m_QmTranslateLocalDetectMinChars, g_Config.m_QmTranslateLocalDetectRatio);
-	}
-
-	bool MatchesTargetLanguageHeuristically(const SLocalLanguageStats &Stats, const char *pTarget)
-	{
-		return qm_translate::MatchesTargetLanguageHeuristically(Stats, pTarget, g_Config.m_QmTranslateLocalDetectMinChars, g_Config.m_QmTranslateLocalDetectRatio);
-	}
 	const char *GetEffectiveTranslateTarget(const char *pTarget)
 	{
 		return (pTarget && pTarget[0] != '\0') ? pTarget : DefaultConfig::QmTranslateTarget;
+	}
+
+	const char *TranslateNoticeText(ETranslateNotice Notice)
+	{
+		switch(Notice)
+		{
+		case ETranslateNotice::SERVICE_NOTICE:
+			return Localize("Translation service returned a notice instead of a translation");
+		case ETranslateNotice::CONTENT_REFUSED:
+			return Localize("Translation service refused this content. Please edit it and try again.");
+		case ETranslateNotice::AUTHENTICATION:
+			return Localize("Translation service authentication failed. Check the API key and service address.");
+		case ETranslateNotice::RATE_LIMIT:
+			return Localize("Translation service is rate limited. Please try again later.");
+		case ETranslateNotice::QUOTA_EXCEEDED:
+			return Localize("Translation service quota is exhausted. Choose another service or try again later.");
+		case ETranslateNotice::NETWORK_ERROR:
+			return Localize("Could not connect to the translation service. Please try again later.");
+		case ETranslateNotice::SERVICE_UNAVAILABLE:
+			return Localize("Translation service is temporarily unavailable. Please try again later.");
+		case ETranslateNotice::NONE:
+			return nullptr;
+		}
+		return nullptr;
 	}
 
 	// 验证语言代码格式
@@ -321,8 +331,8 @@ void CTranslate::OnRender()
 			if(!Completed.m_Success)
 			{
 				char aBuf[sizeof(Response.m_Text)];
-				if(Response.m_Notice == ETranslateNotice::SERVICE_NOTICE)
-					str_copy(aBuf, Localize("Translation service returned a notice instead of a translation (the message may contain filtered words)"));
+				if(const char *pNotice = TranslateNoticeText(Response.m_Notice))
+					str_copy(aBuf, pNotice);
 				else
 					str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Response.m_Text);
 				GameClient()->m_Chat.Echo(aBuf);
@@ -346,13 +356,13 @@ void CTranslate::OnRender()
 			// 失败标记供聊天错误样式与本地化提示分支使用
 			Response.m_Error = true;
 			// 服务提示（翻译记忆样板/屏蔽说明等）按固定本地化文案展示，不透出英文原文
-			if(Response.m_Notice == ETranslateNotice::SERVICE_NOTICE)
-				str_copy(aBuf, Localize("Translation service returned a notice instead of a translation (the message may contain filtered words)"));
+			if(const char *pNotice = TranslateNoticeText(Response.m_Notice))
+				str_copy(aBuf, pNotice);
 			else
 				str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Response.m_Text);
 			// 配额提示按连接节流；消除进度文本后也刷新聊天布局。
 			bool SuppressNotice = false;
-			if(str_comp(Job.m_pBackend->Name(), "MyMemory") == 0 && str_find_nocase(aBuf, "daily anonymous quota reached"))
+			if(str_comp(Job.m_pBackend->Name(), "MyMemory") == 0 && Response.m_Notice == ETranslateNotice::QUOTA_EXCEEDED)
 			{
 				const int64_t Now = time_get();
 				SuppressNotice = m_LastMymemoryQuotaNoticeTime >= 0 && Now - m_LastMymemoryQuotaNoticeTime < time_freq() * 60;
@@ -408,27 +418,6 @@ void CTranslate::AutoTranslate(CChat::CLine &Line)
 	Translate(Line, false, true);
 }
 
-static bool ShouldAutoTranslateOutgoingInPreferredMode(const SLocalLanguageStats &Stats, const char *pTarget)
-{
-	if(!pTarget || pTarget[0] == '\0' || Stats.m_ScriptTotal <= 0)
-		return false;
-
-	const int MinChars = std::clamp(g_Config.m_QmTranslateLocalDetectMinChars, 1, 12);
-	if(IsChineseLanguage(pTarget))
-	{
-		return Stats.m_Latin >= MinChars &&
-		       Stats.m_Han == 0 &&
-		       Stats.m_Kana == 0 &&
-		       Stats.m_Hangul == 0 &&
-		       PassLocalDetectThreshold(Stats.m_Latin, Stats.m_ScriptTotal);
-	}
-
-	return Stats.m_Han >= MinChars &&
-	       Stats.m_Kana == 0 &&
-	       Stats.m_Hangul == 0 &&
-	       PassLocalDetectThreshold(Stats.m_Han, Stats.m_ScriptTotal);
-}
-
 bool CTranslate::ShouldAutoTranslateOutgoing(const char *pText) const
 {
 	if(!g_Config.m_QmTranslateAutoOutgoing)
@@ -439,17 +428,11 @@ bool CTranslate::ShouldAutoTranslateOutgoing(const char *pText) const
 
 	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateOutgoingTarget);
 	const SLocalLanguageStats LocalStats = AnalyzeChatLanguage(pText, GameClient());
-	if(LocalStats.m_ScriptTotal <= 0 || IsPredominantlyNumeric(LocalStats))
-		return false;
-	if(MatchesTargetLanguageHeuristically(LocalStats, pTarget))
-		return false;
-
-	// 模式 0: 仅在常见的源语言输入时触发（中文 <-> 拉丁字母）
-	if(g_Config.m_QmTranslateAutoOutgoingMode == 0)
-		return ShouldAutoTranslateOutgoingInPreferredMode(LocalStats, pTarget);
-
-	// 模式 1: 始终翻译
-	return true;
+	const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
+	if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
+		pSource = "auto";
+	return qm_translate::ShouldTranslateOutgoing(LocalStats, pTarget, pSource,
+		g_Config.m_QmTranslateLocalDetectMinChars, g_Config.m_QmTranslateLocalDetectRatio, g_Config.m_QmTranslateAutoOutgoingMode == 1);
 }
 
 void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)

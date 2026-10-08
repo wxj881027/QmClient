@@ -156,6 +156,10 @@ namespace qm_card_catalog
 			return true;
 		case EQmModuleId::WaterHammerHighlight:
 			return BuildWaterHammerCard(Ctx, Id, Out);
+		case EQmModuleId::AppearancePreset:
+			return BuildAppearancePresetCard(Ctx, Out);
+		case EQmModuleId::Tooltip:
+			return BuildTooltipCard(Ctx, Out);
 		default:
 			return false;
 		}

@@ -378,12 +378,12 @@ namespace
 	bool BuildHudFrozenSummaryText(const SHudFrozenTeamInfo &FrozenInfo, char *pBuf, size_t BufSize)
 	{
 		pBuf[0] = '\0';
-		if(!FrozenInfo.m_Available || g_Config.m_TcShowFrozenText <= 0)
+		if(!FrozenInfo.m_Available || g_Config.m_QmShowFrozenText <= 0)
 			return false;
 
-		if(g_Config.m_TcShowFrozenText == 1)
+		if(g_Config.m_QmShowFrozenText == 1)
 			str_format(pBuf, BufSize, "%d/%d", FrozenInfo.m_NumInTeam - FrozenInfo.m_NumFrozen, FrozenInfo.m_NumInTeam);
-		else if(g_Config.m_TcShowFrozenText == 2)
+		else if(g_Config.m_QmShowFrozenText == 2)
 			str_format(pBuf, BufSize, "%d/%d", FrozenInfo.m_NumFrozen, FrozenInfo.m_NumInTeam);
 		else
 			return false;
@@ -416,14 +416,14 @@ namespace
 	{
 		SHudFrozenHudRect Result;
 		const SHudFrozenTeamInfo FrozenInfo = BuildHudFrozenTeamInfo(GameClient);
-		if(!g_Config.m_TcShowFrozenHud || !FrozenInfo.m_Available || FrozenInfo.m_NumInTeam <= 0 || GameClient.m_Scoreboard.IsActive() || (FrozenInfo.m_LocalTeamId == 0 && g_Config.m_TcFrozenHudTeamOnly))
+		if(!g_Config.m_QmShowFrozenHud || !FrozenInfo.m_Available || FrozenInfo.m_NumInTeam <= 0 || GameClient.m_Scoreboard.IsActive() || (FrozenInfo.m_LocalTeamId == 0 && g_Config.m_QmFrozenHudTeamOnly))
 			return Result;
 
-		const float TeeSize = g_Config.m_TcFrozenHudTeeSize;
+		const float TeeSize = g_Config.m_QmFrozenHudTeeSize;
 		int MaxTees = (int)(8.3f * (HudWidth / HudHeight) * 13.0f / TeeSize);
 		if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred && !g_Config.m_ClShowPacketLoss)
 			MaxTees = (int)(9.5f * (HudWidth / HudHeight) * 13.0f / TeeSize);
-		const int MaxRows = g_Config.m_TcFrozenMaxRows;
+		const int MaxRows = g_Config.m_QmFrozenMaxRows;
 		float StartPos = HudWidth / 2.0f + 38.0f * (HudWidth / HudHeight) / 1.78f;
 		if(TopIslandAvoidanceRight > 0.0f)
 			StartPos = std::max(StartPos, TopIslandAvoidanceRight + TeeSize * 0.5f + 4.0f);
@@ -2443,7 +2443,7 @@ void CHud::RenderTextInfo()
 		TextRender()->Text(Line2X, 45.0f, Line2Size, Localize(pLine2), -1.0f);
 	}
 
-	if(g_Config.m_TcMiniDebug)
+	if(g_Config.m_QmMiniDebug)
 	{
 		float FontSize = 8.0f;
 		float TextHeight = 11.0f;
@@ -2487,15 +2487,15 @@ void CHud::RenderTextInfo()
 			TextRender()->Text(4.0f, OffsetY, FontSize, aBuf, -1.0f);
 		}
 	}
-	if(g_Config.m_TcRenderCursorSpec && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
+	if(g_Config.m_QmRenderCursorSpec && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
 	{
 		int CurWeapon = 1;
-		Graphics()->SetColor(1.f, 1.f, 1.f, g_Config.m_TcRenderCursorSpecAlpha / 100.0f);
+		Graphics()->SetColor(1.f, 1.f, 1.f, g_Config.m_QmRenderCursorSpecAlpha / 100.0f);
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpriteWeaponCursors[CurWeapon]);
 		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aCursorOffset[CurWeapon], m_Width / 2.0f, m_Height / 2.0f, 0.36f, 0.36f);
 	}
 	// render team in freeze text and last notify
-	if((g_Config.m_TcShowFrozenText > 0 || g_Config.m_TcShowFrozenHud > 0 || g_Config.m_TcNotifyWhenLast) && GameClient()->m_GameInfo.m_EntitiesDDRace)
+	if((g_Config.m_QmShowFrozenText > 0 || g_Config.m_QmShowFrozenHud > 0 || g_Config.m_QmNotifyWhenLast) && GameClient()->m_GameInfo.m_EntitiesDDRace)
 	{
 		const SHudFrozenTeamInfo FrozenInfo = BuildHudFrozenTeamInfo(*GameClient());
 		const int NumInTeam = FrozenInfo.m_NumInTeam;
@@ -2503,16 +2503,16 @@ void CHud::RenderTextInfo()
 		const int LocalTeamID = FrozenInfo.m_LocalTeamId;
 
 		// Notify when last
-		if(g_Config.m_TcNotifyWhenLast)
+		if(g_Config.m_QmNotifyWhenLast)
 		{
 			if(NumInTeam > 1 && NumInTeam - NumFrozen == 1)
 			{
-				TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcNotifyWhenLastColor)));
-				float FontSize = g_Config.m_TcNotifyWhenLastSize;
-				float XPos = std::clamp((g_Config.m_TcNotifyWhenLastX / 100.0f) * m_Width, 1.0f, m_Width - FontSize);
-				float YPos = std::clamp((g_Config.m_TcNotifyWhenLastY / 100.0f) * m_Height, 1.0f, m_Height - FontSize);
+				TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNotifyWhenLastColor)));
+				float FontSize = g_Config.m_QmNotifyWhenLastSize;
+				float XPos = std::clamp((g_Config.m_QmNotifyWhenLastX / 100.0f) * m_Width, 1.0f, m_Width - FontSize);
+				float YPos = std::clamp((g_Config.m_QmNotifyWhenLastY / 100.0f) * m_Height, 1.0f, m_Height - FontSize);
 
-				TextRender()->Text(XPos, YPos, FontSize, g_Config.m_TcNotifyWhenLastText, -1.0f);
+				TextRender()->Text(XPos, YPos, FontSize, g_Config.m_QmNotifyWhenLastText, -1.0f);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 		}
@@ -2526,7 +2526,7 @@ void CHud::RenderTextInfo()
 		// str_format(aBuf, sizeof(aBuf), "%d", g_Config.m_ClWhatsMyPing);
 		// TextRender()->Text(0, m_Width / 2 - TextRender()->TextWidth(0, 10, aBuf, -1, -1.0f) / 2, 20, 10, aBuf, -1.0f);
 
-		if(g_Config.m_TcShowFrozenHud > 0 && !GameClient()->m_Scoreboard.IsActive() && !(LocalTeamID == 0 && g_Config.m_TcFrozenHudTeamOnly))
+		if(g_Config.m_QmShowFrozenHud > 0 && !GameClient()->m_Scoreboard.IsActive() && !(LocalTeamID == 0 && g_Config.m_QmFrozenHudTeamOnly))
 		{
 			CTeeRenderInfo FreezeInfo;
 			const CSkin *pSkin = GameClient()->m_Skins.Find("x_ninja");
@@ -2539,11 +2539,11 @@ void CHud::RenderTextInfo()
 			FreezeInfo.m_CustomColoredSkin = false;
 
 			float progressiveOffset = 0.0f;
-			float TeeSize = g_Config.m_TcFrozenHudTeeSize;
+			float TeeSize = g_Config.m_QmFrozenHudTeeSize;
 			int MaxTees = (int)(8.3f * (m_Width / m_Height) * 13.0f / TeeSize);
 			if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred && !g_Config.m_ClShowPacketLoss)
 				MaxTees = (int)(9.5f * (m_Width / m_Height) * 13.0f / TeeSize);
-			int MaxRows = g_Config.m_TcFrozenMaxRows;
+			int MaxRows = g_Config.m_QmFrozenMaxRows;
 			float StartPos = m_Width / 2.0f + 38.0f * (m_Width / m_Height) / 1.78f;
 			const float AvoidanceRight = GetTopIslandAvoidanceRight();
 			if(AvoidanceRight > 0.0f)
@@ -2582,7 +2582,7 @@ void CHud::RenderTextInfo()
 							   GameClient()->m_aClients[i].m_FreezeEnd,
 							   GameClient()->m_aClients[i].m_DeepFrozen))
 						{
-							if(!g_Config.m_TcShowFrozenHudSkins)
+							if(!g_Config.m_QmShowFrozenHudSkins)
 								TeeInfo = FreezeInfo;
 							Frozen = true;
 						}
@@ -2608,7 +2608,7 @@ void CHud::RenderTextInfo()
 						vec2 TeeRenderPos(StartPos + progressiveOffset, TeeSize * (0.7f) + CurrentRow * TeeSize);
 						float Alpha = 1.0f;
 						CNetObj_Character CurChar = GameClient()->m_aClients[i].m_RenderCur;
-						if(g_Config.m_TcShowFrozenHudSkins && Frozen)
+						if(g_Config.m_QmShowFrozenHudSkins && Frozen)
 						{
 							Alpha = 0.6f;
 							TeeInfo.m_ColorBody.r *= 0.4f;
@@ -3141,7 +3141,7 @@ void CHud::RenderFollowSwitchCountdowns()
 		if(Ring.m_Seen)
 		{
 			const vec2 TeePosition = GameClient()->m_aClients[Ring.m_ClientId].m_RenderPos;
-			const bool PetVisible = g_Config.m_TcPetShow > 0 && GameClient()->m_Pet.IsVisibleForClient(Ring.m_ClientId);
+			const bool PetVisible = g_Config.m_QmPetShow > 0 && GameClient()->m_Pet.IsVisibleForClient(Ring.m_ClientId);
 			const vec2 PetPosition = PetVisible ? GameClient()->m_Pet.Position() : vec2();
 			const int Side = QmHudSwitchCountdownFollowSide(TeePosition.x, PetVisible, PetPosition.x);
 			const float Now = Client()->GameTick(Ring.m_Connection) / static_cast<float>(TickSpeed);
@@ -3278,7 +3278,7 @@ void CHud::RenderFollowHookCountdown()
 
 	// 钩子环固定在开关环正上方：取侧沿用开关环那套（宠物对面），纵向再多抬一段。
 	const vec2 TeePosition = GameClient()->m_aClients[Ring.m_ClientId].m_RenderPos;
-	const bool PetVisible = g_Config.m_TcPetShow > 0 && GameClient()->m_Pet.IsVisibleForClient(Ring.m_ClientId);
+	const bool PetVisible = g_Config.m_QmPetShow > 0 && GameClient()->m_Pet.IsVisibleForClient(Ring.m_ClientId);
 	const vec2 PetPosition = PetVisible ? GameClient()->m_Pet.Position() : vec2();
 	const int Side = QmHudSwitchCountdownFollowSide(TeePosition.x, PetVisible, PetPosition.x);
 	const float Now = Client()->GameTick(Ring.m_Connection) / static_cast<float>(TickSpeed);
@@ -3379,7 +3379,7 @@ void CHud::RenderCursor()
 	if(GameClient()->m_HudEditor.IsActive())
 		return;
 
-	const float Scale = (float)g_Config.m_TcCursorScale / 100.0f;
+	const float Scale = (float)g_Config.m_QmCursorScale / 100.0f;
 	if(Scale <= 0.0f)
 		return;
 
@@ -5760,7 +5760,7 @@ void CHud::RenderSpectatorCount()
 		const float BoxWidth = IconWidth + 3.0f + TextWidth + 10.0f;
 
 		const float TimeAnchorX = (m_Width / 7.0f) * 3.0f;
-		const bool Seconds = g_Config.m_TcShowLocalTimeSeconds; // TClient
+		const bool Seconds = g_Config.m_QmShowLocalTimeSeconds; // TClient
 		char aTimeStr[16];
 		str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
 		const float TimeWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
@@ -6243,9 +6243,9 @@ void CHud::RenderMovementInformation()
 		}
 	}
 
-	const bool ShowDummyPos = HasDummyInfo && ShowPosition && g_Config.m_TcShowhudDummyPosition;
-	const bool ShowDummySpeed = HasDummyInfo && ShowSpeed && g_Config.m_TcShowhudDummySpeed;
-	const bool ShowDummyAngle = HasDummyInfo && ShowAngle && g_Config.m_TcShowhudDummyAngle;
+	const bool ShowDummyPos = HasDummyInfo && ShowPosition && g_Config.m_QmShowhudDummyPosition;
+	const bool ShowDummySpeed = HasDummyInfo && ShowSpeed && g_Config.m_QmShowhudDummySpeed;
+	const bool ShowDummyAngle = HasDummyInfo && ShowAngle && g_Config.m_QmShowhudDummyAngle;
 
 	if(ShowDummyPos)
 		MovementBoxHeight += 2.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
@@ -6684,7 +6684,7 @@ void CHud::RenderSpectatorHud()
 		return;
 
 	// TClient
-	float AdjustedHeight = m_Height - (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f);
+	float AdjustedHeight = m_Height - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
 	float BoundsTop = AdjustedHeight - 15.0f;
 	float BoundsBottom = AdjustedHeight;
 	const bool ShowAutoTag = !GameClient()->m_RankGhost.IsViewModeActive() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
@@ -6792,7 +6792,7 @@ void CHud::RenderLocalTime(float x)
 	else
 		m_LocalTimeV2AnimState.Reset();
 
-	const bool Seconds = g_Config.m_TcShowLocalTimeSeconds; // TClient
+	const bool Seconds = g_Config.m_QmShowLocalTimeSeconds; // TClient
 
 	char aTimeStr[16];
 	str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
@@ -7582,9 +7582,9 @@ void CHud::RenderGoresDrownBoard()
 			float FeetBottom = BaseSize / 4.2f;
 			if(!CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), TeeInfo.m_aSixup[g_Config.m_ClDummy].PartTexture(protocol7::SKINPART_BODY)))
 			{
-				if(g_Config.m_TcWhiteFeet && TeeInfo.m_CustomColoredSkin)
+				if(g_Config.m_QmWhiteFeet && TeeInfo.m_CustomColoredSkin)
 				{
-					const CSkin *pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_TcWhiteFeetSkin);
+					const CSkin *pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_QmWhiteFeetSkin);
 					if(pWhiteFeetSkin != nullptr && CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), pWhiteFeetSkin->m_OriginalSkin.m_Feet))
 						TeeInfo.m_SkinMetrics.m_Feet = pWhiteFeetSkin->m_Metrics.m_Feet;
 				}
@@ -7592,8 +7592,8 @@ void CHud::RenderGoresDrownBoard()
 				float FeetWidth, FeetHeight;
 				CRenderTools::GetRenderTeeFeetSize(pIdleState, &TeeInfo, FeetOffset, FeetWidth, FeetHeight);
 				FeetBottom = -BaseSize * 0.25f + FeetOffset.y + FeetHeight;
-				if(g_Config.m_TcTinyTees && (RenderTools()->m_LocalTeeRender || g_Config.m_TcTinyTeesOthers))
-					FeetBottom *= 0.85f * (g_Config.m_TcTinyTeeSize / 100.0f);
+				if(g_Config.m_QmTinyTees && (RenderTools()->m_LocalTeeRender || g_Config.m_QmTinyTeesOthers))
+					FeetBottom *= 0.85f * (g_Config.m_QmTinyTeeSize / 100.0f);
 			}
 			FeetBottom += maximum(pIdleState->GetFrontFoot()->m_Y, pIdleState->GetBackFoot()->m_Y) * AnimScale;
 			// 用名字的可见底边和脚部贴图边界确定落脚平面。

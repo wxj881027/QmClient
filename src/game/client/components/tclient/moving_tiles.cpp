@@ -196,7 +196,7 @@ void CMovingTiles::OnMapLoad()
 
 void CMovingTiles::OnRender()
 {
-	if(g_Config.m_ClOverlayEntities != 100 || !g_Config.m_TcMovingTilesEntities || m_vQuads.empty())
+	if(g_Config.m_ClOverlayEntities != 100 || !g_Config.m_QmMovingTilesEntities || m_vQuads.empty())
 		return;
 
 	// 保存调用方坐标系，避免地图分组的偏移和视差影响后续名牌等组件。

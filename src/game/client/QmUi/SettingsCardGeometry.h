@@ -10,7 +10,7 @@ struct SSettingsCardSpec
 	const char *m_pStableId = nullptr;
 	const char *m_pTitle = nullptr;
 	const char *m_pSubtitle = nullptr;
-	// 可选共享说明入口：标题栏 i 仅显示自动换行的悬浮气泡。
+	// 可选共享说明入口：设置卡内进入固定页脚；独立卡沿用锚定气泡。
 	const char *m_pInfo = nullptr;
 };
 
@@ -22,6 +22,7 @@ struct SSettingsCardFrame
 	CUIRect m_SubtitleRect;
 	CUIRect m_HandleRect;
 	CUIRect m_ContentRect;
+	CUIRect m_LeadingHeaderActionRect{};
 
 	const CUIRect &DisplayRect() const { return m_Rect; }
 	const CUIRect &HitRect() const { return m_Rect; }

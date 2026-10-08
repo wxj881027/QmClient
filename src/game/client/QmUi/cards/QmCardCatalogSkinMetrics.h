@@ -30,7 +30,7 @@ inline SSettingsSkinAppearanceLayout ResolveSettingsSkinAppearanceLayout(const C
 		Layout.m_Hue = {View.x, View.y + OutlineHeight + Metrics.m_SectionGap, View.w, HueHeight};
 		Bottom = Layout.m_Hue.y + HueHeight;
 	}
-	Layout.m_Shadow = {View.x, Bottom + Metrics.m_SectionGap, View.w, Metrics.m_RowStep};
+	Layout.m_Shadow = {View.x, Bottom + Metrics.m_SectionGap, View.w, 2.0f * Metrics.m_RowStep};
 	Layout.m_Height = Layout.m_Shadow.y + Layout.m_Shadow.h - View.y;
 	return Layout;
 }

@@ -278,6 +278,8 @@ public:
 	const char *QmMarkdownBroadcast() const { return m_QmMarkdownBroadcast.Markdown(); }
 	int QmMarkdownBroadcastVersion() const { return m_QmMarkdownBroadcast.Version(); }
 	int QmMarkdownBroadcastRevision() const { return m_QmMarkdownBroadcast.Revision(); }
+	bool HasUnreadQmNews() const;
+	void MarkQmNewsRead();
 	void EnqueueQmRealtimeMessage(const char *pData, size_t Size, bool Compressed = false);
 	bool PopQmRealtimeMessage(SQmRealtimeMessage &Message);
 	bool PopQmRealtimeEmoticon(SQmRealtimeMessage &Message);

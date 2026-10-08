@@ -5,11 +5,15 @@
 #include <base/color.h>
 
 #include <engine/graphics.h>
+#include <engine/input.h>
+#include <engine/keys.h>
 #include <engine/shared/jobs.h>
 
 #include <game/client/component.h>
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <ctime>
 #include <functional>
 #include <memory>
@@ -18,9 +22,36 @@
 #include <vector>
 
 typedef struct _json_value json_value;
+class CUIRect;
 
 namespace QmInputOverlay
 {
+	class CKeyPressCounter
+	{
+	public:
+		void Observe(const IInput::CEvent &Event, bool EnabledBefore, bool EnabledAfter)
+		{
+			if(Event.m_Key <= KEY_UNKNOWN || Event.m_Key >= KEY_LAST)
+				return;
+			if(Event.m_Flags & IInput::FLAG_PRESS)
+			{
+				if(EnabledBefore && EnabledAfter && !m_aHeld[Event.m_Key] && !(Event.m_Flags & IInput::FLAG_REPEAT))
+					++m_aCounts[Event.m_Key];
+				m_aHeld[Event.m_Key] = true;
+			}
+			if(Event.m_Flags & IInput::FLAG_RELEASE)
+				m_aHeld[Event.m_Key] = false;
+		}
+
+		uint64_t Count(int Key) const { return Key > KEY_UNKNOWN && Key < KEY_LAST ? m_aCounts[Key] : 0; }
+		void ResetCounts() { m_aCounts.fill(0); }
+		void ReleaseKeys() { m_aHeld.fill(false); }
+
+	private:
+		std::array<uint64_t, KEY_LAST> m_aCounts{};
+		std::array<bool, KEY_LAST> m_aHeld{};
+	};
+
 	struct SScaledBounds
 	{
 		float m_MinX;
@@ -83,6 +114,11 @@ public:
 	void OnRender() override;
 	void OnShutdown() override { m_pFileTimeJob.reset(); }
 	void OnWindowResize() override;
+	void OnReset() override { m_KeyCounts.ReleaseKeys(); }
+	void OnRelease() override { m_KeyCounts.ReleaseKeys(); }
+	bool HasCountingFocus() const;
+	void ObservePhysicalInput(const IInput::CEvent &Event, bool HadCountingFocus);
+	void ResetKeyCounts() { m_KeyCounts.ResetCounts(); }
 
 private:
 	enum class EConfigMode
@@ -222,7 +258,9 @@ private:
 	void ClearObsLayouts();
 
 	bool IsActiveInput(const SElement &Element) const;
+	void RenderKeyCount(int Key, const CUIRect &Rect, float Opacity);
 
+	QmInputOverlay::CKeyPressCounter m_KeyCounts;
 	EConfigMode m_ConfigMode = EConfigMode::VECTOR;
 	std::vector<SElement> m_vElements;
 	std::vector<SObsLayout> m_vObsLayouts;

@@ -4226,9 +4226,9 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 		uint64_t Revision = 1469598103934665603ull;
 		for(const int Input : aInputs)
 			Revision = (Revision ^ static_cast<uint64_t>(static_cast<uint32_t>(Input))) * 1099511628211ull;
-		Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFont)) * 1099511628211ull;
-		Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFontCjk)) * 1099511628211ull;
-		Revision = (Revision ^ str_quickhash(g_Config.m_TcCustomFontIcons)) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(g_Config.m_QmCustomFont)) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(g_Config.m_QmCustomFontCjk)) * 1099511628211ull;
+		Revision = (Revision ^ str_quickhash(g_Config.m_QmCustomFontIcons)) * 1099511628211ull;
 		Revision = (Revision ^ str_quickhash(Client()->PlayerName())) * 1099511628211ull;
 		Revision = (Revision ^ str_quickhash(Client()->DummyName())) * 1099511628211ull;
 		Revision = (Revision ^ str_quickhash(g_Config.m_PlayerClan)) * 1099511628211ull;
@@ -4484,7 +4484,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				static CButtonContainer s_ClientMessageReset, s_ClientMessageAdd, s_ClientMessageRemove;
 				static unsigned s_aClientMessageColorValues[CMessageGradient::MAX_COLORS];
 				// TClient
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-client-message", aBuf, &g_Config.m_ClMessageClientColor, g_Config.m_ClMessageClientGradient, sizeof(g_Config.m_ClMessageClientGradient), ColorRGBA(0.5f, 0.78f, 1.0f), &s_ClientMessageReset, &s_ClientMessageAdd, &s_ClientMessageRemove, s_aClientMessageColorValues, true, &g_Config.m_TcShowChatClient, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-client-message", aBuf, &g_Config.m_ClMessageClientColor, g_Config.m_ClMessageClientGradient, sizeof(g_Config.m_ClMessageClientGradient), ColorRGBA(0.5f, 0.78f, 1.0f), &s_ClientMessageReset, &s_ClientMessageAdd, &s_ClientMessageRemove, s_aClientMessageColorValues, true, &g_Config.m_QmShowChatClient, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 
 				static CButtonContainer s_FriendMessageHeartReset;
 				const unsigned OldFriendMessageHeartColor = g_Config.m_ClMessageFriendHeartColor;
@@ -4531,7 +4531,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					AddPreviewLine("Friend", "Hello there");
 				if(!g_Config.m_ClShowChatFriends && !g_Config.m_ClShowChatTeamMembersOnly)
 					AddPreviewLine("Spammer", "Hey fools, I'm spamming here!");
-				if(g_Config.m_TcShowChatClient)
+				if(g_Config.m_QmShowChatClient)
 					AddPreviewLine("", "Echo command executed");
 				return maximum(Height, 2.0f * MarginSmall + RealFontSize + RealMsgPaddingY);
 			};
@@ -4540,7 +4540,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				(static_cast<uint64_t>(g_Config.m_ClShowChatSystem != 0) << 1) |
 				(static_cast<uint64_t>(g_Config.m_ClShowChatFriends != 0) << 2) |
 				(static_cast<uint64_t>(g_Config.m_ClShowChatTeamMembersOnly != 0) << 3) |
-				(static_cast<uint64_t>(g_Config.m_TcShowChatClient != 0) << 4) |
+				(static_cast<uint64_t>(g_Config.m_QmShowChatClient != 0) << 4) |
 				(static_cast<uint64_t>(g_Config.m_QmChatHideSystemPrefix != 0) << 5) |
 				(static_cast<uint64_t>(std::clamp(g_Config.m_ClChatFontSize, 0, 255)) << 8) |
 				(static_cast<uint64_t>(std::clamp(g_Config.m_ClChatWidth, 0, 1023)) << 16);
@@ -4802,7 +4802,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 					TempY += RenderMessageBackground(PREVIEW_SPAMMER);
 				}
 
-				if(g_Config.m_TcShowChatClient)
+				if(g_Config.m_QmShowChatClient)
 				{
 					TempY += RenderMessageBackground(PREVIEW_CLIENT);
 				}
@@ -4843,7 +4843,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 				Y += RenderPreview(PREVIEW_SPAMMER, X, Y).y;
 			}
 			// Client
-			if(g_Config.m_TcShowChatClient)
+			if(g_Config.m_QmShowChatClient)
 			{
 				Y += RenderPreview(PREVIEW_CLIENT, X, Y).y;
 			}
@@ -5384,7 +5384,7 @@ void CMenus::RenderSettingsAppearance(CUIRect MainView)
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClShowChatSystem != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClShowChatFriends != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_ClShowChatTeamMembersOnly != 0);
-	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_TcShowChatClient != 0);
+	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(g_Config.m_QmShowChatClient != 0);
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_ClChatFontSize, 0, 255));
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(std::clamp(g_Config.m_ClChatWidth, 0, 1023));
 	AppearanceLayoutRevision = AppearanceLayoutRevision * 1099511628211ULL ^ static_cast<uint64_t>(str_quickhash(Client()->PlayerName()));

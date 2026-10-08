@@ -30,6 +30,7 @@ namespace qm_translate
 	bool IsPredominantlyNumeric(const SLanguageStats &Stats, int MinChars, int Ratio);
 	bool MatchesTargetLanguageHeuristically(const SLanguageStats &Stats, const char *pTarget, int MinChars, int Ratio);
 	bool ShouldTranslateIncoming(const SLanguageStats &Stats, const char *pTarget, int MinChars, int Ratio, bool Always);
+	bool ShouldTranslateOutgoing(const SLanguageStats &Stats, const char *pTarget, const char *pSource, int MinChars, int Ratio, bool Always);
 }
 
 #endif

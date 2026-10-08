@@ -333,47 +333,47 @@ namespace
 		uint64_t Hash = 1469598103934665603ull;
 		if(str_comp(pStableCardId, "tclient:font") == 0)
 		{
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcCustomFontWeight);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_QmCustomFontWeight);
 			// 样式行随字体族是否拥有多样式而出现/隐藏，卡片内容高度依赖字体族。
-			return HashStringFnv1a64(Hash, g_Config.m_TcCustomFont);
+			return HashStringFnv1a64(Hash, g_Config.m_QmCustomFont);
 		}
 		if(str_comp(pStableCardId, "tclient:cursor") == 0)
 			return Hash;
 		if(str_comp(pStableCardId, "tclient:visual-nameplates") == 0)
-			return HashValueFnv1a64(Hash, g_Config.m_TcWhiteFeet);
+			return HashValueFnv1a64(Hash, g_Config.m_QmWhiteFeet);
 		if(str_comp(pStableCardId, "tclient:visual-effects") == 0)
 		{
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcTinyTees > 0);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_QmTinyTees > 0);
 			return HashValueFnv1a64(Hash, g_Config.m_QmJellyTee);
 		}
 		if(str_comp(pStableCardId, "tclient:anti-latency-tools") == 0)
 		{
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcRemoveAnti);
-			return HashValueFnv1a64(Hash, g_Config.m_TcPredMarginInFreeze);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_QmRemoveAnti);
+			return HashValueFnv1a64(Hash, g_Config.m_QmPredMarginInFreeze);
 		}
 		if(str_comp(pStableCardId, "tclient:auto-reply") == 0)
 		{
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcAutoReplyMuted);
-			return HashValueFnv1a64(Hash, g_Config.m_TcAutoReplyMinimized);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_QmAutoReplyMuted);
+			return HashValueFnv1a64(Hash, g_Config.m_QmAutoReplyMinimized);
 		}
 		if(str_comp(pStableCardId, "tclient:player-indicator") == 0)
 		{
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcIndicatorVariableDistance);
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcWarListIndicator);
-			return HashValueFnv1a64(Hash, g_Config.m_TcWarListIndicatorColors);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_QmIndicatorVariableDistance);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_QmWarListIndicator);
+			return HashValueFnv1a64(Hash, g_Config.m_QmWarListIndicatorColors);
 		}
 		if(str_comp(pStableCardId, "tclient:hud") == 0)
 		{
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcRenderCursorSpec);
-			Hash = HashValueFnv1a64(Hash, g_Config.m_TcNotifyWhenLast);
-			return HashValueFnv1a64(Hash, g_Config.m_TcShowCenter);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_QmRenderCursorSpec);
+			Hash = HashValueFnv1a64(Hash, g_Config.m_QmNotifyWhenLast);
+			return HashValueFnv1a64(Hash, g_Config.m_QmShowCenter);
 		}
 		if(str_comp(pStableCardId, "tclient:tee-status-bar") == 0)
-			return HashValueFnv1a64(Hash, g_Config.m_TcShowFrozenText > 0);
+			return HashValueFnv1a64(Hash, g_Config.m_QmShowFrozenText > 0);
 		if(str_comp(pStableCardId, "tclient:finish-name") == 0)
-			return HashValueFnv1a64(Hash, g_Config.m_TcChangeNameNearFinish != 0);
+			return HashValueFnv1a64(Hash, g_Config.m_QmChangeNameNearFinish != 0);
 		if(str_comp(pStableCardId, "tclient:tee-trails") == 0)
-			return HashValueFnv1a64(Hash, g_Config.m_TcTeeTrailColorMode == CTrails::COLORMODE_SOLID);
+			return HashValueFnv1a64(Hash, g_Config.m_QmTeeTrailColorMode == CTrails::COLORMODE_SOLID);
 		return Hash;
 	}
 
@@ -385,11 +385,11 @@ namespace
 		RuntimeKey.m_ConfigHash = IncludeConfigHash ? HashTClientSettingsConfig() : 0;
 		RuntimeKey.m_LanguageHash = str_quickhash(g_Config.m_ClLanguagefile);
 		// 分类字体（中文/图标符号）与各分类可变字重改变文本外观，需一并计入字体缓存键。
-		uint64_t FontHash = HashStringFnv1a64(1469598103934665603ull, g_Config.m_TcCustomFont);
-		FontHash = HashStringFnv1a64(FontHash, g_Config.m_TcCustomFontCjk);
-		FontHash = HashStringFnv1a64(FontHash, g_Config.m_TcCustomFontIcons);
-		FontHash = HashValueFnv1a64(FontHash, (uint64_t)g_Config.m_TcCustomFontWeight);
-		FontHash = HashValueFnv1a64(FontHash, (uint64_t)g_Config.m_TcCustomFontWeightCjk);
+		uint64_t FontHash = HashStringFnv1a64(1469598103934665603ull, g_Config.m_QmCustomFont);
+		FontHash = HashStringFnv1a64(FontHash, g_Config.m_QmCustomFontCjk);
+		FontHash = HashStringFnv1a64(FontHash, g_Config.m_QmCustomFontIcons);
+		FontHash = HashValueFnv1a64(FontHash, (uint64_t)g_Config.m_QmCustomFontWeight);
+		FontHash = HashValueFnv1a64(FontHash, (uint64_t)g_Config.m_QmCustomFontWeightCjk);
 		RuntimeKey.m_FontHash = FontHash;
 		RuntimeKey.m_BackendHash = str_quickhash(g_Config.m_GfxBackend);
 		if(pGraphics)
@@ -986,8 +986,8 @@ int CMenus::DoButtonLineSize_Menu(CButtonContainer *pButtonContainer, const char
 
 void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, const char *pBackupSkin, bool CustomColors, int FeetColor, int BodyColor, int Emote, bool Rainbow, bool Cute, ColorRGBA ColorFeet, ColorRGBA ColorBody)
 {
-	bool WhiteFeetTemp = g_Config.m_TcWhiteFeet;
-	g_Config.m_TcWhiteFeet = false;
+	bool WhiteFeetTemp = g_Config.m_QmWhiteFeet;
+	g_Config.m_QmWhiteFeet = false;
 
 	float DefTick = std::fmod(s_Time, 1.0f);
 
@@ -1030,7 +1030,7 @@ void CMenus::RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, co
 		RenderTeeCute(pIdleState, &SkinInfo, Emote, vec2(1.0f, 0.0f), TeeRenderPos, true);
 	else
 		RenderTools()->RenderTee(pIdleState, &SkinInfo, Emote, vec2(1.0f, 0.0f), TeeRenderPos);
-	g_Config.m_TcWhiteFeet = WhiteFeetTemp;
+	g_Config.m_QmWhiteFeet = WhiteFeetTemp;
 }
 
 void CMenus::RenderTeeCute(const CAnimState *pAnim, const CTeeRenderInfo *pInfo, int Emote, vec2 Dir, vec2 Pos, bool CuteEyes, float Alpha)
@@ -2282,7 +2282,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	// 字重值（轴真实范围）。判定在测量与渲染两趟一致，驱动卡片高度过渡动画。
 	char aLatinFamily[256];
 	std::string LatinCanonicalConfig;
-	QmExtractConfigFamily(TextRender(), g_Config.m_TcCustomFont, aLatinFamily, sizeof(aLatinFamily), LatinCanonicalConfig);
+	QmExtractConfigFamily(TextRender(), g_Config.m_QmCustomFont, aLatinFamily, sizeof(aLatinFamily), LatinCanonicalConfig);
 	int LatinVarMin = 100, LatinVarMax = 900;
 	std::string LatinFamilyDefaultConfig;
 	const bool LatinFamilyAvailable = TextRender()->QmFontFamilyDefaultConfig(aLatinFamily, LatinFamilyDefaultConfig);
@@ -2319,12 +2319,12 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		}
 		const int FontSelectedNew = DoSettingsDropDown(&Button, FontSelectedOld, s_FontDropDownNames.data(), s_FontDropDownNames.size(), s_FontDropDownState);
 		std::string LatinSelectedConfig;
-		if(FontSelectedOld != FontSelectedNew && s_FontSelection.IsFamilySelection(FontSelectedNew) && TextRender()->QmFontFamilyDefaultConfig(s_FontDropDownNames[FontSelectedNew], LatinSelectedConfig) && LatinSelectedConfig.size() < sizeof(g_Config.m_TcCustomFont))
+		if(FontSelectedOld != FontSelectedNew && s_FontSelection.IsFamilySelection(FontSelectedNew) && TextRender()->QmFontFamilyDefaultConfig(s_FontDropDownNames[FontSelectedNew], LatinSelectedConfig) && LatinSelectedConfig.size() < sizeof(g_Config.m_QmCustomFont))
 		{
-			str_copy(g_Config.m_TcCustomFont, LatinSelectedConfig.c_str());
+			str_copy(g_Config.m_QmCustomFont, LatinSelectedConfig.c_str());
 			s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
-			TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+			TextRender()->SetCustomFace(g_Config.m_QmCustomFont);
 			InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
 			GameClient()->OnWindowResize();
 			GameClient()->Editor()->OnWindowResize();
@@ -2370,7 +2370,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			s_LatinWeightLabels.reserve(s_LatinWeightEntries.size());
 			for(const SQmFontWeightEntry &Entry : s_LatinWeightEntries)
 				s_LatinWeightLabels.push_back(Entry.m_Label.c_str());
-			const int LatinWeightSelected = QmSelectFontWeightEntry(s_LatinWeightEntries, LatinCanonicalConfig.c_str(), aLatinFamily, g_Config.m_TcCustomFontWeight);
+			const int LatinWeightSelected = QmSelectFontWeightEntry(s_LatinWeightEntries, LatinCanonicalConfig.c_str(), aLatinFamily, g_Config.m_QmCustomFontWeight);
 			CUi::SDropDownProperties LatinWeightProperties;
 			LatinWeightProperties.m_Enabled = !s_LatinStylesOwned.empty();
 			const int LatinWeightNew = DoSettingsDropDown(&WeightButton, LatinWeightSelected, s_LatinWeightLabels.data(), s_LatinWeightLabels.size(), s_LatinWeightState, LatinWeightProperties);
@@ -2381,26 +2381,26 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				if(Entry.m_Variable)
 				{
 					std::string VariableConfig;
-					if(QmResolveVariableFontSelection(aLatinFamily, g_Config.m_TcCustomFont, sizeof(g_Config.m_TcCustomFont), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
+					if(QmResolveVariableFontSelection(aLatinFamily, g_Config.m_QmCustomFont, sizeof(g_Config.m_QmCustomFont), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
 					{
-						str_copy(g_Config.m_TcCustomFont, VariableConfig.c_str());
+						str_copy(g_Config.m_QmCustomFont, VariableConfig.c_str());
 						Changed = true;
 					}
-					if(g_Config.m_TcCustomFontWeight != Entry.m_Value)
+					if(g_Config.m_QmCustomFontWeight != Entry.m_Value)
 					{
-						g_Config.m_TcCustomFontWeight = Entry.m_Value;
+						g_Config.m_QmCustomFontWeight = Entry.m_Value;
 						TextRender()->SetCustomFontWeight(Entry.m_Value);
 						Changed = true;
 					}
 				}
-				else if(Entry.m_pFullStyle && str_comp_nocase(g_Config.m_TcCustomFont, Entry.m_pFullStyle->c_str()) != 0)
+				else if(Entry.m_pFullStyle && str_comp_nocase(g_Config.m_QmCustomFont, Entry.m_pFullStyle->c_str()) != 0)
 				{
-					str_copy(g_Config.m_TcCustomFont, Entry.m_pFullStyle->c_str());
+					str_copy(g_Config.m_QmCustomFont, Entry.m_pFullStyle->c_str());
 					Changed = true;
 				}
 				if(Changed)
 				{
-					TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+					TextRender()->SetCustomFace(g_Config.m_QmCustomFont);
 					s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 					s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
@@ -2420,15 +2420,15 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		CUIElement &LatinWeightElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-latin-weight-label");
 		DoSettingsLabelStreamed(LatinWeightElement, &Label, Localize("Font weight:"), FontSize, TEXTALIGN_ML, TClientFixedLabelProperties(FontSize, Label.w));
 		static int s_LatinWeightSliderId;
-		RenderQmSettingsSliderWithValueInput(&s_LatinWeightSliderId, Button, &g_Config.m_TcCustomFontWeight, LatinVarMin, LatinVarMax, "", false);
+		RenderQmSettingsSliderWithValueInput(&s_LatinWeightSliderId, Button, &g_Config.m_QmCustomFontWeight, LatinVarMin, LatinVarMax, "", false);
 		static SQmWeightThrottleState s_LatinWeightThrottle;
-		QmTickVariableWeightThrottle(s_LatinWeightThrottle, g_Config.m_TcCustomFontWeight, Client()->GlobalTime(), [this](int Weight) { TextRender()->SetCustomFontWeight(Weight); }, [&]() {
+		QmTickVariableWeightThrottle(s_LatinWeightThrottle, g_Config.m_QmCustomFontWeight, Client()->GlobalTime(), [this](int Weight) { TextRender()->SetCustomFontWeight(Weight); }, [&]() {
 				// 权重应用于真实 face；收尾只使用族 API 的可往返配置，保留消歧所需样式。
 				std::string VariableConfig;
-					if(QmResolveVariableFontSelection(aLatinFamily, g_Config.m_TcCustomFont, sizeof(g_Config.m_TcCustomFont), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
+					if(QmResolveVariableFontSelection(aLatinFamily, g_Config.m_QmCustomFont, sizeof(g_Config.m_QmCustomFont), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
 					{
-						str_copy(g_Config.m_TcCustomFont, VariableConfig.c_str());
-					TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+						str_copy(g_Config.m_QmCustomFont, VariableConfig.c_str());
+					TextRender()->SetCustomFace(g_Config.m_QmCustomFont);
 				}
 				s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 				s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
@@ -2444,7 +2444,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	// 字重值。CJK 未设置（跟随英文）时视为不可变，维持占位下拉不变。
 	char aCjkFamily[256];
 	std::string CjkCanonicalConfig;
-	QmExtractConfigFamily(TextRender(), g_Config.m_TcCustomFontCjk, aCjkFamily, sizeof(aCjkFamily), CjkCanonicalConfig);
+	QmExtractConfigFamily(TextRender(), g_Config.m_QmCustomFontCjk, aCjkFamily, sizeof(aCjkFamily), CjkCanonicalConfig);
 	int CjkVarMin = 100, CjkVarMax = 900;
 	std::string CjkFamilyDefaultConfig;
 	const bool CjkFamilyAvailable = TextRender()->QmFontFamilyDefaultConfig(aCjkFamily, CjkFamilyDefaultConfig);
@@ -2465,10 +2465,10 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		s_CjkDropDownState.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = true;
 		s_CjkDropDownState.m_SelectionPopupContext.m_FontFamilySelection = true;
 		const auto &CustomFaces = *TextRender()->GetCustomFaces();
-		if(s_CjkFacesSource != CustomFaces || s_CjkConfigSource != g_Config.m_TcCustomFontCjk)
+		if(s_CjkFacesSource != CustomFaces || s_CjkConfigSource != g_Config.m_QmCustomFontCjk)
 		{
 			s_CjkFacesSource = CustomFaces;
-			s_CjkConfigSource = g_Config.m_TcCustomFontCjk;
+			s_CjkConfigSource = g_Config.m_QmCustomFontCjk;
 			// CJK 槽只收含 CJK 字形的 face：纯拉丁字体选进该槽没有意义（无字形
 			// 可渲染，等同回退默认链）。当前配置值例外保留，避免已选项从列表
 			// 消失后下拉显示错位。
@@ -2494,16 +2494,16 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		const int CjkSelectedOld = s_CjkSelection.Selected();
 		const int CjkSelectedNew = DoSettingsDropDown(&Button, CjkSelectedOld, s_CjkDropDownNames.data(), s_CjkDropDownNames.size(), s_CjkDropDownState);
 		std::string CjkSelectedConfig;
-		const bool CjkSelectionAvailable = CjkSelectedNew == 0 || (CjkSelectedNew > 0 && (size_t)CjkSelectedNew <= s_CjkDropDownNamesOwned.size() && TextRender()->QmFontFamilyDefaultConfig(s_CjkDropDownNamesOwned[CjkSelectedNew - 1].c_str(), CjkSelectedConfig) && CjkSelectedConfig.size() < sizeof(g_Config.m_TcCustomFontCjk));
+		const bool CjkSelectionAvailable = CjkSelectedNew == 0 || (CjkSelectedNew > 0 && (size_t)CjkSelectedNew <= s_CjkDropDownNamesOwned.size() && TextRender()->QmFontFamilyDefaultConfig(s_CjkDropDownNamesOwned[CjkSelectedNew - 1].c_str(), CjkSelectedConfig) && CjkSelectedConfig.size() < sizeof(g_Config.m_QmCustomFontCjk));
 		if(CjkSelectedNew != CjkSelectedOld && CjkSelectionAvailable)
 		{
 			if(CjkSelectedNew == 0)
-				g_Config.m_TcCustomFontCjk[0] = '\0';
+				g_Config.m_QmCustomFontCjk[0] = '\0';
 			else
-				str_copy(g_Config.m_TcCustomFontCjk, CjkSelectedConfig.c_str());
+				str_copy(g_Config.m_QmCustomFontCjk, CjkSelectedConfig.c_str());
 			s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
-			TextRender()->SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
+			TextRender()->SetCustomFaceCjk(g_Config.m_QmCustomFontCjk);
 			InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
 			GameClient()->OnWindowResize();
 		}
@@ -2525,7 +2525,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			s_CjkWeightLabels.reserve(s_CjkWeightEntries.size());
 			for(const SQmFontWeightEntry &Entry : s_CjkWeightEntries)
 				s_CjkWeightLabels.push_back(Entry.m_Label.c_str());
-			const int CjkWeightSelected = QmSelectFontWeightEntry(s_CjkWeightEntries, CjkCanonicalConfig.c_str(), aCjkFamily, g_Config.m_TcCustomFontWeightCjk);
+			const int CjkWeightSelected = QmSelectFontWeightEntry(s_CjkWeightEntries, CjkCanonicalConfig.c_str(), aCjkFamily, g_Config.m_QmCustomFontWeightCjk);
 			CUi::SDropDownProperties CjkWeightProperties;
 			CjkWeightProperties.m_Enabled = !s_CjkStylesOwned.empty();
 			const int CjkWeightNew = DoSettingsDropDown(&CjkWeightButton, CjkWeightSelected, s_CjkWeightLabels.data(), s_CjkWeightLabels.size(), s_CjkWeightState, CjkWeightProperties);
@@ -2536,26 +2536,26 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 				if(Entry.m_Variable && aCjkFamily[0] != '\0')
 				{
 					std::string VariableConfig;
-					if(QmResolveVariableFontSelection(aCjkFamily, g_Config.m_TcCustomFontCjk, sizeof(g_Config.m_TcCustomFontCjk), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
+					if(QmResolveVariableFontSelection(aCjkFamily, g_Config.m_QmCustomFontCjk, sizeof(g_Config.m_QmCustomFontCjk), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
 					{
-						str_copy(g_Config.m_TcCustomFontCjk, VariableConfig.c_str());
+						str_copy(g_Config.m_QmCustomFontCjk, VariableConfig.c_str());
 						Changed = true;
 					}
-					if(g_Config.m_TcCustomFontWeightCjk != Entry.m_Value)
+					if(g_Config.m_QmCustomFontWeightCjk != Entry.m_Value)
 					{
-						g_Config.m_TcCustomFontWeightCjk = Entry.m_Value;
+						g_Config.m_QmCustomFontWeightCjk = Entry.m_Value;
 						TextRender()->SetCustomFontWeightCjk(Entry.m_Value);
 						Changed = true;
 					}
 				}
-				else if(Entry.m_pFullStyle && str_comp_nocase(g_Config.m_TcCustomFontCjk, Entry.m_pFullStyle->c_str()) != 0)
+				else if(Entry.m_pFullStyle && str_comp_nocase(g_Config.m_QmCustomFontCjk, Entry.m_pFullStyle->c_str()) != 0)
 				{
-					str_copy(g_Config.m_TcCustomFontCjk, Entry.m_pFullStyle->c_str());
+					str_copy(g_Config.m_QmCustomFontCjk, Entry.m_pFullStyle->c_str());
 					Changed = true;
 				}
 				if(Changed)
 				{
-					TextRender()->SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
+					TextRender()->SetCustomFaceCjk(g_Config.m_QmCustomFontCjk);
 					s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 					s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
@@ -2574,15 +2574,15 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		CUIElement &CjkWeightElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-cjk-weight-label");
 		DoSettingsLabelStreamed(CjkWeightElement, &Label, Localize("CJK font weight:"), FontSize, TEXTALIGN_ML, TClientFixedLabelProperties(FontSize, Label.w));
 		static int s_CjkWeightSliderId;
-		RenderQmSettingsSliderWithValueInput(&s_CjkWeightSliderId, Button, &g_Config.m_TcCustomFontWeightCjk, CjkVarMin, CjkVarMax, "", false);
+		RenderQmSettingsSliderWithValueInput(&s_CjkWeightSliderId, Button, &g_Config.m_QmCustomFontWeightCjk, CjkVarMin, CjkVarMax, "", false);
 		static SQmWeightThrottleState s_CjkWeightThrottle;
-		QmTickVariableWeightThrottle(s_CjkWeightThrottle, g_Config.m_TcCustomFontWeightCjk, Client()->GlobalTime(), [this](int Weight) { TextRender()->SetCustomFontWeightCjk(Weight); }, [&]() {
+		QmTickVariableWeightThrottle(s_CjkWeightThrottle, g_Config.m_QmCustomFontWeightCjk, Client()->GlobalTime(), [this](int Weight) { TextRender()->SetCustomFontWeightCjk(Weight); }, [&]() {
 				// 归一为族名：可变字重只对族 face 生效，样式段配置会挡住轴调节。
 				std::string VariableConfig;
-					if(QmResolveVariableFontSelection(aCjkFamily, g_Config.m_TcCustomFontCjk, sizeof(g_Config.m_TcCustomFontCjk), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
+					if(QmResolveVariableFontSelection(aCjkFamily, g_Config.m_QmCustomFontCjk, sizeof(g_Config.m_QmCustomFontCjk), [this](const char *pFamily, std::string &Config) { return TextRender()->QmFontFamilyDefaultConfig(pFamily, Config); }, VariableConfig))
 					{
-						str_copy(g_Config.m_TcCustomFontCjk, VariableConfig.c_str());
-					TextRender()->SetCustomFaceCjk(g_Config.m_TcCustomFontCjk);
+						str_copy(g_Config.m_QmCustomFontCjk, VariableConfig.c_str());
+					TextRender()->SetCustomFaceCjk(g_Config.m_QmCustomFontCjk);
 				}
 				s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 				s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
@@ -2606,23 +2606,23 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		const auto &CustomFaces = *TextRender()->GetCustomFaces();
 		char aIconsFamily[256];
 		std::string IconsCanonicalConfig;
-		QmExtractConfigFamily(TextRender(), g_Config.m_TcCustomFontIcons, aIconsFamily, sizeof(aIconsFamily), IconsCanonicalConfig);
+		QmExtractConfigFamily(TextRender(), g_Config.m_QmCustomFontIcons, aIconsFamily, sizeof(aIconsFamily), IconsCanonicalConfig);
 		s_IconsSelection.Update(CustomFaces, aIconsFamily, Localize("(Follow Chinese font)"), Localize("Default"));
 		const auto &s_IconsDropDownNamesOwned = s_IconsSelection.Families();
 		const auto &s_IconsDropDownNames = s_IconsSelection.Names();
 		const int IconsSelectedOld = s_IconsSelection.Selected();
 		const int IconsSelectedNew = DoSettingsDropDown(&Button, IconsSelectedOld, s_IconsDropDownNames.data(), s_IconsDropDownNames.size(), s_IconsDropDownState);
 		std::string IconsSelectedConfig;
-		const bool IconsSelectionAvailable = IconsSelectedNew == 0 || (IconsSelectedNew > 0 && (size_t)IconsSelectedNew <= CustomFaces.size() && TextRender()->QmFontFamilyDefaultConfig(s_IconsDropDownNamesOwned[IconsSelectedNew - 1].c_str(), IconsSelectedConfig) && IconsSelectedConfig.size() < sizeof(g_Config.m_TcCustomFontIcons));
+		const bool IconsSelectionAvailable = IconsSelectedNew == 0 || (IconsSelectedNew > 0 && (size_t)IconsSelectedNew <= CustomFaces.size() && TextRender()->QmFontFamilyDefaultConfig(s_IconsDropDownNamesOwned[IconsSelectedNew - 1].c_str(), IconsSelectedConfig) && IconsSelectedConfig.size() < sizeof(g_Config.m_QmCustomFontIcons));
 		if(IconsSelectedNew != IconsSelectedOld && IconsSelectionAvailable)
 		{
 			if(IconsSelectedNew == 0)
-				g_Config.m_TcCustomFontIcons[0] = '\0';
+				g_Config.m_QmCustomFontIcons[0] = '\0';
 			else
-				str_copy(g_Config.m_TcCustomFontIcons, IconsSelectedConfig.c_str());
+				str_copy(g_Config.m_QmCustomFontIcons, IconsSelectedConfig.c_str());
 			s_VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 			s_RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
-			TextRender()->SetCustomFaceIcons(g_Config.m_TcCustomFontIcons);
+			TextRender()->SetCustomFaceIcons(g_Config.m_QmCustomFontIcons);
 			InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
 			GameClient()->OnWindowResize();
 		}
@@ -2742,26 +2742,26 @@ float CMenus::LayoutTClientAutoReplyCacheSection(CUIRect &CurrentColumn, bool Re
 
 	CUIRect MutedToggle = Rows.Next();
 	if(Render)
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMuted, "tclient-auto-reply-muted", Localize("Automatically reply to muted players"), &g_Config.m_TcAutoReplyMuted, &MutedToggle, LineSize);
-	if(g_Config.m_TcAutoReplyMuted)
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoReplyMuted, "tclient-auto-reply-muted", Localize("Automatically reply to muted players"), &g_Config.m_QmAutoReplyMuted, &MutedToggle, LineSize);
+	if(g_Config.m_QmAutoReplyMuted)
 	{
 		ReplyRect = Rows.Next();
 		if(Render)
 		{
-			static CLineInput s_MutedReply(g_Config.m_TcAutoReplyMutedMessage, sizeof(g_Config.m_TcAutoReplyMutedMessage));
+			static CLineInput s_MutedReply(g_Config.m_QmAutoReplyMutedMessage, sizeof(g_Config.m_QmAutoReplyMutedMessage));
 			s_MutedReply.SetEmptyText(Localize("I muted you"));
 			ui_widget::InputField(TClientAutoReplyTextInputCtx, &s_MutedReply, ReplyRect, nullptr, EditBoxFontSize);
 		}
 	}
 	CUIRect MinimizedToggle = Rows.Next();
 	if(Render)
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMinimized, "tclient-auto-reply-minimized", Localize("Automatically reply while the window is unfocused"), &g_Config.m_TcAutoReplyMinimized, &MinimizedToggle, LineSize);
-	if(g_Config.m_TcAutoReplyMinimized)
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoReplyMinimized, "tclient-auto-reply-minimized", Localize("Automatically reply while the window is unfocused"), &g_Config.m_QmAutoReplyMinimized, &MinimizedToggle, LineSize);
+	if(g_Config.m_QmAutoReplyMinimized)
 	{
 		ReplyRect = Rows.Next();
 		if(Render)
 		{
-			static CLineInput s_MinimizedReply(g_Config.m_TcAutoReplyMinimizedMessage, sizeof(g_Config.m_TcAutoReplyMinimizedMessage));
+			static CLineInput s_MinimizedReply(g_Config.m_QmAutoReplyMinimizedMessage, sizeof(g_Config.m_QmAutoReplyMinimizedMessage));
 			s_MinimizedReply.SetEmptyText(Localize("I am away from the game window"));
 			ui_widget::InputField(TClientAutoReplyTextInputCtx, &s_MinimizedReply, ReplyRect, nullptr, EditBoxFontSize);
 		}
@@ -2789,19 +2789,19 @@ float CMenus::LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render)
 	CTClientSettingsRowAllocator Rows(CurrentColumn);
 	CUIRect ShowPetRow = Rows.Next();
 	if(Render)
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPetShow, "tclient-show-pet", Localize("Show the pet"), &g_Config.m_TcPetShow, &ShowPetRow, LineSize);
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPetShow, "tclient-show-pet", Localize("Show the pet"), &g_Config.m_QmPetShow, &ShowPetRow, LineSize);
 	Button = Rows.Next();
 	if(Render)
-		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-pet-size", &g_Config.m_TcPetSize, &g_Config.m_TcPetSize, &Button, Localize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-pet-size", &g_Config.m_QmPetSize, &g_Config.m_QmPetSize, &Button, Localize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
 	Button = Rows.Next();
 	if(Render)
-		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-pet-alpha", &g_Config.m_TcPetAlpha, &g_Config.m_TcPetAlpha, &Button, Localize("Pet alpha"), 10, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+		DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-pet-alpha", &g_Config.m_QmPetAlpha, &g_Config.m_QmPetAlpha, &Button, Localize("Pet alpha"), 10, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 	PetSkinBox = Rows.Next();
 	if(Render)
 	{
 		PetSkinBox.VSplitMid(&Label, &Button);
 		DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Pet Skin:"), FontSize, TEXTALIGN_ML);
-		static CLineInput s_PetSkin(g_Config.m_TcPetSkin, sizeof(g_Config.m_TcPetSkin));
+		static CLineInput s_PetSkin(g_Config.m_QmPetSkin, sizeof(g_Config.m_QmPetSkin));
 		ui_widget::InputField(TClientPetTextInputCtx, &s_PetSkin, Button, nullptr, EditBoxFontSize);
 	}
 	return CurrentColumn.y - SavedY;
@@ -2827,23 +2827,23 @@ float CMenus::LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render)
 	CTClientSettingsRowAllocator Rows(CurrentColumn);
 	CUIRect Row = Rows.Next();
 	if(Render)
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcMiniVoteHud, "tclient-mini-vote-hud", Localize("Show compact vote HUD"), &g_Config.m_TcMiniVoteHud, &Row, LineSize);
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMiniVoteHud, "tclient-mini-vote-hud", Localize("Show compact vote HUD"), &g_Config.m_QmMiniVoteHud, &Row, LineSize);
 	Row = Rows.Next();
 	if(Render)
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcMiniDebug, "tclient-mini-debug", Localize("Show position and angle (mini debug)"), &g_Config.m_TcMiniDebug, &Row, LineSize);
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMiniDebug, "tclient-mini-debug", Localize("Show position and angle (mini debug)"), &g_Config.m_QmMiniDebug, &Row, LineSize);
 	Row = Rows.Next();
 	if(Render)
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRenderCursorSpec, "tclient-render-cursor-spec", Localize("Show the cursor while free spectating"), &g_Config.m_TcRenderCursorSpec, &Row, LineSize);
-	if(g_Config.m_TcRenderCursorSpec)
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRenderCursorSpec, "tclient-render-cursor-spec", Localize("Show the cursor while free spectating"), &g_Config.m_QmRenderCursorSpec, &Row, LineSize);
+	if(g_Config.m_QmRenderCursorSpec)
 	{
 		Button = Rows.Next();
 		if(Render)
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_TcRenderCursorSpecAlpha, &g_Config.m_TcRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_QmRenderCursorSpecAlpha, &g_Config.m_QmRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
 	}
 	Row = Rows.Next();
 	if(Render)
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_TcNotifyWhenLast, &Row, LineSize);
-	if(g_Config.m_TcNotifyWhenLast)
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_QmNotifyWhenLast, &Row, LineSize);
+	if(g_Config.m_QmNotifyWhenLast)
 	{
 		NotificationConfig = Rows.Next();
 		const CUIRect NotificationX = Rows.Next();
@@ -2852,28 +2852,28 @@ float CMenus::LayoutTClientHudCacheSection(CUIRect &CurrentColumn, bool Render)
 		if(Render)
 		{
 			NotificationConfig.VSplitMid(&Button, &NotificationConfig);
-			static CLineInput s_LastInput(g_Config.m_TcNotifyWhenLastText, sizeof(g_Config.m_TcNotifyWhenLastText));
+			static CLineInput s_LastInput(g_Config.m_QmNotifyWhenLastText, sizeof(g_Config.m_QmNotifyWhenLastText));
 			s_LastInput.SetEmptyText(Localize("You're the last one!"));
 			ui_widget::InputField(TClientHudTextInputCtx, &s_LastInput, Button, nullptr, EditBoxFontSize);
 			static CButtonContainer s_ClientNotifyWhenLastColor;
-			DoLine_ColorPicker(&s_ClientNotifyWhenLastColor, CurrentSettingsContentMetrics(), &NotificationConfig, "", &g_Config.m_TcNotifyWhenLastColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-x", &g_Config.m_TcNotifyWhenLastX, &g_Config.m_TcNotifyWhenLastX, &NotificationX, Localize("Horizontal position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-y", &g_Config.m_TcNotifyWhenLastY, &g_Config.m_TcNotifyWhenLastY, &NotificationY, Localize("Vertical position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_TcNotifyWhenLastSize, &g_Config.m_TcNotifyWhenLastSize, &NotificationSize, Localize("Font size"), 1, 50);
+			DoLine_ColorPicker(&s_ClientNotifyWhenLastColor, CurrentSettingsContentMetrics(), &NotificationConfig, "", &g_Config.m_QmNotifyWhenLastColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-x", &g_Config.m_QmNotifyWhenLastX, &g_Config.m_QmNotifyWhenLastX, &NotificationX, Localize("Horizontal position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-y", &g_Config.m_QmNotifyWhenLastY, &g_Config.m_QmNotifyWhenLastY, &NotificationY, Localize("Vertical position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_QmNotifyWhenLastSize, &g_Config.m_QmNotifyWhenLastSize, &NotificationSize, Localize("Font size"), 1, 50);
 		}
 	}
 	Row = Rows.Next();
 	if(Render)
-		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_TcShowCenter, &Row, LineSize);
-	if(g_Config.m_TcShowCenter)
+		DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_QmShowCenter, &Row, LineSize);
+	if(g_Config.m_QmShowCenter)
 	{
 		CUIRect CenterColor = Rows.Next();
 		const CUIRect CenterWidth = Rows.Next();
 		if(Render)
 		{
 			static CButtonContainer s_ShowCenterLineColor;
-			DoLine_ColorPicker(&s_ShowCenterLineColor, CurrentSettingsContentMetrics(), &CenterColor, Localize("Screen center line color"), &g_Config.m_TcShowCenterColor, DefaultConfig::TcShowCenterColor, false, nullptr, true);
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-center-line-width", &g_Config.m_TcShowCenterWidth, &g_Config.m_TcShowCenterWidth, &CenterWidth, Localize("Screen center line width"), 0, 20);
+			DoLine_ColorPicker(&s_ShowCenterLineColor, CurrentSettingsContentMetrics(), &CenterColor, Localize("Screen center line color"), &g_Config.m_QmShowCenterColor, DefaultConfig::QmShowCenterColor, false, nullptr, true);
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-center-line-width", &g_Config.m_QmShowCenterWidth, &g_Config.m_QmShowCenterWidth, &CenterWidth, Localize("Screen center line width"), 0, 20);
 		}
 	}
 	return CurrentColumn.y - SavedY;
@@ -2884,7 +2884,7 @@ SSettingsSection CMenus::BuildTClientThemeCacheSection()
 	SSettingsSection S;
 	S.m_pName = "Font";
 	ConfigureSettingsCardSection(S, Localizable("Font"), "tclient:font", [this](CUIRect &Col, bool Render) -> float { return LayoutTClientThemeCacheSection(Col, Render); }, Margin);
-	S.m_DependencyConfigInts = {&g_Config.m_TcCustomFontWeight};
+	S.m_DependencyConfigInts = {&g_Config.m_QmCustomFontWeight};
 	return S;
 }
 
@@ -2903,9 +2903,9 @@ SSettingsSection CMenus::BuildTClientCursorCacheSection()
 		CTClientSettingsRowAllocator Rows(Col);
 		Button = Rows.Next();
 		if(Render)
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_TcCursorScale, &g_Config.m_TcCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_QmCursorScale, &g_Config.m_QmCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
 		return Col.y - SavedY; }, Margin);
-	S.m_DependencyConfigInts = {&g_Config.m_TcCursorScale};
+	S.m_DependencyConfigInts = {&g_Config.m_QmCursorScale};
 	return S;
 }
 
@@ -2914,7 +2914,7 @@ SSettingsSection CMenus::BuildTClientAutoReplyCacheSection()
 	SSettingsSection S;
 	S.m_pName = "Auto reply";
 	ConfigureSettingsCardSection(S, Localizable("Auto reply"), "tclient:auto-reply", [this](CUIRect &Col, bool Render) -> float { return LayoutTClientAutoReplyCacheSection(Col, Render); }, MarginBetweenSections);
-	S.m_DependencyConfigInts = {&g_Config.m_TcAutoReplyMuted, &g_Config.m_TcAutoReplyMinimized};
+	S.m_DependencyConfigInts = {&g_Config.m_QmAutoReplyMuted, &g_Config.m_QmAutoReplyMinimized};
 	return S;
 }
 
@@ -2923,7 +2923,7 @@ SSettingsSection CMenus::BuildTClientPetCacheSection()
 	SSettingsSection S;
 	S.m_pName = "Pet";
 	ConfigureSettingsCardSection(S, "Pet", "tclient:pet", [this](CUIRect &Col, bool Render) -> float { return LayoutTClientPetCacheSection(Col, Render); }, MarginBetweenSections);
-	S.m_DependencyConfigInts = {&g_Config.m_TcPetShow, &g_Config.m_TcPetSize, &g_Config.m_TcPetAlpha};
+	S.m_DependencyConfigInts = {&g_Config.m_QmPetShow, &g_Config.m_QmPetSize, &g_Config.m_QmPetAlpha};
 	return S;
 }
 
@@ -2933,17 +2933,17 @@ SSettingsSection CMenus::BuildTClientHudCacheSection()
 	S.m_pName = "HUD";
 	ConfigureSettingsCardSection(S, "HUD", "tclient:hud", [this](CUIRect &Col, bool Render) -> float { return LayoutTClientHudCacheSection(Col, Render); }, Margin);
 	S.m_DependencyConfigInts = {
-		&g_Config.m_TcMiniVoteHud,
-		&g_Config.m_TcMiniDebug,
-		&g_Config.m_TcRenderCursorSpec,
-		&g_Config.m_TcNotifyWhenLast,
-		&g_Config.m_TcNotifyWhenLastX,
-		&g_Config.m_TcNotifyWhenLastY,
-		&g_Config.m_TcNotifyWhenLastSize,
-		&g_Config.m_TcShowCenter,
-		&g_Config.m_TcShowCenterWidth,
+		&g_Config.m_QmMiniVoteHud,
+		&g_Config.m_QmMiniDebug,
+		&g_Config.m_QmRenderCursorSpec,
+		&g_Config.m_QmNotifyWhenLast,
+		&g_Config.m_QmNotifyWhenLastX,
+		&g_Config.m_QmNotifyWhenLastY,
+		&g_Config.m_QmNotifyWhenLastSize,
+		&g_Config.m_QmShowCenter,
+		&g_Config.m_QmShowCenterWidth,
 	};
-	S.m_DependencyConfigCols = {&g_Config.m_TcNotifyWhenLastColor, &g_Config.m_TcShowCenterColor};
+	S.m_DependencyConfigCols = {&g_Config.m_QmNotifyWhenLastColor, &g_Config.m_QmShowCenterColor};
 	return S;
 }
 
@@ -3208,7 +3208,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					int FontSelectedOld = -1;
 					for(size_t i = 0; i < CustomFaces.size(); ++i)
 					{
-						if(str_comp_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()) == 0)
+						if(str_comp_nocase(g_Config.m_QmCustomFont, CustomFaces[i].c_str()) == 0)
 							FontSelectedOld = i;
 					}
 					CUIRect FontDirectory;
@@ -3218,10 +3218,10 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					const int FontSelectedNew = DoSettingsDropDown(&FontDropDownRect, FontSelectedOld, s_FontDropDownNames.data(), s_FontDropDownNames.size(), s_FontDropDownState);
 					if(FontSelectedOld != FontSelectedNew && FontSelectedNew >= 0 && (size_t)FontSelectedNew < s_FontDropDownNames.size())
 					{
-						str_copy(g_Config.m_TcCustomFont, s_FontDropDownNames[FontSelectedNew]);
+						str_copy(g_Config.m_QmCustomFont, s_FontDropDownNames[FontSelectedNew]);
 						VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 						RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
-						TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+						TextRender()->SetCustomFace(g_Config.m_QmCustomFont);
 						InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
 						GameClient()->OnWindowResize();
 						GameClient()->Editor()->OnWindowResize();
@@ -3248,7 +3248,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			{
 				CUIRect WeightRow;
 				CurrentColumn.HSplitTop(LineSize, &WeightRow, &CurrentColumn);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-custom-font-weight", &g_Config.m_TcCustomFontWeight, &g_Config.m_TcCustomFontWeight, &WeightRow, Localize("Custom font weight (variable fonts)"), 100, 900, &CUi::ms_LinearScrollbarScale, 0, "");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-custom-font-weight", &g_Config.m_QmCustomFontWeight, &g_Config.m_QmCustomFontWeight, &WeightRow, Localize("Custom font weight (variable fonts)"), 100, 900, &CUi::ms_LinearScrollbarScale, 0, "");
 			}
 			else
 			{
@@ -3272,7 +3272,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(ShouldRenderVisualBlock(LineSize * 2.0f))
 			{
 				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_TcCursorScale, &g_Config.m_TcCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_QmCursorScale, &g_Config.m_QmCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
 			}
 			else
 			{
@@ -3314,7 +3314,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				int FontSelectedOld = -1;
 				for(size_t i = 0; i < CustomFaces.size(); ++i)
 				{
-					if(str_comp_nocase(g_Config.m_TcCustomFont, CustomFaces[i].c_str()) == 0)
+					if(str_comp_nocase(g_Config.m_QmCustomFont, CustomFaces[i].c_str()) == 0)
 						FontSelectedOld = i;
 				}
 				CUIRect FontDirectory;
@@ -3323,10 +3323,10 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				const int FontSelectedNew = DoSettingsDropDown(&FontDropDownRect, FontSelectedOld, s_FontDropDownNames.data(), s_FontDropDownNames.size(), s_FontDropDownState);
 				if(FontSelectedOld != FontSelectedNew && FontSelectedNew >= 0 && (size_t)FontSelectedNew < s_FontDropDownNames.size())
 				{
-					str_copy(g_Config.m_TcCustomFont, s_FontDropDownNames[FontSelectedNew]);
+					str_copy(g_Config.m_QmCustomFont, s_FontDropDownNames[FontSelectedNew]);
 					VisualFontLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
 					RightSectionLoader.InvalidateCache(ESettingsCacheDirtyReason::FONT);
-					TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+					TextRender()->SetCustomFace(g_Config.m_QmCustomFont);
 					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::FONT_CHANGED);
 					GameClient()->OnWindowResize();
 					GameClient()->Editor()->OnWindowResize();
@@ -3362,7 +3362,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(ShouldRenderSection(CurrentColumn, 0.0f, LineSize * 2.0f))
 			{
 				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_TcCursorScale, &g_Config.m_TcCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-cursor-scale", &g_Config.m_QmCursorScale, &g_Config.m_QmCursorScale, &Button, Localize("Ingame cursor scale"), 0, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
 			}
 			else
 			{
@@ -3393,7 +3393,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Visual: Nameplates"), HeadlineFontSize, TEXTALIGN_ML);
 			CurrentColumn.HSplitTop(MarginSmall, nullptr, &CurrentColumn);
 
-			const int NameplateRowCount = 7 + (g_Config.m_TcWhiteFeet ? 1 : 0);
+			const int NameplateRowCount = 7 + (g_Config.m_QmWhiteFeet ? 1 : 0);
 			const bool RenderNameplateRows = ShouldRenderVisualBlock(TClientSettingsRowsHeight(NameplateRowCount));
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
 			CUIRect PingCircleRow = Rows.Next();
@@ -3404,24 +3404,24 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CUIRect FreezeKatanaRow = Rows.Next();
 			CUIRect WhiteFeetRow = Rows.Next();
 			CUIRect FeetBox;
-			if(g_Config.m_TcWhiteFeet)
+			if(g_Config.m_QmWhiteFeet)
 				FeetBox = Rows.Next();
 			if(RenderNameplateRows)
 			{
 				CPerfTimer NameplateTimer;
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcNameplatePingCircle, "tclient-nameplate-ping-circle", Localize("Show ping colored circle in nameplates"), &g_Config.m_TcNameplatePingCircle, &PingCircleRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcNameplateCountry, "tclient-nameplate-country", Localize("Show country flags in nameplates"), &g_Config.m_TcNameplateCountry, &CountryRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcNameplateSkins, "tclient-nameplate-skins", Localize("Show skin names in nameplate"), &g_Config.m_TcNameplateSkins, &SkinsRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplatePingCircle, "tclient-nameplate-ping-circle", Localize("Show ping colored circle in nameplates"), &g_Config.m_QmNameplatePingCircle, &PingCircleRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateCountry, "tclient-nameplate-country", Localize("Show country flags in nameplates"), &g_Config.m_QmNameplateCountry, &CountryRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNameplateSkins, "tclient-nameplate-skins", Localize("Show skin names in nameplate"), &g_Config.m_QmNameplateSkins, &SkinsRow, LineSize);
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClFreezeStars, "tclient-freeze-stars", Localize("Freeze stars"), &g_Config.m_ClFreezeStars, &FreezeStarsRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcColorFreeze, "tclient-color-freeze", Localize("Use colored skins for frozen tees"), &g_Config.m_TcColorFreeze, &ColorFreezeRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFreezeKatana, "tclient-freeze-katana", Localize("Show katan on frozen players"), &g_Config.m_TcFreezeKatana, &FreezeKatanaRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWhiteFeet, "tclient-white-feet", Localize("Render all custom colored feet as white feet skin"), &g_Config.m_TcWhiteFeet, &WhiteFeetRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmColorFreeze, "tclient-color-freeze", Localize("Use colored skins for frozen tees"), &g_Config.m_QmColorFreeze, &ColorFreezeRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFreezeKatana, "tclient-freeze-katana", Localize("Show katan on frozen players"), &g_Config.m_QmFreezeKatana, &FreezeKatanaRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWhiteFeet, "tclient-white-feet", Localize("Render all custom colored feet as white feet skin"), &g_Config.m_QmWhiteFeet, &WhiteFeetRow, LineSize);
 				LogSettingsStage("tclient_settings_left_visual_nameplates", NameplateTimer);
 			}
-			if(RenderNameplateRows && g_Config.m_TcWhiteFeet)
+			if(RenderNameplateRows && g_Config.m_QmWhiteFeet)
 			{
 				FeetBox.VSplitMid(&FeetBox, nullptr);
-				static CLineInput s_WhiteFeet(g_Config.m_TcWhiteFeetSkin, sizeof(g_Config.m_TcWhiteFeetSkin));
+				static CLineInput s_WhiteFeet(g_Config.m_QmWhiteFeetSkin, sizeof(g_Config.m_QmWhiteFeetSkin));
 				s_WhiteFeet.SetEmptyText("x_ninja");
 				ui_widget::InputField(TClientWhiteFeetTextInputCtx, &s_WhiteFeet, FeetBox, nullptr, EditBoxFontSize);
 			}
@@ -3449,23 +3449,23 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CUIRect Row = Rows.Next(TinyTeeModeHeight);
 			if(RenderTinyTeeMode)
 			{
-				int Value = g_Config.m_TcTinyTees ? (g_Config.m_TcTinyTeesOthers ? 2 : 1) : 0;
+				int Value = g_Config.m_QmTinyTees ? (g_Config.m_QmTinyTeesOthers ? 2 : 1) : 0;
 				CPerfTimer TinyTeeModeTimer;
 				if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Row, "tclient-smaller-tees-label", Localize("Smaller tees"), s_vTinyTeeModeButtons, {"tclient-smaller-tees-none", "tclient-smaller-tees-self", "tclient-smaller-tees-all"}, {Localize("None"), Localize("Self"), Localize("All")}, {0, 1, 2}, Value, ContentMetrics))
 				{
-					g_Config.m_TcTinyTees = Value > 0 ? 1 : 0;
-					g_Config.m_TcTinyTeesOthers = Value > 1 ? 1 : 0;
+					g_Config.m_QmTinyTees = Value > 0 ? 1 : 0;
+					g_Config.m_QmTinyTeesOthers = Value > 1 ? 1 : 0;
 				}
 				LogSettingsStage("tclient_settings_left_visual_tiny_tee_mode", TinyTeeModeTimer);
 			}
-			if(g_Config.m_TcTinyTees > 0)
+			if(g_Config.m_QmTinyTees > 0)
 			{
 				const bool RenderTinyTeeSize = ShouldRenderVisualBlock(LineSize);
 				TinyTeeConfig = Rows.Next();
 				if(RenderTinyTeeSize)
 				{
 					CPerfTimer TinyTeeSizeTimer;
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-tiny-tee-size", &g_Config.m_TcTinyTeeSize, &g_Config.m_TcTinyTeeSize, &TinyTeeConfig, Localize("Tiny Tee Size"), 85, 115);
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-tiny-tee-size", &g_Config.m_QmTinyTeeSize, &g_Config.m_QmTinyTeeSize, &TinyTeeConfig, Localize("Tiny Tee Size"), 85, 115);
 					LogSettingsStage("tclient_settings_left_visual_tiny_tee_size", TinyTeeSizeTimer);
 				}
 			}
@@ -3500,11 +3500,11 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(RenderFakeFlags)
 			{
 				static std::vector<CButtonContainer> s_vButtonContainers = {{}, {}, {}};
-				int Value = g_Config.m_TcFakeCtfFlags;
+				int Value = g_Config.m_QmFakeCtfFlags;
 				CPerfTimer FakeFlagsTimer;
 				if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, FakeFlagsRow, "tclient-fake-ctf-flags-label", Localize("Fake CTF flags"), s_vButtonContainers, {"tclient-fake-ctf-flags-none", "tclient-fake-ctf-flags-red", "tclient-fake-ctf-flags-blue"}, {Localize("None"), Localize("Red"), Localize("Blue")}, {0, 1, 2}, Value, ContentMetrics))
-					g_Config.m_TcFakeCtfFlags = Value;
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcMovingTilesEntities, "tclient-moving-tiles-entities", Localize("Show moving tiles in entities"), &g_Config.m_TcMovingTilesEntities, &MovingTilesRow, LineSize);
+					g_Config.m_QmFakeCtfFlags = Value;
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMovingTilesEntities, "tclient-moving-tiles-entities", Localize("Show moving tiles in entities"), &g_Config.m_QmMovingTilesEntities, &MovingTilesRow, LineSize);
 				LogSettingsStage("tclient_settings_left_visual_fake_flags", FakeFlagsTimer);
 			}
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
@@ -3522,16 +3522,16 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
 			CUIRect Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInput, "tclient-fast-input", Localize("Fast input (reduce visual latency)"), &g_Config.m_TcFastInput, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFastInput, "tclient-fast-input", Localize("Fast input (reduce visual latency)"), &g_Config.m_QmFastInput, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoMargin, "qm-auto-margin", Localize("Auto margin"), &g_Config.m_QmAutoMargin, &Row, LineSize);
 			Button = Rows.Next();
 			if(Render)
-				DoSliderWithScaledValue(&g_Config.m_TcFastInputAmount, &g_Config.m_TcFastInputAmount, &Button, Localize("Amount"), 1, 40, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+				DoSliderWithScaledValue(&g_Config.m_QmFastInputAmount, &g_Config.m_QmFastInputAmount, &Button, Localize("Amount"), 1, 40, 1, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFastInputOthers, "tclient-fast-input-others", Localize("Fast input others"), &g_Config.m_TcFastInputOthers, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFastInputOthers, "tclient-fast-input-others", Localize("Fast input others"), &g_Config.m_QmFastInputOthers, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
 				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClSubTickAiming, "tclient-sub-tick-aiming", Localize("Sub-Tick aiming"), &g_Config.m_ClSubTickAiming, &Row, LineSize);
@@ -3553,30 +3553,30 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-prediction-margin", &g_Config.m_ClPredictionMargin, &g_Config.m_ClPredictionMargin, &Button, Localize("Base prediction margin"), 10, 75, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 			CUIRect Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRemoveAnti, "tclient-remove-anti-freeze", Localize("Reduce prediction while frozen"), &g_Config.m_TcRemoveAnti, &Row, LineSize);
-			if(g_Config.m_TcRemoveAnti)
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRemoveAnti, "tclient-remove-anti-freeze", Localize("Reduce prediction while frozen"), &g_Config.m_QmRemoveAnti, &Row, LineSize);
+			if(g_Config.m_QmRemoveAnti)
 			{
 				CUIRect AmountButton = Rows.Next();
 				CUIRect DelayButton = Rows.Next();
 				if(Render)
 				{
-					if(g_Config.m_TcUnfreezeLagDelayTicks < g_Config.m_TcUnfreezeLagTicks)
-						g_Config.m_TcUnfreezeLagDelayTicks = g_Config.m_TcUnfreezeLagTicks;
-					DoSliderWithScaledValue(&g_Config.m_TcUnfreezeLagTicks, &g_Config.m_TcUnfreezeLagTicks, &AmountButton, Localize("Maximum reduction"), 100, 300, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
-					DoSliderWithScaledValue(&g_Config.m_TcUnfreezeLagDelayTicks, &g_Config.m_TcUnfreezeLagDelayTicks, &DelayButton, Localize("Delay before reduction"), 100, 3000, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+					if(g_Config.m_QmUnfreezeLagDelayTicks < g_Config.m_QmUnfreezeLagTicks)
+						g_Config.m_QmUnfreezeLagDelayTicks = g_Config.m_QmUnfreezeLagTicks;
+					DoSliderWithScaledValue(&g_Config.m_QmUnfreezeLagTicks, &g_Config.m_QmUnfreezeLagTicks, &AmountButton, Localize("Maximum reduction"), 100, 300, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+					DoSliderWithScaledValue(&g_Config.m_QmUnfreezeLagDelayTicks, &g_Config.m_QmUnfreezeLagDelayTicks, &DelayButton, Localize("Delay before reduction"), 100, 3000, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 				}
 			}
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcUnpredOthersInFreeze, "tclient-unpred-others-in-freeze", Localize("Dont predict other players if you are frozen"), &g_Config.m_TcUnpredOthersInFreeze, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmUnpredOthersInFreeze, "tclient-unpred-others-in-freeze", Localize("Dont predict other players if you are frozen"), &g_Config.m_QmUnpredOthersInFreeze, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPredMarginInFreeze, "tclient-pred-margin-in-freeze", Localize("Use a fixed prediction margin while frozen"), &g_Config.m_TcPredMarginInFreeze, &Row, LineSize);
-			if(g_Config.m_TcPredMarginInFreeze)
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPredMarginInFreeze, "tclient-pred-margin-in-freeze", Localize("Use a fixed prediction margin while frozen"), &g_Config.m_QmPredMarginInFreeze, &Row, LineSize);
+			if(g_Config.m_QmPredMarginInFreeze)
 			{
 				Button = Rows.Next();
 				if(Render)
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-margin", &g_Config.m_TcPredMarginInFreezeAmount, &g_Config.m_TcPredMarginInFreezeAmount, &Button, Localize("Frozen prediction margin"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "ms");
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-margin", &g_Config.m_QmPredMarginInFreezeAmount, &g_Config.m_QmPredMarginInFreezeAmount, &Button, Localize("Frozen prediction margin"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "ms");
 			}
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
 			return BoxRect;
@@ -3593,16 +3593,16 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
 			CUIRect Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAntiPingImproved, "tclient-antiping-improved", Localize("Use new smoothing algorithm"), &g_Config.m_TcAntiPingImproved, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAntiPingImproved, "tclient-antiping-improved", Localize("Use new smoothing algorithm"), &g_Config.m_QmAntiPingImproved, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAntiPingStableDirection, "tclient-antiping-stable-direction", Localize("Optimistic prediction along stable direction"), &g_Config.m_TcAntiPingStableDirection, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAntiPingStableDirection, "tclient-antiping-stable-direction", Localize("Optimistic prediction along stable direction"), &g_Config.m_QmAntiPingStableDirection, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAntiPingNegativeBuffer, "tclient-antiping-negative-buffer", Localize("Negative stability buffer (for Gores)"), &g_Config.m_TcAntiPingNegativeBuffer, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAntiPingNegativeBuffer, "tclient-antiping-negative-buffer", Localize("Negative stability buffer (for Gores)"), &g_Config.m_QmAntiPingNegativeBuffer, &Row, LineSize);
 			Button = Rows.Next();
 			if(Render)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-antiping-uncertainty-scale", &g_Config.m_TcAntiPingUncertaintyScale, &g_Config.m_TcAntiPingUncertaintyScale, &Button, Localize("Uncertainty duration"), 50, 400, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-antiping-uncertainty-scale", &g_Config.m_QmAntiPingUncertaintyScale, &g_Config.m_QmAntiPingUncertaintyScale, &Button, Localize("Uncertainty duration"), 50, 400, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "%");
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
 			return BoxRect;
 		};
@@ -3630,7 +3630,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			{
 				Box.VSplitMid(&Label, &Button);
 				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Execute before connecting"), FontSize, TEXTALIGN_ML);
-				static CLineInput s_LineInput(g_Config.m_TcExecuteOnConnect, sizeof(g_Config.m_TcExecuteOnConnect));
+				static CLineInput s_LineInput(g_Config.m_QmExecuteOnConnect, sizeof(g_Config.m_QmExecuteOnConnect));
 				ui_widget::InputField(TClientAutoExecuteTextInputCtx, &s_LineInput, Button, nullptr, EditBoxFontSize);
 			}
 
@@ -3640,14 +3640,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			{
 				Box.VSplitMid(&Label, &Button);
 				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Execute on connect"), FontSize, TEXTALIGN_ML);
-				static CLineInput s_LineInput(g_Config.m_TcExecuteOnJoin, sizeof(g_Config.m_TcExecuteOnJoin));
+				static CLineInput s_LineInput(g_Config.m_QmExecuteOnJoin, sizeof(g_Config.m_QmExecuteOnJoin));
 				ui_widget::InputField(TClientAutoExecuteTextInputCtx, &s_LineInput, Button, nullptr, EditBoxFontSize);
 			}
 
 			const bool RenderDelaySlider = RenderBeforeConnectInput;
 			Button = Rows.Next();
 			if(RenderDelaySlider)
-				DoSliderWithScaledValue(&g_Config.m_TcExecuteOnJoinDelay, &g_Config.m_TcExecuteOnJoinDelay, &Button, Localize("Delay"), 140, 2000, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
+				DoSliderWithScaledValue(&g_Config.m_QmExecuteOnJoinDelay, &g_Config.m_QmExecuteOnJoinDelay, &Button, Localize("Delay"), 140, 2000, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "ms");
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
 			return BoxRect;
 		};
@@ -3675,20 +3675,20 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(Render)
 			{
 				static std::vector<CButtonContainer> s_vAutoMapVoteButtons = {{}, {}, {}};
-				int AutoMapVote = std::clamp(g_Config.m_TcAutoVoteWhenFar, 0, 2);
+				int AutoMapVote = std::clamp(g_Config.m_QmAutoVoteWhenFar, 0, 2);
 				if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Row, "tclient-auto-map-vote-label", Localize("Auto map vote"), s_vAutoMapVoteButtons, {"tclient-auto-map-vote-off", "tclient-auto-map-vote-agree", "tclient-auto-map-vote-reject"}, {Localize("Off"), Localize("Auto agree vote"), Localize("Auto reject vote")}, {0, 2, 1}, AutoMapVote, ContentMetrics))
-					g_Config.m_TcAutoVoteWhenFar = AutoMapVote;
+					g_Config.m_QmAutoVoteWhenFar = AutoMapVote;
 			}
 			Button = Rows.Next();
 			if(Render)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-auto-vote-minimum-time", &g_Config.m_TcAutoVoteWhenFarTime, &g_Config.m_TcAutoVoteWhenFarTime, &Button, Localize("Minimum time"), 1, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, Localize(" min"));
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-auto-vote-minimum-time", &g_Config.m_QmAutoVoteWhenFarTime, &g_Config.m_QmAutoVoteWhenFarTime, &Button, Localize("Minimum time"), 1, 20, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, Localize(" min"));
 
 			VoteMessage = Rows.Next();
 			if(Render)
 			{
 				VoteMessage.VSplitMid(&Label, &VoteMessage);
 				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Message to send in chat:"), FontSize, TEXTALIGN_ML);
-				static CLineInput s_VoteMessage(g_Config.m_TcAutoVoteWhenFarMessage, sizeof(g_Config.m_TcAutoVoteWhenFarMessage));
+				static CLineInput s_VoteMessage(g_Config.m_QmAutoVoteWhenFarMessage, sizeof(g_Config.m_QmAutoVoteWhenFarMessage));
 				s_VoteMessage.SetEmptyText(Localize("Leave empty to disable"));
 				ui_widget::InputField(TClientVotingTextInputCtx, &s_VoteMessage, VoteMessage, nullptr, EditBoxFontSize);
 			}
@@ -3713,21 +3713,21 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CurrentColumn.HSplitTop(MarginSmall, nullptr, &CurrentColumn);
 
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPetShow, "tclient-show-pet", Localize("Show the pet"), &g_Config.m_TcPetShow, &CurrentColumn, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPetShow, "tclient-show-pet", Localize("Show the pet"), &g_Config.m_QmPetShow, &CurrentColumn, LineSize);
 			else
 				CurrentColumn.HSplitTop(LineSize, nullptr, &CurrentColumn);
 			CurrentColumn.HSplitTop(LineSize, Render ? &Button : &TmpRect, &CurrentColumn);
 			if(Render)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-pet-size", &g_Config.m_TcPetSize, &g_Config.m_TcPetSize, &Button, Localize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-pet-size", &g_Config.m_QmPetSize, &g_Config.m_QmPetSize, &Button, Localize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
 			CurrentColumn.HSplitTop(LineSize, Render ? &Button : &TmpRect, &CurrentColumn);
 			if(Render)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-pet-alpha", &g_Config.m_TcPetAlpha, &g_Config.m_TcPetAlpha, &Button, Localize("Pet alpha"), 10, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-pet-alpha", &g_Config.m_QmPetAlpha, &g_Config.m_QmPetAlpha, &Button, Localize("Pet alpha"), 10, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 			CurrentColumn.HSplitTop(LineSize + MarginExtraSmall, Render ? &PetSkinBox : &TmpRect, &CurrentColumn);
 			if(Render)
 			{
 				PetSkinBox.VSplitMid(&Label, &Button);
 				DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Pet Skin:"), FontSize, TEXTALIGN_ML);
-				static CLineInput s_PetSkin(g_Config.m_TcPetSkin, sizeof(g_Config.m_TcPetSkin));
+				static CLineInput s_PetSkin(g_Config.m_QmPetSkin, sizeof(g_Config.m_QmPetSkin));
 				ui_widget::InputField(TClientPetTextInputCtx, &s_PetSkin, Button, nullptr, EditBoxFontSize);
 			}
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
@@ -3746,15 +3746,15 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			TClientPetTextInputCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
 			TClientPetTextInputCtx.m_ScopeHash = MakeUiScopeHash("settings_tclient_pet_text_inputs");
 			TClientPetTextInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPetShow, "tclient-show-pet", Localize("Show the pet"), &g_Config.m_TcPetShow, &CurrentColumn, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPetShow, "tclient-show-pet", Localize("Show the pet"), &g_Config.m_QmPetShow, &CurrentColumn, LineSize);
 			CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-pet-size", &g_Config.m_TcPetSize, &g_Config.m_TcPetSize, &Button, Localize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-pet-size", &g_Config.m_QmPetSize, &g_Config.m_QmPetSize, &Button, Localize("Pet size"), 10, 500, &CUi::ms_LinearScrollbarScale, 0, "%");
 			CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-pet-alpha", &g_Config.m_TcPetAlpha, &g_Config.m_TcPetAlpha, &Button, Localize("Pet alpha"), 10, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-pet-alpha", &g_Config.m_QmPetAlpha, &g_Config.m_QmPetAlpha, &Button, Localize("Pet alpha"), 10, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 			CurrentColumn.HSplitTop(LineSize + MarginExtraSmall, &PetSkinBox, &CurrentColumn);
 			PetSkinBox.VSplitMid(&Label, &Button);
 			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Pet Skin:"), FontSize, TEXTALIGN_ML);
-			static CLineInput s_PetSkin(g_Config.m_TcPetSkin, sizeof(g_Config.m_TcPetSkin));
+			static CLineInput s_PetSkin(g_Config.m_QmPetSkin, sizeof(g_Config.m_QmPetSkin));
 			ui_widget::InputField(TClientPetTextInputCtx, &s_PetSkin, Button, nullptr, EditBoxFontSize);
 		};
 		auto LayoutAutoReplySection = [&](CUIRect &CurrentColumn, bool Render) {
@@ -3779,12 +3779,12 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(Render)
 			{
 				CPerfTimer MutedTimer;
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMuted, "tclient-auto-reply-muted", Localize("Automatically reply to muted players"), &g_Config.m_TcAutoReplyMuted, &CurrentColumn, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoReplyMuted, "tclient-auto-reply-muted", Localize("Automatically reply to muted players"), &g_Config.m_QmAutoReplyMuted, &CurrentColumn, LineSize);
 				CurrentColumn.HSplitTop(LineSize + MarginExtraSmall, &ReplyRect, &CurrentColumn);
-				if(g_Config.m_TcAutoReplyMuted)
+				if(g_Config.m_QmAutoReplyMuted)
 				{
 					ReplyRect.HSplitTop(MarginExtraSmall, nullptr, &ReplyRect);
-					static CLineInput s_MutedReply(g_Config.m_TcAutoReplyMutedMessage, sizeof(g_Config.m_TcAutoReplyMutedMessage));
+					static CLineInput s_MutedReply(g_Config.m_QmAutoReplyMutedMessage, sizeof(g_Config.m_QmAutoReplyMutedMessage));
 					s_MutedReply.SetEmptyText(Localize("I muted you"));
 					ui_widget::InputField(TClientAutoReplyTextInputCtx, &s_MutedReply, ReplyRect, nullptr, EditBoxFontSize);
 				}
@@ -3800,12 +3800,12 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(Render)
 			{
 				CPerfTimer MinimizedTimer;
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMinimized, "tclient-auto-reply-minimized", Localize("Automatically reply while the window is unfocused"), &g_Config.m_TcAutoReplyMinimized, &CurrentColumn, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoReplyMinimized, "tclient-auto-reply-minimized", Localize("Automatically reply while the window is unfocused"), &g_Config.m_QmAutoReplyMinimized, &CurrentColumn, LineSize);
 				CurrentColumn.HSplitTop(LineSize + MarginExtraSmall, &ReplyRect, &CurrentColumn);
-				if(g_Config.m_TcAutoReplyMinimized)
+				if(g_Config.m_QmAutoReplyMinimized)
 				{
 					ReplyRect.HSplitTop(MarginExtraSmall, nullptr, &ReplyRect);
-					static CLineInput s_MinimizedReply(g_Config.m_TcAutoReplyMinimizedMessage, sizeof(g_Config.m_TcAutoReplyMinimizedMessage));
+					static CLineInput s_MinimizedReply(g_Config.m_QmAutoReplyMinimizedMessage, sizeof(g_Config.m_QmAutoReplyMinimizedMessage));
 					s_MinimizedReply.SetEmptyText(Localize("I am away from the game window"));
 					ui_widget::InputField(TClientAutoReplyTextInputCtx, &s_MinimizedReply, ReplyRect, nullptr, EditBoxFontSize);
 				}
@@ -3834,23 +3834,23 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			TClientAutoReplyTextInputCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
 			TClientAutoReplyTextInputCtx.m_ScopeHash = MakeUiScopeHash("settings_tclient_auto_reply_text_inputs");
 			TClientAutoReplyTextInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMuted, "tclient-auto-reply-muted", Localize("Automatically reply to muted players"), &g_Config.m_TcAutoReplyMuted, &CurrentColumn, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoReplyMuted, "tclient-auto-reply-muted", Localize("Automatically reply to muted players"), &g_Config.m_QmAutoReplyMuted, &CurrentColumn, LineSize);
 			CurrentColumn.HSplitTop(LineSize + MarginExtraSmall, &ReplyRect, &CurrentColumn);
-			if(g_Config.m_TcAutoReplyMuted)
+			if(g_Config.m_QmAutoReplyMuted)
 			{
 				ReplyRect.HSplitTop(MarginExtraSmall, nullptr, &ReplyRect);
-				static CLineInput s_MutedReply(g_Config.m_TcAutoReplyMutedMessage, sizeof(g_Config.m_TcAutoReplyMutedMessage));
+				static CLineInput s_MutedReply(g_Config.m_QmAutoReplyMutedMessage, sizeof(g_Config.m_QmAutoReplyMutedMessage));
 				s_MutedReply.SetEmptyText(Localize("I muted you"));
 				ui_widget::InputField(TClientAutoReplyTextInputCtx, &s_MutedReply, ReplyRect, nullptr, EditBoxFontSize);
 			}
 			CurrentColumn.HSplitTop(MarginExtraSmall, nullptr, &CurrentColumn);
 
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcAutoReplyMinimized, "tclient-auto-reply-minimized", Localize("Automatically reply while the window is unfocused"), &g_Config.m_TcAutoReplyMinimized, &CurrentColumn, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmAutoReplyMinimized, "tclient-auto-reply-minimized", Localize("Automatically reply while the window is unfocused"), &g_Config.m_QmAutoReplyMinimized, &CurrentColumn, LineSize);
 			CurrentColumn.HSplitTop(LineSize + MarginExtraSmall, &ReplyRect, &CurrentColumn);
-			if(g_Config.m_TcAutoReplyMinimized)
+			if(g_Config.m_QmAutoReplyMinimized)
 			{
 				ReplyRect.HSplitTop(MarginExtraSmall, nullptr, &ReplyRect);
-				static CLineInput s_MinimizedReply(g_Config.m_TcAutoReplyMinimizedMessage, sizeof(g_Config.m_TcAutoReplyMinimizedMessage));
+				static CLineInput s_MinimizedReply(g_Config.m_QmAutoReplyMinimizedMessage, sizeof(g_Config.m_QmAutoReplyMinimizedMessage));
 				s_MinimizedReply.SetEmptyText(Localize("I am away from the game window"));
 				ui_widget::InputField(TClientAutoReplyTextInputCtx, &s_MinimizedReply, ReplyRect, nullptr, EditBoxFontSize);
 			}
@@ -3878,16 +3878,16 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(RenderBaseRows)
 			{
 				CPerfTimer BaseTimer;
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPlayerIndicator, "tclient-player-indicator-enabled", Localize("Show any enabled Indicators"), &g_Config.m_TcPlayerIndicator, &EnabledRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcIndicatorHideVisible, "tclient-indicator-hide-visible", Localize("Hide indicator for tees on your screen"), &g_Config.m_TcIndicatorHideVisible, &HideVisibleRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcPlayerIndicatorFreeze, "tclient-player-indicator-freeze-only", Localize("Show only freeze Players"), &g_Config.m_TcPlayerIndicatorFreeze, &FreezeOnlyRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcIndicatorTeamOnly, "tclient-indicator-team-only", Localize("Only show after joining a team"), &g_Config.m_TcIndicatorTeamOnly, &TeamOnlyRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcIndicatorTees, "tclient-indicator-tees", Localize("Render tiny tees instead of circles"), &g_Config.m_TcIndicatorTees, &TeesRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicator, "tclient-warlist-indicator", Localize("Use warlist groups for indicator"), &g_Config.m_TcWarListIndicator, &WarListRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerIndicator, "tclient-player-indicator-enabled", Localize("Show any enabled Indicators"), &g_Config.m_QmPlayerIndicator, &EnabledRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmIndicatorHideVisible, "tclient-indicator-hide-visible", Localize("Hide indicator for tees on your screen"), &g_Config.m_QmIndicatorHideVisible, &HideVisibleRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmPlayerIndicatorFreeze, "tclient-player-indicator-freeze-only", Localize("Show only freeze Players"), &g_Config.m_QmPlayerIndicatorFreeze, &FreezeOnlyRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmIndicatorTeamOnly, "tclient-indicator-team-only", Localize("Only show after joining a team"), &g_Config.m_QmIndicatorTeamOnly, &TeamOnlyRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmIndicatorTees, "tclient-indicator-tees", Localize("Render tiny tees instead of circles"), &g_Config.m_QmIndicatorTees, &TeesRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWarListIndicator, "tclient-warlist-indicator", Localize("Use warlist groups for indicator"), &g_Config.m_QmWarListIndicator, &WarListRow, LineSize);
 				LogSettingsStage("tclient_settings_left_player_indicator_base", BaseTimer);
 			}
 
-			const int DistanceRowCount = 3 + (g_Config.m_TcIndicatorVariableDistance ? 3 : 1);
+			const int DistanceRowCount = 3 + (g_Config.m_QmIndicatorVariableDistance ? 3 : 1);
 			const bool RenderDistanceRows = Render && ShouldRenderSection(CurrentColumn, 0.0f, TClientSettingsRowsHeight(DistanceRowCount));
 			CUIRect RadiusRow = Rows.Next();
 			CUIRect OpacityRow = Rows.Next();
@@ -3895,7 +3895,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CUIRect OffsetRow = Rows.Next();
 			CUIRect MaxOffsetRow;
 			CUIRect MaxDistanceRow;
-			if(g_Config.m_TcIndicatorVariableDistance)
+			if(g_Config.m_QmIndicatorVariableDistance)
 			{
 				MaxOffsetRow = Rows.Next();
 				MaxDistanceRow = Rows.Next();
@@ -3903,23 +3903,23 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(RenderDistanceRows)
 			{
 				CPerfTimer DistanceTimer;
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-radius", &g_Config.m_TcIndicatorRadius, &g_Config.m_TcIndicatorRadius, &RadiusRow, Localize("Indicator size"), 1, 16);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-opacity", &g_Config.m_TcIndicatorOpacity, &g_Config.m_TcIndicatorOpacity, &OpacityRow, Localize("Indicator opacity"), 0, 100);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcIndicatorVariableDistance, "tclient-indicator-variable-distance", Localize("Change indicator offset based on distance to other tees"), &g_Config.m_TcIndicatorVariableDistance, &VariableDistanceRow, LineSize);
-				if(g_Config.m_TcIndicatorVariableDistance)
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-radius", &g_Config.m_QmIndicatorRadius, &g_Config.m_QmIndicatorRadius, &RadiusRow, Localize("Indicator size"), 1, 16);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-opacity", &g_Config.m_QmIndicatorOpacity, &g_Config.m_QmIndicatorOpacity, &OpacityRow, Localize("Indicator opacity"), 0, 100);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmIndicatorVariableDistance, "tclient-indicator-variable-distance", Localize("Change indicator offset based on distance to other tees"), &g_Config.m_QmIndicatorVariableDistance, &VariableDistanceRow, LineSize);
+				if(g_Config.m_QmIndicatorVariableDistance)
 				{
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-offset", &g_Config.m_TcIndicatorOffset, &g_Config.m_TcIndicatorOffset, &OffsetRow, Localize("Indicator min offset"), 16, 200);
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-offset-max", &g_Config.m_TcIndicatorOffsetMax, &g_Config.m_TcIndicatorOffsetMax, &MaxOffsetRow, Localize("Indicator max offset"), 16, 200);
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-max-distance", &g_Config.m_TcIndicatorMaxDistance, &g_Config.m_TcIndicatorMaxDistance, &MaxDistanceRow, Localize("Indicator max distance"), 500, 7000);
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-offset", &g_Config.m_QmIndicatorOffset, &g_Config.m_QmIndicatorOffset, &OffsetRow, Localize("Indicator min offset"), 16, 200);
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-offset-max", &g_Config.m_QmIndicatorOffsetMax, &g_Config.m_QmIndicatorOffsetMax, &MaxOffsetRow, Localize("Indicator max offset"), 16, 200);
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-max-distance", &g_Config.m_QmIndicatorMaxDistance, &g_Config.m_QmIndicatorMaxDistance, &MaxDistanceRow, Localize("Indicator max distance"), 500, 7000);
 				}
 				else
 				{
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-offset", &g_Config.m_TcIndicatorOffset, &g_Config.m_TcIndicatorOffset, &OffsetRow, Localize("Indicator offset"), 16, 200);
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-indicator-offset", &g_Config.m_QmIndicatorOffset, &g_Config.m_QmIndicatorOffset, &OffsetRow, Localize("Indicator offset"), 16, 200);
 				}
 				LogSettingsStage("tclient_settings_left_player_indicator_distance", DistanceTimer);
 			}
 
-			const bool ShowWarListIndicatorOptions = g_Config.m_TcWarListIndicator;
+			const bool ShowWarListIndicatorOptions = g_Config.m_QmWarListIndicator;
 			if(ShowWarListIndicatorOptions)
 			{
 				const bool RenderWarListRows = Render && ShouldRenderSection(CurrentColumn, 0.0f, TClientSettingsRowsHeight(4));
@@ -3930,18 +3930,18 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				if(RenderWarListRows)
 				{
 					CPerfTimer WarListTimer;
-					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicatorColors, "tclient-warlist-indicator-colors", Localize("Use warlist colors instead of regular colors"), &g_Config.m_TcWarListIndicatorColors, &ColorsRow, LineSize);
+					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWarListIndicatorColors, "tclient-warlist-indicator-colors", Localize("Use warlist colors instead of regular colors"), &g_Config.m_QmWarListIndicatorColors, &ColorsRow, LineSize);
 					char aBuf[128];
-					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicatorAll, "tclient-warlist-indicator-all", Localize("Show all warlist groups"), &g_Config.m_TcWarListIndicatorAll, &AllRow, LineSize);
+					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWarListIndicatorAll, "tclient-warlist-indicator-all", Localize("Show all warlist groups"), &g_Config.m_QmWarListIndicatorAll, &AllRow, LineSize);
 					str_format(aBuf, sizeof(aBuf), Localize("Show %s group"), GameClient()->m_WarList.m_WarTypes.at(1)->m_aWarName);
-					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicatorEnemy, "tclient-warlist-indicator-enemy", aBuf, &g_Config.m_TcWarListIndicatorEnemy, &EnemyRow, LineSize);
+					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWarListIndicatorEnemy, "tclient-warlist-indicator-enemy", aBuf, &g_Config.m_QmWarListIndicatorEnemy, &EnemyRow, LineSize);
 					str_format(aBuf, sizeof(aBuf), Localize("Show %s group"), GameClient()->m_WarList.m_WarTypes.at(2)->m_aWarName);
-					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcWarListIndicatorTeam, "tclient-warlist-indicator-team", aBuf, &g_Config.m_TcWarListIndicatorTeam, &TeamRow, LineSize);
+					DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmWarListIndicatorTeam, "tclient-warlist-indicator-team", aBuf, &g_Config.m_QmWarListIndicatorTeam, &TeamRow, LineSize);
 					LogSettingsStage("tclient_settings_left_player_indicator_warlist", WarListTimer);
 				}
 			}
 
-			const bool ShowIndicatorColorOptions = !g_Config.m_TcWarListIndicatorColors || !g_Config.m_TcWarListIndicator;
+			const bool ShowIndicatorColorOptions = !g_Config.m_QmWarListIndicatorColors || !g_Config.m_QmWarListIndicator;
 			if(ShowIndicatorColorOptions)
 			{
 				const bool RenderColorRows = Render && ShouldRenderSection(CurrentColumn, 0.0f, TClientSettingsRowsHeight(3));
@@ -3952,9 +3952,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				{
 					CPerfTimer ColorsTimer;
 					static CButtonContainer s_IndicatorAliveColorId, s_IndicatorDeadColorId, s_IndicatorSavedColorId;
-					DoLine_ColorPicker(&s_IndicatorAliveColorId, CurrentSettingsContentMetrics(), &AliveColorRow, Localize("Indicator alive color"), &g_Config.m_TcIndicatorAlive, ColorRGBA(0.0f, 0.0f, 0.0f), false);
-					DoLine_ColorPicker(&s_IndicatorDeadColorId, CurrentSettingsContentMetrics(), &FreezeColorRow, Localize("Indicator in freeze color"), &g_Config.m_TcIndicatorFreeze, ColorRGBA(0.0f, 0.0f, 0.0f), false);
-					DoLine_ColorPicker(&s_IndicatorSavedColorId, CurrentSettingsContentMetrics(), &SavedColorRow, Localize("Indicator safe color"), &g_Config.m_TcIndicatorSaved, ColorRGBA(0.0f, 0.0f, 0.0f), false);
+					DoLine_ColorPicker(&s_IndicatorAliveColorId, CurrentSettingsContentMetrics(), &AliveColorRow, Localize("Indicator alive color"), &g_Config.m_QmIndicatorAlive, ColorRGBA(0.0f, 0.0f, 0.0f), false);
+					DoLine_ColorPicker(&s_IndicatorDeadColorId, CurrentSettingsContentMetrics(), &FreezeColorRow, Localize("Indicator in freeze color"), &g_Config.m_QmIndicatorFreeze, ColorRGBA(0.0f, 0.0f, 0.0f), false);
+					DoLine_ColorPicker(&s_IndicatorSavedColorId, CurrentSettingsContentMetrics(), &SavedColorRow, Localize("Indicator safe color"), &g_Config.m_QmIndicatorSaved, ColorRGBA(0.0f, 0.0f, 0.0f), false);
 					LogSettingsStage("tclient_settings_left_player_indicator_colors", ColorsTimer);
 				}
 			}
@@ -3988,7 +3988,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Visual: Nameplates", LayoutVisualNameplateSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutVisualNameplateSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcNameplatePingCircle, &g_Config.m_TcNameplateCountry, &g_Config.m_TcNameplateSkins, &g_Config.m_TcWhiteFeet};
+			S.m_DependencyConfigInts = {&g_Config.m_QmNameplatePingCircle, &g_Config.m_QmNameplateCountry, &g_Config.m_QmNameplateSkins, &g_Config.m_QmWhiteFeet};
 			vLeftSections.push_back(S);
 
 			// -- Visual: Effects --
@@ -4007,7 +4007,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Visual: Effects", LayoutVisualEffectsSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutVisualEffectsSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcTinyTees, &g_Config.m_TcTinyTeesOthers, &g_Config.m_QmJellyTee};
+			S.m_DependencyConfigInts = {&g_Config.m_QmTinyTees, &g_Config.m_QmTinyTeesOthers, &g_Config.m_QmJellyTee};
 			vLeftSections.push_back(S);
 			// -- Input --
 			S = SSettingsSection{};
@@ -4025,7 +4025,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Input", LayoutInputSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutInputSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcFastInput, &g_Config.m_TcFastInputAmount, &g_Config.m_TcFastInputOthers, &g_Config.m_ClSubTickAiming};
+			S.m_DependencyConfigInts = {&g_Config.m_QmFastInput, &g_Config.m_QmFastInputAmount, &g_Config.m_QmFastInputOthers, &g_Config.m_ClSubTickAiming};
 			vLeftSections.push_back(S);
 
 			// -- Anti Latency Tools --
@@ -4044,7 +4044,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Anti Latency Tools", LayoutAntiLatencyToolsSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutAntiLatencyToolsSection);
-			S.m_DependencyConfigInts = {&g_Config.m_ClPredictionMargin, &g_Config.m_TcRemoveAnti, &g_Config.m_TcUnfreezeLagTicks, &g_Config.m_TcUnfreezeLagDelayTicks, &g_Config.m_TcUnpredOthersInFreeze, &g_Config.m_TcPredMarginInFreeze, &g_Config.m_TcPredMarginInFreezeAmount};
+			S.m_DependencyConfigInts = {&g_Config.m_ClPredictionMargin, &g_Config.m_QmRemoveAnti, &g_Config.m_QmUnfreezeLagTicks, &g_Config.m_QmUnfreezeLagDelayTicks, &g_Config.m_QmUnpredOthersInFreeze, &g_Config.m_QmPredMarginInFreeze, &g_Config.m_QmPredMarginInFreezeAmount};
 			vLeftSections.push_back(S);
 
 			// -- Improved Anti Ping --
@@ -4063,7 +4063,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Improved Anti Ping", LayoutAntiPingSmoothingSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutAntiPingSmoothingSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcAntiPingImproved, &g_Config.m_TcAntiPingStableDirection, &g_Config.m_TcAntiPingNegativeBuffer, &g_Config.m_TcAntiPingUncertaintyScale};
+			S.m_DependencyConfigInts = {&g_Config.m_QmAntiPingImproved, &g_Config.m_QmAntiPingStableDirection, &g_Config.m_QmAntiPingNegativeBuffer, &g_Config.m_QmAntiPingUncertaintyScale};
 			vLeftSections.push_back(S);
 
 			// -- Execute on join --
@@ -4082,7 +4082,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Execute on join", LayoutAutoExecuteSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutAutoExecuteSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcExecuteOnJoinDelay};
+			S.m_DependencyConfigInts = {&g_Config.m_QmExecuteOnJoinDelay};
 			vLeftSections.push_back(S);
 
 			// -- Voting --
@@ -4101,7 +4101,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Voting", LayoutVotingSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutVotingSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcAutoVoteWhenFar, &g_Config.m_TcAutoVoteWhenFarTime};
+			S.m_DependencyConfigInts = {&g_Config.m_QmAutoVoteWhenFar, &g_Config.m_QmAutoVoteWhenFarTime};
 			vLeftSections.push_back(S);
 
 			// -- 自动回复 --
@@ -4123,7 +4123,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Player Indicator", LayoutPlayerIndicatorSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutPlayerIndicatorSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcPlayerIndicator, &g_Config.m_TcIndicatorHideVisible, &g_Config.m_TcPlayerIndicatorFreeze, &g_Config.m_TcIndicatorTeamOnly, &g_Config.m_TcIndicatorTees, &g_Config.m_TcWarListIndicator, &g_Config.m_TcIndicatorRadius, &g_Config.m_TcIndicatorOpacity, &g_Config.m_TcIndicatorVariableDistance, &g_Config.m_TcIndicatorOffset, &g_Config.m_TcIndicatorOffsetMax, &g_Config.m_TcIndicatorMaxDistance};
+			S.m_DependencyConfigInts = {&g_Config.m_QmPlayerIndicator, &g_Config.m_QmIndicatorHideVisible, &g_Config.m_QmPlayerIndicatorFreeze, &g_Config.m_QmIndicatorTeamOnly, &g_Config.m_QmIndicatorTees, &g_Config.m_QmWarListIndicator, &g_Config.m_QmIndicatorRadius, &g_Config.m_QmIndicatorOpacity, &g_Config.m_QmIndicatorVariableDistance, &g_Config.m_QmIndicatorOffset, &g_Config.m_QmIndicatorOffsetMax, &g_Config.m_QmIndicatorMaxDistance};
 			vLeftSections.push_back(S);
 
 			// -- 宠物 --
@@ -4182,23 +4182,23 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CurrentColumn.HSplitTop(MarginSmall, nullptr, &CurrentColumn);
 			if(Render)
 			{
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcMiniVoteHud, "tclient-mini-vote-hud", Localize("Show compact vote HUD"), &g_Config.m_TcMiniVoteHud, &CurrentColumn, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcMiniDebug, "tclient-mini-debug", Localize("Show position and angle (mini debug)"), &g_Config.m_TcMiniDebug, &CurrentColumn, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRenderCursorSpec, "tclient-render-cursor-spec", Localize("Show the cursor while free spectating"), &g_Config.m_TcRenderCursorSpec, &CurrentColumn, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMiniVoteHud, "tclient-mini-vote-hud", Localize("Show compact vote HUD"), &g_Config.m_QmMiniVoteHud, &CurrentColumn, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMiniDebug, "tclient-mini-debug", Localize("Show position and angle (mini debug)"), &g_Config.m_QmMiniDebug, &CurrentColumn, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRenderCursorSpec, "tclient-render-cursor-spec", Localize("Show the cursor while free spectating"), &g_Config.m_QmRenderCursorSpec, &CurrentColumn, LineSize);
 			}
 			else
 			{
 				CurrentColumn.HSplitTop(LineSize * 3.0f, nullptr, &CurrentColumn);
 			}
 			CurrentColumn.HSplitTop(LineSize, Render ? &Button : &TmpRect, &CurrentColumn);
-			if(Render && g_Config.m_TcRenderCursorSpec)
+			if(Render && g_Config.m_QmRenderCursorSpec)
 			{
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_TcRenderCursorSpecAlpha, &g_Config.m_TcRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_QmRenderCursorSpecAlpha, &g_Config.m_QmRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
 			}
 
 			if(Render)
 			{
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_TcNotifyWhenLast, &CurrentColumn, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_QmNotifyWhenLast, &CurrentColumn, LineSize);
 			}
 			else
 			{
@@ -4209,21 +4209,21 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(Render)
 			{
 				CPerfTimer NotifyWhenLastTimer;
-				if(g_Config.m_TcNotifyWhenLast)
+				if(g_Config.m_QmNotifyWhenLast)
 				{
 					NotificationConfig.VSplitMid(&Button, &NotificationConfig);
-					static CLineInput s_LastInput(g_Config.m_TcNotifyWhenLastText, sizeof(g_Config.m_TcNotifyWhenLastText));
+					static CLineInput s_LastInput(g_Config.m_QmNotifyWhenLastText, sizeof(g_Config.m_QmNotifyWhenLastText));
 					s_LastInput.SetEmptyText(Localize("You're the last one!"));
 					Button.HSplitTop(MarginSmall, nullptr, &Button);
 					ui_widget::InputField(TClientHudTextInputCtx, &s_LastInput, Button, nullptr, EditBoxFontSize);
 					static CButtonContainer s_ClientNotifyWhenLastColor;
-					DoLine_ColorPicker(&s_ClientNotifyWhenLastColor, CurrentSettingsContentMetrics(), &NotificationConfig, "", &g_Config.m_TcNotifyWhenLastColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+					DoLine_ColorPicker(&s_ClientNotifyWhenLastColor, CurrentSettingsContentMetrics(), &NotificationConfig, "", &g_Config.m_QmNotifyWhenLastColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
 					CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-x", &g_Config.m_TcNotifyWhenLastX, &g_Config.m_TcNotifyWhenLastX, &Button, Localize("Horizontal position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-x", &g_Config.m_QmNotifyWhenLastX, &g_Config.m_QmNotifyWhenLastX, &Button, Localize("Horizontal position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-y", &g_Config.m_TcNotifyWhenLastY, &g_Config.m_TcNotifyWhenLastY, &Button, Localize("Vertical position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-y", &g_Config.m_QmNotifyWhenLastY, &g_Config.m_QmNotifyWhenLastY, &Button, Localize("Vertical position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 					CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_TcNotifyWhenLastSize, &g_Config.m_TcNotifyWhenLastSize, &Button, Localize("Font size"), 1, 50);
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_QmNotifyWhenLastSize, &g_Config.m_QmNotifyWhenLastSize, &Button, Localize("Font size"), 1, 50);
 				}
 				else
 				{
@@ -4238,7 +4238,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 
 			if(Render)
 			{
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_TcShowCenter, &CurrentColumn, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_QmShowCenter, &CurrentColumn, LineSize);
 			}
 			else
 			{
@@ -4248,12 +4248,12 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(Render)
 			{
 				CPerfTimer ShowCenterTimer;
-				if(g_Config.m_TcShowCenter)
+				if(g_Config.m_QmShowCenter)
 				{
 					static CButtonContainer s_ShowCenterLineColor;
-					DoLine_ColorPicker(&s_ShowCenterLineColor, CurrentSettingsContentMetrics(), &Button, Localize("Screen center line color"), &g_Config.m_TcShowCenterColor, DefaultConfig::TcShowCenterColor, false, nullptr, true);
+					DoLine_ColorPicker(&s_ShowCenterLineColor, CurrentSettingsContentMetrics(), &Button, Localize("Screen center line color"), &g_Config.m_QmShowCenterColor, DefaultConfig::QmShowCenterColor, false, nullptr, true);
 					CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-center-line-width", &g_Config.m_TcShowCenterWidth, &g_Config.m_TcShowCenterWidth, &Button, Localize("Screen center line width"), 0, 20);
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-center-line-width", &g_Config.m_QmShowCenterWidth, &g_Config.m_QmShowCenterWidth, &Button, Localize("Screen center line width"), 0, 20);
 				}
 				else
 				{
@@ -4281,45 +4281,45 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			TClientHudTextInputCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
 			TClientHudTextInputCtx.m_ScopeHash = MakeUiScopeHash("settings_tclient_hud_text_inputs");
 			TClientHudTextInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcMiniVoteHud, "tclient-mini-vote-hud", Localize("Show compact vote HUD"), &g_Config.m_TcMiniVoteHud, &CurrentColumn, LineSize);
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcMiniDebug, "tclient-mini-debug", Localize("Show position and angle (mini debug)"), &g_Config.m_TcMiniDebug, &CurrentColumn, LineSize);
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRenderCursorSpec, "tclient-render-cursor-spec", Localize("Show the cursor while free spectating"), &g_Config.m_TcRenderCursorSpec, &CurrentColumn, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMiniVoteHud, "tclient-mini-vote-hud", Localize("Show compact vote HUD"), &g_Config.m_QmMiniVoteHud, &CurrentColumn, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMiniDebug, "tclient-mini-debug", Localize("Show position and angle (mini debug)"), &g_Config.m_QmMiniDebug, &CurrentColumn, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRenderCursorSpec, "tclient-render-cursor-spec", Localize("Show the cursor while free spectating"), &g_Config.m_QmRenderCursorSpec, &CurrentColumn, LineSize);
 			CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-			if(g_Config.m_TcRenderCursorSpec)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_TcRenderCursorSpecAlpha, &g_Config.m_TcRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
+			if(g_Config.m_QmRenderCursorSpec)
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-freeview-cursor-opacity", &g_Config.m_QmRenderCursorSpecAlpha, &g_Config.m_QmRenderCursorSpecAlpha, &Button, Localize("Freeview cursor opacity"), 0, 100);
 
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_TcNotifyWhenLast, &CurrentColumn, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmNotifyWhenLast, "tclient-notify-when-last", Localize("Notify when only one tee is still alive:"), &g_Config.m_QmNotifyWhenLast, &CurrentColumn, LineSize);
 			CUIRect NotificationConfig;
 			CurrentColumn.HSplitTop(LineSize + MarginSmall, &NotificationConfig, &CurrentColumn);
-			if(g_Config.m_TcNotifyWhenLast)
+			if(g_Config.m_QmNotifyWhenLast)
 			{
 				NotificationConfig.VSplitMid(&Button, &NotificationConfig);
-				static CLineInput s_LastInput(g_Config.m_TcNotifyWhenLastText, sizeof(g_Config.m_TcNotifyWhenLastText));
+				static CLineInput s_LastInput(g_Config.m_QmNotifyWhenLastText, sizeof(g_Config.m_QmNotifyWhenLastText));
 				s_LastInput.SetEmptyText(Localize("You're the last one!"));
 				Button.HSplitTop(MarginSmall, nullptr, &Button);
 				ui_widget::InputField(TClientHudTextInputCtx, &s_LastInput, Button, nullptr, EditBoxFontSize);
 				static CButtonContainer s_ClientNotifyWhenLastColor;
-				DoLine_ColorPicker(&s_ClientNotifyWhenLastColor, CurrentSettingsContentMetrics(), &NotificationConfig, "", &g_Config.m_TcNotifyWhenLastColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+				DoLine_ColorPicker(&s_ClientNotifyWhenLastColor, CurrentSettingsContentMetrics(), &NotificationConfig, "", &g_Config.m_QmNotifyWhenLastColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
 				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-x", &g_Config.m_TcNotifyWhenLastX, &g_Config.m_TcNotifyWhenLastX, &Button, Localize("Horizontal position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-x", &g_Config.m_QmNotifyWhenLastX, &g_Config.m_QmNotifyWhenLastX, &Button, Localize("Horizontal position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-y", &g_Config.m_TcNotifyWhenLastY, &g_Config.m_TcNotifyWhenLastY, &Button, Localize("Vertical position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-y", &g_Config.m_QmNotifyWhenLastY, &g_Config.m_QmNotifyWhenLastY, &Button, Localize("Vertical position"), 1, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_TcNotifyWhenLastSize, &g_Config.m_TcNotifyWhenLastSize, &Button, Localize("Font size"), 1, 50);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-notify-last-size", &g_Config.m_QmNotifyWhenLastSize, &g_Config.m_QmNotifyWhenLastSize, &Button, Localize("Font size"), 1, 50);
 			}
 			else
 			{
 				CurrentColumn.HSplitTop(LineSize * 3.0f, nullptr, &CurrentColumn);
 			}
 
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_TcShowCenter, &CurrentColumn, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowCenter, "tclient-show-center-line", Localize("Show the screen center line"), &g_Config.m_QmShowCenter, &CurrentColumn, LineSize);
 			CurrentColumn.HSplitTop(LineSize + MarginSmall, &Button, &CurrentColumn);
-			if(g_Config.m_TcShowCenter)
+			if(g_Config.m_QmShowCenter)
 			{
 				static CButtonContainer s_ShowCenterLineColor;
-				DoLine_ColorPicker(&s_ShowCenterLineColor, CurrentSettingsContentMetrics(), &Button, Localize("Screen center line color"), &g_Config.m_TcShowCenterColor, DefaultConfig::TcShowCenterColor, false, nullptr, true);
+				DoLine_ColorPicker(&s_ShowCenterLineColor, CurrentSettingsContentMetrics(), &Button, Localize("Screen center line color"), &g_Config.m_QmShowCenterColor, DefaultConfig::QmShowCenterColor, false, nullptr, true);
 				CurrentColumn.HSplitTop(LineSize, &Button, &CurrentColumn);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-center-line-width", &g_Config.m_TcShowCenterWidth, &g_Config.m_TcShowCenterWidth, &Button, Localize("Screen center line width"), 0, 20);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-center-line-width", &g_Config.m_QmShowCenterWidth, &g_Config.m_QmShowCenterWidth, &Button, Localize("Screen center line width"), 0, 20);
 			}
 			else
 			{
@@ -4342,36 +4342,36 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
 			CUIRect Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcShowFrozenHud, "tclient-show-frozen-hud", Localize("Show tee status bar"), &g_Config.m_TcShowFrozenHud, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowFrozenHud, "tclient-show-frozen-hud", Localize("Show tee status bar"), &g_Config.m_QmShowFrozenHud, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcShowFrozenHudSkins, "tclient-frozen-hud-skins", Localize("Use custom skins instead of the ninja tee"), &g_Config.m_TcShowFrozenHudSkins, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowFrozenHudSkins, "tclient-frozen-hud-skins", Localize("Use custom skins instead of the ninja tee"), &g_Config.m_QmShowFrozenHudSkins, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcFrozenHudTeamOnly, "tclient-frozen-hud-team-only", Localize("Only show after joining a team"), &g_Config.m_TcFrozenHudTeamOnly, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmFrozenHudTeamOnly, "tclient-frozen-hud-team-only", Localize("Only show after joining a team"), &g_Config.m_QmFrozenHudTeamOnly, &Row, LineSize);
 			Button = Rows.Next();
 			if(Render)
 			{
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-max-rows", &g_Config.m_TcFrozenMaxRows, &g_Config.m_TcFrozenMaxRows, &Button, Localize("Maximum rows"), 1, 6);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-max-rows", &g_Config.m_QmFrozenMaxRows, &g_Config.m_QmFrozenMaxRows, &Button, Localize("Maximum rows"), 1, 6);
 			}
 			Button = Rows.Next();
 			if(Render)
 			{
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-hud-tee-size", &g_Config.m_TcFrozenHudTeeSize, &g_Config.m_TcFrozenHudTeeSize, &Button, Localize("Tee size"), 8, 27);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-frozen-hud-tee-size", &g_Config.m_QmFrozenHudTeeSize, &g_Config.m_QmFrozenHudTeeSize, &Button, Localize("Tee size"), 8, 27);
 			}
 			CUIRect CheckBoxRect = Rows.Next();
 			if(Render)
 			{
-				if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcShowFrozenText, "tclient-show-frozen-text", Localize("Show the number of tees still alive"), g_Config.m_TcShowFrozenText >= 1, &CheckBoxRect))
-					g_Config.m_TcShowFrozenText = g_Config.m_TcShowFrozenText >= 1 ? 0 : 1;
+				if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmShowFrozenText, "tclient-show-frozen-text", Localize("Show the number of tees still alive"), g_Config.m_QmShowFrozenText >= 1, &CheckBoxRect))
+					g_Config.m_QmShowFrozenText = g_Config.m_QmShowFrozenText >= 1 ? 0 : 1;
 			}
-			if(g_Config.m_TcShowFrozenText)
+			if(g_Config.m_QmShowFrozenText)
 			{
 				CUIRect CheckBoxRect2 = Rows.Next();
 				if(Render)
 				{
-					if(DoTClientSettingsButton_CheckBox(&s_CountFrozenText, "tclient-show-frozen-count-text", Localize("Show the number of frozen tees"), g_Config.m_TcShowFrozenText == 2, &CheckBoxRect2))
-						g_Config.m_TcShowFrozenText = g_Config.m_TcShowFrozenText != 2 ? 2 : 1;
+					if(DoTClientSettingsButton_CheckBox(&s_CountFrozenText, "tclient-show-frozen-count-text", Localize("Show the number of frozen tees"), g_Config.m_QmShowFrozenText == 2, &CheckBoxRect2))
+						g_Config.m_QmShowFrozenText = g_Config.m_QmShowFrozenText != 2 ? 2 : 1;
 				}
 			}
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
@@ -4398,10 +4398,10 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(RenderBaseRows)
 			{
 				CPerfTimer TileOutlinesBaseTimer;
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcOutline, "tclient-outline-enabled", Localize("Show all enabled outlines"), &g_Config.m_TcOutline, &EnabledRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcOutlineEntities, "tclient-outline-entities", Localize("Only show outlines in the entities layer"), &g_Config.m_TcOutlineEntities, &EntitiesRow, LineSize);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-outline-opacity", &g_Config.m_TcOutlineAlpha, &g_Config.m_TcOutlineAlpha, &OpacityRow, Localize("Outline opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-outline-solid-opacity", &g_Config.m_TcOutlineSolidAlpha, &g_Config.m_TcOutlineSolidAlpha, &SolidOpacityRow, Localize("Solid tile outline opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmOutline, "tclient-outline-enabled", Localize("Show all enabled outlines"), &g_Config.m_QmOutline, &EnabledRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmOutlineEntities, "tclient-outline-entities", Localize("Only show outlines in the entities layer"), &g_Config.m_QmOutlineEntities, &EntitiesRow, LineSize);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-outline-opacity", &g_Config.m_QmOutlineAlpha, &g_Config.m_QmOutlineAlpha, &OpacityRow, Localize("Outline opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-outline-solid-opacity", &g_Config.m_QmOutlineSolidAlpha, &g_Config.m_QmOutlineSolidAlpha, &SolidOpacityRow, Localize("Solid tile outline opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				LogSettingsStage("tclient_settings_right_tile_outlines_base", TileOutlinesBaseTimer);
 			}
 
@@ -4421,31 +4421,31 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			static CButtonContainer s_aOutlineButtonContainers[5];
 			static CButtonContainer s_OutlineDeepFreezeColorId;
 			static CButtonContainer s_OutlineDeepUnfreezeColorId;
-			DoOutlineType("tclient_settings_right_tile_outlines_solid", s_aOutlineButtonContainers[0], Localize("Solid"), g_Config.m_TcOutlineSolid, g_Config.m_TcOutlineWidthSolid, g_Config.m_TcOutlineColorSolid, DefaultConfig::TcOutlineColorSolid);
-			DoOutlineType("tclient_settings_right_tile_outlines_freeze", s_aOutlineButtonContainers[1], Localize("Freeze"), g_Config.m_TcOutlineFreeze, g_Config.m_TcOutlineWidthFreeze, g_Config.m_TcOutlineColorFreeze, DefaultConfig::TcOutlineColorFreeze);
+			DoOutlineType("tclient_settings_right_tile_outlines_solid", s_aOutlineButtonContainers[0], Localize("Solid"), g_Config.m_QmOutlineSolid, g_Config.m_QmOutlineWidthSolid, g_Config.m_QmOutlineColorSolid, DefaultConfig::QmOutlineColorSolid);
+			DoOutlineType("tclient_settings_right_tile_outlines_freeze", s_aOutlineButtonContainers[1], Localize("Freeze"), g_Config.m_QmOutlineFreeze, g_Config.m_QmOutlineWidthFreeze, g_Config.m_QmOutlineColorFreeze, DefaultConfig::QmOutlineColorFreeze);
 			{
 				const bool RenderColorRow = ShouldRenderTileOutlineBlock(LineSize);
 				CUIRect ColorRow = Rows.Next();
 				if(RenderColorRow)
 				{
 					CPerfTimer DeepFreezeTimer;
-					DoLine_ColorPicker(&s_OutlineDeepFreezeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Deep freeze color"), &g_Config.m_TcOutlineColorDeepFreeze, DefaultConfig::TcOutlineColorDeepFreeze, false, nullptr, true);
+					DoLine_ColorPicker(&s_OutlineDeepFreezeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Deep freeze color"), &g_Config.m_QmOutlineColorDeepFreeze, DefaultConfig::QmOutlineColorDeepFreeze, false, nullptr, true);
 					LogSettingsStage("tclient_settings_right_tile_outlines_deepfreeze_color", DeepFreezeTimer);
 				}
 			}
-			DoOutlineType("tclient_settings_right_tile_outlines_unfreeze", s_aOutlineButtonContainers[2], Localize("Unfreeze"), g_Config.m_TcOutlineUnfreeze, g_Config.m_TcOutlineWidthUnfreeze, g_Config.m_TcOutlineColorUnfreeze, DefaultConfig::TcOutlineColorUnfreeze);
+			DoOutlineType("tclient_settings_right_tile_outlines_unfreeze", s_aOutlineButtonContainers[2], Localize("Unfreeze"), g_Config.m_QmOutlineUnfreeze, g_Config.m_QmOutlineWidthUnfreeze, g_Config.m_QmOutlineColorUnfreeze, DefaultConfig::QmOutlineColorUnfreeze);
 			{
 				const bool RenderColorRow = ShouldRenderTileOutlineBlock(LineSize);
 				CUIRect ColorRow = Rows.Next();
 				if(RenderColorRow)
 				{
 					CPerfTimer DeepUnfreezeTimer;
-					DoLine_ColorPicker(&s_OutlineDeepUnfreezeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Deep unfreeze color"), &g_Config.m_TcOutlineColorDeepUnfreeze, DefaultConfig::TcOutlineColorDeepUnfreeze, false, nullptr, true);
+					DoLine_ColorPicker(&s_OutlineDeepUnfreezeColorId, CurrentSettingsContentMetrics(), &ColorRow, Localize("Deep unfreeze color"), &g_Config.m_QmOutlineColorDeepUnfreeze, DefaultConfig::QmOutlineColorDeepUnfreeze, false, nullptr, true);
 					LogSettingsStage("tclient_settings_right_tile_outlines_deepunfreeze_color", DeepUnfreezeTimer);
 				}
 			}
-			DoOutlineType("tclient_settings_right_tile_outlines_kill", s_aOutlineButtonContainers[3], Localize("Kill"), g_Config.m_TcOutlineKill, g_Config.m_TcOutlineWidthKill, g_Config.m_TcOutlineColorKill, DefaultConfig::TcOutlineColorKill);
-			DoOutlineType("tclient_settings_right_tile_outlines_tele", s_aOutlineButtonContainers[4], Localize("Tele"), g_Config.m_TcOutlineTele, g_Config.m_TcOutlineWidthTele, g_Config.m_TcOutlineColorTele, DefaultConfig::TcOutlineColorTele);
+			DoOutlineType("tclient_settings_right_tile_outlines_kill", s_aOutlineButtonContainers[3], Localize("Kill"), g_Config.m_QmOutlineKill, g_Config.m_QmOutlineWidthKill, g_Config.m_QmOutlineColorKill, DefaultConfig::QmOutlineColorKill);
+			DoOutlineType("tclient_settings_right_tile_outlines_tele", s_aOutlineButtonContainers[4], Localize("Tele"), g_Config.m_QmOutlineTele, g_Config.m_QmOutlineWidthTele, g_Config.m_QmOutlineColorTele, DefaultConfig::QmOutlineColorTele);
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
 			return BoxRect;
 		};
@@ -4461,27 +4461,27 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
 			CUIRect Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcShowOthersGhosts, "tclient-show-others-ghosts", Localize("Show unpredicted ghosts for other players"), &g_Config.m_TcShowOthersGhosts, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmShowOthersGhosts, "tclient-show-others-ghosts", Localize("Show unpredicted ghosts for other players"), &g_Config.m_QmShowOthersGhosts, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcSwapGhosts, "tclient-swap-ghosts", Localize("Swap ghosts with regular players"), &g_Config.m_TcSwapGhosts, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmSwapGhosts, "tclient-swap-ghosts", Localize("Swap ghosts with regular players"), &g_Config.m_QmSwapGhosts, &Row, LineSize);
 			Button = Rows.Next();
 			if(Render)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-predicted-ghost-opacity", &g_Config.m_TcPredGhostsAlpha, &g_Config.m_TcPredGhostsAlpha, &Button, Localize("Predicted ghost opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-predicted-ghost-opacity", &g_Config.m_QmPredGhostsAlpha, &g_Config.m_QmPredGhostsAlpha, &Button, Localize("Predicted ghost opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 			Button = Rows.Next();
 			if(Render)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-unpredicted-ghost-opacity", &g_Config.m_TcUnpredGhostsAlpha, &g_Config.m_TcUnpredGhostsAlpha, &Button, Localize("Unpredicted ghost opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-unpredicted-ghost-opacity", &g_Config.m_QmUnpredGhostsAlpha, &g_Config.m_QmUnpredGhostsAlpha, &Button, Localize("Unpredicted ghost opacity"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcHideFrozenGhosts, "tclient-hide-frozen-ghosts", Localize("Hide ghosts of frozen players"), &g_Config.m_TcHideFrozenGhosts, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmHideFrozenGhosts, "tclient-hide-frozen-ghosts", Localize("Hide ghosts of frozen players"), &g_Config.m_QmHideFrozenGhosts, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRenderGhostAsCircle, "tclient-render-ghost-as-circle", Localize("Render ghosts as circles"), &g_Config.m_TcRenderGhostAsCircle, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRenderGhostAsCircle, "tclient-render-ghost-as-circle", Localize("Render ghosts as circles"), &g_Config.m_QmRenderGhostAsCircle, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
 			{
 				static CButtonContainer s_ReaderButtonGhost, s_ClearButtonGhost;
-				DoLine_KeyReader(Row, s_ReaderButtonGhost, s_ClearButtonGhost, Localize("Toggle ghost key"), "toggle tc_show_others_ghosts 0 1");
+				DoLine_KeyReader(Row, s_ReaderButtonGhost, s_ClearButtonGhost, Localize("Toggle ghost key"), "toggle qm_show_others_ghosts 0 1");
 			}
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
 			return BoxRect;
@@ -4499,32 +4499,32 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
 			CUIRect Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRainbowTees, "tclient-rainbow-tees", Localize("Rainbow Tees"), &g_Config.m_TcRainbowTees, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowTees, "tclient-rainbow-tees", Localize("Rainbow Tees"), &g_Config.m_QmRainbowTees, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRainbowWeapon, "tclient-rainbow-weapons", Localize("Rainbow weapons"), &g_Config.m_TcRainbowWeapon, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowWeapon, "tclient-rainbow-weapons", Localize("Rainbow weapons"), &g_Config.m_QmRainbowWeapon, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRainbowHook, "tclient-rainbow-hook", Localize("Rainbow hook"), &g_Config.m_TcRainbowHook, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowHook, "tclient-rainbow-hook", Localize("Rainbow hook"), &g_Config.m_QmRainbowHook, &Row, LineSize);
 			Row = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcRainbowOthers, "tclient-rainbow-others", Localize("Rainbow others"), &g_Config.m_TcRainbowOthers, &Row, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmRainbowOthers, "tclient-rainbow-others", Localize("Rainbow others"), &g_Config.m_QmRainbowOthers, &Row, LineSize);
 			static std::vector<const char *> s_RainbowDropDownNames;
 			s_RainbowDropDownNames = {Localize("Rainbow"), Localize("Pulse"), Localize("Black"), Localize("Random")};
 			static CUi::SDropDownState s_RainbowDropDownState;
 			static CScrollRegion s_RainbowDropDownScrollRegion;
 			s_RainbowDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_RainbowDropDownScrollRegion;
-			int RainbowSelectedOld = g_Config.m_TcRainbowMode - 1;
+			int RainbowSelectedOld = g_Config.m_QmRainbowMode - 1;
 			RainbowDropDownRect = Rows.Next();
 			if(Render)
 			{
 				const int RainbowSelectedNew = DoSettingsDropDown(&RainbowDropDownRect, RainbowSelectedOld, s_RainbowDropDownNames.data(), s_RainbowDropDownNames.size(), s_RainbowDropDownState);
 				if(RainbowSelectedOld != RainbowSelectedNew)
-					g_Config.m_TcRainbowMode = RainbowSelectedNew + 1;
+					g_Config.m_QmRainbowMode = RainbowSelectedNew + 1;
 			}
 			Button = Rows.Next();
 			if(Render)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-rainbow-speed", &g_Config.m_TcRainbowSpeed, &g_Config.m_TcRainbowSpeed, &Button, Localize("Rainbow speed"), 0, 5000, &CUi::ms_LogarithmicScrollbarScale, 0, "%");
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-rainbow-speed", &g_Config.m_QmRainbowSpeed, &g_Config.m_QmRainbowSpeed, &Button, Localize("Rainbow speed"), 0, 5000, &CUi::ms_LogarithmicScrollbarScale, 0, "%");
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
 			return BoxRect;
 		};
@@ -4547,24 +4547,24 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(Render)
 			{
 				CPerfTimer BaseTimer;
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrail, "tclient-tee-trail-enabled", Localize("Enable tee trails"), &g_Config.m_TcTeeTrail, &TrailEnabledRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailOthers, "tclient-tee-trail-others", Localize("Show other tees' trails"), &g_Config.m_TcTeeTrailOthers, &TrailOthersRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailFade, "tclient-tee-trail-fade", Localize("Fade trail alpha"), &g_Config.m_TcTeeTrailFade, &TrailFadeRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailTaper, "tclient-tee-trail-taper", Localize("Taper trail width"), &g_Config.m_TcTeeTrailTaper, &TrailTaperRow, LineSize);
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcTeeTrailStyleColors, "tclient-tee-trail-style-colors", Localize("Use style colors"), &g_Config.m_TcTeeTrailStyleColors, &TrailStyleColorsRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTeeTrail, "tclient-tee-trail-enabled", Localize("Enable tee trails"), &g_Config.m_QmTeeTrail, &TrailEnabledRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTeeTrailOthers, "tclient-tee-trail-others", Localize("Show other tees' trails"), &g_Config.m_QmTeeTrailOthers, &TrailOthersRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTeeTrailFade, "tclient-tee-trail-fade", Localize("Fade trail alpha"), &g_Config.m_QmTeeTrailFade, &TrailFadeRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTeeTrailTaper, "tclient-tee-trail-taper", Localize("Taper trail width"), &g_Config.m_QmTeeTrailTaper, &TrailTaperRow, LineSize);
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmTeeTrailStyleColors, "tclient-tee-trail-style-colors", Localize("Use style colors"), &g_Config.m_QmTeeTrailStyleColors, &TrailStyleColorsRow, LineSize);
 				LogSettingsStage("tclient_settings_right_tee_trails_base", BaseTimer);
 			}
 			static std::vector<const char *> s_TrailDropDownNames;
 			s_TrailDropDownNames = {Localize("Solid"), Localize("Tee"), Localize("Rainbow"), Localize("Speed")};
 			s_TrailDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_TrailDropDownScrollRegion;
-			int TrailSelectedOld = g_Config.m_TcTeeTrailColorMode - 1;
+			int TrailSelectedOld = g_Config.m_QmTeeTrailColorMode - 1;
 			TrailDropDownRect = Rows.Next();
 			if(Render)
 			{
 				CPerfTimer DropDownTimer;
 				const int TrailSelectedNew = DoSettingsDropDown(&TrailDropDownRect, TrailSelectedOld, s_TrailDropDownNames.data(), s_TrailDropDownNames.size(), s_TrailDropDownState);
 				if(TrailSelectedOld != TrailSelectedNew)
-					g_Config.m_TcTeeTrailColorMode = TrailSelectedNew + 1;
+					g_Config.m_QmTeeTrailColorMode = TrailSelectedNew + 1;
 				LogSettingsStage("tclient_settings_right_tee_trails_dropdown", DropDownTimer);
 			}
 			static std::vector<const char *> s_TrailStyleNames;
@@ -4573,19 +4573,19 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CUIRect TrailStyleDropDownRect = Rows.Next();
 			if(Render)
 			{
-				const int TrailStyleOld = qm_tee_trail::ResolveStyle(g_Config.m_TcTeeTrailStyle);
+				const int TrailStyleOld = qm_tee_trail::ResolveStyle(g_Config.m_QmTeeTrailStyle);
 				const int TrailStyleNew = DoSettingsDropDown(&TrailStyleDropDownRect, TrailStyleOld, s_TrailStyleNames.data(), s_TrailStyleNames.size(), s_TrailStyleDropDownState);
 				if(TrailStyleNew != TrailStyleOld)
-					g_Config.m_TcTeeTrailStyle = TrailStyleNew;
+					g_Config.m_QmTeeTrailStyle = TrailStyleNew;
 			}
-			if(g_Config.m_TcTeeTrailColorMode == CTrails::COLORMODE_SOLID)
+			if(g_Config.m_QmTeeTrailColorMode == CTrails::COLORMODE_SOLID)
 			{
 				CUIRect ColorRow = Rows.Next();
 				if(Render)
 				{
 					CPerfTimer ColorTimer;
 					static CButtonContainer s_TeeTrailColor;
-					DoLine_ColorPicker(&s_TeeTrailColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Tee trail color"), &g_Config.m_TcTeeTrailColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+					DoLine_ColorPicker(&s_TeeTrailColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Tee trail color"), &g_Config.m_QmTeeTrailColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
 					LogSettingsStage("tclient_settings_right_tee_trails_color", ColorTimer);
 				}
 			}
@@ -4595,9 +4595,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			if(Render)
 			{
 				CPerfTimer SlidersTimer;
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-tee-trail-width", &g_Config.m_TcTeeTrailWidth, &g_Config.m_TcTeeTrailWidth, &WidthRow, Localize("Trail width"), 0, 20);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-tee-trail-length", &g_Config.m_TcTeeTrailLength, &g_Config.m_TcTeeTrailLength, &LengthRow, Localize("Trail length"), 0, 200);
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-tee-trail-alpha", &g_Config.m_TcTeeTrailAlpha, &g_Config.m_TcTeeTrailAlpha, &AlphaRow, Localize("Trail alpha"), 0, 100);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-tee-trail-width", &g_Config.m_QmTeeTrailWidth, &g_Config.m_QmTeeTrailWidth, &WidthRow, Localize("Trail width"), 0, 20);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-tee-trail-length", &g_Config.m_QmTeeTrailLength, &g_Config.m_QmTeeTrailLength, &LengthRow, Localize("Trail length"), 0, 200);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-tee-trail-alpha", &g_Config.m_QmTeeTrailAlpha, &g_Config.m_QmTeeTrailAlpha, &AlphaRow, Localize("Trail alpha"), 0, 100);
 				LogSettingsStage("tclient_settings_right_tee_trails_sliders", SlidersTimer);
 			}
 			BoxRect.h = CurrentColumn.y - BoxRect.y;
@@ -4616,19 +4616,19 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CUIRect ColorRow = Rows.Next();
 			static CButtonContainer s_BgDrawColor;
 			if(Render)
-				DoLine_ColorPicker(&s_BgDrawColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Color"), &g_Config.m_TcBgDrawColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+				DoLine_ColorPicker(&s_BgDrawColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Color"), &g_Config.m_QmBgDrawColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
 
 			Button = Rows.Next();
 			if(Render)
 			{
-				if(g_Config.m_TcBgDrawFadeTime == 0)
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-fade-time", &g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, Localize("Stroke fade time"), 0, 600, &CUi::ms_LinearScrollbarScale, 0, Localize(" seconds (never)"));
+				if(g_Config.m_QmBgDrawFadeTime == 0)
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-fade-time", &g_Config.m_QmBgDrawFadeTime, &g_Config.m_QmBgDrawFadeTime, &Button, Localize("Stroke fade time"), 0, 600, &CUi::ms_LinearScrollbarScale, 0, Localize(" seconds (never)"));
 				else
-					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-fade-time", &g_Config.m_TcBgDrawFadeTime, &g_Config.m_TcBgDrawFadeTime, &Button, Localize("Stroke fade time"), 0, 600, &CUi::ms_LinearScrollbarScale, 0, Localize(" seconds"));
+					DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-fade-time", &g_Config.m_QmBgDrawFadeTime, &g_Config.m_QmBgDrawFadeTime, &Button, Localize("Stroke fade time"), 0, 600, &CUi::ms_LinearScrollbarScale, 0, Localize(" seconds"));
 			}
 			Button = Rows.Next();
 			if(Render)
-				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-width", &g_Config.m_TcBgDrawWidth, &g_Config.m_TcBgDrawWidth, &Button, Localize("Width"), 1, 50);
+				DoSettingsScrollbarOption(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, "tclient-bg-draw-width", &g_Config.m_QmBgDrawWidth, &g_Config.m_QmBgDrawWidth, &Button, Localize("Width"), 1, 50);
 			CUIRect KeyRow = Rows.Next();
 			if(Render)
 			{
@@ -4657,15 +4657,15 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 			CTClientSettingsRowAllocator Rows(CurrentColumn);
 			CUIRect ToggleRow = Rows.Next();
 			if(Render)
-				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcChangeNameNearFinish, "tclient-change-name-near-finish", Localize("Attempt to change your name when near finish"), &g_Config.m_TcChangeNameNearFinish, &ToggleRow, LineSize);
-			if(g_Config.m_TcChangeNameNearFinish)
+				DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmChangeNameNearFinish, "tclient-change-name-near-finish", Localize("Attempt to change your name when near finish"), &g_Config.m_QmChangeNameNearFinish, &ToggleRow, LineSize);
+			if(g_Config.m_QmChangeNameNearFinish)
 			{
 				FinishNameBox = Rows.Next();
 				if(Render)
 				{
 					FinishNameBox.VSplitMid(&Label, &Button);
 					DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Finish Name:"), FontSize, TEXTALIGN_ML);
-					static CLineInput s_FinishName(g_Config.m_TcFinishName, sizeof(g_Config.m_TcFinishName));
+					static CLineInput s_FinishName(g_Config.m_QmFinishName, sizeof(g_Config.m_QmFinishName));
 					ui_widget::InputField(TClientFinishNameTextInputCtx, &s_FinishName, Button, nullptr, EditBoxFontSize);
 				}
 			}
@@ -4696,7 +4696,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Tee status bar", LayoutTeeStatusBarSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutTeeStatusBarSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcShowFrozenHud, &g_Config.m_TcFrozenMaxRows, &g_Config.m_TcShowFrozenHudSkins};
+			S.m_DependencyConfigInts = {&g_Config.m_QmShowFrozenHud, &g_Config.m_QmFrozenMaxRows, &g_Config.m_QmShowFrozenHudSkins};
 			vRightSections.push_back(S);
 
 			// -- Tile outlines --
@@ -4715,8 +4715,8 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Tile outlines", LayoutTileOutlinesSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutTileOutlinesSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcOutline, &g_Config.m_TcOutlineAlpha, &g_Config.m_TcOutlineEntities, &g_Config.m_TcOutlineSolidAlpha, &g_Config.m_TcOutlineSolid, &g_Config.m_TcOutlineWidthSolid, &g_Config.m_TcOutlineFreeze, &g_Config.m_TcOutlineWidthFreeze, &g_Config.m_TcOutlineUnfreeze, &g_Config.m_TcOutlineWidthUnfreeze, &g_Config.m_TcOutlineKill, &g_Config.m_TcOutlineWidthKill, &g_Config.m_TcOutlineTele, &g_Config.m_TcOutlineWidthTele};
-			S.m_DependencyConfigCols = {&g_Config.m_TcOutlineColorSolid, &g_Config.m_TcOutlineColorFreeze, &g_Config.m_TcOutlineColorDeepFreeze, &g_Config.m_TcOutlineColorDeepUnfreeze, &g_Config.m_TcOutlineColorUnfreeze, &g_Config.m_TcOutlineColorKill, &g_Config.m_TcOutlineColorTele};
+			S.m_DependencyConfigInts = {&g_Config.m_QmOutline, &g_Config.m_QmOutlineAlpha, &g_Config.m_QmOutlineEntities, &g_Config.m_QmOutlineSolidAlpha, &g_Config.m_QmOutlineSolid, &g_Config.m_QmOutlineWidthSolid, &g_Config.m_QmOutlineFreeze, &g_Config.m_QmOutlineWidthFreeze, &g_Config.m_QmOutlineUnfreeze, &g_Config.m_QmOutlineWidthUnfreeze, &g_Config.m_QmOutlineKill, &g_Config.m_QmOutlineWidthKill, &g_Config.m_QmOutlineTele, &g_Config.m_QmOutlineWidthTele};
+			S.m_DependencyConfigCols = {&g_Config.m_QmOutlineColorSolid, &g_Config.m_QmOutlineColorFreeze, &g_Config.m_QmOutlineColorDeepFreeze, &g_Config.m_QmOutlineColorDeepUnfreeze, &g_Config.m_QmOutlineColorUnfreeze, &g_Config.m_QmOutlineColorKill, &g_Config.m_QmOutlineColorTele};
 			vRightSections.push_back(S);
 
 			// -- Ghost tools --
@@ -4735,7 +4735,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Ghost tools", LayoutGhostToolsSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutGhostToolsSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcShowOthersGhosts, &g_Config.m_TcSwapGhosts};
+			S.m_DependencyConfigInts = {&g_Config.m_QmShowOthersGhosts, &g_Config.m_QmSwapGhosts};
 			vRightSections.push_back(S);
 
 			// -- Rainbow --
@@ -4754,7 +4754,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Rainbow", LayoutRainbowSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutRainbowSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcRainbowTees, &g_Config.m_TcRainbowWeapon, &g_Config.m_TcRainbowHook};
+			S.m_DependencyConfigInts = {&g_Config.m_QmRainbowTees, &g_Config.m_QmRainbowWeapon, &g_Config.m_QmRainbowHook};
 			vRightSections.push_back(S);
 
 			// -- Tee Trails --
@@ -4773,7 +4773,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Tee Trails", LayoutTeeTrailsSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutTeeTrailsSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcTeeTrail, &g_Config.m_TcTeeTrailOthers, &g_Config.m_TcTeeTrailWidth, &g_Config.m_TcTeeTrailLength, &g_Config.m_TcTeeTrailAlpha, &g_Config.m_TcTeeTrailStyle, &g_Config.m_TcTeeTrailStyleColors};
+			S.m_DependencyConfigInts = {&g_Config.m_QmTeeTrail, &g_Config.m_QmTeeTrailOthers, &g_Config.m_QmTeeTrailWidth, &g_Config.m_QmTeeTrailLength, &g_Config.m_QmTeeTrailAlpha, &g_Config.m_QmTeeTrailStyle, &g_Config.m_QmTeeTrailStyleColors};
 			vRightSections.push_back(S);
 
 			// -- Background Draw --
@@ -4792,7 +4792,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Background Draw", LayoutBackgroundDrawSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutBackgroundDrawSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcBgDrawWidth, &g_Config.m_TcBgDrawFadeTime};
+			S.m_DependencyConfigInts = {&g_Config.m_QmBgDrawWidth, &g_Config.m_QmBgDrawFadeTime};
 			vRightSections.push_back(S);
 
 			// -- Finish Name --
@@ -4811,7 +4811,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 				return RenderBoxedFullSection("Finish Name", LayoutFinishNameSection, Col);
 			};
 			FillCachedStaticLayer(S, LayoutFinishNameSection);
-			S.m_DependencyConfigInts = {&g_Config.m_TcChangeNameNearFinish};
+			S.m_DependencyConfigInts = {&g_Config.m_QmChangeNameNearFinish};
 			vRightSections.push_back(S);
 			AppendDeckCards(vRightSections);
 			RightSectionLoader.Register(std::move(vRightSections));
@@ -4879,7 +4879,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					Rows.Next();
 					Rows.Next();
 					Rows.Next();
-					return ProcessToggle(Rows.Next(), &g_Config.m_TcWhiteFeet);
+					return ProcessToggle(Rows.Next(), &g_Config.m_QmWhiteFeet);
 				};
 			}
 			if(str_comp(pStableCardId, "tclient:anti-latency-tools") == 0)
@@ -4889,14 +4889,14 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 						return false;
 					CTClientSettingsRowAllocator Rows(Content);
 					Rows.Next();
-					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcRemoveAnti);
-					if(g_Config.m_TcRemoveAnti)
+					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmRemoveAnti);
+					if(g_Config.m_QmRemoveAnti)
 					{
 						Rows.Next();
 						Rows.Next();
 					}
 					Rows.Next();
-					Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcPredMarginInFreeze) || Changed;
+					Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmPredMarginInFreeze) || Changed;
 					return Changed;
 				};
 			}
@@ -4906,10 +4906,10 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					if(m_MenuTextPlanCollecting)
 						return false;
 					CTClientSettingsRowAllocator Rows(Content);
-					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcAutoReplyMuted);
-					if(g_Config.m_TcAutoReplyMuted)
+					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmAutoReplyMuted);
+					if(g_Config.m_QmAutoReplyMuted)
 						Rows.Next();
-					Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcAutoReplyMinimized) || Changed;
+					Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmAutoReplyMinimized) || Changed;
 					return Changed;
 				};
 			}
@@ -4921,26 +4921,26 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					CTClientSettingsRowAllocator Rows(Content);
 					for(int RowIndex = 0; RowIndex < 5; ++RowIndex)
 						Rows.Next();
-					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcWarListIndicator);
+					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmWarListIndicator);
 
 					Rows.Next();
 					Rows.Next();
-					Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcIndicatorVariableDistance) || Changed;
+					Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmIndicatorVariableDistance) || Changed;
 					Rows.Next();
-					if(g_Config.m_TcIndicatorVariableDistance)
+					if(g_Config.m_QmIndicatorVariableDistance)
 					{
 						Rows.Next();
 						Rows.Next();
 					}
 
-					if(g_Config.m_TcWarListIndicator)
+					if(g_Config.m_QmWarListIndicator)
 					{
-						Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcWarListIndicatorColors) || Changed;
+						Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmWarListIndicatorColors) || Changed;
 						Rows.Next();
 						Rows.Next();
 						Rows.Next();
 					}
-					if(!g_Config.m_TcWarListIndicator || !g_Config.m_TcWarListIndicatorColors)
+					if(!g_Config.m_QmWarListIndicator || !g_Config.m_QmWarListIndicatorColors)
 					{
 						Rows.Next();
 						Rows.Next();
@@ -4960,17 +4960,17 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 
 					CUIRect ShowFrozenTextRow = Rows.Next();
 					bool Changed = false;
-					if(Ui()->DoButtonLogic(&g_Config.m_TcShowFrozenText, g_Config.m_TcShowFrozenText >= 1, &ShowFrozenTextRow, BUTTONFLAG_LEFT))
+					if(Ui()->DoButtonLogic(&g_Config.m_QmShowFrozenText, g_Config.m_QmShowFrozenText >= 1, &ShowFrozenTextRow, BUTTONFLAG_LEFT))
 					{
-						g_Config.m_TcShowFrozenText = g_Config.m_TcShowFrozenText >= 1 ? 0 : 1;
+						g_Config.m_QmShowFrozenText = g_Config.m_QmShowFrozenText >= 1 ? 0 : 1;
 						Changed = true;
 					}
-					if(g_Config.m_TcShowFrozenText)
+					if(g_Config.m_QmShowFrozenText)
 					{
 						CUIRect CountFrozenTextRow = Rows.Next();
-						if(Ui()->DoButtonLogic(&s_CountFrozenText, g_Config.m_TcShowFrozenText == 2, &CountFrozenTextRow, BUTTONFLAG_LEFT))
+						if(Ui()->DoButtonLogic(&s_CountFrozenText, g_Config.m_QmShowFrozenText == 2, &CountFrozenTextRow, BUTTONFLAG_LEFT))
 						{
-							g_Config.m_TcShowFrozenText = g_Config.m_TcShowFrozenText != 2 ? 2 : 1;
+							g_Config.m_QmShowFrozenText = g_Config.m_QmShowFrozenText != 2 ? 2 : 1;
 							Changed = true;
 						}
 					}
@@ -4984,8 +4984,8 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 						return false;
 					CTClientSettingsRowAllocator Rows(Content);
 					const CUIRect ToggleRow = Rows.Next();
-					const bool Changed = ProcessToggle(ToggleRow, &g_Config.m_TcChangeNameNearFinish);
-					if(g_Config.m_TcChangeNameNearFinish)
+					const bool Changed = ProcessToggle(ToggleRow, &g_Config.m_QmChangeNameNearFinish);
+					if(g_Config.m_QmChangeNameNearFinish)
 						Rows.Next();
 					return Changed;
 				};
@@ -4998,18 +4998,18 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					CTClientSettingsRowAllocator Rows(Content);
 					Rows.Next();
 					Rows.Next();
-					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcRenderCursorSpec);
-					if(g_Config.m_TcRenderCursorSpec)
+					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmRenderCursorSpec);
+					if(g_Config.m_QmRenderCursorSpec)
 						Rows.Next();
-					Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcNotifyWhenLast) || Changed;
-					if(g_Config.m_TcNotifyWhenLast)
+					Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmNotifyWhenLast) || Changed;
+					if(g_Config.m_QmNotifyWhenLast)
 					{
 						Rows.Next();
 						Rows.Next();
 						Rows.Next();
 						Rows.Next();
 					}
-					Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcShowCenter) || Changed;
+					Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmShowCenter) || Changed;
 					return Changed;
 				};
 			}
@@ -5023,7 +5023,7 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					const CUIRect TinyTeeModeRow = Rows.Next(ResolveSettingsRadioRowLayout(Content, 3, ContentMetrics).m_Height);
 					const SSettingsRadioRowLayout TinyTeeModeLayout = ResolveSettingsRadioRowLayout(TinyTeeModeRow, 3, ContentMetrics);
 					CUIRect TinyTeeModeButtons = TinyTeeModeLayout.m_ButtonsRect;
-					int TinyTeeMode = g_Config.m_TcTinyTees ? (g_Config.m_TcTinyTeesOthers ? 2 : 1) : 0;
+					int TinyTeeMode = g_Config.m_QmTinyTees ? (g_Config.m_QmTinyTeesOthers ? 2 : 1) : 0;
 					bool Changed = false;
 					const float ButtonWidth = TinyTeeModeButtons.w / s_vTinyTeeModeButtons.size();
 					for(int Index = 0; Index < (int)s_vTinyTeeModeButtons.size(); ++Index)
@@ -5032,12 +5032,12 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 						TinyTeeModeButtons.VSplitLeft(ButtonWidth, &RadioButton, &TinyTeeModeButtons);
 						if(Ui()->DoButtonLogic(&s_vTinyTeeModeButtons[Index], Index == TinyTeeMode, &RadioButton, BUTTONFLAG_LEFT))
 						{
-							g_Config.m_TcTinyTees = Index > 0 ? 1 : 0;
-							g_Config.m_TcTinyTeesOthers = Index > 1 ? 1 : 0;
+							g_Config.m_QmTinyTees = Index > 0 ? 1 : 0;
+							g_Config.m_QmTinyTeesOthers = Index > 1 ? 1 : 0;
 							Changed = true;
 						}
 					}
-					if(g_Config.m_TcTinyTees > 0)
+					if(g_Config.m_QmTinyTees > 0)
 						Rows.Next();
 					return ProcessToggle(Rows.Next(), &g_Config.m_QmJellyTee) || Changed;
 				};
@@ -5048,11 +5048,11 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					if(m_MenuTextPlanCollecting)
 						return false;
 					CTClientSettingsRowAllocator Rows(Content);
-					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcFastInput);
+					bool Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmFastInput);
 					Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmAutoMargin) || Changed;
 
 					Rows.Next();
-					Changed = ProcessToggle(Rows.Next(), &g_Config.m_TcFastInputOthers) || Changed;
+					Changed = ProcessToggle(Rows.Next(), &g_Config.m_QmFastInputOthers) || Changed;
 					Changed = ProcessToggle(Rows.Next(), &g_Config.m_ClSubTickAiming) || Changed;
 					return Changed;
 				};
@@ -5066,9 +5066,9 @@ void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)
 					if(Selected < 0 || Selected >= 4)
 						return false;
 					const int NewColorMode = Selected + 1;
-					if(g_Config.m_TcTeeTrailColorMode == NewColorMode)
+					if(g_Config.m_QmTeeTrailColorMode == NewColorMode)
 						return false;
-					g_Config.m_TcTeeTrailColorMode = NewColorMode;
+					g_Config.m_QmTeeTrailColorMode = NewColorMode;
 					return true;
 				};
 			}
@@ -5290,8 +5290,8 @@ void CMenus::RenderSettingsTClientBindWheel(CUIRect MainView, bool PrewarmOnly)
 		LeftView.HSplitBottom(LineSize, &LeftView, &Label);
 		CUIRect CheckBoxRect;
 		Label.HSplitTop(LineSize, &CheckBoxRect, &Label);
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &g_Config.m_TcResetBindWheelMouse, "tclient-bindwheel-reset-mouse", Localize("Reset position of mouse when opening bindwheel"), g_Config.m_TcResetBindWheelMouse, &CheckBoxRect))
-			g_Config.m_TcResetBindWheelMouse ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, TCLIENT_TAB_BINDWHEEL, &g_Config.m_QmResetBindWheelMouse, "tclient-bindwheel-reset-mouse", Localize("Reset position of mouse when opening bindwheel"), g_Config.m_QmResetBindWheelMouse, &CheckBoxRect))
+			g_Config.m_QmResetBindWheelMouse ^= 1;
 		else if(ReadOnly)
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_BINDWHEEL, "tclient-bindwheel-reset-mouse", &CheckBoxRect, Localize("Reset position of mouse when opening bindwheel"), FontSize, TEXTALIGN_ML);
 		LogTClientPerfStage("tclient_bindwheel_editor", EditorTimer.ElapsedMs(), false);
@@ -5824,32 +5824,32 @@ void CMenus::RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly)
 	auto RenderSettings = [&](CUIRect &Column) {
 		CUIRect CheckBoxRect;
 		Column.HSplitTop(LineSize, &CheckBoxRect, &Column);
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_TcWarListAllowDuplicates, "tclient-warlist-allow-duplicates", Localize("Allow Duplicate Entries"), g_Config.m_TcWarListAllowDuplicates, &CheckBoxRect))
-			g_Config.m_TcWarListAllowDuplicates ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListAllowDuplicates, "tclient-warlist-allow-duplicates", Localize("Allow Duplicate Entries"), g_Config.m_QmWarListAllowDuplicates, &CheckBoxRect))
+			g_Config.m_QmWarListAllowDuplicates ^= 1;
 		Column.HSplitTop(MarginSmall, nullptr, &Column);
 		Column.HSplitTop(LineSize, &CheckBoxRect, &Column);
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_TcWarList, "tclient-warlist-enable", Localize("Enable warlist"), g_Config.m_TcWarList, &CheckBoxRect))
-			g_Config.m_TcWarList ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarList, "tclient-warlist-enable", Localize("Enable warlist"), g_Config.m_QmWarList, &CheckBoxRect))
+			g_Config.m_QmWarList ^= 1;
 		Column.HSplitTop(MarginSmall, nullptr, &Column);
 		Column.HSplitTop(LineSize, &CheckBoxRect, &Column);
 		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListBlockEnemyChat, "tclient-warlist-block-enemy-chat", Localize("Block enemy chat"), g_Config.m_QmWarListBlockEnemyChat, &CheckBoxRect))
 			g_Config.m_QmWarListBlockEnemyChat ^= 1;
 		Column.HSplitTop(MarginSmall, nullptr, &Column);
 		Column.HSplitTop(LineSize, &CheckBoxRect, &Column);
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_TcWarListChat, "tclient-warlist-colors-chat", Localize("Colors in chat"), g_Config.m_TcWarListChat, &CheckBoxRect))
-			g_Config.m_TcWarListChat ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListChat, "tclient-warlist-colors-chat", Localize("Colors in chat"), g_Config.m_QmWarListChat, &CheckBoxRect))
+			g_Config.m_QmWarListChat ^= 1;
 		Column.HSplitTop(MarginSmall, nullptr, &Column);
 		Column.HSplitTop(LineSize, &CheckBoxRect, &Column);
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_TcWarListScoreboard, "tclient-warlist-colors-scoreboard", Localize("Colors in scoreboard"), g_Config.m_TcWarListScoreboard, &CheckBoxRect))
-			g_Config.m_TcWarListScoreboard ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListScoreboard, "tclient-warlist-colors-scoreboard", Localize("Colors in scoreboard"), g_Config.m_QmWarListScoreboard, &CheckBoxRect))
+			g_Config.m_QmWarListScoreboard ^= 1;
 		Column.HSplitTop(MarginSmall, nullptr, &Column);
 		Column.HSplitTop(LineSize, &CheckBoxRect, &Column);
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_TcWarListSpectate, "tclient-warlist-colors-spectate", Localize("Show colors in spectator selection"), g_Config.m_TcWarListSpectate, &CheckBoxRect))
-			g_Config.m_TcWarListSpectate ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListSpectate, "tclient-warlist-colors-spectate", Localize("Show colors in spectator selection"), g_Config.m_QmWarListSpectate, &CheckBoxRect))
+			g_Config.m_QmWarListSpectate ^= 1;
 		Column.HSplitTop(MarginSmall, nullptr, &Column);
 		Column.HSplitTop(LineSize, &CheckBoxRect, &Column);
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_TcWarListShowClan, "tclient-warlist-show-clan", Localize("Show clan if war"), g_Config.m_TcWarListShowClan, &CheckBoxRect))
-			g_Config.m_TcWarListShowClan ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_WARLIST, TCLIENT_TAB_WARLIST, &g_Config.m_QmWarListShowClan, "tclient-warlist-show-clan", Localize("Show clan if war"), g_Config.m_QmWarListShowClan, &CheckBoxRect))
+			g_Config.m_QmWarListShowClan ^= 1;
 	};
 
 	auto RenderGroups = [&](CUIRect &Column) {
@@ -6221,7 +6221,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 	static CScrollRegion s_StatusBarSettingsScrollRegion;
 	static int s_SelectedItem = -1;
 	static int s_TypeSelectedOld = -1;
-	static CLineInput s_StatusScheme(g_Config.m_TcStatusBarScheme, sizeof(g_Config.m_TcStatusBarScheme));
+	static CLineInput s_StatusScheme(g_Config.m_QmStatusBarScheme, sizeof(g_Config.m_QmStatusBarScheme));
 	const int StatusBarCodeCount = (int)GameClient()->m_StatusBar.m_vStatusItemTypes.size();
 	const int StatusBarItemCount = (int)GameClient()->m_StatusBar.m_StatusBarItems.size();
 	const float SettingsContentHeight = LineSize * 7.0f + HeadlineHeight * 2.0f + ColorPickerLineSize * 2.0f + MarginSmall * 10.0f;
@@ -6313,7 +6313,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 		CTClientSettingsRowAllocator Rows(View);
 		CheckBoxRect = Rows.Next();
 		// 禅模式接管状态栏时：灰化、拒绝点击并提示接管来源（与 ReadOnly 同样只显示标签）。
-		const char *pStatusBarOverrideTooltip = TemporaryOverrideTooltip(&g_Config.m_TcStatusBar);
+		const char *pStatusBarOverrideTooltip = TemporaryOverrideTooltip(&g_Config.m_QmStatusBar);
 		SLabelProperties StatusBarLabelProps;
 		if(pStatusBarOverrideTooltip != nullptr)
 		{
@@ -6321,34 +6321,34 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 			if(!m_MenuTextPlanCollecting)
 			{
 				// 接管时该行只画标签、没有控件占 hover，先补一次只读按钮逻辑让提示能激活。
-				Ui()->DoButtonLogic(&g_Config.m_TcStatusBar, 0, &CheckBoxRect, BUTTONFLAG_LEFT);
-				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_TcStatusBar, &CheckBoxRect, pStatusBarOverrideTooltip);
+				Ui()->DoButtonLogic(&g_Config.m_QmStatusBar, 0, &CheckBoxRect, BUTTONFLAG_LEFT);
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmStatusBar, &CheckBoxRect, pStatusBarOverrideTooltip);
 			}
 		}
-		if(!ReadOnly && pStatusBarOverrideTooltip == nullptr && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_TcStatusBar, "tclient-statusbar-show", Localize("Show status bar"), g_Config.m_TcStatusBar, &CheckBoxRect))
-			g_Config.m_TcStatusBar ^= 1;
+		if(!ReadOnly && pStatusBarOverrideTooltip == nullptr && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBar, "tclient-statusbar-show", Localize("Show status bar"), g_Config.m_QmStatusBar, &CheckBoxRect))
+			g_Config.m_QmStatusBar ^= 1;
 		else if(ReadOnly || pStatusBarOverrideTooltip != nullptr)
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show", &CheckBoxRect, Localize("Show status bar"), FontSize, TEXTALIGN_ML, StatusBarLabelProps);
 		CheckBoxRect = Rows.Next();
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_TcStatusBarLabels, "tclient-statusbar-show-labels", Localize("Show labels on status bar items"), g_Config.m_TcStatusBarLabels, &CheckBoxRect))
-			g_Config.m_TcStatusBarLabels ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBarLabels, "tclient-statusbar-show-labels", Localize("Show labels on status bar items"), g_Config.m_QmStatusBarLabels, &CheckBoxRect))
+			g_Config.m_QmStatusBarLabels ^= 1;
 		else if(ReadOnly)
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-show-labels", &CheckBoxRect, Localize("Show labels on status bar items"), FontSize, TEXTALIGN_ML);
 		Button = Rows.Next();
 		if(!ReadOnly)
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-height", &g_Config.m_TcStatusBarHeight, &g_Config.m_TcStatusBarHeight, &Button, Localize("Status bar height"), 1, 16);
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-height", &g_Config.m_QmStatusBarHeight, &g_Config.m_QmStatusBarHeight, &Button, Localize("Status bar height"), 1, 16);
 		else
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-height", &Button, Localize("Status bar height"), FontSize, TEXTALIGN_ML);
 		Label = Rows.Next(HeadlineHeight);
 		DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-local-time-title", &Label, Localize("Local Time"), HeadlineFontSize, TEXTALIGN_ML);
 		CheckBoxRect = Rows.Next();
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_TcStatusBar12HourClock, "tclient-statusbar-12-hour-clock", Localize("Use 12 hour clock"), g_Config.m_TcStatusBar12HourClock, &CheckBoxRect))
-			g_Config.m_TcStatusBar12HourClock ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBar12HourClock, "tclient-statusbar-12-hour-clock", Localize("Use 12 hour clock"), g_Config.m_QmStatusBar12HourClock, &CheckBoxRect))
+			g_Config.m_QmStatusBar12HourClock ^= 1;
 		else if(ReadOnly)
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-12-hour-clock", &CheckBoxRect, Localize("Use 12 hour clock"), FontSize, TEXTALIGN_ML);
 		CheckBoxRect = Rows.Next();
-		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_TcStatusBarLocalTimeSeconds, "tclient-statusbar-seconds", Localize("Show seconds on clock"), g_Config.m_TcStatusBarLocalTimeSeconds, &CheckBoxRect))
-			g_Config.m_TcStatusBarLocalTimeSeconds ^= 1;
+		if(!ReadOnly && DoSettingsButton_CheckBox(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &g_Config.m_QmStatusBarLocalTimeSeconds, "tclient-statusbar-seconds", Localize("Show seconds on clock"), g_Config.m_QmStatusBarLocalTimeSeconds, &CheckBoxRect))
+			g_Config.m_QmStatusBarLocalTimeSeconds ^= 1;
 		else if(ReadOnly)
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-seconds", &CheckBoxRect, Localize("Show seconds on clock"), FontSize, TEXTALIGN_ML);
 		Label = Rows.Next(HeadlineHeight);
@@ -6357,9 +6357,9 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 		{
 			static CButtonContainer s_StatusbarColor, s_StatusbarTextColor;
 			CUIRect ColorRow = Rows.Next(ColorPickerLineSize);
-			DoLine_ColorPicker(&s_StatusbarColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Status bar color"), &g_Config.m_TcStatusBarColor, ColorRGBA(0.0f, 0.0f, 0.0f), false);
+			DoLine_ColorPicker(&s_StatusbarColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Status bar color"), &g_Config.m_QmStatusBarColor, ColorRGBA(0.0f, 0.0f, 0.0f), false);
 			ColorRow = Rows.Next(ColorPickerLineSize);
-			DoLine_ColorPicker(&s_StatusbarTextColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_TcStatusBarTextColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
+			DoLine_ColorPicker(&s_StatusbarTextColor, CurrentSettingsContentMetrics(), &ColorRow, Localize("Text color"), &g_Config.m_QmStatusBarTextColor, ColorRGBA(1.0f, 1.0f, 1.0f), false);
 		}
 		else
 		{
@@ -6370,12 +6370,12 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 		}
 		Button = Rows.Next();
 		if(!ReadOnly)
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-alpha", &g_Config.m_TcStatusBarAlpha, &g_Config.m_TcStatusBarAlpha, &Button, Localize("Status bar alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-alpha", &g_Config.m_QmStatusBarAlpha, &g_Config.m_QmStatusBarAlpha, &Button, Localize("Status bar alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 		else
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-alpha", &Button, Localize("Status bar alpha"), FontSize, TEXTALIGN_ML);
 		Button = Rows.Next();
 		if(!ReadOnly)
-			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-text-alpha", &g_Config.m_TcStatusBarTextAlpha, &g_Config.m_TcStatusBarTextAlpha, &Button, Localize("Text alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+			DoSettingsScrollbarOption(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-text-alpha", &g_Config.m_QmStatusBarTextAlpha, &g_Config.m_QmStatusBarTextAlpha, &Button, Localize("Text alpha"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 		else
 			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-text-alpha", &Button, Localize("Text alpha"), FontSize, TEXTALIGN_ML);
 		LogTClientPerfStageEx("tclient_statusbar", "sections", ETClientSettingsPerfStage::INTERACTIVE_LAYER, SectionsTimer.ElapsedMs());
@@ -6426,8 +6426,8 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 		SchemeInput.VSplitRight(MarginSmall, &SchemeInput, nullptr);
 		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &s_ApplyButton, "tclient-statusbar-apply-scheme", Localize("Apply"), 0, &ApplyButton))
 		{
-			GameClient()->m_StatusBar.ApplyStatusBarScheme(g_Config.m_TcStatusBarScheme);
-			GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_TcStatusBarScheme);
+			GameClient()->m_StatusBar.ApplyStatusBarScheme(g_Config.m_QmStatusBarScheme);
+			GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_QmStatusBarScheme);
 			s_SelectedItem = -1;
 		}
 		else if(ReadOnly)
@@ -6437,7 +6437,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 		if(!ReadOnly)
 			ui_widget::InputField(TClientStatusSchemeTextInputCtx, &s_StatusScheme, SchemeInput, nullptr, EditBoxFontSize);
 		else
-			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-scheme-value", &SchemeInput, g_Config.m_TcStatusBarScheme, FontSize, TEXTALIGN_ML);
+			DoSettingsLabel(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, "tclient-statusbar-scheme-value", &SchemeInput, g_Config.m_QmStatusBarScheme, FontSize, TEXTALIGN_ML);
 
 		static std::vector<std::string> s_DropDownNameStorage;
 		static std::vector<const char *> s_DropDownNames;
@@ -6470,7 +6470,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 				if(s_SelectedItem >= 0 && s_TypeSelectedOld >= 0 && s_TypeSelectedOld < StatusItemTypeCount)
 				{
 					GameClient()->m_StatusBar.m_StatusBarItems[s_SelectedItem] = &GameClient()->m_StatusBar.m_vStatusItemTypes[s_TypeSelectedOld];
-					GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_TcStatusBarScheme);
+					GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_QmStatusBarScheme);
 				}
 			}
 		}
@@ -6480,7 +6480,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_TCLIENT, TCLIENT_TAB_STATUSBAR, TCLIENT_TAB_STATUSBAR, &s_AddButton, "tclient-statusbar-add-item", Localize("Add Item"), 0, &AddButton) && s_TypeSelectedOld >= 0 && s_TypeSelectedOld < StatusItemTypeCount && NumItems < 128)
 		{
 			GameClient()->m_StatusBar.m_StatusBarItems.push_back(&GameClient()->m_StatusBar.m_vStatusItemTypes[s_TypeSelectedOld]);
-			GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_TcStatusBarScheme);
+			GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_QmStatusBarScheme);
 			s_SelectedItem = (int)GameClient()->m_StatusBar.m_StatusBarItems.size() - 1;
 		}
 		else if(ReadOnly)
@@ -6490,7 +6490,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 			if(s_SelectedItem < (int)GameClient()->m_StatusBar.m_StatusBarItems.size())
 			{
 				GameClient()->m_StatusBar.m_StatusBarItems.erase(GameClient()->m_StatusBar.m_StatusBarItems.begin() + s_SelectedItem);
-				GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_TcStatusBarScheme);
+				GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_QmStatusBarScheme);
 			}
 			s_SelectedItem = -1;
 		}
@@ -6563,7 +6563,7 @@ void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)
 					s_ItemSwaps[HotStatusIndex].m_Duration = 0.15f;
 					s_ItemSwaps[i].m_InitialPosition = vec2(s_ActivePos.x, s_ActivePos.y);
 					s_ItemSwaps[i].m_Duration = 0.15f;
-					GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_TcStatusBarScheme);
+					GameClient()->m_StatusBar.UpdateStatusBarScheme(g_Config.m_QmStatusBarScheme);
 				}
 			}
 			if(!ReadOnly)
@@ -6816,13 +6816,13 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)
 
 	auto BuildProfileFromCurrentSettings = [&]() {
 		return CProfile(
-			g_Config.m_TcProfileColors ? CurrentColorBody : -1,
-			g_Config.m_TcProfileColors ? CurrentColorFeet : -1,
-			g_Config.m_TcProfileFlag ? CurrentFlag : -2,
-			g_Config.m_TcProfileEmote ? Emote : -1,
-			g_Config.m_TcProfileSkin ? pCurrentSkinName : "",
-			g_Config.m_TcProfileName ? pCurrentName : "",
-			g_Config.m_TcProfileClan ? pCurrentClan : "");
+			g_Config.m_QmProfileColors ? CurrentColorBody : -1,
+			g_Config.m_QmProfileColors ? CurrentColorFeet : -1,
+			g_Config.m_QmProfileFlag ? CurrentFlag : -2,
+			g_Config.m_QmProfileEmote ? Emote : -1,
+			g_Config.m_QmProfileSkin ? pCurrentSkinName : "",
+			g_Config.m_QmProfileName ? pCurrentName : "",
+			g_Config.m_QmProfileClan ? pCurrentClan : "");
 	};
 
 	auto BuildPreviewProfile = [&]() {
@@ -6831,20 +6831,20 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)
 		if(!pProfile)
 			return PreviewProfile;
 
-		if(g_Config.m_TcProfileSkin && pProfile->m_SkinName[0] != '\0')
+		if(g_Config.m_QmProfileSkin && pProfile->m_SkinName[0] != '\0')
 			str_copy(PreviewProfile.m_SkinName, pProfile->m_SkinName);
-		if(g_Config.m_TcProfileColors && pProfile->m_BodyColor != -1 && pProfile->m_FeetColor != -1)
+		if(g_Config.m_QmProfileColors && pProfile->m_BodyColor != -1 && pProfile->m_FeetColor != -1)
 		{
 			PreviewProfile.m_BodyColor = pProfile->m_BodyColor;
 			PreviewProfile.m_FeetColor = pProfile->m_FeetColor;
 		}
-		if(g_Config.m_TcProfileEmote && pProfile->m_Emote != -1)
+		if(g_Config.m_QmProfileEmote && pProfile->m_Emote != -1)
 			PreviewProfile.m_Emote = pProfile->m_Emote;
-		if(g_Config.m_TcProfileName && pProfile->m_Name[0] != '\0')
+		if(g_Config.m_QmProfileName && pProfile->m_Name[0] != '\0')
 			str_copy(PreviewProfile.m_Name, pProfile->m_Name);
-		if(g_Config.m_TcProfileClan && (pProfile->m_Clan[0] != '\0' || g_Config.m_TcProfileOverwriteClanWithEmpty))
+		if(g_Config.m_QmProfileClan && (pProfile->m_Clan[0] != '\0' || g_Config.m_QmProfileOverwriteClanWithEmpty))
 			str_copy(PreviewProfile.m_Clan, pProfile->m_Clan);
-		if(g_Config.m_TcProfileFlag && pProfile->m_CountryFlag != -2)
+		if(g_Config.m_QmProfileFlag && pProfile->m_CountryFlag != -2)
 			PreviewProfile.m_CountryFlag = pProfile->m_CountryFlag;
 
 		return PreviewProfile;
@@ -6855,7 +6855,7 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)
 		if(!pProfile)
 			return;
 		GameClient()->m_SkinProfiles.ApplyProfile(m_Dummy, *pProfile);
-		if(g_Config.m_TcProfileSkin || g_Config.m_TcProfileColors)
+		if(g_Config.m_QmProfileSkin || g_Config.m_QmProfileColors)
 			GameClient()->m_Skins.RecordRecentSkin(m_Dummy);
 	};
 
@@ -6960,12 +6960,12 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)
 		else
 			Left = MainView, Right = {};
 		const auto RenderSaveLoad = [&](CUIRect &View) {
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcProfileSkin, "tclient-profile-save-load-skin", Localize("Save/Load Skin"), &g_Config.m_TcProfileSkin, &View, LineSize);
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcProfileColors, "tclient-profile-save-load-colors", Localize("Save/Load Colors"), &g_Config.m_TcProfileColors, &View, LineSize);
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcProfileEmote, "tclient-profile-save-load-emote", Localize("Save/Load Emote"), &g_Config.m_TcProfileEmote, &View, LineSize);
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcProfileName, "tclient-profile-save-load-name", Localize("Save/Load Name"), &g_Config.m_TcProfileName, &View, LineSize);
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcProfileClan, "tclient-profile-save-load-clan", Localize("Save/Load Clan"), &g_Config.m_TcProfileClan, &View, LineSize);
-			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_TcProfileFlag, "tclient-profile-save-load-flag", Localize("Save/Load Flag"), &g_Config.m_TcProfileFlag, &View, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileSkin, "tclient-profile-save-load-skin", Localize("Save/Load Skin"), &g_Config.m_QmProfileSkin, &View, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileColors, "tclient-profile-save-load-colors", Localize("Save/Load Colors"), &g_Config.m_QmProfileColors, &View, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileEmote, "tclient-profile-save-load-emote", Localize("Save/Load Emote"), &g_Config.m_QmProfileEmote, &View, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileName, "tclient-profile-save-load-name", Localize("Save/Load Name"), &g_Config.m_QmProfileName, &View, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileClan, "tclient-profile-save-load-clan", Localize("Save/Load Clan"), &g_Config.m_QmProfileClan, &View, LineSize);
+			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmProfileFlag, "tclient-profile-save-load-flag", Localize("Save/Load Flag"), &g_Config.m_QmProfileFlag, &View, LineSize);
 		};
 		RenderSaveLoad(Left);
 		const auto RenderIdentityOptions = [&](CUIRect &View) {
@@ -6981,8 +6981,8 @@ void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)
 				SetNeedSendInfo();
 			}
 			Row = IdentityRows.Next();
-			if(!ReadOnly && DoTClientSettingsButton_CheckBox(&g_Config.m_TcProfileOverwriteClanWithEmpty, "tclient-profile-overwrite-empty-clan", Localize("Overwrite clan even if empty"), g_Config.m_TcProfileOverwriteClanWithEmpty, &Row))
-				g_Config.m_TcProfileOverwriteClanWithEmpty = 1 - g_Config.m_TcProfileOverwriteClanWithEmpty;
+			if(!ReadOnly && DoTClientSettingsButton_CheckBox(&g_Config.m_QmProfileOverwriteClanWithEmpty, "tclient-profile-overwrite-empty-clan", Localize("Overwrite clan even if empty"), g_Config.m_QmProfileOverwriteClanWithEmpty, &Row))
+				g_Config.m_QmProfileOverwriteClanWithEmpty = 1 - g_Config.m_QmProfileOverwriteClanWithEmpty;
 		};
 		if(Right.w > 0.0f)
 			RenderIdentityOptions(Right);
@@ -7348,12 +7348,12 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 				Row.VSplitLeft(ButtonWidth, &DomainTClient, &Row);
 				Row.VSplitLeft(Gap, nullptr, &Row);
 				DomainQm = Row;
-				if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiShowDDNet, "tclient-ui-show-ddnet", Localize("DDNet"), g_Config.m_TcUiShowDDNet, &DomainDDNet))
-					g_Config.m_TcUiShowDDNet ^= 1;
-				if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiShowTClient, "tclient-ui-show-tclient", Localize("TClient"), g_Config.m_TcUiShowTClient, &DomainTClient))
-					g_Config.m_TcUiShowTClient ^= 1;
-				if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiShowQm, "tclient-ui-show-qmclient", Localize("QmClient"), g_Config.m_TcUiShowQm, &DomainQm))
-					g_Config.m_TcUiShowQm ^= 1;
+				if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiShowDDNet, "tclient-ui-show-ddnet", Localize("DDNet"), g_Config.m_QmUiShowDDNet, &DomainDDNet))
+					g_Config.m_QmUiShowDDNet ^= 1;
+				if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiShowTClient, "tclient-ui-show-tclient", Localize("TClient"), g_Config.m_QmUiShowTClient, &DomainTClient))
+					g_Config.m_QmUiShowTClient ^= 1;
+				if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiShowQm, "tclient-ui-show-qmclient", Localize("QmClient"), g_Config.m_QmUiShowQm, &DomainQm))
+					g_Config.m_QmUiShowQm ^= 1;
 			}
 			{
 				CUIRect Row = NextRow();
@@ -7363,10 +7363,10 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 				Row.VSplitLeft(ButtonWidth, &Compact, &Row);
 				Row.VSplitLeft(Gap, nullptr, &Row);
 				Modified = Row;
-				if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiCompactList, "tclient-ui-compact-list", Localize("Compact"), g_Config.m_TcUiCompactList, &Compact))
-					g_Config.m_TcUiCompactList ^= 1;
-				if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiOnlyModified, "tclient-ui-only-modified", Localize("Modified"), g_Config.m_TcUiOnlyModified, &Modified))
-					g_Config.m_TcUiOnlyModified ^= 1;
+				if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiCompactList, "tclient-ui-compact-list", Localize("Compact"), g_Config.m_QmUiCompactList, &Compact))
+					g_Config.m_QmUiCompactList ^= 1;
+				if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiOnlyModified, "tclient-ui-only-modified", Localize("Modified"), g_Config.m_QmUiOnlyModified, &Modified))
+					g_Config.m_QmUiOnlyModified ^= 1;
 			}
 			RenderTags(NextRow(), Localize("Tags"), {"Visual", "HUD", "Input", "Chat", "Audio"}, {&s_TcUiTagVisual, &s_TcUiTagHud, &s_TcUiTagInput, &s_TcUiTagChat, &s_TcUiTagAudio}, {"tclient-ui-tag-visual", "tclient-ui-tag-hud", "tclient-ui-tag-input", "tclient-ui-tag-chat", "tclient-ui-tag-audio"});
 			RenderTags(NextRow(), nullptr, {"Auto", "Social", "Camera", "Gameplay", "Misc"}, {&s_TcUiTagAutomation, &s_TcUiTagSocial, &s_TcUiTagCamera, &s_TcUiTagGameplay, &s_TcUiTagMisc}, {"tclient-ui-tag-auto", "tclient-ui-tag-social", "tclient-ui-tag-camera", "tclient-ui-tag-gameplay", "tclient-ui-tag-misc"});
@@ -7408,12 +7408,12 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 		Row.VSplitLeft(DomainWidth, &DomainQm, &Row);
 		Row.VSplitLeft(Margin, nullptr, &Row);
 
-		if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiShowDDNet, "tclient-ui-show-ddnet", Localize("DDNet"), g_Config.m_TcUiShowDDNet, &DomainDDNet))
-			g_Config.m_TcUiShowDDNet ^= 1;
-		if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiShowTClient, "tclient-ui-show-tclient", Localize("TClient"), g_Config.m_TcUiShowTClient, &DomainTClient))
-			g_Config.m_TcUiShowTClient ^= 1;
-		if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiShowQm, "tclient-ui-show-qmclient", Localize("QmClient"), g_Config.m_TcUiShowQm, &DomainQm))
-			g_Config.m_TcUiShowQm ^= 1;
+		if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiShowDDNet, "tclient-ui-show-ddnet", Localize("DDNet"), g_Config.m_QmUiShowDDNet, &DomainDDNet))
+			g_Config.m_QmUiShowDDNet ^= 1;
+		if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiShowTClient, "tclient-ui-show-tclient", Localize("TClient"), g_Config.m_QmUiShowTClient, &DomainTClient))
+			g_Config.m_QmUiShowTClient ^= 1;
+		if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiShowQm, "tclient-ui-show-qmclient", Localize("QmClient"), g_Config.m_QmUiShowQm, &DomainQm))
+			g_Config.m_QmUiShowQm ^= 1;
 
 		// 其他筛选 - 紧凑列表 / 仅显示已修改
 		const float FilterWidth = ConfigFilterWidth;
@@ -7422,10 +7422,10 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 		Row.VSplitLeft(MarginSmall, nullptr, &Row);
 		Row.VSplitLeft(FilterWidth, &FilterModified, &Row);
 
-		if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiCompactList, "tclient-ui-compact-list", Localize("Compact"), g_Config.m_TcUiCompactList, &FilterCompact))
-			g_Config.m_TcUiCompactList ^= 1;
-		if(DoTClientSettingsButton_CheckBox(&g_Config.m_TcUiOnlyModified, "tclient-ui-only-modified", Localize("Modified"), g_Config.m_TcUiOnlyModified, &FilterModified))
-			g_Config.m_TcUiOnlyModified ^= 1;
+		if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiCompactList, "tclient-ui-compact-list", Localize("Compact"), g_Config.m_QmUiCompactList, &FilterCompact))
+			g_Config.m_QmUiCompactList ^= 1;
+		if(DoTClientSettingsButton_CheckBox(&g_Config.m_QmUiOnlyModified, "tclient-ui-only-modified", Localize("Modified"), g_Config.m_QmUiOnlyModified, &FilterModified))
+			g_Config.m_QmUiOnlyModified ^= 1;
 		LogTClientPerfStageEx("tclient_configs", "filter", ETClientSettingsPerfStage::TEXT_CACHE, FilterTimer.ElapsedMs());
 
 		// Tags Filter Bar - Row 1
@@ -7557,9 +7557,9 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 		auto SourceEnabled = [&](EConfigSource Source) {
 			switch(Source)
 			{
-			case EConfigSource::DDNET: return g_Config.m_TcUiShowDDNet != 0;
-			case EConfigSource::TCLIENT: return g_Config.m_TcUiShowTClient != 0;
-			case EConfigSource::QM: return g_Config.m_TcUiShowQm != 0;
+			case EConfigSource::DDNET: return g_Config.m_QmUiShowDDNet != 0;
+			case EConfigSource::TCLIENT: return g_Config.m_QmUiShowTClient != 0;
+			case EConfigSource::QM: return g_Config.m_QmUiShowQm != 0;
 			default: return false;
 			}
 		};
@@ -7652,9 +7652,9 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 				SelectedTagMask |= 1u << static_cast<unsigned int>(TagValue);
 		}
 		const unsigned int MiscTagMask = 1u << static_cast<unsigned int>(EConfigTag::MISC);
-		const int DomainMask = (g_Config.m_TcUiShowDDNet != 0 ? 1 : 0) |
-				       (g_Config.m_TcUiShowTClient != 0 ? 2 : 0) |
-				       (g_Config.m_TcUiShowQm != 0 ? 4 : 0);
+		const int DomainMask = (g_Config.m_QmUiShowDDNet != 0 ? 1 : 0) |
+				       (g_Config.m_QmUiShowTClient != 0 ? 2 : 0) |
+				       (g_Config.m_QmUiShowQm != 0 ? 4 : 0);
 		static std::vector<const SConfigVariable *> s_vFilteredConfigs;
 		static std::string s_CachedConfigSearch;
 		static int s_CachedConfigDomainMask = -1;
@@ -7667,7 +7667,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 		if(s_CachedConfigSearch != (pSearch ? pSearch : "") ||
 			s_CachedConfigDomainMask != DomainMask ||
 			s_CachedConfigChangesCount != ChangesCount ||
-			s_CachedConfigOnlyModified != g_Config.m_TcUiOnlyModified ||
+			s_CachedConfigOnlyModified != g_Config.m_QmUiOnlyModified ||
 			s_CachedConfigTagMask != SelectedTagMask ||
 			s_CachedConfigVarCount != s_vAllClientVars.size() ||
 			s_CachedConfigLanguageHash != ConfigLanguageHash)
@@ -7679,7 +7679,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 				const SConfigVariable *pVar = s_vAllClientVars[i];
 				if(!SourceEnabled(GetConfigSource(pVar)))
 					continue;
-				if(g_Config.m_TcUiOnlyModified && IsEffectiveDefaultVar(pVar))
+				if(g_Config.m_QmUiOnlyModified && IsEffectiveDefaultVar(pVar))
 					continue;
 				if(pSearch && pSearch[0])
 				{
@@ -7700,7 +7700,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 			s_CachedConfigSearch = pSearch ? pSearch : "";
 			s_CachedConfigDomainMask = DomainMask;
 			s_CachedConfigChangesCount = ChangesCount;
-			s_CachedConfigOnlyModified = g_Config.m_TcUiOnlyModified;
+			s_CachedConfigOnlyModified = g_Config.m_QmUiOnlyModified;
 			s_CachedConfigTagMask = SelectedTagMask;
 			s_CachedConfigVarCount = s_vAllClientVars.size();
 			s_CachedConfigLanguageHash = ConfigLanguageHash;
@@ -7716,7 +7716,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 		const float ConfigInlineMinWidth = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + 2.0f * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
 		const bool StackedConfigRows = ListArea.w < ConfigInlineMinWidth;
 		const float ConfigHelpHeight = std::max(MarginSmall, FontSize - 2.0f);
-		const SSettingsConfigRowMetrics ConfigRowMetrics = ResolveSettingsConfigRowMetrics(g_Config.m_TcUiCompactList != 0, StackedConfigRows, LineSize, MarginSmall, ConfigHelpHeight, ColorPickerLineSize, ConfigMetrics.m_LineSpacing);
+		const SSettingsConfigRowMetrics ConfigRowMetrics = ResolveSettingsConfigRowMetrics(g_Config.m_QmUiCompactList != 0, StackedConfigRows, LineSize, MarginSmall, ConfigHelpHeight, ColorPickerLineSize, ConfigMetrics.m_LineSpacing);
 		const float ConfigRowHeight = ConfigRowMetrics.m_RowHeight;
 		ConfigListScrollRequest.m_RowExtent = ConfigRowHeight;
 		CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ConfigListScrollRequest, UiScale, 0.0f));
@@ -7780,7 +7780,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 			TClientConfigTextInputCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
 			TClientConfigTextInputCtx.m_ScopeHash = MakeUiScopeHash("settings_tclient_config_text_inputs");
 			TClientConfigTextInputCtx.m_FrameDt = GameClient()->UiRuntimeV2()->FrameDt();
-			if(g_Config.m_TcUiCompactList)
+			if(g_Config.m_QmUiCompactList)
 			{
 				const float UsedHeight = ConfigRowMetrics.m_ControlBlockHeight;
 				TopLine = RowContent;
@@ -7813,7 +7813,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 			ResetRect.y = Controls.y;
 			Controls.VSplitRight(MarginSmall, &Controls, nullptr);
 
-			if(!g_Config.m_TcUiCompactList)
+			if(!g_Config.m_QmUiCompactList)
 			{
 				CUIRect Help;
 				Below.HSplitTop(ConfigRowMetrics.m_HelpGap, nullptr, &Below);
@@ -7984,7 +7984,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 		const float ConfigInlineMinWidth = ResolveSettingsInlineRowMinimumWidth(ConfigMetrics.m_LabelWidth + 2.0f * ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_SectionGap, 1);
 		const bool StackedRows = ContentWidth < ConfigInlineMinWidth;
 		const float HelpHeight = std::max(MarginSmall, FontSize - 2.0f);
-		const SSettingsConfigRowMetrics RowMetrics = ResolveSettingsConfigRowMetrics(g_Config.m_TcUiCompactList != 0, StackedRows, ConfigMetrics.m_LineHeight, ConfigMetrics.m_LineSpacing, HelpHeight, ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_LineSpacing);
+		const SSettingsConfigRowMetrics RowMetrics = ResolveSettingsConfigRowMetrics(g_Config.m_QmUiCompactList != 0, StackedRows, ConfigMetrics.m_LineHeight, ConfigMetrics.m_LineSpacing, HelpHeight, ConfigMetrics.m_ButtonHeight, ConfigMetrics.m_LineSpacing);
 		return std::max(RowMetrics.m_RowHeight * 2.0f, ContentWidth * 0.52f);
 	};
 	const auto ConfigsContentHeightForWidth = [ConfigListViewportHeightForWidth, SectionHeadingHeight, SectionGap, FiltersHeightForWidth](float ContentWidth) {
@@ -8009,7 +8009,7 @@ void CMenus::RenderSettingsTClientConfigs(CUIRect MainView, bool PrewarmOnly)
 	};
 	static CTClientSettingsCardFrameBinding s_CardBinding;
 	s_CardBinding.Bind(ConfigsContentHeightForWidth, RenderConfigCard);
-	const uint64_t ConfigsLayoutRevision = static_cast<uint64_t>(g_Config.m_TcUiCompactList != 0);
+	const uint64_t ConfigsLayoutRevision = static_cast<uint64_t>(g_Config.m_QmUiCompactList != 0);
 	auto BuildDefinitions = [&](std::vector<SSettingsCardDefinition> &vCards) {
 		SSettingsCardDefinition Definition;
 		Definition.m_Spec = {"deck:tclient-configs-actions", Localize("Configuration"), qm_card_registry::ResolveLocalizedDescription("deck:tclient-configs-actions")};

@@ -800,6 +800,9 @@ API key
 Appearance
 == Apariencia
 
+Appearance of help bubbles outside settings cards
+== Apariencia de las ayudas fuera de las tarjetas de ajustes
+
 Append to log file instead of overwriting
 == Añadir al archivo de registro en lugar de sobrescribir
 
@@ -836,6 +839,9 @@ Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 == Aplicar entrada temprano antes del próximo tick para predicción
 
+Apply Qm recommended appearance
+== Aplicar apariencia recomendada de Qm
+
 Apply quick input to other Tees as well
 == Aplicar entrada rápida también a otros Tees
 
@@ -847,6 +853,9 @@ Apply this preset
 
 Apply watermark
 == Aplicar marca de agua
+
+Applying this preset changes the appearance settings listed below.
+== Este preajuste cambia los ajustes de apariencia indicados abajo.
 
 Arabic
 == Árabe
@@ -1288,6 +1297,9 @@ Axiom score request failed
 
 Axis
 == Eje
+
+Backdrop blur
+== Desenfoque de fondo
 
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 == Algoritmo de desenfoque de fondo: 0=Gaussiano, 1=Kawase, 2=Dual Kawase
@@ -1733,11 +1745,11 @@ Censor replacement character
 Censor word list (comma-separated)
 == Lista de palabras bloqueadas (separadas por ,)
 
-Center line color (requires tc_show_center)
-== Color de línea central (requiere tc_show_center)
+Center line color (requires qm_show_center)
+== Color de línea central (requiere qm_show_center)
 
-Center line width (requires tc_show_center)
-== Ancho de línea central (requiere tc_show_center)
+Center line width (requires qm_show_center)
+== Ancho de línea central (requiere qm_show_center)
 
 Change indicator offset based on distance to other tees
 == Cambiar el desplazamiento del indicador según la distancia a otros tees
@@ -1871,6 +1883,9 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == Comprobando si ya existe un jugador con tu nombre
 
+Checking Steam...
+== Comprobando Steam…
+
 Chinese (Simplified)
 == Chino (simplificado)
 
@@ -1909,6 +1924,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == Cámara cinematográfica
+
+CJK font
+== Fuente CJK
+
+CJK font weight
+== Grosor de la fuente CJK
 
 CJK font weight:
 == Grosor de fuente CJK:
@@ -2159,8 +2180,8 @@ Command
 Command completion
 == Autocompletado de comandos
 
-Command executed by tc_mod_weapon, target id appended at end
-== Comando ejecutado por tc_mod_weapon, id de objetivo añadido al final
+Command executed by qm_mod_weapon, target id appended at end
+== Comando ejecutado por qm_mod_weapon, id de objetivo añadido al final
 
 Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)
 == Comando ejecutado al apuntar a alguien y disparar (kill por defecto, solo funciona cuando la consola remota está autenticada)
@@ -2540,6 +2561,9 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == No se pudo conectar dummy
 
+Could not connect to the translation service. Please try again later.
+== No se pudo conectar al servicio de traducción. Inténtalo más tarde.
+
 Could not create report scan request
 == No se pudo crear la solicitud de escaneo de reporte
 
@@ -2795,6 +2819,9 @@ Cyrillic
 d = Prediction latency
 == d = Latencia de predicción
 
+Dark translucent
+== Oscuro translúcido
+
 Darken Tee color when frozen (0-100)
 == Oscurecer color de Tee cuando está congelado (0-100)
 
@@ -2993,6 +3020,9 @@ Default
 default
 == predeterminado
 
+Default appearance profile migration version
+== Versión de migración de la apariencia predeterminada
+
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 == Modo de visualización predeterminado para el tiempo: temporizador de juego/ronda o transmisión. 0 = temporizador de juego/ronda, 1 = transmisión, 2 = 0+1, 3 = ninguno
 
@@ -3116,24 +3146,6 @@ Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <
 Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
 == Obsoleto. Usa 'vote_muteid <client_id> <seconds> <reason>' o 'vote_muteip <ip> <seconds> <reason>'
 
-Deprecated: jump hint color, migrated to qm_jump_hint_color on startup
-== Obsoleto: color de sugerencia de salto, migrado a qm_jump_hint_color al inicio
-
-Deprecated: jump hint font size, migrated to qm_jump_hint_size on startup
-== Obsoleto: tamaño de fuente de sugerencia de salto, migrado a qm_jump_hint_size al inicio
-
-Deprecated: jump hint text, migrated to qm_jump_hint_text on startup (use \n for newline)
-== Obsoleto: texto de sugerencia de salto, migrado a qm_jump_hint_text al inicio (usa \n para nueva línea)
-
-Deprecated: jump hint toggle, migrated to qm_jump_hint on startup
-== Obsoleto: alternar sugerencia de salto, migrado a qm_jump_hint al inicio
-
-Deprecated: jump hint X position, migrated to qm_jump_hint_x on startup
-== Obsoleto: posición X de sugerencia de salto, migrado a qm_jump_hint_x al inicio
-
-Deprecated: jump hint Y position, migrated to qm_jump_hint_y on startup
-== Obsoleto: posición Y de sugerencia de salto, migrado a qm_jump_hint_y al inicio
-
 Depth freeze tile overlay alpha (0-100)
 == Alpha de superposición de baldosas de congelamiento profundo (0-100)
 
@@ -3157,6 +3169,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == Detectar mensajes de solo compatibles desde servidores personalizados
+
+Detect Steam again
+== Volver a detectar Steam
 
 Detection distance
 == Distancia de detección
@@ -3713,6 +3728,9 @@ Emoticon
 Emoticon ID
 == ID de emoticono
 
+Emoticon projectile duration
+== Duración de los emoticonos lanzados
+
 Emoticon shadow
 == Sombra de emoticono
 
@@ -4165,6 +4183,9 @@ Enter solo split mode
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == Introduce el código de patrocinador y pulsa «Canjear», escribe el título y pulsa «Guardar». Activa «Mostrar solo con este apodo» para vincularlo a un apodo.
+
+Enter the Steam client program path, without command arguments
+== Introduce la ruta del programa Steam sin argumentos de inicio
 
 Enter Username
 == Ingresar nombre de usuario
@@ -4976,6 +4997,9 @@ Global card ordering old config migration completed flag
 Global toggle key
 == Tecla de activación global
 
+Global UI size
+== Tamaño global de la interfaz
+
 Global UI size percentage
 == Porcentaje de tamaño global de la interfaz
 
@@ -5540,6 +5564,21 @@ IME
 IME background color
 == Color de fondo del IME
 
+IME font size
+== Tamaño de letra del IME
+
+IME font size percentage
+== Tamaño de letra del IME (%)
+
+IME selected text color
+== Color del texto seleccionado del IME
+
+IME selection background color
+== Color de fondo de selección del IME
+
+IME text color
+== Color del texto del IME
+
 Import from clipboard
 == Importar desde el portapapeles
 
@@ -5936,6 +5975,18 @@ Keep vote window open after voting
 Key binds
 == Atajos de teclas
 
+Key press count color
+== Color del contador de pulsaciones
+
+Key press count font size
+== Tamaño de letra del contador de pulsaciones
+
+Key press count font size percentage
+== Tamaño de letra del contador de pulsaciones (%)
+
+Key press count label
+== Prefijo del contador de pulsaciones
+
 Key press icon size
 == Tamaño del icono de pulsación de tecla
 
@@ -6101,11 +6152,26 @@ Last successful sync: %s
 Last verified approved update source
 == Última fuente de actualización aprobada y verificada
 
+Last viewed announcement content revision
+== Revisión del contenido del último anuncio leído
+
+Last viewed announcement version
+== Versión del último anuncio leído
+
+Last viewed client release notes
+== Últimas notas de versión del cliente leídas
+
 Latency
 == Latencia
 
 Latency Jitter
 == Fluctuación de latencia
+
+Latin font
+== Fuente latina
+
+Latin font weight
+== Grosor de la fuente latina
 
 Launch count threshold for the next sponsor reminder
 == Umbral de inicios para el próximo recordatorio
@@ -6458,6 +6524,12 @@ Lose weapons when teleporting (useful for race maps)
 Low to high
 == De bajo a alto
 
+LXGW WenKai is available.
+== LXGW WenKai está disponible.
+
+LXGW WenKai is unavailable. Current fonts and weights will be kept.
+== LXGW WenKai no está disponible. Se conservarán las fuentes y los grosores actuales.
+
 Lyrics
 == Letra
 
@@ -6535,6 +6607,9 @@ Manual scope
 
 Manual source file
 == Archivo fuente manual
+
+Manual Steam path is invalid; using automatic detection
+== La ruta manual de Steam no es válida; se usa la detección automática
 
 Manual target
 == Objetivo manual
@@ -6832,6 +6907,12 @@ Menu option - normal
 
 Menu option - selected
 == Opción de menú - seleccionada
+
+Menu panel color
+== Color del panel del menú
+
+Menu panel opacity
+== Opacidad del panel del menú
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == Combinar mensajes echo idénticos consecutivos dentro de esta ventana en milisegundos (0 desactiva la combinación)
@@ -7178,8 +7259,8 @@ Name plates offset
 Name plates size
 == Tamaño de placas de nombre
 
-Name to change to near finish (when tc_change_name_near_finish enabled)
-== Nombre para cambiar cerca de la meta (cuando tc_change_name_near_finish está habilitado)
+Name to change to near finish (when qm_change_name_near_finish enabled)
+== Nombre para cambiar cerca de la meta (cuando qm_change_name_near_finish está habilitado)
 
 Name:
 == Nombre:
@@ -7315,6 +7396,9 @@ New category name
 
 New features
 == Novedades
+
+New features (unread)
+== Novedades (sin leer)
 
 New IME
 == Nuevo IME
@@ -8153,6 +8237,18 @@ Pickup range
 Pie menu
 == Menú circular
 
+Pie menu effects
+== Efectos de apertura y cierre del menú radial
+
+Pie menu highlight tint
+== Tinte de selección del menú radial
+
+Pie menu highlight tint (alpha controls tint strength)
+== Tinte del menú radial (el alfa controla la intensidad)
+
+Pie menu opening and closing effects
+== Efectos de apertura y cierre del menú radial
+
 Pie menu rename list (separate with |, e.g., name1|name2)
 == Lista de nombres alternativos del menú de empanadas (separados por |, ej: Xuanmeng1|Xuanmeng2)
 
@@ -8429,6 +8525,9 @@ Popup & dropdown blur
 Popup animation
 == Animación emergente
 
+Popup blur
+== Desenfoque de ventanas emergentes
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == Puerto para conexión cliente-servidor (0=aleatorio, >=1024 establece puerto manual)
 
@@ -8572,6 +8671,9 @@ Preview
 
 Preview 'Hook collisions' being pressed
 == Vista previa de 'Colisiones de gancho' al presionar
+
+Preview and apply a fixed appearance preset
+== Revisar y aplicar un preajuste fijo de apariencia
 
 Preview built with %d skipped slot(s).
 == Vista previa creada con %d espacio(s) omitido(s).
@@ -8770,6 +8872,9 @@ q = Connection quality
 
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Renderizado mejorado de Qm: 0=desactivado (Vulkan puro), 1=retroceso automático, 2=forzado
+
+Qm recommended appearance
+== Apariencia recomendada de Qm
 
 Qm UI custom icon color
 == Color personalizado de iconos de Qm UI
@@ -9482,6 +9587,9 @@ Replays directory
 Reply
 == Responder
 
+Reply content
+== Contenido de la respuesta
+
 Reply to messages from muted players
 == Responder a mensajes de jugadores silenciados
 
@@ -9590,6 +9698,9 @@ Reset column widths
 Reset controls
 == Restablecer controles
 
+Reset count appearance
+== Restablecer apariencia del contador
+
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 == Restablecer ajustes de DDRace (sv_hit, sv_endless_drag, sv_old_laser) tras cada cambio de mapa
 
@@ -9602,11 +9713,20 @@ Reset dummy
 Reset filter
 == Restablecer filtro
 
+Reset IME appearance
+== Restablecer apariencia del IME
+
+Reset key press counts
+== Reiniciar el número de pulsaciones
+
 Reset layout
 == Restablecer diseño
 
 Reset mouse position when opening bind wheel
 == Restablecer posición del ratón al abrir la rueda de binds
+
+Reset pie menu appearance
+== Restablecer apariencia del menú radial
 
 Reset position of mouse when opening bindwheel
 == Restablecer la posición del ratón al abrir la rueda de binds
@@ -9619,6 +9739,12 @@ Reset stats when joining a server
 
 Reset to defaults
 == Restablecer a valores predeterminados
+
+Reset tooltip appearance
+== Restablecer apariencia de las ayudas
+
+Reset translation colors
+== Restablecer colores de traducción
 
 Reset tuning after each map change
 == Restablecer ajustes tras cada cambio de mapa
@@ -9781,6 +9907,9 @@ Rule line 8.
 
 Rule line 9.
 == Línea de regla 9.
+
+Rule list
+== Lista de reglas
 
 Run "hot_reload" on local server with rcon auth on map save
 == Ejecutar "hot_reload" en el servidor local con autenticación rcon al guardar el mapa
@@ -10172,9 +10301,6 @@ Self and friends
 Self only
 == Solo yo
 
-Send
-== Enviar
-
 Send & Receive
 == Enviar y recibir
 
@@ -10402,6 +10528,9 @@ Settings card titles use rainbow colors
 
 Settings file
 == Archivo de configuración
+
+Settings page opacity
+== Opacidad de la página de ajustes
 
 Settings page right panel opacity
 == Opacidad del panel derecho de la página de configuración
@@ -10894,6 +11023,9 @@ Show katan on frozen players
 
 Show katana on frozen players (restores old behavior)
 == Mostrar katana en jugadores congelados (restaura el comportamiento antiguo)
+
+Show key press counts
+== Mostrar el número de pulsaciones
 
 Show key presses
 == Mostrar pulsaciones de teclas
@@ -11942,8 +12074,23 @@ Status normal, check details below if still experiencing issues
 Status Scheme:
 == Esquema de Estado:
 
+Steam client path (leave empty to detect automatically)
+== Ruta del cliente de Steam (vacía para detectar automáticamente)
+
 Steam integration
 == Integración con Steam
+
+Steam is installed
+== Steam está instalado
+
+Steam is installed but not running
+== Steam está instalado, pero no está en ejecución
+
+Steam is running
+== Steam está en ejecución
+
+Steam not found
+== Steam no encontrado
 
 Steam profile name
 == Nombre del perfil de Steam
@@ -12473,6 +12620,9 @@ Tencent Cloud Translation SecretKey
 Text alpha
 == Alpha del texto
 
+Text before each key press count
+== Prefijo del contador de pulsaciones
+
 Text color
 == Color del texto
 
@@ -12677,8 +12827,8 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Esta ayuda la proporciona ui_widget::Tooltip, una capa fina sobre CTooltips.
 
-Tick delay before executing tc_execute_on_join
-== Retraso en ticks antes de ejecutar tc_execute_on_join
+Tick delay before executing qm_execute_on_join
+== Retraso en ticks antes de ejecutar qm_execute_on_join
 
 Ticks after freeze before applying max prediction reduction
 == Ticks después de congelar antes de aplicar la reducción máxima de predicción
@@ -12956,6 +13106,24 @@ Too many translation tasks
 Toolbox page
 == Página de caja de herramientas
 
+Tooltip background color
+== Color de fondo de la ayuda
+
+Tooltip bounce animation
+== Animación de rebote de la ayuda
+
+Tooltip font size
+== Tamaño de letra de la ayuda
+
+Tooltip preview
+== Vista previa de la ayuda
+
+Tooltip text color
+== Color del texto de la ayuda
+
+Tooltips
+== Ayudas emergentes
+
 Top left
 == Arriba a la izquierda
 
@@ -13067,14 +13235,32 @@ Translation queue full, sending original
 Translation service
 == Servicio de traducción
 
-Translation service returned a notice instead of a translation (the message may contain filtered words)
-== El servicio de traducción devolvió un aviso en lugar de una traducción (el mensaje puede contener palabras filtradas)
+Translation service authentication failed. Check the API key and service address.
+== Falló la autenticación del servicio de traducción. Revisa la clave API y la dirección del servicio.
+
+Translation service is rate limited. Please try again later.
+== Hay demasiadas solicitudes al servicio de traducción. Inténtalo más tarde.
+
+Translation service is temporarily unavailable. Please try again later.
+== El servicio de traducción no está disponible temporalmente. Inténtalo más tarde.
+
+Translation service quota is exhausted. Choose another service or try again later.
+== Se agotó la cuota del servicio de traducción. Elige otro servicio o inténtalo más tarde.
+
+Translation service refused this content. Please edit it and try again.
+== El servicio de traducción rechazó este contenido. Modifícalo e inténtalo de nuevo.
+
+Translation service returned a notice instead of a translation
+== El servicio de traducción devolvió un aviso en lugar de una traducción
 
 Translation Settings
 == Ajustes de traducción
 
 transmits your player name to info.ddnet.org
 == transmite tu nombre de jugador a info.ddnet.org
+
+Trigger limits
+== Límites de activación
 
 Troubleshooting suggestions
 == Sugerencias de solución de problemas
@@ -13156,6 +13342,9 @@ UDP seems to be filtered.
 
 UDP socket not open
 == Socket UDP no abierto
+
+UI animations
+== Animaciones de la interfaz
 
 UI color
 == Color de la interfaz de usuario
@@ -13573,6 +13762,9 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Usa la rueda del ratón sobre un módulo para escalarlo un 5%
+
+Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
+== Introduce por separado las contraseñas registradas en Axiom para la cuenta principal y el dummy. Esta opción no registra cuentas.
 
 Use the scoreboard cursor mode to scroll the list
 == Usa el modo cursor del marcador para desplazar la lista

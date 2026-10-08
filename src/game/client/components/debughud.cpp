@@ -288,7 +288,7 @@ void CDebugHud::RenderHint()
 	const float FontSize = 5.0f;
 	const float Spacing = 5.0f;
 	// TClient：状态栏渲染在屏幕最底部，底部提示文本需要向上避让
-	const float StatusBarHeight = g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f;
+	const float StatusBarHeight = g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f;
 
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 	TextRender()->Text(Spacing, Height - FontSize - Spacing - StatusBarHeight, FontSize, Localize("Debug mode enabled. Press Ctrl+Shift+D to disable debug mode."));
@@ -330,7 +330,7 @@ void CDebugHud::RenderSwitchTileInfo()
 	const float TextWidth = TextRender()->TextWidth(FontSize, aBuf);
 	const float X = std::max(Spacing, WidthScreen - Spacing - TextWidth);
 	// TClient：状态栏渲染在屏幕最底部，底部文本需要向上避让
-	const float StatusBarHeight = g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f;
+	const float StatusBarHeight = g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f;
 	const float Y = Height - FontSize - Spacing - StatusBarHeight;
 	TextRender()->Text(X, Y, FontSize, aBuf);
 }

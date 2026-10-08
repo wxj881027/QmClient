@@ -299,7 +299,40 @@ TEST(QmEmoticonProjectile, ProjectileBouncesAndExpires)
 	EXPECT_FLOAT_EQ(Projectile.m_Pos.x, Before.x);
 	EXPECT_LT(Projectile.m_Vel.x, 0.0f);
 	Projectile.Update(4.0f, Mask, [](int, int) { return false; });
+	EXPECT_TRUE(Projectile.m_Active);
+	Projectile.Update(1.1f, Mask, [](int, int) { return false; });
 	EXPECT_FALSE(Projectile.m_Active);
+}
+
+TEST(QmEmoticonProjectile, ConfiguredDurationClampsAndReinitializationUsesNewValue)
+{
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(0, 0), vec2(0, 0), 0, 1.0f, -1, 0);
+	EXPECT_FLOAT_EQ(Projectile.m_LifeTime, 1.0f);
+	Projectile.Init(vec2(0, 0), vec2(0, 0), 0, 1.0f, -1, 20);
+	EXPECT_FLOAT_EQ(Projectile.m_LifeTime, 10.0f);
+	Projectile.Init(vec2(0, 0), vec2(0, 0), 0);
+	EXPECT_FLOAT_EQ(Projectile.m_LifeTime, 5.0f);
+}
+
+TEST(QmEmoticonProjectile, DurationKeepsFinalHalfSecondFade)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	CEmoticonProjectile Short, Long;
+	Short.Init(vec2(0, 0), vec2(0, 0), 0, 1.0f, -1, 1);
+	Long.Init(vec2(0, 0), vec2(0, 0), 0, 1.0f, -1, 10);
+	const auto Solid = [](int, int) { return false; };
+	Short.Update(0.75f, Mask, Solid);
+	Long.Update(0.75f, Mask, Solid);
+	EXPECT_TRUE(Short.m_Active);
+	EXPECT_NEAR(Short.FadeAlpha(), 0.5f, 0.01f);
+	EXPECT_FLOAT_EQ(Long.FadeAlpha(), 1.0f);
+	Short.Update(0.3f, Mask, Solid);
+	EXPECT_FALSE(Short.m_Active);
+	EXPECT_FLOAT_EQ(Short.FadeAlpha(), 0.0f);
+	EXPECT_TRUE(Long.m_Active);
 }
 
 TEST(QmEmoticonProjectile, PlayerCollisionExcludesOwner)

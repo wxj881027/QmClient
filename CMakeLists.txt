@@ -2779,6 +2779,10 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   config_variables.h
   config_variables_qmclient.h
   config_variables_tclient.h
+  qm_legacy_config.cpp
+  qm_default_profile.h
+  qm_legacy_config.h
+  qm_legacy_config_aliases.h
   console.cpp
   console.h
   csv.cpp
@@ -3145,6 +3149,7 @@ if(CLIENT)
     steam.cpp
     steam_probe.cpp
     steam_probe.h
+    steam_client_path.h
     text.cpp
     qm_font_names.h
     qm_font_name_match.h
@@ -3198,6 +3203,9 @@ if(CLIENT)
     QmUi/SettingsCard.cpp
     QmUi/SettingsCardInfo.cpp
     QmUi/SettingsCardInfo.h
+    QmUi/SettingsToggleGrid.h
+    QmUi/SettingsIconFeedback.h
+    QmUi/SettingsCardHelp.h
     QmUi/SettingsCard.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
@@ -3233,8 +3241,13 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogIds.cpp
     QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
+    QmUi/cards/QmCardCatalogKeywordReply.cpp
     QmUi/cards/QmCardCatalogBetterScoreboard.cpp
     QmUi/cards/QmCardCatalogSteam.cpp
+    QmUi/cards/QmAppearancePreset.h
+    QmUi/cards/QmCardCatalogAppearancePreset.cpp
+    QmUi/cards/QmCardCatalogIme.cpp
+    QmUi/cards/QmCardCatalogTooltip.cpp
     QmUi/cards/QmCardCatalogFunctionMetrics.h
     QmUi/cards/QmCardCatalogHud.cpp
     QmUi/cards/QmCardCatalogInternal.h
@@ -4442,6 +4455,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
+    src/test/unit/qmclient/ui/settings_card_help_test.cpp
+    src/test/unit/engine/steam_client_path_test.cpp
+    src/test/unit/qmclient/ui/settings_toggle_grid_test.cpp
     src/test/unit/qmclient/ui/QmAnimTest.cpp
     src/test/unit/qmclient/ui/QmAnimSpringTest.cpp
     src/test/unit/qmclient/ui/QmAnimCoreTest.cpp
@@ -4509,6 +4525,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/color_test.cpp
     src/test/unit/engine/compression_test.cpp
     src/test/unit/engine/console_test.cpp
+    src/test/unit/engine/qm_legacy_config_test.cpp
+    src/test/unit/qmclient/settings/qm_appearance_preset_test.cpp
     src/test/unit/engine/csv_test.cpp
     src/test/unit/engine/datafile_test.cpp
     src/test/unit/base/dbg_test.cpp
@@ -4607,6 +4625,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/country_flag_anim_start_time_test.cpp
     src/test/contract/qmclient/client/qm_ime_platform_contract_test.cpp
     src/test/unit/qmclient/client/qm_ime_platform_test.cpp
+    src/test/unit/qmclient/client/qm_input_overlay_count_test.cpp
     src/test/unit/qmclient/ui/qm_ui_scale_test.cpp
     src/test/unit/qmclient/client/qm_localization_policy_test.cpp
     src/test/unit/qmclient/client/qm_storage_path_test.cpp
@@ -4687,6 +4706,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
+    src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp
     src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp

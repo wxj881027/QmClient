@@ -3,6 +3,7 @@
 
 #include <game/client/QmUi/QmCardOrderModel.h>
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -46,6 +47,12 @@ namespace qm_card_registry
 		return {};
 	}
 
+	struct SCardSettingSearch
+	{
+		const char *m_pLabel;
+		const char *m_pConfigName;
+	};
+
 	struct SCardDefault
 	{
 		const char *m_pStableId; // 全局唯一 stableId（qm:/tclient:/deck: 命名空间）
@@ -60,6 +67,8 @@ namespace qm_card_registry
 		// 若按 m_pDefaultTab 跳转会落在空 tab 上。设置后搜索按此目标跳转。
 		const char *m_pNavigationTab = nullptr; // 覆盖导航 tab（可为旧设置页 key）
 		const char *m_pNavigationStableId = nullptr; // 实际承载该功能的卡（可为 nullptr）
+		const SCardSettingSearch *m_pSettings = nullptr;
+		size_t m_SettingCount = 0;
 	};
 
 	struct SCardNavigationTarget

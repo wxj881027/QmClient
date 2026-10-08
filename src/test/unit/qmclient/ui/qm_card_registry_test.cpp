@@ -28,6 +28,49 @@ static qm_card_order::CModel RegistryModelAfterRoundTrip()
 	EXPECT_TRUE(Reloaded.LoadMerged(aSerialized, Defaults));
 	return Reloaded;
 }
+
+TEST(QmCardRegistrySearch, MapRouteSettingFindsItsPlayerStatsCardBeforeOpeningIt)
+{
+	const auto Model = RegistryModelAfterRoundTrip();
+	for(const char *pQuery : {"地图", "地图点状调试路径", "Show dotted map route debug", "Use embedded HUD progress bar", "qm_player_stats_map_progress_dbg_route"})
+	{
+		SCOPED_TRACE(pQuery);
+		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
+		const auto It = std::find_if(Results.begin(), Results.end(), [](const auto &Result) {
+			return std::string(Result.m_pStableId) == "qm:player_stats";
+		});
+		ASSERT_NE(It, Results.end());
+		EXPECT_STREQ(It->m_Target.m_pTab, "hud");
+		EXPECT_STREQ(It->m_Target.m_pStableId, "qm:player_stats");
+	}
+}
+
+TEST(QmCardRegistrySearch, InternalSettingLabelsAndConfigNamesFindTheContainingCard)
+{
+	const auto Model = RegistryModelAfterRoundTrip();
+	struct SCase
+	{
+		const char *m_pQuery;
+		const char *m_pCard;
+	};
+	const SCase aCases[] = {
+		{"Emoticon projectile duration", "qm:skin_appearance"},
+		{"qm_emoticon_projectile_duration", "qm:skin_appearance"},
+		{"Skin outline for other players", "qm:skin_appearance"},
+		{"qm_skin_outline_others", "qm:skin_appearance"},
+		{"Show key press counts", "qm:input_overlay"},
+		{"qm_input_overlay_key_counts", "qm:input_overlay"},
+	};
+	for(const auto &Case : aCases)
+	{
+		SCOPED_TRACE(Case.m_pQuery);
+		const auto Results = qm_card_registry::SearchCards(Case.m_pQuery, Model);
+		EXPECT_TRUE(std::any_of(Results.begin(), Results.end(), [&](const auto &Result) {
+			return std::string(Result.m_pStableId) == Case.m_pCard;
+		}));
+	}
+}
+
 // 意图：注册表是迁移兜底与 SmartDefaults 的唯一依据，必须全覆盖、无重复、命名权威。
 TEST(QmCardRegistry, CoversAllCardsNoDuplicates)
 {

@@ -34,7 +34,7 @@ void CSmoothTime::SetAdjustSpeed(EAdjustDirection Direction, float Value)
 int64_t CSmoothTime::Get(int64_t Now) const
 {
 	int64_t r = GetWithoutMargin(Now);
-	if(g_Config.m_TcSmoothPredictionMargin)
+	if(g_Config.m_QmSmoothPredictionMargin)
 		return r + GetMargin(Now);
 	return r + m_Margin;
 }
@@ -60,7 +60,7 @@ int64_t CSmoothTime::GetWithoutMargin(int64_t Now) const
 
 void CSmoothTime::UpdateInt(int64_t Target)
 {
-	if(g_Config.m_TcSmoothPredictionMargin)
+	if(g_Config.m_QmSmoothPredictionMargin)
 	{
 		int64_t Now = time_get();
 		m_Current = GetWithoutMargin(Now);
@@ -126,7 +126,7 @@ CSmoothTime::EUpdateStatus CSmoothTime::Update(CGraph *pGraph, int64_t Target, i
 
 void CSmoothTime::UpdateMargin(int64_t Margin)
 {
-	if(g_Config.m_TcSmoothPredictionMargin)
+	if(g_Config.m_QmSmoothPredictionMargin)
 	{
 		int64_t Now = time_get();
 		m_CurrentMargin = GetMargin(Now);

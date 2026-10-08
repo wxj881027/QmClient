@@ -2,7 +2,10 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "SettingsCard.h"
 
+#include "QmAnimResolve.h"
 #include "SettingsCardInfo.h"
+#include "SettingsCardHelp.h"
+#include "SettingsIconFeedback.h"
 #include "SettingsPageLayout.h"
 #include "UiContext.h"
 #include "UiSurface.h"
@@ -16,6 +19,7 @@
 #include <engine/textrender.h>
 
 #include <game/client/components/menus.h>
+#include <game/client/components/tooltips.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 
@@ -48,18 +52,21 @@ namespace
 
 }
 
-void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, const EQmIcon Icon, const char *pGlyph, const float DrawAlpha)
+void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, const EQmIcon Icon, const char *pGlyph, const float DrawAlpha, const void *pId)
 {
-	if(Ctx.m_pUi == nullptr)
+	if(Ctx.m_pUi == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f)
 		return;
 	const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
 	const bool Hovered = Ctx.m_pUi->MouseHovered(&Rect);
 	const float Alpha = std::clamp(DrawAlpha, 0.0f, 1.0f);
 	const CUIRect &ChromeRect = Rect;
 	const float Radius = std::min(ui_token::radius::TIGHT * UiScale, std::min(ChromeRect.w, ChromeRect.h) * 0.25f);
-	const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? 0.28f : 0.18f) * Alpha);
+	const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, (Hovered ? (Ctx.m_pUi->MouseButton(0) ? 0.36f : 0.28f) : 0.18f) * Alpha);
 	DrawRoundedSurface(Ctx, ChromeRect, ChromeColor, ChromeColor, Radius);
-	const float IconSize = std::clamp(ui_token::font::BODY * UiScale, 10.0f, ui_token::font::BODY);
+	const bool Pressed = Hovered && Ctx.m_pUi->MouseButton(0);
+	const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ str_quickhash("card-icon-feedback"), reinterpret_cast<uint64_t>(pId));
+	const float Scale = Ctx.m_pAnim != nullptr && pId != nullptr ? ResolveSettingsIconScale(*Ctx.m_pAnim, NodeKey, Hovered, Pressed, !Ctx.m_pUi->RenderOnly()) : 1.0f;
+	const float IconSize = std::clamp(ui_token::font::BODY * UiScale, 10.0f, ui_token::font::BODY) * Scale;
 	const ColorRGBA IconColor = ResolveUiSurfaceIconColor(ChromeColor, Ctx.m_pUi->TextRender()->GetTextColor().WithAlpha(Alpha));
 	ITextRender *pTextRender = Ctx.m_pUi->TextRender();
 	ExecuteSettingsCardHeaderIcon(*pTextRender, IconColor, [&]() {
@@ -67,9 +74,9 @@ void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, co
 	});
 }
 
-void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, const bool Collapsed, const float DrawAlpha)
+void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, const bool Collapsed, const float DrawAlpha, const void *pId)
 {
-	RenderSettingsCardHeaderIcon(Ctx, Rect, Collapsed ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP, Collapsed ? FontIcons::FONT_ICON_CHEVRON_DOWN : FontIcons::FONT_ICON_CHEVRON_UP, DrawAlpha);
+	RenderSettingsCardHeaderIcon(Ctx, Rect, Collapsed ? EQmIcon::CHEVRON_DOWN : EQmIcon::CHEVRON_UP, Collapsed ? FontIcons::FONT_ICON_CHEVRON_DOWN : FontIcons::FONT_ICON_CHEVRON_UP, DrawAlpha, pId);
 }
 
 SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const CUIRect &Slot, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardMeasure &Measure, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction, const FSettingsCardRenderMeasured &RenderMeasured, bool *pPointerInside)
@@ -81,8 +88,11 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const CUIRect &Slot, cons
 	return SettingsCard(Ctx, Frame, Spec, State, VisualOptions, Render, HeaderAction, RenderMeasured, pPointerInside);
 }
 
-SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame &Frame, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction, const FSettingsCardRenderMeasured &RenderMeasured, bool *pPointerInside)
+SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame &Frame, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction, const FSettingsCardRenderMeasured &RenderMeasured, bool *pPointerInside, CSettingsCardHelp *pHelp, float HelpHeight)
 {
+	CTooltips::CCardHelpScope HelpScope(Ctx.m_pTooltips, pHelp);
+	if(pHelp != nullptr)
+		pHelp->BeginFrame();
 	const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
 	SSettingsCardVisualState DrawState = State;
 	SSettingsCardFrame DrawFrame = ResolveSettingsCardDrawFrame(Frame, State.m_DrawOffsetX, State.m_DrawOffsetY);
@@ -90,7 +100,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 	if(Spec.m_pInfo != nullptr && Spec.m_pInfo[0] != '\0')
 	{
 		InfoButton = ResolveSettingsCardInfoRect(DrawFrame);
-		DrawFrame.m_TitleRect.w = std::max(0.0f, InfoButton.x - DrawFrame.m_TitleRect.x - ui_token::spacing::XS);
+		DrawFrame.m_TitleRect.w = std::min(DrawFrame.m_TitleRect.w, std::max(0.0f, InfoButton.x - DrawFrame.m_TitleRect.x - ui_token::spacing::XS));
 		DrawFrame.m_SubtitleRect.w = DrawFrame.m_TitleRect.w;
 	}
 	DrawState.m_PointerInside = Ctx.m_pUi != nullptr && Ctx.m_pUi->MouseHovered(&DrawFrame.m_Rect);
@@ -164,7 +174,7 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		Ctx.m_pTextRender->TextSelectionColor(PreviousTextSelectionColor);
 		Ctx.m_pTextRender->TextColor(PreviousTextColor);
 		if(DrawCardChrome && DrawState.m_ShowDefaultCollapseButton)
-			RenderSettingsCardCollapseButton(Ctx, DrawFrame.m_HandleRect, DrawState.m_Collapsed, DrawState.m_DrawAlpha);
+			RenderSettingsCardCollapseButton(Ctx, DrawFrame.m_HandleRect, DrawState.m_Collapsed, DrawState.m_DrawAlpha, Spec.m_pStableId);
 	}
 
 	if(DrawCardChrome)
@@ -179,13 +189,32 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		Ctx.m_pUi->ClipEnable(&ClipRect);
 	}
 	CUiScopedSurfaceText SurfaceText(Ctx.m_pTextRender, Surface);
+	CUIRect BodyRect = DrawFrame.m_ContentRect;
+	CUIRect HelpRect{};
+	if(pHelp != nullptr && HelpHeight > 0.0f)
+	{
+		const float Reserved = std::min(HelpHeight, std::max(0.0f, BodyRect.h));
+		BodyRect.HSplitBottom(Reserved, &BodyRect, &HelpRect);
+		HelpRect.HSplitTop(std::min(4.0f * UiScale, HelpRect.h), nullptr, &HelpRect);
+	}
 	if(RenderMeasured)
 	{
-		CUIRect ContentRect = DrawFrame.m_ContentRect;
+		CUIRect ContentRect = BodyRect;
 		RenderMeasured(ContentRect);
 	}
 	else if(Render)
-		Render(DrawFrame.m_ContentRect);
+		Render(BodyRect);
+	if(pHelp != nullptr && HelpRect.h > 0.0f && Ctx.m_pUi != nullptr && Ctx.m_pTextRender != nullptr)
+	{
+		const ColorRGBA OldColor = Ctx.m_pTextRender->GetTextColor();
+		Ctx.m_pTextRender->TextColor(OldColor.WithAlpha(OldColor.a * 0.7f));
+		SLabelProperties Props;
+		Props.m_MaxWidth = HelpRect.w;
+		Ctx.m_pUi->ClipEnable(&HelpRect);
+		Ctx.m_pUi->DoLabel(&HelpRect, pHelp->Text(), pHelp->FontSize(), TEXTALIGN_TL, Props);
+		Ctx.m_pUi->ClipDisable();
+		Ctx.m_pTextRender->TextColor(OldColor);
+	}
 	if(ClipContent)
 		Ctx.m_pUi->ClipDisable();
 	return Frame;

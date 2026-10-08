@@ -44,18 +44,18 @@ void CTrails::RenderTeeTrails()
 {
 	if(GameClient()->IsRenderingDummyMiniMap())
 		return;
-	if(!g_Config.m_TcTeeTrail)
+	if(!g_Config.m_QmTeeTrail)
 	{
 		OnReset();
 		return;
 	}
-	const int Style = qm_tee_trail::ResolveStyle(g_Config.m_TcTeeTrailStyle);
-	if(m_LastStyle != Style || m_LastLength != g_Config.m_TcTeeTrailLength)
+	const int Style = qm_tee_trail::ResolveStyle(g_Config.m_QmTeeTrailStyle);
+	if(m_LastStyle != Style || m_LastLength != g_Config.m_QmTeeTrailLength)
 		OnReset();
 	const bool DummyChanged = m_LastDummy >= 0 && m_LastDummy != g_Config.m_ClDummy;
 	m_LastDummy = g_Config.m_ClDummy;
 	m_LastStyle = Style;
-	m_LastLength = g_Config.m_TcTeeTrailLength;
+	m_LastLength = g_Config.m_QmTeeTrailLength;
 
 	float X0, Y0, X1, Y1;
 	Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
@@ -72,7 +72,7 @@ void CTrails::RenderTeeTrails()
 	{
 		auto &State = m_aTrailStates[ClientId];
 		const bool Local = GameClient()->IsLocalClientId(ClientId);
-		if(!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active || (!Local && (!g_Config.m_TcTeeTrailOthers || !ZoomAllowed)))
+		if(!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active || (!Local && (!g_Config.m_QmTeeTrailOthers || !ZoomAllowed)))
 		{
 			State.Reset();
 			continue;
@@ -83,7 +83,7 @@ void CTrails::RenderTeeTrails()
 		const vec2 Velocity = mix(vec2(Data.m_RenderPrev.m_VelX, Data.m_RenderPrev.m_VelY), vec2(Data.m_RenderCur.m_VelX, Data.m_RenderCur.m_VelY), Intra) / 256.0f;
 		const float Speed = length(Velocity);
 		const float MovementBudget = Data.m_RenderCur.m_Weapon == WEAPON_NINJA ? std::max(Speed, float(g_pData->m_Weapons.m_Ninja.m_Velocity)) : Speed;
-		const int Source = int(Data.m_IsPredicted) | (g_Config.m_TcRemoveAnti << 1) | (int(g_Config.m_TcUnpredOthersInFreeze && Client()->m_IsLocalFrozen) << 2) | (g_Config.m_TcSwapGhosts << 3) | (int(GameClient()->m_TClient.IsFastInputActive()) << 4);
+		const int Source = int(Data.m_IsPredicted) | (g_Config.m_QmRemoveAnti << 1) | (int(g_Config.m_QmUnpredOthersInFreeze && Client()->m_IsLocalFrozen) << 2) | (g_Config.m_QmSwapGhosts << 3) | (int(GameClient()->m_TClient.IsFastInputActive()) << 4);
 		const bool SourceChanged = m_aPositionSources[ClientId] != Source;
 		m_aPositionSources[ClientId] = Source;
 		// 拦截传送端点的插值窗口，否则远端 Tee 会在几帧内沿传送直线留下假轨迹。
@@ -107,7 +107,7 @@ void CTrails::RenderTeeTrails()
 		if(m_vTrail.size() < 2)
 			continue;
 		float MinX = m_vTrail[0].m_Pos.x, MaxX = MinX, MinY = m_vTrail[0].m_Pos.y, MaxY = MinY;
-		float Alpha = g_Config.m_TcTeeTrailAlpha / 100.0f;
+		float Alpha = g_Config.m_QmTeeTrailAlpha / 100.0f;
 		if(GameClient()->IsOtherTeam(ClientId))
 			Alpha *= g_Config.m_ClShowOthersAlpha / 100.0f;
 		if(Alpha <= 0)
@@ -121,12 +121,12 @@ void CTrails::RenderTeeTrails()
 		}
 		// 连同存活的尾部一起裁剪，头部出屏时不截掉仍在屏幕内的拖尾。
 		// 采样与老化仍然每帧执行，只有不可见轨迹的配色和几何构建被跳过。
-		const float Margin = g_Config.m_TcTeeTrailWidth * 3.0f + 360.0f;
+		const float Margin = g_Config.m_QmTeeTrailWidth * 3.0f + 360.0f;
 		if(MaxX < X0 - Margin || MinX > X1 + Margin || MaxY < Y0 - Margin || MinY > Y1 + Margin)
 			continue;
 		for(auto &Part : m_vTrail)
 		{
-			switch(g_Config.m_TcTeeTrailColorMode)
+			switch(g_Config.m_QmTeeTrailColorMode)
 			{
 			case COLORMODE_TEE:
 				Part.m_Col = Data.m_RenderInfo.m_CustomColoredSkin ? Data.m_RenderInfo.m_ColorBody : Data.m_RenderInfo.m_BloodColor;
@@ -144,12 +144,12 @@ void CTrails::RenderTeeTrails()
 				break;
 			}
 			default:
-				Part.m_Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcTeeTrailColor));
+				Part.m_Col = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTeeTrailColor));
 				break;
 			}
 			Part.m_Col.a = Alpha;
 		}
-		qm_tee_trail::BuildEffect(m_vTrail, Style, g_Config.m_TcTeeTrailStyleColors != 0, Time, g_Config.m_TcTeeTrailWidth, ClientId * 131 + 17, m_vQuads, PixelSize, g_Config.m_TcTeeTrailTaper != 0, g_Config.m_TcTeeTrailFade != 0);
+		qm_tee_trail::BuildEffect(m_vTrail, Style, g_Config.m_QmTeeTrailStyleColors != 0, Time, g_Config.m_QmTeeTrailWidth, ClientId * 131 + 17, m_vQuads, PixelSize, g_Config.m_QmTeeTrailTaper != 0, g_Config.m_QmTeeTrailFade != 0);
 		for(const auto &Quad : m_vQuads)
 		{
 			if(Quad.m_Additive != Additive)

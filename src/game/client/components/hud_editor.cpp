@@ -292,7 +292,7 @@ const CHudEditor::SElementState &CHudEditor::State(EHudEditorElement Element) co
 	return m_aElementStates[static_cast<int>(Element)];
 }
 
-void CHudEditor::ClampStateToScreen(SElementState &State, float BaseWidth, float BaseHeight, float StateOffsetX, float StateOffsetY, const QmHudEditor::SEdgeMargin &EdgeMargin) const
+void CHudEditor::ClampStateToScreen(SElementState &State, float BaseWidth, float BaseHeight, float StateOffsetX, float StateOffsetY) const
 {
 	const CUIRect *pScreen = Ui()->Screen();
 	if(pScreen == nullptr || pScreen->w <= 0.0f || pScreen->h <= 0.0f)
@@ -305,22 +305,13 @@ void CHudEditor::ClampStateToScreen(SElementState &State, float BaseWidth, float
 	const bool AnchorBottom = State.m_PosYPermille >= POSITION_SCALE;
 	const float XNorm = Clamp01(State.m_PosXPermille / (float)POSITION_SCALE);
 	const float YNorm = Clamp01(State.m_PosYPermille / (float)POSITION_SCALE);
-	float X = pScreen->x + XNorm * pScreen->w;
-	float Y = pScreen->y + YNorm * pScreen->h;
+	const float OffsetX = StateOffsetX * Scale;
+	const float OffsetY = StateOffsetY * Scale;
+	const float X = QmHudEditor::RestoreAxisAnchor(XNorm, Width, pScreen->x, pScreen->w, OffsetX);
+	const float Y = QmHudEditor::RestoreAxisAnchor(YNorm, Height, pScreen->y, pScreen->h, OffsetY);
 
-	const float SafeLeft = maximum(0.0f, EdgeMargin.m_Left);
-	const float SafeRight = maximum(0.0f, EdgeMargin.m_Right);
-	const float SafeTop = maximum(0.0f, EdgeMargin.m_Top);
-	const float SafeBottom = maximum(0.0f, EdgeMargin.m_Bottom);
-	const float MinX = pScreen->x + SafeLeft - StateOffsetX * Scale;
-	const float MinY = pScreen->y + SafeTop - StateOffsetY * Scale;
-	const float MaxX = Width >= pScreen->w ? MinX : pScreen->x + pScreen->w - Width - SafeRight - StateOffsetX * Scale;
-	const float MaxY = Height >= pScreen->h ? MinY : pScreen->y + pScreen->h - Height - SafeBottom - StateOffsetY * Scale;
-	X = std::clamp(X, MinX, MaxX);
-	Y = std::clamp(Y, MinY, MaxY);
-
-	State.m_PosXPermille = AnchorRight ? POSITION_SCALE : std::clamp(round_to_int((X - pScreen->x) / pScreen->w * POSITION_SCALE), 0, POSITION_SCALE);
-	State.m_PosYPermille = AnchorBottom ? POSITION_SCALE : std::clamp(round_to_int((Y - pScreen->y) / pScreen->h * POSITION_SCALE), 0, POSITION_SCALE);
+	State.m_PosXPermille = AnchorRight ? POSITION_SCALE : round_to_int(QmHudEditor::StoreAxisAnchor(X, Width, pScreen->x, pScreen->w, OffsetX) * POSITION_SCALE);
+	State.m_PosYPermille = AnchorBottom ? POSITION_SCALE : round_to_int(QmHudEditor::StoreAxisAnchor(Y, Height, pScreen->y, pScreen->h, OffsetY) * POSITION_SCALE);
 }
 
 CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element, const CUIRect &DefaultRect, bool Scalable, bool ApplyMapScreen)
@@ -372,8 +363,6 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	const float Scale = std::clamp(SavedState.m_HasCustom ? SavedState.m_ScalePercent / 100.0f : 1.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
 	const float NormX = SavedState.m_HasCustom ? Clamp01(SavedState.m_PosXPermille / (float)POSITION_SCALE) : DefaultNormX;
 	const float NormY = SavedState.m_HasCustom ? Clamp01(SavedState.m_PosYPermille / (float)POSITION_SCALE) : DefaultNormY;
-	float AnchorX = ScreenX0 + NormX * ScreenW;
-	float AnchorY = ScreenY0 + NormY * ScreenH;
 
 	const float TransformWidth = TransformRect.w * Scale;
 	const float TransformHeight = TransformRect.h * Scale;
@@ -381,23 +370,13 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	const float VisibleHeight = VisibleRect.h * Scale;
 	const float VisibleOffsetX = TransformToVisibleOffsetX * Scale;
 	const float VisibleOffsetY = TransformToVisibleOffsetY * Scale;
-	const float MinAnchorX = EffScreenX0 - VisibleOffsetX;
-	const float MinAnchorY = EffScreenY0 - VisibleOffsetY;
-	const float MaxAnchorX = VisibleWidth >= EffScreenW ? MinAnchorX : EffScreenX0 + EffScreenW - VisibleWidth - VisibleOffsetX;
-	const float MaxAnchorY = VisibleHeight >= EffScreenH ? MinAnchorY : EffScreenY0 + EffScreenH - VisibleHeight - VisibleOffsetY;
-	if(SavedState.m_HasCustom)
-	{
-		if(SavedState.m_PosXPermille <= 0)
-			AnchorX = MinAnchorX;
-		else if(SavedState.m_PosXPermille >= POSITION_SCALE)
-			AnchorX = MaxAnchorX;
-		if(SavedState.m_PosYPermille <= 0)
-			AnchorY = MinAnchorY;
-		else if(SavedState.m_PosYPermille >= POSITION_SCALE)
-			AnchorY = MaxAnchorY;
-	}
-	AnchorX = std::clamp(AnchorX, MinAnchorX, MaxAnchorX);
-	AnchorY = std::clamp(AnchorY, MinAnchorY, MaxAnchorY);
+	// 默认布局保留设计留白；手动布局按真实可见屏幕边恢复，避免每次重进又被内推。
+	const float AnchorX = SavedState.m_HasCustom ?
+		QmHudEditor::RestoreAxisAnchor(NormX, VisibleWidth, ScreenX0, ScreenW, VisibleOffsetX) :
+		QmHudEditor::SnapAxisToScreenEdgesEx(ScreenX0 + NormX * ScreenW, VisibleWidth, EffScreenX0, EffScreenW, VisibleOffsetX);
+	const float AnchorY = SavedState.m_HasCustom ?
+		QmHudEditor::RestoreAxisAnchor(NormY, VisibleHeight, ScreenY0, ScreenH, VisibleOffsetY) :
+		QmHudEditor::SnapAxisToScreenEdgesEx(ScreenY0 + NormY * ScreenH, VisibleHeight, EffScreenY0, EffScreenH, VisibleOffsetY);
 
 	Scope.m_TargetRect = {AnchorX, AnchorY, TransformWidth, TransformHeight};
 	Scope.m_VisibleRect = {AnchorX + VisibleOffsetX, AnchorY + VisibleOffsetY, VisibleWidth, VisibleHeight};
@@ -440,7 +419,6 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 		pVisible->m_StateOffsetX = TransformToVisibleOffsetX * pUiScreen->w / ScreenW;
 		pVisible->m_StateOffsetY = TransformToVisibleOffsetY * pUiScreen->h / ScreenH;
 		pVisible->m_Scalable = Scalable;
-		pVisible->m_EdgeMargin = Scope.m_EdgeMargin;
 	}
 	return true;
 }
@@ -820,31 +798,17 @@ void CHudEditor::OnRender()
 			const float VisibleOffsetX = Visible.m_StateOffsetX * Scale;
 			const float VisibleOffsetY = Visible.m_StateOffsetY * Scale;
 			const SAlignmentReferences References = BuildAlignmentReferences(Visible.m_Element);
-			const float SafeLeft = maximum(0.0f, Visible.m_EdgeMargin.m_Left);
-			const float SafeRight = maximum(0.0f, Visible.m_EdgeMargin.m_Right);
-			const float SafeTop = maximum(0.0f, Visible.m_EdgeMargin.m_Top);
-			const float SafeBottom = maximum(0.0f, Visible.m_EdgeMargin.m_Bottom);
-			const float SafeScreenX = pUiScreen->x + SafeLeft;
-			const float SafeScreenY = pUiScreen->y + SafeTop;
-			const float SafeScreenW = maximum(QmHudEditor::EPSILON, pUiScreen->w - SafeLeft - SafeRight);
-			const float SafeScreenH = maximum(QmHudEditor::EPSILON, pUiScreen->h - SafeTop - SafeBottom);
-			// 屏幕边只在与可见边真正重合时吸附；对齐参考线继续按邻近半径吸附。
-			const QmHudEditor::SSnapAxisResult SnapX = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseX() - m_DragGrabOffset.x, Width, SafeScreenX, SafeScreenW, References.m_aXReferences.data(), References.m_XCount, VisibleOffsetX);
-			const QmHudEditor::SSnapAxisResult SnapY = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseY() - m_DragGrabOffset.y, Height, SafeScreenY, SafeScreenH, References.m_aYReferences.data(), References.m_YCount, VisibleOffsetY);
+			// 鼠标抓取的是可见矩形；转换为锚点后，吸附和存储都只使用这个锚点。
+			const QmHudEditor::SSnapAxisResult SnapX = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseX() - m_DragGrabOffset.x - VisibleOffsetX, Width, pUiScreen->x, pUiScreen->w, References.m_aXReferences.data(), References.m_XCount, VisibleOffsetX);
+			const QmHudEditor::SSnapAxisResult SnapY = QmHudEditor::ResolveAxisSnapEx(Ui()->MouseY() - m_DragGrabOffset.y - VisibleOffsetY, Height, pUiScreen->y, pUiScreen->h, References.m_aYReferences.data(), References.m_YCount, VisibleOffsetY);
 			const float X = SnapX.m_Position;
 			const float Y = SnapY.m_Position;
 			ShowDragGuideX = SnapX.m_HasGuide;
 			ShowDragGuideY = SnapY.m_HasGuide;
 			DragGuideX = SnapX.m_GuidePosition;
 			DragGuideY = SnapY.m_GuidePosition;
-			const float VisibleX = X + VisibleOffsetX;
-			const float VisibleY = Y + VisibleOffsetY;
-			const bool SnapLeft = std::fabs(VisibleX - (pUiScreen->x + SafeLeft)) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
-			const bool SnapRight = std::fabs(VisibleX + Width - (pUiScreen->x + pUiScreen->w - SafeRight)) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
-			const bool SnapTop = std::fabs(VisibleY - (pUiScreen->y + SafeTop)) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
-			const bool SnapBottom = std::fabs(VisibleY + Height - (pUiScreen->y + pUiScreen->h - SafeBottom)) <= HUD_EDITOR_EDGE_COINCIDENCE_DISTANCE;
-			State.m_PosXPermille = SnapLeft ? 0 : (SnapRight ? POSITION_SCALE : std::clamp(round_to_int((X - VisibleOffsetX - pUiScreen->x) / pUiScreen->w * POSITION_SCALE), 0, POSITION_SCALE));
-			State.m_PosYPermille = SnapTop ? 0 : (SnapBottom ? POSITION_SCALE : std::clamp(round_to_int((Y - VisibleOffsetY - pUiScreen->y) / pUiScreen->h * POSITION_SCALE), 0, POSITION_SCALE));
+			State.m_PosXPermille = round_to_int(QmHudEditor::StoreAxisAnchor(X, Width, pUiScreen->x, pUiScreen->w, VisibleOffsetX) * POSITION_SCALE);
+			State.m_PosYPermille = round_to_int(QmHudEditor::StoreAxisAnchor(Y, Height, pUiScreen->y, pUiScreen->h, VisibleOffsetY) * POSITION_SCALE);
 			m_DirtyLayout = true;
 		}
 	}
@@ -862,7 +826,7 @@ void CHudEditor::OnRender()
 		{
 			State.m_HasCustom = true;
 			State.m_ScalePercent = std::clamp(State.m_ScalePercent + DeltaScale, MIN_SCALE_PERCENT, MAX_SCALE_PERCENT);
-			ClampStateToScreen(State, Visible.m_BaseWidth, Visible.m_BaseHeight, Visible.m_StateOffsetX, Visible.m_StateOffsetY, Visible.m_EdgeMargin);
+			ClampStateToScreen(State, Visible.m_BaseWidth, Visible.m_BaseHeight, Visible.m_StateOffsetX, Visible.m_StateOffsetY);
 			m_DirtyLayout = true;
 			SaveLayoutConfig();
 		}

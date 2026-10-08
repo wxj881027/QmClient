@@ -2,6 +2,8 @@
 
 这里放 QmClient 专属的真实进程冒烟和端到端测试。根目录 `scripts/` 是 DDNet 上游同步区，不在其中增加 QmClient 场景。
 
+默认配置与推荐外观的回归种子位于 `fixtures/default_profiles/`，固定尺寸和玩家路径见[默认配置发布回归](../../docs/规格/2026-10-08-默认配置发布回归.md)。这些种子不是执行结果；仅复制到独立测试目录使用。
+
 Windows 的普通版和便携版均忽略 `storage.cfg`。通用进程测试需要独立的 `DEV=ON、QMCLIENT_TEST_STORAGE=ON` 构建，runner 通过 `QMCLIENT_TEST_STORAGE_ROOT` 指向各场景临时目录。误用普通发布构建时初始化会失败；测试构建禁止打包，不用于发布。Linux/macOS 沿用原隔离方式。
 
 便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证 `profile/` 随目录搬家、忽略目录外配置及不可写时不回退：

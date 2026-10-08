@@ -1459,7 +1459,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				IsSameClan = true;
 			}
 		}
-		const bool HasWar = !HideIdentity && g_Config.m_TcWarList && g_Config.m_TcWarListScoreboard && GameClient()->m_WarList.GetAnyWar(ClientId);
+		const bool HasWar = !HideIdentity && g_Config.m_QmWarList && g_Config.m_QmWarListScoreboard && GameClient()->m_WarList.GetAnyWar(ClientId);
 
 		const EClientBrand ClientBrand = ShowClientBrand ? GameClient()->ClientBrand(ClientData.m_aName) : EClientBrand::NONE;
 		if(!HideIdentity && ClientBrand != EClientBrand::NONE)

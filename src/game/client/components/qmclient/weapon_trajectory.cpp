@@ -260,7 +260,7 @@ void CQmWeaponTrajectory::Render(
 				float CursorSpriteScaleX, CursorSpriteScaleY;
 				Graphics()->GetSpriteScale(g_pData->m_Weapons.m_aId[WEAPON_GRENADE].m_pSpriteCursor, CursorSpriteScaleX, CursorSpriteScaleY);
 
-				float CursorScale = (float)g_Config.m_TcCursorScale / 100.0f;
+				float CursorScale = (float)g_Config.m_QmCursorScale / 100.0f;
 				CursorScale = std::clamp(CursorScale, 0.3f, 3.0f);
 				const float CursorSize = 64.0f * CursorScale * 0.8f;
 				IGraphics::CQuadItem CursorQuad(

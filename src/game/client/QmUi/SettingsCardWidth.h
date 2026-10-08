@@ -9,7 +9,11 @@
 inline CUIRect SettingsCardWidthButtonRect(const SSettingsCardFrame &Frame)
 {
 	CUIRect Rect = Frame.m_HandleRect;
-	Rect.x -= Rect.w + 4.0f;
+	const float Right = std::max(Frame.m_HeaderRect.x, Rect.x - 4.0f);
+	Rect.w = std::min(Rect.w, std::max(0.0f, Right - Frame.m_HeaderRect.x));
+	Rect.x = Right - Rect.w;
+	if(Rect.w <= 0.0f)
+		Rect.h = 0.0f;
 	return Rect;
 }
 

@@ -290,19 +290,19 @@ protected:
 	}
 };
 
-TEST_F(CQmImeCandidateTransitionTest, LongCandidatesFadeInWithoutReplacingVisibleTextAtOnce)
+TEST_F(CQmImeCandidateTransitionTest, NewCandidatesAreReadableImmediatelyWhileOldWordsFade)
 {
 	const auto Short = Page({"a", "b", "c"});
 	const auto Long = Page({"a much longer candidate", "another long candidate", "c"});
 	Update(Short);
 	Update(Long);
-	EXPECT_FLOAT_EQ(AlphaFor("a"), 1.0f);
-	EXPECT_FLOAT_EQ(AlphaFor("a much longer candidate"), 0.0f);
+	EXPECT_FLOAT_EQ(AlphaFor("a"), 0.15f);
+	EXPECT_FLOAT_EQ(AlphaFor("a much longer candidate"), 0.85f);
 
 	Advance(Long, 3);
 	EXPECT_GT(AlphaFor("a"), 0.0f);
 	EXPECT_LT(AlphaFor("a"), 1.0f);
-	EXPECT_GT(AlphaFor("a much longer candidate"), 0.0f);
+	EXPECT_GT(AlphaFor("a much longer candidate"), 0.85f);
 	EXPECT_LT(AlphaFor("a much longer candidate"), 1.0f);
 	EXPECT_NEAR(AlphaFor("a") + AlphaFor("a much longer candidate"), 1.0f, 0.0001f);
 }
@@ -320,8 +320,8 @@ TEST_F(CQmImeCandidateTransitionTest, RapidTypingPreservesTheVisibleBlendAndUses
 
 	Update(Latest);
 	EXPECT_FLOAT_EQ(AlphaFor("first"), FirstAlpha);
-	EXPECT_FLOAT_EQ(AlphaFor("second, longer candidate"), SecondAlpha);
-	EXPECT_FLOAT_EQ(AlphaFor("latest"), 0.0f);
+	EXPECT_NEAR(AlphaFor("second, longer candidate"), SecondAlpha - 0.85f, 0.0001f);
+	EXPECT_FLOAT_EQ(AlphaFor("latest"), 0.85f);
 	EXPECT_EQ(m_Transition.Layers()[m_Transition.CurrentLayerIndex()].m_State.m_vCandidates, Latest.m_vCandidates);
 
 	Advance(Latest, 120);
@@ -349,7 +349,7 @@ TEST_F(CQmImeCandidateTransitionTest, SelectionAndCaretMovementDoNotRestartTheFa
 	EXPECT_EQ(ActiveLayers(), 2);
 }
 
-TEST_F(CQmImeCandidateTransitionTest, ReturningToPreviousCandidatesKeepsTheCurrentOpacity)
+TEST_F(CQmImeCandidateTransitionTest, ReturningToPreviousCandidatesMakesThemImmediatelyReadable)
 {
 	const auto First = Page({"short"});
 	const auto Second = Page({"a much longer candidate"});
@@ -360,8 +360,8 @@ TEST_F(CQmImeCandidateTransitionTest, ReturningToPreviousCandidatesKeepsTheCurre
 	const float SecondAlpha = AlphaFor("a much longer candidate");
 
 	Update(First);
-	EXPECT_FLOAT_EQ(AlphaFor("short"), FirstAlpha);
-	EXPECT_FLOAT_EQ(AlphaFor("a much longer candidate"), SecondAlpha);
+	EXPECT_NEAR(AlphaFor("short"), FirstAlpha + 0.85f, 0.0001f);
+	EXPECT_NEAR(AlphaFor("a much longer candidate"), SecondAlpha - 0.85f, 0.0001f);
 	Advance(First, 120);
 	EXPECT_EQ(ActiveLayers(), 1);
 	EXPECT_FLOAT_EQ(AlphaFor("short"), 1.0f);
@@ -412,7 +412,7 @@ TEST_F(CQmImeCandidateTransitionTest, PageIndicatorChangesFadeWithTheCandidates)
 	ASSERT_EQ(ActiveLayers(), 2);
 	EXPECT_EQ(m_Transition.Layers()[PreviousLayer].m_State.m_PageIndex, 0);
 	EXPECT_EQ(m_Transition.Layers()[m_Transition.CurrentLayerIndex()].m_State.m_PageIndex, 1);
-	EXPECT_FLOAT_EQ(m_Transition.Layers()[PreviousLayer].m_Alpha, 1.0f);
+	EXPECT_FLOAT_EQ(m_Transition.Layers()[PreviousLayer].m_Alpha, 0.15f);
 }
 
 TEST_F(CQmImeCandidateTransitionTest, MovingBeyondTheVisibleRowFadesTheShiftedCandidates)
@@ -426,7 +426,7 @@ TEST_F(CQmImeCandidateTransitionTest, MovingBeyondTheVisibleRowFadesTheShiftedCa
 	ASSERT_EQ(ActiveLayers(), 2);
 	EXPECT_EQ(m_Transition.Layers()[PreviousLayer].m_CandidateStart, 0);
 	EXPECT_EQ(m_Transition.Layers()[m_Transition.CurrentLayerIndex()].m_CandidateStart, 1);
-	EXPECT_FLOAT_EQ(m_Transition.Layers()[PreviousLayer].m_Alpha, 1.0f);
+	EXPECT_FLOAT_EQ(m_Transition.Layers()[PreviousLayer].m_Alpha, 0.15f);
 }
 
 TEST_F(CQmImeCandidateTransitionTest, ReusingFinishedLayersKeepsVisibleTextInTheSameDrawOrder)
@@ -454,7 +454,7 @@ TEST_F(CQmImeCandidateTransitionTest, ReusingFinishedLayersKeepsVisibleTextInThe
 	}
 	EXPECT_EQ(vDrawOrder, (std::vector<std::string>{"third", "fourth", "latest"}));
 	EXPECT_FLOAT_EQ(AlphaFor("third"), ThirdAlpha);
-	EXPECT_FLOAT_EQ(AlphaFor("fourth"), FourthAlpha);
+	EXPECT_NEAR(AlphaFor("fourth"), FourthAlpha - 0.85f, 0.0001f);
 }
 
 TEST_F(CQmImeCandidateTransitionTest, OldWordsFinishFadingWithinEightyMilliseconds)

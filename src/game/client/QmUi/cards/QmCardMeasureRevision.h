@@ -18,7 +18,7 @@ namespace qm_card_catalog
 		switch(Id)
 		{
 		case EQmModuleId::GoresActor:
-			return g_Config.m_TcFreezeChatEnabled ? 1u | (g_Config.m_TcFreezeChatEmoticon ? 2u : 0u) : 0u;
+			return g_Config.m_QmFreezeChatEnabled ? 1u | (g_Config.m_QmFreezeChatEmoticon ? 2u : 0u) : 0u;
 		case EQmModuleId::Gores:
 			return (g_Config.m_QmAxiomAutoLogin ? 1u : 0u) |
 			       ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 2u : 0u);
@@ -77,6 +77,7 @@ namespace qm_card_catalog
 		case EQmModuleId::Ime: return (g_Config.m_QmNewIme != 0 ? 1u : 0u) | (g_Config.m_QmImeAutoManage != 0 ? 2u : 0u);
 		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (g_Config.m_QmPlayerStatsMapProgressStyle ? 2u : 0u);
 		case EQmModuleId::InputOverlay: return g_Config.m_QmInputOverlay ? 1u : 0u;
+		case EQmModuleId::Tooltip: return static_cast<uint64_t>(g_Config.m_QmTooltipFontSize);
 		case EQmModuleId::HudNotifications:
 		{
 			uint64_t Revision = g_Config.m_QmHudNotificationsShowAdvanced ? 1u : 0u;
