@@ -102,8 +102,6 @@ namespace
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
-
-#include <dbghelp.h>
 #ifdef ERROR
 #undef ERROR
 #endif
@@ -379,37 +377,6 @@ static const char *ClientStateToString(int State)
 }
 
 #if defined(CONF_FAMILY_WINDOWS)
-static bool WriteMiniDumpFile(const char *pFilename)
-{
-	using MiniDumpWriteDumpFunc = BOOL(WINAPI *)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
-		const MINIDUMP_EXCEPTION_INFORMATION *, const MINIDUMP_USER_STREAM_INFORMATION *, const MINIDUMP_CALLBACK_INFORMATION *);
-
-	HMODULE pDbgHelp = LoadLibraryA("dbghelp.dll");
-	if(pDbgHelp == nullptr)
-		return false;
-
-	auto pMiniDumpWriteDump = (MiniDumpWriteDumpFunc)GetProcAddress(pDbgHelp, "MiniDumpWriteDump");
-	if(pMiniDumpWriteDump == nullptr)
-	{
-		FreeLibrary(pDbgHelp);
-		return false;
-	}
-
-	HANDLE FileHandle = CreateFileA(pFilename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-	if(FileHandle == INVALID_HANDLE_VALUE)
-	{
-		FreeLibrary(pDbgHelp);
-		return false;
-	}
-
-	const MINIDUMP_TYPE DumpType = MINIDUMP_TYPE(MiniDumpWithDataSegs | MiniDumpWithHandleData | MiniDumpWithIndirectlyReferencedMemory); // NOLINT(clang-analyzer-optin.core.EnumCastOutOfRange)
-	const BOOL Result = pMiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), FileHandle, DumpType, nullptr, nullptr, nullptr);
-
-	CloseHandle(FileHandle);
-	FreeLibrary(pDbgHelp);
-	return Result != FALSE;
-}
-
 // QmClient 测试专用：阻塞主线程指定时长，同时泵窗口消息使窗口保持"响应"状态，
 // 避免 Windows 幽灵窗口机制打扰桌面。看门狗心跳在此期间照旧停滞，不影响被测
 // 行为（已实测： pump 不能消除退出清理阶段 NVIDIA ICD 的访问违例，那是驱动
@@ -5656,14 +5623,16 @@ void CClient::StartHangWatchdog()
 		while(!m_HangWatchdogStop.load(std::memory_order_acquire))
 		{
 			std::this_thread::sleep_for(1s);
-			const int64_t LastHeartbeat = m_HangLastHeartbeat.load(std::memory_order_acquire);
+			const int64_t LastHeartbeat = m_HangInfo.LastHeartbeat();
 			if(LastHeartbeat == 0)
 				continue;
 			const int64_t Now = time_get_nanoseconds().count();
 			if(Now - LastHeartbeat >= TimeoutNanoseconds)
 			{
-				if(!m_HangReportWritten.exchange(true, std::memory_order_acq_rel))
-					WriteHangReportAndDump(Now, LastHeartbeat);
+				const auto Snapshot = m_HangInfo.Read();
+				// 快照与心跳来自同一次发布；主线程已恢复时不沿用先前读到的旧心跳。
+				if(Now - Snapshot.m_LastHeartbeat >= TimeoutNanoseconds && !m_HangReportWritten.exchange(true, std::memory_order_acq_rel))
+					WriteHangReportAndDump(Now, Snapshot);
 			}
 		}
 	});
@@ -5678,8 +5647,7 @@ void CClient::StopHangWatchdog()
 
 void CClient::UpdateHangHeartbeat()
 {
-	const int NextIndex = 1 - m_HangInfoIndex.load(std::memory_order_relaxed);
-	SHangInfo &Info = m_aHangInfo[NextIndex];
+	QmHangDiagnostics::SSnapshot Info;
 	Info.m_State = m_State;
 	str_copy(Info.m_aCurrentMap, m_aCurrentMap, sizeof(Info.m_aCurrentMap));
 	const NETADDR *pAddr = ServerAddress();
@@ -5693,13 +5661,12 @@ void CClient::UpdateHangHeartbeat()
 		net_addr_str(pAddr, aAddr, sizeof(aAddr), true);
 		str_copy(Info.m_aServerAddr, aAddr, sizeof(Info.m_aServerAddr));
 	}
-	m_HangInfoIndex.store(NextIndex, std::memory_order_release);
-	// 心跳使用单调时钟纳秒（time_get_nanoseconds），与主循环 tick 缓存解耦，
-	// 保证主线程阻塞时看门狗仍能度量真实流逝时间。
-	m_HangLastHeartbeat.store(time_get_nanoseconds().count(), std::memory_order_release);
+	// 心跳使用单调时钟纳秒，与客户端状态作为同一份快照发布。
+	Info.m_LastHeartbeat = time_get_nanoseconds().count();
+	m_HangInfo.Publish(Info);
 }
 
-void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
+void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnapshot &Snapshot)
 {
 	if(m_aHangDumpDir[0] == '\0')
 		return;
@@ -5718,8 +5685,7 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 	IOHANDLE File = io_open(aReportPath, IOFLAG_WRITE);
 	if(File)
 	{
-		const int SnapshotIndex = m_HangInfoIndex.load(std::memory_order_acquire);
-		const SHangInfo Snapshot = m_aHangInfo[SnapshotIndex];
+		const int64_t LastHeartbeat = Snapshot.m_LastHeartbeat;
 		const float SecondsSinceHeartbeat = (Now - LastHeartbeat) / 1e9f;
 		char aOsVersion[128];
 		if(!os_version_str(aOsVersion, sizeof(aOsVersion)))
@@ -5777,7 +5743,13 @@ void CClient::WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat)
 	char aDumpPath[IO_MAX_PATH_LENGTH];
 	str_format(aDumpPath, sizeof(aDumpPath), "%s/%s", m_aHangDumpDir, aDumpFilename);
 	fs_makedir_rec_for(aDumpPath);
-	WriteMiniDumpFile(aDumpPath);
+	const auto DumpResult = QmHangDiagnostics::WriteDump(aDumpPath);
+	if(!DumpResult.Written())
+		log_warn("hang", "failed to write minidump '%s': stage=%s error=%lu (%s)", aDumpPath,
+			QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, windows_format_system_message(DumpResult.m_Error).c_str());
+	if(!QmHangDiagnostics::AppendDumpResult(aReportPath, aDumpPath, DumpResult))
+		log_warn("hang", "failed to append minidump result to '%s': status=%s stage=%s error=%lu dump='%s'", aReportPath,
+			DumpResult.Written() ? "written" : "failed", QmHangDiagnostics::DumpStageName(DumpResult.m_Stage), DumpResult.m_Error, aDumpPath);
 #endif
 
 	if(!crashdump_launch_reporter_if_available(aReportPath))

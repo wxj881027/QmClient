@@ -5,6 +5,7 @@
 
 #include "game_ping.h"
 #include "graph.h"
+#include "qm_hang_diagnostics.h"
 #include "smooth_time.h"
 
 #include <base/hash.h>
@@ -118,20 +119,10 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	int64_t m_LocalStartTime = 0;
 	int64_t m_GlobalStartTime = 0;
 
-	struct SHangInfo
-	{
-		int m_State = IClient::STATE_OFFLINE;
-		char m_aCurrentMap[IO_MAX_PATH_LENGTH] = "";
-		char m_aServerAddr[NETADDR_MAXSTRSIZE] = "";
-	};
-
-	// 单调时钟纳秒（time_get_nanoseconds），与主循环 tick 缓存无关。
-	std::atomic<int64_t> m_HangLastHeartbeat{0};
+	QmHangDiagnostics::CSnapshotStore m_HangInfo;
 	int64_t m_QmGraphicsLastPumpNetworkNs = 0;
 	std::atomic<bool> m_HangWatchdogStop{false};
 	std::atomic<bool> m_HangReportWritten{false};
-	std::atomic<int> m_HangInfoIndex{0};
-	SHangInfo m_aHangInfo[2];
 	std::thread m_HangWatchdogThread;
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
 	int m_NetworkPumpFirstConn = 0;
@@ -331,7 +322,7 @@ private:
 	void StartHangWatchdog();
 	void StopHangWatchdog();
 	void UpdateHangHeartbeat();
-	void WriteHangReportAndDump(int64_t Now, int64_t LastHeartbeat);
+	void WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnapshot &Snapshot);
 	// 运行期图形致命错误的恢复入口：写诊断报告，尝试一次干净重启（下次启动走安全图形设置），
 	// 避免落入断言模态框导致心跳停止、写出误导性 hang 报告。
 	// @return true 表示已触发恢复（调用方应立即停止当前帧的图形操作）

@@ -35,7 +35,7 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> demo_recording
 
 `assert_dialog_no_false_hang` 依赖客户端测试专用参数 `--qm-test-main-thread-assert`：它在主循环之前触发一次真实断言，等价于启动阶段的错误弹窗，用于验证进程内弹窗阻塞主线程期间 hang 看门狗不会误报、退出兜底看门狗不会强杀正在阅读的弹窗。场景同时通过环境变量 `QMCLIENT_TEST_HIDE_DIALOG` 隐藏弹窗窗口并抑制报告进程拉起，避免桌面点击提前关闭弹窗、测试遗留后台进程干扰断言；弹窗的创建和消息循环行为不变。
 
-`hang_watchdog_reports_stall` 使用 `--qm-test-main-thread-stall` 在主循环内阻塞 12 秒，验证 hang 看门狗使用单调时钟后能在主线程阻塞期间真实写出卡死报告（正向回归，防止时钟退回 tick 缓存）。
+`hang_watchdog_reports_stall` 使用 `--qm-test-main-thread-stall` 在主循环内阻塞 12 秒，验证 hang 看门狗使用单调时钟后能在主线程阻塞期间真实写出卡死报告（正向回归，防止时钟退回 tick 缓存）。Windows 卡死场景会继续等待报告追加转储结果，并检查 `.dmp` 文件的 `MDMP` 签名；不能在文本报告刚出现时就结束进程。
 
 资源加载场景通过测试专用环境变量 `QMCLIENT_TEST_ASSET_LOAD_DELAY_MS` 在每项启动素材加载后注入延迟，取值限制为 0 到 20000 毫秒。`slow_asset_loading_no_false_hang` 每项延迟 1 秒，验证累计加载超过 10 秒仍能启动并响应命令，且没有 hang 产物；`asset_loading_stall_reports_hang` 单次延迟 12 秒，验证启动期间真正停滞仍被看门狗发现。两者都使用有界日志等待，并通过 `QMCLIENT_TEST_HIDE_DIALOG` 抑制报告窗口。
 

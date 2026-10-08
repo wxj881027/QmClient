@@ -67,8 +67,22 @@ def _wait_for_hang_report(env: ProcessEnvironment) -> Path:
 	deadline = time.monotonic() + HANG_WATCHDOG_TIMEOUT + 20.0
 	while time.monotonic() < deadline:
 		reports = sorted(dump_dir.glob("*hang_report_*.txt"))
-		if reports and "Report type: hang" in reports[0].read_text(encoding="utf-8", errors="replace"):
-			return reports[0]
+		if reports:
+			content = reports[0].read_text(encoding="utf-8", errors="replace")
+			if "Report type: hang" in content:
+				if sys.platform != "win32":
+					return reports[0]
+				# 文本先落盘，等待转储完成后的结果，不能在看到报告时就结束进程。
+				if "Minidump status: failed\n" in content:
+					raise AssertionError(f"hang minidump failed: {content}")
+				if "Minidump status: written\n" in content and content.endswith("Minidump error: 0\n"):
+					dump_paths = [line.removeprefix("Minidump path: ") for line in content.splitlines() if line.startswith("Minidump path: ")]
+					if len(dump_paths) != 1:
+						raise AssertionError(f"hang report does not identify one minidump: {content}")
+					with Path(dump_paths[0]).open("rb") as dump_file:
+						if dump_file.read(4) != b"MDMP":
+							raise AssertionError(f"hang minidump has no valid signature: {dump_paths[0]}")
+					return reports[0]
 		if not env.client.is_alive():
 			raise AssertionError("client exited before the hang watchdog reported the injected stall")
 		time.sleep(0.25)

@@ -3111,6 +3111,8 @@ if(CLIENT)
     checksum.h
     client.cpp
     client.h
+    qm_hang_diagnostics.cpp
+    qm_hang_diagnostics.h
     qm_storage_mode.h
     demoedit.cpp
     demoedit.h
@@ -4785,6 +4787,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/server_test.cpp
     src/test/unit/engine/serverbrowser_country_filter_test.cpp
     src/test/unit/client/serverbrowser_test.cpp
+    src/test/unit/client/qm_hang_snapshot_test.cpp
+    src/test/integration/client/qm_hang_dump_report_test.cpp
     src/test/unit/engine/serverinfo_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_state_test.cpp
     src/test/unit/qmclient/settings/settings_card_collapse_config_test.cpp
@@ -4996,6 +5000,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/frame_scheduler.cpp
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
+    src/engine/client/qm_hang_diagnostics.cpp
     src/engine/client/favorites.cpp
     src/engine/client/friends.cpp
     src/engine/client/serverbrowser.cpp
