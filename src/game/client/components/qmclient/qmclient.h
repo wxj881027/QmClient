@@ -6,6 +6,7 @@
 #include "markdown_cache_writer.h"
 #include "qm_markdown_broadcast.h"
 #include "qm_realtime.h"
+#include "qm_realtime_users.h"
 #include "qm_sponsors.h"
 #include "qmclient_utils.h"
 #include "sponsor_chat_style.h"
@@ -123,6 +124,8 @@ class CQmClient : public CComponent
 	std::deque<SQmRealtimeMessage> m_QmRealtimeEvents;
 	std::deque<SQmRealtimeMessage> m_QmRealtimeEmoticonEvents;
 	std::shared_ptr<const json_value> m_pQmRealtimeUsersPayload;
+	CQmRealtimeUsersState m_QmRealtimeUsersState;
+	int64_t m_QmRealtimeNextUsersResync = 0;
 	char m_aQmRealtimeUsersServer[NETADDR_MAXSTRSIZE] = "";
 	int64_t m_QmRealtimeUsersExpireTick = 0;
 	bool m_QmRealtimeHelloSent = false;
@@ -193,6 +196,8 @@ class CQmClient : public CComponent
 
 	void UpdateQmClientRecognition();
 	void FinishQmClientUsers();
+	void ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64_t ExpireTick);
+	void ApplyQmRealtimeUsersSync(const SQmRealtimeMessage &Message);
 	bool EnsureQmClientMachineHash();
 	void PushQmClientServerCounts();
 	void InitQmDeveloperAuthentication();
@@ -273,7 +278,7 @@ public:
 	const char *QmMarkdownBroadcast() const { return m_QmMarkdownBroadcast.Markdown(); }
 	int QmMarkdownBroadcastVersion() const { return m_QmMarkdownBroadcast.Version(); }
 	int QmMarkdownBroadcastRevision() const { return m_QmMarkdownBroadcast.Revision(); }
-	void EnqueueQmRealtimeMessage(const char *pData, size_t Size);
+	void EnqueueQmRealtimeMessage(const char *pData, size_t Size, bool Compressed = false);
 	bool PopQmRealtimeMessage(SQmRealtimeMessage &Message);
 	bool PopQmRealtimeEmoticon(SQmRealtimeMessage &Message);
 	void SendQmAnonymousEmoticon(int Emoticon, int PlayerId, bool LaunchMode, bool SuperLaunch);

@@ -41,6 +41,14 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> demo_recording
 
 进程测试必须从外部可观察结果断言启动、连接、日志、退出和失败回退。客户端或服务端崩溃必须失败，不得通过放宽超时或忽略退出码掩盖。
 
+实时名单同步冒烟使用上述独立测试构建和 Python `websockets` 包，在随机本机端口提供模拟 WebSocket 服务：
+
+```text
+python qmclient_scripts/integration/realtime_users_smoke.py <test-build-dir>
+```
+
+两个场景验证真实客户端声明压缩能力、应用名单、增量断档后请求完整快照、恢复后正常续传、重连清除旧版本，以及旧服务端文本名单兼容。结果通过连接消息与客户端应用日志断言；不依赖公网服务，不代表游戏内头衔视觉验证。日志保留在 `tmp/realtime_*`。
+
 字体资源真实进程回归使用专用便携客户端，不依赖已安装系统字体：
 
 ```text

@@ -19,6 +19,7 @@ enum class EQmRealtimeEvent
 	SPONSORS,
 	TITLES,
 	USERS,
+	USERS_SYNC,
 	DEVELOPERS,
 	PLAYTIME,
 	TIME,
