@@ -3179,6 +3179,7 @@ if(CLIENT)
     QmUi/QmPopupSource.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
+    QmUi/QmHookCountdownRender.h
     QmUi/QmImeCandidateLayout.h
     QmUi/QmIslandSurface.cpp
     QmUi/QmIslandSurface.h
@@ -3395,6 +3396,7 @@ if(CLIENT)
     components/qmclient/emoticon_commands.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
+    components/qmclient/hook_countdown.h
     components/qmclient/hud_notifications/hud_notification_catalog.cpp
     components/qmclient/hud_notifications/hud_notification_catalog.h
     components/qmclient/hud_notifications/hud_notification_rules.cpp

@@ -12,6 +12,7 @@
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/component.h>
 #include <game/client/components/hud_media_island_logic.h>
+#include <game/client/components/qmclient/hook_countdown.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/ui_rect.h>
 #include <game/teamscore.h>
@@ -414,33 +415,7 @@ class CHud : public CComponent
 		}
 	};
 	SHudSwitchCountdownTracker m_SwitchCountdownTracker;
-	struct SHudHookCountdownRingState
-	{
-		int m_ClientId = -1;
-		int m_Connection = 0;
-		int m_GrabTick = 0;
-		// 上一次咬住的玩家 id：用来识别 rehook（目标变了就重新计时，而不是让环淡出重来）。
-		// 松钩时不更新，才能把它留到下一次咬住时做比较。
-		int m_HookedPlayer = -1;
-		// 起钩那一刻记下的地图 tuning（hook_duration），用来算这一轮钩子动作的寿命。
-		float m_HookDurationSeconds = 1.25f;
-		float m_Progress = 1.0f;
-		vec2 m_Position{};
-		vec2 m_Velocity{};
-		float m_Alpha = 0.0f;
-		bool m_Tracking = false;
-		bool m_Seen = false;
-		bool m_Initialized = false;
-
-		void Reset()
-		{
-			*this = {};
-			m_ClientId = -1;
-			m_HookDurationSeconds = 1.25f;
-			m_Progress = 1.0f;
-		}
-	};
-	SHudHookCountdownRingState m_HookCountdownRing;
+	CQmHookCountdown m_HookCountdownRing;
 	struct SHudMediaIslandMuteState
 	{
 		bool m_Confirmed = false;
