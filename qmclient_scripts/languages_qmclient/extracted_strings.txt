@@ -711,6 +711,7 @@ Client uptime
 Close
 Close the demo player
 Close window after changing settings
+Collapse console
 Collision hitbox
 Collision Line Opacity
 Color
@@ -1442,6 +1443,7 @@ Execute on join
 Execute the specified file
 Existing Player
 Exit replay view
+Expand console
 Expanded dropdown background color
 Expanded dropdown background opacity percentage
 Export

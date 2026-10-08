@@ -2728,7 +2728,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2708
+      "line": 2742
     },
     {
       "key": "All",
@@ -3064,7 +3064,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 316
+      "line": 317
     },
     {
       "key": "Always translate",
@@ -5661,7 +5661,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2712
+      "line": 2746
     },
     {
       "key": "Black",
@@ -6403,7 +6403,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2673
+      "line": 2707
     },
     {
       "key": "Cancel",
@@ -6963,21 +6963,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1708
+      "line": 1765
     },
     {
       "key": "Chat export cancelled",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1737
+      "line": 1794
     },
     {
       "key": "Chat export failed",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1739
+      "line": 1796
     },
     {
       "key": "Chat fade smooth time (milliseconds)",
@@ -7579,7 +7579,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2675
+      "line": 2709
     },
     {
       "key": "Clear all favorite maps",
@@ -7642,14 +7642,14 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2980
+      "line": 3024
     },
     {
       "key": "Clear local console",
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2984
+      "line": 3028
     },
     {
       "key": "Clear note",
@@ -7670,7 +7670,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2985
+      "line": 3029
     },
     {
       "key": "Clear the history.",
@@ -8021,6 +8021,13 @@
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
       "line": 2993
+    },
+    {
+      "key": "Collapse console",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/console.cpp",
+      "context": "",
+      "line": 2666
     },
     {
       "key": "Collision hitbox",
@@ -8440,7 +8447,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2711
+      "line": 2745
     },
     {
       "key": "Commands run in the console",
@@ -15979,7 +15986,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1874
+      "line": 1934
     },
     {
       "key": "Enter solo split mode",
@@ -16014,7 +16021,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1872
+      "line": 1932
     },
     {
       "key": "Enter your sponsor code",
@@ -16864,6 +16871,13 @@
       "line": 2993
     },
     {
+      "key": "Expand console",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/console.cpp",
+      "context": "",
+      "line": 2665
+    },
+    {
       "key": "Expand or collapse all groups.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
@@ -16952,7 +16966,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2674
+      "line": 2708
     },
     {
       "key": "Export selected file",
@@ -16987,7 +17001,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1732
+      "line": 1789
     },
     {
       "key": "Exported to %s",
@@ -17008,7 +17022,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2651
+      "line": 2685
     },
     {
       "key": "Exporting is not possible because the image could not be loaded.",
@@ -18177,7 +18191,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2992
+      "line": 3036
     },
     {
       "key": "Fix",
@@ -18366,7 +18380,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2623
+      "line": 2644
     },
     {
       "key": "Following %d: %s",
@@ -20599,7 +20613,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2201
+      "line": 2252
     },
     {
       "key": "Helpful for Gores: allow negative internal certainty for more conservative prediction",
@@ -21523,14 +21537,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 426
+      "line": 427
     },
     {
       "key": "Horizontal position",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 475
+      "line": 476
     },
     {
       "key": "Horizontal position",
@@ -23595,7 +23609,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 431
+      "line": 432
     },
     {
       "key": "Key press count font size",
@@ -23609,7 +23623,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 429
+      "line": 430
     },
     {
       "key": "Key press count font size percentage",
@@ -23630,7 +23644,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 435
+      "line": 436
     },
     {
       "key": "Key press icon size",
@@ -23700,7 +23714,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 423
+      "line": 424
     },
     {
       "key": "Keyword reply",
@@ -24267,7 +24281,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2991
+      "line": 3035
     },
     {
       "key": "Last successful sync: %s",
@@ -24827,7 +24841,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2623
+      "line": 2644
     },
     {
       "key": "List all commands that are available in practice mode",
@@ -25338,7 +25352,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2777
+      "line": 2816
     },
     {
       "key": "Loading DDNet Client",
@@ -25436,7 +25450,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2777
+      "line": 2816
     },
     {
       "key": "Loading menu images",
@@ -25695,7 +25709,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2623
+      "line": 2644
     },
     {
       "key": "Log output filename",
@@ -26220,7 +26234,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 453
+      "line": 454
     },
     {
       "key": "Map progress bar color",
@@ -26486,7 +26500,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2227
+      "line": 2278
     },
     {
       "key": "Match %d of %d",
@@ -27123,7 +27137,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1690
+      "line": 1747
     },
     {
       "key": "Microphone",
@@ -27543,7 +27557,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 424
+      "line": 425
     },
     {
       "key": "Move a friend category to a position",
@@ -28810,7 +28824,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2990
+      "line": 3034
     },
     {
       "key": "Next track",
@@ -29174,7 +29188,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1682
+      "line": 1739
     },
     {
       "key": "No chat message available to repeat",
@@ -29545,7 +29559,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2232
+      "line": 2283
     },
     {
       "key": "No results",
@@ -29923,7 +29937,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1878
+      "line": 1938
     },
     {
       "key": "Not connected to a game server",
@@ -30980,7 +30994,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 425
+      "line": 426
     },
     {
       "key": "Opacity",
@@ -33164,7 +33178,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2709
+      "line": 2743
     },
     {
       "key": "Players",
@@ -33976,7 +33990,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2653
+      "line": 2687
     },
     {
       "key": "Preparing demo playback",
@@ -34319,7 +34333,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2989
+      "line": 3033
     },
     {
       "key": "Previous track",
@@ -34480,7 +34494,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 460
+      "line": 461
     },
     {
       "key": "Progress bar height",
@@ -34494,7 +34508,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 474
+      "line": 475
     },
     {
       "key": "Progress bar width",
@@ -34508,7 +34522,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 473
+      "line": 474
     },
     {
       "key": "Project all selected envelopes onto the curve between the first and last selected envelope.",
@@ -34914,7 +34928,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1690
+      "line": 1747
     },
     {
       "key": "QmClient Community",
@@ -37973,7 +37987,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 441
+      "line": 442
     },
     {
       "key": "Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change",
@@ -38043,7 +38057,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 407
+      "line": 408
     },
     {
       "key": "Reset layout",
@@ -38106,7 +38120,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 480
+      "line": 481
     },
     {
       "key": "Reset tangent point to default value.",
@@ -40010,7 +40024,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1863
+      "line": 1923
     },
     {
       "key": "Searching all map folders...",
@@ -40122,7 +40136,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2676
+      "line": 2710
     },
     {
       "key": "Select button by touch",
@@ -40136,7 +40150,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2715
+      "line": 2749
     },
     {
       "key": "Select group. Shift+left click to select all layers. Double click to collapse.",
@@ -40276,7 +40290,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2656
+      "line": 2690
     },
     {
       "key": "Selected button not visible",
@@ -42026,7 +42040,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 478
+      "line": 479
     },
     {
       "key": "Show draggable virtual back button",
@@ -42747,7 +42761,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 398
+      "line": 399
     },
     {
       "key": "Show IP addresses in rcon commands (1 = on, 0 = off)",
@@ -42810,7 +42824,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 402
+      "line": 403
     },
     {
       "key": "Show key presses",
@@ -43391,7 +43405,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 452
+      "line": 453
     },
     {
       "key": "Show player target angle",
@@ -47339,7 +47353,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2710
+      "line": 2744
     },
     {
       "key": "System default",
@@ -50237,7 +50251,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2982
+      "line": 3026
     },
     {
       "key": "Toggle microphone mute",
@@ -50293,7 +50307,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2983
+      "line": 3027
     },
     {
       "key": "Toggle scoreboard cursor",
@@ -50671,7 +50685,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 1690
+      "line": 1747
     },
     {
       "key": "Total fonts:",
@@ -52428,7 +52442,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2204
+      "line": 2255
     },
     {
       "key": "Usage: /%s %s",
@@ -52631,7 +52645,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 456
+      "line": 457
     },
     {
       "key": "Use emote",
@@ -53135,14 +53149,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 427
+      "line": 428
     },
     {
       "key": "Vertical position",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
       "context": "",
-      "line": 476
+      "line": 477
     },
     {
       "key": "Vertical position",
@@ -54857,7 +54871,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2986
+      "line": 3030
     },
     {
       "key": "Write performance debug logs to dedicated file",
@@ -54878,7 +54892,7 @@
       "category": "register_help",
       "source": "src/game/client/components/console.cpp",
       "context": "",
-      "line": 2987
+      "line": 3031
     },
     {
       "key": "Writing item %d failed",

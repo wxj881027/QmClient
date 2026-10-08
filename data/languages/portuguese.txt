@@ -2138,6 +2138,9 @@ Close the demo player
 Close window after changing settings
 == Fechar janela após alterar definições
 
+Collapse console
+== Recolher consola
+
 Collision hitbox
 == Hitbox de colisão
 
@@ -4330,6 +4333,9 @@ Existing Player
 
 Exit replay view
 == Sair da vista da demo
+
+Expand console
+== Expandir consola
 
 Expanded dropdown background color
 == Cor de fundo da lista expandida

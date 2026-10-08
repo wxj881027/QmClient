@@ -1,8 +1,8 @@
 {
   "summary": {
-    "must_i18n": 8048,
-    "business_data": 10915,
-    "test_only": 5891,
+    "must_i18n": 8050,
+    "business_data": 10913,
+    "test_only": 5749,
     "needs_review": 479,
     "violation": 0
   },
@@ -15528,161 +15528,161 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 316,
+      "line": 317,
       "text": "Always show song title and artist",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 398,
+      "line": 399,
       "text": "Show inputs",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 402,
+      "line": 403,
       "text": "Show key press counts",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 407,
+      "line": 408,
       "text": "Reset key press counts",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 423,
+      "line": 424,
       "text": "Keyboard size",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 424,
+      "line": 425,
       "text": "Mouse size",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 425,
+      "line": 426,
       "text": "Opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 426,
+      "line": 427,
       "text": "Horizontal position",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 427,
+      "line": 428,
       "text": "Vertical position",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 429,
+      "line": 430,
       "text": "Key press count font size",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 431,
+      "line": 432,
       "text": "Key press count color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 435,
+      "line": 436,
       "text": "Key press count label",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 441,
+      "line": 442,
       "text": "Reset count appearance",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 452,
+      "line": 453,
       "text": "Show player stats HUD",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 453,
+      "line": 454,
       "text": "Map progress bar",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 456,
+      "line": 457,
       "text": "Use embedded HUD progress bar",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 460,
+      "line": 461,
       "text": "Progress bar color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 473,
+      "line": 474,
       "text": "Progress bar width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 474,
+      "line": 475,
       "text": "Progress bar height",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 475,
+      "line": 476,
       "text": "Horizontal position",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 476,
+      "line": 477,
       "text": "Vertical position",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 478,
+      "line": 479,
       "text": "Show dotted map route debug",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 480,
+      "line": 481,
       "text": "Reset stats when joining a server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -18139,315 +18139,329 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1682,
+      "line": 1739,
       "text": "No chat log selected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1690,
+      "line": 1747,
       "text": "Messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1690,
+      "line": 1747,
       "text": "QmClient chat log",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1690,
+      "line": 1747,
       "text": "Total",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1708,
+      "line": 1765,
       "text": "Chat export cancelled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1732,
+      "line": 1789,
       "text": "Exported %d chat messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1737,
+      "line": 1794,
       "text": "Chat export cancelled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1739,
+      "line": 1796,
       "text": "Chat export failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1863,
+      "line": 1923,
       "text": "Searching",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1872,
+      "line": 1932,
       "text": "Enter Username",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1874,
+      "line": 1934,
       "text": "Enter Password",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1878,
+      "line": 1938,
       "text": "NOT CONNECTED",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2201,
+      "line": 2252,
       "text": "Help: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2204,
+      "line": 2255,
       "text": "Usage: %s %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2227,
+      "line": 2278,
       "text": "Match %d of %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2232,
+      "line": 2283,
       "text": "No results",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2623,
+      "line": 2644,
       "text": "Following",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2623,
+      "line": 2644,
       "text": "Lines %d - %d (%s)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2623,
+      "line": 2644,
       "text": "Locked",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2651,
+      "line": 2665,
+      "text": "Expand console",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 2666,
+      "text": "Collapse console",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 2685,
       "text": "Exporting chat images: %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2653,
+      "line": 2687,
       "text": "Preparing chat export: %d%%",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2656,
+      "line": 2690,
       "text": "Selected %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2673,
+      "line": 2707,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2674,
+      "line": 2708,
       "text": "Export selected",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2675,
+      "line": 2709,
       "text": "Clear",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2676,
+      "line": 2710,
       "text": "Select all chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2708,
+      "line": 2742,
       "text": "All",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2709,
+      "line": 2743,
       "text": "Players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2710,
+      "line": 2744,
       "text": "System",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2711,
+      "line": 2745,
       "text": "Commands",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2712,
+      "line": 2746,
       "text": "Binds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2715,
+      "line": 2749,
       "text": "Select export",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2777,
+      "line": 2816,
       "text": "Loading commands…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2777,
+      "line": 2816,
       "text": "Loading maps…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2980,
+      "line": 3024,
       "text": "Clear local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2982,
+      "line": 3026,
       "text": "Toggle local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2983,
+      "line": 3027,
       "text": "Toggle remote console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2984,
+      "line": 3028,
       "text": "Clear local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2985,
+      "line": 3029,
       "text": "Clear remote console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2986,
+      "line": 3030,
       "text": "Write local console contents to a text file",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2987,
+      "line": 3031,
       "text": "Write remote console contents to a text file",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2989,
+      "line": 3033,
       "text": "Previous page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2990,
+      "line": 3034,
       "text": "Next page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2991,
+      "line": 3035,
       "text": "Last page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2992,
+      "line": 3036,
       "text": "First page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
@@ -62388,126 +62402,126 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 342,
+      "line": 343,
       "text": "qm:dummy_miniview",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 348,
+      "line": 349,
       "text": "qm:player_stats",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 351,
+      "line": 352,
       "text": "qm:debug_graph",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 354,
+      "line": 355,
       "text": "qm:debug_mode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 357,
+      "line": 358,
       "text": "qm:input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 360,
+      "line": 361,
       "text": "qm:hud_notifications",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 370,
+      "line": 371,
       "text": "qm:dynamic_island",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 373,
+      "line": 374,
       "text": "qm:system_media_controls",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 379,
+      "line": 380,
       "text": "qm:background_3d",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 382,
+      "line": 383,
       "text": "qm:bind_status_hud",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 385,
+      "line": 386,
       "text": "qm:gores_drown_board",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 415,
+      "line": 416,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 435,
+      "line": 436,
       "text": "qmclient-input-overlay-count-label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 437,
+      "line": 438,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 437,
+      "line": 438,
       "text": "settings_input_overlay_count_label",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 462,
+      "line": 463,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 475,
+      "line": 476,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 476,
+      "line": 477,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -68632,105 +68646,105 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 269,
+      "line": 267,
       "text": " chat/all: ",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 270,
+      "line": 268,
       "text": " chat/team: ",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 271,
+      "line": 269,
       "text": " chat/whisper: ",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 299,
+      "line": 297,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 329,
+      "line": 327,
       "text": "qmclient/chat_log",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 448,
+      "line": 446,
       "text": "console pointer must not be null",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 539,
+      "line": 537,
       "text": "sv_map",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 540,
+      "line": 538,
       "text": "change_map",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 542,
+      "line": 540,
       "text": "tune_reset",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 543,
+      "line": 541,
       "text": "toggle_tune",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 544,
+      "line": 542,
       "text": "tune_zone",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 547,
+      "line": 545,
       "text": "access_level",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 548,
+      "line": 546,
       "text": "+toggle",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 667,
+      "line": 665,
       "text": "local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 672,
+      "line": 670,
       "text": "remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -68758,101 +68772,87 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 911,
+      "line": 909,
       "text": "> %s",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 964,
+      "line": 962,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1077,
+      "line": 1074,
       "text": "%s%s%s",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1101,
+      "line": 1098,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1630,
+      "line": 1458,
+      "text": "chat/client",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1458,
+      "text": "xxxx-xx-xx xx:xx:xx x ",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1687,
       "text": "dumps/%s_dump_%s.txt",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1641,
+      "line": 1698,
       "text": "%s contents were written to '%s'",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1641,
+      "line": 1698,
       "text": "console",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1645,
+      "line": 1702,
       "text": "console",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1645,
+      "line": 1702,
       "text": "Failed to open '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1655,
+      "line": 1712,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 1682,
-      "text": "console",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 1689,
-      "text": "qmclient/chat_log/local_chat_export_%s_%lld",
-      "category": "business_data",
-      "reason": "console prompt, export, or formatting template"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 1708,
-      "text": "console",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 1737,
-      "text": "console",
-      "category": "business_data",
-      "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/console.cpp",
@@ -68863,322 +68863,322 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1863,
+      "line": 1746,
+      "text": "qmclient/chat_log/local_chat_export_%s_%lld",
+      "category": "business_data",
+      "reason": "console prompt, export, or formatting template"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1765,
+      "text": "console",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1794,
+      "text": "console",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1796,
+      "text": "console",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/console.cpp",
+      "line": 1923,
       "text": "%s: ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1870,
+      "line": 1930,
       "text": "rcon> ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1872,
+      "line": 1932,
       "text": "%s> ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1874,
+      "line": 1934,
       "text": "%s> ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1878,
+      "line": 1938,
       "text": "%s> ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 1991,
+      "line": 2051,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2190,
+      "line": 2241,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2191,
+      "line": 2242,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2443,
-      "text": "chat/client",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 2443,
-      "text": "xxxx-xx-xx xx:xx:xx x ",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 2458,
+      "line": 2501,
       "text": "xxxx-xx-xx xx:xx:xx x chat/client: — ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2487,
+      "line": 2538,
       "text": "https://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2489,
+      "line": 2540,
       "text": "https://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2493,
+      "line": 2544,
       "text": "http://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2495,
+      "line": 2546,
       "text": "http://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2503,
+      "line": 2554,
       "text": "www.",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2505,
+      "line": 2556,
       "text": "https://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2578,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 2578,
-      "text": "\\n",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/console.cpp",
-      "line": 2705,
+      "line": 2739,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2705,
+      "line": 2739,
       "text": " on ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2706,
+      "line": 2740,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2781,
+      "line": 2820,
       "text": " %d%%",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2980,
+      "line": 3024,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2980,
+      "line": 3024,
       "text": "clear",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2982,
+      "line": 3026,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2982,
+      "line": 3026,
       "text": "toggle_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2983,
+      "line": 3027,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2983,
+      "line": 3027,
       "text": "toggle_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2984,
+      "line": 3028,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2984,
+      "line": 3028,
       "text": "clear_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2985,
+      "line": 3029,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2985,
+      "line": 3029,
       "text": "clear_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2986,
+      "line": 3030,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2986,
+      "line": 3030,
       "text": "dump_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2987,
+      "line": 3031,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2987,
+      "line": 3031,
       "text": "dump_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2989,
+      "line": 3033,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2989,
+      "line": 3033,
       "text": "console_page_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2990,
+      "line": 3034,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2990,
+      "line": 3034,
       "text": "console_page_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2991,
+      "line": 3035,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2991,
+      "line": 3035,
       "text": "console_page_top",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2992,
+      "line": 3036,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2992,
+      "line": 3036,
       "text": "console_page_bottom",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2993,
+      "line": 3037,
       "text": "console_output_level",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -93790,267 +93790,253 @@
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 142,
+      "line": 144,
       "text": "%s%llu",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 639,
+      "line": 641,
       "text": "Failed to read configuration from '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 639,
+      "line": 641,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 666,
+      "line": 668,
       "text": "Failed to parse configuration (invalid json): '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 666,
+      "line": 668,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 671,
+      "line": 673,
       "text": "Failed to parse configuration: root must be an object",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 671,
+      "line": 673,
       "text": "input_overlay",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 680,
-      "text": "obs_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
       "line": 682,
-      "text": "obs_active_color",
+      "text": "obs_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
       "line": 684,
+      "text": "obs_active_color",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/input_overlay.cpp",
+      "line": 686,
       "text": "obs_inactive_alpha",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 699,
+      "line": 701,
       "text": "pressed_offset_y",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 724,
+      "line": 726,
       "text": "Failed to parse configuration: layouts entry '%u' must be an object",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 724,
+      "line": 726,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 733,
+      "line": 735,
       "text": "Failed to parse configuration: layouts entry '%u' missing 'layout'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 733,
+      "line": 735,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 747,
+      "line": 749,
       "text": "pressed_offset_y",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 758,
+      "line": 760,
       "text": "Failed to read layout file '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 758,
+      "line": 760,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 771,
+      "line": 773,
       "text": "Failed to parse layout file '%s': '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 771,
+      "line": 773,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 778,
+      "line": 780,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 778,
+      "line": 780,
       "text": "Layout file '%s' must be a JSON object",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 832,
+      "line": 834,
       "text": "Failed to read layout file '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 832,
+      "line": 834,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 844,
+      "line": 846,
       "text": "Failed to parse layout file '%s': '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 844,
+      "line": 846,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 850,
+      "line": 852,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 850,
+      "line": 852,
       "text": "Layout file '%s' must be a JSON object",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 886,
+      "line": 888,
       "text": "overlay_width",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 887,
+      "line": 889,
       "text": "default_width",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 943,
+      "line": 945,
       "text": "Failed to parse configuration: attribute 'elements' must specify an array",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 943,
+      "line": 945,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 955,
+      "line": 957,
       "text": "Failed to parse configuration: invalid element at index '%u'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 955,
+      "line": 957,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 987,
+      "line": 989,
       "text": "active_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 998,
+      "line": 1000,
       "text": "active_color",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1007,
-      "text": "rainbow",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1008,
-      "text": "gradient_active",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
@@ -94063,190 +94049,197 @@
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
+      "line": 1010,
+      "text": "gradient_active",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/input_overlay.cpp",
       "line": 1011,
+      "text": "rainbow",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/input_overlay.cpp",
+      "line": 1013,
       "text": "rainbow_speed",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1013,
+      "line": 1015,
       "text": "rainbow_offset",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1022,
+      "line": 1024,
       "text": "active_color",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1028,
-      "text": "offset_x",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/input_overlay.cpp",
       "line": 1030,
-      "text": "offset_y",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1157,
       "text": "offset_x",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1158,
+      "line": 1032,
       "text": "offset_y",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1182,
+      "line": 1159,
+      "text": "offset_x",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/input_overlay.cpp",
+      "line": 1160,
+      "text": "offset_y",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/qmclient/input_overlay.cpp",
+      "line": 1184,
       "text": "para",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1182,
+      "line": 1184,
       "text": "parallelogram",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1182,
+      "line": 1184,
       "text": "slant",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1195,
+      "line": 1197,
       "text": "always",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1224,
+      "line": 1226,
       "text": "lmb",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1224,
+      "line": 1226,
       "text": "mouse1",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1224,
+      "line": 1226,
       "text": "mouse_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1226,
+      "line": 1228,
       "text": "mouse2",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1226,
+      "line": 1228,
       "text": "mouse_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1226,
+      "line": 1228,
       "text": "rmb",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1228,
+      "line": 1230,
       "text": "mmb",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1228,
+      "line": 1230,
       "text": "mouse3",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1228,
+      "line": 1230,
       "text": "mouse_middle",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1230,
+      "line": 1232,
       "text": "mb4",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1230,
+      "line": 1232,
       "text": "mouse4",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1230,
+      "line": 1232,
       "text": "x1",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1232,
+      "line": 1234,
       "text": "mb5",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1232,
+      "line": 1234,
       "text": "mouse5",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1232,
-      "text": "x2",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/qmclient/input_overlay.cpp",
       "line": 1234,
-      "text": "mouse",
+      "text": "x2",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
@@ -94259,66 +94252,66 @@
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1255,
+      "line": 1238,
+      "text": "mouse",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/components/qmclient/input_overlay.cpp",
+      "line": 1257,
       "text": "default_width",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1258,
+      "line": 1260,
       "text": "default_height",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1261,
+      "line": 1263,
       "text": "overlay_width",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1264,
+      "line": 1266,
       "text": "overlay_height",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1271,
+      "line": 1273,
       "text": "Failed to parse OBS layout: attribute 'elements' must specify an array",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1271,
+      "line": 1273,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1284,
+      "line": 1286,
       "text": "Failed to parse OBS layout: invalid element at index '%u'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1284,
+      "line": 1286,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1308,
-      "text": ".png",
-      "category": "business_data",
-      "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
@@ -94329,343 +94322,350 @@
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1315,
+      "line": 1312,
+      "text": ".png",
+      "category": "business_data",
+      "reason": "HTML or CSS template fragment"
+    },
+    {
+      "file": "src/game/client/components/qmclient/input_overlay.cpp",
+      "line": 1317,
       "text": "Failed to parse OBS layout: missing image path",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1315,
+      "line": 1317,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1322,
+      "line": 1324,
       "text": "Failed to load OBS overlay image '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1322,
+      "line": 1324,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1352,
+      "line": 1354,
       "text": "pressed_offset_y",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1371,
+      "line": 1373,
       "text": "Failed to create texture for '%s'",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1371,
+      "line": 1373,
       "text": "input_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1421,
+      "line": 1423,
       "text": "z_level",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1424,
+      "line": 1426,
       "text": "mouse_type",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1428,
+      "line": 1430,
       "text": "active_only",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1541,
+      "line": 1543,
       "text": "lmb",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1541,
+      "line": 1543,
       "text": "mouse1",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1541,
+      "line": 1543,
       "text": "mouse_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1543,
+      "line": 1545,
       "text": "mouse2",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1543,
+      "line": 1545,
       "text": "mouse_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1543,
+      "line": 1545,
       "text": "rmb",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1545,
+      "line": 1547,
       "text": "mmb",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1545,
+      "line": 1547,
       "text": "mouse3",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1545,
+      "line": 1547,
       "text": "mouse_middle",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1547,
+      "line": 1549,
       "text": "mb4",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1547,
+      "line": 1549,
       "text": "mouse4",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1547,
+      "line": 1549,
       "text": "smb1",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1549,
+      "line": 1551,
       "text": "mb5",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1549,
+      "line": 1551,
       "text": "mouse5",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1549,
+      "line": 1551,
       "text": "smb2",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1579,
+      "line": 1581,
       "text": "wheel_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1579,
+      "line": 1581,
       "text": "wheelup",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1580,
+      "line": 1582,
       "text": "mousewheelup",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1580,
+      "line": 1582,
       "text": "mwheelup",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1581,
+      "line": 1583,
       "text": "scroll_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1581,
+      "line": 1583,
       "text": "scrollup",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1583,
+      "line": 1585,
       "text": "wheel_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1583,
+      "line": 1585,
       "text": "wheeldown",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1584,
+      "line": 1586,
       "text": "mousewheeldown",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1584,
+      "line": 1586,
       "text": "mwheeldown",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1585,
+      "line": 1587,
       "text": "scroll_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1585,
+      "line": 1587,
       "text": "scrolldown",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1587,
+      "line": 1589,
       "text": "wheel_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1587,
+      "line": 1589,
       "text": "wheelleft",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1588,
+      "line": 1590,
       "text": "mousewheelleft",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1588,
+      "line": 1590,
       "text": "mwheelleft",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1589,
+      "line": 1591,
       "text": "scroll_left",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1589,
+      "line": 1591,
       "text": "scrollleft",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1591,
+      "line": 1593,
       "text": "wheel_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1591,
+      "line": 1593,
       "text": "wheelright",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1592,
+      "line": 1594,
       "text": "mousewheelright",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1592,
+      "line": 1594,
       "text": "mwheelright",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1593,
+      "line": 1595,
       "text": "scroll_right",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/qmclient/input_overlay.cpp",
-      "line": 1593,
+      "line": 1595,
       "text": "scrollright",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
@@ -141923,34 +141923,6 @@
       "reason": "test fixture or assertion text"
     },
     {
-      "file": "src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp",
-      "line": 38,
-      "text": "void CMenus::RenderQmVisualCameraViewContent(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp",
-      "line": 41,
-      "text": "RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, \"Instant zoom reverse\", Localize(\"Instant zoom reverse\"), &g_Config.m_QmZoomInstantReverse);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp",
-      "line": 42,
-      "text": "HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, &g_Config.m_QmZoomInstantReverse)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_camera_effects_contract_test.cpp",
-      "line": 44,
-      "text": "return Rows(6.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
       "line": 14,
       "text": "void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)",
@@ -142295,364 +142267,259 @@
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 171,
-      "text": "const float InputContentHeight = 2.25f * InputCursor.m_FontSize;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 172,
-      "text": "const float InputClipPaddingTop = maximum(1.0f, InputCursor.m_FontSize * 0.18f);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 173,
-      "text": "const float InputClipPaddingBottom = maximum(1.0f, InputCursor.m_FontSize * 0.10f);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 174,
-      "text": "const float InputClipPaddingX = maximum(1.0f, InputCursor.m_FontSize * 0.18f);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 175,
-      "text": "InputContentRect.x - InputClipPaddingX",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 176,
-      "text": "InputContentRect.w + 2.0f * InputClipPaddingX",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 177,
-      "text": "const CUIRect InputContentRect",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 178,
-      "text": "const CUIRect InputClippingRect",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 179,
-      "text": "InputContentRect.y - ScrollOffset",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 180,
-      "text": "m_Input.GetCaretPosition().y - ScrollOffsetChange",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 181,
-      "text": "CaretPositionY < InputContentRect.y",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 182,
-      "text": "InputContentRect.y + InputContentRect.h",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 183,
-      "text": "Graphics()->ClipEnable((int)(InputClippingRect.x * XScale)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 184,
-      "text": "CaretPositionY < InputClippingRect.y",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 190,
-      "text": "void CChat::OnRender()",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 191,
+      "line": 170,
       "text": "// render chat input",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 193,
+      "line": 172,
       "text": "// 渲染翻译按钮",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 197,
+      "line": 176,
       "text": "InputCursor.SetPosition(vec2(x, y));",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 198,
+      "line": 177,
       "text": "InputCursor.SetPosition(vec2(x + TranslateButtonSize + TranslateButtonGap, y));",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 199,
+      "line": 178,
       "text": "CUIRect TranslateButtonRect = {InputContentRect.x + InputContentRect.w + TranslateButtonGap",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 205,
+      "line": 184,
       "text": "void CTClient::OnMessage(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 206,
+      "line": 185,
       "text": "void CTClient::RepeatLastMessage()",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 208,
+      "line": 187,
       "text": "const bool IsRepeatChatChannel = pMsg->m_Team == 0 || pMsg->m_Team == 1;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 209,
+      "line": 188,
       "text": "IsRepeatChatChannel && pMsg->m_pMessage != nullptr",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 210,
+      "line": 189,
       "text": "m_LastChatTeam = pMsg->m_Team;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 211,
+      "line": 190,
       "text": "GameClient()->m_Chat.SendChat(m_LastChatTeam, m_aLastChatMessage);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 219,
+      "line": 198,
       "text": "CButtonContainer m_SpectateButton;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 220,
+      "line": 199,
       "text": "void SpectateChatLine(const CChatLinePopupContext &Context);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 221,
+      "line": 200,
       "text": "DoEntry(&pPopupContext->m_SpectateButton, EQmIcon::EYE, FontIcons::FONT_ICON_EYE, Localize(\"Spectate\")",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 229,
+      "line": 208,
       "text": "bool CChat::TranslateVisibleChatLines()",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 230,
+      "line": 209,
       "text": "for(int i = m_BacklogCurLine; i < MAX_LINES; i++)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 232,
+      "line": 211,
       "text": "aLineIndices[NumLineIndices++] = LineIndex;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 234,
+      "line": 213,
       "text": "for(int i = 0; i < NumLineIndices; i++)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 243,
+      "line": 222,
       "text": "void CTClient::OnMessage(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 244,
+      "line": 223,
       "text": "bool CTClient::TryHandleRedPacketAutoClaim(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 247,
+      "line": 226,
       "text": "if(ClientId < 0)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 252,
+      "line": 231,
       "text": "pMsg->m_ClientId != -1",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 255,
+      "line": 234,
       "text": "SendChatOnConn(IClient::CONN_MAIN, 0, Password.c_str(), true, false)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 261,
+      "line": 240,
       "text": "void CChat::SendChatOnConn(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 263,
+      "line": 242,
       "text": "pLine == nullptr || pLine[0] == '\\0'",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 264,
+      "line": 243,
       "text": "!AllowWhitespaceOnly && *str_utf8_skip_whitespaces(pLine) == '\\0'",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 271,
+      "line": 250,
       "text": "void CChat::OnRender()",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 272,
+      "line": 251,
       "text": "void CChat::OpenChatLineMenu(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 274,
+      "line": 253,
       "text": "float m_ContentWidth",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 275,
+      "line": 254,
       "text": "int m_LineIndex = -1",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 277,
+      "line": 256,
       "text": "const float RenderedContentWidth = Line.m_ContentWidth * RenderScale;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 278,
+      "line": 257,
       "text": "const bool MouseInsideLine = IsChatLineHit(RenderedTextRect, MousePos);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 279,
+      "line": 258,
       "text": "ChatLineMenuOpen && m_ChatLinePopupContext.m_LineIndex == LineIndex",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 280,
+      "line": 259,
       "text": "const ColorRGBA SelectionColor",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 282,
+      "line": 261,
       "text": "m_ChatLinePopupContext.m_LineIndex = GetLineIndex(&Line);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 283,
+      "line": 262,
       "text": "UiMousePos.x, UiMousePos.y",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/client/qm_chat_contract_test.cpp",
-      "line": 285,
+      "line": 264,
       "text": "OpenChatLineMenu(*pMenuLine, GetUiMousePos());",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -143697,69 +143564,6 @@
       "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
       "line": 14,
       "text": "std::vector<IGraphics::CLineItem> vLineSegments",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 32,
-      "text": "void CMenus::RenderQmFunctionWeaponTrajectoryContent(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 33,
-      "text": "void CMenus::RenderSettingsQmClientFunctionDeck(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 37,
-      "text": "MACRO_CONFIG_INT(QmWeaponTrajectoryGun, qm_weapon_trajectory_gun, 1, 0, 1",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 38,
-      "text": "MACRO_CONFIG_INT(QmWeaponTrajectoryNinja, qm_weapon_trajectory_ninja, 0, 0, 1",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 39,
-      "text": "RenderQmFunctionCheckbox(&g_Config.m_QmWeaponTrajectoryGun, \"qmclient-weapon-trajectory-gun\", Localize(\"Pistol guide line\")",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 40,
-      "text": "RenderQmFunctionCheckbox(&g_Config.m_QmWeaponTrajectoryNinja, \"qmclient-weapon-trajectory-ninja\", Localize(\"Predict ninja path\")",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 41,
-      "text": "case EQmModuleId::WeaponTrajectory: return g_Config.m_QmWeaponTrajectory == 0 ? Row() : Row() * 6.0f;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 42,
-      "text": "手枪辅助线 shouqiang fuzhuxian pistol guide line",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp",
-      "line": 43,
-      "text": "预测忍者路径 yuce renzhe lujing predict ninja path",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
@@ -145312,840 +145116,287 @@
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 20,
+      "line": 15,
       "text": "int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 21,
+      "line": 16,
       "text": "int CMenus::CountMissingSettingsMenuTextPlanItems()",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 22,
+      "line": 17,
       "text": "void CMenus::PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride, const char *pOperationOverride)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 27,
+      "line": 22,
       "text": "int CountMissingSettingsMenuTextPlanItems() const;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 30,
+      "line": 25,
       "text": "m_SettingsMenuTextLastPrebuildStats.m_Remaining = CountMissingSettingsMenuTextPlanItems();",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 31,
+      "line": 26,
       "text": "const int RemainingMissing = m_SettingsMenuTextLastPrebuildStats.m_Remaining;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 32,
+      "line": 27,
       "text": "const int RemainingMissing = CountMissingSettingsMenuTextPlanItems();",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 33,
+      "line": 28,
       "text": "for(const SMenuTextPlanItem &Item : m_vSettingsMenuTextPrebuildPlan)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 35,
+      "line": 30,
       "text": "m_vSettingsMenuTextPrebuildPlan.size() - (int)m_SettingsMenuTextPlanCursor",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 44,
+      "line": 39,
       "text": "CMenus::SMenuTextPlanItem CMenus::AddStableTextScrollbar(int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect &Rect, unsigned Flags, const char *pSourceTag) const",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 49,
+      "line": 44,
       "text": "bool CMenus::DoSettingsScrollbarOption(int Page, int Tab, int Subtab, const char *pTextId, const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale, unsigned Flags, const char *pSuffix, const char *pMaxText)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 50,
+      "line": 45,
       "text": "bool CMenus::PrepareSettingsNumericFieldLabel(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 57,
+      "line": 52,
       "text": "DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pStr, FontSize, TEXTALIGN_ML, {}, (int)Label.w);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 58,
+      "line": 53,
       "text": "void CMenus::SplitSettingsScrollbarRects(const CUIRect &Rect, unsigned Flags, CUIRect *pLabelRect, CUIRect *pValueRect, CUIRect *pScrollBarRect) const",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 60,
+      "line": 55,
       "text": "const float ValueWidth = std::clamp(Rect.w * 0.12f, 42.0f, 68.0f);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 61,
+      "line": 56,
       "text": "const float LabelWidth = std::clamp(Rect.w * 0.25f, 108.0f, 180.0f);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 62,
+      "line": 57,
       "text": "Controls.VSplitRight(ValueWidth, &ScrollBar, &ValueText);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 63,
+      "line": 58,
       "text": "ScrollBar.VMargin(minimum(10.0f, Rect.w * 0.025f), &ScrollBar);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 66,
+      "line": 61,
       "text": "DoAppearanceNumericField(APPEARANCE_TAB_HUD, \"appearance-freeze-bars-alpha-inside-freeze\"",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 67,
+      "line": 62,
       "text": "SMenuTextStyleKey BuildSettingsShellTitleTextStyle(const CUIRect &Rect, CUIRect *pOutLabel = nullptr) const;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 71,
+      "line": 66,
       "text": "DoSettingsButton_CheckBox(SETTINGS_DDNET, -1, &g_Config.m_ClRaceGhost, \"Enable ghost\"",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 83,
-      "text": "struct SMenuTextPlanItem",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 84,
-      "text": "std::string m_TextId;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 85,
-      "text": "std::string m_Text;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 86,
-      "text": "enum EMenuTextStyleMode",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 91,
-      "text": "EMenuTextStyleMode m_StyleMode",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 92,
-      "text": "std::string m_AllowlistReason;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 93,
-      "text": "std::string m_SourceTag;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 94,
-      "text": "bool m_UseExplicitStyleKey = false;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 96,
-      "text": "SMenuTextPlanItem AddStableTextDefault(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 97,
-      "text": "SMenuTextPlanItem AddStableTextLabel(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 98,
-      "text": "SMenuTextPlanItem AddStableTextCheckbox(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 99,
-      "text": "SMenuTextPlanItem AddStableTextScrollbar(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 100,
-      "text": "SMenuTextPlanItem AddStableTextButton(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 101,
-      "text": "void BuildTClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 102,
-      "text": "void BuildQmClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 103,
-      "text": "void BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 104,
-      "text": "void BuildBaseSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 105,
-      "text": "void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 106,
-      "text": "bool PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 107,
-      "text": "int CountMissingSettingsMenuTextPlanItems() const;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 108,
-      "text": "int PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride = nullptr);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 109,
-      "text": "void PrebuildVisibleSettingsTextPool(const CUIRect &MainView, int Budget);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 111,
-      "text": "std::vector<SMenuTextPlanItem> m_vSettingsMenuTextPrebuildPlan;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 112,
-      "text": "std::unordered_set<std::string> m_SettingsMenuTextPlannedKeys;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 113,
-      "text": "size_t m_SettingsMenuTextPlanCursor",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 114,
-      "text": "uint64_t m_SettingsMenuTextPlanGeneration",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 115,
-      "text": "SSettingsMenuTextPrebuildStats m_SettingsMenuTextLastPrebuildStats",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 118,
-      "text": "std::unordered_set<std::string> m_SettingsMenuTextPlannedDescriptors;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 120,
-      "text": "bool DoSettingsScrollbarOption(int Page, int Tab, const char *pTextId, const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale = &CUi::ms_LinearScrollbarScale, unsigned Flags = 0u, const char *pSuffix = \"\", const char *pMaxText = nullptr);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 128,
+      "line": 73,
       "text": "int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 130,
-      "text": "bool CMenus::PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 131,
-      "text": "bool CMenus::PrebuildSettingsTextPlanItem(const SMenuTextPlanItem &Item, int &RemainingBudget)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 132,
-      "text": "void CMenus::BuildBaseSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 134,
-      "text": "static constexpr int s_aBaseSettingsPages[]",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 141,
-      "text": "void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 143,
-      "text": "RenderMenubar(TabBar, IClient::STATE_ONLINE);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 146,
-      "text": "planned=%d unplanned=%d",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 148,
-      "text": "const bool HasDescriptor = m_SettingsMenuTextPlannedDescriptors.find(MenuTextDescriptorKey(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 149,
-      "text": "HasDescriptor ? (KeyPlanned ? \"not_built\" : \"key_mismatch\") : \"missing_descriptor\"",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 150,
-      "text": "Box.Margin(2.0f, &Box);\\n\\tSLabelProperties Props;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 151,
-      "text": "void CMenus::BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 152,
-      "text": "CUIRect SettingsMainView = MenuTextSettingsContentView(Screen);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 153,
-      "text": "BuildVisibleSettingsMenuTextPlan(vVisibleItems, SettingsMainView);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 154,
-      "text": "BuildIngameMenuTextPlan(vItems, Screen);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 155,
-      "text": "int CMenus::CountMissingSettingsMenuTextPlanItems()",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 156,
-      "text": "It->second.m_Generation != m_MenuTextPoolGeneration",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 157,
-      "text": "int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 158,
-      "text": "void CMenus::PrebuildVisibleSettingsTextPool(const CUIRect &MainView, int Budget)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 161,
-      "text": "Entry.m_Built = true;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 162,
-      "text": "Entry.m_Generation = m_MenuTextPoolGeneration;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 163,
-      "text": "bool CMenus::DoSettingsScrollbarOption(int Page, int Tab, const char *pTextId, const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale, unsigned Flags, const char *pSuffix, const char *pMaxText)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 164,
-      "text": "RenderSettingsTClient(ContentView, true);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 165,
-      "text": "RenderSettingsQmClient(ContentView, false, true);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 173,
-      "text": "const int LastPage = SettingsCanonicalPage(m_SettingsRuntimeMetadata.m_LastPage);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 180,
-      "text": "void CMenus::BuildTClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 181,
-      "text": "void CMenus::BuildQmClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView, int Tab)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 182,
-      "text": "void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 183,
-      "text": "void CMenus::BuildTClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 184,
-      "text": "void CMenus::BuildQmClientSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 187,
-      "text": "g_Config.m_UiSettingsPage = SETTINGS_TCLIENT;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 188,
-      "text": "g_Config.m_UiSettingsPage = SETTINGS_QMCLIENT;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 191,
-      "text": "RenderSettingsTClient(MainView, true);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 192,
-      "text": "RenderSettingsQmClient(MainView, false, true);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 193,
-      "text": "m_MenuTextPlanCollecting = true;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 194,
-      "text": "m_MenuTextPlanCollecting = true;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 195,
-      "text": "m_pMenuTextPlanCollection = &vItems;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 196,
-      "text": "m_pMenuTextPlanCollection = &vItems;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 197,
-      "text": "m_MenuTextPlanCollecting = PreviousCollecting;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 198,
-      "text": "m_MenuTextPlanCollecting = PreviousCollecting;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 200,
-      "text": "void SetContentHeightForNextFrame(float ContentHeight);",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 201,
-      "text": "LogSettingsStage(\"tclient_settings_right_prewarm\", RightColumnTimer);\\n\\t\\t\\treturn;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 209,
-      "text": "const bool CollectingMenuTextPlan = m_MenuTextPlanCollecting;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 210,
-      "text": "const bool SettingsPerfEnabled = PerfDebugEnabled() && !CollectingMenuTextPlan;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 211,
-      "text": "if(!CollectingMenuTextPlan && g_Config.m_UiSettingsPage != SETTINGS_ASSETS",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 214,
-      "text": "if(!CollectingMenuTextPlan && m_SettingsPerfLastPage == g_Config.m_UiSettingsPage)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 215,
-      "text": "m_SettingsPerfLastPage = g_Config.m_UiSettingsPage;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 227,
-      "text": "void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoadingCaption, const char *pLoadingMessage)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 230,
-      "text": "if(g_Config.m_QmSettingsPrewarm == 0)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 231,
-      "text": "if(g_Config.m_QmSettingsPrewarm == 0)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 243,
-      "text": "int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 244,
+      "line": 74,
       "text": "void CMenus::PrebuildIngameEscTextPoolBeforeOpen(int Budget)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 248,
+      "line": 78,
       "text": "struct SSettingsMenuTextPlanCollectionUnit",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 249,
+      "line": 79,
       "text": "struct SSettingsMenuTextPlanCollectionStats",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 250,
+      "line": 80,
       "text": "std::vector<SSettingsMenuTextPlanCollectionUnit> m_vSettingsMenuTextPlanCollectionUnits;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 251,
+      "line": 81,
       "text": "size_t m_SettingsMenuTextPlanCollectionCursor",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 252,
+      "line": 82,
       "text": "uint64_t m_SettingsMenuTextPlanCollectionGeneration",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 253,
+      "line": 83,
       "text": "bool m_SettingsMenuTextPlanCollectionDirty",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 254,
+      "line": 84,
       "text": "bool m_SettingsMenuTextPlanCollectionComplete",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 255,
+      "line": 85,
       "text": "SSettingsMenuTextPlanCollectionStats m_SettingsMenuTextLastCollectionStats",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 256,
+      "line": 86,
       "text": "int SettingsTextPlanCollectionRemaining() const",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 258,
+      "line": 88,
       "text": "void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 259,
+      "line": 89,
       "text": "bool CMenus::AdvanceSettingsMenuTextPlanCollection(int Budget, const char *pOperationOverride)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 260,
+      "line": 90,
       "text": "void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 262,
+      "line": 92,
       "text": "units_done=%d units_total=%d remaining=%d budget=%d complete=%d dirty=%d phase=%s scope=%s operation=%s",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 265,
+      "line": 95,
       "text": "while(m_SettingsMenuTextPlanCursor < m_vSettingsMenuTextPrebuildPlan.size())",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 266,
+      "line": 96,
       "text": "BuildSettingsMenuTextPlan(vItems, SettingsMainView);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 268,
+      "line": 98,
       "text": "BuildBaseSettingsMenuTextPlan(vItems, SettingsMainView);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 269,
+      "line": 99,
       "text": "for(int Tab = 0; Tab < NumTClientTextPlanTabs; ++Tab)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/monitoring/qmclient_monitoring_text_plan_contract_test.cpp",
-      "line": 270,
+      "line": 100,
       "text": "for(int Tab = 0; Tab < NUMBER_OF_QMCLIENT_SETTINGS_TABS; ++Tab)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -154986,147 +154237,98 @@
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 131,
-      "text": "MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 132,
-      "text": "MACRO_CONFIG_INT(QmMapBrowserOpacity, qm_map_browser_opacity",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 134,
-      "text": "MACRO_CONFIG_COL(UiColor, ui_color, 0x4D000000",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 135,
-      "text": "MACRO_CONFIG_COL(ClMenuPanelColor, cl_menu_panel_color, 0x000000",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 136,
-      "text": "MACRO_CONFIG_INT(ClMenuPanelOpacity, cl_menu_panel_opacity, 30",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 137,
-      "text": "MACRO_CONFIG_INT(ClMenuPanelElevatedOpacity, cl_menu_panel_elevated_opacity, 30",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 138,
-      "text": "MACRO_CONFIG_INT(ClSettingsTabbarOpacity, cl_settings_tabbar_opacity, 30",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 148,
+      "line": 133,
       "text": "void CMenus::RenderThemeSelection(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 149,
+      "line": 134,
       "text": "bool CMenus::RenderLanguageSelection(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 153,
+      "line": 138,
       "text": "LIST_ITEM_SELECTED{1.0f, 1.0f, 1.0f, 0.14f}",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 154,
+      "line": 139,
       "text": "LIST_ITEM_HOVER{1.0f, 1.0f, 1.0f, 0.08f}",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 155,
+      "line": 140,
       "text": "void SetItemColors(ColorRGBA SelectedActive, ColorRGBA SelectedInactive, ColorRGBA Hovered)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 156,
+      "line": 141,
       "text": "m_SelectedItemActiveColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 157,
+      "line": 142,
       "text": "Ui()->ScaleBackgroundAlpha(m_Active ? m_SelectedItemActiveColor : m_SelectedItemInactiveColor)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 158,
+      "line": 143,
       "text": "s_ListBox.SetItemColors(ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::LIST_ITEM_HOVER);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 160,
+      "line": 145,
       "text": "DrawRoundedSurface(Ui(), ItemRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_SELECTED)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 161,
+      "line": 146,
       "text": "if(Ui()->HotItem() == pRowId)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 162,
+      "line": 147,
       "text": "DrawRoundedSurface(Ui(), ItemRect, Ui()->ScaleBackgroundAlpha(ui_token::color::LIST_ITEM_HOVER)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 175,
+      "line": 160,
       "text": "EEditState CUi::DoPickerLogic(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 178,
+      "line": 163,
       "text": "const bool Inside = MouseHovered(pRect);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_colors_contract_test.cpp",
-      "line": 179,
+      "line": 164,
       "text": "if(Inside && MouseButtonClicked(0))",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -155210,231 +154412,49 @@
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 50,
-      "text": "const auto BuildHudPreLayoutInput",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 53,
-      "text": "case EQmModuleId::DynamicIsland:",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 54,
-      "text": "case EQmModuleId::PlayerStats:",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 61,
-      "text": "ConsumeQmHudRow(Content); // edge margin",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
       "line": 62,
-      "text": "ResolveSettingsColorRowLayout(Content, Metrics, false)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 73,
-      "text": "MACRO_CONFIG_INT(QmWeaponSwitchAnimDurationMs, qm_weapon_switch_anim_duration_ms, 300",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 74,
-      "text": "MACRO_CONFIG_INT(QmWeaponSwitchAnimDistance, qm_weapon_switch_anim_distance, 40",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 75,
-      "text": "MACRO_CONFIG_INT(QmWeaponSwitchAnimRotation, qm_weapon_switch_anim_rotation, 360",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 76,
-      "text": "MACRO_CONFIG_INT(QmWeaponSwitchAnimEasing, qm_weapon_switch_anim_easing",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 77,
-      "text": "MACRO_CONFIG_INT(QmWeaponReloadAnim, qm_weapon_reload_anim",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 78,
-      "text": "MACRO_CONFIG_INT(QmWeaponReloadAnimProbability, qm_weapon_reload_anim_probability",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 85,
-      "text": "void CMenus::RenderQmVisualWeaponAnimationContent(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 86,
-      "text": "RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponSwitchAnim",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 87,
-      "text": "RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponReloadAnim",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 88,
-      "text": "RenderValue(\"qmclient-weapon-reload-animation-probability\", \"Weapon reload animation probability\"",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 89,
-      "text": "if(!g_Config.m_QmWeaponSwitchAnim && !g_Config.m_QmWeaponReloadAnim)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 100,
-      "text": "RenderValue(\"qmclient-weapon-switch-duration\", \"Weapon switch duration\"",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 101,
-      "text": "RenderValue(\"qmclient-weapon-switch-distance\", \"Weapon switch distance\"",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 102,
-      "text": "RenderValue(\"qmclient-weapon-switch-rotation\", \"Weapon switch rotation\"",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 103,
-      "text": "Localize(\"Weapon switch easing\")",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 105,
-      "text": "void CMenus::RenderSettingsQmClientVisualDeck(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 106,
-      "text": "ResolveQmVisualWeaponAnimationHeight(Metrics, g_Config.m_QmWeaponSwitchAnim != 0, g_Config.m_QmWeaponReloadAnim != 0)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 108,
-      "text": "HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponReloadAnim, &g_Config.m_QmWeaponReloadAnim)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 109,
-      "text": "装填动画 zhuangtian donghua reload animation",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 121,
       "text": "void CMenus::RenderQmFunctionMiniFeaturesContent(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 126,
-      "text": "void CMenus::RenderQmFunctionImeContent(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 138,
-      "text": "void CMenus::RenderQmFunctionMiniFeaturesContent(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 147,
+      "line": 71,
       "text": "void CMenus::RenderQmFunctionBetterScoreboardContent(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 149,
+      "line": 73,
       "text": "Better scoreboard",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 149,
+      "line": 73,
       "text": "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 149,
+      "line": 73,
       "text": "Scoreboard filter: only show players whose name or clan contains this text",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 149,
+      "line": 73,
       "text": "Scoreboard point check",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_new_ui_menu_settings_features_contract_test.cpp",
-      "line": 149,
+      "line": 73,
       "text": "Show scoreboard after death",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -156862,189 +155882,161 @@
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 86,
-      "text": "bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, float LineSpacing, int TextAlign, const SEditBoxRenderOptions &RenderOptions)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 89,
-      "text": "const bool ClickedOutside = (MouseButtonClicked(0) || MouseButtonClicked(1)) && !Inside;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 90,
-      "text": "if(Active && ClickedOutside)",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 92,
-      "text": "InputOptions.m_TextAlign = TEXTALIGN_ML;",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 98,
+      "line": 85,
       "text": "bool CMenus::DoSliderWithScaledValue(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 101,
+      "line": 88,
       "text": "IUiContext InputCtx = SettingsUiContext(\"tclient_slider_input\"",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 102,
+      "line": 89,
       "text": "Localize(\"Base prediction margin\")",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 103,
+      "line": 90,
       "text": "Localize(\"Maximum reduction\")",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 104,
+      "line": 91,
       "text": "Localize(\"Delay before reduction\")",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 105,
+      "line": 92,
       "text": "Localize(\"Frozen prediction margin\")",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 116,
+      "line": 103,
       "text": "m_InitialScrollPending = true;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 121,
+      "line": 108,
       "text": "CListboxItem CListBox::DoNextRow()",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 127,
+      "line": 114,
       "text": "CListboxItem CListBox::DoCustomRow(float Height, bool ScrollHere)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 128,
+      "line": 115,
       "text": "m_ScrollRegion.AddRect(Item.m_Rect, ScrollHere);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 133,
+      "line": 120,
       "text": "if(!RenderOnly && EntryAnimationEnabled",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 143,
+      "line": 130,
       "text": "&CUi::ms_LinearScrollbarScale, 0, \"%\"",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 144,
+      "line": 131,
       "text": "Options.m_pTrailingActionId = &ToggleButton;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 145,
+      "line": 132,
       "text": "Options.m_pTrailingActionIcon = Visible ? FONT_ICON_EYE_SLASH : FONT_ICON_EYE;",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 146,
+      "line": 133,
       "text": "Options.m_TrailingActionQmIcon = static_cast<int>(Visible ? EQmIcon::EYE_OFF : EQmIcon::EYE);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 153,
+      "line": 140,
       "text": "CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 155,
+      "line": 142,
       "text": "#include <game/client/QmUi/UiSurface.h>",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 156,
+      "line": 143,
       "text": "DrawRoundedSurface(Ui(), *pRect, ReaderBaseColor",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 157,
+      "line": 144,
       "text": "if(ClearChecked == 0)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 158,
+      "line": 145,
       "text": "const float ClearSurfaceAlpha = 0.22f * Ui()->ButtonColorMul(pClearButton);",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 159,
+      "line": 146,
       "text": "DrawRoundedSurface(Ui(), ClearButton",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 160,
+      "line": 147,
       "text": "ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp",
-      "line": 161,
+      "line": 148,
       "text": "if(m_pKeyReaderId == pReaderButton && m_TakeKey)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -164519,6 +163511,20 @@
       "reason": "test fixture or assertion text"
     },
     {
+      "file": "src/test/unit/qmclient/client/qm_console_selection_test.cpp",
+      "line": 68,
+      "text": "A中文🙂B",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
+      "file": "src/test/unit/qmclient/client/qm_console_selection_test.cpp",
+      "line": 69,
+      "text": "中文🙂",
+      "category": "test_only",
+      "reason": "test fixture or assertion text"
+    },
+    {
       "file": "src/test/unit/qmclient/client/qm_crashdump_shutdown_suppression_test.cpp",
       "line": 26,
       "text": "opengl es",
@@ -168937,91 +167943,91 @@
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 104,
+      "line": 138,
       "text": "HTTP/1.1 302 Found\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 105,
+      "line": 139,
       "text": "Content-Length: 100\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 106,
+      "line": 140,
       "text": "Location: /final\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 109,
+      "line": 143,
       "text": "HTTP/1.1 206 Partial Content\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 110,
+      "line": 144,
       "text": "Content-Range: bytes 0-0/10\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 126,
+      "line": 160,
       "text": "HTTP/1.1 302 Found\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 137,
+      "line": 171,
       "text": "HTTP/1.1 206 Partial Content\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 138,
+      "line": 172,
       "text": "Content-Range: bytes 0-0/10\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 149,
+      "line": 183,
       "text": "HTTP/1.1 206 Partial Content\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 150,
+      "line": 184,
       "text": "Content-Range: bytes 0-0/10\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 158,
+      "line": 192,
       "text": "HTTP/1.1 200 OK\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 158,
+      "line": 192,
       "text": "HTTP/1.1 206 Partial Content\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/unit/qmclient/client/qmclient_update_http_test.cpp",
-      "line": 164,
+      "line": 198,
       "text": "Content-Range: bytes 1-1/10\\r\\n",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -174336,168 +173342,168 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 342,
+      "line": 343,
       "text": "Dummy Window",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 342,
+      "line": 343,
       "text": "Show a small view of the dummy",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 345,
+      "line": 346,
       "text": "Show Coordinates",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 345,
+      "line": 346,
       "text": "Show coordinates above players",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 348,
+      "line": 349,
       "text": "Player data",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 348,
+      "line": 349,
       "text": "Player stats and info display",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 351,
+      "line": 352,
       "text": "Debug graph",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 351,
+      "line": 352,
       "text": "Debug performance graph panel",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 354,
+      "line": 355,
       "text": "Debug mode",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 354,
+      "line": 355,
       "text": "Enable performance debug logging and diagnostics",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 357,
+      "line": 358,
       "text": "Input overlay",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 357,
+      "line": 358,
       "text": "Input overlay display",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 360,
+      "line": 361,
       "text": "Show important server prompts and Echo messages as popups",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 367,
+      "line": 368,
       "text": "Voice chat settings and diagnostics",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 370,
+      "line": 371,
       "text": "Dynamic Island",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 370,
+      "line": 371,
       "text": "HUD island appearance settings",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 373,
+      "line": 374,
       "text": "System media control",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 376,
+      "line": 377,
       "text": "Lyrics sources and display",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 379,
+      "line": 380,
       "text": "3D Background",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 379,
+      "line": 380,
       "text": "Configure background 3D particle effects",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 382,
+      "line": 383,
       "text": "DDRace HUD Pro",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 382,
+      "line": 383,
       "text": "Dummy key/hammer/control/copy status switches",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 385,
+      "line": 386,
       "text": "Gores drown board",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogHud.cpp",
-      "line": 385,
+      "line": 386,
       "text": "Team drown death leaderboard",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"

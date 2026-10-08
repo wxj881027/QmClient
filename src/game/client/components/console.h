@@ -10,11 +10,13 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
+#include <game/client/components/qmclient/console_selection.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
 
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -76,9 +78,9 @@ private:
 		CLineInputBuffered<IConsole::CMDLINE_LENGTH> m_Input;
 		const char *m_pName;
 		int m_Type;
-		int m_BacklogCurLine;
+		int m_BacklogCurLine = 0;
 		int m_BacklogLastActiveLine = -1;
-		int m_LinesRendered;
+		int m_LinesRendered = 0;
 		// 顶栏筛选是多选掩码，见 qm_console_log_filter.h
 		int m_LogFilterMask = QM_CONSOLE_LOG_CATEGORY_ALL;
 		int m_ChatExportPreviousFilterMask = QM_CONSOLE_LOG_CATEGORY_ALL;
@@ -88,14 +90,11 @@ private:
 		std::shared_ptr<CQmChatExportJob> m_pChatExportJob;
 
 		STextBoundingBox m_BoundingBox = {0.0f, 0.0f, 0.0f, 0.0f};
-		float m_LastInputHeight = 0.0f;
 
 		bool m_MouseIsPress = false;
 		vec2 m_MousePress = vec2(0.0f, 0.0f);
 		vec2 m_MouseRelease = vec2(0.0f, 0.0f);
-		int m_CurSelStart = 0;
-		int m_CurSelEnd = 0;
-		bool m_HasSelection = false;
+		CQmConsoleSelection m_Selection;
 		int m_NewLineCounter = 0;
 		bool m_ScrollbarDragging = false;
 		float m_ScrollbarDragOffset = 0.0f;
@@ -186,6 +185,10 @@ private:
 		void GetCommand(const char *pInput, char (&aCmd)[IConsole::CMDLINE_LENGTH]);
 
 		void UpdateEntryTextAttributes(CBacklogEntry *pEntry) const;
+		float BacklogLineWidth() const;
+		bool ParseEntryColors(const CBacklogEntry *pEntry) const;
+		CQmConsoleSelection::CPosition SelectionPositionAt(vec2 Position, float LogBottom, float LineHeight);
+		std::string SelectionText();
 
 		bool IsInputHidden() const;
 		void UpdateCompletionSuggestions();
@@ -220,9 +223,9 @@ private:
 	float m_StateChangeDuration;
 
 	bool m_WantsSelectionCopy = false;
+	bool m_LocalConsoleFullscreen = false;
 	CUi::CTouchState m_TouchState;
 	vec2 m_ButtonPressPosition = vec2(0.0f, 0.0f);
-	bool m_ButtonPressed = false;
 
 	bool DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released);
 	CButtonContainer m_aFilterButtons[CInstance::LOG_FILTER_BUTTON_COUNT];
@@ -231,6 +234,7 @@ private:
 	CButtonContainer m_ChatExportClearButton;
 	CButtonContainer m_ChatExportSaveButton;
 	CButtonContainer m_ChatExportCancelButton;
+	CButtonContainer m_FullscreenButton;
 	bool m_TopbarMouseDown = false;
 
 	static constexpr ColorRGBA ms_SearchHighlightColor = ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f);

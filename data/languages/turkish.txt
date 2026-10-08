@@ -2138,6 +2138,9 @@ Close the demo player
 Close window after changing settings
 == Ayarları değiştirdikten sonra pencereyi kapat
 
+Collapse console
+== Konsolu daralt
+
 Collision hitbox
 == Çarpışma hitbox'ı
 
@@ -4330,6 +4333,9 @@ Existing Player
 
 Exit replay view
 == Demo görünümünden çık
+
+Expand console
+== Konsolu genişlet
 
 Expanded dropdown background color
 == Açılan liste arka plan rengi
