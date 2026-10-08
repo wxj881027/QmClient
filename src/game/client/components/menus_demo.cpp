@@ -3,6 +3,7 @@
 
 #include "maplayers.h"
 #include "menus.h"
+#include "qmclient/demo_display.h"
 #include "qmclient/demo_ui.h"
 #include "qmclient/perf_logging.h"
 #include "qmclient/rank_demo_manifest.h"
@@ -290,9 +291,9 @@ void CMenus::RenderDemoDisplaySettings(CUIRect View, bool Enabled)
 		if(ui_widget::Toggle(Context, pValue, &Value, Switch, Enabled))
 			*pValue = Value;
 	};
-	Toggle(Hud, Localize("Show ingame HUD"), &g_Config.m_QmDemoShowHud);
-	// 在线回放保留服务器实时聊天，显示开关沿用实时聊天配置。
-	Toggle(Chat, Localize("Show chat"), GameClient()->m_RankGhost.IsViewModeActive() ? &g_Config.m_ClShowChat : &g_Config.m_QmDemoShowChat);
+	const auto Bindings = qm_demo_display::ConfigBindings(g_Config, GameClient()->m_RankGhost.IsViewModeActive());
+	Toggle(Hud, Localize("Show ingame HUD"), Bindings.m_pHud);
+	Toggle(Chat, Localize("Show chat"), Bindings.m_pChat);
 }
 
 bool CMenus::DemoFilterChat(const void *pData, int Size, void *pUser)
@@ -1282,7 +1283,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 	NameBar.VSplitRight(Margins, &NameBar, nullptr);
 	NameBar.VSplitRight(NameBarHeight, &NameBar, &Button);
 	static CButtonContainer s_KeyboardShortcutsButton;
-	if(Ui()->DoButton_QmIcon(&s_KeyboardShortcutsButton, EQmIcon::KEYBOARD, FONT_ICON_KEYBOARD, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, g_Config.m_ClDemoKeyboardShortcuts != 0))
+	if(Ui()->DoButton_QmIcon(&s_KeyboardShortcutsButton, EQmIcon::KEYBOARD, FONT_ICON_KEYBOARD, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, g_Config.m_ClDemoKeyboardShortcuts == 0))
 	{
 		g_Config.m_ClDemoKeyboardShortcuts ^= 1;
 	}
@@ -1294,7 +1295,7 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		NameBar.VSplitRight(Margins, &NameBar, nullptr);
 		NameBar.VSplitRight(NameBarHeight, &NameBar, &Button);
 		static CButtonContainer s_AutoCameraButton;
-		if(Ui()->DoButton_QmIcon(&s_AutoCameraButton, EQmIcon::CAMERA, FONT_ICON_CAMERA, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, GameClient()->m_Camera.m_AutoSpecCamera))
+		if(Ui()->DoButton_QmIcon(&s_AutoCameraButton, EQmIcon::CAMERA, FONT_ICON_CAMERA, 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, !GameClient()->m_Camera.m_AutoSpecCamera))
 		{
 			GameClient()->m_Camera.m_AutoSpecCamera = !GameClient()->m_Camera.m_AutoSpecCamera;
 		}

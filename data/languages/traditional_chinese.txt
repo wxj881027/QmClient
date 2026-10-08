@@ -4460,6 +4460,9 @@ Failed to preview import file.
 Failed to read saves file
 == 讀取存檔文件失敗
 
+Failed to record video. See local console for details.
+== 影片錄製失敗，詳情請查看本機主控台。
+
 Failed to write PNG export.
 == 寫入 PNG 導出文件失敗。
 

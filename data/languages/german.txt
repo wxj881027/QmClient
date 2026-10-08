@@ -4460,6 +4460,9 @@ Failed to preview import file.
 Failed to read saves file
 == Lesen der Speicherdatei fehlgeschlagen
 
+Failed to record video. See local console for details.
+== Videoaufnahme fehlgeschlagen. Details stehen in der lokalen Konsole.
+
 Failed to write PNG export.
 == PNG-Export konnte nicht geschrieben werden.
 

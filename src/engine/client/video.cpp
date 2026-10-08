@@ -79,7 +79,8 @@ void CVideo::Init()
 CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName) :
 	m_pGraphics(pGraphics),
 	m_pStorage(pStorage),
-	m_pSound(pSound)
+	m_pSound(pSound),
+	m_FrameCapture(Width, Height)
 {
 	m_pFormatContext = nullptr;
 	m_pFormat = nullptr;
@@ -254,9 +255,18 @@ bool CVideo::Start()
 				m_VideoStream.m_pCodecContext->width, m_VideoStream.m_pCodecContext->height, AV_PIX_FMT_RGBA,
 				m_VideoStream.m_pCodecContext->width, m_VideoStream.m_pCodecContext->height, AV_PIX_FMT_YUV420P,
 				SWS_FULL_CHR_H_INT | SWS_FULL_CHR_H_INP | SWS_ACCURATE_RND | SWS_BITEXACT, nullptr, nullptr, nullptr);
+			if(!m_VideoStream.m_vpSwsContexts[i])
+			{
+				log_error("videorecorder", "Could not allocate video color conversion context");
+				return false;
+			}
 
 			const int *pMatrixCoefficients = sws_getCoefficients(COLOR_SPACE);
-			sws_setColorspaceDetails(m_VideoStream.m_vpSwsContexts[i], pMatrixCoefficients, 0, pMatrixCoefficients, 0, 0, 1 << 16, 1 << 16);
+			if(sws_setColorspaceDetails(m_VideoStream.m_vpSwsContexts[i], pMatrixCoefficients, 0, pMatrixCoefficients, 0, 0, 1 << 16, 1 << 16) < 0)
+			{
+				log_error("videorecorder", "Could not configure video color conversion context");
+				return false;
+			}
 		}
 	}
 
@@ -319,13 +329,15 @@ void CVideo::Stop()
 
 	m_Recording = false;
 
-	FinishFrames(&m_VideoStream);
-
-	if(m_HasAudio)
-		FinishFrames(&m_AudioStream);
-
-	if(m_pFormatContext && m_Started)
-		av_write_trailer(m_pFormatContext);
+	// 初始化失败时只释放资源，不能向尚未写入文件头的输出刷新编码帧。
+	if(m_Started)
+	{
+		FinishFrames(&m_VideoStream);
+		if(m_HasAudio)
+			FinishFrames(&m_AudioStream);
+		if(m_pFormatContext)
+			av_write_trailer(m_pFormatContext);
+	}
 
 	CloseStream(&m_VideoStream);
 
@@ -349,13 +361,11 @@ void CVideo::Stop()
 
 void CVideo::NextVideoFrameThread()
 {
-	if(m_Recording)
+	if(IsRecording())
 	{
 		m_VideoFrameIndex += 1;
 		if(m_VideoFrameIndex >= 2)
 		{
-			m_ProcessingVideoFrame.fetch_add(1);
-
 			size_t NextVideoThreadIndex = m_CurVideoThreadIndex + 1;
 			if(NextVideoThreadIndex == m_VideoThreads)
 				NextVideoThreadIndex = 0;
@@ -381,8 +391,10 @@ void CVideo::NextVideoFrameThread()
 					pVideoThread->m_Cond.wait(Lock, [&pVideoThread]() -> bool { return !pVideoThread->m_HasVideoFrame; });
 				}
 
-				UpdateVideoBufferFromGraphics(m_CurVideoThreadIndex);
+				if(!UpdateVideoBufferFromGraphics(m_CurVideoThreadIndex))
+					return;
 
+				m_ProcessingVideoFrame.fetch_add(1);
 				pVideoThread->m_HasVideoFrame = true;
 				{
 					std::unique_lock<std::mutex> LockParent(pVideoThread->m_VideoFillMutex);
@@ -400,7 +412,7 @@ void CVideo::NextVideoFrameThread()
 
 void CVideo::NextVideoFrame()
 {
-	if(m_Recording)
+	if(IsRecording())
 	{
 		ms_Time += ms_TickTime;
 		ms_LocalTime = (ms_Time - ms_LocalStartTime) / (float)time_freq();
@@ -409,10 +421,10 @@ void CVideo::NextVideoFrame()
 
 void CVideo::NextAudioFrameTimeline(ISoundMixFunc Mix)
 {
-	if(m_Recording && m_HasAudio)
+	if(IsRecording() && m_HasAudio)
 	{
 		double SamplesPerFrame = (double)m_AudioStream.m_pCodecContext->sample_rate / m_FPS;
-		while(m_AudioStream.m_SamplesFrameCount >= m_AudioStream.m_SamplesCount)
+		while(IsRecording() && m_AudioStream.m_SamplesFrameCount >= m_AudioStream.m_SamplesCount)
 		{
 			NextAudioFrame(Mix);
 		}
@@ -422,7 +434,7 @@ void CVideo::NextAudioFrameTimeline(ISoundMixFunc Mix)
 
 void CVideo::NextAudioFrame(ISoundMixFunc Mix)
 {
-	if(m_Recording && m_HasAudio)
+	if(IsRecording() && m_HasAudio)
 	{
 		m_AudioFrameIndex += 1;
 
@@ -625,14 +637,14 @@ void CVideo::FillVideoFrame(size_t ThreadIndex)
 		m_VideoStream.m_pCodecContext->height, m_VideoStream.m_vpFrames[ThreadIndex]->data, m_VideoStream.m_vpFrames[ThreadIndex]->linesize);
 }
 
-void CVideo::UpdateVideoBufferFromGraphics(size_t ThreadIndex)
+bool CVideo::UpdateVideoBufferFromGraphics(size_t ThreadIndex)
 {
-	uint32_t Width;
-	uint32_t Height;
-	CImageInfo::EImageFormat Format;
-	m_pGraphics->GetReadPresentedImageDataFuncUnsafe()(Width, Height, Format, m_vVideoBuffers[ThreadIndex].m_vBuffer);
-	dbg_assert((int)Width == m_Width && (int)Height == m_Height, "Size mismatch between video (%d x %d) and graphics (%d x %d)", m_Width, m_Height, Width, Height);
-	dbg_assert(Format == CImageInfo::FORMAT_RGBA, "Unexpected image format %d", (int)Format);
+	if(!m_FrameCapture.Read(m_pGraphics->GetReadPresentedImageDataFuncUnsafe(), m_vVideoBuffers[ThreadIndex].m_vBuffer))
+	{
+		log_error("videorecorder", "%s (expected %d x %d)", m_FrameCapture.ErrorDescription(), m_Width, m_Height);
+		return false;
+	}
+	return true;
 }
 
 AVFrame *CVideo::AllocPicture(enum AVPixelFormat PixFmt, int Width, int Height)

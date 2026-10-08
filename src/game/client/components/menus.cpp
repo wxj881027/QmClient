@@ -52,6 +52,7 @@
 #include <game/client/components/console.h>
 #include <game/client/components/key_binder.h>
 #include <game/client/components/menu_background.h>
+#include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
@@ -4924,12 +4925,13 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		Box.HSplitTop(8.0f, nullptr, &Box);
 
 		CUIRect ShowChatCheckbox, UseSoundsCheckbox;
+		const auto DisplayBindings = qm_demo_display::ConfigBindings(g_Config);
 		Box.HSplitBottom(20.0f, &Box, &Row);
 		Box.HSplitBottom(10.0f, &Box, nullptr);
 		Row.VSplitMid(&ShowChatCheckbox, &UseSoundsCheckbox, 20.0f);
 
-		if(DoButton_CheckBox(&g_Config.m_ClVideoShowChat, Localize("Show chat"), g_Config.m_ClVideoShowChat, &ShowChatCheckbox))
-			g_Config.m_ClVideoShowChat ^= 1;
+		if(DoButton_CheckBox(DisplayBindings.m_pChat, Localize("Show chat"), *DisplayBindings.m_pChat, &ShowChatCheckbox))
+			*DisplayBindings.m_pChat ^= 1;
 
 		if(DoButton_CheckBox(&g_Config.m_ClVideoSndEnable, Localize("Use sounds"), g_Config.m_ClVideoSndEnable, &UseSoundsCheckbox))
 			g_Config.m_ClVideoSndEnable ^= 1;
@@ -4938,8 +4940,8 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		Box.HSplitBottom(20.0f, &Box, &Row);
 		Row.VSplitMid(&Row, &ShowHudButton, 20.0f);
 
-		if(DoButton_CheckBox(&g_Config.m_ClVideoShowhud, Localize("Show ingame HUD"), g_Config.m_ClVideoShowhud, &ShowHudButton))
-			g_Config.m_ClVideoShowhud ^= 1;
+		if(DoButton_CheckBox(DisplayBindings.m_pHud, Localize("Show ingame HUD"), *DisplayBindings.m_pHud, &ShowHudButton))
+			*DisplayBindings.m_pHud ^= 1;
 
 		// slowdown
 		CUIRect SlowDownButton;

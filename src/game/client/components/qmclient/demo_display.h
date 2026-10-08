@@ -7,6 +7,18 @@
 
 namespace qm_demo_display
 {
+	struct SConfigBindings
+	{
+		int *m_pHud;
+		int *m_pChat;
+	};
+
+	// 普通回放与视频导出共用绑定；在线回放的聊天仍来自实时服务器。
+	inline SConfigBindings ConfigBindings(CConfig &Config, bool OnlineReplay = false)
+	{
+		return {&Config.m_QmDemoShowHud, OnlineReplay ? &Config.m_ClShowChat : &Config.m_QmDemoShowChat};
+	}
+
 	struct SSettings
 	{
 		int m_Direction;

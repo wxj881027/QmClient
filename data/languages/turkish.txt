@@ -4460,6 +4460,9 @@ Failed to preview import file.
 Failed to read saves file
 == Kayıt dosyası okunamadı
 
+Failed to record video. See local console for details.
+== Video kaydedilemedi. Ayrıntılar için yerel konsola bakın.
+
 Failed to write PNG export.
 == PNG dışa aktarımı yazılamadı.
 

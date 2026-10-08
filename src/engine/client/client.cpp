@@ -3776,6 +3776,11 @@ void CClient::Update()
 
 	if(State() == IClient::STATE_DEMOPLAYBACK)
 	{
+#if defined(CONF_VIDEORECORDER)
+		// 图形线程仅发布录制失败，主线程在推进回放前完成停止与清理。
+		if(IVideo::Current() && IVideo::Current()->HasError())
+			m_DemoPlayer.Stop(Localize("Failed to record video. See local console for details."));
+#endif
 		if(m_DemoPlayer.IsPlaying())
 		{
 #if defined(CONF_VIDEORECORDER)

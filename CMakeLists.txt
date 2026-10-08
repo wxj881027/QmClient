@@ -3165,6 +3165,7 @@ if(CLIENT)
     updater.h
     video.cpp
     video.h
+    video_frame_capture.h
     warning.cpp
   )
 
@@ -4586,6 +4587,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/dbg_test.cpp
     src/test/contract/base/ddnet_19_9_sync_contract_test.cpp
     src/test/unit/engine/demo_player_test.cpp
+    src/test/unit/engine/video_frame_capture_test.cpp
     src/test/unit/engine/editor_test.cpp
     src/test/unit/base/fs_test.cpp
     src/test/unit/server/gameworld_test.cpp

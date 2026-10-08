@@ -4460,6 +4460,9 @@ Failed to preview import file.
 Failed to read saves file
 == Falha ao ler arquivo de saves
 
+Failed to record video. See local console for details.
+== Falha ao gravar o vídeo. Consulte o console local para mais detalhes.
+
 Failed to write PNG export.
 == Falha ao escrever exportação PNG.
 
