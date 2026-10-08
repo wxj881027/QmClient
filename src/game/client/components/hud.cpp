@@ -1142,6 +1142,7 @@ void CHud::OnReset()
 	m_aMapProgressInitialized[1] = false;
 	m_MediaIslandAnimState.Reset();
 	m_MediaIslandFrameCache.Reset();
+	m_LegacyMediaLyricState.Reset();
 	m_MediaIslandMuteState.Reset();
 	m_RecordingStatusAnimState.Reset();
 
@@ -3539,8 +3540,6 @@ void CHud::EnsureMediaIslandFrameCache() const
 	const bool MusicLyricsEnabled = QmHudMusicLyricsSourceEnabled(g_Config.m_QmSodaHookEnable != 0, g_Config.m_QmKugouHookEnable != 0, g_Config.m_QmQQMusicHookEnable != 0);
 	const bool MediaHudEnabled = g_Config.m_QmSmtcShowHud && SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0 || MusicLyricsEnabled || g_Config.m_QmSpotifyEnable != 0);
 	Cache.m_HasMediaState = MediaHudEnabled && GameClient()->m_SystemMediaControls.GetStateSnapshot(Cache.m_MediaState);
-	if(g_Config.m_QmHudIslandUseOriginalStyle)
-		return;
 
 	// 歌词来源选择:各来源可同时开启(菜单已保证同一时间只启用一个 Hook)。
 	// 若用户手动同时开启，网易云优先，统一歌词组件次之，Spotify 再后备。
@@ -3561,6 +3560,8 @@ void CHud::EnsureMediaIslandFrameCache() const
 		Cache.m_LyricsActive = GameClient()->m_SpotifyIntegration.HasActiveLyrics();
 		Cache.m_ShowLyrics = GameClient()->m_SpotifyIntegration.GetCurrentLyric(Cache.m_aLyrics, sizeof(Cache.m_aLyrics));
 	}
+	if(g_Config.m_QmHudIslandUseOriginalStyle)
+		return;
 	Cache.m_SpectatorCount = GetMediaIslandSpectatorCount(*GameClient(), *Client());
 
 	if(m_MediaIslandAnimState.HasVisibleSatellite())
@@ -6779,113 +6780,46 @@ void CHud::RenderLocalTime(float x)
 float CHud::RenderLegacyMediaInfoAt(float AnchorX, float CenterY)
 {
 	const bool Preview = GameClient()->m_HudEditor.IsActive();
-	if(m_LegacyMediaInfoRendered || !g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud || !SystemMediaControls::AnyMediaSourceEnabled(g_Config.m_QmSmtcEnable != 0, g_Config.m_QmNeteaseHookEnable != 0))
+	if(m_LegacyMediaInfoRendered)
 		return CenterY;
+	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
+	{
+		m_LegacyMediaLyricState.Reset();
+		return CenterY;
+	}
 	EnsureMediaIslandFrameCache();
 
 	CSystemMediaControls::SState PreviewMediaState{};
-	const CSystemMediaControls::SState *pMediaState = nullptr;
+	const CSystemMediaControls::SState *pMediaState = &PreviewMediaState;
 	if(m_MediaIslandFrameCache.m_HasMediaState)
 		pMediaState = &m_MediaIslandFrameCache.m_MediaState;
-	else
+	else if(Preview)
 	{
-		if(!Preview)
-			return CenterY;
 		str_copy(PreviewMediaState.m_aTitle, "Pure Music", sizeof(PreviewMediaState.m_aTitle));
 		str_copy(PreviewMediaState.m_aArtist, "QmClient", sizeof(PreviewMediaState.m_aArtist));
 		PreviewMediaState.m_PositionMs = 56 * 1000;
 		PreviewMediaState.m_DurationMs = 3 * 60 * 1000;
-		pMediaState = &PreviewMediaState;
 	}
 	const CSystemMediaControls::SState &MediaState = *pMediaState;
-
-	const bool HasTitle = MediaState.m_aTitle[0] != '\0';
-	const bool HasArtist = MediaState.m_aArtist[0] != '\0';
-	if(!HasTitle && !HasArtist)
+	const SQmLegacyMediaHudContent Content = QmLegacyMediaHudContent(
+		MediaState.m_aTitle[0] != '\0', MediaState.m_aArtist[0] != '\0',
+		m_MediaIslandFrameCache.m_ShowLyrics, m_MediaIslandFrameCache.m_LyricsActive);
+	if(!Content.m_Visible)
+	{
+		m_LegacyMediaLyricState.Reset();
 		return CenterY;
-
+	}
 	m_LegacyMediaInfoRendered = true;
 
-	constexpr float IslandHeight = 16.0f;
-	constexpr float CoverSize = 14.0f;
-	constexpr float PaddingX = 2.0f;
-	constexpr float IconGap = 3.0f;
-	constexpr float TextMaxWidth = 70.0f;
-	constexpr float TitleSize = 7.0f;
-	constexpr float ArtistSize = 6.0f;
-	const float IslandWidth = PaddingX + CoverSize + IconGap + TextMaxWidth + PaddingX;
-	const float IslandX = std::clamp(AnchorX, 0.0f, maximum(0.0f, m_Width - IslandWidth));
-	const float IslandY = std::clamp(CenterY - IslandHeight * 0.5f, 0.0f, maximum(0.0f, m_Height - IslandHeight));
-	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LegacyMediaInfo, {IslandX, IslandY, IslandWidth, IslandHeight});
-
-	Graphics()->DrawRect(IslandX, IslandY, IslandWidth, IslandHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.35f), HudEditorScope.m_Corners, 4.0f);
-
-	const float CoverX = IslandX + PaddingX;
-	const float CoverY = IslandY + (IslandHeight - CoverSize) * 0.5f;
-	if(MediaState.m_AlbumArt.IsValid())
-	{
-		Graphics()->WrapClamp();
-		Graphics()->TextureSet(MediaState.m_AlbumArt);
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
-		IGraphics::CQuadItem QuadItem(CoverX, CoverY, CoverSize, CoverSize);
-		Graphics()->QuadsDrawTL(&QuadItem, 1);
-		Graphics()->QuadsEnd();
-		Graphics()->WrapNormal();
-	}
-	else
-	{
-		Graphics()->DrawRect(CoverX, CoverY, CoverSize, CoverSize, ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), IGraphics::CORNER_ALL, 2.0f);
-	}
-
-	const float TextX = CoverX + CoverSize + IconGap;
-	const float TextAreaW = IslandX + IslandWidth - PaddingX - TextX;
-	const float TitleY = IslandY + 1.0f;
-	const float ArtistY = TitleY + TitleSize;
-
-	const unsigned int PrevFlags = TextRender()->GetRenderFlags();
-	const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
-	const ColorRGBA PrevOutlineColor = TextRender()->GetTextOutlineColor();
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
-	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.9f);
-	TextRender()->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.35f);
-
-	if(HasTitle)
-	{
-		CTextCursor Cursor;
-		Cursor.m_FontSize = TitleSize;
-		Cursor.m_LineWidth = TextAreaW;
-		Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
-		Cursor.SetPosition(vec2(TextX, TitleY));
-		TextRender()->TextEx(&Cursor, MediaState.m_aTitle);
-	}
-	if(HasArtist)
-	{
-		CTextCursor Cursor;
-		Cursor.m_FontSize = ArtistSize;
-		Cursor.m_LineWidth = TextAreaW;
-		Cursor.m_Flags = TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END;
-		Cursor.SetPosition(vec2(TextX, ArtistY));
-		TextRender()->TextEx(&Cursor, MediaState.m_aArtist);
-	}
-
-	float ContentBottomY = IslandY + IslandHeight;
-
-	TextRender()->TextColor(PrevTextColor);
-	TextRender()->TextOutlineColor(PrevOutlineColor);
-	TextRender()->SetRenderFlags(PrevFlags);
-
-	constexpr float BarHeight = 2.0f;
-	const float BarY = IslandY + IslandHeight - BarHeight - 1.0f;
-	Graphics()->DrawRect(TextX, BarY, TextAreaW, BarHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.15f), IGraphics::CORNER_ALL, 1.0f);
-	if(MediaState.m_DurationMs > 0)
-	{
-		const float Progress = std::clamp((float)MediaState.m_PositionMs / (float)MediaState.m_DurationMs, 0.0f, 1.0f);
-		if(Progress > 0.0f)
-			Graphics()->DrawRect(TextX, BarY, TextAreaW * Progress, BarHeight, ColorRGBA(1.0f, 1.0f, 1.0f, 0.6f), IGraphics::CORNER_ALL, 1.0f);
-	}
+	const SQmLegacyMediaHudLayout Layout = QmLegacyMediaHudLayout(AnchorX, CenterY, m_Width, m_Height, Content);
+	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::LegacyMediaInfo, Layout.m_Panel);
+	const char *pLyrics = Content.m_ShowLyrics ? m_MediaIslandFrameCache.m_aLyrics : "";
+	const int64_t Now = time_get();
+	m_LegacyMediaLyricState.Update(MediaState, pLyrics, Now);
+	QmRenderLegacyMediaHud(*Ui(), *Graphics(), *TextRender(), MediaState, Content, Layout, pLyrics,
+		m_MediaIslandFrameCache.m_LyricsColor, m_LegacyMediaLyricState.ElapsedSeconds(Now, time_freq()), HudEditorScope.m_Corners);
 	GameClient()->m_HudEditor.EndTransform(HudEditorScope);
-	return ContentBottomY;
+	return Layout.m_Panel.y + Layout.m_Panel.h;
 }
 
 bool CHud::GetLegacyMediaInfoAnchor(float &AnchorX, float &CenterY) const
@@ -6990,6 +6924,8 @@ void CHud::OnNewSnapshot()
 
 void CHud::OnRender()
 {
+	if(!g_Config.m_QmHudIslandUseOriginalStyle || !g_Config.m_QmSmtcShowHud)
+		m_LegacyMediaLyricState.Reset();
 	if((!QmHudMediaIslandShouldPrepareBackdropBlur(g_Config.m_QmHudIslandBgOpacity, g_Config.m_QmGaussianBlur != 0) || g_Config.m_QmHudIslandUseOriginalStyle || !Graphics()->HasMediaIslandSdf()) &&
 		(m_MediaIslandBlurSource.IsValid() || m_MediaIslandBlurDownsample.IsValid() || m_MediaIslandBlurDownsampleTemporary.IsValid() || m_MediaIslandBlurDownsampleTarget.IsValid() || m_MediaIslandBlurTarget.IsValid()))
 		DestroyMediaIslandBlurTargets();
