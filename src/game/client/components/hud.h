@@ -10,6 +10,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmLayout.h>
+#include <game/client/QmUi/QmLegacyMediaHud.h>
 #include <game/client/component.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/qmclient/hook_countdown.h>
@@ -575,6 +576,7 @@ private:
 	CUIRect m_MediaIslandLastVisibleRect{};
 	bool m_MediaIslandLastVisibleRectValid = false;
 	bool m_LegacyMediaInfoRendered = false;
+	CQmLegacyMediaHudLyricState m_LegacyMediaLyricState;
 	float m_aMapProgressDisplayed[NUM_DUMMIES] = {0.0f, 0.0f};
 	bool m_aMapProgressInitialized[NUM_DUMMIES] = {false, false};
 };

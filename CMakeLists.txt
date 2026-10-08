@@ -3189,6 +3189,8 @@ if(CLIENT)
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
     QmUi/QmHookCountdownRender.h
+    QmUi/QmLegacyMediaHud.cpp
+    QmUi/QmLegacyMediaHud.h
     QmUi/QmImeCandidateLayout.h
     QmUi/QmInputMotion.h
     QmUi/QmLineInputMotion.cpp
@@ -4676,6 +4678,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_media_volume_test.cpp
     src/test/unit/qmclient/client/qm_mpris_policy_test.cpp
     src/test/unit/qmclient/client/qm_media_island_layout_test.cpp
+    src/test/unit/qmclient/client/qm_legacy_media_hud_test.cpp
     src/test/contract/qmclient/client/qm_hud_media_island_contract_test.cpp
     src/test/unit/qmclient/client/qm_hud_frozen_tee_state_test.cpp
     src/test/unit/qmclient/client/qm_hud_recording_presentation_test.cpp
