@@ -230,7 +230,8 @@ void CMenus::RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, flo
 			const float StartAngle = PreviewStartAngle + AnglePerSector * i + PreviewSectorGap * 0.5f;
 			const float EndAngle = StartAngle + AnglePerSector - PreviewSectorGap;
 			const ColorRGBA Color = qm_pie_menu_ui::OptionColor(color_cast<ColorRGBA>(ColorHSLA(*Entry.m_pColorValue, Entry.m_Alpha)), Highlighted,
-				color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPieMenuSelectedColor, true))).WithMultipliedAlpha(PreviewAlpha);
+				color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPieMenuSelectedColor, true)))
+							.WithMultipliedAlpha(PreviewAlpha);
 			qm_pie_menu_ui::DrawSector(Graphics(), PreviewCenter, InnerRadius, OuterRadius, StartAngle, EndAngle, PreviewSectorGap, Color);
 			const float MidAngle = (StartAngle + EndAngle) * 0.5f * pi / 180.0f;
 			const vec2 ItemPos = PreviewCenter + vec2(cos(MidAngle), sin(MidAngle)) * ((InnerRadius + OuterRadius) * 0.5f);

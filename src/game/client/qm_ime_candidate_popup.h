@@ -61,10 +61,10 @@ public:
 
 		const bool FirstContent = m_CurrentLayer < 0;
 		const bool Changed = FirstContent ||
-			m_vLayers[m_CurrentLayer].m_CandidateStart != CandidateStart ||
-			m_vLayers[m_CurrentLayer].m_State.m_vCandidates != State.m_vCandidates ||
-			m_vLayers[m_CurrentLayer].m_State.m_PageIndex != State.m_PageIndex ||
-			m_vLayers[m_CurrentLayer].m_State.m_PageCount != State.m_PageCount;
+				     m_vLayers[m_CurrentLayer].m_CandidateStart != CandidateStart ||
+				     m_vLayers[m_CurrentLayer].m_State.m_vCandidates != State.m_vCandidates ||
+				     m_vLayers[m_CurrentLayer].m_State.m_PageIndex != State.m_PageIndex ||
+				     m_vLayers[m_CurrentLayer].m_State.m_PageCount != State.m_PageCount;
 		if(Changed)
 		{
 			if(!FirstContent)

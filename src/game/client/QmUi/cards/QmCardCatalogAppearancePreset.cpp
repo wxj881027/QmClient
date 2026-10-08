@@ -51,7 +51,7 @@ void CMenus::RenderQmAppearancePresetContent(CUIRect &Content, const SSettingsCo
 
 	std::string FontConfig;
 	const bool FontAvailable = TextRender()->QmFontFamilyDefaultConfig("LXGW WenKai", FontConfig) &&
-		FontConfig.size() < sizeof(g_Config.m_QmCustomFont) && FontConfig.size() < sizeof(g_Config.m_QmCustomFontCjk);
+				   FontConfig.size() < sizeof(g_Config.m_QmCustomFont) && FontConfig.size() < sizeof(g_Config.m_QmCustomFontCjk);
 	const char *pAvailable = Localize("LXGW WenKai is available.");
 	const char *pUnavailable = Localize("LXGW WenKai is unavailable. Current fonts and weights will be kept.");
 	const float FontNoteHeight = std::max({Metrics.m_LineHeight,
@@ -82,9 +82,7 @@ namespace qm_card_catalog
 {
 	bool BuildAppearancePresetCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out)
 	{
-		MakeModuleCard(Ctx, qm_module::EQmModuleId::AppearancePreset, "qm:appearance_preset", "Qm recommended appearance", "Preview and apply a fixed appearance preset",
-			[Ctx](CUIRect &Content) { QmCardRenderHook::RenderQmAppearancePresetContent(Ctx.m_pMenus, Content, Ctx.m_Metrics, Ctx.m_ReadOnly); },
-			[Metrics = Ctx.m_Metrics](float) { return CardRows(Metrics, 17.0f); }, 1, {}, Out);
+		MakeModuleCard(Ctx, qm_module::EQmModuleId::AppearancePreset, "qm:appearance_preset", "Qm recommended appearance", "Preview and apply a fixed appearance preset", [Ctx](CUIRect &Content) { QmCardRenderHook::RenderQmAppearancePresetContent(Ctx.m_pMenus, Content, Ctx.m_Metrics, Ctx.m_ReadOnly); }, [Metrics = Ctx.m_Metrics](float) { return CardRows(Metrics, 17.0f); }, 1, {}, Out);
 		return true;
 	}
 }

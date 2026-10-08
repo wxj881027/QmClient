@@ -2,8 +2,8 @@
 #define GAME_CLIENT_QMUI_SETTINGSCARDDECK_H
 
 #include "SettingsCard.h"
-#include "SettingsCardHelp.h"
 #include "SettingsCardDeckLogic.h"
+#include "SettingsCardHelp.h"
 #include "SettingsPageLayout.h"
 
 #include <array>

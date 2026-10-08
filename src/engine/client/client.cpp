@@ -41,7 +41,6 @@
 #include <engine/shared/client_brand.h>
 #include <engine/shared/compression.h>
 #include <engine/shared/config.h>
-#include <engine/shared/qm_default_profile.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/filecollection.h>
@@ -52,6 +51,7 @@
 #include <engine/shared/protocol7.h>
 #include <engine/shared/protocol_ex.h>
 #include <engine/shared/protocolglue.h>
+#include <engine/shared/qm_default_profile.h>
 #include <engine/shared/qm_removed_config.h>
 #include <engine/shared/rust_version.h>
 #include <engine/shared/snapshot.h>
@@ -5575,7 +5575,8 @@ bool CClient::DemoRecorder_AddDemoMarker(int Recorder)
 	return DemoRecorders()[Recorder].AddDemoMarker();
 }
 
-CDemoRecorder (&CClient::DemoRecorders()) [RECORDER_MAX] {
+CDemoRecorder (&CClient::DemoRecorders())[RECORDER_MAX]
+{
 	if(IsSixup())
 	{
 		return m_aDemoRecordersSixup;

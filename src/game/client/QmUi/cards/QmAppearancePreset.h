@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_QMUI_CARDS_QMAPPEARANCEPRESET_H
 #define GAME_CLIENT_QMUI_CARDS_QMAPPEARANCEPRESET_H
 
+#include <base/str.h>
+
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
 
@@ -53,8 +55,8 @@ namespace QmAppearancePreset
 	inline bool Apply(CConfig &Config, const char *pResolvedFont)
 	{
 		const bool FontAvailable = pResolvedFont != nullptr && pResolvedFont[0] != '\0' &&
-			str_length(pResolvedFont) < static_cast<int>(sizeof(Config.m_QmCustomFont)) &&
-			str_length(pResolvedFont) < static_cast<int>(sizeof(Config.m_QmCustomFontCjk));
+					   str_length(pResolvedFont) < static_cast<int>(sizeof(Config.m_QmCustomFont)) &&
+					   str_length(pResolvedFont) < static_cast<int>(sizeof(Config.m_QmCustomFontCjk));
 		for(const auto &Setting : IntSettings())
 			if(FontAvailable || !Setting.m_RequiresFont)
 				Config.*(Setting.m_pMember) = Setting.m_Value;

@@ -1,6 +1,7 @@
 #include "QmCardCatalog.h"
 
 #include <engine/shared/config.h>
+
 #include <game/client/components/menus.h>
 #include <game/client/ui.h>
 #include <game/localization.h>

@@ -1,6 +1,8 @@
 #ifndef ENGINE_SHARED_QM_DEFAULT_PROFILE_H
 #define ENGINE_SHARED_QM_DEFAULT_PROFILE_H
 
+#include <base/str.h>
+
 #include <engine/shared/config.h>
 
 inline bool QmConfigValueWasExplicitlySet(IConfigManager &Manager, const char *pName)
@@ -13,9 +15,7 @@ inline bool QmConfigValueWasExplicitlySet(IConfigManager &Manager, const char *p
 	Manager.PossibleConfigVariables(pName, CFGFLAG_CLIENT, [](const SConfigVariable *pVariable, void *pUser) {
 		auto &Query = *static_cast<SQuery *>(pUser);
 		if(str_comp(pVariable->m_pScriptName, Query.m_pName) == 0)
-			Query.m_Explicit = pVariable->m_HasExplicitValue;
-	},
-		&Query);
+			Query.m_Explicit = pVariable->m_HasExplicitValue; }, &Query);
 	return Query.m_Explicit;
 }
 

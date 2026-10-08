@@ -7,7 +7,9 @@
 inline float ResolveSettingsIconScale(CQmAnimationBackend &Anim, uint64_t NodeKey, bool Hovered, bool Pressed, bool Enabled)
 {
 	const int PreviousState = static_cast<int>(Anim.GetValue(NodeKey, EUiAnimProperty::COLOR_MIX));
-	const int State = Enabled ? (Pressed ? 2 : Hovered ? 1 : 0) : 0;
+	const int State = Enabled ? (Pressed ? 2 : Hovered ? 1 :
+							     0) :
+				    0;
 	Anim.SetValue(NodeKey, EUiAnimProperty::COLOR_MIX, static_cast<float>(State));
 	if(!Enabled)
 	{

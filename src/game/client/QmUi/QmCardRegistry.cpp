@@ -443,13 +443,13 @@ namespace qm_card_registry
 			const char *pLocalizedTitle = Default.m_pTitle != nullptr ? Localize(Default.m_pTitle) : "";
 			const char *pLocalizedDescription = Default.m_pDescription != nullptr ? Localize(Default.m_pDescription) : "";
 			bool Matches = SearchTextMatches(pLocalizedTitle, pQuery) || SearchTextMatches(Default.m_pTitle, pQuery) ||
-				SearchTextMatches(pLocalizedDescription, pQuery) || SearchTextMatches(Default.m_pDescription, pQuery) ||
-				SearchTextMatches(Default.m_pSearchKeywords, pQuery);
+				       SearchTextMatches(pLocalizedDescription, pQuery) || SearchTextMatches(Default.m_pDescription, pQuery) ||
+				       SearchTextMatches(Default.m_pSearchKeywords, pQuery);
 			for(size_t Index = 0; !Matches && Index < Default.m_SettingCount; ++Index)
 			{
 				const SCardSettingSearch &Setting = Default.m_pSettings[Index];
 				Matches = SearchTextMatches(Setting.m_pConfigName, pQuery) || SearchTextMatches(Setting.m_pLabel, pQuery) ||
-					(Setting.m_pLabel != nullptr && SearchTextMatches(Localize(Setting.m_pLabel), pQuery));
+					  (Setting.m_pLabel != nullptr && SearchTextMatches(Localize(Setting.m_pLabel), pQuery));
 			}
 			if(!Matches)
 				continue;

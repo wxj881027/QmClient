@@ -1,11 +1,12 @@
 #include "steam_probe.h"
-#include "steam_client_path.h"
 
-#include <engine/steam.h>
+#include "steam_client_path.h"
 
 #include <base/fs.h>
 #include <base/system.h>
 #include <base/windows.h>
+
+#include <engine/steam.h>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>

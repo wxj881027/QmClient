@@ -4,8 +4,8 @@
 #ifndef GAME_CLIENT_QM_IME_MANAGER_H
 #define GAME_CLIENT_QM_IME_MANAGER_H
 
-#include "qm_ime_candidate_popup.h"
 #include "lineinput.h"
+#include "qm_ime_candidate_popup.h"
 
 class CGameClient;
 

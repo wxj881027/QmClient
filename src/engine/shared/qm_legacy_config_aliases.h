@@ -1,3 +1,6 @@
+#ifndef ENGINE_SHARED_QM_LEGACY_CONFIG_ALIASES_H
+#define ENGINE_SHARED_QM_LEGACY_CONFIG_ALIASES_H
+
 // 旧名称只用于读取兼容；新增配置直接声明 qm_ 名称。
 QM_LEGACY_CONFIG_ALIAS("tc_allow_any_res", "qm_allow_any_res")
 QM_LEGACY_CONFIG_ALIAS("tc_animate_wheel_time", "qm_animate_wheel_time")
@@ -199,3 +202,5 @@ QM_LEGACY_CONFIG_ALIAS("tc_warlist_show_clan_if_war", "qm_warlist_show_clan_if_w
 QM_LEGACY_CONFIG_ALIAS("tc_warlist_spectate", "qm_warlist_spectate")
 QM_LEGACY_CONFIG_ALIAS("tc_white_feet", "qm_white_feet")
 QM_LEGACY_CONFIG_ALIAS("tc_white_feet_skin", "qm_white_feet_skin")
+
+#endif

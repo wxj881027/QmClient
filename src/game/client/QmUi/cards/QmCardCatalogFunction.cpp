@@ -5,7 +5,6 @@
 #include <engine/shared/config.h>
 
 #include <game/client/QmUi/UiForms.h>
-
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>

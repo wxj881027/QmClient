@@ -3,8 +3,8 @@
 #include "SettingsCard.h"
 
 #include "QmAnimResolve.h"
-#include "SettingsCardInfo.h"
 #include "SettingsCardHelp.h"
+#include "SettingsCardInfo.h"
 #include "SettingsIconFeedback.h"
 #include "SettingsPageLayout.h"
 #include "UiContext.h"
