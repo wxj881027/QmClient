@@ -2304,7 +2304,7 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 	// 板越透越看得见后面的画面；A=0 时整块板连外圈阴影一起消失。
 	DoLine_AlphaColorPicker(&s_DynamicIslandBgColorId, CurrentSettingsContentMetrics(), &Content, Localize("Background color"), &g_Config.m_QmHudIslandBgColor, &g_Config.m_QmHudIslandBgOpacity, 0x9C460E, 80);
 
-	// 钩子倒计时是独立开关：钩住玩家时在开关环正上方画一个蓝色倒计时环。
+	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);
 
 	// 开关倒计时：总开关决定是否显示，两个位置开关决定显示在跟随 Tee 的圆环上还是灵动岛里，可同时勾选。
