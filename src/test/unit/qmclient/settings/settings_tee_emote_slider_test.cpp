@@ -1,4 +1,6 @@
-#include <game/client/QmUi/SettingsPageLayout.h>
+#include <engine/shared/config.h>
+
+#include <game/client/QmUi/cards/QmCardCatalogTeeMetrics.h>
 
 #include <gtest/gtest.h>
 
@@ -95,4 +97,100 @@ TEST(SettingsTeeEmoteSlider, StepClamping)
 	EXPECT_EQ(StepTeeEmoteSlider(3, -1), 2);
 	EXPECT_EQ(StepTeeEmoteSlider(2, 3), 5);
 	EXPECT_EQ(StepTeeEmoteSlider(4, -5), 0);
+}
+
+class CSettingsTeeEmoteSliderMotion : public ::testing::Test
+{
+protected:
+	int m_PreviousMotionLevel = 0;
+	CUiV2AnimationRuntime m_Runtime;
+	SSettingsContentMetrics m_Metrics;
+	static constexpr uint64_t NODE_KEY = 101;
+
+	void SetUp() override
+	{
+		m_PreviousMotionLevel = g_Config.m_QmUiMotionLevel;
+		g_Config.m_QmUiMotionLevel = 2;
+		m_Metrics.m_UiScale = 1.0f;
+		m_Metrics.m_LineHeight = 24.0f;
+	}
+
+	void TearDown() override
+	{
+		g_Config.m_QmUiMotionLevel = m_PreviousMotionLevel;
+	}
+
+	CUIRect ResolveThumb(const CUIRect &View, int Emote, CUiV2AnimationRuntime *pRuntime)
+	{
+		return ResolveSettingsTeeEmoteSliderThumb(ResolveSettingsTeeEmoteSliderLayout(View, m_Metrics), Emote, m_Metrics.m_UiScale, pRuntime, NODE_KEY);
+	}
+};
+
+TEST_F(CSettingsTeeEmoteSliderMotion, FirstPresentationMatchesSelectedSlot)
+{
+	const CUIRect View{20.0f, 50.0f, 600.0f, 44.0f};
+	const CUIRect Expected = ResolveThumb(View, 3, nullptr);
+	const CUIRect Actual = ResolveThumb(View, 3, &m_Runtime);
+	EXPECT_FLOAT_EQ(Actual.x, Expected.x);
+	EXPECT_FLOAT_EQ(Actual.y, Expected.y);
+	EXPECT_FLOAT_EQ(Actual.w, Expected.w);
+	EXPECT_FLOAT_EQ(Actual.h, Expected.h);
+	EXPECT_EQ(m_Runtime.ActiveTrackCount(), 0);
+}
+
+TEST_F(CSettingsTeeEmoteSliderMotion, TrackTranslationFollowsImmediatelyDuringHorizontalSelection)
+{
+	const CUIRect View{20.0f, 50.0f, 600.0f, 44.0f};
+	const CUIRect Initial = ResolveThumb(View, 0, &m_Runtime);
+	const CUIRect Start = ResolveThumb(View, NUM_EMOTES - 1, &m_Runtime);
+	EXPECT_FLOAT_EQ(Start.x, Initial.x);
+	ASSERT_TRUE(m_Runtime.HasActiveAnimation(NODE_KEY, EUiAnimProperty::POS_X));
+
+	for(int Frame = 1; Frame <= 8; ++Frame)
+	{
+		SCOPED_TRACE(Frame);
+		m_Runtime.Advance(1.0f / 60.0f);
+		const CUIRect Before = ResolveThumb(View, NUM_EMOTES - 1, &m_Runtime);
+		EXPECT_GT(Before.x, Initial.x);
+		CUIRect MovedView = View;
+		MovedView.x += 7.0f * Frame;
+		MovedView.y -= 12.0f * Frame;
+		const CUIRect After = ResolveThumb(MovedView, NUM_EMOTES - 1, &m_Runtime);
+		const CUIRect Expected = ResolveThumb(MovedView, NUM_EMOTES - 1, nullptr);
+		EXPECT_NEAR(After.x - Before.x, MovedView.x - View.x, 0.001f);
+		EXPECT_FLOAT_EQ(After.y, Expected.y);
+		EXPECT_FLOAT_EQ(After.w, Expected.w);
+		EXPECT_FLOAT_EQ(After.h, Expected.h);
+	}
+}
+
+TEST_F(CSettingsTeeEmoteSliderMotion, ResizeKeepsThumbAlignedWithCurrentTrack)
+{
+	ResolveThumb({20.0f, 50.0f, 600.0f, 44.0f}, 3, &m_Runtime);
+	m_Metrics.m_UiScale = 1.5f;
+	m_Metrics.m_LineHeight = 36.0f;
+	const CUIRect View{20.0f, 80.0f, 720.0f, 66.0f};
+	const CUIRect Expected = ResolveThumb(View, 3, nullptr);
+	const CUIRect Actual = ResolveThumb(View, 3, &m_Runtime);
+	EXPECT_FLOAT_EQ(Actual.y, Expected.y);
+	EXPECT_FLOAT_EQ(Actual.w, Expected.w);
+	EXPECT_FLOAT_EQ(Actual.h, Expected.h);
+}
+
+TEST_F(CSettingsTeeEmoteSliderMotion, DisablingMotionSnapsActiveSelectionToMovedTrack)
+{
+	const CUIRect View{20.0f, 50.0f, 600.0f, 44.0f};
+	ResolveThumb(View, 0, &m_Runtime);
+	ResolveThumb(View, 5, &m_Runtime);
+	m_Runtime.Advance(1.0f / 60.0f);
+	ASSERT_TRUE(m_Runtime.HasActiveAnimation(NODE_KEY, EUiAnimProperty::POS_X));
+	g_Config.m_QmUiMotionLevel = 0;
+	const CUIRect MovedView{30.0f, 10.0f, 600.0f, 44.0f};
+	const CUIRect Expected = ResolveThumb(MovedView, 5, nullptr);
+	const CUIRect Actual = ResolveThumb(MovedView, 5, &m_Runtime);
+	EXPECT_FLOAT_EQ(Actual.x, Expected.x);
+	EXPECT_FLOAT_EQ(Actual.y, Expected.y);
+	EXPECT_FLOAT_EQ(Actual.w, Expected.w);
+	EXPECT_FLOAT_EQ(Actual.h, Expected.h);
+	EXPECT_EQ(m_Runtime.ActiveTrackCount(), 0);
 }

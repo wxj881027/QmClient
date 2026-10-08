@@ -1,9 +1,23 @@
 #ifndef GAME_CLIENT_QMUI_CARDS_QMCARDCATALOGTEEMETRICS_H
 #define GAME_CLIENT_QMUI_CARDS_QMCARDCATALOGTEEMETRICS_H
 
+#include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 
 #include <array>
+
+inline CUIRect ResolveSettingsTeeEmoteSliderThumb(const SSettingsTeeEmoteSliderLayout &Layout, int Emote, float UiScale, CUiV2AnimationRuntime *pAnimRuntime, uint64_t NodeKey)
+{
+	CUIRect Thumb;
+	Layout.m_aSlotRects[std::clamp(Emote, 0, NUM_EMOTES - 1)].Margin(2.5f * UiScale, &Thumb);
+	if(pAnimRuntime != nullptr)
+	{
+		// 纵向位置与尺寸直接跟随轨道，切换动画只作用于轨道内的水平偏移。
+		const float OffsetX = Thumb.x - Layout.m_TrackRect.x;
+		Thumb.x = Layout.m_TrackRect.x + ResolveUiAnimSpringValue(*pAnimRuntime, NodeKey, EUiAnimProperty::POS_X, OffsetX, ui_token::motion::NAVIGATION_SPRING, 2);
+	}
+	return Thumb;
+}
 
 struct SSettingsTeeIdentityFieldsLayout
 {
