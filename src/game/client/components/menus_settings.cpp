@@ -1124,11 +1124,12 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	const auto &GpuList = Graphics()->GetGpus();
 	const int OldWindowMode = g_Config.m_GfxFullscreen ? (g_Config.m_GfxFullscreen == 1 ? 4 : (g_Config.m_GfxFullscreen == 2 ? 3 : 2)) : (g_Config.m_GfxBorderless ? 1 : 0);
 #if defined(CONF_FAMILY_WINDOWS)
-	constexpr int GpuInfoFixedRows = 4; // 当前渲染器、硬件标题、选择说明与系统设置按钮。
+	constexpr bool HasSystemGpuSettings = true;
 #else
-	constexpr int GpuInfoFixedRows = 2; // 当前渲染器与硬件标题。
+	constexpr bool HasSystemGpuSettings = false;
 #endif
-	const int GpuRowCount = GpuList.m_CanSelect ? (GpuList.m_vGpus.size() > 1 ? 1 : 0) : GpuInfoFixedRows + std::max(1, static_cast<int>(GpuList.m_vGpus.size()));
+	const auto GpuControl = ResolveSettingsGpuControl(GpuList.m_vGpus.size(), GpuList.m_CanSelect, HasSystemGpuSettings);
+	const int GpuRowCount = GpuControl.RowCount();
 	const int GraphicsBackendRowCount = (FoundBackendCount > 1 ? 1 : 0) + GpuRowCount;
 	const qm_card_registry::SCardDefault *pDisplayDefault = qm_card_registry::FindByStableId("deck:graphics-display");
 	const qm_card_registry::SCardDefault *pVisualDefault = qm_card_registry::FindByStableId("deck:graphics-visual");
@@ -1196,7 +1197,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	const auto BuildDefinitions = [this, pModesDefault, pDisplayDefault, pVisualDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesMinCardHeight, ModesChromeHeight, GraphicsDisplayMinCardHeight, DisplayChromeHeight, GraphicsVisualMinCardHeight, VisualChromeHeight, GraphicsVisualMeasureRevision, GraphicsIconsMinCardHeight, IconsChromeHeight, GraphicsInteractionMinCardHeight, InteractionChromeHeight, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, FoundBackendCount, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(5);
 		const SSettingsCardSpec ModesSpec{pModesDefault->m_pStableId, Localize(pModesDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pModesDefault)};
-		const SSettingsCardSpec DisplaySpec{pDisplayDefault->m_pStableId, Localize(pDisplayDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pDisplayDefault)};
+		const SSettingsCardSpec DisplaySpec{pDisplayDefault->m_pStableId, Localize(pDisplayDefault->m_pTitle), nullptr};
 		const SSettingsCardSpec VisualSpec{pVisualDefault->m_pStableId, Localize(pVisualDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pVisualDefault)};
 		const SSettingsCardSpec IconsSpec{pIconsDefault->m_pStableId, Localize(pIconsDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pIconsDefault)};
 		const SSettingsCardSpec InteractionSpec{pInteractionDefault->m_pStableId, Localize(pInteractionDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pInteractionDefault)};
@@ -1506,7 +1507,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 					InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::BACKEND_CHANGED);
 				});
 			}
-			if(Graphics()->GetGpus().m_CanSelect && Graphics()->GetGpus().m_vGpus.size() > 1)
+			if(ResolveSettingsGpuControl(Graphics()->GetGpus().m_vGpus.size(), Graphics()->GetGpus().m_CanSelect, HasSystemGpuSettings).m_ShowSelector)
 			{
 				CUIRect Row = NextRow();
 				const auto &GpuList = Graphics()->GetGpus();
@@ -1536,7 +1537,7 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 					CheckSettings = true;
 				});
 			}
-			else if(!Graphics()->GetGpus().m_CanSelect)
+			else if(ResolveSettingsGpuControl(Graphics()->GetGpus().m_vGpus.size(), Graphics()->GetGpus().m_CanSelect, HasSystemGpuSettings).m_ShowSystemSettings)
 			{
 				const auto &GpuInfo = Graphics()->GetGpus();
 				const auto InfoLabel = [this, &Rows, &CardView, BodySize](const char *pText) {
@@ -1551,11 +1552,6 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 				char aCurrentGpu[512];
 				str_format(aCurrentGpu, sizeof(aCurrentGpu), "%s: %s", Localize("Current GPU"), GpuInfo.m_AutoGpu.m_aName[0] ? GpuInfo.m_AutoGpu.m_aName : Localize("Unknown"));
 				InfoLabel(aCurrentGpu);
-				InfoLabel(Localize("Detected graphics adapters"));
-				if(GpuInfo.m_vGpus.empty())
-					InfoLabel(Localize("No graphics adapters detected"));
-				for(const auto &Gpu : GpuInfo.m_vGpus)
-					InfoLabel(Gpu.m_aName);
 #if defined(CONF_FAMILY_WINDOWS)
 				InfoLabel(Localize("Choose a GPU for this app in system graphics settings, then restart the client."));
 				static CButtonContainer s_SystemGraphicsSettings;

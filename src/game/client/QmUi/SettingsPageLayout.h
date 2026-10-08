@@ -328,6 +328,23 @@ inline int ResolveSettingsSelectionWithCustomFallback(const int MatchedIndex, co
 	return MatchedIndex >= 0 && MatchedIndex < SupportedCount ? MatchedIndex : std::max(0, SupportedCount);
 }
 
+// 显示策略同时供卡片测高和渲染消费，单卡或枚举失败不显示无可选项的控件。
+struct SSettingsGpuControl
+{
+	bool m_ShowSelector = false;
+	bool m_ShowSystemSettings = false;
+
+	int RowCount() const { return m_ShowSelector ? 1 : m_ShowSystemSettings ? 3 :
+										  0; }
+};
+
+inline SSettingsGpuControl ResolveSettingsGpuControl(size_t AdapterCount, bool CanSelect, bool HasSystemSettings)
+{
+	if(AdapterCount <= 1)
+		return {};
+	return {CanSelect, !CanSelect && HasSystemSettings};
+}
+
 // 列表 viewport 只允许显示完整行。列表控件的行距由调用方显式消费，
 // 不能把卡片剩余高度直接传进去，否则最后会露出半行内容。
 inline float ResolveSettingsListViewportHeight(const int VisibleRows, const float RowHeight, const float RowSpacing)

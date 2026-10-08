@@ -3185,9 +3185,6 @@ Detect compatible solo prompts from custom servers
 Detect Steam again
 == Повторно найти Steam
 
-Detected graphics adapters
-== Обнаруженные графические адаптеры
-
 Detection distance
 == Дистанция обнаружения
 
@@ -7546,9 +7543,6 @@ No filter
 
 No functions bound
 == Действия не назначены
-
-No graphics adapters detected
-== Графические адаптеры не обнаружены
 
 No input device available
 == Нет доступных устройств ввода

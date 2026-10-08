@@ -3185,9 +3185,6 @@ Detect compatible solo prompts from custom servers
 Detect Steam again
 == Steam 다시 감지
 
-Detected graphics adapters
-== 감지된 그래픽 어댑터
-
 Detection distance
 == 감지 거리
 
@@ -7546,9 +7543,6 @@ No filter
 
 No functions bound
 == 지정된 기능 없음
-
-No graphics adapters detected
-== 감지된 그래픽 어댑터가 없습니다
 
 No input device available
 == 사용 가능한 입력 장치 없음
