@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == Desilenciar:
 
+Unmuted
+== Sin silenciar
+
 Unpredictable ghost opacity (0-100)
 == Opacidad del fantasma impredecible (0-100)
 

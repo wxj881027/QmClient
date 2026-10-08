@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == Stummschaltung aufheben:
 
+Unmuted
+== Nicht stummgeschaltet
+
 Unpredictable ghost opacity (0-100)
 == Unvorhersehbare Geist-Deckkraft (0-100)
 

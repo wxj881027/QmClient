@@ -1996,7 +1996,6 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
 	pRect = &ButtonRect;
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	Color = ResolveConfiguredControlSurface(Enabled);
 	DrawRoundedSurface(this, *pRect, Color, ColorRGBA(), 5.0f, 0.0f, Corners);
 
 	CUiScopedSurfaceText SurfaceText(TextRender(), Color);
@@ -2034,8 +2033,9 @@ int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText
 {
 	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
 	pRect = &ButtonRect;
-	DrawButton_FontIcon(pText, pRect, ButtonColor.value_or(ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.1f : 0.5f) * ButtonColorMul(pButtonContainer))), Corners, Enabled);
-	const ColorRGBA Surface = CompositeUiSurface(ResolveConfiguredControlSurface(Enabled), CUiScopedSurfaceText::CurrentSurface());
+	const ColorRGBA Fill = ResolveConfiguredIconButtonSurface(ButtonColor, Enabled);
+	DrawButton_FontIcon(pText, pRect, Fill, Corners, Enabled);
+	const ColorRGBA Surface = CompositeUiSurface(Fill, CUiScopedSurfaceText::CurrentSurface());
 	const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, Enabled, MouseHovered(pRect), CheckActiveItem(pButtonContainer) && MouseButton(0));
 	DrawRoundedSurface(this, *pRect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), 5.0f, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
 
@@ -2077,7 +2077,7 @@ int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const
 	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
 	pRect = &ButtonRect;
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	const ColorRGBA Fill = ButtonColor.value_or(ResolveConfiguredControlSurface(Enabled));
+	const ColorRGBA Fill = ResolveConfiguredIconButtonSurface(ButtonColor, Enabled);
 	DrawRoundedSurface(this, *pRect, Fill, ColorRGBA(), 5.0f, 0.0f, Corners);
 	const ColorRGBA Feedback = ResolveUiIconButtonFeedback(CompositeUiSurface(Fill, CUiScopedSurfaceText::CurrentSurface()), Enabled, MouseHovered(pRect), CheckActiveItem(pButtonContainer) && MouseButton(0));
 	DrawRoundedSurface(this, *pRect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), 5.0f, ui_token::feedback::ICON_BORDER_WIDTH, Corners);

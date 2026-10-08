@@ -31812,6 +31812,22 @@ turkish = "Rank hayaletini kaldır"
 polish = "Wyładuj ducha rangi"
 
 [[message]]
+key = "Unmuted"
+[message.translations]
+simplified_chinese = "未静音"
+traditional_chinese = "未靜音"
+japanese = "ミュート解除済み"
+korean = "음소거 해제됨"
+russian = "Звук включён"
+german = "Nicht stummgeschaltet"
+spanish = "Sin silenciar"
+french = "Son activé"
+brazilian_portuguese = "Som ativado"
+portuguese = "Som ativado"
+turkish = "Sessiz değil"
+polish = "Dźwięk włączony"
+
+[[message]]
 key = "Unplayed lyrics word color"
 [message.translations]
 simplified_chinese = "未播放歌词文字颜色"

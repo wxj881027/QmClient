@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == Снять заглушение:
 
+Unmuted
+== Звук включён
+
 Unpredictable ghost opacity (0-100)
 == Непрозрачность непредсказуемого призрака (0-100)
 

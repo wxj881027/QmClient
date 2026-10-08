@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == 取消禁言：
 
+Unmuted
+== 未靜音
+
 Unpredictable ghost opacity (0-100)
 == 不可預測幽靈透明度（0-100）
 

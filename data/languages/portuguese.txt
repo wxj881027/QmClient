@@ -13616,6 +13616,9 @@ Unmute player with list index
 Unmute:
 == Reativar som:
 
+Unmuted
+== Som ativado
+
 Unpredictable ghost opacity (0-100)
 == Opacidade do fantasma imprevisível (0-100)
 

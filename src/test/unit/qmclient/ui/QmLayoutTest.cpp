@@ -817,6 +817,39 @@ TEST(QmTextColorPolicy, AutomaticFollowsBackgroundButManualChoicesRemainFixed)
 	}
 }
 
+TEST(QmIconButtonSurface, ExplicitStateColorsPreserveAnimationAlpha)
+{
+	for(const ColorRGBA StateColor : {ColorRGBA(1, 0.32f, 0.32f, 0.95f), ColorRGBA(0.82f, 0.88f, 0.96f, 0.45f)})
+	{
+		for(const float AnimationAlpha : {1.0f, 0.25f, 0.0f})
+		{
+			const ColorRGBA Color = StateColor.WithMultipliedAlpha(AnimationAlpha);
+			EXPECT_EQ(ResolveConfiguredIconButtonSurface(Color), Color);
+		}
+	}
+}
+
+TEST(QmIconButtonSurface, DisabledNeighborRetainsExplicitStateColor)
+{
+	const ColorRGBA Muted(1, 0.32f, 0.32f, 0.35f);
+	EXPECT_EQ(ResolveConfiguredIconButtonSurface(Muted, false), Muted);
+	EXPECT_EQ(ResolveUiIconButtonFeedback(CompositeUiSurface(Muted), false, true, true), ColorRGBA(0, 0, 0, 0));
+}
+
+TEST(QmIconButtonSurface, OrdinaryButtonsUseConfiguredSurfaceAndDisabledOpacity)
+{
+	struct SRestoreConfig
+	{
+		CConfig m_Previous = g_Config;
+		~SRestoreConfig() { g_Config = m_Previous; }
+	} Restore;
+	g_Config.m_QmUiDropdownColor = ColorHSLA(0.3f, 0.7f, 0.25f).Pack(false);
+	g_Config.m_QmUiDropdownOpacity = 80;
+	const ColorRGBA Expected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiDropdownColor)).WithAlpha(0.8f);
+	EXPECT_EQ(ResolveConfiguredIconButtonSurface(std::nullopt), Expected);
+	EXPECT_EQ(ResolveConfiguredIconButtonSurface(std::nullopt, false), Expected.WithMultipliedAlpha(0.65f));
+}
+
 TEST(QmIconButtonFeedback, HoverAndPressAreVisibleOnBothSurfacesButDisabledStaysIdle)
 {
 	for(const ColorRGBA Surface : {ColorRGBA(0, 0, 0, 1), ColorRGBA(1, 1, 1, 1)})
