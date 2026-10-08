@@ -36,6 +36,7 @@
 #include <game/client/prediction/entities/character.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
+#include <game/gamecore.h>
 #include <game/layers.h>
 #include <game/localization.h>
 #include <game/mapitems.h>
@@ -3364,9 +3365,7 @@ void CTClient::UpdatePlayerStats()
 
 void CTClient::ResetGoresDrownCounts()
 {
-	std::fill_n(m_aGoresDrownCounts, MAX_CLIENTS, 0);
-	std::fill_n(m_aGoresFreezeState, MAX_CLIENTS, false);
-	std::fill_n(m_aGoresFreezeSeen, MAX_CLIENTS, false);
+	m_GoresDrownTracker.Reset();
 	m_GoresDrownModeActive = false;
 	m_aGoresDrownMap[0] = '\0';
 }
@@ -3396,25 +3395,12 @@ void CTClient::UpdateGoresDrownCounts()
 
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
-		const bool Active = GameClient()->m_aClients[ClientId].m_Active && GameClient()->m_Snap.m_aCharacters[ClientId].m_Active;
-		if(!Active)
-		{
-			m_aGoresFreezeSeen[ClientId] = false;
-			m_aGoresFreezeState[ClientId] = false;
-			continue;
-		}
-
-		const bool Frozen = GameClient()->m_aClients[ClientId].m_FreezeEnd != 0;
-		if(!m_aGoresFreezeSeen[ClientId])
-		{
-			// 首次看到玩家时只建立基线，避免换图时把已经冻结的玩家算成一次落水。
-			m_aGoresFreezeSeen[ClientId] = true;
-			m_aGoresFreezeState[ClientId] = Frozen;
-			continue;
-		}
-		if(Frozen && !m_aGoresFreezeState[ClientId])
-			++m_aGoresDrownCounts[ClientId];
-		m_aGoresFreezeState[ClientId] = Frozen;
+		const auto &Player = GameClient()->m_aClients[ClientId];
+		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
+		const bool Active = Player.m_Active && GameClient()->m_Snap.m_apPlayerInfos[ClientId] != nullptr;
+		const bool Hooking = Character.m_Active && (Character.m_Cur.m_HookState == HOOK_FLYING || Character.m_Cur.m_HookState == HOOK_GRABBED);
+		m_GoresDrownTracker.Observe(ClientId, Active, Player.m_aName, Player.m_aClan, GameClient()->m_Teams.Team(ClientId),
+			Character.m_Active, Player.m_FreezeEnd != 0, Hooking);
 	}
 }
 

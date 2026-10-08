@@ -1220,6 +1220,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 자동 업데이트
 
+Automatically add a watermark to screenshots
+== 스크린샷에 워터마크 자동 추가
+
 Automatically adds voting options for all maps
 == 모든 맵에 투표 옵션을 자동으로 추가합니다
 
@@ -2240,6 +2243,9 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 == 다른 서버의 유사한 싱글 플레이어 영역 알림과 호환
 
+Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
+== 전체 복원은 목록의 파일을 교체합니다. 가져오기 전에 백업을 저장하고 완료 후 클라이언트를 다시 시작합니다.
+
 Complete snapshots are arriving late or not arriving
 == 완전한 스냅샷이 늦게 도착하거나 도착하지 않음
 
@@ -2287,6 +2293,30 @@ Configs
 
 Configuration
 == 설정
+
+Configuration package already exists.
+== 설정 패키지가 이미 존재합니다.
+
+Configuration package exported.
+== 설정 패키지를 내보냈습니다.
+
+Configuration package is missing required files.
+== 설정 패키지에 필수 파일이 없습니다.
+
+Configuration package is too large.
+== 설정 패키지가 너무 큽니다.
+
+Configuration packages
+== 설정 패키지
+
+Configuration restore failed; previous files were restored.
+== 설정 복원에 실패하여 이전 파일로 되돌렸습니다.
+
+Configuration restore failed; recover from the saved backup.
+== 설정 복원에 실패했습니다. 저장된 백업에서 복원하세요.
+
+Configuration restore temporary files already exist.
+== 설정 복원용 임시 파일이 이미 존재합니다.
 
 Configure background 3D particle effects
 == 배경 3D 입자 효과 구성
@@ -2549,6 +2579,9 @@ Copied
 Copy
 == 복사
 
+Copy a .qmconfig file into the package folder, then refresh.
+== .qmconfig 파일을 패키지 폴더에 복사한 뒤 새로 고침하세요.
+
 Copy info
 == 정보 복사
 
@@ -2575,6 +2608,9 @@ Copy skin option color
 
 Could not add the player as a friend
 == 플레이어를 친구로 추가할 수 없습니다
+
+Could not back up configuration files.
+== 설정 파일을 백업할 수 없습니다.
 
 Could not check for existing player with your name. Check your internet connection.
 == 사용자 이름과 일치하는 기존 플레이어를 확인할 수 없습니다. 인터넷 연결을 확인하세요.
@@ -2603,6 +2639,9 @@ Could not get current server address
 Could not get server list from master server
 == 마스터 서버에서 서버 목록을 가져올 수 없습니다
 
+Could not list configuration files.
+== 설정 파일 목록을 가져올 수 없습니다.
+
 Could not load default touch controls from file. See local console for details.
 == 파일에서 기본 터치 컨트롤을 불러올 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
 
@@ -2624,11 +2663,20 @@ Could not preview this image
 Could not query points for %s
 == %s 님의 포인트를 조회할 수 없습니다
 
+Could not read configuration files.
+== 설정 파일을 읽을 수 없습니다.
+
+Could not read configuration package.
+== 설정 패키지를 읽을 수 없습니다.
+
 Could not read the map file.
 == 맵 파일을 읽을 수 없습니다.
 
 Could not resolve connect address '%s'. See local console for details.
 == 연결 주소 '%s'를 확인할 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
+
+Could not save configuration package.
+== 설정 패키지를 저장할 수 없습니다.
 
 Could not save downloaded map. Try manually deleting this file: %s
 == 다운로드한 맵을 저장할 수 없습니다. 이 파일을 수동으로 삭제해 보세요: %s
@@ -2638,6 +2686,9 @@ Could not save title credential
 
 Could not save touch controls to file. See local console for details.
 == 터치 컨트롤을 파일에 저장할 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
+
+Could not stage configuration restore.
+== 설정 복원용 파일을 준비할 수 없습니다.
 
 Count players only
 == 관전자만 카운트
@@ -4355,6 +4406,9 @@ Expanded dropdown background opacity percentage
 Export
 == 내보내기
 
+Export configuration package
+== 설정 패키지 내보내기
+
 Export cut as a separate demo
 == 잘라낸 구간을 별도의 데모로 내보내기
 
@@ -5627,6 +5681,12 @@ IME selection background color
 IME text color
 == IME 글자색
 
+Import and restart
+== 가져오고 다시 시작
+
+Import configuration package
+== 설정 패키지 가져오기
+
 Import from clipboard
 == 클립보드에서 가져오기
 
@@ -5855,6 +5915,15 @@ Invalid client id to move to spectators
 Invalid command or parameters.
 == 명령 또는 매개변수가 올바르지 않습니다.
 
+Invalid configuration package metadata.
+== 설정 패키지의 메타데이터가 올바르지 않습니다.
+
+Invalid configuration package path.
+== 설정 패키지 경로가 올바르지 않습니다.
+
+Invalid configuration package.
+== 설정 패키지가 올바르지 않습니다.
+
 Invalid Demo
 == 유효하지 않은 데모
 
@@ -5866,6 +5935,9 @@ Invalid map file or filename.
 
 Invalid option
 == 잘못된 옵션
+
+Invalid or duplicate configuration path.
+== 설정 경로가 올바르지 않거나 중복됩니다.
 
 Invalid save number. Use a number from the save list.
 == 유효하지 않은 저장 번호입니다. 목록의 번호를 사용하세요.
@@ -7928,6 +8000,9 @@ Open map editor
 Open modal
 == 모달 열기
 
+Open package folder
+== 패키지 폴더 열기
+
 Open pie menu
 == 파이 메뉴 열기
 
@@ -9596,6 +9671,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == 친구가 아닌 스킨을 기본 스킨으로 교체
 
+Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
+== 설정, 키 바인드와 목록의 cfg 파일을 교체한 뒤 다시 시작할까요? 현재 설정을 먼저 백업합니다.
+
 Replace skin with one having this prefix (e.g. cats, santa)
 == 이 접두사가 있는 스킨으로 교체 (예: cats, santa)
 
@@ -9823,6 +9901,9 @@ Restore a recently used Tee skin
 
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 2인 저장 데이터를 복원할까요? /qm Yes는 최신 데이터, /qm Yes 번호는 다른 데이터 선택, /qm No는 알림 닫기입니다.
+
+Restore configuration package
+== 설정 패키지 복원
 
 Restore Kugou files
 == Kugou 원본 파일 복원
@@ -10292,6 +10373,9 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == 다음 체크포인트에서 만나요.
 
+Select a configuration package to preview its contents.
+== 설정 패키지를 선택하여 내용을 미리 확인하세요.
+
 Select a saved .map file (client limit: 64 MiB).
 == 저장된 .map 파일을 선택하세요(클라이언트 제한: 64 MiB).
 
@@ -10588,6 +10672,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 설정 페이지 오른쪽 패널 불투명도
+
+Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
+== 설정, 키 바인드, 스킨 프로필, 채팅 바인드와 전쟁 목록이 포함됩니다. 아래에서 추가 cfg 파일을 선택하세요.
 
 Severe
 == 심각
@@ -13186,6 +13273,9 @@ Token to register this server to a specific community
 
 Tomato
 == 토마토
+
+Too many configuration files.
+== 설정 파일이 너무 많습니다.
 
 Too many translation tasks
 == 번역 작업이 너무 많음

@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <string>
 #include <vector>
 
 #define GRAPHICS_TYPE_UNSIGNED_BYTE 0x1401
@@ -943,8 +944,10 @@ public:
 	 */
 	virtual void ReadPixel(ivec2 Position, ColorRGBA *pColor) = 0;
 	using FScreenshotCallback = std::function<void(CImageInfo &&)>;
+	// 保存任务持有处理器的值快照；处理失败时不保存未按用户选择处理的图片。
+	using FScreenshotProcessor = std::function<bool(CImageInfo &, std::string &)>;
 	virtual void TakeScreenshot(const char *pFilename) = 0;
-	virtual void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback) = 0;
+	virtual void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor = nullptr) = 0;
 	virtual void TakeCustomScreenshot(const char *pFilename) = 0;
 	virtual int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) = 0;
 	virtual void GetCurrentVideoMode(CVideoMode &CurMode, int Screen) = 0;

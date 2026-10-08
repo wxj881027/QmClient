@@ -7,6 +7,9 @@
 #include <engine/client/gpu_upload_limiter.h>
 #include <engine/engine.h>
 #include <engine/gfx/image_loader.h>
+#include <engine/shared/config.h>
+#include <engine/shared/json.h>
+#include <engine/shared/jsonwriter.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -239,6 +242,7 @@ namespace
 void CQmScreenshotManager::Refresh(IStorage *pStorage, const char *pFolder, int StorageType)
 {
 	m_vEntries.clear();
+	m_CaptureMetadata.clear();
 	if(pStorage == nullptr || pFolder == nullptr || pFolder[0] == '\0')
 		return;
 	SScanContext Context{&m_vEntries, pFolder};
@@ -500,35 +504,92 @@ void CQmScreenshotManager::DrawText(CImageInfo &Image, const std::string &Text, 
 	}
 }
 
-std::string CQmScreenshotManager::BuildWatermarkText(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const SWatermarkOptions &Options, const char *pMapName) const
+CQmScreenshotManager::SWatermarkOptions CQmScreenshotManager::CurrentWatermarkOptions()
 {
-	char aTimestamp[64] = "";
-	const char *pTimestamp = nullptr;
-	if(Options.m_ShowTimestamp)
-	{
-		time_t Timestamp = std::time(nullptr);
-		time_t Created = 0;
-		time_t Modified = 0;
-		if(pStorage != nullptr && pSourcePath != nullptr && pSourcePath[0] != '\0' && pStorage->RetrieveTimes(pSourcePath, SourceStorageType, &Created, &Modified) && Modified > 0)
-			Timestamp = Modified;
-		str_timestamp_ex(Timestamp, aTimestamp, sizeof(aTimestamp), FORMAT_SPACE);
-		pTimestamp = aTimestamp;
-	}
-	return ComposeWatermarkText(pTimestamp, Options.m_ShowMapName ? pMapName : nullptr, Options.m_CustomText);
+	SWatermarkOptions Options;
+	Options.m_ShowTimestamp = g_Config.m_QmScreenshotWatermarkTimestamp != 0;
+	Options.m_ShowMapName = g_Config.m_QmScreenshotWatermarkMap != 0;
+	Options.m_CustomText = g_Config.m_QmScreenshotWatermarkText;
+	Options.m_Position = static_cast<EWatermarkPosition>(std::clamp(g_Config.m_QmScreenshotWatermarkPosition, 0, 3));
+	return Options;
 }
 
-bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options, const char *pMapName) const
+IGraphics::FScreenshotProcessor CQmScreenshotManager::CaptureProcessor(IStorage *pStorage, bool Watermark, const SWatermarkOptions &Options, const char *pMapName, time_t Timestamp)
 {
-	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
-		return false;
-	CImageInfo Image;
-	if(!LoadImage(pStorage, pSourcePath, SourceStorageType, Image) || !EnsureRgba(Image))
-	{
-		Image.Free();
-		return false;
-	}
+	char aTimestamp[64];
+	str_timestamp_ex(Timestamp, aTimestamp, sizeof(aTimestamp), FORMAT_SPACE);
+	const std::string MapName = pMapName != nullptr ? pMapName : "";
+	CJsonStringWriter Writer;
+	Writer.BeginObject();
+	Writer.WriteAttribute("qm_screenshot");
+	Writer.WriteIntValue(1);
+	Writer.WriteAttribute("timestamp");
+	Writer.WriteStrValue(aTimestamp);
+	Writer.WriteAttribute("map");
+	Writer.WriteStrValue(MapName.c_str());
+	Writer.EndObject();
+	return [pStorage, Watermark, Options, MapName, TimestampText = std::string(aTimestamp), Metadata = Writer.GetOutputString()](CImageInfo &Image, std::string &Comment) {
+		Comment = Metadata;
+		if(!Watermark)
+			return true;
+		const std::string Text = ComposeWatermarkText(Options.m_ShowTimestamp ? TimestampText.c_str() : nullptr, Options.m_ShowMapName ? MapName.c_str() : nullptr, Options.m_CustomText);
+		return DrawWatermark(pStorage, Image, Text, Options.m_Position);
+	};
+}
 
-	const std::string Text = BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options, pMapName);
+const CQmScreenshotManager::SCaptureMetadata &CQmScreenshotManager::CaptureMetadata(IStorage *pStorage, const char *pPath, int StorageType) const
+{
+	const std::string Key = ThumbnailKey(pPath, StorageType);
+	auto [It, Inserted] = m_CaptureMetadata.try_emplace(Key);
+	if(!Inserted || pStorage == nullptr || pPath == nullptr || str_endswith_nocase(pPath, ".png") == nullptr)
+		return It->second;
+	std::string Comment;
+	if(!CImageLoader::ReadPngComment(pStorage->OpenFile(pPath, IOFLAG_READ, StorageType), pPath, Comment) || Comment.empty())
+		return It->second;
+	std::unique_ptr<json_value, decltype(&json_value_free)> Json(JsonParse(Comment.c_str(), Comment.size()), json_value_free);
+	if(!Json || Json->type != json_object)
+		return It->second;
+	const json_value *pVersion = json_object_get(Json.get(), "qm_screenshot");
+	const json_value *pTimestamp = json_object_get(Json.get(), "timestamp");
+	const json_value *pMap = json_object_get(Json.get(), "map");
+	if(pVersion->type != json_integer || pVersion->u.integer != 1 || pTimestamp->type != json_string || pMap->type != json_string ||
+		pTimestamp->u.string.length == 0 || pTimestamp->u.string.length > 64 || pMap->u.string.length > 128 ||
+		pTimestamp->u.string.length != static_cast<size_t>(str_length(pTimestamp->u.string.ptr)) || pMap->u.string.length != static_cast<size_t>(str_length(pMap->u.string.ptr)) ||
+		!str_utf8_check(pTimestamp->u.string.ptr) || !str_utf8_check(pMap->u.string.ptr))
+		return It->second;
+	It->second.m_Timestamp = pTimestamp->u.string.ptr;
+	It->second.m_MapName = pMap->u.string.ptr;
+	It->second.m_Comment = std::move(Comment);
+	return It->second;
+}
+
+std::string CQmScreenshotManager::BuildWatermarkText(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const SWatermarkOptions &Options) const
+{
+	const SCaptureMetadata &Metadata = CaptureMetadata(pStorage, pSourcePath, SourceStorageType);
+	std::string Timestamp;
+	if(Options.m_ShowTimestamp)
+	{
+		Timestamp = Metadata.m_Timestamp;
+		if(Timestamp.empty())
+		{
+			char aTimestamp[64];
+			time_t Created = 0;
+			time_t Modified = 0;
+			if(pStorage != nullptr && pSourcePath != nullptr && pSourcePath[0] != '\0' && pStorage->RetrieveTimes(pSourcePath, SourceStorageType, &Created, &Modified) && Modified > 0)
+			{
+				str_timestamp_ex(Modified, aTimestamp, sizeof(aTimestamp), FORMAT_SPACE);
+				Timestamp = aTimestamp;
+			}
+		}
+	}
+	// 旧图没有拍摄地图信息，保持空白，不能拿当前服务器的地图填补。
+	return ComposeWatermarkText(Options.m_ShowTimestamp ? Timestamp.c_str() : nullptr, Options.m_ShowMapName ? Metadata.m_MapName.c_str() : nullptr, Options.m_CustomText);
+}
+
+bool CQmScreenshotManager::DrawWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, EWatermarkPosition Position)
+{
+	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0 || !EnsureRgba(Image))
+		return false;
 	if(!Text.empty())
 	{
 		const int Scale = std::clamp((int)Image.m_Width / 640, 1, 4);
@@ -539,8 +600,8 @@ bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourc
 		const int TextW = UseFont ? Font.TextWidth(Text) : TextWidth(Text, Scale);
 		const int TextH = UseFont ? FontSize : 7 * Scale;
 		const int BandH = std::min((int)Image.m_Height, TextH + 2 * Margin);
-		const bool Top = Options.m_Position == EWatermarkPosition::TOP_LEFT || Options.m_Position == EWatermarkPosition::TOP_RIGHT;
-		const bool Right = Options.m_Position == EWatermarkPosition::BOTTOM_RIGHT || Options.m_Position == EWatermarkPosition::TOP_RIGHT;
+		const bool Top = Position == EWatermarkPosition::TOP_LEFT || Position == EWatermarkPosition::TOP_RIGHT;
+		const bool Right = Position == EWatermarkPosition::BOTTOM_RIGHT || Position == EWatermarkPosition::TOP_RIGHT;
 		const int BandY = Top ? 0 : (int)Image.m_Height - BandH;
 		for(int Y = BandY; Y < BandY + BandH; ++Y)
 			for(int X = 0; X < (int)Image.m_Width; ++X)
@@ -551,8 +612,21 @@ bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourc
 		else
 			DrawText(Image, Text, std::max(Margin, TextX), BandY + Margin, Scale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 	}
+	return true;
+}
 
-	const bool Saved = CImageLoader::SavePng(pStorage->OpenFile(pTargetPath, IOFLAG_WRITE, IStorage::TYPE_SAVE), pTargetPath, Image);
+bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const
+{
+	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
+		return false;
+	CImageInfo Image;
+	if(!LoadImage(pStorage, pSourcePath, SourceStorageType, Image) || !DrawWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options.m_Position))
+	{
+		Image.Free();
+		return false;
+	}
+	const SCaptureMetadata &Metadata = CaptureMetadata(pStorage, pSourcePath, SourceStorageType);
+	const bool Saved = CImageLoader::SavePng(pStorage->OpenFile(pTargetPath, IOFLAG_WRITE, IStorage::TYPE_SAVE), pTargetPath, Image, Metadata.m_Comment.c_str());
 	Image.Free();
 	return Saved;
 }

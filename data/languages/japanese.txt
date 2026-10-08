@@ -1220,6 +1220,9 @@ Automatic game-end scoreboard screenshot
 Automatic updates
 == 自動更新
 
+Automatically add a watermark to screenshots
+== スクリーンショットに透かしを自動追加
+
 Automatically adds voting options for all maps
 == すべてのマップに投票オプションを自動追加
 
@@ -2240,6 +2243,9 @@ Compatibility mode
 Compatible with single-player area hints from other servers
 == 他のサーバーの類似シングルエリア通知と互換性を持たせる
 
+Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
+== 完全復元では一覧のファイルを置き換えます。インポート前にバックアップを保存し、完了後にクライアントを再起動します。
+
 Complete snapshots are arriving late or not arriving
 == 完全なスナップショットの到着が遅れているか、届いていません
 
@@ -2287,6 +2293,30 @@ Configs
 
 Configuration
 == 設定
+
+Configuration package already exists.
+== 設定パッケージは既に存在します。
+
+Configuration package exported.
+== 設定パッケージをエクスポートしました。
+
+Configuration package is missing required files.
+== 設定パッケージに必要なファイルがありません。
+
+Configuration package is too large.
+== 設定パッケージが大きすぎます。
+
+Configuration packages
+== 設定パッケージ
+
+Configuration restore failed; previous files were restored.
+== 設定の復元に失敗しました。元のファイルに戻しました。
+
+Configuration restore failed; recover from the saved backup.
+== 設定の復元に失敗しました。保存済みのバックアップから復元してください。
+
+Configuration restore temporary files already exist.
+== 設定復元用の一時ファイルが既に存在します。
 
 Configure background 3D particle effects
 == 背景の 3D パーティクルエフェクトを設定
@@ -2549,6 +2579,9 @@ Copied
 Copy
 == コピー
 
+Copy a .qmconfig file into the package folder, then refresh.
+== .qmconfig ファイルをパッケージフォルダーにコピーしてから更新してください。
+
 Copy info
 == 情報をコピー
 
@@ -2575,6 +2608,9 @@ Copy skin option color
 
 Could not add the player as a friend
 == プレイヤーをフレンドに追加できませんでした
+
+Could not back up configuration files.
+== 設定ファイルをバックアップできませんでした。
 
 Could not check for existing player with your name. Check your internet connection.
 == 同じ名前のプレイヤーがいるか確認できませんでした。インターネット接続を確認してください。
@@ -2603,6 +2639,9 @@ Could not get current server address
 Could not get server list from master server
 == マスターサーバーからサーバーリストを取得できませんでした
 
+Could not list configuration files.
+== 設定ファイルの一覧を取得できませんでした。
+
 Could not load default touch controls from file. See local console for details.
 == ファイルからデフォルトのタッチコントロールを読み込めませんでした。詳細はローカルコンソールを確認してください。
 
@@ -2624,11 +2663,20 @@ Could not preview this image
 Could not query points for %s
 == %s のポイントを取得できませんでした
 
+Could not read configuration files.
+== 設定ファイルを読み込めませんでした。
+
+Could not read configuration package.
+== 設定パッケージを読み込めませんでした。
+
 Could not read the map file.
 == マップファイルを読み込めませんでした。
 
 Could not resolve connect address '%s'. See local console for details.
 == 接続アドレス '%s' を解決できませんでした。詳細はローカルコンソールを確認してください。
+
+Could not save configuration package.
+== 設定パッケージを保存できませんでした。
 
 Could not save downloaded map. Try manually deleting this file: %s
 == ダウンロードしたマップを保存できませんでした。このファイルを手動で削除してみてください：%s
@@ -2638,6 +2686,9 @@ Could not save title credential
 
 Could not save touch controls to file. See local console for details.
 == タッチコントロールをファイルに保存できませんでした。詳細はローカルコンソールを確認してください。
+
+Could not stage configuration restore.
+== 設定復元用のファイルを準備できませんでした。
 
 Count players only
 == プレイヤーのみカウント
@@ -4355,6 +4406,9 @@ Expanded dropdown background opacity percentage
 Export
 == エクスポート
 
+Export configuration package
+== 設定パッケージをエクスポート
+
 Export cut as a separate demo
 == カットを別のデモとしてエクスポート
 
@@ -5627,6 +5681,12 @@ IME selection background color
 IME text color
 == IME の文字色
 
+Import and restart
+== インポートして再起動
+
+Import configuration package
+== 設定パッケージをインポート
+
 Import from clipboard
 == クリップボードからインポート
 
@@ -5855,6 +5915,15 @@ Invalid client id to move to spectators
 Invalid command or parameters.
 == コマンドまたは引数が無効です。
 
+Invalid configuration package metadata.
+== 設定パッケージのメタデータが無効です。
+
+Invalid configuration package path.
+== 設定パッケージのパスが無効です。
+
+Invalid configuration package.
+== 設定パッケージが無効です。
+
 Invalid Demo
 == 無効なデモ
 
@@ -5866,6 +5935,9 @@ Invalid map file or filename.
 
 Invalid option
 == 無効なオプションです
+
+Invalid or duplicate configuration path.
+== 設定ファイルのパスが無効または重複しています。
 
 Invalid save number. Use a number from the save list.
 == セーブ番号が無効です。一覧の番号を指定してください。
@@ -7928,6 +8000,9 @@ Open map editor
 Open modal
 == モーダルを開く
 
+Open package folder
+== パッケージフォルダーを開く
+
 Open pie menu
 == パイメニューを開く
 
@@ -9596,6 +9671,9 @@ Replace non-friend names with ID
 Replace non-friend skins with default
 == 非フレンドスキンをデフォルトに置換
 
+Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
+== 設定、キー割り当て、一覧の cfg ファイルを置き換えて再起動しますか？現在の設定は先にバックアップされます。
+
 Replace skin with one having this prefix (e.g. cats, santa)
 == このプレフィックスを持つスキンに置き換え（例：cats、santa）
 
@@ -9823,6 +9901,9 @@ Restore a recently used Tee skin
 
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
 == 2人用セーブを復元しますか？ /qm Yes で最新、/qm Yes 番号 で別のセーブを選択、/qm No で閉じます。
+
+Restore configuration package
+== 設定パッケージを復元
 
 Restore Kugou files
 == Kugou の元ファイルを復元
@@ -10292,6 +10373,9 @@ See /practicecmdlist for a list of all available practice commands. Most commonl
 See you at the next checkpoint.
 == 次のチェックポイントで会おう。
 
+Select a configuration package to preview its contents.
+== 設定パッケージを選択すると内容を確認できます。
+
 Select a saved .map file (client limit: 64 MiB).
 == 保存済みの .map ファイルを選択してください（クライアントの上限: 64 MiB）。
 
@@ -10588,6 +10672,9 @@ Settings page opacity
 
 Settings page right panel opacity
 == 設定ページ右パネルの不透明度
+
+Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
+== 設定、キー割り当て、スキンプロファイル、チャットバインド、敵対リストを含みます。追加の cfg ファイルを下で選択してください。
 
 Severe
 == 重大
@@ -13186,6 +13273,9 @@ Token to register this server to a specific community
 
 Tomato
 == トマト
+
+Too many configuration files.
+== 設定ファイルが多すぎます。
 
 Too many translation tasks
 == 翻訳タスクが多すぎます

@@ -1661,13 +1661,20 @@ namespace
 		IStorage *m_pStorage;
 		char m_aName[IO_MAX_PATH_LENGTH];
 		CImageInfo m_Image;
+		IGraphics::FScreenshotProcessor m_pfnProcessor;
 
 	protected:
 		void Run() override
 		{
 			static constexpr LOG_COLOR SCREENSHOT_LOG_COLOR = LOG_COLOR{255, 153, 76};
+			std::string Comment;
+			if(m_pfnProcessor && !m_pfnProcessor(m_Image, Comment))
+			{
+				log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to process screenshot '%s'", m_aName);
+				return;
+			}
 			char aWholePath[IO_MAX_PATH_LENGTH];
-			if(CImageLoader::SavePng(m_pStorage->OpenFile(m_aName, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath)), m_aName, m_Image))
+			if(CImageLoader::SavePng(m_pStorage->OpenFile(m_aName, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath)), m_aName, m_Image, Comment.c_str()))
 			{
 				log_info_color(SCREENSHOT_LOG_COLOR, "client", "Saved screenshot to '%s'", aWholePath);
 			}
@@ -1678,9 +1685,10 @@ namespace
 		}
 
 	public:
-		CScreenshotSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image) :
+		CScreenshotSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor) :
 			m_pStorage(pStorage),
-			m_Image(std::move(Image))
+			m_Image(std::move(Image)),
+			m_pfnProcessor(std::move(pfnProcessor))
 		{
 			str_copy(m_aName, pName);
 		}
@@ -1700,6 +1708,7 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 	if(!WindowActive())
 	{
 		m_pfnScreenshotCallback = nullptr;
+		m_pfnScreenshotProcessor = nullptr;
 		return;
 	}
 
@@ -1717,13 +1726,14 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 	{
 		if(m_pfnScreenshotCallback)
 			m_pfnScreenshotCallback(Image.DeepCopy());
-		m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image)));
+		m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image), std::move(m_pfnScreenshotProcessor)));
 	}
 	else
 	{
 		log_error("graphics", "Failed to create screenshot");
 	}
 	m_pfnScreenshotCallback = nullptr;
+	m_pfnScreenshotProcessor = nullptr;
 }
 
 void CGraphics_Threaded::TextureSet(CTextureHandle TextureId)
@@ -4586,13 +4596,14 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename)
 	TakeScreenshot(pFilename, nullptr);
 }
 
-void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback)
+void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor)
 {
 	// TODO: screenshot support
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
 	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename ? pFilename : "screenshot", aDate);
 	m_pfnScreenshotCallback = std::move(pfnCallback);
+	m_pfnScreenshotProcessor = std::move(pfnProcessor);
 	m_DoScreenshot = true;
 }
 
@@ -4600,6 +4611,7 @@ void CGraphics_Threaded::TakeCustomScreenshot(const char *pFilename)
 {
 	str_copy(m_aScreenshotName, pFilename);
 	m_pfnScreenshotCallback = nullptr;
+	m_pfnScreenshotProcessor = nullptr;
 	m_DoScreenshot = true;
 }
 

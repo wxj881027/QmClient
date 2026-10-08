@@ -286,7 +286,7 @@ public:
 	void ChangeColorOfQuadVertices(size_t QuadOffset, unsigned char r, unsigned char g, unsigned char b, unsigned char a) override {}
 	void ReadPixel(ivec2 Position, ColorRGBA *pColor) override { throw std::logic_error("unexpected graphics boundary: ReadPixel"); }
 	void TakeScreenshot(const char *pFilename) override { throw std::logic_error("unexpected graphics boundary: TakeScreenshot"); }
-	void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback) override { throw std::logic_error("unexpected graphics boundary: TakeScreenshot"); }
+	void TakeScreenshot(const char *pFilename, FScreenshotCallback pfnCallback, FScreenshotProcessor pfnProcessor = nullptr) override { throw std::logic_error("unexpected graphics boundary: TakeScreenshot"); }
 	void TakeCustomScreenshot(const char *pFilename) override { throw std::logic_error("unexpected graphics boundary: TakeCustomScreenshot"); }
 	int GetVideoModes(CVideoMode *pModes, int MaxModes, int Screen) override { throw std::logic_error("unexpected graphics boundary: GetVideoModes"); }
 	void GetCurrentVideoMode(CVideoMode &CurMode, int Screen) override { throw std::logic_error("unexpected graphics boundary: GetCurrentVideoMode"); }

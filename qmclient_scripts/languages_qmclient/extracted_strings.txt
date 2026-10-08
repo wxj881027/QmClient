@@ -405,6 +405,7 @@ Automatic effect LOD when crowded
 Automatic gain control (0=off 1=on)
 Automatic game-end scoreboard screenshot
 Automatic updates
+Automatically add a watermark to screenshots
 Automatically adds voting options for all maps
 Automatically ban blacklisted addresses
 Automatically check for stable updates and install them on exit
@@ -745,6 +746,7 @@ Community
 Compact
 Compatibility mode
 Compatible with single-player area hints from other servers
+Complete restore replaces the listed files. A backup is saved before importing. The client will restart.
 Complete snapshots are arriving late or not arriving
 Compressor attack time (ms)
 Compressor makeup gain (percent)
@@ -761,6 +763,14 @@ Config Filters
 Config version. Helps new client fix old config errors.
 Configs
 Configuration
+Configuration package already exists.
+Configuration package exported.
+Configuration package is missing required files.
+Configuration package is too large.
+Configuration packages
+Configuration restore failed; previous files were restored.
+Configuration restore failed; recover from the saved backup.
+Configuration restore temporary files already exist.
 Configure background 3D particle effects
 Configure camera, weapon, and gameplay defaults
 Configure chat position, size, and visibility
@@ -848,6 +858,7 @@ Coordinates
 Coords size
 Copied
 Copy
+Copy a .qmconfig file into the package folder, then refresh.
 Copy info
 Copy name
 Copy name option color
@@ -857,6 +868,7 @@ Copy skin from player
 Copy skin ID
 Copy skin option color
 Could not add the player as a friend
+Could not back up configuration files.
 Could not check for existing player with your name. Check your internet connection.
 Could not connect dummy
 Could not connect to the translation service. Please try again later.
@@ -866,6 +878,7 @@ Could not find online Tutorial server.\nStarting and connecting to local serverâ
 Could not find your Team
 Could not get current server address
 Could not get server list from master server
+Could not list configuration files.
 Could not load default touch controls from file. See local console for details.
 Could not load sponsor QR code. Check the Base64 data
 Could not load touch controls from clipboard. See local console for details.
@@ -873,11 +886,15 @@ Could not load touch controls from file. See local console for details.
 Could not open system graphics settings.
 Could not preview this image
 Could not query points for %s
+Could not read configuration files.
+Could not read configuration package.
 Could not read the map file.
 Could not resolve connect address '%s'. See local console for details.
+Could not save configuration package.
 Could not save downloaded map. Try manually deleting this file: %s
 Could not save title credential
 Could not save touch controls to file. See local console for details.
+Could not stage configuration restore.
 Count players only
 Countries
 Country flag for grouping this community (ISO 3166-1 numeric)
@@ -1450,6 +1467,7 @@ Expand console
 Expanded dropdown background color
 Expanded dropdown background opacity percentage
 Export
+Export configuration package
 Export cut as a separate demo
 Export demo cut
 Export name contains invalid characters.
@@ -1874,6 +1892,8 @@ IME font size percentage
 IME selected text color
 IME selection background color
 IME text color
+Import and restart
+Import configuration package
 Import from clipboard
 Improved anti ping
 In memory of me
@@ -1950,10 +1970,14 @@ Invalid bound name
 Invalid client id to kick
 Invalid client id to move to spectators
 Invalid command or parameters.
+Invalid configuration package metadata.
+Invalid configuration package path.
+Invalid configuration package.
 Invalid Demo
 Invalid ID
 Invalid map file or filename.
 Invalid option
+Invalid or duplicate configuration path.
 Invalid save number. Use a number from the save list.
 Invalid spectator id used
 Invalid sponsor code
@@ -2641,6 +2665,7 @@ Open emote selector
 Open folder
 Open map editor
 Open modal
+Open package folder
 Open pie menu
 Open rename dialog
 Open settings
@@ -3197,6 +3222,7 @@ Replace mode
 Replace mode 0=Regex 1=Full 2=Both
 Replace non-friend names with ID
 Replace non-friend skins with default
+Replace settings, binds and the listed cfg files, then restart? The current configuration will be backed up first.
 Replace skin with one having this prefix (e.g. cats, santa)
 Replace video
 Replacement chars
@@ -3273,6 +3299,7 @@ Restart the client
 Restarting. Please waitâ€¦
 Restore a recently used Tee skin
 Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.
+Restore configuration package
 Restore Kugou files
 Restore old single-segment hook collision line behavior
 Restoring save %d: main '%s', dummy '%s'.
@@ -3429,6 +3456,7 @@ SecretId
 SecretKey
 See /practicecmdlist for a list of all available practice commands. Most commonly used ones are /telecursor, /lasttp and /rescue
 See you at the next checkpoint.
+Select a configuration package to preview its contents.
 Select a saved .map file (client limit: 64 MiB).
 Select all chat
 Select button by touch
@@ -3528,6 +3556,7 @@ Settings card titles use rainbow colors
 Settings file
 Settings page opacity
 Settings page right panel opacity
+Settings, binds, profiles, chat binds and the war list are included. Select additional cfg files below.
 Severe
 Shape
 Share of the server browser name/map split given to the name column (per mille)
@@ -4394,6 +4423,7 @@ Toggles spec on the currently voted player
 Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off for off, toggle for toggle and nothing to show current status
 Token to register this server to a specific community
 Tomato
+Too many configuration files.
 Too many translation tasks
 Toolbox page
 Tooltip background color

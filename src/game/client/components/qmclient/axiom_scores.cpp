@@ -1295,10 +1295,15 @@ void CQmAxiomScores::OnStateChange(int NewState, int OldState)
 	}
 	else if(NewState == IClient::STATE_ONLINE && OldState < IClient::STATE_ONLINE)
 	{
-		// 生命周期取消不代表远程请求失败；重新上线后允许立即恢复同步。
+		// 每次入服都重新查询；取消旧入服代际，保留最近成功数据供刷新期间显示。
+		AbortActiveRequests(true);
+		AbortScoreboardRequests();
+		m_SearchStartsThisFrame = 0;
 		for(auto &[Name, Entry] : m_Cache)
 		{
+			Entry.m_LastSearchSuccessTick = 0;
 			Entry.m_LastSearchFailureTick = 0;
+			Entry.m_aLastModeSuccessTick.fill(0);
 			Entry.m_aLastModeFailureTick.fill(0);
 			Entry.m_LastDdStatsFailureTick = 0;
 		}

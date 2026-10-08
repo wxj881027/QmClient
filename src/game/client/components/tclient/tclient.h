@@ -18,6 +18,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/friend_enter_tracker.h>
 #include <game/client/components/qmclient/friend_online_tracker.h>
+#include <game/client/components/qmclient/gores_drown_tracker.h>
 #include <game/client/components/qmclient/local_saves.h>
 #include <game/client/components/qmclient/map_progress.h>
 #include <game/client/components/qmclient/modes.h>
@@ -249,10 +250,8 @@ class CTClient : public CComponent
 	void UpdatePlayerStats();
 	void TrackHookDirection(int Dummy);
 
-	// Kog 组队落水榜：只记录未冻结到冻结的边沿，避免冻结期间重复计数。
-	int m_aGoresDrownCounts[MAX_CLIENTS] = {};
-	bool m_aGoresFreezeState[MAX_CLIENTS] = {};
-	bool m_aGoresFreezeSeen[MAX_CLIENTS] = {};
+	// Kog 组队落水榜：救起后重新出钩才允许计入下一次落水。
+	CQmGoresDrownTracker m_GoresDrownTracker;
 	bool m_GoresDrownModeActive = false;
 	char m_aGoresDrownMap[128] = "";
 	void UpdateGoresDrownCounts();
@@ -472,7 +471,7 @@ public:
 	bool ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const;
 	bool IsGoresGameMode() const;
 	bool IsFinishRenamePending(int Dummy) const { return Dummy >= 0 && Dummy < NUM_DUMMIES && m_aFinishRenamePending[Dummy]; }
-	int GetGoresDrownCount(int ClientId) const { return ClientId >= 0 && ClientId < MAX_CLIENTS ? m_aGoresDrownCounts[ClientId] : 0; }
+	int GetGoresDrownCount(int ClientId) const { return m_GoresDrownTracker.Count(ClientId); }
 	void ResetGoresDrownCounts();
 
 	void OnStateChange(int NewState, int OldState) override;

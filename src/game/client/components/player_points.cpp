@@ -4,6 +4,7 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <engine/client.h>
 #include <engine/console.h>
 #include <engine/engine.h>
 #include <engine/http.h>
@@ -101,10 +102,7 @@ void CPlayerPoints::OnInit()
 		const int Points = sqlite3_column_int(m_pLoadStmt.get(), 1);
 		if(!pName || pName[0] == '\0')
 			continue;
-		SPlayerPointsEntry &Entry = m_Cache[pName];
-		Entry.m_Points = Points;
-		Entry.m_Status = EPointsStatus::READY;
-		Entry.m_LastSuccessTime = 0; // TTL 已过期，触发后台刷新
+		m_Cache.Load(pName, Points);
 	}
 }
 
@@ -127,70 +125,49 @@ void CPlayerPoints::StoreToDb(const char *pPlayerName, int Points)
 		log_warn("player_points", "failed to store points for '%s'", pPlayerName);
 }
 
-void CPlayerPoints::OnShutdown()
+void CPlayerPoints::CancelRequests(bool NewServer)
 {
-	for(auto &Pair : m_ActiveRequests)
+	for(auto &[Name, Slot] : m_ActiveRequests)
 	{
-		if(Pair.second)
-			Pair.second->Abort();
+		if(Slot.m_pRequest)
+			Slot.m_pRequest->Abort();
 	}
 	m_ActiveRequests.clear();
+	// 后台任务只拥有响应体；移除槽位后，旧解析结果不会再发布到缓存。
 	m_ParseJobs.clear();
-	m_Cache.clear();
+	if(NewServer)
+		m_Cache.BeginServerSession();
+	else
+		m_Cache.CancelPendingRequests();
+}
+
+void CPlayerPoints::OnShutdown()
+{
+	CancelRequests();
+	m_Cache.Clear();
+}
+
+void CPlayerPoints::OnReset()
+{
+	CancelRequests();
+}
+
+void CPlayerPoints::OnStateChange(int NewState, int OldState)
+{
+	if(NewState < IClient::STATE_ONLINE)
+		CancelRequests();
+	else if(NewState == IClient::STATE_ONLINE && OldState < IClient::STATE_ONLINE)
+		CancelRequests(true);
 }
 
 void CPlayerPoints::EnsureQueried(const char *pPlayerName)
 {
 	if(!pPlayerName || pPlayerName[0] == '\0')
 		return;
-
-	std::string Name(pPlayerName);
-
-	// 先看缓存状态，避免重复请求。
-	auto Iter = m_Cache.find(Name);
-	if(Iter != m_Cache.end())
-	{
-		const SPlayerPointsEntry &Entry = Iter->second;
-
-		// 正在请求中，直接返回。
-		if(Entry.m_Status == EPointsStatus::FETCHING)
-			return;
-
-		// 命中有效缓存，直接返回。
-		if(Entry.m_Status == EPointsStatus::READY)
-		{
-			int64_t Now = time_get();
-			int64_t ElapsedMs = (Now - Entry.m_LastSuccessTime) * 1000 / time_freq();
-			if(ElapsedMs < CACHE_TTL_MS)
-				return;
-			// TTL 过期，但上次刷新失败时先等退避期再重试，避免每帧发请求。
-			if(Entry.m_LastFailTime > 0)
-			{
-				int64_t FailElapsedMs = (Now - Entry.m_LastFailTime) * 1000 / time_freq();
-				if(FailElapsedMs < FAIL_RETRY_DELAY_MS)
-					return;
-			}
-		}
-
-		// 上次失败后在退避时间内，不重试。
-		if(Entry.m_Status == EPointsStatus::FAILED)
-		{
-			int64_t Now = time_get();
-			int64_t ElapsedMs = (Now - Entry.m_LastFailTime) * 1000 / time_freq();
-			if(ElapsedMs < FAIL_RETRY_DELAY_MS)
-				return;
-		}
-	}
-
-	// 并发请求上限保护。
-	if(m_ActiveRequests.size() >= MAX_CONCURRENT_REQUESTS)
+	const std::string Name(pPlayerName);
+	if(!m_Cache.ShouldQuery(Name, time_get(), time_freq()) ||
+		m_ActiveRequests.size() >= MAX_CONCURRENT_REQUESTS || m_ActiveRequests.contains(Name))
 		return;
-
-	// 同名请求已在队列中。
-	if(m_ActiveRequests.contains(Name))
-		return;
-
-	// 发起新请求。
 	StartRequest(pPlayerName);
 }
 
@@ -198,14 +175,7 @@ SPlayerPointsResult CPlayerPoints::GetPoints(const char *pPlayerName)
 {
 	if(!pPlayerName || pPlayerName[0] == '\0')
 		return {EPointsStatus::NOT_REQUESTED, 0};
-
-	std::string Name(pPlayerName);
-	auto Iter = m_Cache.find(Name);
-	if(Iter == m_Cache.end())
-		return {EPointsStatus::NOT_REQUESTED, 0};
-
-	const SPlayerPointsEntry &Entry = Iter->second;
-	return {Entry.m_Status, Entry.m_Points};
+	return m_Cache.Get(pPlayerName);
 }
 
 void CPlayerPoints::StartRequest(const char *pPlayerName)
@@ -227,12 +197,10 @@ void CPlayerPoints::StartRequest(const char *pPlayerName)
 	// 保留已有 READY 数据可见；只有在没有任何缓存时才切换到 FETCHING，
 	// 避免重新获取过程中记分板短暂显示 "..."。
 	std::string Name(pPlayerName);
-	SPlayerPointsEntry &CacheEntry = m_Cache[Name];
-	if(CacheEntry.m_Status != EPointsStatus::READY)
-		CacheEntry.m_Status = EPointsStatus::FETCHING;
+	const CQmPlayerPointsCache::SRequestToken Token = m_Cache.BeginRequest(Name);
 
-	// 记录活跃请求并提交执行。
-	m_ActiveRequests[Name] = pRequest;
+	// 记录入服代际和请求序号，迟到结果不能覆盖后续入服的新缓存。
+	m_ActiveRequests[Name] = {pRequest, Token};
 	Http()->Run(pRequest);
 }
 
@@ -242,7 +210,8 @@ void CPlayerPoints::ProcessCompletedRequests()
 	while(Iter != m_ActiveRequests.end())
 	{
 		const std::string &Name = Iter->first;
-		std::shared_ptr<IHttpRequest> pRequest = Iter->second;
+		std::shared_ptr<IHttpRequest> pRequest = Iter->second.m_pRequest;
+		const CQmPlayerPointsCache::SRequestToken Token = Iter->second.m_Token;
 
 		if(!pRequest->Done())
 		{
@@ -250,7 +219,6 @@ void CPlayerPoints::ProcessCompletedRequests()
 			continue;
 		}
 
-		SPlayerPointsEntry &Entry = m_Cache[Name];
 		EHttpState State = pRequest->State();
 
 		if(State == EHttpState::DONE)
@@ -264,9 +232,7 @@ void CPlayerPoints::ProcessCompletedRequests()
 				pRequest->Result(&pData, &DataSize);
 				// 仅失败时记录详细日志。
 				dbg_msg("player_points", "Response for '%s': %zu bytes, status=%d (failed)", Name.c_str(), DataSize, Code);
-				if(Entry.m_Status != EPointsStatus::READY)
-					Entry.m_Status = EPointsStatus::FAILED;
-				Entry.m_LastFailTime = time_get();
+				m_Cache.CompleteFailure(Name, Token, time_get());
 				m_ParseJobs.erase(Name);
 				Iter = m_ActiveRequests.erase(Iter);
 				continue;
@@ -294,33 +260,25 @@ void CPlayerPoints::ProcessCompletedRequests()
 			m_ParseJobs.erase(ParseIter);
 			if(!Result.m_JsonParsed)
 			{
-				if(Entry.m_Status != EPointsStatus::READY)
-					Entry.m_Status = EPointsStatus::FAILED;
-				Entry.m_LastFailTime = time_get();
+				m_Cache.CompleteFailure(Name, Token, time_get());
 				dbg_msg("player_points", "'%s' -> JSON parse failed", Name.c_str());
 			}
 			else if(!Result.m_PointsFound)
 			{
 				// 常见情况：玩家不存在时 DDNet 会返回 {}。
-				if(Entry.m_Status != EPointsStatus::READY)
-					Entry.m_Status = EPointsStatus::FAILED;
-				Entry.m_LastFailTime = time_get();
+				m_Cache.CompleteFailure(Name, Token, time_get());
 				dbg_msg("player_points", "'%s' -> points missing (maybe player not found)", Name.c_str());
 			}
 			else
 			{
-				Entry.m_Points = Result.m_Points;
-				Entry.m_Status = EPointsStatus::READY;
-				Entry.m_LastSuccessTime = time_get();
-				StoreToDb(Name.c_str(), Result.m_Points);
+				if(m_Cache.CompleteSuccess(Name, Token, Result.m_Points, time_get()))
+					StoreToDb(Name.c_str(), Result.m_Points);
 				// 成功路径默认不打日志，避免刷屏。
 			}
 		}
 		else
 		{
-			if(Entry.m_Status != EPointsStatus::READY)
-				Entry.m_Status = EPointsStatus::FAILED;
-			Entry.m_LastFailTime = time_get();
+			m_Cache.CompleteFailure(Name, Token, time_get());
 			const char *pStateStr = nullptr;
 			switch(State)
 			{

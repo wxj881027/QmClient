@@ -37,6 +37,7 @@
 #include "components/qmclient/perf_logging.h"
 #include "components/qmclient/predicted_event_queue.h"
 #include "components/qmclient/qmclient_utils.h"
+#include "components/qmclient/screenshot_manager.h"
 #include "components/qmclient/translate/translate_ui_settings.h"
 #include "components/race_demo.h"
 #include "components/scoreboard.h"
@@ -88,6 +89,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <cstdlib>
+#include <ctime>
 #include <thread>
 
 namespace
@@ -3139,6 +3141,14 @@ void CGameClient::OnStateChange(int NewState, int OldState)
 void CGameClient::OnScreenshotTaken(CImageInfo &&Image)
 {
 	m_UiEffects.StartScreenshotAnimation(std::move(Image));
+}
+
+IGraphics::FScreenshotProcessor CGameClient::ScreenshotProcessor()
+{
+	const CQmScreenshotManager::SWatermarkOptions Options = CQmScreenshotManager::CurrentWatermarkOptions();
+	const int State = Client()->State();
+	const char *pMapName = State == IClient::STATE_ONLINE || State == IClient::STATE_DEMOPLAYBACK ? Client()->GetCurrentMap() : "";
+	return CQmScreenshotManager::CaptureProcessor(Storage(), g_Config.m_QmScreenshotWatermark != 0, Options, pMapName, std::time(nullptr));
 }
 
 void CGameClient::OnShutdown()

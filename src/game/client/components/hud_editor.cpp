@@ -40,6 +40,7 @@ void CHudEditor::ResetRuntimeState()
 	m_DraggingElement = -1;
 	m_DragGrabOffset = vec2(0.0f, 0.0f);
 	m_vVisibleElements.clear();
+	m_aMeasuredVisibleRects = {};
 }
 
 void CHudEditor::OnReset()
@@ -64,6 +65,14 @@ void CHudEditor::OnStateChange(int NewState, int OldState)
 
 void CHudEditor::OnUpdate()
 {
+	std::array<bool, ELEMENT_COUNT> aMeasuredLastFrame{};
+	for(const SVisibleElement &Visible : m_vVisibleElements)
+		aMeasuredLastFrame[static_cast<int>(Visible.m_Element)] = Visible.m_ReportedVisibleRect;
+	for(int Index = 0; Index < ELEMENT_COUNT; ++Index)
+	{
+		if(!aMeasuredLastFrame[Index])
+			m_aMeasuredVisibleRects[Index] = {};
+	}
 	m_vVisibleElements.clear();
 }
 
@@ -160,6 +169,11 @@ void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &Ren
 	const float Scale = std::clamp(State.m_HasCustom ? State.m_ScalePercent / 100.0f : 1.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
 	Visible.m_BaseWidth = Visible.m_Rect.w / Scale;
 	Visible.m_BaseHeight = Visible.m_Rect.h / Scale;
+	// 命中框、拖动锚点与下帧恢复都采用实际内容边界，避免外框留白挡住四边。
+	Visible.m_StateOffsetX = (Visible.m_Rect.x - Visible.m_TargetUiRect.x) / Scale;
+	Visible.m_StateOffsetY = (Visible.m_Rect.y - Visible.m_TargetUiRect.y) / Scale;
+	m_aMeasuredVisibleRects[static_cast<int>(Element)].Observe(Visible.m_TransformRect, Visible.m_TargetUiRect, Visible.m_Rect);
+	Visible.m_ReportedVisibleRect = true;
 }
 
 const char *CHudEditor::ElementToken(EHudEditorElement Element)
@@ -219,8 +233,8 @@ void CHudEditor::ParseLayoutConfig(const char *pConfig)
 				{
 					SElementState &State = m_aElementStates[ElementIndex];
 					State.m_HasCustom = true;
-					State.m_PosXPermille = std::clamp(aValues[0], 0, POSITION_SCALE);
-					State.m_PosYPermille = std::clamp(aValues[1], 0, POSITION_SCALE);
+					State.m_PosXPermille = std::clamp(aValues[0], -2 * POSITION_SCALE, POSITION_SCALE);
+					State.m_PosYPermille = std::clamp(aValues[1], -2 * POSITION_SCALE, POSITION_SCALE);
 					State.m_ScalePercent = std::clamp(aValues[2], MIN_SCALE_PERCENT, MAX_SCALE_PERCENT);
 				}
 			}
@@ -303,8 +317,8 @@ void CHudEditor::ClampStateToScreen(SElementState &State, float BaseWidth, float
 	const float Height = BaseHeight * Scale;
 	const bool AnchorRight = State.m_PosXPermille >= POSITION_SCALE;
 	const bool AnchorBottom = State.m_PosYPermille >= POSITION_SCALE;
-	const float XNorm = Clamp01(State.m_PosXPermille / (float)POSITION_SCALE);
-	const float YNorm = Clamp01(State.m_PosYPermille / (float)POSITION_SCALE);
+	const float XNorm = QmHudEditor::ClampStoredAxisPosition(State.m_PosXPermille / (float)POSITION_SCALE);
+	const float YNorm = QmHudEditor::ClampStoredAxisPosition(State.m_PosYPermille / (float)POSITION_SCALE);
 	const float OffsetX = StateOffsetX * Scale;
 	const float OffsetY = StateOffsetY * Scale;
 	const float X = QmHudEditor::RestoreAxisAnchor(XNorm, Width, pScreen->x, pScreen->w, OffsetX);
@@ -326,7 +340,8 @@ CHudEditor::STransformScope CHudEditor::BeginTransform(EHudEditorElement Element
 
 bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIRect &TransformRect, const CUIRect &VisibleRect, bool Scalable, STransformScope &Scope, SVisibleElement *pVisible, const QmHudEditor::SEdgeMargin &EdgeMargin)
 {
-	if(TransformRect.w <= 0.0f || TransformRect.h <= 0.0f || VisibleRect.w <= 0.0f || VisibleRect.h <= 0.0f)
+	const CUIRect MeasuredVisibleRect = m_aMeasuredVisibleRects[static_cast<int>(Element)].Resolve(TransformRect, VisibleRect);
+	if(TransformRect.w <= 0.0f || TransformRect.h <= 0.0f || MeasuredVisibleRect.w <= 0.0f || MeasuredVisibleRect.h <= 0.0f)
 		return false;
 
 	SyncLayoutConfig();
@@ -354,20 +369,20 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 
 	const float DefaultNormX = Clamp01((TransformRect.x - ScreenX0) / ScreenW);
 	const float DefaultNormY = Clamp01((TransformRect.y - ScreenY0) / ScreenH);
-	const float BaseUiWidth = VisibleRect.w * pUiScreen->w / ScreenW;
-	const float BaseUiHeight = VisibleRect.h * pUiScreen->h / ScreenH;
-	const float TransformToVisibleOffsetX = VisibleRect.x - TransformRect.x;
-	const float TransformToVisibleOffsetY = VisibleRect.y - TransformRect.y;
+	const float BaseUiWidth = MeasuredVisibleRect.w * pUiScreen->w / ScreenW;
+	const float BaseUiHeight = MeasuredVisibleRect.h * pUiScreen->h / ScreenH;
+	const float TransformToVisibleOffsetX = MeasuredVisibleRect.x - TransformRect.x;
+	const float TransformToVisibleOffsetY = MeasuredVisibleRect.y - TransformRect.y;
 
 	const SElementState &SavedState = State(Element);
 	const float Scale = std::clamp(SavedState.m_HasCustom ? SavedState.m_ScalePercent / 100.0f : 1.0f, MIN_SCALE_PERCENT / 100.0f, MAX_SCALE_PERCENT / 100.0f);
-	const float NormX = SavedState.m_HasCustom ? Clamp01(SavedState.m_PosXPermille / (float)POSITION_SCALE) : DefaultNormX;
-	const float NormY = SavedState.m_HasCustom ? Clamp01(SavedState.m_PosYPermille / (float)POSITION_SCALE) : DefaultNormY;
+	const float NormX = SavedState.m_HasCustom ? QmHudEditor::ClampStoredAxisPosition(SavedState.m_PosXPermille / (float)POSITION_SCALE) : DefaultNormX;
+	const float NormY = SavedState.m_HasCustom ? QmHudEditor::ClampStoredAxisPosition(SavedState.m_PosYPermille / (float)POSITION_SCALE) : DefaultNormY;
 
 	const float TransformWidth = TransformRect.w * Scale;
 	const float TransformHeight = TransformRect.h * Scale;
-	const float VisibleWidth = VisibleRect.w * Scale;
-	const float VisibleHeight = VisibleRect.h * Scale;
+	const float VisibleWidth = MeasuredVisibleRect.w * Scale;
+	const float VisibleHeight = MeasuredVisibleRect.h * Scale;
 	const float VisibleOffsetX = TransformToVisibleOffsetX * Scale;
 	const float VisibleOffsetY = TransformToVisibleOffsetY * Scale;
 	// 默认布局保留设计留白；手动布局按真实可见屏幕边恢复，避免每次重进又被内推。
@@ -409,6 +424,12 @@ bool CHudEditor::ComputeTransformPlacement(EHudEditorElement Element, const CUIR
 	if(pVisible != nullptr)
 	{
 		pVisible->m_Element = Element;
+		pVisible->m_TransformRect = TransformRect;
+		pVisible->m_TargetUiRect = {
+			pUiScreen->x + (AnchorX - ScreenX0) * pUiScreen->w / ScreenW,
+			pUiScreen->y + (AnchorY - ScreenY0) * pUiScreen->h / ScreenH,
+			TransformWidth * pUiScreen->w / ScreenW,
+			TransformHeight * pUiScreen->h / ScreenH};
 		pVisible->m_Rect = {
 			pUiScreen->x + (AnchorX + VisibleOffsetX - ScreenX0) * pUiScreen->w / ScreenW,
 			pUiScreen->y + (AnchorY + VisibleOffsetY - ScreenY0) * pUiScreen->h / ScreenH,

@@ -4959,7 +4959,7 @@ void CClient::AutoScreenshot_Start()
 {
 	if(g_Config.m_ClAutoScreenshot)
 	{
-		Graphics()->TakeScreenshot("auto/autoscreen");
+		Graphics()->TakeScreenshot("auto/autoscreen", nullptr, GameClient()->ScreenshotProcessor());
 		m_AutoScreenshotRecycle = true;
 	}
 }
@@ -4968,7 +4968,7 @@ void CClient::AutoStatScreenshot_Start()
 {
 	if(g_Config.m_ClAutoStatboardScreenshot)
 	{
-		Graphics()->TakeScreenshot("auto/stats/autoscreen");
+		Graphics()->TakeScreenshot("auto/stats/autoscreen", nullptr, GameClient()->ScreenshotProcessor());
 		m_AutoStatScreenshotRecycle = true;
 	}
 }
@@ -5026,7 +5026,7 @@ void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 	CClient *pSelf = (CClient *)pUserData;
 	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image) {
 		pSelf->GameClient()->OnScreenshotTaken(std::move(Image));
-	});
+	}, pSelf->GameClient()->ScreenshotProcessor());
 }
 
 #if defined(CONF_VIDEORECORDER)

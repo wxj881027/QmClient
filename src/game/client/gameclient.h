@@ -923,6 +923,7 @@ public:
 	void OnUpdate() override;
 	int RenderThrottleRefreshRate() const override;
 	void OnScreenshotTaken(class CImageInfo &&Image) override;
+	IGraphics::FScreenshotProcessor ScreenshotProcessor() override;
 	void OnDummyDisconnect() override;
 	void OnDummyManualDisconnect() override;
 	virtual void OnRelease();

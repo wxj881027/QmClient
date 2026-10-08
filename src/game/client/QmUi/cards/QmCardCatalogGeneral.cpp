@@ -22,6 +22,40 @@
 
 namespace qm_card_catalog
 {
+	void QmCardRenderHook::RenderScreenshotWatermarkSettings(const SQmCardBuildContext &Ctx, CUIRect Content)
+	{
+		CMenus *pMenus = Ctx.m_pMenus;
+		const auto &Metrics = Ctx.m_Metrics;
+		CUIRect Row;
+		SLabelProperties LabelProps;
+		LabelProps.m_DisallowNewline = true;
+		LabelProps.m_StopAtEnd = true;
+		LabelProps.m_MinimumFontSize = 6.0f;
+		const auto DoToggle = [&](int *pOption, const char *pId, const char *pText) {
+			Content.HSplitTop(Metrics.m_LineHeight, &Row, &Content);
+			if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_GENERAL, -1, -1, pOption, pId, pText, *pOption, &Row, LabelProps, true, Metrics.m_BodySize))
+				*pOption ^= 1;
+			Content.HSplitTop(Metrics.m_LineSpacing, nullptr, &Content);
+		};
+		DoToggle(&g_Config.m_QmScreenshotWatermark, "screenshot-watermark", Localize("Automatically add a watermark to screenshots"));
+		DoToggle(&g_Config.m_QmScreenshotWatermarkTimestamp, "screenshot-watermark-timestamp", Localize("Timestamp"));
+		DoToggle(&g_Config.m_QmScreenshotWatermarkMap, "screenshot-watermark-map", Localize("Map name"));
+		Content.HSplitTop(Metrics.m_LineHeight, &Row, &Content);
+		static CLineInput s_WatermarkTextInput(g_Config.m_QmScreenshotWatermarkText, sizeof(g_Config.m_QmScreenshotWatermarkText));
+		ui_widget::SInputFieldOptions InputOptions;
+		InputOptions.m_pPlaceholder = Localize("Custom watermark text");
+		InputOptions.m_FontSize = Metrics.m_BodySize;
+		ui_widget::InputField(Ctx.m_UiContext, &s_WatermarkTextInput, Row, InputOptions);
+		Content.HSplitTop(Metrics.m_LineSpacing, nullptr, &Content);
+		Content.HSplitTop(Metrics.m_LineHeight, &Row, &Content);
+		static CUi::SDropDownState s_PositionState;
+		const char *apPositions[] = {Localize("Bottom left"), Localize("Bottom right"), Localize("Top left"), Localize("Top right")};
+		const int Position = std::clamp(g_Config.m_QmScreenshotWatermarkPosition, 0, 3);
+		const int NewPosition = pMenus->Ui()->DoDropDown(&Row, Position, apPositions, std::size(apPositions), s_PositionState);
+		if(NewPosition >= 0 && NewPosition < 4)
+			g_Config.m_QmScreenshotWatermarkPosition = NewPosition;
+	}
+
 	bool QmCardRenderHook::BuildGeneralCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out)
 	{
 		if(Ctx.m_pMenus == nullptr || pStableId == nullptr)
@@ -201,7 +235,7 @@ namespace qm_card_catalog
 					(g_Config.m_ClAutoScreenshot != 0) +
 					(g_Config.m_ClAutoStatboardScreenshot != 0) +
 					(g_Config.m_ClAutoCSV != 0);
-				return 4.0f * GeneralMetrics.m_RowStep + EnabledRows * (GeneralMetrics.m_RowStep + GeneralMetrics.m_LineSpacing);
+				return 9.0f * GeneralMetrics.m_RowStep + GeneralMetrics.m_SectionGap + EnabledRows * (GeneralMetrics.m_RowStep + GeneralMetrics.m_LineSpacing);
 			};
 			Out.m_VisibilityController = true;
 			Out.m_PreLayoutInput = [pMenus, GeneralMetrics](CUIRect Content) {
@@ -229,7 +263,7 @@ namespace qm_card_catalog
 				ProcessToggle(&g_Config.m_ClAutoCSV);
 				return Changed;
 			};
-			Out.m_Render = [pMenus, DoNumericField, GeneralMetrics](CUIRect Content) {
+			Out.m_Render = [pMenus, DoNumericField, GeneralMetrics, GeneralCardCtx](CUIRect Content) {
 				CUIRect Button;
 				const auto DoAutoRecord = [pMenus, &Content, &Button, DoNumericField, GeneralMetrics](int *pEnabled, int *pMax, const char *pToggleId, const char *pToggleText, const char *pMaxId, const char *pMaxText) {
 					Content.HSplitTop(GeneralMetrics.m_LineHeight, &Button, &Content);
@@ -246,38 +280,19 @@ namespace qm_card_catalog
 				DoAutoRecord(&g_Config.m_ClAutoScreenshot, &g_Config.m_ClAutoScreenshotMax, "general-auto-screenshot", Localize("Automatically take game over screenshot"), "general-auto-screenshot-max", Localize("Max Screenshots"));
 				DoAutoRecord(&g_Config.m_ClAutoStatboardScreenshot, &g_Config.m_ClAutoStatboardScreenshotMax, "general-auto-statboard-screenshot", Localize("Automatically take statboard screenshot"), "general-auto-statboard-screenshot-max", Localize("Max Screenshots"));
 				DoAutoRecord(&g_Config.m_ClAutoCSV, &g_Config.m_ClAutoCSVMax, "general-auto-csv", Localize("Automatically create statboard csv"), "general-auto-csv-max", Localize("Max CSVs"));
+				Content.HSplitTop(GeneralMetrics.m_SectionGap, nullptr, &Content);
+				SQmCardBuildContext WatermarkCtx;
+				WatermarkCtx.m_pMenus = pMenus;
+				WatermarkCtx.m_UiContext = GeneralCardCtx;
+				WatermarkCtx.m_Metrics = GeneralMetrics;
+				RenderScreenshotWatermarkSettings(WatermarkCtx, Content);
 			};
 
 			return true;
 		}
 		if(str_comp(pStableId, "deck:tclient-info-files") == 0)
 		{
-			Out.m_Measure = [GeneralMetrics](float) {
-				return ResolveSettingsRowsHeight(2, GeneralMetrics.m_ButtonHeight, GeneralMetrics.m_LineSpacing);
-			};
-			Out.m_Render = [pMenus, GeneralMetrics](CUIRect Content) {
-				static CButtonContainer s_Config, s_Profiles, s_Warlist, s_Chatbinds;
-				const auto OpenFile = [pMenus](ConfigDomain Domain) {
-					char aBuf[IO_MAX_PATH_LENGTH];
-					pMenus->Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[Domain].m_aConfigPath, aBuf, sizeof(aBuf));
-					pMenus->Client()->ViewFile(aBuf);
-				};
-				const auto DoFileButton = [pMenus, GeneralMetrics, &OpenFile](CButtonContainer &Id, const char *pTextId, const char *pText, const CUIRect &ButtonRect, ConfigDomain Domain) {
-					if(pMenus->DoSettingsButton_Menu(CMenus::SETTINGS_GENERAL, -1, -1, &Id, pTextId, pText, 0, &ButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, GeneralMetrics.m_BodySize))
-						OpenFile(Domain);
-				};
-				CUIRect Row, LeftButton, RightButton;
-				Content.HSplitTop(GeneralMetrics.m_ButtonHeight, &Row, &Content);
-				Row.VSplitMid(&LeftButton, &RightButton, GeneralMetrics.m_LineSpacing);
-				DoFileButton(s_Config, "tclient-files-qmclient-settings", Localize("QmClient Settings"), LeftButton, ConfigDomain::QMCLIENT);
-				DoFileButton(s_Profiles, "tclient-files-profiles", Localize("Profiles"), RightButton, ConfigDomain::TCLIENTPROFILES);
-				Content.HSplitTop(GeneralMetrics.m_LineSpacing, nullptr, &Content);
-				Content.HSplitTop(GeneralMetrics.m_ButtonHeight, &Row, &Content);
-				Row.VSplitMid(&LeftButton, &RightButton, GeneralMetrics.m_LineSpacing);
-				DoFileButton(s_Warlist, "tclient-files-warlist", Localize("War List"), LeftButton, ConfigDomain::TCLIENTWARLIST);
-				DoFileButton(s_Chatbinds, "tclient-files-chatbinds", Localize("Chat Binds"), RightButton, ConfigDomain::TCLIENTCHATBINDS);
-			};
-			return true;
+			return BuildConfigFilesCard(Ctx, Out);
 		}
 		return false;
 	}
