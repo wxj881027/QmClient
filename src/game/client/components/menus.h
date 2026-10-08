@@ -2220,6 +2220,7 @@ protected:
 	{
 		bool m_IngameScope = false;
 		CUIElement *m_pElement = nullptr;
+		CQmUiLifetime::CWeakRef m_ElementLifetime;
 		std::string m_Text;
 		CUIRect m_Rect;
 		float m_Size = 0.0f;

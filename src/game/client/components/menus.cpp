@@ -6645,7 +6645,7 @@ void CMenus::QueueMenuTextContainerBuild(EMenuTextScope Scope, CUIElement &Eleme
 		return;
 	for(SMenuTextContainerBuildRequest &Request : m_vMenuTextContainerBuildRequests)
 	{
-		if(Request.m_pElement == &Element)
+		if(Request.m_pElement == &Element && Request.m_ElementLifetime.IsAlive())
 		{
 			Request.m_IngameScope = Scope == MENU_TEXT_SCOPE_INGAME && m_IngameServerInfoRenderActive;
 			Request.m_Text = pText;
@@ -6661,6 +6661,7 @@ void CMenus::QueueMenuTextContainerBuild(EMenuTextScope Scope, CUIElement &Eleme
 	SMenuTextContainerBuildRequest Request;
 	Request.m_IngameScope = Scope == MENU_TEXT_SCOPE_INGAME && m_IngameServerInfoRenderActive;
 	Request.m_pElement = &Element;
+	Request.m_ElementLifetime = Element.WeakRef();
 	Request.m_Text = pText;
 	Request.m_Rect = *pRect;
 	Request.m_Size = Size;
@@ -6683,7 +6684,8 @@ void CMenus::DrainMenuTextContainerBuildRequests()
 			break;
 		SMenuTextContainerBuildRequest Request = std::move(*ReadyRequest);
 		m_vMenuTextContainerBuildRequests.erase(ReadyRequest);
-		if(Request.m_pElement == nullptr)
+		// 资源卡片缓存可能在请求消费前淘汰元素；先检查借用寿命，再访问元素。
+		if(Request.m_pElement == nullptr || !Request.m_ElementLifetime.IsAlive())
 			continue;
 		bool TextContainerRecreated = false;
 		SSettingsAdaptiveBudgetOutput &FrameBudget = Request.m_IngameScope ? m_IngameTextFrameBudget : m_CurrentSettingsUiFrameBudget;
