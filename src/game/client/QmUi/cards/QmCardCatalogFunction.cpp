@@ -202,10 +202,13 @@ namespace qm_card_catalog
 				const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
 				const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
 				const bool IsMymemoryBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0;
+				const bool IsBaiduBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "baidu") == 0;
 				const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
 				const bool ShowAdvanced = g_Config.m_QmTranslateShowAdvanced != 0;
 				// 常驻行：收/发自动翻译、译文字号、翻译服务、收/发目标语言、高级选项开关。
-				float Height = Rows(7.0f);
+				float Height = Rows(9.0f); // 常驻测试按钮与诊断开关
+				if(IsBaiduBackend)
+					Height += Row() * 2.0f;
 				if(IsMymemoryBackend)
 					Height += Metrics.m_SmallSize + LineSpacing; // MyMemory 免注册说明
 				else if(IsDeeplBackend)
@@ -219,6 +222,8 @@ namespace qm_card_catalog
 				if(IsLlmBackend)
 				{
 					Height += Row() * 3.0f; // Provider/API key/Model
+					if(g_Config.m_QmTranslateLlmProvider == 3)
+						Height += Row() * 3.0f + Metrics.m_SmallSize + LineSpacing;
 					if(ShowAdvanced || g_Config.m_QmTranslateLlmProvider == 3)
 						Height += Row(); // Endpoint (optional)：Custom 常显，其余高级展开时显示
 					if(ShowAdvanced)
@@ -257,7 +262,8 @@ namespace qm_card_catalog
 
 		uint64_t MeasureFunctionCardRevision(const SQmCardBuildContext &Ctx, const EQmModuleId Id)
 		{
-			return MeasureModuleCardRevision(Id, Ctx.m_pFunctionLayout != nullptr ? *Ctx.m_pFunctionLayout : SQmFunctionCardLayoutState{});
+			const uint64_t Revision = MeasureModuleCardRevision(Id, Ctx.m_pFunctionLayout != nullptr ? *Ctx.m_pFunctionLayout : SQmFunctionCardLayoutState{});
+			return Id == EQmModuleId::Translate && Ctx.m_pMenus ? Revision ^ (Ctx.m_pMenus->TranslationTestLayoutRevision() << 16) : Revision;
 		}
 	} // namespace
 

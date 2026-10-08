@@ -1,4 +1,5 @@
 # 请抬头享受阳光｜日子很好 我很我---------致咩子
+
 [[message]]
 key = "%s (/%s %s)"
 [message.translations]
@@ -1534,3 +1535,83 @@ brazilian_portuguese = "Chave de API do LLM não configurada"
 portuguese = "Chave de API do LLM não configurada"
 turkish = "LLM API anahtarı yapılandırılmadı"
 polish = "Nie skonfigurowano klucza API LLM"
+
+[[message]]
+key = "Baidu Translate"
+[message.translations]
+simplified_chinese = "百度翻译"
+traditional_chinese = "百度翻譯"
+japanese = "Baidu 翻訳"
+korean = "Baidu 번역"
+russian = "Перевод Baidu"
+german = "Baidu-Übersetzung"
+spanish = "Traducción de Baidu"
+french = "Traduction Baidu"
+brazilian_portuguese = "Tradução Baidu"
+portuguese = "Tradução Baidu"
+turkish = "Baidu çevirisi"
+polish = "Tłumaczenie Baidu"
+
+[[message]]
+key = "Text is too long for the selected translation service."
+[message.translations]
+simplified_chinese = "文本超过所选翻译服务的长度限制。"
+traditional_chinese = "文字超過所選翻譯服務的長度限制。"
+japanese = "テキストが選択した翻訳サービスの長さ制限を超えています。"
+korean = "텍스트가 선택한 번역 서비스의 길이 제한을 초과합니다."
+russian = "Текст превышает ограничение длины выбранного сервиса перевода."
+german = "Der Text überschreitet die Längenbegrenzung des gewählten Übersetzungsdienstes."
+spanish = "El texto supera el límite de longitud del servicio de traducción seleccionado."
+french = "Le texte dépasse la limite de longueur du service de traduction sélectionné."
+brazilian_portuguese = "O texto excede o limite de tamanho do serviço de tradução selecionado."
+portuguese = "O texto excede o limite de tamanho do serviço de tradução selecionado."
+turkish = "Metin seçilen çeviri hizmetinin uzunluk sınırını aşıyor."
+polish = "Tekst przekracza limit długości wybranej usługi tłumaczenia."
+
+[[message]]
+key = "Translation model was not found. Check the model name."
+[message.translations]
+simplified_chinese = "未找到翻译模型，请检查模型名称。"
+traditional_chinese = "找不到翻譯模型，請檢查模型名稱。"
+japanese = "翻訳モデルが見つかりません。モデル名を確認してください。"
+korean = "번역 모델을 찾을 수 없습니다. 모델 이름을 확인하세요."
+russian = "Модель перевода не найдена. Проверьте её имя."
+german = "Übersetzungsmodell nicht gefunden. Prüfen Sie den Modellnamen."
+spanish = "No se encontró el modelo de traducción. Comprueba su nombre."
+french = "Modèle de traduction introuvable. Vérifiez son nom."
+brazilian_portuguese = "Modelo de tradução não encontrado. Verifique o nome do modelo."
+portuguese = "Modelo de tradução não encontrado. Verifique o nome do modelo."
+turkish = "Çeviri modeli bulunamadı. Model adını kontrol edin."
+polish = "Nie znaleziono modelu tłumaczenia. Sprawdź jego nazwę."
+
+[[message]]
+key = "Translation service is not configured correctly."
+[message.translations]
+simplified_chinese = "翻译服务配置不正确，请检查设置。"
+traditional_chinese = "翻譯服務設定不正確，請檢查設定。"
+japanese = "翻訳サービスの設定が正しくありません。設定を確認してください。"
+korean = "번역 서비스 설정이 올바르지 않습니다. 설정을 확인하세요."
+russian = "Сервис перевода настроен неверно. Проверьте настройки."
+german = "Der Übersetzungsdienst ist nicht richtig konfiguriert. Prüfen Sie die Einstellungen."
+spanish = "El servicio de traducción no está bien configurado. Revisa los ajustes."
+french = "Le service de traduction est mal configuré. Vérifiez les réglages."
+brazilian_portuguese = "O serviço de tradução não está configurado corretamente. Verifique as configurações."
+portuguese = "O serviço de tradução não está configurado corretamente. Verifique as definições."
+turkish = "Çeviri hizmeti doğru yapılandırılmamış. Ayarları kontrol edin."
+polish = "Usługa tłumaczenia jest nieprawidłowo skonfigurowana. Sprawdź ustawienia."
+
+[[message]]
+key = "Translation service returned an invalid or incomplete translation."
+[message.translations]
+simplified_chinese = "翻译服务返回了无效或不完整的译文。"
+traditional_chinese = "翻譯服務傳回了無效或不完整的譯文。"
+japanese = "翻訳サービスが無効または不完全な訳文を返しました。"
+korean = "번역 서비스가 유효하지 않거나 불완전한 번역을 반환했습니다."
+russian = "Сервис вернул недопустимый или неполный перевод."
+german = "Der Dienst hat eine ungültige oder unvollständige Übersetzung geliefert."
+spanish = "El servicio devolvió una traducción inválida o incompleta."
+french = "Le service a renvoyé une traduction invalide ou incomplète."
+brazilian_portuguese = "O serviço retornou uma tradução inválida ou incompleta."
+portuguese = "O serviço devolveu uma tradução inválida ou incompleta."
+turkish = "Hizmet geçersiz veya eksik bir çeviri döndürdü."
+polish = "Usługa zwróciła nieprawidłowe lub niepełne tłumaczenie."

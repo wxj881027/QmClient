@@ -33,7 +33,6 @@
 %s not found
 %s translating to %s
 %s translating to %s before send
-%s translating to %s failed: %s
 %s wins!
 %s: %d points
 '%s' called for vote to force-pause '%s' for %s seconds (reason: %s)
@@ -264,6 +263,7 @@ AntiPing: predict grenade path
 AntiPing: predict other players
 AntiPing: predict weapons
 API key
+APP ID
 Appearance
 Appearance of help bubbles outside settings cards
 Append to log file instead of overwriting
@@ -331,6 +331,7 @@ AUS
 Authed name color in scoreboard
 Authenticate to rcon
 Authenticate to rcon with a username
+Authentication
 Authorized player forced vote '%s'
 Auto
 auto
@@ -464,6 +465,7 @@ Background image in menu
 Background music volume
 Background stroke color
 Background stroke width
+Baidu Translate
 Balance master, music, and game volume
 Ban a certain nickname
 Ban ip for x minutes for any reason
@@ -477,6 +479,7 @@ Base path for HTTPS map download URLs to clients
 Base prediction margin
 Basic
 Be nice.
+Bearer API key
 Before I die
 Behavior
 Behavior type
@@ -568,6 +571,7 @@ Can't invite this quickly
 Can't recognize specified arguments. Usage: /tpxy x y, e.g. /tpxy 9 3.
 Can't swap with yourself
 Cancel
+Cancel translation test
 Cancel your swap request
 Candidate files
 Cannot join the target player's team
@@ -1000,8 +1004,8 @@ Deep unfreeze opacity
 Deep unfreeze tile outline color
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
 DeepL API Key (free keys end with :fx)
+DeepL API quota depends on your subscription. Get an API key at deepl.com.
 DeepSeek
 DeepSeek API Key
 DeepSeek API key
@@ -2118,7 +2122,6 @@ Listen from camera center when spectating
 Literal
 Live director
 LLM API
-LLM API key not configured
 LLM provider
 LLM Provider (0=ZhipuAI, 1=DeepSeek, 2=OpenAI, 3=Custom)
 LLM translation concurrency (0=auto)
@@ -2161,6 +2164,7 @@ Local only
 Local particle effects
 Local particles: show particles behind own Tee (e.g. freeze snow)
 Local saves
+Local service without authentication
 Local statistics file is invalid, saving paused
 Local test mode
 Local test mode, no server needed
@@ -3448,6 +3452,7 @@ Send emote when entering freeze
 Send emoticon in water
 Send probability
 Send Rate
+Send sampling and token limit parameters
 Send specified command to rcon
 Send translation method
 Sending and receiving
@@ -4065,6 +4070,7 @@ Style chat names, text, and message colors
 Style kill, finish, and system messages
 Sub-Tick aiming
 Subtle
+Success
 Successfully saved the replay!
 Sudden Death
 Suicides
@@ -4205,13 +4211,14 @@ Temporarily disable dummy hammering in Gores mode
 Temporarily set a config value while pressed
 Temporary free camera
 Tencent Cloud
-Tencent Cloud API not configured
 Tencent Cloud SecretId
 Tencent Cloud SecretKey
 Tencent Cloud Translation endpoint
 Tencent Cloud Translation region
 Tencent Cloud Translation SecretId
 Tencent Cloud Translation SecretKey
+Test translation
+Testing translation...
 Text alpha
 Text before each key press count
 Text color
@@ -4219,6 +4226,7 @@ Text color mode
 Text color mode: 0 automatic, 1 white, 2 black, 3 custom
 Text effect
 Text input focus ring color
+Text is too long for the selected translation service.
 Thank you for your company and trust. This is what gives me the courage to keep going.
 Thanks for supporting QmClient
 The audio device couldn't be initialised.
@@ -4258,7 +4266,9 @@ There's a %s second delay between map-votes, please wait %s seconds.
 There's a %s second wait time between kick votes for each player please wait %s second(s)
 There's an unsaved change in the touch controls editor, you might want to save it.
 There's an unsaved map in the editor, you might want to save it.
+Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
 Thinking mode requires a reasoning model
+Thinking parameters
 This bind contains an unfinished quote and cannot be edited safely.
 This bind is already over the local config line limit.
 This connection cannot change names while connected. Reconnect with the saved names first.
@@ -4410,22 +4420,25 @@ Translated chat text size as a percentage of the original text (50-100)
 Translated text hidden due to streamer mode
 Translated text size
 Translating to %s...
-Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
 Translation backend invalid, sending original
 Translation button active color
 Translation button cancel color
 Translation color alpha migration completed flag
+Translation diagnostics
 Translation menu background color
 Translation menu normal color
 Translation menu selected color
+Translation model was not found. Check the model name.
 Translation queue full, sending original
 Translation service
 Translation service authentication failed. Check the API key and service address.
+Translation service is not configured correctly.
 Translation service is rate limited. Please try again later.
 Translation service is temporarily unavailable. Please try again later.
 Translation service quota is exhausted. Choose another service or try again later.
 Translation service refused this content. Please edit it and try again.
 Translation service returned a notice instead of a translation
+Translation service returned an invalid or incomplete translation.
 Translation Settings
 transmits your player name to info.ddnet.org
 Trigger limits
@@ -4589,6 +4602,7 @@ Use original style for Dynamic Island
 Use pre-input to predict other players for more accurate input prediction
 Use procedural ring pipeline when enhanced rendering is active
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
+Use server defaults
 Use skin color for frozen Tee's feet
 Use skin color when Tee is frozen
 Use sounds

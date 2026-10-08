@@ -14,7 +14,7 @@ namespace NTranslateUi
 {
 	constexpr int LANGUAGE_COUNT = 10;
 	constexpr int SOURCE_LANGUAGE_COUNT = LANGUAGE_COUNT + 1;
-	constexpr int BACKEND_COUNT = 6;
+	constexpr int BACKEND_COUNT = 7;
 
 	enum EBackendIndex
 	{
@@ -24,6 +24,7 @@ namespace NTranslateUi
 		BACKEND_FTAPI,
 		BACKEND_MYMEMORY,
 		BACKEND_DEEPL,
+		BACKEND_BAIDU,
 	};
 
 	inline const std::array<const char *, LANGUAGE_COUNT> &LanguageNames()
@@ -58,12 +59,12 @@ namespace NTranslateUi
 
 	inline std::array<const char *, BACKEND_COUNT> BackendNames()
 	{
-		return {Localize("LLM API"), Localize("Tencent Cloud"), "LibreTranslate", "FTAPI", Localize("MyMemory (free)"), Localize("DeepL API")};
+		return {Localize("LLM API"), Localize("Tencent Cloud"), "LibreTranslate", "FTAPI", Localize("MyMemory (free)"), Localize("DeepL API"), Localize("Baidu Translate")};
 	}
 
 	inline const std::array<const char *, BACKEND_COUNT> &BackendCodes()
 	{
-		static const std::array<const char *, BACKEND_COUNT> s_Codes = {"llm", "tencentcloud", "libretranslate", "ftapi", "mymemory", "deepl"};
+		static const std::array<const char *, BACKEND_COUNT> s_Codes = {"llm", "tencentcloud", "libretranslate", "ftapi", "mymemory", "deepl", "baidu"};
 		return s_Codes;
 	}
 

@@ -57,26 +57,8 @@ namespace
 
 	const char *TranslateNoticeText(ETranslateNotice Notice)
 	{
-		switch(Notice)
-		{
-		case ETranslateNotice::SERVICE_NOTICE:
-			return Localize("Translation service returned a notice instead of a translation");
-		case ETranslateNotice::CONTENT_REFUSED:
-			return Localize("Translation service refused this content. Please edit it and try again.");
-		case ETranslateNotice::AUTHENTICATION:
-			return Localize("Translation service authentication failed. Check the API key and service address.");
-		case ETranslateNotice::RATE_LIMIT:
-			return Localize("Translation service is rate limited. Please try again later.");
-		case ETranslateNotice::QUOTA_EXCEEDED:
-			return Localize("Translation service quota is exhausted. Choose another service or try again later.");
-		case ETranslateNotice::NETWORK_ERROR:
-			return Localize("Could not connect to the translation service. Please try again later.");
-		case ETranslateNotice::SERVICE_UNAVAILABLE:
-			return Localize("Translation service is temporarily unavailable. Please try again later.");
-		case ETranslateNotice::NONE:
-			return nullptr;
-		}
-		return nullptr;
+		const char *pSource = TranslateNoticeSource(Notice);
+		return pSource ? Localize(pSource) : nullptr;
 	}
 
 	// 验证语言代码格式
@@ -175,12 +157,14 @@ void CTranslate::OnConsoleInit()
 void CTranslate::OnReset()
 {
 	m_Jobs.Clear();
+	m_LastDiagnostic = {};
 	m_LastMymemoryQuotaNoticeTime = -1;
 }
 
 void CTranslate::OnShutdown()
 {
 	m_Jobs.Clear();
+	m_LastDiagnostic = {};
 	m_LastMymemoryQuotaNoticeTime = -1;
 }
 
@@ -326,6 +310,12 @@ void CTranslate::OnRender()
 	{
 		const auto &Job = Completed.m_Job;
 		CTranslateResponse &Response = *Job.m_pTranslateResponse;
+		if(!Completed.m_Success)
+		{
+			str_copy(m_LastDiagnostic.m_aService, Job.m_pBackend->Name());
+			m_LastDiagnostic.m_HttpStatus = Response.m_HttpStatus;
+			m_LastDiagnostic.m_Notice = Response.m_Notice == ETranslateNotice::NONE ? ETranslateNotice::INVALID_RESPONSE : Response.m_Notice;
+		}
 		if(Job.m_Outgoing)
 		{
 			if(!Completed.m_Success)
@@ -334,7 +324,7 @@ void CTranslate::OnRender()
 				if(const char *pNotice = TranslateNoticeText(Response.m_Notice))
 					str_copy(aBuf, pNotice);
 				else
-					str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Response.m_Text);
+					str_copy(aBuf, Localize(TranslateNoticeSource(ETranslateNotice::INVALID_RESPONSE)));
 				GameClient()->m_Chat.Echo(aBuf);
 			}
 			if(!Completed.m_SendText.empty())
@@ -359,7 +349,7 @@ void CTranslate::OnRender()
 			if(const char *pNotice = TranslateNoticeText(Response.m_Notice))
 				str_copy(aBuf, pNotice);
 			else
-				str_format(aBuf, sizeof(aBuf), Localize("%s translating to %s failed: %s"), Job.m_pBackend->Name(), Job.m_aTarget, Response.m_Text);
+				str_copy(aBuf, Localize(TranslateNoticeSource(ETranslateNotice::INVALID_RESPONSE)));
 			// 配额提示按连接节流；消除进度文本后也刷新聊天布局。
 			bool SuppressNotice = false;
 			if(str_comp(Job.m_pBackend->Name(), "MyMemory") == 0 && Response.m_Notice == ETranslateNotice::QUOTA_EXCEEDED)

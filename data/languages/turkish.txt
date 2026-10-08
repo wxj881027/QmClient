@@ -103,9 +103,6 @@
 %s translating to %s before send
 == %s, göndermeden önce %s diline çevriliyor
 
-%s translating to %s failed: %s
-== %s, %s diline çevrilemedi: %s
-
 %s wins!
 == %s kazandı!
 
@@ -797,6 +794,9 @@ AntiPing: predict weapons
 API key
 == API anahtarı
 
+APP ID
+== Uygulama kimliği
+
 Appearance
 == Görünüm
 
@@ -997,6 +997,9 @@ Authenticate to rcon
 
 Authenticate to rcon with a username
 == Bir kullanıcı adı ile rcon'a kimlik doğrulaması yap
+
+Authentication
+== Kimlik doğrulama
 
 Authorized player forced vote '%s'
 == Yetkili oyuncu '%s' oylamasını zorla başlattı
@@ -1397,6 +1400,9 @@ Background stroke color
 Background stroke width
 == Arka plan vuruş genişliği
 
+Baidu Translate
+== Baidu çevirisi
+
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
@@ -1435,6 +1441,9 @@ Basic
 
 Be nice.
 == Kibar olun.
+
+Bearer API key
+== Bearer API anahtarı
 
 Before I die
 == Ölmeden önce
@@ -1708,6 +1717,9 @@ Can't swap with yourself
 
 Cancel
 == İptal
+
+Cancel translation test
+== Çeviri testini iptal et
 
 Cancel your swap request
 == Takas isteğini iptal et
@@ -3005,11 +3017,11 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free: Ayda 500.000 karakter (deepl.com'da kaydolun; ücretsiz anahtarlar :fx ile biter)
-
 DeepL API Key (free keys end with :fx)
 == DeepL API Anahtarı (ücretsiz anahtarlar :fx ile biter)
+
+DeepL API quota depends on your subscription. Get an API key at deepl.com.
+== DeepL API kotası aboneliğinize bağlıdır. API anahtarını deepl.com adresinden alın.
 
 DeepSeek
 == DeepSeek
@@ -6359,9 +6371,6 @@ Live director
 LLM API
 == LLM API
 
-LLM API key not configured
-== LLM API anahtarı yapılandırılmadı
-
 LLM provider
 == LLM sağlayıcısı
 
@@ -6487,6 +6496,9 @@ Local particles: show particles behind own Tee (e.g. freeze snow)
 
 Local saves
 == Yerel kayıtlar
+
+Local service without authentication
+== Kimlik doğrulamasız yerel hizmet
 
 Local statistics file is invalid, saving paused
 == Yerel istatistik dosyası geçersiz, kayıt duraklatıldı
@@ -10349,6 +10361,9 @@ Send probability
 Send Rate
 == Gönderme hızı
 
+Send sampling and token limit parameters
+== Örnekleme ve token sınırı parametrelerini gönder
+
 Send specified command to rcon
 == Belirtilen komutu rcon'a gönder
 
@@ -12200,6 +12215,9 @@ Sub-Tick aiming
 Subtle
 == Hafif
 
+Success
+== Başarılı
+
 Successfully saved the replay!
 == Tekrar oynatma başarıyla kaydedildi!
 
@@ -12620,9 +12638,6 @@ Temporary free camera
 Tencent Cloud
 == Tencent Cloud
 
-Tencent Cloud API not configured
-== Tencent Cloud API yapılandırılmadı
-
 Tencent Cloud SecretId
 == Tencent Cloud gizli ID
 
@@ -12640,6 +12655,12 @@ Tencent Cloud Translation SecretId
 
 Tencent Cloud Translation SecretKey
 == Tencent Cloud Çeviri SecretKey
+
+Test translation
+== Çeviriyi test et
+
+Testing translation...
+== Çeviri test ediliyor…
 
 Text alpha
 == Metin alfası
@@ -12661,6 +12682,9 @@ Text effect
 
 Text input focus ring color
 == Metin girişi odak halkası rengi
+
+Text is too long for the selected translation service.
+== Metin seçilen çeviri hizmetinin uzunluk sınırını aşıyor.
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Arkadaşlığınız ve güveniniz için teşekkür ederim. Devam etme cesaretini bana veren şey budur.
@@ -12779,8 +12803,14 @@ There's an unsaved change in the touch controls editor, you might want to save i
 There's an unsaved map in the editor, you might want to save it.
 == Düzenleyicide kaydedilmemiş bir harita var, kaydetmek isteyebilirsiniz.
 
+Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
+== Düşünme denetimi model sunucusuna bağlıdır. Sunucu varsayılanları düşünmenin kapalı olduğunu garanti etmez.
+
 Thinking mode requires a reasoning model
 == Düşünme modu bir akıl yürütme modeli gerektirir
+
+Thinking parameters
+== Düşünme parametreleri
 
 This bind contains an unfinished quote and cannot be edited safely.
 == Bu atamada kapatılmamış bir tırnak var ve güvenle düzenlenemiyor.
@@ -13235,9 +13265,6 @@ Translated text size
 Translating to %s...
 == %s diline çevriliyor...
 
-Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
-== Çeviri arka ucu (mymemory/llm/tencentcloud/libretranslate/ftapi)
-
 Translation backend invalid, sending original
 == Çeviri arka ucu geçersiz, orijinal metin gönderiliyor
 
@@ -13250,6 +13277,9 @@ Translation button cancel color
 Translation color alpha migration completed flag
 == Çeviri renkleri alfa taşıma tamamlama işareti
 
+Translation diagnostics
+== Çeviri tanılama
+
 Translation menu background color
 == Çeviri menüsü arka plan rengi
 
@@ -13259,6 +13289,9 @@ Translation menu normal color
 Translation menu selected color
 == Çeviri menüsü seçili rengi
 
+Translation model was not found. Check the model name.
+== Çeviri modeli bulunamadı. Model adını kontrol edin.
+
 Translation queue full, sending original
 == Çeviri kuyruğu dolu, orijinal metin gönderiliyor
 
@@ -13267,6 +13300,9 @@ Translation service
 
 Translation service authentication failed. Check the API key and service address.
 == Çeviri servisi kimlik doğrulaması başarısız. API anahtarını ve servis adresini kontrol edin.
+
+Translation service is not configured correctly.
+== Çeviri hizmeti doğru yapılandırılmamış. Ayarları kontrol edin.
 
 Translation service is rate limited. Please try again later.
 == Çeviri servisine çok fazla istek gönderildi. Daha sonra tekrar deneyin.
@@ -13282,6 +13318,9 @@ Translation service refused this content. Please edit it and try again.
 
 Translation service returned a notice instead of a translation
 == Çeviri servisi çeviri yerine bir bildirim döndürdü
+
+Translation service returned an invalid or incomplete translation.
+== Hizmet geçersiz veya eksik bir çeviri döndürdü.
 
 Translation Settings
 == Çeviri Ayarları
@@ -13771,6 +13810,9 @@ Use procedural ring pipeline when enhanced rendering is active
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == Gelişmiş işleme etkin olduğunda Dynamic Island ve yuvarlatılmış dikdörtgenler için SDF işlem hatlarını kullan
+
+Use server defaults
+== Sunucu varsayılanlarını kullan
 
 Use skin color for frozen Tee's feet
 == Donmuş Tee'nin ayakları için skin rengi kullan

@@ -120,6 +120,11 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 	if(pRefusal->type == json_string && pRefusal->u.string.length > 0)
 		return RefuseContent(Out);
 
+	if(JsonStringIs(json_object_get(pChoice, "finish_reason"), "length") || JsonStringIs(json_object_get(pChoice, "finish_reason"), "tool_calls"))
+	{
+		str_copy(Out.m_aError, "Translation response is incomplete");
+		return false;
+	}
 	const json_value *pContent = json_object_get(pMessage, "content");
 	if(pContent == &json_value_none)
 	{
@@ -134,6 +139,11 @@ bool ParseLlmResponseJson(const json_value *pObj, SLlmParseResult &Out)
 		return false;
 	}
 
+	if(pContent->u.string.length == 0 || str_length(pContent->u.string.ptr) != static_cast<int>(pContent->u.string.length) || !str_utf8_check(pContent->u.string.ptr))
+	{
+		str_copy(Out.m_aError, "Translation response has invalid text");
+		return false;
+	}
 	if(pContent->u.string.length >= sizeof(Out.m_aText))
 	{
 		str_copy(Out.m_aError, "Translation result exceeds buffer capacity");
@@ -163,6 +173,12 @@ bool ParseLlmResponsesJson(const json_value *pObj, SLlmParseResult &Out)
 	}
 	if(JsonStringIs(json_object_get(json_object_get(pObj, "incomplete_details"), "reason"), "content_filter"))
 		return RefuseContent(Out);
+	const json_value *pStatus = json_object_get(pObj, "status");
+	if(pStatus->type == json_string && !JsonStringIs(pStatus, "completed"))
+	{
+		str_copy(Out.m_aError, "Translation response is incomplete");
+		return false;
+	}
 	// 顶层文本也可能伴随拒绝片段，先检查所有消息，避免发布部分译文。
 	const json_value *pOutput = json_object_get(pObj, "output");
 	if(pOutput->type == json_array)
@@ -181,8 +197,12 @@ bool ParseLlmResponsesJson(const json_value *pObj, SLlmParseResult &Out)
 		}
 	}
 	auto AppendText = [&](const json_value *pText) {
-		if(pText->type != json_string)
-			return true;
+		if(pText->type != json_string || str_length(pText->u.string.ptr) != static_cast<int>(pText->u.string.length) || !str_utf8_check(pText->u.string.ptr))
+		{
+			Out.m_aText[0] = '\0';
+			str_copy(Out.m_aError, "Translation response has invalid text");
+			return false;
+		}
 		const size_t Current = str_length(Out.m_aText);
 		if(pText->u.string.length >= sizeof(Out.m_aText) - Current)
 		{

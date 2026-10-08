@@ -682,7 +682,7 @@ MACRO_CONFIG_INT(QmSpotifyEnable, qm_spotify_enable, 0, 0, 1, CFGFLAG_CLIENT | C
 MACRO_CONFIG_STR(QmSpotifySpDc, qm_spotify_sp_dc, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Spotify sp_dc cookie (from browser DevTools, long-lived)")
 
 // Translate - 翻译模块
-MACRO_CONFIG_STR(QmTranslateBackend, qm_translate_backend, 32, "mymemory", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)")
+MACRO_CONFIG_STR(QmTranslateBackend, qm_translate_backend, 32, "mymemory", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Translation service")
 MACRO_CONFIG_INT(QmTranslateShowAdvanced, qm_translate_show_advanced, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show advanced translation options")
 MACRO_CONFIG_STR(QmTranslateTarget, qm_translate_target, 16, "zh", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Target language code (e.g. zh, en, ja, zh-TW)")
 MACRO_CONFIG_INT(QmTranslateAuto, qm_translate_auto, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-translate incoming messages")
@@ -717,6 +717,9 @@ MACRO_CONFIG_STR(QmTranslateLlmKeyCustom, qm_translate_llm_key_custom, 256, "", 
 
 MACRO_CONFIG_INT(QmTranslateLlmConcurrency, qm_translate_llm_concurrency, 0, 0, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM translation concurrency (0=auto)")
 MACRO_CONFIG_INT(QmTranslateLlmConcurrencyDefault, qm_translate_llm_concurrency_default, 3, 1, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "LLM translation default concurrency (smart adjustment)")
+MACRO_CONFIG_INT(QmTranslateLlmCustomAuth, qm_translate_llm_custom_auth, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Authentication")
+MACRO_CONFIG_INT(QmTranslateLlmCustomThinking, qm_translate_llm_custom_thinking, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Thinking parameters")
+MACRO_CONFIG_INT(QmTranslateLlmCustomParameters, qm_translate_llm_custom_parameters, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Send sampling and token limit parameters")
 MACRO_CONFIG_INT(QmTranslateLlmEnableThinking, qm_translate_llm_enable_thinking, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable LLM thinking mode (may increase response time)")
 MACRO_CONFIG_STR(QmTranslateSystemPrompt, qm_translate_system_prompt, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom translation prompt (overrides built-in)")
 
@@ -738,7 +741,11 @@ MACRO_CONFIG_STR(QmTranslateTcRegion, qm_translate_tc_region, 32, "ap-guangzhou"
 MACRO_CONFIG_STR(QmTranslateLibreEndpoint, qm_translate_libre_endpoint, 256, "http://localhost:5000", CFGFLAG_CLIENT | CFGFLAG_SAVE, "LibreTranslate endpoint")
 MACRO_CONFIG_STR(QmTranslateLibreKey, qm_translate_libre_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "LibreTranslate API Key")
 
-// Translate - DeepL - DeepL API（免费档 50 万字符/月，key 以 :fx 结尾）
+// Translate - Baidu - 凭据只由用户配置，不内置公共密钥
+MACRO_CONFIG_STR(QmTranslateBaiduAppId, qm_translate_baidu_app_id, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "APP ID")
+MACRO_CONFIG_STR(QmTranslateBaiduKey, qm_translate_baidu_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "API key")
+
+// Translate - DeepL - 额度与重置周期由实际订阅决定
 MACRO_CONFIG_STR(QmTranslateDeeplKey, qm_translate_deepl_key, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "DeepL API Key (free keys end with :fx)")
 
 // Translate Button Colors - 翻译按钮自定义颜色

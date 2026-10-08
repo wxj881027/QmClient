@@ -103,9 +103,6 @@
 %s translating to %s before send
 == %s이(가) %s(으)로 번역 후 전송
 
-%s translating to %s failed: %s
-== %s을(를) %s(으)로 번역 실패: %s
-
 %s wins!
 == %s가 승리했습니다!
 
@@ -797,6 +794,9 @@ AntiPing: predict weapons
 API key
 == API 키
 
+APP ID
+== 앱 ID
+
 Appearance
 == 외형
 
@@ -997,6 +997,9 @@ Authenticate to rcon
 
 Authenticate to rcon with a username
 == 사용자 이름으로 rcon 인증
+
+Authentication
+== 인증 방식
 
 Authorized player forced vote '%s'
 == 권한 있는 플레이어가 강제로 투표 '%s'를 설정했습니다
@@ -1397,6 +1400,9 @@ Background stroke color
 Background stroke width
 == 배경 스트로크 두께
 
+Baidu Translate
+== Baidu 번역
+
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
@@ -1435,6 +1441,9 @@ Basic
 
 Be nice.
 == 서로 예의를 지켜 주세요.
+
+Bearer API key
+== Bearer API 키
 
 Before I die
 == 내가 죽기 전에
@@ -1708,6 +1717,9 @@ Can't swap with yourself
 
 Cancel
 == 취소
+
+Cancel translation test
+== 번역 테스트 취소
 
 Cancel your swap request
 == 스왑 요청 취소
@@ -3005,11 +3017,11 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free: 매월 50만 자(deepl.com에서 등록; 무료 키는 :fx로 끝남)
-
 DeepL API Key (free keys end with :fx)
 == DeepL API 키(무료 키는 :fx로 끝남)
+
+DeepL API quota depends on your subscription. Get an API key at deepl.com.
+== DeepL API 할당량은 구독 요금제에 따라 다릅니다. deepl.com에서 API 키를 받으세요.
 
 DeepSeek
 == DeepSeek
@@ -6359,9 +6371,6 @@ Live director
 LLM API
 == LLM API
 
-LLM API key not configured
-== LLM API 키가 설정되지 않았습니다
-
 LLM provider
 == LLM 제공자
 
@@ -6487,6 +6496,9 @@ Local particles: show particles behind own Tee (e.g. freeze snow)
 
 Local saves
 == 로컬 저장
+
+Local service without authentication
+== 인증 없는 로컬 서비스
 
 Local statistics file is invalid, saving paused
 == 로컬 통계 파일이 손상되어 저장이 일시 중지되었습니다
@@ -10349,6 +10361,9 @@ Send probability
 Send Rate
 == 전송 속도
 
+Send sampling and token limit parameters
+== 샘플링 및 토큰 제한 매개변수 전송
+
 Send specified command to rcon
 == 지정된 명령을 rcon 으로 전송
 
@@ -12200,6 +12215,9 @@ Sub-Tick aiming
 Subtle
 == 은은함
 
+Success
+== 성공
+
 Successfully saved the replay!
 == 리플레이를 성공적으로 저장했습니다!
 
@@ -12620,9 +12638,6 @@ Temporary free camera
 Tencent Cloud
 == 텐센트 클라우드
 
-Tencent Cloud API not configured
-== Tencent Cloud API가 설정되지 않았습니다
-
 Tencent Cloud SecretId
 == 텐센트 클라우드 SecretId
 
@@ -12640,6 +12655,12 @@ Tencent Cloud Translation SecretId
 
 Tencent Cloud Translation SecretKey
 == 텐센트 클라우드 번역 SecretKey
+
+Test translation
+== 번역 테스트
+
+Testing translation...
+== 번역 테스트 중…
 
 Text alpha
 == 텍스트 투명도
@@ -12661,6 +12682,9 @@ Text effect
 
 Text input focus ring color
 == 텍스트 입력 포커스 링 색상
+
+Text is too long for the selected translation service.
+== 텍스트가 선택한 번역 서비스의 길이 제한을 초과합니다.
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == 당신의 동행과 신뢰에 감사드립니다. 그것이 제가 계속 나아갈 용기를 주는 것입니다.
@@ -12779,8 +12803,14 @@ There's an unsaved change in the touch controls editor, you might want to save i
 There's an unsaved map in the editor, you might want to save it.
 == 편집기에 저장되지 않은 맵이 있습니다. 저장하는 것이 좋습니다.
 
+Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
+== 사고 제어는 모델 서버에 따라 다릅니다. 서버 기본값이 사고 비활성화를 보장하지는 않습니다.
+
 Thinking mode requires a reasoning model
 == 사고 모드를 사용하려면 추론 모델이 필요합니다
+
+Thinking parameters
+== 사고 매개변수
 
 This bind contains an unfinished quote and cannot be edited safely.
 == 이 지정에는 닫히지 않은 따옴표가 있어 안전하게 편집할 수 없습니다.
@@ -13235,9 +13265,6 @@ Translated text size
 Translating to %s...
 == %s(으)로 번역 중...
 
-Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
-== 번역 백엔드(mymemory/llm/tencentcloud/libretranslate/ftapi)
-
 Translation backend invalid, sending original
 == 번역 백엔드가 유효하지 않음, 원문 전송
 
@@ -13250,6 +13277,9 @@ Translation button cancel color
 Translation color alpha migration completed flag
 == 번역 색상 알파 마이그레이션 완료 플래그
 
+Translation diagnostics
+== 번역 진단
+
 Translation menu background color
 == 번역 메뉴 배경 색상
 
@@ -13259,6 +13289,9 @@ Translation menu normal color
 Translation menu selected color
 == 번역 메뉴 선택 시 색상
 
+Translation model was not found. Check the model name.
+== 번역 모델을 찾을 수 없습니다. 모델 이름을 확인하세요.
+
 Translation queue full, sending original
 == 번역 대기열이 가득 참, 원문 전송
 
@@ -13267,6 +13300,9 @@ Translation service
 
 Translation service authentication failed. Check the API key and service address.
 == 번역 서비스 인증에 실패했습니다. API 키와 서비스 주소를 확인하세요.
+
+Translation service is not configured correctly.
+== 번역 서비스 설정이 올바르지 않습니다. 설정을 확인하세요.
 
 Translation service is rate limited. Please try again later.
 == 번역 요청이 너무 많습니다. 잠시 후 다시 시도하세요.
@@ -13282,6 +13318,9 @@ Translation service refused this content. Please edit it and try again.
 
 Translation service returned a notice instead of a translation
 == 번역 서비스가 번역문 대신 안내를 반환했습니다
+
+Translation service returned an invalid or incomplete translation.
+== 번역 서비스가 유효하지 않거나 불완전한 번역을 반환했습니다.
 
 Translation Settings
 == 번역 설정
@@ -13771,6 +13810,9 @@ Use procedural ring pipeline when enhanced rendering is active
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == 향상된 렌더링이 활성화되면 Dynamic Island 및 둥근 사각형에 SDF 파이프라인 사용
+
+Use server defaults
+== 서버 기본값 사용
 
 Use skin color for frozen Tee's feet
 == 얼어붙은 Tee의 발에도 스킨 색상 사용
