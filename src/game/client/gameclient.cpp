@@ -92,8 +92,6 @@
 
 namespace
 {
-	constexpr int DUMMY_HAMMER_RESENDS = 2;
-
 	void NormalizeSixupSkinName(char *pSkinName, int SkinNameSize)
 	{
 		if(!CSkin::IsValidName(pSkinName))
@@ -817,6 +815,7 @@ void CGameClient::OnConsoleInit()
 	pConsole->Chain("events", ConchainRefreshEventSkins, this);
 
 	pConsole->Chain("cl_dummy", ConchainSpecialDummy, this);
+	pConsole->Chain("cl_dummy_hammer", ConchainDummyHammer, this);
 
 	pConsole->Chain("cl_menu_map", ConchainMenuMap, this);
 }
@@ -1527,6 +1526,9 @@ void CGameClient::OnDummySwap()
 	const int PrevDummyFire = m_DummyInput.m_Fire;
 	m_DummyInput = m_Controls.m_aInputData[!g_Config.m_ClDummy];
 	m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire = PrevDummyFire;
+	m_aDummyHammerInputs[g_Config.m_ClDummy].ObserveManualInput(PrevDummyFire);
+	m_aDummyHammerInputs[!g_Config.m_ClDummy].SynchronizeEnabled(g_Config.m_ClDummyHammer != 0);
+	m_HammerInput = m_aDummyHammerInputs[!g_Config.m_ClDummy].HammerInput();
 	m_IsDummySwapping = 1;
 }
 
@@ -1535,57 +1537,26 @@ int CGameClient::OnSnapInput(int *pData, bool Dummy, bool Force)
 	if(!Dummy)
 	{
 		const int Size = m_Controls.SnapInput(pData);
+		if(Size > 0)
+			m_aDummyHammerInputs[g_Config.m_ClDummy].ObserveManualInput(reinterpret_cast<const CNetObj_PlayerInput *>(pData)->m_Fire);
 		return Size;
 	}
 	if(m_aLocalIds[!g_Config.m_ClDummy] < 0)
 	{
+		m_aDummyHammerInputs[!g_Config.m_ClDummy].Reset();
 		return 0;
 	}
 
-	if(!g_Config.m_ClDummyHammer)
-	{
-		m_DummyHammerResends = 0;
-		if(m_DummyFire != 0)
-		{
-			m_DummyInput.m_Fire = (m_HammerInput.m_Fire + 1) & ~1;
-			m_DummyFire = 0;
-		}
-
-		if(!Force && (!m_DummyInput.m_Direction && !m_DummyInput.m_Jump && !m_DummyInput.m_Hook))
-		{
-			return 0;
-		}
-
-		mem_copy(pData, &m_DummyInput, sizeof(m_DummyInput));
-		return sizeof(m_DummyInput);
-	}
-
-	if(m_DummyFire % 25 != 0)
-	{
-		m_DummyFire++;
-		// 重复发送最新的 Fire counter，避免单个非 Vital 输入包丢失导致吞锤。
-		if(m_DummyHammerResends > 0)
-		{
-			m_DummyHammerResends--;
-			mem_copy(pData, &m_HammerInput, sizeof(m_HammerInput));
-			return sizeof(m_HammerInput);
-		}
-		return 0;
-	}
-	m_DummyFire++;
-
-	m_HammerInput.m_Fire = (m_HammerInput.m_Fire + 1) | 1;
-	m_DummyHammerResends = DUMMY_HAMMER_RESENDS;
-	m_HammerInput.m_WantedWeapon = WEAPON_HAMMER + 1;
-	if(!g_Config.m_ClDummyRestoreWeapon)
-		m_DummyInput.m_WantedWeapon = WEAPON_HAMMER + 1;
-
+	CQmDummyHammerInput &Hammer = m_aDummyHammerInputs[!g_Config.m_ClDummy];
+	Hammer.SynchronizeEnabled(g_Config.m_ClDummyHammer != 0);
 	const vec2 Dir = m_LocalCharacterPos - m_aClients[m_aLocalIds[!g_Config.m_ClDummy]].m_Predicted.m_Pos;
-	m_HammerInput.m_TargetX = (int)Dir.x;
-	m_HammerInput.m_TargetY = (int)Dir.y;
-
-	mem_copy(pData, &m_HammerInput, sizeof(m_HammerInput));
-	return sizeof(m_HammerInput);
+	CNetObj_PlayerInput Output;
+	const bool Send = Hammer.SnapInput(Output, m_DummyInput, Dir, g_Config.m_ClDummyRestoreWeapon != 0, Force);
+	m_HammerInput = Hammer.HammerInput();
+	if(!Send)
+		return 0;
+	mem_copy(pData, &Output, sizeof(Output));
+	return sizeof(Output);
 }
 
 bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const CNetObj_PlayerInput *pDummyInputData, const CCharacter *pDummyChar, int LocalTee, int DummyTee) const
@@ -1751,8 +1722,8 @@ void CGameClient::OnReset()
 	std::fill(std::begin(m_aLocalIds), std::end(m_aLocalIds), -1);
 	m_DummyInput = {};
 	m_HammerInput = {};
-	m_DummyFire = 0;
-	m_DummyHammerResends = 0;
+	for(auto &Hammer : m_aDummyHammerInputs)
+		Hammer.Reset();
 	m_ReceivedDDNetPlayer = false;
 	m_ReceivedDDNetPlayerFinishTimes = false;
 	m_ReceivedDDNetPlayerFinishTimesMillis = false;
@@ -2356,6 +2327,9 @@ void CGameClient::ProcessQmStutterFrame()
 
 void CGameClient::OnDummyDisconnect()
 {
+	for(auto &Hammer : m_aDummyHammerInputs)
+		Hammer.Reset();
+	m_HammerInput = {};
 	m_aLocalIds[1] = -1;
 	m_aDDRaceMsgSent[1] = false;
 	m_aShowOthers[1] = SHOW_OTHERS_NOT_SET;
@@ -6654,6 +6628,14 @@ void CGameClient::ConchainSpecialDummy(IConsole::IResult *pResult, void *pUserDa
 		if(g_Config.m_ClDummy && !pThis->m_pClient->DummyConnected())
 			g_Config.m_ClDummy = 0;
 	}
+}
+
+void CGameClient::ConchainDummyHammer(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
+{
+	CGameClient *pThis = static_cast<CGameClient *>(pUserData);
+	pfnCallback(pResult, pCallbackUserData);
+	if(pResult->NumArguments() && pThis->ClientStateOnline() && pThis->Client()->DummyConnected())
+		pThis->m_aDummyHammerInputs[!g_Config.m_ClDummy].SetEnabled(g_Config.m_ClDummyHammer != 0);
 }
 
 IGameClient *CreateGameClient()
