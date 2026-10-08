@@ -25,6 +25,9 @@ class QmClientE2ERunnerTest(unittest.TestCase):
 				"startup_saved_favorites",
 				"vector_font_and_icon_resources",
 				"legacy_icon_font_residual_ignored",
+				"menu_background_switch_shutdown",
+				"menu_background_pending_switch_shutdown",
+				"menu_background_failed_switch_shutdown",
 			},
 		)
 

@@ -9,6 +9,7 @@
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
+#include <game/client/components/qmclient/update_package.h>
 #include <game/client/components/qmclient/update_version.h>
 #include <game/client/components/tclient/tclient.h>
 #include <game/client/gameclient.h>
@@ -23,14 +24,15 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 
 static constexpr int64_t QMCLIENT_UPDATE_RETRY_INTERVAL = 15 * 60;
 static constexpr int64_t QMCLIENT_UPDATE_CHECK_INTERVAL = 6 * 60 * 60;
+static constexpr int64_t QMCLIENT_UPDATE_MAX_PACKAGE_SIZE = 5LL * 1024 * 1024 * 1024;
 #if defined(CONF_FAMILY_WINDOWS)
 static constexpr const char *QMCLIENT_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases/latest";
 static constexpr const char *QMCLIENT_PREVIEW_INFO_URL = "https://api.github.com/repos/wxj881027/QmClient/releases?per_page=100";
-static constexpr int64_t QMCLIENT_UPDATE_MAX_PACKAGE_SIZE = 5LL * 1024 * 1024 * 1024;
 static constexpr int64_t QMCLIENT_UPDATE_MAX_MANIFEST_SIZE = 32 * 1024 * 1024;
 #endif
 
@@ -198,7 +200,23 @@ void CTClient::StartUpdateSourceSurvey()
 			RunUpdateHttp(pRequest);
 		return pRequest;
 	};
-	m_UpdateSurvey.Begin(m_UpdateSources.Candidates(pSignatureUrl, qm_update::RELEASE, Now), pSignatureUrl, Now, [StartProbe](const std::string &Url) { return StartProbe(Url, false); }, [StartProbe](const std::string &Url) { return StartProbe(Url, true); });
+	const char *pPackageUrl = m_UpdateUseSetup ? m_UpdateRelease.m_aSetupUrl : m_UpdateRelease.m_aPackageUrl;
+	const auto StartSample = [this](const std::string &Url, bool Direct) -> std::shared_ptr<IHttpRequest> {
+		std::shared_ptr<IHttpRequest> pRequest = HttpGet(Url.c_str());
+		pRequest->Timeout(CTimeout{5000, 8000, 1, 5});
+		pRequest->MaxResponseSize(QMCLIENT_UPDATE_MAX_PACKAGE_SIZE);
+		pRequest->ResponseSample(qm_update::CSourceSurvey::SAMPLE_BYTES);
+		pRequest->LogProgress(HTTPLOG::FAILURE);
+		if(Direct)
+		{
+			pRequest->Proxy("");
+			Http()->Run(pRequest);
+		}
+		else
+			RunUpdateHttp(pRequest);
+		return pRequest;
+	};
+	m_UpdateSurvey.Begin(m_UpdateSources.Candidates(pSignatureUrl, qm_update::RELEASE, Now), pSignatureUrl, Now, [StartProbe](const std::string &Url) { return StartProbe(Url, false); }, [StartProbe](const std::string &Url) { return StartProbe(Url, true); }, pPackageUrl, StartSample);
 	if(!m_UpdateSurvey.Running())
 		StartUpdateDownload();
 }
@@ -224,6 +242,10 @@ void CTClient::StartUpdateDownload(bool NextSource)
 		str_copy(m_aUpdateError, "Update sources are temporarily unavailable");
 		return;
 	}
+	if(!NextSource)
+		m_UpdateDownloadDirect = m_UpdateSurvey.Direct(*m_UpdateDownloadAttempt.Current());
+	m_UpdateSwitchForSpeed = false;
+	m_UpdateSpeedMonitor.Begin(time_get() / static_cast<double>(time_freq()));
 	ResetUpdateDownloadTasks();
 	RemoveUpdateTempFiles();
 	m_UpdateReady = false;
@@ -269,7 +291,16 @@ void CTClient::StartUpdateDownload(bool NextSource)
 	};
 	for(int Index = 0; Index < 4; ++Index)
 		m_UpdateDeadlines[Index].Begin(time_get() / static_cast<double>(time_freq()));
-	StartDownload(m_pUpdatePackageTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupUrl : m_UpdateRelease.m_aPackageUrl, m_aUpdatePackageTmp, QMCLIENT_UPDATE_MAX_PACKAGE_SIZE);
+	const std::string PackageUrl = m_UpdateDownloadAttempt.Current()->m_Prefix + (m_UpdateUseSetup ? m_UpdateRelease.m_aSetupUrl : m_UpdateRelease.m_aPackageUrl);
+	m_pUpdatePackageDownload = std::make_shared<qm_update::CPackageDownload>(PackageUrl, Storage(), m_aUpdatePackageTmp, QMCLIENT_UPDATE_MAX_PACKAGE_SIZE, [this](const std::shared_ptr<IHttpRequest> &Request) {
+			if(m_UpdateDownloadDirect)
+			{
+				Request->Proxy("");
+				Http()->Run(Request);
+			}
+			else
+				RunUpdateHttp(Request); }, [this](std::shared_ptr<IJob> Job) { Engine()->AddJob(std::move(Job)); });
+	m_pUpdatePackageTask = m_pUpdatePackageDownload;
 	StartDownload(m_pUpdatePackageSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupSignatureUrl : m_UpdateRelease.m_aPackageSignatureUrl, m_aUpdatePackageSignatureTmp, 64);
 	StartDownload(m_pUpdateManifestTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestUrl : m_UpdateRelease.m_aManifestUrl, m_aUpdateManifestTmp, QMCLIENT_UPDATE_MAX_MANIFEST_SIZE);
 	StartDownload(m_pUpdateManifestSignatureTask, m_UpdateUseSetup ? m_UpdateRelease.m_aSetupManifestSignatureUrl : m_UpdateRelease.m_aManifestSignatureUrl, m_aUpdateManifestSignatureTmp, 64);
@@ -284,6 +315,7 @@ void CTClient::ResetUpdateDownloadTasks()
 		pTask = nullptr;
 	};
 	ResetTask(m_pUpdatePackageTask);
+	m_pUpdatePackageDownload.reset();
 	ResetTask(m_pUpdatePackageSignatureTask);
 	ResetTask(m_pUpdateManifestTask);
 	ResetTask(m_pUpdateManifestSignatureTask);
@@ -405,9 +437,16 @@ void CTClient::CancelQmClientUpdate()
 
 void CTClient::RunUpdateHttp(std::shared_ptr<IHttpRequest> pRequest)
 {
-#if defined(CONF_FAMILY_WINDOWS)
 	const std::string Url = pRequest->Url();
-	if(!qm_update::HasEnvironmentProxy() && (qm_update::IsOfficialUrl(Url, qm_update::API) || qm_update::IsOfficialUrl(Url, qm_update::RELEASE)))
+	// 镜像固定直连，显式空代理同时屏蔽 curl 的环境代理和系统代理。
+	if(!qm_update::UpdateUsesSystemProxy(Url))
+	{
+		pRequest->Proxy("");
+		Http()->Run(pRequest);
+		return;
+	}
+#if defined(CONF_FAMILY_WINDOWS)
+	if(!qm_update::HasEnvironmentProxy())
 	{
 		auto pJob = std::make_shared<qm_update::CSystemProxyJob>(Url);
 		m_vUpdateProxyRequests.push_back({pJob, pRequest, time_get() / static_cast<double>(time_freq())});
@@ -423,7 +462,7 @@ void CTClient::PollUpdateProxyRequests()
 	const double Now = time_get() / static_cast<double>(time_freq());
 	for(auto It = m_vUpdateProxyRequests.begin(); It != m_vUpdateProxyRequests.end();)
 	{
-		if(It->m_pRequest->IsAbortRequested())
+		if(qm_update::CompleteAbortedUpdateRequest(*Http(), It->m_pRequest))
 		{
 			It = m_vUpdateProxyRequests.erase(It);
 			continue;
@@ -442,7 +481,11 @@ void CTClient::PollUpdateProxyRequests()
 		const std::shared_ptr<IHttpRequest> apTasks[] = {m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
 		for(size_t Index = 0; Index < std::size(apTasks); ++Index)
 			if(It->m_pRequest == apTasks[Index])
+			{
 				m_UpdateDeadlines[Index].Begin(Now);
+				if(Index == 0)
+					m_UpdateSpeedMonitor.Begin(Now);
+			}
 		Http()->Run(It->m_pRequest);
 		It = m_vUpdateProxyRequests.erase(It);
 	}
@@ -451,8 +494,34 @@ void CTClient::PollUpdateProxyRequests()
 void CTClient::PollUpdateRequests()
 {
 	const double Now = time_get() / static_cast<double>(time_freq());
-	const std::shared_ptr<IHttpRequest> apRequests[] = {m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
+	if(m_pUpdatePackageDownload)
+	{
+		m_pUpdatePackageDownload->Poll(Now);
+		if(m_pUpdatePackageDownload->TakeSpeedWindowReset())
+			m_UpdateSpeedMonitor.Begin(Now);
+	}
+	// 包的分段有各自的传输期限；后台合并不受网络无进展期限影响。
+	const std::shared_ptr<IHttpRequest> apRequests[] = {m_pUpdatePackageDownload ? nullptr : m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
 	qm_update::PollDownloadBatch(apRequests, m_UpdateDeadlines, Now);
+	bool Failed = m_pUpdatePackageTask && m_pUpdatePackageTask->Done() && m_pUpdatePackageTask->State() != EHttpState::DONE;
+	for(const auto &Request : apRequests)
+		Failed |= Request && Request->Done() && Request->State() != EHttpState::DONE;
+	if(Failed && m_pUpdatePackageTask && !m_pUpdatePackageTask->Done())
+		m_pUpdatePackageTask->Abort();
+	if(Failed)
+		for(const auto &Request : apRequests)
+			if(Request && !Request->Done())
+				Request->Abort();
+	if(m_pUpdatePackageDownload && m_pUpdatePackageDownload->Downloading() && m_UpdateDownloadAttempt.Current() &&
+		m_UpdateSpeedMonitor.ShouldSwitch(Now, m_pUpdatePackageTask->Current(), m_pUpdatePackageTask->Size(), m_UpdateSurvey.Speed(m_UpdateDownloadAttempt.NextCandidate()), m_UpdateDownloadAttempt.Current()->m_Prefix.empty()))
+	{
+		m_UpdateSwitchForSpeed = true;
+		log_info("qm-update", "Package remained below 100 KiB/s for 5 seconds; switching approved source");
+		m_pUpdatePackageTask->Abort();
+		for(const auto &pRequest : apRequests)
+			if(pRequest && !pRequest->Done())
+				pRequest->Abort();
+	}
 }
 
 void CTClient::FinishQmClientUpdateInfo()
@@ -509,7 +578,7 @@ void CTClient::FinishUpdateDownloads()
 				if(pTask)
 					RetryAfter = std::max(RetryAfter, qm_update::SourceRetryDelay(pTask.get()));
 			const std::shared_ptr<IHttpRequest> apRequests[] = {m_pUpdatePackageTask, m_pUpdatePackageSignatureTask, m_pUpdateManifestTask, m_pUpdateManifestSignatureTask};
-			if(qm_update::CanRetryOfficialDirect(m_UpdateDownloadAttempt.Current(), m_UpdateDownloadDirect, apRequests))
+			if(!m_UpdateSwitchForSpeed && qm_update::CanRetryOfficialDirect(m_UpdateDownloadAttempt.Current(), m_UpdateDownloadDirect, apRequests))
 			{
 				m_UpdateDownloadDirect = true;
 				log_info("qm-update", "Official proxy route failed; trying one direct route");
@@ -519,7 +588,7 @@ void CTClient::FinishUpdateDownloads()
 			m_UpdateSources.Failed(*m_UpdateDownloadAttempt.Current(), time_get() / static_cast<double>(time_freq()), RetryAfter);
 			if(m_UpdateDownloadAttempt.Next())
 			{
-				m_UpdateDownloadDirect = false;
+				m_UpdateDownloadDirect = m_UpdateSurvey.Direct(*m_UpdateDownloadAttempt.Current());
 				log_info("qm-update", "Trying next approved update source after: %s", pMessage);
 				StartUpdateDownload(true);
 				return;
@@ -544,7 +613,8 @@ void CTClient::FinishUpdateDownloads()
 	if(!IsSuccessful(m_pUpdatePackageTask) || !IsSuccessful(m_pUpdatePackageSignatureTask) ||
 		!IsSuccessful(m_pUpdateManifestTask) || !IsSuccessful(m_pUpdateManifestSignatureTask))
 	{
-		Fail("All approved update sources failed to download", true, true);
+		const bool LocalError = m_pUpdatePackageDownload && m_pUpdatePackageDownload->LocalError();
+		Fail(LocalError ? "Failed to assemble the downloaded update package" : "All approved update sources failed to download", !LocalError, !LocalError);
 		return;
 	}
 
@@ -632,7 +702,25 @@ void CTClient::FinishUpdateDownloads()
 		}
 		str_copy(m_aUpdatePackageTmp, aSetupRelativePath);
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, m_aUpdatePackageTmp, aInstallerPath, sizeof(aInstallerPath));
+		char aHelperDirectory[IO_MAX_PATH_LENGTH];
+		str_format(aHelperDirectory, sizeof(aHelperDirectory), "%s/qmclient", m_aUpdateAssetDirectory);
+		if(!Storage()->CreateFolder(aHelperDirectory, IStorage::TYPE_SAVE))
+		{
+			Fail("Failed to create the Setup session directory", false);
+			return;
+		}
+		char aHelperRelativePath[IO_MAX_PATH_LENGTH];
+		str_format(aHelperRelativePath, sizeof(aHelperRelativePath), "%s/QmClient-Updater-%d.exe", aHelperDirectory, pid());
+		Storage()->GetCompletePath(IStorage::TYPE_SAVE, aHelperRelativePath, aInstallerPath, sizeof(aInstallerPath));
+		char aInstalledHelper[IO_MAX_PATH_LENGTH];
+		Storage()->GetBinaryPathAbsolute("QmClient-Updater.exe", aInstalledHelper, sizeof(aInstalledHelper));
 		str_copy(m_aUpdateInstallerTmp, aInstallerPath);
+		std::error_code CopyError;
+		if(!std::filesystem::copy_file(std::filesystem::u8path(aInstalledHelper), std::filesystem::u8path(aInstallerPath), CopyError))
+		{
+			Fail("Failed to prepare the Setup session helper", false);
+			return;
+		}
 		m_UpdateSources.Succeeded(*m_UpdateDownloadAttempt.Current());
 		str_copy(g_Config.m_QmUpdateRecentSource, m_UpdateSources.Recent().c_str());
 		m_UpdateReady = true;
@@ -697,29 +785,9 @@ bool CTClient::LaunchUpdateInstaller()
 		return false;
 	}
 
-	if(m_UpdateUseSetup)
-	{
-		// 退出可能晚于下载数小时：启动前重新校验磁盘文件，不能只信任下载时的哈希。
-		char aError[256];
-		if(!qm_update_verify_setup_files(aPackagePath, aPackageSignaturePath, aManifestPath, aManifestSignaturePath, QMCLIENT_VERSION, aError, sizeof(aError)))
-		{
-			log_error("qm-update", "Setup validation before launch failed: %s", aError);
-			RemoveUpdateTempFiles();
-			return false;
-		}
-		char aDirectoryArgument[IO_MAX_PATH_LENGTH + 8];
-		str_format(aDirectoryArgument, sizeof(aDirectoryArgument), "/DIR=%s", aInstallPath);
-		const char *apSetupArguments[] = {"/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", aDirectoryArgument};
-		const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apSetupArguments, std::size(apSetupArguments));
-		if(Process == INVALID_PROCESS)
-			return false;
-		CloseHandle(static_cast<HANDLE>(Process));
-		m_UpdateInstallerStarted = true;
-		return true;
-	}
 	char aPid[32];
 	str_format(aPid, sizeof(aPid), "%d", pid());
-	const char *apArguments[] = {
+	std::vector<const char *> vArguments = {
 		"--parent-pid",
 		aPid,
 		"--package",
@@ -733,7 +801,10 @@ bool CTClient::LaunchUpdateInstaller()
 		"--install",
 		aInstallPath,
 	};
-	const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, apArguments, std::size(apArguments));
+	// 两种安装路径共用会话 owner；Setup 的退出后复验、等待与清理由 helper 负责。
+	if(m_UpdateUseSetup)
+		vArguments.push_back("--setup");
+	const PROCESS Process = shell_execute(m_aUpdateInstallerTmp, EShellExecuteWindowState::FOREGROUND, vArguments.data(), vArguments.size());
 	if(Process == INVALID_PROCESS)
 	{
 		RemoveUpdateTempFiles();

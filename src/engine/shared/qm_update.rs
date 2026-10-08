@@ -116,24 +116,4 @@ pub unsafe extern "C" fn qm_update_verify_setup_manifest(
     )
 }
 
-/// 启动前重新校验 Setup 安装器及其签名。
-#[no_mangle]
-pub unsafe extern "C" fn qm_update_verify_setup_files(
-    package_path: *const c_char,
-    package_signature_path: *const c_char,
-    manifest_path: *const c_char,
-    manifest_signature_path: *const c_char,
-    current_version: *const c_char,
-    error: *mut c_char,
-    error_size: usize,
-) -> bool {
-    ::qm_update::ffi_verify_setup_files(
-        package_path,
-        package_signature_path,
-        manifest_path,
-        manifest_signature_path,
-        current_version,
-        error,
-        error_size,
-    )
-}
+// Setup 文件验签导出由 qm-update 自身提供，独立安装器也能链接同一入口。

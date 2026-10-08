@@ -11,11 +11,18 @@
 #include <engine/storage.h>
 
 #include <charconv>
+#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <string>
 
-#if !defined(CONF_FAMILY_WINDOWS)
+#if defined(CONF_FAMILY_WINDOWS)
+#include <winsock2.h>
+
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+
 #include <csignal>
 #endif
 
@@ -102,7 +109,8 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 	curl_easy_setopt(pHandle, CURLOPT_TIMEOUT_MS, m_Timeout.m_TimeoutMs);
 	curl_easy_setopt(pHandle, CURLOPT_LOW_SPEED_LIMIT, m_Timeout.m_LowSpeedLimit);
 	curl_easy_setopt(pHandle, CURLOPT_LOW_SPEED_TIME, m_Timeout.m_LowSpeedTime);
-	if(m_MaxResponseSize >= 0)
+	// 范围长度只约束最终正文，不能让中间重定向的 Content-Length 提前终止请求。
+	if(m_MaxResponseSize >= 0 && !m_ByteRange)
 	{
 		curl_easy_setopt(pHandle, CURLOPT_MAXFILESIZE_LARGE, (curl_off_t)m_MaxResponseSize);
 	}
@@ -131,9 +139,26 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 	curl_easy_setopt(pHandle, CURLOPT_URL, m_aUrl);
 	if(m_ProxyConfigured)
 		curl_easy_setopt(pHandle, CURLOPT_PROXY, m_aProxy);
+	else
+	{
+		// 连接代理失败时 USED_PROXY 仍可能为零，保留所选环境路由用于官方直连回退。
+		// 不设置 CURLOPT_PROXY，继续由 curl 原生处理 NO_PROXY、认证及代理优先级。
+		const bool Https = str_startswith_nocase(m_aUrl, "https:");
+		for(const char *pName : {Https ? "https_proxy" : "http_proxy", Https ? "HTTPS_PROXY" : "", "all_proxy", "ALL_PROXY"})
+		{
+			const char *pValue = *pName ? std::getenv(pName) : nullptr;
+			if(pValue && *pValue)
+			{
+				str_copy(m_aProxy, pValue);
+				break;
+			}
+		}
+	}
 	curl_easy_setopt(pHandle, CURLOPT_NOSIGNAL, 1L);
 	curl_easy_setopt(pHandle, CURLOPT_USERAGENT, USER_AGENT_STRING);
 	curl_easy_setopt(pHandle, CURLOPT_ACCEPT_ENCODING, ""); // Use any compression algorithm supported by libcurl.
+	if(m_ByteRange)
+		curl_easy_setopt(pHandle, CURLOPT_ACCEPT_ENCODING, "identity");
 
 	curl_easy_setopt(pHandle, CURLOPT_HEADERDATA, this);
 	curl_easy_setopt(pHandle, CURLOPT_HEADERFUNCTION, HeaderCallback);
@@ -215,6 +240,129 @@ std::optional<int64_t> CHttpRequestCurl::ParseRetryAfter(std::string_view Value,
 	return Date < 0 ? std::nullopt : std::optional<int64_t>(std::max<int64_t>(0, Date - Now));
 }
 
+bool CHttpRequestCurl::ProxyBypassed(std::string_view Host, std::string_view List)
+{
+	if(Host.empty() || List.empty())
+		return false;
+	// curl 仅把整个列表恰好为星号视为通配，不支持列表内的星号项。
+	if(List == "*")
+		return true;
+	if(Host.front() == '[' && Host.back() == ']')
+		Host = Host.substr(1, Host.size() - 2);
+	if(Host.empty() || Host.find('\0') != std::string_view::npos)
+		return false;
+	unsigned char aHost[16] = {};
+	const std::string HostText(Host);
+	const int Family = inet_pton(AF_INET, HostText.c_str(), aHost) == 1  ? AF_INET :
+			   inet_pton(AF_INET6, HostText.c_str(), aHost) == 1 ? AF_INET6 :
+									       AF_UNSPEC;
+	if(Family == AF_UNSPEC && Host.back() == '.')
+		Host.remove_suffix(1);
+	while(!List.empty())
+	{
+		const auto Start = List.find_first_not_of(", \t");
+		if(Start == std::string_view::npos)
+			break;
+		List.remove_prefix(Start);
+		const auto End = List.find_first_of(", \t");
+		const auto Token = List.substr(0, End);
+		List.remove_prefix(End == std::string_view::npos ? List.size() : End);
+		if(Family != AF_UNSPEC)
+		{
+			const auto Slash = Token.find('/');
+			int Bits = Family == AF_INET ? 32 : 128;
+			if(Slash != std::string_view::npos)
+			{
+				const auto Prefix = Token.substr(Slash + 1);
+				const auto Parsed = std::from_chars(Prefix.data(), Prefix.data() + Prefix.size(), Bits);
+				if(Parsed.ec != std::errc() || Parsed.ptr != Prefix.data() + Prefix.size() || Bits < 0 || Bits > (Family == AF_INET ? 32 : 128))
+					continue;
+			}
+			unsigned char aNetwork[16] = {};
+			const std::string Network(Token.substr(0, Slash));
+			if(Network.find('\0') != std::string::npos || inet_pton(Family, Network.c_str(), aNetwork) != 1)
+				continue;
+			bool Match = true;
+			for(int Bit = 0; Bit < Bits; ++Bit)
+			{
+				if(((aHost[Bit / 8] ^ aNetwork[Bit / 8]) & (0x80 >> (Bit % 8))) != 0)
+				{
+					Match = false;
+					break;
+				}
+			}
+			if(Match)
+				return true;
+		}
+		else
+		{
+			auto Domain = Token;
+			if(!Domain.empty() && Domain.back() == '.')
+				Domain.remove_suffix(1);
+			if(!Domain.empty() && Domain.front() == '.')
+				Domain.remove_prefix(1);
+			if(Domain.empty() || Domain.size() > Host.size())
+				continue;
+			const auto Offset = Host.size() - Domain.size();
+			if(Offset != 0 && Host[Offset - 1] != '.')
+				continue;
+			bool Match = true;
+			for(size_t Index = 0; Index < Domain.size(); ++Index)
+			{
+				const auto Lower = [](char Character) { return Character >= 'A' && Character <= 'Z' ? Character + ('a' - 'A') : Character; };
+				if(Lower(Host[Offset + Index]) != Lower(Domain[Index]))
+				{
+					Match = false;
+					break;
+				}
+			}
+			if(Match)
+				return true;
+		}
+	}
+	return false;
+}
+
+bool CHttpRequestCurl::ProxyBypassEvidence(std::string_view Host, std::string_view List, unsigned int RuntimeVersion)
+{
+	if(List == "*")
+		return ProxyBypassed(Host, List);
+	while(!List.empty())
+	{
+		const auto Start = List.find_first_not_of(", \t");
+		if(Start == std::string_view::npos)
+			break;
+		List.remove_prefix(Start);
+		const auto End = List.find_first_of(", \t");
+		const auto Token = List.substr(0, End);
+		List.remove_prefix(End == std::string_view::npos ? List.size() : End);
+		if(Token == "*")
+			continue;
+		const auto Slash = Token.find('/');
+		if(Slash != std::string_view::npos)
+		{
+			int Bits = -1;
+			const auto Prefix = Token.substr(Slash + 1);
+			const auto Parsed = std::from_chars(Prefix.data(), Prefix.data() + Prefix.size(), Bits);
+			if(Parsed.ec != std::errc() || Parsed.ptr != Prefix.data() + Prefix.size())
+				continue;
+			// CIDR 在 curl 7.86 才支持；零位前缀和 8.8 的 IPv6 剩余位缺陷只降级证据。
+			if(RuntimeVersion < 0x075600 || Bits == 0 || (RuntimeVersion == 0x080800 && Token.substr(0, Slash).find(':') != std::string_view::npos && Bits % 8 != 0))
+				continue;
+		}
+		if(ProxyBypassed(Host, Token))
+			return true;
+	}
+	return false;
+}
+
+bool CHttpRequestCurl::ProxyFallbackBypassed(int StatusCode, std::optional<bool> UsedProxy, bool BypassEvidence)
+{
+	// 最终 HTTP 响应的实测结果优先；中间 3xx 不能证明下一连接使用了代理。
+	const bool FinalResponse = StatusCode >= 200 && (StatusCode < 300 || StatusCode >= 400);
+	return BypassEvidence && (!FinalResponse || !UsedProxy.has_value() || !*UsedProxy);
+}
+
 size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
 {
 	// `pHeader` is NOT null-terminated.
@@ -232,7 +380,20 @@ size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
 		m_ResultDate = {};
 		m_ResultLastModified = {};
 		m_ResultRetryAfterSeconds = {};
+		m_ResultContentRange = {};
 	}
+	// 重定向和 CONNECT 的响应头不能被当成最终分段响应。
+	if(HeaderSize >= 5 && std::string_view(pHeader, HeaderSize).starts_with("HTTP/"))
+	{
+		const std::string_view Line(pHeader, HeaderSize);
+		const auto Space = Line.find(' ');
+		if(Space != std::string_view::npos)
+			std::from_chars(Line.data() + Space + 1, Line.data() + Line.size(), m_StatusCode);
+		m_ResultContentRange = {};
+	}
+	static const char CONTENT_RANGE[] = "Content-Range:";
+	if(HeaderSize >= sizeof(CONTENT_RANGE) - 1 && str_startswith_nocase(pHeader, CONTENT_RANGE))
+		m_ResultContentRange = ParseHttpContentRange(std::string_view(pHeader + sizeof(CONTENT_RANGE) - 1, HeaderSize - sizeof(CONTENT_RANGE) + 1));
 
 	static const char DATE[] = "Date: ";
 	static const char LAST_MODIFIED[] = "Last-Modified: ";
@@ -274,13 +435,56 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 {
 	if(pHandle)
 	{
-		long StatusCode;
+		long StatusCode = 0;
 		curl_easy_getinfo(pHandle, CURLINFO_RESPONSE_CODE, &StatusCode);
 		m_StatusCode = StatusCode;
+		std::optional<bool> UsedProxyResult;
+#if LIBCURL_VERSION_NUM >= 0x080700
+		long UsedProxy = 0;
+		if(curl_easy_getinfo(pHandle, CURLINFO_USED_PROXY, &UsedProxy) == CURLE_OK)
+		{
+			UsedProxyResult = UsedProxy != 0;
+			m_ResultUsedProxy = *UsedProxyResult;
+		}
+#endif
+		// 没有 HTTP 状态也可能已按 NO_PROXY 直连，必须检查重定向后的最终主机。
+		char *pEffectiveUrl = nullptr;
+		if(curl_easy_getinfo(pHandle, CURLINFO_EFFECTIVE_URL, &pEffectiveUrl) == CURLE_OK && pEffectiveUrl)
+		{
+			CURLU *pUrl = curl_url();
+			char *pHost = nullptr;
+			if(pUrl && curl_url_set(pUrl, CURLUPART_URL, pEffectiveUrl, 0) == CURLUE_OK &&
+				curl_url_get(pUrl, CURLUPART_HOST, &pHost, 0) == CURLUE_OK)
+			{
+				char *pNoProxy = curl_getenv("no_proxy");
+				if(pNoProxy && !*pNoProxy)
+				{
+					curl_free(pNoProxy);
+					pNoProxy = nullptr;
+				}
+				if(!pNoProxy)
+					pNoProxy = curl_getenv("NO_PROXY");
+				// 实测最终连接优先，早期失败才使用与运行库兼容的旁路证据。
+				const auto *pVersion = curl_version_info(CURLVERSION_NOW);
+				const bool FinalProxyKnown = UsedProxyResult.has_value() && m_StatusCode >= 200 && (m_StatusCode < 300 || m_StatusCode >= 400);
+				const bool BypassEvidence = pNoProxy && (FinalProxyKnown ? ProxyBypassed(pHost, pNoProxy) :
+											   pVersion && ProxyBypassEvidence(pHost, pNoProxy, pVersion->version_num));
+				if(ProxyFallbackBypassed(m_StatusCode, UsedProxyResult, BypassEvidence))
+				{
+					m_aProxy[0] = '\0';
+					m_ResultUsedProxy = false;
+				}
+				curl_free(pNoProxy);
+			}
+			curl_free(pHost);
+			curl_url_cleanup(pUrl);
+		}
 	}
 
 	EHttpState State;
-	if(Code != CURLE_OK)
+	// 前缀采样主动中止正文回调是成功；用户取消、状态错误与普通下载仍按原错误处理。
+	const bool SampleComplete = Code == CURLE_WRITE_ERROR && m_ResponseSampleComplete && !IsAbortRequested() && m_StatusCode == 200;
+	if(Code != CURLE_OK && !SampleComplete)
 	{
 		State = (Code == CURLE_ABORTED_BY_CALLBACK) ? EHttpState::ABORTED : EHttpState::ERROR;
 		const bool IsShutdownAbort = State == EHttpState::ABORTED && str_comp(m_aErr, "Shutting down") == 0;
@@ -297,6 +501,11 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 		}
 		State = EHttpState::DONE;
 	}
+	if(State == EHttpState::DONE && m_ByteRange &&
+		(m_StatusCode != 206 || !m_ResultContentRange ||
+			m_ResultContentRange->m_First != m_ByteRange->m_First || m_ResultContentRange->m_Last != m_ByteRange->m_Last ||
+			m_ResponseLength != static_cast<uint64_t>(m_ByteRange->Length())))
+		State = EHttpState::ERROR;
 
 	IHttpRequest::OnCompletionInternal(State);
 }
@@ -309,7 +518,16 @@ size_t CHttpRequestCurl::HeaderCallback(char *pData, size_t Size, size_t Number,
 
 size_t CHttpRequestCurl::WriteCallback(char *pData, size_t Size, size_t Number, void *pUser)
 {
-	return ((CHttpRequestCurl *)pUser)->OnData(pData, Size * Number);
+	auto *pRequest = static_cast<CHttpRequestCurl *>(pUser);
+	// 中间重定向正文不属于分段；终态 3xx 仍由完成检查拒绝。
+	if(pRequest->m_ByteRange && pRequest->m_StatusCode >= 300 && pRequest->m_StatusCode < 400)
+		return Size * Number;
+	// 服务器忽略 Range 时不接受整包正文，更不能把 200 响应追加到分段文件。
+	if(pRequest->m_ByteRange && (pRequest->m_StatusCode != 206 || !pRequest->m_ResultContentRange ||
+					    pRequest->m_ResultContentRange->m_First != pRequest->m_ByteRange->m_First ||
+					    pRequest->m_ResultContentRange->m_Last != pRequest->m_ByteRange->m_Last))
+		return 0;
+	return pRequest->OnData(pData, Size * Number);
 }
 
 int CHttpRequestCurl::ProgressCallback(void *pUser, double DlTotal, double DlCurr, double UlTotal, double UlCurr)

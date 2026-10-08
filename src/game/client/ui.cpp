@@ -1388,7 +1388,9 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 	if(!pLabel->m_Container.Valid())
 		return false;
 	const vec2 Pos = CalcAlignedCursorPos(&Rect, pLabel->m_Size, Align, &pLabel->m_BiggestCharacterHeight);
-	const ColorRGBA Color = ConfiguredQmUiIconColor(TextRender()->GetTextColor());
+	const EQmIcon Icon = Count == 1 ? CQmIconRegistry::IconFromGlyph(pText) : EQmIcon::COUNT;
+	const ColorRGBA Color = ConfiguredQmUiIconColor(TextRender()->GetTextColor(), Icon);
+	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	FlushQuadBatch();
 	TextRender()->RenderTextContainer(pLabel->m_Container, Color, ConfiguredQmUiIconContrastColor(Color), Pos.x, Pos.y);
 	CQmIconDrawDiagnostics::Record(Count);
@@ -1414,7 +1416,9 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 	FlushQuadBatch();
 	if(Icons.m_Count > 0)
 	{
-		const ColorRGBA IconColor = ConfiguredQmUiIconColor(TextRender()->GetTextColor());
+		const EQmIcon Icon = Icons.m_Count == 1 ? Icons.m_aIcons[0] : EQmIcon::COUNT;
+		const ColorRGBA IconColor = ConfiguredQmUiIconColor(TextRender()->GetTextColor(), Icon);
+		const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 		QmRenderImmediateFontIcon(*TextRender(), &Cursor, pText, -1, IconColor, ConfiguredQmUiIconContrastColor(IconColor));
 		CQmIconDrawDiagnostics::Record(Icons.m_Count);
 	}
@@ -1471,7 +1475,9 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 	const vec2 CursorPos = CalcAlignedCursorPos(pRect, vec2(RectEl.m_Cursor.m_LongestLineWidth, RectEl.m_Cursor.Height()), Align, pBiggestCharHeight);
 	FlushQuadBatch();
 	// 颜色在绘制时解析，彩虹和即时切换无需重建缓存文本容器。
-	const ColorRGBA Color = RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(RectEl.m_TextColor) : RectEl.m_TextColor;
+	const EQmIcon Icon = RectEl.m_NumQmIcons == 1 ? RectEl.m_aQmIcons[0] : EQmIcon::COUNT;
+	const ColorRGBA Color = RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(RectEl.m_TextColor, Icon) : RectEl.m_TextColor;
+	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	const ColorRGBA OutlineColor = RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor;
 	TextRender()->RenderTextContainer(RectEl.m_UITextContainer, Color, OutlineColor, CursorPos.x, CursorPos.y);
 	CQmIconDrawDiagnostics::Record(RectEl.m_NumQmIcons);
@@ -1972,7 +1978,9 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 	{
 		const CUIElement::SUIElementRect &Label = *UIElement.Rect(0);
 		{
-			const ColorRGBA LabelColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(ColorText) : ColorText;
+			const EQmIcon Icon = Label.m_NumQmIcons == 1 ? Label.m_aQmIcons[0] : EQmIcon::COUNT;
+			const ColorRGBA LabelColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(ColorText, Icon) : ColorText;
+			const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 			const ColorRGBA LabelOutlineColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(LabelColor) : ColorTextOutline;
 			TextRender()->RenderTextContainer(Label.m_UITextContainer, LabelColor, LabelOutlineColor);
 			CQmIconDrawDiagnostics::Record(Label.m_NumQmIcons);
@@ -2043,7 +2051,8 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 	const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
-	pTextRender->TextColor(ConfiguredQmUiIconColor(Color));
+	pTextRender->TextColor(ConfiguredQmUiIconColor(Color, Icon));
+	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	DoLabel(&Rect, pFallbackIcon, QmIconFontSize(Rect), TEXTALIGN_MC);

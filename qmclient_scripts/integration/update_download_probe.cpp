@@ -9,6 +9,7 @@
 #include <engine/storage.h>
 
 #include <game/client/components/qmclient/update_manifest.h>
+#include <game/client/components/qmclient/update_package.h>
 #include <game/client/components/qmclient/update_proxy.h>
 #include <game/client/components/qmclient/update_request.h>
 
@@ -224,7 +225,7 @@ namespace
 			Request->Proxy("");
 			Request->Abort();
 			Requests.push_back(Request);
-			Http->Run(Request);
+			qm_update::CompleteAbortedUpdateRequest(*Http, Request);
 		}
 		std::shared_ptr<IHttpRequest> Recovery = HttpGet(Url.c_str());
 		Recovery->AllowInsecureProtocol();
@@ -255,6 +256,94 @@ namespace
 		Recovery->Abort();
 		Http->Shutdown();
 		return Valid ? 0 : 1;
+	}
+
+	int Sample(const std::string &Url)
+	{
+		if(!Approved(Url))
+			throw std::runtime_error("unapproved sample URL");
+		std::unique_ptr<IEngineHttp> Http(CreateEngineHttp());
+		if(!Http->Init(std::chrono::milliseconds(1000)))
+			throw std::runtime_error("HTTP initialization failed");
+		std::shared_ptr<IHttpRequest> Request = HttpGet(Url.c_str());
+		if(Url.starts_with("http://127.0.0.1:"))
+			Request->AllowInsecureProtocol();
+		Request->Proxy("");
+		Request->Timeout(CTimeout{1000, 8000, 1, 5});
+		Request->MaxResponseSize(5LL * 1024 * 1024 * 1024);
+		Request->ResponseSample(256 * 1024);
+		const auto Start = TClock::now();
+		Http->Run(Request);
+		while(!Request->Done() && Seconds(Start) < 10)
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		if(!Request->Done())
+			Request->Abort();
+		Http->Shutdown();
+		unsigned char *pBytes = nullptr;
+		size_t Size = 0;
+		Request->ResultResponseSample(&pBytes, &Size);
+		const bool Success = Request->State() == EHttpState::DONE && Request->CompletedStatusCode() == 200;
+		CJsonStringWriter Writer;
+		Writer.BeginObject();
+		Bool(Writer, "success", Success);
+		Writer.WriteAttribute("sample_bytes");
+		Writer.WriteIntValue(Size);
+		Writer.WriteAttribute("http_status");
+		Writer.WriteIntValue(Request->CompletedStatusCode());
+		Bool(Writer, "zip_prefix", Size >= 4 && mem_comp(pBytes, "PK\x03\x04", 4) == 0);
+		Writer.EndObject();
+		Emit(Writer);
+		return Success ? 0 : 1;
+	}
+
+	int Segmented(const std::string &Url, const std::string &Destination, double Budget)
+	{
+		if(!Url.starts_with("http://127.0.0.1:") || !Destination.starts_with("tmp/") || Destination.find("..") != std::string::npos || !std::isfinite(Budget) || Budget < 0.01 || Budget > 60)
+			throw std::runtime_error("segmented probe requires loopback and workspace tmp output");
+		std::filesystem::create_directories(std::filesystem::path(Destination).parent_path());
+		std::unique_ptr<IEngineHttp> Http(CreateEngineHttp());
+		auto Storage = CreateLocalStorage();
+		if(!Storage || !Http->Init(std::chrono::milliseconds(1000)))
+			throw std::runtime_error("HTTP initialization failed");
+		CJobPool Jobs;
+		Jobs.Init(1);
+		unsigned Requests = 0;
+		qm_update::CPackageDownload Package(Url, Storage.get(), Destination, 8 * 1024 * 1024, [&](const std::shared_ptr<IHttpRequest> &Request) {
+				++Requests;
+				Request->AllowInsecureProtocol();
+				// 使用与客户端相同的代理策略，测试环境设置不可达代理。
+				if(!qm_update::UpdateUsesSystemProxy(Request->Url()))
+					Request->Proxy("");
+				Http->Run(Request); }, [&](std::shared_ptr<IJob> Job) { Jobs.Add(std::move(Job)); });
+		const auto Start = TClock::now();
+		while(!Package.Done() && Seconds(Start) < Budget)
+		{
+			Package.Poll(Seconds(Start));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		if(!Package.Done())
+			Package.Abort();
+		const bool Success = Package.State() == EHttpState::DONE;
+		CJsonStringWriter Writer;
+		Writer.BeginObject();
+		Bool(Writer, "success", Success);
+		Writer.WriteAttribute("requests");
+		Writer.WriteIntValue(Requests);
+		Number(Writer, "seconds", Seconds(Start));
+		Number(Writer, "bytes", Package.Current());
+		Writer.WriteAttribute("http_status");
+		Writer.WriteIntValue(Package.CompletedStatusCode());
+		if(Success)
+		{
+			char aDigest[SHA256_MAXSTRSIZE];
+			sha256_str(Package.ResultSha256(), aDigest, sizeof(aDigest));
+			String(Writer, "sha256", aDigest);
+		}
+		Writer.EndObject();
+		Emit(Writer);
+		Http->Shutdown();
+		Jobs.Shutdown();
+		return Success ? 0 : 1;
 	}
 
 	int Fetch(const std::string &Url, const std::string &Destination, const std::string &Mode, double Budget, int64_t MaxBytes)
@@ -330,6 +419,11 @@ namespace
 		String(Writer, "proxy_mode", Mode);
 		Bool(Writer, "system_proxy_decision", ProxyDecision);
 		Bool(Writer, "system_proxy_selected", !Proxy.empty());
+		Bool(Writer, "used_proxy", Request->CompletedUsedProxy());
+		Bool(Writer, "proxy_route_selected", Request->ProxyUrl()[0] != '\0');
+		const qm_update::CSource Official{"", "github", 0, qm_update::RELEASE};
+		const std::shared_ptr<IHttpRequest> RouteRequests[] = {Request};
+		Bool(Writer, "official_direct_retry_allowed", !Success && qm_update::CanRetryOfficialDirect(&Official, false, RouteRequests));
 		Number(Writer, "proxy_seconds", ProxySeconds);
 		Number(Writer, "seconds", Elapsed);
 		Number(Writer, "first_byte_seconds", FirstByte);
@@ -362,6 +456,8 @@ int main(int argc, const char **argv)
 			return CheckOfficial(argv[2]);
 		if(argc == 3 && std::string(argv[1]) == "cancel-queued")
 			return CancelQueued(argv[2]);
+		if(argc == 3 && std::string(argv[1]) == "sample")
+			return Sample(argv[2]);
 		if(argc == 5 && std::string(argv[1]) == "info" && (std::string(argv[4]) == "portable" || std::string(argv[4]) == "normal"))
 			return Release(argv[2], argv[3], true, std::string(argv[4]) == "portable");
 		if(argc == 3 && std::string(argv[1]) == "release")
@@ -370,6 +466,8 @@ int main(int argc, const char **argv)
 			return Verify(argv[2], argv[3], argv[4], argv[5]);
 		if(argc == 7 && std::string(argv[1]) == "fetch")
 			return Fetch(argv[2], argv[3], argv[4], std::stod(argv[5]), std::stoll(argv[6]));
+		if(argc == 5 && std::string(argv[1]) == "segmented")
+			return Segmented(argv[2], argv[3], std::stod(argv[4]));
 		throw std::runtime_error("usage: sources | release FILE | info FILE VERSION portable|normal | verify PACKAGE SIG MANIFEST SIG | fetch URL tmp/FILE direct|system|environment BUDGET MAX_BYTES");
 	}
 	catch(const std::exception &Error)

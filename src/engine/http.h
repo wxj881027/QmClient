@@ -3,9 +3,12 @@
 
 #include "kernel.h"
 
+#include <base/dbg.h>
 #include <base/hash_ctxt.h>
 #include <base/str.h>
 #include <base/types.h>
+
+#include <engine/shared/http_range.h>
 
 #include <atomic>
 #include <chrono>
@@ -68,6 +71,11 @@ public:
 	long RequestTimeoutMs() const { return m_Timeout.m_TimeoutMs; }
 	// Skip the download if the local file is newer or as new as the remote file.
 	void MaxResponseSize(int64_t MaxResponseSize) { m_MaxResponseSize = MaxResponseSize; }
+	// 仅取得正文前缀用于下载测速；达到上限主动结束，不落盘、不作为完整下载。
+	void ResponseSample(size_t Bytes);
+	void ResultResponseSample(unsigned char **ppResult, size_t *pResultLength) const;
+	void ByteRange(int64_t First, int64_t Last);
+	std::optional<CHttpByteRange> ResultContentRange() const;
 	// 显式空代理表示强制直连；未设置才继承 curl 的环境代理。
 	void Proxy(const char *pProxy)
 	{
@@ -128,7 +136,16 @@ public:
 		virtual void OnProgress() = 0;
 		virtual void OnCompletion(EHttpState State) = 0;
 	};
-	void SetProgressCallback(IProgressCallback *pCallback) { m_pProgressCallback = pCallback; }
+	void SetProgressCallback(IProgressCallback *pCallback)
+	{
+		m_pOwnedProgressCallback.reset();
+		m_pProgressCallback = pCallback;
+	}
+	void SetProgressCallback(std::shared_ptr<IProgressCallback> pCallback)
+	{
+		m_pOwnedProgressCallback = std::move(pCallback);
+		m_pProgressCallback = m_pOwnedProgressCallback.get();
+	}
 
 	// If `ValidateBeforeOverwrite` is set, this needs to be called after
 	// validating that the downloaded file has the correct format.
@@ -145,6 +162,11 @@ public:
 	int StatusCode() const;
 	// 请求完成后可读取失败响应的状态码；无 HTTP 响应时为零。
 	int CompletedStatusCode() const;
+	bool CompletedUsedProxy() const
+	{
+		dbg_assert(Done(), "HTTP request not completed");
+		return m_ResultUsedProxy;
+	}
 	std::optional<int64_t> ResultAgeSeconds() const;
 	std::optional<int64_t> ResultLastModified() const;
 	std::optional<int64_t> ResultRetryAfterSeconds() const { return m_ResultRetryAfterSeconds; }
@@ -172,6 +194,10 @@ protected:
 	// Settings
 	CTimeout m_Timeout = CTimeout{0, 0, 0, 0};
 	int64_t m_MaxResponseSize = -1;
+	size_t m_ResponseSampleSize = 0;
+	std::optional<CHttpByteRange> m_ByteRange;
+	std::optional<CHttpByteRange> m_ResultContentRange;
+	bool m_ResponseSampleComplete = false;
 	HTTPLOG m_LogProgress = HTTPLOG::ALL;
 	bool m_SkipByFileTime = true;
 	IPRESOLVE m_IpResolve = IPRESOLVE::WHATEVER;
@@ -189,6 +215,7 @@ protected:
 	std::optional<int64_t> m_ResultDate = std::nullopt;
 	std::optional<int64_t> m_ResultLastModified = std::nullopt;
 	std::optional<int64_t> m_ResultRetryAfterSeconds = std::nullopt;
+	bool m_ResultUsedProxy = false;
 
 	bool m_WriteToMemory = true;
 	bool m_WriteToFile = false;
@@ -211,6 +238,7 @@ protected:
 	std::atomic<bool> m_Abort = false;
 	std::atomic<bool> m_AbortTriggeredByProgressCallback = false;
 	IProgressCallback *m_pProgressCallback = nullptr;
+	std::shared_ptr<IProgressCallback> m_pOwnedProgressCallback;
 
 	std::mutex m_WaitMutex;
 	std::condition_variable m_WaitCondition;

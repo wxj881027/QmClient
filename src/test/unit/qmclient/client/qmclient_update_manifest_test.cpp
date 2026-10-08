@@ -281,6 +281,40 @@ TEST(QmClientUpdateManifest, SignedSevenZipIsPreferredAndPortableUsesSeparateMan
 	}
 }
 
+TEST(QmClientUpdateManifest, IncompleteSevenZipFallsBackToCompleteZipUntilAllAssetsArePublished)
+{
+	for(bool Portable : {false, true})
+	{
+		CJsonStringWriter Writer;
+		WriteRelease(Writer, "v3.4", false);
+		std::string Json = Writer.GetOutputString();
+		const std::string Stem = Portable ? "QmClient-windows-portable" : "QmClient-windows";
+		if(Portable)
+		{
+			size_t Offset = 0;
+			while((Offset = Json.find("QmClient-windows", Offset)) != std::string::npos)
+			{
+				Json.insert(Offset + 16, "-portable");
+				Offset += 25;
+			}
+		}
+		int Published = 0;
+		for(const char *pSuffix : {".7z", ".7z.sig", "-7z-update.json", "-7z-update.json.sig"})
+		{
+			const std::string Asset = ",{\"name\":\"" + Stem + pSuffix + "\",\"browser_download_url\":\"https://github.com/wxj881027/QmClient/releases/download/v3.4/" + Stem + pSuffix + "\"}";
+			Json.insert(Json.rfind(']'), Asset);
+			SQmClientUpdateRelease Release;
+			char aError[256];
+			SCOPED_TRACE(Stem + pSuffix);
+			ASSERT_TRUE(ParseQmClientReleaseInfo(Json.c_str(), Json.size(), "3.3", Release, aError, sizeof(aError), false, Portable)) << aError;
+			EXPECT_TRUE(Release.m_PackageAvailable);
+			EXPECT_EQ(Release.m_SevenZip, ++Published == 4);
+			EXPECT_EQ(std::string(Release.m_aPackageUrl), "https://github.com/wxj881027/QmClient/releases/download/v3.4/" + Stem + (Published == 4 ? ".7z" : ".zip"));
+			EXPECT_TRUE(ParseQmClientUpdateRelease(Json.c_str(), Json.size(), "3.3", Release, aError, sizeof(aError), false, Portable)) << aError;
+		}
+	}
+}
+
 TEST(QmClientUpdateManifest, SevenZipManifestCannotCrossPortableOrSetupBoundary)
 {
 	const std::string Json = R"({"schema":1,"version":"3.4","package":{"name":"QmClient-windows-portable.7z","size":10,"sha256":")" + std::string(64, 'a') + R"("},"files":[]})";

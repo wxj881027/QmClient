@@ -24,6 +24,7 @@ namespace QmUpdate
 		std::wstring m_ManifestSignature;
 		std::wstring m_Install;
 		bool m_Elevated = false;
+		bool m_Setup = false;
 	};
 
 	inline bool ParseArguments(const std::vector<std::wstring> &ArgumentsList, SArguments &Arguments)
@@ -37,6 +38,7 @@ namespace QmUpdate
 		bool ManifestSignatureSet = false;
 		bool InstallSet = false;
 		bool ElevatedSet = false;
+		bool SetupSet = false;
 		for(size_t Index = 1; Index < ArgumentsList.size() && Valid; ++Index)
 		{
 			const std::wstring &Name = ArgumentsList[Index];
@@ -109,6 +111,13 @@ namespace QmUpdate
 					Valid = false;
 				InstallSet = true;
 			}
+			else if(Name == L"--setup")
+			{
+				if(SetupSet)
+					Valid = false;
+				SetupSet = true;
+				Arguments.m_Setup = true;
+			}
 			else if(Name == L"--qm-elevated")
 			{
 				if(ElevatedSet)
@@ -172,16 +181,24 @@ namespace QmUpdate
 			return false;
 		const std::wstring Session = std::to_wstring(SessionPid);
 		bool Matched = false;
-		for(const auto &Names : {std::pair{L"QmClient-windows.zip", L"QmClient-windows-update.json"},
-			    std::pair{L"QmClient-windows-portable.zip", L"QmClient-windows-portable-update.json"},
-			    std::pair{L"QmClient-windows.7z", L"QmClient-windows-7z-update.json"},
-			    std::pair{L"QmClient-windows-portable.7z", L"QmClient-windows-portable-7z-update.json"}})
+		if(Arguments.m_Setup)
 		{
-			Matched |= Package.filename() == std::wstring(Names.first) + L"." + Session + L".tmp" &&
-				   PackageSignature.filename() == std::wstring(Names.first) + L".sig." + Session + L".tmp" &&
-				   Manifest.filename() == std::wstring(Names.second) + L"." + Session + L".tmp" &&
-				   ManifestSignature.filename() == std::wstring(Names.second) + L".sig." + Session + L".tmp";
+			Matched = Package.filename() == L"QmClient-Setup-" + Session + L".exe" &&
+				  PackageSignature.filename() == L"QmClient-Setup.exe.sig." + Session + L".tmp" &&
+				  Manifest.filename() == L"QmClient-windows-setup-update.json." + Session + L".tmp" &&
+				  ManifestSignature.filename() == L"QmClient-windows-setup-update.json.sig." + Session + L".tmp";
 		}
+		else
+			for(const auto &Names : {std::pair{L"QmClient-windows.zip", L"QmClient-windows-update.json"},
+				    std::pair{L"QmClient-windows-portable.zip", L"QmClient-windows-portable-update.json"},
+				    std::pair{L"QmClient-windows.7z", L"QmClient-windows-7z-update.json"},
+				    std::pair{L"QmClient-windows-portable.7z", L"QmClient-windows-portable-7z-update.json"}})
+			{
+				Matched |= Package.filename() == std::wstring(Names.first) + L"." + Session + L".tmp" &&
+					   PackageSignature.filename() == std::wstring(Names.first) + L".sig." + Session + L".tmp" &&
+					   Manifest.filename() == std::wstring(Names.second) + L"." + Session + L".tmp" &&
+					   ManifestSignature.filename() == std::wstring(Names.second) + L".sig." + Session + L".tmp";
+			}
 		if(!Matched)
 			return false;
 		const std::filesystem::path AssetDirectory = Package.parent_path();
@@ -193,6 +210,7 @@ namespace QmUpdate
 	{
 		return Error.rfind(PERMISSION_DENIED_MARKER, 0) == 0;
 	}
+
 }
 
 #endif

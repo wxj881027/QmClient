@@ -1898,6 +1898,9 @@ Chinese font:
 CHN
 == 中国
 
+Choose a GPU for this app in system graphics settings, then restart the client.
+== システムのグラフィックス設定でこのアプリの GPU を選択し、クライアントを再起動してください。
+
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
 
@@ -2594,6 +2597,9 @@ Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
 == ファイルからタッチコントロールを読み込めませんでした。詳細はローカルコンソールを確認してください。
 
+Could not open system graphics settings.
+== システムのグラフィックス設定を開けませんでした。
+
 Could not preview this image
 == この画像をプレビューできませんでした
 
@@ -2677,6 +2683,9 @@ Current cut is invalid or already added
 
 Current file
 == 現在のファイル
+
+Current GPU
+== 現在の GPU
 
 Current rescue mode: %s
 == 現在のレスキューモード：%s
@@ -3172,6 +3181,9 @@ Detect compatible solo prompts from custom servers
 
 Detect Steam again
 == Steam を再検出
+
+Detected graphics adapters
+== 検出されたグラフィックスアダプター
 
 Detection distance
 == 検出距離
@@ -4454,6 +4466,9 @@ Favorite
 Favorite friend
 == お気に入りのフレンド
 
+Favorite icon color
+== お気に入りアイコンの色
+
 Favorite map
 == お気に入りのマップ
 
@@ -4756,6 +4771,9 @@ Friend entry color in friend list
 
 Friend heart
 == フレンドハート
+
+Friend icon color
+== フレンドアイコンの色
 
 Friend links
 == 相互リンク
@@ -7522,6 +7540,9 @@ No filter
 
 No functions bound
 == 機能が割り当てられていません
+
+No graphics adapters detected
+== グラフィックスアダプターが検出されませんでした
 
 No input device available
 == 利用可能な入力デバイスがありません
@@ -12296,6 +12317,9 @@ System
 System default
 == システムデフォルト
 
+System graphics settings
+== システムのグラフィックス設定
+
 System media controls
 == システムメディアコントロール
 
@@ -13199,8 +13223,14 @@ Translate UI
 Translate:
 == 翻訳：
 
+Translated chat text size as a percentage of the original text (50-100)
+== チャット翻訳文の文字サイズを原文の文字サイズに対する割合で指定（50-100）
+
 Translated text hidden due to streamer mode
 == ストリーマーモードのため翻訳テキストを非表示
+
+Translated text size
+== 翻訳文の文字サイズ
 
 Translating to %s...
 == %s に翻訳中...

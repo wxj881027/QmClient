@@ -19,4 +19,187 @@ TEST(QmUpdateHttp, RetryAfterHttpDateUsesRemainingTimeAndClampsPastDate)
 	EXPECT_EQ(CHttpRequestCurl::ParseRetryAfter(pDate, 1445412420), 60);
 	EXPECT_EQ(CHttpRequestCurl::ParseRetryAfter(pDate, 1445412600), 0);
 }
+
+// 仅提供真实后端回调的输入入口，不复写响应处理或完成状态逻辑。
+class CHttpRequestCurlTestPeer
+{
+public:
+	static size_t Header(CHttpRequestCurl &Request, std::string Text)
+	{
+		return Request.OnHeader(Text.data(), Text.size());
+	}
+	static size_t Body(CHttpRequestCurl &Request, std::string Text)
+	{
+		return CHttpRequestCurl::WriteCallback(Text.data(), 1, Text.size(), &Request);
+	}
+	static void Complete(CHttpRequestCurl &Request)
+	{
+		Request.OnCompletionInternal(nullptr, CURLE_OK);
+	}
+};
+
+TEST(QmUpdateHttp, ProxyBypassMatchesDomainBoundaryCaseAndDots)
+{
+	for(const char *pHost : {"example.com", "WWW.Example.COM", "www.example.com."})
+	{
+		EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed(pHost, ".EXAMPLE.com.")) << pHost;
+	}
+	for(const char *pHost : {"notexample.com", "example.com.attacker", "other.test"})
+		EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed(pHost, "example.com")) << pHost;
+}
+
+TEST(QmUpdateHttp, ProxyBypassHandlesCommaWhitespaceAndOnlyStandaloneWildcard)
+{
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("target.test", " , other.test,\t target.test , "));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("target.test", "other.test target.test"));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("target.test", "*"));
+	for(const char *pList : {"", " , \t", "*,other.test", " * ", "*.test", "."})
+		EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("target.test", pList)) << pList;
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("", "*"));
+}
+
+TEST(QmUpdateHttp, ProxyBypassMatchesStrictIpv4AndNetworkPrefixes)
+{
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("192.0.2.129", "192.0.2.129"));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("192.0.2.129", "192.0.2.128/25"));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("192.0.2.129", "192.0.2.129/32"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("192.0.2.127", "192.0.2.128/25"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("192.0.2.128", "192.0.2.129/32"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("192.0.2.129", "2.129"));
+	for(const char *pList : {"192.0.2.129oops", "192.0.2.128/25oops", "192.0.2.128/-1", "192.0.2.128/33", "192.0.2.128/", "192.0.2.128/+25"})
+		EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("192.0.2.129", pList)) << pList;
+}
+
+TEST(QmUpdateHttp, ProxyBypassMatchesIpv6EquivalentAddressesAndNetworkPrefixes)
+{
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("[2001:db8::1]", "2001:0db8:0:0:0:0:0:1"));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("2001:db8::1", "2001:db8::/32"));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("[2001:db8::1]", "2001:db8::1/128"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("[2001:db9::1]", "2001:db8::/32"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("[2001:db8::2]", "2001:db8::1/128"));
+	for(const char *pList : {"2001:db8::1oops", "2001:db8::/129", "2001:db8::/-1", "[2001:db8::1]", "192.0.2.0/24"})
+		EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("[2001:db8::1]", pList)) << pList;
+}
+
+TEST(QmUpdateHttp, ProxyBypassIpv6PartialBytePrefixUsesStandardNetworkBits)
+{
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("[2001:db8::1]", "2001:db8::/33"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("[2001:db8:8000::1]", "2001:db8::/33"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("[2001:db9::1]", "2001:db8::/33"));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("[2001:db8::2]", "2001:db8::2/127"));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("[2001:db8::3]", "2001:db8::2/127"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("[2001:db8::4]", "2001:db8::2/127"));
+}
+
+TEST(QmUpdateHttp, ProxyBypassZeroPrefixMatchesAnyAddressInItsFamily)
+{
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("192.0.2.2", "0.0.0.0/0"));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassed("[2001:db8::2]", "::/0"));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassed("192.0.2.2", "::/0"));
+}
+
+TEST(QmUpdateHttp, EarlyProxyEvidenceDowngradesOnlyUnreliablePrefixes)
+{
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassEvidence("[2001:db8::1]", "2001:db8::/33", 0x080800));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassEvidence("[2001:db8::1]", "2001:db8::/32", 0x080800));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassEvidence("192.0.2.2", "0.0.0.0/0", 0x080800));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassEvidence("[2001:db8::1]", "2001:db8::/33,2001:db8::1", 0x080800));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassEvidence("target.test", "*,other.test", 0x080800));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassEvidence("target.test", "*", 0x080800));
+}
+
+TEST(QmUpdateHttp, EarlyProxyEvidenceRespectsRuntimeCidrSupport)
+{
+	EXPECT_FALSE(CHttpRequestCurl::ProxyBypassEvidence("192.0.2.2", "192.0.2.0/24", 0x075500));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassEvidence("192.0.2.2", "192.0.2.0/24", 0x075600));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyBypassEvidence("192.0.2.2", "192.0.2.0/24,192.0.2.2", 0x075500));
+}
+
+TEST(QmUpdateHttp, FinalProxyMeasurementOverridesMatcherEvidence)
+{
+	EXPECT_FALSE(CHttpRequestCurl::ProxyFallbackBypassed(503, true, true));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyFallbackBypassed(503, false, true));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyFallbackBypassed(503, false, false));
+}
+
+TEST(QmUpdateHttp, EarlyFailureUsesFinalHostEvidenceDespiteHistoricalProxy)
+{
+	EXPECT_TRUE(CHttpRequestCurl::ProxyFallbackBypassed(0, false, true));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyFallbackBypassed(302, true, true));
+	EXPECT_TRUE(CHttpRequestCurl::ProxyFallbackBypassed(0, std::nullopt, true));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyFallbackBypassed(0, false, false));
+	EXPECT_FALSE(CHttpRequestCurl::ProxyFallbackBypassed(302, true, false));
+}
+
+TEST(QmUpdateHttp, RangeRedirectBodyIsDiscardedBeforeExactFinalByte)
+{
+	CHttpRequestCurl Request("https://example.test/redirect");
+	Request.ByteRange(0, 0);
+	CHttpRequestCurlTestPeer::Header(Request, "HTTP/1.1 302 Found\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "Content-Length: 100\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "Location: /final\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "\r\n");
+	EXPECT_EQ(CHttpRequestCurlTestPeer::Body(Request, std::string(100, 'r')), 100U);
+	CHttpRequestCurlTestPeer::Header(Request, "HTTP/1.1 206 Partial Content\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "Content-Range: bytes 0-0/10\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "\r\n");
+	EXPECT_EQ(CHttpRequestCurlTestPeer::Body(Request, "x"), 1U);
+	CHttpRequestCurlTestPeer::Complete(Request);
+	ASSERT_EQ(Request.State(), EHttpState::DONE);
+	unsigned char *pResult;
+	size_t Length;
+	Request.Result(&pResult, &Length);
+	ASSERT_EQ(Length, 1U);
+	EXPECT_EQ(pResult[0], 'x');
+}
+
+TEST(QmUpdateHttp, RangeTerminalRedirectCannotCompleteSuccessfully)
+{
+	CHttpRequestCurl Request("https://example.test/no-location");
+	Request.ByteRange(0, 0);
+	CHttpRequestCurlTestPeer::Header(Request, "HTTP/1.1 302 Found\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "\r\n");
+	EXPECT_EQ(CHttpRequestCurlTestPeer::Body(Request, "redirect"), 8U);
+	CHttpRequestCurlTestPeer::Complete(Request);
+	EXPECT_EQ(Request.State(), EHttpState::ERROR);
+}
+
+TEST(QmUpdateHttp, RangeFinalBodyRejectsOversizeBeforeStoringBytes)
+{
+	CHttpRequestCurl Request("https://example.test/final");
+	Request.ByteRange(0, 0);
+	CHttpRequestCurlTestPeer::Header(Request, "HTTP/1.1 206 Partial Content\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "Content-Range: bytes 0-0/10\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "\r\n");
+	EXPECT_EQ(CHttpRequestCurlTestPeer::Body(Request, "xx"), 0U);
+	CHttpRequestCurlTestPeer::Complete(Request);
+	EXPECT_EQ(Request.State(), EHttpState::ERROR);
+}
+
+TEST(QmUpdateHttp, RangeCompletionRejectsMissingFinalBytes)
+{
+	CHttpRequestCurl Request("https://example.test/final");
+	Request.ByteRange(0, 0);
+	CHttpRequestCurlTestPeer::Header(Request, "HTTP/1.1 206 Partial Content\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "Content-Range: bytes 0-0/10\r\n");
+	CHttpRequestCurlTestPeer::Header(Request, "\r\n");
+	CHttpRequestCurlTestPeer::Complete(Request);
+	EXPECT_EQ(Request.State(), EHttpState::ERROR);
+}
+
+TEST(QmUpdateHttp, RangeRejectsIgnoredOrMismatchedFinalRange)
+{
+	for(const char *pStatus : {"HTTP/1.1 200 OK\r\n", "HTTP/1.1 206 Partial Content\r\n"})
+	{
+		SCOPED_TRACE(pStatus);
+		CHttpRequestCurl Request("https://example.test/final");
+		Request.ByteRange(0, 0);
+		CHttpRequestCurlTestPeer::Header(Request, pStatus);
+		CHttpRequestCurlTestPeer::Header(Request, "Content-Range: bytes 1-1/10\r\n");
+		CHttpRequestCurlTestPeer::Header(Request, "\r\n");
+		EXPECT_EQ(CHttpRequestCurlTestPeer::Body(Request, "x"), 0U);
+		CHttpRequestCurlTestPeer::Complete(Request);
+		EXPECT_EQ(Request.State(), EHttpState::ERROR);
+	}
+}
 #endif

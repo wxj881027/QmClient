@@ -1898,6 +1898,9 @@ Chinese font:
 CHN
 == Китай
 
+Choose a GPU for this app in system graphics settings, then restart the client.
+== Выберите GPU для этого приложения в системных настройках графики, затем перезапустите клиент.
+
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
 
@@ -2594,6 +2597,9 @@ Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
 == Не удалось загрузить сенсорное управление из файла. Подробности в локальной консоли.
 
+Could not open system graphics settings.
+== Не удалось открыть системные настройки графики.
+
 Could not preview this image
 == Не удалось просмотреть это изображение
 
@@ -2677,6 +2683,9 @@ Current cut is invalid or already added
 
 Current file
 == Текущий файл
+
+Current GPU
+== Текущий GPU
 
 Current rescue mode: %s
 == Текущий режим спасения: %s
@@ -3172,6 +3181,9 @@ Detect compatible solo prompts from custom servers
 
 Detect Steam again
 == Повторно найти Steam
+
+Detected graphics adapters
+== Обнаруженные графические адаптеры
 
 Detection distance
 == Дистанция обнаружения
@@ -4454,6 +4466,9 @@ Favorite
 Favorite friend
 == Любимый друг
 
+Favorite icon color
+== Цвет значка избранного
+
 Favorite map
 == Избранная карта
 
@@ -4756,6 +4771,9 @@ Friend entry color in friend list
 
 Friend heart
 == Сердце друга
+
+Friend icon color
+== Цвет значка друга
 
 Friend links
 == Дружественные ссылки
@@ -7522,6 +7540,9 @@ No filter
 
 No functions bound
 == Действия не назначены
+
+No graphics adapters detected
+== Графические адаптеры не обнаружены
 
 No input device available
 == Нет доступных устройств ввода
@@ -12296,6 +12317,9 @@ System
 System default
 == Системное значение по умолчанию
 
+System graphics settings
+== Системные настройки графики
+
 System media controls
 == Системные медиа-кнопки
 
@@ -13199,8 +13223,14 @@ Translate UI
 Translate:
 == Перевести:
 
+Translated chat text size as a percentage of the original text (50-100)
+== Размер текста перевода чата в процентах от размера исходного текста (50-100)
+
 Translated text hidden due to streamer mode
 == Переведённый текст скрыт из-за режима стримера
+
+Translated text size
+== Размер текста перевода
 
 Translating to %s...
 == Перевод на %s...

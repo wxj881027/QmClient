@@ -54,6 +54,11 @@ namespace qm_update
 		return Url.find("://", Prefix.size()) == std::string::npos && Url.find('@') == std::string::npos;
 	}
 
+	inline bool UpdateUsesSystemProxy(const std::string &Url)
+	{
+		return IsOfficialUrl(Url, API) || IsOfficialUrl(Url, RELEASE) || IsOfficialUrl(Url, RAW);
+	}
+
 	class CSourceRegistry
 	{
 		std::vector<CSource> m_vSources;
@@ -136,6 +141,45 @@ namespace qm_update
 			return Current() != nullptr;
 		}
 		void Cancel() { m_Cancelled = true; }
+		bool HasNext() const { return Current() && m_Index + 1 < m_vSources.size(); }
+		const CSource *NextCandidate() const { return HasNext() ? &m_vSources[m_Index + 1] : nullptr; }
+	};
+
+	// 只有还有备用源时才切换持续低速的大包；完整窗口消除瞬时停顿与每帧噪声。
+	class CDownloadSpeedMonitor
+	{
+		double m_WindowStart = 0;
+		double m_WindowBytes = 0;
+		double m_LastObservedBytes = 0;
+
+	public:
+		static constexpr double WINDOW_SECONDS = 5;
+		static constexpr double MIN_BYTES_PER_SECOND = 100 * 1024;
+		void Begin(double Now)
+		{
+			m_WindowStart = Now;
+			m_WindowBytes = 0;
+			m_LastObservedBytes = 0;
+		}
+		bool ShouldSwitch(double Now, double Bytes, double Total, double AlternativeSpeed, bool Official = false)
+		{
+			// 与上一观察值比较，窗口内的分段回退也必须重新等待完整窗口。
+			const bool ProgressRegressed = Bytes < m_LastObservedBytes;
+			m_LastObservedBytes = Bytes;
+			if(ProgressRegressed)
+			{
+				m_WindowStart = Now;
+				m_WindowBytes = Bytes;
+				return false;
+			}
+			if(Now - m_WindowStart < WINDOW_SECONDS)
+				return false;
+			const double Rate = (Bytes - m_WindowBytes) / (Now - m_WindowStart);
+			m_WindowStart = Now;
+			m_WindowBytes = Bytes;
+			// 接近完成时保留当前包，避免为最后一小段重新下载整个文件。
+			return (Official || AlternativeSpeed > Rate * 2) && AlternativeSpeed > 0 && Rate < MIN_BYTES_PER_SECOND && (Total <= 0 || Total - Bytes > 256 * 1024);
+		}
 	};
 
 	// 使用传输字节变化监控首字节和无进展时间，不给正常大包设置总超时。

@@ -68,6 +68,8 @@ TEST(SettingsIconOptions, OptionalPickerHeightMatchesActualRowFlowAtEveryScale)
 				Rows.NextLine();
 				if(CustomEnabled)
 					Rows.NextButton();
+				Rows.NextButton();
+				Rows.NextButton();
 				Rows.Next(ResolveSettingsRadioRowLayout(Content, 4, Metrics).m_Height);
 				EXPECT_FLOAT_EQ(qm_icon_settings::ContentHeight(Metrics, CustomEnabled, Width), 1000.0f - Content.h);
 			}

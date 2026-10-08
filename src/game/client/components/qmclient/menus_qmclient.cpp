@@ -28,6 +28,7 @@
 #include <game/client/QmUi/QmModuleTypes.h>
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/SettingsCardCollapseState.h>
+#include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiDogfood.h>
@@ -1372,6 +1373,16 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	auto RenderSliderWithValueInput = [this, PrewarmOnly](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
 		RenderQmSettingsSliderWithValueInput(pId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 	};
+	const auto RenderHelp = [this, &Content, LabelWidth, SmallSize, LineSpacing](const char *pText, float FontSize = 0.0f) {
+		const float TextSize = FontSize > 0.0f ? FontSize : SmallSize;
+		const CUIRect HelpRow = ConsumeSettingsWrappedTextRow(Content, LabelWidth, TextSize, LineSpacing, [this, pText, TextSize](float Width) {
+			return TextRender()->TextBoundingBox(TextSize, pText, -1, Width).m_H + TextSize * 0.25f;
+		});
+		SLabelProperties Props;
+		Props.m_MaxWidth = HelpRow.w;
+		Props.m_EnableWidthCheck = false;
+		Ui()->DoLabel(&HelpRow, pText, TextSize, TEXTALIGN_ML, Props);
+	};
 	CUIRect Row, LabelCol, ControlCol;
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	RenderCheckbox(&g_Config.m_QmTranslateAuto, "Auto translate received messages", Localize("Auto translate received messages"), &g_Config.m_QmTranslateAuto, &Row, LineHeight);
@@ -1379,6 +1390,12 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	RenderCheckbox(&g_Config.m_QmTranslateAutoOutgoing, "Auto translate sent messages", Localize("Auto translate sent messages"), &g_Config.m_QmTranslateAutoOutgoing, &Row, LineHeight);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
+	RenderLabel("qmclient-translation-text-size", &LabelCol, Localize("Translated text size"), BodySize);
+	RenderSliderWithValueInput(&g_Config.m_QmChatTranslationSize, ControlCol, &g_Config.m_QmChatTranslationSize, 50, 100, "%");
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 	const auto TranslateBackendDropDownNames = NTranslateUi::NamesWithCustom(NTranslateUi::BackendNames());
@@ -1408,19 +1425,13 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	// MyMemory 免注册说明
 	if(IsMymemoryBackend)
 	{
-		Content.HSplitTop(SmallSize, &Row, &Content);
-		Row.VMargin(LabelWidth, &Row);
-		Ui()->DoLabel(&Row, Localize("MyMemory needs no registration (anonymous daily quota)"), SmallSize, TEXTALIGN_ML);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
+		RenderHelp(Localize("MyMemory needs no registration (anonymous daily quota)"));
 	}
 
 	// DeepL 说明与 API Key 输入
 	if(IsDeeplBackend)
 	{
-		Content.HSplitTop(SmallSize, &Row, &Content);
-		Row.VMargin(LabelWidth, &Row);
-		Ui()->DoLabel(&Row, Localize("DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)"), SmallSize, TEXTALIGN_ML);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
+		RenderHelp(Localize("DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)"));
 
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
@@ -1439,10 +1450,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 		// FTAPI 警告提示
-		Content.HSplitTop(LineHeight * 0.8f, &Row, &Content);
-		Row.VMargin(LabelWidth, &Row);
-		RenderLabel("qmclient-translate-ftapi-warning", &Row, Localize("⚠️ FTAPI is a free service. Excessive use may cause service suspension."), BodySize * 0.8f);
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
+		RenderHelp(Localize("⚠️ FTAPI is a free service. Excessive use may cause service suspension."), BodySize * 0.8f);
 	}
 
 	auto RenderLanguageDropDownWithCustomInput = [this, BodySize, PrewarmOnly, &TextInputCtx](const CUIRect &ControlColumn, const char *const *apNames, const char *const *apCodes, int Count, CUi::SDropDownState &DropDownState, char *pConfigValue, size_t ConfigValueSize, CLineInput &LineInput, const char *pEmptyText) {
@@ -1851,10 +1859,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		// 智谱免费档并发限制提示
 		if(g_Config.m_QmTranslateLlmProvider == 0)
 		{
-			Content.HSplitTop(SmallSize, &Row, &Content);
-			Row.VMargin(LabelWidth, &Row);
-			Ui()->DoLabel(&Row, Localize("Zhipu free models allow only 1 concurrent request"), SmallSize, TEXTALIGN_ML);
-			Content.HSplitTop(LineSpacing, nullptr, &Content);
+			RenderHelp(Localize("Zhipu free models allow only 1 concurrent request"));
 		}
 
 		// 思考模式开关
@@ -1877,10 +1882,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 			if(pHint)
 			{
-				Content.HSplitTop(SmallSize, &Row, &Content);
-				Row.VMargin(LabelWidth, &Row);
-				Ui()->DoLabel(&Row, pHint, SmallSize, TEXTALIGN_ML);
-				Content.HSplitTop(LineSpacing, nullptr, &Content);
+				RenderHelp(pHint);
 			}
 		}
 
@@ -3851,7 +3853,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 				const ColorRGBA ChromeColor(1.0f, 1.0f, 1.0f, Hovered ? 0.28f : 0.18f);
 				if(LocateButton.w < TextRender()->TextWidth(SmallSize, pLabel) + 16.0f * UiScale)
 				{
-					RenderSettingsCardHeaderIcon(SearchCtx, LocateButton, EQmIcon::ARROW_RIGHT, FONT_ICON_ARROW_RIGHT, 1.0f, pLocateButton);
+					RenderSettingsCardHeaderIcon(SearchCtx, LocateButton, EQmIcon::ARROW_RIGHT, FontIcons::FONT_ICON_CHEVRON_RIGHT, 1.0f, pLocateButton);
 					GameClient()->m_Tooltips.DoSmallToolTip(pLocateButton, &LocateButton, pLabel, SmallSize);
 				}
 				else

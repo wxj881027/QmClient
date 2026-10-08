@@ -1898,6 +1898,9 @@ Chinese font:
 CHN
 == CHN
 
+Choose a GPU for this app in system graphics settings, then restart the client.
+== Wybierz GPU dla tej aplikacji w systemowych ustawieniach grafiki, a następnie uruchom ponownie klienta.
+
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
 
@@ -2594,6 +2597,9 @@ Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
 == Nie można załadować ustawień sterowania dotykowego z pliku. Sprawdź konsolę lokalną, aby uzyskać szczegóły.
 
+Could not open system graphics settings.
+== Nie udało się otworzyć systemowych ustawień grafiki.
+
 Could not preview this image
 == Nie można wyświetlić podglądu tego obrazu
 
@@ -2677,6 +2683,9 @@ Current cut is invalid or already added
 
 Current file
 == Bieżący plik
+
+Current GPU
+== Bieżący GPU
 
 Current rescue mode: %s
 == Aktualny tryb ratunkowy: %s
@@ -3172,6 +3181,9 @@ Detect compatible solo prompts from custom servers
 
 Detect Steam again
 == Wykryj Steam ponownie
+
+Detected graphics adapters
+== Wykryte karty graficzne
 
 Detection distance
 == Dystans wykrywania
@@ -4454,6 +4466,9 @@ Favorite
 Favorite friend
 == Ulubiony znajomy
 
+Favorite icon color
+== Kolor ikony ulubionych
+
 Favorite map
 == Ulubiona mapa
 
@@ -4756,6 +4771,9 @@ Friend entry color in friend list
 
 Friend heart
 == Serduszko znajomego
+
+Friend icon color
+== Kolor ikony znajomych
 
 Friend links
 == Przyjazne linki
@@ -7522,6 +7540,9 @@ No filter
 
 No functions bound
 == Brak przypisanych funkcji
+
+No graphics adapters detected
+== Nie wykryto kart graficznych
 
 No input device available
 == Brak dostępnego urządzenia wejściowego
@@ -12296,6 +12317,9 @@ System
 System default
 == Domyślny systemowy
 
+System graphics settings
+== Systemowe ustawienia grafiki
+
 System media controls
 == Sterowanie multimedialne systemu
 
@@ -13199,8 +13223,14 @@ Translate UI
 Translate:
 == Tłumacz:
 
+Translated chat text size as a percentage of the original text (50-100)
+== Rozmiar przetłumaczonego tekstu czatu jako procent rozmiaru oryginalnego tekstu (50-100)
+
 Translated text hidden due to streamer mode
 == Przetłumaczony tekst ukryty z powodu trybu streamera
+
+Translated text size
+== Rozmiar przetłumaczonego tekstu
 
 Translating to %s...
 == Tłumaczenie na %s...

@@ -1039,6 +1039,22 @@ turkish = "Her zaman göster"
 polish = "Zawsze pokazuj"
 
 [[message]]
+key = "Always show song title and artist"
+[message.translations]
+simplified_chinese = "始终显示歌名歌手"
+traditional_chinese = "始終顯示歌名歌手"
+japanese = "曲名とアーティストを常に表示"
+korean = "곡 제목과 아티스트 항상 표시"
+russian = "Всегда показывать название песни и исполнителя"
+german = "Songtitel und Interpret immer anzeigen"
+spanish = "Mostrar siempre el título de la canción y el artista"
+french = "Toujours afficher le titre et l'artiste"
+brazilian_portuguese = "Sempre mostrar o título da música e o artista"
+portuguese = "Mostrar sempre o título da música e o artista"
+turkish = "Şarkı adını ve sanatçıyı her zaman göster"
+polish = "Zawsze pokazuj tytuł utworu i wykonawcę"
+
+[[message]]
 key = "Always translate"
 [message.translations]
 simplified_chinese = "始终翻译"
@@ -1359,6 +1375,22 @@ turkish = "Görünüm / İsim Plakası"
 polish = "Wygląd / Tabliczka z nazwą"
 
 [[message]]
+key = "Appearance of help bubbles outside settings cards"
+[message.translations]
+simplified_chinese = "设置卡片外的说明气泡外观"
+traditional_chinese = "設定卡片外的說明氣泡外觀"
+japanese = "設定カード外のヘルプ吹き出しの外観"
+korean = "설정 카드 밖 도움말 풍선의 외관"
+russian = "Оформление подсказок вне карточек настроек"
+german = "Darstellung der Hilfeblasen außerhalb von Einstellungskarten"
+spanish = "Apariencia de las ayudas fuera de las tarjetas de ajustes"
+french = "Apparence des infobulles hors des cartes de paramètres"
+brazilian_portuguese = "Aparência das dicas fora dos cartões de configurações"
+portuguese = "Aspeto das dicas fora dos cartões de definições"
+turkish = "Ayar kartları dışındaki yardım balonlarının görünümü"
+polish = "Wygląd podpowiedzi poza kartami ustawień"
+
+[[message]]
 key = "Apple Music media-user-token"
 [message.translations]
 simplified_chinese = "Apple Music 媒体用户令牌"
@@ -1391,6 +1423,38 @@ turkish = "Tek renk ve gökkuşağı renk geçersiz kılmalarına uygulanır."
 polish = "Dotyczy zastąpienia koloru barwą jednolitą i tęczową."
 
 [[message]]
+key = "Apply frosted glass blur behind secondary popups and dropdowns"
+[message.translations]
+simplified_chinese = "对二级弹窗与下拉列表背后的内容应用模糊"
+traditional_chinese = "對次級視窗與下拉清單背後的內容套用模糊"
+japanese = "サブウィンドウとドロップダウンの背景をぼかす"
+korean = "하위 팝업과 드롭다운 뒤의 배경을 흐리게 표시"
+russian = "Размывать фон подокон и выпадающих списков"
+german = "Hintergrund von Unterfenstern und Auswahllisten weichzeichnen"
+spanish = "Desenfocar el fondo de ventanas secundarias y listas"
+french = "Flouter le fond des fenêtres secondaires et listes déroulantes"
+brazilian_portuguese = "Desfocar o fundo de janelas secundárias e listas"
+portuguese = "Desfocar o fundo de janelas secundárias e listas"
+turkish = "Alt pencerelerin ve açılır listelerin arkasını bulanıklaştır"
+polish = "Rozmyj tło okien podrzędnych i list rozwijanych"
+
+[[message]]
+key = "Apply Qm recommended appearance"
+[message.translations]
+simplified_chinese = "应用栖梦推荐外观"
+traditional_chinese = "套用栖夢推薦外觀"
+japanese = "Qm 推奨の外観を適用"
+korean = "Qm 권장 외관 적용"
+russian = "Применить рекомендуемый вид Qm"
+german = "Empfohlenes Qm-Erscheinungsbild anwenden"
+spanish = "Aplicar apariencia recomendada de Qm"
+french = "Appliquer l’apparence recommandée par Qm"
+brazilian_portuguese = "Aplicar aparência recomendada do Qm"
+portuguese = "Aplicar aspeto recomendado do Qm"
+turkish = "Qm önerilen görünümünü uygula"
+polish = "Zastosuj zalecany wygląd Qm"
+
+[[message]]
 key = "Apply squishy Tee deformation to other players"
 [message.translations]
 simplified_chinese = "将 Q 弹 Tee 形变应用到其他玩家"
@@ -1405,6 +1469,22 @@ brazilian_portuguese = "Aplicar deformação do Tee elástico a outros jogadores
 portuguese = "Aplicar deformação de Tee elástico a outros jogadores"
 turkish = "Q弹 Tee deformasyonunu diğer oyunculara uygula"
 polish = "Zastosuj deformację Q-Elastycznego Tee do innych graczy"
+
+[[message]]
+key = "Applying this preset changes the appearance settings listed below."
+[message.translations]
+simplified_chinese = "应用预设会修改下面列出的外观设置。"
+traditional_chinese = "套用預設會修改下列外觀設定。"
+japanese = "このプリセットは以下の外観設定を変更します。"
+korean = "이 프리셋을 적용하면 아래 외관 설정이 변경됩니다."
+russian = "Применение набора изменит перечисленные ниже настройки внешнего вида."
+german = "Diese Vorlage ändert die unten aufgeführten Darstellungseinstellungen."
+spanish = "Este preajuste cambia los ajustes de apariencia indicados abajo."
+french = "Ce préréglage modifie les paramètres d’apparence indiqués ci-dessous."
+brazilian_portuguese = "Este perfil altera as configurações de aparência listadas abaixo."
+portuguese = "Esta predefinição altera as definições de aspeto indicadas abaixo."
+turkish = "Bu ön ayar aşağıdaki görünüm ayarlarını değiştirir."
+polish = "Ten zestaw zmienia wymienione poniżej ustawienia wyglądu."
 
 [[message]]
 key = "Aspect ratio preset"
@@ -2447,6 +2527,22 @@ turkish = "Axiom ana hesap şifresi"
 polish = "Hasło głównego konta Axiom"
 
 [[message]]
+key = "Backdrop blur"
+[message.translations]
+simplified_chinese = "背景模糊"
+traditional_chinese = "背景模糊"
+japanese = "背景のぼかし"
+korean = "배경 흐림"
+russian = "Размытие фона"
+german = "Hintergrundunschärfe"
+spanish = "Desenfoque de fondo"
+french = "Flou d’arrière-plan"
+brazilian_portuguese = "Desfoque de fundo"
+portuguese = "Desfocagem do fundo"
+turkish = "Arka plan bulanıklığı"
+polish = "Rozmycie tła"
+
+[[message]]
 key = "Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase"
 [message.translations]
 simplified_chinese = "背景模糊算法：0=高斯，1=Kawase，2=Dual Kawase"
@@ -2863,6 +2959,22 @@ turkish = "En iyi eşleşme"
 polish = "Najlepsze dopasowanie"
 
 [[message]]
+key = "Bind"
+[message.translations]
+simplified_chinese = "绑定"
+traditional_chinese = "綁定"
+japanese = "バインド"
+korean = "바인드"
+russian = "Привязка"
+german = "Bindung"
+spanish = "Vincular"
+french = "Lier"
+brazilian_portuguese = "Vincular"
+portuguese = "Vincular"
+turkish = "Bağla"
+polish = "Wiązanie"
+
+[[message]]
 key = "Bind chat, team chat, and history actions"
 [message.translations]
 simplified_chinese = "绑定聊天、队伍聊天和历史记录操作"
@@ -3229,6 +3341,70 @@ brazilian_portuguese = "Build the status text shown above Tees"
 portuguese = "Build the status text shown above Tees"
 turkish = "Build the status text shown above Tees"
 polish = "Build the status text shown above Tees"
+
+[[message]]
+key = "Button and input background color"
+[message.translations]
+simplified_chinese = "按钮与输入框背景颜色"
+traditional_chinese = "按鈕與輸入框背景顏色"
+japanese = "ボタンと入力欄の背景色"
+korean = "버튼 및 입력란 배경색"
+russian = "Цвет фона кнопок и полей ввода"
+german = "Hintergrundfarbe für Schaltflächen und Eingabefelder"
+spanish = "Color de fondo de botones y campos de entrada"
+french = "Couleur de fond des boutons et champs de saisie"
+brazilian_portuguese = "Cor de fundo dos botões e campos de entrada"
+portuguese = "Cor de fundo dos botões e campos de entrada"
+turkish = "Düğme ve giriş alanı arka plan rengi"
+polish = "Kolor tła przycisków i pól wprowadzania"
+
+[[message]]
+key = "Button and input background opacity percentage"
+[message.translations]
+simplified_chinese = "按钮与输入框背景不透明度百分比"
+traditional_chinese = "按鈕與輸入框背景不透明度百分比"
+japanese = "ボタンと入力欄の背景不透明度（パーセント）"
+korean = "버튼 및 입력란 배경 불투명도 백분율"
+russian = "Непрозрачность фона кнопок и полей ввода в процентах"
+german = "Hintergrunddeckkraft für Schaltflächen und Eingabefelder in Prozent"
+spanish = "Opacidad del fondo de botones y campos de entrada en porcentaje"
+french = "Opacité du fond des boutons et champs de saisie en pourcentage"
+brazilian_portuguese = "Opacidade do fundo dos botões e campos de entrada em porcentagem"
+portuguese = "Opacidade do fundo dos botões e campos de entrada em percentagem"
+turkish = "Düğme ve giriş alanı arka plan opaklığı yüzdesi"
+polish = "Nieprzezroczystość tła przycisków i pól wprowadzania w procentach"
+
+[[message]]
+key = "Button background color"
+[message.translations]
+simplified_chinese = "按钮背景颜色"
+traditional_chinese = "按鈕背景顏色"
+japanese = "ボタン背景色"
+korean = "버튼 배경색"
+russian = "Цвет фона кнопок"
+german = "Hintergrundfarbe der Schaltflächen"
+spanish = "Color de fondo de botones"
+french = "Couleur de fond des boutons"
+brazilian_portuguese = "Cor de fundo dos botões"
+portuguese = "Cor de fundo dos botões"
+turkish = "Düğme arka plan rengi"
+polish = "Kolor tła przycisków"
+
+[[message]]
+key = "Button background opacity percentage"
+[message.translations]
+simplified_chinese = "按钮背景 — 不透明度百分比"
+traditional_chinese = "按鈕背景 — 不透明度百分比"
+japanese = "ボタン背景 — 不透明度（パーセント）"
+korean = "버튼 배경색 — 불투명도 백분율"
+russian = "Цвет фона кнопок — непрозрачность в процентах"
+german = "Hintergrundfarbe der Schaltflächen — Deckkraft in Prozent"
+spanish = "Color de fondo de botones — opacidad en porcentaje"
+french = "Couleur de fond des boutons — opacité en pourcentage"
+brazilian_portuguese = "Cor de fundo dos botões — opacidade em porcentagem"
+portuguese = "Cor de fundo dos botões — opacidade em percentagem"
+turkish = "Düğme arka plan rengi — opaklık yüzdesi"
+polish = "Kolor tła przycisków — nieprzezroczystość w procentach"
 
 [[message]]
 key = "Cache TTL"
@@ -3807,6 +3983,22 @@ turkish = "Sohbet kelime filtreleme"
 polish = "Filtrowanie słów na czacie"
 
 [[message]]
+key = "Check for updates"
+[message.translations]
+simplified_chinese = "检查更新"
+traditional_chinese = "檢查更新"
+japanese = "更新を確認"
+korean = "업데이트 확인"
+russian = "Проверить обновления"
+german = "Nach Updates suchen"
+spanish = "Buscar actualizaciones"
+french = "Rechercher des mises à jour"
+brazilian_portuguese = "Verificar atualizações"
+portuguese = "Procurar atualizações"
+turkish = "Güncellemeleri kontrol et"
+polish = "Sprawdź aktualizacje"
+
+[[message]]
 key = "Check if voice server address is reachable"
 [message.translations]
 simplified_chinese = "建议检查语音服务器地址是否可用"
@@ -3869,6 +4061,22 @@ brazilian_portuguese = "Verifique o dispositivo de saída, confirme se fones/aut
 portuguese = "Verifique o dispositivo de saída, confirme que os auscultadores/altifalantes ainda estão online"
 turkish = "Önce çıkış cihazını kontrol edin, kulaklıkların/hoparlörlerin hala çalıştığını onaylayın"
 polish = "Najpierw sprawdź urządzenie wyjściowe, potwierdź, że słuchawki/głośniki są nadal podłączone"
+
+[[message]]
+key = "Checking Steam..."
+[message.translations]
+simplified_chinese = "正在检测 Steam…"
+traditional_chinese = "正在偵測 Steam…"
+japanese = "Steam を確認中…"
+korean = "Steam 확인 중…"
+russian = "Проверка Steam…"
+german = "Steam wird geprüft…"
+spanish = "Comprobando Steam…"
+french = "Vérification de Steam…"
+brazilian_portuguese = "Verificando Steam…"
+portuguese = "A verificar o Steam…"
+turkish = "Steam kontrol ediliyor…"
+polish = "Sprawdzanie Steam…"
 
 [[message]]
 key = "Choose and arrange status bar data fields"
@@ -3981,6 +4189,38 @@ brazilian_portuguese = "Câmera cinematográfica"
 portuguese = "Câmara cinematográfica"
 turkish = "Sinematik kamera"
 polish = "Kamera filmowa"
+
+[[message]]
+key = "CJK font"
+[message.translations]
+simplified_chinese = "中日韩文字字体"
+traditional_chinese = "中日韓文字字型"
+japanese = "中国語・日本語・韓国語フォント"
+korean = "한중일 글꼴"
+russian = "Шрифт CJK"
+german = "CJK-Schrift"
+spanish = "Fuente CJK"
+french = "Police CJK"
+brazilian_portuguese = "Fonte CJK"
+portuguese = "Tipo de letra CJK"
+turkish = "CJK yazı tipi"
+polish = "Czcionka CJK"
+
+[[message]]
+key = "CJK font weight"
+[message.translations]
+simplified_chinese = "中日韩文字字重"
+traditional_chinese = "中日韓文字字重"
+japanese = "中国語・日本語・韓国語フォントの太さ"
+korean = "한중일 글꼴 굵기"
+russian = "Толщина шрифта CJK"
+german = "CJK-Schriftstärke"
+spanish = "Grosor de la fuente CJK"
+french = "Graisse de la police CJK"
+brazilian_portuguese = "Espessura da fonte CJK"
+portuguese = "Espessura do tipo de letra CJK"
+turkish = "CJK yazı tipi kalınlığı"
+polish = "Grubość czcionki CJK"
 
 [[message]]
 key = "Clan of the player followed from the pie menu"
@@ -4399,6 +4639,22 @@ turkish = "Kombo"
 polish = "Kombinacja"
 
 [[message]]
+key = "Command completion"
+[message.translations]
+simplified_chinese = "指令补全"
+traditional_chinese = "指令補全"
+japanese = "コマンド補完"
+korean = "명령어 자동 완성"
+russian = "Дополнение команд"
+german = "Befehlsvervollständigung"
+spanish = "Autocompletado de comandos"
+french = "Complétion des commandes"
+brazilian_portuguese = "Conclusão de comandos"
+portuguese = "Conclusão de comandos"
+turkish = "Komut tamamlama"
+polish = "Uzupełnianie poleceń"
+
+[[message]]
 key = "Command is not available on solo servers"
 [message.translations]
 simplified_chinese = "这个命令在 solo 服务器上不可用"
@@ -4687,70 +4943,6 @@ turkish = "Configure Dream-only convenience features"
 polish = "Configure Dream-only convenience features"
 
 [[message]]
-key = "Configure the IME candidate bar"
-[message.translations]
-simplified_chinese = "配置 IME 候选栏"
-traditional_chinese = "Configure the IME candidate bar"
-japanese = "Configure the IME candidate bar"
-korean = "Configure the IME candidate bar"
-russian = "Configure the IME candidate bar"
-german = "Configure the IME candidate bar"
-spanish = "Configure the IME candidate bar"
-french = "Configure the IME candidate bar"
-brazilian_portuguese = "Configure the IME candidate bar"
-portuguese = "Configure the IME candidate bar"
-turkish = "Configure the IME candidate bar"
-polish = "Configure the IME candidate bar"
-
-[[message]]
-key = "IME background color"
-[message.translations]
-simplified_chinese = "IME 背景颜色"
-traditional_chinese = "IME 背景顏色"
-japanese = "IME 背景色"
-korean = "IME 배경 색상"
-russian = "Цвет фона IME"
-german = "Hintergrundfarbe der IME"
-spanish = "Color de fondo del IME"
-french = "Couleur d'arrière-plan de l'IME"
-brazilian_portuguese = "Cor de fundo do IME"
-portuguese = "Cor de fundo do IME"
-turkish = "IME arka plan rengi"
-polish = "Kolor tła IME"
-
-[[message]]
-key = "New IME candidate bar background color"
-[message.translations]
-simplified_chinese = "新版 IME 候选栏背景颜色"
-traditional_chinese = "新版 IME 候選欄背景顏色"
-japanese = "新しい IME 候補バーの背景色"
-korean = "새 IME 후보 표시줄 배경 색상"
-russian = "Цвет фона новой панели кандидатов IME"
-german = "Hintergrundfarbe der neuen IME-Kandidatenleiste"
-spanish = "Color de fondo de la nueva barra de candidatos del IME"
-french = "Couleur d'arrière-plan de la nouvelle barre de candidats IME"
-brazilian_portuguese = "Cor de fundo da nova barra de candidatos do IME"
-portuguese = "Cor de fundo da nova barra de candidatos do IME"
-turkish = "Yeni IME aday çubuğu arka plan rengi"
-polish = "Kolor tła nowego paska kandydatów IME"
-
-[[message]]
-key = "New IME candidate bar opacity"
-[message.translations]
-simplified_chinese = "新版 IME 候选栏透明度"
-traditional_chinese = "新版 IME 候選欄透明度"
-japanese = "新しい IME 候補バーの不透明度"
-korean = "새 IME 후보 표시줄 불투명도"
-russian = "Непрозрачность новой панели кандидатов IME"
-german = "Deckkraft der neuen IME-Kandidatenleiste"
-spanish = "Opacidad de la nueva barra de candidatos del IME"
-french = "Opacité de la nouvelle barre de candidats IME"
-brazilian_portuguese = "Opacidade da nova barra de candidatos do IME"
-portuguese = "Opacidade da nova barra de candidatos do IME"
-turkish = "Yeni IME aday çubuğu opaklığı"
-polish = "Nieprzezroczystość nowego paska kandydatów IME"
-
-[[message]]
 key = "Configure ghost recording and playback tools"
 [message.translations]
 simplified_chinese = "配置幽灵录制和回放工具"
@@ -4989,6 +5181,22 @@ brazilian_portuguese = "Configure the companion appearance and movement"
 portuguese = "Configure the companion appearance and movement"
 turkish = "Configure the companion appearance and movement"
 polish = "Configure the companion appearance and movement"
+
+[[message]]
+key = "Configure the IME candidate bar"
+[message.translations]
+simplified_chinese = "配置 IME 候选栏"
+traditional_chinese = "Configure the IME candidate bar"
+japanese = "Configure the IME candidate bar"
+korean = "Configure the IME candidate bar"
+russian = "Configure the IME candidate bar"
+german = "Configure the IME candidate bar"
+spanish = "Configure the IME candidate bar"
+french = "Configure the IME candidate bar"
+brazilian_portuguese = "Configure the IME candidate bar"
+portuguese = "Configure the IME candidate bar"
+turkish = "Configure the IME candidate bar"
+polish = "Configure the IME candidate bar"
 
 [[message]]
 key = "Configure the input overlay display"
@@ -5295,6 +5503,22 @@ turkish = "Zen modu tarafından yönetiliyor"
 polish = "Kontrolowane przez tryb Zen"
 
 [[message]]
+key = "Copy name option color"
+[message.translations]
+simplified_chinese = "复制名字选项颜色"
+traditional_chinese = "複製名字選項顏色"
+japanese = "名前コピー項目の色"
+korean = "이름 복사 항목 색상"
+russian = "Цвет действия копирования имени"
+german = "Farbe der Option zum Kopieren des Namens"
+spanish = "Color de la opción de copiar nombre"
+french = "Couleur de l'option de copie du nom"
+brazilian_portuguese = "Cor da opção de copiar nome"
+portuguese = "Cor da opção de copiar nome"
+turkish = "İsim kopyalama seçeneğinin rengi"
+polish = "Kolor opcji kopiowania nazwy"
+
+[[message]]
 key = "Copy skin option color"
 [message.translations]
 simplified_chinese = "复制皮肤选项颜色"
@@ -5341,6 +5565,22 @@ brazilian_portuguese = "Não foi possível adicionar o jogador como amigo"
 portuguese = "Não foi possível adicionar o jogador como amigo"
 turkish = "Oyuncu arkadaş olarak eklenemedi"
 polish = "Nie udało się dodać gracza do znajomych"
+
+[[message]]
+key = "Could not connect to the translation service. Please try again later."
+[message.translations]
+simplified_chinese = "无法连接翻译服务，请稍后重试。"
+traditional_chinese = "無法連線至翻譯服務，請稍後重試。"
+japanese = "翻訳サービスに接続できませんでした。しばらくしてから再試行してください。"
+korean = "번역 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하세요."
+russian = "Не удалось подключиться к сервису перевода. Повторите попытку позже."
+german = "Keine Verbindung zum Übersetzungsdienst möglich. Bitte später erneut versuchen."
+spanish = "No se pudo conectar al servicio de traducción. Inténtalo más tarde."
+french = "Impossible de se connecter au service de traduction. Réessayez plus tard."
+brazilian_portuguese = "Não foi possível conectar ao serviço de tradução. Tente novamente mais tarde."
+portuguese = "Não foi possível ligar ao serviço de tradução. Tente novamente mais tarde."
+turkish = "Çeviri servisine bağlanılamadı. Daha sonra tekrar deneyin."
+polish = "Nie udało się połączyć z usługą tłumaczenia. Spróbuj ponownie później."
 
 [[message]]
 key = "Could not find your Team"
@@ -5743,6 +5983,22 @@ turkish = "Özel Sağlayıcı Model Adı"
 polish = "Niestandardowa nazwa modelu dostawcy"
 
 [[message]]
+key = "Custom text color"
+[message.translations]
+simplified_chinese = "自定义文本颜色"
+traditional_chinese = "自訂文字顏色"
+japanese = "カスタム文字色"
+korean = "사용자 지정 텍스트 색상"
+russian = "Пользовательский цвет текста"
+german = "Benutzerdefinierte Textfarbe"
+spanish = "Color de texto personalizado"
+french = "Couleur de texte personnalisée"
+brazilian_portuguese = "Cor de texto personalizada"
+portuguese = "Cor de texto personalizada"
+turkish = "Özel metin rengi"
+polish = "Własny kolor tekstu"
+
+[[message]]
 key = "Custom title"
 [message.translations]
 simplified_chinese = "自定义头衔"
@@ -5997,6 +6253,22 @@ brazilian_portuguese = "Malditos granadeiros, morram!"
 portuguese = "Malditos granadeiros, morram!"
 turkish = "Lanet bombacılar, ölün artık!"
 polish = "Cholerni granatnicy, po prostu zgińcie!"
+
+[[message]]
+key = "Dark translucent"
+[message.translations]
+simplified_chinese = "深色半透明"
+traditional_chinese = "深色半透明"
+japanese = "暗色半透明"
+korean = "어두운 반투명"
+russian = "Тёмный полупрозрачный"
+german = "Dunkel und halbtransparent"
+spanish = "Oscuro translúcido"
+french = "Sombre translucide"
+brazilian_portuguese = "Escuro translúcido"
+portuguese = "Escuro translúcido"
+turkish = "Koyu yarı saydam"
+polish = "Ciemny półprzezroczysty"
 
 [[message]]
 key = "DDNet contributors"
@@ -6367,6 +6639,22 @@ turkish = "DeepSeek model adı"
 polish = "Nazwa modelu DeepSeek"
 
 [[message]]
+key = "Default appearance profile migration version"
+[message.translations]
+simplified_chinese = "默认外观配置迁移版本"
+traditional_chinese = "預設外觀設定遷移版本"
+japanese = "既定の外観設定の移行バージョン"
+korean = "기본 외관 설정 마이그레이션 버전"
+russian = "Версия миграции настроек внешнего вида по умолчанию"
+german = "Migrationsversion des Standard-Darstellungsprofils"
+spanish = "Versión de migración de la apariencia predeterminada"
+french = "Version de migration de l’apparence par défaut"
+brazilian_portuguese = "Versão de migração da aparência padrão"
+portuguese = "Versão de migração do aspeto predefinido"
+turkish = "Varsayılan görünüm profili geçiş sürümü"
+polish = "Wersja migracji domyślnego profilu wyglądu"
+
+[[message]]
 key = "Default input open failed"
 [message.translations]
 simplified_chinese = "默认输入打开失败"
@@ -6413,6 +6701,22 @@ brazilian_portuguese = "Arma solicitada por padrão ao renascer (0=desligado, 1=
 portuguese = "Arma para solicitar troca automaticamente após renascer (0=desligado, 1=martelo, 2=pistola, 3=caçadeira, 4=lançador de granadas, 5=laser)"
 turkish = "Yeniden doğduktan sonra varsayılan olarak istenen silah (0=kapalı, 1=çekiç, 2=tabanca, 3=pompalı, 4=bomba atar, 5=lazer)"
 polish = "Domyślna broń do przełączenia po odrodzeniu (0=wyłączone, 1=młotek, 2=pistolet, 3=strzelba, 4=granatnik, 5=laser)"
+
+[[message]]
+key = "Default width"
+[message.translations]
+simplified_chinese = "默认宽度"
+traditional_chinese = "預設寬度"
+japanese = "標準の幅"
+korean = "기본 너비"
+russian = "Обычная ширина"
+german = "Standardbreite"
+spanish = "Ancho predeterminado"
+french = "Largeur par défaut"
+brazilian_portuguese = "Largura padrão"
+portuguese = "Largura predefinida"
+turkish = "Varsayılan genişlik"
+polish = "Domyślna szerokość"
 
 [[message]]
 key = "Define automatic chat reply rules"
@@ -6621,6 +6925,22 @@ brazilian_portuguese = "Detectar prompts solo compatíveis de servidores persona
 portuguese = "Detectar avisos compatíveis de solo de servidores personalizados"
 turkish = "Özel sunuculardan uyumlu solo ipuçlarını algıla."
 polish = "Wykrywaj kompatybilne monity solo z niestandardowych serwerów"
+
+[[message]]
+key = "Detect Steam again"
+[message.translations]
+simplified_chinese = "重新检测 Steam"
+traditional_chinese = "重新偵測 Steam"
+japanese = "Steam を再検出"
+korean = "Steam 다시 감지"
+russian = "Повторно найти Steam"
+german = "Steam erneut erkennen"
+spanish = "Volver a detectar Steam"
+french = "Détecter Steam à nouveau"
+brazilian_portuguese = "Detectar Steam novamente"
+portuguese = "Detetar Steam novamente"
+turkish = "Steam'i yeniden algıla"
+polish = "Wykryj Steam ponownie"
 
 [[message]]
 key = "Detection distance"
@@ -7215,6 +7535,22 @@ turkish = "Sürüklenme pürüzsüzlüğü"
 polish = "Gładkość dryfu"
 
 [[message]]
+key = "Dummy control"
+[message.translations]
+simplified_chinese = "分身控制"
+traditional_chinese = "分身控制"
+japanese = "ダミー操作"
+korean = "더미 제어"
+russian = "Управление дамми"
+german = "Dummy-Steuerung"
+spanish = "Control del dummy"
+french = "Contrôle du dummy"
+brazilian_portuguese = "Controle do dummy"
+portuguese = "Controlo do dummy"
+turkish = "Kukla kontrolü"
+polish = "Sterowanie dummy"
+
+[[message]]
 key = "Dummy key/hammer/control/copy status switches"
 [message.translations]
 simplified_chinese = "卡键/锤子/分身控制/分身同步状态开关"
@@ -7727,6 +8063,22 @@ turkish = "İfade Kimliği"
 polish = "ID emotki"
 
 [[message]]
+key = "Emoticon projectile duration"
+[message.translations]
+simplified_chinese = "表情弹射时长"
+traditional_chinese = "表情彈射時長"
+japanese = "発射したエモティコンの表示時間"
+korean = "발사한 이모티콘의 표시 시간"
+russian = "Длительность полёта смайлика"
+german = "Anzeigedauer geschossener Emoticons"
+spanish = "Duración de los emoticonos lanzados"
+french = "Durée des émoticônes projetées"
+brazilian_portuguese = "Duração dos emoticons lançados"
+portuguese = "Duração dos emoticons lançados"
+turkish = "Fırlatılan ifade süresi"
+polish = "Czas wyświetlania wystrzelonych emotikonów"
+
+[[message]]
 key = "Emoticon shadow"
 [message.translations]
 simplified_chinese = "表情阴影"
@@ -8093,6 +8445,22 @@ brazilian_portuguese = "Ativar entrada rápida no modo Gores"
 portuguese = "Ativar entrada rápida no modo Gores"
 turkish = "Gores modunda hızlı girişi etkinleştir"
 polish = "Włącz szybkie wprowadzanie w trybie Gores"
+
+[[message]]
+key = "Enable frosted glass blur behind secondary popups and dropdowns"
+[message.translations]
+simplified_chinese = "启用二级弹窗与下拉列表背景模糊"
+traditional_chinese = "啟用次級視窗與下拉清單背景模糊"
+japanese = "サブウィンドウとドロップダウンの背景ぼかしを有効にする"
+korean = "하위 팝업과 드롭다운 배경 흐림 활성화"
+russian = "Включить размытие фона подокон и списков"
+german = "Hintergrundunschärfe für Unterfenster und Auswahllisten aktivieren"
+spanish = "Activar desenfoque de fondo en ventanas secundarias y listas"
+french = "Activer le flou derrière les fenêtres secondaires et listes"
+brazilian_portuguese = "Ativar desfoque atrás de janelas secundárias e listas"
+portuguese = "Ativar desfocagem atrás de janelas secundárias e listas"
+turkish = "Alt pencerelerin ve açılır listelerin arkasında bulanıklığı etkinleştir"
+polish = "Włącz rozmycie tła okien podrzędnych i list"
 
 [[message]]
 key = "Enable FTAPI auto-translate (may overload the service)"
@@ -9071,6 +9439,22 @@ turkish = "Sponsor kodunu gir ve \"Kullan\" düğmesine bas, ardından unvanı y
 polish = "Wpisz kod sponsora i naciśnij „Zrealizuj”, następnie wpisz tytuł i naciśnij „Zapisz”. Zaznacz „Pokazuj tylko z tym nickiem”, aby przypisać tytuł do jednego nicku."
 
 [[message]]
+key = "Enter the Steam client program path, without command arguments"
+[message.translations]
+simplified_chinese = "填写 Steam 客户端程序路径，不要附带启动参数"
+traditional_chinese = "填寫 Steam 用戶端程式路徑，不要附帶啟動參數"
+japanese = "起動引数を付けずに Steam クライアントのパスを入力してください"
+korean = "실행 인수 없이 Steam 클라이언트 프로그램 경로를 입력하세요"
+russian = "Укажите путь к клиенту Steam без аргументов запуска"
+german = "Pfad zum Steam-Client ohne Startparameter eingeben"
+spanish = "Introduce la ruta del programa Steam sin argumentos de inicio"
+french = "Saisissez le chemin du client Steam sans arguments de lancement"
+brazilian_portuguese = "Insira o caminho do programa Steam sem argumentos de inicialização"
+portuguese = "Introduza o caminho do programa Steam sem argumentos de arranque"
+turkish = "Başlatma bağımsız değişkenleri olmadan Steam istemci yolunu girin"
+polish = "Wpisz ścieżkę programu Steam bez argumentów uruchamiania"
+
+[[message]]
 key = "Enter your sponsor code"
 [message.translations]
 simplified_chinese = "请输入分发给你的认证码"
@@ -9181,6 +9565,38 @@ brazilian_portuguese = "Expandir módulo"
 portuguese = "Expandir módulo"
 turkish = "Modülü genişlet"
 polish = "Rozwiń moduł"
+
+[[message]]
+key = "Expanded dropdown background color"
+[message.translations]
+simplified_chinese = "展开列表背景颜色"
+traditional_chinese = "展開清單背景顏色"
+japanese = "展開リスト背景色"
+korean = "펼쳐진 목록 배경색"
+russian = "Цвет фона раскрытого списка"
+german = "Hintergrundfarbe der aufgeklappten Liste"
+spanish = "Color de fondo de la lista desplegada"
+french = "Couleur de fond de la liste déroulée"
+brazilian_portuguese = "Cor de fundo da lista expandida"
+portuguese = "Cor de fundo da lista expandida"
+turkish = "Açılan liste arka plan rengi"
+polish = "Kolor tła rozwiniętej listy"
+
+[[message]]
+key = "Expanded dropdown background opacity percentage"
+[message.translations]
+simplified_chinese = "展开列表背景 — 不透明度百分比"
+traditional_chinese = "展開清單背景 — 不透明度百分比"
+japanese = "展開リスト背景 — 不透明度（パーセント）"
+korean = "펼쳐진 목록 배경색 — 불투명도 백분율"
+russian = "Цвет фона раскрытого списка — непрозрачность в процентах"
+german = "Hintergrundfarbe der aufgeklappten Liste — Deckkraft in Prozent"
+spanish = "Color de fondo de la lista desplegada — opacidad en porcentaje"
+french = "Couleur de fond de la liste déroulée — opacité en pourcentage"
+brazilian_portuguese = "Cor de fundo da lista expandida — opacidade em porcentagem"
+portuguese = "Cor de fundo da lista expandida — opacidade em percentagem"
+turkish = "Açılan liste arka plan rengi — opaklık yüzdesi"
+polish = "Kolor tła rozwiniętej listy — nieprzezroczystość w procentach"
 
 [[message]]
 key = "Expose playback controls to the operating system"
@@ -9373,6 +9789,22 @@ brazilian_portuguese = "Força de redução de ruído simples de fallback"
 portuguese = "Força de redução de ruído simples de fallback"
 turkish = "Yedek basit gürültü azaltma gücü"
 polish = "Siła prostego tłumienia szumów w trybie awaryjnym"
+
+[[message]]
+key = "Favorite icon color"
+[message.translations]
+simplified_chinese = "收藏图标颜色"
+traditional_chinese = "收藏圖示顏色"
+japanese = "お気に入りアイコンの色"
+korean = "즐겨찾기 아이콘 색상"
+russian = "Цвет значка избранного"
+german = "Farbe des Favoritensymbols"
+spanish = "Color del icono de favoritos"
+french = "Couleur de l’icône des favoris"
+brazilian_portuguese = "Cor do ícone de favoritos"
+portuguese = "Cor do ícone de favoritos"
+turkish = "Favori simgesi rengi"
+polish = "Kolor ikony ulubionych"
 
 [[message]]
 key = "Favorite maps"
@@ -9887,6 +10319,22 @@ turkish = "Arkadaş"
 polish = "Znajomy"
 
 [[message]]
+key = "Friend icon color"
+[message.translations]
+simplified_chinese = "好友图标颜色"
+traditional_chinese = "好友圖示顏色"
+japanese = "フレンドアイコンの色"
+korean = "친구 아이콘 색상"
+russian = "Цвет значка друга"
+german = "Farbe des Freundessymbols"
+spanish = "Color del icono de amigos"
+french = "Couleur de l’icône des amis"
+brazilian_portuguese = "Cor do ícone de amigos"
+portuguese = "Cor do ícone de amigos"
+turkish = "Arkadaş simgesi rengi"
+polish = "Kolor ikony znajomych"
+
+[[message]]
 key = "Friend links"
 [message.translations]
 simplified_chinese = "友链"
@@ -10045,6 +10493,22 @@ brazilian_portuguese = "Ouvir mapa inteiro na mesma sala"
 portuguese = "Ouvir mapa inteiro na mesma sala"
 turkish = "Aynı odada tam harita dinleme"
 polish = "Słuchaj całej mapy w tym samym pokoju"
+
+[[message]]
+key = "Full width"
+[message.translations]
+simplified_chinese = "全宽"
+traditional_chinese = "全寬"
+japanese = "全幅"
+korean = "전체 너비"
+russian = "Полная ширина"
+german = "Volle Breite"
+spanish = "Ancho completo"
+french = "Pleine largeur"
+brazilian_portuguese = "Largura total"
+portuguese = "Largura total"
+turkish = "Tam genişlik"
+polish = "Pełna szerokość"
 
 [[message]]
 key = "Functions"
@@ -10365,6 +10829,22 @@ brazilian_portuguese = "Tecla de alternância global"
 portuguese = "Tecla de alternância global"
 turkish = "Genel açma/kapama tuşu"
 polish = "Globalny klawisz przełączania"
+
+[[message]]
+key = "Global UI size"
+[message.translations]
+simplified_chinese = "整体界面大小"
+traditional_chinese = "整體介面大小"
+japanese = "UI 全体のサイズ"
+korean = "전체 UI 크기"
+russian = "Общий размер интерфейса"
+german = "Gesamte UI-Größe"
+spanish = "Tamaño global de la interfaz"
+french = "Taille générale de l’interface"
+brazilian_portuguese = "Tamanho geral da interface"
+portuguese = "Tamanho global da interface"
+turkish = "Genel arayüz boyutu"
+polish = "Ogólny rozmiar interfejsu"
 
 [[message]]
 key = "Global UI size percentage"
@@ -11999,6 +12479,102 @@ turkish = "Ses mesafesi zayıflamasını yoksay"
 polish = "Ignoruj tłumienie głosu z odległości"
 
 [[message]]
+key = "IME background color"
+[message.translations]
+simplified_chinese = "IME 背景颜色"
+traditional_chinese = "IME 背景顏色"
+japanese = "IME 背景色"
+korean = "IME 배경 색상"
+russian = "Цвет фона IME"
+german = "Hintergrundfarbe der IME"
+spanish = "Color de fondo del IME"
+french = "Couleur d'arrière-plan de l'IME"
+brazilian_portuguese = "Cor de fundo do IME"
+portuguese = "Cor de fundo do IME"
+turkish = "IME arka plan rengi"
+polish = "Kolor tła IME"
+
+[[message]]
+key = "IME font size"
+[message.translations]
+simplified_chinese = "输入法字号"
+traditional_chinese = "輸入法字級"
+japanese = "IME の文字サイズ"
+korean = "IME 글꼴 크기"
+russian = "Размер шрифта IME"
+german = "IME-Schriftgröße"
+spanish = "Tamaño de letra del IME"
+french = "Taille du texte IME"
+brazilian_portuguese = "Tamanho da fonte do IME"
+portuguese = "Tamanho da letra do IME"
+turkish = "IME yazı boyutu"
+polish = "Rozmiar czcionki IME"
+
+[[message]]
+key = "IME font size percentage"
+[message.translations]
+simplified_chinese = "输入法字号 (%)"
+traditional_chinese = "輸入法字級 (%)"
+japanese = "IME の文字サイズ (%)"
+korean = "IME 글꼴 크기 (%)"
+russian = "Размер шрифта IME (%)"
+german = "IME-Schriftgröße (%)"
+spanish = "Tamaño de letra del IME (%)"
+french = "Taille du texte IME (%)"
+brazilian_portuguese = "Tamanho da fonte do IME (%)"
+portuguese = "Tamanho da letra do IME (%)"
+turkish = "IME yazı boyutu (%)"
+polish = "Rozmiar czcionki IME (%)"
+
+[[message]]
+key = "IME selected text color"
+[message.translations]
+simplified_chinese = "输入法选中文字颜色"
+traditional_chinese = "輸入法選取文字顏色"
+japanese = "IME の選択文字色"
+korean = "IME 선택 글자색"
+russian = "Цвет выбранного текста IME"
+german = "IME-Farbe des ausgewählten Texts"
+spanish = "Color del texto seleccionado del IME"
+french = "Couleur du texte sélectionné IME"
+brazilian_portuguese = "Cor do texto selecionado do IME"
+portuguese = "Cor do texto selecionado do IME"
+turkish = "IME seçili metin rengi"
+polish = "Kolor zaznaczonego tekstu IME"
+
+[[message]]
+key = "IME selection background color"
+[message.translations]
+simplified_chinese = "输入法选中背景颜色"
+traditional_chinese = "輸入法選取背景顏色"
+japanese = "IME の選択背景色"
+korean = "IME 선택 배경색"
+russian = "Цвет фона выделения IME"
+german = "IME-Auswahlhintergrundfarbe"
+spanish = "Color de fondo de selección del IME"
+french = "Couleur de fond de sélection IME"
+brazilian_portuguese = "Cor de fundo da seleção do IME"
+portuguese = "Cor de fundo da seleção do IME"
+turkish = "IME seçim arka plan rengi"
+polish = "Kolor tła zaznaczenia IME"
+
+[[message]]
+key = "IME text color"
+[message.translations]
+simplified_chinese = "输入法文字颜色"
+traditional_chinese = "輸入法文字顏色"
+japanese = "IME の文字色"
+korean = "IME 글자색"
+russian = "Цвет текста IME"
+german = "IME-Textfarbe"
+spanish = "Color del texto del IME"
+french = "Couleur du texte IME"
+brazilian_portuguese = "Cor do texto do IME"
+portuguese = "Cor do texto do IME"
+turkish = "IME metin rengi"
+polish = "Kolor tekstu IME"
+
+[[message]]
 key = "Import"
 [message.translations]
 simplified_chinese = "导入"
@@ -12125,6 +12701,38 @@ brazilian_portuguese = "Modo de tradução automática de mensagens recebidas (0
 portuguese = "Modo de tradução automática de mensagens recebidas (0=apenas se não estiver no idioma de destino, 1=traduzir sempre)"
 turkish = "Gelen mesajlar için otomatik çeviri modu (0=yalnızca hedef dilde değilse çevir, 1=her zaman çevir)"
 polish = "Tryb automatycznego tłumaczenia wiadomości przychodzących (0=tłumacz tylko, gdy wiadomość nie jest w języku docelowym, 1=zawsze tłumacz)"
+
+[[message]]
+key = "Input background color"
+[message.translations]
+simplified_chinese = "输入框背景颜色"
+traditional_chinese = "輸入框背景顏色"
+japanese = "入力欄背景色"
+korean = "입력란 배경색"
+russian = "Цвет фона полей ввода"
+german = "Hintergrundfarbe der Eingabefelder"
+spanish = "Color de fondo de campos de entrada"
+french = "Couleur de fond des champs de saisie"
+brazilian_portuguese = "Cor de fundo dos campos de entrada"
+portuguese = "Cor de fundo dos campos de entrada"
+turkish = "Giriş alanı arka plan rengi"
+polish = "Kolor tła pól wprowadzania"
+
+[[message]]
+key = "Input background opacity percentage"
+[message.translations]
+simplified_chinese = "输入框背景 — 不透明度百分比"
+traditional_chinese = "輸入框背景 — 不透明度百分比"
+japanese = "入力欄背景 — 不透明度（パーセント）"
+korean = "입력란 배경색 — 불투명도 백분율"
+russian = "Цвет фона полей ввода — непрозрачность в процентах"
+german = "Hintergrundfarbe der Eingabefelder — Deckkraft in Prozent"
+spanish = "Color de fondo de campos de entrada — opacidad en porcentaje"
+french = "Couleur de fond des champs de saisie — opacité en pourcentage"
+brazilian_portuguese = "Cor de fundo dos campos de entrada — opacidade em porcentagem"
+portuguese = "Cor de fundo dos campos de entrada — opacidade em percentagem"
+turkish = "Giriş alanı arka plan rengi — opaklık yüzdesi"
+polish = "Kolor tła pól wprowadzania — nieprzezroczystość w procentach"
 
 [[message]]
 key = "Input device"
@@ -13007,6 +13615,70 @@ turkish = "Tuş Bağlamaları"
 polish = "Przypisania klawiszy"
 
 [[message]]
+key = "Key press count color"
+[message.translations]
+simplified_chinese = "按键计数颜色"
+traditional_chinese = "按鍵計數顏色"
+japanese = "キー入力回数の色"
+korean = "키 입력 횟수 색상"
+russian = "Цвет счётчика нажатий"
+german = "Farbe des Tastenzählers"
+spanish = "Color del contador de pulsaciones"
+french = "Couleur du compteur de touches"
+brazilian_portuguese = "Cor do contador de teclas"
+portuguese = "Cor do contador de teclas"
+turkish = "Tuş sayacı rengi"
+polish = "Kolor licznika naciśnięć"
+
+[[message]]
+key = "Key press count font size"
+[message.translations]
+simplified_chinese = "按键计数字号"
+traditional_chinese = "按鍵計數字級"
+japanese = "キー入力回数の文字サイズ"
+korean = "키 입력 횟수 글꼴 크기"
+russian = "Размер шрифта счётчика нажатий"
+german = "Schriftgröße des Tastenzählers"
+spanish = "Tamaño de letra del contador de pulsaciones"
+french = "Taille du compteur de touches"
+brazilian_portuguese = "Tamanho da fonte do contador de teclas"
+portuguese = "Tamanho da letra do contador de teclas"
+turkish = "Tuş sayacı yazı boyutu"
+polish = "Rozmiar czcionki licznika naciśnięć"
+
+[[message]]
+key = "Key press count font size percentage"
+[message.translations]
+simplified_chinese = "按键计数字号 (%)"
+traditional_chinese = "按鍵計數字級 (%)"
+japanese = "キー入力回数の文字サイズ (%)"
+korean = "키 입력 횟수 글꼴 크기 (%)"
+russian = "Размер шрифта счётчика нажатий (%)"
+german = "Schriftgröße des Tastenzählers (%)"
+spanish = "Tamaño de letra del contador de pulsaciones (%)"
+french = "Taille du compteur de touches (%)"
+brazilian_portuguese = "Tamanho da fonte do contador de teclas (%)"
+portuguese = "Tamanho da letra do contador de teclas (%)"
+turkish = "Tuş sayacı yazı boyutu (%)"
+polish = "Rozmiar czcionki licznika naciśnięć (%)"
+
+[[message]]
+key = "Key press count label"
+[message.translations]
+simplified_chinese = "按键计数前缀文字"
+traditional_chinese = "按鍵計數前綴文字"
+japanese = "キー入力回数の接頭辞"
+korean = "키 입력 횟수 접두사"
+russian = "Префикс счётчика нажатий"
+german = "Präfix des Tastenzählers"
+spanish = "Prefijo del contador de pulsaciones"
+french = "Préfixe du compteur de touches"
+brazilian_portuguese = "Prefixo do contador de teclas"
+portuguese = "Prefixo do contador de teclas"
+turkish = "Tuş sayacı ön eki"
+polish = "Prefiks licznika naciśnięć"
+
+[[message]]
 key = "Keyboard focus ring color"
 [message.translations]
 simplified_chinese = "键盘焦点环颜色"
@@ -13437,6 +14109,102 @@ brazilian_portuguese = "Estilo do laser"
 portuguese = "Estilo do laser"
 turkish = "Lazer stili"
 polish = "Styl lasera"
+
+[[message]]
+key = "Last verified approved update source"
+[message.translations]
+simplified_chinese = "上次验证成功的已批准更新源"
+traditional_chinese = "上次驗證成功的已核准更新來源"
+japanese = "前回検証に成功した承認済みの更新元"
+korean = "마지막으로 검증에 성공한 승인된 업데이트 소스"
+russian = "Последний проверенный разрешённый источник обновления"
+german = "Zuletzt überprüfte freigegebene Updatequelle"
+spanish = "Última fuente de actualización aprobada y verificada"
+french = "Dernière source de mise à jour autorisée et vérifiée"
+brazilian_portuguese = "Última fonte de atualização aprovada e verificada"
+portuguese = "Última fonte de atualização aprovada e verificada"
+turkish = "Son doğrulanan onaylı güncelleme kaynağı"
+polish = "Ostatnie zweryfikowane i zatwierdzone źródło aktualizacji"
+
+[[message]]
+key = "Last viewed announcement content revision"
+[message.translations]
+simplified_chinese = "最近已读的公告内容修订"
+traditional_chinese = "最近已讀的公告內容修訂"
+japanese = "最後に読んだお知らせ内容の改訂"
+korean = "마지막으로 읽은 공지 내용 개정판"
+russian = "Редакция последнего прочитанного объявления"
+german = "Inhaltsrevision der zuletzt gelesenen Ankündigung"
+spanish = "Revisión del contenido del último anuncio leído"
+french = "Révision du contenu de la dernière annonce consultée"
+brazilian_portuguese = "Revisão do conteúdo do último anúncio lido"
+portuguese = "Revisão do conteúdo do último anúncio lido"
+turkish = "Son okunan duyuru içeriği revizyonu"
+polish = "Rewizja treści ostatnio przeczytanego ogłoszenia"
+
+[[message]]
+key = "Last viewed announcement version"
+[message.translations]
+simplified_chinese = "最近已读的公告版本"
+traditional_chinese = "最近已讀的公告版本"
+japanese = "最後に読んだお知らせのバージョン"
+korean = "마지막으로 읽은 공지 버전"
+russian = "Версия последнего прочитанного объявления"
+german = "Version der zuletzt gelesenen Ankündigung"
+spanish = "Versión del último anuncio leído"
+french = "Version de la dernière annonce consultée"
+brazilian_portuguese = "Versão do último anúncio lido"
+portuguese = "Versão do último anúncio lido"
+turkish = "Son okunan duyuru sürümü"
+polish = "Wersja ostatnio przeczytanego ogłoszenia"
+
+[[message]]
+key = "Last viewed client release notes"
+[message.translations]
+simplified_chinese = "最近已读的客户端版本说明"
+traditional_chinese = "最近已讀的用戶端版本說明"
+japanese = "最後に読んだクライアントのリリースノート"
+korean = "마지막으로 읽은 클라이언트 릴리스 정보"
+russian = "Последние прочитанные примечания к выпуску клиента"
+german = "Zuletzt gelesene Versionshinweise des Clients"
+spanish = "Últimas notas de versión del cliente leídas"
+french = "Dernières notes de version du client consultées"
+brazilian_portuguese = "Últimas notas de versão do cliente lidas"
+portuguese = "Últimas notas de versão do cliente lidas"
+turkish = "Son okunan istemci sürüm notları"
+polish = "Ostatnio przeczytane informacje o wydaniu klienta"
+
+[[message]]
+key = "Latin font"
+[message.translations]
+simplified_chinese = "拉丁文字字体"
+traditional_chinese = "拉丁文字字型"
+japanese = "ラテン文字フォント"
+korean = "라틴 문자 글꼴"
+russian = "Латинский шрифт"
+german = "Lateinische Schrift"
+spanish = "Fuente latina"
+french = "Police latine"
+brazilian_portuguese = "Fonte latina"
+portuguese = "Tipo de letra latino"
+turkish = "Latin yazı tipi"
+polish = "Czcionka łacińska"
+
+[[message]]
+key = "Latin font weight"
+[message.translations]
+simplified_chinese = "拉丁文字字重"
+traditional_chinese = "拉丁文字字重"
+japanese = "ラテン文字フォントの太さ"
+korean = "라틴 문자 글꼴 굵기"
+russian = "Толщина латинского шрифта"
+german = "Lateinische Schriftstärke"
+spanish = "Grosor de la fuente latina"
+french = "Graisse de la police latine"
+brazilian_portuguese = "Espessura da fonte latina"
+portuguese = "Espessura do tipo de letra latino"
+turkish = "Latin yazı tipi kalınlığı"
+polish = "Grubość czcionki łacińskiej"
 
 [[message]]
 key = "Launch count threshold for the next sponsor reminder"
@@ -14381,6 +15149,38 @@ brazilian_portuguese = "LRCLIB API base URL (can be changed to a mirror)"
 portuguese = "LRCLIB API base URL (can be changed to a mirror)"
 turkish = "LRCLIB API base URL (can be changed to a mirror)"
 polish = "LRCLIB API base URL (can be changed to a mirror)"
+
+[[message]]
+key = "LXGW WenKai is available."
+[message.translations]
+simplified_chinese = "霞鹜文楷可用。"
+traditional_chinese = "霞鶩文楷可用。"
+japanese = "LXGW WenKai を利用できます。"
+korean = "LXGW WenKai를 사용할 수 있습니다."
+russian = "Шрифт LXGW WenKai доступен."
+german = "LXGW WenKai ist verfügbar."
+spanish = "LXGW WenKai está disponible."
+french = "LXGW WenKai est disponible."
+brazilian_portuguese = "LXGW WenKai está disponível."
+portuguese = "LXGW WenKai está disponível."
+turkish = "LXGW WenKai kullanılabilir."
+polish = "Czcionka LXGW WenKai jest dostępna."
+
+[[message]]
+key = "LXGW WenKai is unavailable. Current fonts and weights will be kept."
+[message.translations]
+simplified_chinese = "未找到霞鹜文楷，将保留当前字体和字重。"
+traditional_chinese = "找不到霞鶩文楷，將保留目前字型與字重。"
+japanese = "LXGW WenKai が見つかりません。現在のフォントと太さを維持します。"
+korean = "LXGW WenKai를 찾을 수 없습니다. 현재 글꼴과 굵기를 유지합니다."
+russian = "LXGW WenKai недоступен. Текущие шрифты и их толщина сохранятся."
+german = "LXGW WenKai ist nicht verfügbar. Aktuelle Schriften und Schriftstärken bleiben erhalten."
+spanish = "LXGW WenKai no está disponible. Se conservarán las fuentes y los grosores actuales."
+french = "LXGW WenKai est indisponible. Les polices et graisses actuelles seront conservées."
+brazilian_portuguese = "LXGW WenKai indisponível. As fontes e espessuras atuais serão mantidas."
+portuguese = "LXGW WenKai indisponível. Os tipos de letra e espessuras atuais serão mantidos."
+turkish = "LXGW WenKai kullanılamıyor. Mevcut yazı tipleri ve kalınlıkları korunacak."
+polish = "Czcionka LXGW WenKai jest niedostępna. Obecne czcionki i ich grubości zostaną zachowane."
 
 [[message]]
 key = "Lyric auto search source order/enable list (empty=default; use | separator, e.g. QQ|Kugou|Netease|LrcLib)"
@@ -15375,6 +16175,22 @@ turkish = "Manuel kapsam"
 polish = "Ręczny zakres"
 
 [[message]]
+key = "Manual Steam path is invalid; using automatic detection"
+[message.translations]
+simplified_chinese = "手动填写的 Steam 路径无效，已使用自动检测"
+traditional_chinese = "手動填寫的 Steam 路徑無效，已改用自動偵測"
+japanese = "指定した Steam パスが無効なため、自動検出を使用します"
+korean = "입력한 Steam 경로가 잘못되어 자동 감지를 사용합니다"
+russian = "Указанный путь Steam недействителен; используется автоопределение"
+german = "Manueller Steam-Pfad ungültig; automatische Erkennung wird verwendet"
+spanish = "La ruta manual de Steam no es válida; se usa la detección automática"
+french = "Le chemin Steam saisi est invalide ; détection automatique utilisée"
+brazilian_portuguese = "O caminho manual do Steam é inválido; usando detecção automática"
+portuguese = "O caminho manual do Steam é inválido; a usar deteção automática"
+turkish = "Elle girilen Steam yolu geçersiz; otomatik algılama kullanılıyor"
+polish = "Ręczna ścieżka Steam jest nieprawidłowa; używane jest automatyczne wykrywanie"
+
+[[message]]
 key = "Manual target"
 [message.translations]
 simplified_chinese = "手动目标"
@@ -15887,6 +16703,38 @@ turkish = "Menü Opaklığı (0-100)"
 polish = "Nieprzezroczystość menu (Menu opacity 0-100)"
 
 [[message]]
+key = "Menu panel color"
+[message.translations]
+simplified_chinese = "菜单面板颜色"
+traditional_chinese = "選單面板顏色"
+japanese = "メニューパネルの色"
+korean = "메뉴 패널 색상"
+russian = "Цвет панели меню"
+german = "Farbe der Menüfläche"
+spanish = "Color del panel del menú"
+french = "Couleur du panneau de menu"
+brazilian_portuguese = "Cor do painel do menu"
+portuguese = "Cor do painel do menu"
+turkish = "Menü paneli rengi"
+polish = "Kolor panelu menu"
+
+[[message]]
+key = "Menu panel opacity"
+[message.translations]
+simplified_chinese = "菜单面板不透明度"
+traditional_chinese = "選單面板不透明度"
+japanese = "メニューパネルの不透明度"
+korean = "메뉴 패널 불투명도"
+russian = "Непрозрачность панели меню"
+german = "Deckkraft der Menüfläche"
+spanish = "Opacidad del panel del menú"
+french = "Opacité du panneau de menu"
+brazilian_portuguese = "Opacidade do painel do menu"
+portuguese = "Opacidade do painel do menu"
+turkish = "Menü paneli opaklığı"
+polish = "Krycie panelu menu"
+
+[[message]]
 key = "Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)"
 [message.translations]
 simplified_chinese = "在此窗口（毫秒）内合并连续相同的 echo 消息（0 表示不合并）"
@@ -16157,6 +17005,22 @@ brazilian_portuguese = "Tamanho do mouse"
 portuguese = "Tamanho do rato"
 turkish = "Fare boyutu"
 polish = "Rozmiar myszy"
+
+[[message]]
+key = "Music player volume"
+[message.translations]
+simplified_chinese = "音乐播放器音量"
+traditional_chinese = "音樂播放器音量"
+japanese = "音楽プレーヤーの音量"
+korean = "음악 플레이어 음량"
+russian = "Громкость музыкального проигрывателя"
+german = "Lautstärke des Musikplayers"
+spanish = "Volumen del reproductor de música"
+french = "Volume du lecteur de musique"
+brazilian_portuguese = "Volume do reprodutor de música"
+portuguese = "Volume do leitor de música"
+turkish = "Müzik oynatıcı ses düzeyi"
+polish = "Głośność odtwarzacza muzyki"
 
 [[message]]
 key = "Mute death/respawn sound in Zen Mode"
@@ -16959,6 +17823,22 @@ turkish = "Netease Hook yardımcı yolu (boş = QmClient'ın yanında)"
 polish = "Ścieżka pomocnika Netease Hook (pusta = obok QmClient)"
 
 [[message]]
+key = "Network error"
+[message.translations]
+simplified_chinese = "网络错误"
+traditional_chinese = "網路錯誤"
+japanese = "ネットワークエラー"
+korean = "네트워크 오류"
+russian = "Ошибка сети"
+german = "Netzwerkfehler"
+spanish = "Error de red"
+french = "Erreur réseau"
+brazilian_portuguese = "Erro de rede"
+portuguese = "Erro de rede"
+turkish = "Ağ hatası"
+polish = "Błąd sieci"
+
+[[message]]
 key = "New features"
 [message.translations]
 simplified_chinese = "新功能"
@@ -16975,6 +17855,22 @@ turkish = "Yeni özellikler"
 polish = "Nowe funkcje"
 
 [[message]]
+key = "New features (unread)"
+[message.translations]
+simplified_chinese = "新功能（未读）"
+traditional_chinese = "新功能（未讀）"
+japanese = "新機能（未読）"
+korean = "새 기능 (읽지 않음)"
+russian = "Новые возможности (не прочитано)"
+german = "Neue Funktionen (ungelesen)"
+spanish = "Novedades (sin leer)"
+french = "Nouveautés (non lues)"
+brazilian_portuguese = "Novidades (não lidas)"
+portuguese = "Novidades (não lidas)"
+turkish = "Yeni özellikler (okunmadı)"
+polish = "Nowości (nieprzeczytane)"
+
+[[message]]
 key = "New IME"
 [message.translations]
 simplified_chinese = "新版 IME"
@@ -16989,6 +17885,38 @@ brazilian_portuguese = "Novo IME"
 portuguese = "Novo IME"
 turkish = "Yeni IME"
 polish = "Nowe IME"
+
+[[message]]
+key = "New IME candidate bar background color"
+[message.translations]
+simplified_chinese = "新版 IME 候选栏背景颜色"
+traditional_chinese = "新版 IME 候選欄背景顏色"
+japanese = "新しい IME 候補バーの背景色"
+korean = "새 IME 후보 표시줄 배경 색상"
+russian = "Цвет фона новой панели кандидатов IME"
+german = "Hintergrundfarbe der neuen IME-Kandidatenleiste"
+spanish = "Color de fondo de la nueva barra de candidatos del IME"
+french = "Couleur d'arrière-plan de la nouvelle barre de candidats IME"
+brazilian_portuguese = "Cor de fundo da nova barra de candidatos do IME"
+portuguese = "Cor de fundo da nova barra de candidatos do IME"
+turkish = "Yeni IME aday çubuğu arka plan rengi"
+polish = "Kolor tła nowego paska kandydatów IME"
+
+[[message]]
+key = "New IME candidate bar opacity"
+[message.translations]
+simplified_chinese = "新版 IME 候选栏透明度"
+traditional_chinese = "新版 IME 候選欄透明度"
+japanese = "新しい IME 候補バーの不透明度"
+korean = "새 IME 후보 표시줄 불투명도"
+russian = "Непрозрачность новой панели кандидатов IME"
+german = "Deckkraft der neuen IME-Kandidatenleiste"
+spanish = "Opacidad de la nueva barra de candidatos del IME"
+french = "Opacité de la nouvelle barre de candidats IME"
+brazilian_portuguese = "Opacidade da nova barra de candidatos do IME"
+portuguese = "Opacidade da nova barra de candidatos do IME"
+turkish = "Yeni IME aday çubuğu opaklığı"
+polish = "Nieprzezroczystość nowego paska kandydatów IME"
 
 [[message]]
 key = "New UI"
@@ -17055,6 +17983,22 @@ turkish = "Sonraki şarkı sözü satırı rengi"
 polish = "Kolor następnego wiersza tekstu utworu"
 
 [[message]]
+key = "Next track"
+[message.translations]
+simplified_chinese = "下一首"
+traditional_chinese = "下一首"
+japanese = "次の曲"
+korean = "다음 곡"
+russian = "Следующая композиция"
+german = "Nächster Titel"
+spanish = "Pista siguiente"
+french = "Piste suivante"
+brazilian_portuguese = "Próxima faixa"
+portuguese = "Faixa seguinte"
+turkish = "Sonraki parça"
+polish = "Następny utwór"
+
+[[message]]
 key = "No animation"
 [message.translations]
 simplified_chinese = "无动画"
@@ -17101,6 +18045,38 @@ brazilian_portuguese = "Nenhum par chamável encontrado"
 portuguese = "Nenhum par contactável encontrado"
 turkish = "Aranabilir eş bulunamadı"
 polish = "Nie znaleziono osiągalnego peera"
+
+[[message]]
+key = "No compatible Windows update package for this version"
+[message.translations]
+simplified_chinese = "此版本暂无匹配的 Windows 更新包"
+traditional_chinese = "此版本暫無相容的 Windows 更新套件"
+japanese = "このバージョンに対応する Windows 更新パッケージはありません"
+korean = "이 버전과 호환되는 Windows 업데이트 패키지가 없습니다"
+russian = "Совместимый пакет обновления Windows для этой версии недоступен"
+german = "Kein kompatibles Windows-Updatepaket für diese Version verfügbar"
+spanish = "No hay un paquete de actualización de Windows compatible con esta versión"
+french = "Aucun paquet de mise à jour Windows compatible avec cette version"
+brazilian_portuguese = "Nenhum pacote de atualização do Windows compatível com esta versão"
+portuguese = "Não existe um pacote de atualização do Windows compatível com esta versão"
+turkish = "Bu sürüm için uyumlu Windows güncelleme paketi yok"
+polish = "Brak zgodnego pakietu aktualizacji Windows dla tej wersji"
+
+[[message]]
+key = "No downloadable portable package for this version"
+[message.translations]
+simplified_chinese = "此版本暂无可下载的便携包"
+traditional_chinese = "此版本暫無可下載的可攜式套件"
+japanese = "このバージョンのポータブル版パッケージはまだありません"
+korean = "이 버전의 포터블 패키지는 아직 다운로드할 수 없습니다"
+russian = "Переносимый пакет для этой версии пока недоступен"
+german = "Für diese Version ist noch kein portables Paket verfügbar"
+spanish = "Aún no hay un paquete portátil para esta versión"
+french = "Aucun paquet portable disponible pour cette version"
+brazilian_portuguese = "Ainda não há pacote portátil para esta versão"
+portuguese = "Ainda não existe um pacote portátil para esta versão"
+turkish = "Bu sürüm için indirilebilir taşınabilir paket henüz yok"
+polish = "Brak pakietu przenośnego do pobrania dla tej wersji"
 
 [[message]]
 key = "No empty team left."
@@ -17325,6 +18301,22 @@ brazilian_portuguese = "Ainda não há demos de rank 1 em cache. Pesquise e baix
 portuguese = "Ainda não há demos de rank 1 em cache. Pesquisa e transfere na página Rank 1."
 turkish = "Henüz önbelleğe alınmış Rank 1 demosu yok. Rank 1 sayfasından arayıp indirebilirsin."
 polish = "Nie ma jeszcze zapisanych nagrań rangi 1. Wyszukaj i pobierz je na stronie Rank 1."
+
+[[message]]
+key = "No release notes provided"
+[message.translations]
+simplified_chinese = "此版本未提供更新说明"
+traditional_chinese = "此版本未提供更新說明"
+japanese = "このバージョンのリリースノートはありません"
+korean = "이 버전의 업데이트 내용이 없습니다"
+russian = "Примечания к этому выпуску не предоставлены"
+german = "Für diese Version sind keine Hinweise vorhanden"
+spanish = "No se proporcionaron notas para esta versión"
+french = "Aucune note fournie pour cette version"
+brazilian_portuguese = "Nenhuma nota fornecida para esta versão"
+portuguese = "Não foram fornecidas notas para esta versão"
+turkish = "Bu sürüm için not sağlanmadı"
+polish = "Nie podano informacji o tym wydaniu"
 
 [[message]]
 key = "Noise reduction mode"
@@ -18943,6 +19935,70 @@ turkish = "Pasta Menüsü"
 polish = "Menu kołowe"
 
 [[message]]
+key = "Pie menu effects"
+[message.translations]
+simplified_chinese = "饼菜单开合效果"
+traditional_chinese = "圓盤選單開合效果"
+japanese = "円形メニューの開閉エフェクト"
+korean = "원형 메뉴 열기 및 닫기 효과"
+russian = "Эффекты открытия и закрытия кругового меню"
+german = "Effekte beim Öffnen und Schließen des Kreismenüs"
+spanish = "Efectos de apertura y cierre del menú radial"
+french = "Effets d’ouverture et de fermeture du menu radial"
+brazilian_portuguese = "Efeitos de abertura e fechamento do menu radial"
+portuguese = "Efeitos de abertura e fecho do menu radial"
+turkish = "Dairesel menü açılma ve kapanma efektleri"
+polish = "Efekty otwierania i zamykania menu kołowego"
+
+[[message]]
+key = "Pie menu highlight tint"
+[message.translations]
+simplified_chinese = "饼菜单选中色调"
+traditional_chinese = "圓盤選單選取色調"
+japanese = "円形メニューの選択色"
+korean = "원형 메뉴 선택 색조"
+russian = "Оттенок выделения кругового меню"
+german = "Auswahlfarbton des Kreismenüs"
+spanish = "Tinte de selección del menú radial"
+french = "Teinte de sélection du menu radial"
+brazilian_portuguese = "Tonalidade de seleção do menu radial"
+portuguese = "Tonalidade de seleção do menu radial"
+turkish = "Dairesel menü seçim tonu"
+polish = "Odcień zaznaczenia menu kołowego"
+
+[[message]]
+key = "Pie menu highlight tint (alpha controls tint strength)"
+[message.translations]
+simplified_chinese = "饼菜单选中色调（透明度控制着色强度）"
+traditional_chinese = "圓盤選單選取色調（透明度控制著色強度）"
+japanese = "円形メニューの選択色（アルファで強度を調整）"
+korean = "원형 메뉴 선택 색조 (알파로 강도 조절)"
+russian = "Оттенок выделения кругового меню (альфа задаёт силу оттенка)"
+german = "Auswahlfarbton des Kreismenüs (Alpha bestimmt die Stärke)"
+spanish = "Tinte del menú radial (el alfa controla la intensidad)"
+french = "Teinte du menu radial (l’alpha règle l’intensité)"
+brazilian_portuguese = "Tonalidade do menu radial (o alfa controla a intensidade)"
+portuguese = "Tonalidade do menu radial (o alfa controla a intensidade)"
+turkish = "Dairesel menü seçim tonu (alfa yoğunluğu belirler)"
+polish = "Odcień menu kołowego (alfa określa intensywność)"
+
+[[message]]
+key = "Pie menu opening and closing effects"
+[message.translations]
+simplified_chinese = "饼菜单开合效果"
+traditional_chinese = "圓盤選單開合效果"
+japanese = "円形メニューの開閉エフェクト"
+korean = "원형 메뉴 열기 및 닫기 효과"
+russian = "Эффекты открытия и закрытия кругового меню"
+german = "Effekte beim Öffnen und Schließen des Kreismenüs"
+spanish = "Efectos de apertura y cierre del menú radial"
+french = "Effets d’ouverture et de fermeture du menu radial"
+brazilian_portuguese = "Efeitos de abertura e fechamento do menu radial"
+portuguese = "Efeitos de abertura e fecho do menu radial"
+turkish = "Dairesel menü açılma ve kapanma efektleri"
+polish = "Efekty otwierania i zamykania menu kołowego"
+
+[[message]]
 key = "Pie menu rename list (separate with |, e.g., name1|name2)"
 [message.translations]
 simplified_chinese = "饼菜单改名名单（使用 | 分隔，例如：name1|name2）"
@@ -19503,6 +20559,22 @@ turkish = "Cilalı"
 polish = "Połysk"
 
 [[message]]
+key = "Popup & dropdown blur"
+[message.translations]
+simplified_chinese = "弹窗与下拉列表模糊"
+traditional_chinese = "彈出視窗與下拉清單模糊"
+japanese = "ポップアップとドロップダウンのぼかし"
+korean = "팝업 및 드롭다운 흐림"
+russian = "Размытие окон и списков"
+german = "Unschärfe für Popups und Auswahllisten"
+spanish = "Desenfoque de ventanas y listas"
+french = "Flou des fenêtres et listes déroulantes"
+brazilian_portuguese = "Desfoque de janelas e listas"
+portuguese = "Desfocagem de janelas e listas"
+turkish = "Açılır pencere ve liste bulanıklığı"
+polish = "Rozmycie okien i list"
+
+[[message]]
 key = "Popup animation"
 [message.translations]
 simplified_chinese = "弹出动画"
@@ -19517,6 +20589,22 @@ brazilian_portuguese = "Animação de pop-up"
 portuguese = "Animação pop-up"
 turkish = "Açılır animasyon"
 polish = "Animacja wyskakująca"
+
+[[message]]
+key = "Popup blur"
+[message.translations]
+simplified_chinese = "弹出面板模糊"
+traditional_chinese = "彈出面板模糊"
+japanese = "ポップアップのぼかし"
+korean = "팝업 흐림"
+russian = "Размытие всплывающих панелей"
+german = "Unschärfe von Einblendungen"
+spanish = "Desenfoque de ventanas emergentes"
+french = "Flou des panneaux contextuels"
+brazilian_portuguese = "Desfoque de painéis flutuantes"
+portuguese = "Desfocagem dos painéis emergentes"
+turkish = "Açılır panel bulanıklığı"
+polish = "Rozmycie paneli podręcznych"
 
 [[message]]
 key = "Position jump hint"
@@ -19759,6 +20847,22 @@ turkish = "Tahmin süresi"
 polish = "Czas predykcji"
 
 [[message]]
+key = "Preview and apply a fixed appearance preset"
+[message.translations]
+simplified_chinese = "查看并应用固定的外观预设"
+traditional_chinese = "檢視並套用固定的外觀預設"
+japanese = "固定の外観プリセットを確認して適用"
+korean = "정해진 외관 프리셋을 확인하고 적용"
+russian = "Просмотр и применение фиксированного набора настроек внешнего вида"
+german = "Feste Darstellungsvorlage ansehen und anwenden"
+spanish = "Revisar y aplicar un preajuste fijo de apariencia"
+french = "Consulter et appliquer un préréglage d’apparence fixe"
+brazilian_portuguese = "Visualizar e aplicar um perfil fixo de aparência"
+portuguese = "Ver e aplicar uma predefinição fixa de aspeto"
+turkish = "Sabit bir görünüm ön ayarını incele ve uygula"
+polish = "Sprawdź i zastosuj ustalony zestaw ustawień wyglądu"
+
+[[message]]
 key = "Preview hook collision colors and line styles"
 [message.translations]
 simplified_chinese = "预览钩爪碰撞颜色和线条样式"
@@ -19933,6 +21037,22 @@ brazilian_portuguese = "Anterior"
 portuguese = "Anterior"
 turkish = "Önceki"
 polish = "Poprzedni"
+
+[[message]]
+key = "Previous track"
+[message.translations]
+simplified_chinese = "上一首"
+traditional_chinese = "上一首"
+japanese = "前の曲"
+korean = "이전 곡"
+russian = "Предыдущая композиция"
+german = "Vorheriger Titel"
+spanish = "Pista anterior"
+french = "Piste précédente"
+brazilian_portuguese = "Faixa anterior"
+portuguese = "Faixa anterior"
+turkish = "Önceki parça"
+polish = "Poprzedni utwór"
 
 [[message]]
 key = "Prioritize outgoing game traffic on Windows (best effort)"
@@ -20349,6 +21469,22 @@ brazilian_portuguese = "Renderização aprimorada do Qm: 0=desativada (Vulkan pu
 portuguese = "Renderização melhorada do Qm: 0=desativada (Vulkan puro), 1=recuo automático, 2=forçada"
 turkish = "Qm gelişmiş işleme: 0=kapalı (saf Vulkan), 1=otomatik geri dönüş, 2=zorla açık"
 polish = "Ulepszone renderowanie Qm: 0=wyłączone (czysty Vulkan), 1=automatyczny powrót, 2=wymuszone"
+
+[[message]]
+key = "Qm recommended appearance"
+[message.translations]
+simplified_chinese = "栖梦推荐外观"
+traditional_chinese = "栖夢推薦外觀"
+japanese = "Qm 推奨の外観"
+korean = "Qm 권장 외관"
+russian = "Рекомендуемый вид Qm"
+german = "Empfohlenes Qm-Erscheinungsbild"
+spanish = "Apariencia recomendada de Qm"
+french = "Apparence recommandée par Qm"
+brazilian_portuguese = "Aparência recomendada do Qm"
+portuguese = "Aspeto recomendado do Qm"
+turkish = "Qm önerilen görünümü"
+polish = "Zalecany wygląd Qm"
 
 [[message]]
 key = "Qm UI custom icon color"
@@ -21695,6 +22831,22 @@ turkish = "Düzenli ifade"
 polish = "Wyrażenie regularne"
 
 [[message]]
+key = "Release notes"
+[message.translations]
+simplified_chinese = "更新说明"
+traditional_chinese = "更新說明"
+japanese = "リリースノート"
+korean = "업데이트 내용"
+russian = "Примечания к выпуску"
+german = "Versionshinweise"
+spanish = "Notas de la versión"
+french = "Notes de version"
+brazilian_portuguese = "Notas da versão"
+portuguese = "Notas da versão"
+turkish = "Sürüm notları"
+polish = "Informacje o wydaniu"
+
+[[message]]
 key = "Remote particle effects"
 [message.translations]
 simplified_chinese = "远程粒子效果"
@@ -21951,6 +23103,22 @@ turkish = "Tekrar klasörü"
 polish = "Katalog nagrań"
 
 [[message]]
+key = "Reply content"
+[message.translations]
+simplified_chinese = "回复内容"
+traditional_chinese = "回覆內容"
+japanese = "返信内容"
+korean = "답장 내용"
+russian = "Текст ответа"
+german = "Antworttext"
+spanish = "Contenido de la respuesta"
+french = "Contenu de la réponse"
+brazilian_portuguese = "Conteúdo da resposta"
+portuguese = "Conteúdo da resposta"
+turkish = "Yanıt içeriği"
+polish = "Treść odpowiedzi"
+
+[[message]]
 key = "Reply with dummy"
 [message.translations]
 simplified_chinese = "使用分身回复"
@@ -22095,6 +23263,70 @@ turkish = "Renkleri sıfırla"
 polish = "Przywróć kolory"
 
 [[message]]
+key = "Reset count appearance"
+[message.translations]
+simplified_chinese = "恢复计数默认外观"
+traditional_chinese = "還原計數預設外觀"
+japanese = "カウンターの外観を初期化"
+korean = "카운터 외관 초기화"
+russian = "Сбросить оформление счётчика"
+german = "Zählerdarstellung zurücksetzen"
+spanish = "Restablecer apariencia del contador"
+french = "Réinitialiser l’apparence du compteur"
+brazilian_portuguese = "Restaurar aparência do contador"
+portuguese = "Repor aspeto do contador"
+turkish = "Sayaç görünümünü sıfırla"
+polish = "Przywróć wygląd licznika"
+
+[[message]]
+key = "Reset IME appearance"
+[message.translations]
+simplified_chinese = "恢复输入法默认外观"
+traditional_chinese = "還原輸入法預設外觀"
+japanese = "IME の外観を初期化"
+korean = "IME 외관 초기화"
+russian = "Сбросить оформление IME"
+german = "IME-Darstellung zurücksetzen"
+spanish = "Restablecer apariencia del IME"
+french = "Réinitialiser l’apparence IME"
+brazilian_portuguese = "Restaurar aparência do IME"
+portuguese = "Repor aspeto do IME"
+turkish = "IME görünümünü sıfırla"
+polish = "Przywróć wygląd IME"
+
+[[message]]
+key = "Reset key press counts"
+[message.translations]
+simplified_chinese = "清零按键累计次数"
+traditional_chinese = "清零按鍵累計次數"
+japanese = "キーを押した回数をリセット"
+korean = "키 입력 횟수 초기화"
+russian = "Сбросить счётчики нажатий клавиш"
+german = "Tastendruckzähler zurücksetzen"
+spanish = "Reiniciar el número de pulsaciones"
+french = "Réinitialiser le compteur d'appuis"
+brazilian_portuguese = "Zerar a contagem de teclas pressionadas"
+portuguese = "Repor a contagem de teclas premidas"
+turkish = "Tuş basma sayılarını sıfırla"
+polish = "Wyzeruj liczniki naciśnięć klawiszy"
+
+[[message]]
+key = "Reset pie menu appearance"
+[message.translations]
+simplified_chinese = "恢复饼菜单默认外观"
+traditional_chinese = "還原圓盤選單預設外觀"
+japanese = "円形メニューの外観を初期化"
+korean = "원형 메뉴 외관 초기화"
+russian = "Сбросить оформление кругового меню"
+german = "Kreismenü-Darstellung zurücksetzen"
+spanish = "Restablecer apariencia del menú radial"
+french = "Réinitialiser l’apparence du menu radial"
+brazilian_portuguese = "Restaurar aparência do menu radial"
+portuguese = "Repor aspeto do menu radial"
+turkish = "Dairesel menü görünümünü sıfırla"
+polish = "Przywróć wygląd menu kołowego"
+
+[[message]]
 key = "Reset stats on server join (0=persistent, 1=reset on join)"
 [message.translations]
 simplified_chinese = "进入服务器时重置统计（0=累计统计，1=每次进服重置）"
@@ -22125,6 +23357,38 @@ brazilian_portuguese = "Redefinir estatísticas ao entrar em um servidor"
 portuguese = "Repor estatísticas ao entrar num servidor"
 turkish = "Bir sunucuya katılırken istatistikleri sıfırla"
 polish = "Resetuj statystyki po dołączeniu do serwera"
+
+[[message]]
+key = "Reset tooltip appearance"
+[message.translations]
+simplified_chinese = "恢复气泡默认外观"
+traditional_chinese = "還原氣泡預設外觀"
+japanese = "ツールチップの外観を初期化"
+korean = "도움말 풍선 외관 초기화"
+russian = "Сбросить оформление подсказок"
+german = "Tooltip-Darstellung zurücksetzen"
+spanish = "Restablecer apariencia de las ayudas"
+french = "Réinitialiser l’apparence des infobulles"
+brazilian_portuguese = "Restaurar aparência das dicas"
+portuguese = "Repor aspeto das dicas"
+turkish = "Araç ipucu görünümünü sıfırla"
+polish = "Przywróć wygląd podpowiedzi"
+
+[[message]]
+key = "Reset translation colors"
+[message.translations]
+simplified_chinese = "恢复翻译默认颜色"
+traditional_chinese = "還原翻譯預設顏色"
+japanese = "翻訳の配色を初期化"
+korean = "번역 색상 초기화"
+russian = "Сбросить цвета перевода"
+german = "Übersetzungsfarben zurücksetzen"
+spanish = "Restablecer colores de traducción"
+french = "Réinitialiser les couleurs de traduction"
+brazilian_portuguese = "Restaurar cores da tradução"
+portuguese = "Repor cores da tradução"
+turkish = "Çeviri renklerini sıfırla"
+polish = "Przywróć kolory tłumaczenia"
 
 [[message]]
 key = "Resource preview VRAM budget override (MB, 0=auto)"
@@ -22434,6 +23698,22 @@ polish = "Przekierowuj wiadomości Echo do powiadomień"
 key = "RTT"
 [message.translations]
 simplified_chinese = "往返延迟"
+
+[[message]]
+key = "Rule list"
+[message.translations]
+simplified_chinese = "规则列表"
+traditional_chinese = "規則清單"
+japanese = "ルール一覧"
+korean = "규칙 목록"
+russian = "Список правил"
+german = "Regelliste"
+spanish = "Lista de reglas"
+french = "Liste des règles"
+brazilian_portuguese = "Lista de regras"
+portuguese = "Lista de regras"
+turkish = "Kural listesi"
+polish = "Lista reguł"
 
 [[message]]
 key = "Run chai script"
@@ -22788,6 +24068,22 @@ turkish = "Kaydırma hızı"
 polish = "Prędkość przewijania"
 
 [[message]]
+key = "Search country flag…"
+[message.translations]
+simplified_chinese = "搜索国家旗帜…"
+traditional_chinese = "搜尋國家旗幟…"
+japanese = "国旗を検索…"
+korean = "국기 검색…"
+russian = "Поиск флага страны…"
+german = "Länderflagge suchen…"
+spanish = "Buscar bandera…"
+french = "Rechercher un drapeau…"
+brazilian_portuguese = "Buscar bandeira…"
+portuguese = "Pesquisar bandeira…"
+turkish = "Ülke bayrağı ara…"
+polish = "Szukaj flagi kraju…"
+
+[[message]]
 key = "Search local maps"
 [message.translations]
 simplified_chinese = "搜索本地地图"
@@ -22882,6 +24178,70 @@ brazilian_portuguese = "Sec-WebSocket-Protocol enviado durante o handshake em te
 portuguese = "Sec-WebSocket-Protocol enviado durante o handshake em tempo real"
 turkish = "Gerçek zamanlı el sıkışmada gönderilen Sec-WebSocket-Protocol"
 polish = "Sec-WebSocket-Protocol wysyłany podczas uzgadniania w czasie rzeczywistym"
+
+[[message]]
+key = "Secondary menu background color"
+[message.translations]
+simplified_chinese = "二级菜单背景颜色"
+traditional_chinese = "次級選單背景顏色"
+japanese = "サブメニュー背景色"
+korean = "보조 메뉴 배경색"
+russian = "Цвет фона подменю"
+german = "Hintergrundfarbe des Untermenüs"
+spanish = "Color de fondo del submenú"
+french = "Couleur de fond du sous-menu"
+brazilian_portuguese = "Cor de fundo do submenu"
+portuguese = "Cor de fundo do submenu"
+turkish = "Alt menü arka plan rengi"
+polish = "Kolor tła podmenu"
+
+[[message]]
+key = "Secondary menu background opacity percentage"
+[message.translations]
+simplified_chinese = "二级菜单背景 — 不透明度百分比"
+traditional_chinese = "次級選單背景 — 不透明度百分比"
+japanese = "サブメニュー背景 — 不透明度（パーセント）"
+korean = "보조 메뉴 배경색 — 불투명도 백분율"
+russian = "Цвет фона подменю — непрозрачность в процентах"
+german = "Hintergrundfarbe des Untermenüs — Deckkraft in Prozent"
+spanish = "Color de fondo del submenú — opacidad en porcentaje"
+french = "Couleur de fond du sous-menu — opacité en pourcentage"
+brazilian_portuguese = "Cor de fundo do submenu — opacidade em porcentagem"
+portuguese = "Cor de fundo do submenu — opacidade em percentagem"
+turkish = "Alt menü arka plan rengi — opaklık yüzdesi"
+polish = "Kolor tła podmenu — nieprzezroczystość w procentach"
+
+[[message]]
+key = "Secondary popup and dropdown list background color"
+[message.translations]
+simplified_chinese = "二级菜单与展开列表背景颜色"
+traditional_chinese = "次級選單與展開清單背景顏色"
+japanese = "サブウィンドウと展開リストの背景色"
+korean = "하위 팝업 및 펼쳐진 목록 배경색"
+russian = "Цвет фона подокон и раскрытых списков"
+german = "Hintergrundfarbe für Unterfenster und aufgeklappte Listen"
+spanish = "Color de fondo de ventanas secundarias y listas desplegadas"
+french = "Couleur de fond des fenêtres secondaires et listes ouvertes"
+brazilian_portuguese = "Cor de fundo de janelas secundárias e listas abertas"
+portuguese = "Cor de fundo das janelas secundárias e listas abertas"
+turkish = "Alt pencere ve açılmış liste arka plan rengi"
+polish = "Kolor tła okien podrzędnych i rozwiniętych list"
+
+[[message]]
+key = "Secondary popup and dropdown list background opacity percentage"
+[message.translations]
+simplified_chinese = "二级菜单与展开列表背景不透明度百分比"
+traditional_chinese = "次級選單與展開清單背景不透明度百分比"
+japanese = "サブウィンドウと展開リストの背景不透明度（パーセント）"
+korean = "하위 팝업 및 펼쳐진 목록 배경 불투명도 백분율"
+russian = "Непрозрачность фона подокон и раскрытых списков в процентах"
+german = "Hintergrunddeckkraft für Unterfenster und aufgeklappte Listen in Prozent"
+spanish = "Opacidad del fondo de ventanas secundarias y listas desplegadas en porcentaje"
+french = "Opacité du fond des fenêtres secondaires et listes ouvertes en pourcentage"
+brazilian_portuguese = "Opacidade do fundo de janelas secundárias e listas abertas em porcentagem"
+portuguese = "Opacidade do fundo das janelas secundárias e listas abertas em percentagem"
+turkish = "Alt pencere ve açılmış liste arka plan opaklığı yüzdesi"
+polish = "Nieprzezroczystość tła okien podrzędnych i rozwiniętych list w procentach"
 
 [[message]]
 key = "SecretId"
@@ -23588,6 +24948,22 @@ turkish = "Kart başlıkları için gökkuşağı rengi kullan"
 polish = "Użyj tęczowych kolorów dla tytułów kart ustawień"
 
 [[message]]
+key = "Settings page opacity"
+[message.translations]
+simplified_chinese = "设置页不透明度"
+traditional_chinese = "設定頁不透明度"
+japanese = "設定ページの不透明度"
+korean = "설정 페이지 불투명도"
+russian = "Непрозрачность страницы настроек"
+german = "Deckkraft der Einstellungsseite"
+spanish = "Opacidad de la página de ajustes"
+french = "Opacité de la page des paramètres"
+brazilian_portuguese = "Opacidade da página de configurações"
+portuguese = "Opacidade da página de definições"
+turkish = "Ayarlar sayfası opaklığı"
+polish = "Krycie strony ustawień"
+
+[[message]]
 key = "Shimmer speed"
 [message.translations]
 simplified_chinese = "流光速度"
@@ -23650,6 +25026,38 @@ brazilian_portuguese = "Mostrar uma pequena visão do Dummy"
 portuguese = "Mostrar uma pequena visão do Dummy"
 turkish = "Dummy'nin küçük bir görünümünü göster"
 polish = "Pokaż mały podgląd kukły"
+
+[[message]]
+key = "Show advanced nameplate settings without changing effect values"
+[message.translations]
+simplified_chinese = "显示昵称高级设置，不改变已有特效值"
+traditional_chinese = "顯示暱稱進階設定，不改變既有特效值"
+japanese = "エフェクトの値を変更せずにネームプレートの詳細設定を表示"
+korean = "효과 값을 변경하지 않고 이름표 고급 설정 표시"
+russian = "Показывать расширенные настройки имён без изменения эффектов"
+german = "Erweiterte Namensschild-Einstellungen ohne Änderung der Effektwerte anzeigen"
+spanish = "Mostrar ajustes avanzados de nombres sin cambiar los valores de los efectos"
+french = "Afficher les réglages avancés des noms sans modifier les valeurs des effets"
+brazilian_portuguese = "Mostrar configurações avançadas dos nomes sem alterar os valores dos efeitos"
+portuguese = "Mostrar definições avançadas dos nomes sem alterar os valores dos efeitos"
+turkish = "Efekt değerlerini değiştirmeden gelişmiş isim etiketi ayarlarını göster"
+polish = "Pokaż zaawansowane ustawienia nazw bez zmiany wartości efektów"
+
+[[message]]
+key = "Show advanced options"
+[message.translations]
+simplified_chinese = "显示高级选项"
+traditional_chinese = "顯示進階選項"
+japanese = "詳細オプションを表示"
+korean = "고급 옵션 표시"
+russian = "Показать дополнительные параметры"
+german = "Erweiterte Optionen anzeigen"
+spanish = "Mostrar opciones avanzadas"
+french = "Afficher les options avancées"
+brazilian_portuguese = "Mostrar opções avançadas"
+portuguese = "Mostrar opções avançadas"
+turkish = "Gelişmiş seçenekleri göster"
+polish = "Pokaż opcje zaawansowane"
 
 [[message]]
 key = "Show advanced title settings (collapsing keeps configured effects)"
@@ -23828,6 +25236,22 @@ turkish = "2 saniye içinde bir oyuncuyu art arda kancaladığında veya çekiç
 polish = "Pokaż combo przy trafieniu gracza hakiem lub młotkiem w ciągu 2 sekund"
 
 [[message]]
+key = "Show command completion in chat"
+[message.translations]
+simplified_chinese = "显示聊天指令补全"
+traditional_chinese = "顯示聊天指令補全"
+japanese = "チャットでコマンド補完を表示"
+korean = "채팅에서 명령어 자동 완성 표시"
+russian = "Показывать дополнение команд в чате"
+german = "Befehlsvervollständigung im Chat anzeigen"
+spanish = "Mostrar autocompletado de comandos en el chat"
+french = "Afficher la complétion des commandes dans le chat"
+brazilian_portuguese = "Mostrar conclusão de comandos no chat"
+portuguese = "Mostrar conclusão de comandos na conversa"
+turkish = "Sohbette komut tamamlamayı göster"
+polish = "Pokaż uzupełnianie poleceń na czacie"
+
+[[message]]
 key = "Show configurable outlines around map tiles"
 [message.translations]
 simplified_chinese = "显示地图方块周围可配置的轮廓"
@@ -23890,6 +25314,22 @@ brazilian_portuguese = "Mostrar coordenadas de você e dos outros"
 portuguese = "Mostrar coordenadas de si e de outros"
 turkish = "Kendinizin ve başkalarının koordinatlarını göster"
 polish = "Pokaż współrzędne swoje i innych"
+
+[[message]]
+key = "Show copy name option"
+[message.translations]
+simplified_chinese = "显示复制名字选项"
+traditional_chinese = "顯示複製名字選項"
+japanese = "名前コピー項目を表示"
+korean = "이름 복사 항목 표시"
+russian = "Показывать действие копирования имени"
+german = "Option zum Kopieren des Namens anzeigen"
+spanish = "Mostrar opción de copiar nombre"
+french = "Afficher l'option de copie du nom"
+brazilian_portuguese = "Mostrar opção de copiar nome"
+portuguese = "Mostrar opção de copiar nome"
+turkish = "İsim kopyalama seçeneğini göster"
+polish = "Pokaż opcję kopiowania nazwy"
 
 [[message]]
 key = "Show copy skin option"
@@ -24418,6 +25858,22 @@ brazilian_portuguese = "Mostrar dica de salto com base na parte decimal da posi�
 portuguese = "Mostrar dica de salto com base na parte decimal da posição"
 turkish = "Konumun ondalık kısmına göre zıplama ipucunu göster"
 polish = "Pokaż wskazówkę skoku na podstawie części ułamkowej pozycji"
+
+[[message]]
+key = "Show key press counts"
+[message.translations]
+simplified_chinese = "显示按键累计次数"
+traditional_chinese = "顯示按鍵累計次數"
+japanese = "キーを押した累計回数を表示"
+korean = "누적 키 입력 횟수 표시"
+russian = "Показывать количество нажатий клавиш"
+german = "Anzahl der Tastendrücke anzeigen"
+spanish = "Mostrar el número de pulsaciones"
+french = "Afficher le nombre d'appuis sur les touches"
+brazilian_portuguese = "Mostrar a contagem de teclas pressionadas"
+portuguese = "Mostrar a contagem de teclas premidas"
+turkish = "Tuş basma sayılarını göster"
+polish = "Pokaż liczbę naciśnięć klawiszy"
 
 [[message]]
 key = "Show key stuck status"
@@ -25234,6 +26690,38 @@ brazilian_portuguese = "Mostrar dicas de configuração do título imediatamente
 portuguese = "Mostrar dicas de configuração do título imediatamente em texto pequeno"
 turkish = "Unvan ayarı ipuçlarını küçük yazıyla hemen göster"
 polish = "Pokazuj od razu wskazówki ustawień tytułu małym tekstem"
+
+[[message]]
+key = "Show titles above player names"
+[message.translations]
+simplified_chinese = "头衔显示在名字上方"
+traditional_chinese = "頭銜顯示在名字上方"
+japanese = "プレイヤー名の上に称号を表示"
+korean = "플레이어 이름 위에 칭호 표시"
+russian = "Показывать титулы над именами игроков"
+german = "Titel über Spielernamen anzeigen"
+spanish = "Mostrar títulos encima de los nombres"
+french = "Afficher les titres au-dessus des noms"
+brazilian_portuguese = "Mostrar títulos acima dos nomes"
+portuguese = "Mostrar títulos acima dos nomes"
+turkish = "Unvanları oyuncu adlarının üstünde göster"
+polish = "Pokaż tytuły nad nazwami graczy"
+
+[[message]]
+key = "Show titles on nameplates"
+[message.translations]
+simplified_chinese = "显示名牌头衔"
+traditional_chinese = "顯示名牌頭銜"
+japanese = "ネームプレートに称号を表示"
+korean = "이름표에 칭호 표시"
+russian = "Показывать титулы на табличках имён"
+german = "Titel auf Namensschildern anzeigen"
+spanish = "Mostrar títulos en las placas de nombre"
+french = "Afficher les titres sur les plaques de nom"
+brazilian_portuguese = "Mostrar títulos nas placas de nome"
+portuguese = "Mostrar títulos nas placas de nome"
+turkish = "İsim etiketlerinde unvanları göster"
+polish = "Pokaż tytuły na plakietkach z nazwami"
 
 [[message]]
 key = "Show translation"
@@ -26932,6 +28420,22 @@ turkish = "Durum normal, hala sorun yaşıyorsanız aşağıdaki ayrıntıları 
 polish = "Status normalny, sprawdź szczegóły poniżej, jeśli nadal występują problemy"
 
 [[message]]
+key = "Steam client path (leave empty to detect automatically)"
+[message.translations]
+simplified_chinese = "Steam 客户端路径（留空自动检测）"
+traditional_chinese = "Steam 用戶端路徑（留空自動偵測）"
+japanese = "Steam クライアントのパス（空欄で自動検出）"
+korean = "Steam 클라이언트 경로 (비워두면 자동 감지)"
+russian = "Путь к клиенту Steam (пусто — автоопределение)"
+german = "Steam-Clientpfad (leer für automatische Erkennung)"
+spanish = "Ruta del cliente de Steam (vacía para detectar automáticamente)"
+french = "Chemin du client Steam (vide pour la détection automatique)"
+brazilian_portuguese = "Caminho do cliente Steam (vazio para detectar automaticamente)"
+portuguese = "Caminho do cliente Steam (vazio para deteção automática)"
+turkish = "Steam istemci yolu (otomatik algılama için boş bırakın)"
+polish = "Ścieżka klienta Steam (pusta oznacza automatyczne wykrywanie)"
+
+[[message]]
 key = "Steam integration"
 [message.translations]
 simplified_chinese = "Steam 集成"
@@ -26946,6 +28450,70 @@ brazilian_portuguese = "Integração com o Steam"
 portuguese = "Integração com o Steam"
 turkish = "Steam entegrasyonu"
 polish = "Integracja ze Steam"
+
+[[message]]
+key = "Steam is installed"
+[message.translations]
+simplified_chinese = "Steam 已安装"
+traditional_chinese = "Steam 已安裝"
+japanese = "Steam はインストール済みです"
+korean = "Steam 설치됨"
+russian = "Steam установлен"
+german = "Steam ist installiert"
+spanish = "Steam está instalado"
+french = "Steam est installé"
+brazilian_portuguese = "Steam está instalado"
+portuguese = "Steam está instalado"
+turkish = "Steam yüklü"
+polish = "Steam jest zainstalowany"
+
+[[message]]
+key = "Steam is installed but not running"
+[message.translations]
+simplified_chinese = "Steam 已安装，尚未启动"
+traditional_chinese = "Steam 已安裝，尚未啟動"
+japanese = "Steam はインストール済みですが未起動です"
+korean = "Steam 설치됨, 실행 중이 아님"
+russian = "Steam установлен, но не запущен"
+german = "Steam ist installiert, läuft aber nicht"
+spanish = "Steam está instalado, pero no está en ejecución"
+french = "Steam est installé, mais n’est pas lancé"
+brazilian_portuguese = "Steam está instalado, mas não está em execução"
+portuguese = "Steam está instalado, mas não está em execução"
+turkish = "Steam yüklü ancak çalışmıyor"
+polish = "Steam jest zainstalowany, ale nie działa"
+
+[[message]]
+key = "Steam is running"
+[message.translations]
+simplified_chinese = "Steam 已运行"
+traditional_chinese = "Steam 已啟動"
+japanese = "Steam は起動中です"
+korean = "Steam 실행 중"
+russian = "Steam запущен"
+german = "Steam läuft"
+spanish = "Steam está en ejecución"
+french = "Steam est en cours d’exécution"
+brazilian_portuguese = "Steam está em execução"
+portuguese = "Steam está em execução"
+turkish = "Steam çalışıyor"
+polish = "Steam jest uruchomiony"
+
+[[message]]
+key = "Steam not found"
+[message.translations]
+simplified_chinese = "未找到 Steam"
+traditional_chinese = "找不到 Steam"
+japanese = "Steam が見つかりません"
+korean = "Steam을 찾을 수 없음"
+russian = "Steam не найден"
+german = "Steam nicht gefunden"
+spanish = "Steam no encontrado"
+french = "Steam introuvable"
+brazilian_portuguese = "Steam não encontrado"
+portuguese = "Steam não encontrado"
+turkish = "Steam bulunamadı"
+polish = "Nie znaleziono Steam"
 
 [[message]]
 key = "Still free after %d sponsors. Take a look?"
@@ -28260,6 +29828,22 @@ turkish = "Tencent Cloud Çeviri SecretKey"
 polish = "Tencent Cloud SecretKey tłumaczenia"
 
 [[message]]
+key = "Text before each key press count"
+[message.translations]
+simplified_chinese = "按键计数前缀文字"
+traditional_chinese = "按鍵計數前綴文字"
+japanese = "キー入力回数の接頭辞"
+korean = "키 입력 횟수 접두사"
+russian = "Префикс счётчика нажатий"
+german = "Präfix des Tastenzählers"
+spanish = "Prefijo del contador de pulsaciones"
+french = "Préfixe du compteur de touches"
+brazilian_portuguese = "Prefixo do contador de teclas"
+portuguese = "Prefixo do contador de teclas"
+turkish = "Tuş sayacı ön eki"
+polish = "Prefiks licznika naciśnięć"
+
+[[message]]
 key = "Text color"
 [message.translations]
 simplified_chinese = "文本颜色"
@@ -28274,6 +29858,38 @@ brazilian_portuguese = "Cor do texto"
 portuguese = "Cor do texto"
 turkish = "Metin rengi"
 polish = "Kolor tekstu"
+
+[[message]]
+key = "Text color mode"
+[message.translations]
+simplified_chinese = "文本颜色模式"
+traditional_chinese = "文字顏色模式"
+japanese = "文字色モード"
+korean = "텍스트 색상 모드"
+russian = "Режим цвета текста"
+german = "Textfarbmodus"
+spanish = "Modo de color del texto"
+french = "Mode de couleur du texte"
+brazilian_portuguese = "Modo de cor do texto"
+portuguese = "Modo de cor do texto"
+turkish = "Metin rengi modu"
+polish = "Tryb koloru tekstu"
+
+[[message]]
+key = "Text color mode: 0 automatic, 1 white, 2 black, 3 custom"
+[message.translations]
+simplified_chinese = "文本颜色模式：0 自动，1 白色，2 黑色，3 自定义"
+traditional_chinese = "文字顏色模式: 0 自動, 1 白色, 2 黑色, 3 自訂"
+japanese = "文字色モード: 0 自動, 1 白, 2 黒, 3 カスタム"
+korean = "텍스트 색상 모드: 0 자동, 1 흰색, 2 검정, 3 사용자 지정"
+russian = "Режим цвета текста: 0 авто, 1 белый, 2 черный, 3 свой"
+german = "Textfarbmodus: 0 automatisch, 1 weiß, 2 schwarz, 3 benutzerdefiniert"
+spanish = "Modo de color del texto: 0 automático, 1 blanco, 2 negro, 3 personalizado"
+french = "Mode de couleur du texte: 0 automatique, 1 blanc, 2 noir, 3 personnalisé"
+brazilian_portuguese = "Modo de cor do texto: 0 automático, 1 branco, 2 preto, 3 personalizado"
+portuguese = "Modo de cor do texto: 0 automático, 1 branco, 2 preto, 3 personalizado"
+turkish = "Metin rengi modu: 0 otomatik, 1 beyaz, 2 siyah, 3 özel"
+polish = "Tryb koloru tekstu: 0 automatyczny, 1 biały, 2 czarny, 3 własny"
 
 [[message]]
 key = "Text effect"
@@ -28948,6 +30564,22 @@ turkish = "Unvan rengi (tek renk)"
 polish = "Kolor tytułu (jednolity)"
 
 [[message]]
+key = "Title display"
+[message.translations]
+simplified_chinese = "头衔显示"
+traditional_chinese = "頭銜顯示"
+japanese = "称号表示"
+korean = "칭호 표시"
+russian = "Отображение титулов"
+german = "Titelanzeige"
+spanish = "Visualización de títulos"
+french = "Affichage des titres"
+brazilian_portuguese = "Exibição de títulos"
+portuguese = "Apresentação de títulos"
+turkish = "Unvan görünümü"
+polish = "Wyświetlanie tytułów"
+
+[[message]]
 key = "Title light sweep speed in 1/100 row per second (0 = off)"
 [message.translations]
 simplified_chinese = "头衔掠光速度（每秒 1/100 行，0 = 关闭）"
@@ -29124,6 +30756,22 @@ turkish = "Unvan çok uzun veya desteklenmeyen karakterler içeriyor"
 polish = "Tytuł jest za długi lub zawiera niedozwolone znaki"
 
 [[message]]
+key = "Title visibility and appearance"
+[message.translations]
+simplified_chinese = "头衔可见性与外观"
+traditional_chinese = "頭銜可見性與外觀"
+japanese = "称号の表示と外観"
+korean = "칭호 표시 여부와 외형"
+russian = "Видимость и оформление титулов"
+german = "Sichtbarkeit und Aussehen der Titel"
+spanish = "Visibilidad y apariencia de los títulos"
+french = "Visibilité et apparence des titres"
+brazilian_portuguese = "Visibilidade e aparência dos títulos"
+portuguese = "Visibilidade e aspeto dos títulos"
+turkish = "Unvan görünürlüğü ve görünüşü"
+polish = "Widoczność i wygląd tytułów"
+
+[[message]]
 key = "To save all players in your team have to be alive and not in '/spec'"
 [message.translations]
 simplified_chinese = "要保存队伍，队内所有玩家都必须存活且不能处于 '/spec'"
@@ -29202,6 +30850,102 @@ brazilian_portuguese = "Alternar o modo de divisão solo"
 portuguese = "Alternar o modo de divisão a solo"
 turkish = "Solo bölme modunu değiştir"
 polish = "Przełącz tryb podziału solo"
+
+[[message]]
+key = "Tooltip background color"
+[message.translations]
+simplified_chinese = "提示气泡背景颜色"
+traditional_chinese = "提示氣泡背景顏色"
+japanese = "ツールチップの背景色"
+korean = "도움말 풍선 배경색"
+russian = "Цвет фона подсказки"
+german = "Tooltip-Hintergrundfarbe"
+spanish = "Color de fondo de la ayuda"
+french = "Couleur de fond des infobulles"
+brazilian_portuguese = "Cor de fundo das dicas"
+portuguese = "Cor de fundo das dicas"
+turkish = "Araç ipucu arka plan rengi"
+polish = "Kolor tła podpowiedzi"
+
+[[message]]
+key = "Tooltip bounce animation"
+[message.translations]
+simplified_chinese = "提示气泡回弹动画"
+traditional_chinese = "提示氣泡回彈動畫"
+japanese = "ツールチップの弾むアニメーション"
+korean = "도움말 풍선 탄성 애니메이션"
+russian = "Упругая анимация подсказки"
+german = "Federnde Tooltip-Animation"
+spanish = "Animación de rebote de la ayuda"
+french = "Animation de rebond des infobulles"
+brazilian_portuguese = "Animação de ressalto das dicas"
+portuguese = "Animação de ressalto das dicas"
+turkish = "Araç ipucu sıçrama animasyonu"
+polish = "Sprężysta animacja podpowiedzi"
+
+[[message]]
+key = "Tooltip font size"
+[message.translations]
+simplified_chinese = "提示气泡字号"
+traditional_chinese = "提示氣泡字級"
+japanese = "ツールチップの文字サイズ"
+korean = "도움말 풍선 글꼴 크기"
+russian = "Размер шрифта подсказки"
+german = "Tooltip-Schriftgröße"
+spanish = "Tamaño de letra de la ayuda"
+french = "Taille du texte des infobulles"
+brazilian_portuguese = "Tamanho da fonte das dicas"
+portuguese = "Tamanho da letra das dicas"
+turkish = "Araç ipucu yazı boyutu"
+polish = "Rozmiar czcionki podpowiedzi"
+
+[[message]]
+key = "Tooltip preview"
+[message.translations]
+simplified_chinese = "提示气泡预览"
+traditional_chinese = "提示氣泡預覽"
+japanese = "ツールチップのプレビュー"
+korean = "도움말 풍선 미리 보기"
+russian = "Предпросмотр подсказки"
+german = "Tooltip-Vorschau"
+spanish = "Vista previa de la ayuda"
+french = "Aperçu des infobulles"
+brazilian_portuguese = "Prévia das dicas"
+portuguese = "Pré-visualização das dicas"
+turkish = "Araç ipucu ön izlemesi"
+polish = "Podgląd podpowiedzi"
+
+[[message]]
+key = "Tooltip text color"
+[message.translations]
+simplified_chinese = "提示气泡文字颜色"
+traditional_chinese = "提示氣泡文字顏色"
+japanese = "ツールチップの文字色"
+korean = "도움말 풍선 글자색"
+russian = "Цвет текста подсказки"
+german = "Tooltip-Textfarbe"
+spanish = "Color del texto de la ayuda"
+french = "Couleur du texte des infobulles"
+brazilian_portuguese = "Cor do texto das dicas"
+portuguese = "Cor do texto das dicas"
+turkish = "Araç ipucu metin rengi"
+polish = "Kolor tekstu podpowiedzi"
+
+[[message]]
+key = "Tooltips"
+[message.translations]
+simplified_chinese = "提示气泡"
+traditional_chinese = "提示氣泡"
+japanese = "ツールチップ"
+korean = "도움말 풍선"
+russian = "Подсказки"
+german = "Tooltips"
+spanish = "Ayudas emergentes"
+french = "Infobulles"
+brazilian_portuguese = "Dicas de ferramenta"
+portuguese = "Dicas de ferramenta"
+turkish = "Araç ipuçları"
+polish = "Podpowiedzi"
 
 [[message]]
 key = "Trail alpha"
@@ -29330,6 +31074,38 @@ brazilian_portuguese = "Traduzir mensagens recebidas para"
 portuguese = "Traduzir mensagens recebidas para"
 turkish = "Alınan mesajların çeviri dili"
 polish = "Tłumacz odebrane wiadomości na"
+
+[[message]]
+key = "Translated chat text size as a percentage of the original text (50-100)"
+[message.translations]
+simplified_chinese = "聊天译文字号相对于原文字号的百分比（50-100）"
+traditional_chinese = "聊天譯文字號相對於原文字號的百分比（50-100）"
+japanese = "チャット翻訳文の文字サイズを原文の文字サイズに対する割合で指定（50-100）"
+korean = "원문 글자 크기에 대한 채팅 번역문 글자 크기의 백분율 (50-100)"
+russian = "Размер текста перевода чата в процентах от размера исходного текста (50-100)"
+german = "Schriftgröße der Chatübersetzung in Prozent der Schriftgröße des Originaltexts (50-100)"
+spanish = "Tamaño del texto traducido del chat como porcentaje del tamaño del texto original (50-100)"
+french = "Taille du texte traduit du chat en pourcentage de la taille du texte original (50-100)"
+brazilian_portuguese = "Tamanho do texto traduzido do chat como porcentagem do tamanho do texto original (50-100)"
+portuguese = "Tamanho do texto traduzido do chat como percentagem do tamanho do texto original (50-100)"
+turkish = "Çevrilmiş sohbet metninin boyutu, özgün metin boyutunun yüzdesi olarak (50-100)"
+polish = "Rozmiar przetłumaczonego tekstu czatu jako procent rozmiaru oryginalnego tekstu (50-100)"
+
+[[message]]
+key = "Translated text size"
+[message.translations]
+simplified_chinese = "译文字号"
+traditional_chinese = "譯文字號"
+japanese = "翻訳文の文字サイズ"
+korean = "번역문 글자 크기"
+russian = "Размер текста перевода"
+german = "Schriftgröße der Übersetzung"
+spanish = "Tamaño del texto traducido"
+french = "Taille du texte traduit"
+brazilian_portuguese = "Tamanho do texto traduzido"
+portuguese = "Tamanho do texto traduzido"
+turkish = "Çevrilmiş metin boyutu"
+polish = "Rozmiar przetłumaczonego tekstu"
 
 [[message]]
 key = "Translation backend (llm/tencentcloud/libretranslate/ftapi)"
@@ -29476,38 +31252,6 @@ turkish = "Çeviri menüsü seçili rengi"
 polish = "Kolor zaznaczonego elementu w menu tłumaczenia"
 
 [[message]]
-key = "Translation service returned a notice instead of a translation"
-[message.translations]
-simplified_chinese = "翻译服务返回了提示，未提供译文"
-traditional_chinese = "翻譯服務傳回了提示，未提供譯文"
-japanese = "翻訳サービスが訳文ではなく通知を返しました"
-korean = "번역 서비스가 번역문 대신 안내를 반환했습니다"
-russian = "Сервис перевода вернул уведомление вместо перевода"
-german = "Der Übersetzungsdienst gab einen Hinweis statt einer Übersetzung zurück"
-spanish = "El servicio de traducción devolvió un aviso en lugar de una traducción"
-french = "Le service de traduction a renvoyé un avis au lieu d'une traduction"
-brazilian_portuguese = "O serviço de tradução retornou um aviso em vez de uma tradução"
-portuguese = "O serviço de tradução devolveu um aviso em vez de uma tradução"
-turkish = "Çeviri servisi çeviri yerine bir bildirim döndürdü"
-polish = "Usługa tłumaczenia zwróciła komunikat zamiast tłumaczenia"
-
-[[message]]
-key = "Translation service refused this content. Please edit it and try again."
-[message.translations]
-simplified_chinese = "翻译服务拒绝处理这条内容，请修改后重试。"
-traditional_chinese = "翻譯服務拒絕處理這則內容，請修改後重試。"
-japanese = "翻訳サービスがこの内容を拒否しました。内容を修正して再試行してください。"
-korean = "번역 서비스가 이 내용을 거부했습니다. 수정한 후 다시 시도하세요."
-russian = "Сервис перевода отказался обработать этот текст. Измените его и повторите попытку."
-german = "Der Übersetzungsdienst hat diesen Inhalt abgelehnt. Bitte bearbeiten und erneut versuchen."
-spanish = "El servicio de traducción rechazó este contenido. Modifícalo e inténtalo de nuevo."
-french = "Le service de traduction a refusé ce contenu. Modifiez-le et réessayez."
-brazilian_portuguese = "O serviço de tradução recusou este conteúdo. Edite-o e tente novamente."
-portuguese = "O serviço de tradução recusou este conteúdo. Edite-o e tente novamente."
-turkish = "Çeviri servisi bu içeriği reddetti. Düzenleyip tekrar deneyin."
-polish = "Usługa tłumaczenia odrzuciła tę treść. Zmień ją i spróbuj ponownie."
-
-[[message]]
 key = "Translation service authentication failed. Check the API key and service address."
 [message.translations]
 simplified_chinese = "翻译服务鉴权失败，请检查 API 密钥和服务地址。"
@@ -29540,38 +31284,6 @@ turkish = "Çeviri servisine çok fazla istek gönderildi. Daha sonra tekrar den
 polish = "Zbyt wiele żądań do usługi tłumaczenia. Spróbuj ponownie później."
 
 [[message]]
-key = "Translation service quota is exhausted. Choose another service or try again later."
-[message.translations]
-simplified_chinese = "翻译服务的额度已用完，请切换服务或稍后重试。"
-traditional_chinese = "翻譯服務的額度已用完，請切換服務或稍後重試。"
-japanese = "翻訳サービスの利用枠を使い切りました。別のサービスを選ぶか、後で再試行してください。"
-korean = "번역 서비스 할당량을 모두 사용했습니다. 다른 서비스를 선택하거나 나중에 다시 시도하세요."
-russian = "Лимит сервиса перевода исчерпан. Выберите другой сервис или повторите попытку позже."
-german = "Das Kontingent des Übersetzungsdienstes ist aufgebraucht. Anderen Dienst wählen oder später erneut versuchen."
-spanish = "Se agotó la cuota del servicio de traducción. Elige otro servicio o inténtalo más tarde."
-french = "Le quota du service de traduction est épuisé. Choisissez un autre service ou réessayez plus tard."
-brazilian_portuguese = "A cota do serviço de tradução foi esgotada. Escolha outro serviço ou tente mais tarde."
-portuguese = "A quota do serviço de tradução esgotou-se. Escolha outro serviço ou tente mais tarde."
-turkish = "Çeviri servisi kotası tükendi. Başka bir servis seçin veya daha sonra tekrar deneyin."
-polish = "Limit usługi tłumaczenia został wyczerpany. Wybierz inną usługę lub spróbuj później."
-
-[[message]]
-key = "Could not connect to the translation service. Please try again later."
-[message.translations]
-simplified_chinese = "无法连接翻译服务，请稍后重试。"
-traditional_chinese = "無法連線至翻譯服務，請稍後重試。"
-japanese = "翻訳サービスに接続できませんでした。しばらくしてから再試行してください。"
-korean = "번역 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하세요."
-russian = "Не удалось подключиться к сервису перевода. Повторите попытку позже."
-german = "Keine Verbindung zum Übersetzungsdienst möglich. Bitte später erneut versuchen."
-spanish = "No se pudo conectar al servicio de traducción. Inténtalo más tarde."
-french = "Impossible de se connecter au service de traduction. Réessayez plus tard."
-brazilian_portuguese = "Não foi possível conectar ao serviço de tradução. Tente novamente mais tarde."
-portuguese = "Não foi possível ligar ao serviço de tradução. Tente novamente mais tarde."
-turkish = "Çeviri servisine bağlanılamadı. Daha sonra tekrar deneyin."
-polish = "Nie udało się połączyć z usługą tłumaczenia. Spróbuj ponownie później."
-
-[[message]]
 key = "Translation service is temporarily unavailable. Please try again later."
 [message.translations]
 simplified_chinese = "翻译服务暂时不可用，请稍后重试。"
@@ -29588,68 +31300,68 @@ turkish = "Çeviri servisi geçici olarak kullanılamıyor. Daha sonra tekrar de
 polish = "Usługa tłumaczenia jest tymczasowo niedostępna. Spróbuj ponownie później."
 
 [[message]]
-key = "Emoticon projectile duration"
+key = "Translation service quota is exhausted. Choose another service or try again later."
 [message.translations]
-simplified_chinese = "表情弹射时长"
-traditional_chinese = "表情彈射時長"
-japanese = "発射したエモティコンの表示時間"
-korean = "발사한 이모티콘의 표시 시간"
-russian = "Длительность полёта смайлика"
-german = "Anzeigedauer geschossener Emoticons"
-spanish = "Duración de los emoticonos lanzados"
-french = "Durée des émoticônes projetées"
-brazilian_portuguese = "Duração dos emoticons lançados"
-portuguese = "Duração dos emoticons lançados"
-turkish = "Fırlatılan ifade süresi"
-polish = "Czas wyświetlania wystrzelonych emotikonów"
+simplified_chinese = "翻译服务的额度已用完，请切换服务或稍后重试。"
+traditional_chinese = "翻譯服務的額度已用完，請切換服務或稍後重試。"
+japanese = "翻訳サービスの利用枠を使い切りました。別のサービスを選ぶか、後で再試行してください。"
+korean = "번역 서비스 할당량을 모두 사용했습니다. 다른 서비스를 선택하거나 나중에 다시 시도하세요."
+russian = "Лимит сервиса перевода исчерпан. Выберите другой сервис или повторите попытку позже."
+german = "Das Kontingent des Übersetzungsdienstes ist aufgebraucht. Anderen Dienst wählen oder später erneut versuchen."
+spanish = "Se agotó la cuota del servicio de traducción. Elige otro servicio o inténtalo más tarde."
+french = "Le quota du service de traduction est épuisé. Choisissez un autre service ou réessayez plus tard."
+brazilian_portuguese = "A cota do serviço de tradução foi esgotada. Escolha outro serviço ou tente mais tarde."
+portuguese = "A quota do serviço de tradução esgotou-se. Escolha outro serviço ou tente mais tarde."
+turkish = "Çeviri servisi kotası tükendi. Başka bir servis seçin veya daha sonra tekrar deneyin."
+polish = "Limit usługi tłumaczenia został wyczerpany. Wybierz inną usługę lub spróbuj później."
 
 [[message]]
-key = "Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts."
+key = "Translation service refused this content. Please edit it and try again."
 [message.translations]
-simplified_chinese = "请分别填写主号和分身在 Axiom 服注册的密码。此选项不会自动注册账号。"
-traditional_chinese = "請分別填寫主號和分身在 Axiom 服註冊的密碼。此選項不會自動註冊帳號。"
-japanese = "メインとダミーそれぞれに、Axiom で登録したパスワードを入力してください。この設定ではアカウントは登録されません。"
-korean = "본 계정과 더미 계정에 각각 Axiom에서 등록한 비밀번호를 입력하세요. 이 옵션은 계정을 등록하지 않습니다."
-russian = "Укажите отдельно пароли основного аккаунта и дамми, зарегистрированных на Axiom. Эта настройка не создаёт аккаунты."
-german = "Trage die bei Axiom registrierten Passwörter für Hauptkonto und Dummy getrennt ein. Diese Option erstellt keine Konten."
-spanish = "Introduce por separado las contraseñas registradas en Axiom para la cuenta principal y el dummy. Esta opción no registra cuentas."
-french = "Saisissez séparément les mots de passe enregistrés sur Axiom pour le compte principal et le dummy. Cette option ne crée pas de compte."
-brazilian_portuguese = "Insira separadamente as senhas cadastradas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
-portuguese = "Introduza separadamente as palavras-passe registadas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
-turkish = "Ana hesap ve dummy için Axiom'da kayıtlı parolaları ayrı ayrı girin. Bu seçenek hesap oluşturmaz."
-polish = "Wpisz osobno hasła zarejestrowane na Axiom dla głównego konta i dummy. Ta opcja nie tworzy kont."
+simplified_chinese = "翻译服务拒绝处理这条内容，请修改后重试。"
+traditional_chinese = "翻譯服務拒絕處理這則內容，請修改後重試。"
+japanese = "翻訳サービスがこの内容を拒否しました。内容を修正して再試行してください。"
+korean = "번역 서비스가 이 내용을 거부했습니다. 수정한 후 다시 시도하세요."
+russian = "Сервис перевода отказался обработать этот текст. Измените его и повторите попытку."
+german = "Der Übersetzungsdienst hat diesen Inhalt abgelehnt. Bitte bearbeiten und erneut versuchen."
+spanish = "El servicio de traducción rechazó este contenido. Modifícalo e inténtalo de nuevo."
+french = "Le service de traduction a refusé ce contenu. Modifiez-le et réessayez."
+brazilian_portuguese = "O serviço de tradução recusou este conteúdo. Edite-o e tente novamente."
+portuguese = "O serviço de tradução recusou este conteúdo. Edite-o e tente novamente."
+turkish = "Çeviri servisi bu içeriği reddetti. Düzenleyip tekrar deneyin."
+polish = "Usługa tłumaczenia odrzuciła tę treść. Zmień ją i spróbuj ponownie."
 
 [[message]]
-key = "Show key press counts"
+key = "Translation service returned a notice instead of a translation"
 [message.translations]
-simplified_chinese = "显示按键累计次数"
-traditional_chinese = "顯示按鍵累計次數"
-japanese = "キーを押した累計回数を表示"
-korean = "누적 키 입력 횟수 표시"
-russian = "Показывать количество нажатий клавиш"
-german = "Anzahl der Tastendrücke anzeigen"
-spanish = "Mostrar el número de pulsaciones"
-french = "Afficher le nombre d'appuis sur les touches"
-brazilian_portuguese = "Mostrar a contagem de teclas pressionadas"
-portuguese = "Mostrar a contagem de teclas premidas"
-turkish = "Tuş basma sayılarını göster"
-polish = "Pokaż liczbę naciśnięć klawiszy"
+simplified_chinese = "翻译服务返回了提示，未提供译文"
+traditional_chinese = "翻譯服務傳回了提示，未提供譯文"
+japanese = "翻訳サービスが訳文ではなく通知を返しました"
+korean = "번역 서비스가 번역문 대신 안내를 반환했습니다"
+russian = "Сервис перевода вернул уведомление вместо перевода"
+german = "Der Übersetzungsdienst gab einen Hinweis statt einer Übersetzung zurück"
+spanish = "El servicio de traducción devolvió un aviso en lugar de una traducción"
+french = "Le service de traduction a renvoyé un avis au lieu d'une traduction"
+brazilian_portuguese = "O serviço de tradução retornou um aviso em vez de uma tradução"
+portuguese = "O serviço de tradução devolveu um aviso em vez de uma tradução"
+turkish = "Çeviri servisi çeviri yerine bir bildirim döndürdü"
+polish = "Usługa tłumaczenia zwróciła komunikat zamiast tłumaczenia"
 
 [[message]]
-key = "Reset key press counts"
+key = "Trigger limits"
 [message.translations]
-simplified_chinese = "清零按键累计次数"
-traditional_chinese = "清零按鍵累計次數"
-japanese = "キーを押した回数をリセット"
-korean = "키 입력 횟수 초기화"
-russian = "Сбросить счётчики нажатий клавиш"
-german = "Tastendruckzähler zurücksetzen"
-spanish = "Reiniciar el número de pulsaciones"
-french = "Réinitialiser le compteur d'appuis"
-brazilian_portuguese = "Zerar a contagem de teclas pressionadas"
-portuguese = "Repor a contagem de teclas premidas"
-turkish = "Tuş basma sayılarını sıfırla"
-polish = "Wyzeruj liczniki naciśnięć klawiszy"
+simplified_chinese = "触发限制"
+traditional_chinese = "觸發限制"
+japanese = "発動条件"
+korean = "발동 제한"
+russian = "Условия срабатывания"
+german = "Auslösebedingungen"
+spanish = "Límites de activación"
+french = "Conditions de déclenchement"
+brazilian_portuguese = "Limites de ativação"
+portuguese = "Limites de ativação"
+turkish = "Tetikleme sınırları"
+polish = "Warunki uruchomienia"
 
 [[message]]
 key = "Troubleshooting suggestions"
@@ -29826,6 +31538,22 @@ brazilian_portuguese = "Socket UDP não aberto"
 portuguese = "Socket UDP não aberto"
 turkish = "UDP soketi açık değil"
 polish = "Gniazdo UDP nie jest otwarte"
+
+[[message]]
+key = "UI animations"
+[message.translations]
+simplified_chinese = "界面动画"
+traditional_chinese = "介面動畫"
+japanese = "UI アニメーション"
+korean = "UI 애니메이션"
+russian = "Анимации интерфейса"
+german = "UI-Animationen"
+spanish = "Animaciones de la interfaz"
+french = "Animations de l’interface"
+brazilian_portuguese = "Animações da interface"
+portuguese = "Animações da interface"
+turkish = "Arayüz animasyonları"
+polish = "Animacje interfejsu"
 
 [[message]]
 key = "UI motion level"
@@ -30132,6 +31860,22 @@ turkish = "En fazla 6 Çince veya 12 ASCII karakter"
 polish = "Do 6 znaków chińskich lub 12 ASCII"
 
 [[message]]
+key = "Update package available"
+[message.translations]
+simplified_chinese = "此版本有可下载的更新包"
+traditional_chinese = "此版本有可下載的更新套件"
+japanese = "このバージョンの更新パッケージをダウンロードできます"
+korean = "이 버전의 업데이트 패키지를 다운로드할 수 있습니다"
+russian = "Пакет обновления для этой версии доступен"
+german = "Updatepaket für diese Version verfügbar"
+spanish = "Hay un paquete de actualización para esta versión"
+french = "Un paquet de mise à jour est disponible pour cette version"
+brazilian_portuguese = "Pacote de atualização disponível para esta versão"
+portuguese = "Pacote de atualização disponível para esta versão"
+turkish = "Bu sürüm için güncelleme paketi mevcut"
+polish = "Pakiet aktualizacji dla tej wersji jest dostępny"
+
+[[message]]
 key = "Updating feature list..."
 [message.translations]
 simplified_chinese = "更新功能列表……"
@@ -30340,22 +32084,6 @@ turkish = "Büyük ifade kullan"
 polish = "Użyj dużej emotki"
 
 [[message]]
-key = "Use procedural ring pipeline when enhanced rendering is active"
-[message.translations]
-simplified_chinese = "启用增强渲染时使用程序化圆环管线"
-traditional_chinese = "啟用增強渲染時使用程序化圓環管線"
-japanese = "拡張レンダリング有効時に手続き型リングパイプラインを使用"
-korean = "향상된 렌더링이 활성화되면 절차적 링 파이프라인 사용"
-russian = "Использовать процедурный конвейер колец при включённом расширенном рендеринге"
-german = "Prozedurale Ring-Pipeline bei aktiviertem erweitertem Rendering verwenden"
-spanish = "Usar la canalización de anillos procedurales con el renderizado mejorado activo"
-french = "Utiliser le pipeline d’anneaux procéduraux lorsque le rendu amélioré est actif"
-brazilian_portuguese = "Usar o pipeline de anéis procedurais quando a renderização aprimorada estiver ativa"
-portuguese = "Usar o pipeline de anéis procedurais quando a renderização melhorada estiver ativa"
-turkish = "Gelişmiş işleme etkin olduğunda prosedürel halka işlem hattını kullan"
-polish = "Używaj potoku pierścieni proceduralnych przy włączonym ulepszonym renderowaniu"
-
-[[message]]
 key = "Use multi-char replacement based on word length"
 [message.translations]
 simplified_chinese = "根据词语长度使用多字符替换"
@@ -30436,6 +32164,22 @@ turkish = "Dinamik Ada orijinal stili kullan"
 polish = "Dynamic Island używa oryginalnego stylu"
 
 [[message]]
+key = "Use procedural ring pipeline when enhanced rendering is active"
+[message.translations]
+simplified_chinese = "启用增强渲染时使用程序化圆环管线"
+traditional_chinese = "啟用增強渲染時使用程序化圓環管線"
+japanese = "拡張レンダリング有効時に手続き型リングパイプラインを使用"
+korean = "향상된 렌더링이 활성화되면 절차적 링 파이프라인 사용"
+russian = "Использовать процедурный конвейер колец при включённом расширенном рендеринге"
+german = "Prozedurale Ring-Pipeline bei aktiviertem erweitertem Rendering verwenden"
+spanish = "Usar la canalización de anillos procedurales con el renderizado mejorado activo"
+french = "Utiliser le pipeline d’anneaux procéduraux lorsque le rendu amélioré est actif"
+brazilian_portuguese = "Usar o pipeline de anéis procedurais quando a renderização aprimorada estiver ativa"
+portuguese = "Usar o pipeline de anéis procedurais quando a renderização melhorada estiver ativa"
+turkish = "Gelişmiş işleme etkin olduğunda prosedürel halka işlem hattını kullan"
+polish = "Używaj potoku pierścieni proceduralnych przy włączonym ulepszonym renderowaniu"
+
+[[message]]
 key = "Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active"
 [message.translations]
 simplified_chinese = "启用增强渲染时，为灵动岛和圆角矩形使用 SDF 管线"
@@ -30450,6 +32194,22 @@ brazilian_portuguese = "Usar pipelines SDF para Dynamic Island e retângulos arr
 portuguese = "Usar pipelines SDF para Dynamic Island e retângulos arredondados quando a renderização melhorada estiver ativa"
 turkish = "Gelişmiş işleme etkin olduğunda Dynamic Island ve yuvarlatılmış dikdörtgenler için SDF işlem hatlarını kullan"
 polish = "Używaj potoków SDF dla Dynamic Island i zaokrąglonych prostokątów przy włączonym ulepszonym renderowaniu"
+
+[[message]]
+key = "Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts."
+[message.translations]
+simplified_chinese = "请分别填写主号和分身在 Axiom 服注册的密码。此选项不会自动注册账号。"
+traditional_chinese = "請分別填寫主號和分身在 Axiom 服註冊的密碼。此選項不會自動註冊帳號。"
+japanese = "メインとダミーそれぞれに、Axiom で登録したパスワードを入力してください。この設定ではアカウントは登録されません。"
+korean = "본 계정과 더미 계정에 각각 Axiom에서 등록한 비밀번호를 입력하세요. 이 옵션은 계정을 등록하지 않습니다."
+russian = "Укажите отдельно пароли основного аккаунта и дамми, зарегистрированных на Axiom. Эта настройка не создаёт аккаунты."
+german = "Trage die bei Axiom registrierten Passwörter für Hauptkonto und Dummy getrennt ein. Diese Option erstellt keine Konten."
+spanish = "Introduce por separado las contraseñas registradas en Axiom para la cuenta principal y el dummy. Esta opción no registra cuentas."
+french = "Saisissez séparément les mots de passe enregistrés sur Axiom pour le compte principal et le dummy. Cette option ne crée pas de compte."
+brazilian_portuguese = "Insira separadamente as senhas cadastradas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
+portuguese = "Introduza separadamente as palavras-passe registadas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
+turkish = "Ana hesap ve dummy için Axiom'da kayıtlı parolaları ayrı ayrı girin. Bu seçenek hesap oluşturmaz."
+polish = "Wpisz osobno hasła zarejestrowane na Axiom dla głównego konta i dummy. Ta opcja nie tworzy kont."
 
 [[message]]
 key = "Use the scoreboard cursor mode to scroll the list"
@@ -31122,6 +32882,22 @@ brazilian_portuguese = "Lista de permissões de voz (separado por vírgulas)"
 portuguese = "Lista de permissões de voz (separada por vírgulas)"
 turkish = "Ses Beyaz Listesi (Virgülle Ayrılmış)"
 polish = "Biała lista głosowa (oddzielona przecinkami)"
+
+[[message]]
+key = "Volume unavailable for this player"
+[message.translations]
+simplified_chinese = "此播放器暂不支持音量控制"
+traditional_chinese = "此播放器暫不支援音量控制"
+japanese = "このプレーヤーの音量は操作できません"
+korean = "이 플레이어의 음량을 조절할 수 없습니다"
+russian = "Громкость этого проигрывателя недоступна"
+german = "Lautstärke für diesen Player nicht verfügbar"
+spanish = "Volumen no disponible para este reproductor"
+french = "Volume indisponible pour ce lecteur"
+brazilian_portuguese = "Volume indisponível para este reprodutor"
+portuguese = "Volume indisponível para este leitor"
+turkish = "Bu oynatıcının ses düzeyi ayarlanamıyor"
+polish = "Głośność tego odtwarzacza jest niedostępna"
 
 [[message]]
 key = "Vulkan API version: 14=prefer 1.4 then 1.3 then 1.1, 13=prefer 1.3 then 1.1, 11=force 1.1"
@@ -33284,55 +35060,6 @@ turkish = "⚠️ FTAPI ücretsiz bir hizmettir. Aşırı kullanım hizmetin ask
 polish = "⚠️ FTAPI to darmowa usługa. Nadmierne użytkowanie może spowodować zawieszenie usługi."
 
 [[message]]
-key = "Use style colors"
-context = "Title color mode"
-[message.translations]
-simplified_chinese = "使用风格颜色"
-traditional_chinese = "使用風格顏色"
-japanese = "スタイルの色を使用"
-korean = "스타일 색상 사용"
-russian = "Использовать цвета стиля"
-german = "Stilfarben verwenden"
-spanish = "Usar los colores del estilo"
-french = "Utiliser les couleurs du style"
-brazilian_portuguese = "Usar as cores do estilo"
-portuguese = "Usar as cores do estilo"
-turkish = "Stilin renklerini kullan"
-polish = "Użyj kolorów stylu"
-
-[[message]]
-key = "Bind"
-[message.translations]
-simplified_chinese = "绑定"
-traditional_chinese = "綁定"
-japanese = "バインド"
-korean = "바인드"
-russian = "Привязка"
-german = "Bindung"
-spanish = "Vincular"
-french = "Lier"
-brazilian_portuguese = "Vincular"
-portuguese = "Vincular"
-turkish = "Bağla"
-polish = "Wiązanie"
-
-[[message]]
-key = "Dummy control"
-[message.translations]
-simplified_chinese = "分身控制"
-traditional_chinese = "分身控制"
-japanese = "ダミー操作"
-korean = "더미 제어"
-russian = "Управление дамми"
-german = "Dummy-Steuerung"
-spanish = "Control del dummy"
-french = "Contrôle du dummy"
-brazilian_portuguese = "Controle do dummy"
-portuguese = "Controlo do dummy"
-turkish = "Kukla kontrolü"
-polish = "Sterowanie dummy"
-
-[[message]]
 key = "Menu"
 context = "Bind keyboard key"
 [message.translations]
@@ -33350,1681 +35077,18 @@ turkish = "Menü tuşu"
 polish = "Klawisz menu"
 
 [[message]]
-key = "Secondary popup and dropdown list background color"
-[message.translations]
-simplified_chinese = "二级菜单与展开列表背景颜色"
-traditional_chinese = "次級選單與展開清單背景顏色"
-japanese = "サブウィンドウと展開リストの背景色"
-korean = "하위 팝업 및 펼쳐진 목록 배경색"
-russian = "Цвет фона подокон и раскрытых списков"
-german = "Hintergrundfarbe für Unterfenster und aufgeklappte Listen"
-spanish = "Color de fondo de ventanas secundarias y listas desplegadas"
-french = "Couleur de fond des fenêtres secondaires et listes ouvertes"
-brazilian_portuguese = "Cor de fundo de janelas secundárias e listas abertas"
-portuguese = "Cor de fundo das janelas secundárias e listas abertas"
-turkish = "Alt pencere ve açılmış liste arka plan rengi"
-polish = "Kolor tła okien podrzędnych i rozwiniętych list"
-
-[[message]]
-key = "Search country flag…"
-[message.translations]
-simplified_chinese = "搜索国家旗帜…"
-traditional_chinese = "搜尋國家旗幟…"
-japanese = "国旗を検索…"
-korean = "국기 검색…"
-russian = "Поиск флага страны…"
-german = "Länderflagge suchen…"
-spanish = "Buscar bandera…"
-french = "Rechercher un drapeau…"
-brazilian_portuguese = "Buscar bandeira…"
-portuguese = "Pesquisar bandeira…"
-turkish = "Ülke bayrağı ara…"
-polish = "Szukaj flagi kraju…"
-
-[[message]]
-key = "Popup & dropdown blur"
-[message.translations]
-simplified_chinese = "弹窗与下拉列表模糊"
-traditional_chinese = "彈出視窗與下拉清單模糊"
-japanese = "ポップアップとドロップダウンのぼかし"
-korean = "팝업 및 드롭다운 흐림"
-russian = "Размытие окон и списков"
-german = "Unschärfe für Popups und Auswahllisten"
-spanish = "Desenfoque de ventanas y listas"
-french = "Flou des fenêtres et listes déroulantes"
-brazilian_portuguese = "Desfoque de janelas e listas"
-portuguese = "Desfocagem de janelas e listas"
-turkish = "Açılır pencere ve liste bulanıklığı"
-polish = "Rozmycie okien i list"
-
-[[message]]
-key = "Apply frosted glass blur behind secondary popups and dropdowns"
-[message.translations]
-simplified_chinese = "对二级弹窗与下拉列表背后的内容应用模糊"
-traditional_chinese = "對次級視窗與下拉清單背後的內容套用模糊"
-japanese = "サブウィンドウとドロップダウンの背景をぼかす"
-korean = "하위 팝업과 드롭다운 뒤의 배경을 흐리게 표시"
-russian = "Размывать фон подокон и выпадающих списков"
-german = "Hintergrund von Unterfenstern und Auswahllisten weichzeichnen"
-spanish = "Desenfocar el fondo de ventanas secundarias y listas"
-french = "Flouter le fond des fenêtres secondaires et listes déroulantes"
-brazilian_portuguese = "Desfocar o fundo de janelas secundárias e listas"
-portuguese = "Desfocar o fundo de janelas secundárias e listas"
-turkish = "Alt pencerelerin ve açılır listelerin arkasını bulanıklaştır"
-polish = "Rozmyj tło okien podrzędnych i list rozwijanych"
-
-[[message]]
-key = "Enable frosted glass blur behind secondary popups and dropdowns"
-[message.translations]
-simplified_chinese = "启用二级弹窗与下拉列表背景模糊"
-traditional_chinese = "啟用次級視窗與下拉清單背景模糊"
-japanese = "サブウィンドウとドロップダウンの背景ぼかしを有効にする"
-korean = "하위 팝업과 드롭다운 배경 흐림 활성화"
-russian = "Включить размытие фона подокон и списков"
-german = "Hintergrundunschärfe für Unterfenster und Auswahllisten aktivieren"
-spanish = "Activar desenfoque de fondo en ventanas secundarias y listas"
-french = "Activer le flou derrière les fenêtres secondaires et listes"
-brazilian_portuguese = "Ativar desfoque atrás de janelas secundárias e listas"
-portuguese = "Ativar desfocagem atrás de janelas secundárias e listas"
-turkish = "Alt pencerelerin ve açılır listelerin arkasında bulanıklığı etkinleştir"
-polish = "Włącz rozmycie tła okien podrzędnych i list"
-
-[[message]]
-key = "Secondary popup and dropdown list background opacity percentage"
-[message.translations]
-simplified_chinese = "二级菜单与展开列表背景不透明度百分比"
-traditional_chinese = "次級選單與展開清單背景不透明度百分比"
-japanese = "サブウィンドウと展開リストの背景不透明度（パーセント）"
-korean = "하위 팝업 및 펼쳐진 목록 배경 불투명도 백분율"
-russian = "Непрозрачность фона подокон и раскрытых списков в процентах"
-german = "Hintergrunddeckkraft für Unterfenster und aufgeklappte Listen in Prozent"
-spanish = "Opacidad del fondo de ventanas secundarias y listas desplegadas en porcentaje"
-french = "Opacité du fond des fenêtres secondaires et listes ouvertes en pourcentage"
-brazilian_portuguese = "Opacidade do fundo de janelas secundárias e listas abertas em porcentagem"
-portuguese = "Opacidade do fundo das janelas secundárias e listas abertas em percentagem"
-turkish = "Alt pencere ve açılmış liste arka plan opaklığı yüzdesi"
-polish = "Nieprzezroczystość tła okien podrzędnych i rozwiniętych list w procentach"
-
-[[message]]
-key = "Button and input background color"
-[message.translations]
-simplified_chinese = "按钮与输入框背景颜色"
-traditional_chinese = "按鈕與輸入框背景顏色"
-japanese = "ボタンと入力欄の背景色"
-korean = "버튼 및 입력란 배경색"
-russian = "Цвет фона кнопок и полей ввода"
-german = "Hintergrundfarbe für Schaltflächen und Eingabefelder"
-spanish = "Color de fondo de botones y campos de entrada"
-french = "Couleur de fond des boutons et champs de saisie"
-brazilian_portuguese = "Cor de fundo dos botões e campos de entrada"
-portuguese = "Cor de fundo dos botões e campos de entrada"
-turkish = "Düğme ve giriş alanı arka plan rengi"
-polish = "Kolor tła przycisków i pól wprowadzania"
-
-[[message]]
-key = "Button and input background opacity percentage"
-[message.translations]
-simplified_chinese = "按钮与输入框背景不透明度百分比"
-traditional_chinese = "按鈕與輸入框背景不透明度百分比"
-japanese = "ボタンと入力欄の背景不透明度（パーセント）"
-korean = "버튼 및 입력란 배경 불투명도 백분율"
-russian = "Непрозрачность фона кнопок и полей ввода в процентах"
-german = "Hintergrunddeckkraft für Schaltflächen und Eingabefelder in Prozent"
-spanish = "Opacidad del fondo de botones y campos de entrada en porcentaje"
-french = "Opacité du fond des boutons et champs de saisie en pourcentage"
-brazilian_portuguese = "Opacidade do fundo dos botões e campos de entrada em porcentagem"
-portuguese = "Opacidade do fundo dos botões e campos de entrada em percentagem"
-turkish = "Düğme ve giriş alanı arka plan opaklığı yüzdesi"
-polish = "Nieprzezroczystość tła przycisków i pól wprowadzania w procentach"
-
-[[message]]
-key = "Button background color"
-[message.translations]
-simplified_chinese = "按钮背景颜色"
-traditional_chinese = "按鈕背景顏色"
-japanese = "ボタン背景色"
-korean = "버튼 배경색"
-russian = "Цвет фона кнопок"
-german = "Hintergrundfarbe der Schaltflächen"
-spanish = "Color de fondo de botones"
-french = "Couleur de fond des boutons"
-brazilian_portuguese = "Cor de fundo dos botões"
-portuguese = "Cor de fundo dos botões"
-turkish = "Düğme arka plan rengi"
-polish = "Kolor tła przycisków"
-
-[[message]]
-key = "Input background color"
-[message.translations]
-simplified_chinese = "输入框背景颜色"
-traditional_chinese = "輸入框背景顏色"
-japanese = "入力欄背景色"
-korean = "입력란 배경색"
-russian = "Цвет фона полей ввода"
-german = "Hintergrundfarbe der Eingabefelder"
-spanish = "Color de fondo de campos de entrada"
-french = "Couleur de fond des champs de saisie"
-brazilian_portuguese = "Cor de fundo dos campos de entrada"
-portuguese = "Cor de fundo dos campos de entrada"
-turkish = "Giriş alanı arka plan rengi"
-polish = "Kolor tła pól wprowadzania"
-
-[[message]]
-key = "Expanded dropdown background color"
-[message.translations]
-simplified_chinese = "展开列表背景颜色"
-traditional_chinese = "展開清單背景顏色"
-japanese = "展開リスト背景色"
-korean = "펼쳐진 목록 배경색"
-russian = "Цвет фона раскрытого списка"
-german = "Hintergrundfarbe der aufgeklappten Liste"
-spanish = "Color de fondo de la lista desplegada"
-french = "Couleur de fond de la liste déroulée"
-brazilian_portuguese = "Cor de fundo da lista expandida"
-portuguese = "Cor de fundo da lista expandida"
-turkish = "Açılan liste arka plan rengi"
-polish = "Kolor tła rozwiniętej listy"
-
-[[message]]
-key = "Secondary menu background color"
-[message.translations]
-simplified_chinese = "二级菜单背景颜色"
-traditional_chinese = "次級選單背景顏色"
-japanese = "サブメニュー背景色"
-korean = "보조 메뉴 배경색"
-russian = "Цвет фона подменю"
-german = "Hintergrundfarbe des Untermenüs"
-spanish = "Color de fondo del submenú"
-french = "Couleur de fond du sous-menu"
-brazilian_portuguese = "Cor de fundo do submenu"
-portuguese = "Cor de fundo do submenu"
-turkish = "Alt menü arka plan rengi"
-polish = "Kolor tła podmenu"
-
-[[message]]
-key = "Text color mode"
-[message.translations]
-simplified_chinese = "文本颜色模式"
-traditional_chinese = "文字顏色模式"
-japanese = "文字色モード"
-korean = "텍스트 색상 모드"
-russian = "Режим цвета текста"
-german = "Textfarbmodus"
-spanish = "Modo de color del texto"
-french = "Mode de couleur du texte"
-brazilian_portuguese = "Modo de cor do texto"
-portuguese = "Modo de cor do texto"
-turkish = "Metin rengi modu"
-polish = "Tryb koloru tekstu"
-
-[[message]]
-key = "Custom text color"
-[message.translations]
-simplified_chinese = "自定义文本颜色"
-traditional_chinese = "自訂文字顏色"
-japanese = "カスタム文字色"
-korean = "사용자 지정 텍스트 색상"
-russian = "Пользовательский цвет текста"
-german = "Benutzerdefinierte Textfarbe"
-spanish = "Color de texto personalizado"
-french = "Couleur de texte personnalisée"
-brazilian_portuguese = "Cor de texto personalizada"
-portuguese = "Cor de texto personalizada"
-turkish = "Özel metin rengi"
-polish = "Własny kolor tekstu"
-
-[[message]]
-key = "Button background opacity percentage"
-[message.translations]
-simplified_chinese = "按钮背景 — 不透明度百分比"
-traditional_chinese = "按鈕背景 — 不透明度百分比"
-japanese = "ボタン背景 — 不透明度（パーセント）"
-korean = "버튼 배경색 — 불투명도 백분율"
-russian = "Цвет фона кнопок — непрозрачность в процентах"
-german = "Hintergrundfarbe der Schaltflächen — Deckkraft in Prozent"
-spanish = "Color de fondo de botones — opacidad en porcentaje"
-french = "Couleur de fond des boutons — opacité en pourcentage"
-brazilian_portuguese = "Cor de fundo dos botões — opacidade em porcentagem"
-portuguese = "Cor de fundo dos botões — opacidade em percentagem"
-turkish = "Düğme arka plan rengi — opaklık yüzdesi"
-polish = "Kolor tła przycisków — nieprzezroczystość w procentach"
-
-[[message]]
-key = "Input background opacity percentage"
-[message.translations]
-simplified_chinese = "输入框背景 — 不透明度百分比"
-traditional_chinese = "輸入框背景 — 不透明度百分比"
-japanese = "入力欄背景 — 不透明度（パーセント）"
-korean = "입력란 배경색 — 불투명도 백분율"
-russian = "Цвет фона полей ввода — непрозрачность в процентах"
-german = "Hintergrundfarbe der Eingabefelder — Deckkraft in Prozent"
-spanish = "Color de fondo de campos de entrada — opacidad en porcentaje"
-french = "Couleur de fond des champs de saisie — opacité en pourcentage"
-brazilian_portuguese = "Cor de fundo dos campos de entrada — opacidade em porcentagem"
-portuguese = "Cor de fundo dos campos de entrada — opacidade em percentagem"
-turkish = "Giriş alanı arka plan rengi — opaklık yüzdesi"
-polish = "Kolor tła pól wprowadzania — nieprzezroczystość w procentach"
-
-[[message]]
-key = "Expanded dropdown background opacity percentage"
-[message.translations]
-simplified_chinese = "展开列表背景 — 不透明度百分比"
-traditional_chinese = "展開清單背景 — 不透明度百分比"
-japanese = "展開リスト背景 — 不透明度（パーセント）"
-korean = "펼쳐진 목록 배경색 — 불투명도 백분율"
-russian = "Цвет фона раскрытого списка — непрозрачность в процентах"
-german = "Hintergrundfarbe der aufgeklappten Liste — Deckkraft in Prozent"
-spanish = "Color de fondo de la lista desplegada — opacidad en porcentaje"
-french = "Couleur de fond de la liste déroulée — opacité en pourcentage"
-brazilian_portuguese = "Cor de fundo da lista expandida — opacidade em porcentagem"
-portuguese = "Cor de fundo da lista expandida — opacidade em percentagem"
-turkish = "Açılan liste arka plan rengi — opaklık yüzdesi"
-polish = "Kolor tła rozwiniętej listy — nieprzezroczystość w procentach"
-
-[[message]]
-key = "Secondary menu background opacity percentage"
-[message.translations]
-simplified_chinese = "二级菜单背景 — 不透明度百分比"
-traditional_chinese = "次級選單背景 — 不透明度百分比"
-japanese = "サブメニュー背景 — 不透明度（パーセント）"
-korean = "보조 메뉴 배경색 — 불투명도 백분율"
-russian = "Цвет фона подменю — непрозрачность в процентах"
-german = "Hintergrundfarbe des Untermenüs — Deckkraft in Prozent"
-spanish = "Color de fondo del submenú — opacidad en porcentaje"
-french = "Couleur de fond du sous-menu — opacité en pourcentage"
-brazilian_portuguese = "Cor de fundo do submenu — opacidade em porcentagem"
-portuguese = "Cor de fundo do submenu — opacidade em percentagem"
-turkish = "Alt menü arka plan rengi — opaklık yüzdesi"
-polish = "Kolor tła podmenu — nieprzezroczystość w procentach"
-
-[[message]]
-key = "Text color mode: 0 automatic, 1 white, 2 black, 3 custom"
-[message.translations]
-simplified_chinese = "文本颜色模式：0 自动，1 白色，2 黑色，3 自定义"
-traditional_chinese = "文字顏色模式: 0 自動, 1 白色, 2 黑色, 3 自訂"
-japanese = "文字色モード: 0 自動, 1 白, 2 黒, 3 カスタム"
-korean = "텍스트 색상 모드: 0 자동, 1 흰색, 2 검정, 3 사용자 지정"
-russian = "Режим цвета текста: 0 авто, 1 белый, 2 черный, 3 свой"
-german = "Textfarbmodus: 0 automatisch, 1 weiß, 2 schwarz, 3 benutzerdefiniert"
-spanish = "Modo de color del texto: 0 automático, 1 blanco, 2 negro, 3 personalizado"
-french = "Mode de couleur du texte: 0 automatique, 1 blanc, 2 noir, 3 personnalisé"
-brazilian_portuguese = "Modo de cor do texto: 0 automático, 1 branco, 2 preto, 3 personalizado"
-portuguese = "Modo de cor do texto: 0 automático, 1 branco, 2 preto, 3 personalizado"
-turkish = "Metin rengi modu: 0 otomatik, 1 beyaz, 2 siyah, 3 özel"
-polish = "Tryb koloru tekstu: 0 automatyczny, 1 biały, 2 czarny, 3 własny"
-
-[[message]]
-key = "Always show song title and artist"
-[message.translations]
-simplified_chinese = "始终显示歌名歌手"
-traditional_chinese = "始終顯示歌名歌手"
-japanese = "曲名とアーティストを常に表示"
-korean = "곡 제목과 아티스트 항상 표시"
-russian = "Всегда показывать название песни и исполнителя"
-german = "Songtitel und Interpret immer anzeigen"
-spanish = "Mostrar siempre el título de la canción y el artista"
-french = "Toujours afficher le titre et l'artiste"
-brazilian_portuguese = "Sempre mostrar o título da música e o artista"
-portuguese = "Mostrar sempre o título da música e o artista"
-turkish = "Şarkı adını ve sanatçıyı her zaman göster"
-polish = "Zawsze pokazuj tytuł utworu i wykonawcę"
-
-[[message]]
-key = "Command completion"
-[message.translations]
-simplified_chinese = "指令补全"
-traditional_chinese = "指令補全"
-japanese = "コマンド補完"
-korean = "명령어 자동 완성"
-russian = "Дополнение команд"
-german = "Befehlsvervollständigung"
-spanish = "Autocompletado de comandos"
-french = "Complétion des commandes"
-brazilian_portuguese = "Conclusão de comandos"
-portuguese = "Conclusão de comandos"
-turkish = "Komut tamamlama"
-polish = "Uzupełnianie poleceń"
-
-[[message]]
-key = "Copy name option color"
-[message.translations]
-simplified_chinese = "复制名字选项颜色"
-traditional_chinese = "複製名字選項顏色"
-japanese = "名前コピー項目の色"
-korean = "이름 복사 항목 색상"
-russian = "Цвет действия копирования имени"
-german = "Farbe der Option zum Kopieren des Namens"
-spanish = "Color de la opción de copiar nombre"
-french = "Couleur de l'option de copie du nom"
-brazilian_portuguese = "Cor da opção de copiar nome"
-portuguese = "Cor da opção de copiar nome"
-turkish = "İsim kopyalama seçeneğinin rengi"
-polish = "Kolor opcji kopiowania nazwy"
-
-[[message]]
-key = "Default width"
-[message.translations]
-simplified_chinese = "默认宽度"
-traditional_chinese = "預設寬度"
-japanese = "標準の幅"
-korean = "기본 너비"
-russian = "Обычная ширина"
-german = "Standardbreite"
-spanish = "Ancho predeterminado"
-french = "Largeur par défaut"
-brazilian_portuguese = "Largura padrão"
-portuguese = "Largura predefinida"
-turkish = "Varsayılan genişlik"
-polish = "Domyślna szerokość"
-
-[[message]]
-key = "Full width"
-[message.translations]
-simplified_chinese = "全宽"
-traditional_chinese = "全寬"
-japanese = "全幅"
-korean = "전체 너비"
-russian = "Полная ширина"
-german = "Volle Breite"
-spanish = "Ancho completo"
-french = "Pleine largeur"
-brazilian_portuguese = "Largura total"
-portuguese = "Largura total"
-turkish = "Tam genişlik"
-polish = "Pełna szerokość"
-
-[[message]]
-key = "Music player volume"
-[message.translations]
-simplified_chinese = "音乐播放器音量"
-traditional_chinese = "音樂播放器音量"
-japanese = "音楽プレーヤーの音量"
-korean = "음악 플레이어 음량"
-russian = "Громкость музыкального проигрывателя"
-german = "Lautstärke des Musikplayers"
-spanish = "Volumen del reproductor de música"
-french = "Volume du lecteur de musique"
-brazilian_portuguese = "Volume do reprodutor de música"
-portuguese = "Volume do leitor de música"
-turkish = "Müzik oynatıcı ses düzeyi"
-polish = "Głośność odtwarzacza muzyki"
-
-[[message]]
-key = "Next track"
-[message.translations]
-simplified_chinese = "下一首"
-traditional_chinese = "下一首"
-japanese = "次の曲"
-korean = "다음 곡"
-russian = "Следующая композиция"
-german = "Nächster Titel"
-spanish = "Pista siguiente"
-french = "Piste suivante"
-brazilian_portuguese = "Próxima faixa"
-portuguese = "Faixa seguinte"
-turkish = "Sonraki parça"
-polish = "Następny utwór"
-
-[[message]]
-key = "Previous track"
-[message.translations]
-simplified_chinese = "上一首"
-traditional_chinese = "上一首"
-japanese = "前の曲"
-korean = "이전 곡"
-russian = "Предыдущая композиция"
-german = "Vorheriger Titel"
-spanish = "Pista anterior"
-french = "Piste précédente"
-brazilian_portuguese = "Faixa anterior"
-portuguese = "Faixa anterior"
-turkish = "Önceki parça"
-polish = "Poprzedni utwór"
-
-[[message]]
-key = "Show advanced nameplate settings without changing effect values"
-[message.translations]
-simplified_chinese = "显示昵称高级设置，不改变已有特效值"
-traditional_chinese = "顯示暱稱進階設定，不改變既有特效值"
-japanese = "エフェクトの値を変更せずにネームプレートの詳細設定を表示"
-korean = "효과 값을 변경하지 않고 이름표 고급 설정 표시"
-russian = "Показывать расширенные настройки имён без изменения эффектов"
-german = "Erweiterte Namensschild-Einstellungen ohne Änderung der Effektwerte anzeigen"
-spanish = "Mostrar ajustes avanzados de nombres sin cambiar los valores de los efectos"
-french = "Afficher les réglages avancés des noms sans modifier les valeurs des effets"
-brazilian_portuguese = "Mostrar configurações avançadas dos nomes sem alterar os valores dos efeitos"
-portuguese = "Mostrar definições avançadas dos nomes sem alterar os valores dos efeitos"
-turkish = "Efekt değerlerini değiştirmeden gelişmiş isim etiketi ayarlarını göster"
-polish = "Pokaż zaawansowane ustawienia nazw bez zmiany wartości efektów"
-
-[[message]]
-key = "Show advanced options"
-[message.translations]
-simplified_chinese = "显示高级选项"
-traditional_chinese = "顯示進階選項"
-japanese = "詳細オプションを表示"
-korean = "고급 옵션 표시"
-russian = "Показать дополнительные параметры"
-german = "Erweiterte Optionen anzeigen"
-spanish = "Mostrar opciones avanzadas"
-french = "Afficher les options avancées"
-brazilian_portuguese = "Mostrar opções avançadas"
-portuguese = "Mostrar opções avançadas"
-turkish = "Gelişmiş seçenekleri göster"
-polish = "Pokaż opcje zaawansowane"
-
-[[message]]
-key = "Show command completion in chat"
-[message.translations]
-simplified_chinese = "显示聊天指令补全"
-traditional_chinese = "顯示聊天指令補全"
-japanese = "チャットでコマンド補完を表示"
-korean = "채팅에서 명령어 자동 완성 표시"
-russian = "Показывать дополнение команд в чате"
-german = "Befehlsvervollständigung im Chat anzeigen"
-spanish = "Mostrar autocompletado de comandos en el chat"
-french = "Afficher la complétion des commandes dans le chat"
-brazilian_portuguese = "Mostrar conclusão de comandos no chat"
-portuguese = "Mostrar conclusão de comandos na conversa"
-turkish = "Sohbette komut tamamlamayı göster"
-polish = "Pokaż uzupełnianie poleceń na czacie"
-
-[[message]]
-key = "Show copy name option"
-[message.translations]
-simplified_chinese = "显示复制名字选项"
-traditional_chinese = "顯示複製名字選項"
-japanese = "名前コピー項目を表示"
-korean = "이름 복사 항목 표시"
-russian = "Показывать действие копирования имени"
-german = "Option zum Kopieren des Namens anzeigen"
-spanish = "Mostrar opción de copiar nombre"
-french = "Afficher l'option de copie du nom"
-brazilian_portuguese = "Mostrar opção de copiar nome"
-portuguese = "Mostrar opção de copiar nome"
-turkish = "İsim kopyalama seçeneğini göster"
-polish = "Pokaż opcję kopiowania nazwy"
-
-[[message]]
-key = "Volume unavailable for this player"
-[message.translations]
-simplified_chinese = "此播放器暂不支持音量控制"
-traditional_chinese = "此播放器暫不支援音量控制"
-japanese = "このプレーヤーの音量は操作できません"
-korean = "이 플레이어의 음량을 조절할 수 없습니다"
-russian = "Громкость этого проигрывателя недоступна"
-german = "Lautstärke für diesen Player nicht verfügbar"
-spanish = "Volumen no disponible para este reproductor"
-french = "Volume indisponible pour ce lecteur"
-brazilian_portuguese = "Volume indisponível para este reprodutor"
-portuguese = "Volume indisponível para este leitor"
-turkish = "Bu oynatıcının ses düzeyi ayarlanamıyor"
-polish = "Głośność tego odtwarzacza jest niedostępna"
-
-[[message]]
-key = "Title display"
-[message.translations]
-simplified_chinese = "头衔显示"
-traditional_chinese = "頭銜顯示"
-japanese = "称号表示"
-korean = "칭호 표시"
-russian = "Отображение титулов"
-german = "Titelanzeige"
-spanish = "Visualización de títulos"
-french = "Affichage des titres"
-brazilian_portuguese = "Exibição de títulos"
-portuguese = "Apresentação de títulos"
-turkish = "Unvan görünümü"
-polish = "Wyświetlanie tytułów"
-
-[[message]]
-key = "Title visibility and appearance"
-[message.translations]
-simplified_chinese = "头衔可见性与外观"
-traditional_chinese = "頭銜可見性與外觀"
-japanese = "称号の表示と外観"
-korean = "칭호 표시 여부와 외형"
-russian = "Видимость и оформление титулов"
-german = "Sichtbarkeit und Aussehen der Titel"
-spanish = "Visibilidad y apariencia de los títulos"
-french = "Visibilité et apparence des titres"
-brazilian_portuguese = "Visibilidade e aparência dos títulos"
-portuguese = "Visibilidade e aspeto dos títulos"
-turkish = "Unvan görünürlüğü ve görünüşü"
-polish = "Widoczność i wygląd tytułów"
-
-[[message]]
-key = "Show titles on nameplates"
-[message.translations]
-simplified_chinese = "显示名牌头衔"
-traditional_chinese = "顯示名牌頭銜"
-japanese = "ネームプレートに称号を表示"
-korean = "이름표에 칭호 표시"
-russian = "Показывать титулы на табличках имён"
-german = "Titel auf Namensschildern anzeigen"
-spanish = "Mostrar títulos en las placas de nombre"
-french = "Afficher les titres sur les plaques de nom"
-brazilian_portuguese = "Mostrar títulos nas placas de nome"
-portuguese = "Mostrar títulos nas placas de nome"
-turkish = "İsim etiketlerinde unvanları göster"
-polish = "Pokaż tytuły na plakietkach z nazwami"
-
-[[message]]
-key = "Show titles above player names"
-[message.translations]
-simplified_chinese = "头衔显示在名字上方"
-traditional_chinese = "頭銜顯示在名字上方"
-japanese = "プレイヤー名の上に称号を表示"
-korean = "플레이어 이름 위에 칭호 표시"
-russian = "Показывать титулы над именами игроков"
-german = "Titel über Spielernamen anzeigen"
-spanish = "Mostrar títulos encima de los nombres"
-french = "Afficher les titres au-dessus des noms"
-brazilian_portuguese = "Mostrar títulos acima dos nomes"
-portuguese = "Mostrar títulos acima dos nomes"
-turkish = "Unvanları oyuncu adlarının üstünde göster"
-polish = "Pokaż tytuły nad nazwami graczy"
-
-[[message]]
-key = "Last verified approved update source"
-[message.translations]
-simplified_chinese = "上次验证成功的已批准更新源"
-traditional_chinese = "上次驗證成功的已核准更新來源"
-japanese = "前回検証に成功した承認済みの更新元"
-korean = "마지막으로 검증에 성공한 승인된 업데이트 소스"
-russian = "Последний проверенный разрешённый источник обновления"
-german = "Zuletzt überprüfte freigegebene Updatequelle"
-spanish = "Última fuente de actualización aprobada y verificada"
-french = "Dernière source de mise à jour autorisée et vérifiée"
-brazilian_portuguese = "Última fonte de atualização aprovada e verificada"
-portuguese = "Última fonte de atualização aprovada e verificada"
-turkish = "Son doğrulanan onaylı güncelleme kaynağı"
-polish = "Ostatnie zweryfikowane i zatwierdzone źródło aktualizacji"
-
-[[message]]
-key = "Network error"
-[message.translations]
-simplified_chinese = "网络错误"
-traditional_chinese = "網路錯誤"
-japanese = "ネットワークエラー"
-korean = "네트워크 오류"
-russian = "Ошибка сети"
-german = "Netzwerkfehler"
-spanish = "Error de red"
-french = "Erreur réseau"
-brazilian_portuguese = "Erro de rede"
-portuguese = "Erro de rede"
-turkish = "Ağ hatası"
-polish = "Błąd sieci"
-
-[[message]]
-key = "Release notes"
-[message.translations]
-simplified_chinese = "更新说明"
-traditional_chinese = "更新說明"
-japanese = "リリースノート"
-korean = "업데이트 내용"
-russian = "Примечания к выпуску"
-german = "Versionshinweise"
-spanish = "Notas de la versión"
-french = "Notes de version"
-brazilian_portuguese = "Notas da versão"
-portuguese = "Notas da versão"
-turkish = "Sürüm notları"
-polish = "Informacje o wydaniu"
-
-[[message]]
-key = "No release notes provided"
-[message.translations]
-simplified_chinese = "此版本未提供更新说明"
-traditional_chinese = "此版本未提供更新說明"
-japanese = "このバージョンのリリースノートはありません"
-korean = "이 버전의 업데이트 내용이 없습니다"
-russian = "Примечания к этому выпуску не предоставлены"
-german = "Für diese Version sind keine Hinweise vorhanden"
-spanish = "No se proporcionaron notas para esta versión"
-french = "Aucune note fournie pour cette version"
-brazilian_portuguese = "Nenhuma nota fornecida para esta versão"
-portuguese = "Não foram fornecidas notas para esta versão"
-turkish = "Bu sürüm için not sağlanmadı"
-polish = "Nie podano informacji o tym wydaniu"
-
-[[message]]
-key = "Update package available"
-[message.translations]
-simplified_chinese = "此版本有可下载的更新包"
-traditional_chinese = "此版本有可下載的更新套件"
-japanese = "このバージョンの更新パッケージをダウンロードできます"
-korean = "이 버전의 업데이트 패키지를 다운로드할 수 있습니다"
-russian = "Пакет обновления для этой версии доступен"
-german = "Updatepaket für diese Version verfügbar"
-spanish = "Hay un paquete de actualización para esta versión"
-french = "Un paquet de mise à jour est disponible pour cette version"
-brazilian_portuguese = "Pacote de atualização disponível para esta versão"
-portuguese = "Pacote de atualização disponível para esta versão"
-turkish = "Bu sürüm için güncelleme paketi mevcut"
-polish = "Pakiet aktualizacji dla tej wersji jest dostępny"
-
-[[message]]
-key = "No downloadable portable package for this version"
-[message.translations]
-simplified_chinese = "此版本暂无可下载的便携包"
-traditional_chinese = "此版本暫無可下載的可攜式套件"
-japanese = "このバージョンのポータブル版パッケージはまだありません"
-korean = "이 버전의 포터블 패키지는 아직 다운로드할 수 없습니다"
-russian = "Переносимый пакет для этой версии пока недоступен"
-german = "Für diese Version ist noch kein portables Paket verfügbar"
-spanish = "Aún no hay un paquete portátil para esta versión"
-french = "Aucun paquet portable disponible pour cette version"
-brazilian_portuguese = "Ainda não há pacote portátil para esta versão"
-portuguese = "Ainda não existe um pacote portátil para esta versão"
-turkish = "Bu sürüm için indirilebilir taşınabilir paket henüz yok"
-polish = "Brak pakietu przenośnego do pobrania dla tej wersji"
-
-[[message]]
-key = "No compatible Windows update package for this version"
-[message.translations]
-simplified_chinese = "此版本暂无匹配的 Windows 更新包"
-traditional_chinese = "此版本暫無相容的 Windows 更新套件"
-japanese = "このバージョンに対応する Windows 更新パッケージはありません"
-korean = "이 버전과 호환되는 Windows 업데이트 패키지가 없습니다"
-russian = "Совместимый пакет обновления Windows для этой версии недоступен"
-german = "Kein kompatibles Windows-Updatepaket für diese Version verfügbar"
-spanish = "No hay un paquete de actualización de Windows compatible con esta versión"
-french = "Aucun paquet de mise à jour Windows compatible avec cette version"
-brazilian_portuguese = "Nenhum pacote de atualização do Windows compatível com esta versão"
-portuguese = "Não existe um pacote de atualização do Windows compatível com esta versão"
-turkish = "Bu sürüm için uyumlu Windows güncelleme paketi yok"
-polish = "Brak zgodnego pakietu aktualizacji Windows dla tej wersji"
-
-[[message]]
-key = "Check for updates"
-[message.translations]
-simplified_chinese = "检查更新"
-traditional_chinese = "檢查更新"
-japanese = "更新を確認"
-korean = "업데이트 확인"
-russian = "Проверить обновления"
-german = "Nach Updates suchen"
-spanish = "Buscar actualizaciones"
-french = "Rechercher des mises à jour"
-brazilian_portuguese = "Verificar atualizações"
-portuguese = "Procurar atualizações"
-turkish = "Güncellemeleri kontrol et"
-polish = "Sprawdź aktualizacje"
-
-[[message]]
-key = "Rule list"
-[message.translations]
-simplified_chinese = "规则列表"
-traditional_chinese = "規則清單"
-japanese = "ルール一覧"
-korean = "규칙 목록"
-russian = "Список правил"
-german = "Regelliste"
-spanish = "Lista de reglas"
-french = "Liste des règles"
-brazilian_portuguese = "Lista de regras"
-portuguese = "Lista de regras"
-turkish = "Kural listesi"
-polish = "Lista reguł"
-
-[[message]]
-key = "Reply content"
-[message.translations]
-simplified_chinese = "回复内容"
-traditional_chinese = "回覆內容"
-japanese = "返信内容"
-korean = "답장 내용"
-russian = "Текст ответа"
-german = "Antworttext"
-spanish = "Contenido de la respuesta"
-french = "Contenu de la réponse"
-brazilian_portuguese = "Conteúdo da resposta"
-portuguese = "Conteúdo da resposta"
-turkish = "Yanıt içeriği"
-polish = "Treść odpowiedzi"
-
-[[message]]
-key = "Trigger limits"
-[message.translations]
-simplified_chinese = "触发限制"
-traditional_chinese = "觸發限制"
-japanese = "発動条件"
-korean = "발동 제한"
-russian = "Условия срабатывания"
-german = "Auslösebedingungen"
-spanish = "Límites de activación"
-french = "Conditions de déclenchement"
-brazilian_portuguese = "Limites de ativação"
-portuguese = "Limites de ativação"
-turkish = "Tetikleme sınırları"
-polish = "Warunki uruchomienia"
-
-[[message]]
-key = "Steam client path (leave empty to detect automatically)"
-[message.translations]
-simplified_chinese = "Steam 客户端路径（留空自动检测）"
-traditional_chinese = "Steam 用戶端路徑（留空自動偵測）"
-japanese = "Steam クライアントのパス（空欄で自動検出）"
-korean = "Steam 클라이언트 경로 (비워두면 자동 감지)"
-russian = "Путь к клиенту Steam (пусто — автоопределение)"
-german = "Steam-Clientpfad (leer für automatische Erkennung)"
-spanish = "Ruta del cliente de Steam (vacía para detectar automáticamente)"
-french = "Chemin du client Steam (vide pour la détection automatique)"
-brazilian_portuguese = "Caminho do cliente Steam (vazio para detectar automaticamente)"
-portuguese = "Caminho do cliente Steam (vazio para deteção automática)"
-turkish = "Steam istemci yolu (otomatik algılama için boş bırakın)"
-polish = "Ścieżka klienta Steam (pusta oznacza automatyczne wykrywanie)"
-
-[[message]]
-key = "Detect Steam again"
-[message.translations]
-simplified_chinese = "重新检测 Steam"
-traditional_chinese = "重新偵測 Steam"
-japanese = "Steam を再検出"
-korean = "Steam 다시 감지"
-russian = "Повторно найти Steam"
-german = "Steam erneut erkennen"
-spanish = "Volver a detectar Steam"
-french = "Détecter Steam à nouveau"
-brazilian_portuguese = "Detectar Steam novamente"
-portuguese = "Detetar Steam novamente"
-turkish = "Steam'i yeniden algıla"
-polish = "Wykryj Steam ponownie"
-
-[[message]]
-key = "Checking Steam..."
-[message.translations]
-simplified_chinese = "正在检测 Steam…"
-traditional_chinese = "正在偵測 Steam…"
-japanese = "Steam を確認中…"
-korean = "Steam 확인 중…"
-russian = "Проверка Steam…"
-german = "Steam wird geprüft…"
-spanish = "Comprobando Steam…"
-french = "Vérification de Steam…"
-brazilian_portuguese = "Verificando Steam…"
-portuguese = "A verificar o Steam…"
-turkish = "Steam kontrol ediliyor…"
-polish = "Sprawdzanie Steam…"
-
-[[message]]
-key = "Steam not found"
-[message.translations]
-simplified_chinese = "未找到 Steam"
-traditional_chinese = "找不到 Steam"
-japanese = "Steam が見つかりません"
-korean = "Steam을 찾을 수 없음"
-russian = "Steam не найден"
-german = "Steam nicht gefunden"
-spanish = "Steam no encontrado"
-french = "Steam introuvable"
-brazilian_portuguese = "Steam não encontrado"
-portuguese = "Steam não encontrado"
-turkish = "Steam bulunamadı"
-polish = "Nie znaleziono Steam"
-
-[[message]]
-key = "Steam is running"
-[message.translations]
-simplified_chinese = "Steam 已运行"
-traditional_chinese = "Steam 已啟動"
-japanese = "Steam は起動中です"
-korean = "Steam 실행 중"
-russian = "Steam запущен"
-german = "Steam läuft"
-spanish = "Steam está en ejecución"
-french = "Steam est en cours d’exécution"
-brazilian_portuguese = "Steam está em execução"
-portuguese = "Steam está em execução"
-turkish = "Steam çalışıyor"
-polish = "Steam jest uruchomiony"
-
-[[message]]
-key = "Steam is installed but not running"
-[message.translations]
-simplified_chinese = "Steam 已安装，尚未启动"
-traditional_chinese = "Steam 已安裝，尚未啟動"
-japanese = "Steam はインストール済みですが未起動です"
-korean = "Steam 설치됨, 실행 중이 아님"
-russian = "Steam установлен, но не запущен"
-german = "Steam ist installiert, läuft aber nicht"
-spanish = "Steam está instalado, pero no está en ejecución"
-french = "Steam est installé, mais n’est pas lancé"
-brazilian_portuguese = "Steam está instalado, mas não está em execução"
-portuguese = "Steam está instalado, mas não está em execução"
-turkish = "Steam yüklü ancak çalışmıyor"
-polish = "Steam jest zainstalowany, ale nie działa"
-
-[[message]]
-key = "Steam is installed"
-[message.translations]
-simplified_chinese = "Steam 已安装"
-traditional_chinese = "Steam 已安裝"
-japanese = "Steam はインストール済みです"
-korean = "Steam 설치됨"
-russian = "Steam установлен"
-german = "Steam ist installiert"
-spanish = "Steam está instalado"
-french = "Steam est installé"
-brazilian_portuguese = "Steam está instalado"
-portuguese = "Steam está instalado"
-turkish = "Steam yüklü"
-polish = "Steam jest zainstalowany"
-
-[[message]]
-key = "Manual Steam path is invalid; using automatic detection"
-[message.translations]
-simplified_chinese = "手动填写的 Steam 路径无效，已使用自动检测"
-traditional_chinese = "手動填寫的 Steam 路徑無效，已改用自動偵測"
-japanese = "指定した Steam パスが無効なため、自動検出を使用します"
-korean = "입력한 Steam 경로가 잘못되어 자동 감지를 사용합니다"
-russian = "Указанный путь Steam недействителен; используется автоопределение"
-german = "Manueller Steam-Pfad ungültig; automatische Erkennung wird verwendet"
-spanish = "La ruta manual de Steam no es válida; se usa la detección automática"
-french = "Le chemin Steam saisi est invalide ; détection automatique utilisée"
-brazilian_portuguese = "O caminho manual do Steam é inválido; usando detecção automática"
-portuguese = "O caminho manual do Steam é inválido; a usar deteção automática"
-turkish = "Elle girilen Steam yolu geçersiz; otomatik algılama kullanılıyor"
-polish = "Ręczna ścieżka Steam jest nieprawidłowa; używane jest automatyczne wykrywanie"
-
-[[message]]
-key = "Enter the Steam client program path, without command arguments"
-[message.translations]
-simplified_chinese = "填写 Steam 客户端程序路径，不要附带启动参数"
-traditional_chinese = "填寫 Steam 用戶端程式路徑，不要附帶啟動參數"
-japanese = "起動引数を付けずに Steam クライアントのパスを入力してください"
-korean = "실행 인수 없이 Steam 클라이언트 프로그램 경로를 입력하세요"
-russian = "Укажите путь к клиенту Steam без аргументов запуска"
-german = "Pfad zum Steam-Client ohne Startparameter eingeben"
-spanish = "Introduce la ruta del programa Steam sin argumentos de inicio"
-french = "Saisissez le chemin du client Steam sans arguments de lancement"
-brazilian_portuguese = "Insira o caminho do programa Steam sem argumentos de inicialização"
-portuguese = "Introduza o caminho do programa Steam sem argumentos de arranque"
-turkish = "Başlatma bağımsız değişkenleri olmadan Steam istemci yolunu girin"
-polish = "Wpisz ścieżkę programu Steam bez argumentów uruchamiania"
-
-[[message]]
-key = "Apply Qm recommended appearance"
-[message.translations]
-simplified_chinese = "应用栖梦推荐外观"
-traditional_chinese = "套用栖夢推薦外觀"
-japanese = "Qm 推奨の外観を適用"
-korean = "Qm 권장 외관 적용"
-russian = "Применить рекомендуемый вид Qm"
-german = "Empfohlenes Qm-Erscheinungsbild anwenden"
-spanish = "Aplicar apariencia recomendada de Qm"
-french = "Appliquer l’apparence recommandée par Qm"
-brazilian_portuguese = "Aplicar aparência recomendada do Qm"
-portuguese = "Aplicar aspeto recomendado do Qm"
-turkish = "Qm önerilen görünümünü uygula"
-polish = "Zastosuj zalecany wygląd Qm"
-
-[[message]]
-key = "Applying this preset changes the appearance settings listed below."
-[message.translations]
-simplified_chinese = "应用预设会修改下面列出的外观设置。"
-traditional_chinese = "套用預設會修改下列外觀設定。"
-japanese = "このプリセットは以下の外観設定を変更します。"
-korean = "이 프리셋을 적용하면 아래 외관 설정이 변경됩니다."
-russian = "Применение набора изменит перечисленные ниже настройки внешнего вида."
-german = "Diese Vorlage ändert die unten aufgeführten Darstellungseinstellungen."
-spanish = "Este preajuste cambia los ajustes de apariencia indicados abajo."
-french = "Ce préréglage modifie les paramètres d’apparence indiqués ci-dessous."
-brazilian_portuguese = "Este perfil altera as configurações de aparência listadas abaixo."
-portuguese = "Esta predefinição altera as definições de aspeto indicadas abaixo."
-turkish = "Bu ön ayar aşağıdaki görünüm ayarlarını değiştirir."
-polish = "Ten zestaw zmienia wymienione poniżej ustawienia wyglądu."
-
-[[message]]
-key = "Backdrop blur"
-[message.translations]
-simplified_chinese = "背景模糊"
-traditional_chinese = "背景模糊"
-japanese = "背景のぼかし"
-korean = "배경 흐림"
-russian = "Размытие фона"
-german = "Hintergrundunschärfe"
-spanish = "Desenfoque de fondo"
-french = "Flou d’arrière-plan"
-brazilian_portuguese = "Desfoque de fundo"
-portuguese = "Desfocagem do fundo"
-turkish = "Arka plan bulanıklığı"
-polish = "Rozmycie tła"
-
-[[message]]
-key = "CJK font"
-[message.translations]
-simplified_chinese = "中日韩文字字体"
-traditional_chinese = "中日韓文字字型"
-japanese = "中国語・日本語・韓国語フォント"
-korean = "한중일 글꼴"
-russian = "Шрифт CJK"
-german = "CJK-Schrift"
-spanish = "Fuente CJK"
-french = "Police CJK"
-brazilian_portuguese = "Fonte CJK"
-portuguese = "Tipo de letra CJK"
-turkish = "CJK yazı tipi"
-polish = "Czcionka CJK"
-
-[[message]]
-key = "CJK font weight"
-[message.translations]
-simplified_chinese = "中日韩文字字重"
-traditional_chinese = "中日韓文字字重"
-japanese = "中国語・日本語・韓国語フォントの太さ"
-korean = "한중일 글꼴 굵기"
-russian = "Толщина шрифта CJK"
-german = "CJK-Schriftstärke"
-spanish = "Grosor de la fuente CJK"
-french = "Graisse de la police CJK"
-brazilian_portuguese = "Espessura da fonte CJK"
-portuguese = "Espessura do tipo de letra CJK"
-turkish = "CJK yazı tipi kalınlığı"
-polish = "Grubość czcionki CJK"
-
-[[message]]
-key = "Dark translucent"
-[message.translations]
-simplified_chinese = "深色半透明"
-traditional_chinese = "深色半透明"
-japanese = "暗色半透明"
-korean = "어두운 반투명"
-russian = "Тёмный полупрозрачный"
-german = "Dunkel und halbtransparent"
-spanish = "Oscuro translúcido"
-french = "Sombre translucide"
-brazilian_portuguese = "Escuro translúcido"
-portuguese = "Escuro translúcido"
-turkish = "Koyu yarı saydam"
-polish = "Ciemny półprzezroczysty"
-
-[[message]]
-key = "Default appearance profile migration version"
-[message.translations]
-simplified_chinese = "默认外观配置迁移版本"
-traditional_chinese = "預設外觀設定遷移版本"
-japanese = "既定の外観設定の移行バージョン"
-korean = "기본 외관 설정 마이그레이션 버전"
-russian = "Версия миграции настроек внешнего вида по умолчанию"
-german = "Migrationsversion des Standard-Darstellungsprofils"
-spanish = "Versión de migración de la apariencia predeterminada"
-french = "Version de migration de l’apparence par défaut"
-brazilian_portuguese = "Versão de migração da aparência padrão"
-portuguese = "Versão de migração do aspeto predefinido"
-turkish = "Varsayılan görünüm profili geçiş sürümü"
-polish = "Wersja migracji domyślnego profilu wyglądu"
-
-[[message]]
-key = "Global UI size"
-[message.translations]
-simplified_chinese = "整体界面大小"
-traditional_chinese = "整體介面大小"
-japanese = "UI 全体のサイズ"
-korean = "전체 UI 크기"
-russian = "Общий размер интерфейса"
-german = "Gesamte UI-Größe"
-spanish = "Tamaño global de la interfaz"
-french = "Taille générale de l’interface"
-brazilian_portuguese = "Tamanho geral da interface"
-portuguese = "Tamanho global da interface"
-turkish = "Genel arayüz boyutu"
-polish = "Ogólny rozmiar interfejsu"
-
-[[message]]
-key = "LXGW WenKai is available."
-[message.translations]
-simplified_chinese = "霞鹜文楷可用。"
-traditional_chinese = "霞鶩文楷可用。"
-japanese = "LXGW WenKai を利用できます。"
-korean = "LXGW WenKai를 사용할 수 있습니다."
-russian = "Шрифт LXGW WenKai доступен."
-german = "LXGW WenKai ist verfügbar."
-spanish = "LXGW WenKai está disponible."
-french = "LXGW WenKai est disponible."
-brazilian_portuguese = "LXGW WenKai está disponível."
-portuguese = "LXGW WenKai está disponível."
-turkish = "LXGW WenKai kullanılabilir."
-polish = "Czcionka LXGW WenKai jest dostępna."
-
-[[message]]
-key = "LXGW WenKai is unavailable. Current fonts and weights will be kept."
-[message.translations]
-simplified_chinese = "未找到霞鹜文楷，将保留当前字体和字重。"
-traditional_chinese = "找不到霞鶩文楷，將保留目前字型與字重。"
-japanese = "LXGW WenKai が見つかりません。現在のフォントと太さを維持します。"
-korean = "LXGW WenKai를 찾을 수 없습니다. 현재 글꼴과 굵기를 유지합니다."
-russian = "LXGW WenKai недоступен. Текущие шрифты и их толщина сохранятся."
-german = "LXGW WenKai ist nicht verfügbar. Aktuelle Schriften und Schriftstärken bleiben erhalten."
-spanish = "LXGW WenKai no está disponible. Se conservarán las fuentes y los grosores actuales."
-french = "LXGW WenKai est indisponible. Les polices et graisses actuelles seront conservées."
-brazilian_portuguese = "LXGW WenKai indisponível. As fontes e espessuras atuais serão mantidas."
-portuguese = "LXGW WenKai indisponível. Os tipos de letra e espessuras atuais serão mantidos."
-turkish = "LXGW WenKai kullanılamıyor. Mevcut yazı tipleri ve kalınlıkları korunacak."
-polish = "Czcionka LXGW WenKai jest niedostępna. Obecne czcionki i ich grubości zostaną zachowane."
-
-[[message]]
-key = "Latin font"
-[message.translations]
-simplified_chinese = "拉丁文字字体"
-traditional_chinese = "拉丁文字字型"
-japanese = "ラテン文字フォント"
-korean = "라틴 문자 글꼴"
-russian = "Латинский шрифт"
-german = "Lateinische Schrift"
-spanish = "Fuente latina"
-french = "Police latine"
-brazilian_portuguese = "Fonte latina"
-portuguese = "Tipo de letra latino"
-turkish = "Latin yazı tipi"
-polish = "Czcionka łacińska"
-
-[[message]]
-key = "Latin font weight"
-[message.translations]
-simplified_chinese = "拉丁文字字重"
-traditional_chinese = "拉丁文字字重"
-japanese = "ラテン文字フォントの太さ"
-korean = "라틴 문자 글꼴 굵기"
-russian = "Толщина латинского шрифта"
-german = "Lateinische Schriftstärke"
-spanish = "Grosor de la fuente latina"
-french = "Graisse de la police latine"
-brazilian_portuguese = "Espessura da fonte latina"
-portuguese = "Espessura do tipo de letra latino"
-turkish = "Latin yazı tipi kalınlığı"
-polish = "Grubość czcionki łacińskiej"
-
-[[message]]
-key = "Menu panel color"
-[message.translations]
-simplified_chinese = "菜单面板颜色"
-traditional_chinese = "選單面板顏色"
-japanese = "メニューパネルの色"
-korean = "메뉴 패널 색상"
-russian = "Цвет панели меню"
-german = "Farbe der Menüfläche"
-spanish = "Color del panel del menú"
-french = "Couleur du panneau de menu"
-brazilian_portuguese = "Cor do painel do menu"
-portuguese = "Cor do painel do menu"
-turkish = "Menü paneli rengi"
-polish = "Kolor panelu menu"
-
-[[message]]
-key = "Menu panel opacity"
-[message.translations]
-simplified_chinese = "菜单面板不透明度"
-traditional_chinese = "選單面板不透明度"
-japanese = "メニューパネルの不透明度"
-korean = "메뉴 패널 불투명도"
-russian = "Непрозрачность панели меню"
-german = "Deckkraft der Menüfläche"
-spanish = "Opacidad del panel del menú"
-french = "Opacité du panneau de menu"
-brazilian_portuguese = "Opacidade do painel do menu"
-portuguese = "Opacidade do painel do menu"
-turkish = "Menü paneli opaklığı"
-polish = "Krycie panelu menu"
-
-[[message]]
-key = "Popup blur"
-[message.translations]
-simplified_chinese = "弹出面板模糊"
-traditional_chinese = "彈出面板模糊"
-japanese = "ポップアップのぼかし"
-korean = "팝업 흐림"
-russian = "Размытие всплывающих панелей"
-german = "Unschärfe von Einblendungen"
-spanish = "Desenfoque de ventanas emergentes"
-french = "Flou des panneaux contextuels"
-brazilian_portuguese = "Desfoque de painéis flutuantes"
-portuguese = "Desfocagem dos painéis emergentes"
-turkish = "Açılır panel bulanıklığı"
-polish = "Rozmycie paneli podręcznych"
-
-[[message]]
-key = "Preview and apply a fixed appearance preset"
-[message.translations]
-simplified_chinese = "查看并应用固定的外观预设"
-traditional_chinese = "檢視並套用固定的外觀預設"
-japanese = "固定の外観プリセットを確認して適用"
-korean = "정해진 외관 프리셋을 확인하고 적용"
-russian = "Просмотр и применение фиксированного набора настроек внешнего вида"
-german = "Feste Darstellungsvorlage ansehen und anwenden"
-spanish = "Revisar y aplicar un preajuste fijo de apariencia"
-french = "Consulter et appliquer un préréglage d’apparence fixe"
-brazilian_portuguese = "Visualizar e aplicar um perfil fixo de aparência"
-portuguese = "Ver e aplicar uma predefinição fixa de aspeto"
-turkish = "Sabit bir görünüm ön ayarını incele ve uygula"
-polish = "Sprawdź i zastosuj ustalony zestaw ustawień wyglądu"
-
-[[message]]
-key = "Qm recommended appearance"
-[message.translations]
-simplified_chinese = "栖梦推荐外观"
-traditional_chinese = "栖夢推薦外觀"
-japanese = "Qm 推奨の外観"
-korean = "Qm 권장 외관"
-russian = "Рекомендуемый вид Qm"
-german = "Empfohlenes Qm-Erscheinungsbild"
-spanish = "Apariencia recomendada de Qm"
-french = "Apparence recommandée par Qm"
-brazilian_portuguese = "Aparência recomendada do Qm"
-portuguese = "Aspeto recomendado do Qm"
-turkish = "Qm önerilen görünümü"
-polish = "Zalecany wygląd Qm"
-
-[[message]]
-key = "Settings page opacity"
-[message.translations]
-simplified_chinese = "设置页不透明度"
-traditional_chinese = "設定頁不透明度"
-japanese = "設定ページの不透明度"
-korean = "설정 페이지 불투명도"
-russian = "Непрозрачность страницы настроек"
-german = "Deckkraft der Einstellungsseite"
-spanish = "Opacidad de la página de ajustes"
-french = "Opacité de la page des paramètres"
-brazilian_portuguese = "Opacidade da página de configurações"
-portuguese = "Opacidade da página de definições"
-turkish = "Ayarlar sayfası opaklığı"
-polish = "Krycie strony ustawień"
-
-[[message]]
-key = "UI animations"
-[message.translations]
-simplified_chinese = "界面动画"
-traditional_chinese = "介面動畫"
-japanese = "UI アニメーション"
-korean = "UI 애니메이션"
-russian = "Анимации интерфейса"
-german = "UI-Animationen"
-spanish = "Animaciones de la interfaz"
-french = "Animations de l’interface"
-brazilian_portuguese = "Animações da interface"
-portuguese = "Animações da interface"
-turkish = "Arayüz animasyonları"
-polish = "Animacje interfejsu"
-
-[[message]]
-key = "New features (unread)"
-[message.translations]
-simplified_chinese = "新功能（未读）"
-traditional_chinese = "新功能（未讀）"
-japanese = "新機能（未読）"
-korean = "새 기능 (읽지 않음)"
-russian = "Новые возможности (не прочитано)"
-german = "Neue Funktionen (ungelesen)"
-spanish = "Novedades (sin leer)"
-french = "Nouveautés (non lues)"
-brazilian_portuguese = "Novidades (não lidas)"
-portuguese = "Novidades (não lidas)"
-turkish = "Yeni özellikler (okunmadı)"
-polish = "Nowości (nieprzeczytane)"
-
-[[message]]
-key = "IME text color"
-[message.translations]
-simplified_chinese = "输入法文字颜色"
-traditional_chinese = "輸入法文字顏色"
-japanese = "IME の文字色"
-korean = "IME 글자색"
-russian = "Цвет текста IME"
-german = "IME-Textfarbe"
-spanish = "Color del texto del IME"
-french = "Couleur du texte IME"
-brazilian_portuguese = "Cor do texto do IME"
-portuguese = "Cor do texto do IME"
-turkish = "IME metin rengi"
-polish = "Kolor tekstu IME"
-
-[[message]]
-key = "IME selected text color"
-[message.translations]
-simplified_chinese = "输入法选中文字颜色"
-traditional_chinese = "輸入法選取文字顏色"
-japanese = "IME の選択文字色"
-korean = "IME 선택 글자색"
-russian = "Цвет выбранного текста IME"
-german = "IME-Farbe des ausgewählten Texts"
-spanish = "Color del texto seleccionado del IME"
-french = "Couleur du texte sélectionné IME"
-brazilian_portuguese = "Cor do texto selecionado do IME"
-portuguese = "Cor do texto selecionado do IME"
-turkish = "IME seçili metin rengi"
-polish = "Kolor zaznaczonego tekstu IME"
-
-[[message]]
-key = "IME selection background color"
-[message.translations]
-simplified_chinese = "输入法选中背景颜色"
-traditional_chinese = "輸入法選取背景顏色"
-japanese = "IME の選択背景色"
-korean = "IME 선택 배경색"
-russian = "Цвет фона выделения IME"
-german = "IME-Auswahlhintergrundfarbe"
-spanish = "Color de fondo de selección del IME"
-french = "Couleur de fond de sélection IME"
-brazilian_portuguese = "Cor de fundo da seleção do IME"
-portuguese = "Cor de fundo da seleção do IME"
-turkish = "IME seçim arka plan rengi"
-polish = "Kolor tła zaznaczenia IME"
-
-[[message]]
-key = "IME font size"
-[message.translations]
-simplified_chinese = "输入法字号"
-traditional_chinese = "輸入法字級"
-japanese = "IME の文字サイズ"
-korean = "IME 글꼴 크기"
-russian = "Размер шрифта IME"
-german = "IME-Schriftgröße"
-spanish = "Tamaño de letra del IME"
-french = "Taille du texte IME"
-brazilian_portuguese = "Tamanho da fonte do IME"
-portuguese = "Tamanho da letra do IME"
-turkish = "IME yazı boyutu"
-polish = "Rozmiar czcionki IME"
-
-[[message]]
-key = "Reset IME appearance"
-[message.translations]
-simplified_chinese = "恢复输入法默认外观"
-traditional_chinese = "還原輸入法預設外觀"
-japanese = "IME の外観を初期化"
-korean = "IME 외관 초기화"
-russian = "Сбросить оформление IME"
-german = "IME-Darstellung zurücksetzen"
-spanish = "Restablecer apariencia del IME"
-french = "Réinitialiser l’apparence IME"
-brazilian_portuguese = "Restaurar aparência do IME"
-portuguese = "Repor aspeto do IME"
-turkish = "IME görünümünü sıfırla"
-polish = "Przywróć wygląd IME"
-
-[[message]]
-key = "Key press count font size"
-[message.translations]
-simplified_chinese = "按键计数字号"
-traditional_chinese = "按鍵計數字級"
-japanese = "キー入力回数の文字サイズ"
-korean = "키 입력 횟수 글꼴 크기"
-russian = "Размер шрифта счётчика нажатий"
-german = "Schriftgröße des Tastenzählers"
-spanish = "Tamaño de letra del contador de pulsaciones"
-french = "Taille du compteur de touches"
-brazilian_portuguese = "Tamanho da fonte do contador de teclas"
-portuguese = "Tamanho da letra do contador de teclas"
-turkish = "Tuş sayacı yazı boyutu"
-polish = "Rozmiar czcionki licznika naciśnięć"
-
-[[message]]
-key = "Key press count color"
-[message.translations]
-simplified_chinese = "按键计数颜色"
-traditional_chinese = "按鍵計數顏色"
-japanese = "キー入力回数の色"
-korean = "키 입력 횟수 색상"
-russian = "Цвет счётчика нажатий"
-german = "Farbe des Tastenzählers"
-spanish = "Color del contador de pulsaciones"
-french = "Couleur du compteur de touches"
-brazilian_portuguese = "Cor do contador de teclas"
-portuguese = "Cor do contador de teclas"
-turkish = "Tuş sayacı rengi"
-polish = "Kolor licznika naciśnięć"
-
-[[message]]
-key = "Key press count label"
-[message.translations]
-simplified_chinese = "按键计数前缀文字"
-traditional_chinese = "按鍵計數前綴文字"
-japanese = "キー入力回数の接頭辞"
-korean = "키 입력 횟수 접두사"
-russian = "Префикс счётчика нажатий"
-german = "Präfix des Tastenzählers"
-spanish = "Prefijo del contador de pulsaciones"
-french = "Préfixe du compteur de touches"
-brazilian_portuguese = "Prefixo do contador de teclas"
-portuguese = "Prefixo do contador de teclas"
-turkish = "Tuş sayacı ön eki"
-polish = "Prefiks licznika naciśnięć"
-
-[[message]]
-key = "Reset count appearance"
-[message.translations]
-simplified_chinese = "恢复计数默认外观"
-traditional_chinese = "還原計數預設外觀"
-japanese = "カウンターの外観を初期化"
-korean = "카운터 외관 초기화"
-russian = "Сбросить оформление счётчика"
-german = "Zählerdarstellung zurücksetzen"
-spanish = "Restablecer apariencia del contador"
-french = "Réinitialiser l’apparence du compteur"
-brazilian_portuguese = "Restaurar aparência do contador"
-portuguese = "Repor aspeto do contador"
-turkish = "Sayaç görünümünü sıfırla"
-polish = "Przywróć wygląd licznika"
-
-[[message]]
-key = "Tooltips"
-[message.translations]
-simplified_chinese = "提示气泡"
-traditional_chinese = "提示氣泡"
-japanese = "ツールチップ"
-korean = "도움말 풍선"
-russian = "Подсказки"
-german = "Tooltips"
-spanish = "Ayudas emergentes"
-french = "Infobulles"
-brazilian_portuguese = "Dicas de ferramenta"
-portuguese = "Dicas de ferramenta"
-turkish = "Araç ipuçları"
-polish = "Podpowiedzi"
-
-[[message]]
-key = "Appearance of help bubbles outside settings cards"
-[message.translations]
-simplified_chinese = "设置卡片外的说明气泡外观"
-traditional_chinese = "設定卡片外的說明氣泡外觀"
-japanese = "設定カード外のヘルプ吹き出しの外観"
-korean = "설정 카드 밖 도움말 풍선의 외관"
-russian = "Оформление подсказок вне карточек настроек"
-german = "Darstellung der Hilfeblasen außerhalb von Einstellungskarten"
-spanish = "Apariencia de las ayudas fuera de las tarjetas de ajustes"
-french = "Apparence des infobulles hors des cartes de paramètres"
-brazilian_portuguese = "Aparência das dicas fora dos cartões de configurações"
-portuguese = "Aspeto das dicas fora dos cartões de definições"
-turkish = "Ayar kartları dışındaki yardım balonlarının görünümü"
-polish = "Wygląd podpowiedzi poza kartami ustawień"
-
-[[message]]
-key = "Tooltip background color"
-[message.translations]
-simplified_chinese = "提示气泡背景颜色"
-traditional_chinese = "提示氣泡背景顏色"
-japanese = "ツールチップの背景色"
-korean = "도움말 풍선 배경색"
-russian = "Цвет фона подсказки"
-german = "Tooltip-Hintergrundfarbe"
-spanish = "Color de fondo de la ayuda"
-french = "Couleur de fond des infobulles"
-brazilian_portuguese = "Cor de fundo das dicas"
-portuguese = "Cor de fundo das dicas"
-turkish = "Araç ipucu arka plan rengi"
-polish = "Kolor tła podpowiedzi"
-
-[[message]]
-key = "Tooltip text color"
-[message.translations]
-simplified_chinese = "提示气泡文字颜色"
-traditional_chinese = "提示氣泡文字顏色"
-japanese = "ツールチップの文字色"
-korean = "도움말 풍선 글자색"
-russian = "Цвет текста подсказки"
-german = "Tooltip-Textfarbe"
-spanish = "Color del texto de la ayuda"
-french = "Couleur du texte des infobulles"
-brazilian_portuguese = "Cor do texto das dicas"
-portuguese = "Cor do texto das dicas"
-turkish = "Araç ipucu metin rengi"
-polish = "Kolor tekstu podpowiedzi"
-
-[[message]]
-key = "Tooltip font size"
-[message.translations]
-simplified_chinese = "提示气泡字号"
-traditional_chinese = "提示氣泡字級"
-japanese = "ツールチップの文字サイズ"
-korean = "도움말 풍선 글꼴 크기"
-russian = "Размер шрифта подсказки"
-german = "Tooltip-Schriftgröße"
-spanish = "Tamaño de letra de la ayuda"
-french = "Taille du texte des infobulles"
-brazilian_portuguese = "Tamanho da fonte das dicas"
-portuguese = "Tamanho da letra das dicas"
-turkish = "Araç ipucu yazı boyutu"
-polish = "Rozmiar czcionki podpowiedzi"
-
-[[message]]
-key = "Tooltip bounce animation"
-[message.translations]
-simplified_chinese = "提示气泡回弹动画"
-traditional_chinese = "提示氣泡回彈動畫"
-japanese = "ツールチップの弾むアニメーション"
-korean = "도움말 풍선 탄성 애니메이션"
-russian = "Упругая анимация подсказки"
-german = "Federnde Tooltip-Animation"
-spanish = "Animación de rebote de la ayuda"
-french = "Animation de rebond des infobulles"
-brazilian_portuguese = "Animação de ressalto das dicas"
-portuguese = "Animação de ressalto das dicas"
-turkish = "Araç ipucu sıçrama animasyonu"
-polish = "Sprężysta animacja podpowiedzi"
-
-[[message]]
-key = "Tooltip preview"
-[message.translations]
-simplified_chinese = "提示气泡预览"
-traditional_chinese = "提示氣泡預覽"
-japanese = "ツールチップのプレビュー"
-korean = "도움말 풍선 미리 보기"
-russian = "Предпросмотр подсказки"
-german = "Tooltip-Vorschau"
-spanish = "Vista previa de la ayuda"
-french = "Aperçu des infobulles"
-brazilian_portuguese = "Prévia das dicas"
-portuguese = "Pré-visualização das dicas"
-turkish = "Araç ipucu ön izlemesi"
-polish = "Podgląd podpowiedzi"
-
-[[message]]
-key = "Reset tooltip appearance"
-[message.translations]
-simplified_chinese = "恢复气泡默认外观"
-traditional_chinese = "還原氣泡預設外觀"
-japanese = "ツールチップの外観を初期化"
-korean = "도움말 풍선 외관 초기화"
-russian = "Сбросить оформление подсказок"
-german = "Tooltip-Darstellung zurücksetzen"
-spanish = "Restablecer apariencia de las ayudas"
-french = "Réinitialiser l’apparence des infobulles"
-brazilian_portuguese = "Restaurar aparência das dicas"
-portuguese = "Repor aspeto das dicas"
-turkish = "Araç ipucu görünümünü sıfırla"
-polish = "Przywróć wygląd podpowiedzi"
-
-[[message]]
-key = "Pie menu effects"
-[message.translations]
-simplified_chinese = "饼菜单开合效果"
-traditional_chinese = "圓盤選單開合效果"
-japanese = "円形メニューの開閉エフェクト"
-korean = "원형 메뉴 열기 및 닫기 효과"
-russian = "Эффекты открытия и закрытия кругового меню"
-german = "Effekte beim Öffnen und Schließen des Kreismenüs"
-spanish = "Efectos de apertura y cierre del menú radial"
-french = "Effets d’ouverture et de fermeture du menu radial"
-brazilian_portuguese = "Efeitos de abertura e fechamento do menu radial"
-portuguese = "Efeitos de abertura e fecho do menu radial"
-turkish = "Dairesel menü açılma ve kapanma efektleri"
-polish = "Efekty otwierania i zamykania menu kołowego"
-
-[[message]]
-key = "Pie menu highlight tint"
-[message.translations]
-simplified_chinese = "饼菜单选中色调"
-traditional_chinese = "圓盤選單選取色調"
-japanese = "円形メニューの選択色"
-korean = "원형 메뉴 선택 색조"
-russian = "Оттенок выделения кругового меню"
-german = "Auswahlfarbton des Kreismenüs"
-spanish = "Tinte de selección del menú radial"
-french = "Teinte de sélection du menu radial"
-brazilian_portuguese = "Tonalidade de seleção do menu radial"
-portuguese = "Tonalidade de seleção do menu radial"
-turkish = "Dairesel menü seçim tonu"
-polish = "Odcień zaznaczenia menu kołowego"
-
-[[message]]
-key = "Reset pie menu appearance"
-[message.translations]
-simplified_chinese = "恢复饼菜单默认外观"
-traditional_chinese = "還原圓盤選單預設外觀"
-japanese = "円形メニューの外観を初期化"
-korean = "원형 메뉴 외관 초기화"
-russian = "Сбросить оформление кругового меню"
-german = "Kreismenü-Darstellung zurücksetzen"
-spanish = "Restablecer apariencia del menú radial"
-french = "Réinitialiser l’apparence du menu radial"
-brazilian_portuguese = "Restaurar aparência do menu radial"
-portuguese = "Repor aspeto do menu radial"
-turkish = "Dairesel menü görünümünü sıfırla"
-polish = "Przywróć wygląd menu kołowego"
-
-[[message]]
-key = "Reset translation colors"
-[message.translations]
-simplified_chinese = "恢复翻译默认颜色"
-traditional_chinese = "還原翻譯預設顏色"
-japanese = "翻訳の配色を初期化"
-korean = "번역 색상 초기화"
-russian = "Сбросить цвета перевода"
-german = "Übersetzungsfarben zurücksetzen"
-spanish = "Restablecer colores de traducción"
-french = "Réinitialiser les couleurs de traduction"
-brazilian_portuguese = "Restaurar cores da tradução"
-portuguese = "Repor cores da tradução"
-turkish = "Çeviri renklerini sıfırla"
-polish = "Przywróć kolory tłumaczenia"
-
-[[message]]
-key = "IME font size percentage"
-[message.translations]
-simplified_chinese = "输入法字号 (%)"
-traditional_chinese = "輸入法字級 (%)"
-japanese = "IME の文字サイズ (%)"
-korean = "IME 글꼴 크기 (%)"
-russian = "Размер шрифта IME (%)"
-german = "IME-Schriftgröße (%)"
-spanish = "Tamaño de letra del IME (%)"
-french = "Taille du texte IME (%)"
-brazilian_portuguese = "Tamanho da fonte do IME (%)"
-portuguese = "Tamanho da letra do IME (%)"
-turkish = "IME yazı boyutu (%)"
-polish = "Rozmiar czcionki IME (%)"
-
-[[message]]
-key = "Key press count font size percentage"
-[message.translations]
-simplified_chinese = "按键计数字号 (%)"
-traditional_chinese = "按鍵計數字級 (%)"
-japanese = "キー入力回数の文字サイズ (%)"
-korean = "키 입력 횟수 글꼴 크기 (%)"
-russian = "Размер шрифта счётчика нажатий (%)"
-german = "Schriftgröße des Tastenzählers (%)"
-spanish = "Tamaño de letra del contador de pulsaciones (%)"
-french = "Taille du compteur de touches (%)"
-brazilian_portuguese = "Tamanho da fonte do contador de teclas (%)"
-portuguese = "Tamanho da letra do contador de teclas (%)"
-turkish = "Tuş sayacı yazı boyutu (%)"
-polish = "Rozmiar czcionki licznika naciśnięć (%)"
-
-[[message]]
-key = "Text before each key press count"
-[message.translations]
-simplified_chinese = "按键计数前缀文字"
-traditional_chinese = "按鍵計數前綴文字"
-japanese = "キー入力回数の接頭辞"
-korean = "키 입력 횟수 접두사"
-russian = "Префикс счётчика нажатий"
-german = "Präfix des Tastenzählers"
-spanish = "Prefijo del contador de pulsaciones"
-french = "Préfixe du compteur de touches"
-brazilian_portuguese = "Prefixo do contador de teclas"
-portuguese = "Prefixo do contador de teclas"
-turkish = "Tuş sayacı ön eki"
-polish = "Prefiks licznika naciśnięć"
-
-[[message]]
-key = "Pie menu opening and closing effects"
-[message.translations]
-simplified_chinese = "饼菜单开合效果"
-traditional_chinese = "圓盤選單開合效果"
-japanese = "円形メニューの開閉エフェクト"
-korean = "원형 메뉴 열기 및 닫기 효과"
-russian = "Эффекты открытия и закрытия кругового меню"
-german = "Effekte beim Öffnen und Schließen des Kreismenüs"
-spanish = "Efectos de apertura y cierre del menú radial"
-french = "Effets d’ouverture et de fermeture du menu radial"
-brazilian_portuguese = "Efeitos de abertura e fechamento do menu radial"
-portuguese = "Efeitos de abertura e fecho do menu radial"
-turkish = "Dairesel menü açılma ve kapanma efektleri"
-polish = "Efekty otwierania i zamykania menu kołowego"
-
-[[message]]
-key = "Pie menu highlight tint (alpha controls tint strength)"
-[message.translations]
-simplified_chinese = "饼菜单选中色调（透明度控制着色强度）"
-traditional_chinese = "圓盤選單選取色調（透明度控制著色強度）"
-japanese = "円形メニューの選択色（アルファで強度を調整）"
-korean = "원형 메뉴 선택 색조 (알파로 강도 조절)"
-russian = "Оттенок выделения кругового меню (альфа задаёт силу оттенка)"
-german = "Auswahlfarbton des Kreismenüs (Alpha bestimmt die Stärke)"
-spanish = "Tinte del menú radial (el alfa controla la intensidad)"
-french = "Teinte du menu radial (l’alpha règle l’intensité)"
-brazilian_portuguese = "Tonalidade do menu radial (o alfa controla a intensidade)"
-portuguese = "Tonalidade do menu radial (o alfa controla a intensidade)"
-turkish = "Dairesel menü seçim tonu (alfa yoğunluğu belirler)"
-polish = "Odcień menu kołowego (alfa określa intensywność)"
-
-[[message]]
-key = "Last viewed client release notes"
-[message.translations]
-simplified_chinese = "最近已读的客户端版本说明"
-traditional_chinese = "最近已讀的用戶端版本說明"
-japanese = "最後に読んだクライアントのリリースノート"
-korean = "마지막으로 읽은 클라이언트 릴리스 정보"
-russian = "Последние прочитанные примечания к выпуску клиента"
-german = "Zuletzt gelesene Versionshinweise des Clients"
-spanish = "Últimas notas de versión del cliente leídas"
-french = "Dernières notes de version du client consultées"
-brazilian_portuguese = "Últimas notas de versão do cliente lidas"
-portuguese = "Últimas notas de versão do cliente lidas"
-turkish = "Son okunan istemci sürüm notları"
-polish = "Ostatnio przeczytane informacje o wydaniu klienta"
-
-[[message]]
-key = "Last viewed announcement version"
-[message.translations]
-simplified_chinese = "最近已读的公告版本"
-traditional_chinese = "最近已讀的公告版本"
-japanese = "最後に読んだお知らせのバージョン"
-korean = "마지막으로 읽은 공지 버전"
-russian = "Версия последнего прочитанного объявления"
-german = "Version der zuletzt gelesenen Ankündigung"
-spanish = "Versión del último anuncio leído"
-french = "Version de la dernière annonce consultée"
-brazilian_portuguese = "Versão do último anúncio lido"
-portuguese = "Versão do último anúncio lido"
-turkish = "Son okunan duyuru sürümü"
-polish = "Wersja ostatnio przeczytanego ogłoszenia"
-
-[[message]]
-key = "Last viewed announcement content revision"
-[message.translations]
-simplified_chinese = "最近已读的公告内容修订"
-traditional_chinese = "最近已讀的公告內容修訂"
-japanese = "最後に読んだお知らせ内容の改訂"
-korean = "마지막으로 읽은 공지 내용 개정판"
-russian = "Редакция последнего прочитанного объявления"
-german = "Inhaltsrevision der zuletzt gelesenen Ankündigung"
-spanish = "Revisión del contenido del último anuncio leído"
-french = "Révision du contenu de la dernière annonce consultée"
-brazilian_portuguese = "Revisão do conteúdo do último anúncio lido"
-portuguese = "Revisão do conteúdo do último anúncio lido"
-turkish = "Son okunan duyuru içeriği revizyonu"
-polish = "Rewizja treści ostatnio przeczytanego ogłoszenia"
+key = "Use style colors"
+context = "Title color mode"
+[message.translations]
+simplified_chinese = "使用风格颜色"
+traditional_chinese = "使用風格顏色"
+japanese = "スタイルの色を使用"
+korean = "스타일 색상 사용"
+russian = "Использовать цвета стиля"
+german = "Stilfarben verwenden"
+spanish = "Usar los colores del estilo"
+french = "Utiliser les couleurs du style"
+brazilian_portuguese = "Usar as cores do estilo"
+portuguese = "Usar as cores do estilo"
+turkish = "Stilin renklerini kullan"
+polish = "Użyj kolorów stylu"

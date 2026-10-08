@@ -300,6 +300,20 @@ inline float ResolveSettingsAutoRowHeight(const float MinimumHeight, const float
 	return std::max(std::max(0.0f, MinimumHeight), std::max(0.0f, ContentHeight));
 }
 
+// 说明文字只保留左侧缩进；测量和绘制共用有效宽度，后续控件从实际文本底部开始。
+template<typename TMeasureHeight>
+inline CUIRect ConsumeSettingsWrappedTextRow(CUIRect &Content, float Indent, float MinimumHeight, float Spacing, TMeasureHeight MeasureHeight)
+{
+	const float LeftInset = std::clamp(Indent, 0.0f, std::max(0.0f, Content.w) * 0.3f);
+	const float TextWidth = std::max(1.0f, Content.w - LeftInset);
+	CUIRect Row;
+	Content.HSplitTop(ResolveSettingsAutoRowHeight(MinimumHeight, MeasureHeight(TextWidth)), &Row, &Content);
+	Row.x += LeftInset;
+	Row.w = TextWidth;
+	Content.HSplitTop(std::max(0.0f, Spacing), nullptr, &Content);
+	return Row;
+}
+
 // 双列内容各自消费自己的矩形后，把较长一列提交回父内容区。
 // 父区的底部保持不变，这样后续行和自动测量都能看到最长列的真实高度。
 inline void CommitSettingsColumnContentFlow(CUIRect &Content, const CUIRect &LeftColumn, const CUIRect &RightColumn)

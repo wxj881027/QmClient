@@ -102,8 +102,10 @@ void CInputOverlay::OnWindowResize()
 
 bool CInputOverlay::HasCountingFocus() const
 {
+	IEngineGraphics *pEngineGraphics = Kernel()->RequestInterface<IEngineGraphics>();
+	const bool WindowActive = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
 	return g_Config.m_QmInputOverlay && g_Config.m_QmInputOverlayKeyCounts &&
-	       Client()->State() == IClient::STATE_ONLINE && Graphics()->WindowActive() && !g_Config.m_ClEditor &&
+	       Client()->State() == IClient::STATE_ONLINE && WindowActive && !g_Config.m_ClEditor &&
 	       !GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_GameConsole.IsActive() &&
 	       !GameClient()->m_HudEditor.IsActive() && !GameClient()->m_Spectator.IsActive() && !GameClient()->m_KeyBinder.IsActive() &&
 	       !GameClient()->m_BindWheel.IsActive() && !GameClient()->m_PieMenu.IsActive() && !GameClient()->m_Emoticon.IsActive() &&

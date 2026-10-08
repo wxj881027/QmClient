@@ -20,6 +20,7 @@
 class CHttpRequestCurl : public IHttpRequest
 {
 	friend class CHttpCurl;
+	friend class CHttpRequestCurlTestPeer;
 
 public:
 	CHttpRequestCurl(const char *pUrl);
@@ -27,6 +28,10 @@ public:
 
 	void Header(const char *pNameColonValue) override;
 	static std::optional<int64_t> ParseRetryAfter(std::string_view Value, int64_t Now);
+	// 标准地址与域名匹配、原生旁路证据和最终连接判定分别处理。
+	static bool ProxyBypassed(std::string_view Host, std::string_view List);
+	static bool ProxyBypassEvidence(std::string_view Host, std::string_view List, unsigned int RuntimeVersion);
+	static bool ProxyFallbackBypassed(int StatusCode, std::optional<bool> UsedProxy, bool BypassEvidence);
 
 private:
 	curl_slist *m_pRequestHeaders = nullptr;

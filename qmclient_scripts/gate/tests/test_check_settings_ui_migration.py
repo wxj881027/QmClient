@@ -20,7 +20,7 @@ class SettingsUiMigrationAuditTest(unittest.TestCase):
     const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
     const SSettingsPageLayoutFrame Frame = SettingsPageLayout(MainView, 1.0f);
     std::vector<SSettingsCardDefinition> vCards;
-    vCards.push_back({{"deck:general-game", "General", nullptr}, MeasureGeneralGame, RenderGeneralGame});
+    qm_card_catalog::BuildCards(CardBuild, qm_card_catalog::GeneralCardStableIds(), vCards);
     CScrollRegion ScrollRegion;
     CQmScrollState &Scroll = ScrollRegion.State();
     QmResolveScrollPolicy(Request, 1.0f, 0.1f);
@@ -43,6 +43,8 @@ SQmGlobalSearchNavigation ResolveGlobalSearchNavigation(const SQmGlobalSearchCar
 }
 """,
 		}
+		entries = ", ".join(f'"{stable_id}"' for stable_id in PAGE_STABLE_IDS["general"])
+		files["src/game/client/QmUi/cards/QmCardCatalogIds.cpp"] = f"s_vGeneralCards = {{{entries}}};"
 		files["src/game/client/components/menus.cpp"] += """
 bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 {
@@ -105,6 +107,18 @@ bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
 
 	def test_clean_page_passes(self):
 		self.assertEqual(audit_page(self.make_repo(), "general"), [])
+
+	def test_general_missing_category_producer_is_rejected(self):
+		errors = audit_page(self.make_repo(drop="qm_card_catalog::GeneralCardStableIds()"), "general")
+		self.assertTrue(any("GeneralCardStableIds(): page producer entry missing" in item for item in errors))
+
+	def test_general_missing_category_card_is_rejected(self):
+		root = self.make_repo()
+		catalogue = root / "src/game/client/QmUi/cards/QmCardCatalogIds.cpp"
+		missing_id = PAGE_STABLE_IDS["general"][-1]
+		catalogue.write_text(catalogue.read_text(encoding="utf-8").replace(f'"{missing_id}"', ""), encoding="utf-8")
+		errors = audit_page(root, "general")
+		self.assertIn(f"general: {missing_id}: catalogue category entry missing", errors)
 
 	def test_sdf_backed_edit_box_requires_the_explicit_tee_allowlist(self):
 		allowed = "Ui()->DoEditBox(&ColorCodeInput, &ColorCodeEditBox, std::max(10.0f, BodySize * 0.85f), IGraphics::CORNER_ALL, {}, TEXTALIGN_MC)"

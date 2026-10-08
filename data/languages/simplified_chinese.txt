@@ -1898,6 +1898,9 @@ Chinese font:
 CHN
 == 中国
 
+Choose a GPU for this app in system graphics settings, then restart the client.
+== 在系统图形设置中为此程序选择 GPU，然后重启客户端。
+
 Choose colors for weapons and entity lasers
 == 选择武器和实体激光的颜色
 
@@ -2594,6 +2597,9 @@ Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
 == 无法从文件加载触控设置。检查本地控制台以获取详情。
 
+Could not open system graphics settings.
+== 无法打开系统图形设置。
+
 Could not preview this image
 == 无法预览这张图片
 
@@ -2677,6 +2683,9 @@ Current cut is invalid or already added
 
 Current file
 == 当前文件
+
+Current GPU
+== 当前 GPU
 
 Current rescue mode: %s
 == 当前救援模式：%s
@@ -3172,6 +3181,9 @@ Detect compatible solo prompts from custom servers
 
 Detect Steam again
 == 重新检测 Steam
+
+Detected graphics adapters
+== 检测到的显卡
 
 Detection distance
 == 检测距离
@@ -4454,6 +4466,9 @@ Favorite
 Favorite friend
 == 最喜欢的好友
 
+Favorite icon color
+== 收藏图标颜色
+
 Favorite map
 == 收藏地图
 
@@ -4756,6 +4771,9 @@ Friend entry color in friend list
 
 Friend heart
 == 好友爱心
+
+Friend icon color
+== 好友图标颜色
 
 Friend links
 == 友链
@@ -7522,6 +7540,9 @@ No filter
 
 No functions bound
 == 未绑定功能
+
+No graphics adapters detected
+== 未检测到显卡
 
 No input device available
 == 系统没有可用输入设备
@@ -12296,6 +12317,9 @@ System
 System default
 == 系统默认
 
+System graphics settings
+== 系统图形设置
+
 System media controls
 == 系统媒体控制
 
@@ -13199,8 +13223,14 @@ Translate UI
 Translate:
 == 翻译：
 
+Translated chat text size as a percentage of the original text (50-100)
+== 聊天译文字号相对于原文字号的百分比（50-100）
+
 Translated text hidden due to streamer mode
 == 由于主播模式，隐藏翻译文本
+
+Translated text size
+== 译文字号
 
 Translating to %s...
 == 正在翻译为 %s……

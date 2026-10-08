@@ -31,15 +31,3 @@ TEST(QmCameraEffectsContract, CinematicCameraAndDynamicFovKeepScopedState)
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmZoomInstantReverse, qm_zoom_instant_reverse, 1, 0, 1"), std::string::npos);
 	EXPECT_NE(ChangeZoom.find("QmCameraEffects::ZoomDerivativeOnRetarget(Current, m_ZoomSmoothing.Derivative(Progress), Target, IsUser && g_Config.m_QmZoomInstantReverse != 0)"), std::string::npos);
 }
-
-TEST(QmCameraEffectsSource, CameraViewCardCountsInstantZoomReverseRow)
-{
-	const std::string QmMenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string CameraView = FunctionBody(QmMenusSource, "void CMenus::RenderQmVisualCameraViewContent(");
-
-	// 渲染、预布局输入、卡片高度三处必须同时带上新增开关，否则点击热区与卡片高度会错位
-	EXPECT_NE(CameraView.find("RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, \"Instant zoom reverse\", Localize(\"Instant zoom reverse\"), &g_Config.m_QmZoomInstantReverse);"), std::string::npos);
-	EXPECT_NE(QmMenusSource.find("HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, &g_Config.m_QmZoomInstantReverse)"), std::string::npos);
-	// EstimateContentHeight 的基础行数必须随新增一行从 5 变 6
-	EXPECT_NE(QmMenusSource.find("return Rows(6.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;"), std::string::npos);
-}

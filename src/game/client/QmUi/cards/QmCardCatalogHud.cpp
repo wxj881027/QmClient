@@ -2,6 +2,7 @@
 #include "QmCardMeasureRevision.h"
 
 #include <engine/shared/config.h>
+#include <engine/shared/localization.h>
 
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/hud_media_island_logic.h>

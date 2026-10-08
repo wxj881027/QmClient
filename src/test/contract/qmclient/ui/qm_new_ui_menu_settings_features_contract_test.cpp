@@ -44,91 +44,15 @@ TEST(QmNewUiMenuSettingsFeaturesContract, DynamicIslandEdgeMarginIsOnlyAnIgnored
 	EXPECT_NE(OnConsoleInit.find("pConsole->Register(\"qm_hud_island_edge_margin\", \"?i[value]\", CFGFLAG_CLIENT, ConDiscardLegacyHudIslandEdgeMargin, nullptr"), std::string::npos);
 }
 
-TEST(QmNewUiMenuSettingsFeaturesContract, DynamicIslandPreLayoutConsumesTheSameConditionalRows)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const size_t FactoryPos = Source.find("const auto BuildHudPreLayoutInput");
-	ASSERT_NE(FactoryPos, std::string::npos);
-	const std::string PreLayoutSource = Source.substr(FactoryPos);
-	const size_t DynamicIslandPos = PreLayoutSource.find("case EQmModuleId::DynamicIsland:");
-	const size_t PlayerStatsPos = PreLayoutSource.find("case EQmModuleId::PlayerStats:", DynamicIslandPos);
-	ASSERT_NE(DynamicIslandPos, std::string::npos);
-	ASSERT_NE(PlayerStatsPos, std::string::npos);
-	const std::string DynamicIsland = PreLayoutSource.substr(DynamicIslandPos, PlayerStatsPos - DynamicIslandPos);
-
-	EXPECT_NE(DynamicIsland.find("g_Config.m_QmHudIslandUseOriginalStyle"), std::string::npos);
-	EXPECT_NE(DynamicIsland.find("g_Config.m_QmHudIslandShowTeam"), std::string::npos);
-	EXPECT_EQ(DynamicIsland.find("ConsumeQmHudRow(Content); // edge margin"), std::string::npos);
-	EXPECT_NE(DynamicIsland.find("ResolveSettingsColorRowLayout(Content, Metrics, false)"), std::string::npos);
-	EXPECT_NE(DynamicIsland.find("if(!g_Config.m_QmHudIslandUseOriginalStyle)"), std::string::npos);
-}
-
-TEST(QmNewUiMenuSettingsFeaturesContract, WeaponAnimationAdvancedControlsAreConfigurable)
-{
-	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string PlayersSource = ReadTextFile("src/game/client/components/players.cpp");
-	const std::string MenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string RegistrySource = ReadTextFile("src/game/client/QmUi/QmCardRegistry.cpp");
-
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmWeaponSwitchAnimDurationMs, qm_weapon_switch_anim_duration_ms, 300"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmWeaponSwitchAnimDistance, qm_weapon_switch_anim_distance, 40"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmWeaponSwitchAnimRotation, qm_weapon_switch_anim_rotation, 360"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmWeaponSwitchAnimEasing, qm_weapon_switch_anim_easing"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmWeaponReloadAnim, qm_weapon_reload_anim"), std::string::npos);
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(QmWeaponReloadAnimProbability, qm_weapon_reload_anim_probability"), std::string::npos);
-
-	EXPECT_NE(PlayersSource.find("g_Config.m_QmWeaponSwitchAnimDurationMs"), std::string::npos);
-	EXPECT_NE(PlayersSource.find("g_Config.m_QmWeaponSwitchAnimDistance"), std::string::npos);
-	EXPECT_NE(PlayersSource.find("g_Config.m_QmWeaponSwitchAnimRotation"), std::string::npos);
-	EXPECT_NE(PlayersSource.find("g_Config.m_QmWeaponSwitchAnimEasing"), std::string::npos);
-
-	const std::string WeaponAnimationContent = FunctionBody(MenusSource, "void CMenus::RenderQmVisualWeaponAnimationContent(");
-	const size_t SwitchToggle = WeaponAnimationContent.find("RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponSwitchAnim");
-	const size_t ReloadToggle = WeaponAnimationContent.find("RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponReloadAnim");
-	const size_t ReloadProbability = WeaponAnimationContent.find("RenderValue(\"qmclient-weapon-reload-animation-probability\", \"Weapon reload animation probability\"");
-	const size_t SharedControls = WeaponAnimationContent.find("if(!g_Config.m_QmWeaponSwitchAnim && !g_Config.m_QmWeaponReloadAnim)");
-	const size_t SwitchControls = WeaponAnimationContent.find("if(!g_Config.m_QmWeaponSwitchAnim)", SharedControls);
-	ASSERT_NE(SwitchToggle, std::string::npos);
-	ASSERT_NE(ReloadToggle, std::string::npos);
-	ASSERT_NE(ReloadProbability, std::string::npos);
-	ASSERT_NE(SharedControls, std::string::npos);
-	ASSERT_NE(SwitchControls, std::string::npos);
-	EXPECT_LT(SwitchToggle, ReloadToggle);
-	EXPECT_LT(ReloadToggle, ReloadProbability);
-	EXPECT_LT(ReloadProbability, SharedControls);
-	EXPECT_LT(SharedControls, SwitchControls);
-	EXPECT_NE(WeaponAnimationContent.find("RenderValue(\"qmclient-weapon-switch-duration\", \"Weapon switch duration\"", SwitchControls), std::string::npos);
-	EXPECT_NE(WeaponAnimationContent.find("RenderValue(\"qmclient-weapon-switch-distance\", \"Weapon switch distance\"", SwitchControls), std::string::npos);
-	EXPECT_NE(WeaponAnimationContent.find("RenderValue(\"qmclient-weapon-switch-rotation\", \"Weapon switch rotation\"", SwitchControls), std::string::npos);
-	EXPECT_NE(WeaponAnimationContent.find("Localize(\"Weapon switch easing\")", SwitchControls), std::string::npos);
-
-	const std::string VisualDeck = FunctionBody(MenusSource, "void CMenus::RenderSettingsQmClientVisualDeck(");
-	EXPECT_NE(VisualDeck.find("ResolveQmVisualWeaponAnimationHeight(Metrics, g_Config.m_QmWeaponSwitchAnim != 0, g_Config.m_QmWeaponReloadAnim != 0)"), std::string::npos);
-	// 测量缓存失效由 SettingsCardMeasureRevision 行为测试验证，不绑定页面局部实现。
-	EXPECT_NE(VisualDeck.find("HandleQmHudCheckboxInput(Content, LineHeight, LineSpacing, &g_Config.m_QmWeaponReloadAnim, &g_Config.m_QmWeaponReloadAnim)"), std::string::npos);
-	EXPECT_NE(RegistrySource.find("装填动画 zhuangtian donghua reload animation"), std::string::npos);
-}
-
-TEST(QmNewUiMenuSettingsFeaturesContract, ProcessPrioritySettingIsRemovedAndImeMovedToDedicatedCard)
+TEST(QmNewUiMenuSettingsFeaturesContract, ProcessPrioritySettingIsRemoved)
 {
 	const std::string ConfigSource = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string ClientSource = ReadTextFile("src/engine/client/client.cpp");
-	const std::string MenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 
+	// 仅约束已删除配置与入口的迁移终态；IME 页面行为不使用源码合同证明。
 	EXPECT_EQ(ConfigSource.find("QmProcessHighPriority"), std::string::npos);
 	EXPECT_EQ(ClientSource.find("ApplyProcessPriorityConfig"), std::string::npos);
 	EXPECT_EQ(ClientSource.find("qm_process_high_priority"), std::string::npos);
-	const std::string MiniFeaturesBody = FunctionBody(MenusSource, "void CMenus::RenderQmFunctionMiniFeaturesContent(");
-	ASSERT_FALSE(MiniFeaturesBody.empty());
-	EXPECT_EQ(MiniFeaturesBody.find("QmProcessHighPriority"), std::string::npos);
-	EXPECT_EQ(MiniFeaturesBody.find("&g_Config.m_QmImeAutoManage"), std::string::npos);
-	EXPECT_EQ(MiniFeaturesBody.find("&g_Config.m_QmNewIme"), std::string::npos);
-	const std::string ImeBody = FunctionBody(MenusSource, "void CMenus::RenderQmFunctionImeContent(");
-	ASSERT_FALSE(ImeBody.empty());
-	EXPECT_NE(ImeBody.find("&g_Config.m_QmImeAutoManage"), std::string::npos);
-	EXPECT_NE(ImeBody.find("&g_Config.m_QmNewIme"), std::string::npos);
-	EXPECT_NE(ImeBody.find("m_QmImeBgColor"), std::string::npos);
-	EXPECT_NE(ImeBody.find("m_QmImeOpacity"), std::string::npos);
 }
 
 TEST(QmNewUiMenuSettingsFeaturesContract, ScoreboardSettingsLiveInDedicatedCardModule)

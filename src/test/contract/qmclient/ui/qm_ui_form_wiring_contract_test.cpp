@@ -79,19 +79,6 @@ TEST(QmNewUiMenuBranches, AnimationControlsExposeIndependentScopes)
 	EXPECT_NE(Body.find("Localize(\"Text input focus ring color\")"), std::string::npos);
 }
 
-TEST(QmNewUiMenuBranches, MultilineInputFieldsReleaseFocusOutsideAndCenterSingleLineContent)
-{
-	const std::string UiSource = ReadTextFile("src/game/client/ui.cpp");
-	const std::string QmClientSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-	const std::string MultiLineBody = FunctionBody(UiSource, "bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, float LineSpacing, int TextAlign, const SEditBoxRenderOptions &RenderOptions)");
-	ASSERT_FALSE(MultiLineBody.empty());
-
-	EXPECT_NE(MultiLineBody.find("const bool ClickedOutside = (MouseButtonClicked(0) || MouseButtonClicked(1)) && !Inside;"), std::string::npos);
-	EXPECT_NE(MultiLineBody.find("if(Active && ClickedOutside)"), std::string::npos);
-	EXPECT_NE(MultiLineBody.find("ReleaseActiveTextInput(pLineInput);"), std::string::npos);
-	EXPECT_NE(QmClientSource.find("InputOptions.m_TextAlign = TEXTALIGN_ML;"), std::string::npos);
-}
-
 TEST(QmNewUiMenuBranches, TClientScaledInputsUseSettingsThemeAndPreciseFreezeLabels)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");

@@ -1898,6 +1898,9 @@ Chinese font:
 CHN
 == Çin
 
+Choose a GPU for this app in system graphics settings, then restart the client.
+== Sistem grafik ayarlarından bu uygulama için bir GPU seçin, ardından istemciyi yeniden başlatın.
+
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
 
@@ -2594,6 +2597,9 @@ Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
 == Dokunmatik kontroller dosyadan yüklenemedi. Ayrıntılar için yerel konsola bakın.
 
+Could not open system graphics settings.
+== Sistem grafik ayarları açılamadı.
+
 Could not preview this image
 == Bu resim önizlenemiyor
 
@@ -2677,6 +2683,9 @@ Current cut is invalid or already added
 
 Current file
 == Geçerli dosya
+
+Current GPU
+== Geçerli GPU
 
 Current rescue mode: %s
 == Mevcut kurtarma modu: %s
@@ -3172,6 +3181,9 @@ Detect compatible solo prompts from custom servers
 
 Detect Steam again
 == Steam'i yeniden algıla
+
+Detected graphics adapters
+== Algılanan grafik bağdaştırıcıları
 
 Detection distance
 == Algılama mesafesi
@@ -4454,6 +4466,9 @@ Favorite
 Favorite friend
 == Favori arkadaş
 
+Favorite icon color
+== Favori simgesi rengi
+
 Favorite map
 == Favori harita
 
@@ -4756,6 +4771,9 @@ Friend entry color in friend list
 
 Friend heart
 == Arkadaş kalbi
+
+Friend icon color
+== Arkadaş simgesi rengi
 
 Friend links
 == Dost bağlantılar
@@ -7522,6 +7540,9 @@ No filter
 
 No functions bound
 == Atanmış işlev yok
+
+No graphics adapters detected
+== Grafik bağdaştırıcısı algılanmadı
 
 No input device available
 == Kullanılabilir giriş cihazı yok
@@ -12296,6 +12317,9 @@ System
 System default
 == Sistem varsayılanı
 
+System graphics settings
+== Sistem grafik ayarları
+
 System media controls
 == Sistem medya kontrolleri
 
@@ -13199,8 +13223,14 @@ Translate UI
 Translate:
 == Çevir:
 
+Translated chat text size as a percentage of the original text (50-100)
+== Çevrilmiş sohbet metninin boyutu, özgün metin boyutunun yüzdesi olarak (50-100)
+
 Translated text hidden due to streamer mode
 == Yayıncı modu nedeniyle çevrilen metin gizlendi
+
+Translated text size
+== Çevrilmiş metin boyutu
 
 Translating to %s...
 == %s diline çevriliyor...

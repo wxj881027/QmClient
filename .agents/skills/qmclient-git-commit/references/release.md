@@ -2,7 +2,7 @@
 
 仅发布、版本管理或 Release 说明任务读取。下面列出操作顺序，不产生额外授权；执行范围遵循父 skill。
 
-1. 按 [版本号与发布通道](../../../../docs/规格/版本号与发布通道.md) 选择正式 `vX.Y` 或预览 `vX.Y-preview.N`。用 `python qmclient_scripts/bump_version.py --tag <目标 Tag> --dry-run` 核对解析，再去掉 `--dry-run` 更新。
+1. 按 [版本号与发布通道](../../../../docs/归档/版本号与发布通道.md) 选择正式 `vX.Y` 或预览 `vX.Y-preview.N`。用 `python qmclient_scripts/bump_version.py --tag <目标 Tag> --dry-run` 核对解析，再去掉 `--dry-run` 更新。
 2. 验证版本差异及发布要求，提交标题使用解析后的版本，例如 `chore: bump version to 3.3`。
 3. 已授权发布时核对目标仓库的 workflow 触发条件与发布权限，再创建对应 tag 并推送；不要顺带推送其他分支或 tag。
 

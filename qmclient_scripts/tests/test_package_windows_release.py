@@ -26,7 +26,7 @@ class PublishWindowsArtifactsTest(unittest.TestCase):
 
 	def test_publishes_all_artifacts_with_matching_hashes_and_keeps_unrelated_files(self) -> None:
 		artifacts = []
-		for name, data in (("完整包.7z", b"normal"), ("Setup.exe", b"installer"), ("portable.zip", b"portable")):
+		for name, data in (("完整包.7z", b"normal"), ("Setup.exe", b"installer"), ("portable.7z", b"portable")):
 			path = self.inputs / name
 			path.write_bytes(data)
 			artifacts.append(path)

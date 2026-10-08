@@ -13,13 +13,6 @@ KEYBOARD_LAYOUT_PATH = REPO_ROOT / "data/input overlay-Zac/wasd.json"
 KEYBOARD_IMAGE_PATH = REPO_ROOT / "data/input overlay-Zac/wasd.png"
 MOUSE_LAYOUT_PATH = REPO_ROOT / "data/input overlay-Zac/mouse.json"
 MOUSE_IMAGE_PATH = REPO_ROOT / "data/input overlay-Zac/mouse.png"
-CONFIG_VARIABLES_PATH = REPO_ROOT / "src/engine/shared/config_variables_qmclient.h"
-INPUT_OVERLAY_SOURCE_PATH = (
-    REPO_ROOT / "src/game/client/components/qmclient/input_overlay.cpp"
-)
-INPUT_OVERLAY_MENU_PATH = (
-    REPO_ROOT / "src/game/client/components/qmclient/menus_qmclient.cpp"
-)
 
 
 class InputOverlayLayoutTest(unittest.TestCase):
@@ -154,48 +147,6 @@ class InputOverlayLayoutTest(unittest.TestCase):
                         (map_x, map_y, map_x + map_width, map_y + map_height)
                     )
                     self.assertIsNotNone(sprite.getchannel("A").getbbox())
-
-    def test_runtime_wires_independent_keyboard_and_mouse_scale_controls(self) -> None:
-        config_variables = CONFIG_VARIABLES_PATH.read_text(encoding="utf-8")
-        render_source = INPUT_OVERLAY_SOURCE_PATH.read_text(encoding="utf-8")
-        menu_source = INPUT_OVERLAY_MENU_PATH.read_text(encoding="utf-8")
-
-        self.assertIn(
-            "MACRO_CONFIG_INT(QmInputOverlayMouseScale, "
-            "qm_input_overlay_mouse_scale, 20, 1, 200,",
-            config_variables,
-        )
-        self.assertIn(
-            "const float MouseScale = "
-            "g_Config.m_QmInputOverlayMouseScale / 100.0f;",
-            render_source,
-        )
-        self.assertIn("Layout.m_IsMouseLayout", render_source)
-        self.assertIn('"Keyboard size"', menu_source)
-        self.assertIn('"Mouse size"', menu_source)
-        self.assertIn("m_QmInputOverlayMouseScale", menu_source)
-
-    def test_runtime_restores_percentage_position_controls(self) -> None:
-        config_variables = CONFIG_VARIABLES_PATH.read_text(encoding="utf-8")
-        render_source = INPUT_OVERLAY_SOURCE_PATH.read_text(encoding="utf-8")
-        menu_source = INPUT_OVERLAY_MENU_PATH.read_text(encoding="utf-8")
-
-        self.assertIn(
-            "MACRO_CONFIG_INT(QmInputOverlayPosX, "
-            "qm_input_overlay_pos_x, 71, 0, 100,",
-            config_variables,
-        )
-        self.assertIn(
-            "MACRO_CONFIG_INT(QmInputOverlayPosY, "
-            "qm_input_overlay_pos_y, 80, 0, 100,",
-            config_variables,
-        )
-        self.assertIn("g_Config.m_QmInputOverlayPosX", render_source)
-        self.assertIn("g_Config.m_QmInputOverlayPosY", render_source)
-        self.assertIn('"Horizontal position"', menu_source)
-        self.assertIn('"Vertical position"', menu_source)
-        self.assertIn("m_QmInputOverlayPosX", menu_source)
-        self.assertIn("m_QmInputOverlayPosY", menu_source)
 
 
 if __name__ == "__main__":

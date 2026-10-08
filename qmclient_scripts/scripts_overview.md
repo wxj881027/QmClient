@@ -176,7 +176,7 @@ python3 qmclient_scripts/bump_version.py --tag vX.Y-preview.N
 python3 qmclient_scripts/bump_version.py --describe
 ```
 
-格式和发布通道以 [版本号与发布通道](../docs/规格/版本号与发布通道.md) 为准。
+格式和发布通道以 [版本号与发布通道](../docs/归档/版本号与发布通道.md) 为准。
 
 ### baseline allowlist
 

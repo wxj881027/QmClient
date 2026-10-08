@@ -18,6 +18,7 @@
 #include <game/client/components/qmclient/hud_notifications/hud_notifications.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/components/qmclient/qm_chat_log_jobs.h>
+#include <game/client/components/qmclient/qm_chat_text_layout.h>
 #include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/components/qmclient/sponsor_chat_render.h>
 #include <game/client/components/qmclient/translate/translate_jobs.h>
@@ -130,6 +131,7 @@ private:
 		bool m_Initialized;
 		int64_t m_Time;
 		float m_aYOffset[2];
+		SQmChatTextBlockLayout m_aTextBlockLayout[2];
 		int m_ClientId;
 		int m_TeamNumber;
 		bool m_Team;
@@ -187,6 +189,7 @@ private:
 	std::array<int, 4> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
+	std::array<int, 3> m_aPreparedChatTextSettings = {-1, -1, -1};
 	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;

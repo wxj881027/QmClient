@@ -1,4 +1,4 @@
-"""CMake Windows 发布目标：汇总完整 7z、安装器和专用便携 ZIP。"""
+"""CMake Windows 发布目标：汇总完整 7z、安装器和专用便携 7z。"""
 
 from __future__ import annotations
 
@@ -66,9 +66,9 @@ def main() -> int:
 	# 主目录的锁由外层 CMake 封装持有；这里仅构建独立便携子目录，避免递归申请主锁。
 	wrapper = str(REPO_ROOT / "qmclient_scripts/cmake-windows.cmd")
 	subprocess.run([wrapper, "-G", "Ninja", "-S", str(REPO_ROOT), "-B", str(portable), "-DCMAKE_BUILD_TYPE=Release", "-DQMCLIENT_PORTABLE=ON", "-DQMCLIENT_TEST_STORAGE=OFF", "-DMYSQL=OFF"], check=True, cwd=REPO_ROOT)
-	subprocess.run([wrapper, "--build", str(portable), "--target", "package_zip", "-j", str(args.jobs)], check=True, cwd=REPO_ROOT)
+	subprocess.run([wrapper, "--build", str(portable), "--target", "package_7z", "-j", str(args.jobs)], check=True, cwd=REPO_ROOT)
 	normal_package = build / (args.package_name + ".7z")
-	portable_package = portable / (args.portable_package_name + ".zip")
+	portable_package = portable / (args.portable_package_name + ".7z")
 	verify(normal_package, build / "qmclient-setup-runtime.txt", build / "qmclient-archive-tools.txt", False)
 	verify(portable_package, portable / "qmclient-setup-runtime.txt", portable / "qmclient-archive-tools.txt", True)
 	payload = build / "release/setup-source"

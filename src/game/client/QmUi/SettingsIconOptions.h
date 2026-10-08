@@ -33,7 +33,7 @@ namespace qm_icon_settings
 		const CUIRect View{0.0f, 0.0f, Width, 0.0f};
 		const float ColorHeight = ResolveSettingsRadioRowLayout(View, 3, Metrics).m_Height;
 		const float StyleHeight = ResolveSettingsRadioRowLayout(View, 4, Metrics).m_Height;
-		return ResolveSettingsContentFlowHeight(Metrics, CustomEnabled ? std::initializer_list<float>{ColorHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, StyleHeight} : std::initializer_list<float>{ColorHeight, Metrics.m_LineHeight, StyleHeight});
+		return ResolveSettingsContentFlowHeight(Metrics, CustomEnabled ? std::initializer_list<float>{ColorHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_ButtonHeight, Metrics.m_ButtonHeight, StyleHeight} : std::initializer_list<float>{ColorHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_ButtonHeight, StyleHeight});
 	}
 }
 

@@ -159,6 +159,32 @@ TEST_F(SettingsCardMeasureRevision, TranslationAdvancedRowsInvalidatePageAndSear
 	EXPECT_EQ(SearchRevision, MeasureModuleCardsRevision());
 }
 
+TEST_F(SettingsCardMeasureRevision, TranslationBackendSwitchInvalidatesMeasurements)
+{
+	using namespace qm_card_catalog;
+	// 每个后端都有专属的说明行/密钥行/端点行组合，任意切换都会改变渲染内容；
+	// 测量版本必须两两不同，否则 Deck 的缓存高度不失效，卡片高度停留在旧服务的高度。
+	static const char *const apBackendCodes[] = {"llm", "tencentcloud", "libretranslate", "ftapi", "mymemory", "deepl"};
+	uint64_t aRevisions[std::size(apBackendCodes)] = {};
+	for(size_t i = 0; i < std::size(apBackendCodes); ++i)
+	{
+		str_copy(g_Config.m_QmTranslateBackend, apBackendCodes[i], sizeof(g_Config.m_QmTranslateBackend));
+		aRevisions[i] = MeasureModuleCardRevision(qm_module::EQmModuleId::Translate);
+	}
+	for(size_t i = 0; i < std::size(apBackendCodes); ++i)
+	{
+		for(size_t j = i + 1; j < std::size(apBackendCodes); ++j)
+			EXPECT_NE(aRevisions[i], aRevisions[j]) << apBackendCodes[i] << " vs " << apBackendCodes[j];
+	}
+	// 显式覆盖用户报告的切换路径：mymemory ↔ deepl 切换必须失效缓存高度，切回后还原。
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory", sizeof(g_Config.m_QmTranslateBackend));
+	const uint64_t MyMemoryRevision = MeasureModuleCardRevision(qm_module::EQmModuleId::Translate);
+	str_copy(g_Config.m_QmTranslateBackend, "deepl", sizeof(g_Config.m_QmTranslateBackend));
+	EXPECT_NE(MyMemoryRevision, MeasureModuleCardRevision(qm_module::EQmModuleId::Translate));
+	str_copy(g_Config.m_QmTranslateBackend, "mymemory", sizeof(g_Config.m_QmTranslateBackend));
+	EXPECT_EQ(MyMemoryRevision, MeasureModuleCardRevision(qm_module::EQmModuleId::Translate));
+}
+
 TEST_F(SettingsCardMeasureRevision, DynamicHudTogglesInvalidatePageAndSearchMeasurements)
 {
 	using namespace qm_card_catalog;
