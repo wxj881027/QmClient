@@ -103,11 +103,11 @@ void CInputOverlay::OnWindowResize()
 bool CInputOverlay::HasCountingFocus() const
 {
 	return g_Config.m_QmInputOverlay && g_Config.m_QmInputOverlayKeyCounts &&
-		Client()->State() == IClient::STATE_ONLINE && Graphics()->WindowActive() && !g_Config.m_ClEditor &&
-		!GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_GameConsole.IsActive() &&
-		!GameClient()->m_HudEditor.IsActive() && !GameClient()->m_Spectator.IsActive() && !GameClient()->m_KeyBinder.IsActive() &&
-		!GameClient()->m_BindWheel.IsActive() && !GameClient()->m_PieMenu.IsActive() && !GameClient()->m_Emoticon.IsActive() &&
-		CLineInput::GetActiveInput() == nullptr;
+	       Client()->State() == IClient::STATE_ONLINE && Graphics()->WindowActive() && !g_Config.m_ClEditor &&
+	       !GameClient()->m_Menus.IsActive() && !GameClient()->m_Chat.IsActive() && !GameClient()->m_GameConsole.IsActive() &&
+	       !GameClient()->m_HudEditor.IsActive() && !GameClient()->m_Spectator.IsActive() && !GameClient()->m_KeyBinder.IsActive() &&
+	       !GameClient()->m_BindWheel.IsActive() && !GameClient()->m_PieMenu.IsActive() && !GameClient()->m_Emoticon.IsActive() &&
+	       CLineInput::GetActiveInput() == nullptr;
 }
 
 void CInputOverlay::ObservePhysicalInput(const IInput::CEvent &Event, bool HadCountingFocus)
@@ -119,13 +119,13 @@ void CInputOverlay::ObservePhysicalInput(const IInput::CEvent &Event, bool HadCo
 		if(m_ConfigMode == EConfigMode::VECTOR)
 			Enabled = std::any_of(m_vElements.begin(), m_vElements.end(), [&](const SElement &Element) {
 				return (Element.m_InputKind == EInputKind::KEY && Element.m_Key == Event.m_Key) ||
-					(Element.m_InputKind == EInputKind::MOUSE && Element.m_MouseButton > 0 && KEY_MOUSE_1 + Element.m_MouseButton - 1 == Event.m_Key);
+				       (Element.m_InputKind == EInputKind::MOUSE && Element.m_MouseButton > 0 && KEY_MOUSE_1 + Element.m_MouseButton - 1 == Event.m_Key);
 			});
 		else
 			Enabled = std::any_of(m_vObsLayouts.begin(), m_vObsLayouts.end(), [&](const SObsLayout &Layout) {
 				return std::any_of(Layout.m_vElements.begin(), Layout.m_vElements.end(), [&](const SObsElement &Element) {
 					return (Element.m_InputKind == EObsInputKind::KEY && Element.m_Key == Event.m_Key) ||
-						(Element.m_InputKind == EObsInputKind::MOUSE && Element.m_MouseButton > 0 && KEY_MOUSE_1 + Element.m_MouseButton - 1 == Event.m_Key);
+					       (Element.m_InputKind == EObsInputKind::MOUSE && Element.m_MouseButton > 0 && KEY_MOUSE_1 + Element.m_MouseButton - 1 == Event.m_Key);
 				});
 			});
 	}
@@ -454,7 +454,7 @@ void CInputOverlay::OnRender()
 				for(const SObsElement &Element : Layout.m_vElements)
 				{
 					const int Key = Element.m_InputKind == EObsInputKind::KEY ? Element.m_Key :
-						(Element.m_InputKind == EObsInputKind::MOUSE && Element.m_MouseButton > 0 ? KEY_MOUSE_1 + Element.m_MouseButton - 1 : KEY_UNKNOWN);
+												    (Element.m_InputKind == EObsInputKind::MOUSE && Element.m_MouseButton > 0 ? KEY_MOUSE_1 + Element.m_MouseButton - 1 : KEY_UNKNOWN);
 					const bool Active = IsObsActive(Element);
 					if(Element.m_ActiveOnly && !Active)
 						continue;
@@ -620,7 +620,7 @@ void CInputOverlay::OnRender()
 		for(const SElement &Element : m_vElements)
 		{
 			const int Key = Element.m_InputKind == EInputKind::KEY ? Element.m_Key :
-				(Element.m_InputKind == EInputKind::MOUSE && Element.m_MouseButton > 0 ? KEY_MOUSE_1 + Element.m_MouseButton - 1 : KEY_UNKNOWN);
+										 (Element.m_InputKind == EInputKind::MOUSE && Element.m_MouseButton > 0 ? KEY_MOUSE_1 + Element.m_MouseButton - 1 : KEY_UNKNOWN);
 			const float Skew = Element.m_Shape == EShape::PARALLELOGRAM ? Element.m_Skew * Scale : 0.0f;
 			RenderKeyCount(Key, {OriginX + Element.m_X * Scale + Skew * 0.5f, OriginY + Element.m_Y * Scale, Element.m_W * Scale, Element.m_H * Scale}, Opacity);
 		}

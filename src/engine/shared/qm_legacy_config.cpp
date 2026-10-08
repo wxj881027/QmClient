@@ -101,9 +101,9 @@ namespace QmLegacyConfig
 			}
 
 			const bool ConfigArgument = str_comp_nocase(Command.m_Value.c_str(), "toggle") == 0 ||
-				str_comp_nocase(Command.m_Value.c_str(), "+toggle") == 0 ||
-				str_comp_nocase(Command.m_Value.c_str(), "+toggle_restore") == 0 ||
-				str_comp_nocase(Command.m_Value.c_str(), "reset") == 0;
+						    str_comp_nocase(Command.m_Value.c_str(), "+toggle") == 0 ||
+						    str_comp_nocase(Command.m_Value.c_str(), "+toggle_restore") == 0 ||
+						    str_comp_nocase(Command.m_Value.c_str(), "reset") == 0;
 			const SToken Argument = ReadToken(Text, Command.m_End);
 			if(!Argument.m_Valid)
 				return Result;

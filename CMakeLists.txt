@@ -3242,6 +3242,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogIds.cpp
     QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
+    QmUi/cards/QmCardCatalogGeneral.cpp
     QmUi/cards/QmCardCatalogKeywordReply.cpp
     QmUi/cards/QmCardCatalogBetterScoreboard.cpp
     QmUi/cards/QmCardCatalogSteam.cpp
@@ -4644,6 +4645,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/settings_font_selection_test.cpp
     src/test/unit/qmclient/settings/settings_icon_options_test.cpp
     src/test/unit/qmclient/settings/settings_page_layout_test.cpp
+    src/test/unit/qmclient/settings/qm_general_card_layout_test.cpp
     src/test/unit/qmclient/settings/settings_tee_emote_slider_test.cpp
     src/test/unit/qmclient/settings/settings_tee_layout_test.cpp
     src/test/unit/qmclient/client/qm_plausible_sizes_contract_test.cpp
@@ -4741,6 +4743,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
+    src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp

@@ -4,22 +4,29 @@ import sys
 from pathlib import Path
 
 
+def write_filtered_log(log_path: Path, output, encoding: str = "mbcs") -> None:
+    prefixes = (
+        "注意: 包含文件:".encode("utf-8"),
+        "Note: including file:".encode("ascii"),
+    )
+    try:
+        prefixes += ("注意: 包含文件:".encode(encoding),)
+    except (LookupError, UnicodeEncodeError):
+        # 英文代码页无法编码中文前缀，非 Windows 平台也可能没有 mbcs。
+        pass
+
+    with log_path.open("rb") as log_file:
+        for line in log_file:
+            if line.lstrip().startswith(prefixes):
+                continue
+            output.write(line)
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         return 1
 
-    log_path = Path(sys.argv[1])
-    prefixes = (
-        "注意: 包含文件:".encode("mbcs"),
-        "注意: 包含文件:".encode("utf-8"),
-        "Note: including file:".encode("ascii"),
-    )
-
-    with log_path.open("rb") as log_file:
-        for line in log_file:
-            if any(line.lstrip().startswith(prefix) for prefix in prefixes):
-                continue
-            sys.stdout.buffer.write(line)
+    write_filtered_log(Path(sys.argv[1]), sys.stdout.buffer)
     return 0
 
 

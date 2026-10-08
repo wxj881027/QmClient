@@ -2,6 +2,7 @@
 
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
+#include <engine/shared/localization.h>
 #include <engine/textrender.h>
 
 #include <game/client/QmUi/SettingsToggleGrid.h>
@@ -180,7 +181,6 @@ static void ParseAutoReplyRules(const char *pRules, std::vector<SAutoReplyRulePl
 		vOutRules.push_back({pKeywords, pReply, AutoRename, RegexRule});
 	}
 }
-
 
 static bool AutoReplyRowsMatchRules(const std::vector<std::unique_ptr<SAutoReplyRuleInputRow>> &vRows, const std::vector<SAutoReplyRulePlain> &vRules)
 {

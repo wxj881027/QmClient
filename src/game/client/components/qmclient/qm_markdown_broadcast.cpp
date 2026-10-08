@@ -20,5 +20,5 @@ bool CQmMarkdownBroadcast::Apply(const std::string &Markdown, int Version)
 bool CQmMarkdownBroadcast::IsUnread(int ReadVersion, const char *pReadContentId) const
 {
 	return HasMarkdown() && (m_Version > ReadVersion ||
-		(m_Version == ReadVersion && (pReadContentId == nullptr || str_comp(m_aContentId, pReadContentId) != 0)));
+					(m_Version == ReadVersion && (pReadContentId == nullptr || str_comp(m_aContentId, pReadContentId) != 0)));
 }

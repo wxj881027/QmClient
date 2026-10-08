@@ -18,8 +18,6 @@ import os
 import re
 import sys
 
-os.chdir(os.path.dirname(__file__) + "/..")
-
 CONFIG_FILES = {
     "ddnet": "src/engine/shared/config_variables.h",
     "tclient": "src/engine/shared/config_variables_tclient.h",
@@ -45,22 +43,22 @@ def parse_config_variables(lines):
 def generate_regex(variable_code, script_name):
     command_name = re.escape(script_name)
     return (
-        rf"(g_Config\.m_{variable_code}\b|"
+        rf"(\b[A-Za-z_]\w*(?:\.|->)m_{variable_code}\b|"
         rf"Config\(\)->m_{variable_code}\b|"
-        rf"m_pConfig->m_{variable_code}\b|"
+        rf"\bCConfig::m_{variable_code}\b|"
         rf"Console\(\)->(?:Register|Chain)\(\s*\"{command_name}\"|"
         rf"Console\(\)->ExecuteLine\([^;]*\"{command_name}\")"
     )
 
 
-def find_config_variables(config_variables):
+def find_config_variables(config_variables, source_root="src"):
     variables_not_found = set(config_variables)
     regex_cache = {}
     for variable_code in variables_not_found.copy():
         regex_cache[variable_code] = re.compile(
             generate_regex(variable_code, config_variables[variable_code])
         )
-    for root, _, files in os.walk("src"):
+    for root, _, files in os.walk(source_root):
         if not variables_not_found:
             break
         for file in files:
@@ -98,6 +96,8 @@ def check_config_file(name, filepath):
 
 def main():
     import argparse
+
+    os.chdir(os.path.dirname(__file__) + "/..")
 
     parser = argparse.ArgumentParser(description="检查 QmClient 配置变量是否被实际使用")
     parser.add_argument(

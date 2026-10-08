@@ -85,6 +85,8 @@ namespace qm_card_catalog
 
 	bool BuildCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out)
 	{
+		if(ContainsStableId(GeneralCardStableIds(), pStableId))
+			return QmCardRenderHook::BuildGeneralCard(Ctx, pStableId, Out);
 		if(str_comp(pStableId, "qm:bind_editor") == 0)
 			return BuildBindCard(Ctx, Out);
 		if(ContainsStableId(NameplateCardStableIds(), pStableId))

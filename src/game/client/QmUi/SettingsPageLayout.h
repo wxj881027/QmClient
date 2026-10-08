@@ -573,8 +573,8 @@ inline SSettingsTeeCustomColorsLayout ResolveSettingsTeeCustomColorsLayout(const
 	const float GroupWidth = SideBySide ? (View.w - Metrics.m_SectionGap) * 0.5f : View.w;
 	Layout.m_BodyGroup = {View.x, View.y + Spacing, GroupWidth, GroupHeight};
 	Layout.m_FeetGroup = SideBySide ?
-		CUIRect{View.x + GroupWidth + Metrics.m_SectionGap, Layout.m_BodyGroup.y, GroupWidth, GroupHeight} :
-		CUIRect{View.x, Layout.m_BodyGroup.y + GroupHeight + Metrics.m_SectionGap, GroupWidth, GroupHeight};
+				     CUIRect{View.x + GroupWidth + Metrics.m_SectionGap, Layout.m_BodyGroup.y, GroupWidth, GroupHeight} :
+				     CUIRect{View.x, Layout.m_BodyGroup.y + GroupHeight + Metrics.m_SectionGap, GroupWidth, GroupHeight};
 	const auto ResolveGroup = [&](const CUIRect &Group, CUIRect &Title, CUIRect &Controls) {
 		CUIRect Inner;
 		Group.Margin(Spacing, &Inner);

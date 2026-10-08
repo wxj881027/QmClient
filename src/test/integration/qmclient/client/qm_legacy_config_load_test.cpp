@@ -126,9 +126,7 @@ TEST_F(CQmLegacyConfigLoad, LegacyWriteRunsCanonicalCommandChainAndMarksExplicit
 	m_pConsole->Chain("qm_custom_font", [](IConsole::IResult *pResult, void *pUser, IConsole::FCommandCallback pfnCallback, void *pCallbackUser) {
 		pfnCallback(pResult, pCallbackUser);
 		if(pResult->NumArguments() > 0)
-			++*static_cast<int *>(pUser);
-	},
-		&Changes);
+			++*static_cast<int *>(pUser); }, &Changes);
 	EXPECT_FALSE(QmConfigValueWasExplicitlySet(*m_pConfigManager, "qm_custom_font"));
 	m_pConsole->ExecuteLine("qm_custom_font");
 	EXPECT_FALSE(QmConfigValueWasExplicitlySet(*m_pConfigManager, "qm_custom_font"));

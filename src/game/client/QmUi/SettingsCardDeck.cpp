@@ -282,8 +282,8 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 				const float HelpSize = ResolveSettingsSmallFontSize(Ctx.m_UiScale);
 				const uint64_t HelpRevision = (pDefinition->m_MeasureRevision * 1099511628211ULL ^ str_quickhash(g_Config.m_ClLanguagefile)) * 1099511628211ULL ^ Ctx.m_pTextRender->GlyphAtlasRevision();
 				if(Runtime.m_Help.Configure(ContentWidth, HelpSize, HelpRevision, pDefinition->m_Spec.m_pSubtitle, [&](const char *pText) {
-					return Ctx.m_pTextRender->TextBoundingBox(HelpSize, pText, -1, std::max(1.0f, ContentWidth)).m_H;
-				}))
+					   return Ctx.m_pTextRender->TextBoundingBox(HelpSize, pText, -1, std::max(1.0f, ContentWidth)).m_H;
+				   }))
 					CachedContentHeight = -1.0f;
 				const auto MeasureHelp = [&](const char *pText) { return Ctx.m_pTextRender->TextBoundingBox(HelpSize, pText, -1, std::max(1.0f, ContentWidth)).m_H; };
 				Runtime.m_Help.Register(0, pDefinition->m_Spec.m_pInfo, false, false, MeasureHelp);

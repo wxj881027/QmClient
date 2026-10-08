@@ -94,6 +94,14 @@ namespace qm_card_catalog
 			"deck:qmclient-contributors-title-display",
 		};
 
+		const std::vector<const char *> s_vGeneralCards = {
+			"deck:general-game",
+			"deck:general-language",
+			"deck:general-client",
+			"deck:general-recording",
+			"deck:tclient-info-files",
+		};
+
 		bool ContainsStableId(const std::vector<const char *> &vStableIds, const char *pStableId)
 		{
 			if(pStableId == nullptr)
@@ -150,7 +158,21 @@ namespace qm_card_catalog
 
 	bool HasCardModule(const char *pStableId)
 	{
-		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId);
+		return ContainsStableId(s_vVisualCards, pStableId) || ContainsStableId(s_vFunctionCards, pStableId) || ContainsStableId(s_vHudCards, pStableId) || ContainsStableId(s_vBindCards, pStableId) || ContainsStableId(s_vNameplateCards, pStableId) || ContainsStableId(s_vTeeCards, pStableId) || ContainsStableId(s_vTitleCards, pStableId) || ContainsStableId(s_vGeneralCards, pStableId);
+	}
+
+	const std::vector<const char *> &GeneralCardStableIds()
+	{
+		return s_vGeneralCards;
+	}
+
+	uint64_t GeneralMeasureContentRevision()
+	{
+		return (static_cast<uint64_t>(g_Config.m_ClAutoDemoRecord != 0) << 0) |
+		       (static_cast<uint64_t>(g_Config.m_ClAutoScreenshot != 0) << 1) |
+		       (static_cast<uint64_t>(g_Config.m_ClAutoStatboardScreenshot != 0) << 2) |
+		       (static_cast<uint64_t>(g_Config.m_ClAutoCSV != 0) << 3) |
+		       (static_cast<uint64_t>(g_Config.m_ClDyncam != 0 || g_Config.m_ClMouseFollowfactor > 0) << 4);
 	}
 
 	const std::vector<const char *> &TitleCardStableIds()
@@ -158,7 +180,7 @@ namespace qm_card_catalog
 		return s_vTitleCards;
 	}
 
-	uint64_t MeasureContentRevision()
+	uint64_t MeasureContentRevision(size_t LanguageCount, size_t ThemeCount)
 	{
 		uint64_t Revision = FoldRevision(0, (uint64_t)s_vVisualCards.size());
 		Revision = FoldRevision(Revision, (uint64_t)s_vFunctionCards.size());
@@ -168,6 +190,10 @@ namespace qm_card_catalog
 		Revision = FoldRevision(Revision, (uint64_t)s_vTeeCards.size());
 		Revision = FoldRevision(Revision, (uint64_t)s_vTitleCards.size());
 		Revision = FoldRevision(Revision, NameplateMeasureContentRevision());
+		Revision = FoldRevision(Revision, static_cast<uint64_t>(s_vGeneralCards.size()));
+		Revision = FoldRevision(Revision, GeneralMeasureContentRevision());
+		Revision = FoldRevision(Revision, static_cast<uint64_t>(LanguageCount));
+		Revision = FoldRevision(Revision, static_cast<uint64_t>(ThemeCount));
 		return Revision;
 	}
 } // namespace qm_card_catalog

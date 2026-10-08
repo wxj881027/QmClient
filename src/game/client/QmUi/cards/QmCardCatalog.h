@@ -28,13 +28,16 @@ namespace qm_card_catalog
 	const std::vector<const char *> &NameplateCardStableIds();
 	const std::vector<const char *> &TitleCardStableIds();
 	const std::vector<const char *> &TeeCardStableIds();
+	const std::vector<const char *> &GeneralCardStableIds();
+	uint64_t GeneralMeasureContentRevision();
 	uint64_t NameplateMeasureContentRevision();
 	uint64_t BlockWordsLayoutRevision();
 
 	// 该 stableId 是否有可构造的卡片模块（用于搜索页过滤与页面自检）。
 	bool HasCardModule(const char *pStableId);
 	// 全目录卡片的重测版本聚合（任一卡的内容高度依赖项变化即失效），页面把它折进 DefinitionsRevision。
-	uint64_t MeasureContentRevision();
+	// 列表数量由页面提供，让异步资源加载也能触发搜索页重新测量。
+	uint64_t MeasureContentRevision(size_t LanguageCount = 0, size_t ThemeCount = 0);
 
 	// 功能分类卡片的布局版本。编辑行与文本缓存由各自卡片模块维护，
 	// 页面和搜索页使用同一份状态进行测量。
@@ -105,6 +108,7 @@ namespace qm_card_catalog
 	// 这里显式列出“卡片可以调用哪些渲染/输入助手”，避免把整类成员公开出去。
 	struct QmCardRenderHook
 	{
+		static bool BuildGeneralCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildNameplateCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildTitleCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
 		static bool BuildTeeCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out);
