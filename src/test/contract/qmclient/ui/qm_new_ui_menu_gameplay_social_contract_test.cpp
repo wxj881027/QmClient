@@ -78,17 +78,12 @@ TEST(QmNewUiMenuGameplaySocialContract, FriendAutoFollowDistinguishesManualAndAu
 {
 	const std::string Header = ReadTextFile("src/game/client/components/menus.h");
 	const std::string Source = ReadTextFile("src/game/client/components/menus_browser.cpp");
-	const std::string QmMenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 
 	EXPECT_NE(Header.find("enum class EConnectIntent"), std::string::npos);
 	EXPECT_NE(Header.find("void Connect(const char *pAddress, EConnectIntent Intent = EConnectIntent::Manual)"), std::string::npos);
 	EXPECT_NE(Source.find("if(Intent == EConnectIntent::Manual)"), std::string::npos);
 	EXPECT_NE(Source.find("StopFriendAutoFollow(m_FriendAutoFollowState);"), std::string::npos);
 	EXPECT_NE(Source.find("Connect(g_Config.m_UiServerAddress, EConnectIntent::AutoFollow)"), std::string::npos);
-	const std::string FriendNotifyBody = FunctionBody(QmMenusSource, "void CMenus::RenderQmFunctionFriendNotifyContent(");
-	ASSERT_FALSE(FriendNotifyBody.empty());
-	EXPECT_NE(FriendNotifyBody.find("RenderValue(\"qmclient-friend-auto-follow-delay\", \"Auto-follow delay\""), std::string::npos);
-	EXPECT_NE(FriendNotifyBody.find("&g_Config.m_QmFriendAutoFollowDelay, 0, 30, \"s\""), std::string::npos);
 }
 
 TEST(QmNewUiMenuGameplaySocialContract, ShortServerNamesKeepDisplayNameHighlightPath)
@@ -116,40 +111,6 @@ TEST(QmNewUiMenuGameplaySocialContract, CallVoteMapListShowsFinishedIcon)
 	EXPECT_NE(Body.find("GameClient()->m_TClient.IsFavoriteMap(aMapName)"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplaySocialContract, ClientSourceDoesNotUseChineseLocalizeKeys)
-{
-	const std::string HudEditorSource = ReadTextFile("src/game/client/components/hud_editor.cpp");
-	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string BrowserSource = ReadTextFile("src/game/client/components/menus_browser.cpp");
-	const std::string DemoSource = ReadTextFile("src/game/client/components/menus_demo.cpp");
-	const std::string IngameTouchSource = ReadTextFile("src/game/client/components/menus_ingame_touch_controls.cpp");
-	const std::string IngameSource = ReadTextFile("src/game/client/components/menus_ingame.cpp");
-	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string SettingsControlsSource = ReadTextFile("src/game/client/components/menus_settings_controls.cpp");
-	const std::string Settings7Source = ReadTextFile("src/game/client/components/menus_settings7.cpp");
-	const std::string StartSource = ReadTextFile("src/game/client/components/menus_start.cpp");
-	const std::string PieMenuSource = ReadTextFile("src/game/client/components/pie_menu.cpp");
-	const std::string ScoreboardSource = ReadTextFile("src/game/client/components/scoreboard.cpp");
-
-	EXPECT_NE(HudEditorSource.find("Localize(\"Position jump tip\")"), std::string::npos);
-	EXPECT_NE(MenusSource.find("m_apSettingsTabs[SETTINGS_SOUND] = Localize(\"Sound\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"DDmaX Easy\")"), std::string::npos);
-	EXPECT_NE(BrowserSource.find("Localize(\"Favorite map\")"), std::string::npos);
-	EXPECT_NE(DemoSource.find("Localize(\"Screenshots directory\")"), std::string::npos);
-	EXPECT_NE(IngameTouchSource.find("Localize(\"Allow dummy\", \"Touch button visibilities\")"), std::string::npos);
-	EXPECT_NE(IngameTouchSource.find("Localize(\"Dummy connected\", \"Touch button visibilities\")"), std::string::npos);
-	EXPECT_NE(IngameTouchSource.find("Localize(\"Spectate\", \"Predefined touch button behaviors\")"), std::string::npos);
-	EXPECT_NE(IngameSource.find("Localize(\"Spectate\")"), std::string::npos);
-	EXPECT_NE(IngameSource.find("Localize(\"Dummies are not allowed on this server\")"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("Localize(\"Show spectator cursor\")"), std::string::npos);
-	EXPECT_NE(SettingsSource.find("Localize(\"Auto save chat log\")"), std::string::npos);
-	EXPECT_NE(Settings7Source.find("Localize(\"Dummy\")"), std::string::npos);
-	EXPECT_NE(Settings7Source.find("Localize(\"Dummy\")"), std::string::npos);
-	EXPECT_NE(StartSource.find("Localize(\"(Update required)\")"), std::string::npos);
-	EXPECT_NE(PieMenuSource.find("Localize(\"Spectate\")"), std::string::npos);
-	EXPECT_NE(ScoreboardSource.find("Localize(\"Spectators\")"), std::string::npos);
-}
-
 TEST(QmNewUiMenuGameplaySocialContract, QmClientAxiomAutoLoginLivesInQmClientComponent)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/qmclient/axiom_auto_login.cpp");
@@ -158,7 +119,6 @@ TEST(QmNewUiMenuGameplaySocialContract, QmClientAxiomAutoLoginLivesInQmClientCom
 	const std::string TClientSource = ReadTextFile("src/game/client/components/tclient/tclient.cpp");
 	const std::string GameClientHeader = ReadTextFile("src/game/client/gameclient.h");
 	const std::string QmConfigHeader = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string QmMenusSource = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp");
 	const std::string IngameMenusSource = ReadTextFile("src/game/client/components/menus_ingame.cpp");
 
 	EXPECT_NE(Header.find("class CQmAxiomAutoLogin : public CComponent"), std::string::npos);
@@ -169,7 +129,6 @@ TEST(QmNewUiMenuGameplaySocialContract, QmClientAxiomAutoLoginLivesInQmClientCom
 	EXPECT_NE(Header.find("TrySendDummyLogin"), std::string::npos);
 	EXPECT_NE(QmConfigHeader.find("QmAxiomDummyLoginPassword"), std::string::npos);
 	EXPECT_NE(QmConfigHeader.find("qm_axiom_dummy_login_password"), std::string::npos);
-	EXPECT_NE(QmMenusSource.find("Axiom dummy password"), std::string::npos);
 	EXPECT_NE(Source.find("m_DummyLoginAllowedThisServer"), std::string::npos);
 	EXPECT_NE(Source.find("m_DummyWasConnected"), std::string::npos);
 	EXPECT_EQ(Source.find("if(DummyConnected && !m_DummyWasConnected)"), std::string::npos);

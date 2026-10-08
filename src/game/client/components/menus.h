@@ -79,6 +79,9 @@ namespace qm_card_registry
 namespace qm_card_catalog
 {
 	struct QmCardRenderHook;
+	struct SQmCardBuildContext;
+	struct STClientCardResult;
+	enum class ETClientCardPass;
 }
 
 inline bool QmTextMatchesIncludeExcludeFilter(const char *pText, const char *pInclude, const char *pExclude)
@@ -3143,6 +3146,38 @@ private:
 
 	// found in menus_settings.cpp
 	void RenderSettingsDDNet(CUIRect MainView);
+	FSettingsCardPreLayoutInput BuildTClientCardPreLayoutInput(const char *pStableId);
+	float LayoutTClientVisualNameplateCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientVisualEffectsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientInputCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientAntiLatencyToolsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientAntiPingSmoothingCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientAutoExecuteCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientVotingCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientPlayerIndicatorCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientTeeStatusBarCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientTileOutlinesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientGhostToolsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientRainbowCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientTeeTrailsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientBackgroundDrawCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+	float LayoutTClientFinishNameCard(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool Render);
+
+	qm_card_catalog::STClientCardResult RunTClientBindWheelCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	qm_card_catalog::STClientCardResult RunTClientChatBindsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	qm_card_catalog::STClientCardResult RunTClientWarListCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	qm_card_catalog::STClientCardResult RunTClientStatusBarCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	qm_card_catalog::STClientCardResult RunTClientProfilesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	qm_card_catalog::STClientCardResult RunTClientConfigsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	qm_card_catalog::STClientCardResult RunTClientMainCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	void RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool PrewarmOnly = false);
+	uint64_t BuildTee7SettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards);
+	uint64_t BuildPlayerSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards);
+	uint64_t BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards);
+	uint64_t BuildSoundSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards);
+	uint64_t BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards, int AppearanceTab);
+	uint64_t BuildDDNetSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards);
+
 	void RenderSettingsAppearance(CUIRect MainView);
 
 	// found in menus_qmclient.cpp

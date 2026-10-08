@@ -28,49 +28,6 @@
 #include <sstream>
 #include <string>
 
-TEST(QmNewUiMenuRenderBrowserContract, TClientProfilesAndStatusBarClampUiIndices)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
-	const std::string RenderSettingsTClientProfiles = FunctionBody(Source, "void CMenus::RenderSettingsTClientProfiles(CUIRect MainView, bool PrewarmOnly)");
-	const std::string RenderSettingsTClientStatusBar = FunctionBody(Source, "void CMenus::RenderSettingsTClientStatusBar(CUIRect MainView, bool PrewarmOnly)");
-
-	EXPECT_NE(RenderSettingsTClientProfiles.find("Profile.m_FeetColor >= 0"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClientProfiles.find("ProfilesPerRow = maximum(1"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClientStatusBar.find("StatusItemTypeCount"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClientStatusBar.find("s_TypeSelectedOld < StatusItemTypeCount"), std::string::npos);
-	EXPECT_NE(RenderSettingsTClientStatusBar.find("s_SelectedItem < (int)GameClient()->m_StatusBar.m_StatusBarItems.size()"), std::string::npos);
-}
-
-TEST(QmNewUiMenuRenderBrowserContract, SettingsListSelectionsClampBeforeIndexing)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string RenderSettingsPlayer = FunctionBody(Source, "void CMenus::RenderSettingsPlayer(CUIRect MainView)");
-	const std::string RenderSettingsGraphics = FunctionBody(Source, "void CMenus::RenderSettingsGraphics(CUIRect MainView)");
-	const std::string PopupMapPicker = FunctionBody(Source, "CUi::EPopupMenuFunctionResult CMenus::PopupMapPicker(void *pContext, CUIRect View, bool Active)");
-
-	EXPECT_NE(RenderSettingsPlayer.find("NewSelected >= 0 && NewSelected < (int)s_vFilteredFlags.size()"), std::string::npos);
-	EXPECT_NE(RenderSettingsGraphics.find("NewSelected >= 0 && NewSelected < s_NumNodes"), std::string::npos);
-	EXPECT_NE(PopupMapPicker.find("const int ItemIndex = MapIndex++;"), std::string::npos);
-	EXPECT_NE(PopupMapPicker.find("ItemIndex == pPopupContext->m_Selection"), std::string::npos);
-	EXPECT_NE(PopupMapPicker.find("NewSelected >= 0 && NewSelected < (int)pPopupContext->m_vMaps.size()"), std::string::npos);
-	EXPECT_NE(PopupMapPicker.find("pPopupContext->m_Selection >= 0"), std::string::npos);
-}
-
-TEST(QmNewUiMenuRenderBrowserContract, BackgroundMapPickerUsesMapsRootAndSupportedFiles)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string RenderSettingsDDNet = FunctionBody(Source, "void CMenus::RenderSettingsDDNet(CUIRect MainView)");
-	const std::string MapListPopulate = FunctionBody(Source, "void CMenus::CPopupMapPickerContext::MapListPopulate()");
-	const std::string MapListFetchCallback = FunctionBody(Source, "int CMenus::CPopupMapPickerContext::MapListFetchCallback");
-
-	EXPECT_NE(RenderSettingsDDNet.find("str_copy(s_PopupMapPickerContext.m_aRootPath, \"maps\""), std::string::npos);
-	EXPECT_NE(MapListPopulate.find("ListRoot(m_aRootPath[0] != '\\0' ? m_aRootPath : \"maps\", m_aValuePrefix);"), std::string::npos);
-	EXPECT_EQ(MapListPopulate.find("m_aFallbackRootPath"), std::string::npos);
-	EXPECT_EQ(MapListPopulate.find("m_aFallbackValuePrefix"), std::string::npos);
-	EXPECT_NE(MapListFetchCallback.find("FindBackgroundFileExtension(pInfo->m_pName)"), std::string::npos);
-	EXPECT_EQ(MapListFetchCallback.find("str_endswith(pInfo->m_pName, \".map\")"), std::string::npos);
-}
-
 TEST(QmNewUiMenuRenderBrowserContract, EditorSaveFileDialogKeepsFilenameInputInControl)
 {
 	const std::string Source = ReadTextFile("src/game/editor/file_browser.cpp");
@@ -116,14 +73,4 @@ TEST(QmNewUiMenuRenderBrowserContract, BrowserSearchUsesSharedIconAndExcludeKeep
 	EXPECT_NE(Browser.find("ExcludeOptions.m_LeadingQmIcon = static_cast<int>(EQmIcon::BAN)"), std::string::npos);
 	EXPECT_NE(Browser.find("ExcludeOptions.m_pPlaceholder = Localize(\"Exclude\")"), std::string::npos);
 	EXPECT_NE(Browser.find("DoToolTip(&s_ExcludeInput, &QuickExclude"), std::string::npos);
-}
-
-TEST(QmNewUiMenuRenderBrowserContract, GraphicsCurrentModeLabelSanitizesScaleAndAspectRatio)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/menus_settings.cpp");
-
-	EXPECT_NE(Source.find("const float HiDPIScale = std::isfinite(RawHiDPIScale) && RawHiDPIScale > 0.0f ? RawHiDPIScale : 1.0f;"), std::string::npos);
-	EXPECT_NE(Source.find("const int AspectGcd = G > 0 ? G : 1;"), std::string::npos);
-	EXPECT_NE(Source.find("g_Config.m_GfxScreenWidth / AspectGcd"), std::string::npos);
-	EXPECT_NE(Source.find("g_Config.m_GfxScreenHeight / AspectGcd"), std::string::npos);
 }

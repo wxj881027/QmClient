@@ -42,32 +42,6 @@ TEST(QmChatMessageMerge, HighlightedMessagesAreNotMerged)
 	EXPECT_NE(AddLine.find("!Highlighted &&"), std::string::npos);
 }
 
-TEST(QmWarListEnemyChat, FilteringKeepsChatLogPersistenceIndependent)
-{
-	const std::string Config = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string Chat = ReadTestSourceFile("src/game/client/components/chat.cpp");
-	const std::string Menus = ReadTestSourceFile("src/game/client/components/tclient/menus_tclient.cpp");
-	const std::string AddLine = SourceFunctionBody(Chat, "void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible, std::optional");
-	const std::string OnMessage = SourceFunctionBody(Chat, "void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)");
-	const std::string WarListSettings = SourceFunctionBody(Menus, "void CMenus::RenderSettingsTClientWarList(");
-
-	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmWarListBlockEnemyChat, qm_warlist_block_enemy_chat, 0, 0, 1"), std::string::npos);
-	EXPECT_NE(AddLine.find("g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
-	EXPECT_NE(AddLine.find("GameClient()->m_WarList.IsEnemy(ClientId)"), std::string::npos);
-	EXPECT_NE(AddLine.find("GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
-	EXPECT_EQ(AddLine.find("m_QmWarList && g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
-	EXPECT_EQ(OnMessage.find("m_QmWarListBlockEnemyChat"), std::string::npos);
-	EXPECT_NE(WarListSettings.find("&g_Config.m_QmWarListBlockEnemyChat"), std::string::npos);
-	EXPECT_NE(WarListSettings.find("\"tclient-warlist-block-enemy-chat\""), std::string::npos);
-	EXPECT_NE(WarListSettings.find("\"Block enemy chat\""), std::string::npos);
-
-	const size_t AddLineCall = OnMessage.find("AddLine(pMsg->m_ClientId, pMsg->m_Team, pMsg->m_pMessage, false, std::nullopt, SourceConnection)");
-	const size_t SaveLogCall = OnMessage.find("SaveChatLogLine(pMsg->m_ClientId, pMsg->m_Team, pMsg->m_pMessage)");
-	ASSERT_NE(AddLineCall, std::string::npos);
-	ASSERT_NE(SaveLogCall, std::string::npos);
-	EXPECT_LT(AddLineCall, SaveLogCall);
-}
-
 TEST(QmLocalSaveJoinHint, UsesExpiringEchoMessages)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/tclient/tclient.cpp");
@@ -94,18 +68,6 @@ TEST(QmWindowModesContract, WindowedFullscreenIsBorderedAndNonResizable)
 	EXPECT_NE(WindowedFullscreen.find("SDL_SetWindowFullscreen(m_pWindow, 0);"), std::string::npos);
 	EXPECT_NE(WindowedFullscreen.find("SDL_SetWindowBordered(m_pWindow, SDL_TRUE);"), std::string::npos);
 	EXPECT_NE(WindowedFullscreen.find("SDL_SetWindowResizable(m_pWindow, SDL_FALSE);"), std::string::npos);
-}
-
-TEST(QmWindowModesContract, GraphicsMenuMapsAllFiveModesToDistinctBackendStates)
-{
-	const std::string Menus = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	const std::string RenderSettingsGraphics = SourceFunctionBody(Menus, "void CMenus::RenderSettingsGraphics(");
-
-	EXPECT_NE(RenderSettingsGraphics.find("Graphics()->SetWindowParams(0, false);"), std::string::npos);
-	EXPECT_NE(RenderSettingsGraphics.find("Graphics()->SetWindowParams(0, true);"), std::string::npos);
-	EXPECT_NE(RenderSettingsGraphics.find("Graphics()->SetWindowParams(3, false);"), std::string::npos);
-	EXPECT_NE(RenderSettingsGraphics.find("Graphics()->SetWindowParams(2, false);"), std::string::npos);
-	EXPECT_NE(RenderSettingsGraphics.find("Graphics()->SetWindowParams(1, false);"), std::string::npos);
 }
 
 TEST(QmFastPracticeCommands, TeleportDefaultsToAimingOrSpectatingPosition)

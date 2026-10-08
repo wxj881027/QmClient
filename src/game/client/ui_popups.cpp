@@ -65,6 +65,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	if(ExistingPopupMenu != m_vPopupMenus.end())
 	{
 		ExistingPopupMenu->m_Props = ResolvedProps;
+		ExistingPopupMenu->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
 		ExistingPopupMenu->m_Rect.x = X;
 		ExistingPopupMenu->m_Rect.y = Y;
 		ExistingPopupMenu->m_Rect.w = Width;
@@ -84,6 +85,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	SPopupMenu *pNewMenu = &m_vPopupMenus.back();
 	pNewMenu->m_pId = pId;
 	pNewMenu->m_Props = ResolvedProps;
+	pNewMenu->m_Source.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
 	pNewMenu->m_Rect.x = X;
 	pNewMenu->m_Rect.y = Y;
 	pNewMenu->m_Rect.w = Width;
@@ -104,6 +106,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 
 void CUi::RenderPopupMenus()
 {
+	PruneInteractionSources(false);
 	// 禁用弹层模糊时，背景和分隔线的半透明绘制也不能触发自动背板模糊。
 	CUiScopedGaussianBlurSuppression PopupBlurSuppression(this, g_Config.m_QmUiPopupBlur == 0);
 	m_RenderingPopupMenus = true;
@@ -368,7 +371,10 @@ void CUi::RenderPopupMenus()
 			// The popup render function can open/close popups, which may resize the vector and thus
 			// invalidate the variable PopupMenu. We therefore store pId in a separate variable.
 			CUiScopedSurfaceText SurfaceText(TextRender(), ForegroundSurface);
+			CUiScopedInteractionOwner InteractionOwner(this, PopupMenu.m_Source.Context(), PopupMenu.m_Source.CardId());
+			m_pRenderingPopupId = pId;
 			Result = PopupMenu.m_pfnFunc(PopupMenu.m_pContext, PopupRect, Active);
+			m_pRenderingPopupId = nullptr;
 			if(ClipToViewport)
 				ClipDisable();
 		}
@@ -400,6 +406,10 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants)
 		// 出场动画已在播放：等待渲染循环自然移除，避免重置动画起点或重复回调。
 		if(!IncludeDescendants && PopupMenuToClose->m_Closing)
 			return;
+		if(m_pTrackedTextPopupId != nullptr && std::any_of(PopupMenuToClose, m_vPopupMenus.end(), [this](const SPopupMenu &Popup) {
+			   return Popup.m_pId == m_pTrackedTextPopupId;
+		   }))
+			ReleaseTrackedTextInput();
 		// 带出场动画的弹窗（仅二级界面大弹窗启用）：后代立即移除，自身标记
 		// closing 播放收缩渐隐后由渲染循环移除；逻辑关闭（输入解除、关闭回调）
 		// 在标记瞬间完成，与立即关闭语义一致。
@@ -438,6 +448,47 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants)
 	}
 }
 
+void CUi::RefreshInteractionSource(const void *pContext, const char *pCardId)
+{
+	if(RenderOnly())
+		return;
+	const uint64_t Frame = PopupSourceFrame();
+	for(SPopupMenu &Popup : m_vPopupMenus)
+		Popup.m_Source.Refresh(pContext, pCardId, Frame);
+	m_TextInputSource.Refresh(pContext, pCardId, Frame);
+}
+
+void CUi::CloseInteractionSource(const void *pContext, const char *pCardId)
+{
+	if(RenderOnly())
+		return;
+	for(size_t Index = 0; Index < m_vPopupMenus.size();)
+	{
+		if(m_vPopupMenus[Index].m_Source.Matches(pContext, pCardId))
+			ClosePopupMenu(m_vPopupMenus[Index].m_pId, true);
+		else
+			++Index;
+	}
+	if(m_TextInputSource.Matches(pContext, pCardId))
+		ReleaseTrackedTextInput();
+}
+
+void CUi::PruneInteractionSources(bool AllowPreviousFrame)
+{
+	if(RenderOnly())
+		return;
+	const uint64_t Frame = PopupSourceFrame();
+	for(size_t Index = 0; Index < m_vPopupMenus.size();)
+	{
+		if(m_vPopupMenus[Index].m_Source.Expired(Frame, AllowPreviousFrame))
+			ClosePopupMenu(m_vPopupMenus[Index].m_pId, true);
+		else
+			++Index;
+	}
+	if(m_TextInputSource.Expired(Frame, AllowPreviousFrame))
+		ReleaseTrackedTextInput();
+}
+
 void CUi::RefreshPopupMenuSource(const SPopupMenuId *pId, bool RequireRefresh, uint64_t Frame)
 {
 	if(!RenderOnly())
@@ -449,6 +500,8 @@ void CUi::ClosePopupMenus()
 	if(m_vPopupMenus.empty())
 		return;
 
+	if(m_pTrackedTextPopupId != nullptr)
+		ReleaseTrackedTextInput();
 	m_vPopupMenus.clear();
 	SetActiveItem(nullptr);
 	if(m_pfnPopupMenuClosedCallback)

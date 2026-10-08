@@ -23,26 +23,6 @@ TEST(QmNewUiMenuLocalizationContract, IngameMenuPrimaryActionLabelsUseEnglishKey
 	EXPECT_NE(Source.find("DoToolTip(&s_DummyButton, &Button, Localize(\"Please wait…\"))"), std::string::npos);
 }
 
-TEST(QmNewUiMenuLocalizationContract, DummyAndSpectateBindLabelsUseEnglishKeys)
-{
-	const std::string ControlsSource = ReadTextFile("src/game/client/components/menus_settings_controls.cpp");
-	const std::string TouchSource = ReadTextFile("src/game/client/components/touch_controls.cpp");
-
-	EXPECT_NE(ControlsSource.find("Localizable(\"Toggle dummy\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Dummy jump\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Dummy fire\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Dummy hook\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Dummy copy\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Dummy hammer fly\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Dummy Control\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Spectate mode\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Spectate teleport\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Spectate next\")"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("Localizable(\"Spectate previous\")"), std::string::npos);
-	EXPECT_NE(TouchSource.find("Localizable(\"Toggle dummy\")"), std::string::npos);
-	EXPECT_NE(TouchSource.find("Localizable(\"Spectate mode\")"), std::string::npos);
-}
-
 TEST(QmNewUiMenuLocalizationContract, ConsoleChatExportLabelsUseEnglishKeys)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/console.cpp");

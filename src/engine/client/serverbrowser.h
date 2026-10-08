@@ -287,6 +287,7 @@ public:
 	bool IsRefreshing() const override;
 	bool IsGettingServerlist() const override;
 	bool IsServerlistError() const override;
+	bool IsServerlistStale() const override;
 	int LoadingProgression() const override;
 	uint64_t FriendListRevision() const override { return m_FriendListRevision; }
 	int GetCurrentClientLocation() const override { return DetermineOwnLocation(); }

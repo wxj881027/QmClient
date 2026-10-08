@@ -724,6 +724,16 @@ private:
 	const void *m_pHotItem = nullptr;
 	const void *m_pActiveItem = nullptr;
 	const void *m_pLastActiveItem = nullptr; // only used internally to track active CLineInput
+	const void *m_pInteractionContext = nullptr;
+	const char *m_pInteractionCardId = nullptr;
+	const SPopupMenuId *m_pRenderingPopupId = nullptr;
+	CLineInput *m_pTrackedTextInput = nullptr;
+	const SPopupMenuId *m_pTrackedTextPopupId = nullptr;
+	CQmUiInteractionSource m_TextInputSource;
+	void TrackActiveTextInput(CLineInput *pLineInput);
+	void ReleaseTrackedTextInput();
+	void PruneInteractionSources(bool AllowPreviousFrame);
+	friend class CUiScopedInteractionOwner;
 	const void *m_pBecomingHotItem = nullptr;
 	CScrollRegion *m_pHotScrollRegion = nullptr;
 	CScrollRegion *m_pBecomingHotScrollRegion = nullptr;
@@ -805,6 +815,7 @@ private:
 
 		const SPopupMenuId *m_pId;
 		SPopupMenuProperties m_Props;
+		CQmUiInteractionSource m_Source;
 		CUIRect m_Rect;
 		void *m_pContext;
 		FPopupMenuFunction m_pfnFunc;
@@ -866,6 +877,8 @@ public:
 	void Init(IKernel *pKernel);
 	IClient *Client() const { return m_pClient; }
 	uint64_t PopupSourceFrame() const { return m_PopupSourceClock.Frame(); }
+	void RefreshInteractionSource(const void *pContext, const char *pCardId);
+	void CloseInteractionSource(const void *pContext, const char *pCardId);
 	bool ConsumeMenuUiFirstWheelPerf()
 	{
 		const bool Result = m_MenuUiFirstWheelPerf;
@@ -993,6 +1006,12 @@ public:
 		if(m_pLastActiveItem == pLineInput)
 			m_pLastActiveItem = nullptr;
 		pLineInput->Deactivate();
+		if(m_pTrackedTextInput == pLineInput)
+		{
+			m_pTrackedTextInput = nullptr;
+			m_pTrackedTextPopupId = nullptr;
+			m_TextInputSource = {};
+		}
 	}
 	bool CheckActiveItem(const void *pId)
 	{
@@ -1380,6 +1399,34 @@ public:
 	};
 	int DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps = {});
 	int DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, bool Enabled);
+};
+
+class CUiScopedInteractionOwner
+{
+	CUi *m_pUi;
+	const void *m_pPreviousContext = nullptr;
+	const char *m_pPreviousCardId = nullptr;
+
+public:
+	CUiScopedInteractionOwner(CUi *pUi, const void *pContext, const char *pCardId) :
+		m_pUi(pUi != nullptr && !pUi->RenderOnly() ? pUi : nullptr)
+	{
+		if(m_pUi == nullptr)
+			return;
+		m_pPreviousContext = m_pUi->m_pInteractionContext;
+		m_pPreviousCardId = m_pUi->m_pInteractionCardId;
+		m_pUi->m_pInteractionContext = pContext;
+		m_pUi->m_pInteractionCardId = pCardId;
+	}
+	~CUiScopedInteractionOwner()
+	{
+		if(m_pUi == nullptr)
+			return;
+		m_pUi->m_pInteractionContext = m_pPreviousContext;
+		m_pUi->m_pInteractionCardId = m_pPreviousCardId;
+	}
+	CUiScopedInteractionOwner(const CUiScopedInteractionOwner &) = delete;
+	CUiScopedInteractionOwner &operator=(const CUiScopedInteractionOwner &) = delete;
 };
 
 #endif

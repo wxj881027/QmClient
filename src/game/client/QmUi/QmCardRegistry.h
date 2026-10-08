@@ -51,6 +51,8 @@ namespace qm_card_registry
 	{
 		const char *m_pLabel;
 		const char *m_pConfigName;
+		const char *m_pAliases = nullptr;
+		const char *m_pContext = "";
 	};
 
 	struct SCardDefault

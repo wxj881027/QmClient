@@ -1960,6 +1960,11 @@ bool CServerBrowser::IsServerlistError() const
 	return m_pHttp->IsError();
 }
 
+bool CServerBrowser::IsServerlistStale() const
+{
+	return m_pHttp->IsStale();
+}
+
 int CServerBrowser::LoadingProgression() const
 {
 	if(m_vpServerlist.empty())

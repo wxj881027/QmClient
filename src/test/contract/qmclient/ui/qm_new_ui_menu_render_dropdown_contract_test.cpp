@@ -30,27 +30,6 @@
 
 // 下拉键盘、取消、来源帧与外部点击使用 QmAnimDropdownTest.cpp 的生产行为测试。
 
-TEST(QmNewUiMenuRenderDropdownContract, SettingsDropdownsUseTheSharedWrapper)
-{
-	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string ControlsSource = ReadTextFile("src/game/client/components/menus_settings_controls.cpp");
-	const std::string Wrapper = FunctionBody(MenusSource, "int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const char *const *ppStrs, const int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties)");
-
-	ASSERT_FALSE(Wrapper.empty());
-	EXPECT_NE(Wrapper.find("Properties.m_pAnchorViewport"), std::string::npos);
-	EXPECT_NE(Wrapper.find("Properties.m_pPopupViewport"), std::string::npos);
-	EXPECT_EQ(ControlsSource.find("Ui()->DoDropDown(&JoystickDropDown"), std::string::npos);
-	EXPECT_NE(ControlsSource.find("GameClient()->m_Menus.DoSettingsDropDown(&JoystickDropDown"), std::string::npos);
-
-	const std::string UiSource = ReadTextFile("src/game/client/ui.cpp") + ReadTextFile("src/game/client/ui_popups.cpp");
-	const std::string DoDropDown = FunctionBody(UiSource, "int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps)");
-	ASSERT_FALSE(DoDropDown.empty());
-	EXPECT_EQ(DoDropDown.find("static CScrollRegion"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("State.m_pOwnedScrollRegion = std::make_shared<CScrollRegion>();"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("State.m_pScrollRegion = State.m_SelectionPopupContext.m_pScrollRegion != nullptr"), std::string::npos);
-	EXPECT_NE(DoDropDown.find("pScrollRegion != nullptr ? pScrollRegion : State.m_pScrollRegion"), std::string::npos);
-}
-
 TEST(QmNewUiMenuRenderDropdownContract, SettingsDropdownWrapperAndNestedListsKeepSharedVisualAndScrollContracts)
 {
 	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");

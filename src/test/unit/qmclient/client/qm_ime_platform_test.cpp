@@ -161,3 +161,28 @@ TEST(QmImePlatform, StaleCandidateReloadAfterCommitIsSuppressed)
 	EXPECT_TRUE(QmImeShouldSuppressStaleCandidateReload(true, false));
 	EXPECT_FALSE(QmImeShouldSuppressStaleCandidateReload(false, false));
 }
+
+TEST(QmImePlatform, KeyConsumedByCompositionProtectsExistingContent)
+{
+	EXPECT_TRUE(QmImeKeyConsumedByComposition(KEY_BACKSPACE));
+	EXPECT_TRUE(QmImeKeyConsumedByComposition(KEY_DELETE));
+	EXPECT_TRUE(QmImeKeyConsumedByComposition(KEY_LEFT));
+	EXPECT_TRUE(QmImeKeyConsumedByComposition(KEY_RIGHT));
+	EXPECT_TRUE(QmImeKeyConsumedByComposition(KEY_HOME));
+	EXPECT_TRUE(QmImeKeyConsumedByComposition(KEY_END));
+	EXPECT_TRUE(QmImeKeyConsumedByComposition(KEY_RETURN));
+	EXPECT_TRUE(QmImeKeyConsumedByComposition(KEY_KP_ENTER));
+
+	EXPECT_FALSE(QmImeKeyConsumedByComposition(KEY_SPACE));
+	EXPECT_FALSE(QmImeKeyConsumedByComposition(KEY_TAB));
+	EXPECT_FALSE(QmImeKeyConsumedByComposition(KEY_ESCAPE));
+	EXPECT_FALSE(QmImeKeyConsumedByComposition(KEY_A));
+}
+
+TEST(QmImePlatform, EmptyTextEventDoesNotMutateBuffer)
+{
+	EXPECT_FALSE(QmImeTextEventShouldMutateBuffer(nullptr));
+	EXPECT_FALSE(QmImeTextEventShouldMutateBuffer(""));
+	EXPECT_TRUE(QmImeTextEventShouldMutateBuffer("a"));
+	EXPECT_TRUE(QmImeTextEventShouldMutateBuffer("你"));
+}

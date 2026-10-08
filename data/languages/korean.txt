@@ -1205,6 +1205,9 @@ Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
+Automatic (Qm service)
+== 자동 (Qm 서비스)
+
 Automatic effect LOD when crowded
 == 혼잡할 때 효과 자동 경량화
 
@@ -2753,12 +2756,6 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 == 라틴 텍스트용 사용자 정의 글꼴(패밀리 또는 패밀리 + 스타일)
 
-Custom font weight (variable fonts)
-== 사용자 지정 글꼴 굵기(가변 글꼴)
-
-Custom Font:
-== 사용자 정의 글꼴:
-
 Custom prompt template
 == 사용자 정의 프롬프트 템플릿
 
@@ -2990,6 +2987,9 @@ Debug SQL.
 Debug tile layer clipping.
 == 디버그 타일 레이어 클리핑
 
+Decorative throws
+== 장식용 투척물
+
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 전용 WebSocket 주소 (비우면 wss://qmclient.icu/ws 사용)
 
@@ -3016,6 +3016,9 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 
 DeepL API
 == DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: 매월 50만 자(deepl.com에서 등록; 무료 키는 :fx로 끝남)
 
 DeepL API Key (free keys end with :fx)
 == DeepL API 키(무료 키는 :fx로 끝남)
@@ -3722,6 +3725,9 @@ Edit touch controls
 Editor
 == 편집기
 
+Egg
+== 달걀
+
 Elastic
 == 탄력적
 
@@ -3844,6 +3850,9 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == 프리즈 시 사용자 정의 예측 여백 활성화
+
+Enable decorative grass, tomato and egg throws
+== 풀, 토마토, 달걀 장식용 투척물 활성화
 
 Enable Deleting
 == 삭제 활성화
@@ -5138,6 +5147,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 그래픽 추적 수준: 0 = 끄기, 1 = 주기적 요약, 2 = 요약 및 느린 프레임, 3 = 상세 백엔드 추적
 
+Grass
+== 풀
+
 Greek
 == 그리스 문자
 
@@ -5592,7 +5604,7 @@ Ignored legacy Dynamic Island edge margin
 == 기존 다이내믹 아일랜드 가장자리 여백은 무시됨
 
 IME
-== IME
+== 입력기
 
 IME background color
 == IME 배경 색상
@@ -5614,9 +5626,6 @@ IME text color
 
 Import from clipboard
 == 클립보드에서 가져오기
-
-Improved Anti Ping
-== 개선된 안티 핑
 
 Improved anti ping
 == 개선된 안티 핑
@@ -6004,6 +6013,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 투표 후 투표 창 유지
+
+Key
+== 키
 
 Key binds
 == 키 바인드
@@ -8384,9 +8396,6 @@ Player feet skin
 Player hands color
 == 플레이어 손 색상
 
-Player Indicator
-== 플레이어 표시기
-
 Player indicator
 == 플레이어 표시기
 
@@ -10444,6 +10453,12 @@ Server kick/spec votes are no longer actively moderated.
 
 Server kick/spec votes will now be actively moderated.
 == 서버 추방/관전 투표가 이제 적극적으로 관리됩니다.
+
+Server list is more than five minutes old
+== 서버 목록이 오 분 넘게 갱신되지 않았습니다
+
+Server list refresh failed; showing the previous list
+== 서버 목록을 새로 고치지 못해 이전 목록을 표시합니다
 
 Server name
 == 서버 이름
@@ -12722,9 +12737,6 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == "default" 이름은 예약되어 있습니다.
 
-The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
-== 이전 qmclient/fonts 폴더는 더 이상 검색하지 않습니다. 사용자 지정 글꼴을 설정 폴더의 fonts/fonts_store로 직접 옮겨 주세요. 일반 버전은 사용자 설정 폴더를, 포터블 버전은 profile을 사용합니다. data/fonts에 포함된 기본 글꼴은 옮길 필요가 없습니다.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 귓속말 상대가 아직 재접속하지 않았거나 게임을 떠났습니다. 잠시 기다리거나 다른 사람에게 귓속말하세요
 
@@ -12880,6 +12892,21 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 이 툴팁은 ui_widget::Tooltip — CTooltips 위의 얇은 레이어에 의해 제공됩니다.
+
+Throw a decorative grass, tomato or egg projectile
+== 풀, 토마토 또는 달걀 장식용 투척물 던지기
+
+Throw egg key
+== 달걀 던지기 키
+
+Throw grass key
+== 풀 던지기 키
+
+Throw tomato key
+== 토마토 던지기 키
+
+Throwables
+== 투척물
 
 Tick delay before executing qm_execute_on_join
 == qm_execute_on_join 실행 전 지연 시간 (tick)
@@ -13153,6 +13180,9 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == 이 서버를 특정 커뮤니티에 등록하기 위한 토큰
+
+Tomato
+== 토마토
 
 Too many translation tasks
 == 번역 작업이 너무 많음
@@ -13450,9 +13480,6 @@ UI size percentage
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d개의 선택된 항목을 삭제할 수 없습니다. 첫 번째 실패 항목은 '%s'입니다.
-
-Unable to delete skin
-== 스킨을 삭제할 수 없습니다
 
 Unable to delete the demo '%s'
 == 데모 '%s'을(를) 삭제할 수 없습니다

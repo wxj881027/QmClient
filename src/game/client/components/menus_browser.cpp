@@ -1247,6 +1247,17 @@ void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItem
 	// The bar is only shown while loading and fades out when it's done.
 	CUIRect RefreshBar;
 	StatusBox.HSplitTop(5.0f, &RefreshBar, &StatusBox);
+	if(ServerBrowser()->GetCurrentType() != IServerBrowser::TYPE_LAN && ServerBrowser()->NumServers() > 0 &&
+		!ServerBrowser()->IsGettingServerlist() && (ServerBrowser()->IsServerlistError() || ServerBrowser()->IsServerlistStale()))
+	{
+		CUIRect Notice;
+		StatusBox.HSplitBottom(12.0f, &StatusBox, &Notice);
+		SLabelProperties Props;
+		Props.m_MaxWidth = Notice.w;
+		Props.m_EllipsisAtEnd = true;
+		Props.SetColor(ColorRGBA(1.0f, 0.75f, 0.35f, 1.0f));
+		Ui()->DoLabel(&Notice, ServerBrowser()->IsServerlistError() ? Localize("Server list refresh failed; showing the previous list") : Localize("Server list is more than five minutes old"), 10.0f, TEXTALIGN_ML, Props);
+	}
 	static float s_LoadingProgressionFadeEnd = 0.0f;
 	if(ServerBrowser()->IsRefreshing() && ServerBrowser()->LoadingProgression() < 100)
 	{

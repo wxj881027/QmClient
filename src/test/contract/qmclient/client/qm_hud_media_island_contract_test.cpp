@@ -11,7 +11,7 @@ TEST(QmHudMediaIslandSource, RemovedTuningSatelliteDoesNotRemain)
 	const std::string Source = ReadTestSourceFile("src/game/client/components/hud.cpp");
 	const std::string Header = ReadTestSourceFile("src/game/client/components/hud.h");
 	const std::string CountdownLogic = ReadTestSourceFile("src/game/client/components/hud_media_island_logic.h");
-	const std::string Menus = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
+	const std::string Menus = ReadTestSourceFile("src/game/client/QmUi/cards/QmCardCatalogHudContent.cpp");
 	const std::string Config = ReadTestSourceFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string IconHeader = ReadTestSourceFile("src/game/client/qm_icon.h");
 

@@ -90,6 +90,20 @@ class SourceKeysTest(unittest.TestCase):
                 records = source_keys.extract_known_indirect_records(path, content)
                 self.assertEqual({record.key for record in records}, {label})
 
+    def test_extracts_labels_after_content_moves_into_card_modules(self):
+        content = '\n'.join((
+            'RenderPassword("qmclient-axiom-dummy-password", "Axiom dummy password");',
+            'RenderValue("qmclient-follow-delay", "Auto-follow delay", &Id, &Value, 0, 30, "s");',
+            'RenderCheckboxTipped(&Config, "Auto weapon switch", Localize("Help text"), &Config);',
+        ))
+        for name in ("QmCardCatalogFunctionContent.cpp", "QmCardCatalogHudContent.cpp"):
+            with self.subTest(name=name):
+                path = Path("src/game/client/QmUi/cards") / name
+                records = source_keys.extract_known_indirect_records(path, content)
+                self.assertEqual({record.key for record in records}, {
+                    "Axiom dummy password", "Auto-follow delay", "Auto weapon switch",
+                })
+
     def test_extracts_tclient_dynamic_card_titles(self):
         path = Path("src/game/client/components/tclient/menus_tclient.cpp")
         content = "\n".join(

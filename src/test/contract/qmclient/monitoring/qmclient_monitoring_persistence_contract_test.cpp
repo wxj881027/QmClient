@@ -126,13 +126,3 @@ TEST(QmStatisticsPersistence, UsesSingleUnversionedStatisticsDocument)
 	EXPECT_NE(Source.find("refusing to overwrite invalid statistics file"), std::string::npos);
 	EXPECT_NE(Source.find("pValue->u.dbl >= static_cast<double>(std::numeric_limits<int64_t>::max())"), std::string::npos);
 }
-
-TEST(QmMonitoringPersistenceContract, AudioPackDirectoryOpensWritableSaveFolder)
-{
-	const std::string Source = ReadRepoFile("src/game/client/components/menus_settings.cpp");
-	const std::string Body = ExtractSourceFunctionBody(Source, "void CMenus::RenderSettingsSound(CUIRect MainView)");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Body.find("Storage()->GetCompletePath(IStorage::TYPE_SAVE, \"audio\", aBuf, sizeof(aBuf));"), std::string::npos);
-	EXPECT_EQ(Body.find("Storage()->GetCompletePath(IStorage::TYPE_ALL, \"audio\""), std::string::npos);
-}

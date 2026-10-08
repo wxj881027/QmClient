@@ -1120,8 +1120,8 @@ TEST(QmCardRegistry, RendererlessCardsNavigateToHostingCard)
 	ExpectTarget("qm:laser", "appearance-laser", "deck:appearance-laser-enhanced");
 	ExpectTarget("qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-text");
 	ExpectTarget("qm:info", "credits-qmclient", "deck:qmclient-contributors-community");
-	// 歌词开关渲染在灵动岛卡内，因此停留在 hud 页但指向承载卡。
-	ExpectTarget("qm:lyrics", "hud", "qm:dynamic_island");
+	// 歌词已由独立共享卡片承载。
+	ExpectTarget("qm:lyrics", "hud", "qm:lyrics");
 
 	// 有自己渲染器的卡不受影响，仍指向自身。
 	const qm_card_registry::SCardDefault *pFocus = qm_card_registry::FindByStableId("qm:focus_mode");
@@ -1147,9 +1147,9 @@ TEST(QmCardRegistry, SearchResultsCarryHostingCardTarget)
 		EXPECT_STREQ(It->m_Target.m_pStableId, pExpectedStableId) << pQuery;
 	};
 
-	ExpectSearchTarget("激光", "qm:laser", "appearance-laser", "deck:appearance-laser-enhanced");
-	ExpectSearchTarget("名牌", "qm:nameplate_text", "appearance-name-plate", "deck:appearance-name-plate-text");
-	ExpectSearchTarget("歌词", "qm:lyrics", "hud", "qm:dynamic_island");
+	ExpectSearchTarget("激光", "deck:appearance-laser-enhanced", "appearance-laser", "deck:appearance-laser-enhanced");
+	ExpectSearchTarget("名牌", "deck:appearance-name-plate-text", "appearance-name-plate", "deck:appearance-name-plate-text");
+	ExpectSearchTarget("歌词", "qm:lyrics", "hud", "qm:lyrics");
 }
 
 // 意图：歌词在旧栖梦子布局里有模块条目，适配层也把 Lyrics 映射到 qm:lyrics，

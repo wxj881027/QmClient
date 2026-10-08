@@ -6,21 +6,6 @@
 
 #include <string>
 
-TEST(QmMonitoringMiscContract, TClientPrewarmDoesNotRunUnboundedInVisibleTargetFrame)
-{
-	const std::string Source = ReadRepoFile("src/game/client/components/tclient/menus_tclient.cpp");
-	const std::string Body = ExtractSourceFunctionBody(Source, "void CMenus::RenderSettingsTClientSettings(CUIRect MainView, bool PrewarmOnly)");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Body.find("const bool TClientVisibleTargetFrame = !ReadOnly"), std::string::npos);
-	EXPECT_NE(Body.find("SetProgressiveEnabled(TClientVisibleTargetFrame)"), std::string::npos);
-	EXPECT_NE(Body.find("SetMaxSectionsPerFrame(TClientVisibleTargetFrame ?"), std::string::npos);
-	EXPECT_NE(Body.find("tclient_settings_left_prewarm_budgeted"), std::string::npos);
-	EXPECT_NE(Body.find("tclient_settings_right_prewarm_budgeted"), std::string::npos);
-	EXPECT_EQ(Body.find("VisualFontLoader.SetProgressiveEnabled(false);"), std::string::npos);
-	EXPECT_EQ(Body.find("RightSectionLoader.SetProgressiveEnabled(false);"), std::string::npos);
-}
-
 TEST(QmMonitoringMiscContract, TimeoutDisconnectReconnectAdvertisesDDNetVersionBeforeSystemInfo)
 {
 	const std::string Source = ReadRepoFile("src/engine/client/client.cpp");

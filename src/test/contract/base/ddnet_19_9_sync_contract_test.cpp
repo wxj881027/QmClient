@@ -55,11 +55,9 @@ TEST(DDNet199Sync, SupportsUnbufferedQuadClippingAndTuneZoneColors)
 TEST(DDNet199Sync, KeepsPredictEventsDisabledAndPopupSelectionHighlighted)
 {
 	const std::string Config = ReadTestSourceFile("src/engine/shared/config_variables.h");
-	const std::string Settings = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
 	const std::string Scoreboard = ReadTestSourceFile("src/game/client/components/scoreboard.cpp");
 
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(ClPredictEvents, cl_predict_events, 0, 0, 1"), std::string::npos);
-	EXPECT_NE(Settings.find("Predict events (experimental)"), std::string::npos);
 	EXPECT_NE(Scoreboard.find("Ui()->IsPopupOpen(&m_ScoreboardPopupContext) && m_ScoreboardPopupContext.m_ClientId == ClientId"), std::string::npos);
 }
 

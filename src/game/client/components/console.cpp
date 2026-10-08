@@ -989,6 +989,11 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 	{
 		if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
 		{
+			if(m_pGameConsole->GameClient()->Input()->HasComposition())
+			{
+				return true;
+			}
+
 			if(!m_Searching)
 			{
 				if(!m_Input.IsEmpty() || (m_UsernameReq && !m_pGameConsole->Client()->RconAuthed() && !m_UserGot))

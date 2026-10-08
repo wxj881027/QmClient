@@ -1205,6 +1205,9 @@ Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
+Automatic (Qm service)
+== 自動（Qm 服務）
+
 Automatic effect LOD when crowded
 == 同屏擁擠時自動降低特效
 
@@ -2753,12 +2756,6 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 == 拉丁文字的自訂字型（字族，或字族 + 樣式）
 
-Custom font weight (variable fonts)
-== 自訂字型字重（可變字型）
-
-Custom Font:
-== 自定義字體：
-
 Custom prompt template
 == 自定義提示詞模板
 
@@ -2990,6 +2987,9 @@ Debug SQL.
 Debug tile layer clipping.
 == 調試圖塊圖層裁剪
 
+Decorative throws
+== 裝飾投擲物
+
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 專用 WebSocket 位址（留空使用 wss://qmclient.icu/ws）
 
@@ -3016,6 +3016,9 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 
 DeepL API
 == DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free：每月 50 萬字元（在 deepl.com 註冊；免費金鑰以 :fx 結尾）
 
 DeepL API Key (free keys end with :fx)
 == DeepL API 金鑰（免費金鑰以 :fx 結尾）
@@ -3722,6 +3725,9 @@ Edit touch controls
 Editor
 == 編輯器
 
+Egg
+== 雞蛋
+
 Elastic
 == 彈性
 
@@ -3844,6 +3850,9 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == 凍結時啟用自定義預測邊距
+
+Enable decorative grass, tomato and egg throws
+== 啟用草、番茄和雞蛋裝飾投擲物
 
 Enable Deleting
 == 啟用刪除
@@ -5138,6 +5147,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 圖形追蹤等級：0 = 關閉，1 = 定期摘要，2 = 摘要與慢影格，3 = 詳細後端追蹤
 
+Grass
+== 草
+
 Greek
 == 希臘文
 
@@ -5592,7 +5604,7 @@ Ignored legacy Dynamic Island edge margin
 == 已忽略舊版靈動島邊緣外邊距
 
 IME
-== IME
+== 輸入法
 
 IME background color
 == IME 背景顏色
@@ -5614,9 +5626,6 @@ IME text color
 
 Import from clipboard
 == 從剪貼板導入
-
-Improved Anti Ping
-== 改進 Anti Ping
 
 Improved anti ping
 == 改進反 Ping
@@ -6004,6 +6013,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == 投票後不關閉投票窗口
+
+Key
+== 按鍵
 
 Key binds
 == 按鍵綁定
@@ -8384,9 +8396,6 @@ Player feet skin
 Player hands color
 == 玩家手部顏色
 
-Player Indicator
-== 玩家指示器
-
 Player indicator
 == 玩家指示器
 
@@ -10444,6 +10453,12 @@ Server kick/spec votes are no longer actively moderated.
 
 Server kick/spec votes will now be actively moderated.
 == 伺服器的踢人/旁觀投票現在會被主動管理員模式接管
+
+Server list is more than five minutes old
+== 伺服器列表已超過五分鐘未更新
+
+Server list refresh failed; showing the previous list
+== 伺服器列表重新整理失敗，正在顯示上次列表
 
 Server name
 == 伺服器名稱
@@ -12722,9 +12737,6 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == “default” 是保留名稱。
 
-The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
-== 舊目錄 qmclient/fonts 已停止掃描。請將自訂字型手動移至設定目錄下的 fonts/fonts_store。一般版使用使用者設定目錄，可攜版使用 profile。data/fonts 中隨用戶端提供的字型無須移動。
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == 你正在私聊的玩家尚未重連或已離開。請稍等，或改與他人私聊
 
@@ -12880,6 +12892,21 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 這個提示由 ui_widget::Tooltip 提供，它是 CTooltips 上的一層薄封裝。
+
+Throw a decorative grass, tomato or egg projectile
+== 投擲草、番茄或雞蛋裝飾物
+
+Throw egg key
+== 投雞蛋按鍵
+
+Throw grass key
+== 投草按鍵
+
+Throw tomato key
+== 投番茄按鍵
+
+Throwables
+== 投擲物
 
 Tick delay before executing qm_execute_on_join
 == 執行 qm_execute_on_join 前的延遲（tick）
@@ -13153,6 +13180,9 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == 用於將此伺服器註冊到特定社區的令牌
+
+Tomato
+== 番茄
 
 Too many translation tasks
 == 翻譯任務過多
@@ -13450,9 +13480,6 @@ UI size percentage
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == 無法刪除 %d 個選中項。第一個失敗項是“%s”。
-
-Unable to delete skin
-== 無法刪除皮膚
 
 Unable to delete the demo '%s'
 == 無法刪除回放文件“%s”

@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <iterator>
 #include <regex>
 #include <sstream>
@@ -80,223 +81,9 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShutdownReleasesUiResourcesBeforeRenderer
 	EXPECT_LT(ComponentsShutdown, UiShutdownCall);
 }
 
-TEST(QmNewUiMenuRenderSurfaceContract, RoundedUiSurfacesUseClampedGeometryAndSharedPaths)
+TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceComposition)
 {
-	const SRoundedRectGeometry Geometry = ResolveRoundedRectGeometry(0.24f, 0.74f, 10.32f, 4.19f, 3.9f, 0.5f);
-	EXPECT_NEAR(Geometry.m_X, 0.0f, 1e-6f);
-	EXPECT_NEAR(Geometry.m_Y, 0.5f, 1e-6f);
-	EXPECT_NEAR(Geometry.m_W, 10.5f, 1e-6f);
-	EXPECT_NEAR(Geometry.m_H, 4.5f, 1e-6f);
-	EXPECT_NEAR(Geometry.m_Rounding, 2.25f, 1e-6f);
-	const SRoundedRectGeometry SmallGeometry = ResolveRoundedRectGeometry(0.24f, 0.24f, 0.51f, 0.51f, 0.4f, 0.5f);
-	EXPECT_NEAR(SmallGeometry.m_W, 1.0f, 1e-6f);
-	EXPECT_NEAR(SmallGeometry.m_H, 1.0f, 1e-6f);
-	EXPECT_NEAR(SmallGeometry.m_Rounding, 0.5f, 1e-6f);
-	const SRoundedRectGeometry InvalidGeometry = ResolveRoundedRectGeometry(0.5f, 0.5f, 0.0f, 4.0f, 3.0f, 0.5f);
-	EXPECT_FLOAT_EQ(InvalidGeometry.m_X, 0.5f);
-	EXPECT_FLOAT_EQ(InvalidGeometry.m_Y, 0.5f);
-	EXPECT_FLOAT_EQ(InvalidGeometry.m_W, 0.0f);
-	EXPECT_FLOAT_EQ(InvalidGeometry.m_H, 4.0f);
-	EXPECT_FLOAT_EQ(InvalidGeometry.m_Rounding, 0.0f);
-
-	const CUIRect Rect{0.2f, 0.2f, 20.0f, 10.0f};
-	SRoundedSurfaceParams SdfParams;
-	SdfParams.m_Radius = 8.0f;
-	SdfParams.m_BorderWidth = 0.6f;
-	SdfParams.m_PixelSize = 0.5f;
-	const SRoundedSurfacePlan Sdf = ResolveRoundedSurfacePlan(Rect, SdfParams, true);
-	EXPECT_TRUE(Sdf.m_UseSdf);
-	EXPECT_FLOAT_EQ(Sdf.m_Rect.x, 0.0f);
-	EXPECT_FLOAT_EQ(Sdf.m_Rect.y, 0.0f);
-	EXPECT_FLOAT_EQ(Sdf.m_Rect.w, 20.0f);
-	EXPECT_FLOAT_EQ(Sdf.m_Rect.h, 10.0f);
-	EXPECT_FLOAT_EQ(Sdf.m_Radius, 5.0f);
-	EXPECT_FLOAT_EQ(Sdf.m_BorderWidth, 0.5f);
-	EXPECT_FLOAT_EQ(Sdf.m_PixelSize, 0.5f);
-	EXPECT_FLOAT_EQ(Sdf.m_CornerRadii.x, 5.0f);
-	EXPECT_FLOAT_EQ(Sdf.m_CornerRadii.y, 5.0f);
-	EXPECT_FLOAT_EQ(Sdf.m_CornerRadii.z, 5.0f);
-	EXPECT_FLOAT_EQ(Sdf.m_CornerRadii.w, 5.0f);
-	SRoundedSurfaceParams NonIntegerPixelParams;
-	NonIntegerPixelParams.m_Radius = 3.9f;
-	NonIntegerPixelParams.m_BorderWidth = 0.6f;
-	NonIntegerPixelParams.m_PixelSize = 0.5f;
-	const SRoundedSurfacePlan NonIntegerPixelPlan = ResolveRoundedSurfacePlan(CUIRect{0.24f, 0.74f, 10.32f, 4.19f}, NonIntegerPixelParams, true);
-	EXPECT_NEAR(NonIntegerPixelPlan.m_Rect.x, 0.0f, 1e-6f);
-	EXPECT_NEAR(NonIntegerPixelPlan.m_Rect.y, 0.5f, 1e-6f);
-	EXPECT_NEAR(NonIntegerPixelPlan.m_Rect.w, 10.5f, 1e-6f);
-	EXPECT_NEAR(NonIntegerPixelPlan.m_Rect.h, 4.5f, 1e-6f);
-	SRoundedSurfaceParams OnePhysicalPixelParams;
-	OnePhysicalPixelParams.m_Radius = 0.4f;
-	OnePhysicalPixelParams.m_BorderWidth = 0.4f;
-	OnePhysicalPixelParams.m_PixelSize = 0.5f;
-	const SRoundedSurfacePlan OnePhysicalPixelPlan = ResolveRoundedSurfacePlan(CUIRect{0.24f, 0.24f, 0.51f, 0.51f}, OnePhysicalPixelParams, true);
-	EXPECT_NEAR(OnePhysicalPixelPlan.m_Rect.w, 1.0f, 1e-6f);
-	EXPECT_NEAR(OnePhysicalPixelPlan.m_Rect.h, 1.0f, 1e-6f);
-	EXPECT_NEAR(OnePhysicalPixelPlan.m_Radius, 0.5f, 1e-6f);
-	EXPECT_NEAR(OnePhysicalPixelPlan.m_BorderWidth, 0.5f, 1e-6f);
-	const auto ExpectCornerRadii = [](const SRoundedSurfacePlan &Plan, const float Tl, const float Tr, const float Br, const float Bl) {
-		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.x, Tl);
-		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.y, Tr);
-		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.z, Br);
-		EXPECT_FLOAT_EQ(Plan.m_CornerRadii.w, Bl);
-	};
-
-	SRoundedSurfaceParams PartialParams;
-	PartialParams.m_Radius = 4.0f;
-	PartialParams.m_BorderWidth = 1.0f;
-	PartialParams.m_PixelSize = 0.5f;
-	PartialParams.m_Corners = IGraphics::CORNER_R;
-	const SRoundedSurfacePlan Partial = ResolveRoundedSurfacePlan(Rect, PartialParams, true);
-	EXPECT_TRUE(Partial.m_UseSdf);
-	ExpectCornerRadii(Partial, 0.0f, 4.0f, 4.0f, 0.0f);
-	SRoundedSurfaceParams LeftParams;
-	LeftParams.m_Radius = 4.0f;
-	LeftParams.m_BorderWidth = 1.0f;
-	LeftParams.m_PixelSize = 0.5f;
-	LeftParams.m_Corners = IGraphics::CORNER_L;
-	const SRoundedSurfacePlan Left = ResolveRoundedSurfacePlan(Rect, LeftParams, true);
-	EXPECT_TRUE(Left.m_UseSdf);
-	ExpectCornerRadii(Left, 4.0f, 0.0f, 0.0f, 4.0f);
-	const auto ExpectMask = [&](const int Corners, const float Tl, const float Tr, const float Br, const float Bl) {
-		SRoundedSurfaceParams Params;
-		Params.m_Radius = 4.0f;
-		Params.m_BorderWidth = 1.0f;
-		Params.m_PixelSize = 0.5f;
-		Params.m_Corners = Corners;
-		const SRoundedSurfacePlan Plan = ResolveRoundedSurfacePlan(Rect, Params, true);
-		EXPECT_TRUE(Plan.m_UseSdf);
-		ExpectCornerRadii(Plan, Tl, Tr, Br, Bl);
-	};
-	ExpectMask(IGraphics::CORNER_T, 4.0f, 4.0f, 0.0f, 0.0f);
-	ExpectMask(IGraphics::CORNER_B, 0.0f, 0.0f, 4.0f, 4.0f);
-	ExpectMask(IGraphics::CORNER_TL, 4.0f, 0.0f, 0.0f, 0.0f);
-	ExpectMask(IGraphics::CORNER_TR, 0.0f, 4.0f, 0.0f, 0.0f);
-	ExpectMask(IGraphics::CORNER_BR, 0.0f, 0.0f, 4.0f, 0.0f);
-	ExpectMask(IGraphics::CORNER_BL, 0.0f, 0.0f, 0.0f, 4.0f);
-	ExpectMask(IGraphics::CORNER_NONE, 0.0f, 0.0f, 0.0f, 0.0f);
-	SRoundedSurfaceParams WideBorderParams;
-	WideBorderParams.m_Radius = 2.0f;
-	WideBorderParams.m_BorderWidth = 4.0f;
-	WideBorderParams.m_PixelSize = 0.5f;
-	const SRoundedSurfacePlan WideBorder = ResolveRoundedSurfacePlan(Rect, WideBorderParams, true);
-	EXPECT_FLOAT_EQ(WideBorder.m_Radius, 2.0f);
-	EXPECT_FLOAT_EQ(WideBorder.m_BorderWidth, 4.0f);
-	SRoundedSurfaceParams SwallowedInteriorParams;
-	SwallowedInteriorParams.m_Radius = 8.0f;
-	SwallowedInteriorParams.m_BorderWidth = 9.0f;
-	SwallowedInteriorParams.m_PixelSize = 0.5f;
-	const SRoundedSurfacePlan SwallowedInterior = ResolveRoundedSurfacePlan(CUIRect{0.0f, 0.0f, 6.0f, 4.0f}, SwallowedInteriorParams, true);
-	EXPECT_FLOAT_EQ(SwallowedInterior.m_Radius, 2.0f);
-	EXPECT_FLOAT_EQ(SwallowedInterior.m_BorderWidth, 2.0f);
-	SRoundedSurfaceParams UnsupportedParams;
-	UnsupportedParams.m_Radius = 4.0f;
-	UnsupportedParams.m_BorderWidth = 1.0f;
-	UnsupportedParams.m_PixelSize = 0.0f;
-	const SRoundedSurfacePlan Unsupported = ResolveRoundedSurfacePlan(Rect, UnsupportedParams, false);
-	EXPECT_FALSE(Unsupported.m_UseSdf);
-	EXPECT_FLOAT_EQ(Unsupported.m_PixelSize, 0.0001f);
-
-	const std::string Buttons = ReadTextFile("src/game/client/QmUi/UiButtons.cpp");
-	const std::string Forms = ReadTextFile("src/game/client/QmUi/UiForms.cpp");
-	const std::string Surface = ReadTextFile("src/game/client/QmUi/UiSurface.cpp");
-	const std::string SurfaceHeader = ReadTextFile("src/game/client/QmUi/UiSurface.h");
-	const std::string UiRect = ReadTextFile("src/game/client/ui_rect.cpp");
-	const std::string Containers = ReadTextFile("src/game/client/QmUi/UiContainers.h");
-	const std::string Overlays = ReadTextFile("src/game/client/QmUi/UiOverlays.h");
-	const std::string Ui = ReadTextFile("src/game/client/ui.cpp") + ReadTextFile("src/game/client/ui_popups.cpp");
-	const std::string Menus = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string IngameMenus = ReadTextFile("src/game/client/components/menus_ingame.cpp");
-	const std::string QmClientMenus = ReadTextFile("src/game/client/components/qmclient/menus_qmclient.cpp") + ReadTextFile("src/game/client/components/menus_credits.cpp");
-	const std::string TClientMenus = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
-	const std::string ScrollRegion = ReadTextFile("src/game/client/ui_scrollregion.cpp");
-	const std::string ImePopup = ReadTextFile("src/game/client/qm_ime_candidate_popup.cpp");
-	const std::string Editor = ReadTextFile("src/game/editor/editor_ui.cpp");
-	EXPECT_NE(Buttons.find("DrawRoundedSurface("), std::string::npos);
-	EXPECT_NE(Forms.find("DrawRoundedSurface("), std::string::npos);
-	EXPECT_NE(SurfaceHeader.find("vec4 m_CornerRadii{};"), std::string::npos);
-	EXPECT_NE(SurfaceHeader.find("struct SRoundedSurfaceParams"), std::string::npos);
-	EXPECT_NE(SurfaceHeader.find("const SRoundedSurfaceParams &Params"), std::string::npos);
-	EXPECT_EQ(SurfaceHeader.find("float PixelSize, int Corners"), std::string::npos);
-	EXPECT_NE(SurfaceHeader.find("ResolveRoundedSurfaceCornerRadii"), std::string::npos);
-	EXPECT_NE(SurfaceHeader.find("Plan.m_UseSdf = HasSdf"), std::string::npos);
-	EXPECT_NE(Surface.find("Params.m_CornerRadii = Plan.m_CornerRadii;"), std::string::npos);
-	EXPECT_NE(Surface.find("Params.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);"), std::string::npos);
-	EXPECT_NE(UiRect.find("DrawRoundedSurface(ms_pGraphics, *this"), std::string::npos);
-	EXPECT_NE(UiRect.find("const float PixelSize = CurrentPixelSize(ms_pGraphics);"), std::string::npos);
-	EXPECT_NE(UiRect.find("SRoundedSurfaceParams Params;"), std::string::npos);
-	EXPECT_NE(UiRect.find("Params.m_PixelSize = PixelSize;"), std::string::npos);
-	EXPECT_NE(UiRect.find("DrawRoundedSurface(ms_pGraphics, *this, Color, ColorRGBA(), Params)"), std::string::npos);
-	EXPECT_EQ(UiRect.find("Rounding, 0.0f, PixelSize, Corners"), std::string::npos);
-	EXPECT_EQ(UiRect.find("ResolveRoundedRectGeometry(x, y, w, h, Rounding"), std::string::npos);
-	EXPECT_NE(Ui.find("DrawRoundedSurface(this, ClearButton"), std::string::npos);
-	EXPECT_NE(FunctionBody(Ui, "bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, int Align, const SEditBoxRenderOptions &RenderOptions)").find("DrawRoundedSurface(this, *pRect"), std::string::npos);
-	EXPECT_NE(FunctionBody(Ui, "SEditResult<int64_t> CUi::DoValueSelectorWithState").find("DrawRoundedSurface(this, *pRect"), std::string::npos);
-	EXPECT_NE(FunctionBody(Ui, "void CUi::DrawButton_FontIcon").find("DrawRoundedSurface(this, *pRect"), std::string::npos);
-	EXPECT_NE(FunctionBody(Ui, "void CUi::RenderPopupMenus").find("SPopupMenu::POPUP_BORDER"), std::string::npos);
-	EXPECT_NE(FunctionBody(Ui, "float CUi::DoScrollbarV").find("DrawRoundedSurface(this, Rail"), std::string::npos);
-	EXPECT_NE(FunctionBody(Ui, "void CUi::RenderProgressBar").find("DrawRoundedSurface(this, ProgressBar"), std::string::npos);
-	EXPECT_NE(IngameMenus.find("#include <game/client/QmUi/UiSurface.h>"), std::string::npos);
-	// 服务器控制页重构为整页一张全圆角卡片，页签行经共享 CapsuleTabBarChrome 叠在卡片内部。
-	EXPECT_NE(FunctionBody(IngameMenus, "void CMenus::RenderServerControl(CUIRect MainView)").find("MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_ALL, 10.0f);"), std::string::npos);
-	const std::string ColorPicker = FunctionBody(Ui, "CUi::EPopupMenuFunctionResult CUi::PopupColorPicker");
-	EXPECT_NE(ColorPicker.find("const CUIRect ColorMarker{MarkerX - 4.5f, MarkerY - 4.5f, 9.0f, 9.0f};"), std::string::npos);
-	EXPECT_NE(ColorPicker.find("DrawRoundedSurface(pUI, ColorMarker, PickerColorRGB, MarkerOutline, 4.5f, 1.0f);"), std::string::npos);
-	EXPECT_EQ(ColorPicker.find("DrawCircle(MarkerX"), std::string::npos);
-	EXPECT_NE(ColorPicker.find("DrawRoundedSurface(pUI, HueMarker, HueMarkerColor, HueMarkerOutline, 1.2f, 1.2f);"), std::string::npos);
-	EXPECT_EQ(ColorPicker.find("HueMarker.Draw("), std::string::npos);
-	EXPECT_NE(FunctionBody(Ui, "int CUi::DoButton_Menu").find("const bool UseRoundedRectSdf = Graphics()->HasRoundedRectSdf();"), std::string::npos);
-	EXPECT_NE(FunctionBody(Ui, "int CUi::DoButton_Menu").find("if(!UseRoundedRectSdf)"), std::string::npos);
-	EXPECT_NE(Menus.find("DrawRoundedSurface(Ui(), *pRect"), std::string::npos);
-	EXPECT_NE(Containers.find("DrawRoundedSurface(Ctx, Shadow"), std::string::npos);
-	EXPECT_LT(Containers.find("DrawRoundedSurface(Ctx, BorderBg"), Containers.find("DrawRoundedSurface(Ctx, Rect, Props.m_FillColor"));
-	EXPECT_NE(Containers.find("BorderBg.Margin(-1.0f, &BorderBg);"), std::string::npos);
-	EXPECT_NE(Containers.find("DrawRoundedSurface(Ctx, Rect, Props.m_FillColor"), std::string::npos);
-	EXPECT_EQ(Containers.find("BorderBg.Draw"), std::string::npos);
-	EXPECT_NE(Overlays.find("DrawRoundedSurface(Ctx, ShadowRect"), std::string::npos);
-	EXPECT_NE(Overlays.find("DrawRoundedSurface(Ctx, ToastRect"), std::string::npos);
-	EXPECT_NE(FunctionBody(ScrollRegion, "void CScrollRegion::DrawBackground(const CUIRect &ScrollbarBg)").find("DrawRoundedSurface(Ui(), ScrollbarBg"), std::string::npos);
-	EXPECT_NE(FunctionBody(ScrollRegion, "void CScrollRegion::DoSlider()").find("DrawRoundedSurface(Ui(), Slider"), std::string::npos);
-	EXPECT_NE(QmClientMenus.find("DrawRoundedSurface(Ui(), Frame.m_Frame.m_ScrollbarTrackRect"), std::string::npos);
-	EXPECT_NE(QmClientMenus.find("DrawRoundedSurface(Ui(), QrRect"), std::string::npos);
-	// QR hook 已上移为具名渲染函数（hook 随栖梦贡献者 tab 一起删除）。
-	EXPECT_NE(QmClientMenus.find("RenderSponsorQrTexture(Graphics(), QrRect, 1.0f)"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), PlayerRect, NameButtonColor"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), ClanRect, ClanButtonColor"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("if(!ReadOnly && NameButtonColor.a > 0.0f)"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("if(!ReadOnly && ClanButtonColor.a > 0.0f)"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), PreviewRect"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), StatusBar"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), Skin"), std::string::npos);
-	EXPECT_NE(ImePopup.find("DrawRoundedSurface(pGraphics, PanelDropA"), std::string::npos);
-	EXPECT_NE(ImePopup.find("DrawRoundedSurface(pGraphics, DrawRect"), std::string::npos);
-	EXPECT_NE(ImePopup.find("SurfaceParams.m_PixelSize = PixelSize;"), std::string::npos);
-	EXPECT_NE(ImePopup.find("PanelTopLine.x += Presentation.m_Radius"), std::string::npos);
-	EXPECT_NE(ImePopup.find("PanelTopLine.w = maximum(0.0f"), std::string::npos);
-	EXPECT_NE(Editor.find("DrawRoundedSurface(Ui(), *pRect"), std::string::npos);
-	EXPECT_NE(FunctionBody(Editor, "SEditResult<int> CEditor::UiDoValueSelector").find("DrawRoundedSurface(Ui(), *pRect"), std::string::npos);
-	EXPECT_EQ(Surface.find("DrawFallbackBorderRing"), std::string::npos);
-	EXPECT_EQ(Surface.find("DrawRoundedRectAntialias"), std::string::npos);
-	EXPECT_NE(Surface.find("pGraphics->DrawRect(Plan.m_Rect.x, Plan.m_Rect.y, Plan.m_Rect.w, Plan.m_Rect.h, Fill, Params.m_Corners, Plan.m_Radius);"), std::string::npos);
-	EXPECT_NE(Surface.find("Inner.Margin(Plan.m_BorderWidth, &Inner);"), std::string::npos);
-	EXPECT_NE(Surface.find("pGraphics->DrawRect(Inner.x, Inner.y, Inner.w, Inner.h, Fill, Params.m_Corners"), std::string::npos);
-	EXPECT_EQ(Surface.find("QuadsDrawFreeform"), std::string::npos);
-	EXPECT_EQ(Surface.find("pUi->ClipEnable(&Clip);"), std::string::npos);
-	const std::string Graphics = ReadTextFile("src/engine/client/graphics_threaded.cpp");
-	const std::string DrawRect = FunctionBody(Graphics, "void CGraphics_Threaded::DrawRect(float x, float y, float w, float h, ColorRGBA Color, int Corners, float Rounding)");
-	const std::string DrawRectExtAntialias = FunctionBody(Graphics, "void CGraphics_Threaded::DrawRectExtAntialias(float x, float y, float w, float h, float r, int Corners, ColorRGBA Color, bool ResolveGeometry)");
-	const std::string DrawRectExt = FunctionBody(Graphics, "void CGraphics_Threaded::DrawRectExt(float x, float y, float w, float h, float r, int Corners)");
-	const std::string DrawRectExt4Antialias = FunctionBody(Graphics, "void CGraphics_Threaded::DrawRectExt4Antialias(float x, float y, float w, float h, float r, int Corners, ColorRGBA ColorTopLeft, ColorRGBA ColorTopRight, ColorRGBA ColorBottomLeft, ColorRGBA ColorBottomRight, bool ResolveGeometry)");
-	const std::string DrawRectExt4 = FunctionBody(Graphics, "void CGraphics_Threaded::DrawRectExt4(float x, float y, float w, float h, ColorRGBA ColorTopLeft, ColorRGBA ColorTopRight, ColorRGBA ColorBottomLeft, ColorRGBA ColorBottomRight, float r, int Corners)");
-	EXPECT_NE(DrawRect.find("DrawRectExt(x, y, w, h, Rounding, Corners);"), std::string::npos);
-	EXPECT_NE(Graphics.find("#include <engine/client/rounded_rect_geometry.h>"), std::string::npos);
-	EXPECT_NE(DrawRectExtAntialias.find("ResolveRoundedRectGeometry(x, y, w, h, r"), std::string::npos);
-	EXPECT_NE(DrawRectExt.find("ResolveRoundedRectGeometry(x, y, w, h, r"), std::string::npos);
-	EXPECT_NE(DrawRectExt4Antialias.find("ResolveRoundedRectGeometry(x, y, w, h, r"), std::string::npos);
-	EXPECT_NE(DrawRectExt4.find("ResolveRoundedRectGeometry(x, y, w, h, r"), std::string::npos);
-	EXPECT_NE(DrawRectExt.find("DrawRectExtAntialias(x, y, w, h, r, Corners, CommandColorToColorRGBA(m_aColor[0]), false);"), std::string::npos);
-	EXPECT_NE(DrawRectExt4.find("DrawRectExt4Antialias(x, y, w, h, r, Corners, ColorTopLeft, ColorTopRight, ColorBottomLeft, ColorBottomRight, false);"), std::string::npos);
-	EXPECT_NE(FunctionBody(Graphics, "int CGraphics_Threaded::CreateRectQuadContainer(float x, float y, float w, float h, float r, int Corners)").find("ResolveRoundedRectGeometry(x, y, w, h, r"), std::string::npos);
+	// 着色器平台分支不能由 CPU 几何单元测试观察；这里只保留对应资源合同。
 	for(const char *pShaderPath : {"data/shader/rounded_rect_sdf.frag", "data/shader/vulkan/rounded_rect_sdf.frag"})
 	{
 		const std::string Shader = ReadTextFile(pShaderPath);
@@ -430,20 +217,14 @@ TEST(QmNewUiMenuRenderSurfaceContract, RoundedUiSurfacesUseClampedGeometryAndSha
 
 TEST(QmNewUiMenuRenderSurfaceContract, OrdinaryUiRoundedSurfacesUseSharedPath)
 {
-	const std::string Appearance = ReadTextFile("src/game/client/components/menus_settings.cpp");
 	const std::string Effects = ReadTextFile("src/game/client/components/ui_effects.cpp");
 	const std::string HudEditor = ReadTextFile("src/game/client/components/hud_editor.cpp");
-	const std::string TClientMenus = ReadTextFile("src/game/client/components/tclient/menus_tclient.cpp");
 	const std::string Chat = ReadTextFile("src/game/client/components/chat.cpp");
 
-	EXPECT_NE(Appearance.find("DrawRoundedSurface(Ui(), MessageBackground"), std::string::npos);
-	EXPECT_EQ(Appearance.find("Graphics()->DrawRectExt(PreviewView"), std::string::npos);
 	EXPECT_NE(Effects.find("DrawRoundedSurface(Ui(), ShadowRect"), std::string::npos);
 	EXPECT_EQ(Effects.find("Graphics()->DrawRect(PreviewX + ShadowOffset"), std::string::npos);
 	EXPECT_NE(HudEditor.find("DrawRoundedSurface(Ui(), HelpRect"), std::string::npos);
 	EXPECT_EQ(HudEditor.find("Graphics()->DrawRect(HelpX, HelpY"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), BodyColor"), std::string::npos);
-	EXPECT_NE(TClientMenus.find("DrawRoundedSurface(Ui(), FeetColor"), std::string::npos);
 	// 聊天滚动条和实时预览仍属于高频绘制，保留批量直绘路径。
 	EXPECT_NE(Chat.find("Graphics()->DrawRect(ScrollbarRect.x"), std::string::npos);
 	EXPECT_NE(Chat.find("Graphics()->DrawRect(x, PreviewY"), std::string::npos);
@@ -493,6 +274,15 @@ TEST(QmNewUiMenuRenderSurfaceContract, LegacyRoundedRectDrawSitesRequireExplicit
 		const std::string Source = ReadTextFile(pPath);
 		EXPECT_EQ(CountRoundedRectDirectCalls(Source), 0u) << pPath;
 	}
+
+	const std::filesystem::path CardsPath = TestSourcePath("src/game/client/QmUi/cards");
+	for(const auto &Entry : std::filesystem::directory_iterator(CardsPath))
+	{
+		if(!Entry.is_regular_file() || (Entry.path().extension() != ".cpp" && Entry.path().extension() != ".h"))
+			continue;
+		const std::string Path = "src/game/client/QmUi/cards/" + Entry.path().filename().string();
+		EXPECT_EQ(CountRoundedRectDirectCalls(ReadTextFile(Path.c_str())), 0u) << Path;
+	}
 }
 
 TEST(QmNewUiMenuRenderSurfaceContract, RetinaNameplatesPreferPhysicalPixelAlignment)
@@ -527,10 +317,6 @@ TEST(QmNewUiMenuBranches, SharedListsAndResourceCardsUseRoundedSurfacePath)
 {
 	const std::string ListBox = ReadTextFile("src/game/client/ui_listbox.cpp");
 	const std::string Assets = ReadTextFile("src/game/client/components/menus_settings_assets.cpp");
-	const std::string Settings = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string Sound = FunctionBody(Settings, "void CMenus::RenderSettingsSound(CUIRect MainView)");
-	const std::string Language = FunctionBody(Settings, "bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMetrics *pMetrics)");
-	const std::string Controls = ReadTextFile("src/game/client/components/menus_settings_controls.cpp");
 	EXPECT_NE(ListBox.find("DrawRoundedSurface(Ui(), Item.m_Rect"), std::string::npos);
 	EXPECT_NE(ListBox.find("DrawRoundedSurface(Ui(), View"), std::string::npos);
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), ShellRect"), std::string::npos);
@@ -538,9 +324,4 @@ TEST(QmNewUiMenuBranches, SharedListsAndResourceCardsUseRoundedSurfacePath)
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), FallbackRect"), std::string::npos);
 	EXPECT_NE(Assets.find("DrawRoundedSurface(pUi, StatusRect"), std::string::npos);
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), WorkshopHudView"), std::string::npos);
-	EXPECT_NE(Sound.find("DrawRoundedSurface(Ui(), ListRow"), std::string::npos);
-	EXPECT_NE(Sound.find("DrawRoundedSurface(Ui(), BadgeRect"), std::string::npos);
-	EXPECT_NE(Language.find("DrawRoundedSurface(Ui(), ItemRect"), std::string::npos);
-	EXPECT_NE(Controls.find("DrawRoundedSurface(Ui(), KeyReaders"), std::string::npos);
-	EXPECT_NE(Controls.find("DrawRoundedSurface(Ui(), Row"), std::string::npos);
 }

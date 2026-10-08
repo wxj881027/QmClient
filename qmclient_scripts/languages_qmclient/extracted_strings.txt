@@ -400,6 +400,7 @@ Auto-translate outgoing messages
 Auto-translation mode (0=Trigger on common source languages only, 1=Always translate)
 Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
+Automatic (Qm service)
 Automatic effect LOD when crowded
 Automatic gain control (0=off 1=on)
 Automatic game-end scoreboard screenshot
@@ -916,8 +917,6 @@ Custom community list fetch URL (must be https, leave empty to disable)
 Custom font for Chinese/CJK text (family, or family + style); empty = follow the Latin custom font
 Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
-Custom font weight (variable fonts)
-Custom Font:
 Custom prompt template
 Custom Provider API Key
 Custom Provider endpoint
@@ -995,6 +994,7 @@ Debug quad layer clipping.
 Debug quad layer cluster clipping.
 Debug SQL.
 Debug tile layer clipping.
+Decorative throws
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 Deep freeze color
 Deep freeze opacity
@@ -1004,6 +1004,7 @@ Deep unfreeze opacity
 Deep unfreeze tile outline color
 Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
 DeepL API Key (free keys end with :fx)
 DeepL API quota depends on your subscription. Get an API key at deepl.com.
 DeepSeek
@@ -1239,6 +1240,7 @@ Edit player and dummy identity information
 Edit skin texture
 Edit touch controls
 Editor
+Egg
 Elastic
 Elastic back
 Elevated
@@ -1280,6 +1282,7 @@ Enable coloring and hearts for friends
 Enable connections from vanilla 0.6 clients
 Enable controller
 Enable custom prediction margin when frozen
+Enable decorative grass, tomato and egg throws
 Enable Deleting
 Enable Discord RPC (requires restart)
 Enable DNSBL (DNS-based Blackhole List)
@@ -1711,6 +1714,7 @@ Graphics library texture sampling lod bias multiplied by 1000
 Graphics mode
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
+Grass
 Greek
 Greeting text
 Grenade
@@ -1870,7 +1874,6 @@ IME selected text color
 IME selection background color
 IME text color
 Import from clipboard
-Improved Anti Ping
 Improved anti ping
 In memory of me
 In-game controller sensitivity
@@ -2000,6 +2003,7 @@ Kawase
 Keep hook when teleporting
 Keep unsent message on chat close
 Keep vote window open after voting
+Key
 Key binds
 Key press count color
 Key press count font size
@@ -2793,7 +2797,6 @@ Player eyes on join. 0 = normal, 1 = pain, 2 = happy, 3 = surprised, 4 = angry, 
 Player feet color
 Player feet skin
 Player hands color
-Player Indicator
 Player indicator
 Player indicator alive Tee color
 Player indicator frozen Tee color
@@ -3480,6 +3483,8 @@ Server hostname (0.7 only)
 Server info
 Server kick/spec votes are no longer actively moderated.
 Server kick/spec votes will now be actively moderated.
+Server list is more than five minutes old
+Server list refresh failed; showing the previous list
 Server name
 Server not full
 Server password
@@ -4239,7 +4244,6 @@ The force pause timer is now over, you can exit with /spec
 The format of texture %s is not RGBA which will cause visual bugs.
 The FPS at which the recorder should record replay.
 The name "default" is reserved.
-The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 The rank 1 demo is already downloaded
 The replay list is empty or malformed
@@ -4292,6 +4296,11 @@ This team is locked using /lock. Only members of the team can unlock it using /l
 This team started already
 This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
+Throw a decorative grass, tomato or egg projectile
+Throw egg key
+Throw grass key
+Throw tomato key
+Throwables
 Tick delay before executing qm_execute_on_join
 Ticks after freeze before applying max prediction reduction
 tile
@@ -4383,6 +4392,7 @@ Toggles spec (if not available behaves as /pause)
 Toggles spec on the currently voted player
 Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off for off, toggle for toggle and nothing to show current status
 Token to register this server to a specific community
+Tomato
 Too many translation tasks
 Toolbox page
 Tooltip background color
@@ -4482,7 +4492,6 @@ UI scale
 UI server address
 UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
-Unable to delete skin
 Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 Unable to delete the screenshot '%s'

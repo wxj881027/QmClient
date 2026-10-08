@@ -1615,3 +1615,19 @@ brazilian_portuguese = "O serviço retornou uma tradução inválida ou incomple
 portuguese = "O serviço devolveu uma tradução inválida ou incompleta."
 turkish = "Hizmet geçersiz veya eksik bir çeviri döndürdü."
 polish = "Usługa zwróciła nieprawidłowe lub niepełne tłumaczenie."
+
+[[message]]
+key = "Automatic (Qm service)"
+[message.translations]
+simplified_chinese = "自动（Qm 服务）"
+traditional_chinese = "自動（Qm 服務）"
+japanese = "自動（Qm サービス）"
+korean = "자동 (Qm 서비스)"
+russian = "Автоматически (служба Qm)"
+german = "Automatisch (Qm-Dienst)"
+spanish = "Automático (servicio Qm)"
+french = "Automatique (service Qm)"
+brazilian_portuguese = "Automático (serviço Qm)"
+portuguese = "Automático (serviço Qm)"
+turkish = "Otomatik (Qm hizmeti)"
+polish = "Automatycznie (usługa Qm)"

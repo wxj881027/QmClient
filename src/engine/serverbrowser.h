@@ -363,6 +363,7 @@ public:
 	virtual bool IsRefreshing() const = 0;
 	virtual bool IsGettingServerlist() const = 0;
 	virtual bool IsServerlistError() const = 0;
+	virtual bool IsServerlistStale() const { return false; }
 	virtual int LoadingProgression() const = 0;
 	virtual uint64_t FriendListRevision() const = 0;
 	// QmClient: 当前客户端自身的位置分类（br_location 或 geoip 推断）。

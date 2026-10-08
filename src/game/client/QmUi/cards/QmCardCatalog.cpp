@@ -85,6 +85,8 @@ namespace qm_card_catalog
 
 	bool BuildCard(const SQmCardBuildContext &Ctx, const char *pStableId, SSettingsCardDefinition &Out)
 	{
+		if(ContainsStableId(ControlsCardStableIds(), pStableId))
+			return QmCardRenderHook::BuildControlsCard(Ctx, pStableId, Out);
 		if(ContainsStableId(GeneralCardStableIds(), pStableId))
 			return QmCardRenderHook::BuildGeneralCard(Ctx, pStableId, Out);
 		if(str_comp(pStableId, "qm:bind_editor") == 0)
@@ -95,6 +97,10 @@ namespace qm_card_catalog
 			return QmCardRenderHook::BuildTitleCard(Ctx, pStableId, Out);
 		if(ContainsStableId(TeeCardStableIds(), pStableId))
 			return QmCardRenderHook::BuildTeeCard(Ctx, pStableId, Out);
+		if(IsTClientCard(pStableId))
+			return QmCardRenderHook::BuildTClientCard(Ctx, pStableId, Out);
+		if(IsStandardCard(pStableId))
+			return QmCardRenderHook::BuildStandardCard(Ctx, pStableId, Out);
 		qm_module::EQmModuleId Id = qm_module::EQmModuleId::Info;
 		if(!qm_module::QmModuleIdFromStableId(pStableId, &Id))
 			return false;

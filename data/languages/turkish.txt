@@ -1205,6 +1205,9 @@ Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
+Automatic (Qm service)
+== Otomatik (Qm hizmeti)
+
 Automatic effect LOD when crowded
 == Kalabalıkta efektleri otomatik basitleştir
 
@@ -2753,12 +2756,6 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 == Latin metin için özel yazı tipi (aile veya aile + stil)
 
-Custom font weight (variable fonts)
-== Özel yazı tipi kalınlığı (değişken yazı tipleri)
-
-Custom Font:
-== Özel Yazı Tipi:
-
 Custom prompt template
 == Özel istem şablonu
 
@@ -2990,6 +2987,9 @@ Debug SQL.
 Debug tile layer clipping.
 == Döşeme katmanı kırpma hata ayıklaması.
 
+Decorative throws
+== Dekoratif fırlatmalar
+
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Özel WebSocket adresi (boşsa wss://qmclient.icu/ws kullanılır)
 
@@ -3016,6 +3016,9 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 
 DeepL API
 == DeepL API
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free: Ayda 500.000 karakter (deepl.com'da kaydolun; ücretsiz anahtarlar :fx ile biter)
 
 DeepL API Key (free keys end with :fx)
 == DeepL API Anahtarı (ücretsiz anahtarlar :fx ile biter)
@@ -3722,6 +3725,9 @@ Edit touch controls
 Editor
 == Düzenleyici
 
+Egg
+== Yumurta
+
 Elastic
 == Elastik
 
@@ -3844,6 +3850,9 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Donduğunda özel tahmin marjını etkinleştir
+
+Enable decorative grass, tomato and egg throws
+== Çimen, domates ve yumurta ile dekoratif fırlatmaları etkinleştir
 
 Enable Deleting
 == Silmeyi Etkinleştir
@@ -5138,6 +5147,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Grafik izleme düzeyi: 0 = kapalı, 1 = dönemsel özet, 2 = özet ve yavaş kareler, 3 = ayrıntılı arka uç izlemesi
 
+Grass
+== Çimen
+
 Greek
 == Yunanca
 
@@ -5592,7 +5604,7 @@ Ignored legacy Dynamic Island edge margin
 == Eski Dinamik Ada kenar boşluğu yok sayıldı
 
 IME
-== IME
+== Giriş yöntemi
 
 IME background color
 == IME arka plan rengi
@@ -5614,9 +5626,6 @@ IME text color
 
 Import from clipboard
 == Panodan içe aktar
-
-Improved Anti Ping
-== Geliştirilmiş Anti Ping
 
 Improved anti ping
 == Geliştirilmiş anti ping
@@ -6004,6 +6013,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Oylamadan sonra oylama penceresini açık tut
+
+Key
+== Tuş
 
 Key binds
 == Tuş atamaları
@@ -8384,9 +8396,6 @@ Player feet skin
 Player hands color
 == Oyuncu el rengi
 
-Player Indicator
-== Oyuncu göstergesi
-
 Player indicator
 == Oyuncu göstergesi
 
@@ -10444,6 +10453,12 @@ Server kick/spec votes are no longer actively moderated.
 
 Server kick/spec votes will now be actively moderated.
 == Sunucu atma/seyirci oyları artık aktif olarak yönetilecek.
+
+Server list is more than five minutes old
+== Sunucu listesi beş dakikadan eski
+
+Server list refresh failed; showing the previous list
+== Sunucu listesi yenilenemedi; önceki liste gösteriliyor
 
 Server name
 == Sunucu adı
@@ -12722,9 +12737,6 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == "default" adı ayrılmıştır.
 
-The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
-== Eski qmclient/fonts klasörü artık taranmıyor. Özel yazı tiplerinizi yapılandırma klasöründeki fonts/fonts_store konumuna elle taşıyın. Normal sürüm kullanıcı yapılandırma klasörünü, taşınabilir sürüm profile klasörünü kullanır. data/fonts içindeki birlikte gelen yazı tiplerinin taşınması gerekmez.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Fısıldadığınız oyuncu henüz yeniden bağlanmadı veya oyundan ayrıldı. Biraz bekleyin ya da başka birine fısıldayın
 
@@ -12880,6 +12892,21 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Bu ipucu ui_widget::Tooltip tarafından sağlanır; CTooltips üzerinde ince bir sarmalayıcıdır.
+
+Throw a decorative grass, tomato or egg projectile
+== Dekoratif çimen, domates veya yumurta fırlat
+
+Throw egg key
+== Yumurta fırlatma tuşu
+
+Throw grass key
+== Çimen fırlatma tuşu
+
+Throw tomato key
+== Domates fırlatma tuşu
+
+Throwables
+== Fırlatılabilirler
 
 Tick delay before executing qm_execute_on_join
 == qm_execute_on_join yürütülmeden önceki tick gecikmesi
@@ -13153,6 +13180,9 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Bu sunucuyu belirli bir topluluğa kaydetmek için token
+
+Tomato
+== Domates
 
 Too many translation tasks
 == Çok fazla çeviri görevi
@@ -13450,9 +13480,6 @@ UI size percentage
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d seçili öğe silinemiyor. İlk başarısız öğe '%s'.
-
-Unable to delete skin
-== Skin silinemiyor
 
 Unable to delete the demo '%s'
 == '%s' demosu silinemiyor

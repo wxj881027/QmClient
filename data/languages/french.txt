@@ -1205,6 +1205,9 @@ Auto-unspec when unfrozen
 Automate demos, screenshots, and match exports
 == Automate demos, screenshots, and match exports
 
+Automatic (Qm service)
+== Automatique (service Qm)
+
 Automatic effect LOD when crowded
 == Simplifier automatiquement les effets en foule
 
@@ -2753,12 +2756,6 @@ Custom font for icon/symbol glyphs; empty = follow CJK or Latin font
 Custom font for Latin text (family, or family + style)
 == Police perso pour le texte latin (famille, ou famille + style)
 
-Custom font weight (variable fonts)
-== Graisse de la police personnalisée (polices variables)
-
-Custom Font:
-== Police personnalisée :
-
 Custom prompt template
 == Modèle d'invite personnalisé
 
@@ -2990,6 +2987,9 @@ Debug SQL.
 Debug tile layer clipping.
 == Déboguer le clipping des couches de tuiles.
 
+Decorative throws
+== Lancers décoratifs
+
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Point de terminaison WebSocket dédié (vide utilise wss://qmclient.icu/ws)
 
@@ -3016,6 +3016,9 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 
 DeepL API
 == API DeepL
+
+DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
+== DeepL API Free : 500 000 caractères par mois (inscription sur deepl.com ; les clés gratuites se terminent par :fx)
 
 DeepL API Key (free keys end with :fx)
 == Clé API DeepL (les clés gratuites se terminent par :fx)
@@ -3722,6 +3725,9 @@ Edit touch controls
 Editor
 == Éditeur
 
+Egg
+== Œuf
+
 Elastic
 == Élastique
 
@@ -3844,6 +3850,9 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Activer la marge de prédiction personnalisée lorsqu'il est gelé
+
+Enable decorative grass, tomato and egg throws
+== Activer les lancers décoratifs d’herbe, de tomates et d’œufs
 
 Enable Deleting
 == Activer la suppression
@@ -5138,6 +5147,9 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Niveau de traçage graphique : 0 = désactivé, 1 = résumé périodique, 2 = résumé et images lentes, 3 = traçage détaillé du backend
 
+Grass
+== Herbe
+
 Greek
 == Grec
 
@@ -5592,7 +5604,7 @@ Ignored legacy Dynamic Island edge margin
 == La marge de bord héritée du Dynamic Island est ignorée
 
 IME
-== IME
+== Méthode de saisie
 
 IME background color
 == Couleur d'arrière-plan de l'IME
@@ -5614,9 +5626,6 @@ IME text color
 
 Import from clipboard
 == Importer depuis le presse-papiers
-
-Improved Anti Ping
-== Anti Ping amélioré
 
 Improved anti ping
 == Anti-ping amélioré
@@ -6004,6 +6013,9 @@ Keep unsent message on chat close
 
 Keep vote window open after voting
 == Garder la fenêtre de vote ouverte après avoir voté
+
+Key
+== Touche
 
 Key binds
 == Touches de raccourci
@@ -8384,9 +8396,6 @@ Player feet skin
 Player hands color
 == Couleur des mains du joueur
 
-Player Indicator
-== Indicateur de joueur
-
 Player indicator
 == Indicateur de joueur
 
@@ -10444,6 +10453,12 @@ Server kick/spec votes are no longer actively moderated.
 
 Server kick/spec votes will now be actively moderated.
 == Les votes d'exclusion/mise en spectateur du serveur seront désormais modérés activement.
+
+Server list is more than five minutes old
+== La liste des serveurs date de plus de cinq minutes
+
+Server list refresh failed; showing the previous list
+== Échec de l’actualisation des serveurs ; la liste précédente est affichée
 
 Server name
 == Nom du serveur
@@ -12722,9 +12737,6 @@ The FPS at which the recorder should record replay.
 The name "default" is reserved.
 == Le nom "default" est réservé.
 
-The old qmclient/fonts directory is no longer scanned. Move your custom fonts manually to fonts/fonts_store under your configuration directory. Normal builds use the user configuration directory; portable builds use profile. Bundled fonts in data/fonts do not need to be moved.
-== L’ancien dossier qmclient/fonts n’est plus analysé. Déplacez manuellement vos polices personnalisées vers fonts/fonts_store dans le dossier de configuration. La version normale utilise le dossier de configuration utilisateur ; la version portable utilise profile. Les polices fournies dans data/fonts n’ont pas besoin d’être déplacées.
-
 The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else
 == Le joueur à qui vous chuchotiez ne s'est pas encore reconnecté ou a quitté. Attendez ou chuchotez à quelqu'un d'autre
 
@@ -12880,6 +12892,21 @@ This team was disbanded because there are more players than allowed in the team.
 
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Cette infobulle est fournie par ui_widget::Tooltip, une fine surcouche de CTooltips.
+
+Throw a decorative grass, tomato or egg projectile
+== Lancer de l’herbe, une tomate ou un œuf décoratif
+
+Throw egg key
+== Touche pour lancer un œuf
+
+Throw grass key
+== Touche pour lancer de l’herbe
+
+Throw tomato key
+== Touche pour lancer une tomate
+
+Throwables
+== Objets à lancer
 
 Tick delay before executing qm_execute_on_join
 == Délai en ticks avant l'exécution de qm_execute_on_join
@@ -13153,6 +13180,9 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Jeton pour enregistrer ce serveur auprès d'une communauté spécifique
+
+Tomato
+== Tomate
 
 Too many translation tasks
 == Trop de tâches de traduction
@@ -13450,9 +13480,6 @@ UI size percentage
 
 Unable to delete %d selected items. The first failing item was '%s'.
 == Impossible de supprimer %d éléments sélectionnés. Le premier élément en échec était '%s'.
-
-Unable to delete skin
-== Impossible de supprimer le skin
 
 Unable to delete the demo '%s'
 == Impossible de supprimer la démo '%s'

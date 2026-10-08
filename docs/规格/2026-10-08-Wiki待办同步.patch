@@ -1,43 +1,42 @@
 diff --git a/Settings-and-Commands.md b/Settings-and-Commands.md
-index 7c39af1..6800500 100644
 --- a/Settings-and-Commands.md
 +++ b/Settings-and-Commands.md
-@@ -39,0 +40,6 @@ bind mouse5 +showweapontrajectory
+@@ -39,0 +40,6 @@
 +## 当前开发改动
 +
 +本地文档已同步本轮待办代码，尚未发布。新增入口、默认状态和使用方法见[待办改动说明](待办改动说明)。
 +
 +原 TClient 配置改用同名 `qm_` 前缀。旧 `tc_` 名称仍可读取；保存后使用新名称。`qm_translate_tc_*` 中的 `tc` 表示腾讯云，不属于这次改名。
 +
-@@ -42 +48 @@ bind mouse5 +showweapontrajectory
+@@ -42 +48 @@
 -下面的完整表格由仓库脚本 `qmclient_scripts/export_settings_commands_table.py --qm-only` 生成，来源是当前仓库的配置变量和命令注册代码。后续如果配置项变化，应重新运行脚本并更新此页。
 +下面的完整表格由仓库脚本 `qmclient_scripts/export_settings_commands_table.py --qm-only --language simplified_chinese` 生成，来源是当前仓库的配置变量和命令注册代码。后续如果配置项变化，应重新运行脚本并更新此页。
-@@ -51 +57 @@ bind mouse5 +showweapontrajectory
+@@ -51 +57 @@
 -  <tr><td>qm_3d_particles_collide</td><td>背景 3D 粒子之间碰撞</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_3d_particles_collide</td><td>背景 3D 粒子之间碰撞</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -75,0 +82,6 @@ bind mouse5 +showweapontrajectory
+@@ -75,0 +82,6 @@
 +  <tr><td>qm_allow_any_res</td><td>允许缩放时使用任意游戏分辨率（Windows 上可能有问题）</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_animate_wheel_time</td><td>表情轮和绑定轮动画时长（毫秒，0=无动画，1000=1 秒）</td><td>350</td><td>0</td><td>1000</td></tr>
 +  <tr><td>qm_antiping_improved</td><td>使用另一套 antiping 平滑算法，与 cl_antiping_smooth 不兼容</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_antiping_negative_buffer</td><td>对 Gores 有帮助：允许内部确定性为负值，使预测更保守</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_antiping_stable_direction</td><td>沿 Tee 的稳定方向进行更乐观的预测，减少稳定下来所需的延迟</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_antiping_uncertainty_scale</td><td>按 ping 比例缩放不确定性时长（100=1.0 倍）</td><td>150</td><td>25</td><td>400</td></tr>
-@@ -79,0 +92 @@ bind mouse5 +showweapontrajectory
+@@ -79,0 +92 @@
 +  <tr><td>qm_auto_accept_team_invite</td><td>通过发送 /team &lt;n&gt; 自动接受组队邀请</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -80,0 +94 @@ bind mouse5 +showweapontrajectory
+@@ -80,0 +94 @@
 +  <tr><td>qm_auto_margin</td><td>自动调整预测边距（关闭后固定使用基础预测边距）</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -81,0 +96,5 @@ bind mouse5 +showweapontrajectory
+@@ -81,0 +96,5 @@
 +  <tr><td>qm_auto_reply_minimized</td><td>游戏最小化时自动回复</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_auto_reply_minimized_message</td><td>游戏最小化时回复的消息</td><td>&quot;I am not tabbed in&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_auto_reply_muted</td><td>自动回复已静音玩家的消息</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_auto_reply_muted_message</td><td>回复静音玩家的消息</td><td>&quot;I have muted you&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_auto_save_history_count</td><td>自动保存历史记录数量（0=禁用）</td><td>100</td><td>0</td><td>1000</td></tr>
-@@ -85,0 +105,4 @@ bind mouse5 +showweapontrajectory
+@@ -85,0 +105,4 @@
 +  <tr><td>qm_auto_update</td><td>自动检查稳定版更新并在退出时安装</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_auto_vote_when_far</td><td>达到最小时长后自动处理换图投票（0=关闭，1=反对，2=同意）</td><td>0</td><td>0</td><td>2</td></tr>
 +  <tr><td>qm_auto_vote_when_far_message</td><td>自动投票时发送的消息，留空则不发送</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_auto_vote_when_far_time</td><td>触发自动投票前的等待时间</td><td>5</td><td>0</td><td>20</td></tr>
-@@ -88,0 +112,8 @@ bind mouse5 +showweapontrajectory
+@@ -88,0 +112,8 @@
 +  <tr><td>qm_better_scoreboard</td><td>启用增强计分板显示</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_bg_draw_auto_save_load</td><td>自动保存并加载背景描线</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_bg_draw_color</td><td>背景描边颜色</td><td><span class="colorpreview" style="background: hsla(300.706, 100.000%, 50.196%, 1.000)"></span> 14024576</td><td></td><td></td></tr>
@@ -46,15 +45,15 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_bg_draw_width</td><td>背景描边宽度</td><td>5</td><td>1</td><td>50</td></tr>
 +  <tr><td>qm_blank_asset_fallback</td><td>自定义资源的贴图全透明时自动回退到默认资源；关闭后空白贴图保持不可见（可用于屏蔽特效）</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_block_words_action</td><td>屏蔽词操作：0=替换匹配词，1=隐藏整条消息</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -91 +122 @@ bind mouse5 +showweapontrajectory
+@@ -91 +122 @@
 -  <tr><td>qm_block_words_list</td><td>屏蔽词列表（用,分隔）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_block_words_list</td><td>屏蔽词列表（用 , 分隔）</td><td>&quot;&quot;</td><td></td><td></td></tr>
-@@ -93 +124 @@ bind mouse5 +showweapontrajectory
+@@ -93 +124 @@
 -  <tr><td>qm_block_words_multi_replace</td><td>按屏蔽词长度多字符替换</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_block_words_multi_replace</td><td>按屏蔽词长度多字符替换</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -95,0 +127 @@ bind mouse5 +showweapontrajectory
+@@ -95,0 +127 @@
 +  <tr><td>qm_blur_mode</td><td>背景模糊算法：0=高斯，1=Kawase，2=Dual Kawase</td><td>2</td><td>0</td><td>2</td></tr>
-@@ -100 +132,6 @@ bind mouse5 +showweapontrajectory
+@@ -100 +132,6 @@
 -  <tr><td>qm_chat_bubble</td><td>在玩家头顶显示聊天气泡</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_card_layout_version</td><td>设置卡片默认布局迁移版本</td><td>0</td><td>0</td><td>13</td></tr>
 +  <tr><td>qm_card_order_migrated</td><td>全局卡片排序旧配置迁移完成标记</td><td>0</td><td>0</td><td>1</td></tr>
@@ -62,10 +61,10 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_chat_anim_fade_duration_ms</td><td>聊天消息淡出过渡时长（毫秒）</td><td>300</td><td>0</td><td>2000</td></tr>
 +  <tr><td>qm_chat_anim_slide_out</td><td>聊天消息淡出时启用左滑偏移</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_chat_bubble</td><td>在玩家头顶显示聊天气泡</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -106,0 +144,2 @@ bind mouse5 +showweapontrajectory
+@@ -106,0 +144,2 @@
 +  <tr><td>qm_chat_command_completion</td><td>显示聊天指令补全</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_chat_hide_system_prefix</td><td>隐藏服务器聊天消息前的 *** 前缀</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -110,6 +149,32 @@ bind mouse5 +showweapontrajectory
+@@ -110,6 +149,32 @@
 -  <tr><td>qm_client_mark_trail</td><td>远程粒子：通过中心服同步并渲染其他玩家（需对方开启本地+远程）</td><td>1</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_client_show_badge</td><td>显示 Qm 标识：通过中心服识别并在名字板/计分板标记 QmClient 用户</td><td>1</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_collision_hitbox_alpha</td><td>碰撞体积线条透明度</td><td>80</td><td>0</td><td>100</td></tr>
@@ -104,14 +103,14 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_demo_show_strong_weak</td><td>回放钩子强弱（0=关闭 1=图标 2=图标与数字）</td><td>0</td><td>0</td><td>2</td></tr>
 +  <tr><td>qm_demo_strong_weak_scope</td><td>回放钩子强弱范围（0=自己 1=他人 2=强钩 3=弱钩 4=全部）</td><td>4</td><td>0</td><td>4</td></tr>
 +  <tr><td>qm_discord_rpc</td><td>启用 Discord RPC（需要重启）</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -119,0 +185 @@ bind mouse5 +showweapontrajectory
+@@ -119,0 +185 @@
 +  <tr><td>qm_dummy_skin_queue_enabled</td><td>启用分身皮肤队列轮换</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -121 +187 @@ bind mouse5 +showweapontrajectory
+@@ -121 +187 @@
 -  <tr><td>qm_dummy_skin_queue_interval</td><td>分身皮肤队列切换间隔（0.1 秒）</td><td>600</td><td>5</td><td>1200</td></tr>
 +  <tr><td>qm_dummy_skin_queue_interval</td><td>分身皮肤队列切换间隔（毫秒，0=不做时间轮换）</td><td>600</td><td>0</td><td>120000</td></tr>
-@@ -122,0 +189 @@ bind mouse5 +showweapontrajectory
+@@ -122,0 +189 @@
 +  <tr><td>qm_dummy_skin_queue_random_join</td><td>进入地图时从分身皮肤队列随机位置开始</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -125,10 +192,26 @@ bind mouse5 +showweapontrajectory
+@@ -125,10 +192,27 @@
 -  <tr><td>qm_dynamic_fov_amount</td><td>动态视野强度（0-200）</td><td>50</td><td>0</td><td>200</td></tr>
 -  <tr><td>qm_dynamic_fov_smoothness</td><td>动态视野平滑度（0=瞬时，100=最平滑）</td><td>80</td><td>0</td><td>100</td></tr>
 -  <tr><td>qm_entity_overlay_death_alpha</td><td>覆盖死亡图块的实体 alpha (0-100)</td><td>100</td><td>0</td><td>100</td></tr>
@@ -122,6 +121,7 @@ index 7c39af1..6800500 100644
 -  <tr><td>qm_entity_overlay_tele_alpha</td><td>Teletile 的覆盖实体 alpha (0-100)</td><td>100</td><td>0</td><td>100</td></tr>
 -  <tr><td>qm_entity_overlay_tele_checkpoint_alpha</td><td>CP点边界的覆盖实体 alpha (0-100)</td><td>100</td><td>0</td><td>100</td></tr>
 -  <tr><td>qm_entity_overlay_unfreeze_alpha</td><td>覆盖实体 alpha 以解冻图块 (0-100)</td><td>100</td><td>0</td><td>100</td></tr>
++  <tr><td>qm_decorative_throws</td><td>启用草、番茄和鸡蛋装饰投掷物</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_dynamic_fov_amount</td><td>动态视场角强度（0-200）</td><td>50</td><td>0</td><td>200</td></tr>
 +  <tr><td>qm_dynamic_fov_smoothness</td><td>动态视场角平滑度（0=瞬时，100=最平滑）</td><td>80</td><td>0</td><td>100</td></tr>
 +  <tr><td>qm_echo_merge_window_ms</td><td>在此窗口（毫秒）内合并连续相同的 echo 消息（0 表示不合并）</td><td>2000</td><td>0</td><td>60000</td></tr>
@@ -148,13 +148,13 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_fast_input_amount</td><td>快速输入提前应用的毫秒数</td><td>20</td><td>1</td><td>100</td></tr>
 +  <tr><td>qm_fast_input_others</td><td>对其他 Tee 也应用快速输入</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_finish_name</td><td>接近终点时要改成的名字（启用 qm_change_name_near_finish 时生效）</td><td>&quot;nameless tee&quot;</td><td></td><td></td></tr>
-@@ -139 +222 @@ bind mouse5 +showweapontrajectory
+@@ -139 +223 @@
 -  <tr><td>qm_focus_mode_hide_explosion_effects</td><td>禅模式下隐藏炮击特效</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_focus_mode_hide_explosion_effects</td><td>禅模式下隐藏投射物特效</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -148 +231 @@ bind mouse5 +showweapontrajectory
+@@ -148 +232 @@
 -  <tr><td>qm_focus_mode_hide_muzzle_effects</td><td>禅模式下隐藏武器火焰特效</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_focus_mode_hide_muzzle_effects</td><td>禅模式下隐藏武器开火特效</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -157,2 +240,8 @@ bind mouse5 +showweapontrajectory
+@@ -157,2 +241,8 @@
 -  <tr><td>qm_foot_particles</td><td>本地粒子：显示自己 Tee 身后掉落的粒子（如冻结雪花）</td><td>0</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_freeze_wakeup_popup</td><td>本体或 Dummy 被锤醒时，在对应玩家随机的左上或右上角显示提示</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_foot_particles</td><td>本地粒子：显示自己 Tee 身后的粒子（例如冻结雪花）</td><td>0</td><td>0</td><td>1</td></tr>
@@ -165,14 +165,14 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_freeze_chat_message</td><td>进入冻结状态时发送的聊天消息，以逗号分隔（空=无消息）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_freeze_wakeup_popup</td><td>本体或分身被锤醒时，在对应玩家随机的左上或右上角显示提示</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_friend_auto_follow_delay</td><td>自动跟随好友换服延迟（秒）</td><td>3</td><td>0</td><td>30</td></tr>
-@@ -161,3 +250,3 @@ bind mouse5 +showweapontrajectory
+@@ -161,3 +251,3 @@
 -  <tr><td>qm_friend_enter_broadcast_text</td><td>好友进服大字提示文本（使用%s表示好友名）</td><td>&quot;%s好友进入本服&quot;</td><td></td><td></td></tr>
 -  <tr><td>qm_friend_enter_greet_text</td><td>好友进图自动打招呼文本</td><td>&quot;你好啊!&quot;</td><td></td><td></td></tr>
 -  <tr><td>qm_friend_online_auto_refresh</td><td>好友提醒自动刷新服务器列表</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_friend_enter_broadcast_text</td><td>好友进服大字提示文本（使用 %s 表示好友名）</td><td>&quot;%s joined this server&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_friend_enter_greet_text</td><td>好友进图自动打招呼文本</td><td>&quot;Hi!&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_friend_online_auto_refresh</td><td>好友提醒自动刷新服务器列表</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -165,2 +254,11 @@ bind mouse5 +showweapontrajectory
+@@ -165,2 +255,11 @@
 -  <tr><td>qm_friend_online_refresh_seconds</td><td>好友提醒刷新间隔(秒)</td><td>30</td><td>5</td><td>300</td></tr>
 -  <tr><td>qm_gores</td><td>启用 Gores 锤枪自动切换</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_friend_online_refresh_seconds</td><td>好友提醒刷新间隔（秒）</td><td>30</td><td>5</td><td>300</td></tr>
@@ -186,28 +186,28 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_gaussian_blur</td><td>为半透明界面和指定 HUD 背景启用背景模糊</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_global_card_order</td><td>全局卡片排序（格式 stableId|tab|col|order; 分号分隔）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_gores</td><td>启用 Gores 模式（King of Gores 辅助工具集合）</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -167,0 +266,2 @@ bind mouse5 +showweapontrajectory
+@@ -167,0 +267,2 @@
 +  <tr><td>qm_gores_auto_weapon_switch</td><td>Gores 模式下自动锤枪切换</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_gores_disable_dummy_hammer</td><td>在 Gores 模式中临时禁用分身锤</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -168,0 +269,4 @@ bind mouse5 +showweapontrajectory
+@@ -168,0 +270,4 @@
 +  <tr><td>qm_gores_drown_board</td><td>显示 Gores 团队落水榜</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_gores_drown_board_max_players</td><td>Gores 团队落水榜显示的最大玩家数</td><td>8</td><td>1</td><td>16</td></tr>
 +  <tr><td>qm_gores_drown_board_opacity</td><td>Gores 团队落水榜不透明度</td><td>80</td><td>0</td><td>100</td></tr>
 +  <tr><td>qm_gores_drown_board_show_tee</td><td>在 Gores 团队落水榜中显示 Tee</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -171,0 +276,4 @@ bind mouse5 +showweapontrajectory
+@@ -171,0 +277,4 @@
 +  <tr><td>qm_gores_suppress_switch_anim</td><td>在 Gores 模式中锤击切换武器时不播放切换动画</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_graphics_mode</td><td>图形模式：-1 = 使用后端设置，0 = 兼容性，1 = 性能（默认）</td><td>1</td><td>-1</td><td>1</td></tr>
 +  <tr><td>qm_graphics_trace</td><td>图形跟踪级别：0 = 关闭，1 = 定期摘要，2 = 摘要和慢帧，3 = 详细后端跟踪</td><td>0</td><td>0</td><td>3</td></tr>
 +  <tr><td>qm_hammer_rotates_with_cursor</td><td>让锤子像其他武器一样随光标旋转</td><td>0</td><td>0</td><td>2</td></tr>
-@@ -173,0 +282,2 @@ bind mouse5 +showweapontrajectory
+@@ -173,0 +283,2 @@
 +  <tr><td>qm_hide_frozen_ghosts</td><td>自己被冻结时隐藏其他玩家的幽灵</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hide_join_server_info</td><td>进图时不自动显示服务器信息</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -175,2 +285,2 @@ bind mouse5 +showweapontrajectory
+@@ -175,2 +286,2 @@
 -  <tr><td>qm_hitbox_color_freeze</td><td>碰撞箱模式Freeze边界颜色</td><td><span class="colorpreview" style="background: hsla(360.000, 0.000%, 100.000%, 1.000)"></span> 16711935</td><td></td><td></td></tr>
 -  <tr><td>qm_hitbox_color_tee</td><td>碰撞箱模式Tee碰撞体颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 100.000%, 100.000%, 1.000)"></span> 65535</td><td></td><td></td></tr>
 +  <tr><td>qm_hitbox_color_freeze</td><td>碰撞箱模式冻结边框颜色</td><td><span class="colorpreview" style="background: hsla(360.000, 0.000%, 100.000%, 1.000)"></span> 16711935</td><td></td><td></td></tr>
 +  <tr><td>qm_hitbox_color_tee</td><td>碰撞箱模式 Tee 碰撞体颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 100.000%, 100.000%, 1.000)"></span> 65535</td><td></td><td></td></tr>
-@@ -178,6 +288,16 @@ bind mouse5 +showweapontrajectory
+@@ -178,6 +289,16 @@
 -  <tr><td>qm_hitbox_mode</td><td>碰撞箱模式总开关 (Hitbox mode)</td><td>0</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_hitbox_player_scope</td><td>碰撞箱模式玩家范围: 0=本地 1=本地+分身 2=所有玩家</td><td>2</td><td>0</td><td>2</td></tr>
 -  <tr><td>qm_hitbox_show_map</td><td>碰撞箱模式显示地图危险边界</td><td>1</td><td>0</td><td>1</td></tr>
@@ -230,28 +230,28 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_hitbox_show_weapons</td><td>碰撞箱模式显示武器交互</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hook_coll_cursor</td><td>钩子辅助线长度跟随光标距离</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hook_countdown</td><td>启用钩子倒计时</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -184,0 +305 @@ bind mouse5 +showweapontrajectory
+@@ -184,0 +306 @@
 +  <tr><td>qm_hud_island_always_show_track_details</td><td>始终显示歌名歌手</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -187,2 +308 @@ bind mouse5 +showweapontrajectory
+@@ -187,2 +309 @@
 -  <tr><td>qm_hud_island_edge_margin</td><td>灵动岛 HUD 编辑器贴边外边距 px</td><td>5</td><td>0</td><td>64</td></tr>
 -  <tr><td>qm_hud_island_show_team</td><td>HUD 灵动岛显示队伍</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hud_island_show_team</td><td>HUD 灵动岛显示队伍</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -195 +315 @@ bind mouse5 +showweapontrajectory
+@@ -195 +316 @@
 -  <tr><td>qm_hud_notifications_echo_inherit_color</td><td>通知栏 echo 继承聊天 echo 颜色</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hud_notifications_echo_inherit_color</td><td>通知栏 echo 继承聊天 echo 颜色</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -203,3 +323,3 @@ bind mouse5 +showweapontrajectory
+@@ -203,3 +324,3 @@
 -  <tr><td>qm_hud_notifications_show_prompts</td><td>通知栏显示重要服务器提示</td><td>1</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_hud_notifications_show_unknown</td><td>通知栏显示未知服务器消息</td><td>1</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_hud_notifications_system</td><td>通知栏接管服务器系统提示（入场版本信息除外）</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hud_notifications_show_prompts</td><td>通知栏显示重要服务器提示</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hud_notifications_show_unknown</td><td>通知栏显示未知服务器消息</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hud_notifications_system</td><td>通知栏接管服务器系统提示（入场版本信息除外）</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -207,2 +327,2 @@ bind mouse5 +showweapontrajectory
+@@ -207,2 +328,2 @@
 -  <tr><td>qm_hud_notifications_text_size</td><td>通知栏文字大小</td><td>8</td><td>1</td><td>24</td></tr>
 -  <tr><td>qm_hud_notifications_use_category_filters</td><td>使用通知栏分类过滤</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_hud_notifications_text_size</td><td>通知文字大小</td><td>8</td><td>1</td><td>24</td></tr>
 +  <tr><td>qm_hud_notifications_use_category_filters</td><td>使用通知栏分类过滤</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -210 +330,25 @@ bind mouse5 +showweapontrajectory
+@@ -210 +331,25 @@
 -  <tr><td>qm_input_overlay</td><td>显示输入覆盖</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_ime_bg_color</td><td>新版 IME 候选栏背景颜色</td><td><span class="colorpreview" style="background: hsla(39.529, 10.980%, 11.765%, 1.000)"></span> 1842206</td><td></td><td></td></tr>
 +  <tr><td>qm_ime_font_size</td><td>输入法字号 (%)</td><td>100</td><td>75</td><td>200</td></tr>
@@ -278,15 +278,15 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_input_overlay_count_size</td><td>按键计数字号 (%)</td><td>100</td><td>50</td><td>200</td></tr>
 +  <tr><td>qm_input_overlay_key_counts</td><td>显示按键累计次数</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_input_overlay_mouse_scale</td><td>输入叠加层鼠标缩放比例（百分比）</td><td>20</td><td>1</td><td>200</td></tr>
-@@ -214 +358 @@ bind mouse5 +showweapontrajectory
+@@ -214 +359 @@
 -  <tr><td>qm_input_overlay_scale</td><td>输入叠加比例（百分比）</td><td>20</td><td>1</td><td>200</td></tr>
 +  <tr><td>qm_input_overlay_scale</td><td>输入叠加层键盘缩放比例（百分比）</td><td>20</td><td>1</td><td>200</td></tr>
-@@ -220,0 +365 @@ bind mouse5 +showweapontrajectory
+@@ -220,0 +366 @@
 +  <tr><td>qm_jump_hint_defaults_migrated</td><td>跳跃提示默认文案迁移完成标记</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -222 +367 @@ bind mouse5 +showweapontrajectory
+@@ -222 +368 @@
 -  <tr><td>qm_jump_hint_text</td><td>跳跃提示文本（使用\n换行）</td><td>&quot;3 Tiles Edge Jump:\nLeft Jump: .34|.31|.16\nLeft Double Jump: .41|.28|.25|.13\nRight Jump: .63|.66|.81\nRight Double Jump: .56|.69|.72|.84&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_jump_hint_text</td><td>跳跃提示文本（使用\n 换行）</td><td>&quot;三格边缘跳:\n左起跳: .34|.31|.16\n左二段跳: .41|.28|.25|.13\n右起跳: .63|.66|.81\n右二段跳: .56|.69|.72|.84&quot;</td><td></td><td></td></tr>
-@@ -226,3 +371,6 @@ bind mouse5 +showweapontrajectory
+@@ -226,3 +372,6 @@
 -  <tr><td>qm_keyword_reply_rules</td><td>关键词回复规则（每行: [rename] [regex] 关键词=&gt;回复）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 -  <tr><td>qm_keyword_reply_use_dummy</td><td>关键词回复使用Dummy</td><td>0</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_laser_alpha</td><td>激光半透明度 (0=完全透明, 100=不透明)</td><td>100</td><td>0</td><td>100</td></tr>
@@ -296,7 +296,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_kugou_hook_helper_path</td><td>酷狗音乐 Hook 辅助程序路径（留空则使用 QmClient 所在目录中的程序）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_kugou_hook_timeout_ms</td><td>酷狗音乐 Hook 心跳超时时间（毫秒）</td><td>1500</td><td>250</td><td>10000</td></tr>
 +  <tr><td>qm_laser_alpha</td><td>激光不透明度（0=完全透明，100=完全不透明）</td><td>100</td><td>0</td><td>100</td></tr>
-@@ -230,60 +378,25 @@ bind mouse5 +showweapontrajectory
+@@ -230,60 +379,25 @@
 -  <tr><td>qm_laser_glow_intensity</td><td>激光辉光强度 (0-100)</td><td>30</td><td>0</td><td>100</td></tr>
 -  <tr><td>qm_laser_pulse_amplitude</td><td>脉冲振幅 (0-100)</td><td>50</td><td>0</td><td>100</td></tr>
 -  <tr><td>qm_laser_pulse_speed</td><td>脉冲动画速度 ( 百分比, 100=正常)</td><td>100</td><td>10</td><td>500</td></tr>
@@ -382,7 +382,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_mini_vote_hud</td><td>缩小投票界面</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_mod_weapon</td><td>指向某人并射击时执行命令（默认 kill，仅在远程控制台已鉴权时生效）</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_mod_weapon_command</td><td>qm_mod_weapon 执行的命令，目标 id 会附加在命令末尾</td><td>&quot;rcon kill_pl&quot;</td><td></td><td></td></tr>
-@@ -291,22 +404,48 @@ bind mouse5 +showweapontrajectory
+@@ -291,22 +405,48 @@
 -  <tr><td>qm_nameplate_clan_offset_x</td><td>名字板战队行 X 偏移</td><td>0</td><td>-300</td><td>300</td></tr>
 -  <tr><td>qm_nameplate_clan_offset_y</td><td>名字板战队行 Y 偏移</td><td>0</td><td>-300</td><td>300</td></tr>
 -  <tr><td>qm_nameplate_coord_x</td><td>名字牌显示坐标X</td><td>1</td><td>0</td><td>1</td></tr>
@@ -453,7 +453,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_netease_hook_enable</td><td>启用网易云音乐 Hook 集成</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_netease_hook_helper_path</td><td>网易云音乐 Hook 辅助程序路径（留空则使用 QmClient 所在目录中的程序）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_netease_hook_timeout_ms</td><td>网易云音乐 Hook 心跳超时时间（毫秒）</td><td>1500</td><td>250</td><td>10000</td></tr>
-@@ -314 +453,27 @@ bind mouse5 +showweapontrajectory
+@@ -314 +454,27 @@
 -  <tr><td>qm_new_ui</td><td>启用新版设置页面 UI</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_news_read_content_id</td><td>最近已读的公告内容修订</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_news_read_release</td><td>最近已读的客户端版本说明</td><td>&quot;&quot;</td><td></td><td></td></tr>
@@ -482,7 +482,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_outline_width_unfreeze</td><td>解冻/深解冻图块轮廓宽度</td><td>2</td><td>1</td><td>16</td></tr>
 +  <tr><td>qm_paused_spectator_alpha</td><td>旁观者透明度（百分比）</td><td>40</td><td>0</td><td>100</td></tr>
 +  <tr><td>qm_paused_spectator_fade</td><td>虚化水中的旁观者</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -317,0 +483,8 @@ bind mouse5 +showweapontrajectory
+@@ -317,0 +484,8 @@
 +  <tr><td>qm_perf_stutter_diagnostics</td><td>启动时启用客户端卡顿诊断</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_pet_alpha</td><td>宠物透明度（100=完全不透明，50=半透明）</td><td>90</td><td>10</td><td>100</td></tr>
 +  <tr><td>qm_pet_show</td><td>显示宠物</td><td>0</td><td>0</td><td>1</td></tr>
@@ -491,14 +491,14 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_pie_follow_clan</td><td>饼菜单跟随目标的战队名</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_pie_follow_name</td><td>持续跨服跟随的玩家，主动取消后停止；留空关闭</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_pie_menu_color_copy_name</td><td>复制名字选项颜色</td><td>3212869785</td><td>0</td><td>0</td></tr>
-@@ -318,0 +492 @@ bind mouse5 +showweapontrajectory
+@@ -318,0 +493 @@
 +  <tr><td>qm_pie_menu_color_follow</td><td>跟随颜色</td><td>1304395967</td><td>0</td><td>0</td></tr>
-@@ -319,0 +494,2 @@ bind mouse5 +showweapontrajectory
+@@ -319,0 +495,2 @@
 +  <tr><td>qm_pie_menu_color_invite_team</td><td>组队邀请颜色</td><td>3866774975</td><td>0</td><td>0</td></tr>
 +  <tr><td>qm_pie_menu_color_join_team</td><td>加入队伍颜色</td><td>1302062783</td><td>0</td><td>0</td></tr>
-@@ -320,0 +497 @@ bind mouse5 +showweapontrajectory
+@@ -320,0 +498 @@
 +  <tr><td>qm_pie_menu_color_score</td><td>查分颜色</td><td>2959861439</td><td>0</td><td>0</td></tr>
-@@ -324 +501,8 @@ bind mouse5 +showweapontrajectory
+@@ -324 +502,8 @@
 -  <tr><td>qm_pie_menu_enabled</td><td>启用饼菜单</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_pie_menu_copy_name_enabled</td><td>显示复制名字选项</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_pie_menu_copy_skin_enabled</td><td>显示复制皮肤选项</td><td>1</td><td>0</td><td>1</td></tr>
@@ -508,7 +508,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_pie_menu_friend_enabled</td><td>显示好友选项</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_pie_menu_invite_team_enabled</td><td>显示组队邀请</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_pie_menu_join_team_enabled</td><td>显示加入队伍</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -326,3 +510,12 @@ bind mouse5 +showweapontrajectory
+@@ -326,3 +511,12 @@
 -  <tr><td>qm_pie_menu_opacity</td><td>菜单不透明度 (Menu opacity 0-100)</td><td>80</td><td>0</td><td>100</td></tr>
 -  <tr><td>qm_pie_menu_rename_queue</td><td>饼菜单改名名单（使用|分隔，如：璇梦1|璇梦2）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 -  <tr><td>qm_pie_menu_scale</td><td>UI大小百分比 (UI scale percentage)</td><td>100</td><td>50</td><td>200</td></tr>
@@ -524,7 +524,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_ping_cache_max_age_hours</td><td>丢弃缓存中超过此小时数的服务器 ping（0 = 永不过期）</td><td>72</td><td>0</td><td>8760</td></tr>
 +  <tr><td>qm_player_indicator</td><td>显示其他 Tee 的径向指示器</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_player_indicator_freeze</td><td>仅在指示器中显示冻结 Tee</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -338,5 +531,31 @@ bind mouse5 +showweapontrajectory
+@@ -338,5 +532,31 @@
 -  <tr><td>qm_player_stats_reset_on_join</td><td>进入服务器时重置统计（0=累计统计，1=每次进服重置）</td><td>1</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_process_high_priority</td><td>仅 Windows：启动时将进程优先级设置为高</td><td>0</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_rainbow_name</td><td>启用自己名字的彩虹色渲染</td><td>0</td><td>0</td><td>1</td></tr>
@@ -561,14 +561,14 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_remove_anti_ticks</td><td>最多减少的预测 tick 数</td><td>5</td><td>0</td><td>20</td></tr>
 +  <tr><td>qm_render_ghost_as_circle</td><td>将幽灵渲染为圆圈而不是 Tee</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_repeat_enabled</td><td>启用复读功能</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -344 +563 @@ bind mouse5 +showweapontrajectory
+@@ -344 +564 @@
 -  <tr><td>qm_report_endpoint</td><td>举报服务地址</td><td>&quot;http://124.222.146.111:8790&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_report_endpoint</td><td>举报服务 URL</td><td>&quot;http://124.222.146.111:8790&quot;</td><td></td><td></td></tr>
-@@ -346 +565,2 @@ bind mouse5 +showweapontrajectory
+@@ -346 +566,2 @@
 -  <tr><td>qm_respawn_default_weapon</td><td>重生后默认请求切换的武器（0=关闭，1=锤子，2=手枪，3=霰弹枪，4=榴弹枪，5=激光）</td><td>0</td><td>0</td><td>5</td></tr>
 +  <tr><td>qm_reset_bindwheel_mouse</td><td>打开绑定轮时重置鼠标位置</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_revert_hook_line</td><td>恢复旧版单段钩子辅助线行为</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -348,4 +568,7 @@ bind mouse5 +showweapontrajectory
+@@ -348,4 +569,7 @@
 -  <tr><td>qm_scoreboard_color</td><td>计分板颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 0.000%, 1.000)"></span> 0</td><td></td><td></td></tr>
 -  <tr><td>qm_scoreboard_on_death</td><td>死亡后显示记分牌</td><td>1</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_scoreboard_opacity</td><td>计分板透明度</td><td>30</td><td>0</td><td>100</td></tr>
@@ -580,7 +580,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_scoreboard_opacity</td><td>计分板透明度</td><td>16</td><td>0</td><td>100</td></tr>
 +  <tr><td>qm_scoreboard_points</td><td>计分板查分</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_scoreboard_scroll</td><td>满人服务器改用固定行高计分板，滚轮翻看其余玩家</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -353 +576,13 @@ bind mouse5 +showweapontrajectory
+@@ -353 +577,13 @@
 -  <tr><td>qm_settings_prewarm</td><td>启动和菜单空闲时预热设置页</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_screenshot_watermark_map</td><td>截图水印：包含地图名称</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_screenshot_watermark_position</td><td>截图水印位置：0=左下，1=右下，2=左上，3=右上</td><td>0</td><td>0</td><td>3</td></tr>
@@ -595,7 +595,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_show_center_color</td><td>中心线颜色（需启用 qm_show_center）</td><td><span class="colorpreview" style="background: hsla(360.000, 100.000%, 50.196%, 0.392)"></span> 1694498688</td><td></td><td></td></tr>
 +  <tr><td>qm_show_center_width</td><td>中心线宽度（需启用 qm_show_center）</td><td>0</td><td>0</td><td>20</td></tr>
 +  <tr><td>qm_show_chat_client</td><td>显示客户端生成的聊天消息，例如 echo</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -355 +590,13 @@ bind mouse5 +showweapontrajectory
+@@ -355 +591,13 @@
 -  <tr><td>qm_show_outdated_version_warning</td><td>显示版本过旧提示</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_show_dummy_title</td><td>本机显示分身头衔</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_show_local_time_seconds</td><td>在本地时间显示中包含秒</td><td>0</td><td>0</td><td>1</td></tr>
@@ -610,12 +610,12 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_showhud_dummy_angle</td><td>在运动信息 HUD 中显示分身角度</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_showhud_dummy_position</td><td>在运动信息 HUD 中显示分身位置</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_showhud_dummy_speed</td><td>在运动信息 HUD 中显示分身速度</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -358 +604,0 @@ bind mouse5 +showweapontrajectory
+@@ -358 +605,0 @@
 -  <tr><td>qm_sidebar_card_usage</td><td>栖梦侧栏模块使用频率</td><td>&quot;&quot;</td><td></td><td></td></tr>
-@@ -359,0 +606,2 @@ bind mouse5 +showweapontrajectory
+@@ -359,0 +607,2 @@
 +  <tr><td>qm_skin_change_transition_easing</td><td>皮肤切换动画缓动模式</td><td>0</td><td>0</td><td>3</td></tr>
 +  <tr><td>qm_skin_change_transition_intensity</td><td>皮肤切换动画强度百分比</td><td>100</td><td>0</td><td>300</td></tr>
-@@ -361 +609,8 @@ bind mouse5 +showweapontrajectory
+@@ -361 +610,8 @@
 -  <tr><td>qm_skin_change_transition_type</td><td>皮肤切换动画类型（0=残影弹出 1=柔和淡变 2=向左滑切 3=旋转弹出 4=明暗切换）</td><td>0</td><td>0</td><td>4</td></tr>
 +  <tr><td>qm_skin_change_transition_scope</td><td>皮肤切换动画范围：0=仅自己 1=本地+分身 2=所有玩家</td><td>1</td><td>0</td><td>2</td></tr>
 +  <tr><td>qm_skin_change_transition_type</td><td>皮肤切换动画类型（0=残影弹出 1=柔和淡变 2=向左滑切 3=旋转弹出 4=明暗切换 5=故障抖动 6=弹性缩放）</td><td>0</td><td>0</td><td>6</td></tr>
@@ -625,15 +625,15 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_skin_outline_others</td><td>为其他玩家 Tee 显示生成描边</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_skin_outline_width</td><td>生成描边宽度</td><td>2</td><td>1</td><td>6</td></tr>
 +  <tr><td>qm_skin_queue_enabled</td><td>启用皮肤队列轮换</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -363 +618 @@ bind mouse5 +showweapontrajectory
+@@ -363 +619 @@
 -  <tr><td>qm_skin_queue_interval</td><td>皮肤队列切换间隔（0.1 秒）</td><td>600</td><td>5</td><td>1200</td></tr>
 +  <tr><td>qm_skin_queue_interval</td><td>皮肤队列切换间隔（毫秒，0=不做时间轮换）</td><td>600</td><td>0</td><td>120000</td></tr>
-@@ -364,0 +620 @@ bind mouse5 +showweapontrajectory
+@@ -364,0 +621 @@
 +  <tr><td>qm_skin_queue_random_join</td><td>进入地图时从皮肤队列随机位置开始</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -365,0 +622,2 @@ bind mouse5 +showweapontrajectory
+@@ -365,0 +623,2 @@
 +  <tr><td>qm_skin_show_metadata</td><td>显示皮肤发布日期和作者</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_skin_sort_mode</td><td>皮肤列表排序模式（0=名称，1=发布时间）</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -368,8 +626,25 @@ bind mouse5 +showweapontrajectory
+@@ -368,8 +627,25 @@
 -  <tr><td>qm_speedrun_timer</td><td>速通倒计时器</td><td>0</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_speedrun_timer_auto_disable</td><td>时间耗尽后自动禁用速通计时器</td><td>0</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_speedrun_timer_hours</td><td>速通计时器小时</td><td>0</td><td>0</td><td>99</td></tr>
@@ -667,7 +667,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_steam_auto_launch</td><td>客户端从外部启动时自动启动 Steam，用于 Steam 统计游戏时长</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_steam_client_path</td><td>Steam 客户端路径（留空自动检测）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_streamer_hide_names</td><td>隐藏非好友姓名/战队并显示客户端 ID</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -378 +653,40 @@ bind mouse5 +showweapontrajectory
+@@ -378 +654,40 @@
 -  <tr><td>qm_translate_auto</td><td>自动翻译入站消息</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_swap_ghosts</td><td>将预测位置显示为幽灵，原始位置显示为不可预测玩家</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_switch_countdown</td><td>启用开关倒计时</td><td>1</td><td>0</td><td>1</td></tr>
@@ -709,7 +709,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_tooltip_text_color</td><td>提示气泡文字颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 100.000%, 1.000)"></span> 4278190335</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_auto</td><td>自动翻译收到的消息</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_translate_auto_mode</td><td>收到消息自动翻译方式（0=仅在非目标语言时翻译，1=始终翻译）</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -380,4 +694,6 @@ bind mouse5 +showweapontrajectory
+@@ -380,4 +695,6 @@
 -  <tr><td>qm_translate_auto_outgoing_mode</td><td>自动翻译模式 (0=仅常见源语言输入时触发, 1=始终翻译)</td><td>1</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_translate_backend</td><td>翻译后端（llm/tencentcloud/libretranslate/ftapi）</td><td>&quot;llm&quot;</td><td></td><td></td></tr>
 -  <tr><td>qm_translate_btn_color_disabled</td><td>翻译按钮取消时的颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 16.078%, 1.000)"></span> 3506438185</td><td></td><td></td></tr>
@@ -720,13 +720,13 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_translate_btn_color_enabled</td><td>翻译按钮开启时的颜色</td><td><span class="colorpreview" style="background: hsla(223.059, 36.863%, 52.549%, 0.902)"></span> 3869138566</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_color_alpha_migrated</td><td>翻译颜色透明度迁移已完成标记</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_translate_deepl_key</td><td>DeepL API 密钥（免费密钥以 :fx 结尾）</td><td>&quot;&quot;</td><td></td><td></td></tr>
-@@ -385 +701 @@ bind mouse5 +showweapontrajectory
+@@ -385 +702 @@
 -  <tr><td>qm_translate_libre_key</td><td>LibreTranslate API Key</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_libre_key</td><td>LibreTranslate API 密钥</td><td>&quot;&quot;</td><td></td><td></td></tr>
-@@ -389 +705 @@ bind mouse5 +showweapontrajectory
+@@ -389 +706 @@
 -  <tr><td>qm_translate_llm_endpoint_custom</td><td>自定义 Provider 端点</td><td>&quot;&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_llm_endpoint_custom</td><td>自定义提供商端点</td><td>&quot;&quot;</td><td></td><td></td></tr>
-@@ -392,10 +708,10 @@ bind mouse5 +showweapontrajectory
+@@ -392,10 +709,10 @@
 -  <tr><td>qm_translate_llm_endpoint_zhipu</td><td>智谱AI 端点（留空使用默认）</td><td>&quot;&quot;</td><td></td><td></td></tr>
 -  <tr><td>qm_translate_llm_key_custom</td><td>自定义 Provider API Key</td><td>&quot;&quot;</td><td></td><td></td></tr>
 -  <tr><td>qm_translate_llm_key_deepseek</td><td>DeepSeek API Key</td><td>&quot;&quot;</td><td></td><td></td></tr>
@@ -747,16 +747,16 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_translate_llm_model_openai</td><td>OpenAI 模型名称</td><td>&quot;gpt-5.6-luna&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_llm_model_zhipu</td><td>智谱 AI 模型名称</td><td>&quot;glm-4.7-flash&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_llm_provider</td><td>LLM 提供商（0=智谱 AI，1=DeepSeek，2=OpenAI，3=自定义）</td><td>0</td><td>0</td><td>3</td></tr>
-@@ -404,3 +720,3 @@ bind mouse5 +showweapontrajectory
+@@ -404,3 +721,3 @@
 -  <tr><td>qm_translate_menu_bg_color</td><td>翻译菜单背景颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 12.157%, 1.000)"></span> 4060086303</td><td></td><td></td></tr>
 -  <tr><td>qm_translate_menu_option_normal</td><td>翻译菜单正常颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 20.000%, 1.000)"></span> 3858759731</td><td></td><td></td></tr>
 -  <tr><td>qm_translate_menu_option_selected</td><td>翻译菜单选中时颜色</td><td><span class="colorpreview" style="background: hsla(223.059, 36.863%, 52.549%, 1.000)"></span> 3869138566</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_menu_bg_color</td><td>翻译菜单背景颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 12.157%, 0.949)"></span> 4060086303</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_menu_option_normal</td><td>翻译菜单正常颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 20.000%, 0.902)"></span> 3858759731</td><td></td><td></td></tr>
 +  <tr><td>qm_translate_menu_option_selected</td><td>翻译菜单选中时颜色</td><td><span class="colorpreview" style="background: hsla(223.059, 36.863%, 52.549%, 0.902)"></span> 3869138566</td><td></td><td></td></tr>
-@@ -407,0 +724 @@ bind mouse5 +showweapontrajectory
+@@ -407,0 +725 @@
 +  <tr><td>qm_translate_show_advanced</td><td>显示高级翻译选项</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -415,3 +732,29 @@ bind mouse5 +showweapontrajectory
+@@ -415,3 +733,29 @@
 -  <tr><td>qm_ui_color</td><td>界面颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 0.000%, 1.000)"></span> 0</td><td></td><td></td></tr>
 -  <tr><td>qm_ui_motion_level</td><td>QmUi 动效强度：0=关闭 1=降低 2=完整</td><td>2</td><td>0</td><td>2</td></tr>
 -  <tr><td>qm_ui_opacity</td><td>通用界面透明度</td><td>30</td><td>0</td><td>100</td></tr>
@@ -789,7 +789,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_ui_popup_blur</td><td>启用二级弹窗与下拉列表背景模糊</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_ui_popup_color</td><td>二级菜单背景颜色</td><td><span class="colorpreview" style="background: hsla(0.000, 0.000%, 100.000%, 1.000)"></span> 255</td><td></td><td></td></tr>
 +  <tr><td>qm_ui_popup_opacity</td><td>二级菜单背景 — 不透明度百分比</td><td>20</td><td>0</td><td>100</td></tr>
-@@ -419,2 +762,35 @@ bind mouse5 +showweapontrajectory
+@@ -419,2 +763,35 @@
 -  <tr><td>qm_weapon_switch_anim</td><td>切换武器时播放滑入旋转动画</td><td>1</td><td>0</td><td>1</td></tr>
 -  <tr><td>qm_weapon_switch_anim_scope</td><td>武器切换动画范围: 0=仅自己 1=本地+分身 2=所有玩家</td><td>0</td><td>0</td><td>2</td></tr>
 +  <tr><td>qm_ui_scale</td><td>全局 UI 大小百分比</td><td>100</td><td>50</td><td>200</td></tr>
@@ -827,10 +827,10 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_weapon_switch_anim_easing</td><td>武器切换动画缓动模式</td><td>0</td><td>0</td><td>3</td></tr>
 +  <tr><td>qm_weapon_switch_anim_rotation</td><td>武器切换动画旋转角度</td><td>360</td><td>0</td><td>1440</td></tr>
 +  <tr><td>qm_weapon_switch_anim_scope</td><td>武器切换动画范围：0=仅自己 1=本地+分身 2=所有玩家</td><td>0</td><td>0</td><td>2</td></tr>
-@@ -423,0 +800,2 @@ bind mouse5 +showweapontrajectory
+@@ -423,0 +801,2 @@
 +  <tr><td>qm_weapon_trajectory_gun</td><td>手枪辅助线</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_weapon_trajectory_ninja</td><td>预测忍者路径</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -424,0 +803,10 @@ bind mouse5 +showweapontrajectory
+@@ -424,0 +804,10 @@
 +  <tr><td>qm_websocket_allow_insecure_tls</td><td>旧版选项：跳过 TLS 校验的连接会被拒绝</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_websocket_backoff_base_ms</td><td>实时通道重连退避基准（毫秒）</td><td>1000</td><td>100</td><td>60000</td></tr>
 +  <tr><td>qm_websocket_backoff_max_ms</td><td>实时通道重连退避上限（毫秒）</td><td>60000</td><td>1000</td><td>600000</td></tr>
@@ -841,24 +841,24 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_white_feet</td><td>将所有脚部渲染为纯白底色</td><td>0</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_white_feet_skin</td><td>白脚底使用的皮肤</td><td>&quot;x_ninja&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_zoom_instant_reverse</td><td>反向按键时立即反向缩放（0=保留原有平滑缩放）</td><td>1</td><td>0</td><td>1</td></tr>
-@@ -442 +830 @@ bind mouse5 +showweapontrajectory
+@@ -442 +831 @@
 -  <tr><td>qm_voice_filter_enable</td><td>启用语音滤波（高通/压缩/限幅）</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_voice_filter_enable</td><td>启用语音滤波（高通/压缩/限幅）</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -447 +835 @@ bind mouse5 +showweapontrajectory
+@@ -447 +836 @@
 -  <tr><td>qm_voice_hear_vad</td><td>接收 VAD 讲话者</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_voice_hear_vad</td><td>接收 VAD 讲话者</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -456 +844 @@ bind mouse5 +showweapontrajectory
+@@ -456 +845 @@
 -  <tr><td>qm_voice_noise_suppress_enable</td><td>噪声抑制模式（0=关闭 1=简单 2=RNNoise）</td><td>2</td><td>0</td><td>2</td></tr>
 +  <tr><td>qm_voice_noise_suppress_enable</td><td>噪声抑制模式（0=关闭 1=简单 2=RNNoise）</td><td>0</td><td>0</td><td>2</td></tr>
-@@ -462,2 +850,2 @@ bind mouse5 +showweapontrajectory
+@@ -462,2 +851,2 @@
 -  <tr><td>qm_voice_radius</td><td>语音距离半径（Tiles）</td><td>50</td><td>1</td><td>400</td></tr>
 -  <tr><td>qm_voice_server</td><td>语音服务器地址 host:port</td><td>&quot;42.194.185.210:9987&quot;</td><td></td><td></td></tr>
 +  <tr><td>qm_voice_radius</td><td>语音距离半径（图块）</td><td>50</td><td>1</td><td>400</td></tr>
 +  <tr><td>qm_voice_server</td><td>语音服务器 URL（ws:// 或 wss://）</td><td>&quot;wss://qmclient.icu/ws/voice&quot;</td><td></td><td></td></tr>
-@@ -466 +854 @@ bind mouse5 +showweapontrajectory
+@@ -466 +855 @@
 -  <tr><td>qm_voice_stereo</td><td>语音立体声输出</td><td>1</td><td>0</td><td>1</td></tr>
 +  <tr><td>qm_voice_stereo</td><td>语音立体声输出</td><td>0</td><td>0</td><td>1</td></tr>
-@@ -483,15 +871,23 @@ bind mouse5 +showweapontrajectory
+@@ -483,15 +872,24 @@
 -  <tr><td>qm_live_match_record_start</td><td></td><td>Start QmLive full match demo recording</td></tr>
 -  <tr><td>qm_live_match_record_stop</td><td></td><td>Stop QmLive full match demo recording</td></tr>
 -  <tr><td>qm_live_team_filter</td><td>i[team]</td><td>Preview/render only one DDRace team from a full match demo</td></tr>
@@ -888,6 +888,7 @@ index 7c39af1..6800500 100644
 +  <tr><td>qm_solo_split_leave</td><td></td><td>退出单刷模式</td></tr>
 +  <tr><td>qm_spec_teleport</td><td></td><td>在悬停的传送入口/出口或检查点传送点与其对应点之间传送自由观战镜头</td></tr>
 +  <tr><td>qm_sponsor_nudge_preview</td><td></td><td>预览赞助提醒，不影响启动计数</td></tr>
++  <tr><td>qm_throw</td><td>s[type]</td><td>投掷草、番茄或鸡蛋装饰物；type 为 grass、tomato 或 egg</td></tr>
 +  <tr><td>qm_timeout_disconnect</td><td></td><td>静默断开当前服务器连接，用于保留 Tee 超时保护</td></tr>
 +  <tr><td>qm_voice_clear_input_device</td><td></td><td>使用默认语音输入设备</td></tr>
 +  <tr><td>qm_voice_clear_output_device</td><td></td><td>使用默认语音输出设备</td></tr>
@@ -901,7 +902,7 @@ diff --git a/待办改动说明.md b/待办改动说明.md
 new file mode 100644
 --- /dev/null
 +++ b/待办改动说明.md
-@@ -0,0 +1,51 @@
+@@ -0,0 +1,56 @@
 +# 待办改动说明
 +
 +状态：2026-10-08 当前开发分支的本地说明，尚未发布。相关代码已改动，但未编译、未执行测试或游戏内验收。完整配置名见[设置与命令](Settings-and-Commands)。
@@ -917,6 +918,9 @@ new file mode 100644
 +| 饼菜单外观 | 搜索“饼菜单”。修改已有扇区颜色、选中色调和整体大小，可关闭开合效果 | 选中色调强度默认 0，保持原有选中配色；关闭开合效果仍能选择和提交动作 |
 +| 翻译按钮颜色 | 搜索“翻译 UI”，修改启用／关闭等颜色 | 可一键恢复本组默认颜色 |
 +| 表情弹射时长 | 设置 → Tee → Tee 外观中的表情弹射设置 | 默认 5 秒，可设为 1～10 秒，最后 0.5 秒淡出。接收方控制显示时长；原有显示他人效果与屏蔽规则继续生效 |
++| 装饰投掷物 | 设置 → Tee → Tee 外观中的表情卡开启后，在表情菜单点击“投掷物”，选中并松开；也可绑定 `qm_throw grass`、`qm_throw tomato`、`qm_throw egg` | `qm_decorative_throws` 默认 0。主号／分身共用每秒一次限制，命中只播放视觉粒子；关闭后清理效果 |
++| 自动翻译 | 在翻译后端选择“自动（Qm 服务）”并主动启用翻译；服务端按 DeepL → MyMemory 回退 | 保留原有默认后端和个人配置；无需填写维护者密钥，服务部署及凭据可用后才能请求 |
++| 服务器列表镜像 | 默认服务器列表候选中加入 Qm 镜像，刷新失败时显示提示并保留旧列表 | 自定义源保持不变；列表超过 300 秒显示过期提示，可继续刷新 |
 +| Steam 路径诊断 | 搜索“Steam”，查看检测状态和路径，点击重新检测，必要时填写客户端程序完整路径 | 手动路径默认留空，使用自动探测。自动启动仍由已有开关控制 |
 +
 +按键计数只统计输入显示布局里启用的键盘键和鼠标键。一次按下计一次，长按和系统重复事件不累加；聊天、菜单、控制台和其他输入界面不计入。打开或关闭这些界面的那次按键也不累计。
@@ -927,14 +931,14 @@ new file mode 100644
 +- 最新候选内容在更新当帧显示，旧文字最多保留 80 毫秒淡出。面板位置和尺寸动画继续使用。
 +- 目标为日语时，纯汉字交给翻译服务判断；含假名的日语可在按需模式下跳过，显式来源和始终翻译优先。
 +- 服务的结构化拒绝、鉴权、限流、额度与网络错误使用本地化短提示；失败后原文是否发送沿用已有设置。
-+- 聊天输入区给翻译按钮单独留出右侧空间。
++- 聊天翻译按钮位于输入行最左侧，聊天类型前缀、正文和补全提示统一从按钮右侧开始。
 +- HUD 手动布局按可见内容贴边，改变缩放、保存和恢复使用同一套锚点。
 +
-+微软拼音吞字的完整触发链仍需复现；焦点检查和候选显示改动不代表该问题已全部解决。
++微软拼音在聊天输入框连续输入拼音时吞字仍待定因；焦点、候选显示和空文本保护改动不代表问题已全部解决。
 +
 +## 设置交互
 +
-+屏蔽词、关键词回复、输入显示、玩家统计和 IME 的实际内容已迁入卡片模块。原页面与搜索页复用这些实现。其余 DDNet、TClient 和部分旧页面仍需继续迁移，不能将“可定位”视为“已在搜索页完整展示”。
++DDNet、TClient 与 Qm 设置的实际内容已接入共用卡片，原页面和搜索结果复用相同控件。迁移尚未完成编译、完整控件与实际交互验收；定位按钮用于回到用户保存的卡片位置。
 +
 +卡头定位按钮位于右侧动作组的左边。使用公共卡片容器的设置会在底部显示当前悬浮／聚焦项目的说明；没有目标时显示卡片概述。关键词回复拆成“规则列表／回复内容／触发限制”页签，饼菜单短开关使用网格。
 +
@@ -948,8 +952,10 @@ new file mode 100644
 +
 +新版或公告内容修订会标为未读，只在离线空闲主菜单提醒。阅读后记录版本和内容修订，对局中不抢焦点；断网继续使用最近成功缓存的 Markdown 内容。
 +
-+## 尚未提供的内容
++## 服务部署与验收
 +
-+服务器列表镜像、自动 DeepL → MyMemory 服务回退及草／番茄／鸡蛋装饰投掷物，需要 Qm 服务端源码和接口配合，当前没有接入或部署。原有手动翻译后端仍可使用。
++服务器列表镜像、自动翻译和投掷同步的客户端与中心服务代码已接入，服务尚未部署。自动翻译只提交文本和语言，取消后不启动后备请求；全部失败时显示简短原因，不把服务错误正文发送到聊天。原有手动后端仍可使用。
++
++投掷物可在本地显示；远端同步需要双方客户端及中心服务支持，只在同服转发。旧客户端忽略该事件。接收方关闭他人表情、关闭他人弹射或屏蔽发送者时不显示；切图、断线和关闭功能后清理。装饰物不造成伤害、冻结或推动角色。
 +
 +发布前还需按默认配置与推荐外观分别完成分辨率、UI 缩放、输入法、弹层和联机回归。

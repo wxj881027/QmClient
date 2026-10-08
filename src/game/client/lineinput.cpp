@@ -8,6 +8,7 @@
 #include <engine/external/tinyexpr.h>
 #include <engine/keys.h>
 #include <engine/shared/config.h>
+#include <engine/shared/qm_ime_policy.h>
 
 #include <algorithm>
 #include <chrono>
@@ -212,12 +213,20 @@ bool CLineInput::ProcessInput(const IInput::CEvent &Event)
 
 	if(Event.m_Flags & IInput::FLAG_TEXT)
 	{
-		SetRange(Event.m_aText, m_SelectionStart, m_SelectionEnd);
+		if(QmImeTextEventShouldMutateBuffer(Event.m_aText))
+		{
+			SetRange(Event.m_aText, m_SelectionStart, m_SelectionEnd);
+		}
 		KeyHandled = true;
 	}
 
 	if(Event.m_Flags & IInput::FLAG_PRESS)
 	{
+		// 输入法处于组合输入状态时，退格、删除、导航与回车由 IME 内部消费，避免误删现有文本或移位光标。
+		if(Input()->HasComposition() && QmImeKeyConsumedByComposition(Event.m_Key))
+		{
+			return true;
+		}
 		const bool ModPressed = Input()->ModifierIsPressed();
 		const bool AltPressed = Input()->AltIsPressed();
 

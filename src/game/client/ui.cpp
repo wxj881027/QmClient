@@ -500,9 +500,38 @@ bool CUi::TryConsumeWheel(const void *pOwnerId, float *pDelta)
 	return QmTryConsumeWheel(m_WheelOwnership, pOwnerId, pDelta);
 }
 
+void CUi::TrackActiveTextInput(CLineInput *pLineInput)
+{
+	if(RenderOnly())
+		return;
+	m_pTrackedTextInput = pLineInput;
+	m_pTrackedTextPopupId = m_pRenderingPopupId;
+	m_TextInputSource.Assign(m_pInteractionContext, m_pInteractionCardId, PopupSourceFrame());
+}
+
+void CUi::ReleaseTrackedTextInput()
+{
+	if(m_pTrackedTextInput == nullptr)
+		return;
+	// 来源消失时控件可能已经销毁；仅对当前仍存活的活动输入对象调用方法。
+	CLineInput *pLineInput = m_pTrackedTextInput;
+	if(CLineInput::GetActiveInput() == pLineInput)
+		pLineInput->Deactivate();
+	if(m_pActiveItem == pLineInput)
+		m_pActiveItem = nullptr;
+	if(m_pLastActiveItem == pLineInput)
+		m_pLastActiveItem = nullptr;
+	if(pLineInput == &m_ActiveValueSelectorState.m_NumberInput)
+		m_ActiveValueSelectorState.m_pLastTextId = nullptr;
+	m_pTrackedTextInput = nullptr;
+	m_pTrackedTextPopupId = nullptr;
+	m_TextInputSource = {};
+}
+
 void CUi::Update()
 {
 	m_PopupSourceClock.Update(Client()->PerfFrame());
+	PruneInteractionSources(true);
 	// 孤儿阻断弹窗兜底清扫：要求来源每帧刷新的弹窗（下拉选择弹层等）若连续
 	// 两帧未刷新，说明来源渲染已停止且当前没有任何 RenderPopupMenus 调用方
 	// 在运行（如聊天模式退出后弹窗残留），在这里强制关闭，防止底层指针输入
@@ -1620,6 +1649,8 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 		ReleaseActiveTextInput(pLineInput);
 		Active = false;
 	}
+	if(Enabled() && (Active || m_pLastActiveItem == pLineInput))
+		TrackActiveTextInput(pLineInput);
 	if(Enabled() && Active && !JustGotActive)
 		pLineInput->Activate(EInputPriority::UI);
 	else
@@ -1736,6 +1767,8 @@ bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float
 		Active = false;
 	}
 
+	if(Enabled() && (Active || m_pLastActiveItem == pLineInput))
+		TrackActiveTextInput(pLineInput);
 	if(Enabled() && Active && !JustGotActive)
 		pLineInput->Activate(EInputPriority::UI);
 	else
@@ -2221,6 +2254,7 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 	if(m_ActiveValueSelectorState.m_pLastTextId == pId)
 	{
 		SetActiveItem(&m_ActiveValueSelectorState.m_NumberInput);
+		TrackActiveTextInput(&m_ActiveValueSelectorState.m_NumberInput);
 		m_ActiveValueSelectorState.m_NumberInput.Activate(EInputPriority::UI);
 		// 编辑态同步鼠标选择状态到行输入：CLineInput::Render 只在
 		// m_MouseSelection.m_Selecting 时按鼠标位置反算光标/选区，不同步的

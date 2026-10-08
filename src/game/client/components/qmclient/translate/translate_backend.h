@@ -53,6 +53,7 @@ public:
 
 using FTranslateRequestFactory = std::unique_ptr<IHttpRequest> (*)(const char *pUrl);
 std::unique_ptr<ITranslateBackend> CreateTranslateBackend(IHttp &Http, const char *pText, const char *pTarget, const char *pSource = "auto", FTranslateRequestFactory pCreateRequest = CreateHttpRequest);
+std::unique_ptr<ITranslateBackend> CreateTranslateBackendAutomatic(IHttp &Http, const char *pText, const char *pTarget, const char *pSource, FTranslateRequestFactory pCreateRequest);
 // 设置提示与请求使用同一份当前 Provider 配置。
 const char *GetSelectedTranslateLlmKey();
 int GetTranslateConcurrency();

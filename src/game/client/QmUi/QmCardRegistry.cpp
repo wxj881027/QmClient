@@ -4,6 +4,7 @@
 
 #include <engine/shared/localization.h>
 
+#include <game/client/QmUi/cards/QmCardCatalogSearch.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -12,118 +13,8 @@
 
 namespace qm_card_registry
 {
-	static constexpr SCardSettingSearch s_aGeneralGameSettings[] = {
-		{Localizable("Dynamic Camera"), "cl_dyncam"},
-		{Localizable("Dynamic Camera"), "cl_mouse_followfactor"},
-		{Localizable("Smooth Dynamic Camera"), "cl_dyncam_smoothness"},
-		{Localizable("Smooth Dynamic Camera"), "cl_dyncam_stabilizing"},
-		{Localizable("Switch weapon on pickup"), "cl_autoswitch_weapons"},
-		{Localizable("Switch weapon when out of ammo"), "cl_autoswitch_weapons_out_of_ammo"},
-	};
-	static constexpr SCardSettingSearch s_aGeneralLanguageSettings[] = {
-		{Localizable("Language"), "cl_languagefile"},
-	};
-	static constexpr SCardSettingSearch s_aGeneralClientSettings[] = {
-		{Localizable("Skip the main menu"), "cl_skip_start_menu"},
-		{Localizable("Update Rate"), "cl_refresh_rate"},
-		{Localizable("Save power by lowering update rate (higher input latency)"), "cl_refresh_rate"},
-		{nullptr, "cl_menu_map"},
-		{Localizable("Settings file"), nullptr},
-		{Localizable("Saves file"), nullptr},
-		{Localizable("Config directory"), nullptr},
-		{Localizable("Themes directory"), nullptr},
-	};
-	static constexpr SCardSettingSearch s_aGeneralRecordingSettings[] = {
-		{Localizable("Automatically record demos"), "cl_auto_demo_record"},
-		{Localizable("Max demos"), "cl_auto_demo_max"},
-		{Localizable("Automatically take game over screenshot"), "cl_auto_screenshot"},
-		{Localizable("Max Screenshots"), "cl_auto_screenshot_max"},
-		{Localizable("Automatically take statboard screenshot"), "cl_auto_statboard_screenshot"},
-		{Localizable("Max Screenshots"), "cl_auto_statboard_screenshot_max"},
-		{Localizable("Automatically create statboard csv"), "cl_auto_csv"},
-		{Localizable("Max CSVs"), "cl_auto_csv_max"},
-	};
-	static constexpr SCardSettingSearch s_aGeneralConfigFilesSettings[] = {
-		{Localizable("QmClient Settings"), nullptr},
-		{Localizable("Profiles"), nullptr},
-		{Localizable("War List"), nullptr},
-		{Localizable("Chat Binds"), nullptr},
-	};
 
 	// 设置项按所属卡登记，搜索使用原文、本地化标签和配置名，不依赖卡片是否打开过。
-	static constexpr SCardSettingSearch s_aPlayerStatsSettings[] = {
-		{Localizable("Show player stats HUD"), "qm_player_stats_hud"},
-		{Localizable("Map progress bar"), "qm_player_stats_map_progress"},
-		{Localizable("Use embedded HUD progress bar"), "qm_player_stats_map_progress_style"},
-		{Localizable("Progress bar color"), "qm_player_stats_map_progress_color"},
-		{Localizable("Progress bar width"), "qm_player_stats_map_progress_width"},
-		{Localizable("Progress bar height"), "qm_player_stats_map_progress_height"},
-		{Localizable("Horizontal position"), "qm_player_stats_map_progress_pos_x"},
-		{Localizable("Vertical position"), "qm_player_stats_map_progress_pos_y"},
-		{Localizable("Show dotted map route debug"), "qm_player_stats_map_progress_dbg_route"},
-		{Localizable("Reset stats when joining a server"), "qm_player_stats_reset_on_join"},
-	};
-	static constexpr SCardSettingSearch s_aSkinAppearanceSettings[] = {
-		{Localizable("Skin outline for self and dummy"), "qm_skin_outline_local"},
-		{Localizable("Skin outline for other players"), "qm_skin_outline_others"},
-		{Localizable("Skin outline color"), "qm_skin_outline_color"},
-		{Localizable("Skin outline width"), "qm_skin_outline_width"},
-		{Localizable("Skin outline opacity"), "qm_skin_outline_alpha"},
-		{Localizable("Cycle custom Tee hue"), "qm_cycle_tee_hue"},
-		{Localizable("Also apply to dummy"), "qm_cycle_tee_hue_dummy"},
-		{Localizable("Hue speed"), "qm_cycle_tee_hue_speed"},
-		{Localizable("Emoticon shadow"), "qm_emoticon_shadow"},
-		{Localizable("Emoticon projectile duration"), "qm_emoticon_projectile_duration"},
-	};
-	static constexpr SCardSettingSearch s_aInputOverlaySettings[] = {
-		{Localizable("Show inputs"), "qm_input_overlay"},
-		{Localizable("Show key press counts"), "qm_input_overlay_key_counts"},
-		{Localizable("Reset key press counts"), nullptr},
-		{Localizable("Key press count font size"), "qm_input_overlay_count_size"},
-		{Localizable("Key press count color"), "qm_input_overlay_count_color"},
-		{Localizable("Key press count label"), "qm_input_overlay_count_label"},
-		{Localizable("Keyboard size"), "qm_input_overlay_scale"},
-		{Localizable("Mouse size"), "qm_input_overlay_mouse_scale"},
-		{Localizable("Opacity"), "qm_input_overlay_opacity"},
-		{Localizable("Horizontal position"), "qm_input_overlay_pos_x"},
-		{Localizable("Vertical position"), "qm_input_overlay_pos_y"},
-	};
-	static constexpr SCardSettingSearch s_aImeSettings[] = {
-		{Localizable("Auto manage IME while typing"), "qm_ime_auto_manage"},
-		{Localizable("New IME"), "qm_new_ime"},
-		{Localizable("IME background color"), "qm_ime_bg_color"},
-		{Localizable("IME text color"), "qm_ime_text_color"},
-		{Localizable("IME selected text color"), "qm_ime_selected_text_color"},
-		{Localizable("IME selection background color"), "qm_ime_selected_color"},
-		{Localizable("IME font size"), "qm_ime_font_size"},
-	};
-	static constexpr SCardSettingSearch s_aBlockWordsSettings[] = {
-		{Localizable("Show blocked words in console"), "qm_block_words_show_console"},
-		{Localizable("Console color"), "qm_block_words_console_color"},
-		{Localizable("Enable word filter list"), "qm_block_words_enabled"},
-		{Localizable("Replace mode"), "qm_block_words_action"},
-		{Localizable("Hide player messages"), "qm_block_words_action"},
-		{Localizable("Use multi-char replacement based on word length"), "qm_block_words_multi_replace"},
-		{Localizable("Replacement chars"), "qm_block_words_replacement_char"},
-		{Localizable("Regular expression"), "qm_block_words_mode"},
-		{Localizable("Word Filter"), "qm_block_words_list"},
-	};
-
-	static constexpr SCardSettingSearch s_aKeywordReplySettings[] = {
-		{Localizable("Rule list"), "qm_keyword_reply_rules"},
-		{Localizable("Reply content"), "qm_keyword_reply_rules"},
-		{Localizable("Trigger limits"), nullptr},
-		{Localizable("Enable keyword reply"), "qm_keyword_reply_enabled"},
-		{Localizable("Reply with dummy"), "qm_keyword_reply_use_dummy"},
-		{Localizable("Auto reply cooldown"), "qm_auto_reply_cooldown"},
-		{Localizable("Rename"), nullptr},
-		{Localizable("Regex"), nullptr},
-	};
-	static constexpr SCardSettingSearch s_aSteamSettings[] = {
-		{Localizable("Launch Steam automatically when starting externally"), "qm_steam_auto_launch"},
-		{Localizable("Steam client path (leave empty to detect automatically)"), "qm_steam_client_path"},
-		{Localizable("Detect Steam again"), nullptr},
-	};
 
 	static constexpr const char *s_apTClientMainCards[] = {
 		"tclient:visual-font-cursor",
@@ -219,7 +110,8 @@ namespace qm_card_registry
 	static const std::vector<SCardDefault> &DefaultsTable()
 	{
 		// clang-format off
-		static const std::vector<SCardDefault> s_aDefaults = {
+		static const std::vector<SCardDefault> s_aDefaults = [] {
+		std::vector<SCardDefault> Cards = {
 			// === 栖梦侧栏模块 · qm:<key>（显式默认值齐全，来源 s_aQmModuleDefaults + 数据债补录）===
 			{"qm:tooltip", "visual", ECardColumn::Left, 9, "Tooltips", "提示 气泡 说明 背景 文字 字号 颜色 回弹 tooltip help font color bounce qm_tooltip_background_color qm_tooltip_text_color qm_tooltip_font_size qm_tooltip_animation", "Appearance of help bubbles outside settings cards"},
 			{"qm:appearance_preset", "visual", ECardColumn::Full, 1, "Qm recommended appearance", "栖梦 推荐 预设 外观 字体 霞鹜文楷 lxgw wenkai font preset recommended appearance qm_custom_font qm_custom_font_cjk ui_color qm_ui_scale qm_ui_motion_level qm_gaussian_blur qm_ui_popup_blur", "Preview and apply a fixed appearance preset"},
@@ -227,7 +119,7 @@ namespace qm_card_registry
 			{"qm:chat_bubble", "visual", ECardColumn::Left, 0, "Chat bubble", "消息气泡 liaotian qipao chat bubble typing 预览 yulan 镜头缩放 suofang 持续时间 chixu 透明度 touming 字体大小 ziti 最大宽度 kuandu 垂直偏移 pianyi 圆角 yuanjiao visual", "Show chat messages above players"},
 			{"qm:focus_mode", "visual", ECardColumn::Left, 2, "Zen Mode", "禅模式 zhuanzhi moshi focus mode zen mode 隐藏 yincang hud 名字 mingzi 特效 texiao 计分板 jifenban 沉浸 chenjing 无干扰 wuganrao 聊天 liaotian chat 非必要UI visual", "Hide UI for focused gameplay"},
 			{"qm:camera_view", "visual", ECardColumn::Right, 0, "Camera view", "镜头 jingtou camera drift 漂移 piaoyi dynamic fov 动态视野 dongtai shiye 纵横比 zonghengbi aspect ratio preset 预设 yushe 自定义 zidinyi 视野视角 shijiao visual", "Adjust game camera and FOV settings"},
-			{"qm:skin_appearance", "tee", ECardColumn::Left, 1, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow 表情弹射时长 tanshe shichang projectile duration visual", "Configure Tee appearance and skins", nullptr, nullptr, s_aSkinAppearanceSettings, std::size(s_aSkinAppearanceSettings)},
+			{"qm:skin_appearance", "tee", ECardColumn::Left, 1, "Tee appearance", "Tee外观 tee waiguan 皮肤描边 pifu miaobian skin outline 边缘 bianyuan 颜色 yanse 粗细 cuxi 透明度 toumingdu 循环色调 xunhuan sediao hue 速度 sudu 分身 fenshen dummy 表情阴影 biaoqing yinying emoticon shadow 表情弹射时长 tanshe shichang projectile duration visual", "Configure Tee appearance and skins"},
 			{"qm:water_hammer", "visual", ECardColumn::Right, 4, "Water hammer highlight", "水域 shuiyu 死亡 death 冻结 freeze 卡锤 kachui 锤子 chuizi hammer held preinput teammate 同队 tongdui 高亮 gaoliang 变色 bianse visual", "Highlight teammates holding hammer in death or freeze areas"},
 			{"qm:skin_transition", "visual", ECardColumn::Left, 2, "Skin transition animation", "皮肤切换 pifu qiehuan skin transition animation 换皮 huanpi 动画 donghua 开关 kaiguan 类型 leixing 时长 shichang 强度 qiangdu easing 缓动 huandong 锤中偷皮 chuizhong toupi hammer skin steal 故障 guzhang glitch 抖动 doudong 弹性 tanxing elastic 范围 fanwei scope 分身 fenshen dummy visual", "Configure hammer skin steal and skin transition animations"},
 			{"qm:weapon_animation", "visual", ECardColumn::Right, 1, "Weapon animation", "武器动画 wuqi donghua weapon animation 切换武器动画 qiehuan wuqi donghua weapon switch animation 装填动画 zhuangtian donghua reload animation 概率 gailv probability 滑入 huaru 旋转 xuanzhuan visual", "Play a slide-in rotation animation when switching weapons"},
@@ -241,29 +133,29 @@ namespace qm_card_registry
 			{"qm:key_binds", "function", ECardColumn::Left, 5, "Key binds", "按键绑定 anjian bangding bind 快捷键 kuaijiejian 常用绑定 changyong bangding 武器辅助线 fuzhuxian 异常断开 yichang duankai timeout disconnect function", "Common key bindings"},
 			{"qm:better_scoreboard", "function", ECardColumn::Left, 6, "Better scoreboard", "更好的计分板 genghao jifenban better scoreboard 计分板查分 chafen 计分板积分检查 jifenban jifen jiancha scoreboard point check 显示死亡后计分板 死亡后显示计分板 siwang hou xianshi jifenban show scoreboard after death 滚动计分板 gundong jifenban fixed-size scoreboard rows mouse wheel 计分板筛选 jifenban shaixuan scoreboard filter 计分板Qm标识 qm biaoshi scoreboard badge function", "Scoreboard"},
 			{"qm:mini_features", "function", ECardColumn::Left, 7, "Mini features", "梦的小功能 meng xiaogongneng 粒子拖尾 lizi tuowei 远程粒子 yuancheng lizi 聊天框淡出 liaotian danchu 聊天指令补全 zhiling buquan 命令补全 mingling buquan command completion autocomplete qm_chat_command_completion 表情选择 biaoqing xuanze 动画优化 donghua youhua 复读 fudu 锤人换皮 chuiren huanpi 随机表情 suiji biaoqing 连击 lianji combo 说话不弹表情 shuo hua biaoqing 本地彩虹名字 caihong mingzi 更新 gengxin 版本 banben 过旧 guojiu 提示 tishi outdated version warning 新版UI xinban ui settings page shezhi yemian 候选栏 houxuanlan 进程优先级 jincheng youxianji 协作制图 xiezuo zhitu 多人制图 duoren zhitu tune zone 区域着色 quyu zhaose 地图着色 ditu zhaose function", "Configure Dream-only convenience features"},
-			{"qm:ime", "function", ECardColumn::Left, 19, "IME", "输入法 shurufa ime 候选栏 houxuanlan 新版输入法 xinban shurufa 自动管理 zidong guanli 背景 beijing 颜色 yanse 透明度 toumingdu 高斯模糊 gaosi mohu function", "Configure the IME candidate bar", nullptr, nullptr, s_aImeSettings, std::size(s_aImeSettings)},
+			{"qm:ime", "function", ECardColumn::Left, 19, "IME", "输入法 shurufa ime 候选栏 houxuanlan 新版输入法 xinban shurufa 自动管理 zidong guanli 背景 beijing 颜色 yanse 透明度 toumingdu 高斯模糊 gaosi mohu function", "Configure the IME candidate bar"},
 			{"qm:jump_hint", "function", ECardColumn::Left, 7, "Jump hint", "位置跳跃提示 tiaoyue tishi jump hint position edge jump color yanse 颜色 horizontal position shuiping weizhi vertical position chuizhi weizhi font size ziti function", "Customize the position jump hint"},
 			{"qm:weapon_trajectory", "function", ECardColumn::Left, 8, "Weapon trajectory", "武器辅助线 wuqi fuzhuxian weapon trajectory 弹道辅助线 dandao fuzhuxian 手枪辅助线 shouqiang fuzhuxian pistol guide line 预测忍者路径 yuce renzhe lujing predict ninja path 线宽 xian kuan 透明度 toumingdu 始终显示 shizhong xianshi 按键显示 anjian xianshi function", "Show grenade and laser trajectory preview"},
 			{"qm:coords", "hud", ECardColumn::Left, 9, "Coordinates", "显示坐标 xianshi zuobiao coords position 自己坐标 ziji 他人坐标 taren 显示x xianshi x 显示y xianshi y 对齐提示 duiqi tishi 严格对齐 yange duiqi hud", "Show coordinates above players"},
 			{"qm:friend_notify", "function", ECardColumn::Left, 11, "Friend notify", "好友提醒 haoyou tixing 好友上线 shangxian 旁观优先 pangguan youxian spectator priority 自动刷新 zidong shuaxin 服务器列表 fuwuqi liebiao 刷新间隔 jiange 进图打招呼 jintu dazhaohu 大字显示 dazi xianshi function", "Friend online and join notifications"},
-			{"qm:block_words", "function", ECardColumn::Left, 12, "Block words", "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan function", "Chat word filtering", nullptr, nullptr, s_aBlockWordsSettings, std::size(s_aBlockWordsSettings)},
-			{"qm:qiafen", "function", ECardColumn::Left, 13, "Keyword reply", "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming keyword reply qiafen function", "Configure keyword-based automatic replies", nullptr, nullptr, s_aKeywordReplySettings, std::size(s_aKeywordReplySettings)}, // UI 名 keyword_reply，以持久化 key qiafen 为权威
+			{"qm:block_words", "function", ECardColumn::Left, 12, "Block words", "屏蔽词 pingbici block words 控制台显示 kongzhitai 启用列表 qiyong liebiao 按词长替换 cichang tihuan 多字符替换 duozifu tihuan function", "Chat word filtering"},
+			{"qm:qiafen", "function", ECardColumn::Left, 13, "Keyword reply", "关键词回复 guanjianci huifu 自动回复 zidong huifu 冷却 lengque dummy 发言 fayan 规则 guize 改名 gaiming 自动改名 zidong gaiming keyword reply qiafen function", "Configure keyword-based automatic replies"}, // UI 名 keyword_reply，以持久化 key qiafen 为权威
 			{"qm:translate", "function", ECardColumn::Left, 14, "Translate", "翻译 fanyi translate 腾讯云 tengxunyun 智谱AI zhipuai 大模型 LLM 自动翻译 zidong fanyi 主动翻译 zhudong fanyi [ru] 目标语言 mubiao yuyan 端点 duandian endpoint 地域 diyu region secret id key api key 密钥 秘钥 凭证 glm-4.7-flash glm-4-flash 模型 model 中文跳过 zhongwen tiaoguo 服务器消息跳过 function", "Chat translation settings"},
 			{"qm:pie_menu", "function", ECardColumn::Left, 16, "Pie menu", "饼菜单 bingcaidan pie menu 启用 qiyong ui大小 daxiao 不透明度 butouming 检测距离 jiance juli 改名名单 gaiming mingdan 组队邀请 zu dui yao qing 加入队伍 jiaru duiwu 跟随 gensui follow server 查分 chafen points score 复制ID 复制名字 fuzhi mingzi copy name 颜色 yanse function", "Quick action menu for players"},
 			{"qm:emoticons", "function", ECardColumn::Left, 18, "Emoticons", "表情 biaoqing 大表情 dabiaoqing 发射表情 fashe biaoqing 表情发射 launcher launch super emote 按键绑定 anjian bangding 他人显示 taren xianshi function", "Large emoticons and launched emoticons"},
 			{"qm:map_upload", "function", ECardColumn::Right, 21, "Map upload", "上传地图 shangchuan ditu 测图 cetu map upload test server function", "Upload a saved map to the public test server"},
-			{"qm:steam", "function", ECardColumn::Right, 22, "Steam integration", "Steam 启动 qidong 自动启动 zidong qidong 主窗口 zhuchuangkou 不启动游戏 buqidong youxi 游戏时长 shichang 统计 tongji 检测 jiance 路径 lujing 未安装 weianzhuang 手动 shoudong playtime function", "Automatically launch Steam when the client is started externally, so Steam can track your playtime", nullptr, nullptr, s_aSteamSettings, std::size(s_aSteamSettings)},
+			{"qm:steam", "function", ECardColumn::Right, 22, "Steam integration", "Steam 启动 qidong 自动启动 zidong qidong 主窗口 zhuchuangkou 不启动游戏 buqidong youxi 游戏时长 shichang 统计 tongji 检测 jiance 路径 lujing 未安装 weianzhuang 手动 shoudong playtime function", "Automatically launch Steam when the client is started externally, so Steam can track your playtime"},
 			{"qm:favorite_maps", "function", ECardColumn::Right, 6, "Favorite maps", "收藏地图 shoucang ditu favorite maps 地图管理 ditu guanli 收藏 shoucang 取消收藏 quxiao shoucang function", "Your favorite map manager"},
 			{"qm:hj_assist", "function", ECardColumn::Right, 7, "HJ assist", "hj辅助 hj fuzhu 解冻辅助 jiedong fuzhu 自动取消旁观 quxiao pangguan 自动切换 qiehuan tee 自动关闭聊天 guanbi liaotian 水中旁观者 shuizhong pangguanzhe 虚化 xuhua 半透明 bantouming 透明度 toumingdu 暂停 zanting pause function", "Configure HJ unfreeze assistance"},
-			{"qm:player_stats", "hud", ECardColumn::Right, 4, "Player stats", "玩家统计 wanjia tongji player stats gores hud 显示统计 xianshi tongji 进服重置 jinfu chongzhi 地图进度 ditu jindu 地图点状调试路径 dian zhuang tiaoshi lujing", "Player stats and info display", nullptr, nullptr, s_aPlayerStatsSettings, std::size(s_aPlayerStatsSettings)},
+			{"qm:player_stats", "hud", ECardColumn::Right, 4, "Player stats", "玩家统计 wanjia tongji player stats gores hud 显示统计 xianshi tongji 进服重置 jinfu chongzhi 地图进度 ditu jindu 地图点状调试路径 dian zhuang tiaoshi lujing", "Player stats and info display"},
 			{"qm:debug_graph", "hud", ECardColumn::Right, 9, "Debug graph", "调试图表 tiaoshi tubiao debug graph monitoring hud 不透明度 touming 透明度 面板 mianban 快捷键 kuaijiejian 按键 anjian", "Debug performance graph panel"},
-			{"qm:input_overlay", "hud", ECardColumn::Right, 10, "Input overlay", "按键显示 anjian xianshi input overlay 按键叠加 anjian diejia 按键计数 anjian jishu 累计次数 leiji cishu 清零 qingling 大小 daxiao 不透明度 butouming 水平位置 shuiping weizhi 垂直位置 chuizhi weizhi hud", "Configure the input overlay display", nullptr, nullptr, s_aInputOverlaySettings, std::size(s_aInputOverlaySettings)},
+			{"qm:input_overlay", "hud", ECardColumn::Right, 10, "Input overlay", "按键显示 anjian xianshi input overlay 按键叠加 anjian diejia 按键计数 anjian jishu 累计次数 leiji cishu 清零 qingling 大小 daxiao 不透明度 butouming 水平位置 shuiping weizhi 垂直位置 chuizhi weizhi hud", "Configure the input overlay display"},
 			{"qm:hud_notifications", "hud", ECardColumn::Right, 11, "HUD notifications", "通知栏 tongzhi lan notification toast echo 系统提示 xitong tishi 黑名单 heimingdan 右侧 youce 动画 donghua 背景 beijing 文字 wenzi hud", "Show server prompts and Echo messages as popups"},
 			{"qm:voice", "hud", ECardColumn::Right, 12, "Voice", "语音 yuyin voice chat 麦克风 maikefeng mic 静音 jingyin 音量 yinliang 语音激活 vad 阈值 yuzhi 释放延迟 shifang yanchi 服务器 fuwuqi token 叠加层 diejiaceng 按住说话 ptt push to talk 全图收听 quantu 衰减 shuijian 距离 juli 半径 banjing 测试 ceshi 本地 bendi 回环 huihuan 设备 shebei 输入 shuru 左右声道定位 左右 zuoyou 声道 shengdao 立体声 stereo 高级 gaoji advanced hud", "Voice chat settings and diagnostics"},
 			{"qm:dummy_miniview", "hud", ECardColumn::Right, 13, "Dummy mini view", "分身小窗 fenshen xiaochuang dummy mini view 预览 yulan 缩放 suofang 小窗大小 daxiao 离开视角 offscreen 自动显示 zidong xianshi hud", "Show a small view of the dummy"},
 			{"qm:dynamic_island", "hud", ECardColumn::Right, 14, "Dynamic island", "灵动岛 lld lingdongdao dynamic island hud 顶部 dingbu 背景 beijing 颜色 yanse 透明度 touming 黑底 heidi 原版 yuanban 默认 moren classic old style 始终显示歌名歌手 shizhong xianshi geming geshou song title artist always show qm_hud_island_always_show_track_details", "Configure HUD island appearance"},
 			// 歌词开关实际渲染在灵动岛卡内；本条只用于注册表/搜索，跳转指向承载卡。
-			{"qm:lyrics", "hud", ECardColumn::Right, 16, "Lyrics", "歌词 geci lyrics 来源 laiyuan source 网易云 wangyi netease 汽水 qishui soda spotify 显示 xianshi 翻译 fanyi hud", "Configure the lyrics display", nullptr, "qm:dynamic_island"},
+			{"qm:lyrics", "hud", ECardColumn::Right, 16, "Lyrics", "歌词 geci lyrics 来源 laiyuan source 网易云 wangyi netease 汽水 qishui soda spotify 显示 xianshi 翻译 fanyi hud", "Configure the lyrics display"},
 			{"qm:system_media_controls", "hud", ECardColumn::Right, 15, "System media controls", "系统媒体控制 xitong meiti kongzhi smtc media controls 启用系统媒体 qiyong 显示歌曲信息 gequ xinxi 上一个 shangyige 播放暂停 bofang zanting 下一个 xiayige hud", "Expose playback controls to the operating system"},
 			{"qm:background_3d", "hud", ECardColumn::Right, 17, "3D background", "3d背景 3d beijing background particles 粒子 lizi 方块 fangkuai cube 爱心 aixin heart 球体 qiuti sphere 金字塔 jinzita pyramid 钻石 zuanshi diamond 圆环 yuanhuan ring 星形 xingxing star 月牙 yueya crescent 混合 hunhe mixed 数量 shuliang 速度 sudu 尺寸 chicun 深度 shendu 透明度 touming 颜色 yanse 随机 suiji 自定义 zidingyi 辉光 huiguang 拖尾 tuowei trail 脉冲 maichong pulse 闪烁 shanshuo twinkle 推动 tuidong 碰撞 pengzhuang 淡入 danru 淡出 danchu hud", "Configure background 3D particle effects"},
 			{"qm:debug_mode", "hud", ECardColumn::Right, 19, "Debug mode", "调试模式 tiaoshi moshi debug mode 性能日志 xingneng rizhi perf log 性能调试 xingneng tiaoshi 日志文件 rizhi wenjian 采样阈值 caiyang yuzhi threshold 卡顿诊断 kadun zhenduan stutter diagnostics hud", "Enable performance debug logging and diagnostics"},
@@ -274,7 +166,7 @@ namespace qm_card_registry
 			{"qm:bind_editor", "bind", ECardColumn::Full, 0, Localizable("Bind"), "绑定 bangding bind keyboard 键盘 anjian 按键 mouse 鼠标 wheel 滚轮 modifier 修饰键 command 命令", Localizable("Configure keyboard, mouse, wheel, and modifier bindings")},
 
 			// === Tclient section（19）· tclient:<name>（id 不变；column/order 按当前 section 顺序显式化）===
-			{"tclient:visual-font-cursor", "tclient", ECardColumn::Left, 0, "Font cursor", "font cursor tclient visual", "Choose the menu font and cursor appearance"},
+			{"tclient:visual-font-cursor", "tclient", ECardColumn::Left, 0, "Font cursor", "font cursor tclient visual", "Choose the menu font and cursor appearance", "tclient", "tclient:font"},
 			{"tclient:visual-nameplates", "tclient", ECardColumn::Right, 0, "Nameplates", "nameplates tclient visual", "Adjust player nameplate details and visibility"},
 			{"tclient:visual-effects", "tclient", ECardColumn::Left, 1, "Visual effects", "visual effects tclient", "Tune additional world and player effects"},
 			{"tclient:input", "tclient", ECardColumn::Right, 1, "Input", "input tclient", "Configure input helpers and cursor behavior"},
@@ -308,11 +200,11 @@ namespace qm_card_registry
 			{"deck:tclient-info-developers", "credits-links", ECardColumn::Left, 1, "TClient Developers", "tclient developers links discord website github support tater sollybunny pebox teero chillerdragon", "View the developers, contributors, and project links"},
 			{"deck:global-search-input", "global-search", ECardColumn::Full, 0, "Feature Search", "global search feature cards", "Search settings by title, feature, or keyword"},
 			{"deck:global-search-results", "global-search", ECardColumn::Full, 1, "Search", "global search result cards", "Open a matching settings card directly"},
-			{"deck:general-game", "general", ECardColumn::Left, 0, Localizable("Game"), "general game camera weapon 动态镜头 dongtai jingtou 平滑 pinghua 拾取切枪 shiqu qieqiang 弹药 danyao", "Configure camera, weapon, and gameplay defaults", nullptr, nullptr, s_aGeneralGameSettings, std::size(s_aGeneralGameSettings)},
-			{"deck:general-language", "general", ECardColumn::Right, 0, Localizable("Language"), "general language localization 语言 yuyan 中文 zhongwen 英文 yingwen", "Choose the language used by the client", nullptr, nullptr, s_aGeneralLanguageSettings, std::size(s_aGeneralLanguageSettings)},
-			{"deck:general-client", "general", ECardColumn::Left, 1, Localizable("Client"), "general client theme files 主菜单 zhucaidan 更新频率 gengxin pinlv 省电 shengdian 主题 zhuti 配置目录 peizhi mulu 存档 cundang", "Manage client theme and menu preferences", nullptr, nullptr, s_aGeneralClientSettings, std::size(s_aGeneralClientSettings)},
-			{"deck:general-recording", "general", ECardColumn::Right, 1, Localizable("Demo"), "general demo screenshot csv recording 自动录像 zidong luxiang 截图 jietu 计分板 jifenban 导出 daochu", "Automate demos, screenshots, and match exports", nullptr, nullptr, s_aGeneralRecordingSettings, std::size(s_aGeneralRecordingSettings)},
-			{"deck:tclient-info-files", "general", ECardColumn::Right, 2, "Config Files", "config files settings profiles war list chat binds 配置文件 peizhi wenjian 配置方案 peizhi fangan 战争列表 zhanzheng liebiao 聊天绑定 liaotian bangding", "Open TClient configuration file locations", nullptr, nullptr, s_aGeneralConfigFilesSettings, std::size(s_aGeneralConfigFilesSettings)},
+			{"deck:general-game", "general", ECardColumn::Left, 0, Localizable("Game"), "general game camera weapon 动态镜头 dongtai jingtou 平滑 pinghua 拾取切枪 shiqu qieqiang 弹药 danyao", "Configure camera, weapon, and gameplay defaults"},
+			{"deck:general-language", "general", ECardColumn::Right, 0, Localizable("Language"), "general language localization 语言 yuyan 中文 zhongwen 英文 yingwen", "Choose the language used by the client"},
+			{"deck:general-client", "general", ECardColumn::Left, 1, Localizable("Client"), "general client theme files 主菜单 zhucaidan 更新频率 gengxin pinlv 省电 shengdian 主题 zhuti 配置目录 peizhi mulu 存档 cundang", "Manage client theme and menu preferences"},
+			{"deck:general-recording", "general", ECardColumn::Right, 1, Localizable("Demo"), "general demo screenshot csv recording 自动录像 zidong luxiang 截图 jietu 计分板 jifenban 导出 daochu", "Automate demos, screenshots, and match exports"},
+			{"deck:tclient-info-files", "general", ECardColumn::Right, 2, "Config Files", "config files settings profiles war list chat binds 配置文件 peizhi wenjian 配置方案 peizhi fangan 战争列表 zhanzheng liebiao 聊天绑定 liaotian bangding", "Open TClient configuration file locations"},
 			{"deck:player-identity", "player", ECardColumn::Left, 0, Localizable("Player"), "player dummy name clan identity", "Edit player and dummy identity information"},
 			{"deck:player-country", "player", ECardColumn::Right, 0, Localizable("Choose country flag"), "player dummy country flag", "Select the country flag for each player"},
 			{"deck:tee-identity", "tee", ECardColumn::Full, 0, "Player preview", "tee player dummy identity preview colors eyes name clan 本体 分身 配色 表情", "Preview player and dummy appearance"},
@@ -371,7 +263,10 @@ namespace qm_card_registry
 			{"deck:controls-miscellaneous", "controls", ECardColumn::Right, 3, "Miscellaneous", "controls miscellaneous binds active disconnect 主动断开 zhudong duankai 异常断开 yichang duankai timeout disconnect qm_timeout_disconnect", "Bind scoreboard, emote, and console actions"},
 			{"deck:controls-custom", "controls", ECardColumn::Right, 4, "Custom", "controls custom binds", "Review and edit custom key bindings"},
 		};
-		// clang-format on
+			// clang-format on
+			qm_card_catalog::FillCardSearchMetadata(Cards);
+			return Cards;
+		}();
 		return s_aDefaults;
 	}
 
@@ -459,8 +354,11 @@ namespace qm_card_registry
 		// 否则会落在自己那个空 tab 上（搜索可见但点了没反应）。
 		if(Default.m_pNavigationTab != nullptr || Default.m_pNavigationStableId != nullptr)
 		{
-			const char *pTab = Default.m_pNavigationTab != nullptr ? Default.m_pNavigationTab : pCurrentTab;
 			const char *pStableId = Default.m_pNavigationStableId != nullptr ? Default.m_pNavigationStableId : Default.m_pStableId;
+			const int TargetIndex = pStableId != nullptr ? Model.FindByStableId(pStableId) : -1;
+			const char *pTab = Default.m_pNavigationTab != nullptr ? Default.m_pNavigationTab : pCurrentTab;
+			if(TargetIndex >= 0 && Model.Entry(TargetIndex).m_pDefaultTab != nullptr)
+				pTab = Model.Entry(TargetIndex).m_pDefaultTab;
 			return {pTab, pStableId};
 		}
 		return {pCurrentTab, Default.m_pStableId};
@@ -486,17 +384,25 @@ namespace qm_card_registry
 			for(size_t Index = 0; !Matches && Index < Default.m_SettingCount; ++Index)
 			{
 				const SCardSettingSearch &Setting = Default.m_pSettings[Index];
-				Matches = SearchTextMatches(Setting.m_pConfigName, pQuery) || SearchTextMatches(Setting.m_pLabel, pQuery) ||
-					  (Setting.m_pLabel != nullptr && SearchTextMatches(Localize(Setting.m_pLabel), pQuery));
+				Matches = SearchTextMatches(Setting.m_pConfigName, pQuery) || SearchTextMatches(Setting.m_pAliases, pQuery) || SearchTextMatches(Setting.m_pLabel, pQuery) ||
+					  (Setting.m_pLabel != nullptr && SearchTextMatches(Localize(Setting.m_pLabel, Setting.m_pContext), pQuery));
 			}
 			if(!Matches)
 				continue;
 
+			// 旧入口只贡献检索词；命中后展示实际承载设置的卡片，并按该 ID 去重。
+			const SCardDefault *pCard = Default.m_pNavigationStableId != nullptr ? FindByStableId(Default.m_pNavigationStableId) : &Default;
+			if(pCard == nullptr)
+				pCard = &Default;
+			if(std::any_of(vResults.begin(), vResults.end(), [pCard](const SCardSearchResult &Result) {
+				   return str_comp(Result.m_pStableId, pCard->m_pStableId) == 0;
+			   }))
+				continue;
 			SCardSearchResult Result;
-			Result.m_pStableId = Default.m_pStableId;
-			Result.m_Title = pLocalizedTitle;
-			Result.m_Description = pLocalizedDescription;
-			Result.m_Target = ResolveCardNavigationTarget(Default, Model);
+			Result.m_pStableId = pCard->m_pStableId;
+			Result.m_Title = pCard->m_pTitle != nullptr ? Localize(pCard->m_pTitle) : "";
+			Result.m_Description = ResolveLocalizedDescription(*pCard);
+			Result.m_Target = ResolveCardNavigationTarget(*pCard, Model);
 			vResults.push_back(std::move(Result));
 		}
 		return vResults;

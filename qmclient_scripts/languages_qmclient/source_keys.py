@@ -434,12 +434,18 @@ def extract_known_indirect_strings(path: Path, content: str) -> set[str]:
     return {record.key for record in extract_known_indirect_records(path, content)}
 
 
+def _is_qm_settings_content_path(normalized: str) -> bool:
+    return normalized.endswith("src/game/client/components/qmclient/menus_qmclient.cpp") or (
+        normalized.startswith("src/game/client/QmUi/cards/") and normalized.endswith(".cpp")
+    )
+
+
 def extract_known_indirect_records(path: Path, content: str) -> list[SourceKeyRecord]:
     records: list[SourceKeyRecord] = []
     normalized = _normalized_relpath(path)
     string_literal = r'"((?:[^"\\]|\\.)*)"'
 
-    if normalized.endswith("src/game/client/components/qmclient/menus_qmclient.cpp"):
+    if _is_qm_settings_content_path(normalized):
         localized_wrapper_re = re.compile(
             r"\b(?:RenderCheckbox|RenderCheckboxTipped|RenderDropDown|RenderIntOption|RenderLabel|RenderLyricsSlider|"
             r"RenderLyricSlider|RenderPassword|RenderSection|RenderSlider|RenderText|RenderValue)\s*\("
@@ -1569,7 +1575,10 @@ def _business_data_records_from_path(
                 )
         # Continue with generic rules for this file.
 
-    if normalized.endswith("src/game/client/QmUi/QmCardRegistry.cpp"):
+    if normalized.endswith((
+        "src/game/client/QmUi/QmCardRegistry.cpp",
+        "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
+    )):
         for text, line in _extract_cpp_string_literal_records(content):
             records.append(
                 StringAuditRecord(
@@ -1591,7 +1600,7 @@ def _business_data_records_from_path(
                 )
             )
 
-    if normalized.endswith("src/game/client/components/qmclient/menus_qmclient.cpp"):
+    if _is_qm_settings_content_path(normalized):
         # 贡献者、服务商、语言名、地图名和歌词预览是运行时数据，不是翻译源文案。
         DataTexts = {
             "栖梦(璇梦),夏日,DYL",
@@ -1615,7 +1624,7 @@ def _business_data_records_from_path(
         sponsor_line_start = _line_number(content, sponsor_array_start)
         sponsor_line_end = _line_number(content, sponsor_array_end)
         for text, line in _extract_cpp_string_literal_records(content):
-            if text in DataTexts or sponsor_line_start <= line <= sponsor_line_end:
+            if text in DataTexts or (sponsor_array_start >= 0 and sponsor_line_start <= line <= sponsor_line_end):
                 records.append(
                     StringAuditRecord(
                         path, line, text, "business_data", "contributor or preview sample data"
@@ -2098,7 +2107,7 @@ def _business_data_records_from_path(
                 )
         # Continue with generic rules for this file.
 
-    if normalized.endswith("src/game/client/components/qmclient/menus_qmclient.cpp"):
+    if _is_qm_settings_content_path(normalized):
         module_search_start = content.find("auto ModuleSearchKeywords =")
         module_search_end = content.find("auto ApplyModuleSearch", module_search_start)
         for text, line in _extract_cpp_string_literal_records(content):

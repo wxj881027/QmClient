@@ -265,6 +265,7 @@ MACRO_CONFIG_COL(QmTeamTeeGlowColor, qm_team_tee_glow_color, 0xFFFFFFFF, CFGFLAG
 MACRO_CONFIG_INT(QmRandomEmoteOnHit, qm_random_emote_on_hit, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Random emote when hit by hammer/grenade")
 MACRO_CONFIG_INT(QmEmoticonShadow, qm_emoticon_shadow, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw shadow behind emote")
 MACRO_CONFIG_INT(QmEmoticonProjectileDuration, qm_emoticon_projectile_duration, 5, 1, 10, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Emoticon projectile duration")
+MACRO_CONFIG_INT(QmDecorativeThrows, qm_decorative_throws, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable decorative grass, tomato and egg throws")
 MACRO_CONFIG_INT(QmShowOtherSuperEmotes, qm_show_other_super_emotes, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show other players' large emoticons")
 MACRO_CONFIG_INT(QmShowOtherLaunchEmotes, qm_show_other_launch_emotes, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show other players' launched emoticons")
 MACRO_CONFIG_INT(QmTitleAdvanced, qm_title_advanced, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show advanced title settings (collapsing keeps configured effects)")
