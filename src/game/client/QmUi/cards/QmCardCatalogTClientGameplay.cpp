@@ -362,7 +362,7 @@ float CMenus::LayoutTClientVotingCard(const qm_card_catalog::SQmCardBuildContext
 			DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Voting"), HeadlineFontSize, TEXTALIGN_ML);
 		CurrentColumn.HSplitTop(MarginSmall, nullptr, &CurrentColumn);
 		CTClientSettingsRowAllocator Rows(CurrentColumn);
-		const SSettingsContentMetrics ContentMetrics = ResolveSettingsContentMetrics(MainView.w);
+		const SSettingsContentMetrics ContentMetrics = Ctx.m_Metrics;
 		const float AutoVoteHeight = ResolveSettingsRadioRowLayout(CurrentColumn, 3, ContentMetrics).m_Height;
 		CUIRect Row = Rows.Next(AutoVoteHeight);
 
