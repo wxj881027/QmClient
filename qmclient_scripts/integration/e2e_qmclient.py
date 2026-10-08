@@ -15,8 +15,18 @@ import time
 from collections.abc import Callable
 
 try:
+	from qmclient_scripts.integration.e2e_menu_background import (
+		scenario_menu_background_failed_switch_shutdown,
+		scenario_menu_background_pending_switch_shutdown,
+		scenario_menu_background_switch_shutdown,
+	)
 	from qmclient_scripts.integration.process_harness import ProcessEnvironment
 except ModuleNotFoundError:
+	from e2e_menu_background import (  # type: ignore[no-redef]
+		scenario_menu_background_failed_switch_shutdown,
+		scenario_menu_background_pending_switch_shutdown,
+		scenario_menu_background_switch_shutdown,
+	)
 	from process_harness import ProcessEnvironment  # type: ignore[no-redef]
 
 
@@ -332,6 +342,9 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"demo_recording": scenario_demo_recording,
 	"online_replay_without_source": scenario_online_replay_without_source,
 	"invalid_statistics_preserved": scenario_invalid_statistics_preserved,
+	"menu_background_failed_switch_shutdown": scenario_menu_background_failed_switch_shutdown,
+	"menu_background_pending_switch_shutdown": scenario_menu_background_pending_switch_shutdown,
+	"menu_background_switch_shutdown": scenario_menu_background_switch_shutdown,
 	"perf_log_persistence": scenario_perf_log_persistence,
 	"qm_lifecycle_persistence": scenario_qm_lifecycle_persistence,
 	"recording_without_connection": scenario_recording_without_connection,

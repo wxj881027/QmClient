@@ -271,11 +271,6 @@ void CMenuBackground::InitializeLoadedMap()
 	}
 }
 
-CBackgroundEngineMap *CMenuBackground::CreateBGMap()
-{
-	return new CMenuMap;
-}
-
 void CMenuBackground::OnInterfacesInit(CGameClient *pClient)
 {
 	CComponentInterfaces::OnInterfacesInit(pClient);
@@ -288,12 +283,13 @@ void CMenuBackground::OnInit()
 	if(m_IsInit)
 		return;
 
-	m_pBackgroundMap = CreateBGMap();
+	// 菜单地图由组件独占，切换时随背景状态转移，不交给 Kernel 重复管理。
+	m_pOwnedBackgroundMap = std::make_unique<CMenuMap>(Storage());
+	m_pBackgroundMap = m_pOwnedBackgroundMap.get();
 	m_pMap = m_pBackgroundMap;
 
 	m_IsInit = true;
 
-	Kernel()->RegisterInterface<CMenuMap>((CMenuMap *)m_pBackgroundMap);
 	EnsureThemeEntries();
 	EnsureThemeListJob();
 	if(g_Config.m_ClMenuMap[0] != '\0')
@@ -320,6 +316,12 @@ void CMenuBackground::OnInit()
 	m_Camera.m_ZoomSmoothingTarget = 0;
 }
 
+void CMenuBackground::OnShutdown()
+{
+	ReleasePreviousBackground();
+	CBackground::OnShutdown();
+}
+
 void CMenuBackground::AdvanceLoading()
 {
 	if(!m_Loading)
@@ -335,14 +337,15 @@ void CMenuBackground::PreserveCurrentBackground()
 		return;
 
 	m_pPreviousBackground = std::make_unique<SPreviousBackground>();
-	m_pPreviousBackground->m_pMap.reset(static_cast<CMenuMap *>(m_pBackgroundMap));
+	m_pPreviousBackground->m_pMap = std::move(m_pOwnedBackgroundMap);
 	m_pPreviousBackground->m_pLayers.reset(m_pBackgroundLayers);
 	m_pPreviousBackground->m_pImages.reset(m_pBackgroundImages);
 	m_pPreviousBackground->m_pRenderer = std::make_unique<CMapLayers>(ERenderType::RENDERTYPE_FULL_DESIGN, false);
 	m_pPreviousBackground->m_pRenderer->OnInterfacesInit(GameClient());
 	SwapState(*m_pPreviousBackground->m_pRenderer);
 
-	m_pBackgroundMap = CreateBGMap();
+	m_pOwnedBackgroundMap = std::make_unique<CMenuMap>(Storage());
+	m_pBackgroundMap = m_pOwnedBackgroundMap.get();
 	m_pBackgroundLayers = new CLayers;
 	m_pBackgroundImages = new CMapImages;
 	m_pMap = m_pBackgroundMap;

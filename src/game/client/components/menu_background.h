@@ -14,6 +14,9 @@
 class CMenuMap : public CBackgroundEngineMap
 {
 	MACRO_INTERFACE("menu_enginemap")
+
+public:
+	using CBackgroundEngineMap::CBackgroundEngineMap;
 };
 
 // themes
@@ -95,10 +98,6 @@ private:
 
 	CCamera m_Camera;
 
-protected:
-	CBackgroundEngineMap *CreateBGMap() override;
-
-private:
 	vec2 m_RotationCenter;
 	std::array<vec2, NUM_POS> m_aPositions;
 	int m_CurrentPosition;
@@ -113,6 +112,7 @@ private:
 
 	bool m_IsInit;
 	bool m_Loading;
+	std::unique_ptr<CMenuMap> m_pOwnedBackgroundMap;
 	std::unique_ptr<SPreviousBackground> m_pPreviousBackground;
 
 	void ResetPositions();
@@ -140,6 +140,7 @@ public:
 
 	void OnInterfacesInit(CGameClient *pClient) override;
 	void OnInit() override;
+	void OnShutdown() override;
 	void OnMapLoad() override;
 	void OnRender() override;
 
