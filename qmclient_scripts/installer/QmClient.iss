@@ -28,6 +28,9 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 LZMAUseSeparateProcess=yes
 WizardStyle=modern
+SetupIconFile=assets\setup-icon.ico
+WizardImageFile=assets\wizard-side.png
+WizardSmallImageFile=assets\wizard-small.png
 UninstallDisplayIcon={app}\DDNet.exe
 CloseApplications=yes
 RestartApplications=no
@@ -40,6 +43,10 @@ UninstallLogMode=append
 
 [Languages]
 Name: "zh_cn"; MessagesFile: "QmClient-zh_CN.isl"
+
+[Messages]
+SetupWindowTitle=QmClient {#AppVersion} 安装程序
+SelectTasksLabel2=勾选需要的选项，然后点击“下一步”。%n%n安装后可从开始菜单搜索 QmClient、DDNet 或 DDNet Server。
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; Flags: unchecked
@@ -153,6 +160,8 @@ Type: files; Name: "{app}\QmClient-Setup.ini"
 
 [Icons]
 Name: "{group}\QmClient"; Filename: "{app}\DDNet.exe"; WorkingDir: "{app}"
+Name: "{group}\DDNet"; Filename: "{app}\DDNet.exe"; WorkingDir: "{app}"
+Name: "{group}\DDNet Server"; Filename: "{app}\DDNet-Server.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\QmClient"; Filename: "{app}\DDNet.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
