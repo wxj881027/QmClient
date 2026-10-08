@@ -5,6 +5,7 @@
 #include <game/client/components/console.h>
 #include <game/client/components/qmclient/axiom_auto_login.h>
 #include <game/client/components/qmclient/chat_command_preview.h>
+#include <game/client/components/qmclient/chat_input_layout.h>
 #include <game/client/components/qmclient/chat_translate_button.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
 #include <game/client/components/tclient/fast_practice.h>
@@ -214,4 +215,71 @@ TEST(QmChatTranslateButton, PopupOrChatClosureCancelsPendingClickAndCanReopen)
 	EXPECT_EQ(Button.Update(KEY_MOUSE_1, IInput::FLAG_RELEASE, true, true), CQmChatTranslateButton::EAction::NONE);
 	Button.Update(KEY_MOUSE_1, IInput::FLAG_PRESS, true, true);
 	EXPECT_EQ(Button.Update(KEY_MOUSE_1, IInput::FLAG_RELEASE, true, true), CQmChatTranslateButton::EAction::OPEN_SETTINGS);
+}
+
+TEST(QmChatInputLayout, TextStartLeavesRoomForButtonOnItsLeft)
+{
+	const float FontSize = 12.0f;
+	const float PrefixWidth = 40.0f;
+	const SQmChatInputLayout Layout = QmChatResolveInputLayout(5.0f, 100.0f, 400.0f, FontSize, PrefixWidth);
+
+	EXPECT_FLOAT_EQ(Layout.m_ButtonX, 5.0f);
+	EXPECT_GT(Layout.m_TextStartX, Layout.m_ButtonX + Layout.m_ButtonW);
+	EXPECT_FLOAT_EQ(Layout.m_TextStartX, Layout.m_ButtonX + Layout.m_ButtonW + QM_CHAT_TRANSLATE_BUTTON_GAP);
+}
+
+TEST(QmChatInputLayout, CursorLineWidthKeepsWrappedTextAwayFromButton)
+{
+	const float FontSize = 12.0f;
+	const SQmChatInputLayout Layout = QmChatResolveInputLayout(5.0f, 100.0f, 400.0f, FontSize, 40.0f);
+	const float TextRight = Layout.m_TextStartX + Layout.m_CursorLineWidth;
+
+	// 正文右边界仍受整行右边界约束，按钮区只从左侧让位。
+	EXPECT_LE(TextRight, 5.0f + 400.0f + 0.001f);
+	EXPECT_GT(Layout.m_MessageMaxWidth, 0.0f);
+	EXPECT_LE(Layout.m_MessageMaxWidth + 40.0f, Layout.m_CursorLineWidth + 0.001f);
+}
+
+TEST(QmChatInputLayout, MessageWidthNeverCollapsesBelowUsableMinimum)
+{
+	const SQmChatInputLayout Layout = QmChatResolveInputLayout(0.0f, 0.0f, 10.0f, 40.0f, 200.0f);
+
+	EXPECT_FLOAT_EQ(Layout.m_MessageMaxWidth, 1.0f);
+	EXPECT_GT(Layout.m_CursorLineWidth, 0.0f);
+}
+
+TEST(QmChatInputLayout, ButtonStaysCenteredOnFirstInputLine)
+{
+	const float FontSize = 12.0f;
+	const float Y = 100.0f;
+	const SQmChatInputLayout Layout = QmChatResolveInputLayout(5.0f, Y, 400.0f, FontSize, 40.0f);
+
+	EXPECT_FLOAT_EQ(Layout.m_ButtonH, QmChatTranslateButtonHeight(FontSize));
+	EXPECT_FLOAT_EQ(Layout.m_ButtonY, Y + (FontSize - Layout.m_ButtonH) * 0.5f);
+	EXPECT_GE(Layout.m_ButtonH, FontSize);
+}
+
+TEST(QmChatInputLayout, WidePrefixStillLeavesBodyRoomToTheRightOfTheButton)
+{
+	const float FontSize = 20.0f;
+	const SQmChatInputLayout Layout = QmChatResolveInputLayout(5.0f, 100.0f, 400.0f, FontSize, 120.0f);
+
+	// 前缀更宽时只有正文变窄，按钮与正文起点不受影响。
+	EXPECT_FLOAT_EQ(Layout.m_TextStartX, 5.0f + QmChatTranslateButtonSize(FontSize) + QM_CHAT_TRANSLATE_BUTTON_GAP);
+	EXPECT_FLOAT_EQ(Layout.m_MessageMaxWidth, 400.0f - QmChatTranslateButtonSize(FontSize) - QM_CHAT_TRANSLATE_BUTTON_GAP - 120.0f);
+}
+
+TEST(QmChatInputLayout, CommonSizesKeepButtonPrefixAndBodyInsideInputRow)
+{
+	for(float FontSize : {8.0f, 12.0f, 20.0f, 32.0f})
+		for(float LineWidth : {190.0f, 400.0f, 800.0f})
+			for(float PrefixWidth : {20.0f, 60.0f, 100.0f})
+			{
+				SCOPED_TRACE(::testing::Message() << FontSize << "/" << LineWidth << "/" << PrefixWidth);
+				const auto Layout = QmChatResolveInputLayout(5.0f, 100.0f, LineWidth, FontSize, PrefixWidth);
+				EXPECT_GT(Layout.m_TextStartX, Layout.m_ButtonX + Layout.m_ButtonW);
+				EXPECT_GT(Layout.m_MessageMaxWidth, 1.0f);
+				EXPECT_LE(Layout.m_TextStartX + PrefixWidth + Layout.m_MessageMaxWidth, 5.0f + LineWidth + 0.001f);
+				EXPECT_FLOAT_EQ(Layout.m_ButtonY + Layout.m_ButtonH * 0.5f, 100.0f + FontSize * 0.5f);
+			}
 }

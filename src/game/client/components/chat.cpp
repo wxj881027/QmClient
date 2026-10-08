@@ -25,6 +25,7 @@
 #include <game/client/components/message_gradient.h>
 #include <game/client/components/qmclient/chat_command_hud_render.h>
 #include <game/client/components/qmclient/chat_command_preview.h>
+#include <game/client/components/qmclient/chat_input_layout.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/friend_heart_icon.h>
@@ -2613,8 +2614,7 @@ bool CChat::OnPrepareLines(float y)
 			AppendCursor.m_LongestLineWidth = 0.0f;
 			if(IndentMessage)
 			{
-				AppendCursor.m_StartX = MeasureCursor.m_X;
-				AppendCursor.m_LineWidth -= MeasureCursor.m_LongestLineWidth;
+				QmChatApplyMessageIndent(AppendCursor);
 			}
 
 			if(RenderChatEmoji)
@@ -2822,8 +2822,7 @@ bool CChat::OnPrepareLines(float y)
 		AppendCursor.m_LongestLineWidth = 0.0f;
 		if(IndentMessage)
 		{
-			AppendCursor.m_StartX = LineCursor.m_X;
-			AppendCursor.m_LineWidth -= LineCursor.m_LongestLineWidth;
+			QmChatApplyMessageIndent(AppendCursor);
 		}
 
 		STextContainerIndex &BodyContainer = Line.m_RenderSponsorChatStyle != EQmSponsorChatStyle::NONE ? Line.m_BodyTextContainerIndex : Line.m_TextContainerIndex;
@@ -2904,7 +2903,7 @@ bool CChat::OnPrepareLines(float y)
 			float FullWidth = RealMsgPaddingX * 1.5f;
 			if(IndentMessage)
 			{
-				FullWidth += LineCursor.m_LongestLineWidth + AppendCursor.m_LongestLineWidth;
+				FullWidth += QmChatIndentedContentWidth(LineCursor, AppendCursor);
 			}
 			else
 			{
@@ -3033,12 +3032,11 @@ void CChat::OnRender()
 
 	float ScaledFontSize = FontSize() * (8.0f / 6.0f);
 	const float CommandPreviewFontSize = ScaledFontSize * 0.5f;
-	const float TranslateButtonSize = maximum(16.0f, ScaledFontSize * 1.35f);
-	const float TranslateButtonGap = 4.0f;
 	const float InputLineWidth = std::max(Width - 190.0f, 190.0f);
 	const char *pInputModeLabel = m_Mode == MODE_ALL ? Localize("All") : (m_Mode == MODE_TEAM ? Localize("Team") : Localize("Chat"));
 	const float InputPrefixWidth = TextRender()->TextWidth(ScaledFontSize, pInputModeLabel) + TextRender()->TextWidth(ScaledFontSize, ": ");
-	const float CommandPreviewMaxWidth = maximum(1.0f, InputLineWidth - InputPrefixWidth - TranslateButtonSize - TranslateButtonGap);
+	// 翻译按钮在输入行最左侧，行宽先扣除按钮区，再扣除「全体」等前缀。
+	const float CommandPreviewMaxWidth = QmChatInputMessageWidth(InputLineWidth, ScaledFontSize, InputPrefixWidth);
 	char aCommandPreview[MAX_LINE_LENGTH];
 	const bool HasCommandPreview = m_Mode != MODE_NONE && BuildCommandUsagePreview(m_Input.GetString(), aCommandPreview, sizeof(aCommandPreview));
 	CUIRect InputBlockRect = {};
@@ -3052,26 +3050,24 @@ void CChat::OnRender()
 
 	if(InputActive)
 	{
+		const SQmChatInputLayout InputLayout = QmChatResolveInputLayout(x, y, InputLineWidth, ScaledFontSize, InputPrefixWidth);
+
 		// render chat input
 		CTextCursor InputCursor;
-		InputCursor.SetPosition(vec2(x, y));
+		InputCursor.SetPosition(vec2(InputLayout.m_TextStartX, y));
 		InputCursor.m_FontSize = ScaledFontSize;
-		InputCursor.m_LineWidth = InputLineWidth;
-
-		// TClient
-		InputCursor.m_LineWidth = InputLineWidth;
+		InputCursor.m_LineWidth = InputLayout.m_CursorLineWidth;
 
 		TextRender()->TextEx(&InputCursor, pInputModeLabel);
 
 		TextRender()->TextEx(&InputCursor, ": ");
 
-		// 计算翻译按钮大小并调整输入框宽度
-		const float MessageMaxWidth = maximum(1.0f, InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX) - TranslateButtonSize - TranslateButtonGap);
+		const float MessageMaxWidth = InputLayout.m_MessageMaxWidth;
 		const float InputContentHeight = 2.25f * InputCursor.m_FontSize;
 		const float InputClipPaddingTop = maximum(1.0f, InputCursor.m_FontSize * 0.18f);
 		const float InputClipPaddingBottom = maximum(1.0f, InputCursor.m_FontSize * 0.10f);
 		const float InputClipPaddingX = maximum(1.0f, InputCursor.m_FontSize * 0.18f);
-		const float InputClipPaddingRight = minimum(InputClipPaddingX, TranslateButtonGap - 1.0f);
+		const float InputClipPaddingRight = minimum(InputClipPaddingX, QM_CHAT_TRANSLATE_BUTTON_GAP - 1.0f);
 		const CUIRect InputContentRect = {InputCursor.m_X, InputCursor.m_Y, MessageMaxWidth, InputContentHeight};
 		const CUIRect InputClippingRect = {InputContentRect.x - InputClipPaddingX, InputContentRect.y - InputClipPaddingTop, InputContentRect.w + InputClipPaddingX + InputClipPaddingRight, InputContentRect.h + InputClipPaddingTop + InputClipPaddingBottom};
 		InputBlockRect = {x, InputContentRect.y, InputLineWidth, InputContentRect.h};
@@ -3177,9 +3173,8 @@ void CChat::OnRender()
 			ExtendBounds(PreviewCursor.m_StartX, PreviewCursor.m_StartY, MessageMaxWidth, PreviewCursor.Height());
 		}
 
-		// 渲染翻译按钮
-		const float TranslateButtonHeight = maximum(InputCursor.m_FontSize + 4.0f, 16.0f);
-		const CUIRect TranslateButtonRect = {InputContentRect.x + InputContentRect.w + TranslateButtonGap, InputContentRect.y + (InputCursor.m_FontSize - TranslateButtonHeight) * 0.5f, TranslateButtonSize, TranslateButtonHeight};
+		// 渲染翻译按钮：固定在输入行最左侧，「全体: 」等前缀从按钮右侧开始。
+		const CUIRect TranslateButtonRect = {InputLayout.m_ButtonX, InputLayout.m_ButtonY, InputLayout.m_ButtonW, InputLayout.m_ButtonH};
 		ExtendBounds(TranslateButtonRect.x, TranslateButtonRect.y, TranslateButtonRect.w, TranslateButtonRect.h);
 		RenderTranslateButton(TranslateButtonRect);
 		if(!Input()->HasComposition() && !HudEditorPreview && !GameClient()->m_Menus.IsActive() && !m_LanguageMenuOpen && !Ui()->IsPopupOpen(&m_LanguagePopupContext) && !Ui()->IsPopupOpen(&m_ChatLinePopupContext))

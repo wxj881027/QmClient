@@ -163,21 +163,6 @@ TEST(QmFastPracticeCommands, PredictionLoopsReuseNormalPreInputAndFreezeSemantic
 	EXPECT_NE(VisualBody.find("VisualWorld.m_WorldConfig.m_PredictEvents = false;"), std::string::npos);
 }
 
-TEST(QmChatInteractions, ChatInputPrefixDoesNotReserveSpaceForRightAlignedTranslateButton)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/chat.cpp");
-	const std::string Body = SourceFunctionBody(Source, "void CChat::OnRender()");
-	const size_t InputLayoutStart = Body.find("// render chat input");
-	ASSERT_NE(InputLayoutStart, std::string::npos);
-	const size_t InputLayoutEnd = Body.find("// 渲染翻译按钮", InputLayoutStart);
-	ASSERT_NE(InputLayoutEnd, std::string::npos);
-	const std::string InputLayout = Body.substr(InputLayoutStart, InputLayoutEnd - InputLayoutStart);
-
-	EXPECT_NE(InputLayout.find("InputCursor.SetPosition(vec2(x, y));"), std::string::npos);
-	EXPECT_EQ(InputLayout.find("InputCursor.SetPosition(vec2(x + TranslateButtonSize + TranslateButtonGap, y));"), std::string::npos);
-	EXPECT_NE(Body.find("CUIRect TranslateButtonRect = {InputContentRect.x + InputContentRect.w + TranslateButtonGap"), std::string::npos);
-}
-
 TEST(QmChatRepeat, TeamMessagesKeepTheirSendChannel)
 {
 	const std::string TClient = ReadTestSourceFile("src/game/client/components/tclient/tclient.cpp");
