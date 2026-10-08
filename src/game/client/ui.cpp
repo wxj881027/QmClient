@@ -2105,7 +2105,7 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 	return DoLabel(pRect, pFallbackIcon, Size, Align, LabelProps);
 }
 
-int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor)
+int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash)
 {
 	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
 	pRect = &ButtonRect;
@@ -2127,9 +2127,9 @@ int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const
 	IconRect.h = IconSide;
 	DrawQmIcon(IconRect, Icon, pFallbackIcon, ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(TextRender()->GetTextColor().a));
 
-	if(!Enabled)
+	if(!Enabled || ShowSlash)
 	{
-		// 与 DrawButton_FontIcon 保持一致：禁用时叠加红色斜杠。
+		// 开关关闭时也可叠加斜杠，但按钮必须保持可点击。
 		const CQmIconSemanticColorScope SemanticColorScope;
 		DrawQmIcon(IconRect, EQmIcon::SLASH, FONT_ICON_SLASH, ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
 	}

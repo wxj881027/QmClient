@@ -544,6 +544,22 @@ turkish = "Demo kesimi dışa aktarılamadı"
 polish = "Nie udało się wyeksportować przycięcia demo"
 
 [[message]]
+key = "Failed to record video. See local console for details."
+[message.translations]
+simplified_chinese = "视频录制失败，详情请查看本地控制台。"
+traditional_chinese = "影片錄製失敗，詳情請查看本機主控台。"
+japanese = "動画の録画に失敗しました。詳細はローカルコンソールを確認してください。"
+korean = "동영상 녹화에 실패했습니다. 자세한 내용은 로컬 콘솔을 확인하세요."
+russian = "Не удалось записать видео. Подробности смотрите в локальной консоли."
+german = "Videoaufnahme fehlgeschlagen. Details stehen in der lokalen Konsole."
+spanish = "No se pudo grabar el vídeo. Consulta la consola local para más detalles."
+french = "L'enregistrement vidéo a échoué. Consultez la console locale pour plus de détails."
+brazilian_portuguese = "Falha ao gravar o vídeo. Consulte o console local para mais detalhes."
+portuguese = "Falha ao gravar o vídeo. Consulte a consola local para mais detalhes."
+turkish = "Video kaydedilemedi. Ayrıntılar için yerel konsola bakın."
+polish = "Nie udało się nagrać filmu. Szczegóły znajdziesz w lokalnej konsoli."
+
+[[message]]
 key = "Fetch Info"
 [message.translations]
 simplified_chinese = "回放信息"

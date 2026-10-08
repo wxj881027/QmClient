@@ -1485,6 +1485,7 @@ Failed to prepare main asset image.
 Failed to preview candidate file.
 Failed to preview import file.
 Failed to read saves file
+Failed to record video. See local console for details.
 Failed to write PNG export.
 Fake CTF flags
 Fallback simple noise reduction strength

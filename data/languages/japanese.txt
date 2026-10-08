@@ -4460,6 +4460,9 @@ Failed to preview import file.
 Failed to read saves file
 == セーブファイルの読み込みに失敗しました
 
+Failed to record video. See local console for details.
+== 動画の録画に失敗しました。詳細はローカルコンソールを確認してください。
+
 Failed to write PNG export.
 == PNG エクスポートの書き込みに失敗しました。
 

@@ -66,6 +66,40 @@ TEST(QmDemoDisplay, LivePlayUsesTheLiveOptions)
 	EXPECT_TRUE(Settings.m_Chat);
 }
 
+TEST(QmDemoDisplay, DisplayBindingsUpdateBothPlaybackAndRenderedVideo)
+{
+	CConfig Config = MakeConfig();
+	const auto Bindings = qm_demo_display::ConfigBindings(Config);
+	for(const int Enabled : {0, 1, 0, 1})
+	{
+		*Bindings.m_pHud = Enabled;
+		*Bindings.m_pChat = Enabled;
+		for(const bool VideoRendering : {false, true})
+		{
+			SCOPED_TRACE(::testing::Message() << "enabled=" << Enabled << " video=" << VideoRendering);
+			const auto Settings = qm_demo_display::Resolve(Config, true, VideoRendering);
+			EXPECT_EQ(Settings.m_Hud, Enabled != 0);
+			EXPECT_EQ(Settings.m_Chat, Enabled != 0);
+		}
+	}
+	EXPECT_EQ(Config.m_ClShowhud, 1);
+	EXPECT_EQ(Config.m_ClShowChat, 1);
+	EXPECT_EQ(Config.m_ClVideoShowhud, 0);
+	EXPECT_EQ(Config.m_ClVideoShowChat, 0);
+}
+
+TEST(QmDemoDisplay, OnlineDisplayBindingKeepsServerChatSeparateFromDemoChat)
+{
+	CConfig Config = MakeConfig();
+	Config.m_QmDemoShowChat = 1;
+	const auto Bindings = qm_demo_display::ConfigBindings(Config, true);
+	*Bindings.m_pChat = 0;
+	EXPECT_FALSE(qm_demo_display::Resolve(Config, false, false).m_Chat);
+	EXPECT_TRUE(qm_demo_display::Resolve(Config, true, false).m_Chat);
+	*Bindings.m_pChat = 1;
+	EXPECT_TRUE(qm_demo_display::Resolve(Config, false, false).m_Chat);
+}
+
 TEST(QmDemoDisplay, VideoRenderingUsesTheVideoOptionsOutsideDemoPlayback)
 {
 	const CConfig Config = MakeConfig();

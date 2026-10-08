@@ -3,6 +3,8 @@
 
 #include <base/lock.h>
 
+#include <engine/client/video_frame_capture.h>
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -47,7 +49,8 @@ public:
 	bool Start() override REQUIRES(!m_WriteLock);
 	void Stop() override;
 	void Pause(bool Pause) override;
-	bool IsRecording() const override { return m_Recording; }
+	bool IsRecording() const override { return m_Recording && !HasError(); }
+	bool HasError() const override { return m_FrameCapture.HasError(); }
 
 	void NextVideoFrame() override;
 	void NextVideoFrameThread() override;
@@ -60,7 +63,7 @@ public:
 private:
 	void RunVideoThread(size_t ParentThreadIndex, size_t ThreadIndex) REQUIRES(!m_WriteLock);
 	void FillVideoFrame(size_t ThreadIndex) REQUIRES(!m_WriteLock);
-	void UpdateVideoBufferFromGraphics(size_t ThreadIndex);
+	bool UpdateVideoBufferFromGraphics(size_t ThreadIndex);
 
 	void RunAudioThread(size_t ParentThreadIndex, size_t ThreadIndex) REQUIRES(!m_WriteLock);
 	void FillAudioFrame(size_t ThreadIndex);
@@ -82,6 +85,7 @@ private:
 
 	int m_Width;
 	int m_Height;
+	CVideoFrameCapture m_FrameCapture;
 	char m_aName[256];
 	uint64_t m_VideoFrameIndex = 0;
 	uint64_t m_AudioFrameIndex = 0;
@@ -90,7 +94,7 @@ private:
 
 	bool m_Started;
 	bool m_Stopped;
-	bool m_Recording;
+	std::atomic<bool> m_Recording;
 
 	CLock m_WriteLock;
 	size_t m_VideoThreads = 2;
