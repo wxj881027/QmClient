@@ -96,9 +96,6 @@ float CMenus::LayoutTClientVisualNameplateCard(const qm_card_catalog::SQmCardBui
 		auto ShouldRenderVisualBlock = [&](float Height) {
 			return Render && ShouldRenderSection(CurrentColumn, 0.0f, Height);
 		};
-		[[maybe_unused]] auto SkipVisualBlock = [&](float Height) {
-			SkipSection(CurrentColumn, 0.0f, Height);
-		};
 		CurrentColumn.HSplitTop(MarginBetweenSections, nullptr, &CurrentColumn);
 		BoxRect = CurrentColumn;
 		CurrentColumn.HSplitTop(HeadlineHeight, Render ? &Label : &TmpLabel, &CurrentColumn);

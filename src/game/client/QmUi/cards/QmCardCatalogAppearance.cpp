@@ -81,7 +81,8 @@ namespace
 
 uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuildContext &Ctx, std::vector<SSettingsCardDefinition> *pCards, int AppearanceTab)
 {
-	const CUIRect MainView = Ctx.m_Page.m_ContentViewport;
+	const SSettingsPageLayoutFrame AppearancePage = Ctx.m_Page;
+	const CUIRect MainView = AppearancePage.m_ContentViewport;
 	CUIRect LeftView, RightView, Button;
 	const SSettingsContentMetrics AppearanceMetrics = Ctx.m_Metrics;
 	const float AppearanceUiScale = AppearanceMetrics.m_UiScale;
