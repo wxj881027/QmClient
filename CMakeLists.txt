@@ -3436,6 +3436,8 @@ if(CLIENT)
     components/qmclient/decorative_projectiles.h
     components/qmclient/decorative_throw_policy.h
     components/qmclient/decorative_throw_transport.cpp
+    components/qmclient/dummy_hammer_input.cpp
+    components/qmclient/dummy_hammer_input.h
     components/qmclient/demo_ui.h
     components/qmclient/emoticon_commands.h
     components/qmclient/hammer_hit_detection.cpp
@@ -4533,6 +4535,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_blank_asset_fallback_test.cpp
     src/test/unit/qmclient/client/qm_spectator_selector_layout_test.cpp
     src/test/unit/qmclient/client/qm_shortcut_held_bind_test.cpp
+    src/test/unit/qmclient/client/qm_dummy_hammer_input_test.cpp
+    src/test/integration/qmclient/client/qm_deepfly_bind_test.cpp
     src/test/unit/qmclient/client/qm_spectator_tele_search_test.cpp
     src/test/unit/qmclient/client/qm_spectator_friend_priority_test.cpp
     src/test/unit/qmclient/client/qm_friend_enter_tracker_test.cpp
@@ -4987,6 +4991,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/hud_notifications/hud_notification_rules.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
     src/game/client/components/qmclient/hammer_hit_detection.cpp
+    src/game/client/components/qmclient/dummy_hammer_input.cpp
     src/game/client/components/qmclient/axiom_scores.cpp
     src/game/client/components/qmclient/axiom_scores_data.cpp
     src/test/support/ui_test_stubs.cpp
