@@ -25,6 +25,23 @@ inline float QmChatTextBlockBottom(const CTextCursor &Cursor)
 	return std::max(LogicalHeight, VisualHeight);
 }
 
+// 前缀已经换行时只按当前行位置缩进；长前缀也必须给后续正文保留半行宽度。
+// 测量和绘制共用此策略，不改动字符计数、行高和颜色分段。
+inline void QmChatApplyMessageIndent(CTextCursor &Cursor)
+{
+	if(Cursor.m_LineWidth <= 0.0f)
+		return;
+	const float Indent = std::clamp(Cursor.m_X - Cursor.m_StartX, 0.0f, Cursor.m_LineWidth * 0.5f);
+	Cursor.m_StartX += Indent;
+	Cursor.m_LineWidth -= Indent;
+}
+
+// 前缀和正文可能位于不同行，背景宽度取各自的最右边缘，不能直接相加最长行。
+inline float QmChatIndentedContentWidth(const CTextCursor &Prefix, const CTextCursor &Body)
+{
+	return std::max(Prefix.m_LongestLineWidth, Body.m_StartX - Prefix.m_StartX + Body.m_LongestLineWidth);
+}
+
 inline CTextCursor QmChatSecondaryCursor(const CTextCursor &Original, float FontSize, float Offset)
 {
 	CTextCursor Secondary;

@@ -3385,6 +3385,7 @@ if(CLIENT)
     components/qmclient/bind_editor.h
     components/qmclient/bind_settings.cpp
     components/qmclient/chat_command_preview.h
+    components/qmclient/chat_input_layout.h
     components/qmclient/chat_command_hud.h
     components/qmclient/chat_command_hud_render.h
     components/qmclient/chat_emoji.cpp
@@ -5197,6 +5198,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/game/client/components/qmclient/update_version.cpp
     src/test/benchmark/qm_anim_benchmark.cpp
     src/test/benchmark/qm_text_benchmark.cpp
+    src/test/benchmark/qm_chat_layout_benchmark.cpp
     src/test/benchmark/qm_translate_benchmark.cpp
     src/game/client/components/qmclient/translate/translate_jobs.cpp
     src/game/client/components/qmclient/translate/translate_parse.cpp

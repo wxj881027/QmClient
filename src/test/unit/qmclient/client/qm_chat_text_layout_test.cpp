@@ -109,3 +109,93 @@ TEST(QmChatTextLayout, UntranslatedHeightUsesOnlyItsOwnLineMetrics)
 	Cursor.m_VisualBottom = 126.0f;
 	EXPECT_FLOAT_EQ(QmChatTextBlockBottom(Cursor), 26.0f);
 }
+
+TEST(QmChatTextLayout, LongPrefixRetainsHalfWidthForWrappedBody)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(20.0f, 50.0f));
+	Cursor.m_X = 219.0f;
+	Cursor.m_LineWidth = 200.0f;
+	Cursor.m_LongestLineWidth = 199.0f;
+	QmChatApplyMessageIndent(Cursor);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, 120.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 100.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX + Cursor.m_LineWidth, 220.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_X, 219.0f);
+}
+
+TEST(QmChatTextLayout, WrappedPrefixUsesCurrentLineRatherThanLongestLine)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(20.0f, 50.0f));
+	Cursor.m_X = 50.0f;
+	Cursor.m_Y = 62.0f;
+	Cursor.m_LineWidth = 200.0f;
+	Cursor.m_LongestLineWidth = 198.0f;
+	Cursor.m_LineCount = 2;
+	Cursor.m_CharCount = 33;
+	QmChatApplyMessageIndent(Cursor);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, 50.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 170.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_Y, 62.0f);
+	EXPECT_EQ(Cursor.m_LineCount, 2);
+	EXPECT_EQ(Cursor.m_CharCount, 33);
+}
+
+TEST(QmChatTextLayout, ShortPrefixPreservesExistingIndent)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(5.0f, 50.0f));
+	Cursor.m_X = 35.0f;
+	Cursor.m_LineWidth = 200.0f;
+	QmChatApplyMessageIndent(Cursor);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, 35.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 170.0f);
+}
+
+TEST(QmChatTextLayout, PrefixEndingWithNewlineLeavesFullBodyWidth)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(5.0f, 50.0f));
+	Cursor.m_LineWidth = 200.0f;
+	Cursor.m_LongestLineWidth = 195.0f;
+	QmChatApplyMessageIndent(Cursor);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, 5.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 200.0f);
+}
+
+TEST(QmChatTextLayout, UnboundedLineRemainsUnbounded)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(5.0f, 50.0f));
+	Cursor.m_X = 35.0f;
+	QmChatApplyMessageIndent(Cursor);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, 5.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, -1.0f);
+}
+
+TEST(QmChatTextLayout, LongPrefixBackgroundFitsActualTextEdges)
+{
+	CTextCursor Prefix;
+	Prefix.SetPosition(vec2(20.0f, 50.0f));
+	Prefix.m_X = 219.0f;
+	Prefix.m_LineWidth = 200.0f;
+	Prefix.m_LongestLineWidth = 199.0f;
+	CTextCursor Body = Prefix;
+	QmChatApplyMessageIndent(Body);
+	Body.m_LongestLineWidth = 100.0f;
+	EXPECT_FLOAT_EQ(QmChatIndentedContentWidth(Prefix, Body), 200.0f);
+}
+
+TEST(QmChatTextLayout, ShortPrefixBackgroundIncludesIndentedBody)
+{
+	CTextCursor Prefix;
+	Prefix.SetPosition(vec2(20.0f, 50.0f));
+	Prefix.m_X = 50.0f;
+	Prefix.m_LineWidth = 200.0f;
+	Prefix.m_LongestLineWidth = 30.0f;
+	CTextCursor Body = Prefix;
+	QmChatApplyMessageIndent(Body);
+	Body.m_LongestLineWidth = 90.0f;
+	EXPECT_FLOAT_EQ(QmChatIndentedContentWidth(Prefix, Body), 120.0f);
+}
