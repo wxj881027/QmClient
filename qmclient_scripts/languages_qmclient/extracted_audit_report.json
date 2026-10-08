@@ -1,6 +1,6 @@
 {
   "summary": {
-    "must_i18n": 8026,
+    "must_i18n": 8024,
     "business_data": 10851,
     "test_only": 5875,
     "needs_review": 473,
@@ -27386,2065 +27386,2051 @@
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1227,
+      "line": 1228,
       "text": "Desktop fullscreen",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1227,
+      "line": 1228,
       "text": "Fullscreen",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1227,
+      "line": 1228,
       "text": "Windowed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1227,
+      "line": 1228,
       "text": "Windowed borderless",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1227,
+      "line": 1228,
       "text": "Windowed fullscreen",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1253,
+      "line": 1254,
       "text": "Current",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1319,
+      "line": 1320,
       "text": "Screen",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1339,
+      "line": 1340,
       "text": "may cause delay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1339,
+      "line": 1340,
       "text": "V-Sync",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1365,
+      "line": 1366,
       "text": "FSAA samples",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1365,
+      "line": 1366,
       "text": "may cause delay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1377,
+      "line": 1378,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1402,
+      "line": 1403,
       "text": "High Detail",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1404,
+      "line": 1405,
       "text": "Allows maps to render with more detail",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1407,
+      "line": 1408,
       "text": "Show FPS",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1409,
+      "line": 1410,
       "text": "Renders your frame rate in the top right",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1413,
+      "line": 1414,
       "text": "Hz",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1414,
+      "line": 1415,
       "text": "Refresh Rate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1463,
+      "line": 1464,
       "text": "custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1483,
+      "line": 1484,
       "text": "auto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1487,
+      "line": 1488,
       "text": "Compatibility mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1487,
+      "line": 1488,
       "text": "Performance mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1494,
+      "line": 1495,
       "text": "Graphics mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1519,
+      "line": 1520,
       "text": "auto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1530,
+      "line": 1531,
       "text": "Graphics card",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1552,
+      "line": 1553,
       "text": "Current GPU",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1552,
+      "line": 1553,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1554,
-      "text": "Detected graphics adapters",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
       "line": 1556,
-      "text": "No graphics adapters detected",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1560,
       "text": "Choose a GPU for this app in system graphics settings, then restart the client.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1563,
+      "line": 1559,
       "text": "System graphics settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1566,
+      "line": 1562,
       "text": "Could not open system graphics settings.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1566,
+      "line": 1562,
       "text": "Error",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1566,
+      "line": 1562,
       "text": "Ok",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1581,
+      "line": 1577,
       "text": "Interface surface",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1587,
+      "line": 1583,
       "text": "Interface accent color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1594,
+      "line": 1590,
       "text": "Selected item color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1600,
+      "line": 1596,
       "text": "Settings card background",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1605,
+      "line": 1601,
       "text": "Button background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1610,
+      "line": 1606,
       "text": "Input background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1615,
+      "line": 1611,
       "text": "Expanded dropdown background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1620,
+      "line": 1616,
       "text": "Secondary menu background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1625,
+      "line": 1621,
       "text": "Text color mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1629,
+      "line": 1625,
       "text": "Auto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1629,
+      "line": 1625,
       "text": "Black",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1629,
+      "line": 1625,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1629,
+      "line": 1625,
       "text": "White",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1643,
+      "line": 1639,
       "text": "Custom text color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1652,
+      "line": 1648,
       "text": "Text input focus ring color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1653,
+      "line": 1649,
       "text": "Used by active shared text and numeric input fields",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1659,
+      "line": 1655,
       "text": "Scoreboard surface",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1663,
+      "line": 1659,
       "text": "Enable backdrop blur",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1666,
+      "line": 1662,
       "text": "Dual Kawase",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1666,
+      "line": 1662,
       "text": "Gaussian",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1666,
+      "line": 1662,
       "text": "Kawase",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1668,
+      "line": 1664,
       "text": "Smooth and accurate blur with the highest GPU cost.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1669,
+      "line": 1665,
       "text": "Fast, lightweight blur with a softer approximation.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1670,
+      "line": 1666,
       "text": "Multi-resolution blur with a stronger result and balanced GPU cost.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1676,
+      "line": 1672,
       "text": "Blur mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1684,
+      "line": 1680,
       "text": "Show settings card borders",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1690,
+      "line": 1686,
       "text": "Settings card border color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1695,
+      "line": 1691,
       "text": "Rainbow card titles",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1709,
+      "line": 1705,
       "text": "Black",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1709,
+      "line": 1705,
       "text": "Rainbow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1709,
+      "line": 1705,
       "text": "White",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1711,
+      "line": 1707,
       "text": "Bold",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1711,
+      "line": 1707,
       "text": "Fill",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1711,
+      "line": 1707,
       "text": "Light",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1711,
+      "line": 1707,
       "text": "Regular",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1713,
+      "line": 1709,
       "text": "UI icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1718,
+      "line": 1714,
       "text": "Use custom UI icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1728,
+      "line": 1724,
       "text": "UI icon custom color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1733,
+      "line": 1729,
       "text": "Friend icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1735,
+      "line": 1731,
       "text": "Favorite icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1736,
+      "line": 1732,
       "text": "UI icon style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1778,
+      "line": 1774,
       "text": "Use custom UI icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1790,
+      "line": 1786,
       "text": "UI icon custom color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1797,
+      "line": 1793,
       "text": "Friend icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1800,
+      "line": 1796,
       "text": "Favorite icon color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1819,
+      "line": 1815,
       "text": "UI motion level",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1821,
+      "line": 1817,
       "text": "Full",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1821,
+      "line": 1817,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1821,
+      "line": 1817,
       "text": "Reduced",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1827,
+      "line": 1823,
       "text": "Off: disables all interface animations while preserving the options below",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1829,
+      "line": 1825,
       "text": "Reduced: uses shorter transitions and disables presentation animations",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1831,
+      "line": 1827,
       "text": "Full: each enabled animation category uses its complete transition",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1834,
+      "line": 1830,
       "text": "This is the master switch for all interface animation categories",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1837,
+      "line": 1833,
       "text": "Card list entry animation",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1839,
+      "line": 1835,
       "text": "Animate settings card lists when entering a page",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1842,
+      "line": 1838,
       "text": "Card height animation",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1844,
+      "line": 1840,
       "text": "Animate settings card expand and collapse height changes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1847,
+      "line": 1843,
       "text": "Card reflow animation",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1849,
+      "line": 1845,
       "text": "Animate settings card reorder and layout reflow",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1852,
+      "line": 1848,
       "text": "Presentation animations",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1854,
+      "line": 1850,
       "text": "Animate chat box, emote selector, scoreboard, and spectate selection",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1857,
+      "line": 1853,
       "text": "Popup & dropdown blur",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1859,
+      "line": 1855,
       "text": "Apply frosted glass blur behind secondary popups and dropdowns",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2293,
+      "line": 2289,
       "text": "No audio slots found.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2337,
+      "line": 2333,
       "text": "Reload",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 2344,
+      "text": "Pack name",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 2345,
+      "text": "Pack name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 2348,
-      "text": "Pack name",
+      "text": "Edit audio pack",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 2349,
-      "text": "Pack name",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2352,
-      "text": "Edit audio pack",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2353,
       "text": "Reload",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2369,
+      "line": 2365,
       "text": "Search",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2399,
+      "line": 2395,
       "text": "Audio slots",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2438,
+      "line": 2434,
       "text": "Search",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2468,
+      "line": 2464,
       "text": "Candidate files",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2490,
+      "line": 2486,
       "text": "Current file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2492,
+      "line": 2488,
       "text": "Pack name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2521,
+      "line": 2517,
       "text": "Relative path",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2527,
+      "line": 2523,
       "text": "Current file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2529,
+      "line": 2525,
       "text": "Current file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2529,
+      "line": 2525,
       "text": "Default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2535,
+      "line": 2531,
       "text": "Selected candidate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2537,
+      "line": 2533,
       "text": "Default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2537,
+      "line": 2533,
       "text": "Selected candidate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2543,
+      "line": 2539,
       "text": "Manual source file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2546,
+      "line": 2542,
       "text": "Manual source file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2557,
+      "line": 2553,
       "text": "Preview selected file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2561,
+      "line": 2557,
       "text": "No candidate file selected.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2565,
+      "line": 2561,
       "text": "Failed to preview candidate file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2573,
+      "line": 2569,
       "text": "Preview import file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2579,
+      "line": 2575,
       "text": "Source file is empty.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 2579,
+      "text": "Source file does not exist.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 2583,
-      "text": "Source file does not exist.",
+      "text": "Only .wv files are supported right now.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 2587,
-      "text": "Only .wv files are supported right now.",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2591,
       "text": "Failed to preview import file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2599,
+      "line": 2595,
       "text": "Export selected file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2608,
+      "line": 2604,
       "text": "No candidate file selected.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2608,
+      "line": 2604,
       "text": "Source file is empty.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2617,
+      "line": 2613,
       "text": "Source file does not exist.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2622,
+      "line": 2618,
       "text": "Only .wv files are supported right now.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2635,
+      "line": 2631,
       "text": "Audio pack exported.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2639,
+      "line": 2635,
       "text": "Audio file was exported, but reload failed. Restart sound to apply it.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2645,
+      "line": 2641,
       "text": "Failed to export audio pack file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2753,
+      "line": 2749,
       "text": "Use sounds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2765,
+      "line": 2761,
       "text": "Play background music",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2773,
+      "line": 2769,
       "text": "Mute when not active",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2778,
+      "line": 2774,
       "text": "Enable game sounds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2783,
+      "line": 2779,
       "text": "Enable gun sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2788,
+      "line": 2784,
       "text": "Enable shout when holding fire while in water",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2793,
+      "line": 2789,
       "text": "Enable server message sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2798,
+      "line": 2794,
       "text": "Enable regular chat sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2803,
+      "line": 2799,
       "text": "Enable team chat sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2808,
+      "line": 2804,
       "text": "Enable highlighted chat sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2819,
+      "line": 2815,
       "text": "Sound volume",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2822,
+      "line": 2818,
       "text": "Game sound volume",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2825,
+      "line": 2821,
       "text": "Chat sound volume",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2828,
+      "line": 2824,
       "text": "Map sound volume",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2831,
+      "line": 2827,
       "text": "Background music volume",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2875,
+      "line": 2871,
       "text": "Edit audio pack",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2876,
+      "line": 2872,
       "text": "Audio pack directory",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2889,
+      "line": 2885,
       "text": "Edit audio pack",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2894,
+      "line": 2890,
       "text": "Audio pack directory",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2925,
+      "line": 2921,
       "text": "Default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3059,
+      "line": 3055,
       "text": "English translation by the DDNet Team",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3071,
+      "line": 3067,
       "text": "Credits",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3261,
+      "line": 3257,
       "text": "Settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3568,
+      "line": 3564,
       "text": "DDNet Client needs to be restarted to complete update!",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3573,
+      "line": 3569,
       "text": "You must restart the game for all settings to take effect.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3577,
+      "line": 3573,
       "text": "Restart",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3636,
+      "line": 3632,
       "text": "Alpha",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3636,
+      "line": 3632,
       "text": "Hue",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3636,
+      "line": 3632,
       "text": "Lht.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3636,
+      "line": 3632,
       "text": "Sat.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3916,
+      "line": 3912,
       "text": "HUD",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3917,
+      "line": 3913,
       "text": "Chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3918,
+      "line": 3914,
       "text": "Name Plate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3919,
+      "line": 3915,
       "text": "Hook Collisions",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3920,
+      "line": 3916,
       "text": "Info Messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3921,
+      "line": 3917,
       "text": "Laser",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4078,
+      "line": 4074,
       "text": "Show ingame HUD",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4079,
+      "line": 4075,
       "text": "Show health, shields and ammo",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4080,
+      "line": 4076,
       "text": "Show score",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4081,
+      "line": 4077,
       "text": "Show local time always",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4082,
+      "line": 4078,
       "text": "Show spectator cursor",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4083,
+      "line": 4079,
       "text": "Show votes window after voting",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4088,
+      "line": 4084,
       "text": "Scoreboard",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4092,
+      "line": 4088,
       "text": "Authed name color in scoreboard",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4093,
+      "line": 4089,
       "text": "Same clan color in scoreboard",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4094,
+      "line": 4090,
       "text": "Friend color in friends list",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4095,
+      "line": 4091,
       "text": "Clan color in friends list",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4101,
+      "line": 4097,
       "text": "Show client IDs (scoreboard, chat, spectating)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4102,
+      "line": 4098,
       "text": "Show DDRace HUD",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4105,
+      "line": 4101,
       "text": "HUD rainbow colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4106,
+      "line": 4102,
       "text": "Show jumps indicator",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4108,
+      "line": 4104,
       "text": "Show number of spectators",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4109,
+      "line": 4105,
       "text": "Show dummy actions",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4112,
+      "line": 4108,
       "text": "Show player position",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4113,
+      "line": 4109,
       "text": "Show player speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4114,
+      "line": 4110,
       "text": "Show player target angle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4118,
+      "line": 4114,
       "text": "Show freeze bars",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4122,
+      "line": 4118,
       "text": "Opacity of freeze bars inside freeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4185,
+      "line": 4181,
       "text": "Show chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4192,
+      "line": 4188,
       "text": "Always show chat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4196,
+      "line": 4192,
       "text": "Show names in chat in team colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4197,
+      "line": 4193,
       "text": "Show only chat messages from friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4198,
+      "line": 4194,
       "text": "Show only chat messages from team members",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4199,
+      "line": 4195,
       "text": "Save unsent chat draft",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4200,
+      "line": 4196,
       "text": "Auto save chat log",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4204,
+      "line": 4200,
       "text": "Chat log retention days",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4204,
+      "line": 4200,
       "text": "Days",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4207,
+      "line": 4203,
       "text": "Use old chat style",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4214,
+      "line": 4210,
       "text": "Chat font size",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4221,
+      "line": 4217,
       "text": "Chat width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4228,
+      "line": 4224,
       "text": "Chat background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4266,
+      "line": 4262,
       "text": "System message",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4267,
+      "line": 4263,
       "text": "Hide system message prefix",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4275,
+      "line": 4271,
       "text": "Highlighted message",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4279,
+      "line": 4275,
       "text": "Team message",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4283,
+      "line": 4279,
       "text": "Friend message",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4287,
+      "line": 4283,
       "text": "Normal message",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4289,
+      "line": 4285,
       "text": "Client message",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4297,
+      "line": 4293,
       "text": "Friend heart",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4688,
+      "line": 4684,
       "text": "Preview dummy nameplate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4688,
+      "line": 4684,
       "text": "Preview player nameplate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4693,
+      "line": 4689,
       "text": "Free move",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4705,
+      "line": 4701,
       "text": "Reset layout",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4744,
+      "line": 4740,
       "text": "Show own player's hook collision line",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4751,
+      "line": 4747,
       "text": "Always show own player's hook collision line",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4756,
+      "line": 4752,
       "text": "Show other players' hook collision lines",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4763,
+      "line": 4759,
       "text": "Always show other players' hook collision lines",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4768,
+      "line": 4764,
       "text": "Width of your own hook collision line",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4771,
+      "line": 4767,
       "text": "Width of others' hook collision line",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4774,
+      "line": 4770,
       "text": "Hook collision line opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4780,
+      "line": 4776,
       "text": "Colors of the hook collision line, in case of a possible collision with:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4783,
+      "line": 4779,
       "text": "Your movements are not taken into account when calculating the line colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4784,
+      "line": 4780,
       "text": "Nothing hookable",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4785,
+      "line": 4781,
       "text": "Something hookable",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4786,
+      "line": 4782,
       "text": "A Tee",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4787,
+      "line": 4783,
       "text": "Hook line tip",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4995,
+      "line": 4991,
       "text": "Preview 'Hook collisions' being pressed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5015,
+      "line": 5011,
       "text": "Show kill messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5021,
+      "line": 5017,
       "text": "Show finish messages",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5028,
+      "line": 5024,
       "text": "Normal Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5029,
+      "line": 5025,
       "text": "Highlight Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5043,
+      "line": 5039,
       "text": "Laser effect enhancement",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5046,
+      "line": 5042,
       "text": "Glow intensity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5049,
+      "line": 5045,
       "text": "Laser size",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5052,
+      "line": 5048,
       "text": "Opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5054,
+      "line": 5050,
       "text": "Rounded caps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5059,
+      "line": 5055,
       "text": "Pulse speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5062,
+      "line": 5058,
       "text": "Pulse amplitude",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5080,
+      "line": 5076,
       "text": "Weapons",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5086,
+      "line": 5082,
       "text": "Rifle Laser Outline Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5087,
+      "line": 5083,
       "text": "Rifle Laser Inner Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5088,
+      "line": 5084,
       "text": "Shotgun Laser Outline Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5089,
+      "line": 5085,
       "text": "Shotgun Laser Inner Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5093,
+      "line": 5089,
       "text": "Entities",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5099,
+      "line": 5095,
       "text": "Door Laser Outline Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5100,
+      "line": 5096,
       "text": "Door Laser Inner Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5101,
+      "line": 5097,
       "text": "Freeze Laser Outline Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5102,
+      "line": 5098,
       "text": "Freeze Laser Inner Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5103,
+      "line": 5099,
       "text": "Dragger Outline Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5104,
+      "line": 5100,
       "text": "Dragger Inner Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5110,
+      "line": 5106,
       "text": "Set all to Rifle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5125,
+      "line": 5121,
       "text": "Reset to defaults",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5357,
+      "line": 5353,
       "text": "Save the best demo of each race",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5363,
+      "line": 5359,
       "text": "Enable replays",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5375,
+      "line": 5371,
       "text": "Default length",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5378,
+      "line": 5374,
       "text": "ESC replay minutes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5384,
+      "line": 5380,
       "text": "Enable ghost",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5388,
+      "line": 5384,
       "text": "When you cross the start line, show a ghost tee replicating the movements of your best time",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5393,
+      "line": 5389,
       "text": "Show ghost",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5399,
+      "line": 5395,
       "text": "Opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5402,
+      "line": 5398,
       "text": "Save ghost",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5410,
+      "line": 5406,
       "text": "Only save improvements",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5437,
+      "line": 5433,
       "text": "Overlay entities",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5443,
+      "line": 5439,
       "text": "Show text entities",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5448,
+      "line": 5444,
       "text": "Size",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5456,
+      "line": 5452,
       "text": "Show others",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5459,
+      "line": 5455,
       "text": "Opacity",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5461,
+      "line": 5457,
       "text": "Adjust the opacity of entities belonging to other teams, such as tees and name plates",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5465,
+      "line": 5461,
       "text": "Show others (own team only)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5471,
+      "line": 5467,
       "text": "Show background quads",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5475,
+      "line": 5471,
       "text": "Quads are used for background decoration",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5478,
+      "line": 5474,
       "text": "Default zoom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5482,
+      "line": 5478,
       "text": "Prediction margin",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5485,
+      "line": 5481,
       "text": "Predict events (experimental)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5491,
+      "line": 5487,
       "text": "AntiPing (latency compensation)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5495,
+      "line": 5491,
       "text": "Try to predict other entities to reduce lag feeling at high latency",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5500,
+      "line": 5496,
       "text": "AntiPing: predict other players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5506,
+      "line": 5502,
       "text": "AntiPing: predict weapons",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5512,
+      "line": 5508,
       "text": "AntiPing: predict grenade path",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5537,
+      "line": 5533,
       "text": "Regular background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5540,
+      "line": 5536,
       "text": "Entities background color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5550,
+      "line": 5546,
       "text": "Map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5603,
+      "line": 5599,
       "text": "Use current map as background",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5614,
+      "line": 5610,
       "text": "Show tiles layers from BG map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5628,
+      "line": 5624,
       "text": "New random timeout code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5637,
+      "line": 5633,
       "text": "Run on join",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5640,
+      "line": 5636,
       "text": "Chat command (e.g. showall 1)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5650,
+      "line": 5646,
       "text": "Unregister protocol and file extensions",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5703,
+      "line": 5699,
       "text": "New preset name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5716,
+      "line": 5712,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5720,
+      "line": 5716,
       "text": "Rename",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -81288,700 +81274,707 @@
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1138,
+      "line": 1139,
       "text": "graphics settings cards must be registered",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1253,
+      "line": 1254,
       "text": "%s: %dx%d @%dhz %d bit (%d:%d)",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1282,
+      "line": 1283,
       "text": " %dx%d @%dhz %d bit (%d:%d)",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1319,
+      "line": 1320,
       "text": "%s %d: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1339,
+      "line": 1340,
       "text": "%s (%s)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1365,
+      "line": 1366,
       "text": "%s (%s)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1379,
+      "line": 1380,
       "text": "%dx",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1412,
+      "line": 1413,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1413,
+      "line": 1414,
       "text": "Hertz",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1414,
+      "line": 1415,
       "text": "graphics-refresh-rate",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1463,
+      "line": 1464,
       "text": "%s (%s)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1478,
+      "line": 1479,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1483,
+      "line": 1484,
       "text": "%s (%s: %d.%d)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1494,
+      "line": 1495,
       "text": "graphics-mode",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1499,
+      "line": 1500,
       "text": "Vulkan",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1519,
+      "line": 1520,
       "text": "%s (%s)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1530,
+      "line": 1531,
       "text": "graphics-card-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1552,
+      "line": 1553,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1563,
+      "line": 1559,
       "text": "graphics-system-gpu-settings",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1625,
+      "line": 1621,
       "text": "text-color-mode",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1663,
+      "line": 1659,
       "text": "enable-backdrop-blur",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1684,
+      "line": 1680,
       "text": "show-settings-card-borders",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1695,
+      "line": 1691,
       "text": "rainbow-card-titles",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1718,
+      "line": 1714,
       "text": "graphics-custom-icon-color",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1778,
+      "line": 1774,
       "text": "graphics-custom-icon-color",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1819,
+      "line": 1815,
       "text": "graphics-ui-motion-level-label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1837,
+      "line": 1833,
       "text": "settings-card-list-entry-animations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1842,
+      "line": 1838,
       "text": "settings-card-height-animations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1847,
+      "line": 1843,
       "text": "settings-card-reflow-animations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1852,
+      "line": 1848,
       "text": "presentation-animations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1857,
+      "line": 1853,
       "text": "settings-popup-blur",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1923,
+      "line": 1919,
       "text": ".opus",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1923,
+      "line": 1919,
       "text": ".wv",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1934,
+      "line": 1930,
       "text": "default",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1942,
+      "line": 1938,
       "text": "audio/%s",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 1947,
+      "line": 1943,
       "text": "audio/%s/audio",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2031,
+      "line": 2027,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2040,
+      "line": 2036,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2041,
+      "line": 2037,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2042,
+      "line": 2038,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2055,
+      "line": 2051,
       "text": ".",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2055,
+      "line": 2051,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2060,
+      "line": 2056,
       "text": "%s/%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2065,
+      "line": 2061,
       "text": "%s/%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2089,
+      "line": 2085,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2101,
+      "line": 2097,
       "text": "audio/%s/audio/%s",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2132,
+      "line": 2128,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2275,
+      "line": 2271,
       "text": "settings_audio_pack_slot_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2281,
+      "line": 2277,
       "text": "settings_audio_pack_candidate_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2287,
+      "line": 2283,
       "text": "settings_audio_pack_text_inputs",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2293,
+      "line": 2289,
       "text": "audio_no_slots_label",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2348,
+      "line": 2344,
       "text": "audio_pack_name_label",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2352,
+      "line": 2348,
       "text": "audio_pack_edit_title",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2353,
+      "line": 2349,
       "text": "sound-audio-pack-editor-reload",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2369,
+      "line": 2365,
       "text": "audio_pack_slot_search_label",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2422,
+      "line": 2418,
       "text": "%s [%d/%d]",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2438,
+      "line": 2434,
       "text": "audio_pack_candidate_search_label",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2490,
+      "line": 2486,
       "text": "%s (%s)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2492,
+      "line": 2488,
       "text": "%s (%s)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2503,
+      "line": 2499,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2506,
+      "line": 2502,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2514,
+      "line": 2510,
       "text": "%s [%d/%d]",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2521,
+      "line": 2517,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2527,
+      "line": 2523,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2529,
+      "line": 2525,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2535,
+      "line": 2531,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2537,
+      "line": 2533,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2543,
+      "line": 2539,
       "text": "audio_manual_source_label",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2557,
+      "line": 2553,
       "text": "sound-audio-pack-editor-preview-selected",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2569,
+      "line": 2565,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2573,
+      "line": 2569,
       "text": "sound-audio-pack-editor-preview-import",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2576,
+      "line": 2572,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2585,
+      "line": 2581,
       "text": ".wv",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2595,
+      "line": 2591,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2599,
+      "line": 2595,
       "text": "sound-audio-pack-editor-export-selected",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2620,
+      "line": 2616,
       "text": ".wv",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2668,
+      "line": 2664,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2683,
+      "line": 2679,
       "text": "settings_sound",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2688,
+      "line": 2684,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2699,
+      "line": 2695,
       "text": "sound settings cards must be registered",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2819,
+      "line": 2815,
       "text": "sound-volume",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2822,
+      "line": 2818,
       "text": "sound-game-volume",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2825,
+      "line": 2821,
       "text": "sound-chat-volume",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2828,
+      "line": 2824,
       "text": "sound-map-volume",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2831,
+      "line": 2827,
       "text": "sound-background-music-volume",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2889,
+      "line": 2885,
       "text": "sound-edit-audio-pack",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2894,
+      "line": 2890,
       "text": "sound-audio-pack-directory",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2897,
+      "line": 2893,
       "text": "audio",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2923,
+      "line": 2919,
       "text": "default",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 2938,
+      "line": 2934,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3059,
+      "line": 3055,
       "text": "Translation credits: Add your own name here when you update translations",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3071,
+      "line": 3067,
       "text": "language-credits",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3082,
+      "line": 3078,
       "text": "page=language languages=%d",
       "category": "business_data",
       "reason": "log or telemetry key/value payload"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3083,
+      "line": 3079,
       "text": "language_list_total",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3085,
+      "line": 3081,
       "text": "language_page_total",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3085,
+      "line": 3081,
       "text": "page=language",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3184,
+      "line": 3180,
       "text": "language_list_scroll",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3187,
+      "line": 3183,
       "text": "language_list_scroll",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3261,
+      "line": 3257,
       "text": "settings-shell-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3268,
+      "line": 3264,
+      "text": "%d",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 3269,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -81989,27 +81982,27 @@
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 3273,
-      "text": "%d",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3277,
       "text": "context=%s page=%s tab=%s operation=%s restart=%d",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3279,
+      "line": 3275,
       "text": "settings_shell_layout",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3321,
+      "line": 3317,
+      "text": "%d",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 3322,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -82017,48 +82010,48 @@
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 3326,
-      "text": "%d",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3330,
       "text": "context=%s page=%s tab=%s operation=%s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3331,
+      "line": 3327,
       "text": "settings_tabbar",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3359,
+      "line": 3355,
       "text": "event=page_switch from=%s to=%s dur_ms=%.3f source=settings_page_switch",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3361,
+      "line": 3357,
       "text": "perf/interaction",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3361,
+      "line": 3357,
       "text": "settings",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3367,
+      "line": 3363,
+      "text": "%d",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 3368,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -82066,83 +82059,83 @@
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 3372,
-      "text": "%d",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3376,
       "text": "settings_tab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3486,
+      "line": 3482,
       "text": "ui_settings_page invalid",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3492,
+      "line": 3488,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3497,
+      "line": 3493,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3503,
+      "line": 3499,
       "text": "context=%s page=%s transition=0 sections=%d sections_visible=%d tab=%s operation=%s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3504,
+      "line": 3500,
       "text": "settings_page_content",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3516,
+      "line": 3512,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3517,
+      "line": 3513,
       "text": "settings_subtab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3522,
+      "line": 3518,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3523,
+      "line": 3519,
       "text": "settings_subtab_switch",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3544,
+      "line": 3540,
+      "text": "%d",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 3545,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -82150,48 +82143,48 @@
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 3549,
-      "text": "%d",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3553,
       "text": "context=%s page=%s tab=%s operation=%s active=0",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3555,
+      "line": 3551,
       "text": "settings_transition_overlay",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3568,
+      "line": 3564,
       "text": "settings-restart-update-warning",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3573,
+      "line": 3569,
       "text": "settings-restart-required-warning",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3577,
+      "line": 3573,
       "text": "settings-restart-button",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3594,
+      "line": 3590,
+      "text": "%d",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 3595,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -82199,27 +82192,27 @@
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 3599,
-      "text": "%d",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3603,
       "text": "context=%s page=%s tab=%s operation=%s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3605,
+      "line": 3601,
       "text": "settings_restart_bar",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3614,
+      "line": 3610,
+      "text": "%d",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 3615,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -82227,30 +82220,30 @@
     {
       "file": "src/game/client/components/menus_settings.cpp",
       "line": 3619,
-      "text": "%d",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3623,
       "text": "context=%s page=%s tab=%s operation=%s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3625,
+      "line": 3621,
       "text": "settings_render_total",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3848,
+      "line": 3844,
       "text": "%s: %.1f° (%03d)",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
+    },
+    {
+      "file": "src/game/client/components/menus_settings.cpp",
+      "line": 3850,
+      "text": "%s: %.1f%% (%03d)",
+      "category": "business_data",
+      "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
@@ -82261,1036 +82254,1029 @@
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3858,
-      "text": "%s: %.1f%% (%03d)",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3931,
+      "line": 3927,
       "text": "settings_appearance_tabs_capsule",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3956,
+      "line": 3952,
       "text": "settings_appearance",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3959,
+      "line": 3955,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 3979,
+      "line": 3975,
       "text": "appearance settings card must be registered",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4068,
+      "line": 4064,
       "text": "appearance_hud_text_cache",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4068,
+      "line": 4064,
       "text": "page=appearance tab=hud section=text_cache",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4069,
+      "line": 4065,
       "text": "appearance_hud_tab_shell",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4069,
+      "line": 4065,
       "text": "page=appearance tab=hud",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4078,
+      "line": 4074,
       "text": "appearance-show-ingame-hud",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4079,
+      "line": 4075,
       "text": "appearance-show-health-shields-ammo",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4080,
+      "line": 4076,
       "text": "appearance-show-score",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4081,
+      "line": 4077,
       "text": "appearance-show-local-time-always",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4082,
+      "line": 4078,
       "text": "appearance-show-spectator-cursor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4083,
+      "line": 4079,
       "text": "appearance-show-votes-after-voting",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4096,
+      "line": 4092,
       "text": "appearance_hud_core_section",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4096,
+      "line": 4092,
       "text": "page=appearance tab=hud section=core",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4101,
+      "line": 4097,
       "text": "appearance-show-client-ids",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4102,
+      "line": 4098,
       "text": "appearance-show-ddrace-hud",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4105,
+      "line": 4101,
       "text": "appearance-hud-rainbow-colors",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4106,
+      "line": 4102,
       "text": "appearance-show-jumps-indicator",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4108,
+      "line": 4104,
       "text": "appearance-show-spectator-count",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4109,
+      "line": 4105,
       "text": "appearance-show-dummy-actions",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4112,
+      "line": 4108,
       "text": "appearance-show-player-position",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4113,
+      "line": 4109,
       "text": "appearance-show-player-speed",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4114,
+      "line": 4110,
       "text": "appearance-show-player-target-angle",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4115,
+      "line": 4111,
       "text": "appearance_hud_ddrace_section",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4115,
+      "line": 4111,
       "text": "page=appearance tab=hud section=ddrace",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4118,
+      "line": 4114,
       "text": "appearance-show-freeze-bars",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4122,
+      "line": 4118,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4122,
+      "line": 4118,
       "text": "appearance-freeze-bars-alpha-inside-freeze",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4124,
+      "line": 4120,
       "text": "appearance_hud_freeze_bars_section",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4124,
+      "line": 4120,
       "text": "page=appearance tab=hud section=freeze_bars",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4185,
+      "line": 4181,
       "text": "appearance-show-chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4192,
+      "line": 4188,
       "text": "appearance-always-show-chat",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4196,
+      "line": 4192,
       "text": "appearance-chat-team-colors",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4197,
+      "line": 4193,
       "text": "appearance-chat-friends-only",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4198,
+      "line": 4194,
       "text": "appearance-chat-team-members-only",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4199,
+      "line": 4195,
       "text": "appearance-chat-save-draft",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4200,
+      "line": 4196,
       "text": "appearance-chat-log-auto-save",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4204,
+      "line": 4200,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4204,
+      "line": 4200,
       "text": "appearance-chat-log-keep-days",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4207,
+      "line": 4203,
       "text": "appearance-use-old-chat-style",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4214,
+      "line": 4210,
       "text": "appearance-chat-font-size",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4221,
+      "line": 4217,
       "text": "appearance-chat-width",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4266,
+      "line": 4262,
       "text": "appearance-chat-system-message",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4267,
+      "line": 4263,
       "text": "appearance-chat-hide-system-prefix",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4275,
+      "line": 4271,
       "text": "appearance-chat-highlighted-message",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4279,
+      "line": 4275,
       "text": "appearance-chat-team-message",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4283,
+      "line": 4279,
       "text": "appearance-chat-friend-message",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4287,
+      "line": 4283,
       "text": "appearance-chat-normal-message",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4289,
+      "line": 4285,
       "text": "%s (echo)",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4317,
+      "line": 4313,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4317,
+      "line": 4313,
       "text": "%s%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4317,
+      "line": 4313,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4323,
+      "line": 4319,
       "text": "'%s' entered and joined the game",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4331,
+      "line": 4327,
       "text": "Hey, how are you %s?",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4341,
+      "line": 4337,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4461,
+      "line": 4457,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4469,
+      "line": 4465,
       "text": "[%d] ",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4471,
+      "line": 4467,
       "text": " [%d]",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4512,
+      "line": 4508,
       "text": ": ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4559,
+      "line": 4555,
       "text": "'%s' entered and joined the game",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4562,
+      "line": 4558,
       "text": "Hey, how are you %s?",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4563,
+      "line": 4559,
       "text": "Random Tee",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4565,
+      "line": 4561,
       "text": "Let's speedrun this!",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4565,
+      "line": 4561,
       "text": "Your Teammate",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4566,
+      "line": 4562,
       "text": "Friend",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4566,
+      "line": 4562,
       "text": "Hello there",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4567,
+      "line": 4563,
       "text": "Hey fools, I'm spamming here!",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4567,
+      "line": 4563,
       "text": "Spammer",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4568,
+      "line": 4564,
       "text": "Echo command executed",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4568,
+      "line": 4564,
       "text": "— ",
       "category": "business_data",
       "reason": "settings debug or chat preview fixture text"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4688,
+      "line": 4684,
       "text": "appearance-preview-dummy-nameplate",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4688,
+      "line": 4684,
       "text": "appearance-preview-player-nameplate",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4693,
+      "line": 4689,
       "text": "appearance-nameplate-free-move",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4705,
+      "line": 4701,
       "text": "appearance-nameplate-reset-layout",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4744,
+      "line": 4740,
       "text": "appearance-show-own-hook-collision",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4751,
+      "line": 4747,
       "text": "appearance-always-show-own-hook-collision",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4756,
+      "line": 4752,
       "text": "appearance-show-other-hook-collision",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4763,
+      "line": 4759,
       "text": "appearance-always-show-other-hook-collision",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4768,
+      "line": 4764,
       "text": "appearance-hook-collision-own-width",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4771,
+      "line": 4767,
       "text": "appearance-hook-collision-other-width",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4774,
+      "line": 4770,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4774,
+      "line": 4770,
       "text": "appearance-hook-collision-opacity",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4780,
+      "line": 4776,
       "text": "appearance-hook-collision-colors-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4995,
+      "line": 4991,
       "text": "appearance-preview-hook-collisions-pressed",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5015,
+      "line": 5011,
       "text": "appearance-show-kill-messages",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5021,
+      "line": 5017,
       "text": "appearance-show-finish-messages",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5043,
+      "line": 5039,
       "text": "appearance-laser-effect-enhancement",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5046,
+      "line": 5042,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5046,
+      "line": 5042,
       "text": "appearance-laser-glow-intensity",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5049,
+      "line": 5045,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5049,
+      "line": 5045,
       "text": "appearance-laser-size",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5052,
+      "line": 5048,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5052,
+      "line": 5048,
       "text": "appearance-laser-opacity",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5054,
+      "line": 5050,
       "text": "appearance-laser-rounded-caps",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5059,
+      "line": 5055,
       "text": "appearance-laser-pulse-speed",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5062,
+      "line": 5058,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5062,
+      "line": 5058,
       "text": "appearance-laser-pulse-amplitude",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5080,
+      "line": 5076,
       "text": "appearance-weapons-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5093,
+      "line": 5089,
       "text": "appearance-entities-title",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5110,
+      "line": 5106,
       "text": "appearance-laser-set-all-to-rifle",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5125,
+      "line": 5121,
       "text": "appearance-laser-reset-defaults",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5227,
+      "line": 5223,
       "text": "ddnet_tab_shell",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5227,
+      "line": 5223,
       "text": "page=ddnet",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5239,
+      "line": 5235,
       "text": "settings_ddnet",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5241,
+      "line": 5237,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5259,
+      "line": 5255,
       "text": "DDNet settings cards must be registered",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5375,
+      "line": 5371,
       "text": "ddnet-replay-default-length",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5378,
+      "line": 5374,
       "text": "ddnet-esc-replay-minutes",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5399,
+      "line": 5395,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5399,
+      "line": 5395,
       "text": "ddnet-race-ghost-opacity",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5416,
+      "line": 5412,
       "text": "ddnet_demo_section",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5416,
+      "line": 5412,
       "text": "page=ddnet section=demo",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5437,
+      "line": 5433,
       "text": "ddnet-overlay-entities",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5448,
+      "line": 5444,
       "text": "ddnet-text-entities-size",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5459,
+      "line": 5455,
       "text": "%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5459,
+      "line": 5455,
       "text": "ddnet-show-others-opacity",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5478,
+      "line": 5474,
       "text": "ddnet-default-zoom",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5482,
+      "line": 5478,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5482,
+      "line": 5478,
       "text": "ddnet-prediction-margin",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5517,
+      "line": 5513,
       "text": "ddnet_gameplay_section",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5517,
+      "line": 5513,
       "text": "page=ddnet section=gameplay",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5550,
+      "line": 5546,
       "text": "ddnet-background-map-label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5553,
+      "line": 5549,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5557,
+      "line": 5553,
       "text": "settings_ddnet_background_entities_text_input",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5572,
+      "line": 5568,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5628,
+      "line": 5624,
       "text": "ddnet-new-random-timeout-code",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5643,
+      "line": 5639,
       "text": "settings_ddnet_run_on_join_text_input",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5650,
+      "line": 5646,
       "text": "ddnet-unregister-protocol-file-extensions",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5656,
+      "line": 5652,
       "text": "ddnet_controls_section",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5656,
+      "line": 5652,
       "text": "page=ddnet section=background_misc",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5703,
+      "line": 5699,
       "text": "tee-skin-queue-new-preset-name",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5709,
+      "line": 5705,
       "text": "settings_skin_queue_preset_rename_text_input",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5754,
+      "line": 5750,
       "text": "%s/%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5758,
+      "line": 5754,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5769,
+      "line": 5765,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5794,
+      "line": 5790,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5796,
+      "line": 5792,
       "text": "Parent folder item selected but there is no parent folder",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5800,
+      "line": 5796,
       "text": "/",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5810,
+      "line": 5806,
       "text": "%s/%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5815,
+      "line": 5811,
       "text": "%s/%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5837,
+      "line": 5833,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5840,
+      "line": 5836,
       "text": "%s/%s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5857,
+      "line": 5853,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5857,
+      "line": 5853,
       "text": ".",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 5857,
+      "line": 5853,
       "text": "..",
       "category": "business_data",
       "reason": "HTML or CSS template fragment"
@@ -174140,42 +174126,42 @@
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4332,
+      "line": 4328,
       "text": "Random Tee",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4334,
+      "line": 4330,
       "text": "Let's speedrun this!",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4334,
+      "line": 4330,
       "text": "Your Teammate",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4337,
+      "line": 4333,
       "text": "Hello there",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4339,
+      "line": 4335,
       "text": "Hey fools, I'm spamming here!",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/menus_settings.cpp",
-      "line": 4341,
+      "line": 4337,
       "text": "Echo command executed",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"

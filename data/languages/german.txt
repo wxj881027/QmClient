@@ -3182,9 +3182,6 @@ Detect compatible solo prompts from custom servers
 Detect Steam again
 == Steam erneut erkennen
 
-Detected graphics adapters
-== Erkannte Grafikadapter
-
 Detection distance
 == Erkennungsdistanz
 
@@ -7540,9 +7537,6 @@ No filter
 
 No functions bound
 == Keine Funktionen zugewiesen
-
-No graphics adapters detected
-== Keine Grafikadapter erkannt
 
 No input device available
 == Kein Eingabegerät verfügbar

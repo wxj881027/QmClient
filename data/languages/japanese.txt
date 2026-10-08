@@ -3182,9 +3182,6 @@ Detect compatible solo prompts from custom servers
 Detect Steam again
 == Steam を再検出
 
-Detected graphics adapters
-== 検出されたグラフィックスアダプター
-
 Detection distance
 == 検出距離
 
@@ -7540,9 +7537,6 @@ No filter
 
 No functions bound
 == 機能が割り当てられていません
-
-No graphics adapters detected
-== グラフィックスアダプターが検出されませんでした
 
 No input device available
 == 利用可能な入力デバイスがありません
