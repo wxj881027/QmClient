@@ -2126,6 +2126,9 @@ Close the demo player
 Close window after changing settings
 == 更改設置後關閉窗口
 
+Collapse console
+== 收起控制台
+
 Collision hitbox
 == 碰撞判定框
 
@@ -4318,6 +4321,9 @@ Existing Player
 
 Exit replay view
 == 退出回放檢視
+
+Expand console
+== 展開控制台
 
 Expanded dropdown background color
 == 展開清單背景顏色

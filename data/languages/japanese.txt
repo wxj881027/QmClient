@@ -2126,6 +2126,9 @@ Close the demo player
 Close window after changing settings
 == 設定変更後にウィンドウを閉じる
 
+Collapse console
+== コンソールを縮小
+
 Collision hitbox
 == 衝突ヒットボックス
 
@@ -4318,6 +4321,9 @@ Existing Player
 
 Exit replay view
 == リプレイ視聴を終了
+
+Expand console
+== コンソールを展開
 
 Expanded dropdown background color
 == 展開リスト背景色

@@ -2126,6 +2126,9 @@ Close the demo player
 Close window after changing settings
 == Zamknij okno po zmianie ustawień
 
+Collapse console
+== Zwiń konsolę
+
 Collision hitbox
 == Hitbox kolizji
 
@@ -4318,6 +4321,9 @@ Existing Player
 
 Exit replay view
 == Zakończ podgląd nagrania
+
+Expand console
+== Rozwiń konsolę
 
 Expanded dropdown background color
 == Kolor tła rozwiniętej listy
