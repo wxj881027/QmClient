@@ -109,6 +109,7 @@ bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &
 			{"sponsors", EQmRealtimeEvent::SPONSORS},
 			{"titles", EQmRealtimeEvent::TITLES},
 			{"users", EQmRealtimeEvent::USERS},
+			{"users_sync", EQmRealtimeEvent::USERS_SYNC},
 			{"developers", EQmRealtimeEvent::DEVELOPERS},
 			{"playtime", EQmRealtimeEvent::PLAYTIME},
 			{"time", EQmRealtimeEvent::TIME},

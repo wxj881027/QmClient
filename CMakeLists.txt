@@ -3467,6 +3467,8 @@ if(CLIENT)
     components/qmclient/qm_markdown_broadcast.h
     components/qmclient/qm_realtime.cpp
     components/qmclient/qm_realtime.h
+    components/qmclient/qm_realtime_users.cpp
+    components/qmclient/qm_realtime_users.h
     components/qmclient/qmclient.cpp
     components/qmclient/qmclient.h
     components/qmclient/qmclient_utils.cpp
@@ -4695,6 +4697,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_markdown_broadcast_test.cpp
     src/test/unit/qmclient/client/qm_emoticon_projectile_test.cpp
     src/test/unit/qmclient/client/qm_realtime_test.cpp
+    src/test/unit/qmclient/client/qm_realtime_users_test.cpp
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
@@ -4930,6 +4933,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/qm_markdown.cpp
     src/game/client/components/qmclient/qm_markdown_broadcast.cpp
     src/game/client/components/qmclient/qm_realtime.cpp
+    src/game/client/components/qmclient/qm_realtime_users.cpp
     src/game/client/components/qmclient/update_version.cpp
     src/game/client/components/qmclient/update_manifest.cpp
     src/game/client/components/qmclient/update_proxy.cpp

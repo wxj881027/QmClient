@@ -163,6 +163,24 @@ TEST(QmRealtime, KeepsServicePayloadAliveForMainThreadConsumers)
 	EXPECT_EQ(json_object_get(Message.m_pPayload.get(), "total_seconds")->u.integer, 42);
 }
 
+TEST(QmRealtime, CompactLegacyFieldsPreserveCountsAndLocalIdentity)
+{
+	const char *pData = R"({"type":"users","v":2,"data":{"server_address":"one:8303","users":[{"server_address":"one:8303","player_name":"first","client_type":"arg","qid":"qid-first"},{"server_address":"one:8303","player_name":"second","voice_supported":false},{"server_address":"two:8303","player_name":"remote dummy","dummy":true}]}})";
+	SQmRealtimeMessage Message;
+	ASSERT_TRUE(ParseQmRealtimeMessage(pData, std::strlen(pData), Message));
+	SQmClientUsersParseResult Result;
+	ASSERT_TRUE(ParseQmClientUsersJson(Message.m_pPayload.get(), "one:8303", Result));
+	EXPECT_EQ(Result.m_OnlineUserCount, 2);
+	EXPECT_EQ(Result.m_OnlineDummyCount, 1);
+	ASSERT_EQ(Result.m_vLocalServerMarks.size(), 2u);
+	EXPECT_EQ(Result.m_vLocalServerMarks[0].m_ClientBrand, EClientBrand::ARG);
+	EXPECT_EQ(Result.m_vLocalServerMarks[0].m_Qid, "qid-first");
+	EXPECT_TRUE(Result.m_vLocalServerMarks[0].m_VoiceSupported);
+	EXPECT_EQ(Result.m_vLocalServerMarks[1].m_ClientBrand, EClientBrand::QM);
+	EXPECT_TRUE(Result.m_vLocalServerMarks[1].m_Qid.empty());
+	EXPECT_FALSE(Result.m_vLocalServerMarks[1].m_VoiceSupported);
+}
+
 TEST(QmRealtime, GlobalUsersSnapshotProvidesDistributionWhileOffline)
 {
 	SQmRealtimeMessage Message;
