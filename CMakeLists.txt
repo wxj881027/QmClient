@@ -3190,6 +3190,9 @@ if(CLIENT)
     QmUi/QmAnimResolve.h
     QmUi/QmHookCountdownRender.h
     QmUi/QmImeCandidateLayout.h
+    QmUi/QmInputMotion.h
+    QmUi/QmLineInputMotion.cpp
+    QmUi/QmLineInputMotion.h
     QmUi/QmIslandSurface.cpp
     QmUi/QmIslandSurface.h
     QmUi/QmIslandNotice.h
@@ -4560,6 +4563,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/ui/qm_ui_presentation_contract_test.cpp
     src/test/unit/qmclient/ui/QmUiTokensTest.cpp
     src/test/unit/qmclient/ui/qm_ime_candidate_layout_test.cpp
+    src/test/unit/qmclient/ui/qm_input_motion_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
@@ -4969,6 +4973,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmAnim.cpp
     src/game/client/QmUi/QmAnimationBackend.cpp
     src/game/client/QmUi/QmAnimResolve.cpp
+    src/game/client/QmUi/QmLineInputMotion.cpp
     src/game/client/QmUi/QmLayout.cpp
     src/game/client/QmUi/QmUiPerf.cpp
     src/game/client/QmUi/UiFormLogic.cpp

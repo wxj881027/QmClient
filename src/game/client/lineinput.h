@@ -3,6 +3,8 @@
 #ifndef GAME_CLIENT_LINEINPUT_H
 #define GAME_CLIENT_LINEINPUT_H
 
+#include "QmUi/QmLineInputMotion.h"
+
 #include <base/vmath.h>
 
 #include <engine/client.h>
@@ -120,6 +122,7 @@ private:
 	float m_ScrollOffsetChange;
 	vec2 m_CaretPosition;
 	std::chrono::nanoseconds m_CaretBlinkStartTime{};
+	CQmLineInputMotion m_InputMotion;
 	SMouseSelection m_MouseSelection;
 	size_t m_LastCompositionCursorPos;
 

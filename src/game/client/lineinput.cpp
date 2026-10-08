@@ -38,6 +38,7 @@ void CLineInput::SetBuffer(char *pStr, size_t MaxSize, size_t MaxChars)
 	m_pStr = pStr;
 	m_MaxSize = MaxSize;
 	m_MaxChars = MaxChars;
+	m_InputMotion.Reset();
 	m_WasChanged = m_pStr && pLastStr && m_WasChanged;
 	m_WasCursorChanged = m_pStr && pLastStr && m_WasCursorChanged;
 	if(!pLastStr)
@@ -452,7 +453,8 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 
 	// IME 状态是全局的，只有当前输入框有组合文本时才隐藏它自己的提示文本。
 	const bool HasVisibleComposition = IsActive() && HasComposition && Input()->GetCompositionLength() > 0;
-	if(pDisplayStr[0] == '\0' && !HasVisibleComposition && m_pEmptyText != nullptr)
+	const bool IsPlaceholder = pDisplayStr[0] == '\0' && !HasVisibleComposition && m_pEmptyText != nullptr;
+	if(IsPlaceholder)
 	{
 		pDisplayStr = m_pEmptyText;
 		m_MouseSelection.m_Selecting = false;
@@ -481,6 +483,8 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 			DisplayStrBuffer = DisplayStr.substr(0, DisplayCursorOffset) + Input()->GetComposition() + DisplayStr.substr(DisplayCursorOffset);
 			pDisplayStr = DisplayStrBuffer.c_str();
 		}
+		m_InputMotion.Update(pDisplayStr, time_get_nanoseconds(), g_Config.m_QmUiMotionLevel,
+			!IsPlaceholder && !IsHidden() && !m_MouseSelection.m_Selecting && (HasComposition || !HasSelection()));
 
 		const STextBoundingBox BoundingBox = TextRender()->TextBoundingBox(FontSize, pDisplayStr, -1, LineWidth, LineSpacing);
 		const vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align);
@@ -533,6 +537,8 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 				Cursor.m_CursorCharacter = SelectionCursor.m_CursorCharacter;
 				Cursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_NONE;
 			}
+			// 位移仅进入主文字绘制，选区预遍历和实际光标仍使用原排版。
+			m_InputMotion.FillCharOffsets(Cursor.m_vCharOffsets, FontSize);
 			TextRender()->TextEx(&Cursor, pDisplayStr);
 		};
 
@@ -631,6 +637,8 @@ void CLineInput::RenderCaret(const CTextCursor &Cursor, bool ForceVisible, Color
 {
 	if(!Cursor.m_HasCursorRenderedPosition)
 		return;
+	const vec2 DrawPosition = m_InputMotion.ResolveCaret(Cursor.m_CursorRenderedPosition, Cursor.m_AlignedFontSize,
+		m_MouseSelection.m_Selecting || (!Input()->HasComposition() && HasSelection()) || m_ScrollOffsetChange != 0.0f);
 
 	const auto Now = time_get_nanoseconds();
 	if(ForceVisible || m_CaretBlinkStartTime == std::chrono::nanoseconds::zero())
@@ -650,13 +658,13 @@ void CLineInput::RenderCaret(const CTextCursor &Cursor, bool ForceVisible, Color
 		return;
 
 	const IGraphics::CQuadItem OuterCaret(
-		Cursor.m_CursorRenderedPosition.x - CursorOuterInnerDiff,
-		Cursor.m_CursorRenderedPosition.y,
+		DrawPosition.x - CursorOuterInnerDiff,
+		DrawPosition.y,
 		CursorOuterWidth,
 		CursorHeight);
 	const IGraphics::CQuadItem InnerCaret(
-		Cursor.m_CursorRenderedPosition.x,
-		Cursor.m_CursorRenderedPosition.y + CursorOuterInnerDiff,
+		DrawPosition.x,
+		DrawPosition.y + CursorOuterInnerDiff,
 		CursorInnerWidth,
 		maximum(0.0f, CursorHeight - CursorOuterInnerDiff * 2.0f));
 
@@ -796,6 +804,7 @@ void CLineInput::Deactivate() const
 
 void CLineInput::OnActivate()
 {
+	m_InputMotion.Reset();
 	m_CaretBlinkStartTime = time_get_nanoseconds();
 	if(!TextInputAutoManaged())
 		Input()->StartTextInput();
@@ -803,6 +812,7 @@ void CLineInput::OnActivate()
 
 void CLineInput::OnDeactivate()
 {
+	m_InputMotion.Reset();
 	if(!TextInputAutoManaged())
 		Input()->StopTextInput();
 	m_MouseSelection.m_Selecting = false;
