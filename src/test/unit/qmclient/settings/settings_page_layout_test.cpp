@@ -286,3 +286,52 @@ TEST(SettingsPageLayout, SecondaryPanelPropertiesRequestCenteredModalPresentatio
 	EXPECT_TRUE(Props.m_BlockUnderlyingScroll);
 	EXPECT_TRUE(Props.m_Animate);
 }
+
+TEST(SettingsPageLayout, GpuControlsHideWithoutMultipleAdapters)
+{
+	for(const size_t Count : {size_t{0}, size_t{1}})
+		for(const bool CanSelect : {false, true})
+			for(const bool HasSystemSettings : {false, true})
+			{
+				const auto Control = ResolveSettingsGpuControl(Count, CanSelect, HasSystemSettings);
+				EXPECT_FALSE(Control.m_ShowSelector);
+				EXPECT_FALSE(Control.m_ShowSystemSettings);
+				EXPECT_EQ(Control.RowCount(), 0);
+			}
+}
+
+TEST(SettingsPageLayout, SelectableMultipleAdaptersUseOneDropdownWithoutSystemInstructions)
+{
+	for(const bool HasSystemSettings : {false, true})
+	{
+		const auto Control = ResolveSettingsGpuControl(2, true, HasSystemSettings);
+		EXPECT_TRUE(Control.m_ShowSelector);
+		EXPECT_FALSE(Control.m_ShowSystemSettings);
+		EXPECT_EQ(Control.RowCount(), 1);
+	}
+}
+
+TEST(SettingsPageLayout, SystemManagedMultipleAdaptersOnlyOfferSupportedSystemSettings)
+{
+	const auto Windows = ResolveSettingsGpuControl(2, false, true);
+	EXPECT_FALSE(Windows.m_ShowSelector);
+	EXPECT_TRUE(Windows.m_ShowSystemSettings);
+	EXPECT_EQ(Windows.RowCount(), 3);
+	const auto WithoutSystemSettings = ResolveSettingsGpuControl(2, false, false);
+	EXPECT_FALSE(WithoutSystemSettings.m_ShowSelector);
+	EXPECT_FALSE(WithoutSystemSettings.m_ShowSystemSettings);
+	EXPECT_EQ(WithoutSystemSettings.RowCount(), 0);
+}
+
+TEST(SettingsPageLayout, GpuControlsRecoverAcrossAdapterAndBackendChanges)
+{
+	auto Control = ResolveSettingsGpuControl(2, false, true);
+	ASSERT_TRUE(Control.m_ShowSystemSettings);
+	Control = ResolveSettingsGpuControl(1, false, true);
+	EXPECT_EQ(Control.RowCount(), 0);
+	Control = ResolveSettingsGpuControl(2, true, true);
+	EXPECT_TRUE(Control.m_ShowSelector);
+	EXPECT_EQ(Control.RowCount(), 1);
+	Control = ResolveSettingsGpuControl(0, false, true);
+	EXPECT_EQ(Control.RowCount(), 0);
+}

@@ -3182,9 +3182,6 @@ Detect compatible solo prompts from custom servers
 Detect Steam again
 == Steam'i yeniden algıla
 
-Detected graphics adapters
-== Algılanan grafik bağdaştırıcıları
-
 Detection distance
 == Algılama mesafesi
 
@@ -7540,9 +7537,6 @@ No filter
 
 No functions bound
 == Atanmış işlev yok
-
-No graphics adapters detected
-== Grafik bağdaştırıcısı algılanmadı
 
 No input device available
 == Kullanılabilir giriş cihazı yok

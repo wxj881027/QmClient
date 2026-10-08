@@ -1059,7 +1059,6 @@ Destroy player's lasers on death
 Detailed reason
 Detect compatible solo prompts from custom servers
 Detect Steam again
-Detected graphics adapters
 Detection distance
 Detection time
 DF
@@ -2512,7 +2511,6 @@ No empty team left.
 No favorite maps yet
 No filter
 No functions bound
-No graphics adapters detected
 No input device available
 No items to write
 No local saves file found (ddnet-saves.txt)

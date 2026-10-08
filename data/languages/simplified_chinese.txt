@@ -3182,9 +3182,6 @@ Detect compatible solo prompts from custom servers
 Detect Steam again
 == 重新检测 Steam
 
-Detected graphics adapters
-== 检测到的显卡
-
 Detection distance
 == 检测距离
 
@@ -7540,9 +7537,6 @@ No filter
 
 No functions bound
 == 未绑定功能
-
-No graphics adapters detected
-== 未检测到显卡
 
 No input device available
 == 系统没有可用输入设备
