@@ -240,6 +240,9 @@ bool LoadBackgroundImageFile(IStorage *pStorage, const char *pPath, CImageInfo &
 class CBackgroundEngineMap : public CMap
 {
 	MACRO_INTERFACE("background_enginemap")
+
+public:
+	using CMap::CMap;
 };
 
 class CBackground : public CMapLayers
