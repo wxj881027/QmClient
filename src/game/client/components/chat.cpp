@@ -2500,6 +2500,8 @@ bool CChat::OnPrepareLines(float y)
 		}
 		Line.m_ChatEmojiRect = {};
 		const bool MultipleAuthors = Line.m_vMergedAuthors.size() > 1;
+		// 多人合并的正文另起一行，使用完整行宽，不再按姓名宽度缩进。
+		const bool IndentMessage = !MultipleAuthors && !IsScoreBoardOpen && !g_Config.m_ClChatOld;
 
 		char aClientId[16] = "";
 		if(!MultipleAuthors && g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0' && !GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
@@ -2602,12 +2604,12 @@ bool CChat::OnPrepareLines(float y)
 
 			if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 			{
-				TextRender()->TextEx(&MeasureCursor, ": ");
+				TextRender()->TextEx(&MeasureCursor, MultipleAuthors ? ":\n" : ": ");
 			}
 
 			CTextCursor AppendCursor = MeasureCursor;
 			AppendCursor.m_LongestLineWidth = 0.0f;
-			if(!IsScoreBoardOpen && !g_Config.m_ClChatOld)
+			if(IndentMessage)
 			{
 				AppendCursor.m_StartX = MeasureCursor.m_X;
 				AppendCursor.m_LineWidth -= MeasureCursor.m_LongestLineWidth;
@@ -2779,7 +2781,7 @@ bool CChat::OnPrepareLines(float y)
 		if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 		{
 			TextRender()->TextColor(NameColor);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, ": ");
+			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, MultipleAuthors ? ":\n" : ": ");
 		}
 
 		ColorRGBA Color;
@@ -2825,7 +2827,7 @@ bool CChat::OnPrepareLines(float y)
 		CTextCursor AppendCursor = LineCursor;
 		AppendCursor.m_TrackLineRanges = Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM;
 		AppendCursor.m_LongestLineWidth = 0.0f;
-		if(!IsScoreBoardOpen && !g_Config.m_ClChatOld)
+		if(IndentMessage)
 		{
 			AppendCursor.m_StartX = LineCursor.m_X;
 			AppendCursor.m_LineWidth -= LineCursor.m_LongestLineWidth;
@@ -2908,7 +2910,7 @@ bool CChat::OnPrepareLines(float y)
 		if(Line.m_aText[0] != '\0' || Line.m_aName[0] != '\0')
 		{
 			float FullWidth = RealMsgPaddingX * 1.5f;
-			if(!IsScoreBoardOpen && !g_Config.m_ClChatOld)
+			if(IndentMessage)
 			{
 				FullWidth += LineCursor.m_LongestLineWidth + AppendCursor.m_LongestLineWidth;
 			}
