@@ -827,18 +827,9 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	}
 	DrawRoundedSurface(TabBarUiContext(), Track, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f), ui_token::radius::PILL);
 	const int ActiveEmote = std::clamp(*pEmote, 0, NUM_EMOTES - 1);
-	CUIRect TargetThumb;
-	SliderLayout.m_aSlotRects[ActiveEmote].Margin(2.5f * UiScale, &TargetThumb);
-	CUIRect AnimatedThumb = TargetThumb;
-	if(GameClient()->UiRuntimeV2() != nullptr)
-	{
-		auto &Anim = GameClient()->UiRuntimeV2()->AnimRuntime();
-		const uint64_t NodeKey = BuildUiAnimNodeKey(MakeUiScopeHash("settings_tee_eyes_slider_thumb"), Target);
-		AnimatedThumb.x = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::POS_X, TargetThumb.x, ui_token::motion::NAVIGATION_SPRING, 2);
-		AnimatedThumb.y = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::POS_Y, TargetThumb.y, ui_token::motion::NAVIGATION_SPRING, 2);
-		AnimatedThumb.w = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::WIDTH, TargetThumb.w, ui_token::motion::NAVIGATION_SPRING, 2);
-		AnimatedThumb.h = ResolveUiAnimSpringValue(Anim, NodeKey, EUiAnimProperty::HEIGHT, TargetThumb.h, ui_token::motion::NAVIGATION_SPRING, 2);
-	}
+	auto *pUiRuntime = GameClient()->UiRuntimeV2();
+	const uint64_t ThumbNodeKey = BuildUiAnimNodeKey(MakeUiScopeHash("settings_tee_eyes_slider_thumb"), Target);
+	const CUIRect AnimatedThumb = ResolveSettingsTeeEmoteSliderThumb(SliderLayout, ActiveEmote, UiScale, pUiRuntime != nullptr ? &pUiRuntime->AnimRuntime() : nullptr, ThumbNodeKey);
 	DrawRoundedSurface(TabBarUiContext(), AnimatedThumb, ColorRGBA(1.0f, 1.0f, 1.0f, 0.20f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), ui_token::radius::PILL);
 	static const char *s_apEmoteNames[] = {"Normal", "Pain", "Happy", "Surprise", "Angry", "Blink"};
 	for(int Emote = 0; Emote < NUM_EMOTES; ++Emote)
