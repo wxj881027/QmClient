@@ -69,6 +69,26 @@ namespace QmHudEditor
 		return SnapAxisToScreenEdgesEx(Position, Size, ScreenStart, ScreenSize);
 	}
 
+	// 沿用布局格式：0/1 表示可见边贴边，中间值保存变换锚点占屏幕的比例。
+	inline float RestoreAxisAnchor(float NormalizedPosition, float Size, float ScreenStart, float ScreenSize, float VisibleEdgeOffset)
+	{
+		float Position = ScreenStart + NormalizedPosition * ScreenSize;
+		if(NormalizedPosition <= 0.0f)
+			Position = ScreenStart - VisibleEdgeOffset;
+		else if(NormalizedPosition >= 1.0f)
+			Position = ScreenStart + std::max(0.0f, ScreenSize - Size) - VisibleEdgeOffset;
+		return SnapAxisToScreenEdgesEx(Position, Size, ScreenStart, ScreenSize, VisibleEdgeOffset);
+	}
+
+	inline float StoreAxisAnchor(float Position, float Size, float ScreenStart, float ScreenSize, float VisibleEdgeOffset)
+	{
+		if(ScreenSize <= EPSILON || std::fabs(Position + VisibleEdgeOffset - ScreenStart) <= EDGE_COINCIDENCE_DISTANCE)
+			return 0.0f;
+		if(std::fabs(Position + VisibleEdgeOffset + Size - ScreenStart - ScreenSize) <= EDGE_COINCIDENCE_DISTANCE)
+			return 1.0f;
+		return std::clamp((Position - ScreenStart) / ScreenSize, 0.0f, 1.0f);
+	}
+
 	// 一个轴上的最终落点：先试屏幕边重合吸附，再试屏幕中线与其它 HUD 模块的对齐参考线。
 	// 屏幕边只认重合，对齐参考线仍保留 SNAP_DISTANCE 邻近吸附。
 	inline SSnapAxisResult ResolveAxisSnapEx(float Position, float Size, float ScreenStart, float ScreenSize, const SAxisReference *pReferences, int ReferenceCount, float VisibleEdgeOffset = 0.0f)
@@ -82,7 +102,7 @@ namespace QmHudEditor
 		float BestDistance = SNAP_DISTANCE + EPSILON;
 
 		const auto TrySnap = [&](float Candidate, float Distance, float GuidePosition, ESnapGuideKind GuideKind) {
-			if(Distance <= SNAP_DISTANCE && Distance < BestDistance)
+			if(Distance <= SNAP_DISTANCE && Distance < BestDistance && Candidate >= MinPosition && Candidate <= MaxPosition)
 			{
 				Result.m_Position = std::clamp(Candidate, MinPosition, MaxPosition);
 				Result.m_HasGuide = true;
@@ -97,15 +117,18 @@ namespace QmHudEditor
 			Result.m_HasGuide = true;
 			Result.m_GuidePosition = ScreenStart;
 			Result.m_GuideKind = ESnapGuideKind::ScreenStart;
+			return Result;
 		}
 		else if(std::fabs(Result.m_Position + VisibleEdgeOffset + Size - ScreenEnd) <= EDGE_COINCIDENCE_DISTANCE)
 		{
 			Result.m_HasGuide = true;
 			Result.m_GuidePosition = ScreenEnd;
 			Result.m_GuideKind = ESnapGuideKind::ScreenEnd;
+			return Result;
 		}
 
-		TrySnap(ScreenCenter - Size * 0.5f, std::fabs(Result.m_Position + Size * 0.5f - ScreenCenter), ScreenCenter, ESnapGuideKind::ScreenCenter);
+		const float VisiblePosition = Result.m_Position + VisibleEdgeOffset;
+		TrySnap(ScreenCenter - Size * 0.5f - VisibleEdgeOffset, std::fabs(VisiblePosition + Size * 0.5f - ScreenCenter), ScreenCenter, ESnapGuideKind::ScreenCenter);
 
 		if(pReferences != nullptr)
 		{
@@ -114,9 +137,9 @@ namespace QmHudEditor
 				const float ReferenceStart = pReferences[i].m_Position;
 				const float ReferenceEnd = pReferences[i].m_Position + pReferences[i].m_Size;
 				const float ReferenceCenter = pReferences[i].m_Position + pReferences[i].m_Size * 0.5f;
-				TrySnap(ReferenceStart, std::fabs(Result.m_Position - ReferenceStart), ReferenceStart, ESnapGuideKind::ReferenceStart);
-				TrySnap(ReferenceCenter - Size * 0.5f, std::fabs(Result.m_Position + Size * 0.5f - ReferenceCenter), ReferenceCenter, ESnapGuideKind::ReferenceCenter);
-				TrySnap(ReferenceEnd - Size, std::fabs(Result.m_Position + Size - ReferenceEnd), ReferenceEnd, ESnapGuideKind::ReferenceEnd);
+				TrySnap(ReferenceStart - VisibleEdgeOffset, std::fabs(VisiblePosition - ReferenceStart), ReferenceStart, ESnapGuideKind::ReferenceStart);
+				TrySnap(ReferenceCenter - Size * 0.5f - VisibleEdgeOffset, std::fabs(VisiblePosition + Size * 0.5f - ReferenceCenter), ReferenceCenter, ESnapGuideKind::ReferenceCenter);
+				TrySnap(ReferenceEnd - Size - VisibleEdgeOffset, std::fabs(VisiblePosition + Size - ReferenceEnd), ReferenceEnd, ESnapGuideKind::ReferenceEnd);
 			}
 		}
 		return Result;
@@ -327,7 +350,6 @@ private:
 		float m_StateOffsetX = 0.0f;
 		float m_StateOffsetY = 0.0f;
 		bool m_Scalable = true;
-		QmHudEditor::SEdgeMargin m_EdgeMargin{};
 	};
 
 	struct SAlignmentReferences
@@ -361,7 +383,7 @@ private:
 	void ParseLayoutConfig(const char *pConfig);
 	void SaveLayoutConfig();
 	void ResetLayoutConfig();
-	void ClampStateToScreen(SElementState &State, float BaseWidth, float BaseHeight, float StateOffsetX, float StateOffsetY, const QmHudEditor::SEdgeMargin &EdgeMargin) const;
+	void ClampStateToScreen(SElementState &State, float BaseWidth, float BaseHeight, float StateOffsetX, float StateOffsetY) const;
 	SElementState &EnsureState(EHudEditorElement Element);
 	const SElementState &State(EHudEditorElement Element) const;
 	int FindHoveredVisibleElement() const;

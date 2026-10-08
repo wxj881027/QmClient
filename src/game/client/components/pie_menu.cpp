@@ -206,6 +206,11 @@ void CPieMenu::OpenMenu()
 	m_CommittedRenameIndex = -1;
 	m_AnimationProgress = 0.0f;
 	m_OpenTime = time_get();
+	if(!g_Config.m_QmPieMenuEffects || g_Config.m_QmUiMotionLevel == 0)
+	{
+		m_Lifecycle.FinishOpening();
+		m_AnimationProgress = 1.0f;
+	}
 	m_CloseTime = 0;
 	m_WasPressed = true;
 	m_SelectorMouse = vec2(0, 0); // Reset selector mouse position
@@ -309,28 +314,16 @@ void CPieMenu::UpdateSelection()
 	m_SelectedRenameIndex = -1;
 	RefreshVisibleOptions();
 
-	const float Scale = MenuScale();
-	const float InnerRadius = INNER_RADIUS * Scale;
-	const float OuterRadius = OUTER_RADIUS * Scale;
-	const float SecondaryInnerRadius = SECONDARY_INNER_RADIUS * Scale;
-	const float SecondaryOuterRadius = SECONDARY_OUTER_RADIUS * Scale;
-	const float MouseDistance = length(m_SelectorMouse);
-
-	// Check if mouse is in center (cancel zone)
-	if(MouseDistance < InnerRadius)
-	{
-		return;
-	}
-
-	// Secondary ring for rename queue.
-	if(!m_vRenameQueue.empty() && MouseDistance >= SecondaryInnerRadius && MouseDistance <= SecondaryOuterRadius)
+	// 命中使用当前动画的实体轮廓，中心孔与两层扇区之间的留白都不接收选择。
+	if(!m_vRenameQueue.empty())
 	{
 		m_SelectedRenameIndex = GetHoveredRenameOption();
-		return;
+		if(m_SelectedRenameIndex >= 0)
+			return;
 	}
 
 	// Primary ring.
-	if(HasTargetPlayer() && VisibleOptionCount() > 0 && MouseDistance <= OuterRadius)
+	if(HasTargetPlayer() && VisibleOptionCount() > 0)
 	{
 		m_SelectedOption = GetHoveredOption();
 	}
@@ -385,7 +378,7 @@ void CPieMenu::OnRender()
 	if(m_Lifecycle.State() == EMenuState::OPENING)
 	{
 		float TimeSinceOpen = (time_get() - m_OpenTime) / (float)time_freq();
-		const float t = minimum(maximum(TimeSinceOpen / ANIMATION_DURATION, 0.0f), 1.0f);
+		const float t = g_Config.m_QmPieMenuEffects && g_Config.m_QmUiMotionLevel > 0 ? minimum(maximum(TimeSinceOpen / ANIMATION_DURATION, 0.0f), 1.0f) : 1.0f;
 		const float Inv = 1.0f - t;
 		// 平滑三次缓出：前段迅猛旋开扩张，后段柔和卡入锁定
 		m_AnimationProgress = 1.0f - Inv * Inv * Inv;
@@ -398,7 +391,7 @@ void CPieMenu::OnRender()
 	else if(m_Lifecycle.State() == EMenuState::CLOSING)
 	{
 		float TimeSinceClose = (time_get() - m_CloseTime) / (float)time_freq();
-		const float t = minimum(maximum(TimeSinceClose / CLOSE_DURATION, 0.0f), 1.0f);
+		const float t = g_Config.m_QmPieMenuEffects && g_Config.m_QmUiMotionLevel > 0 ? minimum(maximum(TimeSinceClose / CLOSE_DURATION, 0.0f), 1.0f) : 1.0f;
 		CommitProgress = t;
 		m_AnimationProgress = 1.0f - t;
 		if(t >= 1.0f)
@@ -433,31 +426,21 @@ void CPieMenu::OnRender()
 	const float BaseSecondaryOuterRadius = SECONDARY_OUTER_RADIUS * Scale;
 
 	// 虹膜机械动态参数
-	float PrimaryAngleOffset = 0.0f;
-	float PrimarySpanFactor = 1.0f;
+	const float OpeningProgress = m_Lifecycle.State() == EMenuState::OPENING ? IrisProgress : 1.0f;
+	const auto PrimaryLayout = qm_pie_menu_ui::ResolvePrimaryRing(BaseInnerRadius, BaseOuterRadius, OpeningProgress);
+	const float PrimaryAngleOffset = PrimaryLayout.m_AngleOffset;
+	const float PrimarySpanFactor = PrimaryLayout.m_SpanFactor;
 	float PrimaryBladeEdgeAlpha = 0.0f;
-	float SectorInner = BaseInnerRadius;
-	float SectorOuter = BaseOuterRadius;
+	const float SectorInner = PrimaryLayout.m_InnerRadius;
+	const float SectorOuter = PrimaryLayout.m_OuterRadius;
 	float PupilRadius = BaseInnerRadius - 9.0f * Scale;
 
 	if(m_Lifecycle.State() == EMenuState::OPENING)
 	{
-		// 1. 虹膜叶片切向旋角 (Spiral Twist)：由 +32° 旋向 0°
-		PrimaryAngleOffset = (1.0f - IrisProgress) * (1.0f - IrisProgress) * 32.0f;
-
-		// 2. 虹膜孔径径向扩张 (Iris Aperture Dilation)：
-		// 内径从近中心孔径 (22%) 迅速撑开到 100%，形成孔径舒张的虹膜核心感
-		SectorInner = BaseInnerRadius * (0.22f + 0.78f * IrisProgress);
-		// 外径随叶片滑移从内向外绽放舒展
-		SectorOuter = mix(BaseInnerRadius * 0.65f, BaseOuterRadius, IrisProgress);
-
-		// 3. 机械叶片扇幅扩展 (Blade Fan-out)：初始呈尖锐切片叶，随孔径撑开逐渐接合
-		PrimarySpanFactor = 0.40f + 0.60f * IrisProgress;
-
-		// 4. 机械刃口高光 (Blade Edge Highlight)：光圈展开过程中叶片边缘高亮滑移
+		// 光圈展开过程中叶片边缘高亮滑移。
 		PrimaryBladeEdgeAlpha = (1.0f - IrisProgress) * 0.85f * Alpha;
 
-		// 5. 中央瞳孔扩张：伴随光圈孔径从中心圆点扩散开
+		// 中央瞳孔伴随光圈孔径从中心圆点扩散开。
 		PupilRadius = SectorInner - 7.0f * Scale;
 	}
 	else if(m_Lifecycle.State() == EMenuState::CLOSING)
@@ -505,27 +488,14 @@ void CPieMenu::OnRender()
 	if(!m_vRenameQueue.empty())
 	{
 		const int SectorCount = (int)m_vRenameQueue.size();
-		float SecondaryInner = BaseSecondaryInnerRadius;
-		float SecondaryOuter = BaseSecondaryOuterRadius;
-		float SecondaryAngleOffset = 0.0f;
-		float SecondarySpanFactor = 1.0f;
-
-		if(m_Lifecycle.State() == EMenuState::OPENING)
-		{
-			// 次级重命名光圈：滞后 15% 呈级联波浪绽开
-			float SecondaryIris = std::clamp((IrisProgress - 0.15f) / 0.85f, 0.0f, 1.0f);
-			SecondaryInner = mix(SectorOuter, BaseSecondaryInnerRadius, SecondaryIris);
-			SecondaryOuter = mix(SectorOuter + 16.0f * Scale, BaseSecondaryOuterRadius, SecondaryIris);
-			SecondaryAngleOffset = (1.0f - SecondaryIris) * (1.0f - SecondaryIris) * 24.0f;
-			SecondarySpanFactor = 0.45f + 0.55f * SecondaryIris;
-		}
+		const auto SecondaryLayout = qm_pie_menu_ui::ResolveSecondaryRing(SectorOuter, BaseSecondaryInnerRadius, BaseSecondaryOuterRadius, Scale, OpeningProgress);
 
 		for(int i = 0; i < SectorCount; i++)
 		{
 			bool Highlighted = (m_Lifecycle.State() == EMenuState::CLOSING ? (i == m_CommittedRenameIndex) : (i == m_SelectedRenameIndex));
 			float SectorAlpha = Alpha;
-			float ItemInner = SecondaryInner;
-			float ItemOuter = SecondaryOuter;
+			float ItemInner = SecondaryLayout.m_InnerRadius;
+			float ItemOuter = SecondaryLayout.m_OuterRadius;
 			if(m_Lifecycle.State() == EMenuState::CLOSING)
 			{
 				if(Highlighted)
@@ -540,7 +510,7 @@ void CPieMenu::OnRender()
 				}
 			}
 			if(SectorAlpha > 0.001f)
-				RenderRenameSector(i, SectorCount, ItemInner, ItemOuter, Highlighted, SectorAlpha, SecondaryAngleOffset, SecondarySpanFactor);
+				RenderRenameSector(i, SectorCount, ItemInner, ItemOuter, Highlighted, SectorAlpha, SecondaryLayout.m_AngleOffset, SecondaryLayout.m_SpanFactor);
 		}
 	}
 
@@ -594,15 +564,17 @@ void CPieMenu::RenderSector(int Index, float InnerRadius, float OuterRadius, boo
 
 	// 悬停只改变颜色，轮廓保持在原命中半径，避免凸入外侧改名环。
 	const ColorRGBA Color = GetOptionColor(Option, Highlighted).WithMultipliedAlpha(Alpha);
-	qm_pie_menu_ui::DrawSector(Graphics(), m_MenuCenter, InnerRadius, OuterRadius, StartAngle, EndAngle, SectorGap, Color);
+	const auto Geometry = qm_pie_menu_ui::BuildSector(InnerRadius, OuterRadius, StartAngle, EndAngle, SectorGap, qm_pie_menu_ui::PixelSize(Graphics()));
+	qm_pie_menu_ui::DrawGeometry(Graphics(), m_MenuCenter, Geometry, Color);
 
 	// 虹膜机械叶片边缘高光 (Iris Blade Leading Edge)
-	if(BladeEdgeAlpha > 0.01f)
+	if(BladeEdgeAlpha > 0.01f && Geometry.m_PointCount > 0 && !Geometry.m_FullRing)
 	{
 		float RadLeading = StartAngle * pi / 180.0f;
 		vec2 DirLeading = vec2(cos(RadLeading), sin(RadLeading));
-		vec2 LineInner = m_MenuCenter + DirLeading * InnerRadius;
-		vec2 LineOuter = m_MenuCenter + DirLeading * OuterRadius;
+		// 高光止于圆角切点，避免重新画出已经切掉的尖角。
+		vec2 LineInner = m_MenuCenter + Geometry.m_aPoints[Geometry.m_PointCount - 1].m_Position + DirLeading * 1.5f;
+		vec2 LineOuter = m_MenuCenter + Geometry.m_aPoints[0].m_Position - DirLeading * 1.5f;
 		vec2 Normal = vec2(-DirLeading.y, DirLeading.x) * 1.5f;
 
 		Graphics()->TextureClear();
@@ -663,7 +635,10 @@ void CPieMenu::RenderRenameSector(int Index, int SectorCount, float InnerRadius,
 	if(EndAngle <= StartAngle)
 		return;
 
-	const ColorRGBA Color = (Highlighted ? ColorRGBA(0.36f, 0.75f, 0.52f, 0.95f) : ColorRGBA(0.28f, 0.58f, 0.43f, 0.78f)).WithMultipliedAlpha(Alpha);
+	ColorRGBA Color = Highlighted ? ColorRGBA(0.36f, 0.75f, 0.52f, 0.95f) : ColorRGBA(0.28f, 0.58f, 0.43f, 0.78f);
+	if(Highlighted)
+		Color = qm_pie_menu_ui::SelectionTint(Color, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPieMenuSelectedColor, true)));
+	Color = Color.WithMultipliedAlpha(Alpha);
 	qm_pie_menu_ui::DrawSector(Graphics(), m_MenuCenter, InnerRadius, OuterRadius, StartAngle, EndAngle, DynamicGap, Color);
 
 	float ContentAlpha = Alpha * std::clamp(SpanFactor * 1.5f - 0.5f, 0.0f, 1.0f);
@@ -837,7 +812,8 @@ ColorRGBA CPieMenu::GetOptionColor(EMenuOption Option, bool Highlighted) const
 		ConfigColor = 0x4D6680BF;
 	}
 
-	return qm_pie_menu_ui::OptionColor(color_cast<ColorRGBA>(ColorHSLA(ConfigColor, Option >= EMenuOption::INVITE_TEAM)), Highlighted);
+	return qm_pie_menu_ui::OptionColor(color_cast<ColorRGBA>(ColorHSLA(ConfigColor, Option >= EMenuOption::INVITE_TEAM)), Highlighted,
+		color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmPieMenuSelectedColor, true)));
 }
 
 bool CPieMenu::IsMouseInCenter() const
@@ -857,37 +833,22 @@ bool CPieMenu::HasTargetPlayer() const
 
 int CPieMenu::GetHoveredOption() const
 {
-	float MouseAngle = atan2(m_SelectorMouse.y, m_SelectorMouse.x) * 180.0f / pi;
-
-	return qm_pie_menu::SectorAtAngle(MouseAngle, START_ANGLE, VisibleOptionCount());
+	const float Scale = MenuScale();
+	const float Progress = m_Lifecycle.State() == EMenuState::OPENING ? m_AnimationProgress : 1.0f;
+	const auto Layout = qm_pie_menu_ui::ResolvePrimaryRing(INNER_RADIUS * Scale, OUTER_RADIUS * Scale, Progress);
+	// 选择器与菜单半径均为屏幕像素，不读取其他组件遗留的 MapScreen 映射。
+	return qm_pie_menu_ui::HoveredSector(m_SelectorMouse, Layout.m_InnerRadius, Layout.m_OuterRadius,
+		START_ANGLE + Layout.m_AngleOffset, VisibleOptionCount(), SECTOR_GAP, 1.0f, Layout.m_SpanFactor);
 }
 
 int CPieMenu::GetHoveredRenameOption() const
 {
-	if(m_vRenameQueue.empty())
-		return -1;
-
-	float MouseAngle = atan2(m_SelectorMouse.y, m_SelectorMouse.x) * 180.0f / pi;
-
-	while(MouseAngle < 0)
-		MouseAngle += 360.0f;
-	while(MouseAngle >= 360.0f)
-		MouseAngle -= 360.0f;
-
-	float AdjustedAngle = MouseAngle - START_ANGLE;
-	while(AdjustedAngle < 0)
-		AdjustedAngle += 360.0f;
-	while(AdjustedAngle >= 360.0f)
-		AdjustedAngle -= 360.0f;
-
-	const int SectorCount = (int)m_vRenameQueue.size();
-	float AnglePerSector = 360.0f / SectorCount;
-	int SectorIndex = (int)(AdjustedAngle / AnglePerSector);
-
-	if(SectorIndex >= 0 && SectorIndex < SectorCount)
-		return SectorIndex;
-
-	return -1;
+	const float Scale = MenuScale();
+	const float Progress = m_Lifecycle.State() == EMenuState::OPENING ? m_AnimationProgress : 1.0f;
+	const auto Primary = qm_pie_menu_ui::ResolvePrimaryRing(INNER_RADIUS * Scale, OUTER_RADIUS * Scale, Progress);
+	const auto Layout = qm_pie_menu_ui::ResolveSecondaryRing(Primary.m_OuterRadius, SECONDARY_INNER_RADIUS * Scale, SECONDARY_OUTER_RADIUS * Scale, Scale, Progress);
+	return qm_pie_menu_ui::HoveredSector(m_SelectorMouse, Layout.m_InnerRadius, Layout.m_OuterRadius,
+		START_ANGLE + Layout.m_AngleOffset, static_cast<int>(m_vRenameQueue.size()), SECTOR_GAP, 1.0f, Layout.m_SpanFactor);
 }
 
 // ========== Option Execution ==========

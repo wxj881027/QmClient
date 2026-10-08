@@ -800,6 +800,9 @@ API key
 Appearance
 == 游戏界面
 
+Appearance of help bubbles outside settings cards
+== 设置卡片外的说明气泡外观
+
 Append to log file instead of overwriting
 == 追加到日志文件而不是每次覆盖
 
@@ -836,6 +839,9 @@ Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 == 在下一 tick 前提前应用输入进行预测
 
+Apply Qm recommended appearance
+== 应用栖梦推荐外观
+
 Apply quick input to other Tees as well
 == 对其他 Tee 也应用快速输入
 
@@ -847,6 +853,9 @@ Apply this preset
 
 Apply watermark
 == 应用水印
+
+Applying this preset changes the appearance settings listed below.
+== 应用预设会修改下面列出的外观设置。
 
 Arabic
 == 阿拉伯文
@@ -1038,7 +1047,7 @@ Auto greet friends entering map
 == 自动问候进图的好友
 
 Auto login Axiom server
-== 自动登录 Axiom 服务器
+== 自动登录 Axiom 服务器账号
 
 Auto manage IME while typing
 == 输入时自动管理 IME
@@ -1288,6 +1297,9 @@ Axiom score request failed
 
 Axis
 == 轴
+
+Backdrop blur
+== 背景模糊
 
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 == 背景模糊算法：0=高斯，1=Kawase，2=Dual Kawase
@@ -1733,11 +1745,11 @@ Censor replacement character
 Censor word list (comma-separated)
 == 屏蔽词列表（用 , 分隔）
 
-Center line color (requires tc_show_center)
-== 中心线颜色（需启用 tc_show_center）
+Center line color (requires qm_show_center)
+== 中心线颜色（需启用 qm_show_center）
 
-Center line width (requires tc_show_center)
-== 中心线宽度（需启用 tc_show_center）
+Center line width (requires qm_show_center)
+== 中心线宽度（需启用 qm_show_center）
 
 Change indicator offset based on distance to other tees
 == 根据与其他 Tee 的距离更改指示器偏移量
@@ -1871,6 +1883,9 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == 正在查找该昵称的 DDNet 记录
 
+Checking Steam...
+== 正在检测 Steam…
+
 Chinese (Simplified)
 == 中文（简体）
 
@@ -1912,6 +1927,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == 电影镜头
+
+CJK font
+== 中日韩文字字体
+
+CJK font weight
+== 中日韩文字字重
 
 CJK font weight:
 == 中日韩字体字重：
@@ -2162,8 +2183,8 @@ Command
 Command completion
 == 指令补全
 
-Command executed by tc_mod_weapon, target id appended at end
-== tc_mod_weapon 执行的命令，目标 id 会附加在命令末尾
+Command executed by qm_mod_weapon, target id appended at end
+== qm_mod_weapon 执行的命令，目标 id 会附加在命令末尾
 
 Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)
 == 指向某人并射击时执行命令（默认 kill，仅在远程控制台已鉴权时生效）
@@ -2543,6 +2564,9 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == 无法连接分身
 
+Could not connect to the translation service. Please try again later.
+== 无法连接翻译服务，请稍后重试。
+
 Could not create report scan request
 == 创建举报扫描请求失败
 
@@ -2804,6 +2828,9 @@ Cyrillic
 d = Prediction latency
 == d = 预测延迟
 
+Dark translucent
+== 深色半透明
+
 Darken Tee color when frozen (0-100)
 == 冻结时加深 Tee 颜色（0-100）
 
@@ -3002,6 +3029,9 @@ Default
 default
 == 默认
 
+Default appearance profile migration version
+== 默认外观配置迁移版本
+
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 == 显示时间的默认方式是游戏/回合计时器或广播。0 = 游戏/回合计时器，1 = 广播，2 = 0+1，3 = 无
 
@@ -3125,24 +3155,6 @@ Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <
 Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
 == 已弃用。使用“vote_muteid <client_id> <秒数> <原因>”或“vote_muteip <ip> <秒数> <原因>”
 
-Deprecated: jump hint color, migrated to qm_jump_hint_color on startup
-== 已废弃：跳跃提示颜色，启动时迁移到 qm_jump_hint_color
-
-Deprecated: jump hint font size, migrated to qm_jump_hint_size on startup
-== 已废弃：跳跃提示字体大小，启动时迁移到 qm_jump_hint_size
-
-Deprecated: jump hint text, migrated to qm_jump_hint_text on startup (use \n for newline)
-== 已废弃：跳跃提示文本，启动时迁移到 qm_jump_hint_text（使用\n 换行）
-
-Deprecated: jump hint toggle, migrated to qm_jump_hint on startup
-== 已废弃：跳跃提示开关，启动时迁移到 qm_jump_hint
-
-Deprecated: jump hint X position, migrated to qm_jump_hint_x on startup
-== 已废弃：跳跃提示水平位置，启动时迁移到 qm_jump_hint_x
-
-Deprecated: jump hint Y position, migrated to qm_jump_hint_y on startup
-== 已废弃：跳跃提示垂直位置，启动时迁移到 qm_jump_hint_y
-
 Depth freeze tile overlay alpha (0-100)
 == 深度冻结图块覆盖层的实体不透明度（0-100）
 
@@ -3166,6 +3178,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == 检测自定义服务器的兼容单人区域提示
+
+Detect Steam again
+== 重新检测 Steam
 
 Detected graphics adapters
 == 检测到的显卡
@@ -3725,6 +3740,9 @@ Emoticon
 Emoticon ID
 == 表情 ID
 
+Emoticon projectile duration
+== 表情弹射时长
+
 Emoticon shadow
 == 表情阴影
 
@@ -4177,6 +4195,9 @@ Enter solo split mode
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == 填入赞助兑换码并点「兑换」，写下称号后点「保存」。勾选「仅在指定昵称下显示」可把称号绑定到某一个昵称。
+
+Enter the Steam client program path, without command arguments
+== 填写 Steam 客户端程序路径，不要附带启动参数
 
 Enter Username
 == 输入账号名称
@@ -4994,6 +5015,9 @@ Global card ordering old config migration completed flag
 Global toggle key
 == 全局开关键
 
+Global UI size
+== 整体界面大小
+
 Global UI size percentage
 == 全局 UI 大小百分比
 
@@ -5558,6 +5582,21 @@ IME
 IME background color
 == IME 背景颜色
 
+IME font size
+== 输入法字号
+
+IME font size percentage
+== 输入法字号 (%)
+
+IME selected text color
+== 输入法选中文字颜色
+
+IME selection background color
+== 输入法选中背景颜色
+
+IME text color
+== 输入法文字颜色
+
 Import from clipboard
 == 从剪贴板导入
 
@@ -5954,6 +5993,18 @@ Keep vote window open after voting
 Key binds
 == 按键绑定
 
+Key press count color
+== 按键计数颜色
+
+Key press count font size
+== 按键计数字号
+
+Key press count font size percentage
+== 按键计数字号 (%)
+
+Key press count label
+== 按键计数前缀文字
+
 Key press icon size
 == 按键显示图标大小
 
@@ -6119,11 +6170,26 @@ Last successful sync: %s
 Last verified approved update source
 == 上次验证成功的已批准更新源
 
+Last viewed announcement content revision
+== 最近已读的公告内容修订
+
+Last viewed announcement version
+== 最近已读的公告版本
+
+Last viewed client release notes
+== 最近已读的客户端版本说明
+
 Latency
 == 延迟
 
 Latency Jitter
 == 延迟抖动
+
+Latin font
+== 拉丁文字字体
+
+Latin font weight
+== 拉丁文字字重
 
 Launch count threshold for the next sponsor reminder
 == 下次赞助提醒的启动次数阈值
@@ -6476,6 +6542,12 @@ Lose weapons when teleporting (useful for race maps)
 Low to high
 == 由低到高
 
+LXGW WenKai is available.
+== 霞鹜文楷可用。
+
+LXGW WenKai is unavailable. Current fonts and weights will be kept.
+== 未找到霞鹜文楷，将保留当前字体和字重。
+
 Lyrics
 == 歌词
 
@@ -6553,6 +6625,9 @@ Manual scope
 
 Manual source file
 == 手动源文件
+
+Manual Steam path is invalid; using automatic detection
+== 手动填写的 Steam 路径无效，已使用自动检测
 
 Manual target
 == 手动目标
@@ -6850,6 +6925,12 @@ Menu option - normal
 
 Menu option - selected
 == 菜单选项 - 选中
+
+Menu panel color
+== 菜单面板颜色
+
+Menu panel opacity
+== 菜单面板不透明度
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == 在此窗口（毫秒）内合并连续相同的 echo 消息（0 表示不合并）
@@ -7196,8 +7277,8 @@ Name plates offset
 Name plates size
 == 昵称大小
 
-Name to change to near finish (when tc_change_name_near_finish enabled)
-== 接近终点时要改成的名字（启用 tc_change_name_near_finish 时生效）
+Name to change to near finish (when qm_change_name_near_finish enabled)
+== 接近终点时要改成的名字（启用 qm_change_name_near_finish 时生效）
 
 Name:
 == 名称：
@@ -7333,6 +7414,9 @@ New category name
 
 New features
 == 新功能
+
+New features (unread)
+== 新功能（未读）
 
 New IME
 == 新版 IME
@@ -8174,6 +8258,18 @@ Pickup range
 Pie menu
 == 饼菜单
 
+Pie menu effects
+== 饼菜单开合效果
+
+Pie menu highlight tint
+== 饼菜单选中色调
+
+Pie menu highlight tint (alpha controls tint strength)
+== 饼菜单选中色调（透明度控制着色强度）
+
+Pie menu opening and closing effects
+== 饼菜单开合效果
+
 Pie menu rename list (separate with |, e.g., name1|name2)
 == 饼菜单改名名单（使用 | 分隔，例如：name1|name2）
 
@@ -8450,6 +8546,9 @@ Popup & dropdown blur
 Popup animation
 == 弹出动画
 
+Popup blur
+== 弹出面板模糊
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == 用于客户端连接到服务器的端口（0 选择随机端口，1024 或更高设置手动端口）
 
@@ -8593,6 +8692,9 @@ Preview
 
 Preview 'Hook collisions' being pressed
 == 预览按下时的钩子辅助线
+
+Preview and apply a fixed appearance preset
+== 查看并应用固定的外观预设
 
 Preview built with %d skipped slot(s).
 == 预览已生成，但跳过了 %d 个槽位。
@@ -8791,6 +8893,9 @@ q = Connection quality
 
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm 增强渲染：0=关闭（纯 Vulkan），1=自动回退，2=强制开启
+
+Qm recommended appearance
+== 栖梦推荐外观
 
 Qm UI custom icon color
 == Qm 界面图标自定义颜色
@@ -9503,6 +9608,9 @@ Replays directory
 Reply
 == 回复
 
+Reply content
+== 回复内容
+
 Reply to messages from muted players
 == 回复静音玩家的消息
 
@@ -9611,6 +9719,9 @@ Reset column widths
 Reset controls
 == 恢复默认设置
 
+Reset count appearance
+== 恢复计数默认外观
+
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 == 每次地图更改后是否重置 DDRace 调整（sv_hit、sv_endless_drag 和 sv_old_laser）
 
@@ -9623,11 +9734,20 @@ Reset dummy
 Reset filter
 == 重置筛选
 
+Reset IME appearance
+== 恢复输入法默认外观
+
+Reset key press counts
+== 清零按键累计次数
+
 Reset layout
 == 重置布局
 
 Reset mouse position when opening bind wheel
 == 打开绑定轮时重置鼠标位置
+
+Reset pie menu appearance
+== 恢复饼菜单默认外观
 
 Reset position of mouse when opening bindwheel
 == 打开快捷绑定轮盘时重置鼠标位置
@@ -9640,6 +9760,12 @@ Reset stats when joining a server
 
 Reset to defaults
 == 恢复默认设置
+
+Reset tooltip appearance
+== 恢复气泡默认外观
+
+Reset translation colors
+== 恢复翻译默认颜色
 
 Reset tuning after each map change
 == 每次地图更改后是否重置调整
@@ -9802,6 +9928,9 @@ Rule line 8.
 
 Rule line 9.
 == 规则第 9 行
+
+Rule list
+== 规则列表
 
 Run "hot_reload" on local server with rcon auth on map save
 == 保存地图时，在已通过 RCON 认证的本地服务器上运行“hot_reload”
@@ -10193,9 +10322,6 @@ Self and friends
 Self only
 == 仅自己
 
-Send
-== 发送
-
 Send & Receive
 == 收发
 
@@ -10423,6 +10549,9 @@ Settings card titles use rainbow colors
 
 Settings file
 == 设置文件
+
+Settings page opacity
+== 设置页不透明度
 
 Settings page right panel opacity
 == 设置页右侧设置栏透明度
@@ -10915,6 +11044,9 @@ Show katan on frozen players
 
 Show katana on frozen players (restores old behavior)
 == 在冻结玩家身上显示武士刀（恢复旧行为）
+
+Show key press counts
+== 显示按键累计次数
 
 Show key presses
 == 显示按键
@@ -11963,8 +12095,23 @@ Status normal, check details below if still experiencing issues
 Status Scheme:
 == 状态方案：
 
+Steam client path (leave empty to detect automatically)
+== Steam 客户端路径（留空自动检测）
+
 Steam integration
 == Steam 集成
+
+Steam is installed
+== Steam 已安装
+
+Steam is installed but not running
+== Steam 已安装，尚未启动
+
+Steam is running
+== Steam 已运行
+
+Steam not found
+== 未找到 Steam
 
 Steam profile name
 ==  Steam 个人资料名称
@@ -12497,6 +12644,9 @@ Tencent Cloud Translation SecretKey
 Text alpha
 == 文字透明度
 
+Text before each key press count
+== 按键计数前缀文字
+
 Text color
 == 文本颜色
 
@@ -12701,8 +12851,8 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 此提示由 ui_widget::Tooltip 提供——一个基于 CTooltips 的薄层封装。
 
-Tick delay before executing tc_execute_on_join
-== 执行 tc_execute_on_join 前的延迟（tick）
+Tick delay before executing qm_execute_on_join
+== 执行 qm_execute_on_join 前的延迟（tick）
 
 Ticks after freeze before applying max prediction reduction
 == 冻结后经过多少 tick 才应用最大预测减少
@@ -12980,6 +13130,24 @@ Too many translation tasks
 Toolbox page
 == 工具箱页面
 
+Tooltip background color
+== 提示气泡背景颜色
+
+Tooltip bounce animation
+== 提示气泡回弹动画
+
+Tooltip font size
+== 提示气泡字号
+
+Tooltip preview
+== 提示气泡预览
+
+Tooltip text color
+== 提示气泡文字颜色
+
+Tooltips
+== 提示气泡
+
 Top left
 == 左上
 
@@ -13097,14 +13265,32 @@ Translation queue full, sending original
 Translation service
 == 翻译服务
 
-Translation service returned a notice instead of a translation (the message may contain filtered words)
-== 翻译服务返回的是提示而非译文（该消息可能包含屏蔽词）
+Translation service authentication failed. Check the API key and service address.
+== 翻译服务鉴权失败，请检查 API 密钥和服务地址。
+
+Translation service is rate limited. Please try again later.
+== 翻译请求过于频繁，请稍后重试。
+
+Translation service is temporarily unavailable. Please try again later.
+== 翻译服务暂时不可用，请稍后重试。
+
+Translation service quota is exhausted. Choose another service or try again later.
+== 翻译服务的额度已用完，请切换服务或稍后重试。
+
+Translation service refused this content. Please edit it and try again.
+== 翻译服务拒绝处理这条内容，请修改后重试。
+
+Translation service returned a notice instead of a translation
+== 翻译服务返回了提示，未提供译文
 
 Translation Settings
 == 翻译设置
 
 transmits your player name to info.ddnet.org
 == 会将玩家昵称发送到 info.ddnet.org
+
+Trigger limits
+== 触发限制
 
 Troubleshooting suggestions
 == 建议排查
@@ -13186,6 +13372,9 @@ UDP seems to be filtered.
 
 UDP socket not open
 == UDP 套接字未打开
+
+UI animations
+== 界面动画
 
 UI color
 == 用户界面颜色
@@ -13603,6 +13792,9 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 将鼠标悬停在 HUD 模块上并滚动滚轮可按 5% 缩放
+
+Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
+== 请分别填写主号和分身在 Axiom 服注册的密码。此选项不会自动注册账号。
 
 Use the scoreboard cursor mode to scroll the list
 == 使用计分板光标模式滚动查看列表

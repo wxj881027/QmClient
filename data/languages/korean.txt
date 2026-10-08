@@ -800,6 +800,9 @@ API key
 Appearance
 == 외형
 
+Appearance of help bubbles outside settings cards
+== 설정 카드 밖 도움말 풍선의 외관
+
 Append to log file instead of overwriting
 == 덮어쓰기 대신 로그 파일에 추가
 
@@ -836,6 +839,9 @@ Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 == 예측을 위해 다음 틱 전에 입력을 미리 적용
 
+Apply Qm recommended appearance
+== Qm 권장 외관 적용
+
 Apply quick input to other Tees as well
 == 다른 Tee에도 빠른 입력 적용
 
@@ -847,6 +853,9 @@ Apply this preset
 
 Apply watermark
 == 워터마크 적용
+
+Applying this preset changes the appearance settings listed below.
+== 이 프리셋을 적용하면 아래 외관 설정이 변경됩니다.
 
 Arabic
 == 아랍어
@@ -1288,6 +1297,9 @@ Axiom score request failed
 
 Axis
 == 축
+
+Backdrop blur
+== 배경 흐림
 
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 == 배경 흐림 알고리즘: 0=가우시안, 1=Kawase, 2=Dual Kawase
@@ -1733,11 +1745,11 @@ Censor replacement character
 Censor word list (comma-separated)
 == 차단 단어 목록(,로 구분)
 
-Center line color (requires tc_show_center)
-== 중심선 색상 (tc_show_center 필요)
+Center line color (requires qm_show_center)
+== 중심선 색상 (qm_show_center 필요)
 
-Center line width (requires tc_show_center)
-== 중심선 두께 (tc_show_center 필요)
+Center line width (requires qm_show_center)
+== 중심선 두께 (qm_show_center 필요)
 
 Change indicator offset based on distance to other tees
 == 다른 티와의 거리에 따라 표시기 오프셋 변경
@@ -1871,6 +1883,9 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == 사용자 이름과 일치하는 기존 플레이어 확인 중
 
+Checking Steam...
+== Steam 확인 중…
+
 Chinese (Simplified)
 == 중국어(간체)
 
@@ -1912,6 +1927,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == 시네마틱 카메라
+
+CJK font
+== 한중일 글꼴
+
+CJK font weight
+== 한중일 글꼴 굵기
 
 CJK font weight:
 == CJK 글꼴 굵기:
@@ -2162,8 +2183,8 @@ Command
 Command completion
 == 명령어 자동 완성
 
-Command executed by tc_mod_weapon, target id appended at end
-== tc_mod_weapon이 실행하는 명령, 대상 ID가 끝에 추가됨
+Command executed by qm_mod_weapon, target id appended at end
+== qm_mod_weapon이 실행하는 명령, 대상 ID가 끝에 추가됨
 
 Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)
 == 누군가를 조준하고 발사할 때 실행되는 명령 (기본 kill, 원격 콘솔이 인증된 경우에만 작동)
@@ -2543,6 +2564,9 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == 더미에 연결할 수 없습니다
 
+Could not connect to the translation service. Please try again later.
+== 번역 서비스에 연결할 수 없습니다. 잠시 후 다시 시도하세요.
+
 Could not create report scan request
 == 신고 스캔 요청을 생성할 수 없습니다
 
@@ -2804,6 +2828,9 @@ Cyrillic
 d = Prediction latency
 == d = 예측 지연 시간
 
+Dark translucent
+== 어두운 반투명
+
 Darken Tee color when frozen (0-100)
 == 프리즈 시 Tee 색상 어둡게 하기 (0-100)
 
@@ -3002,6 +3029,9 @@ Default
 default
 == 기본값
 
+Default appearance profile migration version
+== 기본 외관 설정 마이그레이션 버전
+
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 == 시간 표시 기본 모드: 게임/라운드 타이머 또는 방송. 0 = 게임/라운드 타이머, 1 = 방송, 2 = 0+1, 3 = 없음
 
@@ -3125,24 +3155,6 @@ Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <
 Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
 == 사용 중단됨. 'vote_muteid <client_id> <seconds> <reason>' 또는 'vote_muteip <ip> <seconds> <reason>' 를 사용하세요
 
-Deprecated: jump hint color, migrated to qm_jump_hint_color on startup
-== 사용 중단됨: 점프 힌트 색상, 시작 시 qm_jump_hint_color로 마이그레이션됨
-
-Deprecated: jump hint font size, migrated to qm_jump_hint_size on startup
-== 사용 중단됨: 점프 힌트 글꼴 크기, 시작 시 qm_jump_hint_size로 마이그레이션됨
-
-Deprecated: jump hint text, migrated to qm_jump_hint_text on startup (use \n for newline)
-== 사용 중단됨: 점프 힌트 텍스트, 시작 시 qm_jump_hint_text로 마이그레이션됨 (\n 사용)
-
-Deprecated: jump hint toggle, migrated to qm_jump_hint on startup
-== 사용 중단됨: 점프 힌트 토글, 시작 시 qm_jump_hint로 마이그레이션됨
-
-Deprecated: jump hint X position, migrated to qm_jump_hint_x on startup
-== 사용 중단됨: 점프 힌트 X 위치, 시작 시 qm_jump_hint_x로 마이그레이션됨
-
-Deprecated: jump hint Y position, migrated to qm_jump_hint_y on startup
-== 사용 중단됨: 점프 힌트 Y 위치, 시작 시 qm_jump_hint_y로 마이그레이션됨
-
 Depth freeze tile overlay alpha (0-100)
 == 심층 빙결 타일 오버레이 알파 (0-100)
 
@@ -3166,6 +3178,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == 커스텀 서버에서 호환되는 솔로 프롬프트 감지
+
+Detect Steam again
+== Steam 다시 감지
 
 Detected graphics adapters
 == 감지된 그래픽 어댑터
@@ -3725,6 +3740,9 @@ Emoticon
 Emoticon ID
 == 이모티콘 ID
 
+Emoticon projectile duration
+== 발사한 이모티콘의 표시 시간
+
 Emoticon shadow
 == 이모티콘 그림자
 
@@ -4177,6 +4195,9 @@ Enter solo split mode
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == 후원 코드를 입력하고 "등록"을 누른 뒤 칭호를 작성하고 "저장"을 누르세요. "이 닉네임에서만 표시"를 켜면 하나의 닉네임에만 연결됩니다.
+
+Enter the Steam client program path, without command arguments
+== 실행 인수 없이 Steam 클라이언트 프로그램 경로를 입력하세요
 
 Enter Username
 == 사용자 이름 입력
@@ -4994,6 +5015,9 @@ Global card ordering old config migration completed flag
 Global toggle key
 == 전역 토글 키
 
+Global UI size
+== 전체 UI 크기
+
 Global UI size percentage
 == 전체 UI 크기 백분율
 
@@ -5558,6 +5582,21 @@ IME
 IME background color
 == IME 배경 색상
 
+IME font size
+== IME 글꼴 크기
+
+IME font size percentage
+== IME 글꼴 크기 (%)
+
+IME selected text color
+== IME 선택 글자색
+
+IME selection background color
+== IME 선택 배경색
+
+IME text color
+== IME 글자색
+
 Import from clipboard
 == 클립보드에서 가져오기
 
@@ -5954,6 +5993,18 @@ Keep vote window open after voting
 Key binds
 == 키 바인드
 
+Key press count color
+== 키 입력 횟수 색상
+
+Key press count font size
+== 키 입력 횟수 글꼴 크기
+
+Key press count font size percentage
+== 키 입력 횟수 글꼴 크기 (%)
+
+Key press count label
+== 키 입력 횟수 접두사
+
 Key press icon size
 == 키 입력 아이콘 크기
 
@@ -6119,11 +6170,26 @@ Last successful sync: %s
 Last verified approved update source
 == 마지막으로 검증에 성공한 승인된 업데이트 소스
 
+Last viewed announcement content revision
+== 마지막으로 읽은 공지 내용 개정판
+
+Last viewed announcement version
+== 마지막으로 읽은 공지 버전
+
+Last viewed client release notes
+== 마지막으로 읽은 클라이언트 릴리스 정보
+
 Latency
 == 지연 시간
 
 Latency Jitter
 == 지연 시간 지터
+
+Latin font
+== 라틴 문자 글꼴
+
+Latin font weight
+== 라틴 문자 글꼴 굵기
 
 Launch count threshold for the next sponsor reminder
 == 다음 후원 알림까지의 실행 횟수 임계값
@@ -6476,6 +6542,12 @@ Lose weapons when teleporting (useful for race maps)
 Low to high
 == 낮음에서 높음으로
 
+LXGW WenKai is available.
+== LXGW WenKai를 사용할 수 있습니다.
+
+LXGW WenKai is unavailable. Current fonts and weights will be kept.
+== LXGW WenKai를 찾을 수 없습니다. 현재 글꼴과 굵기를 유지합니다.
+
 Lyrics
 == 가사
 
@@ -6553,6 +6625,9 @@ Manual scope
 
 Manual source file
 == 수동 소스 파일
+
+Manual Steam path is invalid; using automatic detection
+== 입력한 Steam 경로가 잘못되어 자동 감지를 사용합니다
 
 Manual target
 == 수동 대상
@@ -6850,6 +6925,12 @@ Menu option - normal
 
 Menu option - selected
 == 메뉴 옵션 - 선택됨
+
+Menu panel color
+== 메뉴 패널 색상
+
+Menu panel opacity
+== 메뉴 패널 불투명도
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == 이 시간(밀리초) 내에 연속으로 동일한 echo 메시지를 병합합니다(0이면 병합하지 않음)
@@ -7196,8 +7277,8 @@ Name plates offset
 Name plates size
 == 이름표 크기
 
-Name to change to near finish (when tc_change_name_near_finish enabled)
-== 결승선 근처에서 변경할 이름 (tc_change_name_near_finish 활성화 시)
+Name to change to near finish (when qm_change_name_near_finish enabled)
+== 결승선 근처에서 변경할 이름 (qm_change_name_near_finish 활성화 시)
 
 Name:
 == 이름:
@@ -7333,6 +7414,9 @@ New category name
 
 New features
 == 새 기능
+
+New features (unread)
+== 새 기능 (읽지 않음)
 
 New IME
 == 새 IME
@@ -8174,6 +8258,18 @@ Pickup range
 Pie menu
 == 파이 메뉴
 
+Pie menu effects
+== 원형 메뉴 열기 및 닫기 효과
+
+Pie menu highlight tint
+== 원형 메뉴 선택 색조
+
+Pie menu highlight tint (alpha controls tint strength)
+== 원형 메뉴 선택 색조 (알파로 강도 조절)
+
+Pie menu opening and closing effects
+== 원형 메뉴 열기 및 닫기 효과
+
 Pie menu rename list (separate with |, e.g., name1|name2)
 == 파이 메뉴 이름 변경 목록 (|로 구분, 예: 현몽1|현몽2)
 
@@ -8450,6 +8546,9 @@ Popup & dropdown blur
 Popup animation
 == 팝업 애니메이션
 
+Popup blur
+== 팝업 흐림
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == 클라이언트-서버 연결 포트 (0=랜덤, >=1024는 수동 포트 설정)
 
@@ -8593,6 +8692,9 @@ Preview
 
 Preview 'Hook collisions' being pressed
 == '후크 충돌'이 눌린 상태 미리보기
+
+Preview and apply a fixed appearance preset
+== 정해진 외관 프리셋을 확인하고 적용
 
 Preview built with %d skipped slot(s).
 == %d개의 슬롯을 건너뛰고 미리보기가 생성되었습니다.
@@ -8791,6 +8893,9 @@ q = Connection quality
 
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm 향상된 렌더링: 0=끄기(순수 Vulkan), 1=자동 폴백, 2=강제 켜기
+
+Qm recommended appearance
+== Qm 권장 외관
 
 Qm UI custom icon color
 == Qm UI 아이콘 사용자 지정 색상
@@ -9503,6 +9608,9 @@ Replays directory
 Reply
 == 답장
 
+Reply content
+== 답장 내용
+
 Reply to messages from muted players
 == 음소거된 플레이어의 메시지에 답장
 
@@ -9611,6 +9719,9 @@ Reset column widths
 Reset controls
 == 컨트롤 초기화
 
+Reset count appearance
+== 카운터 외관 초기화
+
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 == 각 맵 변경 후 DDRace 튜닝 초기화 (sv_hit, sv_endless_drag, sv_old_laser)
 
@@ -9623,11 +9734,20 @@ Reset dummy
 Reset filter
 == 필터 초기화
 
+Reset IME appearance
+== IME 외관 초기화
+
+Reset key press counts
+== 키 입력 횟수 초기화
+
 Reset layout
 == 레이아웃 재설정
 
 Reset mouse position when opening bind wheel
 == 바인드 휠을 열 때 마우스 위치 초기화
+
+Reset pie menu appearance
+== 원형 메뉴 외관 초기화
 
 Reset position of mouse when opening bindwheel
 == 바인드휠 열 때 마우스 위치 초기화
@@ -9640,6 +9760,12 @@ Reset stats when joining a server
 
 Reset to defaults
 == 기본값으로 초기화
+
+Reset tooltip appearance
+== 도움말 풍선 외관 초기화
+
+Reset translation colors
+== 번역 색상 초기화
 
 Reset tuning after each map change
 == 각 맵 변경 후 튜닝 초기화
@@ -9802,6 +9928,9 @@ Rule line 8.
 
 Rule line 9.
 == 규칙 9번째 줄
+
+Rule list
+== 규칙 목록
 
 Run "hot_reload" on local server with rcon auth on map save
 == 맵 저장 시 rcon 인증으로 로컬 서버에서 "hot_reload" 실행
@@ -10193,9 +10322,6 @@ Self and friends
 Self only
 == 자신만
 
-Send
-== 보내기
-
 Send & Receive
 == 보내기 및 받기
 
@@ -10423,6 +10549,9 @@ Settings card titles use rainbow colors
 
 Settings file
 == 설정 파일
+
+Settings page opacity
+== 설정 페이지 불투명도
 
 Settings page right panel opacity
 == 설정 페이지 오른쪽 패널 불투명도
@@ -10915,6 +11044,9 @@ Show katan on frozen players
 
 Show katana on frozen players (restores old behavior)
 == 얼어붙은 플레이어에 카타나 표시 (이전 동작 복원)
+
+Show key press counts
+== 누적 키 입력 횟수 표시
 
 Show key presses
 == 키 입력 표시
@@ -11963,8 +12095,23 @@ Status normal, check details below if still experiencing issues
 Status Scheme:
 == 상태 구성：
 
+Steam client path (leave empty to detect automatically)
+== Steam 클라이언트 경로 (비워두면 자동 감지)
+
 Steam integration
 == Steam 통합
+
+Steam is installed
+== Steam 설치됨
+
+Steam is installed but not running
+== Steam 설치됨, 실행 중이 아님
+
+Steam is running
+== Steam 실행 중
+
+Steam not found
+== Steam을 찾을 수 없음
 
 Steam profile name
 == Steam 프로필 이름
@@ -12497,6 +12644,9 @@ Tencent Cloud Translation SecretKey
 Text alpha
 == 텍스트 투명도
 
+Text before each key press count
+== 키 입력 횟수 접두사
+
 Text color
 == 텍스트 색상
 
@@ -12701,8 +12851,8 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 이 툴팁은 ui_widget::Tooltip — CTooltips 위의 얇은 레이어에 의해 제공됩니다.
 
-Tick delay before executing tc_execute_on_join
-== tc_execute_on_join 실행 전 지연 시간 (tick)
+Tick delay before executing qm_execute_on_join
+== qm_execute_on_join 실행 전 지연 시간 (tick)
 
 Ticks after freeze before applying max prediction reduction
 == 최대 예측 감소를 적용하기 전 얼어붙은 후 틱 수
@@ -12980,6 +13130,24 @@ Too many translation tasks
 Toolbox page
 == 도구 상자 페이지
 
+Tooltip background color
+== 도움말 풍선 배경색
+
+Tooltip bounce animation
+== 도움말 풍선 탄성 애니메이션
+
+Tooltip font size
+== 도움말 풍선 글꼴 크기
+
+Tooltip preview
+== 도움말 풍선 미리 보기
+
+Tooltip text color
+== 도움말 풍선 글자색
+
+Tooltips
+== 도움말 풍선
+
 Top left
 == 왼쪽 위
 
@@ -13097,14 +13265,32 @@ Translation queue full, sending original
 Translation service
 == 번역 서비스
 
-Translation service returned a notice instead of a translation (the message may contain filtered words)
-== 번역 서비스가 번역문 대신 안내를 반환했습니다(이 메시지에 필터링된 단어가 포함되어 있을 수 있음)
+Translation service authentication failed. Check the API key and service address.
+== 번역 서비스 인증에 실패했습니다. API 키와 서비스 주소를 확인하세요.
+
+Translation service is rate limited. Please try again later.
+== 번역 요청이 너무 많습니다. 잠시 후 다시 시도하세요.
+
+Translation service is temporarily unavailable. Please try again later.
+== 번역 서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도하세요.
+
+Translation service quota is exhausted. Choose another service or try again later.
+== 번역 서비스 할당량을 모두 사용했습니다. 다른 서비스를 선택하거나 나중에 다시 시도하세요.
+
+Translation service refused this content. Please edit it and try again.
+== 번역 서비스가 이 내용을 거부했습니다. 수정한 후 다시 시도하세요.
+
+Translation service returned a notice instead of a translation
+== 번역 서비스가 번역문 대신 안내를 반환했습니다
 
 Translation Settings
 == 번역 설정
 
 transmits your player name to info.ddnet.org
 == 플레이어 이름을 info.ddnet.org로 전송합니다
+
+Trigger limits
+== 발동 제한
 
 Troubleshooting suggestions
 == 문제 해결 제안
@@ -13186,6 +13372,9 @@ UDP seems to be filtered.
 
 UDP socket not open
 == UDP 소켓이 열려 있지 않습니다
+
+UI animations
+== UI 애니메이션
 
 UI color
 == UI 색상
@@ -13603,6 +13792,9 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 마우스를 모듈 위에 올리고 휠을 굴리면 5% 씩 크기 조정
+
+Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
+== 본 계정과 더미 계정에 각각 Axiom에서 등록한 비밀번호를 입력하세요. 이 옵션은 계정을 등록하지 않습니다.
 
 Use the scoreboard cursor mode to scroll the list
 == 목록을 스크롤하려면 스코어보드 커서 모드를 사용하세요

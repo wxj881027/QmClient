@@ -13,24 +13,13 @@
 
 #include <algorithm>
 
-bool CQmImeBlocker::HasTextFocus(const CGameClient *pGameClient) const
+bool CQmImeBlocker::HasTextFocus(CGameClient *pGameClient) const
 {
-	if(CLineInput::GetActiveInput() == nullptr)
+	if(pGameClient == nullptr || CLineInput::GetActiveInput() == nullptr)
 		return false;
-
-	switch(CLineInput::GetActiveInputPriority())
-	{
-	case EInputPriority::UI:
-	case EInputPriority::CHAT:
-	case EInputPriority::CONSOLE:
-		break;
-	case EInputPriority::NONE:
-		return false;
-	}
-
-	if(pGameClient == nullptr)
-		return false;
-	return true;
+	return QmImeHasLiveInputOwner(CLineInput::GetActiveInputPriority(),
+		pGameClient->m_Menus.IsActive(), pGameClient->m_Chat.IsActive(), pGameClient->m_GameConsole.IsActive(),
+		pGameClient->m_HudEditor.IsActive(), pGameClient->Ui()->IsPopupOpen());
 }
 
 bool CQmImeBlocker::IsGameplayOverlayActive(const CGameClient *pGameClient) const
@@ -45,7 +34,7 @@ bool CQmImeBlocker::IsGameplayOverlayActive(const CGameClient *pGameClient) cons
 	       pGameClient->m_PieMenu.IsActive();
 }
 
-bool CQmImeBlocker::WantsTextInput(const CGameClient *pGameClient) const
+bool CQmImeBlocker::WantsTextInput(CGameClient *pGameClient) const
 {
 	if(!HasTextFocus(pGameClient))
 		return false;
@@ -63,17 +52,33 @@ void CQmImeManager::Init(CGameClient *pGameClient)
 
 void CQmImeManager::Reset()
 {
+	if(m_TextInputSession.ClientOwnsInput() && m_pGameClient != nullptr && m_pGameClient->Input() != nullptr)
+		m_pGameClient->Input()->StopTextInput();
+	m_TextInputSession.ResetFocus();
+	m_CandidatePopup.Reset();
+}
+
+void CQmImeManager::SetClientOwnership(bool OwnsInput)
+{
+	if(!m_TextInputSession.SetClientOwnership(OwnsInput))
+		return;
+
+	// 旧界面的输入框不能带着焦点和组合串进入新界面。
+	if(CLineInput *pActiveInput = CLineInput::GetActiveInput())
+		pActiveInput->Deactivate();
 	if(m_pGameClient != nullptr && m_pGameClient->Input() != nullptr)
 		m_pGameClient->Input()->StopTextInput();
-	m_TextInputWanted = false;
+	CLineInput::SetTextInputAutoManaged(OwnsInput);
 	m_CandidatePopup.Reset();
 }
 
 void CQmImeManager::OnFrame()
 {
+	if(!m_TextInputSession.ClientOwnsInput())
+		return;
 	if(m_pGameClient == nullptr)
 	{
-		m_TextInputWanted = false;
+		m_TextInputSession.ResetFocus();
 		return;
 	}
 
@@ -82,14 +87,11 @@ void CQmImeManager::OnFrame()
 		return;
 
 	const bool Wanted = g_Config.m_QmImeAutoManage != 0 ? m_Blocker.WantsTextInput(m_pGameClient) : CLineInput::GetActiveInput() != nullptr;
-	if(Wanted != m_TextInputWanted)
-	{
-		if(Wanted)
-			pInput->StartTextInput();
-		else
-			pInput->StopTextInput();
-		m_TextInputWanted = Wanted;
-	}
+	const CQmImeTextInputSession::EAction Action = m_TextInputSession.UpdateFocus(Wanted);
+	if(Action == CQmImeTextInputSession::EAction::START)
+		pInput->StartTextInput();
+	else if(Action == CQmImeTextInputSession::EAction::STOP)
+		pInput->StopTextInput();
 	else if(!Wanted && (pInput->HasComposition() || pInput->GetCandidateCount() > 0))
 	{
 		pInput->StopTextInput();
@@ -141,6 +143,8 @@ SQmImePopupState CQmImeManager::BuildPopupState() const
 
 void CQmImeManager::RenderCandidatePopup()
 {
+	if(!m_TextInputSession.ClientOwnsInput())
+		return;
 	CUiScopedGaussianBlur GaussianBlurScope(m_pGameClient->Ui());
 	const EQmImeCandidateRenderAction RenderAction = QmImeComputeCandidateRenderAction(QmImeShouldRenderCustomCandidateUi(), g_Config.m_QmNewIme);
 

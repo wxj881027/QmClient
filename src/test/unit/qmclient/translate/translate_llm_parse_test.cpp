@@ -8,7 +8,41 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
-// 测试新的 ParseLlmResponseJson 函数
+// 通过生产解析器验证服务返回的成功内容与失败分类。
+
+TEST(ParseLlmResponseJson, RefusalCannotBecomeTranslation)
+{
+	const char *pText = R"({"choices":[{"message":{"content":"partial","refusal":"Long provider explanation"}}]})";
+	json_value *pJson = json_parse(pText, str_length(pText));
+	SLlmParseResult Result;
+	EXPECT_FALSE(ParseLlmResponseJson(pJson, Result));
+	EXPECT_TRUE(Result.m_Refused);
+	EXPECT_STREQ(Result.m_aText, "");
+	EXPECT_EQ(str_find(Result.m_aError, "Long provider"), nullptr);
+	json_value_free(pJson);
+}
+
+TEST(ParseLlmResponseJson, ContentFilteredFinishDiscardsPartialText)
+{
+	const char *pText = R"({"choices":[{"finish_reason":"content_filter","message":{"content":"partial"}}]})";
+	json_value *pJson = json_parse(pText, str_length(pText));
+	SLlmParseResult Result;
+	EXPECT_FALSE(ParseLlmResponseJson(pJson, Result));
+	EXPECT_TRUE(Result.m_Refused);
+	EXPECT_STREQ(Result.m_aText, "");
+	json_value_free(pJson);
+}
+
+TEST(ParseLlmResponseJson, NullRefusalDoesNotRejectOrdinaryText)
+{
+	const char *pText = R"({"error":null,"choices":[{"message":{"content":"I cannot translate this sentence.","refusal":null}}]})";
+	json_value *pJson = json_parse(pText, str_length(pText));
+	SLlmParseResult Result;
+	EXPECT_TRUE(ParseLlmResponseJson(pJson, Result));
+	EXPECT_FALSE(Result.m_Refused);
+	EXPECT_STREQ(Result.m_aText, "I cannot translate this sentence.");
+	json_value_free(pJson);
+}
 
 // 测试：有效的 LLM 响应
 TEST(ParseLlmResponseJson, ValidResponse)

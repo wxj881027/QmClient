@@ -3,6 +3,7 @@
 
 #include "SettingsCard.h"
 #include "SettingsCardDeckLogic.h"
+#include "SettingsCardHelp.h"
 #include "SettingsPageLayout.h"
 
 #include <array>
@@ -33,6 +34,8 @@ struct SSettingsCardDefinition
 	// 非零版本变化时重新测量，用于避免空闲帧重复执行昂贵布局。
 	uint64_t m_MeasureRevision = 0;
 	bool m_RenderWhenClipped = false;
+	FSettingsCardHeaderAction m_LeadingHeaderAction;
+	float m_LeadingHeaderActionWidth = 0.0f;
 };
 
 struct SSettingsCardDeckInput
@@ -109,6 +112,7 @@ private:
 
 	struct SRuntimeState
 	{
+		CSettingsCardHelp m_Help;
 		float m_DropFeedbackRemaining = 0.0f;
 		float m_LastReflowTargetY = 0.0f;
 		float m_AnimatedContentHeight = 0.0f;

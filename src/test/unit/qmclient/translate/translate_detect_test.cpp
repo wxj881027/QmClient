@@ -172,3 +172,58 @@ TEST(TranslateDetect, InvalidUtf8DoesNotHideRemainingTextOrLoop)
 	const std::string Text = std::string("\xff") + "help";
 	EXPECT_TRUE(ShouldTranslate(Text.c_str()));
 }
+
+TEST(TranslateDetect, HanWithoutKanaDoesNotProveJapanese)
+{
+	for(const char *pText : {"我来帮你", "東京", "好"})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_TRUE(ShouldTranslate(pText, nullptr, 0, "ja"));
+	}
+}
+
+TEST(TranslateOutgoingDetect, AmbiguousHanReachesJapaneseServiceEvenWhenShort)
+{
+	for(const char *pText : {"我来帮你", "東京", "好"})
+	{
+		SCOPED_TRACE(pText);
+		EXPECT_TRUE(qm_translate::ShouldTranslateOutgoing(qm_translate::AnalyzeLanguage(pText), "ja", "auto", 3, 75, false));
+	}
+}
+
+TEST(TranslateOutgoingDetect, AlwaysModeBypassesSameLanguageHeuristic)
+{
+	const auto Stats = qm_translate::AnalyzeLanguage("こんにちは");
+	EXPECT_FALSE(qm_translate::ShouldTranslateOutgoing(Stats, "ja", "auto", 3, 75, false));
+	EXPECT_TRUE(qm_translate::ShouldTranslateOutgoing(Stats, "ja", "auto", 3, 75, true));
+}
+
+TEST(TranslateOutgoingDetect, ExplicitSourceOverridesScriptGuess)
+{
+	const auto Stats = qm_translate::AnalyzeLanguage("東京へ");
+	EXPECT_TRUE(qm_translate::ShouldTranslateOutgoing(Stats, "ja", "zh", 3, 75, false));
+	EXPECT_FALSE(qm_translate::ShouldTranslateOutgoing(Stats, "ja", "JA", 3, 75, false));
+	EXPECT_TRUE(qm_translate::ShouldTranslateOutgoing(Stats, "ja", "JA", 3, 75, true));
+}
+
+TEST(TranslateOutgoingDetect, EmptyNumericAndSymbolsStayExcludedInBothModes)
+{
+	for(const char *pText : {"", "12345", "！！！", "😀", "12345好"})
+	{
+		SCOPED_TRACE(pText);
+		const auto Stats = qm_translate::AnalyzeLanguage(pText);
+		EXPECT_FALSE(qm_translate::ShouldTranslateOutgoing(Stats, "ja", "zh", 3, 75, false));
+		EXPECT_FALSE(qm_translate::ShouldTranslateOutgoing(Stats, "ja", "zh", 3, 75, true));
+	}
+}
+
+TEST(TranslateOutgoingDetect, PreferredModeRetainsOtherLanguagesAndMixedThresholds)
+{
+	const auto Chinese = qm_translate::AnalyzeLanguage("我来帮你");
+	EXPECT_TRUE(qm_translate::ShouldTranslateOutgoing(Chinese, "en", "auto", 3, 75, false));
+	EXPECT_FALSE(qm_translate::ShouldTranslateOutgoing(Chinese, "zh", "auto", 3, 75, false));
+	EXPECT_TRUE(qm_translate::ShouldTranslateOutgoing(qm_translate::AnalyzeLanguage("hello"), "zh", "auto", 3, 75, false));
+	const auto Mixed = qm_translate::AnalyzeLanguage("你好hello");
+	EXPECT_FALSE(qm_translate::ShouldTranslateOutgoing(Mixed, "ja", "auto", 3, 75, false));
+	EXPECT_TRUE(qm_translate::ShouldTranslateOutgoing(Mixed, "ja", "auto", 3, 75, true));
+}

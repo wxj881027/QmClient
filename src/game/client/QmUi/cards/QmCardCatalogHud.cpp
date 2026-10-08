@@ -3,6 +3,7 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/UiForms.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
@@ -388,3 +389,93 @@ namespace qm_card_catalog
 		}
 	}
 } // namespace qm_card_catalog
+
+void CMenus::RenderQmHudInputOverlayContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, float LabelWidth, bool PrewarmOnly)
+{
+	const float LineHeight = Metrics.m_LineHeight;
+	const float BodySize = Metrics.m_BodySize;
+	const float LineSpacing = Metrics.m_LineSpacing;
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmInputOverlay, "Show inputs", Localize("Show inputs"), &g_Config.m_QmInputOverlay);
+	if(!g_Config.m_QmInputOverlay)
+		return;
+
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmInputOverlayKeyCounts, "Show key press counts", Localize("Show key press counts"), &g_Config.m_QmInputOverlayKeyCounts);
+	CUIRect ResetRow;
+	Content.HSplitTop(LineHeight, &ResetRow, &Content);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+	static CButtonContainer s_ResetKeyCounts;
+	if(DoButton_Menu(&s_ResetKeyCounts, Localize("Reset key press counts"), 0, &ResetRow) && !PrewarmOnly)
+		GameClient()->m_InputOverlay.ResetKeyCounts();
+
+	CUIRect Row, LabelColumn, ControlColumn;
+	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue) {
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+		RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
+		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, "%", PrewarmOnly);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	};
+	static int s_QmInputOverlayScaleInputId;
+	static int s_QmInputOverlayMouseScaleInputId;
+	static int s_QmInputOverlayOpacityInputId;
+	static int s_QmInputOverlayPosXInputId;
+	static int s_QmInputOverlayPosYInputId;
+	RenderValue("qmclient-input-overlay-keyboard-size", Localizable("Keyboard size"), &s_QmInputOverlayScaleInputId, &g_Config.m_QmInputOverlayScale, 1, 200);
+	RenderValue("qmclient-input-overlay-mouse-size", Localizable("Mouse size"), &s_QmInputOverlayMouseScaleInputId, &g_Config.m_QmInputOverlayMouseScale, 1, 200);
+	RenderValue("qmclient-input-overlay-opacity", Localizable("Opacity"), &s_QmInputOverlayOpacityInputId, &g_Config.m_QmInputOverlayOpacity, 0, 100);
+	RenderValue("qmclient-input-overlay-horizontal-position", Localizable("Horizontal position"), &s_QmInputOverlayPosXInputId, &g_Config.m_QmInputOverlayPosX, 0, 100);
+	RenderValue("qmclient-input-overlay-vertical-position", Localizable("Vertical position"), &s_QmInputOverlayPosYInputId, &g_Config.m_QmInputOverlayPosY, 0, 100);
+	static int s_CountSize;
+	RenderValue("qmclient-input-overlay-count-size", Localizable("Key press count font size"), &s_CountSize, &g_Config.m_QmInputOverlayCountSize, 50, 200);
+	static CButtonContainer s_CountColor;
+	DoLine_ColorPicker(&s_CountColor, Metrics, &Content, Localize("Key press count color"), &g_Config.m_QmInputOverlayCountColor,
+		color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmInputOverlayCountColor, true)), false, nullptr, true);
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+	RenderQmHudLabel("qmclient-input-overlay-count-label", &LabelColumn, Localize("Key press count label"), BodySize);
+	static CLineInput s_CountLabel(g_Config.m_QmInputOverlayCountLabel, sizeof(g_Config.m_QmInputOverlayCountLabel));
+	ui_widget::InputField(SettingsUiContext("settings_input_overlay_count_label", Metrics.m_UiScale), &s_CountLabel, ControlColumn, "", BodySize);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	static CButtonContainer s_CountAppearanceReset;
+	if(DoButton_Menu(&s_CountAppearanceReset, Localize("Reset count appearance"), 0, &Row) && !PrewarmOnly && !Ui()->RenderOnly())
+	{
+		g_Config.m_QmInputOverlayCountColor = DefaultConfig::QmInputOverlayCountColor;
+		g_Config.m_QmInputOverlayCountSize = DefaultConfig::QmInputOverlayCountSize;
+		str_copy(g_Config.m_QmInputOverlayCountLabel, DefaultConfig::QmInputOverlayCountLabel);
+	}
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+}
+
+void CMenus::RenderQmHudPlayerStatsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsHud, "Show player stats HUD", Localize("Show player stats HUD"), &g_Config.m_QmPlayerStatsHud);
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsMapProgress, "Map progress bar", Localize("Map progress bar"), &g_Config.m_QmPlayerStatsMapProgress);
+	if(g_Config.m_QmPlayerStatsMapProgress)
+	{
+		RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsMapProgressStyle, "Use embedded HUD progress bar", Localize("Use embedded HUD progress bar"), &g_Config.m_QmPlayerStatsMapProgressStyle);
+		if(g_Config.m_QmPlayerStatsMapProgressStyle == 0)
+		{
+			static CButtonContainer s_MapProgressColorId;
+			DoLine_ColorPicker(&s_MapProgressColorId, CurrentSettingsContentMetrics(), &Content, Localize("Progress bar color"), &g_Config.m_QmPlayerStatsMapProgressColor, ColorRGBA(36.0f / 255.0f, 199.0f / 255.0f, 100.0f / 255.0f, 1.0f), false, nullptr, true);
+			CUIRect Row, LabelColumn, ControlColumn;
+			auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
+				Content.HSplitTop(LineHeight, &Row, &Content);
+				Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+				RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
+				RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
+				Content.HSplitTop(LineSpacing, nullptr, &Content);
+			};
+			static int s_QmPlayerStatsMapProgressWidthInputId;
+			static int s_QmPlayerStatsMapProgressHeightInputId;
+			static int s_QmPlayerStatsMapProgressPosXInputId;
+			static int s_QmPlayerStatsMapProgressPosYInputId;
+			RenderValue("qmclient-player-data-progress-bar-width", Localizable("Progress bar width"), &s_QmPlayerStatsMapProgressWidthInputId, &g_Config.m_QmPlayerStatsMapProgressWidth, 10, 80);
+			RenderValue("qmclient-player-data-progress-bar-height", Localizable("Progress bar height"), &s_QmPlayerStatsMapProgressHeightInputId, &g_Config.m_QmPlayerStatsMapProgressHeight, 6, 30);
+			RenderValue("qmclient-player-data-horizontal-position", Localizable("Horizontal position"), &s_QmPlayerStatsMapProgressPosXInputId, &g_Config.m_QmPlayerStatsMapProgressPosX, 0, 100, "%");
+			RenderValue("qmclient-player-data-vertical-position", Localizable("Vertical position"), &s_QmPlayerStatsMapProgressPosYInputId, &g_Config.m_QmPlayerStatsMapProgressPosY, 0, 100, "%");
+		}
+		RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsMapProgressDbgRoute, "Show dotted map route debug", Localize("Show dotted map route debug"), &g_Config.m_QmPlayerStatsMapProgressDbgRoute);
+	}
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmPlayerStatsResetOnJoin, "Reset stats when joining a server", Localize("Reset stats when joining a server"), &g_Config.m_QmPlayerStatsResetOnJoin);
+}

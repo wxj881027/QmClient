@@ -1,8 +1,12 @@
 #include "steam_probe.h"
 
+#include "steam_client_path.h"
+
 #include <base/fs.h>
 #include <base/system.h>
 #include <base/windows.h>
+
+#include <engine/steam.h>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
@@ -150,8 +154,10 @@ namespace
 	}
 } // namespace
 
-bool SteamProbeFindClientWindows(char *pBuffer, int BufferSize)
+bool SteamProbeFindClientWindows(char *pBuffer, int BufferSize, ESteamClientSource *pSource)
 {
+	if(pSource != nullptr)
+		*pSource = ESteamClientSource::NOT_FOUND;
 	// 注册表：Steam 安装器写入的标准位置。用户级记录是自定义目录安装（含免
 	// 管理员安装）唯一可靠记录，优先于机器级视图与 App Paths。
 	const struct SSteamRegistryProbe
@@ -172,11 +178,37 @@ bool SteamProbeFindClientWindows(char *pBuffer, int BufferSize)
 		char aValue[1024];
 		if(SteamRegQueryString(Probe.Root, Probe.pSubKey, Probe.pValue, aValue, (int)sizeof(aValue)) &&
 			SteamAcceptCandidatePath(aValue, pBuffer, BufferSize))
+		{
+			if(pSource != nullptr)
+				*pSource = ESteamClientSource::REGISTRY;
 			return true;
+		}
 	}
-	return SteamPathFromRunningProcess(pBuffer, BufferSize) ||
-	       SteamPathFromCommonDirectories(pBuffer, BufferSize) ||
-	       SteamPathFromSearchPath(pBuffer, BufferSize);
+	const struct
+	{
+		bool (*m_pProbe)(char *, int);
+		ESteamClientSource m_Source;
+	} aFallbacks[] = {
+		{SteamPathFromRunningProcess, ESteamClientSource::RUNNING_PROCESS},
+		{SteamPathFromCommonDirectories, ESteamClientSource::COMMON_DIRECTORY},
+		{SteamPathFromSearchPath, ESteamClientSource::ENVIRONMENT_PATH},
+	};
+	for(const auto &Fallback : aFallbacks)
+	{
+		if(Fallback.m_pProbe(pBuffer, BufferSize))
+		{
+			if(pSource != nullptr)
+				*pSource = Fallback.m_Source;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool SteamProbeValidateManualPath(const char *pCandidate, char *pBuffer, int BufferSize)
+{
+	const std::string Path = SteamManualPathCandidate(pCandidate, ESteamClientPlatform::WINDOWS);
+	return !Path.empty() && SteamAcceptCandidatePath(Path.c_str(), pBuffer, BufferSize);
 }
 
 bool SteamProbePathFromRunningProcess(char *pBuffer, int BufferSize)

@@ -13,7 +13,7 @@
 
 namespace
 {
-	static_assert(STATUSBAR_MAX_SIZE < sizeof(g_Config.m_TcStatusBarScheme));
+	static_assert(STATUSBAR_MAX_SIZE < sizeof(g_Config.m_QmStatusBarScheme));
 
 	const char *ConnectionGradeLabel(EQmConnectionGrade Grade)
 	{
@@ -147,12 +147,12 @@ void CStatusBar::PredictionRender()
 float CStatusBar::LocalTimeWidth()
 {
 	return CachedTextWidth(
-		g_Config.m_TcStatusBar12HourClock ? (g_Config.m_TcStatusBarLocalTimeSeconds ? "00:00:00 XX" : "00:00 XX") : (g_Config.m_TcStatusBarLocalTimeSeconds ? "00:00:00" : "00:00"));
+		g_Config.m_QmStatusBar12HourClock ? (g_Config.m_QmStatusBarLocalTimeSeconds ? "00:00:00 XX" : "00:00 XX") : (g_Config.m_QmStatusBarLocalTimeSeconds ? "00:00:00" : "00:00"));
 }
 void CStatusBar::LocalTimeRender()
 {
 	static char s_aTimeBuf[12];
-	str_timestamp_format(s_aTimeBuf, sizeof(s_aTimeBuf), g_Config.m_TcStatusBar12HourClock ? (g_Config.m_TcStatusBarLocalTimeSeconds ? "%I:%M:%S %p" : "%I:%M %p") : (g_Config.m_TcStatusBarLocalTimeSeconds ? "%H:%M:%S" : "%H:%M"));
+	str_timestamp_format(s_aTimeBuf, sizeof(s_aTimeBuf), g_Config.m_QmStatusBar12HourClock ? (g_Config.m_QmStatusBarLocalTimeSeconds ? "%I:%M:%S %p" : "%I:%M %p") : (g_Config.m_QmStatusBarLocalTimeSeconds ? "%H:%M:%S" : "%H:%M"));
 	if(s_aTimeBuf[0] == '0')
 		str_copy(s_aTimeBuf, &s_aTimeBuf[1], sizeof(s_aTimeBuf) - 1);
 	TextRender()->Text(m_CursorX, m_CursorY, m_FontSize, s_aTimeBuf);
@@ -194,7 +194,7 @@ void CStatusBar::RaceTimeRender()
 		TextRender()->TextColor(1.0f, 0.25f, 0.25f, Alpha);
 	}
 	TextRender()->Text(m_CursorX, m_CursorY, m_FontSize, aTimeBuf);
-	TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcStatusBarTextColor)));
+	TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmStatusBarTextColor)));
 }
 
 float CStatusBar::FPSWidth()
@@ -448,7 +448,7 @@ void CStatusBar::UpdateStatusBarSize()
 {
 	m_Width = 300.0f * Graphics()->ScreenAspect();
 	m_Height = 300.0f;
-	m_BarHeight = g_Config.m_TcStatusBarHeight;
+	m_BarHeight = g_Config.m_QmStatusBarHeight;
 	m_Margin = m_BarHeight * 0.2f;
 	m_BarY = m_Height - m_BarHeight;
 	m_FontSize = m_BarHeight - (m_Margin * 2);
@@ -458,7 +458,7 @@ void CStatusBar::UpdateStatusBarSize()
 void CStatusBar::OnInit()
 {
 	UpdateStatusBarSize();
-	ApplyStatusBarScheme(g_Config.m_TcStatusBarScheme);
+	ApplyStatusBarScheme(g_Config.m_QmStatusBarScheme);
 }
 
 void CStatusBar::LabelRender(const char *pLabel)
@@ -515,7 +515,7 @@ void CStatusBar::OnRender()
 	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
 
-	if(!g_Config.m_TcStatusBar || !GameClient()->m_Snap.m_pGameInfoObj)
+	if(!g_Config.m_QmStatusBar || !GameClient()->m_Snap.m_pGameInfoObj)
 		return;
 
 #if defined(CONF_VIDEORECORDER)
@@ -524,8 +524,8 @@ void CStatusBar::OnRender()
 		return;
 #endif
 
-	if(str_comp(m_aAppliedStatusBarScheme, g_Config.m_TcStatusBarScheme) != 0)
-		ApplyStatusBarScheme(g_Config.m_TcStatusBarScheme);
+	if(str_comp(m_aAppliedStatusBarScheme, g_Config.m_QmStatusBarScheme) != 0)
+		ApplyStatusBarScheme(g_Config.m_QmStatusBarScheme);
 
 	m_PlayerId = GameClient()->m_Snap.m_LocalClientId;
 	if(GameClient()->m_Snap.m_SpecInfo.m_Active)
@@ -537,11 +537,11 @@ void CStatusBar::OnRender()
 	UpdateStatusBarSize();
 	m_CurrentRaceTime = CalculateRaceTime();
 
-	const float BackgroundAlpha = g_Config.m_TcStatusBarAlpha / 100.0f;
+	const float BackgroundAlpha = g_Config.m_QmStatusBarAlpha / 100.0f;
 	Graphics()->MapScreen(0.0f, 0.0f, m_Width, m_Height);
 	Ui()->RenderGaussianBlur({m_BarX, m_BarY, m_Width, m_BarHeight}, BackgroundAlpha, IGraphics::CORNER_NONE, 0.0f);
-	Graphics()->DrawRect(m_BarX, m_BarY, m_Width, m_BarHeight, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcStatusBarColor)).WithAlpha(BackgroundAlpha), 0, 0);
-	TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcStatusBarTextColor)).WithAlpha(g_Config.m_TcStatusBarTextAlpha / 100.0f));
+	Graphics()->DrawRect(m_BarX, m_BarY, m_Width, m_BarHeight, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmStatusBarColor)).WithAlpha(BackgroundAlpha), 0, 0);
+	TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmStatusBarTextColor)).WithAlpha(g_Config.m_QmStatusBarTextAlpha / 100.0f));
 
 	struct SStatusLayoutItem
 	{
@@ -571,7 +571,7 @@ void CStatusBar::OnRender()
 		else
 		{
 			LayoutItem.m_ItemWidth = pItem->m_GetWidth();
-			if(g_Config.m_TcStatusBarLabels && pItem->m_ShowLabel && LayoutItem.m_ItemWidth > 0.0f)
+			if(g_Config.m_QmStatusBarLabels && pItem->m_ShowLabel && LayoutItem.m_ItemWidth > 0.0f)
 				LayoutItem.m_LabelWidth = LabelWidth(Localize(pItem->m_aDisplayName));
 			UsedWidth += LayoutItem.m_ItemWidth + LayoutItem.m_LabelWidth;
 		}

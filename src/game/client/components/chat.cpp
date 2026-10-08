@@ -1020,7 +1020,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 		const bool ChatAnchoredRight = true;
 		const bool ChatScrollbarOnRight = ChatAnchoredRight;
 		const CUIRect ChatRect = {0.0f, 50.0f, std::min(Width, std::max(190.0f, g_Config.m_ClChatWidth + 32.0f)), 250.0f};
-		float HistoryBottom = Height - (20.0f * FontSize() / 6.0f + (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f));
+		float HistoryBottom = Height - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f));
 		HistoryBottom -= FontSize() * (8.0f / 6.0f);
 		const float HeightLimit = GameClient()->m_Scoreboard.IsActive() ? 180.0f : (m_PrevShowChat ? 50.0f : 200.0f);
 		const vec2 MousePos = GetChatMousePos();
@@ -1796,7 +1796,7 @@ void CChat::PrintBlockedMessageToConsole(int ClientId, int Team, const char *pLi
 
 ColorRGBA CChat::PlayerNameColor(int ClientId, int NameColor, bool TeamMessage) const
 {
-	if(ClientId >= 0 && g_Config.m_TcWarList && g_Config.m_TcWarListChat && GameClient()->m_WarList.GetAnyWar(ClientId))
+	if(ClientId >= 0 && g_Config.m_QmWarList && g_Config.m_QmWarListChat && GameClient()->m_WarList.GetAnyWar(ClientId))
 		return GameClient()->m_WarList.GetPriorityColor(ClientId);
 	if(TeamMessage)
 		return CalculateNameColor(ColorHSLA(g_Config.m_ClMessageTeamColor));
@@ -1991,7 +1991,7 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		GateEchoRepeat(nullptr);
 
 	// TClient
-	if(ClientId == CLIENT_MSG && !g_Config.m_TcShowChatClient)
+	if(ClientId == CLIENT_MSG && !g_Config.m_QmShowChatClient)
 		return;
 
 	char aFilteredLine[MAX_LINE_LENGTH];
@@ -2502,6 +2502,8 @@ bool CChat::OnPrepareLines(float y)
 		}
 		Line.m_ChatEmojiRect = {};
 		const bool MultipleAuthors = Line.m_vMergedAuthors.size() > 1;
+		// 多人合并的正文另起一行，使用完整行宽，不再按姓名宽度缩进。
+		const bool IndentMessage = !MultipleAuthors && !IsScoreBoardOpen && !g_Config.m_ClChatOld;
 
 		char aClientId[16] = "";
 		if(!MultipleAuthors && g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0' && !GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
@@ -2604,12 +2606,12 @@ bool CChat::OnPrepareLines(float y)
 
 			if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 			{
-				TextRender()->TextEx(&MeasureCursor, ": ");
+				TextRender()->TextEx(&MeasureCursor, MultipleAuthors ? ":\n" : ": ");
 			}
 
 			CTextCursor AppendCursor = MeasureCursor;
 			AppendCursor.m_LongestLineWidth = 0.0f;
-			if(!IsScoreBoardOpen && !g_Config.m_ClChatOld)
+			if(IndentMessage)
 			{
 				AppendCursor.m_StartX = MeasureCursor.m_X;
 				AppendCursor.m_LineWidth -= MeasureCursor.m_LongestLineWidth;
@@ -2772,7 +2774,7 @@ bool CChat::OnPrepareLines(float y)
 		if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 		{
 			TextRender()->TextColor(NameColor);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, ": ");
+			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, MultipleAuthors ? ":\n" : ": ");
 		}
 
 		ColorRGBA Color;
@@ -2818,7 +2820,7 @@ bool CChat::OnPrepareLines(float y)
 		CTextCursor AppendCursor = LineCursor;
 		AppendCursor.m_TrackLineRanges = Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM;
 		AppendCursor.m_LongestLineWidth = 0.0f;
-		if(!IsScoreBoardOpen && !g_Config.m_ClChatOld)
+		if(IndentMessage)
 		{
 			AppendCursor.m_StartX = LineCursor.m_X;
 			AppendCursor.m_LineWidth -= LineCursor.m_LongestLineWidth;
@@ -2900,7 +2902,7 @@ bool CChat::OnPrepareLines(float y)
 		if(Line.m_aText[0] != '\0' || Line.m_aName[0] != '\0')
 		{
 			float FullWidth = RealMsgPaddingX * 1.5f;
-			if(!IsScoreBoardOpen && !g_Config.m_ClChatOld)
+			if(IndentMessage)
 			{
 				FullWidth += LineCursor.m_LongestLineWidth + AppendCursor.m_LongestLineWidth;
 			}
@@ -3026,7 +3028,7 @@ void CChat::OnRender()
 	};
 
 	// TClient
-	float y = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f));
+	float y = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f));
 	// float y = 300.0f - 20.0f * FontSize() / 6.0f;
 
 	float ScaledFontSize = FontSize() * (8.0f / 6.0f);
@@ -3064,14 +3066,15 @@ void CChat::OnRender()
 		TextRender()->TextEx(&InputCursor, ": ");
 
 		// 计算翻译按钮大小并调整输入框宽度
-		const float MessageMaxWidth = InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX) - TranslateButtonSize - TranslateButtonGap;
+		const float MessageMaxWidth = maximum(1.0f, InputCursor.m_LineWidth - (InputCursor.m_X - InputCursor.m_StartX) - TranslateButtonSize - TranslateButtonGap);
 		const float InputContentHeight = 2.25f * InputCursor.m_FontSize;
 		const float InputClipPaddingTop = maximum(1.0f, InputCursor.m_FontSize * 0.18f);
 		const float InputClipPaddingBottom = maximum(1.0f, InputCursor.m_FontSize * 0.10f);
 		const float InputClipPaddingX = maximum(1.0f, InputCursor.m_FontSize * 0.18f);
+		const float InputClipPaddingRight = minimum(InputClipPaddingX, TranslateButtonGap - 1.0f);
 		const CUIRect InputContentRect = {InputCursor.m_X, InputCursor.m_Y, MessageMaxWidth, InputContentHeight};
-		const CUIRect InputClippingRect = {InputContentRect.x - InputClipPaddingX, InputContentRect.y - InputClipPaddingTop, InputContentRect.w + 2.0f * InputClipPaddingX, InputContentRect.h + InputClipPaddingTop + InputClipPaddingBottom};
-		InputBlockRect = {x, InputContentRect.y, ChatRect.w - x, InputContentRect.h};
+		const CUIRect InputClippingRect = {InputContentRect.x - InputClipPaddingX, InputContentRect.y - InputClipPaddingTop, InputContentRect.w + InputClipPaddingX + InputClipPaddingRight, InputContentRect.h + InputClipPaddingTop + InputClipPaddingBottom};
+		InputBlockRect = {x, InputContentRect.y, InputLineWidth, InputContentRect.h};
 		InputBlockRectValid = true;
 		ExtendBounds(x, InputContentRect.y, ChatRect.w - x, InputContentRect.h);
 		const float XScale = Graphics()->ScreenWidth() / Width;
@@ -3106,6 +3109,8 @@ void CChat::OnRender()
 		m_Input.SetScrollOffset(ScrollOffset);
 		m_Input.SetScrollOffsetChange(ScrollOffsetChange);
 
+		// 补全提示也属于正文区域，不能跨过独立的翻译按钮操作区。
+		Graphics()->ClipEnable((int)(InputClippingRect.x * XScale), (int)(InputClippingRect.y * YScale), (int)(InputClippingRect.w * XScale), (int)(InputClippingRect.h * YScale));
 		// 自动补全提示：以半透明文字显示当前补全命令的剩余部分（与官方 DDNet 一致）
 		if(m_Input.GetString()[0] == '/' && m_Input.GetString()[1] != '\0' && !m_vServerCommands.empty())
 		{
@@ -3155,6 +3160,8 @@ void CChat::OnRender()
 			}
 		}
 
+		Graphics()->ClipDisable();
+
 		// 斜杠指令用法提示：在输入行下方显示一行小字说明当前指令的作用
 		if(HasCommandPreview)
 		{
@@ -3171,7 +3178,9 @@ void CChat::OnRender()
 		}
 
 		// 渲染翻译按钮
-		CUIRect TranslateButtonRect = {InputContentRect.x + InputContentRect.w + TranslateButtonGap, InputContentRect.y, TranslateButtonSize, maximum(InputCursor.m_FontSize + 4.0f, 16.0f)};
+		const float TranslateButtonHeight = maximum(InputCursor.m_FontSize + 4.0f, 16.0f);
+		const CUIRect TranslateButtonRect = {InputContentRect.x + InputContentRect.w + TranslateButtonGap, InputContentRect.y + (InputCursor.m_FontSize - TranslateButtonHeight) * 0.5f, TranslateButtonSize, TranslateButtonHeight};
+		ExtendBounds(TranslateButtonRect.x, TranslateButtonRect.y, TranslateButtonRect.w, TranslateButtonRect.h);
 		RenderTranslateButton(TranslateButtonRect);
 		if(!Input()->HasComposition() && !HudEditorPreview && !GameClient()->m_Menus.IsActive() && !m_LanguageMenuOpen && !Ui()->IsPopupOpen(&m_LanguagePopupContext) && !Ui()->IsPopupOpen(&m_ChatLinePopupContext))
 		{
@@ -3542,7 +3551,7 @@ void CChat::OnRender()
 			{"Friend", "Let's go!", ColorRGBA(1.0f, 0.92f, 0.72f, 0.92f)},
 		};
 
-		float PreviewY = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f)) - ScaledFontSize;
+		float PreviewY = 300.0f - (20.0f * FontSize() / 6.0f + (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f)) - ScaledFontSize;
 		PreviewY -= RowHeight * (float)std::size(s_aPreviewLines);
 
 		for(const SPreviewLine &Line : s_aPreviewLines)

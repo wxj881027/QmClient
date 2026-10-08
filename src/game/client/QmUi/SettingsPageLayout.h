@@ -868,8 +868,8 @@ inline float ResolveQmHudInputOverlayHeight(const SSettingsContentMetrics &Metri
 {
 	if(!Enabled)
 		return Metrics.m_LineHeight;
-	// 总开关与五个数值项共六行。
-	return 6.0f * Metrics.m_RowStep;
+	// 八个基本控件，加字号、颜色、标签和外观恢复；实际页面优先使用内容探针。
+	return 12.0f * Metrics.m_RowStep;
 }
 
 inline float ResolveQmHudDummyMiniViewHeight(const SSettingsContentMetrics &Metrics, const bool Expanded)

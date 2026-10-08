@@ -1,8 +1,111 @@
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsCardInfo.h>
 #include <game/client/QmUi/SettingsCardWidth.h>
+#include <game/client/QmUi/SettingsIconFeedback.h>
+
+#include <engine/shared/config.h>
 
 #include <gtest/gtest.h>
+
+class CSettingsHeaderIconFeedbackTest : public ::testing::Test
+{
+protected:
+	int m_PreviousMotionLevel;
+	void SetUp() override
+	{
+		m_PreviousMotionLevel = g_Config.m_QmUiMotionLevel;
+		g_Config.m_QmUiMotionLevel = 2;
+	}
+	void TearDown() override { g_Config.m_QmUiMotionLevel = m_PreviousMotionLevel; }
+};
+
+TEST_F(CSettingsHeaderIconFeedbackTest, SustainedHoverFinishesOneBounce)
+{
+	CQmAnimationBackend Anim;
+	EXPECT_GT(ResolveSettingsIconScale(Anim, 1, true, false, true), 1.0f);
+	for(int Frame = 0; Frame < 20; ++Frame)
+	{
+		Anim.Advance(1.0f / 60.0f);
+		ResolveSettingsIconScale(Anim, 1, true, false, true);
+	}
+	EXPECT_FLOAT_EQ(ResolveSettingsIconScale(Anim, 1, true, false, true), 1.0f);
+	EXPECT_FALSE(Anim.HasActiveAnimation(1, EUiAnimProperty::SCALE));
+	EXPECT_LT(ResolveSettingsIconScale(Anim, 1, true, true, true), 1.0f);
+}
+
+TEST_F(CSettingsHeaderIconFeedbackTest, DisabledButtonCancelsBounceAndDoesNotReact)
+{
+	CQmAnimationBackend Anim;
+	ResolveSettingsIconScale(Anim, 1, true, false, true);
+	EXPECT_FLOAT_EQ(ResolveSettingsIconScale(Anim, 1, true, true, false), 1.0f);
+	EXPECT_FALSE(Anim.HasActiveAnimation(1, EUiAnimProperty::SCALE));
+	EXPECT_GT(ResolveSettingsIconScale(Anim, 1, true, false, true), 1.0f);
+}
+
+TEST_F(CSettingsHeaderIconFeedbackTest, MotionOffKeepsIconAtItsOriginalSize)
+{
+	g_Config.m_QmUiMotionLevel = 0;
+	CQmAnimationBackend Anim;
+	EXPECT_FLOAT_EQ(ResolveSettingsIconScale(Anim, 1, true, false, true), 1.0f);
+	EXPECT_FLOAT_EQ(ResolveSettingsIconScale(Anim, 1, true, true, true), 1.0f);
+	EXPECT_FALSE(Anim.HasActiveAnimation(1, EUiAnimProperty::SCALE));
+}
+
+TEST(SettingsCardInfoLayout, LeadingActionStaysLeftOfInfoWidthAndCollapse)
+{
+	for(float Scale : {1.0f, 1.5f, 2.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
+			BuildSettingsCardFrame({10, 20, 320 * Scale, 200}, {"search", "Long title", "Description", "Help"}, 80, Scale),
+			60 * Scale, true);
+		const CUIRect Info = ResolveSettingsCardInfoRect(Frame);
+		const CUIRect Width = SettingsCardWidthButtonRect(Frame);
+		const CUIRect Locate = Frame.m_LeadingHeaderActionRect;
+		EXPECT_LE(Frame.m_TitleRect.x + Frame.m_TitleRect.w, Locate.x);
+		EXPECT_LE(Locate.x + Locate.w, Info.x);
+		EXPECT_LE(Info.x + Info.w, Width.x);
+		EXPECT_LE(Width.x + Width.w, Frame.m_HandleRect.x);
+		EXPECT_FLOAT_EQ(Locate.y, Frame.m_HandleRect.y);
+		EXPECT_FLOAT_EQ(Locate.h, Frame.m_HandleRect.h);
+		EXPECT_FLOAT_EQ(Frame.m_SubtitleRect.w, Frame.m_TitleRect.w);
+	}
+}
+
+TEST(SettingsCardInfoLayout, VeryNarrowHeaderNeverPlacesActionsOutsideItsLeftEdge)
+{
+	const SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
+		BuildSettingsCardFrame({10, 20, 40, 100}, {"search", "Title", nullptr, "Help"}, 0, 1), 200, true);
+	for(const CUIRect &Rect : {Frame.m_LeadingHeaderActionRect, ResolveSettingsCardInfoRect(Frame), SettingsCardWidthButtonRect(Frame)})
+	{
+		EXPECT_GE(Rect.x, Frame.m_HeaderRect.x);
+		EXPECT_GE(Rect.w, 0.0f);
+		EXPECT_GE(Rect.h, 0.0f);
+		EXPECT_LE(Rect.x + Rect.w, Frame.m_HandleRect.x);
+	}
+	EXPECT_GE(Frame.m_TitleRect.w, 0.0f);
+}
+
+TEST(SettingsCardInfoLayout, NarrowCardUsesIconWidthAndRestoresTextWidthWhenExpanded)
+{
+	const SSettingsCardSpec Spec{"search", "Title", "Description", "Help"};
+	const auto Narrow = ResolveSettingsCardHeaderActions(BuildSettingsCardFrame({0, 0, 170, 100}, Spec, 0, 1), 70, true);
+	const auto Wide = ResolveSettingsCardHeaderActions(BuildSettingsCardFrame({0, 0, 400, 100}, Spec, 0, 1), 70, true);
+	EXPECT_FLOAT_EQ(Narrow.m_LeadingHeaderActionRect.w, Narrow.m_HandleRect.w);
+	EXPECT_GT(Narrow.m_TitleRect.w, 0.0f);
+	EXPECT_FLOAT_EQ(Wide.m_LeadingHeaderActionRect.w, 70);
+}
+
+TEST(SettingsCardInfoLayout, LeadingActionMovesWithAnimatedCardGeometry)
+{
+	const SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
+		BuildSettingsCardFrame({10, 20, 400, 200}, {"search", "Title", nullptr}, 80, 1), 60, false);
+	const SSettingsCardFrame Moved = ResolveSettingsCardDrawFrame(Frame, 12.5f, -7.0f);
+	EXPECT_FLOAT_EQ(Moved.m_LeadingHeaderActionRect.x, Frame.m_LeadingHeaderActionRect.x + 12.5f);
+	EXPECT_FLOAT_EQ(Moved.m_LeadingHeaderActionRect.y, Frame.m_LeadingHeaderActionRect.y - 7.0f);
+	EXPECT_FLOAT_EQ(Moved.m_LeadingHeaderActionRect.w, Frame.m_LeadingHeaderActionRect.w);
+	EXPECT_LE(Moved.m_LeadingHeaderActionRect.x + Moved.m_LeadingHeaderActionRect.w, SettingsCardWidthButtonRect(Moved).x);
+}
 
 TEST(SettingsCardInfoLayout, SharesSizeAndBaselineWithWidthAndCollapseActions)
 {

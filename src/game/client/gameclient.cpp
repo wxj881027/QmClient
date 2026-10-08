@@ -526,7 +526,7 @@ namespace
 	{
 		SQmFastInputSettings Settings;
 		Settings.m_Enabled = pGameClient->TClientComponent().IsFastInputActive();
-		Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
+		Settings.m_FastAmountMs = g_Config.m_QmFastInputAmount;
 		return QmEffectiveFastInputOffsetTicks(Settings);
 	}
 
@@ -537,7 +537,7 @@ namespace
 
 	bool EffectiveFastInputOthers(const CGameClient *pGameClient)
 	{
-		return QmEffectiveFastInputOthers(pGameClient->TClientComponent().IsFastInputActive(), g_Config.m_TcFastInputOthers != 0);
+		return QmEffectiveFastInputOthers(pGameClient->TClientComponent().IsFastInputActive(), g_Config.m_QmFastInputOthers != 0);
 	}
 
 } // namespace
@@ -820,32 +820,10 @@ void CGameClient::OnConsoleInit()
 	pConsole->Chain("cl_menu_map", ConchainMenuMap, this);
 }
 
-// One-shot migration of legacy tc_jump_hint* settings into qm_jump_hint*.
-// Copied only when the new value is still the built-in default and the legacy
-// value is non-default, mirroring the previous MigrateChatBubbleConfig pattern.
+// 旧配置名已在读取层兼容；这里只保留跳跃提示旧默认文案的一次性迁移。
 static void MigrateJumpHintConfig()
 {
-	auto MigrateInt = [](int &NewValue, int LegacyValue, int NewDefault, int LegacyDefault) {
-		if(NewValue == NewDefault && LegacyValue != LegacyDefault)
-			NewValue = LegacyValue;
-	};
-	auto MigrateCol = [](unsigned &NewValue, unsigned LegacyValue, unsigned NewDefault, unsigned LegacyDefault) {
-		if(NewValue == NewDefault && LegacyValue != LegacyDefault)
-			NewValue = LegacyValue;
-	};
-	auto MigrateStr = [](char *pNewValue, size_t NewSize, const char *pLegacyValue, const char *pNewDefault) {
-		if(str_comp(pNewValue, pNewDefault) == 0 && pLegacyValue[0] != '\0' && str_comp(pLegacyValue, pNewDefault) != 0)
-			str_copy(pNewValue, pLegacyValue, NewSize);
-	};
-	MigrateInt(g_Config.m_QmJumpHint, g_Config.m_TcJumpHintLegacy, DefaultConfig::QmJumpHint, DefaultConfig::TcJumpHintLegacy);
-	MigrateStr(g_Config.m_QmJumpHintText, sizeof(g_Config.m_QmJumpHintText), g_Config.m_TcJumpHintTextLegacy, DefaultConfig::QmJumpHintText);
-	MigrateCol(g_Config.m_QmJumpHintColor, g_Config.m_TcJumpHintColorLegacy, DefaultConfig::QmJumpHintColor, DefaultConfig::TcJumpHintColorLegacy);
-	MigrateInt(g_Config.m_QmJumpHintX, g_Config.m_TcJumpHintXLegacy, DefaultConfig::QmJumpHintX, DefaultConfig::TcJumpHintXLegacy);
-	MigrateInt(g_Config.m_QmJumpHintY, g_Config.m_TcJumpHintYLegacy, DefaultConfig::QmJumpHintY, DefaultConfig::TcJumpHintYLegacy);
-	MigrateInt(g_Config.m_QmJumpHintSize, g_Config.m_TcJumpHintSizeLegacy, DefaultConfig::QmJumpHintSize, DefaultConfig::TcJumpHintSizeLegacy);
-
-	// 默认文案中文化后只替换「原封不动的英文默认」并关掉三跳提示一次；
-	// 上面 MigrateStr 可能刚把旧的 tc_ 值搬进来，所以这步必须排在它之后。
+	// 默认文案中文化后只替换「原封不动的英文默认」并关掉三跳提示一次。
 	MigrateJumpHintDefaults(g_Config.m_QmJumpHintDefaultsMigrated, g_Config.m_QmJumpHint, g_Config.m_QmJumpHintText, sizeof(g_Config.m_QmJumpHintText));
 }
 
@@ -920,7 +898,7 @@ void CGameClient::OnInit()
 	const int64_t OnInitStart = time_get();
 	IClient *pClient = m_pClient;
 
-	// Migrate legacy tc_jump_hint_text into qm_jump_hint_text before any HUD use.
+	// 在首次绘制前处理跳跃提示默认文案。
 	MigrateJumpHintConfig();
 	MigrateNameplateShowScopeConfig();
 	MigrateTranslateUiColorAlphaConfig(ConfigManager());
@@ -1201,6 +1179,8 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 
 void CGameClient::OnUpdate()
 {
+	// 返回客户端后先交接输入，再向组件分发这一帧的事件。
+	m_QmImeManager.SetClientOwnership(true);
 	// 字体配置变化通过统一窗口失效路径清理缓存。
 	SyncQmUiIconWeight();
 	SyncQmCustomFontWeight();
@@ -1243,7 +1223,10 @@ void CGameClient::OnUpdate()
 
 	// handle key presses
 	Input()->ConsumeEvents([&](const IInput::CEvent &Event) {
+		const bool HadCountingFocus = m_InputOverlay.HasCountingFocus();
 		OnInput(Event);
+		// 打开或关闭聊天、菜单的按键不属于游戏操作，但仍要同步按下状态。
+		m_InputOverlay.ObservePhysicalInput(Event, HadCountingFocus);
 	});
 
 	if(g_Config.m_ClSubTickAiming && m_Binds.m_MouseOnAction)
@@ -1315,7 +1298,7 @@ void CGameClient::SyncQmUiIconWeight()
 void CGameClient::SyncQmCustomFontWeight()
 {
 	// 只做安全网钳制：真实生效范围由渲染层按所选字体的 wght 轴范围钳制。
-	const int Weight = std::clamp(g_Config.m_TcCustomFontWeight, 1, 1000);
+	const int Weight = std::clamp(g_Config.m_QmCustomFontWeight, 1, 1000);
 	if(m_AppliedQmCustomFontWeight == Weight)
 		return;
 	m_AppliedQmCustomFontWeight = Weight;
@@ -2469,7 +2452,7 @@ bool CGameClient::Predict() const
 ColorRGBA CGameClient::GetDDTeamColor(int DDTeam, float Lightness) const
 {
 	// TClient
-	if(g_Config.m_TcOldTeamColors)
+	if(g_Config.m_QmOldTeamColors)
 		return color_cast<ColorRGBA>(ColorHSLA(DDTeam / 64.0f, 1.0f, Lightness));
 
 	// Use golden angle to generate unique colors with distinct adjacent colors.
@@ -5285,7 +5268,7 @@ void CGameClient::OnPredict()
 	if(FastInputTicks > 0)
 		m_PredictedWorld.CopyWorld(&m_RegularPredictedWorld);
 
-	if(g_Config.m_TcRemoveAnti)
+	if(g_Config.m_QmRemoveAnti)
 	{
 		m_ExtraPredictedWorld.CopyWorldClean(&m_PredictedWorld);
 
@@ -5300,7 +5283,7 @@ void CGameClient::OnPredict()
 		{
 			bool Unfrozen = false;
 			bool Frozen = false;
-			for(int i = 0; i < g_Config.m_TcUnfreezeLagDelayTicks; i++)
+			for(int i = 0; i < g_Config.m_QmUnfreezeLagDelayTicks; i++)
 			{
 				if(!pExtraChar)
 					continue;
@@ -5319,7 +5302,7 @@ void CGameClient::OnPredict()
 				else
 				{
 					pExtraChar->m_AliveAccumulation = std::max(pExtraChar->m_AliveAccumulation, 1);
-					pExtraChar->m_AliveAccumulation = std::min(pExtraChar->m_AliveAccumulation + 1, g_Config.m_TcUnfreezeLagDelayTicks);
+					pExtraChar->m_AliveAccumulation = std::min(pExtraChar->m_AliveAccumulation + 1, g_Config.m_QmUnfreezeLagDelayTicks);
 				}
 			}
 		}
@@ -5393,7 +5376,7 @@ void CGameClient::OnPredict()
 	// TClient
 	// New antiping smoothing
 	CCharacter *pSmoothLocalChar = m_PredSmoothingWorld.GetCharacterById(m_Snap.m_LocalClientId);
-	if(g_Config.m_TcAntiPingImproved &&
+	if(g_Config.m_QmAntiPingImproved &&
 		Predict() && AntiPingPlayers() &&
 		pSmoothLocalChar &&
 		RealPredTick && m_PredictedTick >= MIN_TICK)
@@ -5562,11 +5545,11 @@ void CGameClient::OnPredict()
 			float TickDuration = (float)1000 / (float)Client()->GameTickSpeed();
 
 			// Manage uncertainty value
-			float PredTimeScale = (float)g_Config.m_TcAntiPingUncertaintyScale / 100.0f;
+			float PredTimeScale = (float)g_Config.m_QmAntiPingUncertaintyScale / 100.0f;
 			float TickSize = TickDuration / ((float)PredTime * PredTimeScale); // 20ms / PredTime
 			float PrevConfidence = 1.0f - m_aClients[i].m_Uncertainty;
 			float NewConfidence = PrevConfidence - Uncertainty + TickSize;
-			float MinConfidence = g_Config.m_TcAntiPingNegativeBuffer ? -1.0f : 0.0f;
+			float MinConfidence = g_Config.m_QmAntiPingNegativeBuffer ? -1.0f : 0.0f;
 			NewConfidence = std::clamp(NewConfidence, MinConfidence, 1.0f); // A certain about of "negative buffer" is allowed
 			m_aClients[i].m_Uncertainty = 1.0f - NewConfidence;
 			NewConfidence = std::max(0.0f, NewConfidence);
@@ -5580,7 +5563,7 @@ void CGameClient::OnPredict()
 				ConfidenceParallel = vec2(0, 0);
 			vec2 ConfidencePerp = PredVector - ConfidenceParallel;
 
-			if(!g_Config.m_TcAntiPingStableDirection)
+			if(!g_Config.m_QmAntiPingStableDirection)
 				TrustFactor = 0.0f;
 
 			vec2 ConfidenceVector = ConfidenceParallel * std::max(TrustFactor, NewConfidence) + ConfidencePerp * NewConfidence;
@@ -5605,7 +5588,7 @@ void CGameClient::OnPredict()
 		}
 	}
 	// Copy the current pred world so on the next tick we have the "previous" pred world to advance and test against
-	if(m_NewPredictedTick && g_Config.m_TcAntiPingImproved)
+	if(m_NewPredictedTick && g_Config.m_QmAntiPingImproved)
 		m_PredSmoothingWorld.CopyWorldClean(&m_RegularPredictedWorld);
 
 	for(int i = 0; i < MAX_CLIENTS; i++)
@@ -5654,6 +5637,7 @@ void CGameClient::OnPredict()
 void CGameClient::OnActivateEditor()
 {
 	OnRelease();
+	m_QmImeManager.SetClientOwnership(false);
 }
 
 CGameClient::CClientStats::CClientStats()
@@ -7119,7 +7103,7 @@ void CGameClient::UpdateRenderedCharacters()
 				if(m_TClient.IsFastInputActive() && (i == m_Snap.m_LocalClientId || EffectiveFastInputOthers(this)))
 					Pos = GetFastInputPos(i);
 			}
-			else if(g_Config.m_TcRemoveAnti)
+			else if(g_Config.m_QmRemoveAnti)
 			{
 				Pos = GetFreezePos(i);
 			}
@@ -7147,18 +7131,18 @@ void CGameClient::UpdateRenderedCharacters()
 				if(g_Config.m_ClAntiPingSmooth)
 					Pos = GetSmoothPos(i);
 
-				if(g_Config.m_TcAntiPingImproved && m_aClients[i].m_ValidAntipingSmooth)
+				if(g_Config.m_QmAntiPingImproved && m_aClients[i].m_ValidAntipingSmooth)
 					Pos = mix(m_aClients[i].m_PrevImprovedPredPos, m_aClients[i].m_ImprovedPredPos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
 
-				if(g_Config.m_TcRemoveAnti && m_pClient->m_IsLocalFrozen)
+				if(g_Config.m_QmRemoveAnti && m_pClient->m_IsLocalFrozen)
 					Pos = GetFreezePos(i);
-				else if(m_TClient.IsFastInputActive() && EffectiveFastInputOthers(this) && !g_Config.m_TcAntiPingImproved)
+				else if(m_TClient.IsFastInputActive() && EffectiveFastInputOthers(this) && !g_Config.m_QmAntiPingImproved)
 					Pos = GetFastInputPos(i);
 
-				if(g_Config.m_TcShowOthersGhosts && g_Config.m_TcSwapGhosts && !(m_aClients[i].m_FreezeEnd > 0 && g_Config.m_TcHideFrozenGhosts))
+				if(g_Config.m_QmShowOthersGhosts && g_Config.m_QmSwapGhosts && !(m_aClients[i].m_FreezeEnd > 0 && g_Config.m_QmHideFrozenGhosts))
 					Pos = UnpredPos;
 
-				if(g_Config.m_TcUnpredOthersInFreeze && Client()->m_IsLocalFrozen)
+				if(g_Config.m_QmUnpredOthersInFreeze && Client()->m_IsLocalFrozen)
 					Pos = UnpredPos;
 			}
 		}
@@ -7287,7 +7271,7 @@ vec2 CGameClient::GetSmoothPos(int ClientId)
 {
 	SQmFastInputSettings Settings;
 	Settings.m_Enabled = m_TClient.IsFastInputActive();
-	Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
+	Settings.m_FastAmountMs = g_Config.m_QmFastInputAmount;
 	const float FastInputOffsetTicks = QmEffectiveFastInputOffsetTicks(Settings);
 	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks);
 	const bool FastInputOthers = EffectiveFastInputOthers(this);
@@ -7322,7 +7306,7 @@ int CGameClient::GetFastInputPredictionAmountMs()
 {
 	if(!m_TClient.IsFastInputActive())
 		return 0;
-	return std::max(0, g_Config.m_TcFastInputAmount);
+	return std::max(0, g_Config.m_QmFastInputAmount);
 }
 
 int CGameClient::GetFastInputPredictionTicks()
@@ -7344,7 +7328,7 @@ vec2 CGameClient::GetFastInputPos(int ClientId)
 
 	SQmFastInputSettings Settings;
 	Settings.m_Enabled = m_TClient.IsFastInputActive();
-	Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
+	Settings.m_FastAmountMs = g_Config.m_QmFastInputAmount;
 	const float FastInputOffsetTicks = QmEffectiveFastInputOffsetTicks(Settings);
 	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks);
 	const bool FastInputOthers = EffectiveFastInputOthers(this);
@@ -7375,7 +7359,7 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 	float SmoothIntra;
 
 	int AdjustTicks = 0;
-	int DelayTicks = g_Config.m_TcUnfreezeLagDelayTicks;
+	int DelayTicks = g_Config.m_QmUnfreezeLagDelayTicks;
 	int FreezeTime = 0;
 	if(pExtraChar && pChar)
 	{
@@ -7388,7 +7372,7 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 
 		AdjustTicks = std::min(FreezeTime, AdjustTicks);
 	}
-	if(g_Config.m_TcRemoveAnti && pChar && AdjustTicks > 0 && FreezeTime > 0)
+	if(g_Config.m_QmRemoveAnti && pChar && AdjustTicks > 0 && FreezeTime > 0)
 		MixAmount = mix(0.0f, 1.0f, 1.0f - AdjustTicks / (float)DelayTicks);
 	// else if(AdjustTicks == 0 && ClientId != m_Snap.m_LocalClientId)
 	//	MixAmount = 1.f - std::pow(1.f - TimePassed / (float)Len, 1.2f);
@@ -7402,7 +7386,7 @@ vec2 CGameClient::GetFreezePos(int ClientId)
 
 	SQmFastInputSettings Settings;
 	Settings.m_Enabled = m_TClient.IsFastInputActive();
-	Settings.m_FastAmountMs = g_Config.m_TcFastInputAmount;
+	Settings.m_FastAmountMs = g_Config.m_QmFastInputAmount;
 	const float FastInputOffsetTicks = QmEffectiveFastInputOffsetTicks(Settings);
 	const int FastInputTicks = QmFastInputPredictionTicks(FastInputOffsetTicks);
 	const bool FastInputOthers = EffectiveFastInputOthers(this);

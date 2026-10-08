@@ -246,7 +246,7 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 		SQmTeeHueCycleConfig HueCycleConfig;
 		HueCycleConfig.m_Enabled = g_Config.m_QmCycleTeeHue != 0;
 		HueCycleConfig.m_PlayerUsesCustomColors = aUCCVars[protocol7::SKINPART_BODY] || aUCCVars[protocol7::SKINPART_FEET];
-		HueCycleConfig.m_TClientRainbowTees = g_Config.m_TcRainbowTees != 0;
+		HueCycleConfig.m_TClientRainbowTees = g_Config.m_QmRainbowTees != 0;
 		HueCycleConfig.m_SpeedDegreesPerSecond = g_Config.m_QmCycleTeeHueSpeed;
 		HueCycleConfig.m_TimeSeconds = PreviewNow.count() / 1000000000.0;
 		HueCycleConfig.m_SixupIndex = g_Config.m_ClDummy;

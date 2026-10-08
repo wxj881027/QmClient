@@ -800,6 +800,9 @@ API key
 Appearance
 == 外観
 
+Appearance of help bubbles outside settings cards
+== 設定カード外のヘルプ吹き出しの外観
+
 Append to log file instead of overwriting
 == 上書きではなくログファイルに追記
 
@@ -836,6 +839,9 @@ Apply frosted glass blur behind secondary popups and dropdowns
 Apply input early before next tick for prediction
 == 予測のために次の tick の前に早期に入力を適用
 
+Apply Qm recommended appearance
+== Qm 推奨の外観を適用
+
 Apply quick input to other Tees as well
 == 他の Tee にもクイック入力を適用
 
@@ -847,6 +853,9 @@ Apply this preset
 
 Apply watermark
 == ウォーターマークを適用
+
+Applying this preset changes the appearance settings listed below.
+== このプリセットは以下の外観設定を変更します。
 
 Arabic
 == アラビア語
@@ -1288,6 +1297,9 @@ Axiom score request failed
 
 Axis
 == 軸
+
+Backdrop blur
+== 背景のぼかし
 
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
 == 背景ぼかしアルゴリズム：0=ガウス、1=Kawase、2=Dual Kawase
@@ -1733,11 +1745,11 @@ Censor replacement character
 Censor word list (comma-separated)
 == ブロックワードリスト（, で区切る）
 
-Center line color (requires tc_show_center)
-== センターラインの色（tc_show_center が必要）
+Center line color (requires qm_show_center)
+== センターラインの色（qm_show_center が必要）
 
-Center line width (requires tc_show_center)
-== センターラインの幅（tc_show_center が必要）
+Center line width (requires qm_show_center)
+== センターラインの幅（qm_show_center が必要）
 
 Change indicator offset based on distance to other tees
 == 他の Tee との距離に基づいてインジケーターオフセットを変更
@@ -1871,6 +1883,9 @@ Check output device, confirm headphones/speakers are still online
 Checking for existing player with your name
 == 同じ名前のプレイヤーがいるか確認中
 
+Checking Steam...
+== Steam を確認中…
+
 Chinese (Simplified)
 == 中国語（簡体字）
 
@@ -1912,6 +1927,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == シネマティックカメラ
+
+CJK font
+== 中国語・日本語・韓国語フォント
+
+CJK font weight
+== 中国語・日本語・韓国語フォントの太さ
 
 CJK font weight:
 == CJK フォントの太さ：
@@ -2162,8 +2183,8 @@ Command
 Command completion
 == コマンド補完
 
-Command executed by tc_mod_weapon, target id appended at end
-== tc_mod_weapon によって実行されるコマンド、末尾にターゲット ID が追加される
+Command executed by qm_mod_weapon, target id appended at end
+== qm_mod_weapon によって実行されるコマンド、末尾にターゲット ID が追加される
 
 Command executed when pointing at someone and shooting (default kill, only works when remote console is authenticated)
 == 誰かを狙って射撃したときに実行されるコマンド（デフォルトは kill、リモートコンソールが認証されている場合のみ動作）
@@ -2543,6 +2564,9 @@ Could not check for existing player with your name. Check your internet connecti
 Could not connect dummy
 == ダミーに接続できませんでした
 
+Could not connect to the translation service. Please try again later.
+== 翻訳サービスに接続できませんでした。しばらくしてから再試行してください。
+
 Could not create report scan request
 == レポートスキャンリクエストを作成できませんでした
 
@@ -2804,6 +2828,9 @@ Cyrillic
 d = Prediction latency
 == d = 予測レイテンシ
 
+Dark translucent
+== 暗色半透明
+
 Darken Tee color when frozen (0-100)
 == フリーズ時の Tee の色を暗くする（0-100）
 
@@ -3002,6 +3029,9 @@ Default
 default
 == デフォルト
 
+Default appearance profile migration version
+== 既定の外観設定の移行バージョン
+
 Default display mode for time: game/round timer or broadcast. 0 = game/round timer, 1 = broadcast, 2 = 0+1, 3 = none
 == 時間のデフォルト表示モード：ゲーム/ラウンドタイマーまたはブロードキャスト。0 = ゲーム/ラウンドタイマー、1 = ブロードキャスト、2 = 0+1、3 = なし
 
@@ -3125,24 +3155,6 @@ Deprecated. Use either 'muteid <client_id> <seconds> <reason>' or 'muteip <ip> <
 Deprecated. Use either 'vote_muteid <client_id> <seconds> <reason>' or 'vote_muteip <ip> <seconds> <reason>'
 == 非推奨です。'vote_muteid <client_id> <seconds> <reason>' または 'vote_muteip <ip> <seconds> <reason>' を使用してください
 
-Deprecated: jump hint color, migrated to qm_jump_hint_color on startup
-== 非推奨：ジャンプヒントの色、起動時に qm_jump_hint_color に移行
-
-Deprecated: jump hint font size, migrated to qm_jump_hint_size on startup
-== 非推奨：ジャンプヒントのフォントサイズ、起動時に qm_jump_hint_size に移行
-
-Deprecated: jump hint text, migrated to qm_jump_hint_text on startup (use \n for newline)
-== 非推奨：ジャンプヒントのテキスト、起動時に qm_jump_hint_text に移行（改行には \n を使用）
-
-Deprecated: jump hint toggle, migrated to qm_jump_hint on startup
-== 非推奨：ジャンプヒントのトグル、起動時に qm_jump_hint に移行
-
-Deprecated: jump hint X position, migrated to qm_jump_hint_x on startup
-== 非推奨：ジャンプヒントの X 位置、起動時に qm_jump_hint_x に移行
-
-Deprecated: jump hint Y position, migrated to qm_jump_hint_y on startup
-== 非推奨：ジャンプヒントの Y 位置、起動時に qm_jump_hint_y に移行
-
 Depth freeze tile overlay alpha (0-100)
 == 深層凍結タイルのオーバーレイアルファ (0-100)
 
@@ -3166,6 +3178,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == カスタムサーバーからの互換性のあるソロプロンプトを検出
+
+Detect Steam again
+== Steam を再検出
 
 Detected graphics adapters
 == 検出されたグラフィックスアダプター
@@ -3725,6 +3740,9 @@ Emoticon
 Emoticon ID
 == エモート ID
 
+Emoticon projectile duration
+== 発射したエモティコンの表示時間
+
 Emoticon shadow
 == エモートの影
 
@@ -4177,6 +4195,9 @@ Enter solo split mode
 
 Enter the sponsor code, press Redeem, then write the title and press Save. Tick "Only show with this nickname" to bind it to one nickname.
 == スポンサーコードを入力して「引き換える」を押し、称号を書いて「保存」を押します。「このニックネームのみ表示」を有効にすると1つのニックネームに紐付けられます。
+
+Enter the Steam client program path, without command arguments
+== 起動引数を付けずに Steam クライアントのパスを入力してください
 
 Enter Username
 == ユーザー名を入力
@@ -4994,6 +5015,9 @@ Global card ordering old config migration completed flag
 Global toggle key
 == グローバルトグルキー
 
+Global UI size
+== UI 全体のサイズ
+
 Global UI size percentage
 == 全体 UI サイズの割合
 
@@ -5558,6 +5582,21 @@ IME
 IME background color
 == IME 背景色
 
+IME font size
+== IME の文字サイズ
+
+IME font size percentage
+== IME の文字サイズ (%)
+
+IME selected text color
+== IME の選択文字色
+
+IME selection background color
+== IME の選択背景色
+
+IME text color
+== IME の文字色
+
 Import from clipboard
 == クリップボードからインポート
 
@@ -5954,6 +5993,18 @@ Keep vote window open after voting
 Key binds
 == キーバインド
 
+Key press count color
+== キー入力回数の色
+
+Key press count font size
+== キー入力回数の文字サイズ
+
+Key press count font size percentage
+== キー入力回数の文字サイズ (%)
+
+Key press count label
+== キー入力回数の接頭辞
+
 Key press icon size
 == キー押下アイコンサイズ
 
@@ -6119,11 +6170,26 @@ Last successful sync: %s
 Last verified approved update source
 == 前回検証に成功した承認済みの更新元
 
+Last viewed announcement content revision
+== 最後に読んだお知らせ内容の改訂
+
+Last viewed announcement version
+== 最後に読んだお知らせのバージョン
+
+Last viewed client release notes
+== 最後に読んだクライアントのリリースノート
+
 Latency
 == レイテンシ
 
 Latency Jitter
 == レイテンシジッター
+
+Latin font
+== ラテン文字フォント
+
+Latin font weight
+== ラテン文字フォントの太さ
 
 Launch count threshold for the next sponsor reminder
 == 次のスポンサー通知までの起動回数しきい値
@@ -6476,6 +6542,12 @@ Lose weapons when teleporting (useful for race maps)
 Low to high
 == 低から高へ
 
+LXGW WenKai is available.
+== LXGW WenKai を利用できます。
+
+LXGW WenKai is unavailable. Current fonts and weights will be kept.
+== LXGW WenKai が見つかりません。現在のフォントと太さを維持します。
+
 Lyrics
 == 歌詞
 
@@ -6553,6 +6625,9 @@ Manual scope
 
 Manual source file
 == 手動ソースファイル
+
+Manual Steam path is invalid; using automatic detection
+== 指定した Steam パスが無効なため、自動検出を使用します
 
 Manual target
 == 手動ターゲット
@@ -6850,6 +6925,12 @@ Menu option - normal
 
 Menu option - selected
 == メニューオプション - 選択中
+
+Menu panel color
+== メニューパネルの色
+
+Menu panel opacity
+== メニューパネルの不透明度
 
 Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)
 == このウィンドウ（ミリ秒）内で連続する同一の echo メッセージを統合する（0 で統合しない）
@@ -7196,8 +7277,8 @@ Name plates offset
 Name plates size
 == ネームプレートのサイズ
 
-Name to change to near finish (when tc_change_name_near_finish enabled)
-== ゴール付近で変更する名前（tc_change_name_near_finish が有効な場合）
+Name to change to near finish (when qm_change_name_near_finish enabled)
+== ゴール付近で変更する名前（qm_change_name_near_finish が有効な場合）
 
 Name:
 == 名前：
@@ -7333,6 +7414,9 @@ New category name
 
 New features
 == 新機能
+
+New features (unread)
+== 新機能（未読）
 
 New IME
 == 新しいIME
@@ -8174,6 +8258,18 @@ Pickup range
 Pie menu
 == パイメニュー
 
+Pie menu effects
+== 円形メニューの開閉エフェクト
+
+Pie menu highlight tint
+== 円形メニューの選択色
+
+Pie menu highlight tint (alpha controls tint strength)
+== 円形メニューの選択色（アルファで強度を調整）
+
+Pie menu opening and closing effects
+== 円形メニューの開閉エフェクト
+
 Pie menu rename list (separate with |, e.g., name1|name2)
 == パイメニュー名前変更リスト（| で区切る、例：璇夢1|璇夢2）
 
@@ -8450,6 +8546,9 @@ Popup & dropdown blur
 Popup animation
 == ポップアップアニメーション
 
+Popup blur
+== ポップアップのぼかし
+
 Port for client to server connection (0=random, >=1024 sets manual port)
 == クライアントからサーバーへの接続用ポート（0=ランダム, >=1024 で手動設定）
 
@@ -8593,6 +8692,9 @@ Preview
 
 Preview 'Hook collisions' being pressed
 == フック衝突線が押された状態をプレビュー
+
+Preview and apply a fixed appearance preset
+== 固定の外観プリセットを確認して適用
 
 Preview built with %d skipped slot(s).
 == %d 個のスロットをスキップしてプレビューを生成しました。
@@ -8791,6 +8893,9 @@ q = Connection quality
 
 Qm enhanced rendering: 0=Off pure Vulkan, 1=Auto fallback, 2=Force on
 == Qm 拡張レンダリング：0=オフ（純粋な Vulkan）、1=自動フォールバック、2=強制オン
+
+Qm recommended appearance
+== Qm 推奨の外観
 
 Qm UI custom icon color
 == Qm UI アイコンのカスタム色
@@ -9503,6 +9608,9 @@ Replays directory
 Reply
 == 返信
 
+Reply content
+== 返信内容
+
 Reply to messages from muted players
 == ミュートされたプレイヤーからのメッセージに返信
 
@@ -9611,6 +9719,9 @@ Reset column widths
 Reset controls
 == コントロールをリセット
 
+Reset count appearance
+== カウンターの外観を初期化
+
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change
 == マップ変更ごとに DDRace チューニング（sv_hit、sv_endless_drag、sv_old_laser）をリセット
 
@@ -9623,11 +9734,20 @@ Reset dummy
 Reset filter
 == フィルターをリセット
 
+Reset IME appearance
+== IME の外観を初期化
+
+Reset key press counts
+== キーを押した回数をリセット
+
 Reset layout
 == レイアウトをリセット
 
 Reset mouse position when opening bind wheel
 == バインドホイールを開くときにマウス位置をリセット
+
+Reset pie menu appearance
+== 円形メニューの外観を初期化
 
 Reset position of mouse when opening bindwheel
 == バインドホイールを開くときにマウス位置をリセット
@@ -9640,6 +9760,12 @@ Reset stats when joining a server
 
 Reset to defaults
 == デフォルトにリセット
+
+Reset tooltip appearance
+== ツールチップの外観を初期化
+
+Reset translation colors
+== 翻訳の配色を初期化
 
 Reset tuning after each map change
 == マップ変更ごとにチューニングをリセット
@@ -9802,6 +9928,9 @@ Rule line 8.
 
 Rule line 9.
 == ルール 9 行目
+
+Rule list
+== ルール一覧
 
 Run "hot_reload" on local server with rcon auth on map save
 == マップ保存時に rcon 認証でローカルサーバー上で「hot_reload」を実行
@@ -10193,9 +10322,6 @@ Self and friends
 Self only
 == 自分のみ
 
-Send
-== 送信
-
 Send & Receive
 == 送受信
 
@@ -10423,6 +10549,9 @@ Settings card titles use rainbow colors
 
 Settings file
 == 設定ファイル
+
+Settings page opacity
+== 設定ページの不透明度
 
 Settings page right panel opacity
 == 設定ページ右パネルの不透明度
@@ -10915,6 +11044,9 @@ Show katan on frozen players
 
 Show katana on frozen players (restores old behavior)
 == フリーズしたプレイヤーに刀を表示 (旧動作を復元)
+
+Show key press counts
+== キーを押した累計回数を表示
 
 Show key presses
 == キー入力を表示
@@ -11963,8 +12095,23 @@ Status normal, check details below if still experiencing issues
 Status Scheme:
 == ステータススキーム：
 
+Steam client path (leave empty to detect automatically)
+== Steam クライアントのパス（空欄で自動検出）
+
 Steam integration
 == Steam 連携
+
+Steam is installed
+== Steam はインストール済みです
+
+Steam is installed but not running
+== Steam はインストール済みですが未起動です
+
+Steam is running
+== Steam は起動中です
+
+Steam not found
+== Steam が見つかりません
 
 Steam profile name
 == Steam プロフィール名
@@ -12497,6 +12644,9 @@ Tencent Cloud Translation SecretKey
 Text alpha
 == テキストの透明度
 
+Text before each key press count
+== キー入力回数の接頭辞
+
 Text color
 == テキスト色
 
@@ -12701,8 +12851,8 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == このツールチップは ui_widget::Tooltip が提供しています。CTooltips の薄いラッパーです。
 
-Tick delay before executing tc_execute_on_join
-== tc_execute_on_join 実行前の遅延（tick）
+Tick delay before executing qm_execute_on_join
+== qm_execute_on_join 実行前の遅延（tick）
 
 Ticks after freeze before applying max prediction reduction
 == フリーズ後、最大予測減少を適用するまでの tick 数
@@ -12980,6 +13130,24 @@ Too many translation tasks
 Toolbox page
 == ツールボックスページ
 
+Tooltip background color
+== ツールチップの背景色
+
+Tooltip bounce animation
+== ツールチップの弾むアニメーション
+
+Tooltip font size
+== ツールチップの文字サイズ
+
+Tooltip preview
+== ツールチップのプレビュー
+
+Tooltip text color
+== ツールチップの文字色
+
+Tooltips
+== ツールチップ
+
 Top left
 == 左上
 
@@ -13097,14 +13265,32 @@ Translation queue full, sending original
 Translation service
 == 翻訳サービス
 
-Translation service returned a notice instead of a translation (the message may contain filtered words)
-== 翻訳サービスが訳文ではなく通知を返しました（このメッセージにはフィルター対象の語が含まれている可能性があります）
+Translation service authentication failed. Check the API key and service address.
+== 翻訳サービスの認証に失敗しました。APIキーとサービスのアドレスを確認してください。
+
+Translation service is rate limited. Please try again later.
+== 翻訳サービスのリクエスト制限に達しました。しばらくしてから再試行してください。
+
+Translation service is temporarily unavailable. Please try again later.
+== 翻訳サービスは一時的に利用できません。しばらくしてから再試行してください。
+
+Translation service quota is exhausted. Choose another service or try again later.
+== 翻訳サービスの利用枠を使い切りました。別のサービスを選ぶか、後で再試行してください。
+
+Translation service refused this content. Please edit it and try again.
+== 翻訳サービスがこの内容を拒否しました。内容を修正して再試行してください。
+
+Translation service returned a notice instead of a translation
+== 翻訳サービスが訳文ではなく通知を返しました
 
 Translation Settings
 == 翻訳設定
 
 transmits your player name to info.ddnet.org
 == プレイヤー名を info.ddnet.org に送信します
+
+Trigger limits
+== 発動条件
 
 Troubleshooting suggestions
 == トラブルシューティングの提案
@@ -13186,6 +13372,9 @@ UDP seems to be filtered.
 
 UDP socket not open
 == UDP ソケットが開いていません
+
+UI animations
+== UI アニメーション
 
 UI color
 == UI カラー
@@ -13603,6 +13792,9 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == ホバーした HUD モジュール上でマウスホイールを使用すると 5% 単位で拡大縮小します
+
+Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
+== メインとダミーそれぞれに、Axiom で登録したパスワードを入力してください。この設定ではアカウントは登録されません。
 
 Use the scoreboard cursor mode to scroll the list
 == リストをスクロールするにはスコアボードカーソルモードを使用してください

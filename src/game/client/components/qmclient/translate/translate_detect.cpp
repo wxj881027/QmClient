@@ -207,7 +207,8 @@ namespace qm_translate
 		if(str_comp_nocase(pTarget, "ja") == 0)
 		{
 			MinChars = std::clamp(MinChars, 1, 12);
-			return Stats.m_Kana + Stats.m_Han >= MinChars &&
+			// 中日文共用汉字，必须出现假名才能据此跳过日语翻译。
+			return Stats.m_Kana > 0 && Stats.m_Kana + Stats.m_Han >= MinChars &&
 			       PassLocalDetectThreshold(Stats.m_Kana + Stats.m_Han, Stats.m_ScriptTotal, Ratio);
 		}
 		if(str_comp_nocase(pTarget, "ko") == 0)
@@ -230,5 +231,30 @@ namespace qm_translate
 	{
 		return Stats.m_ScriptTotal > 0 && !IsPredominantlyNumeric(Stats, MinChars, Ratio) &&
 		       (Always || !MatchesTargetLanguageHeuristically(Stats, pTarget, MinChars, Ratio));
+	}
+
+	bool ShouldTranslateOutgoing(const SLanguageStats &Stats, const char *pTarget, const char *pSource, int MinChars, int Ratio, bool Always)
+	{
+		if(!pTarget || pTarget[0] == '\0' || Stats.m_ScriptTotal <= 0 || IsPredominantlyNumeric(Stats, MinChars, Ratio))
+			return false;
+		if(Always)
+			return true;
+		// 明确指定来源语言后，不再用字形猜测覆盖用户选择。
+		if(pSource && pSource[0] != '\0' && str_comp_nocase(pSource, "auto") != 0)
+			return str_comp_nocase(pSource, pTarget) != 0;
+		if(MatchesTargetLanguageHeuristically(Stats, pTarget, MinChars, Ratio))
+			return false;
+		// 纯汉字短句也可能是中文，日语目标下交给后端消除歧义。
+		if(str_comp_nocase(pTarget, "ja") == 0 && Stats.m_Han == Stats.m_ScriptTotal)
+			return true;
+
+		MinChars = std::clamp(MinChars, 1, 12);
+		if(IsChineseLanguage(pTarget))
+		{
+			return Stats.m_Latin >= MinChars && Stats.m_Han == 0 && Stats.m_Kana == 0 && Stats.m_Hangul == 0 &&
+			       PassLocalDetectThreshold(Stats.m_Latin, Stats.m_ScriptTotal, Ratio);
+		}
+		return Stats.m_Han >= MinChars && Stats.m_Kana == 0 && Stats.m_Hangul == 0 &&
+		       PassLocalDetectThreshold(Stats.m_Han, Stats.m_ScriptTotal, Ratio);
 	}
 }

@@ -25,12 +25,73 @@ namespace
 				const auto Geometry = BuildSector(108.0f * Scale, Radius, -90.0f + Gap * 0.5f, -90.0f + Angle - Gap * 0.5f, Gap, 1.0f);
 				ASSERT_GT(Geometry.m_ArcSegments, 0);
 				ASSERT_LE(Geometry.m_ArcSegments, MAX_ARC_SEGMENTS);
-				for(int Segment = 0; Segment < Geometry.m_ArcSegments; ++Segment)
+				for(int Segment = Geometry.m_CornerSegments; Segment < Geometry.m_ArcSegments - Geometry.m_CornerSegments; ++Segment)
 				{
 					const auto aQuad = Geometry.FillQuad(Segment);
 					EXPECT_LE(Radius - length((aQuad[0] + aQuad[1]) * 0.5f), ARC_ERROR_PIXELS + 0.0001f);
 				}
 			}
+		}
+	}
+
+	TEST(PieMenuGeometry, RoundedCornersExcludeOldSharpPointsWhileKeepingSectorBody)
+	{
+		const auto Geometry = BuildSector(100, 200, 0, 90, 3.6f, 1);
+		ASSERT_GT(Geometry.m_CornerSegments, 0);
+		EXPECT_FALSE(Geometry.Contains(vec2(199.8f, 0.2f)));
+		EXPECT_FALSE(Geometry.Contains(vec2(100.2f, 0.2f)));
+		EXPECT_FALSE(Geometry.Contains(vec2(0.2f, 199.8f)));
+		EXPECT_FALSE(Geometry.Contains(vec2(0.2f, 100.2f)));
+		EXPECT_TRUE(Geometry.Contains(vec2(110, 110)));
+		EXPECT_TRUE(Geometry.Contains(vec2(150, 1)));
+		EXPECT_FALSE(Geometry.Contains(vec2(50, 50)));
+	}
+
+	TEST(PieMenuGeometry, PointerSelectionRejectsGapsAndOutsideRingsAtEveryScale)
+	{
+		for(float Scale : {0.5f, 1.0f, 2.0f})
+		{
+			SCOPED_TRACE(Scale);
+			const auto At = [Scale](float Angle, float Radius) { return vec2(std::cos(Angle * pi / 180), std::sin(Angle * pi / 180)) * Radius * Scale; };
+			EXPECT_EQ(HoveredSector(At(22.5f, 150), 100 * Scale, 200 * Scale, 0, 8, 3.6f, 1), 0);
+			EXPECT_EQ(HoveredSector(At(67.5f, 150), 100 * Scale, 200 * Scale, 0, 8, 3.6f, 1), 1);
+			EXPECT_EQ(HoveredSector(At(45, 150), 100 * Scale, 200 * Scale, 0, 8, 3.6f, 1), -1);
+			EXPECT_EQ(HoveredSector(At(22.5f, 90), 100 * Scale, 200 * Scale, 0, 8, 3.6f, 1), -1);
+			EXPECT_EQ(HoveredSector(At(22.5f, 210), 100 * Scale, 200 * Scale, 0, 8, 3.6f, 1), -1);
+		}
+	}
+
+	TEST(PieMenuGeometry, SingleOptionHasNoCutoutSeamAndEmptyMenuCannotBeSelected)
+	{
+		EXPECT_EQ(HoveredSector(vec2(150, 0), 100, 200, 0, 1, 3.6f, 1), 0);
+		EXPECT_EQ(HoveredSector(vec2(-150, 0), 100, 200, 0, 1, 3.6f, 1), 0);
+		EXPECT_EQ(HoveredSector(vec2(0, 0), 100, 200, 0, 1, 3.6f, 1), -1);
+		EXPECT_EQ(HoveredSector(vec2(150, 0), 100, 200, 0, 0, 3.6f, 1), -1);
+	}
+
+	TEST(PieMenuGeometry, OpeningSelectionFollowsVisibleRingAndLeavesUnopenedAreaEmpty)
+	{
+		const auto Layout = ResolvePrimaryRing(108, 288, 0.5f);
+		const auto At = [](float Angle, float Radius) { return vec2(std::cos(Angle * pi / 180), std::sin(Angle * pi / 180)) * Radius; };
+		const float Start = -90.0f + Layout.m_AngleOffset;
+		const float MiddleRadius = (Layout.m_InnerRadius + Layout.m_OuterRadius) * 0.5f;
+		EXPECT_EQ(HoveredSector(At(Start + 12, MiddleRadius), Layout.m_InnerRadius, Layout.m_OuterRadius, Start, 8, 3.6f, 1, Layout.m_SpanFactor), 0);
+		EXPECT_EQ(HoveredSector(At(Start + 39, MiddleRadius), Layout.m_InnerRadius, Layout.m_OuterRadius, Start, 8, 3.6f, 1, Layout.m_SpanFactor), -1);
+		EXPECT_EQ(HoveredSector(At(Start + 12, 250), Layout.m_InnerRadius, Layout.m_OuterRadius, Start, 8, 3.6f, 1, Layout.m_SpanFactor), -1);
+	}
+
+	TEST(PieMenuGeometry, OpeningSecondaryRingKeepsItsVisibleBoundarySeparateFromPrimary)
+	{
+		for(float Progress : {0.0f, 0.1f, 0.5f, 1.0f})
+		{
+			SCOPED_TRACE(Progress);
+			const auto Primary = ResolvePrimaryRing(108, 288, Progress);
+			const auto Secondary = ResolveSecondaryRing(Primary.m_OuterRadius, 300, 396, 1, Progress);
+			EXPECT_GE(Secondary.m_InnerRadius, Primary.m_OuterRadius);
+			EXPECT_GT(Secondary.m_OuterRadius, Secondary.m_InnerRadius);
+			const float Angle = (-90.0f + Secondary.m_AngleOffset + 10.0f) * pi / 180.0f;
+			const vec2 Pointer = vec2(std::cos(Angle), std::sin(Angle)) * ((Secondary.m_InnerRadius + Secondary.m_OuterRadius) * 0.5f);
+			EXPECT_EQ(HoveredSector(Pointer, Secondary.m_InnerRadius, Secondary.m_OuterRadius, -90.0f + Secondary.m_AngleOffset, 8, 3.6f, 1, Secondary.m_SpanFactor), 0);
 		}
 	}
 
@@ -163,5 +224,18 @@ namespace
 		EXPECT_LE(Highlighted.g, 1.0f);
 		EXPECT_FLOAT_EQ(Highlighted.WithMultipliedAlpha(0.0f).a, 0.0f);
 		EXPECT_FLOAT_EQ(Highlighted.WithMultipliedAlpha(0.5f).a, Highlighted.a * 0.5f);
+	}
+
+	TEST(PieMenuAppearance, HighlightTintOnlyChangesSelectedRgb)
+	{
+		const ColorRGBA Base(0.4f, 0.8f, 0.6f, 0.5f);
+		const ColorRGBA Tint(1.0f, 0.1f, 0.2f, 1.0f);
+		EXPECT_EQ(OptionColor(Base, false, Tint), Base);
+		const ColorRGBA Selected = OptionColor(Base, true, Tint);
+		EXPECT_FLOAT_EQ(Selected.r, Tint.r);
+		EXPECT_FLOAT_EQ(Selected.g, Tint.g);
+		EXPECT_FLOAT_EQ(Selected.b, Tint.b);
+		EXPECT_FLOAT_EQ(Selected.a, OptionColor(Base, true).a);
+		EXPECT_EQ(OptionColor(Base, true, Tint.WithAlpha(0.0f)), OptionColor(Base, true));
 	}
 }

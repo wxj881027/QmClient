@@ -267,7 +267,7 @@ struct CEmoticonProjectile
 	float m_PreviousAngle = 0.0f;
 	static constexpr double STEP = 1.0 / 240.0;
 
-	void Init(vec2 Pos, vec2 Vel, int Emoticon, float SizeScale = 1.0f, int OwnerClientId = -1)
+	void Init(vec2 Pos, vec2 Vel, int Emoticon, float SizeScale = 1.0f, int OwnerClientId = -1, int DurationSeconds = 5)
 	{
 		m_Pos = m_PreviousPos = Pos;
 		m_Vel = Vel;
@@ -276,13 +276,14 @@ struct CEmoticonProjectile
 		m_SizeLimit = 128.0f * m_SizeScale;
 		m_Angle = m_PreviousAngle = 0.0f;
 		m_AngVel = ((rand() % 100) - 50) / 10.0f;
-		m_LifeTime = 3.0f;
+		m_LifeTime = static_cast<float>(std::clamp(DurationSeconds, 1, 10));
 		m_Active = true;
 		m_OwnerClientId = OwnerClientId;
 		m_Accumulator = 0.0;
 	}
 
 	float Size() const { return std::min(m_SizeLimit, 64.0f * m_SizeScale * (1.0f + std::max(0.0f, 0.5f - m_LifeTime) * 2.0f)); }
+	float FadeAlpha() const { return std::clamp(m_LifeTime * 2.0f, 0.0f, 1.0f); }
 
 	template<typename TSolid>
 	bool PlaceOutside(const QmEmoticon::CAlphaMask &Mask, const TSolid &Solid)

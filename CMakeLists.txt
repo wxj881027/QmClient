@@ -2779,6 +2779,10 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   config_variables.h
   config_variables_qmclient.h
   config_variables_tclient.h
+  qm_legacy_config.cpp
+  qm_default_profile.h
+  qm_legacy_config.h
+  qm_legacy_config_aliases.h
   console.cpp
   console.h
   csv.cpp
@@ -3146,6 +3150,7 @@ if(CLIENT)
     steam.cpp
     steam_probe.cpp
     steam_probe.h
+    steam_client_path.h
     text.cpp
     qm_font_names.h
     qm_font_name_match.h
@@ -3175,6 +3180,7 @@ if(CLIENT)
     QmUi/QmPopupSource.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
+    QmUi/QmHookCountdownRender.h
     QmUi/QmImeCandidateLayout.h
     QmUi/QmIslandSurface.cpp
     QmUi/QmIslandSurface.h
@@ -3199,6 +3205,9 @@ if(CLIENT)
     QmUi/SettingsCard.cpp
     QmUi/SettingsCardInfo.cpp
     QmUi/SettingsCardInfo.h
+    QmUi/SettingsToggleGrid.h
+    QmUi/SettingsIconFeedback.h
+    QmUi/SettingsCardHelp.h
     QmUi/SettingsCard.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
@@ -3234,8 +3243,14 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogIds.cpp
     QmUi/cards/QmCardCatalogBind.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
+    QmUi/cards/QmCardCatalogGeneral.cpp
+    QmUi/cards/QmCardCatalogKeywordReply.cpp
     QmUi/cards/QmCardCatalogBetterScoreboard.cpp
     QmUi/cards/QmCardCatalogSteam.cpp
+    QmUi/cards/QmAppearancePreset.h
+    QmUi/cards/QmCardCatalogAppearancePreset.cpp
+    QmUi/cards/QmCardCatalogIme.cpp
+    QmUi/cards/QmCardCatalogTooltip.cpp
     QmUi/cards/QmCardCatalogFunctionMetrics.h
     QmUi/cards/QmCardCatalogHud.cpp
     QmUi/cards/QmCardCatalogInternal.h
@@ -3383,6 +3398,7 @@ if(CLIENT)
     components/qmclient/emoticon_commands.h
     components/qmclient/hammer_hit_detection.cpp
     components/qmclient/hammer_hit_detection.h
+    components/qmclient/hook_countdown.h
     components/qmclient/hud_notifications/hud_notification_catalog.cpp
     components/qmclient/hud_notifications/hud_notification_catalog.h
     components/qmclient/hud_notifications/hud_notification_rules.cpp
@@ -3468,6 +3484,8 @@ if(CLIENT)
     components/qmclient/qm_markdown_broadcast.h
     components/qmclient/qm_realtime.cpp
     components/qmclient/qm_realtime.h
+    components/qmclient/qm_realtime_users.cpp
+    components/qmclient/qm_realtime_users.h
     components/qmclient/qmclient.cpp
     components/qmclient/qmclient.h
     components/qmclient/qmclient_utils.cpp
@@ -4442,6 +4460,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
+    src/test/unit/qmclient/ui/settings_card_help_test.cpp
+    src/test/unit/engine/steam_client_path_test.cpp
+    src/test/unit/qmclient/ui/settings_toggle_grid_test.cpp
     src/test/unit/qmclient/ui/QmAnimTest.cpp
     src/test/unit/qmclient/ui/QmAnimSpringTest.cpp
     src/test/unit/qmclient/ui/QmAnimCoreTest.cpp
@@ -4509,6 +4530,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/color_test.cpp
     src/test/unit/engine/compression_test.cpp
     src/test/unit/engine/console_test.cpp
+    src/test/unit/engine/qm_legacy_config_test.cpp
+    src/test/unit/qmclient/settings/qm_appearance_preset_test.cpp
     src/test/unit/engine/csv_test.cpp
     src/test/unit/engine/datafile_test.cpp
     src/test/unit/base/dbg_test.cpp
@@ -4609,6 +4632,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/country_flag_anim_start_time_test.cpp
     src/test/contract/qmclient/client/qm_ime_platform_contract_test.cpp
     src/test/unit/qmclient/client/qm_ime_platform_test.cpp
+    src/test/unit/qmclient/client/qm_input_overlay_count_test.cpp
     src/test/unit/qmclient/ui/qm_ui_scale_test.cpp
     src/test/unit/qmclient/client/qm_localization_policy_test.cpp
     src/test/unit/qmclient/client/qm_storage_path_test.cpp
@@ -4625,6 +4649,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/settings_font_selection_test.cpp
     src/test/unit/qmclient/settings/settings_icon_options_test.cpp
     src/test/unit/qmclient/settings/settings_page_layout_test.cpp
+    src/test/unit/qmclient/settings/qm_general_card_layout_test.cpp
     src/test/unit/qmclient/settings/settings_tee_emote_slider_test.cpp
     src/test/unit/qmclient/settings/settings_tee_layout_test.cpp
     src/test/unit/qmclient/client/qm_plausible_sizes_contract_test.cpp
@@ -4689,6 +4714,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_map_progress_test.cpp
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
+    src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp
     src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
@@ -4699,6 +4725,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_markdown_broadcast_test.cpp
     src/test/unit/qmclient/client/qm_emoticon_projectile_test.cpp
     src/test/unit/qmclient/client/qm_realtime_test.cpp
+    src/test/unit/qmclient/client/qm_realtime_users_test.cpp
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
@@ -4724,6 +4751,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp
+    src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp
@@ -4938,6 +4966,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/qm_markdown.cpp
     src/game/client/components/qmclient/qm_markdown_broadcast.cpp
     src/game/client/components/qmclient/qm_realtime.cpp
+    src/game/client/components/qmclient/qm_realtime_users.cpp
     src/game/client/components/qmclient/update_version.cpp
     src/game/client/components/qmclient/update_manifest.cpp
     src/game/client/components/qmclient/update_proxy.cpp

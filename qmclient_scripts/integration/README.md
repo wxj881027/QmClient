@@ -2,6 +2,8 @@
 
 这里放 QmClient 专属的真实进程冒烟和端到端测试。根目录 `scripts/` 是 DDNet 上游同步区，不在其中增加 QmClient 场景。
 
+默认配置与推荐外观的回归种子位于 `fixtures/default_profiles/`，固定尺寸和玩家路径见[默认配置发布回归](../../docs/规格/2026-10-08-默认配置发布回归.md)。这些种子不是执行结果；仅复制到独立测试目录使用。
+
 Windows 的普通版和便携版均忽略 `storage.cfg`。通用进程测试需要独立的 `DEV=ON、QMCLIENT_TEST_STORAGE=ON` 构建，runner 通过 `QMCLIENT_TEST_STORAGE_ROOT` 指向各场景临时目录。误用普通发布构建时初始化会失败；测试构建禁止打包，不用于发布。Linux/macOS 沿用原隔离方式。
 
 便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证 `profile/` 随目录搬家、忽略目录外配置及不可写时不回退：
@@ -40,6 +42,14 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir> demo_recording
 注意：`crash_dialog_smoke.py` 是视觉测试，必须让窗口真实出现在屏幕上抓帧（烟花动画、正文、按钮渲染），运行时会在桌面弹出多个可见窗口约 20 秒，请在方便时运行。弹窗逻辑的静默回归由 E2E 场景 `assert_dialog_no_false_hang` 覆盖（窗口以 `QMCLIENT_TEST_HIDE_DIALOG` 隐藏，不会打扰桌面）。
 
 进程测试必须从外部可观察结果断言启动、连接、日志、退出和失败回退。客户端或服务端崩溃必须失败，不得通过放宽超时或忽略退出码掩盖。
+
+实时名单同步冒烟使用上述独立测试构建和 Python `websockets` 包，在随机本机端口提供模拟 WebSocket 服务：
+
+```text
+python qmclient_scripts/integration/realtime_users_smoke.py <test-build-dir>
+```
+
+两个场景验证真实客户端声明压缩能力、应用名单、增量断档后请求完整快照、恢复后正常续传、重连清除旧版本，以及旧服务端文本名单兼容。结果通过连接消息与客户端应用日志断言；不依赖公网服务，不代表游戏内头衔视觉验证。日志保留在 `tmp/realtime_*`。
 
 字体资源真实进程回归使用专用便携客户端，不依赖已安装系统字体：
 

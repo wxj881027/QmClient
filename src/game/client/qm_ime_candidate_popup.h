@@ -61,10 +61,10 @@ public:
 
 		const bool FirstContent = m_CurrentLayer < 0;
 		const bool Changed = FirstContent ||
-			m_vLayers[m_CurrentLayer].m_CandidateStart != CandidateStart ||
-			m_vLayers[m_CurrentLayer].m_State.m_vCandidates != State.m_vCandidates ||
-			m_vLayers[m_CurrentLayer].m_State.m_PageIndex != State.m_PageIndex ||
-			m_vLayers[m_CurrentLayer].m_State.m_PageCount != State.m_PageCount;
+				     m_vLayers[m_CurrentLayer].m_CandidateStart != CandidateStart ||
+				     m_vLayers[m_CurrentLayer].m_State.m_vCandidates != State.m_vCandidates ||
+				     m_vLayers[m_CurrentLayer].m_State.m_PageIndex != State.m_PageIndex ||
+				     m_vLayers[m_CurrentLayer].m_State.m_PageCount != State.m_PageCount;
 		if(Changed)
 		{
 			if(!FirstContent)
@@ -131,11 +131,17 @@ public:
 			}
 			TotalAlpha += Layer.m_Alpha;
 		}
-		// 连续输入保留仍可见的旧内容及其当前权重，不能把上一轮淡入强行重置为不透明。
+		// 新内容当帧就清晰可见，旧内容仅占最多 15%，仍沿原来的 80ms 轨道退场。
+		// 调整绘制权重，不重启旧轨道，连续输入不会延长更早候选的残影。
 		if(TotalAlpha > 0.0f)
 		{
-			for(SLayer &Layer : m_vLayers)
-				Layer.m_Alpha /= TotalAlpha;
+			for(int i = 0; i < static_cast<int>(m_vLayers.size()); ++i)
+			{
+				SLayer &Layer = m_vLayers[i];
+				Layer.m_Alpha = 0.15f * Layer.m_Alpha / TotalAlpha;
+				if(i == m_CurrentLayer)
+					Layer.m_Alpha += 0.85f;
+			}
 		}
 	}
 

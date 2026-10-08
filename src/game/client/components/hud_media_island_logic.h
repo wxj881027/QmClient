@@ -376,54 +376,6 @@ inline vec2 QmHudSwitchCountdownFollowTarget(vec2 TeePosition, int Side, int Slo
 				     -OffsetY + std::sin(Now / 2.0f) * BobAmount);
 }
 
-// 钩子环固定在开关环的正上方：同一侧、同一条竖直线上，只把纵向偏移再抬高一段。
-// 抬升量必须大于两个卫星半径之和（2 × 10.25），否则两个环会叠在一起。
-inline constexpr float QM_HUD_HOOK_COUNTDOWN_RISE = 28.0f;
-
-inline vec2 QmHudHookCountdownFollowTarget(vec2 TeePosition, int Side, float Now)
-{
-	// 先按开关环的槽位 0 取同一个 (x, y)，保证横向完全对齐，再单独抬高 y。
-	const vec2 SwitchTarget = QmHudSwitchCountdownFollowTarget(TeePosition, Side, 0, Now);
-	return vec2(SwitchTarget.x, SwitchTarget.y - QM_HUD_HOOK_COUNTDOWN_RISE);
-}
-
-// 钩住玩家时这一钩的寿命基准（秒）：1.2 秒强制脱钩上限 + 钩链收回时长。
-// 环只在钩住玩家/分身时显示，所以基准就取玩家钩的那个硬上限 —— gamecore.cpp 里
-// m_HookTick > SERVER_TICK_SPEED + SERVER_TICK_SPEED / 5（即 1.2 秒）就自动脱钩。
-// 收回时长 = 1.25 - m_HookDuration，和出钩时长同一个 m_HookTick 计数器的另一处口径；
-// 所以环走空 ≈ 钩住的人马上要被放开。钩墙/钩地形不出环（没有这个时限）。
-inline float QmHudHookCountdownLifespanSeconds(float HookDurationSeconds)
-{
-	constexpr float PlayerHookMaxSeconds = 1.2f;
-	constexpr float HookCycleCeiling = 1.25f;
-	// m_HookDuration 超过 1.25 时引擎侧 m_HookTick 已为负、收回瞬间完成，钳到 0 即可。
-	const float RetractSeconds = HookCycleCeiling - std::clamp(HookDurationSeconds, 0.0f, HookCycleCeiling);
-	return PlayerHookMaxSeconds + RetractSeconds;
-}
-
-// 钩子倒计时环：钩住玩家期间走下坡，环空 = 钩住的人即将被强制放开。
-// 松钩后钩子立即回到 idle，但环不该瞬间跳回满格，所以冻结进度，只靠淡出收尾。
-inline float QmHudHookCountdownProgress(
-	float HookDurationSeconds,
-	float HeldSeconds,
-	float PreviousProgress)
-{
-	const float Lifespan = QmHudHookCountdownLifespanSeconds(HookDurationSeconds);
-	if(Lifespan <= 0.0f)
-		return 0.0f;
-	const float Elapsed = std::max(0.0f, HeldSeconds);
-	if(Elapsed >= Lifespan)
-		return 0.0f;
-	const float Progress = 1.0f - Elapsed / Lifespan;
-	return std::clamp(std::min(Progress, PreviousProgress), 0.0f, 1.0f);
-}
-
-// 钩子环固定蓝色，与黄色系开关环区分；环内底色沿用灵动岛背景色配置。
-inline ColorRGBA QmHudHookCountdownColor()
-{
-	return ColorRGBA(0.20f, 0.62f, 1.0f, 1.0f);
-}
-
 struct SHudMediaIslandSwapLifecycle
 {
 	bool m_Visible = false;

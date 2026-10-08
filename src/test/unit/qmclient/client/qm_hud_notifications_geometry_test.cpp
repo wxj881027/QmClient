@@ -313,6 +313,54 @@ TEST(QmHudEditorGeometry, SnapsToScreenCenterGuide)
 	EXPECT_FLOAT_EQ(QmHudEditor::SnapAxisToScreenGuides(260.0f, 40.0f, 0.0f, 300.0f), 260.0f);
 }
 
+TEST(QmHudEditorGeometry, VisibleOffsetsSurviveSavingAndCoordinateScaling)
+{
+	const float Saved = round_to_int(QmHudEditor::StoreAxisAnchor(402.0f, 100.0f, 20.0f, 1000.0f, 8.0f) * 1000.0f) / 1000.0f;
+	const float UiAnchor = QmHudEditor::RestoreAxisAnchor(Saved, 100.0f, 20.0f, 1000.0f, 8.0f);
+	EXPECT_NEAR(UiAnchor + 8.0f, 410.0f, 0.001f);
+	const float RenderAnchor = QmHudEditor::RestoreAxisAnchor(Saved, 50.0f, 10.0f, 500.0f, 4.0f);
+	EXPECT_NEAR(RenderAnchor + 4.0f, 205.0f, 0.001f);
+	const float SavedAgain = QmHudEditor::StoreAxisAnchor(UiAnchor, 100.0f, 20.0f, 1000.0f, 8.0f);
+	EXPECT_FLOAT_EQ(SavedAgain, Saved);
+}
+
+TEST(QmHudEditorGeometry, SavedEdgesStayAtVisibleScreenEdgesAfterScaling)
+{
+	for(float Scale : {0.75f, 1.0f, 1.5f, 3.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const float Width = 40.0f * Scale;
+		const float Offset = 8.0f * Scale;
+		const float Left = QmHudEditor::RestoreAxisAnchor(0.0f, Width, 20.0f, 300.0f, Offset);
+		const float Right = QmHudEditor::RestoreAxisAnchor(1.0f, Width, 20.0f, 300.0f, Offset);
+		EXPECT_FLOAT_EQ(Left + Offset, 20.0f);
+		EXPECT_FLOAT_EQ(Right + Offset + Width, 320.0f);
+		EXPECT_FLOAT_EQ(QmHudEditor::StoreAxisAnchor(Left, Width, 20.0f, 300.0f, Offset), 0.0f);
+		EXPECT_FLOAT_EQ(QmHudEditor::StoreAxisAnchor(Right, Width, 20.0f, 300.0f, Offset), 1.0f);
+	}
+}
+
+TEST(QmHudEditorGeometry, ReferenceGuidesAlignVisibleContentWithOffset)
+{
+	const QmHudEditor::SAxisReference aReferences[] = {{40.0f, 60.0f}};
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveAxisSnapEx(36.0f, 30.0f, 0.0f, 300.0f, aReferences, 1, 8.0f).m_Position, 32.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveAxisSnapEx(49.0f, 30.0f, 0.0f, 300.0f, aReferences, 1, 8.0f).m_Position, 47.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveAxisSnapEx(60.0f, 30.0f, 0.0f, 300.0f, aReferences, 1, 8.0f).m_Position, 62.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveAxisSnapEx(52.0f, 30.0f, 0.0f, 300.0f, aReferences, 1, -8.0f).m_Position, 48.0f);
+	EXPECT_FLOAT_EQ(QmHudEditor::ResolveAxisSnapEx(119.0f, 40.0f, 0.0f, 300.0f, nullptr, 0, 8.0f).m_Position, 122.0f);
+}
+
+TEST(QmHudEditorGeometry, NearbyReferencesCannotPullContentAwayFromScreenEdge)
+{
+	const QmHudEditor::SAxisReference aReferences[] = {{4.0f, 44.0f}, {254.0f, 44.0f}};
+	const auto Left = QmHudEditor::ResolveAxisSnapEx(-8.0f, 40.0f, 0.0f, 300.0f, aReferences, 2, 8.0f);
+	const auto Right = QmHudEditor::ResolveAxisSnapEx(252.0f, 40.0f, 0.0f, 300.0f, aReferences, 2, 8.0f);
+	EXPECT_FLOAT_EQ(Left.m_Position, -8.0f);
+	EXPECT_EQ(Left.m_GuideKind, QmHudEditor::ESnapGuideKind::ScreenStart);
+	EXPECT_FLOAT_EQ(Right.m_Position, 252.0f);
+	EXPECT_EQ(Right.m_GuideKind, QmHudEditor::ESnapGuideKind::ScreenEnd);
+}
+
 TEST(QmHudEditorGeometry, SnapsToOtherModuleAlignmentGuides)
 {
 	const QmHudEditor::SAxisReference aReferences[] = {

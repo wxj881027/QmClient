@@ -1509,6 +1509,19 @@ void CQmClient::ApplyQmRealtimeUsers(const SQmRealtimeMessage &Message)
 	m_QmRealtimeUsersExpireTick = time_get() + 20 * time_freq();
 }
 
+void CQmClient::ApplyQmRealtimeUsersSync(const SQmRealtimeMessage &Message)
+{
+	char aServer[NETADDR_MAXSTRSIZE] = "";
+	if(Client()->State() == IClient::STATE_ONLINE && Client()->ServerAddress())
+		net_addr_str(Client()->ServerAddress(), aServer, sizeof(aServer), true);
+	if(m_QmRealtimeUsersState.Apply(Message.m_pPayload.get(), aServer) != CQmRealtimeUsersState::EApplyResult::APPLIED)
+		return;
+	// 增量必须依次合并，不能像完整快照一样只留下最后一条等待异步解析。
+	m_pQmRealtimeUsersPayload.reset();
+	m_pQmClientUsersParseJob = nullptr;
+	ApplyQmClientUsersResult(m_QmRealtimeUsersState.Result(), time_get() + m_QmRealtimeUsersState.LeaseSeconds() * time_freq());
+}
+
 void CQmClient::ApplyQmRealtimeDevelopers(const SQmRealtimeMessage &Message)
 {
 	if(!Message.m_pPayload || Client()->State() != IClient::STATE_ONLINE || !Client()->ServerAddress())
@@ -1594,6 +1607,10 @@ std::string CQmClient::BuildQmRealtimePresence(bool Hello) const
 		Writer.WriteIntValue(QMCLIENT_REALTIME_PROTOCOL_VERSION);
 		Writer.WriteAttribute("client_version");
 		Writer.WriteStrValue(QMCLIENT_VERSION);
+		Writer.WriteAttribute("capabilities");
+		Writer.BeginArray();
+		Writer.WriteStrValue(QMCLIENT_USERS_SYNC_CAPABILITY);
+		Writer.EndArray();
 		Writer.WriteAttribute("machine_hash");
 		Writer.WriteStrValue(m_aQmClientMachineHash);
 		Writer.WriteAttribute("client_id");
@@ -1680,6 +1697,21 @@ void CQmClient::SendQmRealtimeStop()
 	Writer.EndObject();
 	const std::string Body = Writer.GetOutputString();
 	m_pQmRealtimeTransport->SendText(Body.c_str(), Body.size());
+}
+
+bool CQmClient::HasUnreadQmNews() const
+{
+	return m_QmMarkdownBroadcast.IsUnread(g_Config.m_QmNewsReadVersion, g_Config.m_QmNewsReadContentId);
+}
+
+void CQmClient::MarkQmNewsRead()
+{
+	str_copy(g_Config.m_QmNewsReadRelease, CLIENT_RELEASE_VERSION);
+	if(m_QmMarkdownBroadcast.HasMarkdown() && m_QmMarkdownBroadcast.Version() >= g_Config.m_QmNewsReadVersion)
+	{
+		g_Config.m_QmNewsReadVersion = m_QmMarkdownBroadcast.Version();
+		str_copy(g_Config.m_QmNewsReadContentId, m_QmMarkdownBroadcast.ContentId());
+	}
 }
 
 void CQmClient::SaveQmMarkdownBroadcastCache()
@@ -1960,6 +1992,8 @@ void CQmClient::UpdateQmRealtime()
 		m_QmRealtimeTitleRevision = -1;
 		m_QmRealtimeConnectedTick = 0;
 		m_QmRealtimePresenceBody.clear();
+		m_QmRealtimeUsersState.Reset();
+		m_QmRealtimeNextUsersResync = 0;
 	}
 
 	if(!m_pQmRealtimeTransport->Available())
@@ -2024,6 +2058,8 @@ void CQmClient::UpdateQmRealtime()
 		m_QmRealtimeNextPresenceCheck = 0;
 		m_QmRealtimeEvents.clear();
 		m_pQmRealtimeUsersPayload.reset();
+		m_QmRealtimeUsersState.Reset();
+		m_QmRealtimeNextUsersResync = 0;
 	}
 	if(!m_QmRealtimeHelloSent && EnsureQmClientMachineHash())
 	{
@@ -2042,6 +2078,8 @@ void CQmClient::UpdateQmRealtime()
 	{
 		if(Incoming.m_Type == EQmWebSocketMessageType::TEXT)
 			EnqueueQmRealtimeMessage(Incoming.m_Data.data(), Incoming.m_Data.size());
+		else if(Incoming.m_Type == EQmWebSocketMessageType::BINARY)
+			EnqueueQmRealtimeMessage(Incoming.m_Data.data(), Incoming.m_Data.size(), true);
 	}
 	if(m_pQmRealtimeTransport->State() != EQmWebSocketState::CONNECTED ||
 		m_pQmRealtimeTransport->LastConnectedTick() != ConnectedTick)
@@ -2063,6 +2101,8 @@ void CQmClient::UpdateQmRealtime()
 			ApplyQmRealtimeTitles(RealtimeMessage);
 		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::USERS)
 			ApplyQmRealtimeUsers(RealtimeMessage);
+		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::USERS_SYNC)
+			ApplyQmRealtimeUsersSync(RealtimeMessage);
 		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::DEVELOPERS)
 			ApplyQmRealtimeDevelopers(RealtimeMessage);
 		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::TIME || RealtimeMessage.m_Event == EQmRealtimeEvent::PLAYTIME ||
@@ -2092,6 +2132,12 @@ void CQmClient::UpdateQmRealtime()
 	}
 
 	const int64_t Tick = time_get();
+	if(m_QmRealtimeUsersState.NeedsFull() && Tick >= m_QmRealtimeNextUsersResync)
+	{
+		static constexpr char aRequest[] = "{\"type\":\"subscribe_users\"}";
+		if(m_pQmRealtimeTransport->SendText(aRequest, sizeof(aRequest) - 1))
+			m_QmRealtimeNextUsersResync = Tick + 5 * time_freq();
+	}
 	if(m_QmClientPlaytimeManualRefreshActive && Tick - m_QmClientPlaytimeManualRefreshTick >= 10 * time_freq())
 	{
 		m_QmClientPlaytimeManualRefreshActive = false;
@@ -2295,10 +2341,10 @@ void CQmClient::UpdateQmAnonymousEmotes()
 	}
 }
 
-void CQmClient::EnqueueQmRealtimeMessage(const char *pData, size_t Size)
+void CQmClient::EnqueueQmRealtimeMessage(const char *pData, size_t Size, bool Compressed)
 {
 	SQmRealtimeMessage Message;
-	if(!ParseQmRealtimeMessage(pData, Size, Message))
+	if(!(Compressed ? ParseQmCompressedUsersMessage(pData, Size, Message) : ParseQmRealtimeMessage(pData, Size, Message)))
 		return;
 	// 账号通道不承载匿名表情；两条连接的消息不可互相代送。
 	if(Message.m_Event == EQmRealtimeEvent::EMOTICON)
@@ -2940,33 +2986,38 @@ void CQmClient::FinishQmClientUsers()
 		if(StaleServer)
 			return;
 
-		if(!m_QmClientDistribution.Apply(Result, ExpireTick))
-		{
-			m_QmClientDistributionSuccessLatched = false;
-			LogQmClientDistributionFailureEvent("parse_failed", "users payload could not be parsed");
-			return;
-		}
-
-		GameClient()->ClearQ1menGSyncMarks();
-		GameClient()->ClearQmVoiceSyncMarks();
-		PushQmClientServerCounts();
-		if(!m_QmClientDistributionSuccessLatched)
-			LogQmClientDistributionEvent("parse_ok", Result.m_OnlineUserCount, Result.m_OnlineDummyCount, (int)Result.m_vLocalServerMarks.size());
-		m_QmClientDistributionSuccessLatched = true;
-		for(const auto &Mark : Result.m_vLocalServerMarks)
-		{
-			for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
-			{
-				if(!GameClient()->m_aClients[ClientId].m_Active || str_comp(GameClient()->m_aClients[ClientId].m_aName, Mark.m_Name.c_str()) != 0)
-					continue;
-
-				GameClient()->MarkQ1menGSyncClient(ClientId, ExpireTick, Mark.m_FootParticlesEnabled, Mark.m_RemoteParticlesEnabled, Mark.m_Qid.c_str(), Mark.m_ClientBrand);
-				if(Mark.m_VoiceSupported)
-					GameClient()->MarkQmVoiceSupportedClient(ClientId, ExpireTick);
-				break;
-			}
-		}
+		ApplyQmClientUsersResult(std::move(Result), ExpireTick);
 		return;
+	}
+}
+
+void CQmClient::ApplyQmClientUsersResult(SQmClientUsersParseResult Result, int64_t ExpireTick)
+{
+	if(!m_QmClientDistribution.Apply(Result, ExpireTick))
+	{
+		m_QmClientDistributionSuccessLatched = false;
+		LogQmClientDistributionFailureEvent("parse_failed", "users payload could not be parsed");
+		return;
+	}
+
+	GameClient()->ClearQ1menGSyncMarks();
+	GameClient()->ClearQmVoiceSyncMarks();
+	PushQmClientServerCounts();
+	if(!m_QmClientDistributionSuccessLatched)
+		LogQmClientDistributionEvent("parse_ok", Result.m_OnlineUserCount, Result.m_OnlineDummyCount, (int)Result.m_vLocalServerMarks.size());
+	m_QmClientDistributionSuccessLatched = true;
+	for(const auto &Mark : Result.m_vLocalServerMarks)
+	{
+		for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+		{
+			if(!GameClient()->m_aClients[ClientId].m_Active || str_comp(GameClient()->m_aClients[ClientId].m_aName, Mark.m_Name.c_str()) != 0)
+				continue;
+
+			GameClient()->MarkQ1menGSyncClient(ClientId, ExpireTick, Mark.m_FootParticlesEnabled, Mark.m_RemoteParticlesEnabled, Mark.m_Qid.c_str(), Mark.m_ClientBrand);
+			if(Mark.m_VoiceSupported)
+				GameClient()->MarkQmVoiceSupportedClient(ClientId, ExpireTick);
+			break;
+		}
 	}
 }
 

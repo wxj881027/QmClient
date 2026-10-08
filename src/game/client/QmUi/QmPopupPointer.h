@@ -39,6 +39,7 @@ struct SQmPopupPointerInput
 	bool m_Held = false;
 	bool m_Captured = false;
 	bool m_Hot = false;
+	bool m_InsideGroup = true;
 };
 
 enum class EQmPopupPointerAction
@@ -47,18 +48,20 @@ enum class EQmPopupPointerAction
 	CAPTURE,
 	RELEASE,
 	CLOSE,
+	CLOSE_GROUP,
 };
 
 inline EQmPopupPointerAction QmResolvePopupPointerAction(const SQmPopupPointerInput &Input)
 {
 	if(!Input.m_Active)
 		return EQmPopupPointerAction::NONE;
+	const auto Close = Input.m_InsideGroup ? EQmPopupPointerAction::CLOSE : EQmPopupPointerAction::CLOSE_GROUP;
 	if(Input.m_BlockUnderlying && Input.m_Pressed && !Input.m_Inside)
-		return EQmPopupPointerAction::CLOSE;
+		return Close;
 	if(Input.m_Captured)
 	{
 		if(!Input.m_Held)
-			return Input.m_Inside ? EQmPopupPointerAction::RELEASE : EQmPopupPointerAction::CLOSE;
+			return Input.m_Inside ? EQmPopupPointerAction::RELEASE : Close;
 	}
 	else if(Input.m_Hot && Input.m_Held)
 		return EQmPopupPointerAction::CAPTURE;

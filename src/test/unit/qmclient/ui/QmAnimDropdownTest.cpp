@@ -757,6 +757,33 @@ TEST(UiV2PopupPointer, BlockingPopupClosesOnOutsidePressWithoutCapture)
 	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::NONE);
 }
 
+TEST(UiV2PopupPointer, PressOutsideChildKeepsParentButOutsideGroupClosesBoth)
+{
+	SQmPopupPointerInput Input;
+	Input.m_Active = true;
+	Input.m_BlockUnderlying = true;
+	Input.m_Pressed = true;
+	Input.m_Held = true;
+	Input.m_InsideGroup = true;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::CLOSE);
+	Input.m_InsideGroup = false;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::CLOSE_GROUP);
+	Input.m_Active = false;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::NONE);
+}
+
+TEST(UiV2PopupPointer, CapturedReleaseOutsideGroupClosesAllWithoutASecondPress)
+{
+	SQmPopupPointerInput Input;
+	Input.m_Active = true;
+	Input.m_Captured = true;
+	Input.m_InsideGroup = false;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::CLOSE_GROUP);
+	Input.m_Inside = true;
+	Input.m_InsideGroup = true;
+	EXPECT_EQ(QmResolvePopupPointerAction(Input), EQmPopupPointerAction::RELEASE);
+}
+
 TEST(UiV2PopupPointer, NonBlockingPopupCapturesPressThenClosesOnOutsideRelease)
 {
 	SQmPopupPointerInput Input;

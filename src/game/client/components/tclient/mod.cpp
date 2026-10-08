@@ -38,7 +38,7 @@ void CMod::OnRender()
 			GameClient()->m_Chat.IsActive() || // In chat
 			GameClient()->m_GameConsole.IsActive() || // In console
 			!Player.m_Active || // In spectator
-			g_Config.m_TcModWeaponCommand[0] == '\0') // Not active or empty command
+			g_Config.m_QmModWeaponCommand[0] == '\0') // Not active or empty command
 		{
 			m_ModWeaponActiveId = -1;
 		}
@@ -83,7 +83,7 @@ void CMod::OnRender()
 				CTextCursor Cursor;
 				Cursor.m_FontSize = 15.0f;
 				TextRender()->SetRenderFlags(TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | TEXT_RENDER_FLAG_ONE_TIME_USE);
-				TextRender()->CreateTextContainer(TextContainer, &Cursor, g_Config.m_TcModWeaponCommand);
+				TextRender()->CreateTextContainer(TextContainer, &Cursor, g_Config.m_QmModWeaponCommand);
 				TextRender()->SetRenderFlags(0);
 				if(TextContainer.Valid())
 				{
@@ -98,7 +98,7 @@ void CMod::OnRender()
 	}
 
 	// Hitboxes
-	if(g_Config.m_TcShowPlayerHitBoxes > 0)
+	if(g_Config.m_QmShowPlayerHitBoxes > 0)
 	{
 		auto RenderHitbox = [&](vec2 Position, float Alpha) {
 			if(Alpha <= 0.0f)
@@ -138,7 +138,7 @@ void CMod::OnRender()
 
 			RenderHitbox(Player.m_RenderPos, Alpha);
 
-			if(g_Config.m_TcShowPlayerHitBoxes > 1)
+			if(g_Config.m_QmShowPlayerHitBoxes > 1)
 			{
 				// From CPlayers::RenderPlayer
 				vec2 ShadowPosition = mix(
@@ -168,7 +168,7 @@ void CMod::ModWeapon(int Id)
 	str_format(aBuf, sizeof(aBuf), Localize("Enable mod weapon on %d: %s"), Player.ClientId(), Player.m_aName);
 	GameClient()->Echo(aBuf);
 
-	str_format(aBuf, sizeof(aBuf), "%s %d", g_Config.m_TcModWeaponCommand, Id);
+	str_format(aBuf, sizeof(aBuf), "%s %d", g_Config.m_QmModWeaponCommand, Id);
 	Console()->ExecuteLine(aBuf);
 }
 
@@ -183,7 +183,7 @@ void CMod::OnFire(bool Pressed)
 	}
 	if(m_ModWeaponActiveId >= 0)
 		return;
-	if(g_Config.m_TcModWeapon == 0)
+	if(g_Config.m_QmModWeapon == 0)
 		return;
 	if(!Client()->RconAuthed())
 		return;

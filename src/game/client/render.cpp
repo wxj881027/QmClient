@@ -777,9 +777,9 @@ void CRenderTools::RenderTee6(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 
 	const float TinyBodyScale = 0.7f;
 	const float TinyFeetScale = 0.85f;
-	float SizeMultiplier = (g_Config.m_TcTinyTeeSize / 100.0f);
-	bool TinyTee = g_Config.m_TcTinyTees;
-	if(!m_LocalTeeRender && !g_Config.m_TcTinyTeesOthers)
+	float SizeMultiplier = (g_Config.m_QmTinyTeeSize / 100.0f);
+	bool TinyTee = g_Config.m_QmTinyTees;
+	if(!m_LocalTeeRender && !g_Config.m_QmTinyTeesOthers)
 		TinyTee = false;
 
 	const CSkin::CSkinTextures *pSkinTextures = pInfo->m_CustomColoredSkin ? &pInfo->m_ColorableRenderSkin : &pInfo->m_OriginalRenderSkin;
@@ -787,8 +787,8 @@ void CRenderTools::RenderTee6(const CAnimState *pAnim, const CTeeRenderInfo *pIn
 	// TClient：白脚皮肤只由配置与皮肤系统状态决定，与 Pass/Filling 无关。
 	// 提到循环外解析，避免每个 Tee 每帧重复做 4 次皮肤名查找与 usage 记录。
 	const CSkin *pWhiteFeetSkin = nullptr;
-	if(g_Config.m_TcWhiteFeet && pInfo->m_CustomColoredSkin)
-		pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_TcWhiteFeetSkin);
+	if(g_Config.m_QmWhiteFeet && pInfo->m_CustomColoredSkin)
+		pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_QmWhiteFeetSkin);
 	// 描边在贴图之前画：整皮肤描边只有身体与脚两处，与经典皮肤的 Pass/Filling 无关。
 	if(pInfo->m_QmSkinOutlineWidth > 0 && Alpha > 0.0f)
 	{

@@ -158,9 +158,9 @@ void qm_card_catalog::QmCardRenderHook::RenderQmFunctionKeywordReplyContent(CMen
 	pMenus->RenderQmFunctionKeywordReplyContent(Content, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 }
 
-void qm_card_catalog::QmCardRenderHook::RenderQmFunctionPieMenuContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CardCornerRadius, bool PrewarmOnly)
+void qm_card_catalog::QmCardRenderHook::RenderQmFunctionPieMenuContent(CMenus *pMenus, CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CardCornerRadius, bool PrewarmOnly, int MaxGridColumns)
 {
-	pMenus->RenderQmFunctionPieMenuContent(Content, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, ButtonHeight, CardPadding, CardCornerRadius, PrewarmOnly);
+	pMenus->RenderQmFunctionPieMenuContent(Content, UiScale, LineHeight, BodySize, LineSpacing, LabelWidth, ButtonHeight, CardPadding, CardCornerRadius, PrewarmOnly, MaxGridColumns);
 }
 
 void qm_card_catalog::QmCardRenderHook::RenderQmFunctionMapUploadContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly)
@@ -287,4 +287,19 @@ void qm_card_catalog::QmCardRenderHook::RenderQmBindEditorContent(CMenus *pMenus
 {
 	if(pMenus != nullptr)
 		pMenus->RenderSettingsQmClientBindCard(Content, ReadOnly);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmSteamContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
+{
+	pMenus->RenderQmSteamContent(Content, Metrics, PrewarmOnly);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmAppearancePresetContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
+{
+	pMenus->RenderQmAppearancePresetContent(Content, Metrics, PrewarmOnly);
+}
+
+void qm_card_catalog::QmCardRenderHook::RenderQmTooltipContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
+{
+	pMenus->RenderQmTooltipContent(Content, Metrics, PrewarmOnly);
 }

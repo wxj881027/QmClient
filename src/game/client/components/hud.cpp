@@ -20,6 +20,7 @@
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmHookCountdownRender.h>
 #include <game/client/QmUi/QmLayout.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
@@ -378,12 +379,12 @@ namespace
 	bool BuildHudFrozenSummaryText(const SHudFrozenTeamInfo &FrozenInfo, char *pBuf, size_t BufSize)
 	{
 		pBuf[0] = '\0';
-		if(!FrozenInfo.m_Available || g_Config.m_TcShowFrozenText <= 0)
+		if(!FrozenInfo.m_Available || g_Config.m_QmShowFrozenText <= 0)
 			return false;
 
-		if(g_Config.m_TcShowFrozenText == 1)
+		if(g_Config.m_QmShowFrozenText == 1)
 			str_format(pBuf, BufSize, "%d/%d", FrozenInfo.m_NumInTeam - FrozenInfo.m_NumFrozen, FrozenInfo.m_NumInTeam);
-		else if(g_Config.m_TcShowFrozenText == 2)
+		else if(g_Config.m_QmShowFrozenText == 2)
 			str_format(pBuf, BufSize, "%d/%d", FrozenInfo.m_NumFrozen, FrozenInfo.m_NumInTeam);
 		else
 			return false;
@@ -416,14 +417,14 @@ namespace
 	{
 		SHudFrozenHudRect Result;
 		const SHudFrozenTeamInfo FrozenInfo = BuildHudFrozenTeamInfo(GameClient);
-		if(!g_Config.m_TcShowFrozenHud || !FrozenInfo.m_Available || FrozenInfo.m_NumInTeam <= 0 || GameClient.m_Scoreboard.IsActive() || (FrozenInfo.m_LocalTeamId == 0 && g_Config.m_TcFrozenHudTeamOnly))
+		if(!g_Config.m_QmShowFrozenHud || !FrozenInfo.m_Available || FrozenInfo.m_NumInTeam <= 0 || GameClient.m_Scoreboard.IsActive() || (FrozenInfo.m_LocalTeamId == 0 && g_Config.m_QmFrozenHudTeamOnly))
 			return Result;
 
-		const float TeeSize = g_Config.m_TcFrozenHudTeeSize;
+		const float TeeSize = g_Config.m_QmFrozenHudTeeSize;
 		int MaxTees = (int)(8.3f * (HudWidth / HudHeight) * 13.0f / TeeSize);
 		if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred && !g_Config.m_ClShowPacketLoss)
 			MaxTees = (int)(9.5f * (HudWidth / HudHeight) * 13.0f / TeeSize);
-		const int MaxRows = g_Config.m_TcFrozenMaxRows;
+		const int MaxRows = g_Config.m_QmFrozenMaxRows;
 		float StartPos = HudWidth / 2.0f + 38.0f * (HudWidth / HudHeight) / 1.78f;
 		if(TopIslandAvoidanceRight > 0.0f)
 			StartPos = std::max(StartPos, TopIslandAvoidanceRight + TeeSize * 0.5f + 4.0f);
@@ -2443,7 +2444,7 @@ void CHud::RenderTextInfo()
 		TextRender()->Text(Line2X, 45.0f, Line2Size, Localize(pLine2), -1.0f);
 	}
 
-	if(g_Config.m_TcMiniDebug)
+	if(g_Config.m_QmMiniDebug)
 	{
 		float FontSize = 8.0f;
 		float TextHeight = 11.0f;
@@ -2487,15 +2488,15 @@ void CHud::RenderTextInfo()
 			TextRender()->Text(4.0f, OffsetY, FontSize, aBuf, -1.0f);
 		}
 	}
-	if(g_Config.m_TcRenderCursorSpec && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
+	if(g_Config.m_QmRenderCursorSpec && GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
 	{
 		int CurWeapon = 1;
-		Graphics()->SetColor(1.f, 1.f, 1.f, g_Config.m_TcRenderCursorSpecAlpha / 100.0f);
+		Graphics()->SetColor(1.f, 1.f, 1.f, g_Config.m_QmRenderCursorSpecAlpha / 100.0f);
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpriteWeaponCursors[CurWeapon]);
 		Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aCursorOffset[CurWeapon], m_Width / 2.0f, m_Height / 2.0f, 0.36f, 0.36f);
 	}
 	// render team in freeze text and last notify
-	if((g_Config.m_TcShowFrozenText > 0 || g_Config.m_TcShowFrozenHud > 0 || g_Config.m_TcNotifyWhenLast) && GameClient()->m_GameInfo.m_EntitiesDDRace)
+	if((g_Config.m_QmShowFrozenText > 0 || g_Config.m_QmShowFrozenHud > 0 || g_Config.m_QmNotifyWhenLast) && GameClient()->m_GameInfo.m_EntitiesDDRace)
 	{
 		const SHudFrozenTeamInfo FrozenInfo = BuildHudFrozenTeamInfo(*GameClient());
 		const int NumInTeam = FrozenInfo.m_NumInTeam;
@@ -2503,16 +2504,16 @@ void CHud::RenderTextInfo()
 		const int LocalTeamID = FrozenInfo.m_LocalTeamId;
 
 		// Notify when last
-		if(g_Config.m_TcNotifyWhenLast)
+		if(g_Config.m_QmNotifyWhenLast)
 		{
 			if(NumInTeam > 1 && NumInTeam - NumFrozen == 1)
 			{
-				TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcNotifyWhenLastColor)));
-				float FontSize = g_Config.m_TcNotifyWhenLastSize;
-				float XPos = std::clamp((g_Config.m_TcNotifyWhenLastX / 100.0f) * m_Width, 1.0f, m_Width - FontSize);
-				float YPos = std::clamp((g_Config.m_TcNotifyWhenLastY / 100.0f) * m_Height, 1.0f, m_Height - FontSize);
+				TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmNotifyWhenLastColor)));
+				float FontSize = g_Config.m_QmNotifyWhenLastSize;
+				float XPos = std::clamp((g_Config.m_QmNotifyWhenLastX / 100.0f) * m_Width, 1.0f, m_Width - FontSize);
+				float YPos = std::clamp((g_Config.m_QmNotifyWhenLastY / 100.0f) * m_Height, 1.0f, m_Height - FontSize);
 
-				TextRender()->Text(XPos, YPos, FontSize, g_Config.m_TcNotifyWhenLastText, -1.0f);
+				TextRender()->Text(XPos, YPos, FontSize, g_Config.m_QmNotifyWhenLastText, -1.0f);
 				TextRender()->TextColor(TextRender()->DefaultTextColor());
 			}
 		}
@@ -2526,7 +2527,7 @@ void CHud::RenderTextInfo()
 		// str_format(aBuf, sizeof(aBuf), "%d", g_Config.m_ClWhatsMyPing);
 		// TextRender()->Text(0, m_Width / 2 - TextRender()->TextWidth(0, 10, aBuf, -1, -1.0f) / 2, 20, 10, aBuf, -1.0f);
 
-		if(g_Config.m_TcShowFrozenHud > 0 && !GameClient()->m_Scoreboard.IsActive() && !(LocalTeamID == 0 && g_Config.m_TcFrozenHudTeamOnly))
+		if(g_Config.m_QmShowFrozenHud > 0 && !GameClient()->m_Scoreboard.IsActive() && !(LocalTeamID == 0 && g_Config.m_QmFrozenHudTeamOnly))
 		{
 			CTeeRenderInfo FreezeInfo;
 			const CSkin *pSkin = GameClient()->m_Skins.Find("x_ninja");
@@ -2539,11 +2540,11 @@ void CHud::RenderTextInfo()
 			FreezeInfo.m_CustomColoredSkin = false;
 
 			float progressiveOffset = 0.0f;
-			float TeeSize = g_Config.m_TcFrozenHudTeeSize;
+			float TeeSize = g_Config.m_QmFrozenHudTeeSize;
 			int MaxTees = (int)(8.3f * (m_Width / m_Height) * 13.0f / TeeSize);
 			if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred && !g_Config.m_ClShowPacketLoss)
 				MaxTees = (int)(9.5f * (m_Width / m_Height) * 13.0f / TeeSize);
-			int MaxRows = g_Config.m_TcFrozenMaxRows;
+			int MaxRows = g_Config.m_QmFrozenMaxRows;
 			float StartPos = m_Width / 2.0f + 38.0f * (m_Width / m_Height) / 1.78f;
 			const float AvoidanceRight = GetTopIslandAvoidanceRight();
 			if(AvoidanceRight > 0.0f)
@@ -2582,7 +2583,7 @@ void CHud::RenderTextInfo()
 							   GameClient()->m_aClients[i].m_FreezeEnd,
 							   GameClient()->m_aClients[i].m_DeepFrozen))
 						{
-							if(!g_Config.m_TcShowFrozenHudSkins)
+							if(!g_Config.m_QmShowFrozenHudSkins)
 								TeeInfo = FreezeInfo;
 							Frozen = true;
 						}
@@ -2608,7 +2609,7 @@ void CHud::RenderTextInfo()
 						vec2 TeeRenderPos(StartPos + progressiveOffset, TeeSize * (0.7f) + CurrentRow * TeeSize);
 						float Alpha = 1.0f;
 						CNetObj_Character CurChar = GameClient()->m_aClients[i].m_RenderCur;
-						if(g_Config.m_TcShowFrozenHudSkins && Frozen)
+						if(g_Config.m_QmShowFrozenHudSkins && Frozen)
 						{
 							Alpha = 0.6f;
 							TeeInfo.m_ColorBody.r *= 0.4f;
@@ -3141,7 +3142,7 @@ void CHud::RenderFollowSwitchCountdowns()
 		if(Ring.m_Seen)
 		{
 			const vec2 TeePosition = GameClient()->m_aClients[Ring.m_ClientId].m_RenderPos;
-			const bool PetVisible = g_Config.m_TcPetShow > 0 && GameClient()->m_Pet.IsVisibleForClient(Ring.m_ClientId);
+			const bool PetVisible = g_Config.m_QmPetShow > 0 && GameClient()->m_Pet.IsVisibleForClient(Ring.m_ClientId);
 			const vec2 PetPosition = PetVisible ? GameClient()->m_Pet.Position() : vec2();
 			const int Side = QmHudSwitchCountdownFollowSide(TeePosition.x, PetVisible, PetPosition.x);
 			const float Now = Client()->GameTick(Ring.m_Connection) / static_cast<float>(TickSpeed);
@@ -3195,152 +3196,62 @@ void CHud::ResetHookCountdownRing()
 
 void CHud::UpdateHookCountdownTracker()
 {
-	SHudHookCountdownRingState &Ring = m_HookCountdownRing;
-	if(!g_Config.m_QmHookCountdown)
+	if(!g_Config.m_QmHookCountdown || Client()->GameTickSpeed() <= 0)
 	{
 		ResetHookCountdownRing();
 		return;
 	}
 
-	const int TickSpeed = Client()->GameTickSpeed();
-	if(TickSpeed <= 0)
-	{
-		ResetHookCountdownRing();
-		return;
-	}
-
-	// 只跟当前正在操作的那个 Tee：m_ClDummy 指向的 local id 就是本地玩家当下控制的分身。
+	// 仍只显示当前控制角色的玩家钩，切分身时不带走上一枚环。
 	const int Connection = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
 	const int ClientId = GameClient()->m_aLocalIds[Connection];
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
+	if(!in_range(ClientId, MAX_CLIENTS - 1) || !GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
 	{
 		ResetHookCountdownRing();
 		return;
 	}
 
-	// 只在钩住**玩家**（含自己的分身）时起环：钩墙 / 钩地形不出。
-	// HOOK_GRABBED 表示钩链已咬住，m_HookedPlayer >= 0 才说明咬住的是人；
-	// 钩地形时 m_HookedPlayer 恒为 -1（gamecore.cpp:378 附近只改 m_HookState）。
-	// 收回阶段（HOOK_RETRACT_START..HOOK_RETRACTED）仍算同一轮，环继续走到淡出。
-	// 注意 m_pLocalCharacter 不一定是本地 Tee（观战时指向被观战者），所以这里按 local id 自己取。
-	const CNetObj_Character &Character = GameClient()->m_Snap.m_aCharacters[ClientId].m_Cur;
-	const bool HookActive = Character.m_HookState == HOOK_GRABBED && Character.m_HookedPlayer >= 0;
-	// 钩住的还是不是上一次那个人：变了就说明中途重咬了（rehook）。
-	// 松钩时不更新这个字段，才能把上一次的目标留到下一次咬住时做比较。
-	const bool FreshGrab = !Ring.m_Tracking || Character.m_HookedPlayer != Ring.m_HookedPlayer;
-
-	// 只要这一刻还跟着同一个 Tee，环就是「该画」的：不引入额外的可见性标志位，
-	// 免得漏设一次就整轮钩子都不显示。
-	if(Ring.m_ClientId != ClientId || Ring.m_Connection != Connection)
+	const auto &Local = GameClient()->m_aClients[ClientId];
+	const CNetObj_Character &Character = Local.m_RenderCur;
+	const CNetObj_Character &Previous = Local.m_RenderPrev;
+	SQmHookCountdownInput Input;
+	Input.m_ClientId = ClientId;
+	Input.m_Connection = Connection;
+	Input.m_HookAttached = Character.m_HookState == HOOK_GRABBED;
+	const int HookedPlayer = Character.m_HookedPlayer;
+	if(Input.m_HookAttached && in_range(HookedPlayer, MAX_CLIENTS - 1) && GameClient()->m_Snap.m_aCharacters[HookedPlayer].m_Active)
 	{
-		// 换了控制对象（切分身 / 换观战目标）就重来一圈，避免把上一个 Tee 的进度接着画。
-		Ring.Reset();
-		Ring.m_ClientId = ClientId;
-		Ring.m_Connection = Connection;
+		Input.m_HookedPlayer = HookedPlayer;
+		Input.m_SourcePosition = Local.m_RenderPos;
+		Input.m_TargetPosition = GameClient()->m_aClients[HookedPlayer].m_RenderPos;
+		// 与 CPlayers::RenderHook 共用位置来源，平滑幽灵模式下也贴住可见钩链。
+		if(g_Config.m_QmSwapGhosts && Client()->State() != IClient::STATE_DEMOPLAYBACK && GameClient()->m_Snap.m_LocalClientId == ClientId)
+			Input.m_TargetPosition = GameClient()->GetSmoothPos(HookedPlayer);
+		const float Intra = Local.m_IsPredicted ? Client()->PredIntraGameTick(Connection) : Client()->IntraGameTick(Connection);
+		const bool SameGrab = Previous.m_HookState == HOOK_GRABBED && Previous.m_HookedPlayer == HookedPlayer;
+		Input.m_HookTick = QmHookCountdownInterpolatedTick(Previous.m_HookTick, Character.m_HookTick, Intra, SameGrab);
+		Input.m_HookDurationSeconds = GameClient()->m_aTuning[Connection].m_HookDuration;
+		Input.m_EndlessHook = Local.m_IsPredictedLocal ? Local.m_Predicted.m_EndlessHook : Local.m_EndlessHook;
 	}
-	Ring.m_Seen = true;
-
-	const int CurTick = Client()->GameTick(Connection);
-	if(!HookActive)
-	{
-		Ring.m_Tracking = false;
-		return;
-	}
-
-	if(FreshGrab)
-	{
-		// 新的一钩：重新计时。
-		Ring.m_GrabTick = CurTick;
-		Ring.m_HookDurationSeconds = GameClient()->m_aTuning[Connection].m_HookDuration;
-		Ring.m_Progress = 1.0f;
-		// 环不重建、位置与弹簧速度都不动：上一钩留下的环（还在淡出）原地拉回满格续上，
-		// 靠弹簧追上新的跟随点。观感是「环留在原地重新开始，然后跟着人跑」。
-		Ring.m_Alpha = 1.0f;
-		Ring.m_HookedPlayer = Character.m_HookedPlayer;
-		Ring.m_Tracking = true;
-	}
-
-	const float HeldSeconds = (CurTick - Ring.m_GrabTick) / static_cast<float>(TickSpeed);
-	Ring.m_Progress = QmHudHookCountdownProgress(Ring.m_HookDurationSeconds, HeldSeconds, Ring.m_Progress);
+	m_HookCountdownRing.Update(Input, Client()->RenderFrameTime());
 }
 
 void CHud::RenderFollowHookCountdown()
 {
-	SHudHookCountdownRingState &Ring = m_HookCountdownRing;
-	if(!g_Config.m_QmHookCountdown)
-	{
-		ResetHookCountdownRing();
+	const SQmHookCountdownVisual &Visual = m_HookCountdownRing.Visual();
+	if(Visual.m_Alpha <= 0.0f)
 		return;
-	}
-	const int TickSpeed = Client()->GameTickSpeed();
-	if(TickSpeed <= 0 || !Ring.m_Seen)
-		return;
-
-	// 钩子环固定在开关环正上方：取侧沿用开关环那套（宠物对面），纵向再多抬一段。
-	const vec2 TeePosition = GameClient()->m_aClients[Ring.m_ClientId].m_RenderPos;
-	const bool PetVisible = g_Config.m_TcPetShow > 0 && GameClient()->m_Pet.IsVisibleForClient(Ring.m_ClientId);
-	const vec2 PetPosition = PetVisible ? GameClient()->m_Pet.Position() : vec2();
-	const int Side = QmHudSwitchCountdownFollowSide(TeePosition.x, PetVisible, PetPosition.x);
-	const float Now = Client()->GameTick(Ring.m_Connection) / static_cast<float>(TickSpeed);
-	const vec2 Target = QmHudHookCountdownFollowTarget(TeePosition, Side, Now);
 
 	float SavedScreenX0, SavedScreenY0, SavedScreenX1, SavedScreenY1;
 	Graphics()->GetScreen(&SavedScreenX0, &SavedScreenY0, &SavedScreenX1, &SavedScreenY1);
 	Graphics()->MapScreenToGameInterface(GameClient()->m_Camera.m_Center.x, GameClient()->m_Camera.m_Center.y, GameClient()->m_Camera.m_Zoom);
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
-
-	// 卫星半径/环宽与开关环保持一致，只有颜色不同（见 QmHudHookCountdownColor）。
-	constexpr float SatelliteRadius = 9.0f + 2.5f * 0.5f;
-	constexpr float RingRadius = SatelliteRadius * MEDIA_ISLAND_SATELLITE_RING_RADIUS_SCALE;
-	const float RingThickness = std::max(1.0f, SatelliteRadius * MEDIA_ISLAND_SATELLITE_RING_THICKNESS_SCALE);
 	const float ScreenPixelSize = QmHudMediaIslandScreenPixelSize(ScreenX0, ScreenY0, ScreenX1, ScreenY1, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
-
-	const float Delta = Client()->RenderFrameTime();
-	if(!Ring.m_Initialized)
-	{
-		Ring.m_Position = Target;
-		Ring.m_Velocity = vec2();
-		Ring.m_Initialized = true;
-	}
-	QmTClientPetAdvanceSpring(Ring.m_Position, Ring.m_Velocity, Target, Delta);
-	// 透明度只有两态：钩着就是满格，松钩后匀速淡出。
-	// 不做渐入 —— 钩子可能只挂一两帧，渐入会让整轮都是半透明的，看起来比开关环「消失得快」；
-	// 淡出速率与开关环一致，两个环的收尾观感才对得上。
-	if(!Ring.m_Tracking)
-	{
-		Ring.m_Alpha = std::max(0.0f, Ring.m_Alpha - Delta);
-		if(Ring.m_Alpha <= 0.0f)
-		{
-			ResetHookCountdownRing();
-			Graphics()->MapScreen(SavedScreenX0, SavedScreenY0, SavedScreenX1, SavedScreenY1);
-			return;
-		}
-	}
-	else
-	{
-		Ring.m_Alpha = 1.0f;
-	}
-	if(!in_range(Ring.m_Position.x, ScreenX0 - SatelliteRadius, ScreenX1 + SatelliteRadius) ||
-		!in_range(Ring.m_Position.y, ScreenY0 - SatelliteRadius, ScreenY1 + SatelliteRadius))
-	{
-		Graphics()->MapScreen(SavedScreenX0, SavedScreenY0, SavedScreenX1, SavedScreenY1);
-		return;
-	}
-
-	ColorRGBA BackgroundColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandBgColor));
-	BackgroundColor.a = std::clamp(g_Config.m_QmHudIslandBgOpacity / 100.0f, 0.0f, 1.0f);
-	DrawMediaIslandCountdownSatellite(
-		Graphics(),
-		Ring.m_Position,
-		SatelliteRadius,
-		RingRadius,
-		RingThickness,
-		Ring.m_Progress,
-		Ring.m_Alpha,
-		ScreenPixelSize,
-		BackgroundColor,
-		QmHudHookCountdownColor());
+	const float Radius = qm_hook_countdown_ui::OUTER_RADIUS * Visual.m_Scale + ScreenPixelSize * 2.5f;
+	if(in_range(Visual.m_Position.x, ScreenX0 - Radius, ScreenX1 + Radius) &&
+		in_range(Visual.m_Position.y, ScreenY0 - Radius, ScreenY1 + Radius))
+		qm_hook_countdown_ui::Render(Graphics(), Visual, ScreenPixelSize);
 	Graphics()->MapScreen(SavedScreenX0, SavedScreenY0, SavedScreenX1, SavedScreenY1);
 }
 
@@ -3379,7 +3290,7 @@ void CHud::RenderCursor()
 	if(GameClient()->m_HudEditor.IsActive())
 		return;
 
-	const float Scale = (float)g_Config.m_TcCursorScale / 100.0f;
+	const float Scale = (float)g_Config.m_QmCursorScale / 100.0f;
 	if(Scale <= 0.0f)
 		return;
 
@@ -5760,7 +5671,7 @@ void CHud::RenderSpectatorCount()
 		const float BoxWidth = IconWidth + 3.0f + TextWidth + 10.0f;
 
 		const float TimeAnchorX = (m_Width / 7.0f) * 3.0f;
-		const bool Seconds = g_Config.m_TcShowLocalTimeSeconds; // TClient
+		const bool Seconds = g_Config.m_QmShowLocalTimeSeconds; // TClient
 		char aTimeStr[16];
 		str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
 		const float TimeWidth = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
@@ -6243,9 +6154,9 @@ void CHud::RenderMovementInformation()
 		}
 	}
 
-	const bool ShowDummyPos = HasDummyInfo && ShowPosition && g_Config.m_TcShowhudDummyPosition;
-	const bool ShowDummySpeed = HasDummyInfo && ShowSpeed && g_Config.m_TcShowhudDummySpeed;
-	const bool ShowDummyAngle = HasDummyInfo && ShowAngle && g_Config.m_TcShowhudDummyAngle;
+	const bool ShowDummyPos = HasDummyInfo && ShowPosition && g_Config.m_QmShowhudDummyPosition;
+	const bool ShowDummySpeed = HasDummyInfo && ShowSpeed && g_Config.m_QmShowhudDummySpeed;
+	const bool ShowDummyAngle = HasDummyInfo && ShowAngle && g_Config.m_QmShowhudDummyAngle;
 
 	if(ShowDummyPos)
 		MovementBoxHeight += 2.0f * MOVEMENT_INFORMATION_LINE_HEIGHT;
@@ -6684,7 +6595,7 @@ void CHud::RenderSpectatorHud()
 		return;
 
 	// TClient
-	float AdjustedHeight = m_Height - (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f);
+	float AdjustedHeight = m_Height - (g_Config.m_QmStatusBar ? g_Config.m_QmStatusBarHeight : 0.0f);
 	float BoundsTop = AdjustedHeight - 15.0f;
 	float BoundsBottom = AdjustedHeight;
 	const bool ShowAutoTag = !GameClient()->m_RankGhost.IsViewModeActive() && Client()->State() != IClient::STATE_DEMOPLAYBACK &&
@@ -6792,7 +6703,7 @@ void CHud::RenderLocalTime(float x)
 	else
 		m_LocalTimeV2AnimState.Reset();
 
-	const bool Seconds = g_Config.m_TcShowLocalTimeSeconds; // TClient
+	const bool Seconds = g_Config.m_QmShowLocalTimeSeconds; // TClient
 
 	char aTimeStr[16];
 	str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
@@ -7582,9 +7493,9 @@ void CHud::RenderGoresDrownBoard()
 			float FeetBottom = BaseSize / 4.2f;
 			if(!CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), TeeInfo.m_aSixup[g_Config.m_ClDummy].PartTexture(protocol7::SKINPART_BODY)))
 			{
-				if(g_Config.m_TcWhiteFeet && TeeInfo.m_CustomColoredSkin)
+				if(g_Config.m_QmWhiteFeet && TeeInfo.m_CustomColoredSkin)
 				{
-					const CSkin *pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_TcWhiteFeetSkin);
+					const CSkin *pWhiteFeetSkin = GameClient()->m_Skins.FindOrNullptr(g_Config.m_QmWhiteFeetSkin);
 					if(pWhiteFeetSkin != nullptr && CTeeRenderInfo::IsLiveDrawableTexture(Graphics(), pWhiteFeetSkin->m_OriginalSkin.m_Feet))
 						TeeInfo.m_SkinMetrics.m_Feet = pWhiteFeetSkin->m_Metrics.m_Feet;
 				}
@@ -7592,8 +7503,8 @@ void CHud::RenderGoresDrownBoard()
 				float FeetWidth, FeetHeight;
 				CRenderTools::GetRenderTeeFeetSize(pIdleState, &TeeInfo, FeetOffset, FeetWidth, FeetHeight);
 				FeetBottom = -BaseSize * 0.25f + FeetOffset.y + FeetHeight;
-				if(g_Config.m_TcTinyTees && (RenderTools()->m_LocalTeeRender || g_Config.m_TcTinyTeesOthers))
-					FeetBottom *= 0.85f * (g_Config.m_TcTinyTeeSize / 100.0f);
+				if(g_Config.m_QmTinyTees && (RenderTools()->m_LocalTeeRender || g_Config.m_QmTinyTeesOthers))
+					FeetBottom *= 0.85f * (g_Config.m_QmTinyTeeSize / 100.0f);
 			}
 			FeetBottom += maximum(pIdleState->GetFrontFoot()->m_Y, pIdleState->GetBackFoot()->m_Y) * AnimScale;
 			// 用名字的可见底边和脚部贴图边界确定落脚平面。

@@ -9,6 +9,7 @@
 #include <game/client/QmUi/SettingsCardDeckLogic.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/cards/QmCardCatalogSkinMetrics.h>
+#include <game/client/ui.h>
 
 #include <gtest/gtest.h>
 
@@ -17,6 +18,56 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+
+TEST(SettingsPageLayout, ReleaseViewportMatrixKeepsCardsAndNavigationInsideTheWindow)
+{
+	constexpr std::array<std::array<int, 2>, 9> aResolutions = {{{1280, 720}, {1366, 768}, {1920, 1080}, {2560, 1440}, {3840, 2160}, {1280, 1024}, {1600, 1200}, {1920, 1200}, {2560, 1080}}};
+	for(const auto &Resolution : aResolutions)
+		for(const int Scale : {100, 125, 150, 200})
+		{
+			SCOPED_TRACE(std::to_string(Resolution[0]) + "x" + std::to_string(Resolution[1]) + " scale=" + std::to_string(Scale));
+			const float Height = QmUiVirtualScreenHeight(Scale);
+			const CUIRect Available{10.0f, 40.0f, Height * Resolution[0] / Resolution[1] - 20.0f, Height - 50.0f};
+			const auto Layout = ResolveSettingsShellLayout(Available, 20.0f);
+			const auto ExpectInside = [](const CUIRect &Inner, const CUIRect &Outer) {
+				EXPECT_GE(Inner.w, 0.0f);
+				EXPECT_GE(Inner.h, 0.0f);
+				EXPECT_GE(Inner.x + 0.001f, Outer.x);
+				EXPECT_GE(Inner.y + 0.001f, Outer.y);
+				EXPECT_LE(Inner.x + Inner.w, Outer.x + Outer.w + 0.001f);
+				EXPECT_LE(Inner.y + Inner.h, Outer.y + Outer.h + 0.001f);
+			};
+			ExpectInside(Layout.m_TabBarRect, Available);
+			ExpectInside(Layout.m_ContentPanelRect, Available);
+			ExpectInside(Layout.m_RestartBarRect, Available);
+			ExpectInside(Layout.m_ScrollViewport, Layout.m_ContentPanelRect);
+			ExpectInside(Layout.m_aColumns[0], Layout.m_ScrollViewport);
+			EXPECT_LE(Layout.m_ContentPanelRect.x + Layout.m_ContentPanelRect.w, Layout.m_TabBarRect.x);
+			if(Layout.m_TwoColumns)
+			{
+				ExpectInside(Layout.m_aColumns[1], Layout.m_ScrollViewport);
+				EXPECT_GE(Layout.m_aColumns[0].w, 360.0f);
+				EXPECT_GE(Layout.m_aColumns[1].w, 360.0f);
+				EXPECT_LE(Layout.m_aColumns[0].x + Layout.m_aColumns[0].w, Layout.m_aColumns[1].x);
+			}
+		}
+}
+
+TEST(SettingsPageLayout, LargeUiUsesOneReadableColumnInsteadOfShrinkingTwo)
+{
+	const auto LayoutAtScale = [](int Scale) {
+		const float Height = QmUiVirtualScreenHeight(Scale);
+		return ResolveSettingsShellLayout({0.0f, 0.0f, Height * 16.0f / 9.0f, Height});
+	};
+	EXPECT_TRUE(LayoutAtScale(100).m_TwoColumns);
+	for(const int Scale : {125, 150, 200})
+	{
+		SCOPED_TRACE(Scale);
+		const auto Layout = LayoutAtScale(Scale);
+		EXPECT_FALSE(Layout.m_TwoColumns);
+		EXPECT_FLOAT_EQ(Layout.m_aColumns[0].w, Layout.m_ScrollViewport.w);
+	}
+}
 
 TEST(SettingsPageLayout, DynamicVisualCardHeightsUseSharedMetrics)
 {

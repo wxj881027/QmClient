@@ -1309,25 +1309,25 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 		str_copy(aPlayerName, GameClient()->m_aClients[ClientId].m_aName, sizeof(aPlayerName));
 
 		bool PlayerMuted = GameClient()->m_aClients[ClientId].m_Foe || GameClient()->m_aClients[ClientId].m_ChatIgnore;
-		if(g_Config.m_TcAutoReplyMuted && PlayerMuted)
+		if(g_Config.m_QmAutoReplyMuted && PlayerMuted)
 		{
 			char aBuf[256];
 			if(pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w"))
-				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_TcAutoReplyMutedMessage);
+				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_QmAutoReplyMutedMessage);
 			else
-				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_TcAutoReplyMutedMessage);
+				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_QmAutoReplyMutedMessage);
 			SendNonDuplicateMessage(0, aBuf);
 			return;
 		}
 
 		bool WindowActive = m_pGraphics && m_pGraphics->WindowActive();
-		if(g_Config.m_TcAutoReplyMinimized && !WindowActive && m_pGraphics)
+		if(g_Config.m_QmAutoReplyMinimized && !WindowActive && m_pGraphics)
 		{
 			char aBuf[256];
 			if(pMsg->m_Team == TEAM_WHISPER_RECV || ServerCommandExists("w"))
-				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_TcAutoReplyMinimizedMessage);
+				str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", aPlayerName, g_Config.m_QmAutoReplyMinimizedMessage);
 			else
-				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_TcAutoReplyMinimizedMessage);
+				str_format(aBuf, sizeof(aBuf), "%s: %s", aPlayerName, g_Config.m_QmAutoReplyMinimizedMessage);
 			SendNonDuplicateMessage(0, aBuf);
 			return;
 		}
@@ -1353,14 +1353,14 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 			bool FunVote = SettingVote && str_find_nocase(aDescription, "funvote");
 			bool MapVote = SettingVote && !RandomMapVote && !MapCoolDown && !CategoryVote && !FunVote && (str_find_nocase(aDescription, "Map:") || str_find_nocase(aDescription, "★") || str_find_nocase(aDescription, "✰"));
 
-			const int AutoMapVote = std::clamp(g_Config.m_TcAutoVoteWhenFar, 0, 2);
+			const int AutoMapVote = std::clamp(g_Config.m_QmAutoVoteWhenFar, 0, 2);
 			if(AutoMapVote != 0 && (MapVote || RandomMapVote))
 			{
 				int RaceTime = 0;
 				if(GameClient()->m_Snap.m_pGameInfoObj && GameClient()->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_RACETIME)
 					RaceTime = (Client()->GameTick(g_Config.m_ClDummy) + GameClient()->m_Snap.m_pGameInfoObj->m_WarmupTimer) / Client()->GameTickSpeed();
 
-				if(RaceTime / 60 >= g_Config.m_TcAutoVoteWhenFarTime)
+				if(RaceTime / 60 >= g_Config.m_QmAutoVoteWhenFarTime)
 				{
 					CGameClient::CClientData *pVoteCaller = nullptr;
 					int CallerId = -1;
@@ -1386,8 +1386,8 @@ void CTClient::OnMessage(int MsgType, void *pRawMsg)
 						if(!Friend && !SameTeam && !MySelf)
 						{
 							GameClient()->m_Voting.Vote(AutoMapVote == 2 ? 1 : -1);
-							if(str_comp(g_Config.m_TcAutoVoteWhenFarMessage, "") != 0)
-								SendNonDuplicateMessage(0, g_Config.m_TcAutoVoteWhenFarMessage);
+							if(str_comp(g_Config.m_QmAutoVoteWhenFarMessage, "") != 0)
+								SendNonDuplicateMessage(0, g_Config.m_QmAutoVoteWhenFarMessage);
 						}
 					}
 				}
@@ -1819,7 +1819,7 @@ void CTClient::OnConsoleInit()
 	ConfigManager()->RegisterCallback(ConfigSaveFavoriteMaps, this);
 
 	Console()->Chain(
-		"tc_allow_any_res", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
+		"qm_allow_any_res", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
 			pfnCallback(pResult, pCallbackUserData);
 			((CTClient *)pUserData)->QueueAspectApply();
 		},
@@ -1840,7 +1840,7 @@ void CTClient::OnConsoleInit()
 		this);
 
 	Console()->Chain(
-		"tc_regex_chat_ignore", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
+		"qm_regex_chat_ignore", [](IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData) {
 			if(pResult->NumArguments() == 1)
 			{
 				auto Re = Regex(pResult->GetString(0));
@@ -1908,7 +1908,7 @@ void CTClient::DoFinishCheck()
 		ResetFinishRenameState();
 		return;
 	}
-	if(g_Config.m_TcChangeNameNearFinish <= 0)
+	if(g_Config.m_QmChangeNameNearFinish <= 0)
 	{
 		m_FinishTextTimeout = 0.0f;
 		ResetFinishRenameState();
@@ -1983,7 +1983,7 @@ void CTClient::DoFinishCheck()
 		ResetFinishRenameState(Dummy);
 		return;
 	}
-	const char *pNewName = g_Config.m_TcFinishName;
+	const char *pNewName = g_Config.m_QmFinishName;
 	if(!pNewName || pNewName[0] == '\0')
 	{
 		ResetFinishRenameState(Dummy);
@@ -2113,7 +2113,7 @@ void CTClient::CheckFreeze()
 {
 	if(Client()->State() != IClient::STATE_ONLINE)
 		return;
-	if(!g_Config.m_TcFreezeChatEnabled)
+	if(!g_Config.m_QmFreezeChatEnabled)
 		return;
 
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
@@ -2140,22 +2140,22 @@ void CTClient::CheckFreeze()
 			int64_t FreqMs = time_freq() / 1000;
 
 			// Send emoticon (with 3 second cooldown)
-			if(g_Config.m_TcFreezeChatEmoticon && Now - m_aLastFreezeEmoteTime[Dummy] > 3000 * FreqMs)
+			if(g_Config.m_QmFreezeChatEmoticon && Now - m_aLastFreezeEmoteTime[Dummy] > 3000 * FreqMs)
 			{
-				GameClient()->m_Emoticon.Emote(g_Config.m_TcFreezeChatEmoticonId);
+				GameClient()->m_Emoticon.Emote(g_Config.m_QmFreezeChatEmoticonId);
 				m_aLastFreezeEmoteTime[Dummy] = Now;
 			}
 
 			// Send chat message (with 5 second cooldown and probability check)
-			if(g_Config.m_TcFreezeChatMessage[0] != '\0' && Now - m_aLastFreezeMessageTime[Dummy] > 5000 * FreqMs)
+			if(g_Config.m_QmFreezeChatMessage[0] != '\0' && Now - m_aLastFreezeMessageTime[Dummy] > 5000 * FreqMs)
 			{
 				// Check probability (0-100%)
-				int Chance = g_Config.m_TcFreezeChatChance;
+				int Chance = g_Config.m_QmFreezeChatChance;
 				if(Chance > 0 && (Chance >= 100 || (std::rand() % 100) < Chance))
 				{
 					// Parse comma-separated messages and pick one randomly
 					char aMessages[128];
-					str_copy(aMessages, g_Config.m_TcFreezeChatMessage);
+					str_copy(aMessages, g_Config.m_QmFreezeChatMessage);
 
 					// Count messages and store pointers
 					std::vector<const char *> vMessages;
@@ -2190,7 +2190,7 @@ bool CTClient::EnsureTextPopupCache(int TextType)
 	if(TextType < 0 || TextType >= (int)std::size(s_aTextPopupDefinitions))
 		return false;
 
-	const bool FontChanged = str_comp(m_aTextPopupFont, g_Config.m_TcCustomFont) != 0;
+	const bool FontChanged = str_comp(m_aTextPopupFont, g_Config.m_QmCustomFont) != 0;
 	if(FontChanged)
 		UnloadTextPopupCaches();
 
@@ -2199,7 +2199,7 @@ bool CTClient::EnsureTextPopupCache(int TextType)
 		return true;
 
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-	TextRender()->SetCustomFace(g_Config.m_TcCustomFont);
+	TextRender()->SetCustomFace(g_Config.m_QmCustomFont);
 
 	const auto &Definition = s_aTextPopupDefinitions[TextType];
 	const char *pPopupText = Localize(Definition.m_pText);
@@ -2213,7 +2213,7 @@ bool CTClient::EnsureTextPopupCache(int TextType)
 	{
 		const STextBoundingBox BoundingBox = TextRender()->GetBoundingBoxTextContainer(PopupCache.m_TextContainerIndex);
 		PopupCache.m_TextSize = vec2(BoundingBox.m_W, BoundingBox.m_H);
-		str_copy(m_aTextPopupFont, g_Config.m_TcCustomFont, sizeof(m_aTextPopupFont));
+		str_copy(m_aTextPopupFont, g_Config.m_QmCustomFont, sizeof(m_aTextPopupFont));
 	}
 	return PopupCache.m_TextContainerIndex.Valid();
 }
@@ -2559,7 +2559,7 @@ void CTClient::CheckWaterFall()
 {
 	if(Client()->State() != IClient::STATE_ONLINE)
 		return;
-	if(!g_Config.m_TcFreezeChatEnabled)
+	if(!g_Config.m_QmFreezeChatEnabled)
 		return;
 
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
@@ -2589,20 +2589,20 @@ void CTClient::CheckWaterFall()
 			int64_t FreqMs = time_freq() / 1000;
 
 			// Send emoticon (with 3 second cooldown)
-			if(g_Config.m_TcFreezeChatEmoticon && Now - m_aLastWaterHeartTime[Dummy] > 3000 * FreqMs)
+			if(g_Config.m_QmFreezeChatEmoticon && Now - m_aLastWaterHeartTime[Dummy] > 3000 * FreqMs)
 			{
-				GameClient()->m_Emoticon.Emote(g_Config.m_TcFreezeChatEmoticonId);
+				GameClient()->m_Emoticon.Emote(g_Config.m_QmFreezeChatEmoticonId);
 				m_aLastWaterHeartTime[Dummy] = Now;
 			}
 
 			// Send chat message (with 5 second cooldown and probability check)
-			if(g_Config.m_TcFreezeChatMessage[0] != '\0' && Now - m_aLastWaterMessageTime[Dummy] > 5000 * FreqMs)
+			if(g_Config.m_QmFreezeChatMessage[0] != '\0' && Now - m_aLastWaterMessageTime[Dummy] > 5000 * FreqMs)
 			{
-				int Chance = g_Config.m_TcFreezeChatChance;
+				int Chance = g_Config.m_QmFreezeChatChance;
 				if(Chance > 0 && (Chance >= 100 || (std::rand() % 100) < Chance))
 				{
 					char aMessages[128];
-					str_copy(aMessages, g_Config.m_TcFreezeChatMessage);
+					str_copy(aMessages, g_Config.m_QmFreezeChatMessage);
 
 					std::vector<const char *> vMessages;
 					char *pToken = strtok(aMessages, ",");
@@ -2941,7 +2941,7 @@ void CTClient::SetForcedAspect()
 	int State = Client()->State();
 	bool Force = true;
 	float GameScreenAspectOverride = 0.0f;
-	if(g_Config.m_TcAllowAnyRes == 0)
+	if(g_Config.m_QmAllowAnyRes == 0)
 		;
 	else if(State == CClient::EClientState::STATE_DEMOPLAYBACK)
 		Force = false;
@@ -3054,9 +3054,9 @@ void CTClient::OnNewSnapshot()
 	MaybeShowLocalSaveJoinHint();
 	// Update volleyball
 	bool IsVolleyBall = false;
-	if(g_Config.m_TcVolleyBallBetterBall > 0 && g_Config.m_TcVolleyBallBetterBallSkin[0] != '\0')
+	if(g_Config.m_QmVolleyBallBetterBall > 0 && g_Config.m_QmVolleyBallBetterBallSkin[0] != '\0')
 	{
-		if(g_Config.m_TcVolleyBallBetterBall > 1)
+		if(g_Config.m_QmVolleyBallBetterBall > 1)
 			IsVolleyBall = true;
 		else
 			IsVolleyBall = str_startswith_nocase(Client()->GetCurrentMap(), "volleyball");
@@ -3217,7 +3217,7 @@ void CTClient::RenderMiniVoteHud(bool HudEditorPreview)
 
 void CTClient::RenderCenterLines()
 {
-	if(g_Config.m_TcShowCenter <= 0)
+	if(g_Config.m_QmShowCenter <= 0)
 		return;
 
 	if(GameClient()->m_Scoreboard.IsActive())
@@ -3230,25 +3230,25 @@ void CTClient::RenderCenterLines()
 	const float XMid = (X0 + X1) / 2.0f;
 	const float YMid = (Y0 + Y1) / 2.0f;
 
-	if(g_Config.m_TcShowCenterWidth == 0)
+	if(g_Config.m_QmShowCenterWidth == 0)
 	{
 		Graphics()->LinesBegin();
 		IGraphics::CLineItem aLines[2] = {
 			{XMid, Y0, XMid, Y1},
 			{X0, YMid, X1, YMid}};
-		Graphics()->SetColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcShowCenterColor, true)));
+		Graphics()->SetColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmShowCenterColor, true)));
 		Graphics()->LinesDraw(aLines, std::size(aLines));
 		Graphics()->LinesEnd();
 	}
 	else
 	{
-		const float W = g_Config.m_TcShowCenterWidth;
+		const float W = g_Config.m_QmShowCenterWidth;
 		Graphics()->QuadsBegin();
 		IGraphics::CQuadItem aQuads[3] = {
 			{XMid, mix(Y0, Y1, 0.25f) - W / 4.0f, W, (Y1 - Y0 - W) / 2.0f},
 			{XMid, mix(Y0, Y1, 0.75f) + W / 4.0f, W, (Y1 - Y0 - W) / 2.0f},
 			{XMid, YMid, X1 - X0, W}};
-		Graphics()->SetColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_TcShowCenterColor, true)));
+		Graphics()->SetColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmShowCenterColor, true)));
 		Graphics()->QuadsDraw(aQuads, std::size(aQuads));
 		Graphics()->QuadsEnd();
 	}
@@ -3259,7 +3259,7 @@ void CTClient::RenderCtfFlag(vec2 Pos, float Alpha)
 	// from CItems::RenderFlag
 	float Size = 42.0f;
 	int QuadOffset;
-	if(g_Config.m_TcFakeCtfFlags == 1)
+	if(g_Config.m_QmFakeCtfFlags == 1)
 	{
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_SpriteFlagRed);
 		QuadOffset = GameClient()->m_Items.m_RedFlagOffset;
@@ -3476,12 +3476,12 @@ bool CTClient::IsGoresModuleEnabled() const
 
 bool CTClient::IsFastInputActive() const
 {
-	return g_Config.m_TcFastInput != 0;
+	return g_Config.m_QmFastInput != 0;
 }
 
 bool CTClient::IsFastInputOthersActive() const
 {
-	return g_Config.m_TcFastInputOthers != 0;
+	return g_Config.m_QmFastInputOthers != 0;
 }
 
 bool CTClient::ShouldHideGoresGuides(bool ManualGuideVisible) const
@@ -4213,7 +4213,7 @@ void CTClient::ApplyFocusModeEffects()
 	};
 	const SFocusOverrideTarget aTargets[] = {
 		{"cl_showhud", &g_Config.m_ClShowhud, 0, Focus.m_HideHud, &m_FocusHudOverrideState},
-		{"tc_statusbar", &g_Config.m_TcStatusBar, 0, Focus.m_HideHud, &m_FocusStatusBarOverrideState},
+		{"qm_statusbar", &g_Config.m_QmStatusBar, 0, Focus.m_HideHud, &m_FocusStatusBarOverrideState},
 		// 名字文本行：禅模式"隐藏名字"与"隐藏名字板"都会隐藏它；坐标行只跟随"隐藏名字板"。
 		// 昵称显示范围是六档枚举，隐藏时压到 0（无）；旧的两开关保留在同表内，避免残留接管状态。
 		{"qm_nameplate_show_scope", &g_Config.m_QmNameplateShowScope, 0, Focus.m_HideNames || Focus.m_HideNameplates, &m_FocusNameplateShowScopeOverrideState},
@@ -4306,15 +4306,15 @@ void CTClient::ApplyGoresFastInputLink()
 	const bool GoresActive = g_Config.m_QmGores != 0;
 	const bool TcFastInputOwnedBefore = m_GoresFastInputOverride.m_AutoChangedValue;
 	const bool TcFastInputOthersOwnedBefore = m_GoresFastInputOthersOverride.m_AutoChangedValue;
-	const int TcFastInput = ApplyQmGoresLinkedConfig(m_GoresFastInputOverride, GoresActive, g_Config.m_QmGoresFastInput != 0, g_Config.m_TcFastInput, TcFastInputChanged);
-	const int TcFastInputOthers = ApplyQmGoresLinkedConfig(m_GoresFastInputOthersOverride, GoresActive, g_Config.m_QmGoresFastInputOthers != 0, g_Config.m_TcFastInputOthers, TcFastInputOthersChanged);
+	const int QmFastInput = ApplyQmGoresLinkedConfig(m_GoresFastInputOverride, GoresActive, g_Config.m_QmGoresFastInput != 0, g_Config.m_QmFastInput, TcFastInputChanged);
+	const int QmFastInputOthers = ApplyQmGoresLinkedConfig(m_GoresFastInputOthersOverride, GoresActive, g_Config.m_QmGoresFastInputOthers != 0, g_Config.m_QmFastInputOthers, TcFastInputOthersChanged);
 	if(TcFastInputChanged)
-		g_Config.m_TcFastInput = TcFastInput;
+		g_Config.m_QmFastInput = QmFastInput;
 	if(TcFastInputOthersChanged)
-		g_Config.m_TcFastInputOthers = TcFastInputOthers;
+		g_Config.m_QmFastInputOthers = QmFastInputOthers;
 	// 快速输入联动随 Gores 模式持续强制，保持灰化与来源提示。
-	ApplyGoresSaveOverride("tc_fast_input", m_GoresFastInputOverride, TcFastInputOwnedBefore, "qm_gores_mode");
-	ApplyGoresSaveOverride("tc_fast_input_others", m_GoresFastInputOthersOverride, TcFastInputOthersOwnedBefore, "qm_gores_mode");
+	ApplyGoresSaveOverride("qm_fast_input", m_GoresFastInputOverride, TcFastInputOwnedBefore, "qm_gores_mode");
+	ApplyGoresSaveOverride("qm_fast_input_others", m_GoresFastInputOthersOverride, TcFastInputOthersOwnedBefore, "qm_gores_mode");
 	// 分身锤只在"进入 Gores 模式"那一帧关一次，之后不再持续接管 cl_dummy_hammer：
 	// 持续覆盖会让用户重新打开的分身锤被反复压回 0，看起来像开关被锁住。
 	// 激活/去激活边界：qm_gores 0→1 视为进入（含自动启用在连服首帧打开的情况），1→0 视为退出。
@@ -4352,13 +4352,13 @@ void CTClient::ResetGoresConfigOverrides()
 {
 	bool Changed = false;
 	g_Config.m_QmGores = ResetQmConfigOverride(m_GoresAutoEnableOverride, g_Config.m_QmGores, 1, Changed);
-	g_Config.m_TcFastInput = ResetQmConfigOverride(m_GoresFastInputOverride, g_Config.m_TcFastInput, 1, Changed);
-	g_Config.m_TcFastInputOthers = ResetQmConfigOverride(m_GoresFastInputOthersOverride, g_Config.m_TcFastInputOthers, 1, Changed);
+	g_Config.m_QmFastInput = ResetQmConfigOverride(m_GoresFastInputOverride, g_Config.m_QmFastInput, 1, Changed);
+	g_Config.m_QmFastInputOthers = ResetQmConfigOverride(m_GoresFastInputOthersOverride, g_Config.m_QmFastInputOthers, 1, Changed);
 	g_Config.m_ClDummyHammer = ResetQmConfigOverride(m_GoresDummyHammerOverride, g_Config.m_ClDummyHammer, 0, Changed);
 	// 恢复之后必须解除写盘覆盖，否则这些配置项会一直按接管前的旧值保存。
 	ConfigManager()->SetSaveValueOverride("qm_gores", false);
-	ConfigManager()->SetSaveValueOverride("tc_fast_input", false);
-	ConfigManager()->SetSaveValueOverride("tc_fast_input_others", false);
+	ConfigManager()->SetSaveValueOverride("qm_fast_input", false);
+	ConfigManager()->SetSaveValueOverride("qm_fast_input_others", false);
 	ConfigManager()->SetSaveValueOverride("cl_dummy_hammer", false);
 	m_GoresGameModeStateKnown = false;
 	m_PrevGoresGameMode = false;

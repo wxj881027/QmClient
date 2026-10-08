@@ -177,9 +177,9 @@ void COutlines::OnRender()
 		return;
 	if(GameClient()->m_MapLayersBackground.m_OnlineOnly && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
-	if(!g_Config.m_ClOverlayEntities && g_Config.m_TcOutlineEntities)
+	if(!g_Config.m_ClOverlayEntities && g_Config.m_QmOutlineEntities)
 		return;
-	if(!g_Config.m_TcOutline)
+	if(!g_Config.m_QmOutline)
 		return;
 
 	const float Scale = 32.0f;
@@ -218,21 +218,21 @@ void COutlines::OnRender()
 	};
 	const COutlineConfig aConfigs[] = {
 		{0, 0, 0},
-		{g_Config.m_TcOutlineUnfreeze, g_Config.m_TcOutlineWidthUnfreeze, g_Config.m_TcOutlineColorUnfreeze},
-		{g_Config.m_TcOutlineUnfreeze, g_Config.m_TcOutlineWidthUnfreeze, g_Config.m_TcOutlineColorDeepUnfreeze},
-		{g_Config.m_TcOutlineFreeze, g_Config.m_TcOutlineWidthFreeze, g_Config.m_TcOutlineColorFreeze},
-		{g_Config.m_TcOutlineFreeze, g_Config.m_TcOutlineWidthFreeze, g_Config.m_TcOutlineColorDeepFreeze},
-		{g_Config.m_TcOutlineTele, g_Config.m_TcOutlineWidthTele, g_Config.m_TcOutlineColorTele},
-		{g_Config.m_TcOutlineKill, g_Config.m_TcOutlineWidthKill, g_Config.m_TcOutlineColorKill},
-		{g_Config.m_TcOutlineSolid, g_Config.m_TcOutlineWidthSolid, g_Config.m_TcOutlineColorSolid},
+		{g_Config.m_QmOutlineUnfreeze, g_Config.m_QmOutlineWidthUnfreeze, g_Config.m_QmOutlineColorUnfreeze},
+		{g_Config.m_QmOutlineUnfreeze, g_Config.m_QmOutlineWidthUnfreeze, g_Config.m_QmOutlineColorDeepUnfreeze},
+		{g_Config.m_QmOutlineFreeze, g_Config.m_QmOutlineWidthFreeze, g_Config.m_QmOutlineColorFreeze},
+		{g_Config.m_QmOutlineFreeze, g_Config.m_QmOutlineWidthFreeze, g_Config.m_QmOutlineColorDeepFreeze},
+		{g_Config.m_QmOutlineTele, g_Config.m_QmOutlineWidthTele, g_Config.m_QmOutlineColorTele},
+		{g_Config.m_QmOutlineKill, g_Config.m_QmOutlineWidthKill, g_Config.m_QmOutlineColorKill},
+		{g_Config.m_QmOutlineSolid, g_Config.m_QmOutlineWidthSolid, g_Config.m_QmOutlineColorSolid},
 	};
 	ColorRGBA aColors[OUTLINE_SOLID + 1];
 	for(int Type = OUTLINE_NONE; Type <= OUTLINE_SOLID; ++Type)
 	{
 		aColors[Type] = color_cast<ColorRGBA>(ColorHSLA(aConfigs[Type].m_Color, true));
-		aColors[Type].a *= g_Config.m_TcOutlineAlpha / 100.0f;
+		aColors[Type].a *= g_Config.m_QmOutlineAlpha / 100.0f;
 	}
-	aColors[OUTLINE_SOLID].a *= g_Config.m_TcOutlineSolidAlpha / 100.0f;
+	aColors[OUTLINE_SOLID].a *= g_Config.m_QmOutlineSolidAlpha / 100.0f;
 
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
