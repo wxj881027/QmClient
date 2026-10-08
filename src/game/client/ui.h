@@ -6,6 +6,7 @@
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmPopupPointer.h"
 #include "QmUi/QmPopupSource.h"
+#include "QmUi/QmUiLifetime.h"
 #include "QmUi/UiTokens.h"
 #include "lineinput.h"
 #include "ui_rect.h"
@@ -283,6 +284,7 @@ class CUIElement
 	friend class CUi;
 
 	CUi *m_pUI = nullptr;
+	CQmUiLifetime m_Lifetime;
 
 	CUIElement(CUi *pUI, int RequestedRectCount) { Init(pUI, RequestedRectCount); }
 
@@ -353,6 +355,7 @@ public:
 	}
 
 	bool IsRegistered() const { return m_pUI != nullptr; }
+	CQmUiLifetime::CWeakRef WeakRef() { return m_Lifetime.WeakRef(); }
 
 	void InitRects(int RequestedRectCount);
 };

@@ -3181,6 +3181,7 @@ if(CLIENT)
     QmUi/QmAnim.h
     QmUi/QmUiPerf.cpp
     QmUi/QmUiPerf.h
+    QmUi/QmUiLifetime.h
     QmUi/QmAnimCurves.h
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
@@ -4687,6 +4688,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_serverlist_cache_test.cpp
     src/test/unit/qmclient/client/qm_input_overlay_count_test.cpp
     src/test/unit/qmclient/ui/qm_ui_scale_test.cpp
+    src/test/unit/qmclient/ui/qm_ui_lifetime_test.cpp
     src/test/unit/qmclient/client/qm_localization_policy_test.cpp
     src/test/unit/qmclient/client/qm_storage_path_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
