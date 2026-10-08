@@ -1,5 +1,6 @@
 // 更新源规划在冷路径执行；计时包含候选构造、排序和分组去重，不包含网络。
 #include <game/client/components/qmclient/update_manifest.h>
+#include <game/client/components/qmclient/update_package.h>
 #include <game/client/components/qmclient/update_sources.h>
 
 #include <benchmark/benchmark.h>
@@ -76,6 +77,47 @@ static void BM_QmUpdateFirstByteDeadline(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_QmUpdateFirstByteDeadline);
+
+// 每帧持续低速监控：推进真实窗口和传输字节，计时不包含网络或候选构造。
+static void BM_QmUpdateDownloadSpeedMonitor(benchmark::State &State)
+{
+	qm_update::CDownloadSpeedMonitor Monitor;
+	Monitor.Begin(0);
+	if(!Monitor.ShouldSwitch(20, 20 * 40 * 1024, 0, 1024 * 1024))
+	{
+		State.SkipWithError("slow package did not switch to its alternative");
+		return;
+	}
+	Monitor.Begin(0);
+	double Now = 0;
+	for(auto _ : State)
+	{
+		Now += 0.01;
+		benchmark::DoNotOptimize(Monitor.ShouldSwitch(Now, Now * 512 * 1024, 0, 1024 * 1024));
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_QmUpdateDownloadSpeedMonitor);
+
+// 冷路径规划：每次生成完整的大包分段，计时包括向量构造，不包含 HTTP 或磁盘。
+static void BM_QmUpdatePackageRanges(benchmark::State &State)
+{
+	const int64_t Size = State.range(0);
+	const auto Check = qm_update::PlanPackageRanges(Size);
+	if(Check.empty() || Check.front().m_First != 0 || Check.back().m_Last != Size - 1)
+	{
+		State.SkipWithError("package range precheck failed");
+		return;
+	}
+	for(auto _ : State)
+	{
+		auto Ranges = qm_update::PlanPackageRanges(Size);
+		benchmark::DoNotOptimize(Ranges.data());
+		benchmark::DoNotOptimize(Ranges.size());
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_QmUpdatePackageRanges)->Arg(1024)->Arg(100 * 1024 * 1024)->Arg(5LL * 1024 * 1024 * 1024);
 
 // 每轮解析一份有效发布信息，计时包含 JSON、版本/附件检查和说明存储，不包含网络。
 static void BM_QmReleaseInfo(benchmark::State &State)

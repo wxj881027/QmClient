@@ -40,6 +40,10 @@
 #include <vector>
 
 class IJob;
+namespace qm_update
+{
+	class CPackageDownload;
+}
 struct CNetMsg_Sv_Chat;
 
 // 玩家统计数据结构
@@ -483,6 +487,7 @@ public:
 
 	std::shared_ptr<IHttpRequest> m_pQmClientUpdateInfoTask = nullptr;
 	std::shared_ptr<IHttpRequest> m_pUpdatePackageTask = nullptr;
+	std::shared_ptr<qm_update::CPackageDownload> m_pUpdatePackageDownload = nullptr;
 	std::shared_ptr<IHttpRequest> m_pUpdatePackageSignatureTask = nullptr;
 	std::shared_ptr<IHttpRequest> m_pUpdateManifestTask = nullptr;
 	std::shared_ptr<IHttpRequest> m_pUpdateManifestSignatureTask = nullptr;
@@ -535,6 +540,8 @@ public:
 	};
 	std::vector<SPendingUpdateProxy> m_vUpdateProxyRequests;
 	qm_update::CProgressDeadline m_UpdateDeadlines[4];
+	qm_update::CDownloadSpeedMonitor m_UpdateSpeedMonitor;
+	bool m_UpdateSwitchForSpeed = false;
 	bool m_UpdatePopupRequested = false;
 	bool m_UpdateShutdownRequested = false;
 	bool m_UpdateInstallerStarted = false;

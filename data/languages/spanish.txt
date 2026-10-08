@@ -1883,6 +1883,9 @@ Chinese font:
 CHN
 == China
 
+Choose a GPU for this app in system graphics settings, then restart the client.
+== Elige una GPU para esta aplicación en la configuración gráfica del sistema y reinicia el cliente.
+
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
 
@@ -2570,6 +2573,9 @@ Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
 == No se pudieron cargar los controles táctiles desde el archivo. Consulta la consola local para más detalles.
 
+Could not open system graphics settings.
+== No se pudo abrir la configuración gráfica del sistema.
+
 Could not preview this image
 == No se pudo previsualizar esta imagen
 
@@ -2653,6 +2659,9 @@ Current cut is invalid or already added
 
 Current file
 == Archivo actual
+
+Current GPU
+== GPU actual
 
 Current rescue mode: %s
 == Modo de rescate actual: %s
@@ -3157,6 +3166,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == Detectar mensajes de solo compatibles desde servidores personalizados
+
+Detected graphics adapters
+== Adaptadores gráficos detectados
 
 Detection distance
 == Distancia de detección
@@ -4433,6 +4445,9 @@ Favorite
 Favorite friend
 == Amigo favorito
 
+Favorite icon color
+== Color del icono de favoritos
+
 Favorite map
 == Mapa favorito
 
@@ -4735,6 +4750,9 @@ Friend entry color in friend list
 
 Friend heart
 == Corazón de amigo
+
+Friend icon color
+== Color del icono de amigos
 
 Friend links
 == Enlaces amigos
@@ -7438,6 +7456,9 @@ No filter
 
 No functions bound
 == Ninguna función asignada
+
+No graphics adapters detected
+== No se detectaron adaptadores gráficos
 
 No input device available
 == No hay dispositivo de entrada disponible
@@ -12149,6 +12170,9 @@ System
 System default
 == Predeterminado del sistema
 
+System graphics settings
+== Configuración gráfica del sistema
+
 System media controls
 == Controles multimedia del sistema
 
@@ -13031,8 +13055,14 @@ Translate UI
 Translate:
 == Traducir:
 
+Translated chat text size as a percentage of the original text (50-100)
+== Tamaño del texto traducido del chat como porcentaje del tamaño del texto original (50-100)
+
 Translated text hidden due to streamer mode
 == Texto traducido oculto debido al modo streamer
+
+Translated text size
+== Tamaño del texto traducido
 
 Translating to %s...
 == Traduciendo a %s...

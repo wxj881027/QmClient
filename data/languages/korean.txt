@@ -1883,6 +1883,9 @@ Chinese font:
 CHN
 == 중국
 
+Choose a GPU for this app in system graphics settings, then restart the client.
+== 시스템 그래픽 설정에서 이 앱의 GPU를 선택한 다음 클라이언트를 다시 시작하세요.
+
 Choose colors for weapons and entity lasers
 == Choose colors for weapons and entity lasers
 
@@ -2570,6 +2573,9 @@ Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
 == 파일에서 터치 컨트롤을 불러올 수 없습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
 
+Could not open system graphics settings.
+== 시스템 그래픽 설정을 열 수 없습니다.
+
 Could not preview this image
 == 이 이미지를 미리 볼 수 없습니다
 
@@ -2653,6 +2659,9 @@ Current cut is invalid or already added
 
 Current file
 == 현재 파일
+
+Current GPU
+== 현재 GPU
 
 Current rescue mode: %s
 == 현재 구조 모드: %s
@@ -3157,6 +3166,9 @@ Detailed reason
 
 Detect compatible solo prompts from custom servers
 == 커스텀 서버에서 호환되는 솔로 프롬프트 감지
+
+Detected graphics adapters
+== 감지된 그래픽 어댑터
 
 Detection distance
 == 감지 거리
@@ -4433,6 +4445,9 @@ Favorite
 Favorite friend
 == 즐겨찾는 친구
 
+Favorite icon color
+== 즐겨찾기 아이콘 색상
+
 Favorite map
 == 즐겨찾는 맵
 
@@ -4735,6 +4750,9 @@ Friend entry color in friend list
 
 Friend heart
 == 친구 하트
+
+Friend icon color
+== 친구 아이콘 색상
 
 Friend links
 == 우호 링크
@@ -7438,6 +7456,9 @@ No filter
 
 No functions bound
 == 지정된 기능 없음
+
+No graphics adapters detected
+== 감지된 그래픽 어댑터가 없습니다
 
 No input device available
 == 사용 가능한 입력 장치 없음
@@ -12149,6 +12170,9 @@ System
 System default
 == 시스템 기본값
 
+System graphics settings
+== 시스템 그래픽 설정
+
 System media controls
 == 시스템 미디어 컨트롤
 
@@ -13031,8 +13055,14 @@ Translate UI
 Translate:
 == 번역：
 
+Translated chat text size as a percentage of the original text (50-100)
+== 원문 글자 크기에 대한 채팅 번역문 글자 크기의 백분율 (50-100)
+
 Translated text hidden due to streamer mode
 == 스트리머 모드로 인해 번역 텍스트 숨김
+
+Translated text size
+== 번역문 글자 크기
 
 Translating to %s...
 == %s(으)로 번역 중...

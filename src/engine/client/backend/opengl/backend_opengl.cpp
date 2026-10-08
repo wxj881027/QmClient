@@ -7,6 +7,7 @@
 #ifndef BACKEND_NO_SDL
 #include <engine/client/backend_sdl.h>
 #endif
+#include <engine/client/qm_graphics_adapters.h>
 #include <engine/graphics.h>
 
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
@@ -359,6 +360,8 @@ bool CCommandProcessorFragment_OpenGL::InitOpenGL(const SCommand_Init *pCommand)
 	str_copy(pCommand->m_pVendorString, pVendorString, gs_GpuInfoStringSize);
 	str_copy(pCommand->m_pVersionString, pVersionString, gs_GpuInfoStringSize);
 	str_copy(pCommand->m_pRendererString, pRendererString, gs_GpuInfoStringSize);
+	QmPopulateOpenGLGpuList(*pCommand->m_pGpuList, pRendererString, QmReadSystemGraphicsAdapters);
+	log_info("gfx/opengl", "GPU selection is system-managed; detected hardware adapters: %zu; renderer: %s", pCommand->m_pGpuList->m_vGpus.size(), pRendererString);
 
 	// 解析版本字符串；能力检查可能降低 m_Context*，所以把真实探测值单独保存。
 	const bool ParsedContextVersion = ParseVersionString(pCommand->m_RequestedBackend, pVersionString, pCommand->m_pCapabilities->m_ContextMajor, pCommand->m_pCapabilities->m_ContextMinor, pCommand->m_pCapabilities->m_ContextPatch);

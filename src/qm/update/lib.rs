@@ -1056,6 +1056,28 @@ pub unsafe fn ffi_verify_setup_files(
     result.is_ok()
 }
 
+/// 独立安装器和客户端共用同一导出，避免只在 engine 包中接线。
+#[no_mangle]
+pub unsafe extern "C" fn qm_update_verify_setup_files(
+    package_path: *const c_char,
+    package_signature_path: *const c_char,
+    manifest_path: *const c_char,
+    manifest_signature_path: *const c_char,
+    current_version: *const c_char,
+    error: *mut c_char,
+    error_size: usize,
+) -> bool {
+    ffi_verify_setup_files(
+        package_path,
+        package_signature_path,
+        manifest_path,
+        manifest_signature_path,
+        current_version,
+        error,
+        error_size,
+    )
+}
+
 /// Verifies a detached package signature over the signed SHA-256 digest.
 pub unsafe fn ffi_verify_package_digest(
     digest: *const u8,
@@ -1333,6 +1355,26 @@ mod tests {
             .unwrap()
             .is_empty());
         assert!(unsafe { input_bytes(std::ptr::null(), 1) }.is_err());
+    }
+
+    #[test]
+    fn standalone_setup_export_rejects_missing_paths_with_an_error() {
+        let mut error = [0 as c_char; 128];
+        assert!(!unsafe {
+            qm_update_verify_setup_files(
+                std::ptr::null(),
+                std::ptr::null(),
+                std::ptr::null(),
+                std::ptr::null(),
+                std::ptr::null(),
+                error.as_mut_ptr(),
+                error.len(),
+            )
+        });
+        assert_eq!(
+            unsafe { CStr::from_ptr(error.as_ptr()) }.to_str().unwrap(),
+            "null update path"
+        );
     }
 
     #[test]

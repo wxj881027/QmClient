@@ -2799,6 +2799,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   host_lookup.h
   http_curl.cpp
   http_curl.h
+  http_range.h
   http_emscripten.cpp
   http_emscripten.h
   huffman.cpp
@@ -3524,6 +3525,7 @@ if(CLIENT)
     components/qmclient/update_manifest.cpp
     components/qmclient/update_manifest.h
     components/qmclient/update_sources.h
+    components/qmclient/update_package.h
     components/qmclient/update_request.h
     components/qmclient/update_survey.h
     components/qmclient/update_proxy.h
@@ -4519,6 +4521,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/git_revision_test.cpp
     src/test/contract/engine/graphics/graphics_backend_contract_test.cpp
     src/test/unit/engine/graphics/graphics_backend_policy_test.cpp
+    src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/unit/engine/graphics/graphics_command_batch_test.cpp
     src/test/unit/base/hash_test.cpp
@@ -4566,6 +4569,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_hud_test.cpp
     src/test/unit/qmclient/client/qm_chat_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
     src/test/unit/qmclient/client/qm_console_log_filter_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp
     src/test/unit/qmclient/client/qm_tclient_warlist_test.cpp
@@ -4713,6 +4717,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qmclient_update_http_test.cpp
     src/test/unit/qmclient/client/qmclient_update_proxy_test.cpp
     src/test/integration/qmclient/client/qmclient_update_request_test.cpp
+    src/test/integration/qmclient/client/qmclient_update_survey_test.cpp
+    src/test/integration/qmclient/client/qmclient_update_package_test.cpp
+    src/test/unit/engine/http/http_range_test.cpp
+    src/test/unit/qmclient/client/qmclient_update_package_plan_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_assets_contract_test.cpp
     src/test/integration/qmclient/settings/settings_resource_preview_pipeline_test.cpp
     src/test/integration/qmclient/settings/qm_nameplate_cards_test.cpp

@@ -10,6 +10,16 @@
 
 namespace qm_update
 {
+	// 代理作业尚未移交的请求也必须走 HTTP 的取消完成路径，不能永远停在 QUEUED。
+	inline bool CompleteAbortedUpdateRequest(IHttp &Http, const std::shared_ptr<IHttpRequest> &Request)
+	{
+		if(!Request->IsAbortRequested())
+			return false;
+		if(!Request->Done())
+			Http.Run(Request);
+		return true;
+	}
+
 	// 429 没有有效 Retry-After 时仍需冷却，防止用户连续重查密集请求官方源。
 	inline double SourceRetryDelay(const IHttpRequest *pRequest)
 	{
@@ -32,7 +42,7 @@ namespace qm_update
 				continue;
 			if(!Request->Done() || Request->CompletedStatusCode() == 429 || Request->ResultRetryAfterSeconds().value_or(0) > 0)
 				return false;
-			UsedProxy |= Request->ProxyUrl()[0] != '\0';
+			UsedProxy |= Request->CompletedUsedProxy() || Request->ProxyUrl()[0] != '\0';
 		}
 		return UsedProxy;
 	}

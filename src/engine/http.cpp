@@ -291,8 +291,41 @@ bool IHttpRequest::BeforeInit()
 	return true;
 }
 
+void IHttpRequest::ResponseSample(size_t Bytes)
+{
+	dbg_assert(Bytes > 0 && m_WriteToMemory && !m_WriteToFile, "HTTP samples must stay in memory");
+	m_ResponseSampleSize = Bytes;
+}
+
+void IHttpRequest::ByteRange(int64_t First, int64_t Last)
+{
+	dbg_assert(First >= 0 && Last >= First && Last < INT64_MAX, "invalid HTTP byte range");
+	m_ByteRange = CHttpByteRange{First, Last, 0};
+	char aRange[96];
+	str_format(aRange, sizeof(aRange), "bytes=%lld-%lld", static_cast<long long>(First), static_cast<long long>(Last));
+	HeaderString("Range", aRange);
+	SkipByFileTime(false);
+	MaxResponseSize(Last - First + 1);
+}
+
+std::optional<CHttpByteRange> IHttpRequest::ResultContentRange() const
+{
+	dbg_assert(Done(), "HTTP range not completed");
+	return m_ResultContentRange;
+}
+
+void IHttpRequest::ResultResponseSample(unsigned char **ppResult, size_t *pResultLength) const
+{
+	dbg_assert(Done() && m_ResponseSampleSize > 0, "HTTP sample not finished");
+	*ppResult = m_pBuffer;
+	*pResultLength = m_ResponseLength;
+}
+
 size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 {
+	const size_t IncomingSize = DataSize;
+	if(m_ResponseSampleSize > 0)
+		DataSize = std::min<uint64_t>(DataSize, m_ResponseSampleSize - m_ResponseLength);
 	// Need to check for the maximum response size here as implementation may not support it,
 	// e.g. curl can only guarantee it if the server sets a Content-Length header.
 	if(m_MaxResponseSize >= 0 && m_ResponseLength + DataSize > (uint64_t)m_MaxResponseSize)
@@ -328,7 +361,12 @@ size_t IHttpRequest::OnData(const char *pData, size_t DataSize)
 		Result = io_write(m_File, pData, DataSize);
 	}
 	m_ResponseLength += DataSize;
-	return Result;
+	if(m_ResponseSampleSize > 0 && m_ResponseLength == m_ResponseSampleSize)
+	{
+		m_ResponseSampleComplete = true;
+		return 0;
+	}
+	return m_ResponseSampleSize > 0 && Result == DataSize ? IncomingSize : Result;
 }
 
 void IHttpRequest::OnCompletionInternal(EHttpState State)

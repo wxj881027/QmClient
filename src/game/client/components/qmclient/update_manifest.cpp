@@ -88,41 +88,28 @@ namespace
 				return false;
 		}
 
-		const char *pSevenZipName = PortableBuild ? "QmClient-windows-portable.7z" : "QmClient-windows.7z";
-		const std::string SevenZipSignatureName = std::string(pSevenZipName) + ".sig";
-		bool HasSevenZip = false;
-		bool HasSevenZipSignature = false;
-		// 不对每个重复附件再扫描整表，避免异常元数据产生平方级主线程工作量。
-		for(unsigned Index = 0; Index < pAssets->u.array.length; ++Index)
-		{
-			const auto *pAsset = json_array_get(pAssets, Index);
-			const auto *pName = pAsset && pAsset->type == json_object ? json_object_get(pAsset, "name") : nullptr;
-			if(pName && pName->type == json_string)
-			{
-				HasSevenZip |= str_comp(json_string_get(pName), pSevenZipName) == 0;
-				HasSevenZipSignature |= str_comp(json_string_get(pName), SevenZipSignatureName.c_str()) == 0;
-			}
-		}
-		// 老发布只有未签名的 7z，继续使用其签名 ZIP。
-		Release.m_SevenZip = HasSevenZip && HasSevenZipSignature;
-
+		// 各格式独立收集完整四件套；后补的部分 7z 附件不能遮蔽已有可用 ZIP。
+		char aaSevenZipUrls[4][2048] = {};
 		struct SExpectedAsset
 		{
 			const char *m_pName;
 			char *m_pUrl;
 			size_t m_UrlSize;
 			bool m_Found = false;
-			bool m_Optional = false;
 		};
 		SExpectedAsset aExpected[] = {
-			{Release.m_SevenZip ? pSevenZipName : (PortableBuild ? "QmClient-windows-portable.zip" : "QmClient-windows.zip"), Release.m_aPackageUrl, sizeof(Release.m_aPackageUrl)},
-			{Release.m_SevenZip ? (PortableBuild ? "QmClient-windows-portable.7z.sig" : "QmClient-windows.7z.sig") : (PortableBuild ? "QmClient-windows-portable.zip.sig" : "QmClient-windows.zip.sig"), Release.m_aPackageSignatureUrl, sizeof(Release.m_aPackageSignatureUrl)},
-			{Release.m_SevenZip ? (PortableBuild ? "QmClient-windows-portable-7z-update.json" : "QmClient-windows-7z-update.json") : (PortableBuild ? "QmClient-windows-portable-update.json" : "QmClient-windows-update.json"), Release.m_aManifestUrl, sizeof(Release.m_aManifestUrl)},
-			{Release.m_SevenZip ? (PortableBuild ? "QmClient-windows-portable-7z-update.json.sig" : "QmClient-windows-7z-update.json.sig") : (PortableBuild ? "QmClient-windows-portable-update.json.sig" : "QmClient-windows-update.json.sig"), Release.m_aManifestSignatureUrl, sizeof(Release.m_aManifestSignatureUrl)},
-			{"QmClient-Setup.exe", Release.m_aSetupUrl, sizeof(Release.m_aSetupUrl), false, true},
-			{"QmClient-Setup.exe.sig", Release.m_aSetupSignatureUrl, sizeof(Release.m_aSetupSignatureUrl), false, true},
-			{"QmClient-windows-setup-update.json", Release.m_aSetupManifestUrl, sizeof(Release.m_aSetupManifestUrl), false, true},
-			{"QmClient-windows-setup-update.json.sig", Release.m_aSetupManifestSignatureUrl, sizeof(Release.m_aSetupManifestSignatureUrl), false, true},
+			{PortableBuild ? "QmClient-windows-portable.zip" : "QmClient-windows.zip", Release.m_aPackageUrl, sizeof(Release.m_aPackageUrl)},
+			{PortableBuild ? "QmClient-windows-portable.zip.sig" : "QmClient-windows.zip.sig", Release.m_aPackageSignatureUrl, sizeof(Release.m_aPackageSignatureUrl)},
+			{PortableBuild ? "QmClient-windows-portable-update.json" : "QmClient-windows-update.json", Release.m_aManifestUrl, sizeof(Release.m_aManifestUrl)},
+			{PortableBuild ? "QmClient-windows-portable-update.json.sig" : "QmClient-windows-update.json.sig", Release.m_aManifestSignatureUrl, sizeof(Release.m_aManifestSignatureUrl)},
+			{PortableBuild ? "QmClient-windows-portable.7z" : "QmClient-windows.7z", aaSevenZipUrls[0], sizeof(aaSevenZipUrls[0])},
+			{PortableBuild ? "QmClient-windows-portable.7z.sig" : "QmClient-windows.7z.sig", aaSevenZipUrls[1], sizeof(aaSevenZipUrls[1])},
+			{PortableBuild ? "QmClient-windows-portable-7z-update.json" : "QmClient-windows-7z-update.json", aaSevenZipUrls[2], sizeof(aaSevenZipUrls[2])},
+			{PortableBuild ? "QmClient-windows-portable-7z-update.json.sig" : "QmClient-windows-7z-update.json.sig", aaSevenZipUrls[3], sizeof(aaSevenZipUrls[3])},
+			{"QmClient-Setup.exe", Release.m_aSetupUrl, sizeof(Release.m_aSetupUrl)},
+			{"QmClient-Setup.exe.sig", Release.m_aSetupSignatureUrl, sizeof(Release.m_aSetupSignatureUrl)},
+			{"QmClient-windows-setup-update.json", Release.m_aSetupManifestUrl, sizeof(Release.m_aSetupManifestUrl)},
+			{"QmClient-windows-setup-update.json.sig", Release.m_aSetupManifestSignatureUrl, sizeof(Release.m_aSetupManifestSignatureUrl)},
 		};
 		for(unsigned Index = 0; Index < pAssets->u.array.length; ++Index)
 		{
@@ -130,9 +117,10 @@ namespace
 			const json_value *pName = pAsset && pAsset->type == json_object ? json_object_get(pAsset, "name") : nullptr;
 			if(!pName || pName->type != json_string)
 				continue;
-			for(auto &Expected : aExpected)
+			for(size_t AssetIndex = 0; AssetIndex < std::size(aExpected); ++AssetIndex)
 			{
-				if(PortableBuild && Expected.m_Optional)
+				auto &Expected = aExpected[AssetIndex];
+				if(PortableBuild && AssetIndex >= 8)
 					continue;
 				if(str_comp(json_string_get(pName), Expected.m_pName) != 0)
 					continue;
@@ -142,9 +130,15 @@ namespace
 				Expected.m_Found = true;
 			}
 		}
-		Release.m_PackageAvailable = true;
-		for(const auto &Expected : aExpected)
-			Release.m_PackageAvailable &= Expected.m_Found || Expected.m_Optional;
+		Release.m_SevenZip = aExpected[4].m_Found && aExpected[5].m_Found && aExpected[6].m_Found && aExpected[7].m_Found;
+		Release.m_PackageAvailable = Release.m_SevenZip || (aExpected[0].m_Found && aExpected[1].m_Found && aExpected[2].m_Found && aExpected[3].m_Found);
+		if(Release.m_SevenZip)
+		{
+			str_copy(Release.m_aPackageUrl, aaSevenZipUrls[0]);
+			str_copy(Release.m_aPackageSignatureUrl, aaSevenZipUrls[1]);
+			str_copy(Release.m_aManifestUrl, aaSevenZipUrls[2]);
+			str_copy(Release.m_aManifestSignatureUrl, aaSevenZipUrls[3]);
+		}
 		if(!InfoOnly)
 		{
 			if(!Release.m_NewVersion)

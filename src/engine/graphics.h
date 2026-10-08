@@ -252,11 +252,12 @@ struct STWGraphicGpu
 
 	struct STWGraphicGpuItem
 	{
-		char m_aName[256];
-		ETWGraphicsGpuType m_GpuType;
+		char m_aName[256] = {};
+		ETWGraphicsGpuType m_GpuType = GRAPHICS_GPU_TYPE_INVALID;
 	};
 	std::vector<STWGraphicGpuItem> m_vGpus;
-	STWGraphicGpuItem m_AutoGpu;
+	STWGraphicGpuItem m_AutoGpu{};
+	bool m_CanSelect = true;
 };
 
 typedef STWGraphicGpu TTwGraphicsGpuList;

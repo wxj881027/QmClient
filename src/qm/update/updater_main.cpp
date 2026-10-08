@@ -8,10 +8,12 @@
 
 #include <commctrl.h>
 #include <qm/update/updater_arguments.h>
+#include <qm/update/updater_session.h>
 #include <shellapi.h>
 #include <winver.h>
 
 #include <atomic>
+#include <cstdio>
 #include <iterator>
 #include <string>
 #include <thread>
@@ -137,6 +139,8 @@ namespace
 		AppendPath(L"--manifest", Arguments.m_Manifest);
 		AppendPath(L"--manifest-signature", Arguments.m_ManifestSignature);
 		AppendPath(L"--install", Arguments.m_Install);
+		if(Arguments.m_Setup)
+			Parameters += L" --setup";
 		Parameters += L" --qm-elevated";
 		SHELLEXECUTEINFOW Info{};
 		Info.cbSize = sizeof(Info);
@@ -244,11 +248,47 @@ namespace
 
 	void CleanupTemporaryFiles(const QmUpdate::SArguments &Arguments)
 	{
-		CleanupPath(Arguments.m_Package, false);
-		CleanupPath(Arguments.m_PackageSignature, false);
-		CleanupPath(Arguments.m_Manifest, false);
-		CleanupPath(Arguments.m_ManifestSignature, false);
+		QmUpdate::CleanupDownloadedFiles(Arguments);
 		CleanupPath(CurrentExecutablePath(), true);
+	}
+
+	QmUpdate::ESetupResult RunSetup(const QmUpdate::SArguments &Arguments, char *pError, size_t ErrorSize)
+	{
+		const std::wstring Parameters = L"/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /NORESTARTAPPLICATIONS " + QuoteArgument(L"/DIR=" + Arguments.m_Install);
+		SHELLEXECUTEINFOW Info{};
+		Info.cbSize = sizeof(Info);
+		Info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
+		Info.lpFile = Arguments.m_Package.c_str();
+		Info.lpParameters = Parameters.c_str();
+		Info.lpDirectory = Arguments.m_Install.c_str();
+		Info.nShow = SW_SHOWNORMAL;
+		if(!ShellExecuteExW(&Info) || !Info.hProcess)
+		{
+			std::snprintf(pError, ErrorSize, "Failed to start Setup (Windows error %lu)", GetLastError());
+			return QmUpdate::ESetupResult::FAILED;
+		}
+		DWORD ExitCode = 1;
+		while(true)
+		{
+			PumpMessages();
+			const DWORD WaitResult = WaitForSingleObject(Info.hProcess, 50);
+			if(WaitResult == WAIT_OBJECT_0)
+				break;
+			if(WaitResult == WAIT_FAILED)
+			{
+				std::snprintf(pError, ErrorSize, "Failed to wait for Setup (Windows error %lu); update files were retained", GetLastError());
+				CloseHandle(Info.hProcess);
+				return QmUpdate::ESetupResult::STILL_RUNNING;
+			}
+		}
+		const bool ReadExitCode = GetExitCodeProcess(Info.hProcess, &ExitCode) != 0;
+		CloseHandle(Info.hProcess);
+		if(!ReadExitCode || ExitCode != 0)
+		{
+			std::snprintf(pError, ErrorSize, "Setup failed or was cancelled (exit code %lu)", ExitCode);
+			return QmUpdate::ESetupResult::FAILED;
+		}
+		return QmUpdate::ESetupResult::SUCCEEDED;
 	}
 }
 
@@ -309,7 +349,10 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 	std::atomic<bool> Finished = false;
 	bool Success = false;
 	std::thread Worker([&] {
-		Success = qm_update_apply(Package.c_str(), PackageSignature.c_str(), Manifest.c_str(), ManifestSignature.c_str(), Install.c_str(), CurrentVersion.c_str(), aError, sizeof(aError));
+		if(Arguments.m_Setup)
+			Success = qm_update_verify_setup_files(Package.c_str(), PackageSignature.c_str(), Manifest.c_str(), ManifestSignature.c_str(), CurrentVersion.c_str(), aError, sizeof(aError));
+		else
+			Success = qm_update_apply(Package.c_str(), PackageSignature.c_str(), Manifest.c_str(), ManifestSignature.c_str(), Install.c_str(), CurrentVersion.c_str(), aError, sizeof(aError));
 		Finished.store(true, std::memory_order_release);
 	});
 	while(!Finished.load(std::memory_order_acquire))
@@ -322,6 +365,18 @@ int WINAPI wWinMain(HINSTANCE Instance, HINSTANCE, PWSTR, int)
 	{
 		DestroyWindow(Window);
 		return 0;
+	}
+	if(Arguments.m_Setup)
+	{
+		const auto Result = QmUpdate::RunSetupSession(
+			[&] { return Success; },
+			[&] { return RunSetup(Arguments, aError, sizeof(aError)); },
+			[&] { CleanupTemporaryFiles(Arguments); });
+		if(Result != QmUpdate::ESetupResult::SUCCEEDED)
+			MessageBoxA(Window, aError[0] ? aError : "Setup failed", "QmClient update", MB_OK | MB_ICONERROR);
+		g_AllowClose = true;
+		DestroyWindow(Window);
+		return Result == QmUpdate::ESetupResult::SUCCEEDED ? 0 : 1;
 	}
 	if(Success)
 	{

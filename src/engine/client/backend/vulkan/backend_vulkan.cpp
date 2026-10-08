@@ -9433,6 +9433,8 @@ public:
 	[[nodiscard]] bool Cmd_PreInit(const CCommandProcessorFragment_GLBase::SCommand_PreInit *pCommand)
 	{
 		m_pGpuList = pCommand->m_pGpuList;
+		// 后端重建时丢弃旧的 OpenGL 信息列表，恢复 Vulkan 的实际可选设备清单。
+		*m_pGpuList = {};
 		if(InitVulkanSDL(pCommand->m_pWindow, pCommand->m_Width, pCommand->m_Height, pCommand->m_pRendererString, pCommand->m_pVendorString, pCommand->m_pVersionString) != 0)
 		{
 			CleanupVulkanSDL();

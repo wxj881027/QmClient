@@ -119,6 +119,47 @@ TEST(SettingsPageLayout, AutoRowHeightUsesNaturalTextHeight)
 	EXPECT_FLOAT_EQ(24.0f, ResolveSettingsAutoRowHeight(24.0f, -4.0f));
 }
 
+TEST(SettingsPageLayout, WrappedHelpReservesMeasuredHeightBeforeFollowingControl)
+{
+	CUIRect Content{20.0f, 40.0f, 400.0f, 200.0f};
+	int Measurements = 0;
+	const CUIRect Help = ConsumeSettingsWrappedTextRow(Content, 150.0f, 10.0f, 4.0f, [&](float Width) {
+		++Measurements;
+		EXPECT_FLOAT_EQ(Width, 280.0f);
+		return 35.0f;
+	});
+	EXPECT_EQ(Measurements, 1);
+	EXPECT_FLOAT_EQ(Help.x, 140.0f);
+	EXPECT_FLOAT_EQ(Help.w, 280.0f);
+	EXPECT_FLOAT_EQ(Help.h, 35.0f);
+	EXPECT_FLOAT_EQ(Content.y, Help.y + Help.h + 4.0f);
+	EXPECT_FLOAT_EQ(Content.y + Content.h, 240.0f);
+}
+
+TEST(SettingsPageLayout, WrappedHelpKeepsReadableWidthInNarrowCards)
+{
+	CUIRect Content{0.0f, 0.0f, 100.0f, 200.0f};
+	const CUIRect Help = ConsumeSettingsWrappedTextRow(Content, 150.0f, 10.0f, 2.0f, [](float Width) {
+		EXPECT_FLOAT_EQ(Width, 70.0f);
+		return 60.0f;
+	});
+	EXPECT_FLOAT_EQ(Help.w, 70.0f);
+	EXPECT_FLOAT_EQ(Content.y, 62.0f);
+	EXPECT_FLOAT_EQ(Content.h, 138.0f);
+}
+
+TEST(SettingsPageLayout, WrappedHelpHandlesEmptyMeasurementsAndDegenerateWidth)
+{
+	CUIRect Content{0.0f, 0.0f, 0.0f, 100.0f};
+	const CUIRect Help = ConsumeSettingsWrappedTextRow(Content, -5.0f, 10.0f, -2.0f, [](float Width) {
+		EXPECT_FLOAT_EQ(Width, 1.0f);
+		return 0.0f;
+	});
+	EXPECT_FLOAT_EQ(Help.x, 0.0f);
+	EXPECT_FLOAT_EQ(Help.h, 10.0f);
+	EXPECT_FLOAT_EQ(Content.y, 10.0f);
+}
+
 TEST(SettingsPageLayout, ColumnFlowUsesLongestColumnAndPreservesBottom)
 {
 	CUIRect Content{0.0f, 0.0f, 400.0f, 500.0f};

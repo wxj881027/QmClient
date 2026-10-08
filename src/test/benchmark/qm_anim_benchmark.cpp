@@ -492,3 +492,49 @@ static void BM_IconColorResolve(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_IconColorResolve)->Args({1, 0, 0})->Args({2, 0, 0})->Args({4, 0, 0})->Args({1, 1, 0})->Args({4, 1, 0})->Args({1, 0, 1})->Args({2, 0, 1})->Args({4, 0, 1})->Args({1, 1, 1})->Args({4, 1, 1});
+
+// 每次迭代解析一个好友或收藏图标；配置准备、正确性预检与恢复不计时。
+static void BM_IconSemanticColorResolve(benchmark::State &State)
+{
+	struct SConfigRestore
+	{
+		int m_Preset = g_Config.m_QmUiIconColor;
+		int m_CustomEnabled = g_Config.m_QmUiIconCustomColorEnabled;
+		unsigned m_CustomColor = g_Config.m_QmUiIconCustomColor;
+		unsigned m_FriendColor = g_Config.m_QmUiFriendIconColor;
+		unsigned m_FavoriteColor = g_Config.m_QmUiFavoriteIconColor;
+		~SConfigRestore()
+		{
+			g_Config.m_QmUiIconColor = m_Preset;
+			g_Config.m_QmUiIconCustomColorEnabled = m_CustomEnabled;
+			g_Config.m_QmUiIconCustomColor = m_CustomColor;
+			g_Config.m_QmUiFriendIconColor = m_FriendColor;
+			g_Config.m_QmUiFavoriteIconColor = m_FavoriteColor;
+		}
+	} Restore;
+	g_Config.m_QmUiIconColor = 4;
+	g_Config.m_QmUiIconCustomColorEnabled = 1;
+	g_Config.m_QmUiIconCustomColor = ColorHSLA(2.0f / 3.0f, 1.0f, 0.5f).Pack(false);
+	g_Config.m_QmUiFriendIconColor = ColorHSLA(0.0f, 1.0f, 0.5f).Pack(false);
+	g_Config.m_QmUiFavoriteIconColor = ColorHSLA(1.0f / 3.0f, 1.0f, 0.5f).Pack(false);
+	EQmIcon Icon = State.range(0) == 0 ? EQmIcon::HEART : EQmIcon::STAR;
+	ColorRGBA Input(1, 1, 1, 0.65f);
+	const ColorRGBA Expected = Icon == EQmIcon::HEART ? ColorRGBA(1, 0, 0, Input.a) : ColorRGBA(0, 1, 0, Input.a);
+	const ColorRGBA Preflight = ConfiguredQmUiIconColor(Input, Icon);
+	// 保存颜色为 8 位 HSL，允许量化误差；红绿通道仍须明确区别于全局蓝色。
+	constexpr float ColorTolerance = 0.01f;
+	if(!std::isfinite(Preflight.r) || !std::isfinite(Preflight.g) || !std::isfinite(Preflight.b) || std::abs(Preflight.r - Expected.r) > ColorTolerance || std::abs(Preflight.g - Expected.g) > ColorTolerance || std::abs(Preflight.b - Expected.b) > ColorTolerance || Preflight.a != Input.a)
+	{
+		State.SkipWithError("semantic icon must use its independent color and preserve state alpha");
+		return;
+	}
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(Input);
+		benchmark::DoNotOptimize(Icon);
+		const ColorRGBA Output = ConfiguredQmUiIconColor(Input, Icon);
+		benchmark::DoNotOptimize(Output);
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_IconSemanticColorResolve)->Arg(0)->Arg(1);

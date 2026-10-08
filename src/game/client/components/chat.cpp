@@ -2337,9 +2337,11 @@ bool CChat::OnPrepareLines(float y)
 
 	// 图集或配置字体变化时，正文、头衔及表情行的布局缓存一起失效。
 	const uint64_t GlyphAtlasRevision = TextRender()->GlyphAtlasRevision();
-	if(m_PreparedGlyphAtlasRevision != GlyphAtlasRevision)
+	const std::array<int, 3> aChatTextSettings = {g_Config.m_ClChatFontSize, g_Config.m_ClChatWidth, g_Config.m_QmChatTranslationSize};
+	if(m_PreparedGlyphAtlasRevision != GlyphAtlasRevision || m_aPreparedChatTextSettings != aChatTextSettings)
 	{
 		m_PreparedGlyphAtlasRevision = GlyphAtlasRevision;
+		m_aPreparedChatTextSettings = aChatTextSettings;
 		RebuildChat();
 	}
 
@@ -2618,34 +2620,24 @@ bool CChat::OnPrepareLines(float y)
 				const SQmChatEmojiCursorLayout EmojiLayout = LayoutQmChatEmoji(AppendCursor, QmChatEmojiChatDisplaySize(FontSize));
 				Line.m_aYOffset[OffsetType] = maximum(AppendCursor.Height(), EmojiLayout.m_RequiredHeight + 2.0f * TitleBobPadding) + RealMsgPaddingY;
 			}
-			else if(pTranslatedText)
+			else if(pTranslatedText || pTranslatedError)
 			{
-				TextRender()->TextEx(&AppendCursor, pTranslatedText);
-				if(pTranslatedLanguage)
-				{
-					TextRender()->TextEx(&AppendCursor, " [");
-					TextRender()->TextEx(&AppendCursor, pTranslatedLanguage);
-					TextRender()->TextEx(&AppendCursor, "]");
-				}
-				TextRender()->TextEx(&AppendCursor, "\n");
-				AppendCursor.m_FontSize *= 0.8f;
-				TextRender()->TextEx(&AppendCursor, pText);
-				AppendCursor.m_FontSize /= 0.8f;
-			}
-			else if(pTranslatedError)
-			{
-				TextRender()->TextEx(&AppendCursor, pText);
-				TextRender()->TextEx(&AppendCursor, "\n");
-				AppendCursor.m_FontSize *= 0.8f;
-				TextRender()->TextEx(&AppendCursor, pTranslatedError);
-				AppendCursor.m_FontSize /= 0.8f;
+				Line.m_aTextBlockLayout[OffsetType] = QmChatMeasureTextBlocks(AppendCursor, QmChatTranslationFontSize(FontSize, g_Config.m_QmChatTranslationSize), [&](CTextCursor &Cursor) { TextRender()->TextEx(&Cursor, pText); }, [&](CTextCursor &Cursor) {
+						TextRender()->TextEx(&Cursor, pTranslatedText ? pTranslatedText : pTranslatedError);
+						if(pTranslatedLanguage)
+						{
+							TextRender()->TextEx(&Cursor, " [");
+							TextRender()->TextEx(&Cursor, pTranslatedLanguage);
+							TextRender()->TextEx(&Cursor, "]");
+						} });
+				Line.m_aYOffset[OffsetType] = Line.m_aTextBlockLayout[OffsetType].m_Height + RealMsgPaddingY;
 			}
 			else
 			{
 				TextRender()->TextEx(&AppendCursor, pText);
 			}
 
-			if(!RenderChatEmoji)
+			if(!RenderChatEmoji && !pTranslatedText && !pTranslatedError)
 				Line.m_aYOffset[OffsetType] = AppendCursor.Height() + RealMsgPaddingY;
 		}
 
@@ -2668,7 +2660,8 @@ bool CChat::OnPrepareLines(float y)
 
 		// reset the cursor
 		CTextCursor LineCursor;
-		LineCursor.SetPosition(vec2(TextBegin, Line.m_TextYOffset + TitleBobPadding));
+		const float PrimaryVisualOffset = pTranslatedText || pTranslatedError ? Line.m_aTextBlockLayout[OffsetType].m_PrimaryOffset : 0.0f;
+		LineCursor.SetPosition(vec2(TextBegin, Line.m_TextYOffset + TitleBobPadding + PrimaryVisualOffset));
 		LineCursor.m_FontSize = FontSize;
 		LineCursor.m_LineWidth = LineWidth;
 		LineCursor.m_LineSpacing = 2.0f * TitleBobPadding;
@@ -2842,11 +2835,11 @@ bool CChat::OnPrepareLines(float y)
 				TextRender()->RecreateTextContainerSoft(Line.m_BodyTextContainerIndex, &ClearCursor, "");
 			}
 		}
-		const auto AddMessageSplits = [&](const char *pMessage) {
+		const auto AddMessageSplits = [&](CTextCursor &Cursor, const char *pMessage) {
 			if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
-				QmSponsorChatAddPlatinumSplits(AppendCursor, pMessage, Color.a);
+				QmSponsorChatAddPlatinumSplits(Cursor, pMessage, Color.a);
 			else if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
-				CMessageGradient::AddTextSplits(AppendCursor, pMessage, pGradient, Color);
+				CMessageGradient::AddTextSplits(Cursor, pMessage, pGradient, Color);
 		};
 
 		if(RenderChatEmoji)
@@ -2854,52 +2847,51 @@ bool CChat::OnPrepareLines(float y)
 			const SQmChatEmojiCursorLayout EmojiLayout = LayoutQmChatEmoji(AppendCursor, QmChatEmojiChatDisplaySize(FontSize));
 			Line.m_ChatEmojiRect = EmojiLayout.m_Rect;
 		}
-		else if(pTranslatedText)
+		else if(pTranslatedText || pTranslatedError)
 		{
-			AddMessageSplits(pTranslatedText);
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedText);
+			AppendCursor.m_CalculateVisualBoundingBox = true;
+			AddMessageSplits(AppendCursor, pText);
+			ColoredParts.AddSplitsToCursor(AppendCursor);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
 			AppendCursor.m_vColorSplits.clear();
+			const float OriginalWidth = AppendCursor.m_LongestLineWidth;
+			CTextCursor SecondaryCursor = QmChatSecondaryCursor(AppendCursor,
+				QmChatTranslationFontSize(FontSize, g_Config.m_QmChatTranslationSize), Line.m_aTextBlockLayout[OffsetType].m_SecondaryOffset);
+			ColorRGBA ColorSub = Color;
+			if(pTranslatedError)
+			{
+				ColorSub.r = 0.7f;
+				ColorSub.g = 0.6f;
+				ColorSub.b = 0.6f;
+			}
+			else
+			{
+				ColorSub.r *= 0.7f;
+				ColorSub.g *= 0.7f;
+				ColorSub.b *= 0.7f;
+				AddMessageSplits(SecondaryCursor, pTranslatedText);
+			}
+			TextRender()->TextColor(ColorSub);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &SecondaryCursor, pTranslatedText ? pTranslatedText : pTranslatedError);
+			SecondaryCursor.m_vColorSplits.clear();
 			if(pTranslatedLanguage)
 			{
-				ColorRGBA ColorLang = Color;
+				ColorRGBA ColorLang = ColorSub;
 				ColorLang.r *= 0.8f;
 				ColorLang.g *= 0.8f;
 				ColorLang.b *= 0.8f;
 				TextRender()->TextColor(ColorLang);
-				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, " [");
-				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedLanguage);
-				TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "]");
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &SecondaryCursor, " [");
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &SecondaryCursor, pTranslatedLanguage);
+				TextRender()->CreateOrAppendTextContainer(BodyContainer, &SecondaryCursor, "]");
 			}
-			ColorRGBA ColorSub = Color;
-			ColorSub.r *= 0.7f;
-			ColorSub.g *= 0.7f;
-			ColorSub.b *= 0.7f;
-			TextRender()->TextColor(ColorSub);
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "\n");
-			AppendCursor.m_FontSize *= 0.8f;
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
-			AppendCursor.m_FontSize /= 0.8f;
-			TextRender()->TextColor(Color);
-		}
-		else if(pTranslatedError)
-		{
-			AddMessageSplits(pText);
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
-			AppendCursor.m_vColorSplits.clear();
-			ColorRGBA ColorSub = Color;
-			ColorSub.r = 0.7f;
-			ColorSub.g = 0.6f;
-			ColorSub.b = 0.6f;
-			TextRender()->TextColor(ColorSub);
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, "\n");
-			AppendCursor.m_FontSize *= 0.8f;
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pTranslatedError);
-			AppendCursor.m_FontSize /= 0.8f;
+			AppendCursor = std::move(SecondaryCursor);
+			AppendCursor.m_LongestLineWidth = maximum(OriginalWidth, AppendCursor.m_LongestLineWidth);
 			TextRender()->TextColor(Color);
 		}
 		else
 		{
-			AddMessageSplits(pText);
+			AddMessageSplits(AppendCursor, pText);
 			ColoredParts.AddSplitsToCursor(AppendCursor);
 			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
 			AppendCursor.m_vColorSplits.clear();

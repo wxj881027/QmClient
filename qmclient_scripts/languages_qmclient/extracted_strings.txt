@@ -626,6 +626,7 @@ Chinese (Simplified)
 Chinese (Traditional)
 Chinese font:
 CHN
+Choose a GPU for this app in system graphics settings, then restart the client.
 Choose colors for weapons and entity lasers
 Choose country flag
 Choose default eyes when joining a server
@@ -855,6 +856,7 @@ Could not load default touch controls from file. See local console for details.
 Could not load sponsor QR code. Check the Base64 data
 Could not load touch controls from clipboard. See local console for details.
 Could not load touch controls from file. See local console for details.
+Could not open system graphics settings.
 Could not preview this image
 Could not query points for %s
 Could not read the map file.
@@ -883,6 +885,7 @@ Current aspect ratio:
 Current aspect ratio: Show default
 Current cut is invalid or already added
 Current file
+Current GPU
 Current rescue mode: %s
 Current status
 Current: Ranks
@@ -1051,6 +1054,7 @@ Destroy player's bullets on death
 Destroy player's lasers on death
 Detailed reason
 Detect compatible solo prompts from custom servers
+Detected graphics adapters
 Detection distance
 Detection time
 DF
@@ -1476,6 +1480,7 @@ Fast, lightweight blur with a softer approximation.
 Fat skins (DDFat)
 Favorite
 Favorite friend
+Favorite icon color
 Favorite map
 Favorite maps
 Favorites
@@ -1577,6 +1582,7 @@ Friend bar category expand state (1=expanded, 0=collapsed)
 Friend color in friends list
 Friend entry color in friend list
 Friend heart
+Friend icon color
 Friend links
 Friend message
 Friend message color
@@ -2478,6 +2484,7 @@ No empty team left.
 No favorite maps yet
 No filter
 No functions bound
+No graphics adapters detected
 No input device available
 No items to write
 No local saves file found (ddnet-saves.txt)
@@ -4048,6 +4055,7 @@ Syncing
 Syncing remote stats
 System
 System default
+System graphics settings
 System media controls
 System message
 System message color
@@ -4342,7 +4350,9 @@ Translate outgoing messages to
 Translate received messages to
 Translate UI
 Translate:
+Translated chat text size as a percentage of the original text (50-100)
 Translated text hidden due to streamer mode
+Translated text size
 Translating to %s...
 Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
 Translation backend invalid, sending original

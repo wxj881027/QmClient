@@ -7,6 +7,28 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <thread>
+
+TEST(QmUpdateDeferredHttp, CancelBeforeProxyResolutionCompletesWithoutOpeningAConnection)
+{
+	std::unique_ptr<IEngineHttp> Http(CreateEngineHttp());
+	ASSERT_TRUE(Http->Init(std::chrono::milliseconds(100)));
+	std::shared_ptr<IHttpRequest> Request = HttpGet("https://127.0.0.1:1/cancelled-before-proxy");
+	Request->Proxy("");
+	Request->Abort();
+	ASSERT_EQ(Request->State(), EHttpState::QUEUED);
+	EXPECT_TRUE(qm_update::CompleteAbortedUpdateRequest(*Http, Request));
+	const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+	while(!Request->Done() && std::chrono::steady_clock::now() < Deadline)
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	EXPECT_TRUE(Request->Done());
+	EXPECT_EQ(Request->State(), EHttpState::ABORTED);
+	const std::shared_ptr<IHttpRequest> Requests[] = {Request};
+	EXPECT_TRUE(qm_update::CanStartDownloadBatch(false, true, Requests));
+	Http->Shutdown();
+}
+
 namespace
 {
 	// 仅替换 HTTP 边界，正文、哈希和完成状态使用生产 IHttpRequest 实现。
@@ -21,6 +43,7 @@ namespace
 			OnCompletionInternal(EHttpState::ABORTED);
 		}
 		void Progress(double Bytes) { m_Current = Bytes; }
+		void UsedProxy(bool Used) { m_ResultUsedProxy = Used; }
 		void Reply(int Status, const std::string &Body, std::optional<int64_t> RetryAfter = {})
 		{
 			m_StatusCode = Status;
@@ -292,6 +315,7 @@ TEST_F(QmUpdateRequest, SurveyRetriesBrokenOfficialSystemProxyThroughDirectOnce)
 	m_vResponses.back()->Reply(200, std::string(64, 'o'));
 	ASSERT_TRUE(Survey.Poll(m_Sources, 2));
 	EXPECT_EQ(Survey.Candidates().front().m_Group, "github");
+	EXPECT_TRUE(Survey.Direct(Survey.Candidates().front()));
 	EXPECT_TRUE(Survey.Poll(m_Sources, 100));
 	EXPECT_EQ(DirectCount, 1);
 }
@@ -471,6 +495,25 @@ TEST_F(QmUpdateRequest, OfficialDirectFailureEndsWithoutAThirdRoute)
 	EXPECT_EQ(m_Request.Poll(2), EState::FAILED);
 	EXPECT_EQ(m_Request.Poll(100), EState::FAILED);
 	EXPECT_EQ(Attempts, 2);
+}
+
+TEST_F(QmUpdateRequest, EnvironmentProxyFailureAllowsDirectRecovery)
+{
+	qm_update::CSourceRegistry Sources({});
+	m_Request.Begin(Sources, s_Api, qm_update::API, 0, [this](const std::string &Url) {
+		auto Request = std::make_shared<CResponse>(Url);
+		Request->UsedProxy(true);
+		m_vResponses.push_back(Request);
+		return Request; }, ValidRelease, [this](const std::string &Url) {
+		auto Request = std::make_shared<CResponse>(Url);
+		Request->Proxy("");
+		m_vResponses.push_back(Request);
+		return Request; });
+	m_vResponses[0]->Interrupted();
+	EXPECT_EQ(m_Request.Poll(1), EState::RUNNING);
+	ASSERT_EQ(m_vResponses.size(), 2U);
+	m_vResponses[1]->Reply(200, ReleaseJson());
+	EXPECT_EQ(m_Request.Poll(2), EState::SUCCEEDED);
 }
 
 TEST_F(QmUpdateRequest, RateLimitOnOfficialProxyDoesNotRetryDirect)

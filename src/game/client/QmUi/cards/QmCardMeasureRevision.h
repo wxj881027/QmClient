@@ -42,6 +42,12 @@ namespace qm_card_catalog
 				Revision = 3u;
 			else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0)
 				Revision = 4u;
+			// mymemory 与 deepl 各有专属说明行/密钥行，切换后端即改变内容高度；
+			// 版本必须两两不同，否则 Deck 的测量缓存不失效，卡片高度不随服务切换更新。
+			else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0)
+				Revision = 5u;
+			else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0)
+				Revision = 6u;
 			// 高级选项会增删多行控件，provider 还会影响端点和提示文案的可见性。
 			Revision |= static_cast<uint64_t>(g_Config.m_QmTranslateShowAdvanced != 0) << 8;
 			Revision |= static_cast<uint64_t>(std::clamp(g_Config.m_QmTranslateLlmProvider, 0, 15)) << 9;

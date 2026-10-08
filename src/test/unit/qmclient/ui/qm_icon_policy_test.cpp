@@ -211,6 +211,8 @@ namespace
 		int m_Preset = g_Config.m_QmUiIconColor;
 		int m_CustomEnabled = g_Config.m_QmUiIconCustomColorEnabled;
 		unsigned m_CustomColor = g_Config.m_QmUiIconCustomColor;
+		unsigned m_FriendColor = g_Config.m_QmUiFriendIconColor;
+		unsigned m_FavoriteColor = g_Config.m_QmUiFavoriteIconColor;
 
 	protected:
 		void TearDown() override
@@ -218,6 +220,8 @@ namespace
 			g_Config.m_QmUiIconColor = m_Preset;
 			g_Config.m_QmUiIconCustomColorEnabled = m_CustomEnabled;
 			g_Config.m_QmUiIconCustomColor = m_CustomColor;
+			g_Config.m_QmUiFriendIconColor = m_FriendColor;
+			g_Config.m_QmUiFavoriteIconColor = m_FavoriteColor;
 		}
 	};
 }
@@ -255,6 +259,60 @@ TEST_F(CQmConfiguredIconColorTest, TurningCustomOffImmediatelyRestoresPreset)
 	EXPECT_FLOAT_EQ(Actual.g, 0.0f);
 	EXPECT_FLOAT_EQ(Actual.b, 0.0f);
 	EXPECT_FLOAT_EQ(Actual.a, StateColor.a);
+}
+
+TEST_F(CQmConfiguredIconColorTest, FriendAndFavoriteColorsRemainIndependentAcrossGlobalPresets)
+{
+	g_Config.m_QmUiFriendIconColor = ColorHSLA(0.0f, 1.0f, 0.5f).Pack(false);
+	g_Config.m_QmUiFavoriteIconColor = ColorHSLA(1.0f / 6.0f, 1.0f, 0.5f).Pack(false);
+	g_Config.m_QmUiIconCustomColor = ColorHSLA(0.6f, 1.0f, 0.5f).Pack(false);
+	for(int Preset : {1, 2, 3, 4})
+	{
+		g_Config.m_QmUiIconColor = Preset;
+		for(int CustomEnabled : {0, 1})
+		{
+			g_Config.m_QmUiIconCustomColorEnabled = CustomEnabled;
+			for(float Alpha : {0.0f, 0.17f, 0.65f, 1.0f})
+			{
+				SCOPED_TRACE(::testing::Message() << "preset=" << Preset << " custom=" << CustomEnabled << " alpha=" << Alpha);
+				const ColorRGBA StateColor(0.2f, 0.4f, 0.8f, Alpha);
+				EXPECT_EQ(ConfiguredQmUiIconColor(StateColor, EQmIcon::HEART), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiFriendIconColor)).WithAlpha(Alpha));
+				EXPECT_EQ(ConfiguredQmUiIconColor(StateColor, EQmIcon::STAR), color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiFavoriteIconColor)).WithAlpha(Alpha));
+				EXPECT_EQ(ConfiguredQmUiIconColor(StateColor, EQmIcon::GEAR), ConfiguredQmUiIconColor(StateColor));
+			}
+		}
+	}
+}
+
+TEST_F(CQmConfiguredIconColorTest, ChangingOneSemanticColorImmediatelyUpdatesOnlyItsIcon)
+{
+	g_Config.m_QmUiFriendIconColor = 0x00D1AB;
+	g_Config.m_QmUiFavoriteIconColor = 0x21FFA6;
+	const ColorRGBA Input(1, 1, 1, 0.35f);
+	const ColorRGBA OriginalFriend = ConfiguredQmUiIconColor(Input, EQmIcon::HEART);
+	const ColorRGBA OriginalFavorite = ConfiguredQmUiIconColor(Input, EQmIcon::STAR);
+	g_Config.m_QmUiFriendIconColor = ColorHSLA(0.6f, 0.8f, 0.45f).Pack(false);
+	EXPECT_NE(ConfiguredQmUiIconColor(Input, EQmIcon::HEART), OriginalFriend);
+	EXPECT_EQ(ConfiguredQmUiIconColor(Input, EQmIcon::STAR), OriginalFavorite);
+	g_Config.m_QmUiFriendIconColor = 0x00D1AB;
+	EXPECT_EQ(ConfiguredQmUiIconColor(Input, EQmIcon::HEART), OriginalFriend);
+}
+
+TEST_F(CQmConfiguredIconColorTest, SemanticDrawingScopePreventsRetintAndRestoresOrdinaryDrawing)
+{
+	g_Config.m_QmUiIconColor = 1;
+	g_Config.m_QmUiIconCustomColorEnabled = 0;
+	g_Config.m_QmUiFriendIconColor = 0x00D1AB;
+	const ColorRGBA Input(1, 1, 1, 0.35f);
+	const ColorRGBA Friend = ConfiguredQmUiIconColor(Input, EQmIcon::HEART);
+	{
+		const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(EQmIcon::HEART));
+		EXPECT_EQ(ConfiguredQmUiIconColor(Friend), Friend);
+		const CQmIconSemanticColorScope OrdinaryNestedScope(false);
+		EXPECT_EQ(ConfiguredQmUiIconColor(Friend, EQmIcon::HEART), Friend);
+	}
+	EXPECT_EQ(ConfiguredQmUiIconColor(Friend, EQmIcon::GEAR), Input);
+	EXPECT_EQ(ConfiguredQmUiIconColor(Friend, EQmIcon::HEART), Friend);
 }
 
 TEST_F(CQmConfiguredIconColorTest, LegacyCustomPresetStillUsesSavedColor)

@@ -11,6 +11,7 @@
 #include <engine/storage.h>
 
 #include <charconv>
+#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <string>
@@ -131,9 +132,26 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 	curl_easy_setopt(pHandle, CURLOPT_URL, m_aUrl);
 	if(m_ProxyConfigured)
 		curl_easy_setopt(pHandle, CURLOPT_PROXY, m_aProxy);
+	else
+	{
+		// 连接代理失败时 USED_PROXY 仍可能为零，保留所选环境路由用于官方直连回退。
+		// 不设置 CURLOPT_PROXY，继续由 curl 原生处理 NO_PROXY、认证及代理优先级。
+		const bool Https = str_startswith_nocase(m_aUrl, "https:");
+		for(const char *pName : {Https ? "https_proxy" : "http_proxy", Https ? "HTTPS_PROXY" : "", "all_proxy", "ALL_PROXY"})
+		{
+			const char *pValue = *pName ? std::getenv(pName) : nullptr;
+			if(pValue && *pValue)
+			{
+				str_copy(m_aProxy, pValue);
+				break;
+			}
+		}
+	}
 	curl_easy_setopt(pHandle, CURLOPT_NOSIGNAL, 1L);
 	curl_easy_setopt(pHandle, CURLOPT_USERAGENT, USER_AGENT_STRING);
 	curl_easy_setopt(pHandle, CURLOPT_ACCEPT_ENCODING, ""); // Use any compression algorithm supported by libcurl.
+	if(m_ByteRange)
+		curl_easy_setopt(pHandle, CURLOPT_ACCEPT_ENCODING, "identity");
 
 	curl_easy_setopt(pHandle, CURLOPT_HEADERDATA, this);
 	curl_easy_setopt(pHandle, CURLOPT_HEADERFUNCTION, HeaderCallback);
@@ -232,7 +250,20 @@ size_t CHttpRequestCurl::OnHeader(char *pHeader, size_t HeaderSize)
 		m_ResultDate = {};
 		m_ResultLastModified = {};
 		m_ResultRetryAfterSeconds = {};
+		m_ResultContentRange = {};
 	}
+	// 重定向和 CONNECT 的响应头不能被当成最终分段响应。
+	if(HeaderSize >= 5 && std::string_view(pHeader, HeaderSize).starts_with("HTTP/"))
+	{
+		const std::string_view Line(pHeader, HeaderSize);
+		const auto Space = Line.find(' ');
+		if(Space != std::string_view::npos)
+			std::from_chars(Line.data() + Space + 1, Line.data() + Line.size(), m_StatusCode);
+		m_ResultContentRange = {};
+	}
+	static const char CONTENT_RANGE[] = "Content-Range:";
+	if(HeaderSize >= sizeof(CONTENT_RANGE) - 1 && str_startswith_nocase(pHeader, CONTENT_RANGE))
+		m_ResultContentRange = ParseHttpContentRange(std::string_view(pHeader + sizeof(CONTENT_RANGE) - 1, HeaderSize - sizeof(CONTENT_RANGE) + 1));
 
 	static const char DATE[] = "Date: ";
 	static const char LAST_MODIFIED[] = "Last-Modified: ";
@@ -277,10 +308,17 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 		long StatusCode;
 		curl_easy_getinfo(pHandle, CURLINFO_RESPONSE_CODE, &StatusCode);
 		m_StatusCode = StatusCode;
+#if LIBCURL_VERSION_NUM >= 0x080700
+		long UsedProxy = 0;
+		if(curl_easy_getinfo(pHandle, CURLINFO_USED_PROXY, &UsedProxy) == CURLE_OK)
+			m_ResultUsedProxy = UsedProxy != 0;
+#endif
 	}
 
 	EHttpState State;
-	if(Code != CURLE_OK)
+	// 前缀采样主动中止正文回调是成功；用户取消、状态错误与普通下载仍按原错误处理。
+	const bool SampleComplete = Code == CURLE_WRITE_ERROR && m_ResponseSampleComplete && !IsAbortRequested() && m_StatusCode == 200;
+	if(Code != CURLE_OK && !SampleComplete)
 	{
 		State = (Code == CURLE_ABORTED_BY_CALLBACK) ? EHttpState::ABORTED : EHttpState::ERROR;
 		const bool IsShutdownAbort = State == EHttpState::ABORTED && str_comp(m_aErr, "Shutting down") == 0;
@@ -297,6 +335,11 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 		}
 		State = EHttpState::DONE;
 	}
+	if(State == EHttpState::DONE && m_ByteRange &&
+		(m_StatusCode != 206 || !m_ResultContentRange ||
+			m_ResultContentRange->m_First != m_ByteRange->m_First || m_ResultContentRange->m_Last != m_ByteRange->m_Last ||
+			m_ResponseLength != static_cast<uint64_t>(m_ByteRange->Length())))
+		State = EHttpState::ERROR;
 
 	IHttpRequest::OnCompletionInternal(State);
 }
@@ -309,7 +352,13 @@ size_t CHttpRequestCurl::HeaderCallback(char *pData, size_t Size, size_t Number,
 
 size_t CHttpRequestCurl::WriteCallback(char *pData, size_t Size, size_t Number, void *pUser)
 {
-	return ((CHttpRequestCurl *)pUser)->OnData(pData, Size * Number);
+	auto *pRequest = static_cast<CHttpRequestCurl *>(pUser);
+	// 服务器忽略 Range 时不接受整包正文，更不能把 200 响应追加到分段文件。
+	if(pRequest->m_ByteRange && (pRequest->m_StatusCode != 206 || !pRequest->m_ResultContentRange ||
+					    pRequest->m_ResultContentRange->m_First != pRequest->m_ByteRange->m_First ||
+					    pRequest->m_ResultContentRange->m_Last != pRequest->m_ByteRange->m_Last))
+		return 0;
+	return pRequest->OnData(pData, Size * Number);
 }
 
 int CHttpRequestCurl::ProgressCallback(void *pUser, double DlTotal, double DlCurr, double UlTotal, double UlCurr)

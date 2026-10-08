@@ -74,23 +74,44 @@ namespace qm_card_catalog
 			case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(QmCardRenderHook::TextRenderer(pMenus), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
 			case EQmModuleId::Translate:
 			{
+				// 行数口径与 RenderQmFunctionTranslateContent 的渲染分支一一对应，逐块注释；
+				// 此处无字体上下文时按单行估算；运行时探针复用说明行的实际换行测高。
+				// 本公式是卡片自身按行计算高度的能力，仅在无菜单上下文时作为兜底。
 				const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
 				const bool IsLibreTranslateBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "libretranslate") == 0;
 				const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
 				const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
-				float Height = Rows(9.0f) + LineHeight * 1.6f + LineSpacing * 1.35f;
+				const bool IsMymemoryBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0;
+				const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
+				const bool ShowAdvanced = g_Config.m_QmTranslateShowAdvanced != 0;
+				// 常驻行：收/发自动翻译、译文字号、翻译服务、收/发目标语言、高级选项开关。
+				float Height = Rows(7.0f);
+				if(IsMymemoryBackend)
+					Height += Metrics.m_SmallSize + LineSpacing; // MyMemory 免注册说明
+				else if(IsDeeplBackend)
+					Height += Row() + Metrics.m_SmallSize + LineSpacing; // DeepL 说明 + API key 行
 				if(IsFtapiBackend)
-					Height += Row() + LineHeight * 0.8f + LineSpacing;
+					Height += Row() + LineHeight * 0.8f + LineSpacing; // 自动翻译开关 + 警告文案
 				if(IsTencentCloudBackend)
-					Height += Row() * 4.0f;
+					Height += Row() * 4.0f; // Endpoint/Region/SecretId/SecretKey
 				else if(IsLibreTranslateBackend)
-					Height += Row() * 2.0f;
+					Height += Row() * 2.0f; // Endpoint/API key
 				if(IsLlmBackend)
 				{
-					Height += Row() * 7.0f + LineHeight + LineSpacing * 0.5f;
-					if(g_Config.m_QmTranslateLlmEnableThinking && (g_Config.m_QmTranslateLlmProvider == 2 || g_Config.m_QmTranslateLlmProvider == 3))
-						Height += Metrics.m_SmallSize + Metrics.m_LineSpacing;
+					Height += Row() * 3.0f; // Provider/API key/Model
+					if(ShowAdvanced || g_Config.m_QmTranslateLlmProvider == 3)
+						Height += Row(); // Endpoint (optional)：Custom 常显，其余高级展开时显示
+					if(ShowAdvanced)
+					{
+						Height += Row() * 4.0f; // 并发、有效并发、思考模式开关、自定义提示词
+						if(g_Config.m_QmTranslateLlmProvider == 0)
+							Height += Metrics.m_SmallSize + LineSpacing; // 智谱免费档并发提示
+						if(g_Config.m_QmTranslateLlmEnableThinking && (g_Config.m_QmTranslateLlmProvider == 2 || g_Config.m_QmTranslateLlmProvider == 3))
+							Height += Metrics.m_SmallSize + LineSpacing; // 思考模式提示
+					}
 				}
+				if(ShowAdvanced)
+					Height += LineHeight + LineSpacing * 0.5f + Row() * 4.0f; // 最小匹配字符 + 语言占比/原文语言/收发翻译方式
 				return Height;
 			}
 			case EQmModuleId::TranslateUi: return Rows(5.0f);

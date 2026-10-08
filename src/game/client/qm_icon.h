@@ -81,14 +81,14 @@ inline ColorRGBA QmUiIconColor(const ColorRGBA &Color, const int ConfiguredColor
 	return Result;
 }
 
-// 仅对禁用覆盖层等必须保持语义色的绘制使用；作用域退出恢复嵌套前的策略。
+// 好友、收藏与禁用覆盖层等保持语义色；作用域退出恢复嵌套前的策略。
 class CQmIconSemanticColorScope
 {
 	inline static thread_local bool s_KeepSemanticColor = false;
 	bool m_Previous;
 
 public:
-	CQmIconSemanticColorScope() : m_Previous(s_KeepSemanticColor) { s_KeepSemanticColor = true; }
+	CQmIconSemanticColorScope(bool KeepSemanticColor = true) : m_Previous(s_KeepSemanticColor) { s_KeepSemanticColor = s_KeepSemanticColor || KeepSemanticColor; }
 	~CQmIconSemanticColorScope() { s_KeepSemanticColor = m_Previous; }
 	CQmIconSemanticColorScope(const CQmIconSemanticColorScope &) = delete;
 	CQmIconSemanticColorScope &operator=(const CQmIconSemanticColorScope &) = delete;
@@ -105,11 +105,23 @@ public:
 	static double Time() { return s_Time; }
 };
 
+// 好友与收藏共用语义图标识别，缓存与回退绘制保持一致。
+inline bool QmUiIconHasSemanticColor(EQmIcon Icon)
+{
+	return Icon == EQmIcon::HEART || Icon == EQmIcon::STAR;
+}
+
 // 字体图标在最终绘制时使用同一颜色策略，保留各自状态 alpha。
-inline ColorRGBA ConfiguredQmUiIconColor(const ColorRGBA &Color)
+inline ColorRGBA ConfiguredQmUiIconColor(const ColorRGBA &Color, EQmIcon Icon = EQmIcon::COUNT)
 {
 	if(CQmIconSemanticColorScope::Active())
 		return Color;
+	// 好友与收藏独立着色，沿用调用者的禁用、悬停与动画透明度。
+	if(QmUiIconHasSemanticColor(Icon))
+	{
+		const unsigned SemanticColor = Icon == EQmIcon::HEART ? g_Config.m_QmUiFriendIconColor : g_Config.m_QmUiFavoriteIconColor;
+		return color_cast<ColorRGBA>(ColorHSLA(SemanticColor)).WithAlpha(Color.a);
+	}
 	const int Preset = qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled) ? 3 : g_Config.m_QmUiIconColor;
 	if(Preset != 4)
 		return QmUiIconColor(Color, Preset, g_Config.m_QmUiIconCustomColor);
