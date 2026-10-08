@@ -4711,6 +4711,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_tclient_statusbar_contract_test.cpp
     src/test/contract/qmclient/client/qm_graphics_shutdown_contract_test.cpp
     src/test/unit/qmclient/client/qm_crashdump_shutdown_suppression_test.cpp
+    src/test/unit/qmclient/client/qm_hang_watchdog_state_test.cpp
     src/test/contract/qmclient/client/qm_graphics_backend_fallback_contract_test.cpp
     src/test/unit/qmclient/client/qm_graphics_opengl_probe_contract_test.cpp
     src/test/unit/qmclient/client/qm_font_category_test.cpp

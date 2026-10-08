@@ -5611,14 +5611,14 @@ void CClient::BenchmarkQuit(int Seconds, const char *pFilename)
 
 void CClient::StartHangWatchdog()
 {
+	if(m_HangWatchdogThread.joinable())
+		return;
+
 	m_HangWatchdogStop.store(false, std::memory_order_release);
-	m_HangReportWritten.store(false, std::memory_order_release);
+	m_HangInfo.StartWatchdog();
 	if(m_aHangDumpDir[0] == '\0' && Storage() != nullptr)
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, gs_pQmCrashDumpDir, m_aHangDumpDir, sizeof(m_aHangDumpDir));
 	UpdateHangHeartbeat();
-
-	if(m_HangWatchdogThread.joinable())
-		return;
 
 	m_HangWatchdogThread = std::thread([this]() {
 		// 必须使用单调时钟（time_get_nanoseconds）而不是 time_get()：后者只在主循环
@@ -5628,16 +5628,17 @@ void CClient::StartHangWatchdog()
 		while(!m_HangWatchdogStop.load(std::memory_order_acquire))
 		{
 			std::this_thread::sleep_for(1s);
+			if(m_HangWatchdogStop.load(std::memory_order_acquire))
+				break;
 			const int64_t LastHeartbeat = m_HangInfo.LastHeartbeat();
 			if(LastHeartbeat == 0)
 				continue;
 			const int64_t Now = time_get_nanoseconds().count();
 			if(Now - LastHeartbeat >= TimeoutNanoseconds)
 			{
-				const auto Snapshot = m_HangInfo.Read();
-				// 快照与心跳来自同一次发布；主线程已恢复时不沿用先前读到的旧心跳。
-				if(Now - Snapshot.m_LastHeartbeat >= TimeoutNanoseconds && !m_HangReportWritten.exchange(true, std::memory_order_acq_rel))
-					WriteHangReportAndDump(Now, Snapshot);
+				const auto Snapshot = m_HangInfo.TryClaimReport(Now, TimeoutNanoseconds);
+				if(Snapshot.has_value())
+					WriteHangReportAndDump(Now, *Snapshot);
 			}
 		}
 	});
@@ -5645,6 +5646,8 @@ void CClient::StartHangWatchdog()
 
 void CClient::StopHangWatchdog()
 {
+	// 停止状态和报告领取同步，防止休眠中的看门狗醒来后领取新报告。
+	m_HangInfo.StopWatchdog();
 	m_HangWatchdogStop.store(true, std::memory_order_release);
 	if(m_HangWatchdogThread.joinable())
 		m_HangWatchdogThread.join();

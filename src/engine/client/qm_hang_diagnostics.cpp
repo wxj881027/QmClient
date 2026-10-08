@@ -15,6 +15,7 @@ namespace QmHangDiagnostics
 	{
 		const std::lock_guard<std::mutex> Lock(m_Mutex);
 		m_Snapshot = Snapshot;
+		m_HaveHeartbeat = true;
 		m_LastHeartbeat.store(Snapshot.m_LastHeartbeat, std::memory_order_release);
 	}
 
@@ -27,6 +28,31 @@ namespace QmHangDiagnostics
 	int64_t CSnapshotStore::LastHeartbeat() const
 	{
 		return m_LastHeartbeat.load(std::memory_order_acquire);
+	}
+
+	void CSnapshotStore::StartWatchdog()
+	{
+		const std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_WatchdogActive = true;
+		m_HaveHeartbeat = false;
+		m_ReportClaimed = false;
+		m_Snapshot = {};
+		m_LastHeartbeat.store(0, std::memory_order_release);
+	}
+
+	void CSnapshotStore::StopWatchdog()
+	{
+		const std::lock_guard<std::mutex> Lock(m_Mutex);
+		m_WatchdogActive = false;
+	}
+
+	std::optional<SSnapshot> CSnapshotStore::TryClaimReport(int64_t Now, int64_t TimeoutNanoseconds)
+	{
+		const std::lock_guard<std::mutex> Lock(m_Mutex);
+		if(!m_WatchdogActive || !m_HaveHeartbeat || m_ReportClaimed || Now < m_Snapshot.m_LastHeartbeat || Now - m_Snapshot.m_LastHeartbeat < TimeoutNanoseconds)
+			return std::nullopt;
+		m_ReportClaimed = true;
+		return m_Snapshot;
 	}
 
 	const char *DumpStageName(EDumpStage Stage)
