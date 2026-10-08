@@ -122,7 +122,6 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	QmHangDiagnostics::CSnapshotStore m_HangInfo;
 	int64_t m_QmGraphicsLastPumpNetworkNs = 0;
 	std::atomic<bool> m_HangWatchdogStop{false};
-	std::atomic<bool> m_HangReportWritten{false};
 	std::thread m_HangWatchdogThread;
 	char m_aHangDumpDir[IO_MAX_PATH_LENGTH] = "";
 	int m_NetworkPumpFirstConn = 0;

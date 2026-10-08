@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 
 namespace QmHangDiagnostics
 {
@@ -25,12 +26,19 @@ namespace QmHangDiagnostics
 		mutable std::mutex m_Mutex;
 		SSnapshot m_Snapshot;
 		std::atomic<int64_t> m_LastHeartbeat{0};
+		bool m_WatchdogActive = false;
+		bool m_HaveHeartbeat = false;
+		bool m_ReportClaimed = false;
 
 	public:
-		// 只在复制快照时持锁，调用方的字符串整理、文件写入和转储均在锁外。
+		// 快照和报告状态操作仅短暂持锁，调用方的文件写入和转储均在锁外。
 		void Publish(const SSnapshot &Snapshot);
 		SSnapshot Read() const;
 		int64_t LastHeartbeat() const;
+		void StartWatchdog();
+		void StopWatchdog();
+		// 超时、停止与单次报告领取共用快照锁；返回的副本可在锁外写盘。
+		std::optional<SSnapshot> TryClaimReport(int64_t Now, int64_t TimeoutNanoseconds);
 	};
 
 	enum class EDumpStage
