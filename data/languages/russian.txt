@@ -103,9 +103,6 @@
 %s translating to %s before send
 == %s переводится на %s перед отправкой
 
-%s translating to %s failed: %s
-== %s перевод на %s не удался: %s
-
 %s wins!
 == %s побеждает!
 
@@ -797,6 +794,9 @@ AntiPing: predict weapons
 API key
 == API-ключ
 
+APP ID
+== ID приложения
+
 Appearance
 == Внешний вид
 
@@ -997,6 +997,9 @@ Authenticate to rcon
 
 Authenticate to rcon with a username
 == Аутентификация в rcon с именем пользователя
+
+Authentication
+== Способ авторизации
 
 Authorized player forced vote '%s'
 == Уполномоченный игрок принудительно выставил голосование '%s'
@@ -1397,6 +1400,9 @@ Background stroke color
 Background stroke width
 == Ширина фонового штриха
 
+Baidu Translate
+== Перевод Baidu
+
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
@@ -1435,6 +1441,9 @@ Basic
 
 Be nice.
 == Будьте вежливы.
+
+Bearer API key
+== API-ключ Bearer
 
 Before I die
 == Перед моей смертью
@@ -1708,6 +1717,9 @@ Can't swap with yourself
 
 Cancel
 == Отмена
+
+Cancel translation test
+== Отменить тест перевода
 
 Cancel your swap request
 == Отменить запрос на обмен
@@ -3002,11 +3014,11 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free: 500 000 символов в месяц (регистрация на deepl.com; бесплатные ключи заканчиваются на :fx)
-
 DeepL API Key (free keys end with :fx)
 == API-ключ DeepL (бесплатные ключи заканчиваются на :fx)
+
+DeepL API quota depends on your subscription. Get an API key at deepl.com.
+== Квота DeepL API зависит от подписки. Получите API-ключ на deepl.com.
 
 DeepSeek
 == DeepSeek
@@ -6353,9 +6365,6 @@ Live director
 LLM API
 == LLM API
 
-LLM API key not configured
-== Ключ API LLM не настроен
-
 LLM provider
 == Поставщик LLM
 
@@ -6481,6 +6490,9 @@ Local particles: show particles behind own Tee (e.g. freeze snow)
 
 Local saves
 == Локальные сохранения
+
+Local service without authentication
+== Локальный сервис без авторизации
 
 Local statistics file is invalid, saving paused
 == Файл локальной статистики повреждён, сохранение приостановлено
@@ -10343,6 +10355,9 @@ Send probability
 Send Rate
 == Скорость отправки
 
+Send sampling and token limit parameters
+== Отправлять параметры выборки и лимита токенов
+
 Send specified command to rcon
 == Отправить указанную команду в rcon
 
@@ -12194,6 +12209,9 @@ Sub-Tick aiming
 Subtle
 == Мягкое
 
+Success
+== Успешно
+
 Successfully saved the replay!
 == Повтор успешно сохранён!
 
@@ -12614,9 +12632,6 @@ Temporary free camera
 Tencent Cloud
 == Тенсент Клауд
 
-Tencent Cloud API not configured
-== API Tencent Cloud не настроен
-
 Tencent Cloud SecretId
 == Идентификатор секрета Tencent Cloud
 
@@ -12634,6 +12649,12 @@ Tencent Cloud Translation SecretId
 
 Tencent Cloud Translation SecretKey
 == SecretKey перевода Tencent Cloud
+
+Test translation
+== Проверить перевод
+
+Testing translation...
+== Проверка перевода…
 
 Text alpha
 == Альфа текста
@@ -12655,6 +12676,9 @@ Text effect
 
 Text input focus ring color
 == Цвет кольца фокуса текстового ввода
+
+Text is too long for the selected translation service.
+== Текст превышает ограничение длины выбранного сервиса перевода.
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Спасибо за вашу компанию и доверие. Именно это даёт мне смелость продолжать.
@@ -12773,8 +12797,14 @@ There's an unsaved change in the touch controls editor, you might want to save i
 There's an unsaved map in the editor, you might want to save it.
 == В редакторе есть несохранённая карта, возможно, стоит её сохранить.
 
+Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
+== Управление рассуждениями зависит от сервера модели. Его настройки по умолчанию не гарантируют отключение рассуждений.
+
 Thinking mode requires a reasoning model
 == Для режима размышления требуется модель рассуждения
+
+Thinking parameters
+== Параметры рассуждений
 
 This bind contains an unfinished quote and cannot be edited safely.
 == В привязке есть незакрытая кавычка; безопасное редактирование невозможно.
@@ -13229,9 +13259,6 @@ Translated text size
 Translating to %s...
 == Перевод на %s...
 
-Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
-== Бэкенд перевода (mymemory/llm/tencentcloud/libretranslate/ftapi)
-
 Translation backend invalid, sending original
 == Бэкенд перевода недействителен, отправка оригинала
 
@@ -13244,6 +13271,9 @@ Translation button cancel color
 Translation color alpha migration completed flag
 == Флаг завершения переноса альфа-канала цветов перевода
 
+Translation diagnostics
+== Диагностика перевода
+
 Translation menu background color
 == Цвет фона меню перевода
 
@@ -13253,6 +13283,9 @@ Translation menu normal color
 Translation menu selected color
 == Цвет выбранного пункта меню перевода
 
+Translation model was not found. Check the model name.
+== Модель перевода не найдена. Проверьте её имя.
+
 Translation queue full, sending original
 == Очередь перевода заполнена, отправка оригинала
 
@@ -13261,6 +13294,9 @@ Translation service
 
 Translation service authentication failed. Check the API key and service address.
 == Ошибка авторизации сервиса перевода. Проверьте ключ API и адрес сервиса.
+
+Translation service is not configured correctly.
+== Сервис перевода настроен неверно. Проверьте настройки.
 
 Translation service is rate limited. Please try again later.
 == Слишком много запросов к сервису перевода. Повторите попытку позже.
@@ -13276,6 +13312,9 @@ Translation service refused this content. Please edit it and try again.
 
 Translation service returned a notice instead of a translation
 == Сервис перевода вернул уведомление вместо перевода
+
+Translation service returned an invalid or incomplete translation.
+== Сервис вернул недопустимый или неполный перевод.
 
 Translation Settings
 == Настройки перевода
@@ -13765,6 +13804,9 @@ Use procedural ring pipeline when enhanced rendering is active
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == Использовать конвейеры SDF для Dynamic Island и скруглённых прямоугольников при включённом расширенном рендеринге
+
+Use server defaults
+== Использовать настройки сервера
 
 Use skin color for frozen Tee's feet
 == Использовать цвет скина для ног замороженного Tee

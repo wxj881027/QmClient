@@ -979,3 +979,15 @@ TEST(UiV2PopupPointer, ActivePopupScopeReadsRealInputAndOutsidePageRemainsBlocke
 	EXPECT_EQ(QmResolvePointerButtons(0, 1, false).Previous(0), 1);
 	EXPECT_EQ(QmResolvePointerButtons(1, 0, false).Pressed(0), 1);
 }
+
+TEST(UiV2TranslateSettings, BaiduCanBeSelectedAndRestoredAcrossSharedMenus)
+{
+	char aBackend[32] = "mymemory";
+	const int Previous = NTranslateUi::BackendIndexForDisplay(aBackend);
+	EXPECT_TRUE(NTranslateUi::CommitBackend(aBackend, sizeof(aBackend), Previous, NTranslateUi::BACKEND_BAIDU));
+	EXPECT_STREQ(aBackend, "baidu");
+	EXPECT_EQ(NTranslateUi::BackendIndexForDisplay(aBackend), NTranslateUi::BACKEND_BAIDU);
+	EXPECT_FALSE(NTranslateUi::NormalizeBackend(aBackend, sizeof(aBackend)));
+	EXPECT_TRUE(NTranslateUi::CommitBackend(aBackend, sizeof(aBackend), NTranslateUi::BACKEND_BAIDU, Previous));
+	EXPECT_STREQ(aBackend, "mymemory");
+}

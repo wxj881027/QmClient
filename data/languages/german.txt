@@ -103,9 +103,6 @@
 %s translating to %s before send
 == %s übersetzt zu %s vor dem Senden
 
-%s translating to %s failed: %s
-== %s übersetzt zu %s fehlgeschlagen: %s
-
 %s wins!
 == %s gewinnt!
 
@@ -797,6 +794,9 @@ AntiPing: predict weapons
 API key
 == API-Schlüssel
 
+APP ID
+== App-ID
+
 Appearance
 == Erscheinungsbild
 
@@ -997,6 +997,9 @@ Authenticate to rcon
 
 Authenticate to rcon with a username
 == Mit einem Benutzernamen bei Rcon authentifizieren
+
+Authentication
+== Authentifizierung
 
 Authorized player forced vote '%s'
 == Autorisierter Spieler hat Abstimmung '%s' erzwungen
@@ -1397,6 +1400,9 @@ Background stroke color
 Background stroke width
 == Hintergrundstrichbreite
 
+Baidu Translate
+== Baidu-Übersetzung
+
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
@@ -1435,6 +1441,9 @@ Basic
 
 Be nice.
 == Seid nett.
+
+Bearer API key
+== Bearer-API-Schlüssel
 
 Before I die
 == Bevor ich sterbe
@@ -1708,6 +1717,9 @@ Can't swap with yourself
 
 Cancel
 == Abbrechen
+
+Cancel translation test
+== Übersetzungstest abbrechen
 
 Cancel your swap request
 == Tauschanfrage abbrechen
@@ -3002,11 +3014,11 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free: 500.000 Zeichen pro Monat (Registrierung unter deepl.com; kostenlose Schlüssel enden auf :fx)
-
 DeepL API Key (free keys end with :fx)
 == DeepL API-Schlüssel (kostenlose Schlüssel enden auf :fx)
+
+DeepL API quota depends on your subscription. Get an API key at deepl.com.
+== Das DeepL-API-Kontingent hängt vom Abo ab. API-Schlüssel gibt es auf deepl.com.
 
 DeepSeek
 == DeepSeek
@@ -6353,9 +6365,6 @@ Live director
 LLM API
 == LLM API
 
-LLM API key not configured
-== LLM-API-Schlüssel nicht eingerichtet
-
 LLM provider
 == LLM-Anbieter
 
@@ -6481,6 +6490,9 @@ Local particles: show particles behind own Tee (e.g. freeze snow)
 
 Local saves
 == Lokale Speicherstände
+
+Local service without authentication
+== Lokaler Dienst ohne Authentifizierung
 
 Local statistics file is invalid, saving paused
 == Lokale Statistikdatei ist beschädigt, Speichern angehalten
@@ -10343,6 +10355,9 @@ Send probability
 Send Rate
 == Senderate
 
+Send sampling and token limit parameters
+== Sampling- und Tokenlimit-Parameter senden
+
 Send specified command to rcon
 == Angegebenen Befehl an Rcon senden
 
@@ -12194,6 +12209,9 @@ Sub-Tick aiming
 Subtle
 == Dezent
 
+Success
+== Erfolgreich
+
 Successfully saved the replay!
 == Wiederholung erfolgreich gespeichert!
 
@@ -12614,9 +12632,6 @@ Temporary free camera
 Tencent Cloud
 == Tencent Cloud
 
-Tencent Cloud API not configured
-== Tencent-Cloud-API nicht eingerichtet
-
 Tencent Cloud SecretId
 == Tencent Cloud Secret-ID
 
@@ -12634,6 +12649,12 @@ Tencent Cloud Translation SecretId
 
 Tencent Cloud Translation SecretKey
 == Tencent Cloud Übersetzung SecretKey
+
+Test translation
+== Übersetzung testen
+
+Testing translation...
+== Übersetzung wird getestet…
 
 Text alpha
 == Text-Transparenz
@@ -12655,6 +12676,9 @@ Text effect
 
 Text input focus ring color
 == Farbe des Fokusrings für Texteingaben
+
+Text is too long for the selected translation service.
+== Der Text überschreitet die Längenbegrenzung des gewählten Übersetzungsdienstes.
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == Danke für deine Begleitung und dein Vertrauen. Das gibt mir den Mut, weiterzumachen.
@@ -12773,8 +12797,14 @@ There's an unsaved change in the touch controls editor, you might want to save i
 There's an unsaved map in the editor, you might want to save it.
 == Es gibt eine ungespeicherte Karte im Editor, du solltest sie speichern.
 
+Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
+== Die Denksteuerung hängt vom Modellserver ab. Servervorgaben garantieren nicht, dass Denken deaktiviert ist.
+
 Thinking mode requires a reasoning model
 == Der Denkmodus erfordert ein Reasoning-Modell
+
+Thinking parameters
+== Denkparameter
 
 This bind contains an unfinished quote and cannot be edited safely.
 == Diese Belegung enthält ein ungeschlossenes Anführungszeichen und kann nicht sicher bearbeitet werden.
@@ -13229,9 +13259,6 @@ Translated text size
 Translating to %s...
 == Übersetze zu %s...
 
-Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
-== Übersetzungs-Backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
-
 Translation backend invalid, sending original
 == Übersetzungs-Backend ungültig, Original wird gesendet
 
@@ -13244,6 +13271,9 @@ Translation button cancel color
 Translation color alpha migration completed flag
 == Abschlusskennzeichen für die Alpha-Migration der Übersetzungsfarben
 
+Translation diagnostics
+== Übersetzungsdiagnose
+
 Translation menu background color
 == Hintergrundfarbe des Übersetzungsmenüs
 
@@ -13253,6 +13283,9 @@ Translation menu normal color
 Translation menu selected color
 == Farbe des Übersetzungsmenüs bei Auswahl
 
+Translation model was not found. Check the model name.
+== Übersetzungsmodell nicht gefunden. Prüfen Sie den Modellnamen.
+
 Translation queue full, sending original
 == Übersetzungswarteschlange voll, Original wird gesendet
 
@@ -13261,6 +13294,9 @@ Translation service
 
 Translation service authentication failed. Check the API key and service address.
 == Authentifizierung beim Übersetzungsdienst fehlgeschlagen. API-Schlüssel und Dienstadresse prüfen.
+
+Translation service is not configured correctly.
+== Der Übersetzungsdienst ist nicht richtig konfiguriert. Prüfen Sie die Einstellungen.
 
 Translation service is rate limited. Please try again later.
 == Zu viele Anfragen an den Übersetzungsdienst. Bitte später erneut versuchen.
@@ -13276,6 +13312,9 @@ Translation service refused this content. Please edit it and try again.
 
 Translation service returned a notice instead of a translation
 == Der Übersetzungsdienst gab einen Hinweis statt einer Übersetzung zurück
+
+Translation service returned an invalid or incomplete translation.
+== Der Dienst hat eine ungültige oder unvollständige Übersetzung geliefert.
 
 Translation Settings
 == Übersetzungseinstellungen
@@ -13765,6 +13804,9 @@ Use procedural ring pipeline when enhanced rendering is active
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == SDF-Pipelines für Dynamic Island und abgerundete Rechtecke bei aktiviertem erweitertem Rendering verwenden
+
+Use server defaults
+== Servervorgaben verwenden
 
 Use skin color for frozen Tee's feet
 == Hautfarbe für die Füße gefrorener Tees verwenden

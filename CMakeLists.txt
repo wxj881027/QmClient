@@ -3525,6 +3525,11 @@ if(CLIENT)
     components/qmclient/translate/translate.cpp
     components/qmclient/translate/translate_backend.cpp
     components/qmclient/translate/translate_backend.h
+    components/qmclient/translate/translate_backend_http.cpp
+    components/qmclient/translate/translate_backend_http.h
+    components/qmclient/translate/translate_backend_cloud.cpp
+    components/qmclient/translate/translate_probe.cpp
+    components/qmclient/translate/translate_probe.h
     components/qmclient/translate/translate_jobs.cpp
     components/qmclient/translate/translate_jobs.h
     components/qmclient/translate/translate.h
@@ -4869,6 +4874,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/time_test.cpp
     src/test/unit/base/timestamp_test.cpp
     src/test/integration/qmclient/translate/translate_backend_test.cpp
+    src/test/integration/qmclient/translate/translate_services_test.cpp
+    src/test/integration/qmclient/translate/translate_local_test.cpp
     src/test/support/translate_http_test_support.h
     src/test/unit/qmclient/translate/translate_detect_test.cpp
     src/test/unit/qmclient/translate/translate_history_test.cpp
@@ -4977,6 +4984,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/sponsor_chat_render.cpp
     src/game/client/components/qmclient/translate/translate_parse.cpp
     src/game/client/components/qmclient/translate/translate_backend.cpp
+    src/game/client/components/qmclient/translate/translate_backend_http.cpp
+    src/game/client/components/qmclient/translate/translate_backend_cloud.cpp
+    src/game/client/components/qmclient/translate/translate_probe.cpp
     src/game/client/components/qmclient/translate/translate_jobs.cpp
     src/game/client/components/qmclient/translate/translate_detect.cpp
     src/game/client/components/qmclient/voice/voice_capture_pipeline.cpp
@@ -5189,6 +5199,9 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/game/client/components/qmclient/translate/translate_jobs.cpp
     src/game/client/components/qmclient/translate/translate_parse.cpp
     src/game/client/components/qmclient/translate/translate_backend.cpp
+    src/game/client/components/qmclient/translate/translate_backend_http.cpp
+    src/game/client/components/qmclient/translate/translate_backend_cloud.cpp
+    src/game/client/components/qmclient/translate/translate_probe.cpp
     src/game/client/components/qmclient/translate/translate_detect.cpp
     src/test/benchmark/qm_net_benchmark.cpp
     src/test/benchmark/qm_snapshot_benchmark.cpp

@@ -103,9 +103,6 @@
 %s translating to %s before send
 == %s 正在翻译为 %s 后发送
 
-%s translating to %s failed: %s
-== %s 翻译为 %s 失败：%s
-
 %s wins!
 == %s 胜利！
 
@@ -797,6 +794,9 @@ AntiPing: predict weapons
 API key
 == API 密钥
 
+APP ID
+== 应用 ID
+
 Appearance
 == 游戏界面
 
@@ -997,6 +997,9 @@ Authenticate to rcon
 
 Authenticate to rcon with a username
 == 使用用户名进行 rcon 认证
+
+Authentication
+== 认证方式
 
 Authorized player forced vote '%s'
 == 授权玩家强制将当前投票设为 '%s'
@@ -1397,6 +1400,9 @@ Background stroke color
 Background stroke width
 == 背景描边宽度
 
+Baidu Translate
+== 百度翻译
+
 Balance master, music, and game volume
 == 平衡主音量、音乐和游戏音量
 
@@ -1435,6 +1441,9 @@ Basic
 
 Be nice.
 == 请友善交流。
+
+Bearer API key
+== Bearer API 密钥
 
 Before I die
 == 在我死去之前
@@ -1708,6 +1717,9 @@ Can't swap with yourself
 
 Cancel
 == 取消
+
+Cancel translation test
+== 取消翻译测试
 
 Cancel your swap request
 == 取消你的交换请求
@@ -3002,11 +3014,11 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free：每月 50 万字符（在 deepl.com 注册；免费密钥以 :fx 结尾）
-
 DeepL API Key (free keys end with :fx)
 == DeepL API 密钥（免费密钥以 :fx 结尾）
+
+DeepL API quota depends on your subscription. Get an API key at deepl.com.
+== DeepL API 额度取决于订阅方案。请在 deepl.com 获取 API 密钥。
 
 DeepSeek
 == DeepSeek
@@ -6353,9 +6365,6 @@ Live director
 LLM API
 == LLM API
 
-LLM API key not configured
-== 尚未配置大模型 API 密钥
-
 LLM provider
 == LLM 提供商
 
@@ -6481,6 +6490,9 @@ Local particles: show particles behind own Tee (e.g. freeze snow)
 
 Local saves
 == 本地存档
+
+Local service without authentication
+== 本机服务，无需认证
 
 Local statistics file is invalid, saving paused
 == 本地统计文件已损坏，保存已暂停
@@ -10343,6 +10355,9 @@ Send probability
 Send Rate
 == 发送速率
 
+Send sampling and token limit parameters
+== 发送采样与 token 上限参数
+
 Send specified command to rcon
 == 向 rcon 发送指定命令
 
@@ -12194,6 +12209,9 @@ Sub-Tick aiming
 Subtle
 == 柔和
 
+Success
+== 成功
+
 Successfully saved the replay!
 == 成功保存短时回放！
 
@@ -12614,9 +12632,6 @@ Temporary free camera
 Tencent Cloud
 == 腾讯云
 
-Tencent Cloud API not configured
-== 尚未配置腾讯云 API
-
 Tencent Cloud SecretId
 == 腾讯云密钥 ID
 
@@ -12634,6 +12649,12 @@ Tencent Cloud Translation SecretId
 
 Tencent Cloud Translation SecretKey
 == 腾讯云翻译 SecretKey
+
+Test translation
+== 测试翻译
+
+Testing translation...
+== 正在测试翻译…
 
 Text alpha
 == 文字透明度
@@ -12655,6 +12676,9 @@ Text effect
 
 Text input focus ring color
 == 文本输入焦点环颜色
+
+Text is too long for the selected translation service.
+== 文本超过所选翻译服务的长度限制。
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == 感谢您的陪伴与信任。正是如此，才给了我继续前行的勇气
@@ -12773,8 +12797,14 @@ There's an unsaved change in the touch controls editor, you might want to save i
 There's an unsaved map in the editor, you might want to save it.
 == 编辑器中有尚未保存的地图，建议先保存。
 
+Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
+== 思考控制取决于模型服务。使用服务默认值不代表已关闭思考。
+
 Thinking mode requires a reasoning model
 == 启用思考模式需要使用推理模型
+
+Thinking parameters
+== 思考参数格式
 
 This bind contains an unfinished quote and cannot be edited safely.
 == 此绑定包含未结束的引号，无法安全编辑。
@@ -13229,9 +13259,6 @@ Translated text size
 Translating to %s...
 == 正在翻译为 %s……
 
-Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
-== 翻译后端（mymemory/llm/tencentcloud/libretranslate/ftapi）
-
 Translation backend invalid, sending original
 == 翻译后端无效，发送原文
 
@@ -13244,6 +13271,9 @@ Translation button cancel color
 Translation color alpha migration completed flag
 == 翻译颜色透明度迁移已完成标记
 
+Translation diagnostics
+== 翻译诊断
+
 Translation menu background color
 == 翻译菜单背景颜色
 
@@ -13253,6 +13283,9 @@ Translation menu normal color
 Translation menu selected color
 == 翻译菜单选中时颜色
 
+Translation model was not found. Check the model name.
+== 未找到翻译模型，请检查模型名称。
+
 Translation queue full, sending original
 == 翻译队列已满，发送原文
 
@@ -13261,6 +13294,9 @@ Translation service
 
 Translation service authentication failed. Check the API key and service address.
 == 翻译服务鉴权失败，请检查 API 密钥和服务地址。
+
+Translation service is not configured correctly.
+== 翻译服务配置不正确，请检查设置。
 
 Translation service is rate limited. Please try again later.
 == 翻译请求过于频繁，请稍后重试。
@@ -13276,6 +13312,9 @@ Translation service refused this content. Please edit it and try again.
 
 Translation service returned a notice instead of a translation
 == 翻译服务返回了提示，未提供译文
+
+Translation service returned an invalid or incomplete translation.
+== 翻译服务返回了无效或不完整的译文。
 
 Translation Settings
 == 翻译设置
@@ -13765,6 +13804,9 @@ Use procedural ring pipeline when enhanced rendering is active
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == 启用增强渲染时，为灵动岛和圆角矩形使用 SDF 管线
+
+Use server defaults
+== 使用服务默认值
 
 Use skin color for frozen Tee's feet
 == 冻结 Tee 的脚部也使用皮肤颜色

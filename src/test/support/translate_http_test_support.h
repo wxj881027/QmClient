@@ -69,6 +69,9 @@ protected:
 	{
 		str_copy(g_Config.m_QmTranslateBackend, "llm");
 		g_Config.m_QmTranslateLlmProvider = 3;
+		g_Config.m_QmTranslateLlmCustomAuth = 0;
+		g_Config.m_QmTranslateLlmCustomThinking = 0;
+		g_Config.m_QmTranslateLlmCustomParameters = 0;
 		str_copy(g_Config.m_QmTranslateLlmKeyCustom, "test-key");
 		str_copy(g_Config.m_QmTranslateLlmEndpointCustom, "https://translate.test/v1");
 		g_Config.m_QmTranslateLlmConcurrency = 0;

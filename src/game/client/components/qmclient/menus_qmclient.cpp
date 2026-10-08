@@ -1359,7 +1359,7 @@ void CMenus::RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHei
 void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float CardLabelWidth, bool PrewarmOnly)
 {
 	// 标签宽度必须按当前卡片内容计算；沿用整页宽度会把端点和模型输入框压缩到不可读。
-	const float LabelWidth = std::min(CardLabelWidth, std::clamp(Content.w * 0.30f, 150.0f, 260.0f));
+	const float LabelWidth = std::min({CardLabelWidth, Content.w * 0.45f, std::clamp(Content.w * 0.30f, 150.0f, 260.0f)});
 	const float SmallSize = CurrentSettingsContentMetrics().m_SmallSize;
 	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_translate_text_inputs", BodySize / ui_token::font::BODY);
 	auto RenderCheckbox = [this, PrewarmOnly](const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float VMargin) {
@@ -1419,6 +1419,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	const bool IsLlmBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "llm") == 0;
 	const bool IsFtapiBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "ftapi") == 0;
 	const bool IsMymemoryBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "mymemory") == 0;
+	const bool IsBaiduBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "baidu") == 0;
 	const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
@@ -1431,7 +1432,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	// DeepL 说明与 API Key 输入
 	if(IsDeeplBackend)
 	{
-		RenderHelp(Localize("DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)"));
+		RenderHelp(Localize("DeepL API quota depends on your subscription. Get an API key at deepl.com."));
 
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
@@ -1440,6 +1441,70 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		s_TranslateDeeplKey.SetHidden(true);
 		ui_widget::InputField(TextInputCtx, &s_TranslateDeeplKey, ControlCol, "", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+
+	if(IsBaiduBackend)
+	{
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
+		RenderLabel("qmclient-translate-baidu-app-id", &LabelCol, Localize("APP ID"), BodySize);
+		static CLineInput s_TranslateBaiduAppId(g_Config.m_QmTranslateBaiduAppId, sizeof(g_Config.m_QmTranslateBaiduAppId));
+		ui_widget::InputField(TextInputCtx, &s_TranslateBaiduAppId, ControlCol, "", BodySize);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
+		RenderLabel("qmclient-translate-baidu-key", &LabelCol, Localize("API key"), BodySize);
+		static CLineInput s_TranslateBaiduKey(g_Config.m_QmTranslateBaiduKey, sizeof(g_Config.m_QmTranslateBaiduKey));
+		s_TranslateBaiduKey.SetHidden(true);
+		ui_widget::InputField(TextInputCtx, &s_TranslateBaiduKey, ControlCol, "", BodySize);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+
+	// 探测通过相同生产后端执行；预热和 RenderOnly 不创建请求或延长 owner。
+	if(!PrewarmOnly && !Ui()->RenderOnly())
+		m_TranslateProbe.Touch();
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	static CButtonContainer s_TestTranslationButton;
+	static CButtonContainer s_CancelTranslationTestButton;
+	const bool PendingTest = m_TranslateProbe.Pending();
+	if(PendingTest)
+	{
+		if(!PrewarmOnly && !Ui()->RenderOnly() && DoButton_Menu(&s_CancelTranslationTestButton, Localize("Cancel translation test"), 0, &Row))
+			m_TranslateProbe.Cancel();
+	}
+	else if(!PrewarmOnly && !Ui()->RenderOnly() && DoButton_Menu(&s_TestTranslationButton, Localize("Test translation"), 0, &Row))
+		m_TranslateProbe.Start(*Http(), "Hello, please hook me.", g_Config.m_QmTranslateTarget, "en");
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+	Content.HSplitTop(LineHeight, &Row, &Content);
+	RenderCheckbox(&m_TranslateProbeDiagnostics, "Translation diagnostics", Localize("Translation diagnostics"), &m_TranslateProbeDiagnostics, &Row, LineHeight);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+	if(m_TranslateProbe.Pending())
+		RenderHelp(Localize("Testing translation..."));
+	else if(m_TranslateProbe.HasResult())
+	{
+		const CTranslateResponse &Result = m_TranslateProbe.Response();
+		if(Result.m_Error)
+			RenderHelp(Localize(TranslateNoticeSource(Result.m_Notice == ETranslateNotice::NONE ? ETranslateNotice::INVALID_RESPONSE : Result.m_Notice)));
+		else
+			RenderHelp(Result.m_Text);
+		if(m_TranslateProbeDiagnostics)
+		{
+			char aDiagnostic[128];
+			str_format(aDiagnostic, sizeof(aDiagnostic), "%s | HTTP %d | %s", m_TranslateProbe.Service(), Result.m_HttpStatus, Result.m_Error ? Localize("Failed") : Localize("Success"));
+			RenderHelp(aDiagnostic);
+		}
+	}
+
+	if(m_TranslateProbeDiagnostics)
+	{
+		const STranslateDiagnostic &Diagnostic = GameClient()->m_Translate.LastDiagnostic();
+		if(Diagnostic.m_aService[0])
+		{
+			char aStatus[128];
+			str_format(aStatus, sizeof(aStatus), "%s | HTTP %d", Diagnostic.m_aService, Diagnostic.m_HttpStatus);
+			RenderHelp(aStatus);
+			RenderHelp(Localize(TranslateNoticeSource(Diagnostic.m_Notice)));
+		}
 	}
 
 	// FTAPI 自动翻译开关（仅在 FTAPI 后端时显示）
@@ -1592,11 +1657,37 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		DoSettingsLabelStreamed(LlmProviderLabel, &LabelCol, Localize("LLM provider"), BodySize, TEXTALIGN_ML);
 		const int NewProvider = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmProvider, LlmProviderDropDownNames.data(), LlmProviderDropDownNames.size(), s_LlmProviderDropDownState);
 		// 写回前校验范围，防止异常返回值（如越界防御收敛出的 -1）污染配置
-		if(NewProvider != g_Config.m_QmTranslateLlmProvider && NewProvider >= 0 && NewProvider < static_cast<int>(LlmProviderDropDownNames.size()))
+		if(!PrewarmOnly && !Ui()->RenderOnly() && NewProvider != g_Config.m_QmTranslateLlmProvider && NewProvider >= 0 && NewProvider < static_cast<int>(LlmProviderDropDownNames.size()))
 		{
 			g_Config.m_QmTranslateLlmProvider = NewProvider;
 		}
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+		if(g_Config.m_QmTranslateLlmProvider == 3)
+		{
+			const std::array<const char *, 2> AuthNames = {Localize("Bearer API key"), Localize("Local service without authentication")};
+			static CUi::SDropDownState s_LlmCustomAuth;
+			Content.HSplitTop(LineHeight, &Row, &Content);
+			Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
+			RenderLabel("qmclient-llm-authentication", &LabelCol, Localize("Authentication"), BodySize);
+			const int Auth = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomAuth, AuthNames.data(), AuthNames.size(), s_LlmCustomAuth);
+			if(!PrewarmOnly && !Ui()->RenderOnly() && Auth >= 0 && Auth < 2)
+				g_Config.m_QmTranslateLlmCustomAuth = Auth;
+			Content.HSplitTop(LineSpacing, nullptr, &Content);
+			const std::array<const char *, 4> ThinkingNames = {Localize("Use server defaults"), "thinking", "enable_thinking", "chat_template_kwargs"};
+			static CUi::SDropDownState s_LlmCustomThinking;
+			Content.HSplitTop(LineHeight, &Row, &Content);
+			Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
+			RenderLabel("qmclient-llm-thinking-parameters", &LabelCol, Localize("Thinking parameters"), BodySize);
+			const int Thinking = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomThinking, ThinkingNames.data(), ThinkingNames.size(), s_LlmCustomThinking);
+			if(!PrewarmOnly && !Ui()->RenderOnly() && Thinking >= 0 && Thinking < 4)
+				g_Config.m_QmTranslateLlmCustomThinking = Thinking;
+			Content.HSplitTop(LineSpacing, nullptr, &Content);
+			Content.HSplitTop(LineHeight, &Row, &Content);
+			RenderCheckbox(&g_Config.m_QmTranslateLlmCustomParameters, "Send sampling and token limit parameters", Localize("Send sampling and token limit parameters"), &g_Config.m_QmTranslateLlmCustomParameters, &Row, LineHeight);
+			Content.HSplitTop(LineSpacing, nullptr, &Content);
+			RenderHelp(Localize("Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled."));
+		}
 
 		// 各 Provider 的 API Key 输入框（静态变量，分别绑定到不同配置）
 		static CLineInput s_LlmApiKeyZhipu(g_Config.m_QmTranslateLlmKeyZhipu, sizeof(g_Config.m_QmTranslateLlmKeyZhipu));
@@ -3511,8 +3602,9 @@ void CMenus::RenderSettingsQmClientFunctionDeck(CUIRect MainView, bool PrewarmOn
 			}
 		}
 	};
-	auto MeasureContentRevision = [](EQmModuleId Id) -> uint64_t {
-		return qm_card_catalog::MeasureModuleCardRevision(Id, ResolveFunctionCardLayoutState());
+	auto MeasureContentRevision = [this](EQmModuleId Id) -> uint64_t {
+		const uint64_t Revision = qm_card_catalog::MeasureModuleCardRevision(Id, ResolveFunctionCardLayoutState());
+		return Id == EQmModuleId::Translate ? Revision ^ (TranslationTestLayoutRevision() << 16) : Revision;
 	};
 	// 卡片改由全局卡片目录构造（N3）：页面只声明「这一页有哪些卡片」，测量与渲染都在目录里。
 	// 内容量状态（词条过滤/关键词回复/收藏地图）经 m_pFunctionLayout 注入，目录测量依赖它。
@@ -3746,6 +3838,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (Client()->IsSixup() ? 1u : 0u);
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ (ReadOnly ? 1u : 0u);
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ qm_card_catalog::MeasureModuleCardsRevision(s_GlobalSearchFunctionCardLayout);
+	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ TranslationTestLayoutRevision();
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ qm_card_catalog::MeasureContentRevision(g_Localization.Languages().size(), GameClient()->m_MenuBackground.GetThemes().size());
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ s_GlobalSearchFunctionCardLayout.m_BlockWordsRevision;
 	CardLayoutRevision = CardLayoutRevision * 1099511628211ULL ^ s_GlobalSearchFunctionCardLayout.m_KeywordRulesRevision;
@@ -4829,4 +4922,9 @@ void CMenus::RenderQmUpdatePopup(CUIRect Screen)
 		Update.m_UpdatePopupRequested = false;
 		m_Popup = POPUP_NONE;
 	}
+}
+
+uint64_t CMenus::TranslationTestLayoutRevision() const
+{
+	return static_cast<uint64_t>(m_TranslateProbe.Pending()) | (static_cast<uint64_t>(m_TranslateProbe.HasResult()) << 1) | (static_cast<uint64_t>(m_TranslateProbeDiagnostics != 0) << 2) | (static_cast<uint64_t>(m_TranslateProbe.Response().m_Notice) << 3) | (static_cast<uint64_t>(str_length(m_TranslateProbe.Response().m_Text)) << 8) | (static_cast<uint64_t>(GameClient()->m_Translate.LastDiagnostic().m_Notice) << 24);
 }

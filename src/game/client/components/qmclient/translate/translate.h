@@ -11,11 +11,13 @@
 class CTranslate : public CComponent
 {
 	CTranslateJobQueue m_Jobs;
+	STranslateDiagnostic m_LastDiagnostic;
 
 	static void ConTranslate(IConsole::IResult *pResult, void *pUserData);
 	static void ConTranslateId(IConsole::IResult *pResult, void *pUserData);
 
 public:
+	const STranslateDiagnostic &LastDiagnostic() const { return m_LastDiagnostic; }
 	int Sizeof() const override { return sizeof(*this); }
 
 	void OnConsoleInit() override;

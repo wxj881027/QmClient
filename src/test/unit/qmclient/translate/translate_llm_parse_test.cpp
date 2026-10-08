@@ -334,7 +334,7 @@ TEST(ParseLlmResponseJson, ContentNotString)
 }
 
 // 测试：content 是空字符串
-TEST(ParseLlmResponseJson, EmptyContent)
+TEST(ParseLlmResponseJson, EmptyContentIsRejected)
 {
 	const char aJson[] =
 		"{"
@@ -352,8 +352,8 @@ TEST(ParseLlmResponseJson, EmptyContent)
 	SLlmParseResult Result;
 	bool Success = ParseLlmResponseJson(pJson, Result);
 
-	EXPECT_TRUE(Success);
-	EXPECT_TRUE(Result.m_Success);
+	EXPECT_FALSE(Success);
+	EXPECT_FALSE(Result.m_Success);
 	EXPECT_STREQ(Result.m_aText, "");
 
 	json_value_free(pJson);
@@ -441,4 +441,17 @@ TEST(NormalizeLlmEndpoint, RejectsInvalid)
 	EXPECT_FALSE(NormalizeLlmEndpoint("api.example.com/v1", Info));
 	EXPECT_FALSE(NormalizeLlmEndpoint("ftp://api.example.com", Info));
 	EXPECT_FALSE(NormalizeLlmEndpoint("   ", Info));
+}
+
+TEST(TranslateLlmParse, RejectsTokenLimitedTextAndEmbeddedNul)
+{
+	for(const char *pBody : {R"({"choices":[{"finish_reason":"length","message":{"content":"partial"}}]})", R"({"choices":[{"message":{"content":"hello\u0000tail"}}]})"})
+	{
+		SCOPED_TRACE(pBody);
+		json_value *pJson = JsonParse(pBody, str_length(pBody));
+		SLlmParseResult Result;
+		EXPECT_FALSE(ParseLlmResponseJson(pJson, Result));
+		EXPECT_STREQ(Result.m_aText, "");
+		json_value_free(pJson);
+	}
 }

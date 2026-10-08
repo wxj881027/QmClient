@@ -164,7 +164,7 @@ TEST_F(SettingsCardMeasureRevision, TranslationBackendSwitchInvalidatesMeasureme
 	using namespace qm_card_catalog;
 	// 每个后端都有专属的说明行/密钥行/端点行组合，任意切换都会改变渲染内容；
 	// 测量版本必须两两不同，否则 Deck 的缓存高度不失效，卡片高度停留在旧服务的高度。
-	static const char *const apBackendCodes[] = {"llm", "tencentcloud", "libretranslate", "ftapi", "mymemory", "deepl"};
+	static const char *const apBackendCodes[] = {"llm", "tencentcloud", "libretranslate", "ftapi", "mymemory", "deepl", "baidu"};
 	uint64_t aRevisions[std::size(apBackendCodes)] = {};
 	for(size_t i = 0; i < std::size(apBackendCodes); ++i)
 	{

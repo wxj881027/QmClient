@@ -96,7 +96,7 @@ TEST_F(CTranslateQueueTest, EmptyAutomaticTranslationRecoversOriginal)
 	ASSERT_EQ(Done.size(), 1u);
 	EXPECT_FALSE(Done[0].m_Success);
 	EXPECT_EQ(Done[0].m_SendText, "original");
-	EXPECT_STREQ(Done[0].m_Job.m_pTranslateResponse->m_Text, "Empty translation result");
+	EXPECT_EQ(Done[0].m_Job.m_pTranslateResponse->m_Notice, ETranslateNotice::INVALID_RESPONSE);
 }
 
 TEST_F(CTranslateQueueTest, SuccessfulAutomaticTranslationSendsResultOnly)
@@ -229,4 +229,16 @@ TEST_F(CTranslateQueueTest, MatchingInitializedOwnerReceivesCompletedResponse)
 	const auto Done = Queue.Update([&](const auto &Pending) { return IsTranslateResponseCurrent(true, 7, pOwnerResponse, Pending); });
 	ASSERT_EQ(Done.size(), 1u);
 	EXPECT_STREQ(pOwnerResponse->m_Text, "current");
+}
+
+TEST_F(CTranslateQueueTest, TokenLimitedOutgoingDoesNotSendPartialText)
+{
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, false), 1));
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"choices":[{"finish_reason":"length","message":{"content":"partial translation"}}]})");
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+	EXPECT_EQ(Done[0].m_Job.m_pTranslateResponse->m_Notice, ETranslateNotice::INVALID_RESPONSE);
 }

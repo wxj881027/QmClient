@@ -13,16 +13,8 @@ namespace
 {
 	const char *BackendWarning()
 	{
-		if(NTranslateUi::FindBackendIndex(g_Config.m_QmTranslateBackend) == NTranslateUi::BACKEND_TENCENT_CLOUD)
-		{
-			if(g_Config.m_QmTranslateTcSecretId[0] == '\0' || g_Config.m_QmTranslateTcSecretKey[0] == '\0')
-				return Localize("Tencent Cloud API not configured");
-		}
-		else if(NTranslateUi::FindBackendIndex(g_Config.m_QmTranslateBackend) == NTranslateUi::BACKEND_LLM)
-		{
-			if(GetSelectedTranslateLlmKey()[0] == '\0')
-				return Localize("LLM API key not configured");
-		}
+		if(TranslateBackendNeedsConfiguration())
+			return Localize("Translation service is not configured correctly.");
 		return nullptr;
 	}
 }

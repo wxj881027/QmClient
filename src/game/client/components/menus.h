@@ -43,6 +43,7 @@
 #include <game/client/components/qmclient/qm_map_upload.h>
 #include <game/client/components/qmclient/screenshot_manager.h>
 #include <game/client/components/qmclient/settings_perf_windows.h>
+#include <game/client/components/qmclient/translate/translate_probe.h>
 #include <game/client/components/section_loader.h>
 #include <game/client/components/settings_resource_jobs.h>
 #include <game/client/components/skins7.h>
@@ -2483,6 +2484,7 @@ public:
 	const char *CurrentQmUiPerfPage() const;
 	const char *CurrentQmUiPerfOperation() const;
 	int IdleRenderFrameRate() const;
+	uint64_t TranslationTestLayoutRevision() const;
 	SSettingsResourceFrameContext SettingsResourceFrameContext() const { return {m_SettingsScrollActive, false, m_SettingsPostScrollRecoveryFrames, m_SettingsHighPrioritySettled}; }
 	const SSettingsAdaptiveBudgetOutput &CurrentSettingsUiFrameBudget() const { return m_CurrentSettingsUiFrameBudget; }
 	void SetActive(bool Active);
@@ -3234,6 +3236,8 @@ private:
 	void RenderQmFunctionBetterScoreboardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionKeywordReplyContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
+	CTranslateProbe m_TranslateProbe;
+	int m_TranslateProbeDiagnostics = 0;
 	void RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionPieMenuContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, float ButtonHeight, float CardPadding, float CornerRadius, bool PrewarmOnly, int MaxGridColumns);
 	void RenderQmFunctionFavoriteMapsContent(CUIRect &Content, float UiScale, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);

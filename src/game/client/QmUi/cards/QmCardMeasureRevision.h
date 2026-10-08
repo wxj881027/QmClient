@@ -48,6 +48,8 @@ namespace qm_card_catalog
 				Revision = 5u;
 			else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0)
 				Revision = 6u;
+			else if(str_comp_nocase(g_Config.m_QmTranslateBackend, "baidu") == 0)
+				Revision = 7u;
 			// 高级选项会增删多行控件，provider 还会影响端点和提示文案的可见性。
 			Revision |= static_cast<uint64_t>(g_Config.m_QmTranslateShowAdvanced != 0) << 8;
 			Revision |= static_cast<uint64_t>(std::clamp(g_Config.m_QmTranslateLlmProvider, 0, 15)) << 9;

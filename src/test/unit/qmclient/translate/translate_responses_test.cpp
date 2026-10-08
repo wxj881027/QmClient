@@ -102,3 +102,13 @@ TEST(TranslateResponses, LaterSuccessClearsRefusal)
 	EXPECT_FALSE(Result.m_Refused);
 	EXPECT_STREQ(Result.m_aText, "恢复");
 }
+
+TEST(TranslateResponses, IncompleteResponseDoesNotPublishPartialOutput)
+{
+	const char *pBody = R"({"status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"output_text":"partial"})";
+	json_value *pJson = JsonParse(pBody, str_length(pBody));
+	SLlmParseResult Result;
+	EXPECT_FALSE(ParseLlmResponsesJson(pJson, Result));
+	EXPECT_STREQ(Result.m_aText, "");
+	json_value_free(pJson);
+}

@@ -1,5 +1,6 @@
 #include <engine/shared/json.h>
 
+#include <game/client/components/qmclient/translate/translate_backend_http.h>
 #include <game/client/components/qmclient/translate/translate_detect.h>
 #include <game/client/components/qmclient/translate/translate_jobs.h>
 #include <game/client/components/qmclient/translate/translate_parse.h>
@@ -91,3 +92,21 @@ static void BM_TranslateResponsesParse(benchmark::State &State)
 	json_value_free(pValue);
 }
 BENCHMARK(BM_TranslateResponsesParse);
+
+static void BM_TranslateUrlEncode(benchmark::State &State)
+{
+	std::string Text;
+	for(int i = 0; i < State.range(0); ++i)
+		Text += "聊天 &+";
+	for(auto _ : State)
+		benchmark::DoNotOptimize(EncodeTranslateUrl(Text));
+	State.SetBytesProcessed(State.iterations() * Text.size());
+}
+BENCHMARK(BM_TranslateUrlEncode)->Arg(1)->Arg(100);
+
+static void BM_TranslateBaiduForm(benchmark::State &State)
+{
+	for(auto _ : State)
+		benchmark::DoNotOptimize(BuildBaiduTranslateForm("hook me 请钩我", "auto", "en", "benchmark-app", "benchmark-key", "12345678"));
+}
+BENCHMARK(BM_TranslateBaiduForm);

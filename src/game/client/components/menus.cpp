@@ -4112,7 +4112,7 @@ void CMenus::Render()
 
 	case IClient::STATE_OFFLINE:
 		if(QmNewsShouldAnnounce(true, m_ShowStart, m_Popup != POPUP_NONE,
-			str_comp(g_Config.m_QmNewsReadRelease, CLIENT_RELEASE_VERSION) != 0, GameClient()->m_QmClient.HasUnreadQmNews()))
+			   str_comp(g_Config.m_QmNewsReadRelease, CLIENT_RELEASE_VERSION) != 0, GameClient()->m_QmClient.HasUnreadQmNews()))
 			ShowQmNewFeaturesPopup();
 		if(m_Popup != POPUP_NONE)
 		{
@@ -6181,6 +6181,7 @@ const char *CMenus::SettingsPerfStableTextScope(int Page) const
 
 void CMenus::OnReset()
 {
+	m_TranslateProbe.Cancel();
 	ResetDemoScreenshotPreview();
 	ClearQmClientSettingsSearchInputs();
 	InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
@@ -6188,6 +6189,7 @@ void CMenus::OnReset()
 
 void CMenus::OnShutdown()
 {
+	m_TranslateProbe.Cancel();
 	m_LocalSaveDisplay.Reset();
 	m_QmMapUpload.Cancel();
 	if(m_pRankDemoManifestRequest)
@@ -7882,6 +7884,7 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
+	m_TranslateProbe.AdvanceFrame();
 	if(GameClient()->m_TClient.m_UpdatePopupRequested && m_MenuActive && m_Popup == POPUP_NONE)
 	{
 		GameClient()->m_TClient.m_UpdatePopupRequested = false;

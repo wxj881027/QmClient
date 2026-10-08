@@ -103,9 +103,6 @@
 %s translating to %s before send
 == %s が %s に翻訳中（送信前）
 
-%s translating to %s failed: %s
-== %s の %s への翻訳に失敗しました：%s
-
 %s wins!
 == %s の勝利！
 
@@ -797,6 +794,9 @@ AntiPing: predict weapons
 API key
 == API キー
 
+APP ID
+== アプリ ID
+
 Appearance
 == 外観
 
@@ -997,6 +997,9 @@ Authenticate to rcon
 
 Authenticate to rcon with a username
 == ユーザー名で rcon 認証
+
+Authentication
+== 認証方式
 
 Authorized player forced vote '%s'
 == 権限のあるプレイヤーが投票を強制 '%s' に設定しました
@@ -1397,6 +1400,9 @@ Background stroke color
 Background stroke width
 == 背景ストロークの幅
 
+Baidu Translate
+== Baidu 翻訳
+
 Balance master, music, and game volume
 == Balance master, music, and game volume
 
@@ -1435,6 +1441,9 @@ Basic
 
 Be nice.
 == 仲良くしましょう。
+
+Bearer API key
+== Bearer API キー
 
 Before I die
 == 死ぬ前に
@@ -1708,6 +1717,9 @@ Can't swap with yourself
 
 Cancel
 == キャンセル
+
+Cancel translation test
+== 翻訳テストをキャンセル
 
 Cancel your swap request
 == 交換リクエストをキャンセル
@@ -3002,11 +3014,11 @@ Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)
 DeepL API
 == DeepL API
 
-DeepL API Free: 500,000 characters per month (register at deepl.com; free keys end with :fx)
-== DeepL API Free：月間50万文字（deepl.comで登録；無料キーは :fx で終わります）
-
 DeepL API Key (free keys end with :fx)
 == DeepL API キー（無料キーは :fx で終わります）
+
+DeepL API quota depends on your subscription. Get an API key at deepl.com.
+== DeepL API の利用枠は契約プランによります。deepl.com で API キーを取得してください。
 
 DeepSeek
 == DeepSeek
@@ -6353,9 +6365,6 @@ Live director
 LLM API
 == LLM API
 
-LLM API key not configured
-== LLM API キーが未設定です
-
 LLM provider
 == LLM プロバイダー
 
@@ -6481,6 +6490,9 @@ Local particles: show particles behind own Tee (e.g. freeze snow)
 
 Local saves
 == ローカルセーブ
+
+Local service without authentication
+== ローカルサービス（認証なし）
 
 Local statistics file is invalid, saving paused
 == ローカル統計ファイルが破損しているため、保存を停止しています
@@ -10343,6 +10355,9 @@ Send probability
 Send Rate
 == 送信レート
 
+Send sampling and token limit parameters
+== サンプリングとトークン上限のパラメータを送信
+
 Send specified command to rcon
 == rcon に指定コマンドを送信
 
@@ -12194,6 +12209,9 @@ Sub-Tick aiming
 Subtle
 == 控えめ
 
+Success
+== 成功
+
 Successfully saved the replay!
 == リプレイの保存に成功しました！
 
@@ -12614,9 +12632,6 @@ Temporary free camera
 Tencent Cloud
 == テンセントクラウド
 
-Tencent Cloud API not configured
-== Tencent Cloud API が未設定です
-
 Tencent Cloud SecretId
 == テンセントクラウド SecretId
 
@@ -12634,6 +12649,12 @@ Tencent Cloud Translation SecretId
 
 Tencent Cloud Translation SecretKey
 == テンセントクラウド翻訳 SecretKey
+
+Test translation
+== 翻訳をテスト
+
+Testing translation...
+== 翻訳をテスト中…
 
 Text alpha
 == テキストの透明度
@@ -12655,6 +12676,9 @@ Text effect
 
 Text input focus ring color
 == テキスト入力フォーカスリングの色
+
+Text is too long for the selected translation service.
+== テキストが選択した翻訳サービスの長さ制限を超えています。
 
 Thank you for your company and trust. This is what gives me the courage to keep going.
 == ご支援と信頼に感謝します。それが私に前進し続ける勇気を与えてくれます。
@@ -12773,8 +12797,14 @@ There's an unsaved change in the touch controls editor, you might want to save i
 There's an unsaved map in the editor, you might want to save it.
 == エディターに未保存のマップがあります。保存することをお勧めします。
 
+Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled.
+== 思考の制御はモデルサーバーに依存します。サーバーの既定値では思考の無効化は保証されません。
+
 Thinking mode requires a reasoning model
 == 思考モードを使用するには推論モデルが必要です
+
+Thinking parameters
+== 思考パラメータ
 
 This bind contains an unfinished quote and cannot be edited safely.
 == この割り当てには閉じていない引用符があり、安全に編集できません。
@@ -13229,9 +13259,6 @@ Translated text size
 Translating to %s...
 == %s に翻訳中...
 
-Translation backend (mymemory/llm/tencentcloud/libretranslate/ftapi)
-== 翻訳バックエンド（mymemory/llm/tencentcloud/libretranslate/ftapi）
-
 Translation backend invalid, sending original
 == 翻訳バックエンドが無効なため、原文を送信
 
@@ -13244,6 +13271,9 @@ Translation button cancel color
 Translation color alpha migration completed flag
 == 翻訳カラーのアルファ移行完了フラグ
 
+Translation diagnostics
+== 翻訳の診断
+
 Translation menu background color
 == 翻訳メニュー背景色
 
@@ -13253,6 +13283,9 @@ Translation menu normal color
 Translation menu selected color
 == 翻訳メニュー選択時の色
 
+Translation model was not found. Check the model name.
+== 翻訳モデルが見つかりません。モデル名を確認してください。
+
 Translation queue full, sending original
 == 翻訳キューが満杯のため、原文を送信
 
@@ -13261,6 +13294,9 @@ Translation service
 
 Translation service authentication failed. Check the API key and service address.
 == 翻訳サービスの認証に失敗しました。APIキーとサービスのアドレスを確認してください。
+
+Translation service is not configured correctly.
+== 翻訳サービスの設定が正しくありません。設定を確認してください。
 
 Translation service is rate limited. Please try again later.
 == 翻訳サービスのリクエスト制限に達しました。しばらくしてから再試行してください。
@@ -13276,6 +13312,9 @@ Translation service refused this content. Please edit it and try again.
 
 Translation service returned a notice instead of a translation
 == 翻訳サービスが訳文ではなく通知を返しました
+
+Translation service returned an invalid or incomplete translation.
+== 翻訳サービスが無効または不完全な訳文を返しました。
 
 Translation Settings
 == 翻訳設定
@@ -13765,6 +13804,9 @@ Use procedural ring pipeline when enhanced rendering is active
 
 Use SDF pipelines for Dynamic Island / rounded rects when enhanced rendering is active
 == 拡張レンダリング有効時に Dynamic Island と角丸矩形で SDF パイプラインを使用
+
+Use server defaults
+== サーバーの既定値を使用
 
 Use skin color for frozen Tee's feet
 == フリーズ Tee の足にもスキン色を使用
