@@ -3,7 +3,6 @@
 
 #include "SettingsCard.h"
 #include "SettingsCardDeckLogic.h"
-#include "SettingsCardHelp.h"
 #include "SettingsPageLayout.h"
 
 #include <array>
@@ -112,7 +111,6 @@ private:
 
 	struct SRuntimeState
 	{
-		CSettingsCardHelp m_Help;
 		float m_DropFeedbackRemaining = 0.0f;
 		float m_LastReflowTargetY = 0.0f;
 		float m_AnimatedContentHeight = 0.0f;
@@ -131,11 +129,6 @@ private:
 		int m_RestoreColumn = -1;
 		int m_RestoreOrder = -1;
 		bool m_PointerInsideLastFrame = false;
-		bool m_SubtitleMotionWasActive = false;
-		bool m_SubtitleVisibleDuringMotion = false;
-		bool m_MotionGeometryInitialized = false;
-		float m_LastMotionY = 0.0f;
-		float m_LastMotionHeight = 0.0f;
 	};
 
 	struct SDragState

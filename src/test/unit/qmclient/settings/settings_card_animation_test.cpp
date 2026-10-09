@@ -17,13 +17,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-TEST(SettingsCardAnimation, GeometryMotionIncludesCardsPushedByAnEarlierHeightAnimation)
-{
-	EXPECT_FALSE(SettingsCardDeckGeometryMoved(false, 100.0f, 80.0f, 120.0f, 80.0f));
-	EXPECT_FALSE(SettingsCardDeckGeometryMoved(true, 100.0f, 80.0f, 100.0f, 80.0f));
-	EXPECT_TRUE(SettingsCardDeckGeometryMoved(true, 100.0f, 80.0f, 120.0f, 80.0f));
-	EXPECT_TRUE(SettingsCardDeckGeometryMoved(true, 100.0f, 80.0f, 100.0f, 90.0f));
-}
 
 TEST(SettingsCardAnimation, AnimatedColumnFramesNeverOverlap)
 {

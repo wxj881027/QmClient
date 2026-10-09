@@ -15,6 +15,7 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
+#include <game/client/components/tooltips.h>
 #include <game/client/lineinput.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>
@@ -463,6 +464,9 @@ namespace ui_widget
 				Ctx.m_pUi->DoLabel(&InputField, aValue, FieldFontSize, TEXTALIGN_MC);
 			return false;
 		}
+
+		if(Ctx.m_pTooltips != nullptr)
+			Ctx.m_pTooltips->DoSettingsToolTipForConfig(pId, &Rect, pValue, HasLabel ? &Label : nullptr);
 
 		bool Changed = false;
 		const int Increment = std::max(ValueStep, (SliderMax - SliderMin) / 35 / ValueStep * ValueStep);

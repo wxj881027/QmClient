@@ -694,12 +694,20 @@ IUiContext CMenus::SettingsUiContext(const char *pScope, const float UiScale)
 	return Context;
 }
 
-int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const char *const *ppStrs, const int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties, const void *pConfigValue, const void *pSecondConfigValue)
+int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const char *const *ppStrs, const int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties, const void *pConfigValue, const void *pSecondConfigValue, const CUIRect *pHelpRect)
 {
 	if(pConfigValue != nullptr)
 		Properties.m_pConfigValue = pConfigValue;
 	if(pSecondConfigValue != nullptr)
 		Properties.m_pSecondConfigValue = pSecondConfigValue;
+	if(pConfigValue != nullptr && !m_MenuTextPlanCollecting)
+	{
+		const CUIRect &HoverRect = pHelpRect != nullptr ? *pHelpRect : *pRect;
+		CUIRect Anchor = HoverRect;
+		if(Anchor.x < pRect->x)
+			Anchor.w = pRect->x - Anchor.x;
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&State.m_ButtonContainer, &HoverRect, pConfigValue, &Anchor, pSecondConfigValue);
+	}
 	// 所有设置页下拉框统一使用当前设置主题，调用点不得回退到旧的默认配色；
 	// 弹层边框与设置卡片边框同源，避免强调色高亮蓝框。
 	Properties.m_VisualStyle = QmSettingsDropdownVisualStyle(m_SettingsUiTheme, SettingsCardDeckVisualOptions().m_BorderColor);
@@ -1685,6 +1693,8 @@ int CMenus::DoButton_CheckBox_Common_WithLabelElement(const void *pId, const cha
 		Control = Layout.m_ControlRect;
 		ui_widget::DrawToggle(Context, pId, pBoxText[0] == 'X', Control, true, ProcessInput, pRect);
 	}
+	if(!m_MenuTextPlanCollecting)
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(HasLabel)
 	{
 		const float FontSize = LabelFontSize > 0.0f ? LabelFontSize : std::min(ui_token::font::BODY, pRect->h * CUi::ms_FontmodHeight);
@@ -1730,6 +1740,8 @@ int CMenus::DoSettingsButton_CheckBox(int Page, int Tab, int Subtab, const void 
 	SLabelProperties Props = LabelProps;
 	Props.m_MaxWidth = Label.w;
 	DoSettingsMenuLabel(Page, Tab, Subtab, pTextId, &Label, pText, BodySize, TEXTALIGN_ML, Props);
+	if(!m_MenuTextPlanCollecting)
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, pRect, pId, &Label);
 	if(m_MenuTextPlanCollecting)
 		return 0;
 
@@ -2160,6 +2172,12 @@ ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const SSettings
 		Ui()->DoLabel(&Label, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
 	}
 
+	if(!m_MenuTextPlanCollecting)
+	{
+		CUIRect HoverRect = Label;
+		HoverRect.w = Layout.m_ColorButtonRect.x + Layout.m_ColorButtonRect.w - Label.x;
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pColorValue, &HoverRect, pColorValue, &Label);
+	}
 	const ColorHSLA PickedColor = DoButton_ColorPicker(&Layout.m_ColorButtonRect, pColorValue, Alpha);
 
 	if(DoButton_Menu(pResetId, Localize("Reset"), 0, &Layout.m_ResetButtonRect, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::BASE, 0.1f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), nullptr, Metrics.m_BodySize))

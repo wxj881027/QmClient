@@ -88,6 +88,7 @@ void CMenus::RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHei
 		Props.m_MinimumFontSize = 6.0f;
 		Props.m_MaxWidth = Label.w;
 		RenderQmVisualLabel(pId, &Label, pText, BodySize, TEXTALIGN_ML, Props);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pSliderId, &Row, pValue, &Label);
 		RenderQmSettingsSliderWithValueInput(pSliderId, Control, pValue, Min, Max, pSuffix, PrewarmOnly);
 	};
 	RenderQmVisualCheckbox(Outline, LineHeight, LineSpacing, &g_Config.m_QmSkinOutlineLocal, "Skin outline for self and dummy", Localize("Skin outline for self and dummy"), &g_Config.m_QmSkinOutlineLocal);
@@ -132,7 +133,7 @@ void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHei
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		RenderQmVisualLabel(pTextId, &LabelColumn, pText, BodySize);
 		State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;
-		const int NewValue = DoSettingsDropDown(&ControlColumn, std::clamp(*pValue, 0, MaxValue), ppNames, NumNames, State, {}, pValue);
+		const int NewValue = DoSettingsDropDown(&ControlColumn, std::clamp(*pValue, 0, MaxValue), ppNames, NumNames, State, {}, pValue, nullptr, &Row);
 		if(*pValue != NewValue)
 			*pValue = NewValue;
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -155,6 +156,7 @@ void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHei
 	DurationLabelProps.m_MinimumFontSize = 6.0f;
 	RenderQmVisualLabel("qmclient-skin-transition-duration", &LabelColumn, Localize("Skin transition duration"), BodySize, TEXTALIGN_ML, DurationLabelProps);
 	static int s_QmSkinChangeTransitionMsInputId;
+	GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmSkinChangeTransitionMsInputId, &Row, &g_Config.m_QmSkinChangeTransitionMs, &LabelColumn);
 	RenderQmSettingsSliderWithValueInput(&s_QmSkinChangeTransitionMsInputId, ControlColumn, &g_Config.m_QmSkinChangeTransitionMs, 0, 2000, "ms", PrewarmOnly);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
@@ -167,6 +169,7 @@ void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHei
 	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 	RenderQmVisualLabel("qmclient-skin-transition-intensity", &LabelColumn, Localize("Skin transition intensity"), BodySize);
 	static int s_QmSkinChangeTransitionIntensityInputId;
+	GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmSkinChangeTransitionIntensityInputId, &Row, &g_Config.m_QmSkinChangeTransitionIntensity, &LabelColumn);
 	RenderQmSettingsSliderWithValueInput(&s_QmSkinChangeTransitionIntensityInputId, ControlColumn, &g_Config.m_QmSkinChangeTransitionIntensity, 0, 300, "%", PrewarmOnly);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }

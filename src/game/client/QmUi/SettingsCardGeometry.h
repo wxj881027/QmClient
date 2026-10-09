@@ -9,8 +9,9 @@ struct SSettingsCardSpec
 {
 	const char *m_pStableId = nullptr;
 	const char *m_pTitle = nullptr;
+	// 保留描述来源供搜索和标题悬浮说明共用，不在卡片内绘制。
 	const char *m_pSubtitle = nullptr;
-	// 可选共享说明入口：设置卡内进入固定页脚；独立卡沿用锚定气泡。
+	// 可选详细说明，同样通过控件锚定的悬浮提示显示。
 	const char *m_pInfo = nullptr;
 };
 

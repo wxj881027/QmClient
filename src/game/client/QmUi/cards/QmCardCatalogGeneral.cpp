@@ -51,9 +51,7 @@ namespace qm_card_catalog
 		static CUi::SDropDownState s_PositionState;
 		const char *apPositions[] = {Localize("Bottom left"), Localize("Bottom right"), Localize("Top left"), Localize("Top right")};
 		const int Position = std::clamp(g_Config.m_QmScreenshotWatermarkPosition, 0, 3);
-		CUi::SDropDownProperties PositionProps;
-		PositionProps.m_pConfigValue = &g_Config.m_QmScreenshotWatermarkPosition;
-		const int NewPosition = pMenus->Ui()->DoDropDown(&Row, Position, apPositions, std::size(apPositions), s_PositionState, PositionProps);
+		const int NewPosition = pMenus->DoSettingsDropDown(&Row, Position, apPositions, std::size(apPositions), s_PositionState, {}, &g_Config.m_QmScreenshotWatermarkPosition);
 		if(NewPosition >= 0 && NewPosition < 4)
 			g_Config.m_QmScreenshotWatermarkPosition = NewPosition;
 	}

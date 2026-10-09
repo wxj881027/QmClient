@@ -74,6 +74,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 		Ui()->DoLabel(&LabelCol, pLabel, BodySize, TEXTALIGN_ML);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, &Row, pValue, &LabelCol);
 		RenderSliderWithValueInput(pId, ControlCol, pValue, MinValue, MaxValue, pSuffix);
 		if(TrailingSpacing)
 			Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -113,7 +114,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		static CUi::SDropDownState s_Qm3DParticleTypeDropDownState;
 		static CScrollRegion s_Qm3DParticleTypeDropDownScrollRegion;
 		s_Qm3DParticleTypeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_Qm3DParticleTypeDropDownScrollRegion;
-		const int NewTypeIndex = DoSettingsDropDown(&ControlCol, TypeIndex, apQm3DParticleTypeNames.data(), static_cast<int>(apQm3DParticleTypeNames.size()), s_Qm3DParticleTypeDropDownState, {}, &g_Config.m_Qm3DParticlesType);
+		const int NewTypeIndex = DoSettingsDropDown(&ControlCol, TypeIndex, apQm3DParticleTypeNames.data(), static_cast<int>(apQm3DParticleTypeNames.size()), s_Qm3DParticleTypeDropDownState, {}, &g_Config.m_Qm3DParticlesType, nullptr, &Row);
 		if(NewTypeIndex >= 0 && NewTypeIndex < static_cast<int>(aQm3DParticleTypeValues.size()) && NewTypeIndex != TypeIndex)
 			g_Config.m_Qm3DParticlesType = aQm3DParticleTypeValues[NewTypeIndex];
 		Content.HSplitTop(LineSpacing, nullptr, &Content);

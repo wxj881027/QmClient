@@ -214,3 +214,31 @@ TEST(SettingsCardHeaderLabel, ZeroWidthOrHeightDoesNotSubmitTextAndVisibleAreaRe
 	ExecuteSettingsCardLabel(CUIRect{0, 0, 20, 20}, [&]() { ++Draws; });
 	EXPECT_EQ(Draws, 1);
 }
+
+TEST(SettingsCardHelpText, TitleHintKeepsOverviewAndDetailedInformation)
+{
+	const SSettingsCardSpec Spec{"example", "Title", "Overview", "Detailed information"};
+	EXPECT_EQ(SettingsCardTooltipText(Spec), "Overview\n\nDetailed information");
+}
+
+TEST(SettingsCardHelpText, DuplicateOrMissingDescriptionsDoNotProduceEmptyLines)
+{
+	EXPECT_EQ(SettingsCardTooltipText({"example", "Title", "Overview", "Overview"}), "Overview");
+	EXPECT_EQ(SettingsCardTooltipText({"example", "Title", nullptr, "Detailed information"}), "Detailed information");
+	EXPECT_EQ(SettingsCardTooltipText({"example", "Title", "Overview", nullptr}), "Overview");
+	EXPECT_TRUE(SettingsCardTooltipText({"example", "Title", nullptr, nullptr}).empty());
+}
+
+TEST(SettingsCardInfoLayout, DescriptionLengthDoesNotReserveSpaceInTheCard)
+{
+	for(const float Scale : {0.78f, 1.0f, 1.5f})
+	{
+		const CUIRect Slot{10, 20, 400, 0};
+		const auto Plain = BuildSettingsCardFrame(Slot, {"example", "Title", nullptr}, 120, Scale);
+		const auto Help = BuildSettingsCardFrame(Slot, {"example", "Title", "A long overview", "Detailed information"}, 120, Scale);
+		EXPECT_FLOAT_EQ(Help.m_Rect.h, Plain.m_Rect.h);
+		EXPECT_FLOAT_EQ(Help.m_ContentRect.y, Plain.m_ContentRect.y);
+		EXPECT_FLOAT_EQ(Help.m_ContentRect.h, 120);
+		EXPECT_FLOAT_EQ(Help.m_SubtitleRect.h, 0);
+	}
+}

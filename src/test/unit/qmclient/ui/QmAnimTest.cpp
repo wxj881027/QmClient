@@ -186,7 +186,7 @@ TEST(SettingsCard, CanonicalRectOwnsDisplayHitDragAndProxyGeometry)
 	EXPECT_GE(Frame.m_ContentRect.y, Frame.m_Rect.y);
 	EXPECT_LE(Frame.m_ContentRect.x + Frame.m_ContentRect.w, Frame.m_Rect.x + Frame.m_Rect.w);
 	EXPECT_LE(Frame.m_ContentRect.y + Frame.m_ContentRect.h, Frame.m_Rect.y + Frame.m_Rect.h);
-	EXPECT_GT(Frame.m_SubtitleRect.h, 0.0f);
+	EXPECT_FLOAT_EQ(Frame.m_SubtitleRect.h, 0.0f);
 }
 
 TEST(SettingsCard, MotionPolicyKeepsRequiredFeedbackAtLevelZero)

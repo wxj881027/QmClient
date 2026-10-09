@@ -3226,7 +3226,6 @@ if(CLIENT)
     QmUi/SettingsCardInfo.h
     QmUi/SettingsToggleGrid.h
     QmUi/SettingsIconFeedback.h
-    QmUi/SettingsCardHelp.h
     QmUi/SettingsCard.h
     QmUi/SettingsCardCollapseState.cpp
     QmUi/SettingsCardCollapseState.h
@@ -4536,7 +4535,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
-    src/test/unit/qmclient/ui/settings_card_help_test.cpp
     src/test/unit/engine/steam_client_path_test.cpp
     src/test/unit/qmclient/ui/settings_toggle_grid_test.cpp
     src/test/unit/qmclient/ui/QmAnimTest.cpp

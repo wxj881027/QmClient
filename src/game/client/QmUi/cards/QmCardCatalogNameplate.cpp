@@ -149,12 +149,12 @@ namespace qm_card_catalog
 					Props.m_MaxWidth = Label.w;
 					CUIElement &LabelElement = pMenus->SettingsTextElement(Page, Tab, pTextId);
 					pMenus->DoSettingsLabelStreamed(LabelElement, &Label, pLabel, Metrics.m_BodySize, TEXTALIGN_ML, Props);
-					RenderControl(Control);
+					RenderControl(Control, Row);
 				};
 				const auto DropDown = [&](const char *pTextId, const char *pLabel, int *pValue, int Max, std::vector<const char *> &vNames, CUi::SDropDownState &State, CScrollRegion &ScrollRegion) {
-					ControlRow(pTextId, pLabel, [&](CUIRect &Control) {
+					ControlRow(pTextId, pLabel, [&](CUIRect &Control, const CUIRect &Row) {
 						State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;
-						*pValue = pMenus->DoSettingsDropDown(&Control, std::clamp(*pValue, 0, Max), vNames.data(), (int)vNames.size(), State, {}, pValue);
+						*pValue = pMenus->DoSettingsDropDown(&Control, std::clamp(*pValue, 0, Max), vNames.data(), (int)vNames.size(), State, {}, pValue, nullptr, &Row);
 					});
 				};
 				static std::vector<const char *> s_vPlayingNames;
@@ -210,8 +210,8 @@ namespace qm_card_catalog
 						break;
 					}
 				}
-				ControlRow("appearance-nameplate-text-demo-target", Localize("Demo target"), [&](CUIRect &Control) {
-					const int Selection = pMenus->DoSettingsDropDown(&Control, DemoTargetSelection, s_vDemoTargetNames.data(), (int)s_vDemoTargetNames.size(), s_DemoTargetState, {}, &g_Config.m_QmNameplateTextDemoTarget);
+				ControlRow("appearance-nameplate-text-demo-target", Localize("Demo target"), [&](CUIRect &Control, const CUIRect &Row) {
+					const int Selection = pMenus->DoSettingsDropDown(&Control, DemoTargetSelection, s_vDemoTargetNames.data(), (int)s_vDemoTargetNames.size(), s_DemoTargetState, {}, &g_Config.m_QmNameplateTextDemoTarget, nullptr, &Row);
 					if(Selection == 0)
 						g_Config.m_QmNameplateTextDemoTarget = -1;
 					else if(Selection > 0 && Selection < (int)s_vDemoTargetStorage.size())

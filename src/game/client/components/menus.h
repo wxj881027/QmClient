@@ -194,7 +194,7 @@ private:
 	int DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float FontSize, bool CapsuleTab = false);
 
 	IUiContext SettingsUiContext(const char *pScope, float UiScale = 1.0f);
-	int DoSettingsDropDown(CUIRect *pRect, int CurSelection, const char *const *ppStrs, int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties = {}, const void *pConfigValue = nullptr, const void *pSecondConfigValue = nullptr);
+	int DoSettingsDropDown(CUIRect *pRect, int CurSelection, const char *const *ppStrs, int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties = {}, const void *pConfigValue = nullptr, const void *pSecondConfigValue = nullptr, const CUIRect *pHelpRect = nullptr);
 	SCardMotionSpec SettingsCardMotionSpec() const;
 	SSettingsCardDeckVisualOptions SettingsCardDeckVisualOptions() const;
 	qm_card_order::CModel &SettingsCardOrderModel();

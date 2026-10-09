@@ -127,13 +127,7 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 	RenderCheckbox(&g_Config.m_QmGores, "qmclient-gores-enable", "Enable Gores mode", &g_Config.m_QmGores);
 	RenderCheckbox(&g_Config.m_QmAxiomAutoLogin, "qmclient-gores-axiom-auto-login", "Auto login Axiom server", &g_Config.m_QmAxiomAutoLogin);
 	const char *pAxiomHelp = Localize("Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.");
-	const float HelpSize = BodySize * 0.85f;
-	const float HelpHeight = std::max(HelpSize, TextRender()->TextBoundingBox(HelpSize, pAxiomHelp, -1, std::max(1.0f, Content.w)).m_H);
-	Content.HSplitTop(HelpHeight, &Row, &Content);
-	SLabelProperties HelpProps;
-	HelpProps.m_MaxWidth = Row.w;
-	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-gores-axiom-help", &Row, pAxiomHelp, HelpSize, TEXTALIGN_TL, HelpProps);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
+	GameClient()->m_Tooltips.DoToolTipForRect(&g_Config.m_QmAxiomAutoLogin, &Row, pAxiomHelp);
 
 	if(g_Config.m_QmAxiomAutoLogin)
 	{
@@ -142,6 +136,7 @@ void CMenus::RenderQmFunctionGoresContent(CUIRect &Content, float LineHeight, fl
 			Content.HSplitTop(LineHeight, &Row, &Content);
 			Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&Input, &Row, Input.GetString(), &LabelColumn);
 			Input.SetHidden(!Visible);
 			ui_widget::SInputFieldOptions Options;
 			Options.m_FontSize = BodySize;
@@ -216,6 +211,7 @@ void CMenus::RenderQmFunctionSoloSplitContent(CUIRect &Content, float LineHeight
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-solo-split-restore-team", &LabelColumn, Localize("Team when leaving solo split"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+	GameClient()->m_Tooltips.DoSettingsToolTipForConfig(s_RestoreTeamInputId, &Row, &g_Config.m_QmSoloSplitRestoreTeam, &LabelColumn);
 	RenderQmSettingsSliderWithValueInput(s_RestoreTeamInputId, ControlColumn, &g_Config.m_QmSoloSplitRestoreTeam, 0, 63, "", PrewarmOnly);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
@@ -283,6 +279,7 @@ void CMenus::RenderQmFunctionJumpHintContent(CUIRect &Content, float LineHeight,
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};
@@ -306,7 +303,7 @@ void CMenus::RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float Lin
 	static CUi::SDropDownState s_WeaponTrajectoryModeDropDownState;
 	static CScrollRegion s_WeaponTrajectoryModeDropDownScrollRegion;
 	s_WeaponTrajectoryModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_WeaponTrajectoryModeDropDownScrollRegion;
-	const int WeaponTrajectoryModeNew = DoSettingsDropDown(&ControlColumn, std::clamp(g_Config.m_QmWeaponTrajectory, 0, 2), s_WeaponTrajectoryModeNames.data(), s_WeaponTrajectoryModeNames.size(), s_WeaponTrajectoryModeDropDownState, {}, &g_Config.m_QmWeaponTrajectory);
+	const int WeaponTrajectoryModeNew = DoSettingsDropDown(&ControlColumn, std::clamp(g_Config.m_QmWeaponTrajectory, 0, 2), s_WeaponTrajectoryModeNames.data(), s_WeaponTrajectoryModeNames.size(), s_WeaponTrajectoryModeDropDownState, {}, &g_Config.m_QmWeaponTrajectory, nullptr, &Row);
 	if(g_Config.m_QmWeaponTrajectory != WeaponTrajectoryModeNew)
 		g_Config.m_QmWeaponTrajectory = WeaponTrajectoryModeNew;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -326,6 +323,7 @@ void CMenus::RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float Lin
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};
@@ -348,6 +346,7 @@ void CMenus::RenderQmFunctionFriendNotifyContent(CUIRect &Content, float LineHei
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, &LabelColumn, Localize(pText), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};

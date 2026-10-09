@@ -2612,7 +2612,7 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 	DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee-team-glow-team0-label", &Team0GlowLabel, Localize("Team 0 glow"), BodySize, TEXTALIGN_ML);
 	const char *apTeam0GlowModes[] = {Localize("Off"), Localize("Tee color"), Localize("Custom color"), Localize("Rainbow")};
 	static CUi::SDropDownState s_Team0GlowModeDropDownState;
-	const int Team0ModeNew = DoSettingsDropDown(&Team0GlowDropDown, std::clamp(g_Config.m_QmTeamTeeGlowTeam0Mode, 0, 3), apTeam0GlowModes, std::size(apTeam0GlowModes), s_Team0GlowModeDropDownState, {}, &g_Config.m_QmTeamTeeGlowTeam0Mode);
+	const int Team0ModeNew = DoSettingsDropDown(&Team0GlowDropDown, std::clamp(g_Config.m_QmTeamTeeGlowTeam0Mode, 0, 3), apTeam0GlowModes, std::size(apTeam0GlowModes), s_Team0GlowModeDropDownState, {}, &g_Config.m_QmTeamTeeGlowTeam0Mode, nullptr, &TeeGlowRow);
 	if(Team0ModeNew != g_Config.m_QmTeamTeeGlowTeam0Mode)
 		g_Config.m_QmTeamTeeGlowTeam0Mode = Team0ModeNew;
 	if(g_Config.m_QmTeamTeeGlowTeam0Mode == 2)
