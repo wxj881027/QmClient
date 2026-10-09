@@ -269,8 +269,9 @@ namespace
 		PanelTopLine.h = 0.45f;
 		PanelTopLine.x += Radius * 0.35f;
 		PanelTopLine.w = maximum(0.0f, PanelTopLine.w - Radius * 0.70f);
-		if(PanelTopLine.w > 0.0f)
-			PanelTopLine.Draw(WithAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.11f), Alpha), IGraphics::CORNER_T, 0.0f);
+		const ColorRGBA TopLineColor = Appearance.PanelTopLineColor(Alpha);
+		if(PanelTopLine.w > 0.0f && TopLineColor.a > 0.0f)
+			PanelTopLine.Draw(TopLineColor, IGraphics::CORNER_T, 0.0f);
 	}
 } // namespace
 
