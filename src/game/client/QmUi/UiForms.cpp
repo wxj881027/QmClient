@@ -3,6 +3,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "UiForms.h"
 
+#include "UiButtons.h"
 #include "UiDiscreteSliderStyle.h"
 #include "UiFormLogic.h"
 #include "UiMotion.h"
@@ -37,7 +38,7 @@ namespace ui_widget
 
 		SUiTheme ThemeFor(const IUiContext &Ctx)
 		{
-			return Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+			return Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi != nullptr ? Ctx.m_pUi->QmControlTheme() : ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
 		}
 
 		SInputFieldResult BuildInputFieldResult(const IUiContext &Ctx, CLineInput *pInput, bool Changed, bool WasActive, bool WasEmpty, bool Clearable)
@@ -150,6 +151,7 @@ namespace ui_widget
 	{
 		if(Ctx.m_pUi == nullptr || pInput == nullptr)
 			return {};
+		Ctx.m_pUi->DoConfigTooltip(pInput, &Rect, pInput->GetString());
 
 		const bool WasActive = pInput->IsActive();
 		const bool WasEmpty = pInput->IsEmpty();
@@ -184,10 +186,6 @@ namespace ui_widget
 				Ctx.m_pUi->DoLabel(&TrailingRect, Options.m_pTrailingText, FontSize * 0.82f, TEXTALIGN_MC);
 			return {};
 		}
-		const SUiTheme &Theme = ThemeFor(Ctx);
-		const auto ActionHoverColor = [&Theme](float State) {
-			return Theme.m_BorderHovered.WithAlpha(std::clamp(Theme.m_BorderHovered.a * (State - 1.0f), 0.0f, 1.0f));
-		};
 		const ColorRGBA PlateColor = ResolveConfiguredInputSurface(Options.m_ProcessInput);
 		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), PlateColor);
 		DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE);
@@ -231,9 +229,11 @@ namespace ui_widget
 		if(Options.m_Clearable)
 		{
 			const CUIRect &ClearRect = Layout.m_ClearRect;
-			const float ClearState = Ctx.m_pUi->ButtonColorMul(pInput->GetClearButtonId());
-			if(ClearState > 1.0f)
-				DrawRoundedSurface(Ctx, ClearRect, Ctx.m_pUi->ScaleBackgroundAlpha(ActionHoverColor(ClearState)), ColorRGBA(), ui_token::radius::BASE, 0.0f, IGraphics::CORNER_R);
+			SButtonSurfaceOptions ActionOptions;
+			ActionOptions.m_Role = EUiButtonRole::ICON;
+			ActionOptions.m_TransparentInactive = true;
+			ActionOptions.m_Corners = IGraphics::CORNER_R;
+			DrawButtonSurface(Ctx, pInput->GetClearButtonId(), ClearRect, ActionOptions);
 			DrawInputFieldIcon(Ctx, ClearRect, FontIcons::FONT_ICON_XMARK, InputIconColor, static_cast<int>(EQmIcon::CLOSE));
 			if(Ctx.m_pUi->DoButtonLogic(pInput->GetClearButtonId(), 0, &ClearRect, BUTTONFLAG_LEFT))
 			{
@@ -245,9 +245,11 @@ namespace ui_widget
 		bool TrailingAction = false;
 		if(HasTrailingAction && TrailingRect.w > 0.0f)
 		{
-			const float ActionState = Ctx.m_pUi->ButtonColorMul(Options.m_pTrailingActionId);
-			if(ActionState > 1.0f)
-				DrawRoundedSurface(Ctx, TrailingRect, Ctx.m_pUi->ScaleBackgroundAlpha(ActionHoverColor(ActionState)), ColorRGBA(), ui_token::radius::BASE, 0.0f, Options.m_Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R);
+			SButtonSurfaceOptions ActionOptions;
+			ActionOptions.m_Role = EUiButtonRole::ICON;
+			ActionOptions.m_TransparentInactive = true;
+			ActionOptions.m_Corners = Options.m_Clearable ? IGraphics::CORNER_NONE : IGraphics::CORNER_R;
+			DrawButtonSurface(Ctx, Options.m_pTrailingActionId, TrailingRect, ActionOptions);
 			DrawInputFieldIcon(Ctx, TrailingRect, Options.m_pTrailingActionIcon, InputIconColor, Options.m_TrailingActionQmIcon);
 			TrailingAction = Ctx.m_pUi->DoButtonLogic(Options.m_pTrailingActionId, 0, &TrailingRect, BUTTONFLAG_LEFT) != 0;
 		}
@@ -371,6 +373,7 @@ namespace ui_widget
 	{
 		if(Ctx.m_pUi == nullptr || pState == nullptr || pValue == nullptr || Max <= Min)
 			return false;
+		Ctx.m_pUi->DoConfigTooltip(pId, &Rect, pValue);
 
 		CLineInputNumber *pInput = &pState->m_Input;
 		const IScrollbarScale *pScale = Options.m_pScale != nullptr ? Options.m_pScale : &CUi::ms_LinearScrollbarScale;
@@ -606,48 +609,84 @@ namespace ui_widget
 		return Result.m_Changed || Changed;
 	}
 
+	void DrawToggle(const IUiContext &Ctx, const void *pId, bool Value, const CUIRect &Rect, bool Enabled, bool Animate, const CUIRect *pHitRect)
+	{
+		if(Ctx.m_pUi == nullptr)
+			return;
+		Ctx.m_pUi->DoConfigTooltip(pId, pHitRect != nullptr ? pHitRect : &Rect, pId);
+		if(Ctx.m_pUi->RenderOnly())
+			return;
+		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
+		const SUiTheme Theme = ThemeFor(Ctx);
+		const ColorRGBA Backdrop = CUiScopedSurfaceText::CurrentSurface();
+		const SUiToggleStyle Style = ResolveUiToggleStyle(Theme, ResolveConfiguredControlSurface(), Backdrop, Value, Enabled);
+		ColorRGBA Track = Style.m_Track;
+		float Progress = Value ? 1.0f : 0.0f;
+		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
+		if(Animate && Enabled && pAnim != nullptr)
+		{
+			const uint64_t TrackKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xA5A5ull, reinterpret_cast<uint64_t>(pId));
+			Track = ResolveUiAnimValueColor(*pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
+			const uint64_t KnobKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x5A5Aull, reinterpret_cast<uint64_t>(pId));
+			Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress, ui_token::motion::TOGGLE);
+		}
+		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress);
+		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->MouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
+		const bool Pressed = Hovered && Ctx.m_pUi->CheckActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
+		const auto Feedback = ResolveUiSecondaryButtonStyle(Track, Backdrop, Enabled, Hovered, Pressed);
+		DrawRoundedSurface(Ctx, Layout.m_Track, Feedback.m_Fill, Feedback.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
+		const ColorRGBA KnobColor = ResolveUiSurfaceForeground(Feedback.m_Fill, Backdrop).WithAlpha(Style.m_Knob.a);
+		DrawRoundedSurface(Ctx, Layout.m_Knob, KnobColor, ColorRGBA(), ui_token::radius::PILL);
+	}
+
+	void DrawMarkedControl(const IUiContext &Ctx, const void *pId, const char *pMark, const CUIRect &Rect, const CUIRect *pHitRect)
+	{
+		if(Ctx.m_pUi == nullptr)
+			return;
+		SButtonSurfaceOptions Options;
+		Options.m_Selected = pMark != nullptr && pMark[0] != '\0';
+		Options.m_Radius = ui_token::radius::TIGHT;
+		Options.m_pHitRect = pHitRect;
+		const ColorRGBA Fill = DrawButtonSurface(Ctx, pId, Rect, Options);
+		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), Fill);
+		if(pMark != nullptr && pMark[0] != '\0')
+			Ctx.m_pUi->DoLabel(&Rect, pMark, Rect.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+	}
+
 	bool Toggle(const IUiContext &Ctx, const void *pId, bool *pValue, const CUIRect &Rect, bool ProcessInput, bool Animate)
 	{
 		if(Ctx.m_pUi == nullptr || pValue == nullptr || Ctx.m_pUi->RenderOnly())
 			return false;
-		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ctx.m_pUi);
-
-		const int Result = ProcessInput ? Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) : 0;
-		const bool Clicked = Result != 0;
+		const bool Clicked = ProcessInput && Ctx.m_pUi->DoButtonLogic(pId, 0, &Rect, BUTTONFLAG_LEFT) != 0;
 		if(Clicked)
 			*pValue = !*pValue;
-
-		// Track
-		const ColorRGBA TrackOn = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
-		const ColorRGBA TrackOff = ui_token::color::BORDER_SUBTLE;
-		ColorRGBA Track = *pValue ? TrackOn : TrackOff;
-		if(Animate && Ctx.m_pAnim != nullptr)
-		{
-			const uint64_t TrackKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xA5A5ull, reinterpret_cast<uint64_t>(pId));
-			Track = ResolveUiAnimValueColor(*Ctx.m_pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
-		}
-		DrawRoundedSurface(Ctx, Rect, Track, Track, Rect.h * 0.5f);
-
-		// 弹簧只跟踪开关进度，控件滚动或布局移动不改变动画目标。
-		const float Padding = std::min(Rect.h * 0.15f, 3.0f);
-		const float KnobSize = Rect.h - Padding * 2.0f;
-		const float LeftX = Rect.x + Padding;
-		const float RightX = Rect.x + Rect.w - KnobSize - Padding;
-		float KnobProgress = *pValue ? 1.0f : 0.0f;
-		if(Animate && Ctx.m_pAnim != nullptr)
-		{
-			const uint64_t KnobKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x5A5Aull, reinterpret_cast<uint64_t>(pId));
-			KnobProgress = ResolveUiAnimSpringValue(*Ctx.m_pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, KnobProgress, ui_token::motion::TOGGLE);
-		}
-
-		CUIRect Knob;
-		Knob.x = LeftX + (RightX - LeftX) * std::clamp(KnobProgress, 0.0f, 1.0f);
-		Knob.y = Rect.y + Padding;
-		Knob.w = KnobSize;
-		Knob.h = KnobSize;
-		DrawRoundedSurface(Ctx, Knob, ui_token::color::TEXT_PRIMARY, ui_token::color::TEXT_PRIMARY, KnobSize * 0.5f);
-
+		DrawToggle(Ctx, pId, *pValue, Rect, true, Animate);
 		return Clicked;
+	}
+
+	void DrawScrollbarHandle(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, bool Enabled, const ColorRGBA *pColorInner)
+	{
+		if(Ctx.m_pUi == nullptr || Ctx.m_pUi->RenderOnly())
+			return;
+		const SUiSliderStyle Style = ResolveUiSliderStyle(ThemeFor(Ctx), CUiScopedSurfaceText::CurrentSurface(), Ctx.m_pUi->HotItem() == pId, Ctx.m_pUi->CheckActiveItem(pId), Enabled);
+		DrawRoundedSurface(Ctx, Rect, Ctx.m_pUi->ScaleBackgroundAlpha(Style.m_Handle), Ctx.m_pUi->ScaleBackgroundAlpha(Style.m_Border), ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
+		if(pColorInner != nullptr)
+		{
+			CUIRect Inner;
+			Rect.Margin(std::min(2.0f, std::min(Rect.w, Rect.h) * 0.25f), &Inner);
+			DrawRoundedSurface(Ctx, Inner, Ctx.m_pUi->ScaleBackgroundAlpha(*pColorInner), ColorRGBA(), ui_token::radius::PILL);
+		}
+	}
+
+	void RenderHorizontalSlider(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, float Current, const ColorRGBA *pColorInner)
+	{
+		if(Ctx.m_pUi == nullptr || Ctx.m_pUi->RenderOnly())
+			return;
+		const auto Layout = ResolveHorizontalSliderLayout(Rect, Current);
+		const auto Style = ResolveUiSliderStyle(ThemeFor(Ctx), CUiScopedSurfaceText::CurrentSurface(), Ctx.m_pUi->HotItem() == pId, Ctx.m_pUi->CheckActiveItem(pId));
+		DrawRoundedSurface(Ctx, Layout.m_Track, Ctx.m_pUi->ScaleBackgroundAlpha(Style.m_Track), ColorRGBA(), ui_token::radius::PILL);
+		DrawRoundedSurface(Ctx, Layout.m_Fill, Ctx.m_pUi->ScaleBackgroundAlpha(Style.m_Fill), ColorRGBA(), ui_token::radius::PILL);
+		DrawScrollbarHandle(Ctx, pId, Layout.m_Handle, true, pColorInner);
 	}
 
 	bool Slider(const IUiContext &Ctx, const void *pId, float *pValue, float Min, float Max, const CUIRect &Rect, const char *pSuffix)
@@ -660,8 +699,7 @@ namespace ui_widget
 		Track.VSplitRight(ui_token::spacing::SM, &Track, nullptr);
 
 		const float Normalized = std::clamp((*pValue - Min) / (Max - Min), 0.0f, 1.0f);
-		const ColorRGBA Inner = Ctx.m_pTheme != nullptr ? Ctx.m_pTheme->m_Accent : ui_token::color::ACCENT_PRIMARY;
-		const float NewNormalized = Ctx.m_pUi->DoScrollbarH(pId, &Track, Normalized, &Inner);
+		const float NewNormalized = Ctx.m_pUi->DoScrollbarH(pId, &Track, Normalized);
 		const float NewValue = Min + NewNormalized * (Max - Min);
 		const bool Changed = std::abs(NewValue - *pValue) > 1e-4f;
 		*pValue = NewValue;

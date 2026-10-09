@@ -408,6 +408,7 @@ const char *CMenus::TemporaryOverrideTooltip(const int *pValue) const
 
 bool CMenus::RenderQmFunctionCheckbox(const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, bool PrewarmOnly, const char *pTooltip)
 {
+	Ui()->DoConfigTooltip(pId, pRect, pValue);
 	const int OriginalValue = *pValue;
 	const char *pOverrideTooltip = TemporaryOverrideTooltip(pValue);
 	SLabelProperties LabelProps;
@@ -438,6 +439,7 @@ bool CMenus::RenderQmVisualCheckbox(CUIRect &Content, float LineHeight, float Li
 	CUIRect Row;
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	const char *pOverrideTooltip = TemporaryOverrideTooltip(pValue);
+	Ui()->DoConfigTooltip(pId, &Row, pValue);
 	SLabelProperties LabelProps;
 	if(pOverrideTooltip != nullptr)
 	{

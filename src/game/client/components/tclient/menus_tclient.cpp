@@ -32,8 +32,10 @@ using namespace qm_tclient_cards;
 #include <game/client/QmUi/SettingsFontSelection.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/animstate.h>
@@ -625,14 +627,13 @@ int CMenus::DoButtonLineSize_Menu(CButtonContainer *pButtonContainer, const char
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 	CUIRect Text = *pRect;
 
-	if(Checked)
-		Color = ColorRGBA(0.6f, 0.6f, 0.6f, 0.5f);
-	Color.a *= Ui()->ButtonColorMul(pButtonContainer);
-
-	if(Fake)
-		Color.a *= 0.5f;
-
-	pRect->Draw(Color, Corners, Rounding);
+	ui_widget::SButtonSurfaceOptions Options;
+	Options.m_Enabled = !Fake && Checked >= 0;
+	Options.m_Selected = Checked > 0;
+	Options.m_Corners = Corners;
+	Options.m_Radius = Rounding;
+	Color = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonContainer, *pRect, Options);
+	CUiScopedSurfaceText SurfaceText(TextRender(), Color);
 
 	Text.HMargin((Text.h - ButtonLineSize) / 2.0f, &Text);
 	Text.HMargin(pRect->h >= 20.0f ? 2.0f : 1.0f, &Text);
@@ -728,39 +729,12 @@ void CMenus::RenderFontIcon_QmIcon(const CUIRect Rect, EQmIcon Icon, const char 
 
 int CMenus::DoButtonNoRect_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners)
 {
-	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
-	TextRender()->TextColor(TextRender()->DefaultTextSelectionColor());
-	if(Ui()->HotItem() == pButtonContainer)
-	{
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-	}
-	CUIRect Temp;
-	pRect->HMargin(0.0f, &Temp);
-	Ui()->DoLabel(&Temp, pText, CurrentSettingsContentMetrics().m_BodySize, TEXTALIGN_MC);
-	TextRender()->SetRenderFlags(0);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-
-	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, BUTTONFLAG_LEFT);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, EQmIcon::COUNT, pText, Checked, *pRect, BUTTONFLAG_LEFT, Corners, true, std::nullopt, false, true);
 }
 
 int CMenus::DoButtonNoRect_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners)
 {
-	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
-	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
-	TextRender()->TextColor(TextRender()->DefaultTextSelectionColor());
-	if(Ui()->HotItem() == pButtonContainer)
-	{
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-	}
-	CUIRect Temp;
-	pRect->HMargin(0.0f, &Temp);
-	Ui()->DoLabel_QmIcon(&Temp, Icon, pFallbackIcon, CurrentSettingsContentMetrics().m_BodySize, TEXTALIGN_MC);
-	TextRender()->TextColor(TextRender()->DefaultTextColor());
-
-	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, BUTTONFLAG_LEFT);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(Ui()), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, BUTTONFLAG_LEFT, Corners, true, std::nullopt, false, true);
 }
 
 void CMenus::PopupConfirmRemoveWarType()

@@ -4,7 +4,8 @@
 
 #include <base/color.h>
 
-#include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/components/binds.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
@@ -41,18 +42,14 @@ CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(CButtonContainer *pReaderBu
 
 	CUIRect KeyReaderButton, ClearButton;
 	pRect->VSplitRight(pRect->h, &KeyReaderButton, &ClearButton);
-	const ColorRGBA ReaderBaseColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * Ui()->ButtonColorMul(pReaderButton));
-	DrawRoundedSurface(Ui(), *pRect, ReaderBaseColor, ColorRGBA(), 5.0f);
-
-	const int ClearChecked = Result.m_Bind == CBindSlot(KEY_UNKNOWN, KeyModifier::NONE) ? 1 : 0;
-	if(ClearChecked == 0)
-	{
-		const float ClearSurfaceAlpha = 0.22f * Ui()->ButtonColorMul(pClearButton);
-		DrawRoundedSurface(Ui(), ClearButton, ColorRGBA(1.0f, 1.0f, 1.0f, ClearSurfaceAlpha), ColorRGBA(), 5.0f, 0.0f, IGraphics::CORNER_R);
-	}
+	ui_widget::SButtonSurfaceOptions ReaderOptions;
+	ReaderOptions.m_Selected = m_pKeyReaderId == pReaderButton;
+	ReaderOptions.m_Corners = IGraphics::CORNER_L;
+	const ColorRGBA ReaderBaseColor = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pReaderButton, KeyReaderButton, ReaderOptions);
+	CUiScopedSurfaceText SurfaceText(TextRender(), ReaderBaseColor);
 	const int ClearButtonResult = Ui()->DoButton_QmIcon(
 		pClearButton, EQmIcon::TRASH, FONT_ICON_TRASH,
-		ClearChecked, &ClearButton, BUTTONFLAG_LEFT, IGraphics::CORNER_R, true, ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f));
+		0, &ClearButton, BUTTONFLAG_LEFT, IGraphics::CORNER_R);
 
 	const int ButtonResult = Ui()->DoButtonLogic(pReaderButton, 0, &KeyReaderButton, BUTTONFLAG_LEFT | BUTTONFLAG_RIGHT);
 	if(!ReadOnly && (ButtonResult == 1 || Activate))

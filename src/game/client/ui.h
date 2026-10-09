@@ -3,6 +3,7 @@
 #ifndef GAME_CLIENT_UI_H
 #define GAME_CLIENT_UI_H
 
+#include "QmUi/QmAnimationBackend.h"
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmPopupPointer.h"
 #include "QmUi/QmPopupSource.h"
@@ -23,6 +24,7 @@
 #include <vector>
 
 class CScrollRegion;
+class CTooltips;
 enum class EQmIcon;
 class IClient;
 class IGraphics;
@@ -403,7 +405,7 @@ struct SMenuButtonProperties
 	float m_Rounding = ui_token::radius::BASE;
 	float m_FontFactor = 0.0f;
 	float m_FontSize = -1.0f;
-	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);
+	std::optional<ColorRGBA> m_Color;
 	unsigned m_Flags = BUTTONFLAG_LEFT;
 };
 
@@ -705,6 +707,12 @@ private:
 	int m_RenderOnlyDepth = 0;
 	int m_PreLayoutInputDepth = 0;
 	float m_DropDownFontSize = -1.0f;
+	// 仅客户端绑定；地图编辑器保留自己的控件样式。
+	CUiV2AnimationRuntime *m_pQmAnimationRuntime = nullptr;
+	CTooltips *m_pQmTooltips = nullptr;
+	SUiTheme m_QmControlTheme{};
+	std::array<unsigned, 7> m_aQmControlThemeConfig{};
+	bool m_HasQmControlTheme = false;
 	mutable int m_QuadBatchDepth = 0;
 	mutable int m_QuadBatchContainerIndex = -1;
 	mutable ColorRGBA m_QuadBatchColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
@@ -957,6 +965,11 @@ public:
 	}
 	bool PreLayoutInput() const { return m_PreLayoutInputDepth > 0; }
 	void SetDropDownFontSize(float FontSize) { m_DropDownFontSize = FontSize; }
+	void SetQmAnimationRuntime(CUiV2AnimationRuntime *pRuntime) { m_pQmAnimationRuntime = pRuntime; }
+	CUiV2AnimationRuntime *QmAnimationRuntime() const { return m_pQmAnimationRuntime; }
+	void SetQmTooltips(CTooltips *pTooltips) { m_pQmTooltips = pTooltips; }
+	void DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue = nullptr);
+	const SUiTheme &QmControlTheme();
 	float DropDownFontSize() const { return m_DropDownFontSize; }
 	void Update();
 	void DebugRender(float X, float Y);
@@ -1399,6 +1412,8 @@ public:
 		const CUIRect *m_pAnchorViewport;
 		const CUIRect *m_pPopupViewport;
 		SQmDropdownVisualStyle m_VisualStyle;
+		const void *m_pConfigValue = nullptr;
+		const void *m_pSecondConfigValue = nullptr;
 	};
 	int DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps = {});
 	int DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, bool Enabled);

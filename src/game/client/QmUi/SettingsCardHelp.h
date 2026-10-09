@@ -72,6 +72,7 @@ public:
 	float FontSize() const { return m_FontSize; }
 	float Height() const { return m_Height; }
 	const char *Text() const { return m_Current.c_str(); }
+	const char *Overview() const { return m_Overview.c_str(); }
 };
 
 #endif

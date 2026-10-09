@@ -1033,7 +1033,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		CUIRect Sort = Toolbar.m_Sort;
 		static CUi::SDropDownState s_SortState;
 		const char *apSortNames[] = {Localize("Name"), Localize("Time")};
-		const int SortMode = DoSettingsDropDown(&Sort, std::clamp(g_Config.m_QmSkinSortMode, 0, 1), apSortNames, std::size(apSortNames), s_SortState);
+		const int SortMode = DoSettingsDropDown(&Sort, std::clamp(g_Config.m_QmSkinSortMode, 0, 1), apSortNames, std::size(apSortNames), s_SortState, {}, &g_Config.m_QmSkinSortMode);
 		if(SortMode != g_Config.m_QmSkinSortMode)
 		{
 			g_Config.m_QmSkinSortMode = SortMode;
@@ -2612,7 +2612,7 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 	DoSettingsMenuLabel(SETTINGS_TEE, -1, -1, "tee-team-glow-team0-label", &Team0GlowLabel, Localize("Team 0 glow"), BodySize, TEXTALIGN_ML);
 	const char *apTeam0GlowModes[] = {Localize("Off"), Localize("Tee color"), Localize("Custom color"), Localize("Rainbow")};
 	static CUi::SDropDownState s_Team0GlowModeDropDownState;
-	const int Team0ModeNew = DoSettingsDropDown(&Team0GlowDropDown, std::clamp(g_Config.m_QmTeamTeeGlowTeam0Mode, 0, 3), apTeam0GlowModes, std::size(apTeam0GlowModes), s_Team0GlowModeDropDownState);
+	const int Team0ModeNew = DoSettingsDropDown(&Team0GlowDropDown, std::clamp(g_Config.m_QmTeamTeeGlowTeam0Mode, 0, 3), apTeam0GlowModes, std::size(apTeam0GlowModes), s_Team0GlowModeDropDownState, {}, &g_Config.m_QmTeamTeeGlowTeam0Mode);
 	if(Team0ModeNew != g_Config.m_QmTeamTeeGlowTeam0Mode)
 		g_Config.m_QmTeamTeeGlowTeam0Mode = Team0ModeNew;
 	if(g_Config.m_QmTeamTeeGlowTeam0Mode == 2)

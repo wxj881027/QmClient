@@ -797,6 +797,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			{
 				const SIntConfigVariable *pInt = static_cast<const SIntConfigVariable *>(pVar);
 				// treat 0 1 ints as checkboxes
+				Ui()->DoConfigTooltip(pVar, &Right, pInt->m_pVariable);
+				GameClient()->m_Tooltips.DoToolTipForRect(pVar, &Right, BuildLocalizedConfigHelpText(pVar).c_str());
 				if(pInt->m_Min == 0 && pInt->m_Max == 1)
 				{
 					const auto StagedInt = s_StagedInts.find(pVar);
@@ -856,6 +858,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			{
 				const SStringConfigVariable *pStr = static_cast<const SStringConfigVariable *>(pVar);
 				SStrState &State = StrInputs[pVar];
+				Ui()->DoConfigTooltip(pVar, &Right, pStr->m_pStr);
+				GameClient()->m_Tooltips.DoToolTipForRect(pVar, &Right, BuildLocalizedConfigHelpText(pVar).c_str());
 				const auto StagedStr = s_StagedStrs.find(pVar);
 				const char *Effective = StagedStr != s_StagedStrs.end() ? StagedStr->second.m_Value.c_str() : pStr->m_pStr;
 				if(!State.m_Inited)
@@ -882,6 +886,8 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 			{
 				const SColorConfigVariable *pCol = static_cast<const SColorConfigVariable *>(pVar);
 				CUIRect ColorRect;
+				Ui()->DoConfigTooltip(pVar, &Right, pCol->m_pVariable);
+				GameClient()->m_Tooltips.DoToolTipForRect(pVar, &Right, BuildLocalizedConfigHelpText(pVar).c_str());
 				ColorRect.x = Controls.x;
 				ColorRect.h = ColorPickerLineSize;
 				ColorRect.y = Right.y + (Right.h - ColorPickerLineSize) / 2.0f;

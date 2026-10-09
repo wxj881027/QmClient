@@ -27,6 +27,7 @@
 #include <generated/client_data.h>
 
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/console.h>
 #include <game/client/gameclient.h>
@@ -807,6 +808,8 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		CUIRect LiveButton;
 		SeekBar.VSplitRight(SeekBar.h, &SeekBar, &LiveButton);
 		SeekBar.VSplitRight(2.0f, &SeekBar, nullptr);
+		static char s_LiveButtonId;
+		ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), &s_LiveButtonId, LiveButton);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		TextRender()->TextColor(pInfo->m_LivePlayback ? ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f) : ColorRGBA(0.6f, 0.6f, 0.6f, 1.0f));
@@ -814,11 +817,6 @@ void CMenus::RenderDemoPlayer(CUIRect MainView)
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 		TextRender()->SetRenderFlags(0);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
-		static char s_LiveButtonId;
-		if(Ui()->HotItem() == &s_LiveButtonId)
-		{
-			LiveButton.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, 3.0f);
-		}
 		if(Ui()->DoButtonLogic(&s_LiveButtonId, 0, &LiveButton, BUTTONFLAG_LEFT))
 		{
 			PositionToSeek = 1.0f;

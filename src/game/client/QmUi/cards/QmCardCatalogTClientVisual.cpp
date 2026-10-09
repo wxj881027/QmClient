@@ -190,7 +190,7 @@ float CMenus::LayoutTClientVisualEffectsCard(const qm_card_catalog::SQmCardBuild
 		{
 			int Value = g_Config.m_QmTinyTees ? (g_Config.m_QmTinyTeesOthers ? 2 : 1) : 0;
 			CPerfTimer TinyTeeModeTimer;
-			if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Row, "tclient-smaller-tees-label", Localize("Smaller tees"), s_vTinyTeeModeButtons, {"tclient-smaller-tees-none", "tclient-smaller-tees-self", "tclient-smaller-tees-all"}, {Localize("None"), Localize("Self"), Localize("All")}, {0, 1, 2}, Value, ContentMetrics))
+			if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Row, "tclient-smaller-tees-label", Localize("Smaller tees"), s_vTinyTeeModeButtons, {"tclient-smaller-tees-none", "tclient-smaller-tees-self", "tclient-smaller-tees-all"}, {Localize("None"), Localize("Self"), Localize("All")}, {0, 1, 2}, Value, ContentMetrics, nullptr, &g_Config.m_QmTinyTees, &g_Config.m_QmTinyTeesOthers))
 			{
 				g_Config.m_QmTinyTees = Value > 0 ? 1 : 0;
 				g_Config.m_QmTinyTeesOthers = Value > 1 ? 1 : 0;
@@ -241,7 +241,7 @@ float CMenus::LayoutTClientVisualEffectsCard(const qm_card_catalog::SQmCardBuild
 			static std::vector<CButtonContainer> s_vButtonContainers = {{}, {}, {}};
 			int Value = g_Config.m_QmFakeCtfFlags;
 			CPerfTimer FakeFlagsTimer;
-			if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, FakeFlagsRow, "tclient-fake-ctf-flags-label", Localize("Fake CTF flags"), s_vButtonContainers, {"tclient-fake-ctf-flags-none", "tclient-fake-ctf-flags-red", "tclient-fake-ctf-flags-blue"}, {Localize("None"), Localize("Red"), Localize("Blue")}, {0, 1, 2}, Value, ContentMetrics))
+			if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, FakeFlagsRow, "tclient-fake-ctf-flags-label", Localize("Fake CTF flags"), s_vButtonContainers, {"tclient-fake-ctf-flags-none", "tclient-fake-ctf-flags-red", "tclient-fake-ctf-flags-blue"}, {Localize("None"), Localize("Red"), Localize("Blue")}, {0, 1, 2}, Value, ContentMetrics, nullptr, &g_Config.m_QmFakeCtfFlags))
 				g_Config.m_QmFakeCtfFlags = Value;
 			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&g_Config.m_QmMovingTilesEntities, "tclient-moving-tiles-entities", Localize("Show moving tiles in entities"), &g_Config.m_QmMovingTilesEntities, &MovingTilesRow, LineSize);
 			LogSettingsStage("tclient_settings_left_visual_fake_flags", FakeFlagsTimer);
@@ -696,7 +696,7 @@ float CMenus::LayoutTClientRainbowCard(const qm_card_catalog::SQmCardBuildContex
 		RainbowDropDownRect = Rows.Next();
 		if(Render)
 		{
-			const int RainbowSelectedNew = DoSettingsDropDown(&RainbowDropDownRect, RainbowSelectedOld, s_RainbowDropDownNames.data(), s_RainbowDropDownNames.size(), s_RainbowDropDownState);
+			const int RainbowSelectedNew = DoSettingsDropDown(&RainbowDropDownRect, RainbowSelectedOld, s_RainbowDropDownNames.data(), s_RainbowDropDownNames.size(), s_RainbowDropDownState, {}, &g_Config.m_QmRainbowMode);
 			if(RainbowSelectedOld != RainbowSelectedNew)
 				g_Config.m_QmRainbowMode = RainbowSelectedNew + 1;
 		}
@@ -770,7 +770,7 @@ float CMenus::LayoutTClientTeeTrailsCard(const qm_card_catalog::SQmCardBuildCont
 		if(Render)
 		{
 			CPerfTimer DropDownTimer;
-			const int TrailSelectedNew = DoSettingsDropDown(&TrailDropDownRect, TrailSelectedOld, s_TrailDropDownNames.data(), s_TrailDropDownNames.size(), s_TrailDropDownState);
+			const int TrailSelectedNew = DoSettingsDropDown(&TrailDropDownRect, TrailSelectedOld, s_TrailDropDownNames.data(), s_TrailDropDownNames.size(), s_TrailDropDownState, {}, &g_Config.m_QmTeeTrailColorMode);
 			if(TrailSelectedOld != TrailSelectedNew)
 				g_Config.m_QmTeeTrailColorMode = TrailSelectedNew + 1;
 			LogSettingsStage("tclient_settings_right_tee_trails_dropdown", DropDownTimer);
@@ -782,7 +782,7 @@ float CMenus::LayoutTClientTeeTrailsCard(const qm_card_catalog::SQmCardBuildCont
 		if(Render)
 		{
 			const int TrailStyleOld = qm_tee_trail::ResolveStyle(g_Config.m_QmTeeTrailStyle);
-			const int TrailStyleNew = DoSettingsDropDown(&TrailStyleDropDownRect, TrailStyleOld, s_TrailStyleNames.data(), s_TrailStyleNames.size(), s_TrailStyleDropDownState);
+			const int TrailStyleNew = DoSettingsDropDown(&TrailStyleDropDownRect, TrailStyleOld, s_TrailStyleNames.data(), s_TrailStyleNames.size(), s_TrailStyleDropDownState, {}, &g_Config.m_QmTeeTrailStyle);
 			if(TrailStyleNew != TrailStyleOld)
 				g_Config.m_QmTeeTrailStyle = TrailStyleNew;
 		}
