@@ -1,4 +1,5 @@
 #include "translate_backend.h"
+#include "translate_backend_http.h"
 
 #include <base/str.h>
 
@@ -21,6 +22,7 @@ namespace
 			m_pRequest = pCreateRequest("https://qmclient.icu/api/v1/translate");
 			m_pRequest->FailOnErrorStatus(false);
 			m_pRequest->LogProgress(HTTPLOG::FAILURE);
+			m_pRequest->MaxResponseSize(64 * 1024);
 			m_pRequest->Timeout(CTimeout{5000, 11000, 500, 5});
 			CJsonStringWriter Writer;
 			Writer.BeginObject();
@@ -58,13 +60,17 @@ namespace
 				const json_value &Error = (*pJson)["error"];
 				const json_value &Text = (*pJson)["text"];
 				const json_value &Language = (*pJson)["language"];
-				if(m_pRequest->StatusCode() == 200 && Ok.type == json_boolean && Ok.u.boolean && Text.type == json_string && Text.u.string.length > 0 && Error.type == json_none)
+				if(m_pRequest->StatusCode() == 200 && Ok.type == json_boolean && Ok.u.boolean && Error.type == json_none)
 				{
-					str_copy(Out.m_Text, Text.u.string.ptr);
-					if(Language.type == json_string)
-						str_copy(Out.m_Language, Language.u.string.ptr);
-					Out.m_Notice = ETranslateNotice::NONE;
-					Success = true;
+					Success = CopyTranslateText(&Text, Out);
+					if(Success)
+					{
+						if(Language.type == json_string)
+							str_copy(Out.m_Language, Language.u.string.ptr);
+						Out.m_Notice = ETranslateNotice::NONE;
+					}
+					else
+						Out.m_Text[0] = '\0';
 				}
 				else if(Error.type == json_string)
 				{

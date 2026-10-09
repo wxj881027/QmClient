@@ -25,6 +25,7 @@
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
 #include <game/client/components/qmclient/route_start_index.h>
 #include <game/client/components/qmclient/route_visited.h>
+#include <game/client/components/qmclient/solo_split_state.h>
 #include <game/client/components/qmclient/update_manifest.h>
 #include <game/client/components/qmclient/update_proxy.h>
 #include <game/client/components/qmclient/update_survey.h>
@@ -144,13 +145,7 @@ class CTClient : public CComponent
 	void SoloSplitLeave();
 	void SoloSplitStart(int Action);
 	void SoloSplitUpdate();
-	void SoloSplitFinish(bool Success);
-	int m_SoloSplitAction = 0; // 1=进队，2=出队
-	int m_SoloSplitAttempts = 0;
-	int64_t m_SoloSplitDeadline = 0;
-	bool m_SoloSplitWaitingForDummy = false;
-	int m_aSoloSplitPreviousTeam[NUM_DUMMIES] = {0, 0};
-	int m_aSoloSplitTargetTeam[NUM_DUMMIES] = {0, 0};
+	CQmSoloSplitState m_SoloSplit;
 
 	int m_EmoteCycle = 0;
 	static void ConEmoteCycle(IConsole::IResult *pResult, void *pUserData);
@@ -453,6 +448,8 @@ public:
 	CTClient();
 	int Sizeof() const override { return sizeof(*this); }
 	void OnInit() override;
+	void OnReset() override { CancelSoloSplit(); }
+	void CancelSoloSplit() { m_SoloSplit.Reset(); }
 	void OnShutdown() override;
 	void OnWindowResize() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;

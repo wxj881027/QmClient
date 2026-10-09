@@ -118,7 +118,7 @@ static constexpr size_t QMCLIENT_NEWS_MAX_BYTES = 64 * 1024;
 static constexpr const char *QMCLIENT_SPONSORS_PUBLISH_URL = "https://qmclient.icu/api/v1/sponsors/publish";
 static constexpr const char *QMCLIENT_SPONSORS_CACHE_FILE = "qmclient/sponsors_cache.json";
 static constexpr const char *QMCLIENT_SPONSORS_DRAFT_FILE = "qmclient/sponsors_draft.md";
-static constexpr int QMCLIENT_SPONSORS_MAX_BYTES = 64 * 1024;
+static constexpr int QMCLIENT_SPONSORS_MAX_BYTES = qm_sponsors::MAX_BYTES;
 static constexpr int QMCLIENT_MARKER_FLUSH_INTERVAL_SECONDS = 5;
 static constexpr const char *DDNET_PLAYER_STATS_URL = "https://ddnet.org/players/?json2=";
 static constexpr int QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS = 120;
@@ -1856,18 +1856,7 @@ void CQmClient::QmSponsorsReloadDraft()
 {
 	if(QmSponsorsPublishing())
 		return;
-	m_QmSponsorsDraft.clear();
-	m_vQmSponsorDraftNames.clear();
-	char *pDraft = Storage()->ReadFileStr(QMCLIENT_SPONSORS_DRAFT_FILE, IStorage::TYPE_SAVE);
-	if(pDraft)
-	{
-		if(str_length(pDraft) <= QMCLIENT_SPONSORS_MAX_BYTES)
-		{
-			m_QmSponsorsDraft = pDraft;
-			m_vQmSponsorDraftNames = qm_sponsors::ParseNames(m_QmSponsorsDraft.c_str());
-		}
-		free(pDraft);
-	}
+	qm_sponsors::LoadDraft(Storage()->OpenFile(QMCLIENT_SPONSORS_DRAFT_FILE, IOFLAG_READ, IStorage::TYPE_SAVE), m_QmSponsorsDraft, m_vQmSponsorDraftNames);
 	++m_QmSponsorsStatusRevision;
 }
 

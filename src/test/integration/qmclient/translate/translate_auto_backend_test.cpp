@@ -59,3 +59,43 @@ TEST_F(CTranslateBackendTest, AutomaticMalformedResponseDoesNotReturnServerError
 	EXPECT_EQ(Response.m_Notice, ETranslateNotice::SERVICE_UNAVAILABLE);
 	EXPECT_STREQ(Response.m_Text, "");
 }
+
+TEST_F(CTranslateBackendTest, AutomaticTranslationAcceptsExactBufferLimit)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "auto");
+	auto pBackend = Create();
+	CTranslateResponse Response;
+	const std::string Text(sizeof(Response.m_Text) - 1, 'x');
+	const std::string Body = "{\"ok\":true,\"text\":\"" + Text + "\",\"language\":\"en\"}";
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(Body.c_str());
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(true));
+	EXPECT_FALSE(Response.m_Error);
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::NONE);
+	EXPECT_EQ(std::string(Response.m_Text), Text);
+}
+
+TEST_F(CTranslateBackendTest, AutomaticOversizedTranslationDoesNotPublishPartialText)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "auto");
+	auto pBackend = Create();
+	CTranslateResponse Response;
+	const std::string Body = "{\"ok\":true,\"text\":\"" + std::string(sizeof(Response.m_Text), 'x') + "\",\"language\":\"en\"}";
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(Body.c_str());
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_TRUE(Response.m_Error);
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::INVALID_RESPONSE);
+	EXPECT_STREQ(Response.m_Text, "");
+	EXPECT_STREQ(Response.m_Language, "");
+}
+
+TEST_F(CTranslateBackendTest, AutomaticEmbeddedNullDoesNotPublishPartialText)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "auto");
+	auto pBackend = Create();
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"ok":true,"text":"before\u0000after","language":"en"})");
+	CTranslateResponse Response;
+	EXPECT_EQ(pBackend->Update(Response), std::optional<bool>(false));
+	EXPECT_TRUE(Response.m_Error);
+	EXPECT_EQ(Response.m_Notice, ETranslateNotice::INVALID_RESPONSE);
+	EXPECT_STREQ(Response.m_Text, "");
+}

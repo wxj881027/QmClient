@@ -3566,6 +3566,7 @@ if(CLIENT)
     components/qmclient/sponsor_chat_style.h
     components/qmclient/qmclient_utils.h
     components/qmclient/bounded_file_reader.h
+    components/qmclient/solo_split_state.h
     components/qmclient/rank_view_timeline.h
     components/qmclient/rank_ghost.cpp
     components/qmclient/rank_ghost.h
@@ -4585,6 +4586,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
     src/test/integration/engine/config_migration_backup_test.cpp
     src/test/integration/qmclient/client/bounded_file_reader_test.cpp
+    src/test/integration/qmclient/client/qm_sponsors_draft_test.cpp
     src/test/integration/qmclient/client/rank_view_timeline_test.cpp
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
@@ -4824,6 +4826,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_tee_trail_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_authors_test.cpp
     src/test/unit/qmclient/client/qm_sponsors_test.cpp
+    src/test/unit/qmclient/client/qm_solo_split_test.cpp
     src/test/unit/qmclient/client/qm_markdown_test.cpp
     src/test/unit/qmclient/client/qm_markdown_broadcast_test.cpp
     src/test/unit/qmclient/client/qm_decorative_throw_test.cpp
