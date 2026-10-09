@@ -3707,6 +3707,9 @@ Dummy marking color
 Dummy mini view
 == Dummy-Miniansicht
 
+Dummy mini view rendering unavailable
+== Die Dummy-Miniansicht kann nicht gerendert werden
+
 Dummy mini view size (percent)
 == Dummy-Miniview-Größe (Prozent)
 
@@ -5281,6 +5284,9 @@ Gradient vertical position
 
 Graphics
 == Grafik
+
+Graphics backend does not support dummy mini view
+== Das Grafik-Backend unterstützt die Dummy-Miniansicht nicht
 
 Graphics card
 == Grafikkarte

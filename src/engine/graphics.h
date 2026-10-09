@@ -659,6 +659,8 @@ public:
 		float m_W = 0.0f;
 		float m_H = 0.0f;
 		float m_Alpha = 1.0f;
+		// 已合成背景的实时画面直接复制颜色，避免纹理 Alpha 再混合一次。
+		bool m_Opaque = false;
 		int m_Corners = 0;
 		float m_Rounding = 0.0f;
 		float m_U0 = 0.0f;

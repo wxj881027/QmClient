@@ -3707,6 +3707,9 @@ Dummy marking color
 Dummy mini view
 == 分身小窗
 
+Dummy mini view rendering unavailable
+== 分身小窗暫時無法繪製
+
 Dummy mini view size (percent)
 == 分身迷你檢視大小（百分比）
 
@@ -5281,6 +5284,9 @@ Gradient vertical position
 
 Graphics
 == 圖像
+
+Graphics backend does not support dummy mini view
+== 目前的圖形後端不支援分身小窗
 
 Graphics card
 == 顯卡

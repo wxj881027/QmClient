@@ -5,6 +5,7 @@
 #include <base/system.h>
 
 #include <engine/client/backend/backend_base.h>
+#include <engine/client/backend/render_target_geometry.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/backend/vulkan/backend_vulkan_qm_ext.h>
 #include <engine/client/backend/vulkan/vulkan_rendering_lifecycle.h>
@@ -4133,33 +4134,45 @@ protected:
 			// the scissor always assumes the presented viewport, because the front-end keeps the calculation
 			// for the forced viewport in sync
 			auto ScissorViewport = m_VKSwapImgAndViewportExtent.GetPresentedImageViewport();
-			if(State.m_ClipEnable)
+			if(m_RenderTargetActive)
 			{
-				int32_t ScissorY = (int32_t)ScissorViewport.height - ((int32_t)State.m_ClipY + (int32_t)State.m_ClipH);
-				uint32_t ScissorH = (int32_t)State.m_ClipH;
-				Scissor.offset = {(int32_t)State.m_ClipX, ScissorY};
-				Scissor.extent = {(uint32_t)State.m_ClipW, ScissorH};
+				const auto &Target = m_vRenderTargets[m_ActiveRenderTargetId];
+				const auto Clip = State.m_ClipEnable ? render_target_geometry::MapScreenClip(State.m_ClipX, State.m_ClipY, State.m_ClipW, State.m_ClipH,
+					ScissorViewport.width, ScissorViewport.height, Target.m_Width, Target.m_Height) :
+					render_target_geometry::SClipRect{0, 0, (int)Target.m_Width, (int)Target.m_Height};
+				Scissor.offset = {Clip.m_X, Clip.m_Y};
+				Scissor.extent = {(uint32_t)Clip.m_W, (uint32_t)Clip.m_H};
 			}
 			else
 			{
-				Scissor.offset = {0, 0};
-				Scissor.extent = {ScissorViewport.width, ScissorViewport.height};
-			}
-
-			// if there is a dynamic viewport make sure the scissor data is scaled down to that
-			if(m_HasDynamicViewport)
-			{
-				if(ScissorViewport.width > 0 && ScissorViewport.height > 0)
+				if(State.m_ClipEnable)
 				{
-					Scissor.offset.x = (int32_t)(((float)Scissor.offset.x / (float)ScissorViewport.width) * (float)m_DynamicViewportSize.width) + m_DynamicViewportOffset.x;
-					Scissor.offset.y = (int32_t)(((float)Scissor.offset.y / (float)ScissorViewport.height) * (float)m_DynamicViewportSize.height) + m_DynamicViewportOffset.y;
-					Scissor.extent.width = (uint32_t)(((float)Scissor.extent.width / (float)ScissorViewport.width) * (float)m_DynamicViewportSize.width);
-					Scissor.extent.height = (uint32_t)(((float)Scissor.extent.height / (float)ScissorViewport.height) * (float)m_DynamicViewportSize.height);
+					int32_t ScissorY = (int32_t)ScissorViewport.height - ((int32_t)State.m_ClipY + (int32_t)State.m_ClipH);
+					uint32_t ScissorH = (int32_t)State.m_ClipH;
+					Scissor.offset = {(int32_t)State.m_ClipX, ScissorY};
+					Scissor.extent = {(uint32_t)State.m_ClipW, ScissorH};
 				}
 				else
 				{
-					Scissor.offset = m_DynamicViewportOffset;
-					Scissor.extent = m_DynamicViewportSize;
+					Scissor.offset = {0, 0};
+					Scissor.extent = {ScissorViewport.width, ScissorViewport.height};
+				}
+
+				// if there is a dynamic viewport make sure the scissor data is scaled down to that
+				if(m_HasDynamicViewport)
+				{
+					if(ScissorViewport.width > 0 && ScissorViewport.height > 0)
+					{
+						Scissor.offset.x = (int32_t)(((float)Scissor.offset.x / (float)ScissorViewport.width) * (float)m_DynamicViewportSize.width) + m_DynamicViewportOffset.x;
+						Scissor.offset.y = (int32_t)(((float)Scissor.offset.y / (float)ScissorViewport.height) * (float)m_DynamicViewportSize.height) + m_DynamicViewportOffset.y;
+						Scissor.extent.width = (uint32_t)(((float)Scissor.extent.width / (float)ScissorViewport.width) * (float)m_DynamicViewportSize.width);
+						Scissor.extent.height = (uint32_t)(((float)Scissor.extent.height / (float)ScissorViewport.height) * (float)m_DynamicViewportSize.height);
+					}
+					else
+					{
+						Scissor.offset = m_DynamicViewportOffset;
+						Scissor.extent = m_DynamicViewportSize;
+					}
 				}
 			}
 
@@ -5943,7 +5956,7 @@ public:
 		InputAssembly.topology = IsLinePrim ? VK_PRIMITIVE_TOPOLOGY_LINE_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		if(SampleCount != VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM)
 			Multisampling.rasterizationSamples = SampleCount;
-		if(!EnableBlending)
+		if(!EnableBlending || BlendMode == VULKAN_BACKEND_BLEND_MODE_NONE)
 			ColorBlendAttachment.blendEnable = VK_FALSE;
 
 		VkPipelineLayoutCreateInfo PipelineLayoutInfo{};

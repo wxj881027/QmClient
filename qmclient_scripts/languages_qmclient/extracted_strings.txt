@@ -1234,6 +1234,7 @@ Dummy jump
 Dummy key/hammer/control/copy status switches
 Dummy marking color
 Dummy mini view
+Dummy mini view rendering unavailable
 Dummy mini view size (percent)
 Dummy mini view zoom (percent)
 Dummy name
@@ -1759,6 +1760,7 @@ Gradient settings
 Gradient type
 Gradient vertical position
 Graphics
+Graphics backend does not support dummy mini view
 Graphics card
 Graphics display
 Graphics library major version (0 = auto-detect)

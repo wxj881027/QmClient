@@ -3707,6 +3707,9 @@ Dummy marking color
 Dummy mini view
 == Мини-вид дубля
 
+Dummy mini view rendering unavailable
+== Не удалось отрисовать мини-окно двойника
+
 Dummy mini view size (percent)
 == Размер мини-вида куклы (в процентах)
 
@@ -5281,6 +5284,9 @@ Gradient vertical position
 
 Graphics
 == Графика
+
+Graphics backend does not support dummy mini view
+== Графический движок не поддерживает мини-окно двойника
 
 Graphics card
 == Видеокарта
