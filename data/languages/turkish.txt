@@ -734,6 +734,9 @@ Angle
 Angle:
 == Açı:
 
+Angular gradient
+== Açısal gradyan
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == Sohbet kutusunu, ifade seçiciyi, skor tablosunu ve izleyici seçimini canlandır
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == Elmas
 
+Diamond gradient
+== Elmas gradyan
+
 died
 == öldü
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == Ses paketini düzenle
+
+Edit color
+== Renkleri düzenle
 
 Edit Entry
 == Girişi Düzenle
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == Gradyan rengi
 
+Gradient direction
+== Gradyan yönü
+
+Gradient horizontal position
+== Gradyan yatay konumu
+
+Gradient range
+== Gradyan boyutu
+
+Gradient type
+== Gradyan türü
+
+Gradient vertical position
+== Gradyan dikey konumu
+
 Graphics
 == Grafikler
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == Giriş yöntemi
 
+IME appearance
+== IME görünümü
+
 IME background color
 == IME arka plan rengi
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == IME yazı boyutu (%)
+
+IME gradient angle in degrees
+== Gradyan yönü (IME, °)
+
+IME gradient colors
+== IME gradyan renkleri
+
+IME gradient horizontal position percentage
+== Gradyan yatay konumu (IME, %)
+
+IME gradient range percentage
+== Gradyan boyutu (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Gradyan türü (IME; 0=Doğrusal gradyan, 1=Radyal gradyan, 2=Açısal gradyan, 3=Simetrik gradyan, 4=Elmas gradyan)
+
+IME gradient vertical position percentage
+== Gradyan dikey konumu (IME, %)
 
 IME selected text color
 == IME seçili metin rengi
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == Doğrusal
+
+Linear gradient
+== Doğrusal gradyan
 
 Lines %d - %d (%s)
 == Satırlar %d - %d (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == Yarış süresi
 
+Radial gradient
+== Radyal gradyan
+
+Radial gradients spread from the center
+== Radyal gradyan merkezden dışa doğru yayılır
+
 Rainbow
 == Gökkuşağı
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == Azaltılmış: daha kısa geçişler kullanır ve sunum animasyonlarını devre dışı bırakır
+
+Reflected gradient
+== Simetrik gradyan
 
 Refresh
 == Yenile
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == Yeniden deneniyor…
+
+Reverse gradient colors
+== Gradyan renklerini ters çevir
+
+Reverse IME gradient colors
+== Gradyan renklerini ters çevir (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Karşı zoom tuşuna basınca yönü anında çevir (0=özgün yumuşak zoom korunur)

@@ -734,6 +734,9 @@ Angle
 Angle:
 == 角度：
 
+Angular gradient
+== 角度渐变
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == 聊天框、表情选择、计分板和观战选择的展示动画
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == 钻石
 
+Diamond gradient
+== 菱形渐变
+
 died
 == 死亡
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == 编辑音频包
+
+Edit color
+== 编辑配色
 
 Edit Entry
 == 编辑条目
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == 渐变颜色
 
+Gradient direction
+== 渐变方向
+
+Gradient horizontal position
+== 渐变水平位置
+
+Gradient range
+== 渐变范围
+
+Gradient type
+== 渐变类型
+
+Gradient vertical position
+== 渐变垂直位置
+
 Graphics
 == 图像
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == 输入法
 
+IME appearance
+== 输入法外观
+
 IME background color
 == IME 背景颜色
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == 输入法字号 (%)
+
+IME gradient angle in degrees
+== 渐变方向 (IME, °)
+
+IME gradient colors
+== 输入法渐变颜色
+
+IME gradient horizontal position percentage
+== 渐变水平位置 (IME, %)
+
+IME gradient range percentage
+== 渐变范围 (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== 渐变类型 (IME; 0=线性渐变，1=径向渐变，2=角度渐变，3=对称渐变，4=菱形渐变)
+
+IME gradient vertical position percentage
+== 渐变垂直位置 (IME, %)
 
 IME selected text color
 == 输入法选中文字颜色
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == 线性
+
+Linear gradient
+== 线性渐变
 
 Lines %d - %d (%s)
 == 行 %d - %d (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == 比赛时间
 
+Radial gradient
+== 径向渐变
+
+Radial gradients spread from the center
+== 径向渐变从中心向外扩散
+
 Rainbow
 == 彩虹
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == 精简：保留更短的过渡效果，并停用展示动画
+
+Reflected gradient
+== 对称渐变
 
 Refresh
 == 刷新
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == 正在重试…
+
+Reverse gradient colors
+== 反转渐变颜色
+
+Reverse IME gradient colors
+== 反转渐变颜色 (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 反向按键时立即反向缩放（0=保留原有平滑缩放）

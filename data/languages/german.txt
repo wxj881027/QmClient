@@ -734,6 +734,9 @@ Angle
 Angle:
 == Winkel:
 
+Angular gradient
+== Winkelverlauf
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == Chatfenster, Emote-Auswahl, Anzeigetafel und Zuschauerwahl animieren
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == Diamant
 
+Diamond gradient
+== Rautenverlauf
+
 died
 == gestorben
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == Audio-Paket bearbeiten
+
+Edit color
+== Farben bearbeiten
 
 Edit Entry
 == Eintrag bearbeiten
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == Verlaufsfarbe
 
+Gradient direction
+== Verlaufsrichtung
+
+Gradient horizontal position
+== Horizontale Verlaufsposition
+
+Gradient range
+== Verlaufsgröße
+
+Gradient type
+== Verlaufstyp
+
+Gradient vertical position
+== Vertikale Verlaufsposition
+
 Graphics
 == Grafik
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == Eingabemethode
 
+IME appearance
+== IME-Darstellung
+
 IME background color
 == Hintergrundfarbe der IME
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == IME-Schriftgröße (%)
+
+IME gradient angle in degrees
+== Verlaufsrichtung (IME, °)
+
+IME gradient colors
+== IME-Verlaufsfarben
+
+IME gradient horizontal position percentage
+== Horizontale Verlaufsposition (IME, %)
+
+IME gradient range percentage
+== Verlaufsgröße (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Verlaufstyp (IME; 0=Linearer Verlauf, 1=Radialer Verlauf, 2=Winkelverlauf, 3=Gespiegelter Verlauf, 4=Rautenverlauf)
+
+IME gradient vertical position percentage
+== Vertikale Verlaufsposition (IME, %)
 
 IME selected text color
 == IME-Farbe des ausgewählten Texts
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == Linear
+
+Linear gradient
+== Linearer Verlauf
 
 Lines %d - %d (%s)
 == Zeilen %d - %d (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == Rennzeit
 
+Radial gradient
+== Radialer Verlauf
+
+Radial gradients spread from the center
+== Radiale Verläufe breiten sich vom Mittelpunkt aus
+
 Rainbow
 == Regenbogen
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == Reduziert: verwendet kürzere Übergänge und deaktiviert Präsentationsanimationen
+
+Reflected gradient
+== Gespiegelter Verlauf
 
 Refresh
 == Aktualisieren
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == Erneuter Versuch…
+
+Reverse gradient colors
+== Verlaufsfarben umkehren
+
+Reverse IME gradient colors
+== Verlaufsfarben umkehren (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Zoomrichtung beim Drücken der Gegentaste sofort umkehren (0=ursprüngliches weiches Zoomen beibehalten)

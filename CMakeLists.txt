@@ -3158,6 +3158,7 @@ if(CLIENT)
     steam_probe.h
     steam_client_path.h
     text.cpp
+    text_gradient.h
     qm_font_names.h
     qm_font_name_match.h
     text_sweep.h
@@ -3192,6 +3193,8 @@ if(CLIENT)
     QmUi/QmHookCountdownRender.h
     QmUi/QmLegacyMediaHud.cpp
     QmUi/QmLegacyMediaHud.h
+    QmUi/QmColorGradient.h
+    QmUi/QmImeAppearance.h
     QmUi/QmImeCandidateLayout.h
     QmUi/QmInputMotion.h
     QmUi/QmLineInputMotion.cpp
@@ -3294,6 +3297,7 @@ if(CLIENT)
     QmUi/cards/QmAppearancePreset.h
     QmUi/cards/QmCardCatalogAppearancePreset.cpp
     QmUi/cards/QmCardCatalogIme.cpp
+    QmUi/cards/QmColorGradientEditor.cpp
     QmUi/cards/QmCardCatalogTooltip.cpp
     QmUi/cards/QmCardCatalogFunctionMetrics.h
     QmUi/cards/QmCardCatalogHud.cpp
@@ -4586,6 +4590,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmUiTokensTest.cpp
     src/test/unit/qmclient/ui/qm_ime_candidate_layout_test.cpp
     src/test/unit/qmclient/ui/qm_input_motion_test.cpp
+    src/test/unit/qmclient/ui/qm_color_gradient_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
@@ -4940,6 +4945,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/graphics/text_container_lifetime_test.cpp
     src/test/unit/engine/graphics/text_layout_string_test.cpp
     src/test/unit/engine/graphics/text_sweep_test.cpp
+    src/test/unit/engine/graphics/text_gradient_geometry_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_effect_lod_test.cpp
     src/test/unit/qmclient/client/qm_scoreboard_footer_test.cpp
     src/test/unit/engine/graphics/glyph_outline_test.cpp
@@ -5007,6 +5013,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/QmUi/QmAnimationBackend.cpp
     src/game/client/QmUi/QmAnimResolve.cpp
     src/game/client/QmUi/QmLineInputMotion.cpp
+    src/game/client/components/message_gradient.cpp
     src/game/client/QmUi/QmLayout.cpp
     src/game/client/QmUi/QmUiPerf.cpp
     src/game/client/QmUi/UiFormLogic.cpp

@@ -11,6 +11,9 @@
 #include <vector>
 
 class CGameClient;
+class CUIRect;
+
+void QmImeRenderStylePreview(CGameClient *pGameClient, const CUIRect &Rect);
 
 struct SQmImePopupState
 {

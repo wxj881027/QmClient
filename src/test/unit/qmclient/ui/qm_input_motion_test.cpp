@@ -204,7 +204,7 @@ TEST_F(CQmLineInputMotionTest, CaretFollowsTypingAndRetargetsWithoutJumping)
 	EXPECT_LT(Before, 34.0f);
 	EXPECT_FLOAT_EQ(m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x, Before);
 	Advance(1ms);
-	EXPECT_GT(m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x, Before);
+	EXPECT_LT(m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x, Before);
 	for(int i = 0; i < 8; ++i)
 		Advance(100ms);
 	EXPECT_FLOAT_EQ(m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x, 2.0f);
@@ -297,4 +297,59 @@ TEST(QmInputMotion, ReducedPopupMotionHasLessOvershoot)
 	}
 	EXPECT_GT(aPeaks[1] - 100.0f, 2.0f);
 	EXPECT_LT(aPeaks[0] - 100.0f, (aPeaks[1] - 100.0f) * 0.5f);
+}
+
+TEST_F(CQmLineInputMotionTest, CaretMovesMonotonicallyAndFinishesWithinEightyMilliseconds)
+{
+	Update("");
+	m_Motion.ResolveCaret(vec2(0.0f, 0.0f), 12.0f);
+	m_Motion.ResolveCaret(vec2(24.0f, 0.0f), 12.0f);
+	float Previous = 0.0f;
+	for(int i = 0; i < 8; ++i)
+	{
+		Advance(10ms);
+		const float Current = m_Motion.ResolveCaret(vec2(24.0f, 0.0f), 12.0f).x;
+		EXPECT_GE(Current, Previous);
+		EXPECT_LE(Current, 24.0f);
+		Previous = Current;
+	}
+	EXPECT_NEAR(Previous, 24.0f, 0.001f);
+	Advance(100ms);
+	EXPECT_FLOAT_EQ(m_Motion.ResolveCaret(vec2(24.0f, 0.0f), 12.0f).x, 24.0f);
+}
+
+TEST_F(CQmLineInputMotionTest, RapidRetargetsStayBetweenCurrentPositionAndNewTarget)
+{
+	Update("");
+	m_Motion.ResolveCaret(vec2(0.0f, 0.0f), 12.0f);
+	for(const float Target : {24.0f, 4.0f, 30.0f, 2.0f})
+	{
+		const float Start = m_Motion.ResolveCaret(vec2(Target, 0.0f), 12.0f).x;
+		for(int i = 0; i < 3; ++i)
+		{
+			Advance(5ms);
+			const float Current = m_Motion.ResolveCaret(vec2(Target, 0.0f), 12.0f).x;
+			EXPECT_GE(Current, std::min(Start, Target));
+			EXPECT_LE(Current, std::max(Start, Target));
+		}
+	}
+	Advance(80ms);
+	EXPECT_FLOAT_EQ(m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x, 2.0f);
+}
+
+TEST_F(CQmLineInputMotionTest, ReducedMotionRetargetDoesNotRestoreSpringOvershoot)
+{
+	Update("");
+	m_Motion.ResolveCaret(vec2(0.0f, 0.0f), 12.0f);
+	m_Motion.ResolveCaret(vec2(24.0f, 0.0f), 12.0f);
+	Advance(20ms);
+	m_Level = 1;
+	Update("");
+	const float Start = m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x;
+	Advance(10ms);
+	const float Current = m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x;
+	EXPECT_LT(Current, Start);
+	EXPECT_GE(Current, 2.0f);
+	Advance(40ms);
+	EXPECT_FLOAT_EQ(m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x, 2.0f);
 }

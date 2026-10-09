@@ -43,6 +43,7 @@ private:
 	bool m_CaretInitialized = false;
 
 	SUiAnimTransition Transition(const SUiSpringConfig &Spring) const;
+	SUiAnimTransition CaretTransition() const;
 	void ClearGlyph(SCharacter &Character);
 };
 

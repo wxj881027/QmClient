@@ -734,6 +734,9 @@ Angle
 Angle:
 == Ângulo:
 
+Angular gradient
+== Gradiente angular
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == Animar a caixa de chat, o seletor de emoticons, o placar e a seleção de espetador
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == Diamante
 
+Diamond gradient
+== Gradiente em losango
+
 died
 == morreu
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == Editar pacote de áudio
+
+Edit color
+== Editar cores
 
 Edit Entry
 == Editar Entrada
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == Cor do gradiente
 
+Gradient direction
+== Direção do gradiente
+
+Gradient horizontal position
+== Posição horizontal do gradiente
+
+Gradient range
+== Dimensão do gradiente
+
+Gradient type
+== Tipo de gradiente
+
+Gradient vertical position
+== Posição vertical do gradiente
+
 Graphics
 == Gráficos
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == Método de entrada
 
+IME appearance
+== Aspeto do IME
+
 IME background color
 == Cor de fundo do IME
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == Tamanho da letra do IME (%)
+
+IME gradient angle in degrees
+== Direção do gradiente (IME, °)
+
+IME gradient colors
+== Cores do gradiente do IME
+
+IME gradient horizontal position percentage
+== Posição horizontal do gradiente (IME, %)
+
+IME gradient range percentage
+== Dimensão do gradiente (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Tipo de gradiente (IME; 0=Gradiente linear, 1=Gradiente radial, 2=Gradiente angular, 3=Gradiente refletido, 4=Gradiente em losango)
+
+IME gradient vertical position percentage
+== Posição vertical do gradiente (IME, %)
 
 IME selected text color
 == Cor do texto selecionado do IME
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == Linear
+
+Linear gradient
+== Gradiente linear
 
 Lines %d - %d (%s)
 == Linhas %d - %d (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == Tempo de corrida
 
+Radial gradient
+== Gradiente radial
+
+Radial gradients spread from the center
+== Os gradientes radiais expandem-se a partir do centro
+
 Rainbow
 == Arco-íris
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == Reduzido: usa transições mais curtas e desativa animações de apresentação
+
+Reflected gradient
+== Gradiente refletido
 
 Refresh
 == Atualizar
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == Tentando novamente…
+
+Reverse gradient colors
+== Inverter as cores do gradiente
+
+Reverse IME gradient colors
+== Inverter as cores do gradiente (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Inverter o zoom de imediato ao premir a tecla oposta (0=manter o zoom suave original)

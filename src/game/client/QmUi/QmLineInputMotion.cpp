@@ -39,6 +39,16 @@ SUiAnimTransition CQmLineInputMotion::Transition(const SUiSpringConfig &Spring) 
 	return qm_animation::ApplyMotionLevel(Result, m_MotionLevel);
 }
 
+SUiAnimTransition CQmLineInputMotion::CaretTransition() const
+{
+	SUiAnimTransition Result;
+	Result.m_DurationSec = 0.08f;
+	Result.m_Easing = EEasing::CUBIC_BEZIER;
+	Result.m_Bezier = {0.25f, 0.1f, 0.25f, 1.0f};
+	Result.m_RespectMotionLevel = false;
+	return qm_animation::ApplyMotionLevel(Result, m_MotionLevel);
+}
+
 void CQmLineInputMotion::ClearGlyph(SCharacter &Character)
 {
 	if(Character.m_NodeKey == 0)
@@ -76,8 +86,13 @@ void CQmLineInputMotion::Update(const char *pText, std::chrono::nanoseconds Now,
 	}
 	if(MotionChanged && m_CaretInitialized)
 	{
-		m_Runtime.RequestAnimation({CARET_NODE, EUiAnimProperty::POS_X, m_CaretTarget.x, Transition(qm_input_motion::CARET)});
-		m_Runtime.RequestAnimation({CARET_NODE, EUiAnimProperty::POS_Y, m_CaretTarget.y, Transition(qm_input_motion::CARET)});
+		for(const auto Property : {EUiAnimProperty::POS_X, EUiAnimProperty::POS_Y})
+		{
+			const float Target = Property == EUiAnimProperty::POS_X ? m_CaretTarget.x : m_CaretTarget.y;
+			const float Current = m_Runtime.GetValue(CARET_NODE, Property, Target);
+			m_Runtime.SetValue(CARET_NODE, Property, Current);
+			m_Runtime.RequestAnimation({CARET_NODE, Property, Target, CaretTransition()});
+		}
 	}
 	SUiAnimCompleteEvent Completed;
 	// 输入框没有完成回调，及时消费事件，避免长时间打字积累。
@@ -166,12 +181,16 @@ vec2 CQmLineInputMotion::ResolveCaret(vec2 Target, float FontHeight, bool Snap)
 		m_Runtime.SetValue(CARET_NODE, EUiAnimProperty::POS_Y, Target.y);
 		return Target;
 	}
-	const auto CaretTransition = Transition(qm_input_motion::CARET);
+	const auto Transition = CaretTransition();
 	// 输入框已经保存目标，无需为两个光标属性再分配通用目标缓存。
 	const auto ResolveAxis = [&](EUiAnimProperty Property, float Value, float Previous) {
 		const float Current = m_Runtime.GetValue(CARET_NODE, Property, Value);
 		if(Value != Previous || (!m_Runtime.HasActiveAnimation(CARET_NODE, Property) && std::abs(Current - Value) > 0.01f))
-			m_Runtime.RequestAnimation({CARET_NODE, Property, Value, CaretTransition});
+		{
+			// 光标从当前画面重放短补间，不继承通用打断弹簧的旧速度。
+			m_Runtime.SetValue(CARET_NODE, Property, Current);
+			m_Runtime.RequestAnimation({CARET_NODE, Property, Value, Transition});
+		}
 		return m_Runtime.GetValue(CARET_NODE, Property, Value);
 	};
 	return vec2(ResolveAxis(EUiAnimProperty::POS_X, Target.x, PreviousTarget.x),

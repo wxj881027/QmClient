@@ -226,6 +226,7 @@ private:
 	bool DoLine_AlphaColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, int *pOpacity, unsigned int DefaultColor, int DefaultOpacity);
 	ColorHSLA DoLine_ColorPicker(CButtonContainer *pResetId, float LineSize, float LabelSize, float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, ColorRGBA DefaultColor, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, bool Alpha = false);
 	ColorHSLA DoButton_ColorPicker(const CUIRect *pRect, unsigned int *pHslaColor, bool Alpha);
+	bool DoColorGradientPalette(CUIRect *pView, unsigned *pBaseColor, char *pGradient, int GradientSize, CButtonContainer *pAddButton, CButtonContainer *pRemoveButton, unsigned *pColorValues, const SSettingsContentMetrics &Metrics, bool CheckBoxSpacing = false, bool Alpha = false);
 	bool DoMessageGradientLine(CChat &Chat, CUIRect *pView, int Tab, const char *pLabelTextId, const char *pLabel, unsigned *pBaseColor, char *pGradient, int GradientSize, ColorRGBA DefaultColor, CButtonContainer *pResetButton, CButtonContainer *pAddButton, CButtonContainer *pRemoveButton, unsigned *pColorValues, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, float LineHeight = ui_token::settings::ROW_HEIGHT, float LineSpacing = ui_token::settings::ROW_GAP, float BodySize = ui_token::font::BODY, float ButtonHeight = -1.0f);
 
 	void DoLaserPreview(const CUIRect *pRect, ColorHSLA OutlineColor, ColorHSLA InnerColor, int LaserType);

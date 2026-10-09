@@ -734,6 +734,9 @@ Angle
 Angle:
 == 각도:
 
+Angular gradient
+== 각도 그라데이션
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == 채팅창, 이모티콘 선택기, 점수판 및 관전 선택에 애니메이션 적용
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == 다이아몬드
 
+Diamond gradient
+== 마름모 그라데이션
+
 died
 == 사망
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == 오디오 팩 편집
+
+Edit color
+== 색상 편집
 
 Edit Entry
 == 항목 편집
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == 그라데이션 색상
 
+Gradient direction
+== 그라데이션 방향
+
+Gradient horizontal position
+== 그라데이션 가로 위치
+
+Gradient range
+== 그라데이션 범위
+
+Gradient type
+== 그라데이션 유형
+
+Gradient vertical position
+== 그라데이션 세로 위치
+
 Graphics
 == 그래픽
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == 입력기
 
+IME appearance
+== IME 모양
+
 IME background color
 == IME 배경 색상
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == IME 글꼴 크기 (%)
+
+IME gradient angle in degrees
+== 그라데이션 방향 (IME, °)
+
+IME gradient colors
+== IME 그라데이션 색상
+
+IME gradient horizontal position percentage
+== 그라데이션 가로 위치 (IME, %)
+
+IME gradient range percentage
+== 그라데이션 범위 (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== 그라데이션 유형 (IME; 0=선형 그라데이션, 1=방사형 그라데이션, 2=각도 그라데이션, 3=대칭 그라데이션, 4=마름모 그라데이션)
+
+IME gradient vertical position percentage
+== 그라데이션 세로 위치 (IME, %)
 
 IME selected text color
 == IME 선택 글자색
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == 선형
+
+Linear gradient
+== 선형 그라데이션
 
 Lines %d - %d (%s)
 == %d행 - %d행 (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == 레이스 시간
 
+Radial gradient
+== 방사형 그라데이션
+
+Radial gradients spread from the center
+== 방사형 그라데이션은 중심에서 바깥으로 퍼집니다
+
 Rainbow
 == 무지개
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == 간소화: 더 짧은 전환을 사용하고 연출 애니메이션을 비활성화합니다
+
+Reflected gradient
+== 대칭 그라데이션
 
 Refresh
 == 새로고침
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == 재시도 중…
+
+Reverse gradient colors
+== 그라데이션 색상 반전
+
+Reverse IME gradient colors
+== 그라데이션 색상 반전 (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 반대 줌 키를 누르면 즉시 방향 전환 (0=기존 부드러운 줌 유지)
