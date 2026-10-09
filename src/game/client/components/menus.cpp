@@ -4362,7 +4362,8 @@ void CMenus::Render()
 
 	{
 		CPerfTimer StageTimer;
-		Ui()->RenderPopupMenus();
+		if(!GameClient()->m_GameConsole.ConsoleSettingsOpen())
+			Ui()->RenderPopupMenus();
 		LogPerfStage(Client(), "popup_menus", StageTimer.ElapsedMs());
 	}
 

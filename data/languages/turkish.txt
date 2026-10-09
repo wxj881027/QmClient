@@ -803,6 +803,9 @@ APP ID
 Appearance
 == Görünüm
 
+Appearance and command highlighting of the local console
+== Yerel konsolun görünümü ve komut vurgulama
+
 Appearance of help bubbles outside settings cards
 == Ayar kartları dışındaki yardım balonlarının görünümü
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == Klasik nut
 
+Classic PowerShell
+== Klasik PowerShell
+
 Classic Pro
 == Klasik Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == Konsol
 
+Console background color
+== Konsol: arka plan rengi
+
+Console background opacity
+== Konsol: arka plan opaklığı
+
 Console color
 == Konsol rengi
+
+Console color scheme
+== Konsol: renk şeması
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== Konsol: renk şeması: 0=Çağdaş terminal, 1=Klasik PowerShell, 2=özel
+
+Console command color
+== Konsol: komut rengi
+
+Console font size
+== Konsol: yazı tipi boyutu
+
+Console link color
+== Konsol: bağlantı rengi
+
+Console number color
+== Konsol: sayı rengi
+
+Console parameter color
+== Konsol: parametre rengi
+
+Console search match color
+== Konsol: arama eşleşmesi rengi
+
+Console selected search match color
+== Konsol: seçili arama eşleşmesi rengi
+
+Console settings
+== Konsol ayarları
+
+Console string color
+== Konsol: metin dizisi rengi
+
+Console text color
+== Konsol: metin rengi
 
 Contacting title server
 == Unvan sunucusuna bağlanılıyor
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == Vurgu Rengi
 
+Highlight console commands
+== Konsol komutlarını vurgula
+
 Highlight game type
 == Oyun türünü vurgula
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == Moderatör uyarısı
+
+Modern terminal
+== Çağdaş terminal
 
 Modified
 == Değiştirilmiş
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == Sütun genişliklerini sıfırla
+
+Reset console appearance
+== Konsol görünümünü sıfırla
 
 Reset controls
 == Kontrolleri sıfırla

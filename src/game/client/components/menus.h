@@ -3278,6 +3278,7 @@ private:
 	void RenderQmFunctionMiniFeaturesContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmSteamContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
 	void RenderQmAppearancePresetContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
+	void RenderQmConsoleContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
 	void RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
 	void RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmFunctionBetterScoreboardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);

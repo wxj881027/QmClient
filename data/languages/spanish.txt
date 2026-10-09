@@ -803,6 +803,9 @@ APP ID
 Appearance
 == Apariencia
 
+Appearance and command highlighting of the local console
+== Apariencia de la consola local y resaltado de comandos
+
 Appearance of help bubbles outside settings cards
 == Apariencia de las ayudas fuera de las tarjetas de ajustes
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == Clásico nut
 
+Classic PowerShell
+== PowerShell clásico
+
 Classic Pro
 == Clásico Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == Consola
 
+Console background color
+== Consola: color del fondo
+
+Console background opacity
+== Consola: opacidad del fondo
+
 Console color
 == Color de la consola
+
+Console color scheme
+== Consola: esquema de colores
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== Consola: esquema de colores: 0=Terminal moderno, 1=PowerShell clásico, 2=personalizado
+
+Console command color
+== Consola: color de comandos
+
+Console font size
+== Consola: tamaño de fuente
+
+Console link color
+== Consola: color de enlaces
+
+Console number color
+== Consola: color de números
+
+Console parameter color
+== Consola: color de parámetros
+
+Console search match color
+== Consola: color de coincidencias de búsqueda
+
+Console selected search match color
+== Consola: color de la coincidencia de búsqueda seleccionada
+
+Console settings
+== Ajustes de la consola
+
+Console string color
+== Consola: color de cadenas
+
+Console text color
+== Consola: color del texto
 
 Contacting title server
 == Conectando al servidor de títulos
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == Color de resaltado
 
+Highlight console commands
+== Resaltar comandos de la consola
+
 Highlight game type
 == Resaltar tipo de juego
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == Alerta de moderador
+
+Modern terminal
+== Terminal moderno
 
 Modified
 == Modificado
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == Restablecer anchos de columna
+
+Reset console appearance
+== Restablecer la apariencia de la consola
 
 Reset controls
 == Restablecer controles

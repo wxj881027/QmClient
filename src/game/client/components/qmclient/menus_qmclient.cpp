@@ -166,7 +166,8 @@ namespace
 		{qm_module::EQmModuleId::GoresDrownBoard, qm_module::EQmModuleColumn::Right, 23, "gores_drown_board"},
 		{qm_module::EQmModuleId::Ime, qm_module::EQmModuleColumn::Left, 19, "ime"},
 		{qm_module::EQmModuleId::AppearancePreset, qm_module::EQmModuleColumn::Full, 1, "appearance_preset"},
-		{qm_module::EQmModuleId::Tooltip, qm_module::EQmModuleColumn::Left, 9, "tooltip"}}};
+		{qm_module::EQmModuleId::Tooltip, qm_module::EQmModuleColumn::Left, 9, "tooltip"},
+		{qm_module::EQmModuleId::Console, qm_module::EQmModuleColumn::Left, 20, "console"}}};
 }
 
 using SQmGlobalSearchCard = qm_card_registry::SCardSearchResult;

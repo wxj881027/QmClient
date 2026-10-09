@@ -803,6 +803,9 @@ APP ID
 Appearance
 == Wygląd
 
+Appearance and command highlighting of the local console
+== Wygląd lokalnej konsoli i podświetlanie poleceń
+
 Appearance of help bubbles outside settings cards
 == Wygląd podpowiedzi poza kartami ustawień
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == Klasyczny nut
 
+Classic PowerShell
+== Klasyczny PowerShell
+
 Classic Pro
 == Klasyczny Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == Konsola
 
+Console background color
+== Konsola: kolor tła
+
+Console background opacity
+== Konsola: nieprzezroczystość tła
+
 Console color
 == Kolor konsoli
+
+Console color scheme
+== Konsola: schemat kolorów
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== Konsola: schemat kolorów: 0=Nowoczesny terminal, 1=Klasyczny PowerShell, 2=własny
+
+Console command color
+== Konsola: kolor poleceń
+
+Console font size
+== Konsola: rozmiar czcionki
+
+Console link color
+== Konsola: kolor odnośników
+
+Console number color
+== Konsola: kolor liczb
+
+Console parameter color
+== Konsola: kolor parametrów
+
+Console search match color
+== Konsola: kolor wyników wyszukiwania
+
+Console selected search match color
+== Konsola: kolor wybranego wyniku wyszukiwania
+
+Console settings
+== Ustawienia konsoli
+
+Console string color
+== Konsola: kolor ciągów tekstowych
+
+Console text color
+== Konsola: kolor tekstu
 
 Contacting title server
 == Łączenie z serwerem tytułów
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == Kolor wyróżnienia
 
+Highlight console commands
+== Podświetlaj polecenia konsoli
+
 Highlight game type
 == Podświetl typ gry
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == Alert moderatora
+
+Modern terminal
+== Nowoczesny terminal
 
 Modified
 == Zmodyfikowane
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == Resetuj szerokości kolumn
+
+Reset console appearance
+== Przywróć wygląd konsoli
 
 Reset controls
 == Resetuj sterowanie

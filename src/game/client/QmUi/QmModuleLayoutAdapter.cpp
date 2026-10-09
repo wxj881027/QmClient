@@ -137,6 +137,7 @@ namespace qm_module
 		case EQmModuleId::Ime: return "qm:ime";
 		case EQmModuleId::AppearancePreset: return "qm:appearance_preset";
 		case EQmModuleId::Tooltip: return "qm:tooltip";
+		case EQmModuleId::Console: return "qm:console";
 		}
 		return nullptr;
 	}

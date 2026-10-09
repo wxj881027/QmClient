@@ -158,6 +158,8 @@ namespace qm_card_catalog
 			return BuildWaterHammerCard(Ctx, Id, Out);
 		case EQmModuleId::AppearancePreset:
 			return BuildAppearancePresetCard(Ctx, Out);
+		case EQmModuleId::Console:
+			return BuildConsoleCard(Ctx, Out);
 		case EQmModuleId::Tooltip:
 			return BuildTooltipCard(Ctx, Out);
 		default:

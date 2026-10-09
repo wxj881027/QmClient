@@ -803,6 +803,9 @@ APP ID
 Appearance
 == 外観
 
+Appearance and command highlighting of the local console
+== ローカルコンソールの外観とコマンドの強調表示
+
 Appearance of help bubbles outside settings cards
 == 設定カード外のヘルプ吹き出しの外観
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == クラシック nut
 
+Classic PowerShell
+== クラシック PowerShell
+
 Classic Pro
 == クラシック Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == コンソール
 
+Console background color
+== コンソール: 背景色
+
+Console background opacity
+== コンソール: 背景の不透明度
+
 Console color
 == コンソールの色
+
+Console color scheme
+== コンソール: 配色
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== コンソール: 配色: 0=モダンターミナル, 1=クラシック PowerShell, 2=カスタム
+
+Console command color
+== コンソール: コマンドの色
+
+Console font size
+== コンソール: 文字サイズ
+
+Console link color
+== コンソール: リンクの色
+
+Console number color
+== コンソール: 数値の色
+
+Console parameter color
+== コンソール: 引数の色
+
+Console search match color
+== コンソール: 検索一致の色
+
+Console selected search match color
+== コンソール: 選択中の検索一致の色
+
+Console settings
+== コンソール設定
+
+Console string color
+== コンソール: 文字列の色
+
+Console text color
+== コンソール: 文字色
 
 Contacting title server
 == 称号サーバーに接続中
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == ハイライト色
 
+Highlight console commands
+== コンソールのコマンドを強調表示
+
 Highlight game type
 == ゲームタイプをハイライト
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == モデレーターアラート
+
+Modern terminal
+== モダンターミナル
 
 Modified
 == 変更済み
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == 列幅をリセット
+
+Reset console appearance
+== コンソールの外観をリセット
 
 Reset controls
 == コントロールをリセット

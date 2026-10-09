@@ -803,6 +803,9 @@ APP ID
 Appearance
 == 游戏界面
 
+Appearance and command highlighting of the local console
+== 本地控制台的外观和命令高亮
+
 Appearance of help bubbles outside settings cards
 == 设置卡片外的说明气泡外观
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == 古典 nut
 
+Classic PowerShell
+== 经典 PowerShell
+
 Classic Pro
 == 经典 Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == 控制台
 
+Console background color
+== 控制台：背景颜色
+
+Console background opacity
+== 控制台：背景不透明度
+
 Console color
 == 控制台颜色
+
+Console color scheme
+== 控制台：配色
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== 控制台：配色：0=现代终端，1=经典 PowerShell, 2=自定义
+
+Console command color
+== 控制台：命令颜色
+
+Console font size
+== 控制台：字号
+
+Console link color
+== 控制台：链接颜色
+
+Console number color
+== 控制台：数字颜色
+
+Console parameter color
+== 控制台：参数颜色
+
+Console search match color
+== 控制台：搜索命中颜色
+
+Console selected search match color
+== 控制台：选中搜索命中颜色
+
+Console settings
+== 控制台设置
+
+Console string color
+== 控制台：字符串颜色
+
+Console text color
+== 控制台：文字颜色
 
 Contacting title server
 == 正在连接头衔服务器
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == 相关信息颜色
 
+Highlight console commands
+== 高亮控制台命令
+
 Highlight game type
 == 高亮显示游戏类型
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == 管理员提醒
+
+Modern terminal
+== 现代终端
 
 Modified
 == 仅已修改
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == 重置列宽
+
+Reset console appearance
+== 重置控制台外观
 
 Reset controls
 == 恢复默认设置

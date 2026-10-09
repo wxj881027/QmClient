@@ -3301,6 +3301,7 @@ if(CLIENT)
     QmUi/cards/QmColorGradientEditor.cpp
     QmUi/cards/QmColorGradientEditor.h
     QmUi/cards/QmChatGradientEditor.cpp
+    QmUi/cards/QmCardCatalogConsole.cpp
     QmUi/cards/QmCardCatalogTooltip.cpp
     QmUi/cards/QmCardCatalogFunctionMetrics.h
     QmUi/cards/QmCardCatalogHud.cpp
@@ -3451,6 +3452,8 @@ if(CLIENT)
     components/qmclient/colored_parts.h
     components/qmclient/console_selection.h
     components/qmclient/console_search_input.h
+    components/qmclient/console_appearance.h
+    components/qmclient/console_syntax.h
     components/qmclient/console_text.h
     components/qmclient/data_version.h
     components/qmclient/decorative_projectiles.cpp
@@ -4687,6 +4690,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_console_log_filter_test.cpp
     src/test/unit/qmclient/client/qm_console_selection_test.cpp
     src/test/unit/qmclient/client/qm_console_search_input_test.cpp
+    src/test/unit/qmclient/client/qm_console_appearance_test.cpp
+    src/test/unit/qmclient/client/qm_console_syntax_test.cpp
     src/test/unit/qmclient/client/qm_console_text_test.cpp
     src/test/integration/qmclient/client/qm_console_text_pipeline_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp

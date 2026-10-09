@@ -20,6 +20,7 @@ namespace qm_card_catalog
 		const std::vector<const char *> s_vVisualCards = {
 			"qm:appearance_preset",
 			"qm:tooltip",
+			"qm:console",
 			"qm:chat_bubble",
 			"qm:focus_mode",
 			"qm:camera_view",

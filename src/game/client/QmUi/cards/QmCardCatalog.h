@@ -120,6 +120,7 @@ namespace qm_card_catalog
 	bool BuildHudCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 	bool BuildSteamCard(const SQmCardBuildContext &Ctx, qm_module::EQmModuleId Id, SSettingsCardDefinition &Out);
 	bool BuildAppearancePresetCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
+	bool BuildConsoleCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildTooltipCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 	bool BuildBindCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out);
 
@@ -167,6 +168,7 @@ namespace qm_card_catalog
 		static void RenderQmFunctionMiniFeaturesContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmSteamContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
 		static void RenderQmAppearancePresetContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
+		static void RenderQmConsoleContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
 		static void RenderQmTooltipContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly);
 		static void RenderQmFunctionImeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 		static void RenderQmFunctionBetterScoreboardContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);

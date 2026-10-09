@@ -58,6 +58,8 @@ TEST(QmCardRegistrySearch, InternalSettingLabelsAndConfigNamesFindTheContainingC
 		{"qm_emoticon_projectile_duration", "qm:skin_appearance"},
 		{"Skin outline for other players", "qm:skin_appearance"},
 		{"qm_skin_outline_others", "qm:skin_appearance"},
+		{"qm_console_font_size", "qm:console"},
+		{"qm_console_search_selected_color", "qm:console"},
 		{"Show key press counts", "qm:input_overlay"},
 		{"qm_input_overlay_key_counts", "qm:input_overlay"},
 	};

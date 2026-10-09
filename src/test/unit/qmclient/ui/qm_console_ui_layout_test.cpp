@@ -48,3 +48,11 @@ TEST(QmConsoleUiLayout, HiddenFiltersNeverReserveAnEmptyToolbarRow)
 	EXPECT_FLOAT_EQ(Layout.m_Height, 26.0f);
 	EXPECT_LE(Layout.m_ActionX + 640.0f * Layout.m_ActionScale, 290.0f);
 }
+
+TEST(QmConsoleUiLayout, LargerFontsReserveTallerRowsWhenControlsWrap)
+{
+	const auto Layout = QmConsoleUi::LayoutToolbar(500.0f, 360.0f, 400.0f, 40.0f);
+	EXPECT_TRUE(Layout.m_SplitRows);
+	EXPECT_FLOAT_EQ(Layout.m_Height, 80.0f);
+	EXPECT_LE(Layout.m_ActionX + 400.0f * Layout.m_ActionScale, 490.0f);
+}
