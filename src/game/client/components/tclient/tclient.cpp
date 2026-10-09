@@ -2094,9 +2094,10 @@ void CTClient::OnUpdate()
 		CheckWaterFall();
 		UpdatePlayerStats(); // 更新玩家统计
 		UpdateGoresDrownCounts();
-		UpdateGoresWeaponCycle(); // Gores 锤枪自动切换
 		UpdateGoresMapProgress(); // 更新 Gores 地图路径进度
 	}
+	// 每次输入更新都处理切锤，不能等待服务器游戏 tick，否则首次攻击可能先发射道具。
+	UpdateGoresWeaponCycle();
 
 	UpdateMapHistorySession();
 	MaybeSaveMapCategoryCache();
@@ -3475,13 +3476,6 @@ bool CTClient::ShouldHideGoresGuides(bool ManualGuideVisible) const
 	return ShouldHideGoresGuide(IsGoresModuleEnabled(), g_Config.m_QmGoresHideGuides != 0, ManualGuideVisible);
 }
 
-bool CTClient::HasBlockingGoresWeapon() const
-{
-	if(!g_Config.m_QmGoresDisableIfWeapons)
-		return false;
-	return HasExtraGoresWeapon();
-}
-
 bool CTClient::HasExtraGoresWeapon() const
 {
 	if(Client()->State() != IClient::STATE_ONLINE || !GameClient()->m_Snap.m_pLocalCharacter)
@@ -3493,26 +3487,13 @@ bool CTClient::HasExtraGoresWeapon() const
 	       Core.m_aWeapons[WEAPON_NINJA].m_Got;
 }
 
-bool CTClient::ShouldAppendGoresPrevWeapon() const
-{
-	return Client()->State() == IClient::STATE_ONLINE &&
-	       !GameClient()->m_Snap.m_SpecInfo.m_Active &&
-	       GameClient()->m_Snap.m_pLocalCharacter != nullptr &&
-	       IsGoresModuleEnabled() &&
-	       g_Config.m_QmGoresAutoWeaponSwitch != 0 &&
-	       !HasExtraGoresWeapon();
-}
-
 bool CTClient::IsGoresWeaponCycleActive() const
 {
 	if(Client()->State() != IClient::STATE_ONLINE ||
 		GameClient()->m_Snap.m_SpecInfo.m_Active ||
-		GameClient()->m_Snap.m_pLocalCharacter == nullptr ||
-		!IsGoresModuleEnabled() ||
-		g_Config.m_QmGoresAutoWeaponSwitch == 0)
+		GameClient()->m_Snap.m_pLocalCharacter == nullptr)
 		return false;
-	// 没有额外武器时走"锤后自动切回"，拿到额外武器时只有允许禁用才走脉冲模式。
-	return !HasExtraGoresWeapon() || g_Config.m_QmGoresDisableIfWeapons != 0;
+	return ShouldEnableQmGoresWeaponCycle(IsGoresModuleEnabled(), g_Config.m_QmGoresAutoWeaponSwitch != 0, HasExtraGoresWeapon(), g_Config.m_QmGoresDisableIfWeapons != 0);
 }
 
 bool CTClient::ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const
@@ -3527,83 +3508,18 @@ void CTClient::UpdateGoresWeaponCycle()
 {
 	const int Dummy = g_Config.m_ClDummy;
 	CNetObj_PlayerInput &Input = GameClient()->m_Controls.m_aInputData[Dummy];
-	const bool FireHeld = (Input.m_Fire & 1) != 0;
-	const bool FireJustPressed = FireHeld && !m_aPrevFireForGores[Dummy];
-	m_aPrevFireForGores[Dummy] = FireHeld;
-	if(ShouldReleaseQmGoresHammerWakeupFire(m_aGoresHammerWakeupFirePendingRelease[Dummy], Input.m_Fire))
-		Input.m_Fire = QmGoresHammerWakeupReleaseFireState(Input.m_Fire);
-	m_aGoresHammerWakeupFirePendingRelease[Dummy] = false;
-
-	const bool GoresCycleActive = ShouldAppendGoresPrevWeapon();
-	const bool MultiWeaponPulseActive = IsGoresWeaponCycleActive() && !GoresCycleActive;
-	if(!GoresCycleActive && !MultiWeaponPulseActive)
-	{
-		for(bool &WasInFreeze : m_aWasInFreezeForGoresHammer)
-			WasInFreeze = false;
-		m_aGoresHasPreHammerWeapon[Dummy] = false;
-		return;
-	}
-
+	const bool GoresCycleActive = IsGoresWeaponCycleActive();
 	const int ClientId = GameClient()->m_aLocalIds[Dummy];
 	bool InFreeze = false;
 	bool ExternalHammerWakeup = false;
-	if(ClientId >= 0 && ClientId < MAX_CLIENTS && GameClient()->m_aClients[ClientId].m_Active)
+	if(GoresCycleActive && ClientId >= 0 && ClientId < MAX_CLIENTS && GameClient()->m_aClients[ClientId].m_Active)
 	{
 		InFreeze = GameClient()->m_aClients[ClientId].m_FreezeEnd != 0;
 		const bool JustUnfrozen = m_aWasInFreezeForGoresHammer[Dummy] && !InFreeze;
 		ExternalHammerWakeup = JustUnfrozen && DetectFreezeWakeupType(GameClient(), ClientId, Client()->GameTick(Dummy)) == EFreezeWakeupType::EXTERNAL_HAMMER;
 	}
-
-	const bool CurrentWeaponIsHammer = GameClient()->m_Snap.m_pLocalCharacter->m_Weapon == WEAPON_HAMMER;
-	if(ShouldPulseGoresHammerOnFire(MultiWeaponPulseActive, FireJustPressed, CurrentWeaponIsHammer, ExternalHammerWakeup))
-	{
-		m_aGoresPreHammerWeapon[Dummy] = GameClient()->m_Snap.m_pLocalCharacter->m_Weapon;
-		m_aGoresHasPreHammerWeapon[Dummy] = true;
-		Input.m_WantedWeapon = WEAPON_HAMMER + 1;
-		Input.m_Fire = QmGoresHammerWakeupFireState(Input.m_Fire);
-		m_aGoresHammerWakeupFirePendingRelease[Dummy] = !FireHeld;
-		m_aWasInFreezeForGoresHammer[Dummy] = InFreeze;
-		return;
-	}
-
-	if(ShouldRestoreGoresWeaponAfterHammer(CurrentWeaponIsHammer, m_aGoresHasPreHammerWeapon[Dummy]))
-	{
-		const int RestoreWeapon = GoresRestoreWeaponAfterHammer(m_aGoresPreHammerWeapon[Dummy], true);
-		GameClient()->m_Controls.m_aInputData[Dummy].m_WantedWeapon = RestoreWeapon + 1;
-		m_aGoresHasPreHammerWeapon[Dummy] = false;
-		m_aWasInFreezeForGoresHammer[Dummy] = InFreeze;
-		return;
-	}
-
-	if(!GoresCycleActive)
-	{
-		m_aWasInFreezeForGoresHammer[Dummy] = InFreeze;
-		return;
-	}
-
-	const bool HammerRequested = Input.m_WantedWeapon == WEAPON_HAMMER + 1;
-	if(ShouldTriggerQmGoresHammerWakeup(GoresCycleActive, HammerRequested, ExternalHammerWakeup))
-	{
-		Input.m_WantedWeapon = WEAPON_HAMMER + 1;
-		Input.m_Fire = QmGoresHammerWakeupFireState(Input.m_Fire);
-		m_aGoresHammerWakeupFirePendingRelease[Dummy] = !FireHeld;
-		m_aWasInFreezeForGoresHammer[Dummy] = InFreeze;
-		return;
-	}
-
-	if(ShouldKeepQmGoresHammerInFreeze(GoresCycleActive, InFreeze, HammerRequested))
-	{
-		m_aWasInFreezeForGoresHammer[Dummy] = InFreeze;
-		return;
-	}
-
-	if(GameClient()->m_Snap.m_pLocalCharacter->m_Weapon == WEAPON_HAMMER)
-	{
-		const int RestoreWeapon = GoresRestoreWeaponAfterHammer(m_aGoresPreHammerWeapon[Dummy], m_aGoresHasPreHammerWeapon[Dummy]);
-		GameClient()->m_Controls.m_aInputData[Dummy].m_WantedWeapon = RestoreWeapon + 1;
-		m_aGoresHasPreHammerWeapon[Dummy] = false;
-	}
-
+	const int CurrentWeapon = GoresCycleActive ? GameClient()->m_Snap.m_pLocalCharacter->m_Weapon : -1;
+	ApplyQmGoresWeaponCycleInput(Input, GameClient()->m_Controls.m_aLastData[Dummy].m_Fire, GoresCycleActive, CurrentWeapon, InFreeze, ExternalHammerWakeup, m_aGoresHammerWakeupFirePendingRelease[Dummy]);
 	m_aWasInFreezeForGoresHammer[Dummy] = InFreeze;
 }
 

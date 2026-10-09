@@ -319,12 +319,8 @@ class CTClient : public CComponent
 	int m_aGoresRunStartDistanceToFinish[NUM_DUMMIES] = {0, 0};
 	bool m_aGoresMapProgressValid[NUM_DUMMIES] = {false, false};
 	float m_aGoresMapProgress[NUM_DUMMIES] = {0.0f, 0.0f};
-	int m_aGoresPreHammerWeapon[NUM_DUMMIES] = {WEAPON_GUN, WEAPON_GUN};
-	bool m_aGoresHasPreHammerWeapon[NUM_DUMMIES] = {false, false};
-	bool m_aPrevFireForGores[NUM_DUMMIES] = {false, false};
 	bool IsGoresMapProgressMap() const;
 	bool IsGoresModuleEnabled() const;
-	bool HasBlockingGoresWeapon() const;
 	bool HasExtraGoresWeapon() const;
 	void UpdateGoresWeaponCycle();
 	void InvalidateGoresDistanceField();
@@ -464,8 +460,7 @@ public:
 	void OnUpdate() override;
 	void OnRender() override;
 	bool OnInput(const IInput::CEvent &Event) override;
-	bool ShouldAppendGoresPrevWeapon() const;
-	// Gores 自动切锤是否正在接管武器（锤后自动切回，或拿到额外武器后的脉冲模式）。
+	// Gores 锤枪循环是否正在接管武器；拿到额外武器时按停用选项决定是否继续。
 	bool IsGoresWeaponCycleActive() const;
 	// Gores 自动切锤引起的锤子切换是否要跳过切换动画（受 qm_gores_suppress_switch_anim 控制）。
 	bool ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const;

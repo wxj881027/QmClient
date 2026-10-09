@@ -8,6 +8,8 @@
 
 #include <generated/protocol.h>
 
+#include <game/gamecore.h>
+
 #include <algorithm>
 #include <limits>
 
@@ -159,19 +161,45 @@ int QmGoresHammerWakeupReleaseFireState(int CurrentFire)
 	return ((CurrentFire + 1) & ~1) & INPUT_STATE_MASK;
 }
 
-int GoresRestoreWeaponAfterHammer(int PreHammerWeapon, bool HasPreHammerWeapon)
+bool ShouldEnableQmGoresWeaponCycle(bool GoresEnabled, bool AutoWeaponSwitch, bool HasExtraWeapon, bool DisableIfWeapons)
 {
-	return HasPreHammerWeapon ? PreHammerWeapon : WEAPON_GUN;
+	return GoresEnabled && AutoWeaponSwitch && !(HasExtraWeapon && DisableIfWeapons);
 }
 
-bool ShouldPulseGoresHammerOnFire(bool GoresCycleActive, bool FireJustPressed, bool CurrentWeaponIsHammer, bool FreezeWakeupActive)
+void ApplyQmGoresWeaponPickupInput(CNetObj_PlayerInput &Input, int Weapon, bool AutoSwitchOnPickup, bool KeepCurrentWeapon)
 {
-	return GoresCycleActive && FireJustPressed && !CurrentWeaponIsHammer && !FreezeWakeupActive;
+	if(AutoSwitchOnPickup && !KeepCurrentWeapon)
+		Input.m_WantedWeapon = Weapon + 1;
 }
 
-bool ShouldRestoreGoresWeaponAfterHammer(bool CurrentWeaponIsHammer, bool HasPreHammerWeapon)
+void ApplyQmGoresWeaponCycleInput(CNetObj_PlayerInput &Input, int PreviousFire, bool CycleActive, int CurrentWeapon, bool InFreeze, bool ExternalHammerWakeup, bool &PendingRelease)
 {
-	return CurrentWeaponIsHammer && HasPreHammerWeapon;
+	const bool FireHeld = (Input.m_Fire & 1) != 0;
+	if(ShouldReleaseQmGoresHammerWakeupFire(PendingRelease, Input.m_Fire))
+		Input.m_Fire = QmGoresHammerWakeupReleaseFireState(Input.m_Fire);
+	PendingRelease = false;
+	if(!CycleActive)
+		return;
+
+	// 和上次采样的开火计数比较：短点击已松开、计数回绕也必须在同一份输入中切锤。
+	if(CountInput(PreviousFire, Input.m_Fire).m_Presses > 0)
+	{
+		Input.m_WantedWeapon = WEAPON_HAMMER + 1;
+		return;
+	}
+
+	const bool HammerRequested = Input.m_WantedWeapon == WEAPON_HAMMER + 1;
+	if(ShouldTriggerQmGoresHammerWakeup(CycleActive, HammerRequested, ExternalHammerWakeup))
+	{
+		Input.m_Fire = QmGoresHammerWakeupFireState(Input.m_Fire);
+		PendingRelease = !FireHeld;
+		return;
+	}
+	if(ShouldKeepQmGoresHammerInFreeze(CycleActive, InFreeze, HammerRequested))
+		return;
+
+	if(CurrentWeapon == WEAPON_HAMMER)
+		Input.m_WantedWeapon = WEAPON_GUN + 1;
 }
 
 bool ShouldShowQmHookStrongWeakScope(int Scope, bool Self, bool Strong, bool Weak)

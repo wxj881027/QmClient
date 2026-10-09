@@ -572,7 +572,7 @@ void CMenus::RenderSettingsTeeIdentity(CUIRect MainView, CUIRect *pFlagButton, f
 		SetNeedSendInfo();
 
 	static CButtonContainer s_FlagButton;
-	if(DoButton_Menu(&s_FlagButton, "", 0, &FlagButton))
+	if(Ui()->DoButtonLogic(&s_FlagButton, 0, &FlagButton, BUTTONFLAG_LEFT))
 	{
 		static SPopupMenuId s_PopupCountryId;
 		static SPopupSettingsCountrySelectionContext s_PopupCountryContext;

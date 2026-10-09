@@ -1912,9 +1912,6 @@ void CGameConsole::OnRender()
 	const unsigned PreviousRenderFlags = TextRender()->GetRenderFlags();
 	const EFontPreset PreviousFontPreset = TextRender()->GetFontPreset();
 
-	if(m_ConsoleState == CONSOLE_OPEN)
-		Input()->MouseModeAbsolute();
-
 	float ConsoleHeightScale;
 	if(m_ConsoleState == CONSOLE_OPENING)
 		ConsoleHeightScale = ConsoleScaleFunc(Progress);
@@ -1937,9 +1934,6 @@ void CGameConsole::OnRender()
 	{
 		Ui()->SetEnabled(true);
 		Ui()->StartCheck();
-		const vec2 NativeMousePos = Input()->NativeMousePos();
-		const vec2 UpdatedMousePos = Ui()->UpdatedMousePos();
-		Ui()->OnCursorMove(NativeMousePos.x - UpdatedMousePos.x, NativeMousePos.y - UpdatedMousePos.y);
 		if(CLineInput *pActiveInput = CLineInput::GetActiveInput())
 		{
 			Ui()->SetActiveItem(pActiveInput);
@@ -2001,7 +1995,6 @@ void CGameConsole::OnRender()
 		TextRender()->TextEx(&PromptCursor, aPrompt);
 
 		// check if mouse is pressed
-		const vec2 WindowSize = vec2(Graphics()->WindowWidth(), Graphics()->WindowHeight());
 		const vec2 ScreenSize = vec2(Screen.w, Screen.h);
 		bool LinkClickPending = false;
 		vec2 LinkClickPos = vec2(0.0f, 0.0f);
@@ -2018,7 +2011,7 @@ void CGameConsole::OnRender()
 			}
 			else
 			{
-				return Input()->NativeMousePos() / WindowSize * ScreenSize;
+				return Ui()->MousePos();
 			}
 		};
 		if(!pConsole->m_MouseIsPress && (m_TouchState.m_PrimaryPressed || Input()->NativeMousePressed(1)))
@@ -2627,6 +2620,8 @@ void CGameConsole::OnRender()
 		}
 	}
 
+	RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
+
 	if(UpdateConsoleUi)
 	{
 		Ui()->FinishCheck();
@@ -2642,6 +2637,17 @@ void CGameConsole::OnRender()
 
 void CGameConsole::OnMessage(int MsgType, void *pRawMsg)
 {
+}
+
+bool CGameConsole::OnCursorMove(float x, float y, IInput::ECursorType CursorType)
+{
+	if(!IsActive())
+		return false;
+
+	// 控制台沿用客户端光标，避免释放鼠标捕获后出现系统光标。
+	Ui()->ConvertMouseMove(&x, &y, CursorType);
+	Ui()->OnCursorMove(x, y);
+	return true;
 }
 
 bool CGameConsole::OnInput(const IInput::CEvent &Event)
@@ -2702,7 +2708,6 @@ void CGameConsole::Toggle(int Type)
 		else
 		{
 			ConsoleForType(Type)->m_Input.Deactivate();
-			Input()->MouseModeRelative();
 			Ui()->SetEnabled(true);
 			GameClient()->OnRelease();
 			m_ConsoleState = CONSOLE_CLOSING;
