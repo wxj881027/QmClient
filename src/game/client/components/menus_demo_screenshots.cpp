@@ -5,6 +5,8 @@
 
 #include <base/system.h>
 
+#include <engine/engine.h>
+
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
@@ -211,10 +213,17 @@ bool CMenus::DoDemoScreenshotWatermarkButton(const CUIRect &Rect)
 	const unsigned PreviousFlags = TextRender()->GetRenderFlags();
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	const bool Clicked = DoButton_Menu_QmIcon(&s_WatermarkButton, EQmIcon::PENCIL, FONT_ICON_PENCIL, 0, &Rect);
+	const bool Busy = m_pScreenshotWatermarkJob != nullptr;
+	const bool Clicked = DoButton_Menu_QmIcon(&s_WatermarkButton, Busy ? EQmIcon::CLOSE : EQmIcon::PENCIL, Busy ? FONT_ICON_XMARK : FONT_ICON_PENCIL, Busy ? 1 : 0, &Rect);
 	TextRender()->SetRenderFlags(PreviousFlags);
 	TextRender()->SetFontPreset(PreviousPreset);
-	GameClient()->m_Tooltips.DoToolTip(&s_WatermarkButton, &Rect, Localize("Apply watermark"));
+	GameClient()->m_Tooltips.DoToolTip(&s_WatermarkButton, &Rect, Busy ? Localize("Cancel") : Localize("Apply watermark"));
+	if(Busy)
+	{
+		if(Clicked)
+			m_pScreenshotWatermarkJob->Cancel();
+		return false;
+	}
 	return Clicked;
 }
 
@@ -234,15 +243,47 @@ bool CMenus::ApplyDemoScreenshotWatermark(const CDemoItem &Item)
 	str_copy(pExtension, "_watermarked.png", sizeof(aTargetPath) - (pExtension - aTargetPath));
 
 	const CQmScreenshotManager::SWatermarkOptions Options = CQmScreenshotManager::CurrentWatermarkOptions();
-	const bool Saved = m_ScreenshotManager.ApplyWatermark(Storage(), aSourcePath, Item.m_StorageType, aTargetPath, Options);
+	if(m_pScreenshotWatermarkJob != nullptr)
+		return false;
+	m_pScreenshotWatermarkJob = m_ScreenshotManager.CreateWatermarkJob(Storage(), aSourcePath, Item.m_StorageType, aTargetPath, Options);
+	if(m_pScreenshotWatermarkJob == nullptr)
+		return false;
+	m_ScreenshotWatermarkFolder = m_aCurrentDemoFolder;
+	Engine()->AddJob(m_pScreenshotWatermarkJob);
+	return true;
+}
+
+void CMenus::PumpDemoScreenshotWatermark()
+{
+	if(m_pScreenshotWatermarkJob == nullptr)
+		return;
+	const bool InGame = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
+	const bool OnSourcePage = IsActive() && (InGame ? m_GamePage : m_MenuPage) == PAGE_DEMOS &&
+		DemoBrowserBrowsingScreenshots() && m_ScreenshotWatermarkFolder == m_aCurrentDemoFolder;
+	if(!OnSourcePage)
+		m_pScreenshotWatermarkJob->Cancel();
+	if(m_pScreenshotWatermarkJob->State() != IJob::STATE_DONE)
+		return;
+	if(m_pScreenshotWatermarkJob->Canceled())
+	{
+		m_pScreenshotWatermarkJob.reset();
+		return;
+	}
+	// 不覆盖正在显示的其它弹窗，结果等到页面仍有效且弹窗空闲再发布。
+	if(m_Popup != POPUP_NONE)
+		return;
+	const bool Saved = m_pScreenshotWatermarkJob->Saved();
+	m_pScreenshotWatermarkJob.reset();
 	if(Saved)
 	{
 		m_DemoScreenshotPreviewLoadFailed = false;
 		ResetDemoScreenshotPreview();
 		DemolistPopulate();
 		DemolistOnUpdate(false);
+		PopupMessage(Localize("Screenshot saved"), Localize("The watermarked screenshot was saved next to the original"), Localize("Ok"));
 	}
-	return Saved;
+	else
+		PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
 }
 
 void CMenus::RenderDemoScreenshotGallery(CUIRect ListBox, bool &WasListboxItemActivated)

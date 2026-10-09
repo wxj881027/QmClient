@@ -12,6 +12,7 @@
 
 #include "online_replay_player.h"
 #include "rank_demo_manifest.h"
+#include "rank_view_timeline.h"
 
 #include <base/vmath.h>
 
@@ -284,37 +285,15 @@ private:
 	// 影子只存了轨迹，demo 浏览器里的交互反馈（锤击/爆炸/伤害指示/世界音效）
 	// 和开关类机关的表现都来自快照。解析时按 tick 顺手记录，查看模式下按
 	// 轨迹相对 tick 重放，行为对齐 demo 浏览器。坐标为服务端世界坐标，直接可播。
-	struct SViewEvent
-	{
-		int m_RelTick;
-		int m_Type;
-		int m_aData[3];
-	};
-	// 开关状态稀疏记录：服务端每份快照都全量下发，仅在状态变化时记一条
-	struct SViewSwitchState
-	{
-		int m_RelTick;
-		int m_HighestSwitchNumber;
-		unsigned m_aStatus[8];
-	};
+	using SViewEvent = qmclient::rank_ghost::SViewEvent;
+	using SViewSwitchState = qmclient::rank_ghost::SViewSwitchState;
 	std::vector<SViewEvent> m_vViewEvents;
 	std::vector<SViewSwitchState> m_vViewSwitchStates;
 
 	// 消息类时间线：终点成绩/差值、检查点差值与全局音效只存在于 demo 的网络
 	// 消息流里（快照与事件都没有），解析时按消息记录，查看模式按播放头重放。
-	enum class EViewMessageType
-	{
-		RACE_FINISH, // {ClientId, TimeMs, DiffMs, RecordPersonal, RecordServer}
-		RACE_TIME, // {TimeMs, CheckCs, Finish}（0.7 的 Checkpoint 已换算成同一形态）
-		SOUND_GLOBAL, // {SoundId}
-		MAP_SOUND_GLOBAL, // {SoundId}
-	};
-	struct SViewMessage
-	{
-		int m_RelTick;
-		EViewMessageType m_Type;
-		int m_aData[5];
-	};
+	using EViewMessageType = qmclient::rank_ghost::EViewMessageType;
+	using SViewMessage = qmclient::rank_ghost::SViewMessage;
 	std::vector<SViewMessage> m_vViewMessages;
 	// 消息播放游标：全局音效只播一次，状态类消息只保留最后一条
 	size_t m_ViewMessageCursor = 0;

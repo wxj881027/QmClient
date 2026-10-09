@@ -32,8 +32,6 @@ namespace
 	constexpr const char *QM_CONFIG_V2_QMCLIENT_PATH = "qmclient/settings_qmclient.cfg";
 	constexpr const char *QM_CONFIG_V2_DDNET_PATH = "qmclient/settings_ddnet.cfg";
 	constexpr const char *QM_CONFIG_V1_DIR = "QmClient";
-	constexpr const char *QM_CONFIG_V2_BACKUP_DIR = "qmclient/migration_backup_v2";
-	constexpr const char *QM_CONFIG_V1_BACKUP_DIR = "qmclient/migration_backup_v1";
 	constexpr const char *QM_CONFIG_V2_MARKER = "qmclient/config_migration_v2.done";
 	constexpr const char *QM_CONFIG_V0_QMCLIENT_PATH = "settings_qmclient.cfg";
 	constexpr const char *QM_CONFIG_V0_PROFILES_PATH = "qmclient_profiles.cfg";
@@ -64,35 +62,6 @@ namespace
 		if(pStorage->FolderExists(aFolder, IStorage::TYPE_SAVE))
 			return true;
 		return pStorage->CreateFolder(aFolder, IStorage::TYPE_SAVE) || pStorage->FolderExists(aFolder, IStorage::TYPE_SAVE);
-	}
-
-	// 递归删除存储目录（先删内容，再删目录本身）。
-	static void RemoveStorageDirRecursive(IStorage *pStorage, const char *pDir)
-	{
-		struct SRemoveContext
-		{
-			IStorage *m_pStorage;
-			const char *m_pDir;
-		};
-		SRemoveContext Context{pStorage, pDir};
-		const auto RemoveEntry = [](const CFsFileInfo *pInfo, int IsDir, int Type, void *pUser) -> int {
-			(void)Type;
-			SRemoveContext *pCtx = static_cast<SRemoveContext *>(pUser);
-			if(pInfo == nullptr || pInfo->m_pName == nullptr)
-				return 0;
-			// Windows FindFirstFileW 会返回 "." 与 ".."，必须跳过，否则递归会删到父目录。
-			if(str_comp(pInfo->m_pName, ".") == 0 || str_comp(pInfo->m_pName, "..") == 0)
-				return 0;
-			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "%s/%s", pCtx->m_pDir, pInfo->m_pName);
-			if(IsDir)
-				RemoveStorageDirRecursive(pCtx->m_pStorage, aPath);
-			else
-				pCtx->m_pStorage->RemoveFile(aPath, IStorage::TYPE_SAVE);
-			return 0;
-		};
-		pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, pDir, RemoveEntry, &Context);
-		pStorage->RemoveFolder(pDir, IStorage::TYPE_SAVE);
 	}
 
 	EColorInputAlphaMode ColorInputAlphaMode(const char *pValue)
@@ -186,7 +155,7 @@ bool QmFinalizeConfigMigration(IStorage *pStorage)
 	}
 
 	// 变量文件已合并进 qmclient/settings.cfg（由调用方 Save 完成），
-	// 这里清理所有历史残留；根目录 settings_ddnet.cfg 保留给官方客户端。
+	// 这里清理已知历史配置文件；备份与官方共享的 settings_ddnet.cfg 保留。
 	pStorage->RemoveFile(QM_CONFIG_V2_QMCLIENT_PATH, IStorage::TYPE_SAVE);
 	pStorage->RemoveFile(QM_CONFIG_V2_DDNET_PATH, IStorage::TYPE_SAVE);
 
@@ -220,11 +189,7 @@ bool QmFinalizeConfigMigration(IStorage *pStorage)
 	pStorage->RemoveFile(QM_CONFIG_V0_CHATBINDS_PATH, IStorage::TYPE_SAVE);
 	pStorage->RemoveFile(QM_CONFIG_V0_WARLIST_PATH, IStorage::TYPE_SAVE);
 
-	// v2 迁移残留：备份目录 + 完成标记
-	if(pStorage->FolderExists(QM_CONFIG_V2_BACKUP_DIR, IStorage::TYPE_SAVE))
-		RemoveStorageDirRecursive(pStorage, QM_CONFIG_V2_BACKUP_DIR);
-	if(pStorage->FolderExists(QM_CONFIG_V1_BACKUP_DIR, IStorage::TYPE_SAVE))
-		RemoveStorageDirRecursive(pStorage, QM_CONFIG_V1_BACKUP_DIR);
+	// 历史备份保留供人工恢复，绝不递归清理可能包含目录链接的用户数据。
 	pStorage->RemoveFile(QM_CONFIG_V2_MARKER, IStorage::TYPE_SAVE);
 
 	log_info("config", "Merged managed client configs into qmclient/settings.cfg and cleaned up legacy files");

@@ -4,6 +4,7 @@
 #include <engine/external/zlib/zlib.h>
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <charconv>
 #include <cstring>
@@ -84,49 +85,41 @@ namespace QmMusicLyrics
 			return true;
 		}
 
-		// 尝试 zlib inflate。返回 true 表示解压成功。
+		// 压缩体积不能约束展开后的内存，分块解压并限制歌词正文。
 		bool Inflate(const std::vector<uint8_t> &Input, std::string *pOut)
 		{
-			if(pOut == nullptr || Input.empty())
+			if(pOut == nullptr || Input.empty() || Input.size() > UINT_MAX)
 				return false;
 			z_stream Stream{};
 			Stream.next_in = const_cast<Bytef *>(Input.data());
-			Stream.avail_in = (uInt)std::min<size_t>(Input.size(), UINT_MAX);
+			Stream.avail_in = (uInt)Input.size();
 			if(inflateInit(&Stream) != Z_OK)
 				return false;
-			std::vector<uint8_t> Output;
-			Output.resize(std::max<size_t>(Input.size() * 4 + 1024, 16384));
-			// next_out 必须从缓冲起点开始,否则 total_out 与缓冲位置错位。
-			Stream.next_out = Output.data();
-			Stream.avail_out = (uInt)Output.size();
-			bool Success = false;
+			struct SInflateCleanup
+			{
+				z_stream *m_pStream;
+				~SInflateCleanup() { inflateEnd(m_pStream); }
+			} Cleanup{&Stream};
+			std::string Output;
+			std::array<uint8_t, 16384> aChunk;
 			for(;;)
 			{
-				const size_t Used = Output.size() - Stream.avail_out;
-				if(Stream.avail_out == 0)
-				{
-					Output.resize(Output.size() * 2);
-					Stream.next_out = Output.data() + Used;
-					Stream.avail_out = (uInt)(Output.size() - Used);
-				}
+				Stream.next_out = aChunk.data();
+				Stream.avail_out = aChunk.size();
 				const int Ret = inflate(&Stream, Z_NO_FLUSH);
+				const size_t Produced = aChunk.size() - Stream.avail_out;
+				if(Produced > KRC_MAX_TEXT_BYTES - Output.size())
+					return false;
+				Output.append((const char *)aChunk.data(), Produced);
 				if(Ret == Z_STREAM_END)
-				{
-					Success = true;
 					break;
-				}
-				if(Ret != Z_OK && Ret != Z_BUF_ERROR)
-					break;
-				if(Stream.avail_in == 0 && Ret == Z_BUF_ERROR)
-					break;
+				if(Ret != Z_OK || (Produced == 0 && Stream.avail_in == 0))
+					return false;
 			}
-			inflateEnd(&Stream);
-			if(!Success)
-				return false;
-			pOut->assign((const char *)Output.data(), Stream.total_out);
 			// 跳过 UTF-8 BOM。
-			if(pOut->size() >= 3 && (uint8_t)(*pOut)[0] == 0xEF && (uint8_t)(*pOut)[1] == 0xBB && (uint8_t)(*pOut)[2] == 0xBF)
-				pOut->erase(0, 3);
+			if(Output.size() >= 3 && (uint8_t)Output[0] == 0xEF && (uint8_t)Output[1] == 0xBB && (uint8_t)Output[2] == 0xBF)
+				Output.erase(0, 3);
+			*pOut = std::move(Output);
 			return true;
 		}
 
@@ -292,12 +285,17 @@ namespace QmMusicLyrics
 				// 毫秒对 [startMs,durationMs](旧版)。
 				int64_t StartMs = 0;
 				int64_t DurationMs = 0;
-				if(ParseUnsigned(Trim(Inside.substr(0, Comma)), &StartMs) &&
-					ParseUnsigned(Trim(Inside.substr(Comma + 1)), &DurationMs))
+				if(!ParseUnsigned(Trim(Inside.substr(0, Comma)), &StartMs) ||
+					!ParseUnsigned(Trim(Inside.substr(Comma + 1)), &DurationMs) ||
+					StartMs > std::numeric_limits<int64_t>::max() - DurationMs)
 				{
-					Parsed.m_StartMs = StartMs;
-					Parsed.m_EndMs = DurationMs > 0 && StartMs <= std::numeric_limits<int64_t>::max() - DurationMs ? StartMs + DurationMs : -1;
+					if(Newline == std::string_view::npos)
+						break;
+					Offset = Newline + 1;
+					continue;
 				}
+				Parsed.m_StartMs = StartMs;
+				Parsed.m_EndMs = DurationMs > 0 ? StartMs + DurationMs : -1;
 			}
 			else if(!ParseLrcStyleTime(Inside, &Parsed.m_StartMs))
 			{

@@ -20,10 +20,8 @@ namespace NeteaseLyrics
 			if(pSequence == nullptr)
 				return 0;
 #if defined(_WIN32)
-			// x86 上普通的 64 位 volatile 读取可能撕裂；使用无写入语义的
-			// InterlockedCompareExchange64 作为原子 load。
-			const auto pAtomic = const_cast<volatile LONG64 *>(reinterpret_cast<const volatile LONG64 *>(pSequence));
-			const uint64_t Value = (uint64_t)InterlockedCompareExchange64(pAtomic, 0, 0);
+			// 映射只读，禁止用带写入语义的 compare-exchange；序列、载荷序列和校验和共同拒绝不稳定快照。
+			const uint64_t Value = *pSequence;
 			MemoryBarrier();
 			return Value;
 #else

@@ -3550,6 +3550,8 @@ if(CLIENT)
     components/qmclient/sponsor_chat_render.h
     components/qmclient/sponsor_chat_style.h
     components/qmclient/qmclient_utils.h
+    components/qmclient/bounded_file_reader.h
+    components/qmclient/rank_view_timeline.h
     components/qmclient/rank_ghost.cpp
     components/qmclient/rank_ghost.h
     components/qmclient/online_replay_player.h
@@ -4565,6 +4567,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_map_upload_lifecycle_test.cpp
     src/test/integration/qmclient/client/qm_chat_emoji_resource_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
+    src/test/integration/engine/config_migration_backup_test.cpp
+    src/test/integration/qmclient/client/bounded_file_reader_test.cpp
+    src/test/integration/qmclient/client/rank_view_timeline_test.cpp
+    src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
@@ -4840,6 +4846,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/monitoring/qmclient_monitoring_font_store_contract_test.cpp
     src/test/unit/client/race_test.cpp
     src/test/unit/server/score_test.cpp
+    src/test/unit/engine/image_decode_budget_test.cpp
     src/test/unit/engine/storage_replace_test.cpp
     src/test/unit/client/section_loader_test.cpp
     src/test/contract/qmclient/settings/section_loader_cleanup_contract_test.cpp
@@ -5098,7 +5105,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
 
   if(FREETYPE_FOUND)
-    list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
+    list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/integration/qmclient/client/qm_screenshot_watermark_job_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
     list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
   endif()
 

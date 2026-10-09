@@ -191,7 +191,7 @@ TEST(ConfigMigrationV3, LoadPathsFallbackV0AndFresh)
 	EXPECT_TRUE(vPaths.empty());
 }
 
-TEST(ConfigMigrationV3, FinalizeKeepsOfficialDdnetAndCleansEverythingElse)
+TEST(ConfigMigrationV3, FinalizeKeepsOfficialDdnetAndMigrationBackups)
 {
 	CTestInfo Info;
 	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
@@ -232,8 +232,8 @@ TEST(ConfigMigrationV3, FinalizeKeepsOfficialDdnetAndCleansEverythingElse)
 	EXPECT_FALSE(pStorage->FileExists("qmclient/settings_qmclient.cfg", IStorage::TYPE_SAVE));
 	EXPECT_FALSE(pStorage->FileExists("qmclient/settings_ddnet.cfg", IStorage::TYPE_SAVE));
 	EXPECT_FALSE(pStorage->FileExists("qmclient/config_migration_v2.done", IStorage::TYPE_SAVE));
-	EXPECT_FALSE(pStorage->FileExists("qmclient/migration_backup_v1", IStorage::TYPE_SAVE));
-	EXPECT_FALSE(pStorage->FileExists("qmclient/migration_backup_v2", IStorage::TYPE_SAVE));
+	EXPECT_EQ(ReadStorageFile(pStorage.get(), "qmclient/migration_backup_v1/settings_ddnet.cfg"), "backup v1\n");
+	EXPECT_EQ(ReadStorageFile(pStorage.get(), "qmclient/migration_backup_v2/settings_qmclient.cfg"), "backup v2\n");
 
 	// v1 目录清理
 	EXPECT_FALSE(pStorage->FileExists("QmClient", IStorage::TYPE_SAVE));
@@ -247,6 +247,10 @@ TEST(ConfigMigrationV3, FinalizeKeepsOfficialDdnetAndCleansEverythingElse)
 	EXPECT_FALSE(pStorage->FileExists("qmclient_chatbinds.cfg", IStorage::TYPE_SAVE));
 	EXPECT_FALSE(pStorage->FileExists("qmclient_warlist.cfg", IStorage::TYPE_SAVE));
 
+	ASSERT_TRUE(pStorage->RemoveFile("qmclient/migration_backup_v1/settings_ddnet.cfg", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(pStorage->RemoveFile("qmclient/migration_backup_v2/settings_qmclient.cfg", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(pStorage->RemoveFolder("qmclient/migration_backup_v1", IStorage::TYPE_SAVE));
+	ASSERT_TRUE(pStorage->RemoveFolder("qmclient/migration_backup_v2", IStorage::TYPE_SAVE));
 	ASSERT_TRUE(pStorage->RemoveFile("qmclient/settings.cfg", IStorage::TYPE_SAVE));
 	// Windows 上 QmClient/qmclient_profiles.cfg 与 qmclient/qmclient_profiles.cfg 是同一文件，
 	// 迁移逻辑会保留它（无变量域当前文件），测试清理时需要一并删除。

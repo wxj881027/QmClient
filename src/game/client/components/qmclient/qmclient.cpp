@@ -1,6 +1,7 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "qmclient.h"
 
+#include "bounded_file_reader.h"
 #include "decorative_throw_policy.h"
 #include "qm_title_style.h"
 #include "statistics_file.h"
@@ -1805,15 +1806,10 @@ void CQmClient::FinishQmNewsPublish()
 
 void CQmClient::LoadQmSponsorsCache()
 {
-	void *pData = nullptr;
-	unsigned Size = 0;
-	if(!Storage()->ReadFile(QMCLIENT_SPONSORS_CACHE_FILE, IStorage::TYPE_SAVE, &pData, &Size) || !pData)
-	{
-		free(pData);
+	std::string Data;
+	if(!QmReadFileBounded(Storage()->OpenFile(QMCLIENT_SPONSORS_CACHE_FILE, IOFLAG_READ, IStorage::TYPE_SAVE), 6 * QMCLIENT_SPONSORS_MAX_BYTES + 1024, Data))
 		return;
-	}
-	json_value *pRoot = Size <= 6 * QMCLIENT_SPONSORS_MAX_BYTES + 1024 ? json_parse(static_cast<const char *>(pData), Size) : nullptr;
-	free(pData);
+	json_value *pRoot = json_parse(Data.data(), Data.size());
 	if(!pRoot)
 		return;
 	const json_value *pCacheVersion = json_object_get(pRoot, "cache_version");
@@ -1931,22 +1927,10 @@ void CQmClient::LoadQmMarkdownBroadcastCache()
 {
 	char aPath[IO_MAX_PATH_LENGTH];
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, QMCLIENT_MARKDOWN_BROADCAST_CACHE_FILE, aPath, sizeof(aPath));
-	IOHANDLE File = io_open(aPath, IOFLAG_READ);
-	if(!File)
+	std::string Data;
+	if(!QmReadFileBounded(io_open(aPath, IOFLAG_READ), 6 * QMCLIENT_NEWS_MAX_BYTES + 1024, Data))
 		return;
-	const unsigned Length = (unsigned)io_length(File);
-	if(Length == 0)
-	{
-		io_close(File);
-		return;
-	}
-	std::vector<char> vBuffer(Length);
-	const bool ReadOk = io_read(File, vBuffer.data(), Length) == Length;
-	io_close(File);
-	if(!ReadOk)
-		return;
-
-	json_value *pRoot = json_parse(vBuffer.data(), Length);
+	json_value *pRoot = json_parse(Data.data(), Data.size());
 	if(pRoot == nullptr)
 		return;
 	const json_value *pCacheVersion = json_object_get(pRoot, "cache_version");
@@ -1956,7 +1940,7 @@ void CQmClient::LoadQmMarkdownBroadcastCache()
 	if(pCacheVersion != nullptr && pCacheVersion->type == json_integer &&
 		pCacheVersion->u.integer == QMCLIENT_MARKDOWN_BROADCAST_CACHE_VERSION &&
 		pVersion != nullptr && pVersion->type == json_integer &&
-		pMarkdown != nullptr && pMarkdown->type == json_string)
+		pMarkdown != nullptr && pMarkdown->type == json_string && pMarkdown->u.string.length <= QMCLIENT_NEWS_MAX_BYTES)
 	{
 		m_QmMarkdownBroadcast.Apply(std::string(pMarkdown->u.string.ptr, pMarkdown->u.string.length), (int)pVersion->u.integer);
 	}

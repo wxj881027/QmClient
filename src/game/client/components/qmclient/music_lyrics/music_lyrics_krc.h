@@ -3,6 +3,7 @@
 
 #include "music_lyrics_model.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -18,6 +19,8 @@
 // 旧版变体:行格式 [start,dur](毫秒对) + <offset,dur,0>词,解析器同时兼容。
 namespace QmMusicLyrics
 {
+	constexpr size_t KRC_MAX_TEXT_BYTES = 2 * 1024 * 1024;
+
 	// 标准 64 字节 XOR 密钥表(公开逆向资料,多个开源实现一致)。
 	constexpr uint8_t KRC_KEY64[64] = {
 		0x40, 0x57, 0x7D, 0x24, 0x30, 0x16, 0x0B, 0x35, 0x13, 0x11, 0x09, 0x00, 0x1C, 0x30, 0x3B, 0x3A,
