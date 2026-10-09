@@ -3103,6 +3103,7 @@ if(CLIENT)
     backend/vulkan/backend_vulkan_qm_ext.h
     backend/vulkan/backend_vulkan_qm_pipelines_impl.h
     backend/vulkan/backend_vulkan_qm_render_targets_impl.h
+    backend/vulkan/vulkan_rendering_lifecycle.h
     backend_egl.cpp
     backend_egl.h
     backend_sdl.cpp
@@ -5142,6 +5143,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     )
   endif()
 
+  if(CLIENT AND VULKAN)
+    list(APPEND TESTS src/test/unit/engine/graphics/vulkan_rendering_lifecycle_test.cpp)
+  endif()
+
   if(METAL)
     list(APPEND TESTS_EXTRA
       src/engine/client/backend/backend_base.cpp
@@ -5199,6 +5204,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE
     ${GTEST_INCLUDE_DIRS}
     ${SDL2_INCLUDE_DIRS}
+    ${VULKAN_INCLUDE_DIRS}
   )
   if(FFMPEG_FOUND)
     target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FFMPEG_INCLUDE_DIRS})

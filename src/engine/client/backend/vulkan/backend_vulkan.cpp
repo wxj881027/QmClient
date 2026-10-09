@@ -7,6 +7,7 @@
 #include <engine/client/backend/backend_base.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/backend/vulkan/backend_vulkan_qm_ext.h>
+#include <engine/client/backend/vulkan/vulkan_rendering_lifecycle.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_threaded.h>
 #include <engine/gfx/image_manipulation.h>
@@ -14,6 +15,10 @@
 #include <engine/shared/config.h>
 #include <engine/shared/localization.h>
 #include <engine/storage.h>
+
+#if defined(CONF_VIDEORECORDER)
+#include <engine/shared/video.h>
+#endif
 
 #include <SDL_video.h>
 #include <SDL_vulkan.h>
@@ -39,9 +44,7 @@
 #include <utility>
 #include <vector>
 
-// 渲染工作线程标记：显存分配失败后的恢复流程会驱动整个帧循环（vkDeviceWaitIdle +
-// NextFrame -> WaitFrame -> FinishRenderThreads -> vkQueueSubmit/vkQueuePresentKHR），
-// 这只能在主渲染线程上做。详见 AllocateVulkanMemory()。
+// 工作线程分配失败时不能等待主线程或回收共享缓存；交给帧错误处理停止提交。
 static thread_local bool s_ThreadIsRenderWorker = false;
 
 #ifndef VK_API_VERSION_MAJOR
@@ -400,9 +403,9 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 			m_vvFrameDelayedCachedBufferCleanup.resize(SwapChainImageCount);
 		}
 
-		void DestroyFrameData(size_t ImageCount)
+		void DestroyFrameData()
 		{
-			for(size_t i = 0; i < ImageCount; ++i)
+			for(size_t i = 0; i < m_vvFrameDelayedCachedBufferCleanup.size(); ++i)
 				Cleanup(i);
 			m_vvFrameDelayedCachedBufferCleanup.clear();
 		}
@@ -428,6 +431,8 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 
 		void Cleanup(size_t ImgIndex)
 		{
+			if(ImgIndex >= m_vvFrameDelayedCachedBufferCleanup.size())
+				return;
 			for(auto &MemBlock : m_vvFrameDelayedCachedBufferCleanup[ImgIndex])
 			{
 				MemBlock.m_UsedSize = 0;
@@ -692,6 +697,8 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 		// 3 blend modes - 2 viewport & scissor modes - 2 texture modes
 		std::array<std::array<std::array<VkPipelineLayout, VULKAN_BACKEND_TEXTURE_MODE_COUNT>, VULKAN_BACKEND_CLIP_MODE_COUNT>, VULKAN_BACKEND_BLEND_MODE_COUNT> m_aaaPipelineLayouts;
 		std::array<std::array<std::array<VkPipeline, VULKAN_BACKEND_TEXTURE_MODE_COUNT>, VULKAN_BACKEND_CLIP_MODE_COUNT>, VULKAN_BACKEND_BLEND_MODE_COUNT> m_aaaPipelines;
+		decltype(m_aaaPipelines) m_aaaRenderTargetPipelines{};
+		bool m_RenderTargetOnly = false;
 
 		SPipelineContainer()
 		{
@@ -719,6 +726,15 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 
 		void Destroy(VkDevice &Device)
 		{
+			for(auto &aaPipes : m_aaaRenderTargetPipelines)
+				for(auto &aPipes : aaPipes)
+					for(auto &Pipeline : aPipes)
+					{
+						if(Pipeline != VK_NULL_HANDLE)
+							vkDestroyPipeline(Device, Pipeline, nullptr);
+						Pipeline = VK_NULL_HANDLE;
+					}
+			m_RenderTargetOnly = false;
 			for(auto &aaPipeLayouts : m_aaaPipelineLayouts)
 			{
 				for(auto &aPipeLayouts : aaPipeLayouts)
@@ -988,6 +1004,13 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	uint32_t m_GetPresentedImgDataHelperWidth = 0;
 	uint32_t m_GetPresentedImgDataHelperHeight = 0;
 	VkFence m_GetPresentedImgDataHelperFence = VK_NULL_HANDLE;
+	VkImage m_PresentedSnapshotImage = VK_NULL_HANDLE;
+	SMemoryImageBlock<IMAGE_BUFFER_CACHE_ID> m_PresentedSnapshotMemory;
+	VkExtent2D m_PresentedSnapshotExtent{};
+	VkFormat m_PresentedSnapshotFormat = VK_FORMAT_UNDEFINED;
+	bool m_PresentedSnapshotInitialized = false;
+	bool m_PresentedSnapshotValid = false;
+	bool m_PresentedSnapshotRequested = false;
 
 	std::array<VkSampler, SUPPORTED_SAMPLER_TYPE_COUNT> m_aSamplers{};
 
@@ -1212,8 +1235,6 @@ private:
 	std::vector<uint64_t> m_vImageLastFrameCheck;
 	bool m_CaptureBackbufferProbeDone = false;
 
-	uint32_t m_LastPresentedSwapChainImageIndex;
-
 	std::vector<SBufferObjectFrame> m_vBufferObjects;
 
 	std::vector<SBufferContainer> m_vBufferContainers;
@@ -1378,6 +1399,7 @@ protected:
 
 	std::atomic<bool> m_HasError{false};
 	bool m_CanAssert = false;
+	VkResult m_LastPipelineCreateResult = VK_SUCCESS;
 
 	/**
 	 * After an error occurred, the rendering stop as soon as possible
@@ -1597,7 +1619,7 @@ protected:
 		DestroyIndexBuffer(m_RenderIndexBuffer, m_RenderIndexBufferMemory);
 		if(m_VulkanInitializationComplete)
 		{
-			CleanupVulkan<true>(m_SwapChainImageCount);
+			CleanupVulkan<true>();
 			m_VulkanInitializationComplete = false;
 		}
 		else
@@ -1704,6 +1726,53 @@ protected:
 	 * VIDEO AND SCREENSHOT HELPER
 	 ******************************/
 
+	void DestroyPresentedSnapshot()
+	{
+		if(m_PresentedSnapshotImage != VK_NULL_HANDLE)
+		{
+			vkDestroyImage(m_VKDevice, m_PresentedSnapshotImage, nullptr);
+			FreeImageMemBlock(m_PresentedSnapshotMemory);
+		}
+		m_PresentedSnapshotImage = VK_NULL_HANDLE;
+		m_PresentedSnapshotMemory = {};
+		m_PresentedSnapshotExtent = {};
+		m_PresentedSnapshotFormat = VK_FORMAT_UNDEFINED;
+		m_PresentedSnapshotInitialized = false;
+		m_PresentedSnapshotValid = false;
+	}
+
+	[[nodiscard]] bool RecordPresentedSnapshot(VkCommandBuffer CommandBuffer)
+	{
+		const VkExtent2D Extent = m_VKSwapImgAndViewportExtent.m_SwapImageViewport;
+		if(m_PresentedSnapshotImage == VK_NULL_HANDLE || m_PresentedSnapshotExtent.width != Extent.width || m_PresentedSnapshotExtent.height != Extent.height || m_PresentedSnapshotFormat != m_VKSurfFormat.format)
+		{
+			// 尺寸变化时先等旧副本的 GPU 使用结束；不等待当前尚未提交的录制帧。
+			if(!CheckVulkanResult(DeviceWaitIdle(), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Waiting for snapshot resize failed."))
+				return false;
+			DestroyPresentedSnapshot();
+			if(!CreateImage(Extent.width, Extent.height, 1, 1, m_VKSurfFormat.format, VK_IMAGE_TILING_OPTIMAL,
+				m_PresentedSnapshotImage, m_PresentedSnapshotMemory, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SAMPLE_COUNT_1_BIT))
+			{
+				if(!m_HasError)
+					SetError(GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Creating presented snapshot failed.");
+				return false;
+			}
+			m_PresentedSnapshotExtent = Extent;
+			m_PresentedSnapshotFormat = m_VKSurfFormat.format;
+		}
+		RecordQmVulkanSnapshotCopy(m_vSwapChainImages[m_CurImageIndex], m_PresentedSnapshotImage, Extent, m_PresentedSnapshotInitialized,
+			[this, CommandBuffer](VkPipelineStageFlags SourceStage, VkPipelineStageFlags DestinationStage, const VkImageMemoryBarrier &Barrier) {
+				RecordBarrier(0, 0, 1);
+				vkCmdPipelineBarrier(CommandBuffer, SourceStage, DestinationStage, 0, 0, nullptr, 0, nullptr, 1, &Barrier);
+			},
+			[CommandBuffer](VkImage Source, VkImage Destination, const VkImageCopy &Region) {
+				vkCmdCopyImage(CommandBuffer, Source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Destination, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
+			});
+		m_PresentedSnapshotInitialized = true;
+		m_PresentedSnapshotValid = true;
+		return true;
+	}
+
 	[[nodiscard]] bool PreparePresentedImageDataImage(uint8_t *&pResImageData, uint32_t Width, uint32_t Height)
 	{
 		bool NeedsNewImg = Width != m_GetPresentedImgDataHelperWidth || Height != m_GetPresentedImgDataHelperHeight;
@@ -1731,7 +1800,8 @@ protected:
 			ImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 			ImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-			vkCreateImage(m_VKDevice, &ImageInfo, nullptr, &m_GetPresentedImgDataHelperImage);
+			if(!CheckVulkanResult(vkCreateImage(m_VKDevice, &ImageInfo, nullptr, &m_GetPresentedImgDataHelperImage), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Creating readback image failed."))
+				return false;
 			// Create memory to back up the image
 			VkMemoryRequirements MemRequirements;
 			vkGetImageMemoryRequirements(m_VKDevice, m_GetPresentedImgDataHelperImage, &MemRequirements);
@@ -1741,8 +1811,12 @@ protected:
 			MemAllocInfo.allocationSize = MemRequirements.size;
 			MemAllocInfo.memoryTypeIndex = FindMemoryType(m_VKGPU, MemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
 
-			vkAllocateMemory(m_VKDevice, &MemAllocInfo, nullptr, &m_GetPresentedImgDataHelperMem.m_Mem);
-			vkBindImageMemory(m_VKDevice, m_GetPresentedImgDataHelperImage, m_GetPresentedImgDataHelperMem.m_Mem, 0);
+			if(!CheckVulkanResult(vkAllocateMemory(m_VKDevice, &MemAllocInfo, nullptr, &m_GetPresentedImgDataHelperMem.m_Mem), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Allocating readback memory failed.") ||
+				!CheckVulkanResult(vkBindImageMemory(m_VKDevice, m_GetPresentedImgDataHelperImage, m_GetPresentedImgDataHelperMem.m_Mem, 0), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Binding readback memory failed."))
+			{
+				DeletePresentedImageDataImage();
+				return false;
+			}
 
 			if(!ImageBarrier(m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL))
 				return false;
@@ -1751,8 +1825,11 @@ protected:
 			VkSubresourceLayout SubResourceLayout;
 			vkGetImageSubresourceLayout(m_VKDevice, m_GetPresentedImgDataHelperImage, &SubResource, &SubResourceLayout);
 
-			if(vkMapMemory(m_VKDevice, m_GetPresentedImgDataHelperMem.m_Mem, 0, VK_WHOLE_SIZE, 0, (void **)&m_pGetPresentedImgDataHelperMappedMemory) != VK_SUCCESS)
+			if(!CheckVulkanResult(vkMapMemory(m_VKDevice, m_GetPresentedImgDataHelperMem.m_Mem, 0, VK_WHOLE_SIZE, 0, (void **)&m_pGetPresentedImgDataHelperMappedMemory), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Mapping readback memory failed."))
+			{
+				DeletePresentedImageDataImage();
 				return false;
+			}
 			m_GetPresentedImgDataHelperMappedLayoutOffset = SubResourceLayout.offset;
 			m_GetPresentedImgDataHelperMappedLayoutPitch = SubResourceLayout.rowPitch;
 			m_pGetPresentedImgDataHelperMappedMemory += m_GetPresentedImgDataHelperMappedLayoutOffset;
@@ -1760,7 +1837,11 @@ protected:
 			VkFenceCreateInfo FenceInfo{};
 			FenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 			FenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-			vkCreateFence(m_VKDevice, &FenceInfo, nullptr, &m_GetPresentedImgDataHelperFence);
+			if(!CheckVulkanResult(vkCreateFence(m_VKDevice, &FenceInfo, nullptr, &m_GetPresentedImgDataHelperFence), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Creating readback fence failed."))
+			{
+				DeletePresentedImageDataImage();
+				return false;
+			}
 		}
 		pResImageData = m_pGetPresentedImgDataHelperMappedMemory;
 		return true;
@@ -1775,8 +1856,10 @@ protected:
 			m_GetPresentedImgDataHelperFence = VK_NULL_HANDLE;
 
 			vkDestroyImage(m_VKDevice, m_GetPresentedImgDataHelperImage, nullptr);
-			vkUnmapMemory(m_VKDevice, m_GetPresentedImgDataHelperMem.m_Mem);
-			vkFreeMemory(m_VKDevice, m_GetPresentedImgDataHelperMem.m_Mem, nullptr);
+			if(m_pGetPresentedImgDataHelperMappedMemory != nullptr)
+				vkUnmapMemory(m_VKDevice, m_GetPresentedImgDataHelperMem.m_Mem);
+			if(m_GetPresentedImgDataHelperMem.m_Mem != VK_NULL_HANDLE)
+				vkFreeMemory(m_VKDevice, m_GetPresentedImgDataHelperMem.m_Mem, nullptr);
 
 			m_GetPresentedImgDataHelperImage = VK_NULL_HANDLE;
 			m_GetPresentedImgDataHelperMem = {};
@@ -1791,7 +1874,7 @@ protected:
 	{
 		bool IsB8G8R8A8 = m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_UNORM;
 		bool UsesRGBALikeFormat = m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_UNORM || IsB8G8R8A8;
-		if(UsesRGBALikeFormat && m_LastPresentedSwapChainImageIndex != std::numeric_limits<decltype(m_LastPresentedSwapChainImageIndex)>::max())
+		if(UsesRGBALikeFormat && m_PresentedSnapshotValid && m_PresentedSnapshotImage != VK_NULL_HANDLE)
 		{
 			auto Viewport = m_VKSwapImgAndViewportExtent.GetPresentedImageViewport();
 			VkOffset3D SrcOffset;
@@ -1823,11 +1906,9 @@ protected:
 				return false;
 			VkCommandBuffer &CommandBuffer = *pCommandBuffer;
 
-			auto &SwapImg = m_vSwapChainImages[m_LastPresentedSwapChainImageIndex];
+			const VkImage SnapshotImage = m_PresentedSnapshotImage;
 
 			if(!ImageBarrier(m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL))
-				return false;
-			if(!ImageBarrier(SwapImg, 0, 1, 0, 1, m_VKSurfFormat.format, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL))
 				return false;
 
 			// If source and destination support blit we'll blit as this also does automatic format conversion (e.g. from BGR to RGB)
@@ -1848,7 +1929,7 @@ protected:
 				ImageBlitRegion.dstOffsets[1] = BlitSize;
 
 				// Issue the blit command
-				vkCmdBlitImage(CommandBuffer, SwapImg, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				vkCmdBlitImage(CommandBuffer, SnapshotImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					m_GetPresentedImgDataHelperImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					1, &ImageBlitRegion, VK_FILTER_NEAREST);
 
@@ -1869,14 +1950,12 @@ protected:
 				ImageCopyRegion.extent.depth = 1;
 
 				// Issue the copy command
-				vkCmdCopyImage(CommandBuffer, SwapImg, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				vkCmdCopyImage(CommandBuffer, SnapshotImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					m_GetPresentedImgDataHelperImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					1, &ImageCopyRegion);
 			}
 
 			if(!ImageBarrier(m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL))
-				return false;
-			if(!ImageBarrier(SwapImg, 0, 1, 0, 1, m_VKSurfFormat.format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
 				return false;
 
 			VkResult EndCommandBufferResult = vkEndCommandBuffer(CommandBuffer);
@@ -1931,7 +2010,8 @@ protected:
 			VkMappedMemoryRange MemRange{};
 			MemRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
 			MemRange.memory = m_GetPresentedImgDataHelperMem.m_Mem;
-			MemRange.offset = m_GetPresentedImgDataHelperMappedLayoutOffset;
+			// 整个分配已映射，从零失效以满足 nonCoherentAtomSize 对齐要求。
+			MemRange.offset = 0;
 			MemRange.size = VK_WHOLE_SIZE;
 			VkResult InvalidateResult = InvalidateMappedMemoryRanges(1, &MemRange);
 			if(InvalidateResult != VK_SUCCESS)
@@ -2013,41 +2093,26 @@ protected:
 		if(Res != VK_SUCCESS)
 		{
 			dbg_msg("vulkan", "vulkan memory allocation failed, trying to recover.");
-			// 下面的恢复流程会推进整个帧循环（vkDeviceWaitIdle +
-			// NextFrame -> WaitFrame -> FinishRenderThreads -> 队列提交/呈现），
-			// 以便释放延迟清理的资源后重试。这只允许在主渲染线程上执行。
-			// 在渲染工作线程上它会等待正在执行恢复的那个工作线程（并重新加锁
-			// 该工作线程自己的互斥量），造成渲染器死锁；同时会和主线程并发
-			// 提交队列操作，导致 VK_ERROR_DEVICE_LOST。
-			// 因此工作线程上直接干净地失败：分配失败的上层调用者会报告
-			// 显存不足错误，由主线程统一处理。
-			if((Res == VK_ERROR_OUT_OF_HOST_MEMORY || Res == VK_ERROR_OUT_OF_DEVICE_MEMORY) && !s_ThreadIsRenderWorker)
-			{
-				// aggressively try to get more memory
-				VkResult WaitIdleResult = DeviceWaitIdle();
-				if(WaitIdleResult != VK_SUCCESS)
-				{
-					// 与 QueueSubmit/RecreateSwapChain 路径一致：AUTO 模式下
-					// 设备丢失时按会话禁用增强管线。
-					if(WaitIdleResult == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
-						QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
-					const char *pCritErrorMsg = CheckVulkanCriticalError(WaitIdleResult);
-					if(pCritErrorMsg != nullptr)
-						SetError(EGfxErrorType::GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "Waiting for device idle during memory recovery failed.", pCritErrorMsg);
-					else
-						SetError(EGfxErrorType::GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "Waiting for device idle during memory recovery failed.");
-					return false;
-				}
-				for(size_t i = 0; i < m_SwapChainImageCount + 1; ++i)
-				{
-					if(!NextFrame())
-						return false;
-				}
-				Res = vkAllocateMemory(m_VKDevice, pAllocateInfo, nullptr, pMemory);
-			}
+			// 当前录制帧的延迟资源仍可能被未提交命令引用，恢复时不能推进帧或清理它。
+			// 多线程录制期间共享缓存仍在使用，只允许单线程主渲染路径尝试回收。
+			bool RecoveryWaitFailed = false;
+			Res = RetryQmVulkanAllocation(Res, !s_ThreadIsRenderWorker && m_ThreadCount == 1,
+				[&] {
+					const VkResult Result = DeviceWaitIdle();
+					RecoveryWaitFailed = Result != VK_SUCCESS;
+					return Result;
+				},
+				[this] {
+					ReclaimQmVulkanCompletedFrames(m_vvFrameDelayedBufferCleanup.size(), m_CurImageIndex,
+						[this](size_t ImageIndex) { ClearFrameData(ImageIndex); });
+					ShrinkUnusedCaches();
+				},
+				[&] { return vkAllocateMemory(m_VKDevice, pAllocateInfo, nullptr, pMemory); });
 			if(Res != VK_SUCCESS)
 			{
-				(void)CheckVulkanResult(Res, GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "vkAllocateMemory failed.");
+				if(Res == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
+					QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
+				(void)CheckVulkanResult(Res, GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, RecoveryWaitFailed ? "Waiting for device idle during memory recovery failed." : "vkAllocateMemory failed.");
 				char aAllocation[192];
 				str_format(aAllocation, sizeof(aAllocation), "vkAllocateMemory request: bytes=%" PRIu64 " memory_type=%u recording_worker=%d", (uint64_t)pAllocateInfo->allocationSize, pAllocateInfo->memoryTypeIndex, s_ThreadIsRenderWorker ? 1 : 0);
 				SetError(GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, aAllocation);
@@ -2524,6 +2589,8 @@ protected:
 
 	void ClearFrameData(size_t FrameImageIndex)
 	{
+		if(FrameImageIndex >= m_vvFrameDelayedBufferCleanup.size() || FrameImageIndex >= m_vvFrameDelayedTextureCleanup.size() || FrameImageIndex >= m_vvFrameDelayedTextTexturesCleanup.size())
+			return;
 		UploadStagingBuffers();
 
 		// clear pending buffers, that require deletion
@@ -2844,7 +2911,19 @@ protected:
 		}
 
 		vkCmdEndRenderPass(CommandBuffer);
+		m_SwapRenderPassActive = false;
 		EndFrameTimestampQuery(CommandBuffer);
+
+		bool CaptureSnapshot = m_PresentedSnapshotRequested;
+#if defined(CONF_VIDEORECORDER)
+		CaptureSnapshot = CaptureSnapshot || (IVideo::Current() && IVideo::Current()->IsRecording());
+#endif
+		CaptureSnapshot = CaptureSnapshot && (m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_UNORM || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_UNORM);
+		m_PresentedSnapshotRequested = false;
+		m_PresentedSnapshotValid = false;
+		// 必须在 Present 释放交换链图像之前复制，读回阶段只访问自有副本。
+		if(CaptureSnapshot && !RecordPresentedSnapshot(CommandBuffer))
+			return false;
 
 		if(!CheckVulkanResult(vkEndCommandBuffer(CommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (frame) failed."))
 			return false;
@@ -2934,8 +3013,6 @@ protected:
 		PresentInfo.pSwapchains = aSwapChains.data();
 
 		PresentInfo.pImageIndices = &m_CurImageIndex;
-
-		m_LastPresentedSwapChainImageIndex = m_CurImageIndex;
 
 		// 黑帧探测：呈现时没有任何绘制调用的帧在屏幕上只会显示清屏色，
 		// 玩家看到的就是“闪黑”。用 trace 开关暴露这类帧的命令构成，
@@ -3958,7 +4035,9 @@ protected:
 
 	VkPipeline &GetPipeline(SPipelineContainer &Container, bool IsTextured, size_t BlendModeIndex, size_t DynamicIndex)
 	{
-		return Container.m_aaaPipelines[BlendModeIndex][DynamicIndex][(size_t)IsTextured];
+		return SelectQmVulkanPipeline(m_RenderTargetActive, Container.m_RenderTargetOnly,
+			Container.m_aaaPipelines[BlendModeIndex][DynamicIndex][(size_t)IsTextured],
+			Container.m_aaaRenderTargetPipelines[BlendModeIndex][DynamicIndex][(size_t)IsTextured]);
 	}
 
 	VkPipelineLayout &GetPipeLayout(SPipelineContainer &Container, bool IsTextured, size_t BlendModeIndex, size_t DynamicIndex)
@@ -5559,18 +5638,7 @@ public:
 		aAttachments[1] = ColorAttachment;
 
 		std::array<VkSubpassDependency, 2> aDependencies{};
-		aDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-		aDependencies[0].dstSubpass = 0;
-		aDependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		aDependencies[0].srcAccessMask = 0;
-		aDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		aDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		if(LoadAttachments)
-		{
-			aDependencies[0].srcStageMask |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-			aDependencies[0].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT;
-			aDependencies[0].dstAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-		}
+		aDependencies[0] = QmVulkanSwapPassDependency();
 		aDependencies[1].srcSubpass = 0;
 		aDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
 		aDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -5657,10 +5725,12 @@ public:
 		CreateInfo.codeSize = vCode.size();
 		CreateInfo.pCode = (const uint32_t *)(vCode.data());
 
-		if(vkCreateShaderModule(m_VKDevice, &CreateInfo, nullptr, &ShaderModule) != VK_SUCCESS)
+		const VkResult Result = vkCreateShaderModule(m_VKDevice, &CreateInfo, nullptr, &ShaderModule);
+		if(Result != VK_SUCCESS)
 		{
-			if(ReportError)
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Shader module was not created.");
+			m_LastPipelineCreateResult = Result;
+			if(QmVulkanPipelineFailureIsFatal(Result, ReportError))
+				(void)CheckVulkanResult(Result, EGfxErrorType::GFX_ERROR_TYPE_INIT, "Shader module was not created.");
 			return false;
 		}
 
@@ -5742,6 +5812,7 @@ public:
 
 		if(!ShaderLoaded)
 		{
+			m_LastPipelineCreateResult = VK_ERROR_INITIALIZATION_FAILED;
 			if(ReportError)
 				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "A shader file could not load correctly.");
 			return false;
@@ -5884,12 +5955,16 @@ public:
 		PipelineLayoutInfo.pPushConstantRanges = !aPushConstants.empty() ? aPushConstants.data() : nullptr;
 
 		VkPipelineLayout &PipeLayout = GetPipeLayout(PipeContainer, HasSampler, size_t(BlendMode), size_t(DynamicMode));
-		VkPipeline &Pipeline = GetPipeline(PipeContainer, HasSampler, size_t(BlendMode), size_t(DynamicMode));
+		VkPipeline &Pipeline = PipeContainer.m_aaaPipelines[BlendMode][DynamicMode][(size_t)HasSampler];
+		VkPipeline &TargetPipeline = PipeContainer.m_aaaRenderTargetPipelines[BlendMode][DynamicMode][(size_t)HasSampler];
+		PipeContainer.m_RenderTargetOnly = RenderPass == m_VKRenderTargetRenderPass;
 
-		if(vkCreatePipelineLayout(m_VKDevice, &PipelineLayoutInfo, nullptr, &PipeLayout) != VK_SUCCESS)
+		const VkResult LayoutResult = vkCreatePipelineLayout(m_VKDevice, &PipelineLayoutInfo, nullptr, &PipeLayout);
+		if(LayoutResult != VK_SUCCESS)
 		{
-			if(ReportError)
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating pipeline layout failed.");
+			m_LastPipelineCreateResult = LayoutResult;
+			if(QmVulkanPipelineFailureIsFatal(LayoutResult, ReportError))
+				(void)CheckVulkanResult(LayoutResult, EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating pipeline layout failed.");
 			return false;
 		}
 
@@ -5923,10 +5998,16 @@ public:
 			PipelineInfo.pDynamicState = &DynamicStateCreate;
 		}
 
-		if(vkCreateGraphicsPipelines(m_VKDevice, VK_NULL_HANDLE, 1, &PipelineInfo, nullptr, &Pipeline) != VK_SUCCESS)
+		const VkResult PipelineResult = CreateQmVulkanGraphicsPipelines(PipelineInfo,
+			RenderPass == VK_NULL_HANDLE ? m_VKRenderTargetRenderPass : VK_NULL_HANDLE, Pipeline, TargetPipeline,
+			[this](const VkGraphicsPipelineCreateInfo &Info, VkPipeline &Output) {
+				return vkCreateGraphicsPipelines(m_VKDevice, VK_NULL_HANDLE, 1, &Info, nullptr, &Output);
+			});
+		if(PipelineResult != VK_SUCCESS)
 		{
-			if(ReportError)
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the graphic pipeline failed.");
+			m_LastPipelineCreateResult = PipelineResult;
+			if(QmVulkanPipelineFailureIsFatal(PipelineResult, ReportError))
+				(void)CheckVulkanResult(PipelineResult, EGfxErrorType::GFX_ERROR_TYPE_INIT, "Creating the graphic pipeline failed.");
 			return false;
 		}
 
@@ -6496,24 +6577,22 @@ public:
 
 	void DestroyCommandBuffer()
 	{
-		if(m_ThreadCount > 1)
-		{
-			size_t Count = 0;
-			for(auto &ThreadDrawCommandBuffers : m_vvThreadDrawCommandBuffers)
-			{
-				vkFreeCommandBuffers(m_VKDevice, m_vCommandPools[Count], static_cast<uint32_t>(ThreadDrawCommandBuffers.size()), ThreadDrawCommandBuffers.data());
-				++Count;
-			}
-		}
-
-		vkFreeCommandBuffers(m_VKDevice, m_vCommandPools[0], static_cast<uint32_t>(m_vMemoryCommandBuffers.size()), m_vMemoryCommandBuffers.data());
-		vkFreeCommandBuffers(m_VKDevice, m_vCommandPools[0], static_cast<uint32_t>(m_vMainDrawCommandBuffers.size()), m_vMainDrawCommandBuffers.data());
-
+		// 初始化可能只分配了部分批次；只释放实际成功创建的句柄。
+		auto FreeBuffers = [this](size_t PoolIndex, std::vector<VkCommandBuffer> &Buffers) {
+			const VkCommandPool Pool = PoolIndex < m_vCommandPools.size() ? m_vCommandPools[PoolIndex] : VK_NULL_HANDLE;
+			FreeQmVulkanCommandBuffers(Pool, Buffers, [this](VkCommandPool CommandPool, uint32_t Count, const VkCommandBuffer *pBuffers) {
+				vkFreeCommandBuffers(m_VKDevice, CommandPool, Count, pBuffers);
+			});
+		};
+		for(size_t Index = 0; Index < m_vvThreadDrawCommandBuffers.size(); ++Index)
+			FreeBuffers(Index, m_vvThreadDrawCommandBuffers[Index]);
+		FreeBuffers(0, m_vMemoryCommandBuffers);
+		FreeBuffers(0, m_vMainDrawCommandBuffers);
 		m_vvThreadDrawCommandBuffers.clear();
 		m_vvUsedThreadDrawCommandBuffer.clear();
 		m_vHelperThreadDrawCommandBuffers.clear();
-
 		m_vMainDrawCommandBuffers.clear();
+
 		m_vMemoryCommandBuffers.clear();
 		m_vUsedMemoryCommandBuffer.clear();
 	}
@@ -6665,12 +6744,12 @@ public:
 	}
 
 	template<bool IsLastCleanup>
-	void CleanupVulkan(size_t SwapchainCount)
+	void CleanupVulkan()
 	{
 		if(IsLastCleanup)
 		{
-			if(m_SwapchainCreated)
-				CleanupVulkanSwapChain(true);
+			if(m_SwapchainCreated || m_VKSwapChain != VK_NULL_HANDLE || m_VKRenderPass != VK_NULL_HANDLE)
+				CleanupVulkanSwapChain(true, !m_SwapchainCreated);
 
 			// clean all images, buffers, buffer containers
 			for(auto &Texture : m_vTextures)
@@ -6682,6 +6761,7 @@ public:
 				DestroyTexture(Texture);
 			}
 			CleanupQmRenderTargets();
+			DestroyPresentedSnapshot();
 
 			for(auto &BufferObject : m_vBufferObjects)
 			{
@@ -6699,15 +6779,14 @@ public:
 		m_vDrawCommandStates.clear();
 		DestroyFrameTimestampQueries();
 
-		for(size_t i = 0; i < m_ThreadCount; ++i)
-		{
-			m_vStreamedVertexBuffers[i].Destroy([&](size_t ImageIndex, SFrameBuffers &Buffer) { DestroyBufferOfFrame(ImageIndex, Buffer); });
-			m_vStreamedUniformBuffers[i].Destroy([&](size_t ImageIndex, SFrameUniformBuffers &Buffer) { DestroyUniBufferOfFrame(ImageIndex, Buffer); });
-		}
+		for(auto &Buffers : m_vStreamedVertexBuffers)
+			Buffers.Destroy([&](size_t ImageIndex, SFrameBuffers &Buffer) { DestroyBufferOfFrame(ImageIndex, Buffer); });
+		for(auto &Buffers : m_vStreamedUniformBuffers)
+			Buffers.Destroy([&](size_t ImageIndex, SFrameUniformBuffers &Buffer) { DestroyUniBufferOfFrame(ImageIndex, Buffer); });
 		m_vStreamedVertexBuffers.clear();
 		m_vStreamedUniformBuffers.clear();
 
-		for(size_t i = 0; i < SwapchainCount; ++i)
+		for(size_t i = 0; i < m_vvFrameDelayedBufferCleanup.size(); ++i)
 		{
 			ClearFrameData(i);
 		}
@@ -6716,11 +6795,11 @@ public:
 		m_vvFrameDelayedTextureCleanup.clear();
 		m_vvFrameDelayedTextTexturesCleanup.clear();
 
-		m_StagingBufferCache.DestroyFrameData(SwapchainCount);
-		m_StagingBufferCacheImage.DestroyFrameData(SwapchainCount);
-		m_VertexBufferCache.DestroyFrameData(SwapchainCount);
+		m_StagingBufferCache.DestroyFrameData();
+		m_StagingBufferCacheImage.DestroyFrameData();
+		m_VertexBufferCache.DestroyFrameData();
 		for(auto &ImageBufferCache : m_ImageBufferCaches)
-			ImageBufferCache.second.DestroyFrameData(SwapchainCount);
+			ImageBufferCache.second.DestroyFrameData();
 
 		if(IsLastCleanup)
 		{
@@ -6794,6 +6873,7 @@ public:
 
 	int RecreateSwapChain()
 	{
+		m_PresentedSnapshotValid = false;
 		int Ret = 0;
 		VkResult WaitIdleResult = DeviceWaitIdle();
 		if(WaitIdleResult != VK_SUCCESS)
@@ -6831,10 +6911,14 @@ public:
 		if(!m_SwapchainCreated)
 			Ret = InitVulkanSwapChain(OldSwapChain);
 
-		if(OldSwapChainImageCount != m_SwapChainImageCount)
+		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount,
+			[this] { CleanupVulkan<false>(); },
+			[this] { return InitVulkan<false>(); });
+		if(Ret != 0)
 		{
-			CleanupVulkan<false>(OldSwapChainImageCount);
-			InitVulkan<false>();
+			m_FramePrepared = false;
+			if(!m_HasError)
+				SetError(GFX_ERROR_TYPE_INIT, "Recreating Vulkan frame resources failed.");
 		}
 
 		if(OldSwapChain != VK_NULL_HANDLE)
@@ -7383,8 +7467,6 @@ public:
 			return -1;
 		}
 
-		m_LastPresentedSwapChainImageIndex = std::numeric_limits<decltype(m_LastPresentedSwapChainImageIndex)>::max();
-
 		if(!CreateRenderPass(m_VKRenderPass, true))
 			return -1;
 		if(!CreateRenderPass(m_VKRenderPassLoad, false, true, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
@@ -7493,23 +7575,6 @@ public:
 				return -1;
 		}
 
-		if(!CreateCommandBuffers())
-			return -1;
-
-		if(!CreateSyncObjects())
-			return -1;
-
-		CreateFrameTimestampQueries();
-
-		if(IsFirstInitialization)
-		{
-			if(!CreateDescriptorPools())
-				return -1;
-
-			if(!CreateTextureSamplers())
-				return -1;
-		}
-
 		m_vStreamedVertexBuffers.resize(m_ThreadCount);
 		m_vStreamedUniformBuffers.resize(m_ThreadCount);
 		for(size_t i = 0; i < m_ThreadCount; ++i)
@@ -7532,6 +7597,23 @@ public:
 			ImageBufferCache.second.Init(m_SwapChainImageCount);
 
 		m_vImageLastFrameCheck.resize(m_SwapChainImageCount, 0);
+
+		if(!CreateCommandBuffers())
+			return -1;
+
+		if(!CreateSyncObjects())
+			return -1;
+
+		CreateFrameTimestampQueries();
+
+		if(IsFirstInitialization)
+		{
+			if(!CreateDescriptorPools())
+				return -1;
+
+			if(!CreateTextureSamplers())
+				return -1;
+		}
 
 		if(IsFirstInitialization)
 		{
@@ -8456,7 +8538,7 @@ public:
 		DestroyIndexBuffer(m_IndexBuffer, m_IndexBufferMemory);
 		DestroyIndexBuffer(m_RenderIndexBuffer, m_RenderIndexBufferMemory);
 
-		CleanupVulkan<true>(m_SwapChainImageCount);
+		CleanupVulkan<true>();
 		SyncProceduralRingCapability();
 		m_pBackendCapabilities = nullptr;
 
@@ -8665,8 +8747,12 @@ public:
 
 	[[nodiscard]] bool Cmd_ReadPixel(const CCommandBuffer::SCommand_TrySwapAndReadPixel *pCommand)
 	{
-		if(!*pCommand->m_pSwapped && !NextFrame())
-			return false;
+		if(!*pCommand->m_pSwapped)
+		{
+			m_PresentedSnapshotRequested = true;
+			if(!NextFrame())
+				return false;
+		}
 		*pCommand->m_pSwapped = true;
 
 		uint32_t Width;
@@ -8686,8 +8772,12 @@ public:
 
 	[[nodiscard]] bool Cmd_Screenshot(const CCommandBuffer::SCommand_TrySwapAndScreenshot *pCommand)
 	{
-		if(!*pCommand->m_pSwapped && !NextFrame())
-			return false;
+		if(!*pCommand->m_pSwapped)
+		{
+			m_PresentedSnapshotRequested = true;
+			if(!NextFrame())
+				return false;
+		}
 		*pCommand->m_pSwapped = true;
 
 		uint32_t Width;
