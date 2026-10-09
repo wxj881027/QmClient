@@ -63,16 +63,10 @@ void CHudEditor::OnStateChange(int NewState, int OldState)
 	}
 }
 
-void CHudEditor::OnUpdate()
+void CHudEditor::BeginRenderFrame()
 {
-	std::array<bool, ELEMENT_COUNT> aMeasuredLastFrame{};
-	for(const SVisibleElement &Visible : m_vVisibleElements)
-		aMeasuredLastFrame[static_cast<int>(Visible.m_Element)] = Visible.m_ReportedVisibleRect;
-	for(int Index = 0; Index < ELEMENT_COUNT; ++Index)
-	{
-		if(!aMeasuredLastFrame[Index])
-			m_aMeasuredVisibleRects[Index] = {};
-	}
+	for(QmHudEditor::CMeasuredVisibleRect &Measured : m_aMeasuredVisibleRects)
+		Measured.BeginRenderFrame();
 	m_vVisibleElements.clear();
 }
 
@@ -173,7 +167,6 @@ void CHudEditor::UpdateVisibleRect(EHudEditorElement Element, const CUIRect &Ren
 	Visible.m_StateOffsetX = (Visible.m_Rect.x - Visible.m_TargetUiRect.x) / Scale;
 	Visible.m_StateOffsetY = (Visible.m_Rect.y - Visible.m_TargetUiRect.y) / Scale;
 	m_aMeasuredVisibleRects[static_cast<int>(Element)].Observe(Visible.m_TransformRect, Visible.m_TargetUiRect, Visible.m_Rect);
-	Visible.m_ReportedVisibleRect = true;
 }
 
 const char *CHudEditor::ElementToken(EHudEditorElement Element)

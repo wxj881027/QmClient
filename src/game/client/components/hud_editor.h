@@ -27,11 +27,20 @@ namespace QmHudEditor
 	class CMeasuredVisibleRect
 	{
 		bool m_Valid = false;
+		bool m_ReportedThisFrame = false;
 		float m_BaseWidth = 0.0f;
 		float m_BaseHeight = 0.0f;
 		CUIRect m_RelativeRect{};
 
 	public:
+		// 只在实际绘制开始时轮换状态；两帧之间的逻辑更新不使测量失效。
+		void BeginRenderFrame()
+		{
+			if(!m_ReportedThisFrame)
+				m_Valid = false;
+			m_ReportedThisFrame = false;
+		}
+
 		void Observe(const CUIRect &TransformRect, const CUIRect &TargetUiRect, const CUIRect &RenderedUiRect)
 		{
 			if(TransformRect.w <= EPSILON || TransformRect.h <= EPSILON || TargetUiRect.w <= EPSILON || TargetUiRect.h <= EPSILON ||
@@ -45,6 +54,7 @@ namespace QmHudEditor
 				RenderedUiRect.w / TargetUiRect.w,
 				RenderedUiRect.h / TargetUiRect.h};
 			m_Valid = true;
+			m_ReportedThisFrame = true;
 		}
 
 		CUIRect Resolve(const CUIRect &TransformRect, const CUIRect &FallbackRect) const
@@ -363,7 +373,6 @@ public:
 	int Sizeof() const override { return sizeof(*this); }
 
 	void OnRender() override;
-	void OnUpdate() override;
 	void OnReset() override;
 	void OnRelease() override;
 	void OnStateChange(int NewState, int OldState) override;
@@ -372,6 +381,7 @@ public:
 
 	void SetActive(bool Active);
 	bool IsActive() const { return m_Active; }
+	void BeginRenderFrame();
 	void UpdateVisibleRect(EHudEditorElement Element, const CUIRect &RenderedRect);
 
 	STransformScope PreviewTransform(EHudEditorElement Element, const CUIRect &DefaultRect, bool Scalable = true);
@@ -397,7 +407,6 @@ private:
 		CUIRect m_Rect{};
 		CUIRect m_TransformRect{};
 		CUIRect m_TargetUiRect{};
-		bool m_ReportedVisibleRect = false;
 		float m_BaseWidth = 0.0f;
 		float m_BaseHeight = 0.0f;
 		float m_StateOffsetX = 0.0f;

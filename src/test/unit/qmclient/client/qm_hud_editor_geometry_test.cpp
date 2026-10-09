@@ -115,7 +115,65 @@ TEST(QmHudMeasuredGeometry, InvalidMeasurementCannotReplaceUsableBounds)
 {
 	QmHudEditor::CMeasuredVisibleRect Geometry;
 	const CUIRect Transform{0.0f, 0.0f, 100.0f, 80.0f};
+	Geometry.BeginRenderFrame();
 	Geometry.Observe(Transform, Transform, {4.0f, 10.0f, 60.0f, 20.0f});
 	Geometry.Observe(Transform, {}, {0.0f, 0.0f, 50.0f, 20.0f});
+	Geometry.BeginRenderFrame();
 	EXPECT_FLOAT_EQ(Geometry.Resolve(Transform, Transform).w, 60.0f);
+}
+
+TEST(QmHudMeasuredGeometry, KeepsChatAnchorAcrossRenderFrames)
+{
+	QmHudEditor::CMeasuredVisibleRect Geometry;
+	const CUIRect Transform{0.0f, 50.0f, 190.0f, 250.0f};
+	Geometry.BeginRenderFrame();
+	Geometry.Observe(Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
+	for(int Frame = 0; Frame < 4; ++Frame)
+	{
+		SCOPED_TRACE(Frame);
+		Geometry.BeginRenderFrame();
+		const CUIRect Visible = Geometry.Resolve(Transform, Transform);
+		EXPECT_FLOAT_EQ(Visible.x, 5.0f);
+		EXPECT_FLOAT_EQ(Visible.y, 260.0f);
+		EXPECT_FLOAT_EQ(Visible.w, 185.0f);
+		EXPECT_FLOAT_EQ(Visible.h, 35.0f);
+		EXPECT_NEAR(QmHudEditor::RestoreAxisAnchor(0.0f, Visible.w * 1.05f, 0.0f, 533.0f, Visible.x * 1.05f), -5.25f, 0.001f);
+		Geometry.Observe(Transform, Transform, Visible);
+	}
+}
+
+TEST(QmHudMeasuredGeometry, FallsBackAfterARenderFrameWithoutAValidReport)
+{
+	QmHudEditor::CMeasuredVisibleRect Geometry;
+	const CUIRect Transform{0.0f, 50.0f, 190.0f, 250.0f};
+	Geometry.BeginRenderFrame();
+	Geometry.Observe(Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
+	Geometry.BeginRenderFrame();
+	EXPECT_FLOAT_EQ(Geometry.Resolve(Transform, Transform).x, 5.0f);
+	// 无效报告不能让隐藏内容的旧测量继续存活。
+	Geometry.Observe(Transform, {}, {5.0f, 260.0f, 185.0f, 35.0f});
+	Geometry.BeginRenderFrame();
+	const CUIRect Visible = Geometry.Resolve(Transform, Transform);
+	EXPECT_FLOAT_EQ(Visible.x, Transform.x);
+	EXPECT_FLOAT_EQ(Visible.y, Transform.y);
+	EXPECT_FLOAT_EQ(Visible.w, Transform.w);
+	EXPECT_FLOAT_EQ(Visible.h, Transform.h);
+}
+
+TEST(QmHudMeasuredGeometry, UsesFreshBoundsAfterReturningFromAHiddenFrame)
+{
+	QmHudEditor::CMeasuredVisibleRect Geometry;
+	const CUIRect Transform{0.0f, 50.0f, 190.0f, 250.0f};
+	Geometry.BeginRenderFrame();
+	Geometry.Observe(Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
+	Geometry.BeginRenderFrame();
+	Geometry.BeginRenderFrame();
+	EXPECT_FLOAT_EQ(Geometry.Resolve(Transform, Transform).h, 250.0f);
+	Geometry.Observe(Transform, Transform, {5.0f, 230.0f, 185.0f, 65.0f});
+	Geometry.BeginRenderFrame();
+	const CUIRect Visible = Geometry.Resolve(Transform, Transform);
+	EXPECT_FLOAT_EQ(Visible.x, 5.0f);
+	EXPECT_FLOAT_EQ(Visible.y, 230.0f);
+	EXPECT_FLOAT_EQ(Visible.w, 185.0f);
+	EXPECT_FLOAT_EQ(Visible.h, 65.0f);
 }
