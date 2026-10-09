@@ -2634,11 +2634,18 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 	const int Team0ModeNew = DoSettingsDropDown(&Team0GlowDropDown, std::clamp(g_Config.m_QmTeamTeeGlowTeam0Mode, 0, 3), apTeam0GlowModes, std::size(apTeam0GlowModes), s_Team0GlowModeDropDownState, {}, &g_Config.m_QmTeamTeeGlowTeam0Mode, nullptr, &TeeGlowRow);
 	if(Team0ModeNew != g_Config.m_QmTeamTeeGlowTeam0Mode)
 		g_Config.m_QmTeamTeeGlowTeam0Mode = Team0ModeNew;
+	const auto Slider = [&](const char *pId, const char *pLabel, int *pValue) {
+		TeeGlowPanel.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &TeeGlowPanel);
+		TeeGlowPanel.HSplitTop(TeeMetrics.m_LineHeight, &TeeGlowRow, &TeeGlowPanel);
+		DoSettingsScrollbarOption(SETTINGS_TEE, -1, pId, pValue, pValue, &TeeGlowRow, pLabel, 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
+	};
+	Slider("tee-team-glow-strength", Localize("Team tee glow intensity"), &g_Config.m_QmTeamTeeGlowStrength);
+	Slider("tee-team-glow-size", Localize("Team tee glow halo size"), &g_Config.m_QmTeamTeeGlowSize);
 	if(g_Config.m_QmTeamTeeGlowTeam0Mode == 2)
 	{
 		TeeGlowPanel.HSplitTop(TeeMetrics.m_LineSpacing, nullptr, &TeeGlowPanel);
 		static CButtonContainer s_Team0GlowColorId;
-		DoLine_ColorPicker(&s_Team0GlowColorId, TeeMetrics, &TeeGlowPanel, Localize("Team 0 glow color"), &g_Config.m_QmTeamTeeGlowColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+		DoLine_ColorPicker(&s_Team0GlowColorId, TeeMetrics, &TeeGlowPanel, Localize("Team 0 glow color"), &g_Config.m_QmTeamTeeGlowColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, false, false);
 	}
 }
 
@@ -2717,7 +2724,7 @@ namespace qm_card_catalog
 		else if(str_comp(pStableId, "deck:tee-glow") == 0)
 		{
 			Out.m_MeasureEachFrame = true;
-			Out.m_Measure = [Metrics](float) { return ResolveSettingsRowsHeight(g_Config.m_QmTeamTeeGlowTeam0Mode == 2 ? 3 : 2, Metrics.m_LineHeight, Metrics.m_LineSpacing); };
+			Out.m_Measure = [Metrics](float) { return ResolveSettingsTeeGlowHeight(Metrics, g_Config.m_QmTeamTeeGlowTeam0Mode == 2); };
 			Out.m_Render = [pMenus, Metrics](CUIRect Content) { pMenus->RenderSettingsTeeGlow(Content, Metrics); };
 		}
 		else

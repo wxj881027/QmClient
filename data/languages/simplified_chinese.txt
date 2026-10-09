@@ -12740,6 +12740,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == 队伍 Tee 外发光
 
+Team tee glow halo size
+== 队伍 Tee 光晕大小
+
+Team tee glow halo size in percent
+== 队伍 Tee 光晕大小 （百分比）
+
+Team tee glow intensity
+== 队伍 Tee 发光强度
+
+Team tee glow intensity in percent
+== 队伍 Tee 发光强度 （百分比）
+
 Team used when leaving solo split mode
 == 退出单刷模式时使用的队伍
 

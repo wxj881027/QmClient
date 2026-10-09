@@ -25,6 +25,19 @@ class CQmGoresDrownTracker
 	std::array<SPlayer, MAX_CLIENTS> m_aPlayers{};
 
 public:
+	static bool ModeEnabled(bool ManualMode, bool DetectedMode) { return ManualMode || DetectedMode; }
+	// 只解释榜单的支持条件，不扩大队伍范围或推断服务器冻结协议。
+	static const char *UnavailableReason(bool GoresGameMode, bool HasLocalClient, int LocalTeam)
+	{
+		if(!GoresGameMode)
+			return "Enable Gores mode or join a Gores server.";
+		if(!HasLocalClient)
+			return "Drown board requires an active local player.";
+		if(!IsTrackedTeam(LocalTeam))
+			return "Join a non-zero DDRace team to show drown counts.";
+		return nullptr;
+	}
+
 	static bool IsTrackedTeam(int Team)
 	{
 		return Team > TEAM_FLOCK && Team < NUM_DDRACE_TEAMS;

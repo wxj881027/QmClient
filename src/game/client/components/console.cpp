@@ -1858,7 +1858,7 @@ void CGameConsole::OnRender()
 	const bool LocalConsole = m_ConsoleType == CONSOLETYPE_LOCAL;
 	const float FontSize = pConsole->FontSize();
 	const auto Palette = QmConsoleAppearance::Palette(g_Config);
-	const bool SettingsOpen = ConsoleSettingsOpen();
+	const bool SettingsOpen = Ui()->IsPopupVisible(&m_SettingsPopupId);
 	const bool FontChanged = LocalConsole && m_LastLocalFontSize != FontSize;
 	if(FontChanged)
 	{
@@ -2365,6 +2365,10 @@ void CGameConsole::OnRender()
 				pConsole->m_Selection.Finish();
 		}
 
+		const float ContentAlpha = pConsole->m_FilterContentMotion.Resolve(pConsole->m_LogFilterMask, Client()->GlobalTime(), g_Config.m_QmUiMotionLevel > 0);
+		const ColorRGBA LogOutline = TextRender()->GetTextOutlineColor();
+		TextRender()->TextOutlineColor(LogOutline.WithAlpha(LogOutline.a * ContentAlpha));
+
 		// render console log (current entry, status, wrap lines)
 		CInstance::CBacklogEntry *pEntry = pConsole->m_Backlog.Last();
 		float OffsetY = 0.0f;
@@ -2507,7 +2511,7 @@ void CGameConsole::OnRender()
 				{
 					const CUIRect Background = QmConsoleUi::LayoutSelectionBackground(Quad, FontSize);
 					if(Background.w > 0.0f && Background.h > 0.0f)
-						Background.Draw(TextRender()->GetTextSelectionColor(), IGraphics::CORNER_NONE, 0.0f);
+						Background.Draw(TextRender()->GetTextSelectionColor().WithAlpha(TextRender()->GetTextSelectionColor().a * ContentAlpha), IGraphics::CORNER_ALL, std::min(2.0f, FontSize * 0.12f));
 				}
 			}
 			QmConsoleText::CollectLinks(pText, vLinkRanges);
@@ -2545,7 +2549,8 @@ void CGameConsole::OnRender()
 				{
 					const float Height = Quad.m_Height * LINK_UNDERLINE_HEIGHT;
 					const CUIRect Underline = {Quad.m_X, Quad.m_Y + Quad.m_Height - Height, Quad.m_Width, Height};
-					QmConsoleUi::DrawPanel(Ui(), Underline, LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK].WithAlpha(0.9f) : LINK_UNDERLINE_COLOR);
+					const ColorRGBA UnderlineColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::LINK].WithAlpha(0.9f) : LINK_UNDERLINE_COLOR;
+					QmConsoleUi::DrawPanel(Ui(), Underline, UnderlineColor.WithAlpha(UnderlineColor.a * ContentAlpha));
 				}
 			}
 			// 搜索最后合入颜色层，链接仍保留下划线，但不会盖住搜索命中颜色。
@@ -2560,6 +2565,12 @@ void CGameConsole::OnRender()
 					vColorLayers.emplace_back(Match.m_Pos, Match.m_Length, LocalConsole ? Palette.m_aColors[IsSelected ? QmConsoleAppearance::SEARCH_SELECTED : QmConsoleAppearance::SEARCH] : (IsSelected ? ms_SearchSelectedColor : ms_SearchHighlightColor));
 				}
 			}
+			for(auto &Layer : vColorLayers)
+			{
+				Layer.m_Color.a *= ContentAlpha;
+				Layer.m_ColorEnd.a *= ContentAlpha;
+			}
+			TextRender()->TextColor(PrintColor.WithAlpha(PrintColor.a * ContentAlpha));
 			QmConsoleText::ComposeColorSplits(pText, vColorLayers, EntryCursor.m_vColorSplits);
 			TextRender()->TextEx(&EntryCursor, pText);
 			if(CaretCharacter && SelectionCursor.m_HasCursorRenderedPosition)
@@ -2570,7 +2581,8 @@ void CGameConsole::OnRender()
 					SelectionCursor.m_AlignedFontSize, time_get_nanoseconds(), g_Config.m_QmUiMotionLevel, pConsole->m_Selection.HasSelection());
 				LogCaretRendered = true;
 				const CUIRect Caret = {Position.x, Position.y, CaretWidth, SelectionCursor.m_AlignedFontSize};
-				QmConsoleUi::DrawPanel(Ui(), Caret, LocalConsole ? Palette.m_aColors[QmConsoleAppearance::TEXT] : TextRender()->DefaultTextColor());
+				const ColorRGBA CaretColor = LocalConsole ? Palette.m_aColors[QmConsoleAppearance::TEXT] : TextRender()->DefaultTextColor();
+				QmConsoleUi::DrawPanel(Ui(), Caret, CaretColor.WithAlpha(CaretColor.a * ContentAlpha));
 			}
 			pEntry = pConsole->m_Backlog.Prev(pEntry);
 
@@ -2581,6 +2593,8 @@ void CGameConsole::OnRender()
 			if(!pEntry)
 				break;
 		}
+
+		TextRender()->TextOutlineColor(LogOutline);
 
 		// 本帧新增日志的滚动补偿已在绘制前统一应用。
 		pConsole->m_NewLineCounter = 0;
@@ -2721,7 +2735,7 @@ void CGameConsole::OnRender()
 	}
 
 	// 工具栏本帧刚打开时延后到下一帧，先捕获底层再绘制，避免首帧模糊日志。
-	if(SettingsOpen && ConsoleSettingsOpen())
+	if(SettingsOpen && Ui()->IsPopupVisible(&m_SettingsPopupId))
 	{
 		CUiScopedGaussianBlur PopupBlurScope(Ui());
 		Ui()->RenderPopupMenus();

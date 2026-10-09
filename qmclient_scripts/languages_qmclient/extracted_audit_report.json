@@ -1,9 +1,9 @@
 {
   "summary": {
-    "must_i18n": 9676,
-    "business_data": 13773,
-    "test_only": 5259,
-    "needs_review": 554,
+    "must_i18n": 9681,
+    "business_data": 13777,
+    "test_only": 5257,
+    "needs_review": 557,
     "violation": 0
   },
   "must_i18n": [
@@ -7682,2855 +7682,2869 @@
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 345,
-      "text": "Random emote when hit by hammer/grenade",
+      "text": "Team tee glow intensity in percent",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 346,
-      "text": "Draw shadow behind emote",
+      "text": "Team tee glow halo size in percent",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 347,
-      "text": "Emoticon projectile duration",
+      "text": "Random emote when hit by hammer/grenade",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 348,
-      "text": "Enable decorative grass, tomato and egg throws",
+      "text": "Draw shadow behind emote",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 349,
-      "text": "Show other players' large emoticons",
+      "text": "Emoticon projectile duration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 350,
-      "text": "Show other players' launched emoticons",
+      "text": "Enable decorative grass, tomato and egg throws",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 351,
-      "text": "Show advanced title settings (collapsing keeps configured effects)",
+      "text": "Show other players' large emoticons",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 352,
-      "text": "Show title setting hints immediately in small text",
+      "text": "Show other players' launched emoticons",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 353,
-      "text": "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow",
+      "text": "Show advanced title settings (collapsing keeps configured effects)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 354,
-      "text": "Bracketed title single color",
+      "text": "Show title setting hints immediately in small text",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 355,
-      "text": "Bracketed title opacity (0-100)",
+      "text": "Bracketed title color: 0 = follow server, 1 = single color, 2 = rainbow",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 356,
-      "text": "Use animated title style (overrides qm_title_color_mode)",
+      "text": "Bracketed title single color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 357,
-      "text": "Animated title style id",
+      "text": "Bracketed title opacity (0-100)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 358,
-      "text": "Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight",
+      "text": "Use animated title style (overrides qm_title_color_mode)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 359,
-      "text": "Show synchronized sponsor chat styles",
+      "text": "Animated title style id",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 360,
-      "text": "Title per-character vertical bob amplitude in pixels (0 = off)",
+      "text": "Sponsor chat style draft: 0=Normal, 1=Soft glow, 2=Platinum highlight",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 361,
-      "text": "Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)",
+      "text": "Show synchronized sponsor chat styles",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 362,
-      "text": "Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)",
+      "text": "Title per-character vertical bob amplitude in pixels (0 = off)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 363,
-      "text": "Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off",
+      "text": "Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 364,
-      "text": "Title light sweep speed in 1/100 row per second (0 = off)",
+      "text": "Classic title glow: 0 = off, 1 = subtle (6 draws), 2 = full Calamity (16 draws)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 365,
-      "text": "Title bob wavelength in pixels",
+      "text": "Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 366,
-      "text": "Title bob angular speed in 1/100 rad/s",
+      "text": "Title light sweep speed in 1/100 row per second (0 = off)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 367,
-      "text": "Snap title bob offset to whole pixels (sharper glyphs, choppier motion)",
+      "text": "Title bob wavelength in pixels",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 368,
-      "text": "Show QmClient title in player nameplate (0 = hide)",
+      "text": "Title bob angular speed in 1/100 rad/s",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 369,
-      "text": "Show main tee title locally",
+      "text": "Snap title bob offset to whole pixels (sharper glyphs, choppier motion)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 370,
-      "text": "Show dummy title locally",
+      "text": "Show QmClient title in player nameplate (0 = hide)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 371,
-      "text": "Place title on a separate line above the player name instead of inline",
+      "text": "Show main tee title locally",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 372,
-      "text": "Weapon trajectory helper mode (0=Off, 1=On key, 2=Always)",
+      "text": "Show dummy title locally",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 373,
-      "text": "Pistol guide line",
+      "text": "Place title on a separate line above the player name instead of inline",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 374,
-      "text": "Predict ninja path",
+      "text": "Weapon trajectory helper mode (0=Off, 1=On key, 2=Always)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 375,
-      "text": "Weapon trajectory helper color",
+      "text": "Pistol guide line",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 376,
-      "text": "Weapon trajectory helper width",
+      "text": "Predict ninja path",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 377,
-      "text": "Weapon trajectory helper alpha",
+      "text": "Weapon trajectory helper color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 378,
-      "text": "Play slide-in rotation animation when switching weapon",
+      "text": "Weapon trajectory helper width",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 379,
-      "text": "Weapon switch animation scope: 0=Self, 1=Local+dummy, 2=All players",
+      "text": "Weapon trajectory helper alpha",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 380,
-      "text": "Weapon switch animation duration (ms)",
+      "text": "Play slide-in rotation animation when switching weapon",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 381,
-      "text": "Weapon switch animation slide distance",
+      "text": "Weapon switch animation scope: 0=Self, 1=Local+dummy, 2=All players",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 382,
-      "text": "Weapon switch animation rotation angle",
+      "text": "Weapon switch animation duration (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 383,
-      "text": "Weapon switch animation easing mode",
+      "text": "Weapon switch animation slide distance",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 384,
-      "text": "Play a flip animation while reloading weapons",
+      "text": "Weapon switch animation rotation angle",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 385,
-      "text": "Weapon reload animation probability",
+      "text": "Weapon switch animation easing mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
       "line": 386,
+      "text": "Play a flip animation while reloading weapons",
+      "category": "must_i18n",
+      "reason": "active source key (indirect)"
+    },
+    {
+      "file": "src/engine/shared/config_variables_qmclient.h",
+      "line": 387,
+      "text": "Weapon reload animation probability",
+      "category": "must_i18n",
+      "reason": "active source key (indirect)"
+    },
+    {
+      "file": "src/engine/shared/config_variables_qmclient.h",
+      "line": 388,
       "text": "Deepfly mode (0=Normal, 1=DF, 2=HDF, 3=Custom)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 389,
+      "line": 391,
       "text": "Auto-unspec when unfrozen",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 392,
+      "line": 394,
       "text": "Auto-switch to first unfrozen when both frozen",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 393,
+      "line": 395,
       "text": "Auto-close chat after unfreeze",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 394,
+      "line": 396,
       "text": "Show hint at random top-left/right of player when main or dummy is hammered awake",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 395,
+      "line": 397,
       "text": "Auto-lock after joining lockable team",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 396,
+      "line": 398,
       "text": "Auto-lock delay (seconds)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 397,
+      "line": 399,
       "text": "Auto-accept team invites by sending /team <n>",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 398,
+      "line": 400,
       "text": "List friends first in the spectator menu",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 400,
+      "line": 402,
       "text": "Fade spectators in water",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 401,
+      "line": 403,
       "text": "Spectator opacity (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 404,
+      "line": 406,
       "text": "Show input overlay",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 405,
+      "line": 407,
       "text": "Show key press counts",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 406,
+      "line": 408,
       "text": "Key press count color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 407,
+      "line": 409,
       "text": "Key press count font size percentage",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 408,
+      "line": 410,
       "text": "Text before each key press count",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 409,
+      "line": 411,
       "text": "Input overlay keyboard scale (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 410,
+      "line": 412,
       "text": "Input overlay mouse scale (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 411,
+      "line": 413,
       "text": "Input overlay opacity (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 412,
+      "line": 414,
       "text": "Input overlay X position (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 413,
+      "line": 415,
       "text": "Input overlay Y position (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 416,
+      "line": 418,
       "text": "Notification bar overrides server system messages (except version info)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 417,
+      "line": 419,
       "text": "Notification bar overrides echo messages",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 418,
+      "line": 420,
       "text": "Show notification bar advanced settings",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 419,
+      "line": 421,
       "text": "Use notification bar category filter",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 420,
+      "line": 422,
       "text": "Notification bar shows basic server info",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 421,
+      "line": 423,
       "text": "Notification bar shows server help",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 422,
+      "line": 424,
       "text": "Notification bar shows important server hints",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 423,
+      "line": 425,
       "text": "Notification bar shows unknown server messages",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 424,
+      "line": 426,
       "text": "Compatible with single-player area hints from other servers",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 425,
+      "line": 427,
       "text": "Team used when leaving solo split mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 426,
+      "line": 428,
       "text": "Connect dummy automatically for solo split mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 427,
+      "line": 429,
       "text": "Notification bar background color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 428,
+      "line": 430,
       "text": "Notification bar system message text color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 429,
+      "line": 431,
       "text": "Notification bar echo inherits chat echo color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 430,
+      "line": 432,
       "text": "Notification echo overlay text color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 431,
+      "line": 433,
       "text": "Notification text size",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 432,
+      "line": 434,
       "text": "Notification display duration (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 433,
+      "line": 435,
       "text": "Notification animation type (0=Fade+Slide, 1=Fade only, 2=No animation)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 434,
+      "line": 436,
       "text": "Notification animation duration (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 435,
+      "line": 437,
       "text": "Maximum notification count",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 436,
+      "line": 438,
       "text": "Margin when notification is docked",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 438,
+      "line": 440,
       "text": "Debug graph panel opacity (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 441,
+      "line": 443,
       "text": "Enable voice chat",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 442,
+      "line": 444,
       "text": "Automatic gain control (0=off 1=on)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 443,
+      "line": 445,
       "text": "Voice protocol version",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 444,
+      "line": 446,
       "text": "Voice server URL (ws:// or wss://)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 445,
+      "line": 447,
       "text": "Legacy realtime WebSocket URL (migrated to qm_websocket_url)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 446,
+      "line": 448,
       "text": "Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 447,
+      "line": 449,
       "text": "Sec-WebSocket-Protocol sent during the realtime handshake",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 448,
+      "line": 450,
       "text": "Realtime channel heartbeat interval (seconds, 0 uses default)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 449,
+      "line": 451,
       "text": "Realtime channel reconnect backoff base (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 450,
+      "line": 452,
       "text": "Realtime channel reconnect backoff cap (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 451,
+      "line": 453,
       "text": "Log realtime WebSocket channel events",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 452,
+      "line": 454,
       "text": "Legacy option: connections that skip TLS verification are rejected",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 453,
+      "line": 455,
       "text": "Map upload endpoint (empty disables map upload)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 454,
+      "line": 456,
       "text": "Voice audio backend (SDL driver name, empty=auto)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 455,
+      "line": 457,
       "text": "Voice input device (empty=default)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 456,
+      "line": 458,
       "text": "Voice output device (empty=default)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 457,
+      "line": 459,
       "text": "Voice stereo output",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 458,
+      "line": 460,
       "text": "Voice stereo width (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 459,
+      "line": 461,
       "text": "Voice room token (optional)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 460,
+      "line": 462,
       "text": "Voice group mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 461,
+      "line": 463,
       "text": "Enable voice filtering (highpass/compressor/limiter)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 462,
+      "line": 464,
       "text": "Voice bitrate (0=auto 1=24kbps 2=32kbps 3=48kbps 4=64kbps)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 463,
+      "line": 465,
       "text": "Noise suppression mode (0=off 1=simple 2=RNNoise)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 464,
+      "line": 466,
       "text": "Noise suppression strength (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 465,
+      "line": 467,
       "text": "Compressor threshold (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 466,
+      "line": 468,
       "text": "Compressor ratio (x10)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 467,
+      "line": 469,
       "text": "Compressor attack time (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 468,
+      "line": 470,
       "text": "Compressor release time (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 469,
+      "line": 471,
       "text": "Compressor makeup gain (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 470,
+      "line": 472,
       "text": "Limiter threshold (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 471,
+      "line": 473,
       "text": "Voice distance radius (Tiles)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 472,
+      "line": 474,
       "text": "Voice playback volume (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 473,
+      "line": 475,
       "text": "Microphone volume (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 474,
+      "line": 476,
       "text": "Mute microphone",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 475,
+      "line": 477,
       "text": "Show voice connection status",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 476,
+      "line": 478,
       "text": "Show voice advanced options",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 477,
+      "line": 479,
       "text": "Voice test mode (0=Off 1=Local 2=Server Loopback)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 478,
+      "line": 480,
       "text": "Enable voice activation (VAD)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 479,
+      "line": 481,
       "text": "VAD threshold (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 480,
+      "line": 482,
       "text": "VAD release delay (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 481,
+      "line": 483,
       "text": "Ignore voice distance attenuation",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 482,
+      "line": 484,
       "text": "Same group full map listening",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 483,
+      "line": 485,
       "text": "Visibility filter mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 484,
+      "line": 486,
       "text": "List filter mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 485,
+      "line": 487,
       "text": "Voice whitelist (comma-separated)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 486,
+      "line": 488,
       "text": "Voice blacklist (comma-separated)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 487,
+      "line": 489,
       "text": "Voice mute list (comma-separated)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 488,
+      "line": 490,
       "text": "Receive VAD speakers",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 489,
+      "line": 491,
       "text": "VAD allow list (comma-separated)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 490,
+      "line": 492,
       "text": "Per-name volume (name=percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 491,
+      "line": 493,
       "text": "Output voice debug log",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 492,
+      "line": 494,
       "text": "Pause voice when window unfocused",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 493,
+      "line": 495,
       "text": "PTT release delay (ms)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 494,
+      "line": 496,
       "text": "Listen from camera center when spectating",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 495,
+      "line": 497,
       "text": "Receive voice from spectators/inactive players",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 498,
+      "line": 500,
       "text": "Hide non-friend names/clans and show client ID",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 499,
+      "line": 501,
       "text": "Non-friends use default skin",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 500,
+      "line": 502,
       "text": "Show default flag in scoreboard",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 503,
+      "line": 505,
       "text": "Friend online notification",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 504,
+      "line": 506,
       "text": "Auto-refresh server list for friend notifications",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 505,
+      "line": 507,
       "text": "Friend notification refresh interval (sec)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 506,
+      "line": 508,
       "text": "Auto greet friend on map join",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 507,
+      "line": 509,
       "text": "Show friend join in large text",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 508,
+      "line": 510,
       "text": "Large text for friend join (use %s for friend name)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 509,
+      "line": 511,
       "text": "Auto greet friend text",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 512,
+      "line": 514,
       "text": "Enable word filter list",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 513,
+      "line": 515,
       "text": "Hide chat messages from players marked as enemies",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 514,
+      "line": 516,
       "text": "Show filtered words in console",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 515,
+      "line": 517,
       "text": "Filtered word console color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 516,
+      "line": 518,
       "text": "Replace censored words with length-based chars",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 517,
+      "line": 519,
       "text": "Word filter action: 0=replace matching words, 1=hide entire message",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 518,
+      "line": 520,
       "text": "Replace mode 0=Regex 1=Full 2=Both",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 519,
+      "line": 521,
       "text": "Censor replacement character",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 520,
+      "line": 522,
       "text": "Censor word list (comma-separated)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 521,
+      "line": 523,
       "text": "QmClient sidebar module order",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 522,
+      "line": 524,
       "text": "QmClient sidebar module collapse state",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 525,
+      "line": 527,
       "text": "Name plate elements freely movable within bounds",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 526,
+      "line": 528,
       "text": "Name plate elements allow free X movement",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 527,
+      "line": 529,
       "text": "Name plate elements allow free Y movement",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 528,
+      "line": 530,
       "text": "Name plate key line X offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 529,
+      "line": 531,
       "text": "Name plate key line Y offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 530,
+      "line": 532,
       "text": "Name plate coord line X offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 531,
+      "line": 533,
       "text": "Name plate coord line Y offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 532,
+      "line": 534,
       "text": "Name plate strength line X offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 533,
+      "line": 535,
       "text": "Name plate strength line Y offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 534,
+      "line": 536,
       "text": "Nameplate hook strength icon scope (0=Own 1=Others 2=Strong hook 3=Weak hook 4=All players)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 535,
+      "line": 537,
       "text": "Nameplate nickname scope (0=None 1=Current character 2=Own characters 3=Other players 4=Other players and own non-current characters 5=All)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 536,
+      "line": 538,
       "text": "Nameplate nickname scope migration completed flag",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 537,
+      "line": 539,
       "text": "Nameplate strong hook icon color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 538,
+      "line": 540,
       "text": "Nameplate weak hook icon color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 539,
+      "line": 541,
       "text": "Show advanced nameplate settings without changing effect values",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 540,
+      "line": 542,
       "text": "Nameplate text effects (1=Border 2=Gradient 4=Rainbow 8=Glow)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 541,
+      "line": 543,
       "text": "Nameplate text border color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 542,
+      "line": 544,
       "text": "Nameplate text border range",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 543,
+      "line": 545,
       "text": "Nameplate text gradient color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 544,
+      "line": 546,
       "text": "Nameplate text glow color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 545,
+      "line": 547,
       "text": "Nameplate text glow range",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 546,
+      "line": 548,
       "text": "Nameplate text effect auto LOD (0=Off 1=On: trim outer effect layers when crowded)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 547,
+      "line": 549,
       "text": "Nameplate count that still keeps full text effect quality; beyond it effect layers scale down by count (higher=keep more)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 548,
+      "line": 550,
       "text": "Nameplate text effects playing scope (0=Off 1=Own 2=Others 3=Friends 4=Own and friends 5=All players)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 549,
+      "line": 551,
       "text": "Nameplate text effects spectate scope (0=Off 1=Spectated player 2=Others 3=Friends 4=Spectated player and friends 5=All players)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 551,
+      "line": 553,
       "text": "Demo key presses (0=Off 1=Others 2=All 3=Own)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 552,
+      "line": 554,
       "text": "Demo hook strength (0=Off 1=Icon 2=Icon and number)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 553,
+      "line": 555,
       "text": "Demo hook strength scope (0=Own 1=Others 2=Strong 3=Weak 4=All)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 554,
+      "line": 556,
       "text": "Show in-game HUD in demo preview and video",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 555,
+      "line": 557,
       "text": "Show chat in demo preview and video",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 556,
+      "line": 558,
       "text": "Nameplate text effects demo mode (0=Off 1=Smart 2=Manual target 3=Manual scope)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 557,
+      "line": 559,
       "text": "Nameplate text effects demo manual target client ID (-1=None)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 558,
+      "line": 560,
       "text": "Name plate clan line X offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 559,
+      "line": 561,
       "text": "Name plate clan line Y offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 560,
+      "line": 562,
       "text": "Name plate name line X offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 561,
+      "line": 563,
       "text": "Name plate name line Y offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 564,
+      "line": 566,
       "text": "Enable Gores mode (King of Gores helper tools)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 565,
+      "line": 567,
       "text": "Automatically switch hammer/gun in Gores mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 566,
+      "line": 568,
       "text": "Disable Gores auto-switch when picking up extra weapon",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 567,
+      "line": 569,
       "text": "Automatically enable Gores auto-switch in Gores game mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 568,
+      "line": 570,
       "text": "Enable fast input in Gores mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 569,
+      "line": 571,
       "text": "Enable fast input for other players in Gores mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 570,
+      "line": 572,
       "text": "Hide helper lines in Gores mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 571,
+      "line": 573,
       "text": "Temporarily disable dummy hammering in Gores mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 572,
+      "line": 574,
       "text": "Skip the weapon switch animation for hammer switches in Gores mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 573,
+      "line": 575,
       "text": "Auto-login after entering Axiom community server",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 574,
+      "line": 576,
       "text": "Password for Axiom main account auto-login",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 575,
+      "line": 577,
       "text": "Password for Axiom alt account auto-login",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 578,
+      "line": 580,
       "text": "Enable Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 579,
+      "line": 581,
       "text": "Hide player names in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 580,
+      "line": 582,
       "text": "Hide player name plates in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 581,
+      "line": 583,
       "text": "Hide jump effects in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 582,
+      "line": 584,
       "text": "Hide death/respawn effects in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 583,
+      "line": 585,
       "text": "Hide projectile effects in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 584,
+      "line": 586,
       "text": "Hide freeze effects in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 585,
+      "line": 587,
       "text": "Hide hammer effects in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 586,
+      "line": 588,
       "text": "Hide weapon fire effects in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 587,
+      "line": 589,
       "text": "Mute jump sound in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 588,
+      "line": 590,
       "text": "Mute death/respawn sound in Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 589,
+      "line": 591,
       "text": "Mute hammer sound in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 590,
+      "line": 592,
       "text": "Hide HUD in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 591,
+      "line": 593,
       "text": "Hide player messages in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 592,
+      "line": 594,
       "text": "Hide basic system info (join, version, rules) in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 593,
+      "line": 595,
       "text": "Hide server tip notifications (including notification bar) in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 594,
+      "line": 596,
       "text": "Hide Echo messages in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 595,
+      "line": 597,
       "text": "Hide map progress bar in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 596,
+      "line": 598,
       "text": "Hide kill and finish messages in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 597,
+      "line": 599,
       "text": "Hide scoreboard in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 598,
+      "line": 600,
       "text": "Hide direction in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 599,
+      "line": 601,
       "text": "Hide helper lines in Zen mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 602,
+      "line": 604,
       "text": "Enable player statistics panel",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 603,
+      "line": 605,
       "text": "Show map progress bar (beta)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 604,
+      "line": 606,
       "text": "Map progress bar style (0=bottom bar, 1=HUD overlay)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 605,
+      "line": 607,
       "text": "Map progress bar color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 606,
+      "line": 608,
       "text": "Map progress bar width (percentage of screen width)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 607,
+      "line": 609,
       "text": "Map progress bar height",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 608,
+      "line": 610,
       "text": "Map progress bar horizontal position (center, % of screen width)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 609,
+      "line": 611,
       "text": "Map progress bar vertical position (top edge, % of screen height)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 610,
+      "line": 612,
       "text": "Show map progress test point route",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 611,
+      "line": 613,
       "text": "Reset stats on server join (0=persistent, 1=reset on join)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 614,
+      "line": 616,
       "text": "Enable switch countdown",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 615,
+      "line": 617,
       "text": "Switch countdown position (0=follow Tee, 1=Dynamic Island, 2=both)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 618,
+      "line": 620,
       "text": "Enable hook countdown",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 621,
+      "line": 623,
       "text": "Use original style for Dynamic Island",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 622,
+      "line": 624,
       "text": "Show team on HUD Dynamic Island",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 623,
+      "line": 625,
       "text": "Always show song title and artist",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 624,
+      "line": 626,
       "text": "Dynamic Island background color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 625,
+      "line": 627,
       "text": "Dynamic Island background alpha",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 626,
+      "line": 628,
       "text": "HUD editor layout",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 629,
+      "line": 631,
       "text": "Show the Gores team drown board",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 630,
+      "line": 632,
       "text": "Maximum players shown in the Gores team drown board",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 631,
+      "line": 633,
       "text": "Gores team drown board opacity",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 632,
+      "line": 634,
       "text": "Show Tees in the Gores team drown board",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 635,
+      "line": 637,
       "text": "Enable camera drift effect, slightly drags camera based on speed",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 636,
+      "line": 638,
       "text": "Camera drift intensity (0-200)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 637,
+      "line": 639,
       "text": "Camera drift smoothness (0=instant, 100=smoothest)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 638,
+      "line": 640,
       "text": "Invert camera drift direction",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 639,
+      "line": 641,
       "text": "Enable dynamic FOV, wider view at higher speed",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 640,
+      "line": 642,
       "text": "Dynamic FOV intensity (0-200)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 641,
+      "line": 643,
       "text": "Dynamic FOV smoothness (0=instant, 100=smoothest)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 642,
+      "line": 644,
       "text": "Enable smooth cinematic camera while free spectating",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 643,
+      "line": 645,
       "text": "Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 644,
+      "line": 646,
       "text": "Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 645,
+      "line": 647,
       "text": "Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 646,
+      "line": 648,
       "text": "Custom aspect ratio, stored as x100 (e.g. 178=16:9, 233=21:9)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 649,
+      "line": 651,
       "text": "Enable squishy Tee deformation",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 650,
+      "line": 652,
       "text": "Apply squishy Tee deformation to other players",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 651,
+      "line": 653,
       "text": "Squishy Tee deformation intensity",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 652,
+      "line": 654,
       "text": "Squishy Tee deformation duration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 653,
+      "line": 655,
       "text": "Enable QmClient style background 3D particles",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 654,
+      "line": 656,
       "text": "Background 3D particle type: 1=Cube, 2=Heart, 3=Mix, 4=Sphere, 5=Pyramid, 6=Diamond, 7=Torus, 8=Star, 9=Crescent",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 655,
+      "line": 657,
       "text": "Background 3D particle count",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 656,
+      "line": 658,
       "text": "Background 3D particle base speed",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 657,
+      "line": 659,
       "text": "Background 3D particle minimum size",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 658,
+      "line": 660,
       "text": "Background 3D particle maximum size",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 659,
+      "line": 661,
       "text": "Background 3D particle depth range",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 660,
+      "line": 662,
       "text": "Background 3D particle margin outside view",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 661,
+      "line": 663,
       "text": "Background 3D particle opacity",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 662,
+      "line": 664,
       "text": "Background 3D particle fade-in time",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 663,
+      "line": 665,
       "text": "Background 3D particle fade-out time",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 664,
+      "line": 666,
       "text": "Background 3D particle collision",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 665,
+      "line": 667,
       "text": "Player push radius for background 3D particles",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 666,
+      "line": 668,
       "text": "Player push strength for background 3D particles",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 667,
+      "line": 669,
       "text": "Background 3D particle color mode: 1=Custom, 2=Random",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 668,
+      "line": 670,
       "text": "Background 3D particle custom color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 669,
+      "line": 671,
       "text": "Enable background 3D particle glow",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 670,
+      "line": 672,
       "text": "Background 3D particle glow opacity",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 671,
+      "line": 673,
       "text": "Background 3D particle glow offset",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 672,
+      "line": 674,
       "text": "Enable background 3D particle trail",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 673,
+      "line": 675,
       "text": "Background 3D particle trail length",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 674,
+      "line": 676,
       "text": "Background 3D particle trail opacity",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 675,
+      "line": 677,
       "text": "Enable background 3D particle pulse scaling",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 676,
+      "line": 678,
       "text": "Background 3D particle pulse intensity",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 677,
+      "line": 679,
       "text": "Background 3D particle pulse speed",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 678,
+      "line": 680,
       "text": "Enable background 3D particle flicker",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 679,
+      "line": 681,
       "text": "Background 3D particle flicker intensity",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 680,
+      "line": 682,
       "text": "Color map tune zones by their tune zone number",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 681,
+      "line": 683,
       "text": "Automatically fall back to the default asset when a custom asset sprite is fully transparent; turn off to keep blank sprites invisible (e.g. to hide effects)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 684,
+      "line": 686,
       "text": "Enable skin queue rotation",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 685,
+      "line": 687,
       "text": "Skin queue switch interval (ms, 0=no timed rotation, random start only)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 686,
+      "line": 688,
       "text": "Skin queue max length",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 687,
+      "line": 689,
       "text": "Skin queue current position",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 688,
+      "line": 690,
       "text": "Auto-fetch all players' skins for rotation queue",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 689,
+      "line": 691,
       "text": "Start skin queue from a random position when entering a map",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 690,
+      "line": 692,
       "text": "Enable dummy skin queue rotation",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 691,
+      "line": 693,
       "text": "Dummy skin queue switch interval (ms, 0=no timed rotation, random start only)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 692,
+      "line": 694,
       "text": "Dummy skin queue max length",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 693,
+      "line": 695,
       "text": "Dummy skin queue current position",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 694,
+      "line": 696,
       "text": "Auto-fetch all players' skins for dummy rotation queue",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 695,
+      "line": 697,
       "text": "Start dummy skin queue from a random position when entering a map",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 698,
+      "line": 700,
       "text": "Local particles: show particles behind own Tee (e.g. freeze snow)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 701,
+      "line": 703,
       "text": "Pre-warm settings page on startup and menu idle",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 704,
+      "line": 706,
       "text": "Show the chat scrollbar on the right",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 705,
+      "line": 707,
       "text": "Keep unsent message on chat close",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 706,
+      "line": 708,
       "text": "Show command completion in chat",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 707,
+      "line": 709,
       "text": "Merge consecutive identical player messages within 2 seconds",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 710,
+      "line": 712,
       "text": "Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 711,
+      "line": 713,
       "text": "Hide the *** prefix before server chat messages",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 712,
+      "line": 714,
       "text": "Enable left swipe offset on chat fade",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 713,
+      "line": 715,
       "text": "Chat fade smooth time (milliseconds)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 714,
+      "line": 716,
       "text": "Hide own chat bubble (only when authenticated in remote console)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 715,
+      "line": 717,
       "text": "Show chat bubbles above players",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 716,
+      "line": 718,
       "text": "Chat bubble display duration (seconds)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 717,
+      "line": 719,
       "text": "Chat bubble transparency (0-100)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 718,
+      "line": 720,
       "text": "Chat bubble font size",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 719,
+      "line": 721,
       "text": "Chat bubble background color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 720,
+      "line": 722,
       "text": "Chat bubble text color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 721,
+      "line": 723,
       "text": "Chat bubble disappear animation (0=Fade, 1=Shrink, 2=Slide up)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 723,
+      "line": 725,
       "text": "Show combo hint when hooking or hammering player within 2 seconds",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 726,
+      "line": 728,
       "text": "Show dummy mini view window",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 727,
+      "line": 729,
       "text": "Show dummy mini view only when other tee leaves current view",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 728,
+      "line": 730,
       "text": "Dummy mini view size (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 729,
+      "line": 731,
       "text": "Dummy mini view zoom (percent)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 732,
+      "line": 734,
       "text": "Enable system media transport control integration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 733,
+      "line": 735,
       "text": "Show direction key indicators above rank ghost members in view mode",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 734,
+      "line": 736,
       "text": "Show system media info on HUD",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 735,
+      "line": 737,
       "text": "Enable Netease Music hook integration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 736,
+      "line": 738,
       "text": "Netease hook heartbeat timeout (milliseconds)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 737,
+      "line": 739,
       "text": "Netease hook helper path (empty=beside QmClient)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 740,
+      "line": 742,
       "text": "Enable Netease lyric integration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 741,
+      "line": 743,
       "text": "Show current Netease lyric in Media Island",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 745,
+      "line": 747,
       "text": "Enable SodaMusic hook integration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 746,
+      "line": 748,
       "text": "SodaMusic hook heartbeat timeout (milliseconds)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 747,
+      "line": 749,
       "text": "SodaMusic hook helper path (empty=beside QmClient)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 754,
+      "line": 756,
       "text": "Enable Kugou Music hook integration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 755,
+      "line": 757,
       "text": "Kugou hook heartbeat timeout (milliseconds)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 756,
+      "line": 758,
       "text": "Kugou hook helper path (empty=beside QmClient)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 757,
+      "line": 759,
       "text": "Enable QQ Music hook integration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 758,
+      "line": 760,
       "text": "QQ Music hook heartbeat timeout (milliseconds)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 759,
+      "line": 761,
       "text": "QQ Music hook helper path (empty=beside QmClient)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 763,
+      "line": 765,
       "text": "Enable Spotify lyric integration",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 764,
+      "line": 766,
       "text": "Spotify sp_dc cookie (from browser DevTools, long-lived)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 767,
+      "line": 769,
       "text": "Translation service",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 768,
+      "line": 770,
       "text": "Show advanced translation options",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 769,
+      "line": 771,
       "text": "Target language code (e.g. zh, en, ja, zh-TW)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 770,
+      "line": 772,
       "text": "Auto-translate incoming messages",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 771,
+      "line": 773,
       "text": "Translated chat text size as a percentage of the original text (50-100)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 772,
+      "line": 774,
       "text": "Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 773,
+      "line": 775,
       "text": "Minimum characters for local target language detection",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 774,
+      "line": 776,
       "text": "Ratio threshold for local target language detection",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 775,
+      "line": 777,
       "text": "Allow FTAPI auto-translate (may cause overload)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 780,
+      "line": 782,
       "text": "LLM Provider (0=ZhipuAI, 1=DeepSeek, 2=OpenAI, 3=Custom)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 783,
+      "line": 785,
       "text": "ZhipuAI model name",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 784,
+      "line": 786,
       "text": "DeepSeek model name",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 785,
+      "line": 787,
       "text": "OpenAI model name",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 786,
+      "line": 788,
       "text": "Custom Provider model name",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 789,
+      "line": 791,
       "text": "ZhipuAI endpoint (leave empty for default)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 790,
+      "line": 792,
       "text": "DeepSeek endpoint (leave empty for default)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 791,
+      "line": 793,
       "text": "OpenAI endpoint (leave empty for default)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 792,
+      "line": 794,
       "text": "Custom Provider endpoint",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 795,
+      "line": 797,
       "text": "ZhipuAI API Key",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 796,
+      "line": 798,
       "text": "DeepSeek API Key",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 797,
+      "line": 799,
       "text": "OpenAI API Key",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 798,
+      "line": 800,
       "text": "Custom Provider API Key",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 800,
+      "line": 802,
       "text": "LLM translation concurrency (0=auto)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 801,
+      "line": 803,
       "text": "LLM translation default concurrency (smart adjustment)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 802,
+      "line": 804,
       "text": "Authentication",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 803,
+      "line": 805,
       "text": "Thinking parameters",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 804,
+      "line": 806,
       "text": "Send sampling and token limit parameters",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 805,
+      "line": 807,
       "text": "Enable LLM thinking mode (may increase response time)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 806,
+      "line": 808,
       "text": "Custom translation prompt (overrides built-in)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 809,
+      "line": 811,
       "text": "Source language code for translation (auto=auto-detect)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 812,
+      "line": 814,
       "text": "Auto-translate outgoing messages",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 813,
+      "line": 815,
       "text": "Auto-translation mode (0=Trigger on common source languages only, 1=Always translate)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 814,
+      "line": 816,
       "text": "Outgoing translation target language code",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 817,
+      "line": 819,
       "text": "Tencent Cloud Translation endpoint",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 818,
+      "line": 820,
       "text": "Tencent Cloud Translation SecretId",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 819,
+      "line": 821,
       "text": "Tencent Cloud Translation SecretKey",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 820,
+      "line": 822,
       "text": "Tencent Cloud Translation region",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 823,
+      "line": 825,
       "text": "LibreTranslate endpoint",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 824,
+      "line": 826,
       "text": "LibreTranslate API Key",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 827,
+      "line": 829,
       "text": "APP ID",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 828,
+      "line": 830,
       "text": "API key",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 831,
+      "line": 833,
       "text": "DeepL API Key (free keys end with :fx)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 834,
+      "line": 836,
       "text": "Translation color alpha migration completed flag",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 835,
+      "line": 837,
       "text": "Translation button cancel color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 836,
+      "line": 838,
       "text": "Translation button active color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 837,
+      "line": 839,
       "text": "Translation menu background color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 838,
+      "line": 840,
       "text": "Translation menu selected color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 839,
+      "line": 841,
       "text": "Translation menu normal color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 842,
+      "line": 844,
       "text": "Show jump hint based on fractional part of position",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 843,
+      "line": 845,
       "text": "Jump hint defaults migration completed flag",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 844,
+      "line": 846,
       "text": "Jump hint text (use \\n for newline)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 845,
+      "line": 847,
       "text": "Jump hint color",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 846,
+      "line": 848,
       "text": "Jump hint horizontal position (% of screen width)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 847,
+      "line": 849,
       "text": "Jump hint vertical position (% of screen height)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 848,
+      "line": 850,
       "text": "Jump hint font size",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
     },
     {
       "file": "src/engine/shared/config_variables_qmclient.h",
-      "line": 851,
+      "line": 853,
       "text": "Auto-follow friend server switch delay (seconds)",
       "category": "must_i18n",
       "reason": "active source key (indirect)"
@@ -14247,14 +14261,14 @@
     },
     {
       "file": "src/game/client/QmUi/SettingsCardDeck.cpp",
-      "line": 745,
+      "line": 751,
       "text": "Default width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/SettingsCardDeck.cpp",
-      "line": 745,
+      "line": 751,
       "text": "Full width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -16081,7 +16095,7 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogConsole.cpp",
-      "line": 143,
+      "line": 141,
       "text": "Console settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -34778,7 +34792,21 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2641,
+      "line": 2642,
+      "text": "Team tee glow intensity",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
+      "line": 2643,
+      "text": "Team tee glow halo size",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
+      "line": 2648,
       "text": "Team 0 glow color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -38733,133 +38761,133 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2607,
+      "line": 2619,
       "text": "Lines %d - %d (%s)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2608,
+      "line": 2620,
       "text": "Following",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2608,
+      "line": 2620,
       "text": "Locked",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2666,
+      "line": 2678,
       "text": "Exporting chat images: %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2668,
+      "line": 2680,
       "text": "Preparing chat export: %d%%",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2671,
+      "line": 2683,
       "text": "Selected %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2702,
+      "line": 2714,
       "text": "Loading commands…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2702,
+      "line": 2714,
       "text": "Loading maps…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2948,
+      "line": 2960,
       "text": "Clear local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2950,
+      "line": 2962,
       "text": "Toggle local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2951,
+      "line": 2963,
       "text": "Toggle remote console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2952,
+      "line": 2964,
       "text": "Clear local console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2953,
+      "line": 2965,
       "text": "Clear remote console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2954,
+      "line": 2966,
       "text": "Write local console contents to a text file",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2955,
+      "line": 2967,
       "text": "Write remote console contents to a text file",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2957,
+      "line": 2969,
       "text": "Previous page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2958,
+      "line": 2970,
       "text": "Next page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2959,
+      "line": 2971,
       "text": "Last page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2960,
+      "line": 2972,
       "text": "First page in console",
       "category": "must_i18n",
       "reason": "active source key (register_help)"
@@ -39349,21 +39377,21 @@
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7369,
+      "line": 7365,
       "text": "Drown deaths",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7387,
+      "line": 7383,
       "text": "Teammate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7392,
+      "line": 7388,
       "text": "More teammates...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -39377,28 +39405,28 @@
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7463,
+      "line": 7471,
       "text": "More teammates...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7478,
+      "line": 7486,
       "text": "Server best:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7492,
+      "line": 7500,
       "text": "Personal best:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7507,
+      "line": 7515,
       "text": "Personal best:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -56709,252 +56737,245 @@
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4103,
+      "line": 4109,
       "text": "Zen Mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4104,
+      "line": 4110,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4104,
+      "line": 4110,
       "text": "On",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4192,
+      "line": 4198,
       "text": "Gores Mode",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4193,
+      "line": 4199,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4193,
+      "line": 4199,
       "text": "On",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5459,
+      "line": 5465,
       "text": "Save loaded; local record removed.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5459,
+      "line": 5465,
       "text": "Save loaded; the local record could not be removed.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5464,
+      "line": 5470,
       "text": "Save restore stopped without confirming success. The local record was kept.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5486,
+      "line": 5492,
       "text": "Use /qm Yes [number] to restore a save, or /qm No to dismiss.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5493,
+      "line": 5499,
       "text": "Save restore dismissed.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5498,
+      "line": 5504,
       "text": "A save is already being restored. Please wait.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5503,
+      "line": 5509,
       "text": "There is no pending save restore prompt.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5508,
+      "line": 5514,
       "text": "Invalid save number. Use a number from the save list.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5518,
+      "line": 5524,
       "text": "This save is no longer in the local save file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5530,
+      "line": 5536,
       "text": "This connection cannot change names while connected. Reconnect with the saved names first.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5535,
+      "line": 5541,
       "text": "Finish or reset the current race before restoring a save.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5540,
+      "line": 5546,
       "text": "Restoring save %d: main '%s', dummy '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5579,
+      "line": 5585,
       "text": "This connection cannot change names while connected. Reconnect with the saved names first.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5616,
+      "line": 5622,
       "text": "Save restore stopped: connection, names or team were not ready. The local record was kept.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5656,
+      "line": 5662,
       "text": "- You have %d saves on this map!",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5659,
+      "line": 5665,
       "text": "- Save owners in order:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5660,
+      "line": 5666,
       "text": "- Save codes in order:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5670,
+      "line": 5676,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5671,
+      "line": 5677,
       "text": "No code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5688,
+      "line": 5694,
       "text": "Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects another. /qm No dismisses.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5695,
+      "line": 5701,
       "text": "%d. %s | main: %s | dummy: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5713,
+      "line": 5719,
       "text": "Failed to read saves file",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5713,
+      "line": 5719,
       "text": "No local saves file found (ddnet-saves.txt)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5722,
+      "line": 5728,
       "text": "=== Saves for '%s' ===",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5724,
+      "line": 5730,
       "text": "=== All Local Saves ===",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5739,
+      "line": 5745,
       "text": "[%s] %s (Map: %s, Time: %s)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5740,
+      "line": 5746,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5741,
+      "line": 5747,
       "text": "No code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5742,
-      "text": "Unknown",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5743,
+      "line": 5748,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -56962,13 +56983,20 @@
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
       "line": 5749,
+      "text": "Unknown",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/tclient/tclient.cpp",
+      "line": 5755,
       "text": "Total: %d save(s)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5798,
+      "line": 5804,
       "text": "No chat message available to repeat",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -57402,14 +57430,14 @@
     },
     {
       "file": "src/game/client/ui_popups.cpp",
-      "line": 594,
+      "line": 599,
       "text": "Yes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/ui_popups.cpp",
-      "line": 595,
+      "line": 600,
       "text": "No",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -60013,84 +60041,84 @@
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 82,
+      "line": 83,
       "text": "[Delete] Delete the selected command from the command list.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 102,
+      "line": 103,
       "text": "[Alt+Down] Move the selected command down.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 117,
+      "line": 118,
       "text": "[Alt+Up] Move the selected command up.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 130,
+      "line": 131,
       "text": "[Ctrl+Y] Redo the last command edit.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 139,
+      "line": 140,
       "text": "[Ctrl+Z] Undo the last command edit.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 159,
+      "line": 160,
       "text": "[Alt+Enter] Update the selected command based on the entered value.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 199,
+      "line": 200,
       "text": "Delete command %d; Edit command %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 226,
+      "line": 227,
       "text": "[Enter] Add a command to the command list.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 226,
+      "line": 227,
       "text": "[Enter] Replace the corresponding command in the command list.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 230,
+      "line": 231,
       "text": "Could not replace command",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 254,
+      "line": 255,
       "text": "Command",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 331,
+      "line": 333,
       "text": "Disallow/allow unknown or invalid commands.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -60104,259 +60132,266 @@
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 580,
+      "line": 357,
+      "text": "Enter a server setting. Press ctrl+space to show available settings.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/editor/editor_server_settings.cpp",
+      "line": 588,
       "text": "Map settings error",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 592,
+      "line": 600,
       "text": "Below is a report of the invalid map settings found when loading the map. Please fix them before proceeding further.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 653,
+      "line": 661,
       "text": "Delete this command.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 657,
+      "line": 665,
       "text": "Fix",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 657,
+      "line": 665,
       "text": "Fix this command.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 677,
+      "line": 685,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 677,
+      "line": 685,
       "text": "Cancel fixing this command.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 690,
+      "line": 698,
       "text": "Confirm editing of this command.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 690,
+      "line": 698,
       "text": "Done",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 776,
+      "line": 784,
       "text": "Choose",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 776,
+      "line": 784,
       "text": "Choose this command.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 811,
+      "line": 819,
       "text": "Choose",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 811,
+      "line": 819,
       "text": "Override with this command.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 828,
+      "line": 836,
       "text": "Fix",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 828,
+      "line": 836,
       "text": "Fix this command (needed before it can be chosen).",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 853,
+      "line": 861,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 853,
+      "line": 861,
       "text": "Cancel fixing this command.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 870,
+      "line": 878,
       "text": "Confirm editing of this command.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 870,
+      "line": 878,
       "text": "Done",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1004,
+      "line": 1012,
       "text": "Allow all unknown settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1010,
+      "line": 1018,
       "text": "Confirm",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1017,
+      "line": 1025,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1038,
+      "line": 1046,
       "text": "%s i[value]",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1091,
+      "line": 1099,
       "text": "Tune variable to value or show current value",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1092,
+      "line": 1100,
       "text": "Tune in zone a variable to value",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1093,
+      "line": 1101,
       "text": "Which message to display on zone enter; use 0 for normal area",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1094,
+      "line": 1102,
       "text": "Which message to display on zone leave; use 0 for normal area",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1095,
+      "line": 1103,
       "text": "Enable map compatibility mode using the specified bug (example: grenade-doubleexplosion@ddnet.tw)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1096,
+      "line": 1104,
       "text": "Whether a switch is deactivated by default (otherwise activated)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1511,
+      "line": 1519,
       "text": "Invalid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1512,
+      "line": 1520,
       "text": "Unknown",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1513,
+      "line": 1521,
       "text": "Incomplete",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1515,
+      "line": 1523,
       "text": "%s value: %s (position %d, parameter \"%s\")",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1520,
+      "line": 1528,
       "text": "Invalid parameter value: %s (position %d, parameter \"%s\"); out of range [%d, %d]",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1533,
+      "line": 1541,
       "text": "Too many parameters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1541,
+      "line": 1549,
       "text": "Unknown server setting: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1717,
+      "line": 1725,
       "text": "Unknown server setting: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -72293,21 +72328,21 @@
     },
     {
       "file": "src/game/client/QmUi/SettingsCardDeck.cpp",
-      "line": 175,
+      "line": 180,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/SettingsCardDeck.cpp",
-      "line": 176,
+      "line": 181,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/SettingsCardDeck.h",
-      "line": 90,
+      "line": 91,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -100888,63 +100923,84 @@
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2659,
+      "line": 2640,
+      "text": "%",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
+      "line": 2642,
+      "text": "tee-team-glow-strength",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
+      "line": 2643,
+      "text": "tee-team-glow-size",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
+      "line": 2666,
       "text": "event=tee_refresh_begin visible_rows=%d first_visible_skin=%s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2661,
+      "line": 2668,
       "text": "perf/interaction",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2661,
+      "line": 2668,
       "text": "settings:tee",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2672,
+      "line": 2679,
       "text": "qm:skin_appearance",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2681,
+      "line": 2688,
       "text": "deck:tee-identity",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2692,
+      "line": 2699,
       "text": "deck:tee-skin-options",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2697,
+      "line": 2704,
       "text": "deck:tee-skin-list",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2708,
+      "line": 2715,
       "text": "deck:tee-skin-queue",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
     },
     {
       "file": "src/game/client/QmUi/cards/QmCardCatalogTee.cpp",
-      "line": 2717,
+      "line": 2724,
       "text": "deck:tee-glow",
       "category": "business_data",
       "reason": "settings matcher, command, or serialized config token"
@@ -107356,210 +107412,210 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2461,
+      "line": 2465,
       "text": "xxxx-xx-xx xx:xx:xx x chat/client: — ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2539,
+      "line": 2543,
       "text": "http://",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2672,
+      "line": 2684,
       "text": "  |  ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2706,
+      "line": 2718,
       "text": " %d%%",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2712,
+      "line": 2724,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2712,
+      "line": 2724,
       "text": " on ",
       "category": "business_data",
       "reason": "console prompt, export, or formatting template"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2717,
+      "line": 2729,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2948,
+      "line": 2960,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2948,
+      "line": 2960,
       "text": "clear",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2950,
+      "line": 2962,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2950,
+      "line": 2962,
       "text": "toggle_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2951,
+      "line": 2963,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2951,
+      "line": 2963,
       "text": "toggle_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2952,
+      "line": 2964,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2952,
+      "line": 2964,
       "text": "clear_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2953,
+      "line": 2965,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2953,
+      "line": 2965,
       "text": "clear_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2954,
+      "line": 2966,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2954,
+      "line": 2966,
       "text": "dump_local_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2955,
+      "line": 2967,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2955,
+      "line": 2967,
       "text": "dump_remote_console",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2957,
+      "line": 2969,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2957,
+      "line": 2969,
       "text": "console_page_up",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2958,
+      "line": 2970,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2958,
+      "line": 2970,
       "text": "console_page_down",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2959,
+      "line": 2971,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2959,
+      "line": 2971,
       "text": "console_page_top",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2960,
+      "line": 2972,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2960,
+      "line": 2972,
       "text": "console_page_bottom",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2961,
+      "line": 2973,
       "text": "console_output_level",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -109393,7 +109449,7 @@
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7388,
+      "line": 7384,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -109407,63 +109463,63 @@
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7482,
+      "line": 7490,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7482,
+      "line": 7490,
       "text": "%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7482,
+      "line": 7490,
       "text": "   ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7497,
+      "line": 7505,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7497,
+      "line": 7505,
       "text": "%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7497,
+      "line": 7505,
       "text": "   ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7510,
+      "line": 7518,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7510,
+      "line": 7518,
       "text": "%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7510,
+      "line": 7518,
       "text": "   ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -123862,28 +123918,28 @@
     },
     {
       "file": "src/game/client/components/players.cpp",
-      "line": 385,
+      "line": 362,
       "text": "invalid client id (%d)",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/players.cpp",
-      "line": 2104,
+      "line": 2081,
       "text": "x_spec",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/players.cpp",
-      "line": 2184,
+      "line": 2161,
       "text": "x_ninja",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/players.cpp",
-      "line": 2195,
+      "line": 2172,
       "text": "x_spec",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -149531,532 +149587,532 @@
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 3393,
+      "line": 3399,
       "text": "gores",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 3402,
+      "line": 3408,
       "text": "NUT_race9",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 3409,
+      "line": 3415,
       "text": "NUT_race9",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 3518,
+      "line": 3524,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4071,
+      "line": 4077,
       "text": "cl_showhud",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4072,
+      "line": 4078,
       "text": "qm_statusbar",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4075,
+      "line": 4081,
       "text": "qm_nameplate_show_scope",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4076,
+      "line": 4082,
       "text": "cl_nameplates",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4077,
+      "line": 4083,
       "text": "cl_nameplates_own",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4078,
+      "line": 4084,
       "text": "qm_nameplate_coords",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4079,
+      "line": 4085,
       "text": "qm_nameplate_coords_own",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4080,
+      "line": 4086,
       "text": "qm_nameplate_coord_x",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4081,
+      "line": 4087,
       "text": "qm_nameplate_coord_y",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4082,
+      "line": 4088,
       "text": "cl_show_direction",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4101,
+      "line": 4107,
       "text": "%s%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4116,
+      "line": 4122,
       "text": "qm_zen_mode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4154,
+      "line": 4160,
       "text": "qm_gores",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4172,
+      "line": 4178,
       "text": "qm_fast_input",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4172,
+      "line": 4178,
       "text": "qm_gores_mode",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4173,
+      "line": 4179,
       "text": "qm_fast_input_others",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4173,
+      "line": 4179,
       "text": "qm_gores_mode",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4184,
-      "text": "cl_dummy_hammer",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
       "line": 4190,
-      "text": "%s%s: %s",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4215,
-      "text": "qm_gores",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4216,
-      "text": "qm_fast_input",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4217,
-      "text": "qm_fast_input_others",
-      "category": "business_data",
-      "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4218,
       "text": "cl_dummy_hammer",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4531,
+      "line": 4196,
+      "text": "%s%s: %s",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/tclient/tclient.cpp",
+      "line": 4221,
+      "text": "qm_gores",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/tclient/tclient.cpp",
+      "line": 4222,
+      "text": "qm_fast_input",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/tclient/tclient.cpp",
+      "line": 4223,
+      "text": "qm_fast_input_others",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/tclient/tclient.cpp",
+      "line": 4224,
+      "text": "cl_dummy_hammer",
+      "category": "business_data",
+      "reason": "command, config, or machine token"
+    },
+    {
+      "file": "src/game/client/components/tclient/tclient.cpp",
+      "line": 4537,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4536,
+      "line": 4542,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4740,
+      "line": 4746,
       "text": "Added favorite map: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4740,
+      "line": 4746,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4748,
+      "line": 4754,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4748,
+      "line": 4754,
       "text": "Removed favorite map: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4754,
+      "line": 4760,
       "text": "Cleared all favorite maps",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4754,
+      "line": 4760,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4781,
+      "line": 4787,
       "text": "add_favorite_map \"%s\"",
       "category": "business_data",
       "reason": "command, diagnostic, or payload format template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4802,
+      "line": 4808,
       "text": "map category cache json parse error: %s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4802,
+      "line": 4808,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4823,
+      "line": 4829,
       "text": "version",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4839,
+      "line": 4845,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4844,
+      "line": 4850,
       "text": "map category cache file open failed",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4844,
+      "line": 4850,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4851,
+      "line": 4857,
       "text": "version",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4853,
+      "line": 4859,
       "text": "maps",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4933,
+      "line": 4939,
       "text": "map notes json parse error: %s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4933,
+      "line": 4939,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4954,
+      "line": 4960,
       "text": "version",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4970,
+      "line": 4976,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4975,
+      "line": 4981,
       "text": "map notes file open failed",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4975,
+      "line": 4981,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4982,
+      "line": 4988,
       "text": "version",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 4984,
+      "line": 4990,
       "text": "notes",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5065,
+      "line": 5071,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5068,
+      "line": 5074,
       "text": "map history json parse error: %s",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5068,
+      "line": 5074,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5079,
+      "line": 5085,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5086,
+      "line": 5092,
       "text": "map history temp file open failed",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5086,
+      "line": 5092,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5096,
+      "line": 5102,
       "text": "map history temp file write failed",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5096,
+      "line": 5102,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5103,
+      "line": 5109,
       "text": "map history replacement failed; previous history was restored or remains at %s",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5103,
+      "line": 5109,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5114,
+      "line": 5120,
       "text": "qmclient",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5114,
+      "line": 5120,
       "text": "Trimmed map history to %d entries",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5125,
+      "line": 5131,
       "text": "path:",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5126,
+      "line": 5132,
       "text": "name:",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5170,
+      "line": 5176,
       "text": "%Y-%m-%d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5367,
+      "line": 5373,
       "text": "ddnet-saves.txt.tmp",
       "category": "business_data",
       "reason": "path, file name, or URL data"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5383,
+      "line": 5389,
       "text": "Failed to replace saves file; remaining records are in %s, backup %s",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5383,
+      "line": 5389,
       "text": "saves",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5597,
+      "line": 5603,
       "text": "/team %d",
       "category": "business_data",
       "reason": "chat or console command template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5604,
+      "line": 5610,
       "text": "/invite ",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5667,
+      "line": 5673,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5668,
+      "line": 5674,
       "text": ",",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5675,
+      "line": 5681,
       "text": ",...",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/tclient/tclient.cpp",
-      "line": 5676,
+      "line": 5682,
       "text": ",...",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -150098,13 +150154,6 @@
     },
     {
       "file": "src/game/client/components/tclient/tclient.h",
-      "line": 519,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/components/tclient/tclient.h",
       "line": 520,
       "text": "",
       "category": "business_data",
@@ -150140,7 +150189,7 @@
     },
     {
       "file": "src/game/client/components/tclient/tclient.h",
-      "line": 554,
+      "line": 525,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
@@ -150148,6 +150197,13 @@
     {
       "file": "src/game/client/components/tclient/tclient.h",
       "line": 555,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/components/tclient/tclient.h",
+      "line": 556,
       "text": "0",
       "category": "business_data",
       "reason": "numeric display format template"
@@ -156223,42 +156279,42 @@
     },
     {
       "file": "src/game/client/ui_popups.cpp",
-      "line": 690,
+      "line": 695,
       "text": "Selection popup opened without a scroll region",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui_popups.cpp",
-      "line": 690,
+      "line": 695,
       "text": "ui",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/ui_popups.cpp",
-      "line": 787,
+      "line": 792,
       "text": "dropdown_first_wheel",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/ui_popups.cpp",
-      "line": 942,
+      "line": 947,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/ui_popups.cpp",
-      "line": 1175,
+      "line": 1180,
       "text": "A: %d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/ui_popups.cpp",
-      "line": 1269,
+      "line": 1274,
       "text": "Color picker mode invalid: %d",
       "category": "business_data",
       "reason": "diagnostic or assertion message"
@@ -158568,77 +158624,77 @@
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 82,
+      "line": 83,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 102,
+      "line": 103,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 117,
+      "line": 118,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 130,
+      "line": 131,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 139,
+      "line": 140,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 159,
+      "line": 160,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 199,
+      "line": 200,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 226,
+      "line": 227,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 230,
+      "line": 231,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 254,
+      "line": 255,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 331,
+      "line": 333,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -158652,176 +158708,162 @@
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 580,
+      "line": 357,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 592,
+      "line": 588,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 653,
+      "line": 600,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 657,
+      "line": 661,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 677,
+      "line": 665,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 690,
+      "line": 685,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 776,
+      "line": 698,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 811,
+      "line": 784,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 828,
+      "line": 819,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 853,
+      "line": 836,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 870,
+      "line": 861,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1004,
+      "line": 878,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1010,
+      "line": 1012,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1017,
+      "line": 1018,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1038,
+      "line": 1025,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1091,
+      "line": 1046,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_server_settings.cpp",
+      "line": 1099,
       "text": "Editor server setting",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1092,
+      "line": 1100,
       "text": "Editor server setting",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1093,
+      "line": 1101,
       "text": "Editor server setting",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1094,
+      "line": 1102,
       "text": "Editor server setting",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1095,
+      "line": 1103,
       "text": "Editor server setting",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1096,
+      "line": 1104,
       "text": "Editor server setting",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1511,
+      "line": 1519,
       "text": "Editor command value error",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1512,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1513,
-      "text": "Editor command value error",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1515,
-      "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
@@ -158834,7 +158876,21 @@
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1533,
+      "line": 1521,
+      "text": "Editor command value error",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_server_settings.cpp",
+      "line": 1523,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_server_settings.cpp",
+      "line": 1528,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -158848,7 +158904,14 @@
     },
     {
       "file": "src/game/editor/editor_server_settings.cpp",
-      "line": 1717,
+      "line": 1549,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_server_settings.cpp",
+      "line": 1725,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -171060,20 +171123,6 @@
       "file": "src/test/contract/client/skins/skins_render_contract_test.cpp",
       "line": 315,
       "text": "RenderTeeGlow(RenderTools(), &State, RenderInfo",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/client/skins/skins_render_contract_test.cpp",
-      "line": 321,
-      "text": "static bool GetTeamTeeGlowColor(",
-      "category": "test_only",
-      "reason": "test fixture or assertion text"
-    },
-    {
-      "file": "src/test/contract/client/skins/skins_render_contract_test.cpp",
-      "line": 325,
-      "text": "GetDDTeamColor(Team, 0.75f)",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
@@ -183609,70 +183658,70 @@
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 101,
+      "line": 102,
       "text": "sv_name 测试",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 103,
+      "line": 104,
       "text": "sv_name 测试",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 107,
+      "line": 108,
       "text": "sv_name 测试",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 299,
+      "line": 300,
       "text": "中文中文中",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 299,
+      "line": 300,
       "text": "中文中文中文中文中文中文",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 300,
+      "line": 301,
       "text": "x中文中文",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 300,
+      "line": 301,
       "text": "x中文中文中文中文",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 347,
+      "line": 348,
       "text": "pre:a b c",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 403,
+      "line": 404,
       "text": " 测试",
       "category": "test_only",
       "reason": "test fixture or assertion text"
     },
     {
       "file": "src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp",
-      "line": 403,
+      "line": 404,
       "text": "中文",
       "category": "test_only",
       "reason": "test fixture or assertion text"
@@ -201881,21 +201930,21 @@
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2675,
+      "line": 2687,
       "text": "Shift+Mouse1  |  Esc",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2676,
+      "line": 2688,
       "text": "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/components/console.cpp",
-      "line": 2676,
+      "line": 2688,
       "text": "Enter / Shift+Enter  |  Esc  |  Ctrl+Mouse1",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
@@ -203374,6 +203423,27 @@
       "file": "src/game/client/components/qmclient/config_package.cpp",
       "line": 464,
       "text": "Configuration restore failed; recover from the saved backup.",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/qmclient/gores_drown_tracker.h",
+      "line": 33,
+      "text": "Enable Gores mode or join a Gores server.",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/qmclient/gores_drown_tracker.h",
+      "line": 35,
+      "text": "Drown board requires an active local player.",
+      "category": "needs_review",
+      "reason": "unclassified human-readable client string"
+    },
+    {
+      "file": "src/game/client/components/qmclient/gores_drown_tracker.h",
+      "line": 37,
+      "text": "Join a non-zero DDRace team to show drown counts.",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },

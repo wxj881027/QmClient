@@ -249,3 +249,25 @@ TEST(QmConsoleUiLayout, FilterWithoutMotionOrRuntimeUsesFinalState)
 	EXPECT_FLOAT_EQ(QmConsoleUi::ResolveFilterDisabled(&Runtime, 19, false), 1.0f);
 	g_Config.m_QmUiMotionLevel = PreviousMotion;
 }
+
+TEST(QmConsoleUiLayout, FilterContentFadesInAfterMaskChangeAndCompletes)
+{
+	QmConsoleUi::CFilterContentMotion Motion;
+	EXPECT_FLOAT_EQ(Motion.Resolve(15, 0.0, true), 1.0f);
+	EXPECT_LT(Motion.Resolve(3, 1.0, true), 0.2f);
+	const float Mid = Motion.Resolve(3, 1.09, true);
+	EXPECT_GT(Mid, 0.2f);
+	EXPECT_LT(Mid, 1.0f);
+	EXPECT_FLOAT_EQ(Motion.Resolve(3, 1.3, true), 1.0f);
+	EXPECT_FLOAT_EQ(Motion.Resolve(7, 2.0, false), 1.0f);
+}
+
+TEST(QmConsoleUiLayout, FilterContentRepeatedFramesDoNotRestartTransition)
+{
+	QmConsoleUi::CFilterContentMotion Motion;
+	Motion.Resolve(15, 0.0, true);
+	Motion.Resolve(1, 1.0, true);
+	const float Before = Motion.Resolve(1, 1.05, true);
+	EXPECT_GT(Motion.Resolve(1, 1.1, true), Before);
+	EXPECT_FLOAT_EQ(Motion.Resolve(1, 1.5, true), 1.0f);
+}

@@ -134,6 +134,29 @@ namespace QmConsoleUi
 		return {Quad.m_X - Padding, Quad.m_Y, Quad.m_Width + Padding * 2.0f, Quad.m_Height};
 	}
 
+	// 筛选后的正文独立淡入，快速切换从当前透明度重新过渡。
+	class CFilterContentMotion
+	{
+		int m_Mask = -1;
+		double m_Started = 0.0;
+		float m_StartAlpha = 1.0f;
+		float m_Alpha = 1.0f;
+
+	public:
+		float Resolve(int Mask, double Now, bool Animate)
+		{
+			if(m_Mask != Mask)
+			{
+				m_StartAlpha = m_Mask < 0 ? 1.0f : std::min(m_Alpha, 0.15f);
+				m_Mask = Mask;
+				m_Started = Now;
+			}
+			const float T = Animate ? std::clamp(static_cast<float>((Now - m_Started) / 0.18), 0.0f, 1.0f) : 1.0f;
+			m_Alpha = m_StartAlpha + (1.0f - m_StartAlpha) * (T * T * (3.0f - 2.0f * T));
+			return m_Alpha;
+		}
+	};
+
 	inline float LogBottomBeforeSeparator(float SeparatorY, float FontSize)
 	{
 		return SeparatorY - std::max(3.0f, FontSize * 0.35f);

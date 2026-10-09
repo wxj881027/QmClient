@@ -207,3 +207,27 @@ TEST(SettingsTeeLayout, LeadingCardsPreserveTheOrderOfTheRemainingColumns)
 	EXPECT_EQ(Order(-1), Order(0));
 	EXPECT_EQ(Order(99), (std::vector<int>{30, 31, 32, 10, 20, 11}));
 }
+
+TEST(SettingsTeeLayout, GlowHeightIncludesSlidersAndActualColorButtonHeight)
+{
+	for(const float Scale : {0.75f, 1.0f, 1.5f})
+	{
+		SCOPED_TRACE(Scale);
+		SSettingsContentMetrics Metrics;
+		Metrics.m_LineHeight = 20.0f * Scale;
+		Metrics.m_ButtonHeight = 28.0f * Scale;
+		Metrics.m_LineSpacing = 5.0f * Scale;
+		CUIRect Remaining{0.0f, 0.0f, 240.0f * Scale, ResolveSettingsTeeGlowHeight(Metrics, true)};
+		for(int Row = 0; Row < 4; ++Row)
+		{
+			if(Row > 0)
+				Remaining.HSplitTop(Metrics.m_LineSpacing, nullptr, &Remaining);
+			Remaining.HSplitTop(Metrics.m_LineHeight, nullptr, &Remaining);
+		}
+		EXPECT_FLOAT_EQ(Remaining.h, Metrics.m_LineSpacing + Metrics.m_ButtonHeight);
+		Remaining.HSplitTop(Metrics.m_LineSpacing, nullptr, &Remaining);
+		const auto Color = ResolveSettingsColorRowLayout(Remaining, Metrics, false, false);
+		EXPECT_FLOAT_EQ(Color.m_ConsumedHeight, Remaining.h);
+		EXPECT_FLOAT_EQ(ResolveSettingsTeeGlowHeight(Metrics, false), Remaining.y - Metrics.m_LineSpacing);
+	}
+}

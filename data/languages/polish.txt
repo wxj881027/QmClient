@@ -12740,6 +12740,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == Poświata tee według drużyn
 
+Team tee glow halo size
+== Rozmiar aureoli Tee drużyny
+
+Team tee glow halo size in percent
+== Rozmiar aureoli Tee drużyny (w procentach)
+
+Team tee glow intensity
+== Intensywność poświaty Tee drużyny
+
+Team tee glow intensity in percent
+== Intensywność poświaty Tee drużyny (w procentach)
+
 Team used when leaving solo split mode
 == Drużyna używana przy wyjściu z trybu podziału solo
 

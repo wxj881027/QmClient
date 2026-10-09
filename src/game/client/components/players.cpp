@@ -25,6 +25,7 @@
 #include <game/client/components/qmclient/jelly_tee.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/qm_skin_outline.h>
+#include <game/client/components/qmclient/team_tee_glow.h>
 #include <game/client/components/qmclient/tee_hue_cycle.h>
 #include <game/client/components/skins.h>
 #include <game/client/components/sounds.h>
@@ -177,69 +178,45 @@ static bool GetTeamTeeGlowColor(CGameClient *pGameClient, int ClientId, const CT
 		return false;
 
 	const int Team = pGameClient->m_Teams.Team(ClientId);
-	if(Team == VANILLA_TEAM_SUPER)
-		return false;
-	if(Team > 0)
+	ColorRGBA TeeColor(1.0f, 1.0f, 1.0f, 1.0f);
+	const CTeeRenderInfo::CSixup &Sixup = RenderInfo.m_aSixup[g_Config.m_ClDummy];
+	if(CTeeRenderInfo::IsDrawableTexture(Sixup.PartTexture(protocol7::SKINPART_BODY)) && Sixup.m_aUseCustomColors[protocol7::SKINPART_BODY])
+		TeeColor = Sixup.m_aColors[protocol7::SKINPART_BODY];
+	else if(RenderInfo.m_CustomColoredSkin)
+		TeeColor = RenderInfo.m_ColorBody;
+	double Seconds = 0.0;
+	if(Team == 0 && g_Config.m_QmTeamTeeGlowTeam0Mode == 3)
 	{
-		Color = pGameClient->GetDDTeamColor(Team, 0.75f);
-		return true;
-	}
-
-	switch(g_Config.m_QmTeamTeeGlowTeam0Mode)
-	{
-	case 1:
-		// tee 自身颜色：0.7 渲染路径读 sixup 部件色，0.6 读皮肤整体自定义色，都未自定义则回退白光
-		{
-			const CTeeRenderInfo::CSixup &Sixup = RenderInfo.m_aSixup[g_Config.m_ClDummy];
-			if(CTeeRenderInfo::IsDrawableTexture(Sixup.PartTexture(protocol7::SKINPART_BODY)) && Sixup.m_aUseCustomColors[protocol7::SKINPART_BODY])
-				Color = Sixup.m_aColors[protocol7::SKINPART_BODY];
-			else if(RenderInfo.m_CustomColoredSkin)
-				Color = RenderInfo.m_ColorBody;
-			else
-				Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
-		}
-		return true;
-	case 2:
-		Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTeamTeeGlowColor, true));
-		return true;
-	case 3:
-	{
-		// 彩虹：随时间循环，玩家之间用黄金角错开相位便于旁观区分。
-		// 回放按 demo 时间轴取相位，暂停即冻结，保证同一回放发光颜色可复现。
-		float Seconds;
 		if(pGameClient->Client()->State() == IClient::STATE_DEMOPLAYBACK)
 		{
 			const IDemoPlayer::CInfo *pDemoInfo = pGameClient->DemoPlayer()->BaseInfo();
-			Seconds = (pDemoInfo->m_CurrentTick - pDemoInfo->m_FirstTick) / (float)pGameClient->Client()->GameTickSpeed();
+			Seconds = (static_cast<double>(pDemoInfo->m_CurrentTick) - pDemoInfo->m_FirstTick) / pGameClient->Client()->GameTickSpeed();
 		}
 		else
-		{
-			Seconds = time_get_nanoseconds().count() / 1000000000.0f;
-		}
-		const float Hue = std::fmod(Seconds / 10.0f + ClientId * normalized_golden_angle, 1.0f);
-		Color = color_cast<ColorRGBA>(ColorHSLA(Hue, 1.0f, 0.75f));
-		return true;
+			Seconds = time_get_nanoseconds().count() / 1000000000.0;
 	}
-	default:
-		return false;
-	}
+	const ColorRGBA TeamColor = Team > 0 && Team != VANILLA_TEAM_SUPER ? pGameClient->GetDDTeamColor(Team, 0.6f) : TeeColor;
+	return QmResolveTeamTeeGlowColor(true, true, Team, Team == VANILLA_TEAM_SUPER, g_Config.m_QmTeamTeeGlowTeam0Mode,
+		g_Config.m_QmTeamTeeGlowColor, TeeColor, TeamColor, Seconds, ClientId, Color);
 }
 
 // 只画 tee outline 层并多次放大叠加，形成外发光光晕
-static void RenderTeeGlow(CRenderTools *pRenderTools, const CAnimState *pAnim, const CTeeRenderInfo &RenderInfo, int Emote, vec2 Direction, vec2 Position, float Alpha, const SQmJellyDeform &JellyDeform, ColorRGBA GlowColor)
+static void RenderTeeGlow(CRenderTools *pRenderTools, const CAnimState *pAnim, const CTeeRenderInfo &RenderInfo, int Emote, vec2 Direction, vec2 Position, float Alpha, const SQmJellyDeform &JellyDeform, ColorRGBA GlowColor, bool TeamGlow = false)
 {
 	CTeeRenderInfo GlowRenderInfo = RenderInfo;
 	GlowRenderInfo.m_TeeRenderFlags = (GlowRenderInfo.m_TeeRenderFlags & ~TEE_PREVIEW_LAYER_ALL) | TEE_PREVIEW_LAYER_OUTLINE | TEE_CUSTOM_OUTLINE_COLOR;
 	GlowRenderInfo.m_OutlineColor = GlowColor;
 
-	static constexpr float s_aGlowScales[] = {1.13f, 1.08f, 1.035f};
-	static constexpr float s_aGlowAlphas[] = {0.10f, 0.18f, 0.30f};
-	for(size_t i = 0; i < std::size(s_aGlowScales); ++i)
+	const auto Layers = TeamGlow ? QmTeamTeeGlowLayers(g_Config.m_QmTeamTeeGlowStrength, g_Config.m_QmTeamTeeGlowSize, Alpha) :
+				       std::array<SQmTeamTeeGlowLayer, 3>{{{1.13f, Alpha * 0.10f}, {1.08f, Alpha * 0.18f}, {1.035f, Alpha * 0.30f}}};
+	for(const auto &Layer : Layers)
 	{
+		if(Layer.m_Alpha <= 0.0f || GlowColor.a <= 0.0f)
+			continue;
 		pRenderTools->RenderTee(pAnim, &GlowRenderInfo, Emote, Direction, Position,
-			Alpha * s_aGlowAlphas[i] * GlowColor.a,
-			JellyDeform.m_BodyScale * s_aGlowScales[i],
-			JellyDeform.m_FeetScale * s_aGlowScales[i],
+			Layer.m_Alpha * GlowColor.a,
+			JellyDeform.m_BodyScale * Layer.m_Scale,
+			JellyDeform.m_FeetScale * Layer.m_Scale,
 			JellyDeform.m_BodyAngle, JellyDeform.m_FeetAngle);
 	}
 }
@@ -1365,7 +1342,7 @@ void CPlayers::RenderPlayer(
 	}
 	else if(GetTeamTeeGlowColor(GameClient(), ClientId, RenderInfo, TeamGlowColor))
 	{
-		RenderTeeGlow(RenderTools(), &State, RenderInfo, Player.m_Emote, Direction, Position, Alpha, JellyDeform, TeamGlowColor);
+		RenderTeeGlow(RenderTools(), &State, RenderInfo, Player.m_Emote, Direction, Position, Alpha, JellyDeform, TeamGlowColor, true);
 	}
 	ConfigureSkinOutline(GameClient(), ClientId, RenderInfo);
 	CTeeRenderInfo PreviousSkinInfoOutline;

@@ -333,3 +333,107 @@ TEST(SettingsCardInteraction, PopupOpenedDuringPrelayoutInvalidatesEarlierDragIn
 	EXPECT_FALSE(Input.m_MouseDown);
 	EXPECT_FALSE(Input.m_MouseReleased);
 }
+
+TEST(SettingsCardFocus, OutsideClickAndMissingReleaseDoNotPreventReselection)
+{
+	qm_card_registry::CCardFocus Focus;
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", true);
+	Focus.EndFrame();
+	ASSERT_TRUE(Focus.IsFocused("card-a"));
+	// 外部按下；释放可在设置区域之外发生，不要求下一帧收到释放事件。
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", false);
+	Focus.EndFrame();
+	ASSERT_FALSE(Focus.IsFocused("card-a"));
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", true);
+	Focus.EndFrame();
+	EXPECT_TRUE(Focus.IsFocused("card-a"));
+}
+
+TEST(SettingsCardFocus, SelectionSurvivesIdleFramesAndTransfersBetweenStableIds)
+{
+	qm_card_registry::CCardFocus Focus;
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", true);
+	Focus.Observe("card-b", false);
+	Focus.EndFrame();
+	for(int Frame = 0; Frame < 8; ++Frame)
+	{
+		Focus.BeginFrame(false, true);
+		Focus.Observe("card-b", true);
+		Focus.Observe("card-a", false);
+		Focus.EndFrame();
+		EXPECT_TRUE(Focus.IsFocused("card-a"));
+		EXPECT_FALSE(Focus.IsFocused("card-b"));
+	}
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", false);
+	Focus.Observe("card-b", true);
+	Focus.EndFrame();
+	EXPECT_FALSE(Focus.IsFocused("card-a"));
+	EXPECT_TRUE(Focus.IsFocused("card-b"));
+}
+
+TEST(SettingsCardFocus, BlockedPopupPointerDoesNotSelectAndClosingAllowsNextClick)
+{
+	qm_card_registry::CCardFocus Focus;
+	SSettingsCardDeckInput Input;
+	Input.m_MousePressed = true;
+	const auto Blocked = ResolveSettingsCardDeckPointerInput(Input, true);
+	Focus.BeginFrame(Blocked.m_MousePressed, true);
+	Focus.Observe("card-a", false);
+	Focus.EndFrame();
+	EXPECT_FALSE(Focus.IsFocused("card-a"));
+	const auto Unblocked = ResolveSettingsCardDeckPointerInput(Input, false);
+	Focus.BeginFrame(Unblocked.m_MousePressed, true);
+	Focus.Observe("card-a", true);
+	Focus.EndFrame();
+	EXPECT_TRUE(Focus.IsFocused("card-a"));
+}
+
+TEST(SettingsCardFocus, ReadOnlyPassCannotClearOrStealInteractiveSelection)
+{
+	qm_card_registry::CCardFocus Focus;
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", true);
+	Focus.EndFrame();
+	Focus.BeginFrame(true, false);
+	Focus.Observe("card-b", true);
+	Focus.EndFrame();
+	EXPECT_TRUE(Focus.IsFocused("card-a"));
+	EXPECT_FALSE(Focus.IsFocused("card-b"));
+}
+
+TEST(SettingsCardFocus, HiddenCardAndDisplayResetInvalidateSelectionAndAllowReopen)
+{
+	qm_card_registry::CCardFocus Focus;
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", true);
+	Focus.EndFrame();
+	Focus.BeginFrame(false, true);
+	Focus.Observe("card-b", false);
+	Focus.EndFrame();
+	EXPECT_FALSE(Focus.IsFocused("card-a"));
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", true);
+	Focus.EndFrame();
+	Focus.Reset();
+	EXPECT_FALSE(Focus.IsFocused("card-a"));
+	Focus.BeginFrame(true, true);
+	Focus.Observe("card-a", true);
+	Focus.EndFrame();
+	EXPECT_TRUE(Focus.IsFocused("card-a"));
+}
+
+TEST(SettingsCardFocus, EmptyAndNullIdsCannotAcquireSelection)
+{
+	qm_card_registry::CCardFocus Focus;
+	Focus.BeginFrame(true, true);
+	Focus.Observe(nullptr, true);
+	Focus.Observe("", true);
+	Focus.EndFrame();
+	EXPECT_FALSE(Focus.IsFocused(nullptr));
+	EXPECT_FALSE(Focus.IsFocused(""));
+}

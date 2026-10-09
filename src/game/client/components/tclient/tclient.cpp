@@ -3336,7 +3336,7 @@ void CTClient::UpdateGoresDrownCounts()
 		str_copy(m_aGoresDrownMap, pMap);
 	}
 
-	const bool IsGores = IsGoresGameMode();
+	const bool IsGores = IsGoresDrownBoardMode();
 	if(IsGores != m_GoresDrownModeActive)
 	{
 		ResetGoresDrownCounts();
@@ -3385,6 +3385,12 @@ void CTClient::TrackHookDirection(int Dummy)
 	}
 
 	Stats.m_WasHooking = IsHooking;
+}
+
+bool CTClient::IsGoresDrownBoardMode() const
+{
+	// 手动启用 Gores 工具即是用户对当前服务器的明确选择；不改冻结或队伍计数语义。
+	return CQmGoresDrownTracker::ModeEnabled(g_Config.m_QmGores != 0, IsGoresGameMode());
 }
 
 bool CTClient::IsGoresGameMode() const

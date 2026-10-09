@@ -151,3 +151,22 @@ TEST(QmGoresDrownTracker, ResetClearsCountsAndFirstObservationState)
 	Observe(Tracker, 1, true);
 	EXPECT_EQ(Tracker.Count(1), 1);
 }
+
+TEST(QmGoresDrownTracker, BoardExplainsUnsupportedContextAndRecoversOnTeamJoin)
+{
+	EXPECT_NE(CQmGoresDrownTracker::UnavailableReason(false, true, 1), nullptr);
+	EXPECT_NE(CQmGoresDrownTracker::UnavailableReason(true, false, -1), nullptr);
+	EXPECT_NE(CQmGoresDrownTracker::UnavailableReason(true, true, TEAM_FLOCK), nullptr);
+	EXPECT_NE(CQmGoresDrownTracker::UnavailableReason(true, true, NUM_DDRACE_TEAMS), nullptr);
+	EXPECT_EQ(CQmGoresDrownTracker::UnavailableReason(true, true, 1), nullptr);
+	EXPECT_EQ(CQmGoresDrownTracker::UnavailableReason(true, true, NUM_DDRACE_TEAMS - 1), nullptr);
+	EXPECT_NE(CQmGoresDrownTracker::UnavailableReason(true, true, TEAM_FLOCK), nullptr);
+}
+
+TEST(QmGoresDrownTracker, ManualGoresModeEnablesBoardWhenServerGameTypeIsGeneric)
+{
+	EXPECT_TRUE(CQmGoresDrownTracker::ModeEnabled(true, false));
+	EXPECT_TRUE(CQmGoresDrownTracker::ModeEnabled(false, true));
+	EXPECT_FALSE(CQmGoresDrownTracker::ModeEnabled(false, false));
+	EXPECT_EQ(CQmGoresDrownTracker::UnavailableReason(CQmGoresDrownTracker::ModeEnabled(true, false), true, 1), nullptr);
+}

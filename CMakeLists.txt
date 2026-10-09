@@ -4952,6 +4952,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_scoreboard_footer_test.cpp
     src/test/unit/engine/graphics/glyph_outline_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_density_test.cpp
+    src/test/unit/qmclient/client/qm_team_tee_glow_test.cpp
     src/test/unit/engine/graphics/glyph_lookup_cache_test.cpp
     src/test/unit/engine/graphics/font_size_cache_test.cpp
     src/test/unit/qmclient/client/qm_hook_coll_intersection_test.cpp

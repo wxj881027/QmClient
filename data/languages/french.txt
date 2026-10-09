@@ -12740,6 +12740,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == Lueur du tee par équipe
 
+Team tee glow halo size
+== Taille du halo des Tees de l’équipe
+
+Team tee glow halo size in percent
+== Taille du halo des Tees de l’équipe (en pourcentage)
+
+Team tee glow intensity
+== Intensité de la lueur des Tees de l’équipe
+
+Team tee glow intensity in percent
+== Intensité de la lueur des Tees de l’équipe (en pourcentage)
+
 Team used when leaving solo split mode
 == Équipe à la sortie du mode séparation solo
 

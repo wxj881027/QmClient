@@ -4245,6 +4245,10 @@ Team save in progress. You'll be able to load with '/load %s' if save is success
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' on %s to continue
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' to continue
 Team tee glow
+Team tee glow halo size
+Team tee glow halo size in percent
+Team tee glow intensity
+Team tee glow intensity in percent
 Team used when leaving solo split mode
 Team when leaving solo split
 Teammate

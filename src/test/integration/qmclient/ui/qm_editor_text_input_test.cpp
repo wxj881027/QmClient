@@ -2,6 +2,7 @@
 #include <engine/keys.h>
 
 #include <game/client/QmUi/UiForms.h>
+#include <game/editor/editor_server_settings_completion.h>
 
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_input.h>
@@ -420,4 +421,74 @@ namespace
 		}
 	}
 
+	TEST_F(QmEditorTextInput, SettingsCompletionOnEmptyInputPreservesCursor)
+	{
+		Focus(m_First);
+		m_Input.m_Modifier = true;
+		m_Input.m_RawPressedKey = KEY_SPACE;
+		EXPECT_TRUE(QmRequestEditorSettingsCompletion(m_First, m_Input, false));
+		EXPECT_STREQ(m_First.GetString(), "");
+		EXPECT_EQ(m_First.GetCursorOffset(), 0u);
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionDoesNotDeleteCharacterBeforeCursor)
+	{
+		m_First.Set("sv_test");
+		Focus(m_First);
+		m_First.SetCursorOffset(3);
+		m_Input.m_Modifier = true;
+		m_Input.m_RawPressedKey = KEY_SPACE;
+		EXPECT_TRUE(QmRequestEditorSettingsCompletion(m_First, m_Input, false));
+		EXPECT_STREQ(m_First.GetString(), "sv_test");
+		EXPECT_EQ(m_First.GetCursorOffset(), 3u);
+	}
+
+	TEST_F(QmEditorTextInput, SettingsShortcutCannotStealOtherFieldFocus)
+	{
+		Focus(m_Second);
+		m_Input.m_Modifier = true;
+		m_Input.m_RawPressedKey = KEY_SPACE;
+		EXPECT_FALSE(QmRequestEditorSettingsCompletion(m_First, m_Input, false));
+		EXPECT_TRUE(m_Second.IsActive());
+		EXPECT_TRUE(QmRequestEditorSettingsCompletion(m_First, m_Input, true));
+		EXPECT_TRUE(m_First.IsActive());
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionDefersDuringImeComposition)
+	{
+		Focus(m_First);
+		m_Input.m_Composing = true;
+		m_Input.m_Modifier = true;
+		m_Input.m_RawPressedKey = KEY_SPACE;
+		EXPECT_FALSE(QmRequestEditorSettingsCompletion(m_First, m_Input, false));
+		EXPECT_FALSE(QmRequestEditorSettingsCompletion(m_First, m_Input, true));
+		m_Input.m_Composing = false;
+		m_Input.m_RawPressedKey = 0;
+		EXPECT_TRUE(QmRequestEditorSettingsCompletion(m_First, m_Input, true));
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionConsumesOnlyShortcutSpaceEvents)
+	{
+		Focus(m_First);
+		m_Input.m_Modifier = true;
+		m_Input.m_RawPressedKey = KEY_SPACE;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		EXPECT_TRUE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
+		Event.m_Flags = IInput::FLAG_TEXT;
+		str_copy(Event.m_aText, " ");
+		EXPECT_TRUE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
+		str_copy(Event.m_aText, "x");
+		EXPECT_FALSE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
+		str_copy(Event.m_aText, " ");
+		m_Input.m_RawPressedKey = 0;
+		EXPECT_FALSE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
+		m_Input.m_RawPressedKey = KEY_SPACE;
+		m_Input.m_Composing = true;
+		EXPECT_FALSE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
+		m_Input.m_Composing = false;
+		Focus(m_Second);
+		EXPECT_FALSE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
+	}
 }

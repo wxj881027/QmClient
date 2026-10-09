@@ -128,9 +128,7 @@ void CGameConsole::OpenSettings()
 	m_LocalConsole.m_Input.GetMouseSelection()->m_Selecting = false;
 	m_TouchState.m_ScrollAmount = vec2(0.0f, 0.0f);
 	auto Props = ui_widget::SecondaryPanelProperties();
-	// F1 每帧独立启停 UI；立即关闭，避免关闭后的动画遗留在菜单弹窗栈中。
-	// 与其它二级面板共享居中遮罩、配色和模糊；仅关闭动画独立禁用。
-	Props.m_Animate = false;
+	// 入场与退场均由公共弹层栈驱动，控制台绘制入口保留退场帧。
 	Ui()->DoPopupMenu(&m_SettingsPopupId, Panel.x, Panel.y, Panel.w, Panel.h, this, PopupSettings, Props);
 }
 
@@ -161,13 +159,12 @@ CUi::EPopupMenuFunctionResult CGameConsole::PopupSettings(void *pContext, CUIRec
 	qm_card_catalog::QmCardRenderHook::RenderQmConsoleContent(&pThis->GameClient()->m_Menus, Content, Metrics, false);
 	pThis->m_SettingsScrollRegion.AddRect({View.x, StartY, View.w, Content.y - StartY});
 	pThis->m_SettingsScrollRegion.End();
-	if(!Close)
+	if(!Close && Active)
 	{
 		// 更新同一弹层的几何，保留控件输入、滚动和嵌套颜色选择器状态。
 		const CUIRect Next = QmConsoleSettingsLayout::PanelRect(*pThis->Ui()->Screen(), g_Config.m_QmConsoleColorScheme == 2, g_Config.m_QmConsoleFontSize);
 		auto Props = ui_widget::SecondaryPanelProperties();
-		Props.m_Animate = false;
 		pThis->Ui()->DoPopupMenu(&pThis->m_SettingsPopupId, Next.x, Next.y, Next.w, Next.h, pThis, PopupSettings, Props);
 	}
-	return Close ? CUi::POPUP_CLOSE_CURRENT_AND_DESCENDANTS : CUi::POPUP_KEEP_OPEN;
+	return Close ? CUi::POPUP_CLOSE_CURRENT : CUi::POPUP_KEEP_OPEN;
 }

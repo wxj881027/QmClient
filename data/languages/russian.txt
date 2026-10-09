@@ -12740,6 +12740,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == Свечение контура ти по командам
 
+Team tee glow halo size
+== Размер ореола Tee команды
+
+Team tee glow halo size in percent
+== Размер ореола Tee команды (в процентах)
+
+Team tee glow intensity
+== Интенсивность свечения Tee команды
+
+Team tee glow intensity in percent
+== Интенсивность свечения Tee команды (в процентах)
+
 Team used when leaving solo split mode
 == Команда при выходе из режима соло-разделения
 

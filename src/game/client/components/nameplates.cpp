@@ -1796,7 +1796,7 @@ public:
 				const float SamplingScale = QmNameplateSmallTextSamplingScale(Data.m_FontSize, This.Graphics()->ScreenHeight() / (Y1 - Y0));
 				const bool DensityChanged = m_Density.Update(SamplingScale * RefHeight / (Y1 - Y0), This.Graphics()->ScreenHeight() / RefHeight,
 					QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID, This.m_Camera.m_Zooming, Cost,
-					NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME, s_NameplateTextRebuildBudget);
+					NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME, s_NameplateTextRebuildBudget, RefHeight / (Y1 - Y0));
 				if(DensityChanged && QmPerfEnabled())
 				{
 					char aPayload[256];

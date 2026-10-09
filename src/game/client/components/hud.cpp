@@ -7320,8 +7320,6 @@ void CHud::RenderGoresDrownBoard()
 		return;
 
 	const bool Preview = GameClient()->m_HudEditor.IsActive();
-	if(!GameClient()->m_TClient.IsGoresGameMode() && !Preview)
-		return;
 
 	const float BoardAlpha = std::clamp(g_Config.m_QmGoresDrownBoardOpacity / 100.0f, 0.0f, 1.0f);
 	if(BoardAlpha <= 0.0f && !Preview)
@@ -7330,12 +7328,9 @@ void CHud::RenderGoresDrownBoard()
 	const float RenderAlpha = Preview ? maximum(BoardAlpha, 0.55f) : BoardAlpha;
 
 	const int LocalId = GameClient()->m_aLocalIds[g_Config.m_ClDummy] >= 0 ? GameClient()->m_aLocalIds[g_Config.m_ClDummy] : GameClient()->m_Snap.m_LocalClientId;
-	const bool HasLocalClient = LocalId >= 0 && LocalId < MAX_CLIENTS && GameClient()->m_aClients[LocalId].m_Active;
-	if(!HasLocalClient && !Preview)
-		return;
+	const bool HasLocalClient = LocalId >= 0 && LocalId < MAX_CLIENTS && GameClient()->m_aClients[LocalId].m_Active && GameClient()->m_Snap.m_apPlayerInfos[LocalId] != nullptr;
 	const int LocalTeam = HasLocalClient ? GameClient()->m_Teams.Team(LocalId) : -1;
-	if(!CQmGoresDrownTracker::IsTrackedTeam(LocalTeam) && !Preview)
-		return;
+	const char *pUnavailable = Preview ? nullptr : CQmGoresDrownTracker::UnavailableReason(GameClient()->m_TClient.IsGoresDrownBoardMode(), HasLocalClient, LocalTeam);
 
 	struct SEntry
 	{
@@ -7343,7 +7338,7 @@ void CHud::RenderGoresDrownBoard()
 		int m_Count;
 	};
 	std::vector<SEntry> vEntries;
-	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
+	for(int ClientId = 0; pUnavailable == nullptr && ClientId < MAX_CLIENTS; ++ClientId)
 	{
 		if(!GameClient()->m_aClients[ClientId].m_Active ||
 			!GameClient()->m_Snap.m_apPlayerInfos[ClientId] ||
@@ -7353,7 +7348,7 @@ void CHud::RenderGoresDrownBoard()
 	}
 	if(vEntries.empty() && Preview)
 		vEntries.push_back({-1, 0});
-	if(vEntries.empty())
+	if(vEntries.empty() && pUnavailable == nullptr)
 		return;
 
 	std::stable_sort(vEntries.begin(), vEntries.end(), [](const SEntry &Left, const SEntry &Right) {
@@ -7365,6 +7360,7 @@ void CHud::RenderGoresDrownBoard()
 	const int MaxRows = std::clamp(g_Config.m_QmGoresDrownBoardMaxPlayers, 1, 16);
 	const int RowCount = minimum((int)vEntries.size(), MaxRows);
 	const bool HasMoreRows = (int)vEntries.size() > RowCount;
+	const char *pStatus = pUnavailable != nullptr ? Localize(pUnavailable) : nullptr;
 	const bool ShowTee = g_Config.m_QmGoresDrownBoardShowTee != 0;
 	const char *pTitle = Localize("Drown deaths");
 	constexpr float TitleFontSize = ui_token::hud::font::BODY;
@@ -7391,8 +7387,12 @@ void CHud::RenderGoresDrownBoard()
 	if(HasMoreRows)
 		BoardWidth = maximum(BoardWidth, TextRender()->TextWidth(MoreFontSize, Localize("More teammates...")));
 
+	if(pStatus != nullptr)
+		BoardWidth = maximum(BoardWidth, TextRender()->TextWidth(MoreFontSize, pStatus));
 	BoardWidth = maximum(BoardWidth + PaddingX * 2.0f, 64.0f) + 2.0f;
-	const float BoardHeight = PaddingY * 2.0f + TitleHeight + RowCount * RowHeight + (HasMoreRows ? MoreHeight : 0.0f);
+	if(pStatus != nullptr)
+		BoardWidth = minimum(BoardWidth, m_Width);
+	const float BoardHeight = PaddingY * 2.0f + TitleHeight + RowCount * RowHeight + ((HasMoreRows || pStatus != nullptr) ? MoreHeight : 0.0f);
 	const float BoardX = std::clamp(8.0f, 0.0f, maximum(0.0f, m_Width - BoardWidth));
 	const float BoardY = QmHudTopEffectY(35.0f, BoardHeight, BoardX, BoardX + BoardWidth, m_MediaIslandLastVisibleRect, m_MediaIslandLastVisibleRectValid);
 	const CUIRect BoardRect{BoardX, BoardY, BoardWidth, BoardHeight};
@@ -7457,6 +7457,14 @@ void CHud::RenderGoresDrownBoard()
 			RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), vec2(RowLeft + TeeSize / 2.0f, TextBottom - FeetBottom), RenderAlpha);
 		}
 		TextRender()->Text(RowRight - CountWidth, Y, RowFontSize, aCount);
+	}
+	if(pStatus != nullptr)
+	{
+		CUIRect StatusRect{RowLeft, BoardY + PaddingY + TitleHeight, maximum(0.0f, RowRight - RowLeft), MoreHeight};
+		SLabelProperties Props;
+		Props.m_MaxWidth = StatusRect.w;
+		Props.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&StatusRect, pStatus, MoreFontSize, TEXTALIGN_ML, Props);
 	}
 	if(HasMoreRows)
 	{

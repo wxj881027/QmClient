@@ -284,14 +284,16 @@ TEST_F(QmUiBlurGraphics, SecondaryPanelDefaultAnimationCanRenderExitAfterLogical
 	g_Config.m_QmUiPopupBlur = 0;
 	m_Ui.DoPopupMenu(&Id, 0, 0, 160, 100, nullptr, KeepCenteredPopupOpen, Props);
 	ASSERT_TRUE(m_Ui.IsPopupOpen(&Id));
-	// CloseTopPopupMenu 现行契约包含后代立即删除；普通关闭才保留退出动画。
-	m_Ui.ClosePopupMenu(&Id);
+	// 输入阶段逻辑关闭立即生效，背板继续由公共栈绘制到退场结束。
+	EXPECT_TRUE(m_Ui.CloseTopPopupMenu());
+	EXPECT_TRUE(m_Ui.IsPopupVisible(&Id));
 	EXPECT_FALSE(m_Ui.IsPopupOpen());
 	m_Ui.RenderPopupMenus();
 	EXPECT_GT(m_Graphics.m_Surfaces, 0);
 	for(int Frame = 0; Frame < 10; ++Frame)
 		m_Client.AdvanceFrame();
 	m_Ui.RenderPopupMenus();
+	EXPECT_FALSE(m_Ui.IsPopupVisible(&Id));
 	const int CompletedDraws = m_Graphics.m_Surfaces;
 	m_Ui.RenderPopupMenus();
 	EXPECT_EQ(m_Graphics.m_Surfaces, CompletedDraws);

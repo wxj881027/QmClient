@@ -6,6 +6,12 @@
 
 #include <array>
 
+inline float ResolveSettingsTeeGlowHeight(const SSettingsContentMetrics &Metrics, bool CustomColor)
+{
+	return ResolveSettingsRowsHeight(4, Metrics.m_LineHeight, Metrics.m_LineSpacing) +
+	       (CustomColor ? Metrics.m_LineSpacing + std::max(0.0f, Metrics.m_ButtonHeight) : 0.0f);
+}
+
 inline CUIRect ResolveSettingsTeeEmoteSliderThumb(const SSettingsTeeEmoteSliderLayout &Layout, int Emote, float UiScale, CUiV2AnimationRuntime *pAnimRuntime, uint64_t NodeKey)
 {
 	CUIRect Thumb;

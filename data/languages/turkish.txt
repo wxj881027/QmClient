@@ -12740,6 +12740,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == Takım tee parlaması
 
+Team tee glow halo size
+== Takım Tee ışık halesi boyutu
+
+Team tee glow halo size in percent
+== Takım Tee ışık halesi boyutu (yüzde olarak)
+
+Team tee glow intensity
+== Takım Tee parlama yoğunluğu
+
+Team tee glow intensity in percent
+== Takım Tee parlama yoğunluğu (yüzde olarak)
+
 Team used when leaving solo split mode
 == Solo bölme modundan çıkarken kullanılan takım
 

@@ -431,13 +431,12 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants)
 			// 关闭弹窗时，栈存其上方的子弹窗必须一并结束：子弹窗的来源渲染
 			// 多半就是被关弹窗，遗留成孤儿阻断弹窗会永久锁死底层指针输入。
 			// 带出场动画的子弹窗转为收缩渐隐，由渲染循环自然移除。
-			const float Now = Client()->LocalTime();
 			for(auto It = PopupMenuToClose + 1; It != m_vPopupMenus.end(); ++It)
 			{
 				if(It->m_Closing || !It->m_Props.m_Animate)
 					continue;
 				It->m_Closing = true;
-				It->m_CloseStart = Now;
+				It->m_CloseStart = Client()->LocalTime();
 			}
 			m_vPopupMenus.erase(
 				std::remove_if(PopupMenuToClose, m_vPopupMenus.end(), [](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing; }),
@@ -504,7 +503,7 @@ bool CUi::CloseTopPopupMenu()
 	if(Top == m_vPopupMenus.rend())
 		return false;
 	const SPopupMenuId *pId = Top->m_pId;
-	ClosePopupMenu(pId, true);
+	ClosePopupMenu(pId);
 	return true;
 }
 
@@ -529,6 +528,11 @@ bool CUi::IsPopupOpen() const
 bool CUi::IsPopupOpen(const SPopupMenuId *pId) const
 {
 	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing && PopupMenu.m_pId == pId; });
+}
+
+bool CUi::IsPopupVisible(const SPopupMenuId *pId) const
+{
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
 }
 
 bool CUi::IsPopupHovered() const

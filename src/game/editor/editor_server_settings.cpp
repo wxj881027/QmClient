@@ -1,6 +1,7 @@
 #include "editor_server_settings.h"
 
 #include "editor.h"
+#include "editor_server_settings_completion.h"
 
 #include <base/color.h>
 #include <base/system.h>
@@ -296,6 +297,7 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 
 	auto *pLineInput = pContext->LineInput();
 	auto &Context = *pContext;
+	m_MapSettingsBackend.m_pCompletionInput = pLineInput;
 	Context.SetFontSize(FontSize);
 
 	// Small utility to render a floating part above the input rect.
@@ -332,6 +334,19 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 	{
 		Context.m_AllowUnknownCommands = !Context.m_AllowUnknownCommands;
 		Context.Update();
+	}
+
+	// 点击入口不依赖 IME 是否把 Ctrl+Space 传给客户端。
+	CUIRect CompletionButton;
+	ToolBar.VSplitRight(ToolBar.h, &ToolBar, &CompletionButton);
+	const bool CompletionClicked = DoButton_Editor(&Context.m_DropdownContext.m_ShortcutUsed, "...", 0, &CompletionButton, BUTTONFLAG_LEFT, Localize("Enter a server setting. Press ctrl+space to show available settings.", "Editor"));
+	if(QmRequestEditorSettingsCompletion(*pLineInput, *Input(), CompletionClicked))
+	{
+		Ui()->SetActiveItem(pLineInput);
+		Context.m_DropdownContext.m_ShortcutUsed = true;
+		Context.m_DropdownContext.m_ShouldHide = false;
+		Context.Update();
+		Context.UpdateCursor(true);
 	}
 
 	// Color the arguments
@@ -409,14 +424,7 @@ int CEditor::DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *p
 
 	pDropdown->m_Selected = std::clamp(pDropdown->m_Selected, -1, (int)vData.size() - 1);
 
-	if(Input()->KeyPress(KEY_SPACE) && Input()->ModifierIsPressed())
-	{ // Handle Ctrl+Space to show available options
-		pDropdown->m_ShortcutUsed = true;
-		// Remove inserted space
-		pLineInput->SetRange("", pLineInput->GetCursorOffset() - 1, pLineInput->GetCursorOffset());
-	}
-
-	if((!pDropdown->m_ShouldHide && !pLineInput->IsEmpty() && (pLineInput->IsActive() || pDropdown->m_MousePressedInside)) || pDropdown->m_ShortcutUsed)
+	if((!pDropdown->m_ShouldHide && !pLineInput->IsEmpty() && (pLineInput->IsActive() || pDropdown->m_MousePressedInside)) || (pDropdown->m_ShortcutUsed && pLineInput->IsActive()))
 	{
 		if(!pDropdown->m_Visible)
 		{
@@ -482,7 +490,7 @@ int CEditor::RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect V
 	if(AutoWidth)
 		CommandsDropdown.w = pDropdown->m_Width + pListBox->ScrollbarWidth();
 
-	pListBox->SetActive(NumEntries > 0);
+	pListBox->SetActive(NumEntries > 0 && m_Dialog == DIALOG_NONE && !Ui()->IsPopupOpen() && pLineInput->IsActive());
 	if(NumEntries > 0)
 	{
 		// Draw the background
@@ -2099,6 +2107,14 @@ void CMapSettingsBackend::CContext::FormatDisplayValue(const char *pValue, char 
 	{
 		str_copy(aOut, pValue);
 	}
+}
+
+bool CMapSettingsBackend::OnInput(const IInput::CEvent &Event)
+{
+	if(m_pCompletionInput != nullptr && CLineInput::GetActiveInput() == m_pCompletionInput &&
+		QmConsumeEditorSettingsCompletionEvent(*m_pCompletionInput, *Input(), Event))
+		return true;
+	return CEditorComponent::OnInput(Event);
 }
 
 void CMapSettingsBackend::OnMapLoad()

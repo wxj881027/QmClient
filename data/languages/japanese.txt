@@ -12740,6 +12740,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 Team tee glow
 == チーム Tee の外側グロー
 
+Team tee glow halo size
+== チーム Tee の光輪サイズ
+
+Team tee glow halo size in percent
+== チーム Tee の光輪サイズ （パーセント）
+
+Team tee glow intensity
+== チーム Tee の発光強度
+
+Team tee glow intensity in percent
+== チーム Tee の発光強度 （パーセント）
+
 Team used when leaving solo split mode
 == ソロスプリット終了時に使用するチーム
 

@@ -8,6 +8,7 @@
 #include <engine/console.h>
 #include <engine/shared/ringbuffer.h>
 
+#include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
 #include <game/client/components/qmclient/console_search_input.h>
@@ -86,6 +87,7 @@ private:
 		int m_LinesRendered = 0;
 		// 顶栏筛选是多选掩码，见 qm_console_log_filter.h
 		int m_LogFilterMask = QM_CONSOLE_LOG_CATEGORY_ALL;
+		QmConsoleUi::CFilterContentMotion m_FilterContentMotion;
 		int m_ChatExportPreviousFilterMask = QM_CONSOLE_LOG_CATEGORY_ALL;
 		int m_NextExportId = 1;
 		int m_ChatExportAnchorId = -1;
