@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_TOOLTIPS_H
 #define GAME_CLIENT_COMPONENTS_TOOLTIPS_H
 
+#include <engine/textrender.h>
+
 #include <game/client/QmUi/UiConfigHintText.h>
 #include <game/client/component.h>
 #include <game/client/ui_rect.h>
@@ -28,6 +30,12 @@ inline float QmTooltipScale(float ElapsedSeconds, bool AnimationEnabled)
 inline int QmTooltipVisibleLines(float Height, float FontSize)
 {
 	return std::max(1, static_cast<int>(std::floor(std::max(0.0f, Height) / std::max(1.0f, FontSize))));
+}
+
+// 从未缩放的完整气泡判断是否被屏幕裁短，避免扣除内边距的舍入误差误判短提示。
+inline bool QmTooltipTextTruncated(float TextHeight, float Padding, float BubbleHeight)
+{
+	return TextHeight + 2.0f * Padding > BubbleHeight + 0.001f;
 }
 
 // 气泡跟随目标矩形；指针在目标内部移动不会改变气泡位置。
@@ -88,6 +96,79 @@ inline float QmTooltipDelay(const CTooltip &Tooltip)
 	return Tooltip.m_SmallInstant || Tooltip.m_Immediate ? 0.0f : Tooltip.m_FadeTime;
 }
 
+// 首次悬浮等待后再显示；已显示的气泡换目标时直接沿用可见状态。
+class CQmTooltipHoverState
+{
+	const CTooltip *m_pTarget = nullptr;
+	double m_VisibleAt = 0.0;
+	bool m_Visible = false;
+
+public:
+	static constexpr float FADE_IN_SECONDS = 0.25f;
+
+	float Update(const CTooltip &Tooltip, double Now)
+	{
+		if(m_pTarget != &Tooltip)
+		{
+			m_pTarget = &Tooltip;
+			m_VisibleAt = Now + (m_Visible ? -FADE_IN_SECONDS : QmTooltipDelay(Tooltip));
+		}
+		const float VisibleSeconds = static_cast<float>(Now - m_VisibleAt);
+		m_Visible = VisibleSeconds >= 0.0f;
+		return VisibleSeconds;
+	}
+
+	void Clear()
+	{
+		m_pTarget = nullptr;
+		m_VisibleAt = 0.0;
+		m_Visible = false;
+	}
+};
+
+// 字形顶点使用不透明白色，最终颜色由气泡渲染传入；不继承前一个控件的透明度或图标字体。
+template<typename TTextRender>
+class CQmTooltipTextScope
+{
+	TTextRender &m_TextRender;
+	ColorRGBA m_PreviousColor;
+	EFontPreset m_PreviousPreset;
+	unsigned m_PreviousFlags;
+
+public:
+	explicit CQmTooltipTextScope(TTextRender &TextRender) :
+		m_TextRender(TextRender),
+		m_PreviousColor(TextRender.GetTextColor()),
+		m_PreviousPreset(TextRender.GetFontPreset()),
+		m_PreviousFlags(TextRender.GetRenderFlags())
+	{
+		m_TextRender.SetFontPreset(EFontPreset::DEFAULT_FONT);
+		m_TextRender.TextColor(ColorRGBA(1, 1, 1, 1));
+		m_TextRender.SetRenderFlags(TEXT_RENDER_FLAG_ONE_TIME_USE | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	}
+
+	~CQmTooltipTextScope()
+	{
+		m_TextRender.SetRenderFlags(m_PreviousFlags);
+		m_TextRender.SetFontPreset(m_PreviousPreset);
+		m_TextRender.TextColor(m_PreviousColor);
+	}
+
+	CQmTooltipTextScope(const CQmTooltipTextScope &) = delete;
+	CQmTooltipTextScope &operator=(const CQmTooltipTextScope &) = delete;
+};
+
+inline CTextCursor QmTooltipTextCursor(const CUIRect &Content, float FontSize, float WrapWidth, int MaxLines)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(Content.TopLeft());
+	Cursor.m_FontSize = FontSize;
+	// 测量与绘制共用换行上限；短文本的紧凑气泡不能反过来触发额外换行。
+	Cursor.m_LineWidth = std::max(1.0f, WrapWidth);
+	Cursor.m_MaxLines = MaxLines;
+	return Cursor;
+}
+
 inline bool QmTooltipAnimate(const CTooltip &Tooltip, bool AnimationEnabled)
 {
 	return !Tooltip.m_SmallInstant && AnimationEnabled;
@@ -134,8 +215,7 @@ class CTooltips : public CComponent
 	std::unordered_map<uintptr_t, CTooltip> m_Tooltips;
 	std::unordered_map<uintptr_t, CUiConfigHintText> m_ConfigHints;
 	std::optional<std::reference_wrapper<CTooltip>> m_ActiveTooltip;
-	std::optional<std::reference_wrapper<CTooltip>> m_PreviousTooltip;
-	int64_t m_HoverTime;
+	CQmTooltipHoverState m_HoverState;
 	uint64_t m_Frame = 1;
 	bool m_ConfigHelpInitialized = false;
 	std::unordered_map<const void *, const SConfigVariable *> m_ConfigHelp;

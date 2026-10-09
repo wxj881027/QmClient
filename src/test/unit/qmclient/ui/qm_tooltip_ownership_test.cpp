@@ -25,6 +25,13 @@ TEST(QmTooltips, VisibleLinesFitBubbleAndKeepMinimumForTinyViewport)
 	EXPECT_EQ(QmTooltipVisibleLines(-5, 0), 1);
 }
 
+TEST(QmTooltips, SingleLineBubbleDoesNotLoseItsTextToPaddingRounding)
+{
+	EXPECT_FALSE(QmTooltipTextTruncated(10, 3, 16));
+	EXPECT_FALSE(QmTooltipTextTruncated(10, 3, 15.999999f));
+	EXPECT_TRUE(QmTooltipTextTruncated(40, 3, 30));
+}
+
 TEST(QmTooltips, BubbleIsCenteredOnItsAnchorAndMovesWithTheControl)
 {
 	const CUIRect Screen{0, 0, 600, 400};
@@ -194,6 +201,96 @@ TEST(QmTooltips, OrdinaryBubblesKeepDelayAndRespectDisabledMotion)
 	EXPECT_FALSE(QmTooltipAnimate(Tooltip, false));
 	Tooltip.m_Immediate = true;
 	EXPECT_FLOAT_EQ(QmTooltipDelay(Tooltip), 0.0f);
+}
+
+TEST(QmTooltips, VisibleBubbleSwitchesTargetWithoutWaitingOrReplayingItsEntrance)
+{
+	CTooltip First, Next;
+	Next.m_FadeTime = 2.0f;
+	CQmTooltipHoverState Hover;
+	EXPECT_LT(Hover.Update(First, 10.0), 0.0f);
+	EXPECT_GT(Hover.Update(First, 11.0), 0.0f);
+	EXPECT_GE(Hover.Update(Next, 11.1), CQmTooltipHoverState::FADE_IN_SECONDS);
+}
+
+TEST(QmTooltips, SwitchingBeforeFirstBubbleAppearsRestartsTheHoverDelay)
+{
+	CTooltip First, Next;
+	CQmTooltipHoverState Hover;
+	Hover.Update(First, 10.0);
+	EXPECT_LT(Hover.Update(First, 10.5), 0.0f);
+	EXPECT_LT(Hover.Update(Next, 10.5), 0.0f);
+	EXPECT_LT(Hover.Update(Next, 11.0), 0.0f);
+	EXPECT_GE(Hover.Update(Next, 11.3), 0.0f);
+}
+
+TEST(QmTooltips, LeavingTargetsOrClosingPageRestoresDelayOnNextHover)
+{
+	CTooltip Tooltip;
+	CQmTooltipHoverState Hover;
+	Hover.Update(Tooltip, 10.0);
+	EXPECT_GE(Hover.Update(Tooltip, 11.0), 0.0f);
+	Hover.Clear();
+	EXPECT_LT(Hover.Update(Tooltip, 11.1), 0.0f);
+	EXPECT_GE(Hover.Update(Tooltip, 12.0), 0.0f);
+}
+
+TEST(QmTooltips, SwitchingFromInstantSettingsHintKeepsOrdinaryBubbleVisible)
+{
+	CTooltip Settings, Ordinary;
+	Settings.m_SmallInstant = true;
+	CQmTooltipHoverState Hover;
+	EXPECT_FLOAT_EQ(Hover.Update(Settings, 10.0), 0.0f);
+	EXPECT_GE(Hover.Update(Ordinary, 10.1), CQmTooltipHoverState::FADE_IN_SECONDS);
+}
+
+namespace
+{
+	struct STooltipTextObserver
+	{
+		ColorRGBA m_Color{0, 0, 0, 0};
+		EFontPreset m_Preset = EFontPreset::ICON_FONT;
+		unsigned m_Flags = TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH;
+		ColorRGBA GetTextColor() const { return m_Color; }
+		EFontPreset GetFontPreset() const { return m_Preset; }
+		unsigned GetRenderFlags() const { return m_Flags; }
+		void TextColor(ColorRGBA Color) { m_Color = Color; }
+		void SetFontPreset(EFontPreset Preset) { m_Preset = Preset; }
+		void SetRenderFlags(unsigned Flags) { m_Flags = Flags; }
+	};
+}
+
+TEST(QmTooltips, TextPreparationIgnoresTransparentCallerColorAndIconFontThenRestoresThem)
+{
+	STooltipTextObserver Render;
+	const STooltipTextObserver Before = Render;
+	{
+		CQmTooltipTextScope Scope(Render);
+		EXPECT_EQ(Render.GetTextColor(), ColorRGBA(1, 1, 1, 1));
+		EXPECT_EQ(Render.GetFontPreset(), EFontPreset::DEFAULT_FONT);
+		EXPECT_EQ(Render.GetRenderFlags(), unsigned(TEXT_RENDER_FLAG_ONE_TIME_USE | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT));
+	}
+	EXPECT_EQ(Render.GetTextColor(), Before.GetTextColor());
+	EXPECT_EQ(Render.GetFontPreset(), Before.GetFontPreset());
+	EXPECT_EQ(Render.GetRenderFlags(), Before.GetRenderFlags());
+}
+
+TEST(QmTooltips, NarrowBubbleKeepsTheMeasuredWrapWidthForDrawing)
+{
+	const CUIRect Content{203.4f, 127.2f, 32.0f, 10.0f};
+	const CTextCursor Cursor = QmTooltipTextCursor(Content, 10.0f, 300.0f, 0);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 300.0f);
+	EXPECT_GT(Cursor.m_LineWidth, Content.w);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, Content.x);
+	EXPECT_FLOAT_EQ(Cursor.m_StartY, Content.y);
+	EXPECT_NE(Cursor.m_Flags & TEXTFLAG_RENDER, 0);
+}
+
+TEST(QmTooltips, ClippedMultilineBubbleLimitsDrawingToItsVisibleLines)
+{
+	const CTextCursor Cursor = QmTooltipTextCursor({10, 20, 80, 30}, 14, 80, 1);
+	EXPECT_EQ(Cursor.m_MaxLines, 1);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 80);
 }
 
 TEST(QmTooltips, PopupMotionKeepsTheSameCenterThroughOvershoot)

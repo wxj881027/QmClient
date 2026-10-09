@@ -30,6 +30,7 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
+#include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_history_ui.h>
@@ -1241,17 +1242,15 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterFavoriteId, &FavoriteGroup, Localize("Favorite maps"));
 }
 
-void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated)
+void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, bool WasListboxItemActivated)
 {
 	// Render bar that shows the loading progression.
 	// The bar is only shown while loading and fades out when it's done.
-	CUIRect RefreshBar;
-	StatusBox.HSplitTop(5.0f, &RefreshBar, &StatusBox);
-	if(ServerBrowser()->GetCurrentType() != IServerBrowser::TYPE_LAN && ServerBrowser()->NumServers() > 0 &&
-		!ServerBrowser()->IsGettingServerlist() && (ServerBrowser()->IsServerlistError() || ServerBrowser()->IsServerlistStale()))
+	CUIRect StatusBox = Layout.m_Controls;
+	CUIRect RefreshBar = Layout.m_RefreshBar;
+	if(Layout.m_Notice.h > 0.0f)
 	{
-		CUIRect Notice;
-		StatusBox.HSplitBottom(12.0f, &StatusBox, &Notice);
+		const CUIRect &Notice = Layout.m_Notice;
 		SLabelProperties Props;
 		Props.m_MaxWidth = Notice.w;
 		Props.m_EllipsisAtEnd = true;
@@ -4261,23 +4260,21 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	}
 
 	CUIRect View = MainView;
-	CUIRect ServerListBase, StatusBox, ToolBoxBase, TabBar;
+	CUIRect ServerListBase, ToolBoxBase, TabBar;
 	CUIRect ContentLayout = View;
 	CUIRect ServerListWithGap;
 	const float ToolBoxWidth = 205.0f;
 	const float ColumnGap = 8.0f;
-	const float StatusHeight = 84.0f;
 	ContentLayout.VSplitRight(ToolBoxWidth, &ServerListWithGap, &ToolBoxBase);
 	ServerListWithGap.VSplitRight(ColumnGap, &ServerListBase, nullptr);
-	CUIRect ServerListStackBase = ServerListBase;
-	ServerListStackBase.HSplitBottom(StatusHeight, &ServerListBase, &StatusBox);
-	StatusBox.y = ServerListStackBase.y + ServerListStackBase.h - StatusHeight;
-	ServerListBase.h = maximum(StatusBox.y - ColumnGap - ServerListBase.y, 0.0f);
+	const bool ShowServerlistNotice = ServerBrowser()->GetCurrentType() != IServerBrowser::TYPE_LAN && ServerBrowser()->NumServers() > 0 &&
+		!ServerBrowser()->IsGettingServerlist() && (ServerBrowser()->IsServerlistError() || ServerBrowser()->IsServerlistStale());
+	const SQmBrowserStatusLayout StatusLayout = QmBrowserStatusLayout(ServerListBase, ShowServerlistNotice);
+	ServerListBase = StatusLayout.m_ServerList;
 	ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-	StatusBox.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	StatusLayout.m_Panel.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	ToolBoxBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
 	ServerListBase.Margin(2.0f, &ServerListBase);
-	StatusBox.Margin(10.0f, &StatusBox);
 	ToolBoxBase.Margin(10.0f, &ToolBoxBase);
 
 	float TransitionOffset = 0.0f;
@@ -4314,7 +4311,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 
 	{
 		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelElevatedColor());
-		RenderServerbrowserStatusBox(StatusBox, WasListboxItemActivated);
+		RenderServerbrowserStatusBox(StatusLayout, WasListboxItemActivated);
 	}
 
 	{

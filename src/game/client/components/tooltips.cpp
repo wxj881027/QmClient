@@ -17,7 +17,6 @@ CTooltips::CTooltips()
 
 void CTooltips::OnReset()
 {
-	m_HoverTime = -1;
 	m_Frame = 1;
 	m_ConfigHelpInitialized = false;
 	m_ConfigHelp.clear();
@@ -35,7 +34,7 @@ void CTooltips::SetActiveTooltip(CTooltip &Tooltip)
 inline void CTooltips::ClearActiveTooltip()
 {
 	m_ActiveTooltip.reset();
-	m_PreviousTooltip.reset();
+	m_HoverState.Clear();
 }
 
 // TClient
@@ -201,23 +200,15 @@ void CTooltips::OnRender()
 	{
 		CTooltip &Tooltip = m_ActiveTooltip.value();
 
-		// Reset hover time if a different tooltip is active.
-		// Only reset hover time when rendering, because multiple tooltips can be
-		// activated in the same frame, but only the last one should be rendered.
-		if(!m_PreviousTooltip.has_value() || &m_PreviousTooltip.value().get() != &Tooltip)
-			m_HoverTime = time_get();
-		m_PreviousTooltip.emplace(Tooltip);
-
-		// 设置页内立即显示；页面外继续使用普通气泡的延迟和淡入。
-		const float SecondsBeforeFadeIn = QmTooltipDelay(Tooltip);
-
-		const float SecondsSinceActivation = (time_get() - m_HoverTime) / (float)time_freq();
-		if(SecondsSinceActivation < SecondsBeforeFadeIn)
+		// 只处理本帧最终命中的目标，多个重叠说明不会反复重置悬浮状态。
+		const float VisibleSeconds = m_HoverState.Update(Tooltip, time_get() / static_cast<double>(time_freq()));
+		if(VisibleSeconds < 0.0f)
 			return;
 		const bool Animate = QmTooltipAnimate(Tooltip, g_Config.m_QmTooltipAnimation && g_Config.m_QmUiMotionLevel > 0);
-		const float SecondsFadeIn = !Animate || Tooltip.m_Immediate ? 0.0f : 0.25f;
-		const float AlphaFactor = SecondsSinceActivation < SecondsBeforeFadeIn + SecondsFadeIn ? (SecondsSinceActivation - SecondsBeforeFadeIn) / SecondsFadeIn : 1.0f;
+		const float SecondsFadeIn = !Animate || Tooltip.m_Immediate ? 0.0f : CQmTooltipHoverState::FADE_IN_SECONDS;
+		const float AlphaFactor = SecondsFadeIn > 0.0f ? std::min(VisibleSeconds / SecondsFadeIn, 1.0f) : 1.0f;
 		CUiScopedGaussianBlur GaussianBlurScope(Ui(), AlphaFactor);
+		CQmTooltipTextScope TextScope(*TextRender());
 
 		const float BaseFontSize = Tooltip.m_FontSize * (Tooltip.m_SmallInstant ? 1.0f : std::clamp(g_Config.m_QmTooltipFontSize, 10, 24) / 14.0f);
 		const float UiScale = Tooltip.m_SmallInstant ? BaseFontSize / 10.0f : 1.0f;
@@ -231,7 +222,7 @@ void CTooltips::OnRender()
 		const CUIRect FixedRect = QmTooltipRect(Tooltip.m_Anchor, *pScreen, vec2(BoundingBox.m_W + 2 * BasePadding, BoundingBox.m_H + 2 * BasePadding), Margin);
 		if(FixedRect.w <= 0.0f || FixedRect.h <= 0.0f)
 			return;
-		CUIRect Rect = QmTooltipAnimatedRect(FixedRect, *pScreen, QmTooltipScale(SecondsSinceActivation - SecondsBeforeFadeIn, Animate));
+		CUIRect Rect = QmTooltipAnimatedRect(FixedRect, *pScreen, QmTooltipScale(VisibleSeconds, Animate));
 		const float Scale = FixedRect.w > 0.0f ? Rect.w / FixedRect.w : 1.0f;
 		const float FontSize = BaseFontSize * Scale;
 		const float Padding = std::min(BasePadding * Scale, std::min(Rect.w, Rect.h) * 0.5f);
@@ -240,20 +231,13 @@ void CTooltips::OnRender()
 		Rect.Draw(Background, IGraphics::CORNER_ALL, Tooltip.m_SmallInstant ? 3.0f * UiScale : Padding);
 		Rect.Margin(Padding, &Rect);
 
-		CTextCursor Cursor;
-		Cursor.SetPosition(Rect.TopLeft());
-		Cursor.m_FontSize = FontSize;
-		Cursor.m_LineWidth = std::max(1.0f, Rect.w);
 		// 极窄视口或超长说明按可见行数收口，保留省略提示，避免文字溢出气泡。
 		const int VisibleLines = QmTooltipVisibleLines(Rect.h, FontSize);
-		const bool Truncated = BoundingBox.m_H * Scale > Rect.h;
-		Cursor.m_MaxLines = Truncated ? std::max(1, VisibleLines - 1) : 0;
+		const bool Truncated = QmTooltipTextTruncated(BoundingBox.m_H, BasePadding, FixedRect.h);
+		CTextCursor Cursor = QmTooltipTextCursor(Rect, FontSize, TextWidth * Scale, Truncated ? std::max(1, VisibleLines - 1) : 0);
 
 		STextContainerIndex TextContainerIndex;
-		const unsigned OldRenderFlags = TextRender()->GetRenderFlags();
-		TextRender()->SetRenderFlags(OldRenderFlags | TEXT_RENDER_FLAG_ONE_TIME_USE);
 		TextRender()->CreateTextContainer(TextContainerIndex, &Cursor, Tooltip.m_Text.c_str());
-		TextRender()->SetRenderFlags(OldRenderFlags);
 
 		if(TextContainerIndex.Valid())
 		{

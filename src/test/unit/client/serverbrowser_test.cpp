@@ -15,6 +15,7 @@
 
 #include <game/client/components/qmclient/browser_column_layout.h>
 #include <game/client/components/qmclient/browser_friend_list.h>
+#include <game/client/components/qmclient/browser_status_layout.h>
 
 #include <gtest/gtest.h>
 #include <sqlite3.h>
@@ -42,6 +43,42 @@ TEST(ServerBrowserColumnLayout, ReservesNameAndMapBeforeAllocatingFixedColumns)
 	EXPECT_GE(Tiny.m_NameWidth, 0.0f);
 	EXPECT_GE(Tiny.m_MapWidth, 0.0f);
 	EXPECT_FLOAT_EQ(Tiny.m_NameWidth + Tiny.m_MapWidth, 100.0f);
+}
+
+TEST(ServerBrowserStatusLayout, NoticeKeepsControlsAtTheirOriginalHeight)
+{
+	const CUIRect Stack{20, 30, 800, 400};
+	const auto Fresh = QmBrowserStatusLayout(Stack, false);
+	const auto Stale = QmBrowserStatusLayout(Stack, true);
+	EXPECT_FLOAT_EQ(Fresh.m_Controls.h, 59);
+	EXPECT_FLOAT_EQ(Stale.m_Controls.h, Fresh.m_Controls.h);
+	EXPECT_FLOAT_EQ(Stale.m_Controls.w, Fresh.m_Controls.w);
+	EXPECT_FLOAT_EQ(Stale.m_Panel.h - Fresh.m_Panel.h, 12);
+	EXPECT_FLOAT_EQ(Fresh.m_ServerList.h - Stale.m_ServerList.h, 12);
+	EXPECT_FLOAT_EQ(Stale.m_Notice.h, 12);
+	EXPECT_FLOAT_EQ(Stale.m_Notice.y, Stale.m_Controls.y + Stale.m_Controls.h);
+	EXPECT_FLOAT_EQ(Stale.m_Panel.y + Stale.m_Panel.h, Stack.y + Stack.h);
+}
+
+TEST(ServerBrowserStatusLayout, FreshListDoesNotReserveAnEmptyNoticeRow)
+{
+	const auto Layout = QmBrowserStatusLayout({0, 0, 600, 300}, false);
+	EXPECT_FLOAT_EQ(Layout.m_Panel.h, 84);
+	EXPECT_FLOAT_EQ(Layout.m_Notice.h, 0);
+	EXPECT_FLOAT_EQ(Layout.m_RefreshBar.h, 5);
+	EXPECT_FLOAT_EQ(Layout.m_ServerList.y + Layout.m_ServerList.h + 8, Layout.m_Panel.y);
+}
+
+TEST(ServerBrowserStatusLayout, SmallViewportKeepsPanelAndLayoutSizesNonnegative)
+{
+	const auto Layout = QmBrowserStatusLayout({100, 50, 16, 40}, true);
+	EXPECT_FLOAT_EQ(Layout.m_Panel.h, 40);
+	EXPECT_FLOAT_EQ(Layout.m_ServerList.h, 0);
+	EXPECT_GE(Layout.m_Controls.w, 0);
+	EXPECT_GE(Layout.m_Controls.h, 0);
+	EXPECT_GE(Layout.m_Notice.h, 0);
+	EXPECT_GE(Layout.m_Panel.y, 50);
+	EXPECT_LE(Layout.m_Notice.y + Layout.m_Notice.h, 90);
 }
 
 class CServerBrowserTestAccess

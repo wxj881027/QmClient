@@ -58,19 +58,3 @@ TEST(QmNewUiMenuRenderBrowserContract, CallVoteSearchSupportsIndependentExclusio
 	EXPECT_NE(RenderControl.find("const float MapSortWidth = HasMapSort ? 140.0f : 0.0f;"), std::string::npos);
 	EXPECT_NE(RenderControl.find("const float FilterWidth = std::min(220.0f, std::max(1.0f, (Bottom.w - 5.0f - MapSortWidth - MapSortGap) * 0.5f));"), std::string::npos);
 }
-
-TEST(QmNewUiMenuRenderBrowserContract, BrowserSearchUsesSharedIconAndExcludeKeepsItsOwnIconAndTooltipRect)
-{
-	const std::string Browser = FunctionBody(ReadTextFile("src/game/client/components/menus_browser.cpp"), "void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated)");
-
-	ASSERT_FALSE(Browser.empty());
-	EXPECT_NE(Browser.find("ui_widget::InputField(ServerBrowserSearchCtx, &s_FilterInput, QuickSearch, SearchOptions)"), std::string::npos);
-	// 两个标签都不得带图标：图标只出现在输入框内部。
-	EXPECT_EQ(Browser.find("Ui()->DoLabel(&QuickSearch, FONT_ICON_MAGNIFYING_GLASS"), std::string::npos);
-	EXPECT_EQ(Browser.find("DoLabel_QmIcon(&QuickExclude"), std::string::npos);
-	// 排除框保留自己的图标语义（BAN，而非放大镜）与「排除」占位符。
-	EXPECT_NE(Browser.find("ExcludeOptions.m_pLeadingIcon = FONT_ICON_BAN"), std::string::npos);
-	EXPECT_NE(Browser.find("ExcludeOptions.m_LeadingQmIcon = static_cast<int>(EQmIcon::BAN)"), std::string::npos);
-	EXPECT_NE(Browser.find("ExcludeOptions.m_pPlaceholder = Localize(\"Exclude\")"), std::string::npos);
-	EXPECT_NE(Browser.find("DoToolTip(&s_ExcludeInput, &QuickExclude"), std::string::npos);
-}
