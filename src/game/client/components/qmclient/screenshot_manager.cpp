@@ -1,8 +1,10 @@
 #include "screenshot_manager.h"
 
+#include <base/log.h>
 #include <base/str.h>
 #include <base/system.h>
 #include <base/time.h>
+#include <base/windows.h>
 
 #include <engine/client/gpu_upload_limiter.h>
 #include <engine/engine.h>
@@ -16,11 +18,20 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <cerrno>
+#include <cstdio>
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
+#include <filesystem>
 #include <limits>
 #include <utility>
+
+#if defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+#endif
 
 namespace
 {
@@ -49,16 +60,17 @@ namespace
 				FT_Done_FreeType(m_Library);
 		}
 
-		bool Load(IStorage *pStorage)
+		bool Load(IStorage *pStorage, const std::vector<std::string> &vFontPaths)
 		{
 			if(pStorage == nullptr || FT_Init_FreeType(&m_Library) != 0)
 				return false;
 
 			// 水印与当前随包中文资源保持一致；从集合中选择简体中文的字面，
 			// 缺失或损坏时仍可用 DejaVu 导出拉丁文本。
-			for(const char *pPath : {"fonts/SourceHanSans.ttc", "fonts/DejaVuSans.ttf"})
+			const std::vector<std::string> vPaths = vFontPaths.empty() ? std::vector<std::string>{"fonts/SourceHanSans.ttc", "fonts/DejaVuSans.ttf"} : vFontPaths;
+			for(const std::string &Path : vPaths)
 			{
-				IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL);
+				IOHANDLE File = pStorage->OpenFile(Path.c_str(), IOFLAG_READ, IStorage::TYPE_ALL_OR_ABSOLUTE);
 				if(File == nullptr)
 					continue;
 				void *pData = nullptr;
@@ -437,16 +449,7 @@ int CQmScreenshotManager::ScanCallback(const CFsFileInfo *pInfo, int IsDir, int 
 
 bool CQmScreenshotManager::LoadImage(IStorage *pStorage, const char *pPath, int StorageType, CImageInfo &Image)
 {
-	if(pStorage == nullptr || pPath == nullptr)
-		return false;
-	if(str_endswith_nocase(pPath, ".png") != nullptr)
-	{
-		int PngliteIncompatible = 0;
-		return CImageLoader::LoadPng(pStorage->OpenFile(pPath, IOFLAG_READ, StorageType), pPath, Image, PngliteIncompatible);
-	}
-	if(str_endswith_nocase(pPath, ".webp") != nullptr)
-		return CImageLoader::LoadWebP(pStorage->OpenFile(pPath, IOFLAG_READ, StorageType), pPath, Image);
-	return false;
+	return pPath != nullptr && CQmScreenshotImageJob::LoadImageFromDisk(pStorage, pPath, StorageType, 0, Image);
 }
 
 bool CQmScreenshotManager::EnsureRgba(CImageInfo &Image)
@@ -586,7 +589,7 @@ std::string CQmScreenshotManager::BuildWatermarkText(IStorage *pStorage, const c
 	return ComposeWatermarkText(Options.m_ShowTimestamp ? Timestamp.c_str() : nullptr, Options.m_ShowMapName ? Metadata.m_MapName.c_str() : nullptr, Options.m_CustomText);
 }
 
-bool CQmScreenshotManager::DrawWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, EWatermarkPosition Position)
+bool CQmScreenshotManager::DrawWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, EWatermarkPosition Position, const std::vector<std::string> &vFontPaths)
 {
 	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0 || !EnsureRgba(Image))
 		return false;
@@ -595,7 +598,7 @@ bool CQmScreenshotManager::DrawWatermark(IStorage *pStorage, CImageInfo &Image, 
 		const int Scale = std::clamp((int)Image.m_Width / 640, 1, 4);
 		const int FontSize = std::clamp((int)Image.m_Width / 50, 14, 32);
 		SWatermarkFont Font;
-		const bool UseFont = Font.Load(pStorage) && Font.SetPixelSize(FontSize);
+		const bool UseFont = Font.Load(pStorage, vFontPaths) && Font.SetPixelSize(FontSize);
 		const int Margin = UseFont ? std::max(8, FontSize / 2) : 12 * Scale;
 		const int TextW = UseFont ? Font.TextWidth(Text) : TextWidth(Text, Scale);
 		const int TextH = UseFont ? FontSize : 7 * Scale;
@@ -626,7 +629,160 @@ bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourc
 		return false;
 	}
 	const SCaptureMetadata &Metadata = CaptureMetadata(pStorage, pSourcePath, SourceStorageType);
-	const bool Saved = CImageLoader::SavePng(pStorage->OpenFile(pTargetPath, IOFLAG_WRITE, IStorage::TYPE_SAVE), pTargetPath, Image, Metadata.m_Comment.c_str());
+	char aTargetPath[IO_MAX_PATH_LENGTH];
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, pTargetPath, aTargetPath, sizeof(aTargetPath));
+	const bool Saved = SavePngAtomically(aTargetPath, Image, Metadata.m_Comment.c_str());
 	Image.Free();
 	return Saved;
+}
+
+namespace
+{
+	std::string AbsoluteScreenshotPath(const char *pPath)
+	{
+		if(pPath == nullptr || pPath[0] == '\0')
+			return {};
+		std::error_code Error;
+		const auto Path = std::filesystem::absolute(std::filesystem::u8path(pPath), Error);
+		if(Error)
+			return {};
+		const auto Utf8 = Path.u8string();
+		return std::string(Utf8.begin(), Utf8.end());
+	}
+
+	bool ReplaceScreenshotFile(const std::string &TempPath, const std::string &TargetPath)
+	{
+#if defined(CONF_FAMILY_WINDOWS)
+		// 不使用 fs_rename 的“失败后删目标”回退，替换失败必须保留已有导出。
+		const auto TempWide = windows_utf8_to_wide(TempPath.c_str());
+		const auto TargetWide = windows_utf8_to_wide(TargetPath.c_str());
+		return MoveFileExW(TempWide.c_str(), TargetWide.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+#else
+		return std::rename(TempPath.c_str(), TargetPath.c_str()) == 0;
+#endif
+	}
+}
+
+void CQmScreenshotExportControl::Cancel()
+{
+	const std::lock_guard<std::mutex> Lock(m_Mutex);
+	m_Canceled = true;
+}
+
+bool CQmScreenshotExportControl::Canceled() const
+{
+	const std::lock_guard<std::mutex> Lock(m_Mutex);
+	return m_Canceled;
+}
+
+bool CQmScreenshotExportControl::Commit(const std::string &TempPath, const std::string &TargetPath)
+{
+	const std::lock_guard<std::mutex> Lock(m_Mutex);
+	return !m_Canceled && ReplaceScreenshotFile(TempPath, TargetPath);
+}
+
+bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, const CImageInfo &Image, const char *pComment, CQmScreenshotExportControl *pControl)
+{
+	if(TargetPath.empty() || (pControl != nullptr && pControl->Canceled()))
+		return false;
+	CByteBufferWriter Writer;
+	if(!CImageLoader::SavePng(Writer, Image, pComment))
+		return false;
+	if(pControl != nullptr && pControl->Canceled())
+		return false;
+
+	static std::atomic<uint64_t> s_NextTemp{0};
+	std::string TempPath;
+	FILE *pFile = nullptr;
+	for(int Attempt = 0; Attempt < 32 && pFile == nullptr; ++Attempt)
+	{
+		TempPath = TargetPath + "." + std::to_string(pid()) + "." + std::to_string(s_NextTemp.fetch_add(1)) + ".tmp";
+#if defined(CONF_FAMILY_WINDOWS)
+		const auto Wide = windows_utf8_to_wide(TempPath.c_str());
+		pFile = _wfopen(Wide.c_str(), L"wbx");
+#else
+		pFile = std::fopen(TempPath.c_str(), "wbx");
+#endif
+		if(pFile == nullptr && errno != EEXIST)
+			return false;
+	}
+	if(pFile == nullptr)
+		return false;
+	struct STempCleanup
+	{
+		const std::string &m_Path;
+		bool m_Active = true;
+		~STempCleanup() { if(m_Active) fs_remove(m_Path.c_str()); }
+	} Cleanup{TempPath};
+	std::unique_ptr<FILE, decltype(&std::fclose)> File(pFile, std::fclose);
+	const bool Wrote = std::fwrite(Writer.Data(), 1, Writer.Size(), File.get()) == Writer.Size();
+	const bool Flushed = std::fflush(File.get()) == 0;
+	const bool Closed = std::fclose(File.release()) == 0;
+	if(!Wrote || !Flushed || !Closed)
+		return false;
+	const bool Saved = pControl != nullptr ? pControl->Commit(TempPath, TargetPath) : ReplaceScreenshotFile(TempPath, TargetPath);
+	Cleanup.m_Active = !Saved;
+	return Saved;
+}
+
+std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermarkJob(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const
+{
+	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
+		return nullptr;
+	char aSource[IO_MAX_PATH_LENGTH];
+	char aTarget[IO_MAX_PATH_LENGTH];
+	IOHANDLE SourceFile = pStorage->OpenFile(pSourcePath, IOFLAG_READ, SourceStorageType, aSource, sizeof(aSource));
+	if(SourceFile == nullptr)
+		return nullptr;
+	io_close(SourceFile);
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE, pTargetPath, aTarget, sizeof(aTarget));
+	const std::string Source = AbsoluteScreenshotPath(aSource);
+	const std::string Target = AbsoluteScreenshotPath(aTarget);
+	if(Source.empty() || Target.empty() || Source == Target)
+		return nullptr;
+	std::vector<std::string> vFontPaths;
+	for(const char *pPath : {"fonts/SourceHanSans.ttc", "fonts/DejaVuSans.ttf"})
+	{
+		char aFont[IO_MAX_PATH_LENGTH];
+		IOHANDLE File = pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_ALL, aFont, sizeof(aFont));
+		vFontPaths.push_back(File != nullptr ? AbsoluteScreenshotPath(aFont) : std::string());
+		if(File != nullptr)
+			io_close(File);
+	}
+	return std::make_shared<CQmScreenshotWatermarkJob>(Source, Target, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), CaptureMetadata(pStorage, pSourcePath, SourceStorageType).m_Comment, std::move(vFontPaths), Options.m_Position);
+}
+
+CQmScreenshotWatermarkJob::CQmScreenshotWatermarkJob(std::string SourcePath, std::string TargetPath, std::string Text, std::string Comment, std::vector<std::string> vFontPaths, CQmScreenshotManager::EWatermarkPosition Position) :
+	m_SourcePath(std::move(SourcePath)),
+	m_TargetPath(std::move(TargetPath)),
+	m_Text(std::move(Text)),
+	m_Comment(std::move(Comment)),
+	m_vFontPaths(std::move(vFontPaths)),
+	m_Position(Position)
+{
+}
+
+void CQmScreenshotWatermarkJob::Run()
+{
+	if(m_Control.Canceled())
+		return;
+	CImageInfo Image;
+	struct SFreeImage
+	{
+		CImageInfo &m_Image;
+		~SFreeImage() { m_Image.Free(); }
+	} FreeImage{Image};
+	try
+	{
+		auto pStorage = CreateLocalStorage();
+		if(!pStorage || !CQmScreenshotImageJob::LoadImageFromDisk(pStorage.get(), m_SourcePath, IStorage::TYPE_ABSOLUTE, 0, Image) || m_Control.Canceled())
+			return;
+		if(!CQmScreenshotManager::DrawWatermark(pStorage.get(), Image, m_Text, m_Position, m_vFontPaths) || m_Control.Canceled())
+			return;
+		m_Saved = CQmScreenshotManager::SavePngAtomically(m_TargetPath, Image, m_Comment.c_str(), &m_Control);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("screenshot", "watermark export failed: %s", Error.what());
+	}
 }

@@ -5736,6 +5736,8 @@ void CMenus::SetActive(bool Active)
 		Ui()->SetActiveItem(nullptr);
 		MarkMenuInteraction();
 	}
+	if(!Active && m_pScreenshotWatermarkJob)
+		m_pScreenshotWatermarkJob->Cancel();
 	m_MenuActive = Active;
 	if(!m_MenuActive)
 	{
@@ -6183,6 +6185,8 @@ const char *CMenus::SettingsPerfStableTextScope(int Page) const
 
 void CMenus::OnReset()
 {
+	if(m_pScreenshotWatermarkJob)
+		m_pScreenshotWatermarkJob->Cancel();
 	m_TranslateProbe.Cancel();
 	ResetDemoScreenshotPreview();
 	ClearQmClientSettingsSearchInputs();
@@ -6191,6 +6195,9 @@ void CMenus::OnReset()
 
 void CMenus::OnShutdown()
 {
+	if(m_pScreenshotWatermarkJob)
+		m_pScreenshotWatermarkJob->Cancel();
+	m_pScreenshotWatermarkJob.reset();
 	m_TranslateProbe.Cancel();
 	m_LocalSaveDisplay.Reset();
 	m_QmMapUpload.Cancel();
@@ -7888,6 +7895,7 @@ void CMenus::OnUpdate()
 
 void CMenus::OnRender()
 {
+	PumpDemoScreenshotWatermark();
 	m_TranslateProbe.AdvanceFrame();
 	if(GameClient()->m_TClient.m_UpdatePopupRequested && m_MenuActive && m_Popup == POPUP_NONE)
 	{
@@ -8168,6 +8176,8 @@ const CMenus::CMenuImage *CMenus::FindMenuImage(const char *pName)
 
 void CMenus::SetMenuPage(int NewPage)
 {
+	if(NewPage != PAGE_DEMOS && m_pScreenshotWatermarkJob)
+		m_pScreenshotWatermarkJob->Cancel();
 	const int OldPage = m_MenuPage;
 	if(OldPage != NewPage)
 		MarkMenuInteraction();

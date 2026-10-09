@@ -3447,9 +3447,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 			RightGroup.VSplitRight(TightSpacing, &RightGroup, nullptr);
 		if(DoDemoScreenshotWatermarkButton(WatermarkButton))
 		{
-			if(ApplyDemoScreenshotWatermark(*pSelectedItem))
-				PopupMessage(Localize("Screenshot saved"), Localize("The watermarked screenshot was saved next to the original"), Localize("Ok"));
-			else
+			if(!ApplyDemoScreenshotWatermark(*pSelectedItem))
 				PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
 		}
 	}

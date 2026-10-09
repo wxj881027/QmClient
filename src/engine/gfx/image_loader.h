@@ -5,6 +5,7 @@
 
 #include <engine/image.h>
 
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -49,13 +50,13 @@ public:
 		PNGLITE_FILTER_TYPE = 1 << 4,
 	};
 
-	static bool LoadPng(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible);
+	static bool LoadPng(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max());
 	static bool LoadPng(IOHANDLE File, const char *pFilename, CImageInfo &Image, int &PngliteIncompatible);
-	static bool LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image);
+	static bool LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max());
 
-	static bool LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image);
+	static bool LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max());
 	static bool LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Image);
-	static bool LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image);
+	static bool LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes = std::numeric_limits<size_t>::max());
 
 	// Comment 使用 UTF-8 iTXt 写在像素前；读取只扫描 PNG 头，不解码图片。
 	static bool ReadPngComment(IOHANDLE File, const char *pFilename, std::string &Comment);

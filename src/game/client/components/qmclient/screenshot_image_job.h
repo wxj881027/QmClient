@@ -19,6 +19,8 @@ enum
 	QM_SCREENSHOT_THUMBNAIL_MAX_CONCURRENT_JOBS = 4,
 	QM_SCREENSHOT_THUMBNAIL_MAX_UPLOADS_PER_FRAME = 8,
 	QM_SCREENSHOT_IMAGE_MAX_FILE_SIZE = 64 * 1024 * 1024,
+	// 四个缩略图解码任务的像素总量最多 512 MiB；标准 8K RGBA 仍在单图预算内。
+	QM_SCREENSHOT_IMAGE_MAX_DECODED_BYTES = 128 * 1024 * 1024,
 };
 
 // 本帧可以补足的后台解码任务数：只在有可见请求时启动，且不超过并发上限。
@@ -50,10 +52,11 @@ class CQmScreenshotImageJob : public IJob
 	int m_MaxEdge;
 	CImageInfo m_Image;
 
-	bool LoadFromDisk();
 	void Run() override;
 
 public:
+	static bool LoadImageFromDisk(IStorage *pStorage, const std::string &Path, int StorageType, int MaxEdge, CImageInfo &Image);
+
 	CQmScreenshotImageJob(IStorage *pStorage, std::string Path, int StorageType, int MaxEdge);
 	~CQmScreenshotImageJob() override;
 

@@ -2358,7 +2358,7 @@ void CRankGhost::RecordViewTimeline(const CSnapshot *pSnapshot, int RelTick)
 
 // sidecar 版本号：加入消息段（终点成绩/差值、全局音效）后为 QMGHEVT2。
 // 旧版本文件会被 ViewTimelineCached() 判为未缓存，由补齐流程重建一次。
-static constexpr char VIEW_TIMELINE_MAGIC[8] = {'Q', 'M', 'G', 'H', 'E', 'V', 'T', '2'};
+using qmclient::rank_ghost::VIEW_TIMELINE_MAGIC;
 
 // sidecar 缓存路径：多轨组 <base>/events.qmevt，单轨迹 <base>.qmevt
 bool CRankGhost::ViewTimelinePath(char *pBuf, size_t BufSize) const
@@ -2457,77 +2457,17 @@ bool CRankGhost::LoadViewTimeline()
 	if(File == nullptr)
 		return false;
 
-	char aMagic[8];
-	uint32_t Count = 0;
-	bool Ok = io_read(File, aMagic, sizeof(aMagic)) == sizeof(aMagic) &&
-		  mem_comp(aMagic, VIEW_TIMELINE_MAGIC, sizeof(aMagic)) == 0 &&
-		  io_read(File, &Count, sizeof(Count)) == sizeof(Count);
-	if(Ok)
-	{
-		m_vViewEvents.reserve(Count);
-		for(uint32_t i = 0; i < Count && Ok; i++)
-		{
-			SViewEvent Event;
-			Ok = io_read(File, &Event.m_RelTick, sizeof(Event.m_RelTick)) == sizeof(Event.m_RelTick) &&
-			     io_read(File, &Event.m_Type, sizeof(Event.m_Type)) == sizeof(Event.m_Type) &&
-			     io_read(File, Event.m_aData, sizeof(Event.m_aData)) == sizeof(Event.m_aData);
-			if(Ok)
-				m_vViewEvents.push_back(Event);
-		}
-	}
-	if(Ok)
-	{
-		Ok = io_read(File, &Count, sizeof(Count)) == sizeof(Count);
-		if(Ok)
-		{
-			m_vViewSwitchStates.reserve(Count);
-			for(uint32_t i = 0; i < Count && Ok; i++)
-			{
-				SViewSwitchState State;
-				Ok = io_read(File, &State.m_RelTick, sizeof(State.m_RelTick)) == sizeof(State.m_RelTick) &&
-				     io_read(File, &State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber)) == sizeof(State.m_HighestSwitchNumber) &&
-				     io_read(File, State.m_aStatus, sizeof(State.m_aStatus)) == sizeof(State.m_aStatus);
-				if(Ok)
-					m_vViewSwitchStates.push_back(State);
-			}
-		}
-	}
-	if(Ok)
-	{
-		Ok = io_read(File, &Count, sizeof(Count)) == sizeof(Count);
-		if(Ok)
-		{
-			m_vViewMessages.reserve(Count);
-			for(uint32_t i = 0; i < Count && Ok; i++)
-			{
-				SViewMessage Message;
-				int Type = 0;
-				Ok = io_read(File, &Message.m_RelTick, sizeof(Message.m_RelTick)) == sizeof(Message.m_RelTick) &&
-				     io_read(File, &Type, sizeof(Type)) == sizeof(Type) &&
-				     io_read(File, Message.m_aData, sizeof(Message.m_aData)) == sizeof(Message.m_aData);
-				if(!Ok)
-					break;
-				if(Type < 0 || Type > (int)EViewMessageType::MAP_SOUND_GLOBAL)
-				{
-					// 未知类型按缓存损坏处理，交给补齐流程重建
-					Ok = false;
-					break;
-				}
-				Message.m_Type = (EViewMessageType)Type;
-				m_vViewMessages.push_back(Message);
-			}
-		}
-	}
+	qmclient::rank_ghost::SViewTimeline Timeline;
+	const bool Ok = qmclient::rank_ghost::ReadViewTimeline(File, Timeline);
 	io_close(File);
 	if(!Ok)
 	{
-		// 缓存损坏按缺失处理，旧缓存可由补齐流程重建
 		log_error("rank_ghost", "failed to read view timeline '%s'", aPath);
-		m_vViewEvents.clear();
-		m_vViewSwitchStates.clear();
-		m_vViewMessages.clear();
 		return false;
 	}
+	m_vViewEvents = std::move(Timeline.m_vEvents);
+	m_vViewSwitchStates = std::move(Timeline.m_vSwitchStates);
+	m_vViewMessages = std::move(Timeline.m_vMessages);
 	log_info("rank_ghost", "view timeline loaded: %d events, %d switch states, %d messages ('%s')",
 		(int)m_vViewEvents.size(), (int)m_vViewSwitchStates.size(), (int)m_vViewMessages.size(), aPath);
 	return true;
@@ -2695,7 +2635,7 @@ void CRankGhost::ApplyViewSwitchState(const SViewSwitchState &State)
 	if(vSwitchers.empty())
 		return;
 	const int Team = std::clamp(GameClient()->SwitchStateTeam(), (int)TEAM_FLOCK, NUM_DDRACE_TEAMS - 1);
-	const int Count = minimum(State.m_HighestSwitchNumber + 1, (int)vSwitchers.size());
+	const int Count = minimum(std::clamp(State.m_HighestSwitchNumber, 0, 255) + 1, (int)vSwitchers.size());
 	for(int j = 0; j < Count; j++)
 	{
 		const bool Status = (State.m_aStatus[j / 32] >> (j % 32)) & 1;

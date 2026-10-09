@@ -1843,6 +1843,8 @@ protected:
 	std::vector<SDemoCutSegment> m_vDemoCutSegments;
 	qm_demo_cut::CPreview m_DemoCutPreview;
 	int m_DemoSelectionAnchorIndex = -1;
+	std::shared_ptr<CQmScreenshotWatermarkJob> m_pScreenshotWatermarkJob;
+	std::string m_ScreenshotWatermarkFolder;
 	bool m_DemoScreenshotPreviewOpen = false;
 	bool m_DemoScreenshotPreviewLoadFailed = false;
 	char m_aDemoScreenshotPreviewFolder[IO_MAX_PATH_LENGTH] = "";
@@ -1901,6 +1903,7 @@ protected:
 	void RenderDemoScreenshotWatermarkPreview(CUIRect PreviewRect, const CDemoItem &Item);
 	bool DoDemoScreenshotWatermarkButton(const CUIRect &Rect);
 	bool ApplyDemoScreenshotWatermark(const CDemoItem &Item);
+	void PumpDemoScreenshotWatermark();
 	void DemolistOnUpdate(bool Reset);
 	void DemolistSelectNeighbor();
 	static int DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
