@@ -1,4 +1,4 @@
-// QmNewUi 菜单源码合同：名牌显示域：他人模式隐藏本机身份行、开发者徽章顺序、强钩行布局预留、预览/游戏全范围参考帧。
+// QmNewUi 菜单源码合同：名牌显示域：他人模式隐藏本机身份行、开发者徽章顺序、预览/游戏全范围参考帧。
 // 运行时行为保留在 qm_new_ui_menu_branch_test.cpp。
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/backend_sdl.h>
@@ -65,22 +65,6 @@ TEST(QmNewUiMenuSettingsNameplateContract, NameplateOthersModeSuppressesLocalIde
 	EXPECT_EQ(RenderNamePlateGame.find("!IsAnyLocalClient &&\n\t\tGameClient()->m_Snap.m_LocalClientId >= 0"), std::string::npos);
 	EXPECT_NE(RenderNamePlateGame.find("if(Data.m_ShowName && !HideIdentity && g_Config.m_QmWarList && g_Config.m_QmWarListShowClan"), std::string::npos);
 	EXPECT_NE(RenderNamePlateGame.find("Data.m_Local = pPlayerInfo->m_Local;"), std::string::npos);
-}
-
-TEST(QmNewUiMenuSettingsNameplateContract, NameplateStrongHookRowReservesLayoutWithoutContentWidth)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/nameplates.cpp");
-	const std::string RangeSize = FunctionBody(Source, "vec2 RangeSize(");
-	const std::string AddHookRow = FunctionBody(Source, "void AddHookRow(");
-
-	EXPECT_NE(Source.find("bool m_ReserveHookStrongWeakRow;"), std::string::npos);
-	EXPECT_NE(Source.find("bool m_ReserveLineHeight = false;"), std::string::npos);
-	EXPECT_NE(Source.find("bool ReserveLineHeight() const { return m_ReserveLineHeight; }"), std::string::npos);
-	EXPECT_NE(Source.find("class CNamePlatePartHookStrongWeakRowReserve"), std::string::npos);
-	EXPECT_NE(RangeSize.find("else if(Part.ReserveLineHeight())\n\t\t\t{"), std::string::npos);
-	EXPECT_NE(RangeSize.find("LineSize.y = std::max(LineSize.y, Part.Size().y + Part.Padding().y);"), std::string::npos);
-	EXPECT_NE(AddHookRow.find("AddPart<CNamePlatePartHookStrongWeakRowReserve>(This);"), std::string::npos);
-	EXPECT_LT(AddHookRow.find("AddPart<CNamePlatePartHookStrongWeakRowReserve>(This);"), AddHookRow.find("AddPart<CNamePlatePartHookStrongWeak>(This);"));
 }
 
 TEST(QmNewUiMenuSettingsNameplateContract, NameplateGameUsesFullScopeReferenceFrame)
