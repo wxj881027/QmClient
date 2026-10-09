@@ -13,6 +13,7 @@
 #include <game/client/components/camera.h>
 #include <game/client/components/chat.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/modes.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
 #include <game/collision.h>
@@ -184,8 +185,9 @@ void CControls::OnMessage(int Msg, void *pRawMsg)
 	if(Msg == NETMSGTYPE_SV_WEAPONPICKUP)
 	{
 		CNetMsg_Sv_WeaponPickup *pMsg = (CNetMsg_Sv_WeaponPickup *)pRawMsg;
-		if(g_Config.m_ClAutoswitchWeapons)
-			m_aInputData[g_Config.m_ClDummy].m_WantedWeapon = pMsg->m_Weapon + 1;
+		// 继续锤枪循环时只获得道具，不让拾取自动切枪覆盖当前武器或待发的切锤请求。
+		const bool KeepCurrentWeapon = !g_Config.m_QmGoresDisableIfWeapons && GameClient()->m_TClient.IsGoresWeaponCycleActive();
+		ApplyQmGoresWeaponPickupInput(m_aInputData[g_Config.m_ClDummy], pMsg->m_Weapon, g_Config.m_ClAutoswitchWeapons != 0, KeepCurrentWeapon);
 		// We don't really know ammo count, until we'll switch to that weapon, but any non-zero count will suffice here
 		m_aAmmoCount[maximum(0, pMsg->m_Weapon % NUM_WEAPONS)] = 10;
 	}
