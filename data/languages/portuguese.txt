@@ -803,6 +803,9 @@ APP ID
 Appearance
 == Aparência
 
+Appearance and command highlighting of the local console
+== Aspeto da consola local e destaque dos comandos
+
 Appearance of help bubbles outside settings cards
 == Aspeto das dicas fora dos cartões de definições
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == Clássico nut
 
+Classic PowerShell
+== PowerShell clássico
+
 Classic Pro
 == Classic Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == Consola
 
+Console background color
+== Consola: cor do fundo
+
+Console background opacity
+== Consola: opacidade do fundo
+
 Console color
 == Cor da consola
+
+Console color scheme
+== Consola: esquema de cores
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== Consola: esquema de cores: 0=Terminal moderno, 1=PowerShell clássico, 2=personalizado
+
+Console command color
+== Consola: cor dos comandos
+
+Console font size
+== Consola: tamanho da letra
+
+Console link color
+== Consola: cor das ligações
+
+Console number color
+== Consola: cor dos números
+
+Console parameter color
+== Consola: cor dos parâmetros
+
+Console search match color
+== Consola: cor dos resultados da pesquisa
+
+Console selected search match color
+== Consola: cor do resultado selecionado da pesquisa
+
+Console settings
+== Definições da consola
+
+Console string color
+== Consola: cor das cadeias de texto
+
+Console text color
+== Consola: cor do texto
 
 Contacting title server
 == A ligar ao servidor de títulos
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == Cor de destaque
 
+Highlight console commands
+== Destacar comandos da consola
+
 Highlight game type
 == Destacar tipo de jogo
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == Alerta de moderador
+
+Modern terminal
+== Terminal moderno
 
 Modified
 == Modificado
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == Repor larguras das colunas
+
+Reset console appearance
+== Repor o aspeto da consola
 
 Reset controls
 == Repor controlos

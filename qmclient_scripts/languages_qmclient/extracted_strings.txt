@@ -266,6 +266,7 @@ AntiPing: predict weapons
 API key
 APP ID
 Appearance
+Appearance and command highlighting of the local console
 Appearance of help bubbles outside settings cards
 Append to log file instead of overwriting
 Applied to %d same-family part(s).
@@ -673,6 +674,7 @@ Classic Next
 Classic next
 Classic Nut
 Classic nut
+Classic PowerShell
 Classic Pro
 Classic pro
 Classic title glow
@@ -841,7 +843,21 @@ Connection severely abnormal
 Connlimit: number of connections allowed per IP in a time period
 Connlimit: time window for IP connection count
 Console
+Console background color
+Console background opacity
 Console color
+Console color scheme
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+Console command color
+Console font size
+Console link color
+Console number color
+Console parameter color
+Console search match color
+Console selected search match color
+Console settings
+Console string color
+Console text color
 Contacting title server
 Continue anyway?
 Contributors
@@ -1826,6 +1842,7 @@ High Detail
 High to low
 Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
+Highlight console commands
 Highlight game type
 Highlight message text gradient color
 Highlight movement in Polished mode. Zero turns it off.
@@ -2409,6 +2426,7 @@ Mode
 Model
 Moderate
 Moderator alert
+Modern terminal
 Modified
 Modules snap to screen edges, center lines and other HUD modules while dragging
 Monospace
@@ -3296,6 +3314,7 @@ Reset all or one tuning variable to default
 Reset chat on escape
 Reset colors
 Reset column widths
+Reset console appearance
 Reset controls
 Reset count appearance
 Reset DDRace tuning (sv_hit, sv_endless_drag, sv_old_laser) after each map change

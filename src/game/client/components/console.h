@@ -15,6 +15,7 @@
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
+#include <game/client/ui_scrollregion.h>
 
 #include <memory>
 #include <string>
@@ -63,6 +64,7 @@ private:
 			int m_LogCategory;
 			int m_ExportId;
 			bool m_ExportSelected;
+			bool m_CommandEcho;
 			char m_aText[1];
 		};
 		CStaticRingBuffer<CBacklogEntry, 1024 * 1024, CRingBufferBase::FLAG_RECYCLE> m_Backlog;
@@ -157,7 +159,7 @@ private:
 		void ExecuteLine(const char *pLine);
 
 		bool OnInput(const IInput::CEvent &Event);
-		void PrintLine(const char *pLine, int Len, ColorRGBA PrintColor, const SColorSpan *pColorSpans = nullptr, size_t NumColorSpans = 0, std::shared_ptr<const QmChatExport::SMetadata> pChatMetadata = nullptr) REQUIRES(!m_BacklogPendingLock);
+		void PrintLine(const char *pLine, int Len, ColorRGBA PrintColor, const SColorSpan *pColorSpans = nullptr, size_t NumColorSpans = 0, std::shared_ptr<const QmChatExport::SMetadata> pChatMetadata = nullptr, bool CommandEcho = false) REQUIRES(!m_BacklogPendingLock);
 		int GetLinesToScroll(int Direction, int LinesToScroll);
 		void ScrollToCenter(int StartLine, int EndLine);
 		void Dump() REQUIRES(!m_BacklogPendingLock);
@@ -188,6 +190,7 @@ private:
 
 		void UpdateEntryTextAttributes(CBacklogEntry *pEntry) const;
 		float BacklogLineWidth() const;
+		float FontSize() const;
 		bool ParseEntryColors(const CBacklogEntry *pEntry) const;
 		CQmConsoleSelection::CPosition SelectionPositionAt(vec2 Position, float LogBottom, float LineHeight);
 		std::string SelectionText();
@@ -227,6 +230,12 @@ private:
 
 	bool m_WantsSelectionCopy = false;
 	bool m_LocalConsoleFullscreen = false;
+	float m_LastLocalFontSize = -1.0f;
+	SPopupMenuId m_SettingsPopupId;
+	CScrollRegion m_SettingsScrollRegion;
+	CButtonContainer m_SettingsCloseButton;
+	void OpenSettings();
+	static CUi::EPopupMenuFunctionResult PopupSettings(void *pContext, CUIRect View, bool Active);
 	CUi::CTouchState m_TouchState;
 	vec2 m_ButtonPressPosition = vec2(0.0f, 0.0f);
 
@@ -277,6 +286,7 @@ public:
 	void Prompt(char (&aPrompt)[32]);
 
 	void Toggle(int Type);
+	bool ConsoleSettingsOpen() const { return Ui()->IsPopupOpen(&m_SettingsPopupId); }
 	bool IsActive() const { return m_ConsoleState != CONSOLE_CLOSED; }
 
 	void ForceUpdateRemoteCompletionSuggestions();

@@ -85,6 +85,7 @@ namespace qm_card_catalog
 		case EQmModuleId::Ime: return (g_Config.m_QmNewIme != 0 ? 1u : 0u) | (g_Config.m_QmImeAutoManage != 0 ? 2u : 0u);
 		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (g_Config.m_QmPlayerStatsMapProgressStyle ? 2u : 0u);
 		case EQmModuleId::InputOverlay: return g_Config.m_QmInputOverlay ? 1u : 0u;
+		case EQmModuleId::Console: return static_cast<uint64_t>(g_Config.m_QmConsoleFontSize) | (static_cast<uint64_t>(g_Config.m_QmConsoleColorScheme == 2) << 8);
 		case EQmModuleId::Tooltip: return static_cast<uint64_t>(g_Config.m_QmTooltipFontSize);
 		case EQmModuleId::HudNotifications:
 		{

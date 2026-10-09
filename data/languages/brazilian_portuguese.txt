@@ -803,6 +803,9 @@ APP ID
 Appearance
 == Aparência
 
+Appearance and command highlighting of the local console
+== Aparência do console local e destaque dos comandos
+
 Appearance of help bubbles outside settings cards
 == Aparência das dicas fora dos cartões de configurações
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == Clássico nut
 
+Classic PowerShell
+== PowerShell clássico
+
 Classic Pro
 == Clássico Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == Console
 
+Console background color
+== Console: cor do fundo
+
+Console background opacity
+== Console: opacidade do fundo
+
 Console color
 == Cor do console
+
+Console color scheme
+== Console: esquema de cores
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== Console: esquema de cores: 0=Terminal moderno, 1=PowerShell clássico, 2=personalizado
+
+Console command color
+== Console: cor dos comandos
+
+Console font size
+== Console: tamanho da fonte
+
+Console link color
+== Console: cor dos links
+
+Console number color
+== Console: cor dos números
+
+Console parameter color
+== Console: cor dos parâmetros
+
+Console search match color
+== Console: cor dos resultados da busca
+
+Console selected search match color
+== Console: cor do resultado selecionado da busca
+
+Console settings
+== Configurações do console
+
+Console string color
+== Console: cor das strings
+
+Console text color
+== Console: cor do texto
 
 Contacting title server
 == Conectando ao servidor de títulos
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == Cor de destaque
 
+Highlight console commands
+== Destacar comandos do console
+
 Highlight game type
 == Destacar tipo de jogo
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == Alerta de moderador
+
+Modern terminal
+== Terminal moderno
 
 Modified
 == Modificado
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == Redefinir larguras das colunas
+
+Reset console appearance
+== Redefinir a aparência do console
 
 Reset controls
 == Redefinir controles

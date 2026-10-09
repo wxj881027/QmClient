@@ -299,6 +299,11 @@ void qm_card_catalog::QmCardRenderHook::RenderQmAppearancePresetContent(CMenus *
 	pMenus->RenderQmAppearancePresetContent(Content, Metrics, PrewarmOnly);
 }
 
+void qm_card_catalog::QmCardRenderHook::RenderQmConsoleContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
+{
+	pMenus->RenderQmConsoleContent(Content, Metrics, PrewarmOnly);
+}
+
 void qm_card_catalog::QmCardRenderHook::RenderQmTooltipContent(CMenus *pMenus, CUIRect &Content, const SSettingsContentMetrics &Metrics, bool PrewarmOnly)
 {
 	pMenus->RenderQmTooltipContent(Content, Metrics, PrewarmOnly);

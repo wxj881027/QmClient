@@ -62,6 +62,7 @@ namespace qm_module
 		Ime,
 		AppearancePreset,
 		Tooltip,
+		Console,
 	};
 
 	enum class EQmModuleColumn
@@ -79,7 +80,7 @@ namespace qm_module
 		const char *m_pKey;
 	};
 
-	constexpr size_t QmModuleCount = 48;
+	constexpr size_t QmModuleCount = 49;
 } // namespace qm_module
 
 #endif // GAME_CLIENT_QMUI_QMMODULETYPES_H

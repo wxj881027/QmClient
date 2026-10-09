@@ -113,6 +113,7 @@ namespace qm_card_registry
 		static const std::vector<SCardDefault> s_aDefaults = [] {
 		std::vector<SCardDefault> Cards = {
 			// === 栖梦侧栏模块 · qm:<key>（显式默认值齐全，来源 s_aQmModuleDefaults + 数据债补录）===
+			{"qm:console", "visual", ECardColumn::Left, 20, "Console settings", "控制台 终端 字号 配色 命令 参数 字符串 数字 链接 搜索 高亮 console terminal font color highlight qm_console_font_size qm_console_color_scheme qm_console_opacity qm_console_highlight_commands qm_console_background_color qm_console_text_color qm_console_command_color qm_console_parameter_color qm_console_string_color qm_console_number_color qm_console_link_color qm_console_search_color qm_console_search_selected_color", "Appearance and command highlighting of the local console"},
 			{"qm:tooltip", "visual", ECardColumn::Left, 9, "Tooltips", "提示 气泡 说明 背景 文字 字号 颜色 回弹 tooltip help font color bounce qm_tooltip_background_color qm_tooltip_text_color qm_tooltip_font_size qm_tooltip_animation", "Appearance of help bubbles outside settings cards"},
 			{"qm:appearance_preset", "visual", ECardColumn::Full, 1, "Qm recommended appearance", "栖梦 推荐 预设 外观 字体 霞鹜文楷 lxgw wenkai font preset recommended appearance qm_custom_font qm_custom_font_cjk ui_color qm_ui_scale qm_ui_motion_level qm_gaussian_blur qm_ui_popup_blur", "Preview and apply a fixed appearance preset"},
 			{"qm:info", "visual", ECardColumn::Full, 0, "QmClient", "qmclient info", "QmClient information and project links", "credits-qmclient", "deck:qmclient-contributors-community"},

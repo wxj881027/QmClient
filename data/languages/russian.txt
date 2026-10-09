@@ -803,6 +803,9 @@ APP ID
 Appearance
 == Внешний вид
 
+Appearance and command highlighting of the local console
+== Оформление локальной консоли и подсветка команд
+
 Appearance of help bubbles outside settings cards
 == Оформление подсказок вне карточек настроек
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == Классический nut
 
+Classic PowerShell
+== Классический PowerShell
+
 Classic Pro
 == Классический Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == Консоль
 
+Console background color
+== Консоль: цвет фона
+
+Console background opacity
+== Консоль: непрозрачность фона
+
 Console color
 == Цвет консоли
+
+Console color scheme
+== Консоль: цветовая схема
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== Консоль: цветовая схема: 0=Современный терминал, 1=Классический PowerShell, 2=своя
+
+Console command color
+== Консоль: цвет команд
+
+Console font size
+== Консоль: размер шрифта
+
+Console link color
+== Консоль: цвет ссылок
+
+Console number color
+== Консоль: цвет чисел
+
+Console parameter color
+== Консоль: цвет параметров
+
+Console search match color
+== Консоль: цвет совпадений поиска
+
+Console selected search match color
+== Консоль: цвет выбранного совпадения поиска
+
+Console settings
+== Настройки консоли
+
+Console string color
+== Консоль: цвет строк
+
+Console text color
+== Консоль: цвет текста
 
 Contacting title server
 == Подключение к серверу титулов
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == Цвет выделения
 
+Highlight console commands
+== Подсвечивать команды консоли
+
 Highlight game type
 == Выделять тип игры
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == Предупреждение модератора
+
+Modern terminal
+== Современный терминал
 
 Modified
 == Изменённые
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == Сбросить ширину столбцов
+
+Reset console appearance
+== Сбросить оформление консоли
 
 Reset controls
 == Сбросить управление

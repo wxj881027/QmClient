@@ -803,6 +803,9 @@ APP ID
 Appearance
 == Apparence
 
+Appearance and command highlighting of the local console
+== Apparence de la console locale et coloration des commandes
+
 Appearance of help bubbles outside settings cards
 == Apparence des infobulles hors des cartes de paramètres
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == Classique nut
 
+Classic PowerShell
+== PowerShell classique
+
 Classic Pro
 == Classic Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == Console
 
+Console background color
+== Console: couleur du fond
+
+Console background opacity
+== Console: opacité du fond
+
 Console color
 == Couleur de la console
+
+Console color scheme
+== Console: palette de couleurs
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== Console: palette de couleurs: 0=Terminal moderne, 1=PowerShell classique, 2=personnalisée
+
+Console command color
+== Console: couleur des commandes
+
+Console font size
+== Console: taille de police
+
+Console link color
+== Console: couleur des liens
+
+Console number color
+== Console: couleur des nombres
+
+Console parameter color
+== Console: couleur des paramètres
+
+Console search match color
+== Console: couleur des résultats de recherche
+
+Console selected search match color
+== Console: couleur du résultat de recherche sélectionné
+
+Console settings
+== Paramètres de la console
+
+Console string color
+== Console: couleur des chaînes
+
+Console text color
+== Console: couleur du texte
 
 Contacting title server
 == Connexion au serveur de titres
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == Couleur de surbrillance
 
+Highlight console commands
+== Mettre en évidence les commandes de la console
+
 Highlight game type
 == Mettre en surbrillance le type de jeu
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == Alerte modérateur
+
+Modern terminal
+== Terminal moderne
 
 Modified
 == Modifié
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == Réinitialiser les largeurs de colonnes
+
+Reset console appearance
+== Réinitialiser l’apparence de la console
 
 Reset controls
 == Réinitialiser les contrôles

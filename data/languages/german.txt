@@ -803,6 +803,9 @@ APP ID
 Appearance
 == Erscheinungsbild
 
+Appearance and command highlighting of the local console
+== Darstellung der lokalen Konsole und Befehlshervorhebung
+
 Appearance of help bubbles outside settings cards
 == Darstellung der Hilfeblasen außerhalb von Einstellungskarten
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == Klassisch nut
 
+Classic PowerShell
+== Klassische PowerShell
+
 Classic Pro
 == Classic Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == Konsole
 
+Console background color
+== Konsole: Hintergrundfarbe
+
+Console background opacity
+== Konsole: Hintergrunddeckkraft
+
 Console color
 == Konsolenfarbe
+
+Console color scheme
+== Konsole: Farbschema
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== Konsole: Farbschema: 0=Modernes Terminal, 1=Klassische PowerShell, 2=benutzerdefiniert
+
+Console command color
+== Konsole: Befehlsfarbe
+
+Console font size
+== Konsole: Schriftgröße
+
+Console link color
+== Konsole: Linkfarbe
+
+Console number color
+== Konsole: Zahlenfarbe
+
+Console parameter color
+== Konsole: Parameterfarbe
+
+Console search match color
+== Konsole: Farbe der Suchtreffer
+
+Console selected search match color
+== Konsole: Farbe des ausgewählten Suchtreffers
+
+Console settings
+== Konsoleneinstellungen
+
+Console string color
+== Konsole: Zeichenkettenfarbe
+
+Console text color
+== Konsole: Textfarbe
 
 Contacting title server
 == Verbindung zum Titelserver
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == Hervorhebungsfarbe
 
+Highlight console commands
+== Konsolenbefehle hervorheben
+
 Highlight game type
 == Spieltyp hervorheben
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == Moderator-Warnung
+
+Modern terminal
+== Modernes Terminal
 
 Modified
 == Geändert
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == Spaltenbreiten zurücksetzen
+
+Reset console appearance
+== Konsolendarstellung zurücksetzen
 
 Reset controls
 == Steuerung zurücksetzen

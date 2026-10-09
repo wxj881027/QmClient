@@ -803,6 +803,9 @@ APP ID
 Appearance
 == 외형
 
+Appearance and command highlighting of the local console
+== 로컬 콘솔의 모양과 명령어 강조 표시
+
 Appearance of help bubbles outside settings cards
 == 설정 카드 밖 도움말 풍선의 외관
 
@@ -2024,6 +2027,9 @@ Classic Nut
 Classic nut
 == 클래식 nut
 
+Classic PowerShell
+== 클래식 PowerShell
+
 Classic Pro
 == 클래식 Pro
 
@@ -2528,8 +2534,50 @@ Connlimit: time window for IP connection count
 Console
 == 콘솔
 
+Console background color
+== 콘솔: 배경색
+
+Console background opacity
+== 콘솔: 배경 불투명도
+
 Console color
 == 콘솔 색상
+
+Console color scheme
+== 콘솔: 색 구성
+
+Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom
+== 콘솔: 색 구성: 0=현대식 터미널, 1=클래식 PowerShell, 2=사용자 지정
+
+Console command color
+== 콘솔: 명령어 색상
+
+Console font size
+== 콘솔: 글꼴 크기
+
+Console link color
+== 콘솔: 링크 색상
+
+Console number color
+== 콘솔: 숫자 색상
+
+Console parameter color
+== 콘솔: 인수 색상
+
+Console search match color
+== 콘솔: 검색 일치 색상
+
+Console selected search match color
+== 콘솔: 선택한 검색 일치 색상
+
+Console settings
+== 콘솔 설정
+
+Console string color
+== 콘솔: 문자열 색상
+
+Console text color
+== 콘솔: 텍스트 색상
 
 Contacting title server
 == 칭호 서버에 연결 중
@@ -5483,6 +5531,9 @@ Higher values make the wave move faster. Zero stops the movement.
 Highlight Color
 == 강조 색상
 
+Highlight console commands
+== 콘솔 명령어 강조 표시
+
 Highlight game type
 == 게임 유형 강조
 
@@ -7231,6 +7282,9 @@ Moderate
 
 Moderator alert
 == 관리자 알림
+
+Modern terminal
+== 현대식 터미널
 
 Modified
 == 수정됨
@@ -9892,6 +9946,9 @@ Reset colors
 
 Reset column widths
 == 열 너비 초기화
+
+Reset console appearance
+== 콘솔 모양 초기화
 
 Reset controls
 == 컨트롤 초기화
