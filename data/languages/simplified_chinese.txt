@@ -5984,6 +5984,9 @@ Interface
 Interface accent color
 == 界面强调色
 
+Interface accent color opacity percentage
+== 界面强调色不透明度百分比
+
 Interface animations
 == 界面动画
 

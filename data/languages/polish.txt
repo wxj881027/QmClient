@@ -5984,6 +5984,9 @@ Interface
 Interface accent color
 == Kolor akcentu interfejsu
 
+Interface accent color opacity percentage
+== Procent nieprzezroczystości koloru akcentu interfejsu
+
 Interface animations
 == Animacje interfejsu
 

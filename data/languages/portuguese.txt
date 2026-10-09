@@ -5984,6 +5984,9 @@ Interface
 Interface accent color
 == Cor de destaque da interface
 
+Interface accent color opacity percentage
+== Percentagem de opacidade da cor de destaque da interface
+
 Interface animations
 == Animações de interface
 

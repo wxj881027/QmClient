@@ -5984,6 +5984,9 @@ Interface
 Interface accent color
 == Arayüz vurgu rengi
 
+Interface accent color opacity percentage
+== Arayüz vurgu renginin opaklık yüzdesi
+
 Interface animations
 == Arayüz animasyonları
 
