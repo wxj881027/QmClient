@@ -1,5 +1,13 @@
 # QmClient 进程级测试
 
+Unix 打开链接的失败回归通过已构建的 `testrunner` 调用生产 `open_link/open_file`：
+
+```text
+python qmclient_scripts/integration/open_link_failure_smoke.py <build-dir>/testrunner
+```
+
+四个隔离场景检查启动器缺失、不可执行、恢复后原样传参，以及 Unicode 目录的 open_file 转发。PATH 只包含工作区临时启动器，不打开真实浏览器或访问网络。通过子进程退出状态检查 exec 失败后的退出路径；日志保留在 `tmp/tests/open-link-*`。测试代码已补充，是否执行须以当前任务的实际验证记录为准。
+
 这里放 QmClient 专属的真实进程冒烟和端到端测试。根目录 `scripts/` 是 DDNet 上游同步区，不在其中增加 QmClient 场景。
 
 默认配置与推荐外观的回归种子位于 `fixtures/default_profiles/`，固定尺寸和玩家路径见[默认配置发布回归](../../docs/规格/2026-10-08-默认配置发布回归.md)。这些种子不是执行结果；仅复制到独立测试目录使用。
