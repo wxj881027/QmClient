@@ -3736,6 +3736,7 @@ void CTClient::FailGoresDistanceFieldBuild()
 
 void CTClient::CompleteGoresDistanceFieldBuild()
 {
+	++m_GoresDebugRouteRevision;
 	m_GoresDistanceFieldValid = true;
 	ResetGoresDistanceFieldBuild();
 }
@@ -4266,30 +4267,17 @@ void CTClient::ResetGoresConfigOverrides()
 	m_PrevGoresGameMode = false;
 }
 
-bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) const
+int CTClient::FindGoresDebugRouteStart(int Dummy) const
 {
-	vRoutePoints.clear();
-
 	const CCollision *pCollision = Collision();
-	if(IsDDraceMapProgressMap())
-	{
-		if(!pCollision)
-			return false;
-		std::vector<int> vIndices;
-		if(!m_aQmDDraceProgress[std::clamp(Dummy, 0, NUM_DUMMIES - 1)].BuildRoute(vIndices))
-			return false;
-		for(const int Index : vIndices)
-			vRoutePoints.push_back(pCollision->GetPos(Index));
-		return !vRoutePoints.empty();
-	}
 	if(!pCollision || !m_GoresDistanceFieldValid)
-		return false;
+		return -1;
 
 	const int Width = pCollision->GetWidth();
 	const int Height = pCollision->GetHeight();
 	const int64_t MapCellCount64 = (int64_t)Width * Height;
 	if(MapCellCount64 <= 0 || MapCellCount64 > std::numeric_limits<int>::max())
-		return false;
+		return -1;
 	const int MapCellCount = (int)MapCellCount64;
 	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
 	if(MapCellCount <= 0 ||
@@ -4297,25 +4285,24 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) 
 		m_GoresDistanceFieldHeight != Height ||
 		m_vGoresCMap.size() != (size_t)MapCellCount ||
 		m_vGoresDistanceToFinish.size() != (size_t)MapCellCount)
-		return false;
+		return -1;
 
 	const int DummyIndex = Dummy < 0 ? 0 : (Dummy >= NUM_DUMMIES ? NUM_DUMMIES - 1 : Dummy);
 	if(DummyIndex == 1 && !Client()->DummyConnected())
-		return false;
+		return -1;
 
 	const int ClientId = GameClient()->m_aLocalIds[DummyIndex];
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS)
-		return false;
+		return -1;
 
 	const auto &Char = GameClient()->m_Snap.m_aCharacters[ClientId];
 	if(!Char.m_Active)
-		return false;
+		return -1;
 
 	const CTile *pGame = pCollision->GameLayer();
 	if(!pGame)
-		return false;
+		return -1;
 	const CTile *pFront = pCollision->FrontLayer();
-	const CTeleTile *pTele = pCollision->TeleLayer();
 
 	const vec2 RefPos = GameClient()->m_aClients[ClientId].m_RenderPos;
 	const auto IsReachableIndex = [&](int Index) {
@@ -4336,6 +4323,56 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) 
 			[&](int Index) { return IsReachableIndex(Index) && (pGame[Index].m_Index == TILE_START || (pFront && pFront[Index].m_Index == TILE_START)); },
 			[&](int Index) { return pCollision->GetPos(Index); });
 	}
+
+	if(!IsReachableIndex(StartIndex))
+		return -1;
+
+	return StartIndex;
+}
+
+bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy, int StartIndex)
+{
+	vRoutePoints.clear();
+
+	const CCollision *pCollision = Collision();
+	if(IsDDraceMapProgressMap())
+	{
+		if(!pCollision)
+			return false;
+		if(!m_aQmDDraceProgress[std::clamp(Dummy, 0, NUM_DUMMIES - 1)].BuildRoute(m_vDDraceDebugRouteIndices))
+			return false;
+		for(const int Index : m_vDDraceDebugRouteIndices)
+			vRoutePoints.push_back(pCollision->GetPos(Index));
+		return !vRoutePoints.empty();
+	}
+	if(!pCollision || !m_GoresDistanceFieldValid)
+		return false;
+
+	const int Width = pCollision->GetWidth();
+	const int Height = pCollision->GetHeight();
+	const int64_t MapCellCount64 = (int64_t)Width * Height;
+	if(MapCellCount64 <= 0 || MapCellCount64 > std::numeric_limits<int>::max())
+		return false;
+	const int MapCellCount = (int)MapCellCount64;
+	static constexpr int DISTANCE_INF = std::numeric_limits<int>::max();
+	if(MapCellCount <= 0 ||
+		m_GoresDistanceFieldWidth != Width ||
+		m_GoresDistanceFieldHeight != Height ||
+		m_vGoresCMap.size() != (size_t)MapCellCount ||
+		m_vGoresDistanceToFinish.size() != (size_t)MapCellCount)
+		return false;
+
+	const CTile *pGame = pCollision->GameLayer();
+	if(!pGame)
+		return false;
+	const CTile *pFront = pCollision->FrontLayer();
+	const CTeleTile *pTele = pCollision->TeleLayer();
+
+	const auto IsReachableIndex = [&](int Index) {
+		return Index >= 0 && Index < MapCellCount &&
+		       m_vGoresCMap[(size_t)Index] != GORES_CMAP_BLOCKED &&
+		       m_vGoresDistanceToFinish[(size_t)Index] != DISTANCE_INF;
+	};
 
 	if(!IsReachableIndex(StartIndex))
 		return false;
@@ -4416,11 +4453,31 @@ bool CTClient::BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) 
 void CTClient::RenderGoresDebugRoute()
 {
 	if(!ShouldRenderGoresDebugRoute(Client()->State() == IClient::STATE_ONLINE, g_Config.m_QmPlayerStatsMapProgressDbgRoute != 0, IsGoresMapProgressEnabled()))
+	{
+		m_GoresDebugRouteCache.Invalidate();
 		return;
+	}
 
 	EnsureGoresDistanceField();
-	std::vector<vec2> vRoutePoints;
-	if(!BuildGoresDebugRoute(vRoutePoints, g_Config.m_ClDummy) || vRoutePoints.empty())
+	CQmRouteRenderCache::SKey Key;
+	Key.m_Dummy = std::clamp(g_Config.m_ClDummy, 0, NUM_DUMMIES - 1);
+	Key.m_ClientId = GameClient()->m_aLocalIds[Key.m_Dummy];
+	Key.m_DDrace = IsDDraceMapProgressMap();
+	if(Key.m_DDrace)
+	{
+		const auto &Progress = m_aQmDDraceProgress[Key.m_Dummy];
+		Key.m_StartIndex = Progress.RouteIndex();
+		Key.m_Revision = Progress.RouteRevision();
+		Key.m_Segment = Progress.UsesSegmentRoute();
+	}
+	else
+	{
+		Key.m_StartIndex = FindGoresDebugRouteStart(Key.m_Dummy);
+		Key.m_Revision = m_GoresDebugRouteRevision;
+	}
+	if(!m_GoresDebugRouteCache.Update(Key, [&](std::vector<vec2> &vPoints) {
+		   return BuildGoresDebugRoute(vPoints, Key.m_Dummy, Key.m_StartIndex);
+	   }))
 		return;
 
 	float ScreenX0 = 0.0f;
@@ -4438,15 +4495,14 @@ void CTClient::RenderGoresDebugRoute()
 	Graphics()->SetColor(0.15f, 1.0f, 0.45f, 0.95f);
 	bool HasStartDot = false;
 	IGraphics::CQuadItem StartDot(0.0f, 0.0f, StartDotSize, StartDotSize);
-	std::vector<IGraphics::CQuadItem> vRouteDots;
+	auto &vRouteDots = m_vGoresDebugRouteDots;
+	vRouteDots.clear();
 	vRouteDots.reserve(512);
 
-	for(size_t i = 0; i < vRoutePoints.size(); ++i)
+	const auto &vVisible = m_GoresDebugRouteCache.QueryVisible({ScreenX0 - Margin, ScreenY0 - Margin, ScreenX1 + Margin, ScreenY1 + Margin});
+	for(const size_t i : vVisible)
 	{
-		const vec2 &Pos = vRoutePoints[i];
-		if(Pos.x < ScreenX0 - Margin || Pos.x > ScreenX1 + Margin ||
-			Pos.y < ScreenY0 - Margin || Pos.y > ScreenY1 + Margin)
-			continue;
+		const vec2 &Pos = m_GoresDebugRouteCache.Point(i);
 
 		if(i == 0)
 		{
@@ -4485,6 +4541,9 @@ void CTClient::RenderGoresDebugRoute()
 
 void CTClient::ResetDDraceMapProgress()
 {
+	m_GoresDebugRouteCache.Invalidate();
+	m_vDDraceDebugRouteIndices.clear();
+	m_vGoresDebugRouteDots.clear();
 	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
 	{
 		m_aQmDDraceProgress[Dummy].Reset();
@@ -4554,7 +4613,10 @@ void CTClient::UpdateDDraceMapProgress()
 			!GameClient()->m_Snap.m_aCharacters[ClientId].m_Active)
 		{
 			if(m_aQmDDraceProgressClientId[Dummy] >= 0)
+			{
 				Progress.Reset();
+				m_GoresDebugRouteCache.Invalidate();
+			}
 			m_aQmDDraceProgressClientId[Dummy] = -1;
 			m_aQmDDraceProgressHasPreviousPos[Dummy] = false;
 			m_aQmDDraceTeleCheckpoint[Dummy] = 0;
@@ -4563,6 +4625,7 @@ void CTClient::UpdateDDraceMapProgress()
 		if(m_aQmDDraceProgressClientId[Dummy] != ClientId)
 		{
 			Progress.Reset();
+			m_GoresDebugRouteCache.Invalidate();
 			m_aQmDDraceProgressHasPreviousPos[Dummy] = false;
 			m_aQmDDraceTeleCheckpoint[Dummy] = 0;
 			m_aQmDDraceProgressClientId[Dummy] = ClientId;

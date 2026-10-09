@@ -170,6 +170,7 @@ namespace QmMapProgress
 		int m_TeleCheckpoint = -1;
 		int m_CheckOutputNumber = 0;
 		int m_Stage = -2;
+		uint64_t m_Revision = 0;
 
 		bool Allowed(const CMap &Map, int Index) const
 		{
@@ -196,6 +197,7 @@ namespace QmMapProgress
 			Label.m_Cost = NewCost;
 			Label.m_Length = NewLength;
 			Label.m_Next = Target;
+			++m_Revision;
 			m_Queue.emplace(NewCost, NewLength, Index);
 		}
 
@@ -209,6 +211,7 @@ namespace QmMapProgress
 		}
 
 	public:
+		uint64_t Revision() const { return m_Revision; }
 		bool Matches(int TeleCheckpoint, int Stage) const { return m_TeleCheckpoint == TeleCheckpoint && m_Stage == Stage; }
 		bool Complete() const { return m_Queue.empty() && m_apPending[0] == nullptr && m_apPending[1] == nullptr; }
 		bool Settled(int Index) const { return Index >= 0 && Index < (int)m_vLabels.size() && m_vLabels[(size_t)Index].m_Settled; }
@@ -218,6 +221,7 @@ namespace QmMapProgress
 
 		void Start(const CMap &Map, int TeleCheckpoint, int Stage = -1)
 		{
+			++m_Revision;
 			m_vLabels.assign((size_t)Map.Size(), {});
 			m_Queue = {};
 			m_apPending = {};
@@ -275,6 +279,7 @@ namespace QmMapProgress
 				if(Label.m_Settled || Cost != Label.m_Cost || Length != Label.m_Length)
 					continue;
 				Label.m_Settled = true;
+				++m_Revision;
 				const STile &Cell = Map.Tile(Index);
 				const int X = Index % Map.m_Width;
 				const int aPred[4] = {X > 0 ? Index - 1 : -1, X + 1 < Map.m_Width ? Index + 1 : -1, Index - Map.m_Width, Index + Map.m_Width};
@@ -440,6 +445,10 @@ namespace QmMapProgress
 			else
 				m_Estimate = {};
 		}
+
+		int RouteIndex() const { return m_CurrentIndex; }
+		bool UsesSegmentRoute() const { return m_UseSegmentForRoute; }
+		uint64_t RouteRevision() const { return (m_UseSegmentForRoute ? m_Segment : m_Global).Revision(); }
 
 		bool BuildRoute(std::vector<int> &vRoute) const
 		{

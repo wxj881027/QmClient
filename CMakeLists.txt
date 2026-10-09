@@ -3570,6 +3570,7 @@ if(CLIENT)
     components/qmclient/rank_ghost.cpp
     components/qmclient/rank_ghost.h
     components/qmclient/online_replay_player.h
+    components/qmclient/route_render_cache.h
     components/qmclient/route_start_index.h
     components/qmclient/route_visited.h
     components/qmclient/settings_resource_preview.cpp
@@ -4591,6 +4592,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
+    src/test/unit/qmclient/client/qm_route_render_cache_test.cpp
+    src/test/integration/qmclient/client/qm_map_route_cache_test.cpp
     src/test/unit/qmclient/monitoring/qm_stutter_sample_series_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_multipart_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_response_test.cpp
@@ -5310,6 +5313,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   add_executable(qm-benchmarks EXCLUDE_FROM_ALL
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
+    src/test/benchmark/qm_route_render_cache_benchmark.cpp
     src/test/benchmark/qm_str_benchmark.cpp
     src/test/benchmark/qm_update_benchmark.cpp
     src/game/client/components/qmclient/update_manifest.cpp

@@ -23,6 +23,7 @@
 #include <game/client/components/qmclient/map_progress.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
+#include <game/client/components/qmclient/route_render_cache.h>
 #include <game/client/components/qmclient/route_start_index.h>
 #include <game/client/components/qmclient/route_visited.h>
 #include <game/client/components/qmclient/update_manifest.h>
@@ -294,6 +295,10 @@ class CTClient : public CComponent
 	// 前者沿用距离场已有的递增地图扫描记录潜在起点，后者只清理上一条路径触及的位图字。
 	CQmRouteStartIndex m_GoresRouteStartIndex;
 	mutable CQmRouteVisited m_GoresDebugRouteVisited;
+	CQmRouteRenderCache m_GoresDebugRouteCache;
+	uint64_t m_GoresDebugRouteRevision = 0;
+	std::vector<int> m_vDDraceDebugRouteIndices;
+	std::vector<IGraphics::CQuadItem> m_vGoresDebugRouteDots;
 	EGoresDistanceFieldBuildStage m_GoresDistanceFieldBuildStage = EGoresDistanceFieldBuildStage::IDLE;
 	int m_GoresDistanceFieldBuildMapSize = 0;
 	int m_GoresDistanceFieldBuildCursor = 0;
@@ -339,7 +344,8 @@ class CTClient : public CComponent
 	void StepGoresDistanceFieldReachableStartCheck(int Budget);
 	void UpdateGoresMapProgress();
 	bool IsGoresMapProgressDebugRouteEnabled() const;
-	bool BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy) const;
+	int FindGoresDebugRouteStart(int Dummy) const;
+	bool BuildGoresDebugRoute(std::vector<vec2> &vRoutePoints, int Dummy, int StartIndex);
 	void RenderGoresDebugRoute();
 
 	// 收藏地图功能
