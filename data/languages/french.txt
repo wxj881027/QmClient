@@ -3245,6 +3245,9 @@ Delete this preset
 Demo
 == Démo
 
+Demo directory
+== Dossier des démos
+
 Demo display
 == Affichage de la démo
 
@@ -4588,6 +4591,15 @@ Failed to read saves file
 
 Failed to record video. See local console for details.
 == L'enregistrement vidéo a échoué. Consultez la console locale pour plus de détails.
+
+Failed to save demo
+== Échec de l’enregistrement de la démo
+
+Failed to save screenshot
+== Échec de l’enregistrement de la capture d’écran
+
+Failed to save video
+== Échec de l’enregistrement de la vidéo
 
 Failed to write PNG export.
 == Échec de l'écriture de l'exportation PNG.
@@ -6448,6 +6460,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Laissez vide pour utiliser l'invite par défaut
+
+Leave empty to use the default directory. Relative paths use the config directory.
+== Laissez vide pour utiliser le dossier par défaut. Les chemins relatifs partent du dossier de configuration.
 
 Leave solo split mode
 == Quitter le mode séparation solo
@@ -10424,6 +10439,9 @@ Screen resolution width (only fullscreen)
 Screenshot
 == Capture d'écran
 
+Screenshot directory
+== Dossier des captures d’écran
+
 Screenshot error
 == Erreur de capture d'écran
 
@@ -14176,6 +14194,9 @@ Vertical sync (may cause lag)
 
 Video Background
 == Fond vidéo
+
+Video directory
+== Dossier des vidéos
 
 Video name
 == Nom de la vidéo

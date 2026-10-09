@@ -3245,6 +3245,9 @@ Delete this preset
 Demo
 == Demo
 
+Demo directory
+== Katalog nagrań demo
+
 Demo display
 == Wyświetlanie dema
 
@@ -4588,6 +4591,15 @@ Failed to read saves file
 
 Failed to record video. See local console for details.
 == Nie udało się nagrać filmu. Szczegóły znajdziesz w lokalnej konsoli.
+
+Failed to save demo
+== Nie udało się zapisać nagrania demo
+
+Failed to save screenshot
+== Nie udało się zapisać zrzutu ekranu
+
+Failed to save video
+== Nie udało się zapisać filmu
 
 Failed to write PNG export.
 == Nie udało się zapisać eksportu PNG.
@@ -6448,6 +6460,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Pozostaw puste, aby użyć domyślnego promptu
+
+Leave empty to use the default directory. Relative paths use the config directory.
+== Pozostaw puste, aby użyć domyślnego katalogu. Ścieżki względne zaczynają się w katalogu konfiguracji.
 
 Leave solo split mode
 == Wyjdź z trybu podziału solo
@@ -10424,6 +10439,9 @@ Screen resolution width (only fullscreen)
 Screenshot
 == Zrzut ekranu
 
+Screenshot directory
+== Katalog zrzutów ekranu
+
 Screenshot error
 == Błąd zrzutu ekranu
 
@@ -14176,6 +14194,9 @@ Vertical sync (may cause lag)
 
 Video Background
 == Tło wideo
+
+Video directory
+== Katalog filmów
 
 Video name
 == Nazwa wideo

@@ -86,7 +86,7 @@ private:
 	int m_Width;
 	int m_Height;
 	CVideoFrameCapture m_FrameCapture;
-	char m_aName[256];
+	char m_aName[IO_MAX_PATH_LENGTH];
 	uint64_t m_VideoFrameIndex = 0;
 	uint64_t m_AudioFrameIndex = 0;
 

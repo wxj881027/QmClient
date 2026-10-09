@@ -15,8 +15,8 @@ class CDemoEdit : public IJob
 
 	CDemoEditor m_DemoEditor;
 
-	char m_aDemo[256];
-	char m_aDst[256];
+	char m_aDemo[IO_MAX_PATH_LENGTH];
+	char m_aDst[IO_MAX_PATH_LENGTH];
 	int m_StartTick;
 	int m_EndTick;
 	bool m_Success;

@@ -3245,6 +3245,9 @@ Delete this preset
 Demo
 == デモ
 
+Demo directory
+== デモの保存先
+
 Demo display
 == デモ表示
 
@@ -4588,6 +4591,15 @@ Failed to read saves file
 
 Failed to record video. See local console for details.
 == 動画の録画に失敗しました。詳細はローカルコンソールを確認してください。
+
+Failed to save demo
+== デモの保存に失敗しました
+
+Failed to save screenshot
+== スクリーンショットの保存に失敗しました
+
+Failed to save video
+== 動画の保存に失敗しました
 
 Failed to write PNG export.
 == PNG エクスポートの書き込みに失敗しました。
@@ -6448,6 +6460,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == 空欄にしてデフォルトプロンプトを使用
+
+Leave empty to use the default directory. Relative paths use the config directory.
+== 空欄の場合は既定の保存先を使います。相対パスの基準は設定フォルダーです。
 
 Leave solo split mode
 == ソロスプリットモードを終了
@@ -10424,6 +10439,9 @@ Screen resolution width (only fullscreen)
 Screenshot
 == スクリーンショット
 
+Screenshot directory
+== スクリーンショットの保存先
+
 Screenshot error
 == スクリーンショットの処理に失敗しました
 
@@ -14176,6 +14194,9 @@ Vertical sync (may cause lag)
 
 Video Background
 == ビデオ背景
+
+Video directory
+== 動画の保存先
 
 Video name
 == ビデオ名

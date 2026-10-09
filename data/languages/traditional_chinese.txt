@@ -3245,6 +3245,9 @@ Delete this preset
 Demo
 == 回放
 
+Demo directory
+== 回放儲存目錄
+
 Demo display
 == 回放顯示
 
@@ -4588,6 +4591,15 @@ Failed to read saves file
 
 Failed to record video. See local console for details.
 == 影片錄製失敗，詳情請查看本機主控台。
+
+Failed to save demo
+== 回放儲存失敗
+
+Failed to save screenshot
+== 截圖儲存失敗
+
+Failed to save video
+== 影片儲存失敗
 
 Failed to write PNG export.
 == 寫入 PNG 導出文件失敗。
@@ -6448,6 +6460,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == 留空使用默認提示詞
+
+Leave empty to use the default directory. Relative paths use the config directory.
+== 留空使用預設目錄。相對路徑以設定目錄為起點。
 
 Leave solo split mode
 == 退出單刷模式
@@ -10424,6 +10439,9 @@ Screen resolution width (only fullscreen)
 Screenshot
 == 截圖
 
+Screenshot directory
+== 截圖儲存目錄
+
 Screenshot error
 == 螢幕截圖處理失敗
 
@@ -14176,6 +14194,9 @@ Vertical sync (may cause lag)
 
 Video Background
 == 視頻背景
+
+Video directory
+== 影片匯出目錄
 
 Video name
 == 視頻名稱
