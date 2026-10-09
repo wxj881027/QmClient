@@ -122,6 +122,7 @@ struct SSettingsCardDeckVisualOptions;
 enum class EQmChatGradientRole;
 struct SQmGradientGeometryBinding;
 struct SQmGradientGeometryState;
+struct SQmBrowserStatusLayout;
 
 class CMenus;
 
@@ -2318,7 +2319,7 @@ protected:
 	bool m_ServerBrowserShouldRevealSelection;
 	std::vector<CUIElement *> m_avpServerBrowserUiElements[IServerBrowser::NUM_TYPES];
 	void RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated);
-	void RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated);
+	void RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, bool WasListboxItemActivated);
 	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
 	enum class EConnectIntent
 	{

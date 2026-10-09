@@ -3440,6 +3440,7 @@ if(CLIENT)
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
     components/qmclient/bind_settings.cpp
+    components/qmclient/browser_status_layout.h
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_input_layout.h
     components/qmclient/chat_gradient.h
