@@ -4922,6 +4922,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/strip_path_and_extension_test.cpp
     src/test/unit/base/swap_endian_test.cpp
     src/test/unit/server/teehistorian_test.cpp
+    src/test/unit/engine/graphics/text_char_transform_test.cpp
     src/test/unit/engine/graphics/text_container_lifetime_test.cpp
     src/test/unit/engine/graphics/text_layout_string_test.cpp
     src/test/unit/engine/graphics/text_sweep_test.cpp

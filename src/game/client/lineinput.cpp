@@ -537,8 +537,8 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 				Cursor.m_CursorCharacter = SelectionCursor.m_CursorCharacter;
 				Cursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_NONE;
 			}
-			// 位移仅进入主文字绘制，选区预遍历和实际光标仍使用原排版。
-			m_InputMotion.FillCharOffsets(Cursor.m_vCharOffsets, FontSize);
+			// 缩放仅进入主文字绘制，选区预遍历和实际光标仍使用原排版。
+			m_InputMotion.FillCharOffsets(Cursor.m_vCharOffsets);
 			TextRender()->TextEx(&Cursor, pDisplayStr);
 		};
 
