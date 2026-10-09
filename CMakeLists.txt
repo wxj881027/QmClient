@@ -4766,6 +4766,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/settings/qm_general_card_layout_test.cpp
     src/test/unit/qmclient/settings/settings_tee_emote_slider_test.cpp
     src/test/unit/qmclient/settings/settings_tee_layout_test.cpp
+    src/test/unit/qmclient/settings/settings_tee_skin_list_state_test.cpp
     src/test/unit/qmclient/client/qm_plausible_sizes_contract_test.cpp
     src/test/unit/qmclient/client/qm_tclient_statusbar_score_contract_test.cpp
     src/test/contract/qmclient/client/qm_tclient_statusbar_contract_test.cpp
@@ -4847,6 +4848,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_scoreboard_media_test.cpp
     src/test/unit/qmclient/client/qm_voting_hud_test.cpp
     src/test/unit/qmclient/client/recent_tee_skins_test.cpp
+    src/test/unit/qmclient/client/tee_skin_apply_test.cpp
     src/test/contract/qmclient/client/qm_weapon_trajectory_contract_test.cpp
     src/test/unit/qmclient/client/qm_rank_demo_manifest_test.cpp
     src/test/unit/qmclient/client/qmclient_update_version_test.cpp

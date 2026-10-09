@@ -23,6 +23,7 @@
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogInternal.h>
 #include <game/client/QmUi/cards/QmCardCatalogTeeMetrics.h>
+#include <game/client/QmUi/cards/QmCardCatalogTeeSkinListState.h>
 #include <game/client/animstate.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/menus.h>
@@ -392,6 +393,7 @@ namespace
 		}
 	};
 	STeeSkinCollectionState gs_TeeSkinCollection;
+	CSettingsTeeSkinListState gs_TeeSkinListState;
 
 	void BeginTeeListDrainPerfSession(const CSkins &Skins, int64_t NowNs)
 	{
@@ -492,6 +494,7 @@ void CMenus::FinalizeTeeListDrainPerfSession()
 	CommitSettingsTeeSkinEdits();
 	gs_TeeSkinCollection.m_CachedCollection = ETeeSkinCollection::ALL;
 	gs_TeeSkinCollection.m_SourceRevision = UINT64_MAX;
+	gs_TeeSkinListState = {};
 	LogTeeListDrainSummary(Client(), GameClient()->m_Skins, GameClient()->m_Skins.LoadingStats(), false, time_get_nanoseconds().count());
 	m_SettingsHighPrioritySettled = false;
 	ResetTeeSettingsPageState();
@@ -555,6 +558,7 @@ namespace
 	struct STeeEditorState
 	{
 		std::array<CButtonContainer, NUM_DUMMIES> m_aPreviewButtons;
+		std::array<CButtonContainer, 3> m_aSkinTransfers;
 		std::array<CLineInput, NUM_DUMMIES> m_aSkinInputs;
 		std::array<SSettingsPreviewSkinTransitionState, NUM_DUMMIES> m_aTransitions;
 	};
@@ -583,9 +587,30 @@ bool CMenus::ProcessSettingsTeeEditorInput(CUIRect Content, const SSettingsConte
 				CLineInput::GetActiveInput()->Deactivate();
 			m_Dummy = Target != 0;
 			m_SkinListScrollToSelected = false;
-			m_TeeEntranceStartTime = time_get();
 			return true;
 		}
+	}
+	for(int Action = 0; Action < 3; ++Action)
+	{
+		if(!Ui()->DoButtonLogic(&gs_TeeEditorState.m_aSkinTransfers[Action], 0, &Layout.m_aSkinTransfers[Action], BUTTONFLAG_LEFT))
+			continue;
+		CommitSettingsTeeSkinEdits();
+		if(CLineInput::GetActiveInput() != nullptr)
+			CLineInput::GetActiveInput()->Deactivate();
+		if(Action == 1)
+			QmSwapTeeSkinSettings(g_Config);
+		else
+			QmCopyTeeSkinSettings(g_Config, Action == 0 ? ETeeSkinApplyTarget::DUMMY : ETeeSkinApplyTarget::MAIN);
+		for(int ChangedTarget = 0; ChangedTarget < NUM_DUMMIES; ++ChangedTarget)
+		{
+			if(Action != 1 && ChangedTarget != (Action == 0 ? 1 : 0))
+				continue;
+			SetNeedSendInfo(ChangedTarget != 0);
+			GameClient()->m_Skins.RecordRecentSkin(ChangedTarget);
+		}
+		m_SkinListScrollToSelected = true;
+		GameClient()->m_Skins.SkinList(m_Dummy ? 1 : 0).ForceRefresh();
+		return true;
 	}
 	if(!Ui()->DoButtonLogic(pUseCustomColor, *pUseCustomColor, &Layout.m_CustomColors, BUTTONFLAG_LEFT))
 		return false;
@@ -633,8 +658,10 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		const bool Dummy = PreviewTarget != 0;
 		const bool Selected = PreviewTarget == Target;
 		const CUIRect &Preview = Layout.m_aPreviews[PreviewTarget];
-		DoButton_Menu(&gs_TeeEditorState.m_aPreviewButtons[PreviewTarget], "", Selected, &Preview, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 6.0f * UiScale, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, Selected ? 0.16f : 0.04f));
-		const CUIRect Underline{Preview.x + Gap, Preview.y + Preview.h - 2.0f * UiScale, std::max(0.0f, Preview.w - Gap * 2.0f), 2.0f * UiScale};
+		const float PreviewRadius = 14.0f * UiScale;
+		DoButton_Menu(&gs_TeeEditorState.m_aPreviewButtons[PreviewTarget], "", Selected, &Preview, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, PreviewRadius, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, Selected ? 0.16f : 0.04f));
+		const float UnderlineInset = std::max(Gap, PreviewRadius);
+		const CUIRect Underline{Preview.x + UnderlineInset, Preview.y + Preview.h - 2.0f * UiScale, std::max(0.0f, Preview.w - UnderlineInset * 2.0f), 2.0f * UiScale};
 		if(Selected)
 			Underline.Draw(ColorRGBA(0.3f, 0.85f, 0.75f, 0.9f), IGraphics::CORNER_NONE, 0.0f);
 		const char *pName = Dummy ? g_Config.m_ClDummyName : g_Config.m_PlayerName;
@@ -653,7 +680,6 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		Inner.HSplitBottom(TeeMetrics.m_LineHeight, &TeeRect, &SkinLabel);
 		CompactLabel.m_MaxWidth = SkinLabel.w;
 		Ui()->DoLabel(&SkinLabel, pPreviewSkin, TeeMetrics.m_SmallSize, TEXTALIGN_MC, CompactLabel);
-		GameClient()->m_Tooltips.DoToolTip(&gs_TeeEditorState.m_aPreviewButtons[PreviewTarget], &Preview, pPreviewSkin);
 
 		CTeeRenderInfo OwnInfo;
 		OwnInfo.Apply(GameClient()->m_Skins.Find(pPreviewSkin));
@@ -762,20 +788,15 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	}
 	GameClient()->m_Tooltips.DoToolTip(&s_RandomSkin, &Layout.m_RandomSkin, Localize("Create a random skin"));
 
-	static CButtonContainer s_CopyOtherSkin;
-	if(Ui()->DoButton_QmIcon(&s_CopyOtherSkin, EQmIcon::COPY, FONT_ICON_COPY, 0, &Layout.m_CopyOtherSkin, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL))
+	const std::array<EQmIcon, 3> aTransferIcons = {EQmIcon::ARROW_RIGHT, EQmIcon::ARROWS_LEFT_RIGHT, EQmIcon::ARROW_LEFT};
+	const std::array<const char *, 3> apTransferGlyphs = {"\xEE\x81\xAC", FONT_ICON_ARROWS_LEFT_RIGHT, "\xEE\x81\x98"};
+	const std::array<const char *, 3> apTransferTooltips = {Localize("Copy skin from player"), Localize("Swap"), Localize("Copy skin from dummy")};
+	for(int Action = 0; Action < 3; ++Action)
 	{
-		// 一键把另一侧（本体/分身）的皮肤与配色状态复制到当前编辑对象，与双击应用共用同一套字段语义。
-		CommitSettingsTeeSkinEdits();
-		const SQmRecentTeeSkin Other = QmCurrentTeeSkin(g_Config, !m_Dummy);
-		QmApplyTeeSkinToTarget(g_Config, m_Dummy ? ETeeSkinApplyTarget::DUMMY : ETeeSkinApplyTarget::MAIN,
-			Other.m_Name.c_str(), true, Other.m_UseCustomColor, Other.m_ColorBody, Other.m_ColorFeet);
-		SetNeedSendInfo(m_Dummy);
-		m_SkinListScrollToSelected = true;
-		GameClient()->m_Skins.SkinList(Target).ForceRefresh();
-		GameClient()->m_Skins.RecordRecentSkin(Target);
+		const CUIRect &Button = Layout.m_aSkinTransfers[Action];
+		Ui()->DoButton_QmIcon(&gs_TeeEditorState.m_aSkinTransfers[Action], aTransferIcons[Action], apTransferGlyphs[Action], 0, &Button, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL);
+		GameClient()->m_Tooltips.DoToolTip(&gs_TeeEditorState.m_aSkinTransfers[Action], &Button, apTransferTooltips[Action]);
 	}
-	GameClient()->m_Tooltips.DoToolTip(&s_CopyOtherSkin, &Layout.m_CopyOtherSkin, m_Dummy ? Localize("Copy skin from player") : Localize("Copy skin from dummy"));
 
 	CTeeRenderInfo EyeInfo;
 	EyeInfo.Apply(GameClient()->m_Skins.Find(pSkinName[0] == '\0' ? "default" : pSkinName));
@@ -817,13 +838,10 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 			else if(Ui()->HotItem() == nullptr)
 				Ui()->SetHotItem(pSliderId);
 		}
-		if(MouseInsideTrack)
-		{
-			if(Input()->KeyPress(KEY_MOUSE_WHEEL_UP))
-				SetEmote(StepTeeEmoteSlider(*pEmote, -1));
-			else if(Input()->KeyPress(KEY_MOUSE_WHEEL_DOWN))
-				SetEmote(StepTeeEmoteSlider(*pEmote, 1));
-		}
+		Ui()->RegisterWheelOwner(pSliderId, EUiWheelOwnerPriority::COMPOSITE_CONTROL, Track, MouseInsideTrack);
+		float WheelDelta = 0.0f;
+		if(Ui()->TryConsumeWheel(pSliderId, &WheelDelta))
+			SetEmote(StepTeeEmoteSlider(*pEmote, WheelDelta > 0.0f ? -1 : 1));
 	}
 	DrawRoundedSurface(TabBarUiContext(), Track, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f), ui_token::radius::PILL);
 	const int ActiveEmote = std::clamp(*pEmote, 0, NUM_EMOTES - 1);
@@ -850,7 +868,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		RenderTools()->RenderTee(CAnimState::GetIdle(), &EyeInfo, Emote, vec2(1.0f, 0.0f), Slot.Center() + Offset + vec2(SettingsSkinPreviewCenterOffset(EyeMinX, EyeMaxX) * EyeInfo.m_Size / EyeRequestedSize, 0.0f), TeeAlpha);
 		Ui()->ClipDisable();
 		char aTooltip[128];
-		str_format(aTooltip, sizeof(aTooltip), "%s - %s", Localize(s_apEmoteNames[Emote]), Localize("Choose default eyes when joining a server"));
+		str_format(aTooltip, sizeof(aTooltip), "%s (%d) - %s", Localize(s_apEmoteNames[Emote]), Emote, Localize("Choose default eyes when joining a server"));
 		GameClient()->m_Tooltips.DoToolTip(&s_aEyes[Target][Emote], &Slot, aTooltip);
 	}
 	DoSettingsButton_CheckBox(SETTINGS_TEE, -1, pUseCustomColor, m_Dummy ? "tee-dummy-custom-colors" : "tee-player-custom-colors", Localize("Custom colors"), *pUseCustomColor, &Layout.m_CustomColors);
@@ -994,8 +1012,6 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	const CUIRect RefreshButton = Toolbar.m_aTools[3];
 	// Skin selector
 	static CListBox s_ListBox;
-	static std::vector<char> s_vQueueButtonIds;
-	static std::vector<char> s_vRightDoubleClickIds;
 	static CLineInput s_SkinFilterInput(g_Config.m_ClSkinFilterString, sizeof(g_Config.m_ClSkinFilterString));
 	static CButtonContainer s_aCollectionButtons[3];
 	const char *apCollectionLabels[] = {Localize("All"), Localize("Favorites"), Localize("Recent")};
@@ -1083,6 +1099,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	const int TeeTextureUploadTokens = TeeSettingsFrameBudget.m_TextureUploadTokens;
 	(void)TeeTextureUploadTokens;
 	const bool NeedFullListSourceState = g_Config.m_QmSettingsPrewarm != 0;
+	const SQmRecentTeeSkin SelectedAppearance = QmCurrentTeeSkin(g_Config, m_Dummy);
 	const bool NeedSelectedIndexScan = gs_TeeSettingsPageState.m_SelectedIndexRevision != ListRevision ||
 					   gs_TeeSettingsPageState.m_SelectedIndexDummy != (m_Dummy ? 1 : 0);
 	const auto PrescanStartTime = time_get_nanoseconds();
@@ -1093,7 +1110,9 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		for(size_t i = 0; i < vSkinList.size(); ++i)
 		{
 			const CSkins::CSkinListEntry &SkinListEntry = vSkinList[i];
-			if(!m_Dummy ? SkinListEntry.IsSelectedMain() : SkinListEntry.IsSelectedDummy())
+			const auto &ColorKey = SkinListEntry.ColorKey();
+			const std::optional<SSettingsSkinListColorKey> Color = ColorKey.has_value() ? std::make_optional(SSettingsSkinListColorKey{ColorKey->m_UseCustomColor, ColorKey->m_ColorBody, ColorKey->m_ColorFeet}) : std::nullopt;
+			if(SkinListEntry.SkinContainer() != nullptr && SettingsTeeSkinEntryMatches(SkinListEntry.SkinContainer()->Name(), Color, SelectedAppearance))
 			{
 				gs_TeeSettingsPageState.m_SelectedIndex = (int)i;
 				break;
@@ -1136,8 +1155,6 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			QmPerfLogPayload("perf/settings-skin-source", aPayload, Client(), "settings:tee");
 		}
 	}
-	s_vQueueButtonIds.resize(vSkinList.size());
-	s_vRightDoubleClickIds.resize(vSkinList.size());
 	const auto ListFrameStartTime = time_get_nanoseconds();
 	const float TeeSkinListRowHeight = 50.0f * UiScale;
 	const int TeeSkinListItemsPerRow = ResolveSettingsTeeSkinColumns(MainView.w, UiScale);
@@ -1216,8 +1233,10 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		TeeResourcePreviewState.m_Failed = TerminalFailure;
 		const ESettingsResourcePreviewDrawResult TeePreviewDrawResult = SettingsResourcePreviewDrawResult(TeeResourcePreviewState);
 
+		const std::optional<SSettingsSkinListColorKey> RowColor = EntryColorKey.has_value() ? std::make_optional(SSettingsSkinListColorKey{EntryColorKey->m_UseCustomColor, EntryColorKey->m_ColorBody, EntryColorKey->m_ColorFeet}) : std::nullopt;
+		CSettingsTeeSkinListState::SIds &RowIds = gs_TeeSkinListState.Resolve(pSkinContainer->Name(), RowColor);
 		const bool ItemActivatedBefore = s_ListBox.WasItemActivated();
-		const CListboxItem Item = s_ListBox.DoNextItem(SkinListEntry.ListItemId(), OldSelected >= 0 && (size_t)OldSelected == i);
+		const CListboxItem Item = s_ListBox.DoNextItem(&RowIds.m_ListItem, OldSelected >= 0 && (size_t)OldSelected == i);
 		if(!Item.m_Visible)
 		{
 			continue;
@@ -1229,8 +1248,8 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		}
 		// 列表框已处理左键；右键使用独立标识，避免再次消费条目的按钮状态。
 		if(Ui()->MouseButtonClicked(1) && !Ui()->IsPopupOpen() &&
-			Ui()->HotItem() == SkinListEntry.ListItemId() && Ui()->MouseHovered(&Item.m_Rect) &&
-			Ui()->DoDoubleClickLogic(&s_vRightDoubleClickIds[i]))
+			Ui()->HotItem() == &RowIds.m_ListItem && Ui()->MouseHovered(&Item.m_Rect) &&
+			Ui()->DoDoubleClickLogic(&RowIds.m_RightDoubleClick))
 		{
 			DoubleClickIndex = (int)i;
 			DoubleClickTarget = ETeeSkinApplyTarget::DUMMY;
@@ -1373,7 +1392,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			IconRow.VSplitRight(2.0f, &IconRow, nullptr);
 			IconRow.VSplitRight(20.0f, &IconRow, &QueueIcon);
 			const bool InQueue = GameClient()->m_Skins.IsInSkinQueue(pSkinContainer->Name(), EntryUseCustomColor, EntryColorBody, EntryColorFeet, QueueDummy);
-			if(DoButtonSkinQueue(&s_vQueueButtonIds[i], SkinListEntry.ListItemId(), InQueue, false, &QueueIcon))
+			if(DoButtonSkinQueue(&RowIds.m_Queue, &RowIds.m_ListItem, InQueue, false, &QueueIcon))
 			{
 				if(InQueue)
 				{
@@ -1385,9 +1404,9 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 				}
 			}
 			const char *pQueueTooltip = InQueue ? Localize("Remove from queue") : Localize("Add to queue");
-			GameClient()->m_Tooltips.DoToolTip(&s_vQueueButtonIds[i], &QueueIcon, pQueueTooltip);
+			GameClient()->m_Tooltips.DoToolTip(&RowIds.m_Queue, &QueueIcon, pQueueTooltip);
 
-			if(DoButton_Favorite(SkinListEntry.FavoriteButtonId(), SkinListEntry.ListItemId(), SkinListEntry.IsFavorite(), &FavIcon))
+			if(DoButton_Favorite(&RowIds.m_Favorite, &RowIds.m_ListItem, SkinListEntry.IsFavorite(), &FavIcon))
 			{
 				if(SkinListEntry.IsFavorite())
 				{
@@ -1400,7 +1419,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			}
 		}
 
-		RenderSkinStatus(Item.m_Rect, pSkinContainer, SkinListEntry.ErrorTooltipId(), PreviewCacheReady);
+		RenderSkinStatus(Item.m_Rect, pSkinContainer, &RowIds.m_ErrorTooltip, PreviewCacheReady);
 	}
 	const int TailItems = (int)vSkinList.size() - VisibleRange.m_EndItem;
 	if(TailItems > 0)

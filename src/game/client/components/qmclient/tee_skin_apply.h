@@ -5,6 +5,8 @@
 
 #include <engine/shared/config.h>
 
+#include <utility>
+
 // 皮肤列表双击的目标角色：0=本体（主号），1=分身（dummy）。
 // 双预览选择只决定单击的编辑对象；双击显式指定一侧，不改变编辑对象。
 // 左键双击＝本体、右键双击＝分身由调用点直接决定，不需要按键序号到角色的映射。
@@ -34,6 +36,24 @@ inline void QmApplyTeeSkinToTarget(CConfig &Config, const ETeeSkinApplyTarget Ta
 		(Dummy ? Config.m_ClDummyColorBody : Config.m_ClPlayerColorBody) = ColorBody;
 		(Dummy ? Config.m_ClDummyColorFeet : Config.m_ClPlayerColorFeet) = ColorFeet;
 	}
+}
+
+// 预览之间复制完整的皮肤配色设置，包括暂时关闭的颜色值。
+inline void QmCopyTeeSkinSettings(CConfig &Config, const ETeeSkinApplyTarget Target)
+{
+	const bool ToDummy = Target == ETeeSkinApplyTarget::DUMMY;
+	str_copy(ToDummy ? Config.m_ClDummySkin : Config.m_ClPlayerSkin, ToDummy ? Config.m_ClPlayerSkin : Config.m_ClDummySkin, sizeof(Config.m_ClPlayerSkin));
+	(ToDummy ? Config.m_ClDummyUseCustomColor : Config.m_ClPlayerUseCustomColor) = ToDummy ? Config.m_ClPlayerUseCustomColor : Config.m_ClDummyUseCustomColor;
+	(ToDummy ? Config.m_ClDummyColorBody : Config.m_ClPlayerColorBody) = ToDummy ? Config.m_ClPlayerColorBody : Config.m_ClDummyColorBody;
+	(ToDummy ? Config.m_ClDummyColorFeet : Config.m_ClPlayerColorFeet) = ToDummy ? Config.m_ClPlayerColorFeet : Config.m_ClDummyColorFeet;
+}
+
+inline void QmSwapTeeSkinSettings(CConfig &Config)
+{
+	std::swap(Config.m_ClPlayerSkin, Config.m_ClDummySkin);
+	std::swap(Config.m_ClPlayerUseCustomColor, Config.m_ClDummyUseCustomColor);
+	std::swap(Config.m_ClPlayerColorBody, Config.m_ClDummyColorBody);
+	std::swap(Config.m_ClPlayerColorFeet, Config.m_ClDummyColorFeet);
 }
 
 #endif

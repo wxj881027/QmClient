@@ -1,6 +1,8 @@
 #include <game/client/QmUi/QmCardRegistry.h>
 #include <game/client/QmUi/SettingsCardDeckLogic.h>
+#include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
+#include <game/client/ui.h>
 
 #include <gtest/gtest.h>
 
@@ -102,4 +104,41 @@ TEST(QmTeeCards, ExistingCustomizationWithinTeeIsNotMovedAgain)
 	const auto FullBefore = Model.StableIdOrder("", "tee", 0);
 	EXPECT_FALSE(qm_card_registry::RepairLegacyTeeLayout(Model));
 	EXPECT_EQ(Model.StableIdOrder("", "tee", 0), FullBefore);
+}
+
+TEST(QmTeeCards, EmoteWheelConsumesTheEventBeforePageScrolling)
+{
+	CScrollWheelOwnership Ownership;
+	char Page = 0;
+	char Slider = 0;
+	const CUIRect Track{20.0f, 30.0f, 600.0f, 44.0f};
+	for(const float RawDelta : {120.0f, -120.0f})
+	{
+		SCOPED_TRACE(RawDelta);
+		Ownership.BeginFrame(RawDelta > 0.0f ? 1 : 2, RawDelta, false);
+		QmRegisterWheelOwnerCandidate(Ownership, {&Page, EUiWheelOwnerPriority::PAGE, {0.0f, 0.0f, 800.0f, 600.0f}, true}, Track.Center(), true);
+		QmRegisterWheelOwnerCandidate(Ownership, {&Slider, EUiWheelOwnerPriority::COMPOSITE_CONTROL, Track, true}, Track.Center(), true);
+		float WheelDelta = 0.0f;
+		ASSERT_TRUE(QmTryConsumeWheel(Ownership, &Slider, &WheelDelta));
+		const int Current = RawDelta > 0.0f ? 0 : NUM_EMOTES - 1;
+		EXPECT_EQ(StepTeeEmoteSlider(Current, WheelDelta > 0.0f ? -1 : 1), RawDelta > 0.0f ? NUM_EMOTES - 1 : 0);
+		EXPECT_FALSE(QmTryConsumeWheel(Ownership, &Page, &WheelDelta));
+		EXPECT_FALSE(QmTryConsumeWheel(Ownership, &Slider, &WheelDelta));
+	}
+}
+
+TEST(QmTeeCards, WheelOutsideEmoteTrackRemainsAvailableToThePage)
+{
+	CScrollWheelOwnership Ownership;
+	char Page = 0;
+	char Slider = 0;
+	const CUIRect Track{20.0f, 30.0f, 600.0f, 44.0f};
+	const vec2 Pointer(Track.x + 10.0f, Track.y + Track.h + 10.0f);
+	Ownership.BeginFrame(1, -120.0f, false);
+	QmRegisterWheelOwnerCandidate(Ownership, {&Page, EUiWheelOwnerPriority::PAGE, {0.0f, 0.0f, 800.0f, 600.0f}, true}, Pointer, true);
+	QmRegisterWheelOwnerCandidate(Ownership, {&Slider, EUiWheelOwnerPriority::COMPOSITE_CONTROL, Track, true}, Pointer, true);
+	float WheelDelta = 0.0f;
+	EXPECT_FALSE(QmTryConsumeWheel(Ownership, &Slider, &WheelDelta));
+	ASSERT_TRUE(QmTryConsumeWheel(Ownership, &Page, &WheelDelta));
+	EXPECT_FLOAT_EQ(WheelDelta, -120.0f);
 }
