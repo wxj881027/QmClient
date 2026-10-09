@@ -941,7 +941,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	OwnSkinInfo.m_Size = 60.0f;
 	// Skin loading status
 	const auto &&RenderSkinStatus = [&](CUIRect Parent, const CSkins::CSkinContainer *pSkinContainer, const void *pStatusTooltipId, bool PreviewCacheReady = false) {
-		if(pSkinContainer != nullptr && (pSkinContainer->State() == CSkins::CSkinContainer::EState::LOADED || PreviewCacheReady))
+		if(pSkinContainer != nullptr && (pSkinContainer->Skin() != nullptr || PreviewCacheReady))
 		{
 			return;
 		}
@@ -1114,7 +1114,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 				continue;
 			++PrescanItemsScanned;
 			const auto State = pSkinContainer->State();
-			const bool SourceReady = State == CSkins::CSkinContainer::EState::LOADED;
+			const bool SourceReady = pSkinContainer->Skin() != nullptr;
 			const bool TerminalFailure = State == CSkins::CSkinContainer::EState::ERROR || State == CSkins::CSkinContainer::EState::NOT_FOUND;
 			if(SettingsSkinListEntrySourceSettled(SourceReady, TerminalFailure))
 				++TotalSourceSettledCount;
@@ -1206,7 +1206,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 		const int EntryColorFeet = EntryColorKey.has_value() ? EntryColorKey->m_ColorFeet : (int)*pColorFeet;
 		const std::string PreviewCacheKey = SSettingsTeeListPreviewCache::Key(pSkinContainer->Name(), m_Dummy, EntryUseCustomColor, EntryColorBody, EntryColorFeet, *pEmote);
 		CManagedTeeRenderInfo *pCachedPreview = gs_TeeListPreviewCache.Find(PreviewCacheKey);
-		const bool SourceReady = State == CSkins::CSkinContainer::EState::LOADED;
+		const bool SourceReady = pSkinContainer->Skin() != nullptr;
 		const bool TerminalFailure = State == CSkins::CSkinContainer::EState::ERROR || State == CSkins::CSkinContainer::EState::NOT_FOUND;
 		const bool PreviewCacheReady = pCachedPreview != nullptr;
 		const bool EntryVisualReady = SettingsSkinListEntryVisualReady(SourceReady, TerminalFailure, PreviewCacheReady);
@@ -1239,11 +1239,11 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			++RowsRendered;
 
 		vVisibleSkinIndices.push_back(i);
-		const bool EntryNonTerminalWaiting =
-			State == CSkins::CSkinContainer::EState::UNLOADED ||
-			State == CSkins::CSkinContainer::EState::BACKGROUND_REQUESTED ||
-			State == CSkins::CSkinContainer::EState::PENDING ||
-			State == CSkins::CSkinContainer::EState::LOADING;
+		const bool EntryNonTerminalWaiting = !SourceReady &&
+						     (State == CSkins::CSkinContainer::EState::UNLOADED ||
+							     State == CSkins::CSkinContainer::EState::BACKGROUND_REQUESTED ||
+							     State == CSkins::CSkinContainer::EState::PENDING ||
+							     State == CSkins::CSkinContainer::EState::LOADING);
 		if(EntryVisualReady)
 		{
 			++VisibleVisualReadyCount;
@@ -1261,7 +1261,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 			++VisibleBackgroundRequestedCount;
 		if(EntryNonTerminalWaiting)
 			++VisibleNonTerminalWaitingCount;
-		const CSkin *pSkin = State == CSkins::CSkinContainer::EState::LOADED ? pSkinContainer->Skin().get() : pDefaultSkin;
+		const CSkin *pSkin = pSkinContainer->Skin() != nullptr ? pSkinContainer->Skin().get() : pDefaultSkin;
 		Item.m_Rect.VSplitLeft(60.0f, &Button, &Label);
 
 		{
@@ -1543,7 +1543,7 @@ void CMenus::RenderSettingsTeeSkinList(CUIRect Content, const SSettingsContentMe
 	};
 	const bool FirstVisibleReady = !vVisibleSkinIndices.empty() &&
 				       SettingsSkinListEntryVisualReady(
-					       vSkinList[vVisibleSkinIndices.front()].SkinContainer()->State() == CSkins::CSkinContainer::EState::LOADED,
+					       vSkinList[vVisibleSkinIndices.front()].SkinContainer()->Skin() != nullptr,
 					       vSkinList[vVisibleSkinIndices.front()].SkinContainer()->State() == CSkins::CSkinContainer::EState::ERROR ||
 						       vSkinList[vVisibleSkinIndices.front()].SkinContainer()->State() == CSkins::CSkinContainer::EState::NOT_FOUND,
 					       SkinEntryHasPreviewCache(vSkinList[vVisibleSkinIndices.front()]));

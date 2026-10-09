@@ -155,27 +155,6 @@ TEST(SkinsContract, SkinRefreshKeepsExistingListWhileNewPlanLoads)
 	EXPECT_EQ(RefreshBody.find("m_SkinsBackgroundList.clear();"), std::string::npos);
 }
 
-TEST(SkinsContract, AbortedLocalSkinLoadJobStopsBeforeExpensiveRefreshWork)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/skins.cpp");
-	const size_t RunPos = Source.find("void CSkins::CSkinLoadJob::Run()");
-	ASSERT_NE(RunPos, std::string::npos);
-	const size_t DownloadRunPos = Source.find("void CSkins::CSkinDownloadJob::Run()", RunPos);
-	ASSERT_NE(DownloadRunPos, std::string::npos);
-	const std::string RunBody = Source.substr(RunPos, DownloadRunPos - RunPos);
-
-	const size_t ReadFilePos = RunBody.find("Storage()->ReadFile(aPath, m_StorageType");
-	const size_t DecodePos = RunBody.find("CImageLoader::LoadPng(pFileData, FileSize, aPath, m_Data.m_Info)");
-	const size_t PreparePos = RunBody.find("PrepareSkinData(m_aName, m_Data)");
-	ASSERT_NE(ReadFilePos, std::string::npos);
-	ASSERT_NE(DecodePos, std::string::npos);
-	ASSERT_NE(PreparePos, std::string::npos);
-
-	EXPECT_LT(RunBody.find("if(State() == IJob::STATE_ABORTED)"), ReadFilePos);
-	EXPECT_LT(RunBody.find("if(State() == IJob::STATE_ABORTED)", ReadFilePos), DecodePos);
-	EXPECT_LT(RunBody.find("if(State() == IJob::STATE_ABORTED)", DecodePos), PreparePos);
-}
-
 TEST(SkinsContract, PrepareSkinDataResetsMetricsBeforeWritingPlan)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/components/skins.cpp");

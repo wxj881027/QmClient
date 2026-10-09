@@ -2,7 +2,6 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SKIN_LOAD_BUDGET_H
 
 #include <chrono>
-#include <utility>
 
 inline bool QmSkinCanFinalize(int Processed, std::chrono::nanoseconds Elapsed, std::chrono::nanoseconds Budget)
 {
@@ -13,12 +12,13 @@ inline bool QmSkinCanFinalize(int Processed, std::chrono::nanoseconds Elapsed, s
 class CQmSkinUploadFrameBudget
 {
 public:
-	// 多次逻辑更新共享一次上传额度，只在实际渲染或启动预热时重置。
-	bool TryConsume() { return !std::exchange(m_Consumed, true); }
-	void Reset() { m_Consumed = false; }
+	// 多次逻辑更新共享真实上传时间；允许在同一帧内继续上传多个精灵。
+	bool CanUpload() const { return m_UploadTime < std::chrono::milliseconds(1); }
+	void RecordUpload(std::chrono::nanoseconds Duration) { m_UploadTime += Duration; }
+	void Reset() { m_UploadTime = {}; }
 
 private:
-	bool m_Consumed = false;
+	std::chrono::nanoseconds m_UploadTime{};
 };
 
 #endif
