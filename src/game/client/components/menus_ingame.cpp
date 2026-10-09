@@ -1293,7 +1293,8 @@ void CMenus::RenderPlayers(CUIRect MainView)
 		Ui()->DoLabel(&Player, aNameBuf, 14.0f, TEXTALIGN_ML, LabelProps);
 		Ui()->DoLabel(&Button, aClanBuf, 14.0f, TEXTALIGN_ML, LabelProps);
 
-		GameClient()->m_CountryFlags.Render(CurrentClient.m_Country, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f),
+		const int CountryCode = g_Config.m_QmStreamerScoreboardDefaultFlags ? -1 : CurrentClient.m_Country;
+		GameClient()->m_CountryFlags.Render(CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f),
 			Country.x + (Country.w - 1.5f * Country.h) / 2.0f, Country.y + Country.h / 2.0f - 0.75f * Country.h / 2.0f, 1.5f * Country.h, 0.75f * Country.h);
 
 		// ignore chat button
