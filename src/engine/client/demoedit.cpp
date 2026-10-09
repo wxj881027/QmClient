@@ -1,5 +1,6 @@
 #include "demoedit.h"
 
+#include <base/fs.h>
 #include <base/str.h>
 
 #include <engine/shared/demo.h>
