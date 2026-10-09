@@ -35,7 +35,36 @@
 
 namespace
 {
+	class CQmDropdownVisualStyleTest : public ::testing::Test
+	{
+		unsigned m_TriggerColor = g_Config.m_QmUiDropdownColor;
+		int m_TriggerOpacity = g_Config.m_QmUiDropdownOpacity;
+		unsigned m_ListColor = g_Config.m_QmUiDropdownListColor;
+		int m_ListOpacity = g_Config.m_QmUiDropdownListOpacity;
+		unsigned m_BorderColor = g_Config.m_QmUiCardBorderColor;
+		unsigned m_SelectedColor = g_Config.m_QmUiSelectedColor;
 
+	protected:
+		void SetUp() override
+		{
+			g_Config.m_QmUiDropdownColor = ColorHSLA(0.15f, 0.6f, 0.4f).Pack(false);
+			g_Config.m_QmUiDropdownOpacity = 35;
+			g_Config.m_QmUiDropdownListColor = ColorHSLA(0.7f, 0.4f, 0.3f).Pack(false);
+			g_Config.m_QmUiDropdownListOpacity = 45;
+			g_Config.m_QmUiCardBorderColor = ColorHSLA(0.2f, 0.3f, 0.7f, 0.8f).Pack(true);
+			g_Config.m_QmUiSelectedColor = ColorHSLA(0.5f, 0.7f, 0.4f).Pack(false);
+		}
+
+		void TearDown() override
+		{
+			g_Config.m_QmUiDropdownColor = m_TriggerColor;
+			g_Config.m_QmUiDropdownOpacity = m_TriggerOpacity;
+			g_Config.m_QmUiDropdownListColor = m_ListColor;
+			g_Config.m_QmUiDropdownListOpacity = m_ListOpacity;
+			g_Config.m_QmUiCardBorderColor = m_BorderColor;
+			g_Config.m_QmUiSelectedColor = m_SelectedColor;
+		}
+	};
 }
 
 TEST(UiV2DropdownGeometry, PositionsPopupRelativeToScrolledAnchor)
@@ -79,17 +108,15 @@ TEST(UiV2DropdownGeometry, RejectsPartiallyVisibleAnchorBeforeOpening)
 
 	EXPECT_FALSE(Result.m_AnchorVisible);
 }
-TEST(UiV2DropdownVisuals, SettingsStyleSeparatesInputSurfaceFromConfiguredPopupSurface)
+TEST_F(CQmDropdownVisualStyleTest, SettingsTriggerUsesButtonSurfaceAndKeepsIndependentPopupTheme)
 {
 	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(0.20f, 0.50f, 0.40f, 1.0f), 0.75f);
 	// 弹层边框由调用点显式传入（与设置卡片边框同源），不再取主题强调色。
 	const ColorRGBA CardBorder = ColorRGBA(0.30f, 0.42f, 0.55f, 0.80f);
 	const SUiTheme PopupTheme = ResolveSecondaryPanelTheme(0x97FFA6, 45, 0xFFFFFF);
 	const SQmDropdownVisualStyle Style = QmSettingsDropdownVisualStyle(Theme, CardBorder, PopupTheme);
-	EXPECT_FLOAT_EQ(Style.m_TriggerColor.r, Theme.m_InputSurface.r);
-	EXPECT_FLOAT_EQ(Style.m_TriggerColor.g, Theme.m_InputSurface.g);
-	EXPECT_FLOAT_EQ(Style.m_TriggerColor.b, Theme.m_InputSurface.b);
-	// 输入框与弹层拥有独立主题；弹层透明度不能被最低不透明度覆盖。
+	EXPECT_EQ(Style.m_TriggerColor, ResolveConfiguredControlSurface());
+	// 按钮与弹层拥有独立主题；弹层透明度不能被最低不透明度覆盖。
 	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.r, PopupTheme.m_Surface.r);
 	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.g, PopupTheme.m_Surface.g);
 	EXPECT_FLOAT_EQ(Style.m_PopupBackgroundColor.b, PopupTheme.m_Surface.b);
@@ -990,4 +1017,27 @@ TEST(UiV2TranslateSettings, BaiduCanBeSelectedAndRestoredAcrossSharedMenus)
 	EXPECT_FALSE(NTranslateUi::NormalizeBackend(aBackend, sizeof(aBackend)));
 	EXPECT_TRUE(NTranslateUi::CommitBackend(aBackend, sizeof(aBackend), NTranslateUi::BACKEND_BAIDU, Previous));
 	EXPECT_STREQ(aBackend, "mymemory");
+}
+
+TEST_F(CQmDropdownVisualStyleTest, DefaultAndSettingsDropdownsUseTheSameConfiguredRoles)
+{
+	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(0.2f, 0.5f, 0.4f), 0.75f, ColorHSLA(0x97FFA6), ColorHSLA(0x5DFE54), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	const SQmDropdownVisualStyle Default;
+	const SQmDropdownVisualStyle Settings = QmSettingsDropdownVisualStyle(Theme, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true)));
+	EXPECT_EQ(Default.m_TriggerColor, Settings.m_TriggerColor);
+	EXPECT_EQ(Default.m_PopupBackgroundColor, Settings.m_PopupBackgroundColor);
+	EXPECT_EQ(Default.m_PopupBorderColor, Settings.m_PopupBorderColor);
+	EXPECT_EQ(Default.m_ActiveEntryColor, Settings.m_ActiveEntryColor);
+}
+
+TEST_F(CQmDropdownVisualStyleTest, ReconstructedDefaultStyleReflectsChangedOpacity)
+{
+	const SQmDropdownVisualStyle Before;
+	g_Config.m_QmUiDropdownOpacity = 0;
+	g_Config.m_QmUiDropdownListOpacity = 80;
+	const SQmDropdownVisualStyle After;
+	EXPECT_FLOAT_EQ(After.m_TriggerColor.a, 0.0f);
+	EXPECT_FLOAT_EQ(After.m_PopupBackgroundColor.a, 0.8f);
+	EXPECT_GT(Before.m_TriggerColor.a, After.m_TriggerColor.a);
+	EXPECT_LT(Before.m_PopupBackgroundColor.a, After.m_PopupBackgroundColor.a);
 }

@@ -370,7 +370,7 @@ float CMenus::LayoutTClientVotingCard(const qm_card_catalog::SQmCardBuildContext
 		{
 			static std::vector<CButtonContainer> s_vAutoMapVoteButtons = {{}, {}, {}};
 			int AutoMapVote = std::clamp(g_Config.m_QmAutoVoteWhenFar, 0, 2);
-			if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Row, "tclient-auto-map-vote-label", Localize("Auto map vote"), s_vAutoMapVoteButtons, {"tclient-auto-map-vote-off", "tclient-auto-map-vote-agree", "tclient-auto-map-vote-reject"}, {Localize("Off"), Localize("Auto agree vote"), Localize("Auto reject vote")}, {0, 2, 1}, AutoMapVote, ContentMetrics))
+			if(DoSettingsLine_RadioMenu(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, Row, "tclient-auto-map-vote-label", Localize("Auto map vote"), s_vAutoMapVoteButtons, {"tclient-auto-map-vote-off", "tclient-auto-map-vote-agree", "tclient-auto-map-vote-reject"}, {Localize("Off"), Localize("Auto agree vote"), Localize("Auto reject vote")}, {0, 2, 1}, AutoMapVote, ContentMetrics, nullptr, &g_Config.m_QmAutoVoteWhenFar))
 				g_Config.m_QmAutoVoteWhenFar = AutoMapVote;
 		}
 		Button = Rows.Next();

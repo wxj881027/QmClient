@@ -22,6 +22,68 @@ class IScrollbarScale;
 
 namespace ui_widget
 {
+	struct SBooleanControlLayout
+	{
+		CUIRect m_LabelRect;
+		CUIRect m_ControlRect;
+	};
+
+	inline SBooleanControlLayout ResolveBooleanControlLayout(const CUIRect &Rect, bool HasLabel)
+	{
+		SBooleanControlLayout Layout{};
+		const float Width = std::min(std::max(0.0f, Rect.w), std::max(Rect.h * 1.65f, 30.0f));
+		Layout.m_ControlRect = {HasLabel ? Rect.x + Rect.w - Width : Rect.x + (Rect.w - Width) * 0.5f, Rect.y, Width, std::max(0.0f, Rect.h)};
+		Layout.m_LabelRect = {Rect.x, Rect.y, HasLabel ? std::max(0.0f, Rect.w - Width - 8.0f) : 0.0f, std::max(0.0f, Rect.h)};
+		return Layout;
+	}
+
+	struct SToggleLayout
+	{
+		CUIRect m_Track;
+		CUIRect m_Knob;
+	};
+
+	inline SToggleLayout ResolveToggleLayout(const CUIRect &Rect, float Progress)
+	{
+		SToggleLayout Layout{};
+		const float Width = std::max(0.0f, Rect.w);
+		const float Height = std::min(std::max(0.0f, Rect.h), Width / 1.65f);
+		Layout.m_Track = {Rect.x, Rect.y + (Rect.h - Height) * 0.5f, Width, Height};
+		const float Padding = std::min(Height * 0.15f, 3.0f);
+		const float KnobSize = Height - Padding * 2.0f;
+		const float Travel = std::max(0.0f, Width - KnobSize - Padding * 2.0f);
+		Layout.m_Knob = {Rect.x + Padding + Travel * std::clamp(Progress, 0.0f, 1.0f), Layout.m_Track.y + Padding, KnobSize, KnobSize};
+		return Layout;
+	}
+
+	struct SHorizontalSliderLayout
+	{
+		CUIRect m_Handle;
+		CUIRect m_HandleArea;
+		CUIRect m_Track;
+		CUIRect m_Fill;
+	};
+
+	inline SHorizontalSliderLayout ResolveHorizontalSliderLayout(const CUIRect &Rect, float Current)
+	{
+		SHorizontalSliderLayout Layout{};
+		const float Width = std::max(0.0f, Rect.w);
+		const float Height = std::max(0.0f, Rect.h);
+		const float HandleSize = std::min({Width, Height, std::clamp(Height * 0.75f, 8.0f, 16.0f)});
+		const float Progress = std::clamp(Current, 0.0f, 1.0f);
+		Layout.m_Handle = {Rect.x + (Width - HandleSize) * Progress, Rect.y + (Height - HandleSize) * 0.5f, HandleSize, HandleSize};
+		Layout.m_HandleArea = {Layout.m_Handle.x - 3.0f, Rect.y + Height * 0.05f, HandleSize + 6.0f, Height * 0.9f};
+		const float TrackHeight = std::min(Height, std::clamp(Height * 0.12f, 2.0f, 3.0f));
+		Layout.m_Track = {Rect.x + HandleSize * 0.5f, Rect.y + (Height - TrackHeight) * 0.5f, Width - HandleSize, TrackHeight};
+		Layout.m_Fill = Layout.m_Track;
+		Layout.m_Fill.w *= Progress;
+		return Layout;
+	}
+
+	void DrawToggle(const IUiContext &Ctx, const void *pId, bool Value, const CUIRect &Rect, bool Enabled = true, bool Animate = true, const CUIRect *pHitRect = nullptr);
+	void DrawMarkedControl(const IUiContext &Ctx, const void *pId, const char *pMark, const CUIRect &Rect, const CUIRect *pHitRect = nullptr);
+	void DrawScrollbarHandle(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, bool Enabled = true, const ColorRGBA *pColorInner = nullptr);
+	void RenderHorizontalSlider(const IUiContext &Ctx, const void *pId, const CUIRect &Rect, float Current, const ColorRGBA *pColorInner = nullptr);
 	enum class EInputFieldCapability : unsigned
 	{
 		DOUBLE_CLICK_SELECT_ALL = 1u << 0,

@@ -281,7 +281,7 @@ void CMenusSettingsControls::RenderSettingsJoystick(CUIRect View, bool ReadOnly)
 				const int CurrentJoystick = Input()->GetActiveJoystick()->GetIndex();
 				CUi::SDropDownProperties JoystickDropDownProps;
 				JoystickDropDownProps.m_pPopupViewport = Ui()->OutermostClipArea();
-				const int NewJoystick = GameClient()->m_Menus.DoSettingsDropDown(&JoystickDropDown, CurrentJoystick, vpJoystickNames.data(), vpJoystickNames.size(), m_JoystickDropDownState, JoystickDropDownProps);
+				const int NewJoystick = GameClient()->m_Menus.DoSettingsDropDown(&JoystickDropDown, CurrentJoystick, vpJoystickNames.data(), vpJoystickNames.size(), m_JoystickDropDownState, JoystickDropDownProps, g_Config.m_InpControllerGUID);
 				if(NewJoystick != CurrentJoystick)
 				{
 					Input()->SetActiveJoystick(NewJoystick);
@@ -394,6 +394,8 @@ void CMenusSettingsControls::RenderJoystickAxisPicker(CUIRect View, bool ReadOnl
 		// Bind to X/Y
 		CUIRect AimBindX, AimBindY;
 		AimBind.VSplitMid(&AimBindX, &AimBindY);
+		Ui()->DoConfigTooltip(&m_aaJoystickAxisCheckboxIds[i][0], &AimBindX, &g_Config.m_InpControllerX);
+		Ui()->DoConfigTooltip(&m_aaJoystickAxisCheckboxIds[i][1], &AimBindY, &g_Config.m_InpControllerY);
 		if(GameClient()->m_Menus.DoButton_CheckBox(&m_aaJoystickAxisCheckboxIds[i][0], "X", g_Config.m_InpControllerX == i, &AimBindX))
 		{
 			if(g_Config.m_InpControllerY == i)

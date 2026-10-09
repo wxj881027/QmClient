@@ -330,7 +330,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientStatusBarCard(const qm_car
 			s_DropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_DropDownScrollRegion;
 			CUi::SDropDownProperties DropDownProps;
 			DropDownProps.m_pPopupViewport = &Page.m_ScrollViewport;
-			const int TypeSelectedNew = DoSettingsDropDown(&DropDownRect, s_TypeSelectedOld, s_DropDownNames.data(), s_DropDownNames.size(), s_DropDownState, DropDownProps);
+			const int TypeSelectedNew = DoSettingsDropDown(&DropDownRect, s_TypeSelectedOld, s_DropDownNames.data(), s_DropDownNames.size(), s_DropDownState, DropDownProps, g_Config.m_QmStatusBarScheme);
 			if(s_TypeSelectedOld != TypeSelectedNew)
 			{
 				s_TypeSelectedOld = TypeSelectedNew;

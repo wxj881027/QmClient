@@ -1,6 +1,9 @@
 #include "scoreboard_media_controls.h"
 
 #include <base/time.h>
+#include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/components/system_media_controls.h>
 #include <game/client/components/tooltips.h>
 #include <game/localization.h>
@@ -39,12 +42,17 @@ void CQmScoreboardMediaControls::Render(CUi &Ui, ITextRender &TextRender, CToolt
 	for(int Index = 0; Index < 3; ++Index)
 	{
 		CUIRect Button{Rail.x, Rail.y + Index * 32.0f, Rail.w, 28.0f};
-		const bool Hovered = Interactive && Ui.MouseHovered(&Button);
-		Button.Draw(Ui.ScaleBackgroundAlpha(Background.WithMultipliedAlpha(Hovered ? 1.0f : 0.8f)), IGraphics::CORNER_ALL, 5.0f);
+		ui_widget::SButtonSurfaceOptions Options;
+		Options.m_Role = EUiButtonRole::ICON;
+		Options.m_Enabled = Interactive && aEnabled[Index];
+		Options.m_Color = ResolveConfiguredControlSurface().WithMultipliedAlpha(Alpha);
+		const ColorRGBA Fill = ui_widget::DrawButtonSurface(ui_widget::ControlContext(&Ui), &m_aButtons[Index], Button, Options);
+		CUiScopedSurfaceText SurfaceText(&TextRender, Fill);
 		TextRender.SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender.SetRenderFlags(TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | TEXT_RENDER_FLAG_NO_X_BEARING | TEXT_RENDER_FLAG_NO_Y_BEARING);
-		TextRender.TextColor(TextRender.DefaultTextColor().WithMultipliedAlpha(Alpha * (aEnabled[Index] ? 1.0f : 0.3f)));
-		TextRender.TextOutlineColor(TextRender.DefaultTextOutlineColor().WithMultipliedAlpha(Alpha));
+		const ColorRGBA Foreground = ResolveUiSurfaceForeground(SurfaceText.Surface());
+		TextRender.TextColor(Foreground.WithAlpha(Alpha * (Options.m_Enabled ? 1.0f : 0.65f)));
+		TextRender.TextOutlineColor(ResolveUiSurfaceForeground(Foreground).WithAlpha(Alpha));
 		Ui.DoLabel(&Button, apIcons[Index], 16.0f, TEXTALIGN_MC);
 		TextRender.SetFontPreset(PreviousFont);
 		TextRender.SetRenderFlags(PreviousFlags);
@@ -64,7 +72,7 @@ void CQmScoreboardMediaControls::Render(CUi &Ui, ITextRender &TextRender, CToolt
 	}
 
 	CUIRect VolumeArea{Rail.x, Rail.y + 96.0f, Rail.w, 124.0f};
-	VolumeArea.Draw(Ui.ScaleBackgroundAlpha(Background.WithMultipliedAlpha(0.8f)), IGraphics::CORNER_ALL, 5.0f);
+	VolumeArea.Draw(Ui.ScaleBackgroundAlpha(Background.WithMultipliedAlpha(0.8f)), IGraphics::CORNER_ALL, ui_token::radius::BASE);
 	CUIRect Track{VolumeArea.x + VolumeArea.w * 0.5f - 2.0f, VolumeArea.y + 10.0f, 4.0f, 86.0f};
 	CUIRect Hit{VolumeArea.x, Track.y - 5.0f, VolumeArea.w, Track.h + 10.0f};
 	if(!Ui.IsActiveItem(&m_VolumeId) && (m_LastRequest == 0 || time_get() - m_LastRequest > time_freq() / 2))
@@ -87,13 +95,14 @@ void CQmScoreboardMediaControls::Render(CUi &Ui, ITextRender &TextRender, CToolt
 		}
 	}
 	const float VolumeAlpha = Alpha * (State.m_CanSetVolume ? 1.0f : 0.3f);
-	Track.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.2f * VolumeAlpha), IGraphics::CORNER_ALL, 2.0f);
+	const auto Style = ResolveUiSliderStyle(Ui.QmControlTheme(), Background, Interactive && Ui.MouseHovered(&Hit), Ui.CheckActiveItem(&m_VolumeId));
+	DrawRoundedSurface(&Ui, Track, Style.m_Track.WithMultipliedAlpha(VolumeAlpha), ColorRGBA(), ui_token::radius::PILL);
 	CUIRect Fill = Track;
 	Fill.y += (1.0f - m_LocalVolume) * Track.h;
 	Fill.h = m_LocalVolume * Track.h;
-	Fill.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.8f * VolumeAlpha), IGraphics::CORNER_ALL, 2.0f);
+	DrawRoundedSurface(&Ui, Fill, Style.m_Fill.WithMultipliedAlpha(VolumeAlpha), ColorRGBA(), ui_token::radius::PILL);
 	CUIRect Thumb{Track.x - 3.0f, Fill.y - 4.0f, 10.0f, 8.0f};
-	Thumb.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, VolumeAlpha), IGraphics::CORNER_ALL, 4.0f);
+	DrawRoundedSurface(&Ui, Thumb, Style.m_Handle.WithMultipliedAlpha(VolumeAlpha), Style.m_Border.WithMultipliedAlpha(VolumeAlpha), ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 	CUIRect Label{VolumeArea.x, VolumeArea.y + 102.0f, VolumeArea.w, 16.0f};
 	char aVolume[16];
 	if(State.m_CanSetVolume)

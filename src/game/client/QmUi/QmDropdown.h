@@ -16,17 +16,17 @@
 
 struct SQmDropdownVisualStyle
 {
-	ColorRGBA m_TriggerColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);
-	ColorRGBA m_PopupBackgroundColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f);
-	ColorRGBA m_PopupBorderColor = ColorRGBA(0.7f, 0.7f, 0.7f, 0.9f);
-	ColorRGBA m_ActiveEntryColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.22f);
+	ColorRGBA m_TriggerColor = ResolveConfiguredControlSurface();
+	ColorRGBA m_PopupBackgroundColor = ResolveDropdownSurface(g_Config.m_QmUiDropdownListColor, g_Config.m_QmUiDropdownListOpacity);
+	ColorRGBA m_PopupBorderColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiCardBorderColor, true));
+	ColorRGBA m_ActiveEntryColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmUiSelectedColor)).WithAlpha(0.22f);
 	bool m_TransparentEntries = true;
 };
 
 inline SQmDropdownVisualStyle QmSettingsDropdownVisualStyle(const SUiTheme &Theme, const ColorRGBA &PopupBorderColor, const SUiTheme &PopupTheme = ResolveConfiguredDropdownListTheme())
 {
 	SQmDropdownVisualStyle Style;
-	Style.m_TriggerColor = Theme.m_InputSurface;
+	Style.m_TriggerColor = ResolveConfiguredControlSurface();
 	// 列表拥有独立背景；触发器使用按钮角色。
 	Style.m_PopupBackgroundColor = PopupTheme.m_Surface;
 	Style.m_PopupBorderColor = PopupBorderColor;

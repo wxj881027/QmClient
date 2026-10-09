@@ -1,3 +1,6 @@
+#include <base/str.h>
+
+#include <game/client/QmUi/UiConfigHint.h>
 #include <game/client/components/tooltips.h>
 
 #include <gtest/gtest.h>
@@ -87,4 +90,90 @@ TEST(QmTooltips, RectangleHoverExpiresWhenInputIsBlockedAndRecoversAfterPopupClo
 	EXPECT_TRUE(QmTooltipHovered(Tooltip, Pointer));
 	Pointer.m_Position = vec2(30, 10);
 	EXPECT_FALSE(QmTooltipHovered(Tooltip, Pointer));
+}
+
+TEST(QmConfigHint, ResolvesClientIntegerColorAndStringBindingsWithoutReadingValues)
+{
+	CConfig Config{};
+	Config.m_QmScreenshotWatermark = 1;
+	str_copy(Config.m_QmScreenshotWatermarkText, "private watermark text");
+	EXPECT_STREQ(QmUiConfigCommand(Config, &Config.m_QmScreenshotWatermark), "qm_screenshot_watermark");
+	EXPECT_STREQ(QmUiConfigCommand(Config, &Config.m_QmUiColor), "qm_ui_color");
+	EXPECT_STREQ(QmUiConfigCommand(Config, Config.m_QmScreenshotWatermarkText), "qm_screenshot_watermark_text");
+	EXPECT_STREQ(QmUiConfigCommand(Config, &Config.m_ClShowhud), "cl_showhud");
+	EXPECT_STREQ(QmUiConfigCommand(Config, Config.m_QmCustomFont), "qm_custom_font");
+	Config.m_QmScreenshotWatermark = 0;
+	EXPECT_STREQ(QmUiConfigCommand(Config, &Config.m_QmScreenshotWatermark), "qm_screenshot_watermark");
+}
+
+TEST(QmConfigHint, RejectsServerVariablesInteriorPointersAndUnboundControls)
+{
+	CConfig Config{};
+	int Unbound = 0;
+	EXPECT_EQ(QmUiConfigCommand(Config, nullptr), nullptr);
+	EXPECT_EQ(QmUiConfigCommand(Config, &Unbound), nullptr);
+	EXPECT_EQ(QmUiConfigCommand(Config, &Config.m_SvName), nullptr);
+	EXPECT_EQ(QmUiConfigCommand(Config, Config.m_QmScreenshotWatermarkText + 1), nullptr);
+	EXPECT_EQ(QmUiConfigCommand(Config, reinterpret_cast<const char *>(&Config) + sizeof(Config)), nullptr);
+}
+
+TEST(QmConfigHintText, PreservesDescriptionAndAppendsOnlyCommandNames)
+{
+	CUiConfigHintText Hint;
+	Hint.SetDescription("Automatically add a watermark");
+	Hint.SetCommands("qm_screenshot_watermark");
+	EXPECT_STREQ(Hint.Text(), "Automatically add a watermark\nqm_screenshot_watermark");
+	Hint.SetCommands("qm_screenshot_watermark");
+	Hint.SetDescription(nullptr);
+	EXPECT_STREQ(Hint.Text(), "Automatically add a watermark\nqm_screenshot_watermark");
+}
+
+TEST(QmConfigHintText, OwnsDescriptionAndReflectsLanguageChanges)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_screenshot_watermark");
+	char aDescription[] = "Watermark";
+	Hint.SetDescription(aDescription);
+	aDescription[0] = 'w';
+	EXPECT_STREQ(Hint.Text(), "Watermark\nqm_screenshot_watermark");
+	Hint.SetDescription("截图水印");
+	EXPECT_STREQ(Hint.Text(), "截图水印\nqm_screenshot_watermark");
+}
+
+TEST(QmConfigHintText, GroupedSettingsShowBothCommandsAndDeduplicateIdenticalBindings)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_ui_color", "qm_ui_opacity");
+	EXPECT_STREQ(Hint.Text(), "qm_ui_color\nqm_ui_opacity");
+	Hint.SetCommands("qm_ui_color", "qm_ui_color");
+	EXPECT_STREQ(Hint.Text(), "qm_ui_color");
+	Hint.SetCommands(nullptr, "qm_ui_opacity");
+	EXPECT_STREQ(Hint.Text(), "qm_ui_opacity");
+}
+
+TEST(QmConfigHintText, RebindingAndClearingDoNotKeepPreviousOptionHelp)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_ui_color");
+	Hint.SetDescription("Button color");
+	Hint.SetCommands("qm_ui_opacity");
+	EXPECT_STREQ(Hint.Text(), "qm_ui_opacity");
+	Hint.SetDescription("Button opacity");
+	Hint.SetCommands(nullptr);
+	EXPECT_STREQ(Hint.Text(), "");
+}
+
+TEST(QmConfigHintText, UsesCurrentCardOverviewUntilOptionDescriptionIsAvailable)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_screenshot_watermark");
+	Hint.SetFallbackDescription("Screenshot settings");
+	EXPECT_STREQ(Hint.Text(), "Screenshot settings\nqm_screenshot_watermark");
+	Hint.SetFallbackDescription("截图设置");
+	EXPECT_STREQ(Hint.Text(), "截图设置\nqm_screenshot_watermark");
+	Hint.SetDescription("Automatically add a watermark");
+	Hint.SetFallbackDescription("Other card overview");
+	EXPECT_STREQ(Hint.Text(), "Automatically add a watermark\nqm_screenshot_watermark");
+	Hint.SetFallbackDescription(nullptr);
+	EXPECT_STREQ(Hint.Text(), "Automatically add a watermark\nqm_screenshot_watermark");
 }

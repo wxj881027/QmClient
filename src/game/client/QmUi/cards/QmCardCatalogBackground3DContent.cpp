@@ -57,6 +57,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 	const int ColorModeForLayout = g_Config.m_Qm3DParticlesColorMode;
 	CUIRect Row, LabelCol, ControlCol;
 	auto DoQmSettingsCheckboxAuto = [this](const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float) {
+		Ui()->DoConfigTooltip(pId, pRect, pValue);
 		const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, pId, pTextId, pText, *pValue, pRect) != 0;
 		if(Changed)
 			*pValue ^= 1;
@@ -112,7 +113,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 		static CUi::SDropDownState s_Qm3DParticleTypeDropDownState;
 		static CScrollRegion s_Qm3DParticleTypeDropDownScrollRegion;
 		s_Qm3DParticleTypeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_Qm3DParticleTypeDropDownScrollRegion;
-		const int NewTypeIndex = DoSettingsDropDown(&ControlCol, TypeIndex, apQm3DParticleTypeNames.data(), static_cast<int>(apQm3DParticleTypeNames.size()), s_Qm3DParticleTypeDropDownState);
+		const int NewTypeIndex = DoSettingsDropDown(&ControlCol, TypeIndex, apQm3DParticleTypeNames.data(), static_cast<int>(apQm3DParticleTypeNames.size()), s_Qm3DParticleTypeDropDownState, {}, &g_Config.m_Qm3DParticlesType);
 		if(NewTypeIndex >= 0 && NewTypeIndex < static_cast<int>(aQm3DParticleTypeValues.size()) && NewTypeIndex != TypeIndex)
 			g_Config.m_Qm3DParticlesType = aQm3DParticleTypeValues[NewTypeIndex];
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -149,7 +150,7 @@ void CMenus::RenderQmHudBackground3DContent(CUIRect &Content, const SSettingsCon
 
 		static std::vector<CButtonContainer> s_vQm3DParticleColorModeButtons = {{}, {}};
 		int ColorMode = g_Config.m_Qm3DParticlesColorMode;
-		if(DoSettingsLine_RadioMenu(SETTINGS_QMCLIENT, m_QmClientSettingsTab, m_QmClientSettingsTab, Content, "qmclient-3d-particle-color-mode-label", Localize("Particle color"), s_vQm3DParticleColorModeButtons, {"qmclient-3d-particle-color-custom", "qmclient-3d-particle-color-random"}, {Localize("Custom"), Localize("Random")}, {1, 2}, ColorMode, Metrics))
+		if(DoSettingsLine_RadioMenu(SETTINGS_QMCLIENT, m_QmClientSettingsTab, m_QmClientSettingsTab, Content, "qmclient-3d-particle-color-mode-label", Localize("Particle color"), s_vQm3DParticleColorModeButtons, {"qmclient-3d-particle-color-custom", "qmclient-3d-particle-color-random"}, {Localize("Custom"), Localize("Random")}, {1, 2}, ColorMode, Metrics, nullptr, &g_Config.m_Qm3DParticlesColorMode))
 			g_Config.m_Qm3DParticlesColorMode = ColorMode;
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 

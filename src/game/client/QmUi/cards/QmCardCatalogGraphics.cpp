@@ -381,7 +381,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 		s_WindowModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_WindowModeDropDownScrollRegion;
 		CUi::SDropDownProperties WindowModeDropDownProps;
 		WindowModeDropDownProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
-		const int NewWindowMode = DoSettingsDropDown(&WindowModeDropDown, OldWindowMode, apWindowModes, std::size(apWindowModes), s_WindowModeDropDownState, WindowModeDropDownProps);
+		const int NewWindowMode = DoSettingsDropDown(&WindowModeDropDown, OldWindowMode, apWindowModes, std::size(apWindowModes), s_WindowModeDropDownState, WindowModeDropDownProps, &g_Config.m_GfxFullscreen, &g_Config.m_GfxBorderless);
 		if(OldWindowMode != NewWindowMode)
 		{
 			if(NewWindowMode == 0)
@@ -481,7 +481,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				s_ScreenDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ScreenDropDownScrollRegion;
 				CUi::SDropDownProperties ScreenDropDownProps;
 				ScreenDropDownProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
-				const int NewScreen = DoSettingsDropDown(&ScreenDropDown, g_Config.m_GfxScreen, s_vpScreenNames.data(), s_vpScreenNames.size(), s_ScreenDropDownState, ScreenDropDownProps);
+				const int NewScreen = DoSettingsDropDown(&ScreenDropDown, g_Config.m_GfxScreen, s_vpScreenNames.data(), s_vpScreenNames.size(), s_ScreenDropDownState, ScreenDropDownProps, &g_Config.m_GfxScreen);
 				if(NewScreen != g_Config.m_GfxScreen)
 					Graphics()->SwitchWindowScreen(NewScreen, true);
 			}
@@ -493,7 +493,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				Graphics()->SetVSync(!g_Config.m_GfxVsync);
 			}
 
-			const auto DoGraphicsChoiceRow = [this, GraphicsMetrics, GraphicsPage](CUIRect Row, const char *pLabel, const char *pId, const char **ppNames, size_t Count, int Current, CUi::SDropDownState &State, CScrollRegion &ScrollRegion, auto &&OnChanged) {
+			const auto DoGraphicsChoiceRow = [this, GraphicsMetrics, GraphicsPage](CUIRect Row, const char *pLabel, const char *pId, const char **ppNames, size_t Count, int Current, CUi::SDropDownState &State, CScrollRegion &ScrollRegion, const void *pConfigValue, auto &&OnChanged) {
 				if(ppNames == nullptr || Count == 0)
 					return;
 				for(size_t Index = 0; Index < Count; ++Index)
@@ -507,7 +507,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;
 				CUi::SDropDownProperties DropDownProps;
 				DropDownProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
-				const int NewValue = DoSettingsDropDown(&DropDown, Current, ppNames, Count, State, DropDownProps);
+				const int NewValue = DoSettingsDropDown(&DropDown, Current, ppNames, Count, State, DropDownProps, pConfigValue);
 				if(NewValue != Current)
 					OnChanged(NewValue);
 			};
@@ -543,7 +543,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					break;
 				}
 			}
-			DoGraphicsChoiceRow(Button, aBuf, "graphics-fsaa-samples", s_apFsaaSampleNames, std::size(s_apFsaaSampleNames), FsaaSampleIndex, s_FsaaSampleDropDownState, s_FsaaSampleDropDownScrollRegion, [](int NewValue) {
+			DoGraphicsChoiceRow(Button, aBuf, "graphics-fsaa-samples", s_apFsaaSampleNames, std::size(s_apFsaaSampleNames), FsaaSampleIndex, s_FsaaSampleDropDownState, s_FsaaSampleDropDownScrollRegion, &g_Config.m_GfxFsaaSamples, [](int NewValue) {
 				g_Config.m_GfxFsaaSamples = s_aFsaaSamples[NewValue];
 				// 多重采样会重建交换链；设置页只记录目标值，统一在重启图形后应用，避免选择时闪屏。
 				CheckSettings = true;
@@ -642,7 +642,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 					const char *pPerformanceBackend = graphics_backend::BackendNameForGraphicsMode(graphics_backend::GRAPHICS_MODE_PERFORMANCE);
 					CurrentGraphicsMode = str_comp_nocase(g_Config.m_GfxBackend, pPerformanceBackend) == 0 ? graphics_backend::GRAPHICS_MODE_PERFORMANCE : graphics_backend::GRAPHICS_MODE_COMPATIBILITY;
 				}
-				DoGraphicsChoiceRow(Row, Localize("Graphics mode"), "graphics-mode", apGraphicsModes, std::size(apGraphicsModes), CurrentGraphicsMode, s_BackendDropDownState, s_BackendDropDownScrollRegion, [this](int NewValue) {
+				DoGraphicsChoiceRow(Row, Localize("Graphics mode"), "graphics-mode", apGraphicsModes, std::size(apGraphicsModes), CurrentGraphicsMode, s_BackendDropDownState, s_BackendDropDownScrollRegion, &g_Config.m_QmGraphicsMode, [this](int NewValue) {
 					if(NewValue != graphics_backend::GRAPHICS_MODE_PERFORMANCE && NewValue != graphics_backend::GRAPHICS_MODE_COMPATIBILITY)
 						return;
 					g_Config.m_QmGraphicsMode = NewValue;
@@ -678,7 +678,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				for(size_t i = 1; i < s_vGpuNames.size(); ++i)
 					if(str_comp(g_Config.m_GfxGpuName, GpuList.m_vGpus[i - 1].m_aName) == 0)
 						Selected = (int)i;
-				DoGraphicsChoiceRow(Row, Localize("Graphics card"), "graphics-card-title", s_vpGpuNames.data(), s_vpGpuNames.size(), Selected, s_GpuDropDownState, s_GpuDropDownScrollRegion, [this, &GpuList](int NewValue) {
+				DoGraphicsChoiceRow(Row, Localize("Graphics card"), "graphics-card-title", s_vpGpuNames.data(), s_vpGpuNames.size(), Selected, s_GpuDropDownState, s_GpuDropDownScrollRegion, g_Config.m_GfxGpuName, [this, &GpuList](int NewValue) {
 					if(NewValue == 0)
 						str_copy(g_Config.m_GfxGpuName, "auto");
 					else
@@ -775,7 +775,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const char *apTextModes[] = {Localize("Auto"), Localize("White"), Localize("Black"), Localize("Custom")};
 			CUi::SDropDownProperties TextModeProps;
 			TextModeProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
-			const int TextMode = DoSettingsDropDown(&TextModeControl, g_Config.m_QmUiTextColorMode, apTextModes, std::size(apTextModes), s_TextColorModeState, TextModeProps);
+			const int TextMode = DoSettingsDropDown(&TextModeControl, g_Config.m_QmUiTextColorMode, apTextModes, std::size(apTextModes), s_TextColorModeState, TextModeProps, &g_Config.m_QmUiTextColorMode);
 			if(TextMode != g_Config.m_QmUiTextColorMode)
 			{
 				g_Config.m_QmUiTextColorMode = TextMode;

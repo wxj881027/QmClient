@@ -333,7 +333,7 @@ void CMenus::RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSe
 	static CUi::SDropDownState s_HudNotificationAnimDropDownState;
 	static CScrollRegion s_HudNotificationAnimDropDownScrollRegion;
 	s_HudNotificationAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_HudNotificationAnimDropDownScrollRegion;
-	const int AnimSelectedNew = DoSettingsDropDown(&ControlColumn, g_Config.m_QmHudNotificationsAnimType, apHudNotificationAnimDropDownNames, std::size(apHudNotificationAnimDropDownNames), s_HudNotificationAnimDropDownState);
+	const int AnimSelectedNew = DoSettingsDropDown(&ControlColumn, g_Config.m_QmHudNotificationsAnimType, apHudNotificationAnimDropDownNames, std::size(apHudNotificationAnimDropDownNames), s_HudNotificationAnimDropDownState, {}, &g_Config.m_QmHudNotificationsAnimType);
 	if(g_Config.m_QmHudNotificationsAnimType != AnimSelectedNew)
 		g_Config.m_QmHudNotificationsAnimType = AnimSelectedNew;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -360,6 +360,7 @@ void CMenus::RenderQmHudCoordsContent(CUIRect &Content, const SSettingsContentMe
 	const float LineSpacing = Metrics.m_LineSpacing;
 	CUIRect Row, LabelCol, ControlCol;
 	auto DoQmSettingsCheckboxAuto = [this](const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float) {
+		Ui()->DoConfigTooltip(pId, pRect, pValue);
 		const char *pOverrideTooltip = TemporaryOverrideTooltip(pValue);
 		SLabelProperties LabelProps;
 		if(pOverrideTooltip != nullptr)

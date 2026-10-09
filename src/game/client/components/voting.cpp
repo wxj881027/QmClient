@@ -2,6 +2,8 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "voting.h"
 
+#include <game/client/QmUi/UiButtons.h>
+
 #include <base/system.h>
 
 #include <engine/shared/config.h>
@@ -746,9 +748,12 @@ void CVoting::RenderScoreboard(const CUIRect &Scoreboard, bool Interactive, floa
 		const void *pButtonId = &m_aScoreboardVoteButtonIds[Index];
 		const bool Selected = TakenChoice() == Choice;
 		const bool Enabled = QmScoreboardVoteCanSubmit(IsVoting(), CanInteract, TakenChoice(), Choice);
-		const bool Hovered = Enabled && Ui()->MouseHovered(&Button);
 		const ColorRGBA ChoiceColor = Choice == 1 ? ui_token::color::SUCCESS : ui_token::color::DANGER;
-		Button.Draw((Selected ? ChoiceColor.WithAlpha(0.25f) : ui_token::color::SURFACE_HIGHLIGHT.WithMultipliedAlpha(Hovered ? 1.8f : 1.0f)).WithMultipliedAlpha(Alpha), IGraphics::CORNER_ALL, ui_token::radius::BASE * Layout.m_Scale);
+		ui_widget::SButtonSurfaceOptions Options;
+		Options.m_Enabled = Enabled;
+		Options.m_Radius = ui_token::radius::BASE * Layout.m_Scale;
+		Options.m_Color = (Selected ? ChoiceColor.WithAlpha(0.25f) : ResolveConfiguredControlSurface()).WithMultipliedAlpha(Alpha);
+		ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), pButtonId, Button, Options);
 		char aKey[64];
 		GameClient()->m_Binds.GetKey(Choice == 1 ? "vote yes" : "vote no", aKey, sizeof(aKey));
 		const char *pLabel = Choice == 1 ? Localize("Vote yes") : Localize("Vote no");
