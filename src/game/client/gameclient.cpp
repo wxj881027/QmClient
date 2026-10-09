@@ -1883,6 +1883,7 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	m_HudEditor.BeginRenderFrame();
 	CQmIconFrameColorClock::BeginFrame(static_cast<double>(time_get()) / static_cast<double>(time_freq()));
 	// qm_blank_asset_fallback 兜底轮询：设置页直改 g_Config、控制台命令等任何来源改值后，
 	// 下一帧在这里触发自定义素材热重载（-1 表示初始素材尚未加载）。
