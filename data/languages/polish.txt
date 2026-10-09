@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == Przezroczystość zamrożenia
 
+Freeze projectile collision volume
+== Objętość kolizji pocisków Freeze
+
 Freeze stars
 == Gwiazdy zamrożenia
 

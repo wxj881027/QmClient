@@ -1,6 +1,8 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "collision_hitbox.h"
 
+#include "collision_hitbox_projectile_logic.h"
+
 #include <base/log.h>
 #include <base/math.h>
 
@@ -653,6 +655,9 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 	const float Alpha = HitboxAlpha();
 	static constexpr float ExplosionRadius = 135.0f;
 	static constexpr float ExplosionInnerRadius = 48.0f;
+	const auto &aSwitchers = GameClient()->Switchers();
+	const int SwitcherTeam = std::clamp(GameClient()->SwitchStateTeam(), 0, NUM_DDRACE_TEAMS - 1);
+	const bool IsSuper = GameClient()->IsLocalCharSuper();
 
 	for(const CSnapEntities &Ent : GameClient()->SnapEntities())
 	{
@@ -661,6 +666,10 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 			continue;
 
 		const CProjectileData Data = ExtractProjectileInfo(Item.m_Type, Item.m_pData, &GameClient()->m_GameWorld, Ent.m_pDataEx);
+		const bool FreezeActive = IsSuper || Data.m_SwitchNumber <= 0 || Data.m_SwitchNumber >= (int)aSwitchers.size() || aSwitchers[Data.m_SwitchNumber].m_aStatus[SwitcherTeam];
+		const SQmProjectileHitboxDisplay Display = ResolveQmProjectileHitboxDisplay(Data, g_Config.m_QmHitboxShowProjectiles != 0, g_Config.m_QmHitboxShowFreezeProjectiles != 0, FreezeActive);
+		if(!Display.m_ShowTrail && Display.m_FreezeRadius <= 0.0f)
+			continue;
 		if(Data.m_ExtraInfo && Data.m_Owner >= 0 && !ShouldRenderClient(Data.m_Owner))
 			continue;
 
@@ -680,13 +689,18 @@ void CCollisionHitbox::RenderProjectileHitboxes()
 		if(ProjectileAlpha <= 0.0f)
 			continue;
 
-		const ColorRGBA ProjectileColor = WeaponColor(ProjectileAlpha * 0.85f);
-		const IGraphics::CLineItem TrailLine(PreviousPosition, Position);
-		Graphics()->SetColor(ProjectileColor);
-		Graphics()->LinesDraw(&TrailLine, 1);
-		DrawCross(Position, 4.0f, ProjectileColor);
+		if(Display.m_ShowTrail)
+		{
+			const ColorRGBA ProjectileColor = WeaponColor(ProjectileAlpha * 0.85f);
+			const IGraphics::CLineItem TrailLine(PreviousPosition, Position);
+			Graphics()->SetColor(ProjectileColor);
+			Graphics()->LinesDraw(&TrailLine, 1);
+			DrawCross(Position, 4.0f, ProjectileColor);
+		}
+		if(Display.m_FreezeRadius > 0.0f)
+			DrawCircleOutline(Position, Display.m_FreezeRadius, FreezeColor(ProjectileAlpha), 36);
 
-		if(Data.m_Type == WEAPON_GRENADE || Data.m_Explosive)
+		if(Display.m_ShowExplosion)
 		{
 			DrawCircleOutline(Position, ExplosionRadius, WeaponColor(ProjectileAlpha * 0.65f), 48);
 			DrawCircleOutline(Position, ExplosionInnerRadius, WeaponColor(ProjectileAlpha), 36);
@@ -808,14 +822,14 @@ void CCollisionHitbox::RenderHookHitboxes()
 void CCollisionHitbox::RenderWeaponHitboxes()
 {
 	const float Alpha = HitboxAlpha();
-	if(Alpha <= 0.0f || (!g_Config.m_QmHitboxShowHammer && !g_Config.m_QmHitboxShowProjectiles && !g_Config.m_QmHitboxShowLasers && !g_Config.m_QmHitboxShowFreezeLasers && !g_Config.m_QmHitboxShowHook))
+	if(Alpha <= 0.0f || (!g_Config.m_QmHitboxShowHammer && !g_Config.m_QmHitboxShowProjectiles && !g_Config.m_QmHitboxShowFreezeProjectiles && !g_Config.m_QmHitboxShowLasers && !g_Config.m_QmHitboxShowFreezeLasers && !g_Config.m_QmHitboxShowHook))
 		return;
 
 	Graphics()->TextureClear();
 	Graphics()->LinesBegin();
 	if(!GameClient()->m_RankGhost.IsViewModeActive() && g_Config.m_QmHitboxShowHammer)
 		RenderHammerHitboxes();
-	if(g_Config.m_QmHitboxShowProjectiles)
+	if(g_Config.m_QmHitboxShowProjectiles || g_Config.m_QmHitboxShowFreezeProjectiles)
 		RenderProjectileHitboxes();
 	if(g_Config.m_QmHitboxShowLasers || g_Config.m_QmHitboxShowFreezeLasers)
 		RenderLaserHitboxes();
@@ -869,7 +883,7 @@ void CCollisionHitbox::OnRender()
 		RenderPickupHitboxes();
 	}
 
-	if(HitboxMode && (g_Config.m_QmHitboxShowHammer || g_Config.m_QmHitboxShowProjectiles || g_Config.m_QmHitboxShowLasers || g_Config.m_QmHitboxShowFreezeLasers || g_Config.m_QmHitboxShowHook))
+	if(HitboxMode && (g_Config.m_QmHitboxShowHammer || g_Config.m_QmHitboxShowProjectiles || g_Config.m_QmHitboxShowFreezeProjectiles || g_Config.m_QmHitboxShowLasers || g_Config.m_QmHitboxShowFreezeLasers || g_Config.m_QmHitboxShowHook))
 	{
 		// 各类武器交互范围由独立开关控制。
 		RenderWeaponHitboxes();

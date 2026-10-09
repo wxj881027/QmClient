@@ -80,7 +80,8 @@ namespace qm_card_catalog
 			       (g_Config.m_QmHitboxShowProjectiles ? 1u << 7 : 0u) |
 			       (g_Config.m_QmHitboxShowLasers ? 1u << 8 : 0u) |
 			       (g_Config.m_QmHitboxShowFreezeLasers ? 1u << 9 : 0u) |
-			       (g_Config.m_QmHitboxShowHook ? 1u << 10 : 0u);
+			       (g_Config.m_QmHitboxShowHook ? 1u << 10 : 0u) |
+			       (g_Config.m_QmHitboxShowFreezeProjectiles ? 1u << 11 : 0u);
 		case EQmModuleId::DummyMiniView: return DummyMiniViewExpanded ? 1u : 0u;
 		case EQmModuleId::Ime: return (g_Config.m_QmNewIme != 0 ? 1u : 0u) | (g_Config.m_QmImeAutoManage != 0 ? 2u : 0u);
 		case EQmModuleId::PlayerStats: return (g_Config.m_QmPlayerStatsMapProgress ? 1u : 0u) | (g_Config.m_QmPlayerStatsMapProgressStyle ? 2u : 0u);

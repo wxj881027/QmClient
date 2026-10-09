@@ -3451,6 +3451,7 @@ if(CLIENT)
     components/qmclient/chat_emoji.h
     components/qmclient/collision_hitbox.cpp
     components/qmclient/collision_hitbox.h
+    components/qmclient/collision_hitbox_projectile_logic.h
     components/qmclient/colored_parts.h
     components/qmclient/console_selection.h
     components/qmclient/console_search_input.h
@@ -4900,6 +4901,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/pie_menu_geometry_test.cpp
     src/test/unit/client/pie_menu_points_test.cpp
     src/test/unit/qmclient/client/qm_collision_hitbox_geometry_test.cpp
+    src/test/unit/qmclient/client/qm_collision_hitbox_projectile_test.cpp
     src/test/unit/qmclient/settings/settings_form_state_test.cpp
     src/test/unit/qmclient/settings/settings_card_surface_geometry_test.cpp
     src/test/unit/qmclient/settings/settings_card_placement_test.cpp

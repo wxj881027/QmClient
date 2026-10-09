@@ -124,6 +124,7 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 	RenderCheckbox(&g_Config.m_QmHitboxShowPickups, "Pickup range", Localize("Pickup range"), &g_Config.m_QmHitboxShowPickups);
 	RenderCheckbox(&g_Config.m_QmHitboxShowHammer, "Hammer interaction", Localize("Hammer interaction"), &g_Config.m_QmHitboxShowHammer);
 	RenderCheckbox(&g_Config.m_QmHitboxShowProjectiles, "Projectile / explosion range", Localize("Projectile / explosion range"), &g_Config.m_QmHitboxShowProjectiles);
+	RenderCheckbox(&g_Config.m_QmHitboxShowFreezeProjectiles, "Freeze projectile collision volume", Localize("Freeze projectile collision volume"), &g_Config.m_QmHitboxShowFreezeProjectiles);
 	RenderCheckbox(&g_Config.m_QmHitboxShowLasers, "Laser / shotgun interaction", Localize("Laser / shotgun interaction"), &g_Config.m_QmHitboxShowLasers);
 	RenderCheckbox(&g_Config.m_QmHitboxShowFreezeLasers, "Freeze laser collision volume", Localize("Freeze laser collision volume"), &g_Config.m_QmHitboxShowFreezeLasers);
 	RenderCheckbox(&g_Config.m_QmHitboxShowHook, "Hook interaction", Localize("Hook interaction"), &g_Config.m_QmHitboxShowHook);

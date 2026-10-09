@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == Opacidad de congelación
 
+Freeze projectile collision volume
+== Volumen de colisión de los proyectiles Freeze
+
 Freeze stars
 == Estrellas de congelación
 

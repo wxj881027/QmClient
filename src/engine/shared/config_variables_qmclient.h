@@ -260,6 +260,7 @@ MACRO_CONFIG_INT(QmHitboxShowTeeFreeze, qm_hitbox_show_tee_freeze, 1, 0, 1, CFGF
 MACRO_CONFIG_INT(QmHitboxShowTeeDeath, qm_hitbox_show_tee_death, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee death probe")
 MACRO_CONFIG_INT(QmHitboxShowHammer, qm_hitbox_show_hammer, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hammer interaction")
 MACRO_CONFIG_INT(QmHitboxShowProjectiles, qm_hitbox_show_projectiles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Projectile / explosion range")
+MACRO_CONFIG_INT(QmHitboxShowFreezeProjectiles, qm_hitbox_show_freeze_projectiles, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze projectile collision volume")
 MACRO_CONFIG_INT(QmHitboxShowLasers, qm_hitbox_show_lasers, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Laser / shotgun interaction")
 MACRO_CONFIG_INT(QmHitboxShowFreezeLasers, qm_hitbox_show_freeze_lasers, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Freeze laser collision volume")
 MACRO_CONFIG_INT(QmHitboxShowHook, qm_hitbox_show_hook, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hook interaction")

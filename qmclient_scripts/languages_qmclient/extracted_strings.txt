@@ -1632,6 +1632,7 @@ Freeze laser inner color
 Freeze Laser Outline Color
 Freeze laser outline color
 Freeze opacity
+Freeze projectile collision volume
 Freeze stars
 Freeze tile outline color
 Freeze/Deep freeze tile outline width

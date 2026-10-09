@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == Opacité du gel
 
+Freeze projectile collision volume
+== Volume de collision des projectiles Freeze
+
 Freeze stars
 == Étoiles de gel
 

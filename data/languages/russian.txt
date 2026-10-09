@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == Непрозрачность заморозки
 
+Freeze projectile collision volume
+== Объём столкновения замораживающих снарядов
+
 Freeze stars
 == Звёзды заморозки
 

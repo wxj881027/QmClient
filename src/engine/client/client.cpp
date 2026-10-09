@@ -6924,6 +6924,7 @@ int main(int argc, const char **argv)
 			g_Config.m_QmHitboxShowPickups = 1;
 			g_Config.m_QmHitboxShowHammer = 0;
 			g_Config.m_QmHitboxShowProjectiles = 0;
+			g_Config.m_QmHitboxShowFreezeProjectiles = 0;
 			g_Config.m_QmHitboxShowLasers = 0;
 			g_Config.m_QmHitboxShowFreezeLasers = 0;
 			g_Config.m_QmHitboxShowHook = 0;
@@ -6935,6 +6936,7 @@ int main(int argc, const char **argv)
 			g_Config.m_QmHitboxShowTeeDeath = g_Config.m_QmHitboxShowTees;
 			g_Config.m_QmHitboxShowHammer = g_Config.m_QmHitboxShowWeapons;
 			g_Config.m_QmHitboxShowProjectiles = g_Config.m_QmHitboxShowWeapons;
+			g_Config.m_QmHitboxShowFreezeProjectiles = g_Config.m_QmHitboxShowWeapons;
 			g_Config.m_QmHitboxShowLasers = g_Config.m_QmHitboxShowWeapons;
 			g_Config.m_QmHitboxShowFreezeLasers = g_Config.m_QmHitboxShowWeapons;
 			g_Config.m_QmHitboxShowHook = g_Config.m_QmHitboxShowWeapons;
