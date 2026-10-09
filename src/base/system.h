@@ -128,6 +128,7 @@ unsigned io_read(IOHANDLE io, void *buffer, unsigned size);
  *
  * @return `true` on success, `false` on failure.
  *
+ * @remark 失败时 result 为 nullptr，result_len 为零。
  * @remark Does NOT guarantee that there are no internal null bytes.
  * @remark The result must be freed after it has been used.
  * @remark The function will fail if more than 1 GiB of memory would

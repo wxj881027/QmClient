@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "system.h"
 
+#include "io_read_all.h"
 #include "lock.h"
 #include "logger.h"
 #include "sphore.h"
@@ -235,23 +236,48 @@ unsigned io_read(IOHANDLE io, void *buffer, unsigned size)
 
 bool io_read_all(IOHANDLE io, void **result, unsigned *result_len)
 {
+	const SIOReadAllAllocator Allocator{
+		[](void *pBuffer, size_t Size, void *) { return realloc(pBuffer, Size); },
+		[](void *pBuffer, void *) { free(pBuffer); },
+		nullptr};
+	return io_read_all_with_allocator(io, result, result_len, Allocator);
+}
+
+bool io_read_all_with_allocator(IOHANDLE io, void **result, unsigned *result_len, const SIOReadAllAllocator &Allocator)
+{
+	*result = nullptr;
+	*result_len = 0;
 	// Loading files larger than 1 GiB into memory is not supported.
 	constexpr int64_t MAX_FILE_SIZE = (int64_t)1024 * 1024 * 1024;
 
 	int64_t real_len = io_length(io);
 	if(real_len > MAX_FILE_SIZE)
 	{
-		*result = nullptr;
-		*result_len = 0;
 		return false;
 	}
 
 	int64_t len = real_len < 0 ? 1024 : real_len; // use default initial size if we couldn't get the length
-	char *buffer = (char *)malloc(len + 1);
+	char *buffer = (char *)Allocator.m_pfnReallocate(nullptr, len + 1, Allocator.m_pUser);
+	if(buffer == nullptr)
+		return false;
+	auto resize = [&](size_t size) {
+		void *candidate = Allocator.m_pfnReallocate(buffer, size, Allocator.m_pUser);
+		if(candidate == nullptr)
+			return false;
+		buffer = (char *)candidate;
+		return true;
+	};
+	auto fail = [&]() {
+		Allocator.m_pfnFree(buffer, Allocator.m_pUser);
+		return false;
+	};
 	int64_t read = io_read(io, buffer, len + 1); // +1 to check if the file size is larger than expected
+	if(io_error(io))
+		return fail();
 	if(read < len)
 	{
-		buffer = (char *)realloc(buffer, read + 1);
+		// 缩小容量不是读取成功的必要条件，失败时保留原缓冲。
+		resize(read + 1);
 		len = read;
 	}
 	else if(read > len)
@@ -259,13 +285,11 @@ bool io_read_all(IOHANDLE io, void **result, unsigned *result_len)
 		int64_t cap = 2 * read;
 		if(cap > MAX_FILE_SIZE)
 		{
-			free(buffer);
-			*result = nullptr;
-			*result_len = 0;
-			return false;
+			return fail();
 		}
 		len = read;
-		buffer = (char *)realloc(buffer, cap);
+		if(!resize(cap))
+			return fail();
 		while((read = io_read(io, buffer + len, cap - len)) != 0)
 		{
 			len += read;
@@ -274,15 +298,15 @@ bool io_read_all(IOHANDLE io, void **result, unsigned *result_len)
 				cap *= 2;
 				if(cap > MAX_FILE_SIZE)
 				{
-					free(buffer);
-					*result = nullptr;
-					*result_len = 0;
-					return false;
+					return fail();
 				}
-				buffer = (char *)realloc(buffer, cap);
+				if(!resize(cap))
+					return fail();
 			}
 		}
-		buffer = (char *)realloc(buffer, len + 1);
+		if(io_error(io))
+			return fail();
+		resize(len + 1);
 	}
 	buffer[len] = 0;
 	*result = buffer;
@@ -2501,12 +2525,19 @@ int open_link(const char *link)
 #elif defined(CONF_PLATFORM_LINUX)
 	const int pid = fork();
 	if(pid == 0)
+	{
 		execlp("xdg-open", "xdg-open", link, nullptr);
+		// exec 失败后不能返回继承了其他线程状态的客户端调用栈。
+		_exit(1);
+	}
 	return pid > 0;
 #elif defined(CONF_FAMILY_UNIX)
 	const int pid = fork();
 	if(pid == 0)
+	{
 		execlp("open", "open", link, nullptr);
+		_exit(1);
+	}
 	return pid > 0;
 #endif
 }

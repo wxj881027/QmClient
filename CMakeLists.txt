@@ -2699,6 +2699,7 @@ set_src(BASE GLOB_RECURSE src/base
   hash_ctxt.h
   hash_libtomcrypt.cpp
   hash_openssl.cpp
+  io_read_all.h
   lock.h
   log.cpp
   log.h
@@ -4636,9 +4637,12 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/base/http_shutdown_lifecycle_contract_test.cpp
     src/test/unit/engine/image_test.cpp
     src/test/unit/base/io_test.cpp
+    src/test/unit/base/io_read_all_test.cpp
     src/test/contract/base/ios_runtime_contract_test.cpp
     src/test/support/qm_exit_process_probe.cpp
     src/test/support/qm_exit_process_probe.h
+    src/test/support/qm_open_link_probe.cpp
+    src/test/support/qm_open_link_probe.h
     src/test/unit/engine/jobs_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
