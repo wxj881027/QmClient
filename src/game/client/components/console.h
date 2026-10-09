@@ -278,6 +278,7 @@ public:
 	void OnRender() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	bool OnInput(const IInput::CEvent &Event) override;
+	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 	void Prompt(char (&aPrompt)[32]);
 
 	void Toggle(int Type);
