@@ -3,6 +3,8 @@
 
 #include "menus.h"
 
+#include <game/client/components/qmclient/media_paths.h>
+
 #include "background.h"
 
 #include <base/color.h>
@@ -4847,19 +4849,22 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			m_Popup = POPUP_NONE;
 			// render video
 			char aVideoPath[IO_MAX_PATH_LENGTH];
-			str_format(aVideoPath, sizeof(aVideoPath), "videos/%s", m_DemoRenderInput.GetString());
-			if(!str_endswith(aVideoPath, ".mp4"))
-				str_append(aVideoPath, ".mp4");
+			const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + m_DemoRenderInput.GetString() + ".mp4").c_str());
+			str_copy(aVideoPath, VideoPath.c_str());
 
 			if(!str_valid_filename(m_DemoRenderInput.GetString()))
 			{
 				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENDER_DEMO);
 			}
-			else if(Storage()->FolderExists(aVideoPath, IStorage::TYPE_SAVE))
+			else if(!qmclient::media_paths::PrepareWrite(Storage(), VideoPath))
+			{
+				PopupMessage(Localize("Error"), Localize("Failed to save video"), Localize("Ok"), POPUP_RENDER_DEMO);
+			}
+			else if(Storage()->FolderExists(aVideoPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
 				PopupMessage(Localize("Error"), Localize("A folder with this name already exists"), Localize("Ok"), POPUP_RENDER_DEMO);
 			}
-			else if(Storage()->FileExists(aVideoPath, IStorage::TYPE_SAVE))
+			else if(Storage()->FileExists(aVideoPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
 				char aMessage[128 + IO_MAX_PATH_LENGTH];
 				str_format(aMessage, sizeof(aMessage), Localize("File '%s' already exists, do you want to overwrite it?"), m_DemoRenderInput.GetString());
@@ -4965,8 +4970,9 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 
 		char aFilePath[IO_MAX_PATH_LENGTH];
 		char aSaveFolder[IO_MAX_PATH_LENGTH];
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, "videos", aSaveFolder, sizeof(aSaveFolder));
-		str_format(aFilePath, sizeof(aFilePath), "%s/%s.mp4", aSaveFolder, m_DemoRenderInput.GetString());
+		str_copy(aFilePath, m_aDemoRenderedVideoPath);
+		str_copy(aSaveFolder, aFilePath);
+		fs_parent_dir(aSaveFolder);
 
 		Box.HSplitBottom(20.f, &Box, &Part);
 		Box.HSplitBottom(24.f, &Box, &Part);
@@ -5567,6 +5573,9 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	str_format(aBuf, sizeof(aBuf), "%s/%s", pDemoFolder, aDemoFilename);
 	char aVideoName[IO_MAX_PATH_LENGTH];
 	str_copy(aVideoName, m_DemoRenderInput.GetString());
+	const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + aVideoName + ".mp4").c_str());
+	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(), VideoPath);
+	str_copy(m_aDemoRenderedVideoPath, WholePath.c_str());
 	const char *pError = Client()->DemoPlayer_Render(aBuf, DemoStorageType, aVideoName, m_Speed, m_StartPaused);
 	m_HasPendingDemoRenderSource = false;
 	m_vDemoCutSegments.clear();
@@ -6171,9 +6180,9 @@ void CMenus::OnShutdown()
 	if(m_pRankDemoRequest)
 		m_pRankDemoRequest->Abort();
 	if(m_aRankDemoManifestPath[0] != '\0')
-		Storage()->RemoveFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE);
+		Storage()->RemoveFile(m_aRankDemoManifestPath, qmclient::media_paths::StorageType(m_aRankDemoManifestPath));
 	if(m_aRankDemoTempPath[0] != '\0')
-		Storage()->RemoveFile(m_aRankDemoTempPath, IStorage::TYPE_SAVE);
+		Storage()->RemoveFile(m_aRankDemoTempPath, qmclient::media_paths::StorageType(m_aRankDemoTempPath));
 	m_pRankDemoManifestRequest = nullptr;
 	m_pRankDemoRequest = nullptr;
 	m_RankDemoDownloadStage = ERankDemoDownloadStage::IDLE;

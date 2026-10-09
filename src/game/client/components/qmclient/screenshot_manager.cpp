@@ -441,6 +441,8 @@ int CQmScreenshotManager::ScanCallback(const CFsFileInfo *pInfo, int IsDir, int 
 	SScanContext *pContext = static_cast<SScanContext *>(pUser);
 	SEntry Entry;
 	Entry.m_RelativePath = pContext->m_Folder + "/" + pInfo->m_pName;
+	if(Entry.m_RelativePath.size() >= IO_MAX_PATH_LENGTH)
+		return 0;
 	Entry.m_Modified = pInfo->m_TimeModified;
 	Entry.m_StorageType = StorageType;
 	pContext->m_pEntries->push_back(std::move(Entry));
@@ -630,7 +632,7 @@ bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourc
 	}
 	const SCaptureMetadata &Metadata = CaptureMetadata(pStorage, pSourcePath, SourceStorageType);
 	char aTargetPath[IO_MAX_PATH_LENGTH];
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE, pTargetPath, aTargetPath, sizeof(aTargetPath));
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pTargetPath, aTargetPath, sizeof(aTargetPath));
 	const bool Saved = SavePngAtomically(aTargetPath, Image, Metadata.m_Comment.c_str());
 	Image.Free();
 	return Saved;
@@ -735,7 +737,7 @@ std::shared_ptr<CQmScreenshotWatermarkJob> CQmScreenshotManager::CreateWatermark
 	if(SourceFile == nullptr)
 		return nullptr;
 	io_close(SourceFile);
-	pStorage->GetCompletePath(IStorage::TYPE_SAVE, pTargetPath, aTarget, sizeof(aTarget));
+	pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pTargetPath, aTarget, sizeof(aTarget));
 	const std::string Source = AbsoluteScreenshotPath(aSource);
 	const std::string Target = AbsoluteScreenshotPath(aTarget);
 	if(Source.empty() || Target.empty() || Source == Target)

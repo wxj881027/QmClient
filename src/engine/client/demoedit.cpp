@@ -26,5 +26,5 @@ void CDemoEdit::Run()
 	m_Success = m_DemoEditor.Slice(m_aDemo, m_aDst, m_StartTick, m_EndTick, nullptr, nullptr);
 	// We remove the temporary demo file if slicing is successful
 	if(m_Success)
-		m_pStorage->RemoveFile(m_aDemo, IStorage::TYPE_SAVE);
+		m_pStorage->RemoveFile(m_aDemo, fs_is_relative_path(m_aDemo) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE);
 }

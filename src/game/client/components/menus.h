@@ -1824,6 +1824,8 @@ protected:
 	using SDemoCutSegment = SDemoSliceSegment;
 
 	char m_aCurrentDemoFolder[IO_MAX_PATH_LENGTH];
+	char m_aDemoBrowserBaseFolder[IO_MAX_PATH_LENGTH] = "demos";
+	char m_aDemoBrowserDirectorySetting[IO_MAX_PATH_LENGTH] = "";
 	char m_aCurrentDemoSelectionName[IO_MAX_PATH_LENGTH];
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenameInput;
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSliceInput;
@@ -1838,6 +1840,7 @@ protected:
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenderInput;
 	bool m_HasPendingDemoRenderSource = false;
 	char m_aPendingDemoRenderFolder[IO_MAX_PATH_LENGTH] = "";
+	char m_aDemoRenderedVideoPath[IO_MAX_PATH_LENGTH] = "";
 	char m_aPendingDemoRenderSelectionName[IO_MAX_PATH_LENGTH] = "";
 	int m_PendingDemoRenderStorageType = IStorage::TYPE_SAVE;
 #endif
@@ -1925,6 +1928,7 @@ protected:
 	bool DemoBrowserSupportedFile(const char *pName) const;
 	void SetDemoBrowserSource(EDemoBrowserSource Source);
 	void ResetDemoBrowserFolder();
+	void SyncDemoBrowserDirectory();
 
 	// friends
 	class CFriendItem

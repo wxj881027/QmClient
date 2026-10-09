@@ -3582,6 +3582,7 @@ if(CLIENT)
     components/qmclient/screenshot_image_job.h
     components/qmclient/skin_source_job.cpp
     components/qmclient/skin_source_job.h
+    components/qmclient/media_paths.h
     components/qmclient/screenshot_manager.cpp
     components/qmclient/config_package.cpp
     components/qmclient/config_package.h
@@ -4752,6 +4753,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_ui_lifetime_test.cpp
     src/test/unit/qmclient/client/qm_localization_policy_test.cpp
     src/test/unit/qmclient/client/qm_storage_path_test.cpp
+    src/test/unit/qmclient/client/qm_media_paths_test.cpp
+    src/test/integration/qmclient/client/qm_media_paths_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp

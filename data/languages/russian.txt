@@ -3245,6 +3245,9 @@ Delete this preset
 Demo
 == Демо
 
+Demo directory
+== Папка демозаписей
+
 Demo display
 == Отображение демо
 
@@ -4588,6 +4591,15 @@ Failed to read saves file
 
 Failed to record video. See local console for details.
 == Не удалось записать видео. Подробности смотрите в локальной консоли.
+
+Failed to save demo
+== Не удалось сохранить демозапись
+
+Failed to save screenshot
+== Не удалось сохранить снимок экрана
+
+Failed to save video
+== Не удалось сохранить видео
 
 Failed to write PNG export.
 == Не удалось записать PNG экспорт.
@@ -6448,6 +6460,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Оставьте пустым для использования промпта по умолчанию
+
+Leave empty to use the default directory. Relative paths use the config directory.
+== Оставьте пустым для папки по умолчанию. Относительные пути отсчитываются от папки настроек.
 
 Leave solo split mode
 == Выйти из режима соло-разделения
@@ -10424,6 +10439,9 @@ Screen resolution width (only fullscreen)
 Screenshot
 == Скриншот
 
+Screenshot directory
+== Папка снимков экрана
+
 Screenshot error
 == Ошибка обработки снимка экрана
 
@@ -14176,6 +14194,9 @@ Vertical sync (may cause lag)
 
 Video Background
 == Фоновое видео
+
+Video directory
+== Папка видеозаписей
 
 Video name
 == Имя видео
