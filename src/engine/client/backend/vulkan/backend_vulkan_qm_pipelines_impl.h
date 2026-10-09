@@ -48,15 +48,15 @@ inline bool CCommandProcessorFragment_Vulkan::CreateMediaIslandSdfGraphicsPipeli
 	std::array<VkPushConstantRange, 1> aPushConstants{};
 	aPushConstants[0] = {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUniformGPos)};
 
-	bool Ret = true;
 	for(size_t i = 0; i < VULKAN_BACKEND_BLEND_MODE_COUNT; ++i)
 	{
 		for(size_t j = 0; j < VULKAN_BACKEND_CLIP_MODE_COUNT; ++j)
 		{
-			Ret &= CreateGraphicsPipeline<true>(pVertName, pFragName, m_MediaIslandSdfPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j));
+			if(!CreateGraphicsPipeline<true>(pVertName, pFragName, m_MediaIslandSdfPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j), false, VK_NULL_HANDLE, VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM, true, QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON))
+				return false;
 		}
 	}
-	return Ret;
+	return true;
 }
 
 inline bool CCommandProcessorFragment_Vulkan::CreateRoundedRectSdfGraphicsPipeline(const char *pVertName, const char *pFragName)
@@ -70,15 +70,15 @@ inline bool CCommandProcessorFragment_Vulkan::CreateRoundedRectSdfGraphicsPipeli
 	std::array<VkPushConstantRange, 1> aPushConstants{};
 	aPushConstants[0] = {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUniformGPos)};
 
-	bool Ret = true;
 	for(size_t i = 0; i < VULKAN_BACKEND_BLEND_MODE_COUNT; ++i)
 	{
 		for(size_t j = 0; j < VULKAN_BACKEND_CLIP_MODE_COUNT; ++j)
 		{
-			Ret &= CreateGraphicsPipeline<true>(pVertName, pFragName, m_RoundedRectSdfPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_NOT_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j));
+			if(!CreateGraphicsPipeline<true>(pVertName, pFragName, m_RoundedRectSdfPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_NOT_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j), false, VK_NULL_HANDLE, VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM, true, QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON))
+				return false;
 		}
 	}
-	return Ret;
+	return true;
 }
 
 inline bool CCommandProcessorFragment_Vulkan::CreateProceduralRingGraphicsPipeline(const char *pVertName, const char *pFragName)
@@ -92,15 +92,15 @@ inline bool CCommandProcessorFragment_Vulkan::CreateProceduralRingGraphicsPipeli
 	std::array<VkPushConstantRange, 1> aPushConstants{};
 	aPushConstants[0] = {VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(SUniformGPos)};
 
-	bool Ret = true;
 	for(size_t i = 0; i < VULKAN_BACKEND_BLEND_MODE_COUNT; ++i)
 	{
 		for(size_t j = 0; j < VULKAN_BACKEND_CLIP_MODE_COUNT; ++j)
 		{
-			Ret &= CreateGraphicsPipeline<true>(pVertName, pFragName, m_ProceduralRingPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_NOT_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j), false, VK_NULL_HANDLE, VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM, true, false);
+			if(!CreateGraphicsPipeline<true>(pVertName, pFragName, m_ProceduralRingPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants, VULKAN_BACKEND_TEXTURE_MODE_NOT_TEXTURED, EVulkanBackendBlendModes(i), EVulkanBackendClipModes(j), false, VK_NULL_HANDLE, VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM, true, false))
+				return false;
 		}
 	}
-	return Ret;
+	return true;
 }
 
 inline bool CCommandProcessorFragment_Vulkan::CreateGaussianBlurGraphicsPipeline(const char *pVertName, const char *pFragName)
@@ -113,7 +113,7 @@ inline bool CCommandProcessorFragment_Vulkan::CreateGaussianBlurGraphicsPipeline
 	aPushConstants[0] = {VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SUniformGaussianBlur)};
 	return CreateGraphicsPipeline<true>(pVertName, pFragName, m_GaussianBlurPipeline, sizeof(CCommandBuffer::SVertex), aAttributeDescriptions, aSetLayouts, aPushConstants,
 		VULKAN_BACKEND_TEXTURE_MODE_TEXTURED, VULKAN_BACKEND_BLEND_MODE_NONE, VULKAN_BACKEND_CLIP_MODE_DYNAMIC_SCISSOR_AND_VIEWPORT, false,
-		m_VKRenderTargetRenderPass, VK_SAMPLE_COUNT_1_BIT, false);
+		m_VKRenderTargetRenderPass, VK_SAMPLE_COUNT_1_BIT, false, QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON);
 }
 
 inline void CCommandProcessorFragment_Vulkan::Cmd_RenderMediaIslandSdf_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_RenderMediaIslandSdf *pCommand)
@@ -274,6 +274,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderProceduralRing(const CCo
 
 inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 {
+	m_LastPipelineCreateResult = VK_SUCCESS;
 	// ==== QmVulkan 扩展管线：仅在增强渲染启用时创建 ====
 	m_QmMediaIslandSdfPipelineValid = false;
 	m_QmRoundedRectSdfPipelineValid = false;
@@ -284,7 +285,11 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 		if(g_Config.m_QmEnhancedSdf)
 		{
 			m_QmMediaIslandSdfPipelineValid = CreateMediaIslandSdfGraphicsPipeline("shader/vulkan/media_island_sdf.vert.spv", "shader/vulkan/media_island_sdf.frag.spv");
+			if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST)
+				return -1;
 			m_QmRoundedRectSdfPipelineValid = CreateRoundedRectSdfGraphicsPipeline("shader/vulkan/rounded_rect_sdf.vert.spv", "shader/vulkan/rounded_rect_sdf.frag.spv");
+			if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST)
+				return -1;
 			if(!m_QmMediaIslandSdfPipelineValid || !m_QmRoundedRectSdfPipelineValid)
 			{
 				m_MediaIslandSdfPipeline.Destroy(m_VKDevice);
@@ -303,6 +308,8 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 		{
 			m_ProceduralRingPipelineValid = CreateProceduralRingGraphicsPipeline("shader/vulkan/procedural_ring.vert.spv", "shader/vulkan/procedural_ring.frag.spv");
 			SyncProceduralRingCapability();
+			if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST)
+				return -1;
 			if(!m_ProceduralRingPipelineValid)
 			{
 				m_ProceduralRingPipeline.Destroy(m_VKDevice);
@@ -325,8 +332,13 @@ inline int CCommandProcessorFragment_Vulkan::InitQmPipelines()
 		if(!m_QmEnhancedSessionDisabled && g_Config.m_QmEnhancedBlur)
 		{
 			m_GaussianBlurPipelineValid = CreateGaussianBlurGraphicsPipeline("shader/vulkan/gaussian_blur.vert.spv", "shader/vulkan/gaussian_blur.frag.spv");
-			if(!m_GaussianBlurPipelineValid && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON)
+			if(m_HasError || m_LastPipelineCreateResult == VK_ERROR_DEVICE_LOST || (!m_GaussianBlurPipelineValid && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::ON))
 				return -1;
+			if(!m_GaussianBlurPipelineValid)
+			{
+				m_GaussianBlurPipeline.Destroy(m_VKDevice);
+				SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, "Gaussian blur pipeline unavailable, falling back to unblurred rendering.");
+			}
 		}
 	}
 	else
