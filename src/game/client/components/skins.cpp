@@ -436,21 +436,9 @@ static bool SyncSkinQueueEntriesInPlace(std::vector<CSkins::CSkinQueueEntry> &Qu
 	return Changed;
 }
 
-CSkins::CAbstractSkinLoadJob::CAbstractSkinLoadJob(CSkins *pSkins, const char *pName) :
-	m_pSkins(pSkins)
-{
-	str_copy(m_aName, pName);
-	Abortable(true);
-}
-
-CSkins::CAbstractSkinLoadJob::~CAbstractSkinLoadJob()
-{
-	m_Data.m_Info.Free();
-	m_Data.m_InfoGrayscale.Free();
-}
-
 CSkins::CSkinLoadJob::CSkinLoadJob(CSkins *pSkins, const char *pName, int StorageType) :
-	CAbstractSkinLoadJob(pSkins, pName),
+	CAbstractSkinLoadJob(pName),
+	m_pSkins(pSkins),
 	m_StorageType(StorageType)
 {
 }
@@ -484,6 +472,8 @@ int CSkins::CSkinDirectoryScanJob::ScanCallback(const CFsFileInfo *pInfo, int Is
 	if(!CSkin::IsValidName(aSkinName))
 		return 0;
 
+	if(!pSelf->m_SeenNames.insert(aSkinName).second)
+		return 0;
 	pSelf->m_Result.m_vEntries.push_back({aSkinName, pSelf->m_CurrentScanType, StorageType, pInfo->m_TimeModified});
 	return 0;
 }
@@ -701,11 +691,16 @@ void CSkins::CSkinContainer::SetState(EState State, ESettingsResourcePriority Pr
 	else if(OldState == EState::LOADING && State != EState::LOADING)
 	{
 		--m_pSkins->m_NumLoadingSkins;
-		if(m_pSkins->m_pSkinPreviewUpload == this)
-			m_pSkins->m_pSkinPreviewUpload = nullptr;
 	}
+	if(State == EState::UNLOADED && m_pSkin != nullptr)
+		m_pSkins->UnloadLoadedSkinTextures(this);
 	if(ShouldDiscardPendingUpload(OldState, State))
 		m_pSkins->DiscardSkinPreviewUpload(this);
+	if(State != EState::LOADED && m_pDownloadUpdateJob != nullptr)
+	{
+		m_pDownloadUpdateJob->Abort();
+		m_pDownloadUpdateJob.reset();
+	}
 	m_State = State;
 	m_pSkins->m_UnresolvedSkinScanState.OnStateChange(OldState, State);
 	if(OldState != State)
@@ -1118,8 +1113,11 @@ void CSkins::LoadSkinFinish(CSkinContainer *pSkinContainer, CSkinLoadData &Data)
 	auto SkinIt = m_Skins.find(pSkinContainer->Name());
 	dbg_assert(SkinIt != m_Skins.end(), "LoadSkinFinish on skin '%s' which is not in m_Skins", pSkinContainer->Name());
 	const bool BackgroundTracked = SkinIt->second->IsBackgroundTracked();
+	if(Data.m_LastModified.has_value())
+		pSkinContainer->SetLastModified(Data.m_LastModified.value());
 	SkinIt->second->m_SettingsSourceApproxBytes = SettingsSkinSourceBytesEstimate((int)Data.m_SourceWidth, (int)Data.m_SourceHeight, 2);
 	SkinIt->second->m_pSkin = std::make_unique<CSkin>(std::move(Skin));
+	pSkinContainer->m_LoadedSource = SQmSkinSourceIdentity{pSkinContainer->Type() == CSkinContainer::EType::DOWNLOAD, pSkinContainer->StorageType(), pSkinContainer->LastModified()};
 	pSkinContainer->SetState(CSkinContainer::EState::LOADED, BackgroundTracked ? ESettingsResourcePriority::BACKGROUND : ESettingsResourcePriority::VISIBLE);
 	LogSettingsSkinSourceStageEvent("upload_done", pSkinContainer->Name(), Data.m_SourceWidth, Data.m_SourceHeight, (int)SkinIt->second->m_SettingsSourceApproxBytes, std::chrono::duration<double, std::milli>(time_get_nanoseconds() - UploadStart).count(), SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS);
 }
@@ -1131,7 +1129,6 @@ bool CSkins::BeginSkinPreviewUpload(CSkinContainer *pSkinContainer, CSkinLoadDat
 	pSkinContainer->m_SettingsPendingUploadData = std::move(Data);
 	pSkinContainer->m_SettingsPendingUploadSprite = 0;
 	pSkinContainer->m_SettingsPendingUploadStart = time_get_nanoseconds();
-	m_pSkinPreviewUpload = pSkinContainer;
 	pSkinContainer->m_pPendingSkin = std::make_unique<CSkin>(pSkinContainer->Name());
 	return true;
 }
@@ -1295,6 +1292,8 @@ void CSkins::FinishSkinPreviewUpload(CSkinContainer *pSkinContainer)
 	pSkinContainer->m_pPendingSkin->m_Metrics = pSkinContainer->m_SettingsPendingUploadData.m_Metrics;
 	pSkinContainer->m_SettingsPendingUploadData.m_PreparedVisuals.Apply(*pSkinContainer->m_pPendingSkin);
 	pSkinContainer->m_pPendingSkin->m_BloodColor = pSkinContainer->m_SettingsPendingUploadData.m_BloodColor;
+	if(pSkinContainer->m_SettingsPendingUploadData.m_LastModified.has_value())
+		pSkinContainer->SetLastModified(pSkinContainer->m_SettingsPendingUploadData.m_LastModified.value());
 	SkinIt->second->m_SettingsSourceApproxBytes = SettingsSkinSourceBytesEstimate((int)pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, (int)pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, 2);
 	if(pSkinContainer->m_pSkin)
 	{
@@ -1302,6 +1301,7 @@ void CSkins::FinishSkinPreviewUpload(CSkinContainer *pSkinContainer)
 		pSkinContainer->m_pSkin->m_ColorableSkin.Unload(Graphics());
 	}
 	pSkinContainer->m_pSkin = std::move(pSkinContainer->m_pPendingSkin);
+	pSkinContainer->m_LoadedSource = SQmSkinSourceIdentity{pSkinContainer->Type() == CSkinContainer::EType::DOWNLOAD, pSkinContainer->StorageType(), pSkinContainer->LastModified()};
 	pSkinContainer->SetState(CSkinContainer::EState::LOADED, BackgroundTracked ? ESettingsResourcePriority::BACKGROUND : ESettingsResourcePriority::VISIBLE);
 	LogSettingsSkinSourceStageEvent("upload_done", pSkinContainer->Name(), pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth, pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, (int)SkinIt->second->m_SettingsSourceApproxBytes, std::chrono::duration<double, std::milli>(time_get_nanoseconds() - pSkinContainer->m_SettingsPendingUploadStart).count(), SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS);
 	pSkinContainer->m_SettingsPendingUploadData.m_Info.Free();
@@ -1350,6 +1350,7 @@ void CSkins::LoadSkinDirect(const char *pName)
 	char aPath[IO_MAX_PATH_LENGTH];
 	str_format(aPath, sizeof(aPath), "skins/%s.png", pName);
 	CSkinLoadData DefaultSkinData;
+	DefaultSkinData.ReadLastModified(Storage(), aPath, pSkinContainer->StorageType());
 	pSkinContainer->SetState(CSkinContainer::EState::LOADING);
 	if(!Graphics()->LoadPng(DefaultSkinData.m_Info, aPath, pSkinContainer->StorageType()))
 	{
@@ -1425,10 +1426,12 @@ void CSkins::OnShutdown()
 			pSkinContainer->m_pLoadJob->Abort();
 			pSkinContainer->m_pLoadJob = nullptr;
 		}
+		if(pSkinContainer->m_pDownloadUpdateJob)
+			pSkinContainer->m_pDownloadUpdateJob->Abort();
 		if(pSkinContainer->m_pPendingSkin)
 			DiscardSkinPreviewUpload(pSkinContainer.get());
 	}
-	m_pSkinPreviewUpload = nullptr;
+	m_vSkinDownloadUpdates.clear();
 	m_NumLoadingSkins = 0;
 	m_Skins.clear();
 	m_UnresolvedSkinScanState = {};
@@ -1444,19 +1447,15 @@ void CSkins::OnUpdate()
 		UpdateSkinQueue(Now, Dummy);
 	}
 
-	// 续传不受容器扫描间隔限制，也不每帧扫描全部皮肤。
-	if(m_pSkinPreviewUpload != nullptr)
-	{
-		CSkinLoadingStats UploadStats;
-		UploadStats.m_NumLoading = m_NumLoadingSkins;
-		int Processed = 0;
-		DrainSettingsSkinPreviewUpload(m_pSkinPreviewUpload, UploadStats, Processed, Now, 1ms);
-	}
+	ProcessSkinDownloadUpdates();
 
 	// Only update skins periodically to reduce FPS impact
 	const std::chrono::nanoseconds MaxTime = std::chrono::milliseconds(std::clamp(round_to_int(Client()->RenderFrameTime() * 50000.0f), 25, 500));
 	if(m_ContainerUpdateTime.has_value() && Now - m_ContainerUpdateTime.value() < MaxTime)
 	{
+		CSkinLoadingStats Stats;
+		Stats.m_NumLoading = m_NumLoadingSkins;
+		UpdateFinishLoading(Stats, Now, 1ms);
 		return;
 	}
 	m_ContainerUpdateTime = Now;
@@ -1470,13 +1469,13 @@ void CSkins::OnUpdate()
 	FindContainerOrNullptr(g_Config.m_ClPlayerSkin);
 	FindContainerOrNullptr(g_Config.m_ClDummySkin);
 
-	CSkinLoadingStats Stats = LoadingStats();
 	ProcessOfficialSkinIndexRequest();
 	ProcessSkinDirectoryScanJob();
+	CSkinLoadingStats Stats = LoadingStats();
 	UpdateUnloadSkins(Stats);
 	UpdateStartLoading(Stats);
 	// 检查间隔不是主线程预算：终局上传使用独立的 1 ms 预算，首个皮肤始终取得进展。
-	UpdateFinishLoading(Stats, Now, std::chrono::milliseconds(1));
+	UpdateFinishLoading(Stats, time_get_nanoseconds(), 1ms);
 	ProcessSkinListPlanJob();
 	CollectUnresolvedSkins();
 	for(const std::string &SkinName : m_vSkinsUnresolvedThisFrame)
@@ -1840,6 +1839,7 @@ void CSkins::UnloadLoadedSkinTextures(CSkinContainer *pSkinContainer)
 	pSkinContainer->m_pSkin->m_OriginalSkin.Unload(Graphics());
 	pSkinContainer->m_pSkin->m_ColorableSkin.Unload(Graphics());
 	pSkinContainer->m_pSkin.reset();
+	pSkinContainer->m_LoadedSource.reset();
 	pSkinContainer->m_SettingsSourceApproxBytes = 0;
 	QueueSkinTexturesUnloaded(pSkinContainer->Name());
 }
@@ -1849,7 +1849,7 @@ void CSkins::UpdateUnloadSkins(CSkinLoadingStats &Stats)
 	size_t SourceBytesInUse = 0;
 	for(const auto &[_, pSkinContainer] : m_Skins)
 	{
-		if(pSkinContainer->m_State == CSkinContainer::EState::LOADED)
+		if(pSkinContainer->m_pSkin != nullptr)
 			SourceBytesInUse += pSkinContainer->SettingsSourceApproxBytes();
 	}
 	const size_t SourceBytesBudget = SettingsSkinSourceBytesEstimate(256, 128, 2) * (size_t)maximum(0, g_Config.m_ClSkinsLoadedMax);
@@ -2035,6 +2035,58 @@ bool CSkins::ReclaimBackgroundSkinForPriorityRequest(const char *pRequesterName,
 	return ReclaimedBackgroundRequested;
 }
 
+std::shared_ptr<CQmSkinDownloadJob> CSkins::CreateSkinDownloadJob(const char *pName, bool UseCache)
+{
+	const char *pBaseUrl = g_Config.m_ClDownloadCommunitySkins != 0 ? g_Config.m_ClSkinCommunityDownloadUrl : g_Config.m_ClSkinDownloadUrl;
+	return std::make_shared<CQmSkinDownloadJob>(Storage(), Http(), pName, pBaseUrl, PrepareSkinData, UseCache);
+}
+
+void CSkins::ProcessSkinDownloadUpdates()
+{
+	int AvailableUpdates = maximum(0, SettingsSkinDecodeJobWorkerBudget() - (int)m_NumLoadingSkins);
+	for(const auto &Name : m_vSkinDownloadUpdates)
+	{
+		const auto It = m_Skins.find(Name);
+		if(It != m_Skins.end() && It->second->m_DownloadUpdateQueued &&
+			It->second->m_pDownloadUpdateJob != nullptr && !It->second->m_pDownloadUpdateJob->Done())
+			--AvailableUpdates;
+	}
+	for(auto It = m_vSkinDownloadUpdates.begin(); It != m_vSkinDownloadUpdates.end();)
+	{
+		const auto SkinIt = m_Skins.find(*It);
+		if(SkinIt == m_Skins.end() || SkinIt->second->m_pDownloadUpdateJob == nullptr)
+		{
+			It = m_vSkinDownloadUpdates.erase(It);
+			continue;
+		}
+		CSkinContainer *pContainer = SkinIt->second.get();
+		if(pContainer->m_pDownloadUpdateJob->State() == IJob::STATE_QUEUED)
+		{
+			if(AvailableUpdates > 0 && !pContainer->m_DownloadUpdateQueued && pContainer->m_pDownloadUpdateJob->DownloadReady())
+			{
+				pContainer->m_DownloadUpdateQueued = true;
+				Engine()->AddJob(pContainer->m_pDownloadUpdateJob);
+				--AvailableUpdates;
+			}
+			++It;
+			continue;
+		}
+		if(!pContainer->m_pDownloadUpdateJob->Done())
+		{
+			++It;
+			continue;
+		}
+		const auto pJob = std::move(pContainer->m_pDownloadUpdateJob);
+		if(pJob->State() == IJob::STATE_DONE && pJob->m_Data.m_pPreparedTextures != nullptr && pContainer->m_State == CSkinContainer::EState::LOADED)
+		{
+			pContainer->m_pLoadJob = pJob;
+			pContainer->SetState(CSkinContainer::EState::LOADING, pContainer->m_LoadPriority);
+			--AvailableUpdates;
+		}
+		It = m_vSkinDownloadUpdates.erase(It);
+	}
+}
+
 void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 {
 	const bool TeeSettingsActive = ActiveSettingsTeePage(GameClient());
@@ -2163,7 +2215,7 @@ void CSkins::UpdateStartLoading(CSkinLoadingStats &Stats)
 			pSkinContainer->m_pLoadJob = std::make_shared<CSkinLoadJob>(this, pSkinContainer->Name(), pSkinContainer->StorageType());
 			break;
 		case CSkinContainer::EType::DOWNLOAD:
-			pSkinContainer->m_pLoadJob = std::make_shared<CSkinDownloadJob>(this, pSkinContainer->Name());
+			pSkinContainer->m_pLoadJob = CreateSkinDownloadJob(pSkinContainer->Name());
 			break;
 		default:
 			dbg_assert_failed("pSkinContainer->Type() invalid");
@@ -2314,7 +2366,12 @@ CSkins::ESkinProcessResult CSkins::ProcessSkinContainer(CSkinContainer *pSkinCon
 		Stats.m_NumLoading--;
 		SkinsProcessedThisFrame++;
 
-		if(pSkinContainer->m_pLoadJob->State() == IJob::STATE_DONE && pSkinContainer->m_pLoadJob->m_NotFound)
+		if(pSkinContainer->m_pSkin != nullptr)
+		{
+			pSkinContainer->SetState(CSkinContainer::EState::LOADED, pSkinContainer->m_LoadPriority);
+			Stats.m_NumLoaded++;
+		}
+		else if(pSkinContainer->m_pLoadJob->State() == IJob::STATE_DONE && pSkinContainer->m_pLoadJob->m_NotFound)
 		{
 			pSkinContainer->SetState(CSkinContainer::EState::NOT_FOUND);
 			Stats.m_NumNotFound++;
@@ -2339,7 +2396,7 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 	int &SkinsProcessedThisFrame, std::chrono::nanoseconds StartTime,
 	std::chrono::nanoseconds MaxTime)
 {
-	if(!m_SkinUploadFrameBudget.TryConsume())
+	if(!m_SkinUploadFrameBudget.CanUpload())
 		return ESkinProcessResult::BREAK_UPLOAD;
 	const int MaxSkinsPerFrame = SettingsSkinMaxPerFrame(GameClient());
 	if(!GameClient()->GpuUploadLimiter()->CanUpload(1))
@@ -2365,35 +2422,56 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 		if(!BeginSkinPreviewUpload(pSkinContainer, std::move(pSkinContainer->m_pLoadJob->m_Data)))
 			return ESkinProcessResult::BREAK_UPLOAD;
 	}
-	SResourcePreviewUploadBudget SkinPreviewUploadBudget;
-	SkinPreviewUploadBudget.m_MaxUploads = 1;
-	SkinPreviewUploadBudget.m_pGpuUploadLimiter = GameClient()->GpuUploadLimiter();
-	if(!SettingsResourcePreviewConsumeUploadBudget(SkinPreviewUploadBudget))
+	while(pSkinContainer->m_SettingsPendingUploadSprite < SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS)
 	{
-		LogSettingsSkinSourceStageEvent("preview_uploads", pSkinContainer->Name(), 0, 0, 0, 0.0, 0);
-		return ESkinProcessResult::BREAK_GPU_LIMIT;
+		if(!m_SkinUploadFrameBudget.CanUpload())
+			return ESkinProcessResult::BREAK_UPLOAD;
+		SResourcePreviewUploadBudget SkinPreviewUploadBudget;
+		SkinPreviewUploadBudget.m_MaxUploads = 1;
+		SkinPreviewUploadBudget.m_pGpuUploadLimiter = GameClient()->GpuUploadLimiter();
+		if(!SettingsResourcePreviewConsumeUploadBudget(SkinPreviewUploadBudget))
+			return ESkinProcessResult::BREAK_GPU_LIMIT;
+		const auto UploadStart = time_get_nanoseconds();
+		const bool Uploaded = UploadNextSkinPreviewSprite(pSkinContainer, SkinPreviewUploadBudget);
+		if(!Uploaded)
+		{
+			m_SkinUploadFrameBudget.RecordUpload(time_get_nanoseconds() - UploadStart);
+			pSkinContainer->m_pLoadJob = nullptr;
+			if(pSkinContainer->m_pSkin != nullptr)
+			{
+				pSkinContainer->SetState(CSkinContainer::EState::LOADED, pSkinContainer->m_LoadPriority);
+				Stats.m_NumLoaded++;
+			}
+			else
+			{
+				pSkinContainer->SetState(CSkinContainer::EState::ERROR);
+				Stats.m_NumError++;
+			}
+			DiscardSkinPreviewUpload(pSkinContainer);
+			Stats.m_NumLoading--;
+			SkinsProcessedThisFrame++;
+			return ESkinProcessResult::BREAK_UPLOAD;
+		}
+		SettingsResourcePreviewCommitUploadBudget(SkinPreviewUploadBudget);
+		LogSettingsSkinSourceStageEvent("preview_uploads", pSkinContainer->Name(),
+			pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth,
+			pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, 0, 0.0, 1);
+		m_SkinUploadFrameBudget.RecordUpload(time_get_nanoseconds() - UploadStart);
 	}
-	if(!UploadNextSkinPreviewSprite(pSkinContainer, SkinPreviewUploadBudget))
-	{
-		pSkinContainer->m_pLoadJob = nullptr;
-		pSkinContainer->SetState(CSkinContainer::EState::ERROR);
-		Stats.m_NumLoading--;
-		SkinsProcessedThisFrame++;
-		Stats.m_NumError++;
-		return ESkinProcessResult::BREAK_UPLOAD;
-	}
-	SettingsResourcePreviewCommitUploadBudget(SkinPreviewUploadBudget);
-	LogSettingsSkinSourceStageEvent("preview_uploads", pSkinContainer->Name(),
-		pSkinContainer->m_SettingsPendingUploadData.m_SourceWidth,
-		pSkinContainer->m_SettingsPendingUploadData.m_SourceHeight, 0, 0.0, 1);
-	if(pSkinContainer->m_SettingsPendingUploadSprite < SETTINGS_SKIN_SOURCE_TEXTURE_UPLOADS)
-		return ESkinProcessResult::BREAK_UPLOAD;
+	const bool UsedCachedSkin = pSkinContainer->m_pLoadJob->m_UsedCachedSkin;
 
 	Stats.m_NumLoading--;
 	SkinsProcessedThisFrame++;
 	FinishSkinPreviewUpload(pSkinContainer);
 	GameClient()->OnSkinUpdate(pSkinContainer->Name());
 	pSkinContainer->m_pLoadJob = nullptr;
+	if(UsedCachedSkin)
+	{
+		pSkinContainer->m_pDownloadUpdateJob = CreateSkinDownloadJob(pSkinContainer->Name(), false);
+		m_vSkinDownloadUpdates.emplace_back(pSkinContainer->Name());
+		pSkinContainer->m_DownloadUpdateQueued = false;
+		pSkinContainer->m_pDownloadUpdateJob->StartUpdate();
+	}
 	Stats.m_NumLoaded++;
 	++m_SettingsSourceLoadsCompleted;
 	LogSkinSettingsResourcePerf("upload", 1, MaxSkinsPerFrame, (int)Stats.m_NumLoading, ESettingsWarmupMissReason::NONE, 0.0);
@@ -2405,7 +2483,10 @@ CSkins::ESkinProcessResult CSkins::DrainSettingsSkinPreviewUpload(CSkinContainer
 
 void CSkins::UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime)
 {
+	if(Stats.m_NumLoading == 0)
+		return;
 	int SkinsProcessedThisFrame = 0;
+	int TrackedLoading = 0;
 	const int MaxSkinsPerFrame = SettingsSkinMaxPerFrame(GameClient());
 	LogSettingsSkinFrameCapEvent(GameClient());
 	bool ProcessedHighPrioritySkin = false;
@@ -2457,6 +2538,8 @@ void CSkins::UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseco
 		{
 			return;
 		}
+		if(It->second->m_State == CSkinContainer::EState::LOADING)
+			++TrackedLoading;
 		if(Result == ESkinProcessResult::CONTINUE && It->second->m_State == CSkinContainer::EState::LOADED)
 		{
 			ProcessedHighPrioritySkin = true;
@@ -2499,11 +2582,16 @@ void CSkins::UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseco
 		}
 
 		ESkinProcessResult Result = ProcessSkinContainer(It->second.get(), Stats, SkinsProcessedThisFrame, StartTime, MaxTime);
+		if(It->second->m_State == CSkinContainer::EState::LOADING)
+			++TrackedLoading;
 		if(Result == ESkinProcessResult::BREAK_GPU_LIMIT || Result == ESkinProcessResult::BREAK_TIME_EXCEEDED || Result == ESkinProcessResult::BREAK_UPLOAD)
 		{
 			return;
 		}
 	}
+
+	if(Stats.m_NumLoading <= (size_t)TrackedLoading)
+		return;
 
 	// Process remaining loading skins that are not tracked by either priority queue.
 	// This ensures legacy and direct-load paths can still finish.
@@ -2576,8 +2664,15 @@ void CSkins::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 			pSkinContainer->m_pLoadJob->Abort();
 			pSkinContainer->m_pLoadJob = nullptr;
 		}
+		if(pSkinContainer->m_pDownloadUpdateJob)
+		{
+			pSkinContainer->m_pDownloadUpdateJob->Abort();
+			pSkinContainer->m_pDownloadUpdateJob.reset();
+		}
+		if(pSkinContainer->m_pPendingSkin)
+			DiscardSkinPreviewUpload(pSkinContainer.get());
 		if(pSkinContainer->m_State != CSkinContainer::EState::LOADED)
-			pSkinContainer->SetState(pSkinContainer->DetermineInitialState());
+			pSkinContainer->SetState(pSkinContainer->m_pSkin != nullptr ? CSkinContainer::EState::LOADED : pSkinContainer->DetermineInitialState(), pSkinContainer->m_LoadPriority);
 	}
 	m_SkinList.m_NeedsUpdate = true;
 
@@ -2734,7 +2829,7 @@ bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool Progressi
 	}
 
 	const CSkinContainer *pDefaultContainer = FindContainerOrNullptr("default");
-	const bool DefaultReady = pDefaultContainer != nullptr && pDefaultContainer->State() == CSkinContainer::EState::LOADED;
+	const bool DefaultReady = pDefaultContainer != nullptr && pDefaultContainer->Skin() != nullptr;
 	if(!DefaultReady)
 	{
 		LogSettingsSkinSourceWarmupEvent("warmup_miss", "reason=default_loading");
@@ -2743,7 +2838,7 @@ bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool Progressi
 
 	const CSkinContainer *pSelectedContainer = FindContainerOrNullptr(vNames.front().c_str());
 	const bool SelectedReady = pSelectedContainer == nullptr ||
-				   pSelectedContainer->State() == CSkinContainer::EState::LOADED ||
+				   pSelectedContainer->Skin() != nullptr ||
 				   pSelectedContainer->State() == CSkinContainer::EState::ERROR ||
 				   pSelectedContainer->State() == CSkinContainer::EState::NOT_FOUND;
 
@@ -2757,7 +2852,7 @@ bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool Progressi
 			continue;
 
 		const CSkinContainer::EState State = pContainer->State();
-		if(State == CSkinContainer::EState::LOADED)
+		if(pContainer->Skin() != nullptr)
 		{
 			++VisibleReadyCount;
 			++SourceLoadedCount;
@@ -2903,38 +2998,24 @@ void CSkins::ProcessSkinDirectoryScanJob()
 			{
 				continue;
 			}
-			if(pSkinContainer->LastModified() != Entry.m_LastModified)
+			const SQmSkinSourceIdentity RequestedSource{pSkinContainer->Type() == CSkinContainer::EType::DOWNLOAD, pSkinContainer->StorageType(), pSkinContainer->LastModified()};
+			// 加载失败时仍保留旧预览；下次刷新与已发布版本比较，允许重新尝试。
+			const SQmSkinSourceIdentity OldSource = pSkinContainer->m_State == CSkinContainer::EState::LOADED ? pSkinContainer->m_LoadedSource.value_or(RequestedSource) : RequestedSource;
+			const SQmSkinSourceIdentity NewSource{Entry.m_Type == CSkinContainer::EType::DOWNLOAD, Entry.m_StorageType, Entry.m_LastModified};
+			const auto RefreshState = CSkinContainer::SourceRefreshState(OldSource, NewSource, pSkinContainer->m_State, pSkinContainer->DetermineInitialState());
+			if(RefreshState.has_value())
 			{
-				pSkinContainer->SetLastModified(Entry.m_LastModified);
-				DirectoryScanDirty = true;
-			}
-			if(pSkinContainer->Type() != Entry.m_Type)
-			{
-				const CSkinContainer::EState OldState = pSkinContainer->m_State;
-				const ESettingsResourcePriority OldPriority = pSkinContainer->m_LoadPriority;
-				const bool KeepRequestedState =
-					OldState == CSkinContainer::EState::PENDING ||
-					OldState == CSkinContainer::EState::LOADING ||
-					OldState == CSkinContainer::EState::LOADED;
-				if(OldState == CSkinContainer::EState::LOADING && pSkinContainer->m_pLoadJob != nullptr)
+				const auto Priority = pSkinContainer->m_LoadPriority;
+				if(pSkinContainer->m_pLoadJob)
 				{
 					pSkinContainer->m_pLoadJob->Abort();
-					pSkinContainer->m_pLoadJob = nullptr;
+					pSkinContainer->m_pLoadJob.reset();
 				}
 				pSkinContainer->m_Type = Entry.m_Type;
 				pSkinContainer->m_StorageType = Entry.m_StorageType;
-				if(OldState == CSkinContainer::EState::LOADED && pSkinContainer->m_pSkin)
-				{
-					UnloadLoadedSkinTextures(pSkinContainer);
-				}
-				if(KeepRequestedState)
-				{
-					pSkinContainer->SetState(CSkinContainer::EState::PENDING, OldPriority);
-				}
-				else
-				{
-					pSkinContainer->SetState(pSkinContainer->DetermineInitialState(), ESettingsResourcePriority::VISIBLE);
-				}
+				pSkinContainer->SetLastModified(Entry.m_LastModified);
+				// 更新期间继续显示旧纹理，新数据上传完成后统一替换并通知所有预览。
+				pSkinContainer->SetState(RefreshState.value(), Priority);
 				DirectoryScanDirty = true;
 			}
 			continue;
@@ -3155,7 +3236,7 @@ const CSkins::CSkinContainer *CSkins::FindContainerOrNullptr(const char *pName)
 		str_format(aNameWithPrefix, sizeof(aNameWithPrefix), "%s_%s", pSkinPrefix, pName);
 		// If we find something, use it, otherwise fall back to normal skins.
 		const CSkinContainer *pSkinContainer = FindContainerImpl(aNameWithPrefix);
-		if(pSkinContainer != nullptr && pSkinContainer->State() == CSkinContainer::EState::LOADED)
+		if(pSkinContainer != nullptr && pSkinContainer->Skin() != nullptr)
 		{
 			return pSkinContainer;
 		}
@@ -3201,7 +3282,7 @@ const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName, bool 
 const CSkin *CSkins::FindOrNullptr(const char *pName)
 {
 	const CSkinContainer *pSkinContainer = FindContainerOrNullptr(pName);
-	if(pSkinContainer == nullptr || pSkinContainer->m_State != CSkinContainer::EState::LOADED)
+	if(pSkinContainer == nullptr || pSkinContainer->m_pSkin == nullptr)
 	{
 		return nullptr;
 	}
@@ -3674,6 +3755,7 @@ void CSkins::CSkinLoadJob::Run()
 		return;
 	}
 
+	m_Data.ReadLastModified(m_pSkins->Storage(), aPath, m_StorageType);
 	void *pFileData = nullptr;
 	unsigned FileSize = 0;
 	if(!m_pSkins->Storage()->ReadFile(aPath, m_StorageType, &pFileData, &FileSize))
@@ -3705,140 +3787,6 @@ void CSkins::CSkinLoadJob::Run()
 	{
 		LogSettingsSkinSourceStageEvent("decode_done", m_aName, m_Data.m_SourceWidth, m_Data.m_SourceHeight, (int)FileSize, std::chrono::duration<double, std::milli>(time_get_nanoseconds() - DecodeStart).count());
 	}
-}
-
-CSkins::CSkinDownloadJob::CSkinDownloadJob(CSkins *pSkins, const char *pName) :
-	CAbstractSkinLoadJob(pSkins, pName)
-{
-}
-
-bool CSkins::CSkinDownloadJob::Abort()
-{
-	if(!CAbstractSkinLoadJob::Abort())
-	{
-		return false;
-	}
-
-	const CLockScope LockScope(m_Lock);
-	if(m_pGetRequest)
-	{
-		m_pGetRequest->Abort();
-		m_pGetRequest = nullptr;
-	}
-	return true;
-}
-
-void CSkins::CSkinDownloadJob::Run()
-{
-	const char *pBaseUrl = g_Config.m_ClDownloadCommunitySkins != 0 ? g_Config.m_ClSkinCommunityDownloadUrl : g_Config.m_ClSkinDownloadUrl;
-
-	char aEscapedName[256];
-	EscapeUrl(aEscapedName, m_aName);
-
-	char aUrl[IO_MAX_PATH_LENGTH];
-	str_format(aUrl, sizeof(aUrl), "%s%s.png", pBaseUrl, aEscapedName);
-
-	char aPathReal[IO_MAX_PATH_LENGTH];
-	str_format(aPathReal, sizeof(aPathReal), "downloadedskins/%s.png", m_aName);
-
-	const CTimeout Timeout{10000, 0, 8192, 10};
-	const size_t MaxResponseSize = 10 * 1024 * 1024; // 10 MiB
-
-	std::shared_ptr<IHttpRequest> pGet = HttpGetBoth(aUrl, m_pSkins->Storage(), aPathReal, IStorage::TYPE_SAVE);
-	pGet->Timeout(Timeout);
-	pGet->MaxResponseSize(MaxResponseSize);
-	pGet->ValidateBeforeOverwrite(true);
-	pGet->LogProgress(HTTPLOG::NONE);
-	pGet->FailOnErrorStatus(false);
-	{
-		const CLockScope LockScope(m_Lock);
-		m_pGetRequest = pGet;
-	}
-	m_pSkins->Http()->Run(pGet);
-
-	// Load existing file while waiting for the HTTP request
-	{
-		void *pPngData;
-		unsigned PngSize;
-		if(m_pSkins->Storage()->ReadFile(aPathReal, IStorage::TYPE_SAVE, &pPngData, &PngSize))
-		{
-			if(CImageLoader::LoadPng(pPngData, PngSize, aPathReal, m_Data.m_Info))
-			{
-				if(State() == IJob::STATE_ABORTED)
-				{
-					return;
-				}
-				PrepareSkinData(m_aName, m_Data);
-			}
-			free(pPngData);
-		}
-	}
-
-	pGet->Wait();
-	{
-		const CLockScope LockScope(m_Lock);
-		m_pGetRequest = nullptr;
-	}
-	if(pGet->State() != EHttpState::DONE || State() == IJob::STATE_ABORTED || pGet->StatusCode() >= 400)
-	{
-		m_NotFound = pGet->State() == EHttpState::DONE && pGet->StatusCode() == 404; // 404 Not Found
-		return;
-	}
-	if(pGet->StatusCode() == 304) // 304 Not Modified
-	{
-		bool Success = m_Data.m_pPreparedTextures != nullptr;
-		pGet->OnValidation(Success);
-		if(Success)
-		{
-			return; // Local skin is up-to-date and was loaded successfully
-		}
-
-		log_error("skins", "Failed to load PNG of existing downloaded skin '%s' from '%s', downloading it again", m_aName, aPathReal);
-		pGet = HttpGetBoth(aUrl, m_pSkins->Storage(), aPathReal, IStorage::TYPE_SAVE);
-		pGet->Timeout(Timeout);
-		pGet->MaxResponseSize(MaxResponseSize);
-		pGet->ValidateBeforeOverwrite(true);
-		pGet->SkipByFileTime(false);
-		pGet->LogProgress(HTTPLOG::NONE);
-		pGet->FailOnErrorStatus(false);
-		{
-			const CLockScope LockScope(m_Lock);
-			m_pGetRequest = pGet;
-		}
-		m_pSkins->Http()->Run(pGet);
-		pGet->Wait();
-		{
-			const CLockScope LockScope(m_Lock);
-			m_pGetRequest = nullptr;
-		}
-		if(pGet->State() != EHttpState::DONE || State() == IJob::STATE_ABORTED || pGet->StatusCode() >= 400)
-		{
-			m_NotFound = pGet->State() == EHttpState::DONE && pGet->StatusCode() == 404; // 404 Not Found
-			return;
-		}
-	}
-
-	unsigned char *pResult;
-	size_t ResultSize;
-	pGet->Result(&pResult, &ResultSize);
-
-	m_Data.m_Info.Free();
-	m_Data.m_InfoGrayscale.Free();
-	m_Data.m_pPreparedTextures.reset();
-	const bool Success = CImageLoader::LoadPng(pResult, ResultSize, aUrl, m_Data.m_Info);
-	if(Success)
-	{
-		if(State() == IJob::STATE_ABORTED)
-		{
-			return;
-		}
-		PrepareSkinData(m_aName, m_Data);
-	}
-	else
-	{
-		log_error("skins", "Failed to load PNG of skin '%s' downloaded from '%s' (size %" PRIzu ")", m_aName, aUrl, ResultSize);
-	}
-	pGet->OnValidation(Success);
 }
 
 void CSkins::ConAddFavoriteSkin(IConsole::IResult *pResult, void *pUserData)

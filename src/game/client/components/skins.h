@@ -19,6 +19,7 @@
 #include <game/client/components/qmclient/skin_load_budget.h>
 #include <game/client/components/qmclient/skin_prepared_textures.h>
 #include <game/client/components/qmclient/skin_prepared_visuals.h>
+#include <game/client/components/qmclient/skin_source_job.h>
 #include <game/client/components/settings_resource_jobs.h>
 #include <game/client/skin.h>
 
@@ -41,40 +42,8 @@ class IHttpRequest;
 class CSkins : public CComponent
 {
 private:
-	/**
-	 * The data of a skin that can be loaded in a separate thread.
-	 */
-	class CSkinLoadData
-	{
-	public:
-		CImageInfo m_Info;
-		CImageInfo m_InfoGrayscale;
-		CSkin::CSkinMetrics m_Metrics;
-		ColorRGBA m_BloodColor;
-		// 解码任务在 CPU 侧备好素材，主线程只做纹理上传与接管（避免主线程重复提取精灵）。
-		// 纹理预备按精灵粒度记录可用性，越界精灵留待主线程走空白素材回退。
-		SQmPreparedSkinVisuals m_PreparedVisuals;
-		std::unique_ptr<CQmPreparedSkinTextures> m_pPreparedTextures;
-		size_t m_SourceWidth = 0;
-		size_t m_SourceHeight = 0;
-	};
-
-	/**
-	 * An abstract job to load a skin from a source determined by the derived class.
-	 */
-	class CAbstractSkinLoadJob : public IJob
-	{
-	public:
-		CAbstractSkinLoadJob(CSkins *pSkins, const char *pName);
-		~CAbstractSkinLoadJob() override;
-
-		CSkinLoadData m_Data;
-		bool m_NotFound = false;
-
-	protected:
-		CSkins *m_pSkins;
-		char m_aName[MAX_SKIN_LENGTH];
-	};
+	using CSkinLoadData = SQmSkinSourceData;
+	using CAbstractSkinLoadJob = CQmSkinSourceJob;
 
 public:
 	struct SSkinSpriteSpec
@@ -228,6 +197,14 @@ public:
 		{
 			return OldState == EState::LOADING && NewState != EState::LOADING && NewState != EState::LOADED;
 		}
+		static std::optional<EState> SourceRefreshState(const SQmSkinSourceIdentity &Current, const SQmSkinSourceIdentity &Scanned, EState State, EState InitialState)
+		{
+			if(Current == Scanned)
+				return std::nullopt;
+			if(State == EState::LOADED || State == EState::LOADING || State == EState::PENDING)
+				return EState::PENDING;
+			return InitialState;
+		}
 		static bool IsUnresolved(EState State)
 		{
 			return State == EState::ERROR || State == EState::NOT_FOUND;
@@ -273,6 +250,7 @@ public:
 		EType m_Type;
 		int m_StorageType;
 		time_t m_LastModified = 0;
+		std::optional<SQmSkinSourceIdentity> m_LoadedSource;
 		int m_OfficialReleaseDate = 0;
 		char m_aOfficialCreator[MAX_NAME_LENGTH] = {};
 		bool m_Vanilla;
@@ -285,6 +263,8 @@ public:
 		std::unique_ptr<CSkin> m_pSkin = nullptr;
 		std::unique_ptr<CSkin> m_pPendingSkin;
 		std::shared_ptr<CAbstractSkinLoadJob> m_pLoadJob = nullptr;
+		std::shared_ptr<CQmSkinDownloadJob> m_pDownloadUpdateJob;
+		bool m_DownloadUpdateQueued = false;
 		CSkinLoadData m_SettingsPendingUploadData;
 		size_t m_SettingsPendingUploadSprite = 0;
 		std::chrono::nanoseconds m_SettingsPendingUploadStart{};
@@ -830,22 +810,8 @@ private:
 		void Run() override;
 
 	private:
+		CSkins *m_pSkins;
 		int m_StorageType;
-	};
-
-	class CSkinDownloadJob : public CAbstractSkinLoadJob
-	{
-	public:
-		CSkinDownloadJob(CSkins *pSkins, const char *pName);
-
-		bool Abort() override REQUIRES(!m_Lock);
-
-	protected:
-		void Run() override REQUIRES(!m_Lock);
-
-	private:
-		CLock m_Lock;
-		std::shared_ptr<IHttpRequest> m_pGetRequest GUARDED_BY(m_Lock);
 	};
 
 	struct SSkinListSnapshotEntry
@@ -916,6 +882,7 @@ private:
 		IStorage *m_pStorage;
 		SResult m_Result;
 		CSkinContainer::EType m_CurrentScanType = CSkinContainer::EType::LOCAL;
+		std::unordered_set<std::string> m_SeenNames;
 	};
 
 	static bool PrepareSkinData(const char *pName, CSkinLoadData &Data);
@@ -933,6 +900,8 @@ private:
 	void QueueSkinTexturesUnloaded(const char *pSkinName);
 	bool ReclaimBackgroundSkinForPriorityRequest(const char *pRequesterName, int CountFuseLimit);
 	void UpdateStartLoading(CSkinLoadingStats &Stats);
+	std::shared_ptr<CQmSkinDownloadJob> CreateSkinDownloadJob(const char *pName, bool UseCache = true);
+	void ProcessSkinDownloadUpdates();
 	void UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime);
 	void CollectUnresolvedSkins();
 	size_t LoadedSkinLimit() const;
@@ -981,7 +950,7 @@ private:
 
 	std::unordered_map<std::string, std::unique_ptr<CSkinContainer>> m_Skins;
 	std::optional<std::chrono::nanoseconds> m_ContainerUpdateTime;
-	CSkinContainer *m_pSkinPreviewUpload = nullptr;
+	std::vector<std::string> m_vSkinDownloadUpdates;
 	size_t m_NumLoadingSkins = 0;
 	CQmSkinUploadFrameBudget m_SkinUploadFrameBudget;
 	CUnresolvedSkinScanState m_UnresolvedSkinScanState;

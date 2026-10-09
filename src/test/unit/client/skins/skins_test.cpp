@@ -548,13 +548,64 @@ TEST(Skins, PartialUploadIsDiscardedOnCancellationOrFailure)
 	EXPECT_FALSE(CSkins::CSkinContainer::ShouldDiscardPendingUpload(EState::PENDING, EState::UNLOADED));
 }
 
-TEST(Skins, UploadFrameBudgetRequiresResetBeforeAnotherUpload)
+TEST(Skins, UploadFrameBudgetAllowsMultipleSpritesUntilTimeIsExhausted)
 {
+	using namespace std::chrono_literals;
 	CQmSkinUploadFrameBudget Budget;
-	EXPECT_TRUE(Budget.TryConsume());
-	EXPECT_FALSE(Budget.TryConsume());
+	ASSERT_TRUE(Budget.CanUpload());
+	Budget.RecordUpload(200us);
+	EXPECT_TRUE(Budget.CanUpload());
+	Budget.RecordUpload(799us);
+	EXPECT_TRUE(Budget.CanUpload());
+	Budget.RecordUpload(1us);
+	EXPECT_FALSE(Budget.CanUpload());
+}
+
+TEST(Skins, UploadFrameBudgetSharesTimeAcrossUpdatesAndResetsForNextFrame)
+{
+	using namespace std::chrono_literals;
+	CQmSkinUploadFrameBudget Budget;
+	Budget.RecordUpload(2ms);
+	EXPECT_FALSE(Budget.CanUpload());
 	Budget.Reset();
-	EXPECT_TRUE(Budget.TryConsume());
+	EXPECT_TRUE(Budget.CanUpload());
+}
+
+TEST(Skins, ModifiedLoadedLocalSourceReturnsToPending)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	const SQmSkinSourceIdentity Before{false, 0, 100};
+	const SQmSkinSourceIdentity After{false, 0, 101};
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::LOADED, EState::UNLOADED), EState::PENDING);
+	EXPECT_FALSE(CSkins::CSkinContainer::SourceRefreshState(After, After, EState::LOADED, EState::UNLOADED).has_value());
+}
+
+TEST(Skins, UserStorageOverrideAndLocalReplacementRequestReload)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	const SQmSkinSourceIdentity Bundled{false, 1, 100};
+	const SQmSkinSourceIdentity User{false, 0, 100};
+	const SQmSkinSourceIdentity Downloaded{true, 0, 100};
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Bundled, User, EState::LOADED, EState::UNLOADED), EState::PENDING);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Downloaded, User, EState::LOADED, EState::UNLOADED), EState::PENDING);
+}
+
+TEST(Skins, SourceChangeRestartsLoadingAndPreservesPendingRequests)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	const SQmSkinSourceIdentity Before{false, 0, 100};
+	const SQmSkinSourceIdentity After{false, 0, 101};
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::LOADING, EState::UNLOADED), EState::PENDING);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::PENDING, EState::UNLOADED), EState::PENDING);
+}
+
+TEST(Skins, SourceChangeLeavesUnrequestedSkinsUnloadedAndRespectsDisabledDownloads)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	const SQmSkinSourceIdentity Before{true, 0, 100};
+	const SQmSkinSourceIdentity After{true, 0, 101};
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::UNLOADED, EState::UNLOADED), EState::UNLOADED);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::NOT_FOUND, EState::NOT_FOUND), EState::NOT_FOUND);
 }
 
 TEST(Skins, UnresolvedNotificationIsTriggeredOnlyByNewFailures)

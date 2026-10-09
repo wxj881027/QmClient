@@ -3575,6 +3575,8 @@ if(CLIENT)
     components/qmclient/settings_resource_preview.h
     components/qmclient/screenshot_image_job.cpp
     components/qmclient/screenshot_image_job.h
+    components/qmclient/skin_source_job.cpp
+    components/qmclient/skin_source_job.h
     components/qmclient/screenshot_manager.cpp
     components/qmclient/config_package.cpp
     components/qmclient/config_package.h
@@ -4928,6 +4930,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/settings/settings_warmup_cleanup_contract_test.cpp
     src/test/unit/client/skins/skin_transition_test.cpp
     src/test/unit/client/skins/skins_test.cpp
+    src/test/integration/client/skins/skin_source_job_test.cpp
     src/test/unit/client/skins/skins_preview_layers_test.cpp
     src/test/contract/client/skins/skins_resource_contract_test.cpp
     src/test/contract/client/skins/skins_render_contract_test.cpp
@@ -5011,6 +5014,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/tclient/qm_tee_trail.cpp
     src/game/client/components/qmclient/tee_trail_styles.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
+    src/game/client/components/qmclient/skin_source_job.cpp
     src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/test/support/render_tee_offset_helpers.cpp
