@@ -67,6 +67,7 @@ protected:
 	std::vector<SOpenGLRenderTarget> m_vRenderTargets;
 	TWGLint m_aRenderTargetPreviousViewport[4] = {0, 0, 0, 0};
 	TWGLint m_RenderTargetPreviousFramebuffer = 0;
+	float m_aRenderTargetPreviousClearColor[4] = {};
 	bool m_RenderTargetActive = false;
 	int m_ActiveRenderTargetId = -1;
 
@@ -97,6 +98,7 @@ protected:
 	bool InitOpenGL(const SCommand_Init *pCommand);
 
 	void SetState(const CCommandBuffer::SState &State, bool Use2DArrayTexture = false);
+	void SetClipRect(const CCommandBuffer::SState &State);
 	virtual bool IsNewApi() { return false; }
 	void DestroyTexture(int Slot);
 

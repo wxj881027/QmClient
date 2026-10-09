@@ -326,6 +326,7 @@ class CHud : public CComponent
 	IGraphics::CRenderTargetHandle m_DummyMiniViewRenderTarget;
 	int m_DummyMiniViewRenderTargetWidth = 0;
 	int m_DummyMiniViewRenderTargetHeight = 0;
+	unsigned m_DummyMiniViewGraphicsVersion = 0;
 	struct SHudRecordingStatusAnimState
 	{
 		float m_TargetWidth = 0.0f;

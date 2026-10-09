@@ -939,6 +939,8 @@ bool CGraphics_Threaded::BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA
 		return false;
 
 	FlushVertices();
+	m_RenderTargetSavedState = m_State;
+	m_State.m_ClipEnable = false;
 	CCommandBuffer::SCommand_RenderTarget_Begin Cmd;
 	Cmd.m_TargetId = TargetId;
 	Cmd.m_ClearColor.r = ClearColor.r;
@@ -957,6 +959,7 @@ void CGraphics_Threaded::EndRenderTarget()
 	if(!IsRenderTargetSupported() || !m_RenderTargetActive)
 		return;
 	FlushVertices();
+	m_State = m_RenderTargetSavedState;
 	CCommandBuffer::SCommand_RenderTarget_End Cmd;
 	Cmd.m_State = m_State;
 	AddCmd(Cmd);
@@ -981,6 +984,8 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	Cmd.m_Alpha = std::clamp(Params.m_Alpha, 0.0f, 1.0f);
 	Cmd.m_State = m_State;
 	Cmd.m_State.m_WrapMode = EWrapMode::CLAMP;
+	if(Params.m_Opaque)
+		Cmd.m_State.m_BlendMode = EBlendMode::NONE;
 
 	// 四角每角至多 NumSegments / 2 个四边形，另有中心和四条边。
 	static_assert(RECT_CORNER_SEGMENTS >= 2 && RECT_CORNER_SEGMENTS % 2 == 0);

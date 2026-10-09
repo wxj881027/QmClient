@@ -47,7 +47,7 @@
       "category": "localize_or_localizable",
       "source": "src/engine/client/graphics_threaded.cpp",
       "context": "",
-      "line": 1512
+      "line": 1517
     },
     {
       "key": "%.2f KiB",
@@ -383,7 +383,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 942
+      "line": 943
     },
     {
       "key": "%s has requested to swap with %s",
@@ -2931,7 +2931,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6337
+      "line": 6319
     },
     {
       "key": "All",
@@ -3498,7 +3498,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6302
+      "line": 6284
     },
     {
       "key": "Angular gradient",
@@ -4716,14 +4716,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 558
+      "line": 559
     },
     {
       "key": "AUTO",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "Spectating Camera Mode Icon",
-      "line": 6661
+      "line": 6643
     },
     {
       "key": "Auto",
@@ -11009,7 +11009,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 1916
+      "line": 1920
     },
     {
       "key": "Connect to a server first",
@@ -11149,7 +11149,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 3263
+      "line": 3245
     },
     {
       "key": "Connection Quality",
@@ -12871,7 +12871,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5866
+      "line": 5848
     },
     {
       "key": "Custom",
@@ -15223,7 +15223,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5862
+      "line": 5844
     },
     {
       "key": "Diamond",
@@ -16469,7 +16469,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 7362
+      "line": 7344
     },
     {
       "key": "Dual Kawase",
@@ -16665,7 +16665,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5874
+      "line": 5856
     },
     {
       "key": "Dummy copy",
@@ -16700,7 +16700,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5882
+      "line": 5864
     },
     {
       "key": "Dummy country (ISO 3166-1 numeric)",
@@ -16910,7 +16910,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 1902
+      "line": 1906
+    },
+    {
+      "key": "Dummy mini view rendering unavailable",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/hud.cpp",
+      "context": "",
+      "line": 2137
     },
     {
       "key": "Dummy mini view size (percent)",
@@ -21264,14 +21271,14 @@
       "category": "localize_or_localizable",
       "source": "src/engine/client/graphics_threaded.cpp",
       "context": "",
-      "line": 1735
+      "line": 1740
     },
     {
       "key": "Failed to save screenshot",
       "category": "localize_or_localizable",
       "source": "src/engine/client/graphics_threaded.cpp",
       "context": "",
-      "line": 4617
+      "line": 4622
     },
     {
       "key": "Failed to save video",
@@ -22279,21 +22286,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "Spectating",
-      "line": 6647
+      "line": 6629
     },
     {
       "key": "Following %s",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "Spectating",
-      "line": 6633
+      "line": 6615
     },
     {
       "key": "Following %s",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "Spectating",
-      "line": 6649
+      "line": 6631
     },
     {
       "key": "Following %s across servers",
@@ -22622,14 +22629,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6628
+      "line": 6610
     },
     {
       "key": "Free-View",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6653
+      "line": 6635
     },
     {
       "key": "Free-View",
@@ -23455,7 +23462,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 1420
+      "line": 1424
     },
     {
       "key": "Game sound volume",
@@ -24459,6 +24466,13 @@
       "line": 1530
     },
     {
+      "key": "Graphics backend does not support dummy mini view",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/components/hud.cpp",
+      "context": "",
+      "line": 2069
+    },
+    {
       "key": "Graphics card",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp",
@@ -24785,7 +24799,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5867
+      "line": 5849
     },
     {
       "key": "Hands",
@@ -24862,7 +24876,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5864
+      "line": 5846
     },
     {
       "key": "Heart",
@@ -26115,7 +26129,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6359
+      "line": 6341
     },
     {
       "key": "Hookthrough",
@@ -26444,7 +26458,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 1912
+      "line": 1916
     },
     {
       "key": "HUD notifications",
@@ -28824,28 +28838,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5848
+      "line": 5830
     },
     {
       "key": "Key Sticking: Off",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5852
+      "line": 5834
     },
     {
       "key": "Key Sticking: On",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5850
+      "line": 5832
     },
     {
       "key": "Key Sticking: Reset Self",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5854
+      "line": 5836
     },
     {
       "key": "Keyboard focus ring color",
@@ -31533,7 +31547,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 556
+      "line": 557
     },
     {
       "key": "Manual",
@@ -31855,14 +31869,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6372
+      "line": 6354
     },
     {
       "key": "Map Progress: --",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6374
+      "line": 6356
     },
     {
       "key": "Map settings error",
@@ -33290,14 +33304,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 7385
+      "line": 7367
     },
     {
       "key": "More teammates...",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 7456
+      "line": 7438
     },
     {
       "key": "MOTD",
@@ -33556,14 +33570,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6626
+      "line": 6608
     },
     {
       "key": "Multi-View",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6638
+      "line": 6620
     },
     {
       "key": "Multi-View",
@@ -36083,7 +36097,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5860
+      "line": 5842
     },
     {
       "key": "Normal",
@@ -36776,14 +36790,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5873
+      "line": 5855
     },
     {
       "key": "Off",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5880
+      "line": 5862
     },
     {
       "key": "Off",
@@ -37231,14 +37245,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5873
+      "line": 5855
     },
     {
       "key": "On",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 5880
+      "line": 5862
     },
     {
       "key": "On",
@@ -39142,14 +39156,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 7485
+      "line": 7467
     },
     {
       "key": "Personal best:",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 7500
+      "line": 7482
     },
     {
       "key": "Personal Setting of showing time in either broadcast or game/round timer, timer s, where s = broadcast for broadcast, gametimer for game/round timer, cycle for cycle, both for both, none for no timer and nothing to show current status",
@@ -40388,7 +40402,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 3278
+      "line": 3260
     },
     {
       "key": "Please enable finished indicator first",
@@ -40801,7 +40815,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6220
+      "line": 6202
     },
     {
       "key": "Practice mode can't be enabled in team 0 mode.",
@@ -42537,7 +42551,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 557
+      "line": 558
     },
     {
       "key": "Race",
@@ -45253,7 +45267,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 559
+      "line": 560
     },
     {
       "key": "Replay",
@@ -45554,7 +45568,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6347
+      "line": 6329
     },
     {
       "key": "Rescue: auto mode teleports out of freeze; manual mode records a rescue point on landing and teleports when frozen",
@@ -49082,7 +49096,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 7471
+      "line": 7453
     },
     {
       "key": "Server browser exclude string",
@@ -55620,7 +55634,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 6265
+      "line": 6247
     },
     {
       "key": "SPEEDER: Causes weapons, SHIELD, SNOWFLAKE and SPINNING LASER to move quickly.",
@@ -56782,7 +56796,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 1437
+      "line": 1441
     },
     {
       "key": "Suicides",
@@ -57685,7 +57699,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 412
+      "line": 413
     },
     {
       "key": "Team %d",
@@ -58126,14 +58140,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 7380
+      "line": 7362
     },
     {
       "key": "Teammate",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 7415
+      "line": 7397
     },
     {
       "key": "Teams",
@@ -59218,7 +59232,7 @@
       "category": "localize_or_localizable",
       "source": "src/engine/client/graphics_threaded.cpp",
       "context": "",
-      "line": 1630
+      "line": 1635
     },
     {
       "key": "The FPS at which the recorder should record replay.",
@@ -59400,7 +59414,7 @@
       "category": "localize_or_localizable",
       "source": "src/engine/client/graphics_threaded.cpp",
       "context": "",
-      "line": 1592
+      "line": 1597
     },
     {
       "key": "The width or height of this image is not divisible by 16. This is required for images used in tile layers.",
@@ -65168,7 +65182,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 1921
+      "line": 1925
     },
     {
       "key": "Waiting for the voice WebSocket connection",
@@ -65322,14 +65336,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 1804
+      "line": 1808
     },
     {
       "key": "Warmup",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud.cpp",
       "context": "",
-      "line": 1817
+      "line": 1821
     },
     {
       "key": "Warmup time before round (in seconds)",

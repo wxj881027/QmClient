@@ -7,6 +7,7 @@
 #ifndef BACKEND_NO_SDL
 #include <engine/client/backend_sdl.h>
 #endif
+#include <engine/client/backend/render_target_geometry.h>
 #include <engine/client/qm_graphics_adapters.h>
 #include <engine/graphics.h>
 
@@ -41,6 +42,21 @@
 #endif
 
 // ------------ CCommandProcessorFragment_OpenGL
+void CCommandProcessorFragment_OpenGL::SetClipRect(const CCommandBuffer::SState &State)
+{
+	if(m_RenderTargetActive)
+	{
+		const auto &Target = m_vRenderTargets[m_ActiveRenderTargetId];
+		const auto Clip = render_target_geometry::MapScreenClip(State.m_ClipX, State.m_ClipY, State.m_ClipW, State.m_ClipH,
+			m_CanvasWidth, m_CanvasHeight, Target.m_Width, Target.m_Height);
+		glScissor(Clip.m_X, Target.m_Height - Clip.m_Y - Clip.m_H, Clip.m_W, Clip.m_H);
+	}
+	else
+	{
+		glScissor(m_ViewportX + State.m_ClipX, m_ViewportY + State.m_ClipY, State.m_ClipW, State.m_ClipH);
+	}
+}
+
 void CCommandProcessorFragment_OpenGL::Cmd_Update_Viewport(const CCommandBuffer::SCommand_Update_Viewport *pCommand)
 {
 	m_ViewportX = pCommand->m_X;
@@ -96,9 +112,7 @@ void CCommandProcessorFragment_OpenGL::SetState(const CCommandBuffer::SState &St
 	// clip
 	if(State.m_ClipEnable)
 	{
-		const int ScissorX = (m_RenderTargetActive ? 0 : m_ViewportX) + State.m_ClipX;
-		const int ScissorY = (m_RenderTargetActive ? 0 : m_ViewportY) + State.m_ClipY;
-		glScissor(ScissorX, ScissorY, State.m_ClipW, State.m_ClipH);
+		SetClipRect(State);
 		glEnable(GL_SCISSOR_TEST);
 		m_LastClipEnable = true;
 	}
@@ -1267,27 +1281,20 @@ void CCommandProcessorFragment_OpenGL2::UseProgram(CGLSLTWProgram *pProgram)
 
 void CCommandProcessorFragment_OpenGL2::SetState(const CCommandBuffer::SState &State, CGLSLTWProgram *pProgram, bool Use2DArrayTextures)
 {
-	if(m_LastBlendMode == EBlendMode::NONE)
+	if(State.m_BlendMode != m_LastBlendMode)
 	{
-		m_LastBlendMode = EBlendMode::ALPHA;
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	}
-	if(State.m_BlendMode != m_LastBlendMode && State.m_BlendMode != EBlendMode::NONE)
-	{
-		// blend
+		// 离屏画面回贴需要真正关闭混合；切回普通绘制时同步恢复。
 		switch(State.m_BlendMode)
 		{
 		case EBlendMode::NONE:
-			// We don't really need this anymore
-			// glDisable(GL_BLEND);
+			glDisable(GL_BLEND);
 			break;
 		case EBlendMode::ALPHA:
-			// glEnable(GL_BLEND);
+			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			break;
 		case EBlendMode::ADDITIVE:
-			// glEnable(GL_BLEND);
+			glEnable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 			break;
 		default:
@@ -1300,9 +1307,7 @@ void CCommandProcessorFragment_OpenGL2::SetState(const CCommandBuffer::SState &S
 	// clip
 	if(State.m_ClipEnable)
 	{
-		const int ScissorX = (m_RenderTargetActive ? 0 : m_ViewportX) + State.m_ClipX;
-		const int ScissorY = (m_RenderTargetActive ? 0 : m_ViewportY) + State.m_ClipY;
-		glScissor(ScissorX, ScissorY, State.m_ClipW, State.m_ClipH);
+		SetClipRect(State);
 		glEnable(GL_SCISSOR_TEST);
 		m_LastClipEnable = true;
 	}

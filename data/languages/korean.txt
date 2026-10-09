@@ -3707,6 +3707,9 @@ Dummy marking color
 Dummy mini view
 == 더미 미니 뷰
 
+Dummy mini view rendering unavailable
+== 분신 미니 화면을 렌더링할 수 없습니다
+
 Dummy mini view size (percent)
 == 더미 미니 뷰 크기 (백분율)
 
@@ -5281,6 +5284,9 @@ Gradient vertical position
 
 Graphics
 == 그래픽
+
+Graphics backend does not support dummy mini view
+== 현재 그래픽 백엔드는 분신 미니 화면을 지원하지 않습니다
 
 Graphics card
 == 그래픽 카드

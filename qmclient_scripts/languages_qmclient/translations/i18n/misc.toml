@@ -13842,3 +13842,35 @@ brazilian_portuguese = "Deixe vazio para usar a pasta padrão. Os caminhos relat
 portuguese = "Deixe vazio para usar a pasta predefinida. Os caminhos relativos partem da pasta de configuração."
 turkish = "Varsayılan dizin için boş bırakın. Göreli yollar yapılandırma dizinini temel alır."
 polish = "Pozostaw puste, aby użyć domyślnego katalogu. Ścieżki względne zaczynają się w katalogu konfiguracji."
+
+[[message]]
+key = "Dummy mini view rendering unavailable"
+[message.translations]
+simplified_chinese = "分身小窗暂时无法渲染"
+traditional_chinese = "分身小窗暫時無法繪製"
+japanese = "分身の小窓を描画できません"
+korean = "분신 미니 화면을 렌더링할 수 없습니다"
+russian = "Не удалось отрисовать мини-окно двойника"
+german = "Die Dummy-Miniansicht kann nicht gerendert werden"
+spanish = "No se puede renderizar la vista pequeña del dummy"
+french = "Impossible de rendre la mini-vue du dummy"
+brazilian_portuguese = "Não é possível renderizar a minivisualização do dummy"
+portuguese = "Não é possível renderizar a minivista do dummy"
+turkish = "Kuklanın mini görünümü çizilemiyor"
+polish = "Nie można wyrenderować miniwidoku dummy"
+
+[[message]]
+key = "Graphics backend does not support dummy mini view"
+[message.translations]
+simplified_chinese = "当前图形后端不支持分身小窗"
+traditional_chinese = "目前的圖形後端不支援分身小窗"
+japanese = "この描画環境は分身の小窓に対応していません"
+korean = "현재 그래픽 백엔드는 분신 미니 화면을 지원하지 않습니다"
+russian = "Графический движок не поддерживает мини-окно двойника"
+german = "Das Grafik-Backend unterstützt die Dummy-Miniansicht nicht"
+spanish = "El motor gráfico no admite la vista pequeña del dummy"
+french = "Le moteur graphique ne prend pas en charge la mini-vue du dummy"
+brazilian_portuguese = "O backend gráfico não suporta a minivisualização do dummy"
+portuguese = "O backend gráfico não suporta a minivista do dummy"
+turkish = "Grafik arka ucu kuklanın mini görünümünü desteklemiyor"
+polish = "Backend graficzny nie obsługuje miniwidoku dummy"

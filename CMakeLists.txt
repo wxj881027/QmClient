@@ -4958,7 +4958,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/client/skins/skins_preset_contract_test.cpp
     src/test/contract/client/skins/skins_official_index_contract_test.cpp
     src/test/contract/engine/graphics/render_target_contract_test.cpp
+    src/test/unit/engine/graphics/render_target_geometry_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
+    src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp
     src/test/unit/engine/netobj_secure_unpack_test.cpp

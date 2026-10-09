@@ -1,7 +1,7 @@
 {
   "summary": {
-    "must_i18n": 9705,
-    "business_data": 13770,
+    "must_i18n": 9707,
+    "business_data": 13768,
     "test_only": 5185,
     "needs_review": 511,
     "violation": 0
@@ -548,35 +548,35 @@
     },
     {
       "file": "src/engine/client/graphics_threaded.cpp",
-      "line": 1512,
+      "line": 1517,
       "text": "\"%s\" is not compatible with pnglite and cannot be loaded by old DDNet versions:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/graphics_threaded.cpp",
-      "line": 1592,
+      "line": 1597,
       "text": "The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/graphics_threaded.cpp",
-      "line": 1630,
+      "line": 1635,
       "text": "The format of texture %s is not RGBA which will cause visual bugs.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/graphics_threaded.cpp",
-      "line": 1735,
+      "line": 1740,
       "text": "Failed to save screenshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/engine/client/graphics_threaded.cpp",
-      "line": 4617,
+      "line": 4622,
       "text": "Failed to save screenshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -39125,385 +39125,399 @@
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 412,
+      "line": 413,
       "text": "Team %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 556,
+      "line": 557,
       "text": "Manual",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 557,
+      "line": 558,
       "text": "Race",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 558,
+      "line": 559,
       "text": "Auto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 559,
+      "line": 560,
       "text": "Replay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 942,
+      "line": 943,
       "text": "%s has requested to swap with %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1420,
+      "line": 1424,
       "text": "Game paused",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1437,
+      "line": 1441,
       "text": "Sudden Death",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1804,
+      "line": 1808,
       "text": "Warmup",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1817,
+      "line": 1821,
       "text": "Warmup",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1902,
+      "line": 1906,
       "text": "Dummy mini view",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1912,
+      "line": 1916,
       "text": "HUD editor preview",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1916,
+      "line": 1920,
       "text": "Connect dummy to enable",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1921,
+      "line": 1925,
       "text": "Waiting for snapshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 3263,
+      "line": 2069,
+      "text": "Graphics backend does not support dummy mini view",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/hud.cpp",
+      "line": 2137,
+      "text": "Dummy mini view rendering unavailable",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/components/hud.cpp",
+      "line": 3245,
       "text": "Connection Problems…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 3278,
+      "line": 3260,
       "text": "Please balance teams!",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5848,
+      "line": 5830,
       "text": "Key Sticking: ?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5850,
+      "line": 5832,
       "text": "Key Sticking: On",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5852,
+      "line": 5834,
       "text": "Key Sticking: Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5854,
+      "line": 5836,
       "text": "Key Sticking: Reset Self",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5860,
+      "line": 5842,
       "text": "Normal",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5862,
+      "line": 5844,
       "text": "DF",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5864,
+      "line": 5846,
       "text": "HDF",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5866,
+      "line": 5848,
       "text": "Custom",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5867,
+      "line": 5849,
       "text": "Hammer: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5873,
+      "line": 5855,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5873,
+      "line": 5855,
       "text": "On",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5874,
+      "line": 5856,
       "text": "Dummy Control: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5880,
+      "line": 5862,
       "text": "Off",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5880,
+      "line": 5862,
       "text": "On",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5882,
+      "line": 5864,
       "text": "Dummy copy: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6220,
+      "line": 6202,
       "text": "Position:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6265,
+      "line": 6247,
       "text": "Speed:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6302,
+      "line": 6284,
       "text": "Angle:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6337,
+      "line": 6319,
       "text": "Alive: %.1fs/%.1fs",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6347,
+      "line": 6329,
       "text": "Rescue/Freeze: %d/%d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6359,
+      "line": 6341,
       "text": "Hooking L/R: %.0f%%/%.0f%%",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6372,
+      "line": 6354,
       "text": "Map Progress: %.1f%%",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6374,
+      "line": 6356,
       "text": "Map Progress: --",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6626,
+      "line": 6608,
       "text": "Multi-View",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6628,
+      "line": 6610,
       "text": "Free-View",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6633,
+      "line": 6615,
       "text": "Following %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6638,
+      "line": 6620,
       "text": "Multi-View",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6647,
+      "line": 6629,
       "text": "Following %d: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6649,
+      "line": 6631,
       "text": "Following %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6653,
+      "line": 6635,
       "text": "Free-View",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6661,
+      "line": 6643,
       "text": "AUTO",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7362,
+      "line": 7344,
       "text": "Drown deaths",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7380,
+      "line": 7362,
       "text": "Teammate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7385,
+      "line": 7367,
       "text": "More teammates...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7415,
+      "line": 7397,
       "text": "Teammate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7456,
+      "line": 7438,
       "text": "More teammates...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7471,
+      "line": 7453,
       "text": "Server best:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7485,
+      "line": 7467,
       "text": "Personal best:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7500,
+      "line": 7482,
       "text": "Personal best:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -108805,689 +108819,682 @@
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 61,
+      "line": 62,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 63,
+      "line": 64,
       "text": "Vulkan",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 65,
+      "line": 66,
       "text": "Vulkan",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 70,
+      "line": 71,
       "text": "OpenGL",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 201,
+      "line": 202,
       "text": "hud_local_time_v2",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 207,
+      "line": 208,
       "text": "hud_media_island",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 214,
+      "line": 215,
       "text": "entrance_drop",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 214,
+      "line": 215,
       "text": "entrance_expand",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 219,
+      "line": 220,
       "text": "hud_media_island_satellite_item",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 225,
+      "line": 226,
       "text": "hud_recording_status",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 231,
+      "line": 232,
       "text": "hud_switch_countdown",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 386,
+      "line": 387,
       "text": "%d/%d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 388,
+      "line": 389,
       "text": "%d/%d",
       "category": "business_data",
       "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/hud.cpp",
-      "line": 456,
-      "text": "00:00",
-      "category": "business_data",
-      "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
       "line": 457,
-      "text": "00:00:00",
+      "text": "00:00",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
       "line": 458,
-      "text": "0d 00:00:00",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/hud.cpp",
-      "line": 459,
-      "text": "00d 00:00:00",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/hud.cpp",
-      "line": 460,
-      "text": "000d 00:00:00",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/hud.cpp",
-      "line": 495,
-      "text": "00:00",
-      "category": "business_data",
-      "reason": "numeric display format template"
-    },
-    {
-      "file": "src/game/client/components/hud.cpp",
-      "line": 496,
       "text": "00:00:00",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 497,
+      "line": 459,
       "text": "0d 00:00:00",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 498,
+      "line": 460,
       "text": "00d 00:00:00",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 499,
+      "line": 461,
       "text": "000d 00:00:00",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 549,
+      "line": 496,
+      "text": "00:00",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/hud.cpp",
+      "line": 497,
+      "text": "00:00:00",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/components/hud.cpp",
+      "line": 498,
+      "text": "0d 00:00:00",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/hud.cpp",
+      "line": 499,
+      "text": "00d 00:00:00",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/hud.cpp",
+      "line": 500,
+      "text": "000d 00:00:00",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/components/hud.cpp",
+      "line": 550,
       "text": "  ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 551,
+      "line": 552,
       "text": " ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 945,
+      "line": 946,
       "text": "%s->%s Swap:%d秒",
       "category": "business_data",
       "reason": "HUD config default, preview sample, localized alias, or dynamic display template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 950,
+      "line": 951,
       "text": "%s->%s 可交换!",
       "category": "business_data",
       "reason": "HUD config default, preview sample, localized alias, or dynamic display template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1050,
+      "line": 1051,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1295,
+      "line": 1299,
       "text": "11:56.13",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1464,
+      "line": 1468,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1465,
+      "line": 1469,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1486,
+      "line": 1490,
       "text": "100",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1636,
+      "line": 1640,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1676,
+      "line": 1680,
       "text": "%d.",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1684,
+      "line": 1688,
       "text": "10",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1771,
+      "line": 1775,
       "text": "%d.",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1807,
+      "line": 1811,
       "text": "%d.%d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1809,
+      "line": 1813,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 1811,
+      "line": 1815,
       "text": "0.0",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2132,
-      "text": "hud",
-      "category": "business_data",
-      "reason": "machine/log/matcher call argument"
-    },
-    {
-      "file": "src/game/client/components/hud.cpp",
-      "line": 2132,
-      "text": "Vulkan dummy mini view render target unavailable: %s",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/hud.cpp",
-      "line": 2297,
+      "line": 2279,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2301,
+      "line": 2283,
       "text": "0000",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2305,
+      "line": 2287,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2312,
+      "line": 2294,
       "text": "%.1f%%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2413,
+      "line": 2395,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2417,
+      "line": 2399,
       "text": "event=hud_text_info item=%s enabled=%d rendered=%d target_alpha=%.3f resolved_alpha=%.3f target_x=%.1f target_y=%.1f resolved_x=%.1f resolved_y=%.1f text_container=%d text_container_valid=%d text_len=%d",
       "category": "business_data",
       "reason": "log or telemetry payload"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2419,
+      "line": 2401,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2420,
+      "line": 2402,
       "text": "perf/autodiag_hud",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2438,
+      "line": 2420,
       "text": "practice mode",
       "category": "business_data",
       "reason": "HUD config default, preview sample, localized alias, or dynamic display template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2439,
+      "line": 2421,
       "text": "(you can use practice commands /tc /invincible)",
       "category": "business_data",
       "reason": "HUD config default, preview sample, localized alias, or dynamic display template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2470,
+      "line": 2452,
       "text": "X: %.2f",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2474,
+      "line": 2456,
       "text": "Y: %.2f",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2479,
+      "line": 2461,
       "text": "Angle: %d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2483,
+      "line": 2465,
       "text": "VelY: %.2f",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2488,
+      "line": 2470,
       "text": "VelX: %.2f",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2534,
+      "line": 2516,
       "text": "x_ninja",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2805,
+      "line": 2787,
       "text": "开关#%d:%d秒",
       "category": "business_data",
       "reason": "HUD config default, preview sample, localized alias, or dynamic display template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2807,
+      "line": 2789,
       "text": "  ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 2902,
+      "line": 2884,
       "text": "开关#%d:%d秒",
       "category": "business_data",
       "reason": "HUD config default, preview sample, localized alias, or dynamic display template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 3695,
+      "line": 3677,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 3698,
+      "line": 3680,
       "text": "%H:%M",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 3700,
+      "line": 3682,
       "text": "00:00",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 3752,
+      "line": 3734,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 3765,
+      "line": 3747,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4078,
+      "line": 4060,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4090,
+      "line": 4072,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4093,
+      "line": 4075,
       "text": "%H:%M",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4095,
+      "line": 4077,
       "text": "00:00",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4101,
+      "line": 4083,
       "text": "CP%d",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4200,
+      "line": 4182,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4288,
+      "line": 4270,
       "text": "cover_in",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4289,
+      "line": 4271,
       "text": "cover_out",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4290,
+      "line": 4272,
       "text": "track_title_in",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4291,
+      "line": 4273,
       "text": "track_title_out",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4292,
+      "line": 4274,
       "text": "track_meta_in",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4293,
+      "line": 4275,
       "text": "track_meta_out",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4296,
+      "line": 4278,
       "text": "entrance_drop",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4296,
+      "line": 4278,
       "text": "entrance_expand",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4303,
+      "line": 4285,
       "text": "capsule_morph",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4806,
+      "line": 4788,
       "text": "%s - %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 4820,
+      "line": 4802,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5622,
+      "line": 5604,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5677,
+      "line": 5659,
       "text": "%H:%M",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 5677,
+      "line": 5659,
       "text": "%H:%M.%S",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6030,
+      "line": 6012,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6243,
+      "line": 6225,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6255,
+      "line": 6237,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6287,
+      "line": 6269,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6292,
+      "line": 6274,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6314,
+      "line": 6296,
       "text": "%.2f",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6565,
+      "line": 6547,
       "text": "%.1f%%",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6567,
+      "line": 6549,
       "text": "--",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6631,
+      "line": 6613,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6633,
+      "line": 6615,
       "text": "Spectating",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6647,
+      "line": 6629,
       "text": "Spectating",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6649,
+      "line": 6631,
       "text": "Spectating",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6661,
+      "line": 6643,
       "text": "Spectating Camera Mode Icon",
       "category": "business_data",
       "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/client/components/hud.cpp",
+      "line": 6674,
+      "text": "%H:%M",
+      "category": "business_data",
+      "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
@@ -109498,175 +109505,168 @@
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6710,
-      "text": "%H:%M",
-      "category": "business_data",
-      "reason": "display formatting template"
-    },
-    {
-      "file": "src/game/client/components/hud.cpp",
-      "line": 6710,
+      "line": 6692,
       "text": "%H:%M.%S",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6798,
+      "line": 6780,
       "text": "Pure Music",
       "category": "business_data",
       "reason": "HUD config default, preview sample, localized alias, or dynamic display template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 6816,
+      "line": 6798,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7140,
+      "line": 7122,
       "text": "Finish time: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7150,
+      "line": 7132,
       "text": "-%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7155,
+      "line": 7137,
       "text": "+%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7185,
+      "line": 7167,
       "text": "-%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7191,
+      "line": 7173,
       "text": "+%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7217,
+      "line": 7199,
       "text": "Finish time: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7241,
+      "line": 7223,
       "text": "-%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7247,
+      "line": 7229,
       "text": "+%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7268,
+      "line": 7250,
       "text": "-%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7273,
+      "line": 7255,
       "text": "+%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7381,
+      "line": 7363,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7416,
+      "line": 7398,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7475,
+      "line": 7457,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7475,
+      "line": 7457,
       "text": "%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7475,
+      "line": 7457,
       "text": "   ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7490,
+      "line": 7472,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7490,
+      "line": 7472,
       "text": "%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7490,
+      "line": 7472,
       "text": "   ",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7503,
+      "line": 7485,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7503,
+      "line": 7485,
       "text": "%s%s",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/components/hud.cpp",
-      "line": 7503,
+      "line": 7485,
       "text": "   ",
       "category": "business_data",
       "reason": "empty or whitespace literal"

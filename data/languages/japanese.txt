@@ -3707,6 +3707,9 @@ Dummy marking color
 Dummy mini view
 == ダミーミニビュー
 
+Dummy mini view rendering unavailable
+== 分身の小窓を描画できません
+
 Dummy mini view size (percent)
 == ダミーミニビューサイズ (パーセント)
 
@@ -5281,6 +5284,9 @@ Gradient vertical position
 
 Graphics
 == グラフィック
+
+Graphics backend does not support dummy mini view
+== この描画環境は分身の小窓に対応していません
 
 Graphics card
 == グラフィックカード

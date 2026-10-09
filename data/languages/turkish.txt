@@ -3707,6 +3707,9 @@ Dummy marking color
 Dummy mini view
 == Dummy mini görünüm
 
+Dummy mini view rendering unavailable
+== Kuklanın mini görünümü çizilemiyor
+
 Dummy mini view size (percent)
 == Kukla mini görünüm boyutu (yüzde).
 
@@ -5281,6 +5284,9 @@ Gradient vertical position
 
 Graphics
 == Grafikler
+
+Graphics backend does not support dummy mini view
+== Grafik arka ucu kuklanın mini görünümünü desteklemiyor
 
 Graphics card
 == Ekran kartı
