@@ -1136,7 +1136,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			Button.VSplitRight(110.0f, &Button, &WeightButton);
 			Button.VSplitRight(MarginSmall, &Button, nullptr);
 		}
-		const int FontSelectedNew = DoSettingsDropDown(&Button, FontSelectedOld, s_FontDropDownNames.data(), s_FontDropDownNames.size(), s_FontDropDownState);
+		const int FontSelectedNew = DoSettingsDropDown(&Button, FontSelectedOld, s_FontDropDownNames.data(), s_FontDropDownNames.size(), s_FontDropDownState, {}, g_Config.m_QmCustomFont);
 		std::string LatinSelectedConfig;
 		if(FontSelectedOld != FontSelectedNew && s_FontSelection.IsFamilySelection(FontSelectedNew) && TextRender()->QmFontFamilyDefaultConfig(s_FontDropDownNames[FontSelectedNew], LatinSelectedConfig) && LatinSelectedConfig.size() < sizeof(g_Config.m_QmCustomFont))
 		{
@@ -1191,7 +1191,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			const int LatinWeightSelected = QmSelectFontWeightEntry(s_LatinWeightEntries, LatinCanonicalConfig.c_str(), aLatinFamily, g_Config.m_QmCustomFontWeight);
 			CUi::SDropDownProperties LatinWeightProperties;
 			LatinWeightProperties.m_Enabled = !s_LatinStylesOwned.empty();
-			const int LatinWeightNew = DoSettingsDropDown(&WeightButton, LatinWeightSelected, s_LatinWeightLabels.data(), s_LatinWeightLabels.size(), s_LatinWeightState, LatinWeightProperties);
+			const int LatinWeightNew = DoSettingsDropDown(&WeightButton, LatinWeightSelected, s_LatinWeightLabels.data(), s_LatinWeightLabels.size(), s_LatinWeightState, LatinWeightProperties, &g_Config.m_QmCustomFontWeight);
 			if(LatinWeightNew >= 0 && (size_t)LatinWeightNew < s_LatinWeightEntries.size() && LatinWeightNew != LatinWeightSelected)
 			{
 				const SQmFontWeightEntry &Entry = s_LatinWeightEntries[LatinWeightNew];
@@ -1308,7 +1308,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			Button.VSplitRight(MarginSmall, &Button, nullptr);
 		}
 		const int CjkSelectedOld = s_CjkSelection.Selected();
-		const int CjkSelectedNew = DoSettingsDropDown(&Button, CjkSelectedOld, s_CjkDropDownNames.data(), s_CjkDropDownNames.size(), s_CjkDropDownState);
+		const int CjkSelectedNew = DoSettingsDropDown(&Button, CjkSelectedOld, s_CjkDropDownNames.data(), s_CjkDropDownNames.size(), s_CjkDropDownState, {}, g_Config.m_QmCustomFontCjk);
 		std::string CjkSelectedConfig;
 		const bool CjkSelectionAvailable = CjkSelectedNew == 0 || (CjkSelectedNew > 0 && (size_t)CjkSelectedNew <= s_CjkDropDownNamesOwned.size() && TextRender()->QmFontFamilyDefaultConfig(s_CjkDropDownNamesOwned[CjkSelectedNew - 1].c_str(), CjkSelectedConfig) && CjkSelectedConfig.size() < sizeof(g_Config.m_QmCustomFontCjk));
 		if(CjkSelectedNew != CjkSelectedOld && CjkSelectionAvailable)
@@ -1343,7 +1343,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			const int CjkWeightSelected = QmSelectFontWeightEntry(s_CjkWeightEntries, CjkCanonicalConfig.c_str(), aCjkFamily, g_Config.m_QmCustomFontWeightCjk);
 			CUi::SDropDownProperties CjkWeightProperties;
 			CjkWeightProperties.m_Enabled = !s_CjkStylesOwned.empty();
-			const int CjkWeightNew = DoSettingsDropDown(&CjkWeightButton, CjkWeightSelected, s_CjkWeightLabels.data(), s_CjkWeightLabels.size(), s_CjkWeightState, CjkWeightProperties);
+			const int CjkWeightNew = DoSettingsDropDown(&CjkWeightButton, CjkWeightSelected, s_CjkWeightLabels.data(), s_CjkWeightLabels.size(), s_CjkWeightState, CjkWeightProperties, &g_Config.m_QmCustomFontWeightCjk);
 			if(CjkWeightNew >= 0 && (size_t)CjkWeightNew < s_CjkWeightEntries.size() && CjkWeightNew != CjkWeightSelected)
 			{
 				const SQmFontWeightEntry &Entry = s_CjkWeightEntries[CjkWeightNew];
@@ -1424,7 +1424,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 		const auto &s_IconsDropDownNamesOwned = s_IconsSelection.Families();
 		const auto &s_IconsDropDownNames = s_IconsSelection.Names();
 		const int IconsSelectedOld = s_IconsSelection.Selected();
-		const int IconsSelectedNew = DoSettingsDropDown(&Button, IconsSelectedOld, s_IconsDropDownNames.data(), s_IconsDropDownNames.size(), s_IconsDropDownState);
+		const int IconsSelectedNew = DoSettingsDropDown(&Button, IconsSelectedOld, s_IconsDropDownNames.data(), s_IconsDropDownNames.size(), s_IconsDropDownState, {}, g_Config.m_QmCustomFontIcons);
 		std::string IconsSelectedConfig;
 		const bool IconsSelectionAvailable = IconsSelectedNew == 0 || (IconsSelectedNew > 0 && (size_t)IconsSelectedNew <= CustomFaces.size() && TextRender()->QmFontFamilyDefaultConfig(s_IconsDropDownNamesOwned[IconsSelectedNew - 1].c_str(), IconsSelectedConfig) && IconsSelectedConfig.size() < sizeof(g_Config.m_QmCustomFontIcons));
 		if(IconsSelectedNew != IconsSelectedOld && IconsSelectionAvailable)

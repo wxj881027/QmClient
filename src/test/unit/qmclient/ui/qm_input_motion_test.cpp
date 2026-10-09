@@ -23,22 +23,22 @@ protected:
 	{
 		m_Text = pText;
 		m_Motion.Update(pText, m_Now, m_Level, AnimateGlyphs);
-		m_Motion.FillCharOffsets(m_vOffsets, 12.0f);
+		m_Motion.FillCharOffsets(m_vOffsets);
 	}
 
 	void Advance(std::chrono::nanoseconds Elapsed)
 	{
 		m_Now += Elapsed;
 		m_Motion.Update(m_Text.c_str(), m_Now, m_Level);
-		m_Motion.FillCharOffsets(m_vOffsets, 12.0f);
+		m_Motion.FillCharOffsets(m_vOffsets);
 	}
 
-	float OffsetAt(int ByteOffset) const
+	float ScaleAt(int ByteOffset) const
 	{
 		const auto It = std::find_if(m_vOffsets.begin(), m_vOffsets.end(), [ByteOffset](const auto &Offset) {
 			return Offset.m_CharIndex == ByteOffset;
 		});
-		return It == m_vOffsets.end() ? 0.0f : It->m_YOffset;
+		return It == m_vOffsets.end() ? 1.0f : It->m_Scale;
 	}
 };
 
@@ -52,9 +52,13 @@ TEST_F(CQmLineInputMotionTest, NewCharactersBounceOnceAndSettlePromptly)
 {
 	Update("");
 	Update("a");
-	EXPECT_GT(OffsetAt(0), 0.0f);
+	ASSERT_EQ(m_vOffsets.size(), 1u);
+	// 完整缩放幅度为 21.24%，即原 18% 的 1.18 倍。
+	EXPECT_NEAR(ScaleAt(0), 0.7876f, 1e-6f);
+	EXPECT_FLOAT_EQ(m_vOffsets[0].m_XOffset, 0.0f);
+	EXPECT_FLOAT_EQ(m_vOffsets[0].m_YOffset, 0.0f);
 	Advance(120ms);
-	EXPECT_LT(OffsetAt(0), 0.0f);
+	EXPECT_GT(ScaleAt(0), 1.0f);
 	for(int i = 0; i < 5; ++i)
 		Advance(100ms);
 	EXPECT_TRUE(m_vOffsets.empty());
@@ -68,9 +72,9 @@ TEST_F(CQmLineInputMotionTest, MixedUtf8CharactersUseTheirActualByteOffsets)
 	EXPECT_EQ(m_vOffsets[0].m_CharIndex, 0);
 	EXPECT_EQ(m_vOffsets[1].m_CharIndex, 1);
 	EXPECT_EQ(m_vOffsets[2].m_CharIndex, 4);
-	EXPECT_FLOAT_EQ(OffsetAt(0), 0.0f);
-	EXPECT_GT(OffsetAt(1), 0.0f);
-	EXPECT_GT(OffsetAt(4), 0.0f);
+	EXPECT_FLOAT_EQ(ScaleAt(0), 1.0f);
+	EXPECT_LT(ScaleAt(1), 1.0f);
+	EXPECT_LT(ScaleAt(4), 1.0f);
 }
 
 TEST_F(CQmLineInputMotionTest, InsertingInTheMiddlePreservesNeighbouringMotion)
@@ -78,12 +82,12 @@ TEST_F(CQmLineInputMotionTest, InsertingInTheMiddlePreservesNeighbouringMotion)
 	Update("");
 	Update("ab");
 	Advance(20ms);
-	const float A = OffsetAt(0);
-	const float B = OffsetAt(1);
+	const float A = ScaleAt(0);
+	const float B = ScaleAt(1);
 	Update("axb");
-	EXPECT_FLOAT_EQ(OffsetAt(0), A);
-	EXPECT_FLOAT_EQ(OffsetAt(2), B);
-	EXPECT_GT(OffsetAt(1), A);
+	EXPECT_FLOAT_EQ(ScaleAt(0), A);
+	EXPECT_FLOAT_EQ(ScaleAt(2), B);
+	EXPECT_LT(ScaleAt(1), A);
 }
 
 TEST_F(CQmLineInputMotionTest, NewlineDoesNotShiftTheFollowingUtf8Animation)
@@ -91,8 +95,8 @@ TEST_F(CQmLineInputMotionTest, NewlineDoesNotShiftTheFollowingUtf8Animation)
 	Update("");
 	Update("a\n你");
 	ASSERT_EQ(m_vOffsets.size(), 3u);
-	EXPECT_FLOAT_EQ(OffsetAt(1), 0.0f);
-	EXPECT_GT(OffsetAt(2), 0.0f);
+	EXPECT_FLOAT_EQ(ScaleAt(1), 1.0f);
+	EXPECT_LT(ScaleAt(2), 1.0f);
 }
 
 TEST_F(CQmLineInputMotionTest, CompositionCommitDropsTheReplacedLetters)
@@ -103,7 +107,7 @@ TEST_F(CQmLineInputMotionTest, CompositionCommitDropsTheReplacedLetters)
 	Update("你");
 	ASSERT_EQ(m_vOffsets.size(), 1u);
 	EXPECT_EQ(m_vOffsets[0].m_CharIndex, 0);
-	EXPECT_GT(m_vOffsets[0].m_YOffset, 0.0f);
+	EXPECT_LT(m_vOffsets[0].m_Scale, 1.0f);
 }
 
 TEST_F(CQmLineInputMotionTest, DeletingMiddleTextKeepsSuffixMotionWithoutReplayingIt)
@@ -111,10 +115,10 @@ TEST_F(CQmLineInputMotionTest, DeletingMiddleTextKeepsSuffixMotionWithoutReplayi
 	Update("");
 	Update("abc");
 	Advance(20ms);
-	const float C = OffsetAt(2);
+	const float C = ScaleAt(2);
 	Update("ac");
 	ASSERT_EQ(m_vOffsets.size(), 2u);
-	EXPECT_FLOAT_EQ(OffsetAt(1), C);
+	EXPECT_FLOAT_EQ(ScaleAt(1), C);
 }
 
 TEST_F(CQmLineInputMotionTest, UnchangedTextDoesNotRestartTheBounce)
@@ -122,9 +126,9 @@ TEST_F(CQmLineInputMotionTest, UnchangedTextDoesNotRestartTheBounce)
 	Update("");
 	Update("a");
 	Advance(50ms);
-	const float Before = OffsetAt(0);
+	const float Before = ScaleAt(0);
 	Update("a");
-	EXPECT_FLOAT_EQ(OffsetAt(0), Before);
+	EXPECT_FLOAT_EQ(ScaleAt(0), Before);
 }
 
 TEST_F(CQmLineInputMotionTest, HiddenOrSelectedTextStopsGlyphMotion)
@@ -154,13 +158,13 @@ TEST_F(CQmLineInputMotionTest, ReducedMotionUsesASmallerLetterBounce)
 {
 	Update("");
 	Update("a");
-	const float Full = OffsetAt(0);
+	const float Full = ScaleAt(0);
 	m_Motion.Reset();
 	m_Level = 1;
 	Update("");
 	Update("a");
-	EXPECT_GT(OffsetAt(0), 0.0f);
-	EXPECT_LT(OffsetAt(0), Full * 0.5f);
+	EXPECT_NEAR(ScaleAt(0), 0.9292f, 1e-6f);
+	EXPECT_LT(1.0f - ScaleAt(0), (1.0f - Full) * 0.5f);
 }
 
 TEST_F(CQmLineInputMotionTest, ResetPreventsMotionLeakingIntoTheNextFocus)
@@ -180,13 +184,13 @@ TEST_F(CQmLineInputMotionTest, LargeInsertKeepsTheAnimatedGlyphBudgetBounded)
 	Update("");
 	const std::string Text(200, 'a');
 	Update(Text.c_str());
-	EXPECT_EQ(std::count_if(m_vOffsets.begin(), m_vOffsets.end(), [](const auto &Offset) { return Offset.m_YOffset != 0.0f; }),
+	EXPECT_EQ(std::count_if(m_vOffsets.begin(), m_vOffsets.end(), [](const auto &Offset) { return Offset.m_Scale != 1.0f; }),
 		CQmLineInputMotion::MAX_ANIMATED_GLYPHS);
 	for(int i = 0; i < 7; ++i)
 		Advance(100ms);
 	Update("");
 	Update("reused");
-	EXPECT_GT(OffsetAt(0), 0.0f);
+	EXPECT_LT(ScaleAt(0), 1.0f);
 }
 
 TEST_F(CQmLineInputMotionTest, CaretFollowsTypingAndRetargetsWithoutJumping)

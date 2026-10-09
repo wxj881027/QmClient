@@ -19,7 +19,7 @@ public:
 
 	void Reset();
 	void Update(const char *pText, std::chrono::nanoseconds Now, int MotionLevel, bool AnimateGlyphs = true);
-	void FillCharOffsets(std::vector<STextCharOffset> &vOffsets, float FontSize) const;
+	void FillCharOffsets(std::vector<STextCharOffset> &vOffsets) const;
 	vec2 ResolveCaret(vec2 Target, float FontHeight, bool Snap = false);
 
 private:

@@ -3,6 +3,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/QmUi/SettingsCardHelp.h>
+#include <game/client/QmUi/UiConfigHint.h>
 #include <game/client/gameclient.h>
 #include <game/client/lineinput.h>
 #include <game/client/ui.h>
@@ -18,6 +19,7 @@ void CTooltips::OnReset()
 {
 	m_HoverTime = -1;
 	m_Tooltips.clear();
+	m_ConfigHints.clear();
 	ClearActiveTooltip();
 }
 
@@ -65,12 +67,41 @@ void CTooltips::DoSmallToolTip(const void *pId, const CUIRect *pNearRect, const 
 	DoToolTip(pId, pNearRect, pText, WidthHint, FontSize, true, true);
 }
 
+void CTooltips::DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const void *pValue, const void *pSecondValue)
+{
+	const char *pCommand = QmUiConfigCommand(g_Config, pValue);
+	const char *pSecondCommand = QmUiConfigCommand(g_Config, pSecondValue);
+	if(pId == nullptr || (pCommand == nullptr && pSecondCommand == nullptr))
+		return;
+	m_ConfigHints[reinterpret_cast<uintptr_t>(pId)].SetCommands(pCommand, pSecondCommand);
+	const bool Small = GameClient()->m_Menus.IsSettingsPageActive();
+	DoToolTip(pId, pNearRect, nullptr, -1.0f, Small ? 10.0f : 14.0f, Small, true);
+}
+
 void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, const float FontSize, const bool SmallInstant, const bool HoverByRect, const bool Immediate)
 {
+	const uintptr_t Id = reinterpret_cast<uintptr_t>(pId);
+	auto Hint = m_ConfigHints.find(Id);
+	if(Hint == m_ConfigHints.end())
+	{
+		if(const char *pCommand = QmUiConfigCommand(g_Config, pId); pCommand != nullptr)
+		{
+			Hint = m_ConfigHints.try_emplace(Id).first;
+			Hint->second.SetCommands(pCommand);
+		}
+	}
+	const bool HasConfigHint = Hint != m_ConfigHints.end();
+	const bool RectHover = HoverByRect || HasConfigHint;
+	if(HasConfigHint)
+	{
+		Hint->second.SetDescription(pText);
+		Hint->second.SetFallbackDescription(m_pCardHelp != nullptr ? m_pCardHelp->Overview() : nullptr);
+		pText = Hint->second.Text();
+	}
 	if(m_pCardHelp != nullptr)
 	{
 		const bool ReadOnly = Ui()->RenderOnly();
-		const bool Hovered = !ReadOnly && Ui()->MouseHovered(pNearRect) && (HoverByRect || Ui()->HotItem() == pId);
+		const bool Hovered = !ReadOnly && Ui()->MouseHovered(pNearRect) && (RectHover || Ui()->HotItem() == pId);
 		const bool Focused = !ReadOnly && (Ui()->ActiveItem() == pId || CLineInput::GetActiveInput() == pId);
 		m_pCardHelp->Register(reinterpret_cast<uintptr_t>(pId), pText, Hovered, Focused, [&](const char *pHelp) {
 			return TextRender()->TextBoundingBox(m_pCardHelp->FontSize(), pHelp, -1, std::max(1.0f, m_pCardHelp->Width())).m_H;
@@ -79,7 +110,6 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	}
 	if(Ui()->RenderOnly())
 		return;
-	uintptr_t Id = reinterpret_cast<uintptr_t>(pId);
 	const auto &[Entry, WasInserted] = m_Tooltips.emplace(Id, CTooltip{
 									  pId,
 									  *pNearRect,
@@ -95,7 +125,7 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	}
 	Tooltip.m_FontSize = std::max(1.0f, FontSize);
 	Tooltip.m_WidthHint = WidthHint;
-	Tooltip.m_HoverByRect = HoverByRect;
+	Tooltip.m_HoverByRect = RectHover;
 	Tooltip.m_Immediate = Immediate;
 	if(Tooltip.m_SmallInstant != SmallInstant)
 		Tooltip.m_FadeTime = SmallInstant ? 0.0f : 0.75f;
@@ -108,6 +138,11 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	if(QmTooltipHovered(Tooltip, *Ui()))
 	{
 		SetActiveTooltip(Tooltip);
+	}
+	else if(HasConfigHint && m_ActiveTooltip.has_value() && &m_ActiveTooltip.value().get() == &Tooltip)
+	{
+		// 本帧的裁剪或弹层已经屏蔽目标，不能沿用上一帧的可悬浮状态。
+		ClearActiveTooltip();
 	}
 }
 

@@ -94,6 +94,52 @@ struct SUiTheme
 	float m_FocusRingInset = 1.0f;
 };
 
+struct SUiToggleStyle
+{
+	ColorRGBA m_Track;
+	ColorRGBA m_Knob;
+};
+
+inline SUiToggleStyle ResolveUiToggleStyle(const SUiTheme &Theme, ColorRGBA ControlSurface, ColorRGBA Backdrop, bool Value, bool Enabled)
+{
+	SUiToggleStyle Style;
+	Style.m_Track = Value ? Theme.m_Accent : ControlSurface;
+	Style.m_Knob = ResolveUiSurfaceForeground(Style.m_Track, Backdrop);
+	if(!Enabled)
+	{
+		Style.m_Track.a *= 0.65f;
+		Style.m_Knob.a *= 0.65f;
+	}
+	return Style;
+}
+
+struct SUiSliderStyle
+{
+	ColorRGBA m_Track;
+	ColorRGBA m_Fill;
+	ColorRGBA m_Handle;
+	ColorRGBA m_Border;
+};
+
+inline SUiSliderStyle ResolveUiSliderStyle(const SUiTheme &Theme, ColorRGBA Backdrop, bool Hovered, bool Pressed, bool Enabled = true)
+{
+	const ColorRGBA Foreground = ResolveUiSurfaceForeground(Backdrop);
+	SUiSliderStyle Style;
+	Style.m_Track = Foreground.WithAlpha(0.25f);
+	Style.m_Fill = Theme.m_Accent.WithAlpha(0.85f);
+	Style.m_Handle = ResolveUiSurfaceIconColor(Backdrop, Theme.m_Accent);
+	Style.m_Border = Foreground.WithAlpha(Enabled && (Hovered || Pressed) ? 0.70f : 0.30f);
+	if(Enabled && (Hovered || Pressed))
+		Style.m_Handle = Style.m_Handle.WithAlpha(1.0f);
+	if(!Enabled)
+	{
+		Style.m_Track.a *= 0.65f;
+		Style.m_Fill.a *= 0.65f;
+		Style.m_Handle.a *= 0.65f;
+	}
+	return Style;
+}
+
 inline SUiTheme ResolveUiTheme(const ColorHSLA BaseColor, float Opacity, const ColorHSLA FocusColor = ColorHSLA(0.60f, 0.78f, 0.52f, 1.0f), const ColorHSLA AccentColor = ColorHSLA(0x8FDDAD), const ColorHSLA SelectedColor = ColorHSLA(0x8FDDAD))
 {
 	Opacity = std::clamp(Opacity, 0.0f, 1.0f);

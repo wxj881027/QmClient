@@ -70,6 +70,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 	const int NoiseSuppressModeForLayout = std::clamp(g_Config.m_QmVoiceNoiseSuppressEnable, 0, 2);
 	CUIRect Row, LabelCol, ControlCol;
 	auto DoQmSettingsCheckboxAuto = [this](const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float) {
+		Ui()->DoConfigTooltip(pId, pRect, pValue);
 		const bool Changed = DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, pId, pTextId, pText, *pValue, pRect) != 0;
 		if(Changed)
 			*pValue ^= 1;
@@ -451,7 +452,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			else
 			{
 				const int VoiceInputSelectedOld = VoiceUtils::VoiceFindSelectedDeviceIndex(s_VoiceInputDeviceEntries, g_Config.m_QmVoiceInputDevice);
-				const int VoiceInputSelectedNew = DoSettingsDropDown(&VoiceInputDropDownRect, VoiceInputSelectedOld, s_VoiceInputDeviceDropDownNames.data(), s_VoiceInputDeviceDropDownNames.size(), s_VoiceInputDeviceDropDownState);
+				const int VoiceInputSelectedNew = DoSettingsDropDown(&VoiceInputDropDownRect, VoiceInputSelectedOld, s_VoiceInputDeviceDropDownNames.data(), s_VoiceInputDeviceDropDownNames.size(), s_VoiceInputDeviceDropDownState, {}, g_Config.m_QmVoiceInputDevice);
 				if(VoiceInputSelectedNew >= 0 && VoiceInputSelectedNew != VoiceInputSelectedOld && (size_t)VoiceInputSelectedNew < s_VoiceInputDeviceConfigValues.size())
 					str_copy(g_Config.m_QmVoiceInputDevice, s_VoiceInputDeviceConfigValues[VoiceInputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceInputDevice));
 				if(DoQmSettingsMenuButton(&s_VoiceInputRefreshButton, "qmclient-voice-input-refresh", Localize("Refresh"), &VoiceInputRefreshButton))
@@ -525,7 +526,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 			else
 			{
 				const int VoiceOutputSelectedOld = VoiceUtils::VoiceFindSelectedDeviceIndex(s_VoiceOutputDeviceEntries, g_Config.m_QmVoiceOutputDevice);
-				const int VoiceOutputSelectedNew = DoSettingsDropDown(&VoiceOutputDropDownRect, VoiceOutputSelectedOld, s_VoiceOutputDeviceDropDownNames.data(), s_VoiceOutputDeviceDropDownNames.size(), s_VoiceOutputDeviceDropDownState);
+				const int VoiceOutputSelectedNew = DoSettingsDropDown(&VoiceOutputDropDownRect, VoiceOutputSelectedOld, s_VoiceOutputDeviceDropDownNames.data(), s_VoiceOutputDeviceDropDownNames.size(), s_VoiceOutputDeviceDropDownState, {}, g_Config.m_QmVoiceOutputDevice);
 				if(VoiceOutputSelectedNew >= 0 && VoiceOutputSelectedNew != VoiceOutputSelectedOld && (size_t)VoiceOutputSelectedNew < s_VoiceOutputDeviceConfigValues.size())
 					str_copy(g_Config.m_QmVoiceOutputDevice, s_VoiceOutputDeviceConfigValues[VoiceOutputSelectedNew].c_str(), sizeof(g_Config.m_QmVoiceOutputDevice));
 				if(DoQmSettingsMenuButton(&s_VoiceOutputRefreshButton, "qmclient-voice-output-refresh", Localize("Refresh"), &VoiceOutputRefreshButton))
@@ -550,7 +551,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 				Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 				DoQmSettingsLabel("qmclient-voice-bitrate", &LabelCol, Localize("Voice bitrate"), BodySize);
 				const int CurrentBitrateProfile = std::clamp(g_Config.m_QmVoiceBitrateProfile, 0, 4);
-				const int NewBitrateProfile = DoSettingsDropDown(&ControlCol, CurrentBitrateProfile, s_VoiceBitrateProfileDropDownNames.data(), s_VoiceBitrateProfileDropDownNames.size(), s_VoiceBitrateProfileDropDownState);
+				const int NewBitrateProfile = DoSettingsDropDown(&ControlCol, CurrentBitrateProfile, s_VoiceBitrateProfileDropDownNames.data(), s_VoiceBitrateProfileDropDownNames.size(), s_VoiceBitrateProfileDropDownState, {}, &g_Config.m_QmVoiceBitrateProfile);
 				if(CurrentBitrateProfile != NewBitrateProfile)
 					g_Config.m_QmVoiceBitrateProfile = NewBitrateProfile;
 			}
@@ -575,7 +576,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 				Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 				DoQmSettingsLabel("qmclient-voice-noise-reduction-mode", &LabelCol, Localize("Noise reduction mode"), BodySize);
 				const int CurrentNoiseSuppressMode = std::clamp(g_Config.m_QmVoiceNoiseSuppressEnable, 0, 2);
-				const int NewNoiseSuppressMode = DoSettingsDropDown(&ControlCol, CurrentNoiseSuppressMode, s_VoiceNoiseSuppressModeDropDownNames.data(), s_VoiceNoiseSuppressModeDropDownNames.size(), s_VoiceNoiseSuppressModeDropDownState);
+				const int NewNoiseSuppressMode = DoSettingsDropDown(&ControlCol, CurrentNoiseSuppressMode, s_VoiceNoiseSuppressModeDropDownNames.data(), s_VoiceNoiseSuppressModeDropDownNames.size(), s_VoiceNoiseSuppressModeDropDownState, {}, &g_Config.m_QmVoiceNoiseSuppressEnable);
 				if(CurrentNoiseSuppressMode != NewNoiseSuppressMode)
 					g_Config.m_QmVoiceNoiseSuppressEnable = NewNoiseSuppressMode;
 			}

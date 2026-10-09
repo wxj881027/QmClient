@@ -160,6 +160,19 @@ inline int QmNormalizeConsoleLogFilterMask(int Mask)
 	return Valid != 0 ? Valid : QM_CONSOLE_LOG_CATEGORY_ALL;
 }
 
+/** 「全部」只在所有分类开启时选中；点击它恢复全部，分类按钮独立切换。 */
+inline bool QmConsoleLogFilterButtonActive(int Mask, int Category)
+{
+	return (QmNormalizeConsoleLogFilterMask(Mask) & Category) == Category;
+}
+
+inline int QmToggleConsoleLogFilterCategory(int Mask, int Category)
+{
+	if(Category == QM_CONSOLE_LOG_CATEGORY_ALL)
+		return QM_CONSOLE_LOG_CATEGORY_ALL;
+	return QmNormalizeConsoleLogFilterMask(QmNormalizeConsoleLogFilterMask(Mask) ^ (Category & QM_CONSOLE_LOG_CATEGORY_ALL));
+}
+
 /** 该行是否应该显示在给定筛选掩码下。 */
 inline bool QmConsoleLogCategoryPassesFilter(int Category, int FilterMask)
 {

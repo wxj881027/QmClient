@@ -858,6 +858,7 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 
 int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, int Num, SDropDownState &State, const SDropDownProperties &DropDownProps)
 {
+	DoConfigTooltip(&State.m_ButtonContainer, pRect, DropDownProps.m_pConfigValue, DropDownProps.m_pSecondConfigValue);
 	// 防御：选中索引必须落在 [-1, Num) 才能安全用作 pStrs 下标。索引来源包括
 	// g_Config 与跨帧 UI 状态，一旦被越界写破坏（2026-09-30 崩溃报告：按钮文字
 	// lambda 捕获块在两次调用之间被栈上野写覆盖成 0x2D6D6C67），直接下标访问
@@ -922,7 +923,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	if(State.m_DropDownState.IsOpen() && !PopupOpen)
 		State.m_DropDownState.Reset();
 
-	const ColorRGBA TriggerColor = ResolveConfiguredDropdownSurface();
+	const SQmDropdownVisualStyle &VisualStyle = DropDownProps.m_VisualStyle;
+	const ColorRGBA TriggerColor = VisualStyle.m_TriggerColor;
 	const auto LabelFunc = [CurSelection, pStrs]() {
 		return CurSelection > -1 ? pStrs[CurSelection] : "";
 	};
@@ -956,6 +958,7 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 	Props.m_HintRequiresStringCheck = true;
 	Props.m_HintCanChangePositionOrSize = true;
 	Props.m_ShowDropDownIcon = true;
+	Props.m_Checked = PopupOpen ? 1 : 0;
 	Props.m_Flags |= BUTTONFLAG_CURRENT_HIT;
 	Props.m_FontSize = ResolvedFontSize;
 	Props.m_Color = TriggerColor;
@@ -986,9 +989,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_Width = pRect->w;
 		State.m_SelectionPopupContext.m_AlignmentHeight = pRect->h;
 		State.m_SelectionPopupContext.m_Viewport = Viewport;
-		const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
-		State.m_SelectionPopupContext.m_Props.m_BorderColor = Theme.m_Border;
-		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = Theme.m_Surface;
+		State.m_SelectionPopupContext.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
+		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
 		State.m_SelectionPopupContext.m_TransparentButtons = DropDownProps.m_VisualStyle.m_TransparentEntries;
 		ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);
@@ -1007,9 +1009,8 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 		State.m_SelectionPopupContext.m_SpecialFontRenderMode = SpecialFontRenderMode;
 		State.m_SelectionPopupContext.m_FontFaceAvailabilityCheck = FontFaceAvailabilityCheck;
 		State.m_SelectionPopupContext.m_FontFamilySelection = FontFamilySelection;
-		const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
-		State.m_SelectionPopupContext.m_Props.m_BorderColor = Theme.m_Border;
-		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = Theme.m_Surface;
+		State.m_SelectionPopupContext.m_Props.m_BorderColor = VisualStyle.m_PopupBorderColor;
+		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = VisualStyle.m_PopupBackgroundColor;
 		State.m_SelectionPopupContext.m_ActiveEntryColor = DropDownProps.m_VisualStyle.m_ActiveEntryColor;
 		for(int i = 0; i < Num; ++i)
 			State.m_SelectionPopupContext.m_vEntries.emplace_back(pStrs[i]);

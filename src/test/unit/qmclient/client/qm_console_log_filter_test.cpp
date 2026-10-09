@@ -123,3 +123,30 @@ TEST(QmConsoleLogFilter, EmptyMaskFallsBackToAllCategories)
 	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(1 << 20), QM_CONSOLE_LOG_CATEGORY_ALL);
 	EXPECT_EQ(QmNormalizeConsoleLogFilterMask(QM_CONSOLE_LOG_CATEGORY_PLAYER | (1 << 20)), QM_CONSOLE_LOG_CATEGORY_PLAYER);
 }
+
+TEST(QmConsoleLogFilter, AllButtonIsSelectedOnlyWhenEveryCategoryIsEnabled)
+{
+	EXPECT_FALSE(QmConsoleLogFilterButtonActive(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_ALL));
+	EXPECT_TRUE(QmConsoleLogFilterButtonActive(QM_CONSOLE_LOG_CATEGORY_ALL, QM_CONSOLE_LOG_CATEGORY_ALL));
+	EXPECT_TRUE(QmConsoleLogFilterButtonActive(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_PLAYER));
+}
+
+TEST(QmConsoleLogFilter, CategoryTogglePreservesOtherSelections)
+{
+	const int Initial = QM_CONSOLE_LOG_CATEGORY_PLAYER | QM_CONSOLE_LOG_CATEGORY_SYSTEM;
+	const int Toggled = QmToggleConsoleLogFilterCategory(Initial, QM_CONSOLE_LOG_CATEGORY_PLAYER);
+	EXPECT_EQ(Toggled, QM_CONSOLE_LOG_CATEGORY_SYSTEM);
+	EXPECT_EQ(QmToggleConsoleLogFilterCategory(Toggled, QM_CONSOLE_LOG_CATEGORY_PLAYER), Initial);
+}
+
+TEST(QmConsoleLogFilter, AllButtonRestoresAllAndRepeatedClicksKeepAll)
+{
+	const int Restored = QmToggleConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_ALL);
+	EXPECT_EQ(Restored, QM_CONSOLE_LOG_CATEGORY_ALL);
+	EXPECT_EQ(QmToggleConsoleLogFilterCategory(Restored, QM_CONSOLE_LOG_CATEGORY_ALL), QM_CONSOLE_LOG_CATEGORY_ALL);
+}
+
+TEST(QmConsoleLogFilter, TurningOffLastCategoryFallsBackToAll)
+{
+	EXPECT_EQ(QmToggleConsoleLogFilterCategory(QM_CONSOLE_LOG_CATEGORY_PLAYER, QM_CONSOLE_LOG_CATEGORY_PLAYER), QM_CONSOLE_LOG_CATEGORY_ALL);
+}

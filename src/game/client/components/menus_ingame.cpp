@@ -30,6 +30,7 @@
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
@@ -3530,14 +3531,11 @@ void CMenus::RenderRankDemo(CUIRect MainView)
 	{
 		CUIRect SearchBox;
 		SearchRow.VSplitLeft(280.0f, &SearchBox, &SearchRow);
-		if(Ui()->DoEditBox(&m_RankSearchInput, &SearchBox, 12.0f))
+		ui_widget::SInputFieldOptions Options;
+		Options.m_pPlaceholder = Localize("Search maps for Rank 1 replays ...");
+		Options.m_FontSize = ui_token::font::BODY;
+		if(ui_widget::InputField(ui_widget::ControlContext(Ui()), &m_RankSearchInput, SearchBox, Options).m_Changed)
 			s_SelectedIndex = -1;
-		if(m_RankSearchInput.GetString()[0] == '\0')
-		{
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.5f);
-			TextRender()->Text(SearchBox.x + 8.0f, SearchBox.y + (SearchBox.h - 12.0f) / 2.0f, 12.0f, Localize("Search maps for Rank 1 replays ..."), -1.0f);
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-		}
 	}
 
 	View.HSplitTop(17.0f, &Headers, &View);

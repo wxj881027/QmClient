@@ -4,9 +4,12 @@
 
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmUiPerf.h"
+#include "QmUi/UiButtons.h"
+#include "QmUi/UiForms.h"
 #include "QmUi/UiSurface.h"
 #include "QmUi/UiSurfaceText.h"
 #include "components/qmclient/perf_logging.h"
+#include "components/tooltips.h"
 #include "qm_icon.h"
 #include "qm_icon_font_render.h"
 #include "qm_icon_label.h"
@@ -1592,6 +1595,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 
 bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const std::vector<STextColorSplit> &vColorSplits, int Align, const SEditBoxRenderOptions &RenderOptions)
 {
+	DoConfigTooltip(pLineInput, RenderOptions.m_pHitRect != nullptr ? RenderOptions.m_pHitRect : pRect, pLineInput->GetString());
 	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), RenderOptions.m_DrawBackground);
 	const float VSpacing = 2.0f;
 	const float EditBoxRounding = ui_token::radius::BASE;
@@ -1720,6 +1724,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 
 bool CUi::DoEditBoxMultiLine(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, float LineSpacing, int TextAlign, const SEditBoxRenderOptions &RenderOptions)
 {
+	DoConfigTooltip(pLineInput, RenderOptions.m_pHitRect != nullptr ? RenderOptions.m_pHitRect : pRect, pLineInput->GetString());
 	CUiScopedSurfaceText SurfaceText(TextRender(), ResolveConfiguredInputSurface(), RenderOptions.m_DrawBackground);
 	if(pLineInput == nullptr || pRect == nullptr)
 		return false;
@@ -1886,12 +1891,38 @@ bool CUi::DoEditBox_Search(CLineInput *pLineInput, const CUIRect *pRect, float F
 	return DoClearableEditBox(pLineInput, &QuickSearch, FontSize, IGraphics::CORNER_ALL, {}, RenderOptions);
 }
 
+void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue)
+{
+	if(m_pQmTooltips != nullptr)
+		m_pQmTooltips->DoConfigToolTip(pId, pRect, pValue, pSecondValue);
+}
+
+const SUiTheme &CUi::QmControlTheme()
+{
+	const std::array<unsigned, 7> aConfig = {
+		g_Config.m_QmUiColor, static_cast<unsigned>(g_Config.m_QmUiOpacity), g_Config.m_QmUiFocusColor,
+		g_Config.m_QmUiAccentColor, g_Config.m_QmUiSelectedColor, static_cast<unsigned>(g_Config.m_QmUiTextColorMode), g_Config.m_QmUiTextCustomColor};
+	// 同帧所有控件复用主题；配置变化时才重新解析颜色与前景。
+	if(!m_HasQmControlTheme || m_aQmControlThemeConfig != aConfig)
+	{
+		m_QmControlTheme = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+		m_aQmControlThemeConfig = aConfig;
+		m_HasQmControlTheme = true;
+	}
+	return m_QmControlTheme;
+}
+
 int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const std::function<const char *()> &GetTextLambda, const CUIRect *pRect, const SMenuButtonProperties &Props)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	const bool Enabled = Props.m_Enabled;
-	const ColorRGBA BaseSurface = ResolveConfiguredControlSurface(Enabled);
-	const bool UseRoundedRectSdf = Graphics()->HasRoundedRectSdf();
+	ui_widget::SButtonSurfaceOptions SurfaceOptions;
+	SurfaceOptions.m_Enabled = Props.m_Enabled && Props.m_Checked >= 0;
+	SurfaceOptions.m_Selected = Props.m_Checked > 0;
+	SurfaceOptions.m_Corners = Props.m_Corners;
+	SurfaceOptions.m_Radius = Props.m_Rounding;
+	SurfaceOptions.m_Color = Props.m_Color;
+	const ColorRGBA Fill = ui_widget::DrawButtonSurface(ui_widget::ControlContext(this), pId, *pRect, SurfaceOptions);
+	CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
 	CUIRect Text = *pRect, DropDownIcon;
 	Text.HMargin(pRect->h >= 20.0f ? 2.0f : 1.0f, &Text);
 	Text.HMargin((Text.h * Props.m_FontFactor) / 2.0f, &Text);
@@ -1902,126 +1933,61 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 		Text.VSplitRight(pRect->h * 0.75f, &Text, &DropDownIcon);
 	}
 
-	if(!UIElement.AreRectsInit() || Props.m_HintRequiresStringCheck || Props.m_HintCanChangePositionOrSize || !UIElement.Rect(0)->m_UITextContainer.Valid() || (UseRoundedRectSdf ? UIElement.Rect(0)->m_UIRectQuadContainer != -1 : UIElement.Rect(0)->m_UIRectQuadContainer == -1))
+	// 只缓存文字。背景和状态反馈由公共按钮绘制，避免为每个状态重复缓存矩形。
+	bool NeedsRecalc = !UIElement.AreRectsInit() || !UIElement.Rect(0)->m_UITextContainer.Valid();
+	const char *pText = nullptr;
+	if(UIElement.AreRectsInit())
 	{
-		bool NeedsRecalc = !UIElement.AreRectsInit() || !UIElement.Rect(0)->m_UITextContainer.Valid() || (UseRoundedRectSdf ? UIElement.Rect(0)->m_UIRectQuadContainer != -1 : UIElement.Rect(0)->m_UIRectQuadContainer == -1);
-		if(UIElement.AreRectsInit())
-		{
-			for(int i = 0; i < 3; ++i)
-			{
-				if(UIElement.Rect(i)->m_QuadColor != BaseSurface)
-					NeedsRecalc = true;
-			}
-		}
+		const CUIElement::SUIElementRect &Cached = *UIElement.Rect(0);
+		NeedsRecalc |= Cached.m_FontSize != FontSize;
 		if(Props.m_HintCanChangePositionOrSize)
-		{
-			if(UIElement.AreRectsInit())
-			{
-				if(UIElement.Rect(0)->m_X != pRect->x || UIElement.Rect(0)->m_Y != pRect->y || UIElement.Rect(0)->m_Width != pRect->w || UIElement.Rect(0)->m_Height != pRect->h || UIElement.Rect(0)->m_Rounding != Props.m_Rounding || UIElement.Rect(0)->m_Corners != Props.m_Corners || UIElement.Rect(0)->m_BackgroundAlphaScale != m_BackgroundAlphaScale || UIElement.Rect(0)->m_FontSize != FontSize)
-				{
-					NeedsRecalc = true;
-				}
-			}
-		}
-		const char *pText = nullptr;
+			NeedsRecalc |= Cached.m_X != pRect->x || Cached.m_Y != pRect->y || Cached.m_Width != pRect->w || Cached.m_Height != pRect->h;
 		if(Props.m_HintRequiresStringCheck)
 		{
-			if(UIElement.AreRectsInit())
-			{
-				pText = GetTextLambda();
-				if(str_comp(UIElement.Rect(0)->m_Text.c_str(), pText) != 0)
-				{
-					NeedsRecalc = true;
-				}
-			}
-		}
-		if(NeedsRecalc)
-		{
-			if(!UIElement.AreRectsInit())
-			{
-				UIElement.InitRects(3);
-			}
-			ResetUIElement(UIElement);
-
-			for(int i = 0; i < 3; ++i)
-			{
-				const ColorRGBA Color = BaseSurface;
-				CUIElement::SUIElementRect &NewRect = *UIElement.Rect(i);
-				NewRect.m_QuadColor = Color;
-				if(!UseRoundedRectSdf)
-				{
-					Graphics()->SetColor(Color);
-					NewRect.m_UIRectQuadContainer = Graphics()->CreateRectQuadContainer(pRect->x, pRect->y, pRect->w, pRect->h, Props.m_Rounding, Props.m_Corners);
-				}
-
-				NewRect.m_X = pRect->x;
-				NewRect.m_Y = pRect->y;
-				NewRect.m_Width = pRect->w;
-				NewRect.m_Height = pRect->h;
-				NewRect.m_Rounding = Props.m_Rounding;
-				NewRect.m_Corners = Props.m_Corners;
-				NewRect.m_BackgroundAlphaScale = m_BackgroundAlphaScale;
-				if(i == 0)
-				{
-					if(pText == nullptr)
-						pText = GetTextLambda();
-					NewRect.m_Text = pText;
-					if(Props.m_UseIconFont)
-						TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-					DoLabel(NewRect, &Text, pText, FontSize, TEXTALIGN_MC);
-					if(Props.m_UseIconFont)
-						TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-				}
-			}
-			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			pText = GetTextLambda();
+			NeedsRecalc |= str_comp(Cached.m_Text.c_str(), pText) != 0;
 		}
 	}
-	// render
-	size_t Index = 2;
-	if(Enabled && CheckActiveItem(pId))
-		Index = 0;
-	else if(Enabled && HotItem() == pId)
-		Index = 1;
-	CUiScopedSurfaceText StateSurfaceText(TextRender(), BaseSurface);
-	if(UseRoundedRectSdf)
-		DrawRoundedSurface(this, *pRect, BaseSurface, ColorRGBA(), Props.m_Rounding, 0.0f, Props.m_Corners);
-	else
+	if(NeedsRecalc)
 	{
-		Graphics()->TextureClear();
-		Graphics()->RenderQuadContainer(UIElement.Rect(Index)->m_UIRectQuadContainer, -1);
+		if(!UIElement.AreRectsInit())
+			UIElement.InitRects(1);
+		ResetUIElement(UIElement);
+		CUIElement::SUIElementRect &Cached = *UIElement.Rect(0);
+		Cached.m_X = pRect->x;
+		Cached.m_Y = pRect->y;
+		Cached.m_Width = pRect->w;
+		Cached.m_Height = pRect->h;
+		if(pText == nullptr)
+			pText = GetTextLambda();
+		Cached.m_Text = pText;
+		const EFontPreset PreviousPreset = TextRender()->GetFontPreset();
+		if(Props.m_UseIconFont)
+			TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		DoLabel(Cached, &Text, pText, FontSize, TEXTALIGN_MC);
+		TextRender()->SetFontPreset(PreviousPreset);
 	}
 	if(Props.m_ShowDropDownIcon)
-	{
-		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		DoLabel_QmIcon(&DropDownIcon, EQmIcon::CIRCLE_CHEVRON_DOWN, FONT_ICON_CIRCLE_CHEVRON_DOWN, DropDownIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MR);
-		TextRender()->SetRenderFlags(0);
-		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-	}
-	ColorRGBA ColorText(TextRender()->GetTextColor());
-	ColorRGBA ColorTextOutline(TextRender()->GetTextOutlineColor());
-	if(!Enabled)
+	ColorRGBA ColorText = TextRender()->GetTextColor();
+	ColorRGBA ColorTextOutline = TextRender()->GetTextOutlineColor();
+	if(!SurfaceOptions.m_Enabled)
 	{
 		ColorText.a *= 0.65f;
 		ColorTextOutline.a *= 0.65f;
 	}
 	if(UIElement.Rect(0)->m_UITextContainer.Valid())
-		FlushQuadBatch();
-	if(UIElement.Rect(0)->m_UITextContainer.Valid())
 	{
+		FlushQuadBatch();
 		const CUIElement::SUIElementRect &Label = *UIElement.Rect(0);
-		{
-			const EQmIcon Icon = Label.m_NumQmIcons == 1 ? Label.m_aQmIcons[0] : EQmIcon::COUNT;
-			const ColorRGBA LabelColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(ColorText, Icon) : ColorText;
-			const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
-			const ColorRGBA LabelOutlineColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(LabelColor) : ColorTextOutline;
-			TextRender()->RenderTextContainer(Label.m_UITextContainer, LabelColor, LabelOutlineColor);
-			CQmIconDrawDiagnostics::Record(Label.m_NumQmIcons);
-		}
+		const EQmIcon Icon = Label.m_NumQmIcons == 1 ? Label.m_aQmIcons[0] : EQmIcon::COUNT;
+		const ColorRGBA LabelColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(ColorText, Icon) : ColorText;
+		const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
+		const ColorRGBA LabelOutlineColor = Label.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(LabelColor) : ColorTextOutline;
+		TextRender()->RenderTextContainer(Label.m_UITextContainer, LabelColor, LabelOutlineColor);
+		CQmIconDrawDiagnostics::Record(Label.m_NumQmIcons);
 	}
-	if(!Enabled)
-		return 0;
-	return DoButtonLogic(pId, Props.m_Checked, pRect, Props.m_Flags);
+	return SurfaceOptions.m_Enabled ? DoButtonLogic(pId, Props.m_Checked, pRect, Props.m_Flags) : 0;
 }
 
 void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA Color, int Corners, bool Enabled)
@@ -2029,7 +1995,12 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
 	pRect = &ButtonRect;
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	DrawRoundedSurface(this, *pRect, Color, ColorRGBA(), 5.0f, 0.0f, Corners);
+	ui_widget::SButtonSurfaceOptions Options;
+	Options.m_Role = EUiButtonRole::ICON;
+	Options.m_Enabled = Enabled;
+	Options.m_Color = Color;
+	Options.m_Corners = Corners;
+	Color = ui_widget::DrawButtonSurface(ui_widget::ControlContext(this), nullptr, *pRect, Options);
 
 	CUiScopedSurfaceText SurfaceText(TextRender(), Color);
 	const ColorRGBA PreviousColor = TextRender()->GetTextColor();
@@ -2064,15 +2035,7 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 
 int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor)
 {
-	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
-	pRect = &ButtonRect;
-	const ColorRGBA Fill = ResolveConfiguredIconButtonSurface(ButtonColor, Enabled);
-	DrawButton_FontIcon(pText, pRect, Fill, Corners, Enabled);
-	const ColorRGBA Surface = CompositeUiSurface(Fill, CUiScopedSurfaceText::CurrentSurface());
-	const ColorRGBA Feedback = ResolveUiIconButtonFeedback(Surface, Enabled, MouseHovered(pRect), CheckActiveItem(pButtonContainer) && MouseButton(0));
-	DrawRoundedSurface(this, *pRect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), 5.0f, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
-
-	return Enabled ? DoButtonLogic(pButtonContainer, Checked, pRect, Flags) : 0;
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, EQmIcon::COUNT, pText, Checked, *pRect, Flags, Corners, Enabled, ButtonColor);
 }
 
 bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIcon, const ColorRGBA &Color) const
@@ -2107,45 +2070,19 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 
 int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash)
 {
-	const CUIRect ButtonRect = QmUiSquareIconButtonRect(*pRect);
-	pRect = &ButtonRect;
-	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	const ColorRGBA Fill = ResolveConfiguredIconButtonSurface(ButtonColor, Enabled);
-	DrawRoundedSurface(this, *pRect, Fill, ColorRGBA(), 5.0f, 0.0f, Corners);
-	const ColorRGBA Feedback = ResolveUiIconButtonFeedback(CompositeUiSurface(Fill, CUiScopedSurfaceText::CurrentSurface()), Enabled, MouseHovered(pRect), CheckActiveItem(pButtonContainer) && MouseButton(0));
-	DrawRoundedSurface(this, *pRect, Feedback, Feedback.WithAlpha(Feedback.a > 0.0f ? ui_token::feedback::ICON_BORDER_ALPHA : 0.0f), 5.0f, ui_token::feedback::ICON_BORDER_WIDTH, Corners);
-	CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
-	const ColorRGBA PreviousOutlineColor = TextRender()->GetTextOutlineColor();
-
-	CUIRect Label;
-	pRect->HMargin(2.0f, &Label);
-	const float IconSide = std::min(Label.w, Label.h);
-	CUIRect IconRect;
-	IconRect.x = Label.x + (Label.w - IconSide) * 0.5f;
-	IconRect.y = Label.y + (Label.h - IconSide) * 0.5f;
-	IconRect.w = IconSide;
-	IconRect.h = IconSide;
-	DrawQmIcon(IconRect, Icon, pFallbackIcon, ResolveUiSurfaceForeground(SurfaceText.Surface()).WithAlpha(TextRender()->GetTextColor().a));
-
-	if(!Enabled || ShowSlash)
-	{
-		// 开关关闭时也可叠加斜杠，但按钮必须保持可点击。
-		const CQmIconSemanticColorScope SemanticColorScope;
-		DrawQmIcon(IconRect, EQmIcon::SLASH, FONT_ICON_SLASH, ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
-	}
-	TextRender()->TextOutlineColor(PreviousOutlineColor);
-
-	return Enabled ? DoButtonLogic(pButtonContainer, Checked, pRect, Flags) : 0;
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize)
 {
 	CUiScopedGaussianBlurSuppression GaussianBlurSuppression(this);
-	const bool DrawBackground = ButtonColor.has_value() || !TransparentInactive || CheckActiveItem(pButtonContainer) || HotItem() == pButtonContainer;
-	const ColorRGBA Fill = ButtonColor.value_or(ResolveConfiguredControlSurface(Enabled));
-	CUiScopedSurfaceText SurfaceText(TextRender(), DrawBackground ? Fill : ColorRGBA());
-	if(DrawBackground)
-		DrawRoundedSurface(this, *pRect, Fill, ColorRGBA(), ui_token::radius::BASE);
+	ui_widget::SButtonSurfaceOptions Options;
+	Options.m_Role = EUiButtonRole::LIST_ENTRY;
+	Options.m_Enabled = Enabled;
+	Options.m_TransparentInactive = TransparentInactive;
+	Options.m_Color = ButtonColor;
+	const ColorRGBA Fill = ui_widget::DrawButtonSurface(ui_widget::ControlContext(this), pButtonContainer, *pRect, Options);
+	CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
 
 	CUIRect Label;
 	pRect->Margin(Padding, &Label);
@@ -2443,14 +2380,28 @@ float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
 	}
 
 	// render
-	DrawRoundedSurface(this, Rail, ScaleBackgroundAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f)), ColorRGBA(), Rail.w / 2.0f);
-	DrawRoundedSurface(this, Handle, ScaleBackgroundAlpha(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId)), ColorRGBA(), Handle.w / 2.0f);
+	if(QmAnimationRuntime() != nullptr)
+	{
+		const auto Style = ResolveUiSliderStyle(QmControlTheme(), CUiScopedSurfaceText::CurrentSurface(), HotItem() == pId, CheckActiveItem(pId));
+		DrawRoundedSurface(this, Rail, ScaleBackgroundAlpha(Style.m_Track), ColorRGBA(), ui_token::radius::PILL);
+		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(this), pId, Handle);
+	}
+	else
+	{
+		DrawRoundedSurface(this, Rail, ScaleBackgroundAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f)), ColorRGBA(), Rail.w / 2.0f);
+		DrawRoundedSurface(this, Handle, ScaleBackgroundAlpha(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId)), ColorRGBA(), Handle.w / 2.0f);
+	}
 
 	return ReturnValue;
 }
 
 void CUi::RenderScrollbarH(const void *pId, const CUIRect *pRect, float Current, const ColorRGBA *pColorInner)
 {
+	if(QmAnimationRuntime() != nullptr)
+	{
+		ui_widget::RenderHorizontalSlider(ui_widget::ControlContext(this), pId, *pRect, Current, pColorInner);
+		return;
+	}
 	Current = std::clamp(Current, 0.0f, 1.0f);
 
 	// layout
@@ -2499,6 +2450,12 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	HandleArea.y = pRect->y + pRect->h * 0.05f;
 	HandleArea.w += 6.0f;
 	HandleArea.x -= 3.0f;
+	if(QmAnimationRuntime() != nullptr)
+	{
+		const auto Layout = ui_widget::ResolveHorizontalSliderLayout(*pRect, Current);
+		Handle = Layout.m_Handle;
+		HandleArea = Layout.m_HandleArea;
+	}
 
 	const bool InsideRail = MouseHovered(&Rail);
 	const bool InsideHandle = MouseHovered(&HandleArea);
@@ -2545,7 +2502,7 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	{
 		const float Max = Rail.w - Handle.w;
 		const float Cur = MouseX() - m_ActiveScrollbarOffset;
-		ReturnValue = std::clamp((Cur - Rail.x) / Max, 0.0f, 1.0f);
+		ReturnValue = QmAnimationRuntime() != nullptr && Max <= 0.0f ? Current : std::clamp((Cur - Rail.x) / Max, 0.0f, 1.0f);
 	}
 
 	RenderScrollbarH(pId, pRect, ReturnValue, pColorInner);
@@ -2555,6 +2512,7 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 
 bool CUi::DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, const IScrollbarScale *pScale, unsigned Flags, const char *pSuffix, const char *pMaxText)
 {
+	DoConfigTooltip(pId, pRect, pOption);
 	const bool Infinite = Flags & CUi::SCROLLBAR_OPTION_INFINITE;
 	const bool NoClampValue = Flags & CUi::SCROLLBAR_OPTION_NOCLAMPVALUE;
 	const bool MultiLine = Flags & CUi::SCROLLBAR_OPTION_MULTILINE;

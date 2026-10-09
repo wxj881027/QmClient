@@ -13,7 +13,7 @@
 #include <utility>
 
 extern "C" {
-void *qm_ws_connect(const char *pUrl, const char *pProtocol, const char *pHeaders, uint32_t TimeoutMs, size_t Limit, char *pError, size_t ErrorSize);
+void *qm_ws_connect(const char *pUrl, const char *pProtocol, const char *pHeaders, uint32_t TimeoutMs, size_t Limit, char *pError, size_t ErrorSize, bool (*pCanceled)(void *), void *pUser);
 bool qm_ws_send(void *pHandle, int Kind, const unsigned char *pData, size_t Size, char *pError, size_t ErrorSize);
 int qm_ws_read(void *pHandle, const unsigned char **ppData, size_t *pSize, char *pError, size_t ErrorSize);
 void qm_ws_close(void *pHandle);
@@ -75,7 +75,8 @@ namespace
 			{
 				m_State = EverConnected ? EQmWebSocketState::RECONNECTING : EQmWebSocketState::CONNECTING;
 				char aError[512] = {};
-				void *pHandle = qm_ws_connect(Url.c_str(), m_Config.m_Protocol.c_str(), Headers.c_str(), m_Config.m_HandshakeTimeoutMs > 0 ? m_Config.m_HandshakeTimeoutMs : 10000, m_Config.m_MaxMessageSize, aError, sizeof(aError));
+				void *pHandle = qm_ws_connect(Url.c_str(), m_Config.m_Protocol.c_str(), Headers.c_str(), m_Config.m_HandshakeTimeoutMs > 0 ? m_Config.m_HandshakeTimeoutMs : 10000, m_Config.m_MaxMessageSize, aError, sizeof(aError),
+					[](void *pUser) { return !static_cast<CWebSocketClientRust *>(pUser)->m_Desired.load(); }, this);
 				bool Clean = false;
 				int64_t ConnectedAt = 0;
 				if(pHandle && m_Desired)

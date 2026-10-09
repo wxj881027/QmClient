@@ -10,6 +10,7 @@
 
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
+#include <game/client/components/qmclient/console_search_input.h>
 #include <game/client/components/qmclient/console_selection.h>
 #include <game/client/components/qmclient/qm_chat_export_metadata.h>
 #include <game/client/lineinput.h>
@@ -128,16 +129,17 @@ private:
 		std::vector<const char *> m_vpCommandSuggestions;
 		std::vector<const char *> m_vpArgumentSuggestions;
 
-		bool m_Searching = false;
+		CQmConsoleSearchInput m_SearchInput;
 		struct SSearchMatch
 		{
 			int m_Pos;
+			int m_Length;
 			int m_StartLine;
 			int m_EndLine;
 			int m_EntryLine;
 
-			SSearchMatch(int Pos, int StartLine, int EndLine, int EntryLine) :
-				m_Pos(Pos), m_StartLine(StartLine), m_EndLine(EndLine), m_EntryLine(EntryLine) {}
+			SSearchMatch(int Pos, int Length, int StartLine, int EndLine, int EntryLine) :
+				m_Pos(Pos), m_Length(Length), m_StartLine(StartLine), m_EndLine(EndLine), m_EntryLine(EntryLine) {}
 		};
 		int m_CurrentMatchIndex;
 		char m_aCurrentSearchString[IConsole::CMDLINE_LENGTH];
@@ -192,8 +194,9 @@ private:
 
 		bool IsInputHidden() const;
 		void UpdateCompletionSuggestions();
+		void UpdateInputState(bool ResetCompletion);
 
-		/** 顶栏筛选按钮对应的日志类别位；下标即按钮顺序（与 m_aFilterButtons 一致）。 */
+		/** 顶栏筛选按钮对应的日志类别位；下标即按钮顺序。 */
 		static int LogFilterCategoryForButton(int ButtonIndex);
 
 	private:
@@ -228,14 +231,6 @@ private:
 	vec2 m_ButtonPressPosition = vec2(0.0f, 0.0f);
 
 	bool DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released);
-	CButtonContainer m_aFilterButtons[CInstance::LOG_FILTER_BUTTON_COUNT];
-	CButtonContainer m_ChatExportButton;
-	CButtonContainer m_ChatExportSelectAllButton;
-	CButtonContainer m_ChatExportClearButton;
-	CButtonContainer m_ChatExportSaveButton;
-	CButtonContainer m_ChatExportCancelButton;
-	CButtonContainer m_FullscreenButton;
-	bool m_TopbarMouseDown = false;
 
 	static constexpr ColorRGBA ms_SearchHighlightColor = ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f);
 	static constexpr ColorRGBA ms_SearchSelectedColor = ColorRGBA(1.0f, 1.0f, 0.0f, 1.0f);
@@ -278,6 +273,7 @@ public:
 	void OnRender() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 	bool OnInput(const IInput::CEvent &Event) override;
+	bool OnCursorMove(float x, float y, IInput::ECursorType CursorType) override;
 	void Prompt(char (&aPrompt)[32]);
 
 	void Toggle(int Type);

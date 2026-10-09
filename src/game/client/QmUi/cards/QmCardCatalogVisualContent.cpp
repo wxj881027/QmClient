@@ -137,7 +137,7 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, "qmclient-hitbox-player-range", &LabelColumn, Localize("Player range"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 	const int HitboxScope = std::clamp(g_Config.m_QmHitboxPlayerScope, 0, 2);
-	const int HitboxScopeNew = DoSettingsDropDown(&ControlColumn, HitboxScope, s_HitboxScopeDropDownNames.data(), s_HitboxScopeDropDownNames.size(), s_HitboxScopeDropDownState);
+	const int HitboxScopeNew = DoSettingsDropDown(&ControlColumn, HitboxScope, s_HitboxScopeDropDownNames.data(), s_HitboxScopeDropDownNames.size(), s_HitboxScopeDropDownState, {}, &g_Config.m_QmHitboxPlayerScope);
 	if(g_Config.m_QmHitboxPlayerScope != HitboxScopeNew)
 		g_Config.m_QmHitboxPlayerScope = HitboxScopeNew;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -176,7 +176,7 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 		static CScrollRegion s_HammerModeDropDownScrollRegion;
 		s_HammerModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_HammerModeDropDownScrollRegion;
 		const int HammerMode = std::clamp(g_Config.m_QmHammerRotatesWithCursor, 0, 2);
-		const int NewHammerMode = DoSettingsDropDown(&HammerControl, HammerMode, s_HammerModeDropDownNames.data(), s_HammerModeDropDownNames.size(), s_HammerModeDropDownState);
+		const int NewHammerMode = DoSettingsDropDown(&HammerControl, HammerMode, s_HammerModeDropDownNames.data(), s_HammerModeDropDownNames.size(), s_HammerModeDropDownState, {}, &g_Config.m_QmHammerRotatesWithCursor);
 		if(g_Config.m_QmHammerRotatesWithCursor != NewHammerMode)
 			g_Config.m_QmHammerRotatesWithCursor = NewHammerMode;
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -209,7 +209,7 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 	RenderQmVisualLabel("qmclient-weapon-switch-animation-range", &LabelColumn, Localize("Animation range"), BodySize);
 	const int Scope = std::clamp(g_Config.m_QmWeaponSwitchAnimScope, 0, 2);
-	const int NewScope = DoSettingsDropDown(&ControlColumn, Scope, s_WeaponSwitchAnimScopeDropDownNames.data(), s_WeaponSwitchAnimScopeDropDownNames.size(), s_WeaponSwitchAnimScopeDropDownState);
+	const int NewScope = DoSettingsDropDown(&ControlColumn, Scope, s_WeaponSwitchAnimScopeDropDownNames.data(), s_WeaponSwitchAnimScopeDropDownNames.size(), s_WeaponSwitchAnimScopeDropDownState, {}, &g_Config.m_QmWeaponSwitchAnimScope);
 	if(g_Config.m_QmWeaponSwitchAnimScope != NewScope)
 		g_Config.m_QmWeaponSwitchAnimScope = NewScope;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -233,7 +233,7 @@ void CMenus::RenderQmVisualWeaponAnimationContent(CUIRect &Content, float LineHe
 	static CScrollRegion s_WeaponSwitchAnimEasingDropDownScrollRegion;
 	s_WeaponSwitchAnimEasingDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_WeaponSwitchAnimEasingDropDownScrollRegion;
 	const int Easing = std::clamp(g_Config.m_QmWeaponSwitchAnimEasing, 0, 3);
-	const int NewEasing = DoSettingsDropDown(&ControlColumn, Easing, s_WeaponSwitchAnimEasingDropDownNames.data(), s_WeaponSwitchAnimEasingDropDownNames.size(), s_WeaponSwitchAnimEasingDropDownState);
+	const int NewEasing = DoSettingsDropDown(&ControlColumn, Easing, s_WeaponSwitchAnimEasingDropDownNames.data(), s_WeaponSwitchAnimEasingDropDownNames.size(), s_WeaponSwitchAnimEasingDropDownState, {}, &g_Config.m_QmWeaponSwitchAnimEasing);
 	if(g_Config.m_QmWeaponSwitchAnimEasing != NewEasing)
 		g_Config.m_QmWeaponSwitchAnimEasing = NewEasing;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -269,7 +269,7 @@ void CMenus::RenderQmVisualChatBubbleContent(CUIRect &Content, float LineHeight,
 	static CUi::SDropDownState s_ChatBubbleAnimDropDownState;
 	static CScrollRegion s_ChatBubbleAnimDropDownScrollRegion;
 	s_ChatBubbleAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_ChatBubbleAnimDropDownScrollRegion;
-	const int Animation = DoSettingsDropDown(&ControlColumn, g_Config.m_QmChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState);
+	const int Animation = DoSettingsDropDown(&ControlColumn, g_Config.m_QmChatBubbleAnimation, s_ChatBubbleAnimDropDownNames.data(), s_ChatBubbleAnimDropDownNames.size(), s_ChatBubbleAnimDropDownState, {}, &g_Config.m_QmChatBubbleAnimation);
 	if(g_Config.m_QmChatBubbleAnimation != Animation)
 		g_Config.m_QmChatBubbleAnimation = Animation;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -390,7 +390,7 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 	RenderQmVisualLabel("qmclient-camera-aspect-ratio-preset", &LabelColumn, Localize("Aspect ratio preset"), BodySize);
 	const int CurrentPreset = std::clamp(g_Config.m_QmAspectPreset, 0, 6);
-	const int NewPreset = DoSettingsDropDown(&ControlColumn, CurrentPreset, apAspectPresetNames, (int)std::size(apAspectPresetNames), s_AspectPresetDropDownState);
+	const int NewPreset = DoSettingsDropDown(&ControlColumn, CurrentPreset, apAspectPresetNames, (int)std::size(apAspectPresetNames), s_AspectPresetDropDownState, {}, &g_Config.m_QmAspectPreset, &g_Config.m_QmAspectRatio);
 	bool AspectChanged = NewPreset != CurrentPreset;
 	if(AspectChanged)
 	{

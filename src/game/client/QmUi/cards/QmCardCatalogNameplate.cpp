@@ -79,7 +79,7 @@ namespace qm_card_catalog
 					   {"appearance-show-name-plates-none", "appearance-show-name-plates-current", "appearance-show-name-plates-local", "appearance-show-name-plates-others", "appearance-show-name-plates-others-local", "appearance-show-name-plates-all"},
 					   {Localize("None", "Show name plates"), Localize("Current", "Show name plates"), Localize("Own characters", "Show name plates"), Localize("Others", "Show name plates"), Localize("Others and own", "Show name plates"), Localize("All", "Show name plates")},
 					   {QM_NAMEPLATE_SHOW_SCOPE_OFF, QM_NAMEPLATE_SHOW_SCOPE_CURRENT, QM_NAMEPLATE_SHOW_SCOPE_LOCAL, QM_NAMEPLATE_SHOW_SCOPE_OTHERS, QM_NAMEPLATE_SHOW_SCOPE_OTHERS_LOCAL, QM_NAMEPLATE_SHOW_SCOPE_ALL},
-					   ShowScope, Metrics, pOverrideSource))
+					   ShowScope, Metrics, pOverrideSource, &g_Config.m_QmNameplateShowScope))
 					g_Config.m_QmNameplateShowScope = ShowScope;
 				Content.HSplitTop(Metrics.m_LineSpacing, nullptr, &Content);
 
@@ -154,7 +154,7 @@ namespace qm_card_catalog
 				const auto DropDown = [&](const char *pTextId, const char *pLabel, int *pValue, int Max, std::vector<const char *> &vNames, CUi::SDropDownState &State, CScrollRegion &ScrollRegion) {
 					ControlRow(pTextId, pLabel, [&](CUIRect &Control) {
 						State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;
-						*pValue = pMenus->DoSettingsDropDown(&Control, std::clamp(*pValue, 0, Max), vNames.data(), (int)vNames.size(), State);
+						*pValue = pMenus->DoSettingsDropDown(&Control, std::clamp(*pValue, 0, Max), vNames.data(), (int)vNames.size(), State, {}, pValue);
 					});
 				};
 				static std::vector<const char *> s_vPlayingNames;
@@ -211,7 +211,7 @@ namespace qm_card_catalog
 					}
 				}
 				ControlRow("appearance-nameplate-text-demo-target", Localize("Demo target"), [&](CUIRect &Control) {
-					const int Selection = pMenus->DoSettingsDropDown(&Control, DemoTargetSelection, s_vDemoTargetNames.data(), (int)s_vDemoTargetNames.size(), s_DemoTargetState);
+					const int Selection = pMenus->DoSettingsDropDown(&Control, DemoTargetSelection, s_vDemoTargetNames.data(), (int)s_vDemoTargetNames.size(), s_DemoTargetState, {}, &g_Config.m_QmNameplateTextDemoTarget);
 					if(Selection == 0)
 						g_Config.m_QmNameplateTextDemoTarget = -1;
 					else if(Selection > 0 && Selection < (int)s_vDemoTargetStorage.size())
@@ -247,6 +247,7 @@ namespace qm_card_catalog
 					return;
 				static int s_StrongNumberId;
 				Row = NextRow(Content);
+				pMenus->Ui()->DoConfigTooltip(&s_StrongNumberId, &Row, &g_Config.m_ClNamePlatesStrong);
 				if(pMenus->DoSettingsButton_CheckBox(Page, Tab, -1, &s_StrongNumberId, "appearance-show-hook-strength-number", Localize("Show hook strength number indicator"), g_Config.m_ClNamePlatesStrong == 2, &Row, SingleLineProps))
 					g_Config.m_ClNamePlatesStrong = g_Config.m_ClNamePlatesStrong != 2 ? 2 : 1;
 				pMenus->DoSettingsLine_RadioMenu(Page, Tab, Tab, Content, "appearance-hook-strength-scope-label", Localize("Hook strength scope"),

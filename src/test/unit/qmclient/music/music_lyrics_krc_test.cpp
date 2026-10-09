@@ -200,3 +200,53 @@ TEST(MusicLyricsKrc, RejectsMalformedTranslationBase64)
 	const std::vector<std::string> Translation = ExtractKrcTranslation("[language:!!!not-base64!!!]\n");
 	EXPECT_TRUE(Translation.empty());
 }
+
+TEST(MusicLyricsKrc, AcceptsInflatedTextAtExactBudget)
+{
+	const std::string Plain(KRC_MAX_TEXT_BYTES, 'a');
+	std::string Text;
+	ASSERT_TRUE(DecryptKrc(BuildEncryptedKrc(Plain), &Text));
+	EXPECT_EQ(Text, Plain);
+}
+
+TEST(MusicLyricsKrc, RejectsHighlyCompressedTextOverBudgetWithoutPartialOutput)
+{
+	std::string Text = "previous";
+	EXPECT_FALSE(DecryptKrc(BuildEncryptedKrc(std::string(KRC_MAX_TEXT_BYTES + 1, 'a')), &Text));
+	EXPECT_TRUE(Text.empty());
+}
+
+TEST(MusicLyricsKrc, RejectsTruncatedCompressedStream)
+{
+	std::string Encrypted = BuildEncryptedKrc(SAMPLE_KRC);
+	ASSERT_GT(Encrypted.size(), 10u);
+	Encrypted.resize(Encrypted.size() - 4);
+	std::string Text;
+	EXPECT_FALSE(DecryptKrc(Encrypted, &Text));
+	EXPECT_TRUE(Text.empty());
+}
+
+TEST(MusicLyricsKrc, SkipsInvalidStartTimeAndKeepsFollowingValidLine)
+{
+	NeteaseLyrics::STimeline Timeline;
+	ASSERT_TRUE(ParseKrcText("[invalid,100]bad\n[2000,500]valid\n", &Timeline));
+	ASSERT_EQ(Timeline.m_vLines.size(), 1u);
+	EXPECT_EQ(Timeline.m_vLines[0].m_StartMs, 2000);
+	EXPECT_EQ(Timeline.m_vLines[0].m_Text, "valid");
+}
+
+TEST(MusicLyricsKrc, SkipsInvalidDurationInsteadOfCreatingZeroTimeLine)
+{
+	NeteaseLyrics::STimeline Timeline;
+	ASSERT_TRUE(ParseKrcText("[0,invalid]bad\n[2000,500]valid\n", &Timeline));
+	ASSERT_EQ(Timeline.m_vLines.size(), 1u);
+	EXPECT_EQ(Timeline.m_vLines[0].m_Text, "valid");
+}
+
+TEST(MusicLyricsKrc, SkipsOverflowingEndTime)
+{
+	NeteaseLyrics::STimeline Timeline;
+	ASSERT_TRUE(ParseKrcText("[9223372036854775807,1]bad\n[2000,500]valid\n", &Timeline));
+	ASSERT_EQ(Timeline.m_vLines.size(), 1u);
+	EXPECT_EQ(Timeline.m_vLines[0].m_EndMs, 2500);
+}

@@ -2794,28 +2794,17 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 				// remove button
 				if(Inside)
 				{
-					const ColorRGBA InactiveIconColor = ColorRGBA(0.4f, 0.4f, 0.4f, 1.0f);
-					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-					TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-					if(Friend.ServerInfo())
-					{
-						TextRender()->TextColor(FollowingThisFriend || Ui()->HotItem() == pFollowButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
-						Ui()->DoLabel_QmIcon(&FollowButton, FollowingThisFriend ? EQmIcon::STOP : EQmIcon::PLAY, FollowingThisFriend ? FONT_ICON_STOP : FONT_ICON_PLAY, FollowButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
-					}
-					TextRender()->TextColor(Ui()->HotItem() == pCopyButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
-					Ui()->DoLabel_QmIcon(&CopyButton, EQmIcon::COPY, FONT_ICON_COPY, CopyButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
-					TextRender()->TextColor(Ui()->HotItem() == pRemoveButtonId ? TextRender()->DefaultTextColor() : InactiveIconColor);
-					Ui()->DoLabel_QmIcon(&RemoveButton, EQmIcon::TRASH, FONT_ICON_TRASH, RemoveButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
-					TextRender()->SetRenderFlags(0);
-					TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-					TextRender()->TextColor(TextRender()->DefaultTextColor());
-					if(Ui()->DoButtonLogic(pCopyButtonId, 0, &CopyButton, BUTTONFLAG_LEFT))
+					const IUiContext Context = ui_widget::ControlContext(Ui());
+					const bool FollowPressed = Friend.ServerInfo() && ui_widget::DoIconButton(Context, pFollowButtonId, FollowingThisFriend ? EQmIcon::STOP : EQmIcon::PLAY, FollowingThisFriend ? FONT_ICON_STOP : FONT_ICON_PLAY, FollowingThisFriend ? 1 : 0, FollowButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, true) != 0;
+					const bool CopyPressed = ui_widget::DoIconButton(Context, pCopyButtonId, EQmIcon::COPY, FONT_ICON_COPY, 0, CopyButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, true) != 0;
+					const bool RemovePressed = ui_widget::DoIconButton(Context, pRemoveButtonId, EQmIcon::TRASH, FONT_ICON_TRASH, 0, RemoveButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, true, std::nullopt, false, true) != 0;
+					if(CopyPressed)
 					{
 						Input()->SetClipboardText(Friend.Name()[0] != '\0' ? Friend.Name() : Friend.Clan());
 						ButtonResult = 0;
 					}
 					GameClient()->m_Tooltips.DoToolTip(pCopyButtonId, &CopyButton, Friend.FriendState() == IFriends::FRIEND_PLAYER ? Localize("Click to copy this player's name to clipboard") : Localize("Click to copy this clan's name to clipboard"));
-					if(Friend.ServerInfo() && Ui()->DoButtonLogic(pFollowButtonId, 0, &FollowButton, BUTTONFLAG_LEFT))
+					if(FollowPressed)
 					{
 						if(FollowingThisFriend)
 						{
@@ -2831,7 +2820,7 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 					}
 					if(Friend.ServerInfo())
 						GameClient()->m_Tooltips.DoToolTip(pFollowButtonId, &FollowButton, FollowingThisFriend ? Localize("Stop following this friend", "Friend auto follow") : Localize("Follow this friend across servers", "Friend auto follow"));
-					if(Ui()->DoButtonLogic(pRemoveButtonId, 0, &RemoveButton, BUTTONFLAG_LEFT))
+					if(RemovePressed)
 					{
 						str_copy(m_aRemoveFriendName, Friend.Name(), sizeof(m_aRemoveFriendName));
 						str_copy(m_aRemoveFriendClan, Friend.Clan(), sizeof(m_aRemoveFriendClan));

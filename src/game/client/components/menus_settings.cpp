@@ -804,6 +804,7 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		++VisibleLanguages;
 
 		void *pRowId = UseCache ? static_cast<void *>(&gs_aLanguageRowIds[i]) : const_cast<char *>(Language.m_Filename.c_str());
+		Ui()->DoConfigTooltip(pRowId, &ItemRect, g_Config.m_ClLanguagefile);
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(Ui());
 		const int ButtonResult = Ui()->DoButtonLogic(pRowId, 0, &ItemRect, BUTTONFLAG_LEFT);
 		if(ButtonResult)

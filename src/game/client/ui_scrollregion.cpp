@@ -10,6 +10,8 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
 
 #include <cmath>
@@ -383,7 +385,10 @@ void CScrollRegion::DoSlider()
 		MaintainNoScrollSliderActive();
 		const bool Active = Ui()->IsActiveItem(pId);
 		const float Rounding = m_Params.m_ScrollHorizontal ? Slider.h / 2.0f : Slider.w / 2.0f;
-		DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Active, Ui()->HotItem() == pId), ColorRGBA(), Rounding);
+		if(Ui()->QmAnimationRuntime() != nullptr)
+			ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive);
+		else
+			DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Active, Ui()->HotItem() == pId), ColorRGBA(), Rounding);
 		return;
 	}
 
@@ -408,5 +413,8 @@ void CScrollRegion::DoSlider()
 	}
 
 	const float Rounding = m_Params.m_ScrollHorizontal ? Slider.h / 2.0f : Slider.w / 2.0f;
-	DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Ui()->CheckActiveItem(pId), Ui()->HotItem() == pId), ColorRGBA(), Rounding);
+	if(Ui()->QmAnimationRuntime() != nullptr)
+		ui_widget::DrawScrollbarHandle(ui_widget::ControlContext(Ui()), pId, Slider, m_Params.m_Interactive);
+	else
+		DrawRoundedSurface(Ui(), Slider, m_Params.SliderColor(Ui()->CheckActiveItem(pId), Ui()->HotItem() == pId), ColorRGBA(), Rounding);
 }

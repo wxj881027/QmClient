@@ -3379,18 +3379,15 @@ public:
 						}
 					}
 
-					// QmClient：逐字符顶点偏移（波浪浮动）。即使该字符不渲染也要消费游标，避免与字符错位。
-					float CharOffsetX = 0.0f;
-					float CharOffsetY = 0.0f;
+					// QmClient：逐字符顶点变换。即使该字符不渲染也要消费游标，避免与字符错位。
+					const STextCharOffset *pCharOffset = nullptr;
 					// 跳过序号已经落后的条目：调用方可能为换行等不产生顶点的字符也建了条目，
 					// 若不跳过，游标会永久卡住，之后所有字符的偏移恒为 0。
 					while(OffsetOption < (int)pCursor->m_vCharOffsets.size() && pCursor->m_vCharOffsets.at(OffsetOption).m_CharIndex < PrevCharCount)
 						++OffsetOption;
 					if(OffsetOption < (int)pCursor->m_vCharOffsets.size() && pCursor->m_vCharOffsets.at(OffsetOption).m_CharIndex == PrevCharCount)
 					{
-						const STextCharOffset &CharOffset = pCursor->m_vCharOffsets.at(OffsetOption);
-						CharOffsetX = CharOffset.m_XOffset;
-						CharOffsetY = CharOffset.m_YOffset;
+						pCharOffset = &pCursor->m_vCharOffsets.at(OffsetOption);
 						++OffsetOption;
 					}
 
@@ -3402,8 +3399,8 @@ public:
 							TextContainer.m_SweepLayout.AddQuad(LineCount, TextContainer.m_StringInfo.m_vCharacterQuads.size() - 1);
 						STextCharQuad &TextCharQuad = TextContainer.m_StringInfo.m_vCharacterQuads.back();
 
-						TextCharQuad.m_aVertices[0].m_X = CharX + CharOffsetX;
-						TextCharQuad.m_aVertices[0].m_Y = CharY + CharOffsetY;
+						TextCharQuad.m_aVertices[0].m_X = CharX;
+						TextCharQuad.m_aVertices[0].m_Y = CharY;
 						TextCharQuad.m_aVertices[0].m_U = pGlyph->m_aUVs[0];
 						TextCharQuad.m_aVertices[0].m_V = pGlyph->m_aUVs[3];
 						TextCharQuad.m_aVertices[0].m_Color.r = (unsigned char)(Color.r * 255.f);
@@ -3411,8 +3408,8 @@ public:
 						TextCharQuad.m_aVertices[0].m_Color.b = (unsigned char)(Color.b * 255.f);
 						TextCharQuad.m_aVertices[0].m_Color.a = (unsigned char)(Color.a * 255.f);
 
-						TextCharQuad.m_aVertices[1].m_X = CharX + CharWidth + CharOffsetX;
-						TextCharQuad.m_aVertices[1].m_Y = CharY + CharOffsetY;
+						TextCharQuad.m_aVertices[1].m_X = CharX + CharWidth;
+						TextCharQuad.m_aVertices[1].m_Y = CharY;
 						TextCharQuad.m_aVertices[1].m_U = pGlyph->m_aUVs[2];
 						TextCharQuad.m_aVertices[1].m_V = pGlyph->m_aUVs[3];
 						TextCharQuad.m_aVertices[1].m_Color.r = (unsigned char)(ColorEnd.r * 255.f);
@@ -3420,8 +3417,8 @@ public:
 						TextCharQuad.m_aVertices[1].m_Color.b = (unsigned char)(ColorEnd.b * 255.f);
 						TextCharQuad.m_aVertices[1].m_Color.a = (unsigned char)(ColorEnd.a * 255.f);
 
-						TextCharQuad.m_aVertices[2].m_X = CharX + CharWidth + CharOffsetX;
-						TextCharQuad.m_aVertices[2].m_Y = CharY - CharHeight + CharOffsetY;
+						TextCharQuad.m_aVertices[2].m_X = CharX + CharWidth;
+						TextCharQuad.m_aVertices[2].m_Y = CharY - CharHeight;
 						TextCharQuad.m_aVertices[2].m_U = pGlyph->m_aUVs[2];
 						TextCharQuad.m_aVertices[2].m_V = pGlyph->m_aUVs[1];
 						TextCharQuad.m_aVertices[2].m_Color.r = (unsigned char)(ColorEnd.r * 255.f);
@@ -3429,14 +3426,27 @@ public:
 						TextCharQuad.m_aVertices[2].m_Color.b = (unsigned char)(ColorEnd.b * 255.f);
 						TextCharQuad.m_aVertices[2].m_Color.a = (unsigned char)(ColorEnd.a * 255.f);
 
-						TextCharQuad.m_aVertices[3].m_X = CharX + CharOffsetX;
-						TextCharQuad.m_aVertices[3].m_Y = CharY - CharHeight + CharOffsetY;
+						TextCharQuad.m_aVertices[3].m_X = CharX;
+						TextCharQuad.m_aVertices[3].m_Y = CharY - CharHeight;
 						TextCharQuad.m_aVertices[3].m_U = pGlyph->m_aUVs[0];
 						TextCharQuad.m_aVertices[3].m_V = pGlyph->m_aUVs[1];
 						TextCharQuad.m_aVertices[3].m_Color.r = (unsigned char)(Color.r * 255.f);
 						TextCharQuad.m_aVertices[3].m_Color.g = (unsigned char)(Color.g * 255.f);
 						TextCharQuad.m_aVertices[3].m_Color.b = (unsigned char)(Color.b * 255.f);
 						TextCharQuad.m_aVertices[3].m_Color.a = (unsigned char)(Color.a * 255.f);
+
+						if(pCharOffset != nullptr)
+						{
+							// 围绕字形中心缩放；排版、选区和光标继续使用原字形尺寸。
+							const vec2 Center(CharX + CharWidth * 0.5f, CharY - CharHeight * 0.5f);
+							for(auto &Vertex : TextCharQuad.m_aVertices)
+							{
+								const vec2 Position = pCharOffset->TransformVertex(vec2(Vertex.m_X, Vertex.m_Y), Center);
+								Vertex.m_X = Position.x;
+								Vertex.m_Y = Position.y;
+							}
+						}
+
 						if(pCursor->m_pfnColorSampler != nullptr)
 						{
 							TextContainer.m_HasSpatialGradient = true;

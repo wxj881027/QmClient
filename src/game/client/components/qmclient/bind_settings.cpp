@@ -7,6 +7,8 @@
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/components/binds.h>
@@ -197,7 +199,10 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		const bool Selected = State.m_HasSelected && State.m_Selected == Slot;
 
 		const auto *pImage = Tile.m_pImage != nullptr ? FindMenuImage(Tile.m_pImage) : nullptr;
-		DrawRoundedSurface(Ui(), Rect, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.08f), 4.0f);
+		ui_widget::SButtonSurfaceOptions Options;
+		Options.m_Selected = Selected;
+		const ColorRGBA Fill = ui_widget::DrawButtonSurface(ui_widget::ControlContext(Ui()), &State.m_aKeyButtons[State.m_KeyButtonCount], Rect, Options);
+		CUiScopedSurfaceText SurfaceText(TextRender(), Fill);
 		if(pImage != nullptr)
 		{
 			Graphics()->TextureSet(Hovered || Selected ? pImage->m_OrgTexture : pImage->m_GreyTexture);
@@ -214,10 +219,6 @@ void CMenus::RenderSettingsQmClientBindCard(CUIRect &Content, const bool Prewarm
 		{
 			Ui()->DoLabel(&Rect, Localize(Tile.m_pLabel, Tile.m_pContext != nullptr ? Tile.m_pContext : ""), std::min(BodySize, Rect.h * CUi::ms_FontmodHeight), TEXTALIGN_MC);
 		}
-		if(Selected)
-			DrawRoundedSurface(Ui(), Rect, ColorRGBA(0.2f, 0.75f, 1.0f, 0.18f), ColorRGBA(0.3f, 0.85f, 1.0f, 0.75f), 4.0f, 1.0f);
-		else if(Hovered)
-			DrawRoundedSurface(Ui(), Rect, ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f), ColorRGBA(), 4.0f);
 		if(GameClient()->m_Binds.Get(Slot)[0] != '\0')
 		{
 			CUIRect Indicator;

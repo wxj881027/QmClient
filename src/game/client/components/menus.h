@@ -143,7 +143,7 @@ class CMenus : public CComponent
 public:
 	int DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, unsigned Flags = BUTTONFLAG_LEFT);
 	int DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f);
-	int DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = 5.0f, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f);
+	int DoButton_Menu_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), CUIElement *pTextUiElement = nullptr, float TextFontSize = -1.0f);
 	int DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);
 	int DoButton_MenuTab_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float FontSize = -1.0f, bool CapsuleTab = false);
 	int DoMenuTabV2(CButtonContainer *pButtonContainer, const char *pText, bool Active, const CUIRect *pRect, int Corners = IGraphics::CORNER_T, const ColorRGBA *pCustomDefault = nullptr, const ColorRGBA *pCustomActive = nullptr, const ColorRGBA *pCustomHover = nullptr, const CCommunityIcon *pCommunityIcon = nullptr, CUIElement *pTextUiElement = nullptr, float ContentScale = 1.0f, bool CapsuleTab = false);
@@ -190,7 +190,7 @@ private:
 	int DoButton_MenuTabInternal(CButtonContainer *pButtonContainer, const char *pText, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator, const ColorRGBA *pDefaultColor, const ColorRGBA *pActiveColor, const ColorRGBA *pHoverColor, float EdgeRounding, const CCommunityIcon *pCommunityIcon, CUIElement *pTextUiElement, float FontSize, bool CapsuleTab = false);
 
 	IUiContext SettingsUiContext(const char *pScope, float UiScale = 1.0f);
-	int DoSettingsDropDown(CUIRect *pRect, int CurSelection, const char *const *ppStrs, int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties = {});
+	int DoSettingsDropDown(CUIRect *pRect, int CurSelection, const char *const *ppStrs, int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties = {}, const void *pConfigValue = nullptr, const void *pSecondConfigValue = nullptr);
 	SCardMotionSpec SettingsCardMotionSpec() const;
 	SSettingsCardDeckVisualOptions SettingsCardDeckVisualOptions() const;
 	qm_card_order::CModel &SettingsCardOrderModel();
@@ -210,7 +210,7 @@ private:
 	void PrepareSettingsTabLabelCache(float MainViewWidth, float TabBarWidth = -1.0f);
 	void PrepareLanguagePageCache(float MainViewWidth, bool ForceComplete);
 	void SplitSettingsScrollbarRects(const CUIRect &Rect, unsigned Flags, CUIRect *pLabelRect, CUIRect *pValueRect, CUIRect *pScrollBarRect) const;
-	int DoButton_CheckBox_Common_WithLabelElement(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, CUIElement *pLabelElement, bool ProcessInput = true, float LabelFontSize = -1.0f);
+	int DoButton_CheckBox_Common_WithLabelElement(const void *pId, const char *pText, const char *pBoxText, const CUIRect *pRect, unsigned Flags, CUIElement *pLabelElement, bool ProcessInput = true, float LabelFontSize = -1.0f, bool MarkedControl = false);
 	int DoSettingsButton_CheckBox(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect);
 	const char *TemporaryOverrideTooltip(const int *pValue) const;
 	int DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float RowHeight, float RowSpacing, float BodySize);
@@ -1844,6 +1844,8 @@ protected:
 	std::vector<SDemoCutSegment> m_vDemoCutSegments;
 	qm_demo_cut::CPreview m_DemoCutPreview;
 	int m_DemoSelectionAnchorIndex = -1;
+	std::shared_ptr<CQmScreenshotWatermarkJob> m_pScreenshotWatermarkJob;
+	std::string m_ScreenshotWatermarkFolder;
 	bool m_DemoScreenshotPreviewOpen = false;
 	bool m_DemoScreenshotPreviewLoadFailed = false;
 	char m_aDemoScreenshotPreviewFolder[IO_MAX_PATH_LENGTH] = "";
@@ -1902,6 +1904,7 @@ protected:
 	void RenderDemoScreenshotWatermarkPreview(CUIRect PreviewRect, const CDemoItem &Item);
 	bool DoDemoScreenshotWatermarkButton(const CUIRect &Rect);
 	bool ApplyDemoScreenshotWatermark(const CDemoItem &Item);
+	void PumpDemoScreenshotWatermark();
 	void DemolistOnUpdate(bool Reset);
 	void DemolistSelectNeighbor();
 	static int DemolistFetchCallback(const char *pName, int IsDir, int StorageType, void *pUser);
@@ -2833,7 +2836,7 @@ public:
 
 	bool PrepareSettingsNumericFieldLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect &Rect, const char *pLabel, unsigned Flags, ui_widget::SNumericFieldOptions &Options);
 	ui_widget::SNumericFieldState *GetSettingsNumericFieldState(const void *pId);
-	bool DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &View, const char *pLabelTextId, const char *pLabel, std::vector<CButtonContainer> &vButtonContainers, const std::vector<const char *> &vButtonTextIds, const std::vector<const char *> &vLabels, const std::vector<int> &vValues, int &Value, const SSettingsContentMetrics &Metrics, const int *pOverrideSource = nullptr);
+	bool DoSettingsLine_RadioMenu(int Page, int Tab, int Subtab, CUIRect &View, const char *pLabelTextId, const char *pLabel, std::vector<CButtonContainer> &vButtonContainers, const std::vector<const char *> &vButtonTextIds, const std::vector<const char *> &vLabels, const std::vector<int> &vValues, int &Value, const SSettingsContentMetrics &Metrics, const int *pOverrideSource = nullptr, const void *pConfigValue = nullptr, const void *pSecondConfigValue = nullptr);
 	void BuildBaseSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView);
 	void BuildSettingsMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems);

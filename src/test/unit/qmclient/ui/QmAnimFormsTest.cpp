@@ -152,3 +152,108 @@ TEST(UiForms, SliderInputValueMappingPreservesStoredScaleAndInfiniteSentinel)
 	EXPECT_LE(ui_widget::NumericFieldInfiniteEndpointStart(240.0f, 1.0f), 0.96f);
 	EXPECT_GE(ui_widget::NumericFieldInfiniteEndpointStart(240.0f, 1.0f), 0.94f);
 }
+
+TEST(BooleanControlLayout, LabelAndSwitchStaySeparateInNarrowAndScaledRows)
+{
+	for(const CUIRect Rect : {CUIRect{10, 20, 300, 20}, CUIRect{10, 20, 300, 40}, CUIRect{10, 20, 12, 20}})
+	{
+		SCOPED_TRACE(::testing::Message() << "width=" << Rect.w << " height=" << Rect.h);
+		const auto Layout = ui_widget::ResolveBooleanControlLayout(Rect, true);
+		EXPECT_GE(Layout.m_LabelRect.w, 0.0f);
+		EXPECT_LE(Layout.m_LabelRect.x + Layout.m_LabelRect.w, Layout.m_ControlRect.x);
+		EXPECT_GE(Layout.m_ControlRect.x, Rect.x);
+		EXPECT_LE(Layout.m_ControlRect.x + Layout.m_ControlRect.w, Rect.x + Rect.w);
+	}
+}
+
+TEST(BooleanControlLayout, UnlabelledSwitchIsCenteredWithinItsHitArea)
+{
+	const CUIRect Rect{10, 20, 60, 20};
+	const auto Layout = ui_widget::ResolveBooleanControlLayout(Rect, false);
+	EXPECT_FLOAT_EQ(Layout.m_ControlRect.x + Layout.m_ControlRect.w * 0.5f, Rect.x + Rect.w * 0.5f);
+	EXPECT_FLOAT_EQ(Layout.m_LabelRect.w, 0.0f);
+}
+
+TEST(ToggleLayout, KnobStaysInsideTrackAcrossEndpointsAndSmallDimensions)
+{
+	for(const CUIRect Rect : {CUIRect{10, 20, 33, 20}, CUIRect{10, 20, 10, 24}, CUIRect{10, 20, 1, 1}, CUIRect{10, 20, 0, 20}})
+	{
+		for(float Progress : {-1.0f, 0.0f, 0.5f, 1.0f, 2.0f})
+		{
+			SCOPED_TRACE(::testing::Message() << "width=" << Rect.w << " progress=" << Progress);
+			const auto Layout = ui_widget::ResolveToggleLayout(Rect, Progress);
+			EXPECT_GE(Layout.m_Knob.w, 0.0f);
+			EXPECT_GE(Layout.m_Knob.x, Layout.m_Track.x);
+			EXPECT_GE(Layout.m_Knob.y, Layout.m_Track.y);
+			EXPECT_LE(Layout.m_Knob.x + Layout.m_Knob.w, Layout.m_Track.x + Layout.m_Track.w + 0.001f);
+			EXPECT_LE(Layout.m_Knob.y + Layout.m_Knob.h, Layout.m_Track.y + Layout.m_Track.h + 0.001f);
+		}
+	}
+}
+
+TEST(ToggleStyle, OnUsesAccentAndOffPreservesConfiguredControlSurface)
+{
+	SUiTheme Theme{};
+	Theme.m_Accent = ColorRGBA(0.7f, 0.2f, 0.5f, 1.0f);
+	const ColorRGBA Surface(0.1f, 0.3f, 0.2f, 0.4f), Backdrop(0, 0, 0, 1);
+	const auto Off = ResolveUiToggleStyle(Theme, Surface, Backdrop, false, true);
+	const auto On = ResolveUiToggleStyle(Theme, Surface, Backdrop, true, true);
+	const auto Disabled = ResolveUiToggleStyle(Theme, Surface, Backdrop, true, false);
+	EXPECT_EQ(Off.m_Track, Surface);
+	EXPECT_EQ(On.m_Track, Theme.m_Accent);
+	EXPECT_LT(Disabled.m_Track.a, On.m_Track.a);
+	EXPECT_LT(Disabled.m_Knob.a, On.m_Knob.a);
+}
+
+TEST(SliderLayout, FillFollowsClampedValueAndMatchesHandleCenter)
+{
+	const CUIRect Rect{10, 20, 200, 20};
+	for(float Value : {-1.0f, 0.0f, 0.5f, 1.0f, 2.0f})
+	{
+		const auto Layout = ui_widget::ResolveHorizontalSliderLayout(Rect, Value);
+		EXPECT_NEAR(Layout.m_Fill.x + Layout.m_Fill.w, Layout.m_Handle.x + Layout.m_Handle.w * 0.5f, 0.001f);
+		EXPECT_GE(Layout.m_Fill.w, 0.0f);
+		EXPECT_LE(Layout.m_Fill.w, Layout.m_Track.w);
+		EXPECT_GE(Layout.m_Handle.x, Rect.x);
+		EXPECT_LE(Layout.m_Handle.x + Layout.m_Handle.w, Rect.x + Rect.w);
+	}
+}
+
+TEST(SliderLayout, NarrowAndEmptyTracksKeepNonnegativeGeometry)
+{
+	for(const CUIRect Rect : {CUIRect{10, 20, 4, 20}, CUIRect{10, 20, 0, 20}, CUIRect{10, 20, 20, 0}})
+	{
+		const auto Layout = ui_widget::ResolveHorizontalSliderLayout(Rect, 0.5f);
+		EXPECT_GE(Layout.m_Handle.w, 0.0f);
+		EXPECT_GE(Layout.m_Track.w, 0.0f);
+		EXPECT_GE(Layout.m_Track.h, 0.0f);
+		EXPECT_LE(Layout.m_Handle.x + Layout.m_Handle.w, Rect.x + Rect.w);
+	}
+}
+
+TEST(SliderStyle, RailAndHandleRemainVisibleOnLightAndDarkBackgrounds)
+{
+	SUiTheme Theme{};
+	Theme.m_Accent = ColorRGBA(1, 1, 1, 1);
+	const auto Dark = ResolveUiSliderStyle(Theme, ColorRGBA(0, 0, 0, 1), false, false);
+	const auto Light = ResolveUiSliderStyle(Theme, ColorRGBA(1, 1, 1, 1), false, false);
+	EXPECT_GT(Dark.m_Track.r, Light.m_Track.r);
+	EXPECT_GT(Dark.m_Handle.r, Light.m_Handle.r);
+	EXPECT_GT(Dark.m_Track.a, 0.0f);
+	EXPECT_GT(Light.m_Track.a, 0.0f);
+}
+
+TEST(SliderStyle, DisabledIgnoresHoverAndPressFeedback)
+{
+	SUiTheme Theme{};
+	Theme.m_Accent = ColorRGBA(0.2f, 0.5f, 0.8f, 0.85f);
+	const ColorRGBA Backdrop(0, 0, 0, 1);
+	const auto Idle = ResolveUiSliderStyle(Theme, Backdrop, false, false);
+	const auto Pressed = ResolveUiSliderStyle(Theme, Backdrop, true, true);
+	const auto Disabled = ResolveUiSliderStyle(Theme, Backdrop, false, false, false);
+	const auto DisabledPress = ResolveUiSliderStyle(Theme, Backdrop, true, true, false);
+	EXPECT_GT(Pressed.m_Border.a, Idle.m_Border.a);
+	EXPECT_LT(Disabled.m_Handle.a, Idle.m_Handle.a);
+	EXPECT_EQ(DisabledPress.m_Handle, Disabled.m_Handle);
+	EXPECT_EQ(DisabledPress.m_Border, Disabled.m_Border);
+}

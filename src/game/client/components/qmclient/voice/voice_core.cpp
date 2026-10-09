@@ -1117,15 +1117,19 @@ void CRClientVoice::Shutdown()
 	}
 	m_EncoderReady.store(false);
 	ResetRuntimeState(VoiceUtils::VOICE_RUNTIME_RESET_CONNECTION | VoiceUtils::VOICE_RUNTIME_RESET_PEERS, 0);
-	for(auto &Peer : *m_pPeers)
+	// 重新启用后可能尚未完成初始化，关闭必须允许没有 peers 的状态。
+	if(m_pPeers)
 	{
-		if(Peer.m_pDecoder)
+		for(auto &Peer : *m_pPeers)
 		{
-			opus_decoder_destroy(Peer.m_pDecoder);
-			Peer.m_pDecoder = nullptr;
+			if(Peer.m_pDecoder)
+			{
+				opus_decoder_destroy(Peer.m_pDecoder);
+				Peer.m_pDecoder = nullptr;
+			}
 		}
+		m_pPeers.reset();
 	}
-	m_pPeers.reset();
 	if(m_pVoiceTransport)
 	{
 		m_pVoiceTransport->Disconnect();

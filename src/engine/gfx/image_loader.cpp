@@ -15,6 +15,7 @@
 #include <csetjmp>
 #include <cstdlib>
 #include <limits>
+#include <memory>
 #include <new>
 #include <vector>
 
@@ -166,112 +167,112 @@ static int PngliteIncompatibility(png_structp pPngStruct, png_infop pPngInfo)
 	return Result;
 }
 
-bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible)
+bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, int &PngliteIncompatible, size_t MaxDecodedBytes)
 {
-	CUserErrorStruct UserErrorStruct = {&Reader, pContextName, {}};
-
-	if(setjmp(UserErrorStruct.m_JmpBuf))
+	// libpng 错误会 longjmp，清理状态放在堆上，避免读取被跳转失效的局部指针。
+	struct SReadState
 	{
-		return false;
-	}
-
-	png_structp pPngStruct = png_create_read_struct(PNG_LIBPNG_VER_STRING, &UserErrorStruct, PngErrorCallback, PngWarningCallback);
-	if(pPngStruct == nullptr)
-	{
-		log_error("png", "libpng internal failure: png_create_read_struct failed.");
-		return false;
-	}
-
-	png_infop pPngInfo = nullptr;
-	png_bytepp pRowPointers = nullptr;
-	int Height = 0; // ensure this is not undefined for the Cleanup function
-	const auto &&Cleanup = [&]() {
-		delete[] pRowPointers;
-		if(pPngInfo != nullptr)
+		CUserErrorStruct m_Error;
+		png_structp m_pPng = nullptr;
+		png_infop m_pInfo = nullptr;
+		png_bytepp m_pRows = nullptr;
+		~SReadState()
 		{
-			png_destroy_info_struct(pPngStruct, &pPngInfo);
+			delete[] m_pRows;
+			if(m_pPng != nullptr)
+				png_destroy_read_struct(&m_pPng, &m_pInfo, nullptr);
 		}
-		png_destroy_read_struct(&pPngStruct, nullptr, nullptr);
 	};
-	if(setjmp(UserErrorStruct.m_JmpBuf))
+	std::unique_ptr<SReadState> pState(new(std::nothrow) SReadState{});
+	if(pState == nullptr)
+		return false;
+	pState->m_Error = {&Reader, pContextName, {}};
+	pState->m_pPng = png_create_read_struct(PNG_LIBPNG_VER_STRING, &pState->m_Error, PngErrorCallback, PngWarningCallback);
+	if(pState->m_pPng == nullptr)
+		return false;
+	if(setjmp(pState->m_Error.m_JmpBuf))
 	{
 		Image.Free();
-		Cleanup();
 		return false;
 	}
-
-	pPngInfo = png_create_info_struct(pPngStruct);
-	if(pPngInfo == nullptr)
-	{
-		Cleanup();
-		log_error("png", "libpng internal failure: png_create_info_struct failed.");
+	pState->m_pInfo = png_create_info_struct(pState->m_pPng);
+	if(pState->m_pInfo == nullptr)
 		return false;
-	}
 
 	png_byte aSignature[8];
 	if(!Reader.Read(aSignature, sizeof(aSignature)) || png_sig_cmp(aSignature, 0, sizeof(aSignature)) != 0)
 	{
-		Cleanup();
 		log_error("png", "file is not a valid PNG file (signature mismatch).");
 		return false;
 	}
 
-	png_set_read_fn(pPngStruct, (png_bytep)&Reader, PngReadDataCallback);
-	png_set_sig_bytes(pPngStruct, sizeof(aSignature));
+	png_set_read_fn(pState->m_pPng, (png_bytep)&Reader, PngReadDataCallback);
+	png_set_sig_bytes(pState->m_pPng, sizeof(aSignature));
 
-	png_read_info(pPngStruct, pPngInfo);
+#if defined(PNG_SET_USER_LIMITS_SUPPORTED)
+	if(MaxDecodedBytes != std::numeric_limits<size_t>::max())
+	{
+		png_set_chunk_malloc_max(pState->m_pPng, 1024 * 1024);
+		png_set_chunk_cache_max(pState->m_pPng, 16);
+	}
+#endif
+	png_read_info(pState->m_pPng, pState->m_pInfo);
 
 	if(Reader.Error())
 	{
 		// error already logged
-		Cleanup();
 		return false;
 	}
 
-	const png_uint_32 PngWidth = png_get_image_width(pPngStruct, pPngInfo);
-	const png_uint_32 PngHeight = png_get_image_height(pPngStruct, pPngInfo);
-	const png_byte BitDepth = png_get_bit_depth(pPngStruct, pPngInfo);
-	const int ColorType = png_get_color_type(pPngStruct, pPngInfo);
+	const png_uint_32 PngWidth = png_get_image_width(pState->m_pPng, pState->m_pInfo);
+	const png_uint_32 PngHeight = png_get_image_height(pState->m_pPng, pState->m_pInfo);
+	const png_byte BitDepth = png_get_bit_depth(pState->m_pPng, pState->m_pInfo);
+	const int ColorType = png_get_color_type(pState->m_pPng, pState->m_pInfo);
 
 	if(PngWidth == 0 || PngHeight == 0 || PngWidth > (png_uint_32)std::numeric_limits<int>::max() || PngHeight > (png_uint_32)std::numeric_limits<int>::max())
 	{
 		log_error("png", "image has invalid dimensions. width=%u height=%u", (unsigned)PngWidth, (unsigned)PngHeight);
-		Cleanup();
 		return false;
 	}
 	const int Width = (int)PngWidth;
-	Height = (int)PngHeight;
+	const int Height = (int)PngHeight;
+	// 按 RGBA 的最坏情况限制像素，后续格式转换也不能突破调用方预算。
+	size_t RgbaDataSize = 0;
+	if(!ImageDataSize(Width, Height, CImageInfo::FORMAT_RGBA, RgbaDataSize) || RgbaDataSize > MaxDecodedBytes)
+	{
+		log_error("png", "image exceeds decoded byte budget. width=%d height=%d", Width, Height);
+		return false;
+	}
 
 	if(BitDepth == 16)
 	{
-		png_set_strip_16(pPngStruct);
+		png_set_strip_16(pState->m_pPng);
 	}
 	else if(BitDepth > 8 || BitDepth == 0)
 	{
 		log_error("png", "bit depth %d not supported.", BitDepth);
-		Cleanup();
 		return false;
 	}
 
 	if(ColorType == PNG_COLOR_TYPE_PALETTE)
 	{
-		png_set_palette_to_rgb(pPngStruct);
+		png_set_palette_to_rgb(pState->m_pPng);
 	}
 
 	if(ColorType == PNG_COLOR_TYPE_GRAY && BitDepth < 8)
 	{
-		png_set_expand_gray_1_2_4_to_8(pPngStruct);
+		png_set_expand_gray_1_2_4_to_8(pState->m_pPng);
 	}
 
-	if(png_get_valid(pPngStruct, pPngInfo, PNG_INFO_tRNS))
+	if(png_get_valid(pState->m_pPng, pState->m_pInfo, PNG_INFO_tRNS))
 	{
-		png_set_tRNS_to_alpha(pPngStruct);
+		png_set_tRNS_to_alpha(pState->m_pPng);
 	}
 
-	png_read_update_info(pPngStruct, pPngInfo);
+	png_read_update_info(pState->m_pPng, pState->m_pInfo);
 
-	const int ColorChannelCount = png_get_channels(pPngStruct, pPngInfo);
-	const size_t BytesInRow = png_get_rowbytes(pPngStruct, pPngInfo);
+	const int ColorChannelCount = png_get_channels(pState->m_pPng, pState->m_pInfo);
+	const size_t BytesInRow = png_get_rowbytes(pState->m_pPng, pState->m_pInfo);
 	const CImageInfo::EImageFormat ImageFormat = ImageFormatFromChannelCount(ColorChannelCount);
 	size_t ExpectedDataSize = 0;
 	if(BytesInRow == 0 || ColorChannelCount <= 0 || (size_t)Width > std::numeric_limits<size_t>::max() / CImageInfo::PixelSize(ImageFormat) ||
@@ -279,7 +280,6 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 		!ImageDataSize(Width, Height, ImageFormat, ExpectedDataSize))
 	{
 		log_error("png", "image dimensions are too large. width=%d height=%d rowbytes=%" PRIzu " channels=%d", Width, Height, BytesInRow, ColorChannelCount);
-		Cleanup();
 		return false;
 	}
 
@@ -287,21 +287,19 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 	if(Image.m_pData == nullptr)
 	{
 		log_error("png", "failed to allocate image data. width=%d height=%d bytes=%" PRIzu, Width, Height, ExpectedDataSize);
-		Cleanup();
 		return false;
 	}
-	pRowPointers = new(std::nothrow) png_bytep[Height];
-	if(pRowPointers == nullptr)
+	pState->m_pRows = new(std::nothrow) png_bytep[Height];
+	if(pState->m_pRows == nullptr)
 	{
 		Image.Free();
 		log_error("png", "failed to allocate row pointers. height=%d", Height);
-		Cleanup();
 		return false;
 	}
 	for(int y = 0; y < Height; ++y)
-		pRowPointers[y] = &Image.m_pData[(size_t)y * BytesInRow];
+		pState->m_pRows[y] = &Image.m_pData[(size_t)y * BytesInRow];
 
-	png_read_image(pPngStruct, pRowPointers);
+	png_read_image(pState->m_pPng, pState->m_pRows);
 	if(Reader.Error())
 		Image.Free();
 	else
@@ -309,11 +307,8 @@ bool CImageLoader::LoadPng(CByteBufferReader &Reader, const char *pContextName, 
 		Image.m_Width = Width;
 		Image.m_Height = Height;
 		Image.m_Format = ImageFormat;
-		PngliteIncompatible = PngliteIncompatibility(pPngStruct, pPngInfo);
+		PngliteIncompatible = PngliteIncompatibility(pState->m_pPng, pState->m_pInfo);
 	}
-
-	Cleanup();
-
 	return !Reader.Error();
 }
 
@@ -445,24 +440,38 @@ bool CImageLoader::ReadPngComment(IOHANDLE File, const char *pFilename, std::str
 
 bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, const char *pComment)
 {
-	png_structp pPngStruct = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-	if(pPngStruct == nullptr)
-	{
-		log_error("png", "libpng internal failure: png_create_write_struct failed.");
+	if(Image.m_pData == nullptr || Image.m_Width == 0 || Image.m_Height == 0 ||
+		Image.m_Width > (size_t)std::numeric_limits<int>::max() || Image.m_Height > (size_t)std::numeric_limits<int>::max() ||
+		Image.m_Format < CImageInfo::FORMAT_RGB || Image.m_Format > CImageInfo::FORMAT_RA)
 		return false;
-	}
-
-	png_infop pPngInfo = png_create_info_struct(pPngStruct);
-	if(pPngInfo == nullptr)
-	{
-		png_destroy_read_struct(&pPngStruct, nullptr, nullptr);
-		log_error("png", "libpng internal failure: png_create_info_struct failed.");
+	size_t DataSize = 0;
+	if(!ImageDataSize((int)Image.m_Width, (int)Image.m_Height, Image.m_Format, DataSize))
 		return false;
-	}
-
-	png_set_write_fn(pPngStruct, (png_bytep)&Writer, PngWriteDataCallback, PngOutputFlushCallback);
-
-	png_set_IHDR(pPngStruct, pPngInfo, Image.m_Width, Image.m_Height, 8, PngColorTypeFromFormat(Image.m_Format), PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+	// 清理状态置于堆上，libpng longjmp 后不会读取值已改变的自动局部变量。
+	struct SWriteState
+	{
+		CUserErrorStruct m_Error{nullptr, "PNG encode", {}};
+		png_structp m_pPng = nullptr;
+		png_infop m_pInfo = nullptr;
+		png_bytepp m_pRows = nullptr;
+		~SWriteState()
+		{
+			delete[] m_pRows;
+			if(m_pPng != nullptr)
+				png_destroy_write_struct(&m_pPng, &m_pInfo);
+		}
+	};
+	auto pState = std::make_unique<SWriteState>();
+	pState->m_pPng = png_create_write_struct(PNG_LIBPNG_VER_STRING, &pState->m_Error, PngErrorCallback, PngWarningCallback);
+	if(pState->m_pPng == nullptr)
+		return false;
+	if(setjmp(pState->m_Error.m_JmpBuf))
+		return false;
+	pState->m_pInfo = png_create_info_struct(pState->m_pPng);
+	if(pState->m_pInfo == nullptr)
+		return false;
+	png_set_write_fn(pState->m_pPng, &Writer, PngWriteDataCallback, PngOutputFlushCallback);
+	png_set_IHDR(pState->m_pPng, pState->m_pInfo, Image.m_Width, Image.m_Height, 8, PngColorTypeFromFormat(Image.m_Format), PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 	if(pComment != nullptr && pComment[0] != '\0')
 	{
 		png_text Text = {};
@@ -472,31 +481,14 @@ bool CImageLoader::SavePng(CByteBufferWriter &Writer, const CImageInfo &Image, c
 		Text.itxt_length = str_length(pComment);
 		Text.lang = const_cast<char *>("");
 		Text.lang_key = const_cast<char *>("");
-		png_set_text(pPngStruct, pPngInfo, &Text, 1);
+		png_set_text(pState->m_pPng, pState->m_pInfo, &Text, 1);
 	}
-	png_write_info(pPngStruct, pPngInfo);
-
-	png_bytepp pRowPointers = new png_bytep[Image.m_Height];
-	const size_t WidthBytes = Image.m_Width * Image.PixelSize();
-	ptrdiff_t BufferOffset = 0;
-	for(size_t y = 0; y < Image.m_Height; ++y)
-	{
-		pRowPointers[y] = new png_byte[WidthBytes];
-		mem_copy(pRowPointers[y], Image.m_pData + BufferOffset, WidthBytes);
-		BufferOffset += (ptrdiff_t)WidthBytes;
-	}
-	png_write_image(pPngStruct, pRowPointers);
-	png_write_end(pPngStruct, pPngInfo);
-
-	for(size_t y = 0; y < Image.m_Height; ++y)
-	{
-		delete[] pRowPointers[y];
-	}
-	delete[] pRowPointers;
-
-	png_destroy_info_struct(pPngStruct, &pPngInfo);
-	png_destroy_write_struct(&pPngStruct, nullptr);
-
+	png_write_info(pState->m_pPng, pState->m_pInfo);
+	pState->m_pRows = new png_bytep[Image.m_Height];
+	for(size_t Y = 0; Y < Image.m_Height; ++Y)
+		pState->m_pRows[Y] = Image.m_pData + Y * Image.m_Width * CImageInfo::PixelSize(Image.m_Format);
+	png_write_image(pState->m_pPng, pState->m_pRows);
+	png_write_end(pState->m_pPng, pState->m_pInfo);
 	return true;
 }
 
@@ -587,7 +579,7 @@ bool CImageLoader::SaveWebP(IOHANDLE File, const char *pFilename, const CImageIn
 	return WriteSuccess;
 }
 
-bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image)
+bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
 {
 #if defined(CONF_WEBP)
 	// Read all data from reader
@@ -621,32 +613,26 @@ bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName,
 		return false;
 	}
 
-	// Decode to RGBA
-	uint8_t *pDecodedData = WebPDecodeRGBA(vData.data(), vData.size(), &Width, &Height);
-	if(!pDecodedData)
-	{
-		log_error("webp", "failed to decode WebP for '%s'", pContextName);
-		return false;
-	}
-
-	// Allocate output buffer and copy data (libwebp uses its own allocator)
+	// 先验证预算，再直接解码到最终缓冲，避免同时持有两份完整 RGBA。
 	size_t DataSizeOut = 0;
-	if(!ImageDataSize(Width, Height, CImageInfo::FORMAT_RGBA, DataSizeOut))
+	if(Width < 0 || Height < 0 || Width > std::numeric_limits<int>::max() / 4 ||
+		!ImageDataSize(Width, Height, CImageInfo::FORMAT_RGBA, DataSizeOut) || DataSizeOut > MaxDecodedBytes)
 	{
-		log_error("webp", "image dimensions are too large for '%s': %dx%d", pContextName, Width, Height);
-		WebPFree(pDecodedData);
+		log_error("webp", "image exceeds decoded byte budget for '%s': %dx%d", pContextName, Width, Height);
 		return false;
 	}
 	uint8_t *pDestData = (uint8_t *)malloc(DataSizeOut);
 	if(!pDestData)
 	{
 		log_error("webp", "failed to allocate output buffer for '%s'", pContextName);
-		WebPFree(pDecodedData);
 		return false;
 	}
-
-	mem_copy(pDestData, pDecodedData, DataSizeOut);
-	WebPFree(pDecodedData);
+	if(!WebPDecodeRGBAInto(vData.data(), vData.size(), pDestData, DataSizeOut, Width * 4))
+	{
+		free(pDestData);
+		log_error("webp", "failed to decode WebP for '%s'", pContextName);
+		return false;
+	}
 
 	// Fill image info
 	Image.m_Width = Width;
@@ -657,6 +643,7 @@ bool CImageLoader::LoadWebP(CByteBufferReader &Reader, const char *pContextName,
 	return true;
 #else
 	(void)Image;
+	(void)MaxDecodedBytes;
 
 	const size_t DataSize = Reader.Size();
 	if(DataSize < 12)
@@ -727,15 +714,15 @@ bool CImageLoader::LoadWebP(IOHANDLE File, const char *pFilename, CImageInfo &Im
 #endif
 }
 
-bool CImageLoader::LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image)
+bool CImageLoader::LoadPng(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
 {
 	CByteBufferReader Reader(static_cast<const uint8_t *>(pData), Size);
 	int PngliteIncompatible = 0;
-	return LoadPng(Reader, pContextName, Image, PngliteIncompatible);
+	return LoadPng(Reader, pContextName, Image, PngliteIncompatible, MaxDecodedBytes);
 }
 
-bool CImageLoader::LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image)
+bool CImageLoader::LoadWebP(const void *pData, size_t Size, const char *pContextName, CImageInfo &Image, size_t MaxDecodedBytes)
 {
 	CByteBufferReader Reader(static_cast<const uint8_t *>(pData), Size);
-	return LoadWebP(Reader, pContextName, Image);
+	return LoadWebP(Reader, pContextName, Image, MaxDecodedBytes);
 }

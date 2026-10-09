@@ -103,7 +103,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 	CUIElement &TranslationServiceLabel = SettingsTextElement(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-translation-service");
 	DoSettingsLabelStreamed(TranslationServiceLabel, &LabelCol, Localize("Translation service"), BodySize, TEXTALIGN_ML);
-	const int BackendSelectedNew = DoSettingsDropDown(&ControlCol, BackendSelectedOld, TranslateBackendDropDownNames.data(), TranslateBackendDropDownNames.size(), s_TranslateBackendDropDownState);
+	const int BackendSelectedNew = DoSettingsDropDown(&ControlCol, BackendSelectedOld, TranslateBackendDropDownNames.data(), TranslateBackendDropDownNames.size(), s_TranslateBackendDropDownState, {}, g_Config.m_QmTranslateBackend);
 	if(!PrewarmOnly && !Ui()->RenderOnly())
 		NTranslateUi::CommitBackend(g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), BackendSelectedOld, BackendSelectedNew);
 	const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
@@ -230,7 +230,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		std::vector<const char *> vNames(apNames, apNames + Count);
 		vNames.push_back(Localize("Custom…"));
 		const int SelectedIndex = NTranslateUi::CustomSelectionIndex(OldSel, Count);
-		const int NewSel = DoSettingsDropDown(&DropRect, SelectedIndex, vNames.data(), static_cast<int>(vNames.size()), DropDownState);
+		const int NewSel = DoSettingsDropDown(&DropRect, SelectedIndex, vNames.data(), static_cast<int>(vNames.size()), DropDownState, {}, pConfigValue);
 		if(!PrewarmOnly && !Ui()->RenderOnly())
 			NTranslateUi::CommitSelection(pConfigValue, ConfigValueSize, apCodes, Count, SelectedIndex, NewSel);
 
@@ -347,7 +347,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 		CUIElement &LlmProviderLabel = SettingsTextElement(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-llm-provider");
 		DoSettingsLabelStreamed(LlmProviderLabel, &LabelCol, Localize("LLM provider"), BodySize, TEXTALIGN_ML);
-		const int NewProvider = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmProvider, LlmProviderDropDownNames.data(), LlmProviderDropDownNames.size(), s_LlmProviderDropDownState);
+		const int NewProvider = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmProvider, LlmProviderDropDownNames.data(), LlmProviderDropDownNames.size(), s_LlmProviderDropDownState, {}, &g_Config.m_QmTranslateLlmProvider);
 		// 写回前校验范围，防止异常返回值（如越界防御收敛出的 -1）污染配置
 		if(!PrewarmOnly && !Ui()->RenderOnly() && NewProvider != g_Config.m_QmTranslateLlmProvider && NewProvider >= 0 && NewProvider < static_cast<int>(LlmProviderDropDownNames.size()))
 		{
@@ -362,7 +362,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			Content.HSplitTop(LineHeight, &Row, &Content);
 			Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-llm-authentication", &LabelCol, Localize("Authentication"), BodySize);
-			const int Auth = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomAuth, AuthNames.data(), AuthNames.size(), s_LlmCustomAuth);
+			const int Auth = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomAuth, AuthNames.data(), AuthNames.size(), s_LlmCustomAuth, {}, &g_Config.m_QmTranslateLlmCustomAuth);
 			if(!PrewarmOnly && !Ui()->RenderOnly() && Auth >= 0 && Auth < 2)
 				g_Config.m_QmTranslateLlmCustomAuth = Auth;
 			Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -371,7 +371,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			Content.HSplitTop(LineHeight, &Row, &Content);
 			Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-llm-thinking-parameters", &LabelCol, Localize("Thinking parameters"), BodySize);
-			const int Thinking = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomThinking, ThinkingNames.data(), ThinkingNames.size(), s_LlmCustomThinking);
+			const int Thinking = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomThinking, ThinkingNames.data(), ThinkingNames.size(), s_LlmCustomThinking, {}, &g_Config.m_QmTranslateLlmCustomThinking);
 			if(!PrewarmOnly && !Ui()->RenderOnly() && Thinking >= 0 && Thinking < 4)
 				g_Config.m_QmTranslateLlmCustomThinking = Thinking;
 			Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -506,7 +506,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			ModelEditRect.VMargin(1.0f, &ModelEditRect);
 
 			const int ModelOldSel = FindPresetIndex(pModelConfigValue);
-			const int ModelNewSel = DoSettingsDropDown(&ModelDropRect, ModelOldSel, vModelNames.data(), vModelNames.size(), s_LlmModelDropDownState);
+			const int ModelNewSel = DoSettingsDropDown(&ModelDropRect, ModelOldSel, vModelNames.data(), vModelNames.size(), s_LlmModelDropDownState, {}, pModelConfigValue);
 			if(ModelNewSel >= 0 && ModelNewSel != ModelOldSel && ModelNewSel != CustomIndex)
 				str_copy(pModelConfigValue, vModelPresets[ModelNewSel], ModelConfigSize);
 
@@ -710,7 +710,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			};
 			static CUi::SDropDownState s_IncomingModeDropDown;
 			const int OldIncomingMode = std::clamp(g_Config.m_QmTranslateAutoMode, 0, 1);
-			const int NewIncomingMode = DoSettingsDropDown(&ControlCol, OldIncomingMode, apIncomingModeNames.data(), apIncomingModeNames.size(), s_IncomingModeDropDown);
+			const int NewIncomingMode = DoSettingsDropDown(&ControlCol, OldIncomingMode, apIncomingModeNames.data(), apIncomingModeNames.size(), s_IncomingModeDropDown, {}, &g_Config.m_QmTranslateAutoMode);
 			if(NewIncomingMode != OldIncomingMode)
 				g_Config.m_QmTranslateAutoMode = NewIncomingMode;
 		}
@@ -727,7 +727,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			};
 			static CUi::SDropDownState s_OutgoingModeDropDown;
 			const int OldMode = std::clamp(g_Config.m_QmTranslateAutoOutgoingMode, 0, 1);
-			const int NewMode = DoSettingsDropDown(&ControlCol, OldMode, apOutgoingModeNames.data(), apOutgoingModeNames.size(), s_OutgoingModeDropDown);
+			const int NewMode = DoSettingsDropDown(&ControlCol, OldMode, apOutgoingModeNames.data(), apOutgoingModeNames.size(), s_OutgoingModeDropDown, {}, &g_Config.m_QmTranslateAutoOutgoingMode);
 			if(NewMode != OldMode)
 				g_Config.m_QmTranslateAutoOutgoingMode = NewMode;
 		}

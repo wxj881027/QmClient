@@ -132,7 +132,7 @@ void CMenus::RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHei
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		RenderQmVisualLabel(pTextId, &LabelColumn, pText, BodySize);
 		State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;
-		const int NewValue = DoSettingsDropDown(&ControlColumn, std::clamp(*pValue, 0, MaxValue), ppNames, NumNames, State);
+		const int NewValue = DoSettingsDropDown(&ControlColumn, std::clamp(*pValue, 0, MaxValue), ppNames, NumNames, State, {}, pValue);
 		if(*pValue != NewValue)
 			*pValue = NewValue;
 		Content.HSplitTop(LineSpacing, nullptr, &Content);

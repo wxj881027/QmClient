@@ -968,6 +968,8 @@ void CGameClient::OnInit()
 		OnInput(Event);
 	});
 	m_UiRuntimeV2.Init(this);
+	m_UI.SetQmAnimationRuntime(&m_UiRuntimeV2.AnimRuntime());
+	m_UI.SetQmTooltips(&m_Tooltips);
 	m_RenderTools.Init(Graphics(), TextRender(), this); // TClient
 	m_RenderMap.Init(Graphics(), TextRender());
 	m_AppliedQmUiIconWeight = NormalizeQmIconWeight(g_Config.m_QmUiIconWeight);

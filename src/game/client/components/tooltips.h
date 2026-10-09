@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_TOOLTIPS_H
 #define GAME_CLIENT_COMPONENTS_TOOLTIPS_H
 
+#include <game/client/QmUi/UiConfigHintText.h>
 #include <game/client/component.h>
 #include <game/client/ui_rect.h>
 
@@ -83,6 +84,7 @@ inline bool QmTooltipHovered(const CTooltip &Tooltip, TUi &Ui)
 class CTooltips : public CComponent
 {
 	std::unordered_map<uintptr_t, CTooltip> m_Tooltips;
+	std::unordered_map<uintptr_t, CUiConfigHintText> m_ConfigHints;
 	std::optional<std::reference_wrapper<CTooltip>> m_ActiveTooltip;
 	std::optional<std::reference_wrapper<CTooltip>> m_PreviousTooltip;
 	int64_t m_HoverTime;
@@ -135,6 +137,8 @@ public:
 	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
 	// 说明标签不抢占控件的 HotItem，通过可见悬浮区域触发提示。
 	void DoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
+	// 控件显式提供配置绑定；后续普通提示会追加同一命令，保留原说明。
+	void DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const void *pValue, const void *pSecondValue = nullptr);
 
 	// 卡片内交给固定说明区；独立说明保留自动换行的气泡。
 	void DoInfoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize);

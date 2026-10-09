@@ -12,16 +12,31 @@
 #include <cstdint>
 #include <ctime>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 class IEngine;
 class CGpuUploadLimiter;
+class CQmScreenshotWatermarkJob;
+
+// 取消与最终替换串行：取消先发生时保留旧文件，替换已提交时不撤回成功结果。
+class CQmScreenshotExportControl
+{
+	mutable std::mutex m_Mutex;
+	bool m_Canceled = false;
+
+public:
+	void Cancel();
+	bool Canceled() const;
+	bool Commit(const std::string &TempPath, const std::string &TargetPath);
+};
 
 // 截图页只负责选择文件，水印处理放在这个独立模块中，便于其它卡片复用。
 class CQmScreenshotManager
 {
+	friend class CQmScreenshotWatermarkJob;
 public:
 	enum class EWatermarkPosition
 	{
@@ -96,6 +111,8 @@ public:
 
 	// 从指定存储路径读取图片，合成水印后写入用户保存目录。源文件不会被覆盖。
 	bool ApplyWatermark(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const;
+	std::shared_ptr<CQmScreenshotWatermarkJob> CreateWatermarkJob(IStorage *pStorage, const char *pSourcePath, int SourceStorageType, const char *pTargetPath, const SWatermarkOptions &Options) const;
+	static bool SavePngAtomically(const std::string &TargetPath, const CImageInfo &Image, const char *pComment, CQmScreenshotExportControl *pControl = nullptr);
 
 private:
 	struct SCaptureMetadata
@@ -105,7 +122,7 @@ private:
 		std::string m_Comment;
 	};
 	const SCaptureMetadata &CaptureMetadata(IStorage *pStorage, const char *pPath, int StorageType) const;
-	static bool DrawWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, EWatermarkPosition Position);
+	static bool DrawWatermark(IStorage *pStorage, CImageInfo &Image, const std::string &Text, EWatermarkPosition Position, const std::vector<std::string> &vFontPaths = {});
 
 	struct SScanContext
 	{
@@ -137,6 +154,26 @@ private:
 	// 本帧按可见顺序排队的缩略图键：只在当前可见项上启动后台任务，滚动过快不会堆积陈旧请求。
 	std::vector<std::string> m_vThumbnailRequests;
 	uint64_t m_ThumbnailFrame = 0;
+};
+
+// 后台任务只持有路径和内容快照，不借用菜单、配置或其 Storage。
+class CQmScreenshotWatermarkJob : public IJob
+{
+	std::string m_SourcePath;
+	std::string m_TargetPath;
+	std::string m_Text;
+	std::string m_Comment;
+	std::vector<std::string> m_vFontPaths;
+	CQmScreenshotManager::EWatermarkPosition m_Position;
+	CQmScreenshotExportControl m_Control;
+	bool m_Saved = false;
+	void Run() override;
+
+public:
+	CQmScreenshotWatermarkJob(std::string SourcePath, std::string TargetPath, std::string Text, std::string Comment, std::vector<std::string> vFontPaths, CQmScreenshotManager::EWatermarkPosition Position);
+	void Cancel() { m_Control.Cancel(); }
+	bool Canceled() const { return m_Control.Canceled(); }
+	bool Saved() const { return State() == STATE_DONE && m_Saved; }
 };
 
 #endif

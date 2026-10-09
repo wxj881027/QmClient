@@ -330,16 +330,25 @@ struct STextColorSplit
 		m_CharIndex(CharIndex), m_Length(Length), m_Color(Color), m_ColorEnd(ColorEnd) {}
 };
 
-// QmClient：逐字符顶点偏移，用于波浪浮动一类几何效果。
-// 偏移只作用于渲染顶点，不参与布局、断行、选区与光标计算，因此文字宽度和对齐保持稳定。
+// QmClient：逐字符顶点变换，用于浮动和缩放回弹。
+// 变换只作用于渲染顶点，不参与布局、断行、选区与光标计算，因此文字宽度和对齐保持稳定。
 struct STextCharOffset
 {
 	int m_CharIndex; // 文本中的字符序号，与 STextColorSplit 使用同一套序号
 	float m_XOffset;
 	float m_YOffset;
+	float m_Scale;
 
-	STextCharOffset(int CharIndex, float XOffset, float YOffset) :
-		m_CharIndex(CharIndex), m_XOffset(XOffset), m_YOffset(YOffset) {}
+	STextCharOffset(int CharIndex, float XOffset, float YOffset, float Scale = 1.0f) :
+		m_CharIndex(CharIndex), m_XOffset(XOffset), m_YOffset(YOffset), m_Scale(Scale) {}
+
+	vec2 TransformVertex(vec2 Position, vec2 Center) const
+	{
+		// 默认比例沿用原顶点坐标，避免影响既有浮动效果的像素对齐。
+		if(m_Scale != 1.0f)
+			Position = Center + (Position - Center) * m_Scale;
+		return Position + vec2(m_XOffset, m_YOffset);
+	}
 };
 
 class CTextCursor

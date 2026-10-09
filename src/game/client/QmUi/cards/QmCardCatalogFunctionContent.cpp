@@ -306,7 +306,7 @@ void CMenus::RenderQmFunctionWeaponTrajectoryContent(CUIRect &Content, float Lin
 	static CUi::SDropDownState s_WeaponTrajectoryModeDropDownState;
 	static CScrollRegion s_WeaponTrajectoryModeDropDownScrollRegion;
 	s_WeaponTrajectoryModeDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_WeaponTrajectoryModeDropDownScrollRegion;
-	const int WeaponTrajectoryModeNew = DoSettingsDropDown(&ControlColumn, std::clamp(g_Config.m_QmWeaponTrajectory, 0, 2), s_WeaponTrajectoryModeNames.data(), s_WeaponTrajectoryModeNames.size(), s_WeaponTrajectoryModeDropDownState);
+	const int WeaponTrajectoryModeNew = DoSettingsDropDown(&ControlColumn, std::clamp(g_Config.m_QmWeaponTrajectory, 0, 2), s_WeaponTrajectoryModeNames.data(), s_WeaponTrajectoryModeNames.size(), s_WeaponTrajectoryModeDropDownState, {}, &g_Config.m_QmWeaponTrajectory);
 	if(g_Config.m_QmWeaponTrajectory != WeaponTrajectoryModeNew)
 		g_Config.m_QmWeaponTrajectory = WeaponTrajectoryModeNew;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
