@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == フリーズの不透明度
 
+Freeze projectile collision volume
+== フリーズ弾の衝突範囲
+
 Freeze stars
 == フリーズスター
 

@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == Donma opaklığı
 
+Freeze projectile collision volume
+== Freeze mermilerinin çarpışma hacmi
+
 Freeze stars
 == Donma yıldızları
 

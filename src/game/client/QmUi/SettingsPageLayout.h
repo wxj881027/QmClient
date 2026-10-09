@@ -560,8 +560,8 @@ inline float ResolveQmVisualWeaponAnimationHeight(const SSettingsContentMetrics 
 
 inline float ResolveQmVisualCollisionHitboxHeight(const SSettingsContentMetrics &Metrics, const bool Enabled)
 {
-	// 总开关、十个语义开关、玩家范围、三项颜色和透明度共十六行。
-	return (Enabled ? 16.0f : 1.0f) * Metrics.m_RowStep;
+	// 总开关、十一个语义开关、玩家范围、三项颜色和透明度共十七行。
+	return (Enabled ? 17.0f : 1.0f) * Metrics.m_RowStep;
 }
 
 inline float ResolveQmVisualFocusModeHeight(const SSettingsContentMetrics &Metrics)

@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == 얼음 불투명도
 
+Freeze projectile collision volume
+== 프리즈 탄환 충돌 범위
+
 Freeze stars
 == 얼음 별
 

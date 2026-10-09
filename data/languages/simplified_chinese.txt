@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == 冻结不透明度
 
+Freeze projectile collision volume
+== 冻结子弹碰撞体积
+
 Freeze stars
 == 显示冻结效果的星星动画
 

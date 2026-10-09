@@ -4901,6 +4901,9 @@ Freeze laser outline color
 Freeze opacity
 == Freeze-Deckkraft
 
+Freeze projectile collision volume
+== Kollisionsvolumen von Freeze-Projektilen
+
 Freeze stars
 == Froststerne
 
