@@ -1,6 +1,8 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_QM_SPONSORS_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_QM_SPONSORS_H
 
+#include "bounded_file_reader.h"
+
 #include <base/str.h>
 
 #include <engine/shared/json.h>
@@ -12,18 +14,19 @@
 
 namespace qm_sponsors
 {
+	constexpr size_t MAX_BYTES = 64 * 1024;
+
 	inline std::vector<std::string> ParseNames(const char *pMarkdown)
 	{
 		std::vector<std::string> vNames;
 		if(!pMarkdown)
 			return vNames;
 
-		constexpr size_t MaxBytes = 64 * 1024;
 		constexpr size_t MaxNames = 400;
 		size_t Length = 0;
-		while(Length < MaxBytes && pMarkdown[Length])
+		while(Length < MAX_BYTES && pMarkdown[Length])
 			++Length;
-		const bool Truncated = Length == MaxBytes && pMarkdown[Length];
+		const bool Truncated = Length == MAX_BYTES && pMarkdown[Length];
 		const auto IsBlank = [](char Char) { return Char == ' ' || Char == '\t'; };
 
 		size_t Position = 0;
@@ -76,6 +79,22 @@ namespace qm_sponsors
 		return vNames;
 	}
 
+	// 接管句柄并在分配前限制草稿大小；失败后不保留旧文本或旧名单。
+	inline bool LoadDraft(IOHANDLE File, std::string &Draft, std::vector<std::string> &vNames)
+	{
+		vNames.clear();
+		if(!QmReadFileBounded(File, MAX_BYTES, Draft))
+			return false;
+		// 保持原 ReadFileStr 的文本语义，不能将含 NUL 的文件解析成残缺名单。
+		if(Draft.find('\0') != std::string::npos)
+		{
+			Draft.clear();
+			return false;
+		}
+		vNames = ParseNames(Draft.c_str());
+		return true;
+	}
+
 	class CSnapshot
 	{
 		std::string m_Markdown;
@@ -91,7 +110,7 @@ namespace qm_sponsors
 				return false;
 			const json_value *pMarkdown = json_object_get(pPayload, "markdown");
 			const json_value *pVersion = json_object_get(pPayload, "version");
-			if(!pMarkdown || pMarkdown->type != json_string || pMarkdown->u.string.length > 64 * 1024 ||
+			if(!pMarkdown || pMarkdown->type != json_string || pMarkdown->u.string.length > MAX_BYTES ||
 				!pVersion || pVersion->type != json_integer || pVersion->u.integer < 0 ||
 				pVersion->u.integer > std::numeric_limits<int>::max() ||
 				static_cast<size_t>(str_length(pMarkdown->u.string.ptr)) != pMarkdown->u.string.length ||

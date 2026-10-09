@@ -1563,7 +1563,7 @@ void CTClient::ConSoloSplitLeave(IConsole::IResult *pResult, void *pUserData)
 
 void CTClient::SoloSplitToggle()
 {
-	if(m_SoloSplitAction != 0)
+	if(m_SoloSplit.Pending())
 		return;
 	if(Client()->State() != IClient::STATE_ONLINE)
 		return;
@@ -1592,15 +1592,13 @@ void CTClient::SoloSplitLeave()
 
 void CTClient::SoloSplitStart(int Action)
 {
-	if(m_SoloSplitAction != 0 || Client()->State() != IClient::STATE_ONLINE)
+	if(m_SoloSplit.Pending() || Client()->State() != IClient::STATE_ONLINE)
 		return;
 	if(!Client()->DummyConnected())
 	{
 		if(Action != 1 || !g_Config.m_QmSoloSplitLinkDummy)
 			return;
-		m_SoloSplitAction = Action;
-		m_SoloSplitWaitingForDummy = true;
-		m_SoloSplitDeadline = time_get() + time_freq() * 10;
+		m_SoloSplit.WaitForPlayers(Action, time_get(), time_freq());
 		Client()->DummyConnect();
 		return;
 	}
@@ -1609,7 +1607,7 @@ void CTClient::SoloSplitStart(int Action)
 	const int DummyId = GameClient()->m_aLocalIds[1];
 	if(MainId < 0 || DummyId < 0)
 	{
-		m_SoloSplitAction = 0;
+		m_SoloSplit.WaitForPlayers(Action, time_get(), time_freq());
 		return;
 	}
 
@@ -1619,15 +1617,12 @@ void CTClient::SoloSplitStart(int Action)
 	const int RestoreTeam = g_Config.m_QmSoloSplitRestoreTeam;
 	if(RestoreTeam < 0 || RestoreTeam >= TeamSuper)
 	{
-		m_SoloSplitAction = 0;
 		return;
 	}
-	m_aSoloSplitPreviousTeam[0] = MainTeam;
-	m_aSoloSplitPreviousTeam[1] = DummyTeam;
+	std::array<int, 2> aTargetTeams;
 	if(Action == 2)
 	{
-		m_aSoloSplitTargetTeam[0] = RestoreTeam;
-		m_aSoloSplitTargetTeam[1] = RestoreTeam;
+		aTargetTeams = {RestoreTeam, RestoreTeam};
 	}
 	else
 	{
@@ -1657,62 +1652,30 @@ void CTClient::SoloSplitStart(int Action)
 		}
 		if(First < 0 || Second < 0)
 		{
-			m_SoloSplitAction = 0;
 			return;
 		}
-		m_aSoloSplitTargetTeam[0] = First;
-		m_aSoloSplitTargetTeam[1] = Second;
+		aTargetTeams = {First, Second};
 	}
-	m_SoloSplitAction = Action;
-	m_SoloSplitAttempts = 0;
-	m_SoloSplitWaitingForDummy = false;
-	m_SoloSplitDeadline = time_get();
+	m_SoloSplit.StartTeams(Action, {MainTeam, DummyTeam}, aTargetTeams, time_get());
 	SoloSplitUpdate();
 }
 
 void CTClient::SoloSplitUpdate()
 {
-	if(m_SoloSplitAction == 0 || !Client()->DummyConnected())
-		return;
 	const int MainId = GameClient()->m_aLocalIds[0];
 	const int DummyId = GameClient()->m_aLocalIds[1];
-	if(MainId < 0 || DummyId < 0)
-		return;
-	const bool Done = GameClient()->m_Teams.Team(MainId) == m_aSoloSplitTargetTeam[0] && GameClient()->m_Teams.Team(DummyId) == m_aSoloSplitTargetTeam[1];
-	if(Done)
+	const bool PlayerIdsValid = MainId >= 0 && DummyId >= 0;
+	const std::array<int, 2> aCurrentTeams = PlayerIdsValid ? std::array<int, 2>{GameClient()->m_Teams.Team(MainId), GameClient()->m_Teams.Team(DummyId)} : std::array<int, 2>{};
+	const auto Teams = m_SoloSplit.UpdateTeams(Client()->State() == IClient::STATE_ONLINE, Client()->DummyConnected(), PlayerIdsValid, aCurrentTeams, time_get(), time_freq());
+	if(Teams.has_value())
 	{
-		SoloSplitFinish(true);
-		return;
+		for(int Conn : {IClient::CONN_MAIN, IClient::CONN_DUMMY})
+		{
+			char aCmd[32];
+			str_format(aCmd, sizeof(aCmd), "/team %d", (*Teams)[Conn]);
+			GameClient()->m_Chat.SendChatOnConn(Conn, 0, aCmd);
+		}
 	}
-	if(time_get() < m_SoloSplitDeadline)
-		return;
-	if(m_SoloSplitAttempts < 2)
-	{
-		m_SoloSplitAttempts++;
-		m_SoloSplitDeadline = time_get() + time_freq() * 2;
-		char aCmd[32];
-		str_format(aCmd, sizeof(aCmd), "/team %d", m_aSoloSplitTargetTeam[0]);
-		GameClient()->m_Chat.SendChatOnConn(IClient::CONN_MAIN, 0, aCmd);
-		str_format(aCmd, sizeof(aCmd), "/team %d", m_aSoloSplitTargetTeam[1]);
-		GameClient()->m_Chat.SendChatOnConn(IClient::CONN_DUMMY, 0, aCmd);
-		return;
-	}
-	// 两边未能达到目标，回滚到调用前的队伍。
-	char aCmd[32];
-	str_format(aCmd, sizeof(aCmd), "/team %d", m_aSoloSplitPreviousTeam[0]);
-	GameClient()->m_Chat.SendChatOnConn(IClient::CONN_MAIN, 0, aCmd);
-	str_format(aCmd, sizeof(aCmd), "/team %d", m_aSoloSplitPreviousTeam[1]);
-	GameClient()->m_Chat.SendChatOnConn(IClient::CONN_DUMMY, 0, aCmd);
-	SoloSplitFinish(false);
-}
-
-void CTClient::SoloSplitFinish(bool Success)
-{
-	(void)Success;
-	m_SoloSplitAction = 0;
-	m_SoloSplitAttempts = 0;
-	m_SoloSplitWaitingForDummy = false;
-	m_SoloSplitDeadline = 0;
 }
 
 void CTClient::ConEmoteCycle(IConsole::IResult *pResult, void *pUserData)
@@ -2035,23 +1998,12 @@ bool CTClient::ServerCommandExists(const char *pCommand)
 
 void CTClient::OnUpdate()
 {
-	if(m_SoloSplitAction != 0)
-	{
-		if(m_SoloSplitWaitingForDummy)
-		{
-			if(Client()->DummyConnected())
-			{
-				const int Action = m_SoloSplitAction;
-				m_SoloSplitAction = 0;
-				m_SoloSplitWaitingForDummy = false;
-				SoloSplitStart(Action);
-			}
-			else if(time_get() >= m_SoloSplitDeadline)
-				SoloSplitFinish(false);
-		}
-		else
-			SoloSplitUpdate();
-	}
+	const bool PlayerIdsValid = GameClient()->m_aLocalIds[0] >= 0 && GameClient()->m_aLocalIds[1] >= 0;
+	const int SoloSplitAction = m_SoloSplit.TakeReadyAction(Client()->State() == IClient::STATE_ONLINE, Client()->DummyConnected(), PlayerIdsValid, time_get());
+	if(SoloSplitAction != 0)
+		SoloSplitStart(SoloSplitAction);
+	else if(m_SoloSplit.Pending() && !m_SoloSplit.WaitingForPlayers())
+		SoloSplitUpdate();
 	UpdateLocalSaveRestore();
 	TickUpdateLifecycle();
 
@@ -2978,6 +2930,7 @@ void CTClient::OnStateChange(int NewState, int OldState)
 	ResetGoresDrownCounts();
 	if(NewState != IClient::STATE_ONLINE)
 	{
+		CancelSoloSplit();
 		ResetGoresConfigOverrides();
 		m_LocalSaveRestore.Reset();
 		m_LocalSaveConfirmation.Reset();

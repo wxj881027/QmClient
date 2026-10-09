@@ -110,6 +110,41 @@ TEST_F(CTranslateQueueTest, SuccessfulAutomaticTranslationSendsResultOnly)
 	EXPECT_EQ(Done[0].m_SendText, "你好");
 }
 
+TEST_F(CTranslateQueueTest, OversizedAutomaticServiceResultRecoversOriginalExactlyOnce)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "auto");
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "完整原文"), 1));
+	const std::string Body = "{\"ok\":true,\"text\":\"" + std::string(1024, 'x') + "\"}";
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(Body.c_str());
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_EQ(Done[0].m_SendText, "完整原文");
+	EXPECT_EQ(Done[0].m_Job.m_pTranslateResponse->m_Notice, ETranslateNotice::INVALID_RESPONSE);
+	EXPECT_EQ(Queue.Size(), 0u);
+	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "next"), 1));
+	m_Http.m_vSubmissions.back().m_pRequest->Finish(R"({"ok":true,"text":"下一条"})");
+	const auto Recovered = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Recovered.size(), 1u);
+	EXPECT_TRUE(Recovered[0].m_Success);
+	EXPECT_EQ(Recovered[0].m_SendText, "下一条");
+}
+
+TEST_F(CTranslateQueueTest, OversizedExplicitAutomaticServiceResultSendsNothing)
+{
+	str_copy(g_Config.m_QmTranslateBackend, "auto");
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, false), 1));
+	const std::string Body = "{\"ok\":true,\"text\":\"" + std::string(1024, 'x') + "\"}";
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(Body.c_str());
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+}
+
 TEST_F(CTranslateQueueTest, IncomingResponsePublishesToOriginalSharedResponse)
 {
 	CTranslateJobQueue Queue;

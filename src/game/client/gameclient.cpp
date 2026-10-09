@@ -2332,6 +2332,7 @@ void CGameClient::ProcessQmStutterFrame()
 
 void CGameClient::OnDummyDisconnect()
 {
+	TClientComponent().CancelSoloSplit();
 	for(auto &Hammer : m_aDummyHammerInputs)
 		Hammer.Reset();
 	m_HammerInput = {};
