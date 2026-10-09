@@ -1850,6 +1850,21 @@ Chat fade smooth time (milliseconds)
 Chat font size
 == チャットフォントサイズ
 
+Chat gradient angle in degrees
+== グラデーションの方向 (チャット, °)
+
+Chat gradient horizontal position percentage
+== グラデーションの水平位置 (チャット, %)
+
+Chat gradient range percentage
+== グラデーションの範囲 (チャット, %)
+
+Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== グラデーションの種類 (チャット; 0=線形グラデーション, 1=放射状グラデーション, 2=角度グラデーション, 3=反射グラデーション, 4=菱形グラデーション)
+
+Chat gradient vertical position percentage
+== グラデーションの垂直位置 (チャット, %)
+
 Chat log retention days
 == チャットログ保持日数
 
@@ -5191,6 +5206,9 @@ Gradient horizontal position
 
 Gradient range
 == グラデーションの範囲
+
+Gradient settings
+== グラデーション設定
 
 Gradient type
 == グラデーションの種類
@@ -9979,6 +9997,9 @@ Retry remote stats
 
 Retrying…
 == 再試行中…
+
+Reverse chat gradient colors
+== グラデーションの色を反転 (チャット)
 
 Reverse gradient colors
 == グラデーションの色を反転

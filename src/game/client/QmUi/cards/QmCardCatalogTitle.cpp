@@ -15,7 +15,7 @@
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
-#include <game/client/components/message_gradient.h>
+#include <game/client/components/qmclient/chat_gradient.h>
 #include <game/client/components/qmclient/qm_title_color.h>
 #include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/components/qmclient/qm_title_style.h>
@@ -276,8 +276,8 @@ static void RenderQmSponsorChatPreview(IGraphics *pGraphics, ITextRender *pTextR
 	Cursor.m_TrackLineRanges = Style == EQmSponsorChatStyle::PLATINUM;
 	if(Style == EQmSponsorChatStyle::PLATINUM)
 		QmSponsorChatAddPlatinumSplits(Cursor, pText, Color.a);
-	else
-		CMessageGradient::AddTextSplits(Cursor, pText, g_Config.m_ClMessageGradient, Color);
+	const auto Gradient = QmChatGradientStyle(g_Config, EQmChatGradientRole::NORMAL, Color);
+	const CQmChatGradientPaint Paint(pTextRender, Cursor, pText, Style != EQmSponsorChatStyle::PLATINUM ? &Gradient : nullptr);
 	if(s_SponsorChatPreviewContainer.Valid())
 		pTextRender->RecreateTextContainerSoft(s_SponsorChatPreviewContainer, &Cursor, pText);
 	else

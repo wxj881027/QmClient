@@ -3195,6 +3195,7 @@ if(CLIENT)
     QmUi/QmLegacyMediaHud.cpp
     QmUi/QmLegacyMediaHud.h
     QmUi/QmColorGradient.h
+    QmUi/QmGradientGeometry.h
     QmUi/QmImeAppearance.h
     QmUi/QmImeCandidateLayout.h
     QmUi/QmInputMotion.h
@@ -3299,6 +3300,8 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogAppearancePreset.cpp
     QmUi/cards/QmCardCatalogIme.cpp
     QmUi/cards/QmColorGradientEditor.cpp
+    QmUi/cards/QmColorGradientEditor.h
+    QmUi/cards/QmChatGradientEditor.cpp
     QmUi/cards/QmCardCatalogTooltip.cpp
     QmUi/cards/QmCardCatalogFunctionMetrics.h
     QmUi/cards/QmCardCatalogHud.cpp
@@ -3438,6 +3441,7 @@ if(CLIENT)
     components/qmclient/bind_settings.cpp
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_input_layout.h
+    components/qmclient/chat_gradient.h
     components/qmclient/chat_command_hud.h
     components/qmclient/chat_command_hud_render.h
     components/qmclient/chat_emoji.cpp
@@ -4592,6 +4596,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_ime_candidate_layout_test.cpp
     src/test/unit/qmclient/ui/qm_input_motion_test.cpp
     src/test/unit/qmclient/ui/qm_color_gradient_test.cpp
+    src/test/unit/qmclient/client/qm_chat_gradient_test.cpp
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp

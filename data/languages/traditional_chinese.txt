@@ -1850,6 +1850,21 @@ Chat fade smooth time (milliseconds)
 Chat font size
 == 聊天字體大小
 
+Chat gradient angle in degrees
+== 漸層方向 (聊天, °)
+
+Chat gradient horizontal position percentage
+== 漸層水平位置 (聊天, %)
+
+Chat gradient range percentage
+== 漸層範圍 (聊天, %)
+
+Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== 漸層類型 (聊天; 0=線性漸層, 1=放射漸層, 2=角度漸層, 3=對稱漸層, 4=菱形漸層)
+
+Chat gradient vertical position percentage
+== 漸層垂直位置 (聊天, %)
+
 Chat log retention days
 == 聊天記錄保留天數
 
@@ -5191,6 +5206,9 @@ Gradient horizontal position
 
 Gradient range
 == 漸層範圍
+
+Gradient settings
+== 漸層設定
 
 Gradient type
 == 漸層類型
@@ -9979,6 +9997,9 @@ Retry remote stats
 
 Retrying…
 == 正在重試…
+
+Reverse chat gradient colors
+== 反轉漸層顏色 (聊天)
 
 Reverse gradient colors
 == 反轉漸層顏色

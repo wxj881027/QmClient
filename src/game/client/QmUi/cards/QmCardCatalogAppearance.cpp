@@ -36,7 +36,7 @@
 #include <game/client/components/countryflags.h>
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
-#include <game/client/components/message_gradient.h>
+#include <game/client/components/qmclient/chat_gradient.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
@@ -404,7 +404,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				// Message Colors and extra settings
 				static CButtonContainer s_SystemMessageReset, s_SystemMessageAdd, s_SystemMessageRemove;
 				static unsigned s_aSystemMessageColorValues[CMessageGradient::MAX_COLORS];
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-system-message", Localize("System message"), &g_Config.m_ClMessageSystemColor, g_Config.m_ClMessageSystemGradient, sizeof(g_Config.m_ClMessageSystemGradient), ColorRGBA(1.0f, 1.0f, 0.5f), &s_SystemMessageReset, &s_SystemMessageAdd, &s_SystemMessageRemove, s_aSystemMessageColorValues, true, &g_Config.m_ClShowChatSystem, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-system-message", Localize("System message"), &g_Config.m_ClMessageSystemColor, g_Config.m_ClMessageSystemGradient, sizeof(g_Config.m_ClMessageSystemGradient), ColorRGBA(1.0f, 1.0f, 0.5f), &s_SystemMessageReset, &s_SystemMessageAdd, &s_SystemMessageRemove, s_aSystemMessageColorValues, EQmChatGradientRole::SYSTEM, true, &g_Config.m_ClShowChatSystem, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 				if(DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, &g_Config.m_QmChatHideSystemPrefix, "appearance-chat-hide-system-prefix", Localize("Hide system message prefix"), &g_Config.m_QmChatHideSystemPrefix, &RightView, LineSize, MarginSmall, AppearanceBodySize))
 				{
 					pChat->RebuildChat();
@@ -413,25 +413,25 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 
 				static CButtonContainer s_HighlightedMessageReset, s_HighlightedMessageAdd, s_HighlightedMessageRemove;
 				static unsigned s_aHighlightedMessageColorValues[CMessageGradient::MAX_COLORS];
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-highlighted-message", Localize("Highlighted message"), &g_Config.m_ClMessageHighlightColor, g_Config.m_ClMessageHighlightGradient, sizeof(g_Config.m_ClMessageHighlightGradient), ColorRGBA(1.0f, 0.5f, 0.5f), &s_HighlightedMessageReset, &s_HighlightedMessageAdd, &s_HighlightedMessageRemove, s_aHighlightedMessageColorValues, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-highlighted-message", Localize("Highlighted message"), &g_Config.m_ClMessageHighlightColor, g_Config.m_ClMessageHighlightGradient, sizeof(g_Config.m_ClMessageHighlightGradient), ColorRGBA(1.0f, 0.5f, 0.5f), &s_HighlightedMessageReset, &s_HighlightedMessageAdd, &s_HighlightedMessageRemove, s_aHighlightedMessageColorValues, EQmChatGradientRole::HIGHLIGHT, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 
 				static CButtonContainer s_TeamMessageReset, s_TeamMessageAdd, s_TeamMessageRemove;
 				static unsigned s_aTeamMessageColorValues[CMessageGradient::MAX_COLORS];
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-team-message", Localize("Team message"), &g_Config.m_ClMessageTeamColor, g_Config.m_ClMessageTeamGradient, sizeof(g_Config.m_ClMessageTeamGradient), ColorRGBA(0.65f, 1.0f, 0.65f), &s_TeamMessageReset, &s_TeamMessageAdd, &s_TeamMessageRemove, s_aTeamMessageColorValues, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-team-message", Localize("Team message"), &g_Config.m_ClMessageTeamColor, g_Config.m_ClMessageTeamGradient, sizeof(g_Config.m_ClMessageTeamGradient), ColorRGBA(0.65f, 1.0f, 0.65f), &s_TeamMessageReset, &s_TeamMessageAdd, &s_TeamMessageRemove, s_aTeamMessageColorValues, EQmChatGradientRole::TEAM, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 
 				static CButtonContainer s_FriendMessageReset, s_FriendMessageAdd, s_FriendMessageRemove;
 				static unsigned s_aFriendMessageColorValues[CMessageGradient::MAX_COLORS];
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-friend-message", Localize("Friend message"), &g_Config.m_ClMessageFriendColor, g_Config.m_ClMessageFriendGradient, sizeof(g_Config.m_ClMessageFriendGradient), ColorRGBA(1.0f, 0.137f, 0.137f), &s_FriendMessageReset, &s_FriendMessageAdd, &s_FriendMessageRemove, s_aFriendMessageColorValues, true, &g_Config.m_ClMessageFriend, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-friend-message", Localize("Friend message"), &g_Config.m_ClMessageFriendColor, g_Config.m_ClMessageFriendGradient, sizeof(g_Config.m_ClMessageFriendGradient), ColorRGBA(1.0f, 0.137f, 0.137f), &s_FriendMessageReset, &s_FriendMessageAdd, &s_FriendMessageRemove, s_aFriendMessageColorValues, EQmChatGradientRole::FRIEND, true, &g_Config.m_ClMessageFriend, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 
 				static CButtonContainer s_NormalMessageReset, s_NormalMessageAdd, s_NormalMessageRemove;
 				static unsigned s_aNormalMessageColorValues[CMessageGradient::MAX_COLORS];
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-normal-message", Localize("Normal message"), &g_Config.m_ClMessageColor, g_Config.m_ClMessageGradient, sizeof(g_Config.m_ClMessageGradient), ColorRGBA(1.0f, 1.0f, 1.0f), &s_NormalMessageReset, &s_NormalMessageAdd, &s_NormalMessageRemove, s_aNormalMessageColorValues, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-normal-message", Localize("Normal message"), &g_Config.m_ClMessageColor, g_Config.m_ClMessageGradient, sizeof(g_Config.m_ClMessageGradient), ColorRGBA(1.0f, 1.0f, 1.0f), &s_NormalMessageReset, &s_NormalMessageAdd, &s_NormalMessageRemove, s_aNormalMessageColorValues, EQmChatGradientRole::NORMAL, true, nullptr, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 
 				str_format(aBuf, sizeof(aBuf), "%s (echo)", Localize("Client message"));
 				static CButtonContainer s_ClientMessageReset, s_ClientMessageAdd, s_ClientMessageRemove;
 				static unsigned s_aClientMessageColorValues[CMessageGradient::MAX_COLORS];
 				// TClient
-				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-client-message", aBuf, &g_Config.m_ClMessageClientColor, g_Config.m_ClMessageClientGradient, sizeof(g_Config.m_ClMessageClientGradient), ColorRGBA(0.5f, 0.78f, 1.0f), &s_ClientMessageReset, &s_ClientMessageAdd, &s_ClientMessageRemove, s_aClientMessageColorValues, true, &g_Config.m_QmShowChatClient, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
+				DoMessageGradientLine(*pChat, &RightView, APPEARANCE_TAB_CHAT, "appearance-chat-client-message", aBuf, &g_Config.m_ClMessageClientColor, g_Config.m_ClMessageClientGradient, sizeof(g_Config.m_ClMessageClientGradient), ColorRGBA(0.5f, 0.78f, 1.0f), &s_ClientMessageReset, &s_ClientMessageAdd, &s_ClientMessageRemove, s_aClientMessageColorValues, EQmChatGradientRole::CLIENT, true, &g_Config.m_QmShowChatClient, LineSize, MarginSmall, AppearanceBodySize, AppearanceMetrics.m_ButtonHeight);
 
 				static CButtonContainer s_FriendMessageHeartReset;
 				const unsigned OldFriendMessageHeartColor = g_Config.m_ClMessageFriendHeartColor;
@@ -441,6 +441,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					pChat->RebuildChat();
 					ConfigManager()->Save();
 				}
+				RenderQmChatGradientSettings(RightView, *pChat, AppearanceMetrics);
 			});
 			const auto MeasureChatPreview = [this, pChat, MarginSmall](float ContentWidth) {
 				const float RealFontSize = pChat->FontSize() * 2.0f;
@@ -673,20 +674,15 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						TextRender()->TextColor(NormalColor);
 				}
 
-				if(Line.m_Highlighted)
-					CMessageGradient::AddTextSplits(AppendCursor, Line.m_aText, g_Config.m_ClMessageHighlightGradient, HighlightedColor);
-				else if(Line.m_Friend && g_Config.m_ClMessageFriend)
-					CMessageGradient::AddTextSplits(AppendCursor, Line.m_aText, g_Config.m_ClMessageFriendGradient, FriendColor);
-				else if(Line.m_Team)
-					CMessageGradient::AddTextSplits(AppendCursor, Line.m_aText, g_Config.m_ClMessageTeamGradient, TeamColor);
-				else if(Line.m_Player)
-					CMessageGradient::AddTextSplits(AppendCursor, Line.m_aText, g_Config.m_ClMessageGradient, NormalColor);
-				else if(Line.m_Client)
-					CMessageGradient::AddTextSplits(AppendCursor, Line.m_aText, g_Config.m_ClMessageClientGradient, ClientColor);
-				else
-					CMessageGradient::AddTextSplits(AppendCursor, Line.m_aText, g_Config.m_ClMessageSystemGradient, SystemColor);
+				const EQmChatGradientRole Role = Line.m_Highlighted                          ? EQmChatGradientRole::HIGHLIGHT :
+								 Line.m_Friend && g_Config.m_ClMessageFriend ? EQmChatGradientRole::FRIEND :
+								 Line.m_Team                                 ? EQmChatGradientRole::TEAM :
+								 Line.m_Player                               ? EQmChatGradientRole::NORMAL :
+								 Line.m_Client                               ? EQmChatGradientRole::CLIENT :
+													       EQmChatGradientRole::SYSTEM;
+				const auto Gradient = QmChatGradientStyle(g_Config, Role, TextRender()->GetTextColor());
+				const CQmChatGradientPaint Paint(TextRender(), AppendCursor, Line.m_aText, &Gradient);
 				TextRender()->TextEx(&AppendCursor, Line.m_aText, -1);
-				AppendCursor.m_vColorSplits.clear();
 				if(Render)
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 

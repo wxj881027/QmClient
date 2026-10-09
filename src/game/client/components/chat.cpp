@@ -22,9 +22,9 @@
 #include <game/client/animstate.h>
 #include <game/client/components/censor.h>
 #include <game/client/components/console.h>
-#include <game/client/components/message_gradient.h>
 #include <game/client/components/qmclient/chat_command_hud_render.h>
 #include <game/client/components/qmclient/chat_command_preview.h>
+#include <game/client/components/qmclient/chat_gradient.h>
 #include <game/client/components/qmclient/chat_input_layout.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
@@ -994,6 +994,17 @@ void CChat::OnInit()
 	Console()->Chain("cl_chat_old", ConchainChatOld, this);
 	Console()->Chain("cl_chat_size", ConchainChatFontSize, this);
 	Console()->Chain("cl_chat_width", ConchainChatWidth, this);
+	const char *apRoles[] = {"system", "client", "highlight", "team", "friend", "normal"};
+	const char *apProperties[] = {"type", "angle", "center_x", "center_y", "range", "reverse"};
+	for(const char *pRole : apRoles)
+	{
+		for(const char *pProperty : apProperties)
+		{
+			char aCommand[64];
+			str_format(aCommand, sizeof(aCommand), "qm_chat_%s_gradient_%s", pRole, pProperty);
+			Console()->Chain(aCommand, ConchainChatOld, this);
+		}
+	}
 }
 
 bool CChat::OnInput(const IInput::CEvent &Event)
@@ -2783,7 +2794,7 @@ bool CChat::OnPrepareLines(float y)
 		}
 
 		ColorRGBA Color;
-		const char *pGradient = nullptr;
+		EQmChatGradientRole GradientRole = EQmChatGradientRole::NORMAL;
 		if(Line.m_CustomColor)
 		{
 			Color = *Line.m_CustomColor;
@@ -2791,32 +2802,32 @@ bool CChat::OnPrepareLines(float y)
 		else if(Line.m_ClientId == SERVER_MSG)
 		{
 			Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageSystemColor));
-			pGradient = g_Config.m_ClMessageSystemGradient;
+			GradientRole = EQmChatGradientRole::SYSTEM;
 		}
 		else if(Line.m_ClientId == CLIENT_MSG)
 		{
 			Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageClientColor));
-			pGradient = g_Config.m_ClMessageClientGradient;
+			GradientRole = EQmChatGradientRole::CLIENT;
 		}
 		else if(Line.m_Highlighted)
 		{
 			Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageHighlightColor));
-			pGradient = g_Config.m_ClMessageHighlightGradient;
+			GradientRole = EQmChatGradientRole::HIGHLIGHT;
 		}
 		else if(Line.m_Friend && g_Config.m_ClMessageFriend)
 		{
 			Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor));
-			pGradient = g_Config.m_ClMessageFriendGradient;
+			GradientRole = EQmChatGradientRole::FRIEND;
 		}
 		else if(Line.m_Team)
 		{
 			Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageTeamColor));
-			pGradient = g_Config.m_ClMessageTeamGradient;
+			GradientRole = EQmChatGradientRole::TEAM;
 		}
 		else // regular message
 		{
 			Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor));
-			pGradient = g_Config.m_ClMessageGradient;
+			GradientRole = EQmChatGradientRole::NORMAL;
 		}
 		if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
 			Color = QmSponsorChatPlatinumColor(0.0f, Color.a);
@@ -2841,11 +2852,17 @@ bool CChat::OnPrepareLines(float y)
 				TextRender()->RecreateTextContainerSoft(Line.m_BodyTextContainerIndex, &ClearCursor, "");
 			}
 		}
-		const auto AddMessageSplits = [&](CTextCursor &Cursor, const char *pMessage) {
-			if(Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM)
+		const auto AppendMessage = [&](CTextCursor &Cursor, const char *pMessage, bool UseGradient, bool UseColoredParts) {
+			const bool Platinum = Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM;
+			if(UseGradient && Platinum)
 				QmSponsorChatAddPlatinumSplits(Cursor, pMessage, Color.a);
-			else if(pGradient != nullptr && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty())
-				CMessageGradient::AddTextSplits(Cursor, pMessage, pGradient, Color);
+			if(UseColoredParts)
+				ColoredParts.AddSplitsToCursor(Cursor);
+			const bool SpatialGradient = UseGradient && !Platinum && Line.m_CustomColor == std::nullopt && ColoredParts.Colors().empty();
+			const auto Gradient = QmChatGradientStyle(g_Config, GradientRole, Color);
+			const CQmChatGradientPaint Paint(TextRender(), Cursor, pMessage, SpatialGradient ? &Gradient : nullptr);
+			TextRender()->CreateOrAppendTextContainer(BodyContainer, &Cursor, pMessage);
+			Cursor.m_vColorSplits.clear();
 		};
 
 		if(RenderChatEmoji)
@@ -2856,10 +2873,7 @@ bool CChat::OnPrepareLines(float y)
 		else if(pTranslatedText || pTranslatedError)
 		{
 			AppendCursor.m_CalculateVisualBoundingBox = true;
-			AddMessageSplits(AppendCursor, pText);
-			ColoredParts.AddSplitsToCursor(AppendCursor);
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
-			AppendCursor.m_vColorSplits.clear();
+			AppendMessage(AppendCursor, pText, true, true);
 			const float OriginalWidth = AppendCursor.m_LongestLineWidth;
 			CTextCursor SecondaryCursor = QmChatSecondaryCursor(AppendCursor,
 				QmChatTranslationFontSize(FontSize, g_Config.m_QmChatTranslationSize), Line.m_aTextBlockLayout[OffsetType].m_SecondaryOffset);
@@ -2875,11 +2889,9 @@ bool CChat::OnPrepareLines(float y)
 				ColorSub.r *= 0.7f;
 				ColorSub.g *= 0.7f;
 				ColorSub.b *= 0.7f;
-				AddMessageSplits(SecondaryCursor, pTranslatedText);
 			}
 			TextRender()->TextColor(ColorSub);
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &SecondaryCursor, pTranslatedText ? pTranslatedText : pTranslatedError);
-			SecondaryCursor.m_vColorSplits.clear();
+			AppendMessage(SecondaryCursor, pTranslatedText ? pTranslatedText : pTranslatedError, pTranslatedError == nullptr, false);
 			if(pTranslatedLanguage)
 			{
 				ColorRGBA ColorLang = ColorSub;
@@ -2897,10 +2909,7 @@ bool CChat::OnPrepareLines(float y)
 		}
 		else
 		{
-			AddMessageSplits(AppendCursor, pText);
-			ColoredParts.AddSplitsToCursor(AppendCursor);
-			TextRender()->CreateOrAppendTextContainer(BodyContainer, &AppendCursor, pText);
-			AppendCursor.m_vColorSplits.clear();
+			AppendMessage(AppendCursor, pText, true, true);
 		}
 
 		if(Line.m_aText[0] != '\0' || Line.m_aName[0] != '\0')

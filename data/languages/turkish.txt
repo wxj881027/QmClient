@@ -1850,6 +1850,21 @@ Chat fade smooth time (milliseconds)
 Chat font size
 == Sohbet yazı tipi boyutu
 
+Chat gradient angle in degrees
+== Gradyan yönü (sohbet, °)
+
+Chat gradient horizontal position percentage
+== Gradyan yatay konumu (sohbet, %)
+
+Chat gradient range percentage
+== Gradyan boyutu (sohbet, %)
+
+Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Gradyan türü (sohbet; 0=Doğrusal gradyan, 1=Radyal gradyan, 2=Açısal gradyan, 3=Simetrik gradyan, 4=Elmas gradyan)
+
+Chat gradient vertical position percentage
+== Gradyan dikey konumu (sohbet, %)
+
 Chat log retention days
 == Sohbet günlüğü saklama günü
 
@@ -5191,6 +5206,9 @@ Gradient horizontal position
 
 Gradient range
 == Gradyan boyutu
+
+Gradient settings
+== Gradyan ayarları
 
 Gradient type
 == Gradyan türü
@@ -9979,6 +9997,9 @@ Retry remote stats
 
 Retrying…
 == Yeniden deneniyor…
+
+Reverse chat gradient colors
+== Gradyan renklerini ters çevir (sohbet)
 
 Reverse gradient colors
 == Gradyan renklerini ters çevir

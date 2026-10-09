@@ -1,4 +1,5 @@
 #include "QmCardCatalog.h"
+#include "QmColorGradientEditor.h"
 
 #include <engine/shared/config.h>
 
@@ -139,35 +140,12 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 		else
 			g_Config.m_QmImeOpacity = Opacity;
 	}
+	static std::array<SQmGradientGeometryState, 4> s_aGeometryStates;
+	const SQmGradientGeometryBinding Geometry = {Settings.m_pType, Settings.m_pAngle, Settings.m_pCenterX, Settings.m_pCenterY, Settings.m_pRange, Settings.m_pReverse};
+	DoColorGradientGeometry(Content, Geometry, s_aGeometryStates[s_Role], Metrics, LabelWidth);
 	NextRow();
-	DrawLabel(Localize("Gradient type"));
-	const char *apTypes[] = {Localize("Linear gradient"), Localize("Radial gradient"), Localize("Angular gradient"), Localize("Reflected gradient"), Localize("Diamond gradient")};
-	static std::array<CUi::SDropDownState, 4> s_aTypeDropdown;
-	static std::array<CScrollRegion, 4> s_aTypeScroll;
-	s_aTypeDropdown[s_Role].m_SelectionPopupContext.m_pScrollRegion = &s_aTypeScroll[s_Role];
-	const int Type = DoSettingsDropDown(&Control, std::clamp(*Settings.m_pType, 0, 4), apTypes, std::size(apTypes), s_aTypeDropdown[s_Role]);
-	if(!ReadOnly)
-		*Settings.m_pType = Type;
-	const auto Slider = [&](const char *pText, int *pValue, int Min, int Max, const char *pUnit) {
-		NextRow();
-		DrawLabel(pText);
-		RenderQmSettingsSliderWithValueInput(pValue, Control, pValue, Min, Max, pUnit, ReadOnly);
-	};
-	if(*Settings.m_pType == 1)
-	{
-		NextRow();
-		SLabelProperties Props;
-		Props.m_MaxWidth = Row.w;
-		Props.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&Row, Localize("Radial gradients spread from the center"), BodySize, TEXTALIGN_ML, Props);
-	}
-	else
-		Slider(Localize("Gradient direction"), Settings.m_pAngle, 0, 360, "°");
-	Slider(Localize("Gradient horizontal position"), Settings.m_pCenterX, 0, 100, "%");
-	Slider(Localize("Gradient vertical position"), Settings.m_pCenterY, 0, 100, "%");
-	Slider(Localize("Gradient range"), Settings.m_pRange, 10, 200, "%");
-	RenderQmFunctionCheckboxRow(Content, RowHeight, LineSpacing, Settings.m_pReverse, "Reverse gradient colors", Localize("Reverse gradient colors"), Settings.m_pReverse, ReadOnly);
-	Slider(Localize("IME font size"), &g_Config.m_QmImeFontSize, 75, 200, "%");
+	DrawLabel(Localize("IME font size"));
+	RenderQmSettingsSliderWithValueInput(&g_Config.m_QmImeFontSize, Control, &g_Config.m_QmImeFontSize, 75, 200, "%", ReadOnly);
 	NextRow();
 	static CButtonContainer s_ResetAll;
 	if(DoButton_Menu(&s_ResetAll, Localize("Reset IME appearance"), 0, &Row) && !ReadOnly)

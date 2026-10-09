@@ -101,6 +101,23 @@ struct SQmColorGradient
 	}
 };
 
+// 长消息的颜色变化跨越多个字形，按方向和覆盖范围减少不必要的细分；单字仍保留七色网格。
+inline std::array<int, 2> QmGradientTextGrid(const SQmColorGradient &Gradient, vec2 Size, float FontSize)
+{
+	if(Gradient.m_Type == EQmGradientType::ANGULAR)
+		return {8, 8};
+	const bool Linear = Gradient.m_Type == EQmGradientType::LINEAR || Gradient.m_Type == EQmGradientType::REFLECTED;
+	const float Extent = std::abs(Gradient.m_Direction.x) + std::abs(Gradient.m_Direction.y);
+	const float Frequency = 2.0f * std::max(1, Gradient.m_NumColors - 1) / Gradient.m_Range;
+	const float Factor = Gradient.m_Type == EQmGradientType::LINEAR ? 1.0f : 2.0f;
+	const auto Count = [&](float Dimension, float Direction) {
+		const float Weight = Linear ? std::abs(Direction) / Extent : 1.0f;
+		const float Cells = Frequency * Factor * std::max(0.0f, FontSize) * Weight / std::max(0.0001f, Dimension);
+		return static_cast<int>(std::clamp(std::ceil(Cells), Linear ? 1.0f : 2.0f, 8.0f));
+	};
+	return {Count(Size.x, Gradient.m_Direction.x), Count(Size.y, Gradient.m_Direction.y)};
+}
+
 struct SQmGradientTextPaint
 {
 	const SQmColorGradient *m_pGradient;

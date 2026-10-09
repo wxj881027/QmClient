@@ -610,7 +610,7 @@ TEST(SettingsPageLayout, AppearanceDynamicCardsMatchConsumedPrimitivesAtBothScal
 {
 	const SSettingsContentMetrics Compact = ResolveSettingsContentMetrics(640.0f);
 	EXPECT_FLOAT_EQ(Compact.m_UiScale, 0.78f);
-	EXPECT_NEAR(ResolveAppearanceChatMessagesHeight(Compact), 278.6f, 0.001f);
+	EXPECT_NEAR(ResolveAppearanceChatMessagesHeight(Compact), 437.8f, 0.001f);
 	EXPECT_NEAR(ResolveQmHudCoordsHeight(Compact), 155.3f, 0.001f);
 	EXPECT_NEAR(ResolveQmHudNotificationsHeight(Compact, false, false), 95.6f, 0.001f);
 	EXPECT_NEAR(ResolveQmHudNotificationsHeight(Compact, true, false), 311.4f, 0.001f);
@@ -621,7 +621,7 @@ TEST(SettingsPageLayout, AppearanceDynamicCardsMatchConsumedPrimitivesAtBothScal
 
 	const SSettingsContentMetrics Standard = ResolveSettingsContentMetrics(1000.0f);
 	EXPECT_FLOAT_EQ(Standard.m_UiScale, 1.0f);
-	EXPECT_FLOAT_EQ(ResolveAppearanceChatMessagesHeight(Standard), 350.0f);
+	EXPECT_FLOAT_EQ(ResolveAppearanceChatMessagesHeight(Standard), 550.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudCoordsHeight(Standard), 195.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Standard, false, false), 120.0f);
 	EXPECT_FLOAT_EQ(ResolveQmHudNotificationsHeight(Standard, true, false), 390.0f);

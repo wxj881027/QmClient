@@ -615,6 +615,11 @@ Chat export cancelled
 Chat export failed
 Chat fade smooth time (milliseconds)
 Chat font size
+Chat gradient angle in degrees
+Chat gradient horizontal position percentage
+Chat gradient range percentage
+Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+Chat gradient vertical position percentage
 Chat log retention days
 Chat message
 Chat message preview
@@ -1729,6 +1734,7 @@ Gradient color
 Gradient direction
 Gradient horizontal position
 Gradient range
+Gradient settings
 Gradient type
 Gradient vertical position
 Graphics
@@ -3325,6 +3331,7 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 Retry remote stats
 Retrying…
+Reverse chat gradient colors
 Reverse gradient colors
 Reverse IME gradient colors
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
