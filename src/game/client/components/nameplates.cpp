@@ -404,7 +404,7 @@ public:
 	bool m_DirJump;
 	bool m_DirRight;
 	float m_FontSizeDirection;
-	bool m_ReserveHookStrongWeakRow;
+	float m_HookStrongWeakRowHeight;
 	bool m_ShowHookStrongWeak;
 	EHookStrongWeakState m_HookStrongWeakState;
 	bool m_ShowHookStrongWeakId;
@@ -1142,8 +1142,8 @@ public:
 	void Update(CGameClient &This, const CNamePlateData &Data) override
 	{
 		m_Visible = false;
-		m_ReserveLineHeight = Data.m_ReserveHookStrongWeakRow;
-		m_Size = vec2(0.0f, Data.m_FontSizeHookStrongWeak + DEFAULT_PADDING);
+		m_ReserveLineHeight = true;
+		m_Size = vec2(0.0f, Data.m_HookStrongWeakRowHeight);
 	}
 };
 
@@ -2214,7 +2214,7 @@ void CNamePlates::RenderNamePlateGame(vec2 Position, const CNetObj_PlayerInfo *p
 	}
 
 	Data.m_ShowHookStrongWeak = false;
-	Data.m_ReserveHookStrongWeakRow = DisplaySettings.StrongWeakEnabled();
+	Data.m_HookStrongWeakRowHeight = DisplaySettings.m_StrongWeakRowHeight;
 	Data.m_HookStrongWeakState = EHookStrongWeakState::NEUTRAL;
 	Data.m_ShowHookStrongWeakId = false;
 	Data.m_HookStrongWeakId = 0;
@@ -2365,7 +2365,7 @@ static void BuildNamePlatePreviewData(CGameClient &This, int DummyIdx, CNamePlat
 
 	Data.m_FontSizeHookStrongWeak = FontSizeHookStrongWeak;
 	Data.m_HookStrongWeakId = Data.m_ClientId;
-	Data.m_ReserveHookStrongWeakRow = g_Config.m_Debug || g_Config.m_ClNamePlatesStrong > 0;
+	Data.m_HookStrongWeakRowHeight = qm_demo_display::Resolve(g_Config, false, false).m_StrongWeakRowHeight;
 	Data.m_ShowHookStrongWeakId = NameplateScopeAllowsPreview && g_Config.m_ClNamePlatesStrong == 2;
 	if(DummyIdx == g_Config.m_ClDummy)
 	{

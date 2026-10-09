@@ -16,6 +16,7 @@ namespace
 		Config.m_ClShowDirection = 3;
 		Config.m_ClVideoShowDirection = 0;
 		Config.m_ClNamePlatesStrong = 2;
+		Config.m_ClNamePlatesStrongSize = 30;
 		Config.m_QmNameplateHookStrongWeakScope = 1;
 		Config.m_ClShowhud = 1;
 		Config.m_ClVideoShowhud = 0;
@@ -121,7 +122,7 @@ TEST(QmDemoDisplay, DefaultsMatchTheDocumentedValues)
 	EXPECT_EQ(DefaultConfig::QmDemoShowChat, 1);
 }
 
-TEST(QmDemoDisplay, DisabledDemoStrongWeakHidesIconsNumbersAndRow)
+TEST(QmDemoDisplay, DisabledDemoStrongWeakHidesContentAndKeepsRowHeight)
 {
 	CConfig Config = MakeConfig();
 	Config.m_QmDemoShowStrongWeak = 0;
@@ -134,6 +135,8 @@ TEST(QmDemoDisplay, DisabledDemoStrongWeakHidesIconsNumbersAndRow)
 			Config.m_Debug = Debug;
 			const auto Settings = qm_demo_display::Resolve(Config, true, VideoRendering);
 			EXPECT_FALSE(Settings.StrongWeakEnabled());
+			EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, 29.0f);
+			EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, qm_demo_display::Resolve(Config, false, VideoRendering).m_StrongWeakRowHeight);
 			EXPECT_FALSE(Settings.ShowStrongWeakId());
 			EXPECT_FALSE(Settings.ShowStrongWeak(true, false, false));
 			EXPECT_FALSE(Settings.ShowStrongWeak(false, true, false));
@@ -161,6 +164,7 @@ TEST(QmDemoDisplay, DemoStrongWeakModeChangesApplyWithoutChangingLiveOptions)
 			Config.m_QmDemoShowStrongWeak = Case.m_Mode;
 			const auto Settings = qm_demo_display::Resolve(Config, true, VideoRendering);
 			EXPECT_EQ(Settings.StrongWeakEnabled(), Case.m_Enabled);
+			EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, 29.0f);
 			EXPECT_EQ(Settings.ShowStrongWeakId(), Case.m_ShowId);
 			EXPECT_EQ(Settings.ShowStrongWeak(true, false, false), Case.m_Enabled);
 			EXPECT_EQ(Settings.ShowStrongWeak(false, true, false), Case.m_Enabled);
@@ -220,6 +224,50 @@ TEST(QmDemoDisplay, LeavingDemoUsesLiveStrongWeakSettings)
 		EXPECT_TRUE(Settings.ShowStrongWeak(true, false, false));
 		EXPECT_FALSE(Settings.ShowStrongWeak(false, true, false));
 		EXPECT_TRUE(Settings.ShowStrongWeak(false, false, true));
+	}
+}
+
+TEST(QmDemoDisplay, StrongWeakRowHeightUsesConfiguredSizeWhenContentIsHidden)
+{
+	CConfig Config = MakeConfig();
+	Config.m_ClNamePlatesStrong = 0;
+	Config.m_QmDemoShowStrongWeak = 0;
+	const struct
+	{
+		int m_Size;
+		float m_Height;
+	} aCases[] = {{-50, 13.0f}, {30, 29.0f}, {100, 43.0f}};
+	for(const auto &Case : aCases)
+	{
+		Config.m_ClNamePlatesStrongSize = Case.m_Size;
+		for(const bool DemoPlayback : {false, true})
+		{
+			for(const bool VideoRendering : {false, true})
+			{
+				SCOPED_TRACE(::testing::Message() << "size=" << Case.m_Size << " demo=" << DemoPlayback << " video=" << VideoRendering);
+				const auto Settings = qm_demo_display::Resolve(Config, DemoPlayback, VideoRendering);
+				EXPECT_FALSE(Settings.StrongWeakEnabled());
+				EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, Case.m_Height);
+			}
+		}
+	}
+}
+
+TEST(QmDemoDisplay, LiveStrongWeakModeChangesKeepTheSameRowHeight)
+{
+	CConfig Config = MakeConfig();
+	Config.m_QmDemoShowStrongWeak = 0;
+	for(const int Mode : {2, 0, 1, 0, 2})
+	{
+		Config.m_ClNamePlatesStrong = Mode;
+		for(const bool VideoRendering : {false, true})
+		{
+			SCOPED_TRACE(::testing::Message() << "mode=" << Mode << " video=" << VideoRendering);
+			const auto Settings = qm_demo_display::Resolve(Config, false, VideoRendering);
+			EXPECT_EQ(Settings.StrongWeakEnabled(), Mode > 0);
+			EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, 29.0f);
+			EXPECT_FLOAT_EQ(Settings.m_StrongWeakRowHeight, qm_demo_display::Resolve(Config, true, VideoRendering).m_StrongWeakRowHeight);
+		}
 	}
 }
 
