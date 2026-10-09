@@ -5,6 +5,7 @@
 #include <engine/client.h>
 #include <engine/config.h>
 #include <engine/shared/config.h>
+#include <engine/shared/localization.h>
 #include <engine/storage.h>
 
 #include <game/client/components/menus.h>

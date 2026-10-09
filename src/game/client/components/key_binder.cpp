@@ -5,6 +5,7 @@
 #include <base/color.h>
 
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>
 #include <game/client/components/binds.h>
 #include <game/client/gameclient.h>
