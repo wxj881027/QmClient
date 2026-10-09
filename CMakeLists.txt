@@ -3185,6 +3185,7 @@ if(CLIENT)
     QmUi/QmAnimCurves.h
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
+    QmUi/QmConsoleUi.h
     QmUi/QmPopupSource.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
@@ -3441,6 +3442,8 @@ if(CLIENT)
     components/qmclient/collision_hitbox.h
     components/qmclient/colored_parts.h
     components/qmclient/console_selection.h
+    components/qmclient/console_search_input.h
+    components/qmclient/console_text.h
     components/qmclient/data_version.h
     components/qmclient/decorative_projectiles.cpp
     components/qmclient/decorative_projectiles.h
@@ -4580,6 +4583,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_card_order_model_test.cpp
     src/test/unit/qmclient/ui/qm_card_registry_test.cpp
     src/test/unit/qmclient/ui/qm_interaction_source_test.cpp
+    src/test/unit/qmclient/ui/qm_console_ui_layout_test.cpp
     src/test/unit/qmclient/client/qm_credits_layout_test.cpp
     src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
     src/test/unit/base/aio_test.cpp
@@ -4664,6 +4668,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
     src/test/unit/qmclient/client/qm_console_log_filter_test.cpp
     src/test/unit/qmclient/client/qm_console_selection_test.cpp
+    src/test/unit/qmclient/client/qm_console_search_input_test.cpp
+    src/test/unit/qmclient/client/qm_console_text_test.cpp
+    src/test/integration/qmclient/client/qm_console_text_pipeline_test.cpp
     src/test/unit/qmclient/client/qm_red_packet_auto_claim_test.cpp
     src/test/unit/qmclient/client/qm_tclient_warlist_test.cpp
     src/test/contract/qmclient/client/qm_chat_contract_test.cpp

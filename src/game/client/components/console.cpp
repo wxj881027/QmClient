@@ -22,7 +22,9 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/components/qmclient/colored_parts.h>
+#include <game/client/components/qmclient/console_text.h>
 #include <game/client/components/qmclient/qm_chat_export.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
@@ -30,6 +32,7 @@
 #include <game/version.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdlib>
 #include <iterator>
@@ -91,146 +94,6 @@ static bool BuildLocalizedConfigHelpText(const SConfigVariable *pVar, char *pBuf
 		str_copy(pBuffer, pHelpText, BufferSize);
 	}
 	return true;
-}
-
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-struct SLinkRange
-{
-	int m_StartChar;
-	int m_EndChar;
-};
-
-static bool IsLinkTrailingPunctuation(char c)
-{
-	switch(c)
-	{
-	case '.':
-	case ',':
-	case ';':
-	case ':':
-	case ')':
-	case ']':
-	case '}':
-	case '>':
-	case '"':
-	case '\'':
-		return true;
-	default:
-		return false;
-	}
-}
-
-static const char *FindNextLinkStart(const char *pText)
-{
-	const char *pHttps = str_find_nocase(pText, "https://");
-	const char *pHttp = str_find_nocase(pText, "http://");
-	const char *pWww = str_find_nocase(pText, "www.");
-	const char *pStart = nullptr;
-	for(const char *pCandidate : {pHttps, pHttp, pWww})
-	{
-		if(!pCandidate)
-			continue;
-		if(!pStart || pCandidate < pStart)
-			pStart = pCandidate;
-	}
-	return pStart;
-}
-
-static bool FindLinkAtChar(const char *pText, int CharIndex, char *pOut, size_t OutSize)
-{
-	if(!pText || CharIndex < 0 || OutSize == 0)
-		return false;
-
-	const char *pSearch = pText;
-	while(*pSearch)
-	{
-		const char *pStart = FindNextLinkStart(pSearch);
-		if(!pStart)
-			break;
-
-		const char *pEnd = pStart;
-		while(*pEnd && !str_isspace(*pEnd))
-			++pEnd;
-
-		while(pEnd > pStart && IsLinkTrailingPunctuation(pEnd[-1]))
-			--pEnd;
-
-		if(pEnd > pStart)
-		{
-			const int StartChar = (int)str_utf8_offset_bytes_to_chars(pText, pStart - pText);
-			const int EndChar = (int)str_utf8_offset_bytes_to_chars(pText, pEnd - pText);
-			if(CharIndex >= StartChar && CharIndex < EndChar)
-			{
-				str_truncate(pOut, (int)OutSize, pStart, (int)(pEnd - pStart));
-				return true;
-			}
-			pSearch = pEnd;
-		}
-		else
-		{
-			pSearch = pStart + 1;
-		}
-	}
-
-	return false;
-}
-
-static bool HasPotentialLink(const char *pText)
-{
-	return pText && (str_find_nocase(pText, "https://") || str_find_nocase(pText, "http://") || str_find_nocase(pText, "www."));
-}
-
-static void CollectLinkRanges(const char *pText, std::vector<SLinkRange> &vRanges)
-{
-	vRanges.clear();
-	if(!pText || pText[0] == '\0')
-		return;
-
-	const char *pSearch = pText;
-	while(*pSearch)
-	{
-		const char *pStart = FindNextLinkStart(pSearch);
-		if(!pStart)
-			break;
-
-		const char *pEnd = pStart;
-		while(*pEnd && !str_isspace(*pEnd))
-			++pEnd;
-
-		while(pEnd > pStart && IsLinkTrailingPunctuation(pEnd[-1]))
-			--pEnd;
-
-		if(pEnd > pStart)
-		{
-			const int StartChar = (int)str_utf8_offset_bytes_to_chars(pText, pStart - pText);
-			const int EndChar = (int)str_utf8_offset_bytes_to_chars(pText, pEnd - pText);
-			if(EndChar > StartChar)
-				vRanges.push_back({StartChar, EndChar});
-			pSearch = pEnd;
-		}
-		else
-		{
-			pSearch = pStart + 1;
-		}
-	}
-}
-
-static void BuildLinkColorSplits(const std::vector<SLinkRange> &vRanges, std::vector<STextColorSplit> &vSplits)
-{
-	vSplits.clear();
-	if(vRanges.empty())
-		return;
-
-	int Cursor = 0;
-	for(const auto &Range : vRanges)
-	{
-		if(Range.m_StartChar > Cursor)
-			vSplits.emplace_back(Cursor, Range.m_StartChar - Cursor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
-		if(Range.m_EndChar > Range.m_StartChar)
-			vSplits.emplace_back(Range.m_StartChar, Range.m_EndChar - Range.m_StartChar, LINK_TEXT_COLOR);
-		Cursor = Range.m_EndChar;
-	}
-	vSplits.emplace_back(Cursor, 9999, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
 }
 
 bool CGameConsole::DoButton(const CUIRect &Rect, const char *pIcon, vec2 MousePosition, bool Released)
@@ -987,14 +850,20 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 
 	if(Event.m_Flags & IInput::FLAG_PRESS)
 	{
-		if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
+		if(m_Type == CONSOLETYPE_LOCAL && !m_ChatExportMode && m_pGameConsole->Input()->AltIsPressed() &&
+			Event.m_Key >= KEY_1 && Event.m_Key <= KEY_5 && !m_pGameConsole->Input()->HasComposition())
+		{
+			SetLogFilterMask(QmToggleConsoleLogFilterCategory(m_LogFilterMask, LogFilterCategoryForButton(Event.m_Key - KEY_1)));
+			Handled = true;
+		}
+		else if(Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER)
 		{
 			if(m_pGameConsole->GameClient()->Input()->HasComposition())
 			{
 				return true;
 			}
 
-			if(!m_Searching)
+			if(!m_SearchInput.IsSearching())
 			{
 				if(!m_Input.IsEmpty() || (m_UsernameReq && !m_pGameConsole->Client()->RconAuthed() && !m_UserGot))
 				{
@@ -1012,7 +881,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		}
 		else if(Event.m_Key == KEY_UP)
 		{
-			if(m_Searching)
+			if(m_SearchInput.IsSearching())
 			{
 				SelectNextSearchMatch(-1);
 			}
@@ -1037,7 +906,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		}
 		else if(Event.m_Key == KEY_DOWN)
 		{
-			if(m_Searching)
+			if(m_SearchInput.IsSearching())
 			{
 				SelectNextSearchMatch(1);
 			}
@@ -1057,7 +926,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 		{
 			const int Direction = m_pGameConsole->GameClient()->Input()->ShiftIsPressed() ? -1 : 1;
 
-			if(!m_Searching)
+			if(!m_SearchInput.IsSearching())
 			{
 				UpdateCompletionSuggestions();
 
@@ -1160,7 +1029,7 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 			m_BacklogCurLine = 0;
 			Handled = true;
 		}
-		else if(Event.m_Key == KEY_ESCAPE && m_Searching)
+		else if(Event.m_Key == KEY_ESCAPE && m_SearchInput.IsSearching())
 		{
 			SetSearching(false);
 			Handled = true;
@@ -1180,57 +1049,60 @@ bool CGameConsole::CInstance::OnInput(const IInput::CEvent &Event)
 	}
 
 	if(Event.m_Flags & (IInput::FLAG_PRESS | IInput::FLAG_TEXT))
-	{
-		if(Event.m_Key != KEY_TAB && Event.m_Key != KEY_LSHIFT && Event.m_Key != KEY_RSHIFT)
-		{
-			const char *pInputStr = m_Input.GetString();
-
-			m_CompletionChosen = -1;
-			str_copy(m_aCompletionBuffer, pInputStr);
-
-			const auto [CompletionType, CompletionPos] = ArgumentCompletion(GetString());
-			if(CompletionType != EArgumentCompletionType::NONE)
-			{
-				for(const auto &Entry : gs_aArgumentCompletionEntries)
-				{
-					if(Entry.m_Type != CompletionType)
-						continue;
-					const int Len = str_length(Entry.m_pCommandName);
-					if(str_comp_nocase_num(pInputStr, Entry.m_pCommandName, Len) == 0 && str_isspace(pInputStr[Len]))
-					{
-						m_CompletionChosenArgument = -1;
-						str_copy(m_aCompletionBufferArgument, &pInputStr[CompletionPos]);
-					}
-				}
-			}
-
-			Reset();
-		}
-
-		// find the current command
-		{
-			char aCmd[IConsole::CMDLINE_LENGTH];
-			GetCommand(GetString(), aCmd);
-			char aBuf[IConsole::CMDLINE_LENGTH];
-			StrCopyUntilSpace(aBuf, sizeof(aBuf), aCmd);
-
-			const IConsole::ICommandInfo *pCommand = m_pGameConsole->m_pConsole->GetCommandInfo(aBuf, m_CompletionFlagmask,
-				m_Type != CGameConsole::CONSOLETYPE_LOCAL && m_pGameConsole->Client()->RconAuthed() && m_pGameConsole->Client()->UseTempRconCommands());
-			if(pCommand)
-			{
-				m_IsCommand = true;
-				m_pCommandName = pCommand->Name();
-				m_pCommandHelp = pCommand->Help();
-				m_pCommandParams = pCommand->Params();
-			}
-			else
-			{
-				m_IsCommand = false;
-			}
-		}
-	}
+		UpdateInputState(Event.m_Key != KEY_TAB && Event.m_Key != KEY_LSHIFT && Event.m_Key != KEY_RSHIFT);
 
 	return Handled;
+}
+
+void CGameConsole::CInstance::UpdateInputState(bool ResetCompletion)
+{
+	if(ResetCompletion)
+	{
+		const char *pInputStr = m_Input.GetString();
+
+		m_CompletionChosen = -1;
+		str_copy(m_aCompletionBuffer, pInputStr);
+
+		const auto [CompletionType, CompletionPos] = ArgumentCompletion(GetString());
+		if(CompletionType != EArgumentCompletionType::NONE)
+		{
+			for(const auto &Entry : gs_aArgumentCompletionEntries)
+			{
+				if(Entry.m_Type != CompletionType)
+					continue;
+				const int Len = str_length(Entry.m_pCommandName);
+				if(str_comp_nocase_num(pInputStr, Entry.m_pCommandName, Len) == 0 && str_isspace(pInputStr[Len]))
+				{
+					m_CompletionChosenArgument = -1;
+					str_copy(m_aCompletionBufferArgument, &pInputStr[CompletionPos]);
+				}
+			}
+		}
+
+		Reset();
+	}
+
+	// 更新当前命令信息；鼠标切换搜索也走同一入口。
+	{
+		char aCmd[IConsole::CMDLINE_LENGTH];
+		GetCommand(GetString(), aCmd);
+		char aBuf[IConsole::CMDLINE_LENGTH];
+		StrCopyUntilSpace(aBuf, sizeof(aBuf), aCmd);
+
+		const IConsole::ICommandInfo *pCommand = m_pGameConsole->m_pConsole->GetCommandInfo(aBuf, m_CompletionFlagmask,
+			m_Type != CGameConsole::CONSOLETYPE_LOCAL && m_pGameConsole->Client()->RconAuthed() && m_pGameConsole->Client()->UseTempRconCommands());
+		if(pCommand)
+		{
+			m_IsCommand = true;
+			m_pCommandName = pCommand->Name();
+			m_pCommandHelp = pCommand->Help();
+			m_pCommandParams = pCommand->Params();
+		}
+		else
+		{
+			m_IsCommand = false;
+		}
+	}
 }
 
 void CGameConsole::CInstance::PrintLine(const char *pLine, int Len, ColorRGBA PrintColor, const SColorSpan *pColorSpans, size_t NumColorSpans, std::shared_ptr<const QmChatExport::SMetadata> pChatMetadata)
@@ -1287,7 +1159,7 @@ void CGameConsole::CInstance::SetLogFilterMask(int Mask)
 	m_MouseIsPress = false;
 	m_ScrollbarDragging = false;
 	m_ScrollbarDragOffset = 0.0f;
-	if(m_Searching)
+	if(m_SearchInput.IsSearching())
 		UpdateSearch();
 
 	// 顶栏分类选择跨启动保留；只写变量，落盘交给常规配置保存
@@ -1385,7 +1257,7 @@ void CGameConsole::CInstance::SetChatExportMode(bool Enable)
 	if(Enable)
 	{
 		PumpBacklogPending();
-		if(m_Searching)
+		if(m_SearchInput.IsSearching())
 			SetSearching(false);
 		ClearChatExportSelection();
 		m_ChatExportPreviousFilterMask = m_LogFilterMask;
@@ -1460,7 +1332,7 @@ float CGameConsole::CInstance::BacklogLineWidth() const
 
 bool CGameConsole::CInstance::ParseEntryColors(const CBacklogEntry *pEntry) const
 {
-	return (!m_Searching || m_CurrentMatchIndex == -1) && pEntry->m_Length > (size_t)str_length("xxxx-xx-xx xx:xx:xx x ") && str_startswith(pEntry->m_aText + str_length("xxxx-xx-xx xx:xx:xx x "), "chat/client");
+	return pEntry->m_Length > (size_t)str_length("xxxx-xx-xx xx:xx:xx x ") && str_startswith(pEntry->m_aText + str_length("xxxx-xx-xx xx:xx:xx x "), "chat/client");
 }
 
 CQmConsoleSelection::CPosition CGameConsole::CInstance::SelectionPositionAt(vec2 Position, float LogBottom, float LineHeight)
@@ -1527,7 +1399,8 @@ void CGameConsole::CInstance::UpdateEntryTextAttributes(CBacklogEntry *pEntry) c
 	Cursor.m_LineWidth = BacklogLineWidth();
 	Cursor.m_MaxLines = 10;
 	Cursor.m_LineSpacing = LINE_SPACING;
-	m_pGameConsole->TextRender()->TextEx(&Cursor, pEntry->m_aText, -1);
+	const CColoredParts Text(pEntry->m_aText, ParseEntryColors(pEntry));
+	m_pGameConsole->TextRender()->TextEx(&Cursor, Text.Text(), -1);
 	pEntry->m_YOffset = Cursor.Height();
 	pEntry->m_LineCount = Cursor.m_LineCount;
 }
@@ -1536,7 +1409,7 @@ bool CGameConsole::CInstance::IsInputHidden() const
 {
 	if(m_Type != CONSOLETYPE_REMOTE)
 		return false;
-	if(m_pGameConsole->Client()->State() != IClient::STATE_ONLINE || m_Searching)
+	if(m_pGameConsole->Client()->State() != IClient::STATE_ONLINE || m_SearchInput.IsSearching())
 		return false;
 	if(m_pGameConsole->Client()->RconAuthed())
 		return false;
@@ -1545,19 +1418,25 @@ bool CGameConsole::CInstance::IsInputHidden() const
 
 void CGameConsole::CInstance::SetSearching(bool Searching)
 {
-	m_Selection.Clear();
-	m_Searching = Searching;
 	if(Searching)
 	{
-		m_Input.SetClipboardLineCallback(nullptr); // restore default behavior (replace newlines with spaces)
+		if(!m_SearchInput.Begin(m_Input.GetString()))
+		{
+			m_Input.SelectAll();
+			return;
+		}
+		m_Selection.Clear();
+		m_Input.SetClipboardLineCallback(nullptr); // 搜索粘贴按普通文本处理，不执行命令。
 		m_Input.Set(m_aCurrentSearchString);
 		m_Input.SelectAll();
 		UpdateSearch();
 	}
-	else
+	else if(const auto Draft = m_SearchInput.End())
 	{
+		m_Selection.Clear();
 		m_Input.SetClipboardLineCallback([this](const char *pLine) { ExecuteLine(pLine); });
-		m_Input.Clear();
+		m_Input.Set(Draft->c_str());
+		UpdateInputState(true);
 	}
 }
 
@@ -1571,13 +1450,12 @@ void CGameConsole::CInstance::ClearSearch()
 
 void CGameConsole::CInstance::UpdateSearch()
 {
-	if(!m_Searching)
+	if(!m_SearchInput.IsSearching())
 		return;
 
 	const char *pSearchText = m_Input.GetString();
 	bool SearchChanged = str_utf8_comp_nocase(pSearchText, m_aCurrentSearchString) != 0;
 
-	int SearchLength = m_Input.GetLength();
 	str_copy(m_aCurrentSearchString, pSearchText);
 
 	m_vSearchMatches.clear();
@@ -1597,7 +1475,8 @@ void CGameConsole::CInstance::UpdateSearch()
 	const float LineWidth = BacklogLineWidth();
 
 	CBacklogEntry *pEntry = m_Backlog.Last();
-	int EntryLine = 0, LineToScrollStart = 0, LineToScrollEnd = 0;
+	int EntryLine = 0;
+	std::vector<QmConsoleText::SRange> vMatches;
 
 	for(; pEntry; pEntry = m_Backlog.Prev(pEntry))
 	{
@@ -1606,28 +1485,20 @@ void CGameConsole::CInstance::UpdateSearch()
 		if(!MatchesLogFilter(pEntry))
 			continue;
 
-		const char *pSearchPos = str_utf8_find_nocase(pEntry->m_aText, pSearchText);
-		if(!pSearchPos)
-		{
-			EntryLine += pEntry->m_LineCount;
-			continue;
-		}
-
+		CColoredParts ColoredParts(pEntry->m_aText, ParseEntryColors(pEntry));
+		const char *pText = ColoredParts.Text();
+		QmConsoleText::CollectSearchMatches(pText, pSearchText, vMatches);
 		int EntryLineCount = pEntry->m_LineCount;
 
 		// Find all occurrences of the search string and save their positions
-		while(pSearchPos)
+		for(const auto &Match : vMatches)
 		{
-			int Pos = pSearchPos - pEntry->m_aText;
+			const int Pos = Match.m_StartByte;
+			const int Length = Match.m_EndByte - Pos;
 
 			if(EntryLineCount == 1)
 			{
-				m_vSearchMatches.emplace_back(Pos, EntryLine, EntryLine, EntryLine);
-				if(EntryLine > LineToScrollStart)
-				{
-					LineToScrollStart = EntryLine;
-					LineToScrollEnd = EntryLine;
-				}
+				m_vSearchMatches.emplace_back(Pos, Length, EntryLine, EntryLine, EntryLine);
 			}
 			else
 			{
@@ -1638,7 +1509,7 @@ void CGameConsole::CInstance::UpdateSearch()
 				Props.m_pLineCount = &LineCount;
 
 				// Compute line of end match
-				pTextRender->TextWidth(FONT_SIZE, pEntry->m_aText, Pos + SearchLength, LineWidth, 0, Props);
+				pTextRender->TextWidth(FONT_SIZE, pText, Match.m_EndByte, LineWidth, 0, Props);
 				int EndLine = (EntryLineCount - LineCount);
 				int MatchEndLine = EntryLine + EndLine;
 
@@ -1646,21 +1517,13 @@ void CGameConsole::CInstance::UpdateSearch()
 				int MatchStartLine = MatchEndLine;
 				if(LineCount > 1)
 				{
-					pTextRender->TextWidth(FONT_SIZE, pEntry->m_aText, Pos, LineWidth, 0, Props);
+					pTextRender->TextWidth(FONT_SIZE, pText, Pos, LineWidth, 0, Props);
 					int StartLine = (EntryLineCount - LineCount);
 					MatchStartLine = EntryLine + StartLine;
 				}
 
-				if(MatchStartLine > LineToScrollStart)
-				{
-					LineToScrollStart = MatchStartLine;
-					LineToScrollEnd = MatchEndLine;
-				}
-
-				m_vSearchMatches.emplace_back(Pos, MatchStartLine, MatchEndLine, EntryLine);
+				m_vSearchMatches.emplace_back(Pos, Length, MatchStartLine, MatchEndLine, EntryLine);
 			}
-
-			pSearchPos = str_utf8_find_nocase(pEntry->m_aText + Pos + SearchLength, pSearchText);
 		}
 
 		EntryLine += pEntry->m_LineCount;
@@ -1669,7 +1532,7 @@ void CGameConsole::CInstance::UpdateSearch()
 	if(!m_vSearchMatches.empty() && SearchChanged)
 		m_CurrentMatchIndex = 0;
 	else
-		m_CurrentMatchIndex = std::clamp(m_CurrentMatchIndex, -1, (int)m_vSearchMatches.size() - 1);
+		m_CurrentMatchIndex = m_vSearchMatches.empty() ? -1 : std::clamp(m_CurrentMatchIndex, 0, (int)m_vSearchMatches.size() - 1);
 
 	// Reverse order of lines by sorting so we have matches from top to bottom instead of bottom to top
 	std::sort(m_vSearchMatches.begin(), m_vSearchMatches.end(), [](const SSearchMatch &MatchA, const SSearchMatch &MatchB) {
@@ -1680,7 +1543,7 @@ void CGameConsole::CInstance::UpdateSearch()
 
 	if(!m_vSearchMatches.empty() && SearchChanged)
 	{
-		ScrollToCenter(LineToScrollStart, LineToScrollEnd);
+		ScrollToCenter(m_vSearchMatches[0].m_StartLine, m_vSearchMatches[0].m_EndLine);
 	}
 }
 
@@ -1923,7 +1786,7 @@ void CGameConsole::PossibleCommandsRenderCallback(int Index, const char *pStr, v
 void CGameConsole::Prompt(char (&aPrompt)[32])
 {
 	CInstance *pConsole = CurrentConsole();
-	if(pConsole->m_Searching)
+	if(pConsole->m_SearchInput.IsSearching())
 	{
 		str_format(aPrompt, sizeof(aPrompt), "%s: ", Localize("Searching"));
 	}
@@ -1979,10 +1842,69 @@ void CGameConsole::OnRender()
 		Toggle(CONSOLETYPE_LOCAL);
 
 	if(m_ConsoleState == CONSOLE_CLOSED)
-	{
-		m_TopbarMouseDown = false;
 		return;
+
+	const bool LocalConsole = m_ConsoleType == CONSOLETYPE_LOCAL;
+	const char *apFilterLabels[CInstance::LOG_FILTER_BUTTON_COUNT] = {
+		Localize("All"), Localize("Players"), Localize("System"), Localize("Commands"), Localize("Binds")};
+	constexpr float FilterSpacing = 4.0f;
+	constexpr float FilterPadding = 6.0f;
+	float aFilterWidths[CInstance::LOG_FILTER_BUTTON_COUNT];
+	float TotalFilterWidth = FilterSpacing * (CInstance::LOG_FILTER_BUTTON_COUNT - 1);
+	for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
+	{
+		aFilterWidths[i] = TextRender()->TextWidth(FONT_SIZE, apFilterLabels[i]) + FilterPadding * 2.0f;
+		TotalFilterWidth += aFilterWidths[i];
 	}
+	enum class EToolbarAction
+	{
+		SEARCH, FOLLOW, EXPORT, CANCEL_EXPORT, SAVE_EXPORT, CLEAR_EXPORT, SELECT_CHAT, EXPAND,
+	};
+	struct SToolbarAction
+	{
+		EToolbarAction m_Action;
+		const char *m_pLabel;
+		float m_Width;
+		bool m_Selected;
+	};
+	std::array<SToolbarAction, 5> aActions;
+	int NumActions = 0;
+	const auto AddAction = [&](EToolbarAction Action, const char *pLabel, bool Selected = false) {
+		dbg_assert(NumActions < static_cast<int>(aActions.size()), "Too many console toolbar actions");
+		aActions[NumActions++] = {Action, pLabel, TextRender()->TextWidth(FONT_SIZE, pLabel) + FilterPadding * 2.0f, Selected};
+	};
+	if(LocalConsole)
+	{
+		if(pConsole->m_ChatExportMode)
+		{
+			AddAction(EToolbarAction::CANCEL_EXPORT, Localize("Cancel"));
+			if(!pConsole->m_pChatExportJob)
+			{
+				AddAction(EToolbarAction::SAVE_EXPORT, Localize("Export selected"));
+				AddAction(EToolbarAction::CLEAR_EXPORT, Localize("Clear"));
+				AddAction(EToolbarAction::SELECT_CHAT, Localize("Select all chat"));
+			}
+		}
+		else
+		{
+			AddAction(EToolbarAction::SEARCH, pConsole->m_SearchInput.IsSearching() ? Localize("Cancel") : Localize("Search"), pConsole->m_SearchInput.IsSearching());
+			AddAction(EToolbarAction::FOLLOW, Localize("Following"), pConsole->m_BacklogCurLine == 0);
+			AddAction(EToolbarAction::EXPORT, Localize("Select export"));
+		}
+		AddAction(EToolbarAction::EXPAND, m_LocalConsoleFullscreen ? Localize("Collapse console") : Localize("Expand console"), m_LocalConsoleFullscreen);
+	}
+	float TotalActionWidth = 0.0f;
+	for(int i = 0; i < NumActions; ++i)
+		TotalActionWidth += aActions[i].m_Width + FilterSpacing;
+	if(NumActions > 0)
+		TotalActionWidth -= FilterSpacing;
+	float ToolbarRightMargin = 0.0f;
+#if defined(CONF_PLATFORM_IOS)
+	ToolbarRightMargin = FONT_SIZE * 2.0f + 10.0f;
+#endif
+	const auto Toolbar = QmConsoleUi::LayoutToolbar(Screen.w - ToolbarRightMargin, pConsole->m_ChatExportMode ? 0.0f : TotalFilterWidth, TotalActionWidth);
+	const float RowHeight = LocalConsole ? Toolbar.m_Height : FONT_SIZE * 2.0f;
+	const float FooterHeight = LocalConsole ? 16.0f : 0.0f;
 
 	const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();
 	const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();
@@ -2026,15 +1948,23 @@ void CGameConsole::OnRender()
 		Ui()->Update();
 	}
 
-	// background
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BACKGROUND_NOISE].m_Id);
-	Graphics()->QuadsBegin();
-	Graphics()->SetColor(aBackgroundColors[m_ConsoleType]);
-	Graphics()->QuadsSetSubset(0, 0, Screen.w / 80.0f, ConsoleHeight / 80.0f);
-	IGraphics::CQuadItem QuadItemBackground(0.0f, 0.0f, Screen.w, ConsoleHeight);
-	Graphics()->QuadsDrawTL(&QuadItemBackground, 1);
-	Graphics()->QuadsEnd();
-
+	// 本地控制台使用终端式纯色面板，工具栏与状态栏独立分区。
+	if(LocalConsole)
+	{
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, ConsoleHeight}, ColorRGBA(0.055f, 0.065f, 0.08f, 0.96f));
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, 0.0f, Screen.w, RowHeight}, ColorRGBA(0.09f, 0.11f, 0.14f, 0.98f));
+		QmConsoleUi::DrawPanel(Ui(), {0.0f, ConsoleHeight - FooterHeight, Screen.w, FooterHeight}, ColorRGBA(0.09f, 0.11f, 0.14f, 0.98f));
+	}
+	else
+	{
+		Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BACKGROUND_NOISE].m_Id);
+		Graphics()->QuadsBegin();
+		Graphics()->SetColor(aBackgroundColors[m_ConsoleType]);
+		Graphics()->QuadsSetSubset(0, 0, Screen.w / 80.0f, ConsoleHeight / 80.0f);
+		IGraphics::CQuadItem QuadItemBackground(0.0f, 0.0f, Screen.w, ConsoleHeight);
+		Graphics()->QuadsDrawTL(&QuadItemBackground, 1);
+		Graphics()->QuadsEnd();
+	}
 	// bottom border
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
@@ -2055,10 +1985,8 @@ void CGameConsole::OnRender()
 		// Get height of 1 line
 		const float LineHeight = TextRender()->TextBoundingBox(FONT_SIZE, " ", -1, -1.0f, LINE_SPACING).m_H;
 
-		const float RowHeight = FONT_SIZE * 2.0f;
-
 		float x = 3;
-		float y = ConsoleHeight - RowHeight - 18.0f;
+		float y = ConsoleHeight - FONT_SIZE * 2.0f - 18.0f - FooterHeight;
 
 		const float InitialX = x;
 		const float InitialY = y;
@@ -2186,6 +2114,8 @@ void CGameConsole::OnRender()
 			pConsole->m_Selection.Clear();
 
 		y -= pConsole->m_BoundingBox.m_H - FONT_SIZE;
+		if(LocalConsole)
+			QmConsoleUi::DrawPanel(Ui(), {0.0f, y - 2.0f, Screen.w, 1.0f}, ColorRGBA(0.22f, 0.28f, 0.34f, 0.8f));
 
 		bool HandleLinkClick = false;
 		if(LinkClickPending)
@@ -2196,7 +2126,7 @@ void CGameConsole::OnRender()
 		}
 
 		// render possible commands
-		if(!pConsole->m_Searching && (m_ConsoleType == CONSOLETYPE_LOCAL || Client()->RconAuthed()) && !pConsole->m_Input.IsEmpty())
+		if(!pConsole->m_SearchInput.IsSearching() && (m_ConsoleType == CONSOLETYPE_LOCAL || Client()->RconAuthed()) && !pConsole->m_Input.IsEmpty())
 		{
 			pConsole->UpdateCompletionSuggestions();
 
@@ -2211,7 +2141,7 @@ void CGameConsole::OnRender()
 			pConsole->GetCommand(pConsole->m_aCompletionBuffer, aCmd);
 			Info.m_pCurrentCmd = aCmd;
 
-			Info.m_Cursor.SetPosition(vec2(InitialX - Info.m_Offset, InitialY + RowHeight + 2.0f));
+			Info.m_Cursor.SetPosition(vec2(InitialX - Info.m_Offset, InitialY + FONT_SIZE * 2.0f + 2.0f));
 			Info.m_Cursor.m_FontSize = FONT_SIZE;
 
 			for(size_t SuggestionId = 0; SuggestionId < pConsole->m_vpCommandSuggestions.size(); ++SuggestionId)
@@ -2271,10 +2201,10 @@ void CGameConsole::OnRender()
 			}
 			Ui()->DoSmoothScrollLogic(&pConsole->m_CompletionRenderOffset, &pConsole->m_CompletionRenderOffsetChange, Info.m_Width, Info.m_TotalWidth);
 		}
-		else if(pConsole->m_Searching && !pConsole->m_Input.IsEmpty())
+		else if(pConsole->m_SearchInput.IsSearching() && !pConsole->m_Input.IsEmpty())
 		{ // Render current match and match count
 			CTextCursor MatchInfoCursor;
-			MatchInfoCursor.SetPosition(vec2(InitialX, InitialY + RowHeight + 2.0f));
+			MatchInfoCursor.SetPosition(vec2(InitialX, InitialY + FONT_SIZE * 2.0f + 2.0f));
 			MatchInfoCursor.m_FontSize = FONT_SIZE;
 			TextRender()->TextColor(0.8f, 0.8f, 0.8f, 1.0f);
 			if(!pConsole->m_vSearchMatches.empty())
@@ -2317,6 +2247,8 @@ void CGameConsole::OnRender()
 		const float LogTextRightInset = CONSOLE_SCROLLBAR_WIDTH + CONSOLE_SCROLLBAR_MARGIN;
 		const bool CanSelectLog = !pConsole->m_ChatExportMode && m_ConsoleState == CONSOLE_OPEN;
 		const CUIRect LogRect = {0.0f, LogTop, Screen.w - LogTextRightInset, LogHeight};
+		HandleLinkClick = HandleLinkClick && LogRect.Inside(LinkClickPress) && LogRect.Inside(LinkClickPos);
+		ChatExportClickPending = ChatExportClickPending && LogRect.Inside(pConsole->m_MousePress) && LogRect.Inside(ChatExportClickPos);
 		if(CanSelectLog && MousePressedThisFrame && LogRect.Inside(pConsole->m_MousePress))
 			pConsole->m_Selection.Begin(pConsole->SelectionPositionAt(pConsole->m_MousePress, LogBottom, LineHeight));
 		if(CanSelectLog && pConsole->m_MouseIsPress)
@@ -2390,8 +2322,8 @@ void CGameConsole::OnRender()
 		CInstance::CBacklogEntry *pEntry = pConsole->m_Backlog.Last();
 		float OffsetY = 0.0f;
 
-		std::vector<SLinkRange> vLinkRanges;
-		std::vector<STextColorSplit> vLinkColorSplits;
+		std::vector<QmConsoleText::SRange> vLinkRanges;
+		std::vector<STextColorSplit> vColorLayers;
 
 		pConsole->m_BacklogLastActiveLine = pConsole->m_BacklogCurLine;
 
@@ -2400,12 +2332,12 @@ void CGameConsole::OnRender()
 
 		int SkippedLines = 0;
 		bool First = true;
-		bool LinkClickHandled = !HandleLinkClick;
 
 		const float XScale = Graphics()->ScreenWidth() / Screen.w;
 		const float YScale = Graphics()->ScreenHeight() / Screen.h;
 		const float CalcOffsetY = LineHeight * std::floor((y - RowHeight) / LineHeight);
 		const float ClipStartY = (y - CalcOffsetY) * YScale;
+		HandleLinkClick = HandleLinkClick && LinkClickPress.y >= y - CalcOffsetY && LinkClickPos.y >= y - CalcOffsetY;
 		Graphics()->ClipEnable(0, ClipStartY, Screen.w * XScale, (y + 2.0f) * YScale - ClipStartY);
 
 		while(pEntry)
@@ -2475,40 +2407,24 @@ void CGameConsole::OnRender()
 			EntryCursor.m_LineSpacing = LINE_SPACING;
 			const bool ParseColors = pConsole->ParseEntryColors(pEntry);
 
-			if(pConsole->m_Searching && pConsole->m_CurrentMatchIndex != -1)
-			{
-				std::vector<CInstance::SSearchMatch> vMatches;
-				std::copy_if(pConsole->m_vSearchMatches.begin(), pConsole->m_vSearchMatches.end(), std::back_inserter(vMatches), [&](const CInstance::SSearchMatch &Match) { return Match.m_EntryLine == LineNum + 1 - pEntry->m_LineCount; });
-
-				auto CurrentSelectedOccurrence = pConsole->m_vSearchMatches[pConsole->m_CurrentMatchIndex];
-
-				EntryCursor.m_vColorSplits.reserve(vMatches.size());
-				for(const auto &Match : vMatches)
-				{
-					bool IsSelected = CurrentSelectedOccurrence.m_EntryLine == Match.m_EntryLine && CurrentSelectedOccurrence.m_Pos == Match.m_Pos;
-					EntryCursor.m_vColorSplits.emplace_back(
-						Match.m_Pos,
-						pConsole->m_Input.GetLength(),
-						IsSelected ? ms_SearchSelectedColor : ms_SearchHighlightColor);
-				}
-			}
-
-			// TODO don't recalculate every frame
-			// TODO less jank way of detecting echo
 			CColoredParts ColoredParts(pEntry->m_aText, ParseColors);
 			ColoredParts.AddSplitsToCursor(EntryCursor);
-			const auto StoredColorSpans = pConsole->m_ColorSpansByExportId.find(pEntry->m_ExportId);
-			if((!pConsole->m_Searching || pConsole->m_CurrentMatchIndex == -1) && StoredColorSpans != pConsole->m_ColorSpansByExportId.end())
-			{
-				for(const SColorSpan &Span : StoredColorSpans->second)
-					EntryCursor.m_vColorSplits.emplace_back(Span.m_CharIndex, Span.m_Length, Span.m_Color);
-			}
 			if(!ColoredParts.Colors().empty() && ColoredParts.Colors()[0].m_Index == str_length("xxxx-xx-xx xx:xx:xx x chat/client: — "))
 			{
 				EntryCursor.m_vColorSplits[0].m_CharIndex -= str_length("— ");
 				EntryCursor.m_vColorSplits[0].m_Length += str_length("— ");
 			}
 			const char *pText = ColoredParts.Text();
+			const int TextLength = str_length(pText);
+			vColorLayers.clear();
+			vColorLayers.emplace_back(0, TextLength, pEntry->m_PrintColor);
+			vColorLayers.insert(vColorLayers.end(), EntryCursor.m_vColorSplits.begin(), EntryCursor.m_vColorSplits.end());
+			const auto StoredColorSpans = pConsole->m_ColorSpansByExportId.find(pEntry->m_ExportId);
+			if(StoredColorSpans != pConsole->m_ColorSpansByExportId.end())
+			{
+				for(const SColorSpan &Span : StoredColorSpans->second)
+					vColorLayers.push_back(QmConsoleText::ColorSplitForCharacters(pText, Span.m_CharIndex, Span.m_Length, Span.m_Color));
+			}
 			if(pConsole->m_Selection.ContainsEntry(pEntry->m_ExportId))
 			{
 				const int Characters = static_cast<int>(str_utf8_offset_bytes_to_chars(pText, str_length(pText)));
@@ -2517,13 +2433,10 @@ void CGameConsole::OnRender()
 				EntryCursor.m_SelectionStart = Range->m_Start;
 				EntryCursor.m_SelectionEnd = Range->m_End;
 			}
-			vLinkRanges.clear();
-			if(HasPotentialLink(pText))
-				CollectLinkRanges(pText, vLinkRanges);
-
-			if(HandleLinkClick && !LinkClickHandled && LinkClickPos.y >= EntryTop && LinkClickPos.y <= EntryBottom)
+			QmConsoleText::CollectLinks(pText, vLinkRanges);
+			for(const auto &Range : vLinkRanges)
 			{
-				LinkClickHandled = true;
+				vColorLayers.emplace_back(Range.m_StartByte, Range.m_EndByte - Range.m_StartByte, LINK_TEXT_COLOR);
 				CTextCursor LinkCursor;
 				LinkCursor.SetPosition(vec2(EntryTextX, EntryTop));
 				LinkCursor.m_FontSize = FONT_SIZE;
@@ -2531,90 +2444,47 @@ void CGameConsole::OnRender()
 				LinkCursor.m_MaxLines = pEntry->m_LineCount;
 				LinkCursor.m_LineSpacing = LINE_SPACING;
 				LinkCursor.m_Flags = 0;
-				LinkCursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_CALCULATE;
-				LinkCursor.m_ReleaseMouse = LinkClickPos;
-				TextRender()->TextEx(&LinkCursor, pText, -1);
-
-				char aLink[512];
-				if(FindLinkAtChar(pText, LinkCursor.m_CursorCharacter, aLink, sizeof(aLink)))
+				LinkCursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
+				LinkCursor.m_RenderSelection = false;
+				LinkCursor.m_SelectionStart = Range.m_StartChar;
+				LinkCursor.m_SelectionEnd = Range.m_EndChar;
+				TextRender()->TextEx(&LinkCursor, pText);
+				// 使用实际换行后的链接矩形，空白处不会被最近字符的光标吸附误判。
+				if(HandleLinkClick && QmConsoleText::ContainsPoint(LinkCursor.m_vSelectionQuads, LinkClickPress) &&
+					QmConsoleText::ContainsPoint(LinkCursor.m_vSelectionQuads, LinkClickPos))
 				{
-					bool Opened = false;
-					char aNormalized[512];
-					if(const char *pAfterHttps = str_startswith_nocase(aLink, "https://"))
-					{
-						str_copy(aNormalized, "https://");
-						str_append(aNormalized, pAfterHttps, sizeof(aNormalized));
-						Opened = Client()->ViewLink(aNormalized);
-					}
-					else if(const char *pAfterHttp = str_startswith_nocase(aLink, "http://"))
-					{
-						str_copy(aNormalized, "http://");
-						str_append(aNormalized, pAfterHttp, sizeof(aNormalized));
+					HandleLinkClick = false;
+					const std::string Url = QmConsoleText::LinkUrl(pText, Range);
+					bool Opened;
 #if defined(CONF_PLATFORM_ANDROID)
-						Opened = Client()->ViewLink(aNormalized);
+					Opened = Client()->ViewLink(Url.c_str());
 #else
-						Opened = open_link(aNormalized) != 0;
+					Opened = str_startswith(Url.c_str(), "http://") ? open_link(Url.c_str()) != 0 : Client()->ViewLink(Url.c_str());
 #endif
-					}
-					else if(str_startswith_nocase(aLink, "www."))
-					{
-						str_copy(aNormalized, "https://");
-						str_append(aNormalized, aLink, sizeof(aNormalized));
-						Opened = Client()->ViewLink(aNormalized);
-					}
 					if(Opened)
-					{
 						pConsole->m_Selection.Clear();
-					}
 				}
-			}
-
-			if(!vLinkRanges.empty())
-			{
-				const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
-				const ColorRGBA PrevSelectionColor = TextRender()->GetTextSelectionColor();
-				TextRender()->TextColor(TransparentColor);
-				TextRender()->TextSelectionColor(LINK_UNDERLINE_COLOR);
-				for(const auto &Range : vLinkRanges)
+				for(const auto &Quad : LinkCursor.m_vSelectionQuads)
 				{
-					CTextCursor UnderlineCursor;
-					UnderlineCursor.SetPosition(vec2(EntryTextX, EntryTop));
-					UnderlineCursor.m_FontSize = FONT_SIZE;
-					UnderlineCursor.m_LineWidth = EntryLineWidth;
-					UnderlineCursor.m_MaxLines = pEntry->m_LineCount;
-					UnderlineCursor.m_LineSpacing = LINE_SPACING;
-					UnderlineCursor.m_CalculateSelectionMode = TEXT_CURSOR_SELECTION_MODE_SET;
-					UnderlineCursor.m_SelectionHeightFactor = LINK_UNDERLINE_HEIGHT;
-					UnderlineCursor.m_SelectionStart = Range.m_StartChar;
-					UnderlineCursor.m_SelectionEnd = Range.m_EndChar;
-					TextRender()->TextEx(&UnderlineCursor, pText, -1);
+					const float Height = Quad.m_Height * LINK_UNDERLINE_HEIGHT;
+					const CUIRect Underline = {Quad.m_X, Quad.m_Y + Quad.m_Height - Height, Quad.m_Width, Height};
+					QmConsoleUi::DrawPanel(Ui(), Underline, LINK_UNDERLINE_COLOR);
 				}
-				TextRender()->TextSelectionColor(PrevSelectionColor);
-				TextRender()->TextColor(PrevTextColor);
 			}
-
-			TextRender()->TextEx(&EntryCursor, pText, -1); // TClient
-			EntryCursor.m_vColorSplits = {};
-
-			if(!vLinkRanges.empty())
+			// 搜索最后合入颜色层，链接仍保留下划线，但不会盖住搜索命中颜色。
+			if(pConsole->m_SearchInput.IsSearching() && pConsole->m_CurrentMatchIndex >= 0)
 			{
-				BuildLinkColorSplits(vLinkRanges, vLinkColorSplits);
-				if(!vLinkColorSplits.empty())
+				const auto &Selected = pConsole->m_vSearchMatches[pConsole->m_CurrentMatchIndex];
+				for(const auto &Match : pConsole->m_vSearchMatches)
 				{
-					const ColorRGBA PrevTextColor = TextRender()->GetTextColor();
-					CTextCursor LinkCursor;
-					LinkCursor.SetPosition(vec2(EntryTextX, EntryTop));
-					LinkCursor.m_FontSize = FONT_SIZE;
-					LinkCursor.m_LineWidth = EntryLineWidth;
-					LinkCursor.m_MaxLines = pEntry->m_LineCount;
-					LinkCursor.m_LineSpacing = LINE_SPACING;
-					LinkCursor.m_vColorSplits = vLinkColorSplits;
-					TextRender()->TextColor(TransparentColor);
-					TextRender()->TextEx(&LinkCursor, pText, -1);
-					TextRender()->TextColor(PrevTextColor);
+					if(Match.m_EntryLine != LineNum + 1 - pEntry->m_LineCount)
+						continue;
+					const bool IsSelected = Selected.m_EntryLine == Match.m_EntryLine && Selected.m_Pos == Match.m_Pos;
+					vColorLayers.emplace_back(Match.m_Pos, Match.m_Length, IsSelected ? ms_SearchSelectedColor : ms_SearchHighlightColor);
 				}
 			}
-
+			QmConsoleText::ComposeColorSplits(pText, vColorLayers, EntryCursor.m_vColorSplits);
+			TextRender()->TextEx(&EntryCursor, pText);
 			pEntry = pConsole->m_Backlog.Prev(pEntry);
 
 			// reset color
@@ -2642,181 +2512,99 @@ void CGameConsole::OnRender()
 
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-		// render current lines and status (locked, following)
 		char aLinesBuf[128];
 		const int LineStart = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + 1 : 0;
 		const int LineEnd = pConsole->m_LinesRendered > 0 ? pConsole->m_BacklogCurLine + pConsole->m_LinesRendered : 0;
-		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd, pConsole->m_BacklogCurLine != 0 ? Localize("Locked") : Localize("Following"));
-		const float LinesTextX = 10.0f;
-		const float LinesTextY = FONT_SIZE / 2.f;
-
-		const float FilterFontSize = FONT_SIZE;
-		const float FilterHeight = RowHeight - 6.0f;
-		const float FilterY = (RowHeight - FilterHeight) / 2.0f;
-		const float FilterPadding = 6.0f;
-		const float FilterSpacing = 4.0f;
-		float TopbarRightMargin = 10.0f;
-#if defined(CONF_PLATFORM_IOS)
-		TopbarRightMargin += RowHeight + 10.0f;
-#endif
-
-		vec2 UiMousePos = Input()->NativeMousePos();
-		if(WindowSize.x > 0.0f && WindowSize.y > 0.0f)
-			UiMousePos = UiMousePos / WindowSize * ScreenSize;
-		const bool MouseDown = Input()->NativeMousePressed(1);
-		const bool MousePressed = MouseDown && !m_TopbarMouseDown;
-		if(m_ConsoleType == CONSOLETYPE_LOCAL)
+		str_format(aLinesBuf, sizeof(aLinesBuf), Localize("Lines %d - %d (%s)"), LineStart, LineEnd,
+			pConsole->m_BacklogCurLine != 0 ? Localize("Locked") : Localize("Following"));
+		const auto ToolbarButton = [&](const CUIRect &Rect, const char *pLabel, float Scale, bool Selected = false) {
+			return QmConsoleUi::Button(Ui(), Rect, pLabel, maximum(7.0f, FONT_SIZE * Scale), Selected,
+				m_ButtonPressPosition, ButtonMousePosition, pConsole->m_MouseIsPress, ButtonReleased, m_ConsoleState == CONSOLE_OPEN);
+		};
+		const float LinesWidth = LocalConsole ? 0.0f : TextRender()->TextWidth(FONT_SIZE, aLinesBuf);
+		float FilterX = LocalConsole ? 10.0f : LinesWidth + 20.0f;
+		const float FilterScale = LocalConsole ? Toolbar.m_FilterScale : minimum(1.0f, maximum(0.0f, (Screen.w - ToolbarRightMargin - FilterX - 10.0f) / TotalFilterWidth));
+		if(!pConsole->m_ChatExportMode)
 		{
-			const char *pExpand = Localize("Expand console");
-			const char *pCollapse = Localize("Collapse console");
-			const char *pFullscreenLabel = m_LocalConsoleFullscreen ? pCollapse : pExpand;
-			const float ButtonWidth = maximum(TextRender()->TextWidth(FilterFontSize, pExpand), TextRender()->TextWidth(FilterFontSize, pCollapse)) + FilterPadding * 2.0f;
-			CUIRect FullscreenButton = {Screen.w - TopbarRightMargin - ButtonWidth, FilterY, ButtonWidth, FilterHeight};
-			Ui()->DoButton_PopupMenu(&m_FullscreenButton, pFullscreenLabel, &FullscreenButton, FilterFontSize, TEXTALIGN_MC);
-			if(m_ConsoleState == CONSOLE_OPEN && MousePressedThisFrame && FullscreenButton.Inside(ButtonMousePosition))
-				m_LocalConsoleFullscreen = !m_LocalConsoleFullscreen;
-			TopbarRightMargin += ButtonWidth + FilterSpacing;
-		}
-
-		const float LinesWidth = TextRender()->TextWidth(FONT_SIZE, aLinesBuf);
-		bool ShowLineStatus = true;
-		if(pConsole->m_ChatExportMode)
-		{
-			char aSelectedBuf[64];
-			if(pConsole->m_pChatExportJob)
+			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 			{
-				const auto &Job = *pConsole->m_pChatExportJob;
-				if(Job.m_Queued)
-					str_format(aSelectedBuf, sizeof(aSelectedBuf), Localize("Exporting chat images: %d"), Job.m_CompletedPages.load());
-				else
-					str_format(aSelectedBuf, sizeof(aSelectedBuf), Localize("Preparing chat export: %d%%"), Job.PreparationPercent());
+				const int Category = CInstance::LogFilterCategoryForButton(i);
+				const CUIRect Button = {FilterX, 3.0f, aFilterWidths[i] * FilterScale, LocalConsole ? 20.0f : 14.0f};
+				if(ToolbarButton(Button, apFilterLabels[i], FilterScale, QmConsoleLogFilterButtonActive(pConsole->m_LogFilterMask, Category)))
+					pConsole->SetLogFilterMask(QmToggleConsoleLogFilterCategory(pConsole->m_LogFilterMask, Category));
+				FilterX += (aFilterWidths[i] + FilterSpacing) * FilterScale;
 			}
-			else
-				str_format(aSelectedBuf, sizeof(aSelectedBuf), Localize("Selected %d"), pConsole->SelectedChatExportCount());
-			TextRender()->Text(LinesTextX + LinesWidth + 10.0f, LinesTextY, FONT_SIZE, aSelectedBuf);
-
-			enum class EExportAction
+		}
+		if(LocalConsole)
+		{
+			float ActionX = Toolbar.m_ActionX;
+			for(int i = 0; i < NumActions; ++i)
 			{
-				CANCEL = 0,
-				SAVE,
-				CLEAR,
-				SELECT_ALL,
-			};
-			struct SExportButton
-			{
-				CButtonContainer *m_pButton;
-				const char *m_pLabel;
-				EExportAction m_Action;
-			};
-			SExportButton aButtons[] = {
-				{&m_ChatExportCancelButton, Localize("Cancel"), EExportAction::CANCEL},
-				{&m_ChatExportSaveButton, Localize("Export selected"), EExportAction::SAVE},
-				{&m_ChatExportClearButton, Localize("Clear"), EExportAction::CLEAR},
-				{&m_ChatExportSelectAllButton, Localize("Select all chat"), EExportAction::SELECT_ALL},
-			};
-			float ButtonRight = Screen.w - TopbarRightMargin;
-			for(const SExportButton &ExportButton : aButtons)
-			{
-				// 导出进行中只保留取消，避免重复发起或改动正在导出的选择。
-				if(pConsole->m_pChatExportJob && ExportButton.m_Action != EExportAction::CANCEL)
-					continue;
-				const float ButtonWidth = TextRender()->TextWidth(FilterFontSize, ExportButton.m_pLabel) + FilterPadding * 2.0f;
-				CUIRect Button = {ButtonRight - ButtonWidth, FilterY, ButtonWidth, FilterHeight};
-				Ui()->DoButton_PopupMenu(ExportButton.m_pButton, ExportButton.m_pLabel, &Button, FilterFontSize, TEXTALIGN_MC);
-				const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
-				if(ManualClicked)
+				const auto &Action = aActions[i];
+				const CUIRect Button = {ActionX, Toolbar.m_SplitRows ? 29.0f : 3.0f, Action.m_Width * Toolbar.m_ActionScale, 20.0f};
+				if(ToolbarButton(Button, Action.m_pLabel, Toolbar.m_ActionScale, Action.m_Selected))
 				{
-					if(ExportButton.m_Action == EExportAction::CANCEL)
-						pConsole->SetChatExportMode(false);
-					else if(ExportButton.m_Action == EExportAction::SAVE)
-						pConsole->ExportSelectedChat();
-					else if(ExportButton.m_Action == EExportAction::CLEAR)
-						pConsole->ClearChatExportSelection();
-					else if(ExportButton.m_Action == EExportAction::SELECT_ALL)
-						pConsole->SelectAllChatExportable();
+					switch(Action.m_Action)
+					{
+					case EToolbarAction::SEARCH: pConsole->SetSearching(!pConsole->m_SearchInput.IsSearching()); break;
+					case EToolbarAction::FOLLOW:
+						pConsole->m_BacklogCurLine = 0;
+						pConsole->m_Selection.Clear();
+						break;
+					case EToolbarAction::EXPORT: pConsole->SetChatExportMode(true); break;
+					case EToolbarAction::CANCEL_EXPORT: pConsole->SetChatExportMode(false); break;
+					case EToolbarAction::SAVE_EXPORT: pConsole->ExportSelectedChat(); break;
+					case EToolbarAction::CLEAR_EXPORT: pConsole->ClearChatExportSelection(); break;
+					case EToolbarAction::SELECT_CHAT: pConsole->SelectAllChatExportable(); break;
+					case EToolbarAction::EXPAND: m_LocalConsoleFullscreen = !m_LocalConsoleFullscreen; break;
+					}
 				}
-				ButtonRight -= ButtonWidth + FilterSpacing;
+				ActionX += (Action.m_Width + FilterSpacing) * Toolbar.m_ActionScale;
+			}
+			char aStatus[256];
+			str_copy(aStatus, aLinesBuf);
+			if(pConsole->m_ChatExportMode)
+			{
+				char aExportStatus[128];
+				if(pConsole->m_pChatExportJob)
+				{
+					const auto &Job = *pConsole->m_pChatExportJob;
+					if(Job.m_Queued)
+						str_format(aExportStatus, sizeof(aExportStatus), Localize("Exporting chat images: %d"), Job.m_CompletedPages.load());
+					else
+						str_format(aExportStatus, sizeof(aExportStatus), Localize("Preparing chat export: %d%%"), Job.PreparationPercent());
+				}
+				else
+					str_format(aExportStatus, sizeof(aExportStatus), Localize("Selected %d"), pConsole->SelectedChatExportCount());
+				str_append(aStatus, "  |  ");
+				str_append(aStatus, aExportStatus);
+			}
+			const char *pHints = pConsole->m_ChatExportMode ? "Shift+Mouse1  |  Esc" :
+				(pConsole->m_SearchInput.IsSearching() ? "Enter / Shift+Enter  |  Esc  |  Ctrl+Mouse1" : "Ctrl+F  |  Alt+1-5  |  PgUp/PgDn  |  End  |  Ctrl+Mouse1");
+			const float HintWidth = TextRender()->TextWidth(8.0f, pHints);
+			const float StatusWidth = TextRender()->TextWidth(8.0f, aStatus);
+			const float HintX = Screen.w - HintWidth - 10.0f;
+			const bool ShowHints = StatusWidth + HintWidth + 30.0f <= Screen.w;
+			const CUIRect StatusRect = {10.0f, ConsoleHeight - FooterHeight, ShowHints ? HintX - 20.0f : maximum(0.0f, Screen.w - 20.0f), FooterHeight};
+			SLabelProperties Props;
+			Props.m_MaxWidth = StatusRect.w;
+			Props.m_EllipsisAtEnd = true;
+			Ui()->DoLabel(&StatusRect, aStatus, 8.0f, TEXTALIGN_ML, Props);
+			if(ShowHints)
+			{
+				const CUIRect HintRect = {HintX, ConsoleHeight - FooterHeight, HintWidth, FooterHeight};
+				Ui()->DoLabel(&HintRect, pHints, 8.0f, TEXTALIGN_ML);
 			}
 		}
 		else
 		{
-			char aVersionBuf[128];
-			str_copy(aVersionBuf, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
-			const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
-			const char *apFilterLabels[CInstance::LOG_FILTER_BUTTON_COUNT] = {
-				Localize("All"),
-				Localize("Players"),
-				Localize("System"),
-				Localize("Commands"),
-				Localize("Binds"),
-			};
-			const bool ShowExportButton = m_ConsoleType == CONSOLETYPE_LOCAL;
-			const char *pExportLabel = Localize("Select export");
-			const float ExportButtonWidth = ShowExportButton ? TextRender()->TextWidth(FilterFontSize, pExportLabel) + FilterPadding * 2.0f : 0.0f;
-			const float VersionRight = ShowExportButton ? Screen.w - TopbarRightMargin - ExportButtonWidth - FilterSpacing : Screen.w - TopbarRightMargin;
-			float aFilterWidths[CInstance::LOG_FILTER_BUTTON_COUNT];
-			float TotalFilterWidth = 0.0f;
-			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
-			{
-				aFilterWidths[i] = TextRender()->TextWidth(FilterFontSize, apFilterLabels[i]) + FilterPadding * 2.0f;
-				TotalFilterWidth += aFilterWidths[i];
-				if(i != CInstance::LOG_FILTER_BUTTON_COUNT - 1)
-					TotalFilterWidth += FilterSpacing;
-			}
-
-			float FilterX = LinesTextX + LinesWidth + 10.0f;
-			const float VersionWidth = TextRender()->TextWidth(FONT_SIZE, aVersionBuf);
-			const bool ShowVersion = FilterX + TotalFilterWidth + VersionWidth + 10.0f <= VersionRight;
-			if(!ShowVersion && FilterX + TotalFilterWidth > VersionRight)
-			{
-				ShowLineStatus = false;
-				FilterX = LinesTextX;
-			}
-			// 窄视口优先保留操作按钮，避免筛选按钮覆盖全屏和导出入口。
-			const float FilterScale = std::clamp((VersionRight - FilterX) / TotalFilterWidth, 0.1f, 1.0f);
-
-			CUIRect aFilterRects[CInstance::LOG_FILTER_BUTTON_COUNT];
-			float FilterLayoutX = FilterX;
-			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
-			{
-				aFilterRects[i] = {FilterLayoutX, FilterY, aFilterWidths[i] * FilterScale, FilterHeight};
-				FilterLayoutX += (aFilterWidths[i] + FilterSpacing) * FilterScale;
-			}
-
-			for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
-			{
-				CUIRect Button = aFilterRects[i];
-				const int Category = CInstance::LogFilterCategoryForButton(i);
-				const bool Active = (pConsole->m_LogFilterMask & Category) != 0;
-				const bool UiClicked = Ui()->DoButton_PopupMenu(&m_aFilterButtons[i], apFilterLabels[i], &Button, FilterFontSize * FilterScale, TEXTALIGN_MC);
-				const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
-				if(UiClicked || ManualClicked)
-				{
-					// i==0 的「全部」是总开关：点亮即其余全亮，再点一次则全部熄灭（熄灭会归一化回全亮）
-					const unsigned int Mask = (unsigned int)pConsole->m_LogFilterMask;
-					const unsigned int CategoryMask = (unsigned int)Category;
-					const unsigned int NewMask = i == 0 ? (Active ? 0u : (unsigned int)QM_CONSOLE_LOG_CATEGORY_ALL) : (Active ? (Mask & ~CategoryMask) : (Mask | CategoryMask));
-					pConsole->SetLogFilterMask((int)NewMask);
-				}
-				if(Active)
-					Button.DrawOutline(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
-			}
-			if(ShowExportButton)
-			{
-				CUIRect Button = {Screen.w - TopbarRightMargin - ExportButtonWidth, FilterY, ExportButtonWidth, FilterHeight};
-				Ui()->DoButton_PopupMenu(&m_ChatExportButton, pExportLabel, &Button, FilterFontSize, TEXTALIGN_MC);
-				const bool ManualClicked = MousePressed && Button.Inside(UiMousePos);
-				if(ManualClicked)
-					m_LocalConsole.SetChatExportMode(true);
-			}
-
-			if(m_ConsoleType == CONSOLETYPE_REMOTE && (Client()->ReceivingRconCommands() || Client()->ReceivingMaplist()))
+			TextRender()->Text(10.0f, FONT_SIZE / 2.0f, FONT_SIZE, aLinesBuf);
+			if(Client()->ReceivingRconCommands() || Client()->ReceivingMaplist())
 			{
 				const float Percentage = Client()->ReceivingRconCommands() ? Client()->GotRconCommandsPercentage() : Client()->GotMaplistPercentage();
 				SProgressSpinnerProperties ProgressProps;
 				ProgressProps.m_Progress = Percentage;
 				Ui()->RenderProgressSpinner(vec2(Screen.w / 4.0f + FONT_SIZE / 2.f, FONT_SIZE), FONT_SIZE / 2.f, ProgressProps);
-
 				char aLoading[128];
 				str_copy(aLoading, Client()->ReceivingRconCommands() ? Localize("Loading commands…") : Localize("Loading maps…"));
 				if(Percentage > 0)
@@ -2827,17 +2615,16 @@ void CGameConsole::OnRender()
 				}
 				TextRender()->Text(Screen.w / 4.0f + FONT_SIZE + 2.0f, FONT_SIZE / 2.f, FONT_SIZE, aLoading);
 			}
-
-			if(ShowVersion)
+			char aVersion[128];
+			str_copy(aVersion, "v" GAME_VERSION " on " CONF_PLATFORM_STRING " " CONF_ARCH_STRING);
+			const float VersionWidth = TextRender()->TextWidth(FONT_SIZE, aVersion);
+			if(FilterX + VersionWidth + 10.0f <= Screen.w - ToolbarRightMargin)
 			{
-				TextRender()->Text(VersionRight - VersionWidth, FONT_SIZE / 2.f, FONT_SIZE, aVersionBuf);
-				TextRender()->Text(VersionRight - TextRender()->TextWidth(FONT_SIZE, pClientVersion), FONT_SIZE / 2.0f + FONT_SIZE * 1.5f, FONT_SIZE, pClientVersion);
+				TextRender()->Text(Screen.w - ToolbarRightMargin - VersionWidth - 10.0f, FONT_SIZE / 2.0f, FONT_SIZE, aVersion);
+				const char *pClientVersion = CLIENT_NAME " " CLIENT_RELEASE_VERSION;
+				TextRender()->Text(Screen.w - ToolbarRightMargin - TextRender()->TextWidth(FONT_SIZE, pClientVersion) - 10.0f, FONT_SIZE * 2.0f, FONT_SIZE, pClientVersion);
 			}
 		}
-		m_TopbarMouseDown = MouseDown;
-
-		if(ShowLineStatus)
-			TextRender()->Text(LinesTextX, LinesTextY, FONT_SIZE, aLinesBuf);
 	}
 
 	if(UpdateConsoleUi)
@@ -2869,7 +2656,7 @@ bool CGameConsole::OnInput(const IInput::CEvent &Event)
 	{
 		CurrentConsole()->SetChatExportMode(false);
 	}
-	else if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS) && !CurrentConsole()->m_Searching)
+	else if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS) && !CurrentConsole()->m_SearchInput.IsSearching())
 	{
 		Toggle(m_ConsoleType);
 	}
