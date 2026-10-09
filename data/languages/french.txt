@@ -1850,6 +1850,21 @@ Chat fade smooth time (milliseconds)
 Chat font size
 == Taille de la police du chat
 
+Chat gradient angle in degrees
+== Direction du dégradé (discussion, °)
+
+Chat gradient horizontal position percentage
+== Position horizontale du dégradé (discussion, %)
+
+Chat gradient range percentage
+== Étendue du dégradé (discussion, %)
+
+Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Type de dégradé (discussion; 0=Dégradé linéaire, 1=Dégradé radial, 2=Dégradé angulaire, 3=Dégradé réfléchi, 4=Dégradé en losange)
+
+Chat gradient vertical position percentage
+== Position verticale du dégradé (discussion, %)
+
 Chat log retention days
 == Jours de conservation du journal du chat
 
@@ -5191,6 +5206,9 @@ Gradient horizontal position
 
 Gradient range
 == Étendue du dégradé
+
+Gradient settings
+== Réglages du dégradé
 
 Gradient type
 == Type de dégradé
@@ -9979,6 +9997,9 @@ Retry remote stats
 
 Retrying…
 == Nouvelle tentative…
+
+Reverse chat gradient colors
+== Inverser les couleurs du dégradé (discussion)
 
 Reverse gradient colors
 == Inverser les couleurs du dégradé

@@ -240,7 +240,7 @@ namespace qm_card_registry
 			{"deck:appearance-hud-main", "appearance-hud", ECardColumn::Left, 0, "HUD", "appearance hud main", "Configure health, ammo, timer, and race HUD"},
 			{"deck:appearance-hud-ddrace", "appearance-hud", ECardColumn::Right, 0, "DDRace HUD", "appearance ddrace hud", "Adjust DDRace-specific HUD indicators"},
 			{"deck:appearance-chat-settings", "appearance-chat", ECardColumn::Left, 0, "Chat", "appearance chat settings", "Configure chat position, size, and visibility"},
-			{"deck:appearance-chat-messages", "appearance-chat", ECardColumn::Right, 0, "Messages", "appearance chat messages", "Style chat names, text, and message colors"},
+			{"deck:appearance-chat-messages", "appearance-chat", ECardColumn::Right, 0, "Messages", "appearance chat messages colors gradient linear radial angular reflected diamond 渐变 聊天 配色 jianbian liaotian peise", "Style chat names, text, and message colors"},
 			{"deck:appearance-chat-preview", "appearance-chat", ECardColumn::Left, 1, "Preview", "appearance chat preview", "Preview the current chat appearance"},
 			{"deck:appearance-name-plate-settings", "appearance-name-plate", ECardColumn::Left, 0, "Name Plate", "appearance name plate settings visibility clan friend client id 昵称 显示 战队 好友 客户端 nicheng", "Configure nameplate text, badges, and visibility"},
 			{"deck:appearance-name-plate-text", "appearance-name-plate", ECardColumn::Left, 1, Localizable("Nameplate text"), "appearance nameplate text effects border gradient rainbow glow lod 名牌文字 描边 渐变 彩虹 辉光 特效 mingpai wenzi", "Customize additional nameplate text"},

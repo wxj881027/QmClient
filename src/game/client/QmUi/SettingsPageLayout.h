@@ -852,7 +852,8 @@ inline float ResolveAppearanceChatMessagesHeight(const SSettingsContentMetrics &
 	const float MessageGradientHeight = 2.0f * ControlHeight + 2.0f * Metrics.m_LineSpacing;
 	const float ColorPickerHeight = ControlHeight + Metrics.m_LineSpacing;
 	const float SystemPrefixToggleHeight = Metrics.m_LineHeight + Metrics.m_LineSpacing;
-	return MessageGradientCount * MessageGradientHeight + SystemPrefixToggleHeight + ColorPickerHeight;
+	const float GeometryEditorHeight = 8.0f * (ControlHeight + Metrics.m_LineSpacing);
+	return MessageGradientCount * MessageGradientHeight + SystemPrefixToggleHeight + ColorPickerHeight + GeometryEditorHeight;
 }
 
 inline float ResolveQmHudCoordsHeight(const SSettingsContentMetrics &Metrics)

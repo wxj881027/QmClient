@@ -1850,6 +1850,21 @@ Chat fade smooth time (milliseconds)
 Chat font size
 == Размер шрифта чата
 
+Chat gradient angle in degrees
+== Направление градиента (чат, °)
+
+Chat gradient horizontal position percentage
+== Горизонтальное положение градиента (чат, %)
+
+Chat gradient range percentage
+== Размер градиента (чат, %)
+
+Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Тип градиента (чат; 0=Линейный градиент, 1=Радиальный градиент, 2=Угловой градиент, 3=Зеркальный градиент, 4=Ромбовидный градиент)
+
+Chat gradient vertical position percentage
+== Вертикальное положение градиента (чат, %)
+
 Chat log retention days
 == Дни хранения лога чата
 
@@ -5191,6 +5206,9 @@ Gradient horizontal position
 
 Gradient range
 == Размер градиента
+
+Gradient settings
+== Настройки градиента
 
 Gradient type
 == Тип градиента
@@ -9979,6 +9997,9 @@ Retry remote stats
 
 Retrying…
 == Повторная попытка…
+
+Reverse chat gradient colors
+== Обратить цвета градиента (чат)
 
 Reverse gradient colors
 == Обратить цвета градиента

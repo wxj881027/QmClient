@@ -3456,7 +3456,7 @@ public:
 								vec2(Glyph.m_aVertices[1].m_X, Glyph.m_aVertices[1].m_Y),
 								vec2(Glyph.m_aVertices[3].m_U, Glyph.m_aVertices[3].m_V),
 								vec2(Glyph.m_aVertices[1].m_U, Glyph.m_aVertices[1].m_V),
-								pCursor->m_pfnColorSampler, pCursor->m_pColorSamplerContext, [&](const STextGradientCell &Cell) {
+								pCursor->m_pfnColorSampler, pCursor->m_pColorSamplerContext, pCursor->m_ColorSamplerColumns, pCursor->m_ColorSamplerRows, [&](const STextGradientCell &Cell) {
 									if(!First)
 									{
 										TextContainer.m_StringInfo.m_vCharacterQuads.emplace_back();

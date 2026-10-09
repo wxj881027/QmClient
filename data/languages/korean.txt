@@ -1850,6 +1850,21 @@ Chat fade smooth time (milliseconds)
 Chat font size
 == 채팅 글꼴 크기
 
+Chat gradient angle in degrees
+== 그라데이션 방향 (채팅, °)
+
+Chat gradient horizontal position percentage
+== 그라데이션 가로 위치 (채팅, %)
+
+Chat gradient range percentage
+== 그라데이션 범위 (채팅, %)
+
+Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== 그라데이션 유형 (채팅; 0=선형 그라데이션, 1=방사형 그라데이션, 2=각도 그라데이션, 3=대칭 그라데이션, 4=마름모 그라데이션)
+
+Chat gradient vertical position percentage
+== 그라데이션 세로 위치 (채팅, %)
+
 Chat log retention days
 == 채팅 로그 보관 일수
 
@@ -5191,6 +5206,9 @@ Gradient horizontal position
 
 Gradient range
 == 그라데이션 범위
+
+Gradient settings
+== 그라데이션 설정
 
 Gradient type
 == 그라데이션 유형
@@ -9979,6 +9997,9 @@ Retry remote stats
 
 Retrying…
 == 재시도 중…
+
+Reverse chat gradient colors
+== 그라데이션 색상 반전 (채팅)
 
 Reverse gradient colors
 == 그라데이션 색상 반전

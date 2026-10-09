@@ -415,6 +415,8 @@ public:
 	using FColorSampler = ColorRGBA (*)(vec2 Position, const void *pContext);
 	FColorSampler m_pfnColorSampler = nullptr;
 	const void *m_pColorSamplerContext = nullptr;
+	int m_ColorSamplerColumns = 8;
+	int m_ColorSamplerRows = 8;
 
 	// QmClient：逐字符顶点偏移。按字符序号升序排列且覆盖每个字符，未偏移的字符填 0，
 	// 否则游标推进方式（顺序消费）会与字符错位。

@@ -171,3 +171,30 @@ TEST(QmColorGradient, VerticalTextPaintChangesColorFromTopToBottom)
 	EXPECT_NEAR(SQmGradientTextPaint::Sample(vec2(18.0f, 20.0f), &Paint).r, 1.0f, 0.02f);
 	EXPECT_NEAR(SQmGradientTextPaint::Sample(vec2(18.0f, 36.0f), &Paint).b, 1.0f, 0.02f);
 }
+
+TEST(QmColorGradient, LongHorizontalMessagesDoNotNeedAnEightByEightGridForEveryGlyph)
+{
+	const auto Value = SQmColorGradient::FromConfig("FF0000,00FF00,0000FF,FFFF00,00FFFF,FF00FF,FFFFFF",
+		ColorRGBA(1, 1, 1, 1), 0, 0, 50, 50, 100, false);
+	const auto LongText = QmGradientTextGrid(Value, vec2(1000, 12), 12);
+	EXPECT_EQ(LongText[0], 1);
+	EXPECT_EQ(LongText[1], 1);
+	const auto SingleGlyph = QmGradientTextGrid(Value, vec2(12, 12), 12);
+	EXPECT_EQ(SingleGlyph[0], 8);
+	EXPECT_EQ(SingleGlyph[1], 1);
+}
+
+TEST(QmColorGradient, TextGridTracksTheDirectionAndKeepsTheMaximumBudgetBounded)
+{
+	const auto Vertical = QmGradientTextGrid(Gradient(0, 90), vec2(1000, 12), 12);
+	EXPECT_EQ(Vertical[0], 1);
+	EXPECT_GT(Vertical[1], 1);
+	for(int Type = 0; Type < 5; ++Type)
+	{
+		SCOPED_TRACE(Type);
+		const auto Grid = QmGradientTextGrid(Gradient(Type, 45, 50, 50, 10), vec2(0, 0), 200);
+		EXPECT_GE(Grid[0], 1);
+		EXPECT_GE(Grid[1], 1);
+		EXPECT_LE(Grid[0] * Grid[1], 64);
+	}
+}

@@ -1,7 +1,10 @@
+#include "QmColorGradientEditor.h"
+
 #include <game/client/components/menus.h>
 #include <game/client/components/message_gradient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>
+#include <game/localization.h>
 
 #include <algorithm>
 
@@ -84,4 +87,51 @@ bool CMenus::DoColorGradientPalette(CUIRect *pView, unsigned *pBaseColor, char *
 
 	pView->HSplitTop(BottomMargin, nullptr, pView);
 	return Changed;
+}
+
+bool CMenus::DoColorGradientGeometry(CUIRect &Content, const SQmGradientGeometryBinding &Binding,
+	SQmGradientGeometryState &State, const SSettingsContentMetrics &Metrics, float LabelWidth)
+{
+	const bool ReadOnly = Ui()->RenderOnly();
+	const auto Before = Binding.Values();
+	const float RowHeight = std::max(Metrics.m_LineHeight, Metrics.m_ButtonHeight);
+	CUIRect Row, Label, Control;
+	const auto NextRow = [&](const char *pText) {
+		Content.HSplitTop(RowHeight, &Row, &Content);
+		Content.HSplitTop(Metrics.m_LineSpacing, nullptr, &Content);
+		Row.VSplitLeft(std::min(LabelWidth, Row.w * 0.48f), &Label, &Control);
+		SLabelProperties Props;
+		Props.m_MaxWidth = Label.w;
+		Props.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&Label, pText, Metrics.m_BodySize, TEXTALIGN_ML, Props);
+	};
+	NextRow(Localize("Gradient type"));
+	const char *apTypes[] = {Localize("Linear gradient"), Localize("Radial gradient"), Localize("Angular gradient"), Localize("Reflected gradient"), Localize("Diamond gradient")};
+	State.m_TypeDropdown.m_SelectionPopupContext.m_pScrollRegion = &State.m_TypeScroll;
+	const int Type = DoSettingsDropDown(&Control, std::clamp(*Binding.m_pType, 0, 4), apTypes, std::size(apTypes), State.m_TypeDropdown);
+	if(!ReadOnly)
+		*Binding.m_pType = Type;
+	const auto Slider = [&](const char *pText, int *pValue, int Min, int Max, const char *pUnit) {
+		NextRow(pText);
+		RenderQmSettingsSliderWithValueInput(pValue, Control, pValue, Min, Max, pUnit, ReadOnly);
+	};
+	if(*Binding.m_pType == 1)
+	{
+		NextRow("");
+		SLabelProperties Props;
+		Props.m_MaxWidth = Row.w;
+		Props.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&Row, Localize("Radial gradients spread from the center"), Metrics.m_BodySize, TEXTALIGN_ML, Props);
+	}
+	else
+		Slider(Localize("Gradient direction"), Binding.m_pAngle, 0, 360, "°");
+	Slider(Localize("Gradient horizontal position"), Binding.m_pCenterX, 0, 100, "%");
+	Slider(Localize("Gradient vertical position"), Binding.m_pCenterY, 0, 100, "%");
+	Slider(Localize("Gradient range"), Binding.m_pRange, 10, 200, "%");
+	NextRow("");
+	if(DoButton_CheckBox_Common_WithLabelElement(Binding.m_pReverse, Localize("Reverse gradient colors"),
+		   *Binding.m_pReverse ? "X" : "", &Row, BUTTONFLAG_LEFT, nullptr, !ReadOnly, Metrics.m_BodySize) &&
+		!ReadOnly)
+		*Binding.m_pReverse ^= 1;
+	return Before != Binding.Values();
 }

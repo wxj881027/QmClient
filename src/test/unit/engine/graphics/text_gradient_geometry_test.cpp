@@ -74,3 +74,29 @@ TEST(TextGradientGeometry, AdjacentCellsShareTheirGeometryAndColorEdges)
 			++Column;
 		});
 }
+
+TEST(TextGradientGeometry, ReducedGridStillCoversTheWholeGlyphAndSamplesItsOuterEdges)
+{
+	const float Alpha = 1.0f;
+	int Count = 0;
+	float Area = 0;
+	ForEachTextGradientCell(vec2(0, 0), vec2(16, 8), vec2(0, 0), vec2(1, 1),
+		SamplePosition, &Alpha, 2, 1, [&](const STextGradientCell &Cell) {
+			++Count;
+			Area += (Cell.m_aPositions[1].x - Cell.m_aPositions[0].x) * (Cell.m_aPositions[2].y - Cell.m_aPositions[0].y);
+			EXPECT_FLOAT_EQ(Cell.m_aUvs[0].y, 0);
+			EXPECT_FLOAT_EQ(Cell.m_aUvs[2].y, 1);
+			EXPECT_FLOAT_EQ(Cell.m_aColors[0].g, 0);
+			EXPECT_FLOAT_EQ(Cell.m_aColors[2].g, 1);
+		});
+	EXPECT_EQ(Count, 2);
+	EXPECT_FLOAT_EQ(Area, 128);
+}
+
+TEST(TextGradientGeometry, InvalidGridDimensionsAreClampedToTheMinimumAndMaximumBudget)
+{
+	const float Alpha = 1.0f;
+	int Count = 0;
+	ForEachTextGradientCell(vec2(0, 0), vec2(16, 8), vec2(0, 0), vec2(1, 1), SamplePosition, &Alpha, -1, 100, [&](const STextGradientCell &) { ++Count; });
+	EXPECT_EQ(Count, 8);
+}

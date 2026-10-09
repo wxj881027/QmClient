@@ -1850,6 +1850,21 @@ Chat fade smooth time (milliseconds)
 Chat font size
 == Chat-Schriftgröße
 
+Chat gradient angle in degrees
+== Verlaufsrichtung (Chat, °)
+
+Chat gradient horizontal position percentage
+== Horizontale Verlaufsposition (Chat, %)
+
+Chat gradient range percentage
+== Verlaufsgröße (Chat, %)
+
+Chat gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Verlaufstyp (Chat; 0=Linearer Verlauf, 1=Radialer Verlauf, 2=Winkelverlauf, 3=Gespiegelter Verlauf, 4=Rautenverlauf)
+
+Chat gradient vertical position percentage
+== Vertikale Verlaufsposition (Chat, %)
+
 Chat log retention days
 == Aufbewahrungstage des Chat-Logs
 
@@ -5191,6 +5206,9 @@ Gradient horizontal position
 
 Gradient range
 == Verlaufsgröße
+
+Gradient settings
+== Verlaufseinstellungen
 
 Gradient type
 == Verlaufstyp
@@ -9979,6 +9997,9 @@ Retry remote stats
 
 Retrying…
 == Erneuter Versuch…
+
+Reverse chat gradient colors
+== Verlaufsfarben umkehren (Chat)
 
 Reverse gradient colors
 == Verlaufsfarben umkehren
