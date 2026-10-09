@@ -11,6 +11,16 @@ namespace
 		return {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
 	}
 
+	CImageInfo RgbaImage(unsigned char *pPixels, int Width, int Height)
+	{
+		CImageInfo Image;
+		Image.m_pData = pPixels;
+		Image.m_Width = Width;
+		Image.m_Height = Height;
+		Image.m_Format = CImageInfo::FORMAT_RGBA;
+		return Image;
+	}
+
 	std::array<unsigned char, 6 * 64 * 4> SplitColumnPixels()
 	{
 		std::array<unsigned char, 6 * 64 * 4> Pixels{};
@@ -548,4 +558,183 @@ TEST(QmEmoticonProjectile, TeamFilteringSkipsInvalidClientIds)
 		EXPECT_FALSE(QmEmoticon::OverlapsPlayerBoxes(Mask, vec2(16.0f, 16.0f), 32.0f, 0.0f, 7, &Invalid, 1, &Teams));
 	}
 	EXPECT_TRUE(QmEmoticon::OverlapsPlayerBoxes(Mask, vec2(16.0f, 16.0f), 32.0f, 0.0f, 7, &Other, 1, &Teams));
+}
+
+TEST(QmEmoticonProjectile, BlankSpriteUsesDisplayedFallbackContour)
+{
+	std::array<unsigned char, 2 * 4> Pixels{};
+	std::array<unsigned char, 4 * 2 * 4> FallbackPixels{};
+	FallbackPixels[(1 * 4 + 3) * 4 + 3] = 255;
+	const auto Image = RgbaImage(Pixels.data(), 2, 1);
+	const auto Fallback = RgbaImage(FallbackPixels.data(), 4, 2);
+	CDataSpriteset Set{nullptr, 2, 1};
+	const CDataSprite Sprite{"test", &Set, 1, 0, 1, 1};
+	QmEmoticon::CAlphaMask Mask;
+	Mask.BuildSprite(Image, Sprite, &Fallback);
+
+	EXPECT_EQ(Mask.NumRects(), 1u);
+	EXPECT_TRUE(Mask.OverlapsBox(vec2(0, 0), 64, 0, vec2(16, 16), vec2(1, 1)));
+	EXPECT_FALSE(Mask.OverlapsBox(vec2(0, 0), 64, 0, vec2(-16, -16), vec2(1, 1)));
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(-0.2f, 16), vec2(100, 0), 0);
+	Projectile.m_AngVel = 0;
+	Projectile.Update(static_cast<float>(CEmoticonProjectile::STEP), Mask, [](int X, int) { return X >= 1; });
+	EXPECT_TRUE(Projectile.m_Active);
+	EXPECT_LT(Projectile.m_Vel.x, 0);
+}
+
+TEST(QmEmoticonProjectile, DisabledFallbackKeepsBlankSpriteNonColliding)
+{
+	std::array<unsigned char, 16> Pixels{};
+	auto FallbackPixels = OpaquePixel();
+	const auto Image = RgbaImage(Pixels.data(), 2, 2);
+	const auto Fallback = RgbaImage(FallbackPixels.data(), 2, 2);
+	CDataSpriteset Set{nullptr, 1, 1};
+	const CDataSprite Sprite{"test", &Set, 0, 0, 1, 1};
+	QmEmoticon::CAlphaMask Mask;
+	Mask.BuildSprite(Image, Sprite, &Fallback);
+	ASSERT_GT(Mask.NumRects(), 0u);
+	Mask.BuildSprite(Image, Sprite);
+	EXPECT_EQ(Mask.NumRects(), 0u);
+	EXPECT_FALSE(Mask.Overlaps(vec2(16, 16), 64, 0, [](int, int) { return true; }));
+}
+
+TEST(QmEmoticonProjectile, ProvidedSpriteContourTakesPrecedenceOverFallback)
+{
+	std::array<unsigned char, 16> Pixels{};
+	Pixels[3] = 255;
+	auto FallbackPixels = OpaquePixel();
+	const auto Image = RgbaImage(Pixels.data(), 2, 2);
+	const auto Fallback = RgbaImage(FallbackPixels.data(), 2, 2);
+	CDataSpriteset Set{nullptr, 1, 1};
+	const CDataSprite Sprite{"test", &Set, 0, 0, 1, 1};
+	QmEmoticon::CAlphaMask Mask;
+	Mask.BuildSprite(Image, Sprite, &Fallback);
+	EXPECT_TRUE(Mask.OverlapsBox(vec2(0, 0), 64, 0, vec2(-16, -16), vec2(1, 1)));
+	EXPECT_FALSE(Mask.OverlapsBox(vec2(0, 0), 64, 0, vec2(16, 16), vec2(1, 1)));
+}
+
+TEST(QmEmoticonProjectile, InvalidSpriteReloadClearsPreviousContour)
+{
+	auto Pixels = OpaquePixel();
+	const auto Image = RgbaImage(Pixels.data(), 2, 2);
+	const auto Fallback = RgbaImage(Pixels.data(), 2, 2);
+	CDataSpriteset Set{nullptr, 1, 1};
+	const CDataSprite Sprite{"test", &Set, 0, 0, 1, 1};
+	const CDataSprite MissingSprite{"test", &Set, 1, 0, 1, 1};
+	QmEmoticon::CAlphaMask Mask;
+	Mask.BuildSprite(Image, Sprite, &Fallback);
+	ASSERT_GT(Mask.NumRects(), 0u);
+	Mask.BuildSprite(Image, MissingSprite, &Fallback);
+	EXPECT_EQ(Mask.NumRects(), 0u);
+}
+
+TEST(QmEmoticonProjectile, EnclosedSpawnDoesNotJumpToOtherSideOfWall)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(16, 16), vec2(1200, -400), 0);
+	const auto Solid = [](int X, int) { return X < 0 || X == 1; };
+	// 模拟地图路径查询：同侧的窄通道不能跨过左右两堵墙。
+	const auto CanReach = [](vec2 From, vec2 To) { return From.x >= 0 && From.x < 32 && To.x >= 0 && To.x < 32; };
+	const vec2 Before = Projectile.m_Pos;
+	EXPECT_FALSE(Projectile.PlaceOutside(Mask, Solid, vec2(16, 36), CanReach));
+	EXPECT_EQ(Projectile.m_Pos, Before);
+	EXPECT_EQ(Projectile.m_PreviousPos, Before);
+}
+
+TEST(QmEmoticonProjectile, WallAdjacentSpawnStaysOnThePlayersSide)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	for(const float Scale : {1.0f, 2.35f})
+	{
+		SCOPED_TRACE(Scale);
+		CEmoticonProjectile Projectile;
+		Projectile.Init(vec2(80, 60), vec2(1200, -400), 0, Scale);
+		const auto Solid = [](int X, int) { return X == 3; };
+		const auto CanReach = [](vec2 From, vec2 To) { return From.x < 96 && To.x < 96; };
+		ASSERT_TRUE(Projectile.PlaceOutside(Mask, Solid, vec2(80, 80), CanReach));
+		EXPECT_LE(Projectile.m_Pos.x + Projectile.Size() * 0.5f, 96);
+		EXPECT_EQ(Projectile.m_PreviousPos, Projectile.m_Pos);
+		EXPECT_FALSE(Mask.Overlaps(Projectile.m_Pos, Projectile.Size(), Projectile.m_Angle, Solid));
+	}
+}
+
+TEST(QmEmoticonProjectile, HeadOriginInsideCeilingUsesClearPlayerAnchor)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(16, 30), vec2(0, -400), 0, 0.25f);
+	const auto Solid = [](int, int Y) { return Y <= 0; };
+	const auto CanReach = [](vec2 From, vec2 To) { return From.y >= 32 && To.y >= 32; };
+	ASSERT_TRUE(Projectile.PlaceOutside(Mask, Solid, vec2(16, 50), CanReach));
+	EXPECT_GE(Projectile.m_Pos.y, 40);
+	EXPECT_FALSE(Mask.Overlaps(Projectile.m_Pos, Projectile.Size(), 0, Solid));
+}
+
+TEST(QmEmoticonProjectile, ClearCandidateAcrossWallIsNotAccepted)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(16, 16), vec2(0, -400), 0, 0.25f);
+	const auto Solid = [](int, int Y) { return Y == 1; };
+	const auto CanReach = [](vec2 From, vec2 To) { return From.y >= 64 && To.y >= 64; };
+	ASSERT_FALSE(Mask.Overlaps(Projectile.m_Pos, Projectile.Size(), 0, Solid));
+	ASSERT_TRUE(Projectile.PlaceOutside(Mask, Solid, vec2(16, 80), CanReach));
+	EXPECT_GE(Projectile.m_Pos.y, 72);
+}
+
+TEST(QmEmoticonProjectile, ClearSpawnKeepsOriginalPosition)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(16, 16), vec2(1200, -400), 0);
+	const auto Solid = [](int, int) { return false; };
+	ASSERT_TRUE(Projectile.PlaceOutside(Mask, Solid, vec2(16, 36), [](vec2, vec2) { return true; }));
+	EXPECT_EQ(Projectile.m_Pos, vec2(16, 16));
+	EXPECT_EQ(Projectile.m_PreviousPos, Projectile.m_Pos);
+}
+
+TEST(QmEmoticonProjectile, BlockedPlayerAnchorRejectsSpawn)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(16, 16), vec2(1200, -400), 0);
+	const auto Solid = [](int, int) { return false; };
+	EXPECT_FALSE(Projectile.PlaceOutside(Mask, Solid, vec2(16, 36), [](vec2, vec2) { return false; }));
+}
+
+TEST(QmEmoticonProjectile, LaunchSpeedBouncesWithoutCrossingSingleTileWallAtLongFrames)
+{
+	const auto Pixels = OpaquePixel();
+	QmEmoticon::CAlphaMask Mask;
+	Mask.Build(Pixels.data(), 2, 2);
+	const auto Solid = [](int X, int) { return X == 2; };
+	for(const float Scale : {1.0f, 2.35f})
+	{
+		SCOPED_TRACE(Scale);
+		CEmoticonProjectile Projectile;
+		Projectile.Init(vec2(64 - 32 * Scale - 0.2f, 16), vec2(1200, -400), 0, Scale);
+		Projectile.m_AngVel = 3.0f;
+		for(int Frame = 0; Frame < 10; ++Frame)
+		{
+			Projectile.Update(0.1f, Mask, Solid);
+			ASSERT_TRUE(Projectile.m_Active);
+			EXPECT_LT(Projectile.m_Pos.x, 64);
+			EXPECT_FALSE(Mask.Overlaps(Projectile.m_Pos, Projectile.Size(), Projectile.m_Angle, Solid));
+		}
+		EXPECT_LT(Projectile.m_Vel.x, 0);
+	}
 }
