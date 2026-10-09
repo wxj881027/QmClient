@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
-void TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::initializer_list<const char *> pExpectedLines, bool ExpectSuccess, bool WriteBom)
+void TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::initializer_list<const char *> pExpectedLines, bool ExpectSuccess, bool WriteBom, bool RejectInvalidLines = false)
 {
 	CTestInfo Info;
 	IOHANDLE File = io_open(Info.m_aFilename, IOFLAG_WRITE);
@@ -22,7 +22,7 @@ void TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::in
 	EXPECT_FALSE(io_close(File));
 
 	CLineReader LineReader;
-	const bool ActualSuccess = LineReader.OpenFile(io_open(Info.m_aFilename, IOFLAG_READ));
+	const bool ActualSuccess = LineReader.OpenFile(io_open(Info.m_aFilename, IOFLAG_READ), RejectInvalidLines);
 	ASSERT_EQ(ActualSuccess, ExpectSuccess);
 	if(ActualSuccess)
 	{
@@ -110,4 +110,24 @@ TEST(LineReader, NullBytes)
 	TestFileLineReaderRaw("foo\0\nbar\nbaz", 12, {}, false);
 	TestFileLineReaderRaw("foo\nbar\0\nbaz", 12, {}, false);
 	TestFileLineReaderRaw("foo\nbar\nbaz\0", 12, {}, false);
+}
+
+TEST(LineReader, StrictLoadRejectsInvalidUtf8BeforeReadingValidPrefix)
+{
+	TestFileLineReaderRaw("foo\nbar\xff", 8, {}, false, false, true);
+}
+
+TEST(LineReader, StrictLoadRejectsControlCharacter)
+{
+	TestFileLineReaderRaw("foo\nbar\x01", 8, {}, false, false, true);
+}
+
+TEST(LineReader, StrictLoadRejectsUnpairedCarriageReturn)
+{
+	TestFileLineReaderRaw("foo\rbar", 7, {}, false, false, true);
+}
+
+TEST(LineReader, StrictLoadAcceptsBomAndMixedValidLineEndings)
+{
+	TestFileLineReaderRaw("foo\r\n\tbar\nbaz", 13, {"foo", "\tbar", "baz"}, true, true, true);
 }

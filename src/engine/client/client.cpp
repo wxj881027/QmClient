@@ -6898,7 +6898,7 @@ int main(int argc, const char **argv)
 
 			SSaveUnknownCommandContext UnknownCommandContext{pConfigManager, ConfigDomain};
 			pConsole->SetUnknownCommandCallback(SaveUnknownDomainCommandCallback, &UnknownCommandContext);
-			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE))
+			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE, true))
 			{
 				pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 				char aError[2048];

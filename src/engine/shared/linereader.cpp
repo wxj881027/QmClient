@@ -34,7 +34,22 @@ CLineReader::~CLineReader()
 	free(m_pBuffer);
 }
 
-bool CLineReader::OpenFile(IOHANDLE File)
+bool CLineReader::IsValidBuffer(const char *pBuffer)
+{
+	if(!str_utf8_check(pBuffer))
+		return false;
+	for(size_t Index = 0; pBuffer[Index] != '\0'; ++Index)
+	{
+		const unsigned char Character = pBuffer[Index];
+		if(Character == '\r' && pBuffer[Index + 1] == '\n')
+			continue;
+		if(Character < ' ' && Character != '\t' && Character != '\n')
+			return false;
+	}
+	return true;
+}
+
+bool CLineReader::OpenFile(IOHANDLE File, bool RejectInvalidLines)
 {
 	if(!File)
 	{
@@ -44,6 +59,11 @@ bool CLineReader::OpenFile(IOHANDLE File)
 	io_close(File);
 	if(pBuffer == nullptr)
 	{
+		return false;
+	}
+	if(RejectInvalidLines && !IsValidBuffer(pBuffer))
+	{
+		free(pBuffer);
 		return false;
 	}
 	OpenBuffer(pBuffer);

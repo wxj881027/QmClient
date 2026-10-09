@@ -68,7 +68,8 @@ public:
 	virtual size_t FindFiles(const char *pFilename, const char *pPath, int Type, std::set<std::string> *pEntries) = 0;
 	virtual bool RemoveFile(const char *pFilename, int Type) = 0;
 	virtual bool RemoveFolder(const char *pFilename, int Type) = 0;
-	virtual bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type) = 0;
+	// 保存用户配置时禁用目标删除重试；失败后保留原目标文件。
+	virtual bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type, bool AllowDestinationRemoval = true) = 0;
 	virtual bool CreateFolder(const char *pFoldername, int Type) = 0;
 	virtual void GetCompletePath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) = 0;
 

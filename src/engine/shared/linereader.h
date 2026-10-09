@@ -15,7 +15,9 @@ public:
 	CLineReader();
 	~CLineReader();
 
-	bool OpenFile(IOHANDLE File);
+	bool OpenFile(IOHANDLE File, bool RejectInvalidLines = false);
+	// 配置加载先校验整份文本，不能执行一部分后才发现被跳过的坏行。
+	static bool IsValidBuffer(const char *pBuffer);
 	void OpenBuffer(char *pBuffer); // Buffer must have been allocated with malloc, will be freed by the line reader
 
 	const char *Get(); // Returned string is valid until the line reader is destroyed

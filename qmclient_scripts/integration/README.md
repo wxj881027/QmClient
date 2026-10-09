@@ -14,6 +14,14 @@ python qmclient_scripts/integration/open_link_failure_smoke.py <build-dir>/testr
 
 Windows 的普通版和便携版均忽略 `storage.cfg`。通用进程测试需要独立的 `DEV=ON、QMCLIENT_TEST_STORAGE=ON` 构建，runner 通过 `QMCLIENT_TEST_STORAGE_ROOT` 指向各场景临时目录。误用普通发布构建时初始化会失败；测试构建禁止打包，不用于发布。Linux/macOS 沿用原隔离方式。
 
+配置读写保护的 Windows 端到端入口：
+
+```text
+python qmclient_scripts/integration/e2e_config_persistence.py <test-build-dir>
+```
+
+两个场景验证多开时旧实例拒绝覆盖新设置，以及错误编码导致加载失败后保留原文件。测试只使用隔离存档，产物保留在 `tmp/config-persistence-*`。测试代码已补充，未执行；保存失败或配置错误弹窗会在记录日志与文件状态后结束本场景的实例。
+
 便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证 `profile/` 随目录搬家、忽略目录外配置及不可写时不回退：
 
 ```text
