@@ -8005,7 +8005,7 @@ void CMenus::OnRender()
 		CPerfTimer StageTimer;
 		if(IsActive())
 			Ui()->RenderBackButton();
-		if(IsActive() || GameClient()->m_Spectator.PlaybackControlsActive())
+		if(!GameClient()->m_GameConsole.IsActive() && (IsActive() || GameClient()->m_Spectator.PlaybackControlsActive()))
 			RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 		LogPerfStage(Client(), "cursor_render", StageTimer.ElapsedMs());
 	}
