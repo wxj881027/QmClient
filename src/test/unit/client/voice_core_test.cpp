@@ -25,20 +25,7 @@
 #include <memory>
 #include <sstream>
 
-#if defined(CONF_RNNOISE)
-#include <rnnoise.h>
-#endif
-
 using namespace VoiceUtils;
-
-namespace VoiceUtils
-{
-	int ResolveNoiseSuppressMode(int ConfigValue, bool RnnoiseRuntimeAvailable, bool *pFallbackUsed);
-}
-
-static constexpr int TEST_VOICE_NOISE_SUPPRESS_OFF = 0;
-static constexpr int TEST_VOICE_NOISE_SUPPRESS_SIMPLE = 1;
-static constexpr int TEST_VOICE_NOISE_SUPPRESS_RNNOISE = 2;
 
 TEST(VoiceUtils, VoiceWebSocketUrlMigratesOnlyOfficialUdpDefault)
 {
@@ -271,8 +258,8 @@ TEST(VoiceCore, CaptureProcessKeepsOnlyMicGain)
 	SRClientVoiceConfigSnapshot Config;
 	Config.m_QmVoiceAgcEnable = 1;
 	Config.m_QmVoiceMicVolume = 100;
-	Config.m_QmVoiceNoiseSuppressEnable = TEST_VOICE_NOISE_SUPPRESS_OFF;
-	Config.m_QmVoiceFilterEnable = 0;
+	Config.m_QmVoiceNoiseSuppressEnable = 2;
+	Config.m_QmVoiceFilterEnable = 1;
 
 	std::vector<EVoiceProcessStage> vStages;
 	SetVoiceProcessTraceCallback(
@@ -287,24 +274,84 @@ TEST(VoiceCore, CaptureProcessKeepsOnlyMicGain)
 	float AgcGain = 1.0f;
 	float NoiseFloor = 0.0f;
 	float NoiseGate = 1.0f;
-	DenoiseState *pNoiseState = nullptr;
-	bool NoiseFallbackLogged = false;
 	float HpfPrevIn = 0.0f;
 	float HpfPrevOut = 0.0f;
 	float CompEnv = 0.0f;
 
-	VoiceUtils::ProcessVoiceCaptureFrame(Config, aSamples, VOICE_FRAME_SAMPLES, AgcGain, NoiseFloor, NoiseGate, pNoiseState, NoiseFallbackLogged, HpfPrevIn, HpfPrevOut, CompEnv);
+	VoiceUtils::ProcessVoiceCaptureFrame(Config, aSamples, VOICE_FRAME_SAMPLES, AgcGain, NoiseFloor, NoiseGate, HpfPrevIn, HpfPrevOut, CompEnv);
 
 	SetVoiceProcessTraceCallback(nullptr, nullptr);
 
 	ASSERT_EQ(vStages.size(), 1u);
 	EXPECT_EQ(vStages[0], EVoiceProcessStage::MIC_GAIN);
+	EXPECT_EQ(aSamples[0], 1000);
 	EXPECT_FLOAT_EQ(AgcGain, 1.0f);
 	EXPECT_FLOAT_EQ(NoiseFloor, 0.0f);
 	EXPECT_FLOAT_EQ(NoiseGate, 1.0f);
 	EXPECT_FLOAT_EQ(HpfPrevIn, 0.0f);
 	EXPECT_FLOAT_EQ(HpfPrevOut, 0.0f);
 	EXPECT_FLOAT_EQ(CompEnv, 0.0f);
+}
+
+TEST(VoiceCore, CaptureLegacyNoiseModesDoNotChangeMicGain)
+{
+	for(const int Mode : {-1, 0, 1, 2, 99})
+	{
+		SCOPED_TRACE(Mode);
+		SRClientVoiceConfigSnapshot Config;
+		Config.m_QmVoiceMicVolume = 150;
+		Config.m_QmVoiceNoiseSuppressEnable = Mode;
+		Config.m_QmVoiceNoiseSuppressStrength = 100;
+		Config.m_QmVoiceAgcEnable = 1;
+		Config.m_QmVoiceFilterEnable = 1;
+		float AgcGain = 2.0f;
+		float NoiseFloor = 3.0f;
+		float NoiseGate = 0.0f;
+		float HpfPrevIn = 4.0f;
+		float HpfPrevOut = 5.0f;
+		float CompEnv = 6.0f;
+		for(int Repeat = 0; Repeat < 2; ++Repeat)
+		{
+			int16_t aSamples[] = {1000, -1000, 0, 30000, -30000};
+			VoiceUtils::ProcessVoiceCaptureFrame(Config, aSamples, 5, AgcGain, NoiseFloor, NoiseGate, HpfPrevIn, HpfPrevOut, CompEnv);
+			EXPECT_EQ(aSamples[0], 1500);
+			EXPECT_EQ(aSamples[1], -1500);
+			EXPECT_EQ(aSamples[2], 0);
+			EXPECT_EQ(aSamples[3], 32767);
+			EXPECT_EQ(aSamples[4], -32768);
+			EXPECT_FLOAT_EQ(AgcGain, 1.0f);
+			EXPECT_FLOAT_EQ(NoiseFloor, 0.0f);
+			EXPECT_FLOAT_EQ(NoiseGate, 1.0f);
+			EXPECT_FLOAT_EQ(HpfPrevIn, 0.0f);
+			EXPECT_FLOAT_EQ(HpfPrevOut, 0.0f);
+			EXPECT_FLOAT_EQ(CompEnv, 0.0f);
+		}
+	}
+}
+
+TEST(VoiceCore, CaptureEmptyFramesPreserveSamplesAndResetLegacyState)
+{
+	SRClientVoiceConfigSnapshot Config;
+	Config.m_QmVoiceMicVolume = 300;
+	for(const int Count : {-1, 0, 1})
+	{
+		SCOPED_TRACE(Count);
+		float AgcGain = 2.0f;
+		float NoiseFloor = 3.0f;
+		float NoiseGate = 0.0f;
+		float HpfPrevIn = 4.0f;
+		float HpfPrevOut = 5.0f;
+		float CompEnv = 6.0f;
+		int16_t Sample = 1000;
+		VoiceUtils::ProcessVoiceCaptureFrame(Config, Count > 0 ? nullptr : &Sample, Count, AgcGain, NoiseFloor, NoiseGate, HpfPrevIn, HpfPrevOut, CompEnv);
+		EXPECT_EQ(Sample, 1000);
+		EXPECT_FLOAT_EQ(AgcGain, 1.0f);
+		EXPECT_FLOAT_EQ(NoiseFloor, 0.0f);
+		EXPECT_FLOAT_EQ(NoiseGate, 1.0f);
+		EXPECT_FLOAT_EQ(HpfPrevIn, 0.0f);
+		EXPECT_FLOAT_EQ(HpfPrevOut, 0.0f);
+		EXPECT_FLOAT_EQ(CompEnv, 0.0f);
+	}
 }
 
 TEST(VoiceCore, ComputeVoiceEncoderTargetsManualProfilesOverrideAdaptiveTable)

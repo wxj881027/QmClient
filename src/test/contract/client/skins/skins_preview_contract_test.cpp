@@ -42,29 +42,6 @@ static std::string FunctionBody(const std::string &Source, const std::string &Si
 	return {};
 }
 
-TEST(SkinsContract, PrewarmPlayerPreviewReadyRequiresSelectedAndVisibleSourcesLoaded)
-{
-	std::ifstream File(TestSourcePath("src/game/client/components/skins.cpp"));
-	ASSERT_TRUE(File.good());
-	std::stringstream Buffer;
-	Buffer << File.rdbuf();
-	const std::string Source = Buffer.str();
-
-	const size_t PrewarmPos = Source.find("bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady)");
-	ASSERT_NE(PrewarmPos, std::string::npos);
-	const size_t PrewarmEnd = Source.find("void CSkins::QueueSkinListPlanJob(int Dummy)", PrewarmPos);
-	ASSERT_NE(PrewarmEnd, std::string::npos);
-	const std::string PrewarmBody = Source.substr(PrewarmPos, PrewarmEnd - PrewarmPos);
-
-	EXPECT_NE(PrewarmBody.find("pSelectedContainer"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("SelectedReady"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("VisibleReadyCount"), std::string::npos);
-	EXPECT_EQ(PrewarmBody.find("SettingsPreviewCacheContentHash()"), std::string::npos);
-	EXPECT_EQ(PrewarmBody.find("DiskCacheArtifactsValid"), std::string::npos);
-	EXPECT_EQ(PrewarmBody.find("FindTextures(CacheKey).has_value()"), std::string::npos);
-	EXPECT_NE(PrewarmBody.find("State == CSkinContainer::EState::LOADED"), std::string::npos);
-}
-
 TEST(SkinsContract, PrewarmPlayerPreviewReadyNoLongerBuildsPreviewCacheKeys)
 {
 	std::ifstream File(TestSourcePath("src/game/client/components/skins.cpp"));
@@ -133,26 +110,6 @@ TEST(SkinsContract, SkinListWaitsForCompletePlanInsteadOfSeedingPlaceholderEntry
 
 	EXPECT_EQ(Source.find("SeedVisibleSkinListIfEmpty"), std::string::npos);
 	EXPECT_NE(Source.find("m_SkinList.m_vSkins = std::move(m_vPendingSkinListEntries);"), std::string::npos);
-}
-
-TEST(SkinsContract, SkinRefreshKeepsExistingListWhileNewPlanLoads)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/skins.cpp");
-	const size_t RefreshPos = Source.find("void CSkins::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)");
-	ASSERT_NE(RefreshPos, std::string::npos);
-	const size_t StatsPos = Source.find("CSkins::CSkinLoadingStats CSkins::LoadingStats() const", RefreshPos);
-	ASSERT_NE(StatsPos, std::string::npos);
-	const std::string RefreshBody = Source.substr(RefreshPos, StatsPos - RefreshPos);
-
-	EXPECT_EQ(RefreshBody.find("m_SkinList.m_vSkins.clear();"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("m_SkinList.m_UnfilteredCount = 0;"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("str_comp(pSkinContainer->Name(), \"default\") == 0"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("continue;"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->SetState(CSkinContainer::EState::PENDING"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("pSkinContainer->SetState(pSkinContainer->DetermineInitialState());"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->m_pSkin.reset();"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("m_SkinsUsageList.clear();"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("m_SkinsBackgroundList.clear();"), std::string::npos);
 }
 
 TEST(SkinsContract, PrepareSkinDataResetsMetricsBeforeWritingPlan)

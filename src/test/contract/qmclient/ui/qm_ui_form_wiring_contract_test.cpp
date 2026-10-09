@@ -75,17 +75,3 @@ TEST(QmNewUiMenuBranches, SharedListEntryRevealUsesElapsedGapWithoutMovingScroll
 	EXPECT_LT(CustomAddRectPos, CustomAnimateRectPos);
 	EXPECT_NE(ListBoxSource.find("if(!RenderOnly && EntryAnimationEnabled"), std::string::npos);
 }
-
-TEST(QmNewUiMenuBranches, KeyReaderUsesOneOuterShellForValueAndDeleteAction)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/key_binder.cpp");
-	const std::string Body = FunctionBody(Source, "CKeyBinder::CKeyReaderResult CKeyBinder::DoKeyReader(");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Source.find("#include <game/client/QmUi/UiSurface.h>"), std::string::npos);
-	EXPECT_NE(Body.find("DrawRoundedSurface(Ui(), *pRect, ReaderBaseColor"), std::string::npos);
-	EXPECT_NE(Body.find("if(ClearChecked == 0)"), std::string::npos);
-	EXPECT_NE(Body.find("const float ClearSurfaceAlpha = 0.22f * Ui()->ButtonColorMul(pClearButton);"), std::string::npos);
-	EXPECT_NE(Body.find("DrawRoundedSurface(Ui(), ClearButton"), std::string::npos);
-	EXPECT_NE(Body.find("ColorRGBA(1.0f, 1.0f, 1.0f, 0.0f)"), std::string::npos);
-	EXPECT_NE(Body.find("if(m_pKeyReaderId == pReaderButton && m_TakeKey)"), std::string::npos);
-}

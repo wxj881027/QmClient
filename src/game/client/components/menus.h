@@ -122,7 +122,6 @@ struct SSettingsCardDeckVisualOptions;
 enum class EQmChatGradientRole;
 struct SQmGradientGeometryBinding;
 struct SQmGradientGeometryState;
-struct SQmBrowserStatusLayout;
 
 class CMenus;
 
@@ -2319,7 +2318,7 @@ protected:
 	bool m_ServerBrowserShouldRevealSelection;
 	std::vector<CUIElement *> m_avpServerBrowserUiElements[IServerBrowser::NUM_TYPES];
 	void RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated);
-	void RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, bool WasListboxItemActivated);
+	void RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated);
 	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
 	enum class EConnectIntent
 	{
@@ -2650,6 +2649,8 @@ public:
 	int m_TClientSettingsTab = 0;
 	int m_AppearanceSettingsTab = APPEARANCE_TAB_HUD;
 	CLineInputBuffered<128> m_GlobalCardSearchInput;
+	// 进入「搜索」设置页时自动聚焦输入框的一次性请求标志（渲染侧消费）。
+	bool m_FocusSettingsSearchOnEntry = false;
 	void ClearQmClientSettingsSearchInputs();
 
 	// DDRace

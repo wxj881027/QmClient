@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("prepare_setup_source", REPO_ROOT / "qmclient_scripts/prepare_setup_source.py")
@@ -190,6 +193,23 @@ class PrepareSetupSourceTest(unittest.TestCase):
 			with self.subTest(output=output), self.assertRaises(ValueError):
 				MODULE.prepare(self.source, self.data, output)
 		self.assertEqual((self.source / "DDNet.exe").read_bytes(), b"client")
+
+	def test_cli_prepares_unicode_payload_with_legacy_console_encoding(self) -> None:
+		font = self.data / "fonts/霞鹜文楷/文楷.ttf"
+		font.parent.mkdir(parents=True)
+		font.write_bytes(b"font-bytes")
+		for encoding in ("cp1252", "ascii", "utf-8"):
+			with self.subTest(encoding=encoding), io.BytesIO() as output_bytes, io.BytesIO() as error_bytes:
+				with io.TextIOWrapper(output_bytes, encoding=encoding) as stdout, io.TextIOWrapper(error_bytes, encoding=encoding) as stderr:
+					output = self.source / f"安装载荷-{encoding}"
+					args = ["prepare_setup_source.py", "--source", str(self.source), "--data", str(self.data), "--output", str(output)]
+					with mock.patch.object(sys, "argv", args), mock.patch.object(sys, "stdout", stdout), mock.patch.object(sys, "stderr", stderr):
+						self.assertEqual(MODULE.main(), 0)
+						self.assertEqual(sys.stdout.encoding, "utf-8")
+						self.assertEqual(sys.stderr.encoding, "utf-8")
+					stdout.flush()
+					self.assertIn(str(output), output_bytes.getvalue().decode("utf-8"))
+					self.assertEqual((output / "data/fonts/霞鹜文楷/文楷.ttf").read_bytes(), b"font-bytes")
 
 
 if __name__ == "__main__":

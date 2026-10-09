@@ -806,8 +806,8 @@ Appearance
 Appearance and command highlighting of the local console
 == Оформление локальной консоли и подсветка команд
 
-Appearance of help bubbles outside settings cards
-== Оформление подсказок вне карточек настроек
+Appearance of help bubbles
+== Внешний вид всплывающих подсказок
 
 Append to log file instead of overwriting
 == Добавлять в файл журнала вместо перезаписи
@@ -1298,6 +1298,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Ошибка автоматического входа в Axiom, повторная попытка
 
+Axiom auto login skipped: no password
+== Автовход Axiom: пароль не задан, пропущено
+
+Axiom auto login stopped after repeated failures
+== Автовход Axiom остановлен: несколько попыток не удались
+
 Axiom auto login succeeded
 == Автоматический вход в Axiom выполнен успешно
 
@@ -1309,6 +1315,9 @@ Axiom main account password
 
 Axiom score request failed
 == Не удалось получить очки Axiom
+
+Axiom website
+== Сайт Axiom
 
 Axis
 == Ось
@@ -9836,9 +9845,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == Список реплеев: ещё не загружен
 
-Replay list: up to date
-== Список реплеев: актуален
-
 Replays directory
 == Каталог реплеев
 
@@ -11683,6 +11689,9 @@ Show teleporter tile outlines
 
 Show text entities
 == Показывать текстовые сущности
+
+Show the chat scrollbar on the right
+== Показывать полосу прокрутки чата справа
 
 Show the cursor while free spectating
 == Показывать курсор при свободном наблюдении
@@ -13721,6 +13730,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == Не удалось удалить %d выбранных элементов. Первый неудачный элемент: «%s».
 
+Unable to delete skin
+== Не удалось удалить скин
+
 Unable to delete the demo '%s'
 == Не удалось удалить демо «%s»
 
@@ -14104,9 +14116,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Используйте колесо мыши на наведённом модуле для масштабирования на 5%
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== Укажите отдельно пароли основного аккаунта и дамми, зарегистрированных на Axiom. Эта настройка не создаёт аккаунты.
 
 Use the scoreboard cursor mode to scroll the list
 == Для прокрутки списка используйте режим курсора таблицы
@@ -14980,6 +14989,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == Ты последний!
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== Аккаунт — это ваше имя в игре. Сначала зарегистрируйте его на сайте Axiom. Укажите зарегистрированные пароли основного аккаунта и дамми. Эта настройка не регистрирует аккаунты.
 
 Your current race time is %s
 == Ваше текущее время забега: %s

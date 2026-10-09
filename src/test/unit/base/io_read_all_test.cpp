@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <cstdio>
 #include <cstdlib>
 #include <functional>
 #include <string>
@@ -13,6 +14,8 @@ namespace
 	{
 		int m_Calls = 0;
 		int m_FailOnCall = 0;
+		int m_Failures = 0;
+		size_t m_LastFailedSize = 0;
 		int m_Frees = 0;
 		void *m_pLive = nullptr;
 		std::function<void()> m_OnInitialAllocation;
@@ -22,7 +25,11 @@ namespace
 			auto &State = *static_cast<SAllocationState *>(pUser);
 			++State.m_Calls;
 			if(State.m_Calls == State.m_FailOnCall)
+			{
+				++State.m_Failures;
+				State.m_LastFailedSize = Size;
 				return nullptr;
+			}
 			if(State.m_Calls == 1 && State.m_OnInitialAllocation)
 				State.m_OnInitialAllocation();
 			EXPECT_EQ(pBuffer, State.m_pLive);
@@ -156,12 +163,22 @@ TEST_F(CIoReadAll, ShrinkFailureKeepsValidContents)
 {
 	ASSERT_TRUE(Write("longer"));
 	ASSERT_TRUE(Open());
+	// 长度查询的 seek 可能预读旧内容；在任何流操作前禁用缓冲，
+	// 让另一句柄截断后的真实短读稳定触发缩容，而不依赖平台 stdio 缓存。
+	ASSERT_EQ(std::setvbuf(static_cast<FILE *>(m_File), nullptr, _IONBF, 0), 0);
 	m_Allocation.m_OnInitialAllocation = [&]() { EXPECT_TRUE(Write("x")); };
 	m_Allocation.m_FailOnCall = 2;
 	void *pResult = nullptr;
 	unsigned Length = 0;
 	ASSERT_TRUE(Read(&pResult, &Length));
+	EXPECT_EQ(m_Allocation.m_Calls, 2);
+	EXPECT_EQ(m_Allocation.m_Failures, 1);
+	EXPECT_EQ(m_Allocation.m_LastFailedSize, 2u);
+	EXPECT_EQ(m_Allocation.m_pLive, pResult);
+	EXPECT_EQ(m_Allocation.m_Frees, 0);
 	ExpectContents(pResult, Length, "x");
+	EXPECT_EQ(m_Allocation.m_pLive, nullptr);
+	EXPECT_EQ(m_Allocation.m_Frees, 1);
 }
 
 TEST_F(CIoReadAll, FileGrowthPreservesAllContents)

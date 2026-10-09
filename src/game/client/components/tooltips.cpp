@@ -114,8 +114,7 @@ void CTooltips::DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect
 				pValue = static_cast<const SStringConfigVariable *>(pVariable)->m_pStr;
 				break;
 			}
-			Help.emplace(pValue, pVariable);
-		}, &m_ConfigHelp);
+			Help.emplace(pValue, pVariable); }, &m_ConfigHelp);
 		m_ConfigHelpInitialized = true;
 	}
 	const char *pCommand = QmUiConfigCommand(g_Config, pConfigValue);
@@ -215,53 +214,46 @@ void CTooltips::OnRender()
 		const float Margin = (Tooltip.m_SmallInstant ? 4.0f : 5.0f) * UiScale;
 		const float BasePadding = (Tooltip.m_SmallInstant ? 3.0f : 5.0f) * UiScale;
 		const CUIRect *pScreen = Ui()->Screen();
-		const float MaxTextWidth = maximum(1.0f, pScreen->w - 2.0f * (Margin + BasePadding));
 		const float WidthLimit = Tooltip.m_WidthHint > 0.0f ? Tooltip.m_WidthHint : 300.0f * UiScale;
-		const float TextWidth = minimum(WidthLimit, MaxTextWidth);
-		const STextBoundingBox BoundingBox = TextRender()->TextBoundingBox(BaseFontSize, Tooltip.m_Text.c_str(), -1, TextWidth);
-		const CUIRect FixedRect = QmTooltipRect(Tooltip.m_Anchor, *pScreen, vec2(BoundingBox.m_W + 2 * BasePadding, BoundingBox.m_H + 2 * BasePadding), Margin);
+		const SQmTooltipTextLayout Layout = QmTooltipMeasureText(*TextRender(), Tooltip.m_Text.c_str(), BaseFontSize, WidthLimit,
+			vec2(std::max(0.0f, pScreen->w - 2.0f * Margin), std::max(0.0f, pScreen->h - 2.0f * Margin)), BasePadding);
+		if(Layout.m_VisibleLines <= 0)
+			return;
+		const CUIRect FixedRect = QmTooltipRect(Tooltip.m_Anchor, *pScreen, Layout.m_Size, Margin);
 		if(FixedRect.w <= 0.0f || FixedRect.h <= 0.0f)
 			return;
-		CUIRect Rect = QmTooltipAnimatedRect(FixedRect, *pScreen, QmTooltipScale(VisibleSeconds, Animate));
-		const float Scale = FixedRect.w > 0.0f ? Rect.w / FixedRect.w : 1.0f;
-		const float FontSize = BaseFontSize * Scale;
-		const float Padding = std::min(BasePadding * Scale, std::min(Rect.w, Rect.h) * 0.5f);
-		ColorRGBA Background = Tooltip.m_SmallInstant ? ColorRGBA(0.08f, 0.08f, 0.08f, 0.94f) : color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true));
+		const CUIRect Rect = QmTooltipAnimatedRect(FixedRect, *pScreen, QmTooltipScale(VisibleSeconds, Animate));
+		const float Scale = Rect.w / FixedRect.w;
+		ColorRGBA Background = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true));
 		Background.a *= AlphaFactor;
-		Rect.Draw(Background, IGraphics::CORNER_ALL, Tooltip.m_SmallInstant ? 3.0f * UiScale : Padding);
-		Rect.Margin(Padding, &Rect);
+		Rect.Draw(Background, IGraphics::CORNER_ALL, (Tooltip.m_SmallInstant ? 3.0f * UiScale : Layout.m_Padding) * Scale);
 
-		// 极窄视口或超长说明按可见行数收口，保留省略提示，避免文字溢出气泡。
-		const int VisibleLines = QmTooltipVisibleLines(Rect.h, FontSize);
-		const bool Truncated = QmTooltipTextTruncated(BoundingBox.m_H, BasePadding, FixedRect.h);
-		CTextCursor Cursor = QmTooltipTextCursor(Rect, FontSize, TextWidth * Scale, Truncated ? std::max(1, VisibleLines - 1) : 0);
+		const vec2 TextPosition = FixedRect.TopLeft() + vec2(Layout.m_Padding + Layout.m_TextOffsetX, Layout.m_Padding + Layout.m_TextOffsetY);
+		STextContainerIndex TextIndex, EllipsisIndex;
+		QmTooltipCreateText(*TextRender(), Layout, Tooltip.m_Text.c_str(), TextPosition, TextIndex);
+		if(Layout.m_Truncated)
+			QmTooltipCreateText(*TextRender(), Layout, "…", TextPosition + vec2(0.0f, (Layout.m_VisibleLines - 1) * Layout.m_LineHeight), EllipsisIndex, true);
 
-		STextContainerIndex TextContainerIndex;
-		TextRender()->CreateTextContainer(TextContainerIndex, &Cursor, Tooltip.m_Text.c_str());
-
-		if(TextContainerIndex.Valid())
-		{
-			ColorRGBA TextColor = Tooltip.m_SmallInstant ? ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f) : color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipTextColor, true));
-			TextColor.a *= AlphaFactor;
-			ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
-			OutlineColor.a *= AlphaFactor;
-			Ui()->ClipEnable(&Rect);
-			if(!Truncated || VisibleLines > 1)
-				TextRender()->RenderTextContainer(TextContainerIndex, TextColor, OutlineColor);
-			if(Truncated)
-			{
-				CUIRect End = Rect;
-				End.y += std::max(0, VisibleLines - 1) * FontSize;
-				End.h = FontSize;
-				const ColorRGBA OldColor = TextRender()->GetTextColor();
-				TextRender()->TextColor(TextColor);
-				Ui()->DoLabel(&End, "…", FontSize, TEXTALIGN_TL);
-				TextRender()->TextColor(OldColor);
-			}
-			Ui()->ClipDisable();
-		}
-
-		TextRender()->DeleteTextContainer(TextContainerIndex);
+		ColorRGBA TextColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipTextColor, true));
+		TextColor.a *= AlphaFactor;
+		ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
+		OutlineColor.a *= AlphaFactor;
+		// 裁剪留出描边空间，动画只改变投影，不重新生成字形或断行。
+		CUIRect ClipRect;
+		Rect.Margin(Layout.m_Padding * Scale * 0.5f, &ClipRect);
+		Ui()->ClipEnable(&ClipRect);
+		float X0, Y0, X1, Y1;
+		Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);
+		const CUIRect Projection = QmTooltipTextProjection({X0, Y0, X1 - X0, Y1 - Y0}, FixedRect.Center(), Scale);
+		Graphics()->MapScreen(Projection.x, Projection.y, Projection.x + Projection.w, Projection.y + Projection.h);
+		if(TextIndex.Valid())
+			TextRender()->RenderTextContainer(TextIndex, TextColor, OutlineColor);
+		if(EllipsisIndex.Valid())
+			TextRender()->RenderTextContainer(EllipsisIndex, TextColor, OutlineColor);
+		Graphics()->MapScreen(X0, Y0, X1, Y1);
+		Ui()->ClipDisable();
+		TextRender()->DeleteTextContainer(TextIndex);
+		TextRender()->DeleteTextContainer(EllipsisIndex);
 
 		Tooltip.m_OnScreen = false;
 	}

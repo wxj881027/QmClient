@@ -487,7 +487,11 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 			!IsPlaceholder && !IsHidden() && !m_MouseSelection.m_Selecting && (HasComposition || !HasSelection()));
 
 		const STextBoundingBox BoundingBox = TextRender()->TextBoundingBox(FontSize, pDisplayStr, -1, LineWidth, LineSpacing);
-		const vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align);
+		// 单行时按可见字形高度做视觉垂直居中，与 DoLabel(TEXTALIGN_M?) 的观感一致；
+		// 整行框含字体上伸/下伸空白，直接按框居中会让数字等无下伸字形看起来偏上。
+		// 多行或无字形数据（空文本/IME 组合中）时退回整行框居中。
+		const float *pBiggestCharHeight = BoundingBox.m_LineCount == 1 && BoundingBox.m_MaxCharacterHeight > 0.0f ? &BoundingBox.m_MaxCharacterHeight : nullptr;
+		const vec2 CursorPos = CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight);
 
 		Cursor.SetPosition(CursorPos);
 		Cursor.m_FontSize = FontSize;
@@ -603,7 +607,9 @@ STextBoundingBox CLineInput::Render(const CUIRect *pRect, float FontSize, int Al
 	else
 	{
 		const STextBoundingBox BoundingBox = TextRender()->TextBoundingBox(FontSize, pDisplayStr, -1, LineWidth, LineSpacing);
-		Cursor.SetPosition(CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align));
+		// 与激活态一致：单行按可见字形高度视觉居中，多行/无字形数据退回整行框居中。
+		const float *pBiggestCharHeight = BoundingBox.m_LineCount == 1 && BoundingBox.m_MaxCharacterHeight > 0.0f ? &BoundingBox.m_MaxCharacterHeight : nullptr;
+		Cursor.SetPosition(CUi::CalcAlignedCursorPos(pRect, BoundingBox.Size(), Align, pBiggestCharHeight));
 		Cursor.m_FontSize = FontSize;
 		Cursor.m_LineWidth = LineWidth;
 		Cursor.m_LineSpacing = LineSpacing;

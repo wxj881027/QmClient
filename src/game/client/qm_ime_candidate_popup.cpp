@@ -162,7 +162,7 @@ namespace
 	SImeCandidateRow MeasureCandidateRow(ITextRender *pTextRender, const SQmImePopupState &State, int CandidateStart, const qm_theme::SImeTheme &Ime, float MaxPanelWidth)
 	{
 		SImeCandidateRow Row;
-		const int CandidateCount = minimum((int)State.m_vCandidates.size(), qm_ime_overlay::MAX_CANDIDATES);
+		const int CandidateCount = static_cast<int>(State.m_vCandidates.size());
 		Row.m_SelectedIndex = qm_ime_overlay::NormalizeSelectedCandidateIndex(State.m_SelectedIndex, CandidateCount);
 		Row.m_Viewport = qm_ime_overlay::BuildCandidateViewport(CandidateCount, Row.m_SelectedIndex, CandidateStart);
 		const int PageCount = CandidatePageCount(State);
@@ -262,16 +262,6 @@ namespace
 		if(Appearance.m_Background.HasTransparency() && g_Config.m_QmGaussianBlur != 0)
 			pGameClient->Ui()->RenderGaussianBlur(Panel, Alpha * UserOpacity, SurfaceParams.m_Corners, SurfaceParams.m_Radius);
 		DrawRoundedGradientSurface(pGraphics, Panel, Appearance.m_Background, Alpha, WithAlpha(Ime.m_PanelBorder, Alpha * UserOpacity), SurfaceParams);
-		CUIRect PanelContent;
-		Panel.Margin(Ime.m_BorderInset, &PanelContent);
-
-		CUIRect PanelTopLine = PanelContent;
-		PanelTopLine.h = 0.45f;
-		PanelTopLine.x += Radius * 0.35f;
-		PanelTopLine.w = maximum(0.0f, PanelTopLine.w - Radius * 0.70f);
-		const ColorRGBA TopLineColor = Appearance.PanelTopLineColor(Alpha);
-		if(PanelTopLine.w > 0.0f && TopLineColor.a > 0.0f)
-			PanelTopLine.Draw(TopLineColor, IGraphics::CORNER_T, 0.0f);
 	}
 } // namespace
 
@@ -506,9 +496,9 @@ void QmImeRenderStylePreview(CGameClient *pGameClient, const CUIRect &Rect)
 	const float Scale = std::abs(ScreenY1 - ScreenY0) / Appearance.m_Theme.m_ScreenHeight;
 	auto &Ime = Appearance.m_Theme;
 	for(float *pValue : {&Ime.m_FontCandidate, &Ime.m_FontComposition, &Ime.m_PaddingX, &Ime.m_PaddingY,
-		&Ime.m_RowHeight, &Ime.m_MinWidth, &Ime.m_TrailingWidth, &Ime.m_CandidateGap, &Ime.m_CandidatePaddingX,
-		&Ime.m_SelectedPaddingX, &Ime.m_CandidateNumPaddingX, &Ime.m_CompositionTextPaddingX,
-		&Ime.m_TextSafePaddingX, &Ime.m_TextSafePaddingY, &Ime.m_ShadowX, &Ime.m_ShadowY, &Ime.m_BorderInset})
+		    &Ime.m_RowHeight, &Ime.m_MinWidth, &Ime.m_TrailingWidth, &Ime.m_CandidateGap, &Ime.m_CandidatePaddingX,
+		    &Ime.m_SelectedPaddingX, &Ime.m_CandidateNumPaddingX, &Ime.m_CompositionTextPaddingX,
+		    &Ime.m_TextSafePaddingX, &Ime.m_TextSafePaddingY, &Ime.m_ShadowX, &Ime.m_ShadowY, &Ime.m_BorderInset})
 		*pValue *= Scale;
 	const unsigned OldFlags = pTextRender->GetRenderFlags();
 	const ColorRGBA OldColor = pTextRender->GetTextColor();

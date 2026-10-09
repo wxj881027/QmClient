@@ -6,6 +6,17 @@
 #include <game/editor/editor.h>
 #include <game/editor/editor_ui.h>
 
+namespace
+{
+	CUi::SEditBoxRenderOptions EditorEditBoxOptions()
+	{
+		CUi::SEditBoxRenderOptions Options;
+		// 数值确认、命令提交和补全由编辑器外层处理，输入框不能先抢走 Enter 或失焦。
+		Options.m_ReleaseFocusOnEnter = false;
+		return Options;
+	}
+}
+
 void CEditor::UpdateTooltip(const void *pId, const CUIRect *pRect, const char *pToolTip)
 {
 	if(Ui()->MouseInside(pRect) && !pToolTip)
@@ -185,13 +196,13 @@ int CEditor::DoButton_DraggableEx(const void *pId, const char *pText, int Checke
 bool CEditor::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const char *pToolTip, const std::vector<STextColorSplit> &vColorSplits)
 {
 	UpdateTooltip(pLineInput, pRect, pToolTip);
-	return Ui()->DoEditBox(pLineInput, pRect, FontSize, Corners, vColorSplits);
+	return Ui()->DoEditBox(pLineInput, pRect, FontSize, Corners, vColorSplits, TEXTALIGN_ML, EditorEditBoxOptions());
 }
 
 bool CEditor::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize, int Corners, const char *pToolTip, const std::vector<STextColorSplit> &vColorSplits)
 {
 	UpdateTooltip(pLineInput, pRect, pToolTip);
-	return Ui()->DoClearableEditBox(pLineInput, pRect, FontSize, Corners, vColorSplits);
+	return Ui()->DoClearableEditBox(pLineInput, pRect, FontSize, Corners, vColorSplits, EditorEditBoxOptions());
 }
 
 SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, const char *pLabel, int Current, int Min, int Max, int Step, float Scale, const char *pToolTip, bool IsDegree, bool IsHex, int Corners, const ColorRGBA *pColor, bool ShowValue)
@@ -232,14 +243,14 @@ SEditResult<int> CEditor::UiDoValueSelector(const void *pId, CUIRect *pRect, con
 		{
 			Current = std::clamp(s_NumberInput.GetInteger(Base), Min, Max);
 			Ui()->DisableMouseLock();
-			Ui()->SetActiveItem(nullptr);
+			Ui()->ReleaseActiveTextInput(&s_NumberInput);
 			s_pLastTextId = nullptr;
 		}
 
 		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 		{
 			Ui()->DisableMouseLock();
-			Ui()->SetActiveItem(nullptr);
+			Ui()->ReleaseActiveTextInput(&s_NumberInput);
 			s_pLastTextId = nullptr;
 		}
 	}

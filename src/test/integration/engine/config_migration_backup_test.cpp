@@ -26,7 +26,11 @@ TEST(ConfigMigrationBackup, FinalizePreservesLinkedBackupAndExternalContents)
 	struct SRemoveLink
 	{
 		std::filesystem::path m_Path;
-		~SRemoveLink() { std::error_code Ignored; std::filesystem::remove(m_Path, Ignored); }
+		~SRemoveLink()
+		{
+			std::error_code Ignored;
+			std::filesystem::remove(m_Path, Ignored);
+		}
 	} RemoveLink{Link};
 	ASSERT_TRUE(QmFinalizeConfigMigration(pStorage.get()));
 	EXPECT_TRUE(std::filesystem::is_symlink(Link));

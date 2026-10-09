@@ -14,8 +14,6 @@ namespace VoiceUtils
 		float &AgcGain,
 		float &NoiseFloor,
 		float &NoiseGate,
-		DenoiseState *&pNoiseState,
-		bool &NoiseFallbackLogged,
 		float &HpfPrevIn,
 		float &HpfPrevOut,
 		float &CompEnv)
@@ -25,11 +23,9 @@ namespace VoiceUtils
 		AgcGain = 1.0f;
 		NoiseFloor = 0.0f;
 		NoiseGate = 1.0f;
-		NoiseFallbackLogged = false;
 		HpfPrevIn = 0.0f;
 		HpfPrevOut = 0.0f;
 		CompEnv = 0.0f;
-		(void)pNoiseState;
 
 		if(!pSamples || Count <= 0)
 			return;

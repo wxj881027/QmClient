@@ -8,6 +8,7 @@
 #include <base/time.h>
 
 #include <engine/shared/config.h>
+#include <engine/shared/http_url.h>
 #include <engine/storage.h>
 
 #include <charconv>
@@ -30,17 +31,6 @@
 
 static constexpr size_t HTTP_MAX_CONCURRENT_REQUESTS = 16;
 static constexpr size_t HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST = 4;
-
-static std::string HttpRequestHostKey(const char *pUrl)
-{
-	if(!pUrl || pUrl[0] == '\0')
-		return {};
-
-	const char *pHostStart = str_find(pUrl, "://");
-	pHostStart = pHostStart ? pHostStart + 3 : pUrl;
-	const char *pHostEnd = str_find(pHostStart, "/");
-	return std::string(pHostStart, pHostEnd ? pHostEnd - pHostStart : str_length(pHostStart));
-}
 
 static int CurlDebug(CURL *pHandle, curl_infotype Type, char *pData, size_t DataSize, void *pUser)
 {
@@ -451,33 +441,23 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 		char *pEffectiveUrl = nullptr;
 		if(curl_easy_getinfo(pHandle, CURLINFO_EFFECTIVE_URL, &pEffectiveUrl) == CURLE_OK && pEffectiveUrl)
 		{
-			CURLU *pUrl = curl_url();
-			char *pHost = nullptr;
-			if(pUrl && curl_url_set(pUrl, CURLUPART_URL, pEffectiveUrl, 0) == CURLUE_OK &&
-				curl_url_get(pUrl, CURLUPART_HOST, &pHost, 0) == CURLUE_OK)
+			const std::string Host = HttpUrlHost(pEffectiveUrl);
+			if(!Host.empty())
 			{
-				char *pNoProxy = curl_getenv("no_proxy");
-				if(pNoProxy && !*pNoProxy)
-				{
-					curl_free(pNoProxy);
-					pNoProxy = nullptr;
-				}
-				if(!pNoProxy)
-					pNoProxy = curl_getenv("NO_PROXY");
+				const char *pNoProxy = std::getenv("no_proxy");
+				if(!pNoProxy || !*pNoProxy)
+					pNoProxy = std::getenv("NO_PROXY");
 				// 实测最终连接优先，早期失败才使用与运行库兼容的旁路证据。
 				const auto *pVersion = curl_version_info(CURLVERSION_NOW);
 				const bool FinalProxyKnown = UsedProxyResult.has_value() && m_StatusCode >= 200 && (m_StatusCode < 300 || m_StatusCode >= 400);
-				const bool BypassEvidence = pNoProxy && (FinalProxyKnown ? ProxyBypassed(pHost, pNoProxy) :
-											   pVersion && ProxyBypassEvidence(pHost, pNoProxy, pVersion->version_num));
+				const bool BypassEvidence = pNoProxy && (FinalProxyKnown ? ProxyBypassed(Host, pNoProxy) :
+											   pVersion && ProxyBypassEvidence(Host, pNoProxy, pVersion->version_num));
 				if(ProxyFallbackBypassed(m_StatusCode, UsedProxyResult, BypassEvidence))
 				{
 					m_aProxy[0] = '\0';
 					m_ResultUsedProxy = false;
 				}
-				curl_free(pNoProxy);
 			}
-			curl_free(pHost);
-			curl_url_cleanup(pUrl);
 		}
 	}
 
@@ -707,7 +687,7 @@ void CHttpCurl::RunLoop()
 			{
 				auto RequestIt = m_RunningRequests.find(pMsg->easy_handle);
 				dbg_assert(RequestIt != m_RunningRequests.end(), "Running handle not added to map");
-				const std::string HostKey = HttpRequestHostKey(RequestIt->second->m_aUrl);
+				const std::string HostKey = HttpUrlHost(RequestIt->second->m_aUrl);
 				if(!HostKey.empty())
 				{
 					auto HostIt = RunningRequestsPerHost.find(HostKey);
@@ -761,7 +741,7 @@ void CHttpCurl::RunLoop()
 				continue;
 			}
 
-			const std::string HostKey = HttpRequestHostKey(pRequest->m_aUrl);
+			const std::string HostKey = HttpUrlHost(pRequest->m_aUrl);
 			const size_t RunningForHost = HostKey.empty() ? 0 : RunningRequestsPerHost[HostKey];
 			if(m_RunningRequests.size() >= HTTP_MAX_CONCURRENT_REQUESTS ||
 				(!HostKey.empty() && RunningForHost >= HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST))

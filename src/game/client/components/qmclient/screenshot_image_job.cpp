@@ -59,7 +59,11 @@ bool CQmScreenshotImageJob::LoadImageFromDisk(IStorage *pStorage, const std::str
 	struct SCloseFile
 	{
 		IOHANDLE m_File;
-		~SCloseFile() { if(m_File) io_close(m_File); }
+		~SCloseFile()
+		{
+			if(m_File)
+				io_close(m_File);
+		}
 	} Close{File};
 	std::vector<uint8_t> vFileData((size_t)FileSize);
 	const size_t Read = io_read(File, vFileData.data(), (unsigned)vFileData.size());

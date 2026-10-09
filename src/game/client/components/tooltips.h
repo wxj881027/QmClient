@@ -5,6 +5,7 @@
 
 #include <game/client/QmUi/UiConfigHintText.h>
 #include <game/client/component.h>
+#include <game/client/components/qm_tooltip_text_layout.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -24,18 +25,6 @@ inline float QmTooltipScale(float ElapsedSeconds, bool AnimationEnabled)
 	const float T = std::clamp(ElapsedSeconds / 0.18f, 0.0f, 1.0f) - 1.0f;
 	const float Ease = 1.0f + 2.70158f * T * T * T + 1.70158f * T * T;
 	return 0.88f + 0.12f * Ease;
-}
-
-// 气泡内可绘制的完整文本行数；最终绘制仍裁剪于可见内容区。
-inline int QmTooltipVisibleLines(float Height, float FontSize)
-{
-	return std::max(1, static_cast<int>(std::floor(std::max(0.0f, Height) / std::max(1.0f, FontSize))));
-}
-
-// 从未缩放的完整气泡判断是否被屏幕裁短，避免扣除内边距的舍入误差误判短提示。
-inline bool QmTooltipTextTruncated(float TextHeight, float Padding, float BubbleHeight)
-{
-	return TextHeight + 2.0f * Padding > BubbleHeight + 0.001f;
 }
 
 // 气泡跟随目标矩形；指针在目标内部移动不会改变气泡位置。
@@ -157,17 +146,6 @@ public:
 	CQmTooltipTextScope(const CQmTooltipTextScope &) = delete;
 	CQmTooltipTextScope &operator=(const CQmTooltipTextScope &) = delete;
 };
-
-inline CTextCursor QmTooltipTextCursor(const CUIRect &Content, float FontSize, float WrapWidth, int MaxLines)
-{
-	CTextCursor Cursor;
-	Cursor.SetPosition(Content.TopLeft());
-	Cursor.m_FontSize = FontSize;
-	// 测量与绘制共用换行上限；短文本的紧凑气泡不能反过来触发额外换行。
-	Cursor.m_LineWidth = std::max(1.0f, WrapWidth);
-	Cursor.m_MaxLines = MaxLines;
-	return Cursor;
-}
 
 inline bool QmTooltipAnimate(const CTooltip &Tooltip, bool AnimationEnabled)
 {

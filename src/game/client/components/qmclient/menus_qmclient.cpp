@@ -1090,6 +1090,15 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 		const uint64_t InputOffsetKey = BuildUiAnimNodeKey(str_quickhash("global-search"), str_quickhash("global-search-input-offset"));
 		InputOffsetY = ResolveUiAnimValue(*pSearchAnimRuntime, InputOffsetKey, EUiAnimProperty::POS_Y, TargetOffsetY, Motion.m_ReflowDuration, EEasing::EASE_OUT);
 	}
+	// 进入「搜索」页第一帧自动聚焦输入框：同时建立 ActiveItem 与 CLineInput 激活态，
+	// 之后由 DoEditBox 的激活维持逻辑接管；一次性消费，点击其他控件可正常移走焦点。
+	if(!ReadOnly && m_FocusSettingsSearchOnEntry && !Ui()->IsPopupOpen() && !GameClient()->m_GameConsole.IsActive() && !s_GlobalSearchInputCollapsed)
+	{
+		m_FocusSettingsSearchOnEntry = false;
+		Ui()->SetActiveItem(&m_GlobalCardSearchInput);
+		m_GlobalCardSearchInput.Activate(EInputPriority::UI);
+		m_GlobalCardSearchInput.SelectAll();
+	}
 	{
 		const CUIRect InputSlot{Page.m_ContentViewport.x, Page.m_ContentViewport.y + InputOffsetY, Page.m_ContentViewport.w, 0.0f};
 		SSettingsCardVisualState InputVisualState;
@@ -1324,6 +1333,8 @@ void CMenus::ClearQmClientSettingsSearchInputs()
 		m_GlobalCardSearchInput.Deactivate();
 	}
 	m_GlobalCardSearchInput.Clear();
+	// 离开搜索页/关菜单时同步请求标志：若清空时正处「搜索」页，重开菜单回到该页时自动聚焦。
+	m_FocusSettingsSearchOnEntry = g_Config.m_UiSettingsPage == SETTINGS_SEARCH;
 }
 
 void CMenus::RenderSponsorNudge(CUIRect Screen)

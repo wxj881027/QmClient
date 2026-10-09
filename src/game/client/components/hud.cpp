@@ -25,6 +25,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/rank_ghost.h>
@@ -2024,17 +2025,25 @@ bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 
 void CHud::RenderDummyMiniMap()
 {
+	int BackendMajor = 0;
+	int BackendMinor = 0;
+	int BackendPatch = 0;
+	const char *pBackendName = "";
+	const auto Backend = Graphics()->GetDetectedContextVersion(BackendMajor, BackendMinor, BackendPatch, pBackendName) ?
+				     QmDummyMiniViewLayout::ResolveBackend(pBackendName) :
+				     QmDummyMiniViewLayout::EBackend::UNKNOWN;
 	float MiniX = 0.0f;
 	float MiniY = 0.0f;
 	float MiniW = 0.0f;
 	float MiniH = 0.0f;
 	if(!GetDummyMiniMapRect(MiniX, MiniY, MiniW, MiniH))
 	{
-		if(m_DummyMiniViewRenderTarget.IsValid() && (!g_Config.m_QmDummyMiniView || !IsVulkanBackend(Graphics())))
+		if(m_DummyMiniViewRenderTarget.IsValid() && (!g_Config.m_QmDummyMiniView || Backend == QmDummyMiniViewLayout::EBackend::OPENGL))
 			DestroyDummyMiniViewRenderTarget();
 		return;
 	}
-	const bool UseOffscreenTarget = IsVulkanBackend(Graphics());
+	// 未识别的后端只尝试能力接口提供的离屏目标，不套用 OpenGL 的视口裁剪语义。
+	const bool UseOffscreenTarget = Backend != QmDummyMiniViewLayout::EBackend::OPENGL;
 	if(!UseOffscreenTarget && m_DummyMiniViewRenderTarget.IsValid())
 		DestroyDummyMiniViewRenderTarget();
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::DummyMiniMap, {MiniX, MiniY, MiniW, MiniH}, true, false);
@@ -2094,22 +2103,20 @@ void CHud::RenderDummyMiniMap()
 
 		const int ScreenW = Graphics()->ScreenWidth();
 		const int ScreenH = Graphics()->ScreenHeight();
-		const float XScale = ScreenW / m_Width;
-		const float YScale = ScreenH / m_Height;
-
-		const int ViewX = (int)std::round(InnerX * XScale);
-		const int ViewY = (int)std::round((m_Height - (InnerY + InnerH)) * YScale);
-		const int ViewW = maximum(1, (int)std::round(InnerW * XScale));
-		const int ViewH = maximum(1, (int)std::round(InnerH * YScale));
-
-		int ClampedX = maximum(0, minimum(ViewX, ScreenW - 1));
-		int ClampedY = maximum(0, minimum(ViewY, ScreenH - 1));
-		int ClampedW = minimum(ViewW, ScreenW - ClampedX);
-		int ClampedH = minimum(ViewH, ScreenH - ClampedY);
+		const auto Viewport = QmDummyMiniViewLayout::ResolveViewport(
+			{InnerX, InnerY, InnerW, InnerH},
+			{SavedX0, SavedY0, SavedX1 - SavedX0, SavedY1 - SavedY0}, ScreenW, ScreenH);
+		const int ClampedX = Viewport.m_X;
+		const int ClampedY = Viewport.m_Y;
+		const int ClampedW = Viewport.m_W;
+		const int ClampedH = Viewport.m_H;
 		if(ClampedW > 0 && ClampedH > 0)
 		{
 			const ColorRGBA MiniClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
 			bool RenderingMiniView = false;
+			const auto Clip = Viewport.ResolveClip(Backend, ScreenW, ScreenH);
+			Graphics()->FlushVertices();
+			Graphics()->ClipDisable();
 			if(UseOffscreenTarget)
 			{
 				const bool TargetSizeChanged = ClampedW != m_DummyMiniViewRenderTargetWidth || ClampedH != m_DummyMiniViewRenderTargetHeight;
@@ -2129,20 +2136,20 @@ void CHud::RenderDummyMiniMap()
 					static bool s_LoggedRenderTargetFailure = false;
 					if(!s_LoggedRenderTargetFailure)
 					{
-						dbg_msg("hud", "Vulkan dummy mini view render target unavailable: %s", Graphics()->RenderTargetSupportReason());
+						dbg_msg("hud", "Dummy mini view render target unavailable: %s", Graphics()->RenderTargetSupportReason());
 						s_LoggedRenderTargetFailure = true;
 					}
 				}
 			}
 			else
 			{
-				Graphics()->FlushVertices();
-				Graphics()->ClipDisable();
 				Graphics()->UpdateViewport(ClampedX, ClampedY, ClampedW, ClampedH, false);
 				// UpdateViewport 只限制光栅化视口；地图层和 Tee 仍可能提交越界几何，
 				// 因此同步启用同一内框的屏幕裁剪。
-				const int ClipTop = ScreenH - (ClampedY + ClampedH);
-				Graphics()->ClipEnable(ClampedX, ClipTop, ClampedW, ClampedH);
+				if(Clip.has_value())
+					Graphics()->ClipEnable(Clip->m_X, Clip->m_Y, Clip->m_W, Clip->m_H);
+				else
+					Graphics()->ClipDisable();
 				RenderingMiniView = true;
 			}
 

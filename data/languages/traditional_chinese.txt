@@ -806,8 +806,8 @@ Appearance
 Appearance and command highlighting of the local console
 == 本機控制台的外觀和命令醒目顯示
 
-Appearance of help bubbles outside settings cards
-== 設定卡片外的說明氣泡外觀
+Appearance of help bubbles
+== 提示氣泡外觀
 
 Append to log file instead of overwriting
 == 追加到日誌文件而不是每次覆蓋
@@ -1298,6 +1298,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Axiom 自動登錄失敗，正在重試
 
+Axiom auto login skipped: no password
+== Axiom 自動登錄：未填寫密碼，已跳過
+
+Axiom auto login stopped after repeated failures
+== Axiom 自動登錄已停止：多次嘗試未成功
+
 Axiom auto login succeeded
 == Axiom 自動登錄成功
 
@@ -1309,6 +1315,9 @@ Axiom main account password
 
 Axiom score request failed
 == Axiom 分數請求失敗
+
+Axiom website
+== Axiom 官網
 
 Axis
 == 軸
@@ -9836,9 +9845,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == 回放清單：尚未載入
 
-Replay list: up to date
-== 回放清單：已是最新
-
 Replays directory
 == 回放目錄
 
@@ -11683,6 +11689,9 @@ Show teleporter tile outlines
 
 Show text entities
 == 顯示文本實體
+
+Show the chat scrollbar on the right
+== 在右側顯示聊天捲軸
 
 Show the cursor while free spectating
 == 自由觀戰時顯示光標
@@ -13721,6 +13730,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == 無法刪除 %d 個選中項。第一個失敗項是“%s”。
 
+Unable to delete skin
+== 無法刪除皮膚
+
 Unable to delete the demo '%s'
 == 無法刪除回放文件“%s”
 
@@ -14104,9 +14116,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 將鼠標懸停在 HUD 模塊上並滾動滾輪可按 5% 縮放
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== 請分別填寫主號和分身在 Axiom 服註冊的密碼。此選項不會自動註冊帳號。
 
 Use the scoreboard cursor mode to scroll the list
 == 使用計分板游標模式滾動查看清單
@@ -14980,6 +14989,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == 就你一個啦！
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== 帳號即遊戲內名字，請先在 Axiom 官網註冊。分別填入主號與分身的註冊密碼；不會自動註冊帳號。
 
 Your current race time is %s
 == 你當前的比賽用時是 %s

@@ -46,10 +46,10 @@ TEST_P(QmRouteCacheInvalidation, ChangedRouteStateReplacesPreviousPoints)
 	EXPECT_EQ(Cache.Point(0), vec2(2.0f, 0.0f));
 }
 
-INSTANTIATE_TEST_SUITE_P(RouteDependencies, QmRouteCacheInvalidation, ::testing::Range(0, 6), [](const ::testing::TestParamInfo<int> &Info) {
+INSTANTIATE_TEST_SUITE_P(RouteDependencies, QmRouteCacheInvalidation, ::testing::Range(0, 6), ([](const ::testing::TestParamInfo<int> &Info) {
 	const char *apNames[] = {"FieldRevision", "StartTile", "Client", "Dummy", "MapMode", "Segment"};
 	return apNames[Info.param];
-});
+}));
 
 TEST(QmRouteRenderCache, ResetRebuildsEvenWhenNewMapReusesTheSameKey)
 {

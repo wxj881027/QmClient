@@ -259,7 +259,7 @@ void CMenus::PumpDemoScreenshotWatermark()
 		return;
 	const bool InGame = Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK;
 	const bool OnSourcePage = IsActive() && (InGame ? m_GamePage : m_MenuPage) == PAGE_DEMOS &&
-		DemoBrowserBrowsingScreenshots() && m_ScreenshotWatermarkFolder == m_aCurrentDemoFolder;
+				  DemoBrowserBrowsingScreenshots() && m_ScreenshotWatermarkFolder == m_aCurrentDemoFolder;
 	if(!OnSourcePage)
 		m_pScreenshotWatermarkJob->Cancel();
 	if(m_pScreenshotWatermarkJob->State() != IJob::STATE_DONE)

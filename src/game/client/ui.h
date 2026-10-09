@@ -216,7 +216,8 @@ private:
 class CUiScopedGaussianBlur
 {
 public:
-	explicit CUiScopedGaussianBlur(CUi *pUi, float Alpha = 1.0f);
+	explicit CUiScopedGaussianBlur(CUi *pUi);
+	CUiScopedGaussianBlur(CUi *pUi, float Alpha);
 	~CUiScopedGaussianBlur();
 
 	CUiScopedGaussianBlur(const CUiScopedGaussianBlur &) = delete;
@@ -1062,6 +1063,11 @@ public:
 	bool UnderlyingScrollBlocked() const { return m_UnderlyingScrollBlocked; }
 	bool RenderingPopupMenus() const { return m_RenderingPopupMenus; }
 	void BeginWheelOwnershipFrame();
+	// 原始输入入口与客户端采集共用帧初始化，允许隔离设备后驱动跨帧 UI 行为。
+	bool BeginWheelOwnershipFrame(uint64_t FrameId, float RawDelta, bool AltPressed)
+	{
+		return m_WheelOwnership.BeginFrame(FrameId, RawDelta, AltPressed);
+	}
 	void RegisterWheelOwner(const void *pOwnerId, EUiWheelOwnerPriority Priority, const CUIRect &HotRect, bool Eligible);
 	bool TryConsumeWheel(const void *pOwnerId, float *pDelta);
 
@@ -1123,12 +1129,15 @@ public:
 	{
 		SEditBoxRenderOptions() :
 			m_DrawBackground(true),
-			m_pHitRect(nullptr)
+			m_pHitRect(nullptr),
+			m_ReleaseFocusOnEnter(true)
 		{
 		}
 
 		bool m_DrawBackground;
 		const CUIRect *m_pHitRect;
+		// 编辑器等调用者需要保留焦点与确认热键，供外层执行数值／命令提交。
+		bool m_ReleaseFocusOnEnter;
 	};
 
 	void DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr) const;
@@ -1257,6 +1266,8 @@ public:
 	void RenderPopupMenus();
 	void ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants = false);
 	void RefreshPopupMenuSource(const SPopupMenuId *pId, bool RequireRefresh, uint64_t Frame);
+	// 输入阶段关闭最上层，避免所属组件延迟绘制前 Escape 泄漏给菜单。
+	bool CloseTopPopupMenu();
 	void ClosePopupMenus();
 	bool IsPopupOpen() const;
 	bool IsPopupOpen(const SPopupMenuId *pId) const;

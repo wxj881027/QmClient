@@ -27,7 +27,6 @@ class IConsole;
 class IEngineGraphics;
 struct OpusDecoder;
 struct OpusEncoder;
-struct DenoiseState;
 
 struct SVoiceOverlayEntry
 {
@@ -192,8 +191,6 @@ class CRClientVoice
 	float m_AgcGain = 1.0f;
 	float m_NsNoiseFloor = 0.0f;
 	float m_NsGain = 1.0f;
-	DenoiseState *m_pNoiseSuppress = nullptr;
-	bool m_NoiseSuppressFallbackLogged = false;
 	std::atomic<int> m_OutputChannels = 0;
 
 	OpusEncoder *m_pEncoder = nullptr;

@@ -806,8 +806,8 @@ Appearance
 Appearance and command highlighting of the local console
 == Darstellung der lokalen Konsole und Befehlshervorhebung
 
-Appearance of help bubbles outside settings cards
-== Darstellung der Hilfeblasen außerhalb von Einstellungskarten
+Appearance of help bubbles
+== Darstellung der Hinweisblasen
 
 Append to log file instead of overwriting
 == An Logdatei anhängen anstatt zu überschreiben
@@ -1298,6 +1298,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Axiom Auto-Login fehlgeschlagen, versuche es erneut
 
+Axiom auto login skipped: no password
+== Axiom-Auto-Login: Kein Passwort gesetzt, übersprungen
+
+Axiom auto login stopped after repeated failures
+== Axiom-Auto-Login gestoppt: mehrere Fehlversuche
+
 Axiom auto login succeeded
 == Axiom Auto-Login erfolgreich
 
@@ -1309,6 +1315,9 @@ Axiom main account password
 
 Axiom score request failed
 == Axiom-Punkte konnten nicht abgerufen werden
+
+Axiom website
+== Axiom-Website
 
 Axis
 == Achse
@@ -9836,9 +9845,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == Wiederholungsliste: noch nicht geladen
 
-Replay list: up to date
-== Wiederholungsliste: aktuell
-
 Replays directory
 == Wiederholungsordner
 
@@ -11683,6 +11689,9 @@ Show teleporter tile outlines
 
 Show text entities
 == Text-Entitäten anzeigen
+
+Show the chat scrollbar on the right
+== Chat-Scrollleiste rechts anzeigen
 
 Show the cursor while free spectating
 == Cursor beim freien Zuschauen anzeigen
@@ -13721,6 +13730,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d ausgewählte Elemente konnten nicht gelöscht werden. Das erste fehlgeschlagene Element war '%s'.
 
+Unable to delete skin
+== Skin kann nicht gelöscht werden
+
 Unable to delete the demo '%s'
 == Demo '%s' konnte nicht gelöscht werden
 
@@ -14104,9 +14116,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Mit dem Mausrad über einem Modul skaliert es um 5%
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== Trage die bei Axiom registrierten Passwörter für Hauptkonto und Dummy getrennt ein. Diese Option erstellt keine Konten.
 
 Use the scoreboard cursor mode to scroll the list
 == Verwenden Sie den Scoreboard-Cursormodus, um die Liste zu scrollen
@@ -14980,6 +14989,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == Du bist der Letzte!
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== Dein Konto ist dein Spielname – registriere es zuerst auf der Axiom-Website. Trage die registrierten Passwörter für Hauptkonto und Dummy ein. Diese Option registriert keine Konten.
 
 Your current race time is %s
 == Deine aktuelle Rennzeit ist %s

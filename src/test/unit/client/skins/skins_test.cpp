@@ -576,8 +576,8 @@ TEST(Skins, ModifiedLoadedLocalSourceReturnsToPending)
 	using EState = CSkins::CSkinContainer::EState;
 	const SQmSkinSourceIdentity Before{false, 0, 100};
 	const SQmSkinSourceIdentity After{false, 0, 101};
-	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::LOADED, EState::UNLOADED), EState::PENDING);
-	EXPECT_FALSE(CSkins::CSkinContainer::SourceRefreshState(After, After, EState::LOADED, EState::UNLOADED).has_value());
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::LOADED, false, true, true), EState::PENDING);
+	EXPECT_FALSE(CSkins::CSkinContainer::SourceRefreshState(After, After, EState::LOADED, false, true, true).has_value());
 }
 
 TEST(Skins, UserStorageOverrideAndLocalReplacementRequestReload)
@@ -586,8 +586,8 @@ TEST(Skins, UserStorageOverrideAndLocalReplacementRequestReload)
 	const SQmSkinSourceIdentity Bundled{false, 1, 100};
 	const SQmSkinSourceIdentity User{false, 0, 100};
 	const SQmSkinSourceIdentity Downloaded{true, 0, 100};
-	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Bundled, User, EState::LOADED, EState::UNLOADED), EState::PENDING);
-	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Downloaded, User, EState::LOADED, EState::UNLOADED), EState::PENDING);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Bundled, User, EState::LOADED, false, true, true), EState::PENDING);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Downloaded, User, EState::LOADED, false, true, true), EState::PENDING);
 }
 
 TEST(Skins, SourceChangeRestartsLoadingAndPreservesPendingRequests)
@@ -595,8 +595,8 @@ TEST(Skins, SourceChangeRestartsLoadingAndPreservesPendingRequests)
 	using EState = CSkins::CSkinContainer::EState;
 	const SQmSkinSourceIdentity Before{false, 0, 100};
 	const SQmSkinSourceIdentity After{false, 0, 101};
-	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::LOADING, EState::UNLOADED), EState::PENDING);
-	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::PENDING, EState::UNLOADED), EState::PENDING);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::LOADING, false, true, true), EState::PENDING);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::PENDING, false, true, true), EState::PENDING);
 }
 
 TEST(Skins, SourceChangeLeavesUnrequestedSkinsUnloadedAndRespectsDisabledDownloads)
@@ -604,8 +604,8 @@ TEST(Skins, SourceChangeLeavesUnrequestedSkinsUnloadedAndRespectsDisabledDownloa
 	using EState = CSkins::CSkinContainer::EState;
 	const SQmSkinSourceIdentity Before{true, 0, 100};
 	const SQmSkinSourceIdentity After{true, 0, 101};
-	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::UNLOADED, EState::UNLOADED), EState::UNLOADED);
-	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::NOT_FOUND, EState::NOT_FOUND), EState::NOT_FOUND);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::UNLOADED, false, true, true), EState::UNLOADED);
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::NOT_FOUND, false, true, false), EState::NOT_FOUND);
 }
 
 TEST(Skins, UnresolvedNotificationIsTriggeredOnlyByNewFailures)
@@ -651,4 +651,155 @@ TEST(Skins, PreparedTexturesKeepValidSpritesWhenOneSpriteIsOutOfBounds)
 	EXPECT_FALSE(pPrepared->Available(1, 11));
 	EXPECT_EQ(pPrepared->Image(0, 11).m_pData, nullptr);
 	Source.Free();
+}
+
+TEST(Skins, LoadedRefreshCanFinalizeWithoutInitialLoads)
+{
+	CSkins::CSkinLoadingStats Stats;
+	Stats.AddState(CSkins::CSkinContainer::EState::LOADED);
+	EXPECT_FALSE(Stats.ShouldFinishLoading(false));
+	// 更新上传保持 LOADED，推进不应依赖初次加载计数。
+	EXPECT_TRUE(Stats.ShouldFinishLoading(true));
+	EXPECT_EQ(Stats.m_NumLoading, 0u);
+	EXPECT_EQ(Stats.m_NumLoaded, 1u);
+	Stats.AddState(CSkins::CSkinContainer::EState::LOADING);
+	EXPECT_TRUE(Stats.ShouldFinishLoading(false));
+}
+
+TEST(Skins, DisabledDownloadCanBeReplacedByLocalSourceInOneRefresh)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	const SQmSkinSourceIdentity Downloaded{true, IStorage::TYPE_SAVE, 100};
+	const SQmSkinSourceIdentity Local{false, IStorage::TYPE_SAVE, 100};
+	EXPECT_EQ(CSkins::CSkinContainer::InitialStateForSource(CSkins::CSkinContainer::EType::DOWNLOAD, false, true, false), EState::NOT_FOUND);
+	const auto State = CSkins::CSkinContainer::SourceRefreshState(Downloaded, Local, EState::NOT_FOUND, false, true, false);
+	ASSERT_TRUE(State.has_value());
+	EXPECT_EQ(State.value(), EState::UNLOADED);
+	EXPECT_FALSE(CSkins::CSkinContainer::SourceRefreshState(Local, Local, State.value(), false, true, false).has_value());
+}
+
+TEST(Skins, ChangedDownloadSourceStillRespectsDisabledDownloads)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	const SQmSkinSourceIdentity Before{true, IStorage::TYPE_SAVE, 100};
+	const SQmSkinSourceIdentity After{true, IStorage::TYPE_SAVE, 101};
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Before, After, EState::LOADED, false, true, false), EState::NOT_FOUND);
+}
+
+TEST(Skins, LocalSourceReplacementStillRespectsVanillaRestriction)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	const SQmSkinSourceIdentity Downloaded{true, IStorage::TYPE_SAVE, 100};
+	const SQmSkinSourceIdentity Local{false, IStorage::TYPE_SAVE, 101};
+	EXPECT_EQ(CSkins::CSkinContainer::SourceRefreshState(Downloaded, Local, EState::NOT_FOUND, false, false, false), EState::NOT_FOUND);
+	EXPECT_EQ(CSkins::CSkinContainer::InitialStateForSource(CSkins::CSkinContainer::EType::LOCAL, true, false, false), EState::PENDING);
+}
+
+TEST(Skins, ReloadErrorRestoresPublishedSkinAndCountsItOnce)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	CSkins::CSkinLoadingStats Stats;
+	Stats.AddState(EState::LOADING);
+	const EState State = Stats.FinishLoadingFailure(EState::LOADING, true, false);
+	EXPECT_EQ(State, EState::LOADED);
+	EXPECT_EQ(Stats.m_NumLoading, 0u);
+	EXPECT_EQ(Stats.m_NumLoaded, 1u);
+	EXPECT_EQ(Stats.m_NumError, 0u);
+	EXPECT_TRUE(CSkins::CSkinContainer::TracksUsage(State, false));
+	EXPECT_EQ(Stats.FinishLoadingFailure(State, true, false), EState::LOADED);
+	EXPECT_EQ(Stats.m_NumLoaded, 1u);
+	EXPECT_EQ(Stats.m_NumLoading, 0u);
+}
+
+TEST(Skins, ReloadNotFoundRestoresPublishedSkinInsteadOfHidingIt)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	CSkins::CSkinLoadingStats Stats;
+	Stats.AddState(EState::LOADING);
+	const EState State = Stats.FinishLoadingFailure(EState::LOADING, true, true);
+	EXPECT_EQ(State, EState::LOADED);
+	EXPECT_EQ(Stats.m_NumLoading, 0u);
+	EXPECT_EQ(Stats.m_NumLoaded, 1u);
+	EXPECT_EQ(Stats.m_NumNotFound, 0u);
+	EXPECT_EQ(CSkins::CSkinContainer::StatusIndicator(State), CSkins::CSkinContainer::EStatusIndicator::NONE);
+}
+
+TEST(Skins, InitialLoadErrorWithoutPublishedSkinRemainsError)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	CSkins::CSkinLoadingStats Stats;
+	Stats.AddState(EState::LOADING);
+	EXPECT_EQ(Stats.FinishLoadingFailure(EState::LOADING, false, false), EState::ERROR);
+	EXPECT_EQ(Stats.m_NumLoading, 0u);
+	EXPECT_EQ(Stats.m_NumLoaded, 0u);
+	EXPECT_EQ(Stats.m_NumError, 1u);
+	EXPECT_EQ(Stats.m_NumNotFound, 0u);
+}
+
+TEST(Skins, InitialLoadNotFoundWithoutPublishedSkinRemainsNotFound)
+{
+	using EState = CSkins::CSkinContainer::EState;
+	CSkins::CSkinLoadingStats Stats;
+	Stats.AddState(EState::LOADING);
+	EXPECT_EQ(Stats.FinishLoadingFailure(EState::LOADING, false, true), EState::NOT_FOUND);
+	EXPECT_EQ(Stats.m_NumLoading, 0u);
+	EXPECT_EQ(Stats.m_NumLoaded, 0u);
+	EXPECT_EQ(Stats.m_NumError, 0u);
+	EXPECT_EQ(Stats.m_NumNotFound, 1u);
+}
+
+TEST(Skins, PreviewSpriteUploadsShareSettingsBudgetAcrossDrainCalls)
+{
+	CGpuUploadLimiter Limiter;
+	Limiter.OnFrameStart(24);
+	SSettingsWarmupFrameBudget FrameBudget;
+	FrameBudget.m_MaxGpuUploads = 1;
+	CSkins::CSkinPreviewUploadBudget FirstDrain(24, &Limiter, &FrameBudget);
+	ASSERT_TRUE(FirstDrain.Consume());
+	FirstDrain.Commit();
+	EXPECT_EQ(FrameBudget.m_MaxGpuUploads, 0);
+	EXPECT_EQ(Limiter.UploadsThisFrame(), 1);
+	EXPECT_FALSE(FirstDrain.Consume());
+	CSkins::CSkinPreviewUploadBudget SecondDrain(23, &Limiter, &FrameBudget);
+	EXPECT_FALSE(SecondDrain.Consume());
+	EXPECT_EQ(Limiter.UploadsThisFrame(), 1);
+	// 下一帧恢复共享额度后可继续上传，耗尽后的尝试没有多扣全局计数。
+	Limiter.OnFrameStart(24);
+	FrameBudget = {};
+	FrameBudget.m_MaxGpuUploads = 1;
+	CSkins::CSkinPreviewUploadBudget NextFrame(23, &Limiter, &FrameBudget);
+	ASSERT_TRUE(NextFrame.Consume());
+	NextFrame.Commit();
+	EXPECT_FALSE(NextFrame.Consume());
+	EXPECT_EQ(Limiter.UploadsThisFrame(), 1);
+}
+
+TEST(Skins, ExhaustedGlobalUploadBudgetDoesNotConsumeSettingsAllowance)
+{
+	CGpuUploadLimiter Limiter;
+	Limiter.OnFrameStart(0);
+	SSettingsWarmupFrameBudget FrameBudget;
+	FrameBudget.m_MaxGpuUploads = 1;
+	CSkins::CSkinPreviewUploadBudget Budget(24, &Limiter, &FrameBudget);
+	EXPECT_FALSE(Budget.Consume());
+	EXPECT_EQ(FrameBudget.m_MaxGpuUploads, 1);
+	EXPECT_EQ(Limiter.UploadsThisFrame(), 0);
+	Limiter.OnFrameStart(1);
+	ASSERT_TRUE(Budget.Consume());
+	Budget.Commit();
+	EXPECT_EQ(FrameBudget.m_MaxGpuUploads, 0);
+	EXPECT_EQ(Limiter.UploadsThisFrame(), 1);
+}
+
+TEST(Skins, PreviewUploadsWithoutSettingsPageRespectRemainingSpriteCount)
+{
+	CGpuUploadLimiter Limiter;
+	Limiter.OnFrameStart(24);
+	CSkins::CSkinPreviewUploadBudget Budget(2, &Limiter, nullptr);
+	ASSERT_TRUE(Budget.Consume());
+	Budget.Commit();
+	ASSERT_TRUE(Budget.Consume());
+	Budget.Commit();
+	EXPECT_FALSE(Budget.Consume());
+	EXPECT_EQ(Limiter.UploadsThisFrame(), 2);
 }

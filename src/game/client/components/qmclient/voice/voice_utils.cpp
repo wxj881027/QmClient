@@ -427,29 +427,6 @@ namespace VoiceUtils
 		return 0;
 	}
 
-	int ResolveNoiseSuppressMode(int ConfigValue, bool RnnoiseRuntimeAvailable, bool *pFallbackUsed)
-	{
-		if(pFallbackUsed)
-			*pFallbackUsed = false;
-
-		const int Mode = std::clamp(ConfigValue, VOICE_NOISE_SUPPRESS_OFF, VOICE_NOISE_SUPPRESS_RNNOISE);
-		if(Mode != VOICE_NOISE_SUPPRESS_RNNOISE || RnnoiseRuntimeAvailable)
-			return Mode;
-
-		if(pFallbackUsed)
-			*pFallbackUsed = true;
-		return VOICE_NOISE_SUPPRESS_SIMPLE;
-	}
-
-	bool IsRnnoiseCompiledIn()
-	{
-#if defined(CONF_RNNOISE)
-		return true;
-#else
-		return false;
-#endif
-	}
-
 	EVoiceIncomingPacketDecision ClassifyVoiceIncomingPacket(const SVoicePacketHeader &Header, size_t PacketSize, const SVoiceIncomingPacketContext &Context)
 	{
 		if(PacketSize < VOICE_PACKET_HEADER_SIZE)

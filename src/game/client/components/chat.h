@@ -40,6 +40,13 @@ constexpr auto SAVES_FILE = "ddnet-saves.txt";
 class CChat : public CComponent
 {
 public:
+	enum
+	{
+		// client IDs for special messages
+		CLIENT_MSG = -2,
+		SERVER_MSG = -1,
+	};
+
 	enum class EBlockWordsAction
 	{
 		REPLACE = 0,
@@ -189,7 +196,7 @@ private:
 	std::array<int, 4> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
-	std::array<int, 3> m_aPreparedChatTextSettings = {-1, -1, -1};
+	std::array<int, 5> m_aPreparedChatTextSettings = {-1, -1, -1, -1, -1};
 	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
@@ -207,17 +214,11 @@ private:
 	int m_BacklogCurLine;
 	bool m_ScrollbarDragging;
 	float m_ScrollbarDragOffset;
+	CUIRect m_ChatInputMapRect{};
 	std::optional<vec2> m_LastMousePos;
 	bool m_MouseIsPress;
 	vec2 m_MousePress;
 	vec2 m_MouseRelease;
-
-	enum
-	{
-		// client IDs for special messages
-		CLIENT_MSG = -2,
-		SERVER_MSG = -1,
-	};
 
 	enum
 	{
@@ -456,8 +457,18 @@ public:
 		if(ClientId == SERVER_MSG)
 			return HideSystemPrefix ? "" : "*** ";
 		if(ClientId == CLIENT_MSG)
-			return "— ";
+			return HideSystemPrefix ? "" : "— ";
 		return "";
+	}
+	// 配置切换时刷新已有系统/echo 行，玩家名称保持原有身份与合并语义。
+	static void RefreshMessageNamePrefix(int ClientId, char *pName, int NameSize, bool HideSystemPrefix)
+	{
+		if(ClientId == SERVER_MSG || ClientId == CLIENT_MSG)
+			str_copy(pName, MessageNamePrefixForClientId(ClientId, HideSystemPrefix), NameSize);
+	}
+	static const char *ClientMessageNamePrefix(bool HideSystemPrefix = true)
+	{
+		return MessageNamePrefixForClientId(CLIENT_MSG, HideSystemPrefix);
 	}
 	static const char *SystemMessageNamePrefix(bool HideSystemPrefix = true)
 	{
@@ -532,6 +543,7 @@ public:
 
 	// 翻译按钮相关方法
 	vec2 GetChatMousePos() const;
+	vec2 GetChatLocalMousePos() const;
 	vec2 GetUiMousePos() const;
 	void RenderTranslateButton(const CUIRect &ButtonRect);
 	void ToggleAutoTranslate();

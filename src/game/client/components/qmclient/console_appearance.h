@@ -73,7 +73,7 @@ namespace QmConsoleAppearance
 
 	inline float FontSize(int ConfiguredSize)
 	{
-		return static_cast<float>(std::clamp(ConfiguredSize, 8, 24));
+		return static_cast<float>(std::clamp(ConfiguredSize, 1, 24));
 	}
 
 	inline void Reset(CConfig &Config)

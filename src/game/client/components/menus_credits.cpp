@@ -475,10 +475,10 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 
 	SSettingsCardDefinition FriendLinks;
 	FriendLinks.m_Spec = {"deck:credits-friend-links", Localize("Friend links"), qm_card_registry::ResolveLocalizedDescription("deck:credits-friend-links")};
-	FriendLinks.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(3, LineHeight, LineSpacing); };
+	FriendLinks.m_Measure = [LineHeight, LineSpacing](float) { return ResolveSettingsRowsHeight(4, LineHeight, LineSpacing); };
 	FriendLinks.m_Render = [this, LineHeight, LineSpacing, ReadOnly](CUIRect Content) {
 		static CButtonContainer s_DdnetWorkshopButton, s_DdnetWebsiteButton, s_QmClientWebsiteButton;
-		static CButtonContainer s_ShengyanButton, s_TeeDataButton, s_DdStatsButton;
+		static CButtonContainer s_ShengyanButton, s_TeeDataButton, s_DdStatsButton, s_AxiomButton;
 		// 站点图标纹理：首次渲染时各加载一次，失败则回退到 EQmIcon 字形。
 		enum
 		{
@@ -488,6 +488,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			ICON_SHENGYAN,
 			ICON_TEEDATA,
 			ICON_DDSTATS,
+			ICON_AXIOM,
 			ICON_COUNT,
 		};
 		static IGraphics::CTextureHandle s_aSiteIcons[ICON_COUNT];
@@ -499,6 +500,7 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			"qmclient/friendlinks/shengyan.webp",
 			"qmclient/friendlinks/teedata.webp",
 			"qmclient/friendlinks/ddstats.webp",
+			"qmclient/friendlinks/axiom.webp",
 		};
 		for(int i = 0; i < ICON_COUNT; ++i)
 		{
@@ -531,6 +533,11 @@ void CMenus::AppendFriendLinkCards(std::vector<SSettingsCardDefinition> &vCards,
 			Client()->ViewLink("https://teedata.net/");
 		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_DdStatsButton, "credits-links-ddstats", "DDStats 官方统计网站", 0, &RightButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::LIST_UL, FONT_ICON_LIST_UL, &s_aSiteIcons[ICON_DDSTATS]))
 			Client()->ViewLink("https://ddstats.tw/");
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitMid(&LeftButton, &RightButton, LineSpacing);
+		if(!ReadOnly && DoSettingsButton_Menu(SETTINGS_CONTRIBUTORS, -1, -1, &s_AxiomButton, "credits-links-axiom", "Axiom 社区", 0, &LeftButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0.0f, -1.0f, EQmIcon::EARTH_AMERICAS, FONT_ICON_EARTH_AMERICAS, &s_aSiteIcons[ICON_AXIOM]))
+			Client()->ViewLink("https://axiom.teeworlds.cn/");
 	};
 	vCards.push_back(std::move(FriendLinks));
 }

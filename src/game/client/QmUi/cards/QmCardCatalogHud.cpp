@@ -172,12 +172,8 @@ namespace qm_card_catalog
 
 					for(int Index = 0; Index < 5; ++Index)
 						ConsumeQmHudRow(Content, Metrics); // server, input/output device, bitrate and noise mode
-					if(g_Config.m_QmVoiceNoiseSuppressEnable != 0)
+					if(g_Config.m_QmVoiceNoiseSuppressEnable == 1)
 					{
-#if !defined(CONF_RNNOISE)
-						if(g_Config.m_QmVoiceNoiseSuppressEnable == 2)
-							ConsumeQmHudHeight(Content, LineHeight * 0.78f + LineSpacing * 0.75f);
-#endif
 						ConsumeQmHudRow(Content, Metrics); // noise reduction strength
 					}
 					ConsumeQmHudRow(Content, Metrics); // AGC

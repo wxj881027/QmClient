@@ -35,7 +35,7 @@ TEST(QmConsoleAppearance, InvalidExternalValuesHaveBoundedFallbacks)
 	EXPECT_EQ(QmConsoleAppearance::ResolvePalette(99, 96, {}).m_aColors, QmConsoleAppearance::ResolvePalette(0, 96, {}).m_aColors);
 	EXPECT_FLOAT_EQ(QmConsoleAppearance::ResolvePalette(0, -10, {}).m_aColors[0].a, 0.2f);
 	EXPECT_FLOAT_EQ(QmConsoleAppearance::ResolvePalette(0, 200, {}).m_aColors[0].a, 1.0f);
-	EXPECT_FLOAT_EQ(QmConsoleAppearance::FontSize(-1), 8.0f);
+	EXPECT_FLOAT_EQ(QmConsoleAppearance::FontSize(-1), 1.0f);
 	EXPECT_FLOAT_EQ(QmConsoleAppearance::FontSize(100), 24.0f);
 }
 
@@ -55,4 +55,10 @@ TEST(QmConsoleAppearance, ResetRestoresAppearanceAndPreservesLogFilters)
 	EXPECT_EQ(Config.m_QmConsoleHighlightCommands, 1);
 	EXPECT_EQ(Config.m_QmConsoleLinkColor, DefaultConfig::QmConsoleLinkColor);
 	EXPECT_EQ(Config.m_QmConsoleSearchSelectedColor, DefaultConfig::QmConsoleSearchSelectedColor);
+}
+
+TEST(QmConsoleAppearance, FontSizeAllowsOneThroughSevenWithoutClampingToEight)
+{
+	for(int Size = 1; Size <= 7; ++Size)
+		EXPECT_FLOAT_EQ(QmConsoleAppearance::FontSize(Size), static_cast<float>(Size));
 }

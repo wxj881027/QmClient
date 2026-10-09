@@ -12,7 +12,9 @@ python qmclient_scripts/integration/open_link_failure_smoke.py <build-dir>/testr
 
 默认配置与推荐外观的回归种子位于 `fixtures/default_profiles/`，固定尺寸和玩家路径见[默认配置发布回归](../../docs/规格/2026-10-08-默认配置发布回归.md)。这些种子不是执行结果；仅复制到独立测试目录使用。
 
-Windows 的普通版和便携版均忽略 `storage.cfg`。通用进程测试需要独立的 `DEV=ON、QMCLIENT_TEST_STORAGE=ON` 构建，runner 通过 `QMCLIENT_TEST_STORAGE_ROOT` 指向各场景临时目录。误用普通发布构建时初始化会失败；测试构建禁止打包，不用于发布。Linux/macOS 沿用原隔离方式。
+Windows 的普通版和便携版均忽略 `storage.cfg`。通用进程环境、启动呈现、皮肤加载和实时名单冒烟共用 `process_build.py`：传入普通构建目录时，启动前选择同一源码、配置和生成器的已有隔离缓存；没有匹配缓存时使用 `<build-dir>-process-tests`。独立缓存启用 `DEV=ON、QMCLIENT_TEST_STORAGE=ON、QMCLIENT_PORTABLE=OFF`，沿用功能与优化开关，并通过 Windows 封装入口增量构建当前源码。原始普通／便携缓存的存储模式保持不变，构建失败或来源不匹配时不启动旧程序。
+
+runner 通过 `QMCLIENT_TEST_STORAGE_ROOT` 指向场景临时目录。测试构建禁止打包，不用于发布；客户端仍拒绝用普通发布二进制运行隔离测试。已有专用测试目录也会先增量构建。Linux/macOS 沿用原隔离方式。
 
 便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证 `profile/` 随目录搬家、忽略目录外配置及不可写时不回退：
 

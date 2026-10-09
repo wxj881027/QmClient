@@ -149,3 +149,50 @@ TEST_F(CNameplateDensityTest, RepeatedTraversalUsesAFiniteSetOfRasterBuckets)
 	EXPECT_EQ(First, Second);
 	EXPECT_LE(First.size(), 9u);
 }
+
+TEST(QmNameplateSmallTextSampling, OnlySmallPhysicalTextGetsBoundedExtraSampling)
+{
+	EXPECT_FLOAT_EQ(QmNameplateSmallTextSamplingScale(24.0f, 0.5f), 1.0f);
+	EXPECT_FLOAT_EQ(QmNameplateSmallTextSamplingScale(24.0f, 1.0f), 1.0f);
+	const float Mid = QmNameplateSmallTextSamplingScale(20.0f, 0.5f);
+	EXPECT_GT(Mid, 1.0f);
+	EXPECT_LT(Mid, 1.25f);
+	EXPECT_FLOAT_EQ(QmNameplateSmallTextSamplingScale(16.0f, 0.5f), 1.25f);
+	EXPECT_FLOAT_EQ(QmNameplateSmallTextSamplingScale(1.0f, 0.1f), 1.25f);
+}
+
+TEST(QmNameplateSmallTextSampling, ResolutionAndUserFontSizeDeterminePhysicalThreshold)
+{
+	const float LowResolution = QmNameplateSmallTextSamplingScale(20.0f, 0.5f);
+	EXPECT_FLOAT_EQ(LowResolution, QmNameplateSmallTextSamplingScale(10.0f, 1.0f));
+	EXPECT_FLOAT_EQ(QmNameplateSmallTextSamplingScale(20.0f, 1.0f), 1.0f);
+	EXPECT_FLOAT_EQ(QmNameplateSmallTextSamplingScale(28.0f, 0.5f), 1.0f);
+}
+
+TEST(QmNameplateSmallTextSampling, InvalidInputsLeaveSamplingUnchanged)
+{
+	for(float Value : {0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
+	{
+		EXPECT_FLOAT_EQ(QmNameplateSmallTextSamplingScale(Value, 1.0f), 1.0f);
+		EXPECT_FLOAT_EQ(QmNameplateSmallTextSamplingScale(20.0f, Value), 1.0f);
+	}
+}
+
+TEST_F(CNameplateDensityTest, SmallTextCompensationRetainsAnimationCacheAndBudgetedRecovery)
+{
+	ASSERT_TRUE(Update(1.0f));
+	const float Original = m_Density.Ratio();
+	const float SmallRatio = 0.3f * QmNameplateSmallTextSamplingScale(24.0f, 0.3f);
+	EXPECT_FALSE(Update(SmallRatio, true));
+	EXPECT_EQ(m_Density.Ratio(), Original);
+	m_Budget = 5;
+	EXPECT_FALSE(Update(SmallRatio));
+	m_Budget = 16;
+	ASSERT_TRUE(Update(SmallRatio));
+	EXPECT_GT(m_Density.Ratio(), 0.3f);
+	EXPECT_EQ(m_Budget, 10);
+	EXPECT_FALSE(Update(SmallRatio));
+	m_Budget = 16;
+	ASSERT_TRUE(Update(1.0f));
+	EXPECT_FLOAT_EQ(m_Density.Ratio(), Original);
+}

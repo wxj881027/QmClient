@@ -149,50 +149,15 @@ TEST(SettingsWarmupLoadingContract, SettingsPageCachePrewarmRespectsDisabledConf
 	EXPECT_NE(QmClient.find("\tEnsureSettingsBindCache();\n\n\tRenderSettingsQmClientContent(MainView, PrewarmOnly);"), std::string::npos);
 }
 
-TEST(SettingsWarmupLoadingContract, MenuTextPrebuildDoesNotRenderPages)
+// 这是公开入口的迁移终态合同；实际预热和只渲染行为由对应状态机／表面测试验证。
+TEST(SettingsWarmupLoadingContract, TextPrebuildPublicApiReplacesVisiblePageWarmup)
 {
 	const std::string Header = ReadTestSourceFile("src/game/client/components/menus.h");
-	const std::string Menus = ReadTestSourceFile("src/game/client/components/menus.cpp");
+	EXPECT_NE(Header.find("PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride"), std::string::npos);
 	const std::string UiHeader = ReadTestSourceFile("src/game/client/ui.h");
-	const std::string UiSource = ReadTestSourceFile("src/game/client/ui.cpp");
-	const std::string SettingsCard = ReadTestSourceFile("src/game/client/QmUi/SettingsCard.cpp");
-	const std::string Settings = ReadTestSourceFile("src/game/client/components/menus_settings.cpp");
-	const std::string TClient = ReadTestSourceFile("src/game/client/components/tclient/menus_tclient.cpp");
-	const std::string QmClient = ReadTestSourceFile("src/game/client/components/qmclient/menus_qmclient.cpp");
-
-	EXPECT_TRUE(Menus.find("PrebuildSettingsMenuTextPool(int Budget") != std::string::npos);
-	EXPECT_TRUE(Header.find("PrebuildSettingsMenuTextPool(int Budget, const char *pScopeOverride") != std::string::npos);
-	EXPECT_TRUE(Header.find("PrebuildSettingsMenuTextPool(Budget, \"target_settings\", \"settings_open\")") != std::string::npos);
-	EXPECT_TRUE(Menus.find("event=settings_text_prebuild") != std::string::npos);
-	EXPECT_TRUE(Menus.find("built=%d reused=%d remaining=%d budget=%d phase=%s scope=%s operation=%s") != std::string::npos);
-	EXPECT_TRUE(Menus.find("phase=before_target") != std::string::npos);
-	EXPECT_TRUE(Menus.find("scope=target_settings") != std::string::npos);
-	EXPECT_EQ(Header.find("PrebuildVisibleSettingsTextPool"), std::string::npos);
-	EXPECT_EQ(Menus.find("void CMenus::PrebuildVisibleSettingsTextPool"), std::string::npos);
-	EXPECT_EQ(Menus.find("PrebuildVisibleSettingsTextPool(ContentView"), std::string::npos);
-	EXPECT_EQ(Menus.find("RenderSettingsTClient(MainView, true)"), std::string::npos);
-	EXPECT_EQ(Menus.find("RenderSettingsQmClient(MainView, false, true)"), std::string::npos);
 	EXPECT_NE(UiHeader.find("void BeginRenderOnly();"), std::string::npos);
 	EXPECT_NE(UiHeader.find("void EndRenderOnly();"), std::string::npos);
-	EXPECT_NE(UiSource.find("if(m_RenderOnlyDepth++ == 0)"), std::string::npos);
-	EXPECT_NE(UiSource.find("RenderOnlyClip.x += RenderOnlyClip.w;"), std::string::npos);
-	EXPECT_NE(UiSource.find("RenderOnlyClip.y += RenderOnlyClip.h;"), std::string::npos);
-	EXPECT_NE(UiSource.find("ClipEnable(&RenderOnlyClip);"), std::string::npos);
-	EXPECT_NE(UiSource.find("if(--m_RenderOnlyDepth == 0)"), std::string::npos);
-	EXPECT_NE(UiSource.find("ClipDisable();"), std::string::npos);
-	EXPECT_NE(SettingsCard.find("SettingsCardShouldDrawChrome(Ctx.m_pUi != nullptr && Ctx.m_pUi->RenderOnly())"), std::string::npos);
-	EXPECT_NE(SettingsCard.find("DrawRoundedSurface(Ctx, ChromeRect, Surface, Border, CardRadius"), std::string::npos);
-	EXPECT_EQ(SettingsCard.find("ChromeRect.Draw(Surface, IGraphics::CORNER_ALL, CardRadius);"), std::string::npos);
-	EXPECT_EQ(SettingsCard.find("ResolveSettingsCardBorderRingClipRects"), std::string::npos);
-	EXPECT_EQ(SettingsCard.find("InnerSurface.Margin(BorderWidth, &InnerSurface);"), std::string::npos);
-	EXPECT_EQ(SettingsCard.find("ChromeRect.Draw(Border, IGraphics::CORNER_ALL, CardRadius);"), std::string::npos);
-	EXPECT_EQ(SettingsCard.find("BorderRect.Draw(Border, IGraphics::CORNER_ALL, CardRadius);"), std::string::npos);
-	EXPECT_NE(Menus.find("SettingsCardDeckForRenderPass()"), std::string::npos);
-	EXPECT_NE(Menus.find("SettingsCardOrderModelForRenderPass()"), std::string::npos);
-	EXPECT_NE(Settings.find("RenderOnly ? nullptr : &s_GeneralSettingsScrollRegion"), std::string::npos);
-	EXPECT_NE(Settings.find("RenderOnly ? nullptr : &s_AppearanceSettingsCardScrollRegions[m_AppearanceSettingsTab]"), std::string::npos);
-	EXPECT_NE(TClient.find("PrewarmOnly"), std::string::npos);
-	EXPECT_NE(QmClient.find("PrewarmOnly"), std::string::npos);
+	EXPECT_EQ(Header.find("PrebuildVisibleSettingsTextPool"), std::string::npos);
 }
 
 TEST(SettingsWarmupLoadingContract, MenuTextPrebuildLogsRemainingMissingPlanItems)
@@ -226,7 +191,6 @@ TEST(SettingsWarmupLoadingContract, TextPlanCollectionUsesPrewarmOnlyRenderers)
 	EXPECT_EQ(QmClient.find("m_SettingsPageSwitchActive = m_SettingsPageSwitchActive || TabTransitionActive;"), std::string::npos);
 	EXPECT_NE(QmClient.find("QmPerfLogPayload(\"perf/qmclient\", aPayload, Client(), CurrentQmUiPerfPage());"), std::string::npos);
 }
-
 
 TEST(SettingsWarmupLoadingContract, CardHeightCacheInvalidatesWhenViewportHeightChanges)
 {

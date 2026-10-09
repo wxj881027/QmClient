@@ -22,6 +22,12 @@ import time
 from collections.abc import Callable
 
 
+try:
+	from qmclient_scripts.integration.process_build import prepare_process_build
+except ModuleNotFoundError:
+	from process_build import prepare_process_build
+
+
 EXE_SUFFIX = ".exe" if os.name == "nt" else ""
 
 # 命名管道名/临时目录前缀。两个用途共用一个前缀，便于失败时辨认残留物归属。
@@ -174,7 +180,7 @@ class ProcessEnvironment:
 	"""一对 DDNet 客户端/服务端进程 + 独立临时工作目录。"""
 
 	def __init__(self, build_dir: Path, temp_prefix: str = DEFAULT_TEMP_PREFIX):
-		self._build_dir = build_dir.resolve()
+		self._build_dir = prepare_process_build(build_dir, ("game-client", "game-server"))
 		self._temp_prefix = temp_prefix
 		self._client_binary = self._build_dir / f"DDNet{EXE_SUFFIX}"
 		self._server_binary = self._build_dir / f"DDNet-Server{EXE_SUFFIX}"

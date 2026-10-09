@@ -806,8 +806,8 @@ Appearance
 Appearance and command highlighting of the local console
 == ローカルコンソールの外観とコマンドの強調表示
 
-Appearance of help bubbles outside settings cards
-== 設定カード外のヘルプ吹き出しの外観
+Appearance of help bubbles
+== ヘルプ吹き出しの外観
 
 Append to log file instead of overwriting
 == 上書きではなくログファイルに追記
@@ -1298,6 +1298,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Axiom 自動ログイン失敗、再試行中
 
+Axiom auto login skipped: no password
+== Axiom 自動ログイン：パスワード未入力のためスキップ
+
+Axiom auto login stopped after repeated failures
+== Axiom 自動ログインを停止：複数回失敗しました
+
 Axiom auto login succeeded
 == Axiom 自動ログイン成功
 
@@ -1309,6 +1315,9 @@ Axiom main account password
 
 Axiom score request failed
 == Axiom スコアの取得に失敗しました
+
+Axiom website
+== Axiom ウェブサイト
 
 Axis
 == 軸
@@ -9836,9 +9845,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == リプレイ一覧：未読み込み
 
-Replay list: up to date
-== リプレイ一覧：最新です
-
 Replays directory
 == リプレイフォルダ
 
@@ -11683,6 +11689,9 @@ Show teleporter tile outlines
 
 Show text entities
 == テキストエンティティを表示
+
+Show the chat scrollbar on the right
+== チャットのスクロールバーを右側に表示
 
 Show the cursor while free spectating
 == フリースペクテイト中にカーソルを表示
@@ -13721,6 +13730,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == 選択した %d 個のアイテムを削除できませんでした。最初に失敗したアイテムは「%s」です。
 
+Unable to delete skin
+== スキンを削除できません
+
 Unable to delete the demo '%s'
 == デモ「%s」を削除できませんでした
 
@@ -14104,9 +14116,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == ホバーした HUD モジュール上でマウスホイールを使用すると 5% 単位で拡大縮小します
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== メインとダミーそれぞれに、Axiom で登録したパスワードを入力してください。この設定ではアカウントは登録されません。
 
 Use the scoreboard cursor mode to scroll the list
 == リストをスクロールするにはスコアボードカーソルモードを使用してください
@@ -14980,6 +14989,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == あなたが最後の一人です！
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== アカウントはゲーム内の名前です。まず Axiom ウェブサイトで登録してください。メインとダミーの登録済みパスワードを入力してください。この設定ではアカウント登録は行われません。
 
 Your current race time is %s
 == 現在のレースタイムは %s です

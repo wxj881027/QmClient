@@ -1,262 +1,208 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch
 
-from qmclient_scripts.gate.check_settings_ui_migration import _contains_forbidden_token, _find_legacy_color_picker_geometry, _find_raw_font_literals, _find_rect_derived_font_arguments, _find_rect_derived_font_assignments, PAGE_STABLE_IDS, PRODUCER_COMPLETE_PAGES, audit_page, audit_shared_contracts
+from qmclient_scripts.gate.check_settings_ui_migration import (
+	CATALOG_PAGE_SOURCES, PAGE_CATALOGUE_LIST, PAGE_FUNCTIONS, PAGE_ROUTE_TABS,
+	PAGE_STABLE_IDS, _CATALOGUE_LIST_STATICS, _DEFAULT_SOURCE, _PAGE_SOURCE,
+	_contains_forbidden_token, _find_legacy_color_picker_geometry, _find_raw_font_literals,
+	_find_rect_derived_font_arguments, _find_rect_derived_font_assignments,
+	audit_catalog_build_contracts, audit_page, audit_shared_contracts,
+)
 
 
 class SettingsUiMigrationAuditTest(unittest.TestCase):
 	def setUp(self):
 		self.temp_dir = TemporaryDirectory()
+		self.addCleanup(self.temp_dir.cleanup)
 		self.root = Path(self.temp_dir.name)
 
-	def tearDown(self):
-		self.temp_dir.cleanup()
+	def write(self, relative, content):
+		path = self.root / relative
+		path.parent.mkdir(parents=True, exist_ok=True)
+		path.write_text(content, encoding="utf-8")
+		return path
 
-	def make_repo(self, *, drop: str = "", add: str = "") -> Path:
-		source = """void CMenus::RenderSettingsGeneral(CUIRect MainView)
-{
-    const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(MainView.w);
-    const SSettingsPageLayoutFrame Frame = SettingsPageLayout(MainView, 1.0f);
-    std::vector<SSettingsCardDefinition> vCards;
-    qm_card_catalog::BuildCards(CardBuild, qm_card_catalog::GeneralCardStableIds(), vCards);
-    CScrollRegion ScrollRegion;
-    CQmScrollState &Scroll = ScrollRegion.State();
-    QmResolveScrollPolicy(Request, 1.0f, 0.1f);
-    Request.m_Profile = EQmScrollProfile::SETTINGS_OUTER;
-    ui_widget::NumericField(Context);
-    const SSettingsCardDeckResult DeckResult = SettingsCardDeckForRenderPass().RenderCached(Context, Frame, "general", vCards, SettingsCardOrderModelForRenderPass(), &ScrollRegion, Input, SettingsCardMotionSpec(), 1);
-}
-"""
-		source = source.replace("\n}\n", f"\n    {add}\n}}\n", 1).replace(drop, "")
-		files = {
-			"src/game/client/components/menus_settings.cpp": source,
-			"src/game/client/components/menus.cpp": "",
-			"src/game/client/QmUi/QmCardRegistry.cpp": "\n".join(PAGE_STABLE_IDS["general"]),
-			"src/game/client/components/qmclient/menus_qmclient.cpp": """static constexpr SQmGlobalSearchTabRoute s_aGlobalSearchTabRoutes[] = {
-    {"general", CMenus::SETTINGS_GENERAL},
-};
-SQmGlobalSearchNavigation ResolveGlobalSearchNavigation(const SQmGlobalSearchCard &Card)
-{
-    return {};
-}
-""",
-		}
-		entries = ", ".join(f'"{stable_id}"' for stable_id in PAGE_STABLE_IDS["general"])
-		files["src/game/client/QmUi/cards/QmCardCatalogIds.cpp"] = f"s_vGeneralCards = {{{entries}}};"
-		files["src/game/client/components/menus.cpp"] += """
-bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
-{
-    if(str_comp(pTab, "general") == 0)
-        return true;
-    return false;
-}
-"""
-		for relative, content in files.items():
-			path = self.root / relative
-			path.parent.mkdir(parents=True, exist_ok=True)
-			path.write_text(content, encoding="utf-8")
+	def replace(self, relative, before, after):
+		path = self.root / relative
+		source = path.read_text(encoding="utf-8")
+		self.assertIn(before, source)
+		path.write_text(source.replace(before, after), encoding="utf-8")
+
+	def make_page(self, page):
+		# 这些是校验器的最小输入，不复制 UI 算法或声称验证 C++ 运行时行为。
+		tabs = PAGE_ROUTE_TABS[page]
+		if page in CATALOG_PAGE_SOURCES:
+			if len(tabs) > 1:
+				body = 'const char *s_apTabs[] = {' + ', '.join(f'"{tab}"' for tab in tabs) + '};\nRenderSettingsCatalogPage(MainView, s_apTabs[Index]);'
+			else:
+				body = f'RenderSettingsCatalogPage(MainView, "{tabs[0]}");'
+			self.write("src/game/client/QmUi/cards/" + CATALOG_PAGE_SOURCES[page], "// 独立编译单元\n")
+		elif page in PAGE_CATALOGUE_LIST:
+			list_name = PAGE_CATALOGUE_LIST[page]
+			body = f"qm_card_catalog::BuildCards(Ctx, qm_card_catalog::{list_name}(), Cards);"
+			static = _CATALOGUE_LIST_STATICS[list_name]
+			ids = ', '.join(f'"{stable_id}"' for stable_id in PAGE_STABLE_IDS[page])
+			self.write("src/game/client/QmUi/cards/QmCardCatalogIds.cpp", f"const auto {static} = {{{ids}}};\nconst auto &{list_name}() {{ return {static}; }}")
+		else:
+			body = ""
+		source = "\n".join(f"void {symbol if '(' in symbol else symbol + '()'} {{ {body} }}" for symbol in PAGE_FUNCTIONS[page])
+		self.write(_PAGE_SOURCE.get(page, _DEFAULT_SOURCE), source)
+		entries = ',\n'.join(f'{{"{stable_id}", "{tabs[0] if tabs else "search"}", ECardColumn::Left, 0}}' for stable_id in PAGE_STABLE_IDS[page])
+		self.write("src/game/client/QmUi/QmCardRegistry.cpp", "std::vector<SCardDefault> Cards = {" + entries + "};")
+		routes = "\n".join(f'if(str_comp(pTab, "{tab}") == 0) return true;' for tab in tabs)
+		self.write("src/game/client/components/menus.cpp", "bool CMenus::SetSettingsPageFromCardTab(const char *pTab) {" + routes + "return false;}")
 		return self.root
 
-	def make_warlist_repo(self, *, drop: str = "", add: str = "", registry_add: str = "") -> Path:
-		source = """void CMenus::RenderSettingsTClientWarList(CUIRect MainView, bool PrewarmOnly)
-{
-    ApplyTClientContentMetrics(MainView.w);
-    const SSettingsPageLayoutFrame Frame = SettingsPageLayout(MainView, 1.0f);
-    std::vector<SSettingsCardDefinition> vCards;
-    SSettingsCardDefinition Card;
-    Card.m_Spec = {"deck:tclient-warlist", "War List", nullptr};
-    vCards.push_back(std::move(Card));
-    SSettingsCardDeckResult Result;
-    QmResolveScrollPolicy(Request, 1.0f, 0.1f);
-    Request.m_Profile = EQmScrollProfile::SETTINGS_OUTER;
-    Result = CardDeck.RenderCached(Context, Frame, "tclient-warlist", vCards, Model, &ScrollRegion, Input, Motion, 1);
-}
-"""
-		source = source.replace("\n}\n", f"\n    {add}\n}}\n", 1).replace(drop, "")
-		files = {
-			"src/game/client/components/tclient/menus_tclient.cpp": source,
-			"src/game/client/QmUi/QmCardRegistry.cpp": '"deck:tclient-warlist"\n' + registry_add,
-			"src/game/client/components/menus.cpp": """bool CMenus::SetSettingsPageFromCardTab(const char *pTab)
-{
-    return str_comp(pTab, "tclient-warlist") == 0;
-}
-""",
-		}
-		for relative, content in files.items():
-			path = self.root / relative
-			path.parent.mkdir(parents=True, exist_ok=True)
-			path.write_text(content, encoding="utf-8")
-		return self.root
+	def test_every_manifest_page_accepts_its_current_structural_boundary(self):
+		for page in PAGE_STABLE_IDS:
+			with self.subTest(page=page):
+				self.assertEqual(audit_page(self.make_page(page), page), [])
 
-	def make_shared_contract_repo(self) -> Path:
-		files = {
-			"src/game/client/components/menus.cpp": "ResolveSettingsRadioRowLayout(); CurrentSettingsContentMetrics().m_BodySize; float RowHeight, float RowSpacing, float BodySize;",
-			"src/game/client/components/menus_settings.cpp": "Ui()->SetDropDownFontSize(m_SettingsContentMetrics.m_BodySize);",
-			"src/game/client/components/qmclient/menus_qmclient.cpp": "",
-			"src/game/client/components/tclient/menus_tclient.cpp": "VMargin, 0.0f, FontSize",
-			"src/game/client/ui.cpp": "",
-			"src/game/client/ui_popups.cpp": "Props.m_FontSize = ResolvedFontSize; State.m_SelectionPopupContext.m_FontSize = ResolvedFontSize;",
-		}
-		for relative, content in files.items():
-			path = self.root / relative
-			path.parent.mkdir(parents=True, exist_ok=True)
-			path.write_text(content, encoding="utf-8")
-		return self.root
+	def test_thin_tee7_entry_does_not_need_moved_render_helpers(self):
+		self.assertEqual(audit_page(self.make_page("tee7"), "tee7"), [])
 
-	def test_clean_page_passes(self):
-		self.assertEqual(audit_page(self.make_repo(), "general"), [])
+	def test_render_body_details_are_not_positive_runtime_contracts(self):
+		root = self.make_page("graphics")
+		self.assertEqual(audit_page(root, "graphics"), [])
+		self.write("src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp", "void AnyImplementation() {}")
+		self.assertEqual(audit_page(root, "graphics"), [])
 
-	def test_general_missing_category_producer_is_rejected(self):
-		errors = audit_page(self.make_repo(drop="qm_card_catalog::GeneralCardStableIds()"), "general")
-		self.assertTrue(any("GeneralCardStableIds(): page producer entry missing" in item for item in errors))
+	def test_missing_entry_definition_is_rejected(self):
+		self.make_page("tee7")
+		self.write(_PAGE_SOURCE["tee7"], "void CMenus::RenderSettingsTee7(CUIRect MainView);\nvoid Other() {}")
+		self.assertTrue(any("entry definition missing" in error for error in audit_page(self.root, "tee7")))
 
-	def test_general_missing_category_card_is_rejected(self):
-		root = self.make_repo()
-		catalogue = root / "src/game/client/QmUi/cards/QmCardCatalogIds.cpp"
-		missing_id = PAGE_STABLE_IDS["general"][-1]
-		catalogue.write_text(catalogue.read_text(encoding="utf-8").replace(f'"{missing_id}"', ""), encoding="utf-8")
-		errors = audit_page(root, "general")
-		self.assertIn(f"general: {missing_id}: catalogue category entry missing", errors)
+	def test_comment_cannot_supply_page_definition(self):
+		self.make_page("graphics")
+		self.write(_DEFAULT_SOURCE, '// void CMenus::RenderSettingsGraphics() { RenderSettingsCatalogPage(MainView, "graphics"); }')
+		self.assertTrue(any("entry definition missing" in error for error in audit_page(self.root, "graphics")))
 
-	def test_sdf_backed_edit_box_requires_the_explicit_tee_allowlist(self):
+	def test_missing_delegation_is_rejected(self):
+		self.make_page("graphics")
+		self.replace(_DEFAULT_SOURCE, 'RenderSettingsCatalogPage(MainView, "graphics");', '// RenderSettingsCatalogPage(MainView, "graphics");\n')
+		self.assertTrue(any("delegation missing" in error for error in audit_page(self.root, "graphics")))
+
+	def test_unrelated_tab_literal_cannot_hide_wrong_delegate_route(self):
+		self.make_page("graphics")
+		self.replace(_DEFAULT_SOURCE, 'RenderSettingsCatalogPage(MainView, "graphics");', 'const char *pUnrelated = "graphics"; RenderSettingsCatalogPage(MainView, "sound");')
+		self.assertTrue(any("catalog page route missing" in error for error in audit_page(self.root, "graphics")))
+
+	def test_appearance_requires_all_delegated_subtabs(self):
+		self.make_page("appearance")
+		self.replace(_DEFAULT_SOURCE, '"appearance-chat"', '"unrelated"')
+		self.assertTrue(any("appearance-chat: catalog page route missing" in error for error in audit_page(self.root, "appearance")))
+
+	def test_missing_producer_file_is_rejected(self):
+		self.make_page("player")
+		self.write("src/game/client/QmUi/cards/QmCardCatalogPlayer.cpp", "")
+		self.assertTrue(any("producer source missing" in error for error in audit_page(self.root, "player")))
+
+	def test_registry_card_must_belong_to_its_catalog_page(self):
+		self.make_page("sound")
+		self.replace("src/game/client/QmUi/QmCardRegistry.cpp", '"sound"', '"graphics"')
+		self.assertTrue(any("category mismatch" in error for error in audit_page(self.root, "sound")))
+
+	def test_missing_registry_card_is_rejected_and_restoring_it_recovers(self):
+		self.make_page("player")
+		path = self.root / "src/game/client/QmUi/QmCardRegistry.cpp"
+		original = path.read_text(encoding="utf-8")
+		self.replace(path.relative_to(self.root), '"deck:player-country"', '"unrelated"')
+		self.assertTrue(any("deck:player-country: registry entry missing" in error for error in audit_page(self.root, "player")))
+		path.write_text(original, encoding="utf-8")
+		self.assertEqual(audit_page(self.root, "player"), [])
+
+	def test_duplicate_registry_card_is_rejected(self):
+		self.make_page("player")
+		self.replace("src/game/client/QmUi/QmCardRegistry.cpp", 'Cards = {', 'Cards = {{"deck:player-country", "player", 0},')
+		self.assertTrue(any("deck:player-country: registry entry missing or duplicated" in error for error in audit_page(self.root, "player")))
+
+	def test_comment_and_unrelated_string_are_not_registry_entries(self):
+		self.make_page("player")
+		self.write("src/game/client/QmUi/QmCardRegistry.cpp", '// Cards = {{"deck:player-identity", "player", 0}};\nconst char *pText = "deck:player-country";')
+		self.assertTrue(any("registry entry missing" in error for error in audit_page(self.root, "player")))
+
+	def test_explicit_category_requires_its_accessor_and_card(self):
+		self.make_page("qmclient_visual")
+		self.replace("src/game/client/QmUi/cards/QmCardCatalogIds.cpp", '"qm:skin_transition"', '"unrelated"')
+		self.assertTrue(any("qm:skin_transition: catalogue category entry missing" in error for error in audit_page(self.root, "qmclient_visual")))
+
+	def test_explicit_category_accessor_cannot_return_another_list(self):
+		self.make_page("general")
+		self.replace("src/game/client/QmUi/cards/QmCardCatalogIds.cpp", "return s_vGeneralCards;", "return s_vOtherCards;")
+		self.assertTrue(any("catalogue category entry missing" in error for error in audit_page(self.root, "general")))
+
+	def test_duplicate_explicit_category_card_is_rejected(self):
+		self.make_page("general")
+		self.replace("src/game/client/QmUi/cards/QmCardCatalogIds.cpp", '"deck:general-game"', '"deck:general-game", "deck:general-game"')
+		self.assertTrue(any("catalogue category entry missing or duplicated" in error for error in audit_page(self.root, "general")))
+
+	def test_missing_explicit_category_delegation_is_rejected(self):
+		self.make_page("controls")
+		self.replace(_PAGE_SOURCE["controls"], "qm_card_catalog::ControlsCardStableIds()", "OtherCards()")
+		self.assertTrue(any("category delegation missing" in error for error in audit_page(self.root, "controls")))
+
+	def test_warlist_single_registry_card_is_the_migration_terminal_state(self):
+		self.assertEqual(audit_page(self.make_page("tclient_warlist"), "tclient_warlist"), [])
+		self.replace("src/game/client/QmUi/QmCardRegistry.cpp", 'Cards = {', 'Cards = {{"deck:tclient-warlist-editor", "tclient-warlist", 0},')
+		self.assertTrue(any("legacy registry" in error for error in audit_page(self.root, "tclient_warlist")))
+
+	def test_route_literal_outside_navigation_function_cannot_supply_route(self):
+		self.make_page("general")
+		self.write("src/game/client/components/menus.cpp", 'const char *pText = "general";')
+		self.assertTrue(any("registry/navigation entry missing" in error for error in audit_page(self.root, "general")))
+
+	def test_legacy_card_entry_is_rejected(self):
+		self.make_page("general")
+		self.replace(_DEFAULT_SOURCE, "qm_card_catalog::BuildCards", "BeginSettingsCardDeck(); qm_card_catalog::BuildCards")
+		self.assertTrue(any("legacy path remains" in error for error in audit_page(self.root, "general")))
+
+	def test_existing_tee_sdf_exception_is_not_expanded(self):
 		allowed = "Ui()->DoEditBox(&ColorCodeInput, &ColorCodeEditBox, std::max(10.0f, BodySize * 0.85f), IGraphics::CORNER_ALL, {}, TEXTALIGN_MC)"
 		self.assertFalse(_contains_forbidden_token("tee", allowed, "Ui()->DoEditBox("))
-		self.assertTrue(_contains_forbidden_token("tee", "Ui()->DoEditBox(&OtherInput, &OtherRect, 10.0f)", "Ui()->DoEditBox("))
-		self.assertTrue(_contains_forbidden_token("general", allowed, "Ui()->DoEditBox("))
+		self.assertTrue(_contains_forbidden_token("tee", allowed + "; Ui()->DoEditBox(&Other);", "Ui()->DoEditBox("))
 
-	def test_missing_public_contract_fails(self):
-		errors = audit_page(self.make_repo(drop="SettingsCardDeckForRenderPass().RenderCached("), "general")
-		self.assertTrue(any("SettingsCardDeckForRenderPass().RenderCached" in item for item in errors))
+	def make_build_contract(self):
+		names = {"QmCardCatalog.cpp", "QmCardCatalogIds.cpp", "QmCardCatalogStandard.cpp", "QmCardCatalogTClient.cpp", "QmCardRenderBridge.cpp", "QmCardCatalogControls.cpp", *CATALOG_PAGE_SOURCES.values()}
+		for name in names:
+			self.write("src/game/client/QmUi/cards/" + name, "// 编译单元\n")
+		self.write("CMakeLists.txt", "set(CLIENT_SRC\n" + "\n".join("QmUi/cards/" + name for name in sorted(names)) + "\n)")
 
-	def test_tee7_requires_render_pass_isolated_deck(self):
-		from qmclient_scripts.gate.check_settings_ui_migration import PAGE_REQUIRED
+	def test_catalog_sources_require_cmake_registration_and_recover(self):
+		self.make_build_contract()
+		self.assertEqual(audit_catalog_build_contracts(self.root), [])
+		self.replace("CMakeLists.txt", "QmUi/cards/QmCardCatalogPlayer.cpp", "# QmUi/cards/QmCardCatalogPlayer.cpp")
+		self.assertIn("catalog: QmCardCatalogPlayer.cpp: CMake registration missing", audit_catalog_build_contracts(self.root))
+		self.replace("CMakeLists.txt", "# QmUi/cards/QmCardCatalogPlayer.cpp", "QmUi/cards/QmCardCatalogPlayer.cpp")
+		self.assertEqual(audit_catalog_build_contracts(self.root), [])
 
-		self.assertIn("SettingsCardDeckForRenderPass().RenderCached(", PAGE_REQUIRED["tee7"])
-		self.assertNotIn("m_SettingsCardDeck.RenderCached(", PAGE_REQUIRED["tee7"])
+	def test_cmake_entry_without_source_is_rejected(self):
+		self.make_build_contract()
+		self.replace("CMakeLists.txt", "set(CLIENT_SRC", "set(CLIENT_SRC\nQmUi/cards/Removed.cpp")
+		self.assertIn("catalog: Removed.cpp: source missing", audit_catalog_build_contracts(self.root))
 
-	def test_tee_page_validates_delegated_cards_in_its_catalogue(self):
-		self.make_repo(add="ResolveSettingsCardDefinitionsRevision(); qm_card_catalog::TeeCardStableIds();")
-		page = self.root / "src/game/client/components/menus_settings.cpp"
-		source = page.read_text(encoding="utf-8").replace("RenderSettingsGeneral", "RenderSettingsTee").replace("ui_widget::NumericField(Context);", "")
-		page.write_text(source, encoding="utf-8")
-		registry = self.root / "src/game/client/QmUi/QmCardRegistry.cpp"
-		registry.write_text("\n".join(PAGE_STABLE_IDS["tee"]), encoding="utf-8")
-		navigation = self.root / "src/game/client/components/menus.cpp"
-		navigation.write_text(navigation.read_text(encoding="utf-8").replace('"general"', '"tee"'), encoding="utf-8")
-		catalogue = self.root / "src/game/client/QmUi/cards/QmCardCatalogIds.cpp"
-		catalogue.parent.mkdir(parents=True, exist_ok=True)
-		entries = ", ".join(f'"{stable_id}"' for stable_id in PAGE_STABLE_IDS["tee"])
-		catalogue.write_text(f"s_vTeeCards = {{{entries}}};", encoding="utf-8")
-		self.assertEqual(audit_page(self.root, "tee"), [])
-		catalogue.write_text('s_vTeeCards = {"qm:other"};', encoding="utf-8")
-		self.assertTrue(any("catalogue category entry missing" in error for error in audit_page(self.root, "tee")))
+	def test_new_catalog_unit_cannot_remain_unregistered(self):
+		self.make_build_contract()
+		self.write("src/game/client/QmUi/cards/NewCard.cpp", "void NewCard() {}")
+		self.assertIn("catalog: NewCard.cpp: CMake registration missing", audit_catalog_build_contracts(self.root))
 
-	def test_manifest_covers_every_new_settings_page(self):
-		self.assertTrue(
-			{
-				"general",
-				"player",
-				"tee",
-				"tee7",
-				"graphics",
-				"sound",
-				"ddnet",
-				"appearance",
-				"controls",
-				"qmclient_hud",
-				"qmclient_function",
-				"qmclient_visual",
-				"contributors",
-				"global_search",
-				"tclient",
-				"tclient_bind_wheel",
-				"tclient_chat_binds",
-				"tclient_warlist",
-				"tclient_status_bar",
-				"tclient_profiles",
-				"tclient_configs",
-				"assets",
-			}.issubset(PAGE_STABLE_IDS)
-		)
-		self.assertIn("qm:dummy_miniview", PAGE_STABLE_IDS["qmclient_hud"])
-		self.assertIn("qm:lyrics", PAGE_STABLE_IDS["qmclient_hud"])
-		self.assertIn("qm:bind_status_hud", PAGE_STABLE_IDS["qmclient_hud"])
-		self.assertIn("qm:emoticons", PAGE_STABLE_IDS["qmclient_function"])
-		self.assertIn("qm:map_upload", PAGE_STABLE_IDS["qmclient_function"])
-		self.assertIn("qm:solo_split", PAGE_STABLE_IDS["qmclient_function"])
-		self.assertIn("qm:favorite_maps", PAGE_STABLE_IDS["qmclient_function"])
-		self.assertIn("qm:skin_appearance", PAGE_STABLE_IDS["tee"])
-		self.assertNotIn("qm:skin_appearance", PAGE_STABLE_IDS["qmclient_visual"])
-		self.assertIn("qm:skin_transition", PAGE_STABLE_IDS["qmclient_visual"])
-		self.assertTrue({"appearance", "qmclient_hud", "qmclient_function", "qmclient_visual", "contributors", "tclient_configs", "tclient_warlist"}.issubset(PRODUCER_COMPLETE_PAGES))
+	def test_moved_producer_cannot_reintroduce_legacy_card_api(self):
+		self.make_page("graphics")
+		self.write("src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp", "void Build() { BeginSettingsCardDeck(); }")
+		self.assertTrue(any("legacy path remains" in error for error in audit_page(self.root, "graphics")))
 
-	def test_visual_page_requires_its_catalogue_call_and_own_category_entry(self):
-		page = self.root / "src/game/client/components/qmclient/menus_qmclient.cpp"
-		page.parent.mkdir(parents=True, exist_ok=True)
-		page.write_text("""void CMenus::RenderSettingsQmClientVisualDeck()
-{
-    SettingsPageLayout(MainView, 1.0f);
-    SSettingsPageLayoutFrame Frame;
-    SSettingsCardDefinition Card;
-    QmResolveScrollPolicy(Request, 1.0f, 0.1f);
-    EQmScrollProfile::SETTINGS_OUTER;
-    SSettingsCardDeckResult Result;
-    ResolveSettingsContentMetrics(MainView.w);
-    CardDeck.RenderCached(Context);
-    ResolveSettingsCardDefinitionsRevision();
-    qm_card_catalog::VisualCardStableIds();
-}
-""", encoding="utf-8")
-		registry = self.root / "src/game/client/QmUi/QmCardRegistry.cpp"
-		registry.parent.mkdir(parents=True, exist_ok=True)
-		registry.write_text('"qm:skin_appearance"', encoding="utf-8")
-		navigation = self.root / "src/game/client/components/menus.cpp"
-		navigation.parent.mkdir(parents=True, exist_ok=True)
-		navigation.write_text('bool CMenus::SetSettingsPageFromCardTab(const char *pTab) { return str_comp(pTab, "visual") == 0; }', encoding="utf-8")
-		catalogue = self.root / "src/game/client/QmUi/cards/QmCardCatalogIds.cpp"
-		catalogue.parent.mkdir(parents=True, exist_ok=True)
-		catalogue.write_text('s_vHudCards = {"qm:skin_appearance"};\ns_vVisualCards = {"qm:skin_appearance"};', encoding="utf-8")
-		with patch.dict(PAGE_STABLE_IDS, {"qmclient_visual": ("qm:skin_appearance",)}):
-			self.assertEqual(audit_page(self.root, "qmclient_visual"), [])
-			page.write_text(page.read_text(encoding="utf-8").replace("qm_card_catalog::VisualCardStableIds();", ""), encoding="utf-8")
-			self.assertTrue(any("page producer entry missing" in error for error in audit_page(self.root, "qmclient_visual")))
-			page.write_text(page.read_text(encoding="utf-8").replace("ResolveSettingsCardDefinitionsRevision();", "ResolveSettingsCardDefinitionsRevision();\n    qm_card_catalog::VisualCardStableIds();"), encoding="utf-8")
-			catalogue.write_text('s_vHudCards = {"qm:skin_appearance"};\ns_vVisualCards = {"qm:other"};', encoding="utf-8")
-			self.assertTrue(any("catalogue category entry missing" in error for error in audit_page(self.root, "qmclient_visual")))
+	def test_documented_legacy_api_is_not_an_active_call(self):
+		self.make_page("graphics")
+		self.write("src/game/client/QmUi/cards/QmCardCatalogGraphics.cpp", '// BeginSettingsCardDeck();\nconst char *pDoc = "BeginSettingsCardDeck()";')
+		self.assertEqual(audit_page(self.root, "graphics"), [])
 
-	def test_warlist_single_card_contract_passes(self):
-		self.assertEqual(audit_page(self.make_warlist_repo(), "tclient_warlist"), [])
+	def test_catalog_builder_name_is_not_the_removed_settings_card_api(self):
+		self.assertFalse(_contains_forbidden_token("controls", "Controls.BuildSettingsCard(Ctx, Id, Out);", "SettingsCard("))
+		self.assertTrue(_contains_forbidden_token("controls", "SettingsCard(Ctx);", "SettingsCard("))
 
-	def test_warlist_missing_producer_card_fails(self):
-		errors = audit_page(
-			self.make_warlist_repo(
-				drop='Card.m_Spec = {"deck:tclient-warlist", "War List", nullptr};',
-				add='str_startswith(FocusStableId, "deck:tclient-warlist");',
-			),
-			"tclient_warlist",
-		)
-		self.assertTrue(any("page producer" in item for item in errors))
-
-	def test_warlist_legacy_split_card_fails(self):
-		errors = audit_page(self.make_warlist_repo(add='Card.m_Spec = {"deck:tclient-warlist-editor", "Edit Entry", nullptr};'), "tclient_warlist")
-		self.assertTrue(any("deck:tclient-warlist-editor" in item and "legacy path" in item for item in errors))
-
-	def test_warlist_legacy_split_card_in_registry_fails(self):
-		errors = audit_page(
-			self.make_warlist_repo(registry_add='"deck:tclient-warlist-editor"'),
-			"tclient_warlist",
-		)
-		self.assertTrue(any("deck:tclient-warlist-editor" in item and "legacy registry" in item for item in errors))
-
-	def test_missing_outer_scroll_profile_fails(self):
-		errors = audit_page(self.make_repo(drop="Request.m_Profile = EQmScrollProfile::SETTINGS_OUTER;"), "general")
-		self.assertTrue(any("SETTINGS_OUTER" in item for item in errors))
-
-	def test_missing_content_metrics_fails(self):
-		errors = audit_page(self.make_repo(drop="ResolveSettingsContentMetrics("), "general")
-		self.assertTrue(any("ResolveSettingsContentMetrics" in item for item in errors))
+	def test_unknown_page_is_rejected(self):
+		with self.assertRaises(ValueError):
+			audit_page(self.root, "unknown")
 
 	def test_scalar_color_picker_call_is_rejected(self):
 		self.assertEqual(_find_legacy_color_picker_geometry("DoLine_ColorPicker(&Reset, LineHeight, BodySize, LineSpacing, &View, Text, &Color, Default);"), [(1, "LineHeight")])
@@ -370,33 +316,13 @@ Clean.m_FontSize = Metrics.m_BodySize;
 	def test_rect_derived_font_assignment_ignores_comparisons(self):
 		self.assertEqual(_find_rect_derived_font_assignments("Props.m_FontSize == Rect.h;"), [])
 
-	def test_shared_contract_audit_rejects_numeric_and_dropdown_font_bypasses(self):
-		root = self.make_shared_contract_repo()
-		self.assertEqual(audit_shared_contracts(root), [])
-		qmclient = root / "src/game/client/components/qmclient/menus_qmclient.cpp"
-		qmclient.write_text("Options.m_FontSize = std::min(BodySize, ControlColumn.h * 0.8f);", encoding="utf-8")
-		self.assertTrue(any("settings font assignment still derives" in item for item in audit_shared_contracts(root)))
-		qmclient.write_text("", encoding="utf-8")
-		ui = root / "src/game/client/ui_popups.cpp"
-		ui.write_text("Props.m_FontSize = ResolvedFontSize;", encoding="utf-8")
-		self.assertTrue(any("dropdown trigger and popup" in item for item in audit_shared_contracts(root)))
-
-	def test_legacy_path_fails(self):
-		errors = audit_page(self.make_repo(add="DoSettingsScrollbarOption("), "general")
-		self.assertTrue(any("DoSettingsScrollbarOption" in item for item in errors))
-
-	def test_missing_registry_or_navigation_fails(self):
-		root = self.make_repo()
-		(root / "src/game/client/QmUi/QmCardRegistry.cpp").write_text("", encoding="utf-8")
-		errors = audit_page(root, "general")
-		self.assertTrue(any("registry/navigation" in item for item in errors))
-
-	def test_route_name_outside_explicit_navigation_contract_fails(self):
-		root = self.make_repo()
-		navigation = root / "src/game/client/components/menus.cpp"
-		navigation.write_text('const char *pUnrelated = "general";', encoding="utf-8")
-		errors = audit_page(root, "general")
-		self.assertTrue(any("general: general: registry/navigation entry missing" in item for item in errors))
+	def test_shared_contract_rejects_legacy_api_but_not_font_propagation_details(self):
+		self.assertEqual(audit_shared_contracts(self.root), [])
+		self.write("src/game/client/components/qmclient/menus_qmclient.cpp", "Ui()->DoDropDown();")
+		self.assertTrue(any("dropdown bypasses" in error for error in audit_shared_contracts(self.root)))
+		self.write("src/game/client/components/qmclient/menus_qmclient.cpp", "")
+		self.write("src/game/client/ui_popups.cpp", "void ArbitraryPopupImplementation() {}")
+		self.assertEqual(audit_shared_contracts(self.root), [])
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@
 #include <game/client/QmUi/SettingsCardDeckLogic.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/cards/QmCardCatalogSkinMetrics.h>
+#include <game/client/QmUi/cards/QmConsoleSettingsLayout.h>
 #include <game/client/ui.h>
 
 #include <gtest/gtest.h>
@@ -334,4 +335,98 @@ TEST(SettingsPageLayout, GpuControlsRecoverAcrossAdapterAndBackendChanges)
 	EXPECT_EQ(Control.RowCount(), 1);
 	Control = ResolveSettingsGpuControl(0, false, true);
 	EXPECT_EQ(Control.RowCount(), 0);
+}
+
+TEST(QmConsoleSettingsPanelLayout, PresetFitsContentAndCustomExpandsWithinScreen)
+{
+	const CUIRect Screen = {20.0f, 10.0f, 1000.0f, 1000.0f};
+	const auto Preset = QmConsoleSettingsLayout::PanelRect(Screen, false, 10);
+	const auto Custom = QmConsoleSettingsLayout::PanelRect(Screen, true, 10);
+	EXPECT_GT(Custom.h, Preset.h);
+	EXPECT_FLOAT_EQ(Custom.w, Preset.w);
+	EXPECT_LT(Preset.w, Screen.w * 0.5f);
+	EXPECT_FLOAT_EQ(Preset.x + Preset.w * 0.5f, Screen.x + Screen.w * 0.5f);
+	EXPECT_FLOAT_EQ(Custom.y + Custom.h * 0.5f, Screen.y + Screen.h * 0.5f);
+}
+
+TEST(QmConsoleSettingsPanelLayout, SmallScreensConstrainCustomContentForScrolling)
+{
+	for(const CUIRect Screen : {CUIRect{0, 0, 320, 200}, CUIRect{10, 20, 640, 360}})
+	{
+		SCOPED_TRACE(Screen.w);
+		const auto Panel = QmConsoleSettingsLayout::PanelRect(Screen, true, 24);
+		EXPECT_LE(Panel.w, Screen.w);
+		EXPECT_LE(Panel.h, Screen.h);
+		EXPECT_GE(Panel.x, Screen.x);
+		EXPECT_GE(Panel.y, Screen.y);
+		const auto Metrics = ResolveSettingsContentMetrics(Panel.w);
+		EXPECT_GT(QmConsoleSettingsLayout::ContentHeight(Metrics, true, 24), Panel.h);
+	}
+}
+
+TEST(QmConsoleSettingsPanelLayout, LargerPreviewFontExpandsPanelAndResetRestoresSize)
+{
+	const CUIRect Screen = {0, 0, 1000, 1000};
+	const auto Initial = QmConsoleSettingsLayout::PanelRect(Screen, false, 10);
+	const auto Enlarged = QmConsoleSettingsLayout::PanelRect(Screen, false, 24);
+	const auto Restored = QmConsoleSettingsLayout::PanelRect(Screen, false, 10);
+	EXPECT_GT(Enlarged.h, Initial.h);
+	EXPECT_FLOAT_EQ(Restored.h, Initial.h);
+}
+
+TEST(QmConsoleSettingsPanelLayout, EmptyViewportNeverProducesNegativeGeometry)
+{
+	const auto Panel = QmConsoleSettingsLayout::PanelRect({10, 20, 0, 0}, true, 24);
+	EXPECT_FLOAT_EQ(Panel.w, 0.0f);
+	EXPECT_FLOAT_EQ(Panel.h, 0.0f);
+}
+
+TEST(QmConsoleSettingsPanelLayout, ActivePopupWheelOwnerWinsAndConsumesOnlyOnce)
+{
+	CScrollWheelOwnership Ownership;
+	int Page = 0;
+	int Popup = 0;
+	Ownership.BeginFrame(1, 1.0f, false);
+	Ownership.Register(&Page, EUiWheelOwnerPriority::PAGE, true);
+	Ownership.Register(&Popup, EUiWheelOwnerPriority::POPUP, true);
+	float Delta = 0.0f;
+	EXPECT_FALSE(Ownership.TryConsume(&Page, &Delta));
+	EXPECT_TRUE(Ownership.TryConsume(&Popup, &Delta));
+	EXPECT_FLOAT_EQ(Delta, 1.0f);
+	EXPECT_FALSE(Ownership.TryConsume(&Popup, &Delta));
+	Ownership.BeginFrame(2, -1.0f, false);
+	Ownership.Register(&Popup, EUiWheelOwnerPriority::POPUP, false);
+	EXPECT_FALSE(Ownership.TryConsume(&Popup, &Delta));
+	Ownership.BeginFrame(3, -1.0f, false);
+	Ownership.Register(&Popup, EUiWheelOwnerPriority::POPUP, true);
+	EXPECT_TRUE(Ownership.TryConsume(&Popup, &Delta));
+	EXPECT_FLOAT_EQ(Delta, -1.0f);
+}
+
+TEST(QmConsoleSettingsPanelLayout, CustomColorRowsConsumeButtonHeightWithoutTrailingGap)
+{
+	for(float Width : {160.0f, 320.0f, 440.0f})
+	{
+		SCOPED_TRACE(Width);
+		const auto Metrics = ResolveSettingsContentMetrics(Width);
+		const auto Row = ResolveSettingsColorRowLayout({0, 0, Width, 1000}, Metrics, false, false);
+		EXPECT_FLOAT_EQ(Row.m_ConsumedHeight, Metrics.m_ButtonHeight);
+		EXPECT_FLOAT_EQ(QmConsoleSettingsLayout::ContentHeight(Metrics, true, 10) -
+					QmConsoleSettingsLayout::ContentHeight(Metrics, false, 10),
+			9.0f * Row.m_ConsumedHeight);
+	}
+}
+
+TEST(SettingsPageLayout, LegacyRnnoiseModeDoesNotReserveFallbackRows)
+{
+	for(const float Width : {420.0f, 700.0f, 1000.0f})
+	{
+		SCOPED_TRACE(Width);
+		const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(Width);
+		const float DisabledHeight = ResolveQmHudVoiceHeight(Metrics, true, true, true, 0, true, true);
+		EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, true, true, true, 2, true, true), DisabledHeight);
+		EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, true, true, true, -1, true, true), DisabledHeight);
+		EXPECT_FLOAT_EQ(ResolveQmHudVoiceHeight(Metrics, true, true, true, 99, true, true), DisabledHeight);
+		EXPECT_GT(ResolveQmHudVoiceHeight(Metrics, true, true, true, 1, true, true), DisabledHeight);
+	}
 }

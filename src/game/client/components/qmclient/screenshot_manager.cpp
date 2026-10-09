@@ -19,9 +19,9 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cctype>
 #include <cerrno>
 #include <cstdio>
-#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -712,7 +712,11 @@ bool CQmScreenshotManager::SavePngAtomically(const std::string &TargetPath, cons
 	{
 		const std::string &m_Path;
 		bool m_Active = true;
-		~STempCleanup() { if(m_Active) fs_remove(m_Path.c_str()); }
+		~STempCleanup()
+		{
+			if(m_Active)
+				fs_remove(m_Path.c_str());
+		}
 	} Cleanup{TempPath};
 	std::unique_ptr<FILE, decltype(&std::fclose)> File(pFile, std::fclose);
 	const bool Wrote = std::fwrite(Writer.Data(), 1, Writer.Size(), File.get()) == Writer.Size();

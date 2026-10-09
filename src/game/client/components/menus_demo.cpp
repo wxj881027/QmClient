@@ -26,8 +26,8 @@
 
 #include <generated/client_data.h>
 
-#include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/console.h>
 #include <game/client/gameclient.h>

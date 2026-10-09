@@ -2,8 +2,6 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "voting.h"
 
-#include <game/client/QmUi/UiButtons.h>
-
 #include <base/system.h>
 
 #include <engine/shared/config.h>
@@ -11,6 +9,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/voting_hud.h>

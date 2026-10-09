@@ -4,6 +4,8 @@
 
 #include <base/str.h>
 
+#include <game/client/QmUi/QmLineInputMotion.h>
+
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -69,10 +71,24 @@ public:
 		m_ScrollRemainder = 0.0f;
 	}
 
+	CPosition CursorPosition() const { return m_Cursor; }
 	bool IsDragging() const { return m_Dragging; }
 	bool HasSelection() const
 	{
 		return m_Anchor.m_EntryId >= 0 && (m_Anchor.m_EntryId != m_Cursor.m_EntryId || m_Anchor.m_Character != m_Cursor.m_Character);
+	}
+
+	// 点击产生的零长度选区也保留光标；编号回收或清空时一并失效。
+	bool HasCursorForEntry(int EntryId) const
+	{
+		return m_Cursor.m_EntryId >= 0 && m_Cursor.m_EntryId == EntryId;
+	}
+
+	std::optional<int> CursorForEntry(int EntryId, int CharacterCount) const
+	{
+		if(!HasCursorForEntry(EntryId))
+			return std::nullopt;
+		return std::clamp(m_Cursor.m_Character, 0, std::max(0, CharacterCount));
 	}
 
 	bool ContainsEntry(int EntryId) const
@@ -133,6 +149,34 @@ public:
 		const int Lines = static_cast<int>(m_ScrollRemainder);
 		m_ScrollRemainder -= Lines;
 		return Lines;
+	}
+};
+
+// 稳定字符身份与视口坐标分开：只让重新定位字符平滑移动，滚动/拖选精确对齐。
+class CQmConsoleCaretMotion
+{
+	CQmLineInputMotion m_Motion;
+	CQmConsoleSelection::CPosition m_Position;
+	vec2 m_Target{};
+	bool m_Initialized = false;
+
+public:
+	void Reset()
+	{
+		m_Motion.Reset();
+		m_Initialized = false;
+	}
+	vec2 Resolve(CQmConsoleSelection::CPosition Position, vec2 Target, float Height,
+		std::chrono::nanoseconds Now, int Level, bool HasSelection)
+	{
+		const bool SameCharacter = m_Initialized && Position.m_EntryId == m_Position.m_EntryId && Position.m_Character == m_Position.m_Character;
+		const bool LayoutMoved = SameCharacter && Target != m_Target;
+		m_Motion.Update("", Now, Level, false);
+		const vec2 Result = m_Motion.ResolveCaret(Target, Height, HasSelection || LayoutMoved, true);
+		m_Position = Position;
+		m_Target = Target;
+		m_Initialized = true;
+		return Result;
 	}
 };
 

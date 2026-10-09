@@ -159,19 +159,19 @@ void CQmLineInputMotion::FillCharOffsets(std::vector<STextCharOffset> &vOffsets)
 	for(const auto &Character : m_vCharacters)
 	{
 		const float Shrink = Character.m_NodeKey == 0 ? 0.0f :
-			std::clamp(m_Runtime.GetValue(Character.m_NodeKey, EUiAnimProperty::SCALE), -0.2f, 1.0f) * Amplitude;
+								std::clamp(m_Runtime.GetValue(Character.m_NodeKey, EUiAnimProperty::SCALE), -0.2f, 1.0f) * Amplitude;
 		vOffsets.emplace_back(Character.m_ByteOffset, 0.0f, 0.0f, 1.0f - Shrink);
 	}
 }
 
-vec2 CQmLineInputMotion::ResolveCaret(vec2 Target, float FontHeight, bool Snap)
+vec2 CQmLineInputMotion::ResolveCaret(vec2 Target, float FontHeight, bool Snap, bool AnimateAcrossLines)
 {
 	const vec2 PreviousTarget = m_CaretTarget;
 	// 跨行、布局缩放和鼠标选区立即对齐，避免光标扫过无关文字。
 	Snap |= !m_CaretInitialized || m_MotionLevel == 0 ||
 		std::abs(FontHeight - m_CaretHeight) > 0.1f ||
-		std::abs(Target.y - m_CaretTarget.y) > FontHeight * 0.5f ||
-		std::abs(Target.x - m_CaretTarget.x) > FontHeight * 4.0f;
+		(!AnimateAcrossLines && (std::abs(Target.y - m_CaretTarget.y) > FontHeight * 0.5f ||
+						std::abs(Target.x - m_CaretTarget.x) > FontHeight * 4.0f));
 	m_CaretTarget = Target;
 	m_CaretHeight = FontHeight;
 	m_CaretInitialized = true;

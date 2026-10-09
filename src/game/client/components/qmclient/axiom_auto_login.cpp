@@ -77,6 +77,8 @@ void CQmAxiomAutoLogin::ResetState()
 	m_DummyAutoLoginSent = false;
 	m_DummyWasConnected = false;
 	m_DummyLoginAllowedThisServer = false;
+	m_PasswordHintAnnounced = false;
+	m_ExhaustionAnnounced = false;
 	m_aDummyAutoLoginServer[0] = '\0';
 }
 
@@ -148,13 +150,13 @@ void CQmAxiomAutoLogin::OnMessage(int MsgType, void *pRawMsg)
 		return;
 
 	const EQmAxiomLoginReply Reply = QmClassifyAxiomLoginReply(pText);
-	const EQmAxiomLoginReply AppliedReply = QmApplyAxiomLoginReply(m_AutoLoginState, Reply, time_get(), time_freq());
+	const EQmAxiomLoginReply AppliedReply = QmApplyAxiomLoginReply(m_AutoLoginState, Reply, time_get(), time_freq(), pText);
 	if(AppliedReply == EQmAxiomLoginReply::IGNORE || AppliedReply == EQmAxiomLoginReply::PENDING)
 		return;
 
 	if(AppliedReply == EQmAxiomLoginReply::HARD_FAILURE)
 	{
-		GameClient()->Echo(Localize("Axiom auto login failed"));
+		GameClient()->Echo(Localize(QmAxiomAutoLoginFailureKey(m_AutoLoginState.m_LastFailureReason)));
 		return;
 	}
 
@@ -225,10 +227,23 @@ void CQmAxiomAutoLogin::OnUpdate()
 	{
 		m_AutoLoginState = {};
 		m_aAutoLoginServer[0] = '\0';
+		// 密码未填时功能静默跳过；提示一次，避免玩家误以为功能失效。
+		if(!m_PasswordHintAnnounced)
+		{
+			GameClient()->Echo(Localize("Axiom auto login skipped: no password"));
+			m_PasswordHintAnnounced = true;
+		}
 	}
 	else if(QmUpdateAxiomAutoLoginState(m_AutoLoginState, time_get(), time_freq()))
 	{
 		TrySendLogin();
+	}
+
+	// 重试耗尽（回执未被识别为已知失败原因）同样提示一次，避免无声停止。
+	if(m_AutoLoginState.m_HardFailed && !m_ExhaustionAnnounced && m_AutoLoginState.m_LastFailureReason == EQmAxiomLoginFailureReason::NONE)
+	{
+		GameClient()->Echo(Localize("Axiom auto login stopped after repeated failures"));
+		m_ExhaustionAnnounced = true;
 	}
 }
 

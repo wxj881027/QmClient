@@ -32228,20 +32228,86 @@ turkish = "Gelişmiş işleme etkin olduğunda Dynamic Island ve yuvarlatılmı�
 polish = "Używaj potoków SDF dla Dynamic Island i zaokrąglonych prostokątów przy włączonym ulepszonym renderowaniu"
 
 [[message]]
-key = "Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts."
+key = "Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts."
 [message.translations]
-simplified_chinese = "请分别填写主号和分身在 Axiom 服注册的密码。此选项不会自动注册账号。"
-traditional_chinese = "請分別填寫主號和分身在 Axiom 服註冊的密碼。此選項不會自動註冊帳號。"
-japanese = "メインとダミーそれぞれに、Axiom で登録したパスワードを入力してください。この設定ではアカウントは登録されません。"
-korean = "본 계정과 더미 계정에 각각 Axiom에서 등록한 비밀번호를 입력하세요. 이 옵션은 계정을 등록하지 않습니다."
-russian = "Укажите отдельно пароли основного аккаунта и дамми, зарегистрированных на Axiom. Эта настройка не создаёт аккаунты."
-german = "Trage die bei Axiom registrierten Passwörter für Hauptkonto und Dummy getrennt ein. Diese Option erstellt keine Konten."
-spanish = "Introduce por separado las contraseñas registradas en Axiom para la cuenta principal y el dummy. Esta opción no registra cuentas."
-french = "Saisissez séparément les mots de passe enregistrés sur Axiom pour le compte principal et le dummy. Cette option ne crée pas de compte."
-brazilian_portuguese = "Insira separadamente as senhas cadastradas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
-portuguese = "Introduza separadamente as palavras-passe registadas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
-turkish = "Ana hesap ve dummy için Axiom'da kayıtlı parolaları ayrı ayrı girin. Bu seçenek hesap oluşturmaz."
-polish = "Wpisz osobno hasła zarejestrowane na Axiom dla głównego konta i dummy. Ta opcja nie tworzy kont."
+simplified_chinese = "账号即游戏内名字，请先在 Axiom 官网注册。分别填入主号与分身的注册密码；不会自动注册账号。"
+traditional_chinese = "帳號即遊戲內名字，請先在 Axiom 官網註冊。分別填入主號與分身的註冊密碼；不會自動註冊帳號。"
+japanese = "アカウントはゲーム内の名前です。まず Axiom ウェブサイトで登録してください。メインとダミーの登録済みパスワードを入力してください。この設定ではアカウント登録は行われません。"
+korean = "계정은 게임 내 이름입니다. 먼저 Axiom 웹사이트에서 등록하세요. 본 계정과 더미의 등록된 비밀번호를 입력하세요. 이 옵션은 계정을 등록하지 않습니다."
+russian = "Аккаунт — это ваше имя в игре. Сначала зарегистрируйте его на сайте Axiom. Укажите зарегистрированные пароли основного аккаунта и дамми. Эта настройка не регистрирует аккаунты."
+german = "Dein Konto ist dein Spielname – registriere es zuerst auf der Axiom-Website. Trage die registrierten Passwörter für Hauptkonto und Dummy ein. Diese Option registriert keine Konten."
+spanish = "Tu cuenta es tu nombre en el juego: regístrala primero en el sitio web de Axiom. Introduce las contraseñas registradas de la cuenta principal y el dummy. Esta opción no registra cuentas."
+french = "Votre compte est votre nom en jeu – enregistrez-le d'abord sur le site web d'Axiom. Saisissez les mots de passe enregistrés du compte principal et du dummy. Cette option ne crée pas de compte."
+brazilian_portuguese = "Sua conta é o seu nome no jogo – registre-a primeiro no site da Axiom. Insira as senhas registradas da conta principal e do dummy. Esta opção não registra contas."
+portuguese = "A tua conta é o teu nome no jogo – regista-a primeiro no site da Axiom. Introduz as palavras-passe registadas da conta principal e do dummy. Esta opção não registra contas."
+turkish = "Hesabınız oyun içi adınızdır – önce Axiom web sitesinde kaydedin. Ana hesap ve dummy için kayıtlı parolaları girin. Bu seçenek hesap oluşturmaz."
+polish = "Konto to twoja nazwa w grze – zarejestruj je najpierw na stronie internetowej Axiom. Wpisz zarejestrowane hasła głównego konta i dummy. Ta opcja nie rejestruje kont."
+
+[[message]]
+key = "Axiom website"
+[message.translations]
+simplified_chinese = "Axiom 官网"
+traditional_chinese = "Axiom 官網"
+japanese = "Axiom ウェブサイト"
+korean = "Axiom 웹사이트"
+russian = "Сайт Axiom"
+german = "Axiom-Website"
+spanish = "Sitio web de Axiom"
+french = "Site web d'Axiom"
+brazilian_portuguese = "Site da Axiom"
+portuguese = "Site da Axiom"
+turkish = "Axiom web sitesi"
+polish = "Strona internetowa Axiom"
+
+[[message]]
+key = "Axiom auto login failed: wrong password"
+[message.translations]
+simplified_chinese = "Axiom 登录失败：密码错误"
+traditional_chinese = "Axiom 登錄失敗：密碼錯誤"
+
+[[message]]
+key = "Axiom auto login failed: already in game"
+[message.translations]
+simplified_chinese = "Axiom 登录失败：账号已在游戏中"
+traditional_chinese = "Axiom 登錄失敗：帳號已在遊戲中"
+
+[[message]]
+key = "Axiom auto login failed: invalid credentials"
+[message.translations]
+simplified_chinese = "Axiom 登录失败：凭据无效"
+traditional_chinese = "Axiom 登錄失敗：憑證無效"
+
+[[message]]
+key = "Axiom auto login stopped after repeated failures"
+[message.translations]
+simplified_chinese = "Axiom 自动登录已停止：多次尝试未成功"
+traditional_chinese = "Axiom 自動登錄已停止：多次嘗試未成功"
+japanese = "Axiom 自動ログインを停止：複数回失敗しました"
+korean = "Axiom 자동 로그인 중지: 여러 번 실패"
+russian = "Автовход Axiom остановлен: несколько попыток не удались"
+german = "Axiom-Auto-Login gestoppt: mehrere Fehlversuche"
+spanish = "Inicio de sesión automático de Axiom detenido: falló repetidamente"
+french = "Connexion automatique Axiom arrêtée : plusieurs échecs"
+brazilian_portuguese = "Login automático do Axiom parou: várias tentativas falharam"
+portuguese = "Início de sessão automático do Axiom parou: várias tentativas falharam"
+turkish = "Axiom otomatik girişi durduruldu: birden çok deneme başarısız"
+polish = "Automatyczne logowanie Axiom zatrzymane: wiele nieudanych prób"
+
+[[message]]
+key = "Axiom auto login skipped: no password"
+[message.translations]
+simplified_chinese = "Axiom 自动登录：未填写密码，已跳过"
+traditional_chinese = "Axiom 自動登錄：未填寫密碼，已跳過"
+japanese = "Axiom 自動ログイン：パスワード未入力のためスキップ"
+korean = "Axiom 자동 로그인: 비밀번호 미입력, 건너뜀"
+russian = "Автовход Axiom: пароль не задан, пропущено"
+german = "Axiom-Auto-Login: Kein Passwort gesetzt, übersprungen"
+spanish = "Inicio de sesión automático de Axiom: sin contraseña, omitido"
+french = "Connexion automatique Axiom : mot de passe non renseigné, ignorée"
+brazilian_portuguese = "Login automático do Axiom: sem senha, pulado"
+portuguese = "Início de sessão automático do Axiom: sem palavra-passe, ignorado"
+turkish = "Axiom otomatik girişi: parola yok, atlandı"
+polish = "Automatyczne logowanie Axiom: brak hasła, pominięto"
 
 [[message]]
 key = "Use the scoreboard cursor mode to scroll the list"
@@ -35860,6 +35926,38 @@ brazilian_portuguese = "Destacar comandos do console"
 portuguese = "Destacar comandos da consola"
 turkish = "Konsol komutlarını vurgula"
 polish = "Podświetlaj polecenia konsoli"
+
+[[message]]
+key = "Show the chat scrollbar on the right"
+[message.translations]
+simplified_chinese = "在右侧显示聊天滚动条"
+traditional_chinese = "在右側顯示聊天捲軸"
+japanese = "チャットのスクロールバーを右側に表示"
+korean = "채팅 스크롤바를 오른쪽에 표시"
+russian = "Показывать полосу прокрутки чата справа"
+german = "Chat-Scrollleiste rechts anzeigen"
+spanish = "Mostrar la barra de desplazamiento del chat a la derecha"
+french = "Afficher la barre de défilement du chat à droite"
+brazilian_portuguese = "Mostrar a barra de rolagem do chat à direita"
+portuguese = "Mostrar a barra de deslocamento do chat à direita"
+turkish = "Sohbet kaydırma çubuğunu sağda göster"
+polish = "Pokaż pasek przewijania czatu po prawej"
+
+[[message]]
+key = "Appearance of help bubbles"
+[message.translations]
+simplified_chinese = "提示气泡外观"
+traditional_chinese = "提示氣泡外觀"
+japanese = "ヘルプ吹き出しの外観"
+korean = "도움말 말풍선 모양"
+russian = "Внешний вид всплывающих подсказок"
+german = "Darstellung der Hinweisblasen"
+spanish = "Apariencia de las burbujas de ayuda"
+french = "Apparence des bulles d’aide"
+brazilian_portuguese = "Aparência dos balões de ajuda"
+portuguese = "Aspeto dos balões de ajuda"
+turkish = "Yardım balonlarının görünümü"
+polish = "Wygląd dymków pomocy"
 
 [[message]]
 key = "Freeze projectile collision volume"

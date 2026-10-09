@@ -925,12 +925,8 @@ inline float ResolveQmHudVoiceHeight(const SSettingsContentMetrics &Metrics, con
 	Height += 11.0f * Metrics.m_RowStep + Metrics.m_LineSpacing * 1.15f;
 	// 可选 WebSocket endpoint 与 UDP 地址并列显示，始终占一行避免配置切换时卡片跳动。
 	Height += Metrics.m_RowStep;
-	if(NoiseSuppressMode != 0)
+	if(NoiseSuppressMode == 1)
 		Height += Metrics.m_RowStep;
-#if !defined(CONF_RNNOISE)
-	if(NoiseSuppressMode == 2)
-		Height += Metrics.m_LineHeight * 0.78f + Metrics.m_LineSpacing * 0.75f;
-#endif
 	if(VadEnabled)
 		Height += 2.0f * Metrics.m_RowStep;
 	if(StereoEnabled)

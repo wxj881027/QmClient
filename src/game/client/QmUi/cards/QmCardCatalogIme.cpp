@@ -32,6 +32,7 @@ namespace
 	class CImePrewarmScope
 	{
 		CUi *m_pUi;
+
 	public:
 		CImePrewarmScope(CUi *pUi, bool Prewarm) : m_pUi(Prewarm ? pUi : nullptr)
 		{

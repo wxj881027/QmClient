@@ -4,23 +4,23 @@
 
 namespace
 {
-std::vector<std::string> LinkUrls(const char *pText)
-{
-	std::vector<QmConsoleText::SRange> vLinks;
-	QmConsoleText::CollectLinks(pText, vLinks);
-	std::vector<std::string> vUrls;
-	for(const auto &Link : vLinks)
-		vUrls.push_back(QmConsoleText::LinkUrl(pText, Link));
-	return vUrls;
-}
+	std::vector<std::string> LinkUrls(const char *pText)
+	{
+		std::vector<QmConsoleText::SRange> vLinks;
+		QmConsoleText::CollectLinks(pText, vLinks);
+		std::vector<std::string> vUrls;
+		for(const auto &Link : vLinks)
+			vUrls.push_back(QmConsoleText::LinkUrl(pText, Link));
+		return vUrls;
+	}
 
-const STextColorSplit *ColorAt(const std::vector<STextColorSplit> &vSplits, int Byte)
-{
-	for(const auto &Split : vSplits)
-		if(Byte >= Split.m_CharIndex && Byte < Split.m_CharIndex + Split.m_Length)
-			return &Split;
-	return nullptr;
-}
+	const STextColorSplit *ColorAt(const std::vector<STextColorSplit> &vSplits, int Byte)
+	{
+		for(const auto &Split : vSplits)
+			if(Byte >= Split.m_CharIndex && Byte < Split.m_CharIndex + Split.m_Length)
+				return &Split;
+		return nullptr;
+	}
 }
 
 TEST(QmConsoleLinks, ChinesePrefixKeepsByteAndCharacterCoordinatesSeparate)

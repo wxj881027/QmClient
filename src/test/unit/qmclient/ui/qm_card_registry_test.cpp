@@ -1224,13 +1224,22 @@ TEST(QmCardRegistry, TimeoutDisconnectSearchPointsToControls)
 	{
 		const auto Results = qm_card_registry::SearchCards(pQuery, Model);
 		ASSERT_FALSE(Results.empty()) << pQuery;
-		// 本地把同一批中文/拼音关键词也写进了总览卡片 qm:key_binds（远程没有），所以中文查询会多命中一张；
-		// 这里断言「命中控件卡片」，唯一无歧义的命令名仍然只应命中一张卡。
+		// 共享搜索索引会同时命中直接绑定与命令编辑器，不能假设同一命令只有一个入口。
 		bool Found = false;
 		for(const auto &Result : Results)
 			Found = Found || std::string(Result.m_pStableId) == "deck:controls-miscellaneous";
 		EXPECT_TRUE(Found) << pQuery;
+		std::set<std::string> UniqueIds;
+		for(const auto &Result : Results)
+		{
+			EXPECT_TRUE(UniqueIds.emplace(Result.m_pStableId).second) << pQuery;
+			ASSERT_NE(Result.m_Target.m_pStableId, nullptr);
+			EXPECT_GE(Model.FindByStableId(Result.m_Target.m_pStableId), 0) << pQuery;
+		}
 		if(std::string(pQuery) == "qm_timeout_disconnect")
-			EXPECT_EQ(Results.size(), 1u) << pQuery;
+		{
+			EXPECT_EQ(UniqueIds.count("qm:key_binds"), 1u);
+			EXPECT_EQ(UniqueIds.count("qm:bind_editor"), 1u);
+		}
 	}
 }

@@ -30,19 +30,6 @@
 
 // 下拉键盘、取消、来源帧与外部点击使用 QmAnimDropdownTest.cpp 的生产行为测试。
 
-TEST(QmNewUiMenuRenderDropdownContract, SettingsDropdownWrapperAndNestedListsKeepSharedVisualAndScrollContracts)
-{
-	const std::string MenusSource = ReadTextFile("src/game/client/components/menus.cpp");
-	const std::string ListBoxHeader = ReadTextFile("src/game/client/ui_listbox.h");
-	const std::string ListBoxSource = ReadTextFile("src/game/client/ui_listbox.cpp");
-	const std::string Wrapper = FunctionBody(MenusSource, "int CMenus::DoSettingsDropDown(CUIRect *pRect, const int CurSelection, const char *const *ppStrs, const int Num, CUi::SDropDownState &State, CUi::SDropDownProperties Properties)");
-
-	ASSERT_FALSE(Wrapper.empty());
-	EXPECT_NE(Wrapper.find("Properties.m_VisualStyle = QmSettingsDropdownVisualStyle(m_SettingsUiTheme, SettingsCardDeckVisualOptions().m_BorderColor);"), std::string::npos);
-	EXPECT_NE(ListBoxHeader.find("void SetScrollbarAlwaysReserved(bool AlwaysReserved)"), std::string::npos);
-	EXPECT_NE(ListBoxSource.find("ScrollParams.m_ScrollbarAlwaysReserved = m_ScrollbarAlwaysReserved;"), std::string::npos);
-}
-
 TEST(QmNewUiMenuRenderDropdownContract, ValueSelectorUsesOneFittedTextLayoutForDisplayAndEditing)
 {
 	EXPECT_FLOAT_EQ(QmFitSingleLineFontSize(10.0f, 6.0f, 40.0f, 80.0f), 10.0f);

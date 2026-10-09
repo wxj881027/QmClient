@@ -18,6 +18,7 @@
 #include <game/client/QmUi/UiTheme.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
+#include <game/client/components/qmclient/console_selection.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/qm_icon.h>
 #include <game/client/qm_icon_label.h>
@@ -26,6 +27,7 @@
 
 #include <benchmark/benchmark.h>
 
+#include <chrono>
 #include <cmath>
 #include <memory>
 #include <vector>
@@ -538,3 +540,28 @@ static void BM_IconSemanticColorResolve(benchmark::State &State)
 	State.SetItemsProcessed(State.iterations());
 }
 BENCHMARK(BM_IconSemanticColorResolve)->Arg(0)->Arg(1);
+
+// 生产日志光标的每帧更新；初始化、正确性检查与时钟起点在计时外。
+static void BM_QmConsoleCaretFrame(benchmark::State &State)
+{
+	using namespace std::chrono_literals;
+	CQmConsoleCaretMotion Motion;
+	auto Now = std::chrono::nanoseconds(1s);
+	Motion.Resolve({1, 0}, vec2(10, 20), 10, Now, 2, false);
+	if(Motion.Resolve({2, 1}, vec2(100, 80), 10, Now, 2, false) != vec2(10, 20))
+	{
+		State.SkipWithError("Click transition jumped to its target");
+		return;
+	}
+	int Frame = 0;
+	for(auto _ : State)
+	{
+		Now += 16ms;
+		const int Entry = (Frame / 12) % 2;
+		const vec2 Position = Motion.Resolve({Entry, 5}, vec2(20 + 80 * Entry, 30 + 40 * Entry), 10, Now, 2, State.range(0) != 0);
+		benchmark::DoNotOptimize(Position);
+		++Frame;
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_QmConsoleCaretFrame)->Arg(0)->Arg(1);

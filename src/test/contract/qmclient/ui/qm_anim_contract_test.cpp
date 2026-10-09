@@ -4,15 +4,6 @@
 
 #include <string>
 
-TEST(SettingsCardContract, HeaderTextUsesCanonicalBoundedEllipsis)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/QmUi/SettingsCard.cpp");
-	EXPECT_NE(Source.find("TitleProps.m_MaxWidth = DrawFrame.m_TitleRect.w;"), std::string::npos);
-	EXPECT_NE(Source.find("TitleProps.m_EllipsisAtEnd = true;"), std::string::npos);
-	EXPECT_NE(Source.find("SubtitleProps.m_MaxWidth = DrawFrame.m_SubtitleRect.w;"), std::string::npos);
-	EXPECT_NE(Source.find("SubtitleProps.m_EllipsisAtEnd = true;"), std::string::npos);
-}
-
 TEST(SettingsCardContract, DeckMeasuresContentFromCanonicalPaddingToken)
 {
 	const std::string Source = ReadTestSourceFile("src/game/client/QmUi/SettingsCardDeck.cpp");

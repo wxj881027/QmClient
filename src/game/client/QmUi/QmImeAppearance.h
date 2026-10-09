@@ -14,15 +14,6 @@ struct SQmImeAppearance
 	SQmColorGradient m_SelectedText;
 	SQmColorGradient m_Selection;
 	qm_theme::SImeTheme m_Theme;
-
-	ColorRGBA PanelTopLineColor(float Alpha) const
-	{
-		// 高光跟随背景淡出；全部色标透明时不能留下独立白线。
-		float BackgroundAlpha = 0.0f;
-		for(int i = 0; i < std::clamp(m_Background.m_NumColors, 1, CMessageGradient::MAX_COLORS); ++i)
-			BackgroundAlpha = std::max(BackgroundAlpha, m_Background.m_aColors[i].a);
-		return ColorRGBA(1.0f, 1.0f, 1.0f, 0.11f * BackgroundAlpha * Alpha);
-	}
 };
 
 inline SQmImeAppearance QmImeAppearance(const CConfig &Config)

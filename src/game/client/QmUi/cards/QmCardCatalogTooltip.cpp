@@ -58,7 +58,7 @@ namespace qm_card_catalog
 {
 	bool BuildTooltipCard(const SQmCardBuildContext &Ctx, SSettingsCardDefinition &Out)
 	{
-		MakeModuleCard(Ctx, qm_module::EQmModuleId::Tooltip, "qm:tooltip", "Tooltips", "Appearance of help bubbles outside settings cards", [Ctx](CUIRect &Content) { QmCardRenderHook::RenderQmTooltipContent(Ctx.m_pMenus, Content, Ctx.m_Metrics, Ctx.m_ReadOnly); }, [Metrics = Ctx.m_Metrics](float) { return CardRows(Metrics, 6.0f); }, MeasureModuleCardRevision(qm_module::EQmModuleId::Tooltip), {}, Out);
+		MakeModuleCard(Ctx, qm_module::EQmModuleId::Tooltip, "qm:tooltip", "Tooltips", "Appearance of help bubbles", [Ctx](CUIRect &Content) { QmCardRenderHook::RenderQmTooltipContent(Ctx.m_pMenus, Content, Ctx.m_Metrics, Ctx.m_ReadOnly); }, [Metrics = Ctx.m_Metrics](float) { return CardRows(Metrics, 6.0f); }, MeasureModuleCardRevision(qm_module::EQmModuleId::Tooltip), {}, Out);
 		return true;
 	}
 }

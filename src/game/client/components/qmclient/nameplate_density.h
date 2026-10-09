@@ -5,6 +5,17 @@
 #include <cmath>
 #include <cstdint>
 
+// 小字号无 hinting 字形保留少量额外采样；仅改变烘焙密度，不改变游标字号或世界坐标尺寸。
+// 使用物理像素而非相机 zoom 判定，分辨率、DPI 和用户字号共同决定是否需要补偿。
+inline float QmNameplateSmallTextSamplingScale(float FontSize, float PixelsPerUnit)
+{
+	if(!std::isfinite(FontSize) || FontSize <= 0.0f ||
+		!std::isfinite(PixelsPerUnit) || PixelsPerUnit <= 0.0f)
+		return 1.0f;
+	const float Pixels = FontSize * PixelsPerUnit;
+	return 1.0f + 0.25f * std::clamp((12.0f - Pixels) / 4.0f, 0.0f, 1.0f);
+}
+
 // 整块名牌共用一次密度决策：动画内不重建，动画结束才占用完整部件预算。
 class CQmNameplateDensity
 {

@@ -34,12 +34,13 @@ namespace ui_widget
 		void DrawTextFieldFocusBorder(const IUiContext &Ctx, const CUIRect &Rect, float Alpha);
 		void DrawTextFieldFocusBorder(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect);
 		void DrawTextFieldFocusBorder(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, bool Multiline);
-		void DrawTextFieldShell(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, int Corners, float Radius);
+		void DrawTextFieldShell(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, int Corners, float Radius, const ColorRGBA *pBorderColorOverride = nullptr, float BorderWidthOverride = 1.0f);
 		bool InputFieldFocusActive(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect, bool Multiline);
 
 		SUiTheme ThemeFor(const IUiContext &Ctx)
 		{
-			return Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi != nullptr ? Ctx.m_pUi->QmControlTheme() : ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+			return Ctx.m_pTheme != nullptr ? *Ctx.m_pTheme : Ctx.m_pUi != nullptr ? Ctx.m_pUi->QmControlTheme() :
+												ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
 		}
 
 		SInputFieldResult BuildInputFieldResult(const IUiContext &Ctx, CLineInput *pInput, bool Changed, bool WasActive, bool WasEmpty, bool Clearable)
@@ -48,12 +49,13 @@ namespace ui_widget
 			return ui_widget::BuildInputFieldResult(WasActive, pInput->IsActive(), Changed, SubmitPressed, WasEmpty, pInput->IsEmpty(), Clearable);
 		}
 
-		void DrawTextFieldShell(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const int Corners, const float Radius)
+		void DrawTextFieldShell(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const int Corners, const float Radius, const ColorRGBA *pBorderColorOverride, const float BorderWidthOverride)
 		{
 			const SUiTheme Theme = ThemeFor(Ctx);
-			ColorRGBA Border = Theme.m_Border;
-			Border.a = std::max(Border.a, 0.24f);
-			DrawRoundedSurface(Ctx, Rect, Fill, Ctx.m_pUi->ScaleBackgroundAlpha(Border), Radius, 1.0f, Corners);
+			ColorRGBA Border = pBorderColorOverride != nullptr ? *pBorderColorOverride : Theme.m_Border;
+			if(pBorderColorOverride == nullptr)
+				Border.a = std::max(Border.a, 0.24f);
+			DrawRoundedSurface(Ctx, Rect, Fill, Ctx.m_pUi->ScaleBackgroundAlpha(Border), Radius, BorderWidthOverride, Corners);
 		}
 
 		bool NumericFieldTextIsInfinite(const char *pText)
@@ -73,7 +75,8 @@ namespace ui_widget
 			const SUiTheme &Theme = ThemeFor(Ctx);
 			ColorRGBA RingColor = Theme.m_FocusRing;
 			RingColor.a *= Alpha;
-			DrawRoundedSurface(Ctx, Rect, ResolveConfiguredInputSurface(), Ctx.m_pUi->ScaleBackgroundAlpha(RingColor), ui_token::radius::BASE + Theme.m_FocusRingWidth, Theme.m_FocusRingWidth);
+			// 激活态直接把外壳边框画粗并换成强调色，不做外扩光圈。
+			DrawRoundedSurface(Ctx, Rect, ResolveConfiguredInputSurface(), Ctx.m_pUi->ScaleBackgroundAlpha(RingColor), ui_token::radius::BASE, Theme.m_FocusRingWidth);
 		}
 
 		void DrawTextFieldFocusBorder(const IUiContext &Ctx, CLineInput *pInput, const CUIRect &Rect)
@@ -189,7 +192,32 @@ namespace ui_widget
 		}
 		const ColorRGBA PlateColor = ResolveConfiguredInputSurface(Options.m_ProcessInput);
 		CUiScopedSurfaceText SurfaceText(Ctx.m_pUi->TextRender(), PlateColor);
-		DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE);
+		// 激活态边框单层绘制：颜色与粗细随聚焦动画在常规边框与强调色环之间过渡，
+		// 不再叠加第二层描边——半透明强调环叠在常规边框上会让灰边透出（叠色）。
+		float FocusAlpha = 0.0f;
+		if(Options.m_ProcessInput && Ctx.m_pAnim != nullptr)
+		{
+			const bool FocusActive = InputFieldFocusActive(Ctx, pInput, Layout.m_ShellRect, Options.m_Mode == EInputFieldMode::MULTILINE);
+			FocusAlpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, FocusActive ? 1.0f : 0.0f, ui_curve::DECELERATE);
+		}
+		if(FocusAlpha > 0.01f)
+		{
+			const SUiTheme Theme = ThemeFor(Ctx);
+			ColorRGBA NormalBorder = Theme.m_Border;
+			NormalBorder.a = std::max(NormalBorder.a, 0.24f);
+			const float T = FocusAlpha;
+			const ColorRGBA FocusBorder{
+				NormalBorder.r + (Theme.m_FocusRing.r - NormalBorder.r) * T,
+				NormalBorder.g + (Theme.m_FocusRing.g - NormalBorder.g) * T,
+				NormalBorder.b + (Theme.m_FocusRing.b - NormalBorder.b) * T,
+				NormalBorder.a + (Theme.m_FocusRing.a - NormalBorder.a) * T};
+			const float BorderWidth = 1.0f + T * (Theme.m_FocusRingWidth - 1.0f);
+			DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE, &FocusBorder, BorderWidth);
+		}
+		else
+		{
+			DrawTextFieldShell(Ctx, Layout.m_ShellRect, PlateColor, Options.m_Corners, ui_token::radius::BASE);
+		}
 		pInput->SetEmptyText(Options.m_pPlaceholder != nullptr ? Options.m_pPlaceholder : (Search ? Localize("Search") : nullptr));
 		if(!Options.m_ProcessInput)
 		{
@@ -207,7 +235,6 @@ namespace ui_widget
 			Ctx.m_pUi->SetActiveItem(pInput);
 			pInput->SelectAll();
 		}
-		DrawTextFieldFocusBorder(Ctx, pInput, Layout.m_FocusRingRect, Options.m_Mode == EInputFieldMode::MULTILINE);
 
 		const ColorRGBA InputIconColor = ResolveUiSurfaceIconColor(PlateColor, Ctx.m_pUi->TextRender()->GetTextColor());
 		const char *pLeadingIcon = Options.m_pLeadingIcon != nullptr ? Options.m_pLeadingIcon : (Search ? FontIcons::FONT_ICON_MAGNIFYING_GLASS : nullptr);
@@ -672,12 +699,13 @@ namespace ui_widget
 		if(Ctx.m_pUi == nullptr || Ctx.m_pUi->RenderOnly())
 			return;
 		const SUiSliderStyle Style = ResolveUiSliderStyle(ThemeFor(Ctx), CUiScopedSurfaceText::CurrentSurface(), Ctx.m_pUi->HotItem() == pId, Ctx.m_pUi->CheckActiveItem(pId), Enabled);
-		DrawRoundedSurface(Ctx, Rect, Ctx.m_pUi->ScaleBackgroundAlpha(Style.m_Handle), Ctx.m_pUi->ScaleBackgroundAlpha(Style.m_Border), ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
+		// 滑块是前景反馈，背景透明度仅作用于轨道；保留强调色自身 alpha 和禁用态。
+		DrawRoundedSurface(Ctx, Rect, Style.m_Handle, Style.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 		if(pColorInner != nullptr)
 		{
 			CUIRect Inner;
 			Rect.Margin(std::min(2.0f, std::min(Rect.w, Rect.h) * 0.25f), &Inner);
-			DrawRoundedSurface(Ctx, Inner, Ctx.m_pUi->ScaleBackgroundAlpha(*pColorInner), ColorRGBA(), ui_token::radius::PILL);
+			DrawRoundedSurface(Ctx, Inner, *pColorInner, ColorRGBA(), ui_token::radius::PILL);
 		}
 	}
 

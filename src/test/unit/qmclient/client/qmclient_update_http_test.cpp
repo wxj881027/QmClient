@@ -4,6 +4,11 @@
 
 #include <gtest/gtest.h>
 
+#include <cstdlib>
+#include <memory>
+#include <optional>
+#include <string>
+
 TEST(QmUpdateHttp, RetryAfterSecondsAcceptsWhitespaceAndRejectsMalformedNumbers)
 {
 	EXPECT_EQ(CHttpRequestCurl::ParseRetryAfter("900\r\n", 0), 900);
@@ -32,9 +37,10 @@ public:
 	{
 		return CHttpRequestCurl::WriteCallback(Text.data(), 1, Text.size(), &Request);
 	}
-	static void Complete(CHttpRequestCurl &Request)
+	static void Complete(CHttpRequestCurl &Request, CURL *pHandle = nullptr, CURLcode Code = CURLE_OK)
 	{
-		Request.OnCompletionInternal(nullptr, CURLE_OK);
+		Request.m_aErr[0] = '\0';
+		Request.OnCompletionInternal(pHandle, Code);
 	}
 };
 
@@ -202,4 +208,106 @@ TEST(QmUpdateHttp, RangeRejectsIgnoredOrMismatchedFinalRange)
 		EXPECT_EQ(Request.State(), EHttpState::ERROR);
 	}
 }
+
+// 只注入 curl 完成时提供的 URL 元数据，不发起网络请求；环境变量逐项恢复。
+class QmUpdateHttpEnvironment : public ::testing::Test
+{
+protected:
+	std::optional<std::string> m_NoProxy;
+	std::optional<std::string> m_UpperNoProxy;
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> m_pHandle{nullptr, curl_easy_cleanup};
+
+	static std::optional<std::string> ReadEnvironment(const char *pName)
+	{
+		const char *pValue = std::getenv(pName);
+		return pValue ? std::optional<std::string>(pValue) : std::nullopt;
+	}
+	static int SetEnvironment(const char *pName, const char *pValue)
+	{
+#if defined(CONF_FAMILY_WINDOWS)
+		return _putenv_s(pName, pValue ? pValue : "");
+#else
+		return pValue ? setenv(pName, pValue, 1) : unsetenv(pName);
+#endif
+	}
+	void SetUp() override
+	{
+		m_NoProxy = ReadEnvironment("no_proxy");
+		m_UpperNoProxy = ReadEnvironment("NO_PROXY");
+		ASSERT_EQ(SetEnvironment("no_proxy", nullptr), 0);
+		ASSERT_EQ(SetEnvironment("NO_PROXY", nullptr), 0);
+		m_pHandle.reset(curl_easy_init());
+		ASSERT_NE(m_pHandle, nullptr);
+	}
+	void TearDown() override
+	{
+		m_pHandle.reset();
+		EXPECT_EQ(SetEnvironment("no_proxy", m_NoProxy ? m_NoProxy->c_str() : nullptr), 0);
+		EXPECT_EQ(SetEnvironment("NO_PROXY", m_UpperNoProxy ? m_UpperNoProxy->c_str() : nullptr), 0);
+	}
+};
+
+TEST_F(QmUpdateHttpEnvironment, CompletionUsesFinalHostRatherThanInitialHost)
+{
+	ASSERT_EQ(SetEnvironment("no_proxy", "final.test"), 0);
+	ASSERT_EQ(curl_easy_setopt(m_pHandle.get(), CURLOPT_URL, "https://user:p%40ss@FINAL.test:8443?next=other.test"), CURLE_OK);
+	CHttpRequestCurl Request("https://initial.test/redirect");
+	Request.Proxy("http://proxy.test:8080");
+	Request.LogProgress(HTTPLOG::NONE);
+	CHttpRequestCurlTestPeer::Complete(Request, m_pHandle.get(), CURLE_COULDNT_CONNECT);
+	EXPECT_EQ(Request.State(), EHttpState::ERROR);
+	EXPECT_STREQ(Request.ProxyUrl(), "");
+	EXPECT_FALSE(Request.CompletedUsedProxy());
+}
+
+TEST_F(QmUpdateHttpEnvironment, InitialHostBypassCannotClearFinalHostProxy)
+{
+	ASSERT_EQ(SetEnvironment("no_proxy", "initial.test"), 0);
+	ASSERT_EQ(curl_easy_setopt(m_pHandle.get(), CURLOPT_URL, "https://final.test:443/path"), CURLE_OK);
+	CHttpRequestCurl Request("https://initial.test/redirect");
+	Request.Proxy("http://proxy.test:8080");
+	Request.LogProgress(HTTPLOG::NONE);
+	CHttpRequestCurlTestPeer::Complete(Request, m_pHandle.get(), CURLE_COULDNT_CONNECT);
+	EXPECT_EQ(Request.State(), EHttpState::ERROR);
+	EXPECT_STREQ(Request.ProxyUrl(), "http://proxy.test:8080");
+}
+
+TEST_F(QmUpdateHttpEnvironment, FinalIpv6HostWithUserinfoPortAndZoneCanBypass)
+{
+	ASSERT_EQ(SetEnvironment("NO_PROXY", "fe80::1"), 0);
+	ASSERT_EQ(curl_easy_setopt(m_pHandle.get(), CURLOPT_URL, "http://user:pass@[fe80::1%25eth0]:8080/"), CURLE_OK);
+	CHttpRequestCurl Request("https://initial.test/redirect");
+	Request.Proxy("http://proxy.test:8080");
+	Request.LogProgress(HTTPLOG::NONE);
+	CHttpRequestCurlTestPeer::Complete(Request, m_pHandle.get(), CURLE_COULDNT_CONNECT);
+	EXPECT_EQ(Request.State(), EHttpState::ERROR);
+	EXPECT_STREQ(Request.ProxyUrl(), "");
+}
+
+#if !defined(CONF_FAMILY_WINDOWS)
+// Windows 环境变量名不区分大小写，不能在那里构造两份独立的旁路列表。
+TEST_F(QmUpdateHttpEnvironment, EmptyLowercaseFallsBackToUppercase)
+{
+	ASSERT_EQ(SetEnvironment("no_proxy", ""), 0);
+	ASSERT_EQ(SetEnvironment("NO_PROXY", "final.test"), 0);
+	ASSERT_EQ(curl_easy_setopt(m_pHandle.get(), CURLOPT_URL, "https://final.test/"), CURLE_OK);
+	CHttpRequestCurl Request("https://initial.test/");
+	Request.Proxy("http://proxy.test:8080");
+	Request.LogProgress(HTTPLOG::NONE);
+	CHttpRequestCurlTestPeer::Complete(Request, m_pHandle.get(), CURLE_COULDNT_CONNECT);
+	EXPECT_STREQ(Request.ProxyUrl(), "");
+}
+
+TEST_F(QmUpdateHttpEnvironment, NonemptyLowercaseTakesPriorityOverUppercase)
+{
+	ASSERT_EQ(SetEnvironment("no_proxy", "other.test"), 0);
+	ASSERT_EQ(SetEnvironment("NO_PROXY", "final.test"), 0);
+	ASSERT_EQ(curl_easy_setopt(m_pHandle.get(), CURLOPT_URL, "https://final.test/"), CURLE_OK);
+	CHttpRequestCurl Request("https://initial.test/");
+	Request.Proxy("http://proxy.test:8080");
+	Request.LogProgress(HTTPLOG::NONE);
+	CHttpRequestCurlTestPeer::Complete(Request, m_pHandle.get(), CURLE_COULDNT_CONNECT);
+	EXPECT_STREQ(Request.ProxyUrl(), "http://proxy.test:8080");
+}
+#endif
 #endif

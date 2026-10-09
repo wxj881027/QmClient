@@ -15,15 +15,25 @@ import zlib
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.server import serve
 
-from process_harness import EXE_SUFFIX, Process
+try:
+	from qmclient_scripts.integration.process_build import prepare_process_build
+	from qmclient_scripts.integration.process_harness import EXE_SUFFIX, Process
+except ModuleNotFoundError:
+	from process_build import prepare_process_build
+	from process_harness import EXE_SUFFIX, Process
 
 
 def encoded(revision: int, base: int, users: int | None = None) -> bytes:
 	data = {
-		"server_address": "", "revision": revision, "base_revision": base,
-		"full": base == 0, "lease_seconds": 20,
+		"server_address": "",
+		"revision": revision,
+		"base_revision": base,
+		"full": base == 0,
+		"lease_seconds": 20,
 		"servers": [["127.0.0.1:8303", users, 1]] if users is not None else [],
-		"players": [], "removed_servers": [], "removed_players": [],
+		"players": [],
+		"removed_servers": [],
+		"removed_players": [],
 	}
 	message = json.dumps({"type": "users_sync", "v": 2, "data": data}).encode()
 	return b"QMU1" + struct.pack(">I", len(message)) + zlib.compress(message, 1)
@@ -105,12 +115,14 @@ def run_client(build_dir: Path, legacy: bool) -> None:
 		thread.start()
 		port = server.socket.getsockname()[1]
 		try:
-			client = Process("realtime-client", [str(build_dir / f"DDNet{EXE_SUFFIX}"),
-				"gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0",
-				"cl_show_welcome 0", "cl_save_settings 0", "qm_auto_update 0", "qm_steam_auto_launch 0",
-				"qm_websocket_log 1", f"qm_websocket_url ws://127.0.0.1:{port}/ws"],
-				artifacts, fifo_command="cl_input_fifo", pipe_prefix="realtime_users_",
-				env={"QMCLIENT_TEST_STORAGE_ROOT": str(artifacts), "QMCLIENT_TEST_HIDE_DIALOG": "1"})
+			client = Process(
+				"realtime-client",
+				[str(build_dir / f"DDNet{EXE_SUFFIX}"), "gfx_fullscreen 0", "gfx_screen_width 640", "gfx_screen_height 480", "snd_enable 0", "cl_show_welcome 0", "cl_save_settings 0", "qm_auto_update 0", "qm_steam_auto_launch 0", "qm_websocket_log 1", f"qm_websocket_url ws://127.0.0.1:{port}/ws"],
+				artifacts,
+				fifo_command="cl_input_fifo",
+				pipe_prefix="realtime_users_",
+				env={"QMCLIENT_TEST_STORAGE_ROOT": str(artifacts), "QMCLIENT_TEST_HIDE_DIALOG": "1"},
+			)
 			client.wait_for(lambda line: "distribution parse_ok: users=3 dummies=1" in line, "初始名单实际应用", 45)
 			if not completed.wait(timeout=30):
 				raise TimeoutError("压缩同步与恢复流程未完成")
@@ -142,10 +154,7 @@ def main() -> None:
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("build_dir", type=Path)
 	args = parser.parse_args()
-	build_dir = args.build_dir.resolve()
-	cache = (build_dir / "CMakeCache.txt").read_text(encoding="utf-8")
-	if "QMCLIENT_TEST_STORAGE:BOOL=ON" not in cache or "DEV:BOOL=ON" not in cache:
-		raise RuntimeError("需要 DEV=ON、QMCLIENT_TEST_STORAGE=ON 的独立测试构建")
+	build_dir = prepare_process_build(args.build_dir)
 	smoke_compressed_recovery(build_dir)
 	smoke_legacy_compatibility(build_dir)
 

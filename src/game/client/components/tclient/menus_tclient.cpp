@@ -31,8 +31,8 @@ using namespace qm_tclient_cards;
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsFontSelection.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
-#include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/QmUi/UiSurfaceText.h>

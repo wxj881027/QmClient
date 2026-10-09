@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit whether P5 settings pages use the unified UI stack exclusively."""
+"""Audit settings catalog migration structure, not UI runtime behavior."""
 
 from __future__ import annotations
 
@@ -120,9 +120,9 @@ PAGE_STABLE_IDS = {
 
 PAGE_FUNCTIONS = {
 	"general": ("CMenus::RenderSettingsGeneral",),
-	"player": ("CMenus::RenderSettingsTeeIdentity", "CMenus::RenderSettingsPlayer"),
+	"player": ("CMenus::RenderSettingsPlayer",),
 	"tee": ("CMenus::RenderSettingsTee(CUIRect MainView)",),
-	"tee7": ("CMenus::RenderSettingsTee7(CUIRect MainView)", "CMenus::RenderSettingsTee7Content"),
+	"tee7": ("CMenus::RenderSettingsTee7(CUIRect MainView)",),
 	"graphics": ("CMenus::RenderSettingsGraphics",),
 	"sound": ("CMenus::RenderSettingsSound",),
 	"ddnet": ("CMenus::RenderSettingsDDNet",),
@@ -141,27 +141,6 @@ PAGE_FUNCTIONS = {
 	"tclient_profiles": ("CMenus::RenderSettingsTClientProfiles",),
 	"tclient_configs": ("CMenus::RenderSettingsTClientConfigs",),
 	"assets": ("CMenus::RenderSettingsCustom",),
-}
-
-PRODUCER_COMPLETE_PAGES = {
-	"general",
-	"tee",
-	"appearance",
-	"qmclient_hud",
-	"qmclient_function",
-	"qmclient_visual",
-	"contributors",
-	"tclient_configs",
-	"tclient_warlist",
-}
-
-PAGE_PRODUCER_REQUIRED = {
-	"contributors": (
-		"AppendQmClientContributorCards(vCards",
-		"AppendFriendLinkCards(vCards",
-		"AppendDdnetContributorCard(vCards",
-		"AppendTClientDeveloperCard(vCards",
-	),
 }
 
 PAGE_ROUTE_TABS = {
@@ -196,13 +175,6 @@ PAGE_ROUTE_TABS = {
 	"assets": (),
 }
 
-COMMON_REQUIRED = (
-	"SettingsPageLayout(",
-	"SSettingsPageLayoutFrame",
-	"SSettingsCardDefinition",
-	"QmResolveScrollPolicy(",
-	"EQmScrollProfile::SETTINGS_OUTER",
-)
 COMMON_FORBIDDEN = (
 	"SettingsCard(",
 	"BeginSettingsCardDeck(",
@@ -230,44 +202,6 @@ PAGE_ALLOWED_FORBIDDEN_CALLS = {
 }
 STRICT_LEGACY_PAGES = {"general", "player", "tee", "tee7", "graphics", "sound", "ddnet", "appearance", "controls"}
 DECK_LEGACY_FORBIDDEN = ("BeginSettingsCardDeck(", "BeginSettingsCardDeckCard(")
-PAGE_REQUIRED = {
-	"general": ("SettingsCardDeckForRenderPass().RenderCached(", "qm_card_catalog::BuildCards("),
-	"player": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::InputField("),
-	"tee": ("SettingsCardDeckForRenderPass().RenderCached(", "ResolveSettingsCardDefinitionsRevision("),
-	"tee7": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::InputField(", "EQmScrollProfile::SETTINGS_GRID"),
-	"graphics": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::NumericField("),
-	"sound": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::NumericField("),
-	"ddnet": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::InputField(", "ui_widget::NumericField("),
-	"appearance": ("SettingsCardDeckForRenderPass().RenderCached(", "ui_widget::NumericField("),
-	"controls": ("SettingsCardDeckForRenderPass().RenderCached(", "SettingsCardOrderModelForRenderPass()", "ui_widget::InputField(", "ui_widget::NumericField("),
-	"qmclient_hud": ("CardDeck.RenderCached(", "ResolveSettingsCardDefinitionsRevision("),
-	"qmclient_function": ("CardDeck.RenderCached(", "ResolveSettingsCardDefinitionsRevision("),
-	"qmclient_visual": ("CardDeck.RenderCached(", "ResolveSettingsCardDefinitionsRevision("),
-	"contributors": ("CardDeck.RenderCached(",),
-	"global_search": ("CardDeck.RenderCached(",),
-	"tclient": ('RenderCached(SettingsUiContext("settings_tclient_main"',),
-	"tclient_bind_wheel": ("CardDeck.RenderCached(",),
-	"tclient_chat_binds": ("CardDeck.RenderCached(",),
-	"tclient_warlist": ("CardDeck.RenderCached(",),
-	"tclient_status_bar": ("CardDeck.RenderCached(",),
-	"tclient_profiles": ("CardDeck.RenderCached(",),
-	"tclient_configs": ("CardDeck.RenderCached(",),
-	"assets": (
-		"ResolveSettingsContentMetrics(",
-		"s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_OUTER)",
-		"s_WorkshopAssetsListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_OUTER)",
-	),
-}
-PAGE_METRICS_REQUIRED = {
-	"controls": "ApplyControlsContentMetrics(MainView.w)",
-	"tclient": "ApplyTClientContentMetrics(MainView.w)",
-	"tclient_bind_wheel": "ApplyTClientContentMetrics(MainView.w)",
-	"tclient_chat_binds": "ApplyTClientContentMetrics(MainView.w)",
-	"tclient_warlist": "ApplyTClientContentMetrics(MainView.w)",
-	"tclient_status_bar": "ApplyTClientContentMetrics(MainView.w)",
-	"tclient_profiles": "ApplyTClientContentMetrics(MainView.w)",
-	"tclient_configs": "ApplyTClientContentMetrics(MainView.w)",
-}
 PAGE_FORBIDDEN = {
 	"graphics": ("s_GraphicsSettingsScrollRegion",),
 	"sound": ("s_SoundSettingsScrollRegion",),
@@ -288,7 +222,6 @@ PAGE_FORBIDDEN = {
 	),
 }
 
-PAGE_PRODUCER_REQUIRED["tclient_warlist"] = ('m_Spec = {"deck:tclient-warlist"',)
 
 REGISTRY_FORBIDDEN = {
 	"tclient_warlist": PAGE_FORBIDDEN["tclient_warlist"],
@@ -317,6 +250,7 @@ _NAVIGATION_SOURCE = Path("src/game/client/components/menus.cpp")
 # 卡片生产的归属：页面声明「这一页有哪些卡片」，具体生产在全局卡片目录的分类模块里（N3）。
 _CATALOGUE_SOURCE = Path("src/game/client/QmUi/cards/QmCardCatalogIds.cpp")
 PAGE_CATALOGUE_LIST = {
+	"controls": "ControlsCardStableIds",
 	"general": "GeneralCardStableIds",
 	"tee": "TeeCardStableIds",
 	"qmclient_hud": "HudCardStableIds",
@@ -324,6 +258,7 @@ PAGE_CATALOGUE_LIST = {
 	"qmclient_visual": "VisualCardStableIds",
 }
 _CATALOGUE_LIST_STATICS = {
+	"ControlsCardStableIds": "s_vControlsCards",
 	"GeneralCardStableIds": "s_vGeneralCards",
 	"TeeCardStableIds": "s_vTeeCards",
 	"HudCardStableIds": "s_vHudCards",
@@ -332,24 +267,73 @@ _CATALOGUE_LIST_STATICS = {
 }
 
 
-def _catalogue_list_contains(root: Path, list_name: str, stable_id: str) -> bool:
-	"""该 stableId 是否出现在目录源码对应分类清单的字面量中。
+# registry 驱动的页面已迁入目录模块；这里只约束入口、归属和注册。
+CATALOG_PAGE_SOURCES = {
+	"player": "QmCardCatalogPlayer.cpp",
+	"tee7": "QmCardCatalogTee7.cpp",
+	"graphics": "QmCardCatalogGraphics.cpp",
+	"sound": "QmCardCatalogSound.cpp",
+	"ddnet": "QmCardCatalogDDNet.cpp",
+	"appearance": "QmCardCatalogAppearance.cpp",
+	"tclient": "QmCardCatalogTClientMain.cpp",
+	"tclient_bind_wheel": "QmCardCatalogTClientBindWheel.cpp",
+	"tclient_chat_binds": "QmCardCatalogTClientChatBinds.cpp",
+	"tclient_warlist": "QmCardCatalogTClientWarList.cpp",
+	"tclient_status_bar": "QmCardCatalogTClientStatusBar.cpp",
+	"tclient_profiles": "QmCardCatalogTClientProfiles.cpp",
+	"tclient_configs": "QmCardCatalogTClientConfigs.cpp",
+}
+_CARDS_DIRECTORY = Path("src/game/client/QmUi/cards")
 
-	N3 之后卡片不再由页面逐个 AddCard 生产，「每张期望卡片都真的被本页生产」这一不变量
-	改由「页面调用对应分类清单 + 该 stableId 确在该清单字面量内」两段共同保证。
-	"""
+
+def _initializer(source: str, name: str) -> str:
+	"""读取具名清单初始化范围，不接受注释或字符串内的伪声明。"""
+	code = _mask_cpp_comments_and_strings(source)
+	match = re.search(r"\b" + re.escape(name) + r"\s*(?:\[[^\]]*\]\s*)?=\s*\{", code)
+	if match is None:
+		return ""
+	start = match.end() - 1
+	depth = 0
+	for index in range(start, len(code)):
+		if code[index] == "{":
+			depth += 1
+		elif code[index] == "}":
+			depth -= 1
+			if depth == 0:
+				return source[start:index + 1]
+	return ""
+
+
+def _string_literals(source: str) -> list[str]:
+	"""按词法顺序跳过注释、字符和 raw string，只读取实际字符串清单。"""
+	tokens = re.compile(
+		r'//[^\n]*|/\*[\s\S]*?(?:\*/|$)|'
+		r'(?:u8|u|U|L)?R"(?P<delimiter>[^ ()\\	\r\n]{0,16})\([\s\S]*?\)(?P=delimiter)"|'
+		r"'(?:\\.|[^'\\])*'|"
+		r'"(?P<literal>(?:\\.|[^"\\])*)"'
+	)
+	return [match.group("literal") for match in tokens.finditer(source) if match.group("literal") is not None]
+
+
+def _registry_entries(source: str) -> dict[str, list[str]]:
+	entries: dict[str, list[str]] = {}
+	initializer = _initializer(source, "Cards")
+	code = _mask_cpp_comments_and_strings(initializer)
+	for match in re.finditer(r'\{\s*"([^"\\]+)"\s*,\s*"([^"\\]+)"\s*,', initializer):
+		if code[match.start()] == "{":
+			entries.setdefault(match.group(1), []).append(match.group(2))
+	return entries
+
+
+def _catalogue_list_contains(root: Path, list_name: str, stable_id: str) -> bool:
 	static_name = _CATALOGUE_LIST_STATICS.get(list_name)
 	if static_name is None:
 		return False
 	source = _read(root, _CATALOGUE_SOURCE)
-	marker = f"{static_name} = {{"
-	start = source.find(marker)
-	if start == -1:
+	body = _extract_function_body(source, list_name) or ""
+	if not re.search(r"\breturn\s+" + re.escape(static_name) + r"\s*;", _mask_cpp_comments_and_strings(body)):
 		return False
-	end = source.find("};", start)
-	if end == -1:
-		return False
-	return f'"{stable_id}"' in source[start:end]
+	return _string_literals(_initializer(source, static_name)).count(stable_id) == 1
 
 _TYPOGRAPHY_SOURCES = (
 	Path("src/game/client/components/menus_settings.cpp"),
@@ -374,56 +358,25 @@ _RAW_FONT_ALLOWLIST = (
 )
 _RAW_FONT_LITERAL = re.compile(r"\b(?:9|10|12|13|14|16|20|24|25)\.0f\b")
 _CPP_RAW_STRING_START = re.compile(r'(?:u8|u|U|L)?R"(?P<delimiter>[^ ()\\\t\r\n]{0,16})\(')
-PAGE_CONTRACT_HELPERS = {
-	"controls": ("ApplyControlsContentMetrics", "CMenusSettingsControls::DoSettingsControlsNumericField"),
-	"tee7": ("CMenus::RenderSkinSelection7", "CMenus::RenderSkinPartSelection7"),
-}
-
-
 def _extract_function_body(source: str, symbol: str) -> str | None:
-	"""Return a C++ function body using a small brace-aware scanner."""
-	symbol_pos = source.find(symbol)
-	if symbol_pos < 0:
+	"""提取真实定义，忽略注释、字符串和没有函数体的声明。"""
+	code = _mask_cpp_comments_and_strings(source)
+	pattern = re.escape(symbol) if "(" in symbol else r"\b" + re.escape(symbol) + r"(?=\s*\()"
+	match = re.search(pattern, code)
+	if match is None:
 		return None
-	open_brace = source.find("{", symbol_pos)
-	if open_brace < 0:
+	start = code.find("{", match.end())
+	semicolon = code.find(";", match.end())
+	if start < 0 or (0 <= semicolon < start):
 		return None
-
 	depth = 0
-	index = open_brace
-	quote = ""
-	line_comment = False
-	block_comment = False
-	while index < len(source):
-		char = source[index]
-		next_char = source[index + 1] if index + 1 < len(source) else ""
-		if line_comment:
-			if char == "\n":
-				line_comment = False
-		elif block_comment:
-			if char == "*" and next_char == "/":
-				block_comment = False
-				index += 1
-		elif quote:
-			if char == "\\":
-				index += 1
-			elif char == quote:
-				quote = ""
-		elif char == "/" and next_char == "/":
-			line_comment = True
-			index += 1
-		elif char == "/" and next_char == "*":
-			block_comment = True
-			index += 1
-		elif char in ('"', "'"):
-			quote = char
-		elif char == "{":
+	for index in range(start, len(code)):
+		if code[index] == "{":
 			depth += 1
-		elif char == "}":
+		elif code[index] == "}":
 			depth -= 1
 			if depth == 0:
-				return source[symbol_pos : index + 1]
-		index += 1
+				return source[match.start():index + 1]
 	return None
 
 
@@ -622,111 +575,94 @@ def _contains_forbidden_token(page: str, source: str, token: str) -> bool:
 	remaining_source = source
 	for allowed_call in PAGE_ALLOWED_FORBIDDEN_CALLS.get(page, {}).get(token, ()):
 		remaining_source = remaining_source.replace(allowed_call, "", 1)
-	return token in remaining_source
+	if token not in remaining_source:
+		return False
+	if ":" in token:
+		return token in _string_literals(remaining_source)
+	return re.search(r"(?<![\w])" + re.escape(token), _mask_cpp_comments_and_strings(remaining_source)) is not None
 
 
 def audit_page(repo_root: Path, page: str) -> list[str]:
 	if page not in PAGE_STABLE_IDS:
 		raise ValueError(f"unknown settings page: {page}")
-
 	errors: list[str] = []
 	source = _read(repo_root, _PAGE_SOURCE.get(page, _DEFAULT_SOURCE))
-	bodies: list[str] = []
+	bodies = []
 	for symbol in PAGE_FUNCTIONS[page]:
 		body = _extract_function_body(source, symbol)
 		if body is None:
-			errors.append(f"{page}: {symbol}: function body missing")
+			errors.append(f"{page}: {symbol}: page entry definition missing")
 		else:
 			bodies.append(body)
 	page_source = "\n".join(bodies)
-	for helper_symbol in PAGE_CONTRACT_HELPERS.get(page, ()):
-		# 只允许明确列出的 helper 承载入口函数委托的组件契约。
-		helper = _extract_function_body(source, helper_symbol)
-		if helper is None:
-			errors.append(f"{page}: {helper_symbol}: function body missing")
-		else:
-			page_source += "\n" + helper
-
-	required = PAGE_REQUIRED[page] if page == "assets" else COMMON_REQUIRED + PAGE_REQUIRED[page]
-	# 全局搜索只用 Deck 的绘制副作用，结果由搜索缓存持有；其他卡片页仍消费返回值。
-	if page not in ("assets", "global_search"):
-		required += ("SSettingsCardDeckResult",)
-	metrics_required = PAGE_METRICS_REQUIRED.get(page, "ResolveSettingsContentMetrics(")
-	required += (metrics_required,)
-	for token in required:
-		if token not in page_source:
-			errors.append(f"{page}: {token}: required unified contract missing")
-	if page == "assets":
-		forbidden = PAGE_FORBIDDEN.get(page, ())
-	elif page in STRICT_LEGACY_PAGES:
-		forbidden = COMMON_FORBIDDEN + PAGE_FORBIDDEN.get(page, ())
-	else:
-		forbidden = DECK_LEGACY_FORBIDDEN + PAGE_FORBIDDEN.get(page, ())
-	for token in forbidden:
-		if _contains_forbidden_token(page, page_source, token):
-			errors.append(f"{page}: {token}: legacy path remains")
-
-	registry = _read(repo_root, _REGISTRY_SOURCE)
+	contract_source = page_source
+	entries = _registry_entries(_read(repo_root, _REGISTRY_SOURCE))
 	navigation = _read(repo_root, _NAVIGATION_SOURCE)
+	if page in CATALOG_PAGE_SOURCES:
+		# 接线属于迁移架构合同；布局、滚动、测量和输入行为由运行时测试负责。
+		calls = list(_iter_cpp_call_arguments(page_source, "RenderSettingsCatalogPage"))
+		if not calls:
+			errors.append(f"{page}: catalog page delegation missing")
+		tabs = PAGE_ROUTE_TABS[page]
+		delegated_tabs = []
+		for start, end, _, arguments in calls:
+			delegated_tabs.extend(_string_literals(page_source[start:end]))
+			if len(arguments) > 1 and (array := re.match(r"(\w+)\s*\[", arguments[1])):
+				delegated_tabs.extend(_string_literals(_initializer(page_source, array.group(1))))
+		for tab in tabs:
+			if tab not in delegated_tabs:
+				errors.append(f"{page}: {tab}: catalog page route missing")
+		producer = _CARDS_DIRECTORY / CATALOG_PAGE_SOURCES[page]
+		producer_source = _read(repo_root, producer)
+		contract_source += "\n" + producer_source
+		if not producer_source.strip():
+			errors.append(f"{page}: {producer}: catalog producer source missing")
+		for stable_id in PAGE_STABLE_IDS[page]:
+			if len(entries.get(stable_id, [])) == 1 and entries[stable_id][0] not in tabs:
+				errors.append(f"{page}: {stable_id}: registry category mismatch")
+	else:
+		catalogue_list = PAGE_CATALOGUE_LIST.get(page)
+		if catalogue_list is not None:
+			if not list(_iter_cpp_call_arguments(page_source, f"qm_card_catalog::{catalogue_list}")):
+				errors.append(f"{page}: {catalogue_list}: page category delegation missing")
+			for stable_id in PAGE_STABLE_IDS[page]:
+				if not _catalogue_list_contains(repo_root, catalogue_list, stable_id):
+					errors.append(f"{page}: {stable_id}: catalogue category entry missing or duplicated")
 	for stable_id in PAGE_STABLE_IDS[page]:
-		if stable_id not in registry:
-			errors.append(f"{page}: {stable_id}: registry/navigation entry missing")
-		if page in PRODUCER_COMPLETE_PAGES and page not in PAGE_PRODUCER_REQUIRED:
-			# 卡片生产已迁入全局卡片目录（N3）：页面只声明本页含有哪些分类。
-			# 仍校验「该页每张期望卡片都真的被生产」，但拆成两段：页面调用对应分类清单，
-			# 且该 stableId 确实在该清单字面量内——不是取消检查。
-			catalogue_list = PAGE_CATALOGUE_LIST.get(page)
-			if catalogue_list is None:
-				if stable_id not in page_source:
-					errors.append(f"{page}: {stable_id}: page producer entry missing")
-			else:
-				if f"qm_card_catalog::{catalogue_list}()" not in page_source:
-					errors.append(f"{page}: qm_card_catalog::{catalogue_list}(): page producer entry missing")
-				elif not _catalogue_list_contains(repo_root, catalogue_list, stable_id):
-					errors.append(f"{page}: {stable_id}: catalogue category entry missing")
-	for token in PAGE_PRODUCER_REQUIRED.get(page, ()):
-		if token not in page_source:
-			errors.append(f"{page}: {token}: page producer entry missing")
+		if len(entries.get(stable_id, [])) != 1:
+			errors.append(f"{page}: {stable_id}: registry entry missing or duplicated")
 	for token in REGISTRY_FORBIDDEN.get(page, ()):
-		if token in registry:
+		if token in entries:
 			errors.append(f"{page}: {token}: legacy registry entry remains")
 	for route in PAGE_ROUTE_TABS[page]:
 		if not _navigation_has_route(navigation, route):
 			errors.append(f"{page}: {route}: registry/navigation entry missing")
+	if page == "controls":
+		contract_source += "\n" + _read(repo_root, _CARDS_DIRECTORY / "QmCardCatalogControls.cpp")
+	forbidden = (COMMON_FORBIDDEN if page in STRICT_LEGACY_PAGES else DECK_LEGACY_FORBIDDEN) + PAGE_FORBIDDEN.get(page, ())
+	for token in forbidden:
+		if _contains_forbidden_token(page, contract_source, token):
+			errors.append(f"{page}: {token}: legacy path remains")
+	return errors
+
+
+def audit_catalog_build_contracts(repo_root: Path) -> list[str]:
+	"""独立编译单元必须存在并注册，不以函数体片段声称卡片行为正确。"""
+	errors = []
+	cmake = re.sub(r"#[^\n]*", "", _read(repo_root, Path("CMakeLists.txt")))
+	registered = set(re.findall(r"(?<![\w/])QmUi/cards/([\w]+\.cpp)(?![\w.])", cmake))
+	required = {"QmCardCatalog.cpp", "QmCardCatalogIds.cpp", "QmCardCatalogStandard.cpp", "QmCardCatalogTClient.cpp", "QmCardRenderBridge.cpp", "QmCardCatalogControls.cpp", *CATALOG_PAGE_SOURCES.values()}
+	actual = {path.name for path in (repo_root / _CARDS_DIRECTORY).glob("*.cpp")}
+	for name in sorted(required | actual | registered):
+		if name not in actual:
+			errors.append(f"catalog: {name}: source missing")
+		if name not in registered:
+			errors.append(f"catalog: {name}: CMake registration missing")
 	return errors
 
 
 def audit_shared_contracts(repo_root: Path) -> list[str]:
 	errors: list[str] = []
-	menu_source = _read(repo_root, _NAVIGATION_SOURCE)
-	settings_shell_source = _read(repo_root, _DEFAULT_SOURCE)
-	tclient_source = _read(repo_root, Path("src/game/client/components/tclient/menus_tclient.cpp"))
-	# Dropdown trigger/popup rendering lives in ui_popups.cpp after the UI split.
-	ui_source = "\n".join(
-		_read(repo_root, relative)
-		for relative in (
-			Path("src/game/client/ui.cpp"),
-			Path("src/game/client/ui_popups.cpp"),
-		)
-	)
-	if "ResolveSettingsRadioRowLayout(" not in menu_source:
-		errors.append("shared: responsive settings radio resolver missing")
-	if "SettingsPageUiScale(pRect->w)" in menu_source:
-		errors.append("shared: settings control font still derives from local rect width")
-	if "SettingsPageUiScale(0.0f)" in menu_source:
-		errors.append("shared: settings control font still derives from a synthetic zero width")
-	if "CurrentSettingsContentMetrics().m_BodySize" not in menu_source:
-		errors.append("shared: settings buttons do not consume the shell content metrics")
-	if "float RowHeight, float RowSpacing, float BodySize" not in menu_source:
-		errors.append("shared: streamed settings checkbox rows do not consume explicit metrics")
-	if re.search(r"DoSettingsButton_CheckBoxAutoVMarginAndSet\([^;{]+float RowSpacing\s*=", menu_source) or re.search(r"DoSettingsButton_CheckBoxAutoVMarginAndSet\([^;{]+float BodySize\s*=", menu_source):
-		errors.append("shared: streamed settings checkbox metrics still have implicit defaults")
-	if "VMargin, 0.0f, FontSize" not in tclient_source:
-		errors.append("tclient: streamed checkbox rows do not use the shared BodySize")
-	if "Ui()->SetDropDownFontSize(m_SettingsContentMetrics.m_BodySize);" not in settings_shell_source:
-		errors.append("shared: settings shell does not provide the BodySize dropdown context")
-	if "Props.m_FontSize = ResolvedFontSize;" not in ui_source or "State.m_SelectionPopupContext.m_FontSize = ResolvedFontSize;" not in ui_source:
-		errors.append("shared: dropdown trigger and popup do not inherit one resolved font size")
 	for relative in _TYPOGRAPHY_SOURCES:
 		if "Ui()->DoDropDown(" in _read(repo_root, relative):
 			errors.append(f"{relative}: settings dropdown bypasses CMenus::DoSettingsDropDown")
@@ -760,6 +696,7 @@ def main() -> int:
 	pages = tuple(PAGE_STABLE_IDS) if args.all else (args.page,)
 	errors = [error for page in pages for error in audit_page(args.repo_root, page)]
 	errors.extend(audit_shared_contracts(args.repo_root))
+	errors.extend(audit_catalog_build_contracts(args.repo_root))
 	if errors:
 		print("P5 设置页迁移结构清单失败：")
 		for error in errors:

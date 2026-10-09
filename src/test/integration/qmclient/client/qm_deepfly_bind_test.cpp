@@ -33,14 +33,11 @@ namespace
 			m_pConsole->StoreCommands(false);
 			g_Config.m_ClDummyHammer = 0;
 			// 用事件记录器替换主控开火消费者；配置解析和分身输入使用生产实现。
-			m_pConsole->Register("+fire", "", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUser) {
-				static_cast<CQmDeepflyBind *>(pUser)->m_vFireStrokes.push_back(pResult->GetInteger(0));
-			}, this, "");
+			m_pConsole->Register("+fire", "", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUser) { static_cast<CQmDeepflyBind *>(pUser)->m_vFireStrokes.push_back(pResult->GetInteger(0)); }, this, "");
 			m_pConsole->Chain("cl_dummy_hammer", [](IConsole::IResult *pResult, void *pUser, IConsole::FCommandCallback pfnCallback, void *pCallbackUser) {
 				pfnCallback(pResult, pCallbackUser);
 				if(pResult->NumArguments())
-					static_cast<CQmDeepflyBind *>(pUser)->m_Hammer.SetEnabled(g_Config.m_ClDummyHammer != 0);
-			}, this);
+					static_cast<CQmDeepflyBind *>(pUser)->m_Hammer.SetEnabled(g_Config.m_ClDummyHammer != 0); }, this);
 		}
 
 		void TearDown() override { g_Config = m_PreviousConfig; }
@@ -66,8 +63,8 @@ namespace
 
 TEST_F(CQmDeepflyBind, HdfPressAndReleaseBeforeSamplingRetainsTheHammerRequest)
 {
-	m_pConsole->ExecuteLineStroked(1, "+toggle cl_dummy_hammer 1 0");
-	m_pConsole->ExecuteLineStroked(0, "+toggle cl_dummy_hammer 1 0");
+	m_pConsole->ExecuteLineStroked(1, "+toggle cl_dummy_hammer 1 0", IConsole::CLIENT_ID_UNSPECIFIED);
+	m_pConsole->ExecuteLineStroked(0, "+toggle cl_dummy_hammer 1 0", IConsole::CLIENT_ID_UNSPECIFIED);
 	EXPECT_EQ(g_Config.m_ClDummyHammer, 0);
 	ASSERT_TRUE(Snap());
 	EXPECT_EQ(CountInput(0, m_Output.m_Fire).m_Presses, 1);
@@ -78,8 +75,8 @@ TEST_F(CQmDeepflyBind, HdfPressAndReleaseBeforeSamplingRetainsTheHammerRequest)
 TEST_F(CQmDeepflyBind, DfShortClickPreservesBothMainFireStrokesAndTheDummyHammer)
 {
 	const char *pCommand = "+fire; +toggle cl_dummy_hammer 1 0";
-	m_pConsole->ExecuteLineStroked(1, pCommand);
-	m_pConsole->ExecuteLineStroked(0, pCommand);
+	m_pConsole->ExecuteLineStroked(1, pCommand, IConsole::CLIENT_ID_UNSPECIFIED);
+	m_pConsole->ExecuteLineStroked(0, pCommand, IConsole::CLIENT_ID_UNSPECIFIED);
 	EXPECT_EQ(m_vFireStrokes, (std::vector<int>{1, 0}));
 	ASSERT_TRUE(Snap());
 	EXPECT_EQ(CountInput(0, m_Output.m_Fire).m_Presses, 1);

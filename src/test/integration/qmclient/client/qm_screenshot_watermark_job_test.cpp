@@ -1,8 +1,10 @@
 #include <base/system.h>
 #include <base/windows.h>
+
 #include <engine/gfx/image_loader.h>
 #include <engine/shared/jobs.h>
 #include <engine/storage.h>
+
 #include <game/client/components/qmclient/screenshot_manager.h>
 
 #include <gtest/gtest.h>
@@ -142,7 +144,11 @@ TEST_F(CQmScreenshotWatermarkJobTest, ReplacementDeniedByOpenHandlePreservesPrev
 	struct SHandle
 	{
 		HANDLE m_Handle = INVALID_HANDLE_VALUE;
-		~SHandle() { if(m_Handle != INVALID_HANDLE_VALUE) CloseHandle(m_Handle); }
+		~SHandle()
+		{
+			if(m_Handle != INVALID_HANDLE_VALUE)
+				CloseHandle(m_Handle);
+		}
 	} Handle;
 	Handle.m_Handle = CreateFileW(Wide.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	ASSERT_NE(Handle.m_Handle, INVALID_HANDLE_VALUE);

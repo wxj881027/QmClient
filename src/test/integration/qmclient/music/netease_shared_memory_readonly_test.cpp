@@ -1,10 +1,14 @@
 #include <base/detect.h>
+
 #include <game/client/components/qmclient/netease/netease_shared_memory.h>
+
 #include <gtest/gtest.h>
+
 #include <string>
 
 #if defined(CONF_FAMILY_WINDOWS)
 #include <windows.h>
+
 #include <cstring>
 
 TEST(NeteaseSharedMemoryMapping, ReadsSnapshotFromReadOnlyWindowsMapping)
@@ -14,7 +18,13 @@ TEST(NeteaseSharedMemoryMapping, ReadsSnapshotFromReadOnlyWindowsMapping)
 	{
 		HANDLE m_Handle = nullptr;
 		void *m_pView = nullptr;
-		~SMapping() { if(m_pView) UnmapViewOfFile(m_pView); if(m_Handle) CloseHandle(m_Handle); }
+		~SMapping()
+		{
+			if(m_pView)
+				UnmapViewOfFile(m_pView);
+			if(m_Handle)
+				CloseHandle(m_Handle);
+		}
 	} Mapping;
 	Mapping.m_Handle = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(SSharedBlockV5), nullptr);
 	ASSERT_NE(Mapping.m_Handle, nullptr);

@@ -806,8 +806,8 @@ Appearance
 Appearance and command highlighting of the local console
 == Apariencia de la consola local y resaltado de comandos
 
-Appearance of help bubbles outside settings cards
-== Apariencia de las ayudas fuera de las tarjetas de ajustes
+Appearance of help bubbles
+== Apariencia de las burbujas de ayuda
 
 Append to log file instead of overwriting
 == Añadir al archivo de registro en lugar de sobrescribir
@@ -1298,6 +1298,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Falló el inicio de sesión automático de Axiom, reintentando
 
+Axiom auto login skipped: no password
+== Inicio de sesión automático de Axiom: sin contraseña, omitido
+
+Axiom auto login stopped after repeated failures
+== Inicio de sesión automático de Axiom detenido: falló repetidamente
+
 Axiom auto login succeeded
 == Inicio de sesión automático de Axiom exitoso
 
@@ -1309,6 +1315,9 @@ Axiom main account password
 
 Axiom score request failed
 == Error al solicitar las puntuaciones de Axiom
+
+Axiom website
+== Sitio web de Axiom
 
 Axis
 == Eje
@@ -9836,9 +9845,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == Lista de repeticiones: aún no cargada
 
-Replay list: up to date
-== Lista de repeticiones: al día
-
 Replays directory
 == Directorio de repeticiones
 
@@ -11683,6 +11689,9 @@ Show teleporter tile outlines
 
 Show text entities
 == Mostrar entidades de texto
+
+Show the chat scrollbar on the right
+== Mostrar la barra de desplazamiento del chat a la derecha
 
 Show the cursor while free spectating
 == Mostrar el cursor mientras se especta libremente
@@ -13721,6 +13730,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == No se pudieron eliminar %d elementos seleccionados. El primer elemento fallido fue '%s'.
 
+Unable to delete skin
+== No se puede eliminar el skin
+
 Unable to delete the demo '%s'
 == No se pudo eliminar la demo '%s'
 
@@ -14104,9 +14116,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Usa la rueda del ratón sobre un módulo para escalarlo un 5%
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== Introduce por separado las contraseñas registradas en Axiom para la cuenta principal y el dummy. Esta opción no registra cuentas.
 
 Use the scoreboard cursor mode to scroll the list
 == Usa el modo cursor del marcador para desplazar la lista
@@ -14980,6 +14989,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == ¡Eres el último!
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== Tu cuenta es tu nombre en el juego: regístrala primero en el sitio web de Axiom. Introduce las contraseñas registradas de la cuenta principal y el dummy. Esta opción no registra cuentas.
 
 Your current race time is %s
 == Tu tiempo de carrera actual es %s

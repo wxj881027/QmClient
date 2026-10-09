@@ -75,8 +75,7 @@ namespace
 			{
 				m_State = EverConnected ? EQmWebSocketState::RECONNECTING : EQmWebSocketState::CONNECTING;
 				char aError[512] = {};
-				void *pHandle = qm_ws_connect(Url.c_str(), m_Config.m_Protocol.c_str(), Headers.c_str(), m_Config.m_HandshakeTimeoutMs > 0 ? m_Config.m_HandshakeTimeoutMs : 10000, m_Config.m_MaxMessageSize, aError, sizeof(aError),
-					[](void *pUser) { return !static_cast<CWebSocketClientRust *>(pUser)->m_Desired.load(); }, this);
+				void *pHandle = qm_ws_connect(Url.c_str(), m_Config.m_Protocol.c_str(), Headers.c_str(), m_Config.m_HandshakeTimeoutMs > 0 ? m_Config.m_HandshakeTimeoutMs : 10000, m_Config.m_MaxMessageSize, aError, sizeof(aError), [](void *pUser) { return !static_cast<CWebSocketClientRust *>(pUser)->m_Desired.load(); }, this);
 				bool Clean = false;
 				int64_t ConnectedAt = 0;
 				if(pHandle && m_Desired)

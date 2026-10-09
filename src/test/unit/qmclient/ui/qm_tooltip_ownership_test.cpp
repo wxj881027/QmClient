@@ -17,19 +17,19 @@ TEST(QmTooltips, OwnsCallerText)
 	EXPECT_EQ(Tooltip.m_Text, "rabbit");
 }
 
-TEST(QmTooltips, VisibleLinesFitBubbleAndKeepMinimumForTinyViewport)
+TEST(QmTooltips, TextProjectionScalesAroundTheSameCenterAndRestoresWithoutMotion)
 {
-	EXPECT_EQ(QmTooltipVisibleLines(100, 14), 7);
-	EXPECT_EQ(QmTooltipVisibleLines(28, 14), 2);
-	EXPECT_EQ(QmTooltipVisibleLines(1, 14), 1);
-	EXPECT_EQ(QmTooltipVisibleLines(-5, 0), 1);
-}
-
-TEST(QmTooltips, SingleLineBubbleDoesNotLoseItsTextToPaddingRounding)
-{
-	EXPECT_FALSE(QmTooltipTextTruncated(10, 3, 16));
-	EXPECT_FALSE(QmTooltipTextTruncated(10, 3, 15.999999f));
-	EXPECT_TRUE(QmTooltipTextTruncated(40, 3, 30));
+	const CUIRect Screen{100, 50, 400, 200};
+	const auto Scaled = QmTooltipTextProjection(Screen, vec2(200, 100), 2.0f);
+	EXPECT_FLOAT_EQ(Scaled.x, 150);
+	EXPECT_FLOAT_EQ(Scaled.y, 75);
+	EXPECT_FLOAT_EQ(Scaled.w, 200);
+	EXPECT_FLOAT_EQ(Scaled.h, 100);
+	const auto Restored = QmTooltipTextProjection(Screen, vec2(200, 100), 1.0f);
+	EXPECT_FLOAT_EQ(Restored.x, Screen.x);
+	EXPECT_FLOAT_EQ(Restored.y, Screen.y);
+	EXPECT_FLOAT_EQ(Restored.w, Screen.w);
+	EXPECT_FLOAT_EQ(Restored.h, Screen.h);
 }
 
 TEST(QmTooltips, BubbleIsCenteredOnItsAnchorAndMovesWithTheControl)
@@ -273,24 +273,6 @@ TEST(QmTooltips, TextPreparationIgnoresTransparentCallerColorAndIconFontThenRest
 	EXPECT_EQ(Render.GetTextColor(), Before.GetTextColor());
 	EXPECT_EQ(Render.GetFontPreset(), Before.GetFontPreset());
 	EXPECT_EQ(Render.GetRenderFlags(), Before.GetRenderFlags());
-}
-
-TEST(QmTooltips, NarrowBubbleKeepsTheMeasuredWrapWidthForDrawing)
-{
-	const CUIRect Content{203.4f, 127.2f, 32.0f, 10.0f};
-	const CTextCursor Cursor = QmTooltipTextCursor(Content, 10.0f, 300.0f, 0);
-	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 300.0f);
-	EXPECT_GT(Cursor.m_LineWidth, Content.w);
-	EXPECT_FLOAT_EQ(Cursor.m_StartX, Content.x);
-	EXPECT_FLOAT_EQ(Cursor.m_StartY, Content.y);
-	EXPECT_NE(Cursor.m_Flags & TEXTFLAG_RENDER, 0);
-}
-
-TEST(QmTooltips, ClippedMultilineBubbleLimitsDrawingToItsVisibleLines)
-{
-	const CTextCursor Cursor = QmTooltipTextCursor({10, 20, 80, 30}, 14, 80, 1);
-	EXPECT_EQ(Cursor.m_MaxLines, 1);
-	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 80);
 }
 
 TEST(QmTooltips, PopupMotionKeepsTheSameCenterThroughOvershoot)

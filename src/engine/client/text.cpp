@@ -1618,7 +1618,7 @@ float CTextCursor::Height() const
 
 STextBoundingBox CTextCursor::BoundingBox() const
 {
-	return {m_StartX, m_StartY, m_LongestLineWidth, Height()};
+	return {m_StartX, m_StartY, m_LongestLineWidth, Height(), m_MaxCharacterHeight, m_LineCount};
 }
 
 struct SFontLanguageVariant
@@ -2968,7 +2968,8 @@ public:
 			ScreenHeight >= 1.0f && std::isfinite(ScreenHeight) ? SafeGraphicsHeight / ScreenHeight : 1.0f);
 		const float CursorX = SafePixelAlign(pCursor->m_X, FakeToScreen.x);
 		const float CursorY = SafePixelAlign(pCursor->m_Y, FakeToScreen.y);
-		const int ActualSize = round_truncate(pCursor->m_FontSize * FakeToScreen.y);
+		// 正字号至少占一个物理像素；低分辨率的小字号不能退化为零行高。
+		const int ActualSize = maximum(1, round_truncate(pCursor->m_FontSize * FakeToScreen.y));
 		const bool Nameplate = (TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_QM_NAMEPLATE) != 0;
 		pCursor->m_AlignedFontSize = Nameplate ? pCursor->m_FontSize : ActualSize / FakeToScreen.y;
 		pCursor->m_AlignedLineSpacing = round_truncate(pCursor->m_LineSpacing * FakeToScreen.y) / FakeToScreen.y;
@@ -2982,7 +2983,9 @@ public:
 		const char *pCurrent = pText;
 		const char *pEnd = pCurrent + Length;
 		const char *pPrevBatchEnd = nullptr;
-		const char *pEllipsis = "…";
+		// 内部终止标记必须独占地址，避免与调用者的省略号常量合并后误判为空文本。
+		const char aEllipsis[] = "…";
+		const char *pEllipsis = aEllipsis;
 		const SGlyph *pEllipsisGlyph = nullptr;
 		// Only text that does not fit as a whole is ellipsized. Both the ellipsis glyph and
 		// the width of the whole text are only determined once the line width is nearly
@@ -3335,6 +3338,9 @@ public:
 					const float CharY = TmpY - BearingY;
 					if(pCursor->m_CalculateVisualBoundingBox && pGlyph->m_CharHeight > 0.0f)
 					{
+						const float FillLeftOffset = ((pGlyph->m_Width - pGlyph->m_CharWidth) * 0.5f) * Scale * pCursor->m_AlignedFontSize;
+						const float CharLeft = CharX + FillLeftOffset;
+						const float CharRight = CharLeft + pGlyph->m_CharWidth * Scale * pCursor->m_AlignedFontSize;
 						const float FillTopOffset = ((pGlyph->m_Height - pGlyph->m_CharHeight) * 0.5f) * Scale * pCursor->m_AlignedFontSize;
 						const float FillHeight = pGlyph->m_CharHeight * Scale * pCursor->m_AlignedFontSize;
 						const float CharTop = CharY - CharHeight + FillTopOffset;
@@ -3342,11 +3348,15 @@ public:
 						if(!pCursor->m_HasVisualBoundingBox)
 						{
 							pCursor->m_HasVisualBoundingBox = true;
+							pCursor->m_VisualLeft = CharLeft;
+							pCursor->m_VisualRight = CharRight;
 							pCursor->m_VisualTop = CharTop;
 							pCursor->m_VisualBottom = CharBottom;
 						}
 						else
 						{
+							pCursor->m_VisualLeft = minimum(pCursor->m_VisualLeft, CharLeft);
+							pCursor->m_VisualRight = maximum(pCursor->m_VisualRight, CharRight);
 							pCursor->m_VisualTop = minimum(pCursor->m_VisualTop, CharTop);
 							pCursor->m_VisualBottom = maximum(pCursor->m_VisualBottom, CharBottom);
 						}

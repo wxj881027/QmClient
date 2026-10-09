@@ -67,7 +67,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 	const float UiScale = Metrics.m_UiScale;
 	// 下拉框在正式绘制阶段才提交配置。当前帧继续使用测量阶段的模式，
 	// 避免先绘制新增行、下一帧才扩展卡片高度。
-	const int NoiseSuppressModeForLayout = std::clamp(g_Config.m_QmVoiceNoiseSuppressEnable, 0, 2);
+	const int NoiseSuppressModeForLayout = g_Config.m_QmVoiceNoiseSuppressEnable == 1 ? 1 : 0;
 	CUIRect Row, LabelCol, ControlCol;
 	auto DoQmSettingsCheckboxAuto = [this](const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float) {
 		Ui()->DoConfigTooltip(pId, pRect, pValue);
@@ -563,11 +563,6 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 				s_VoiceNoiseSuppressModeDropDownNames = {
 					Localize("No noise reduction"),
 					Localize("Simple noise reduction"),
-#if defined(CONF_RNNOISE)
-					Localize("RNNoise noise reduction"),
-#else
-					Localize("RNNoise noise reduction (unavailable in this build)"),
-#endif
 				};
 				static CUi::SDropDownState s_VoiceNoiseSuppressModeDropDownState;
 				static CScrollRegion s_VoiceNoiseSuppressModeDropDownScrollRegion;
@@ -575,7 +570,7 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 
 				Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 				DoQmSettingsLabel("qmclient-voice-noise-reduction-mode", &LabelCol, Localize("Noise reduction mode"), BodySize);
-				const int CurrentNoiseSuppressMode = std::clamp(g_Config.m_QmVoiceNoiseSuppressEnable, 0, 2);
+				const int CurrentNoiseSuppressMode = NoiseSuppressModeForLayout;
 				const int NewNoiseSuppressMode = DoSettingsDropDown(&ControlCol, CurrentNoiseSuppressMode, s_VoiceNoiseSuppressModeDropDownNames.data(), s_VoiceNoiseSuppressModeDropDownNames.size(), s_VoiceNoiseSuppressModeDropDownState, {}, &g_Config.m_QmVoiceNoiseSuppressEnable, nullptr, &Row);
 				if(CurrentNoiseSuppressMode != NewNoiseSuppressMode)
 					g_Config.m_QmVoiceNoiseSuppressEnable = NewNoiseSuppressMode;
@@ -584,28 +579,11 @@ void CMenus::RenderQmHudVoiceContent(CUIRect &Content, const SSettingsContentMet
 
 			if(NoiseSuppressModeForLayout != 0)
 			{
-#if !defined(CONF_RNNOISE)
-				if(NoiseSuppressModeForLayout == 2)
-				{
-					Content.HSplitTop(LineHeight * 0.78f, &Row, &Content);
-					DoQmSettingsLabel("qmclient-voice-rnnoise-fallback-warning", &Row, Localize("RNNoise not integrated in current build, will fallback to simple noise reduction"), Metrics.m_SmallSize);
-					Content.HSplitTop(LineSpacing * 0.75f, nullptr, &Content);
-				}
-#endif
 				Content.HSplitTop(LineHeight, &Row, &Content);
 				{
 					CUIRect LabelColValue, ControlColValue;
 					Row.VSplitLeft(LabelWidth, &LabelColValue, &ControlColValue);
-#if !defined(CONF_RNNOISE)
-					const bool RnnoiseFallbackActive = NoiseSuppressModeForLayout == 2;
-#endif
-					const char *pNoiseSuppressStrengthLabel = NoiseSuppressModeForLayout == 2 ?
-#if !defined(CONF_RNNOISE)
-											  (RnnoiseFallbackActive ? Localize("Fallback simple noise reduction strength") : Localize("RNNoise noise reduction strength")) :
-#else
-											  Localize("RNNoise noise reduction strength") :
-#endif
-											  Localize("Simple noise reduction strength");
+					const char *pNoiseSuppressStrengthLabel = Localize("Simple noise reduction strength");
 					Ui()->DoLabel(&LabelColValue, pNoiseSuppressStrengthLabel, BodySize, TEXTALIGN_ML);
 					static int s_QmVoiceNoiseSuppressStrengthInputId;
 					RenderSliderWithValueInput(&s_QmVoiceNoiseSuppressStrengthInputId, ControlColValue, &g_Config.m_QmVoiceNoiseSuppressStrength, 0, 100, "%");

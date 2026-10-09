@@ -1161,22 +1161,13 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 
 	int SliderLevel = QmMapVotes::MapBrowserFilterLevel(g_Config.m_QmMapBrowserEmptyOnly, g_Config.m_QmMapBrowserStarMask);
 
-	// 纵向三段：标题行（「服务器筛选」，居中，字号与「服务器地址：」一致）→ 滑块行 → 收藏开关行。
-	CUIRect Heading, Body, SliderRow, FavoriteRow;
-	Selector.HSplitTop(14.0f, &Heading, &Body);
-	Body.HSplitTop(4.0f, nullptr, &Body);
-	Body.HSplitTop(20.0f, &SliderRow, &FavoriteRow);
-	FavoriteRow.HSplitTop(2.0f, nullptr, &FavoriteRow);
-	Ui()->DoLabel(&Heading, Localize("Server filter"), 14.0f, TEXTALIGN_MC);
-
-	CUIRect CurrentLabel, SliderRect;
-	// 档位名最长是非中文的「No filter」一类短语，标签列留够宽度避免溢出到滑条上；
-	// 标签右对齐后与滑块之间保留一小段呼吸间距，不完全贴死。
-	SliderRow.VSplitLeft(58.0f, &CurrentLabel, &SliderRect);
-	CurrentLabel.VMargin(1.0f, &CurrentLabel);
-	SliderRect.VMargin(1.0f, &SliderRect);
-	SliderRect.x += 4.0f;
-	SliderRect.w = std::max(0.0f, SliderRect.w - 4.0f);
+	const SQmBrowserMapFilterLayout Layout = QmBrowserMapFilterLayout(Selector, TextRender()->TextWidth(11.0f, Localize("Favorite maps")));
+	SLabelProperties HeadingProps;
+	HeadingProps.m_MaxWidth = Layout.m_Heading.w;
+	HeadingProps.m_EllipsisAtEnd = true;
+	Ui()->DoLabel(&Layout.m_Heading, Localize("Server filter"), 14.0f, TEXTALIGN_MC, HeadingProps);
+	const CUIRect CurrentLabel = Layout.m_CurrentLabel;
+	const CUIRect SliderRect = Layout.m_Slider;
 
 	const bool SliderChanged = ui_widget::DiscreteSlider(Context, &s_MapFilterSliderId, s_MapFilterSliderState, &SliderLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR, SliderRect);
 	if(SliderChanged)
@@ -1200,34 +1191,28 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 		str_format(aCurrentLabel, sizeof(aCurrentLabel), "%d★", QmMapVotes::MapBrowserFilterStars(DisplayLevel));
 	if(DisplayLevel >= 0)
 		TextRender()->TextColor(ui_widget::ResolveDiscreteSliderStyle(DisplayLevel, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_NONE, QmMapVotes::MAP_BROWSER_FILTER_LEVEL_LAST_STAR).m_Color);
-	Ui()->DoLabel(&CurrentLabel, aCurrentLabel, 11.0f, TEXTALIGN_MR);
+	SLabelProperties CurrentProps;
+	CurrentProps.m_MaxWidth = CurrentLabel.w;
+	CurrentProps.m_EllipsisAtEnd = true;
+	Ui()->DoLabel(&CurrentLabel, aCurrentLabel, 11.0f, TEXTALIGN_MR, CurrentProps);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 	// 收藏开关移到滑块下方，与滑块上下并列：左侧「收藏地图」文本说明 + 开关 + 星标，
 	// 整组在滑块列内水平居中；说明文字与上行档位文字同为 11px 右对齐，方向一致。
 	bool FavoriteOnly = g_Config.m_QmMapBrowserFavoriteOnly != 0;
-	CUIRect FavoriteToggle, FavoriteIcon;
-	const float FavoriteToggleWidth = 28.0f;
-	const float FavoriteIconWidth = 18.0f;
-	const float FavoriteLabelGap = 6.0f;
-	const float FavoriteLabelWidth = TextRender()->TextWidth(11.0f, Localize("Favorite maps"));
-	const float FavoriteGroupWidth = FavoriteLabelWidth + FavoriteLabelGap + FavoriteToggleWidth + FavoriteIconWidth;
-	CUIRect FavoriteGroup = FavoriteRow;
-	FavoriteGroup.x += (FavoriteGroup.w - FavoriteGroupWidth) * 0.5f;
-	FavoriteGroup.w = FavoriteGroupWidth;
-	FavoriteGroup.h = minimum(FavoriteGroup.h, 18.0f);
-	FavoriteGroup.y += (FavoriteRow.h - FavoriteGroup.h) * 0.5f;
-	CUIRect FavoriteLabel;
-	FavoriteGroup.VSplitLeft(FavoriteLabelWidth, &FavoriteLabel, &FavoriteGroup);
-	FavoriteGroup.VSplitLeft(FavoriteLabelGap, nullptr, &FavoriteGroup);
-	FavoriteGroup.VSplitLeft(FavoriteToggleWidth, &FavoriteToggle, &FavoriteIcon);
-	Ui()->DoLabel(&FavoriteLabel, Localize("Favorite maps"), 11.0f, TEXTALIGN_MR);
+	const CUIRect FavoriteToggle = Layout.m_FavoriteToggle;
+	CUIRect FavoriteIcon = Layout.m_FavoriteIcon;
+	const CUIRect FavoriteGroup = Layout.m_FavoriteGroup;
+	SLabelProperties FavoriteProps;
+	FavoriteProps.m_MaxWidth = Layout.m_FavoriteLabel.w;
+	FavoriteProps.m_EllipsisAtEnd = true;
+	Ui()->DoLabel(&Layout.m_FavoriteLabel, Localize("Favorite maps"), 11.0f, TEXTALIGN_MR, FavoriteProps);
 	if(ui_widget::Toggle(Context, &s_MapFilterFavoriteId, &FavoriteOnly, FavoriteToggle))
 	{
 		g_Config.m_QmMapBrowserFavoriteOnly = FavoriteOnly ? 1 : 0;
 		Client()->ServerBrowserUpdate();
 	}
-	FavoriteIcon.VMargin(1.0f, &FavoriteIcon);
+	FavoriteIcon.VMargin(std::min(1.0f, FavoriteIcon.w * 0.25f), &FavoriteIcon);
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 	TextRender()->TextColor(FavoriteOnly ? ColorRGBA(1.0f, 0.85f, 0.2f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.62f));
@@ -1242,21 +1227,54 @@ void CMenus::RenderServerbrowserMapFilterSelector(CUIRect Selector)
 	GameClient()->m_Tooltips.DoToolTip(&s_MapFilterFavoriteId, &FavoriteGroup, Localize("Favorite maps"));
 }
 
-void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, bool WasListboxItemActivated)
+static bool BrowserStatusHasNotice(IServerBrowser *pBrowser)
 {
-	// Render bar that shows the loading progression.
-	// The bar is only shown while loading and fades out when it's done.
-	CUIRect StatusBox = Layout.m_Controls;
-	CUIRect RefreshBar = Layout.m_RefreshBar;
-	if(Layout.m_Notice.h > 0.0f)
+	return pBrowser->GetCurrentType() != IServerBrowser::TYPE_LAN && pBrowser->NumServers() > 0 &&
+	       !pBrowser->IsGettingServerlist() && (pBrowser->IsServerlistError() || pBrowser->IsServerlistStale());
+}
+
+void CMenus::RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated)
+{
+	if(StatusBox.w <= 0.0f || StatusBox.h <= 0.0f)
+		return;
+	const bool ShowNotice = BrowserStatusHasNotice(ServerBrowser());
+	static CScrollRegion s_StatusScrollRegion;
+	SQmScrollRequest ScrollRequest;
+	ScrollRequest.m_Profile = EQmScrollProfile::SETTINGS_INNER;
+	ScrollRequest.m_RowExtent = 24.0f;
+	ScrollRequest.m_RowsPerStep = 2;
+	CScrollRegionParams ScrollParams = QmScrollRegionParamsFromPolicy(QmResolveScrollPolicy(ScrollRequest));
+	ScrollParams.m_ScrollbarThickness = std::min(ScrollParams.m_ScrollbarThickness, StatusBox.w * 0.1f);
+	ScrollParams.m_ScrollbarMargin = std::min(ScrollParams.m_ScrollbarMargin, ScrollParams.m_ScrollbarThickness * 0.25f);
+	// 首帧就按实际内容判定滚动，避免窄宽度换行与滚动条占宽互相滞后一帧。
+	float ContentHeight = QmBrowserStatusLayout(StatusBox, ShowNotice).m_ContentHeight;
+	if(ContentHeight > StatusBox.h)
 	{
-		const CUIRect &Notice = Layout.m_Notice;
+		CUIRect ScrollContent = StatusBox;
+		ScrollContent.w -= ScrollParams.m_ScrollbarThickness;
+		ContentHeight = QmBrowserStatusLayout(ScrollContent, ShowNotice).m_ContentHeight;
+	}
+	s_StatusScrollRegion.SetContentHeightForNextFrame(ContentHeight);
+	vec2 ScrollOffset(0.0f, 0.0f);
+	s_StatusScrollRegion.Begin(&StatusBox, &ScrollOffset, &ScrollParams);
+	StatusBox.y += ScrollOffset.y;
+	const SQmBrowserStatusLayout Layout = QmBrowserStatusLayout(StatusBox, ShowNotice);
+	s_StatusScrollRegion.AddRect({StatusBox.x, StatusBox.y, StatusBox.w, Layout.m_ContentHeight});
+	CUIRect RefreshBar = Layout.m_RefreshBar;
+	if(ShowNotice)
+	{
 		SLabelProperties Props;
-		Props.m_MaxWidth = Notice.w;
+		Props.m_MaxWidth = Layout.m_Notice.w;
 		Props.m_EllipsisAtEnd = true;
 		Props.SetColor(ColorRGBA(1.0f, 0.75f, 0.35f, 1.0f));
-		Ui()->DoLabel(&Notice, ServerBrowser()->IsServerlistError() ? Localize("Server list refresh failed; showing the previous list") : Localize("Server list is more than five minutes old"), 10.0f, TEXTALIGN_ML, Props);
+		Ui()->DoLabel(&Layout.m_Notice, ServerBrowser()->IsServerlistError() ? Localize("Server list refresh failed; showing the previous list") : Localize("Server list is more than five minutes old"), 10.0f, TEXTALIGN_ML, Props);
 	}
+	const auto DoFieldLabel = [&](const CUIRect &Rect, const char *pText) {
+		SLabelProperties Props;
+		Props.m_MaxWidth = Rect.w;
+		Props.m_EllipsisAtEnd = true;
+		Ui()->DoLabel(&Rect, pText, 14.0f, TEXTALIGN_ML, Props);
+	};
 	static float s_LoadingProgressionFadeEnd = 0.0f;
 	if(ServerBrowser()->IsRefreshing() && ServerBrowser()->LoadingProgression() < 100)
 	{
@@ -1271,32 +1289,14 @@ void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, 
 		RefreshBar.Draw(BrowserOpacityColor(ColorRGBA(1.0f, 1.0f, 1.0f, RefreshBarAlpha)), IGraphics::CORNER_NONE, 0.0f);
 	}
 
-	const float SearchExcludeAddrStrMax = 120.0f;
-	// 标签列与输入列的间距：排除图标改由输入框内部绘制后，列偏移不再需要预留图标宽度。
-	const float SearchExcludeAddrInputOffset = SearchExcludeAddrStrMax + 10.0f;
-
-	CUIRect SearchInfoAndAddr, ServersAndConnect, ServersPlayersOnline, SearchAndInfo, ServerAddr, ConnectButtons;
-	CUIRect MapFilterControls{};
-	StatusBox.VSplitRight(135.0f, &SearchInfoAndAddr, &ServersAndConnect);
-	if(SearchInfoAndAddr.w > 350.0f)
-		SearchInfoAndAddr.VSplitLeft(350.0f, &SearchInfoAndAddr, &MapFilterControls);
-	SearchInfoAndAddr.HSplitTop(40.0f, &SearchAndInfo, &ServerAddr);
-	ServersAndConnect.HSplitTop(35.0f, &ServersPlayersOnline, &ConnectButtons);
-	ConnectButtons.HSplitTop(5.0f, nullptr, &ConnectButtons);
-
-	CUIRect QuickSearch, QuickExclude;
-	SearchAndInfo.HSplitTop(20.0f, &QuickSearch, &QuickExclude);
-	QuickSearch.Margin(2.0f, &QuickSearch);
-	QuickExclude.Margin(2.0f, &QuickExclude);
+	const CUIRect QuickSearch = Layout.m_SearchInput;
+	const CUIRect QuickExclude = Layout.m_ExcludeInput;
 
 	// render quick search
 	{
 		char aBufSearch[64];
 		str_format(aBufSearch, sizeof(aBufSearch), "%s:", Localize("Search"));
-		CUIRect SearchLabel;
-		QuickSearch.VSplitLeft(SearchExcludeAddrStrMax, &SearchLabel, nullptr);
-		QuickSearch.VSplitLeft(SearchExcludeAddrInputOffset, nullptr, &QuickSearch);
-		Ui()->DoLabel(&SearchLabel, aBufSearch, 14.0f, TEXTALIGN_ML);
+		DoFieldLabel(Layout.m_SearchLabel, aBufSearch);
 
 		static CLineInput s_FilterInput(g_Config.m_BrFilterString, sizeof(g_Config.m_BrFilterString));
 		static char s_aTooltipText[64];
@@ -1307,6 +1307,8 @@ void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, 
 			Ui()->SetActiveItem(&s_FilterInput);
 			s_FilterInput.SelectAll();
 		}
+		if(Ui()->ActiveItem() == &s_FilterInput)
+			s_StatusScrollRegion.AddRect(QuickSearch, true);
 		const IUiContext ServerBrowserSearchCtx = SettingsUiContext("server_browser_search");
 		ui_widget::SInputFieldOptions SearchOptions;
 		SearchOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
@@ -1320,13 +1322,9 @@ void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, 
 	{
 		// 标签不再带图标（与「搜索:」同行对齐）：排除语义由图标的输入框自身表达，
 		// 输入框内用 BAN 图标并把占位符写成「排除」。
-		CUIRect ExcludeLabel;
-		QuickExclude.VSplitLeft(SearchExcludeAddrStrMax, &ExcludeLabel, nullptr);
-		QuickExclude.VSplitLeft(SearchExcludeAddrInputOffset, nullptr, &QuickExclude);
-
 		char aBufExclude[64];
 		str_format(aBufExclude, sizeof(aBufExclude), "%s:", Localize("Exclude"));
-		Ui()->DoLabel(&ExcludeLabel, aBufExclude, 14.0f, TEXTALIGN_ML);
+		DoFieldLabel(Layout.m_ExcludeLabel, aBufExclude);
 
 		static CLineInput s_ExcludeInput(g_Config.m_BrExcludeString, sizeof(g_Config.m_BrExcludeString));
 		static char s_aTooltipText[64];
@@ -1337,6 +1335,8 @@ void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, 
 			Ui()->SetActiveItem(&s_ExcludeInput);
 			s_ExcludeInput.SelectAll();
 		}
+		if(Ui()->ActiveItem() == &s_ExcludeInput)
+			s_StatusScrollRegion.AddRect(QuickExclude, true);
 		const IUiContext ServerBrowserExcludeCtx = SettingsUiContext("server_browser_exclude");
 		ui_widget::SInputFieldOptions ExcludeOptions;
 		ExcludeOptions.m_Mode = ui_widget::EInputFieldMode::SEARCH;
@@ -1349,52 +1349,38 @@ void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, 
 			Client()->ServerBrowserUpdate();
 	}
 
-	if(MapFilterControls.w > 0.0f)
-	{
-		CUIRect Selector = MapFilterControls;
-		Selector.x += 12.0f;
-		Selector.w = std::min(430.0f, std::max(0.0f, Selector.w - 24.0f));
-		// 筛选列纵跨状态盒：标题行在滑块上方居中，收藏开关在滑块下方，与左侧三行输入同高。
-		Selector.y = MapFilterControls.y;
-		Selector.h = MapFilterControls.h;
-		RenderServerbrowserMapFilterSelector(Selector);
-	}
+	if(Layout.m_MapFilter.w > 0.0f)
+		RenderServerbrowserMapFilterSelector(Layout.m_MapFilter);
 
 	// render status
 	{
-		CUIRect ServersOnline, PlayersOnline;
-		ServersPlayersOnline.HSplitMid(&PlayersOnline, &ServersOnline);
+		const CUIRect ServersOnline = Layout.m_Servers;
+		const CUIRect PlayersOnline = Layout.m_Players;
+		SLabelProperties Props;
+		Props.m_MaxWidth = ServersOnline.w;
+		Props.m_EllipsisAtEnd = true;
 
 		char aBuf[128];
 		if(ServerBrowser()->NumServers() != 1)
 			str_format(aBuf, sizeof(aBuf), Localize("%d of %d servers"), ServerBrowser()->NumSortedServers(), ServerBrowser()->NumServers());
 		else
 			str_format(aBuf, sizeof(aBuf), Localize("%d of %d server"), ServerBrowser()->NumSortedServers(), ServerBrowser()->NumServers());
-		Ui()->DoLabel(&ServersOnline, aBuf, 12.0f, TEXTALIGN_MR);
+		Ui()->DoLabel(&ServersOnline, aBuf, 12.0f, TEXTALIGN_MR, Props);
 
 		if(ServerBrowser()->NumSortedPlayers() != 1)
 			str_format(aBuf, sizeof(aBuf), Localize("%d players"), ServerBrowser()->NumSortedPlayers());
 		else
 			str_format(aBuf, sizeof(aBuf), Localize("%d player"), ServerBrowser()->NumSortedPlayers());
-		Ui()->DoLabel(&PlayersOnline, aBuf, 12.0f, TEXTALIGN_MR);
+		Ui()->DoLabel(&PlayersOnline, aBuf, 12.0f, TEXTALIGN_MR, Props);
 	}
 
 	// address info
 	{
-		CUIRect ServerAddrLabel, ServerAddrEditBox;
-		ServerAddr.VSplitLeft(SearchExcludeAddrInputOffset, &ServerAddrLabel, &ServerAddrEditBox);
-		// 与搜索/排除行同规格：输入框统一 16px 高、左右各内缩 2px，并在行余高里垂直居中。
-		// 状态盒余高随界面缩放变化，直接 Margin 会让「服务器地址」行比上两行矮。
-		ServerAddrEditBox.h = 16.0f;
-		ServerAddrEditBox.y += (ServerAddr.h - ServerAddrEditBox.h) * 0.5f;
-		ServerAddrEditBox.x += 2.0f;
-		ServerAddrEditBox.w -= 4.0f;
-		// 搜索/排除两行的标签来自 Margin(2) 后的行矩形，「服务器地址」行不再整行 Margin，
-		// 标签单独补同样的 2px 内缩，保证三行标签左缘对齐。
-		ServerAddrLabel.x += 2.0f;
-
-		Ui()->DoLabel(&ServerAddrLabel, Localize("Server address:"), 14.0f, TEXTALIGN_ML);
+		const CUIRect ServerAddrEditBox = Layout.m_AddressInput;
+		DoFieldLabel(Layout.m_AddressLabel, Localize("Server address:"));
 		static CLineInput s_ServerAddressInput(g_Config.m_UiServerAddress, sizeof(g_Config.m_UiServerAddress));
+		if(Ui()->ActiveItem() == &s_ServerAddressInput)
+			s_StatusScrollRegion.AddRect(ServerAddrEditBox, true);
 		const IUiContext ServerBrowserAddressCtx = SettingsUiContext("server_browser_address");
 		ui_widget::SInputFieldOptions AddressOptions;
 		AddressOptions.m_Clearable = true;
@@ -1405,8 +1391,8 @@ void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, 
 
 	// buttons
 	{
-		CUIRect ButtonRefresh, ButtonConnect;
-		ConnectButtons.VSplitMid(&ButtonRefresh, &ButtonConnect, 10.0f);
+		const CUIRect ButtonRefresh = Layout.m_RefreshButton;
+		const CUIRect ButtonConnect = Layout.m_ConnectButton;
 
 		// refresh button
 		{
@@ -1447,6 +1433,7 @@ void CMenus::RenderServerbrowserStatusBox(const SQmBrowserStatusLayout &Layout, 
 			}
 		}
 	}
+	s_StatusScrollRegion.End();
 }
 
 void CMenus::Connect(const char *pAddress, EConnectIntent Intent)
@@ -4259,23 +4246,16 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 		return;
 	}
 
-	CUIRect View = MainView;
-	CUIRect ServerListBase, ToolBoxBase, TabBar;
-	CUIRect ContentLayout = View;
-	CUIRect ServerListWithGap;
-	const float ToolBoxWidth = 205.0f;
-	const float ColumnGap = 8.0f;
-	ContentLayout.VSplitRight(ToolBoxWidth, &ServerListWithGap, &ToolBoxBase);
-	ServerListWithGap.VSplitRight(ColumnGap, &ServerListBase, nullptr);
-	const bool ShowServerlistNotice = ServerBrowser()->GetCurrentType() != IServerBrowser::TYPE_LAN && ServerBrowser()->NumServers() > 0 &&
-		!ServerBrowser()->IsGettingServerlist() && (ServerBrowser()->IsServerlistError() || ServerBrowser()->IsServerlistStale());
-	const SQmBrowserStatusLayout StatusLayout = QmBrowserStatusLayout(ServerListBase, ShowServerlistNotice);
-	ServerListBase = StatusLayout.m_ServerList;
-	ServerListBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-	StatusLayout.m_Panel.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-	ToolBoxBase.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
-	ServerListBase.Margin(2.0f, &ServerListBase);
-	ToolBoxBase.Margin(10.0f, &ToolBoxBase);
+	const CUIRect View = MainView;
+	const SQmBrowserPanelLayout PanelLayout = QmBrowserPanelLayout(View, BrowserStatusHasNotice(ServerBrowser()));
+	PanelLayout.m_List.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	PanelLayout.m_Status.Draw(BrowserPanelElevatedColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	if(PanelLayout.m_Toolbox.w > 0.0f)
+		PanelLayout.m_Toolbox.Draw(BrowserPanelColor(), IGraphics::CORNER_ALL, ui_token::radius::CARD);
+	const CUIRect ServerListBase = PanelLayout.m_ListContent;
+	const CUIRect StatusBox = PanelLayout.m_StatusViewport;
+	const CUIRect ToolBoxBase = PanelLayout.m_ToolboxContent;
+	CUIRect TabBar;
 
 	float TransitionOffset = 0.0f;
 	const float TransitionStrength = ReadUiSwitchAnimation(UiAnimNodeKey("browser_page_switch"));
@@ -4287,6 +4267,7 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 	}
 
 	bool WasListboxItemActivated = false;
+	if(ServerListBase.w > 0.0f && ServerListBase.h > ms_ListheaderHeight)
 	{
 		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor());
 		CUIRect ServerList = ServerListBase;
@@ -4311,9 +4292,10 @@ void CMenus::RenderServerbrowser(CUIRect MainView, bool DrawBackground)
 
 	{
 		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelElevatedColor());
-		RenderServerbrowserStatusBox(StatusLayout, WasListboxItemActivated);
+		RenderServerbrowserStatusBox(StatusBox, WasListboxItemActivated);
 	}
 
+	if(ToolBoxBase.w > 0.0f && ToolBoxBase.h > 0.0f)
 	{
 		CUiScopedSurfaceText SurfaceText(TextRender(), BrowserPanelColor());
 		CUIRect ToolBox = ToolBoxBase;

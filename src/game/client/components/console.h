@@ -98,6 +98,7 @@ private:
 		vec2 m_MousePress = vec2(0.0f, 0.0f);
 		vec2 m_MouseRelease = vec2(0.0f, 0.0f);
 		CQmConsoleSelection m_Selection;
+		CQmConsoleCaretMotion m_LogCaretMotion;
 		int m_NewLineCounter = 0;
 		bool m_ScrollbarDragging = false;
 		float m_ScrollbarDragOffset = 0.0f;

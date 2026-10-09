@@ -1,4 +1,5 @@
 #include <game/client/QmUi/QmImeCandidateLayout.h>
+#include <game/client/lineinput.h>
 
 #include <gtest/gtest.h>
 
@@ -227,4 +228,42 @@ TEST(QmImeCandidateLayout, EmptyPageHasNoCells)
 	EXPECT_EQ(Layout.m_Count, 0);
 	EXPECT_FLOAT_EQ(Layout.m_ContentWidth, 0.0f);
 	EXPECT_FLOAT_EQ(Layout.m_PanelWidth, 0.0f);
+}
+TEST(QmImeCandidateLayout, NineItemImePageKeepsEveryCellWithinNarrowScreen)
+{
+	const auto aMeasures = CandidateMeasures({200.0f, 80.0f, 40.0f, 45.0f, 30.0f, 35.0f, 50.0f, 25.0f, 30.0f});
+	for(float Width : {240.0f, 450.0f, 760.0f})
+	{
+		SCOPED_TRACE(Width);
+		const auto Viewport = qm_ime_overlay::BuildCandidateViewport(9, 0, 0);
+		ASSERT_EQ(Viewport.m_Count, 9);
+		ASSERT_EQ(Viewport.m_Start, 0);
+		const CUIRect Panel = {4.0f, 10.0f, Width, 22.0f};
+		const auto Layout = qm_ime_overlay::BuildCandidateRowLayoutForPanel(aMeasures, Viewport.m_Count, LayoutConfig(Width), Panel);
+		const auto Presentation = qm_ime_overlay::BuildCandidateRowPresentation(Layout, Panel, 16.0f, 6.0f, 3.0f, 1.0f);
+		ASSERT_EQ(Layout.m_Count, 9);
+		ExpectAllCellsInsidePanel(Layout, Presentation, Panel);
+	}
+}
+
+TEST(QmImeCandidateLayout, LargeImePageKeepsSelectedTailWithinBoundedViewport)
+{
+	const auto Viewport = qm_ime_overlay::BuildCandidateViewport(20, 19, 0);
+	ASSERT_EQ(Viewport.m_Count, 16);
+	EXPECT_EQ(Viewport.m_Start, 4);
+	std::array<qm_ime_overlay::SCandidateMeasure, qm_ime_overlay::MAX_CANDIDATES> aMeasures;
+	aMeasures.fill({18.0f, 40.0f});
+	const CUIRect Panel = {4.0f, 10.0f, 450.0f, 22.0f};
+	const auto Layout = qm_ime_overlay::BuildCandidateRowLayoutForPanel(aMeasures, Viewport.m_Count, LayoutConfig(450.0f), Panel);
+	const auto Presentation = qm_ime_overlay::BuildCandidateRowPresentation(Layout, Panel, 16.0f, 6.0f, 3.0f, 1.0f);
+	EXPECT_EQ(Viewport.m_Start + Layout.m_Count - 1, 19);
+	ExpectAllCellsInsidePanel(Layout, Presentation, Panel);
+}
+
+TEST(QmImeCandidateLayout, NewShortPageDoesNotKeepPreviousTailOffset)
+{
+	const auto OldPage = qm_ime_overlay::BuildCandidateViewport(20, 19, 0);
+	const auto NewPage = qm_ime_overlay::BuildCandidateViewport(9, 0, OldPage.m_Start);
+	EXPECT_EQ(NewPage.m_Start, 0);
+	EXPECT_EQ(NewPage.m_Count, 9);
 }

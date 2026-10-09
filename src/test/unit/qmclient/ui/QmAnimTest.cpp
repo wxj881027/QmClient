@@ -527,7 +527,6 @@ TEST(SettingsPageLayout, TeeQueueListViewportUsesCompleteRowsAndPrioritizesQueue
 	EXPECT_GE(EightQueueItems.m_ContentHeight, Metrics.m_LineSpacing * 5.0f + Metrics.m_LineHeight + StackedIntervalHeight + EightQueueItems.m_QueueListSurfaceHeight + EightQueueItems.m_QueuePresetHeight);
 }
 
-
 TEST(SettingsPageLayout, TeeCustomColorsUseTwoStackedFullWidthGroups)
 {
 	const SSettingsContentMetrics Metrics = ResolveSettingsContentMetrics(500.0f);
@@ -919,14 +918,15 @@ TEST(InputField, InlineTrailingTextCentersItsVisualGroup)
 	EXPECT_LE(Layout.m_TrailingRect.x + Layout.m_TrailingRect.w, Content.x + Content.w);
 }
 
-TEST(InputField, FocusRingExpandsShellAndMultilineDefaultsToTopLeft)
+TEST(InputField, FocusRingStaysFlushWithShellAndMultilineDefaultsToTopLeft)
 {
 	const CUIRect Rect{10.0f, 20.0f, 240.0f, 32.0f};
 	const ui_widget::SInputFieldLayout Layout = ui_widget::ResolveInputFieldLayout(Rect, true, true, 1.0f);
-	EXPECT_LT(Layout.m_FocusRingRect.x, Rect.x);
-	EXPECT_LT(Layout.m_FocusRingRect.y, Rect.y);
-	EXPECT_GT(Layout.m_FocusRingRect.w, Rect.w);
-	EXPECT_GT(Layout.m_FocusRingRect.h, Rect.h);
+	// 激活态边框直接贴外壳矩形绘制（变粗变强调色），不再向外扩出一圈光圈。
+	EXPECT_FLOAT_EQ(Layout.m_ShellRect.x, Rect.x);
+	EXPECT_FLOAT_EQ(Layout.m_ShellRect.y, Rect.y);
+	EXPECT_FLOAT_EQ(Layout.m_ShellRect.w, Rect.w);
+	EXPECT_FLOAT_EQ(Layout.m_ShellRect.h, Rect.h);
 
 	ui_widget::SInputFieldOptions Options;
 	EXPECT_EQ(ui_widget::ResolveInputFieldTextAlign(Options), TEXTALIGN_ML);

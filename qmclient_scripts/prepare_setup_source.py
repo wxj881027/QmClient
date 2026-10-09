@@ -5,7 +5,13 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import sys
 from pathlib import Path, PurePosixPath
+
+if not __package__:
+	sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from qmclient_scripts.package_stdio import configure_stdio
 
 
 def prepare(source: Path, data: Path, output: Path) -> None:
@@ -76,6 +82,7 @@ def prepare(source: Path, data: Path, output: Path) -> None:
 
 
 def main() -> int:
+	configure_stdio()
 	parser = argparse.ArgumentParser(description="Prepare the minimal QmClient Setup payload")
 	parser.add_argument("--source", type=Path, required=True, help="build directory")
 	parser.add_argument("--data", type=Path, required=True, help="repository data directory")

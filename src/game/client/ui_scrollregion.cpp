@@ -274,7 +274,8 @@ void CScrollRegion::DrawBackground(const CUIRect &ScrollbarBg)
 		if(m_Params.m_RailBgColor.a > 0.0f)
 		{
 			float Rounding = m_Params.m_ScrollHorizontal ? m_RailRect.h / 2.0f : m_RailRect.w / 2.0f;
-			DrawRoundedSurface(Ui(), m_RailRect, m_Params.m_RailBgColor, ColorRGBA(), Rounding);
+			// 背景倍率只弱化轨道，不再削弱前景滑块的强调色。
+			DrawRoundedSurface(Ui(), m_RailRect, Ui()->ScaleBackgroundAlpha(m_Params.m_RailBgColor), ColorRGBA(), Rounding);
 		}
 	}
 	if(m_Params.m_ClipBgColor.a > 0.0f)

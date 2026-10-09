@@ -197,3 +197,18 @@ static void BM_NameplateDensityStable(benchmark::State &State)
 	}
 }
 BENCHMARK(BM_NameplateDensityStable);
+
+// 测量每块铭牌的小物理字号采样决策；输入和输出都保留在计时循环中。
+static void BM_NameplateSmallTextSampling(benchmark::State &State)
+{
+	float FontSize = 24.0f;
+	float PixelsPerUnit = static_cast<float>(State.range(0)) / 24.0f;
+	for(auto _ : State)
+	{
+		benchmark::DoNotOptimize(FontSize);
+		benchmark::DoNotOptimize(PixelsPerUnit);
+		benchmark::DoNotOptimize(QmNameplateSmallTextSamplingScale(FontSize, PixelsPerUnit));
+	}
+	State.SetItemsProcessed(State.iterations());
+}
+BENCHMARK(BM_NameplateSmallTextSampling)->Arg(6)->Arg(10)->Arg(16);

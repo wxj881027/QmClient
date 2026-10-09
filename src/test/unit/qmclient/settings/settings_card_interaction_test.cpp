@@ -116,7 +116,6 @@ TEST(SettingsCardInteraction, ActiveItemContinuationRequiresPointerInput)
 	EXPECT_FALSE(SettingsCardDeckHasActiveItemContinuation(false, false));
 }
 
-
 namespace
 {
 	class SettingsCardMeasureRevision : public ::testing::Test

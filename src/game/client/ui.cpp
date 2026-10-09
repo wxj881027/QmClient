@@ -73,6 +73,12 @@ CUiScopedQuadBatch::~CUiScopedQuadBatch()
 		m_pUi->EndQuadBatch();
 }
 
+// 默认作用域继承外层淡入透明度，独立弹层与菜单内弹层共用同一模糊链。
+CUiScopedGaussianBlur::CUiScopedGaussianBlur(CUi *pUi) :
+	CUiScopedGaussianBlur(pUi, pUi != nullptr && pUi->GaussianBlurScopeActive() ? pUi->GaussianBlurScopeAlpha() : 1.0f)
+{
+}
+
 CUiScopedGaussianBlur::CUiScopedGaussianBlur(CUi *pUi, float Alpha) :
 	m_pUi(pUi)
 {
@@ -490,7 +496,7 @@ void CUi::BeginWheelOwnershipFrame()
 		RawDelta += 120.0f;
 	if(ConsumeHotkey(HOTKEY_SCROLL_DOWN))
 		RawDelta -= 120.0f;
-	m_WheelOwnership.BeginFrame(FrameId, RawDelta, Input() != nullptr && Input()->AltIsPressed());
+	BeginWheelOwnershipFrame(FrameId, RawDelta, Input() != nullptr && Input()->AltIsPressed());
 }
 
 void CUi::RegisterWheelOwner(const void *pOwnerId, EUiWheelOwnerPriority Priority, const CUIRect &HotRect, bool Eligible)
@@ -1617,7 +1623,8 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 	bool Active = m_pLastActiveItem == pLineInput;
 	const bool Changed = pLineInput->WasChanged();
 	const bool CursorChanged = pLineInput->WasCursorChanged();
-	const bool SubmitPressed = Input()->KeyPress(KEY_RETURN) || Input()->KeyPress(KEY_KP_ENTER) || ConsumeHotkey(HOTKEY_ENTER);
+	// 只查看已路由的确认事件，保留给外层提交；IME 已消费的 Enter 不应从原始按键状态绕回来。
+	const bool SubmitPressed = Active && RenderOptions.m_ReleaseFocusOnEnter && (m_HotkeysPressed & HOTKEY_ENTER) != 0;
 	const bool ClickedOutside = (MouseButtonClicked(0) || MouseButtonClicked(1)) && !Inside;
 
 	bool JustGotActive = false;

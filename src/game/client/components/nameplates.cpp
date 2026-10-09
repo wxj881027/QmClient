@@ -1792,7 +1792,9 @@ public:
 				int Cost = 0;
 				for(const auto &Part : m_vpParts)
 					Cost += Part->TextRebuildCost();
-				const bool DensityChanged = m_Density.Update(RefHeight / (Y1 - Y0), This.Graphics()->ScreenHeight() / RefHeight,
+				// 小像素姓名只增加有限采样密度，整块名牌继续共用档位、滞回和重建预算。
+				const float SamplingScale = QmNameplateSmallTextSamplingScale(Data.m_FontSize, This.Graphics()->ScreenHeight() / (Y1 - Y0));
+				const bool DensityChanged = m_Density.Update(SamplingScale * RefHeight / (Y1 - Y0), This.Graphics()->ScreenHeight() / RefHeight,
 					QM_NAMEPLATE_BAKE_DENSITY_LOG_GRID, This.m_Camera.m_Zooming, Cost,
 					NAMEPLATE_TEXT_REBUILD_BUDGET_PER_FRAME, s_NameplateTextRebuildBudget);
 				if(DensityChanged && QmPerfEnabled())

@@ -353,3 +353,33 @@ TEST_F(CQmLineInputMotionTest, ReducedMotionRetargetDoesNotRestoreSpringOvershoo
 	Advance(40ms);
 	EXPECT_FLOAT_EQ(m_Motion.ResolveCaret(vec2(2.0f, 0.0f), 12.0f).x, 2.0f);
 }
+
+TEST_F(CQmLineInputMotionTest, LogCaretMovesAcrossLinesAndRetargetsFromCurrentPosition)
+{
+	Update("", false);
+	const vec2 Start(10, 20), Target(200, 120), Next(30, 40);
+	EXPECT_EQ(m_Motion.ResolveCaret(Start, 10, false, true), Start);
+	EXPECT_EQ(m_Motion.ResolveCaret(Target, 10, false, true), Start);
+	Advance(40ms);
+	const vec2 Middle = m_Motion.ResolveCaret(Target, 10, false, true);
+	EXPECT_GT(Middle.x, Start.x);
+	EXPECT_LT(Middle.x, Target.x);
+	EXPECT_GT(Middle.y, Start.y);
+	EXPECT_LT(Middle.y, Target.y);
+	EXPECT_EQ(m_Motion.ResolveCaret(Next, 10, false, true), Middle);
+	Advance(100ms);
+	EXPECT_EQ(m_Motion.ResolveCaret(Next, 10, false, true), Next);
+}
+
+TEST_F(CQmLineInputMotionTest, LogCaretDragAndReducedMotionSnapToExactCharacter)
+{
+	Update("", false);
+	m_Motion.ResolveCaret(vec2(10, 20), 1, false, true);
+	EXPECT_EQ(m_Motion.ResolveCaret(vec2(100, 200), 1, true, true), vec2(100, 200));
+	m_Level = 0;
+	Update("", false);
+	EXPECT_EQ(m_Motion.ResolveCaret(vec2(20, 50), 1, false, true), vec2(20, 50));
+	m_Motion.Reset();
+	Update("", false);
+	EXPECT_EQ(m_Motion.ResolveCaret(vec2(30, 70), 1, false, true), vec2(30, 70));
+}

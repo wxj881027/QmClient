@@ -114,21 +114,19 @@ namespace qmclient::rank_ghost
 			if(!ReadSection(Candidate.m_vEvents, 5 * sizeof(int), [&](SViewEvent &Event) {
 				   return Read(&Event.m_RelTick, sizeof(Event.m_RelTick)) && Read(&Event.m_Type, sizeof(Event.m_Type)) &&
 					  Read(Event.m_aData, sizeof(Event.m_aData)) && ValidViewEvent(Event);
-			   }) ||
-				!ReadSection(Candidate.m_vSwitchStates, 2 * sizeof(int) + 8 * sizeof(unsigned), [&](SViewSwitchState &State) {
-					return Read(&State.m_RelTick, sizeof(State.m_RelTick)) && Read(&State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber)) &&
-					       Read(State.m_aStatus, sizeof(State.m_aStatus)) && State.m_HighestSwitchNumber >= 0 && State.m_HighestSwitchNumber < 256;
-				}) ||
-				!ReadSection(Candidate.m_vMessages, 7 * sizeof(int), [&](SViewMessage &Message) {
-					int Type = 0;
-					if(!Read(&Message.m_RelTick, sizeof(Message.m_RelTick)) || !Read(&Type, sizeof(Type)) ||
-						!Read(Message.m_aData, sizeof(Message.m_aData)) || Type < 0 || Type > (int)EViewMessageType::MAP_SOUND_GLOBAL)
-						return false;
-					Message.m_Type = (EViewMessageType)Type;
-					if(Message.m_Type == EViewMessageType::RACE_FINISH)
-						return Message.m_aData[0] >= 0 && Message.m_aData[0] < MAX_CLIENTS;
-					return Message.m_Type == EViewMessageType::RACE_TIME || Message.m_aData[0] >= 0;
-				}))
+			   }) || !ReadSection(Candidate.m_vSwitchStates, 2 * sizeof(int) + 8 * sizeof(unsigned), [&](SViewSwitchState &State) {
+				   return Read(&State.m_RelTick, sizeof(State.m_RelTick)) && Read(&State.m_HighestSwitchNumber, sizeof(State.m_HighestSwitchNumber)) &&
+					  Read(State.m_aStatus, sizeof(State.m_aStatus)) && State.m_HighestSwitchNumber >= 0 && State.m_HighestSwitchNumber < 256;
+			   }) || !ReadSection(Candidate.m_vMessages, 7 * sizeof(int), [&](SViewMessage &Message) {
+				   int Type = 0;
+				   if(!Read(&Message.m_RelTick, sizeof(Message.m_RelTick)) || !Read(&Type, sizeof(Type)) ||
+					   !Read(Message.m_aData, sizeof(Message.m_aData)) || Type < 0 || Type > (int)EViewMessageType::MAP_SOUND_GLOBAL)
+					   return false;
+				   Message.m_Type = (EViewMessageType)Type;
+				   if(Message.m_Type == EViewMessageType::RACE_FINISH)
+					   return Message.m_aData[0] >= 0 && Message.m_aData[0] < MAX_CLIENTS;
+				   return Message.m_Type == EViewMessageType::RACE_TIME || Message.m_aData[0] >= 0;
+			   }))
 				return false;
 		}
 		catch(const std::bad_alloc &)

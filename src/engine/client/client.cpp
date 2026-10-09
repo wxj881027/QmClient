@@ -5023,9 +5023,7 @@ void CClient::AutoCSV_Cleanup()
 void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image) {
-		pSelf->GameClient()->OnScreenshotTaken(std::move(Image));
-	}, pSelf->GameClient()->ScreenshotProcessor());
+	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image)); }, pSelf->GameClient()->ScreenshotProcessor());
 }
 
 #if defined(CONF_VIDEORECORDER)
@@ -5546,8 +5544,7 @@ bool CClient::DemoRecorder_AddDemoMarker(int Recorder)
 	return DemoRecorders()[Recorder].AddDemoMarker();
 }
 
-CDemoRecorder (&CClient::DemoRecorders())[RECORDER_MAX]
-{
+CDemoRecorder (&CClient::DemoRecorders()) [RECORDER_MAX] {
 	if(IsSixup())
 	{
 		return m_aDemoRecordersSixup;

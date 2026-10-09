@@ -267,7 +267,7 @@ API key
 APP ID
 Appearance
 Appearance and command highlighting of the local console
-Appearance of help bubbles outside settings cards
+Appearance of help bubbles
 Append to log file instead of overwriting
 Applied to %d same-family part(s).
 Applies to single-color and rainbow overrides.
@@ -431,10 +431,13 @@ Avg %.*f   ↓ %.*f   ↑ %.*f
 Axiom API returned an error
 Axiom auto login failed
 Axiom auto login failed, retrying
+Axiom auto login skipped: no password
+Axiom auto login stopped after repeated failures
 Axiom auto login succeeded
 Axiom dummy password
 Axiom main account password
 Axiom score request failed
+Axiom website
 Axis
 Backdrop blur
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
@@ -3277,7 +3280,6 @@ Replay feature is disabled!
 Replay list: failed to load, press Refresh to retry
 Replay list: loading ...
 Replay list: not loaded yet
-Replay list: up to date
 Replays directory
 Reply
 Reply content
@@ -3893,6 +3895,7 @@ Show Tee trail for others
 Show Tees in the Gores team drown board
 Show teleporter tile outlines
 Show text entities
+Show the chat scrollbar on the right
 Show the cursor while free spectating
 Show the Gores team drown board
 Show the number of frozen tees
@@ -4572,6 +4575,7 @@ UI scale
 UI server address
 UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
+Unable to delete skin
 Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 Unable to delete the screenshot '%s'
@@ -4700,7 +4704,6 @@ Use style colors
 Use team colors for name plates
 Use Tee icons instead of circles
 Use the mouse wheel on a hovered module to scale it by 5%
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
 Use the scoreboard cursor mode to scroll the list
 Use the selected tee trail style palette
 Use this after `add_favorite` to group favorites. Start with `begin_favorite_group`
@@ -4992,6 +4995,7 @@ You'll lose unsaved changes after deselecting.
 You're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 You're playing on a local server because no online Tutorial server could be found.\n\nYour record will only be saved locally.
 You're the last one!
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
 Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 Your favorite map manager

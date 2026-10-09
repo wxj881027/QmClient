@@ -292,6 +292,11 @@ struct STextBoundingBox
 	float m_Y;
 	float m_W;
 	float m_H;
+	// 单行内最大字符可见高度与行数：供垂直对齐做"视觉居中"修正
+	//（与 DoLabel 测量路径的 m_pMaxCharacterHeightInLine 同源）。
+	// 多行时调用方不应使用 m_MaxCharacterHeight。
+	float m_MaxCharacterHeight = 0.0f;
+	int m_LineCount = 1;
 
 	float Right() const { return m_X + m_W; }
 	float Bottom() const { return m_Y + m_H; }
@@ -371,6 +376,8 @@ public:
 	// 按需缓存实际绘制的行范围，用于逐行扫光。
 	bool m_TrackLineRanges = false;
 	bool m_HasVisualBoundingBox = false;
+	float m_VisualLeft = 0.0f;
+	float m_VisualRight = 0.0f;
 	float m_VisualTop = 0.0f;
 	float m_VisualBottom = 0.0f;
 

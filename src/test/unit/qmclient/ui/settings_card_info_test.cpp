@@ -1,9 +1,9 @@
+#include <engine/shared/config.h>
+
 #include <game/client/QmUi/SettingsCard.h>
 #include <game/client/QmUi/SettingsCardInfo.h>
 #include <game/client/QmUi/SettingsCardWidth.h>
 #include <game/client/QmUi/SettingsIconFeedback.h>
-
-#include <engine/shared/config.h>
 
 #include <gtest/gtest.h>
 

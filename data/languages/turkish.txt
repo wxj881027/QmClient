@@ -806,8 +806,8 @@ Appearance
 Appearance and command highlighting of the local console
 == Yerel konsolun görünümü ve komut vurgulama
 
-Appearance of help bubbles outside settings cards
-== Ayar kartları dışındaki yardım balonlarının görünümü
+Appearance of help bubbles
+== Yardım balonlarının görünümü
 
 Append to log file instead of overwriting
 == Günlük dosyasının üzerine yazmak yerine sonuna ekle
@@ -1298,6 +1298,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Axiom otomatik girişi başarısız oldu, yeniden deneniyor
 
+Axiom auto login skipped: no password
+== Axiom otomatik girişi: parola yok, atlandı
+
+Axiom auto login stopped after repeated failures
+== Axiom otomatik girişi durduruldu: birden çok deneme başarısız
+
 Axiom auto login succeeded
 == Axiom otomatik girişi başarılı oldu
 
@@ -1309,6 +1315,9 @@ Axiom main account password
 
 Axiom score request failed
 == Axiom puan isteği başarısız oldu
+
+Axiom website
+== Axiom web sitesi
 
 Axis
 == Eksen
@@ -9836,9 +9845,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == Tekrar listesi: henüz yüklenmedi
 
-Replay list: up to date
-== Tekrar listesi: güncel
-
 Replays directory
 == Tekrar klasörü
 
@@ -11683,6 +11689,9 @@ Show teleporter tile outlines
 
 Show text entities
 == Metin varlıklarını göster
+
+Show the chat scrollbar on the right
+== Sohbet kaydırma çubuğunu sağda göster
 
 Show the cursor while free spectating
 == Serbest izlerken imleci göster
@@ -13721,6 +13730,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d seçili öğe silinemiyor. İlk başarısız öğe '%s'.
 
+Unable to delete skin
+== Skin silinemiyor
+
 Unable to delete the demo '%s'
 == '%s' demosu silinemiyor
 
@@ -14104,9 +14116,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Üzerine gelinen bir modülü fare tekerleği ile %5 oranında ölçeklendir
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== Ana hesap ve dummy için Axiom'da kayıtlı parolaları ayrı ayrı girin. Bu seçenek hesap oluşturmaz.
 
 Use the scoreboard cursor mode to scroll the list
 == Listeyi kaydırmak için skor tablosu imleç modunu kullanın
@@ -14980,6 +14989,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == Son sensin!
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== Hesabınız oyun içi adınızdır – önce Axiom web sitesinde kaydedin. Ana hesap ve dummy için kayıtlı parolaları girin. Bu seçenek hesap oluşturmaz.
 
 Your current race time is %s
 == Mevcut yarış süreniz %s

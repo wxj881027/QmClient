@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_QMUI_QMIMECANDIDATELAYOUT_H
 #define GAME_CLIENT_QMUI_QMIMECANDIDATELAYOUT_H
 
+#include <game/client/lineinput.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -9,7 +10,7 @@
 namespace qm_ime_overlay
 {
 
-	inline constexpr int MAX_CANDIDATES = 16;
+	inline constexpr int MAX_CANDIDATES = FIXED_CANDIDATE_VIEWPORT_SIZE;
 
 	struct SCandidateMeasure
 	{

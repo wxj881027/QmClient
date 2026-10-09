@@ -103,19 +103,19 @@ TEST(QmImeOverlay, InvalidSelectionHighlightsFirstCandidate)
 	EXPECT_EQ(qm_ime_overlay::NormalizeSelectedCandidateIndex(3, 8), 3);
 }
 
-TEST(QmImeOverlay, CandidateViewportKeepsSevenItemsWhenPageHasEnoughCandidates)
+TEST(QmImeOverlay, CandidateViewportShowsEntireNineItemImePage)
 {
 	const qm_ime_overlay::SQmImeCandidateViewport First = qm_ime_overlay::BuildCandidateViewport(9, 0, 0);
 	EXPECT_EQ(First.m_Start, 0);
-	EXPECT_EQ(First.m_Count, 7);
+	EXPECT_EQ(First.m_Count, 9);
 
 	const qm_ime_overlay::SQmImeCandidateViewport StillVisible = qm_ime_overlay::BuildCandidateViewport(9, 6, First.m_Start);
 	EXPECT_EQ(StillVisible.m_Start, 0);
-	EXPECT_EQ(StillVisible.m_Count, 7);
+	EXPECT_EQ(StillVisible.m_Count, 9);
 
 	const qm_ime_overlay::SQmImeCandidateViewport Shifted = qm_ime_overlay::BuildCandidateViewport(9, 7, StillVisible.m_Start);
-	EXPECT_EQ(Shifted.m_Start, 1);
-	EXPECT_EQ(Shifted.m_Count, 7);
+	EXPECT_EQ(Shifted.m_Start, 0);
+	EXPECT_EQ(Shifted.m_Count, 9);
 }
 
 TEST(QmImeOverlay, CandidateViewportShowsOnlyActualCandidatesOnShortPages)
@@ -127,13 +127,13 @@ TEST(QmImeOverlay, CandidateViewportShowsOnlyActualCandidatesOnShortPages)
 
 TEST(QmImeOverlay, CandidateViewportKeepsStableStartWhileSelectionStaysVisible)
 {
-	const qm_ime_overlay::SQmImeCandidateViewport Stable = qm_ime_overlay::BuildCandidateViewport(12, 5, 2);
+	const qm_ime_overlay::SQmImeCandidateViewport Stable = qm_ime_overlay::BuildCandidateViewport(20, 5, 2);
 	EXPECT_EQ(Stable.m_Start, 2);
-	EXPECT_EQ(Stable.m_Count, 7);
+	EXPECT_EQ(Stable.m_Count, 16);
 
-	const qm_ime_overlay::SQmImeCandidateViewport ShiftLeft = qm_ime_overlay::BuildCandidateViewport(12, 1, Stable.m_Start);
+	const qm_ime_overlay::SQmImeCandidateViewport ShiftLeft = qm_ime_overlay::BuildCandidateViewport(20, 1, Stable.m_Start);
 	EXPECT_EQ(ShiftLeft.m_Start, 1);
-	EXPECT_EQ(ShiftLeft.m_Count, 7);
+	EXPECT_EQ(ShiftLeft.m_Count, 16);
 }
 
 TEST(QmLineInput, CaretBlinkUsesStableHalfSecondPhases)

@@ -217,3 +217,40 @@ TEST(QmChatPresentation, SmoothYApproachesTargetWithoutOvershoot)
 		Y = NextY;
 	}
 }
+
+TEST(QmChatPrefix, SystemAndEchoUseTheSameHideSetting)
+{
+	EXPECT_STREQ(CChat::MessageNamePrefixForClientId(CChat::SERVER_MSG, false), "*** ");
+	EXPECT_STREQ(CChat::MessageNamePrefixForClientId(CChat::CLIENT_MSG, false), "— ");
+	EXPECT_STREQ(CChat::MessageNamePrefixForClientId(CChat::SERVER_MSG, true), "");
+	EXPECT_STREQ(CChat::MessageNamePrefixForClientId(CChat::CLIENT_MSG, true), "");
+	EXPECT_STREQ(CChat::MessageNamePrefixForClientId(CChat::CLIENT_MSG), "");
+}
+
+TEST(QmChatPrefix, ExistingSystemAndEchoNamesRecoverAfterRepeatedSettingChanges)
+{
+	for(int ClientId : {CChat::SERVER_MSG, CChat::CLIENT_MSG})
+	{
+		SCOPED_TRACE(ClientId);
+		char aName[64] = "old prefix";
+		const char *pShown = ClientId == CChat::SERVER_MSG ? "*** " : "— ";
+		for(bool Hide : {false, true, true, false, false, true, false})
+		{
+			CChat::RefreshMessageNamePrefix(ClientId, aName, sizeof(aName), Hide);
+			EXPECT_STREQ(aName, Hide ? "" : pShown);
+		}
+	}
+}
+
+TEST(QmChatPrefix, RefreshPreservesPlayerAndMergedNames)
+{
+	for(int ClientId : {0, MAX_CLIENTS - 1})
+	{
+		SCOPED_TRACE(ClientId);
+		char aName[64] = "Alice,Bob";
+		CChat::RefreshMessageNamePrefix(ClientId, aName, sizeof(aName), true);
+		EXPECT_STREQ(aName, "Alice,Bob");
+		CChat::RefreshMessageNamePrefix(ClientId, aName, sizeof(aName), false);
+		EXPECT_STREQ(aName, "Alice,Bob");
+	}
+}

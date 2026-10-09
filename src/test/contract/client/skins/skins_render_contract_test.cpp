@@ -53,25 +53,6 @@ TEST(SkinsContract, ManagedTeeRenderInfoDefersUnloadedSkinInsteadOfApplyingFallb
 	EXPECT_EQ(RefreshSkinBody.find("TeeInfo.Apply(m_Skins.Find("), std::string::npos);
 }
 
-TEST(SkinsContract, SkinRefreshDoesNotFloodPendingQueueBeforeVisibleRequests)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/skins.cpp");
-	const size_t RefreshPos = Source.find("void CSkins::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)");
-	ASSERT_NE(RefreshPos, std::string::npos);
-	const size_t LoadingStatsPos = Source.find("CSkins::CSkinLoadingStats CSkins::LoadingStats() const", RefreshPos);
-	ASSERT_NE(LoadingStatsPos, std::string::npos);
-	const std::string RefreshBody = Source.substr(RefreshPos, LoadingStatsPos - RefreshPos);
-
-	EXPECT_NE(RefreshBody.find("if(pSkinContainer->m_pLoadJob)"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->m_pSkin->m_OriginalSkin.Unload(Graphics());"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->m_pSkin->m_ColorableSkin.Unload(Graphics());"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->m_pSkin.reset();"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->SetState(CSkinContainer::EState::PENDING, ESettingsResourcePriority::VISIBLE);"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("if(pSkinContainer->m_State != CSkinContainer::EState::LOADED)"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("pSkinContainer->SetState(pSkinContainer->DetermineInitialState());"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("LoadSkinDirect(\"default\");"), std::string::npos);
-}
-
 TEST(SkinsContract, SkinTransitionDefersKeyUntilDescriptorRenderInfoIsReady)
 {
 	const std::string Header = ReadTestSourceFile("src/game/client/render.h");

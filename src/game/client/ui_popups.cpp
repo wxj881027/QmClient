@@ -41,8 +41,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	SPopupMenuProperties ResolvedProps = Props;
 	if(ResolvedProps.m_CenterInViewport)
 	{
-		// 新版 UI 下，居中模态二级弹窗默认启用缩放入场动画与底层滚动阻断（对齐字体商店体验）
-		ResolvedProps.m_Animate = true;
+		// 居中模态弹层阻断底层滚动，动画开关保留调用方配置。
 		ResolvedProps.m_BlockUnderlyingScroll = true;
 	}
 	if(ResolvedProps.m_CenterInViewport)
@@ -107,6 +106,8 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 void CUi::RenderPopupMenus()
 {
 	PruneInteractionSources(false);
+	// 公共入口自行接入模糊链，聊天和编辑器无需逐个补接线。
+	CUiScopedGaussianBlur PopupBlurScope(this);
 	// 禁用弹层模糊时，背景和分隔线的半透明绘制也不能触发自动背板模糊。
 	CUiScopedGaussianBlurSuppression PopupBlurSuppression(this, g_Config.m_QmUiPopupBlur == 0);
 	m_RenderingPopupMenus = true;
@@ -493,6 +494,18 @@ void CUi::RefreshPopupMenuSource(const SPopupMenuId *pId, bool RequireRefresh, u
 {
 	if(!RenderOnly())
 		QmRefreshPopupSource(m_vPopupMenus, pId, RequireRefresh, Frame);
+}
+
+bool CUi::CloseTopPopupMenu()
+{
+	if(RenderOnly())
+		return false;
+	const auto Top = std::find_if(m_vPopupMenus.rbegin(), m_vPopupMenus.rend(), [](const SPopupMenu &Popup) { return !Popup.m_Closing; });
+	if(Top == m_vPopupMenus.rend())
+		return false;
+	const SPopupMenuId *pId = Top->m_pId;
+	ClosePopupMenu(pId, true);
+	return true;
 }
 
 void CUi::ClosePopupMenus()
@@ -942,6 +955,10 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 			State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
 			State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
 			RefreshPopupMenuSource(&State.m_SelectionPopupContext, DropDownProps.m_RequireSourceRefresh, SourceFrame);
+			// 父触发器失活后不再经过 ShowPopupSelection，但活动子列表仍需逐帧注册滚轮归属。
+			// 使用栈内实际矩形，不重开弹层或重置选择、滚动与动画状态。
+			if(const CUIRect *pPopupRect = GetPopupMenuRect(&State.m_SelectionPopupContext))
+				RegisterWheelOwner(&State.m_SelectionPopupContext, EUiWheelOwnerPriority::POPUP, *pPopupRect, State.m_SelectionPopupContext.m_BlockUnderlyingScroll);
 		}
 		SMenuButtonProperties ButtonProps;
 		ButtonProps.m_Enabled = false;

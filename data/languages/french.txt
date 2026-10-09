@@ -806,8 +806,8 @@ Appearance
 Appearance and command highlighting of the local console
 == Apparence de la console locale et coloration des commandes
 
-Appearance of help bubbles outside settings cards
-== Apparence des infobulles hors des cartes de paramètres
+Appearance of help bubbles
+== Apparence des bulles d’aide
 
 Append to log file instead of overwriting
 == Ajouter au fichier journal au lieu de l'écraser
@@ -1298,6 +1298,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Échec de la connexion automatique Axiom, nouvelle tentative
 
+Axiom auto login skipped: no password
+== Connexion automatique Axiom : mot de passe non renseigné, ignorée
+
+Axiom auto login stopped after repeated failures
+== Connexion automatique Axiom arrêtée : plusieurs échecs
+
 Axiom auto login succeeded
 == Connexion automatique Axiom réussie
 
@@ -1309,6 +1315,9 @@ Axiom main account password
 
 Axiom score request failed
 == Échec de la récupération des scores Axiom
+
+Axiom website
+== Site web d'Axiom
 
 Axis
 == Axe
@@ -9836,9 +9845,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == Liste des rediffusions : pas encore chargée
 
-Replay list: up to date
-== Liste des rediffusions : à jour
-
 Replays directory
 == Dossier des rediffusions
 
@@ -11683,6 +11689,9 @@ Show teleporter tile outlines
 
 Show text entities
 == Afficher les entités de texte
+
+Show the chat scrollbar on the right
+== Afficher la barre de défilement du chat à droite
 
 Show the cursor while free spectating
 == Afficher le curseur en spectateur libre
@@ -13721,6 +13730,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == Impossible de supprimer %d éléments sélectionnés. Le premier élément en échec était '%s'.
 
+Unable to delete skin
+== Impossible de supprimer le skin
+
 Unable to delete the demo '%s'
 == Impossible de supprimer la démo '%s'
 
@@ -14104,9 +14116,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Utilisez la molette de la souris sur un module survolé pour le redimensionner de 5 %
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== Saisissez séparément les mots de passe enregistrés sur Axiom pour le compte principal et le dummy. Cette option ne crée pas de compte.
 
 Use the scoreboard cursor mode to scroll the list
 == Utilisez le mode curseur du tableau pour faire défiler la liste
@@ -14980,6 +14989,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == Vous êtes le dernier !
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== Votre compte est votre nom en jeu – enregistrez-le d'abord sur le site web d'Axiom. Saisissez les mots de passe enregistrés du compte principal et du dummy. Cette option ne crée pas de compte.
 
 Your current race time is %s
 == Votre temps de course actuel est %s
