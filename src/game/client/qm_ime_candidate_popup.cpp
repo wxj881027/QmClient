@@ -4,6 +4,7 @@
 #include "qm_ime_candidate_popup.h"
 
 #include "QmUi/QmAnimResolve.h"
+#include "QmUi/QmImeAppearance.h"
 #include "QmUi/QmImeCandidateLayout.h"
 #include "QmUi/QmInputMotion.h"
 #include "QmUi/QmTheme.h"
@@ -115,7 +116,7 @@ namespace
 		return Metrics;
 	}
 
-	void DrawImeText(ITextRender *pTextRender, float VisualX, float RectY, float RectH, float FontSize, const char *pText, const SImeTextMetrics &Metrics, ColorRGBA Color, float Alpha, float Scale, float MaxWidth = -1.0f)
+	void DrawImeText(ITextRender *pTextRender, float VisualX, float RectY, float RectH, float FontSize, const char *pText, const SImeTextMetrics &Metrics, ColorRGBA Color, float Alpha, float Scale, float MaxWidth = -1.0f, const SQmColorGradient *pGradient = nullptr)
 	{
 		if(pTextRender == nullptr || pText == nullptr || pText[0] == '\0' || Scale <= 0.0f)
 			return;
@@ -132,6 +133,14 @@ namespace
 			Cursor.m_LineWidth = maximum(0.01f, MaxWidth - 2.0f * Metrics.m_DrawOffsetX) * Scale;
 			Cursor.m_MaxLines = 1;
 			Cursor.m_Flags |= TEXTFLAG_ELLIPSIS_AT_END | TEXTFLAG_STOP_AT_END;
+		}
+		const float Width = MaxWidth >= 0.0f ? std::min(Metrics.m_Width, MaxWidth) : Metrics.m_Width;
+		const SQmGradientTextPaint Paint = {pGradient, vec2(Cursor.m_X, TextY + Metrics.m_VisualTop * Scale),
+			vec2(std::max(0.01f, Width - 2.0f * Metrics.m_DrawOffsetX) * Scale, VisualHeight), Alpha};
+		if(pGradient != nullptr && pGradient->m_NumColors > 1)
+		{
+			Cursor.m_pfnColorSampler = SQmGradientTextPaint::Sample;
+			Cursor.m_pColorSamplerContext = &Paint;
 		}
 		pTextRender->TextEx(&Cursor, pText);
 	}
@@ -193,10 +202,11 @@ namespace
 	}
 
 	void DrawCandidateRow(ITextRender *pTextRender, const SQmImePopupState &State, const SImeCandidateRow &Row,
-		const CUIRect &Panel, const qm_theme::SImeTheme &Ime, float Alpha, float Scale)
+		const CUIRect &Panel, const SQmImeAppearance &Appearance, float Alpha, float Scale)
 	{
 		if(Alpha <= 0.0f)
 			return;
+		const auto &Ime = Appearance.m_Theme;
 		const auto Layout = qm_ime_overlay::BuildCandidateRowLayoutForPanel(Row.m_aMeasures, Row.m_Viewport.m_Count, Row.m_LayoutConfig, Panel);
 		const auto Presentation = qm_ime_overlay::BuildCandidateRowPresentation(Layout, Panel, Row.m_Height, Ime.m_PaddingX, Ime.m_PaddingY, Scale);
 		const float ContentScale = Presentation.m_Scale;
@@ -212,8 +222,8 @@ namespace
 			str_format(aNum, sizeof(aNum), "%d", (CandidateIndex + 1) % 10);
 			const float NumX = CellRect.x + CandidatePaddingX * ContentScale;
 			const float TextX = NumX + (Metrics.m_Num.m_Width + Ime.m_CandidateNumPaddingX) * ContentScale;
-			DrawImeText(pTextRender, NumX, CellRect.y, CellRect.h, Ime.m_FontCandidate, aNum, Metrics.m_Num, Selected ? Ime.m_TextSelected : Ime.m_TextMuted, Alpha, ContentScale);
-			DrawImeText(pTextRender, TextX, CellRect.y, CellRect.h, Ime.m_FontCandidate, State.m_vCandidates[CandidateIndex].c_str(), Metrics.m_Text, Selected ? Ime.m_TextSelected : Ime.m_Text, Alpha, ContentScale, Cell.m_TextWidth);
+			DrawImeText(pTextRender, NumX, CellRect.y, CellRect.h, Ime.m_FontCandidate, aNum, Metrics.m_Num, Selected ? Ime.m_TextSelected : Ime.m_Text, Alpha * (Selected ? 1.0f : 0.62f), ContentScale, -1.0f, Selected ? &Appearance.m_SelectedText : &Appearance.m_Text);
+			DrawImeText(pTextRender, TextX, CellRect.y, CellRect.h, Ime.m_FontCandidate, State.m_vCandidates[CandidateIndex].c_str(), Metrics.m_Text, Selected ? Ime.m_TextSelected : Ime.m_Text, Alpha, ContentScale, Cell.m_TextWidth, Selected ? &Appearance.m_SelectedText : &Appearance.m_Text);
 		}
 
 		if(Row.m_TrailingWidth > 0.0f)
@@ -228,8 +238,39 @@ namespace
 			Divider = Presentation.Transform(Divider);
 			Divider.Draw(WithAlpha(Ime.m_PanelBorder, Alpha * 1.25f), IGraphics::CORNER_ALL, 0.25f);
 			DrawImeText(pTextRender, More.x + (More.w - Row.m_PageTextMetrics.m_Width * ContentScale) * 0.5f,
-				More.y, More.h, Ime.m_FontComposition, Row.m_aPageText, Row.m_PageTextMetrics, Ime.m_TextMuted, Alpha, ContentScale);
+				More.y, More.h, Ime.m_FontComposition, Row.m_aPageText, Row.m_PageTextMetrics, Ime.m_Text, Alpha * 0.62f, ContentScale, -1.0f, &Appearance.m_Text);
 		}
+	}
+	void DrawImePanelSurface(CGameClient *pGameClient, const CUIRect &Panel, const SQmImeAppearance &Appearance,
+		float Radius, float Alpha, float PixelSize)
+	{
+		IGraphics *pGraphics = pGameClient->Graphics();
+		const auto &Ime = Appearance.m_Theme;
+		const float UserOpacity = Appearance.m_Background.m_aColors[0].a;
+		CUIRect PanelDropA = Panel;
+		PanelDropA.x += Ime.m_ShadowX;
+		PanelDropA.y += Ime.m_ShadowY * 0.65f;
+		SRoundedSurfaceParams SurfaceParams;
+		SurfaceParams.m_Radius = Radius;
+		SurfaceParams.m_PixelSize = PixelSize;
+		DrawRoundedSurface(pGraphics, PanelDropA, WithAlpha(Ime.m_PanelShadow, Alpha * 0.46f), ColorRGBA(), SurfaceParams);
+		CUIRect PanelDropB = Panel;
+		PanelDropB.y += Ime.m_ShadowY * 1.7f;
+		DrawRoundedSurface(pGraphics, PanelDropB, WithAlpha(Ime.m_PanelShadow, Alpha * 0.28f), ColorRGBA(), SurfaceParams);
+
+		SurfaceParams.m_BorderWidth = Ime.m_BorderInset;
+		if(UserOpacity < 0.999f && g_Config.m_QmGaussianBlur != 0)
+			pGameClient->Ui()->RenderGaussianBlur(Panel, Alpha * UserOpacity, SurfaceParams.m_Corners, SurfaceParams.m_Radius);
+		DrawRoundedGradientSurface(pGraphics, Panel, Appearance.m_Background, Alpha, WithAlpha(Ime.m_PanelBorder, Alpha * UserOpacity), SurfaceParams);
+		CUIRect PanelContent;
+		Panel.Margin(Ime.m_BorderInset, &PanelContent);
+
+		CUIRect PanelTopLine = PanelContent;
+		PanelTopLine.h = 0.45f;
+		PanelTopLine.x += Radius * 0.35f;
+		PanelTopLine.w = maximum(0.0f, PanelTopLine.w - Radius * 0.70f);
+		if(PanelTopLine.w > 0.0f)
+			PanelTopLine.Draw(WithAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.11f), Alpha), IGraphics::CORNER_T, 0.0f);
 	}
 } // namespace
 
@@ -261,14 +302,8 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 
 	IGraphics *pGraphics = pGameClient->Graphics();
 	ITextRender *pTextRender = pGameClient->TextRender();
-	qm_theme::SImeTheme Ime = qm_theme::ImeTheme(true);
-	Ime.m_Text = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeTextColor, true));
-	Ime.m_TextSelected = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeSelectedTextColor, true));
-	Ime.m_SelectedBg = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeSelectedColor, true));
-	const float FontScale = std::clamp(g_Config.m_QmImeFontSize, 75, 200) / 100.0f;
-	Ime.m_FontCandidate *= FontScale;
-	Ime.m_FontComposition *= FontScale;
-	const float UserOpacity = std::clamp(g_Config.m_QmImeOpacity, 0, 100) / 100.0f;
+	const SQmImeAppearance Appearance = QmImeAppearance(g_Config);
+	const auto &Ime = Appearance.m_Theme;
 	const unsigned OldRenderFlags = pTextRender->GetRenderFlags();
 	pTextRender->SetRenderFlags(OldRenderFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 
@@ -397,31 +432,7 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 	const CUIRect Panel = qm_ime_overlay::FitCandidatePanel(Presentation.m_Rect,
 		{Margin, Margin, ScreenMaxPanelWidth, Height - 2.0f * Margin});
 	const qm_ime_overlay::SCandidateRowLayout CandidateLayout = qm_ime_overlay::BuildCandidateRowLayoutForPanel(CandidateRow.m_aMeasures, CandidateRow.m_Viewport.m_Count, CandidateRow.m_LayoutConfig, Panel);
-	CUIRect PanelDropA = Panel;
-	PanelDropA.x += Ime.m_ShadowX;
-	PanelDropA.y += Ime.m_ShadowY * 0.65f;
-	SRoundedSurfaceParams SurfaceParams;
-	SurfaceParams.m_Radius = Presentation.m_Radius;
-	SurfaceParams.m_PixelSize = PixelSize;
-	DrawRoundedSurface(pGraphics, PanelDropA, WithAlpha(Ime.m_PanelShadow, Alpha * 0.46f), ColorRGBA(), SurfaceParams);
-	CUIRect PanelDropB = Panel;
-	PanelDropB.y += Ime.m_ShadowY * 1.7f;
-	DrawRoundedSurface(pGraphics, PanelDropB, WithAlpha(Ime.m_PanelShadow, Alpha * 0.28f), ColorRGBA(), SurfaceParams);
-
-	SurfaceParams.m_BorderWidth = Ime.m_BorderInset;
-	const ColorRGBA PanelBackground = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmImeBgColor));
-	if(UserOpacity < 0.999f && g_Config.m_QmGaussianBlur != 0)
-		pGameClient->Ui()->RenderGaussianBlur(Panel, Alpha * UserOpacity, SurfaceParams.m_Corners, SurfaceParams.m_Radius);
-	DrawRoundedSurface(pGraphics, Panel, WithAlpha(PanelBackground, Alpha * UserOpacity), WithAlpha(Ime.m_PanelBorder, Alpha * UserOpacity), SurfaceParams);
-	CUIRect PanelContent;
-	Panel.Margin(Ime.m_BorderInset, &PanelContent);
-
-	CUIRect PanelTopLine = PanelContent;
-	PanelTopLine.h = 0.45f;
-	PanelTopLine.x += Presentation.m_Radius * 0.35f;
-	PanelTopLine.w = maximum(0.0f, PanelTopLine.w - Presentation.m_Radius * 0.70f);
-	if(PanelTopLine.w > 0.0f)
-		PanelTopLine.Draw(WithAlpha(ColorRGBA(1.0f, 1.0f, 1.0f, 0.11f), Alpha), IGraphics::CORNER_T, 0.0f);
+	DrawImePanelSurface(pGameClient, Panel, Appearance, Presentation.m_Radius, Alpha, PixelSize);
 
 	const ColorRGBA OldTextColor = pTextRender->GetTextColor();
 	const ColorRGBA OldOutlineColor = pTextRender->GetTextOutlineColor();
@@ -461,15 +472,69 @@ void CQmImeCandidatePopup::Render(CGameClient *pGameClient, const SQmImePopupSta
 			SRoundedSurfaceParams CandidateSurfaceParams;
 			CandidateSurfaceParams.m_Radius = maximum(1.0f, DrawRect.h * 0.5f);
 			CandidateSurfaceParams.m_PixelSize = PixelSize;
-			DrawRoundedSurface(pGraphics, DrawRect, WithAlpha(Ime.m_SelectedBg, CandidateDrawAlpha), ColorRGBA(), CandidateSurfaceParams);
+			DrawRoundedGradientSurface(pGraphics, DrawRect, Appearance.m_Selection, CandidateDrawAlpha, ColorRGBA(), CandidateSurfaceParams);
 			break;
 		}
 
 		// 打字和翻页直接显示最新候选；外框伸缩和选中背景继续使用各自的动画。
-		DrawCandidateRow(pTextRender, DrawState, CandidateRow, Panel, Ime, CandidateDrawAlpha, Presentation.m_CandidateScale);
+		DrawCandidateRow(pTextRender, DrawState, CandidateRow, Panel, Appearance, CandidateDrawAlpha, Presentation.m_CandidateScale);
 	}
 	pTextRender->TextColor(OldTextColor);
 	pTextRender->TextOutlineColor(OldOutlineColor);
 	pTextRender->SetRenderFlags(OldRenderFlags);
 	pGraphics->MapScreen(OldScreenX0, OldScreenY0, OldScreenX1, OldScreenY1);
+}
+
+void QmImeRenderStylePreview(CGameClient *pGameClient, const CUIRect &Rect)
+{
+	if(pGameClient == nullptr || Rect.w <= 0.0f || Rect.h <= 0.0f)
+		return;
+	IGraphics *pGraphics = pGameClient->Graphics();
+	ITextRender *pTextRender = pGameClient->TextRender();
+	if(pGraphics == nullptr || pTextRender == nullptr)
+		return;
+	SQmImePopupState State;
+	State.m_Visible = true;
+	State.m_vCandidates = {"你好", "你", "拟好", "您好", "泥号"};
+	State.m_SelectedIndex = 0;
+	State.m_PageIndex = 0;
+	State.m_PageCount = 3;
+	SQmImeAppearance Appearance = QmImeAppearance(g_Config);
+	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+	pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+	const float Scale = std::abs(ScreenY1 - ScreenY0) / Appearance.m_Theme.m_ScreenHeight;
+	auto &Ime = Appearance.m_Theme;
+	for(float *pValue : {&Ime.m_FontCandidate, &Ime.m_FontComposition, &Ime.m_PaddingX, &Ime.m_PaddingY,
+		&Ime.m_RowHeight, &Ime.m_MinWidth, &Ime.m_TrailingWidth, &Ime.m_CandidateGap, &Ime.m_CandidatePaddingX,
+		&Ime.m_SelectedPaddingX, &Ime.m_CandidateNumPaddingX, &Ime.m_CompositionTextPaddingX,
+		&Ime.m_TextSafePaddingX, &Ime.m_TextSafePaddingY, &Ime.m_ShadowX, &Ime.m_ShadowY, &Ime.m_BorderInset})
+		*pValue *= Scale;
+	const unsigned OldFlags = pTextRender->GetRenderFlags();
+	const ColorRGBA OldColor = pTextRender->GetTextColor();
+	const ColorRGBA OldOutline = pTextRender->GetTextOutlineColor();
+	pTextRender->SetRenderFlags(OldFlags | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+	pTextRender->TextOutlineColor(0.0f, 0.0f, 0.0f, 0.0f);
+	const auto Row = MeasureCandidateRow(pTextRender, State, 0, Ime, Rect.w);
+	const float Height = Row.m_Height + Ime.m_PaddingY * 2.0f;
+	const CUIRect Panel = {Rect.x + (Rect.w - Row.m_TargetLayout.m_PanelWidth) * 0.5f,
+		Rect.y + (Rect.h - Height) * 0.5f, Row.m_TargetLayout.m_PanelWidth, Height};
+	SRoundedSurfaceParams Params;
+	Params.m_Radius = Height * 0.5f;
+	Params.m_BorderWidth = Ime.m_BorderInset;
+	Params.m_PixelSize = pGameClient->Ui()->PixelSize();
+	DrawImePanelSurface(pGameClient, Panel, Appearance, Params.m_Radius, 1.0f, Params.m_PixelSize);
+	const auto Layout = qm_ime_overlay::BuildCandidateRowLayoutForPanel(Row.m_aMeasures, Row.m_Viewport.m_Count, Row.m_LayoutConfig, Panel);
+	const auto Presentation = qm_ime_overlay::BuildCandidateRowPresentation(Layout, Panel, Row.m_Height, Ime.m_PaddingX, Ime.m_PaddingY, 1.0f);
+	if(Layout.m_Count > 0)
+	{
+		const auto &Cell = Layout.m_aCells[0];
+		const CUIRect Selection = Presentation.Transform({Cell.m_X, 0.75f, Cell.m_Width, Row.m_Height - 1.5f});
+		Params.m_BorderWidth = 0.0f;
+		Params.m_Radius = Selection.h * 0.5f;
+		DrawRoundedGradientSurface(pGraphics, Selection, Appearance.m_Selection, 1.0f, ColorRGBA(), Params);
+	}
+	DrawCandidateRow(pTextRender, State, Row, Panel, Appearance, 1.0f, 1.0f);
+	pTextRender->TextColor(OldColor);
+	pTextRender->TextOutlineColor(OldOutline);
+	pTextRender->SetRenderFlags(OldFlags);
 }

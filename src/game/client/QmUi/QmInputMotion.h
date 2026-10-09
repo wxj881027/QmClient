@@ -9,7 +9,6 @@ namespace qm_input_motion
 	inline constexpr SUiSpringConfig FOLLOW = {1.0f, 760.0f, 36.0f, 0.02f, 0.20f};
 	inline constexpr SUiSpringConfig RESIZE = {1.0f, 640.0f, 32.0f, 0.02f, 0.20f};
 	inline constexpr SUiSpringConfig SELECTED = {1.0f, 1000.0f, 38.0f, 0.01f, 0.15f};
-	inline constexpr SUiSpringConfig CARET = {1.0f, 1100.0f, 44.0f, 0.015f, 0.15f};
 	inline constexpr SUiSpringConfig GLYPH = {1.0f, 900.0f, 34.0f, 0.003f, 0.03f};
 
 	inline float ResolvePresentationValue(CQmAnimationBackend &Runtime, uint64_t NodeKey, EUiAnimProperty Property,

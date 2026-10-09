@@ -734,6 +734,9 @@ Angle
 Angle:
 == Ángulo:
 
+Angular gradient
+== Degradado angular
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == Animar el chat, el selector de emoticonos, el marcador y la selección de espectador
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == Diamante
 
+Diamond gradient
+== Degradado de diamante
+
 died
 == murió
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == Editar paquete de audio
+
+Edit color
+== Editar colores
 
 Edit Entry
 == Editar Entrada
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == Color de degradado
 
+Gradient direction
+== Dirección del degradado
+
+Gradient horizontal position
+== Posición horizontal del degradado
+
+Gradient range
+== Tamaño del degradado
+
+Gradient type
+== Tipo de degradado
+
+Gradient vertical position
+== Posición vertical del degradado
+
 Graphics
 == Gráficos
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == Método de entrada
 
+IME appearance
+== Apariencia del IME
+
 IME background color
 == Color de fondo del IME
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == Tamaño de letra del IME (%)
+
+IME gradient angle in degrees
+== Dirección del degradado (IME, °)
+
+IME gradient colors
+== Colores del degradado del IME
+
+IME gradient horizontal position percentage
+== Posición horizontal del degradado (IME, %)
+
+IME gradient range percentage
+== Tamaño del degradado (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Tipo de degradado (IME; 0=Degradado lineal, 1=Degradado radial, 2=Degradado angular, 3=Degradado reflejado, 4=Degradado de diamante)
+
+IME gradient vertical position percentage
+== Posición vertical del degradado (IME, %)
 
 IME selected text color
 == Color del texto seleccionado del IME
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == Lineal
+
+Linear gradient
+== Degradado lineal
 
 Lines %d - %d (%s)
 == Líneas %d - %d (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == Tiempo de carrera
 
+Radial gradient
+== Degradado radial
+
+Radial gradients spread from the center
+== Los degradados radiales se extienden desde el centro
+
 Rainbow
 == Arcoíris
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == Reducido: usa transiciones más cortas y desactiva las animaciones de presentación
+
+Reflected gradient
+== Degradado reflejado
 
 Refresh
 == Refrescar
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == Reintentando…
+
+Reverse gradient colors
+== Invertir los colores del degradado
+
+Reverse IME gradient colors
+== Invertir los colores del degradado (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Invertir el zoom al instante al pulsar la tecla opuesta (0=mantener el zoom suave original)

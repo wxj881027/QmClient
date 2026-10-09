@@ -734,6 +734,9 @@ Angle
 Angle:
 == Угол:
 
+Angular gradient
+== Угловой градиент
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == Анимировать чат, выбор эмоций, табло и выбор наблюдения
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == Ромб
 
+Diamond gradient
+== Ромбовидный градиент
+
 died
 == умер
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == Редактировать аудиопакет
+
+Edit color
+== Изменить цвета
 
 Edit Entry
 == Редактировать запись
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == Цвет градиента
 
+Gradient direction
+== Направление градиента
+
+Gradient horizontal position
+== Горизонтальное положение градиента
+
+Gradient range
+== Размер градиента
+
+Gradient type
+== Тип градиента
+
+Gradient vertical position
+== Вертикальное положение градиента
+
 Graphics
 == Графика
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == Метод ввода
 
+IME appearance
+== Оформление IME
+
 IME background color
 == Цвет фона IME
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == Размер шрифта IME (%)
+
+IME gradient angle in degrees
+== Направление градиента (IME, °)
+
+IME gradient colors
+== Цвета градиента IME
+
+IME gradient horizontal position percentage
+== Горизонтальное положение градиента (IME, %)
+
+IME gradient range percentage
+== Размер градиента (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== Тип градиента (IME; 0=Линейный градиент, 1=Радиальный градиент, 2=Угловой градиент, 3=Зеркальный градиент, 4=Ромбовидный градиент)
+
+IME gradient vertical position percentage
+== Вертикальное положение градиента (IME, %)
 
 IME selected text color
 == Цвет выбранного текста IME
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == Линейный
+
+Linear gradient
+== Линейный градиент
 
 Lines %d - %d (%s)
 == Строки %d - %d (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == Время гонки
 
+Radial gradient
+== Радиальный градиент
+
+Radial gradients spread from the center
+== Радиальный градиент расходится от центра
+
 Rainbow
 == Радуга
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == Уменьшено: использует более короткие переходы и отключает презентационные анимации
+
+Reflected gradient
+== Зеркальный градиент
 
 Refresh
 == Обновить
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == Повторная попытка…
+
+Reverse gradient colors
+== Обратить цвета градиента
+
+Reverse IME gradient colors
+== Обратить цвета градиента (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == Мгновенно менять направление зума при нажатии противоположной клавиши (0=оставить прежний плавный зум)

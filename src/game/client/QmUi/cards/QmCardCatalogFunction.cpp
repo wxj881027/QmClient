@@ -2,6 +2,8 @@
 #include "QmCardCatalogInternal.h"
 #include "QmCardMeasureRevision.h"
 
+#include <game/client/QmUi/QmImeAppearance.h>
+
 #include <engine/shared/config.h>
 
 #include <game/client/QmUi/UiForms.h>
@@ -189,7 +191,7 @@ namespace qm_card_catalog
 				return Row() * (3.0f + (g_Config.m_QmAxiomAutoLogin ? 2.0f : 0.0f) + ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 7.0f : 0.0f)) + LineHeight;
 			case EQmModuleId::KeyBinds: return Rows(8.0f);
 			case EQmModuleId::Emoticons: return Rows(7.0f);
-			case EQmModuleId::Ime: return Rows(8.0f);
+			case EQmModuleId::Ime: return QmImeAppearanceCardHeight(LineHeight, Metrics.m_ButtonHeight, LineSpacing);
 			case EQmModuleId::BetterScoreboard: return Rows(5.0f);
 			case EQmModuleId::BlockWords: return Row() * (g_Config.m_QmBlockWordsAction == 0 ? 7.0f : 4.0f) + CalcQiaFenInputHeight(QmCardRenderHook::TextRenderer(pMenus), g_Config.m_QmBlockWordsList, std::max(1.0f, ContentWidth - LabelWidth), BodySize, std::clamp(2.0f * UiScale, 1.0f, 2.0f), LineHeight);
 			case EQmModuleId::Translate:

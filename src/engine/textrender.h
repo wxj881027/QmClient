@@ -402,6 +402,10 @@ public:
 
 	// Color splits of the cursor to allow multicolored text
 	std::vector<STextColorSplit> m_vColorSplits;
+	// 渐变取色仅在同步创建字形顶点时调用；上下文须存活到 TextEx/CreateTextContainer 返回。
+	using FColorSampler = ColorRGBA (*)(vec2 Position, const void *pContext);
+	FColorSampler m_pfnColorSampler = nullptr;
+	const void *m_pColorSamplerContext = nullptr;
 
 	// QmClient：逐字符顶点偏移。按字符序号升序排列且覆盖每个字符，未偏移的字符填 0，
 	// 否则游标推进方式（顺序消费）会与字符错位。

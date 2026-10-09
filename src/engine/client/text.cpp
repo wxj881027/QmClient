@@ -7,6 +7,7 @@
 #include "qm_font_name_match.h"
 #include "qm_font_names.h"
 #include "qm_font_resource_policy.h"
+#include "text_gradient.h"
 #include "text_layout_string.h"
 #include "text_sweep.h"
 #include "text_word_cursor.h"
@@ -1571,6 +1572,7 @@ struct STextContainer
 	bool m_HasCursor;
 	bool m_ForceCursorRendering;
 	bool m_HasSelection;
+	bool m_HasSpatialGradient;
 
 	bool m_SingleTimeUse;
 
@@ -1597,6 +1599,7 @@ struct STextContainer
 		m_HasCursor = false;
 		m_ForceCursorRendering = false;
 		m_HasSelection = false;
+		m_HasSpatialGradient = false;
 
 		m_SingleTimeUse = false;
 
@@ -3434,6 +3437,41 @@ public:
 						TextCharQuad.m_aVertices[3].m_Color.g = (unsigned char)(Color.g * 255.f);
 						TextCharQuad.m_aVertices[3].m_Color.b = (unsigned char)(Color.b * 255.f);
 						TextCharQuad.m_aVertices[3].m_Color.a = (unsigned char)(Color.a * 255.f);
+						if(pCursor->m_pfnColorSampler != nullptr)
+						{
+							TextContainer.m_HasSpatialGradient = true;
+							const STextCharQuad Glyph = TextCharQuad;
+							bool First = true;
+							ForEachTextGradientCell(vec2(Glyph.m_aVertices[3].m_X, Glyph.m_aVertices[3].m_Y),
+								vec2(Glyph.m_aVertices[1].m_X, Glyph.m_aVertices[1].m_Y),
+								vec2(Glyph.m_aVertices[3].m_U, Glyph.m_aVertices[3].m_V),
+								vec2(Glyph.m_aVertices[1].m_U, Glyph.m_aVertices[1].m_V),
+								pCursor->m_pfnColorSampler, pCursor->m_pColorSamplerContext, [&](const STextGradientCell &Cell) {
+									if(!First)
+									{
+										TextContainer.m_StringInfo.m_vCharacterQuads.emplace_back();
+										if(pCursor->m_TrackLineRanges)
+											TextContainer.m_SweepLayout.AddQuad(LineCount, TextContainer.m_StringInfo.m_vCharacterQuads.size() - 1);
+									}
+									First = false;
+									auto &Quad = TextContainer.m_StringInfo.m_vCharacterQuads.back();
+									const int aCornerIndices[] = {2, 3, 1, 0};
+									for(int i = 0; i < 4; ++i)
+									{
+										const int Corner = aCornerIndices[i];
+										auto &Vertex = Quad.m_aVertices[i];
+										Vertex.m_X = Cell.m_aPositions[Corner].x;
+										Vertex.m_Y = Cell.m_aPositions[Corner].y;
+										Vertex.m_U = Cell.m_aUvs[Corner].x;
+										Vertex.m_V = Cell.m_aUvs[Corner].y;
+										const auto &Sample = Cell.m_aColors[Corner];
+										Vertex.m_Color.r = static_cast<unsigned char>(std::clamp(Sample.r, 0.0f, 1.0f) * 255.0f);
+										Vertex.m_Color.g = static_cast<unsigned char>(std::clamp(Sample.g, 0.0f, 1.0f) * 255.0f);
+										Vertex.m_Color.b = static_cast<unsigned char>(std::clamp(Sample.b, 0.0f, 1.0f) * 255.0f);
+										Vertex.m_Color.a = static_cast<unsigned char>(std::clamp(Sample.a, 0.0f, 1.0f) * 255.0f);
+									}
+								});
+						}
 					}
 
 					// calculate the full width from the last selection point to the end of this selection draw on screen
@@ -3631,6 +3669,7 @@ public:
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 		TextContainer.m_StringInfo.m_vCharacterQuads.clear();
 		TextContainer.m_SweepLayout.Clear();
+		TextContainer.m_HasSpatialGradient = false;
 		// the text buffer gets then recreated by the appended quads
 		AppendTextContainer(TextContainerIndex, pCursor, pText, Length);
 	}
@@ -3703,6 +3742,39 @@ public:
 				Graphics()->TextureClear();
 				// render buffered text
 				Graphics()->RenderText(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, TextContainer.m_StringInfo.m_vCharacterQuads.size(), m_pGlyphMap->TextureDimension(), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL).Id(), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE).Id(), TextColor, TextOutlineColor);
+			}
+			else if(TextContainer.m_HasSpatialGradient)
+			{
+				// 无文字缓冲后端也保留每个顶点的颜色，避免中心和纵向渐变退化为色块。
+				const float UVScale = 1.0f / m_pGlyphMap->TextureDimension();
+				const auto DrawPass = [&](size_t TextureIndex, const ColorRGBA &Tint) {
+					if(Tint.a <= 0.0f)
+						return;
+					Graphics()->TextureSet(m_pGlyphMap->Texture(TextureIndex));
+					Graphics()->QuadsBegin();
+					for(const auto &Quad : TextContainer.m_StringInfo.m_vCharacterQuads)
+					{
+						const auto &aVertices = Quad.m_aVertices;
+						const int aCorners[] = {0, 1, 3, 2};
+						IGraphics::CColorVertex aColors[4];
+						for(int i = 0; i < 4; ++i)
+						{
+							const auto &Color = aVertices[aCorners[i]].m_Color;
+							aColors[i] = {i, ColorRGBA(Color.r / 255.0f * Tint.r, Color.g / 255.0f * Tint.g, Color.b / 255.0f * Tint.b, Color.a / 255.0f * Tint.a)};
+						}
+						Graphics()->SetColorVertex(aColors, std::size(aColors));
+						Graphics()->QuadsSetSubsetFree(aVertices[0].m_U * UVScale, aVertices[0].m_V * UVScale, aVertices[1].m_U * UVScale, aVertices[1].m_V * UVScale,
+							aVertices[3].m_U * UVScale, aVertices[3].m_V * UVScale, aVertices[2].m_U * UVScale, aVertices[2].m_V * UVScale);
+						const IGraphics::CFreeformItem Item(vec2(aVertices[0].m_X, aVertices[0].m_Y), vec2(aVertices[1].m_X, aVertices[1].m_Y),
+							vec2(aVertices[3].m_X, aVertices[3].m_Y), vec2(aVertices[2].m_X, aVertices[2].m_Y));
+						Graphics()->QuadsDrawFreeform(&Item, 1);
+					}
+					Graphics()->QuadsEnd();
+				};
+				Graphics()->FlushVertices();
+				DrawPass(CGlyphMap::FONT_TEXTURE_OUTLINE, TextOutlineColor);
+				DrawPass(CGlyphMap::FONT_TEXTURE_FILL, TextColor);
+				Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 			}
 			else
 			{

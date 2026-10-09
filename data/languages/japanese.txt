@@ -734,6 +734,9 @@ Angle
 Angle:
 == 角度：
 
+Angular gradient
+== 角度グラデーション
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == チャットボックス、絵文字選択、スコアボード、観戦選択をアニメーション化
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == ダイヤモンド
 
+Diamond gradient
+== 菱形グラデーション
+
 died
 == 死亡
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == オーディオパックを編集
+
+Edit color
+== 配色を編集
 
 Edit Entry
 == エントリを編集
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == グラデーションカラー
 
+Gradient direction
+== グラデーションの方向
+
+Gradient horizontal position
+== グラデーションの水平位置
+
+Gradient range
+== グラデーションの範囲
+
+Gradient type
+== グラデーションの種類
+
+Gradient vertical position
+== グラデーションの垂直位置
+
 Graphics
 == グラフィック
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == 入力メソッド
 
+IME appearance
+== IME の外観
+
 IME background color
 == IME 背景色
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == IME の文字サイズ (%)
+
+IME gradient angle in degrees
+== グラデーションの方向 (IME, °)
+
+IME gradient colors
+== IME のグラデーション色
+
+IME gradient horizontal position percentage
+== グラデーションの水平位置 (IME, %)
+
+IME gradient range percentage
+== グラデーションの範囲 (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== グラデーションの種類 (IME; 0=線形グラデーション, 1=放射状グラデーション, 2=角度グラデーション, 3=反射グラデーション, 4=菱形グラデーション)
+
+IME gradient vertical position percentage
+== グラデーションの垂直位置 (IME, %)
 
 IME selected text color
 == IME の選択文字色
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == リニア
+
+Linear gradient
+== 線形グラデーション
 
 Lines %d - %d (%s)
 == 行 %d - %d (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == レースタイム
 
+Radial gradient
+== 放射状グラデーション
+
+Radial gradients spread from the center
+== 放射状グラデーションは中心から外側へ広がります
+
 Rainbow
 == レインボー
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == 軽減：短い遷移を使用し、演出アニメーションを無効にします
+
+Reflected gradient
+== 反射グラデーション
 
 Refresh
 == 更新
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == 再試行中…
+
+Reverse gradient colors
+== グラデーションの色を反転
+
+Reverse IME gradient colors
+== グラデーションの色を反転 (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 逆方向キーでズームを即座に反転（0=元の滑らかなズームを維持）

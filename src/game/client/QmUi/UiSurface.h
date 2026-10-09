@@ -16,6 +16,7 @@
 #include <cmath>
 
 class CUi;
+struct SQmColorGradient;
 
 // 普通 UI 圆角必须走 DrawRoundedSurface / CUIRect::Draw 公共路径。
 // 旧直绘路径仅允许用于高频 HUD/聊天/名牌/观战/统计板渲染。
@@ -62,6 +63,7 @@ inline SRoundedSurfacePlan ResolveRoundedSurfacePlan(const CUIRect &Rect, const 
 	Plan.m_UseSdf = HasSdf && Plan.m_Rect.w > 0.0f && Plan.m_Rect.h > 0.0f;
 	return Plan;
 }
+bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const SQmColorGradient &Gradient, float Alpha, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
 bool DrawRoundedSurface(IGraphics *pGraphics, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, const SRoundedSurfaceParams &Params);
 bool DrawRoundedSurface(CUi *pUi, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL);
 bool DrawRoundedSurface(const IUiContext &Ctx, const CUIRect &Rect, const ColorRGBA &Fill, const ColorRGBA &Border, float Radius, float BorderWidth = 0.0f, int Corners = IGraphics::CORNER_ALL);

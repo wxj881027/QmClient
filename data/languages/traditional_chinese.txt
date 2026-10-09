@@ -734,6 +734,9 @@ Angle
 Angle:
 == 角度：
 
+Angular gradient
+== 角度漸層
+
 Animate chat box, emote selector, scoreboard, and spectate selection
 == 聊天框、表情選擇、計分板和觀戰選擇的展示動畫
 
@@ -3263,6 +3266,9 @@ DF
 Diamond
 == 鑽石
 
+Diamond gradient
+== 菱形漸層
+
 died
 == 死亡
 
@@ -3751,6 +3757,9 @@ Edit
 
 Edit audio pack
 == 編輯音頻包
+
+Edit color
+== 編輯配色
 
 Edit Entry
 == 編輯條目
@@ -5174,6 +5183,21 @@ Gradient
 Gradient color
 == 漸變顏色
 
+Gradient direction
+== 漸層方向
+
+Gradient horizontal position
+== 漸層水平位置
+
+Gradient range
+== 漸層範圍
+
+Gradient type
+== 漸層類型
+
+Gradient vertical position
+== 漸層垂直位置
+
 Graphics
 == 圖像
 
@@ -5663,6 +5687,9 @@ Ignored legacy Dynamic Island edge margin
 IME
 == 輸入法
 
+IME appearance
+== 輸入法外觀
+
 IME background color
 == IME 背景顏色
 
@@ -5671,6 +5698,24 @@ IME font size
 
 IME font size percentage
 == 輸入法字級 (%)
+
+IME gradient angle in degrees
+== 漸層方向 (IME, °)
+
+IME gradient colors
+== 輸入法漸層顏色
+
+IME gradient horizontal position percentage
+== 漸層水平位置 (IME, %)
+
+IME gradient range percentage
+== 漸層範圍 (IME, %)
+
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+== 漸層類型 (IME; 0=線性漸層, 1=放射漸層, 2=角度漸層, 3=對稱漸層, 4=菱形漸層)
+
+IME gradient vertical position percentage
+== 漸層垂直位置 (IME, %)
 
 IME selected text color
 == 輸入法選取文字顏色
@@ -6394,6 +6439,9 @@ Line width
 
 Linear
 == 線性
+
+Linear gradient
+== 線性漸層
 
 Lines %d - %d (%s)
 == 行 %d - %d (%s)
@@ -9104,6 +9152,12 @@ Race
 Race Time
 == 比賽時間
 
+Radial gradient
+== 放射漸層
+
+Radial gradients spread from the center
+== 放射漸層從中心向外擴散
+
 Rainbow
 == 彩虹
 
@@ -9349,6 +9403,9 @@ Reduced
 
 Reduced: uses shorter transitions and disables presentation animations
 == 精簡：保留較短的過渡效果，並停用展示動畫
+
+Reflected gradient
+== 對稱漸層
 
 Refresh
 == 刷新
@@ -9922,6 +9979,12 @@ Retry remote stats
 
 Retrying…
 == 正在重試…
+
+Reverse gradient colors
+== 反轉漸層顏色
+
+Reverse IME gradient colors
+== 反轉漸層顏色 (IME)
 
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 == 反向按鍵時立即反向縮放（0=保留原有平滑縮放）

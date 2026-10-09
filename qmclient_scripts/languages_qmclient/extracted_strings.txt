@@ -243,6 +243,7 @@ Amount
 And pick one randomly
 Angle
 Angle:
+Angular gradient
 Animate chat box, emote selector, scoreboard, and spectate selection
 Animate lists when entering a page
 Animate settings card expand and collapse height changes
@@ -1086,6 +1087,7 @@ Detection distance
 Detection time
 DF
 Diamond
+Diamond gradient
 died
 Difficulty stars
 Direct touch input while ingame
@@ -1249,6 +1251,7 @@ Echo the text in chat window
 Edge margin
 Edit
 Edit audio pack
+Edit color
 Edit Entry
 Edit HUD
 Edit individual Tee 7 skin parts
@@ -1723,6 +1726,11 @@ GPU name, chosen by backend (if supported)
 Grabs
 Gradient
 Gradient color
+Gradient direction
+Gradient horizontal position
+Gradient range
+Gradient type
+Gradient vertical position
 Graphics
 Graphics card
 Graphics display
@@ -1886,9 +1894,16 @@ Ignore keyboard modifier mask
 Ignore voice distance attenuation
 Ignored legacy Dynamic Island edge margin
 IME
+IME appearance
 IME background color
 IME font size
 IME font size percentage
+IME gradient angle in degrees
+IME gradient colors
+IME gradient horizontal position percentage
+IME gradient range percentage
+IME gradient type (0=linear, 1=radial, 2=angular, 3=reflected, 4=diamond)
+IME gradient vertical position percentage
 IME selected text color
 IME selection background color
 IME text color
@@ -2130,6 +2145,7 @@ Limit the title to the exact nickname below.
 Limiter threshold (percent)
 Line width
 Linear
+Linear gradient
 Lines %d - %d (%s)
 List all commands that are available in practice mode
 List all commands which are accessible for given access level
@@ -3033,6 +3049,8 @@ Quitting. Please wait…
 r = Race time
 Race
 Race Time
+Radial gradient
+Radial gradients spread from the center
 Rainbow
 Rainbow card titles
 Rainbow hook
@@ -3115,6 +3133,7 @@ Reduce antiping and player prediction when frozen
 Reduce prediction while frozen
 Reduced
 Reduced: uses shorter transitions and disables presentation animations
+Reflected gradient
 Refresh
 Refresh interval
 Refresh Rate
@@ -3306,6 +3325,8 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 Retry remote stats
 Retrying…
+Reverse gradient colors
+Reverse IME gradient colors
 Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)
 Review and edit custom key bindings
 Review and reset changed configuration values
