@@ -3,18 +3,31 @@
 
 #include <base/log.h>
 #include <base/system.h>
+#include <base/windows.h>
 
 #include <engine/config.h>
 #include <engine/console.h>
 #include <engine/shared/config.h>
 #include <engine/shared/console.h>
+#include <engine/shared/linereader.h>
 #include <engine/shared/protocol.h>
 #include <engine/shared/qm_legacy_config.h>
 #include <engine/shared/qm_removed_config.h>
 #include <engine/storage.h>
 
+#include <cstdlib>
+#include <memory>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
+
+#if defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+#else
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
+#endif
 
 CConfig g_Config;
 
@@ -24,6 +37,55 @@ namespace
 	// QmClient v3：单一变量文件 qmclient/settings.cfg 存在即视为配置系统已收敛，
 	// 不再需要额外的迁移标记文件。
 	constexpr const char *QM_CONFIG_MAIN_PATH = "qmclient/settings.cfg";
+
+	// 锁文件长期保留，退出只释放句柄，避免删除并重建锁文件造成两个写入者。
+	class CConfigSaveLock
+	{
+#if defined(CONF_FAMILY_WINDOWS)
+		HANDLE m_File = INVALID_HANDLE_VALUE;
+#else
+		int m_File = -1;
+#endif
+
+	public:
+		explicit CConfigSaveLock(const char *pPath)
+		{
+#if defined(CONF_FAMILY_WINDOWS)
+			const std::wstring Path = windows_utf8_to_wide(pPath);
+			m_File = CreateFileW(Path.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+#else
+			m_File = open(pPath, O_CREAT | O_RDWR, 0600);
+			if(m_File >= 0 && flock(m_File, LOCK_EX | LOCK_NB) != 0)
+			{
+				close(m_File);
+				m_File = -1;
+			}
+#endif
+		}
+
+		~CConfigSaveLock()
+		{
+			if(!IsLocked())
+				return;
+#if defined(CONF_FAMILY_WINDOWS)
+			CloseHandle(m_File);
+#else
+			close(m_File);
+#endif
+		}
+
+		CConfigSaveLock(const CConfigSaveLock &) = delete;
+		CConfigSaveLock &operator=(const CConfigSaveLock &) = delete;
+
+		bool IsLocked() const
+		{
+#if defined(CONF_FAMILY_WINDOWS)
+			return m_File != INVALID_HANDLE_VALUE;
+#else
+			return m_File >= 0;
+#endif
+		}
+	};
 	// v3 迁移需要删除的历史残留：
 	// - v2 时代 qmclient/ 下的两个旧变量文件（已合并进 settings.cfg）
 	// - v1 时代的大写 QmClient/ 目录（含 4 个旧文件）
@@ -471,6 +533,9 @@ void CConfigManager::Init()
 {
 	m_pConsole = Kernel()->RequestInterface<IConsole>();
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
+	// 在加载配置前登记磁盘基线；强制保存也不能覆盖其他实例之后写出的设置。
+	for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+		ReadConfigFileState(s_aConfigDomains[Domain].m_aConfigPath, m_aSaveState[Domain]);
 
 	ConfigDomain ConfigDomain;
 	const auto &&AddVariable = [this, &ConfigDomain](SConfigVariable *pVariable) {
@@ -633,18 +698,80 @@ void CConfigManager::SetGameSettingsReadOnly(bool ReadOnly)
 	}
 }
 
+bool CConfigManager::ReadConfigFileState(const char *pPath, SConfigFileState &State) const
+{
+	State = {};
+	if(pPath == nullptr)
+	{
+		State.m_Readable = true;
+		return true;
+	}
+	if(!m_pStorage)
+		return false;
+	IOHANDLE File = m_pStorage->OpenFile(pPath, IOFLAG_READ, IStorage::TYPE_SAVE);
+	if(!File)
+	{
+		State.m_Exists = m_pStorage->FileExists(pPath, IStorage::TYPE_SAVE) || m_pStorage->FolderExists(pPath, IStorage::TYPE_SAVE);
+		State.m_Readable = !State.m_Exists;
+		return State.m_Readable;
+	}
+	State.m_Exists = true;
+	void *pData = nullptr;
+	unsigned Length = 0;
+	const bool Read = io_read_all(File, &pData, &Length);
+	const int CloseError = io_close(File);
+	std::unique_ptr<void, decltype(&free)> pContent(pData, free);
+	if(!Read || CloseError != 0)
+		return false;
+	State.m_Content.assign(static_cast<const char *>(pData), Length);
+	State.m_Readable = !mem_has_null(State.m_Content.data(), State.m_Content.size()) && CLineReader::IsValidBuffer(State.m_Content.c_str());
+	return State.m_Readable;
+}
+
+bool CConfigManager::ConfigFilesUnchanged() const
+{
+	for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+	{
+		SConfigFileState Current;
+		const SConfigFileState &Expected = m_aSaveState[Domain];
+		if(!Expected.m_Readable || !ReadConfigFileState(s_aConfigDomains[Domain].m_aConfigPath, Current) ||
+			Current.m_Exists != Expected.m_Exists || Current.m_Content != Expected.m_Content)
+		{
+			log_error("config", "ERROR: %s is unreadable or changed since loading/last saving; refusing to overwrite it", s_aConfigDomains[Domain].m_aConfigPath);
+			return false;
+		}
+	}
+	return true;
+}
+
 bool CConfigManager::Save(bool Force)
 {
 	if(!m_pStorage)
 		return false;
 	if(!Force && !g_Config.m_ClSaveSettings)
 		return true;
+	if(!EnsureConfigPathFolder(m_pStorage, QM_CONFIG_MAIN_PATH))
+	{
+		log_error("config", "ERROR: creating config folder for %s failed", QM_CONFIG_MAIN_PATH);
+		return false;
+	}
+	char aLockPath[IO_MAX_PATH_LENGTH];
+	m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "qmclient/config_save.lock", aLockPath, sizeof(aLockPath));
+	const CConfigSaveLock SaveLock(aLockPath);
+	if(!SaveLock.IsLocked())
+	{
+		log_error("config", "ERROR: could not lock client configs for saving");
+		return false;
+	}
+	if(!ConfigFilesUnchanged())
+		return false;
 
 	bool aFailedError[ConfigDomain::NUM] = {};
 	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
 		m_aFailed[ConfigDomain] = false;
 
-	char aaConfigFileTmp[ConfigDomain::NUM][IO_MAX_PATH_LENGTH];
+	char aaConfigFileTmp[ConfigDomain::NUM][IO_MAX_PATH_LENGTH] = {};
+	SConfigFileState aWrittenState[ConfigDomain::NUM];
 	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
 	{
 		if(s_aConfigDomains[ConfigDomain].m_aConfigPath == nullptr)
@@ -725,23 +852,40 @@ bool CConfigManager::Save(bool Force)
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
 		m_aConfigFile[ConfigDomain] = nullptr;
-		if(!m_aFailed[ConfigDomain] && !m_pStorage->RenameFile(aaConfigFileTmp[ConfigDomain], s_aConfigDomains[ConfigDomain].m_aConfigPath, IStorage::TYPE_SAVE))
+		if(!m_aFailed[ConfigDomain] && !ReadConfigFileState(aaConfigFileTmp[ConfigDomain], aWrittenState[ConfigDomain]))
 		{
-			log_error("config", "ERROR: renaming %s to %s failed", aaConfigFileTmp[ConfigDomain], s_aConfigDomains[ConfigDomain].m_aConfigPath);
+			log_error("config", "ERROR: reading completed temporary config %s failed", aaConfigFileTmp[ConfigDomain]);
 			aFailedError[ConfigDomain] = m_aFailed[ConfigDomain] = true;
 		}
-		if(m_aFailed[ConfigDomain])
-			m_pStorage->RemoveFile(aaConfigFileTmp[ConfigDomain], IStorage::TYPE_SAVE);
 	}
 
-	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
-		m_aConfigFile[ConfigDomain] = nullptr;
+	bool Failed = false;
+	for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+		Failed |= m_aFailed[Domain];
+	// 所有文件完成写入后才替换，写入失败或写入期间发生外部修改都保留原配置。
+	if(Failed || !ConfigFilesUnchanged())
+	{
+		for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+			if(aaConfigFileTmp[Domain][0] != '\0')
+				m_pStorage->RemoveFile(aaConfigFileTmp[Domain], IStorage::TYPE_SAVE);
+		return false;
+	}
 
-	for(ConfigDomain ConfigDomain = ConfigDomain::START; ConfigDomain < ConfigDomain::NUM; ++ConfigDomain)
-		if(m_aFailed[ConfigDomain])
-			return false;
+	for(ConfigDomain Domain = ConfigDomain::START; Domain < ConfigDomain::NUM; ++Domain)
+	{
+		if(s_aConfigDomains[Domain].m_aConfigPath == nullptr)
+			continue;
+		// 禁止底层删除旧目标再重试。替换失败保留完整临时文件供恢复，下次保存可重试。
+		if(!m_pStorage->RenameFile(aaConfigFileTmp[Domain], s_aConfigDomains[Domain].m_aConfigPath, IStorage::TYPE_SAVE, false))
+		{
+			log_error("config", "ERROR: replacing %s failed; completed config remains at %s", s_aConfigDomains[Domain].m_aConfigPath, aaConfigFileTmp[Domain]);
+			Failed = true;
+			continue;
+		}
+		m_aSaveState[Domain] = std::move(aWrittenState[Domain]);
+	}
 
-	return true;
+	return !Failed;
 }
 
 void CConfigManager::RegisterCallback(SAVECALLBACKFUNC pfnFunc, void *pUserData, ConfigDomain ConfigDomain)

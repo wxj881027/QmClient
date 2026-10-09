@@ -588,7 +588,7 @@ int fs_remove(const char *filename)
 #endif
 }
 
-int fs_rename(const char *oldname, const char *newname)
+int fs_rename(const char *oldname, const char *newname, bool allow_destination_removal)
 {
 #if defined(CONF_FAMILY_WINDOWS)
 	const std::wstring wide_oldname = windows_utf8_to_wide(oldname);
@@ -601,7 +601,7 @@ int fs_rename(const char *oldname, const char *newname)
 	// Windows 在目标文件仍有打开句柄时无法重命名，先删除目标文件再重试。
 	// 不能在重命名前删除：对 foo 重命名为 FOO 时会把源文件误删。
 	DWORD error = GetLastError();
-	if(error == ERROR_ACCESS_DENIED)
+	if(allow_destination_removal && error == ERROR_ACCESS_DENIED)
 	{
 		(void)fs_remove(newname);
 		if(MoveFileExW(wide_oldname.c_str(), wide_newname.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED | MOVEFILE_WRITE_THROUGH) != 0)
@@ -613,6 +613,7 @@ int fs_rename(const char *oldname, const char *newname)
 	log_error("filesystem", "Failed to rename file '%s' to '%s' (%ld '%s')", oldname, newname, error, windows_format_system_message(error).c_str());
 	return 1;
 #else
+	(void)allow_destination_removal;
 	if(rename(oldname, newname) == 0)
 	{
 		return 0;

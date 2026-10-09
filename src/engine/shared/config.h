@@ -11,6 +11,7 @@
 #include <engine/shared/memheap.h>
 
 #include <algorithm>
+#include <string>
 #include <vector>
 
 // include protocol for MAX_CLIENT used in config_variables
@@ -343,6 +344,16 @@ class CConfigManager : public IConfigManager
 
 	IOHANDLE m_aConfigFile[ConfigDomain::NUM];
 	bool m_aFailed[ConfigDomain::NUM];
+
+	struct SConfigFileState
+	{
+		bool m_Readable = false;
+		bool m_Exists = false;
+		std::string m_Content;
+	};
+	SConfigFileState m_aSaveState[ConfigDomain::NUM];
+	bool ReadConfigFileState(const char *pPath, SConfigFileState &State) const;
+	bool ConfigFilesUnchanged() const;
 
 	struct SCallback
 	{

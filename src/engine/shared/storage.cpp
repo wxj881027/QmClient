@@ -926,7 +926,7 @@ namespace
 			return fs_remove(aBuffer) == 0;
 		}
 
-		bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type) override
+		bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type, bool AllowDestinationRemoval = true) override
 		{
 			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
 
@@ -935,7 +935,7 @@ namespace
 			GetPath(Type, pOldFilename, aOldBuffer, sizeof(aOldBuffer));
 			GetPath(Type, pNewFilename, aNewBuffer, sizeof(aNewBuffer));
 
-			return fs_rename(aOldBuffer, aNewBuffer) == 0;
+			return fs_rename(aOldBuffer, aNewBuffer, AllowDestinationRemoval) == 0;
 		}
 
 		bool RenameBinaryFile(const char *pOldFilename, const char *pNewFilename) override
