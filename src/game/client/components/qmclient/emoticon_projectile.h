@@ -3,12 +3,15 @@
 
 #include <base/vmath.h>
 
+#include <engine/gfx/image_manipulation.h>
+
 #include <game/teamscore.h>
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <limits>
 #include <vector>
 
 namespace QmEmoticon
@@ -165,6 +168,33 @@ namespace QmEmoticon
 			}
 		}
 
+		void BuildSprite(const CImageInfo &Image, const CDataSprite &Sprite, const CImageInfo *pFallbackImage = nullptr)
+		{
+			std::size_t X = 0, Y = 0, Width = 0, Height = 0;
+			const auto Resolve = [&](const CImageInfo &Source, bool *pOutOfBounds = nullptr) {
+				return Source.m_pData != nullptr && Sprite.m_pSet != nullptr &&
+				       ResolveSpritePixelRect(Source.m_Width, Source.m_Height, Sprite.m_pSet->m_Gridx, Sprite.m_pSet->m_Gridy,
+					       Sprite.m_X, Sprite.m_Y, Sprite.m_W, Sprite.m_H, X, Y, Width, Height, pOutOfBounds);
+			};
+			bool OutOfBounds = false;
+			bool Resolved = Resolve(Image, &OutOfBounds);
+			const CImageInfo *pSource = &Image;
+			// 与显示材质选择同一张图；直接读取图集行距，不额外复制像素。
+			if(pFallbackImage != nullptr && (OutOfBounds || (Resolved && IsImageRectFullyTransparent(Image, X, Y, Width, Height))))
+			{
+				pSource = pFallbackImage;
+				Resolved = Resolve(*pSource);
+			}
+			if(!Resolved || pSource->m_Format != CImageInfo::FORMAT_RGBA ||
+				pSource->m_Width > static_cast<std::size_t>(std::numeric_limits<int>::max() / 4) ||
+				Height > static_cast<std::size_t>(std::numeric_limits<int>::max()))
+			{
+				Build(nullptr, 0, 0);
+				return;
+			}
+			Build(pSource->m_pData + (Y * pSource->m_Width + X) * 4, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(pSource->m_Width * 4));
+		}
+
 		std::size_t NumRects() const { return m_vRects.size(); }
 
 		template<typename TSolid>
@@ -289,16 +319,32 @@ struct CEmoticonProjectile
 	float Size() const { return std::min(m_SizeLimit, 64.0f * m_SizeScale * (1.0f + std::max(0.0f, 0.5f - m_LifeTime) * 2.0f)); }
 	float FadeAlpha() const { return std::clamp(m_LifeTime * 2.0f, 0.0f, 1.0f); }
 
-	template<typename TSolid>
-	bool PlaceOutside(const QmEmoticon::CAlphaMask &Mask, const TSolid &Solid)
+	template<typename TSolid, typename TCanReach>
+	bool PlaceOutside(const QmEmoticon::CAlphaMask &Mask, const TSolid &Solid, vec2 Origin, const TCanReach &CanReach)
 	{
-		if(!Mask.Overlaps(m_Pos, Size(), m_Angle, Solid))
+		if(!CanReach(Origin, Origin))
+			return false;
+		if(!Mask.Overlaps(m_Pos, Size(), m_Angle, Solid) && CanReach(Origin, m_Pos))
 			return true;
-		const int MaxRadius = (int)(Size() + 32);
+		// 从角色所在的空位向外搜索；射线碰墙后不再沿该方向找，避免跳到墙另一侧。
+		vec2 aDirections[16];
+		bool aBlocked[16] = {};
+		for(int Index = 0; Index < 16; ++Index)
+			aDirections[Index] = direction(-pi / 2 + Index * pi / 8);
+		const int MaxRadius = static_cast<int>(std::ceil(distance(Origin, m_Pos) + Size() + 32));
 		for(int Radius = 2; Radius <= MaxRadius; Radius += 2)
 			for(int Index = 0; Index < 16; ++Index)
 			{
-				const vec2 Candidate = m_Pos + direction(-pi / 2 + Index * pi / 8) * (float)Radius;
+				if(aBlocked[Index])
+					continue;
+				const vec2 Candidate = Origin + aDirections[Index] * static_cast<float>(Radius);
+				const vec2 Previous = Origin + aDirections[Index] * static_cast<float>(Radius - 2);
+				// 只查本轮新增的两像素路径，方向和状态都在栈上，不增加每帧成本。
+				if(!CanReach(Previous, Candidate))
+				{
+					aBlocked[Index] = true;
+					continue;
+				}
 				if(!Mask.Overlaps(Candidate, Size(), m_Angle, Solid))
 				{
 					m_Pos = m_PreviousPos = Candidate;

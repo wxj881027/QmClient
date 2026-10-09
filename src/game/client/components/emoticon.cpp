@@ -719,6 +719,8 @@ void CEmoticon::SpawnProjectile(vec2 Position, vec2 Direction, int Emoticon, boo
 	pProjectile->Init(Position, Direction * 1200.0f + vec2(0.0f, -400.0f), Emoticon, Super ? 2.35f : 1.0f, OwnerClientId, g_Config.m_QmEmoticonProjectileDuration);
 	pProjectile->m_Active = pProjectile->PlaceOutside(m_aCollisionMasks[Emoticon], [this](int X, int Y) {
 		return Collision()->CheckPoint(X * 32.0f + 16.0f, Y * 32.0f + 16.0f);
+	}, Position + vec2(0.0f, 20.0f), [this](vec2 From, vec2 To) {
+		return Collision()->IntersectLine(From, To, nullptr, nullptr) == 0;
 	});
 	if(Super)
 		GameClient()->m_Effects.Explosion(Position, 0.9f);

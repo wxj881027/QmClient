@@ -84,7 +84,9 @@ bool CQmDecorativeProjectiles::Spawn(int Type, int Owner, vec2 Origin, vec2 Dire
 	pSlot->Init(Origin, normalize(Direction) * 900.0f + vec2(0.0f, -200.0f), Type, 0.75f, Owner, g_Config.m_QmEmoticonProjectileDuration);
 	pSlot->m_StopOnCollision = true;
 	const auto Solid = [this](int X, int Y) { return Collision()->CheckPoint(X * 32.0f + 16.0f, Y * 32.0f + 16.0f); };
-	if(!pSlot->PlaceOutside(m_aMasks[Type], Solid))
+	if(!pSlot->PlaceOutside(m_aMasks[Type], Solid, Origin + vec2(0.0f, 20.0f), [this](vec2 From, vec2 To) {
+		   return Collision()->IntersectLine(From, To, nullptr, nullptr) == 0;
+	   }))
 	{
 		pSlot->m_Active = false;
 		return false;

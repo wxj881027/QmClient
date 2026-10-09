@@ -163,10 +163,10 @@ public:
 		int Sizeof() const override { return sizeof(*this); }
 		void OnRender() override { m_pEmoticon->RenderProjectiles(); }
 	} m_RenderProjectiles;
-	void SetCollisionMask(int Emoticon, const unsigned char *pPixels, int Width, int Height, int Stride)
+	void SetCollisionMask(int Emoticon, const CImageInfo &Image, const CDataSprite &Sprite, const CImageInfo *pFallbackImage = nullptr)
 	{
 		if(Emoticon >= 0 && Emoticon < NUM_EMOTICONS)
-			m_aCollisionMasks[Emoticon].Build(pPixels, Width, Height, Stride);
+			m_aCollisionMasks[Emoticon].BuildSprite(Image, Sprite, pFallbackImage);
 	}
 	int Sizeof() const override { return sizeof(*this); }
 
