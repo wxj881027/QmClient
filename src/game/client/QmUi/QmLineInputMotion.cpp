@@ -43,7 +43,7 @@ void CQmLineInputMotion::ClearGlyph(SCharacter &Character)
 {
 	if(Character.m_NodeKey == 0)
 		return;
-	m_Runtime.SetValue(Character.m_NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+	m_Runtime.SetValue(Character.m_NodeKey, EUiAnimProperty::SCALE, 0.0f);
 	m_aUsedSlots[static_cast<size_t>(Character.m_NodeKey - 1)] = false;
 	Character.m_NodeKey = 0;
 }
@@ -69,10 +69,10 @@ void CQmLineInputMotion::Update(const char *pText, std::chrono::nanoseconds Now,
 	{
 		if(Character.m_NodeKey == 0)
 			continue;
-		if(!AnimateGlyphs || m_MotionLevel == 0 || !m_Runtime.HasActiveAnimation(Character.m_NodeKey, EUiAnimProperty::POS_Y))
+		if(!AnimateGlyphs || m_MotionLevel == 0 || !m_Runtime.HasActiveAnimation(Character.m_NodeKey, EUiAnimProperty::SCALE))
 			ClearGlyph(Character);
 		else if(MotionChanged)
-			m_Runtime.RequestAnimation({Character.m_NodeKey, EUiAnimProperty::POS_Y, 0.0f, Transition(qm_input_motion::GLYPH)});
+			m_Runtime.RequestAnimation({Character.m_NodeKey, EUiAnimProperty::SCALE, 0.0f, Transition(qm_input_motion::GLYPH)});
 	}
 	if(MotionChanged && m_CaretInitialized)
 	{
@@ -124,8 +124,8 @@ void CQmLineInputMotion::Update(const char *pText, std::chrono::nanoseconds Now,
 			const uint64_t NodeKey = static_cast<uint64_t>(std::distance(m_aUsedSlots.begin(), Free)) + 1;
 			*Free = true;
 			m_vNextCharacters[i].m_NodeKey = NodeKey;
-			m_Runtime.SetValue(NodeKey, EUiAnimProperty::POS_Y, 1.0f);
-			m_Runtime.RequestAnimation({NodeKey, EUiAnimProperty::POS_Y, 0.0f, Transition(qm_input_motion::GLYPH)});
+			m_Runtime.SetValue(NodeKey, EUiAnimProperty::SCALE, 1.0f);
+			m_Runtime.RequestAnimation({NodeKey, EUiAnimProperty::SCALE, 0.0f, Transition(qm_input_motion::GLYPH)});
 		}
 	}
 	m_vCharacters.swap(m_vNextCharacters);
@@ -133,20 +133,19 @@ void CQmLineInputMotion::Update(const char *pText, std::chrono::nanoseconds Now,
 	m_TextInitialized = true;
 }
 
-void CQmLineInputMotion::FillCharOffsets(std::vector<STextCharOffset> &vOffsets, float FontSize) const
+void CQmLineInputMotion::FillCharOffsets(std::vector<STextCharOffset> &vOffsets) const
 {
 	vOffsets.clear();
 	if(m_MotionLevel == 0 || std::none_of(m_aUsedSlots.begin(), m_aUsedSlots.end(), [](bool Used) { return Used; }))
 		return;
 	vOffsets.reserve(m_vCharacters.size());
-	// 大字号也只移动少量逻辑像素，避免输入框边缘裁掉新字。
-	const float Amplitude = std::min(std::max(0.0f, FontSize) * (m_MotionLevel == 1 ? 0.06f : 0.18f),
-		m_MotionLevel == 1 ? 0.7f : 2.0f);
+	// 原幅度系数增加 18%，由归一化弹簧驱动从小到大的一次缩放回弹。
+	const float Amplitude = (m_MotionLevel == 1 ? 0.06f : 0.18f) * 1.18f;
 	for(const auto &Character : m_vCharacters)
 	{
-		const float Offset = Character.m_NodeKey == 0 ? 0.0f :
-			std::clamp(m_Runtime.GetValue(Character.m_NodeKey, EUiAnimProperty::POS_Y), -0.2f, 1.0f) * Amplitude;
-		vOffsets.emplace_back(Character.m_ByteOffset, 0.0f, Offset);
+		const float Shrink = Character.m_NodeKey == 0 ? 0.0f :
+			std::clamp(m_Runtime.GetValue(Character.m_NodeKey, EUiAnimProperty::SCALE), -0.2f, 1.0f) * Amplitude;
+		vOffsets.emplace_back(Character.m_ByteOffset, 0.0f, 0.0f, 1.0f - Shrink);
 	}
 }
 
