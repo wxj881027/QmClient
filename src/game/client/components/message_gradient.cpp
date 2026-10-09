@@ -76,7 +76,7 @@ int CMessageGradient::Unpack(const char *pGradient, unsigned *pColors, int MaxCo
 		if(!Color.has_value())
 			continue;
 
-		pColors[NumColors++] = color_cast<ColorHSLA>(*Color).Pack(false);
+		pColors[NumColors++] = color_cast<ColorHSLA>(*Color).Pack(true);
 	}
 
 	return NumColors;
@@ -95,8 +95,9 @@ void CMessageGradient::Pack(const unsigned *pColors, int NumColors, char *pGradi
 	for(int ColorIndex = 0; ColorIndex < NumColors; ++ColorIndex)
 	{
 		char aColor[16];
-		const ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(pColors[ColorIndex]));
-		str_format(aColor, sizeof(aColor), "%s%06X", ColorIndex == 0 ? "" : ",", Color.Pack(false));
+		const ColorRGBA Color = color_cast<ColorRGBA>(ColorHSLA(pColors[ColorIndex], true));
+		const bool Alpha = (pColors[ColorIndex] >> 24) != 0xffu;
+		str_format(aColor, sizeof(aColor), "%s%0*X", ColorIndex == 0 ? "" : ",", Alpha ? 8 : 6, Color.PackAlphaLast(Alpha));
 		str_append(pGradient, aColor, GradientSize);
 	}
 }
@@ -120,7 +121,7 @@ void CMessageGradient::AddTextSplits(CTextCursor &Cursor, const char *pText, con
 
 	ColorRGBA aColors[MAX_COLORS];
 	for(int ColorIndex = 0; ColorIndex < NumColors; ++ColorIndex)
-		aColors[ColorIndex] = color_cast<ColorRGBA>(ColorHSLA(aPackedColors[ColorIndex]));
+		aColors[ColorIndex] = color_cast<ColorRGBA>(ColorHSLA(aPackedColors[ColorIndex], true));
 
 	const int StartChar = Cursor.m_CharCount;
 	const float Denominator = NumChars > 1 ? (float)(NumChars - 1) : 1.0f;

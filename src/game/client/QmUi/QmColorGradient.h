@@ -26,6 +26,7 @@ struct SQmColorGradient
 {
 	std::array<ColorRGBA, CMessageGradient::MAX_COLORS> m_aColors{};
 	int m_NumColors = 1;
+	bool m_HasPalette = false;
 	EQmGradientType m_Type = EQmGradientType::LINEAR;
 	vec2 m_Center = vec2(0.5f, 0.5f);
 	vec2 m_Direction = vec2(1.0f, 0.0f);
@@ -41,10 +42,10 @@ struct SQmColorGradient
 		if(Count > 0)
 		{
 			Result.m_NumColors = Count;
+			Result.m_HasPalette = true;
 			for(int i = 0; i < Count; ++i)
 			{
-				Result.m_aColors[i] = color_cast<ColorRGBA>(ColorHSLA(aPackedColors[i]));
-				Result.m_aColors[i].a = Fallback.a;
+				Result.m_aColors[i] = color_cast<ColorRGBA>(ColorHSLA(aPackedColors[i], true)).WithMultipliedAlpha(Fallback.a);
 			}
 		}
 		Result.m_Type = static_cast<EQmGradientType>(std::clamp(Type, 0, 4));
@@ -58,6 +59,12 @@ struct SQmColorGradient
 		Result.m_Range = std::clamp(Range, 10, 200) / 100.0f;
 		Result.m_Reverse = Reverse;
 		return Result;
+	}
+
+	bool HasTransparency() const
+	{
+		return std::any_of(m_aColors.begin(), m_aColors.begin() + std::clamp(m_NumColors, 1, CMessageGradient::MAX_COLORS),
+			[](const ColorRGBA &Color) { return Color.a < 0.999f; });
 	}
 
 	float Position(vec2 Point) const

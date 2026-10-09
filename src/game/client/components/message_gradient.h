@@ -12,6 +12,7 @@ public:
 	static constexpr int MAX_COLORS = 7;
 	static constexpr int MIN_COLORS = 1;
 
+	// 内部颜色为 A-H-S-L；持久化使用 RGB 或 RGBA 十六进制，旧 RGB 色标视为不透明。
 	static int Unpack(const char *pGradient, unsigned *pColors, int MaxColors);
 	static void Pack(const unsigned *pColors, int NumColors, char *pGradient, int GradientSize);
 	static void Reset(char *pGradient, int GradientSize);

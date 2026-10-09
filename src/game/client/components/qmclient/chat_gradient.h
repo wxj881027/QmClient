@@ -94,21 +94,26 @@ public:
 		m_PreviousColumns(Cursor.m_ColorSamplerColumns),
 		m_PreviousRows(Cursor.m_ColorSamplerRows)
 	{
-		if(pTextRender == nullptr || pGradient == nullptr || pGradient->m_NumColors <= 1 ||
+		if(pGradient == nullptr || !pGradient->m_HasPalette || (pGradient->m_NumColors > 1 && pTextRender == nullptr) ||
 			pText == nullptr || pText[0] == '\0' || (Cursor.m_Flags & TEXTFLAG_RENDER) == 0)
 			return;
 		m_Gradient = *pGradient;
-		CTextCursor Measure = Cursor;
-		Measure.m_Flags &= ~TEXTFLAG_RENDER;
-		Measure.m_pfnColorSampler = nullptr;
-		Measure.m_pColorSamplerContext = nullptr;
-		Measure.m_CalculateVisualBoundingBox = true;
-		Measure.m_HasVisualBoundingBox = false;
-		Measure.m_LongestLineWidth = 0.0f;
-		pTextRender->TextEx(&Measure, pText);
-		const CUIRect Bounds = QmChatGradientBounds(Cursor, Measure);
+		// 单色标也可保存透明度；均匀取色不需要重新测量整段文字。
+		CUIRect Bounds = {0, 0, 1, 1};
+		if(m_Gradient.m_NumColors > 1)
+		{
+			CTextCursor Measure = Cursor;
+			Measure.m_Flags &= ~TEXTFLAG_RENDER;
+			Measure.m_pfnColorSampler = nullptr;
+			Measure.m_pColorSamplerContext = nullptr;
+			Measure.m_CalculateVisualBoundingBox = true;
+			Measure.m_HasVisualBoundingBox = false;
+			Measure.m_LongestLineWidth = 0.0f;
+			pTextRender->TextEx(&Measure, pText);
+			Bounds = QmChatGradientBounds(Cursor, Measure);
+		}
 		m_Paint = {&m_Gradient, Bounds.TopLeft(), Bounds.Size(), 1.0f};
-		const auto Grid = QmGradientTextGrid(m_Gradient, Bounds.Size(), Cursor.m_FontSize);
+		const auto Grid = m_Gradient.m_NumColors == 1 ? std::array<int, 2>{1, 1} : QmGradientTextGrid(m_Gradient, Bounds.Size(), Cursor.m_FontSize);
 		Cursor.m_pfnColorSampler = SQmGradientTextPaint::Sample;
 		Cursor.m_pColorSamplerContext = &m_Paint;
 		Cursor.m_ColorSamplerColumns = Grid[0];

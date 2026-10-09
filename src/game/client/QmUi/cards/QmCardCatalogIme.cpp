@@ -12,7 +12,6 @@
 #include <game/localization.h>
 
 #include <array>
-#include <cmath>
 
 namespace
 {
@@ -104,6 +103,7 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 	static std::array<std::array<unsigned, CMessageGradient::MAX_COLORS>, 4> s_aColors;
 	static std::array<int, 4> s_aOpacityIds;
 	const bool HasAlpha = s_Role != 0;
+	const SQmGradientPaletteBinding Palette{Settings.m_pColor, Settings.m_pGradient, Settings.m_GradientSize, HasAlpha};
 	const auto ColorRow = ResolveSettingsColorRowLayout(Content, Metrics, false);
 	Content.y += ColorRow.m_ConsumedHeight;
 	Content.h = std::max(0.0f, Content.h - ColorRow.m_ConsumedHeight);
@@ -130,13 +130,13 @@ void CMenus::RenderQmFunctionImeContent(CUIRect &Content, float LineHeight, floa
 
 	NextRow();
 	DrawLabel(Localize("Opacity"));
-	int Opacity = HasAlpha ? static_cast<int>(std::round((*Settings.m_pColor & 0xffu) * 100.0f / 255.0f)) : g_Config.m_QmImeOpacity;
+	int Opacity = HasAlpha ? Palette.Opacity() : g_Config.m_QmImeOpacity;
 	const int OldOpacity = Opacity;
 	RenderQmSettingsSliderWithValueInput(&s_aOpacityIds[s_Role], Control, &Opacity, 0, 100, "%", ReadOnly);
 	if(Opacity != OldOpacity && !ReadOnly)
 	{
 		if(HasAlpha)
-			*Settings.m_pColor = (*Settings.m_pColor & 0xffffff00u) | static_cast<unsigned>(std::round(Opacity * 255.0f / 100.0f));
+			Palette.SetOpacity(Opacity);
 		else
 			g_Config.m_QmImeOpacity = Opacity;
 	}

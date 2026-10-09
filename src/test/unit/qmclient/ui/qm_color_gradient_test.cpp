@@ -1,5 +1,6 @@
 #include <game/client/QmUi/QmColorGradient.h>
 #include <game/client/QmUi/QmImeAppearance.h>
+#include <game/client/QmUi/cards/QmColorGradientEditor.h>
 
 #include <gtest/gtest.h>
 
@@ -197,4 +198,181 @@ TEST(QmColorGradient, TextGridTracksTheDirectionAndKeepsTheMaximumBudgetBounded)
 		EXPECT_GE(Grid[1], 1);
 		EXPECT_LE(Grid[0] * Grid[1], 64);
 	}
+}
+
+TEST(QmGradientPalette, EditingAnImeColorPreservesHueAndOverallOpacity)
+{
+	unsigned BaseColor = color_cast<ColorHSLA>(ColorRGBA(1.0f, 0.0f, 0.0f, 0.56f)).Pack(true);
+	const unsigned OriginalAlpha = BaseColor & 0xff000000u;
+	char aPalette[128] = "";
+	const SQmGradientPaletteBinding Binding{&BaseColor, aPalette, sizeof(aPalette), true};
+	unsigned aColors[CMessageGradient::MAX_COLORS];
+	ASSERT_EQ(Binding.Load(aColors), 1);
+	aColors[0] = color_cast<ColorHSLA>(ColorRGBA(0.0f, 1.0f, 0.66f, 1.0f)).Pack(true);
+	Binding.Store(aColors, 1);
+	const auto Color = color_cast<ColorRGBA>(ColorHSLA(BaseColor, true));
+	EXPECT_NEAR(Color.r, 0.0f, 0.02f);
+	EXPECT_NEAR(Color.g, 1.0f, 0.02f);
+	EXPECT_NEAR(Color.b, 0.66f, 0.02f);
+	EXPECT_EQ(BaseColor & 0xff000000u, OriginalAlpha);
+	EXPECT_STREQ(aPalette, "");
+	ASSERT_EQ(Binding.Load(aColors), 1);
+	EXPECT_EQ(aColors[0], color_cast<ColorHSLA>(Color).WithAlpha(1.0f).Pack(true));
+}
+
+TEST(QmGradientPalette, OverallOpacityChangesWithoutChangingColorOrStops)
+{
+	unsigned BaseColor = color_cast<ColorHSLA>(ColorRGBA(0.0f, 1.0f, 0.66f, 0.56f)).Pack(true);
+	const unsigned OriginalColor = BaseColor & 0x00ffffffu;
+	char aPalette[128] = "00FFA800,0000FF80";
+	const SQmGradientPaletteBinding Binding{&BaseColor, aPalette, sizeof(aPalette), true};
+	EXPECT_EQ(Binding.Opacity(), 56);
+	for(int Opacity : {0, 25, 100, 56})
+	{
+		SCOPED_TRACE(Opacity);
+		Binding.SetOpacity(Opacity);
+		EXPECT_EQ(Binding.Opacity(), Opacity);
+		EXPECT_EQ(BaseColor & 0x00ffffffu, OriginalColor);
+		EXPECT_STREQ(aPalette, "00FFA800,0000FF80");
+	}
+}
+
+TEST(QmGradientPalette, RemovingTheLastStopKeepsItsTransparencyUntilMadeOpaque)
+{
+	unsigned BaseColor = color_cast<ColorHSLA>(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f)).Pack(true);
+	char aPalette[128] = "FF000080,0000FF00";
+	const SQmGradientPaletteBinding Binding{&BaseColor, aPalette, sizeof(aPalette), true};
+	unsigned aColors[CMessageGradient::MAX_COLORS];
+	ASSERT_EQ(Binding.Load(aColors), 2);
+	Binding.Store(aColors, 1);
+	ASSERT_EQ(Binding.Load(aColors), 1);
+	EXPECT_NEAR(ColorHSLA(aColors[0], true).a, 128.0f / 255.0f, 0.00001f);
+	EXPECT_EQ(Binding.Opacity(), 50);
+	aColors[0] = ColorHSLA(aColors[0], true).WithAlpha(1.0f).Pack(true);
+	Binding.Store(aColors, 1);
+	EXPECT_STREQ(aPalette, "");
+	EXPECT_EQ(Binding.Opacity(), 50);
+}
+
+TEST(QmGradientPalette, ChatBaseColorKeepsItsRgbWhenAStopBecomesTransparent)
+{
+	unsigned BaseColor = color_cast<ColorHSLA>(ColorRGBA(1.0f, 0.0f, 0.0f)).Pack(false);
+	char aPalette[128] = "";
+	const SQmGradientPaletteBinding Binding{&BaseColor, aPalette, sizeof(aPalette), false};
+	unsigned aColors[CMessageGradient::MAX_COLORS];
+	ASSERT_EQ(Binding.Load(aColors), 1);
+	aColors[0] = ColorHSLA(aColors[0], true).WithAlpha(0.0f).Pack(true);
+	Binding.Store(aColors, 1);
+	const auto Persisted = color_parse<ColorRGBA>(aPalette);
+	ASSERT_TRUE(Persisted.has_value());
+	EXPECT_NEAR(Persisted->r, 1.0f, 0.02f);
+	EXPECT_FLOAT_EQ(Persisted->a, 0.0f);
+	const auto Color = color_cast<ColorRGBA>(ColorHSLA(BaseColor));
+	EXPECT_NEAR(Color.r, 1.0f, 0.02f);
+	EXPECT_NEAR(Color.g, 0.0f, 0.02f);
+	ASSERT_EQ(Binding.Load(aColors), 1);
+	EXPECT_FLOAT_EQ(ColorHSLA(aColors[0], true).a, 0.0f);
+}
+
+TEST(QmColorGradient, TransparentStopsSurvivePackingAndReloading)
+{
+	unsigned aColors[CMessageGradient::MAX_COLORS];
+	ASSERT_EQ(CMessageGradient::Unpack("FF000000,00FF0080,0000FF", aColors, CMessageGradient::MAX_COLORS), 3);
+	EXPECT_FLOAT_EQ(ColorHSLA(aColors[0], true).a, 0.0f);
+	EXPECT_FLOAT_EQ(ColorHSLA(aColors[1], true).a, 128.0f / 255.0f);
+	EXPECT_FLOAT_EQ(ColorHSLA(aColors[2], true).a, 1.0f);
+	char aPalette[128];
+	CMessageGradient::Pack(aColors, 3, aPalette, sizeof(aPalette));
+	unsigned aReloaded[CMessageGradient::MAX_COLORS];
+	ASSERT_EQ(CMessageGradient::Unpack(aPalette, aReloaded, CMessageGradient::MAX_COLORS), 3);
+	for(int i = 0; i < 3; ++i)
+		EXPECT_EQ(aColors[i], aReloaded[i]);
+}
+
+TEST(QmColorGradient, MixedLegacyAndAlphaColorsSkipMalformedStops)
+{
+	const auto Value = SQmColorGradient::FromConfig("invalid;#F008 $00FF00;0000FF40 garbage",
+		ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), 0, 0, 50, 50, 100, false);
+	ASSERT_EQ(Value.m_NumColors, 3);
+	EXPECT_NEAR(Value.m_aColors[0].r, 1.0f, 0.02f);
+	EXPECT_FLOAT_EQ(Value.m_aColors[0].a, (136.0f / 255.0f) * 0.5f);
+	EXPECT_NEAR(Value.m_aColors[1].g, 1.0f, 0.02f);
+	EXPECT_FLOAT_EQ(Value.m_aColors[1].a, 0.5f);
+	EXPECT_NEAR(Value.m_aColors[2].b, 1.0f, 0.02f);
+	EXPECT_FLOAT_EQ(Value.m_aColors[2].a, (64.0f / 255.0f) * 0.5f);
+}
+
+TEST(QmColorGradient, StopOpacityInterpolatesAndMultipliesWithOverallOpacityAndFade)
+{
+	const auto Value = SQmColorGradient::FromConfig("FF000000,0000FFFF", ColorRGBA(1, 1, 1, 0.6f), 0, 0, 50, 50, 100, false);
+	EXPECT_FLOAT_EQ(Value.Sample(vec2(0.0f, 0.5f)).a, 0.0f);
+	EXPECT_FLOAT_EQ(Value.Sample(vec2(0.5f, 0.5f)).a, 0.3f);
+	EXPECT_FLOAT_EQ(Value.Sample(vec2(1.0f, 0.5f)).a, 0.6f);
+	const SQmGradientTextPaint Paint{&Value, vec2(10, 20), vec2(100, 20), 0.5f};
+	EXPECT_FLOAT_EQ(SQmGradientTextPaint::Sample(vec2(60, 30), &Paint).a, 0.15f);
+}
+
+TEST(QmImeAppearance, AllFourRolesMultiplyStopsByTheirOwnOverallOpacity)
+{
+	CConfig Config{};
+	Config.m_QmImeOpacity = 60;
+	Config.m_QmImeTextColor = color_cast<ColorHSLA>(ColorRGBA(1, 1, 1, 0.5f)).Pack(true);
+	Config.m_QmImeSelectedTextColor = color_cast<ColorHSLA>(ColorRGBA(1, 1, 1, 0.75f)).Pack(true);
+	Config.m_QmImeSelectedColor = color_cast<ColorHSLA>(ColorRGBA(1, 1, 1, 0.25f)).Pack(true);
+	for(char *pPalette : {Config.m_QmImeBgGradient, Config.m_QmImeTextGradient,
+		Config.m_QmImeSelectedTextGradient, Config.m_QmImeSelectedGradient})
+		str_copy(pPalette, "FF000000,0000FF80", sizeof(Config.m_QmImeBgGradient));
+	const auto Appearance = QmImeAppearance(Config);
+	const std::array<const SQmColorGradient *, 4> apGradients = {&Appearance.m_Background, &Appearance.m_Text,
+		&Appearance.m_SelectedText, &Appearance.m_Selection};
+	const std::array<float, 4> aOpacity = {0.6f, 128.0f / 255.0f, 191.0f / 255.0f, 64.0f / 255.0f};
+	for(int i = 0; i < 4; ++i)
+	{
+		SCOPED_TRACE(i);
+		EXPECT_FLOAT_EQ(apGradients[i]->m_aColors[0].a, 0.0f);
+		EXPECT_FLOAT_EQ(apGradients[i]->m_aColors[1].a, aOpacity[i] * (128.0f / 255.0f));
+	}
+	EXPECT_FLOAT_EQ(Appearance.m_BackgroundOpacity, 0.6f);
+}
+
+TEST(QmColorGradient, TransparencyChecksAllStopsInsteadOfOnlyTheFirst)
+{
+	const auto Value = SQmColorGradient::FromConfig("FF0000,0000FF00", ColorRGBA(1, 1, 1, 1), 0, 0, 50, 50, 100, false);
+	EXPECT_FLOAT_EQ(Value.m_aColors[0].a, 1.0f);
+	EXPECT_TRUE(Value.HasTransparency());
+	EXPECT_FALSE(SQmColorGradient::FromConfig("FF0000,0000FF", ColorRGBA(1, 1, 1, 1), 0, 0, 50, 50, 100, false).HasTransparency());
+}
+
+TEST(QmGradientPalette, AddingStopsCopiesOpacityWithoutChangingTheOverallOpacity)
+{
+	unsigned BaseColor = color_cast<ColorHSLA>(ColorRGBA(0, 1, 0, 0.5f)).Pack(true);
+	char aPalette[128] = "00FF0040";
+	const SQmGradientPaletteBinding Binding{&BaseColor, aPalette, sizeof(aPalette), true};
+	unsigned aColors[CMessageGradient::MAX_COLORS];
+	ASSERT_EQ(Binding.Load(aColors), 1);
+	for(int Count = 2; Count <= CMessageGradient::MAX_COLORS; ++Count)
+	{
+		SCOPED_TRACE(Count);
+		aColors[Count - 1] = aColors[Count - 2];
+		Binding.Store(aColors, Count);
+		ASSERT_EQ(Binding.Load(aColors), Count);
+		EXPECT_FLOAT_EQ(ColorHSLA(aColors[Count - 1], true).a, 64.0f / 255.0f);
+		EXPECT_EQ(Binding.Opacity(), 50);
+	}
+}
+
+TEST(QmColorGradient, CharacterSplitsKeepStopOpacityAndTheExistingTextOffset)
+{
+	CTextCursor Cursor;
+	Cursor.m_CharCount = 5;
+	CMessageGradient::AddTextSplits(Cursor, "a你b", "FF000000,0000FF80", ColorRGBA(1, 1, 1, 0.5f));
+	ASSERT_EQ(Cursor.m_vColorSplits.size(), 3u);
+	EXPECT_EQ(Cursor.m_vColorSplits[0].m_CharIndex, 5);
+	EXPECT_EQ(Cursor.m_vColorSplits[1].m_CharIndex, 6);
+	EXPECT_EQ(Cursor.m_vColorSplits[1].m_Length, 3);
+	EXPECT_EQ(Cursor.m_vColorSplits[2].m_CharIndex, 9);
+	EXPECT_FLOAT_EQ(Cursor.m_vColorSplits[0].m_Color.a, 0.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_vColorSplits[1].m_Color.a, (128.0f / 255.0f) * 0.25f);
+	EXPECT_FLOAT_EQ(Cursor.m_vColorSplits[2].m_Color.a, (128.0f / 255.0f) * 0.5f);
+	EXPECT_EQ(Cursor.m_CharCount, 5);
 }
