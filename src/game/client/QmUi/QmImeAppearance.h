@@ -9,6 +9,7 @@
 struct SQmImeAppearance
 {
 	SQmColorGradient m_Background;
+	float m_BackgroundOpacity = 1.0f;
 	SQmColorGradient m_Text;
 	SQmColorGradient m_SelectedText;
 	SQmColorGradient m_Selection;
@@ -19,8 +20,9 @@ inline SQmImeAppearance QmImeAppearance(const CConfig &Config)
 {
 	SQmImeAppearance Result;
 	Result.m_Theme = qm_theme::ImeTheme(true);
+	Result.m_BackgroundOpacity = std::clamp(Config.m_QmImeOpacity, 0, 100) / 100.0f;
 	Result.m_Background = SQmColorGradient::FromConfig(Config.m_QmImeBgGradient,
-		color_cast<ColorRGBA>(ColorHSLA(Config.m_QmImeBgColor)).WithAlpha(std::clamp(Config.m_QmImeOpacity, 0, 100) / 100.0f),
+		color_cast<ColorRGBA>(ColorHSLA(Config.m_QmImeBgColor)).WithAlpha(Result.m_BackgroundOpacity),
 		Config.m_QmImeBgGradientType, Config.m_QmImeBgGradientAngle, Config.m_QmImeBgGradientCenterX, Config.m_QmImeBgGradientCenterY, Config.m_QmImeBgGradientRange, Config.m_QmImeBgGradientReverse != 0);
 	Result.m_Text = SQmColorGradient::FromConfig(Config.m_QmImeTextGradient, color_cast<ColorRGBA>(ColorHSLA(Config.m_QmImeTextColor, true)),
 		Config.m_QmImeTextGradientType, Config.m_QmImeTextGradientAngle, Config.m_QmImeTextGradientCenterX, Config.m_QmImeTextGradientCenterY, Config.m_QmImeTextGradientRange, Config.m_QmImeTextGradientReverse != 0);

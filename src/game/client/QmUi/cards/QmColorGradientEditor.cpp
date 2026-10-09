@@ -12,7 +12,7 @@ using namespace FontIcons;
 
 bool CMenus::DoColorGradientPalette(CUIRect *pView, unsigned *pBaseColor, char *pGradient, int GradientSize,
 	CButtonContainer *pAddButton, CButtonContainer *pRemoveButton, unsigned *pColorValues,
-	const SSettingsContentMetrics &Metrics, bool CheckBoxSpacing, bool Alpha)
+	const SSettingsContentMetrics &Metrics, bool CheckBoxSpacing, bool BaseHasAlpha)
 {
 	const float ResolvedButtonHeight = Metrics.m_ButtonHeight;
 	const float ColorLineHeight = std::max(Metrics.m_LineHeight, ResolvedButtonHeight);
@@ -22,12 +22,8 @@ bool CMenus::DoColorGradientPalette(CUIRect *pView, unsigned *pBaseColor, char *
 	const float BodySize = Metrics.m_BodySize;
 	const bool ReadOnly = Ui()->RenderOnly();
 	bool Changed = false;
-	int NumColors = CMessageGradient::Unpack(pGradient, pColorValues, CMessageGradient::MAX_COLORS);
-	if(NumColors <= 0)
-	{
-		NumColors = 1;
-		pColorValues[0] = Alpha ? *pBaseColor >> 8 : *pBaseColor;
-	}
+	const SQmGradientPaletteBinding Binding{pBaseColor, pGradient, GradientSize, BaseHasAlpha};
+	int NumColors = Binding.Load(pColorValues);
 
 	CUIRect ColorLine;
 	pView->HSplitTop(ColorLineHeight, &ColorLine, pView);
@@ -46,15 +42,11 @@ bool CMenus::DoColorGradientPalette(CUIRect *pView, unsigned *pBaseColor, char *
 		if(ColorIndex < NumColors - 1)
 			ColorArea.VSplitLeft(ColorButtonSpacing, nullptr, &ColorArea);
 		const unsigned OldColor = pColorValues[ColorIndex];
-		const ColorHSLA PickedColor = DoButton_ColorPicker(&ColorButton, &pColorValues[ColorIndex], false);
-		pColorValues[ColorIndex] = PickedColor.Pack(false);
+		const ColorHSLA PickedColor = DoButton_ColorPicker(&ColorButton, &pColorValues[ColorIndex], true);
+		pColorValues[ColorIndex] = PickedColor.Pack(true);
 		if(pColorValues[ColorIndex] != OldColor && !ReadOnly)
 		{
-			*pBaseColor = Alpha ? (pColorValues[0] << 8) | (*pBaseColor & 0xffu) : pColorValues[0];
-			if(NumColors == 1)
-				CMessageGradient::Reset(pGradient, GradientSize);
-			else
-				CMessageGradient::Pack(pColorValues, NumColors, pGradient, GradientSize);
+			Binding.Store(pColorValues, NumColors);
 			Changed = true;
 		}
 	}
@@ -70,18 +62,14 @@ bool CMenus::DoColorGradientPalette(CUIRect *pView, unsigned *pBaseColor, char *
 	if(DoButton_Menu_QmIcon(pRemoveButton, EQmIcon::MINUS, FONT_ICON_MINUS, CanRemoveColor ? 0 : -1, &RemoveButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, BodySize) && CanRemoveColor && !ReadOnly)
 	{
 		--NumColors;
-		*pBaseColor = Alpha ? (pColorValues[0] << 8) | (*pBaseColor & 0xffu) : pColorValues[0];
-		if(NumColors == 1)
-			CMessageGradient::Reset(pGradient, GradientSize);
-		else
-			CMessageGradient::Pack(pColorValues, NumColors, pGradient, GradientSize);
+		Binding.Store(pColorValues, NumColors);
 		Changed = true;
 	}
 	if(DoButton_Menu_QmIcon(pAddButton, EQmIcon::PLUS, FONT_ICON_PLUS, CanAddColor ? 0 : -1, &AddButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, ui_token::radius::PILL, 0.0f, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), nullptr, BodySize) && CanAddColor && !ReadOnly)
 	{
 		pColorValues[NumColors] = pColorValues[NumColors - 1];
 		++NumColors;
-		CMessageGradient::Pack(pColorValues, NumColors, pGradient, GradientSize);
+		Binding.Store(pColorValues, NumColors);
 		Changed = true;
 	}
 

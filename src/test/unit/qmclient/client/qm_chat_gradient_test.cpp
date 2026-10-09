@@ -129,3 +129,91 @@ TEST(QmChatGradient, DegenerateTextBoundsRemainUsableForSampling)
 	EXPECT_GT(Bounds.w, 0);
 	EXPECT_GT(Bounds.h, 0);
 }
+
+TEST(QmChatGradient, EveryMessageCategoryPreservesItsStopOpacity)
+{
+	CConfig Config{};
+	const std::array<char *, 6> apPalettes = {Config.m_ClMessageSystemGradient, Config.m_ClMessageClientGradient,
+		Config.m_ClMessageHighlightGradient, Config.m_ClMessageTeamGradient, Config.m_ClMessageFriendGradient, Config.m_ClMessageGradient};
+	for(int i = 0; i < 6; ++i)
+	{
+		SCOPED_TRACE(i);
+		const auto Role = static_cast<EQmChatGradientRole>(i);
+		QmChatGradientBinding(Config, Role).Reset();
+		str_copy(apPalettes[i], "FF000040,0000FFC0", sizeof(Config.m_ClMessageGradient));
+		const auto Value = QmChatGradientStyle(Config, Role, ColorRGBA(1, 1, 1, 0.5f));
+		EXPECT_FLOAT_EQ(Value.Sample(vec2(0, 0.5f)).a, (64.0f / 255.0f) * 0.5f);
+		EXPECT_FLOAT_EQ(Value.Sample(vec2(1, 0.5f)).a, (192.0f / 255.0f) * 0.5f);
+	}
+}
+
+TEST(QmChatGradient, ARemainingTransparentStopSamplesWithoutMeasuringText)
+{
+	CConfig Config{};
+	QmChatGradientBinding(Config, EQmChatGradientRole::NORMAL).Reset();
+	str_copy(Config.m_ClMessageGradient, "FF000080");
+	const auto Value = QmChatGradientStyle(Config, EQmChatGradientRole::NORMAL, ColorRGBA(1, 1, 1, 0.5f));
+	CTextCursor Cursor;
+	Cursor.m_Flags = TEXTFLAG_RENDER;
+	const auto PreviousSampler = +[](vec2, const void *) { return ColorRGBA(0, 1, 0, 1); };
+	int PreviousContext = 0;
+	Cursor.m_pfnColorSampler = PreviousSampler;
+	Cursor.m_pColorSamplerContext = &PreviousContext;
+	Cursor.m_ColorSamplerColumns = 3;
+	Cursor.m_ColorSamplerRows = 4;
+	{
+		const CQmChatGradientPaint Paint(nullptr, Cursor, "text", &Value);
+		ASSERT_NE(Cursor.m_pfnColorSampler, nullptr);
+		ASSERT_NE(Cursor.m_pfnColorSampler, PreviousSampler);
+		EXPECT_EQ(Cursor.m_ColorSamplerColumns, 1);
+		EXPECT_EQ(Cursor.m_ColorSamplerRows, 1);
+		for(vec2 Point : {vec2(0, 0), vec2(500, 100)})
+		{
+			const auto Color = Cursor.m_pfnColorSampler(Point, Cursor.m_pColorSamplerContext);
+			EXPECT_NEAR(Color.r, 1.0f, 0.02f);
+			EXPECT_FLOAT_EQ(Color.a, (128.0f / 255.0f) * 0.5f);
+		}
+	}
+	EXPECT_EQ(Cursor.m_pfnColorSampler, PreviousSampler);
+	EXPECT_EQ(Cursor.m_pColorSamplerContext, &PreviousContext);
+	EXPECT_EQ(Cursor.m_ColorSamplerColumns, 3);
+	EXPECT_EQ(Cursor.m_ColorSamplerRows, 4);
+}
+
+TEST(QmChatGradient, EmptyAndInvalidPalettesKeepTheExistingTextSampler)
+{
+	for(const char *pPalette : {"", "invalid"})
+	{
+		SCOPED_TRACE(pPalette);
+		CConfig Config{};
+		str_copy(Config.m_ClMessageGradient, pPalette);
+		const auto Value = QmChatGradientStyle(Config, EQmChatGradientRole::NORMAL, ColorRGBA(1, 1, 1, 0.5f));
+		CTextCursor Cursor;
+		Cursor.m_Flags = TEXTFLAG_RENDER;
+		const CQmChatGradientPaint Paint(nullptr, Cursor, "text", &Value);
+		EXPECT_EQ(Cursor.m_pfnColorSampler, nullptr);
+		EXPECT_EQ(Cursor.m_pColorSamplerContext, nullptr);
+	}
+}
+
+TEST(QmChatGradient, NestedSingleStopPaintRestoresTheOuterOpacity)
+{
+	const auto Outer = SQmColorGradient::FromConfig("FF000080", ColorRGBA(1, 1, 1, 1), 0, 0, 50, 50, 100, false);
+	const auto Inner = SQmColorGradient::FromConfig("0000FF00", ColorRGBA(1, 1, 1, 1), 0, 0, 50, 50, 100, false);
+	CTextCursor Cursor;
+	Cursor.m_Flags = TEXTFLAG_RENDER;
+	{
+		const CQmChatGradientPaint OuterPaint(nullptr, Cursor, "outer", &Outer);
+		ASSERT_NE(Cursor.m_pfnColorSampler, nullptr);
+		const void *pOuterContext = Cursor.m_pColorSamplerContext;
+		{
+			const CQmChatGradientPaint InnerPaint(nullptr, Cursor, "inner", &Inner);
+			ASSERT_NE(Cursor.m_pfnColorSampler, nullptr);
+			EXPECT_FLOAT_EQ(Cursor.m_pfnColorSampler(vec2(0, 0), Cursor.m_pColorSamplerContext).a, 0.0f);
+		}
+		EXPECT_EQ(Cursor.m_pColorSamplerContext, pOuterContext);
+		EXPECT_FLOAT_EQ(Cursor.m_pfnColorSampler(vec2(0, 0), Cursor.m_pColorSamplerContext).a, 128.0f / 255.0f);
+	}
+	EXPECT_EQ(Cursor.m_pfnColorSampler, nullptr);
+	EXPECT_EQ(Cursor.m_pColorSamplerContext, nullptr);
+}

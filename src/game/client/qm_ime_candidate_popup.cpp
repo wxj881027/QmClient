@@ -246,7 +246,7 @@ namespace
 	{
 		IGraphics *pGraphics = pGameClient->Graphics();
 		const auto &Ime = Appearance.m_Theme;
-		const float UserOpacity = Appearance.m_Background.m_aColors[0].a;
+		const float UserOpacity = Appearance.m_BackgroundOpacity;
 		CUIRect PanelDropA = Panel;
 		PanelDropA.x += Ime.m_ShadowX;
 		PanelDropA.y += Ime.m_ShadowY * 0.65f;
@@ -259,7 +259,7 @@ namespace
 		DrawRoundedSurface(pGraphics, PanelDropB, WithAlpha(Ime.m_PanelShadow, Alpha * 0.28f), ColorRGBA(), SurfaceParams);
 
 		SurfaceParams.m_BorderWidth = Ime.m_BorderInset;
-		if(UserOpacity < 0.999f && g_Config.m_QmGaussianBlur != 0)
+		if(Appearance.m_Background.HasTransparency() && g_Config.m_QmGaussianBlur != 0)
 			pGameClient->Ui()->RenderGaussianBlur(Panel, Alpha * UserOpacity, SurfaceParams.m_Corners, SurfaceParams.m_Radius);
 		DrawRoundedGradientSurface(pGraphics, Panel, Appearance.m_Background, Alpha, WithAlpha(Ime.m_PanelBorder, Alpha * UserOpacity), SurfaceParams);
 		CUIRect PanelContent;
