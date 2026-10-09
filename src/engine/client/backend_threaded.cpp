@@ -74,6 +74,7 @@ CGraphicsBackend_Threaded::CGraphicsBackend_Threaded(TTranslateFunc &&TranslateF
 void CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor)
 {
 	dbg_assert(m_Shutdown, "Processor was already not shut down.");
+	m_FatalError.clear();
 	ResetSubmissionStopForCleanup();
 	m_Shutdown = false;
 	m_pProcessor = pProcessor;
@@ -171,6 +172,9 @@ void CGraphicsBackend_Threaded::WaitForIdle()
 
 void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error)
 {
+	// 第一份故障已保存后，不让后续收尾错误覆盖报告。
+	if(m_SubmissionStopped.exchange(true, std::memory_order_acq_rel))
+		return;
 	m_FatalError = "";
 	for(const auto &ErrStr : Error.m_vErrors)
 	{
@@ -184,7 +188,6 @@ void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error)
 			m_FatalError.append(ErrStr.m_Err);
 	}
 	std::string LogMessage = "Graphics Error:\n" + m_FatalError;
-	m_SubmissionStopped.store(true, std::memory_order_release);
 	if(Error.m_ErrorType == GFX_ERROR_TYPE_INIT)
 	{
 		dbg_assert_failed("%s", LogMessage.c_str());
@@ -212,6 +215,8 @@ bool CGraphicsBackend_Threaded::TakeFatalError()
 	WaitForIdle();
 	if(m_pProcessor->GetError().m_ErrorType == GFX_ERROR_TYPE_NONE)
 		return false;
+	// 主循环可能在下一次 RunBuffer 之前消费错误，必须先保存详情并停止提交。
+	ProcessError(m_pProcessor->GetError());
 	m_pProcessor->ClearFatalError();
 	return true;
 }
