@@ -73,6 +73,7 @@ MACRO_CONFIG_INT(DbgQmUiDogfood, dbg_qm_ui_dogfood, 0, 0, 1, CFGFLAG_CLIENT, "Sh
 MACRO_CONFIG_COL(QmUiColor, qm_ui_color, 0x000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Interface surface color")
 MACRO_CONFIG_COL(QmUiFocusColor, qm_ui_focus_color, 0x97FFA6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keyboard focus ring color")
 MACRO_CONFIG_COL(QmUiAccentColor, qm_ui_accent_color, 0x5DFE54, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Interface accent color")
+MACRO_CONFIG_INT(QmUiAccentOpacity, qm_ui_accent_opacity, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Interface accent color opacity percentage")
 MACRO_CONFIG_COL(QmUiSelectedColor, qm_ui_selected_color, 0x8F061D, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Selected item color")
 MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color, 0x000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard surface color")
 MACRO_CONFIG_INT(QmUiOpacity, qm_ui_opacity, 12, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Interface transparency")

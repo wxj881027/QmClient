@@ -674,7 +674,7 @@ CMenus::CMenus()
 
 IUiContext CMenus::SettingsUiContext(const char *pScope, const float UiScale)
 {
-	m_SettingsUiTheme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiFocusColor), ColorHSLA(g_Config.m_QmUiAccentColor), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	m_SettingsUiTheme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiFocusColor), ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f), ColorHSLA(g_Config.m_QmUiSelectedColor));
 	IUiContext Context;
 	Context.m_pUi = Ui();
 	Context.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
@@ -5852,7 +5852,7 @@ void CMenus::FinishSettingsScrollRegion(CScrollRegion &ScrollRegion, SSettingsSc
 CMenus::SQmSettingsCardStyle CMenus::QmSettingsCardStyle(float UiScale) const
 {
 	SQmSettingsCardStyle Style;
-	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiFocusColor), ColorHSLA(g_Config.m_QmUiAccentColor), ColorHSLA(g_Config.m_QmUiSelectedColor));
+	const SUiTheme Theme = ResolveUiTheme(ColorHSLA(g_Config.m_QmUiColor), g_Config.m_QmUiOpacity / 100.0f, ColorHSLA(g_Config.m_QmUiFocusColor), ColorHSLA(g_Config.m_QmUiAccentColor).WithAlpha(g_Config.m_QmUiAccentOpacity / 100.0f), ColorHSLA(g_Config.m_QmUiSelectedColor));
 	const ui_widget::SCardProps CardProps = ui_widget::QmClientCardProps(UiScale, &Theme);
 	const SQmScrollContainerStyle ScrollStyle = QmScrollContainerStyleForSize(EQmScrollSize::MEDIUM, 1.0f);
 	Style.m_Padding = CardProps.m_Padding;

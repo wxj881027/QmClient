@@ -13039,6 +13039,22 @@ turkish = "Arayüz vurgu rengi"
 polish = "Kolor akcentu interfejsu"
 
 [[message]]
+key = "Interface accent color opacity percentage"
+[message.translations]
+simplified_chinese = "界面强调色不透明度百分比"
+traditional_chinese = "介面強調色不透明度百分比"
+japanese = "インターフェースのアクセントカラーの不透明度（パーセント）"
+korean = "인터페이스 강조 색상 불투명도 백분율"
+russian = "Непрозрачность акцентного цвета интерфейса в процентах"
+german = "Deckkraft der Akzentfarbe der Benutzeroberfläche in Prozent"
+spanish = "Porcentaje de opacidad del color de acento de la interfaz"
+french = "Pourcentage d’opacité de la couleur d’accent de l’interface"
+brazilian_portuguese = "Porcentagem de opacidade da cor de destaque da interface"
+portuguese = "Percentagem de opacidade da cor de destaque da interface"
+turkish = "Arayüz vurgu renginin opaklık yüzdesi"
+polish = "Procent nieprzezroczystości koloru akcentu interfejsu"
+
+[[message]]
 key = "Interface color"
 [message.translations]
 simplified_chinese = "界面颜色"

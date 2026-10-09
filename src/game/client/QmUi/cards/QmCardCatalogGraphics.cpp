@@ -728,10 +728,8 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 
 			static CButtonContainer s_UiAccentColorResetId;
-			const unsigned OldUiAccentColor = g_Config.m_QmUiAccentColor;
 			CUIRect UiAccentColorRow = Rows.NextButton();
-			DoLine_ColorPicker(&s_UiAccentColorResetId, ColorMetrics, &UiAccentColorRow, Localize("Interface accent color"), &g_Config.m_QmUiAccentColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::QmUiAccentColor)), false, nullptr, false);
-			if(OldUiAccentColor != g_Config.m_QmUiAccentColor)
+			if(DoLine_AlphaColorPicker(&s_UiAccentColorResetId, ColorMetrics, &UiAccentColorRow, Localize("Interface accent color"), &g_Config.m_QmUiAccentColor, &g_Config.m_QmUiAccentOpacity, DefaultConfig::QmUiAccentColor, DefaultConfig::QmUiAccentOpacity))
 				InvalidateSettingsRuntimeCaches(ESettingsInvalidationReason::CONFIG_HASH_CHANGED);
 
 			static CButtonContainer s_UiSelectedColorResetId;

@@ -10,6 +10,7 @@
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/SettingsCardGeometry.h>
 #include <game/client/QmUi/SettingsPageLayout.h>
+#include <game/client/QmUi/UiButtonStyle.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiFormLogic.h>
 #include <game/client/QmUi/UiForms.h>
@@ -205,6 +206,140 @@ TEST(ToggleStyle, OnUsesAccentAndOffPreservesConfiguredControlSurface)
 	EXPECT_LT(Disabled.m_Knob.a, On.m_Knob.a);
 }
 
+TEST(ToggleStyle, HoverAndPressKeepKnobColorAcrossForegroundThreshold)
+{
+	const ColorRGBA Backdrop(0, 0, 0, 1);
+	for(const float Gray : {0.42f, 0.48f})
+	{
+		const ColorRGBA Surface(Gray, Gray, Gray, 1);
+		SUiTheme Theme{};
+		Theme.m_Accent = Surface;
+		for(const bool Value : {false, true})
+		{
+			SCOPED_TRACE(::testing::Message() << "gray=" << Gray << " value=" << Value);
+			const auto Base = ResolveUiToggleStyle(Theme, Surface, Backdrop, Value, true);
+			const auto Idle = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, true, false, false);
+			const auto Hover = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, true, true, false);
+			const auto Press = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, true, true, true);
+			EXPECT_EQ(Idle.m_Knob, Gray < 0.45f ? ColorRGBA(1, 1, 1, 1) : ColorRGBA(0, 0, 0, 1));
+			EXPECT_EQ(Hover.m_Knob, Idle.m_Knob);
+			EXPECT_EQ(Press.m_Knob, Idle.m_Knob);
+			EXPECT_NE(Hover.m_Track, Idle.m_Track);
+			EXPECT_NE(Press.m_Track, Hover.m_Track);
+			EXPECT_GT(Hover.m_Border.a, Idle.m_Border.a);
+		}
+	}
+}
+
+TEST(ToggleStyle, ReleaseAndDraggingOutsideRestoreFeedbackWithoutChangingKnob)
+{
+	SUiTheme Theme{};
+	Theme.m_Accent = ColorRGBA(0.42f, 0.42f, 0.42f, 1);
+	const ColorRGBA Backdrop(0, 0, 0, 1);
+	const auto Base = ResolveUiToggleStyle(Theme, ColorRGBA(), Backdrop, true, true);
+	const auto Hover = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, true, true, false);
+	for(int Interaction = 0; Interaction < 3; ++Interaction)
+	{
+		const auto Press = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, true, true, true);
+		const auto Release = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, true, true, false);
+		const auto Outside = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, true, false, true);
+		EXPECT_EQ(Press.m_Knob, Base.m_Knob);
+		EXPECT_EQ(Release.m_Track, Hover.m_Track);
+		EXPECT_EQ(Release.m_Knob, Base.m_Knob);
+		EXPECT_EQ(Outside.m_Track, Base.m_Track);
+		EXPECT_EQ(Outside.m_Knob, Base.m_Knob);
+	}
+}
+
+TEST(ToggleStyle, AnimatedTrackDoesNotOverrideStableKnobColor)
+{
+	SUiTheme Theme{};
+	Theme.m_Accent = ColorRGBA(0.48f, 0.48f, 0.48f, 1);
+	const ColorRGBA Backdrop(0, 0, 0, 1);
+	const auto Base = ResolveUiToggleStyle(Theme, ColorRGBA(), Backdrop, true, true);
+	const ColorRGBA AnimatedTrack(0.2f, 0.2f, 0.2f, 0.5f);
+	const auto Style = ResolveUiToggleFeedbackStyle(Base, AnimatedTrack, Backdrop, true, false, false);
+	EXPECT_EQ(Style.m_Track, AnimatedTrack);
+	EXPECT_EQ(Style.m_Knob, Base.m_Knob);
+}
+
+TEST(ToggleStyle, DisabledKeepsMutedKnobAndIgnoresPointerFeedback)
+{
+	SUiTheme Theme{};
+	Theme.m_Accent = ColorRGBA(0.42f, 0.42f, 0.42f, 0.2f);
+	const ColorRGBA Backdrop(0, 0, 0, 1);
+	const auto Base = ResolveUiToggleStyle(Theme, ColorRGBA(), Backdrop, true, false);
+	const auto Idle = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, false, false, false);
+	const auto Press = ResolveUiToggleFeedbackStyle(Base, Base.m_Track, Backdrop, false, true, true);
+	EXPECT_EQ(Press.m_Track, Idle.m_Track);
+	EXPECT_EQ(Press.m_Knob, Idle.m_Knob);
+	EXPECT_EQ(Press.m_Border, Idle.m_Border);
+	EXPECT_FLOAT_EQ(Idle.m_Knob.a, 0.65f);
+}
+
+TEST(UiThemeAccent, OpacityPreservesRgbAndAllowsFullyTransparentAccent)
+{
+	const ColorHSLA Accent(0.6f, 0.7f, 0.5f, 1);
+	const auto Opaque = ResolveUiTheme(ColorHSLA(0), 1, ColorHSLA(0), Accent);
+	for(const float Opacity : {0.0f, 0.2f, 0.75f, 1.0f})
+	{
+		SCOPED_TRACE(Opacity);
+		const auto Theme = ResolveUiTheme(ColorHSLA(0), 1, ColorHSLA(0), Accent.WithAlpha(Opacity));
+		EXPECT_FLOAT_EQ(Theme.m_Accent.a, Opacity);
+		EXPECT_FLOAT_EQ(Theme.m_Accent.r, Opaque.m_Accent.r);
+		EXPECT_FLOAT_EQ(Theme.m_Accent.g, Opaque.m_Accent.g);
+		EXPECT_FLOAT_EQ(Theme.m_Accent.b, Opaque.m_Accent.b);
+		EXPECT_FLOAT_EQ(Theme.m_BorderHovered.a, 0.45f * Opacity);
+		EXPECT_FLOAT_EQ(Theme.m_BorderFocused.a, 0.75f * Opacity);
+		EXPECT_EQ(Theme.m_FocusRing, Opaque.m_FocusRing);
+	}
+}
+
+TEST(UiThemeAccent, TransparentEnabledTrackKeepsKnobVisibleAgainstBackdrop)
+{
+	const auto Theme = ResolveUiTheme(ColorHSLA(0), 1, ColorHSLA(0), ColorHSLA(0, 0, 1, 0));
+	const auto Dark = ResolveUiToggleStyle(Theme, ColorRGBA(), ColorRGBA(0, 0, 0, 1), true, true);
+	const auto Light = ResolveUiToggleStyle(Theme, ColorRGBA(), ColorRGBA(1, 1, 1, 1), true, true);
+	EXPECT_FLOAT_EQ(Dark.m_Track.a, 0.0f);
+	EXPECT_FLOAT_EQ(Light.m_Track.a, 0.0f);
+	EXPECT_EQ(Dark.m_Knob, ColorRGBA(1, 1, 1, 1));
+	EXPECT_EQ(Light.m_Knob, ColorRGBA(0, 0, 0, 1));
+}
+
+class CUiAccentConfigTest : public ::testing::Test
+{
+	unsigned m_PreviousColor = g_Config.m_QmUiAccentColor;
+	int m_PreviousOpacity = g_Config.m_QmUiAccentOpacity;
+
+protected:
+	void SetUp() override
+	{
+		g_Config.m_QmUiAccentColor = DefaultConfig::QmUiAccentColor;
+		g_Config.m_QmUiAccentOpacity = 100;
+	}
+
+	void TearDown() override
+	{
+		g_Config.m_QmUiAccentColor = m_PreviousColor;
+		g_Config.m_QmUiAccentOpacity = m_PreviousOpacity;
+	}
+};
+
+TEST_F(CUiAccentConfigTest, FallbackThemeReflectsOpacityChangesAndRestoration)
+{
+	const auto Before = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+	EXPECT_FLOAT_EQ(Before.m_Accent.a, 1.0f);
+	for(const int Opacity : {20, 0, 100})
+	{
+		g_Config.m_QmUiAccentOpacity = Opacity;
+		const auto Theme = ResolveInputFallbackTheme(g_Config.m_QmUiFocusColor);
+		EXPECT_FLOAT_EQ(Theme.m_Accent.a, Opacity / 100.0f);
+		EXPECT_FLOAT_EQ(Theme.m_Accent.r, Before.m_Accent.r);
+		EXPECT_FLOAT_EQ(Theme.m_Accent.g, Before.m_Accent.g);
+		EXPECT_FLOAT_EQ(Theme.m_Accent.b, Before.m_Accent.b);
+	}
+}
+
 TEST(SliderLayout, FillFollowsClampedValueAndMatchesHandleCenter)
 {
 	const CUIRect Rect{10, 20, 200, 20};
@@ -256,4 +391,24 @@ TEST(SliderStyle, DisabledIgnoresHoverAndPressFeedback)
 	EXPECT_LT(Disabled.m_Handle.a, Idle.m_Handle.a);
 	EXPECT_EQ(DisabledPress.m_Handle, Disabled.m_Handle);
 	EXPECT_EQ(DisabledPress.m_Border, Disabled.m_Border);
+}
+
+TEST(SliderStyle, AccentOpacityRemainsEffectiveDuringHoverAndPress)
+{
+	const ColorRGBA Backdrop(0, 0, 0, 1);
+	for(const float Opacity : {0.0f, 0.2f, 1.0f})
+	{
+		SUiTheme Theme{};
+		Theme.m_Accent = ColorRGBA(0.2f, 0.5f, 0.8f, Opacity);
+		const auto Idle = ResolveUiSliderStyle(Theme, Backdrop, false, false);
+		const auto Hover = ResolveUiSliderStyle(Theme, Backdrop, true, false);
+		const auto Press = ResolveUiSliderStyle(Theme, Backdrop, true, true);
+		EXPECT_FLOAT_EQ(Idle.m_Fill.a, 0.85f * Opacity);
+		EXPECT_FLOAT_EQ(Idle.m_Handle.a, Opacity);
+		EXPECT_EQ(Hover.m_Fill, Idle.m_Fill);
+		EXPECT_EQ(Hover.m_Handle, Idle.m_Handle);
+		EXPECT_EQ(Press.m_Fill, Idle.m_Fill);
+		EXPECT_EQ(Press.m_Handle, Idle.m_Handle);
+		EXPECT_GT(Hover.m_Border.a, Idle.m_Border.a);
+	}
 }

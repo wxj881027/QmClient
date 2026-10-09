@@ -52,6 +52,16 @@ inline SUiSecondaryButtonStyle ResolveUiSecondaryButtonStyle(ColorRGBA Surface, 
 	return Style;
 }
 
+// 滑块沿用基础轨道选出的前景，悬浮遮罩和轨道动画不再触发黑白反转。
+inline SUiToggleStyle ResolveUiToggleFeedbackStyle(const SUiToggleStyle &Base, ColorRGBA Track, ColorRGBA Backdrop, bool Enabled, bool Hovered, bool Pressed)
+{
+	const auto Feedback = ResolveUiSecondaryButtonStyle(Track, Backdrop, Enabled, Hovered, Pressed);
+	SUiToggleStyle Style = Base;
+	Style.m_Track = Feedback.m_Fill;
+	Style.m_Border = Feedback.m_Border;
+	return Style;
+}
+
 // 同类按钮只保留用途差异，主题、禁用和鼠标反馈由这一处解析。
 inline SUiSecondaryButtonStyle ResolveUiButtonStyle(EUiButtonRole Role, ColorRGBA Surface, ColorRGBA Backdrop, const SUiTheme &Theme, const SUiButtonState &State)
 {

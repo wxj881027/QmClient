@@ -711,7 +711,7 @@ private:
 	CUiV2AnimationRuntime *m_pQmAnimationRuntime = nullptr;
 	CTooltips *m_pQmTooltips = nullptr;
 	SUiTheme m_QmControlTheme{};
-	std::array<unsigned, 7> m_aQmControlThemeConfig{};
+	std::array<unsigned, 8> m_aQmControlThemeConfig{};
 	bool m_HasQmControlTheme = false;
 	mutable int m_QuadBatchDepth = 0;
 	mutable int m_QuadBatchContainerIndex = -1;

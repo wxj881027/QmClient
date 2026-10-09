@@ -1993,6 +1993,7 @@ Instant compact hints
 Instant zoom reverse
 Interface
 Interface accent color
+Interface accent color opacity percentage
 Interface animations
 Interface page
 Interface settings page

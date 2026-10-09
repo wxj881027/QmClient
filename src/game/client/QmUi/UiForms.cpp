@@ -637,10 +637,9 @@ namespace ui_widget
 		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress);
 		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->MouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
 		const bool Pressed = Hovered && Ctx.m_pUi->CheckActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
-		const auto Feedback = ResolveUiSecondaryButtonStyle(Track, Backdrop, Enabled, Hovered, Pressed);
-		DrawRoundedSurface(Ctx, Layout.m_Track, Feedback.m_Fill, Feedback.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
-		const ColorRGBA KnobColor = ResolveUiSurfaceForeground(Feedback.m_Fill, Backdrop).WithAlpha(Style.m_Knob.a);
-		DrawRoundedSurface(Ctx, Layout.m_Knob, KnobColor, ColorRGBA(), ui_token::radius::PILL);
+		const auto Feedback = ResolveUiToggleFeedbackStyle(Style, Track, Backdrop, Enabled, Hovered, Pressed);
+		DrawRoundedSurface(Ctx, Layout.m_Track, Feedback.m_Track, Feedback.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
+		DrawRoundedSurface(Ctx, Layout.m_Knob, Feedback.m_Knob, ColorRGBA(), ui_token::radius::PILL);
 	}
 
 	void DrawMarkedControl(const IUiContext &Ctx, const void *pId, const char *pMark, const CUIRect &Rect, const CUIRect *pHitRect)

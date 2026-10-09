@@ -1616,6 +1616,7 @@ namespace qm_card_catalog
 			{nullptr, "qm_scoreboard_color", nullptr},
 			{nullptr, "qm_scoreboard_opacity", nullptr},
 			{nullptr, "qm_ui_accent_color", nullptr},
+			{nullptr, "qm_ui_accent_opacity", nullptr},
 			{nullptr, "qm_ui_card_border_color", nullptr},
 			{nullptr, "qm_ui_card_borders", nullptr},
 			{nullptr, "qm_ui_card_color", nullptr},

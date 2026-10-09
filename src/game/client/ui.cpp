@@ -1899,9 +1899,10 @@ void CUi::DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pVa
 
 const SUiTheme &CUi::QmControlTheme()
 {
-	const std::array<unsigned, 7> aConfig = {
+	const std::array<unsigned, 8> aConfig = {
 		g_Config.m_QmUiColor, static_cast<unsigned>(g_Config.m_QmUiOpacity), g_Config.m_QmUiFocusColor,
-		g_Config.m_QmUiAccentColor, g_Config.m_QmUiSelectedColor, static_cast<unsigned>(g_Config.m_QmUiTextColorMode), g_Config.m_QmUiTextCustomColor};
+		g_Config.m_QmUiAccentColor, static_cast<unsigned>(g_Config.m_QmUiAccentOpacity), g_Config.m_QmUiSelectedColor,
+		static_cast<unsigned>(g_Config.m_QmUiTextColorMode), g_Config.m_QmUiTextCustomColor};
 	// 同帧所有控件复用主题；配置变化时才重新解析颜色与前景。
 	if(!m_HasQmControlTheme || m_aQmControlThemeConfig != aConfig)
 	{
