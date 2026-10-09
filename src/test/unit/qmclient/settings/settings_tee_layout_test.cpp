@@ -36,7 +36,8 @@ TEST(SettingsTeeLayout, EditorControlsStayInsideMeasuredHeightWithoutOverlapping
 			const CUIRect Bounds{10.0f, 20.0f, Width, Layout.m_Height};
 			std::vector<CUIRect> vControls{Layout.m_aPreviews[0], Layout.m_aPreviews[1], Layout.m_TargetLabel,
 				Layout.m_Identity, Layout.m_SkinLabel, Layout.m_SkinInput, Layout.m_RandomSkin,
-				Layout.m_CopyOtherSkin, Layout.m_Eyes, Layout.m_CustomColors, Layout.m_RandomColors};
+				Layout.m_Eyes, Layout.m_CustomColors, Layout.m_RandomColors};
+			vControls.insert(vControls.end(), Layout.m_aSkinTransfers.begin(), Layout.m_aSkinTransfers.end());
 			if(Colors)
 			{
 				vControls.push_back(Layout.m_Colors.m_BodyGroup);
@@ -72,6 +73,40 @@ TEST(SettingsTeeLayout, WideEditorUsesAvailableWidthAndNarrowEditorStacksFields)
 	ExpectInside(Narrow.m_Identity, Identity.m_NameInput);
 	ExpectInside(Narrow.m_Identity, Identity.m_ClanInput);
 	ExpectInside(Narrow.m_Identity, Identity.m_FlagButton);
+}
+
+TEST(SettingsTeeLayout, TransferButtonsStayBetweenPreviewsAtDifferentWidthsAndScales)
+{
+	for(const float Scale : {0.8f, 1.0f, 1.5f})
+	{
+		SCOPED_TRACE(Scale);
+		for(const float Width : {200.0f, 540.0f, 900.0f})
+		{
+			SCOPED_TRACE(Width);
+			SSettingsContentMetrics Metrics;
+			Metrics.m_UiScale = Scale;
+			Metrics.m_LineHeight *= Scale;
+			Metrics.m_InputHeight *= Scale;
+			Metrics.m_ButtonHeight *= Scale;
+			Metrics.m_LineSpacing *= Scale;
+			Metrics.m_SectionGap *= Scale;
+			const auto Layout = ResolveSettingsTeeEditorLayout({10.0f, 20.0f, Width * Scale, 0.0f}, Metrics, false);
+			const CUIRect &Player = Layout.m_aPreviews[0];
+			const CUIRect &Dummy = Layout.m_aPreviews[1];
+			for(size_t Index = 0; Index < Layout.m_aSkinTransfers.size(); ++Index)
+			{
+				const auto &Button = Layout.m_aSkinTransfers[Index];
+				EXPECT_GT(Button.x, Player.x + Player.w);
+				EXPECT_LT(Button.x + Button.w, Dummy.x);
+				EXPECT_GE(Button.y, Player.y);
+				EXPECT_LE(Button.y + Button.h, Player.y + Player.h);
+				EXPECT_FLOAT_EQ(Button.w, Button.h);
+				EXPECT_FLOAT_EQ(Button.w, Metrics.m_ButtonHeight);
+				if(Index > 0)
+					EXPECT_GT(Button.y, Layout.m_aSkinTransfers[Index - 1].y + Button.h);
+			}
+		}
+	}
 }
 
 TEST(SettingsTeeLayout, CustomColorsKeepBothPartsVisibleWhenResizing)

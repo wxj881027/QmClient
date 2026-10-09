@@ -89,14 +89,25 @@ TEST(SettingsTeeEmoteSlider, PointToSlotMapping)
 	EXPECT_EQ(ResolveTeeEmoteSliderTargetFromPoint(EmptyTrack, 150.0f), 0);
 }
 
-TEST(SettingsTeeEmoteSlider, StepClamping)
+TEST(SettingsTeeEmoteSlider, WheelStepsWrapInBothDirections)
 {
-	EXPECT_EQ(StepTeeEmoteSlider(0, -1), 0);
-	EXPECT_EQ(StepTeeEmoteSlider(0, 1), 1);
-	EXPECT_EQ(StepTeeEmoteSlider(NUM_EMOTES - 1, 1), NUM_EMOTES - 1);
+	EXPECT_EQ(StepTeeEmoteSlider(0, -1), NUM_EMOTES - 1);
+	EXPECT_EQ(StepTeeEmoteSlider(NUM_EMOTES - 1, 1), 0);
 	EXPECT_EQ(StepTeeEmoteSlider(3, -1), 2);
-	EXPECT_EQ(StepTeeEmoteSlider(2, 3), 5);
-	EXPECT_EQ(StepTeeEmoteSlider(4, -5), 0);
+	EXPECT_EQ(StepTeeEmoteSlider(0, 1), 1);
+}
+
+TEST(SettingsTeeEmoteSlider, RepeatedStepsCompleteACycleAndReturnToTheSameEmote)
+{
+	for(const int Direction : {-1, 1})
+	{
+		int Emote = 2;
+		for(int Step = 0; Step < NUM_EMOTES; ++Step)
+			Emote = StepTeeEmoteSlider(Emote, Direction);
+		EXPECT_EQ(Emote, 2);
+	}
+	EXPECT_EQ(StepTeeEmoteSlider(2, NUM_EMOTES * 3 + 1), 3);
+	EXPECT_EQ(StepTeeEmoteSlider(2, -NUM_EMOTES * 3 - 1), 1);
 }
 
 class CSettingsTeeEmoteSliderMotion : public ::testing::Test

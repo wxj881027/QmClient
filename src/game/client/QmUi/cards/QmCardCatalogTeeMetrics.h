@@ -60,7 +60,7 @@ struct SSettingsTeeEditorLayout
 	CUIRect m_SkinLabel;
 	CUIRect m_SkinInput;
 	CUIRect m_RandomSkin;
-	CUIRect m_CopyOtherSkin;
+	std::array<CUIRect, 3> m_aSkinTransfers;
 	CUIRect m_Eyes;
 	CUIRect m_CustomColors;
 	CUIRect m_RandomColors;
@@ -95,9 +95,6 @@ inline SSettingsTeeEditorLayout ResolveSettingsTeeEditorLayout(const CUIRect &Vi
 	Layout.m_Identity = NextRow(IdentityHeight);
 	CUIRect SkinRow = NextRow(Metrics.m_InputHeight);
 	SkinRow.VSplitLeft(std::min(SkinRow.w * 0.28f, 84.0f * Metrics.m_UiScale), &Layout.m_SkinLabel, &SkinRow);
-	// 皮肤行右侧依次为输入框、随机按钮与「从对方复制」按钮，两个图标按钮等宽并各占一个间隔。
-	SkinRow.VSplitRight(Metrics.m_ButtonHeight, &SkinRow, &Layout.m_CopyOtherSkin);
-	SkinRow.VSplitRight(std::min(Gap, SkinRow.w), nullptr, nullptr);
 	SkinRow.VSplitRight(Metrics.m_ButtonHeight, &Layout.m_SkinInput, &Layout.m_RandomSkin);
 	Layout.m_SkinInput.VSplitRight(Gap, &Layout.m_SkinInput, nullptr);
 	Layout.m_Eyes = NextRow(ResolveSettingsTeeEmoteSliderLayout({}, Metrics).m_Height);
@@ -109,7 +106,13 @@ inline SSettingsTeeEditorLayout ResolveSettingsTeeEditorLayout(const CUIRect &Vi
 		Previews.h = std::max(112.0f * Metrics.m_UiScale, Y - View.y - Gap);
 		Y = std::max(Y, Previews.y + Previews.h + Gap);
 	}
-	Previews.VSplitMid(&Layout.m_aPreviews[0], &Layout.m_aPreviews[1], Gap * 2.0f);
+	// 两张预览中间竖排三个方向明确的按钮，每个操作都可直接点击。
+	const float ButtonSize = Metrics.m_ButtonHeight;
+	Previews.VSplitMid(&Layout.m_aPreviews[0], &Layout.m_aPreviews[1], ButtonSize + Gap * 2.0f);
+	const float TransfersHeight = ButtonSize * 3.0f + Gap * 2.0f;
+	for(size_t Index = 0; Index < Layout.m_aSkinTransfers.size(); ++Index)
+		Layout.m_aSkinTransfers[Index] = {Previews.x + (Previews.w - ButtonSize) * 0.5f,
+			Previews.y + (Previews.h - TransfersHeight) * 0.5f + Index * (ButtonSize + Gap), ButtonSize, ButtonSize};
 	if(CustomColors)
 	{
 		Layout.m_Colors = ResolveSettingsTeeCustomColorsLayout({View.x, Y, View.w, 0.0f}, true, Metrics);

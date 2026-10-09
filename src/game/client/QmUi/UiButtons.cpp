@@ -76,10 +76,25 @@ namespace ui_widget
 		if(!Options.m_Enabled)
 			Foreground.a *= 0.65f;
 		pUi->DrawQmIcon(Label, Icon, pFallbackIcon, Foreground);
-		if(ShowSlash || !Options.m_Enabled)
+		if((ShowSlash || !Options.m_Enabled) && Label.w > 0.0f && Label.h > 0.0f)
 		{
-			const CQmIconSemanticColorScope SemanticColorScope;
-			pUi->DrawQmIcon(Label, EQmIcon::SLASH, FontIcons::FONT_ICON_SLASH, ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
+			// 禁用标记使用左上到右下的平头斜线，不依赖字体字形的方向和端点形状。
+			const float Inset = Label.w * 0.16f;
+			const vec2 Start(Label.x + Inset, Label.y + Inset);
+			const vec2 End(Label.x + Label.w - Inset, Label.y + Label.h - Inset);
+			const vec2 Normal = normalize(vec2(-(End.y - Start.y), End.x - Start.x));
+			IGraphics *pGraphics = pUi->Graphics();
+			pGraphics->TextureClear();
+			pGraphics->QuadsBegin();
+			const auto DrawSlash = [&](float Width, ColorRGBA SlashColor) {
+				const vec2 Offset = Normal * Width * 0.5f;
+				const IGraphics::CFreeformItem Quad(Start + Offset, Start - Offset, End + Offset, End - Offset);
+				pGraphics->SetColor(SlashColor);
+				pGraphics->QuadsDrawFreeform(&Quad, 1);
+			};
+			DrawSlash(Label.w * 0.18f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.65f));
+			DrawSlash(Label.w * 0.10f, ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
+			pGraphics->QuadsEnd();
 		}
 		return Options.m_Enabled ? pUi->DoButtonLogic(pId, Checked, &ButtonRect, Flags) : 0;
 	}

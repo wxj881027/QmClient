@@ -547,7 +547,8 @@ inline int ResolveTeeEmoteSliderTargetFromPoint(const CUIRect &TrackRect, float 
 
 inline int StepTeeEmoteSlider(int CurrentEmote, int Delta)
 {
-	return std::clamp(CurrentEmote + Delta, 0, NUM_EMOTES - 1);
+	const int Current = std::clamp(CurrentEmote, 0, NUM_EMOTES - 1);
+	return (Current + Delta % NUM_EMOTES + NUM_EMOTES) % NUM_EMOTES;
 }
 
 inline float ResolveQmVisualWeaponAnimationHeight(const SSettingsContentMetrics &Metrics, const bool SwitchEnabled, const bool ReloadEnabled)
