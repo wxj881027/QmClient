@@ -447,7 +447,7 @@ int CQmScreenshotManager::ScanCallback(const CFsFileInfo *pInfo, int IsDir, int 
 	return 0;
 }
 
-bool CQmScreenshotManager::LoadImage(IStorage *pStorage, const char *pPath, int StorageType, CImageInfo &Image)
+bool CQmScreenshotManager::LoadScreenshotImage(IStorage *pStorage, const char *pPath, int StorageType, CImageInfo &Image)
 {
 	return pPath != nullptr && CQmScreenshotImageJob::LoadImageFromDisk(pStorage, pPath, StorageType, 0, Image);
 }
@@ -491,7 +491,7 @@ int CQmScreenshotManager::TextWidth(const std::string &Text, int Scale)
 	return (int)Text.size() * 6 * Scale;
 }
 
-void CQmScreenshotManager::DrawText(CImageInfo &Image, const std::string &Text, int X, int Y, int Scale, ColorRGBA Color)
+void CQmScreenshotManager::DrawBitmapText(CImageInfo &Image, const std::string &Text, int X, int Y, int Scale, ColorRGBA Color)
 {
 	for(char RawCharacter : Text)
 	{
@@ -613,7 +613,7 @@ bool CQmScreenshotManager::DrawWatermark(IStorage *pStorage, CImageInfo &Image, 
 		if(UseFont)
 			Font.Draw(Image, Text, std::max(Margin, TextX), BandY + Margin + FontSize, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 		else
-			DrawText(Image, Text, std::max(Margin, TextX), BandY + Margin, Scale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+			DrawBitmapText(Image, Text, std::max(Margin, TextX), BandY + Margin, Scale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 	}
 	return true;
 }
@@ -623,7 +623,7 @@ bool CQmScreenshotManager::ApplyWatermark(IStorage *pStorage, const char *pSourc
 	if(pStorage == nullptr || pSourcePath == nullptr || pTargetPath == nullptr || pTargetPath[0] == '\0')
 		return false;
 	CImageInfo Image;
-	if(!LoadImage(pStorage, pSourcePath, SourceStorageType, Image) || !DrawWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options.m_Position))
+	if(!LoadScreenshotImage(pStorage, pSourcePath, SourceStorageType, Image) || !DrawWatermark(pStorage, Image, BuildWatermarkText(pStorage, pSourcePath, SourceStorageType, Options), Options.m_Position))
 	{
 		Image.Free();
 		return false;

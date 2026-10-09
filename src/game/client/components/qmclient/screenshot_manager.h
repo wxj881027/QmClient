@@ -141,10 +141,10 @@ private:
 	};
 
 	static int ScanCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
-	static bool LoadImage(IStorage *pStorage, const char *pPath, int StorageType, CImageInfo &Image);
+	static bool LoadScreenshotImage(IStorage *pStorage, const char *pPath, int StorageType, CImageInfo &Image);
 	static bool EnsureRgba(CImageInfo &Image);
 	static void BlendPixel(CImageInfo &Image, int X, int Y, ColorRGBA Color);
-	static void DrawText(CImageInfo &Image, const std::string &Text, int X, int Y, int Scale, ColorRGBA Color);
+	static void DrawBitmapText(CImageInfo &Image, const std::string &Text, int X, int Y, int Scale, ColorRGBA Color);
 	static int TextWidth(const std::string &Text, int Scale);
 	static std::string ThumbnailKey(const char *pPath, int StorageType);
 
