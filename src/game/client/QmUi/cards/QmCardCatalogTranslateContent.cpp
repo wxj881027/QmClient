@@ -42,6 +42,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace FontIcons;
@@ -53,6 +54,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	// 标签宽度必须按当前卡片内容计算；沿用整页宽度会把端点和模型输入框压缩到不可读。
 	const float LabelWidth = std::min({CardLabelWidth, Content.w * 0.45f, std::clamp(Content.w * 0.30f, 150.0f, 260.0f)});
 	const float SmallSize = CurrentSettingsContentMetrics().m_SmallSize;
+	CUIRect Row, LabelCol, ControlCol;
 	IUiContext TextInputCtx = SettingsUiContext("settings_qmclient_translate_text_inputs", BodySize / ui_token::font::BODY);
 	auto RenderCheckbox = [this, PrewarmOnly](const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float VMargin) {
 		CUIRect CheckBoxRect;
@@ -62,7 +64,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	auto RenderLabel = [this](const char *pTextId, CUIRect *pRect, const char *pText, float FontSize, int TextAlign = TEXTALIGN_ML, const SLabelProperties &LabelProps = {}) {
 		DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, pTextId, pRect, pText, FontSize, TextAlign, LabelProps, (int)pRect->w);
 	};
-	auto RenderSliderWithValueInput = [this, PrewarmOnly](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
+	auto RenderSliderWithValueInput = [this, PrewarmOnly, &Row, &LabelCol](const void *pId, const CUIRect &ControlColumn, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pId, &Row, pValue, &LabelCol);
 		RenderQmSettingsSliderWithValueInput(pId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 	};
 	const auto RenderHelp = [this, &Content, LabelWidth, SmallSize, LineSpacing](const char *pText, float FontSize = 0.0f) {
@@ -75,7 +78,12 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		Props.m_EnableWidthCheck = false;
 		Ui()->DoLabel(&HelpRow, pText, TextSize, TEXTALIGN_ML, Props);
 	};
-	CUIRect Row, LabelCol, ControlCol;
+	// 标题和文本输入共用整行提示，内部输入不改变已登记的标题锚点。
+	const auto RenderTextInput = [this, &TextInputCtx, &Row, &LabelCol](CLineInput *pInput, const CUIRect &Rect, auto &&...Arguments) {
+		if(pInput != nullptr)
+			GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInput, &Row, pInput->GetString(), &LabelCol);
+		return ui_widget::InputField(TextInputCtx, pInput, Rect, std::forward<decltype(Arguments)>(Arguments)...);
+	};
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	RenderCheckbox(&g_Config.m_QmTranslateAuto, "Auto translate received messages", Localize("Auto translate received messages"), &g_Config.m_QmTranslateAuto, &Row, LineHeight);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -103,7 +111,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 	CUIElement &TranslationServiceLabel = SettingsTextElement(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-translation-service");
 	DoSettingsLabelStreamed(TranslationServiceLabel, &LabelCol, Localize("Translation service"), BodySize, TEXTALIGN_ML);
-	const int BackendSelectedNew = DoSettingsDropDown(&ControlCol, BackendSelectedOld, TranslateBackendDropDownNames.data(), TranslateBackendDropDownNames.size(), s_TranslateBackendDropDownState, {}, g_Config.m_QmTranslateBackend);
+	const int BackendSelectedNew = DoSettingsDropDown(&ControlCol, BackendSelectedOld, TranslateBackendDropDownNames.data(), TranslateBackendDropDownNames.size(), s_TranslateBackendDropDownState, {}, g_Config.m_QmTranslateBackend, nullptr, &Row);
 	if(!PrewarmOnly && !Ui()->RenderOnly())
 		NTranslateUi::CommitBackend(g_Config.m_QmTranslateBackend, sizeof(g_Config.m_QmTranslateBackend), BackendSelectedOld, BackendSelectedNew);
 	const bool IsTencentCloudBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "tencentcloud") == 0;
@@ -118,20 +126,20 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	// MyMemory 免注册说明
 	if(IsMymemoryBackend)
 	{
-		RenderHelp(Localize("MyMemory needs no registration (anonymous daily quota)"));
+		GameClient()->m_Tooltips.DoToolTipForRect(&s_TranslateBackendDropDownState, &Row, Localize("MyMemory needs no registration (anonymous daily quota)"));
 	}
 
 	// DeepL 说明与 API Key 输入
 	if(IsDeeplBackend)
 	{
-		RenderHelp(Localize("DeepL API quota depends on your subscription. Get an API key at deepl.com."));
+		GameClient()->m_Tooltips.DoToolTipForRect(&s_TranslateBackendDropDownState, &Row, Localize("DeepL API quota depends on your subscription. Get an API key at deepl.com."));
 
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 		RenderLabel("qmclient-translate-deepl-key", &LabelCol, Localize("API key"), BodySize);
 		static CLineInput s_TranslateDeeplKey(g_Config.m_QmTranslateDeeplKey, sizeof(g_Config.m_QmTranslateDeeplKey));
 		s_TranslateDeeplKey.SetHidden(true);
-		ui_widget::InputField(TextInputCtx, &s_TranslateDeeplKey, ControlCol, "", BodySize);
+		RenderTextInput(&s_TranslateDeeplKey, ControlCol, "", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 
@@ -141,14 +149,14 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 		RenderLabel("qmclient-translate-baidu-app-id", &LabelCol, Localize("APP ID"), BodySize);
 		static CLineInput s_TranslateBaiduAppId(g_Config.m_QmTranslateBaiduAppId, sizeof(g_Config.m_QmTranslateBaiduAppId));
-		ui_widget::InputField(TextInputCtx, &s_TranslateBaiduAppId, ControlCol, "", BodySize);
+		RenderTextInput(&s_TranslateBaiduAppId, ControlCol, "", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 		RenderLabel("qmclient-translate-baidu-key", &LabelCol, Localize("API key"), BodySize);
 		static CLineInput s_TranslateBaiduKey(g_Config.m_QmTranslateBaiduKey, sizeof(g_Config.m_QmTranslateBaiduKey));
 		s_TranslateBaiduKey.SetHidden(true);
-		ui_widget::InputField(TextInputCtx, &s_TranslateBaiduKey, ControlCol, "", BodySize);
+		RenderTextInput(&s_TranslateBaiduKey, ControlCol, "", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 
@@ -207,10 +215,10 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 		// FTAPI 警告提示
-		RenderHelp(Localize("⚠️ FTAPI is a free service. Excessive use may cause service suspension."), BodySize * 0.8f);
+		GameClient()->m_Tooltips.DoToolTipForRect(&g_Config.m_QmTranslateFtapiAutoEnable, &Row, Localize("⚠️ FTAPI is a free service. Excessive use may cause service suspension."));
 	}
 
-	auto RenderLanguageDropDownWithCustomInput = [this, BodySize, PrewarmOnly, &TextInputCtx](const CUIRect &ControlColumn, const char *const *apNames, const char *const *apCodes, int Count, CUi::SDropDownState &DropDownState, char *pConfigValue, size_t ConfigValueSize, CLineInput &LineInput, const char *pEmptyText) {
+	auto RenderLanguageDropDownWithCustomInput = [this, BodySize, PrewarmOnly, &RenderTextInput](const CUIRect &HelpRow, const CUIRect &ControlColumn, const char *const *apNames, const char *const *apCodes, int Count, CUi::SDropDownState &DropDownState, char *pConfigValue, size_t ConfigValueSize, CLineInput &LineInput, const char *pEmptyText) {
 		CUIRect DropRect, EditRect;
 		ControlColumn.VSplitMid(&DropRect, &EditRect);
 		DropRect.VMargin(1.0f, &DropRect);
@@ -230,7 +238,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		std::vector<const char *> vNames(apNames, apNames + Count);
 		vNames.push_back(Localize("Custom…"));
 		const int SelectedIndex = NTranslateUi::CustomSelectionIndex(OldSel, Count);
-		const int NewSel = DoSettingsDropDown(&DropRect, SelectedIndex, vNames.data(), static_cast<int>(vNames.size()), DropDownState, {}, pConfigValue);
+		const int NewSel = DoSettingsDropDown(&DropRect, SelectedIndex, vNames.data(), static_cast<int>(vNames.size()), DropDownState, {}, pConfigValue, nullptr, &HelpRow);
 		if(!PrewarmOnly && !Ui()->RenderOnly())
 			NTranslateUi::CommitSelection(pConfigValue, ConfigValueSize, apCodes, Count, SelectedIndex, NewSel);
 
@@ -245,7 +253,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		LanguageInputOptions.m_FontSize = BodySize;
 		LanguageInputOptions.m_Corners = IGraphics::CORNER_ALL;
 		LanguageInputOptions.m_TextAlign = TEXTALIGN_MC;
-		ui_widget::InputField(TextInputCtx, &LineInput, EditRect, LanguageInputOptions);
+		RenderTextInput(&LineInput, EditRect, LanguageInputOptions);
 		if(WasActive && (SubmitPressed || ClickedOutside))
 		{
 			str_copy(pConfigValue, LineInput.GetString(), ConfigValueSize);
@@ -267,7 +275,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		static CUi::SDropDownState s_TargetLangDropDown;
 
 		static CLineInput s_TranslateTarget(g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget));
-		RenderLanguageDropDownWithCustomInput(ControlCol, LangNames.data(), LangCodes.data(), LangCodes.size(), s_TargetLangDropDown, g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), s_TranslateTarget, "zh");
+		RenderLanguageDropDownWithCustomInput(Row, ControlCol, LangNames.data(), LangCodes.data(), LangCodes.size(), s_TargetLangDropDown, g_Config.m_QmTranslateTarget, sizeof(g_Config.m_QmTranslateTarget), s_TranslateTarget, "zh");
 	}
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 	// Endpoint 配置 - 根据后端类型显示不同的端点输入
@@ -278,7 +286,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		RenderLabel("qmclient-translate-tencent-endpoint", &LabelCol, Localize("Endpoint"), BodySize);
 		static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateTcEndpoint, sizeof(g_Config.m_QmTranslateTcEndpoint));
 		s_TranslateEndpoint.SetEmptyText("https://tmt.tencentcloudapi.com/");
-		ui_widget::InputField(TextInputCtx, &s_TranslateEndpoint, ControlCol, "https://tmt.tencentcloudapi.com/", BodySize);
+		RenderTextInput(&s_TranslateEndpoint, ControlCol, "https://tmt.tencentcloudapi.com/", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 	else if(IsLibreTranslateBackend)
@@ -288,7 +296,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		RenderLabel("qmclient-translate-aliyun-endpoint", &LabelCol, Localize("Endpoint"), BodySize);
 		static CLineInput s_TranslateEndpoint(g_Config.m_QmTranslateLibreEndpoint, sizeof(g_Config.m_QmTranslateLibreEndpoint));
 		s_TranslateEndpoint.SetEmptyText("http://localhost:5000");
-		ui_widget::InputField(TextInputCtx, &s_TranslateEndpoint, ControlCol, "http://localhost:5000", BodySize);
+		RenderTextInput(&s_TranslateEndpoint, ControlCol, "http://localhost:5000", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 	// LLM 后端的端点配置在 Provider 选择区域显示
@@ -300,7 +308,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		RenderLabel("qmclient-translate-region", &LabelCol, Localize("Region"), BodySize);
 		static CLineInput s_TranslateRegion(g_Config.m_QmTranslateTcRegion, sizeof(g_Config.m_QmTranslateTcRegion));
 		s_TranslateRegion.SetEmptyText("ap-guangzhou");
-		ui_widget::InputField(TextInputCtx, &s_TranslateRegion, ControlCol, "ap-guangzhou", BodySize);
+		RenderTextInput(&s_TranslateRegion, ControlCol, "ap-guangzhou", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 		Content.HSplitTop(LineHeight, &Row, &Content);
@@ -308,7 +316,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		RenderLabel("qmclient-translate-secret-id", &LabelCol, Localize("SecretId"), BodySize);
 		static CLineInput s_TranslateSecretId(g_Config.m_QmTranslateTcSecretId, sizeof(g_Config.m_QmTranslateTcSecretId));
 		s_TranslateSecretId.SetEmptyText(Localize("Tencent Cloud SecretId"));
-		ui_widget::InputField(TextInputCtx, &s_TranslateSecretId, ControlCol, Localize("Tencent Cloud SecretId"), BodySize);
+		RenderTextInput(&s_TranslateSecretId, ControlCol, Localize("Tencent Cloud SecretId"), BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 		Content.HSplitTop(LineHeight, &Row, &Content);
@@ -317,7 +325,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		static CLineInput s_TranslateSecretKey(g_Config.m_QmTranslateTcSecretKey, sizeof(g_Config.m_QmTranslateTcSecretKey));
 		s_TranslateSecretKey.SetEmptyText(Localize("Tencent Cloud SecretKey"));
 		s_TranslateSecretKey.SetHidden(true);
-		ui_widget::InputField(TextInputCtx, &s_TranslateSecretKey, ControlCol, Localize("Tencent Cloud SecretKey"), BodySize);
+		RenderTextInput(&s_TranslateSecretKey, ControlCol, Localize("Tencent Cloud SecretKey"), BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 	else if(IsLibreTranslateBackend)
@@ -327,7 +335,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		RenderLabel("qmclient-translate-api-key", &LabelCol, Localize("API key"), BodySize);
 		static CLineInput s_TranslateKey(g_Config.m_QmTranslateLibreKey, sizeof(g_Config.m_QmTranslateLibreKey));
 		s_TranslateKey.SetHidden(true);
-		ui_widget::InputField(TextInputCtx, &s_TranslateKey, ControlCol, "", BodySize);
+		RenderTextInput(&s_TranslateKey, ControlCol, "", BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 
@@ -347,7 +355,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 		CUIElement &LlmProviderLabel = SettingsTextElement(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, "qmclient-llm-provider");
 		DoSettingsLabelStreamed(LlmProviderLabel, &LabelCol, Localize("LLM provider"), BodySize, TEXTALIGN_ML);
-		const int NewProvider = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmProvider, LlmProviderDropDownNames.data(), LlmProviderDropDownNames.size(), s_LlmProviderDropDownState, {}, &g_Config.m_QmTranslateLlmProvider);
+		const int NewProvider = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmProvider, LlmProviderDropDownNames.data(), LlmProviderDropDownNames.size(), s_LlmProviderDropDownState, {}, &g_Config.m_QmTranslateLlmProvider, nullptr, &Row);
 		// 写回前校验范围，防止异常返回值（如越界防御收敛出的 -1）污染配置
 		if(!PrewarmOnly && !Ui()->RenderOnly() && NewProvider != g_Config.m_QmTranslateLlmProvider && NewProvider >= 0 && NewProvider < static_cast<int>(LlmProviderDropDownNames.size()))
 		{
@@ -362,7 +370,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			Content.HSplitTop(LineHeight, &Row, &Content);
 			Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-llm-authentication", &LabelCol, Localize("Authentication"), BodySize);
-			const int Auth = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomAuth, AuthNames.data(), AuthNames.size(), s_LlmCustomAuth, {}, &g_Config.m_QmTranslateLlmCustomAuth);
+			const int Auth = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomAuth, AuthNames.data(), AuthNames.size(), s_LlmCustomAuth, {}, &g_Config.m_QmTranslateLlmCustomAuth, nullptr, &Row);
 			if(!PrewarmOnly && !Ui()->RenderOnly() && Auth >= 0 && Auth < 2)
 				g_Config.m_QmTranslateLlmCustomAuth = Auth;
 			Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -371,14 +379,14 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			Content.HSplitTop(LineHeight, &Row, &Content);
 			Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 			RenderLabel("qmclient-llm-thinking-parameters", &LabelCol, Localize("Thinking parameters"), BodySize);
-			const int Thinking = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomThinking, ThinkingNames.data(), ThinkingNames.size(), s_LlmCustomThinking, {}, &g_Config.m_QmTranslateLlmCustomThinking);
+			const int Thinking = DoSettingsDropDown(&ControlCol, g_Config.m_QmTranslateLlmCustomThinking, ThinkingNames.data(), ThinkingNames.size(), s_LlmCustomThinking, {}, &g_Config.m_QmTranslateLlmCustomThinking, nullptr, &Row);
+			GameClient()->m_Tooltips.DoToolTipForRect(&s_LlmCustomThinking, &Row, Localize("Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled."));
 			if(!PrewarmOnly && !Ui()->RenderOnly() && Thinking >= 0 && Thinking < 4)
 				g_Config.m_QmTranslateLlmCustomThinking = Thinking;
 			Content.HSplitTop(LineSpacing, nullptr, &Content);
 			Content.HSplitTop(LineHeight, &Row, &Content);
 			RenderCheckbox(&g_Config.m_QmTranslateLlmCustomParameters, "Send sampling and token limit parameters", Localize("Send sampling and token limit parameters"), &g_Config.m_QmTranslateLlmCustomParameters, &Row, LineHeight);
 			Content.HSplitTop(LineSpacing, nullptr, &Content);
-			RenderHelp(Localize("Thinking controls depend on the model server. Server defaults do not guarantee that thinking is disabled."));
 		}
 
 		// 各 Provider 的 API Key 输入框（静态变量，分别绑定到不同配置）
@@ -425,7 +433,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 		Ui()->DoLabel(&LabelCol, pKeyLabel, BodySize, TEXTALIGN_ML);
 		if(pActiveKeyInput)
-			ui_widget::InputField(TextInputCtx, pActiveKeyInput, ControlCol, pActiveKeyInput->GetEmptyText(), BodySize);
+			RenderTextInput(pActiveKeyInput, ControlCol, pActiveKeyInput->GetEmptyText(), BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 		// 各 Provider 的模型配置
@@ -479,7 +487,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		if(pActiveModelInput && vModelPresets.empty())
 		{
 			// 自定义 Provider 无预设，保持纯文本输入
-			ui_widget::InputField(TextInputCtx, pActiveModelInput, ControlCol, pActiveModelInput->GetEmptyText(), BodySize);
+			RenderTextInput(pActiveModelInput, ControlCol, pActiveModelInput->GetEmptyText(), BodySize);
 		}
 		else if(pActiveModelInput)
 		{
@@ -506,7 +514,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			ModelEditRect.VMargin(1.0f, &ModelEditRect);
 
 			const int ModelOldSel = FindPresetIndex(pModelConfigValue);
-			const int ModelNewSel = DoSettingsDropDown(&ModelDropRect, ModelOldSel, vModelNames.data(), vModelNames.size(), s_LlmModelDropDownState, {}, pModelConfigValue);
+			const int ModelNewSel = DoSettingsDropDown(&ModelDropRect, ModelOldSel, vModelNames.data(), vModelNames.size(), s_LlmModelDropDownState, {}, pModelConfigValue, nullptr, &Row);
 			if(ModelNewSel >= 0 && ModelNewSel != ModelOldSel && ModelNewSel != CustomIndex)
 				str_copy(pModelConfigValue, vModelPresets[ModelNewSel], ModelConfigSize);
 
@@ -521,7 +529,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			ModelInputOptions.m_FontSize = BodySize;
 			ModelInputOptions.m_Corners = IGraphics::CORNER_ALL;
 			ModelInputOptions.m_TextAlign = TEXTALIGN_MC;
-			ui_widget::InputField(TextInputCtx, pActiveModelInput, ModelEditRect, ModelInputOptions);
+			RenderTextInput(pActiveModelInput, ModelEditRect, ModelInputOptions);
 			if(ModelWasActive && (ModelSubmitPressed || ModelClickedOutside))
 				str_copy(pModelConfigValue, pActiveModelInput->GetString(), ModelConfigSize);
 		}
@@ -540,7 +548,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		static CUi::SDropDownState s_OutTargetLangDropDown;
 
 		static CLineInput s_TargetLang(g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget));
-		RenderLanguageDropDownWithCustomInput(ControlCol, apOutTargetNames.data(), apOutTargetCodes.data(), apOutTargetCodes.size(), s_OutTargetLangDropDown, g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), s_TargetLang, "en");
+		RenderLanguageDropDownWithCustomInput(Row, ControlCol, apOutTargetNames.data(), apOutTargetCodes.data(), apOutTargetCodes.size(), s_OutTargetLangDropDown, g_Config.m_QmTranslateOutgoingTarget, sizeof(g_Config.m_QmTranslateOutgoingTarget), s_TargetLang, "en");
 	}
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
@@ -605,7 +613,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			break;
 		}
 		if(pActiveEndpointInput)
-			ui_widget::InputField(TextInputCtx, pActiveEndpointInput, ControlCol, pActiveEndpointInput->GetEmptyText(), BodySize);
+			RenderTextInput(pActiveEndpointInput, ControlCol, pActiveEndpointInput->GetEmptyText(), BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 
@@ -617,6 +625,8 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		RenderLabel("qmclient-translate-llm-concurrency", &LabelCol, Localize("Concurrency (0 = auto)"), BodySize);
 		static int s_LlmConcurrencySelectorId;
 		RenderSliderWithNumberInput(&s_LlmConcurrencySelectorId, ControlCol, &g_Config.m_QmTranslateLlmConcurrency, 0, 20);
+		if(g_Config.m_QmTranslateLlmProvider == 0)
+			GameClient()->m_Tooltips.DoToolTipForRect(&s_LlmConcurrencySelectorId, &Row, Localize("Zhipu free models allow only 1 concurrent request"));
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 		// 显示当前有效并发数
@@ -639,12 +649,6 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		}
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 
-		// 智谱免费档并发限制提示
-		if(g_Config.m_QmTranslateLlmProvider == 0)
-		{
-			RenderHelp(Localize("Zhipu free models allow only 1 concurrent request"));
-		}
-
 		// 思考模式开关
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		RenderCheckbox(&g_Config.m_QmTranslateLlmEnableThinking, "Enable thinking mode (slower)", Localize("Enable thinking mode (slower)"), &g_Config.m_QmTranslateLlmEnableThinking, &Row, LineHeight);
@@ -665,7 +669,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 
 			if(pHint)
 			{
-				RenderHelp(pHint);
+				GameClient()->m_Tooltips.DoToolTipForRect(&g_Config.m_QmTranslateLlmEnableThinking, &Row, pHint);
 			}
 		}
 
@@ -675,7 +679,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 		RenderLabel("qmclient-translate-custom-prompt-template", &LabelCol, Localize("Custom prompt template"), BodySize);
 		static CLineInput s_CustomPrompt(g_Config.m_QmTranslateSystemPrompt, sizeof(g_Config.m_QmTranslateSystemPrompt));
 		s_CustomPrompt.SetEmptyText(Localize("Leave empty to use default prompt"));
-		ui_widget::InputField(TextInputCtx, &s_CustomPrompt, ControlCol, Localize("Leave empty to use default prompt"), BodySize);
+		RenderTextInput(&s_CustomPrompt, ControlCol, Localize("Leave empty to use default prompt"), BodySize);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	}
 
@@ -695,7 +699,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			static CUi::SDropDownState s_SourceLangDropDown;
 
 			static CLineInput s_SourceLang(g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource));
-			RenderLanguageDropDownWithCustomInput(ControlCol, apSourceNames.data(), apSourceCodes.data(), apSourceCodes.size(), s_SourceLangDropDown, g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource), s_SourceLang, "auto");
+			RenderLanguageDropDownWithCustomInput(Row, ControlCol, apSourceNames.data(), apSourceCodes.data(), apSourceCodes.size(), s_SourceLangDropDown, g_Config.m_QmTranslateSource, sizeof(g_Config.m_QmTranslateSource), s_SourceLang, "auto");
 		}
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 
@@ -710,7 +714,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			};
 			static CUi::SDropDownState s_IncomingModeDropDown;
 			const int OldIncomingMode = std::clamp(g_Config.m_QmTranslateAutoMode, 0, 1);
-			const int NewIncomingMode = DoSettingsDropDown(&ControlCol, OldIncomingMode, apIncomingModeNames.data(), apIncomingModeNames.size(), s_IncomingModeDropDown, {}, &g_Config.m_QmTranslateAutoMode);
+			const int NewIncomingMode = DoSettingsDropDown(&ControlCol, OldIncomingMode, apIncomingModeNames.data(), apIncomingModeNames.size(), s_IncomingModeDropDown, {}, &g_Config.m_QmTranslateAutoMode, nullptr, &Row);
 			if(NewIncomingMode != OldIncomingMode)
 				g_Config.m_QmTranslateAutoMode = NewIncomingMode;
 		}
@@ -727,7 +731,7 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 			};
 			static CUi::SDropDownState s_OutgoingModeDropDown;
 			const int OldMode = std::clamp(g_Config.m_QmTranslateAutoOutgoingMode, 0, 1);
-			const int NewMode = DoSettingsDropDown(&ControlCol, OldMode, apOutgoingModeNames.data(), apOutgoingModeNames.size(), s_OutgoingModeDropDown, {}, &g_Config.m_QmTranslateAutoOutgoingMode);
+			const int NewMode = DoSettingsDropDown(&ControlCol, OldMode, apOutgoingModeNames.data(), apOutgoingModeNames.size(), s_OutgoingModeDropDown, {}, &g_Config.m_QmTranslateAutoOutgoingMode, nullptr, &Row);
 			if(NewMode != OldMode)
 				g_Config.m_QmTranslateAutoOutgoingMode = NewMode;
 		}

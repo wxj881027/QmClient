@@ -507,7 +507,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 				State.m_SelectionPopupContext.m_pScrollRegion = &ScrollRegion;
 				CUi::SDropDownProperties DropDownProps;
 				DropDownProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
-				const int NewValue = DoSettingsDropDown(&DropDown, Current, ppNames, Count, State, DropDownProps, pConfigValue);
+				const int NewValue = DoSettingsDropDown(&DropDown, Current, ppNames, Count, State, DropDownProps, pConfigValue, nullptr, &Row);
 				if(NewValue != Current)
 					OnChanged(NewValue);
 			};
@@ -775,7 +775,7 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const char *apTextModes[] = {Localize("Auto"), Localize("White"), Localize("Black"), Localize("Custom")};
 			CUi::SDropDownProperties TextModeProps;
 			TextModeProps.m_pPopupViewport = &GraphicsPage.m_ScrollViewport;
-			const int TextMode = DoSettingsDropDown(&TextModeControl, g_Config.m_QmUiTextColorMode, apTextModes, std::size(apTextModes), s_TextColorModeState, TextModeProps, &g_Config.m_QmUiTextColorMode);
+			const int TextMode = DoSettingsDropDown(&TextModeControl, g_Config.m_QmUiTextColorMode, apTextModes, std::size(apTextModes), s_TextColorModeState, TextModeProps, &g_Config.m_QmUiTextColorMode, nullptr, &TextModeRow);
 			if(TextMode != g_Config.m_QmUiTextColorMode)
 			{
 				g_Config.m_QmUiTextColorMode = TextMode;

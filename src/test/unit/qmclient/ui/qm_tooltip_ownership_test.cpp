@@ -73,7 +73,6 @@ namespace
 		bool m_InputAvailable = true;
 		const void *m_pHotItem = nullptr;
 		bool MouseHovered(const CUIRect *pRect) const { return m_InputAvailable && pRect->Inside(m_Position); }
-		vec2 MousePos() const { return m_Position; }
 		const void *HotItem() const { return m_pHotItem; }
 	};
 }
@@ -176,4 +175,146 @@ TEST(QmConfigHintText, UsesCurrentCardOverviewUntilOptionDescriptionIsAvailable)
 	EXPECT_STREQ(Hint.Text(), "Automatically add a watermark\nqm_screenshot_watermark");
 	Hint.SetFallbackDescription(nullptr);
 	EXPECT_STREQ(Hint.Text(), "Automatically add a watermark\nqm_screenshot_watermark");
+}
+
+TEST(QmTooltips, SettingsHintsHaveNoHoverDelayOrBounce)
+{
+	CTooltip Tooltip;
+	Tooltip.m_SmallInstant = true;
+	EXPECT_FLOAT_EQ(QmTooltipDelay(Tooltip), 0.0f);
+	EXPECT_FALSE(QmTooltipAnimate(Tooltip, true));
+	EXPECT_FLOAT_EQ(QmTooltipScale(0.0f, QmTooltipAnimate(Tooltip, true)), 1.0f);
+}
+
+TEST(QmTooltips, OrdinaryBubblesKeepDelayAndRespectDisabledMotion)
+{
+	CTooltip Tooltip;
+	EXPECT_FLOAT_EQ(QmTooltipDelay(Tooltip), 0.75f);
+	EXPECT_TRUE(QmTooltipAnimate(Tooltip, true));
+	EXPECT_FALSE(QmTooltipAnimate(Tooltip, false));
+	Tooltip.m_Immediate = true;
+	EXPECT_FLOAT_EQ(QmTooltipDelay(Tooltip), 0.0f);
+}
+
+TEST(QmTooltips, PopupMotionKeepsTheSameCenterThroughOvershoot)
+{
+	const CUIRect Screen{0, 0, 600, 400};
+	const CUIRect Fixed = QmTooltipRect({200, 180, 100, 20}, Screen, vec2(120, 40), 5);
+	const auto Entering = QmTooltipAnimatedRect(Fixed, Screen, QmTooltipScale(0.0f, true));
+	const auto Overshoot = QmTooltipAnimatedRect(Fixed, Screen, QmTooltipScale(0.12f, true));
+	EXPECT_FLOAT_EQ(Entering.Center().x, Fixed.Center().x);
+	EXPECT_FLOAT_EQ(Entering.Center().y, Fixed.Center().y);
+	EXPECT_FLOAT_EQ(Overshoot.Center().x, Fixed.Center().x);
+	EXPECT_FLOAT_EQ(Overshoot.Center().y, Fixed.Center().y);
+	EXPECT_GT(Overshoot.w, Fixed.w);
+}
+
+TEST(QmTooltips, OvershootAtViewportEdgeKeepsCenterAndFitsScreen)
+{
+	const CUIRect Screen{100, 50, 300, 200};
+	const CUIRect Fixed{100, 50, 150, 40};
+	const auto Rect = QmTooltipAnimatedRect(Fixed, Screen, QmTooltipScale(0.12f, true));
+	EXPECT_FLOAT_EQ(Rect.Center().x, Fixed.Center().x);
+	EXPECT_FLOAT_EQ(Rect.Center().y, Fixed.Center().y);
+	EXPECT_GE(Rect.x, Screen.x);
+	EXPECT_GE(Rect.y, Screen.y);
+	EXPECT_LE(Rect.x + Rect.w, Screen.x + Screen.w);
+	EXPECT_LE(Rect.y + Rect.h, Screen.y + Screen.h);
+}
+
+TEST(QmTooltips, DisappearingTargetExpiresAndCanRegisterAgain)
+{
+	CTooltip Tooltip;
+	Tooltip.m_RegisteredFrame = 42;
+	EXPECT_TRUE(QmTooltipRegistered(Tooltip, 42));
+	EXPECT_FALSE(QmTooltipRegistered(Tooltip, 43));
+	Tooltip.m_RegisteredFrame = 44;
+	EXPECT_TRUE(QmTooltipRegistered(Tooltip, 44));
+}
+
+TEST(QmTooltips, SpecificHelpWinsOverAutomaticDescriptionInEitherRegistrationOrder)
+{
+	CTooltip Specific, Fallback;
+	Specific.m_RegisteredFrame = Fallback.m_RegisteredFrame = 1;
+	Fallback.m_Fallback = true;
+	EXPECT_FALSE(QmTooltipMayReplace(Fallback, Specific, 1, true));
+	EXPECT_TRUE(QmTooltipMayReplace(Specific, Fallback, 1, true));
+}
+
+TEST(QmTooltips, MovingFromSpecificHelpToAnotherOptionActivatesItsFallbackImmediately)
+{
+	CTooltip Previous, Next;
+	Previous.m_RegisteredFrame = Next.m_RegisteredFrame = 1;
+	Next.m_Fallback = true;
+	EXPECT_TRUE(QmTooltipMayReplace(Next, Previous, 1, false));
+	EXPECT_TRUE(QmTooltipMayReplace(Next, Previous, 2, true));
+}
+
+TEST(QmTooltips, RectangleHintDoesNotWaitForHotItemOrMoveItsAnchorWithThePointer)
+{
+	CTooltip Tooltip;
+	Tooltip.m_Rect = {0, 0, 100, 20};
+	Tooltip.m_Anchor = {0, 0, 40, 20};
+	Tooltip.m_HoverByRect = true;
+	STooltipPointer Pointer;
+	Pointer.m_pHotItem = nullptr;
+	const CUIRect Screen{0, 0, 600, 400};
+	const auto Before = QmTooltipRect(Tooltip.m_Anchor, Screen, vec2(120, 40), 5);
+	EXPECT_TRUE(QmTooltipHovered(Tooltip, Pointer));
+	Pointer.m_Position = vec2(90, 10);
+	EXPECT_TRUE(QmTooltipHovered(Tooltip, Pointer));
+	const auto After = QmTooltipRect(Tooltip.m_Anchor, Screen, vec2(120, 40), 5);
+	EXPECT_FLOAT_EQ(Before.x, After.x);
+	EXPECT_FLOAT_EQ(Before.y, After.y);
+}
+
+TEST(QmTooltips, InnerControlFallbackKeepsTheRowsRegisteredAnchorAndHitArea)
+{
+	CTooltip Row;
+	Row.m_RegisteredFrame = 1;
+	Row.m_Fallback = true;
+	EXPECT_FALSE(QmTooltipMayUpdate(Row, 1, true, true));
+	EXPECT_TRUE(QmTooltipMayUpdate(Row, 1, false, true));
+	EXPECT_TRUE(QmTooltipMayUpdate(Row, 1, true, false));
+	EXPECT_TRUE(QmTooltipMayUpdate(Row, 2, true, true));
+}
+
+TEST(QmTooltips, TitleAnchorRefinesAutomaticHintAndSurvivesLaterInnerRegistration)
+{
+	CTooltip Automatic;
+	Automatic.m_RegisteredFrame = 1;
+	Automatic.m_Fallback = true;
+	EXPECT_TRUE(QmTooltipMayUpdate(Automatic, 1, true, true, true));
+	Automatic.m_HasTextAnchor = true;
+	EXPECT_FALSE(QmTooltipMayUpdate(Automatic, 1, true, true));
+	EXPECT_FALSE(QmTooltipMayUpdate(Automatic, 1, true, true, true));
+}
+
+TEST(QmTooltips, AutomaticTitleAnchorDoesNotReplaceSpecificHelpOnTheSameControl)
+{
+	CTooltip Specific;
+	Specific.m_RegisteredFrame = 1;
+	EXPECT_FALSE(QmTooltipMayUpdate(Specific, 1, true, true, true));
+	EXPECT_TRUE(QmTooltipMayUpdate(Specific, 1, false, true, true));
+}
+
+TEST(QmTooltips, ClearingContentClipDoesNotReactivateAHiddenTarget)
+{
+	CTooltip Tooltip;
+	Tooltip.m_Rect = {0, 0, 20, 20};
+	Tooltip.m_HoverByRect = true;
+	Tooltip.m_RegisteredFrame = 1;
+	STooltipPointer Pointer;
+	Pointer.m_InputAvailable = false;
+	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, Pointer);
+	Pointer.m_InputAvailable = true;
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 1, Pointer));
+
+	Tooltip.m_RegisteredFrame = 2;
+	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, Pointer);
+	EXPECT_TRUE(QmTooltipActive(Tooltip, 2, Pointer));
+	Pointer.m_InputAvailable = false;
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 2, Pointer));
+	Pointer.m_InputAvailable = true;
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 3, Pointer));
 }

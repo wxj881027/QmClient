@@ -3,7 +3,6 @@
 #include "SettingsCard.h"
 
 #include "QmAnimResolve.h"
-#include "SettingsCardHelp.h"
 #include "SettingsCardInfo.h"
 #include "SettingsIconFeedback.h"
 #include "SettingsPageLayout.h"
@@ -88,11 +87,8 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const CUIRect &Slot, cons
 	return SettingsCard(Ctx, Frame, Spec, State, VisualOptions, Render, HeaderAction, RenderMeasured, pPointerInside);
 }
 
-SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame &Frame, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction, const FSettingsCardRenderMeasured &RenderMeasured, bool *pPointerInside, CSettingsCardHelp *pHelp, float HelpHeight)
+SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame &Frame, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction, const FSettingsCardRenderMeasured &RenderMeasured, bool *pPointerInside)
 {
-	CTooltips::CCardHelpScope HelpScope(Ctx.m_pTooltips, pHelp);
-	if(pHelp != nullptr)
-		pHelp->BeginFrame();
 	const float UiScale = Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f;
 	SSettingsCardVisualState DrawState = State;
 	SSettingsCardFrame DrawFrame = ResolveSettingsCardDrawFrame(Frame, State.m_DrawOffsetX, State.m_DrawOffsetY);
@@ -111,11 +107,11 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 	SUiTheme Fallback;
 	const SUiTheme &Theme = SettingsCardTheme(Ctx, Fallback);
 	const bool DrawCardChrome = SettingsCardShouldDrawChrome(Ctx.m_pUi != nullptr && Ctx.m_pUi->RenderOnly());
-	// 普通 hover 只暴露副标题；重排与拖放反馈只改变边框，卡片背景透明度保持稳定，避免滚动或切页时闪烁。
+	// 普通 hover 只触发悬浮说明；重排与拖放反馈只改变边框，卡片背景透明度保持稳定，避免滚动或切页时闪烁。
 	// 完成反馈只属于显式拖放。普通高度/布局变化不得改变卡片 chrome，
 	// 否则半透明卡片在展开、折叠或首次布局时会表现为一次亮闪。
 	const bool InteractionComplete = DrawState.m_DropFeedback;
-	// 普通卡片只是内容容器，指针进入只显示副标题。焦点和拖放才需要轮廓反馈，
+	// 普通卡片只是内容容器，指针进入不改变背景。焦点和拖放才需要轮廓反馈，
 	// 且不能被“常驻边框”关闭选项一并隐藏。
 	const bool DrawNormalBorder = VisualOptions.m_AlwaysShowBorders;
 	const bool DrawAttentionBorder = DrawState.m_Focused || DrawState.m_Dragged || InteractionComplete;
@@ -155,19 +151,15 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		TitleProps.m_MaxWidth = DrawFrame.m_TitleRect.w;
 		TitleProps.m_EllipsisAtEnd = true;
 		RenderSettingsCardLabel(Ctx, Spec, false, DrawFrame.m_TitleRect, Spec.m_pTitle != nullptr ? Spec.m_pTitle : "", ui_token::font::TITLE * UiScale, TitleProps);
-		const char *pSubtitle = Spec.m_pSubtitle;
-		if(pSubtitle != nullptr && SettingsCardSubtitleVisible(DrawState.m_Hovered, DrawState.m_SubtitleVisibleDuringMotion, DrawState.m_Focused))
+		if(DrawCardChrome && Ctx.m_pTooltips != nullptr && Spec.m_pStableId != nullptr && Ctx.m_pUi->MouseHovered(&DrawFrame.m_TitleRect))
 		{
-			ColorRGBA SubtitleColor = ResolveConfiguredTextColor(Surface);
-			SubtitleColor.a *= DrawState.m_DrawAlpha;
-			Ctx.m_pTextRender->TextColor(SubtitleColor);
-			SLabelProperties SubtitleProps;
-			SubtitleProps.m_MaxWidth = DrawFrame.m_SubtitleRect.w;
-			SubtitleProps.m_EllipsisAtEnd = true;
-			const float SubtitleSize = ResolveSettingsSmallFontSize(UiScale);
-			RenderSettingsCardLabel(Ctx, Spec, true, DrawFrame.m_SubtitleRect, pSubtitle, SubtitleSize, SubtitleProps);
+			CUIRect TitleAnchor = DrawFrame.m_TitleRect;
+			TitleAnchor.w = std::min(TitleAnchor.w, Ctx.m_pTextRender->TextWidth(ui_token::font::TITLE * UiScale, Spec.m_pTitle != nullptr ? Spec.m_pTitle : ""));
+			const uint64_t Key = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ str_quickhash("card-title-tip"), str_quickhash(Spec.m_pStableId));
+			const std::string Help = SettingsCardTooltipText(Spec);
+			Ctx.m_pTooltips->DoSmallToolTip(reinterpret_cast<const void *>(static_cast<uintptr_t>(Key)), &TitleAnchor, Help.c_str(), ResolveSettingsSmallFontSize(UiScale), ResolveSettingsCardInfoWidth(Ctx.m_pUi->Screen()->w, UiScale));
 		}
-		// 标题和副标题只影响本卡片，不能把调用方的文本状态写死为默认白色。
+		// 标题只影响本卡片，不能把调用方的文本状态写死为默认白色。
 		Ctx.m_pTextRender->SetRenderFlags(PreviousRenderFlags);
 		Ctx.m_pTextRender->SetFontPreset(PreviousFontPreset);
 		Ctx.m_pTextRender->TextOutlineColor(PreviousTextOutlineColor);
@@ -189,32 +181,13 @@ SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame 
 		Ctx.m_pUi->ClipEnable(&ClipRect);
 	}
 	CUiScopedSurfaceText SurfaceText(Ctx.m_pTextRender, Surface);
-	CUIRect BodyRect = DrawFrame.m_ContentRect;
-	CUIRect HelpRect{};
-	if(pHelp != nullptr && HelpHeight > 0.0f)
-	{
-		const float Reserved = std::min(HelpHeight, std::max(0.0f, BodyRect.h));
-		BodyRect.HSplitBottom(Reserved, &BodyRect, &HelpRect);
-		HelpRect.HSplitTop(std::min(4.0f * UiScale, HelpRect.h), nullptr, &HelpRect);
-	}
 	if(RenderMeasured)
 	{
-		CUIRect ContentRect = BodyRect;
+		CUIRect ContentRect = DrawFrame.m_ContentRect;
 		RenderMeasured(ContentRect);
 	}
 	else if(Render)
-		Render(BodyRect);
-	if(pHelp != nullptr && HelpRect.h > 0.0f && Ctx.m_pUi != nullptr && Ctx.m_pTextRender != nullptr)
-	{
-		const ColorRGBA OldColor = Ctx.m_pTextRender->GetTextColor();
-		Ctx.m_pTextRender->TextColor(OldColor.WithAlpha(OldColor.a * 0.7f));
-		SLabelProperties Props;
-		Props.m_MaxWidth = HelpRect.w;
-		Ctx.m_pUi->ClipEnable(&HelpRect);
-		Ctx.m_pUi->DoLabel(&HelpRect, pHelp->Text(), pHelp->FontSize(), TEXTALIGN_TL, Props);
-		Ctx.m_pUi->ClipDisable();
-		Ctx.m_pTextRender->TextColor(OldColor);
-	}
+		Render(DrawFrame.m_ContentRect);
 	if(ClipContent)
 		Ctx.m_pUi->ClipDisable();
 	return Frame;

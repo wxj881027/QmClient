@@ -80,23 +80,13 @@ TEST(SettingsCardInteraction, CollapseAndVisibilityChangesSnapWithoutDisablingDr
 	EXPECT_FALSE(SettingsCardDeckShouldSnapReflow(true, true));
 }
 
-TEST(SettingsCardInteraction, SubtitleVisibilityLatchesOnlyWhileCardIsMoving)
-{
-	EXPECT_TRUE(ResolveSettingsCardSubtitleMotionLatch(true, true, false, false));
-	EXPECT_FALSE(ResolveSettingsCardSubtitleMotionLatch(false, true, false, false));
-	EXPECT_TRUE(ResolveSettingsCardSubtitleMotionLatch(false, true, true, true));
-	EXPECT_FALSE(ResolveSettingsCardSubtitleMotionLatch(false, true, true, false));
-	EXPECT_FALSE(ResolveSettingsCardSubtitleMotionLatch(false, false, true, true));
-}
-
-TEST(SettingsCardInteraction, HoverOnlyRevealsSubtitleWithoutChangingCardChrome)
+TEST(SettingsCardInteraction, HoverDoesNotChangeCardChrome)
 {
 	const ColorRGBA BaseSurface(0.12f, 0.24f, 0.36f, 0.48f);
 	SSettingsCardVisualState Resting;
 	SSettingsCardVisualState Hovered = Resting;
 	Hovered.m_Hovered = true;
 
-	EXPECT_TRUE(SettingsCardSubtitleVisible(Hovered.m_Hovered, false, false));
 	EXPECT_FALSE(SettingsCardInteractionBorderVisible(Hovered));
 
 	const ColorRGBA RestingSurface = ResolveSettingsCardSurfaceColor(BaseSurface, Resting);
@@ -126,13 +116,6 @@ TEST(SettingsCardInteraction, ActiveItemContinuationRequiresPointerInput)
 	EXPECT_FALSE(SettingsCardDeckHasActiveItemContinuation(false, false));
 }
 
-TEST(SettingsCardInteraction, SubtitleVisibilityUsesCurrentPointerMotionLatchAndFocus)
-{
-	EXPECT_TRUE(SettingsCardSubtitleVisible(true, false, false));
-	EXPECT_TRUE(SettingsCardSubtitleVisible(false, true, false));
-	EXPECT_TRUE(SettingsCardSubtitleVisible(false, false, true));
-	EXPECT_FALSE(SettingsCardSubtitleVisible(false, false, false));
-}
 
 namespace
 {

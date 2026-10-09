@@ -68,6 +68,7 @@ void CMenus::RenderQmHudDebugGraphContent(CUIRect &Content, float LineHeight, fl
 	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 	RenderQmHudLabel("qmclient-debug-graph-panel-opacity", &LabelColumn, Localize("Panel opacity"), BodySize);
 	static int s_QmMonitoringHudOpacityInputId;
+	GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmMonitoringHudOpacityInputId, &Row, &g_Config.m_QmMonitoringHudOpacity, &LabelColumn);
 	RenderQmSettingsSliderWithValueInput(&s_QmMonitoringHudOpacityInputId, ControlColumn, &g_Config.m_QmMonitoringHudOpacity, 0, 100, "%", PrewarmOnly);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 }
@@ -102,6 +103,7 @@ void CMenus::RenderQmHudDebugModeContent(CUIRect &Content, float LineHeight, flo
 	Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 	DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-debug-mode-threshold", &LabelColumn, Localize("Performance debug log threshold (ms)"), BodySize, TEXTALIGN_ML, {}, (int)LabelColumn.w);
 	static int s_QmPerfDebugThresholdMsInputId;
+	GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_QmPerfDebugThresholdMsInputId, &Row, &g_Config.m_QmPerfDebugThresholdMs, &LabelColumn);
 	RenderQmSettingsSliderWithValueInput(&s_QmPerfDebugThresholdMsInputId, ControlColumn, &g_Config.m_QmPerfDebugThresholdMs, 1, 1000, "ms", PrewarmOnly);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
@@ -122,6 +124,7 @@ void CMenus::RenderQmHudDummyMiniViewContent(CUIRect &Content, float LineHeight,
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, "%", PrewarmOnly);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};
@@ -287,6 +290,7 @@ void CMenus::RenderQmHudNotificationsBasicContent(CUIRect &Content, const SSetti
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};
@@ -333,7 +337,7 @@ void CMenus::RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSe
 	static CUi::SDropDownState s_HudNotificationAnimDropDownState;
 	static CScrollRegion s_HudNotificationAnimDropDownScrollRegion;
 	s_HudNotificationAnimDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_HudNotificationAnimDropDownScrollRegion;
-	const int AnimSelectedNew = DoSettingsDropDown(&ControlColumn, g_Config.m_QmHudNotificationsAnimType, apHudNotificationAnimDropDownNames, std::size(apHudNotificationAnimDropDownNames), s_HudNotificationAnimDropDownState, {}, &g_Config.m_QmHudNotificationsAnimType);
+	const int AnimSelectedNew = DoSettingsDropDown(&ControlColumn, g_Config.m_QmHudNotificationsAnimType, apHudNotificationAnimDropDownNames, std::size(apHudNotificationAnimDropDownNames), s_HudNotificationAnimDropDownState, {}, &g_Config.m_QmHudNotificationsAnimType, nullptr, &Row);
 	if(g_Config.m_QmHudNotificationsAnimType != AnimSelectedNew)
 		g_Config.m_QmHudNotificationsAnimType = AnimSelectedNew;
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
@@ -342,6 +346,7 @@ void CMenus::RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSe
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};
@@ -443,6 +448,7 @@ void CMenus::RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeigh
 		Content.HSplitTop(LineHeight, &Row, &Content);
 		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
 		RenderQmHudLabel(pTextId, &LabelColumn, Localize(pText), BodySize);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(pInputId, &Row, pValue, &LabelColumn);
 		RenderQmSettingsSliderWithValueInput(pInputId, ControlColumn, pValue, MinValue, MaxValue, pSuffix, PrewarmOnly);
 		Content.HSplitTop(LineSpacing, nullptr, &Content);
 	};

@@ -153,6 +153,7 @@ float CMenus::LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render)
 	CUIRect BoxRect;
 	IUiContext TClientPetTextInputCtx;
 	TClientPetTextInputCtx.m_pUi = Ui();
+	TClientPetTextInputCtx.m_pTooltips = &GameClient()->m_Tooltips;
 	TClientPetTextInputCtx.m_pAnim = &GameClient()->UiRuntimeV2()->AnimRuntime();
 	TClientPetTextInputCtx.m_pTree = &GameClient()->UiRuntimeV2()->Tree();
 	TClientPetTextInputCtx.m_ScopeHash = MakeUiScopeHash("settings_tclient_pet_text_inputs");
@@ -180,6 +181,7 @@ float CMenus::LayoutTClientPetCacheSection(CUIRect &CurrentColumn, bool Render)
 		PetSkinBox.VSplitMid(&Label, &Button);
 		DoSettingsMenuLabel(SETTINGS_TCLIENT, m_TClientSettingsTab, m_TClientSettingsTab, nullptr, &Label, Localize("Pet Skin:"), FontSize, TEXTALIGN_ML);
 		static CLineInput s_PetSkin(g_Config.m_QmPetSkin, sizeof(g_Config.m_QmPetSkin));
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_PetSkin, &PetSkinBox, g_Config.m_QmPetSkin, &Label);
 		ui_widget::InputField(TClientPetTextInputCtx, &s_PetSkin, Button, nullptr, EditBoxFontSize);
 	}
 	return CurrentColumn.y - SavedY;

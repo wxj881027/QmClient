@@ -5,6 +5,20 @@
 #include "UiTokens.h"
 
 #include <algorithm>
+#include <string>
+
+// 概述和详细说明仍由原卡片提供，悬浮入口持有合并后的文案。
+inline std::string SettingsCardTooltipText(const SSettingsCardSpec &Spec)
+{
+	std::string Text = Spec.m_pSubtitle != nullptr ? Spec.m_pSubtitle : "";
+	if(Spec.m_pInfo != nullptr && Spec.m_pInfo[0] != '\0' && Text != Spec.m_pInfo)
+	{
+		if(!Text.empty())
+			Text += "\n\n";
+		Text += Spec.m_pInfo;
+	}
+	return Text;
+}
 
 // 说明入口与右侧宽度、折叠操作使用同一行和同一尺寸，窄卡片时不侵入标题区外。
 inline CUIRect ResolveSettingsCardInfoRect(const SSettingsCardFrame &Frame)

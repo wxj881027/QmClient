@@ -458,6 +458,7 @@ float CMenus::LayoutTClientTeeStatusBarCard(const qm_card_catalog::SQmCardBuildC
 			CUIRect CheckBoxRect2 = Rows.Next();
 			if(Render)
 			{
+				GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_CountFrozenText, &CheckBoxRect2, &g_Config.m_QmShowFrozenText);
 				if(DoTClientSettingsButton_CheckBox(&s_CountFrozenText, "tclient-show-frozen-count-text", Localize("Show the number of frozen tees"), g_Config.m_QmShowFrozenText == 2, &CheckBoxRect2))
 					g_Config.m_QmShowFrozenText = g_Config.m_QmShowFrozenText != 2 ? 2 : 1;
 			}

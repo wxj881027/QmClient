@@ -6,6 +6,7 @@
 
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/components/menus.h>
+#include <game/client/gameclient.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 
@@ -27,6 +28,7 @@ void CMenus::RenderQmTooltipContent(CUIRect &Content, const SSettingsContentMetr
 	Props.m_EllipsisAtEnd = true;
 	Ui()->DoLabel(&Label, Localize("Tooltip font size"), Metrics.m_BodySize, TEXTALIGN_ML, Props);
 	static int s_FontSize;
+	GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_FontSize, &Row, &g_Config.m_QmTooltipFontSize, &Label);
 	RenderQmSettingsSliderWithValueInput(&s_FontSize, Control, &g_Config.m_QmTooltipFontSize, 10, 24, "", ReadOnly);
 	Content.HSplitTop(Metrics.m_LineSpacing, nullptr, &Content);
 	RenderQmFunctionCheckboxRow(Content, Metrics.m_LineHeight, Metrics.m_LineSpacing, &g_Config.m_QmTooltipAnimation,

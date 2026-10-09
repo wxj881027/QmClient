@@ -6,12 +6,13 @@
 
 #include <algorithm>
 
-SSettingsCardFrame BuildSettingsCardFrame(const CUIRect &Slot, const SSettingsCardSpec &Spec, const float ContentHeight, const float UiScale)
+SSettingsCardFrame BuildSettingsCardFrame(const CUIRect &Slot, const SSettingsCardSpec &, const float ContentHeight, const float UiScale)
 {
 	const float Scale = UiScale > 0.0f ? UiScale : 1.0f;
 	const float Padding = ui_token::settings::CARD_PADDING * Scale;
 	const float TitleHeight = ui_token::settings::CARD_HEADER_TITLE_HEIGHT * Scale;
-	const float SubtitleHeight = Spec.m_pSubtitle != nullptr ? ui_token::settings::CARD_HEADER_SUBTITLE_HEIGHT * Scale : 0.0f;
+	// 模块说明由标题悬浮提示承载，不再预留副标题行。
+	const float SubtitleHeight = 0.0f;
 	const float HeaderGap = ui_token::settings::CARD_HEADER_GAP * Scale;
 	const float HeaderHeight = TitleHeight + SubtitleHeight;
 	const float HandleSize = ui_token::settings::CARD_HANDLE_SIZE * Scale;

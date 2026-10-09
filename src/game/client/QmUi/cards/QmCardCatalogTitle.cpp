@@ -427,7 +427,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 			ChatStyleProperties.m_FontSize = BodySize;
 			if(ReadOnly)
 				pMenus->Ui()->BeginRenderOnly();
-			const int ChatStyle = pMenus->DoSettingsDropDown(&ChatStyleControl, g_Config.m_QmSponsorChatStyle, s_apChatStyleNames.data(), s_apChatStyleNames.size(), s_ChatStyleState, ChatStyleProperties, &g_Config.m_QmSponsorChatStyle);
+			const int ChatStyle = pMenus->DoSettingsDropDown(&ChatStyleControl, g_Config.m_QmSponsorChatStyle, s_apChatStyleNames.data(), s_apChatStyleNames.size(), s_ChatStyleState, ChatStyleProperties, &g_Config.m_QmSponsorChatStyle, nullptr, &Row);
 			if(ReadOnly)
 				pMenus->Ui()->EndRenderOnly();
 			if(!ReadOnly && ChatStyleProperties.m_Enabled)
@@ -605,7 +605,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				pMenus->DoSettingsMenuLabel(CMenus::SETTINGS_CONTRIBUTORS, -1, -1, "qm-title-color-mode", &Label, Localize("Title color"), BodySize, TEXTALIGN_ML);
 				Hint(&g_Config.m_QmTitleColorMode, Row, Localize("Single color and Rainbow override the color of animated styles; the style keeps its motion"));
 				s_TitleColorModeState.m_SelectionPopupContext.m_pScrollRegion = &s_TitleColorModeScroll;
-				const int ColorMode = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleColorMode, s_TitleColorModeNames.data(), s_TitleColorModeNames.size(), s_TitleColorModeState, {}, &g_Config.m_QmTitleColorMode);
+				const int ColorMode = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleColorMode, s_TitleColorModeNames.data(), s_TitleColorModeNames.size(), s_TitleColorModeState, {}, &g_Config.m_QmTitleColorMode, nullptr, &Row);
 				if(!ReadOnly && ColorMode != g_Config.m_QmTitleColorMode)
 				{
 					g_Config.m_QmTitleColorMode = ColorMode;
@@ -632,7 +632,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				Row.VSplitLeft(Row.w * 0.55f, &Label, &Control);
 				pMenus->DoSettingsMenuLabel(CMenus::SETTINGS_CONTRIBUTORS, -1, -1, "qm-title-effect", &Label, Localize("Text effect"), BodySize, TEXTALIGN_ML);
 				s_TitleEffectState.m_SelectionPopupContext.m_pScrollRegion = &s_TitleEffectScroll;
-				const int Effect = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleEffect, s_TitleEffectNames.data(), s_TitleEffectNames.size(), s_TitleEffectState, {}, &g_Config.m_QmTitleEffect);
+				const int Effect = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleEffect, s_TitleEffectNames.data(), s_TitleEffectNames.size(), s_TitleEffectState, {}, &g_Config.m_QmTitleEffect, nullptr, &Row);
 				if(!ReadOnly && Effect != g_Config.m_QmTitleEffect)
 				{
 					g_Config.m_QmTitleEffect = Effect;
@@ -642,7 +642,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				Row.VSplitLeft(Row.w * 0.55f, &Label, &Control);
 				pMenus->DoSettingsMenuLabel(CMenus::SETTINGS_CONTRIBUTORS, -1, -1, "qm-title-bloom", &Label, Localize("Classic title glow"), BodySize, TEXTALIGN_ML);
 				s_TitleBloomState.m_SelectionPopupContext.m_pScrollRegion = &s_TitleBloomScroll;
-				const int Bloom = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleBloom, s_TitleBloomNames.data(), s_TitleBloomNames.size(), s_TitleBloomState, {}, &g_Config.m_QmTitleBloom);
+				const int Bloom = pMenus->DoSettingsDropDown(&Control, g_Config.m_QmTitleBloom, s_TitleBloomNames.data(), s_TitleBloomNames.size(), s_TitleBloomState, {}, &g_Config.m_QmTitleBloom, nullptr, &Row);
 				if(!ReadOnly && Bloom != g_Config.m_QmTitleBloom)
 				{
 					g_Config.m_QmTitleBloom = Bloom;

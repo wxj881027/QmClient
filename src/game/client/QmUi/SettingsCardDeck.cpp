@@ -138,9 +138,6 @@ void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEnt
 			Runtime.m_ContentHeightWasActive = false;
 			Runtime.m_CollapsedInitialized = false;
 			Runtime.m_PointerInsideLastFrame = false;
-			Runtime.m_SubtitleMotionWasActive = false;
-			Runtime.m_SubtitleVisibleDuringMotion = false;
-			Runtime.m_MotionGeometryInitialized = false;
 			Runtime.m_LastDrawOffsetX = 0.0f;
 			Runtime.m_LastDrawOffsetY = 0.0f;
 		}
@@ -279,20 +276,6 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			const bool HasCustomCollapsedState = static_cast<bool>(pDefinition->m_IsCollapsed);
 			const bool Collapsed = SettingsCardDeckResolveCollapsed(HasCustomCollapsedState, HasCustomCollapsedState && pDefinition->m_IsCollapsed(), Runtime.m_DefaultCollapsed);
 			const float ContentWidth = std::max(0.0f, Slot.w - 2.0f * ui_token::settings::CARD_PADDING * (Ctx.m_UiScale > 0.0f ? Ctx.m_UiScale : 1.0f));
-			const bool HasHelp = Ctx.m_pTooltips != nullptr && Ctx.m_pTextRender != nullptr;
-			if(HasHelp)
-			{
-				const float HelpSize = ResolveSettingsSmallFontSize(Ctx.m_UiScale);
-				const uint64_t HelpRevision = (pDefinition->m_MeasureRevision * 1099511628211ULL ^ str_quickhash(g_Config.m_ClLanguagefile)) * 1099511628211ULL ^ Ctx.m_pTextRender->GlyphAtlasRevision();
-				if(Runtime.m_Help.Configure(ContentWidth, HelpSize, HelpRevision, pDefinition->m_Spec.m_pSubtitle, [&](const char *pText) {
-					   return Ctx.m_pTextRender->TextBoundingBox(HelpSize, pText, -1, std::max(1.0f, ContentWidth)).m_H;
-				   }))
-					CachedContentHeight = -1.0f;
-				const auto MeasureHelp = [&](const char *pText) { return Ctx.m_pTextRender->TextBoundingBox(HelpSize, pText, -1, std::max(1.0f, ContentWidth)).m_H; };
-				Runtime.m_Help.Register(0, pDefinition->m_Spec.m_pInfo, false, false, MeasureHelp);
-				Runtime.m_Help.Register(1, Localize("Default width"), false, false, MeasureHelp);
-				Runtime.m_Help.Register(2, Localize("Full width"), false, false, MeasureHelp);
-			}
 			if(std::abs(CachedContentWidth - ContentWidth) > 0.01f)
 			{
 				MeasuredGeometryChanged = MeasuredGeometryChanged || PreviousContentHeight >= 0.0f;
@@ -311,12 +294,10 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 				// m_Measure 是卡片定义的布局合同。模块卡片在构建时把它绑定到
 				// 内容探针；TClient 等旧卡片则继续使用自己的稳定高度测量，
 				// 因为部分预览内容只绘制到矩形，并不会消费 CUIRect。
-				CTooltips::CCardHelpScope HelpScope(Ctx.m_pTooltips, HasHelp ? &Runtime.m_Help : nullptr);
 				CachedContentHeight = pDefinition->m_Measure ? std::max(0.0f, pDefinition->m_Measure(ContentWidth)) : 0.0f;
 				MeasuredGeometryChanged = MeasuredGeometryChanged || SettingsCardDeckContentHeightChanged(PreviousContentHeight, CachedContentHeight);
 			}
-			const float HelpHeight = HasHelp ? Runtime.m_Help.Height() + 4.0f * std::max(0.1f, Ctx.m_UiScale) : 0.0f;
-			const float TargetContentHeight = Collapsed ? 0.0f : std::max(0.0f, CachedContentHeight) + HelpHeight;
+			const float TargetContentHeight = Collapsed ? 0.0f : std::max(0.0f, CachedContentHeight);
 			const bool HeightInitializedThisFrame = !Runtime.m_ContentHeightInitialized;
 			const bool HeightTargetChanged = Runtime.m_ContentHeightInitialized && std::abs(Runtime.m_LastContentHeightTarget - TargetContentHeight) > 0.01f;
 			const SSettingsCardHeightAnimationWork HeightWork = ResolveSettingsCardHeightAnimationWork(HeightInitializedThisFrame, HeightTargetChanged, Runtime.m_ContentHeightWasActive, Motion.m_ContentHeightDuration, m_Drag.Active() || Ctx.m_pAnim == nullptr);
@@ -725,14 +706,6 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			}
 			Runtime.m_LastReflowTargetY = ReflowTargetY;
 		}
-		// 用未滚动的布局坐标检测真实几何动效。屏幕滚动只改变绘制位置，
-		// 不能让所有卡片的副标题在滚轮事件中短暂出现。
-		const float MotionY = Card.m_Frame.m_Rect.y - ScrollOffset.y + State.m_DrawOffsetY;
-		const float MotionHeight = Card.m_Frame.m_Rect.h;
-		const bool GeometryMotionActive = SettingsCardDeckGeometryMoved(Runtime.m_MotionGeometryInitialized, Runtime.m_LastMotionY, Runtime.m_LastMotionHeight, MotionY, MotionHeight);
-		Runtime.m_MotionGeometryInitialized = true;
-		Runtime.m_LastMotionY = MotionY;
-		Runtime.m_LastMotionHeight = MotionHeight;
 		State.m_Dragged = m_Drag.Active() && Card.m_StateIndex == m_Drag.m_StateIndex;
 		if(State.m_Dragged)
 		{
@@ -744,16 +717,6 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 		Result.m_DropFeedbackConsumed = Result.m_DropFeedbackConsumed || State.m_DropFeedback;
 		const bool Reveal = !m_PendingRevealStableId.empty() && str_comp(pStableId, m_PendingRevealStableId.c_str()) == 0;
 		const bool Visible = pScrollRegion == nullptr || pScrollRegion->AddRect(Card.m_Frame.m_Rect, Reveal);
-		CUIRect CurrentDrawRect = Card.m_Frame.m_Rect;
-		CurrentDrawRect.x += State.m_DrawOffsetX;
-		CurrentDrawRect.y += State.m_DrawOffsetY;
-		const bool PointerInsideCurrentFrame = Visible && Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->MouseHovered(&CurrentDrawRect);
-		// 入场是整个 Deck 的统一动效；高度/重排只影响当前卡片或被其推动的同列卡片。
-		// 副标题从动效开始的当前绘制帧锁存，避免首次入场时依赖上一帧旧几何而漏显。
-		const bool SubtitleMotionActive = EntryPositionActive || Runtime.m_ReflowWasActive || Card.m_ContentHeightAnimationActive || GeometryMotionActive;
-		Runtime.m_SubtitleVisibleDuringMotion = ResolveSettingsCardSubtitleMotionLatch(PointerInsideCurrentFrame, SubtitleMotionActive, Runtime.m_SubtitleMotionWasActive, Runtime.m_SubtitleVisibleDuringMotion);
-		Runtime.m_SubtitleMotionWasActive = SubtitleMotionActive;
-		State.m_SubtitleVisibleDuringMotion = Runtime.m_SubtitleVisibleDuringMotion;
 		if(Reveal)
 		{
 			Result.m_pRevealedStableId = Model.Entry(Card.m_StateIndex).m_pStableId;
@@ -784,9 +747,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			};
 			SettingsCard(Ctx, Frame, Card.m_pDefinition->m_Spec, State, VisualOptions,
 				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_Render : FSettingsCardRender{}, HeaderAction,
-				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_RenderMeasured : FSettingsCardRenderMeasured{}, &PointerInsideDrawFrame,
-				!Collapsed && Ctx.m_pTooltips != nullptr && Ctx.m_pTextRender != nullptr ? &Runtime.m_Help : nullptr,
-				!Collapsed ? Runtime.m_Help.Height() + 4.0f * std::max(0.1f, Ctx.m_UiScale) : 0.0f);
+				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_RenderMeasured : FSettingsCardRenderMeasured{}, &PointerInsideDrawFrame);
 			Runtime.m_PointerInsideLastFrame = PointerInsideDrawFrame;
 			if(Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly())
 			{

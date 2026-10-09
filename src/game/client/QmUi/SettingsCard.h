@@ -13,7 +13,6 @@
 #include <functional>
 
 struct IUiContext;
-class CSettingsCardHelp;
 enum class EQmIcon;
 
 // 所有卡片标题操作共享图标状态边界，绘制结束后完整恢复正文渲染状态。
@@ -60,7 +59,6 @@ struct SSettingsCardVisualState
 {
 	bool m_Hovered = false;
 	bool m_PointerInside = false;
-	bool m_SubtitleVisibleDuringMotion = false;
 	bool m_HoverFeedbackEnabled = true;
 	bool m_Focused = false;
 	bool m_Dragged = false;
@@ -73,25 +71,6 @@ struct SSettingsCardVisualState
 	float m_DrawOffsetY = 0.0f;
 	float m_DrawAlpha = 1.0f;
 };
-
-inline bool SettingsCardSubtitleVisible(const bool HoverActive, const bool SubtitleVisibleDuringMotion, const bool Focused)
-{
-	return HoverActive || SubtitleVisibleDuringMotion || Focused;
-}
-
-inline bool ResolveSettingsCardSubtitleMotionLatch(const bool PointerInsideCurrentFrame, const bool MotionActive, const bool MotionWasActive, const bool VisibleDuringMotion)
-{
-	if(!MotionActive)
-		return false;
-	if(!MotionWasActive)
-		return PointerInsideCurrentFrame;
-	return VisibleDuringMotion;
-}
-
-inline bool SettingsCardDeckGeometryMoved(const bool Initialized, const float LastY, const float LastHeight, const float CurrentY, const float CurrentHeight)
-{
-	return Initialized && (std::abs(LastY - CurrentY) > 0.001f || std::abs(LastHeight - CurrentHeight) > 0.001f);
-}
 
 inline bool SettingsCardInteractionBorderVisible(const SSettingsCardVisualState &State)
 {
@@ -246,6 +225,6 @@ inline float ResolveSettingsCardContentHeight(const FSettingsCardRenderMeasured 
 void RenderSettingsCardCollapseButton(const IUiContext &Ctx, const CUIRect &Rect, bool Collapsed, float DrawAlpha = 1.0f, const void *pId = nullptr);
 
 SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const CUIRect &Slot, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardMeasure &Measure, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction = {}, const FSettingsCardRenderMeasured &RenderMeasured = {}, bool *pPointerInside = nullptr);
-SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame &Frame, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction = {}, const FSettingsCardRenderMeasured &RenderMeasured = {}, bool *pPointerInside = nullptr, CSettingsCardHelp *pHelp = nullptr, float HelpHeight = 0.0f);
+SSettingsCardFrame SettingsCard(const IUiContext &Ctx, const SSettingsCardFrame &Frame, const SSettingsCardSpec &Spec, const SSettingsCardVisualState &State, const SSettingsCardDeckVisualOptions &VisualOptions, const FSettingsCardRender &Render, const FSettingsCardHeaderAction &HeaderAction = {}, const FSettingsCardRenderMeasured &RenderMeasured = {}, bool *pPointerInside = nullptr);
 
 #endif

@@ -13,7 +13,7 @@
 #include <string>
 #include <unordered_map>
 
-class CSettingsCardHelp;
+struct SConfigVariable;
 
 inline float QmTooltipScale(float ElapsedSeconds, bool AnimationEnabled)
 {
@@ -55,25 +55,73 @@ inline CUIRect QmTooltipRect(const CUIRect &Anchor, const CUIRect &Screen, vec2 
 	return Rect;
 }
 
+// 先确定避让后的完整矩形，再围绕固定中心缩放；屏幕边缘限制回弹幅度。
+inline CUIRect QmTooltipAnimatedRect(const CUIRect &Rect, const CUIRect &Screen, float Scale)
+{
+	const vec2 Center = Rect.Center();
+	const float MaxScaleX = Rect.w > 0.0f ? 2.0f * std::max(0.0f, std::min(Center.x - Screen.x, Screen.x + Screen.w - Center.x)) / Rect.w : 1.0f;
+	const float MaxScaleY = Rect.h > 0.0f ? 2.0f * std::max(0.0f, std::min(Center.y - Screen.y, Screen.y + Screen.h - Center.y)) / Rect.h : 1.0f;
+	Scale = std::clamp(Scale, 0.0f, std::min(MaxScaleX, MaxScaleY));
+	return {Center.x - Rect.w * Scale * 0.5f, Center.y - Rect.h * Scale * 0.5f, Rect.w * Scale, Rect.h * Scale};
+}
+
 struct CTooltip
 {
-	const void *m_pId;
-	CUIRect m_Rect;
+	const void *m_pId = nullptr;
+	CUIRect m_Rect{};
 	std::string m_Text;
-	float m_WidthHint;
-	bool m_OnScreen; // used to know if the tooltip should be rendered.
+	float m_WidthHint = -1.0f;
+	bool m_OnScreen = false; // 登记时的悬浮资格，保留内容裁剪与弹层屏蔽结果。
 	float m_FadeTime = 0.75f;
 	float m_FontSize = 14.0f;
 	bool m_SmallInstant = false;
 	bool m_HoverByRect = false;
 	bool m_Immediate = false;
+	bool m_Fallback = false;
+	uint64_t m_RegisteredFrame = 0;
+	CUIRect m_Anchor{};
+	bool m_HasTextAnchor = false;
 };
+
+inline float QmTooltipDelay(const CTooltip &Tooltip)
+{
+	return Tooltip.m_SmallInstant || Tooltip.m_Immediate ? 0.0f : Tooltip.m_FadeTime;
+}
+
+inline bool QmTooltipAnimate(const CTooltip &Tooltip, bool AnimationEnabled)
+{
+	return !Tooltip.m_SmallInstant && AnimationEnabled;
+}
+
+inline bool QmTooltipRegistered(const CTooltip &Tooltip, uint64_t Frame)
+{
+	return Tooltip.m_RegisteredFrame == Frame;
+}
+
+// 自动配置描述只作兜底，不覆盖本帧已提供的专属说明。
+inline bool QmTooltipMayReplace(const CTooltip &Candidate, const CTooltip &Current, uint64_t Frame, bool CurrentHovered)
+{
+	return !CurrentHovered || !QmTooltipRegistered(Current, Frame) || !Candidate.m_Fallback || Current.m_Fallback;
+}
+
+// 标题锚点可补全自动登记的配置提示；内部控件兜底不缩小整行命中区，也不覆盖专属说明。
+inline bool QmTooltipMayUpdate(const CTooltip &Current, uint64_t Frame, bool Fallback, bool CurrentHovered, bool HasTextAnchor = false)
+{
+	return !Fallback || !CurrentHovered || !QmTooltipRegistered(Current, Frame) || (Current.m_Fallback && HasTextAnchor && !Current.m_HasTextAnchor);
+}
 
 // 注册与最终绘制共享同一悬浮资格，弹层屏蔽和裁剪变化立即使矩形提示失效。
 template<typename TUi>
 inline bool QmTooltipHovered(const CTooltip &Tooltip, TUi &Ui)
 {
-	return Tooltip.m_HoverByRect ? Ui.MouseHovered(&Tooltip.m_Rect) : Ui.HotItem() == Tooltip.m_pId && Tooltip.m_Rect.Inside(Ui.MousePos());
+	return Ui.MouseHovered(&Tooltip.m_Rect) && (Tooltip.m_HoverByRect || Ui.HotItem() == Tooltip.m_pId);
+}
+
+// 最终绘制同时检查登记时和当前的悬浮资格，离开裁剪区后不能被恢复的全屏命中激活。
+template<typename TUi>
+inline bool QmTooltipActive(const CTooltip &Tooltip, uint64_t Frame, TUi &Ui)
+{
+	return Tooltip.m_OnScreen && QmTooltipRegistered(Tooltip, Frame) && QmTooltipHovered(Tooltip, Ui);
 }
 
 /**
@@ -88,38 +136,19 @@ class CTooltips : public CComponent
 	std::optional<std::reference_wrapper<CTooltip>> m_ActiveTooltip;
 	std::optional<std::reference_wrapper<CTooltip>> m_PreviousTooltip;
 	int64_t m_HoverTime;
-	CSettingsCardHelp *m_pCardHelp = nullptr;
+	uint64_t m_Frame = 1;
+	bool m_ConfigHelpInitialized = false;
+	std::unordered_map<const void *, const SConfigVariable *> m_ConfigHelp;
 
 	/**
 	 * @param Tooltip A reference to the tooltip that should be active.
 	 */
 	void SetActiveTooltip(CTooltip &Tooltip);
-	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize, bool SmallInstant, bool HoverByRect, bool Immediate = false);
+	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize, bool SmallInstant, bool HoverByRect, bool Immediate = false, bool Fallback = false, const CUIRect *pAnchor = nullptr);
 
 	inline void ClearActiveTooltip();
 
 public:
-	class CCardHelpScope
-	{
-		CTooltips *m_pTooltips;
-		CSettingsCardHelp *m_pPrevious;
-
-	public:
-		CCardHelpScope(CTooltips *pTooltips, CSettingsCardHelp *pHelp) :
-			m_pTooltips(pTooltips), m_pPrevious(pTooltips != nullptr ? pTooltips->m_pCardHelp : nullptr)
-		{
-			if(pTooltips != nullptr)
-				pTooltips->m_pCardHelp = pHelp;
-		}
-		~CCardHelpScope()
-		{
-			if(m_pTooltips != nullptr)
-				m_pTooltips->m_pCardHelp = m_pPrevious;
-		}
-		CCardHelpScope(const CCardHelpScope &) = delete;
-		CCardHelpScope &operator=(const CCardHelpScope &) = delete;
-	};
-
 	CTooltips();
 	int Sizeof() const override { return sizeof(*this); }
 
@@ -127,12 +156,12 @@ public:
 	 * Adds the tooltip to a cache and renders it when active.
 	 *
 	 * On the first call to this function, the data passed is cached, afterwards the calls are used to detect if the tooltip should be activated.
-	 * If multiple tooltips cover the same rect or the rects intersect, then the tooltip that is added later has priority.
+	 * 重叠时后登记的专属说明优先，自动配置描述只作兜底。
 	 *
 	 * @param pId The ID of the tooltip. Usually a reference to some g_Config value.
 	 * @param pNearRect Place the tooltip near this rect.
 	 * @param pText The text to display in the tooltip.
-	 * @param WidthHint The maximum width of the tooltip, or -1.0f for unlimited.
+	 * @param WidthHint 提示最大宽度，-1.0f 表示默认阅读宽度。
 	 */
 	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint = -1.0f);
 	// 说明标签不抢占控件的 HotItem，通过可见悬浮区域触发提示。
@@ -140,11 +169,14 @@ public:
 	// 控件显式提供配置绑定；后续普通提示会追加同一命令，保留原说明。
 	void DoConfigToolTip(const void *pId, const CUIRect *pNearRect, const void *pValue, const void *pSecondValue = nullptr);
 
-	// 卡片内交给固定说明区；独立说明保留自动换行的气泡。
+	// 设置页内统一使用即时的小字气泡，独立说明保留自动换行。
 	void DoInfoToolTipForRect(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize);
 
-	// 无背景的小字提示，悬停时立即显示在控件上方。
+	// 设置内为紧凑深色小字提示，页面外使用普通气泡；均立即显示在控件附近。
 	void DoSmallToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float FontSize, float WidthHint = -1.0f);
+
+	// 从已有配置描述取得选项帮助；命中整行时仍可锚定到标题文本。
+	void DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect, const void *pConfigValue, const CUIRect *pAnchor = nullptr, const void *pSecondConfigValue = nullptr);
 
 	void OnReset() override;
 	void OnRender() override;

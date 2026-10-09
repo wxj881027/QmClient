@@ -188,7 +188,7 @@ namespace qm_card_catalog
 			case EQmModuleId::GoresActor:
 				return !g_Config.m_QmFreezeChatEnabled ? Row() : Row() * (g_Config.m_QmFreezeChatEmoticon ? 5.0f : 4.0f);
 			case EQmModuleId::Gores:
-				return Row() * (3.0f + (g_Config.m_QmAxiomAutoLogin ? 2.0f : 0.0f) + ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 7.0f : 0.0f)) + LineHeight;
+				return Row() * (3.0f + (g_Config.m_QmAxiomAutoLogin ? 2.0f : 0.0f) + ((g_Config.m_QmGores || g_Config.m_QmGoresAutoEnable) ? 7.0f : 0.0f));
 			case EQmModuleId::KeyBinds: return Rows(8.0f);
 			case EQmModuleId::Emoticons: return Rows(7.0f);
 			case EQmModuleId::Ime: return QmImeAppearanceCardHeight(LineHeight, Metrics.m_ButtonHeight, LineSpacing);
