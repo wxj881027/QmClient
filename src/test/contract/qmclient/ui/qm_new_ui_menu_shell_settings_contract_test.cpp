@@ -76,14 +76,6 @@ TEST(QmNewUiMenuShellSettingsContract, QmClientTabLabelsDoNotCacheLocalizedPoint
 	EXPECT_NE(Source.find("apQmTabNames[QMCLIENT_SETTINGS_TAB_CONFIG] = Localize(\"Config\");"), std::string::npos);
 }
 
-TEST(QmNewUiMenuShellSettingsContract, TClientHeaderIncludesGeneratedProtocolForWeaponDefaults)
-{
-	const std::string TClientHeader = ReadTextFile("src/game/client/components/tclient/tclient.h");
-
-	EXPECT_NE(TClientHeader.find("#include <generated/protocol.h>"), std::string::npos);
-	EXPECT_NE(TClientHeader.find("m_aGoresPreHammerWeapon[NUM_DUMMIES] = {WEAPON_GUN, WEAPON_GUN};"), std::string::npos);
-}
-
 TEST(QmNewUiMenuShellSettingsContract, AssetsPreviewUsesInnerFrameRectForPreviewImage)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus_settings_assets.cpp");

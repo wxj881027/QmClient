@@ -2,6 +2,7 @@
 
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/weapon_animation.h>
+#include <game/gamecore.h>
 
 #include <gtest/gtest.h>
 #include <test/test.h>
@@ -248,27 +249,174 @@ TEST(QmGoresMode, HammerWakeupReleaseClearsOnlyPendingAutomaticPress)
 	EXPECT_EQ(QmGoresHammerWakeupReleaseFireState(3), 4);
 }
 
-TEST(QmGoresMode, RestoreWeaponAfterHammerUsesRecordedWeapon)
+TEST(QmGoresMode, ExtraWeaponsKeepTheCycleWhenPickupDisablingIsOff)
 {
-	EXPECT_EQ(GoresRestoreWeaponAfterHammer(WEAPON_LASER, true), WEAPON_LASER);
-	EXPECT_EQ(GoresRestoreWeaponAfterHammer(WEAPON_GRENADE, true), WEAPON_GRENADE);
-	EXPECT_EQ(GoresRestoreWeaponAfterHammer(WEAPON_GUN, false), WEAPON_GUN);
+	EXPECT_TRUE(ShouldEnableQmGoresWeaponCycle(true, true, true, false));
+	EXPECT_TRUE(ShouldEnableQmGoresWeaponCycle(true, true, false, false));
 }
 
-TEST(QmGoresMode, FireKeydownPulseRequiresActiveCycleAndNonHammerWeapon)
+TEST(QmGoresMode, PickupDisablingStopsTheCycleOnlyWithExtraWeapons)
 {
-	EXPECT_TRUE(ShouldPulseGoresHammerOnFire(true, true, false, false));
-	EXPECT_FALSE(ShouldPulseGoresHammerOnFire(false, true, false, false));
-	EXPECT_FALSE(ShouldPulseGoresHammerOnFire(true, false, false, false));
-	EXPECT_FALSE(ShouldPulseGoresHammerOnFire(true, true, true, false));
-	EXPECT_FALSE(ShouldPulseGoresHammerOnFire(true, true, false, true));
+	EXPECT_FALSE(ShouldEnableQmGoresWeaponCycle(true, true, true, true));
+	EXPECT_TRUE(ShouldEnableQmGoresWeaponCycle(true, true, false, true));
 }
 
-TEST(QmGoresMode, RestoresRecordedWeaponEvenWhenTwoWeaponCycleIsInactive)
+TEST(QmGoresMode, DisabledModeOrAutoSwitchDoesNotTakeOverWeapons)
 {
-	EXPECT_TRUE(ShouldRestoreGoresWeaponAfterHammer(true, true));
-	EXPECT_FALSE(ShouldRestoreGoresWeaponAfterHammer(false, true));
-	EXPECT_FALSE(ShouldRestoreGoresWeaponAfterHammer(true, false));
+	EXPECT_FALSE(ShouldEnableQmGoresWeaponCycle(false, true, false, false));
+	EXPECT_FALSE(ShouldEnableQmGoresWeaponCycle(true, false, false, false));
+}
+
+TEST(QmGoresMode, PickingUpExtraWeaponsPreservesTheGunAndPendingHammer)
+{
+	for(const int Weapon : {WEAPON_SHOTGUN, WEAPON_GRENADE, WEAPON_LASER})
+	{
+		SCOPED_TRACE(Weapon);
+		CNetObj_PlayerInput Input{};
+		Input.m_WantedWeapon = WEAPON_GUN + 1;
+		Input.m_Fire = 2;
+		ApplyQmGoresWeaponPickupInput(Input, Weapon, true, true);
+		EXPECT_EQ(Input.m_WantedWeapon, WEAPON_GUN + 1);
+		EXPECT_EQ(Input.m_Fire, 2);
+
+		Input.m_WantedWeapon = WEAPON_HAMMER + 1;
+		ApplyQmGoresWeaponPickupInput(Input, Weapon, true, true);
+		EXPECT_EQ(Input.m_WantedWeapon, WEAPON_HAMMER + 1);
+	}
+}
+
+TEST(QmGoresMode, InactiveCycleKeepsNormalPickupAutoSwitch)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_WantedWeapon = WEAPON_GUN + 1;
+	ApplyQmGoresWeaponPickupInput(Input, WEAPON_GRENADE, true, false);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_GRENADE + 1);
+	ApplyQmGoresWeaponPickupInput(Input, WEAPON_LASER, false, false);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_GRENADE + 1);
+}
+
+TEST(QmGoresMode, FirstAttackFromAnExtraWeaponRequestsHammerInTheSameInput)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_Fire = 1;
+	Input.m_WantedWeapon = WEAPON_GRENADE + 1;
+	bool PendingRelease = false;
+	const bool Active = ShouldEnableQmGoresWeaponCycle(true, true, true, false);
+	ApplyQmGoresWeaponCycleInput(Input, 0, Active, WEAPON_GRENADE, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_HAMMER + 1);
+	EXPECT_EQ(Input.m_Fire, 1);
+	EXPECT_EQ(CountInput(0, Input.m_Fire).m_Presses, 1);
+	EXPECT_EQ(Input.m_PrevWeapon, 0);
+	EXPECT_FALSE(PendingRelease);
+}
+
+TEST(QmGoresMode, ClickReleasedBeforeSamplingStillRequestsHammer)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_Fire = 2;
+	Input.m_WantedWeapon = WEAPON_GUN + 1;
+	bool PendingRelease = false;
+	ApplyQmGoresWeaponCycleInput(Input, 0, true, WEAPON_GUN, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_HAMMER + 1);
+	EXPECT_EQ(Input.m_Fire, 2);
+	EXPECT_EQ(CountInput(0, Input.m_Fire).m_Presses, 1);
+	EXPECT_EQ(Input.m_Fire & 1, 0);
+}
+
+TEST(QmGoresMode, RepeatedUpdatesKeepAnAttackUntilItsInputIsSampled)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_Fire = 1;
+	bool PendingRelease = false;
+	ApplyQmGoresWeaponCycleInput(Input, 0, true, WEAPON_HAMMER, false, false, PendingRelease);
+	ApplyQmGoresWeaponCycleInput(Input, 0, true, WEAPON_HAMMER, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_HAMMER + 1);
+	EXPECT_EQ(Input.m_Fire, 1);
+}
+
+TEST(QmGoresMode, ObservedHammerRestoresGunAndAllowsAnotherAttack)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_WantedWeapon = WEAPON_HAMMER + 1;
+	Input.m_Fire = 1;
+	bool PendingRelease = false;
+	ApplyQmGoresWeaponCycleInput(Input, 1, true, WEAPON_HAMMER, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_GUN + 1);
+	EXPECT_EQ(Input.m_Fire, 1);
+	Input.m_Fire = 3;
+	ApplyQmGoresWeaponCycleInput(Input, 1, true, WEAPON_HAMMER, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_HAMMER + 1);
+	EXPECT_EQ(CountInput(1, Input.m_Fire).m_Presses, 1);
+}
+
+TEST(QmGoresMode, FireCounterWrapRetainsAReleasedAttack)
+{
+	CNetObj_PlayerInput Input{};
+	bool PendingRelease = false;
+	ApplyQmGoresWeaponCycleInput(Input, INPUT_STATE_MASK - 1, true, WEAPON_GUN, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_HAMMER + 1);
+	EXPECT_EQ(Input.m_Fire, 0);
+	EXPECT_EQ(CountInput(INPUT_STATE_MASK - 1, Input.m_Fire).m_Presses, 1);
+}
+
+TEST(QmGoresMode, FrozenHammerWaitsForExternalWakeupAndReleasesItsAutomaticPress)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_WantedWeapon = WEAPON_HAMMER + 1;
+	Input.m_Fire = 2;
+	bool PendingRelease = false;
+	ApplyQmGoresWeaponCycleInput(Input, 2, true, WEAPON_HAMMER, true, false, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_HAMMER + 1);
+	EXPECT_EQ(Input.m_Fire, 2);
+	ApplyQmGoresWeaponCycleInput(Input, 2, true, WEAPON_HAMMER, false, true, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_HAMMER + 1);
+	EXPECT_EQ(CountInput(2, Input.m_Fire).m_Presses, 1);
+	ASSERT_TRUE(PendingRelease);
+	const int WakeupFire = Input.m_Fire;
+	ApplyQmGoresWeaponCycleInput(Input, WakeupFire, true, WEAPON_HAMMER, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_Fire & 1, 0);
+	EXPECT_EQ(CountInput(WakeupFire, Input.m_Fire).m_Presses, 0);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_GUN + 1);
+	EXPECT_FALSE(PendingRelease);
+}
+
+TEST(QmGoresMode, WakeupDoesNotReleaseThePlayersHeldFire)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_WantedWeapon = WEAPON_HAMMER + 1;
+	Input.m_Fire = 1;
+	bool PendingRelease = false;
+	ApplyQmGoresWeaponCycleInput(Input, 1, true, WEAPON_HAMMER, false, true, PendingRelease);
+	EXPECT_EQ(CountInput(1, Input.m_Fire).m_Presses, 1);
+	EXPECT_FALSE(PendingRelease);
+	const int WakeupFire = Input.m_Fire;
+	ApplyQmGoresWeaponCycleInput(Input, WakeupFire, true, WEAPON_HAMMER, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_Fire, WakeupFire);
+	EXPECT_EQ(Input.m_Fire & 1, 1);
+}
+
+TEST(QmGoresMode, DisabledCyclePreservesManualFireAndWeapon)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_Fire = 1;
+	Input.m_WantedWeapon = WEAPON_GRENADE + 1;
+	bool PendingRelease = false;
+	const bool Active = ShouldEnableQmGoresWeaponCycle(true, true, true, true);
+	ApplyQmGoresWeaponCycleInput(Input, 0, Active, WEAPON_GRENADE, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_GRENADE + 1);
+	EXPECT_EQ(Input.m_Fire, 1);
+}
+
+TEST(QmGoresMode, DisablingCycleReleasesAPendingAutomaticWakeup)
+{
+	CNetObj_PlayerInput Input{};
+	Input.m_Fire = 3;
+	Input.m_WantedWeapon = WEAPON_LASER + 1;
+	bool PendingRelease = true;
+	ApplyQmGoresWeaponCycleInput(Input, 3, false, WEAPON_LASER, false, false, PendingRelease);
+	EXPECT_EQ(Input.m_Fire, 4);
+	EXPECT_EQ(Input.m_WantedWeapon, WEAPON_LASER + 1);
+	EXPECT_FALSE(PendingRelease);
 }
 
 TEST(QmGoresMode, BudgetedWorkConsumesAtMostBudget)

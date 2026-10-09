@@ -33,11 +33,6 @@ static constexpr LOG_COLOR BIND_PRINT_COLOR{255, 255, 204};
 	return Found;
 }
 
-static bool ShouldAppendGoresPrevWeapon(const CGameClient *pGameClient)
-{
-	return pGameClient != nullptr && pGameClient->m_TClient.ShouldAppendGoresPrevWeapon();
-}
-
 static bool IsExactDebugGraphToggleCommand(const char *pCommand)
 {
 	if(!pCommand || pCommand[0] == '\0')
@@ -48,19 +43,11 @@ static bool IsExactDebugGraphToggleCommand(const char *pCommand)
 	return str_comp_nocase(aNormalized, "toggle dbg_graphs 0 1") == 0;
 }
 
-static void ExecuteBindCommand(IConsole *pConsole, const char *pBind, const CGameClient *pGameClient, int Stroke, int ClientId)
+static void ExecuteBindCommand(IConsole *pConsole, const char *pBind, int Stroke, int ClientId)
 {
 	if(!pBind)
 		return;
-	if(!ShouldAppendGoresPrevWeapon(pGameClient) || str_find(pBind, "+fire") == nullptr || str_find(pBind, "+prevweapon") != nullptr)
-	{
-		pConsole->ExecuteLineStroked(Stroke, pBind, ClientId);
-		return;
-	}
-
-	std::string Command(pBind);
-	Command += ";+prevweapon";
-	pConsole->ExecuteLineStroked(Stroke, Command.c_str(), ClientId);
+	pConsole->ExecuteLineStroked(Stroke, pBind, ClientId);
 }
 
 bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
@@ -184,7 +171,7 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 					break;
 
 				const bool KeepHeldPanel = ActiveModifierBind->m_ShortcutState.Restrict(Get(*ActiveModifierBind), [&](const char *pCommand) {
-					ExecuteBindCommand(Console(), pCommand, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+					ExecuteBindCommand(Console(), pCommand, 0, IConsole::CLIENT_ID_UNSPECIFIED);
 				});
 				if(!KeepHeldPanel)
 					m_vActiveBinds.erase(ActiveModifierBind);
@@ -205,7 +192,7 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 						m_MouseOnAction = true;
 					}
 				}
-				ExecuteBindCommand(Console(), pBind, GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
+				ExecuteBindCommand(Console(), pBind, 1, IConsole::CLIENT_ID_UNSPECIFIED);
 				m_vActiveBinds.emplace_back(Event.m_Key, Mask);
 			};
 
@@ -227,7 +214,7 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 			// Have to check for nullptr again because the previous execute can unbind itself
 			if(m_Storage.m_aapKeyBindings[ActiveBind->m_ModifierMask][ActiveBind->m_Key])
 			{
-				ExecuteBindCommand(Console(), ActiveBind->m_ShortcutState.Command(Get(*ActiveBind)), GameClient(), 1, IConsole::CLIENT_ID_UNSPECIFIED);
+				ExecuteBindCommand(Console(), ActiveBind->m_ShortcutState.Command(Get(*ActiveBind)), 1, IConsole::CLIENT_ID_UNSPECIFIED);
 			}
 			Handled = true;
 		}
@@ -239,7 +226,7 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 		const bool WindowActive = pEngineGraphics == nullptr || pEngineGraphics->WindowActive() != 0;
 		const auto &&OnKeyRelease = [&](CActiveBind &Bind) {
 			if(!WindowActive && Bind.m_ShortcutState.ReleaseWhileUnfocused(Get(Bind), [&](const char *pCommand) {
-				   ExecuteBindCommand(Console(), pCommand, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+				   ExecuteBindCommand(Console(), pCommand, 0, IConsole::CLIENT_ID_UNSPECIFIED);
 			   }))
 				return true;
 			if(!WindowActive)
@@ -259,7 +246,7 @@ bool CBinds::OnInput(const IInput::CEvent &Event)
 			{
 				return false;
 			}
-			ExecuteBindCommand(Console(), pBind, GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+			ExecuteBindCommand(Console(), pBind, 0, IConsole::CLIENT_ID_UNSPECIFIED);
 			return false;
 		};
 
@@ -310,7 +297,7 @@ void CBinds::OnRender()
 		// 切回游戏先结束被冻结的显示状态，新的按键事件可重新打开；不恢复任何玩家输入。
 		const std::string Command = Bind.m_ShortcutState.Command(Get(Bind));
 		m_vActiveBinds.erase(m_vActiveBinds.begin() + i);
-		ExecuteBindCommand(Console(), Command.c_str(), GameClient(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
+		ExecuteBindCommand(Console(), Command.c_str(), 0, IConsole::CLIENT_ID_UNSPECIFIED);
 	}
 }
 
