@@ -104,11 +104,14 @@ inline void CCommandProcessorFragment_Vulkan::BeginSwapRenderPass(VkRenderPass R
 		LastPipe = VK_NULL_HANDLE;
 }
 
-inline void CCommandProcessorFragment_Vulkan::EndSwapRenderPassForExternalWork()
+inline bool CCommandProcessorFragment_Vulkan::EndSwapRenderPassForExternalWork()
 {
 	FinishRenderThreads();
+	if(m_HasError)
+		return false;
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	ExecutePendingRenderThreadCommandBuffers(CommandBuffer);
+	if(!ExecutePendingRenderThreadCommandBuffers(CommandBuffer))
+		return false;
 	if(m_SwapRenderPassActive)
 	{
 		vkCmdEndRenderPass(CommandBuffer);
@@ -117,14 +120,18 @@ inline void CCommandProcessorFragment_Vulkan::EndSwapRenderPassForExternalWork()
 	m_ForceSingleThreadedRender = true;
 	for(auto &LastPipe : m_vLastPipeline)
 		LastPipe = VK_NULL_HANDLE;
+	return true;
 }
 
 inline bool CCommandProcessorFragment_Vulkan::SubmitCurrentCommandsAndRestartSwapPass()
 {
-	EndSwapRenderPassForExternalWork();
+	if(!EndSwapRenderPassForExternalWork())
+		return false;
 	UploadNonFlushedBuffers<true>();
+	if(m_HasError)
+		return false;
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	if(vkEndCommandBuffer(CommandBuffer) != VK_SUCCESS)
+	if(!CheckVulkanResult(vkEndCommandBuffer(CommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (intermediate frame) failed."))
 		return false;
 
 	VkSubmitInfo SubmitInfo{};
@@ -135,7 +142,8 @@ inline bool CCommandProcessorFragment_Vulkan::SubmitCurrentCommandsAndRestartSwa
 	if(m_vUsedMemoryCommandBuffer[m_CurImageIndex])
 	{
 		auto &MemoryCommandBuffer = m_vMemoryCommandBuffers[m_CurImageIndex];
-		vkEndCommandBuffer(MemoryCommandBuffer);
+		if(!CheckVulkanResult(vkEndCommandBuffer(MemoryCommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (intermediate memory) failed."))
+			return false;
 		aCommandBuffers[0] = MemoryCommandBuffer;
 		aCommandBuffers[1] = CommandBuffer;
 		SubmitInfo.commandBufferCount = 2;
@@ -183,11 +191,12 @@ inline bool CCommandProcessorFragment_Vulkan::SubmitCurrentCommandsAndRestartSwa
 		return false;
 	}
 
-	vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+	if(!CheckVulkanResult(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT), GFX_ERROR_TYPE_RENDER_RECORDING, "vkResetCommandBuffer (intermediate frame) failed."))
+		return false;
 	VkCommandBufferBeginInfo BeginInfo{};
 	BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	BeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	if(vkBeginCommandBuffer(CommandBuffer, &BeginInfo) != VK_SUCCESS)
+	if(!CheckVulkanResult(vkBeginCommandBuffer(CommandBuffer, &BeginInfo), GFX_ERROR_TYPE_RENDER_RECORDING, "vkBeginCommandBuffer (intermediate frame) failed."))
 		return false;
 	BeginSwapRenderPass(m_VKRenderPassLoad);
 	// 命令缓冲已被重置，其中记录过的 index buffer、descriptor 与动态状态绑定
@@ -278,7 +287,8 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Begin(const CComm
 	SRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
 	if(Target.m_Framebuffer == VK_NULL_HANDLE)
 		return true;
-	EndSwapRenderPassForExternalWork();
+	if(!EndSwapRenderPassForExternalWork())
+		return false;
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
 	if(Target.m_Layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && !ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL))
 		return false;
@@ -396,7 +406,8 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 	if(!ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
 		return false;
 	Target.m_Layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	vkEndCommandBuffer(CommandBuffer);
+	if(!CheckVulkanResult(vkEndCommandBuffer(CommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (render target readback) failed."))
+		return false;
 	m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 	VkSubmitInfo SubmitInfo{};
 	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -480,8 +491,11 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Draw(const CComma
 	if(Target.m_Image == VK_NULL_HANDLE || Target.m_aVKStandardTexturedDescrSets[0].m_Descriptor == VK_NULL_HANDLE)
 		return true;
 	FinishRenderThreads();
+	if(m_HasError)
+		return false;
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	ExecutePendingRenderThreadCommandBuffers(CommandBuffer);
+	if(!ExecutePendingRenderThreadCommandBuffers(CommandBuffer))
+		return false;
 	if(Target.m_Layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 	{
 		if(!ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
@@ -552,7 +566,8 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_CaptureBackbuffer
 		(Target.m_Layout != VK_IMAGE_LAYOUT_UNDEFINED && Target.m_Layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
 		return true;
 
-	EndSwapRenderPassForExternalWork();
+	if(!EndSwapRenderPassForExternalWork())
+		return false;
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
 	VkImage &SwapImage = m_vSwapChainImages[m_CurImageIndex];
 	if(!ImageBarrier(CommandBuffer, SwapImage, 0, 1, 0, 1, m_VKSurfFormat.format, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL))
@@ -605,8 +620,11 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_GaussianBlurPass(
 		return true;
 
 	FinishRenderThreads();
+	if(m_HasError)
+		return false;
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	ExecutePendingRenderThreadCommandBuffers(CommandBuffer);
+	if(!ExecutePendingRenderThreadCommandBuffers(CommandBuffer))
+		return false;
 	CCommandBuffer::SState State{};
 	State.m_Texture = -1;
 	State.m_BlendMode = EBlendMode::NONE;

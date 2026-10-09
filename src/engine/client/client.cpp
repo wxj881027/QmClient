@@ -6,6 +6,7 @@
 #include "demoedit.h"
 #include "friends.h"
 #include "perf_file_logger.h"
+#include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
 #include "serverbrowser.h"
 
@@ -4372,10 +4373,8 @@ void CClient::Run()
 #endif
 		}
 
-		// 图形后端已经记录致命错误时，立刻在提交（会断言退出）之前收口。
-		// 这样设备丢失等故障走的是「写诊断 + 干净重启」，而不是弹模态框把
-		// 主线程和心跳一起卡住（那会写出误导性的 hang 报告）。
-		// TakeFatalError 会同时清掉标记，让随后的收尾流程不再重复触发断言。
+		// 消费图形故障时先保存后端诊断、停止提交，再写报告并收尾。
+		// 运行期图形故障不在主线程弹模态框，避免阻塞心跳造成误导性的 hang 报告。
 		if(Graphics()->TakeFatalError())
 		{
 			if(HandleQmGraphicsFatalError())
@@ -5767,9 +5766,8 @@ void CClient::WriteHangReportAndDump(int64_t Now, const QmHangDiagnostics::SSnap
 bool CClient::HandleQmGraphicsFatalError()
 {
 	// 图形后端已经记录了致命错误（例如 Vulkan VK_ERROR_DEVICE_LOST）。
-	// 一旦这个错误被提交（CGraphicsBackend_Threaded::ProcessError）就会断言退出，
-	// 而断言弹窗会阻塞主线程、停掉心跳，看门狗随后写出误导性的 hang 报告。
-	// 这里在提交之前主动收口：写诊断报告 -> 干净退出。用户的渲染后端与窗口
+	// TakeFatalError 已保存第一份诊断并停止提交；这里写诊断报告再干净退出。
+	// 用户的渲染后端与窗口
 	// 模式等显式设置保持原样。
 	// 例外（qm_vulkan_ext 的设计语义）：device lost 且 qm_enhanced_rendering
 	// 处于 AUTO 时，把配置持久化写回 0（纯净 Vulkan）并自动重启一次。AUTO
@@ -5782,6 +5780,7 @@ bool CClient::HandleQmGraphicsFatalError()
 	const char *pFatalError = Graphics()->GetFatalError();
 
 	bool QmEnhancedAutoFallback = false;
+	const int EnhancedRenderingMode = g_Config.m_QmEnhancedRendering;
 	char aQmFallbackInfo[256] = "none";
 	if(pFatalError[0] != '\0' && str_find(pFatalError, "device lost") != nullptr && g_Config.m_QmEnhancedRendering == 1)
 	{
@@ -5815,38 +5814,27 @@ bool CClient::HandleQmGraphicsFatalError()
 	Storage()->GetCompletePath(IStorage::TYPE_SAVE, aFilename, aPath, sizeof(aPath));
 	fs_makedir_rec_for(aPath);
 
-	IOHANDLE File = io_open(aPath, IOFLAG_WRITE);
-	if(File)
-	{
-		char aBuf[2048];
-		str_format(aBuf, sizeof(aBuf),
-			"QmClient runtime graphics fault report\n"
-			"Report type: graphics_fatal_error\n"
-			"Timestamp: %s\n"
-			"Process ID: %d\n"
-			"Graphics backend: %s\n"
-			"Configured graphics backend: %s\n"
-			"Client state: %s (%d)\n"
-			"Qm enhanced rendering fallback: %s\n"
-			"Current map: %s\n"
-			"Server address: %s\n"
-			"Game version: %s %s %s\n"
-			"\n"
-			"Graphics error:\n%s\n"
-			"\n"
-			"%s\n",
-			aDate, pid(), graphics_backend::BackendName(FailedBackend), aBackend, ClientStateToString(m_State), m_State,
-			aQmFallbackInfo,
-			m_aCurrentMap[0] != '\0' ? m_aCurrentMap : "(none)",
-			aServerAddr,
-			GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "",
-			pFatalError[0] != '\0' ? pFatalError : "(not reported by the backend)",
-			aGpuInfo);
-		io_write(File, aBuf, str_length(aBuf));
-		io_sync(File);
-		io_close(File);
-	}
-	else
+	char aHeader[2048];
+	str_format(aHeader, sizeof(aHeader),
+		"QmClient runtime graphics fault report\n"
+		"Report type: graphics_fatal_error\n"
+		"Timestamp: %s\n"
+		"Process ID: %d\n"
+		"Graphics backend: %s\n"
+		"Configured graphics backend: %s\n"
+		"Client state: %s (%d)\n"
+		"Qm enhanced rendering fallback: %s\n"
+		"Qm enhanced rendering mode before fallback: %d\n"
+		"Configured Vulkan recording threads: %d\n"
+		"Current map: %s\n"
+		"Server address: %s\n"
+		"Game version: %s %s %s\n",
+		aDate, pid(), graphics_backend::BackendName(FailedBackend), aBackend, ClientStateToString(m_State), m_State,
+		aQmFallbackInfo, EnhancedRenderingMode, g_Config.m_GfxRenderThreadCount,
+		m_aCurrentMap[0] != '\0' ? m_aCurrentMap : "(none)",
+		aServerAddr,
+		GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH != nullptr ? GIT_SHORTREV_HASH : "");
+	if(!QmGraphicsDiagnostics::WriteReport(aPath, aHeader, pFatalError, aGpuInfo))
 	{
 		log_error("gfx", "could not write runtime graphics fault report to '%s'", aPath);
 	}

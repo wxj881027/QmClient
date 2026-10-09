@@ -3117,6 +3117,7 @@ if(CLIENT)
     client.h
     qm_hang_diagnostics.cpp
     qm_hang_diagnostics.h
+    qm_graphics_diagnostics.h
     qm_storage_mode.h
     demoedit.cpp
     demoedit.h
@@ -4639,6 +4640,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/graphics/graphics_backend_policy_test.cpp
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
+    src/test/integration/client/graphics_fatal_error_test.cpp
+    src/test/integration/client/graphics_error_report_test.cpp
     src/test/unit/engine/graphics/graphics_command_batch_test.cpp
     src/test/unit/base/hash_test.cpp
     src/test/unit/engine/huffman_test.cpp
@@ -5000,6 +5003,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
+    src/engine/client/backend_threaded.cpp
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
     src/engine/client/backend/graphics_backend_contract.cpp
     src/engine/client/backend/metal/metal_frame_state.cpp
@@ -5156,6 +5160,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   )
   add_dependencies(${TARGET_TESTRUNNER} generate_protocol)
   target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+  if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
+    # 线程后端的 autorelease pool 与 macOS 主循环等待需要这些系统框架。
+    target_link_libraries(${TARGET_TESTRUNNER} "-framework Foundation" "-framework CoreFoundation")
+  endif()
   if(FREETYPE_FOUND)
     target_link_libraries(${TARGET_TESTRUNNER} ${FREETYPE_LIBRARIES})
     target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FREETYPE_INCLUDE_DIRS})

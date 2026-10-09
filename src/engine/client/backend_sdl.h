@@ -115,7 +115,8 @@ public:
 	// 非破坏性查询：图形后端是否已记录致命错误。运行时错误会停止后续提交，
 	// 由主循环消费并进入恢复流程；初始化错误仍由 ProcessError 直接报告。
 	bool HasFatalError() const override;
-	// 「检查并清除」致命错误标记：返回 true 表示刚刚消费掉一个致命错误。
+	// 保存诊断并停止提交后清除待消费标记；GetFatalError 保留第一份故障。
+	// 返回 true 表示刚刚消费掉一个致命错误。
 	// 收尾流程仍可能向后端提交清理命令，停止标志保证这些提交不会再次执行。
 	bool TakeFatalError();
 	bool GetWarning(std::vector<std::string> &WarningStrings) override;

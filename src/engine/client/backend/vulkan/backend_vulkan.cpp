@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <condition_variable>
 #include <cstddef>
 #include <cstdlib>
@@ -1374,9 +1375,8 @@ protected:
 	 * ERROR MANAGEMENT
 	 ************************/
 	std::mutex m_ErrWarnMutex;
-	std::string m_ErrorHelper;
 
-	bool m_HasError = false;
+	std::atomic<bool> m_HasError{false};
 	bool m_CanAssert = false;
 
 	/**
@@ -1401,8 +1401,14 @@ protected:
 				dbg_msg("vulkan", "vulkan error: %s: %s", pErr, pErrStrExtra);
 			else
 				dbg_msg("vulkan", "vulkan error: %s", pErr);
+			if(!m_HasError)
+			{
+				m_Error.m_ErrorType = ErrType;
+				char aContext[192];
+				str_format(aContext, sizeof(aContext), "Vulkan frame context: image=%u/%u recording_threads=%zu", m_CurImageIndex, m_SwapChainImageCount, m_ThreadCount);
+				m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{false, aContext});
+			}
 			m_HasError = true;
-			m_Error.m_ErrorType = ErrType;
 		}
 		else
 		{
@@ -1434,7 +1440,6 @@ protected:
 		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
 		m_Error = {};
 		m_Warning = {};
-		m_ErrorHelper.clear();
 		m_HasError = false;
 	}
 
@@ -1497,6 +1502,8 @@ protected:
 
 	const char *CheckVulkanCriticalError(VkResult CallResult)
 	{
+		// 多个录制线程可能同时失败；返回的诊断字符串不能共用可变缓冲。
+		static thread_local std::string s_ErrorHelper;
 		const char *pCriticalError = nullptr;
 		switch(CallResult)
 		{
@@ -1559,13 +1566,26 @@ protected:
 			m_RecreateSwapChain = true;
 			break;
 		default:
-			m_ErrorHelper = "unknown error: ";
-			m_ErrorHelper.append(std::to_string(CallResult));
-			pCriticalError = m_ErrorHelper.c_str();
+			pCriticalError = "unknown error";
 			break;
 		}
 
-		return pCriticalError;
+		if(pCriticalError == nullptr)
+			return nullptr;
+		s_ErrorHelper = pCriticalError;
+		s_ErrorHelper.append(" (VkResult ").append(std::to_string(CallResult)).append(")");
+		return s_ErrorHelper.c_str();
+	}
+
+	[[nodiscard]] bool CheckVulkanResult(VkResult Result, EGfxErrorType ErrorType, const char *pOperation)
+	{
+		if(Result == VK_SUCCESS)
+			return true;
+		const char *pDetail = CheckVulkanCriticalError(Result);
+		char aResult[64];
+		str_format(aResult, sizeof(aResult), "VkResult %d", (int)Result);
+		SetError(ErrorType, pOperation, pDetail != nullptr ? pDetail : aResult);
+		return false;
 	}
 
 	void CleanupVulkanInitialization()
@@ -2027,7 +2047,10 @@ protected:
 			}
 			if(Res != VK_SUCCESS)
 			{
-				dbg_msg("vulkan", "vulkan memory allocation failed.");
+				(void)CheckVulkanResult(Res, GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "vkAllocateMemory failed.");
+				char aAllocation[192];
+				str_format(aAllocation, sizeof(aAllocation), "vkAllocateMemory request: bytes=%" PRIu64 " memory_type=%u recording_worker=%d", (uint64_t)pAllocateInfo->allocationSize, pAllocateInfo->memoryTypeIndex, s_ThreadIsRenderWorker ? 1 : 0);
+				SetError(GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, aAllocation);
 				return false;
 			}
 		}
@@ -2644,7 +2667,10 @@ protected:
 			{
 				if(!m_vThreadHelperHadCommands[ThreadIndex])
 				{
-					StartRenderThread(ThreadIndex);
+					if(!m_HasError)
+						StartRenderThread(ThreadIndex);
+					else
+						m_vvThreadCommandLists[ThreadIndex].clear();
 				}
 			}
 
@@ -2722,10 +2748,10 @@ protected:
 		return true;
 	}
 
-	void ExecutePendingRenderThreadCommandBuffers(VkCommandBuffer CommandBuffer)
+	[[nodiscard]] bool ExecutePendingRenderThreadCommandBuffers(VkCommandBuffer CommandBuffer)
 	{
 		if(m_ThreadCount <= 1)
-			return;
+			return true;
 		size_t ThreadedCommandsUsedCount = 0;
 		const size_t RenderThreadCount = m_ThreadCount - 1;
 		for(size_t i = 0; i < RenderThreadCount; ++i)
@@ -2741,15 +2767,17 @@ protected:
 		if(m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex])
 		{
 			auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[0][m_CurImageIndex];
-			vkEndCommandBuffer(GraphicThreadCommandBuffer);
+			if(!CheckVulkanResult(vkEndCommandBuffer(GraphicThreadCommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (secondary) failed."))
+				return false;
 			vkCmdExecuteCommands(CommandBuffer, 1, &GraphicThreadCommandBuffer);
 			m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex] = false;
 		}
+		return true;
 	}
 
 	void BeginSwapRenderPass(VkRenderPass RenderPass);
 
-	void EndSwapRenderPassForExternalWork();
+	[[nodiscard]] bool EndSwapRenderPassForExternalWork();
 
 	[[nodiscard]] bool SubmitCurrentCommandsAndRestartSwapPass();
 
@@ -2762,9 +2790,14 @@ protected:
 	[[nodiscard]] bool WaitFrame()
 	{
 		FinishRenderThreads();
+		// 工作线程失败时 secondary 缓冲可能仍在录制，不能执行或提交本帧。
+		if(m_HasError)
+			return false;
 		m_RenderScheduler.NewFrame();
 
 		UploadNonFlushedBuffers<true>();
+		if(m_HasError)
+			return false;
 
 		auto &CommandBuffer = GetMainGraphicCommandBuffer();
 
@@ -2813,11 +2846,8 @@ protected:
 		vkCmdEndRenderPass(CommandBuffer);
 		EndFrameTimestampQuery(CommandBuffer);
 
-		if(vkEndCommandBuffer(CommandBuffer) != VK_SUCCESS)
-		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Command buffer cannot be ended anymore.");
+		if(!CheckVulkanResult(vkEndCommandBuffer(CommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (frame) failed."))
 			return false;
-		}
 
 		VkSubmitInfo SubmitInfo{};
 		SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -2885,7 +2915,7 @@ protected:
 				QmEnhancedMarkDisabled(qm_vulkan_ext::EDisableReason::DEVICE_LOST);
 			if(pCritErrorMsg != nullptr)
 			{
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Submitting to graphics queue failed.", pCritErrorMsg);
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "vkQueueSubmit (frame) failed.", pCritErrorMsg);
 				return false;
 			}
 		}
@@ -2928,7 +2958,7 @@ protected:
 			const char *pCritErrorMsg = CheckVulkanCriticalError(QueuePresentRes);
 			if(pCritErrorMsg != nullptr)
 			{
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "Presenting graphics queue failed.", pCritErrorMsg);
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "vkQueuePresentKHR failed.", pCritErrorMsg);
 				return false;
 			}
 		}
@@ -2984,7 +3014,7 @@ protected:
 				const char *pCritErrorMsg = CheckVulkanCriticalError(AcqResult);
 				if(pCritErrorMsg != nullptr)
 				{
-					SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "Acquiring next image failed.", pCritErrorMsg);
+					SetError(EGfxErrorType::GFX_ERROR_TYPE_SWAP_FAILED, "vkAcquireNextImageKHR failed.", pCritErrorMsg);
 					return false;
 				}
 				else if(AcqResult == VK_ERROR_SURFACE_LOST_KHR)
@@ -3001,9 +3031,9 @@ protected:
 		{
 			const char *pCritErrorMsg = CheckVulkanCriticalError(WaitForImageFenceResult);
 			if(pCritErrorMsg != nullptr)
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Waiting for swap chain image fence failed.", pCritErrorMsg);
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "vkWaitForFences (swapchain image) failed.", pCritErrorMsg);
 			else
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "Waiting for swap chain image fence failed.");
+				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_SUBMIT_FAILED, "vkWaitForFences (swapchain image) failed.");
 			return false;
 		}
 		ReadFrameTimestampQuery(m_CurImageIndex);
@@ -3038,18 +3068,16 @@ protected:
 		ClearFrameMemoryUsage();
 
 		// clear frame
-		vkResetCommandBuffer(GetMainGraphicCommandBuffer(), VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+		if(!CheckVulkanResult(vkResetCommandBuffer(GetMainGraphicCommandBuffer(), VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT), GFX_ERROR_TYPE_RENDER_RECORDING, "vkResetCommandBuffer failed."))
+			return false;
 
 		auto &CommandBuffer = GetMainGraphicCommandBuffer();
 		VkCommandBufferBeginInfo BeginInfo{};
 		BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		BeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-		if(vkBeginCommandBuffer(CommandBuffer, &BeginInfo) != VK_SUCCESS)
-		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Command buffer cannot be filled anymore.");
+		if(!CheckVulkanResult(vkBeginCommandBuffer(CommandBuffer, &BeginInfo), GFX_ERROR_TYPE_RENDER_RECORDING, "vkBeginCommandBuffer (frame) failed."))
 			return false;
-		}
 		BeginFrameTimestampQuery(CommandBuffer);
 
 		VkRenderPassBeginInfo RenderPassInfo{};
@@ -6927,11 +6955,8 @@ public:
 		BufferInfo.usage = BufferUsage;
 		BufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if(vkCreateBuffer(m_VKDevice, &BufferInfo, nullptr, &VKBuffer) != VK_SUCCESS)
-		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "Buffer creation failed.");
+		if(!CheckVulkanResult(vkCreateBuffer(m_VKDevice, &BufferInfo, nullptr, &VKBuffer), GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "vkCreateBuffer failed."))
 			return false;
-		}
 
 		VkMemoryRequirements MemRequirements;
 		vkGetBufferMemoryRequirements(m_VKDevice, VKBuffer, &MemRequirements);
@@ -6963,11 +6988,8 @@ public:
 
 		VKBufferMemory.m_UsageType = MemUsage;
 
-		if(vkBindBufferMemory(m_VKDevice, VKBuffer, VKBufferMemory.m_Mem, 0) != VK_SUCCESS)
-		{
-			SetError(EGfxErrorType::GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "Binding memory to buffer failed.");
+		if(!CheckVulkanResult(vkBindBufferMemory(m_VKDevice, VKBuffer, VKBufferMemory.m_Mem, 0), GFX_ERROR_TYPE_OUT_OF_MEMORY_BUFFER, "vkBindBufferMemory failed."))
 			return false;
-		}
 
 		return true;
 	}
@@ -7554,16 +7576,14 @@ public:
 		{
 			m_vUsedMemoryCommandBuffer[m_CurImageIndex] = true;
 
-			vkResetCommandBuffer(MemCommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+			if(!CheckVulkanResult(vkResetCommandBuffer(MemCommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT), GFX_ERROR_TYPE_RENDER_RECORDING, "vkResetCommandBuffer failed."))
+				return false;
 
 			VkCommandBufferBeginInfo BeginInfo{};
 			BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			BeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			if(vkBeginCommandBuffer(MemCommandBuffer, &BeginInfo) != VK_SUCCESS)
-			{
-				SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Command buffer cannot be filled anymore.");
+			if(!CheckVulkanResult(vkBeginCommandBuffer(MemCommandBuffer, &BeginInfo), GFX_ERROR_TYPE_RENDER_RECORDING, "vkBeginCommandBuffer (memory) failed."))
 				return false;
-			}
 		}
 		pMemCommandBuffer = &MemCommandBuffer;
 		return true;
@@ -7583,7 +7603,8 @@ public:
 			{
 				m_vvUsedThreadDrawCommandBuffer[RenderThreadIndex][m_CurImageIndex] = true;
 
-				vkResetCommandBuffer(DrawCommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+				if(!CheckVulkanResult(vkResetCommandBuffer(DrawCommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT), GFX_ERROR_TYPE_RENDER_RECORDING, "vkResetCommandBuffer failed."))
+					return false;
 
 				VkCommandBufferBeginInfo BeginInfo{};
 				BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -7598,11 +7619,8 @@ public:
 
 				BeginInfo.pInheritanceInfo = &InheritanceInfo;
 
-				if(vkBeginCommandBuffer(DrawCommandBuffer, &BeginInfo) != VK_SUCCESS)
-				{
-					SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Thread draw command buffer cannot be filled anymore.");
+				if(!CheckVulkanResult(vkBeginCommandBuffer(DrawCommandBuffer, &BeginInfo), GFX_ERROR_TYPE_RENDER_RECORDING, "vkBeginCommandBuffer (secondary) failed."))
 					return false;
-				}
 			}
 			pDrawCommandBuffer = &DrawCommandBuffer;
 			return true;
@@ -8051,7 +8069,9 @@ public:
 	{
 		m_FrameProfileStats.m_FlushCalls++;
 		m_FrameProfileStats.m_FlushRanges += RangeCount;
-		return vkFlushMappedMemoryRanges(m_VKDevice, RangeCount, pRanges);
+		const VkResult Result = vkFlushMappedMemoryRanges(m_VKDevice, RangeCount, pRanges);
+		(void)CheckVulkanResult(Result, GFX_ERROR_TYPE_RENDER_CMD_FAILED, "vkFlushMappedMemoryRanges failed.");
+		return Result;
 	}
 
 	VkResult InvalidateMappedMemoryRanges(uint32_t RangeCount, const VkMappedMemoryRange *pRanges)
@@ -8237,6 +8257,12 @@ public:
 				const auto RecordStartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
 				if(!CallbackObj.m_CommandCB(pBaseCommand, Buffer))
 				{
+					if(!m_HasError)
+					{
+						char aError[128];
+						str_format(aError, sizeof(aError), "Vulkan command %d failed without API details (recording thread %zu).", (int)pBaseCommand->m_Cmd, Buffer.m_ThreadIndex);
+						SetError(GFX_ERROR_TYPE_RENDER_CMD_FAILED, aError);
+					}
 					if(m_FrameProfilingActive)
 						m_FrameProfileStats.m_CPUMainCommandRecordTime += time_get_nanoseconds() - RecordStartTime;
 					m_FrameProfileStats.m_MainCommandRecords++;
@@ -9562,9 +9588,20 @@ public:
 				bool HasErrorFromCmd = false;
 				for(auto &NextCmd : m_vvThreadCommandLists[ThreadIndex])
 				{
+					if(m_HasError)
+					{
+						HasErrorFromCmd = true;
+						break;
+					}
 					const auto RecordStartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
 					if(!m_aCommandCallbacks[CommandBufferCMDOff(NextCmd.m_Command)].m_CommandCB(NextCmd.m_pRawCommand, NextCmd))
 					{
+						if(!m_HasError)
+						{
+							char aError[128];
+							str_format(aError, sizeof(aError), "Vulkan command %d failed without API details (recording thread %zu).", (int)NextCmd.m_Command, ThreadIndex + 1);
+							SetError(GFX_ERROR_TYPE_RENDER_CMD_FAILED, aError);
+						}
 						if(m_FrameProfilingActive)
 							m_vThreadFrameProfileStats[ThreadIndex + 1].m_CPUThreadCommandRecordTime += time_get_nanoseconds() - RecordStartTime;
 						m_vThreadFrameProfileStats[ThreadIndex + 1].m_ThreadCommandRecords++;

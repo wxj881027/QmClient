@@ -230,12 +230,21 @@ void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer)
 		}
 		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR)
 		{
+			// 错误返回时也要收拢录制线程，再读取它们写入的诊断。
+			m_pGLBackend->EndCommands();
 			m_Error = m_pGLBackend->GetError();
 			HandleError();
 			return;
 		}
 		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_WARNING)
 		{
+			m_pGLBackend->EndCommands();
+			if(m_pGLBackend->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
+			{
+				m_Error = m_pGLBackend->GetError();
+				HandleError();
+				return;
+			}
 			m_Warning = m_pGLBackend->GetWarning();
 			HandleWarning();
 			return;
@@ -251,6 +260,12 @@ void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer)
 	}
 
 	m_pGLBackend->EndCommands();
+	// 工作线程可能在最后一次 RunCommand 之后才失败。
+	if(m_pGLBackend->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
+	{
+		m_Error = m_pGLBackend->GetError();
+		HandleError();
+	}
 }
 
 CCommandProcessor_SDL_GL::CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch)
