@@ -3104,9 +3104,6 @@ Debug SQL.
 Debug tile layer clipping.
 == 디버그 타일 레이어 클리핑
 
-Decorative throws
-== 장식용 투척물
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 전용 WebSocket 주소 (비우면 wss://qmclient.icu/ws 사용)
 
@@ -3854,9 +3851,6 @@ Edit touch controls
 Editor
 == 편집기
 
-Egg
-== 달걀
-
 Elastic
 == 탄력적
 
@@ -3979,9 +3973,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == 프리즈 시 사용자 정의 예측 여백 활성화
-
-Enable decorative grass, tomato and egg throws
-== 풀, 토마토, 달걀 장식용 투척물 활성화
 
 Enable Deleting
 == 삭제 활성화
@@ -5314,9 +5305,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 그래픽 추적 수준: 0 = 끄기, 1 = 주기적 요약, 2 = 요약 및 느린 프레임, 3 = 상세 백엔드 추적
-
-Grass
-== 풀
 
 Greek
 == 그리스 문자
@@ -13154,21 +13142,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 이 툴팁은 ui_widget::Tooltip — CTooltips 위의 얇은 레이어에 의해 제공됩니다.
 
-Throw a decorative grass, tomato or egg projectile
-== 풀, 토마토 또는 달걀 장식용 투척물 던지기
-
-Throw egg key
-== 달걀 던지기 키
-
-Throw grass key
-== 풀 던지기 키
-
-Throw tomato key
-== 토마토 던지기 키
-
-Throwables
-== 투척물
-
 Tick delay before executing qm_execute_on_join
 == qm_execute_on_join 실행 전 지연 시간 (tick)
 
@@ -13441,9 +13414,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == 이 서버를 특정 커뮤니티에 등록하기 위한 토큰
-
-Tomato
-== 토마토
 
 Too many configuration files.
 == 설정 파일이 너무 많습니다.

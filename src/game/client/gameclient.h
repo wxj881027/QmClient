@@ -77,7 +77,6 @@
 #include "components/qmclient/chat_emoji.h"
 #include "components/qmclient/collision_hitbox.h"
 #include "components/qmclient/data_version.h"
-#include "components/qmclient/decorative_projectiles.h"
 #include "components/qmclient/dummy_hammer_input.h"
 #include "components/qmclient/hammer_hit_detection.h"
 #include "components/qmclient/hud_notifications/hud_notifications.h"
@@ -260,7 +259,6 @@ public:
 	CStatboard m_Statboard;
 	CSounds m_Sounds;
 	CEmoticon m_Emoticon;
-	CQmDecorativeProjectiles m_DecorativeProjectiles;
 	CSystemMediaControls m_SystemMediaControls;
 	CNeteaseIntegration m_NeteaseIntegration;
 	CMusicLyricsIntegration m_MusicLyricsIntegration;

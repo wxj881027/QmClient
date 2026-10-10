@@ -290,8 +290,6 @@ struct CEmoticonProjectile
 	float m_SizeScale = 1.0f;
 	float m_SizeLimit = 128.0f;
 	bool m_Active = false;
-	bool m_StopOnCollision = false;
-	bool m_Impacted = false;
 	int m_Emoticon = 0;
 	int m_OwnerClientId = -1;
 	double m_Accumulator = 0.0;
@@ -310,8 +308,6 @@ struct CEmoticonProjectile
 		m_AngVel = ((rand() % 100) - 50) / 10.0f;
 		m_LifeTime = static_cast<float>(std::clamp(DurationSeconds, 1, 10));
 		m_Active = true;
-		m_StopOnCollision = false;
-		m_Impacted = false;
 		m_OwnerClientId = OwnerClientId;
 		m_Accumulator = 0.0;
 	}
@@ -387,7 +383,6 @@ struct CEmoticonProjectile
 				else
 				{
 					m_Active = false;
-					m_Impacted = m_StopOnCollision;
 					break;
 				}
 			}
@@ -396,39 +391,21 @@ struct CEmoticonProjectile
 			m_Vel.y += 1500.0f * STEP;
 			const int Steps = std::max(1, (int)std::ceil((length(m_Vel) + std::abs(m_AngVel) * Size()) * STEP));
 			const float SubDt = STEP / Steps;
-			for(int Step = 0; Step < Steps && m_Active; ++Step)
+			for(int Step = 0; Step < Steps; ++Step)
 			{
-				for(int Axis = 0; Axis < 2 && m_Active; ++Axis)
+				for(int Axis = 0; Axis < 2; ++Axis)
 				{
 					vec2 Next = m_Pos;
 					float &Velocity = Axis == 0 ? m_Vel.x : m_Vel.y;
 					(Axis == 0 ? Next.x : Next.y) += Velocity * SubDt;
 					if(Blocked(Next, Size(), m_Angle))
-					{
-						if(m_StopOnCollision)
-						{
-							m_Active = false;
-							m_Impacted = true;
-						}
-						else
-							Velocity *= -0.6f;
-					}
+						Velocity *= -0.6f;
 					else
 						m_Pos = Next;
 				}
-				if(!m_Active)
-					break;
 				const float NextAngle = m_Angle + m_AngVel * SubDt;
 				if(Blocked(m_Pos, Size(), NextAngle))
-				{
-					if(m_StopOnCollision)
-					{
-						m_Active = false;
-						m_Impacted = true;
-					}
-					else
-						m_AngVel *= -0.6f;
-				}
+					m_AngVel *= -0.6f;
 				else
 					m_Angle = NextAngle;
 			}

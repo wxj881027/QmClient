@@ -12868,22 +12868,6 @@ turkish = "Konsolu daralt"
 polish = "Zwiń konsolę"
 
 [[message]]
-key = "Decorative throws"
-[message.translations]
-simplified_chinese = "装饰投掷物"
-traditional_chinese = "裝飾投擲物"
-japanese = "装飾用の投げ物"
-korean = "장식용 투척물"
-russian = "Декоративные броски"
-german = "Dekorative Würfe"
-spanish = "Lanzamientos decorativos"
-french = "Lancers décoratifs"
-brazilian_portuguese = "Arremessos decorativos"
-portuguese = "Lançamentos decorativos"
-turkish = "Dekoratif fırlatmalar"
-polish = "Rzuty dekoracyjne"
-
-[[message]]
 key = "IME"
 [message.translations]
 simplified_chinese = "输入法"
@@ -12914,70 +12898,6 @@ brazilian_portuguese = "Tecla"
 portuguese = "Tecla"
 turkish = "Tuş"
 polish = "Klawisz"
-
-[[message]]
-key = "Throw egg key"
-[message.translations]
-simplified_chinese = "投鸡蛋按键"
-traditional_chinese = "投雞蛋按鍵"
-japanese = "卵を投げるキー"
-korean = "달걀 던지기 키"
-russian = "Клавиша броска яйца"
-german = "Taste für Eierwurf"
-spanish = "Tecla para lanzar huevo"
-french = "Touche pour lancer un œuf"
-brazilian_portuguese = "Tecla para arremessar ovo"
-portuguese = "Tecla para lançar ovo"
-turkish = "Yumurta fırlatma tuşu"
-polish = "Klawisz rzutu jajkiem"
-
-[[message]]
-key = "Throw grass key"
-[message.translations]
-simplified_chinese = "投草按键"
-traditional_chinese = "投草按鍵"
-japanese = "草を投げるキー"
-korean = "풀 던지기 키"
-russian = "Клавиша броска травы"
-german = "Taste für Graswurf"
-spanish = "Tecla para lanzar hierba"
-french = "Touche pour lancer de l’herbe"
-brazilian_portuguese = "Tecla para arremessar grama"
-portuguese = "Tecla para lançar erva"
-turkish = "Çimen fırlatma tuşu"
-polish = "Klawisz rzutu trawą"
-
-[[message]]
-key = "Throw tomato key"
-[message.translations]
-simplified_chinese = "投番茄按键"
-traditional_chinese = "投番茄按鍵"
-japanese = "トマトを投げるキー"
-korean = "토마토 던지기 키"
-russian = "Клавиша броска помидора"
-german = "Taste für Tomatenwurf"
-spanish = "Tecla para lanzar tomate"
-french = "Touche pour lancer une tomate"
-brazilian_portuguese = "Tecla para arremessar tomate"
-portuguese = "Tecla para lançar tomate"
-turkish = "Domates fırlatma tuşu"
-polish = "Klawisz rzutu pomidorem"
-
-[[message]]
-key = "Throwables"
-[message.translations]
-simplified_chinese = "投掷物"
-traditional_chinese = "投擲物"
-japanese = "投げ物"
-korean = "투척물"
-russian = "Предметы для броска"
-german = "Wurfobjekte"
-spanish = "Objetos arrojadizos"
-french = "Objets à lancer"
-brazilian_portuguese = "Objetos de arremesso"
-portuguese = "Objetos de lançamento"
-turkish = "Fırlatılabilirler"
-polish = "Przedmioty do rzucania"
 
 [[message]]
 key = "Configuration package exported."

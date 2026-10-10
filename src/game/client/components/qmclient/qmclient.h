@@ -122,7 +122,6 @@ class CQmClient : public CComponent
 	int64_t m_QmAnonymousNextHelloCheck = 0;
 	std::string m_QmAnonymousHelloBody;
 	std::deque<SQmRealtimeMessage> m_QmRealtimeEvents;
-	std::deque<SQmRealtimeMessage> m_QmDecorativeThrowEvents;
 	std::deque<SQmRealtimeMessage> m_QmRealtimeEmoticonEvents;
 	std::shared_ptr<const json_value> m_pQmRealtimeUsersPayload;
 	CQmRealtimeUsersState m_QmRealtimeUsersState;
@@ -222,7 +221,6 @@ class CQmClient : public CComponent
 	void StopQmAnonymousEmotes();
 	std::string BuildQmAnonymousEmoteHello() const;
 	void SendQmAnonymousEmoteHello();
-	void QueueQmDecorativeThrow(SQmRealtimeMessage Message);
 	void QueueQmAnonymousEmoticonEvent(SQmRealtimeMessage Message);
 	void ApplyQmRealtimeServiceData(const SQmRealtimeMessage &Message);
 	void ApplyQmRealtimeBroadcast(const SQmRealtimeMessage &Message);
@@ -284,8 +282,6 @@ public:
 	void MarkQmNewsRead();
 	void EnqueueQmRealtimeMessage(const char *pData, size_t Size, bool Compressed = false);
 	bool PopQmRealtimeMessage(SQmRealtimeMessage &Message);
-	bool PopQmDecorativeThrow(SQmRealtimeMessage &Message);
-	void SendQmDecorativeThrow(int Type, int PlayerId, vec2 Origin, vec2 Direction);
 	bool PopQmRealtimeEmoticon(SQmRealtimeMessage &Message);
 	void SendQmAnonymousEmoticon(int Emoticon, int PlayerId, bool LaunchMode, bool SuperLaunch);
 	int Sizeof() const override { return sizeof(*this); }

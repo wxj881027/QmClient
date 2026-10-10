@@ -3104,9 +3104,6 @@ Debug SQL.
 Debug tile layer clipping.
 == 調試圖塊圖層裁剪
 
-Decorative throws
-== 裝飾投擲物
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 專用 WebSocket 位址（留空使用 wss://qmclient.icu/ws）
 
@@ -3854,9 +3851,6 @@ Edit touch controls
 Editor
 == 編輯器
 
-Egg
-== 雞蛋
-
 Elastic
 == 彈性
 
@@ -3979,9 +3973,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == 凍結時啟用自定義預測邊距
-
-Enable decorative grass, tomato and egg throws
-== 啟用草、番茄和雞蛋裝飾投擲物
 
 Enable Deleting
 == 啟用刪除
@@ -5314,9 +5305,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == 圖形追蹤等級：0 = 關閉，1 = 定期摘要，2 = 摘要與慢影格，3 = 詳細後端追蹤
-
-Grass
-== 草
 
 Greek
 == 希臘文
@@ -13154,21 +13142,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == 這個提示由 ui_widget::Tooltip 提供，它是 CTooltips 上的一層薄封裝。
 
-Throw a decorative grass, tomato or egg projectile
-== 投擲草、番茄或雞蛋裝飾物
-
-Throw egg key
-== 投雞蛋按鍵
-
-Throw grass key
-== 投草按鍵
-
-Throw tomato key
-== 投番茄按鍵
-
-Throwables
-== 投擲物
-
 Tick delay before executing qm_execute_on_join
 == 執行 qm_execute_on_join 前的延遲（tick）
 
@@ -13441,9 +13414,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == 用於將此伺服器註冊到特定社區的令牌
-
-Tomato
-== 番茄
 
 Too many configuration files.
 == 配置檔案過多。

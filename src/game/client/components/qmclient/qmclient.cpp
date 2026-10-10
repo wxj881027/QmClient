@@ -2,7 +2,6 @@
 #include "qmclient.h"
 
 #include "bounded_file_reader.h"
-#include "decorative_throw_policy.h"
 #include "qm_title_style.h"
 #include "statistics_file.h"
 #include "voice/voice_utils.h"
@@ -1325,7 +1324,6 @@ void CQmClient::OnShutdown()
 		m_pQmRealtimeTransport->Disconnect();
 	StopQmAnonymousEmotes();
 	m_QmRealtimeEvents.clear();
-	m_QmDecorativeThrowEvents.clear();
 	m_QmRealtimeEmoticonEvents.clear();
 	m_pQmRealtimeUsersPayload.reset();
 	EndQmClientLocalModePlaytime();
@@ -1613,7 +1611,6 @@ std::string CQmClient::BuildQmRealtimePresence(bool Hello) const
 		Writer.WriteAttribute("capabilities");
 		Writer.BeginArray();
 		Writer.WriteStrValue(QMCLIENT_USERS_SYNC_CAPABILITY);
-		Writer.WriteStrValue(QmDecorativeThrow::CAPABILITY);
 		Writer.EndArray();
 		Writer.WriteAttribute("machine_hash");
 		Writer.WriteStrValue(m_aQmClientMachineHash);
@@ -1963,7 +1960,6 @@ void CQmClient::UpdateQmRealtime()
 		str_copy(m_aQmRealtimeUrl, pConfiguredUrl);
 		m_QmRealtimeFailureLogged = false;
 		m_QmRealtimeEvents.clear();
-		m_QmDecorativeThrowEvents.clear();
 		m_pQmRealtimeUsersPayload.reset();
 		m_QmRealtimeHelloSent = false;
 		m_QmRealtimeTitleRevision = -1;
@@ -2034,7 +2030,6 @@ void CQmClient::UpdateQmRealtime()
 		m_QmRealtimePresenceBody.clear();
 		m_QmRealtimeNextPresenceCheck = 0;
 		m_QmRealtimeEvents.clear();
-		m_QmDecorativeThrowEvents.clear();
 		m_pQmRealtimeUsersPayload.reset();
 		m_QmRealtimeUsersState.Reset();
 		m_QmRealtimeNextUsersResync = 0;
@@ -2063,7 +2058,6 @@ void CQmClient::UpdateQmRealtime()
 		m_pQmRealtimeTransport->LastConnectedTick() != ConnectedTick)
 	{
 		m_QmRealtimeEvents.clear();
-		m_QmDecorativeThrowEvents.clear();
 		m_pQmRealtimeUsersPayload.reset();
 		m_QmRealtimeHelloSent = false;
 		return;
@@ -2094,8 +2088,6 @@ void CQmClient::UpdateQmRealtime()
 			if(RealtimeMessage.m_HasOnlineDummies)
 				m_QmClientDistribution.m_OnlineDummyCount = RealtimeMessage.m_OnlineDummies;
 		}
-		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::DECORATIVE_THROW)
-			QueueQmDecorativeThrow(std::move(RealtimeMessage));
 		else if(RealtimeMessage.m_Event == EQmRealtimeEvent::PING)
 		{
 			static constexpr const char *pPong = "{\"type\":\"pong\"}";
@@ -2459,7 +2451,6 @@ void CQmClient::OnStateChange(int NewState, int OldState)
 		ResetTitlePresences();
 		m_pQmRealtimeUsersPayload.reset();
 		m_QmRealtimeEvents.clear();
-		m_QmDecorativeThrowEvents.clear();
 		m_QmRealtimeEmoticonEvents.clear();
 		GameClient()->ClearQ1menGSyncMarks();
 		GameClient()->ClearQmVoiceSyncMarks();

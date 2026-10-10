@@ -3104,9 +3104,6 @@ Debug SQL.
 Debug tile layer clipping.
 == Depuración de recorte de capa de mosaicos.
 
-Decorative throws
-== Lanzamientos decorativos
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Dirección WebSocket dedicada (vacío usa wss://qmclient.icu/ws)
 
@@ -3854,9 +3851,6 @@ Edit touch controls
 Editor
 == Editor
 
-Egg
-== Huevo
-
 Elastic
 == Elástico
 
@@ -3979,9 +3973,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Habilitar margen de predicción personalizado cuando está congelado
-
-Enable decorative grass, tomato and egg throws
-== Activar lanzamientos decorativos de hierba, tomates y huevos
 
 Enable Deleting
 == Habilitar Eliminación
@@ -5314,9 +5305,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Nivel de trazado gráfico: 0 = desactivado, 1 = resumen periódico, 2 = resumen y fotogramas lentos, 3 = trazado detallado del backend
-
-Grass
-== Hierba
 
 Greek
 == Griego
@@ -13154,21 +13142,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Esta ayuda la proporciona ui_widget::Tooltip, una capa fina sobre CTooltips.
 
-Throw a decorative grass, tomato or egg projectile
-== Lanzar un objeto decorativo de hierba, tomate o huevo
-
-Throw egg key
-== Tecla para lanzar huevo
-
-Throw grass key
-== Tecla para lanzar hierba
-
-Throw tomato key
-== Tecla para lanzar tomate
-
-Throwables
-== Objetos arrojadizos
-
 Tick delay before executing qm_execute_on_join
 == Retraso en ticks antes de ejecutar qm_execute_on_join
 
@@ -13441,9 +13414,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Token para registrar este servidor en una comunidad específica
-
-Tomato
-== Tomate
 
 Too many configuration files.
 == Demasiados archivos de configuración.
