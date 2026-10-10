@@ -45,4 +45,10 @@ struct SQmTitleEffectStyle
 	int m_BloomDraws = 0; // 辉光副本份数
 };
 
+// 辉光与文字共用最终透明度，避免 spec 淡出后只剩固定亮度的模糊副本。
+inline ColorRGBA QmTitleEffectBloomColor(const SQmTitleEffectStyle &Style)
+{
+	return Style.m_BloomColor.WithMultipliedAlpha(Style.m_BloomAlpha * Style.m_TextColor.a);
+}
+
 #endif

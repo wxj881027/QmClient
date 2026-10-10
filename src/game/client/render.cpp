@@ -289,14 +289,15 @@ void CRenderTools::RenderTitleContainerWithCalamityEffects(STextContainerIndex I
 		for(const vec2 &Direction : s_aDirections)
 			TextRender()->RenderTextContainer(Index, Empty, Style.m_OutlineColor, X + Direction.x * Style.m_OutlineRadius, Y + Direction.y * Style.m_OutlineRadius);
 	}
-	if(Style.m_BloomDraws > 0 && Style.m_BloomAlpha > 0.0f && Style.m_BloomColor.a > 0.0f)
+	const ColorRGBA BloomColor = QmTitleEffectBloomColor(Style);
+	if(Style.m_BloomDraws > 0 && BloomColor.a > 0.0f)
 	{
 		const float Radius = Style.m_BloomRadius + Style.m_BloomPulse;
 		Graphics()->BlendAdditive();
 		for(int Pass = 0; Pass < Style.m_BloomDraws; ++Pass)
 		{
 			const float Angle = 2.0f * pi * float(Pass) / float(Style.m_BloomDraws) + Style.m_BloomRotation;
-			TextRender()->RenderTextContainer(Index, Style.m_BloomColor.WithAlpha(Style.m_BloomAlpha), Empty, X + std::cos(Angle) * Radius, Y + std::sin(Angle) * Radius);
+			TextRender()->RenderTextContainer(Index, BloomColor, Empty, X + std::cos(Angle) * Radius, Y + std::sin(Angle) * Radius);
 		}
 		Graphics()->BlendNormal();
 	}
