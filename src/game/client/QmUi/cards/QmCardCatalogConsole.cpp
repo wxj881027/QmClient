@@ -120,6 +120,7 @@ namespace qm_card_catalog
 void CGameConsole::OpenSettings()
 {
 	const CUIRect Panel = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
+	m_SettingsEscapePressed = false;
 	m_SettingsScrollRegion.Reset();
 	m_LocalConsole.m_Selection.Finish();
 	m_LocalConsole.m_MouseIsPress = false;

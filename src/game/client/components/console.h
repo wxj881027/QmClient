@@ -232,6 +232,7 @@ private:
 	bool m_LocalConsoleFullscreen = false;
 	float m_LastLocalFontSize = -1.0f;
 	SPopupMenuId m_SettingsPopupId;
+	bool m_SettingsEscapePressed = false;
 	CScrollRegion m_SettingsScrollRegion;
 	CButtonContainer m_SettingsCloseButton;
 	void OpenSettings();
