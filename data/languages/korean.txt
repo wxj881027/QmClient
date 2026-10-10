@@ -7,6 +7,9 @@
  seconds (never)
 == 초 (절대 안 함)
 
+ · %d finishers · average %d:%02d:%02d
+==  · 완료한 플레이어 %d명 · 평균 %d:%02d:%02d
+
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s"는 pnglite와 호환되지 않으며 이전 버전의 DDNet에서는 로드할 수 없습니다.
 
@@ -18,6 +21,9 @@
 
 %c Team %d
 == %c 팀 %d
+
+%d / %d maps
+== %d / %d개 맵
 
 %d items selected
 == %d개 항목 선택됨
@@ -640,6 +646,9 @@ All
 
 All combined
 == 모두 결합
+
+All maps
+== 모든 맵
 
 All players
 == 모든 플레이어
@@ -3002,6 +3011,9 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 == DDNet 기여자 및 스태프
 
+DDNet map library
+== DDNet 맵 라이브러리
+
 DDNet Memory
 == DDNet 메모리
 
@@ -3337,6 +3349,9 @@ Diamond gradient
 
 died
 == 사망
+
+Difficulty
+== 난이도
 
 Difficulty stars
 == 난이도 별점
@@ -4252,6 +4267,9 @@ Enable Tee trail
 
 Enable tee trails
 == 티 꼬리 활성화
+
+Enable the finished indicator and wait for player data
+== 완료 표시를 켜고 플레이어 정보가 로드될 때까지 기다리세요
 
 Enable thinking mode (slower)
 == 사고 모드 활성화 (느림)
@@ -6893,6 +6911,9 @@ Map browser: show favorite maps only
 Map danger border
 == 맵 위험 경계
 
+Map data unavailable; server votes remain available
+== 맵 정보를 불러올 수 없습니다. 서버 투표는 이용할 수 있습니다
+
 Map download send window
 == 맵 다운로드 전송 창
 
@@ -6970,6 +6991,9 @@ Map upload network error.
 
 Map uploaded successfully.
 == 맵을 업로드했습니다.
+
+Mapper
+== 제작자
 
 Maps finished
 == 완료한 맵
@@ -7460,6 +7484,9 @@ Mute:
 Muted
 == 음소거됨
 
+Muted players
+== 차단한 플레이어
+
 my_%s
 == 내_%s
 
@@ -7688,6 +7715,9 @@ New preset name
 New random timeout code
 == 새 랜덤 타임아웃 코드
 
+Newest first
+== 최근 출시순
+
 News
 == 뉴스
 
@@ -7814,6 +7844,9 @@ No map selected
 No maps found on this server!
 == 이 서버에서 조건에 맞는 맵을 찾지 못했습니다!
 
+No maps match these filters
+== 필터에 맞는 맵이 없습니다
+
 No matching assets.
 == 일치하는 에셋이 없습니다.
 
@@ -7846,6 +7879,9 @@ No player nearby
 
 No player with this name found.
 == 이 이름의 플레이어를 찾을 수 없습니다.
+
+No players match these filters
+== 필터에 맞는 플레이어가 없습니다
 
 No presets yet
 == 아직 프리셋이 없습니다
@@ -9437,6 +9473,9 @@ Realtime channel reconnect backoff cap (ms)
 Reason
 == 이유
 
+Reason (optional)
+== 이유 (선택 사항)
+
 Reason:
 == 이유:
 
@@ -9544,6 +9583,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == 드래그 가능한 뒤로 가기 버튼의 상대적 Y 위치
+
+Release date
+== 출시일
 
 Release notes
 == 업데이트 내용
@@ -10076,6 +10118,9 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 == 다시 시도
 
+Retry details
+== 상세 정보 다시 불러오기
+
 Retry remote stats
 == 원격 통계 재시도
 
@@ -10499,8 +10544,14 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Rank 1 리플레이가 있는 맵 검색 ...
 
+Search maps or mappers
+== 맵 또는 제작자 검색
+
 Search online fonts…
 == 온라인 글꼴 검색…
+
+Search players or clans
+== 플레이어 또는 클랜 검색
 
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
@@ -10546,6 +10597,12 @@ See you at the next checkpoint.
 
 Select a configuration package to preview its contents.
 == 설정 패키지를 선택하여 내용을 미리 확인하세요.
+
+Select a map
+== 맵 선택
+
+Select a player to manage
+== 관리할 플레이어 선택
 
 Select a saved .map file (client limit: 64 MiB).
 == 저장된 .map 파일을 선택하세요(클라이언트 제한: 64 MiB).
@@ -10681,6 +10738,9 @@ Server browser filter string
 
 Server browser sort column
 == 서버 브라우저 정렬 열
+
+Server control
+== 서버 관리
 
 Server could not be started
 == 서버를 시작할 수 없음

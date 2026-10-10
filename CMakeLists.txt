@@ -3190,6 +3190,10 @@ if(CLIENT)
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
     QmUi/QmConsoleUi.h
+    QmUi/QmVoteMenu.cpp
+    QmUi/QmVoteMenu.h
+    QmUi/QmPlayersMenu.cpp
+    QmUi/QmPlayersMenu.h
     QmUi/QmPopupSource.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
@@ -3487,6 +3491,10 @@ if(CLIENT)
     components/qmclient/recent_tee_skins.h
     components/qmclient/map_difficulty_catalog.cpp
     components/qmclient/map_difficulty_catalog.h
+    components/qmclient/vote_map_library.cpp
+    components/qmclient/vote_map_library.h
+    components/qmclient/vote_map_loader.cpp
+    components/qmclient/vote_map_loader.h
     components/qmclient/map_vote_difficulty.h
     components/qmclient/markdown_cache_writer.h
     components/qmclient/media_volume_logic.h
@@ -4669,6 +4677,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/keyword_reply_rules_test.cpp
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
+    src/test/unit/qmclient/ui/vote_map_library_test.cpp
+    src/test/unit/qmclient/ui/players_menu_test.cpp
+    src/test/integration/qmclient/ui/vote_map_loader_test.cpp
     src/test/unit/client/map_history_test.cpp
     src/test/unit/engine/map_load_test.cpp
     src/test/unit/engine/linereader_test.cpp
@@ -5074,6 +5085,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/hud_notifications/hud_notification_catalog.cpp
     src/game/client/components/qmclient/hud_notifications/hud_notification_rules.cpp
     src/game/client/components/qmclient/map_difficulty_catalog.cpp
+    src/game/client/components/qmclient/vote_map_library.cpp
+    src/game/client/components/qmclient/vote_map_loader.cpp
     src/game/client/components/qmclient/hammer_hit_detection.cpp
     src/game/client/components/qmclient/dummy_hammer_input.cpp
     src/game/client/components/qmclient/axiom_scores.cpp

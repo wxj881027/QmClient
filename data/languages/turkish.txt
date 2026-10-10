@@ -7,6 +7,9 @@
  seconds (never)
 == saniye (asla)
 
+ · %d finishers · average %d:%02d:%02d
+==  · %d oyuncu bitirdi · ortalama %d:%02d:%02d
+
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" pnglite ile uyumlu değil ve eski DDNet sürümleri tarafından yüklenemez
 
@@ -18,6 +21,9 @@
 
 %c Team %d
 == %c Takım %d
+
+%d / %d maps
+== %d / %d harita
 
 %d items selected
 == %d öğe seçildi
@@ -640,6 +646,9 @@ All
 
 All combined
 == Tümü birleştirilmiş
+
+All maps
+== Tüm haritalar
 
 All players
 == Tüm oyuncular
@@ -3002,6 +3011,9 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 == DDNet katkıda bulunanlar ve ekip
 
+DDNet map library
+== DDNet harita kitaplığı
+
 DDNet Memory
 == DDNet belleği
 
@@ -3337,6 +3349,9 @@ Diamond gradient
 
 died
 == öldü
+
+Difficulty
+== Zorluk
 
 Difficulty stars
 == Zorluk yıldızı
@@ -4252,6 +4267,9 @@ Enable Tee trail
 
 Enable tee trails
 == Tee izlerini etkinleştir
+
+Enable the finished indicator and wait for player data
+== Tamamlanma göstergesini açıp oyuncu verilerini bekleyin
 
 Enable thinking mode (slower)
 == Düşünme modunu etkinleştir (daha yavaş)
@@ -6893,6 +6911,9 @@ Map browser: show favorite maps only
 Map danger border
 == Harita tehlike sınırı
 
+Map data unavailable; server votes remain available
+== Harita verileri alınamıyor; sunucu oylamaları kullanılabilir
+
 Map download send window
 == Harita indirme gönderme penceresi
 
@@ -6970,6 +6991,9 @@ Map upload network error.
 
 Map uploaded successfully.
 == Harita başarıyla yüklendi.
+
+Mapper
+== Yapımcı
 
 Maps finished
 == Tamamlanan haritalar
@@ -7460,6 +7484,9 @@ Mute:
 Muted
 == Sessize alındı
 
+Muted players
+== Susturulan oyuncular
+
 my_%s
 == benim_%s
 
@@ -7688,6 +7715,9 @@ New preset name
 New random timeout code
 == Yeni rastgele zaman aşımı kodu
 
+Newest first
+== Önce en yeniler
+
 News
 == Haberler
 
@@ -7814,6 +7844,9 @@ No map selected
 No maps found on this server!
 == Bu sunucuda uygun harita bulunamadı!
 
+No maps match these filters
+== Bu filtrelere uyan harita yok
+
 No matching assets.
 == Eşleşen varlık yok.
 
@@ -7846,6 +7879,9 @@ No player nearby
 
 No player with this name found.
 == Bu isimde bir oyuncu bulunamadı.
+
+No players match these filters
+== Bu filtrelere uyan oyuncu yok
 
 No presets yet
 == Henüz ön ayar yok
@@ -9437,6 +9473,9 @@ Realtime channel reconnect backoff cap (ms)
 Reason
 == Sebep
 
+Reason (optional)
+== Neden (isteğe bağlı)
+
 Reason:
 == Sebep:
 
@@ -9544,6 +9583,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Sürüklenebilir geri düğmesinin bağıl Y konumu
+
+Release date
+== Yayın tarihi
 
 Release notes
 == Sürüm notları
@@ -10076,6 +10118,9 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 == Yeniden dene
 
+Retry details
+== Ayrıntıları yeniden yükle
+
 Retry remote stats
 == Uzak istatistikleri yeniden dene
 
@@ -10499,8 +10544,14 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Rank 1 demosu olan haritaları ara ...
 
+Search maps or mappers
+== Harita veya yapımcı ara
+
 Search online fonts…
 == Çevrimiçi yazı tiplerini ara…
+
+Search players or clans
+== Oyuncu veya klan ara
 
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
@@ -10546,6 +10597,12 @@ See you at the next checkpoint.
 
 Select a configuration package to preview its contents.
 == İçeriğini önizlemek için bir yapılandırma paketi seçin.
+
+Select a map
+== Bir harita seçin
+
+Select a player to manage
+== Yönetmek için bir oyuncu seçin
 
 Select a saved .map file (client limit: 64 MiB).
 == Kaydedilmiş bir .map dosyası seçin (istemci sınırı: 64 MiB).
@@ -10681,6 +10738,9 @@ Server browser filter string
 
 Server browser sort column
 == Sunucu tarayıcı sıralama sütunu
+
+Server control
+== Sunucu yönetimi
 
 Server could not be started
 == Sunucu başlatılamadı

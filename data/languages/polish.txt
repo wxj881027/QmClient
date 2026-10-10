@@ -7,6 +7,9 @@
  seconds (never)
 == sekund (nigdy)
 
+ · %d finishers · average %d:%02d:%02d
+==  · Ukończyło: %d · Średnio %d:%02d:%02d
+
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == „%s” nie jest kompatybilne z pnglite i nie może być załadowane przez stare wersje DDNet
 
@@ -18,6 +21,9 @@
 
 %c Team %d
 == %c Drużyna %d
+
+%d / %d maps
+== %d / %d map
 
 %d items selected
 == Wybrano %d elementów
@@ -640,6 +646,9 @@ All
 
 All combined
 == Wszystkie połączone
+
+All maps
+== Wszystkie mapy
 
 All players
 == Wszyscy gracze
@@ -3002,6 +3011,9 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 == DDNet — współtwórcy i zespół
 
+DDNet map library
+== Biblioteka map DDNet
+
 DDNet Memory
 == Pamięć DDNet
 
@@ -3337,6 +3349,9 @@ Diamond gradient
 
 died
 == zginął
+
+Difficulty
+== Trudność
 
 Difficulty stars
 == Gwiazdki trudności
@@ -4252,6 +4267,9 @@ Enable Tee trail
 
 Enable tee trails
 == Włącz ślady tee
+
+Enable the finished indicator and wait for player data
+== Włącz wskaźnik ukończenia i poczekaj na dane gracza
 
 Enable thinking mode (slower)
 == Włącz tryb myślenia (wolniejszy)
@@ -6893,6 +6911,9 @@ Map browser: show favorite maps only
 Map danger border
 == Niebezpieczna granica mapy
 
+Map data unavailable; server votes remain available
+== Dane map niedostępne; głosowania serwera są nadal dostępne
+
 Map download send window
 == Okno wysyłania pobierania mapy
 
@@ -6970,6 +6991,9 @@ Map upload network error.
 
 Map uploaded successfully.
 == Mapa została przesłana.
+
+Mapper
+== Autor
 
 Maps finished
 == Ukończone mapy
@@ -7460,6 +7484,9 @@ Mute:
 Muted
 == Wyciszony
 
+Muted players
+== Wyciszeni gracze
+
 my_%s
 == moje_%s
 
@@ -7688,6 +7715,9 @@ New preset name
 New random timeout code
 == Nowy losowy kod timeoutu
 
+Newest first
+== Od najnowszych
+
 News
 == Aktualności
 
@@ -7814,6 +7844,9 @@ No map selected
 No maps found on this server!
 == Nie znaleziono pasujących map na tym serwerze!
 
+No maps match these filters
+== Żadna mapa nie pasuje do filtrów
+
 No matching assets.
 == Brak pasujących zasobów.
 
@@ -7846,6 +7879,9 @@ No player nearby
 
 No player with this name found.
 == Nie znaleziono gracza o tym imieniu.
+
+No players match these filters
+== Żaden gracz nie pasuje do filtrów
 
 No presets yet
 == Brak presetów
@@ -9437,6 +9473,9 @@ Realtime channel reconnect backoff cap (ms)
 Reason
 == Powód
 
+Reason (optional)
+== Powód (opcjonalnie)
+
 Reason:
 == Powód:
 
@@ -9544,6 +9583,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Względna pozycja Y przeciągalnego przycisku wstecz
+
+Release date
+== Data wydania
 
 Release notes
 == Informacje o wydaniu
@@ -10076,6 +10118,9 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 == Ponów
 
+Retry details
+== Wczytaj szczegóły ponownie
+
 Retry remote stats
 == Ponów statystyki zdalne
 
@@ -10499,8 +10544,14 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Szukaj map z nagraniami rangi 1 ...
 
+Search maps or mappers
+== Szukaj map lub autorów
+
 Search online fonts…
 == Szukaj czcionek online…
+
+Search players or clans
+== Szukaj graczy lub klanów
 
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
@@ -10546,6 +10597,12 @@ See you at the next checkpoint.
 
 Select a configuration package to preview its contents.
 == Wybierz pakiet konfiguracji, aby wyświetlić jego zawartość.
+
+Select a map
+== Wybierz mapę
+
+Select a player to manage
+== Wybierz gracza do zarządzania
 
 Select a saved .map file (client limit: 64 MiB).
 == Wybierz zapisany plik .map (limit klienta: 64 MiB).
@@ -10681,6 +10738,9 @@ Server browser filter string
 
 Server browser sort column
 == Kolumna sortowania w przeglądarce serwerów
+
+Server control
+== Zarządzanie serwerem
 
 Server could not be started
 == Nie można uruchomić serwera

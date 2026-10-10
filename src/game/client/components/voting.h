@@ -39,6 +39,7 @@ class CVoting : public CComponent
 	char m_aPendingMap[MAX_MAP_LENGTH];
 	char m_aPendingTypeKey[32];
 	char m_aPendingTypeLabel[64];
+	char m_aPendingMapReason[VOTE_REASON_LENGTH];
 	bool m_PendingTypeVoteActive;
 	bool m_PendingMapVoteReady;
 	int m_aScoreboardVoteButtonIds[2]{};
@@ -61,6 +62,7 @@ public:
 	CVoting();
 	int Sizeof() const override { return sizeof(*this); }
 	void OnReset() override;
+	void OnStateChange(int NewState, int OldState) override;
 	void OnConsoleInit() override;
 	void OnMessage(int MsgType, void *pRawMsg) override;
 
@@ -81,8 +83,9 @@ public:
 		ABORT,
 	};
 
-	EUnfinishedMapVoteAction StartUnfinishedMapVoteChain(const char *pMapName, const char *pTypeKey, const char *pTypeLabel);
+	EUnfinishedMapVoteAction StartUnfinishedMapVoteChain(const char *pMapName, const char *pTypeKey, const char *pTypeLabel, const char *pReason = "");
 	void ClearUnfinishedMapVoteChain();
+	const char *PendingMapVote() const { return m_aPendingMap; }
 	void OnVoteResult(EVoteResult Result);
 
 	void CallvoteSpectate(int ClientId, const char *pReason, bool ForceVote = false);

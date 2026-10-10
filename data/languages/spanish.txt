@@ -7,6 +7,9 @@
  seconds (never)
 == segundos (nunca)
 
+ · %d finishers · average %d:%02d:%02d
+==  · %d jugadores completaron · promedio %d:%02d:%02d
+
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" no es compatible con pnglite y no puede ser cargado por versiones antiguas de DDNet
 
@@ -18,6 +21,9 @@
 
 %c Team %d
 == %c Equipo %d
+
+%d / %d maps
+== %d / %d mapas
 
 %d items selected
 == %d elementos seleccionados
@@ -640,6 +646,9 @@ All
 
 All combined
 == Todo combinado
+
+All maps
+== Todos los mapas
 
 All players
 == Todos los jugadores
@@ -3002,6 +3011,9 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 == Contribuidores y equipo de DDNet
 
+DDNet map library
+== Biblioteca de mapas DDNet
+
 DDNet Memory
 == Memoria de DDNet
 
@@ -3337,6 +3349,9 @@ Diamond gradient
 
 died
 == murió
+
+Difficulty
+== Dificultad
 
 Difficulty stars
 == Estrellas de dificultad
@@ -4252,6 +4267,9 @@ Enable Tee trail
 
 Enable tee trails
 == Habilitar estelas de tee
+
+Enable the finished indicator and wait for player data
+== Activa el indicador de mapas completados y espera los datos del jugador
 
 Enable thinking mode (slower)
 == Activar modo de pensamiento (más lento)
@@ -6893,6 +6911,9 @@ Map browser: show favorite maps only
 Map danger border
 == Borde de peligro del mapa
 
+Map data unavailable; server votes remain available
+== Datos de mapas no disponibles; las votaciones del servidor siguen disponibles
+
 Map download send window
 == Ventana de envío de descarga de mapas
 
@@ -6970,6 +6991,9 @@ Map upload network error.
 
 Map uploaded successfully.
 == Mapa subido correctamente.
+
+Mapper
+== Autor
 
 Maps finished
 == Mapas completados
@@ -7460,6 +7484,9 @@ Mute:
 Muted
 == Silenciado
 
+Muted players
+== Jugadores silenciados
+
 my_%s
 == mi_%s
 
@@ -7688,6 +7715,9 @@ New preset name
 New random timeout code
 == Nuevo código de tiempo de espera aleatorio
 
+Newest first
+== Más recientes primero
+
 News
 == Noticias
 
@@ -7814,6 +7844,9 @@ No map selected
 No maps found on this server!
 == ¡No se han encontrado mapas que cumplan los requisitos en este servidor!
 
+No maps match these filters
+== Ningún mapa coincide con estos filtros
+
 No matching assets.
 == No hay activos coincidentes.
 
@@ -7846,6 +7879,9 @@ No player nearby
 
 No player with this name found.
 == No se encontró ningún jugador con este nombre.
+
+No players match these filters
+== Ningún jugador coincide con estos filtros
 
 No presets yet
 == Aún no hay preconfiguraciones
@@ -9437,6 +9473,9 @@ Realtime channel reconnect backoff cap (ms)
 Reason
 == Motivo
 
+Reason (optional)
+== Motivo (opcional)
+
 Reason:
 == Razón:
 
@@ -9544,6 +9583,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Posición Y relativa del botón de retroceso arrastrable
+
+Release date
+== Fecha de publicación
 
 Release notes
 == Notas de la versión
@@ -10076,6 +10118,9 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 == Reintentar
 
+Retry details
+== Reintentar detalles
+
 Retry remote stats
 == Reintentar estadísticas remotas
 
@@ -10499,8 +10544,14 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Buscar mapas con demos de rank 1 ...
 
+Search maps or mappers
+== Buscar mapas o autores
+
 Search online fonts…
 == Buscar fuentes en línea…
+
+Search players or clans
+== Buscar jugadores o clanes
 
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
@@ -10546,6 +10597,12 @@ See you at the next checkpoint.
 
 Select a configuration package to preview its contents.
 == Selecciona un paquete de configuración para ver su contenido.
+
+Select a map
+== Selecciona un mapa
+
+Select a player to manage
+== Selecciona un jugador para gestionarlo
 
 Select a saved .map file (client limit: 64 MiB).
 == Selecciona un archivo .map guardado (límite del cliente: 64 MiB).
@@ -10681,6 +10738,9 @@ Server browser filter string
 
 Server browser sort column
 == Columna de ordenación del navegador de servidores
+
+Server control
+== Control del servidor
 
 Server could not be started
 == No se pudo iniciar el servidor

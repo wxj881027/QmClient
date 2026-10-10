@@ -7,6 +7,9 @@
  seconds (never)
 == 秒 (不消失)
 
+ · %d finishers · average %d:%02d:%02d
+==  · %d 人完成 · 平均 %d:%02d:%02d
+
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" 與 pnglite 不兼容，無法被舊版本 DDNet 加載
 
@@ -18,6 +21,9 @@
 
 %c Team %d
 == %c 隊伍 %d
+
+%d / %d maps
+== %d / %d 張地圖
 
 %d items selected
 == 已選擇 %d 項
@@ -640,6 +646,9 @@ All
 
 All combined
 == 全部文件
+
+All maps
+== 全部地圖
 
 All players
 == 所有人
@@ -3002,6 +3011,9 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 == DDNet 貢獻者與團隊名單
 
+DDNet map library
+== DDNet 地圖庫
+
 DDNet Memory
 == DDNet 內存
 
@@ -3337,6 +3349,9 @@ Diamond gradient
 
 died
 == 死亡
+
+Difficulty
+== 難度
 
 Difficulty stars
 == 難度星級
@@ -4252,6 +4267,9 @@ Enable Tee trail
 
 Enable tee trails
 == 啟用 Tee 拖尾
+
+Enable the finished indicator and wait for player data
+== 啟用完成狀態指示，並等待玩家資料載入
 
 Enable thinking mode (slower)
 == 啟用思考模式（較慢）
@@ -6893,6 +6911,9 @@ Map browser: show favorite maps only
 Map danger border
 == 地圖危險邊界
 
+Map data unavailable; server votes remain available
+== 地圖資料暫不可用，仍可使用伺服器投票
+
 Map download send window
 == 地圖下載發送窗口
 
@@ -6970,6 +6991,9 @@ Map upload network error.
 
 Map uploaded successfully.
 == 地圖上傳成功。
+
+Mapper
+== 作者
 
 Maps finished
 == 已過地圖
@@ -7460,6 +7484,9 @@ Mute:
 Muted
 == 已靜音
 
+Muted players
+== 已封鎖玩家
+
 my_%s
 == 我的_%s
 
@@ -7688,6 +7715,9 @@ New preset name
 New random timeout code
 == 隨機生成新的超時代碼
 
+Newest first
+== 最新發佈優先
+
 News
 == 新聞
 
@@ -7814,6 +7844,9 @@ No map selected
 No maps found on this server!
 == 這個伺服器上沒有找到符合條件的地圖！
 
+No maps match these filters
+== 沒有符合篩選條件的地圖
+
 No matching assets.
 == 沒有匹配的材質。
 
@@ -7846,6 +7879,9 @@ No player nearby
 
 No player with this name found.
 == 沒有找到這個名字的玩家
+
+No players match these filters
+== 沒有符合篩選條件的玩家
 
 No presets yet
 == 暫無預設
@@ -9437,6 +9473,9 @@ Realtime channel reconnect backoff cap (ms)
 Reason
 == 原因
 
+Reason (optional)
+== 理由（選填）
+
 Reason:
 == 理由：
 
@@ -9544,6 +9583,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Relative Y position of the draggable back button
+
+Release date
+== 發佈日期
 
 Release notes
 == 更新說明
@@ -10076,6 +10118,9 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 == 重試
 
+Retry details
+== 重試詳情
+
 Retry remote stats
 == 重試遠程統計
 
@@ -10499,8 +10544,14 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == 搜尋有 Rank 1 回放的地圖……
 
+Search maps or mappers
+== 搜尋地圖或作者
+
 Search online fonts…
 == 搜尋線上字型…
+
+Search players or clans
+== 搜尋玩家或戰隊
 
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
@@ -10546,6 +10597,12 @@ See you at the next checkpoint.
 
 Select a configuration package to preview its contents.
 == 選擇配置包以預覽內容。
+
+Select a map
+== 選擇一張地圖
+
+Select a player to manage
+== 選擇玩家以查看及管理
 
 Select a saved .map file (client limit: 64 MiB).
 == 選擇已儲存的 .map 檔案（用戶端上限：64 MiB）。
@@ -10681,6 +10738,9 @@ Server browser filter string
 
 Server browser sort column
 == 伺服器瀏覽器中的排序列
+
+Server control
+== 伺服器控制
 
 Server could not be started
 == 無法啟動伺服器
