@@ -26,6 +26,11 @@ void CTooltips::OnRender()
 {
 }
 
+// vtable 的窗口/退出入口会引用清理函数；本目标不构造完整提示组件。
+void CTooltips::ClearActiveTooltip()
+{
+}
+
 // 独立目标没有客户端 owner；仅提供未使用的基类 key function 以生成 RTTI。
 void CComponentInterfaces::OnInterfacesInit(CGameClient *)
 {
