@@ -1752,7 +1752,7 @@ protected:
 				return false;
 			DestroyPresentedSnapshot();
 			if(!CreateImage(Extent.width, Extent.height, 1, 1, m_VKSurfFormat.format, VK_IMAGE_TILING_OPTIMAL,
-				m_PresentedSnapshotImage, m_PresentedSnapshotMemory, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SAMPLE_COUNT_1_BIT))
+				   m_PresentedSnapshotImage, m_PresentedSnapshotMemory, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SAMPLE_COUNT_1_BIT))
 			{
 				if(!m_HasError)
 					SetError(GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Creating presented snapshot failed.");
@@ -1761,14 +1761,9 @@ protected:
 			m_PresentedSnapshotExtent = Extent;
 			m_PresentedSnapshotFormat = m_VKSurfFormat.format;
 		}
-		RecordQmVulkanSnapshotCopy(m_vSwapChainImages[m_CurImageIndex], m_PresentedSnapshotImage, Extent, m_PresentedSnapshotInitialized,
-			[this, CommandBuffer](VkPipelineStageFlags SourceStage, VkPipelineStageFlags DestinationStage, const VkImageMemoryBarrier &Barrier) {
+		RecordQmVulkanSnapshotCopy(m_vSwapChainImages[m_CurImageIndex], m_PresentedSnapshotImage, Extent, m_PresentedSnapshotInitialized, [this, CommandBuffer](VkPipelineStageFlags SourceStage, VkPipelineStageFlags DestinationStage, const VkImageMemoryBarrier &Barrier) {
 				RecordBarrier(0, 0, 1);
-				vkCmdPipelineBarrier(CommandBuffer, SourceStage, DestinationStage, 0, 0, nullptr, 0, nullptr, 1, &Barrier);
-			},
-			[CommandBuffer](VkImage Source, VkImage Destination, const VkImageCopy &Region) {
-				vkCmdCopyImage(CommandBuffer, Source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Destination, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region);
-			});
+				vkCmdPipelineBarrier(CommandBuffer, SourceStage, DestinationStage, 0, 0, nullptr, 0, nullptr, 1, &Barrier); }, [CommandBuffer](VkImage Source, VkImage Destination, const VkImageCopy &Region) { vkCmdCopyImage(CommandBuffer, Source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Destination, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &Region); });
 		m_PresentedSnapshotInitialized = true;
 		m_PresentedSnapshotValid = true;
 		return true;
@@ -2097,18 +2092,13 @@ protected:
 			// 当前录制帧的延迟资源仍可能被未提交命令引用，恢复时不能推进帧或清理它。
 			// 多线程录制期间共享缓存仍在使用，只允许单线程主渲染路径尝试回收。
 			bool RecoveryWaitFailed = false;
-			Res = RetryQmVulkanAllocation(Res, !s_ThreadIsRenderWorker && m_ThreadCount == 1,
-				[&] {
+			Res = RetryQmVulkanAllocation(Res, !s_ThreadIsRenderWorker && m_ThreadCount == 1, [&] {
 					const VkResult Result = DeviceWaitIdle();
 					RecoveryWaitFailed = Result != VK_SUCCESS;
-					return Result;
-				},
-				[this] {
+					return Result; }, [this] {
 					ReclaimQmVulkanCompletedFrames(m_vvFrameDelayedBufferCleanup.size(), m_CurImageIndex,
 						[this](size_t ImageIndex) { ClearFrameData(ImageIndex); });
-					ShrinkUnusedCaches();
-				},
-				[&] { return vkAllocateMemory(m_VKDevice, pAllocateInfo, nullptr, pMemory); });
+					ShrinkUnusedCaches(); }, [&] { return vkAllocateMemory(m_VKDevice, pAllocateInfo, nullptr, pMemory); });
 			if(Res != VK_SUCCESS)
 			{
 				if(Res == VK_ERROR_DEVICE_LOST && QmEnhancedShouldLoad() && QmEnhancedMode() == qm_vulkan_ext::EEnhancedMode::AUTO)
@@ -4138,8 +4128,8 @@ protected:
 			{
 				const auto &Target = m_vRenderTargets[m_ActiveRenderTargetId];
 				const auto Clip = State.m_ClipEnable ? render_target_geometry::MapScreenClip(State.m_ClipX, State.m_ClipY, State.m_ClipW, State.m_ClipH,
-					ScissorViewport.width, ScissorViewport.height, Target.m_Width, Target.m_Height) :
-					render_target_geometry::SClipRect{0, 0, (int)Target.m_Width, (int)Target.m_Height};
+									       ScissorViewport.width, ScissorViewport.height, Target.m_Width, Target.m_Height) :
+								       render_target_geometry::SClipRect{0, 0, (int)Target.m_Width, (int)Target.m_Height};
 				Scissor.offset = {Clip.m_X, Clip.m_Y};
 				Scissor.extent = {(uint32_t)Clip.m_W, (uint32_t)Clip.m_H};
 			}
@@ -6924,9 +6914,7 @@ public:
 		if(!m_SwapchainCreated)
 			Ret = InitVulkanSwapChain(OldSwapChain);
 
-		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount,
-			[this] { CleanupVulkan<false>(); },
-			[this] { return InitVulkan<false>(); });
+		Ret = ReinitializeQmVulkanFrameResources(Ret, OldSwapChainImageCount != m_SwapChainImageCount, [this] { CleanupVulkan<false>(); }, [this] { return InitVulkan<false>(); });
 		if(Ret != 0)
 		{
 			m_FramePrepared = false;

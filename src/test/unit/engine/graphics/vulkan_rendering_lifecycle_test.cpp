@@ -8,14 +8,14 @@
 
 namespace
 {
-template<typename THandle>
-THandle Handle(uintptr_t Value)
-{
-	if constexpr(std::is_pointer_v<THandle>)
-		return reinterpret_cast<THandle>(Value);
-	else
-		return static_cast<THandle>(Value);
-}
+	template<typename THandle>
+	THandle Handle(uintptr_t Value)
+	{
+		if constexpr(std::is_pointer_v<THandle>)
+			return reinterpret_cast<THandle>(Value);
+		else
+			return static_cast<THandle>(Value);
+	}
 }
 
 TEST(VulkanRenderingPipelines, SwapPassDependencyCoversLoadAfterAttachmentAndTransferReads)
@@ -45,13 +45,14 @@ TEST(VulkanRenderingPipelines, TargetVariantUsesItsPassAndSingleSamplingWithoutC
 	std::vector<VkRenderPass> vPasses;
 	std::vector<VkSampleCountFlagBits> vSamples;
 	EXPECT_EQ(CreateQmVulkanGraphicsPipelines(Info, Handle<VkRenderPass>(2), Pipeline, Target,
-		[&](const VkGraphicsPipelineCreateInfo &Created, VkPipeline &Output) {
-			vPasses.push_back(Created.renderPass);
-			vSamples.push_back(Created.pMultisampleState->rasterizationSamples);
-			EXPECT_EQ(Created.layout, Info.layout);
-			Output = Handle<VkPipeline>(vPasses.size());
-			return VK_SUCCESS;
-		}), VK_SUCCESS);
+			  [&](const VkGraphicsPipelineCreateInfo &Created, VkPipeline &Output) {
+				  vPasses.push_back(Created.renderPass);
+				  vSamples.push_back(Created.pMultisampleState->rasterizationSamples);
+				  EXPECT_EQ(Created.layout, Info.layout);
+				  Output = Handle<VkPipeline>(vPasses.size());
+				  return VK_SUCCESS;
+			  }),
+		VK_SUCCESS);
 	EXPECT_EQ(vPasses, (std::vector<VkRenderPass>{Info.renderPass, Handle<VkRenderPass>(2)}));
 	EXPECT_EQ(vSamples, (std::vector<VkSampleCountFlagBits>{VK_SAMPLE_COUNT_4_BIT, VK_SAMPLE_COUNT_1_BIT}));
 	EXPECT_EQ(Info.renderPass, Handle<VkRenderPass>(1));
@@ -66,7 +67,8 @@ TEST(VulkanRenderingPipelines, DefaultFailureStopsBeforeCreatingTargetVariant)
 	VkPipeline Target = VK_NULL_HANDLE;
 	int Calls = 0;
 	EXPECT_EQ(CreateQmVulkanGraphicsPipelines(Info, Handle<VkRenderPass>(2), Pipeline, Target,
-		[&](const auto &, auto &) { ++Calls; return VK_ERROR_OUT_OF_DEVICE_MEMORY; }), VK_ERROR_OUT_OF_DEVICE_MEMORY);
+			  [&](const auto &, auto &) { ++Calls; return VK_ERROR_OUT_OF_DEVICE_MEMORY; }),
+		VK_ERROR_OUT_OF_DEVICE_MEMORY);
 	EXPECT_EQ(Calls, 1);
 }
 
@@ -79,7 +81,8 @@ TEST(VulkanRenderingPipelines, TargetFailureIsPropagated)
 	VkPipeline Target = VK_NULL_HANDLE;
 	int Calls = 0;
 	EXPECT_EQ(CreateQmVulkanGraphicsPipelines(Info, Handle<VkRenderPass>(2), Pipeline, Target,
-		[&](const auto &, auto &) { return ++Calls == 1 ? VK_SUCCESS : VK_ERROR_DEVICE_LOST; }), VK_ERROR_DEVICE_LOST);
+			  [&](const auto &, auto &) { return ++Calls == 1 ? VK_SUCCESS : VK_ERROR_DEVICE_LOST; }),
+		VK_ERROR_DEVICE_LOST);
 	EXPECT_EQ(Calls, 2);
 }
 
@@ -90,7 +93,8 @@ TEST(VulkanRenderingPipelines, DedicatedTargetPipelineIsCreatedOnce)
 	VkPipeline Target = VK_NULL_HANDLE;
 	int Calls = 0;
 	EXPECT_EQ(CreateQmVulkanGraphicsPipelines(Info, VK_NULL_HANDLE, Pipeline, Target,
-		[&](const auto &, auto &) { ++Calls; return VK_SUCCESS; }), VK_SUCCESS);
+			  [&](const auto &, auto &) { ++Calls; return VK_SUCCESS; }),
+		VK_SUCCESS);
 	EXPECT_EQ(Calls, 1);
 }
 
@@ -115,42 +119,35 @@ TEST(VulkanRenderingPipelines, OptionalFailureCanFallbackButDeviceLossCannot)
 TEST(VulkanRenderingRecovery, AllocationRetriesOnlyAfterIdleAndReclamation)
 {
 	std::vector<int> vEvents;
-	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_OUT_OF_DEVICE_MEMORY, true,
-		[&] { vEvents.push_back(1); return VK_SUCCESS; },
-		[&] { vEvents.push_back(2); },
-		[&] { vEvents.push_back(3); return VK_SUCCESS; }), VK_SUCCESS);
+	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_OUT_OF_DEVICE_MEMORY, true, [&] { vEvents.push_back(1); return VK_SUCCESS; }, [&] { vEvents.push_back(2); }, [&] { vEvents.push_back(3); return VK_SUCCESS; }), VK_SUCCESS);
 	EXPECT_EQ(vEvents, (std::vector<int>{1, 2, 3}));
 }
 
 TEST(VulkanRenderingRecovery, WorkerFailureDoesNotWaitReclaimOrRetry)
 {
 	int Calls = 0;
-	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_OUT_OF_HOST_MEMORY, false,
-		[&] { ++Calls; return VK_SUCCESS; }, [&] { ++Calls; }, [&] { ++Calls; return VK_SUCCESS; }), VK_ERROR_OUT_OF_HOST_MEMORY);
+	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_OUT_OF_HOST_MEMORY, false, [&] { ++Calls; return VK_SUCCESS; }, [&] { ++Calls; }, [&] { ++Calls; return VK_SUCCESS; }), VK_ERROR_OUT_OF_HOST_MEMORY);
 	EXPECT_EQ(Calls, 0);
 }
 
 TEST(VulkanRenderingRecovery, DeviceLossWhileWaitingStopsBeforeReclamation)
 {
 	int Calls = 0;
-	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_OUT_OF_DEVICE_MEMORY, true,
-		[] { return VK_ERROR_DEVICE_LOST; }, [&] { ++Calls; }, [&] { ++Calls; return VK_SUCCESS; }), VK_ERROR_DEVICE_LOST);
+	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_OUT_OF_DEVICE_MEMORY, true, [] { return VK_ERROR_DEVICE_LOST; }, [&] { ++Calls; }, [&] { ++Calls; return VK_SUCCESS; }), VK_ERROR_DEVICE_LOST);
 	EXPECT_EQ(Calls, 0);
 }
 
 TEST(VulkanRenderingRecovery, RepeatedAllocationFailureDoesNotLoop)
 {
 	int Retries = 0;
-	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_OUT_OF_DEVICE_MEMORY, true,
-		[] { return VK_SUCCESS; }, [] {}, [&] { ++Retries; return VK_ERROR_OUT_OF_DEVICE_MEMORY; }), VK_ERROR_OUT_OF_DEVICE_MEMORY);
+	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_OUT_OF_DEVICE_MEMORY, true, [] { return VK_SUCCESS; }, [] {}, [&] { ++Retries; return VK_ERROR_OUT_OF_DEVICE_MEMORY; }), VK_ERROR_OUT_OF_DEVICE_MEMORY);
 	EXPECT_EQ(Retries, 1);
 }
 
 TEST(VulkanRenderingRecovery, NonMemoryFailureDoesNotAttemptRecovery)
 {
 	int Calls = 0;
-	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_DEVICE_LOST, true,
-		[&] { ++Calls; return VK_SUCCESS; }, [&] { ++Calls; }, [&] { ++Calls; return VK_SUCCESS; }), VK_ERROR_DEVICE_LOST);
+	EXPECT_EQ(RetryQmVulkanAllocation(VK_ERROR_DEVICE_LOST, true, [&] { ++Calls; return VK_SUCCESS; }, [&] { ++Calls; }, [&] { ++Calls; return VK_SUCCESS; }), VK_ERROR_DEVICE_LOST);
 	EXPECT_EQ(Calls, 0);
 }
 
@@ -200,8 +197,7 @@ TEST(VulkanRenderingRecovery, SwapFailureDoesNotReinitializeFrameResources)
 TEST(VulkanRenderingRecovery, ImageCountChangePropagatesFrameInitializationFailure)
 {
 	std::vector<int> vEvents;
-	EXPECT_EQ(ReinitializeQmVulkanFrameResources(0, true,
-		[&] { vEvents.push_back(1); }, [&] { vEvents.push_back(2); return -3; }), -3);
+	EXPECT_EQ(ReinitializeQmVulkanFrameResources(0, true, [&] { vEvents.push_back(1); }, [&] { vEvents.push_back(2); return -3; }), -3);
 	EXPECT_EQ(vEvents, (std::vector<int>{1, 2}));
 }
 
@@ -218,20 +214,16 @@ TEST(VulkanRenderingReadback, SnapshotCopyPublishesOwnedImageAndRestoresSwapForP
 	const VkImage Snapshot = Handle<VkImage>(2);
 	std::vector<VkImageMemoryBarrier> vBarriers;
 	std::vector<int> vEvents;
-	RecordQmVulkanSnapshotCopy(Swap, Snapshot, {1280, 720}, false,
-		[&](VkPipelineStageFlags SourceStage, VkPipelineStageFlags, const VkImageMemoryBarrier &Barrier) {
+	RecordQmVulkanSnapshotCopy(Swap, Snapshot, {1280, 720}, false, [&](VkPipelineStageFlags SourceStage, VkPipelineStageFlags, const VkImageMemoryBarrier &Barrier) {
 			if(vBarriers.empty())
 				EXPECT_EQ(SourceStage, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 			vEvents.push_back(1);
-			vBarriers.push_back(Barrier);
-		},
-		[&](VkImage Source, VkImage Destination, const VkImageCopy &Region) {
+			vBarriers.push_back(Barrier); }, [&](VkImage Source, VkImage Destination, const VkImageCopy &Region) {
 			vEvents.push_back(2);
 			EXPECT_EQ(Source, Swap);
 			EXPECT_EQ(Destination, Snapshot);
 			EXPECT_EQ(Region.extent.width, 1280u);
-			EXPECT_EQ(Region.extent.height, 720u);
-		});
+			EXPECT_EQ(Region.extent.height, 720u); });
 	EXPECT_EQ(vEvents, (std::vector<int>{1, 1, 2, 1, 1}));
 	ASSERT_EQ(vBarriers.size(), 4u);
 	EXPECT_EQ(vBarriers[0].image, Swap);
@@ -248,9 +240,7 @@ TEST(VulkanRenderingReadback, SnapshotCopyPublishesOwnedImageAndRestoresSwapForP
 TEST(VulkanRenderingReadback, RepeatedCaptureWaitsForPreviousSnapshotReads)
 {
 	std::vector<VkImageMemoryBarrier> vBarriers;
-	RecordQmVulkanSnapshotCopy(Handle<VkImage>(1), Handle<VkImage>(2), {32, 16}, true,
-		[&](VkPipelineStageFlags, VkPipelineStageFlags, const VkImageMemoryBarrier &Barrier) { vBarriers.push_back(Barrier); },
-		[](VkImage, VkImage, const VkImageCopy &) {});
+	RecordQmVulkanSnapshotCopy(Handle<VkImage>(1), Handle<VkImage>(2), {32, 16}, true, [&](VkPipelineStageFlags, VkPipelineStageFlags, const VkImageMemoryBarrier &Barrier) { vBarriers.push_back(Barrier); }, [](VkImage, VkImage, const VkImageCopy &) {});
 	ASSERT_EQ(vBarriers.size(), 4u);
 	EXPECT_EQ(vBarriers[1].oldLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	EXPECT_EQ(vBarriers[1].srcAccessMask, VK_ACCESS_TRANSFER_READ_BIT);

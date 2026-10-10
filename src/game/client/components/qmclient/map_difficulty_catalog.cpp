@@ -120,8 +120,8 @@ const CQmMapDifficultyCatalog::SEntry *CQmMapDifficultyCatalog::FindForServer(co
 {
 	// 随包星级属于 DDNet 地图，不能仅凭同名地图或服务器名称中的难度词跨玩法套用。
 	const bool IsDdrace = str_comp_nocase(Server.m_aGameType, "DDNet") == 0 ||
-			     str_comp_nocase(Server.m_aGameType, "DDRaceNetwork") == 0 ||
-			     str_comp_nocase(Server.m_aGameType, "DDRace") == 0;
+			      str_comp_nocase(Server.m_aGameType, "DDRaceNetwork") == 0 ||
+			      str_comp_nocase(Server.m_aGameType, "DDRace") == 0;
 	// 部分 Gores 服使用兼容的游戏类型，社区信息仍应阻止其读取 DDNet 星级。
 	if(!IsDdrace || str_comp_nocase(Server.m_aCommunityId, "kog") == 0 || str_find_nocase(Server.m_aCommunityType, "gores") != nullptr)
 		return nullptr;

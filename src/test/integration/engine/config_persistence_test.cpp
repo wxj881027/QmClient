@@ -216,7 +216,8 @@ TEST_F(CConfigPersistence, NullByteRejectsWholeLoadAndProtectsOriginal)
 
 TEST_F(CConfigPersistence, ValidBomCrLfAndChineseTextLoadAndSave)
 {
-	Write(SETTINGS_PATH, "\xef\xbb\xbf" "cl_showhud 0\r\nplayer_name \"中文名字\"\r\n");
+	Write(SETTINGS_PATH, "\xef\xbb\xbf"
+			     "cl_showhud 0\r\nplayer_name \"中文名字\"\r\n");
 	CConfigSession Session(m_pStorage.get());
 	ASSERT_TRUE(Session.Load());
 	EXPECT_EQ(g_Config.m_ClShowhud, 0);
@@ -262,7 +263,8 @@ TEST_F(CConfigPersistence, ChangeDuringSerializationKeepsExternalSettings)
 		const char *pContent = "cl_showhud 1\n";
 		EXPECT_EQ(io_write(File, pContent, str_length(pContent)), static_cast<unsigned>(str_length(pContent)));
 		EXPECT_EQ(io_close(File), 0);
-	}, m_pStorage.get());
+	},
+		m_pStorage.get());
 	EXPECT_FALSE(Session.Config()->Save());
 	EXPECT_EQ(Read(), "cl_showhud 1\n");
 }
@@ -281,7 +283,8 @@ TEST_F(CConfigPersistence, ConcurrentWriterIsRejectedAndLockIsReleasedAfterSave)
 		auto &Context = *static_cast<SContext *>(pUser);
 		Context.m_Attempted = true;
 		Context.m_Result = Context.m_pOther->Save();
-	}, &Context);
+	},
+		&Context);
 	ASSERT_TRUE(First.Config()->Save());
 	EXPECT_TRUE(Context.m_Attempted);
 	EXPECT_FALSE(Context.m_Result);
@@ -295,7 +298,8 @@ TEST_F(CConfigPersistence, ReentrantSaveDoesNotDisturbOuterStagedFiles)
 	bool NestedResult = true;
 	Session.Config()->RegisterCallback([](IConfigManager *pConfig, void *pUser) {
 		*static_cast<bool *>(pUser) = pConfig->Save();
-	}, &NestedResult);
+	},
+		&NestedResult);
 	g_Config.m_ClShowhud = 0;
 	ASSERT_TRUE(Session.Config()->Save());
 	EXPECT_FALSE(NestedResult);

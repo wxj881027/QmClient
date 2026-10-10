@@ -1,7 +1,6 @@
 #include "rank_ghost.h"
 
 #include "media_paths.h"
-
 #include "rank_demo_manifest.h"
 
 #include <base/log.h>
