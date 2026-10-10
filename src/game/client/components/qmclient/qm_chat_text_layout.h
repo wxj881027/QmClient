@@ -25,15 +25,28 @@ inline float QmChatTextBlockBottom(const CTextCursor &Cursor)
 	return std::max(LogicalHeight, VisualHeight);
 }
 
-// 前缀已经换行时只按当前行位置缩进；长前缀也必须给后续正文保留半行宽度。
+// 长前缀也必须给后续正文保留半行宽度。
 // 测量和绘制共用此策略，不改动字符计数、行高和颜色分段。
-inline void QmChatApplyMessageIndent(CTextCursor &Cursor)
+inline void QmChatApplyMessageIndent(CTextCursor &Cursor, float PrefixWidth)
 {
 	if(Cursor.m_LineWidth <= 0.0f)
 		return;
-	const float Indent = std::clamp(Cursor.m_X - Cursor.m_StartX, 0.0f, Cursor.m_LineWidth * 0.5f);
+	const float Indent = std::clamp(PrefixWidth, 0.0f, Cursor.m_LineWidth * 0.5f);
 	Cursor.m_StartX += Indent;
 	Cursor.m_LineWidth -= Indent;
+}
+
+// 普通消息按前缀结束时的当前行位置缩进。
+inline void QmChatApplyMessageIndent(CTextCursor &Cursor)
+{
+	QmChatApplyMessageIndent(Cursor, Cursor.m_X - Cursor.m_StartX);
+}
+
+// 姓名列表后已经换行，正文首行和续行都保留第一个人的前缀占位。
+inline void QmChatApplyMergedMessageIndent(CTextCursor &Cursor, float FirstAuthorPrefixWidth)
+{
+	QmChatApplyMessageIndent(Cursor, FirstAuthorPrefixWidth);
+	Cursor.m_X = Cursor.m_StartX;
 }
 
 // 前缀和正文可能位于不同行，背景宽度取各自的最右边缘，不能直接相加最长行。

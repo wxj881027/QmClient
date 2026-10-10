@@ -2519,8 +2519,15 @@ bool CChat::OnPrepareLines(float y)
 		}
 		Line.m_ChatEmojiRect = {};
 		const bool MultipleAuthors = Line.m_vMergedAuthors.size() > 1;
-		// 多人合并的正文另起一行，使用完整行宽，不再按姓名宽度缩进。
-		const bool IndentMessage = !MultipleAuthors && !IsScoreBoardOpen && !g_Config.m_ClChatOld;
+		// 多人合并仍将正文另起一行，只保留第一个人的前缀占位。
+		const bool IndentMessage = MultipleAuthors || (!IsScoreBoardOpen && !g_Config.m_ClChatOld);
+		float FirstAuthorPrefixWidth = 0.0f;
+		if(MultipleAuthors)
+		{
+			const SMergedAuthor &FirstAuthor = Line.m_vMergedAuthors.front();
+			FirstAuthorPrefixWidth = TextRender()->TextWidth(FontSize, VisibleTitle(FirstAuthor.m_aQmTitle, FirstAuthor.m_ClientId)) +
+				TextRender()->TextWidth(FontSize, FirstAuthor.m_aName) + TextRender()->TextWidth(FontSize, ": ");
+		}
 
 		char aClientId[16] = "";
 		if(!MultipleAuthors && g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0' && !GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
@@ -2628,7 +2635,11 @@ bool CChat::OnPrepareLines(float y)
 
 			CTextCursor AppendCursor = MeasureCursor;
 			AppendCursor.m_LongestLineWidth = 0.0f;
-			if(IndentMessage)
+			if(MultipleAuthors)
+			{
+				QmChatApplyMergedMessageIndent(AppendCursor, FirstAuthorPrefixWidth);
+			}
+			else if(IndentMessage)
 			{
 				QmChatApplyMessageIndent(AppendCursor);
 			}
@@ -2836,7 +2847,11 @@ bool CChat::OnPrepareLines(float y)
 		CTextCursor AppendCursor = LineCursor;
 		AppendCursor.m_TrackLineRanges = Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM;
 		AppendCursor.m_LongestLineWidth = 0.0f;
-		if(IndentMessage)
+		if(MultipleAuthors)
+		{
+			QmChatApplyMergedMessageIndent(AppendCursor, FirstAuthorPrefixWidth);
+		}
+		else if(IndentMessage)
 		{
 			QmChatApplyMessageIndent(AppendCursor);
 		}
