@@ -1,4 +1,5 @@
 #include "config_tags.h"
+#include "qm_legacy_config.h"
 
 #include <base/str.h>
 #include <base/system.h>
@@ -73,20 +74,20 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*entity_overlay*", EConfigTag::VISUAL);
 	RegisterTag("*collision_hitbox*", EConfigTag::VISUAL);
 	RegisterTag("*hookcoll*", EConfigTag::VISUAL);
-	RegisterTag("tc_grenade*", EConfigTag::VISUAL);
-	RegisterTag("tc_laser*", EConfigTag::VISUAL);
-	RegisterTag("tc_rainbow*", EConfigTag::VISUAL);
-	RegisterTag("tc_show_hook*", EConfigTag::VISUAL);
-	RegisterTag("tc_frozen_tees*", EConfigTag::VISUAL);
-	RegisterTag("tc_freeze*", EConfigTag::VISUAL);
-	RegisterTag("tc_anti*", EConfigTag::VISUAL);
-	RegisterTag("tc_kill*", EConfigTag::VISUAL);
-	RegisterTag("tc_weak*", EConfigTag::VISUAL);
-	RegisterTag("tc_color*", EConfigTag::VISUAL);
-	RegisterTag("tc_skin*", EConfigTag::VISUAL);
-	RegisterTag("tc_custom*", EConfigTag::VISUAL);
-	RegisterTag("tc_tee*", EConfigTag::VISUAL);
-	RegisterTag("tc_dummy_color*", EConfigTag::VISUAL);
+	RegisterTag("qm_grenade*", EConfigTag::VISUAL);
+	RegisterTag("qm_laser*", EConfigTag::VISUAL);
+	RegisterTag("qm_rainbow*", EConfigTag::VISUAL);
+	RegisterTag("qm_show_hook*", EConfigTag::VISUAL);
+	RegisterTag("qm_frozen_tees*", EConfigTag::VISUAL);
+	RegisterTag("qm_freeze*", EConfigTag::VISUAL);
+	RegisterTag("qm_anti*", EConfigTag::VISUAL);
+	RegisterTag("qm_kill*", EConfigTag::VISUAL);
+	RegisterTag("qm_weak*", EConfigTag::VISUAL);
+	RegisterTag("qm_color*", EConfigTag::VISUAL);
+	RegisterTag("qm_skin*", EConfigTag::VISUAL);
+	RegisterTag("qm_custom*", EConfigTag::VISUAL);
+	RegisterTag("qm_tee*", EConfigTag::VISUAL);
+	RegisterTag("qm_dummy_color*", EConfigTag::VISUAL);
 	RegisterTag("qm_warlist*", EConfigTag::VISUAL);
 	RegisterTag("cl_skin*", EConfigTag::VISUAL);
 	RegisterTag("cl_camera*", EConfigTag::VISUAL);
@@ -107,16 +108,15 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*island*", EConfigTag::HUD);
 	RegisterTag("*overlay*", EConfigTag::HUD);
 	RegisterTag("*progress*", EConfigTag::HUD);
-	RegisterTag("tc_scoreboard*", EConfigTag::HUD);
-	RegisterTag("tc_hud*", EConfigTag::HUD);
-	RegisterTag("tc_show_chat*", EConfigTag::HUD);
-	RegisterTag("tc_show_ids*", EConfigTag::HUD);
-	RegisterTag("tc_show_local*", EConfigTag::HUD);
-	RegisterTag("tc_show_direction*", EConfigTag::HUD);
-	RegisterTag("tc_show_ips*", EConfigTag::HUD);
-	RegisterTag("tc_streamer*", EConfigTag::HUD);
-	RegisterTag("cl_scoreboard*", EConfigTag::HUD);
 	RegisterTag("qm_scoreboard*", EConfigTag::HUD);
+	RegisterTag("qm_hud*", EConfigTag::HUD);
+	RegisterTag("qm_show_chat*", EConfigTag::HUD);
+	RegisterTag("qm_show_ids*", EConfigTag::HUD);
+	RegisterTag("qm_show_local*", EConfigTag::HUD);
+	RegisterTag("qm_show_direction*", EConfigTag::HUD);
+	RegisterTag("qm_show_ips*", EConfigTag::HUD);
+	RegisterTag("qm_streamer*", EConfigTag::HUD);
+	RegisterTag("cl_scoreboard*", EConfigTag::HUD);
 	RegisterTag("qm_dummy_miniview*", EConfigTag::HUD);
 	RegisterTag("qm_smtc*", EConfigTag::HUD);
 	RegisterTag("cl_showhud*", EConfigTag::HUD);
@@ -134,11 +134,11 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*deepfly*", EConfigTag::INPUT);
 	RegisterTag("*autoswitch*", EConfigTag::INPUT);
 	RegisterTag("*input*", EConfigTag::INPUT);
-	RegisterTag("tc_fast*", EConfigTag::INPUT);
-	RegisterTag("tc_switch*", EConfigTag::INPUT);
-	RegisterTag("tc_dummy_copy*", EConfigTag::INPUT);
-	RegisterTag("tc_plasma*", EConfigTag::INPUT);
-	RegisterTag("tc_control*", EConfigTag::INPUT);
+	RegisterTag("qm_fast*", EConfigTag::INPUT);
+	RegisterTag("qm_switch*", EConfigTag::INPUT);
+	RegisterTag("qm_dummy_copy*", EConfigTag::INPUT);
+	RegisterTag("qm_plasma*", EConfigTag::INPUT);
+	RegisterTag("qm_control*", EConfigTag::INPUT);
 	RegisterTag("cl_control*", EConfigTag::INPUT);
 	RegisterTag("cl_mouse*", EConfigTag::INPUT);
 	RegisterTag("cl_deepfly*", EConfigTag::INPUT);
@@ -151,8 +151,8 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*reply*", EConfigTag::CHAT);
 	RegisterTag("*keyword*", EConfigTag::CHAT);
 	RegisterTag("*repeat*", EConfigTag::CHAT);
-	RegisterTag("tc_chat*", EConfigTag::CHAT);
-	RegisterTag("tc_show_chat*", EConfigTag::CHAT);
+	RegisterTag("qm_chat*", EConfigTag::CHAT);
+	RegisterTag("qm_show_chat*", EConfigTag::CHAT);
 	RegisterTag("cl_chat*", EConfigTag::CHAT);
 	RegisterTag("cl_message*", EConfigTag::CHAT);
 	RegisterTag("cl_show_chat*", EConfigTag::CHAT);
@@ -162,7 +162,7 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*qm_voice*", EConfigTag::AUDIO);
 	RegisterTag("*sound*", EConfigTag::AUDIO);
 	RegisterTag("*audio*", EConfigTag::AUDIO);
-	RegisterTag("tc_voice*", EConfigTag::AUDIO);
+	RegisterTag("qm_voice*", EConfigTag::AUDIO);
 	RegisterTag("cl_sound*", EConfigTag::AUDIO);
 	RegisterTag("cl_music*", EConfigTag::AUDIO);
 
@@ -172,12 +172,12 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*qiafen*", EConfigTag::AUTOMATION);
 	RegisterTag("*unspec*", EConfigTag::AUTOMATION);
 	RegisterTag("*unfreeze*", EConfigTag::AUTOMATION);
-	RegisterTag("tc_auto*", EConfigTag::AUTOMATION);
-	RegisterTag("tc_aim*", EConfigTag::AUTOMATION);
-	RegisterTag("tc_hook*", EConfigTag::AUTOMATION);
-	RegisterTag("tc_vote*", EConfigTag::AUTOMATION);
-	RegisterTag("tc_kill*", EConfigTag::AUTOMATION);
-	RegisterTag("tc_dummy*", EConfigTag::AUTOMATION);
+	RegisterTag("qm_auto*", EConfigTag::AUTOMATION);
+	RegisterTag("qm_aim*", EConfigTag::AUTOMATION);
+	RegisterTag("qm_hook*", EConfigTag::AUTOMATION);
+	RegisterTag("qm_vote*", EConfigTag::AUTOMATION);
+	RegisterTag("qm_kill*", EConfigTag::AUTOMATION);
+	RegisterTag("qm_dummy*", EConfigTag::AUTOMATION);
 	RegisterTag("cl_autoswitch*", EConfigTag::AUTOMATION);
 	RegisterTag("cl_auto_demo*", EConfigTag::AUTOMATION);
 	RegisterTag("cl_auto_race*", EConfigTag::AUTOMATION);
@@ -190,8 +190,8 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*blacklist*", EConfigTag::SOCIAL);
 	RegisterTag("*mute*", EConfigTag::SOCIAL);
 	RegisterTag("qm_warlist*", EConfigTag::SOCIAL);
-	RegisterTag("tc_trademark*", EConfigTag::SOCIAL);
-	RegisterTag("tc_friend*", EConfigTag::SOCIAL);
+	RegisterTag("qm_trademark*", EConfigTag::SOCIAL);
+	RegisterTag("qm_friend*", EConfigTag::SOCIAL);
 	RegisterTag("cl_friends*", EConfigTag::SOCIAL);
 	RegisterTag("cl_mute*", EConfigTag::SOCIAL);
 	RegisterTag("cl_vote*", EConfigTag::SOCIAL);
@@ -201,7 +201,7 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*fov*", EConfigTag::CAMERA);
 	RegisterTag("*aspect*", EConfigTag::CAMERA);
 	RegisterTag("*drift*", EConfigTag::CAMERA);
-	RegisterTag("tc_camera*", EConfigTag::CAMERA);
+	RegisterTag("qm_camera*", EConfigTag::CAMERA);
 	RegisterTag("cl_camera*", EConfigTag::CAMERA);
 	RegisterTag("cl_zoom*", EConfigTag::CAMERA);
 	RegisterTag("cl_smooth*", EConfigTag::CAMERA);
@@ -214,9 +214,9 @@ CConfigTagsManager::CConfigTagsManager()
 	RegisterTag("*shotgun*", EConfigTag::GAMEPLAY);
 	RegisterTag("*laser*", EConfigTag::GAMEPLAY);
 	RegisterTag("*hook*", EConfigTag::GAMEPLAY);
-	RegisterTag("tc_predict*", EConfigTag::GAMEPLAY);
-	RegisterTag("tc_antiping*", EConfigTag::GAMEPLAY);
-	RegisterTag("tc_show_hook*", EConfigTag::GAMEPLAY);
+	RegisterTag("qm_predict*", EConfigTag::GAMEPLAY);
+	RegisterTag("qm_antiping*", EConfigTag::GAMEPLAY);
+	RegisterTag("qm_show_hook*", EConfigTag::GAMEPLAY);
 	RegisterTag("cl_predict*", EConfigTag::GAMEPLAY);
 	RegisterTag("cl_antiping*", EConfigTag::GAMEPLAY);
 	RegisterTag("cl_show_hook_coll*", EConfigTag::GAMEPLAY);
@@ -331,6 +331,8 @@ std::vector<EConfigTag> CConfigTagsManager::InferTagsFromName(const char *pScrip
 
 std::vector<EConfigTag> CConfigTagsManager::GetTagsForVariable(const char *pScriptName) const
 {
+	pScriptName = QmLegacyConfig::CanonicalName(pScriptName);
+
 	// 首先检查是否有显式注册的 Tags
 	auto Iter = m_VariableTags.find(pScriptName);
 	if(Iter != m_VariableTags.end())
