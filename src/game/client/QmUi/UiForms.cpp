@@ -182,7 +182,10 @@ namespace ui_widget
 			if(WasEmpty && pPlaceholder != nullptr)
 				Ctx.m_pUi->DoLabel(&TextRect, pPlaceholder, FontSize, TextAlign);
 			else if(!WasEmpty && !pInput->IsHidden())
+			{
+				const CQmCardLabelHintScope PreserveInput(Ctx.m_pUi, false);
 				Ctx.m_pUi->DoLabel(&TextRect, pInput->GetString(), FontSize, TextAlign);
+			}
 			if(Options.m_pTrailingText != nullptr && TrailingRect.w > 0.0f)
 				Ctx.m_pUi->DoLabel(&TrailingRect, Options.m_pTrailingText, FontSize * 0.82f, TEXTALIGN_MC);
 			return {};

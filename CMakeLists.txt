@@ -3190,6 +3190,7 @@ if(CLIENT)
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
     QmUi/QmConsoleUi.h
+    QmUi/QmCardLabelHints.h
     QmUi/QmPopupSource.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h

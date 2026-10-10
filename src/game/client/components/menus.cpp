@@ -1788,6 +1788,7 @@ int CMenus::DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const 
 
 void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, bool Render)
 {
+	pText = Ui()->PrepareCardLabel(pRect, pText, Render && !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = LabelProps;
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
@@ -1813,6 +1814,7 @@ void CMenus::DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRe
 
 void CMenus::DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props, int MaxWidth)
 {
+	pText = Ui()->PrepareCardLabel(pRect, pText, !m_MenuTextPlanCollecting);
 	SLabelProperties EffectiveProps = Props;
 	if(Page == SETTINGS_TCLIENT && Size > 0.0f)
 	{
@@ -6715,9 +6717,11 @@ void CMenus::CountMenuTextImmediateFallback()
 
 void CMenus::DoMenuLabelStreamed(EMenuTextScope Scope, CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render)
 {
-	(void)Scope;
 	if(pText == nullptr)
 		return;
+	// 缓存预算与最终绘制必须使用同一份短标签，避免逐帧排队重建。
+	if(Scope == MENU_TEXT_SCOPE_SETTINGS && StrLen < 0 && pReadCursor == nullptr)
+		pText = Ui()->PrepareCardLabel(pRect, pText, Render);
 
 	if(m_MenuTextPlanCollecting)
 	{
