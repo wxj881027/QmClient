@@ -968,6 +968,9 @@ void CMenus::RenderSettings(CUIRect MainView)
 		else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
 		{
 			CommitSettingsTeeSkinEdits();
+			// 切入「搜索」页时请求自动聚焦搜索输入框（一次性标志，渲染侧消费）。
+			if(g_Config.m_UiSettingsPage == SETTINGS_SEARCH)
+				m_FocusSettingsSearchOnEntry = true;
 			if(s_PrevSettingsPage == SETTINGS_TEE && g_Config.m_UiSettingsPage != SETTINGS_TEE)
 				FinalizeTeeListDrainPerfSession();
 			if(g_Config.m_UiSettingsPage == SETTINGS_TEE || g_Config.m_UiSettingsPage == SETTINGS_PLAYER)

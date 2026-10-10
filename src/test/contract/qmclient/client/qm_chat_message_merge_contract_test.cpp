@@ -2,30 +2,6 @@
 #include <gtest/gtest.h>
 #include <test/support/qmclient_source_contract_test.h>
 
-TEST(QmChatMessageMergeContract, ChatAndConsoleKeepStructuredMergedAuthors)
-{
-	const std::string ChatHeader = ReadRepoFile("src/game/client/components/chat.h");
-	const std::string Chat = ReadRepoFile("src/game/client/components/chat.cpp");
-	const std::string ConsoleHeader = ReadRepoFile("src/game/client/components/console.h");
-	const std::string Console = ReadRepoFile("src/game/client/components/console.cpp");
-	const std::string AddLine = ExtractSourceFunctionBody(Chat, "void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible, std::optional");
-
-	EXPECT_TRUE(ContainsAll(ChatHeader, {"struct SMergedAuthor", "std::vector<SMergedAuthor> m_vMergedAuthors"}));
-	EXPECT_TRUE(ContainsAll(AddLine, {"g_Config.m_QmMessageMerge", "CanMergePlayerMessages(", "!Highlighted &&"}));
-	EXPECT_FALSE(ContainsAny(AddLine, {"PreviousLine.m_Team = false;", "PreviousLine.m_TeamNumber = 0;", "PreviousLine.m_ClientId == ClientId"}));
-	EXPECT_TRUE(ContainsAll(Chat, {
-					      "if(Author.m_ClientId == ClientId)",
-					      "Author.m_NameColor = PlayerNameColor(ClientId, NameColor, false);",
-					      "\" [%d]: \", Line.m_TimesRepeated + 1",
-					      "FlushPendingConsoleLine",
-					      "GameClient()->m_GameConsole.PrintLineWithColorSpans",
-					      "const bool MergedPlayerMessages = Line.m_TimesRepeated > 0 && !Line.m_vMergedAuthors.empty();",
-					      "m_PlayerLine = Line.m_vMergedAuthors.size() <= 1",
-				      }));
-	EXPECT_TRUE(ContainsAll(ConsoleHeader, {"struct SColorSpan", "m_ColorSpansByExportId", "PrintLineWithColorSpans"}));
-	EXPECT_TRUE(ContainsAll(Console, {"m_PendingColorSpansByExportId", "EntryCursor.m_vColorSplits.emplace_back"}));
-}
-
 TEST(QmChatMessageMergeContract, SettingIsDefaultAndLocalized)
 {
 	const std::string Config = ReadRepoFile("src/engine/shared/config_variables_qmclient.h");

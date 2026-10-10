@@ -23,13 +23,8 @@
 #include <android/android_main.h>
 #endif
 
-#include <opus/opus.h>
-
-#if defined(CONF_RNNOISE)
-#include <rnnoise.h>
-#endif
-
 #include <SDL.h>
+#include <opus/opus.h>
 
 #include <algorithm>
 #include <array>
@@ -1148,14 +1143,6 @@ void CRClientVoice::Shutdown()
 	m_NsNoiseFloor = 0.0f;
 	m_NsGain = 1.0f;
 	m_AudioPausedForInactive = false;
-	m_NoiseSuppressFallbackLogged = false;
-#if defined(CONF_RNNOISE)
-	if(m_pNoiseSuppress)
-	{
-		rnnoise_destroy(m_pNoiseSuppress);
-		m_pNoiseSuppress = nullptr;
-	}
-#endif
 	m_aAudioBackend[0] = '\0';
 	m_aAudioBackendMismatchReq[0] = '\0';
 	m_aAudioBackendMismatchCur[0] = '\0';
@@ -1459,7 +1446,7 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 				int16_t aPcm[VOICE_FRAME_SAMPLES];
 				SDL_DequeueAudio(m_CaptureDevice, aPcm, VOICE_FRAME_BYTES);
 				FramesProcessed++;
-				VoiceUtils::ProcessVoiceCaptureFrame(Config, aPcm, VOICE_FRAME_SAMPLES, m_AgcGain, m_NsNoiseFloor, m_NsGain, m_pNoiseSuppress, m_NoiseSuppressFallbackLogged, m_HpfPrevIn, m_HpfPrevOut, m_CompEnv);
+				VoiceUtils::ProcessVoiceCaptureFrame(Config, aPcm, VOICE_FRAME_SAMPLES, m_AgcGain, m_NsNoiseFloor, m_NsGain, m_HpfPrevIn, m_HpfPrevOut, m_CompEnv);
 				const float Peak = VoiceUtils::VoiceFramePeak(aPcm, VOICE_FRAME_SAMPLES);
 				UpdateMicLevel(Peak);
 				UpdatedMicLevel = true;
@@ -1503,7 +1490,7 @@ void CRClientVoice::ProcessCapture() NO_THREAD_SAFETY_ANALYSIS
 		int16_t aPcm[VOICE_FRAME_SAMPLES];
 		SDL_DequeueAudio(m_CaptureDevice, aPcm, VOICE_FRAME_BYTES);
 		FramesProcessed++;
-		VoiceUtils::ProcessVoiceCaptureFrame(Config, aPcm, VOICE_FRAME_SAMPLES, m_AgcGain, m_NsNoiseFloor, m_NsGain, m_pNoiseSuppress, m_NoiseSuppressFallbackLogged, m_HpfPrevIn, m_HpfPrevOut, m_CompEnv);
+		VoiceUtils::ProcessVoiceCaptureFrame(Config, aPcm, VOICE_FRAME_SAMPLES, m_AgcGain, m_NsNoiseFloor, m_NsGain, m_HpfPrevIn, m_HpfPrevOut, m_CompEnv);
 
 		const float Peak = VoiceUtils::VoiceFramePeak(aPcm, VOICE_FRAME_SAMPLES);
 		if(ShowMicLevel)

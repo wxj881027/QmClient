@@ -111,6 +111,18 @@ inline bool QmUiIconHasSemanticColor(EQmIcon Icon)
 	return Icon == EQmIcon::HEART || Icon == EQmIcon::STAR;
 }
 
+// 语义图标实心态：两个开关彼此独立，互不影响；其余图标不受控。
+// 实心沿用同一 Phosphor 码位、仅切换到随包 Fill 字面（EFontPreset::ICON_FONT_FILL），
+// 字体实测：heart/star 在 Fill 字面为 1 轮廓实心，Regular/Bold/Light 为 2 轮廓空心。
+inline bool QmUiIconFilledStyle(EQmIcon Icon)
+{
+	if(Icon == EQmIcon::HEART)
+		return g_Config.m_QmUiFriendIconFilled != 0;
+	if(Icon == EQmIcon::STAR)
+		return g_Config.m_QmUiFavoriteIconFilled != 0;
+	return false;
+}
+
 // 字体图标在最终绘制时使用同一颜色策略，保留各自状态 alpha。
 inline ColorRGBA ConfiguredQmUiIconColor(const ColorRGBA &Color, EQmIcon Icon = EQmIcon::COUNT)
 {

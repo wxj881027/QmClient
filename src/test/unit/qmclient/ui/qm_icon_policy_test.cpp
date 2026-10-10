@@ -88,6 +88,25 @@ TEST(QmIconLabel, EveryBundledGlyphResolvesWithoutTreatingBodyTextAsIcons)
 	EXPECT_EQ(QmIconForLabel(EFontPreset::ICON_FONT, FontIcons::FONT_ICON_STAR, 3), EQmIcon::STAR);
 }
 
+TEST(QmIconLabel, FillPresetResolvesIconGlyphsLikeOtherIconPresets)
+{
+	for(const char *pGlyph : FontIcons::FONT_ICON_ALL)
+	{
+		SCOPED_TRACE(pGlyph);
+		EXPECT_NE(QmIconForLabel(EFontPreset::ICON_FONT_FILL, pGlyph), EQmIcon::COUNT);
+	}
+	EXPECT_EQ(QmIconForLabel(EFontPreset::ICON_FONT_FILL, FontIcons::FONT_ICON_HEART), EQmIcon::HEART);
+	EXPECT_EQ(QmIconForLabel(EFontPreset::ICON_FONT_FILL, FontIcons::FONT_ICON_STAR), EQmIcon::STAR);
+	EXPECT_EQ(QmIconForLabel(EFontPreset::ICON_FONT_FILL, "A"), EQmIcon::COUNT);
+	EXPECT_EQ(QmIconForLabel(EFontPreset::ICON_FONT_FILL, nullptr), EQmIcon::COUNT);
+	const std::string Loading = std::string(FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT) + FontIcons::FONT_ICON_ELLIPSIS;
+	const auto Icons = QmIconLabelGlyphs(EFontPreset::ICON_FONT_FILL, Loading.c_str());
+	ASSERT_EQ(Icons.m_Count, 2);
+	EXPECT_EQ(Icons.m_aIcons[0], EQmIcon::ARROW_ROTATE_RIGHT);
+	EXPECT_EQ(Icons.m_aIcons[1], EQmIcon::ELLIPSIS);
+	EXPECT_EQ(QmIconLabelGlyphs(EFontPreset::ICON_FONT_FILL, (Loading + "text").c_str()).m_Count, 0);
+}
+
 TEST(QmIconLabel, LoadingButtonResolvesBothGlyphsAndRejectsMixedText)
 {
 	const std::string Loading = std::string(FontIcons::FONT_ICON_ARROW_ROTATE_RIGHT) + FontIcons::FONT_ICON_ELLIPSIS;
@@ -213,6 +232,8 @@ namespace
 		unsigned m_CustomColor = g_Config.m_QmUiIconCustomColor;
 		unsigned m_FriendColor = g_Config.m_QmUiFriendIconColor;
 		unsigned m_FavoriteColor = g_Config.m_QmUiFavoriteIconColor;
+		int m_FriendFilled = g_Config.m_QmUiFriendIconFilled;
+		int m_FavoriteFilled = g_Config.m_QmUiFavoriteIconFilled;
 
 	protected:
 		void TearDown() override
@@ -222,6 +243,8 @@ namespace
 			g_Config.m_QmUiIconCustomColor = m_CustomColor;
 			g_Config.m_QmUiFriendIconColor = m_FriendColor;
 			g_Config.m_QmUiFavoriteIconColor = m_FavoriteColor;
+			g_Config.m_QmUiFriendIconFilled = m_FriendFilled;
+			g_Config.m_QmUiFavoriteIconFilled = m_FavoriteFilled;
 		}
 	};
 }
@@ -282,6 +305,29 @@ TEST_F(CQmConfiguredIconColorTest, FriendAndFavoriteColorsRemainIndependentAcros
 			}
 		}
 	}
+}
+
+TEST_F(CQmConfiguredIconColorTest, FilledStylesStayIndependentPerSemanticIcon)
+{
+	g_Config.m_QmUiFriendIconFilled = 0;
+	g_Config.m_QmUiFavoriteIconFilled = 0;
+	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::HEART));
+	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::STAR));
+	g_Config.m_QmUiFriendIconFilled = 1;
+	EXPECT_TRUE(QmUiIconFilledStyle(EQmIcon::HEART));
+	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::STAR));
+	g_Config.m_QmUiFavoriteIconFilled = 1;
+	EXPECT_TRUE(QmUiIconFilledStyle(EQmIcon::HEART));
+	EXPECT_TRUE(QmUiIconFilledStyle(EQmIcon::STAR));
+	g_Config.m_QmUiFriendIconFilled = 0;
+	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::HEART));
+	EXPECT_TRUE(QmUiIconFilledStyle(EQmIcon::STAR));
+	// 非语义图标不受任何实心配置影响。
+	g_Config.m_QmUiFriendIconFilled = 1;
+	g_Config.m_QmUiFavoriteIconFilled = 1;
+	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::GEAR));
+	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::BOOKMARK));
+	EXPECT_FALSE(QmUiIconFilledStyle(EQmIcon::COUNT));
 }
 
 TEST_F(CQmConfiguredIconColorTest, ChangingOneSemanticColorImmediatelyUpdatesOnlyItsIcon)

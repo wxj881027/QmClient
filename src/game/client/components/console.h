@@ -8,6 +8,7 @@
 #include <engine/console.h>
 #include <engine/shared/ringbuffer.h>
 
+#include <game/client/QmUi/QmConsoleUi.h>
 #include <game/client/component.h>
 #include <game/client/components/qm_console_log_filter.h>
 #include <game/client/components/qmclient/console_search_input.h>
@@ -86,6 +87,7 @@ private:
 		int m_LinesRendered = 0;
 		// 顶栏筛选是多选掩码，见 qm_console_log_filter.h
 		int m_LogFilterMask = QM_CONSOLE_LOG_CATEGORY_ALL;
+		QmConsoleUi::CFilterContentMotion m_FilterContentMotion;
 		int m_ChatExportPreviousFilterMask = QM_CONSOLE_LOG_CATEGORY_ALL;
 		int m_NextExportId = 1;
 		int m_ChatExportAnchorId = -1;
@@ -98,6 +100,7 @@ private:
 		vec2 m_MousePress = vec2(0.0f, 0.0f);
 		vec2 m_MouseRelease = vec2(0.0f, 0.0f);
 		CQmConsoleSelection m_Selection;
+		CQmConsoleCaretMotion m_LogCaretMotion;
 		int m_NewLineCounter = 0;
 		bool m_ScrollbarDragging = false;
 		float m_ScrollbarDragOffset = 0.0f;
@@ -232,7 +235,6 @@ private:
 	bool m_LocalConsoleFullscreen = false;
 	float m_LastLocalFontSize = -1.0f;
 	SPopupMenuId m_SettingsPopupId;
-	bool m_SettingsEscapePressed = false;
 	CScrollRegion m_SettingsScrollRegion;
 	CButtonContainer m_SettingsCloseButton;
 	void OpenSettings();

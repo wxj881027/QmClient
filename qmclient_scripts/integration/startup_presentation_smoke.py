@@ -11,14 +11,16 @@ import tempfile
 import time
 
 try:
+	from qmclient_scripts.integration.process_build import prepare_process_build
 	from qmclient_scripts.integration.process_harness import Process
 except ModuleNotFoundError:
+	from process_build import prepare_process_build
 	from process_harness import Process
 
 
 class StartupEnvironment:
 	def __init__(self, build_dir: Path):
-		self.build_dir = build_dir.resolve()
+		self.build_dir = prepare_process_build(build_dir)
 		self.binary = self.build_dir / ("DDNet.exe" if sys.platform == "win32" else "DDNet")
 		if not self.binary.is_file():
 			raise RuntimeError(f"missing client: {self.binary}")
@@ -30,11 +32,24 @@ class StartupEnvironment:
 		self.client: Process | None = None
 
 	def start(self, config: list[str]) -> Process:
-		arguments = [str(self.binary), "gfx_fullscreen 0", "gfx_screen_width 960", "gfx_screen_height 540",
-			"gfx_backend OpenGL", "qm_graphics_mode 0", "qm_graphics_trace 1", "gfx_backgroundrender 1",
-			"cl_save_settings 0", "cl_show_welcome 0", "qm_auto_update 0", "qm_steam_auto_launch 0",
-			"cl_languagefile languages/simplified_chinese.txt", "tc_custom_font DejaVu Sans",
-			"tc_custom_font_weight 900", *config]
+		arguments = [
+			str(self.binary),
+			"gfx_fullscreen 0",
+			"gfx_screen_width 960",
+			"gfx_screen_height 540",
+			"gfx_backend OpenGL",
+			"qm_graphics_mode 0",
+			"qm_graphics_trace 1",
+			"gfx_backgroundrender 1",
+			"cl_save_settings 0",
+			"cl_show_welcome 0",
+			"qm_auto_update 0",
+			"qm_steam_auto_launch 0",
+			"cl_languagefile languages/simplified_chinese.txt",
+			"tc_custom_font DejaVu Sans",
+			"tc_custom_font_weight 900",
+			*config,
+		]
 		self.client = Process("client", arguments, self.temp_dir, fifo_command="cl_input_fifo", pipe_prefix="qmclient_startup_", env={"QMCLIENT_TEST_STORAGE_ROOT": str(self.temp_dir)} if sys.platform == "win32" else None)
 		return self.client
 

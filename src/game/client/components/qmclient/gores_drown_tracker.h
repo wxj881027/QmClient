@@ -25,14 +25,20 @@ class CQmGoresDrownTracker
 	std::array<SPlayer, MAX_CLIENTS> m_aPlayers{};
 
 public:
-	static bool IsTrackedTeam(int Team)
+	// 榜单只支持服务器声明的 Gores 模式，Team0 的统计与显示共用过滤策略。
+	static bool IsTrackedTeam(int Team, bool IncludeTeamZero)
 	{
-		return Team > TEAM_FLOCK && Team < NUM_DDRACE_TEAMS;
+		return Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS && (IncludeTeamZero || Team != TEAM_FLOCK);
 	}
 
-	static bool IsSameTrackedTeam(int LocalTeam, int PlayerTeam)
+	static bool IsSameTrackedTeam(int LocalTeam, int PlayerTeam, bool IncludeTeamZero)
 	{
-		return IsTrackedTeam(LocalTeam) && LocalTeam == PlayerTeam;
+		return IsTrackedTeam(LocalTeam, IncludeTeamZero) && LocalTeam == PlayerTeam;
+	}
+
+	static bool IsBoardVisible(bool GoresGameMode, bool HasLocalClient, int LocalTeam, bool IncludeTeamZero)
+	{
+		return GoresGameMode && HasLocalClient && IsTrackedTeam(LocalTeam, IncludeTeamZero);
 	}
 
 	void Reset()
@@ -45,12 +51,12 @@ public:
 		return ClientId >= 0 && ClientId < MAX_CLIENTS ? m_aPlayers[ClientId].m_Count : 0;
 	}
 
-	void Observe(int ClientId, bool Active, std::string_view Name, std::string_view Clan, int Team, bool HasCharacter, bool Frozen, bool Hooking)
+	void Observe(int ClientId, bool Active, std::string_view Name, std::string_view Clan, int Team, bool HasCharacter, bool Frozen, bool Hooking, bool IncludeTeamZero)
 	{
 		if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 			return;
 		SPlayer &Player = m_aPlayers[ClientId];
-		if(!Active || !IsTrackedTeam(Team))
+		if(!Active || !IsTrackedTeam(Team, IncludeTeamZero))
 		{
 			Player = {};
 			return;

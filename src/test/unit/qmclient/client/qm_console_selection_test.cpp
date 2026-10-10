@@ -167,3 +167,85 @@ TEST(QmConsoleSelection, AutoScrollBoundsFrameStallsAndRejectsEmptyViewport)
 	EXPECT_EQ(Selection.AutoScroll(0.0f, 20.0f, 20.0f, 10.0f, 0.1f), 0);
 	EXPECT_EQ(Selection.AutoScroll(0.0f, 20.0f, 200.0f, 0.0f, 0.1f), 0);
 }
+
+TEST(QmConsoleSelection, ClickRetainsCaretAfterReleaseWithoutSelectingOrCopyingText)
+{
+	CQmConsoleSelection Selection;
+	EXPECT_FALSE(Selection.CursorForEntry(7, 10).has_value());
+	Selection.Begin({7, 3});
+	Selection.Finish();
+	ASSERT_TRUE(Selection.CursorForEntry(7, 10).has_value());
+	EXPECT_EQ(*Selection.CursorForEntry(7, 10), 3);
+	EXPECT_FALSE(Selection.CursorForEntry(8, 10).has_value());
+	EXPECT_FALSE(Selection.HasSelection());
+	EXPECT_FALSE(Selection.IsDragging());
+	std::string Text;
+	Selection.AppendText(7, "read only", Text);
+	EXPECT_TRUE(Text.empty());
+}
+
+TEST(QmConsoleSelection, CaretFollowsDragEndpointAndIgnoresExtensionAfterRelease)
+{
+	CQmConsoleSelection Selection;
+	Selection.Begin({7, 3});
+	Selection.Extend({8, 4});
+	EXPECT_FALSE(Selection.CursorForEntry(7, 10).has_value());
+	ASSERT_TRUE(Selection.CursorForEntry(8, 10).has_value());
+	EXPECT_EQ(*Selection.CursorForEntry(8, 10), 4);
+	Selection.Extend({7, 1});
+	Selection.Finish();
+	Selection.Extend({8, 5});
+	ASSERT_TRUE(Selection.CursorForEntry(7, 10).has_value());
+	EXPECT_EQ(*Selection.CursorForEntry(7, 10), 1);
+	EXPECT_TRUE(Selection.HasSelection());
+}
+
+TEST(QmConsoleSelection, CaretClampsToTextLengthAndClearsWhenClickedEntryIsRemoved)
+{
+	CQmConsoleSelection Selection;
+	Selection.Begin({7, 30});
+	Selection.Finish();
+	EXPECT_EQ(Selection.CursorForEntry(7, 5), 5);
+	EXPECT_EQ(Selection.CursorForEntry(7, 0), 0);
+	EXPECT_EQ(Selection.CursorForEntry(7, -1), 0);
+	Selection.OnEntryRemoved(8);
+	EXPECT_TRUE(Selection.CursorForEntry(7, 5).has_value());
+	Selection.OnEntryRemoved(7);
+	EXPECT_FALSE(Selection.CursorForEntry(7, 5).has_value());
+	Selection.Begin({7, 2});
+	Selection.Clear();
+	EXPECT_FALSE(Selection.CursorForEntry(7, 5).has_value());
+	Selection.Begin({7, 2});
+	Selection.Begin({});
+	EXPECT_FALSE(Selection.CursorForEntry(7, 5).has_value());
+}
+
+TEST(QmConsoleCaretMotion, ClickMovesSmoothlyWhileScrollAndReleaseStayOnTheCharacter)
+{
+	using namespace std::chrono_literals;
+	CQmConsoleSelection Selection;
+	CQmConsoleCaretMotion Motion;
+	auto Now = 1s;
+	Selection.Begin({1, 0});
+	Selection.Finish();
+	EXPECT_EQ(Motion.Resolve(Selection.CursorPosition(), vec2(10, 20), 10, Now, 2, Selection.HasSelection()), vec2(10, 20));
+	Selection.Begin({2, 5});
+	Selection.Finish();
+	EXPECT_EQ(Motion.Resolve(Selection.CursorPosition(), vec2(100, 80), 10, Now, 2, Selection.HasSelection()), vec2(10, 20));
+	auto Middle = Motion.Resolve(Selection.CursorPosition(), vec2(100, 80), 10, Now + 40ms, 2, Selection.HasSelection());
+	EXPECT_GT(Middle.x, 10);
+	EXPECT_LT(Middle.x, 100);
+	EXPECT_GT(Middle.y, 20);
+	EXPECT_LT(Middle.y, 80);
+	EXPECT_EQ(Motion.Resolve(Selection.CursorPosition(), vec2(100, 50), 10, Now + 41ms, 2, Selection.HasSelection()), vec2(100, 50));
+	Selection.Begin({2, 5});
+	Selection.Extend({3, 8});
+	Selection.Finish();
+	EXPECT_FALSE(Selection.IsDragging());
+	EXPECT_TRUE(Selection.HasSelection());
+	EXPECT_EQ(Motion.Resolve(Selection.CursorPosition(), vec2(50, 100), 10, Now + 42ms, 2, Selection.HasSelection()), vec2(50, 100));
+	Motion.Reset();
+	Selection.Begin({4, 0});
+	Selection.Finish();
+	EXPECT_EQ(Motion.Resolve(Selection.CursorPosition(), vec2(200, 200), 1, Now + 43ms, 2, false), vec2(200, 200));
+}

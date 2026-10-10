@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == 同时应用到分身
 
+Also send the original text when translating outgoing messages
+== 翻译发出的消息时同时发送原文
+
 Always show
 == 始终显示
 
@@ -806,8 +809,8 @@ Appearance
 Appearance and command highlighting of the local console
 == 本地控制台的外观和命令高亮
 
-Appearance of help bubbles outside settings cards
-== 设置卡片外的说明气泡外观
+Appearance of help bubbles
+== 提示气泡外观
 
 Append to log file instead of overwriting
 == 追加到日志文件而不是每次覆盖
@@ -1298,6 +1301,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Axiom 自动登录失败，正在重试
 
+Axiom auto login skipped: no password
+== Axiom 自动登录：未填写密码，已跳过
+
+Axiom auto login stopped after repeated failures
+== Axiom 自动登录已停止：多次尝试未成功
+
 Axiom auto login succeeded
 == Axiom 自动登录成功
 
@@ -1309,6 +1318,9 @@ Axiom main account password
 
 Axiom score request failed
 == Axiom 分数请求失败
+
+Axiom website
+== Axiom 官网
 
 Axis
 == 轴
@@ -1966,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == 电影镜头
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== 电影镜头平滑度（0=瞬时，100=最平滑）
+
+Cinematic smoothness
+== 电影镜头平滑度
 
 CJK font
 == 中日韩文字字体
@@ -3590,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == 在表情后绘制阴影
 
+Draw the favorite star icon with the filled icon font style
+== 以图标字体的实心样式绘制收藏星标
+
+Draw the friend heart icon with the filled icon font style
+== 以图标字体的实心样式绘制好友爱心
+
 Draw tile layers when using custom background (solid)
 == 使用纯色自定义背景时绘制图块图层
 
@@ -4190,9 +4214,6 @@ Enable skin switch animation
 Enable skin transition animation, then choose the type, scope, duration and easing.
 == 打开皮肤切换动画，再选择类型、作用范围、时长与缓动。
 
-Enable smooth cinematic camera while free spectating
-== 自由观战时启用平滑电影镜头
-
 Enable SodaMusic Hook
 == 启用汽水音乐 Hook
 
@@ -4312,6 +4333,9 @@ Endless hook has been activated
 
 Endless hook has been deactivated
 == 无限钩已关闭
+
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== 无限钩圆环流动样式（0=单色，1=彩虹，2=静止）
 
 Endpoint
 == 端点
@@ -4762,6 +4786,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == 翻转：
+
+Flow style
+== 流动样式
 
 Folder
 == 文件夹
@@ -5848,6 +5875,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == 保存/加载配置方案时包含皮肤
+
+Include Team 0
+== 包括 Team 0
+
+Include Team 0 in the Gores team drown board
+== 在 Gores 落水榜中包括 Team 0 玩家
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 收到消息自动翻译方式（0=仅在非目标语言时翻译，1=始终翻译）
@@ -9848,9 +9881,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == 回放列表：尚未加载
 
-Replay list: up to date
-== 回放列表：已是最新
-
 Replays directory
 == 回放目录
 
@@ -10612,6 +10642,9 @@ Send emote when entering freeze
 
 Send emoticon in water
 == 水中发送表情
+
+Send original text with translation
+== 翻译发送的消息时同时发送原文
 
 Send probability
 == 发送概率
@@ -11699,6 +11732,9 @@ Show teleporter tile outlines
 Show text entities
 == 显示文本实体
 
+Show the chat scrollbar on the right
+== 在右侧显示聊天滚动条
+
 Show the cursor while free spectating
 == 自由观战时显示光标
 
@@ -12053,6 +12089,9 @@ Smooth Dynamic Camera
 Smooth fade
 == 柔和淡变
 
+Smooth free spectator camera
+== 平滑自由观战镜头
+
 Smooth other players' predicted movement
 == 平滑其他玩家的预测移动
 
@@ -12061,6 +12100,9 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == 菜单/编辑器中平滑滚动动画的时间（单位：毫秒，0 为关闭）
+
+Smooth the mouse-driven camera in live and demo free spectating
+== 平滑在线观战和 Demo 回放中由鼠标控制的自由视角
 
 Smooth zoom animation time in editor (in ms, 0=off)
 == 编辑器中平滑缩放动画的时间（毫秒）（0 表示关闭）
@@ -12106,6 +12148,12 @@ Soft glow
 
 Solid
 == 纯色
+
+Solid favorite icon
+== 实心收藏图标
+
+Solid friend icon
+== 实心好友图标
 
 Solid tile outline opacity
 == 墙体轮廓不透明度
@@ -12331,6 +12379,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == 统计板
+
+Static
+== 静止
 
 Stats
 == 统计
@@ -12748,6 +12799,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == 队伍 Tee 外发光
+
+Team tee glow halo size
+== 队伍 Tee 光晕大小
+
+Team tee glow halo size in percent
+== 队伍 Tee 光晕大小 （百分比）
+
+Team tee glow intensity
+== 队伍 Tee 发光强度
+
+Team tee glow intensity in percent
+== 队伍 Tee 发光强度 （百分比）
 
 Team used when leaving solo split mode
 == 退出单刷模式时使用的队伍
@@ -13727,6 +13790,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == 无法删除 %d 个选中项。第一个失败项是“%s”。
 
+Unable to delete skin
+== 无法删除皮肤
+
 Unable to delete the demo '%s'
 == 无法删除回放文件“%s”
 
@@ -14110,9 +14176,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == 将鼠标悬停在 HUD 模块上并滚动滚轮可按 5% 缩放
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== 请分别填写主号和分身在 Axiom 服注册的密码。此选项不会自动注册账号。
 
 Use the scoreboard cursor mode to scroll the list
 == 使用计分板光标模式滚动查看列表
@@ -14989,6 +15052,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == 就你一个啦！
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== 账号即游戏内名字，请先在 Axiom 官网注册。分别填入主号与分身的注册密码；不会自动注册账号。
 
 Your current race time is %s
 == 你当前的比赛用时是 %s
@@ -16518,8 +16584,8 @@ Enter a room code to join a collaboration room.
 == 输入房间码以加入协作房间。
 
 [Editor]
-Enter a server setting. Press ctrl+space to show available settings.
-== 输入服务器设置。按 Ctrl+Space 显示可用设置。
+Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... .
+== 输入服务器设置。按 Ctrl+Space、Ctrl+Shift+Space，或点击 ... 显示可用设置。输入法占用快捷键时，请点击 ... 。
 
 [Editor]
 Enter the room code

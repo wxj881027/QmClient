@@ -87,6 +87,44 @@ namespace qm_card_registry
 		SCardNavigationTarget m_Target;
 	};
 
+	// 焦点只消费本帧按下沿，不持有鼠标按下状态，外部释放或输入隔离不会卡住后续点击。
+	class CCardFocus
+	{
+		std::string m_StableId;
+		bool m_Pressed = false;
+		bool m_Interactive = false;
+		bool m_Observed = false;
+
+	public:
+		void Reset() { *this = {}; }
+		void BeginFrame(bool Pressed, bool Interactive)
+		{
+			m_Interactive = Interactive;
+			m_Pressed = Pressed && Interactive;
+			m_Observed = false;
+			if(m_Pressed)
+				m_StableId.clear();
+		}
+		void Observe(const char *pStableId, bool PointerInside)
+		{
+			if(!m_Interactive || pStableId == nullptr || pStableId[0] == '\0')
+				return;
+			if(m_Pressed && PointerInside)
+				m_StableId = pStableId;
+			if(m_StableId == pStableId)
+				m_Observed = true;
+		}
+		bool IsFocused(const char *pStableId) const
+		{
+			return pStableId != nullptr && !m_StableId.empty() && m_StableId == pStableId;
+		}
+		void EndFrame()
+		{
+			if(m_Interactive && !m_Observed)
+				m_StableId.clear();
+		}
+	};
+
 	// 全局卡片默认 Placement 表（栖梦 + Tclient + deck）
 	const std::vector<SCardDefault> &Defaults();
 

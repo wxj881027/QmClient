@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == Также применить к дамми
 
+Also send the original text when translating outgoing messages
+== Также отправлять оригинальный текст при переводе исходящих сообщений
+
 Always show
 == Всегда показывать
 
@@ -806,8 +809,8 @@ Appearance
 Appearance and command highlighting of the local console
 == Оформление локальной консоли и подсветка команд
 
-Appearance of help bubbles outside settings cards
-== Оформление подсказок вне карточек настроек
+Appearance of help bubbles
+== Внешний вид всплывающих подсказок
 
 Append to log file instead of overwriting
 == Добавлять в файл журнала вместо перезаписи
@@ -1298,6 +1301,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Ошибка автоматического входа в Axiom, повторная попытка
 
+Axiom auto login skipped: no password
+== Автовход Axiom: пароль не задан, пропущено
+
+Axiom auto login stopped after repeated failures
+== Автовход Axiom остановлен: несколько попыток не удались
+
 Axiom auto login succeeded
 == Автоматический вход в Axiom выполнен успешно
 
@@ -1309,6 +1318,9 @@ Axiom main account password
 
 Axiom score request failed
 == Не удалось получить очки Axiom
+
+Axiom website
+== Сайт Axiom
 
 Axis
 == Ось
@@ -1966,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == Кинематографическая камера
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== Плавность кинематографической камеры (0=мгновенно, 100=максимально плавно)
+
+Cinematic smoothness
+== Плавность кинематографической камеры
 
 CJK font
 == Шрифт CJK
@@ -3590,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == Рисовать тень за эмоциями
 
+Draw the favorite star icon with the filled icon font style
+== Рисовать значок избранного заливкой шрифта иконок
+
+Draw the friend heart icon with the filled icon font style
+== Рисовать значок сердца друга заливкой шрифта иконок
+
 Draw tile layers when using custom background (solid)
 == Рисовать тайловые слои при использовании пользовательского фона (сплошного).
 
@@ -4190,9 +4214,6 @@ Enable skin switch animation
 Enable skin transition animation, then choose the type, scope, duration and easing.
 == Включите анимацию смены скина и выберите тип, область, длительность и сглаживание.
 
-Enable smooth cinematic camera while free spectating
-== Включить плавную кинематографическую камеру в свободном наблюдении
-
 Enable SodaMusic Hook
 == Включить SodaMusic Hook
 
@@ -4312,6 +4333,9 @@ Endless hook has been activated
 
 Endless hook has been deactivated
 == Бесконечный крюк деактивирован
+
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== Стиль переливания кольца бесконечного крюка (0=один цвет, 1=радуга, 2=статично)
 
 Endpoint
 == Конечная точка
@@ -4762,6 +4786,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == Отразить:
+
+Flow style
+== Стиль переливания
 
 Folder
 == Папка
@@ -5848,6 +5875,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == Включать скин при сохранении/загрузке пресета конфигурации
+
+Include Team 0
+== Включить Team 0
+
+Include Team 0 in the Gores team drown board
+== Включить Team 0 в список утоплений Gores
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Режим автоперевода входящих сообщений (0=только если сообщение не на целевом языке, 1=всегда переводить)
@@ -9848,9 +9881,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == Список реплеев: ещё не загружен
 
-Replay list: up to date
-== Список реплеев: актуален
-
 Replays directory
 == Каталог реплеев
 
@@ -10612,6 +10642,9 @@ Send emote when entering freeze
 
 Send emoticon in water
 == Вероятность отправки
+
+Send original text with translation
+== Отправлять оригинальный текст вместе с переводом
 
 Send probability
 == Отправить исходный язык
@@ -11699,6 +11732,9 @@ Show teleporter tile outlines
 Show text entities
 == Показывать текстовые сущности
 
+Show the chat scrollbar on the right
+== Показывать полосу прокрутки чата справа
+
 Show the cursor while free spectating
 == Показывать курсор при свободном наблюдении
 
@@ -12053,6 +12089,9 @@ Smooth Dynamic Camera
 Smooth fade
 == Плавное затухание
 
+Smooth free spectator camera
+== Плавная камера свободного наблюдения
+
 Smooth other players' predicted movement
 == Плавное предсказанное движение других игроков
 
@@ -12061,6 +12100,9 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == Длительность анимации плавной прокрутки в меню/редакторе (ms, 0 = выкл)
+
+Smooth the mouse-driven camera in live and demo free spectating
+== Сглаживать управляемую мышью камеру при свободном наблюдении в игре и демозаписях
 
 Smooth zoom animation time in editor (in ms, 0=off)
 == Время плавной анимации масштабирования в редакторе (в ms, 0 = выкл)
@@ -12106,6 +12148,12 @@ Soft glow
 
 Solid
 == Сплошной
+
+Solid favorite icon
+== Значок избранного заливкой
+
+Solid friend icon
+== Значок друга заливкой
 
 Solid tile outline opacity
 == Непрозрачность контура сплошных плиток
@@ -12331,6 +12379,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == Статистика
+
+Static
+== Статично
 
 Stats
 == Статистика
@@ -12748,6 +12799,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Свечение контура ти по командам
+
+Team tee glow halo size
+== Размер ореола Tee команды
+
+Team tee glow halo size in percent
+== Размер ореола Tee команды (в процентах)
+
+Team tee glow intensity
+== Интенсивность свечения Tee команды
+
+Team tee glow intensity in percent
+== Интенсивность свечения Tee команды (в процентах)
 
 Team used when leaving solo split mode
 == Команда при выходе из режима соло-разделения
@@ -13727,6 +13790,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == Не удалось удалить %d выбранных элементов. Первый неудачный элемент: «%s».
 
+Unable to delete skin
+== Не удалось удалить скин
+
 Unable to delete the demo '%s'
 == Не удалось удалить демо «%s»
 
@@ -14110,9 +14176,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Используйте колесо мыши на наведённом модуле для масштабирования на 5%
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== Укажите отдельно пароли основного аккаунта и дамми, зарегистрированных на Axiom. Эта настройка не создаёт аккаунты.
 
 Use the scoreboard cursor mode to scroll the list
 == Для прокрутки списка используйте режим курсора таблицы
@@ -14989,6 +15052,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == Ты последний!
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== Аккаунт — это ваше имя в игре. Сначала зарегистрируйте его на сайте Axiom. Укажите зарегистрированные пароли основного аккаунта и дамми. Эта настройка не регистрирует аккаунты.
 
 Your current race time is %s
 == Ваше текущее время забега: %s

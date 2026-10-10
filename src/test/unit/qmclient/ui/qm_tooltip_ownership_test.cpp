@@ -17,19 +17,19 @@ TEST(QmTooltips, OwnsCallerText)
 	EXPECT_EQ(Tooltip.m_Text, "rabbit");
 }
 
-TEST(QmTooltips, VisibleLinesFitBubbleAndKeepMinimumForTinyViewport)
+TEST(QmTooltips, TextProjectionScalesAroundTheSameCenterAndRestoresWithoutMotion)
 {
-	EXPECT_EQ(QmTooltipVisibleLines(100, 14), 7);
-	EXPECT_EQ(QmTooltipVisibleLines(28, 14), 2);
-	EXPECT_EQ(QmTooltipVisibleLines(1, 14), 1);
-	EXPECT_EQ(QmTooltipVisibleLines(-5, 0), 1);
-}
-
-TEST(QmTooltips, SingleLineBubbleDoesNotLoseItsTextToPaddingRounding)
-{
-	EXPECT_FALSE(QmTooltipTextTruncated(10, 3, 16));
-	EXPECT_FALSE(QmTooltipTextTruncated(10, 3, 15.999999f));
-	EXPECT_TRUE(QmTooltipTextTruncated(40, 3, 30));
+	const CUIRect Screen{100, 50, 400, 200};
+	const auto Scaled = QmTooltipTextProjection(Screen, vec2(200, 100), 2.0f);
+	EXPECT_FLOAT_EQ(Scaled.x, 150);
+	EXPECT_FLOAT_EQ(Scaled.y, 75);
+	EXPECT_FLOAT_EQ(Scaled.w, 200);
+	EXPECT_FLOAT_EQ(Scaled.h, 100);
+	const auto Restored = QmTooltipTextProjection(Screen, vec2(200, 100), 1.0f);
+	EXPECT_FLOAT_EQ(Restored.x, Screen.x);
+	EXPECT_FLOAT_EQ(Restored.y, Screen.y);
+	EXPECT_FLOAT_EQ(Restored.w, Screen.w);
+	EXPECT_FLOAT_EQ(Restored.h, Screen.h);
 }
 
 TEST(QmTooltips, BubbleIsCenteredOnItsAnchorAndMovesWithTheControl)
@@ -273,24 +273,6 @@ TEST(QmTooltips, TextPreparationIgnoresTransparentCallerColorAndIconFontThenRest
 	EXPECT_EQ(Render.GetTextColor(), Before.GetTextColor());
 	EXPECT_EQ(Render.GetFontPreset(), Before.GetFontPreset());
 	EXPECT_EQ(Render.GetRenderFlags(), Before.GetRenderFlags());
-}
-
-TEST(QmTooltips, NarrowBubbleKeepsTheMeasuredWrapWidthForDrawing)
-{
-	const CUIRect Content{203.4f, 127.2f, 32.0f, 10.0f};
-	const CTextCursor Cursor = QmTooltipTextCursor(Content, 10.0f, 300.0f, 0);
-	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 300.0f);
-	EXPECT_GT(Cursor.m_LineWidth, Content.w);
-	EXPECT_FLOAT_EQ(Cursor.m_StartX, Content.x);
-	EXPECT_FLOAT_EQ(Cursor.m_StartY, Content.y);
-	EXPECT_NE(Cursor.m_Flags & TEXTFLAG_RENDER, 0);
-}
-
-TEST(QmTooltips, ClippedMultilineBubbleLimitsDrawingToItsVisibleLines)
-{
-	const CTextCursor Cursor = QmTooltipTextCursor({10, 20, 80, 30}, 14, 80, 1);
-	EXPECT_EQ(Cursor.m_MaxLines, 1);
-	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 80);
 }
 
 TEST(QmTooltips, PopupMotionKeepsTheSameCenterThroughOvershoot)
@@ -642,4 +624,142 @@ TEST(QmTooltipTextCache, ClosingAndReopeningCreatesAFreshContainer)
 	EXPECT_TRUE(Cache.Index().Valid());
 	EXPECT_EQ(Render.m_Created, 2);
 	EXPECT_EQ(Render.m_Deleted, 1);
+}
+
+TEST(QmTooltips, UniformTextScaleFitsBothDimensionsAndCentersTheTargetLayout)
+{
+	const CUIRect Screen{100, 50, 400, 200};
+	const CUIRect Layout{200, 100, 100, 80};
+	for(const CUIRect Bubble : std::array<CUIRect, 2>{{{120, 60, 200, 20}, {200, 70, 20, 120}}})
+	{
+		SCOPED_TRACE(Bubble.w);
+		const auto Projection = QmTooltipTextProjection(Screen, Layout, Bubble);
+		const auto Project = [&](vec2 Point) {
+			return vec2(Screen.x + (Point.x - Projection.x) * Screen.w / Projection.w,
+				Screen.y + (Point.y - Projection.y) * Screen.h / Projection.h);
+		};
+		const vec2 Center = Project(Layout.Center());
+		EXPECT_NEAR(Center.x, Bubble.Center().x, 0.001f);
+		EXPECT_NEAR(Center.y, Bubble.Center().y, 0.001f);
+		const vec2 TopLeft = Project(Layout.TopLeft());
+		const vec2 BottomRight = Project(Layout.TopLeft() + vec2(Layout.w, Layout.h));
+		EXPECT_GE(TopLeft.x, Bubble.x - 0.001f);
+		EXPECT_GE(TopLeft.y, Bubble.y - 0.001f);
+		EXPECT_LE(BottomRight.x, Bubble.x + Bubble.w + 0.001f);
+		EXPECT_LE(BottomRight.y, Bubble.y + Bubble.h + 0.001f);
+		EXPECT_NEAR((BottomRight.x - TopLeft.x) / Layout.w, (BottomRight.y - TopLeft.y) / Layout.h, 0.001f);
+	}
+}
+
+TEST(QmTooltips, DisabledMotionRestoresTargetSizeAndUnmodifiedTextProjection)
+{
+	const CUIRect Screen{100, 50, 400, 200};
+	const CUIRect Target{200, 100, 120, 60};
+	CQmTooltipMotionState Motion;
+	Motion.Update({120, 70, 200, 20}, 0, true);
+	const auto Bubble = QmTooltipAnimatedRect(Motion.Update(Target, 1, false), Screen, QmTooltipScale(0, false));
+	EXPECT_FLOAT_EQ(Bubble.x, Target.x);
+	EXPECT_FLOAT_EQ(Bubble.y, Target.y);
+	EXPECT_FLOAT_EQ(Bubble.w, Target.w);
+	EXPECT_FLOAT_EQ(Bubble.h, Target.h);
+	EXPECT_FLOAT_EQ(QmTooltipTextScale(Target, Bubble), 1);
+	const auto Projection = QmTooltipTextProjection(Screen, Target, Bubble);
+	EXPECT_FLOAT_EQ(Projection.x, Screen.x);
+	EXPECT_FLOAT_EQ(Projection.y, Screen.y);
+	EXPECT_FLOAT_EQ(Projection.w, Screen.w);
+	EXPECT_FLOAT_EQ(Projection.h, Screen.h);
+}
+
+TEST(QmTooltips, EmptyLayoutOrBubbleDoesNotCreateAnInvalidProjection)
+{
+	const CUIRect Screen{100, 50, 400, 200};
+	for(const CUIRect Empty : std::array<CUIRect, 2>{{{0, 0, 0, 30}, {0, 0, 100, 0}}})
+	{
+		EXPECT_FLOAT_EQ(QmTooltipTextScale(Empty, Screen), 0);
+		EXPECT_FLOAT_EQ(QmTooltipTextScale(Screen, Empty), 0);
+		const auto Projection = QmTooltipTextProjection(Screen, Empty, Screen);
+		EXPECT_FLOAT_EQ(Projection.x, Screen.x);
+		EXPECT_FLOAT_EQ(Projection.y, Screen.y);
+		EXPECT_FLOAT_EQ(Projection.w, Screen.w);
+		EXPECT_FLOAT_EQ(Projection.h, Screen.h);
+	}
+}
+
+TEST(QmTooltips, RegisteredClippedSourceClearsGraceAndRestoresDelayAfterRecovery)
+{
+	CTooltip Tooltip;
+	CQmTooltipHoverState Hover;
+	Hover.Update(Tooltip, 10.0);
+	ASSERT_GE(Hover.Update(Tooltip, 11.0), 0);
+	const CUIRect Clip{0, 0, 100, 100};
+	QmTooltipRecordSource(Tooltip, 42, {0, 110, 80, 20}, &Clip, vec2(20, 120));
+	EXPECT_FALSE(Hover.Retain(11.05, &Tooltip, 42));
+	QmTooltipRecordSource(Tooltip, 43, {0, 0, 80, 20}, &Clip, vec2(20, 10));
+	EXPECT_TRUE(Tooltip.m_SourceAvailable);
+	EXPECT_LT(Hover.Update(Tooltip, 11.1), 0);
+	EXPECT_GE(Hover.Update(Tooltip, 12.0), 0);
+}
+
+TEST(QmTooltips, PointerOverClippedPartDoesNotRetainAPartiallyVisibleSource)
+{
+	CTooltip Tooltip;
+	Tooltip.m_Rect = {0, 0, 80, 40};
+	Tooltip.m_HoverByRect = true;
+	Tooltip.m_OnScreen = true;
+	Tooltip.m_RegisteredFrame = 42;
+	const CUIRect Clip{0, 0, 100, 20};
+	QmTooltipRecordSource(Tooltip, 42, Tooltip.m_Rect, &Clip, vec2(10, 30));
+	STooltipPointer Pointer;
+	Pointer.m_Position = vec2(10, 30);
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 42, Pointer));
+	CQmTooltipHoverState Hover;
+	Hover.Update(Tooltip, 10.0);
+	Hover.Update(Tooltip, 11.0);
+	EXPECT_FALSE(Hover.Retain(11.05, &Tooltip, 42));
+}
+
+TEST(QmTooltips, ExplicitEmptyTextClearsVisibleGrace)
+{
+	CTooltip Tooltip;
+	CQmTooltipHoverState Hover;
+	Hover.Update(Tooltip, 10.0);
+	Hover.Update(Tooltip, 11.0);
+	QmTooltipRecordSource(Tooltip, 42, {0, 0, 80, 20}, nullptr, vec2(10, 10), false);
+	EXPECT_FALSE(Hover.Retain(11.05, &Tooltip, 42));
+}
+
+TEST(QmTooltips, CollapsedSourceRectClearsVisibleGrace)
+{
+	CTooltip Tooltip;
+	CQmTooltipHoverState Hover;
+	Hover.Update(Tooltip, 10.0);
+	Hover.Update(Tooltip, 11.0);
+	QmTooltipRecordSource(Tooltip, 42, {0, 0, 80, 0}, nullptr, vec2(10, 10));
+	EXPECT_FALSE(Hover.Retain(11.05, &Tooltip, 42));
+}
+
+TEST(QmTooltips, VisibleRegisteredSourceAllowsPointerGapAndImmediateSwitch)
+{
+	CTooltip First, Next;
+	CQmTooltipHoverState Hover;
+	Hover.Update(First, 10.0);
+	Hover.Update(First, 11.0);
+	const CUIRect Clip{0, 0, 100, 100};
+	QmTooltipRecordSource(First, 42, {0, 0, 80, 20}, &Clip, vec2(90, 30));
+	EXPECT_TRUE(Hover.Retain(11.05, &First, 42));
+	EXPECT_GE(Hover.Update(Next, 11.1), CQmTooltipHoverState::FADE_IN_SECONDS);
+}
+
+TEST(QmTooltips, MissingRegistrationKeepsOnlyBoundedGraceWithoutGuessingSourceLifetime)
+{
+	CTooltip Tooltip;
+	CQmTooltipHoverState Hover;
+	Hover.Update(Tooltip, 10.0);
+	Hover.Update(Tooltip, 11.0);
+	QmTooltipRecordSource(Tooltip, 41, {0, 0, 80, 0}, nullptr, vec2(10, 10));
+	// 旧帧无效证据不能推断本帧来源已卸载；仍保留远程跨间隙用途。
+	EXPECT_TRUE(Hover.Retain(11.05, &Tooltip, 42));
+	EXPECT_TRUE(Hover.Retain(11.2, nullptr, 42));
+	EXPECT_FALSE(Hover.Retain(11.3, &Tooltip, 42));
+	EXPECT_LT(Hover.Update(Tooltip, 11.31), 0);
 }

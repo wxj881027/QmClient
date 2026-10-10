@@ -25,7 +25,9 @@ namespace qm_card_catalog
 			case EQmModuleId::ChatBubble:
 				return g_Config.m_QmChatBubble ? Rows(5.0f) + 2.0f * Metrics.m_LineHeight + 2.0f * Metrics.m_LineSpacing : Rows(1.0f);
 			case EQmModuleId::CameraView:
-				return Rows(6.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;
+				return Rows(5.0f + (g_Config.m_QmCameraDrift ? 3.0f : 0.0f) + (g_Config.m_QmDynamicFov ? 2.0f : 0.0f) + (g_Config.m_QmAspectPreset == 6 ? 1.0f : 0.0f)) + Metrics.m_BodySize;
+			case EQmModuleId::SpectatorMode:
+				return Rows(g_Config.m_QmCinematicCamera ? 2.0f : 1.0f);
 			case EQmModuleId::WeaponAnimation:
 				return ResolveQmVisualWeaponAnimationHeight(Metrics, g_Config.m_QmWeaponSwitchAnim != 0, g_Config.m_QmWeaponReloadAnim != 0);
 			case EQmModuleId::Streamer: return Rows(3.0f);
@@ -71,8 +73,11 @@ namespace qm_card_catalog
 						Content.HSplitTop(LineHeight + LineSpacing, nullptr, &Content);
 						Content.HSplitTop(LineHeight + LineSpacing, nullptr, &Content);
 					}
-					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, &g_Config.m_QmCinematicCamera) || Changed;
 					return Changed;
+				};
+			case EQmModuleId::SpectatorMode:
+				return [pMenus, LineHeight, LineSpacing](CUIRect Content) {
+					return QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, &g_Config.m_QmCinematicCamera);
 				};
 			case EQmModuleId::WeaponAnimation:
 				return [pMenus, LineHeight, LineSpacing](CUIRect Content) {
@@ -128,6 +133,9 @@ namespace qm_card_catalog
 			return true;
 		case EQmModuleId::CameraView:
 			Add(Id, "qm:camera_view", "Camera & FOV", "Adjust game camera and FOV settings", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualCameraViewContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
+			return true;
+		case EQmModuleId::SpectatorMode:
+			Add(Id, "qm:spectator_mode", "Spectate mode", "Smooth the mouse-driven camera in live and demo free spectating", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly](CUIRect &Content) { QmCardRenderHook::RenderQmVisualSpectatorModeContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LabelWidth, ReadOnly); });
 			return true;
 		case EQmModuleId::SkinAppearance:
 		case EQmModuleId::SkinTransition:

@@ -7,6 +7,7 @@
 
 #include <engine/client.h>
 #include <engine/console.h>
+#include <engine/shared/protocol.h>
 
 #include <game/client/component.h>
 
@@ -20,14 +21,92 @@ namespace QmCameraEffects
 		return AppliedFactor > 0.0f ? EffectiveZoom / AppliedFactor : EffectiveZoom;
 	}
 
-	inline vec2 SmoothCinematicPosition(vec2 Current, vec2 Target, float FrameTime)
+	// 帧率无关指数阻尼：FrameTime 为本帧时长（秒），HalfLife 为逼近目标剩余一半所需的秒数。
+	inline vec2 SmoothPosition(vec2 Current, vec2 Target, float FrameTime, float HalfLife)
 	{
-		constexpr float HalfLife = 0.09f;
-		if(!std::isfinite(FrameTime) || FrameTime <= 0.0f)
+		if(!std::isfinite(FrameTime) || FrameTime <= 0.0f || !(HalfLife > 0.0f))
 			return Current;
 		const float Step = 1.0f - std::exp2(-FrameTime / HalfLife);
 		return Current + (Target - Current) * Step;
 	}
+
+	inline vec2 SmoothCinematicPosition(vec2 Current, vec2 Target, float FrameTime)
+	{
+		constexpr float HalfLife = 0.09f;
+		return SmoothPosition(Current, Target, FrameTime, HalfLife);
+	}
+
+	struct SFreeviewCameraInput
+	{
+		int m_ClientState = IClient::STATE_OFFLINE;
+		bool m_Spectating = false;
+		bool m_UsePosition = false;
+		int m_SpectatorId = SPEC_FREEVIEW;
+		int m_Connection = 0;
+		bool m_Enabled = false;
+		int m_Smoothness = 80;
+		bool m_DemoPaused = false;
+		float m_DemoSpeed = 1.0f;
+		int m_DemoTick = 0;
+		int m_TickSpeed = SERVER_TICK_SPEED;
+	};
+
+	inline bool IsMouseFreeview(const SFreeviewCameraInput &Input)
+	{
+		return (Input.m_ClientState == IClient::STATE_ONLINE || Input.m_ClientState == IClient::STATE_DEMOPLAYBACK) &&
+		       Input.m_Spectating && !Input.m_UsePosition && Input.m_SpectatorId == SPEC_FREEVIEW;
+	}
+
+	// 默认关闭时保留原生镜头过渡；启用但强度为零时仍接管过渡，以保证即时定位。
+	inline bool UseFreeviewCameraSettings(const SFreeviewCameraInput &Input)
+	{
+		return Input.m_Enabled && IsMouseFreeview(Input);
+	}
+
+	// 只保留当前自由视角的锚点；Demo 控制变化不能把旧时间线的跟随状态带入新一帧。
+	class CFreeviewCameraSmoothing
+	{
+		bool m_Active = false;
+		vec2 m_Position{};
+		SFreeviewCameraInput m_Previous;
+
+	public:
+		void Reset() { *this = CFreeviewCameraSmoothing{}; }
+		bool Active() const { return m_Active; }
+
+		vec2 Update(const SFreeviewCameraInput &Input, vec2 Current, vec2 Target, float FrameTime)
+		{
+			if(!std::isfinite(Target.x) || !std::isfinite(Target.y))
+			{
+				Reset();
+				return Current;
+			}
+			if(!UseFreeviewCameraSettings(Input) || Input.m_Smoothness <= 0)
+			{
+				Reset();
+				return Target;
+			}
+			const float Delta = std::isfinite(FrameTime) && FrameTime > 0.0f ? FrameTime : 0.0f;
+			bool Restart = !m_Active || Input.m_ClientState != m_Previous.m_ClientState || Input.m_Connection != m_Previous.m_Connection;
+			if(m_Active && Input.m_ClientState == IClient::STATE_DEMOPLAYBACK)
+			{
+				const int64_t TickDelta = static_cast<int64_t>(Input.m_DemoTick) - m_Previous.m_DemoTick;
+				const float Speed = std::isfinite(Input.m_DemoSpeed) && Input.m_DemoSpeed > 0.0f ? Input.m_DemoSpeed : 1.0f;
+				// 连续播放允许一帧按当前速度前进，并留两 tick 的取样误差；暂停中 tick 改变就是 seek。
+				const double ExpectedAdvance = std::ceil(static_cast<double>(Delta) * Speed * std::max(Input.m_TickSpeed, 1)) + 2.0;
+				Restart = Restart || Input.m_DemoPaused != m_Previous.m_DemoPaused || Input.m_DemoSpeed != m_Previous.m_DemoSpeed ||
+					  TickDelta < 0 || (Input.m_DemoPaused ? TickDelta != 0 : TickDelta > ExpectedAdvance);
+			}
+			if(Restart)
+				m_Position = std::isfinite(Current.x) && std::isfinite(Current.y) ? Current : Target;
+			m_Active = true;
+			m_Previous = Input;
+			// WT1 的强度映射保持不变；暂停和变速都使用真实渲染帧时长，不使用 Demo 时间。
+			const float HalfLife = 0.0012f * std::clamp(Input.m_Smoothness, 1, 100);
+			m_Position = SmoothPosition(m_Position, Target, Delta, HalfLife);
+			return m_Position;
+		}
+	};
 
 	// 反向按键时的步进基准：与当前动画方向相反时改用画面当前值
 	// 否则旧目标可能仍停在旧方向那一侧，整段动画会继续朝旧方向跑，按键在视觉上等于没反应
@@ -110,8 +189,7 @@ private:
 	float m_DynamicFovTarget;
 	float m_DynamicFovCurrent;
 	float m_DynamicFovAppliedFactor;
-	bool m_CinematicCameraSmoothing;
-	vec2 m_CinematicCameraPosition;
+	QmCameraEffects::CFreeviewCameraSmoothing m_FreeviewCameraSmoothing;
 
 	void RemoveDynamicFovZoom();
 
@@ -147,6 +225,7 @@ public:
 
 	void OnConsoleInit() override;
 	void OnReset() override;
+	void OnStateChange(int NewState, int OldState) override;
 
 	void SetView(ivec2 Pos, bool Relative = false);
 	void SetViewWorld(vec2 Pos);

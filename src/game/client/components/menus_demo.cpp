@@ -3,8 +3,6 @@
 
 #include "maplayers.h"
 #include "menus.h"
-
-#include <game/client/components/qmclient/media_paths.h>
 #include "qmclient/demo_display.h"
 #include "qmclient/demo_ui.h"
 #include "qmclient/perf_logging.h"
@@ -28,10 +26,11 @@
 
 #include <generated/client_data.h>
 
-#include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/console.h>
+#include <game/client/components/qmclient/media_paths.h>
 #include <game/client/gameclient.h>
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>

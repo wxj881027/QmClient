@@ -16,6 +16,7 @@
 #include <game/client/component.h>
 #include <game/client/components/qmclient/recent_tee_skins.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
+#include <game/client/components/qmclient/skin_download_session.h>
 #include <game/client/components/qmclient/skin_load_budget.h>
 #include <game/client/components/qmclient/skin_prepared_textures.h>
 #include <game/client/components/qmclient/skin_prepared_visuals.h>
@@ -108,7 +109,7 @@ public:
 			 */
 			PENDING,
 			/**
-			 * Skin is currently loading, iff @link m_pLoadJob @endlink is set.
+			 * Skin is currently loading a local job or an asynchronous download session.
 			 */
 			LOADING,
 			/**
@@ -197,10 +198,22 @@ public:
 		{
 			return OldState == EState::LOADING && NewState != EState::LOADING && NewState != EState::LOADED;
 		}
-		static std::optional<EState> SourceRefreshState(const SQmSkinSourceIdentity &Current, const SQmSkinSourceIdentity &Scanned, EState State, EState InitialState)
+		static EState InitialStateForSource(EType Type, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadSkins)
+		{
+			if(AlwaysLoaded)
+				return EState::PENDING;
+			if(!VanillaAllowed || (Type == EType::DOWNLOAD && !DownloadSkins))
+				return EState::NOT_FOUND;
+			return EState::UNLOADED;
+		}
+		static std::optional<EState> SourceRefreshState(const SQmSkinSourceIdentity &Current, const SQmSkinSourceIdentity &Scanned, EState State, bool AlwaysLoaded, bool VanillaAllowed, bool DownloadSkins)
 		{
 			if(Current == Scanned)
 				return std::nullopt;
+			// 准入按扫描到的新来源判断，旧 DOWNLOAD 的禁用状态不能阻止本地替换。
+			const EState InitialState = InitialStateForSource(Scanned.m_Download ? EType::DOWNLOAD : EType::LOCAL, AlwaysLoaded, VanillaAllowed, DownloadSkins);
+			if(InitialState == EState::NOT_FOUND)
+				return InitialState;
 			if(State == EState::LOADED || State == EState::LOADING || State == EState::PENDING)
 				return EState::PENDING;
 			return InitialState;
@@ -263,8 +276,7 @@ public:
 		std::unique_ptr<CSkin> m_pSkin = nullptr;
 		std::unique_ptr<CSkin> m_pPendingSkin;
 		std::shared_ptr<CAbstractSkinLoadJob> m_pLoadJob = nullptr;
-		std::shared_ptr<CQmSkinDownloadJob> m_pDownloadUpdateJob;
-		bool m_DownloadUpdateQueued = false;
+		std::unique_ptr<CQmSkinDownloadSession> m_pDownloadSession;
 		CSkinLoadData m_SettingsPendingUploadData;
 		size_t m_SettingsPendingUploadSprite = 0;
 		std::chrono::nanoseconds m_SettingsPendingUploadStart{};
@@ -418,11 +430,46 @@ public:
 			}
 		}
 
+		bool ShouldFinishLoading(bool RefreshUploadPending) const { return m_NumLoading != 0 || RefreshUploadPending; }
+		CSkinContainer::EState FinishLoadingFailure(CSkinContainer::EState State, bool HasPublishedSkin, bool NotFound)
+		{
+			using EState = CSkinContainer::EState;
+			dbg_assert(State == EState::LOADING || State == EState::LOADED, "Failed skin load must be loading or loaded");
+			// 已发布皮肤的网络更新失败不重复计数；重载失败恢复旧皮肤的驻留状态。
+			if(State == EState::LOADED)
+				return State;
+			--m_NumLoading;
+			const EState NewState = HasPublishedSkin ? EState::LOADED : (NotFound ? EState::NOT_FOUND : EState::ERROR);
+			AddState(NewState);
+			return NewState;
+		}
+
 		size_t RealInflight() const { return m_NumPending + m_NumLoading; }
 		bool AdmissionInvariantViolated(int CountFuseLimit) const
 		{
 			return CountFuseLimit >= 0 && RealInflight() > (size_t)CountFuseLimit;
 		}
+	};
+
+	// 每个精灵同时受设置页共享额度和全局上传限制约束，成功后才提交全局计数。
+	class CSkinPreviewUploadBudget
+	{
+		SSettingsResourceMergeBudget m_MergeBudget;
+		SResourcePreviewUploadBudget m_UploadBudget;
+
+	public:
+		CSkinPreviewUploadBudget(int MaxUploads, CGpuUploadLimiter *pGpuUploadLimiter, SSettingsWarmupFrameBudget *pFrameBudget)
+		{
+			m_MergeBudget.m_MaxGpuUploads = MaxUploads;
+			m_UploadBudget.m_MaxUploads = MaxUploads;
+			m_UploadBudget.m_pMergeBudget = &m_MergeBudget;
+			m_UploadBudget.m_pFrameBudget = pFrameBudget;
+			m_UploadBudget.m_pGpuUploadLimiter = pGpuUploadLimiter;
+		}
+		CSkinPreviewUploadBudget(const CSkinPreviewUploadBudget &) = delete;
+		CSkinPreviewUploadBudget &operator=(const CSkinPreviewUploadBudget &) = delete;
+		bool Consume() { return SettingsResourcePreviewConsumeUploadBudget(m_UploadBudget); }
+		void Commit() { SettingsResourcePreviewCommitUploadBudget(m_UploadBudget); }
 	};
 
 	struct SSettingsSourceAdmissionTelemetry
@@ -888,7 +935,7 @@ private:
 	static bool PrepareSkinData(const char *pName, CSkinLoadData &Data);
 	void LoadSkinFinish(CSkinContainer *pSkinContainer, CSkinLoadData &Data);
 	bool BeginSkinPreviewUpload(CSkinContainer *pSkinContainer, CSkinLoadData &&Data);
-	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer, SResourcePreviewUploadBudget &Budget);
+	bool UploadNextSkinPreviewSprite(CSkinContainer *pSkinContainer);
 	void FinishSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void DiscardSkinPreviewUpload(CSkinContainer *pSkinContainer);
 	void LoadSkinDirect(const char *pName);
@@ -900,8 +947,9 @@ private:
 	void QueueSkinTexturesUnloaded(const char *pSkinName);
 	bool ReclaimBackgroundSkinForPriorityRequest(const char *pRequesterName, int CountFuseLimit);
 	void UpdateStartLoading(CSkinLoadingStats &Stats);
-	std::shared_ptr<CQmSkinDownloadJob> CreateSkinDownloadJob(const char *pName, bool UseCache = true);
-	void ProcessSkinDownloadUpdates();
+	void UpdateSkinDownloads(CSkinLoadingStats &Stats);
+	std::unique_ptr<CQmSkinDownloadSession> CreateSkinDownloadSession(const char *pName);
+	std::vector<std::string> m_vSkinDownloadNames;
 	void UpdateFinishLoading(CSkinLoadingStats &Stats, std::chrono::nanoseconds StartTime, std::chrono::nanoseconds MaxTime);
 	void CollectUnresolvedSkins();
 	size_t LoadedSkinLimit() const;
@@ -950,7 +998,6 @@ private:
 
 	std::unordered_map<std::string, std::unique_ptr<CSkinContainer>> m_Skins;
 	std::optional<std::chrono::nanoseconds> m_ContainerUpdateTime;
-	std::vector<std::string> m_vSkinDownloadUpdates;
 	size_t m_NumLoadingSkins = 0;
 	CQmSkinUploadFrameBudget m_SkinUploadFrameBudget;
 	CUnresolvedSkinScanState m_UnresolvedSkinScanState;

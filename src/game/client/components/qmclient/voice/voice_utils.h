@@ -28,8 +28,6 @@ constexpr uint8_t VOICE_FLAG_VAD = 1 << 0;
 constexpr uint8_t VOICE_FLAG_LOOPBACK = 1 << 1;
 constexpr uint8_t VOICE_ALLOWED_FLAGS = VOICE_FLAG_VAD | VOICE_FLAG_LOOPBACK;
 constexpr int VOICE_NOISE_SUPPRESS_OFF = 0;
-constexpr int VOICE_NOISE_SUPPRESS_SIMPLE = 1;
-constexpr int VOICE_NOISE_SUPPRESS_RNNOISE = 2;
 inline constexpr float VOICE_HPF_CUTOFF_HZ = 120.0f;
 
 namespace VoiceUtils
@@ -157,8 +155,6 @@ namespace VoiceUtils
 		const char *pDisconnectedSuffix,
 		std::vector<SVoiceDeviceDropdownEntry> &vEntries);
 	int VoiceFindSelectedDeviceIndex(const std::vector<SVoiceDeviceDropdownEntry> &vEntries, const char *pCurrentDevice);
-	int ResolveNoiseSuppressMode(int ConfigValue, bool RnnoiseRuntimeAvailable, bool *pFallbackUsed);
-	bool IsRnnoiseCompiledIn();
 
 	enum class EVoiceIncomingPacketDecision
 	{

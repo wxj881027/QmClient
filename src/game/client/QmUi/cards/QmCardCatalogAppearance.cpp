@@ -37,6 +37,7 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/chat_gradient.h>
+#include <game/client/components/qmclient/chat_scrollbar.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/settings_resource_preview.h>
@@ -305,7 +306,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			static int s_AppearanceAlwaysShowChat = 0;
 			// ***** Chat ***** //
 			const auto ResolveChatSettingsMinCardHeight = [LineSize, MarginSmall, ColorPickerRowHeight]() {
-				const int ChatSettingsRowCount = 9 + (g_Config.m_ClShowChat != 0 ? 1 : 0) + (g_Config.m_QmChatLogAutoSave != 0 ? 1 : 0);
+				const int ChatSettingsRowCount = 10 + (g_Config.m_ClShowChat != 0 ? 1 : 0) + (g_Config.m_QmChatLogAutoSave != 0 ? 1 : 0);
 				return ResolveSettingsRowsHeight(ChatSettingsRowCount, LineSize, MarginSmall) + MarginSmall + ColorPickerRowHeight;
 			};
 			SSettingsCardDefinition ChatSettingsDefinition;
@@ -337,6 +338,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				DoChatCheckBox(&g_Config.m_ClChatTeamColors, "appearance-chat-team-colors", Localize("Show names in chat in team colors"), &g_Config.m_ClChatTeamColors);
 				DoChatCheckBox(&g_Config.m_ClShowChatFriends, "appearance-chat-friends-only", Localize("Show only chat messages from friends"), &g_Config.m_ClShowChatFriends);
 				DoChatCheckBox(&g_Config.m_ClShowChatTeamMembersOnly, "appearance-chat-team-members-only", Localize("Show only chat messages from team members"), &g_Config.m_ClShowChatTeamMembersOnly);
+				DoChatCheckBox(&g_Config.m_QmChatScrollbarRight, "appearance-chat-scrollbar-right", Localize("Show the chat scrollbar on the right"), &g_Config.m_QmChatScrollbarRight);
 				DoChatCheckBox(&g_Config.m_QmChatSaveDraft, "appearance-chat-save-draft", Localize("Save unsent chat draft"), &g_Config.m_QmChatSaveDraft);
 				DoChatCheckBox(&g_Config.m_QmChatLogAutoSave, "appearance-chat-log-auto-save", Localize("Auto save chat log"), &g_Config.m_QmChatLogAutoSave);
 				if(g_Config.m_QmChatLogAutoSave)
@@ -449,7 +451,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				const float RealMsgPaddingY = (!g_Config.m_ClChatOld ? pChat->MessagePaddingY() : 0.0f) * 2.0f;
 				const float RealMsgPaddingTee = (!g_Config.m_ClChatOld ? pChat->MessageTeeSize() + CChat::MESSAGE_TEE_PADDING_RIGHT : 0.0f) * 2.0f;
 				const float ConfiguredLineWidth = g_Config.m_ClChatWidth * 2.0f - RealMsgPaddingX * 1.5f - RealMsgPaddingTee;
-				const float CardLineWidth = maximum(RealFontSize, ContentWidth - 2.0f * MarginSmall - RealMsgPaddingX * 1.5f - RealMsgPaddingTee);
+				const float CardLineWidth = maximum(RealFontSize, ContentWidth - 2.0f * MarginSmall - QM_CHAT_SCROLLBAR_RESERVE * 2.0f - RealMsgPaddingX * 1.5f - RealMsgPaddingTee);
 				const float LineWidth = maximum(RealFontSize, minimum(ConfiguredLineWidth, CardLineWidth));
 				char aPlayerName[64];
 				str_copy(aPlayerName, Client()->PlayerName());
@@ -480,7 +482,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				if(!g_Config.m_ClShowChatFriends && !g_Config.m_ClShowChatTeamMembersOnly)
 					AddPreviewLine("Spammer", "Hey fools, I'm spamming here!");
 				if(g_Config.m_QmShowChatClient)
-					AddPreviewLine("", "Echo command executed");
+					AddPreviewLine(CChat::ClientMessageNamePrefix(g_Config.m_QmChatHideSystemPrefix != 0), "Echo command executed", false);
 				return maximum(Height, 2.0f * MarginSmall + RealFontSize + RealMsgPaddingY);
 			};
 			const uint64_t ChatPreviewMeasureRevision =
@@ -498,6 +500,12 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			// ***** Chat Preview ***** //
 			PreviewView.Draw(ColorRGBA(1, 1, 1, 0.1f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
 			PreviewView.Margin(MarginSmall, &PreviewView);
+			const CUIRect PreviewRailBounds = PreviewView;
+			const float ScrollbarReserve = std::min(PreviewView.w, QM_CHAT_SCROLLBAR_RESERVE * 2.0f);
+			if(g_Config.m_QmChatScrollbarRight)
+				PreviewView.VSplitRight(ScrollbarReserve, &PreviewView, nullptr);
+			else
+				PreviewView.VSplitLeft(ScrollbarReserve, nullptr, &PreviewView);
 
 			ColorRGBA SystemColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageSystemColor));
 			ColorRGBA HighlightedColor = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMessageHighlightColor));
@@ -702,7 +710,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				SetPreviewLine(PREVIEW_TEAM, 11, "Your Teammate", "Let's speedrun this!", FLAG_TEAM, 0);
 				SetPreviewLine(PREVIEW_FRIEND, 8, "Friend", "Hello there", FLAG_FRIEND, 0);
 				SetPreviewLine(PREVIEW_SPAMMER, 9, "Spammer", "Hey fools, I'm spamming here!", 0, 5);
-				SetPreviewLine(PREVIEW_CLIENT, -1, "— ", "Echo command executed", FLAG_CLIENT, 0);
+				SetPreviewLine(PREVIEW_CLIENT, -1, CChat::ClientMessageNamePrefix(g_Config.m_QmChatHideSystemPrefix != 0), "Echo command executed", FLAG_CLIENT, 0);
 			}
 
 			SetLineSkin(1, GameClient()->m_Skins.Find("pinky"));
@@ -791,6 +799,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				Y += RenderPreview(PREVIEW_CLIENT, X, Y).y;
 			}
 
+			const CUIRect Rail = QmChatScrollbarRail(PreviewRailBounds, PreviewRailBounds.y, std::min(PreviewRailBounds.h, std::max(RealFontSize, Y - PreviewRailBounds.y)), g_Config.m_QmChatScrollbarRight != 0, 2.0f);
+			const float HandleHeight = QmChatScrollbarHandleHeight(Rail.h, 3, 6, 2.0f);
+			const CUIRect Handle = QmChatScrollbarHandle(Rail, HandleHeight, 1.0f);
+			QmDrawChatScrollbar(Ui(), Rail, Handle.y, Handle.h, false);
 					TextRender()->TextColor(TextRender()->DefaultTextColor());
 					PreviewView.y = maximum(PreviewView.y, Y + MarginSmall); }, ChatPreviewMeasureRevision);
 		}
@@ -799,7 +811,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			qm_card_catalog::SQmCardBuildContext CardBuild;
 			CardBuild.m_pMenus = this;
 			CardBuild.m_ReadOnly = RenderOnly;
-			CardBuild.m_Page = AppearancePage;
+			CardBuild.m_Page = Ctx.m_Page;
 			CardBuild.m_Metrics = AppearanceMetrics;
 			CardBuild.m_UiContext = AppearanceCardCtx;
 			qm_card_catalog::BuildCards(CardBuild, qm_card_catalog::NameplateCardStableIds(), vCards);

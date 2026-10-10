@@ -125,6 +125,7 @@ void CSettingsCardDeck::BeginDisplayCycle(uint64_t DisplayCycle, bool AnimateEnt
 {
 	if(m_FrameRuntime.BeginDisplayCycle(DisplayCycle, AnimateEntry))
 	{
+		m_Focus.Reset();
 		m_Drag.Reset();
 		m_SuppressHoverFeedbackOnce = true;
 		m_HasScrollOffset = false;
@@ -155,10 +156,14 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 	SSettingsCardDeckResult Result;
 	m_FrameRuntime.BeginFrame(Input.m_pDiagnostics);
 	if(pTab == nullptr)
+	{
+		m_Focus.Reset();
 		return Result;
+	}
 	const bool TabChanged = m_LastRenderedTab != pTab;
 	if(TabChanged)
 	{
+		m_Focus.Reset();
 		if(Ctx.m_pUi != nullptr)
 			for(const char *pStableId : m_vPreparedStableIds)
 				Ctx.m_pUi->CloseInteractionSource(this, pStableId);
@@ -631,6 +636,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			});
 		}
 	}
+	m_Focus.BeginFrame(Input.m_MousePressed, Ctx.m_pUi != nullptr && !Ctx.m_pUi->RenderOnly());
 	for(const SPreparedCard &Card : m_vPreparedCards)
 	{
 		SRuntimeState &Runtime = m_vRuntimeStates[Card.m_StateIndex];
@@ -742,6 +748,10 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 						Ctx.m_pTooltips->DoSmallToolTip(&Runtime.m_WidthButtonId, &Button, Card.m_Column == 0 ? Localize("Default width") : Localize("Full width"), 10.0f * Ctx.m_UiScale);
 				}
 			};
+			// 命中与绘制使用同一动画矩形，且遵守弹层和滚动裁剪的输入隔离。
+			const SSettingsCardFrame FocusFrame = ResolveSettingsCardDrawFrame(Frame, State.m_DrawOffsetX, State.m_DrawOffsetY);
+			m_Focus.Observe(pStableId, Ctx.m_pUi != nullptr && !Ctx.m_pUi->PointerInputBlocked() && PointInRect(ScrollViewport, Input.m_MouseX, Input.m_MouseY) && Ctx.m_pUi->MouseHovered(&FocusFrame.m_Rect));
+			State.m_Focused = m_Focus.IsFocused(pStableId);
 			SettingsCard(Ctx, Frame, Card.m_pDefinition->m_Spec, State, VisualOptions,
 				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_Render : FSettingsCardRender{}, HeaderAction,
 				SettingsCardDeckRendersContent(Collapsed) ? Card.m_pDefinition->m_RenderMeasured : FSettingsCardRenderMeasured{}, &PointerInsideDrawFrame);
@@ -756,6 +766,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			Runtime.m_PointerInsideLastFrame = false;
 	}
 
+	m_Focus.EndFrame();
 	if(pScrollRegion != nullptr)
 		pScrollRegion->End();
 	for(SRuntimeState &Runtime : m_vRuntimeStates)

@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == Ayrıca dummy'e de uygula
 
+Also send the original text when translating outgoing messages
+== Giden mesajları çevirirken orijinal metni de gönder
+
 Always show
 == Her zaman göster
 
@@ -806,8 +809,8 @@ Appearance
 Appearance and command highlighting of the local console
 == Yerel konsolun görünümü ve komut vurgulama
 
-Appearance of help bubbles outside settings cards
-== Ayar kartları dışındaki yardım balonlarının görünümü
+Appearance of help bubbles
+== Yardım balonlarının görünümü
 
 Append to log file instead of overwriting
 == Günlük dosyasının üzerine yazmak yerine sonuna ekle
@@ -1298,6 +1301,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Axiom otomatik girişi başarısız oldu, yeniden deneniyor
 
+Axiom auto login skipped: no password
+== Axiom otomatik girişi: parola yok, atlandı
+
+Axiom auto login stopped after repeated failures
+== Axiom otomatik girişi durduruldu: birden çok deneme başarısız
+
 Axiom auto login succeeded
 == Axiom otomatik girişi başarılı oldu
 
@@ -1309,6 +1318,9 @@ Axiom main account password
 
 Axiom score request failed
 == Axiom puan isteği başarısız oldu
+
+Axiom website
+== Axiom web sitesi
 
 Axis
 == Eksen
@@ -1966,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == Sinematik kamera
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== Sinematik kamera yumuşaklığı (0=Anlık, 100=En yumuşak)
+
+Cinematic smoothness
+== Sinematik kamera yumuşaklığı
 
 CJK font
 == CJK yazı tipi
@@ -3590,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == İfadelerin arkasına gölge çiz
 
+Draw the favorite star icon with the filled icon font style
+== Favori yıldız simgesini dolu simge yazı tipi stiliyle çiz
+
+Draw the friend heart icon with the filled icon font style
+== Arkadaş kalp simgesini dolu simge yazı tipi stiliyle çiz
+
 Draw tile layers when using custom background (solid)
 == Özel arka plan (düz) kullanılırken döşeme katmanlarını çiz
 
@@ -4190,9 +4214,6 @@ Enable skin switch animation
 Enable skin transition animation, then choose the type, scope, duration and easing.
 == Skin geçiş animasyonunu aç, ardından tür, menzil, süre ve yumuşatmayı seç.
 
-Enable smooth cinematic camera while free spectating
-== Serbest izlerken akıcı sinematik kamerayı etkinleştir
-
 Enable SodaMusic Hook
 == SodaMusic Hook'u etkinleştir
 
@@ -4312,6 +4333,9 @@ Endless hook has been activated
 
 Endless hook has been deactivated
 == Sonsuz kanca devre dışı bırakıldı
+
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== Sonsuz kanca halkası akış stili (0=tek renk, 1=gökuşağı, 2=sabit)
 
 Endpoint
 == Uç nokta
@@ -4762,6 +4786,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == Çevir:
+
+Flow style
+== Akış stili
 
 Folder
 == Klasör
@@ -5848,6 +5875,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == Yapılandırma ön ayarını kaydederken/yüklerken skin'i dahil et
+
+Include Team 0
+== Team 0 dahil edilsin
+
+Include Team 0 in the Gores team drown board
+== Gores boğulma listesine Team 0 dahil edilsin
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Gelen mesajlar için otomatik çeviri modu (0=yalnızca hedef dilde değilse çevir, 1=her zaman çevir)
@@ -9848,9 +9881,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == Tekrar listesi: henüz yüklenmedi
 
-Replay list: up to date
-== Tekrar listesi: güncel
-
 Replays directory
 == Tekrar klasörü
 
@@ -10612,6 +10642,9 @@ Send emote when entering freeze
 
 Send emoticon in water
 == Suda ifade gönder
+
+Send original text with translation
+== Çeviriyle birlikte orijinal metni gönder
 
 Send probability
 == Gönderme olasılığı
@@ -11699,6 +11732,9 @@ Show teleporter tile outlines
 Show text entities
 == Metin varlıklarını göster
 
+Show the chat scrollbar on the right
+== Sohbet kaydırma çubuğunu sağda göster
+
 Show the cursor while free spectating
 == Serbest izlerken imleci göster
 
@@ -12053,6 +12089,9 @@ Smooth Dynamic Camera
 Smooth fade
 == Yumuşak geçiş
 
+Smooth free spectator camera
+== Serbest izleyici kamerasını yumuşat
+
 Smooth other players' predicted movement
 == Diğer oyuncuların tahmini hareketini yumuşat
 
@@ -12061,6 +12100,9 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == Menü/düzenleyicide yumuşak kaydırma animasyonu süresi (ms, 0=kapalı)
+
+Smooth the mouse-driven camera in live and demo free spectating
+== Oyunda ve demolarda serbest izleme sırasında fareyle kontrol edilen kamerayı yumuşat
 
 Smooth zoom animation time in editor (in ms, 0=off)
 == Düzenleyicide yumuşak yakınlaştırma animasyonu süresi (ms cinsinden, 0=kapalı)
@@ -12106,6 +12148,12 @@ Soft glow
 
 Solid
 == Düz
+
+Solid favorite icon
+== Dolu favori simgesi
+
+Solid friend icon
+== Dolu arkadaş simgesi
 
 Solid tile outline opacity
 == Katı karo anahat opaklığı
@@ -12331,6 +12379,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == İstatistik Tablosu
+
+Static
+== Sabit
 
 Stats
 == İstatistikler
@@ -12748,6 +12799,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Takım tee parlaması
+
+Team tee glow halo size
+== Takım Tee ışık halesi boyutu
+
+Team tee glow halo size in percent
+== Takım Tee ışık halesi boyutu (yüzde olarak)
+
+Team tee glow intensity
+== Takım Tee parlama yoğunluğu
+
+Team tee glow intensity in percent
+== Takım Tee parlama yoğunluğu (yüzde olarak)
 
 Team used when leaving solo split mode
 == Solo bölme modundan çıkarken kullanılan takım
@@ -13727,6 +13790,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d seçili öğe silinemiyor. İlk başarısız öğe '%s'.
 
+Unable to delete skin
+== Skin silinemiyor
+
 Unable to delete the demo '%s'
 == '%s' demosu silinemiyor
 
@@ -14110,9 +14176,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Üzerine gelinen bir modülü fare tekerleği ile %5 oranında ölçeklendir
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== Ana hesap ve dummy için Axiom'da kayıtlı parolaları ayrı ayrı girin. Bu seçenek hesap oluşturmaz.
 
 Use the scoreboard cursor mode to scroll the list
 == Listeyi kaydırmak için skor tablosu imleç modunu kullanın
@@ -14989,6 +15052,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == Son sensin!
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== Hesabınız oyun içi adınızdır – önce Axiom web sitesinde kaydedin. Ana hesap ve dummy için kayıtlı parolaları girin. Bu seçenek hesap oluşturmaz.
 
 Your current race time is %s
 == Mevcut yarış süreniz %s

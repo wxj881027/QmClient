@@ -26,7 +26,8 @@ enum class EInputPriority
 
 namespace qm_ime_overlay
 {
-	inline constexpr int FIXED_CANDIDATE_VIEWPORT_SIZE = 7;
+	// 常见 IME 一页有 9～10 项，不能额外固定为七项而隐藏本页尾部候选。
+	inline constexpr int FIXED_CANDIDATE_VIEWPORT_SIZE = 16;
 
 	struct SQmImeCandidateViewport
 	{

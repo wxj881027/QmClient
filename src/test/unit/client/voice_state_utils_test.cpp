@@ -24,20 +24,7 @@
 #include <limits>
 #include <sstream>
 
-#if defined(CONF_RNNOISE)
-#include <rnnoise.h>
-#endif
-
 using namespace VoiceUtils;
-
-namespace VoiceUtils
-{
-	int ResolveNoiseSuppressMode(int ConfigValue, bool RnnoiseRuntimeAvailable, bool *pFallbackUsed);
-}
-
-static constexpr int TEST_VOICE_NOISE_SUPPRESS_OFF = 0;
-static constexpr int TEST_VOICE_NOISE_SUPPRESS_SIMPLE = 1;
-static constexpr int TEST_VOICE_NOISE_SUPPRESS_RNNOISE = 2;
 
 TEST(VoiceUtils, VoiceTransmitBlockersNetworkAndDevice)
 {

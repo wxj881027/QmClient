@@ -1,4 +1,5 @@
 #include <engine/gfx/image_loader.h>
+
 #include <gtest/gtest.h>
 
 namespace

@@ -4,8 +4,6 @@
 
 #include "voice_core.h"
 
-struct DenoiseState;
-
 namespace VoiceUtils
 {
 	void ProcessVoiceCaptureFrame(
@@ -15,8 +13,6 @@ namespace VoiceUtils
 		float &AgcGain,
 		float &NoiseFloor,
 		float &NoiseGate,
-		DenoiseState *&pNoiseState,
-		bool &NoiseFallbackLogged,
 		float &HpfPrevIn,
 		float &HpfPrevOut,
 		float &CompEnv);

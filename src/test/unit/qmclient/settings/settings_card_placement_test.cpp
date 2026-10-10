@@ -381,9 +381,7 @@ TEST(SettingsCardDeck, ProductionPagePlacementsPreserveWideColumnsAndNarrowReadi
 		}
 
 		std::vector<const char *> vVisualOrder;
-		ForEachSettingsCardDeckVisualOrder(aColumns, [&](const int StateIndex, int) {
-			vVisualOrder.push_back(Model.Entry(StateIndex).m_pStableId);
-		}, LeadingFullWidthCards);
+		ForEachSettingsCardDeckVisualOrder(aColumns, [&](const int StateIndex, int) { vVisualOrder.push_back(Model.Entry(StateIndex).m_pStableId); }, LeadingFullWidthCards);
 		ASSERT_EQ(vVisualOrder.size(), vExpectedVisualOrder.size());
 		for(size_t Index = 0; Index < vVisualOrder.size(); ++Index)
 			EXPECT_STREQ(vVisualOrder[Index], vExpectedVisualOrder[Index]);

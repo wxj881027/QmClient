@@ -23,17 +23,23 @@ namespace QmHudEditor
 	// 未重合时保留拖拽后的原始位置与样式。容差只用于吸收浮点误差。
 	inline constexpr float EDGE_COINCIDENCE_DISTANCE = EPSILON;
 
-	// 绘制后才知道实际边界的元素，下一帧继续使用同一套局部可见矩形。
-	class CMeasuredVisibleRect
+	// 绘制后报告的可见范围可能小于预估范围（例如聊天只显示底部几行）。
+	// 保存源坐标中的实际范围，让下一帧恢复、缩放和拖动使用同一个边界。
+	class CVisibleBounds
 	{
 		bool m_Valid = false;
 		bool m_ReportedThisFrame = false;
-		float m_BaseWidth = 0.0f;
-		float m_BaseHeight = 0.0f;
-		CUIRect m_RelativeRect{};
+		CUIRect m_TransformRect{};
+		CUIRect m_DeclaredRect{};
+		CUIRect m_ObservedRect{};
+
+		static bool SameRect(const CUIRect &Left, const CUIRect &Right)
+		{
+			return Left.x == Right.x && Left.y == Right.y && Left.w == Right.w && Left.h == Right.h;
+		}
 
 	public:
-		// 只在实际绘制开始时轮换状态；两帧之间的逻辑更新不使测量失效。
+		// 仅在绘制帧开始轮换，避免逻辑更新使聊天边界来回失效。
 		void BeginRenderFrame()
 		{
 			if(!m_ReportedThisFrame)
@@ -41,33 +47,30 @@ namespace QmHudEditor
 			m_ReportedThisFrame = false;
 		}
 
-		void Observe(const CUIRect &TransformRect, const CUIRect &TargetUiRect, const CUIRect &RenderedUiRect)
+		CUIRect Resolve(const CUIRect &TransformRect, const CUIRect &DeclaredRect) const
 		{
-			if(TransformRect.w <= EPSILON || TransformRect.h <= EPSILON || TargetUiRect.w <= EPSILON || TargetUiRect.h <= EPSILON ||
-				RenderedUiRect.w <= 0.0f || RenderedUiRect.h <= 0.0f)
-				return;
-			m_BaseWidth = TransformRect.w;
-			m_BaseHeight = TransformRect.h;
-			m_RelativeRect = {
-				(RenderedUiRect.x - TargetUiRect.x) / TargetUiRect.w,
-				(RenderedUiRect.y - TargetUiRect.y) / TargetUiRect.h,
-				RenderedUiRect.w / TargetUiRect.w,
-				RenderedUiRect.h / TargetUiRect.h};
-			m_Valid = true;
-			m_ReportedThisFrame = true;
+			const CUIRect RelativeDeclared{DeclaredRect.x - TransformRect.x, DeclaredRect.y - TransformRect.y, DeclaredRect.w, DeclaredRect.h};
+			const CUIRect PreviousDeclared{m_DeclaredRect.x - m_TransformRect.x, m_DeclaredRect.y - m_TransformRect.y, m_DeclaredRect.w, m_DeclaredRect.h};
+			if(!m_Valid || TransformRect.w != m_TransformRect.w || TransformRect.h != m_TransformRect.h || !SameRect(RelativeDeclared, PreviousDeclared))
+				return DeclaredRect;
+			return {m_ObservedRect.x + TransformRect.x - m_TransformRect.x, m_ObservedRect.y + TransformRect.y - m_TransformRect.y, m_ObservedRect.w, m_ObservedRect.h};
 		}
 
-		CUIRect Resolve(const CUIRect &TransformRect, const CUIRect &FallbackRect) const
+		void Observe(const CUIRect &TransformRect, const CUIRect &DeclaredRect, const CUIRect &TargetUiRect, const CUIRect &RenderedUiRect)
 		{
-			// 显式提供边界的调用方仍以当帧测量为准；尺寸变化时丢弃旧内容的测量。
-			if(!m_Valid || std::fabs(TransformRect.w - m_BaseWidth) > EPSILON || std::fabs(TransformRect.h - m_BaseHeight) > EPSILON ||
-				FallbackRect.x != TransformRect.x || FallbackRect.y != TransformRect.y || FallbackRect.w != TransformRect.w || FallbackRect.h != TransformRect.h)
-				return FallbackRect;
-			return {
-				TransformRect.x + m_RelativeRect.x * TransformRect.w,
-				TransformRect.y + m_RelativeRect.y * TransformRect.h,
-				m_RelativeRect.w * TransformRect.w,
-				m_RelativeRect.h * TransformRect.h};
+			if(TransformRect.w <= EPSILON || TransformRect.h <= EPSILON || TargetUiRect.w <= EPSILON || TargetUiRect.h <= EPSILON || RenderedUiRect.w <= 0.0f || RenderedUiRect.h <= 0.0f)
+				return;
+			const float ToSourceX = TransformRect.w / TargetUiRect.w;
+			const float ToSourceY = TransformRect.h / TargetUiRect.h;
+			m_TransformRect = TransformRect;
+			m_DeclaredRect = DeclaredRect;
+			m_ObservedRect = {
+				TransformRect.x + (RenderedUiRect.x - TargetUiRect.x) * ToSourceX,
+				TransformRect.y + (RenderedUiRect.y - TargetUiRect.y) * ToSourceY,
+				RenderedUiRect.w * ToSourceX,
+				RenderedUiRect.h * ToSourceY};
+			m_Valid = true;
+			m_ReportedThisFrame = true;
 		}
 	};
 
@@ -406,6 +409,7 @@ private:
 		EHudEditorElement m_Element = EHudEditorElement::HudMain;
 		CUIRect m_Rect{};
 		CUIRect m_TransformRect{};
+		CUIRect m_DeclaredVisibleRect{};
 		CUIRect m_TargetUiRect{};
 		float m_BaseWidth = 0.0f;
 		float m_BaseHeight = 0.0f;
@@ -434,7 +438,7 @@ private:
 	vec2 m_DragGrabOffset = vec2(0.0f, 0.0f);
 	char m_aLayoutCache[2048] = {};
 	std::array<SElementState, ELEMENT_COUNT> m_aElementStates{};
-	std::array<QmHudEditor::CMeasuredVisibleRect, ELEMENT_COUNT> m_aMeasuredVisibleRects{};
+	std::array<QmHudEditor::CVisibleBounds, ELEMENT_COUNT> m_aVisibleBounds{};
 	std::vector<SVisibleElement> m_vVisibleElements;
 	bool m_InteractionUiActive = false;
 	bool m_JumpHintTextEditorActive = false;

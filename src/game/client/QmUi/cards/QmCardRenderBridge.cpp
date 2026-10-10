@@ -68,6 +68,11 @@ void qm_card_catalog::QmCardRenderHook::RenderQmVisualChatBubbleContent(CMenus *
 	pMenus->RenderQmVisualChatBubbleContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
 }
 
+void qm_card_catalog::QmCardRenderHook::RenderQmVisualSpectatorModeContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmVisualSpectatorModeContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);
+}
+
 void qm_card_catalog::QmCardRenderHook::RenderQmVisualCameraViewContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	pMenus->RenderQmVisualCameraViewContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, PrewarmOnly);

@@ -37,6 +37,7 @@ public:
 class CQmScreenshotManager
 {
 	friend class CQmScreenshotWatermarkJob;
+
 public:
 	enum class EWatermarkPosition
 	{

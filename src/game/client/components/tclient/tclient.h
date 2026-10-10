@@ -468,6 +468,7 @@ public:
 	// Gores 自动切锤引起的锤子切换是否要跳过切换动画（受 qm_gores_suppress_switch_anim 控制）。
 	bool ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const;
 	bool IsGoresGameMode() const;
+	bool IsGoresDrownBoardMode() const;
 	bool IsFinishRenamePending(int Dummy) const { return Dummy >= 0 && Dummy < NUM_DUMMIES && m_aFinishRenamePending[Dummy]; }
 	int GetGoresDrownCount(int ClientId) const { return m_GoresDrownTracker.Count(ClientId); }
 	void ResetGoresDrownCounts();

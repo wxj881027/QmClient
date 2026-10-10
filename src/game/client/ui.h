@@ -217,7 +217,8 @@ private:
 class CUiScopedGaussianBlur
 {
 public:
-	explicit CUiScopedGaussianBlur(CUi *pUi, float Alpha = 1.0f);
+	explicit CUiScopedGaussianBlur(CUi *pUi);
+	CUiScopedGaussianBlur(CUi *pUi, float Alpha);
 	~CUiScopedGaussianBlur();
 
 	CUiScopedGaussianBlur(const CUiScopedGaussianBlur &) = delete;
@@ -706,6 +707,7 @@ private:
 
 	bool m_Enabled;
 	int m_RenderOnlyDepth = 0;
+	int m_BackgroundRenderDepth = 0;
 	int m_PreLayoutInputDepth = 0;
 	float m_DropDownFontSize = -1.0f;
 	// 仅客户端绑定；地图编辑器保留自己的控件样式。
@@ -958,7 +960,13 @@ public:
 	bool Enabled() const { return m_Enabled; }
 	void BeginRenderOnly();
 	void EndRenderOnly();
-	bool RenderOnly() const { return m_RenderOnlyDepth > 0; }
+	void BeginBackgroundRender() { ++m_BackgroundRenderDepth; }
+	void EndBackgroundRender()
+	{
+		if(m_BackgroundRenderDepth > 0)
+			--m_BackgroundRenderDepth;
+	}
+	bool RenderOnly() const { return m_RenderOnlyDepth > 0 || m_BackgroundRenderDepth > 0; }
 	void BeginPreLayoutInput() { ++m_PreLayoutInputDepth; }
 	void EndPreLayoutInput()
 	{
@@ -1067,6 +1075,11 @@ public:
 	bool UnderlyingScrollBlocked() const { return m_UnderlyingScrollBlocked; }
 	bool RenderingPopupMenus() const { return m_RenderingPopupMenus; }
 	void BeginWheelOwnershipFrame();
+	// 原始输入入口与客户端采集共用帧初始化，允许隔离设备后驱动跨帧 UI 行为。
+	bool BeginWheelOwnershipFrame(uint64_t FrameId, float RawDelta, bool AltPressed)
+	{
+		return m_WheelOwnership.BeginFrame(FrameId, RawDelta, AltPressed);
+	}
 	void RegisterWheelOwner(const void *pOwnerId, EUiWheelOwnerPriority Priority, const CUIRect &HotRect, bool Eligible);
 	bool TryConsumeWheel(const void *pOwnerId, float *pDelta);
 
@@ -1128,12 +1141,15 @@ public:
 	{
 		SEditBoxRenderOptions() :
 			m_DrawBackground(true),
-			m_pHitRect(nullptr)
+			m_pHitRect(nullptr),
+			m_ReleaseFocusOnEnter(true)
 		{
 		}
 
 		bool m_DrawBackground;
 		const CUIRect *m_pHitRect;
+		// 编辑器等调用者需要保留焦点与确认热键，供外层执行数值／命令提交。
+		bool m_ReleaseFocusOnEnter;
 	};
 
 	void DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr) const;
@@ -1262,9 +1278,13 @@ public:
 	void RenderPopupMenus();
 	void ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants = false);
 	void RefreshPopupMenuSource(const SPopupMenuId *pId, bool RequireRefresh, uint64_t Frame);
+	// 输入阶段关闭最上层，避免所属组件延迟绘制前 Escape 泄漏给菜单。
+	bool CloseTopPopupMenu();
 	void ClosePopupMenus();
 	bool IsPopupOpen() const;
 	bool IsPopupOpen(const SPopupMenuId *pId) const;
+	// 包含退场中的弹层，供独立绘制入口延续公共动画生命周期。
+	bool IsPopupVisible(const SPopupMenuId *pId) const;
 	// 返回指定弹窗的当前矩形（UI 屏幕坐标）；弹窗未打开时返回 nullptr。
 	const CUIRect *GetPopupMenuRect(const SPopupMenuId *pId) const;
 	bool IsPopupHovered() const;

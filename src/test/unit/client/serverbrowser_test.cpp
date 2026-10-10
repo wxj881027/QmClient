@@ -21,6 +21,7 @@
 #include <sqlite3.h>
 #include <test/test.h>
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -45,40 +46,151 @@ TEST(ServerBrowserColumnLayout, ReservesNameAndMapBeforeAllocatingFixedColumns)
 	EXPECT_FLOAT_EQ(Tiny.m_NameWidth + Tiny.m_MapWidth, 100.0f);
 }
 
-TEST(ServerBrowserStatusLayout, NoticeKeepsControlsAtTheirOriginalHeight)
+namespace
 {
-	const CUIRect Stack{20, 30, 800, 400};
-	const auto Fresh = QmBrowserStatusLayout(Stack, false);
-	const auto Stale = QmBrowserStatusLayout(Stack, true);
-	EXPECT_FLOAT_EQ(Fresh.m_Controls.h, 59);
-	EXPECT_FLOAT_EQ(Stale.m_Controls.h, Fresh.m_Controls.h);
-	EXPECT_FLOAT_EQ(Stale.m_Controls.w, Fresh.m_Controls.w);
-	EXPECT_FLOAT_EQ(Stale.m_Panel.h - Fresh.m_Panel.h, 12);
-	EXPECT_FLOAT_EQ(Fresh.m_ServerList.h - Stale.m_ServerList.h, 12);
-	EXPECT_FLOAT_EQ(Stale.m_Notice.h, 12);
-	EXPECT_FLOAT_EQ(Stale.m_Notice.y, Stale.m_Controls.y + Stale.m_Controls.h);
-	EXPECT_FLOAT_EQ(Stale.m_Panel.y + Stale.m_Panel.h, Stack.y + Stack.h);
+	void ExpectBrowserRectWithin(const CUIRect &Rect, const CUIRect &Area)
+	{
+		EXPECT_GE(Rect.w, 0.0f);
+		EXPECT_GE(Rect.h, 0.0f);
+		EXPECT_GE(Rect.x, Area.x - 0.001f);
+		EXPECT_GE(Rect.y, Area.y - 0.001f);
+		EXPECT_LE(Rect.x + Rect.w, Area.x + Area.w + 0.001f);
+		EXPECT_LE(Rect.y + Rect.h, Area.y + Area.h + 0.001f);
+	}
+}
+
+TEST(ServerBrowserStatusLayout, StaleNoticeReservesItsOwnHeightAndLeavesControlsUnchanged)
+{
+	const CUIRect Area{10.0f, 20.0f, 700.0f, 64.0f};
+	const auto Normal = QmBrowserStatusLayout(Area, false);
+	const auto Stale = QmBrowserStatusLayout(Area, true);
+	EXPECT_FLOAT_EQ(Stale.m_SearchInput.h, 20.0f);
+	EXPECT_FLOAT_EQ(Stale.m_ExcludeInput.h, 20.0f);
+	EXPECT_FLOAT_EQ(Stale.m_AddressInput.h, 20.0f);
+	EXPECT_FLOAT_EQ(Stale.m_RefreshButton.h, 24.0f);
+	EXPECT_FLOAT_EQ(Stale.m_ConnectButton.h, 24.0f);
+	EXPECT_FLOAT_EQ(Stale.m_ConnectButton.y, Normal.m_ConnectButton.y);
+	EXPECT_GT(Stale.m_ContentHeight, Normal.m_ContentHeight);
+	EXPECT_GE(Stale.m_Notice.y, Stale.m_ConnectButton.y + Stale.m_ConnectButton.h);
+	EXPECT_GE(Stale.m_Notice.y, Stale.m_AddressInput.y + Stale.m_AddressInput.h);
 }
 
 TEST(ServerBrowserStatusLayout, FreshListDoesNotReserveAnEmptyNoticeRow)
 {
-	const auto Layout = QmBrowserStatusLayout({0, 0, 600, 300}, false);
-	EXPECT_FLOAT_EQ(Layout.m_Panel.h, 84);
-	EXPECT_FLOAT_EQ(Layout.m_Notice.h, 0);
-	EXPECT_FLOAT_EQ(Layout.m_RefreshBar.h, 5);
-	EXPECT_FLOAT_EQ(Layout.m_ServerList.y + Layout.m_ServerList.h + 8, Layout.m_Panel.y);
+	const CUIRect View{20.0f, 30.0f, 800.0f, 400.0f};
+	const auto Fresh = QmBrowserPanelLayout(View, false);
+	const auto Stale = QmBrowserPanelLayout(View, true);
+	const auto FreshContent = QmBrowserStatusLayout(Fresh.m_StatusViewport, false);
+	const auto StaleContent = QmBrowserStatusLayout(Stale.m_StatusViewport, true);
+	EXPECT_FLOAT_EQ(FreshContent.m_Notice.h, 0.0f);
+	EXPECT_FLOAT_EQ(StaleContent.m_Notice.h, 12.0f);
+	const float NoticeSpace = StaleContent.m_ContentHeight - FreshContent.m_ContentHeight;
+	EXPECT_GT(NoticeSpace, 0.0f);
+	EXPECT_FLOAT_EQ(Stale.m_Status.h - Fresh.m_Status.h, NoticeSpace);
+	EXPECT_FLOAT_EQ(Fresh.m_List.h - Stale.m_List.h, NoticeSpace);
+	EXPECT_FLOAT_EQ(Stale.m_Status.y + Stale.m_Status.h, View.y + View.h);
 }
 
-TEST(ServerBrowserStatusLayout, SmallViewportKeepsPanelAndLayoutSizesNonnegative)
+TEST(ServerBrowserPanelLayout, DecreasingHeightShrinksListBeforeStatusContent)
 {
-	const auto Layout = QmBrowserStatusLayout({100, 50, 16, 40}, true);
-	EXPECT_FLOAT_EQ(Layout.m_Panel.h, 40);
-	EXPECT_FLOAT_EQ(Layout.m_ServerList.h, 0);
-	EXPECT_GE(Layout.m_Controls.w, 0);
-	EXPECT_GE(Layout.m_Controls.h, 0);
-	EXPECT_GE(Layout.m_Notice.h, 0);
-	EXPECT_GE(Layout.m_Panel.y, 50);
-	EXPECT_LE(Layout.m_Notice.y + Layout.m_Notice.h, 90);
+	const auto Tall = QmBrowserPanelLayout({8.0f, 16.0f, 960.0f, 500.0f}, true);
+	const auto Short = QmBrowserPanelLayout({8.0f, 16.0f, 960.0f, 280.0f}, true);
+	EXPECT_FLOAT_EQ(Tall.m_Status.h, Short.m_Status.h);
+	EXPECT_FLOAT_EQ(Tall.m_List.h - Short.m_List.h, 220.0f);
+	const auto Layout = QmBrowserStatusLayout(Short.m_StatusViewport, true);
+	EXPECT_GE(Short.m_StatusViewport.h, Layout.m_ContentHeight);
+	EXPECT_GE(Short.m_Status.y, Short.m_List.y + Short.m_List.h);
+}
+
+TEST(ServerBrowserPanelLayout, ExtremelyLowViewportClipsContentWithoutCompressingControls)
+{
+	for(float Height : {0.0f, 1.0f, 20.0f, 60.0f, 80.0f})
+	{
+		SCOPED_TRACE(Height);
+		const CUIRect View{8.0f, 16.0f, 800.0f, Height};
+		const auto Panels = QmBrowserPanelLayout(View, true);
+		ExpectBrowserRectWithin(Panels.m_List, View);
+		ExpectBrowserRectWithin(Panels.m_Status, View);
+		ExpectBrowserRectWithin(Panels.m_StatusViewport, Panels.m_Status);
+		EXPECT_FLOAT_EQ(Panels.m_List.h, 0.0f);
+		const auto Content = QmBrowserStatusLayout(Panels.m_StatusViewport, true);
+		EXPECT_GT(Content.m_ContentHeight, Panels.m_StatusViewport.h);
+		EXPECT_FLOAT_EQ(Content.m_SearchInput.h, 20.0f);
+		EXPECT_FLOAT_EQ(Content.m_RefreshButton.h, 24.0f);
+		EXPECT_FLOAT_EQ(Content.m_ConnectButton.h, 24.0f);
+	}
+}
+
+TEST(ServerBrowserStatusLayout, NarrowContentStacksFieldsFilterAndActionsWithoutOverlap)
+{
+	const CUIRect Area{40.0f, 50.0f, 180.0f, 40.0f};
+	const auto Layout = QmBrowserStatusLayout(Area, true);
+	EXPECT_GE(Layout.m_SearchInput.y, Layout.m_SearchLabel.y + Layout.m_SearchLabel.h);
+	EXPECT_GE(Layout.m_ExcludeLabel.y, Layout.m_SearchInput.y + Layout.m_SearchInput.h);
+	EXPECT_GE(Layout.m_AddressLabel.y, Layout.m_ExcludeInput.y + Layout.m_ExcludeInput.h);
+	EXPECT_GE(Layout.m_MapFilter.y, Layout.m_AddressInput.y + Layout.m_AddressInput.h);
+	EXPECT_GE(Layout.m_Players.y, Layout.m_MapFilter.y + Layout.m_MapFilter.h);
+	EXPECT_GE(Layout.m_RefreshButton.y, Layout.m_Servers.y + Layout.m_Servers.h);
+	EXPECT_GE(Layout.m_ConnectButton.x, Layout.m_RefreshButton.x + Layout.m_RefreshButton.w);
+}
+
+TEST(ServerBrowserStatusLayout, WidthTransitionsKeepEveryControlWithinMeasuredContent)
+{
+	for(float Width : {0.0f, 1.0f, 16.0f, 80.0f, 219.0f, 220.0f, 429.0f, 430.0f, 549.0f, 550.0f, 630.0f, 1000.0f})
+	{
+		SCOPED_TRACE(Width);
+		const auto Layout = QmBrowserStatusLayout({11.0f, 23.0f, Width, 1.0f}, true);
+		const CUIRect Content{11.0f, 23.0f, Width, Layout.m_ContentHeight};
+		for(const CUIRect &Rect : {Layout.m_RefreshBar, Layout.m_SearchLabel, Layout.m_SearchInput,
+			    Layout.m_ExcludeLabel, Layout.m_ExcludeInput, Layout.m_AddressLabel, Layout.m_AddressInput,
+			    Layout.m_Players, Layout.m_Servers, Layout.m_RefreshButton, Layout.m_ConnectButton,
+			    Layout.m_MapFilter, Layout.m_Notice})
+			ExpectBrowserRectWithin(Rect, Content);
+		EXPECT_FLOAT_EQ(Layout.m_SearchInput.h, 20.0f);
+		EXPECT_FLOAT_EQ(Layout.m_ConnectButton.h, 24.0f);
+	}
+}
+
+TEST(ServerBrowserMapFilterLayout, LongTranslatedLabelCannotDisplaceToggleOrSlider)
+{
+	for(float Width : {1.0f, 30.0f, 80.0f, 140.0f, 350.0f})
+	{
+		SCOPED_TRACE(Width);
+		const CUIRect Area{10.0f, 20.0f, Width, 64.0f};
+		const auto Layout = QmBrowserMapFilterLayout(Area, 1200.0f);
+		for(const CUIRect &Rect : {Layout.m_Heading, Layout.m_CurrentLabel, Layout.m_Slider,
+			    Layout.m_FavoriteGroup, Layout.m_FavoriteLabel, Layout.m_FavoriteToggle, Layout.m_FavoriteIcon})
+			ExpectBrowserRectWithin(Rect, Area);
+		EXPECT_GT(Layout.m_Slider.w, 0.0f);
+		EXPECT_GT(Layout.m_FavoriteToggle.w, 0.0f);
+		EXPECT_GE(Layout.m_FavoriteToggle.x, Layout.m_FavoriteLabel.x + Layout.m_FavoriteLabel.w);
+		EXPECT_GE(Layout.m_Slider.x, Layout.m_CurrentLabel.x + Layout.m_CurrentLabel.w);
+	}
+}
+
+TEST(ServerBrowserPanelLayout, ResizeRecoveryRestoresOriginalContentAndListAllocation)
+{
+	const CUIRect View{8.0f, 16.0f, 960.0f, 500.0f};
+	const auto Original = QmBrowserPanelLayout(View, false);
+	const auto Tiny = QmBrowserPanelLayout({8.0f, 16.0f, 180.0f, 40.0f}, true);
+	EXPECT_FLOAT_EQ(Tiny.m_List.h, 0.0f);
+	EXPECT_GT(Tiny.m_StatusViewport.w, 0.0f);
+	const auto Recovered = QmBrowserPanelLayout(View, false);
+	EXPECT_FLOAT_EQ(Recovered.m_List.h, Original.m_List.h);
+	EXPECT_FLOAT_EQ(Recovered.m_StatusViewport.w, Original.m_StatusViewport.w);
+	EXPECT_FLOAT_EQ(Recovered.m_StatusViewport.h, Original.m_StatusViewport.h);
+}
+
+TEST(ServerBrowserPanelLayout, InvalidExtentsProduceBoundedEmptyPanels)
+{
+	for(float Value : {-1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
+	{
+		const auto Layout = QmBrowserPanelLayout({0.0f, 0.0f, Value, Value}, true);
+		EXPECT_FLOAT_EQ(Layout.m_List.w, 0.0f);
+		EXPECT_FLOAT_EQ(Layout.m_List.h, 0.0f);
+		EXPECT_FLOAT_EQ(Layout.m_Status.w, 0.0f);
+		EXPECT_FLOAT_EQ(Layout.m_Status.h, 0.0f);
+	}
 }
 
 class CServerBrowserTestAccess

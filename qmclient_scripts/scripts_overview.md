@@ -8,6 +8,8 @@
 - 给 agent 一个单一脚本说明入口
 - 不再把“脚本总览”和“gate 工作流说明”拆成两份重复文档
 
+进程冒烟入口通过 `integration/process_build.py` 统一准备 Windows 隔离构建；传入普通构建目录会复用匹配测试缓存或创建独立 `-process-tests` 缓存，并增量构建当前源码。详细规则见 [进程级测试](integration/README.md)。
+
 ## 脚本分层
 
 ### `scripts/` 与 `qmclient_scripts/` 边界

@@ -40,6 +40,60 @@ constexpr auto SAVES_FILE = "ddnet-saves.txt";
 class CChat : public CComponent
 {
 public:
+	// SENT/QUEUED 表示消息已接纳；HANDLED 仅表示其他入口已处理，不能当作原文已发送。
+	enum class EChatSendResult
+	{
+		REJECTED,
+		SENT,
+		QUEUED,
+		HANDLED,
+	};
+
+	// 敏感登录命令绕过可持久化的普通消息入口，也不进入翻译队列。
+	template<typename TSendSensitive, typename TSendOrdinary>
+	static EChatSendResult DispatchChatMessage(const char *pLine, TSendSensitive &&SendSensitive, TSendOrdinary &&SendOrdinary)
+	{
+		if(pLine == nullptr || pLine[0] == '\0')
+			return EChatSendResult::REJECTED;
+		if(IsSensitiveChatCommand(pLine))
+		{
+			SendSensitive();
+			return EChatSendResult::SENT;
+		}
+		return SendOrdinary();
+	}
+
+	// 与实际发送共用额度预留策略，时间由调用者提供，便于验证限流边界与恢复。
+	static EChatSendResult ReserveChatMessage(int64_t LastSend, int64_t Now, int64_t Frequency, int &PendingCount)
+	{
+		if(LastSend + Frequency < Now)
+			return EChatSendResult::SENT;
+		if(PendingCount >= 3)
+			return EChatSendResult::REJECTED;
+		++PendingCount;
+		return EChatSendResult::QUEUED;
+	}
+
+	// 保留原文时先确认聊天入口接纳，再创建翻译后端；拒绝不能退化成只发送译文。
+	template<typename TSendOriginal, typename TStartTranslation>
+	static bool TryStartOutgoingTranslation(bool KeepOriginal, TSendOriginal &&SendOriginal, TStartTranslation &&StartTranslation)
+	{
+		if(KeepOriginal)
+		{
+			const EChatSendResult Result = SendOriginal();
+			if(Result != EChatSendResult::SENT && Result != EChatSendResult::QUEUED)
+				return false;
+		}
+		return StartTranslation(KeepOriginal);
+	}
+
+	enum
+	{
+		// client IDs for special messages
+		CLIENT_MSG = -2,
+		SERVER_MSG = -1,
+	};
+
 	enum class EBlockWordsAction
 	{
 		REPLACE = 0,
@@ -189,7 +243,7 @@ private:
 	std::array<int, 4> m_aPrevTitleVisibility = {};
 	bool m_PrevSponsorChatEffects = true;
 	uint64_t m_PreparedGlyphAtlasRevision = 0;
-	std::array<int, 3> m_aPreparedChatTextSettings = {-1, -1, -1};
+	std::array<int, 5> m_aPreparedChatTextSettings = {-1, -1, -1, -1, -1};
 	CQmSponsorChatRenderer m_SponsorChatRenderer;
 	int64_t m_LastPresentationUpdateTime;
 	int64_t m_LargeAreaOpenTick;
@@ -207,17 +261,11 @@ private:
 	int m_BacklogCurLine;
 	bool m_ScrollbarDragging;
 	float m_ScrollbarDragOffset;
+	CUIRect m_ChatInputMapRect{};
 	std::optional<vec2> m_LastMousePos;
 	bool m_MouseIsPress;
 	vec2 m_MousePress;
 	vec2 m_MouseRelease;
-
-	enum
-	{
-		// client IDs for special messages
-		CLIENT_MSG = -2,
-		SERVER_MSG = -1,
-	};
 
 	enum
 	{
@@ -320,7 +368,7 @@ private:
 	bool BuildCommandUsagePreview(const char *pInput, char *pBuf, size_t BufSize) const;
 	bool HandleCommandHudInput(const IInput::CEvent &Event);
 	void RenderCommandHud(float X, float Bottom, float Width, float FontSize, const CUIRect &ChatRect, const CUIRect &TargetRect);
-	void SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
+	EChatSendResult SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation);
 	int CountInitializedLines() const;
 	int CountVisibleLinesFrom(int BacklogLine) const;
 	void UpdatePresentationStates(int64_t Now, float DeltaSeconds, bool ShowLargeArea, bool ExtraAnimations);
@@ -456,8 +504,18 @@ public:
 		if(ClientId == SERVER_MSG)
 			return HideSystemPrefix ? "" : "*** ";
 		if(ClientId == CLIENT_MSG)
-			return "— ";
+			return HideSystemPrefix ? "" : "— ";
 		return "";
+	}
+	// 配置切换时刷新已有系统/echo 行，玩家名称保持原有身份与合并语义。
+	static void RefreshMessageNamePrefix(int ClientId, char *pName, int NameSize, bool HideSystemPrefix)
+	{
+		if(ClientId == SERVER_MSG || ClientId == CLIENT_MSG)
+			str_copy(pName, MessageNamePrefixForClientId(ClientId, HideSystemPrefix), NameSize);
+	}
+	static const char *ClientMessageNamePrefix(bool HideSystemPrefix = true)
+	{
+		return MessageNamePrefixForClientId(CLIENT_MSG, HideSystemPrefix);
 	}
 	static const char *SystemMessageNamePrefix(bool HideSystemPrefix = true)
 	{
@@ -532,6 +590,7 @@ public:
 
 	// 翻译按钮相关方法
 	vec2 GetChatMousePos() const;
+	vec2 GetChatLocalMousePos() const;
 	vec2 GetUiMousePos() const;
 	void RenderTranslateButton(const CUIRect &ButtonRect);
 	void ToggleAutoTranslate();
@@ -588,7 +647,7 @@ public:
 	// between sent messages.
 	//
 	// It uses team or public chat depending on m_Mode.
-	void SendChatQueued(const char *pLine);
+	EChatSendResult SendChatQueued(const char *pLine);
 };
 
 static inline float ChatPresentationClamp(float Value)

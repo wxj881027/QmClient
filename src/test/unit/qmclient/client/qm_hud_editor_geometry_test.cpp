@@ -4,10 +4,10 @@
 
 TEST(QmHudMeasuredGeometry, ReportsLocalContentOffsetAndSizeAfterRendering)
 {
-	QmHudEditor::CMeasuredVisibleRect Geometry;
+	QmHudEditor::CVisibleBounds Geometry;
 	const CUIRect Transform{0.0f, 50.0f, 190.0f, 250.0f};
 	// 绘制空间已经放大两倍并平移，可见内容仍须还原到原始外框的局部坐标。
-	Geometry.Observe(Transform, {400.0f, 100.0f, 380.0f, 500.0f}, {410.0f, 520.0f, 370.0f, 70.0f});
+	Geometry.Observe(Transform, Transform, {400.0f, 100.0f, 380.0f, 500.0f}, {410.0f, 520.0f, 370.0f, 70.0f});
 	const CUIRect Visible = Geometry.Resolve(Transform, Transform);
 	EXPECT_NEAR(Visible.x, 5.0f, 0.001f);
 	EXPECT_NEAR(Visible.y, 260.0f, 0.001f);
@@ -21,8 +21,8 @@ TEST(QmHudMeasuredGeometry, KeepsMeasuredContentAtAllFourEdgesAfterMovingAway)
 	for(float Scale : {0.75f, 1.0f, 2.0f})
 	{
 		SCOPED_TRACE(Scale);
-		QmHudEditor::CMeasuredVisibleRect Geometry;
-		Geometry.Observe(Transform, {100.0f, 120.0f, 200.0f * Scale, 240.0f * Scale},
+		QmHudEditor::CVisibleBounds Geometry;
+		Geometry.Observe(Transform, Transform, {100.0f, 120.0f, 200.0f * Scale, 240.0f * Scale},
 			{100.0f + 5.0f * Scale, 120.0f + 180.0f * Scale, 180.0f * Scale, 40.0f * Scale});
 		const CUIRect Visible = Geometry.Resolve(Transform, Transform);
 		const float aOffsets[] = {Visible.x * Scale, Visible.y * Scale};
@@ -85,9 +85,9 @@ TEST(QmHudMeasuredGeometry, PreservesLegacyPositiveLayoutCoordinates)
 
 TEST(QmHudMeasuredGeometry, UsesFreshExplicitBoundsInsteadOfPreviousMeasurement)
 {
-	QmHudEditor::CMeasuredVisibleRect Geometry;
+	QmHudEditor::CVisibleBounds Geometry;
 	const CUIRect Transform{0.0f, 0.0f, 100.0f, 80.0f};
-	Geometry.Observe(Transform, Transform, {4.0f, 10.0f, 60.0f, 20.0f});
+	Geometry.Observe(Transform, Transform, Transform, {4.0f, 10.0f, 60.0f, 20.0f});
 	const CUIRect Fresh{6.0f, 12.0f, 70.0f, 30.0f};
 	const CUIRect Visible = Geometry.Resolve(Transform, Fresh);
 	EXPECT_FLOAT_EQ(Visible.x, Fresh.x);
@@ -98,9 +98,9 @@ TEST(QmHudMeasuredGeometry, UsesFreshExplicitBoundsInsteadOfPreviousMeasurement)
 
 TEST(QmHudMeasuredGeometry, FallsBackAfterTransformSizeChangesOrRuntimeReset)
 {
-	QmHudEditor::CMeasuredVisibleRect Geometry;
+	QmHudEditor::CVisibleBounds Geometry;
 	const CUIRect Transform{0.0f, 0.0f, 100.0f, 80.0f};
-	Geometry.Observe(Transform, Transform, {4.0f, 10.0f, 60.0f, 20.0f});
+	Geometry.Observe(Transform, Transform, Transform, {4.0f, 10.0f, 60.0f, 20.0f});
 	const CUIRect Resized{0.0f, 0.0f, 200.0f, 80.0f};
 	EXPECT_FLOAT_EQ(Geometry.Resolve(Resized, Resized).w, 200.0f);
 	Geometry = {};
@@ -113,21 +113,21 @@ TEST(QmHudMeasuredGeometry, FallsBackAfterTransformSizeChangesOrRuntimeReset)
 
 TEST(QmHudMeasuredGeometry, InvalidMeasurementCannotReplaceUsableBounds)
 {
-	QmHudEditor::CMeasuredVisibleRect Geometry;
+	QmHudEditor::CVisibleBounds Geometry;
 	const CUIRect Transform{0.0f, 0.0f, 100.0f, 80.0f};
 	Geometry.BeginRenderFrame();
-	Geometry.Observe(Transform, Transform, {4.0f, 10.0f, 60.0f, 20.0f});
-	Geometry.Observe(Transform, {}, {0.0f, 0.0f, 50.0f, 20.0f});
+	Geometry.Observe(Transform, Transform, Transform, {4.0f, 10.0f, 60.0f, 20.0f});
+	Geometry.Observe(Transform, Transform, {}, {0.0f, 0.0f, 50.0f, 20.0f});
 	Geometry.BeginRenderFrame();
 	EXPECT_FLOAT_EQ(Geometry.Resolve(Transform, Transform).w, 60.0f);
 }
 
 TEST(QmHudMeasuredGeometry, KeepsChatAnchorAcrossRenderFrames)
 {
-	QmHudEditor::CMeasuredVisibleRect Geometry;
+	QmHudEditor::CVisibleBounds Geometry;
 	const CUIRect Transform{0.0f, 50.0f, 190.0f, 250.0f};
 	Geometry.BeginRenderFrame();
-	Geometry.Observe(Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
+	Geometry.Observe(Transform, Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
 	for(int Frame = 0; Frame < 4; ++Frame)
 	{
 		SCOPED_TRACE(Frame);
@@ -138,20 +138,20 @@ TEST(QmHudMeasuredGeometry, KeepsChatAnchorAcrossRenderFrames)
 		EXPECT_FLOAT_EQ(Visible.w, 185.0f);
 		EXPECT_FLOAT_EQ(Visible.h, 35.0f);
 		EXPECT_NEAR(QmHudEditor::RestoreAxisAnchor(0.0f, Visible.w * 1.05f, 0.0f, 533.0f, Visible.x * 1.05f), -5.25f, 0.001f);
-		Geometry.Observe(Transform, Transform, Visible);
+		Geometry.Observe(Transform, Transform, Transform, Visible);
 	}
 }
 
 TEST(QmHudMeasuredGeometry, FallsBackAfterARenderFrameWithoutAValidReport)
 {
-	QmHudEditor::CMeasuredVisibleRect Geometry;
+	QmHudEditor::CVisibleBounds Geometry;
 	const CUIRect Transform{0.0f, 50.0f, 190.0f, 250.0f};
 	Geometry.BeginRenderFrame();
-	Geometry.Observe(Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
+	Geometry.Observe(Transform, Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
 	Geometry.BeginRenderFrame();
 	EXPECT_FLOAT_EQ(Geometry.Resolve(Transform, Transform).x, 5.0f);
 	// 无效报告不能让隐藏内容的旧测量继续存活。
-	Geometry.Observe(Transform, {}, {5.0f, 260.0f, 185.0f, 35.0f});
+	Geometry.Observe(Transform, Transform, {}, {5.0f, 260.0f, 185.0f, 35.0f});
 	Geometry.BeginRenderFrame();
 	const CUIRect Visible = Geometry.Resolve(Transform, Transform);
 	EXPECT_FLOAT_EQ(Visible.x, Transform.x);
@@ -162,14 +162,14 @@ TEST(QmHudMeasuredGeometry, FallsBackAfterARenderFrameWithoutAValidReport)
 
 TEST(QmHudMeasuredGeometry, UsesFreshBoundsAfterReturningFromAHiddenFrame)
 {
-	QmHudEditor::CMeasuredVisibleRect Geometry;
+	QmHudEditor::CVisibleBounds Geometry;
 	const CUIRect Transform{0.0f, 50.0f, 190.0f, 250.0f};
 	Geometry.BeginRenderFrame();
-	Geometry.Observe(Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
+	Geometry.Observe(Transform, Transform, Transform, {5.0f, 260.0f, 185.0f, 35.0f});
 	Geometry.BeginRenderFrame();
 	Geometry.BeginRenderFrame();
 	EXPECT_FLOAT_EQ(Geometry.Resolve(Transform, Transform).h, 250.0f);
-	Geometry.Observe(Transform, Transform, {5.0f, 230.0f, 185.0f, 65.0f});
+	Geometry.Observe(Transform, Transform, Transform, {5.0f, 230.0f, 185.0f, 65.0f});
 	Geometry.BeginRenderFrame();
 	const CUIRect Visible = Geometry.Resolve(Transform, Transform);
 	EXPECT_FLOAT_EQ(Visible.x, 5.0f);

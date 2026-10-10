@@ -1978,9 +1978,41 @@ german = "Gesendete Nachrichten automatisch übersetzen"
 spanish = "Traducir automáticamente los mensajes enviados"
 french = "Traduire automatiquement les messages envoyés"
 brazilian_portuguese = "Traduzir automaticamente mensagens enviadas"
-portuguese = "Traduzir automaticamente mensagens enviadas"
+portuguese = "Traduzir automaticamente as mensagens enviadas"
 turkish = "Gönderilen mesajları otomatik çevir"
-polish = "Automatyczne tłumaczenie wysłanych wiadomości"
+polish = "Automatycznie tłumacz wysyłane wiadomości"
+
+[[message]]
+key = "Also send the original text when translating outgoing messages"
+[message.translations]
+simplified_chinese = "翻译发出的消息时同时发送原文"
+traditional_chinese = "翻譯發出的訊息時同時發送原文"
+japanese = "送信メッセージの翻訳時にも原文を送る"
+korean = "발신 메시지 번역 시 원문도 함께 전송"
+russian = "Также отправлять оригинальный текст при переводе исходящих сообщений"
+german = "Beim Übersetzen ausgehender Nachrichten auch den Originaltext senden"
+spanish = "También enviar el texto original al traducir mensajes salientes"
+french = "Envoyer aussi le texte original lors de la traduction des messages sortants"
+brazilian_portuguese = "Também enviar o texto original ao traduzir mensagens enviadas"
+portuguese = "Enviar também o texto original ao traduzir mensagens enviadas"
+turkish = "Giden mesajları çevirirken orijinal metni de gönder"
+polish = "Przy tłumaczeniu wiadomości wysyłanych też wysyłaj oryginalny tekst"
+
+[[message]]
+key = "Send original text with translation"
+[message.translations]
+simplified_chinese = "翻译发送的消息时同时发送原文"
+traditional_chinese = "翻譯發送的消息時同時發送原文"
+japanese = "送信メッセージの翻訳時に原文も送信"
+korean = "발신 메시지 번역 시 원문도 전송"
+russian = "Отправлять оригинальный текст вместе с переводом"
+german = "Originaltext zusammen mit der Übersetzung senden"
+spanish = "Enviar el texto original junto con la traducción"
+french = "Envoyer le texte original avec la traduction"
+brazilian_portuguese = "Enviar o texto original junto com a tradução"
+portuguese = "Enviar o texto original juntamente com a tradução"
+turkish = "Çeviriyle birlikte orijinal metni gönder"
+polish = "Wyślij oryginalny tekst wraz z tłumaczeniem"
 
 [[message]]
 key = "Auto unmute when speaking"
@@ -4189,6 +4221,38 @@ brazilian_portuguese = "Câmera cinematográfica"
 portuguese = "Câmara cinematográfica"
 turkish = "Sinematik kamera"
 polish = "Kamera filmowa"
+
+[[message]]
+key = "Cinematic camera smoothness (0=instant, 100=smoothest)"
+[message.translations]
+simplified_chinese = "电影镜头平滑度（0=瞬时，100=最平滑）"
+traditional_chinese = "電影鏡頭平滑度（0=瞬時，100=最平滑）"
+japanese = "シネマティックカメラのスムーズさ (0=瞬時, 100=最もスムーズ)"
+korean = "시네마틱 카메라 부드러움 (0=즉시, 100=가장 부드러움)"
+russian = "Плавность кинематографической камеры (0=мгновенно, 100=максимально плавно)"
+german = "Filmische Kamera-Glättung (0=sofort, 100=am glattesten)"
+spanish = "Suavizado de la cámara cinematográfica (0=instantáneo, 100=más suave)"
+french = "Lissage de la caméra cinématique (0=Instantané, 100=Le plus lisse)"
+brazilian_portuguese = "Suavidade da câmera cinematográfica (0=instantâneo, 100=mais suave)"
+portuguese = "Suavidade da câmara cinematográfica (0=instantâneo, 100=mais suave)"
+turkish = "Sinematik kamera yumuşaklığı (0=Anlık, 100=En yumuşak)"
+polish = "Płynność kamery filmowej (0=natychmiastowy, 100=najpłynniejszy)"
+
+[[message]]
+key = "Cinematic smoothness"
+[message.translations]
+simplified_chinese = "电影镜头平滑度"
+traditional_chinese = "電影鏡頭平滑度"
+japanese = "シネマティックカメラの滑らかさ"
+korean = "시네마틱 카메라 부드러움"
+russian = "Плавность кинематографической камеры"
+german = "Filmische Kamera-Glättung"
+spanish = "Suavidad de la cámara cinematográfica"
+french = "Fluidité de la caméra cinématique"
+brazilian_portuguese = "Suavidade da câmera cinematográfica"
+portuguese = "Suavidade da câmara cinematográfica"
+turkish = "Sinematik kamera yumuşaklığı"
+polish = "Płynność kamery filmowej"
 
 [[message]]
 key = "CJK font"
@@ -7455,6 +7519,38 @@ turkish = "İfadelerin arkasına gölge çiz"
 polish = "Rysuj cień za emotkami"
 
 [[message]]
+key = "Draw the favorite star icon with the filled icon font style"
+[message.translations]
+simplified_chinese = "以图标字体的实心样式绘制收藏星标"
+traditional_chinese = "以圖示字體的實心樣式繪製收藏星標"
+japanese = "アイコンフォントの塗りつぶしスタイルでお気に入り星アイコンを描画"
+korean = "아이콘 폰트의 채움 스타일로 즐겨찾기 별 아이콘 그리기"
+russian = "Рисовать значок избранного заливкой шрифта иконок"
+german = "Favoritensymbol im ausgefüllten Symbolschriftstil zeichnen"
+spanish = "Dibujar el icono de favoritos con el estilo relleno de la fuente de iconos"
+french = "Dessiner l’icône des favoris avec le style rempli de la police d’icônes"
+brazilian_portuguese = "Desenhar o ícone de favoritos com o estilo preenchido da fonte de ícones"
+portuguese = "Desenhar o ícone de favoritos com o estilo preenchido do tipo de ícones"
+turkish = "Favori yıldız simgesini dolu simge yazı tipi stiliyle çiz"
+polish = "Rysuj ikonę ulubionych wypełnionym stylem czcionki ikon"
+
+[[message]]
+key = "Draw the friend heart icon with the filled icon font style"
+[message.translations]
+simplified_chinese = "以图标字体的实心样式绘制好友爱心"
+traditional_chinese = "以圖示字體的實心樣式繪製好友愛心"
+japanese = "アイコンフォントの塗りつぶしスタイルでフレンドハートアイコンを描画"
+korean = "아이콘 폰트의 채움 스타일로 친구 하트 아이콘 그리기"
+russian = "Рисовать значок сердца друга заливкой шрифта иконок"
+german = "Freundessymbol im ausgefüllten Symbolschriftstil zeichnen"
+spanish = "Dibujar el icono de corazón de amigos con el estilo relleno de la fuente de iconos"
+french = "Dessiner l’icône de cœur des amis avec le style rempli de la police d’icônes"
+brazilian_portuguese = "Desenhar o ícone de coração de amigos com o estilo preenchido da fonte de ícones"
+portuguese = "Desenhar o ícone de coração de amigos com o estilo preenchido do tipo de ícones"
+turkish = "Arkadaş kalp simgesini dolu simge yazı tipi stiliyle çiz"
+polish = "Rysuj ikonę serca znajomych wypełnionym stylem czcionki ikon"
+
+[[message]]
 key = "Drawing a big pie in the sky"
 [message.translations]
 simplified_chinese = "画一张大饼"
@@ -9805,6 +9901,38 @@ brazilian_portuguese = "Cor do ícone de favoritos"
 portuguese = "Cor do ícone de favoritos"
 turkish = "Favori simgesi rengi"
 polish = "Kolor ikony ulubionych"
+
+[[message]]
+key = "Solid favorite icon"
+[message.translations]
+simplified_chinese = "实心收藏图标"
+traditional_chinese = "實心收藏圖示"
+japanese = "塗りつぶしお気に入りアイコン"
+korean = "채워진 즐겨찾기 아이콘"
+russian = "Значок избранного заливкой"
+german = "Ausgefülltes Favoritensymbol"
+spanish = "Icono de favoritos relleno"
+french = "Icône des favoris remplie"
+brazilian_portuguese = "Ícone de favoritos preenchido"
+portuguese = "Ícone de favoritos preenchido"
+turkish = "Dolu favori simgesi"
+polish = "Wypełniona ikona ulubionych"
+
+[[message]]
+key = "Solid friend icon"
+[message.translations]
+simplified_chinese = "实心好友图标"
+traditional_chinese = "實心好友圖示"
+japanese = "塗りつぶしフレンドアイコン"
+korean = "채워진 친구 아이콘"
+russian = "Значок друга заливкой"
+german = "Ausgefülltes Freundessymbol"
+spanish = "Icono de amigos relleno"
+french = "Icône des amis remplie"
+brazilian_portuguese = "Ícone de amigos preenchido"
+portuguese = "Ícone de amigos preenchido"
+turkish = "Dolu arkadaş simgesi"
+polish = "Wypełniona ikona znajomych"
 
 [[message]]
 key = "Favorite maps"
@@ -27124,6 +27252,70 @@ turkish = "Basit gürültü azaltma gücü"
 polish = "Siła prostej redukcji szumów"
 
 [[message]]
+key = "Endless hook ring flow style: 0=single color, 1=rainbow, 2=static"
+[message.translations]
+simplified_chinese = "无限钩圆环流动样式（0=单色，1=彩虹，2=静止）"
+traditional_chinese = "無限鉤圓環流動樣式（0=單色，1=彩虹，2=靜止）"
+japanese = "無限フックのリングの流れスタイル (0=単色, 1=虹色, 2=静止)"
+korean = "무한 훅 링 흐름 스타일(0=단색, 1=무지개, 2=정지)"
+russian = "Стиль переливания кольца бесконечного крюка (0=один цвет, 1=радуга, 2=статично)"
+german = "Flussstil des Endlos-Hakenrings (0=einfarbig, 1=Regenbogen, 2=statisch)"
+spanish = "Estilo de flujo del anillo de gancho infinito (0=color único, 1=arcoíris, 2=estático)"
+french = "Style de flux de l'anneau de grappin infini (0=couleur unique, 1=arc-en-ciel, 2=statique)"
+brazilian_portuguese = "Estilo de fluxo do anel de gancho infinito (0=cor única, 1=arco-íris, 2=estático)"
+portuguese = "Estilo de fluxo do anel de gancho infinito (0=cor única, 1=arco-íris, 2=estático)"
+turkish = "Sonsuz kanca halkası akış stili (0=tek renk, 1=gökuşağı, 2=sabit)"
+polish = "Styl przepływu pierścienia nieskończonego haka (0=jeden kolor, 1=tęcza, 2=statyczny)"
+
+[[message]]
+key = "Flow style"
+[message.translations]
+simplified_chinese = "流动样式"
+traditional_chinese = "流動樣式"
+japanese = "フロースタイル"
+korean = "흐름 스타일"
+russian = "Стиль переливания"
+german = "Flussstil"
+spanish = "Estilo de flujo"
+french = "Style de fluxo"
+brazilian_portuguese = "Estilo de fluxo"
+portuguese = "Estilo de fluxo"
+turkish = "Akış stili"
+polish = "Styl przepływu"
+
+[[message]]
+key = "Rainbow"
+[message.translations]
+simplified_chinese = "彩虹"
+traditional_chinese = "彩虹"
+japanese = "レインボー"
+korean = "무지개"
+russian = "Радуга"
+german = "Regenbogen"
+spanish = "Arcoíris"
+french = "Arc-en-ciel"
+brazilian_portuguese = "Arco-íris"
+portuguese = "Arco-íris"
+turkish = "Gökkuşağı"
+polish = "Tęcza"
+
+[[message]]
+key = "Static"
+[message.translations]
+simplified_chinese = "静止"
+traditional_chinese = "靜止"
+japanese = "静止"
+korean = "정지"
+russian = "Статично"
+german = "Statisch"
+spanish = "Estático"
+french = "Statique"
+brazilian_portuguese = "Estático"
+portuguese = "Estático"
+turkish = "Sabit"
+polish = "Statyczny"
+
+[[message]]
 key = "Single color"
 [message.translations]
 simplified_chinese = "单色"
@@ -32228,20 +32420,86 @@ turkish = "Gelişmiş işleme etkin olduğunda Dynamic Island ve yuvarlatılmı�
 polish = "Używaj potoków SDF dla Dynamic Island i zaokrąglonych prostokątów przy włączonym ulepszonym renderowaniu"
 
 [[message]]
-key = "Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts."
+key = "Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts."
 [message.translations]
-simplified_chinese = "请分别填写主号和分身在 Axiom 服注册的密码。此选项不会自动注册账号。"
-traditional_chinese = "請分別填寫主號和分身在 Axiom 服註冊的密碼。此選項不會自動註冊帳號。"
-japanese = "メインとダミーそれぞれに、Axiom で登録したパスワードを入力してください。この設定ではアカウントは登録されません。"
-korean = "본 계정과 더미 계정에 각각 Axiom에서 등록한 비밀번호를 입력하세요. 이 옵션은 계정을 등록하지 않습니다."
-russian = "Укажите отдельно пароли основного аккаунта и дамми, зарегистрированных на Axiom. Эта настройка не создаёт аккаунты."
-german = "Trage die bei Axiom registrierten Passwörter für Hauptkonto und Dummy getrennt ein. Diese Option erstellt keine Konten."
-spanish = "Introduce por separado las contraseñas registradas en Axiom para la cuenta principal y el dummy. Esta opción no registra cuentas."
-french = "Saisissez séparément les mots de passe enregistrés sur Axiom pour le compte principal et le dummy. Cette option ne crée pas de compte."
-brazilian_portuguese = "Insira separadamente as senhas cadastradas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
-portuguese = "Introduza separadamente as palavras-passe registadas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
-turkish = "Ana hesap ve dummy için Axiom'da kayıtlı parolaları ayrı ayrı girin. Bu seçenek hesap oluşturmaz."
-polish = "Wpisz osobno hasła zarejestrowane na Axiom dla głównego konta i dummy. Ta opcja nie tworzy kont."
+simplified_chinese = "账号即游戏内名字，请先在 Axiom 官网注册。分别填入主号与分身的注册密码；不会自动注册账号。"
+traditional_chinese = "帳號即遊戲內名字，請先在 Axiom 官網註冊。分別填入主號與分身的註冊密碼；不會自動註冊帳號。"
+japanese = "アカウントはゲーム内の名前です。まず Axiom ウェブサイトで登録してください。メインとダミーの登録済みパスワードを入力してください。この設定ではアカウント登録は行われません。"
+korean = "계정은 게임 내 이름입니다. 먼저 Axiom 웹사이트에서 등록하세요. 본 계정과 더미의 등록된 비밀번호를 입력하세요. 이 옵션은 계정을 등록하지 않습니다."
+russian = "Аккаунт — это ваше имя в игре. Сначала зарегистрируйте его на сайте Axiom. Укажите зарегистрированные пароли основного аккаунта и дамми. Эта настройка не регистрирует аккаунты."
+german = "Dein Konto ist dein Spielname – registriere es zuerst auf der Axiom-Website. Trage die registrierten Passwörter für Hauptkonto und Dummy ein. Diese Option registriert keine Konten."
+spanish = "Tu cuenta es tu nombre en el juego: regístrala primero en el sitio web de Axiom. Introduce las contraseñas registradas de la cuenta principal y el dummy. Esta opción no registra cuentas."
+french = "Votre compte est votre nom en jeu – enregistrez-le d'abord sur le site web d'Axiom. Saisissez les mots de passe enregistrés du compte principal et du dummy. Cette option ne crée pas de compte."
+brazilian_portuguese = "Sua conta é o seu nome no jogo – registre-a primeiro no site da Axiom. Insira as senhas registradas da conta principal e do dummy. Esta opção não registra contas."
+portuguese = "A tua conta é o teu nome no jogo – regista-a primeiro no site da Axiom. Introduz as palavras-passe registadas da conta principal e do dummy. Esta opção não registra contas."
+turkish = "Hesabınız oyun içi adınızdır – önce Axiom web sitesinde kaydedin. Ana hesap ve dummy için kayıtlı parolaları girin. Bu seçenek hesap oluşturmaz."
+polish = "Konto to twoja nazwa w grze – zarejestruj je najpierw na stronie internetowej Axiom. Wpisz zarejestrowane hasła głównego konta i dummy. Ta opcja nie rejestruje kont."
+
+[[message]]
+key = "Axiom website"
+[message.translations]
+simplified_chinese = "Axiom 官网"
+traditional_chinese = "Axiom 官網"
+japanese = "Axiom ウェブサイト"
+korean = "Axiom 웹사이트"
+russian = "Сайт Axiom"
+german = "Axiom-Website"
+spanish = "Sitio web de Axiom"
+french = "Site web d'Axiom"
+brazilian_portuguese = "Site da Axiom"
+portuguese = "Site da Axiom"
+turkish = "Axiom web sitesi"
+polish = "Strona internetowa Axiom"
+
+[[message]]
+key = "Axiom auto login failed: wrong password"
+[message.translations]
+simplified_chinese = "Axiom 登录失败：密码错误"
+traditional_chinese = "Axiom 登錄失敗：密碼錯誤"
+
+[[message]]
+key = "Axiom auto login failed: already in game"
+[message.translations]
+simplified_chinese = "Axiom 登录失败：账号已在游戏中"
+traditional_chinese = "Axiom 登錄失敗：帳號已在遊戲中"
+
+[[message]]
+key = "Axiom auto login failed: invalid credentials"
+[message.translations]
+simplified_chinese = "Axiom 登录失败：凭据无效"
+traditional_chinese = "Axiom 登錄失敗：憑證無效"
+
+[[message]]
+key = "Axiom auto login stopped after repeated failures"
+[message.translations]
+simplified_chinese = "Axiom 自动登录已停止：多次尝试未成功"
+traditional_chinese = "Axiom 自動登錄已停止：多次嘗試未成功"
+japanese = "Axiom 自動ログインを停止：複数回失敗しました"
+korean = "Axiom 자동 로그인 중지: 여러 번 실패"
+russian = "Автовход Axiom остановлен: несколько попыток не удались"
+german = "Axiom-Auto-Login gestoppt: mehrere Fehlversuche"
+spanish = "Inicio de sesión automático de Axiom detenido: falló repetidamente"
+french = "Connexion automatique Axiom arrêtée : plusieurs échecs"
+brazilian_portuguese = "Login automático do Axiom parou: várias tentativas falharam"
+portuguese = "Início de sessão automático do Axiom parou: várias tentativas falharam"
+turkish = "Axiom otomatik girişi durduruldu: birden çok deneme başarısız"
+polish = "Automatyczne logowanie Axiom zatrzymane: wiele nieudanych prób"
+
+[[message]]
+key = "Axiom auto login skipped: no password"
+[message.translations]
+simplified_chinese = "Axiom 自动登录：未填写密码，已跳过"
+traditional_chinese = "Axiom 自動登錄：未填寫密碼，已跳過"
+japanese = "Axiom 自動ログイン：パスワード未入力のためスキップ"
+korean = "Axiom 자동 로그인: 비밀번호 미입력, 건너뜀"
+russian = "Автовход Axiom: пароль не задан, пропущено"
+german = "Axiom-Auto-Login: Kein Passwort gesetzt, übersprungen"
+spanish = "Inicio de sesión automático de Axiom: sin contraseña, omitido"
+french = "Connexion automatique Axiom : mot de passe non renseigné, ignorée"
+brazilian_portuguese = "Login automático do Axiom: sem senha, pulado"
+portuguese = "Início de sessão automático do Axiom: sem palavra-passe, ignorado"
+turkish = "Axiom otomatik girişi: parola yok, atlandı"
+polish = "Automatyczne logowanie Axiom: brak hasła, pominięto"
 
 [[message]]
 key = "Use the scoreboard cursor mode to scroll the list"
@@ -35782,6 +36040,38 @@ turkish = "Konsol komutlarını vurgula"
 polish = "Podświetlaj polecenia konsoli"
 
 [[message]]
+key = "Show the chat scrollbar on the right"
+[message.translations]
+simplified_chinese = "在右侧显示聊天滚动条"
+traditional_chinese = "在右側顯示聊天捲軸"
+japanese = "チャットのスクロールバーを右側に表示"
+korean = "채팅 스크롤바를 오른쪽에 표시"
+russian = "Показывать полосу прокрутки чата справа"
+german = "Chat-Scrollleiste rechts anzeigen"
+spanish = "Mostrar la barra de desplazamiento del chat a la derecha"
+french = "Afficher la barre de défilement du chat à droite"
+brazilian_portuguese = "Mostrar a barra de rolagem do chat à direita"
+portuguese = "Mostrar a barra de deslocamento do chat à direita"
+turkish = "Sohbet kaydırma çubuğunu sağda göster"
+polish = "Pokaż pasek przewijania czatu po prawej"
+
+[[message]]
+key = "Appearance of help bubbles"
+[message.translations]
+simplified_chinese = "提示气泡外观"
+traditional_chinese = "提示氣泡外觀"
+japanese = "ヘルプ吹き出しの外観"
+korean = "도움말 말풍선 모양"
+russian = "Внешний вид всплывающих подсказок"
+german = "Darstellung der Hinweisblasen"
+spanish = "Apariencia de las burbujas de ayuda"
+french = "Apparence des bulles d’aide"
+brazilian_portuguese = "Aparência dos balões de ajuda"
+portuguese = "Aspeto dos balões de ajuda"
+turkish = "Yardım balonlarının görünümü"
+polish = "Wygląd dymków pomocy"
+
+[[message]]
 key = "Freeze projectile collision volume"
 [message.translations]
 simplified_chinese = "冻结子弹碰撞体积"
@@ -35796,6 +36086,167 @@ brazilian_portuguese = "Volume de colisão dos projéteis Freeze"
 portuguese = "Volume de colisão dos projéteis Freeze"
 turkish = "Freeze mermilerinin çarpışma hacmi"
 polish = "Objętość kolizji pocisków Freeze"
+
+[[message]]
+key = "Team tee glow intensity"
+[message.translations]
+simplified_chinese = "队伍 Tee 发光强度"
+traditional_chinese = "隊伍 Tee 發光強度"
+japanese = "チーム Tee の発光強度"
+korean = "팀 Tee 발광 강도"
+russian = "Интенсивность свечения Tee команды"
+german = "Leuchtstärke der Team-Tees"
+spanish = "Intensidad del brillo de los Tees del equipo"
+french = "Intensité de la lueur des Tees de l’équipe"
+brazilian_portuguese = "Intensidade do brilho dos Tees da equipe"
+portuguese = "Intensidade do brilho dos Tees da equipa"
+turkish = "Takım Tee parlama yoğunluğu"
+polish = "Intensywność poświaty Tee drużyny"
+
+[[message]]
+key = "Team tee glow halo size"
+[message.translations]
+simplified_chinese = "队伍 Tee 光晕大小"
+traditional_chinese = "隊伍 Tee 光暈大小"
+japanese = "チーム Tee の光輪サイズ"
+korean = "팀 Tee 후광 크기"
+russian = "Размер ореола Tee команды"
+german = "Größe des Leuchthofs der Team-Tees"
+spanish = "Tamaño del halo de los Tees del equipo"
+french = "Taille du halo des Tees de l’équipe"
+brazilian_portuguese = "Tamanho do halo dos Tees da equipe"
+portuguese = "Tamanho do halo dos Tees da equipa"
+turkish = "Takım Tee ışık halesi boyutu"
+polish = "Rozmiar aureoli Tee drużyny"
+
+[[message]]
+key = "Enable Gores mode or join a Gores server."
+[message.translations]
+simplified_chinese = "请启用 Gores 模式或加入 Gores 服务器。"
+traditional_chinese = "請啟用 Gores 模式或加入 Gores 伺服器。"
+japanese = "Gores モードを有効にするか、Gores サーバーに接続してください。"
+korean = "Gores 모드를 켜거나 Gores 서버에 접속하세요."
+russian = "Включите режим Gores или подключитесь к серверу Gores."
+german = "Aktiviere den Gores-Modus oder tritt einem Gores-Server bei."
+spanish = "Activa el modo Gores o entra en un servidor Gores."
+french = "Activez le mode Gores ou rejoignez un serveur Gores."
+brazilian_portuguese = "Ative o modo Gores ou entre em um servidor Gores."
+portuguese = "Ative o modo Gores ou entre num servidor Gores."
+turkish = "Gores modunu açın veya bir Gores sunucusuna katılın."
+polish = "Włącz tryb Gores lub dołącz do serwera Gores."
+
+[[message]]
+key = "Drown board requires an active local player."
+[message.translations]
+simplified_chinese = "落水榜需要当前有已进入游戏的本地玩家。"
+traditional_chinese = "落水榜需要目前有已進入遊戲的本機玩家。"
+japanese = "落水ランキングにはゲーム参加中のローカルプレイヤーが必要です。"
+korean = "낙수 순위에는 게임에 참가 중인 로컬 플레이어가 필요합니다."
+russian = "Для списка падений нужен активный локальный игрок."
+german = "Die Ertrinkensliste benötigt einen aktiven lokalen Spieler."
+spanish = "La tabla de caídas requiere un jugador local activo."
+french = "Le classement des noyades nécessite un joueur local actif."
+brazilian_portuguese = "A tabela de afogamentos exige um jogador local ativo."
+portuguese = "A tabela de afogamentos requer um jogador local ativo."
+turkish = "Suya düşme tablosu için etkin bir yerel oyuncu gerekir."
+polish = "Tabela utonięć wymaga aktywnego gracza lokalnego."
+
+[[message]]
+key = "Join a non-zero DDRace team to show drown counts."
+[message.translations]
+simplified_chinese = "加入非 0 的 DDRace 队伍后显示落水次数。"
+traditional_chinese = "加入非 0 的 DDRace 隊伍後顯示落水次數。"
+japanese = "落水回数を表示するには、0 以外の DDRace チームに参加してください。"
+korean = "낙수 횟수를 보려면 0이 아닌 DDRace 팀에 참가하세요."
+russian = "Вступите в команду DDRace с номером не 0, чтобы видеть число падений."
+german = "Tritt einem DDRace-Team ungleich 0 bei, um die Ertrinkenszahlen zu sehen."
+spanish = "Únete a un equipo DDRace distinto de 0 para ver las caídas."
+french = "Rejoignez une équipe DDRace autre que 0 pour afficher les noyades."
+brazilian_portuguese = "Entre em uma equipe DDRace diferente de 0 para ver as quedas."
+portuguese = "Entre numa equipa DDRace diferente de 0 para ver as quedas."
+turkish = "Suya düşme sayılarını görmek için 0 dışında bir DDRace takımına katılın."
+polish = "Dołącz do drużyny DDRace innej niż 0, aby zobaczyć liczbę utonięć."
+
+[[message]]
+key = "Team tee glow intensity in percent"
+[message.translations]
+simplified_chinese = "队伍 Tee 发光强度 （百分比）"
+traditional_chinese = "隊伍 Tee 發光強度 （百分比）"
+japanese = "チーム Tee の発光強度 （パーセント）"
+korean = "팀 Tee 발광 강도 (백분율)"
+russian = "Интенсивность свечения Tee команды (в процентах)"
+german = "Leuchtstärke der Team-Tees (in Prozent)"
+spanish = "Intensidad del brillo de los Tees del equipo (en porcentaje)"
+french = "Intensité de la lueur des Tees de l’équipe (en pourcentage)"
+brazilian_portuguese = "Intensidade do brilho dos Tees da equipe (em porcentagem)"
+portuguese = "Intensidade do brilho dos Tees da equipa (em percentagem)"
+turkish = "Takım Tee parlama yoğunluğu (yüzde olarak)"
+polish = "Intensywność poświaty Tee drużyny (w procentach)"
+
+[[message]]
+key = "Team tee glow halo size in percent"
+[message.translations]
+simplified_chinese = "队伍 Tee 光晕大小 （百分比）"
+traditional_chinese = "隊伍 Tee 光暈大小 （百分比）"
+japanese = "チーム Tee の光輪サイズ （パーセント）"
+korean = "팀 Tee 후광 크기 (백분율)"
+russian = "Размер ореола Tee команды (в процентах)"
+german = "Größe des Leuchthofs der Team-Tees (in Prozent)"
+spanish = "Tamaño del halo de los Tees del equipo (en porcentaje)"
+french = "Taille du halo des Tees de l’équipe (en pourcentage)"
+brazilian_portuguese = "Tamanho do halo dos Tees da equipe (em porcentagem)"
+portuguese = "Tamanho do halo dos Tees da equipa (em percentagem)"
+turkish = "Takım Tee ışık halesi boyutu (yüzde olarak)"
+polish = "Rozmiar aureoli Tee drużyny (w procentach)"
+
+[[message]]
+key = "Include Team 0"
+[message.translations]
+simplified_chinese = "包括 Team 0"
+traditional_chinese = "包含 Team 0"
+japanese = "Team 0 を含める"
+korean = "Team 0 포함"
+russian = "Включить Team 0"
+german = "Team 0 einbeziehen"
+spanish = "Incluir Team 0"
+french = "Inclure Team 0"
+brazilian_portuguese = "Incluir Team 0"
+portuguese = "Incluir Team 0"
+turkish = "Team 0 dahil edilsin"
+polish = "Uwzględnij Team 0"
+
+[[message]]
+key = "Include Team 0 in the Gores team drown board"
+[message.translations]
+simplified_chinese = "在 Gores 落水榜中包括 Team 0 玩家"
+traditional_chinese = "在 Gores 落水榜中包含 Team 0 玩家"
+japanese = "Gores の落水ランキングに Team 0 を含める"
+korean = "Gores 낙수 순위에 Team 0 포함"
+russian = "Включить Team 0 в список утоплений Gores"
+german = "Team 0 in der Gores-Ertrinkensliste berücksichtigen"
+spanish = "Incluir Team 0 en la lista de ahogamientos de Gores"
+french = "Inclure Team 0 dans le classement des noyades Gores"
+brazilian_portuguese = "Incluir Team 0 na lista de afogamentos Gores"
+portuguese = "Incluir Team 0 na lista de afogamentos Gores"
+turkish = "Gores boğulma listesine Team 0 dahil edilsin"
+polish = "Uwzględnij Team 0 w rankingu utonięć Gores"
+
+[[message]]
+key = "Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts."
+[message.translations]
+simplified_chinese = "请分别填写主号和分身在 Axiom 服注册的密码。此选项不会自动注册账号。"
+traditional_chinese = "請分別填寫主號和分身在 Axiom 服註冊的密碼。此選項不會自動註冊帳號。"
+japanese = "メインとダミーそれぞれに、Axiom で登録したパスワードを入力してください。この設定ではアカウントは登録されません。"
+korean = "본 계정과 더미 계정에 각각 Axiom에서 등록한 비밀번호를 입력하세요. 이 옵션은 계정을 등록하지 않습니다."
+russian = "Укажите отдельно пароли основного аккаунта и дамми, зарегистрированных на Axiom. Эта настройка не создаёт аккаунты."
+german = "Trage die bei Axiom registrierten Passwörter für Hauptkonto und Dummy getrennt ein. Diese Option erstellt keine Konten."
+spanish = "Introduce por separado las contraseñas registradas en Axiom para la cuenta principal y el dummy. Esta opción no registra cuentas."
+french = "Saisissez séparément les mots de passe enregistrés sur Axiom pour le compte principal et le dummy. Cette option ne crée pas de compte."
+brazilian_portuguese = "Insira separadamente as senhas cadastradas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
+portuguese = "Introduza separadamente as palavras-passe registadas no Axiom para a conta principal e o dummy. Esta opção não cria contas."
+turkish = "Ana hesap ve dummy için Axiom'da kayıtlı parolaları ayrı ayrı girin. Bu seçenek hesap oluşturmaz."
+polish = "Wpisz osobno hasła zarejestrowane na Axiom dla głównego konta i dummy. Ta opcja nie tworzy kont."
+
 
 [[message]]
 key = "Demo directory"
@@ -35813,6 +36264,7 @@ portuguese = "Pasta de demos"
 turkish = "Demo kayıt dizini"
 polish = "Katalog nagrań demo"
 
+
 [[message]]
 key = "Screenshot directory"
 [message.translations]
@@ -35828,6 +36280,7 @@ brazilian_portuguese = "Pasta de capturas de tela"
 portuguese = "Pasta de capturas de ecrã"
 turkish = "Ekran görüntüsü dizini"
 polish = "Katalog zrzutów ekranu"
+
 
 [[message]]
 key = "Video directory"
@@ -35876,3 +36329,35 @@ brazilian_portuguese = "Intensidade da onda do título (0-3, 0 = desativado)"
 portuguese = "Intensidade da onda do título (0-3, 0 = desativado)"
 turkish = "Unvan dalga gücü (0-3, 0 = kapalı)"
 polish = "Siła fali tytułu (0-3, 0 = wyłączone)"
+
+[[message]]
+key = "Smooth free spectator camera"
+[message.translations]
+simplified_chinese = "平滑自由观战镜头"
+traditional_chinese = "平滑自由觀戰鏡頭"
+japanese = "自由観戦カメラを滑らかに移動"
+korean = "자유 관전 카메라 부드럽게 이동"
+russian = "Плавная камера свободного наблюдения"
+german = "Freie Zuschauerkamera glätten"
+spanish = "Suavizar la cámara de espectador libre"
+french = "Lisser la caméra de spectateur libre"
+brazilian_portuguese = "Suavizar a câmera de espectador livre"
+portuguese = "Suavizar a câmara de espectador livre"
+turkish = "Serbest izleyici kamerasını yumuşat"
+polish = "Płynna kamera swobodnego obserwatora"
+
+[[message]]
+key = "Smooth the mouse-driven camera in live and demo free spectating"
+[message.translations]
+simplified_chinese = "平滑在线观战和 Demo 回放中由鼠标控制的自由视角"
+traditional_chinese = "平滑線上觀戰和 Demo 重播中由滑鼠控制的自由視角"
+japanese = "ゲームとデモの自由観戦でマウス操作のカメラを滑らかに移動"
+korean = "게임과 데모의 자유 관전에서 마우스로 조작하는 카메라를 부드럽게 이동"
+russian = "Сглаживать управляемую мышью камеру при свободном наблюдении в игре и демозаписях"
+german = "Die mausgesteuerte Kamera beim freien Zuschauen im Spiel und in Demos glätten"
+spanish = "Suavizar la cámara controlada por el ratón al espectar libremente en partidas y demos"
+french = "Lisser la caméra contrôlée à la souris en spectateur libre, en partie et dans les démos"
+brazilian_portuguese = "Suavizar a câmera controlada pelo mouse ao assistir livremente em partidas e demos"
+portuguese = "Suavizar a câmara controlada pelo rato ao observar livremente em partidas e demos"
+turkish = "Oyunda ve demolarda serbest izleme sırasında fareyle kontrol edilen kamerayı yumuşat"
+polish = "Wygładź ruch kamery sterowanej myszą podczas swobodnej obserwacji w grze i demach"

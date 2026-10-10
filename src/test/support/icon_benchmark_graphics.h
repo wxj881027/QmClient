@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <unordered_map>
-class CIconBenchmarkGraphics final : public IGraphics
+class CIconBenchmarkGraphics : public IGraphics
 {
 public:
 	IStorage *m_pStorage = nullptr;

@@ -4,6 +4,7 @@
 #include "QmAnimationBackend.h"
 
 #include <base/vmath.h>
+
 #include <engine/textrender.h>
 
 #include <array>
@@ -20,7 +21,7 @@ public:
 	void Reset();
 	void Update(const char *pText, std::chrono::nanoseconds Now, int MotionLevel, bool AnimateGlyphs = true);
 	void FillCharOffsets(std::vector<STextCharOffset> &vOffsets) const;
-	vec2 ResolveCaret(vec2 Target, float FontHeight, bool Snap = false);
+	vec2 ResolveCaret(vec2 Target, float FontHeight, bool Snap = false, bool AnimateAcrossLines = false);
 
 private:
 	struct SCharacter

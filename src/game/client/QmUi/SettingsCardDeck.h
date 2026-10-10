@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_QMUI_SETTINGSCARDDECK_H
 #define GAME_CLIENT_QMUI_SETTINGSCARDDECK_H
 
+#include "QmCardRegistry.h"
 #include "SettingsCard.h"
 #include "SettingsCardDeckLogic.h"
 #include "SettingsPageLayout.h"
@@ -159,6 +160,7 @@ private:
 	std::string m_LastRenderedTab;
 	std::string m_PendingRevealStableId;
 	SDragState m_Drag;
+	qm_card_registry::CCardFocus m_Focus;
 	std::vector<SRuntimeState> m_vRuntimeStates;
 	std::vector<float> m_vContentHeights;
 	std::vector<float> m_vContentWidths;

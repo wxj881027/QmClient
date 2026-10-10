@@ -44,7 +44,8 @@ TEST(QmNewUiMenuSettingsColorsContract, LegacyUiSurfaceOptionsRemainCompatible)
 	EXPECT_EQ(QmConfigSource.find("MACRO_CONFIG_COL(QmMapBrowserColor, qm_map_browser_color"), std::string::npos);
 	EXPECT_EQ(QmConfigSource.find("MACRO_CONFIG_INT(QmMapBrowserOpacity, qm_map_browser_opacity"), std::string::npos);
 
-	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(UiColor, ui_color, 0x4D000000"), std::string::npos);
+	// 兼容合同约束配置名和类型，默认颜色属于可调整的用户体验而非存档格式。
+	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(UiColor, ui_color,"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_COL(ClMenuPanelColor, cl_menu_panel_color, 0x000000"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(ClMenuPanelOpacity, cl_menu_panel_opacity, 30"), std::string::npos);
 	EXPECT_NE(ConfigSource.find("MACRO_CONFIG_INT(ClMenuPanelElevatedOpacity, cl_menu_panel_elevated_opacity, 30"), std::string::npos);

@@ -25,6 +25,15 @@ enum class EQmAxiomLoginReply
 	HARD_FAILURE,
 };
 
+// 硬失败的原因细分：给用户可理解的失败提示，替代笼统的"登录失败"。
+enum class EQmAxiomLoginFailureReason
+{
+	NONE,
+	WRONG_PASSWORD,
+	ALREADY_IN_GAME,
+	BAD_CREDENTIAL,
+};
+
 struct SQmAxiomAutoLoginState
 {
 	bool m_Announced = false;
@@ -34,6 +43,7 @@ struct SQmAxiomAutoLoginState
 	bool m_HardFailed = false;
 	int m_Attempts = 0;
 	int64_t m_NextTryTick = 0;
+	EQmAxiomLoginFailureReason m_LastFailureReason = EQmAxiomLoginFailureReason::NONE;
 };
 
 namespace QmAxiomAutoLoginDetail
@@ -77,6 +87,41 @@ inline EQmAxiomLoginReply QmClassifyAxiomLoginReply(const char *pText)
 	return EQmAxiomLoginReply::IGNORE;
 }
 
+// 从硬失败回执中细分原因；仅在 QmClassifyAxiomLoginReply 判为 HARD_FAILURE 后调用，
+// 词表是其硬失败词表的子集，判定顺序为密码 → 已在游戏 → 凭据。
+inline EQmAxiomLoginFailureReason QmClassifyAxiomLoginFailureReason(const char *pText)
+{
+	using QmAxiomAutoLoginDetail::TextContainsAny;
+
+	if(TextContainsAny(pText, {"incorrect password", "password incorrect", "invalid password", "password invalid", "wrong password", "password wrong", "密码错误", "密码不正确", "密碼錯誤", "密碼不正確"}))
+		return EQmAxiomLoginFailureReason::WRONG_PASSWORD;
+
+	if(TextContainsAny(pText, {"already in game", "player already online", "已有玩家在线", "已有玩家在線", "已在游戏中", "已在遊戲中"}))
+		return EQmAxiomLoginFailureReason::ALREADY_IN_GAME;
+
+	if(TextContainsAny(pText, {"incorrect token", "token incorrect", "invalid token", "token invalid", "wrong token", "token wrong", "incorrect credential", "credential incorrect", "invalid credential", "credential invalid", "wrong credential", "credential wrong", "unauthenticated", "not authenticated", "凭证无效", "凭证错误", "憑證無效", "憑證錯誤", "令牌无效", "令牌错误", "令牌無效", "令牌錯誤", "token 无效", "token 無效", "无效 token", "無效 token"}))
+		return EQmAxiomLoginFailureReason::BAD_CREDENTIAL;
+
+	return EQmAxiomLoginFailureReason::NONE;
+}
+
+// 失败原因对应的本地化 key；NONE 返回旧 key 兜底（被合同测试锁定，不可改名）。
+inline const char *QmAxiomAutoLoginFailureKey(EQmAxiomLoginFailureReason Reason)
+{
+	switch(Reason)
+	{
+	case EQmAxiomLoginFailureReason::WRONG_PASSWORD:
+		return "Axiom auto login failed: wrong password";
+	case EQmAxiomLoginFailureReason::ALREADY_IN_GAME:
+		return "Axiom auto login failed: already in game";
+	case EQmAxiomLoginFailureReason::BAD_CREDENTIAL:
+		return "Axiom auto login failed: invalid credentials";
+	case EQmAxiomLoginFailureReason::NONE:
+		break;
+	}
+	return "Axiom auto login failed";
+}
+
 inline bool QmShouldHandleAxiomLoginReply(EQmAxiomLoginReply Reply, int Attempts, bool WaitingReply)
 {
 	if(Attempts <= 0 || Reply == EQmAxiomLoginReply::IGNORE)
@@ -111,7 +156,7 @@ inline void QmMarkAxiomAutoLoginAttempt(SQmAxiomAutoLoginState &State, int64_t N
 	State.m_NextTryTick = Now + (int64_t)QMCLIENT_AXIOM_AUTO_LOGIN_REPLY_TIMEOUT_SECONDS * TimeFreq;
 }
 
-inline EQmAxiomLoginReply QmApplyAxiomLoginReply(SQmAxiomAutoLoginState &State, EQmAxiomLoginReply Reply, int64_t Now, int64_t TimeFreq)
+inline EQmAxiomLoginReply QmApplyAxiomLoginReply(SQmAxiomAutoLoginState &State, EQmAxiomLoginReply Reply, int64_t Now, int64_t TimeFreq, const char *pReplyText = nullptr)
 {
 	if(!QmShouldHandleAxiomLoginReply(Reply, State.m_Attempts, State.m_WaitingReply))
 		return EQmAxiomLoginReply::IGNORE;
@@ -126,6 +171,7 @@ inline EQmAxiomLoginReply QmApplyAxiomLoginReply(SQmAxiomAutoLoginState &State, 
 		State.m_WaitingReply = false;
 		State.m_SlowRetryMode = false;
 		State.m_HardFailed = false;
+		State.m_LastFailureReason = EQmAxiomLoginFailureReason::NONE;
 		State.m_NextTryTick = 0;
 		break;
 	case EQmAxiomLoginReply::RETRYABLE_FAILURE:
@@ -135,6 +181,8 @@ inline EQmAxiomLoginReply QmApplyAxiomLoginReply(SQmAxiomAutoLoginState &State, 
 		State.m_WaitingReply = false;
 		State.m_SlowRetryMode = false;
 		State.m_HardFailed = true;
+		if(pReplyText && pReplyText[0] != '\0')
+			State.m_LastFailureReason = QmClassifyAxiomLoginFailureReason(pReplyText);
 		State.m_NextTryTick = 0;
 		break;
 	case EQmAxiomLoginReply::IGNORE:
@@ -166,6 +214,9 @@ class CQmAxiomAutoLogin : public CComponent
 	bool m_DummyWasConnected = false;
 	bool m_DummyLoginAllowedThisServer = false;
 	bool m_AutoLoginEnabledLastFrame = false;
+	// 每服最多提示一次的门控：密码未填提示与重试耗尽提示。
+	bool m_PasswordHintAnnounced = false;
+	bool m_ExhaustionAnnounced = false;
 	char m_aDummyAutoLoginServer[NETADDR_MAXSTRSIZE] = "";
 
 	const char *CurrentCommunityId() const;

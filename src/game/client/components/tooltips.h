@@ -6,6 +6,7 @@
 #include <game/client/QmUi/QmCardLabelHints.h>
 #include <game/client/QmUi/UiConfigHintText.h>
 #include <game/client/component.h>
+#include <game/client/components/qm_tooltip_text_layout.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -16,6 +17,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 struct SConfigVariable;
 
@@ -26,18 +28,6 @@ inline float QmTooltipScale(float ElapsedSeconds, bool AnimationEnabled)
 	const float T = std::clamp(ElapsedSeconds / 0.18f, 0.0f, 1.0f) - 1.0f;
 	const float Ease = 1.0f + 2.70158f * T * T * T + 1.70158f * T * T;
 	return 0.88f + 0.12f * Ease;
-}
-
-// 气泡内可绘制的完整文本行数；最终绘制仍裁剪于气泡范围。
-inline int QmTooltipVisibleLines(float Height, float FontSize)
-{
-	return std::max(1, static_cast<int>(std::floor(std::max(0.0f, Height) / std::max(1.0f, FontSize))));
-}
-
-// 从未缩放的完整气泡判断是否被屏幕裁短，避免扣除内边距的舍入误差误判短提示。
-inline bool QmTooltipTextTruncated(float TextHeight, float Padding, float BubbleHeight)
-{
-	return TextHeight + 2.0f * Padding > BubbleHeight + 0.001f;
 }
 
 // 气泡跟随目标矩形；指针在目标内部移动不会改变气泡位置。
@@ -91,7 +81,29 @@ struct CTooltip
 	uint64_t m_RegisteredFrame = 0;
 	CUIRect m_Anchor{};
 	bool m_HasTextAnchor = false;
+	uint64_t m_SourceFrame = 0;
+	bool m_SourceAvailable = true;
 };
+
+// 只记录实际提交的来源证据；没有登记不能证明来源被隐藏或销毁。
+inline void QmTooltipRecordSource(CTooltip &Tooltip, uint64_t Frame, const CUIRect &Rect, const CUIRect *pClip, vec2 Pointer, bool HasText = true)
+{
+	Tooltip.m_SourceFrame = Frame;
+	Tooltip.m_SourceAvailable = HasText && Rect.w > 0.0f && Rect.h > 0.0f;
+	if(pClip != nullptr)
+	{
+		const bool Visible = pClip->w > 0.0f && pClip->h > 0.0f &&
+				     Rect.x < pClip->x + pClip->w && Rect.x + Rect.w > pClip->x &&
+				     Rect.y < pClip->y + pClip->h && Rect.y + Rect.h > pClip->y;
+		// 指针仍在来源矩形内、却落在被裁掉的部分，不属于控件之间的间隙。
+		Tooltip.m_SourceAvailable &= Visible && (!Rect.Inside(Pointer) || pClip->Inside(Pointer));
+	}
+}
+
+inline bool QmTooltipSourceInvalidated(const CTooltip &Tooltip, uint64_t Frame)
+{
+	return Tooltip.m_SourceFrame == Frame && !Tooltip.m_SourceAvailable;
+}
 
 inline float QmTooltipDelay(const CTooltip &Tooltip)
 {
@@ -128,9 +140,10 @@ public:
 
 	float VisibleSeconds(double Now) const { return static_cast<float>(Now - m_VisibleAt); }
 
-	bool Retain(double Now)
+	bool Retain(double Now, const CTooltip *pSource = nullptr, uint64_t Frame = 0)
 	{
-		if(m_Visible && Now - m_LastHoveredAt <= SWITCH_GRACE_SECONDS)
+		const bool SourceInvalidated = pSource != nullptr && QmTooltipSourceInvalidated(*pSource, Frame);
+		if(!SourceInvalidated && m_Visible && Now - m_LastHoveredAt <= SWITCH_GRACE_SECONDS)
 			return true;
 		Clear();
 		return false;
@@ -192,9 +205,12 @@ class CQmTooltipTextCache
 	float m_FontSize = 0.0f;
 	float m_WrapWidth = 0.0f;
 	int m_MaxLines = 0;
+	// 保存真实生成的字形范围与断行结果；缓存命中时不重复排版。
+	CTextCursor m_Cursor;
 
 public:
 	const STextContainerIndex &Index() const { return m_Index; }
+	const CTextCursor &LayoutCursor() const { return m_Cursor; }
 
 	template<typename TTextRender>
 	void Update(TTextRender &TextRender, CTextCursor Cursor, const std::string &Text)
@@ -207,6 +223,7 @@ public:
 			m_FontSize = Cursor.m_FontSize;
 			m_WrapWidth = Cursor.m_LineWidth;
 			m_MaxLines = Cursor.m_MaxLines;
+			m_Cursor = std::move(Cursor);
 		}
 	}
 
@@ -216,6 +233,7 @@ public:
 		TextRender.DeleteTextContainer(m_Index);
 		m_Index.Reset();
 		m_Text.clear();
+		m_Cursor = {};
 	}
 };
 
@@ -251,17 +269,6 @@ public:
 	CQmTooltipTextScope &operator=(const CQmTooltipTextScope &) = delete;
 };
 
-inline CTextCursor QmTooltipTextCursor(const CUIRect &Content, float FontSize, float WrapWidth, int MaxLines)
-{
-	CTextCursor Cursor;
-	Cursor.SetPosition(Content.TopLeft());
-	Cursor.m_FontSize = FontSize;
-	// 测量与绘制共用换行上限；短文本的紧凑气泡不能反过来触发额外换行。
-	Cursor.m_LineWidth = std::max(1.0f, WrapWidth);
-	Cursor.m_MaxLines = MaxLines;
-	return Cursor;
-}
-
 inline bool QmTooltipAnimate(const CTooltip &Tooltip, bool AnimationEnabled)
 {
 	return !Tooltip.m_SmallInstant && AnimationEnabled;
@@ -295,7 +302,7 @@ inline bool QmTooltipHovered(const CTooltip &Tooltip, TUi &Ui)
 template<typename TUi>
 inline bool QmTooltipActive(const CTooltip &Tooltip, uint64_t Frame, TUi &Ui)
 {
-	return Tooltip.m_OnScreen && QmTooltipRegistered(Tooltip, Frame) && QmTooltipHovered(Tooltip, Ui);
+	return Tooltip.m_OnScreen && QmTooltipRegistered(Tooltip, Frame) && !QmTooltipSourceInvalidated(Tooltip, Frame) && QmTooltipHovered(Tooltip, Ui);
 }
 
 /**
@@ -325,6 +332,7 @@ class CTooltips : public CComponent
 	void SetActiveTooltip(CTooltip &Tooltip);
 	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize, bool SmallInstant, bool HoverByRect, bool Immediate = false, bool Fallback = false, const CUIRect *pAnchor = nullptr);
 
+	void RecordSource(const void *pId, const CUIRect &Rect);
 	void ClearActiveTooltip();
 	void ResetPresentation();
 

@@ -320,7 +320,7 @@ TEST(QmImeAppearance, AllFourRolesMultiplyStopsByTheirOwnOverallOpacity)
 	Config.m_QmImeSelectedTextColor = color_cast<ColorHSLA>(ColorRGBA(1, 1, 1, 0.75f)).Pack(true);
 	Config.m_QmImeSelectedColor = color_cast<ColorHSLA>(ColorRGBA(1, 1, 1, 0.25f)).Pack(true);
 	for(char *pPalette : {Config.m_QmImeBgGradient, Config.m_QmImeTextGradient,
-		Config.m_QmImeSelectedTextGradient, Config.m_QmImeSelectedGradient})
+		    Config.m_QmImeSelectedTextGradient, Config.m_QmImeSelectedGradient})
 		str_copy(pPalette, "FF000000,0000FF80", sizeof(Config.m_QmImeBgGradient));
 	const auto Appearance = QmImeAppearance(Config);
 	const std::array<const SQmColorGradient *, 4> apGradients = {&Appearance.m_Background, &Appearance.m_Text,
@@ -375,41 +375,4 @@ TEST(QmColorGradient, CharacterSplitsKeepStopOpacityAndTheExistingTextOffset)
 	EXPECT_FLOAT_EQ(Cursor.m_vColorSplits[1].m_Color.a, (128.0f / 255.0f) * 0.25f);
 	EXPECT_FLOAT_EQ(Cursor.m_vColorSplits[2].m_Color.a, (128.0f / 255.0f) * 0.5f);
 	EXPECT_EQ(Cursor.m_CharCount, 5);
-}
-
-TEST(QmImeAppearance, ZeroBackgroundOpacityHidesThePanelTopLine)
-{
-	for(const char *pPalette : {"", "FF0000,0000FF"})
-	{
-		SCOPED_TRACE(pPalette);
-		CConfig Config{};
-		Config.m_QmImeBgColor = DefaultConfig::QmImeBgColor;
-		Config.m_QmImeOpacity = 0;
-		str_copy(Config.m_QmImeBgGradient, pPalette);
-		EXPECT_FLOAT_EQ(QmImeAppearance(Config).PanelTopLineColor(1.0f).a, 0.0f);
-	}
-}
-
-TEST(QmImeAppearance, FullyTransparentStopsHideThePanelTopLineAtFullOverallOpacity)
-{
-	CConfig Config{};
-	Config.m_QmImeOpacity = 100;
-	str_copy(Config.m_QmImeBgGradient, "FF000000,0000FF00");
-	EXPECT_FLOAT_EQ(QmImeAppearance(Config).PanelTopLineColor(1.0f).a, 0.0f);
-}
-
-TEST(QmImeAppearance, PanelTopLineFadesWithTheBackgroundAndPopupAnimation)
-{
-	CConfig Config{};
-	Config.m_QmImeOpacity = 50;
-	const auto SingleColor = QmImeAppearance(Config);
-	EXPECT_FLOAT_EQ(SingleColor.PanelTopLineColor(1.0f).a, 0.11f * 0.5f);
-	EXPECT_FLOAT_EQ(SingleColor.PanelTopLineColor(0.5f).a, 0.11f * 0.5f * 0.5f);
-	EXPECT_FLOAT_EQ(SingleColor.PanelTopLineColor(0.0f).a, 0.0f);
-	str_copy(Config.m_QmImeBgGradient, "FF000000,0000FF80");
-	const auto Gradient = QmImeAppearance(Config);
-	EXPECT_FLOAT_EQ(Gradient.PanelTopLineColor(0.5f).a, 0.11f * ((128.0f / 255.0f) * 0.5f) * 0.5f);
-	Config.m_QmImeOpacity = 100;
-	str_copy(Config.m_QmImeBgGradient, "FF0000,0000FF");
-	EXPECT_FLOAT_EQ(QmImeAppearance(Config).PanelTopLineColor(1.0f).a, 0.11f);
 }

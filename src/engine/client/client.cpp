@@ -5026,9 +5026,7 @@ void CClient::AutoCSV_Cleanup()
 void CClient::Con_Screenshot(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = (CClient *)pUserData;
-	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image) {
-		pSelf->GameClient()->OnScreenshotTaken(std::move(Image));
-	}, pSelf->GameClient()->ScreenshotProcessor());
+	pSelf->Graphics()->TakeScreenshot(nullptr, [pSelf](CImageInfo &&Image) { pSelf->GameClient()->OnScreenshotTaken(std::move(Image)); }, pSelf->GameClient()->ScreenshotProcessor());
 }
 
 #if defined(CONF_VIDEORECORDER)
@@ -5515,19 +5513,19 @@ void CClient::DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int 
 	}
 	str_copy(aFilename, Path.c_str());
 	if(DemoRecorders()[Recorder].Start(
-		Storage(),
-		m_pConsole,
-		aFilename,
-		IsSixup() ? GameClient()->NetVersion7() : GameClient()->NetVersion(),
-		m_aCurrentMap,
-		m_pMap->Sha256(),
-		m_pMap->Crc(),
-		"client",
-		m_pMap->Size(),
-		nullptr,
-		m_pMap->File(),
-		nullptr,
-		nullptr) == -1)
+		   Storage(),
+		   m_pConsole,
+		   aFilename,
+		   IsSixup() ? GameClient()->NetVersion7() : GameClient()->NetVersion(),
+		   m_aCurrentMap,
+		   m_pMap->Sha256(),
+		   m_pMap->Crc(),
+		   "client",
+		   m_pMap->Size(),
+		   nullptr,
+		   m_pMap->File(),
+		   nullptr,
+		   nullptr) == -1)
 		GameClient()->Echo(Localize("Failed to save demo"));
 }
 
@@ -5579,8 +5577,7 @@ bool CClient::DemoRecorder_AddDemoMarker(int Recorder)
 	return DemoRecorders()[Recorder].AddDemoMarker();
 }
 
-CDemoRecorder (&CClient::DemoRecorders())[RECORDER_MAX]
-{
+CDemoRecorder (&CClient::DemoRecorders()) [RECORDER_MAX] {
 	if(IsSixup())
 	{
 		return m_aDemoRecordersSixup;
@@ -7154,19 +7151,19 @@ void CClient::RaceRecord_Start(const char *pFilename)
 	dbg_assert(m_pMap && m_pMap->IsLoaded(), "Map must be loaded to record demo");
 
 	if(DemoRecorders()[RECORDER_RACE].Start(
-		Storage(),
-		m_pConsole,
-		pFilename,
-		IsSixup() ? GameClient()->NetVersion7() : GameClient()->NetVersion(),
-		m_aCurrentMap,
-		m_pMap->Sha256(),
-		m_pMap->Crc(),
-		"client",
-		m_pMap->Size(),
-		nullptr,
-		m_pMap->File(),
-		nullptr,
-		nullptr) == -1)
+		   Storage(),
+		   m_pConsole,
+		   pFilename,
+		   IsSixup() ? GameClient()->NetVersion7() : GameClient()->NetVersion(),
+		   m_aCurrentMap,
+		   m_pMap->Sha256(),
+		   m_pMap->Crc(),
+		   "client",
+		   m_pMap->Size(),
+		   nullptr,
+		   m_pMap->File(),
+		   nullptr,
+		   nullptr) == -1)
 		GameClient()->Echo(Localize("Failed to save demo"));
 }
 

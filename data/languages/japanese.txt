@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == ダミーにも適用する
 
+Also send the original text when translating outgoing messages
+== 送信メッセージの翻訳時にも原文を送る
+
 Always show
 == 常に表示
 
@@ -806,8 +809,8 @@ Appearance
 Appearance and command highlighting of the local console
 == ローカルコンソールの外観とコマンドの強調表示
 
-Appearance of help bubbles outside settings cards
-== 設定カード外のヘルプ吹き出しの外観
+Appearance of help bubbles
+== ヘルプ吹き出しの外観
 
 Append to log file instead of overwriting
 == 上書きではなくログファイルに追記
@@ -1298,6 +1301,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Axiom 自動ログイン失敗、再試行中
 
+Axiom auto login skipped: no password
+== Axiom 自動ログイン：パスワード未入力のためスキップ
+
+Axiom auto login stopped after repeated failures
+== Axiom 自動ログインを停止：複数回失敗しました
+
 Axiom auto login succeeded
 == Axiom 自動ログイン成功
 
@@ -1309,6 +1318,9 @@ Axiom main account password
 
 Axiom score request failed
 == Axiom スコアの取得に失敗しました
+
+Axiom website
+== Axiom ウェブサイト
 
 Axis
 == 軸
@@ -1966,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == シネマティックカメラ
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== シネマティックカメラのスムーズさ (0=瞬時, 100=最もスムーズ)
+
+Cinematic smoothness
+== シネマティックカメラの滑らかさ
 
 CJK font
 == 中国語・日本語・韓国語フォント
@@ -3590,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == エモートの後ろに影を描画
 
+Draw the favorite star icon with the filled icon font style
+== アイコンフォントの塗りつぶしスタイルでお気に入り星アイコンを描画
+
+Draw the friend heart icon with the filled icon font style
+== アイコンフォントの塗りつぶしスタイルでフレンドハートアイコンを描画
+
 Draw tile layers when using custom background (solid)
 == カスタム背景（ソリッド）使用時にタイルレイヤーを描画
 
@@ -4190,9 +4214,6 @@ Enable skin switch animation
 Enable skin transition animation, then choose the type, scope, duration and easing.
 == スキン切り替えアニメを有効にし、種類・範囲・時間・イージングを選びます。
 
-Enable smooth cinematic camera while free spectating
-== フリー観戦中に滑らかなシネマティックカメラを有効にする
-
 Enable SodaMusic Hook
 == SodaMusic Hook を有効化
 
@@ -4312,6 +4333,9 @@ Endless hook has been activated
 
 Endless hook has been deactivated
 == エンドレスフックが無効化されました
+
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== 無限フックのリングの流れスタイル (0=単色, 1=虹色, 2=静止)
 
 Endpoint
 == エンドポイント
@@ -4762,6 +4786,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == 反転：
+
+Flow style
+== フロースタイル
 
 Folder
 == フォルダ
@@ -5848,6 +5875,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == 設定プリセットの保存/読み込み時にスキンを含める
+
+Include Team 0
+== Team 0 を含める
+
+Include Team 0 in the Gores team drown board
+== Gores の落水ランキングに Team 0 を含める
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 受信メッセージの自動翻訳方式（0=対象言語でない場合のみ翻訳、1=常に翻訳）
@@ -9848,9 +9881,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == リプレイ一覧：未読み込み
 
-Replay list: up to date
-== リプレイ一覧：最新です
-
 Replays directory
 == リプレイフォルダ
 
@@ -10612,6 +10642,9 @@ Send emote when entering freeze
 
 Send emoticon in water
 == 水中で表情を送信
+
+Send original text with translation
+== 送信メッセージの翻訳時に原文も送信
 
 Send probability
 == 送信確率
@@ -11699,6 +11732,9 @@ Show teleporter tile outlines
 Show text entities
 == テキストエンティティを表示
 
+Show the chat scrollbar on the right
+== チャットのスクロールバーを右側に表示
+
 Show the cursor while free spectating
 == フリースペクテイト中にカーソルを表示
 
@@ -12053,6 +12089,9 @@ Smooth Dynamic Camera
 Smooth fade
 == スムーズフェード
 
+Smooth free spectator camera
+== 自由観戦カメラを滑らかに移動
+
 Smooth other players' predicted movement
 == 他のプレイヤーの予測移動をスムーズにする
 
@@ -12061,6 +12100,9 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == メニュー/エディターでのスムーズスクロールアニメーション時間（ms、0 = オフ）
+
+Smooth the mouse-driven camera in live and demo free spectating
+== ゲームとデモの自由観戦でマウス操作のカメラを滑らかに移動
 
 Smooth zoom animation time in editor (in ms, 0=off)
 == エディターでのスムーズズームアニメーション時間（ms、0 = オフ）
@@ -12106,6 +12148,12 @@ Soft glow
 
 Solid
 == 単色
+
+Solid favorite icon
+== 塗りつぶしお気に入りアイコン
+
+Solid friend icon
+== 塗りつぶしフレンドアイコン
 
 Solid tile outline opacity
 == タイル輪郭の不透明度
@@ -12331,6 +12379,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == 統計ボード
+
+Static
+== 静止
 
 Stats
 == 統計
@@ -12748,6 +12799,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == チーム Tee の外側グロー
+
+Team tee glow halo size
+== チーム Tee の光輪サイズ
+
+Team tee glow halo size in percent
+== チーム Tee の光輪サイズ （パーセント）
+
+Team tee glow intensity
+== チーム Tee の発光強度
+
+Team tee glow intensity in percent
+== チーム Tee の発光強度 （パーセント）
 
 Team used when leaving solo split mode
 == ソロスプリット終了時に使用するチーム
@@ -13727,6 +13790,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == 選択した %d 個のアイテムを削除できませんでした。最初に失敗したアイテムは「%s」です。
 
+Unable to delete skin
+== スキンを削除できません
+
 Unable to delete the demo '%s'
 == デモ「%s」を削除できませんでした
 
@@ -14110,9 +14176,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == ホバーした HUD モジュール上でマウスホイールを使用すると 5% 単位で拡大縮小します
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== メインとダミーそれぞれに、Axiom で登録したパスワードを入力してください。この設定ではアカウントは登録されません。
 
 Use the scoreboard cursor mode to scroll the list
 == リストをスクロールするにはスコアボードカーソルモードを使用してください
@@ -14989,6 +15052,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == あなたが最後の一人です！
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== アカウントはゲーム内の名前です。まず Axiom ウェブサイトで登録してください。メインとダミーの登録済みパスワードを入力してください。この設定ではアカウント登録は行われません。
 
 Your current race time is %s
 == 現在のレースタイムは %s です

@@ -1,12 +1,11 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SKIN_SOURCE_JOB_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SKIN_SOURCE_JOB_H
 
-#include <base/lock.h>
 #include <base/str.h>
 
 #include <engine/http.h>
-#include <engine/shared/jobs.h>
 
+#include <game/client/components/qmclient/skin_download_session.h>
 #include <game/client/components/qmclient/skin_prepared_textures.h>
 #include <game/client/components/qmclient/skin_prepared_visuals.h>
 #include <game/client/skin.h>
@@ -14,7 +13,6 @@
 #include <ctime>
 #include <memory>
 #include <optional>
-#include <string>
 
 class IStorage;
 
@@ -55,7 +53,7 @@ struct SQmSkinSourceIdentity
 	}
 };
 
-class CQmSkinSourceJob : public IJob
+class CQmSkinSourceJob : public IQmSkinDataJob
 {
 public:
 	explicit CQmSkinSourceJob(const char *pName)
@@ -65,40 +63,30 @@ public:
 	}
 
 	SQmSkinSourceData m_Data;
-	bool m_NotFound = false;
-	bool m_UsedCachedSkin = false;
-	bool m_NotModified = false;
+	bool HasData() const override { return m_Data.m_pPreparedTextures != nullptr; }
 
 protected:
 	char m_aName[MAX_SKIN_LENGTH];
 };
 
-// 缓存任务立即返回；更新任务独立等待网络，不阻塞已发布的皮肤。
+// 只读取磁盘缓存或解码已完成响应；HTTP 生命周期与缓存替换由下载会话管理。
 class CQmSkinDownloadJob : public CQmSkinSourceJob
 {
 public:
 	using TPrepare = bool (*)(const char *, SQmSkinSourceData &);
-	using TCreateRequest = std::unique_ptr<IHttpRequest> (*)(const char *);
 
-	CQmSkinDownloadJob(IStorage *pStorage, IHttp *pHttp, const char *pName, const char *pBaseUrl, TPrepare Prepare, bool UseCache = true, TCreateRequest CreateRequest = CreateHttpRequest);
-	bool Abort() override REQUIRES(!m_Lock);
-	void StartUpdate() REQUIRES(!m_Lock);
-	bool DownloadReady() REQUIRES(!m_Lock);
+	CQmSkinDownloadJob(IStorage *pStorage, const char *pName, TPrepare Prepare, std::shared_ptr<IHttpRequest> pResponse = nullptr);
 
 protected:
-	void Run() override REQUIRES(!m_Lock);
+	void Run() override;
 
 private:
 	IStorage *m_pStorage;
-	IHttp *m_pHttp;
-	std::string m_BaseUrl;
 	TPrepare m_Prepare;
-	bool m_UseCache;
-	TCreateRequest m_CreateRequest;
-	CLock m_Lock;
-	std::shared_ptr<IHttpRequest> m_pGetRequest GUARDED_BY(m_Lock);
-
-	std::shared_ptr<IHttpRequest> Download(const char *pUrl, const char *pPath, bool SkipByFileTime, bool Wait = true) REQUIRES(!m_Lock);
+	// 主线程在构造时取得响应数据；保活请求，避免校验失败改变状态后再次调用 Result。
+	std::shared_ptr<IHttpRequest> m_pResponse;
+	const unsigned char *m_pResponseData = nullptr;
+	size_t m_ResponseSize = 0;
 };
 
 #endif

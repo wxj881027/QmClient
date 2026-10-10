@@ -3,9 +3,47 @@
 
 #include <base/color.h>
 #include <base/vmath.h>
+
 #include <engine/shared/protocol.h>
 
 #include <algorithm>
+#include <cmath>
+
+// 无限钩光圈流动一圈的秒数；渲染层按 m_FlowPhase(0..1) 旋转高光弧。
+constexpr float QM_HOOK_COUNTDOWN_FLOW_PERIOD_SECONDS = 2.5f;
+
+// 无限钩流动光圈的配色模式；与 qm_hook_countdown_flow_style 的取值一一对应。
+enum class EQmHookCountdownFlowStyle
+{
+	SINGLE_COLOR = 0,
+	RAINBOW = 1,
+	STATIC = 2,
+};
+
+// 彩虹渐变用的色相转 RGB（V=1, S=1 全饱和）；Hue 任意实数，按 1.0 循环。
+inline ColorRGBA QmHueToRgb(float Hue)
+{
+	Hue -= std::floor(Hue);
+	const float H = Hue * 6.0f;
+	const int Sector = static_cast<int>(H) % 6;
+	// 标准 HSV(V=1,S=1) 色环：X 为从纯色滑向下一主色的过渡分量，不随小数部分缩放。
+	const float X = 1.0f - std::abs(std::fmod(H, 2.0f) - 1.0f);
+	switch(Sector)
+	{
+	case 0: return ColorRGBA(1.0f, X, 0.0f, 1.0f);
+	case 1: return ColorRGBA(X, 1.0f, 0.0f, 1.0f);
+	case 2: return ColorRGBA(0.0f, 1.0f, X, 1.0f);
+	case 3: return ColorRGBA(0.0f, X, 1.0f, 1.0f);
+	case 4: return ColorRGBA(X, 0.0f, 1.0f, 1.0f);
+	default: return ColorRGBA(1.0f, 0.0f, X, 1.0f);
+	}
+}
+
+// 弧段色相随时间相位前进，沿半圈尾迹后移。渲染与行为测试使用同一策略。
+inline ColorRGBA QmHookCountdownFlowColor(float Phase, float TailPosition)
+{
+	return QmHueToRgb(Phase - TailPosition * 0.5f);
+}
 
 inline float QmHookCountdownProgress(float HookTick, float HookDurationSeconds, bool EndlessHook)
 {
@@ -50,6 +88,7 @@ struct SQmHookCountdownInput
 	bool m_EndlessHook = false;
 	float m_HookTick = 0.0f;
 	float m_HookDurationSeconds = 1.25f;
+	int m_FlowStyle = static_cast<int>(EQmHookCountdownFlowStyle::SINGLE_COLOR);
 	vec2 m_SourcePosition{};
 	vec2 m_TargetPosition{};
 };
@@ -61,6 +100,10 @@ struct SQmHookCountdownVisual
 	float m_Alpha = 0.0f;
 	float m_Scale = 0.72f;
 	ColorRGBA m_Color{0.20f, 0.65f, 1.0f, 1.0f};
+	// 无限钩标记与光圈流动相位（0..1 循环）；普通钩子不使用流动光弧。
+	bool m_EndlessHook = false;
+	float m_FlowPhase = 0.0f;
+	int m_FlowStyle = static_cast<int>(EQmHookCountdownFlowStyle::SINGLE_COLOR);
 };
 
 class CQmHookCountdown
@@ -95,6 +138,8 @@ public:
 
 	void Update(const SQmHookCountdownInput &Input, float Delta)
 	{
+		// 无效帧时长不能污染动画时间与循环相位。
+		Delta = std::isfinite(Delta) && Delta > 0.0f ? Delta : 0.0f;
 		if(Input.m_ClientId < 0 || Input.m_Connection < 0)
 		{
 			Reset();
@@ -123,6 +168,8 @@ public:
 			m_Visual.m_Position = mix(Input.m_SourcePosition, Input.m_TargetPosition, 0.5f);
 			m_Visual.m_Progress = QmHookCountdownProgress(Input.m_HookTick, Input.m_HookDurationSeconds, Input.m_EndlessHook);
 			m_Visual.m_Color = QmHookCountdownColor(m_Visual.m_Progress);
+			m_Visual.m_EndlessHook = Input.m_EndlessHook;
+			m_Visual.m_FlowStyle = Input.m_FlowStyle;
 		}
 		else if(Tracking)
 		{
@@ -157,6 +204,11 @@ public:
 			if(Progress >= 1.0f)
 				Reset();
 		}
+
+		// 无限钩光圈流动相位：钩住与松钩收拢期间持续流动，松钩时光弧随 Alpha 淡出；
+		// Reset（新钩/无效输入）时相位随整个 Visual 归零重新起笔。
+		if(m_Visual.m_EndlessHook && (m_Phase == EPhase::ENTERING || m_Phase == EPhase::ACTIVE || m_Phase == EPhase::EXITING))
+			m_Visual.m_FlowPhase = std::fmod(m_Visual.m_FlowPhase + std::max(Delta, 0.0f) / QM_HOOK_COUNTDOWN_FLOW_PERIOD_SECONDS, 1.0f);
 	}
 };
 

@@ -7,105 +7,176 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <chrono>
+#include <condition_variable>
 #include <cstdlib>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 namespace
 {
-	// 只替换 HTTP 传输；PNG 解码、缓存读取和校验后替换使用生产实现。
+	// 只替换 HTTP 传输；校验后的磁盘替换使用 IHttpRequest 的生产实现。
 	class CTestSkinRequest : public IHttpRequest
 	{
 	public:
-		explicit CTestSkinRequest(const char *pUrl) :
-			IHttpRequest(pUrl) {}
+		explicit CTestSkinRequest(IStorage *pStorage) :
+			IHttpRequest("https://skins.test/test%20skin.png")
+		{
+			WriteToFileAndMemory(pStorage, "downloadedskins/test skin.png", IStorage::TYPE_SAVE);
+			ValidateBeforeOverwrite(true);
+			m_State = EHttpState::RUNNING;
+		}
 		void Header(const char *) override {}
-		bool SkipByFileTimeEnabled() const { return m_SkipByFileTime; }
-		void Finish(EHttpState State, int Status, const std::vector<uint8_t> &vBody)
+		void Finish(const std::vector<uint8_t> &vBody, int Status = 200)
 		{
 			m_StatusCode = Status;
 			m_ResponseLength = vBody.size();
 			m_pBuffer = static_cast<unsigned char *>(malloc(vBody.size() + 1));
-			mem_copy(m_pBuffer, vBody.data(), vBody.size());
+			if(!vBody.empty())
+				mem_copy(m_pBuffer, vBody.data(), vBody.size());
 			m_BufferSize = vBody.size() + 1;
-			if(Status == 304)
-				m_IfModifiedSince = 0;
-			else if(State == EHttpState::DONE)
-			{
-				IOHANDLE File = io_open(m_aDestAbsoluteTmp, IOFLAG_WRITE);
-				if(File == nullptr)
-				{
-					ADD_FAILURE() << "Unable to write HTTP response";
-					m_State = EHttpState::ERROR;
-					return;
-				}
+			IOHANDLE File = io_open(m_aDestAbsoluteTmp, IOFLAG_WRITE);
+			ASSERT_NE(File, nullptr);
+			if(!vBody.empty())
 				io_write(File, vBody.data(), vBody.size());
-				io_close(File);
-			}
-			m_State = State;
+			io_close(File);
+			m_State = EHttpState::DONE;
 		}
 	};
-
-	std::unique_ptr<IHttpRequest> CreateTestSkinRequest(const char *pUrl)
-	{
-		return std::make_unique<CTestSkinRequest>(pUrl);
-	}
 
 	class CTestSkinHttp : public IHttp
 	{
 	public:
-		struct SResponse
-		{
-			EHttpState m_State = EHttpState::DONE;
-			int m_Status = 200;
-			std::vector<uint8_t> m_vBody;
-		};
-		std::vector<SResponse> m_vResponses;
 		std::vector<std::shared_ptr<CTestSkinRequest>> m_vRequests;
 		void Run(std::shared_ptr<IHttpRequest> pRequest) override
 		{
-			auto pTestRequest = std::static_pointer_cast<CTestSkinRequest>(pRequest);
-			const size_t Index = m_vRequests.size();
-			m_vRequests.push_back(pTestRequest);
-			// 即使旧实现意外发起网络请求，测试也会立即失败并结束，不依赖超时等待。
-			if(Index >= m_vResponses.size())
-			{
-				ADD_FAILURE() << "Unexpected HTTP request";
-				pTestRequest->Finish(EHttpState::ERROR, 0, {});
-				return;
-			}
-			const auto &Response = m_vResponses[Index];
-			pTestRequest->Finish(Response.m_State, Response.m_Status, Response.m_vBody);
+			m_vRequests.push_back(std::static_pointer_cast<CTestSkinRequest>(pRequest));
 		}
 		bool HasIpresolveBug() const override { return false; }
 	};
 
-	// 素材预处理是下载任务的调用边界；测试保留解码像素供断言。
+	// 有界双向 barrier 固定“预处理已完成、返回前取消”的交错，无任意 sleep。
+	class CPrepareBarrier
+	{
+		std::mutex m_Mutex;
+		std::condition_variable m_Condition;
+		bool m_Entered = false;
+		bool m_Released = false;
+
+	public:
+		bool Enter()
+		{
+			std::unique_lock Lock(m_Mutex);
+			m_Entered = true;
+			m_Condition.notify_all();
+			return m_Condition.wait_for(Lock, std::chrono::seconds(5), [this] { return m_Released; });
+		}
+		bool WaitUntilEntered()
+		{
+			std::unique_lock Lock(m_Mutex);
+			return m_Condition.wait_for(Lock, std::chrono::seconds(5), [this] { return m_Entered; });
+		}
+		void Release()
+		{
+			std::lock_guard Lock(m_Mutex);
+			m_Released = true;
+			m_Condition.notify_all();
+		}
+	};
+	thread_local CPrepareBarrier *s_pPrepareBarrier = nullptr;
+
+	// 预处理边界调用真实精灵提取，HasData 必须对应预备纹理而非只有解码像素。
 	bool PrepareTestSkin(const char *, SQmSkinSourceData &Data)
 	{
-		return Data.m_Info.m_Width == 64 && Data.m_Info.m_Height == 32;
+		if(Data.m_Info.m_Width != 64 || Data.m_Info.m_Height != 32)
+			return false;
+		Data.m_SourceWidth = Data.m_Info.m_Width;
+		Data.m_SourceHeight = Data.m_Info.m_Height;
+		Data.m_pPreparedTextures = QmPrepareSkinTextures(Data.m_Info, Data.m_Info, g_pData->m_aSprites);
+		return s_pPrepareBarrier == nullptr || s_pPrepareBarrier->Enter();
 	}
 
 	class CTestSkinJob : public CQmSkinDownloadJob
 	{
+		CPrepareBarrier *m_pBarrier;
+
 	public:
-		CTestSkinJob(IStorage *pStorage, IHttp *pHttp, bool UseCache = true) :
-			CQmSkinDownloadJob(pStorage, pHttp, "test skin", "https://skins.test/", PrepareTestSkin, UseCache, CreateTestSkinRequest) {}
-		using CQmSkinDownloadJob::Run;
+		CTestSkinJob(IStorage *pStorage, std::shared_ptr<IHttpRequest> pResponse = nullptr, CPrepareBarrier *pBarrier = nullptr, TPrepare Prepare = PrepareTestSkin) :
+			CQmSkinDownloadJob(pStorage, "test skin", Prepare, std::move(pResponse)),
+			m_pBarrier(pBarrier) {}
+		void Run() override
+		{
+			s_pPrepareBarrier = m_pBarrier;
+			CQmSkinDownloadJob::Run();
+			s_pPrepareBarrier = nullptr;
+		}
 	};
 }
 
 class SkinSourceJob : public ::testing::Test
 {
 protected:
+	using EResult = CQmSkinDownloadSession::EResult;
 	CTestInfo m_Info;
 	std::unique_ptr<IStorage> m_pStorage;
 	CTestSkinHttp m_Http;
+	CPrepareBarrier m_Barrier;
+	CJobPool m_Pool;
+	bool m_PoolRunning = false;
+	std::shared_ptr<CTestSkinJob> m_pDecodedJob;
 
 	void SetUp() override
 	{
 		m_pStorage = m_Info.CreateTestStorage();
 		ASSERT_NE(m_pStorage, nullptr);
 		ASSERT_TRUE(m_pStorage->CreateFolder("downloadedskins", IStorage::TYPE_SAVE));
+		m_Pool.Init(1);
+		m_PoolRunning = true;
+	}
+	void StopPool()
+	{
+		m_Barrier.Release();
+		if(m_PoolRunning)
+		{
+			m_Pool.Shutdown();
+			m_PoolRunning = false;
+		}
+	}
+	void TearDown() override { StopPool(); }
+
+	std::shared_ptr<CTestSkinRequest> Response(const std::vector<uint8_t> &vBody, int Status = 200)
+	{
+		auto pRequest = std::make_shared<CTestSkinRequest>(m_pStorage.get());
+		pRequest->Finish(vBody, Status);
+		return pRequest;
+	}
+	std::unique_ptr<CQmSkinDownloadSession> Session(CPrepareBarrier *pBarrier = nullptr)
+	{
+		return std::make_unique<CQmSkinDownloadSession>(m_Http, "https://skins.test/test%20skin.png", "", std::make_shared<CTestSkinJob>(m_pStorage.get()), [this](const char *, bool) { return std::make_shared<CTestSkinRequest>(m_pStorage.get()); }, [this, pBarrier](std::shared_ptr<IHttpRequest> pResponse) {
+				m_pDecodedJob = std::make_shared<CTestSkinJob>(m_pStorage.get(), std::move(pResponse), pBarrier);
+				return m_pDecodedJob; }, [this](std::shared_ptr<IJob> pJob) { m_Pool.Add(std::move(pJob)); });
+	}
+	bool PollUntil(CQmSkinDownloadSession &Session, EResult Expected)
+	{
+		const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+		do
+		{
+			if(Session.Poll() == Expected)
+				return true;
+			std::this_thread::yield();
+		} while(std::chrono::steady_clock::now() < Deadline);
+		return false;
+	}
+	bool WaitForRequest(CQmSkinDownloadSession &Session)
+	{
+		const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+		while(m_Http.m_vRequests.empty() && std::chrono::steady_clock::now() < Deadline)
+		{
+			Session.Poll();
+			std::this_thread::yield();
+		}
+		return !m_Http.m_vRequests.empty();
 	}
 
 	std::vector<uint8_t> Png(uint8_t Red = 23, size_t Width = 64)
@@ -145,94 +216,43 @@ protected:
 	}
 };
 
-TEST_F(SkinSourceJob, ValidCachePublishesPixelsWithoutSubmittingHttp)
+TEST_F(SkinSourceJob, ValidCachePublishesPreparedTextures)
 {
 	WriteCache(Png());
-	CTestSkinJob Job(m_pStorage.get(), &m_Http);
+	CTestSkinJob Job(m_pStorage.get());
 	Job.Run();
-	EXPECT_TRUE(m_Http.m_vRequests.empty());
-	ASSERT_TRUE(Job.m_UsedCachedSkin);
+	ASSERT_TRUE(Job.HasData());
 	ASSERT_NE(Job.m_Data.m_Info.m_pData, nullptr);
 	EXPECT_EQ(Job.m_Data.m_Info.m_pData[0], 23);
+	EXPECT_TRUE(Job.m_Data.m_pPreparedTextures->Available(0, 0));
+	EXPECT_EQ(Job.m_Data.m_SourceWidth, 64u);
+	EXPECT_EQ(Job.m_Data.m_SourceHeight, 32u);
 }
 
-TEST_F(SkinSourceJob, MissingCacheDownloadsAndPublishesValidatedPng)
+TEST_F(SkinSourceJob, MissingCacheProducesNoData)
 {
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 200, Png(45)});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http);
+	CTestSkinJob Job(m_pStorage.get());
 	Job.Run();
-	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
-	EXPECT_STREQ(m_Http.m_vRequests.front()->Url(), "https://skins.test/test%20skin.png");
-	EXPECT_FALSE(Job.m_UsedCachedSkin);
-	ASSERT_NE(Job.m_Data.m_Info.m_pData, nullptr);
-	EXPECT_EQ(Job.m_Data.m_Info.m_pData[0], 45);
-	EXPECT_EQ(CacheRed(), 45);
+	EXPECT_FALSE(Job.HasData());
+	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
 }
 
-TEST_F(SkinSourceJob, CorruptCacheFallsBackToDownload)
+TEST_F(SkinSourceJob, CorruptCacheProducesNoData)
 {
 	WriteCache({'b', 'a', 'd'});
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 200, Png(67)});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http);
+	CTestSkinJob Job(m_pStorage.get());
 	Job.Run();
-	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
-	EXPECT_FALSE(Job.m_UsedCachedSkin);
-	EXPECT_EQ(CacheRed(), 67);
+	EXPECT_FALSE(Job.HasData());
+	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
 }
 
-TEST_F(SkinSourceJob, CacheRejectedByPreparationFallsBackToDownload)
+TEST_F(SkinSourceJob, CacheRejectedByPreparationProducesNoData)
 {
 	WriteCache(Png(23, 32));
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 200, Png(89)});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http);
+	CTestSkinJob Job(m_pStorage.get());
 	Job.Run();
-	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
-	EXPECT_FALSE(Job.m_UsedCachedSkin);
-	EXPECT_EQ(CacheRed(), 89);
-}
-
-TEST_F(SkinSourceJob, BackgroundUpdatePublishesNewPixelsAndReplacesDiskCache)
-{
-	WriteCache(Png(23));
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 200, Png(111)});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http, false);
-	Job.StartUpdate();
-	ASSERT_TRUE(Job.DownloadReady());
-	Job.Run();
-	EXPECT_FALSE(Job.m_UsedCachedSkin);
-	ASSERT_NE(Job.m_Data.m_Info.m_pData, nullptr);
-	EXPECT_EQ(Job.m_Data.m_Info.m_pData[0], 111);
-	EXPECT_EQ(CacheRed(), 111);
-}
-
-TEST_F(SkinSourceJob, PendingBackgroundDownloadDoesNotBlockCacheJob)
-{
-	WriteCache(Png(23));
-	m_Http.m_vResponses.push_back({EHttpState::RUNNING, 0, {}});
-	CTestSkinJob UpdateJob(m_pStorage.get(), &m_Http, false);
-	UpdateJob.StartUpdate();
-	EXPECT_FALSE(UpdateJob.DownloadReady());
-	CTestSkinJob CacheJob(m_pStorage.get(), &m_Http);
-	CacheJob.Run();
-	ASSERT_TRUE(CacheJob.m_UsedCachedSkin);
-	ASSERT_NE(CacheJob.m_Data.m_Info.m_pData, nullptr);
-	EXPECT_EQ(CacheJob.m_Data.m_Info.m_pData[0], 23);
-	EXPECT_EQ(m_Http.m_vRequests.size(), 1u);
-	UpdateJob.Abort();
-}
-
-TEST_F(SkinSourceJob, CancelledBackgroundDownloadAbortsTransportAndPreservesCache)
-{
-	WriteCache(Png(23));
-	m_Http.m_vResponses.push_back({EHttpState::RUNNING, 0, {}});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http, false);
-	Job.StartUpdate();
-	ASSERT_EQ(m_Http.m_vRequests.size(), 1u);
-	ASSERT_TRUE(Job.Abort());
-	EXPECT_TRUE(m_Http.m_vRequests[0]->IsAbortRequested());
-	Job.Run();
+	EXPECT_FALSE(Job.HasData());
 	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
-	EXPECT_EQ(CacheRed(), 23);
 }
 
 TEST_F(SkinSourceJob, LoadedCacheCarriesFileTimestampUntilUpload)
@@ -240,9 +260,10 @@ TEST_F(SkinSourceJob, LoadedCacheCarriesFileTimestampUntilUpload)
 	WriteCache(Png(23));
 	time_t Created = 0, Modified = 0;
 	ASSERT_TRUE(m_pStorage->RetrieveTimes("downloadedskins/test skin.png", IStorage::TYPE_SAVE, &Created, &Modified));
-	CTestSkinJob Job(m_pStorage.get(), &m_Http);
+	CTestSkinJob Job(m_pStorage.get());
 	Job.Run();
 	WriteCache(Png(45));
+	ASSERT_TRUE(Job.HasData());
 	ASSERT_TRUE(Job.m_Data.m_LastModified.has_value());
 	EXPECT_EQ(Job.m_Data.m_LastModified.value(), Modified);
 	ASSERT_NE(Job.m_Data.m_Info.m_pData, nullptr);
@@ -263,92 +284,199 @@ TEST_F(SkinSourceJob, SourceTimestampSupportsAllStoragePathsAndClearsMissingFile
 	EXPECT_FALSE(Data.m_LastModified.has_value());
 }
 
-TEST_F(SkinSourceJob, CancelledBackgroundJobDoesNotSubmitDownload)
+TEST_F(SkinSourceJob, CompletedResponseDecodesWithoutReplacingCache)
 {
-	CTestSkinJob Job(m_pStorage.get(), &m_Http, false);
+	WriteCache(Png(23));
+	auto pResponse = Response(Png(45));
+	CTestSkinJob Job(m_pStorage.get(), pResponse);
+	Job.Run();
+	ASSERT_TRUE(Job.HasData());
+	EXPECT_EQ(Job.m_Data.m_Info.m_pData[0], 45);
+	EXPECT_EQ(pResponse->State(), EHttpState::DONE);
+	EXPECT_FALSE(Job.m_Data.m_LastModified.has_value());
+	EXPECT_EQ(CacheRed(), 23);
+	pResponse->OnValidation(false);
+}
+
+TEST_F(SkinSourceJob, ResponseBufferRemainsAliveAfterCallerReleasesRequest)
+{
+	auto pResponse = Response(Png(67));
+	std::weak_ptr<IHttpRequest> WeakResponse = pResponse;
+	{
+		CTestSkinJob Job(m_pStorage.get(), pResponse);
+		pResponse->OnValidation(false);
+		pResponse.reset();
+		EXPECT_FALSE(WeakResponse.expired());
+		Job.Run();
+		ASSERT_TRUE(Job.HasData());
+		EXPECT_EQ(Job.m_Data.m_Info.m_pData[0], 67);
+	}
+	EXPECT_TRUE(WeakResponse.expired());
+}
+
+TEST_F(SkinSourceJob, RunningResponseDoesNotWaitOrReadCache)
+{
+	WriteCache(Png());
+	auto pResponse = std::make_shared<CTestSkinRequest>(m_pStorage.get());
+	CTestSkinJob Job(m_pStorage.get(), pResponse);
+	Job.Run();
+	EXPECT_FALSE(Job.HasData());
+	EXPECT_EQ(pResponse->State(), EHttpState::RUNNING);
+	EXPECT_FALSE(pResponse->IsAbortRequested());
+}
+
+TEST_F(SkinSourceJob, NonSuccessfulResponseDoesNotDecodeOrReadCache)
+{
+	WriteCache(Png());
+	auto pResponse = Response(Png(45), 404);
+	CTestSkinJob Job(m_pStorage.get(), pResponse);
+	Job.Run();
+	EXPECT_FALSE(Job.HasData());
+	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
+	EXPECT_EQ(CacheRed(), 23);
+	pResponse->OnValidation(false);
+}
+
+TEST_F(SkinSourceJob, EmptyResponseProducesNoData)
+{
+	auto pResponse = Response({});
+	CTestSkinJob Job(m_pStorage.get(), pResponse);
+	Job.Run();
+	EXPECT_FALSE(Job.HasData());
+	pResponse->OnValidation(false);
+}
+
+TEST_F(SkinSourceJob, CancelledCacheJobDoesNotReadPixels)
+{
+	WriteCache(Png());
+	CTestSkinJob Job(m_pStorage.get());
 	ASSERT_TRUE(Job.Abort());
-	Job.StartUpdate();
-	EXPECT_FALSE(Job.DownloadReady());
-	EXPECT_TRUE(m_Http.m_vRequests.empty());
+	Job.Run();
+	EXPECT_FALSE(Job.HasData());
+	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
 }
 
-TEST_F(SkinSourceJob, FailedBackgroundUpdatePreservesDiskCache)
+TEST_F(SkinSourceJob, CancelledResponseJobLeavesValidationToSession)
 {
-	WriteCache(Png(23));
-	m_Http.m_vResponses.push_back({EHttpState::ERROR, 0, {}});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http, false);
-	Job.StartUpdate();
-	ASSERT_TRUE(Job.DownloadReady());
+	WriteCache(Png());
+	auto pResponse = Response(Png(45));
+	CTestSkinJob Job(m_pStorage.get(), pResponse);
+	ASSERT_TRUE(Job.Abort());
 	Job.Run();
-	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
+	EXPECT_FALSE(Job.HasData());
+	EXPECT_EQ(pResponse->State(), EHttpState::DONE);
+	EXPECT_FALSE(pResponse->IsAbortRequested());
 	EXPECT_EQ(CacheRed(), 23);
+	pResponse->OnValidation(false);
 }
 
-TEST_F(SkinSourceJob, InvalidBackgroundResponseDoesNotOverwriteCache)
+TEST_F(SkinSourceJob, SessionDownloadsWhenRealCacheJobHasNoData)
+{
+	auto pSession = Session();
+	ASSERT_TRUE(WaitForRequest(*pSession));
+	m_Http.m_vRequests[0]->Finish(Png(45));
+	ASSERT_TRUE(PollUntil(*pSession, EResult::READY));
+	auto pReady = std::static_pointer_cast<CQmSkinSourceJob>(pSession->TakeReadyJob());
+	ASSERT_NE(pReady, nullptr);
+	ASSERT_TRUE(pReady->HasData());
+	EXPECT_EQ(pReady->m_Data.m_Info.m_pData[0], 45);
+	EXPECT_EQ(CacheRed(), 45);
+	EXPECT_EQ(pSession->Poll(), EResult::DONE);
+}
+
+TEST_F(SkinSourceJob, SessionReplacesCacheOnlyAfterRealResponsePreparation)
 {
 	WriteCache(Png(23));
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 200, {'b', 'a', 'd'}});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http, false);
-	Job.StartUpdate();
-	ASSERT_TRUE(Job.DownloadReady());
-	Job.Run();
-	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
+	auto pSession = Session(&m_Barrier);
+	ASSERT_TRUE(PollUntil(*pSession, EResult::READY));
+	auto pCache = std::static_pointer_cast<CQmSkinSourceJob>(pSession->TakeReadyJob());
+	ASSERT_NE(pCache, nullptr);
+	EXPECT_EQ(pCache->m_Data.m_Info.m_pData[0], 23);
+	m_Http.m_vRequests[0]->Finish(Png(111));
+	EXPECT_EQ(pSession->Poll(), EResult::WAITING);
+	ASSERT_TRUE(m_Barrier.WaitUntilEntered());
 	EXPECT_EQ(CacheRed(), 23);
+	m_Barrier.Release();
+	ASSERT_TRUE(PollUntil(*pSession, EResult::READY));
+	auto pReady = std::static_pointer_cast<CQmSkinSourceJob>(pSession->TakeReadyJob());
+	ASSERT_NE(pReady, nullptr);
+	EXPECT_EQ(pReady->m_Data.m_Info.m_pData[0], 111);
+	EXPECT_EQ(CacheRed(), 111);
+	EXPECT_EQ(pCache->m_Data.m_Info.m_pData[0], 23);
+}
+
+TEST_F(SkinSourceJob, InvalidResponsePreservesPublishedCache)
+{
+	WriteCache(Png(23));
+	auto pSession = Session();
+	ASSERT_TRUE(PollUntil(*pSession, EResult::READY));
+	auto pCache = pSession->TakeReadyJob();
+	m_Http.m_vRequests[0]->Finish({'b', 'a', 'd'});
+	ASSERT_TRUE(PollUntil(*pSession, EResult::DONE));
+	EXPECT_TRUE(pCache->HasData());
+	EXPECT_FALSE(m_pDecodedJob->HasData());
+	EXPECT_EQ(m_pDecodedJob->m_Data.m_Info.m_pData, nullptr);
+	EXPECT_EQ(CacheRed(), 23);
+	EXPECT_EQ(m_Http.m_vRequests[0]->State(), EHttpState::ERROR);
+	EXPECT_EQ(pSession->TakeReadyJob(), nullptr);
 }
 
 TEST_F(SkinSourceJob, PreparationFailureDoesNotPromoteDownloadedImage)
 {
 	WriteCache(Png(23));
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 200, Png(45, 32)});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http, false);
-	Job.StartUpdate();
-	ASSERT_TRUE(Job.DownloadReady());
-	Job.Run();
-	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
+	auto pSession = Session();
+	ASSERT_TRUE(PollUntil(*pSession, EResult::READY));
+	pSession->TakeReadyJob();
+	m_Http.m_vRequests[0]->Finish(Png(45, 32));
+	ASSERT_TRUE(PollUntil(*pSession, EResult::DONE));
+	EXPECT_FALSE(m_pDecodedJob->HasData());
+	EXPECT_EQ(m_pDecodedJob->m_Data.m_Info.m_pData, nullptr);
 	EXPECT_EQ(CacheRed(), 23);
+	EXPECT_EQ(pSession->TakeReadyJob(), nullptr);
 }
 
-TEST_F(SkinSourceJob, NotModifiedBackgroundUpdateKeepsPublishedSource)
+TEST_F(SkinSourceJob, CancelDuringPreparationRejectsResponseAndNeverDeliversPixels)
 {
 	WriteCache(Png(23));
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 304, {}});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http, false);
-	Job.StartUpdate();
-	ASSERT_TRUE(Job.DownloadReady());
-	Job.Run();
-	EXPECT_TRUE(Job.m_NotModified);
-	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
+	auto pSession = Session(&m_Barrier);
+	ASSERT_TRUE(PollUntil(*pSession, EResult::READY));
+	auto pCache = pSession->TakeReadyJob();
+	m_Http.m_vRequests[0]->Finish(Png(45));
+	EXPECT_EQ(pSession->Poll(), EResult::WAITING);
+	ASSERT_TRUE(m_Barrier.WaitUntilEntered());
+	pSession->Cancel();
+	// Cancel 调用真实 OnValidation(false)，请求状态变化时 CPU job 仍停在 prepare 内。
+	EXPECT_EQ(m_Http.m_vRequests[0]->State(), EHttpState::ERROR);
+	EXPECT_EQ(m_pDecodedJob->State(), IJob::STATE_ABORTED);
+	StopPool();
+	EXPECT_FALSE(m_pDecodedJob->HasData());
+	EXPECT_EQ(m_pDecodedJob->m_Data.m_Info.m_pData, nullptr);
+	EXPECT_TRUE(pCache->HasData());
 	EXPECT_EQ(CacheRed(), 23);
+	EXPECT_EQ(pSession->Poll(), EResult::DONE);
+	EXPECT_EQ(pSession->TakeReadyJob(), nullptr);
+	pSession->Cancel();
 }
 
-TEST_F(SkinSourceJob, MissingCacheRetriesNotModifiedResponseWithoutFileTime)
-{
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 304, {}});
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 200, Png(133)});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http);
-	Job.Run();
-	ASSERT_EQ(m_Http.m_vRequests.size(), 2u);
-	EXPECT_TRUE(m_Http.m_vRequests[0]->SkipByFileTimeEnabled());
-	EXPECT_FALSE(m_Http.m_vRequests[1]->SkipByFileTimeEnabled());
-	EXPECT_EQ(CacheRed(), 133);
-}
-
-TEST_F(SkinSourceJob, NotFoundDownloadProducesNoPixels)
-{
-	m_Http.m_vResponses.push_back({EHttpState::DONE, 404, {}});
-	CTestSkinJob Job(m_pStorage.get(), &m_Http);
-	Job.Run();
-	EXPECT_TRUE(Job.m_NotFound);
-	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
-}
-
-TEST_F(SkinSourceJob, CancelledJobDoesNotReadCacheOrSubmitHttp)
+TEST_F(SkinSourceJob, DecodedPixelsWithoutPreparedTexturesAreNotReady)
 {
 	WriteCache(Png());
-	CTestSkinJob Job(m_pStorage.get(), &m_Http);
-	ASSERT_TRUE(Job.Abort());
+	CTestSkinJob Job(m_pStorage.get(), nullptr, nullptr,
+		[](const char *, SQmSkinSourceData &) { return true; });
 	Job.Run();
-	EXPECT_FALSE(Job.m_UsedCachedSkin);
-	EXPECT_EQ(Job.m_Data.m_Info.m_pData, nullptr);
-	EXPECT_TRUE(m_Http.m_vRequests.empty());
+	ASSERT_NE(Job.m_Data.m_Info.m_pData, nullptr);
+	EXPECT_FALSE(Job.HasData());
+}
+
+TEST_F(SkinSourceJob, CancelDuringCachePreparationDoesNotPublishPixels)
+{
+	WriteCache(Png());
+	auto pJob = std::make_shared<CTestSkinJob>(m_pStorage.get(), nullptr, &m_Barrier);
+	m_Pool.Add(pJob);
+	ASSERT_TRUE(m_Barrier.WaitUntilEntered());
+	EXPECT_TRUE(pJob->Abort());
+	StopPool();
+	EXPECT_FALSE(pJob->HasData());
+	EXPECT_EQ(pJob->m_Data.m_Info.m_pData, nullptr);
+	EXPECT_EQ(CacheRed(), 23);
 }

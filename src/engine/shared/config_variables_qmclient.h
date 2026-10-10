@@ -14,7 +14,7 @@
 MACRO_CONFIG_INT(QmSteamAutoLaunch, qm_steam_auto_launch, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically launch Steam when the client is started externally, so Steam can track your playtime")
 MACRO_CONFIG_STR(QmSteamClientPath, qm_steam_client_path, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Steam client path (leave empty to detect automatically)")
 MACRO_CONFIG_INT(QmConsoleFilterMask, qm_console_filter_mask, 15, 0, 15, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Local console log category filter mask (bit flags)")
-MACRO_CONFIG_INT(QmConsoleFontSize, qm_console_font_size, 10, 8, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console font size")
+MACRO_CONFIG_INT(QmConsoleFontSize, qm_console_font_size, 10, 1, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console font size")
 MACRO_CONFIG_INT(QmConsoleColorScheme, qm_console_color_scheme, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console color scheme: 0=modern terminal, 1=classic PowerShell, 2=custom")
 MACRO_CONFIG_INT(QmConsoleOpacity, qm_console_opacity, 96, 20, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Console background opacity")
 MACRO_CONFIG_INT(QmConsoleHighlightCommands, qm_console_highlight_commands, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Highlight console commands")
@@ -60,6 +60,8 @@ MACRO_CONFIG_INT(QmUiIconCustomColorEnabled, qm_ui_icon_custom_color_enabled, 0,
 MACRO_CONFIG_COL(QmUiIconCustomColor, qm_ui_icon_custom_color, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI custom icon color")
 MACRO_CONFIG_COL(QmUiFriendIconColor, qm_ui_friend_icon_color, 0x00D1AB, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Friend icon color")
 MACRO_CONFIG_COL(QmUiFavoriteIconColor, qm_ui_favorite_icon_color, 0x21FFA6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Favorite icon color")
+MACRO_CONFIG_INT(QmUiFriendIconFilled, qm_ui_friend_icon_filled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the friend heart icon with the filled icon font style")
+MACRO_CONFIG_INT(QmUiFavoriteIconFilled, qm_ui_favorite_icon_filled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the favorite star icon with the filled icon font style")
 MACRO_CONFIG_INT(QmUiIconWeight, qm_ui_icon_weight, 1, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)")
 MACRO_CONFIG_INT(QmUiColorInterpolation, qm_ui_color_interpolation, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform")
 MACRO_CONFIG_INT(QmRectCornerSegments, qm_rect_corner_segments, 16, 8, 48, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI rounded corner segments (even numbers recommended)")
@@ -78,7 +80,7 @@ MACRO_CONFIG_COL(QmUiSelectedColor, qm_ui_selected_color, 0x8F061D, CFGFLAG_CLIE
 MACRO_CONFIG_COL(QmScoreboardColor, qm_scoreboard_color, 0x000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scoreboard surface color")
 MACRO_CONFIG_INT(QmUiOpacity, qm_ui_opacity, 12, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Interface transparency")
 MACRO_CONFIG_INT(QmUiPopupBlur, qm_ui_popup_blur, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable frosted glass blur behind secondary popups and dropdowns")
-MACRO_CONFIG_COL(QmTooltipBackgroundColor, qm_tooltip_background_color, 0xCC000033, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip background color")
+MACRO_CONFIG_COL(QmTooltipBackgroundColor, qm_tooltip_background_color, 0xD9000066, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip background color")
 MACRO_CONFIG_COL(QmTooltipTextColor, qm_tooltip_text_color, 0xFF0000FF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Tooltip text color")
 MACRO_CONFIG_INT(QmTooltipFontSize, qm_tooltip_font_size, 14, 10, 24, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip font size")
 MACRO_CONFIG_INT(QmTooltipAnimation, qm_tooltip_animation, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tooltip bounce animation")
@@ -346,7 +348,9 @@ MACRO_CONFIG_INT(QmCycleTeeHueDummy, qm_cycle_tee_hue_dummy, 0, 0, 1, CFGFLAG_CL
 MACRO_CONFIG_INT(QmCycleTeeHueSpeed, qm_cycle_tee_hue_speed, 72, 0, 360, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Cycle custom Tee hue speed (deg/s)")
 MACRO_CONFIG_INT(QmTeamTeeGlow, qm_team_tee_glow, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw a glow around tees colored by their race team")
 MACRO_CONFIG_INT(QmTeamTeeGlowTeam0Mode, qm_team_tee_glow_team0_mode, 1, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Team 0 (unteamed) tee glow mode: 0=Off, 1=Tee color, 2=Custom color, 3=Rainbow")
-MACRO_CONFIG_COL(QmTeamTeeGlowColor, qm_team_tee_glow_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Team 0 tee glow custom color")
+MACRO_CONFIG_COL(QmTeamTeeGlowColor, qm_team_tee_glow_color, 0xFFFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Team 0 tee glow custom color")
+MACRO_CONFIG_INT(QmTeamTeeGlowStrength, qm_team_tee_glow_strength, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Team tee glow intensity in percent")
+MACRO_CONFIG_INT(QmTeamTeeGlowSize, qm_team_tee_glow_size, 40, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Team tee glow halo size in percent")
 MACRO_CONFIG_INT(QmRandomEmoteOnHit, qm_random_emote_on_hit, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Random emote when hit by hammer/grenade")
 MACRO_CONFIG_INT(QmEmoticonShadow, qm_emoticon_shadow, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw shadow behind emote")
 MACRO_CONFIG_INT(QmEmoticonProjectileDuration, qm_emoticon_projectile_duration, 5, 1, 10, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Emoticon projectile duration")
@@ -621,6 +625,7 @@ MACRO_CONFIG_INT(QmSwitchCountdownMode, qm_switch_countdown_mode, 1, 0, 2, CFGFL
 
 // Hook Countdown - 钩子倒计时（钩链中点圆环）
 MACRO_CONFIG_INT(QmHookCountdown, qm_hook_countdown, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable hook countdown")
+MACRO_CONFIG_INT(QmHookCountdownFlowStyle, qm_hook_countdown_flow_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Endless hook ring flow style: 0=single color, 1=rainbow, 2=static")
 
 // HUD Dynamic Island - 灵动岛/HUD 编辑器
 MACRO_CONFIG_INT(QmHudIslandUseOriginalStyle, qm_hud_island_use_original_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use original style for Dynamic Island")
@@ -632,6 +637,7 @@ MACRO_CONFIG_STR(QmHudEditorLayout, qm_hud_editor_layout, 2048, "", CFGFLAG_CLIE
 
 // Gores 组队落水榜
 MACRO_CONFIG_INT(QmGoresDrownBoard, qm_gores_drown_board, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the Gores team drown board")
+MACRO_CONFIG_INT(QmGoresDrownBoardIncludeTeam0, qm_gores_drown_board_include_team0, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Include Team 0 in the Gores team drown board")
 MACRO_CONFIG_INT(QmGoresDrownBoardMaxPlayers, qm_gores_drown_board_max_players, 8, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Maximum players shown in the Gores team drown board")
 MACRO_CONFIG_INT(QmGoresDrownBoardOpacity, qm_gores_drown_board_opacity, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Gores team drown board opacity")
 MACRO_CONFIG_INT(QmGoresDrownBoardShowTee, qm_gores_drown_board_show_tee, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Tees in the Gores team drown board")
@@ -644,7 +650,8 @@ MACRO_CONFIG_INT(QmCameraDriftReverse, qm_camera_drift_reverse, 0, 0, 1, CFGFLAG
 MACRO_CONFIG_INT(QmDynamicFov, qm_dynamic_fov, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable dynamic FOV, wider view at higher speed")
 MACRO_CONFIG_INT(QmDynamicFovAmount, qm_dynamic_fov_amount, 50, 0, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic FOV intensity (0-200)")
 MACRO_CONFIG_INT(QmDynamicFovSmoothness, qm_dynamic_fov_smoothness, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic FOV smoothness (0=instant, 100=smoothest)")
-MACRO_CONFIG_INT(QmCinematicCamera, qm_cinematic_camera, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable smooth cinematic camera while free spectating")
+MACRO_CONFIG_INT(QmCinematicCamera, qm_cinematic_camera, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Smooth the mouse-driven camera in live and demo free spectating")
+MACRO_CONFIG_INT(QmCinematicCameraSmoothness, qm_cinematic_camera_smoothness, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Cinematic camera smoothness (0=instant, 100=smoothest)")
 MACRO_CONFIG_INT(QmZoomInstantReverse, qm_zoom_instant_reverse, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)")
 MACRO_CONFIG_INT(QmCrashReportOnStartup, qm_crash_report_on_startup, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)")
 MACRO_CONFIG_INT(QmAspectPreset, qm_aspect_preset, 0, 0, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)")
@@ -706,6 +713,7 @@ MACRO_CONFIG_INT(QmFootParticles, qm_foot_particles, 0, 0, 1, CFGFLAG_CLIENT | C
 MACRO_CONFIG_INT(QmSettingsPrewarm, qm_settings_prewarm, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pre-warm settings page on startup and menu idle")
 
 // Chat Bubble Settings - 聊天气泡
+MACRO_CONFIG_INT(QmChatScrollbarRight, qm_chat_scrollbar_right, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the chat scrollbar on the right")
 MACRO_CONFIG_INT(QmChatSaveDraft, qm_chat_save_draft, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keep unsent message on chat close")
 MACRO_CONFIG_INT(QmChatCommandCompletion, qm_chat_command_completion, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show command completion in chat")
 MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Merge consecutive identical player messages within 2 seconds")
@@ -814,6 +822,7 @@ MACRO_CONFIG_STR(QmTranslateSource, qm_translate_source, 16, "auto", CFGFLAG_CLI
 
 // Translate - Auto Outgoing - 自动翻译发送消息
 MACRO_CONFIG_INT(QmTranslateAutoOutgoing, qm_translate_auto_outgoing, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-translate outgoing messages")
+MACRO_CONFIG_INT(QmTranslateOutgoingSendOriginal, qm_translate_outgoing_send_original, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Also send the original text when translating outgoing messages")
 MACRO_CONFIG_INT(QmTranslateAutoOutgoingMode, qm_translate_auto_outgoing_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-translation mode (0=Trigger on common source languages only, 1=Always translate)")
 MACRO_CONFIG_STR(QmTranslateOutgoingTarget, qm_translate_outgoing_target, 16, "en", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Outgoing translation target language code")
 

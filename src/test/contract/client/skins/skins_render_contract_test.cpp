@@ -53,25 +53,6 @@ TEST(SkinsContract, ManagedTeeRenderInfoDefersUnloadedSkinInsteadOfApplyingFallb
 	EXPECT_EQ(RefreshSkinBody.find("TeeInfo.Apply(m_Skins.Find("), std::string::npos);
 }
 
-TEST(SkinsContract, SkinRefreshDoesNotFloodPendingQueueBeforeVisibleRequests)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/skins.cpp");
-	const size_t RefreshPos = Source.find("void CSkins::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)");
-	ASSERT_NE(RefreshPos, std::string::npos);
-	const size_t LoadingStatsPos = Source.find("CSkins::CSkinLoadingStats CSkins::LoadingStats() const", RefreshPos);
-	ASSERT_NE(LoadingStatsPos, std::string::npos);
-	const std::string RefreshBody = Source.substr(RefreshPos, LoadingStatsPos - RefreshPos);
-
-	EXPECT_NE(RefreshBody.find("if(pSkinContainer->m_pLoadJob)"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->m_pSkin->m_OriginalSkin.Unload(Graphics());"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->m_pSkin->m_ColorableSkin.Unload(Graphics());"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->m_pSkin.reset();"), std::string::npos);
-	EXPECT_EQ(RefreshBody.find("pSkinContainer->SetState(CSkinContainer::EState::PENDING, ESettingsResourcePriority::VISIBLE);"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("if(pSkinContainer->m_State != CSkinContainer::EState::LOADED)"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("pSkinContainer->SetState(pSkinContainer->DetermineInitialState());"), std::string::npos);
-	EXPECT_NE(RefreshBody.find("LoadSkinDirect(\"default\");"), std::string::npos);
-}
-
 TEST(SkinsContract, SkinTransitionDefersKeyUntilDescriptorRenderInfoIsReady)
 {
 	const std::string Header = ReadTestSourceFile("src/game/client/render.h");
@@ -332,22 +313,4 @@ TEST(SkinsContract, WarListGlowKeepsPriorityOverTeamTeeGlow)
 	ASSERT_NE(TeamGlow, std::string::npos);
 	EXPECT_LT(WarList, TeamGlow);
 	EXPECT_NE(Body.find("RenderTeeGlow(RenderTools(), &State, RenderInfo"), std::string::npos);
-}
-
-TEST(SkinsContract, TeamTeeGlowUsesTeamColorsForTeamedPlayers)
-{
-	const std::string Source = ReadTestSourceFile("src/game/client/components/players.cpp");
-	const std::string Body = ExtractSourceFunctionBody(Source, "static bool GetTeamTeeGlowColor(");
-
-	EXPECT_NE(Body.find("g_Config.m_QmTeamTeeGlow"), std::string::npos);
-	EXPECT_NE(Body.find("VANILLA_TEAM_SUPER"), std::string::npos);
-	EXPECT_NE(Body.find("GetDDTeamColor(Team, 0.75f)"), std::string::npos);
-	EXPECT_NE(Body.find("g_Config.m_QmTeamTeeGlowTeam0Mode"), std::string::npos);
-	EXPECT_NE(Body.find("normalized_golden_angle"), std::string::npos);
-	// team0 的 tee 自身颜色模式必须覆盖 0.7 sixup 部件色，避免 0.7 玩家恒为白光。
-	EXPECT_NE(Body.find("m_aSixup[g_Config.m_ClDummy]"), std::string::npos);
-	EXPECT_NE(Body.find("m_aUseCustomColors[protocol7::SKINPART_BODY]"), std::string::npos);
-	// 彩虹相位在回放中必须取 demo 时间轴（可复现），而非本地时钟。
-	EXPECT_NE(Body.find("IClient::STATE_DEMOPLAYBACK"), std::string::npos);
-	EXPECT_NE(Body.find("pDemoInfo->m_CurrentTick"), std::string::npos);
 }

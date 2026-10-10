@@ -17,7 +17,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-
 TEST(SettingsCardAnimation, AnimatedColumnFramesNeverOverlap)
 {
 	const float Gap = 12.0f;

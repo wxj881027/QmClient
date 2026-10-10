@@ -70,13 +70,47 @@ inline SQmChatInputPixelClip QmChatInputPixelClip(const CUIRect &Rect, const CUI
 	if(MappedScreen.w <= 0.0f || MappedScreen.h <= 0.0f || ScreenWidth <= 0 || ScreenHeight <= 0)
 		return {};
 
-	const float ScaleX = ScreenWidth / MappedScreen.w;
-	const float ScaleY = ScreenHeight / MappedScreen.h;
-	const int Left = std::clamp((int)std::floor((Rect.x - MappedScreen.x) * ScaleX), 0, ScreenWidth);
-	const int Top = std::clamp((int)std::floor((Rect.y - MappedScreen.y) * ScaleY), 0, ScreenHeight);
-	const int Right = std::clamp((int)std::ceil((Rect.x + Rect.w - MappedScreen.x) * ScaleX), Left, ScreenWidth);
-	const int Bottom = std::clamp((int)std::ceil((Rect.y + Rect.h - MappedScreen.y) * ScaleY), Top, ScreenHeight);
+	const float PixelWidth = ScreenWidth;
+	const float PixelHeight = ScreenHeight;
+	const float ScaleX = PixelWidth / MappedScreen.w;
+	const float ScaleY = PixelHeight / MappedScreen.h;
+	// 先限制到帧缓冲再转整数，避免完全移出屏幕的坐标超出整数范围。
+	const int Left = (int)std::clamp(std::floor((Rect.x - MappedScreen.x) * ScaleX), 0.0f, PixelWidth);
+	const int Top = (int)std::clamp(std::floor((Rect.y - MappedScreen.y) * ScaleY), 0.0f, PixelHeight);
+	const int Right = (int)std::clamp(std::ceil((Rect.x + Rect.w - MappedScreen.x) * ScaleX), (float)Left, PixelWidth);
+	const int Bottom = (int)std::clamp(std::ceil((Rect.y + Rect.h - MappedScreen.y) * ScaleY), (float)Top, PixelHeight);
 	return {Left, Top, Right - Left, Bottom - Top};
 }
+
+// 同一绘制映射同时用于裁剪、鼠标命中与 tooltip 锚点，避免 HUD 移动/缩放后坐标错位。
+struct SQmChatViewport
+{
+	CUIRect m_MapRect{};
+	vec2 m_PixelSize{};
+
+	vec2 ToLocal(vec2 Pixel) const
+	{
+		return vec2(m_MapRect.x, m_MapRect.y) + Pixel * vec2(m_MapRect.w, m_MapRect.h) / m_PixelSize;
+	}
+
+	CUIRect ToPixels(const CUIRect &Rect) const
+	{
+		const vec2 Scale = m_PixelSize / vec2(m_MapRect.w, m_MapRect.h);
+		return {(Rect.x - m_MapRect.x) * Scale.x, (Rect.y - m_MapRect.y) * Scale.y, Rect.w * Scale.x, Rect.h * Scale.y};
+	}
+
+	CUIRect ClipPixels(const CUIRect &Rect) const
+	{
+		const auto Clip = QmChatInputPixelClip(Rect, m_MapRect, (int)m_PixelSize.x, (int)m_PixelSize.y);
+		return {(float)Clip.m_X, (float)Clip.m_Y, (float)Clip.m_W, (float)Clip.m_H};
+	}
+
+	CUIRect ToUi(const CUIRect &Rect, const CUIRect &UiScreen) const
+	{
+		const CUIRect Pixels = ToPixels(Rect);
+		const vec2 Scale = vec2(UiScreen.w, UiScreen.h) / m_PixelSize;
+		return {UiScreen.x + Pixels.x * Scale.x, UiScreen.y + Pixels.y * Scale.y, Pixels.w * Scale.x, Pixels.h * Scale.y};
+	}
+};
 
 #endif

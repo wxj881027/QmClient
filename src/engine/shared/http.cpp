@@ -7,12 +7,12 @@
 
 #include <engine/external/json-parser/json.h>
 #include <engine/shared/config.h>
+#include <engine/shared/http_url.h>
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 
 #include <game/version.h>
 
-#include <cctype>
 #include <limits>
 #include <string>
 #include <unordered_map>
@@ -52,93 +52,6 @@ static int CurlDebug(CURL *pHandle, curl_infotype Type, char *pData, size_t Data
 
 static constexpr size_t HTTP_MAX_CONCURRENT_REQUESTS = 16;
 static constexpr size_t HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST = 4;
-
-static std::string HttpRequestHostKey(const char *pUrl)
-{
-	if(!pUrl || pUrl[0] == '\0')
-	{
-		return {};
-	}
-
-	const char *pHostStart = str_find(pUrl, "://");
-	pHostStart = pHostStart ? pHostStart + 3 : pUrl;
-	if(pHostStart[0] == '\0')
-	{
-		return {};
-	}
-
-	const char *pAuthorityEnd = pHostStart;
-	while(*pAuthorityEnd != '\0' && *pAuthorityEnd != '/' && *pAuthorityEnd != '?' && *pAuthorityEnd != '#')
-	{
-		pAuthorityEnd++;
-	}
-	if(pAuthorityEnd <= pHostStart)
-	{
-		return {};
-	}
-
-	// Strip optional userinfo (`user:pass@host`).
-	const char *pAuthorityStart = pHostStart;
-	for(const char *p = pHostStart; p < pAuthorityEnd; ++p)
-	{
-		if(*p == '@')
-		{
-			pAuthorityStart = p + 1;
-		}
-	}
-	if(pAuthorityStart >= pAuthorityEnd)
-	{
-		return {};
-	}
-
-	const char *pHostEnd = pAuthorityEnd;
-	if(*pAuthorityStart == '[')
-	{
-		// IPv6 literals are wrapped in brackets.
-		const char *pClosingBracket = nullptr;
-		for(const char *p = pAuthorityStart + 1; p < pAuthorityEnd; ++p)
-		{
-			if(*p == ']')
-			{
-				pClosingBracket = p;
-				break;
-			}
-		}
-		if(!pClosingBracket || pClosingBracket <= pAuthorityStart + 1)
-		{
-			return {};
-		}
-		std::string Host(pAuthorityStart + 1, pClosingBracket - (pAuthorityStart + 1));
-		for(char &c : Host)
-		{
-			c = (char)std::tolower((unsigned char)c);
-		}
-		return Host;
-	}
-	else
-	{
-		for(const char *p = pAuthorityStart; p < pAuthorityEnd; ++p)
-		{
-			if(*p == ':')
-			{
-				pHostEnd = p;
-				break;
-			}
-		}
-	}
-
-	if(pHostEnd <= pAuthorityStart)
-	{
-		return {};
-	}
-
-	std::string Host(pAuthorityStart, pHostEnd - pAuthorityStart);
-	for(char &c : Host)
-	{
-		c = (char)std::tolower((unsigned char)c);
-	}
-	return Host;
-}
 
 void EscapeUrl(char *pBuf, int Size, const char *pStr)
 {
@@ -820,7 +733,7 @@ void CHttp::RunLoop()
 			{
 				auto RequestIt = m_RunningRequests.find(pMsg->easy_handle);
 				dbg_assert(RequestIt != m_RunningRequests.end(), "Running handle not added to map");
-				const std::string HostKey = HttpRequestHostKey(RequestIt->second->m_aUrl);
+				const std::string HostKey = HttpUrlHost(RequestIt->second->m_aUrl);
 				if(!HostKey.empty())
 				{
 					auto HostIt = RunningRequestsPerHost.find(HostKey);
@@ -865,7 +778,7 @@ void CHttp::RunLoop()
 				continue;
 			}
 
-			const std::string HostKey = HttpRequestHostKey(pRequest->m_aUrl);
+			const std::string HostKey = HttpUrlHost(pRequest->m_aUrl);
 			const size_t RunningForHost = HostKey.empty() ? 0 : RunningRequestsPerHost[HostKey];
 			if(m_RunningRequests.size() >= HTTP_MAX_CONCURRENT_REQUESTS ||
 				(!HostKey.empty() && RunningForHost >= HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST))

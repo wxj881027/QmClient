@@ -2,6 +2,7 @@
 #define GAME_EDITOR_EDITOR_SERVER_SETTINGS_H
 
 #include "component.h"
+#include "editor_server_settings_completion.h"
 #include "editor_ui.h"
 
 #include <game/client/lineinput.h>
@@ -204,6 +205,7 @@ public:
 
 	void OnInit(CEditor *pEditor) override;
 	void OnMapLoad() override;
+	bool OnInput(const IInput::CEvent &Event) override;
 
 	// Constraints methods
 	enum class EArgConstraint
@@ -405,6 +407,10 @@ private:
 	};
 
 	TCommandArgumentConstraints m_ArgConstraintsPerCommand;
+
+	// 只在该输入框仍是全局活跃输入时路由补全事件。
+	CLineInput *m_pCompletionInput = nullptr;
+	CQmEditorSettingsCompletion m_SettingsCompletion;
 
 	// Backend fields
 	std::vector<std::shared_ptr<IMapSetting>> m_vpMapSettings;

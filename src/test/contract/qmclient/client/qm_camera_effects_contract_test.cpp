@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <test/support/qmclient_source_contract_test.h>
 
-TEST(QmCameraEffectsContract, CinematicCameraAndDynamicFovKeepScopedState)
+TEST(QmCameraEffectsContract, DynamicFovAndZoomKeepScopedState)
 {
 	const std::string Config = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
 	const std::string Header = ReadTextFile("src/game/client/components/camera.h");
@@ -14,10 +14,7 @@ TEST(QmCameraEffectsContract, CinematicCameraAndDynamicFovKeepScopedState)
 	const std::string GameClient = ReadTextFile("src/game/client/gameclient.cpp");
 
 	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmCinematicCamera, qm_cinematic_camera"), std::string::npos);
-	EXPECT_NE(Header.find("m_CinematicCameraSmoothing"), std::string::npos);
-	EXPECT_NE(OnRender.find("GameClient()->m_Snap.m_SpecInfo.m_Active && !GameClient()->m_Snap.m_SpecInfo.m_UsePosition"), std::string::npos);
-	EXPECT_NE(OnRender.find("if(g_Config.m_QmCinematicCamera)"), std::string::npos);
-	EXPECT_NE(OnRender.find("m_CinematicCameraSmoothing = false;"), std::string::npos);
+	EXPECT_NE(Config.find("MACRO_CONFIG_INT(QmCinematicCameraSmoothness, qm_cinematic_camera_smoothness"), std::string::npos);
 	EXPECT_NE(ScaleZoom.find("RemoveDynamicFovZoom();"), std::string::npos);
 	EXPECT_NE(ChangeZoom.find("RemoveDynamicFovZoom();"), std::string::npos);
 	EXPECT_NE(UpdateCamera.find("RemoveDynamicFovZoom();"), std::string::npos);

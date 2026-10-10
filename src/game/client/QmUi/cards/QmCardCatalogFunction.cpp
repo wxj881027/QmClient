@@ -2,10 +2,9 @@
 #include "QmCardCatalogInternal.h"
 #include "QmCardMeasureRevision.h"
 
-#include <game/client/QmUi/QmImeAppearance.h>
-
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/QmImeAppearance.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
@@ -208,7 +207,7 @@ namespace qm_card_catalog
 				const bool IsDeeplBackend = str_comp_nocase(g_Config.m_QmTranslateBackend, "deepl") == 0;
 				const bool ShowAdvanced = g_Config.m_QmTranslateShowAdvanced != 0;
 				// 常驻行：收/发自动翻译、译文字号、翻译服务、收/发目标语言、高级选项开关。
-				float Height = Rows(9.0f); // 常驻测试按钮与诊断开关
+				float Height = Rows(10.0f); // 常驻测试按钮与诊断开关
 				if(IsBaiduBackend)
 					Height += Row() * 2.0f;
 				if(IsMymemoryBackend)

@@ -221,14 +221,14 @@ namespace QmEmoticon
 						continue;
 					const vec2 TileCenter(X * 32.0f + 16.0f, Y * 32.0f + 16.0f);
 					if(OverlapsRects([&](const SRect &Rect, float Epsilon) {
-						const vec2 Half((Rect.m_Right - Rect.m_Left) * Size / (2.0f * m_Width), (Rect.m_Bottom - Rect.m_Top) * Size / (2.0f * m_Height));
-						const vec2 Local = Rect.m_NormalizedCenter * Size;
-						const vec2 Delta = TileCenter - (Pos + AxisX * Local.x + AxisY * Local.y);
-						return std::abs(Delta.x) < 16.0f + AbsX.x * Half.x + AbsY.x * Half.y - Epsilon &&
-						       std::abs(Delta.y) < 16.0f + AbsX.y * Half.x + AbsY.y * Half.y - Epsilon &&
-						       std::abs(dot(Delta, AxisX)) < Half.x + 16.0f * (AbsX.x + AbsX.y) - Epsilon &&
-						       std::abs(dot(Delta, AxisY)) < Half.y + 16.0f * (AbsY.x + AbsY.y) - Epsilon;
-						}))
+						   const vec2 Half((Rect.m_Right - Rect.m_Left) * Size / (2.0f * m_Width), (Rect.m_Bottom - Rect.m_Top) * Size / (2.0f * m_Height));
+						   const vec2 Local = Rect.m_NormalizedCenter * Size;
+						   const vec2 Delta = TileCenter - (Pos + AxisX * Local.x + AxisY * Local.y);
+						   return std::abs(Delta.x) < 16.0f + AbsX.x * Half.x + AbsY.x * Half.y - Epsilon &&
+							  std::abs(Delta.y) < 16.0f + AbsX.y * Half.x + AbsY.y * Half.y - Epsilon &&
+							  std::abs(dot(Delta, AxisX)) < Half.x + 16.0f * (AbsX.x + AbsX.y) - Epsilon &&
+							  std::abs(dot(Delta, AxisY)) < Half.y + 16.0f * (AbsY.x + AbsY.y) - Epsilon;
+					   }))
 						return true;
 				}
 			}

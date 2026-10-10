@@ -8,7 +8,7 @@
 
 inline EQmIcon QmIconForLabel(EFontPreset Preset, const char *pText, int Length = -1)
 {
-	if(Preset != EFontPreset::ICON_FONT && Preset != EFontPreset::ICON_FONT_BOLD)
+	if(Preset != EFontPreset::ICON_FONT && Preset != EFontPreset::ICON_FONT_BOLD && Preset != EFontPreset::ICON_FONT_FILL)
 		return EQmIcon::COUNT;
 	return CQmIconRegistry::IconFromGlyph(pText, Length);
 }
@@ -38,7 +38,7 @@ struct SQmIconLabelGlyphs
 inline SQmIconLabelGlyphs QmIconLabelGlyphs(EFontPreset Preset, const char *pText, int Length = -1)
 {
 	SQmIconLabelGlyphs Result;
-	if((Preset != EFontPreset::ICON_FONT && Preset != EFontPreset::ICON_FONT_BOLD) || pText == nullptr)
+	if((Preset != EFontPreset::ICON_FONT && Preset != EFontPreset::ICON_FONT_BOLD && Preset != EFontPreset::ICON_FONT_FILL) || pText == nullptr)
 		return Result;
 	if(Length < 0)
 		Length = str_length(pText);
@@ -59,5 +59,25 @@ inline SQmIconLabelGlyphs QmIconLabelGlyphs(EFontPreset Preset, const char *pTex
 	}
 	return Result;
 }
+
+// 单字形语义图标在即时和缓存标签入口统一选字面，退出时恢复调用者状态。
+class CQmIconLabelFontScope
+{
+	ITextRender &m_TextRender;
+	EFontPreset m_PreviousPreset;
+
+public:
+	CQmIconLabelFontScope(ITextRender &TextRender, const SQmIconLabelGlyphs &Icons) :
+		m_TextRender(TextRender), m_PreviousPreset(TextRender.GetFontPreset())
+	{
+		if(Icons.m_Count == 1 && QmUiIconFilledStyle(Icons.m_aIcons[0]))
+			m_TextRender.SetFontPreset(EFontPreset::ICON_FONT_FILL);
+	}
+	~CQmIconLabelFontScope()
+	{
+		if(m_TextRender.GetFontPreset() != m_PreviousPreset)
+			m_TextRender.SetFontPreset(m_PreviousPreset);
+	}
+};
 
 #endif

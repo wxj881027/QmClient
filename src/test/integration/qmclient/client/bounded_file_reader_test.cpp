@@ -1,4 +1,5 @@
 #include <engine/storage.h>
+
 #include <game/client/components/qmclient/bounded_file_reader.h>
 
 #include <gtest/gtest.h>
@@ -11,7 +12,11 @@ namespace
 	protected:
 		CTestInfo m_Info;
 		std::unique_ptr<IStorage> m_pStorage;
-		void SetUp() override { m_pStorage = m_Info.CreateTestStorage(); ASSERT_NE(m_pStorage, nullptr); }
+		void SetUp() override
+		{
+			m_pStorage = m_Info.CreateTestStorage();
+			ASSERT_NE(m_pStorage, nullptr);
+		}
 		void Write(const std::string &Text)
 		{
 			IOHANDLE File = m_pStorage->OpenFile("cache.json", IOFLAG_WRITE, IStorage::TYPE_SAVE);

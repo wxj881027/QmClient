@@ -162,7 +162,9 @@ TEST(QmNewUiMenuGameplaySocialContract, QmClientAxiomAutoLoginLivesInQmClientCom
 	EXPECT_NE(Source.find("Localize(\"Trying Axiom dummy auto login\")"), std::string::npos);
 	EXPECT_NE(Source.find("Localize(\"Axiom auto login succeeded\")"), std::string::npos);
 	EXPECT_NE(Source.find("Localize(\"Axiom auto login failed, retrying\")"), std::string::npos);
-	EXPECT_NE(Source.find("Localize(\"Axiom auto login failed\")"), std::string::npos);
+	// 硬失败提示按细分原因走 Localize；旧 key 由 QmAxiomAutoLoginFailureKey 的 NONE 分支兜底保留（行为由单元测试锁定）。
+	EXPECT_NE(Source.find("Localize(QmAxiomAutoLoginFailureKey(m_AutoLoginState.m_LastFailureReason))"), std::string::npos);
+	EXPECT_NE(Header.find("\"Axiom auto login failed\""), std::string::npos);
 
 	EXPECT_EQ(TClientHeader.find("IsAxiomCommunity() const"), std::string::npos);
 	EXPECT_EQ(TClientHeader.find("ResetAxiomAutoLoginState"), std::string::npos);

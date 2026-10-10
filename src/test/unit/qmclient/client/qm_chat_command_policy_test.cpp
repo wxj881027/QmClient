@@ -83,6 +83,71 @@ TEST(QmAxiomAutoLogin, ClassifiesOnlyExplicitLoginSuccessReplies)
 	EXPECT_EQ(QmClassifyAxiomLoginReply("已有玩家在线"), EQmAxiomLoginReply::HARD_FAILURE);
 }
 
+TEST(QmAxiomAutoLogin, ClassifiesHardFailureReasonForUserHint)
+{
+	// 密码错误（中英文）。
+	EXPECT_EQ(QmClassifyAxiomLoginFailureReason("Incorrect password."), EQmAxiomLoginFailureReason::WRONG_PASSWORD);
+	EXPECT_EQ(QmClassifyAxiomLoginFailureReason("密码错误"), EQmAxiomLoginFailureReason::WRONG_PASSWORD);
+	// 已在游戏。
+	EXPECT_EQ(QmClassifyAxiomLoginFailureReason("Player already online"), EQmAxiomLoginFailureReason::ALREADY_IN_GAME);
+	EXPECT_EQ(QmClassifyAxiomLoginFailureReason("已在游戏中"), EQmAxiomLoginFailureReason::ALREADY_IN_GAME);
+	// 凭据无效。
+	EXPECT_EQ(QmClassifyAxiomLoginFailureReason("invalid token"), EQmAxiomLoginFailureReason::BAD_CREDENTIAL);
+	EXPECT_EQ(QmClassifyAxiomLoginFailureReason("凭证无效"), EQmAxiomLoginFailureReason::BAD_CREDENTIAL);
+	// 命中硬失败但无具体类别词时保持 NONE，回退笼统提示。
+	EXPECT_EQ(QmClassifyAxiomLoginFailureReason("Login failed"), EQmAxiomLoginFailureReason::NONE);
+	EXPECT_EQ(QmClassifyAxiomLoginFailureReason(nullptr), EQmAxiomLoginFailureReason::NONE);
+}
+
+TEST(QmAxiomAutoLogin, FailureKeyFallsBackToLegacyKeyForUnknownReason)
+{
+	// NONE 必须回退到合同测试锁定的旧 key。
+	EXPECT_STREQ(QmAxiomAutoLoginFailureKey(EQmAxiomLoginFailureReason::NONE), "Axiom auto login failed");
+	// 其余原因各自映射到专属新 key，且互不相同、非空。
+	const char *apKeys[] = {
+		QmAxiomAutoLoginFailureKey(EQmAxiomLoginFailureReason::WRONG_PASSWORD),
+		QmAxiomAutoLoginFailureKey(EQmAxiomLoginFailureReason::ALREADY_IN_GAME),
+		QmAxiomAutoLoginFailureKey(EQmAxiomLoginFailureReason::BAD_CREDENTIAL),
+	};
+	for(const char *pKey : apKeys)
+	{
+		ASSERT_TRUE(pKey != nullptr);
+		EXPECT_NE(pKey[0], '\0');
+		EXPECT_STRNE(pKey, "Axiom auto login failed");
+	}
+	EXPECT_STRNE(apKeys[0], apKeys[1]);
+	EXPECT_STRNE(apKeys[1], apKeys[2]);
+}
+
+TEST(QmAxiomAutoLogin, HardFailureRecordsReasonAndSuccessResetsIt)
+{
+	const int64_t Freq = 1000;
+	SQmAxiomAutoLoginState State;
+	State.m_Attempts = 1;
+	State.m_WaitingReply = true;
+
+	// 硬失败回执写入具体原因，供组件输出用户可读提示。
+	EXPECT_EQ(QmApplyAxiomLoginReply(State, EQmAxiomLoginReply::HARD_FAILURE, 1000, Freq, "Incorrect password."), EQmAxiomLoginReply::HARD_FAILURE);
+	EXPECT_TRUE(State.m_HardFailed);
+	EXPECT_EQ(State.m_LastFailureReason, EQmAxiomLoginFailureReason::WRONG_PASSWORD);
+
+	// 不带文本时保持既有行为：硬失败但不写原因（NONE 走笼统兜底）。
+	SQmAxiomAutoLoginState NoTextState;
+	NoTextState.m_Attempts = 1;
+	NoTextState.m_WaitingReply = true;
+	QmApplyAxiomLoginReply(NoTextState, EQmAxiomLoginReply::HARD_FAILURE, 1000, Freq);
+	EXPECT_EQ(NoTextState.m_LastFailureReason, EQmAxiomLoginFailureReason::NONE);
+
+	// 成功后清理失败原因，避免残留状态影响后续会话判断。
+	SQmAxiomAutoLoginState SuccessState;
+	SuccessState.m_Attempts = 1;
+	SuccessState.m_WaitingReply = true;
+	SuccessState.m_LastFailureReason = EQmAxiomLoginFailureReason::WRONG_PASSWORD;
+	QmApplyAxiomLoginReply(SuccessState, EQmAxiomLoginReply::SUCCESS, 1000, Freq);
+	EXPECT_TRUE(SuccessState.m_Succeeded);
+	EXPECT_EQ(SuccessState.m_LastFailureReason, EQmAxiomLoginFailureReason::NONE);
+}
+
 TEST(QmAxiomAutoLogin, SlowRetryStopsAfterTotalAttemptCap)
 {
 	// 慢速重试不再无限进行：总尝试次数到达上限后按硬失败停止。
@@ -167,4 +232,34 @@ TEST(QmChatCommandPreview, ReadsCommandNameForServerCommandLookup)
 	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName("pause", aName, sizeof(aName)));
 	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName("/", aName, sizeof(aName)));
 	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName(nullptr, aName, sizeof(aName)));
+}
+
+TEST(QmChatSecurity, SensitiveLoginBypassesTheOrdinaryHistoryAndTranslationEntry)
+{
+	int SensitiveSends = 0;
+	int OrdinaryEntries = 0;
+	for(const char *pLine : {"/login secret", " \t/LOGIN secret", "/login\tsecret"})
+	{
+		SCOPED_TRACE(pLine);
+		EXPECT_EQ(CChat::DispatchChatMessage(pLine, [&] { ++SensitiveSends; }, [&] {
+			++OrdinaryEntries;
+			return CChat::EChatSendResult::QUEUED; }), CChat::EChatSendResult::SENT);
+	}
+	EXPECT_EQ(SensitiveSends, 3);
+	EXPECT_EQ(OrdinaryEntries, 0);
+	EXPECT_EQ(CChat::DispatchChatMessage("ordinary", [&] { ++SensitiveSends; }, [&] {
+		++OrdinaryEntries;
+		return CChat::EChatSendResult::REJECTED; }), CChat::EChatSendResult::REJECTED);
+	EXPECT_EQ(OrdinaryEntries, 1);
+	EXPECT_EQ(SensitiveSends, 3);
+}
+
+TEST(QmChatSecurity, EmptyInputDoesNotEnterEitherSendingPath)
+{
+	int Calls = 0;
+	for(const char *pLine : {static_cast<const char *>(nullptr), ""})
+		EXPECT_EQ(CChat::DispatchChatMessage(pLine, [&] { ++Calls; }, [&] {
+			++Calls;
+			return CChat::EChatSendResult::QUEUED; }), CChat::EChatSendResult::REJECTED);
+	EXPECT_EQ(Calls, 0);
 }

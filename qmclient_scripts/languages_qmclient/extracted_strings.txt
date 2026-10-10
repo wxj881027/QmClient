@@ -231,6 +231,7 @@ Allow voting to pause players (instead of moving to spectators)
 Allows maps to render with more detail
 Alpha
 Also apply to dummy
+Also send the original text when translating outgoing messages
 Always show
 Always show chat
 Always show local time
@@ -267,7 +268,7 @@ API key
 APP ID
 Appearance
 Appearance and command highlighting of the local console
-Appearance of help bubbles outside settings cards
+Appearance of help bubbles
 Append to log file instead of overwriting
 Applied to %d same-family part(s).
 Applies to single-color and rainbow overrides.
@@ -431,10 +432,13 @@ Avg %.*f   ↓ %.*f   ↑ %.*f
 Axiom API returned an error
 Axiom auto login failed
 Axiom auto login failed, retrying
+Axiom auto login skipped: no password
+Axiom auto login stopped after repeated failures
 Axiom auto login succeeded
 Axiom dummy password
 Axiom main account password
 Axiom score request failed
+Axiom website
 Axis
 Backdrop blur
 Backdrop blur algorithm: 0=Gaussian, 1=Kawase, 2=Dual Kawase
@@ -654,6 +658,8 @@ Choose the menu font and cursor appearance
 Choose the menu font and font weight
 Choose the menu map and background colors
 Cinematic camera
+Cinematic camera smoothness (0=instant, 100=smoothest)
+Cinematic smoothness
 CJK font
 CJK font weight
 CJK font weight:
@@ -1195,6 +1201,8 @@ Draw a glow around tees colored by their race team
 Draw lines showing screen/clickbox center
 Draw on the in game background
 Draw shadow behind emote
+Draw the favorite star icon with the filled icon font style
+Draw the friend heart icon with the filled icon font style
 Draw tile layers when using custom background (solid)
 Draw where mouse is
 Draw!
@@ -1395,7 +1403,6 @@ Enable Sixup connection.
 Enable skin queue rotation
 Enable skin switch animation
 Enable skin transition animation, then choose the type, scope, duration and easing.
-Enable smooth cinematic camera while free spectating
 Enable SodaMusic Hook
 Enable SodaMusic hook integration
 Enable sound
@@ -1436,6 +1443,7 @@ Enables/disables active moderator mode for the player
 End marker of replay slice
 Endless hook has been activated
 Endless hook has been deactivated
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
 Endpoint
 Endpoint (optional)
 English font:
@@ -1586,6 +1594,7 @@ Fire
 First page in console
 Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 Flip:
+Flow style
 Folder
 Folder Link
 Follow
@@ -1948,6 +1957,8 @@ Include emoticon when saving/loading config preset
 Include name when saving/loading config preset
 Include seconds in local time display
 Include skin when saving/loading config preset
+Include Team 0
+Include Team 0 in the Gores team drown board
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 Incoming language
 Indicate map finish
@@ -3281,7 +3292,6 @@ Replay feature is disabled!
 Replay list: failed to load, press Refresh to retry
 Replay list: loading ...
 Replay list: not loaded yet
-Replay list: up to date
 Replays directory
 Reply
 Reply content
@@ -3536,6 +3546,7 @@ Send aim data with sub-tick precision
 Send client input to others before correct input (increases server bandwidth)
 Send emote when entering freeze
 Send emoticon in water
+Send original text with translation
 Send probability
 Send Rate
 Send sampling and token limit parameters
@@ -3898,6 +3909,7 @@ Show Tee trail for others
 Show Tees in the Gores team drown board
 Show teleporter tile outlines
 Show text entities
+Show the chat scrollbar on the right
 Show the cursor while free spectating
 Show the Gores team drown board
 Show the number of frozen tees
@@ -4016,9 +4028,11 @@ Smooth and accurate blur with the highest GPU cost.
 Smooth camera switch animation time when spectating (in ms, 0=off)
 Smooth Dynamic Camera
 Smooth fade
+Smooth free spectator camera
 Smooth other players' predicted movement
 Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 Smooth scroll animation duration in menu/editor (ms, 0=off)
+Smooth the mouse-driven camera in live and demo free spectating
 Smooth zoom animation time in editor (in ms, 0=off)
 Smoothness of multi-view zoom (in ms, higher = slower)
 Snap title bob offset to whole pixels (sharper glyphs, choppier motion)
@@ -4034,6 +4048,8 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 Soft glow
 Solid
+Solid favorite icon
+Solid friend icon
 Solid tile outline opacity
 Solo
 Solo split
@@ -4109,6 +4125,7 @@ Start recording a demo
 Start recording a video
 Start skin queue from a random position when entering a map
 Statboard
+Static
 Stats
 Stats notes
 Status
@@ -4248,6 +4265,10 @@ Team save in progress. You'll be able to load with '/load %s' if save is success
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' on %s to continue
 Team successfully saved by %s. The database connection failed, using generated save code instead to avoid collisions. Use '/load %s' to continue
 Team tee glow
+Team tee glow halo size
+Team tee glow halo size in percent
+Team tee glow intensity
+Team tee glow intensity in percent
 Team used when leaving solo split mode
 Team when leaving solo split
 Teammate
@@ -4574,6 +4595,7 @@ UI scale
 UI server address
 UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
+Unable to delete skin
 Unable to delete the demo '%s'
 Unable to delete the folder '%s'. Make sure it's empty first.
 Unable to delete the screenshot '%s'
@@ -4702,7 +4724,6 @@ Use style colors
 Use team colors for name plates
 Use Tee icons instead of circles
 Use the mouse wheel on a hovered module to scale it by 5%
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
 Use the scoreboard cursor mode to scroll the list
 Use the selected tee trail style palette
 Use this after `add_favorite` to group favorites. Start with `begin_favorite_group`
@@ -4995,6 +5016,7 @@ You'll lose unsaved changes after deselecting.
 You're not in a team with /practice turned on. Note that you can't earn a rank with practice enabled.
 You're playing on a local server because no online Tutorial server could be found.\n\nYour record will only be saved locally.
 You're the last one!
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
 Your current race time is %s
 Your current version is outdated. Please update from the QQ group.
 Your favorite map manager
@@ -5386,7 +5408,7 @@ Zoom to current mouse target
 [Editor]	ENDLESS HOOK OFF: Deactivates endless hook.
 [Editor]	ENDLESS HOOK: Activates endless hook.
 [Editor]	Enter a room code to join a collaboration room.
-[Editor]	Enter a server setting. Press ctrl+space to show available settings.
+[Editor]	Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... .
 [Editor]	Enter the room code
 [Editor]	ENTITIES OFF SIGN: Informs people playing with entities about important marks, tips, information or text on the map.
 [Editor]	Entities: %s

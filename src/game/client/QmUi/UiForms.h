@@ -138,7 +138,6 @@ namespace ui_widget
 	struct SInputFieldLayout
 	{
 		CUIRect m_ShellRect;
-		CUIRect m_FocusRingRect;
 		CUIRect m_ContentRect;
 		CUIRect m_IconRect;
 		CUIRect m_ClearRect;
@@ -178,12 +177,6 @@ namespace ui_widget
 		SInputFieldLayout Layout{};
 		Layout.m_ShellRect = Rect;
 		const float Scale = std::max(UiScale, 0.1f);
-		Layout.m_FocusRingRect = Rect;
-		const float FocusOutset = std::max(1.0f, 2.0f * Scale);
-		Layout.m_FocusRingRect.x -= FocusOutset;
-		Layout.m_FocusRingRect.y -= FocusOutset;
-		Layout.m_FocusRingRect.w += FocusOutset * 2.0f;
-		Layout.m_FocusRingRect.h += FocusOutset * 2.0f;
 		Layout.m_ContentRect = Rect;
 		const float SlotWidth = std::max(Rect.h, 18.0f * Scale);
 		const float Gap = 6.0f * Scale;

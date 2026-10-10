@@ -3336,7 +3336,7 @@ void CTClient::UpdateGoresDrownCounts()
 		str_copy(m_aGoresDrownMap, pMap);
 	}
 
-	const bool IsGores = IsGoresGameMode();
+	const bool IsGores = IsGoresDrownBoardMode();
 	if(IsGores != m_GoresDrownModeActive)
 	{
 		ResetGoresDrownCounts();
@@ -3354,7 +3354,7 @@ void CTClient::UpdateGoresDrownCounts()
 		const bool Active = Player.m_Active && GameClient()->m_Snap.m_apPlayerInfos[ClientId] != nullptr;
 		const bool Hooking = Character.m_Active && (Character.m_Cur.m_HookState == HOOK_FLYING || Character.m_Cur.m_HookState == HOOK_GRABBED);
 		m_GoresDrownTracker.Observe(ClientId, Active, Player.m_aName, Player.m_aClan, GameClient()->m_Teams.Team(ClientId),
-			Character.m_Active, Player.m_FreezeEnd != 0, Hooking);
+			Character.m_Active, Player.m_FreezeEnd != 0, Hooking, g_Config.m_QmGoresDrownBoardIncludeTeam0 != 0);
 	}
 }
 
@@ -3385,6 +3385,12 @@ void CTClient::TrackHookDirection(int Dummy)
 	}
 
 	Stats.m_WasHooking = IsHooking;
+}
+
+bool CTClient::IsGoresDrownBoardMode() const
+{
+	// 落水榜仅采用服务器模式判定，不让手动 Gores 工具开关扩大支持范围。
+	return IsGoresGameMode();
 }
 
 bool CTClient::IsGoresGameMode() const

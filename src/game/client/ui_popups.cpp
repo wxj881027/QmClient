@@ -41,8 +41,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	SPopupMenuProperties ResolvedProps = Props;
 	if(ResolvedProps.m_CenterInViewport)
 	{
-		// 新版 UI 下，居中模态二级弹窗默认启用缩放入场动画与底层滚动阻断（对齐字体商店体验）
-		ResolvedProps.m_Animate = true;
+		// 居中模态弹层阻断底层滚动，动画开关保留调用方配置。
 		ResolvedProps.m_BlockUnderlyingScroll = true;
 	}
 	if(ResolvedProps.m_CenterInViewport)
@@ -107,6 +106,8 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 void CUi::RenderPopupMenus()
 {
 	PruneInteractionSources(false);
+	// 公共入口自行接入模糊链，聊天和编辑器无需逐个补接线。
+	CUiScopedGaussianBlur PopupBlurScope(this);
 	// 禁用弹层模糊时，背景和分隔线的半透明绘制也不能触发自动背板模糊。
 	CUiScopedGaussianBlurSuppression PopupBlurSuppression(this, g_Config.m_QmUiPopupBlur == 0);
 	m_RenderingPopupMenus = true;
@@ -293,6 +294,11 @@ void CUi::RenderPopupMenus()
 						PopupRect.h *= ScaleY;
 					}
 				}
+				else if(PopupProps.m_CenterInViewport)
+				{
+					// 模态面板保持内容尺寸，避免动画重排触发临时滚动条与命中漂移。
+					PopupRect.y += 8.0f * (1.0f - Eased);
+				}
 				else
 				{
 					const float Scale = 0.92f + 0.08f * Eased;
@@ -430,13 +436,12 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants)
 			// 关闭弹窗时，栈存其上方的子弹窗必须一并结束：子弹窗的来源渲染
 			// 多半就是被关弹窗，遗留成孤儿阻断弹窗会永久锁死底层指针输入。
 			// 带出场动画的子弹窗转为收缩渐隐，由渲染循环自然移除。
-			const float Now = Client()->LocalTime();
 			for(auto It = PopupMenuToClose + 1; It != m_vPopupMenus.end(); ++It)
 			{
 				if(It->m_Closing || !It->m_Props.m_Animate)
 					continue;
 				It->m_Closing = true;
-				It->m_CloseStart = Now;
+				It->m_CloseStart = Client()->LocalTime();
 			}
 			m_vPopupMenus.erase(
 				std::remove_if(PopupMenuToClose, m_vPopupMenus.end(), [](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing; }),
@@ -495,6 +500,18 @@ void CUi::RefreshPopupMenuSource(const SPopupMenuId *pId, bool RequireRefresh, u
 		QmRefreshPopupSource(m_vPopupMenus, pId, RequireRefresh, Frame);
 }
 
+bool CUi::CloseTopPopupMenu()
+{
+	if(RenderOnly())
+		return false;
+	const auto Top = std::find_if(m_vPopupMenus.rbegin(), m_vPopupMenus.rend(), [](const SPopupMenu &Popup) { return !Popup.m_Closing; });
+	if(Top == m_vPopupMenus.rend())
+		return false;
+	const SPopupMenuId *pId = Top->m_pId;
+	ClosePopupMenu(pId);
+	return true;
+}
+
 void CUi::ClosePopupMenus()
 {
 	if(m_vPopupMenus.empty())
@@ -516,6 +533,11 @@ bool CUi::IsPopupOpen() const
 bool CUi::IsPopupOpen(const SPopupMenuId *pId) const
 {
 	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing && PopupMenu.m_pId == pId; });
+}
+
+bool CUi::IsPopupVisible(const SPopupMenuId *pId) const
+{
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
 }
 
 bool CUi::IsPopupHovered() const
@@ -942,6 +964,10 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char *const *pStrs, 
 			State.m_SelectionPopupContext.m_Props.m_RequireSourceRefresh = DropDownProps.m_RequireSourceRefresh;
 			State.m_SelectionPopupContext.m_Props.m_SourceFrame = SourceFrame;
 			RefreshPopupMenuSource(&State.m_SelectionPopupContext, DropDownProps.m_RequireSourceRefresh, SourceFrame);
+			// 父触发器失活后不再经过 ShowPopupSelection，但活动子列表仍需逐帧注册滚轮归属。
+			// 使用栈内实际矩形，不重开弹层或重置选择、滚动与动画状态。
+			if(const CUIRect *pPopupRect = GetPopupMenuRect(&State.m_SelectionPopupContext))
+				RegisterWheelOwner(&State.m_SelectionPopupContext, EUiWheelOwnerPriority::POPUP, *pPopupRect, State.m_SelectionPopupContext.m_BlockUnderlyingScroll);
 		}
 		SMenuButtonProperties ButtonProps;
 		ButtonProps.m_Enabled = false;

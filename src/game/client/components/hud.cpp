@@ -25,6 +25,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/demo_display.h>
+#include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/dummy_miniview_render.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
@@ -2028,6 +2029,13 @@ bool CHud::GetDummyMiniMapRect(float &X, float &Y, float &W, float &H) const
 
 void CHud::RenderDummyMiniMap()
 {
+	int BackendMajor = 0;
+	int BackendMinor = 0;
+	int BackendPatch = 0;
+	const char *pBackendName = "";
+	const auto Backend = Graphics()->GetDetectedContextVersion(BackendMajor, BackendMinor, BackendPatch, pBackendName) ?
+				     QmDummyMiniViewLayout::ResolveBackend(pBackendName) :
+				     QmDummyMiniViewLayout::EBackend::UNKNOWN;
 	if(m_DummyMiniViewGraphicsVersion != Graphics()->GraphicsResourcesResetVersion())
 	{
 		// 图形重建已经释放旧 GPU 资源，旧 ID 不能再提交销毁命令。
@@ -2109,11 +2117,12 @@ void CHud::RenderDummyMiniMap()
 
 		const int ScreenW = Graphics()->ScreenWidth();
 		const int ScreenH = Graphics()->ScreenHeight();
-		const float XScale = ScreenW / m_Width;
-		const float YScale = ScreenH / m_Height;
-
-		const int ViewW = maximum(1, (int)std::round(InnerW * XScale));
-		const int ViewH = maximum(1, (int)std::round(InnerH * YScale));
+		// 使用 HUD 编辑器变换后的投影计算尺寸；离屏目标保留完整内框，屏幕交集仅判断可见性。
+		const auto Viewport = QmDummyMiniViewLayout::ResolveViewport(
+			{InnerX, InnerY, InnerW, InnerH},
+			{SavedX0, SavedY0, SavedX1 - SavedX0, SavedY1 - SavedY0}, ScreenW, ScreenH);
+		const int ViewW = Viewport.IsVisible() ? maximum(1, (int)std::round(InnerW * ScreenW / (SavedX1 - SavedX0))) : 0;
+		const int ViewH = Viewport.IsVisible() ? maximum(1, (int)std::round(InnerH * ScreenH / (SavedY1 - SavedY0))) : 0;
 		const auto TargetSize = ResolveQmDummyMiniViewTargetSize(ViewW, ViewH,
 			m_DummyMiniViewRenderTargetWidth, m_DummyMiniViewRenderTargetHeight, ScreenW, ScreenH);
 		if(TargetSize.m_W > 0 && TargetSize.m_H > 0)
@@ -2201,7 +2210,7 @@ void CHud::RenderDummyMiniMap()
 				DrawParams.m_Corners = HudEditorScope.m_Corners;
 				DrawParams.m_Rounding = InnerRadius;
 				DrawParams.m_Opaque = true;
-				if(IsVulkanBackend(Graphics()))
+				if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 				{
 					DrawParams.m_V0 = 0.0f;
 					DrawParams.m_V1 = 1.0f;
@@ -3215,6 +3224,7 @@ void CHud::UpdateHookCountdownTracker()
 		Input.m_HookTick = QmHookCountdownInterpolatedTick(Previous.m_HookTick, Character.m_HookTick, Intra, SameGrab);
 		Input.m_HookDurationSeconds = GameClient()->m_aTuning[Connection].m_HookDuration;
 		Input.m_EndlessHook = Local.m_IsPredictedLocal ? Local.m_Predicted.m_EndlessHook : Local.m_EndlessHook;
+		Input.m_FlowStyle = g_Config.m_QmHookCountdownFlowStyle;
 	}
 	m_HookCountdownRing.Update(Input, Client()->RenderFrameTime());
 }
@@ -7291,12 +7301,10 @@ void CHud::RenderDDRaceEffects()
 
 void CHud::RenderGoresDrownBoard()
 {
-	if(!g_Config.m_QmGoresDrownBoard)
+	if(!g_Config.m_QmGoresDrownBoard || !GameClient()->m_TClient.IsGoresDrownBoardMode())
 		return;
 
 	const bool Preview = GameClient()->m_HudEditor.IsActive();
-	if(!GameClient()->m_TClient.IsGoresGameMode() && !Preview)
-		return;
 
 	const float BoardAlpha = std::clamp(g_Config.m_QmGoresDrownBoardOpacity / 100.0f, 0.0f, 1.0f);
 	if(BoardAlpha <= 0.0f && !Preview)
@@ -7305,11 +7313,10 @@ void CHud::RenderGoresDrownBoard()
 	const float RenderAlpha = Preview ? maximum(BoardAlpha, 0.55f) : BoardAlpha;
 
 	const int LocalId = GameClient()->m_aLocalIds[g_Config.m_ClDummy] >= 0 ? GameClient()->m_aLocalIds[g_Config.m_ClDummy] : GameClient()->m_Snap.m_LocalClientId;
-	const bool HasLocalClient = LocalId >= 0 && LocalId < MAX_CLIENTS && GameClient()->m_aClients[LocalId].m_Active;
-	if(!HasLocalClient && !Preview)
-		return;
+	const bool HasLocalClient = LocalId >= 0 && LocalId < MAX_CLIENTS && GameClient()->m_aClients[LocalId].m_Active && GameClient()->m_Snap.m_apPlayerInfos[LocalId] != nullptr;
 	const int LocalTeam = HasLocalClient ? GameClient()->m_Teams.Team(LocalId) : -1;
-	if(!CQmGoresDrownTracker::IsTrackedTeam(LocalTeam) && !Preview)
+	const bool IncludeTeamZero = g_Config.m_QmGoresDrownBoardIncludeTeam0 != 0;
+	if(!Preview && !CQmGoresDrownTracker::IsBoardVisible(GameClient()->m_TClient.IsGoresDrownBoardMode(), HasLocalClient, LocalTeam, IncludeTeamZero))
 		return;
 
 	struct SEntry
@@ -7322,7 +7329,7 @@ void CHud::RenderGoresDrownBoard()
 	{
 		if(!GameClient()->m_aClients[ClientId].m_Active ||
 			!GameClient()->m_Snap.m_apPlayerInfos[ClientId] ||
-			!CQmGoresDrownTracker::IsSameTrackedTeam(LocalTeam, GameClient()->m_Teams.Team(ClientId)))
+			!CQmGoresDrownTracker::IsSameTrackedTeam(LocalTeam, GameClient()->m_Teams.Team(ClientId), IncludeTeamZero))
 			continue;
 		vEntries.push_back({ClientId, GameClient()->m_TClient.GetGoresDrownCount(ClientId)});
 	}

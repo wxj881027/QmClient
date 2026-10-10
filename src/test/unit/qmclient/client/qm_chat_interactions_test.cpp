@@ -3,9 +3,11 @@
 
 #include <game/client/components/chat.h>
 #include <game/client/components/console.h>
+#include <game/client/components/hud_editor.h>
 #include <game/client/components/qmclient/axiom_auto_login.h>
 #include <game/client/components/qmclient/chat_command_preview.h>
 #include <game/client/components/qmclient/chat_input_layout.h>
+#include <game/client/components/qmclient/chat_scrollbar.h>
 #include <game/client/components/qmclient/chat_translate_button.h>
 #include <game/client/components/qmclient/red_packet_auto_claim.h>
 #include <game/client/components/tclient/fast_practice.h>
@@ -284,6 +286,192 @@ TEST(QmChatInputLayout, CommonSizesKeepButtonPrefixAndBodyInsideInputRow)
 			}
 }
 
+TEST(QmChatInputViewport, MovedScaledBodyClipContainsBothEndsOfTheInput)
+{
+	const SQmChatViewport Viewport{{-100.0f, -50.0f, 400.0f, 300.0f}, vec2(1600.0f, 1200.0f)};
+	const CUIRect Body{25.0f, 150.0f, 100.0f, 24.0f};
+	const CUIRect Clip = Viewport.ClipPixels(Body);
+	EXPECT_FLOAT_EQ(Clip.x, 500.0f);
+	EXPECT_FLOAT_EQ(Clip.y, 800.0f);
+	EXPECT_FLOAT_EQ(Clip.w, 400.0f);
+	EXPECT_FLOAT_EQ(Clip.h, 96.0f);
+	const auto Start = Viewport.ToLocal(vec2(Clip.x, Clip.y));
+	const auto End = Viewport.ToLocal(vec2(Clip.x + Clip.w, Clip.y + Clip.h));
+	EXPECT_FLOAT_EQ(Start.x, Body.x);
+	EXPECT_FLOAT_EQ(Start.y, Body.y);
+	EXPECT_FLOAT_EQ(End.x, Body.x + Body.w);
+	EXPECT_FLOAT_EQ(End.y, Body.y + Body.h);
+}
+
+TEST(QmChatInputViewport, FractionalPixelsRoundOutwardsInsteadOfCroppingGlyphEdges)
+{
+	const SQmChatViewport Viewport{{0.5f, -0.25f, 100.0f, 50.0f}, vec2(150.0f, 75.0f)};
+	const auto Clip = Viewport.ClipPixels({1.0f, 1.0f, 10.25f, 5.25f});
+	EXPECT_FLOAT_EQ(Clip.x, 0.0f);
+	EXPECT_FLOAT_EQ(Clip.y, 1.0f);
+	EXPECT_FLOAT_EQ(Clip.w, 17.0f);
+	EXPECT_FLOAT_EQ(Clip.h, 9.0f);
+}
+
+TEST(QmChatInputViewport, ClipClampsMovedInputToFramebuffer)
+{
+	const SQmChatViewport Viewport{{0.0f, 0.0f, 400.0f, 300.0f}, vec2(1600.0f, 1200.0f)};
+	const auto Clip = Viewport.ClipPixels({-5.0f, 290.0f, 420.0f, 24.0f});
+	EXPECT_FLOAT_EQ(Clip.x, 0.0f);
+	EXPECT_FLOAT_EQ(Clip.y, 1160.0f);
+	EXPECT_FLOAT_EQ(Clip.w, 1600.0f);
+	EXPECT_FLOAT_EQ(Clip.h, 40.0f);
+	const auto Outside = Viewport.ClipPixels({500.0f, 400.0f, 50.0f, 20.0f});
+	EXPECT_FLOAT_EQ(Outside.w, 0.0f);
+	EXPECT_FLOAT_EQ(Outside.h, 0.0f);
+}
+
+TEST(QmChatTranslateButton, MovedScaledVisualCenterOpensSettings)
+{
+	const auto Layout = QmChatResolveInputLayout(5.0f, 100.0f, 400.0f, 12.0f, 40.0f);
+	const CUIRect ButtonRect{Layout.m_ButtonX, Layout.m_ButtonY, Layout.m_ButtonW, Layout.m_ButtonH};
+	for(const auto &Map : {CUIRect{0.0f, 0.0f, 400.0f, 300.0f}, CUIRect{-50.0f, 25.0f, 200.0f, 150.0f}})
+	{
+		SCOPED_TRACE(::testing::Message() << Map.x << "/" << Map.y << "/" << Map.w);
+		const SQmChatViewport Viewport{Map, vec2(1600.0f, 1200.0f)};
+		const auto Visual = Viewport.ToPixels(ButtonRect);
+		const auto Mouse = Viewport.ToLocal(vec2(Visual.x + Visual.w * 0.5f, Visual.y + Visual.h * 0.5f));
+		CQmChatTranslateButton Button;
+		ASSERT_TRUE(ButtonRect.Inside(Mouse));
+		EXPECT_EQ(Button.Update(KEY_MOUSE_1, IInput::FLAG_PRESS, ButtonRect.Inside(Mouse), true), CQmChatTranslateButton::EAction::CONSUME);
+		EXPECT_EQ(Button.Update(KEY_MOUSE_1, IInput::FLAG_RELEASE, ButtonRect.Inside(Mouse), true), CQmChatTranslateButton::EAction::OPEN_SETTINGS);
+	}
+}
+
+TEST(QmChatInputViewport, TooltipAnchorUsesUiScreenCoordinatesAndWindowSize)
+{
+	const SQmChatViewport Viewport{{-100.0f, -50.0f, 400.0f, 300.0f}, vec2(1600.0f, 1200.0f)};
+	const auto Anchor = Viewport.ToUi({25.0f, 100.0f, 16.0f, 16.0f}, {10.0f, 20.0f, 800.0f, 600.0f});
+	EXPECT_FLOAT_EQ(Anchor.x, 260.0f);
+	EXPECT_FLOAT_EQ(Anchor.y, 320.0f);
+	EXPECT_FLOAT_EQ(Anchor.w, 32.0f);
+	EXPECT_FLOAT_EQ(Anchor.h, 32.0f);
+}
+
+TEST(QmChatScrollbar, SideSwitchMovesRailInsideBoundsWithoutChangingSize)
+{
+	const CUIRect Bounds{20.0f, 50.0f, 250.0f, 200.0f};
+	const auto Left = QmChatScrollbarRail(Bounds, 80.0f, 100.0f, false);
+	const auto Right = QmChatScrollbarRail(Bounds, 80.0f, 100.0f, true);
+	EXPECT_FLOAT_EQ(Left.x, 22.0f);
+	EXPECT_FLOAT_EQ(Right.x + Right.w, 268.0f);
+	EXPECT_FLOAT_EQ(Left.w, 3.0f);
+	EXPECT_FLOAT_EQ(Left.w, Right.w);
+	EXPECT_FLOAT_EQ(Left.y, Right.y);
+	EXPECT_FLOAT_EQ(Left.h, Right.h);
+}
+
+TEST(QmChatScrollbar, HandleFitsShortHistoryAndMapsBothBacklogEnds)
+{
+	const auto Rail = QmChatScrollbarRail({0.0f, 0.0f, 100.0f, 100.0f}, 50.0f, 100.0f, false);
+	const float Height = QmChatScrollbarHandleHeight(Rail.h, 3, 10);
+	const auto Oldest = QmChatScrollbarHandle(Rail, Height, CChat::BacklogLineToScrollbarValue(7, 7));
+	const auto Latest = QmChatScrollbarHandle(Rail, Height, CChat::BacklogLineToScrollbarValue(0, 7));
+	EXPECT_FLOAT_EQ(Oldest.y, Rail.y);
+	EXPECT_FLOAT_EQ(Latest.y + Latest.h, Rail.y + Rail.h);
+	EXPECT_FLOAT_EQ(QmChatScrollbarHandleHeight(5.0f, 1, 100), 5.0f);
+	EXPECT_FLOAT_EQ(QmChatScrollbarHandleHeight(0.0f, 1, 100), 0.0f);
+	EXPECT_FLOAT_EQ(QmChatScrollbarHandleHeight(100.0f, 10, 0), 100.0f);
+}
+
+TEST(QmChatScrollbar, PreviewUsesTheSameScaledRailAndHandleGeometry)
+{
+	const auto GameRail = QmChatScrollbarRail({0.0f, 0.0f, 200.0f, 100.0f}, 0.0f, 100.0f, false);
+	const auto PreviewRail = QmChatScrollbarRail({0.0f, 0.0f, 400.0f, 200.0f}, 0.0f, 200.0f, false, 2.0f);
+	EXPECT_FLOAT_EQ(PreviewRail.x, GameRail.x * 2.0f);
+	EXPECT_FLOAT_EQ(PreviewRail.w, GameRail.w * 2.0f);
+	EXPECT_FLOAT_EQ(QmChatScrollbarHandleHeight(PreviewRail.h, 3, 6, 2.0f), QmChatScrollbarHandleHeight(GameRail.h, 3, 6) * 2.0f);
+	const auto NarrowRail = QmChatScrollbarRail({0.0f, 0.0f, 1.0f, 5.0f}, 0.0f, 5.0f, true);
+	EXPECT_GE(NarrowRail.x, 0.0f);
+	EXPECT_LE(NarrowRail.x + NarrowRail.w, 1.0f);
+}
+
+TEST(QmChatScrollbar, LeftHistoryReservesTheSameGapAsPreview)
+{
+	const auto Rail = QmChatScrollbarRail({0, 0, 200, 100}, 0, 100, false);
+	EXPECT_FLOAT_EQ(QmChatHistoryStartX(false) - (Rail.x + Rail.w), QM_CHAT_SCROLLBAR_MARGIN);
+	EXPECT_FLOAT_EQ(QmChatHistoryStartX(true), 5);
+}
+
+TEST(QmChatScrollbar, HiddenRailKeepsBothSidesInTheNextHudBounds)
+{
+	const CUIRect ChatRect{0.0f, 50.0f, 250.0f, 250.0f};
+	for(bool OnRight : {false, true})
+	{
+		SCOPED_TRACE(OnRight);
+		CQmChatVisibleBounds Bounds(ChatRect);
+		const float X = QmChatHistoryStartX(OnRight);
+		Bounds.Extend({X, 250.0f, ChatRect.w - X, 20.0f});
+		ASSERT_TRUE(Bounds.Valid());
+		const auto Rail = QmChatScrollbarRail(ChatRect, 50.0f, 220.0f, OnRight);
+		EXPECT_LE(Bounds.Rect().x, Rail.x);
+		EXPECT_GE(Bounds.Rect().x + Bounds.Rect().w, Rail.x + Rail.w);
+		EXPECT_FLOAT_EQ(Bounds.Rect().y, 250.0f);
+		EXPECT_FLOAT_EQ(Bounds.Rect().h, 20.0f);
+		Bounds.Extend(Rail);
+		EXPECT_FLOAT_EQ(Bounds.Rect().y, 50.0f);
+		EXPECT_FLOAT_EQ(Bounds.Rect().h, 220.0f);
+	}
+}
+
+TEST(QmChatScrollbar, BothRailsRemainVisibleAtEitherScaledScreenEdge)
+{
+	const CUIRect ChatRect{0.0f, 50.0f, 250.0f, 250.0f};
+	for(bool OnRight : {false, true})
+		for(bool AtRightEdge : {false, true})
+			for(float Scale : {0.5f, 1.0f, 2.0f})
+			{
+				SCOPED_TRACE(::testing::Message() << OnRight << "/" << AtRightEdge << "/" << Scale);
+				CQmChatVisibleBounds Bounds(ChatRect);
+				const float X = QmChatHistoryStartX(OnRight);
+				Bounds.Extend({X, 250.0f, ChatRect.w - X, 20.0f});
+				QmHudEditor::CVisibleBounds HudBounds;
+				HudBounds.Observe(ChatRect, ChatRect, ChatRect, Bounds.Rect());
+				HudBounds.BeginRenderFrame();
+				const CUIRect Visible = HudBounds.Resolve(ChatRect, ChatRect);
+				const float Anchor = QmHudEditor::RestoreAxisAnchor(AtRightEdge ? 1.0f : 0.0f, Visible.w * Scale, 0.0f, 600.0f, (Visible.x - ChatRect.x) * Scale);
+				const SQmChatViewport Viewport{{-Anchor / Scale, 0.0f, 600.0f / Scale, 300.0f / Scale}, vec2(2400.0f, 1200.0f)};
+				const auto Rail = QmChatScrollbarRail(ChatRect, 50.0f, 100.0f, OnRight);
+				const auto Pixels = Viewport.ToPixels(Rail);
+				EXPECT_GE(Pixels.x, 0.0f);
+				EXPECT_LE(Pixels.x + Pixels.w, 2400.0f);
+				const auto Clip = Viewport.ClipPixels(Rail);
+				EXPECT_NEAR(Clip.w, Pixels.w, 1.0f);
+			}
+}
+
+TEST(QmChatScrollbar, ActualInputAndPopupExtentsExpandHudBounds)
+{
+	CQmChatVisibleBounds Bounds({0.0f, 50.0f, 250.0f, 250.0f});
+	Bounds.Extend({7.0f, 250.0f, 243.0f, 20.0f});
+	Bounds.Extend({7.0f, 275.0f, 360.0f, 20.0f});
+	Bounds.Extend({-12.0f, 210.0f, 60.0f, 50.0f});
+	EXPECT_FLOAT_EQ(Bounds.Rect().x, -12.0f);
+	EXPECT_FLOAT_EQ(Bounds.Rect().x + Bounds.Rect().w, 367.0f);
+	EXPECT_FLOAT_EQ(Bounds.Rect().y, 210.0f);
+	EXPECT_FLOAT_EQ(Bounds.Rect().y + Bounds.Rect().h, 295.0f);
+}
+
+TEST(QmChatScrollbar, EmptyAndDegenerateContentDoesNotCreateHudBounds)
+{
+	CQmChatVisibleBounds Bounds({0.0f, 50.0f, 250.0f, 250.0f});
+	EXPECT_FALSE(Bounds.Valid());
+	Bounds.Extend({-100.0f, -100.0f, 0.0f, 50.0f});
+	Bounds.Extend({-100.0f, -100.0f, 50.0f, -1.0f});
+	EXPECT_FALSE(Bounds.Valid());
+	Bounds.Extend({7.0f, 250.0f, 20.0f, 10.0f});
+	ASSERT_TRUE(Bounds.Valid());
+	EXPECT_FLOAT_EQ(Bounds.Rect().x, 0.0f);
+	EXPECT_FLOAT_EQ(Bounds.Rect().w, 250.0f);
+	EXPECT_FLOAT_EQ(Bounds.Rect().y, 250.0f);
+	EXPECT_FLOAT_EQ(Bounds.Rect().h, 10.0f);
+}
+
 TEST(QmChatInputLayout, DefaultMappingProjectsInputClipToPixels)
 {
 	const auto Clip = QmChatInputPixelClip({40.0f, 250.0f, 200.0f, 20.0f}, {0.0f, 0.0f, 400.0f, 300.0f}, 1600, 1200);
@@ -327,4 +515,62 @@ TEST(QmChatInputLayout, ClipOutsideViewportIsLimitedToVisiblePixels)
 	EXPECT_EQ(Clip.m_Y, 0);
 	EXPECT_EQ(Clip.m_W, 1600);
 	EXPECT_EQ(Clip.m_H, 1200);
+}
+
+TEST(QmChatInputLayout, InvalidProjectionReturnsEmptyClip)
+{
+	for(const auto &Map : {CUIRect{0.0f, 0.0f, 0.0f, 300.0f}, CUIRect{0.0f, 0.0f, 400.0f, 0.0f}, CUIRect{0.0f, 0.0f, -400.0f, 300.0f}})
+	{
+		SCOPED_TRACE(::testing::Message() << Map.w << "/" << Map.h);
+		const auto Clip = QmChatInputPixelClip({40.0f, 120.0f, 100.0f, 20.0f}, Map, 1600, 1200);
+		EXPECT_EQ(Clip.m_X, 0);
+		EXPECT_EQ(Clip.m_Y, 0);
+		EXPECT_EQ(Clip.m_W, 0);
+		EXPECT_EQ(Clip.m_H, 0);
+		const SQmChatViewport Viewport{Map, vec2(1600.0f, 1200.0f)};
+		EXPECT_FLOAT_EQ(Viewport.ClipPixels({40.0f, 120.0f, 100.0f, 20.0f}).w, 0.0f);
+	}
+}
+
+TEST(QmChatInputLayout, UnavailableFramebufferReturnsEmptyClip)
+{
+	for(const auto &Size : {vec2(0.0f, 1200.0f), vec2(1600.0f, 0.0f), vec2(-1.0f, 1200.0f), vec2(1600.0f, -1.0f)})
+	{
+		SCOPED_TRACE(::testing::Message() << Size.x << "/" << Size.y);
+		const auto Clip = QmChatInputPixelClip({40.0f, 120.0f, 100.0f, 20.0f}, {0.0f, 0.0f, 400.0f, 300.0f}, (int)Size.x, (int)Size.y);
+		EXPECT_EQ(Clip.m_X, 0);
+		EXPECT_EQ(Clip.m_Y, 0);
+		EXPECT_EQ(Clip.m_W, 0);
+		EXPECT_EQ(Clip.m_H, 0);
+	}
+}
+
+TEST(QmChatInputViewport, NonUniformProjectionKeepsClipMouseAndTooltipOnTheSameBody)
+{
+	const SQmChatViewport Viewport{{-20.0f, 100.0f, 200.0f, 100.0f}, vec2(1600.0f, 1200.0f)};
+	const CUIRect Body{10.0f, 120.0f, 100.0f, 20.0f};
+	const auto Clip = Viewport.ClipPixels(Body);
+	EXPECT_FLOAT_EQ(Clip.x, 240.0f);
+	EXPECT_FLOAT_EQ(Clip.y, 240.0f);
+	EXPECT_FLOAT_EQ(Clip.w, 800.0f);
+	EXPECT_FLOAT_EQ(Clip.h, 240.0f);
+	EXPECT_TRUE(Body.Inside(Viewport.ToLocal(vec2(640.0f, 360.0f))));
+	const auto Anchor = Viewport.ToUi(Body, {0.0f, 0.0f, 800.0f, 600.0f});
+	EXPECT_FLOAT_EQ(Anchor.x, 120.0f);
+	EXPECT_FLOAT_EQ(Anchor.y, 120.0f);
+	EXPECT_FLOAT_EQ(Anchor.w, 400.0f);
+	EXPECT_FLOAT_EQ(Anchor.h, 120.0f);
+}
+
+TEST(QmChatInputLayout, FarOffscreenClipClampsBeforeIntegerConversion)
+{
+	for(float X : {-1.0e20f, 1.0e20f})
+	{
+		SCOPED_TRACE(X);
+		const auto Clip = QmChatInputPixelClip({X, 120.0f, 100.0f, 20.0f}, {0.0f, 0.0f, 400.0f, 300.0f}, 1600, 1200);
+		EXPECT_EQ(Clip.m_X, X < 0.0f ? 0 : 1600);
+		EXPECT_EQ(Clip.m_Y, 480);
+		EXPECT_EQ(Clip.m_W, 0);
+		EXPECT_EQ(Clip.m_H, 80);
+	}
 }

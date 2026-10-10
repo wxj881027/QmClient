@@ -296,6 +296,8 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 
 	auto *pLineInput = pContext->LineInput();
 	auto &Context = *pContext;
+	if(pLineInput->IsActive())
+		m_MapSettingsBackend.m_pCompletionInput = pLineInput;
 	Context.SetFontSize(FontSize);
 
 	// Small utility to render a floating part above the input rect.
@@ -334,16 +336,35 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 		Context.Update();
 	}
 
+	// Ctrl+Shift+Space 也走实际事件；系统保留热键时使用点击入口。
+	const char *pCompletionTooltip = Localize("Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... .", "Editor");
+	CUIRect CompletionButton;
+	ToolBar.VSplitRight(ToolBar.h, &ToolBar, &CompletionButton);
+	const bool CompletionClicked = DoButton_Editor(&Context.m_DropdownContext.m_ShortcutUsed, "...", 0, &CompletionButton, BUTTONFLAG_LEFT, pCompletionTooltip);
+	if(m_MapSettingsBackend.m_SettingsCompletion.Request(*pLineInput, *Input(), CompletionClicked))
+	{
+		Ui()->SetActiveItem(pLineInput);
+		m_MapSettingsBackend.m_pCompletionInput = pLineInput;
+		Context.m_DropdownContext.m_ShortcutUsed = true;
+		Context.m_DropdownContext.m_ShouldHide = false;
+		Context.Update();
+		Context.UpdateCursor(true);
+	}
+
 	// Color the arguments
 	std::vector<STextColorSplit> vColorSplits;
 	Context.ColorArguments(vColorSplits);
 
 	// Do and render clearable edit box with the colors
-	if(DoClearableEditBox(pLineInput, &ToolBar, FontSize, IGraphics::CORNER_L, Localize("Enter a server setting. Press ctrl+space to show available settings.", "Editor"), vColorSplits))
+	if(DoClearableEditBox(pLineInput, &ToolBar, FontSize, IGraphics::CORNER_L, pCompletionTooltip, vColorSplits))
 	{
 		Context.Update(); // Update the context when contents change
 		Context.m_DropdownContext.m_ShouldHide = false;
 	}
+
+	// 输入框可能在本次绘制中刚获得焦点，下一批事件必须路由到它。
+	if(pLineInput->IsActive())
+		m_MapSettingsBackend.m_pCompletionInput = pLineInput;
 
 	// Update/track the cursor
 	if(Context.UpdateCursor())
@@ -409,14 +430,7 @@ int CEditor::DoEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CLineInput *p
 
 	pDropdown->m_Selected = std::clamp(pDropdown->m_Selected, -1, (int)vData.size() - 1);
 
-	if(Input()->KeyPress(KEY_SPACE) && Input()->ModifierIsPressed())
-	{ // Handle Ctrl+Space to show available options
-		pDropdown->m_ShortcutUsed = true;
-		// Remove inserted space
-		pLineInput->SetRange("", pLineInput->GetCursorOffset() - 1, pLineInput->GetCursorOffset());
-	}
-
-	if((!pDropdown->m_ShouldHide && !pLineInput->IsEmpty() && (pLineInput->IsActive() || pDropdown->m_MousePressedInside)) || pDropdown->m_ShortcutUsed)
+	if((!pDropdown->m_ShouldHide && !pLineInput->IsEmpty() && (pLineInput->IsActive() || pDropdown->m_MousePressedInside)) || (pDropdown->m_ShortcutUsed && pLineInput->IsActive()))
 	{
 		if(!pDropdown->m_Visible)
 		{
@@ -482,7 +496,7 @@ int CEditor::RenderEditBoxDropdown(SEditBoxDropdownContext *pDropdown, CUIRect V
 	if(AutoWidth)
 		CommandsDropdown.w = pDropdown->m_Width + pListBox->ScrollbarWidth();
 
-	pListBox->SetActive(NumEntries > 0);
+	pListBox->SetActive(NumEntries > 0 && m_Dialog == DIALOG_NONE && !Ui()->IsPopupOpen() && pLineInput->IsActive());
 	if(NumEntries > 0)
 	{
 		// Draw the background
@@ -2099,6 +2113,13 @@ void CMapSettingsBackend::CContext::FormatDisplayValue(const char *pValue, char 
 	{
 		str_copy(aOut, pValue);
 	}
+}
+
+bool CMapSettingsBackend::OnInput(const IInput::CEvent &Event)
+{
+	if(m_SettingsCompletion.OnInput(m_pCompletionInput, *Input(), Event))
+		return true;
+	return CEditorComponent::OnInput(Event);
 }
 
 void CMapSettingsBackend::OnMapLoad()

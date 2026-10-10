@@ -8,8 +8,10 @@
 #include <base/time.h>
 
 #include <engine/shared/config.h>
+#include <engine/shared/http_url.h>
 #include <engine/storage.h>
 
+#include <algorithm>
 #include <charconv>
 #include <cstdlib>
 #include <cstring>
@@ -30,17 +32,6 @@
 
 static constexpr size_t HTTP_MAX_CONCURRENT_REQUESTS = 16;
 static constexpr size_t HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST = 4;
-
-static std::string HttpRequestHostKey(const char *pUrl)
-{
-	if(!pUrl || pUrl[0] == '\0')
-		return {};
-
-	const char *pHostStart = str_find(pUrl, "://");
-	pHostStart = pHostStart ? pHostStart + 3 : pUrl;
-	const char *pHostEnd = str_find(pHostStart, "/");
-	return std::string(pHostStart, pHostEnd ? pHostEnd - pHostStart : str_length(pHostStart));
-}
 
 static int CurlDebug(CURL *pHandle, curl_infotype Type, char *pData, size_t DataSize, void *pUser)
 {
@@ -135,6 +126,11 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 	if(m_FailOnErrorStatus)
 	{
 		curl_easy_setopt(pHandle, CURLOPT_FAILONERROR, 1L);
+	}
+	if(m_RevocationBestEffort)
+	{
+		// 吊销分发点缺失或离线时尽力校验，保留 Schannel 对已知吊销证书的拒绝。
+		curl_easy_setopt(pHandle, CURLOPT_SSL_OPTIONS, static_cast<long>(CURLSSLOPT_REVOKE_BEST_EFFORT));
 	}
 	curl_easy_setopt(pHandle, CURLOPT_URL, m_aUrl);
 	if(m_ProxyConfigured)
@@ -451,36 +447,32 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 		char *pEffectiveUrl = nullptr;
 		if(curl_easy_getinfo(pHandle, CURLINFO_EFFECTIVE_URL, &pEffectiveUrl) == CURLE_OK && pEffectiveUrl)
 		{
-			CURLU *pUrl = curl_url();
-			char *pHost = nullptr;
-			if(pUrl && curl_url_set(pUrl, CURLUPART_URL, pEffectiveUrl, 0) == CURLUE_OK &&
-				curl_url_get(pUrl, CURLUPART_HOST, &pHost, 0) == CURLUE_OK)
+			const std::string Host = HttpUrlHost(pEffectiveUrl);
+			if(!Host.empty())
 			{
-				char *pNoProxy = curl_getenv("no_proxy");
-				if(pNoProxy && !*pNoProxy)
-				{
-					curl_free(pNoProxy);
-					pNoProxy = nullptr;
-				}
-				if(!pNoProxy)
-					pNoProxy = curl_getenv("NO_PROXY");
+				const char *pNoProxy = std::getenv("no_proxy");
+				if(!pNoProxy || !*pNoProxy)
+					pNoProxy = std::getenv("NO_PROXY");
 				// 实测最终连接优先，早期失败才使用与运行库兼容的旁路证据。
 				const auto *pVersion = curl_version_info(CURLVERSION_NOW);
 				const bool FinalProxyKnown = UsedProxyResult.has_value() && m_StatusCode >= 200 && (m_StatusCode < 300 || m_StatusCode >= 400);
-				const bool BypassEvidence = pNoProxy && (FinalProxyKnown ? ProxyBypassed(pHost, pNoProxy) :
-											   pVersion && ProxyBypassEvidence(pHost, pNoProxy, pVersion->version_num));
+				const bool BypassEvidence = pNoProxy && (FinalProxyKnown ? ProxyBypassed(Host, pNoProxy) :
+											   pVersion && ProxyBypassEvidence(Host, pNoProxy, pVersion->version_num));
 				if(ProxyFallbackBypassed(m_StatusCode, UsedProxyResult, BypassEvidence))
 				{
 					m_aProxy[0] = '\0';
 					m_ResultUsedProxy = false;
 				}
-				curl_free(pNoProxy);
 			}
-			curl_free(pHost);
-			curl_url_cleanup(pUrl);
 		}
 	}
 
+	// 取消可能与成功或错误消息同时到达，用户取消优先于结果发布。
+	if(IsAbortRequested())
+	{
+		Code = CURLE_ABORTED_BY_CALLBACK;
+		m_AbortTriggeredByProgressCallback = true;
+	}
 	EHttpState State;
 	// 前缀采样主动中止正文回调是成功；用户取消、状态错误与普通下载仍按原错误处理。
 	const bool SampleComplete = Code == CURLE_WRITE_ERROR && m_ResponseSampleComplete && !IsAbortRequested() && m_StatusCode == 200;
@@ -627,6 +619,35 @@ void CHttpCurl::ThreadMain(void *pUser)
 	static_cast<CHttpCurl *>(pUser)->RunLoop();
 }
 
+void CHttpCurl::CompleteRunningRequest(CURL *pHandle, CURLcode Code, std::unordered_map<std::string, size_t> &RunningRequestsPerHost)
+{
+	auto RequestIt = m_RunningRequests.find(pHandle);
+	dbg_assert(RequestIt != m_RunningRequests.end(), "Running handle not added to map");
+	const std::string HostKey = HttpUrlHost(RequestIt->second->m_aUrl);
+	if(auto HostIt = RunningRequestsPerHost.find(HostKey); HostIt != RunningRequestsPerHost.end())
+	{
+		if(HostIt->second > 1)
+			--HostIt->second;
+		else
+			RunningRequestsPerHost.erase(HostIt);
+	}
+	auto pRequest = std::move(RequestIt->second);
+	m_RunningRequests.erase(RequestIt);
+	curl_multi_remove_handle(m_pMultiH, pHandle);
+	pRequest->OnCompletionInternal(pHandle, Code);
+	curl_easy_cleanup(pHandle);
+}
+
+void CHttpCurl::CancelAbortedRequests(std::unordered_map<std::string, size_t> &RunningRequestsPerHost)
+{
+	for(auto It = m_RunningRequests.begin(); It != m_RunningRequests.end();)
+	{
+		const auto Current = It++;
+		if(Current->second->IsAbortRequested())
+			CompleteRunningRequest(Current->first, CURLE_ABORTED_BY_CALLBACK, RunningRequestsPerHost);
+	}
+}
+
 void CHttpCurl::RunLoop()
 {
 	std::unique_lock Lock(m_Lock);
@@ -663,7 +684,7 @@ void CHttpCurl::RunLoop()
 	while(m_State == CHttpCurl::RUNNING)
 	{
 		int Events = 0;
-		const CURLMcode PollCode = curl_multi_poll(m_pMultiH, nullptr, 0, m_NextTimeout, &Events);
+		const CURLMcode PollCode = curl_multi_poll(m_pMultiH, nullptr, 0, m_RunningRequests.empty() ? m_NextTimeout : std::min(m_NextTimeout, 100), &Events);
 
 		// We may have been woken up for a shutdown
 		if(m_Shutdown)
@@ -705,27 +726,12 @@ void CHttpCurl::RunLoop()
 		{
 			if(pMsg->msg == CURLMSG_DONE)
 			{
-				auto RequestIt = m_RunningRequests.find(pMsg->easy_handle);
-				dbg_assert(RequestIt != m_RunningRequests.end(), "Running handle not added to map");
-				const std::string HostKey = HttpRequestHostKey(RequestIt->second->m_aUrl);
-				if(!HostKey.empty())
-				{
-					auto HostIt = RunningRequestsPerHost.find(HostKey);
-					if(HostIt != RunningRequestsPerHost.end())
-					{
-						if(HostIt->second > 1)
-							--HostIt->second;
-						else
-							RunningRequestsPerHost.erase(HostIt);
-					}
-				}
-				auto pRequest = std::move(RequestIt->second);
-				m_RunningRequests.erase(RequestIt);
-				pRequest->OnCompletionInternal(pMsg->easy_handle, pMsg->data.result);
-				curl_multi_remove_handle(m_pMultiH, pMsg->easy_handle);
-				curl_easy_cleanup(pMsg->easy_handle);
+				CompleteRunningRequest(pMsg->easy_handle, pMsg->data.result, RunningRequestsPerHost);
 			}
 		}
+
+		// 连接建立期间也主动释放取消请求，不依赖 curl 进度回调。
+		CancelAbortedRequests(RunningRequestsPerHost);
 
 		decltype(m_PendingRequests) NewRequests = {};
 		Lock.lock();
@@ -761,7 +767,7 @@ void CHttpCurl::RunLoop()
 				continue;
 			}
 
-			const std::string HostKey = HttpRequestHostKey(pRequest->m_aUrl);
+			const std::string HostKey = HttpUrlHost(pRequest->m_aUrl);
 			const size_t RunningForHost = HostKey.empty() ? 0 : RunningRequestsPerHost[HostKey];
 			if(m_RunningRequests.size() >= HTTP_MAX_CONCURRENT_REQUESTS ||
 				(!HostKey.empty() && RunningForHost >= HTTP_MAX_CONCURRENT_REQUESTS_PER_HOST))

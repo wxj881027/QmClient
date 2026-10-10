@@ -16,6 +16,11 @@ namespace
 	protected:
 		void SetUp() override
 		{
+			// 配置备份场景会生成多层目录，保留隔离 tmp 证据，不放宽通用清理的十条安全上限。
+			m_Info.m_DeleteTestStorageFilesOnSuccess = false;
+			static unsigned int s_StorageInstance = 0;
+			const std::string BasePath = m_Info.m_aStoragePath;
+			str_format(m_Info.m_aStoragePath, sizeof(m_Info.m_aStoragePath), "%s-run-%u", BasePath.c_str(), ++s_StorageInstance);
 			m_pStorage = m_Info.CreateTestStorage();
 			ASSERT_NE(m_pStorage, nullptr);
 			m_pFiles = std::make_unique<qm_config_package::CStorageFiles>(*m_pStorage);

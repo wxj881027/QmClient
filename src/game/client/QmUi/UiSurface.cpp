@@ -88,7 +88,7 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 	constexpr int ROWS = 16;
 	const auto RoundedCorner = [&](float Y, bool Right) {
 		return Radius > 0.0f && ((Y < Radius && (Params.m_Corners & (Right ? IGraphics::CORNER_TR : IGraphics::CORNER_TL))) ||
-			(Y > Inner.h - Radius && (Params.m_Corners & (Right ? IGraphics::CORNER_BR : IGraphics::CORNER_BL))));
+						(Y > Inner.h - Radius && (Params.m_Corners & (Right ? IGraphics::CORNER_BR : IGraphics::CORNER_BL))));
 	};
 	const auto Edge = [&](float Y, bool Right) {
 		float Inset = 0.0f;

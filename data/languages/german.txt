@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == Auch auf Dummy anwenden
 
+Also send the original text when translating outgoing messages
+== Beim Übersetzen ausgehender Nachrichten auch den Originaltext senden
+
 Always show
 == Immer anzeigen
 
@@ -806,8 +809,8 @@ Appearance
 Appearance and command highlighting of the local console
 == Darstellung der lokalen Konsole und Befehlshervorhebung
 
-Appearance of help bubbles outside settings cards
-== Darstellung der Hilfeblasen außerhalb von Einstellungskarten
+Appearance of help bubbles
+== Darstellung der Hinweisblasen
 
 Append to log file instead of overwriting
 == An Logdatei anhängen anstatt zu überschreiben
@@ -1298,6 +1301,12 @@ Axiom auto login failed
 Axiom auto login failed, retrying
 == Axiom Auto-Login fehlgeschlagen, versuche es erneut
 
+Axiom auto login skipped: no password
+== Axiom-Auto-Login: Kein Passwort gesetzt, übersprungen
+
+Axiom auto login stopped after repeated failures
+== Axiom-Auto-Login gestoppt: mehrere Fehlversuche
+
 Axiom auto login succeeded
 == Axiom Auto-Login erfolgreich
 
@@ -1309,6 +1318,9 @@ Axiom main account password
 
 Axiom score request failed
 == Axiom-Punkte konnten nicht abgerufen werden
+
+Axiom website
+== Axiom-Website
 
 Axis
 == Achse
@@ -1966,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == Filmische Kamera
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== Filmische Kamera-Glättung (0=sofort, 100=am glattesten)
+
+Cinematic smoothness
+== Filmische Kamera-Glättung
 
 CJK font
 == CJK-Schrift
@@ -3590,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == Schatten hinter Emoticons zeichnen
 
+Draw the favorite star icon with the filled icon font style
+== Favoritensymbol im ausgefüllten Symbolschriftstil zeichnen
+
+Draw the friend heart icon with the filled icon font style
+== Freundessymbol im ausgefüllten Symbolschriftstil zeichnen
+
 Draw tile layers when using custom background (solid)
 == Kachelebenen zeichnen, wenn benutzerdefinierter Hintergrund (einfarbig) verwendet wird
 
@@ -4190,9 +4214,6 @@ Enable skin switch animation
 Enable skin transition animation, then choose the type, scope, duration and easing.
 == Aktiviere die Skin-Übergangsanimation und wähle Typ, Reichweite, Dauer und Easing.
 
-Enable smooth cinematic camera while free spectating
-== Sanfte Kinokamera beim freien Zuschauen aktivieren
-
 Enable SodaMusic Hook
 == SodaMusic-Hook aktivieren
 
@@ -4312,6 +4333,9 @@ Endless hook has been activated
 
 Endless hook has been deactivated
 == Endloser Haken wurde deaktiviert
+
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== Flussstil des Endlos-Hakenrings (0=einfarbig, 1=Regenbogen, 2=statisch)
 
 Endpoint
 == Endpunkt
@@ -4762,6 +4786,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == Spiegeln:
+
+Flow style
+== Flussstil
 
 Folder
 == Ordner
@@ -5848,6 +5875,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == Skin beim Speichern/Laden von Konfigurationsvoreinstellungen einbeziehen
+
+Include Team 0
+== Team 0 einbeziehen
+
+Include Team 0 in the Gores team drown board
+== Team 0 in der Gores-Ertrinkensliste berücksichtigen
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Modus für automatische Übersetzung eingehender Nachrichten (0=nur wenn nicht in der Zielsprache, 1=immer übersetzen)
@@ -9848,9 +9881,6 @@ Replay list: loading ...
 Replay list: not loaded yet
 == Wiederholungsliste: noch nicht geladen
 
-Replay list: up to date
-== Wiederholungsliste: aktuell
-
 Replays directory
 == Wiederholungsordner
 
@@ -10612,6 +10642,9 @@ Send emote when entering freeze
 
 Send emoticon in water
 == Emoticon im Wasser senden
+
+Send original text with translation
+== Originaltext zusammen mit der Übersetzung senden
 
 Send probability
 == Sendewahrscheinlichkeit
@@ -11699,6 +11732,9 @@ Show teleporter tile outlines
 Show text entities
 == Text-Entitäten anzeigen
 
+Show the chat scrollbar on the right
+== Chat-Scrollleiste rechts anzeigen
+
 Show the cursor while free spectating
 == Cursor beim freien Zuschauen anzeigen
 
@@ -12053,6 +12089,9 @@ Smooth Dynamic Camera
 Smooth fade
 == Sanfter Übergang
 
+Smooth free spectator camera
+== Freie Zuschauerkamera glätten
+
 Smooth other players' predicted movement
 == Sanfte vorhergesagte Bewegung anderer Spieler
 
@@ -12061,6 +12100,9 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == Dauer der sanften Scroll-Animation im Menü/Editor (ms, 0 = aus)
+
+Smooth the mouse-driven camera in live and demo free spectating
+== Die mausgesteuerte Kamera beim freien Zuschauen im Spiel und in Demos glätten
 
 Smooth zoom animation time in editor (in ms, 0=off)
 == Dauer der sanften Zoom-Animation im Editor (in ms, 0 = aus)
@@ -12106,6 +12148,12 @@ Soft glow
 
 Solid
 == Durchgehend
+
+Solid favorite icon
+== Ausgefülltes Favoritensymbol
+
+Solid friend icon
+== Ausgefülltes Freundessymbol
 
 Solid tile outline opacity
 == Feste Kachel-Umriss-Deckkraft
@@ -12331,6 +12379,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == Statistiktafel
+
+Static
+== Statisch
 
 Stats
 == Statistik
@@ -12748,6 +12799,18 @@ Team successfully saved by %s. The database connection failed, using generated s
 
 Team tee glow
 == Team-Tee-Glühen
+
+Team tee glow halo size
+== Größe des Leuchthofs der Team-Tees
+
+Team tee glow halo size in percent
+== Größe des Leuchthofs der Team-Tees (in Prozent)
+
+Team tee glow intensity
+== Leuchtstärke der Team-Tees
+
+Team tee glow intensity in percent
+== Leuchtstärke der Team-Tees (in Prozent)
 
 Team used when leaving solo split mode
 == Team beim Verlassen des Solo-Aufteilungsmodus
@@ -13727,6 +13790,9 @@ UI size percentage
 Unable to delete %d selected items. The first failing item was '%s'.
 == %d ausgewählte Elemente konnten nicht gelöscht werden. Das erste fehlgeschlagene Element war '%s'.
 
+Unable to delete skin
+== Skin kann nicht gelöscht werden
+
 Unable to delete the demo '%s'
 == Demo '%s' konnte nicht gelöscht werden
 
@@ -14110,9 +14176,6 @@ Use Tee icons instead of circles
 
 Use the mouse wheel on a hovered module to scale it by 5%
 == Mit dem Mausrad über einem Modul skaliert es um 5%
-
-Use the passwords registered on Axiom for your main and dummy accounts separately. This option does not register accounts.
-== Trage die bei Axiom registrierten Passwörter für Hauptkonto und Dummy getrennt ein. Diese Option erstellt keine Konten.
 
 Use the scoreboard cursor mode to scroll the list
 == Verwenden Sie den Scoreboard-Cursormodus, um die Liste zu scrollen
@@ -14989,6 +15052,9 @@ You're playing on a local server because no online Tutorial server could be foun
 
 You're the last one!
 == Du bist der Letzte!
+
+Your account is your in-game name — register it on the Axiom website. Fill in the registered main and dummy passwords. This option does not register accounts.
+== Dein Konto ist dein Spielname – registriere es zuerst auf der Axiom-Website. Trage die registrierten Passwörter für Hauptkonto und Dummy ein. Diese Option registriert keine Konten.
 
 Your current race time is %s
 == Deine aktuelle Rennzeit ist %s

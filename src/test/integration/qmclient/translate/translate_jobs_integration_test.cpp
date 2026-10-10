@@ -1,14 +1,16 @@
+#include <game/client/components/chat.h>
 #include <game/client/components/qmclient/translate/translate_jobs.h>
 
 #include <test/support/translate_http_test_support.h>
 
 namespace
 {
-	STranslateJob MakeJob(CTranslateTestHttp &Http, bool Outgoing, bool Automatic, const char *pText = "original")
+	STranslateJob MakeJob(CTranslateTestHttp &Http, bool Outgoing, bool Automatic, const char *pText = "original", bool OriginalSent = false)
 	{
 		STranslateJob Job;
 		Job.m_Outgoing = Outgoing;
 		Job.m_AutoTriggered = Automatic;
+		Job.m_OriginalSent = OriginalSent;
 		Job.m_OriginalText = pText;
 		Job.m_Team = 1;
 		Job.m_pBackend = CreateTranslateBackend(Http, pText, "zh", "auto", CreateTranslateTestRequest);
@@ -74,6 +76,42 @@ TEST_F(CTranslateQueueTest, AutomaticFailureRecoversOriginalExactlyOnce)
 	EXPECT_EQ(Done[0].m_Job.m_Team, 1);
 	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
 	EXPECT_EQ(Queue.Size(), 0u);
+}
+
+// 原文已随提交先行发送时，失败回退不再重复发送原文。
+TEST_F(CTranslateQueueTest, FailureWithAlreadySentOriginalDoesNotResend)
+{
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "original", true), 1));
+	m_Http.m_vSubmissions[0].m_pRequest->SetState(EHttpState::ERROR);
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+}
+
+TEST_F(CTranslateQueueTest, SuccessWithAlreadySentOriginalStillSendsTranslation)
+{
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "original", true), 1));
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Success);
+	EXPECT_EQ(Done[0].m_SendText, "translated");
+}
+
+TEST_F(CTranslateQueueTest, CancelledRequestWithAlreadySentOriginalDoesNotResend)
+{
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "original", true), 1));
+	m_Http.m_vSubmissions[0].m_pRequest->SetState(EHttpState::ABORTED);
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+	EXPECT_TRUE(Queue.CanSubmit(1));
+	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
 }
 
 TEST_F(CTranslateQueueTest, ExplicitFailureDoesNotSendUntranslatedText)
@@ -276,4 +314,122 @@ TEST_F(CTranslateQueueTest, TokenLimitedOutgoingDoesNotSendPartialText)
 	EXPECT_FALSE(Done[0].m_Success);
 	EXPECT_TRUE(Done[0].m_SendText.empty());
 	EXPECT_EQ(Done[0].m_Job.m_pTranslateResponse->m_Notice, ETranslateNotice::INVALID_RESPONSE);
+}
+
+// 聊天接纳与翻译任务队列协作；时钟和待发送数量由测试输入，HTTP 只替换外部传输。
+class CTranslateOriginalAdmissionTest : public CTranslateBackendTest
+{
+protected:
+	CTranslateJobQueue m_Queue;
+	int m_PendingCount = 0;
+	int m_OriginalAttempts = 0;
+	int64_t m_Now = 101;
+
+	bool Start(bool KeepOriginal = true, bool Automatic = true)
+	{
+		const auto SendOriginal = [&] {
+			++m_OriginalAttempts;
+			return CChat::ReserveChatMessage(100, m_Now, 10, m_PendingCount);
+		};
+		const auto StartTranslation = [&](bool OriginalSent) {
+			return m_Queue.Submit(MakeJob(m_Http, true, Automatic, "original", OriginalSent), 1);
+		};
+		return CChat::TryStartOutgoingTranslation(KeepOriginal, SendOriginal, StartTranslation);
+	}
+};
+
+TEST_F(CTranslateOriginalAdmissionTest, FullChatQueueRejectsBothOutgoingModesBeforeCreatingRequest)
+{
+	m_PendingCount = 3;
+	m_Now = 110;
+	for(bool Automatic : {false, true})
+	{
+		SCOPED_TRACE(Automatic);
+		EXPECT_FALSE(Start(true, Automatic));
+		EXPECT_EQ(m_PendingCount, 3);
+		EXPECT_EQ(m_Queue.Size(), 0u);
+		EXPECT_TRUE(m_Http.m_vSubmissions.empty());
+	}
+	EXPECT_EQ(m_OriginalAttempts, 2);
+}
+
+TEST_F(CTranslateOriginalAdmissionTest, LastChatSlotAcceptsOriginalAndFailureDoesNotResend)
+{
+	m_PendingCount = 2;
+	ASSERT_TRUE(Start());
+	EXPECT_EQ(m_PendingCount, 3);
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	m_Http.m_vSubmissions[0].m_pRequest->SetState(EHttpState::ERROR);
+	const auto Done = m_Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Job.m_OriginalSent);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+	EXPECT_TRUE(m_Queue.Update([](const auto &) { return true; }).empty());
+}
+
+TEST_F(CTranslateOriginalAdmissionTest, ImmediateOriginalDoesNotConsumePendingCapacityAndSuccessSendsTranslation)
+{
+	m_PendingCount = 3;
+	m_Now = 111;
+	ASSERT_TRUE(Start());
+	EXPECT_EQ(m_PendingCount, 3);
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
+	const auto Done = m_Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Job.m_OriginalSent);
+	EXPECT_EQ(Done[0].m_SendText, "translated");
+}
+
+TEST_F(CTranslateOriginalAdmissionTest, ExactSendDelayStillQueuesOriginal)
+{
+	m_PendingCount = 2;
+	m_Now = 110;
+	ASSERT_TRUE(Start());
+	EXPECT_EQ(m_PendingCount, 3);
+	m_Http.m_vSubmissions[0].m_pRequest->SetState(EHttpState::ABORTED);
+	const auto Done = m_Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Job.m_OriginalSent);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+}
+
+TEST_F(CTranslateOriginalAdmissionTest, RejectedOriginalCanRetryAfterChatCapacityRecovers)
+{
+	m_PendingCount = 3;
+	ASSERT_FALSE(Start());
+	// 外部聊天消费者释放一个槽位后，用户再次提交才启动翻译。
+	m_PendingCount = 2;
+	ASSERT_TRUE(Start());
+	EXPECT_EQ(m_PendingCount, 3);
+	EXPECT_EQ(m_OriginalAttempts, 2);
+	EXPECT_EQ(m_Queue.Size(), 1u);
+	ASSERT_EQ(m_Http.m_vSubmissions.size(), 1u);
+	m_Http.m_vSubmissions[0].m_pRequest->SetState(EHttpState::ERROR);
+	const auto Done = m_Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Job.m_OriginalSent);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+}
+
+TEST_F(CTranslateOriginalAdmissionTest, OriginalDisabledSkipsChatAdmissionAndRetainsAutomaticFailureRecovery)
+{
+	m_PendingCount = 3;
+	ASSERT_TRUE(Start(false));
+	EXPECT_EQ(m_OriginalAttempts, 0);
+	EXPECT_EQ(m_PendingCount, 3);
+	m_Http.m_vSubmissions[0].m_pRequest->SetState(EHttpState::ERROR);
+	const auto Done = m_Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Job.m_OriginalSent);
+	EXPECT_EQ(Done[0].m_SendText, "original");
+}
+
+TEST_F(CTranslateOriginalAdmissionTest, LocallyHandledOriginalDoesNotStartTranslation)
+{
+	const auto StartTranslation = [&](bool OriginalSent) {
+		return m_Queue.Submit(MakeJob(m_Http, true, true, "original", OriginalSent), 1);
+	};
+	EXPECT_FALSE(CChat::TryStartOutgoingTranslation(true, [] { return CChat::EChatSendResult::HANDLED; }, StartTranslation));
+	EXPECT_EQ(m_Queue.Size(), 0u);
+	EXPECT_TRUE(m_Http.m_vSubmissions.empty());
 }

@@ -5,7 +5,18 @@
 #include <cmath>
 #include <cstdint>
 
-// 整块名牌共用一次密度决策：动画内不重建，动画结束才占用完整部件预算。
+// 小字号无 hinting 字形保留少量额外采样；仅改变烘焙密度，不改变游标字号或世界坐标尺寸。
+// 使用物理像素而非相机 zoom 判定，分辨率、DPI 和用户字号共同决定是否需要补偿。
+inline float QmNameplateSmallTextSamplingScale(float FontSize, float PixelsPerUnit)
+{
+	if(!std::isfinite(FontSize) || FontSize <= 0.0f ||
+		!std::isfinite(PixelsPerUnit) || PixelsPerUnit <= 0.0f)
+		return 1.0f;
+	const float Pixels = FontSize * PixelsPerUnit;
+	return 1.0f + 0.25f * std::clamp((12.0f - Pixels) / 4.0f, 0.0f, 1.0f);
+}
+
+// 整块名牌共用一次密度决策：低于当前原版采样需求时恢复，其余动画变化延后；始终占用完整部件预算。
 class CQmNameplateDensity
 {
 	float m_Ratio = 0.0f;
@@ -16,11 +27,14 @@ public:
 	float Ratio() const { return m_Ratio; }
 	uint64_t Revision() const { return m_Revision; }
 	void Reset() { *this = CQmNameplateDensity(); }
-	bool Update(float RequestedRatio, float ReferencePixels, float Grid, bool Zooming, int Cost, int FrameBudget, int &Budget)
+	bool Update(float RequestedRatio, float ReferencePixels, float Grid, bool Zooming, int Cost, int FrameBudget, int &Budget, float MinimumRatio = 0.0f)
 	{
 		if(!std::isfinite(RequestedRatio) || RequestedRatio <= 0.0f ||
 			!std::isfinite(ReferencePixels) || ReferencePixels <= 0.0f ||
 			!std::isfinite(Grid) || Grid <= 0.0f || Grid > 1.0f || Cost < 0)
+			return false;
+		const float Minimum = MinimumRatio == 0.0f ? RequestedRatio : MinimumRatio;
+		if(!std::isfinite(Minimum) || Minimum <= 0.0f || Minimum > RequestedRatio)
 			return false;
 		const float PhysicalDensity = RequestedRatio * ReferencePixels;
 		if(!std::isfinite(PhysicalDensity) || PhysicalDensity <= 0.0f)
@@ -32,7 +46,9 @@ public:
 		// 仅多烘焙一个相机档位；缩放使用滞回，窗口尺寸和 DPI 独立检测。
 		const float Drift = m_Ratio > 0.0f ? std::log(PhysicalDensity / (m_Ratio * m_ReferencePixels)) + Grid : 0.0f;
 		const bool ReferenceChanged = m_ReferencePixels > 0.0f && std::abs(std::log(ReferencePixels / m_ReferencePixels)) > 0.0001f;
-		if(m_Ratio > 0.0f && (Zooming || (!ReferenceChanged && std::abs(Drift) <= Grid * 0.65f)))
+		// 动画和滞回不能将旧低密度容器永久放大；原版当前视野密度是下限。
+		const bool BelowMinimum = m_Ratio * m_ReferencePixels < Minimum * ReferencePixels;
+		if(m_Ratio > 0.0f && !BelowMinimum && (Zooming || (!ReferenceChanged && std::abs(Drift) <= Grid * 0.65f)))
 			return false;
 		// 初次内容必须立即出现。超预算名牌在完整预算帧独占一次，避免永久饥饿。
 		const int Charge = std::min(Cost, std::max(0, FrameBudget));
