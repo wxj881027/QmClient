@@ -343,6 +343,132 @@ TEST(QmTitleStyle, BobPaddingCoversAmplitudeAndRoundsUp)
 	EXPECT_FLOAT_EQ(QmTitleStyleBobPadding(Bob, 0.0f), 4.0f);
 }
 
+TEST(QmTitleStyle, VerticalWaveKeepsOriginalGlyphScale)
+{
+	SQmTitleBobStyle Bob{};
+	Bob.m_Amplitude = 3.0f;
+	Bob.m_WaveLength = 320.0f;
+	Bob.m_Speed = 1.5f;
+	EXPECT_EQ(Bob.m_Mode, EQmTitleMotionMode::BOB);
+	EXPECT_FLOAT_EQ(QmTitleStyleBobScale(Bob, 1.0f, 80.0f), 1.0f);
+	EXPECT_NE(QmTitleStyleBobOffset(Bob, 1.0f, 80.0f), 0.0f);
+}
+
+TEST(QmTitleStyle, ZeroStrengthDisablesPopWave)
+{
+	SQmTitleBobStyle Bob{};
+	Bob.m_Mode = EQmTitleMotionMode::POP;
+	Bob.m_WaveLength = 320.0f;
+	Bob.m_Speed = 1.5f;
+	EXPECT_FLOAT_EQ(QmTitleStyleBobScale(Bob, 0.0f, 0.0f), 1.0f);
+	EXPECT_FLOAT_EQ(QmTitleStyleBobOffset(Bob, 1.0f, 80.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmTitleStyleBobPadding(Bob, 1.0f, 20.0f), 0.0f);
+}
+
+TEST(QmTitleStyle, InvalidWavelengthDisablesPopWave)
+{
+	SQmTitleBobStyle Bob{};
+	Bob.m_Mode = EQmTitleMotionMode::POP;
+	Bob.m_Amplitude = 3.0f;
+	for(float Wavelength : {0.0f, -1.0f})
+	{
+		SCOPED_TRACE(Wavelength);
+		Bob.m_WaveLength = Wavelength;
+		EXPECT_FLOAT_EQ(QmTitleStyleBobScale(Bob, 0.0f, 0.0f), 1.0f);
+		EXPECT_FLOAT_EQ(QmTitleStyleBobOffset(Bob, 1.0f, 80.0f), 0.0f);
+		EXPECT_FLOAT_EQ(QmTitleStyleBobPadding(Bob, 1.0f, 20.0f), 0.0f);
+	}
+}
+
+TEST(QmTitleStyle, PopWaveTravelsRightAndReturnsGlyphsToOriginalSize)
+{
+	SQmTitleBobStyle Bob{};
+	Bob.m_Mode = EQmTitleMotionMode::POP;
+	Bob.m_Amplitude = 3.0f;
+	Bob.m_WaveLength = 320.0f;
+	Bob.m_Speed = pi / 2.0f;
+	// 波峰初始在行首，一秒后到达右侧四分之一波长处。
+	const float Peak = QmTitleStyleBobScale(Bob, 0.0f, 0.0f);
+	EXPECT_GT(Peak, 1.0f);
+	EXPECT_NEAR(QmTitleStyleBobScale(Bob, 0.0f, 80.0f), 1.0f, 1e-5f);
+	EXPECT_NEAR(QmTitleStyleBobScale(Bob, 1.0f, 80.0f), Peak, 1e-5f);
+	EXPECT_NEAR(QmTitleStyleBobScale(Bob, 1.0f, 0.0f), 1.0f, 1e-5f);
+	EXPECT_FLOAT_EQ(QmTitleStyleBobScale(Bob, 2.0f, 0.0f), 1.0f);
+	EXPECT_NEAR(QmTitleStyleBobScale(Bob, 4.0f, 0.0f), Peak, 1e-5f);
+	EXPECT_FLOAT_EQ(QmTitleStyleBobOffset(Bob, 1.0f, 80.0f), 0.0f);
+}
+
+TEST(QmTitleStyle, PopStrengthIncreasesPeakWithoutShrinkingGlyphs)
+{
+	SQmTitleBobStyle Bob{};
+	Bob.m_Mode = EQmTitleMotionMode::POP;
+	Bob.m_WaveLength = 320.0f;
+	Bob.m_Speed = 1.5f;
+	float PreviousPeak = 1.0f;
+	for(int Strength = 1; Strength <= 3; ++Strength)
+	{
+		SCOPED_TRACE(Strength);
+		Bob.m_Amplitude = (float)Strength;
+		const float Peak = QmTitleStyleBobScale(Bob, 0.0f, 0.0f);
+		EXPECT_GT(Peak, PreviousPeak);
+		EXPECT_LE(Peak, 1.3f);
+		for(int Step = 0; Step < 64; ++Step)
+		{
+			const float Scale = QmTitleStyleBobScale(Bob, Step * 0.1f, 37.0f);
+			EXPECT_GE(Scale, 1.0f);
+			EXPECT_LE(Scale, Peak);
+		}
+		PreviousPeak = Peak;
+	}
+}
+
+TEST(QmTitleStyle, ZeroSpeedPausesPopWave)
+{
+	SQmTitleBobStyle Bob{};
+	Bob.m_Mode = EQmTitleMotionMode::POP;
+	Bob.m_Amplitude = 3.0f;
+	Bob.m_WaveLength = 320.0f;
+	Bob.m_Speed = 0.0f;
+	const float Paused = QmTitleStyleBobScale(Bob, 0.0f, 37.0f);
+	EXPECT_GT(Paused, 1.0f);
+	EXPECT_FLOAT_EQ(QmTitleStyleBobScale(Bob, 100.0f, 37.0f), Paused);
+}
+
+TEST(QmTitleStyle, SwitchingMotionModeClearsPreviousTransform)
+{
+	SQmTitleBobStyle Bob{};
+	Bob.m_Mode = EQmTitleMotionMode::POP;
+	Bob.m_Amplitude = 3.0f;
+	Bob.m_WaveLength = 320.0f;
+	const float Scale = QmTitleStyleBobScale(Bob, 0.0f, 37.0f);
+	EXPECT_GT(Scale, 1.0f);
+	Bob.m_Mode = EQmTitleMotionMode::BOB;
+	EXPECT_FLOAT_EQ(QmTitleStyleBobScale(Bob, 0.0f, 37.0f), 1.0f);
+	EXPECT_NE(QmTitleStyleBobOffset(Bob, 0.0f, 37.0f), 0.0f);
+	Bob.m_Mode = EQmTitleMotionMode::POP;
+	EXPECT_FLOAT_EQ(QmTitleStyleBobOffset(Bob, 0.0f, 37.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmTitleStyleBobScale(Bob, 0.0f, 37.0f), Scale);
+}
+
+TEST(QmTitleStyle, PopPaddingFollowsFontSizeAndCoversPeakExpansion)
+{
+	SQmTitleBobStyle Bob{};
+	Bob.m_Mode = EQmTitleMotionMode::POP;
+	Bob.m_Amplitude = 3.0f;
+	Bob.m_WaveLength = 320.0f;
+	const float Small = QmTitleStyleBobPadding(Bob, 0.0f, 10.0f);
+	const float Large = QmTitleStyleBobPadding(Bob, 0.0f, 20.0f);
+	EXPECT_GT(Small, 0.0f);
+	EXPECT_FLOAT_EQ(Large, Small * 2.0f);
+	const STextCharOffset Transform(0, 0.0f, 0.0f, QmTitleStyleBobScale(Bob, 0.0f, 0.0f));
+	const vec2 Top = Transform.TransformVertex(vec2(0.0f, -10.0f), vec2(0.0f, 0.0f));
+	EXPECT_LE(-Top.y - 10.0f, Large);
+	const float Aligned = QmTitleStyleBobPadding(Bob, 2.0f, 15.0f);
+	EXPECT_GE(Aligned, QmTitleStyleBobPadding(Bob, 0.0f, 15.0f));
+	EXPECT_FLOAT_EQ(std::fmod(Aligned, 2.0f), 0.0f);
+	EXPECT_FLOAT_EQ(QmTitleStyleBobPadding(Bob, 1.0f, 0.0f), 0.0f);
+}
+
 TEST(QmTitleStyle, ShimmerDisabledPaths)
 {
 	SQmTitleShimmer Shimmer;

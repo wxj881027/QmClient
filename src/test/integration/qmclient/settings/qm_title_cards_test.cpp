@@ -35,7 +35,7 @@ TEST(QmTitleCards, MissingSettingNamesFindTheInteractiveDisplayCard)
 {
 	qm_card_order::CModel Model;
 	Model.SetEntries(qm_card_registry::BuildDefaultEntries());
-	for(const char *pQuery : {"头衔显示", "qm_show_nameplate_title", "qm_nameplate_title_above_name", "qm_show_main_title", "qm_show_dummy_title", "qm_title_style_enabled", "qm_title_color_mode", "qm_title_bob_speed", "qm_title_shimmer_speed"})
+	for(const char *pQuery : {"头衔显示", "qm_show_nameplate_title", "qm_nameplate_title_above_name", "qm_show_main_title", "qm_show_dummy_title", "qm_title_style_enabled", "qm_title_color_mode", "qm_title_motion_mode", "Title motion", "Pop wave", "上下波动", "放大凸起", "qm_title_bob_speed", "qm_title_shimmer_speed"})
 	{
 		SCOPED_TRACE(pQuery);
 		const auto vResults = qm_card_registry::SearchCards(pQuery, Model);
