@@ -33,6 +33,7 @@ SQmTitleRenderStyle QmTitleResolveRenderStyle(const char *pServerStyleId, const 
 
 	// 服务端只下发风格 id，浮动与相位强度仍由本地配置决定。
 	Style.m_Interpolation = EQmTitleInterpolation::Smooth;
+	Style.m_Bob.m_Mode = (EQmTitleMotionMode)g_Config.m_QmTitleMotionMode;
 	Style.m_Bob.m_Amplitude = (float)g_Config.m_QmTitleBobAmplitude;
 	Style.m_Bob.m_WaveLength = (float)g_Config.m_QmTitleBobWavelength;
 	Style.m_Bob.m_Speed = (float)g_Config.m_QmTitleBobSpeed / 100.0f;
@@ -127,7 +128,7 @@ bool QmTitleRenderFillCursor(ITextRender *pTextRender, CTextCursor &Cursor, cons
 		Cursor.m_vColorSplits.emplace_back(BaseIndex + ByteIndex, (int)(pNext - pCurrent), LeftColor, RightColor);
 
 		if(UseBob)
-			Cursor.m_vCharOffsets.emplace_back(BaseIndex + ByteIndex, 0.0f, QmTitleStyleBobOffset(Style.m_Bob, TimeSec, LeftX));
+			Cursor.m_vCharOffsets.emplace_back(BaseIndex + ByteIndex, 0.0f, QmTitleStyleBobOffset(Style.m_Bob, TimeSec, LeftX), QmTitleStyleBobScale(Style.m_Bob, TimeSec, LeftX));
 
 		PixelX = RightX;
 		pCurrent = pNext;
@@ -161,7 +162,7 @@ void QmTitleRenderFillMotionOffsets(ITextRender *pTextRender, CTextCursor &Curso
 		const float LeftX = PixelX;
 		const float RightX = QmTitlePrefixWidth(pTextRender, pText, (int)(pNext - pText), FontSize, LeftX, pMetrics);
 
-		Cursor.m_vCharOffsets.emplace_back(BaseIndex + (int)(pCurrent - pText), 0.0f, QmTitleStyleBobOffset(Style.m_Bob, TimeSec, LeftX));
+		Cursor.m_vCharOffsets.emplace_back(BaseIndex + (int)(pCurrent - pText), 0.0f, QmTitleStyleBobOffset(Style.m_Bob, TimeSec, LeftX), QmTitleStyleBobScale(Style.m_Bob, TimeSec, LeftX));
 		PixelX = RightX;
 		pCurrent = pNext;
 	}

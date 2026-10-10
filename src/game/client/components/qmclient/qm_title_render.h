@@ -72,7 +72,7 @@ private:
 	std::array<float, 64> m_aWidths = {};
 };
 
-// 头衔动态渲染参数：颜色风格 + 可选的逐字符波浪浮动。
+// 头衔动态渲染参数：颜色风格 + 可选的逐字符上下波动或放大凸起。
 struct SQmTitleRenderStyle
 {
 	const SQmTitleStyle *m_pStyle = nullptr; // nullptr 表示不启用动态风格
@@ -123,7 +123,7 @@ SQmTitleRenderStyle QmTitleResolveRenderStyle(const char *pServerStyleId, bool L
 // 与 QmAddTitleRainbowSplits 一样，色段使用字节偏移作为字符序号（与引擎的 m_CharCount 语义一致）。
 bool QmTitleRenderFillCursor(ITextRender *pTextRender, CTextCursor &Cursor, const char *pText, float FontSize, const SQmTitleRenderStyle &Style, float TimeSec, float Alpha, const SQmTitleShimmer &Shimmer = {}, const CQmTitleTextMetrics *pMetrics = nullptr, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), const ColorRGBA &ColorEnd = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 
-// 只写逐字符浮动偏移，不写任何色段：配色交给调用方自己的档位（单色走文本色，彩虹走 QmAddTitleRainbowSplits）。
+// 只写逐字符位移与缩放，不写任何色段：配色交给调用方自己的档位（单色走文本色，彩虹走 QmAddTitleRainbowSplits）。
 // 风格颜色的优先级低于本地配色档，此时仍要保留浮动与掠光，所以不能整条跳过风格。
 void QmTitleRenderFillMotionOffsets(ITextRender *pTextRender, CTextCursor &Cursor, const char *pText, float FontSize, const SQmTitleRenderStyle &Style, float TimeSec, const SQmTitleShimmer &Shimmer = {}, const CQmTitleTextMetrics *pMetrics = nullptr);
 

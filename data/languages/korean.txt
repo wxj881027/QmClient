@@ -8786,6 +8786,9 @@ Points unavailable
 Polished
 == 광택
 
+Pop wave
+== 확대 물결
+
 Popup & dropdown blur
 == 팝업 및 드롭다운 흐림
 
@@ -12452,6 +12455,9 @@ Streamer mode
 Strength icons assets
 == 강도 아이콘 에셋
 
+Strength of the vertical or pop wave. Zero keeps the title still.
+== 상하 또는 확대 물결의 강도입니다. 영으로 설정하면 칭호가 움직이지 않습니다.
+
 Stress system (debug builds only).
 == 스트레스 시스템 (디버그 빌드 전용)
 
@@ -13277,14 +13283,17 @@ Title display
 Title light sweep speed in 1/100 row per second (0 = off)
 == 칭호 빛 이동 속도 (초당 1/100줄, 0 = 끔)
 
+Title motion
+== 칭호 애니메이션
+
+Title motion: 0 = vertical wave, 1 = pop wave
+== 칭호 애니메이션: 0 = 상하 물결, 1 = 확대 물결
+
 Title opacity
 == 칭호 불투명도
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == 칭호 글자별 위상 (픽셀당 1/1000 px, 0 = 스타일 기본값, 20 = 빛 띠 보임)
-
-Title per-character vertical bob amplitude in pixels (0 = off)
-== 칭호 글자별 상하 흔들림 진폭 (픽셀, 0 = 끔)
 
 Title preview
 == 칭호 완성 미리보기
@@ -13306,6 +13315,9 @@ Title too long or contains unsupported characters
 
 Title visibility and appearance
 == 칭호 표시 여부와 외형
+
+Title wave strength (0-3, 0 = off)
+== 칭호 물결 강도 (0-3, 0 = 끔)
 
 to check a server setting say /settings and setting's name, setting names are:
 == 서버 설정을 확인하려면 /settings 와 설정 이름을 입력하세요. 설정 이름은 다음과 같습니다:
@@ -14189,14 +14201,14 @@ Version
 Version performing the analysis
 == 분석을 수행하는 버전
 
-Vertical movement of each character. Zero keeps the title still.
-== 각 글자의 위아래 움직임입니다. 영으로 설정하면 칭호가 움직이지 않습니다.
-
 Vertical position
 == 세로 위치
 
 Vertical sync (may cause lag)
 == 수직 동기화 (지연 발생 가능)
+
+Vertical wave
+== 상하 물결
 
 Video Background
 == 비디오 배경
