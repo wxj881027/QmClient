@@ -5316,7 +5316,6 @@ Zoom to current mouse target
 [Editor]	Delete
 [Editor]	Delete command %d
 [Editor]	Delete command %d; Edit command %d
-[Editor]	Delete current envelope point in all channels.
 [Editor]	Delete envelope %d
 [Editor]	Delete group
 [Editor]	Delete group %d
@@ -5328,6 +5327,7 @@ Zoom to current mouse target
 [Editor]	Delete the current sound source.
 [Editor]	Delete the group.
 [Editor]	Delete the layer.
+[Editor]	Delete the selected channel point.
 [Editor]	Delete the selected file.
 [Editor]	Delete the selected folder.
 [Editor]	Delete this command.
@@ -5348,7 +5348,8 @@ Zoom to current mouse target
 [Editor]	Do you want to save your changes before closing this map?\n\nYour changes will be lost if you discard them.
 [Editor]	Done
 [Editor]	DOOR: Combined with LASER LENGTH creates doors. Doesn't allow to go through it (only with NINJA).
-[Editor]	Double click to create a new point. Use shift to change the zoom axis. Press S to scale selected envelope points.
+[Editor]	Drag a rectangle inside the quad to create a cropped quad.
+[Editor]	Drag inside the quad to slice a rectangle. Hold alt to ignore grid. Right click to cancel.
 [Editor]	DRAGGING LASER: Grabs and attracts the closest tee to it. Can reach tees through walls but not through LASER BLOCKER. Medium strength.
 [Editor]	DRAGGING LASER: Grabs and attracts the closest tee to it. Can reach tees through walls but not through LASER BLOCKER. Strong.
 [Editor]	DRAGGING LASER: Grabs and attracts the closest tee to it. Can reach tees through walls but not through LASER BLOCKER. Weak.
@@ -5375,7 +5376,6 @@ Zoom to current mouse target
 [Editor]	Edit command %d
 [Editor]	Edit envelope %d %s
 [Editor]	Edit envelope %d point %d (channel %d) %s
-[Editor]	Edit envelope %d point %d color
 [Editor]	Edit group %d %s property
 [Editor]	Edit layer %d in group %d %s property
 [Editor]	Edit layers group and order (x%d)
@@ -5776,6 +5776,7 @@ Zoom to current mouse target
 [Editor]	Resize the current quad based on the aspect ratio of its image.
 [Editor]	Restart server
 [Editor]	Restarting server
+[Editor]	Right click or double click to add points on active channels. Use shift to change the zoom axis. Press S to scale selected points.
 [Editor]	Room %s is in sync (%d/%d people)
 [Editor]	Room code
 [Editor]	Room code copied
@@ -5858,6 +5859,7 @@ Zoom to current mouse target
 [Editor]	Size: %d × %d
 [Editor]	Size: %zu × %zu
 [Editor]	Slice
+[Editor]	Slice rectangle
 [Editor]	Smooth
 [Editor]	SNOWFLAKE: Works like a FREEZE tile. Freezes tees for 3 seconds by default.
 [Editor]	Softness 

@@ -3,6 +3,10 @@
 
 #include "component.h"
 
+#include <memory>
+
+class CLayerQuads;
+
 class CQuadKnife : public CEditorComponent
 {
 public:
@@ -13,14 +17,18 @@ public:
 		int m_SelectedQuadIndex;
 		int m_Count;
 		vec2 m_aPoints[4];
+		bool m_Rectangle;
+		bool m_Dragging;
+		vec2 m_DragStart;
+		std::weak_ptr<CLayerQuads> m_pLayer;
 
 		void Reset();
 	};
 
 	bool IsActive() const;
-	void Activate(int SelectedQuad);
+	void Activate(int SelectedQuad, bool Rectangle = false);
 	void Deactivate();
-	void DoSlice();
+	void DoSlice(bool MouseInside);
 };
 
 #endif

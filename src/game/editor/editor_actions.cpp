@@ -1648,7 +1648,7 @@ void CEditorActionEnvelopeEditPoint::Apply(int Value)
 
 		if(pEnvelope->GetChannels() == 4)
 		{
-			Editor()->m_ColorPickerPopupContext.m_RgbaColor = pEnvelope->m_vPoints[m_PointIndex].ColorValue();
+			pEnvelope->Eval(pEnvelope->m_vPoints[m_PointIndex].m_Time.AsSeconds(), Editor()->m_ColorPickerPopupContext.m_RgbaColor, 4, false);
 			Editor()->m_ColorPickerPopupContext.m_HslaColor = color_cast<ColorHSLA>(Editor()->m_ColorPickerPopupContext.m_RgbaColor);
 			Editor()->m_ColorPickerPopupContext.m_HsvaColor = color_cast<ColorHSVA>(Editor()->m_ColorPickerPopupContext.m_HslaColor);
 		}
@@ -1701,19 +1701,7 @@ void CEditorActionEditEnvelopePointValue::Apply(bool Undo)
 			CurrentValue = std::clamp(CurrentValue, 0.0f, 1.0f);
 		pEnvelope->m_vPoints[m_PointIndex].m_aValues[m_Channel] = f2fx(CurrentValue);
 
-		if(m_PointIndex != 0)
-		{
-			pEnvelope->m_vPoints[m_PointIndex].m_Time = CurrentTime;
-
-			if(pEnvelope->m_vPoints[m_PointIndex].m_Time < pEnvelope->m_vPoints[m_PointIndex - 1].m_Time)
-				pEnvelope->m_vPoints[m_PointIndex].m_Time = pEnvelope->m_vPoints[m_PointIndex - 1].m_Time + CFixedTime(1);
-			if(static_cast<size_t>(m_PointIndex) + 1 != pEnvelope->m_vPoints.size() && pEnvelope->m_vPoints[m_PointIndex].m_Time > pEnvelope->m_vPoints[m_PointIndex + 1].m_Time)
-				pEnvelope->m_vPoints[m_PointIndex].m_Time = pEnvelope->m_vPoints[m_PointIndex + 1].m_Time - CFixedTime(1);
-		}
-		else
-		{
-			pEnvelope->m_vPoints[m_PointIndex].m_Time = CFixedTime(0);
-		}
+		pEnvelope->m_vPoints[m_PointIndex].m_Time = pEnvelope->ClampPointTime(m_PointIndex, m_Channel, CurrentTime);
 	}
 
 	Map()->OnModify();
@@ -1730,38 +1718,40 @@ CEditorActionResetEnvelopePointTangent::CEditorActionResetEnvelopePointTangent(C
 
 // ------------------
 
-CEditorActionAddEnvelopePoint::CEditorActionAddEnvelopePoint(CEditorMap *pMap, int EnvelopeIndex, CFixedTime Time, ColorRGBA Channels) :
-	IEditorAction(pMap), m_EnvelopeIndex(EnvelopeIndex), m_Time(Time), m_Channels(Channels)
+CEditorActionAddEnvelopePoint::CEditorActionAddEnvelopePoint(CEditorMap *pMap, int EnvelopeIndex, CFixedTime Time, ColorRGBA Channels, int ChannelMask) :
+	IEditorAction(pMap), m_EnvelopeIndex(EnvelopeIndex)
 {
+	Map()->m_EnvOpTracker.Stop(false);
+	auto pEnvelope = Map()->m_vpEnvelopes[EnvelopeIndex];
+	m_vPreviousPoints = pEnvelope->m_vPoints;
+	CEnvelope Updated = *pEnvelope;
+	Updated.AddPoint(Time, {f2fx(Channels.r), f2fx(Channels.g), f2fx(Channels.b), f2fx(Channels.a)}, ChannelMask);
+	m_vCurrentPoints = std::move(Updated.m_vPoints);
 	str_format(m_aDisplayText, sizeof(m_aDisplayText), Localize("Add new point in envelope %d at time %f", "Editor"), m_EnvelopeIndex, Time.AsSeconds());
 }
 
 void CEditorActionAddEnvelopePoint::Undo()
 {
-	// Delete added point
-	auto pEnvelope = Map()->m_vpEnvelopes[m_EnvelopeIndex];
-	auto pIt = std::find_if(pEnvelope->m_vPoints.begin(), pEnvelope->m_vPoints.end(), [this](const CEnvPoint_runtime &Point) {
-		return Point.m_Time == m_Time;
-	});
-	if(pIt != pEnvelope->m_vPoints.end())
-	{
-		pEnvelope->m_vPoints.erase(pIt);
-	}
-
+	Map()->m_vpEnvelopes[m_EnvelopeIndex]->m_vPoints = m_vPreviousPoints;
+	Map()->DeselectEnvPoints();
+	Editor()->Ui()->SetActiveItem(nullptr);
+	Editor()->Ui()->SetHotItem(nullptr);
 	Map()->OnModify();
 }
 
 void CEditorActionAddEnvelopePoint::Redo()
 {
-	auto pEnvelope = Map()->m_vpEnvelopes[m_EnvelopeIndex];
-	pEnvelope->AddPoint(m_Time, {f2fx(m_Channels.r), f2fx(m_Channels.g), f2fx(m_Channels.b), f2fx(m_Channels.a)});
-
+	Map()->m_vpEnvelopes[m_EnvelopeIndex]->m_vPoints = m_vCurrentPoints;
+	Map()->DeselectEnvPoints();
+	Editor()->Ui()->SetActiveItem(nullptr);
+	Editor()->Ui()->SetHotItem(nullptr);
 	Map()->OnModify();
 }
 
 CEditorActionDeleteEnvelopePoint::CEditorActionDeleteEnvelopePoint(CEditorMap *pMap, int EnvelopeIndex, int PointIndex) :
 	IEditorAction(pMap), m_EnvelopeIndex(EnvelopeIndex), m_PointIndex(PointIndex), m_Point(Map()->m_vpEnvelopes[EnvelopeIndex]->m_vPoints[PointIndex])
 {
+	Map()->m_EnvOpTracker.Stop(false);
 	str_format(m_aDisplayText, sizeof(m_aDisplayText), Localize("Delete point %d of envelope %d", "Editor"), m_PointIndex, m_EnvelopeIndex);
 }
 
@@ -1769,7 +1759,9 @@ void CEditorActionDeleteEnvelopePoint::Undo()
 {
 	std::shared_ptr<CEnvelope> pEnvelope = Map()->m_vpEnvelopes[m_EnvelopeIndex];
 	pEnvelope->m_vPoints.insert(pEnvelope->m_vPoints.begin() + m_PointIndex, m_Point);
-
+	Map()->DeselectEnvPoints();
+	Editor()->Ui()->SetActiveItem(nullptr);
+	Editor()->Ui()->SetHotItem(nullptr);
 	Map()->OnModify();
 }
 
@@ -1778,12 +1770,9 @@ void CEditorActionDeleteEnvelopePoint::Redo()
 	std::shared_ptr<CEnvelope> pEnvelope = Map()->m_vpEnvelopes[m_EnvelopeIndex];
 	pEnvelope->m_vPoints.erase(pEnvelope->m_vPoints.begin() + m_PointIndex);
 
-	auto pSelectedPointIt = std::find_if(Map()->m_vSelectedEnvelopePoints.begin(), Map()->m_vSelectedEnvelopePoints.end(), [this](const std::pair<int, int> &Pair) {
-		return Pair.first == m_PointIndex;
-	});
-
-	if(pSelectedPointIt != Map()->m_vSelectedEnvelopePoints.end())
-		Map()->m_vSelectedEnvelopePoints.erase(pSelectedPointIt);
+	Map()->DeselectEnvPoints();
+	Editor()->Ui()->SetActiveItem(nullptr);
+	Editor()->Ui()->SetHotItem(nullptr);
 
 	Map()->OnModify();
 }

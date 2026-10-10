@@ -1219,6 +1219,15 @@ CUi::EPopupMenuFunctionResult CEditor::PopupQuad(void *pContext, CUIRect View, b
 		return CUi::POPUP_CLOSE_CURRENT;
 	}
 
+	View.HSplitBottom(6.0f, &View, nullptr);
+	View.HSplitBottom(12.0f, &View, &Button);
+	static int s_RectangleSliceButton;
+	if(pEditor->DoButton_Editor(&s_RectangleSliceButton, Localize("Slice rectangle", "Editor"), 0, &Button, BUTTONFLAG_LEFT, Localize("Drag a rectangle inside the quad to create a cropped quad.", "Editor")))
+	{
+		pEditor->QuadKnife()->Activate(pQuadPopupContext->m_SelectedQuadIndex, true);
+		return CUi::POPUP_CLOSE_CURRENT;
+	}
+
 	// proportional scale
 	View.HSplitBottom(8.0f, &View, nullptr);
 	static int s_ScalePercent = 100;
@@ -1624,6 +1633,8 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEnvPoint(void *pContext, CUIRect Vie
 	CEditor *pEditor = static_cast<CEditor *>(pContext);
 	if(pEditor->Map()->m_SelectedEnvelope < 0 || pEditor->Map()->m_SelectedEnvelope >= (int)pEditor->Map()->m_vpEnvelopes.size())
 		return CUi::POPUP_CLOSE_CURRENT;
+	if(!pEditor->Map()->IsTangentSelected() && pEditor->Map()->m_vSelectedEnvelopePoints.empty())
+		return CUi::POPUP_CLOSE_CURRENT;
 
 	const float RowHeight = 12.0f;
 	CUIRect Row, Label, EditBox;
@@ -1640,38 +1651,16 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEnvPoint(void *pContext, CUIRect Vie
 		Row.VSplitLeft(10.0f, nullptr, &EditBox);
 		pEditor->Ui()->DoLabel(&Label, Localize("Color:", "Editor"), RowHeight - 2.0f, TEXTALIGN_ML);
 
-		const auto SelectedPoint = pEditor->Map()->m_vSelectedEnvelopePoints.front();
-		const int SelectedIndex = SelectedPoint.first;
-		auto *pValues = pEnvelope->m_vPoints[SelectedIndex].m_aValues;
-		const ColorRGBA Color = pEnvelope->m_vPoints[SelectedIndex].ColorValue();
-		const auto &&SetColor = [&](ColorRGBA NewColor) {
-			if(Color == NewColor && pEditor->m_ColorPickerPopupContext.m_State == EEditState::EDITING)
-				return;
-
-			static int s_Values[4];
-
+		const auto [SelectedIndex, SelectedChannel] = pEditor->Map()->m_vSelectedEnvelopePoints.front();
+		ColorRGBA Color(1, 1, 1, 1);
+		pEnvelope->Eval(pEnvelope->m_vPoints[SelectedIndex].m_Time.AsSeconds(), Color, 4, false);
+		const auto SetColor = [&](ColorRGBA NewColor) {
+			static int s_PreviousValue;
 			if(pEditor->m_ColorPickerPopupContext.m_State == EEditState::START || pEditor->m_ColorPickerPopupContext.m_State == EEditState::ONE_GO)
-			{
-				for(int Channel = 0; Channel < 4; ++Channel)
-					s_Values[Channel] = pValues[Channel];
-			}
-
-			pEnvelope->m_vPoints[SelectedIndex].SetColorValue(NewColor);
-
+				s_PreviousValue = pEnvelope->m_vPoints[SelectedIndex].m_aValues[SelectedChannel];
+			pEnvelope->m_vPoints[SelectedIndex].m_aValues[SelectedChannel] = f2fx(NewColor[SelectedChannel]);
 			if(pEditor->m_ColorPickerPopupContext.m_State == EEditState::END || pEditor->m_ColorPickerPopupContext.m_State == EEditState::ONE_GO)
-			{
-				std::vector<std::shared_ptr<IEditorAction>> vpActions(4);
-
-				for(int Channel = 0; Channel < 4; ++Channel)
-				{
-					vpActions[Channel] = std::make_shared<CEditorActionEnvelopeEditPoint>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, Channel, CEditorActionEnvelopeEditPoint::EEditType::VALUE, s_Values[Channel], f2fx(NewColor[Channel]));
-				}
-
-				char aDisplay[256];
-				str_format(aDisplay, sizeof(aDisplay), Localize("Edit envelope %d point %d color", "Editor"), pEditor->Map()->m_SelectedEnvelope, SelectedIndex);
-				pEditor->Map()->m_EnvelopeEditorHistory.RecordAction(std::make_shared<CEditorActionBulk>(pEditor->Map(), vpActions, aDisplay));
-			}
-
+				pEditor->Map()->m_EnvelopeEditorHistory.RecordAction(std::make_shared<CEditorActionEnvelopeEditPoint>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, SelectedChannel, CEditorActionEnvelopeEditPoint::EEditType::VALUE, s_PreviousValue, f2fx(NewColor[SelectedChannel])));
 			pEditor->Map()->m_UpdateEnvPointInfo = true;
 			pEditor->Map()->OnModify();
 		};
@@ -1739,15 +1728,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEnvPoint(void *pContext, CUIRect Vie
 				auto [SelectedIndex, SelectedChannel] = pEditor->Map()->m_vSelectedEnvelopePoints.front();
 				pEditor->Map()->m_EnvelopeEditorHistory.Execute(std::make_shared<CEditorActionEditEnvelopePointValue>(pEditor->Map(), pEditor->Map()->m_SelectedEnvelope, SelectedIndex, SelectedChannel, CEditorActionEditEnvelopePointValue::EType::POINT, OldTime, OldValue, CFixedTime::FromSeconds(CurrentTime), f2fx(CurrentValue)));
 
-				if(SelectedIndex != 0)
-				{
-					CurrentTime = pEnvelope->m_vPoints[SelectedIndex].m_Time.AsSeconds();
-				}
-				else
-				{
-					CurrentTime = 0.0f;
-					pEnvelope->m_vPoints[SelectedIndex].m_Time = CFixedTime(0);
-				}
+				CurrentTime = pEnvelope->m_vPoints[SelectedIndex].m_Time.AsSeconds();
 			}
 
 			s_CurTimeInput.SetFloat(CFixedTime::FromSeconds(CurrentTime).AsSeconds());
@@ -1762,7 +1743,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEnvPoint(void *pContext, CUIRect Vie
 	View.HSplitTop(RowHeight, &Row, &View);
 	static int s_DeleteButtonId = 0;
 	const char *pButtonText = pEditor->Map()->IsTangentSelected() ? Localize("Reset", "Editor") : Localize("Delete", "Editor");
-	const char *pTooltip = pEditor->Map()->IsTangentSelected() ? Localize("Reset tangent point to default value.", "Editor") : Localize("Delete current envelope point in all channels.", "Editor");
+	const char *pTooltip = pEditor->Map()->IsTangentSelected() ? Localize("Reset tangent point to default value.", "Editor") : Localize("Delete the selected channel point.", "Editor");
 	if(pEditor->DoButton_Editor(&s_DeleteButtonId, pButtonText, 0, &Row, BUTTONFLAG_LEFT, pTooltip))
 	{
 		if(pEditor->Map()->IsTangentInSelected())
@@ -3396,7 +3377,7 @@ CUi::EPopupMenuFunctionResult CEditor::PopupEnvelopeCurvetype(void *pContext, CU
 			{
 				SelectedPoint.m_Curvetype = Type;
 				pEditor->Map()->m_EnvelopeEditorHistory.RecordAction(std::make_shared<CEditorActionEnvelopeEditPoint>(pEditor->Map(),
-					pEditor->Map()->m_SelectedEnvelope, pEditor->m_PopupEnvelopeSelectedPoint, 0, CEditorActionEnvelopeEditPoint::EEditType::CURVE_TYPE, PrevCurve, SelectedPoint.m_Curvetype));
+					pEditor->Map()->m_SelectedEnvelope, pEditor->m_PopupEnvelopeSelectedPoint, pEnvelope->m_vPoints[pEditor->m_PopupEnvelopeSelectedPoint].m_Channel, CEditorActionEnvelopeEditPoint::EEditType::CURVE_TYPE, PrevCurve, SelectedPoint.m_Curvetype));
 				pEditor->Map()->OnModify();
 				return CUi::POPUP_CLOSE_CURRENT;
 			}

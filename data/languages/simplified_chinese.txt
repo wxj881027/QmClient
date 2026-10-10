@@ -16216,10 +16216,6 @@ Delete command %d; Edit command %d
 == 删除命令 %d; 编辑命令 %d
 
 [Editor]
-Delete current envelope point in all channels.
-== 删除当前动画点在所有通道上的数据。
-
-[Editor]
 Delete envelope %d
 == 删除动画 %d
 
@@ -16262,6 +16258,10 @@ Delete the group.
 [Editor]
 Delete the layer.
 == 删除该层.
+
+[Editor]
+Delete the selected channel point.
+== 删除当前轴的关键帧。
 
 [Editor]
 Delete the selected file.
@@ -16344,8 +16344,12 @@ DOOR: Combined with LASER LENGTH creates doors. Doesn't allow to go through it (
 == 门: 与激光长度结合创建门.不允许通过(只有忍者可以).
 
 [Editor]
-Double click to create a new point. Use shift to change the zoom axis. Press S to scale selected envelope points.
-== 双击创建新点。按住 Shift 切换缩放轴，按 S 缩放选中的动画点。
+Drag a rectangle inside the quad to create a cropped quad.
+== 在 Quad 内拖出矩形，生成裁剪后的 Quad。
+
+[Editor]
+Drag inside the quad to slice a rectangle. Hold alt to ignore grid. Right click to cancel.
+== 在 Quad 内拖拽进行矩形裁剪。按住 Alt 忽略网格，右键取消。
 
 [Editor]
 DRAGGING LASER: Grabs and attracts the closest tee to it. Can reach tees through walls but not through LASER BLOCKER. Medium strength.
@@ -16450,10 +16454,6 @@ Edit envelope %d %s
 [Editor]
 Edit envelope %d point %d (channel %d) %s
 == 编辑动画 %d 的点 %d（通道 %d）的%s
-
-[Editor]
-Edit envelope %d point %d color
-== 编辑动画 %d 的第 %d 个点颜色
 
 [Editor]
 Edit group %d %s property
@@ -18056,6 +18056,10 @@ Restarting server
 == 正在重启服务器
 
 [Editor]
+Right click or double click to add points on active channels. Use shift to change the zoom axis. Press S to scale selected points.
+== 右键或双击为亮起的轴添加关键帧。按住 Shift 切换缩放轴，按 S 缩放选中的关键帧。
+
+[Editor]
 Room %s is in sync (%d/%d people)
 == 房间 %s 同步正常（%d/%d 人）
 
@@ -18382,6 +18386,10 @@ Size: %zu × %zu
 [Editor]
 Slice
 == 切割
+
+[Editor]
+Slice rectangle
+== 矩形裁剪
 
 [Editor]
 Smooth

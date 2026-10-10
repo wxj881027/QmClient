@@ -39,7 +39,6 @@ private:
 	void UpdateHotEnvelopeObject(const CUIRect &View, const CEnvelope *pEnvelope, int ActiveChannels);
 
 	void ResetZoomEnvelope(const std::shared_ptr<CEnvelope> &pEnvelope, int ActiveChannels);
-	void RemoveTimeOffsetEnvelope(const std::shared_ptr<CEnvelope> &pEnvelope);
 
 	void ZoomAdaptOffsetX(float ZoomFactor, const CUIRect &View);
 	void UpdateZoomEnvelopeX(const CUIRect &View);

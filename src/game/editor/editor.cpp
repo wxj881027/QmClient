@@ -1640,7 +1640,7 @@ void CEditor::DoQuad(int LayerIndex, const std::shared_ptr<CLayerQuads> &pLayer,
 					m_QuadPopupContext.m_SelectedQuadIndex = Map()->FindSelectedQuadIndex(Index);
 					dbg_assert(m_QuadPopupContext.m_SelectedQuadIndex >= 0, "Selected quad index not found for quad popup");
 					m_QuadPopupContext.m_Color = PackColor(AverageColor(Map()->SelectedQuads()));
-					Ui()->DoPopupMenu(&m_QuadPopupContext, Ui()->MouseX(), Ui()->MouseY(), 120, 251, &m_QuadPopupContext, PopupQuad);
+					Ui()->DoPopupMenu(&m_QuadPopupContext, Ui()->MouseX(), Ui()->MouseY(), 120, 269, &m_QuadPopupContext, PopupQuad);
 					Ui()->DisableMouseLock();
 				}
 				s_Operation = OP_NONE;
@@ -2039,43 +2039,30 @@ void CEditor::DoQuadEnvelopes(const CLayerQuads *pLayerQuads)
 		const CPoint *pPivotPoint = &pQuad->m_aPoints[4];
 		const vec2 PivotPoint = vec2(fx2f(pPivotPoint->x), fx2f(pPivotPoint->y));
 
-		for(int PointIndex = 0; PointIndex <= (int)pEnvelope->m_vPoints.size() - 2; PointIndex++)
+		std::vector<CFixedTime> vTimes;
+		for(const auto &Point : pEnvelope->m_vPoints)
+			if(Point.HasChannel(0) || Point.HasChannel(1))
+				vTimes.push_back(Point.m_Time);
+		std::sort(vTimes.begin(), vTimes.end());
+		vTimes.erase(std::unique(vTimes.begin(), vTimes.end()), vTimes.end());
+		for(size_t i = 0; i + 1 < vTimes.size(); ++i)
 		{
-			const auto &PointStart = pEnvelope->m_vPoints[PointIndex];
-			const auto &PointEnd = pEnvelope->m_vPoints[PointIndex + 1];
-			const float PointStartTime = PointStart.m_Time.AsSeconds();
-			const float PointEndTime = PointEnd.m_Time.AsSeconds();
-			const float TimeRange = PointEndTime - PointStartTime;
-
-			int Steps;
-			if(PointStart.m_Curvetype == CURVETYPE_BEZIER)
+			const float Begin = vTimes[i].AsSeconds(), End = vTimes[i + 1].AsSeconds();
+			const CEnvelope::CPoint *apPrevious[2] = {};
+			for(const auto &Point : pEnvelope->m_vPoints)
+				for(int c = 0; c < 2; ++c)
+					if(Point.HasChannel(c) && Point.m_Time <= vTimes[i] && (!apPrevious[c] || Point.m_Time >= apPrevious[c]->m_Time))
+						apPrevious[c] = &Point;
+			const bool Curved = (apPrevious[0] && apPrevious[0]->m_Curvetype != CURVETYPE_LINEAR) || (apPrevious[1] && apPrevious[1]->m_Curvetype != CURVETYPE_LINEAR);
+			const int Steps = Curved ? std::clamp(round_to_int((End - Begin) * 10.0f), 50, 150) : 1;
+			ColorRGBA StartPosition(0, 0, 0, 0);
+			pEnvelope->Eval(Begin, StartPosition, 2, false);
+			for(int Step = 1; Step <= Steps; ++Step)
 			{
-				Steps = std::clamp(round_to_int(TimeRange * 10.0f), 50, 150);
-			}
-			else
-			{
-				Steps = 1;
-			}
-			ColorRGBA StartPosition = PointStart.ColorValue();
-			for(int Step = 1; Step <= Steps; Step++)
-			{
-				ColorRGBA EndPosition;
-				if(Step == Steps)
-				{
-					EndPosition = PointEnd.ColorValue();
-				}
-				else
-				{
-					const float SectionEndTime = PointStartTime + TimeRange * (Step / (float)Steps);
-					EndPosition = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f);
-					pEnvelope->Eval(SectionEndTime, EndPosition, 2);
-				}
-
-				const vec2 Pos0 = PivotPoint + vec2(StartPosition.r, StartPosition.g);
-				const vec2 Pos1 = PivotPoint + vec2(EndPosition.r, EndPosition.g);
-				const IGraphics::CLineItem Item = IGraphics::CLineItem(Pos0, Pos1);
+				ColorRGBA EndPosition(0, 0, 0, 0);
+				pEnvelope->Eval(Begin + (End - Begin) * Step / Steps, EndPosition, 2, false);
+				const IGraphics::CLineItem Item(PivotPoint + vec2(StartPosition.r, StartPosition.g), PivotPoint + vec2(EndPosition.r, EndPosition.g));
 				Graphics()->LinesBatchDraw(&LineItemBatch, &Item, 1);
-
 				StartPosition = EndPosition;
 			}
 		}
@@ -2097,8 +2084,10 @@ void CEditor::DoQuadEnvelopes(const CLayerQuads *pLayerQuads)
 		for(size_t PointIndex = 0; PointIndex < pEnvelope->m_vPoints.size(); PointIndex++)
 		{
 			const CEnvPoint_runtime &EnvPoint = pEnvelope->m_vPoints[PointIndex];
-			const vec2 Offset = vec2(fx2f(EnvPoint.m_aValues[0]), fx2f(EnvPoint.m_aValues[1]));
-			const float Rotation = fx2f(EnvPoint.m_aValues[2]) / 180.0f * pi;
+			ColorRGBA Position(0, 0, 0, 0);
+			pEnvelope->Eval(EnvPoint.m_Time.AsSeconds(), Position, 3, false);
+			const vec2 Offset(Position.r, Position.g);
+			const float Rotation = Position.b / 180.0f * pi;
 
 			const float Alpha = (Map()->m_SelectedQuadEnvelope == pQuad->m_PosEnv && Map()->IsEnvPointSelected(PointIndex)) ? 0.65f : 0.35f;
 			Graphics()->SetColor4(
@@ -2154,7 +2143,12 @@ void CEditor::DoQuadEnvelopes(const CLayerQuads *pLayerQuads)
 void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadIndex, int PointIndex)
 {
 	CEnvPoint_runtime *pPoint = &pEnvelope->m_vPoints[PointIndex];
-	const vec2 Center = vec2(fx2f(pQuad->m_aPoints[4].x) + fx2f(pPoint->m_aValues[0]), fx2f(pQuad->m_aPoints[4].y) + fx2f(pPoint->m_aValues[1]));
+	const int Channel = pEnvelope->m_vPoints[PointIndex].m_Channel;
+	if(!(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << Channel)))
+		return;
+	ColorRGBA Position(0, 0, 0, 0);
+	pEnvelope->Eval(pPoint->m_Time.AsSeconds(), Position, 3, false);
+	const vec2 Center(fx2f(pQuad->m_aPoints[4].x) + Position.r, fx2f(pQuad->m_aPoints[4].y) + Position.g);
 	const bool IgnoreGrid = Input()->AltIsPressed();
 
 	if(Ui()->CheckActiveItem(pPoint) && Map()->m_CurrentQuadIndex == QuadIndex)
@@ -2168,10 +2162,12 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 				{
 					MapView()->MapGrid()->SnapToGrid(Pos);
 				}
-				pPoint->m_aValues[0] = f2fx(Pos.x) - pQuad->m_aPoints[4].x;
-				pPoint->m_aValues[1] = f2fx(Pos.y) - pQuad->m_aPoints[4].y;
+				if(Channel == 0)
+					pPoint->m_aValues[0] = f2fx(Pos.x) - pQuad->m_aPoints[4].x;
+				if(Channel == 1)
+					pPoint->m_aValues[1] = f2fx(Pos.y) - pQuad->m_aPoints[4].y;
 			}
-			else if(m_QuadEnvelopePointOperation == EQuadEnvelopePointOperation::ROTATE)
+			else if(m_QuadEnvelopePointOperation == EQuadEnvelopePointOperation::ROTATE && Channel == 2)
 			{
 				pPoint->m_aValues[2] += 10 * Ui()->MouseDeltaX();
 			}
@@ -2203,6 +2199,7 @@ void CEditor::DoQuadEnvPoint(const CQuad *pQuad, CEnvelope *pEnvelope, int QuadI
 				m_QuadEnvelopePointOperation = EQuadEnvelopePointOperation::MOVE;
 			}
 			Map()->SelectQuad(QuadIndex);
+			Map()->m_SelectedEnvelope = pQuad->m_PosEnv;
 			Map()->SelectEnvPoint(PointIndex);
 			Map()->m_SelectedQuadEnvelope = pQuad->m_PosEnv;
 			Ui()->SetActiveItem(pPoint);
@@ -2249,7 +2246,11 @@ void CEditor::UpdateHotQuadPoint(const CLayerQuads *pLayer)
 		{
 			for(const auto &EnvPoint : Map()->m_vpEnvelopes[Quad.m_PosEnv]->m_vPoints)
 			{
-				const vec2 Position = vec2(fx2f(Quad.m_aPoints[4].x) + fx2f(EnvPoint.m_aValues[0]), fx2f(Quad.m_aPoints[4].y) + fx2f(EnvPoint.m_aValues[1]));
+				if(!(Map()->m_EnvelopeEditorState.m_ActiveChannels & (1 << EnvPoint.m_Channel)))
+					continue;
+				ColorRGBA Value(0, 0, 0, 0);
+				Map()->m_vpEnvelopes[Quad.m_PosEnv]->Eval(EnvPoint.m_Time.AsSeconds(), Value, 2, false);
+				const vec2 Position(fx2f(Quad.m_aPoints[4].x) + Value.r, fx2f(Quad.m_aPoints[4].y) + Value.g);
 				if(UpdateMinimum(Position, &EnvPoint) && Ui()->ActiveItem() == nullptr)
 				{
 					Map()->m_CurrentQuadIndex = &Quad - pLayer->m_vQuads.data();

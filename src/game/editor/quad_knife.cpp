@@ -2,12 +2,17 @@
 
 #include "editor.h"
 #include "editor_actions.h"
+#include "quad_slice.h"
 
 void CQuadKnife::CState::Reset()
 {
 	m_Active = false;
 	m_Count = 0;
 	m_SelectedQuadIndex = -1;
+	m_Rectangle = false;
+	m_Dragging = false;
+	m_DragStart = vec2(0, 0);
+	m_pLayer.reset();
 	std::fill(std::begin(m_aPoints), std::end(m_aPoints), vec2(0.0f, 0.0f));
 }
 
@@ -16,11 +21,17 @@ bool CQuadKnife::IsActive() const
 	return Map()->m_QuadKnifeState.m_Active;
 }
 
-void CQuadKnife::Activate(int SelectedQuad)
+void CQuadKnife::Activate(int SelectedQuad, bool Rectangle)
 {
-	Map()->m_QuadKnifeState.m_Active = true;
-	Map()->m_QuadKnifeState.m_Count = 0;
-	Map()->m_QuadKnifeState.m_SelectedQuadIndex = SelectedQuad;
+	auto pLayer = std::static_pointer_cast<CLayerQuads>(Map()->SelectedLayerType(0, LAYERTYPE_QUADS));
+	if(!pLayer || SelectedQuad < 0 || SelectedQuad >= (int)Map()->m_vSelectedQuads.size())
+		return;
+	auto &State = Map()->m_QuadKnifeState;
+	State.Reset();
+	State.m_Active = true;
+	State.m_Rectangle = Rectangle;
+	State.m_SelectedQuadIndex = Map()->m_vSelectedQuads[SelectedQuad];
+	State.m_pLayer = pLayer;
 }
 
 void CQuadKnife::Deactivate()
@@ -54,15 +65,22 @@ static bool IsInTriangle(vec2 Point, vec2 A, vec2 B, vec2 C)
 	return Area > 0.f && absolute(TriangleArea(Point, A, B) + TriangleArea(Point, B, C) + TriangleArea(Point, C, A) - Area) < 0.000001f;
 }
 
-void CQuadKnife::DoSlice()
+void CQuadKnife::DoSlice(bool MouseInside)
 {
 	if(Editor()->m_Dialog != DIALOG_NONE || Editor()->Ui()->IsPopupOpen())
 	{
+		Map()->m_QuadKnifeState.m_Dragging = false;
 		return;
 	}
 
-	int QuadIndex = Map()->m_vSelectedQuads[Map()->m_QuadKnifeState.m_SelectedQuadIndex];
-	std::shared_ptr<CLayerQuads> pLayer = std::static_pointer_cast<CLayerQuads>(Map()->SelectedLayerType(0, LAYERTYPE_QUADS));
+	auto &State = Map()->m_QuadKnifeState;
+	auto pLayer = State.m_pLayer.lock();
+	const int QuadIndex = State.m_SelectedQuadIndex;
+	if(!pLayer || Map()->SelectedLayerType(0, LAYERTYPE_QUADS) != pLayer || QuadIndex < 0 || QuadIndex >= (int)pLayer->m_vQuads.size())
+	{
+		Deactivate();
+		return;
+	}
 	CQuad *pQuad = &pLayer->m_vQuads[QuadIndex];
 
 	const bool IgnoreGrid = Editor()->Input()->AltIsPressed();
@@ -79,9 +97,9 @@ void CQuadKnife::DoSlice()
 
 	str_copy(Editor()->m_aTooltip, Localize("Left click inside the quad to select an area to slice. Hold alt to ignore grid. Right click to leave knife mode.", "Editor"));
 
-	if(Editor()->Ui()->MouseButtonClicked(1))
+	if(Editor()->Ui()->MouseButtonClicked(1) || Editor()->Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 	{
-		Map()->m_QuadKnifeState.m_Active = false;
+		Deactivate();
 		return;
 	}
 
@@ -173,10 +191,40 @@ void CQuadKnife::DoSlice()
 
 	bool ValidPosition = IsInTriangle(Point, v[0], v[1], v[2]) || IsInTriangle(Point, v[0], v[3], v[2]);
 
-	if(Editor()->Ui()->MouseButtonClicked(0) && ValidPosition)
+	if(!State.m_Rectangle && MouseInside && Editor()->Ui()->MouseButtonClicked(0) && ValidPosition)
 	{
 		Map()->m_QuadKnifeState.m_aPoints[Map()->m_QuadKnifeState.m_Count] = Point;
 		Map()->m_QuadKnifeState.m_Count++;
+	}
+
+	CQuad RectangleResult{};
+	bool ValidRectangle = false;
+	if(State.m_Rectangle)
+	{
+		str_copy(Editor()->m_aTooltip, Localize("Drag inside the quad to slice a rectangle. Hold alt to ignore grid. Right click to cancel.", "Editor"));
+		if(Editor()->Input()->ModifierIsPressed())
+			State.m_Dragging = false;
+		if(MouseInside && Editor()->Ui()->MouseButtonClicked(0) && ValidPosition && !Editor()->Input()->ModifierIsPressed())
+		{
+			State.m_Dragging = true;
+			State.m_DragStart = Point;
+		}
+		if(State.m_Dragging)
+		{
+			ValidRectangle = MouseInside && quad_slice::SliceRectangle(*pQuad, State.m_DragStart, Point, RectangleResult);
+			const auto Points = quad_slice::Rectangle(State.m_DragStart, Point);
+			std::copy(Points.begin(), Points.end(), State.m_aPoints);
+			if(!Editor()->Ui()->MouseButton(0))
+			{
+				State.m_Dragging = false;
+				if(ValidRectangle)
+				{
+					pLayer->m_vQuads.push_back(RectangleResult);
+					Map()->OnModify();
+					Map()->m_EditorHistory.RecordAction(std::make_shared<CEditorActionNewQuad>(Map(), Map()->m_SelectedGroup, Map()->m_vSelectedLayers[0]));
+				}
+			}
+		}
 	}
 
 	if(Map()->m_QuadKnifeState.m_Count == 4)
@@ -239,6 +287,14 @@ void CQuadKnife::DoSlice()
 
 	Graphics()->SetColor(1.f, 0.5f, 0.f, 1.f);
 	Graphics()->LinesDraw(aEdges, std::size(aEdges));
+
+	if(State.m_Rectangle && State.m_Dragging)
+	{
+		const auto &Points = State.m_aPoints;
+		IGraphics::CLineItem Lines[] = {{Points[0], Points[1]}, {Points[1], Points[3]}, {Points[3], Points[2]}, {Points[2], Points[0]}};
+		Graphics()->SetColor(ValidRectangle ? ColorRGBA(1, 1, 1, 1) : ColorRGBA(1, 0.2f, 0.2f, 1));
+		Graphics()->LinesDraw(Lines, std::size(Lines));
+	}
 
 	IGraphics::CLineItem aLines[4];
 	int LineCount = maximum(Map()->m_QuadKnifeState.m_Count - 1, 0);

@@ -775,8 +775,14 @@ void CEditorMap::SelectEnvPoint(int Index)
 {
 	m_vSelectedEnvelopePoints.clear();
 
-	for(int c = 0; c < CEnvPoint::MAX_CHANNELS; c++)
-		m_vSelectedEnvelopePoints.emplace_back(Index, c);
+	if(m_SelectedEnvelope < 0 || m_SelectedEnvelope >= (int)m_vpEnvelopes.size())
+		return;
+	const auto &Envelope = *m_vpEnvelopes[m_SelectedEnvelope];
+	if(Index < 0 || Index >= (int)Envelope.m_vPoints.size())
+		return;
+	for(int c = 0; c < Envelope.GetChannels(); ++c)
+		if(Envelope.m_vPoints[Index].HasChannel(c))
+			m_vSelectedEnvelopePoints.emplace_back(Index, c);
 }
 
 void CEditorMap::SelectEnvPoint(int Index, int Channel)

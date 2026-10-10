@@ -474,11 +474,15 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 
 	// save envelopes
 	log_trace("editor/save", "Saving envelopes");
+	std::vector<std::vector<CEnvPoint_runtime>> vvRuntimePoints;
+	vvRuntimePoints.reserve(m_vpEnvelopes.size());
+	for(const auto &pEnvelope : m_vpEnvelopes)
+		vvRuntimePoints.push_back(pEnvelope->ExportPoints());
 	int PointCount = 0;
 	for(size_t e = 0; e < m_vpEnvelopes.size(); e++)
 	{
-		if(m_vpEnvelopes[e]->m_vPoints.size() > (size_t)std::numeric_limits<int>::max() ||
-			PointCount > std::numeric_limits<int>::max() - (int)m_vpEnvelopes[e]->m_vPoints.size())
+		if(vvRuntimePoints[e].size() > (size_t)std::numeric_limits<int>::max() ||
+			PointCount > std::numeric_limits<int>::max() - (int)vvRuntimePoints[e].size())
 		{
 			ErrorHandler(Localize("Error: Saving is not possible because there are too many envelope points.", "Editor"));
 			return false;
@@ -487,20 +491,27 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 		Item.m_Version = 2;
 		Item.m_Channels = m_vpEnvelopes[e]->GetChannels();
 		Item.m_StartPoint = PointCount;
-		Item.m_NumPoints = m_vpEnvelopes[e]->m_vPoints.size();
+		Item.m_NumPoints = vvRuntimePoints[e].size();
 		Item.m_Synchronized = m_vpEnvelopes[e]->m_Synchronized;
 		StrToInts(Item.m_aName, std::size(Item.m_aName), m_vpEnvelopes[e]->m_aName);
 
 		Writer.AddItem(MAPITEMTYPE_ENVELOPE, e, sizeof(Item), &Item);
 		PointCount += Item.m_NumPoints;
+		const auto ChannelData = m_vpEnvelopes[e]->SerializeChannels(vvRuntimePoints[e]);
+		if(!CheckedDatafileSize(ChannelData.size() * sizeof(int)))
+		{
+			ErrorHandler(Localize("Error: Saving is not possible because there are too many envelope points.", "Editor"));
+			return false;
+		}
+		Writer.AddItem(MAPITEMTYPE_QM_ENVELOPE_CHANNELS, e, ChannelData.size() * sizeof(int), ChannelData.data());
 	}
 
 	// save points
 	log_trace("editor/save", "Saving envelope points");
 	bool BezierUsed = false;
-	for(const auto &pEnvelope : m_vpEnvelopes)
+	for(const auto &vPoints : vvRuntimePoints)
 	{
-		for(const auto &Point : pEnvelope->m_vPoints)
+		for(const auto &Point : vPoints)
 		{
 			if(Point.m_Curvetype == CURVETYPE_BEZIER)
 			{
@@ -544,10 +555,10 @@ bool CEditorMap::Save(const char *pFilename, const FErrorHandler &ErrorHandler)
 	}
 	PointCount = 0;
 
-	for(const auto &pEnvelope : m_vpEnvelopes)
+	for(const auto &vPoints : vvRuntimePoints)
 	{
 		const CEnvPoint_runtime *pPrevPoint = nullptr;
-		for(const auto &Point : pEnvelope->m_vPoints)
+		for(const auto &Point : vPoints)
 		{
 			mem_copy(&pPoints[PointCount], &Point, sizeof(CEnvPoint));
 			if(pPointsBezier != nullptr)
@@ -1240,16 +1251,26 @@ bool CEditorMap::Load(const char *pFilename, int StorageType, const FErrorHandle
 			}
 
 			std::shared_ptr<CEnvelope> pEnvelope = std::make_shared<CEnvelope>(Channels);
-			pEnvelope->m_vPoints.resize(pItem->m_NumPoints);
+			std::vector<CEnvPoint_runtime> vRuntimePoints(pItem->m_NumPoints);
 			for(int PointIndex = 0; PointIndex < pItem->m_NumPoints; PointIndex++)
 			{
 				const CEnvPoint *pPoint = EnvelopePoints.GetPoint(pItem->m_StartPoint + PointIndex);
 				if(pPoint != nullptr)
-					mem_copy(&pEnvelope->m_vPoints[PointIndex], pPoint, sizeof(CEnvPoint));
+					mem_copy(&vRuntimePoints[PointIndex], pPoint, sizeof(CEnvPoint));
 				const CEnvPointBezier *pPointBezier = EnvelopePoints.GetBezier(pItem->m_StartPoint + PointIndex);
 				if(pPointBezier != nullptr)
-					mem_copy(&pEnvelope->m_vPoints[PointIndex].m_Bezier, pPointBezier, sizeof(CEnvPointBezier));
+					mem_copy(&vRuntimePoints[PointIndex].m_Bezier, pPointBezier, sizeof(CEnvPointBezier));
 			}
+			pEnvelope->ImportPoints(vRuntimePoints);
+			const int ChannelsItem = pMap->FindItemIndex(MAPITEMTYPE_QM_ENVELOPE_CHANNELS, EnvelopeIndex);
+			if(ChannelsItem >= 0)
+			{
+				const int DataSize = pMap->GetItemSize(ChannelsItem);
+				const auto *pData = static_cast<const int *>(pMap->GetItem(ChannelsItem));
+				if(DataSize >= 0 && DataSize % sizeof(int) == 0)
+					pEnvelope->DeserializeChannels(pData, DataSize / sizeof(int), vRuntimePoints);
+			}
+
 			if(pItem->m_aName[0] != -1) // compatibility with old maps
 				IntsToStr(pItem->m_aName, std::size(pItem->m_aName), pEnvelope->m_aName, std::size(pEnvelope->m_aName));
 			m_vpEnvelopes.push_back(pEnvelope);

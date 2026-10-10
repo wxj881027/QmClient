@@ -117,7 +117,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4304
+      "line": 4305
     },
     {
       "key": "%d of %d server",
@@ -194,7 +194,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 245
+      "line": 235
     },
     {
       "key": "%d/%d KiB (%.1f KiB/s)",
@@ -208,35 +208,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 243
+      "line": 233
     },
     {
       "key": "%d:%02dmin",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 251
+      "line": 241
     },
     {
       "key": "%dmin",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 256
+      "line": 246
     },
     {
       "key": "%dms",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 247
+      "line": 237
     },
     {
       "key": "%ds",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 253
+      "line": 243
     },
     {
       "key": "%ds left",
@@ -432,7 +432,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4388
+      "line": 4389
     },
     {
       "key": "%s sec.",
@@ -1006,7 +1006,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4302
+      "line": 4303
     },
     {
       "key": "1 star",
@@ -1083,7 +1083,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4306
+      "line": 4307
     },
     {
       "key": "=== All Local Saves ===",
@@ -1153,28 +1153,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3042
+      "line": 3023
     },
     {
       "key": "[Ctrl+F] Find next free checkpoint number.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2890
+      "line": 2871
     },
     {
       "key": "[Ctrl+F] Find next free tele number.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2878
+      "line": 2859
     },
     {
       "key": "[Ctrl+F] Find unused zone.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3142
+      "line": 3123
     },
     {
       "key": "[Ctrl+G] Toggle grid.",
@@ -1307,7 +1307,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 373
+      "line": 364
     },
     {
       "key": "[Ctrl+Y] Redo the last command edit.",
@@ -1328,7 +1328,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 381
+      "line": 372
     },
     {
       "key": "[Ctrl+Z] Undo the last command edit.",
@@ -1363,7 +1363,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4680
+      "line": 4681
     },
     {
       "key": "[Escape] Exit from the editor.",
@@ -1377,7 +1377,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4674
+      "line": 4675
     },
     {
       "key": "[Home] Restore map focus.",
@@ -1405,28 +1405,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3051
+      "line": 3032
     },
     {
       "key": "[N] Show next tele with this number.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2902
+      "line": 2883
     },
     {
       "key": "[N] Show next tune tile with this number.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3151
+      "line": 3132
     },
     {
       "key": "[NumPad*] Reset zoom to default value.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 475
+      "line": 466
     },
     {
       "key": "[Numpad*] Zoom to normal and remove editor offset.",
@@ -1440,7 +1440,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 479
+      "line": 470
     },
     {
       "key": "[Numpad+] Zoom in.",
@@ -1454,7 +1454,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 466
+      "line": 457
     },
     {
       "key": "[Numpad-] Zoom out.",
@@ -1489,7 +1489,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor envelope alpha channel",
-      "line": 573
+      "line": 567
     },
     {
       "key": "A",
@@ -1832,7 +1832,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3505
+      "line": 3506
     },
     {
       "key": "Add",
@@ -2294,7 +2294,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1736
+      "line": 1730
     },
     {
       "key": "Add one",
@@ -2336,14 +2336,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3504
+      "line": 3505
     },
     {
       "key": "Add sound",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3505
+      "line": 3506
     },
     {
       "key": "Add sound",
@@ -2868,7 +2868,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2630
+      "line": 2611
     },
     {
       "key": "Align",
@@ -3323,7 +3323,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 580
+      "line": 574
     },
     {
       "key": "Also apply to dummy",
@@ -3491,7 +3491,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2969
+      "line": 2950
     },
     {
       "key": "Angle ",
@@ -3855,7 +3855,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4819
+      "line": 4820
     },
     {
       "key": "Append",
@@ -3883,7 +3883,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4819
+      "line": 4820
     },
     {
       "key": "Append map",
@@ -4618,14 +4618,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 661
+      "line": 672
     },
     {
       "key": "Author:",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2179
+      "line": 2160
     },
     {
       "key": "Authorized player forced vote '%s'",
@@ -5948,7 +5948,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor envelope blue channel",
-      "line": 573
+      "line": 567
     },
     {
       "key": "Backdrop blur",
@@ -6480,28 +6480,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 1522
+      "line": 1529
     },
     {
       "key": "Bezier out-tangent. Left mouse to drag. Hold ctrl to be more precise. Shift+right click to reset.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 1386
+      "line": 1393
     },
     {
       "key": "Big image",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2299
+      "line": 2280
     },
     {
       "key": "Big image",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2314
+      "line": 2295
     },
     {
       "key": "Bind",
@@ -6830,7 +6830,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2639
+      "line": 2620
     },
     {
       "key": "BLUE CHECKPOINT TELEPORT: Sends tees to CTO with the same number as the last touched TELEPORT CHECKPOINT. Speed and hook are kept.",
@@ -6872,7 +6872,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 580
+      "line": 574
     },
     {
       "key": "Blur mode",
@@ -7726,21 +7726,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2216
+      "line": 2197
     },
     {
       "key": "Cancel",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2373
+      "line": 2354
     },
     {
       "key": "Cancel",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3465
+      "line": 3446
     },
     {
       "key": "Cancel fixing this command.",
@@ -7915,7 +7915,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3426
+      "line": 3407
     },
     {
       "key": "Change indicator offset based on distance to other tees",
@@ -7957,7 +7957,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1388
+      "line": 1397
     },
     {
       "key": "Change the animation settings.",
@@ -7978,7 +7978,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4559
+      "line": 4560
     },
     {
       "key": "Change the skip duration",
@@ -8734,7 +8734,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2913
+      "line": 2894
     },
     {
       "key": "CHECKPOINT TELEPORT TO: Tees will appear here after touching TELEPORT CHECKPOINT with the same number and falling into CFROM TELEPORT.",
@@ -8958,14 +8958,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1862
+      "line": 1851
     },
     {
       "key": "Circle",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1383
+      "line": 1392
     },
     {
       "key": "CJK font",
@@ -9448,7 +9448,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4462
+      "line": 4463
     },
     {
       "key": "Clearable text...",
@@ -9574,7 +9574,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2279
+      "line": 2280
     },
     {
       "key": "Client",
@@ -9798,7 +9798,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4633
+      "line": 4634
     },
     {
       "key": "Collaboration",
@@ -9812,21 +9812,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3844
+      "line": 3845
     },
     {
       "key": "Collaboration connection lost; please try again",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3683
+      "line": 3684
     },
     {
       "key": "Collapse all",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2993
+      "line": 2994
     },
     {
       "key": "Collapse console",
@@ -9952,14 +9952,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1263
+      "line": 1272
     },
     {
       "key": "Color",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1560
+      "line": 1569
     },
     {
       "key": "Color Burn",
@@ -10001,7 +10001,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1264
+      "line": 1273
     },
     {
       "key": "color env offset",
@@ -10092,14 +10092,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1265
+      "line": 1274
     },
     {
       "key": "Color+",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 396
+      "line": 387
     },
     {
       "key": "color, size",
@@ -10113,7 +10113,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1641
+      "line": 1652
     },
     {
       "key": "Colorize ping on scoreboard",
@@ -10813,7 +10813,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3436
+      "line": 3417
     },
     {
       "key": "Configure remaining DDNet client preferences",
@@ -10932,21 +10932,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2221
+      "line": 2202
     },
     {
       "key": "Confirm",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2394
+      "line": 2375
     },
     {
       "key": "Confirm",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3474
+      "line": 3455
     },
     {
       "key": "Confirm both are on same server, same room, and support voice",
@@ -12353,7 +12353,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 396
+      "line": 387
     },
     {
       "key": "Create a new folder.",
@@ -12374,7 +12374,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 405
+      "line": 396
     },
     {
       "key": "Create a new quads layer.",
@@ -12388,7 +12388,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 387
+      "line": 378
     },
     {
       "key": "Create a new sound layer.",
@@ -12479,7 +12479,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4633
+      "line": 4634
     },
     {
       "key": "Create Quadart",
@@ -12514,7 +12514,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3790
+      "line": 3791
     },
     {
       "key": "Credits",
@@ -12528,14 +12528,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 663
+      "line": 674
     },
     {
       "key": "Credits:",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2197
+      "line": 2178
     },
     {
       "key": "CREDITS: Who designed the entities.",
@@ -12724,14 +12724,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/map_view.cpp",
       "context": "Editor",
-      "line": 695
+      "line": 705
     },
     {
       "key": "Current proof position at",
       "category": "localize_or_localizable",
       "source": "src/game/editor/map_view.cpp",
       "context": "Editor",
-      "line": 709
+      "line": 719
     },
     {
       "key": "Current rescue mode: %s",
@@ -13746,7 +13746,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2632
+      "line": 2613
     },
     {
       "key": "Death opacity",
@@ -13914,7 +13914,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3320
+      "line": 3301
     },
     {
       "key": "Decrease value.",
@@ -13956,7 +13956,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2637
+      "line": 2618
     },
     {
       "key": "Deep freeze color",
@@ -14019,7 +14019,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2638
+      "line": 2619
     },
     {
       "key": "Deep unfreeze color",
@@ -14313,7 +14313,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3339
+      "line": 3320
     },
     {
       "key": "Default appearance profile migration version",
@@ -14474,14 +14474,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1398
+      "line": 1407
     },
     {
       "key": "Delay",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3064
+      "line": 3045
     },
     {
       "key": "Delay before new players can start votes or participate in kick/spectate votes (seconds)",
@@ -14614,14 +14614,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1366
+      "line": 1375
     },
     {
       "key": "Delete",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1764
+      "line": 1745
     },
     {
       "key": "Delete button",
@@ -14657,13 +14657,6 @@
       "source": "src/game/editor/editor_server_settings.cpp",
       "context": "Editor",
       "line": 199
-    },
-    {
-      "key": "Delete current envelope point in all channels.",
-      "category": "localize_or_localizable",
-      "source": "src/game/editor/popups.cpp",
-      "context": "Editor",
-      "line": 1765
     },
     {
       "key": "Delete demo",
@@ -14726,7 +14719,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1765
+      "line": 1755
     },
     {
       "key": "Delete quad (x%d)",
@@ -14782,7 +14775,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1834
+      "line": 1823
     },
     {
       "key": "Delete the current quad.",
@@ -14796,7 +14789,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1366
+      "line": 1375
     },
     {
       "key": "Delete the group.",
@@ -14811,6 +14804,13 @@
       "source": "src/game/editor/quick_actions.h",
       "context": "Editor",
       "line": 378
+    },
+    {
+      "key": "Delete the selected channel point.",
+      "category": "localize_or_localizable",
+      "source": "src/game/editor/popups.cpp",
+      "context": "Editor",
+      "line": 1746
     },
     {
       "key": "Delete the selected file.",
@@ -14838,7 +14838,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 417
+      "line": 408
     },
     {
       "key": "Delete this preset",
@@ -15475,7 +15475,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2479
+      "line": 2460
     },
     {
       "key": "Disconnect",
@@ -15909,7 +15909,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2263
+      "line": 2244
     },
     {
       "key": "Done",
@@ -16015,13 +16015,6 @@
       "source": "src/game/editor/explanations.cpp",
       "context": "Editor",
       "line": 520
-    },
-    {
-      "key": "Double click to create a new point. Use shift to change the zoom axis. Press S to scale selected envelope points.",
-      "category": "localize_or_localizable",
-      "source": "src/game/editor/envelope_editor.cpp",
-      "context": "Editor",
-      "line": 693
     },
     {
       "key": "Download",
@@ -16192,11 +16185,25 @@
       "line": 1581
     },
     {
+      "key": "Drag a rectangle inside the quad to create a cropped quad.",
+      "category": "localize_or_localizable",
+      "source": "src/game/editor/popups.cpp",
+      "context": "Editor",
+      "line": 1225
+    },
+    {
       "key": "Drag HUD modules with the left mouse button",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/hud_editor.cpp",
       "context": "",
       "line": 897
+    },
+    {
+      "key": "Drag inside the quad to slice a rectangle. Hold alt to ignore grid. Right click to cancel.",
+      "category": "localize_or_localizable",
+      "source": "src/game/editor/quad_knife.cpp",
+      "context": "Editor",
+      "line": 204
     },
     {
       "key": "Drag to another category to move this friend.",
@@ -17473,13 +17480,6 @@
       "line": 1628
     },
     {
-      "key": "Edit envelope %d point %d color",
-      "category": "localize_or_localizable",
-      "source": "src/game/editor/popups.cpp",
-      "context": "Editor",
-      "line": 1671
-    },
-    {
       "key": "Edit group %d %s property",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
@@ -17568,7 +17568,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1866
+      "line": 1855
     },
     {
       "key": "Edit skin texture",
@@ -17603,28 +17603,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1929
+      "line": 1918
     },
     {
       "key": "Edit sound source %d in layer %d of group %d sound shape %s property",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1998
+      "line": 1987
     },
     {
       "key": "Edit sound source %d in layer %d of group %d sound shape %s property",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 2034
+      "line": 2023
     },
     {
       "key": "Edit sounds layer %d in group %d %s property",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1799
+      "line": 1788
     },
     {
       "key": "Edit tiles layer %d in group %d %s property",
@@ -17666,7 +17666,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2413
+      "line": 2394
     },
     {
       "key": "Editor",
@@ -17701,14 +17701,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4425
+      "line": 4426
     },
     {
       "key": "Editor history. Click on an action to undo all actions above.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4447
+      "line": 4448
     },
     {
       "key": "Elastic",
@@ -17785,35 +17785,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3328
+      "line": 3329
     },
     {
       "key": "Embed",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3451
+      "line": 3452
     },
     {
       "key": "Embed",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1953
+      "line": 1934
     },
     {
       "key": "Embed the image into the map file.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1953
+      "line": 1934
     },
     {
       "key": "Embedding is not possible because the image could not be loaded.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1957
+      "line": 1938
     },
     {
       "key": "Emote and binding wheel animation duration (ms, 0=No animation, 1000=1 sec)",
@@ -19535,7 +19535,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3804
+      "line": 3805
     },
     {
       "key": "Enter the sponsor code, press Redeem, then write the title and press Save. Tick \"Only show with this nickname\" to bind it to one nickname.",
@@ -19703,7 +19703,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4431
+      "line": 4432
     },
     {
       "key": "Envelope",
@@ -19724,7 +19724,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 1248
+      "line": 1255
     },
     {
       "key": "Erase items on the in game background",
@@ -19955,14 +19955,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 771
+      "line": 782
     },
     {
       "key": "Error: could not allocate memory for embedded sound \"%s\".",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 854
+      "line": 865
     },
     {
       "key": "Error: could not allocate memory for map settings.",
@@ -19983,35 +19983,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 728
+      "line": 739
     },
     {
       "key": "Error: could not find image '%s' in the mapres folder.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1991
+      "line": 1972
     },
     {
       "key": "Error: could not find sound '%s' in the mapres folder.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2102
+      "line": 2083
     },
     {
       "key": "Error: could not read embedded image \"%s\".",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 758
+      "line": 769
     },
     {
       "key": "Error: could not read embedded sound \"%s\".",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 844
+      "line": 855
     },
     {
       "key": "Error: could not save because the data for image \"%s\" is invalid or too large.",
@@ -20095,35 +20095,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 1238
+      "line": 1249
     },
     {
       "key": "Error: Failed to allocate memory for bezier envelope points.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 541
+      "line": 552
     },
     {
       "key": "Error: Failed to allocate memory for envelope points.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 524
+      "line": 535
     },
     {
       "key": "Error: Failed to load external image '%s'.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 741
+      "line": 752
     },
     {
       "key": "Error: Failed to load external sound '%s'.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 833
+      "line": 844
     },
     {
       "key": "Error: Failed to open file '%s' for writing.",
@@ -20137,84 +20137,91 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 628
+      "line": 639
     },
     {
       "key": "Error: Failed to read %s from map info.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 651
+      "line": 662
     },
     {
       "key": "Error: Failed to read name of image %d.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 700
+      "line": 711
     },
     {
       "key": "Error: Failed to read name of sound %d.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 815
+      "line": 826
     },
     {
       "key": "Error: Saving is not possible because the bezier envelope point data is too large.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 534
+      "line": 545
     },
     {
       "key": "Error: Saving is not possible because the bezier envelope point data is too large.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 580
+      "line": 591
     },
     {
       "key": "Error: Saving is not possible because the envelope point data is too large.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 518
+      "line": 529
     },
     {
       "key": "Error: Saving is not possible because the image '%s' could not be loaded. Remove or replace this image.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 604
+      "line": 615
     },
     {
       "key": "Error: Saving is not possible because the sound '%s' could not be loaded. Remove or replace this sound.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 614
+      "line": 625
     },
     {
       "key": "Error: Saving is not possible because there are too many envelope points.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 483
+      "line": 487
+    },
+    {
+      "key": "Error: Saving is not possible because there are too many envelope points.",
+      "category": "localize_or_localizable",
+      "source": "src/game/editor/mapitems/map_io.cpp",
+      "context": "Editor",
+      "line": 503
     },
     {
       "key": "Error: The image '%s' (size %zu x%zu) has a width or height that is not divisible by 16 and therefore cannot be used for tile layers. The image of group #%zu '%s', layer #%zu '%s', has been unset.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 1465
+      "line": 1486
     },
     {
       "key": "Error: Unsupported image type of image %d '%s'.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 709
+      "line": 720
     },
     {
       "key": "ESC replay minutes",
@@ -20466,14 +20473,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2247
+      "line": 2228
     },
     {
       "key": "Expand all",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2993
+      "line": 2994
     },
     {
       "key": "Expand console",
@@ -20487,7 +20494,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2997
+      "line": 2998
     },
     {
       "key": "Expanded dropdown background color",
@@ -20543,14 +20550,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2041
+      "line": 2022
     },
     {
       "key": "Export",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2149
+      "line": 2130
     },
     {
       "key": "Export configuration package",
@@ -20613,14 +20620,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2041
+      "line": 2022
     },
     {
       "key": "Export the sound to a separate file.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2149
+      "line": 2130
     },
     {
       "key": "Export to clipboard",
@@ -20662,14 +20669,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2045
+      "line": 2026
     },
     {
       "key": "Exporting is not possible because the sound could not be loaded.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2153
+      "line": 2134
     },
     {
       "key": "Expose playback controls to the operating system",
@@ -20683,7 +20690,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3328
+      "line": 3329
     },
     {
       "key": "External console password. Must be set to enable economy.",
@@ -20914,14 +20921,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3077
+      "line": 3078
     },
     {
       "key": "Failed to convert image from file \"%s\".",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3138
+      "line": 3139
     },
     {
       "key": "Failed to copy main asset image.",
@@ -20942,14 +20949,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3965
+      "line": 3966
     },
     {
       "key": "Failed to create room: the collaboration service returned an error",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3977
+      "line": 3978
     },
     {
       "key": "Failed to create the folder '%s'.",
@@ -21012,21 +21019,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3965
+      "line": 3966
     },
     {
       "key": "Failed to join: the collaboration service returned an error",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3977
+      "line": 3978
     },
     {
       "key": "Failed to join: the room code is invalid or the room has expired",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3973
+      "line": 3974
     },
     {
       "key": "Failed to load",
@@ -21047,14 +21054,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3062
+      "line": 3063
     },
     {
       "key": "Failed to load image from file '%s'.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3125
+      "line": 3126
     },
     {
       "key": "Failed to load image from file '%s'.",
@@ -21103,14 +21110,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3193
+      "line": 3194
     },
     {
       "key": "Failed to load sound from file '%s'.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3241
+      "line": 3242
     },
     {
       "key": "Failed to load the image (check the local console for details).",
@@ -21138,14 +21145,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3184
+      "line": 3185
     },
     {
       "key": "Failed to open sound file '%s'.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3232
+      "line": 3233
     },
     {
       "key": "Failed to open the directory '%s'.",
@@ -21159,7 +21166,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4692
+      "line": 4693
     },
     {
       "key": "Failed to prepare main asset image.",
@@ -21376,14 +21383,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1923
+      "line": 1912
     },
     {
       "key": "Falloff",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1399
+      "line": 1408
     },
     {
       "key": "Fast",
@@ -21705,7 +21712,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4600
+      "line": 4601
     },
     {
       "key": "File",
@@ -21775,7 +21782,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4661
+      "line": 4662
     },
     {
       "key": "Filename %s",
@@ -22503,7 +22510,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2967
+      "line": 2948
     },
     {
       "key": "Force a vote to yes/no",
@@ -22727,7 +22734,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2635
+      "line": 2616
     },
     {
       "key": "Freeze bar opacity (0 invisible, 100 fully visible)",
@@ -23364,7 +23371,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 573
+      "line": 567
     },
     {
       "key": "Game",
@@ -24246,7 +24253,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3229
+      "line": 3210
     },
     {
       "key": "Go back one marker",
@@ -24295,14 +24302,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4332
+      "line": 4333
     },
     {
       "key": "Go to layers management.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4325
+      "line": 4326
     },
     {
       "key": "Go to Live",
@@ -24316,7 +24323,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4339
+      "line": 4340
     },
     {
       "key": "GOLDEN SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server.",
@@ -24603,7 +24610,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 580
+      "line": 574
     },
     {
       "key": "Greeting text",
@@ -24953,7 +24960,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1996
+      "line": 1985
     },
     {
       "key": "Height",
@@ -24981,7 +24988,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1511
+      "line": 1520
     },
     {
       "key": "Hello from ui_widget::Modal",
@@ -26108,7 +26115,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2631
+      "line": 2612
     },
     {
       "key": "Hookable/Unhookable tile outline color",
@@ -26164,7 +26171,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor quick action",
-      "line": 2634
+      "line": 2615
     },
     {
       "key": "HOOKTHROUGH: Combined with (UN)HOOKABLE tiles, allows to hook through the walls.",
@@ -26360,7 +26367,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4689
+      "line": 4690
     },
     {
       "key": "https://wiki.ddnet.org/wiki/Touch_controls",
@@ -26738,28 +26745,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3053
+      "line": 3054
     },
     {
       "key": "Image named '%s' was already added.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3110
+      "line": 3111
     },
     {
       "key": "Image pixelsize",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3423
+      "line": 3404
     },
     {
       "key": "Image width/height",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2277
+      "line": 2258
     },
     {
       "key": "IME",
@@ -27102,7 +27109,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1728
+      "line": 1716
     },
     {
       "key": "In group %d, %s %s layer",
@@ -27249,7 +27256,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3328
+      "line": 3309
     },
     {
       "key": "Increase value.",
@@ -27501,7 +27508,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3282
+      "line": 3263
     },
     {
       "key": "Ingame controller mode",
@@ -28551,14 +28558,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4000
+      "line": 4001
     },
     {
       "key": "Joining collaboration room...",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3824
+      "line": 3825
     },
     {
       "key": "Joining Tutorial server",
@@ -29265,7 +29272,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2267
+      "line": 2248
     },
     {
       "key": "Large text announcement for friend joining",
@@ -29692,14 +29699,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 2150
+      "line": 2139
     },
     {
       "key": "Layer type does not match a sound layer",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 2156
+      "line": 2145
     },
     {
       "key": "Layer: add image",
@@ -29881,35 +29888,35 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3880
+      "line": 3881
     },
     {
       "key": "Left click inside the quad to select an area to slice. Hold alt to ignore grid. Right click to leave knife mode.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/quad_knife.cpp",
       "context": "Editor",
-      "line": 80
+      "line": 98
     },
     {
       "key": "Left click to pick a color from the screen. Right click to cancel pipette mode.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5097
+      "line": 5098
     },
     {
       "key": "Left click to toggle visibility. Right click to show only this layer within its group.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2645
+      "line": 2646
     },
     {
       "key": "Left click to toggle visibility. Right click to show this group only.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2486
+      "line": 2487
     },
     {
       "key": "Left jump",
@@ -29937,7 +29944,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2192
+      "line": 2188
     },
     {
       "key": "Left mouse button to move. Hold shift to move pivot. Hold alt to ignore grid. Shift+right click to delete.",
@@ -29958,28 +29965,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3673
+      "line": 3674
     },
     {
       "key": "Left the collaboration room",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3851
+      "line": 3852
     },
     {
       "key": "Left the collaboration room",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4019
+      "line": 4020
     },
     {
       "key": "Left the collaboration room, but could not notify the collaboration service",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3876
+      "line": 3877
     },
     {
       "key": "Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.",
@@ -30098,14 +30105,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 664
+      "line": 675
     },
     {
       "key": "License:",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2206
+      "line": 2187
     },
     {
       "key": "Light",
@@ -30448,7 +30455,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2641
+      "line": 2622
     },
     {
       "key": "LIVE FREEZE: Live frozen tees cannot move or jump, while hook and weapons can still be used.",
@@ -30490,7 +30497,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2642
+      "line": 2623
     },
     {
       "key": "LIVE UNFREEZE: Removes LIVE FREEZE effect.",
@@ -30560,7 +30567,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4841
+      "line": 4842
     },
     {
       "key": "Load",
@@ -30581,14 +30588,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2403
+      "line": 2384
     },
     {
       "key": "Load",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3254
+      "line": 3235
     },
     {
       "key": "Load a new image to use in the map.",
@@ -30602,7 +30609,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3504
+      "line": 3505
     },
     {
       "key": "Load as ghost",
@@ -30623,7 +30630,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3254
+      "line": 3235
     },
     {
       "key": "Load drawings from a given csv file (defaults to map name)",
@@ -30637,7 +30644,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4841
+      "line": 4842
     },
     {
       "key": "Load map",
@@ -30651,14 +30658,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2252
+      "line": 2233
     },
     {
       "key": "Load map",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2403
+      "line": 2384
     },
     {
       "key": "Load save %s",
@@ -30714,21 +30721,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4511
+      "line": 4512
     },
     {
       "key": "Loaded map '%s'",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5903
+      "line": 5904
     },
     {
       "key": "Loaded the collaboration room's map snapshot",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4221
+      "line": 4222
     },
     {
       "key": "Loading",
@@ -30798,7 +30805,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4769
+      "line": 4770
     },
     {
       "key": "Loading commands…",
@@ -31078,7 +31085,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2335
+      "line": 2316
     },
     {
       "key": "Local service without authentication",
@@ -31295,14 +31302,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1920
+      "line": 1909
     },
     {
       "key": "Loop",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1396
+      "line": 1405
     },
     {
       "key": "Lose weapons when teleporting (useful for race maps)",
@@ -31421,7 +31428,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1968
+      "line": 1949
     },
     {
       "key": "Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)",
@@ -31708,14 +31715,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 1366
+      "line": 1387
     },
     {
       "key": "map already contains image %s with the same data, removing duplicate",
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 1356
+      "line": 1377
     },
     {
       "key": "Map browser difficulty star filter bitmask (bits 1-5)",
@@ -31764,7 +31771,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2174
+      "line": 2155
     },
     {
       "key": "Map details",
@@ -32240,7 +32247,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2282
+      "line": 2263
     },
     {
       "key": "Max number of full server info responses sent per second (0 = unlimited).",
@@ -32317,14 +32324,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2288
+      "line": 2269
     },
     {
       "key": "Max Speed",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2968
+      "line": 2949
     },
     {
       "key": "Max stroke entries to keep",
@@ -32667,7 +32674,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3291
+      "line": 3272
     },
     {
       "key": "Menu accent panel opacity",
@@ -33521,21 +33528,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 2145
+      "line": 2134
     },
     {
       "key": "Move this envelope to the left.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 449
+      "line": 440
     },
     {
       "key": "Move this envelope to the right.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 434
+      "line": 425
     },
     {
       "key": "Move to category",
@@ -33563,7 +33570,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4317
+      "line": 4318
     },
     {
       "key": "Movement",
@@ -34270,7 +34277,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor file label",
-      "line": 533
+      "line": 524
     },
     {
       "key": "Name:",
@@ -34298,14 +34305,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor property label",
-      "line": 1941
+      "line": 1922
     },
     {
       "key": "Name:",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor property label",
-      "line": 2082
+      "line": 2063
     },
     {
       "key": "Name: %s",
@@ -34753,7 +34760,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2257
+      "line": 2238
     },
     {
       "key": "New map",
@@ -34802,14 +34809,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 2088
+      "line": 2077
     },
     {
       "key": "New quad in layer %d of group %d",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 2125
+      "line": 2114
     },
     {
       "key": "New random timeout code",
@@ -34830,7 +34837,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 2065
+      "line": 2054
     },
     {
       "key": "News",
@@ -36048,28 +36055,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2526
+      "line": 2507
     },
     {
       "key": "None",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2599
+      "line": 2580
     },
     {
       "key": "None",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2730
+      "line": 2711
     },
     {
       "key": "None",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2789
+      "line": 2770
     },
     {
       "key": "None:",
@@ -36300,21 +36307,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5510
+      "line": 5511
     },
     {
       "key": "Not in a collaboration room",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5802
+      "line": 5803
     },
     {
       "key": "Not in a collaboration room",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5945
+      "line": 5946
     },
     {
       "key": "Not installed",
@@ -36629,14 +36636,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2912
+      "line": 2893
     },
     {
       "key": "Number",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3063
+      "line": 3044
     },
     {
       "key": "Number of reserved slots for special players.",
@@ -37735,7 +37742,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2696
+      "line": 2677
     },
     {
       "key": "Open the directory that contains the configuration and user files",
@@ -37987,7 +37994,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3425
+      "line": 3406
     },
     {
       "key": "Option color",
@@ -38085,7 +38092,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1258
+      "line": 1267
     },
     {
       "key": "Original",
@@ -38281,7 +38288,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1728
+      "line": 1716
     },
     {
       "key": "Out of VRAM. Try setting 'cl_skins_loaded_max' to a lower value or remove custom assets (skins, entities, etc.), especially those with high resolution.",
@@ -38659,14 +38666,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1921
+      "line": 1910
     },
     {
       "key": "Pan",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1397
+      "line": 1406
     },
     {
       "key": "Panel opacity",
@@ -39555,7 +39562,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2294
+      "line": 2275
     },
     {
       "key": "Place tiles in a 2-tile wide border at the edges of the selected tile layer.",
@@ -40675,7 +40682,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1925
+      "line": 1914
     },
     {
       "key": "Pos X",
@@ -40703,7 +40710,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1918
+      "line": 1907
     },
     {
       "key": "Pos X",
@@ -40717,21 +40724,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1259
+      "line": 1268
     },
     {
       "key": "Pos X",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1394
+      "line": 1403
     },
     {
       "key": "Pos X",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1558
+      "line": 1567
     },
     {
       "key": "Pos Y",
@@ -40759,7 +40766,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1919
+      "line": 1908
     },
     {
       "key": "Pos Y",
@@ -40773,21 +40780,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1260
+      "line": 1269
     },
     {
       "key": "Pos Y",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1395
+      "line": 1404
     },
     {
       "key": "Pos Y",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1559
+      "line": 1568
     },
     {
       "key": "Pos. Env",
@@ -40801,42 +40808,42 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1924
+      "line": 1913
     },
     {
       "key": "Pos. Env",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1261
+      "line": 1270
     },
     {
       "key": "Pos. Env",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1400
+      "line": 1409
     },
     {
       "key": "Pos. TO",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1262
+      "line": 1271
     },
     {
       "key": "Pos. TO",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1401
+      "line": 1410
     },
     {
       "key": "Pos.+",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 405
+      "line": 396
     },
     {
       "key": "Position",
@@ -41263,7 +41270,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 1582
+      "line": 1589
     },
     {
       "key": "Prev. weapon",
@@ -41767,7 +41774,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1800
+      "line": 1781
     },
     {
       "key": "Project and community websites",
@@ -41781,14 +41788,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1800
+      "line": 1781
     },
     {
       "key": "Project points",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1897
+      "line": 1878
     },
     {
       "key": "Projectile / explosion range",
@@ -42341,7 +42348,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3424
+      "line": 3405
     },
     {
       "key": "Quad place (x%d)",
@@ -42355,7 +42362,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2696
+      "line": 2697
     },
     {
       "key": "Quads",
@@ -42579,14 +42586,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor envelope rotation channel",
-      "line": 572
+      "line": 566
     },
     {
       "key": "R",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor envelope red channel",
-      "line": 573
+      "line": 567
     },
     {
       "key": "r = Race time",
@@ -42670,14 +42677,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 2032
+      "line": 2021
     },
     {
       "key": "Radius",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1484
+      "line": 1493
     },
     {
       "key": "Rainbow",
@@ -43342,28 +43349,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1980
+      "line": 1961
     },
     {
       "key": "Re-import",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2091
+      "line": 2072
     },
     {
       "key": "Re-import the image from the mapres folder.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1980
+      "line": 1961
     },
     {
       "key": "Re-import the sound from the mapres folder.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2091
+      "line": 2072
     },
     {
       "key": "Ready",
@@ -43503,7 +43510,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4130
+      "line": 4131
     },
     {
       "key": "Receiving",
@@ -43594,14 +43601,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1861
+      "line": 1850
     },
     {
       "key": "Rectangle",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1382
+      "line": 1391
     },
     {
       "key": "Rectangle shape.",
@@ -43636,7 +43643,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2640
+      "line": 2621
     },
     {
       "key": "RED CHECKPOINT TELEPORT: Send tees to CTO with the same number as the last touched TELEPORT CHECKPOINT. Speed and hook are reset.",
@@ -43678,7 +43685,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 580
+      "line": 574
     },
     {
       "key": "Redeem",
@@ -44273,14 +44280,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2022
+      "line": 2003
     },
     {
       "key": "Remove",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2131
+      "line": 2112
     },
     {
       "key": "Remove [group] [clan]:",
@@ -44574,7 +44581,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2319
+      "line": 2300
     },
     {
       "key": "Remove Item",
@@ -44616,7 +44623,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2324
+      "line": 2305
     },
     {
       "key": "Remove team clan:",
@@ -44651,21 +44658,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1968
+      "line": 1949
     },
     {
       "key": "Remove the image from the map.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2022
+      "line": 2003
     },
     {
       "key": "Remove the sound from the map.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2131
+      "line": 2112
     },
     {
       "key": "Remove unused envelopes",
@@ -45190,28 +45197,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2014
+      "line": 1995
     },
     {
       "key": "Replace",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2016
+      "line": 1997
     },
     {
       "key": "Replace",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2123
+      "line": 2104
     },
     {
       "key": "Replace",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2125
+      "line": 2106
     },
     {
       "key": "Replace censored words with length-based chars",
@@ -45225,7 +45232,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2016
+      "line": 1997
     },
     {
       "key": "Replace mode",
@@ -45295,21 +45302,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2125
+      "line": 2106
     },
     {
       "key": "Replace the image with a new one.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2014
+      "line": 1995
     },
     {
       "key": "Replace the sound with a new one.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2123
+      "line": 2104
     },
     {
       "key": "Replace video",
@@ -45729,7 +45736,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1764
+      "line": 1745
     },
     {
       "key": "Reset a config to its default value",
@@ -45946,7 +45953,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1728
+      "line": 1716
     },
     {
       "key": "Reset position of mouse when opening bindwheel",
@@ -45995,7 +46002,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1765
+      "line": 1746
     },
     {
       "key": "Reset to defaults",
@@ -46037,7 +46044,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3339
+      "line": 3320
     },
     {
       "key": "Reset to normal grid size.",
@@ -46149,7 +46156,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2329
+      "line": 2310
     },
     {
       "key": "Restart the client",
@@ -46163,7 +46170,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2334
+      "line": 2315
     },
     {
       "key": "Restarting. Please wait…",
@@ -46411,6 +46418,13 @@
       "line": 2028
     },
     {
+      "key": "Right click or double click to add points on active channels. Use shift to change the zoom axis. Press S to scale selected points.",
+      "category": "localize_or_localizable",
+      "source": "src/game/editor/envelope_editor.cpp",
+      "context": "Editor",
+      "line": 693
+    },
+    {
       "key": "Right jump",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogFunctionContent.cpp",
@@ -46513,14 +46527,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4135
+      "line": 4136
     },
     {
       "key": "Room %s is in sync (%d/%d people)",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5800
+      "line": 5801
     },
     {
       "key": "Room code",
@@ -46611,7 +46625,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 579
+      "line": 573
     },
     {
       "key": "Round",
@@ -47010,7 +47024,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4866
+      "line": 4867
     },
     {
       "key": "Save",
@@ -47031,14 +47045,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2048
+      "line": 2029
     },
     {
       "key": "Save",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2156
+      "line": 2137
     },
     {
       "key": "Save a replay of the last defined amount of seconds",
@@ -47066,7 +47080,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2432
+      "line": 2413
     },
     {
       "key": "Save as",
@@ -47129,14 +47143,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2262
+      "line": 2243
     },
     {
       "key": "Save copy",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4850
+      "line": 4851
     },
     {
       "key": "Save copy",
@@ -47220,7 +47234,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2048
+      "line": 2029
     },
     {
       "key": "Save last %d min",
@@ -47248,14 +47262,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4850
+      "line": 4851
     },
     {
       "key": "Save map",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4866
+      "line": 4867
     },
     {
       "key": "Save map",
@@ -47276,7 +47290,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2432
+      "line": 2413
     },
     {
       "key": "Save map",
@@ -47353,7 +47367,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2156
+      "line": 2137
     },
     {
       "key": "Save team with code r.",
@@ -47549,7 +47563,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5671
+      "line": 5672
     },
     {
       "key": "saving '%s' done",
@@ -47563,7 +47577,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4764
+      "line": 4765
     },
     {
       "key": "Saving failed: Could not move temporary map file '%s' to '%s'.",
@@ -47591,7 +47605,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5050
+      "line": 5051
     },
     {
       "key": "Say in chat",
@@ -47619,7 +47633,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1226
+      "line": 1235
     },
     {
       "key": "Scale down other Tees as well",
@@ -48522,28 +48536,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2528
+      "line": 2529
     },
     {
       "key": "Select group. Shift+left click to select all layers. Double click to expand.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2528
+      "line": 2529
     },
     {
       "key": "Select image.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3358
+      "line": 3359
     },
     {
       "key": "Select layer. Hold shift to select multiple.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2714
+      "line": 2715
     },
     {
       "key": "Select layers by tile",
@@ -48585,7 +48599,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor envelope selector punctuation",
-      "line": 521
+      "line": 512
     },
     {
       "key": "Select previous envelope.",
@@ -48599,7 +48613,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor envelope selector punctuation",
-      "line": 513
+      "line": 504
     },
     {
       "key": "Select proof mode.",
@@ -48613,7 +48627,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3473
+      "line": 3474
     },
     {
       "key": "Select the country flag for each player",
@@ -48634,21 +48648,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 505
+      "line": 496
     },
     {
       "key": "Select the wanted image:",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1999
+      "line": 1980
     },
     {
       "key": "Select the wanted sound:",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2110
+      "line": 2091
     },
     {
       "key": "Select which player fields a profile stores",
@@ -49670,14 +49684,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4437
+      "line": 4438
     },
     {
       "key": "Settings",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4622
+      "line": 4623
     },
     {
       "key": "Settings card background",
@@ -50811,7 +50825,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2696
+      "line": 2677
     },
     {
       "key": "Show dotted map route debug",
@@ -51021,7 +51035,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4431
+      "line": 4432
     },
     {
       "key": "Show existing saves",
@@ -51959,7 +51973,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4425
+      "line": 4426
     },
     {
       "key": "Show map progress bar (beta)",
@@ -52841,7 +52855,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4437
+      "line": 4438
     },
     {
       "key": "Show settings card borders",
@@ -54524,6 +54538,13 @@
       "line": 1216
     },
     {
+      "key": "Slice rectangle",
+      "category": "localize_or_localizable",
+      "source": "src/game/editor/popups.cpp",
+      "context": "Editor",
+      "line": 1225
+    },
+    {
       "key": "Slide left",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/cards/QmCardCatalogSearch.cpp",
@@ -55186,7 +55207,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2701
+      "line": 2702
     },
     {
       "key": "Sound",
@@ -55207,7 +55228,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1797
+      "line": 1786
     },
     {
       "key": "Sound",
@@ -55228,21 +55249,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1926
+      "line": 1915
     },
     {
       "key": "Sound Env",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1402
+      "line": 1411
     },
     {
       "key": "sound env offset",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1927
+      "line": 1916
     },
     {
       "key": "Sound error",
@@ -55256,14 +55277,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3167
+      "line": 3168
     },
     {
       "key": "Sound named '%s' was already added.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3221
+      "line": 3222
     },
     {
       "key": "Sound place (x%d)",
@@ -55291,14 +55312,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 387
+      "line": 378
     },
     {
       "key": "Sound. TO",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1403
+      "line": 1412
     },
     {
       "key": "Source file does not exist.",
@@ -55760,7 +55781,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3315
+      "line": 3296
     },
     {
       "key": "Speed of camera moving to desired position (higher = faster)",
@@ -57125,7 +57146,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 923
+      "line": 933
     },
     {
       "key": "Switch failed",
@@ -57188,7 +57209,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/map_view.cpp",
       "context": "Editor",
-      "line": 693
+      "line": 703
     },
     {
       "key": "Switch skin on hammer",
@@ -57426,126 +57447,126 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3947
+      "line": 3948
     },
     {
       "key": "Sync failed: could not load the remote map snapshot",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4185
+      "line": 4186
     },
     {
       "key": "Sync failed: could not read the map snapshot",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3914
+      "line": 3915
     },
     {
       "key": "Sync failed: could not save the map snapshot",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3901
+      "line": 3902
     },
     {
       "key": "Sync failed: could not write the complete remote map snapshot",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4175
+      "line": 4176
     },
     {
       "key": "Sync failed: could not write the remote map snapshot",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4169
+      "line": 4170
     },
     {
       "key": "Sync failed: map snapshot save failed",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 5644
+      "line": 5645
     },
     {
       "key": "Sync failed: the collaboration service returned an error",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4062
+      "line": 4063
     },
     {
       "key": "Sync failed: the collaboration service returned an error",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4118
+      "line": 4119
     },
     {
       "key": "Sync failed: the map is too large to sync in real time",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3921
+      "line": 3922
     },
     {
       "key": "Sync failed: the map snapshot data is invalid",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4160
+      "line": 4161
     },
     {
       "key": "Sync failed: the received map snapshot is too large",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4152
+      "line": 4153
     },
     {
       "key": "Sync interrupted: connection failed",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4042
+      "line": 4043
     },
     {
       "key": "Sync interrupted: connection failed",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4098
+      "line": 4099
     },
     {
       "key": "Sync interrupted: the room does not exist or has expired",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4046
+      "line": 4047
     },
     {
       "key": "Sync interrupted: the room does not exist or has expired",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4102
+      "line": 4103
     },
     {
       "key": "Sync interrupted: you are no longer in this room",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4054
+      "line": 4055
     },
     {
       "key": "Sync interrupted: you are no longer in this room",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4110
+      "line": 4111
     },
     {
       "key": "Sync remote stats",
@@ -57580,7 +57601,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4070
+      "line": 4071
     },
     {
       "key": "Syncing",
@@ -57601,7 +57622,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3897
+      "line": 3898
     },
     {
       "key": "Syncing remote stats",
@@ -59162,7 +59183,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1561
+      "line": 1570
     },
     {
       "key": "Tex V",
@@ -59176,7 +59197,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1562
+      "line": 1571
     },
     {
       "key": "Text alpha",
@@ -59344,7 +59365,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3352
+      "line": 3333
     },
     {
       "key": "The audio device couldn't be initialised.",
@@ -59365,21 +59386,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2283
+      "line": 2264
     },
     {
       "key": "The client only allows a maximum of %zu sounds.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2289
+      "line": 2270
     },
     {
       "key": "The client only supports 64 images but more would be needed to add the selected image as tileart.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2310
+      "line": 2291
     },
     {
       "key": "The command is empty, incomplete, or exceeds the local config line limit.",
@@ -59456,21 +59477,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2258
+      "line": 2239
     },
     {
       "key": "The map contains unsaved data, you might want to save it before you exit the editor.\\n\\nContinue anyway?",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2248
+      "line": 2229
     },
     {
       "key": "The map contains unsaved data, you might want to save it before you load a new map.\\n\\nContinue anyway?",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2253
+      "line": 2234
     },
     {
       "key": "The map isn't saved in the maps/ folder. It must be saved there to load on the server.",
@@ -59491,7 +59512,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 539
+      "line": 530
     },
     {
       "key": "The player you were whispering to hasn't reconnected yet or left. Please wait or whisper to someone else",
@@ -59519,7 +59540,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 3969
+      "line": 3970
     },
     {
       "key": "The selected button is not visible. Do you want to deselect it or edit its visibility?",
@@ -59540,21 +59561,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2305
+      "line": 2286
     },
     {
       "key": "The selected image is big. Converting it to tileart may take some time.\\n\\nContinue anyway?",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2300
+      "line": 2281
     },
     {
       "key": "The selected image is really big. Expect performance issues!\\n\\nContinue anyway?",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2315
+      "line": 2296
     },
     {
       "key": "The selected part stays highlighted while you adjust its color.",
@@ -59589,7 +59610,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1713
+      "line": 1702
     },
     {
       "key": "The update is ready and will be installed when you exit.",
@@ -59603,7 +59624,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1706
+      "line": 1695
     },
     {
       "key": "The watermarked screenshot was saved next to the original",
@@ -59631,7 +59652,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2278
+      "line": 2259
     },
     {
       "key": "Theme",
@@ -59792,14 +59813,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3282
+      "line": 3263
     },
     {
       "key": "These borders represent what will be shown in the menu.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3291
+      "line": 3272
     },
     {
       "key": "Thickness ",
@@ -59904,14 +59925,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2320
+      "line": 2301
     },
     {
       "key": "This is going to overwrite any existing tiles around the edges of the layer.\\n\\nContinue?",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2295
+      "line": 2276
     },
     {
       "key": "This is the master switch for all interface animation categories",
@@ -59932,7 +59953,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4657
+      "line": 4658
     },
     {
       "key": "This name cannot be used for files and folders",
@@ -60058,7 +60079,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2325
+      "line": 2306
     },
     {
       "key": "This team already has the maximum allowed size of %s players",
@@ -60233,7 +60254,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 2691
+      "line": 2692
     },
     {
       "key": "Tiles",
@@ -60289,7 +60310,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1712
+      "line": 1701
     },
     {
       "key": "Time (ms) player must wait before next overhead emote sent to all clients (must be >= sv_emoticon_ms_delay to take effect).",
@@ -60387,7 +60408,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1922
+      "line": 1911
     },
     {
       "key": "Time in seconds before economy authentication timeout.",
@@ -60464,14 +60485,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 985
+      "line": 995
     },
     {
       "key": "Timebar. Press left-click to drag. Hold ctrl to be more precise.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 999
+      "line": 1009
     },
     {
       "key": "Timeout code to use for dummy",
@@ -61283,14 +61304,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2304
+      "line": 2285
     },
     {
       "key": "Too many colors",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2309
+      "line": 2290
     },
     {
       "key": "Too many configuration files.",
@@ -61339,7 +61360,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4611
+      "line": 4612
     },
     {
       "key": "Tooltip background color",
@@ -62886,7 +62907,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2636
+      "line": 2617
     },
     {
       "key": "Unfreeze opacity",
@@ -62942,7 +62963,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2633
+      "line": 2614
     },
     {
       "key": "UNHOOKABLE: It's not possible to hook it, but can collide with it.",
@@ -63383,14 +63404,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2273
+      "line": 2254
     },
     {
       "key": "Unused tiles disabled",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2272
+      "line": 2253
     },
     {
       "key": "Up to 6 Chinese or 12 ASCII characters",
@@ -63908,28 +63929,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/map_view.cpp",
       "context": "Editor",
-      "line": 389
+      "line": 398
     },
     {
       "key": "Use left mouse button to drag and create a brush. Hold shift to select multiple quads. Press R to rotate selected quads. Use ctrl+right click to select layer.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/map_view.cpp",
       "context": "Editor",
-      "line": 382
+      "line": 391
     },
     {
       "key": "Use left mouse button to drag and create a brush. Use ctrl+right click to select layer of hovered tile.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/map_view.cpp",
       "context": "Editor",
-      "line": 387
+      "line": 396
     },
     {
       "key": "Use left mouse button to paint with the brush. Right click to clear the brush. Hold Alt to lock the mouse movement to a single axis.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/map_view.cpp",
       "context": "Editor",
-      "line": 394
+      "line": 403
     },
     {
       "key": "Use mouse sensitivity when dynamic camera is on",
@@ -64083,7 +64104,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4975
+      "line": 4976
     },
     {
       "key": "Use skin color for frozen Tee's feet",
@@ -64321,14 +64342,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor property value",
-      "line": 570
+      "line": 564
     },
     {
       "key": "Value:",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1705
+      "line": 1694
     },
     {
       "key": "Vanilla",
@@ -64398,7 +64419,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/mapitems/map_io.cpp",
       "context": "Editor",
-      "line": 662
+      "line": 673
     },
     {
       "key": "Version performing the analysis",
@@ -64412,7 +64433,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2188
+      "line": 2169
     },
     {
       "key": "Vertical position",
@@ -64566,21 +64587,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2914
+      "line": 2895
     },
     {
       "key": "View",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3065
+      "line": 3046
     },
     {
       "key": "View",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3164
+      "line": 3145
     },
     {
       "key": "View latest updates",
@@ -65070,7 +65091,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 577
+      "line": 571
     },
     {
       "key": "Volume unavailable for this player",
@@ -66316,7 +66337,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor_actions.cpp",
       "context": "Editor",
-      "line": 1995
+      "line": 1984
     },
     {
       "key": "Width",
@@ -66344,7 +66365,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 1510
+      "line": 1519
     },
     {
       "key": "Width and height are required to be within the range from %d to %d.",
@@ -66561,14 +66582,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor envelope channel",
-      "line": 572
+      "line": 566
     },
     {
       "key": "X",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor coordinate label",
-      "line": 3207
+      "line": 3188
     },
     {
       "key": "x = DDNet CPU% / total CPU%",
@@ -66610,28 +66631,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 579
+      "line": 573
     },
     {
       "key": "X: %.1f, Y: %.1f, Z: %.1f, T: %.1f, A: %.1f, G: %i  %s",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
       "context": "Editor",
-      "line": 4670
+      "line": 4671
     },
     {
       "key": "Y",
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor envelope channel",
-      "line": 572
+      "line": 566
     },
     {
       "key": "Y",
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor coordinate label",
-      "line": 3208
+      "line": 3189
     },
     {
       "key": "y = DDNet memory usage",
@@ -66645,7 +66666,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/envelope_editor.cpp",
       "context": "Editor",
-      "line": 579
+      "line": 573
     },
     {
       "key": "Yes",
@@ -67093,7 +67114,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2268
+      "line": 2249
     },
     {
       "key": "You can collide with others",
@@ -67611,7 +67632,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 2330
+      "line": 2311
     },
     {
       "key": "You have already requested to swap with %s.",
@@ -68304,7 +68325,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/editor/popups.cpp",
       "context": "Editor",
-      "line": 3163
+      "line": 3144
     },
     {
       "key": "Zoom",
