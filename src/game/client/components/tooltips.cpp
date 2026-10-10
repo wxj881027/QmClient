@@ -229,6 +229,7 @@ void CTooltips::OnRender()
 		ColorRGBA Background = Tooltip.m_SmallInstant ? ColorRGBA(0.08f, 0.08f, 0.08f, 0.94f) : color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmTooltipBackgroundColor, true));
 		Background.a *= AlphaFactor;
 		Rect.Draw(Background, IGraphics::CORNER_ALL, Tooltip.m_SmallInstant ? 3.0f * UiScale : Padding);
+		const CUIRect ClipRect = Rect;
 		Rect.Margin(Padding, &Rect);
 
 		// 极窄视口或超长说明按可见行数收口，保留省略提示，避免文字溢出气泡。
@@ -245,7 +246,8 @@ void CTooltips::OnRender()
 			TextColor.a *= AlphaFactor;
 			ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
 			OutlineColor.a *= AlphaFactor;
-			Ui()->ClipEnable(&Rect);
+			// 行高和字宽记录的是排版尺寸；字形下伸部与描边可使用气泡内边距。
+			Ui()->ClipEnable(&ClipRect);
 			if(!Truncated || VisibleLines > 1)
 				TextRender()->RenderTextContainer(TextContainerIndex, TextColor, OutlineColor);
 			if(Truncated)
