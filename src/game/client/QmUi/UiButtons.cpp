@@ -51,7 +51,7 @@ namespace ui_widget
 			Style.m_Fill = ResolveUiAnimValueColor(*pAnim, NodeKey, Style.m_Fill, Transition.m_DurationSec, Transition.m_Easing);
 		}
 		const ColorRGBA Fill = pUi->ScaleBackgroundAlpha(Style.m_Fill);
-		DrawRoundedSurface(Ctx, Rect, Fill, pUi->ScaleBackgroundAlpha(Style.m_Border), Options.m_Radius, ui_token::feedback::ICON_BORDER_WIDTH, Options.m_Corners);
+		DrawRoundedSurface(Ctx, Rect, Fill, pUi->ScaleBackgroundAlpha(Style.m_Border), Options.m_Radius, Options.m_BorderWidth, Options.m_Corners);
 		return Fill;
 	}
 
