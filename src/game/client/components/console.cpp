@@ -1880,7 +1880,7 @@ void CGameConsole::OnRender()
 	float TotalFilterWidth = FilterSpacing * (CInstance::LOG_FILTER_BUTTON_COUNT - 1);
 	for(int i = 0; i < CInstance::LOG_FILTER_BUTTON_COUNT; ++i)
 	{
-		aFilterWidths[i] = TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f + (LocalConsole && i != 0 ? FilterIndicatorWidth : 0.0f);
+		aFilterWidths[i] = TextRender()->TextWidth(FontSize, apFilterLabels[i]) + FilterPadding * 2.0f + (LocalConsole && i != 0 ? FilterIndicatorWidth * 2.0f : 0.0f);
 		TotalFilterWidth += aFilterWidths[i];
 	}
 	enum class EToolbarAction
@@ -2154,8 +2154,6 @@ void CGameConsole::OnRender()
 			pConsole->m_Selection.Clear();
 
 		y -= pConsole->m_BoundingBox.m_H - FontSize;
-		if(LocalConsole)
-			QmConsoleUi::DrawPanel(Ui(), {0.0f, y - 2.0f, Screen.w, 1.0f}, Palette.m_MutedText.WithAlpha(0.35f));
 
 		bool HandleLinkClick = false;
 		if(LinkClickPending)
@@ -2673,10 +2671,21 @@ void CGameConsole::OnRender()
 		}
 	}
 
+	const bool SettingsEscapePressed = std::exchange(m_SettingsEscapePressed, false);
 	if(ConsoleSettingsOpen())
 	{
 		QmConsoleUi::DrawPanel(Ui(), Screen, ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f));
+		if(SettingsEscapePressed)
+		{
+			// 菜单先于控制台绘制并清理共享热键；在弹窗绘制前投递 Esc，沿用栈顶关闭规则。
+			IInput::CEvent Event{};
+			Event.m_Key = KEY_ESCAPE;
+			Event.m_Flags = IInput::FLAG_PRESS;
+			Ui()->OnInput(Event);
+		}
 		Ui()->RenderPopupMenus();
+		if(SettingsEscapePressed)
+			Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE);
 		if(!ConsoleSettingsOpen() && m_ConsoleState == CONSOLE_OPEN)
 			pConsole->m_Input.Activate(EInputPriority::CONSOLE);
 	}
@@ -2720,6 +2729,11 @@ bool CGameConsole::OnInput(const IInput::CEvent &Event)
 
 	if(ConsoleSettingsOpen())
 	{
+		if(Event.m_Key == KEY_ESCAPE && (Event.m_Flags & IInput::FLAG_PRESS))
+		{
+			m_SettingsEscapePressed = true;
+			return true;
+		}
 		const bool PreviouslyEnabled = Ui()->Enabled();
 		Ui()->SetEnabled(true);
 		Ui()->OnInput(Event);
@@ -2747,6 +2761,7 @@ bool CGameConsole::OnInput(const IInput::CEvent &Event)
 void CGameConsole::Toggle(int Type)
 {
 	Ui()->ClosePopupMenu(&m_SettingsPopupId, true);
+	m_SettingsEscapePressed = false;
 	CurrentConsole()->m_Selection.Finish();
 	CurrentConsole()->m_ScrollbarDragging = false;
 	CurrentConsole()->m_MouseIsPress = false;

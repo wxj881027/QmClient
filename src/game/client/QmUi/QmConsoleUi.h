@@ -7,6 +7,8 @@
 #include <game/client/qm_icon.h>
 #include <game/client/ui.h>
 
+#include <algorithm>
+
 namespace QmConsoleUi
 {
 	struct SToolbarLayout
@@ -26,6 +28,22 @@ namespace QmConsoleUi
 		const float ActionScale = ActionWidth > 0.0f ? std::min(1.0f, Available / ActionWidth) : 1.0f;
 		return {Split, RowHeight * (Split ? 2.0f : 1.0f), FilterScale, ActionScale,
 			std::max(10.0f, Width - 10.0f - ActionWidth * ActionScale)};
+	}
+
+	struct SButtonLayout
+	{
+		CUIRect m_Label;
+		CUIRect m_FilterIndicator;
+	};
+
+	inline SButtonLayout LayoutButton(const CUIRect &Rect, float FilterIndicatorWidth)
+	{
+		SButtonLayout Layout;
+		const float IndicatorWidth = std::clamp(FilterIndicatorWidth, 0.0f, Rect.w * 0.5f);
+		// 两侧对称预留图标空间，分类标记隐藏时文字仍以按钮中心对齐。
+		Rect.VMargin(IndicatorWidth, &Layout.m_Label);
+		Rect.VSplitLeft(IndicatorWidth, &Layout.m_FilterIndicator, nullptr);
+		return Layout;
 	}
 
 	inline void DrawPanel(CUi *pUi, const CUIRect &Rect, ColorRGBA Color)
@@ -57,25 +75,24 @@ namespace QmConsoleUi
 			pUi->TextRender()->TextColor(pPalette->m_aColors[QmConsoleAppearance::TEXT]);
 			pUi->TextRender()->TextOutlineColor(ResolveUiSurfaceForeground(pPalette->m_aColors[QmConsoleAppearance::TEXT]).WithAlpha(pUi->TextRender()->GetTextOutlineColor().a));
 		}
-		CUIRect Label = Rect;
-		if(FilterIndicatorWidth > 0.0f)
+		const auto Layout = LayoutButton(Rect, FilterIndicatorWidth);
+		const CUIRect &Label = Layout.m_Label;
+		if(FilterIndicatorWidth > 0.0f && !Selected)
 		{
-			// 分类按钮固定预留标记位置，避免切换状态时文字跳动；被筛掉的分类显示禁用符号。
-			CUIRect Indicator;
-			Label.VSplitLeft(std::min(FilterIndicatorWidth, Label.w), &Indicator, &Label);
-			if(!Selected)
-			{
-				const float IconSize = std::min({Indicator.w, Indicator.h, FontSize * 1.25f});
-				const CUIRect Icon = {Indicator.x + (Indicator.w - IconSize) * 0.5f, Indicator.y + (Indicator.h - IconSize) * 0.5f, IconSize, IconSize};
-				const CQmIconSemanticColorScope SemanticColorScope;
-				pUi->DrawQmIcon(Icon, EQmIcon::BAN, FontIcons::FONT_ICON_BAN, pUi->TextRender()->GetTextColor());
-			}
+			const CUIRect &Indicator = Layout.m_FilterIndicator;
+			const float IconSize = std::min({Indicator.w, Indicator.h, FontSize * 1.25f});
+			const CUIRect Icon = {Indicator.x + (Indicator.w - IconSize) * 0.5f, Indicator.y + (Indicator.h - IconSize) * 0.5f, IconSize, IconSize};
+			const CQmIconSemanticColorScope SemanticColorScope;
+			pUi->DrawQmIcon(Icon, EQmIcon::BAN, FontIcons::FONT_ICON_BAN, pUi->TextRender()->GetTextColor());
 		}
 		SLabelProperties Props;
 		Props.m_MaxWidth = Label.w;
 		Props.m_MinimumFontSize = FontSize;
 		Props.m_EllipsisAtEnd = true;
+		const unsigned PreviousRenderFlags = pUi->TextRender()->GetRenderFlags();
+		pUi->TextRender()->SetRenderFlags(PreviousRenderFlags | TEXT_RENDER_FLAG_NO_Y_BEARING);
 		pUi->DoLabel(&Label, pLabel, FontSize, TEXTALIGN_MC, Props);
+		pUi->TextRender()->SetRenderFlags(PreviousRenderFlags);
 		return Enabled && Released && PressedInside && Hovered;
 	}
 }

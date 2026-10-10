@@ -56,3 +56,39 @@ TEST(QmConsoleUiLayout, LargerFontsReserveTallerRowsWhenControlsWrap)
 	EXPECT_FLOAT_EQ(Layout.m_Height, 80.0f);
 	EXPECT_LE(Layout.m_ActionX + 400.0f * Layout.m_ActionScale, 490.0f);
 }
+
+TEST(QmConsoleUiLayout, CategoryLabelStaysCenteredWithIndicatorSpaceAtDifferentScales)
+{
+	for(const float Scale : {0.5f, 1.0f, 2.0f})
+	{
+		SCOPED_TRACE(Scale);
+		const CUIRect Button = {40.0f, 15.0f, 120.0f * Scale, 28.0f * Scale};
+		const auto Layout = QmConsoleUi::LayoutButton(Button, 14.0f * Scale);
+		EXPECT_FLOAT_EQ(Layout.m_Label.x + Layout.m_Label.w * 0.5f, Button.x + Button.w * 0.5f);
+		EXPECT_FLOAT_EQ(Layout.m_Label.y + Layout.m_Label.h * 0.5f, Button.y + Button.h * 0.5f);
+		EXPECT_GE(Layout.m_Label.x, Layout.m_FilterIndicator.x + Layout.m_FilterIndicator.w);
+		EXPECT_GT(Layout.m_Label.w, 0.0f);
+	}
+}
+
+TEST(QmConsoleUiLayout, ButtonWithoutIndicatorUsesWholeRectForLabel)
+{
+	const CUIRect Button = {40.0f, 15.0f, 120.0f, 28.0f};
+	const auto Layout = QmConsoleUi::LayoutButton(Button, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Label.x, Button.x);
+	EXPECT_FLOAT_EQ(Layout.m_Label.y, Button.y);
+	EXPECT_FLOAT_EQ(Layout.m_Label.w, Button.w);
+	EXPECT_FLOAT_EQ(Layout.m_Label.h, Button.h);
+	EXPECT_FLOAT_EQ(Layout.m_FilterIndicator.w, 0.0f);
+}
+
+TEST(QmConsoleUiLayout, NarrowButtonKeepsCenteredLabelAndIndicatorInsideButton)
+{
+	const CUIRect Button = {40.0f, 15.0f, 12.0f, 28.0f};
+	const auto Layout = QmConsoleUi::LayoutButton(Button, 14.0f);
+	EXPECT_GE(Layout.m_Label.w, 0.0f);
+	EXPECT_FLOAT_EQ(Layout.m_Label.x + Layout.m_Label.w * 0.5f, Button.x + Button.w * 0.5f);
+	EXPECT_GE(Layout.m_FilterIndicator.x, Button.x);
+	EXPECT_LE(Layout.m_FilterIndicator.x + Layout.m_FilterIndicator.w, Layout.m_Label.x);
+	EXPECT_LE(Layout.m_Label.x + Layout.m_Label.w, Button.x + Button.w);
+}
