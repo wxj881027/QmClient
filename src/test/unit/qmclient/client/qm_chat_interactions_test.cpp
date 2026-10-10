@@ -283,3 +283,48 @@ TEST(QmChatInputLayout, CommonSizesKeepButtonPrefixAndBodyInsideInputRow)
 				EXPECT_FLOAT_EQ(Layout.m_ButtonY + Layout.m_ButtonH * 0.5f, 100.0f + FontSize * 0.5f);
 			}
 }
+
+TEST(QmChatInputLayout, DefaultMappingProjectsInputClipToPixels)
+{
+	const auto Clip = QmChatInputPixelClip({40.0f, 250.0f, 200.0f, 20.0f}, {0.0f, 0.0f, 400.0f, 300.0f}, 1600, 1200);
+	EXPECT_EQ(Clip.m_X, 160);
+	EXPECT_EQ(Clip.m_Y, 1000);
+	EXPECT_EQ(Clip.m_W, 800);
+	EXPECT_EQ(Clip.m_H, 80);
+}
+
+TEST(QmChatInputLayout, MovedHudKeepsInputClipAlignedWithText)
+{
+	const auto Clip = QmChatInputPixelClip({40.0f, 250.0f, 200.0f, 20.0f}, {-20.0f, -10.0f, 400.0f, 300.0f}, 1600, 1200);
+	EXPECT_EQ(Clip.m_X, 240);
+	EXPECT_EQ(Clip.m_Y, 1040);
+	EXPECT_EQ(Clip.m_W, 800);
+	EXPECT_EQ(Clip.m_H, 80);
+}
+
+TEST(QmChatInputLayout, ScaledHudKeepsInputClipAlignedWithText)
+{
+	const auto Clip = QmChatInputPixelClip({40.0f, 120.0f, 100.0f, 20.0f}, {10.0f, 100.0f, 200.0f, 150.0f}, 1600, 1200);
+	EXPECT_EQ(Clip.m_X, 240);
+	EXPECT_EQ(Clip.m_Y, 160);
+	EXPECT_EQ(Clip.m_W, 800);
+	EXPECT_EQ(Clip.m_H, 160);
+}
+
+TEST(QmChatInputLayout, FractionalClipEdgesRetainBoundaryPixels)
+{
+	const auto Clip = QmChatInputPixelClip({10.2f, 20.3f, 30.4f, 40.2f}, {0.0f, 0.0f, 400.0f, 300.0f}, 400, 300);
+	EXPECT_EQ(Clip.m_X, 10);
+	EXPECT_EQ(Clip.m_Y, 20);
+	EXPECT_EQ(Clip.m_W, 31);
+	EXPECT_EQ(Clip.m_H, 41);
+}
+
+TEST(QmChatInputLayout, ClipOutsideViewportIsLimitedToVisiblePixels)
+{
+	const auto Clip = QmChatInputPixelClip({-2.0f, -3.0f, 410.0f, 310.0f}, {0.0f, 0.0f, 400.0f, 300.0f}, 1600, 1200);
+	EXPECT_EQ(Clip.m_X, 0);
+	EXPECT_EQ(Clip.m_Y, 0);
+	EXPECT_EQ(Clip.m_W, 1600);
+	EXPECT_EQ(Clip.m_H, 1200);
+}
