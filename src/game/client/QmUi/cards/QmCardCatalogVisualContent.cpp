@@ -50,9 +50,16 @@ extern std::unordered_map<std::string, CBindSlot> g_CommandBindCache;
 
 void CMenus::RenderQmVisualStreamerContent(CUIRect &Content, float LineHeight, float LineSpacing)
 {
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmStreamerHideNames, "Replace non-friend names with ID", Localize("Replace non-friend names with ID"), &g_Config.m_QmStreamerHideNames);
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmStreamerHideSkins, "Replace non-friend skins with default", Localize("Replace non-friend skins with default"), &g_Config.m_QmStreamerHideSkins);
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmStreamerScoreboardDefaultFlags, "Use default flags on scoreboard", Localize("Use default flags on scoreboard"), &g_Config.m_QmStreamerScoreboardDefaultFlags);
+	SSettingsContentMetrics Metrics = CurrentSettingsContentMetrics();
+	Metrics.m_LineHeight = LineHeight;
+	Metrics.m_LineSpacing = LineSpacing;
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+		{
+			{&g_Config.m_QmStreamerHideNames, "Replace non-friend names with ID", Localize("Replace non-friend names with ID")},
+			{&g_Config.m_QmStreamerHideSkins, "Replace non-friend skins with default", Localize("Replace non-friend skins with default")},
+			{&g_Config.m_QmStreamerScoreboardDefaultFlags, "Use default flags on scoreboard", Localize("Use default flags on scoreboard")},
+		},
+		Metrics);
 }
 
 void CMenus::RenderQmVisualTranslateUiContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing)
@@ -94,14 +101,6 @@ void CMenus::RenderQmVisualEntityOverlayContent(CUIRect &Content, float LineHeig
 
 void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
-	auto RenderCheckbox = [&](const void *pId, const char *pTextId, const char *pText, int *pValue) {
-		CUIRect Row;
-		Content.HSplitTop(LineHeight, &Row, &Content);
-		if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, pId, pTextId, pText, *pValue, &Row))
-			*pValue ^= 1;
-		Content.HSplitTop(LineSpacing, nullptr, &Content);
-	};
-
 	int HitboxModeEnabled = g_Config.m_QmHitboxMode || g_Config.m_QmShowCollisionHitbox;
 	{
 		CUIRect Row;
@@ -117,17 +116,21 @@ void CMenus::RenderQmVisualCollisionHitboxContent(CUIRect &Content, float LineHe
 	if(!HitboxModeEnabled)
 		return;
 
-	RenderCheckbox(&g_Config.m_QmHitboxShowMap, "Map danger border", Localize("Map danger border"), &g_Config.m_QmHitboxShowMap);
-	RenderCheckbox(&g_Config.m_QmHitboxShowTeeCollision, "Tee collision (Tee to Tee)", Localize("Tee collision (Tee to Tee)"), &g_Config.m_QmHitboxShowTeeCollision);
-	RenderCheckbox(&g_Config.m_QmHitboxShowTeeFreeze, "Tee freeze probe (Tee to Freeze)", Localize("Tee freeze probe (Tee to Freeze)"), &g_Config.m_QmHitboxShowTeeFreeze);
-	RenderCheckbox(&g_Config.m_QmHitboxShowTeeDeath, "Tee death probe", Localize("Tee death probe"), &g_Config.m_QmHitboxShowTeeDeath);
-	RenderCheckbox(&g_Config.m_QmHitboxShowPickups, "Pickup range", Localize("Pickup range"), &g_Config.m_QmHitboxShowPickups);
-	RenderCheckbox(&g_Config.m_QmHitboxShowHammer, "Hammer interaction", Localize("Hammer interaction"), &g_Config.m_QmHitboxShowHammer);
-	RenderCheckbox(&g_Config.m_QmHitboxShowProjectiles, "Projectile / explosion range", Localize("Projectile / explosion range"), &g_Config.m_QmHitboxShowProjectiles);
-	RenderCheckbox(&g_Config.m_QmHitboxShowFreezeProjectiles, "Freeze projectile collision volume", Localize("Freeze projectile collision volume"), &g_Config.m_QmHitboxShowFreezeProjectiles);
-	RenderCheckbox(&g_Config.m_QmHitboxShowLasers, "Laser / shotgun interaction", Localize("Laser / shotgun interaction"), &g_Config.m_QmHitboxShowLasers);
-	RenderCheckbox(&g_Config.m_QmHitboxShowFreezeLasers, "Freeze laser collision volume", Localize("Freeze laser collision volume"), &g_Config.m_QmHitboxShowFreezeLasers);
-	RenderCheckbox(&g_Config.m_QmHitboxShowHook, "Hook interaction", Localize("Hook interaction"), &g_Config.m_QmHitboxShowHook);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+		{
+			{&g_Config.m_QmHitboxShowMap, "Map danger border", Localize("Map danger border")},
+			{&g_Config.m_QmHitboxShowTeeCollision, "Tee collision (Tee to Tee)", Localize("Tee collision (Tee to Tee)")},
+			{&g_Config.m_QmHitboxShowTeeFreeze, "Tee freeze probe (Tee to Freeze)", Localize("Tee freeze probe (Tee to Freeze)")},
+			{&g_Config.m_QmHitboxShowTeeDeath, "Tee death probe", Localize("Tee death probe")},
+			{&g_Config.m_QmHitboxShowPickups, "Pickup range", Localize("Pickup range")},
+			{&g_Config.m_QmHitboxShowHammer, "Hammer interaction", Localize("Hammer interaction")},
+			{&g_Config.m_QmHitboxShowProjectiles, "Projectile / explosion range", Localize("Projectile / explosion range")},
+			{&g_Config.m_QmHitboxShowFreezeProjectiles, "Freeze projectile collision volume", Localize("Freeze projectile collision volume")},
+			{&g_Config.m_QmHitboxShowLasers, "Laser / shotgun interaction", Localize("Laser / shotgun interaction")},
+			{&g_Config.m_QmHitboxShowFreezeLasers, "Freeze laser collision volume", Localize("Freeze laser collision volume")},
+			{&g_Config.m_QmHitboxShowHook, "Hook interaction", Localize("Hook interaction")},
+		},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	Content.HSplitTop(LineHeight, &Row, &Content);
@@ -290,8 +293,8 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 	const float SmallSize = CurrentSettingsContentMetrics().m_SmallSize;
 	static CButtonContainer s_ReaderButtonFocusToggle, s_ClearButtonFocusToggle;
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmFocusMode, "qmclient-focus-mode-enable", Localize("Enable Zen mode"), &g_Config.m_QmFocusMode);
-	CUIRect LeftColumn, RightColumn, Row;
-	Content.VSplitMid(&LeftColumn, &RightColumn, ColumnGap);
+	CUIRect Row;
+	(void)ColumnGap;
 	auto RenderSection = [&](CUIRect &Target, const char *pTextId, const char *pLabel) {
 		Target.HSplitTop(SmallSize, &Row, &Target);
 		TextRender()->TextColor(ColorRGBA(0.72f, 0.72f, 0.78f, 0.86f));
@@ -299,39 +302,52 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 		Target.HSplitTop(LineSpacing, nullptr, &Target);
 	};
-	auto RenderCheckbox = [&](CUIRect &Target, int *pConfig, const char *pTextId, const char *pLabel) {
-		Target.HSplitTop(LineHeight, &Row, &Target);
-		if(DoSettingsButton_CheckBox(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, pConfig, pTextId, Localize(pLabel), *pConfig, &Row))
-			*pConfig ^= 1;
-		Target.HSplitTop(LineSpacing, nullptr, &Target);
-	};
-	RenderSection(LeftColumn, "qmclient-focus-section-interface", "Interface");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideHud, "qmclient-focus-hide-hud", "Hide HUD");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideMapProgress, "qmclient-focus-hide-map-progress", "Hide map progress");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideInfoMessages, "qmclient-focus-hide-info-messages", "Hide kill/finish messages");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideScoreboard, "qmclient-focus-hide-scoreboard", "Hide scoreboard");
-	RenderSection(LeftColumn, "qmclient-focus-section-players", "Players");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideNames, "qmclient-focus-hide-names", "Hide names");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideNameplates, "qmclient-focus-hide-nameplates", "Hide nameplates");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideDirectionIndicators, "qmclient-focus-hide-direction-indicators", "Hide direction indicators");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideGuideLines, "qmclient-focus-hide-guide-lines", "Hide guide lines");
-	RenderSection(LeftColumn, "qmclient-focus-section-visuals", "Visuals");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideJumpEffects, "qmclient-focus-hide-jump-effects", "Hide jump effects");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideKillEffects, "qmclient-focus-hide-kill-effects", "Hide death/respawn effects");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideExplosionEffects, "qmclient-focus-hide-explosion-effects", "Hide explosion effects");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideFreezeEffects, "qmclient-focus-hide-freeze-effects", "Hide freeze effects");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideHammerEffects, "qmclient-focus-hide-hammer-effects", "Hide hammer effects");
-	RenderCheckbox(LeftColumn, &g_Config.m_QmFocusModeHideMuzzleEffects, "qmclient-focus-hide-muzzle-effects", "Hide weapon muzzle flashes");
-	RenderSection(RightColumn, "qmclient-focus-section-audio", "Audio");
-	RenderCheckbox(RightColumn, &g_Config.m_QmFocusModeMuteJumpSounds, "qmclient-focus-mute-jump-sounds", "Mute jump sounds");
-	RenderCheckbox(RightColumn, &g_Config.m_QmFocusModeMuteDeathSounds, "qmclient-focus-mute-death-sounds", "Mute death/respawn sounds");
-	RenderCheckbox(RightColumn, &g_Config.m_QmFocusModeMuteHammerSounds, "qmclient-focus-mute-hammer-sounds", "Mute hammer sounds");
-	RenderSection(RightColumn, "qmclient-focus-section-chat", "Chat");
-	RenderCheckbox(RightColumn, &g_Config.m_QmFocusModeHideChat, "qmclient-focus-hide-chat", "Hide player messages");
-	RenderCheckbox(RightColumn, &g_Config.m_QmFocusModeHideSystemInfoMessages, "qmclient-focus-hide-system-info-messages", "Hide join/version prompts");
-	RenderCheckbox(RightColumn, &g_Config.m_QmFocusModeHideSystemMessages, "qmclient-focus-hide-system-messages", "Hide server prompt notifications");
-	RenderCheckbox(RightColumn, &g_Config.m_QmFocusModeHideEcho, "qmclient-focus-hide-echo", "Hide Echo messages");
-	Content.y = std::max(LeftColumn.y, RightColumn.y);
+	RenderSection(Content, "qmclient-focus-section-interface", "Interface");
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+		{
+			{&g_Config.m_QmFocusModeHideHud, "qmclient-focus-hide-hud", Localize("Hide HUD")},
+			{&g_Config.m_QmFocusModeHideMapProgress, "qmclient-focus-hide-map-progress", Localize("Hide map progress")},
+			{&g_Config.m_QmFocusModeHideInfoMessages, "qmclient-focus-hide-info-messages", Localize("Hide kill/finish messages")},
+			{&g_Config.m_QmFocusModeHideScoreboard, "qmclient-focus-hide-scoreboard", Localize("Hide scoreboard")},
+		},
+		CurrentSettingsContentMetrics());
+	RenderSection(Content, "qmclient-focus-section-players", "Players");
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+		{
+			{&g_Config.m_QmFocusModeHideNames, "qmclient-focus-hide-names", Localize("Hide names")},
+			{&g_Config.m_QmFocusModeHideNameplates, "qmclient-focus-hide-nameplates", Localize("Hide nameplates")},
+			{&g_Config.m_QmFocusModeHideDirectionIndicators, "qmclient-focus-hide-direction-indicators", Localize("Hide direction indicators")},
+			{&g_Config.m_QmFocusModeHideGuideLines, "qmclient-focus-hide-guide-lines", Localize("Hide guide lines")},
+		},
+		CurrentSettingsContentMetrics());
+	RenderSection(Content, "qmclient-focus-section-visuals", "Visuals");
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+		{
+			{&g_Config.m_QmFocusModeHideJumpEffects, "qmclient-focus-hide-jump-effects", Localize("Hide jump effects")},
+			{&g_Config.m_QmFocusModeHideKillEffects, "qmclient-focus-hide-kill-effects", Localize("Hide death/respawn effects")},
+			{&g_Config.m_QmFocusModeHideExplosionEffects, "qmclient-focus-hide-explosion-effects", Localize("Hide explosion effects")},
+			{&g_Config.m_QmFocusModeHideFreezeEffects, "qmclient-focus-hide-freeze-effects", Localize("Hide freeze effects")},
+			{&g_Config.m_QmFocusModeHideHammerEffects, "qmclient-focus-hide-hammer-effects", Localize("Hide hammer effects")},
+			{&g_Config.m_QmFocusModeHideMuzzleEffects, "qmclient-focus-hide-muzzle-effects", Localize("Hide weapon muzzle flashes")},
+		},
+		CurrentSettingsContentMetrics());
+	RenderSection(Content, "qmclient-focus-section-audio", "Audio");
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+		{
+			{&g_Config.m_QmFocusModeMuteJumpSounds, "qmclient-focus-mute-jump-sounds", Localize("Mute jump sounds")},
+			{&g_Config.m_QmFocusModeMuteDeathSounds, "qmclient-focus-mute-death-sounds", Localize("Mute death/respawn sounds")},
+			{&g_Config.m_QmFocusModeMuteHammerSounds, "qmclient-focus-mute-hammer-sounds", Localize("Mute hammer sounds")},
+		},
+		CurrentSettingsContentMetrics());
+	RenderSection(Content, "qmclient-focus-section-chat", "Chat");
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_VISUAL, QMCLIENT_SETTINGS_TAB_VISUAL, Content,
+		{
+			{&g_Config.m_QmFocusModeHideChat, "qmclient-focus-hide-chat", Localize("Hide player messages")},
+			{&g_Config.m_QmFocusModeHideSystemInfoMessages, "qmclient-focus-hide-system-info-messages", Localize("Hide join/version prompts")},
+			{&g_Config.m_QmFocusModeHideSystemMessages, "qmclient-focus-hide-system-messages", Localize("Hide server prompt notifications")},
+			{&g_Config.m_QmFocusModeHideEcho, "qmclient-focus-hide-echo", Localize("Hide Echo messages")},
+		},
+		CurrentSettingsContentMetrics());
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	CUIRect BindLabel, BindKey;

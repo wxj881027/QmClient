@@ -17,8 +17,12 @@ void CMenus::RenderQmFunctionBetterScoreboardContent(CUIRect &Content, float Lin
 	};
 
 	RenderCheckbox(&g_Config.m_QmBetterScoreboard, "Better scoreboard", Localize("Better scoreboard"), &g_Config.m_QmBetterScoreboard);
-	RenderCheckbox(&g_Config.m_QmScoreboardPoints, "Scoreboard point check", Localize("Scoreboard point check"), &g_Config.m_QmScoreboardPoints);
-	RenderCheckbox(&g_Config.m_QmScoreboardOnDeath, "Show scoreboard after death", Localize("Show scoreboard after death"), &g_Config.m_QmScoreboardOnDeath);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
+		{
+			{&g_Config.m_QmScoreboardPoints, "Scoreboard point check", Localize("Scoreboard point check")},
+			{&g_Config.m_QmScoreboardOnDeath, "Show scoreboard after death", Localize("Show scoreboard after death")},
+		},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	RenderCheckboxTipped(&g_Config.m_QmScoreboardScroll, "Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers", Localize("Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers"), Localize("Use the scoreboard cursor mode to scroll the list"), &g_Config.m_QmScoreboardScroll);
 	{
 		// 计分板过滤器直接绑定配置缓冲，保持原有输入即时生效和控制台同步语义。

@@ -29,7 +29,7 @@ namespace qm_card_catalog
 			case EQmModuleId::WeaponAnimation:
 				return ResolveQmVisualWeaponAnimationHeight(Metrics, g_Config.m_QmWeaponSwitchAnim != 0, g_Config.m_QmWeaponReloadAnim != 0);
 			case EQmModuleId::Streamer: return Rows(3.0f);
-			case EQmModuleId::FocusMode: return ResolveQmVisualFocusModeHeight(Metrics);
+			case EQmModuleId::FocusMode: return Rows(1.0f);
 			case EQmModuleId::EntityOverlay: return Rows(9.0f);
 			case EQmModuleId::CollisionHitbox:
 				return ResolveQmVisualCollisionHitboxHeight(Metrics, g_Config.m_QmHitboxMode || g_Config.m_QmShowCollisionHitbox);
@@ -141,11 +141,7 @@ namespace qm_card_catalog
 		case EQmModuleId::FocusMode:
 		{
 			Add(Id, "qm:focus_mode", "Zen Mode", "Hide UI for focused gameplay", [pMenus, LineHeight, BodySize, LineSpacing, LabelWidth](CUIRect &Content) { qm_card_catalog::QmCardRenderHook::RenderQmVisualFocusModeContent(pMenus, Content, LineHeight, BodySize, LineSpacing, LineSpacing, LabelWidth); });
-			// 禅模式卡是目录里唯一的双列内容：左右两列各自消费自己的列矩形，父内容区只被推到底部、
-			// 高度不变；而通用内容探针统计的是 Content.h 的减少量，会把这张卡量成「总开关 + 按键」
-			// 两行高，卡片随之塌陷、内容画到卡外。因此这张卡单独判定高度：直接按自己的双列布局
-			// 推导，不经过探针，也不改动探针与 TClient 等自带测量卡片的路径。
-			Out.m_Measure = [Metrics](float) { return ResolveQmVisualFocusModeHeight(Metrics); };
+
 			return true;
 		}
 		case EQmModuleId::EntityOverlay:
