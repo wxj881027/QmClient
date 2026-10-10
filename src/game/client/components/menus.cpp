@@ -626,7 +626,8 @@ CMenus::CMenus()
 	m_ShowStart = true;
 
 	m_DemoBrowserSource = DEMO_BROWSER_SOURCE_DEMOS;
-	ResetDemoBrowserFolder();
+	str_copy(m_aCurrentDemoFolder, DemoBrowserBaseFolder());
+	m_DemolistStorageType = IStorage::TYPE_ALL;
 
 	m_DemoPlayerState = DEMOPLAYER_NONE;
 	m_Dummy = false;
@@ -3744,6 +3745,8 @@ void CMenus::OnInterfacesInit(CGameClient *pClient)
 
 void CMenus::OnInit()
 {
+	// 构造阶段还没有组件接口；配置目录必须等存储接口就绪后解析。
+	ResetDemoBrowserFolder();
 	GameClient()->FrameScheduler()->Reset();
 	m_MapDifficultyCatalog.Load(Storage(), Console());
 
