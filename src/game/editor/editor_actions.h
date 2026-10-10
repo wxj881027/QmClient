@@ -502,15 +502,15 @@ private:
 class CEditorActionAddEnvelopePoint : public IEditorAction
 {
 public:
-	CEditorActionAddEnvelopePoint(CEditorMap *pMap, int EnvelopeIndex, CFixedTime Time, ColorRGBA Channels);
+	CEditorActionAddEnvelopePoint(CEditorMap *pMap, int EnvelopeIndex, CFixedTime Time, ColorRGBA Channels, int ChannelMask);
 
 	void Undo() override;
 	void Redo() override;
 
 private:
 	int m_EnvelopeIndex;
-	CFixedTime m_Time;
-	ColorRGBA m_Channels;
+	std::vector<CEnvelope::CPoint> m_vPreviousPoints;
+	std::vector<CEnvelope::CPoint> m_vCurrentPoints;
 };
 
 class CEditorActionDeleteEnvelopePoint : public IEditorAction
@@ -524,7 +524,7 @@ public:
 private:
 	int m_EnvelopeIndex;
 	int m_PointIndex;
-	CEnvPoint_runtime m_Point;
+	CEnvelope::CPoint m_Point;
 };
 
 class CEditorActionEditEnvelopePointValue : public IEditorAction

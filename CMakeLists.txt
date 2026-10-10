@@ -3835,6 +3835,7 @@ if(CLIENT)
     quadart.h
     quad_knife.cpp
     quad_knife.h
+    quad_slice.h
     quick_action.h
     quick_actions.cpp
     quick_actions.h
@@ -3845,6 +3846,7 @@ if(CLIENT)
     tileart.cpp
   )
   set_src(GAME_MAP GLOB_RECURSE src/game/map
+    envelope_eval.cpp
     envelope_extrema.cpp
     envelope_extrema.h
     envelope_manager.h
@@ -4451,6 +4453,7 @@ if(TOOLS)
           src/game/map/map_renderer.cpp
           src/game/map/render_layer.cpp
           src/game/map/render_map.cpp
+          src/game/map/envelope_eval.cpp
           src/game/map/render_component.cpp
           src/game/map/envelope_extrema.cpp
           ${PROJECT_BINARY_DIR}/src/generated/client_data.h
@@ -4606,6 +4609,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/demo_player_test.cpp
     src/test/unit/engine/video_frame_capture_test.cpp
     src/test/unit/engine/editor_test.cpp
+    src/test/unit/client/editor_quad_slice_test.cpp
+    src/test/unit/client/editor_envelope_channels_test.cpp
+    src/test/integration/client/editor_envelope_channel_io_test.cpp
     src/test/unit/base/fs_test.cpp
     src/test/unit/server/gameworld_test.cpp
     src/test/unit/base/gameinfo_ex_test.cpp
@@ -4990,6 +4996,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/voice_spatial_utils_test.cpp
   )
   set(TESTS_EXTRA
+    src/game/editor/mapitems/envelope.cpp
+    src/game/map/envelope_eval.cpp
     src/engine/client/backend_threaded.cpp
     src/engine/client/backend/vulkan/backend_vulkan_qm_ext.cpp
     src/engine/client/backend/graphics_backend_contract.cpp

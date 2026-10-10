@@ -1,7 +1,7 @@
 {
   "summary": {
-    "must_i18n": 9733,
-    "business_data": 13810,
+    "must_i18n": 9736,
+    "business_data": 13812,
     "test_only": 5319,
     "needs_review": 553,
     "violation": 0
@@ -58543,861 +58543,861 @@
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2192,
+      "line": 2188,
       "text": "Left mouse button to move. Hold ctrl to rotate. Hold alt to ignore grid.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2279,
+      "line": 2280,
       "text": "Click to show the color picker. Shift+right click to copy color to clipboard. Shift+left click to paste color from clipboard.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2486,
+      "line": 2487,
       "text": "Left click to toggle visibility. Right click to show this group only.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2528,
+      "line": 2529,
       "text": "Select group. Shift+left click to select all layers. Double click to collapse.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2528,
+      "line": 2529,
       "text": "Select group. Shift+left click to select all layers. Double click to expand.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2645,
+      "line": 2646,
       "text": "Left click to toggle visibility. Right click to show only this layer within its group.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2691,
+      "line": 2692,
       "text": "Tiles",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2696,
+      "line": 2697,
       "text": "Quads",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2701,
+      "line": 2702,
       "text": "Sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2714,
+      "line": 2715,
       "text": "Select layer. Hold shift to select multiple.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2993,
+      "line": 2994,
       "text": "Collapse all",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2993,
+      "line": 2994,
       "text": "Expand all",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2997,
+      "line": 2998,
       "text": "Expand or collapse all groups.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3053,
+      "line": 3054,
       "text": "Image named '%s' was already added.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3062,
+      "line": 3063,
       "text": "Failed to load image from file '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3077,
+      "line": 3078,
       "text": "Failed to convert image from file \"%s\".",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3110,
+      "line": 3111,
       "text": "Image named '%s' was already added.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3125,
+      "line": 3126,
       "text": "Failed to load image from file '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3138,
+      "line": 3139,
       "text": "Failed to convert image from file \"%s\".",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3167,
+      "line": 3168,
       "text": "Sound named '%s' was already added.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3184,
+      "line": 3185,
       "text": "Failed to open sound file '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3193,
+      "line": 3194,
       "text": "Failed to load sound from file '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3221,
+      "line": 3222,
       "text": "Sound named '%s' was already added.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3232,
+      "line": 3233,
       "text": "Failed to open sound file '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3241,
+      "line": 3242,
       "text": "Failed to load sound from file '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3328,
+      "line": 3329,
       "text": "Embed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3328,
+      "line": 3329,
       "text": "External",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3358,
+      "line": 3359,
       "text": "Select image.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3451,
+      "line": 3452,
       "text": "Embed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3473,
+      "line": 3474,
       "text": "Select sound.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3504,
+      "line": 3505,
       "text": "Add sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3504,
+      "line": 3505,
       "text": "Load a new sound to use in the map.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3505,
+      "line": 3506,
       "text": "Add",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3505,
+      "line": 3506,
       "text": "Add sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3673,
+      "line": 3674,
       "text": "Left the collaboration room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3683,
+      "line": 3684,
       "text": "Collaboration connection lost; please try again",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3790,
+      "line": 3791,
       "text": "Creating collaboration room...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3804,
+      "line": 3805,
       "text": "Enter the room code",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3824,
+      "line": 3825,
       "text": "Joining collaboration room...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3844,
+      "line": 3845,
       "text": "Collaboration connection cancelled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3851,
+      "line": 3852,
       "text": "Left the collaboration room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3876,
+      "line": 3877,
       "text": "Left the collaboration room, but could not notify the collaboration service",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3880,
+      "line": 3881,
       "text": "Leaving collaboration room...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3897,
+      "line": 3898,
       "text": "Syncing map snapshot...",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3901,
+      "line": 3902,
       "text": "Sync failed: could not save the map snapshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3914,
+      "line": 3915,
       "text": "Sync failed: could not read the map snapshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3921,
+      "line": 3922,
       "text": "Sync failed: the map is too large to sync in real time",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3947,
+      "line": 3948,
       "text": "Sync failed: could not connect to the collaboration service",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3965,
+      "line": 3966,
       "text": "Failed to create room: connection failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3965,
+      "line": 3966,
       "text": "Failed to join: connection failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3969,
+      "line": 3970,
       "text": "The room is full; up to 4 people can collaborate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3973,
+      "line": 3974,
       "text": "Failed to join: the room code is invalid or the room has expired",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3977,
+      "line": 3978,
       "text": "Failed to create room: the collaboration service returned an error",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3977,
+      "line": 3978,
       "text": "Failed to join: the collaboration service returned an error",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4000,
+      "line": 4001,
       "text": "Joined room %s (%d/%d people)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4019,
+      "line": 4020,
       "text": "Left the collaboration room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4042,
+      "line": 4043,
       "text": "Sync interrupted: connection failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4046,
+      "line": 4047,
       "text": "Sync interrupted: the room does not exist or has expired",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4054,
+      "line": 4055,
       "text": "Sync interrupted: you are no longer in this room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4062,
+      "line": 4063,
       "text": "Sync failed: the collaboration service returned an error",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4070,
+      "line": 4071,
       "text": "Synced to room %s (%d/%d people)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4098,
+      "line": 4099,
       "text": "Sync interrupted: connection failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4102,
+      "line": 4103,
       "text": "Sync interrupted: the room does not exist or has expired",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4110,
+      "line": 4111,
       "text": "Sync interrupted: you are no longer in this room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4118,
+      "line": 4119,
       "text": "Sync failed: the collaboration service returned an error",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4130,
+      "line": 4131,
       "text": "Received a sync update from room %s (%d/%d people)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4135,
+      "line": 4136,
       "text": "Room %s is in sync (%d/%d people)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4152,
+      "line": 4153,
       "text": "Sync failed: the received map snapshot is too large",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4160,
+      "line": 4161,
       "text": "Sync failed: the map snapshot data is invalid",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4169,
+      "line": 4170,
       "text": "Sync failed: could not write the remote map snapshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4175,
+      "line": 4176,
       "text": "Sync failed: could not write the complete remote map snapshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4185,
+      "line": 4186,
       "text": "Sync failed: could not load the remote map snapshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4221,
+      "line": 4222,
       "text": "Loaded the collaboration room's map snapshot",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4302,
+      "line": 4303,
       "text": "1 new mention",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4304,
+      "line": 4305,
       "text": "%d new mentions",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4306,
+      "line": 4307,
       "text": "9+ new mentions",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4317,
+      "line": 4318,
       "text": "Moved ingame",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4325,
+      "line": 4326,
       "text": "Go to layers management.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4332,
+      "line": 4333,
       "text": "Go to images management.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4339,
+      "line": 4340,
       "text": "Go to sounds management.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4388,
+      "line": 4389,
       "text": "%s Right click for context menu.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4425,
+      "line": 4426,
       "text": "Editor",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4425,
+      "line": 4426,
       "text": "Show map editor history.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4431,
+      "line": 4432,
       "text": "Envelope",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4431,
+      "line": 4432,
       "text": "Show envelope editor history.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4437,
+      "line": 4438,
       "text": "Settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4437,
+      "line": 4438,
       "text": "Show server settings editor history.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4447,
+      "line": 4448,
       "text": "Editor history. Click on an action to undo all actions above.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4462,
+      "line": 4463,
       "text": "Clear the history.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4511,
+      "line": 4512,
       "text": "Loaded map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4559,
+      "line": 4560,
       "text": "Change the size of the editor by dragging.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4600,
+      "line": 4601,
       "text": "File",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4611,
+      "line": 4612,
       "text": "Tools",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4622,
+      "line": 4623,
       "text": "Settings",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4633,
+      "line": 4634,
       "text": "Collaboration",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4633,
+      "line": 4634,
       "text": "Create or join an editor collaboration room for up to 4 people.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4657,
+      "line": 4658,
       "text": "This map has unsaved changes.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4661,
+      "line": 4662,
       "text": "File: %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4670,
+      "line": 4671,
       "text": "X: %.1f, Y: %.1f, Z: %.1f, T: %.1f, A: %.1f, G: %i  %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4674,
+      "line": 4675,
       "text": "[F1] Open the DDNet Wiki page for the map editor in a web browser.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4680,
+      "line": 4681,
       "text": "[Escape] Exit from the editor.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4689,
+      "line": 4690,
       "text": "https://wiki.ddnet.org/wiki/Mapping",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4692,
+      "line": 4693,
       "text": "Failed to open the link '%s' in the default web browser.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4764,
+      "line": 4765,
       "text": "saving current brush to %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4769,
+      "line": 4770,
       "text": "loading brush from slot %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4819,
+      "line": 4820,
       "text": "Append",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4819,
+      "line": 4820,
       "text": "Append map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4841,
+      "line": 4842,
       "text": "Load",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4841,
+      "line": 4842,
       "text": "Load map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4850,
+      "line": 4851,
       "text": "Save copy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4850,
+      "line": 4851,
       "text": "Save map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4866,
+      "line": 4867,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4866,
+      "line": 4867,
       "text": "Save map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4975,
+      "line": 4976,
       "text": "Use shift+mouse wheel up/down to adjust the tele numbers. Use ctrl+f to change all tele numbers to the first unused number.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5050,
+      "line": 5051,
       "text": "Saving…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5097,
+      "line": 5098,
       "text": "Left click to pick a color from the screen. Right click to cancel pipette mode.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5510,
+      "line": 5511,
       "text": "Not in a collaboration room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5644,
+      "line": 5645,
       "text": "Sync failed: map snapshot save failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5671,
+      "line": 5672,
       "text": "saving '%s' done",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5800,
+      "line": 5801,
       "text": "Room %s is in sync (%d/%d people)",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5802,
+      "line": 5803,
       "text": "Not in a collaboration room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5903,
+      "line": 5904,
       "text": "Loaded map '%s'",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5945,
+      "line": 5946,
       "text": "Not in a collaboration room",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -60041,231 +60041,231 @@
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1728,
+      "line": 1716,
       "text": "in",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1728,
+      "line": 1716,
       "text": "out",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1728,
+      "line": 1716,
       "text": "Reset point %d of env %d tangent %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1736,
+      "line": 1730,
       "text": "Add new point in envelope %d at time %f",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1765,
+      "line": 1755,
       "text": "Delete point %d of envelope %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1797,
+      "line": 1786,
       "text": "Sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1799,
+      "line": 1788,
       "text": "Edit sounds layer %d in group %d %s property",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1834,
+      "line": 1823,
       "text": "Delete sound source %d in layer %d of group %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1861,
+      "line": 1850,
       "text": "Rectangle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1862,
+      "line": 1851,
       "text": "Circle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1866,
+      "line": 1855,
       "text": "Edit shape of sound source %d in layer %d of group %d to %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1918,
+      "line": 1907,
       "text": "Pos X",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1919,
+      "line": 1908,
       "text": "Pos Y",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1920,
+      "line": 1909,
       "text": "Loop",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1921,
+      "line": 1910,
       "text": "Pan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1922,
+      "line": 1911,
       "text": "time delay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1923,
+      "line": 1912,
       "text": "Falloff",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1924,
+      "line": 1913,
       "text": "Pos. Env",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1925,
+      "line": 1914,
       "text": "pos env offset",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1926,
+      "line": 1915,
       "text": "Sound Env",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1927,
+      "line": 1916,
       "text": "sound env offset",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1929,
+      "line": 1918,
       "text": "Edit sound source %d in layer %d of group %d %s property",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1995,
+      "line": 1984,
       "text": "Width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1996,
+      "line": 1985,
       "text": "Height",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1998,
+      "line": 1987,
       "text": "Edit sound source %d in layer %d of group %d sound shape %s property",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 2032,
+      "line": 2021,
       "text": "Radius",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 2034,
+      "line": 2023,
       "text": "Edit sound source %d in layer %d of group %d sound shape %s property",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 2065,
+      "line": 2054,
       "text": "New sound in layer %d of group %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 2088,
+      "line": 2077,
       "text": "New quad in layer %d of group %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 2125,
+      "line": 2114,
       "text": "New quad in layer %d of group %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 2145,
+      "line": 2134,
       "text": "Move sound source %d of layer %d in group %d",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 2150,
+      "line": 2139,
       "text": "Layer type does not match a sound layer",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 2156,
+      "line": 2145,
       "text": "Layer type does not match a sound layer",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -61021,287 +61021,287 @@
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 243,
+      "line": 233,
       "text": "%d:%02d.%03dmin",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 245,
+      "line": 235,
       "text": "%d.%03ds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 247,
+      "line": 237,
       "text": "%dms",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 251,
+      "line": 241,
       "text": "%d:%02dmin",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 253,
+      "line": 243,
       "text": "%ds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 256,
+      "line": 246,
       "text": "%dmin",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 373,
+      "line": 364,
       "text": "[Ctrl+Y] Redo the last action.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 381,
+      "line": 372,
       "text": "[Ctrl+Z] Undo the last action.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 387,
+      "line": 378,
       "text": "Create a new sound envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 387,
+      "line": 378,
       "text": "Sound+",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 396,
+      "line": 387,
       "text": "Color+",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 396,
+      "line": 387,
       "text": "Create a new color envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 405,
+      "line": 396,
       "text": "Create a new position envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 405,
+      "line": 396,
       "text": "Pos.+",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 417,
+      "line": 408,
       "text": "Delete this envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 434,
+      "line": 425,
       "text": "Move this envelope to the right.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 449,
+      "line": 440,
       "text": "Move this envelope to the left.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 466,
+      "line": 457,
       "text": "[NumPad-] Zoom out horizontally, hold shift to zoom vertically.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 475,
+      "line": 466,
       "text": "[NumPad*] Reset zoom to default value.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 479,
+      "line": 470,
       "text": "[NumPad+] Zoom in horizontally, hold shift to zoom vertically.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 505,
+      "line": 496,
       "text": "Select the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 513,
+      "line": 504,
       "text": "Select previous envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 521,
+      "line": 512,
       "text": "Select next envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 533,
+      "line": 524,
       "text": "Name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 539,
+      "line": 530,
       "text": "The name of the selected envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 570,
+      "line": 564,
       "text": "value",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 572,
+      "line": 566,
       "text": "R",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 572,
+      "line": 566,
       "text": "X",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 572,
+      "line": 566,
       "text": "Y",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 573,
+      "line": 567,
       "text": "A",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 573,
+      "line": 567,
       "text": "B",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 573,
+      "line": 567,
       "text": "G",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 573,
+      "line": 567,
       "text": "R",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 577,
+      "line": 571,
       "text": "Volume of the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 579,
+      "line": 573,
       "text": "Rotation of the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 579,
+      "line": 573,
       "text": "X-axis of the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 579,
+      "line": 573,
       "text": "Y-axis of the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 580,
+      "line": 574,
       "text": "Alpha value of the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 580,
+      "line": 574,
       "text": "Blue value of the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 580,
+      "line": 574,
       "text": "Green value of the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 580,
+      "line": 574,
       "text": "Red value of the envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -61309,55 +61309,55 @@
     {
       "file": "src/game/editor/envelope_editor.cpp",
       "line": 693,
-      "text": "Double click to create a new point. Use shift to change the zoom axis. Press S to scale selected envelope points.",
+      "text": "Right click or double click to add points on active channels. Use shift to change the zoom axis. Press S to scale selected points.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 923,
+      "line": 933,
       "text": "Switch curve type (N = step, L = linear, S = slow, F = fast, M = smooth, B = bezier).",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 985,
+      "line": 995,
       "text": "Timebar. Press left-click to drag. Hold ctrl to be more precise.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 999,
+      "line": 1009,
       "text": "Timebar. Press left-click to drag. Hold ctrl to be more precise.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 1248,
+      "line": 1255,
       "text": "Envelope point. Left mouse to drag. Hold ctrl to be more precise. Hold shift to alter time. Shift+right click to delete.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 1386,
+      "line": 1393,
       "text": "Bezier out-tangent. Left mouse to drag. Hold ctrl to be more precise. Shift+right click to reset.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 1522,
+      "line": 1529,
       "text": "Bezier in-tangent. Left mouse to drag. Hold ctrl to be more precise. Shift+right click to reset.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 1582,
+      "line": 1589,
       "text": "Press shift to scale the time. Press alt to scale along midpoint. Press ctrl to be more precise.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -62890,49 +62890,49 @@
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 382,
+      "line": 391,
       "text": "Use left mouse button to drag and create a brush. Hold shift to select multiple quads. Press R to rotate selected quads. Use ctrl+right click to select layer.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 387,
+      "line": 396,
       "text": "Use left mouse button to drag and create a brush. Use ctrl+right click to select layer of hovered tile.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 389,
+      "line": 398,
       "text": "Use left mouse button to drag and create a brush.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 394,
+      "line": 403,
       "text": "Use left mouse button to paint with the brush. Right click to clear the brush. Hold Alt to lock the mouse movement to a single axis.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 693,
+      "line": 703,
       "text": "Switch proof position to",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 695,
+      "line": 705,
       "text": "Current proof position at",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 709,
+      "line": 719,
       "text": "Current proof position at",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -63345,196 +63345,203 @@
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 483,
+      "line": 487,
       "text": "Error: Saving is not possible because there are too many envelope points.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 518,
+      "line": 503,
+      "text": "Error: Saving is not possible because there are too many envelope points.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/editor/mapitems/map_io.cpp",
+      "line": 529,
       "text": "Error: Saving is not possible because the envelope point data is too large.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 524,
+      "line": 535,
       "text": "Error: Failed to allocate memory for envelope points.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 534,
+      "line": 545,
       "text": "Error: Saving is not possible because the bezier envelope point data is too large.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 541,
+      "line": 552,
       "text": "Error: Failed to allocate memory for bezier envelope points.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 580,
+      "line": 591,
       "text": "Error: Saving is not possible because the bezier envelope point data is too large.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 604,
+      "line": 615,
       "text": "Error: Saving is not possible because the image '%s' could not be loaded. Remove or replace this image.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 614,
+      "line": 625,
       "text": "Error: Saving is not possible because the sound '%s' could not be loaded. Remove or replace this sound.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 628,
+      "line": 639,
       "text": "Error: Failed to open map file. See local console for details.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 651,
+      "line": 662,
       "text": "Error: Failed to read %s from map info.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 661,
+      "line": 672,
       "text": "author",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 662,
+      "line": 673,
       "text": "version",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 663,
+      "line": 674,
       "text": "credits",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 664,
+      "line": 675,
       "text": "license",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 700,
+      "line": 711,
       "text": "Error: Failed to read name of image %d.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 709,
+      "line": 720,
       "text": "Error: Unsupported image type of image %d '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 728,
+      "line": 739,
       "text": "Error: could not convert external image \"%s\".",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 741,
+      "line": 752,
       "text": "Error: Failed to load external image '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 758,
+      "line": 769,
       "text": "Error: could not read embedded image \"%s\".",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 771,
+      "line": 782,
       "text": "Error: could not allocate memory for embedded image \"%s\".",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 815,
+      "line": 826,
       "text": "Error: Failed to read name of sound %d.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 833,
+      "line": 844,
       "text": "Error: Failed to load external sound '%s'.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 844,
+      "line": 855,
       "text": "Error: could not read embedded sound \"%s\".",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 854,
+      "line": 865,
       "text": "Error: could not allocate memory for embedded sound \"%s\".",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 1238,
+      "line": 1249,
       "text": "Error: Envelope %d had an invalid number of channels, %d, which was changed to %d.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 1356,
+      "line": 1377,
       "text": "map already contains image %s with the same data, removing duplicate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 1366,
+      "line": 1387,
       "text": "map already contains image %s but contents of appended image is different. Renaming to %s",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 1465,
+      "line": 1486,
       "text": "Error: The image '%s' (size %zu x%zu) has a width or height that is not divisible by 16 and therefore cannot be used for tile layers. The image of group #%zu '%s', layer #%zu '%s', has been unset.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -64507,1344 +64514,1351 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1226,
+      "line": 1225,
+      "text": "Drag a rectangle inside the quad to create a cropped quad.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1225,
+      "text": "Slice rectangle",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1235,
       "text": "Scale %",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1258,
+      "line": 1267,
       "text": "Order",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1259,
+      "line": 1268,
       "text": "Pos X",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1260,
+      "line": 1269,
       "text": "Pos Y",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1261,
+      "line": 1270,
       "text": "Pos. Env",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1262,
+      "line": 1271,
       "text": "Pos. TO",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1263,
+      "line": 1272,
       "text": "Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1264,
+      "line": 1273,
       "text": "Color Env",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1265,
+      "line": 1274,
       "text": "Color TO",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1366,
+      "line": 1375,
       "text": "Delete",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1366,
+      "line": 1375,
       "text": "Delete the current sound source.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1382,
+      "line": 1391,
       "text": "Rectangle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1383,
+      "line": 1392,
       "text": "Circle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1388,
+      "line": 1397,
       "text": "Change sound source shape.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1394,
+      "line": 1403,
       "text": "Pos X",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1395,
+      "line": 1404,
       "text": "Pos Y",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1396,
+      "line": 1405,
       "text": "Loop",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1397,
+      "line": 1406,
       "text": "Pan",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1398,
+      "line": 1407,
       "text": "Delay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1399,
+      "line": 1408,
       "text": "Falloff",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1400,
+      "line": 1409,
       "text": "Pos. Env",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1401,
+      "line": 1410,
       "text": "Pos. TO",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1402,
+      "line": 1411,
       "text": "Sound Env",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1403,
+      "line": 1412,
       "text": "Sound. TO",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1484,
+      "line": 1493,
       "text": "Radius",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1510,
+      "line": 1519,
       "text": "Width",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1511,
+      "line": 1520,
       "text": "Height",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1558,
+      "line": 1567,
       "text": "Pos X",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1559,
+      "line": 1568,
       "text": "Pos Y",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1560,
+      "line": 1569,
       "text": "Color",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1561,
+      "line": 1570,
       "text": "Tex U",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1562,
+      "line": 1571,
       "text": "Tex V",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1641,
+      "line": 1652,
       "text": "Color:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1671,
-      "text": "Edit envelope %d point %d color",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 1705,
+      "line": 1694,
       "text": "Value:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1706,
+      "line": 1695,
       "text": "The value of the selected envelope point.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1712,
+      "line": 1701,
       "text": "Time (in s):",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1713,
+      "line": 1702,
       "text": "The time of the selected envelope point.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1764,
+      "line": 1745,
       "text": "Delete",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1764,
+      "line": 1745,
       "text": "Reset",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1765,
-      "text": "Delete current envelope point in all channels.",
+      "line": 1746,
+      "text": "Delete the selected channel point.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1765,
+      "line": 1746,
       "text": "Reset tangent point to default value.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1800,
+      "line": 1781,
       "text": "Project all selected envelopes onto the curve between the first and last selected envelope.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1800,
+      "line": 1781,
       "text": "Project onto",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1897,
+      "line": 1878,
       "text": "Project points",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1941,
+      "line": 1922,
       "text": "Name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1953,
+      "line": 1934,
       "text": "Embed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1953,
+      "line": 1934,
       "text": "Embed the image into the map file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1957,
+      "line": 1938,
       "text": "Embedding is not possible because the image could not be loaded.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1968,
+      "line": 1949,
       "text": "Make external",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1968,
+      "line": 1949,
       "text": "Remove the image from the map file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1980,
+      "line": 1961,
       "text": "Re-import",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1980,
+      "line": 1961,
       "text": "Re-import the image from the mapres folder.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1991,
+      "line": 1972,
       "text": "Error: could not find image '%s' in the mapres folder.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1999,
+      "line": 1980,
       "text": "Select the wanted image:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2014,
+      "line": 1995,
       "text": "Replace",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2014,
+      "line": 1995,
       "text": "Replace the image with a new one.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2016,
+      "line": 1997,
       "text": "Replace",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2016,
+      "line": 1997,
       "text": "Replace image",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2022,
+      "line": 2003,
       "text": "Remove",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2022,
+      "line": 2003,
       "text": "Remove the image from the map.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2041,
+      "line": 2022,
       "text": "Export",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2041,
+      "line": 2022,
       "text": "Export the image to a separate file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2045,
+      "line": 2026,
       "text": "Exporting is not possible because the image could not be loaded.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2048,
+      "line": 2029,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2048,
+      "line": 2029,
       "text": "Save image",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2082,
+      "line": 2063,
       "text": "Name:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2091,
+      "line": 2072,
       "text": "Re-import",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2091,
+      "line": 2072,
       "text": "Re-import the sound from the mapres folder.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2102,
+      "line": 2083,
       "text": "Error: could not find sound '%s' in the mapres folder.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2110,
+      "line": 2091,
       "text": "Select the wanted sound:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2123,
+      "line": 2104,
       "text": "Replace",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2123,
+      "line": 2104,
       "text": "Replace the sound with a new one.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2125,
+      "line": 2106,
       "text": "Replace",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2125,
+      "line": 2106,
       "text": "Replace sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2131,
+      "line": 2112,
       "text": "Remove",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2131,
+      "line": 2112,
       "text": "Remove the sound from the map.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2149,
+      "line": 2130,
       "text": "Export",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2149,
+      "line": 2130,
       "text": "Export the sound to a separate file.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2153,
+      "line": 2134,
       "text": "Exporting is not possible because the sound could not be loaded.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2156,
+      "line": 2137,
       "text": "Save",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2156,
+      "line": 2137,
       "text": "Save sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2174,
+      "line": 2155,
       "text": "Map details",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2179,
+      "line": 2160,
       "text": "Author:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2188,
+      "line": 2169,
       "text": "Version:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2197,
+      "line": 2178,
       "text": "Credits:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2206,
+      "line": 2187,
       "text": "License:",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2216,
+      "line": 2197,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2221,
+      "line": 2202,
       "text": "Confirm",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2247,
+      "line": 2228,
       "text": "Exit the editor",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2248,
+      "line": 2229,
       "text": "The map contains unsaved data, you might want to save it before you exit the editor.\\n\\nContinue anyway?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2252,
+      "line": 2233,
       "text": "Load map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2253,
+      "line": 2234,
       "text": "The map contains unsaved data, you might want to save it before you load a new map.\\n\\nContinue anyway?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2257,
+      "line": 2238,
       "text": "New map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2258,
+      "line": 2239,
       "text": "The map contains unsaved data, you might want to save it before you create a new map.\\n\\nContinue anyway?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2262,
+      "line": 2243,
       "text": "Save changes?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2263,
+      "line": 2244,
       "text": "Do you want to save your changes before closing this map?\\n\\nYour changes will be lost if you discard them.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2267,
+      "line": 2248,
       "text": "Large layer",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2268,
+      "line": 2249,
       "text": "You are trying to set the height or width of a layer to more than 1000 tiles. This is actually possible, but only rarely necessary. It may cause the editor to work slower and will result in a larger file size as well as higher memory usage for client and server.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2272,
+      "line": 2253,
       "text": "Unused tiles disabled",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2273,
+      "line": 2254,
       "text": "Unused tiles can't be placed by default because they could get a use later and then destroy your map.\\n\\nActivate the 'Allow unused' setting to be able to place every tile.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2277,
+      "line": 2258,
       "text": "Image width/height",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2278,
+      "line": 2259,
       "text": "The width or height of this image is not divisible by 16. This is required for images used in tile layers.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2282,
+      "line": 2263,
       "text": "Max images",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2283,
+      "line": 2264,
       "text": "The client only allows a maximum of %zu images.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2288,
+      "line": 2269,
       "text": "Max sounds",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2289,
+      "line": 2270,
       "text": "The client only allows a maximum of %zu sounds.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2294,
+      "line": 2275,
       "text": "Place border tiles",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2295,
+      "line": 2276,
       "text": "This is going to overwrite any existing tiles around the edges of the layer.\\n\\nContinue?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2299,
+      "line": 2280,
       "text": "Big image",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2300,
+      "line": 2281,
       "text": "The selected image is big. Converting it to tileart may take some time.\\n\\nContinue anyway?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2304,
+      "line": 2285,
       "text": "Too many colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2305,
+      "line": 2286,
       "text": "The selected image contains many colors, which will lead to a big mapfile. You may want to consider reducing the number of colors.\\n\\nContinue anyway?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2309,
+      "line": 2290,
       "text": "Too many colors",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2310,
+      "line": 2291,
       "text": "The client only supports 64 images but more would be needed to add the selected image as tileart.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2314,
+      "line": 2295,
       "text": "Big image",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2315,
+      "line": 2296,
       "text": "The selected image is really big. Expect performance issues!\\n\\nContinue anyway?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2319,
+      "line": 2300,
       "text": "Remove image",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2320,
+      "line": 2301,
       "text": "This image is used in the map. Removing it will reset all layers that use this image to their default.\\n\\nRemove anyway?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2324,
+      "line": 2305,
       "text": "Remove sound",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2325,
+      "line": 2306,
       "text": "This sound is used in the map. Removing it will reset all layers that use this sound to their default.\\n\\nRemove anyway?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2329,
+      "line": 2310,
       "text": "Restart server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2330,
+      "line": 2311,
       "text": "You have a local server running, but you are not authorized or connected.\\n\\nDo you want to restart the server and reconnect?",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2334,
+      "line": 2315,
       "text": "Restarting server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2335,
+      "line": 2316,
       "text": "Local server is restarting. Please wait…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2373,
+      "line": 2354,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2394,
+      "line": 2375,
       "text": "Confirm",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2403,
+      "line": 2384,
       "text": "Load",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2403,
+      "line": 2384,
       "text": "Load map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2413,
+      "line": 2394,
       "text": "editing passed map file '%s' failed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2432,
+      "line": 2413,
       "text": "Save as",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2432,
+      "line": 2413,
       "text": "Save map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2479,
+      "line": 2460,
       "text": "Discard changes",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2526,
+      "line": 2507,
       "text": "None",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2599,
+      "line": 2580,
       "text": "None",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2630,
+      "line": 2611,
       "text": "Air",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2631,
+      "line": 2612,
       "text": "Hookable",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2632,
+      "line": 2613,
       "text": "Death",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2633,
+      "line": 2614,
       "text": "Unhookable",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2634,
+      "line": 2615,
       "text": "Hookthrough",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2635,
+      "line": 2616,
       "text": "Freeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2636,
+      "line": 2617,
       "text": "Unfreeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2637,
+      "line": 2618,
       "text": "Deep Freeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2638,
+      "line": 2619,
       "text": "Deep Unfreeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2639,
+      "line": 2620,
       "text": "Blue Check-Tele",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2640,
+      "line": 2621,
       "text": "Red Check-Tele",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2641,
+      "line": 2622,
       "text": "Live Freeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2642,
+      "line": 2623,
       "text": "Live Unfreeze",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2696,
+      "line": 2677,
       "text": "Open the directory for automapper rules in the file browser.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2696,
+      "line": 2677,
       "text": "Show directory",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2730,
+      "line": 2711,
       "text": "None",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2789,
+      "line": 2770,
       "text": "None",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2878,
+      "line": 2859,
       "text": "[Ctrl+F] Find next free tele number.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2890,
+      "line": 2871,
       "text": "[Ctrl+F] Find next free checkpoint number.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2902,
+      "line": 2883,
       "text": "[N] Show next tele with this number.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2912,
+      "line": 2893,
       "text": "Number",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2913,
+      "line": 2894,
       "text": "Checkpoint",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2914,
+      "line": 2895,
       "text": "View",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2967,
+      "line": 2948,
       "text": "Force",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2968,
+      "line": 2949,
       "text": "Max Speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2969,
+      "line": 2950,
       "text": "Angle",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3042,
+      "line": 3023,
       "text": "[Ctrl+F] Find empty slot.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3051,
+      "line": 3032,
       "text": "[N] Show next switcher with this number.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3063,
+      "line": 3044,
       "text": "Number",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3064,
+      "line": 3045,
       "text": "Delay",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3065,
+      "line": 3046,
       "text": "View",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3142,
+      "line": 3123,
       "text": "[Ctrl+F] Find unused zone.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3151,
+      "line": 3132,
       "text": "[N] Show next tune tile with this number.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3163,
+      "line": 3144,
       "text": "Zone",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3164,
+      "line": 3145,
       "text": "View",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3207,
+      "line": 3188,
       "text": "X",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3208,
+      "line": 3189,
       "text": "Y",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3229,
+      "line": 3210,
       "text": "Go",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3254,
+      "line": 3235,
       "text": "Load",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3254,
+      "line": 3235,
       "text": "Load custom entities",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3282,
+      "line": 3263,
       "text": "Ingame",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3282,
+      "line": 3263,
       "text": "These borders represent what a player maximum can see.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3291,
+      "line": 3272,
       "text": "Menu",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3291,
+      "line": 3272,
       "text": "These borders represent what will be shown in the menu.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3315,
+      "line": 3296,
       "text": "Speed",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3320,
+      "line": 3301,
       "text": "Decrease animation speed.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3328,
+      "line": 3309,
       "text": "Increase animation speed.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3339,
+      "line": 3320,
       "text": "Default",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3339,
+      "line": 3320,
       "text": "Reset to normal animation speed.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3352,
+      "line": 3333,
       "text": "The animation speed.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3423,
+      "line": 3404,
       "text": "Image pixelsize",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3424,
+      "line": 3405,
       "text": "Quad pixelsize",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3425,
+      "line": 3406,
       "text": "Optimize",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3426,
+      "line": 3407,
       "text": "Centralize",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3436,
+      "line": 3417,
       "text": "Configure Quadart",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3465,
+      "line": 3446,
       "text": "Cancel",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3474,
+      "line": 3455,
       "text": "Confirm",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -66033,8 +66047,15 @@
     },
     {
       "file": "src/game/editor/quad_knife.cpp",
-      "line": 80,
+      "line": 98,
       "text": "Left click inside the quad to select an area to slice. Hold alt to ignore grid. Right click to leave knife mode.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/editor/quad_knife.cpp",
+      "line": 204,
+      "text": "Drag inside the quad to slice a rectangle. Hold alt to ignore grid. Right click to cancel.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -157525,196 +157546,189 @@
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2192,
+      "line": 2188,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2279,
+      "line": 2280,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2486,
+      "line": 2487,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2528,
+      "line": 2529,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2645,
+      "line": 2646,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2691,
+      "line": 2692,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2696,
+      "line": 2697,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2701,
+      "line": 2702,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2714,
+      "line": 2715,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2993,
+      "line": 2994,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 2997,
+      "line": 2998,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3053,
+      "line": 3054,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3062,
+      "line": 3063,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3077,
+      "line": 3078,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3110,
+      "line": 3111,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3125,
+      "line": 3126,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3138,
+      "line": 3139,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3167,
+      "line": 3168,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3184,
+      "line": 3185,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3193,
+      "line": 3194,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3221,
+      "line": 3222,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3232,
+      "line": 3233,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3241,
+      "line": 3242,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3328,
+      "line": 3329,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3358,
+      "line": 3359,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3451,
+      "line": 3452,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3473,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor.cpp",
-      "line": 3504,
+      "line": 3474,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -157728,553 +157742,560 @@
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3673,
+      "line": 3506,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3683,
+      "line": 3674,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3790,
+      "line": 3684,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3804,
+      "line": 3791,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3824,
+      "line": 3805,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3844,
+      "line": 3825,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3851,
+      "line": 3845,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3876,
+      "line": 3852,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3880,
+      "line": 3877,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3897,
+      "line": 3881,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3901,
+      "line": 3898,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3914,
+      "line": 3902,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3921,
+      "line": 3915,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3947,
+      "line": 3922,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3965,
+      "line": 3948,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3969,
+      "line": 3966,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3973,
+      "line": 3970,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 3977,
+      "line": 3974,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4000,
+      "line": 3978,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4019,
+      "line": 4001,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4042,
+      "line": 4020,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4046,
+      "line": 4043,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4054,
+      "line": 4047,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4062,
+      "line": 4055,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4070,
+      "line": 4063,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4098,
+      "line": 4071,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4102,
+      "line": 4099,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4110,
+      "line": 4103,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4118,
+      "line": 4111,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4130,
+      "line": 4119,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4135,
+      "line": 4131,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4152,
+      "line": 4136,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4160,
+      "line": 4153,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4169,
+      "line": 4161,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4175,
+      "line": 4170,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4185,
+      "line": 4176,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4221,
+      "line": 4186,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4302,
+      "line": 4222,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4304,
+      "line": 4303,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4306,
+      "line": 4305,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4317,
+      "line": 4307,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4325,
+      "line": 4318,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4332,
+      "line": 4326,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4339,
+      "line": 4333,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4388,
+      "line": 4340,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4425,
+      "line": 4389,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4431,
+      "line": 4426,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4437,
+      "line": 4432,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4447,
+      "line": 4438,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4462,
+      "line": 4448,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4511,
+      "line": 4463,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4559,
+      "line": 4512,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4600,
+      "line": 4560,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4611,
+      "line": 4601,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4622,
+      "line": 4612,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4633,
+      "line": 4623,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4657,
+      "line": 4634,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4661,
+      "line": 4658,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4670,
+      "line": 4662,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4674,
+      "line": 4671,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4680,
+      "line": 4675,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4689,
+      "line": 4681,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4692,
+      "line": 4690,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4764,
+      "line": 4693,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4769,
+      "line": 4765,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4819,
+      "line": 4770,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4841,
+      "line": 4820,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4850,
+      "line": 4842,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4866,
+      "line": 4851,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 4975,
+      "line": 4867,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5050,
+      "line": 4976,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5097,
+      "line": 5051,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5510,
+      "line": 5098,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5644,
+      "line": 5511,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5671,
+      "line": 5645,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5800,
+      "line": 5672,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5802,
+      "line": 5801,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5903,
+      "line": 5803,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor.cpp",
-      "line": 5945,
+      "line": 5904,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor.cpp",
+      "line": 5946,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -158869,63 +158890,133 @@
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1728,
+      "line": 1716,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1736,
+      "line": 1730,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1765,
+      "line": 1755,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1797,
+      "line": 1786,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1799,
+      "line": 1788,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1834,
+      "line": 1823,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1861,
+      "line": 1850,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1862,
+      "line": 1851,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1866,
+      "line": 1855,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1907,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1908,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1909,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1910,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1911,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1912,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1913,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1914,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1915,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/editor_actions.cpp",
+      "line": 1916,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -158939,126 +159030,70 @@
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1919,
+      "line": 1984,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1920,
+      "line": 1985,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1921,
+      "line": 1987,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1922,
+      "line": 2021,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1923,
+      "line": 2023,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1924,
+      "line": 2054,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1925,
+      "line": 2077,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1926,
+      "line": 2114,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1927,
+      "line": 2134,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/editor_actions.cpp",
-      "line": 1929,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 1995,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 1996,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 1998,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 2032,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 2034,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 2065,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 2088,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 2125,
+      "line": 2139,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -159066,20 +159101,6 @@
     {
       "file": "src/game/editor/editor_actions.cpp",
       "line": 2145,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 2150,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/editor_actions.cpp",
-      "line": 2156,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -159772,6 +159793,34 @@
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
+      "line": 233,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/envelope_editor.cpp",
+      "line": 235,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/envelope_editor.cpp",
+      "line": 237,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/envelope_editor.cpp",
+      "line": 241,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/envelope_editor.cpp",
       "line": 243,
       "text": "Editor",
       "category": "business_data",
@@ -159779,49 +159828,28 @@
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 245,
+      "line": 246,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 247,
+      "line": 364,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 251,
+      "line": 372,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 253,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/envelope_editor.cpp",
-      "line": 256,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/envelope_editor.cpp",
-      "line": 373,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/envelope_editor.cpp",
-      "line": 381,
+      "line": 378,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -159842,28 +159870,28 @@
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 405,
+      "line": 408,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 417,
+      "line": 425,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 434,
+      "line": 440,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 449,
+      "line": 457,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -159877,119 +159905,112 @@
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 475,
+      "line": 470,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 479,
+      "line": 496,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 505,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/envelope_editor.cpp",
-      "line": 513,
+      "line": 504,
       "text": "Editor envelope selector punctuation",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 521,
+      "line": 512,
       "text": "Editor envelope selector punctuation",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 533,
+      "line": 524,
       "text": "Editor file label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 539,
+      "line": 530,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 570,
+      "line": 564,
       "text": "Editor property value",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 572,
+      "line": 566,
       "text": "Editor envelope channel",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 572,
+      "line": 566,
       "text": "Editor envelope rotation channel",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 573,
+      "line": 567,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 573,
+      "line": 567,
       "text": "Editor envelope alpha channel",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 573,
+      "line": 567,
       "text": "Editor envelope blue channel",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 573,
+      "line": 567,
       "text": "Editor envelope red channel",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 577,
+      "line": 571,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 579,
+      "line": 573,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 580,
+      "line": 574,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -160003,49 +160024,49 @@
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 923,
+      "line": 933,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 985,
+      "line": 995,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 999,
+      "line": 1009,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 1248,
+      "line": 1255,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 1386,
+      "line": 1393,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 1522,
+      "line": 1529,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/envelope_editor.cpp",
-      "line": 1582,
+      "line": 1589,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -161508,49 +161529,49 @@
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 382,
+      "line": 391,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 387,
+      "line": 396,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 389,
+      "line": 398,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 394,
+      "line": 403,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 693,
+      "line": 703,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 695,
+      "line": 705,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/map_view.cpp",
-      "line": 709,
+      "line": 719,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -161928,77 +161949,70 @@
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 483,
+      "line": 487,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 518,
+      "line": 503,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 524,
+      "line": 529,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 534,
+      "line": 535,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 541,
+      "line": 545,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 580,
+      "line": 552,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 604,
+      "line": 591,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 614,
+      "line": 615,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 628,
+      "line": 625,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 651,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 661,
+      "line": 639,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -162012,70 +162026,77 @@
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 663,
+      "line": 672,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 664,
+      "line": 673,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 700,
+      "line": 674,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 709,
+      "line": 675,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 728,
+      "line": 711,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 741,
+      "line": 720,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 758,
+      "line": 739,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 771,
+      "line": 752,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 815,
+      "line": 769,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 833,
+      "line": 782,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/mapitems/map_io.cpp",
+      "line": 826,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -162089,35 +162110,42 @@
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 854,
+      "line": 855,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 1238,
+      "line": 865,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 1356,
+      "line": 1249,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 1366,
+      "line": 1377,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/mapitems/map_io.cpp",
-      "line": 1465,
+      "line": 1387,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/mapitems/map_io.cpp",
+      "line": 1486,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -162775,112 +162803,91 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1226,
+      "line": 1225,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1258,
+      "line": 1235,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1259,
+      "line": 1267,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1260,
+      "line": 1268,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1261,
+      "line": 1269,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1262,
+      "line": 1270,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1263,
+      "line": 1271,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1264,
+      "line": 1272,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1265,
+      "line": 1273,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1366,
+      "line": 1274,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1382,
+      "line": 1375,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1383,
+      "line": 1391,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1388,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 1394,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 1395,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 1396,
+      "line": 1392,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -162894,41 +162901,6 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1398,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 1399,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 1400,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 1401,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 1402,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
       "line": 1403,
       "text": "Editor",
       "category": "business_data",
@@ -162936,154 +162908,224 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1484,
+      "line": 1404,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1510,
+      "line": 1405,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1511,
+      "line": 1406,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1558,
+      "line": 1407,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1559,
+      "line": 1408,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1560,
+      "line": 1409,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1561,
+      "line": 1410,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1562,
+      "line": 1411,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1641,
+      "line": 1412,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1671,
+      "line": 1493,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1705,
+      "line": 1519,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1706,
+      "line": 1520,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1712,
+      "line": 1567,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1713,
+      "line": 1568,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1764,
+      "line": 1569,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1765,
+      "line": 1570,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1800,
+      "line": 1571,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1897,
+      "line": 1652,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1941,
+      "line": 1694,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1695,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1701,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1702,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1745,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1746,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1781,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1878,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1922,
       "text": "Editor property label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1953,
+      "line": 1934,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1957,
+      "line": 1938,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1968,
+      "line": 1949,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1961,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 1972,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163097,28 +163139,21 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1991,
+      "line": 1995,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 1999,
+      "line": 1997,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2014,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 2016,
+      "line": 2003,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163132,29 +163167,36 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2041,
+      "line": 2026,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2045,
+      "line": 2029,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2048,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 2082,
+      "line": 2063,
       "text": "Editor property label",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 2072,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 2083,
+      "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
@@ -163167,77 +163209,77 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2102,
+      "line": 2104,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2110,
+      "line": 2106,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2123,
+      "line": 2112,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2125,
+      "line": 2130,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2131,
+      "line": 2134,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2149,
+      "line": 2137,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2153,
+      "line": 2155,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2156,
+      "line": 2160,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2174,
+      "line": 2169,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2179,
+      "line": 2178,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2188,
+      "line": 2187,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163251,28 +163293,63 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2206,
+      "line": 2202,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2216,
+      "line": 2228,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2221,
+      "line": 2229,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2247,
+      "line": 2233,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 2234,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 2238,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 2239,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 2243,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 2244,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163286,7 +163363,7 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2252,
+      "line": 2249,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163300,7 +163377,7 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2257,
+      "line": 2254,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163314,7 +163391,7 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2262,
+      "line": 2259,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163328,77 +163405,77 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2267,
+      "line": 2264,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2268,
+      "line": 2269,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2272,
+      "line": 2270,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2273,
+      "line": 2275,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2277,
+      "line": 2276,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2278,
+      "line": 2280,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2282,
+      "line": 2281,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2283,
+      "line": 2285,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2288,
+      "line": 2286,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2289,
+      "line": 2290,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2294,
+      "line": 2291,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163412,7 +163489,7 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2299,
+      "line": 2296,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163426,7 +163503,7 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2304,
+      "line": 2301,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163440,7 +163517,7 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2309,
+      "line": 2306,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163454,7 +163531,7 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2314,
+      "line": 2311,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163468,63 +163545,28 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2319,
+      "line": 2316,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2320,
+      "line": 2354,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2324,
+      "line": 2375,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2325,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 2329,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 2330,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 2334,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 2335,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 2373,
+      "line": 2384,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163538,13 +163580,6 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2403,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
       "line": 2413,
       "text": "Editor",
       "category": "business_data",
@@ -163552,315 +163587,322 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2432,
+      "line": 2460,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2479,
+      "line": 2507,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2526,
+      "line": 2580,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2599,
+      "line": 2611,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2630,
+      "line": 2612,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2631,
+      "line": 2613,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2632,
+      "line": 2614,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2633,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 2634,
+      "line": 2615,
       "text": "Editor quick action",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2635,
+      "line": 2616,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2636,
+      "line": 2617,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2637,
+      "line": 2618,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2638,
+      "line": 2619,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2639,
+      "line": 2620,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2640,
+      "line": 2621,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2641,
+      "line": 2622,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2642,
+      "line": 2623,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2696,
+      "line": 2677,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2730,
+      "line": 2711,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2789,
+      "line": 2770,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2878,
+      "line": 2859,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2890,
+      "line": 2871,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2902,
+      "line": 2883,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2912,
+      "line": 2893,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2913,
+      "line": 2894,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2914,
+      "line": 2895,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2967,
+      "line": 2948,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2968,
+      "line": 2949,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 2969,
+      "line": 2950,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3042,
+      "line": 3023,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3051,
+      "line": 3032,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3063,
+      "line": 3044,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3064,
+      "line": 3045,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3065,
+      "line": 3046,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3142,
+      "line": 3123,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3151,
+      "line": 3132,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3163,
+      "line": 3144,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3164,
+      "line": 3145,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3207,
+      "line": 3188,
       "text": "Editor coordinate label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3208,
+      "line": 3189,
       "text": "Editor coordinate label",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3229,
+      "line": 3210,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3254,
+      "line": 3235,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3282,
+      "line": 3263,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3291,
+      "line": 3272,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3315,
+      "line": 3296,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 3301,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/popups.cpp",
+      "line": 3309,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -163874,70 +163916,56 @@
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3328,
+      "line": 3333,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3339,
+      "line": 3404,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3352,
+      "line": 3405,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3423,
+      "line": 3406,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3424,
+      "line": 3407,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3425,
+      "line": 3417,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3426,
+      "line": 3446,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/editor/popups.cpp",
-      "line": 3436,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 3465,
-      "text": "Editor",
-      "category": "business_data",
-      "reason": "localization context metadata"
-    },
-    {
-      "file": "src/game/editor/popups.cpp",
-      "line": 3474,
+      "line": 3455,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
@@ -164126,7 +164154,14 @@
     },
     {
       "file": "src/game/editor/quad_knife.cpp",
-      "line": 80,
+      "line": 98,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/quad_knife.cpp",
+      "line": 204,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"

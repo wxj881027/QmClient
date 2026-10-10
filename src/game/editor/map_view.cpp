@@ -319,6 +319,15 @@ void CEditor::DoMapEditor(CUIRect View)
 			m_pContainerPanned = nullptr;
 	}
 
+	if(QuadKnife()->IsActive())
+	{
+		const auto pKnifeLayer = Map()->m_QuadKnifeState.m_pLayer.lock();
+		if(!pKnifeLayer || Map()->SelectedLayerType(0, LAYERTYPE_QUADS) != pKnifeLayer || m_ShowPicker || !m_pBrush->IsEmpty())
+			QuadKnife()->Deactivate();
+		else if(!Inside)
+			Map()->m_QuadKnifeState.m_Dragging = false;
+	}
+
 	if(Inside || m_DrawingTools.IsDrawing())
 	{
 		if(Inside)
@@ -623,7 +632,8 @@ void CEditor::DoMapEditor(CUIRect View)
 
 						if(QuadKnife()->IsActive())
 						{
-							QuadKnife()->DoSlice();
+							if(k == 0)
+								QuadKnife()->DoSlice(Inside);
 						}
 						else
 						{
