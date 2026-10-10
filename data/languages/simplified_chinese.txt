@@ -1634,9 +1634,6 @@ Browse font store…
 Browse profiles saved on this device
 == 浏览保存在此设备上的配置档
 
-Browse, choose, vote
-== 浏览地图，选好再投票
-
 Browser
 == 浏览
 

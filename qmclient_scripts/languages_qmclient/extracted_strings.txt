@@ -543,7 +543,6 @@ Broadcast shown to players without DDNet client
 Browse and activate custom audio packs
 Browse font store…
 Browse profiles saved on this device
-Browse, choose, vote
 Browser
 Brutal
 Bubble opacity

@@ -1634,9 +1634,6 @@ Browse font store…
 Browse profiles saved on this device
 == Browse profiles saved on this device
 
-Browse, choose, vote
-== Explora, elige y vota
-
 Browser
 == Examinar
 

@@ -1634,9 +1634,6 @@ Browse font store…
 Browse profiles saved on this device
 == Browse profiles saved on this device
 
-Browse, choose, vote
-== 探して、選んで、投票
-
 Browser
 == ブラウザ
 

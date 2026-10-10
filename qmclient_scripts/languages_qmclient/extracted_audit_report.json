@@ -1,9 +1,9 @@
 {
   "summary": {
-    "must_i18n": 9766,
-    "business_data": 13797,
+    "must_i18n": 9768,
+    "business_data": 13799,
     "test_only": 5195,
-    "needs_review": 531,
+    "needs_review": 530,
     "violation": 0
   },
   "must_i18n": [
@@ -14317,35 +14317,35 @@
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 51,
+      "line": 59,
       "text": "Players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 62,
+      "line": 70,
       "text": "Search players or clans",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 66,
+      "line": 74,
       "text": "All",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 66,
+      "line": 74,
       "text": "Friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 66,
+      "line": 74,
       "text": "Muted players",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -14359,455 +14359,469 @@
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 145,
+      "line": 153,
       "text": "No players match these filters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 153,
+      "line": 161,
       "text": "Select a player to manage",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 205,
-      "text": "Mute",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 207,
-      "text": "Mute emoticons",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 209,
+      "line": 246,
       "text": "Friends",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 224,
+      "line": 257,
       "text": "Follow server",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 224,
+      "line": 257,
       "text": "Stop following",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 232,
+      "line": 267,
+      "text": "Mute",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
+      "line": 269,
+      "text": "Mute emoticons",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
+      "line": 272,
       "text": "Copy name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 235,
+      "line": 275,
       "text": "Copy skin",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 246,
+      "line": 286,
       "text": "Skin copying is only available for 0.6 skins",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Brutal",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Dummy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Event",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Fun",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Insane",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Moderate",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Novice",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Oldschool",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Race",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "Solo",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 33,
+      "line": 35,
       "text": "Classic Easy",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 35,
+      "line": 37,
       "text": "Classic Next",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 37,
+      "line": 39,
       "text": "Classic Pro",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 39,
+      "line": 41,
       "text": "Classic Nut",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 63,
+      "line": 65,
       "text": "DDNet map library",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 67,
+      "line": 65,
       "text": "Server control",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 158,
+      "line": 176,
       "text": "Loading…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 158,
+      "line": 176,
       "text": "Refresh",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 160,
-      "text": "Browse, choose, vote",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 160,
-      "text": "Map data unavailable; server votes remain available",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 173,
+      "line": 189,
       "text": "Search maps or mappers",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 183,
+      "line": 199,
       "text": "Exclude",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 218,
+      "line": 227,
       "text": "All",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 224,
+      "line": 238,
+      "text": "All",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 243,
+      "text": "Difficulty",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 245,
       "text": "Favorites",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 229,
+      "line": 250,
       "text": "All",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 229,
+      "line": 250,
       "text": "Finished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 229,
+      "line": 250,
       "text": "Unfinished",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 236,
+      "line": 262,
       "text": "Enable the finished indicator and wait for player data",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 237,
+      "line": 263,
       "text": "Difficulty",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 237,
+      "line": 263,
       "text": "Name",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 237,
+      "line": 263,
       "text": "Newest first",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 267,
+      "line": 298,
       "text": "All maps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 284,
+      "line": 315,
       "text": "All maps",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 307,
-      "text": "%d / %d maps",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 311,
-      "text": "Random pick",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 340,
-      "text": "Map",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 342,
-      "text": "Mapper",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 343,
-      "text": "Difficulty",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 346,
-      "text": "Points",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
       "line": 347,
-      "text": "Release date",
+      "text": "%d / %d maps",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 386,
-      "text": "Favorite map",
+      "line": 348,
+      "text": "Map data unavailable; server votes remain available",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 417,
-      "text": "Loading…",
+      "line": 351,
+      "text": "Map data unavailable; server votes remain available",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 417,
-      "text": "No maps match these filters",
+      "line": 354,
+      "text": "Random pick",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 425,
-      "text": "Select a map",
+      "line": 385,
+      "text": "Map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 428,
-      "text": "Favorite map",
+      "line": 387,
+      "text": "Mapper",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 442,
-      "text": "Unknown",
+      "line": 388,
+      "text": "Difficulty",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 444,
+      "line": 391,
       "text": "Points",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 451,
-      "text": " · %d finishers · average %d:%02d:%02d",
+      "line": 392,
+      "text": "Release date",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 460,
-      "text": "Retry details",
+      "line": 442,
+      "text": "Favorite map",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 472,
-      "text": "Reason (optional)",
+      "line": 476,
+      "text": "Loading…",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 488,
-      "text": "Cancel",
-      "category": "must_i18n",
-      "reason": "active source key (localize_or_localizable)"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 493,
-      "text": "Select a map",
+      "line": 476,
+      "text": "No maps match these filters",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
       "line": 495,
+      "text": "Select a map",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 506,
+      "text": "Favorite map",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 513,
+      "text": "Unknown",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 516,
+      "text": "Points",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 523,
+      "text": " · %d finishers · average %d:%02d:%02d",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 532,
+      "text": "Retry details",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 546,
+      "text": "Reason (optional)",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 562,
+      "text": "Cancel",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 567,
+      "text": "Select a map",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 569,
       "text": "Call vote",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 511,
+      "line": 585,
       "text": "No corresponding vote option found",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 511,
+      "line": 585,
       "text": "Type switch vote started automatically",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
@@ -72699,17 +72713,10 @@
     },
     {
       "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 56,
+      "line": 64,
       "text": "qm_players_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
-    },
-    {
-      "file": "src/game/client/QmUi/QmPlayersMenu.cpp",
-      "line": 137,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmRt.cpp",
@@ -72853,133 +72860,154 @@
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 32,
+      "line": 34,
       "text": "DDmaX Easy",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 34,
+      "line": 36,
       "text": "DDmaX Next",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 36,
+      "line": 38,
       "text": "DDmaX Pro",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 38,
+      "line": 40,
       "text": "DDmaX Nut",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 85,
+      "line": 84,
       "text": "DDNet",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 85,
+      "line": 84,
       "text": "DDRace",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 85,
+      "line": 84,
       "text": "DDRaceNetwork",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 86,
+      "line": 85,
       "text": "gores",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 86,
+      "line": 85,
       "text": "kog",
       "category": "business_data",
       "reason": "machine/log/matcher call argument"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 167,
+      "line": 183,
       "text": "qm_vote_map_library_search",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 182,
+      "line": 198,
       "text": "qm_vote_map_library_exclude",
       "category": "business_data",
       "reason": "command, config, or machine token"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 273,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 287,
-      "text": "",
-      "category": "business_data",
-      "reason": "empty or whitespace literal"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 400,
+      "line": 235,
       "text": "%d",
       "category": "business_data",
       "reason": "numeric display format template"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 409,
+      "line": 296,
+      "text": "DDmaX ",
+      "category": "business_data",
+      "reason": "machine/log/matcher call argument"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 304,
       "text": "",
       "category": "business_data",
       "reason": "empty or whitespace literal"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 442,
+      "line": 327,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 455,
+      "text": "%d / 5",
+      "category": "business_data",
+      "reason": "display formatting template"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 459,
+      "text": "%d",
+      "category": "business_data",
+      "reason": "numeric display format template"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 468,
+      "text": "",
+      "category": "business_data",
+      "reason": "empty or whitespace literal"
+    },
+    {
+      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "line": 513,
       "text": "%s · %s · %s",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 444,
+      "line": 516,
       "text": "%s: %s",
       "category": "business_data",
       "reason": "display formatting template"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 444,
+      "line": 516,
       "text": "—",
       "category": "business_data",
       "reason": "localization context metadata"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 474,
+      "line": 548,
       "text": "qm_vote_map_library_reason",
       "category": "business_data",
       "reason": "command, config, or machine token"
@@ -201321,36 +201349,29 @@
   "needs_review": [
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "DDmaX Easy",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "DDmaX Next",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "DDmaX Nut",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },
     {
       "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 28,
+      "line": 30,
       "text": "DDmaX Pro",
-      "category": "needs_review",
-      "reason": "unclassified human-readable client string"
-    },
-    {
-      "file": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "line": 396,
-      "text": "%d/5 ★",
       "category": "needs_review",
       "reason": "unclassified human-readable client string"
     },

@@ -47,7 +47,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 451
+      "line": 523
     },
     {
       "key": "\"%s\" is not compatible with pnglite and cannot be loaded by old DDNet versions:",
@@ -110,7 +110,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 307
+      "line": 347
     },
     {
       "key": "%d items selected",
@@ -2959,21 +2959,28 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 66
+      "line": 74
     },
     {
       "key": "All",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 218
+      "line": 227
     },
     {
       "key": "All",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 229
+      "line": 238
+    },
+    {
+      "key": "All",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "context": "",
+      "line": 250
     },
     {
       "key": "All",
@@ -3106,14 +3113,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 267
+      "line": 298
     },
     {
       "key": "All maps",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 284
+      "line": 315
     },
     {
       "key": "All players",
@@ -7169,13 +7176,6 @@
       "line": 239
     },
     {
-      "key": "Browse, choose, vote",
-      "category": "localize_or_localizable",
-      "source": "src/game/client/QmUi/QmVoteMenu.cpp",
-      "context": "",
-      "line": 160
-    },
-    {
       "key": "Browser",
       "category": "localize_or_localizable",
       "source": "src/game/client/components/menus.cpp",
@@ -7215,7 +7215,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Brutal",
@@ -7383,7 +7383,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 495
+      "line": 569
     },
     {
       "key": "Call vote",
@@ -7593,7 +7593,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 488
+      "line": 562
     },
     {
       "key": "Cancel",
@@ -9238,7 +9238,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 33
+      "line": 35
     },
     {
       "key": "Classic easy",
@@ -9266,7 +9266,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 35
+      "line": 37
     },
     {
       "key": "Classic next",
@@ -9294,7 +9294,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 39
+      "line": 41
     },
     {
       "key": "Classic nut",
@@ -9329,7 +9329,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 37
+      "line": 39
     },
     {
       "key": "Classic pro",
@@ -11940,7 +11940,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 232
+      "line": 272
     },
     {
       "key": "Copy name",
@@ -11989,7 +11989,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 235
+      "line": 275
     },
     {
       "key": "Copy skin",
@@ -13634,7 +13634,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 63
+      "line": 65
     },
     {
       "key": "DDNet Memory",
@@ -15370,14 +15370,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 237
+      "line": 243
     },
     {
       "key": "Difficulty",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 343
+      "line": 263
+    },
+    {
+      "key": "Difficulty",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "context": "",
+      "line": 388
     },
     {
       "key": "Difficulty stars",
@@ -16623,7 +16630,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Dummy",
@@ -19269,7 +19276,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 236
+      "line": 262
     },
     {
       "key": "Enable thinking mode (slower)",
@@ -20347,7 +20354,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Event",
@@ -20459,7 +20466,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 183
+      "line": 199
     },
     {
       "key": "Exclude",
@@ -21642,14 +21649,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 386
+      "line": 442
     },
     {
       "key": "Favorite map",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 428
+      "line": 506
     },
     {
       "key": "Favorite map",
@@ -21726,7 +21733,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 224
+      "line": 245
     },
     {
       "key": "Favorites",
@@ -22153,7 +22160,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 229
+      "line": 250
     },
     {
       "key": "Finished",
@@ -22391,7 +22398,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 224
+      "line": 257
     },
     {
       "key": "Follow server",
@@ -23245,14 +23252,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 66
+      "line": 74
     },
     {
       "key": "Friends",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 209
+      "line": 246
     },
     {
       "key": "Friends",
@@ -23469,7 +23476,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Fun",
@@ -27928,7 +27935,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Insane",
@@ -31113,14 +31120,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 158
+      "line": 176
     },
     {
       "key": "Loading…",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 417
+      "line": 476
     },
     {
       "key": "Loading…",
@@ -31834,7 +31841,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 340
+      "line": 385
     },
     {
       "key": "Map",
@@ -31939,7 +31946,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 160
+      "line": 348
+    },
+    {
+      "key": "Map data unavailable; server votes remain available",
+      "category": "localize_or_localizable",
+      "source": "src/game/client/QmUi/QmVoteMenu.cpp",
+      "context": "",
+      "line": 351
     },
     {
       "key": "Map details",
@@ -32233,7 +32247,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 342
+      "line": 387
     },
     {
       "key": "Maps finished",
@@ -33451,7 +33465,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Moderate",
@@ -33843,7 +33857,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 205
+      "line": 267
     },
     {
       "key": "Mute",
@@ -33878,7 +33892,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 207
+      "line": 269
     },
     {
       "key": "Mute emoticons",
@@ -34102,7 +34116,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 66
+      "line": 74
     },
     {
       "key": "my_%s",
@@ -34186,7 +34200,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 237
+      "line": 263
     },
     {
       "key": "Name",
@@ -35047,7 +35061,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 237
+      "line": 263
     },
     {
       "key": "News",
@@ -35551,7 +35565,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 511
+      "line": 585
     },
     {
       "key": "No corresponding vote option found",
@@ -35740,7 +35754,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 417
+      "line": 476
     },
     {
       "key": "No matching assets.",
@@ -35866,7 +35880,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 145
+      "line": 153
     },
     {
       "key": "No presets yet",
@@ -36846,7 +36860,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Novice",
@@ -37490,7 +37504,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Oldschool",
@@ -40465,7 +40479,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 51
+      "line": 59
     },
     {
       "key": "Players",
@@ -40773,14 +40787,14 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 346
+      "line": 391
     },
     {
       "key": "Points",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 444
+      "line": 516
     },
     {
       "key": "Points",
@@ -42838,7 +42852,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Race",
@@ -43216,7 +43230,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 311
+      "line": 354
     },
     {
       "key": "Random pick",
@@ -43685,7 +43699,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 472
+      "line": 546
     },
     {
       "key": "Reason:",
@@ -44077,7 +44091,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 158
+      "line": 176
     },
     {
       "key": "Refresh",
@@ -44343,7 +44357,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 347
+      "line": 392
     },
     {
       "key": "Release notes",
@@ -46534,7 +46548,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 460
+      "line": 532
     },
     {
       "key": "Retry remote stats",
@@ -48627,7 +48641,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 173
+      "line": 189
     },
     {
       "key": "Search online fonts…",
@@ -48641,7 +48655,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 62
+      "line": 70
     },
     {
       "key": "Search settings by title, feature, or keyword",
@@ -48816,21 +48830,21 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 425
+      "line": 495
     },
     {
       "key": "Select a map",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 493
+      "line": 567
     },
     {
       "key": "Select a player to manage",
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 153
+      "line": 161
     },
     {
       "key": "Select a saved .map file (client limit: 64 MiB).",
@@ -49502,7 +49516,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 67
+      "line": 65
     },
     {
       "key": "Server could not be started",
@@ -54346,7 +54360,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 246
+      "line": 286
     },
     {
       "key": "Skin copying is only available for 0.6 skins",
@@ -55221,7 +55235,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 28
+      "line": 30
     },
     {
       "key": "Solo",
@@ -56831,7 +56845,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmPlayersMenu.cpp",
       "context": "",
-      "line": 224
+      "line": 257
     },
     {
       "key": "Stop following",
@@ -62529,7 +62543,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 511
+      "line": 585
     },
     {
       "key": "Type switch vote started automatically",
@@ -62998,7 +63012,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 229
+      "line": 250
     },
     {
       "key": "Unfinished",
@@ -63208,7 +63222,7 @@
       "category": "localize_or_localizable",
       "source": "src/game/client/QmUi/QmVoteMenu.cpp",
       "context": "",
-      "line": 442
+      "line": 513
     },
     {
       "key": "Unknown",

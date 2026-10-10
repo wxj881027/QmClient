@@ -1634,9 +1634,6 @@ Browse font store…
 Browse profiles saved on this device
 == Browse profiles saved on this device
 
-Browse, choose, vote
-== 瀏覽地圖，選好再投票
-
 Browser
 == 瀏覽
 
