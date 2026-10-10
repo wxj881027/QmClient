@@ -26,7 +26,7 @@ inline float QmTooltipScale(float ElapsedSeconds, bool AnimationEnabled)
 	return 0.88f + 0.12f * Ease;
 }
 
-// 气泡内可绘制的完整文本行数；最终绘制仍裁剪于可见内容区。
+// 气泡内可绘制的完整文本行数；最终绘制仍裁剪于气泡范围。
 inline int QmTooltipVisibleLines(float Height, float FontSize)
 {
 	return std::max(1, static_cast<int>(std::floor(std::max(0.0f, Height) / std::max(1.0f, FontSize))));
