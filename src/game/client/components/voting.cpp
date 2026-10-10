@@ -14,6 +14,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/voting_hud.h>
+#include <game/client/components/qmclient/vote_map_library.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
@@ -21,29 +22,6 @@
 
 namespace
 {
-	bool ExtractMapName(const char *pDescription, char *pMapName, int MaxLen)
-	{
-		if(!pDescription)
-			return false;
-		const char *pMapPrefix = str_find_nocase(pDescription, "Map:");
-		if(pMapPrefix)
-		{
-			pMapPrefix += 4;
-			while(*pMapPrefix == ' ')
-				pMapPrefix++;
-			str_copy(pMapName, pMapPrefix, MaxLen);
-			return true;
-		}
-		const char *pBy = str_find_nocase(pDescription, " by ");
-		if(pBy && (str_find(pDescription, "★") || str_find(pDescription, "✰")))
-		{
-			int Len = minimum((int)(pBy - pDescription), MaxLen - 1);
-			str_copy(pMapName, pDescription, Len + 1);
-			return true;
-		}
-		return false;
-	}
-
 	bool HasConfusableSubstring(const char *pText, const char *pNeedle)
 	{
 		if(!pText || !pNeedle || pNeedle[0] == '\0')
@@ -236,17 +214,7 @@ CVoting::CVoting()
 
 int CVoting::FindMapVoteOptionIndex(const char *pMapName) const
 {
-	if(!pMapName || pMapName[0] == '\0')
-		return -1;
-
-	int i = 0;
-	for(const CVoteOptionClient *pOption = m_pFirst; pOption; pOption = pOption->m_pNext, ++i)
-	{
-		char aMapName[128];
-		if(ExtractMapName(pOption->m_aDescription, aMapName, sizeof(aMapName)) && str_comp_nocase(aMapName, pMapName) == 0)
-			return i;
-	}
-	return -1;
+	return QmVoteMaps::FindOption(m_pFirst, pMapName);
 }
 
 int CVoting::FindTypeVoteOptionIndex(const char *pTypeKey, const char *pTypeLabel) const
@@ -267,6 +235,9 @@ int CVoting::FindTypeVoteOptionIndex(const char *pTypeKey, const char *pTypeLabe
 	int i = 0;
 	for(const CVoteOptionClient *pOption = m_pFirst; pOption; pOption = pOption->m_pNext, ++i)
 	{
+		QmVoteMaps::SMap Map;
+		if(QmVoteMaps::ParseVoteMap(pOption->m_aDescription, Map))
+			continue;
 		if(HasTypeVoteMatch(pOption->m_aDescription, aTypeLabelPlural) || HasTypeVoteMatch(pOption->m_aDescription, aTypeLabelSingular))
 			return i;
 		if(aTypeLabelLocalized[0] != '\0' && HasTypeVoteMatch(pOption->m_aDescription, aTypeLabelLocalized))
@@ -280,6 +251,9 @@ int CVoting::FindTypeVoteOptionIndex(const char *pTypeKey, const char *pTypeLabe
 bool CVoting::MatchTypeVoteDescription(const char *pDescription) const
 {
 	if(!pDescription || m_aPendingTypeKey[0] == '\0')
+		return false;
+	QmVoteMaps::SMap Map;
+	if(QmVoteMaps::ParseVoteMap(pDescription, Map))
 		return false;
 
 	char aTypeLabelPlural[64];
@@ -306,19 +280,19 @@ bool CVoting::TryCallPendingMapVote()
 {
 	if(!m_PendingMapVoteReady || m_aPendingMap[0] == '\0')
 		return false;
-	if(IsVoting())
+	if(!GameClient()->ClientStateOnline() || IsVoting() || IsReceivingOptions())
 		return false;
 
 	const int MapOptionIndex = FindMapVoteOptionIndex(m_aPendingMap);
 	if(MapOptionIndex < 0)
 		return false;
 
-	CallvoteOption(MapOptionIndex, "");
+	CallvoteOption(MapOptionIndex, m_aPendingMapReason);
 	ClearUnfinishedMapVoteChain();
 	return true;
 }
 
-CVoting::EUnfinishedMapVoteAction CVoting::StartUnfinishedMapVoteChain(const char *pMapName, const char *pTypeKey, const char *pTypeLabel)
+CVoting::EUnfinishedMapVoteAction CVoting::StartUnfinishedMapVoteChain(const char *pMapName, const char *pTypeKey, const char *pTypeLabel, const char *pReason)
 {
 	ClearUnfinishedMapVoteChain();
 	if(!pMapName || pMapName[0] == '\0')
@@ -327,7 +301,7 @@ CVoting::EUnfinishedMapVoteAction CVoting::StartUnfinishedMapVoteChain(const cha
 	const int MapOptionIndex = FindMapVoteOptionIndex(pMapName);
 	if(MapOptionIndex >= 0)
 	{
-		CallvoteOption(MapOptionIndex, "");
+		CallvoteOption(MapOptionIndex, pReason);
 		return EUnfinishedMapVoteAction::MAP_VOTE_SENT;
 	}
 
@@ -337,9 +311,10 @@ CVoting::EUnfinishedMapVoteAction CVoting::StartUnfinishedMapVoteChain(const cha
 		str_copy(m_aPendingMap, pMapName, sizeof(m_aPendingMap));
 		str_copy(m_aPendingTypeKey, pTypeKey ? pTypeKey : "", sizeof(m_aPendingTypeKey));
 		str_copy(m_aPendingTypeLabel, pTypeLabel ? pTypeLabel : "", sizeof(m_aPendingTypeLabel));
+		str_copy(m_aPendingMapReason, pReason);
 		m_PendingTypeVoteActive = false;
 		m_PendingMapVoteReady = false;
-		CallvoteOption(TypeOptionIndex, "");
+		CallvoteOption(TypeOptionIndex, pReason);
 		return EUnfinishedMapVoteAction::TYPE_VOTE_SENT;
 	}
 
@@ -351,6 +326,7 @@ void CVoting::ClearUnfinishedMapVoteChain()
 	m_aPendingMap[0] = '\0';
 	m_aPendingTypeKey[0] = '\0';
 	m_aPendingTypeLabel[0] = '\0';
+	m_aPendingMapReason[0] = '\0';
 	m_PendingTypeVoteActive = false;
 	m_PendingMapVoteReady = false;
 }
@@ -466,10 +442,20 @@ void CVoting::OnReset()
 	m_aReason[0] = '\0';
 	m_Yes = m_No = m_Pass = m_Total = 0;
 	m_Voted = 0;
-	m_ReceivingOptions = false;
+	if(!GameClient() || !GameClient()->ClientStateOnline())
+		m_ReceivingOptions = false;
 	ResetScoreboardVoteInteraction();
 
-	if(GameClient() && !GameClient()->ClientStateOnline())
+	// 同服切分类可能重载地图；断开或连接到新服时才丢弃后续投票。
+	if(GameClient() && (!Client() || Client()->State() < IClient::STATE_LOADING || Client()->State() == IClient::STATE_DEMOPLAYBACK))
+		ClearUnfinishedMapVoteChain();
+}
+
+void CVoting::OnStateChange(int NewState, int)
+{
+	if(NewState == IClient::STATE_ONLINE)
+		TryCallPendingMapVote();
+	else if(NewState < IClient::STATE_LOADING || NewState == IClient::STATE_DEMOPLAYBACK)
 		ClearUnfinishedMapVoteChain();
 }
 
@@ -508,6 +494,19 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 				Client()->Notify("DDNet Vote", aBuf);
 				GameClient()->m_Sounds.Play(CSounds::CHN_GUI, SOUND_CHAT_HIGHLIGHT, 1.0f);
 			}
+		}
+		else
+			TryCallPendingMapVote();
+	}
+	else if(MsgType == NETMSGTYPE_SV_CHAT && !Client()->IsSixup() && m_aPendingMap[0] != '\0')
+	{
+		const auto *pMsg = static_cast<const CNetMsg_Sv_Chat *>(pRawMsg);
+		switch(QmVoteMaps::ServerVoteResult(pMsg->m_ClientId, pMsg->m_Team, pMsg->m_pMessage))
+		{
+		case QmVoteMaps::EVoteResult::PASS: OnVoteResult(EVoteResult::PASS); break;
+		case QmVoteMaps::EVoteResult::FAIL: OnVoteResult(EVoteResult::FAIL); break;
+		case QmVoteMaps::EVoteResult::ABORT: OnVoteResult(EVoteResult::ABORT); break;
+		case QmVoteMaps::EVoteResult::NONE: break;
 		}
 	}
 	else if(MsgType == NETMSGTYPE_SV_VOTESTATUS)
@@ -570,6 +569,7 @@ void CVoting::OnMessage(int MsgType, void *pRawMsg)
 	else if(MsgType == NETMSGTYPE_SV_VOTEOPTIONGROUPEND)
 	{
 		m_ReceivingOptions = false;
+		TryCallPendingMapVote();
 	}
 }
 

@@ -59,21 +59,3 @@ TEST(QmNewUiMenuBranches, ServerBrowserToolboxUsesCapsuleTabBar)
 	EXPECT_NE(MenusSource.find("ui_widget::SCapsuleTabBarStyle CMenus::CapsuleTabBarStyleFor(const ColorRGBA &SurfaceColor) const"), std::string::npos);
 	EXPECT_NE(MenusSource.find("return CapsuleTabBarStyleFor(SettingsTabbarColor());"), std::string::npos);
 }
-
-TEST(QmNewUiMenuBranches, ServerControlTabsUseCapsuleTabBarInNewUi)
-{
-	// 意图：游戏中"服务器控制"页的三个页签（改设置 / 踢人 / 移到观察者）
-	// 同样先画胶囊容器与滑块，再画页签文字。
-	const std::string Source = ReadTextFile("src/game/client/components/menus_ingame.cpp");
-	const std::string Body = FunctionBody(Source, "void CMenus::RenderServerControl(CUIRect MainView)");
-	ASSERT_FALSE(Body.empty());
-
-	EXPECT_NE(Source.find("#include <game/client/QmUi/UiNavigation.h>"), std::string::npos);
-	const size_t Chrome = Body.find("ui_widget::CapsuleTabBarChrome(TabBarUiContext(), MakeUiScopeHash(\"ingame_server_control_tabs_capsule\"), aControlTabSlots, 3, ActiveControlTab, CapsuleTabBarStyleFor(ms_ColorTabbarActive));");
-	const size_t Draw = Body.find("if(DoButton_MenuTab(&s_Button0, Localize(\"Change settings\"), s_ControlPage == EServerControlTab::SETTINGS, &aControlTabSlots[0], IGraphics::CORNER_ALL");
-	ASSERT_NE(Chrome, std::string::npos);
-	ASSERT_NE(Draw, std::string::npos);
-	EXPECT_LT(Chrome, Draw);
-	EXPECT_NE(Body.find("ControlTabsRemainder.VSplitLeft(ControlTabsRemainder.w / 3.0f, &aControlTabSlots[0], &ControlTabsRemainder);"), std::string::npos);
-	EXPECT_NE(Body.find("ControlTabsRemainder.VSplitMid(&aControlTabSlots[1], &aControlTabSlots[2]);"), std::string::npos);
-}

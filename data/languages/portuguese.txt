@@ -7,6 +7,9 @@
  seconds (never)
 == segundos (nunca)
 
+ · %d finishers · average %d:%02d:%02d
+==  · %d jogadores concluíram · média %d:%02d:%02d
+
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" não é compatível com pnglite e não pode ser carregado por versões antigas do DDNet
 
@@ -18,6 +21,9 @@
 
 %c Team %d
 == %c Equipa %d
+
+%d / %d maps
+== %d / %d mapas
 
 %d items selected
 == %d itens selecionados
@@ -640,6 +646,9 @@ All
 
 All combined
 == Todos combinados
+
+All maps
+== Todos os mapas
 
 All players
 == Todos os jogadores
@@ -1624,6 +1633,9 @@ Browse font store…
 
 Browse profiles saved on this device
 == Browse profiles saved on this device
+
+Browse, choose, vote
+== Explore, escolha e vote
 
 Browser
 == Navegador
@@ -3002,6 +3014,9 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 == Contribuidores e equipe do DDNet
 
+DDNet map library
+== Biblioteca de mapas DDNet
+
 DDNet Memory
 == Memória do DDNet
 
@@ -3337,6 +3352,9 @@ Diamond gradient
 
 died
 == morreu
+
+Difficulty
+== Dificuldade
 
 Difficulty stars
 == Estrelas de dificuldade
@@ -4252,6 +4270,9 @@ Enable Tee trail
 
 Enable tee trails
 == Ativar rastos de tee
+
+Enable the finished indicator and wait for player data
+== Ative o indicador de conclusão e aguarde os dados do jogador
 
 Enable thinking mode (slower)
 == Ativar modo de pensamento (mais lento)
@@ -6893,6 +6914,9 @@ Map browser: show favorite maps only
 Map danger border
 == Borda de perigo do mapa
 
+Map data unavailable; server votes remain available
+== Dados dos mapas indisponíveis; as votações do servidor continuam disponíveis
+
 Map download send window
 == Janela de envio de download de mapa
 
@@ -6970,6 +6994,9 @@ Map upload network error.
 
 Map uploaded successfully.
 == Mapa enviado com sucesso.
+
+Mapper
+== Autor
 
 Maps finished
 == Mapas concluídos
@@ -7460,6 +7487,9 @@ Mute:
 Muted
 == Silenciado
 
+Muted players
+== Jogadores silenciados
+
 my_%s
 == minha_%s
 
@@ -7688,6 +7718,9 @@ New preset name
 New random timeout code
 == Novo código de timeout aleatório
 
+Newest first
+== Mais recentes primeiro
+
 News
 == Novidades
 
@@ -7814,6 +7847,9 @@ No map selected
 No maps found on this server!
 == Nenhum mapa correspondente encontrado neste servidor!
 
+No maps match these filters
+== Nenhum mapa corresponde aos filtros
+
 No matching assets.
 == Nenhuns recursos correspondentes.
 
@@ -7846,6 +7882,9 @@ No player nearby
 
 No player with this name found.
 == Nenhum jogador com este nome encontrado.
+
+No players match these filters
+== Nenhum jogador corresponde aos filtros
 
 No presets yet
 == Ainda sem predefinições
@@ -9437,6 +9476,9 @@ Realtime channel reconnect backoff cap (ms)
 Reason
 == Motivo
 
+Reason (optional)
+== Motivo (opcional)
+
 Reason:
 == Razão:
 
@@ -9544,6 +9586,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == Posição Y relativa do botão de voltar arrastável
+
+Release date
+== Data de lançamento
 
 Release notes
 == Notas da versão
@@ -10076,6 +10121,9 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 == Tentar novamente
 
+Retry details
+== Voltar a carregar detalhes
+
 Retry remote stats
 == Tentar novamente as estatísticas remotas
 
@@ -10499,8 +10547,14 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Pesquisar mapas com demos de rank 1 ...
 
+Search maps or mappers
+== Procurar mapas ou autores
+
 Search online fonts…
 == Pesquisar tipos de letra online…
+
+Search players or clans
+== Procurar jogadores ou clãs
 
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
@@ -10546,6 +10600,12 @@ See you at the next checkpoint.
 
 Select a configuration package to preview its contents.
 == Selecione um pacote de configurações para pré-visualizar o seu conteúdo.
+
+Select a map
+== Selecione um mapa
+
+Select a player to manage
+== Selecione um jogador para gerir
 
 Select a saved .map file (client limit: 64 MiB).
 == Selecione um ficheiro .map guardado (limite do cliente: 64 MiB).
@@ -10681,6 +10741,9 @@ Server browser filter string
 
 Server browser sort column
 == Coluna de ordenação do navegador de servidores
+
+Server control
+== Controlo do servidor
 
 Server could not be started
 == O servidor não pôde ser iniciado

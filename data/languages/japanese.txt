@@ -7,6 +7,9 @@
  seconds (never)
 == 秒 (消えない)
 
+ · %d finishers · average %d:%02d:%02d
+==  · クリア %d 人 · 平均 %d:%02d:%02d
+
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" は pnglite と互換性がなく、古いバージョンの DDNet では読み込めません
 
@@ -18,6 +21,9 @@
 
 %c Team %d
 == %c チーム %d
+
+%d / %d maps
+== %d / %d マップ
 
 %d items selected
 == %d 個のアイテムが選択されました
@@ -640,6 +646,9 @@ All
 
 All combined
 == すべて結合
+
+All maps
+== すべてのマップ
 
 All players
 == すべてのプレイヤー
@@ -1624,6 +1633,9 @@ Browse font store…
 
 Browse profiles saved on this device
 == Browse profiles saved on this device
+
+Browse, choose, vote
+== 探して、選んで、投票
 
 Browser
 == ブラウザ
@@ -3002,6 +3014,9 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 == DDNet のコントリビューターとスタッフ
 
+DDNet map library
+== DDNet マップライブラリ
+
 DDNet Memory
 == DDNet メモリ
 
@@ -3337,6 +3352,9 @@ Diamond gradient
 
 died
 == 死亡
+
+Difficulty
+== 難易度
 
 Difficulty stars
 == 難易度の星
@@ -4252,6 +4270,9 @@ Enable Tee trail
 
 Enable tee trails
 == Tee の軌跡を有効化
+
+Enable the finished indicator and wait for player data
+== クリア表示を有効にし、プレイヤーデータの取得をお待ちください
 
 Enable thinking mode (slower)
 == 思考モードを有効にする（低速）
@@ -6893,6 +6914,9 @@ Map browser: show favorite maps only
 Map danger border
 == マップ危険境界
 
+Map data unavailable; server votes remain available
+== マップ情報を取得できません。サーバーの投票項目は利用できます
+
 Map download send window
 == マップダウンロード送信ウィンドウ
 
@@ -6970,6 +6994,9 @@ Map upload network error.
 
 Map uploaded successfully.
 == マップをアップロードしました。
+
+Mapper
+== 作者
 
 Maps finished
 == クリアしたマップ
@@ -7460,6 +7487,9 @@ Mute:
 Muted
 == ミュート済み
 
+Muted players
+== ミュート中のプレイヤー
+
 my_%s
 == 私の_%s
 
@@ -7688,6 +7718,9 @@ New preset name
 New random timeout code
 == 新しいランダムタイムアウトコード
 
+Newest first
+== リリースが新しい順
+
 News
 == ニュース
 
@@ -7814,6 +7847,9 @@ No map selected
 No maps found on this server!
 == このサーバーに条件を満たすマップが見つかりません！
 
+No maps match these filters
+== 条件に一致するマップはありません
+
 No matching assets.
 == 一致するアセットがありません。
 
@@ -7846,6 +7882,9 @@ No player nearby
 
 No player with this name found.
 == この名前のプレイヤーは見つかりませんでした。
+
+No players match these filters
+== 条件に一致するプレイヤーはいません
 
 No presets yet
 == まだプリセットがありません
@@ -9437,6 +9476,9 @@ Realtime channel reconnect backoff cap (ms)
 Reason
 == 理由
 
+Reason (optional)
+== 理由（任意）
+
 Reason:
 == 理由：
 
@@ -9544,6 +9586,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == ドラッグ可能な戻るボタンの相対 Y 位置
+
+Release date
+== リリース日
 
 Release notes
 == リリースノート
@@ -10076,6 +10121,9 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 == 再試行
 
+Retry details
+== 詳細を再取得
+
 Retry remote stats
 == リモート統計を再試行
 
@@ -10499,8 +10547,14 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == Rank 1 リプレイのあるマップを検索 ...
 
+Search maps or mappers
+== マップ名・作者を検索
+
 Search online fonts…
 == オンラインフォントを検索…
+
+Search players or clans
+== プレイヤー・クランを検索
 
 Search settings by title, feature, or keyword
 == Search settings by title, feature, or keyword
@@ -10546,6 +10600,12 @@ See you at the next checkpoint.
 
 Select a configuration package to preview its contents.
 == 設定パッケージを選択すると内容を確認できます。
+
+Select a map
+== マップを選択
+
+Select a player to manage
+== 管理するプレイヤーを選択
 
 Select a saved .map file (client limit: 64 MiB).
 == 保存済みの .map ファイルを選択してください（クライアントの上限: 64 MiB）。
@@ -10681,6 +10741,9 @@ Server browser filter string
 
 Server browser sort column
 == サーバーブラウザのソート列
+
+Server control
+== サーバー管理
 
 Server could not be started
 == サーバーを起動できませんでした

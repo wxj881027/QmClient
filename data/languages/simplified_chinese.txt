@@ -7,6 +7,9 @@
  seconds (never)
 == 秒 (不消失)
 
+ · %d finishers · average %d:%02d:%02d
+==  · %d 人完成 · 平均 %d:%02d:%02d
+
 "%s" is not compatible with pnglite and cannot be loaded by old DDNet versions:
 == "%s" 与 pnglite 不兼容，无法被旧版本 DDNet 加载
 
@@ -18,6 +21,9 @@
 
 %c Team %d
 == %c 队伍 %d
+
+%d / %d maps
+== %d / %d 张地图
 
 %d items selected
 == 已选择 %d 项
@@ -640,6 +646,9 @@ All
 
 All combined
 == 全部文件
+
+All maps
+== 全部地图
 
 All players
 == 所有人
@@ -1624,6 +1633,9 @@ Browse font store…
 
 Browse profiles saved on this device
 == 浏览保存在此设备上的配置档
+
+Browse, choose, vote
+== 浏览地图，选好再投票
 
 Browser
 == 浏览
@@ -3002,6 +3014,9 @@ DDNet Client needs to be restarted to complete update!
 DDNet contributors and staff credits
 == DDNet 贡献者与团队名单
 
+DDNet map library
+== DDNet 地图库
+
 DDNet Memory
 == DDNet 内存
 
@@ -3337,6 +3352,9 @@ Diamond gradient
 
 died
 == 死亡
+
+Difficulty
+== 难度
 
 Difficulty stars
 == 难度星级
@@ -4252,6 +4270,9 @@ Enable Tee trail
 
 Enable tee trails
 == 启用 Tee 拖尾
+
+Enable the finished indicator and wait for player data
+== 启用完成状态指示，并等待玩家数据加载
 
 Enable thinking mode (slower)
 == 启用思考模式（较慢）
@@ -6893,6 +6914,9 @@ Map browser: show favorite maps only
 Map danger border
 == 地图危险边界
 
+Map data unavailable; server votes remain available
+== 地图数据暂不可用，仍可使用服务器投票
+
 Map download send window
 == 地图下载发送窗口
 
@@ -6970,6 +6994,9 @@ Map upload network error.
 
 Map uploaded successfully.
 == 地图上传成功。
+
+Mapper
+== 作者
 
 Maps finished
 == 已过地图
@@ -7460,6 +7487,9 @@ Mute:
 Muted
 == 已静音
 
+Muted players
+== 已屏蔽玩家
+
 my_%s
 == 我的_%s
 
@@ -7688,6 +7718,9 @@ New preset name
 New random timeout code
 == 随机生成新的超时代码
 
+Newest first
+== 最新发布优先
+
 News
 == 新闻
 
@@ -7814,6 +7847,9 @@ No map selected
 No maps found on this server!
 == 这个服务器上没有找到符合条件的地图！
 
+No maps match these filters
+== 没有符合筛选条件的地图
+
 No matching assets.
 == 没有匹配的材质。
 
@@ -7846,6 +7882,9 @@ No player nearby
 
 No player with this name found.
 == 没有找到这个名字的玩家
+
+No players match these filters
+== 没有符合筛选条件的玩家
 
 No presets yet
 == 暂无预设
@@ -9437,6 +9476,9 @@ Realtime channel reconnect backoff cap (ms)
 Reason
 == 原因
 
+Reason (optional)
+== 理由（可选）
+
 Reason:
 == 理由：
 
@@ -9544,6 +9586,9 @@ Relative X position of the draggable back button
 
 Relative Y position of the draggable back button
 == 可拖动虚拟返回按钮的相对 Y 位置
+
+Release date
+== 发布日期
 
 Release notes
 == 更新说明
@@ -10076,6 +10121,9 @@ Restoring save %d: main '%s', dummy '%s'.
 Retry
 == 重试
 
+Retry details
+== 重试详情
+
 Retry remote stats
 == 重试远程统计
 
@@ -10499,8 +10547,14 @@ Search maps and downloadedmaps, including subfolders
 Search maps for Rank 1 replays ...
 == 搜索有 Rank 1 回放的地图……
 
+Search maps or mappers
+== 搜索地图或作者
+
 Search online fonts…
 == 搜索在线字体…
+
+Search players or clans
+== 搜索玩家或战队
 
 Search settings by title, feature, or keyword
 == 按标题、功能或关键字搜索设置
@@ -10546,6 +10600,12 @@ See you at the next checkpoint.
 
 Select a configuration package to preview its contents.
 == 选择配置包以预览内容。
+
+Select a map
+== 选择一张地图
+
+Select a player to manage
+== 选择玩家以查看和管理
 
 Select a saved .map file (client limit: 64 MiB).
 == 选择已保存的 .map 文件（客户端上限：64 MiB）。
@@ -10681,6 +10741,9 @@ Server browser filter string
 
 Server browser sort column
 == 服务器浏览器中的排序列
+
+Server control
+== 服务器控制
 
 Server could not be started
 == 无法启动服务器
