@@ -266,13 +266,15 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 	auto BuildPreparedCards = [&](const std::array<std::vector<int>, 3> &aDisplayColumns) {
 		m_vPreparedCards.clear();
 		m_vPreparedCards.reserve(m_vActiveStateIndices.size());
-		auto AppendCard = [&](int StateIndex, int Column, CUIRect ColumnRect, CSettingsCardColumnFramePlan &ColumnPlan) {
+		m_PackingPlan.Reset(DrawLayout.m_ContentViewport.y, DrawLayout.m_CardGap);
+		CSettingsCardColumnFramePlan SingleColumnPlan(DrawLayout.m_ContentViewport.y, DrawLayout.m_CardGap);
+		auto AppendCard = [&](int StateIndex, int Column, CUIRect ColumnRect, bool LeadingFullWidth = false) {
 			if(StateIndex < 0 || StateIndex >= (int)m_vDefinitionsByState.size())
 				return;
 			const SSettingsCardDefinition *pDefinition = m_vDefinitionsByState[StateIndex];
 			if(pDefinition == nullptr)
 				return;
-			CUIRect Slot{ColumnRect.x, ColumnPlan.CursorY(), ColumnRect.w, 0.0f};
+			CUIRect Slot{ColumnRect.x, ColumnRect.y, ColumnRect.w, 0.0f};
 			float &CachedContentHeight = m_vContentHeights[StateIndex];
 			float &CachedContentWidth = m_vContentWidths[StateIndex];
 			uint64_t &CachedMeasureRevision = m_vMeasureRevisions[StateIndex];
@@ -334,45 +336,40 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Ctx,
 			ContentHeightTargetChanged = ContentHeightTargetChanged || HeightTargetChanged;
 			ContentHeightAnimationActive = ContentHeightAnimationActive || Runtime.m_ContentHeightWasActive;
 			const float ContentHeight = std::max(0.0f, Runtime.m_AnimatedContentHeight);
-			const SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
+			SSettingsCardFrame Frame = ResolveSettingsCardHeaderActions(
 				BuildSettingsCardFrame(Slot, pDefinition->m_Spec, ContentHeight, Ctx.m_UiScale),
 				pDefinition->m_LeadingHeaderActionWidth, pDefinition->m_Spec.m_pInfo != nullptr && pDefinition->m_Spec.m_pInfo[0] != '\0');
+			const SSettingsCardColumnFrame Placement = DrawLayout.m_TwoColumns ? m_PackingPlan.Append(Column, Frame.m_Rect.h, LeadingFullWidth) : SingleColumnPlan.Append(Frame.m_Rect.h);
+			Frame = ResolveSettingsCardDrawFrame(Frame, 0.0f, Placement.m_Y - Frame.m_Rect.y);
 			m_vPreparedCards.push_back({pDefinition, StateIndex, Column, Frame, TargetContentHeight, HeightInitializedThisFrame, Runtime.m_ContentHeightWasActive});
-			ColumnPlan.Append(Frame.m_Rect.h);
 		};
-		auto AppendColumn = [&](const std::vector<int> &vStateIndices, int Column, CUIRect ColumnRect, CSettingsCardColumnFramePlan &ColumnPlan) {
+		auto AppendColumn = [&](const std::vector<int> &vStateIndices, int Column, CUIRect ColumnRect) {
 			for(const int StateIndex : vStateIndices)
-				AppendCard(StateIndex, Column, ColumnRect, ColumnPlan);
+				AppendCard(StateIndex, Column, ColumnRect);
 		};
 
 		if(DrawLayout.m_TwoColumns && !aDisplayColumns[0].empty())
 		{
-			CSettingsCardColumnFramePlan LeftPlan(DrawLayout.m_aColumns[0].y, DrawLayout.m_CardGap);
-			CSettingsCardColumnFramePlan RightPlan(DrawLayout.m_aColumns[1].y, DrawLayout.m_CardGap);
+			int FullWidthIndex = 0;
 			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) {
 				if(Column == 1)
-					AppendCard(StateIndex, Column, DrawLayout.m_aColumns[0], LeftPlan);
+					AppendCard(StateIndex, Column, DrawLayout.m_aColumns[0]);
 				else if(Column == 2)
-					AppendCard(StateIndex, Column, DrawLayout.m_aColumns[1], RightPlan);
+					AppendCard(StateIndex, Column, DrawLayout.m_aColumns[1]);
 				else
 				{
-					CSettingsCardColumnFramePlan FullPlan(std::max(LeftPlan.CursorY(), RightPlan.CursorY()), DrawLayout.m_CardGap);
-					AppendCard(StateIndex, 0, DrawLayout.m_ContentViewport, FullPlan);
-					LeftPlan.SetCursorY(FullPlan.CursorY());
-					RightPlan.SetCursorY(FullPlan.CursorY());
+					AppendCard(StateIndex, 0, DrawLayout.m_ContentViewport, FullWidthIndex < VisualOptions.m_LeadingFullWidthCards);
+					++FullWidthIndex;
 				} }, VisualOptions.m_LeadingFullWidthCards);
 		}
 		else if(DrawLayout.m_TwoColumns)
 		{
-			CSettingsCardColumnFramePlan LeftPlan(DrawLayout.m_aColumns[0].y, DrawLayout.m_CardGap);
-			CSettingsCardColumnFramePlan RightPlan(DrawLayout.m_aColumns[1].y, DrawLayout.m_CardGap);
-			AppendColumn(aDisplayColumns[1], 1, DrawLayout.m_aColumns[0], LeftPlan);
-			AppendColumn(aDisplayColumns[2], 2, DrawLayout.m_aColumns[1], RightPlan);
+			AppendColumn(aDisplayColumns[1], 1, DrawLayout.m_aColumns[0]);
+			AppendColumn(aDisplayColumns[2], 2, DrawLayout.m_aColumns[1]);
 		}
 		else
 		{
-			CSettingsCardColumnFramePlan ColumnPlan(DrawLayout.m_ContentViewport.y, DrawLayout.m_CardGap);
-			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) { AppendCard(StateIndex, Column, DrawLayout.m_ContentViewport, ColumnPlan); }, VisualOptions.m_LeadingFullWidthCards);
+			ForEachSettingsCardDeckVisualOrder(aDisplayColumns, [&](int StateIndex, int Column) { AppendCard(StateIndex, Column, DrawLayout.m_ContentViewport); }, VisualOptions.m_LeadingFullWidthCards);
 		}
 	};
 

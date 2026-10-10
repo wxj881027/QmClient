@@ -17,7 +17,6 @@
 #include <game/client/ui.h>
 #include <game/collision.h>
 #include <game/gamecore.h>
-#include <game/localization.h>
 
 #include <algorithm>
 #include <cmath>
@@ -169,8 +168,6 @@ void CEmoticon::OnReset()
 	m_PresentationInitialized = false;
 	m_SelectorMouse = vec2(0.0f, 0.0f);
 	m_SelectedEmote = -1;
-	m_SelectedThrow = -1;
-	m_ThrowTab = false;
 	m_SelectedEyeEmote = -1;
 	m_LaunchModeActive = false;
 	m_SuperCharge.Reset();
@@ -202,18 +199,6 @@ void CEmoticon::UpdateSelection()
 {
 	if(length(m_SelectorMouse) > 170.0f)
 		m_SelectorMouse = normalize(m_SelectorMouse) * 170.0f;
-	if(!g_Config.m_QmDecorativeThrows)
-		m_ThrowTab = false;
-	if(m_ThrowTab)
-	{
-		const float Angle = angle(m_SelectorMouse);
-		m_SelectedThrow = length(m_SelectorMouse) > 80.0f ? static_cast<int>(std::fmod(std::round(Angle / (2.0f * pi) * QmDecorativeThrow::COUNT) + QmDecorativeThrow::COUNT, QmDecorativeThrow::COUNT)) : -1;
-		m_SelectedEmote = m_SelectedEyeEmote = -1;
-		m_SuperCharge.Reset();
-		m_SuperChargeProgress = 0.0f;
-		return;
-	}
-	m_SelectedThrow = -1;
 	const float SelectorAngle = angle(m_SelectorMouse);
 	const auto PositiveMod = [](float x, float y) -> int { return static_cast<int>(std::fmod(x + y, y)); };
 	m_SelectedEmote = length(m_SelectorMouse) > 110.0f ? PositiveMod(std::round(SelectorAngle / (2.0f * pi) * NUM_EMOTICONS), NUM_EMOTICONS) : -1;
@@ -243,12 +228,6 @@ void CEmoticon::SetActive(bool Active)
 	if(!m_TouchPressedOutside && Client()->State() == IClient::STATE_ONLINE &&
 		!GameClient()->m_Snap.m_SpecInfo.m_Active && GameClient()->m_Snap.m_pLocalCharacter)
 	{
-		if(m_ThrowTab)
-		{
-			if(m_SelectedThrow >= 0)
-				GameClient()->m_DecorativeProjectiles.Throw(m_SelectedThrow);
-			return;
-		}
 		if(m_SelectedEmote != -1)
 		{
 			m_SuperLaunchPending = m_SuperChargeProgress >= 1.0f;
@@ -281,8 +260,6 @@ bool CEmoticon::OnInput(const IInput::CEvent &Event)
 {
 	if(IsActive() && Event.m_Flags & IInput::FLAG_PRESS)
 	{
-		if(Event.m_Key == KEY_MOUSE_1 && TrySelectThrowTab(m_SelectorMouse))
-			return true;
 		if(Event.m_Key == KEY_ESCAPE)
 		{
 			OnRelease();
@@ -295,38 +272,6 @@ bool CEmoticon::OnInput(const IInput::CEvent &Event)
 		}
 	}
 	return false;
-}
-
-bool CEmoticon::TrySelectThrowTab(vec2 Pointer)
-{
-	if(!g_Config.m_QmDecorativeThrows || Pointer.y < -12.0f || Pointer.y > 12.0f)
-		return false;
-	if(Pointer.x >= -70.0f && Pointer.x <= -2.0f)
-		m_ThrowTab = false;
-	else if(Pointer.x >= 2.0f && Pointer.x <= 70.0f)
-		m_ThrowTab = true;
-	else
-		return false;
-	m_SelectorMouse = vec2(0.0f, 0.0f);
-	UpdateSelection();
-	return true;
-}
-
-void CEmoticon::RenderSelectorTabs(vec2 Center, float Alpha)
-{
-	if(!g_Config.m_QmDecorativeThrows)
-		return;
-	const char *apLabels[] = {Localize("Emoticons"), Localize("Throwables")};
-	for(int Tab = 0; Tab < 2; ++Tab)
-	{
-		CUIRect Rect = {Center.x + (Tab == 0 ? -70.0f : 2.0f), Center.y - 12.0f, 68.0f, 24.0f};
-		Rect.Draw((Tab == static_cast<int>(m_ThrowTab) ? ui_token::color::ACCENT_PRIMARY_DIM : ui_token::color::SURFACE_OVERLAY).WithMultipliedAlpha(Alpha), IGraphics::CORNER_ALL, 5.0f);
-		SLabelProperties Properties;
-		Properties.m_MaxWidth = Rect.w - 8.0f;
-		Properties.m_EllipsisAtEnd = true;
-		Properties.SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, Alpha));
-		Ui()->DoLabel(&Rect, apLabels[Tab], 10.0f, TEXTALIGN_MC, Properties);
-	}
 }
 
 void CEmoticon::OnRender()
@@ -387,11 +332,8 @@ void CEmoticon::OnRender()
 			const float TouchCenterDistance = length(TouchPos);
 			if(TouchCenterDistance <= s_OuterMouseLimitRadius)
 			{
-				if(WasTouchPressed || !TrySelectThrowTab(TouchPos))
-				{
-					m_SelectorMouse = TouchPos;
-					UpdateSelection();
-				}
+				m_SelectorMouse = TouchPos;
+				UpdateSelection();
 			}
 			else if(TouchCenterDistance > s_OuterCircleRadius)
 			{
@@ -484,14 +426,6 @@ void CEmoticon::OnRender()
 	Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, s_InnerOuterMouseBoundaryRadius * PresentationScale, 64);
 	Graphics()->QuadsEnd();
 
-	if(m_ThrowTab && g_Config.m_QmDecorativeThrows)
-	{
-		GameClient()->m_DecorativeProjectiles.RenderSelector(ScreenCenter, m_SelectedThrow, PresentationScale, PresentationAlpha);
-		RenderSelectorTabs(ScreenCenter, PresentationAlpha);
-		RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse * PresentationScale, 24.0f * PresentationScale, PresentationAlpha);
-		return;
-	}
-
 	Graphics()->WrapClamp();
 	for(int Emote = 0; Emote < NUM_EMOTICONS; Emote++)
 	{
@@ -577,7 +511,6 @@ void CEmoticon::OnRender()
 		m_SelectedEyeEmote = -1;
 	}
 
-	RenderSelectorTabs(ScreenCenter, PresentationAlpha);
 	RenderTools()->RenderCursor(ScreenCenter + m_SelectorMouse * PresentationScale, 24.0f * PresentationScale, PresentationAlpha);
 }
 
@@ -717,11 +650,7 @@ void CEmoticon::SpawnProjectile(vec2 Position, vec2 Direction, int Emoticon, boo
 			pProjectile = &Projectile;
 	}
 	pProjectile->Init(Position, Direction * 1200.0f + vec2(0.0f, -400.0f), Emoticon, Super ? 2.35f : 1.0f, OwnerClientId, g_Config.m_QmEmoticonProjectileDuration);
-	pProjectile->m_Active = pProjectile->PlaceOutside(m_aCollisionMasks[Emoticon], [this](int X, int Y) {
-		return Collision()->CheckPoint(X * 32.0f + 16.0f, Y * 32.0f + 16.0f);
-	}, Position + vec2(0.0f, 20.0f), [this](vec2 From, vec2 To) {
-		return Collision()->IntersectLine(From, To, nullptr, nullptr) == 0;
-	});
+	pProjectile->m_Active = pProjectile->PlaceOutside(m_aCollisionMasks[Emoticon], [this](int X, int Y) { return Collision()->CheckPoint(X * 32.0f + 16.0f, Y * 32.0f + 16.0f); }, Position + vec2(0.0f, 20.0f), [this](vec2 From, vec2 To) { return Collision()->IntersectLine(From, To, nullptr, nullptr) == 0; });
 	if(Super)
 		GameClient()->m_Effects.Explosion(Position, 0.9f);
 	else

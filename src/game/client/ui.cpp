@@ -1437,8 +1437,16 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 	return true;
 }
 
+const char *CUi::PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render) const
+{
+	return m_CardLabelHintsEnabled && m_pQmTooltips != nullptr && TextRender()->GetFontPreset() != EFontPreset::ICON_FONT ?
+		       m_pQmTooltips->PrepareCardLabel(pRect, pText, Render && !RenderOnly()) :
+		       pText;
+}
+
 CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps) const
 {
+	pText = PrepareCardLabel(pRect, pText);
 	const SQmIconLabelGlyphs Icons = QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText);
 	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
 	if(Icons.m_Count > 0 && pRect->w >= Size * Icons.m_Count && pRect->h >= Size && LabelProps.m_vColorSplits.empty() && LabelProps.m_MaxWidth < 0 && DrawCachedQmIconLabel(*pRect, pText, Size, Align, Icons.m_Count))
@@ -1470,6 +1478,8 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 
 void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor) const
 {
+	if(StrLen < 0 && pReadCursor == nullptr)
+		pText = PrepareCardLabel(pRect, pText);
 	const auto Icons = pReadCursor == nullptr ? QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText, StrLen) : SQmIconLabelGlyphs{};
 	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
 	RectEl.m_aQmIcons = Icons.m_aIcons;
@@ -1527,6 +1537,8 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 
 void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor, bool Render, bool *pTextContainerRecreated) const
 {
+	if(StrLen < 0 && pReadCursor == nullptr)
+		pText = PrepareCardLabel(pRect, pText, Render);
 	const int Flags = GetFlagsForLabelProperties(LabelProps, pReadCursor);
 	const int ReadCursorGlyphCount = pReadCursor == nullptr ? -1 : pReadCursor->m_GlyphCount;
 	bool NeedsRecreate = false;
@@ -1950,16 +1962,19 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 
 	// 只缓存文字。背景和状态反馈由公共按钮绘制，避免为每个状态重复缓存矩形。
 	bool NeedsRecalc = !UIElement.AreRectsInit() || !UIElement.Rect(0)->m_UITextContainer.Valid();
-	const char *pText = nullptr;
+	const char *pText = m_CardLabelHintsEnabled && !Props.m_UseIconFont ? GetTextLambda() : nullptr;
+	if(pText != nullptr)
+		PrepareCardLabel(&Text, pText);
 	if(UIElement.AreRectsInit())
 	{
 		const CUIElement::SUIElementRect &Cached = *UIElement.Rect(0);
 		NeedsRecalc |= Cached.m_FontSize != FontSize;
 		if(Props.m_HintCanChangePositionOrSize)
 			NeedsRecalc |= Cached.m_X != pRect->x || Cached.m_Y != pRect->y || Cached.m_Width != pRect->w || Cached.m_Height != pRect->h;
-		if(Props.m_HintRequiresStringCheck)
+		if(Props.m_HintRequiresStringCheck || pText != nullptr)
 		{
-			pText = GetTextLambda();
+			if(pText == nullptr)
+				pText = GetTextLambda();
 			NeedsRecalc |= str_comp(Cached.m_Text.c_str(), pText) != 0;
 		}
 	}

@@ -2472,7 +2472,7 @@ bool CChat::OnPrepareLines(float y)
 			if(Style.m_pStyle != nullptr)
 			{
 				LineHasDynamicTitle = true;
-				TitleBobPadding = maximum(TitleBobPadding, QmTitleStyleBobPadding(Style.m_Bob, PixelSize));
+				TitleBobPadding = maximum(TitleBobPadding, QmTitleStyleBobPadding(Style.m_Bob, PixelSize, FontSize));
 			}
 		};
 		if(MergedPlayerMessages)
@@ -3710,52 +3710,39 @@ void CChat::SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhit
 		GameClient()->TClientComponent().TrackLocalSaveLoadCommand(Conn, pLine);
 }
 
-void CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation)
+CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation)
 {
 	if(pLine && GameClient()->TClientComponent().TryHandleLocalSaveReply(pLine))
-		return;
+		return EChatSendResult::HANDLED;
 
-	if(!pLine || str_length(pLine) < 1)
-		return;
+	const auto SendSensitive = [&] { SendChat(Team, pLine); };
+	const auto SendOrdinary = [&] {
+		// 自动出站翻译
+		if(AllowOutgoingTranslation && QmChatEmojiShouldTranslate(QmChatEmojiFromText(pLine)) && GameClient()->m_Translate.ShouldAutoTranslateOutgoing(pLine))
+		{
+			GameClient()->m_Translate.StartAutoOutgoingTranslate(Team, pLine);
+			return EChatSendResult::HANDLED;
+		}
 
-	if(IsSensitiveChatCommand(pLine))
-	{
-		SendChat(Team, pLine);
-		return;
-	}
+		const EChatSendResult Result = ReserveChatMessage(m_LastChatSend, time(), time_freq(), m_PendingChatCounter);
+		if(Result == EChatSendResult::SENT)
+			SendChat(Team, pLine);
 
-	// 自动出站翻译
-	if(AllowOutgoingTranslation && QmChatEmojiShouldTranslate(QmChatEmojiFromText(pLine)) && GameClient()->m_Translate.ShouldAutoTranslateOutgoing(pLine))
-	{
-		GameClient()->m_Translate.StartAutoOutgoingTranslate(Team, pLine);
-		return;
-	}
-
-	bool AddEntry = false;
-
-	if(m_LastChatSend + time_freq() < time())
-	{
-		SendChat(Team, pLine);
-		AddEntry = true;
-	}
-	else if(m_PendingChatCounter < 3)
-	{
-		++m_PendingChatCounter;
-		AddEntry = true;
-	}
-
-	if(AddEntry)
-	{
-		const int Length = str_length(pLine);
-		CHistoryEntry *pEntry = m_History.Allocate(sizeof(CHistoryEntry) + Length);
-		pEntry->m_Team = Team;
-		str_copy(pEntry->m_aText, pLine, Length + 1);
-	}
+		if(Result != EChatSendResult::REJECTED)
+		{
+			const int Length = str_length(pLine);
+			CHistoryEntry *pEntry = m_History.Allocate(sizeof(CHistoryEntry) + Length);
+			pEntry->m_Team = Team;
+			str_copy(pEntry->m_aText, pLine, Length + 1);
+		}
+		return Result;
+	};
+	return DispatchChatMessage(pLine, SendSensitive, SendOrdinary);
 }
 
-void CChat::SendChatQueued(const char *pLine)
+CChat::EChatSendResult CChat::SendChatQueued(const char *pLine)
 {
-	SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true);
+	return SendChatQueued(m_Mode == MODE_ALL ? 0 : 1, pLine, true);
 }
 
 // ===== 翻译按钮相关方法 =====

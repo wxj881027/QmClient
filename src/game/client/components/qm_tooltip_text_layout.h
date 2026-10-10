@@ -86,14 +86,21 @@ inline SQmTooltipTextLayout QmTooltipMeasureText(ITextRender &TextRender, const 
 	return Layout;
 }
 
+inline CTextCursor QmTooltipTextCursor(const CUIRect &Content, float FontSize, float WrapWidth, int MaxLines)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(Content.TopLeft());
+	Cursor.m_FontSize = FontSize;
+	Cursor.m_LineWidth = std::max(1.0f, WrapWidth);
+	Cursor.m_MaxLines = MaxLines;
+	Cursor.m_CalculateVisualBoundingBox = true;
+	return Cursor;
+}
+
 inline CTextCursor QmTooltipCreateText(ITextRender &TextRender, const SQmTooltipTextLayout &Layout, const char *pText, vec2 Position, STextContainerIndex &Index, bool Ellipsis = false)
 {
 	CQmTooltipRenderFlags Flags(TextRender);
-	CTextCursor Cursor;
-	Cursor.SetPosition(Position);
-	Cursor.m_FontSize = Layout.m_FontSize;
-	Cursor.m_LineWidth = Layout.m_LineWidth;
-	Cursor.m_CalculateVisualBoundingBox = true;
+	CTextCursor Cursor = QmTooltipTextCursor({Position.x, Position.y, 0, 0}, Layout.m_FontSize, Layout.m_LineWidth, Layout.m_Truncated ? std::max(1, Layout.m_VisibleLines - 1) : 0);
 	if(Ellipsis)
 	{
 		// 仅省略标记在不足一个字宽的视口中缩小，正文逻辑字号保持固定。
@@ -110,12 +117,33 @@ inline CTextCursor QmTooltipCreateText(ITextRender &TextRender, const SQmTooltip
 	return Cursor;
 }
 
+// 宽高共同约束统一比例，尺寸过渡中完整目标布局也必须落在当前气泡内。
+inline float QmTooltipTextScale(const CUIRect &LayoutRect, const CUIRect &RenderRect)
+{
+	if(LayoutRect.w <= 0.0f || LayoutRect.h <= 0.0f || RenderRect.w <= 0.0f || RenderRect.h <= 0.0f)
+		return 0.0f;
+	return std::min(RenderRect.w / LayoutRect.w, RenderRect.h / LayoutRect.h);
+}
+
 // 逆向映射投影，使固定逻辑顶点与气泡围绕同一中心缩放。
 inline CUIRect QmTooltipTextProjection(const CUIRect &Projection, vec2 Center, float Scale)
 {
-	Scale = std::max(0.0001f, Scale);
+	if(Scale <= 0.0f || !std::isfinite(Scale))
+		return Projection;
 	return {Center.x + (Projection.x - Center.x) / Scale, Center.y + (Projection.y - Center.y) / Scale,
 		Projection.w / Scale, Projection.h / Scale};
+}
+
+// 字形使用目标布局，移动和缩放后的气泡中心只影响投影，不重新断行。
+inline CUIRect QmTooltipTextProjection(const CUIRect &Projection, const CUIRect &LayoutRect, const CUIRect &RenderRect)
+{
+	const float Scale = QmTooltipTextScale(LayoutRect, RenderRect);
+	if(Scale <= 0.0f || !std::isfinite(Scale))
+		return Projection;
+	CUIRect Result = QmTooltipTextProjection(Projection, LayoutRect.Center(), Scale);
+	Result.x += (LayoutRect.Center().x - RenderRect.Center().x) / Scale;
+	Result.y += (LayoutRect.Center().y - RenderRect.Center().y) / Scale;
+	return Result;
 }
 
 #endif

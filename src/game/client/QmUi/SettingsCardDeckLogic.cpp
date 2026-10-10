@@ -9,6 +9,53 @@
 #include <algorithm>
 #include <cmath>
 
+void CSettingsCardDeckPackingPlan::Reset(const float CursorY, const float CardGap)
+{
+	m_aCursorY.fill(CursorY);
+	m_aNextFullWidthFrame.fill(0);
+	m_FullWidthCursorY = CursorY;
+	m_CardGap = std::max(0.0f, CardGap);
+	// 保留容量，稳定帧及同帧预布局重算不重复分配。
+	m_vFullWidthFrames.clear();
+}
+
+SSettingsCardColumnFrame CSettingsCardDeckPackingPlan::Append(const int Column, const float CardHeight, const bool LeadingFullWidth)
+{
+	dbg_assert(Column >= 0 && Column <= 2, "Invalid settings card column");
+	if(Column == 0)
+	{
+		const float CursorY = std::max({m_aCursorY[0], m_aCursorY[1], m_FullWidthCursorY});
+		const SSettingsCardColumnFrame Frame = ResolveSettingsCardColumnFrame(CursorY, CardHeight, m_CardGap);
+		m_vFullWidthFrames.push_back(Frame);
+		m_FullWidthCursorY = Frame.m_NextY;
+		// 页首全宽卡保持置顶，后续卡不能回填到它们之间。
+		if(LeadingFullWidth)
+			m_aCursorY.fill(Frame.m_NextY);
+		return Frame;
+	}
+
+	float &CursorY = m_aCursorY[Column - 1];
+	size_t &NextFullWidthFrame = m_aNextFullWidthFrame[Column - 1];
+	const float Height = std::max(0.0f, CardHeight);
+	while(NextFullWidthFrame < m_vFullWidthFrames.size())
+	{
+		const SSettingsCardColumnFrame &Full = m_vFullWidthFrames[NextFullWidthFrame];
+		if(CursorY >= Full.m_NextY)
+		{
+			++NextFullWidthFrame;
+			continue;
+		}
+		// 空位必须同时容纳卡片与下边间距，避免贴住或穿过全宽卡。
+		if(CursorY + Height + m_CardGap <= Full.m_Y)
+			break;
+		CursorY = Full.m_NextY;
+		++NextFullWidthFrame;
+	}
+	const SSettingsCardColumnFrame Frame = ResolveSettingsCardColumnFrame(CursorY, Height, m_CardGap);
+	CursorY = Frame.m_NextY;
+	return Frame;
+}
+
 std::array<std::vector<int>, 3> BuildSettingsCardDeckColumnOrder(const qm_card_order::CModel &Model, const char *pTab, const std::vector<int> &vActiveStateIndices)
 {
 	std::array<std::vector<int>, 3> aColumns;

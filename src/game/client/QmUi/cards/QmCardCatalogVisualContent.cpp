@@ -355,6 +355,22 @@ void CMenus::RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, 
 	}
 }
 
+void CMenus::RenderQmVisualSpectatorModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, "qmclient-spectator-smoothing", Localize("Smooth free spectator camera"), &g_Config.m_QmCinematicCamera);
+	if(g_Config.m_QmCinematicCamera)
+	{
+		static int s_SmoothnessInputId;
+		CUIRect Row, LabelColumn, ControlColumn;
+		Content.HSplitTop(LineHeight, &Row, &Content);
+		Row.VSplitLeft(LabelWidth, &LabelColumn, &ControlColumn);
+		RenderQmVisualLabel("qmclient-cinematic-camera-smoothness", &LabelColumn, Localize("Cinematic smoothness"), BodySize);
+		GameClient()->m_Tooltips.DoSettingsToolTipForConfig(&s_SmoothnessInputId, &Row, &g_Config.m_QmCinematicCameraSmoothness, &LabelColumn);
+		RenderQmSettingsSliderWithValueInput(&s_SmoothnessInputId, ControlColumn, &g_Config.m_QmCinematicCameraSmoothness, 0, 100, "%", PrewarmOnly);
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
+}
+
 void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "", unsigned Flags = 0u) {
@@ -382,12 +398,6 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 		static int s_QmDynamicFovSmoothnessInputId;
 		RenderValue("qmclient-camera-dynamic-fov-intensity", "Dynamic FOV intensity", &s_QmDynamicFovAmountInputId, &g_Config.m_QmDynamicFovAmount, 0, 200);
 		RenderValue("qmclient-camera-dynamic-fov-smoothness", "Dynamic FOV smoothness", &s_QmDynamicFovSmoothnessInputId, &g_Config.m_QmDynamicFovSmoothness, 0, 100, "%");
-	}
-	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, "Cinematic camera", Localize("Cinematic camera"), &g_Config.m_QmCinematicCamera);
-	if(g_Config.m_QmCinematicCamera)
-	{
-		static int s_QmCinematicCameraSmoothnessInputId;
-		RenderValue("qmclient-cinematic-camera-smoothness", "Cinematic smoothness", &s_QmCinematicCameraSmoothnessInputId, &g_Config.m_QmCinematicCameraSmoothness, 0, 100, "%");
 	}
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, "Instant zoom reverse", Localize("Instant zoom reverse"), &g_Config.m_QmZoomInstantReverse);
 	static int s_QmUiScaleInputId;

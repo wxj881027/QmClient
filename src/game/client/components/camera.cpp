@@ -10,6 +10,7 @@
 #include <base/system.h>
 #include <base/vmath.h>
 
+#include <engine/demo.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
@@ -104,8 +105,7 @@ CCamera::CCamera()
 	m_DynamicFovTarget = 1.0f;
 	m_DynamicFovCurrent = 1.0f;
 	m_DynamicFovAppliedFactor = 1.0f;
-	m_CinematicCameraSmoothing = false;
-	m_CinematicCameraPosition = vec2(0.0f, 0.0f);
+	m_FreeviewCameraSmoothing.Reset();
 
 	m_AutoSpecCamera = true;
 	m_AutoSpecCameraZooming = false;
@@ -469,27 +469,29 @@ void CCamera::OnRender()
 			m_CamType = CAMTYPE_SPEC;
 		}
 		const vec2 TargetCenter = GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy];
-		if(g_Config.m_QmCinematicCamera && g_Config.m_QmCinematicCameraSmoothness > 0)
+		QmCameraEffects::SFreeviewCameraInput Input;
+		Input.m_ClientState = Client()->State();
+		Input.m_Spectating = GameClient()->m_Snap.m_SpecInfo.m_Active;
+		Input.m_UsePosition = GameClient()->m_Snap.m_SpecInfo.m_UsePosition;
+		Input.m_SpectatorId = GameClient()->m_Snap.m_SpecInfo.m_SpectatorId;
+		Input.m_Connection = g_Config.m_ClDummy;
+		Input.m_Enabled = g_Config.m_QmCinematicCamera != 0;
+		Input.m_Smoothness = g_Config.m_QmCinematicCameraSmoothness;
+		if(Input.m_ClientState == IClient::STATE_DEMOPLAYBACK)
 		{
-			if(!m_CinematicCameraSmoothing)
-			{
-				m_CinematicCameraPosition = m_Center;
-				m_CinematicCameraSmoothing = true;
-			}
-			// 0-100 平滑度映射为指数阻尼半衰期：80 档≈原有 0.09s 手感，0 档为瞬移语义。
-			const float HalfLife = 0.0012f * g_Config.m_QmCinematicCameraSmoothness;
-			m_CinematicCameraPosition = QmCameraEffects::SmoothPosition(m_CinematicCameraPosition, TargetCenter, Client()->RenderFrameTime(), HalfLife);
-			m_Center = m_CinematicCameraPosition;
+			const IDemoPlayer::CInfo *pInfo = DemoPlayer()->BaseInfo();
+			Input.m_DemoPaused = pInfo->m_Paused;
+			Input.m_DemoSpeed = pInfo->m_Speed;
+			Input.m_DemoTick = pInfo->m_CurrentTick;
+			Input.m_TickSpeed = Client()->GameTickSpeed();
 		}
-		else
-		{
-			m_Center = TargetCenter;
-			m_CinematicCameraSmoothing = false;
-		}
+		if(QmCameraEffects::UseFreeviewCameraSettings(Input))
+			m_CameraSmoothing = false;
+		m_Center = m_FreeviewCameraSmoothing.Update(Input, m_Center, TargetCenter, Client()->RenderFrameTime());
 	}
 	else
 	{
-		m_CinematicCameraSmoothing = false;
+		m_FreeviewCameraSmoothing.Reset();
 		if(m_CamType != CAMTYPE_PLAYER)
 		{
 			GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy] = m_aLastPos[g_Config.m_ClDummy];
@@ -508,7 +510,7 @@ void CCamera::OnRender()
 	{
 		GameClient()->m_Controls.m_aMouseInputType[g_Config.m_ClDummy] = CControls::EMouseInputType::AUTOMATED;
 		m_Center = GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy] = m_ForceFreeviewPos;
-		m_CinematicCameraSmoothing = false;
+		m_FreeviewCameraSmoothing.Reset();
 		m_ForceFreeview = false;
 	}
 	else
@@ -607,10 +609,16 @@ void CCamera::OnConsoleInit()
 	Console()->Register("qm_spec_teleport", "", CFGFLAG_CLIENT, ConSpectatorTeleportToHoveredTele, this, "Teleport free spectator camera between hovered tele-in/out or checkpoint tele and a matching counterpart");
 }
 
+void CCamera::OnStateChange(int NewState, int OldState)
+{
+	if(NewState != OldState)
+		m_FreeviewCameraSmoothing.Reset();
+}
+
 void CCamera::OnReset()
 {
 	m_CameraSmoothing = false;
-	m_CinematicCameraSmoothing = false;
+	m_FreeviewCameraSmoothing.Reset();
 	m_DriftTargetOffset = vec2(0.0f, 0.0f);
 	m_DriftCurrentOffset = vec2(0.0f, 0.0f);
 	m_DynamicFovTarget = 1.0f;

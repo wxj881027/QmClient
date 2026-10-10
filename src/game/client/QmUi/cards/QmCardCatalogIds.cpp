@@ -24,6 +24,7 @@ namespace qm_card_catalog
 			"qm:chat_bubble",
 			"qm:focus_mode",
 			"qm:camera_view",
+			"qm:spectator_mode",
 			"qm:skin_transition",
 			"qm:weapon_animation",
 			"qm:streamer",

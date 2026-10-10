@@ -127,3 +127,178 @@ TEST(QmCameraEffects, SmoothPositionRejectsInvalidTimeAndHalfLife)
 	EXPECT_EQ(QmCameraEffects::SmoothPosition(Start, Target, 0.016f, 0.0f), Start);
 	EXPECT_EQ(QmCameraEffects::SmoothPosition(Start, Target, 0.016f, -0.09f), Start);
 }
+
+namespace
+{
+	QmCameraEffects::SFreeviewCameraInput FreeviewInput(int State = IClient::STATE_ONLINE)
+	{
+		QmCameraEffects::SFreeviewCameraInput Input;
+		Input.m_ClientState = State;
+		Input.m_Spectating = true;
+		Input.m_Enabled = true;
+		Input.m_DemoTick = 100;
+		return Input;
+	}
+}
+
+TEST(QmFreeviewCamera, LiveAndDemoUseTheSameMouseSmoothing)
+{
+	QmCameraEffects::CFreeviewCameraSmoothing Live, Demo;
+	const auto LiveInput = FreeviewInput();
+	const auto DemoInput = FreeviewInput(IClient::STATE_DEMOPLAYBACK);
+	vec2 LiveCenter{}, DemoCenter{};
+	for(int Frame = 0; Frame < 20; ++Frame)
+	{
+		LiveCenter = Live.Update(LiveInput, LiveCenter, vec2(100, 50), 1.0f / 60.0f);
+		DemoCenter = Demo.Update(DemoInput, DemoCenter, vec2(100, 50), 1.0f / 60.0f);
+		EXPECT_EQ(LiveCenter, DemoCenter);
+	}
+	EXPECT_GT(LiveCenter.x, 0.0f);
+	EXPECT_LT(LiveCenter.x, 100.0f);
+}
+
+TEST(QmFreeviewCamera, FollowingAndNormalGameplayDoNotSmoothAndClearFreeviewState)
+{
+	for(int State : {IClient::STATE_ONLINE, IClient::STATE_DEMOPLAYBACK})
+	{
+		SCOPED_TRACE(State);
+		for(int Mode = 0; Mode < 3; ++Mode)
+		{
+			SCOPED_TRACE(Mode);
+			QmCameraEffects::CFreeviewCameraSmoothing Camera;
+			auto Input = FreeviewInput(State);
+			Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+			if(Mode == 0)
+				Input.m_Spectating = false;
+			else if(Mode == 1)
+				Input.m_UsePosition = true;
+			else
+				Input.m_SpectatorId = 5;
+			EXPECT_EQ(Camera.Update(Input, vec2(50, 0), vec2(200, 0), 0.096f), vec2(200, 0));
+			EXPECT_FALSE(Camera.Active());
+		}
+	}
+}
+
+TEST(QmFreeviewCamera, PausingAndResumingReanchorAndPausedMouseStillMoves)
+{
+	QmCameraEffects::CFreeviewCameraSmoothing Camera;
+	auto Input = FreeviewInput(IClient::STATE_DEMOPLAYBACK);
+	Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+	Input.m_DemoPaused = true;
+	EXPECT_NEAR(Camera.Update(Input, vec2(200, 0), vec2(400, 0), 0.096f).x, 300.0f, 0.001f);
+	EXPECT_NEAR(Camera.Update(Input, vec2(300, 0), vec2(500, 0), 0.096f).x, 400.0f, 0.001f);
+	Input.m_DemoPaused = false;
+	EXPECT_NEAR(Camera.Update(Input, vec2(600, 0), vec2(800, 0), 0.096f).x, 700.0f, 0.001f);
+}
+
+TEST(QmFreeviewCamera, SpeedChangeReanchorsWithoutScalingMouseFrameTime)
+{
+	QmCameraEffects::CFreeviewCameraSmoothing Camera;
+	auto Input = FreeviewInput(IClient::STATE_DEMOPLAYBACK);
+	Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+	Input.m_DemoSpeed = 4.0f;
+	EXPECT_NEAR(Camera.Update(Input, vec2(200, 0), vec2(400, 0), 0.096f).x, 300.0f, 0.001f);
+	// 正常倍速前进的 tick 不应被当作跳转，也不应重用外部旧锚点。
+	Input.m_DemoTick += 19;
+	EXPECT_NEAR(Camera.Update(Input, vec2(0, 0), vec2(500, 0), 0.096f).x, 400.0f, 0.001f);
+}
+
+TEST(QmFreeviewCamera, TimelineJumpsReanchorForBothSeekDirections)
+{
+	for(int Tick : {0, 1000, std::numeric_limits<int>::min(), std::numeric_limits<int>::max()})
+	{
+		SCOPED_TRACE(Tick);
+		QmCameraEffects::CFreeviewCameraSmoothing Camera;
+		auto Input = FreeviewInput(IClient::STATE_DEMOPLAYBACK);
+		Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+		Input.m_DemoTick = Tick;
+		EXPECT_NEAR(Camera.Update(Input, vec2(200, 0), vec2(400, 0), 0.096f).x, 300.0f, 0.001f);
+	}
+}
+
+TEST(QmFreeviewCamera, PausedSingleTickSeekReanchors)
+{
+	QmCameraEffects::CFreeviewCameraSmoothing Camera;
+	auto Input = FreeviewInput(IClient::STATE_DEMOPLAYBACK);
+	Input.m_DemoPaused = true;
+	Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+	++Input.m_DemoTick;
+	EXPECT_NEAR(Camera.Update(Input, vec2(200, 0), vec2(400, 0), 0.096f).x, 300.0f, 0.001f);
+}
+
+TEST(QmFreeviewCamera, PlaybackSourceAndConnectionChangesDoNotReusePreviousAnchor)
+{
+	QmCameraEffects::CFreeviewCameraSmoothing Camera;
+	auto Input = FreeviewInput();
+	Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+	Input.m_ClientState = IClient::STATE_DEMOPLAYBACK;
+	EXPECT_NEAR(Camera.Update(Input, vec2(200, 0), vec2(400, 0), 0.096f).x, 300.0f, 0.001f);
+	Input.m_Connection = 1;
+	EXPECT_NEAR(Camera.Update(Input, vec2(600, 0), vec2(800, 0), 0.096f).x, 700.0f, 0.001f);
+	Input.m_ClientState = IClient::STATE_OFFLINE;
+	EXPECT_EQ(Camera.Update(Input, vec2(), vec2(900, 0), 0.096f), vec2(900, 0));
+	EXPECT_FALSE(Camera.Active());
+}
+
+TEST(QmFreeviewCamera, DisabledAndZeroSmoothnessSnapThenReenableFromCurrentPosition)
+{
+	for(bool Enabled : {false, true})
+	{
+		SCOPED_TRACE(Enabled);
+		QmCameraEffects::CFreeviewCameraSmoothing Camera;
+		auto Input = FreeviewInput();
+		Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+		Input.m_Enabled = Enabled;
+		Input.m_Smoothness = Enabled ? 0 : 80;
+		EXPECT_EQ(Camera.Update(Input, vec2(50, 0), vec2(200, 0), 0.096f), vec2(200, 0));
+		EXPECT_FALSE(Camera.Active());
+		Input.m_Enabled = true;
+		Input.m_Smoothness = 80;
+		EXPECT_NEAR(Camera.Update(Input, vec2(200, 0), vec2(400, 0), 0.096f).x, 300.0f, 0.001f);
+	}
+}
+
+TEST(QmFreeviewCamera, InvalidFrameTimeKeepsFiniteStateAndNextFrameRecovers)
+{
+	QmCameraEffects::CFreeviewCameraSmoothing Camera;
+	const auto Input = FreeviewInput(IClient::STATE_DEMOPLAYBACK);
+	const vec2 Before = Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+	for(float Delta : {0.0f, -1.0f, std::numeric_limits<float>::infinity(), std::numeric_limits<float>::quiet_NaN()})
+		EXPECT_EQ(Camera.Update(Input, Before, vec2(200, 0), Delta), Before);
+	const vec2 After = Camera.Update(Input, Before, vec2(200, 0), 0.016f);
+	EXPECT_TRUE(std::isfinite(After.x));
+	EXPECT_GT(After.x, Before.x);
+	EXPECT_LT(After.x, 200.0f);
+}
+
+TEST(QmFreeviewCamera, ForcedPositionResetDiscardsPriorAnchor)
+{
+	QmCameraEffects::CFreeviewCameraSmoothing Camera;
+	const auto Input = FreeviewInput();
+	Camera.Update(Input, vec2(), vec2(100, 0), 0.096f);
+	Camera.Reset();
+	EXPECT_FALSE(Camera.Active());
+	EXPECT_NEAR(Camera.Update(Input, vec2(200, 0), vec2(400, 0), 0.096f).x, 300.0f, 0.001f);
+}
+
+TEST(QmFreeviewCamera, DisabledOptionKeepsNativeTransitionAndEnabledZeroSmoothnessOverridesIt)
+{
+	for(int State : {IClient::STATE_ONLINE, IClient::STATE_DEMOPLAYBACK})
+	{
+		SCOPED_TRACE(State);
+		auto Input = FreeviewInput(State);
+		Input.m_Enabled = false;
+		EXPECT_FALSE(QmCameraEffects::UseFreeviewCameraSettings(Input));
+		Input.m_Enabled = true;
+		Input.m_Smoothness = 0;
+		EXPECT_TRUE(QmCameraEffects::UseFreeviewCameraSettings(Input));
+		Input.m_Smoothness = 80;
+		EXPECT_TRUE(QmCameraEffects::UseFreeviewCameraSettings(Input));
+		Input.m_UsePosition = true;
+		EXPECT_FALSE(QmCameraEffects::UseFreeviewCameraSettings(Input));
+		Input.m_UsePosition = false;
+		Input.m_Spectating = false;
+		EXPECT_FALSE(QmCameraEffects::UseFreeviewCameraSettings(Input));
+	}
+}

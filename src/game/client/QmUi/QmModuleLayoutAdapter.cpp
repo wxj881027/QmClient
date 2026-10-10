@@ -98,6 +98,7 @@ namespace qm_module
 		case EQmModuleId::SkinTransition: return "qm:skin_transition";
 		case EQmModuleId::SkinAppearance: return "qm:skin_appearance";
 		case EQmModuleId::CameraView: return "qm:camera_view";
+		case EQmModuleId::SpectatorMode: return "qm:spectator_mode";
 		case EQmModuleId::DummyMiniView: return "qm:dummy_miniview";
 		case EQmModuleId::Coords: return "qm:coords";
 		case EQmModuleId::Streamer: return "qm:streamer";

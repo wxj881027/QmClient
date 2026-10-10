@@ -1,7 +1,5 @@
 #include "qm_realtime.h"
 
-#include "decorative_throw_policy.h"
-
 #include <engine/shared/json.h>
 #include <engine/shared/protocol.h>
 
@@ -16,16 +14,6 @@ namespace
 	const json_value *ObjectField(const json_value *pObject, const char *pName)
 	{
 		return pObject && pObject->type == json_object ? json_object_get(pObject, pName) : nullptr;
-	}
-	bool VectorField(const json_value *pObject, const char *pName, vec2 &Out)
-	{
-		const json_value *pVector = ObjectField(pObject, pName);
-		const json_value *pX = ObjectField(pVector, "x");
-		const json_value *pY = ObjectField(pVector, "y");
-		if(!pX || !pY || (pX->type != json_integer && pX->type != json_double) || (pY->type != json_integer && pY->type != json_double))
-			return false;
-		Out = vec2(pX->type == json_integer ? pX->u.integer : pX->u.dbl, pY->type == json_integer ? pY->u.integer : pY->u.dbl);
-		return std::isfinite(Out.x) && std::isfinite(Out.y);
 	}
 	bool IntegerField(const json_value *pObject, const char *pName, int &Out)
 	{
@@ -110,29 +98,6 @@ bool ParseQmRealtimeMessage(const char *pData, size_t Size, SQmRealtimeMessage &
 		OutMessage.m_pTitlePayload = std::shared_ptr<const json_value>(pPayload, [pRoot](const json_value *) { json_value_free(pRoot); });
 		OutMessage.m_pPayload = OutMessage.m_pTitlePayload;
 		return true;
-	}
-	else if(str_comp(pType->u.string.ptr, "decorative_throw") == 0)
-	{
-		OutMessage.m_Event = EQmRealtimeEvent::DECORATIVE_THROW;
-		const json_value *pObject = ObjectField(pRoot, "data");
-		const char *pClient = StringField(pObject, "client_id");
-		const char *pName = StringField(pObject, "player_name");
-		const char *pServer = StringField(pObject, "server_address");
-		const int Type = QmDecorativeThrow::TypeFromName(StringField(pObject, "projectile"));
-		const json_value *pPlayer = ObjectField(pObject, "player_id");
-		if(pClient && pClient[0] && str_length(pClient) <= 128 && pName && str_length(pName) <= 63 &&
-			pServer && pServer[0] && str_length(pServer) <= 128 && Type >= 0 &&
-			pPlayer && pPlayer->type == json_integer && pPlayer->u.integer >= 0 && pPlayer->u.integer < MAX_CLIENTS &&
-			VectorField(pObject, "origin", OutMessage.m_ThrowOrigin) && VectorField(pObject, "direction", OutMessage.m_ThrowDirection) &&
-			QmDecorativeThrow::ValidGeometry(OutMessage.m_ThrowOrigin, OutMessage.m_ThrowDirection))
-		{
-			OutMessage.m_PlayerId = static_cast<int>(pPlayer->u.integer);
-			OutMessage.m_ThrowType = Type;
-			OutMessage.m_ThrowClientId = pClient;
-			OutMessage.m_ThrowPlayerName = pName;
-			OutMessage.m_ThrowServerAddress = pServer;
-			OutMessage.m_HasDecorativeThrow = true;
-		}
 	}
 	else if(str_comp(pType->u.string.ptr, "emoticon") != 0)
 	{

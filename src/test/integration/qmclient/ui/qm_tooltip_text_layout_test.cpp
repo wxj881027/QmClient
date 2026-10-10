@@ -19,6 +19,14 @@ namespace
 			return QmTooltipMeasureText(TextRender(), pText, Font, Width, Available, 5);
 		}
 
+		struct CCachedContainer
+		{
+			ITextRender &m_TextRender;
+			CQmTooltipTextCache m_Cache;
+			explicit CCachedContainer(ITextRender &TextRender) : m_TextRender(TextRender) {}
+			~CCachedContainer() { m_Cache.Clear(m_TextRender); }
+		};
+
 		// 容器在断言失败时也释放，不让下一项测试继承文字资源。
 		struct CContainer
 		{
@@ -325,4 +333,76 @@ TEST_F(QmTooltipTextLayout, WrappedInkKeepsEqualPaddingAtFractionalPixelScale)
 	EXPECT_EQ(Cursor.m_LineCount, Layout.m_LineCount);
 	EXPECT_NEAR(Cursor.m_VisualLeft, Layout.m_Padding, 0.001f);
 	EXPECT_NEAR(Layout.m_Size.x - Cursor.m_VisualRight, Layout.m_Padding, 0.001f);
+}
+
+TEST_F(QmTooltipTextLayout, CachedTextKeepsFinalGlyphsInsideClipWhileBubbleMovesAndResizes)
+{
+	const CUIRect Screen{100, 50, 600, 400};
+	auto *pGraphics = static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
+	pGraphics->SetFramebufferSize(1280, 720);
+	pGraphics->MapScreen(Screen.x, Screen.y, Screen.x + Screen.w, Screen.y + Screen.h);
+	const char *pText = "切换气泡保留最后字\nEnglish final Z";
+	const auto Layout = Measure(pText, vec2(500, 300), 110, 13.37f);
+	ASSERT_FALSE(Layout.m_Truncated);
+	const CUIRect Target = QmTooltipRect({400, 230, 100, 20}, Screen, Layout.m_Size, 5);
+	CContainer Reference(TextRender());
+	const auto Expected = QmTooltipCreateText(TextRender(), Layout, pText, vec2(0, 0), Reference.m_Index);
+	ASSERT_EQ(Expected.m_CharCount, str_length(pText));
+	const vec2 Offset = Target.TopLeft() + vec2(Layout.m_Padding + Layout.m_TextOffsetX, Layout.m_Padding + Layout.m_TextOffsetY);
+	// 宽气泡变高与窄气泡变宽分别让高度、宽度成为统一比例的限制项。
+	for(const CUIRect Initial : std::array<CUIRect, 2>{{{120, 70, 220, 16}, {180, 120, 24, 160}}})
+	{
+		SCOPED_TRACE(Initial.w);
+		CCachedContainer Container(TextRender());
+		auto &Cache = Container.m_Cache;
+		CQmTooltipMotionState Motion;
+		Motion.Update(Initial, 0, true);
+		Motion.Update(Target, 1, true);
+		int FirstIndex = -1;
+		uint64_t FirstUploads = 0;
+		for(double Now : std::array<double, 5>{1.0, 1.04, 1.08, 1.16, 1.3})
+		{
+			SCOPED_TRACE(Now);
+			const CUIRect Bubble = QmTooltipAnimatedRect(Motion.Update(Target, Now, true), Screen, QmTooltipScale(0.25f, true));
+			const CUIRect Projection = QmTooltipTextProjection(Screen, Target, Bubble);
+			pGraphics->MapScreen(Screen.x, Screen.y, Screen.x + Screen.w, Screen.y + Screen.h);
+			{
+				CQmTooltipTextScope Scope(TextRender());
+				Cache.Update(TextRender(), QmTooltipTextCursor({}, Layout.m_FontSize, Layout.m_LineWidth, 0), pText);
+			}
+			ASSERT_TRUE(Cache.Index().Valid());
+			const CTextCursor &Cached = Cache.LayoutCursor();
+			ASSERT_TRUE(Cached.m_HasVisualBoundingBox);
+			EXPECT_EQ(Cached.m_CharCount, str_length(pText));
+			EXPECT_EQ(Cached.m_LineCount, Expected.m_LineCount);
+			EXPECT_FLOAT_EQ(Cached.Height(), Expected.Height());
+			const bool FirstFrame = FirstIndex < 0;
+			if(FirstFrame)
+				FirstIndex = Cache.Index().m_Index;
+			EXPECT_EQ(Cache.Index().m_Index, FirstIndex);
+			m_Ui.ClipEnable(&Bubble);
+			pGraphics->MapScreen(Projection.x, Projection.y, Projection.x + Projection.w, Projection.y + Projection.h);
+			const uint64_t Before = pGraphics->m_Quads;
+			TextRender().RenderTextContainer(Cache.Index(), ColorRGBA(1, 1, 1, 1), ColorRGBA(0, 0, 0, 1), Offset.x, Offset.y);
+			EXPECT_EQ(pGraphics->m_Quads - Before, static_cast<uint64_t>(Expected.m_GlyphCount));
+			// 首次绘制允许刷新待上传字形；后续投影变化不能重新上传正文。
+			if(FirstFrame)
+				FirstUploads = pGraphics->m_Uploads;
+			EXPECT_EQ(pGraphics->m_Uploads, FirstUploads);
+			float X0, Y0, X1, Y1;
+			pGraphics->GetScreen(&X0, &Y0, &X1, &Y1);
+			// 对真实缓存的填充范围应用设备投影，包含全部末字，而非只数提交的 quad。
+			const auto Project = [&](vec2 Point) {
+				return vec2(Screen.x + (Point.x - X0) * Screen.w / (X1 - X0), Screen.y + (Point.y - Y0) * Screen.h / (Y1 - Y0));
+			};
+			const vec2 TopLeft = Project(Offset + vec2(Cached.m_VisualLeft, Cached.m_VisualTop));
+			const vec2 BottomRight = Project(Offset + vec2(Cached.m_VisualRight, Cached.m_VisualBottom));
+			EXPECT_GE(TopLeft.x, Bubble.x - 0.001f);
+			EXPECT_GE(TopLeft.y, Bubble.y - 0.001f);
+			EXPECT_LE(BottomRight.x, Bubble.x + Bubble.w + 0.001f);
+			EXPECT_LE(BottomRight.y, Bubble.y + Bubble.h + 0.001f);
+			pGraphics->MapScreen(Screen.x, Screen.y, Screen.x + Screen.w, Screen.y + Screen.h);
+			m_Ui.ClipDisable();
+		}
+	}
 }

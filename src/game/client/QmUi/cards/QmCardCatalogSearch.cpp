@@ -103,10 +103,6 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_emoticons[] = {
-			{Localizable("Decorative throws"), nullptr, "qm_decorative_throws 草 番茄 鸡蛋 装饰投掷"},
-			{Localizable("Throw grass key"), nullptr, "qm_throw grass 投草 绑定"},
-			{Localizable("Throw tomato key"), nullptr, "qm_throw tomato 投番茄 绑定"},
-			{Localizable("Throw egg key"), nullptr, "qm_throw egg 投鸡蛋 绑定"},
 			{Localizable("Launch emote key"), nullptr, "发射表情按键"},
 			{Localizable("Show other players' large emoticons"), nullptr, "显示他人的超大表情"},
 			{Localizable("Show other players' launched emoticons"), nullptr, "显示他人的发射表情"},
@@ -1337,7 +1333,6 @@ namespace qm_card_catalog
 
 		static constexpr SCardSettingSearch s_aqm_camera_view[] = {
 			{Localizable("Aspect ratio preset"), nullptr, "纵横比预设"},
-			{Localizable("Cinematic camera"), nullptr, "电影镜头"},
 			{Localizable("Current aspect ratio:"), nullptr, "当前宽高比："},
 			{Localizable("Current aspect ratio: Show default"), nullptr, "当前宽高比：显示默认"},
 			{Localizable("Custom"), nullptr, "自定义"},
@@ -1358,12 +1353,20 @@ namespace qm_card_catalog
 			{nullptr, "qm_camera_drift_amount", nullptr},
 			{nullptr, "qm_camera_drift_reverse", nullptr},
 			{nullptr, "qm_camera_drift_smoothness", nullptr},
-			{nullptr, "qm_cinematic_camera", nullptr},
 			{nullptr, "qm_dynamic_fov", nullptr},
 			{nullptr, "qm_dynamic_fov_amount", nullptr},
 			{nullptr, "qm_dynamic_fov_smoothness", nullptr},
 			{nullptr, "qm_ui_scale", nullptr},
 			{nullptr, "qm_zoom_instant_reverse", nullptr},
+		};
+
+		static constexpr SCardSettingSearch s_aqm_spectator_mode[] = {
+			{Localizable("Spectate mode"), nullptr, "观战模式"},
+			{Localizable("Smooth free spectator camera"), nullptr, "平滑自由观战镜头"},
+			{Localizable("Cinematic camera"), nullptr, "电影镜头"},
+			{Localizable("Cinematic smoothness"), nullptr, "电影镜头平滑度"},
+			{nullptr, "qm_cinematic_camera", nullptr},
+			{nullptr, "qm_cinematic_camera_smoothness", nullptr},
 		};
 
 		static constexpr SCardSettingSearch s_aqm_weapon_animation[] = {
@@ -2956,7 +2959,10 @@ namespace qm_card_catalog
 			{Localizable("Turning this off only changes your display."), nullptr, "关闭后仅影响本机显示。"},
 			{Localizable("Up to 6 Chinese or 12 ASCII characters"), nullptr, "最多 6 个中文或 12 个英文字符"},
 			{Localizable("Use style colors", "Title color mode"), nullptr, "使用风格颜色", "Title color mode"},
-			{Localizable("Vertical movement of each character. Zero keeps the title still."), nullptr, "调整文字上下起伏的幅度，设为零时保持静止。"},
+			{Localizable("Strength of the vertical or pop wave. Zero keeps the title still."), nullptr, "调整上下波动或放大凸起的强度，设为零时保持静止。"},
+			{Localizable("Title motion"), nullptr, "头衔动画"},
+			{Localizable("Vertical wave"), nullptr, "上下波动"},
+			{Localizable("Pop wave"), nullptr, "放大凸起"},
 			{Localizable("Wave amount"), nullptr, "波浪幅度"},
 			{Localizable("Wave spacing"), nullptr, "波浪间距"},
 			{Localizable("Wave speed"), nullptr, "波浪速度"},
@@ -2971,6 +2977,7 @@ namespace qm_card_catalog
 			{nullptr, "qm_sponsor_chat_style", nullptr},
 			{nullptr, "qm_title_advanced", nullptr},
 			{nullptr, "qm_title_bloom", nullptr},
+			{nullptr, "qm_title_motion_mode", nullptr},
 			{nullptr, "qm_title_bob_amplitude", nullptr},
 			{nullptr, "qm_title_bob_pixel_snap", nullptr},
 			{nullptr, "qm_title_bob_speed", nullptr},
@@ -3037,7 +3044,10 @@ namespace qm_card_catalog
 			{Localizable("Turning this off only changes your display."), nullptr, "关闭后仅影响本机显示。"},
 			{Localizable("Up to 6 Chinese or 12 ASCII characters"), nullptr, "最多 6 个中文或 12 个英文字符"},
 			{Localizable("Use style colors", "Title color mode"), nullptr, "使用风格颜色", "Title color mode"},
-			{Localizable("Vertical movement of each character. Zero keeps the title still."), nullptr, "调整文字上下起伏的幅度，设为零时保持静止。"},
+			{Localizable("Strength of the vertical or pop wave. Zero keeps the title still."), nullptr, "调整上下波动或放大凸起的强度，设为零时保持静止。"},
+			{Localizable("Title motion"), nullptr, "头衔动画"},
+			{Localizable("Vertical wave"), nullptr, "上下波动"},
+			{Localizable("Pop wave"), nullptr, "放大凸起"},
 			{Localizable("Wave amount"), nullptr, "波浪幅度"},
 			{Localizable("Wave spacing"), nullptr, "波浪间距"},
 			{Localizable("Wave speed"), nullptr, "波浪速度"},
@@ -3052,6 +3062,7 @@ namespace qm_card_catalog
 			{nullptr, "qm_sponsor_chat_style", nullptr},
 			{nullptr, "qm_title_advanced", nullptr},
 			{nullptr, "qm_title_bloom", nullptr},
+			{nullptr, "qm_title_motion_mode", nullptr},
 			{nullptr, "qm_title_bob_amplitude", nullptr},
 			{nullptr, "qm_title_bob_pixel_snap", nullptr},
 			{nullptr, "qm_title_bob_speed", nullptr},
@@ -3167,6 +3178,7 @@ namespace qm_card_catalog
 			{"deck:tee-glow", s_adeck_tee_glow, std::size(s_adeck_tee_glow)},
 			{"qm:chat_bubble", s_aqm_chat_bubble, std::size(s_aqm_chat_bubble)},
 			{"qm:camera_view", s_aqm_camera_view, std::size(s_aqm_camera_view)},
+			{"qm:spectator_mode", s_aqm_spectator_mode, std::size(s_aqm_spectator_mode)},
 			{"qm:weapon_animation", s_aqm_weapon_animation, std::size(s_aqm_weapon_animation)},
 			{"qm:streamer", s_aqm_streamer, std::size(s_aqm_streamer)},
 			{"qm:focus_mode", s_aqm_focus_mode, std::size(s_aqm_focus_mode)},

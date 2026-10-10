@@ -89,6 +89,28 @@ TEST(QmRealtime, ParsesAnonymousEmoticonServerAddress)
 	EXPECT_EQ(Message.m_EmoticonServerAddress, "[::1]:8303");
 }
 
+TEST(QmRealtime, RetiredDecorativeThrowsStayUnknownAndClearPreviousEmoticon)
+{
+	SQmRealtimeMessage Message;
+	const char *pEmoticon = R"({"type":"emoticon","data":{"client_id":"anon","player_id":3,"player_name":"tee","server_address":"example:8303","emoticon":5,"launch_mode":true}})";
+	const char *apProjectiles[] = {"grass", "tomato", "egg"};
+	for(const char *pProjectile : apProjectiles)
+	{
+		SCOPED_TRACE(pProjectile);
+		ASSERT_TRUE(ParseQmRealtimeMessage(pEmoticon, std::strlen(pEmoticon), Message));
+		ASSERT_TRUE(Message.m_HasEmoticon);
+		const std::string Data = std::string(R"({"type":"decorative_throw","data":{"client_id":"anon","player_id":3,"player_name":"tee","server_address":"example:8303","projectile":")") +
+					 pProjectile + R"(","origin":{"x":100,"y":-20},"direction":{"x":0.6,"y":-0.8}}})";
+		ASSERT_TRUE(ParseQmRealtimeMessage(Data.data(), Data.size(), Message));
+		EXPECT_EQ(Message.m_Event, EQmRealtimeEvent::UNKNOWN);
+		EXPECT_FALSE(Message.m_HasEmoticon);
+		EXPECT_FALSE(Message.m_EmoticonPayloadValid);
+		EXPECT_EQ(Message.m_PlayerId, -1);
+		EXPECT_FALSE(Message.m_HasRealtimeData);
+		EXPECT_EQ(Message.m_pPayload, nullptr);
+	}
+}
+
 TEST(QmRealtime, ParsesLaunchMode)
 {
 	SQmRealtimeMessage Message;

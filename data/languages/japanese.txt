@@ -3122,9 +3122,6 @@ Debug SQL.
 Debug tile layer clipping.
 == デバッグタイルレイヤークリッピング
 
-Decorative throws
-== 装飾用の投げ物
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 専用 WebSocket エンドポイント（空欄なら wss://qmclient.icu/ws を使用）
 
@@ -3878,9 +3875,6 @@ Edit touch controls
 Editor
 == エディター
 
-Egg
-== 卵
-
 Elastic
 == エラスティック
 
@@ -4003,9 +3997,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == フリーズ時にカスタム予測マージンを有効化
-
-Enable decorative grass, tomato and egg throws
-== 草・トマト・卵の装飾用投げ物を有効にする
 
 Enable Deleting
 == 削除を有効化
@@ -4222,9 +4213,6 @@ Enable skin switch animation
 
 Enable skin transition animation, then choose the type, scope, duration and easing.
 == スキン切り替えアニメを有効にし、種類・範囲・時間・イージングを選びます。
-
-Enable smooth cinematic camera while free spectating
-== フリー観戦中に滑らかなシネマティックカメラを有効にする
 
 Enable SodaMusic Hook
 == SodaMusic Hook を有効化
@@ -5344,9 +5332,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == グラフィックス追跡レベル：0 = オフ、1 = 定期サマリー、2 = サマリーと遅いフレーム、3 = 詳細なバックエンド追跡
-
-Grass
-== 草
 
 Greek
 == ギリシャ文字
@@ -8822,6 +8807,9 @@ Points unavailable
 Polished
 == 光沢
 
+Pop wave
+== 拡大の波
+
 Popup & dropdown blur
 == ポップアップとドロップダウンのぼかし
 
@@ -12101,6 +12089,9 @@ Smooth Dynamic Camera
 Smooth fade
 == スムーズフェード
 
+Smooth free spectator camera
+== 自由観戦カメラを滑らかに移動
+
 Smooth other players' predicted movement
 == 他のプレイヤーの予測移動をスムーズにする
 
@@ -12109,6 +12100,9 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == メニュー/エディターでのスムーズスクロールアニメーション時間（ms、0 = オフ）
+
+Smooth the mouse-driven camera in live and demo free spectating
+== ゲームとデモの自由観戦でマウス操作のカメラを滑らかに移動
 
 Smooth zoom animation time in editor (in ms, 0=off)
 == エディターでのスムーズズームアニメーション時間（ms、0 = オフ）
@@ -12499,6 +12493,9 @@ Streamer mode
 
 Strength icons assets
 == 強さアイコンアセット
+
+Strength of the vertical or pop wave. Zero keeps the title still.
+== 上下または拡大の波の強さ。ゼロにすると称号が静止します。
 
 Stress system (debug builds only).
 == ストレスシステム（デバッグビルドのみ）
@@ -13214,21 +13211,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == このツールチップは ui_widget::Tooltip が提供しています。CTooltips の薄いラッパーです。
 
-Throw a decorative grass, tomato or egg projectile
-== 草・トマト・卵の装飾物を投げる
-
-Throw egg key
-== 卵を投げるキー
-
-Throw grass key
-== 草を投げるキー
-
-Throw tomato key
-== トマトを投げるキー
-
-Throwables
-== 投げ物
-
 Tick delay before executing qm_execute_on_join
 == qm_execute_on_join 実行前の遅延（tick）
 
@@ -13337,14 +13319,17 @@ Title display
 Title light sweep speed in 1/100 row per second (0 = off)
 == タイトルの光の走査速度（毎秒 1/100 行、0 = 無効）
 
+Title motion
+== 称号アニメーション
+
+Title motion: 0 = vertical wave, 1 = pop wave
+== 称号アニメーション：0 = 上下の波、1 = 拡大の波
+
 Title opacity
 == 称号の不透明度
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == タイトルの文字ごとの位相（1 ピクセルあたり 1/1000 px、0 = スタイル既定値、20 = 光の帯が見える）
-
-Title per-character vertical bob amplitude in pixels (0 = off)
-== タイトルの文字ごとの上下振幅（ピクセル、0 = 無効）
 
 Title preview
 == タイトルの仕上がりプレビュー
@@ -13366,6 +13351,9 @@ Title too long or contains unsupported characters
 
 Title visibility and appearance
 == 称号の表示と外観
+
+Title wave strength (0-3, 0 = off)
+== 称号の波の強さ（0-3、0 = 無効）
 
 to check a server setting say /settings and setting's name, setting names are:
 == サーバー設定を確認するには /settings と設定名を入力します。設定名は次のとおりです:
@@ -13501,9 +13489,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == このサーバーを特定のコミュニティに登録するためのトークン
-
-Tomato
-== トマト
 
 Too many configuration files.
 == 設定ファイルが多すぎます。
@@ -14249,14 +14234,14 @@ Version
 Version performing the analysis
 == 分析を実行するバージョン
 
-Vertical movement of each character. Zero keeps the title still.
-== 文字ごとの上下の動き。ゼロにすると称号が静止します。
-
 Vertical position
 == 垂直位置
 
 Vertical sync (may cause lag)
 == 垂直同期（ラグの原因になる可能性あり）
+
+Vertical wave
+== 上下の波
 
 Video Background
 == ビデオ背景

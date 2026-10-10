@@ -10,6 +10,12 @@ void CTooltips::DoSettingsToolTipForConfig(const void *, const CUIRect *, const 
 {
 }
 
+// 本目标不启用菜单卡片说明作用域；括号标签解析由生产策略单元测试覆盖。
+const char *CTooltips::PrepareCardLabel(const CUIRect *, const char *pText, bool)
+{
+	return pText;
+}
+
 // 为 Itanium ABI 的 key function 提供定义，sanitizer 的 vptr 检查需要完整 RTTI。
 // 本目标不构造或测试完整 Tooltip 组件；真实文字布局由独立协作测试覆盖。
 void CTooltips::OnReset()

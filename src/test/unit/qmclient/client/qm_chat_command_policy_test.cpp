@@ -233,3 +233,33 @@ TEST(QmChatCommandPreview, ReadsCommandNameForServerCommandLookup)
 	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName("/", aName, sizeof(aName)));
 	EXPECT_FALSE(QmChatCommandPreview::ReadCommandName(nullptr, aName, sizeof(aName)));
 }
+
+TEST(QmChatSecurity, SensitiveLoginBypassesTheOrdinaryHistoryAndTranslationEntry)
+{
+	int SensitiveSends = 0;
+	int OrdinaryEntries = 0;
+	for(const char *pLine : {"/login secret", " \t/LOGIN secret", "/login\tsecret"})
+	{
+		SCOPED_TRACE(pLine);
+		EXPECT_EQ(CChat::DispatchChatMessage(pLine, [&] { ++SensitiveSends; }, [&] {
+			++OrdinaryEntries;
+			return CChat::EChatSendResult::QUEUED; }), CChat::EChatSendResult::SENT);
+	}
+	EXPECT_EQ(SensitiveSends, 3);
+	EXPECT_EQ(OrdinaryEntries, 0);
+	EXPECT_EQ(CChat::DispatchChatMessage("ordinary", [&] { ++SensitiveSends; }, [&] {
+		++OrdinaryEntries;
+		return CChat::EChatSendResult::REJECTED; }), CChat::EChatSendResult::REJECTED);
+	EXPECT_EQ(OrdinaryEntries, 1);
+	EXPECT_EQ(SensitiveSends, 3);
+}
+
+TEST(QmChatSecurity, EmptyInputDoesNotEnterEitherSendingPath)
+{
+	int Calls = 0;
+	for(const char *pLine : {static_cast<const char *>(nullptr), ""})
+		EXPECT_EQ(CChat::DispatchChatMessage(pLine, [&] { ++Calls; }, [&] {
+			++Calls;
+			return CChat::EChatSendResult::QUEUED; }), CChat::EChatSendResult::REJECTED);
+	EXPECT_EQ(Calls, 0);
+}

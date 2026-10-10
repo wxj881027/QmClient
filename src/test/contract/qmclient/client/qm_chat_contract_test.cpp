@@ -8,27 +8,6 @@
 
 #include <string>
 
-TEST(QmChatSecurity, SensitiveLoginCommandsAreNotPersisted)
-{
-	const std::string Chat = ReadTestSourceFile("src/game/client/components/chat.cpp");
-	const std::string OnMessage = SourceFunctionBody(Chat, "void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)");
-	const std::string SendChatQueued = SourceFunctionBody(Chat, "void CChat::SendChatQueued(int Team");
-
-	EXPECT_NE(OnMessage.find("GameClient()->IsLocalClientId(pMsg->m_ClientId)"), std::string::npos);
-	EXPECT_NE(OnMessage.find("IsSensitiveChatCommand(pMsg->m_pMessage)"), std::string::npos);
-	const size_t SensitiveCheck = SendChatQueued.find("if(IsSensitiveChatCommand(pLine))");
-	const size_t SendNow = SendChatQueued.find("SendChat(Team, pLine);");
-	const size_t TranslateCheck = SendChatQueued.find("ShouldAutoTranslateOutgoing(pLine)");
-	const size_t PendingQueue = SendChatQueued.find("m_PendingChatCounter");
-	ASSERT_NE(SensitiveCheck, std::string::npos);
-	ASSERT_NE(SendNow, std::string::npos);
-	ASSERT_NE(TranslateCheck, std::string::npos);
-	ASSERT_NE(PendingQueue, std::string::npos);
-	EXPECT_LT(SensitiveCheck, SendNow);
-	EXPECT_LT(SensitiveCheck, TranslateCheck);
-	EXPECT_LT(SendNow, PendingQueue);
-}
-
 TEST(QmChatMessageMerge, HighlightedMessagesAreNotMerged)
 {
 	const std::string Chat = ReadTestSourceFile("src/game/client/components/chat.cpp");

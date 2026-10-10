@@ -167,7 +167,8 @@ namespace
 		{qm_module::EQmModuleId::Ime, qm_module::EQmModuleColumn::Left, 19, "ime"},
 		{qm_module::EQmModuleId::AppearancePreset, qm_module::EQmModuleColumn::Full, 1, "appearance_preset"},
 		{qm_module::EQmModuleId::Tooltip, qm_module::EQmModuleColumn::Left, 9, "tooltip"},
-		{qm_module::EQmModuleId::Console, qm_module::EQmModuleColumn::Left, 20, "console"}}};
+		{qm_module::EQmModuleId::Console, qm_module::EQmModuleColumn::Left, 20, "console"},
+		{qm_module::EQmModuleId::SpectatorMode, qm_module::EQmModuleColumn::Right, 24, "spectator_mode"}}};
 }
 
 using SQmGlobalSearchCard = qm_card_registry::SCardSearchResult;

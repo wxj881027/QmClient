@@ -442,9 +442,20 @@ TEST_F(SettingsCardMeasureRevision, CinematicCameraToggleInvalidatesConditionalS
 {
 	using namespace qm_card_catalog;
 	g_Config.m_QmCinematicCamera = 0;
-	const uint64_t Disabled = MeasureModuleCardRevision(qm_module::EQmModuleId::CameraView);
+	const uint64_t Disabled = MeasureModuleCardRevision(qm_module::EQmModuleId::SpectatorMode);
 	g_Config.m_QmCinematicCamera = 1;
-	EXPECT_NE(Disabled, MeasureModuleCardRevision(qm_module::EQmModuleId::CameraView));
+	EXPECT_NE(Disabled, MeasureModuleCardRevision(qm_module::EQmModuleId::SpectatorMode));
 	g_Config.m_QmCinematicCamera = 0;
-	EXPECT_EQ(Disabled, MeasureModuleCardRevision(qm_module::EQmModuleId::CameraView));
+	EXPECT_EQ(Disabled, MeasureModuleCardRevision(qm_module::EQmModuleId::SpectatorMode));
+}
+
+TEST_F(SettingsCardMeasureRevision, SpectatorSettingsDoNotInvalidateGameplayCameraHeight)
+{
+	using namespace qm_card_catalog;
+	g_Config.m_QmCinematicCamera = 0;
+	g_Config.m_QmCinematicCameraSmoothness = 0;
+	const uint64_t Camera = MeasureModuleCardRevision(qm_module::EQmModuleId::CameraView);
+	g_Config.m_QmCinematicCamera = 1;
+	g_Config.m_QmCinematicCameraSmoothness = 100;
+	EXPECT_EQ(Camera, MeasureModuleCardRevision(qm_module::EQmModuleId::CameraView));
 }

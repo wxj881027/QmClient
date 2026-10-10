@@ -3122,9 +3122,6 @@ Debug SQL.
 Debug tile layer clipping.
 == Отладка обрезки тайловых слоёв.
 
-Decorative throws
-== Декоративные броски
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Адрес выделенного WebSocket (пусто — используется wss://qmclient.icu/ws)
 
@@ -3878,9 +3875,6 @@ Edit touch controls
 Editor
 == Редактор
 
-Egg
-== Яйцо
-
 Elastic
 == Эластичный
 
@@ -4003,9 +3997,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Включить пользовательский запас предсказания при заморозке
-
-Enable decorative grass, tomato and egg throws
-== Включить декоративные броски травы, помидоров и яиц
 
 Enable Deleting
 == Включить удаление
@@ -4222,9 +4213,6 @@ Enable skin switch animation
 
 Enable skin transition animation, then choose the type, scope, duration and easing.
 == Включите анимацию смены скина и выберите тип, область, длительность и сглаживание.
-
-Enable smooth cinematic camera while free spectating
-== Включить плавную кинематографическую камеру в свободном наблюдении
 
 Enable SodaMusic Hook
 == Включить SodaMusic Hook
@@ -5344,9 +5332,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Уровень трассировки графики: 0 = выкл., 1 = периодическая сводка, 2 = сводка и медленные кадры, 3 = подробная трассировка бэкенда
-
-Grass
-== Трава
 
 Greek
 == Греческий
@@ -8822,6 +8807,9 @@ Points unavailable
 Polished
 == Глянец
 
+Pop wave
+== Волна увеличения
+
 Popup & dropdown blur
 == Размытие окон и списков
 
@@ -12101,6 +12089,9 @@ Smooth Dynamic Camera
 Smooth fade
 == Плавное затухание
 
+Smooth free spectator camera
+== Плавная камера свободного наблюдения
+
 Smooth other players' predicted movement
 == Плавное предсказанное движение других игроков
 
@@ -12109,6 +12100,9 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == Длительность анимации плавной прокрутки в меню/редакторе (ms, 0 = выкл)
+
+Smooth the mouse-driven camera in live and demo free spectating
+== Сглаживать управляемую мышью камеру при свободном наблюдении в игре и демозаписях
 
 Smooth zoom animation time in editor (in ms, 0=off)
 == Время плавной анимации масштабирования в редакторе (в ms, 0 = выкл)
@@ -12499,6 +12493,9 @@ Streamer mode
 
 Strength icons assets
 == Ресурсы иконок силы
+
+Strength of the vertical or pop wave. Zero keeps the title still.
+== Сила вертикальной волны или волны увеличения. Ноль отключает движение титула.
 
 Stress system (debug builds only).
 == Система стресса (только для отладочных сборок).
@@ -13214,21 +13211,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Эту подсказку предоставляет ui_widget::Tooltip — тонкая обёртка над CTooltips.
 
-Throw a decorative grass, tomato or egg projectile
-== Бросить декоративную траву, помидор или яйцо
-
-Throw egg key
-== Клавиша броска яйца
-
-Throw grass key
-== Клавиша броска травы
-
-Throw tomato key
-== Клавиша броска помидора
-
-Throwables
-== Предметы для броска
-
 Tick delay before executing qm_execute_on_join
 == Задержка в тиках перед выполнением qm_execute_on_join
 
@@ -13337,14 +13319,17 @@ Title display
 Title light sweep speed in 1/100 row per second (0 = off)
 == Скорость блика титула в 1/100 строки в секунду (0 = выкл.)
 
+Title motion
+== Анимация титула
+
+Title motion: 0 = vertical wave, 1 = pop wave
+== Анимация титула: 0 = вертикальная волна, 1 = волна увеличения
+
 Title opacity
 == Непрозрачность титула
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == Фаза на пиксель для символов титула в 1/1000 px (0 = по умолчанию стиля, 20 = заметная световая полоса)
-
-Title per-character vertical bob amplitude in pixels (0 = off)
-== Амплитуда вертикального покачивания символов титула в пикселях (0 = выкл.)
 
 Title preview
 == Предпросмотр титула
@@ -13366,6 +13351,9 @@ Title too long or contains unsupported characters
 
 Title visibility and appearance
 == Видимость и оформление титулов
+
+Title wave strength (0-3, 0 = off)
+== Сила волны титула (0-3, 0 = выкл.)
 
 to check a server setting say /settings and setting's name, setting names are:
 == Чтобы посмотреть настройку сервера, введите /settings и её название. Названия настроек:
@@ -13501,9 +13489,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Токен для регистрации этого сервера в определённом сообществе
-
-Tomato
-== Помидор
 
 Too many configuration files.
 == Слишком много файлов настроек.
@@ -14249,14 +14234,14 @@ Version
 Version performing the analysis
 == Версия, выполняющая анализ
 
-Vertical movement of each character. Zero keeps the title still.
-== Движение каждого символа вверх и вниз. Ноль отключает движение титула.
-
 Vertical position
 == Вертикальное положение
 
 Vertical sync (may cause lag)
 == Вертикальная синхронизация (может вызывать задержки)
+
+Vertical wave
+== Вертикальная волна
 
 Video Background
 == Фоновое видео

@@ -818,6 +818,7 @@ protected:
 		const SQmTitleRenderStyle RenderStyle = QmTitleResolveRenderStyle(pStyle);
 		const bool Changed = m_FontSize != FontSize || m_TitleColorStyle != ColorStyle || str_comp(m_aText, Data.m_aQmTitle) != 0 ||
 				     str_comp(m_aStyle, pStyle) != 0 || m_TitleRenderStyle.m_pStyle != RenderStyle.m_pStyle ||
+				     m_TitleRenderStyle.m_Bob.m_Mode != RenderStyle.m_Bob.m_Mode ||
 				     m_TitleRenderStyle.m_Bob.m_Amplitude != RenderStyle.m_Bob.m_Amplitude ||
 				     m_TitleRenderStyle.m_Bob.m_WaveLength != RenderStyle.m_Bob.m_WaveLength ||
 				     m_TitleRenderStyle.m_Bob.m_Speed != RenderStyle.m_Bob.m_Speed ||
@@ -830,7 +831,7 @@ protected:
 
 	float ExtraVerticalPadding() const override
 	{
-		float Padding = m_TitleRenderStyle.m_Bob.m_Amplitude;
+		float Padding = QmTitleStyleBobPadding(m_TitleRenderStyle.m_Bob, 0.0f, m_FontSize);
 		if(g_Config.m_QmTitleEffect == QM_TITLE_EFFECT_POLISHED)
 			Padding += 3.5f;
 		else if(g_Config.m_QmTitleEffect == QM_TITLE_EFFECT_CLASSIC && m_TitleRenderStyle.m_pStyle != nullptr && g_Config.m_QmTitleBloom > 0)

@@ -2508,9 +2508,6 @@ set(EXPECTED_DATA
   skins7/warpaint.json
   skins7/x_ninja.json
   skins7/xmas_hat.png
-  qm_throwables/egg.png
-  qm_throwables/grass.png
-  qm_throwables/tomato.png
   strong_weak.png
   themes/autumn_day.map
   themes/autumn_night.map
@@ -3156,6 +3153,7 @@ if(CLIENT)
     QmUi/QmDropdown.cpp
     QmUi/QmDropdown.h
     QmUi/QmConsoleUi.h
+    QmUi/QmCardLabelHints.h
     QmUi/QmPopupSource.h
     QmUi/QmAnimResolve.cpp
     QmUi/QmAnimResolve.h
@@ -3427,10 +3425,6 @@ if(CLIENT)
     components/qmclient/console_syntax.h
     components/qmclient/console_text.h
     components/qmclient/data_version.h
-    components/qmclient/decorative_projectiles.cpp
-    components/qmclient/decorative_projectiles.h
-    components/qmclient/decorative_throw_policy.h
-    components/qmclient/decorative_throw_transport.cpp
     components/qmclient/dummy_hammer_input.cpp
     components/qmclient/dummy_hammer_input.h
     components/qmclient/demo_ui.h
@@ -4812,7 +4806,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_solo_split_test.cpp
     src/test/unit/qmclient/client/qm_markdown_test.cpp
     src/test/unit/qmclient/client/qm_markdown_broadcast_test.cpp
-    src/test/unit/qmclient/client/qm_decorative_throw_test.cpp
     src/test/unit/qmclient/client/qm_emoticon_projectile_test.cpp
     src/test/unit/qmclient/client/qm_realtime_test.cpp
     src/test/unit/qmclient/client/qm_realtime_users_test.cpp
@@ -4846,6 +4839,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/settings/qm_general_cards_test.cpp
     src/test/integration/qmclient/settings/qm_catalog_search_test.cpp
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
+    src/test/integration/qmclient/settings/qm_spectator_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_graphics_contract_test.cpp

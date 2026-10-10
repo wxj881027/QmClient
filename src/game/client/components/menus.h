@@ -2500,6 +2500,11 @@ public:
 	bool ClaimOnlineReplaySpectatorBind(int Key);
 	bool IsActive() const { return m_MenuActive; }
 	bool IsSettingsPageActive() const;
+	std::array<int, 9> TooltipContext() const
+	{
+		return {m_MenuActive, m_MenuPage, m_GamePage, m_Popup, g_Config.m_UiSettingsPage,
+			m_QmClientSettingsTab, m_TClientSettingsTab, m_AppearanceSettingsTab, m_CreditsSettingsTab};
+	}
 	const char *CurrentQmUiPerfPage() const;
 	const char *CurrentQmUiPerfOperation() const;
 	int IdleRenderFrameRate() const;
@@ -3261,6 +3266,7 @@ private:
 	void RenderQmVisualSkinTransitionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualSkinAppearanceContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualFocusModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float ColumnGap, float LabelWidth);
+	void RenderQmVisualSpectatorModeContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	void RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	bool RenderQmHudCheckbox(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, const char *pTextId, const char *pText, int *pValue);
 	bool HandleQmHudCheckboxInput(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);

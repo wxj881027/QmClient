@@ -3122,9 +3122,6 @@ Debug SQL.
 Debug tile layer clipping.
 == Debugowanie przycinania warstw kafelków.
 
-Decorative throws
-== Rzuty dekoracyjne
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Dedykowany adres WebSocket (puste używa wss://qmclient.icu/ws)
 
@@ -3878,9 +3875,6 @@ Edit touch controls
 Editor
 == Edytor
 
-Egg
-== Jajko
-
 Elastic
 == Elastyczny
 
@@ -4003,9 +3997,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Włącz niestandardowy margines przewidywania po zamrożeniu
-
-Enable decorative grass, tomato and egg throws
-== Włącz dekoracyjne rzuty trawą, pomidorami i jajkami
 
 Enable Deleting
 == Włącz usuwanie
@@ -4222,9 +4213,6 @@ Enable skin switch animation
 
 Enable skin transition animation, then choose the type, scope, duration and easing.
 == Włącz animację zmiany skina, a następnie wybierz typ, zasięg, czas i wygładzanie.
-
-Enable smooth cinematic camera while free spectating
-== Włącz płynną kamerę filmową podczas swobodnej obserwacji
 
 Enable SodaMusic Hook
 == Włącz SodaMusic Hook
@@ -5344,9 +5332,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Poziom śledzenia grafiki: 0 = wyłączone, 1 = okresowe podsumowanie, 2 = podsumowanie i wolne klatki, 3 = szczegółowe śledzenie backendu
-
-Grass
-== Trawa
 
 Greek
 == Grecki
@@ -8822,6 +8807,9 @@ Points unavailable
 Polished
 == Połysk
 
+Pop wave
+== Fala powiększająca
+
 Popup & dropdown blur
 == Rozmycie okien i list
 
@@ -12101,6 +12089,9 @@ Smooth Dynamic Camera
 Smooth fade
 == Płynne zanikanie
 
+Smooth free spectator camera
+== Płynna kamera swobodnego obserwatora
+
 Smooth other players' predicted movement
 == Wygładź przewidywany ruch innych graczy
 
@@ -12109,6 +12100,9 @@ Smooth prediction margin (weakens ping jitter correction, restores old behavior)
 
 Smooth scroll animation duration in menu/editor (ms, 0=off)
 == Czas trwania płynnej animacji przewijania w menu/edytorze (ms, 0 = wył.)
+
+Smooth the mouse-driven camera in live and demo free spectating
+== Wygładź ruch kamery sterowanej myszą podczas swobodnej obserwacji w grze i demach
 
 Smooth zoom animation time in editor (in ms, 0=off)
 == Czas płynnej animacji zoomu w edytorze (w ms, 0 = wył.)
@@ -12499,6 +12493,9 @@ Streamer mode
 
 Strength icons assets
 == Zasoby ikon siły
+
+Strength of the vertical or pop wave. Zero keeps the title still.
+== Siła fali pionowej lub powiększającej. Zero pozostawia tytuł nieruchomy.
 
 Stress system (debug builds only).
 == System obciążenia (tylko wersje debugowania).
@@ -13214,21 +13211,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Ta podpowiedź pochodzi z ui_widget::Tooltip, cienkiej nakładki na CTooltips.
 
-Throw a decorative grass, tomato or egg projectile
-== Rzuć dekoracyjną trawą, pomidorem lub jajkiem
-
-Throw egg key
-== Klawisz rzutu jajkiem
-
-Throw grass key
-== Klawisz rzutu trawą
-
-Throw tomato key
-== Klawisz rzutu pomidorem
-
-Throwables
-== Przedmioty do rzucania
-
 Tick delay before executing qm_execute_on_join
 == Opóźnienie w tickach przed wykonaniem qm_execute_on_join
 
@@ -13337,14 +13319,17 @@ Title display
 Title light sweep speed in 1/100 row per second (0 = off)
 == Prędkość przesuwania światła tytułu w 1/100 wiersza na sekundę (0 = wył.)
 
+Title motion
+== Animacja tytułu
+
+Title motion: 0 = vertical wave, 1 = pop wave
+== Animacja tytułu: 0 = fala pionowa, 1 = fala powiększająca
+
 Title opacity
 == Krycie tytułu
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == Faza na znak i piksel w 1/1000 px (0 = domyślna stylu, 20 = widoczna wstęga światła)
-
-Title per-character vertical bob amplitude in pixels (0 = off)
-== Amplituda pionowego kołysania znaków w pikselach (0 = wyłączone)
 
 Title preview
 == Podgląd tytułu
@@ -13366,6 +13351,9 @@ Title too long or contains unsupported characters
 
 Title visibility and appearance
 == Widoczność i wygląd tytułów
+
+Title wave strength (0-3, 0 = off)
+== Siła fali tytułu (0-3, 0 = wyłączone)
 
 to check a server setting say /settings and setting's name, setting names are:
 == Aby sprawdzić ustawienie serwera, wpisz /settings i nazwę ustawienia. Nazwy ustawień:
@@ -13501,9 +13489,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Token do rejestracji tego serwera w konkretnej społeczności
-
-Tomato
-== Pomidor
 
 Too many configuration files.
 == Za dużo plików konfiguracji.
@@ -14249,14 +14234,14 @@ Version
 Version performing the analysis
 == Wersja wykonująca analizę
 
-Vertical movement of each character. Zero keeps the title still.
-== Pionowy ruch każdego znaku. Zero pozostawia tytuł nieruchomy.
-
 Vertical position
 == Pozycja pionowa
 
 Vertical sync (may cause lag)
 == Synchronizacja pionowa (może powodować opóźnienia)
+
+Vertical wave
+== Fala pionowa
 
 Video Background
 == Tło wideo

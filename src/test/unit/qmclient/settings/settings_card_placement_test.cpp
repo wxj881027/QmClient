@@ -60,6 +60,180 @@ TEST(SettingsCardDeck, DragPlacementUsesVisualOrderWithoutRendering)
 	EXPECT_EQ(ResolveSettingsCardDeckDropOrder(200.0f, 2, vItems, 7), 1);
 }
 
+TEST(SettingsCardPacking, HalfWidthCardsFillSpaceAboveFullWidthWithoutChangingSides)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(100.0f, 10.0f);
+	Plan.Append(1, 40.0f);
+	Plan.Append(2, 240.0f);
+	const auto Full = Plan.Append(0, 50.0f);
+	const auto Left = Plan.Append(1, 80.0f);
+	const auto Right = Plan.Append(2, 30.0f);
+
+	EXPECT_FLOAT_EQ(Full.m_Y, 350.0f);
+	EXPECT_FLOAT_EQ(Left.m_Y, 150.0f);
+	EXPECT_LE(Left.m_NextY, Full.m_Y);
+	EXPECT_FLOAT_EQ(Right.m_Y, Full.m_NextY);
+}
+
+TEST(SettingsCardPacking, WithoutFullWidthCardsBothColumnsKeepIndependentFlow)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(100.0f, 10.0f);
+	const auto FirstLeft = Plan.Append(1, 40.0f);
+	const auto SecondLeft = Plan.Append(1, 80.0f);
+	const auto FirstRight = Plan.Append(2, 240.0f);
+	const auto SecondRight = Plan.Append(2, 30.0f);
+
+	EXPECT_FLOAT_EQ(FirstLeft.m_Y, 100.0f);
+	EXPECT_FLOAT_EQ(FirstRight.m_Y, 100.0f);
+	EXPECT_FLOAT_EQ(SecondLeft.m_Y, FirstLeft.m_NextY);
+	EXPECT_FLOAT_EQ(SecondRight.m_Y, FirstRight.m_NextY);
+}
+
+TEST(SettingsCardPacking, ExactFitKeepsGapBeforeFullWidthCard)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(100.0f, 10.0f);
+	Plan.Append(1, 40.0f);
+	Plan.Append(2, 240.0f);
+	const auto Full = Plan.Append(0, 50.0f);
+	const auto Left = Plan.Append(1, 190.0f);
+
+	EXPECT_FLOAT_EQ(Left.m_Y, 150.0f);
+	EXPECT_FLOAT_EQ(Left.m_NextY, Full.m_Y);
+	EXPECT_FLOAT_EQ(Full.m_Y - (Left.m_Y + Left.m_Height), 10.0f);
+}
+
+TEST(SettingsCardPacking, CardThatExceedsGapContinuesBelowFullWidth)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(100.0f, 10.0f);
+	Plan.Append(1, 40.0f);
+	Plan.Append(2, 240.0f);
+	const auto Full = Plan.Append(0, 50.0f);
+	const auto Left = Plan.Append(1, 190.01f);
+
+	EXPECT_FLOAT_EQ(Left.m_Y, Full.m_NextY);
+	EXPECT_FLOAT_EQ(Left.m_Y - (Full.m_Y + Full.m_Height), 10.0f);
+}
+
+TEST(SettingsCardPacking, SmallerFollowingCardDoesNotOvertakeItsColumnPredecessor)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(100.0f, 10.0f);
+	Plan.Append(1, 40.0f);
+	Plan.Append(2, 240.0f);
+	const auto Full = Plan.Append(0, 50.0f);
+	const auto Tall = Plan.Append(1, 200.0f);
+	const auto Short = Plan.Append(1, 20.0f);
+
+	EXPECT_FLOAT_EQ(Tall.m_Y, Full.m_NextY);
+	EXPECT_FLOAT_EQ(Short.m_Y, Tall.m_NextY);
+}
+
+TEST(SettingsCardPacking, HalfWidthCardsCanFillSuccessiveFullWidthGaps)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(0.0f, 10.0f);
+	Plan.Append(1, 10.0f);
+	Plan.Append(2, 100.0f);
+	const auto FirstFull = Plan.Append(0, 20.0f);
+	Plan.Append(2, 100.0f);
+	const auto SecondFull = Plan.Append(0, 20.0f);
+	const auto FirstLeft = Plan.Append(1, 60.0f);
+	const auto SecondLeft = Plan.Append(1, 60.0f);
+	const auto ThirdLeft = Plan.Append(1, 100.0f);
+
+	EXPECT_FLOAT_EQ(FirstLeft.m_Y, 20.0f);
+	EXPECT_LE(FirstLeft.m_NextY, FirstFull.m_Y);
+	EXPECT_FLOAT_EQ(SecondLeft.m_Y, FirstFull.m_NextY);
+	EXPECT_LE(SecondLeft.m_NextY, SecondFull.m_Y);
+	EXPECT_FLOAT_EQ(ThirdLeft.m_Y, SecondFull.m_NextY);
+}
+
+TEST(SettingsCardPacking, ConsecutiveFullWidthCardsRemainOrderedWhenColumnsAreShorter)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(0.0f, 10.0f);
+	Plan.Append(1, 10.0f);
+	Plan.Append(2, 100.0f);
+	const auto FirstFull = Plan.Append(0, 20.0f);
+	const auto SecondFull = Plan.Append(0, 30.0f);
+	const auto Left = Plan.Append(1, 100.0f);
+
+	EXPECT_FLOAT_EQ(SecondFull.m_Y, FirstFull.m_NextY);
+	EXPECT_FLOAT_EQ(Left.m_Y, SecondFull.m_NextY);
+}
+
+TEST(SettingsCardPacking, LeadingFullWidthCardsKeepBothColumnsBelowThem)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(100.0f, 10.0f);
+	const auto FirstFull = Plan.Append(0, 30.0f, true);
+	const auto SecondFull = Plan.Append(0, 20.0f, true);
+	const auto Left = Plan.Append(1, 20.0f);
+	const auto Right = Plan.Append(2, 50.0f);
+
+	EXPECT_FLOAT_EQ(FirstFull.m_Y, 100.0f);
+	EXPECT_FLOAT_EQ(SecondFull.m_Y, FirstFull.m_NextY);
+	EXPECT_FLOAT_EQ(Left.m_Y, SecondFull.m_NextY);
+	EXPECT_FLOAT_EQ(Right.m_Y, SecondFull.m_NextY);
+}
+
+TEST(SettingsCardPacking, RebuildAfterCollapseAndReopenUsesOnlyCurrentHeights)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	for(const float RightHeight : {240.0f, 10.0f, 240.0f})
+	{
+		SCOPED_TRACE(RightHeight);
+		Plan.Reset(100.0f, 10.0f);
+		Plan.Append(1, 40.0f);
+		Plan.Append(2, RightHeight);
+		const auto Full = Plan.Append(0, 50.0f);
+		const auto Left = Plan.Append(1, 80.0f);
+
+		EXPECT_FLOAT_EQ(Full.m_Y, RightHeight == 240.0f ? 350.0f : 150.0f);
+		EXPECT_FLOAT_EQ(Left.m_Y, RightHeight == 240.0f ? 150.0f : 210.0f);
+		EXPECT_TRUE(Left.m_NextY <= Full.m_Y || Left.m_Y >= Full.m_NextY);
+	}
+}
+
+TEST(SettingsCardPacking, RebuildWithoutFullWidthCardRemovesItsObstacle)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	Plan.Reset(100.0f, 10.0f);
+	Plan.Append(1, 40.0f);
+	Plan.Append(2, 240.0f);
+	Plan.Append(0, 50.0f);
+
+	Plan.Reset(100.0f, 10.0f);
+	const auto FirstLeft = Plan.Append(1, 40.0f);
+	Plan.Append(2, 240.0f);
+	const auto SecondLeft = Plan.Append(1, 200.0f);
+	EXPECT_FLOAT_EQ(SecondLeft.m_Y, FirstLeft.m_NextY);
+}
+
+TEST(SettingsCardPacking, ChangingAnimatedHeightsNeverIntersectsFullWidthCard)
+{
+	CSettingsCardDeckPackingPlan Plan;
+	for(const float Progress : {0.0f, 0.25f, 0.5f, 0.75f, 1.0f})
+	{
+		SCOPED_TRACE(Progress);
+		Plan.Reset(100.0f, 10.0f);
+		const auto FirstLeft = Plan.Append(1, 40.0f);
+		const auto FirstRight = Plan.Append(2, 240.0f - 180.0f * Progress);
+		const auto Full = Plan.Append(0, 50.0f + 80.0f * Progress);
+		const auto Left = Plan.Append(1, 80.0f + 100.0f * Progress);
+		const auto Right = Plan.Append(2, 30.0f);
+
+		EXPECT_GE(Left.m_Y, FirstLeft.m_NextY);
+		EXPECT_GE(Right.m_Y, FirstRight.m_NextY);
+		EXPECT_TRUE(Left.m_NextY <= Full.m_Y || Left.m_Y >= Full.m_NextY);
+		EXPECT_TRUE(Right.m_NextY <= Full.m_Y || Right.m_Y >= Full.m_NextY);
+	}
+}
+
 TEST(SettingsCardDeck, SingleColumnDragPreservesCanonicalColumnCapacity)
 {
 	std::array<std::vector<int>, 3> aColumns{
@@ -207,9 +381,7 @@ TEST(SettingsCardDeck, ProductionPagePlacementsPreserveWideColumnsAndNarrowReadi
 		}
 
 		std::vector<const char *> vVisualOrder;
-		ForEachSettingsCardDeckVisualOrder(aColumns, [&](const int StateIndex, int) {
-			vVisualOrder.push_back(Model.Entry(StateIndex).m_pStableId);
-		}, LeadingFullWidthCards);
+		ForEachSettingsCardDeckVisualOrder(aColumns, [&](const int StateIndex, int) { vVisualOrder.push_back(Model.Entry(StateIndex).m_pStableId); }, LeadingFullWidthCards);
 		ASSERT_EQ(vVisualOrder.size(), vExpectedVisualOrder.size());
 		for(size_t Index = 0; Index < vVisualOrder.size(); ++Index)
 			EXPECT_STREQ(vVisualOrder[Index], vExpectedVisualOrder[Index]);

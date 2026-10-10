@@ -107,6 +107,7 @@ static std::vector<SQmModuleEntry> MakeAllDefaults()
 		{EQmModuleId::AppearancePreset, EQmModuleColumn::Full, 1, "appearance_preset"},
 		{EQmModuleId::Tooltip, EQmModuleColumn::Left, 9, "tooltip"},
 		{EQmModuleId::Console, EQmModuleColumn::Left, 20, "console"},
+		{EQmModuleId::SpectatorMode, EQmModuleColumn::Right, 24, "spectator_mode"},
 	};
 }
 
