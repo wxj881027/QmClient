@@ -2501,6 +2501,11 @@ public:
 	bool ClaimOnlineReplaySpectatorBind(int Key);
 	bool IsActive() const { return m_MenuActive; }
 	bool IsSettingsPageActive() const;
+	std::array<int, 9> TooltipContext() const
+	{
+		return {m_MenuActive, m_MenuPage, m_GamePage, m_Popup, g_Config.m_UiSettingsPage,
+			m_QmClientSettingsTab, m_TClientSettingsTab, m_AppearanceSettingsTab, m_CreditsSettingsTab};
+	}
 	const char *CurrentQmUiPerfPage() const;
 	const char *CurrentQmUiPerfOperation() const;
 	int IdleRenderFrameRate() const;

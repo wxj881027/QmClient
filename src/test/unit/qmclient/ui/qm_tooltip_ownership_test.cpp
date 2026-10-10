@@ -268,7 +268,7 @@ TEST(QmTooltips, TextPreparationIgnoresTransparentCallerColorAndIconFontThenRest
 		CQmTooltipTextScope Scope(Render);
 		EXPECT_EQ(Render.GetTextColor(), ColorRGBA(1, 1, 1, 1));
 		EXPECT_EQ(Render.GetFontPreset(), EFontPreset::DEFAULT_FONT);
-		EXPECT_EQ(Render.GetRenderFlags(), unsigned(TEXT_RENDER_FLAG_ONE_TIME_USE | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT));
+		EXPECT_EQ(Render.GetRenderFlags(), unsigned(TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT));
 	}
 	EXPECT_EQ(Render.GetTextColor(), Before.GetTextColor());
 	EXPECT_EQ(Render.GetFontPreset(), Before.GetFontPreset());
@@ -414,4 +414,232 @@ TEST(QmTooltips, ClearingContentClipDoesNotReactivateAHiddenTarget)
 	EXPECT_FALSE(QmTooltipActive(Tooltip, 2, Pointer));
 	Pointer.m_InputAvailable = true;
 	EXPECT_FALSE(QmTooltipActive(Tooltip, 3, Pointer));
+}
+
+TEST(QmCardLabelHints, MovesAllGroupsIncludingAcronymsAndWarningsIntoHint)
+{
+	const auto Text = QmSplitCardLabel("全屏抗锯齿（FSAA）采样倍数 (可能会产生延迟)");
+	EXPECT_EQ(Text.m_Label, "全屏抗锯齿采样倍数");
+	EXPECT_EQ(Text.m_Hint, "FSAA\n可能会产生延迟");
+}
+
+TEST(QmCardLabelHints, UnitsAndOptionDistinctionsMoveWithoutFiltering)
+{
+	const auto Units = QmSplitCardLabel("Threshold (ms)");
+	EXPECT_EQ(Units.m_Label, "Threshold");
+	EXPECT_EQ(Units.m_Hint, "ms");
+	const auto Option = QmSplitCardLabel("Show others (own team only)");
+	EXPECT_EQ(Option.m_Label, "Show others");
+	EXPECT_EQ(Option.m_Hint, "own team only");
+}
+
+TEST(QmCardLabelHints, NestedParenthesesStayTogetherInTheHint)
+{
+	const auto Text = QmSplitCardLabel("Mode （details (experimental) here） enabled");
+	EXPECT_EQ(Text.m_Label, "Mode enabled");
+	EXPECT_EQ(Text.m_Hint, "details (experimental) here");
+}
+
+TEST(QmCardLabelHints, IncompleteGroupsStayVisibleAndPlainWhitespaceIsUnchanged)
+{
+	const auto Broken = QmSplitCardLabel("Mode (unfinished");
+	EXPECT_EQ(Broken.m_Label, "Mode (unfinished");
+	EXPECT_TRUE(Broken.m_Hint.empty());
+	const auto Plain = QmSplitCardLabel("  Plain  label  ");
+	EXPECT_EQ(Plain.m_Label, "  Plain  label  ");
+	EXPECT_TRUE(Plain.m_Hint.empty());
+}
+
+TEST(QmCardLabelHints, ParentheticalOnlyChoiceKeepsAVisibleHoverTarget)
+{
+	const auto Text = QmSplitCardLabel("(Follow English font)");
+	EXPECT_EQ(Text.m_Label, "…");
+	EXPECT_EQ(Text.m_Hint, "Follow English font");
+}
+
+TEST(QmCardLabelHints, CacheOwnsCallerTextAndKeepsTranslatedEntriesStable)
+{
+	CQmCardLabelHintCache Cache;
+	std::string Caller = "V-Sync (may cause delay)";
+	const auto &English = Cache.Get(Caller);
+	Caller = "changed";
+	const auto &Chinese = Cache.Get("垂直同步（可能会产生延迟）");
+	EXPECT_EQ(English.m_Label, "V-Sync");
+	EXPECT_EQ(Chinese.m_Label, "垂直同步");
+	EXPECT_EQ(&English, &Cache.Get("V-Sync (may cause delay)"));
+	Cache.Clear();
+	EXPECT_EQ(Cache.Get("Mode (new)").m_Hint, "new");
+}
+
+namespace
+{
+	struct SCardLabelUi
+	{
+		bool m_Enabled = false;
+		bool CardLabelHintsEnabled() const { return m_Enabled; }
+		void SetCardLabelHintsEnabled(bool Enabled) { m_Enabled = Enabled; }
+	};
+}
+
+TEST(QmCardLabelHints, NestedCardAndInputScopesRestoreTheCallersState)
+{
+	SCardLabelUi Ui;
+	{
+		CQmCardLabelHintScope Card(&Ui);
+		EXPECT_TRUE(Ui.m_Enabled);
+		{
+			CQmCardLabelHintScope Input(&Ui, false);
+			EXPECT_FALSE(Ui.m_Enabled);
+		}
+		EXPECT_TRUE(Ui.m_Enabled);
+	}
+	EXPECT_FALSE(Ui.m_Enabled);
+}
+
+TEST(QmTooltips, ShortGapKeepsVisibleBubbleAndNextTargetSkipsEntrance)
+{
+	CTooltip First, Next;
+	CQmTooltipHoverState Hover;
+	Hover.Update(First, 10.0);
+	Hover.Update(First, 11.0);
+	EXPECT_TRUE(Hover.Retain(11.1));
+	EXPECT_TRUE(Hover.Retain(11.2));
+	EXPECT_GE(Hover.Update(Next, 11.2), CQmTooltipHoverState::FADE_IN_SECONDS);
+}
+
+TEST(QmTooltips, GapTimeoutRestoresTheNextTargetsDelay)
+{
+	CTooltip First, Next;
+	CQmTooltipHoverState Hover;
+	Hover.Update(First, 10.0);
+	Hover.Update(First, 11.0);
+	EXPECT_FALSE(Hover.Retain(11.3));
+	EXPECT_LT(Hover.Update(Next, 11.31), 0.0f);
+}
+
+TEST(QmTooltips, GapBeforeAnyVisibleBubbleDoesNotRetainAContainer)
+{
+	CTooltip Tooltip;
+	CQmTooltipHoverState Hover;
+	Hover.Update(Tooltip, 10.0);
+	EXPECT_FALSE(Hover.Retain(10.1));
+	EXPECT_LT(Hover.Update(Tooltip, 10.5), 0.0f);
+}
+
+TEST(QmTooltips, TargetChangeAfterLongFrameDoesNotReuseExpiredVisibility)
+{
+	CTooltip First, Next;
+	CQmTooltipHoverState Hover;
+	Hover.Update(First, 10.0);
+	Hover.Update(First, 11.0);
+	EXPECT_LT(Hover.Update(Next, 11.5), 0.0f);
+}
+
+TEST(QmTooltips, MotionStartsAtCurrentPositionAndSettlesOnTheNextTarget)
+{
+	CQmTooltipMotionState Motion;
+	const CUIRect First{10, 20, 100, 30}, Next{110, 120, 200, 50};
+	EXPECT_FLOAT_EQ(Motion.Update(First, 0, true).x, First.x);
+	EXPECT_FLOAT_EQ(Motion.Update(Next, 1, true).x, First.x);
+	const auto Middle = Motion.Update(Next, 1.08, true);
+	EXPECT_GT(Middle.x, First.x);
+	EXPECT_LT(Middle.x, Next.x);
+	EXPECT_GT(Middle.w, First.w);
+	EXPECT_LT(Middle.w, Next.w);
+	const auto Settled = Motion.Update(Next, 1.2, true);
+	EXPECT_FLOAT_EQ(Settled.x, Next.x);
+	EXPECT_FLOAT_EQ(Settled.y, Next.y);
+	EXPECT_FLOAT_EQ(Settled.w, Next.w);
+}
+
+TEST(QmTooltips, RapidRetargetingContinuesFromTheVisibleRectangle)
+{
+	CQmTooltipMotionState Motion;
+	const CUIRect First{0, 0, 100, 30}, Second{100, 50, 100, 30}, Third{200, 150, 100, 30};
+	Motion.Update(First, 0, true);
+	Motion.Update(Second, 1, true);
+	const auto Before = Motion.Update(Second, 1.08, true);
+	const auto After = Motion.Update(Third, 1.08, true);
+	EXPECT_FLOAT_EQ(After.x, Before.x);
+	EXPECT_FLOAT_EQ(After.y, Before.y);
+	EXPECT_FLOAT_EQ(Motion.Update(Third, 1.3, true).x, Third.x);
+}
+
+TEST(QmTooltips, DisabledMotionAndPageResetPlaceTheBubbleImmediately)
+{
+	CQmTooltipMotionState Motion;
+	Motion.Update({0, 0, 100, 30}, 0, true);
+	EXPECT_FLOAT_EQ(Motion.Update({100, 100, 100, 30}, 1, false).x, 100);
+	Motion.Clear();
+	EXPECT_FLOAT_EQ(Motion.Update({200, 100, 100, 30}, 1.1, true).x, 200);
+}
+
+namespace
+{
+	struct STooltipContainerRenderer
+	{
+		int m_Created = 0;
+		int m_Updated = 0;
+		int m_Deleted = 0;
+		std::string m_Text;
+		void RecreateTextContainerSoft(STextContainerIndex &Index, CTextCursor *pCursor, const char *pText)
+		{
+			if(!Index.Valid())
+				Index.m_Index = ++m_Created;
+			++m_Updated;
+			m_Text = pText;
+			EXPECT_FLOAT_EQ(pCursor->m_StartX, 0);
+			EXPECT_FLOAT_EQ(pCursor->m_StartY, 0);
+		}
+		void DeleteTextContainer(STextContainerIndex &Index)
+		{
+			if(Index.m_Index >= 0)
+				++m_Deleted;
+			Index.Reset();
+		}
+	};
+}
+
+TEST(QmTooltipTextCache, MovingAndChangingContentKeepTheSameContainer)
+{
+	CQmTooltipTextCache Cache;
+	STooltipContainerRenderer Render;
+	Cache.Update(Render, QmTooltipTextCursor({10, 20, 100, 40}, 10, 100, 0), "first");
+	const int Index = Cache.Index().m_Index;
+	Cache.Update(Render, QmTooltipTextCursor({200, 300, 100, 40}, 10, 100, 0), "first");
+	EXPECT_EQ(Render.m_Updated, 1);
+	Cache.Update(Render, QmTooltipTextCursor({200, 300, 100, 40}, 10, 100, 0), "next");
+	EXPECT_EQ(Cache.Index().m_Index, Index);
+	EXPECT_EQ(Render.m_Text, "next");
+	EXPECT_EQ(Render.m_Created, 1);
+	EXPECT_EQ(Render.m_Updated, 2);
+	EXPECT_EQ(Render.m_Deleted, 0);
+	Cache.Clear(Render);
+	EXPECT_EQ(Render.m_Deleted, 1);
+	EXPECT_FALSE(Cache.Index().Valid());
+}
+
+TEST(QmTooltipTextCache, ScaleWrapAndLineLimitChangesUpdateLayoutWithoutReleasingTheContainer)
+{
+	CQmTooltipTextCache Cache;
+	STooltipContainerRenderer Render;
+	Cache.Update(Render, QmTooltipTextCursor({}, 10, 100, 0), "text");
+	Cache.Update(Render, QmTooltipTextCursor({}, 12, 100, 0), "text");
+	Cache.Update(Render, QmTooltipTextCursor({}, 12, 80, 0), "text");
+	Cache.Update(Render, QmTooltipTextCursor({}, 12, 80, 1), "text");
+	EXPECT_EQ(Render.m_Created, 1);
+	EXPECT_EQ(Render.m_Updated, 4);
+	EXPECT_EQ(Render.m_Deleted, 0);
+}
+
+TEST(QmTooltipTextCache, ClosingAndReopeningCreatesAFreshContainer)
+{
+	CQmTooltipTextCache Cache;
+	STooltipContainerRenderer Render;
+	Cache.Update(Render, QmTooltipTextCursor({}, 10, 100, 0), "text");
+	Cache.Clear(Render);
+	Cache.Update(Render, QmTooltipTextCursor({}, 10, 100, 0), "text");
+	EXPECT_TRUE(Cache.Index().Valid());
+	EXPECT_EQ(Render.m_Created, 2);
+	EXPECT_EQ(Render.m_Deleted, 1);
 }

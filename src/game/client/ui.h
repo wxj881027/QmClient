@@ -4,6 +4,7 @@
 #define GAME_CLIENT_UI_H
 
 #include "QmUi/QmAnimationBackend.h"
+#include "QmUi/QmCardLabelHints.h"
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmPopupPointer.h"
 #include "QmUi/QmPopupSource.h"
@@ -710,6 +711,7 @@ private:
 	// 仅客户端绑定；地图编辑器保留自己的控件样式。
 	CUiV2AnimationRuntime *m_pQmAnimationRuntime = nullptr;
 	CTooltips *m_pQmTooltips = nullptr;
+	bool m_CardLabelHintsEnabled = false;
 	SUiTheme m_QmControlTheme{};
 	std::array<unsigned, 8> m_aQmControlThemeConfig{};
 	bool m_HasQmControlTheme = false;
@@ -968,6 +970,9 @@ public:
 	void SetQmAnimationRuntime(CUiV2AnimationRuntime *pRuntime) { m_pQmAnimationRuntime = pRuntime; }
 	CUiV2AnimationRuntime *QmAnimationRuntime() const { return m_pQmAnimationRuntime; }
 	void SetQmTooltips(CTooltips *pTooltips) { m_pQmTooltips = pTooltips; }
+	bool CardLabelHintsEnabled() const { return m_CardLabelHintsEnabled; }
+	void SetCardLabelHintsEnabled(bool Enabled) { m_CardLabelHintsEnabled = Enabled; }
+	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render = true) const;
 	void DoConfigTooltip(const void *pId, const CUIRect *pRect, const void *pValue, const void *pSecondValue = nullptr);
 	const SUiTheme &QmControlTheme();
 	float DropDownFontSize() const { return m_DropDownFontSize; }
