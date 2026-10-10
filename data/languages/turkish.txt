@@ -3104,9 +3104,6 @@ Debug SQL.
 Debug tile layer clipping.
 == Döşeme katmanı kırpma hata ayıklaması.
 
-Decorative throws
-== Dekoratif fırlatmalar
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Özel WebSocket adresi (boşsa wss://qmclient.icu/ws kullanılır)
 
@@ -3854,9 +3851,6 @@ Edit touch controls
 Editor
 == Düzenleyici
 
-Egg
-== Yumurta
-
 Elastic
 == Elastik
 
@@ -3979,9 +3973,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Donduğunda özel tahmin marjını etkinleştir
-
-Enable decorative grass, tomato and egg throws
-== Çimen, domates ve yumurta ile dekoratif fırlatmaları etkinleştir
 
 Enable Deleting
 == Silmeyi Etkinleştir
@@ -5314,9 +5305,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Grafik izleme düzeyi: 0 = kapalı, 1 = dönemsel özet, 2 = özet ve yavaş kareler, 3 = ayrıntılı arka uç izlemesi
-
-Grass
-== Çimen
 
 Greek
 == Yunanca
@@ -13160,21 +13148,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Bu ipucu ui_widget::Tooltip tarafından sağlanır; CTooltips üzerinde ince bir sarmalayıcıdır.
 
-Throw a decorative grass, tomato or egg projectile
-== Dekoratif çimen, domates veya yumurta fırlat
-
-Throw egg key
-== Yumurta fırlatma tuşu
-
-Throw grass key
-== Çimen fırlatma tuşu
-
-Throw tomato key
-== Domates fırlatma tuşu
-
-Throwables
-== Fırlatılabilirler
-
 Tick delay before executing qm_execute_on_join
 == qm_execute_on_join yürütülmeden önceki tick gecikmesi
 
@@ -13453,9 +13426,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Bu sunucuyu belirli bir topluluğa kaydetmek için token
-
-Tomato
-== Domates
 
 Too many configuration files.
 == Çok fazla yapılandırma dosyası var.

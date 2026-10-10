@@ -102,10 +102,6 @@ namespace qm_card_catalog
 		};
 
 		static constexpr SCardSettingSearch s_aqm_emoticons[] = {
-			{Localizable("Decorative throws"), nullptr, "qm_decorative_throws 草 番茄 鸡蛋 装饰投掷"},
-			{Localizable("Throw grass key"), nullptr, "qm_throw grass 投草 绑定"},
-			{Localizable("Throw tomato key"), nullptr, "qm_throw tomato 投番茄 绑定"},
-			{Localizable("Throw egg key"), nullptr, "qm_throw egg 投鸡蛋 绑定"},
 			{Localizable("Launch emote key"), nullptr, "发射表情按键"},
 			{Localizable("Show other players' large emoticons"), nullptr, "显示他人的超大表情"},
 			{Localizable("Show other players' launched emoticons"), nullptr, "显示他人的发射表情"},

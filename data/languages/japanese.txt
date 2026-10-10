@@ -3104,9 +3104,6 @@ Debug SQL.
 Debug tile layer clipping.
 == デバッグタイルレイヤークリッピング
 
-Decorative throws
-== 装飾用の投げ物
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == 専用 WebSocket エンドポイント（空欄なら wss://qmclient.icu/ws を使用）
 
@@ -3854,9 +3851,6 @@ Edit touch controls
 Editor
 == エディター
 
-Egg
-== 卵
-
 Elastic
 == エラスティック
 
@@ -3979,9 +3973,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == フリーズ時にカスタム予測マージンを有効化
-
-Enable decorative grass, tomato and egg throws
-== 草・トマト・卵の装飾用投げ物を有効にする
 
 Enable Deleting
 == 削除を有効化
@@ -5314,9 +5305,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == グラフィックス追跡レベル：0 = オフ、1 = 定期サマリー、2 = サマリーと遅いフレーム、3 = 詳細なバックエンド追跡
-
-Grass
-== 草
 
 Greek
 == ギリシャ文字
@@ -13160,21 +13148,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == このツールチップは ui_widget::Tooltip が提供しています。CTooltips の薄いラッパーです。
 
-Throw a decorative grass, tomato or egg projectile
-== 草・トマト・卵の装飾物を投げる
-
-Throw egg key
-== 卵を投げるキー
-
-Throw grass key
-== 草を投げるキー
-
-Throw tomato key
-== トマトを投げるキー
-
-Throwables
-== 投げ物
-
 Tick delay before executing qm_execute_on_join
 == qm_execute_on_join 実行前の遅延（tick）
 
@@ -13453,9 +13426,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == このサーバーを特定のコミュニティに登録するためのトークン
-
-Tomato
-== トマト
 
 Too many configuration files.
 == 設定ファイルが多すぎます。

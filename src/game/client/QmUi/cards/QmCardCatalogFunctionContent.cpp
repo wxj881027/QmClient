@@ -24,7 +24,6 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/binds.h>
 #include <game/client/components/menus.h>
-#include <game/client/components/qmclient/decorative_throw_policy.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
@@ -394,15 +393,6 @@ void CMenus::RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight
 	Content.HSplitTop(LineHeight, &Row, &Content);
 	RenderQmFunctionCheckbox(&g_Config.m_QmShowOtherLaunchEmotes, "Show other players' launched emoticons", Localize("Show other players' launched emoticons"), &g_Config.m_QmShowOtherLaunchEmotes, &Row, false);
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
-	Content.HSplitTop(LineHeight, &Row, &Content);
-	RenderQmFunctionCheckbox(&g_Config.m_QmDecorativeThrows, "Decorative throws", Localize("Decorative throws"), &g_Config.m_QmDecorativeThrows, &Row, false);
-	Content.HSplitTop(LineSpacing, nullptr, &Content);
-	static CButtonContainer s_aThrowReaders[QmDecorativeThrow::COUNT];
-	static CButtonContainer s_aThrowClearers[QmDecorativeThrow::COUNT];
-	const char *apThrowLabels[] = {Localize("Throw grass key"), Localize("Throw tomato key"), Localize("Throw egg key")};
-	const char *apThrowCommands[] = {"qm_throw grass", "qm_throw tomato", "qm_throw egg"};
-	for(int Type = 0; Type < QmDecorativeThrow::COUNT; ++Type)
-		RenderQmHudKeyBindRow(Content, s_aThrowReaders[Type], s_aThrowClearers[Type], apThrowLabels[Type], apThrowCommands[Type], LineHeight, BodySize, LineSpacing, LabelWidth);
 	RenderQmHudKeyBindRow(Content, s_ReaderButtonLaunchEmote, s_ClearButtonLaunchEmote,
 		Localize("Launch emote key"), "toggle_emote_launcher", LineHeight, BodySize, LineSpacing, LabelWidth);
 }

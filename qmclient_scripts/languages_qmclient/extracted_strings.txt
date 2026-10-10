@@ -1033,7 +1033,6 @@ Debug quad layer clipping.
 Debug quad layer cluster clipping.
 Debug SQL.
 Debug tile layer clipping.
-Decorative throws
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 Deep freeze color
 Deep freeze opacity
@@ -1283,7 +1282,6 @@ Edit player and dummy identity information
 Edit skin texture
 Edit touch controls
 Editor
-Egg
 Elastic
 Elastic back
 Elevated
@@ -1325,7 +1323,6 @@ Enable coloring and hearts for friends
 Enable connections from vanilla 0.6 clients
 Enable controller
 Enable custom prediction margin when frozen
-Enable decorative grass, tomato and egg throws
 Enable Deleting
 Enable Discord RPC (requires restart)
 Enable DNSBL (DNS-based Blackhole List)
@@ -1770,7 +1767,6 @@ Graphics library texture sampling lod bias multiplied by 1000
 Graphics mode
 Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
-Grass
 Greek
 Greeting text
 Grenade
@@ -4385,11 +4381,6 @@ This team is locked using /lock. Only members of the team can unlock it using /l
 This team started already
 This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
-Throw a decorative grass, tomato or egg projectile
-Throw egg key
-Throw grass key
-Throw tomato key
-Throwables
 Tick delay before executing qm_execute_on_join
 Ticks after freeze before applying max prediction reduction
 tile
@@ -4483,7 +4474,6 @@ Toggles spec (if not available behaves as /pause)
 Toggles spec on the currently voted player
 Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off for off, toggle for toggle and nothing to show current status
 Token to register this server to a specific community
-Tomato
 Too many configuration files.
 Too many translation tasks
 Toolbox page

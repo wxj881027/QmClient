@@ -3104,9 +3104,6 @@ Debug SQL.
 Debug tile layer clipping.
 == Déboguer le clipping des couches de tuiles.
 
-Decorative throws
-== Lancers décoratifs
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Point de terminaison WebSocket dédié (vide utilise wss://qmclient.icu/ws)
 
@@ -3854,9 +3851,6 @@ Edit touch controls
 Editor
 == Éditeur
 
-Egg
-== Œuf
-
 Elastic
 == Élastique
 
@@ -3979,9 +3973,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Activer la marge de prédiction personnalisée lorsqu'il est gelé
-
-Enable decorative grass, tomato and egg throws
-== Activer les lancers décoratifs d’herbe, de tomates et d’œufs
 
 Enable Deleting
 == Activer la suppression
@@ -5314,9 +5305,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Niveau de traçage graphique : 0 = désactivé, 1 = résumé périodique, 2 = résumé et images lentes, 3 = traçage détaillé du backend
-
-Grass
-== Herbe
 
 Greek
 == Grec
@@ -13160,21 +13148,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Cette infobulle est fournie par ui_widget::Tooltip, une fine surcouche de CTooltips.
 
-Throw a decorative grass, tomato or egg projectile
-== Lancer de l’herbe, une tomate ou un œuf décoratif
-
-Throw egg key
-== Touche pour lancer un œuf
-
-Throw grass key
-== Touche pour lancer de l’herbe
-
-Throw tomato key
-== Touche pour lancer une tomate
-
-Throwables
-== Objets à lancer
-
 Tick delay before executing qm_execute_on_join
 == Délai en ticks avant l'exécution de qm_execute_on_join
 
@@ -13453,9 +13426,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Jeton pour enregistrer ce serveur auprès d'une communauté spécifique
-
-Tomato
-== Tomate
 
 Too many configuration files.
 == Trop de fichiers de configuration.

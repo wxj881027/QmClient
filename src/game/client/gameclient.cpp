@@ -667,7 +667,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_CustomCommunities, "custom_communities");
 	AddComponent(&m_PlayerPoints, "player_points");
 	AddComponent(&m_Emoticon.m_RenderProjectiles, "emoticon_projectiles");
-	AddComponent(&m_DecorativeProjectiles, "qm_decorative_projectiles");
 	AddComponent(&m_Hud, "hud");
 	AddComponent(&m_Spectator, "spectator");
 	AddComponent(&m_Emoticon, "emoticon");

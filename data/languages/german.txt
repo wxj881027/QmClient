@@ -3104,9 +3104,6 @@ Debug SQL.
 Debug tile layer clipping.
 == Debug-Tile-Layer-Clipping
 
-Decorative throws
-== Dekorative Würfe
-
 Dedicated WebSocket endpoint (empty uses wss://qmclient.icu/ws)
 == Dedizierter WebSocket-Endpunkt (leer verwendet wss://qmclient.icu/ws)
 
@@ -3854,9 +3851,6 @@ Edit touch controls
 Editor
 == Editor
 
-Egg
-== Ei
-
 Elastic
 == Elastisch
 
@@ -3979,9 +3973,6 @@ Enable controller
 
 Enable custom prediction margin when frozen
 == Benutzerdefinierten Vorhersageabstand bei Freeze aktivieren
-
-Enable decorative grass, tomato and egg throws
-== Dekorative Würfe mit Gras, Tomaten und Eiern aktivieren
 
 Enable Deleting
 == Löschen aktivieren
@@ -5314,9 +5305,6 @@ Graphics mode: -1=use backend setting, 0=compatibility, 1=performance (default)
 
 Graphics trace level: 0=off, 1=periodic summary, 2=summary and slow frames, 3=detailed backend trace
 == Grafik-Trace-Stufe: 0 = aus, 1 = regelmäßige Zusammenfassung, 2 = Zusammenfassung und langsame Frames, 3 = detaillierter Backend-Trace
-
-Grass
-== Gras
 
 Greek
 == Griechisch
@@ -13160,21 +13148,6 @@ This team was disbanded because there are more players than allowed in the team.
 This tooltip is provided by ui_widget::Tooltip — a thin shim over CTooltips.
 == Dieser Tooltip kommt von ui_widget::Tooltip, einer dünnen Hülle über CTooltips.
 
-Throw a decorative grass, tomato or egg projectile
-== Ein dekoratives Gras-, Tomaten- oder Eiobjekt werfen
-
-Throw egg key
-== Taste für Eierwurf
-
-Throw grass key
-== Taste für Graswurf
-
-Throw tomato key
-== Taste für Tomatenwurf
-
-Throwables
-== Wurfobjekte
-
 Tick delay before executing qm_execute_on_join
 == Tick-Verzögerung vor Ausführung von qm_execute_on_join
 
@@ -13453,9 +13426,6 @@ Toggles use of standard eye-emotes on/off, eyeemote s, where s = on for on, off 
 
 Token to register this server to a specific community
 == Token, um diesen Server in einer bestimmten Community zu registrieren
-
-Tomato
-== Tomate
 
 Too many configuration files.
 == Zu viele Konfigurationsdateien.
