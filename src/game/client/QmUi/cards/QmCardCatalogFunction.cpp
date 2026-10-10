@@ -126,11 +126,15 @@ void CMenus::RenderQmFunctionHJAssistContent(CUIRect &Content, float LineHeight,
 	const auto RenderCheckbox = [this, &Content, LineHeight, LineSpacing, PrewarmOnly](const char *pText, int *pValue) {
 		RenderQmFunctionCheckboxRow(Content, LineHeight, LineSpacing, pValue, pText, Localize(pText), pValue, PrewarmOnly);
 	};
-	RenderCheckbox(Localizable("Auto unspec on unfreeze"), &g_Config.m_QmAutoUnspecOnUnfreeze);
-	RenderCheckbox(Localizable("Auto switch to the tee that got unfrozen"), &g_Config.m_QmAutoSwitchOnUnfreeze);
-	RenderCheckbox(Localizable("Automatically close the current chat after waking from freeze"), &g_Config.m_QmAutoCloseChatOnUnfreeze);
-	RenderCheckbox(Localizable("Show wake-up popup on the other tee"), &g_Config.m_QmFreezeWakeupPopup);
-	RenderCheckbox(Localizable("Auto team lock"), &g_Config.m_QmAutoTeamLock);
+	DoSettingsToggleGroup(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_FUNCTION, QMCLIENT_SETTINGS_TAB_FUNCTION, Content,
+		{
+			{&g_Config.m_QmAutoUnspecOnUnfreeze, Localizable("Auto unspec on unfreeze"), Localize("Auto unspec on unfreeze")},
+			{&g_Config.m_QmAutoSwitchOnUnfreeze, Localizable("Auto switch to the tee that got unfrozen"), Localize("Auto switch to the tee that got unfrozen")},
+			{&g_Config.m_QmAutoCloseChatOnUnfreeze, Localizable("Automatically close the current chat after waking from freeze"), Localize("Automatically close the current chat after waking from freeze")},
+			{&g_Config.m_QmFreezeWakeupPopup, Localizable("Show wake-up popup on the other tee"), Localize("Show wake-up popup on the other tee")},
+			{&g_Config.m_QmAutoTeamLock, Localizable("Auto team lock"), Localize("Auto team lock")},
+		},
+		CurrentSettingsContentMetrics(), !PrewarmOnly);
 	if(g_Config.m_QmAutoTeamLock)
 	{
 		Content.HSplitTop(LineHeight, &Row, &Content);

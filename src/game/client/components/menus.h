@@ -24,6 +24,7 @@
 #include <game/client/QmUi/QmScroll.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
+#include <game/client/QmUi/SettingsToggleGrid.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiTheme.h>
@@ -58,6 +59,7 @@
 #include <array>
 #include <chrono>
 #include <deque>
+#include <initializer_list>
 #include <memory>
 #include <optional>
 #include <set>
@@ -2835,6 +2837,8 @@ public:
 	CUIElement &SettingsTextElement(int Page, int Tab, const char *pTextId, const SMenuTextStyleKey &StyleKey);
 	void DoSettingsLabelStreamed(CUIElement &Element, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, int StrLen = -1, const CTextCursor *pReadCursor = nullptr, bool Render = true);
 	void DoSettingsLabel(int Page, int Tab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps = {}, bool Render = true);
+	// 同组短开关共用测量与渲染；LAYOUT/INPUT 供卡片预布局复用相同的内容尺寸与命中区域。
+	bool DoSettingsToggleGroup(int Page, int Tab, int Subtab, CUIRect &Content, std::initializer_list<SSettingsToggleEntry> Entries, const SSettingsContentMetrics &Metrics, bool ProcessInput = true, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER);
 	void DoSettingsMenuLabel(int Page, int Tab, int Subtab, const char *pTextId, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &Props = {}, int MaxWidth = -1);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, float BodySize = -1.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);
 	int DoSettingsButton_Menu(int Page, int Tab, int Subtab, CButtonContainer *pBC, const char *pTextId, const char *pText, int Checked, const CUIRect *pRect, const SSettingsContentMetrics &Metrics, int Flags = BUTTONFLAG_LEFT, int Corners = IGraphics::CORNER_ALL, float Rounding = ui_token::radius::BASE, const ColorRGBA &Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), float FontFactor = 0.0f, EQmIcon Icon = EQmIcon::COUNT, const char *pFallbackIcon = nullptr, const IGraphics::CTextureHandle *pIconTexture = nullptr);

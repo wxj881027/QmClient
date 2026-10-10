@@ -183,6 +183,60 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 		return Revision;
 	};
 	const uint64_t NamePlatePreviewMeasureRevision = AppearanceTab == APPEARANCE_TAB_NAME_PLATE ? ResolveNamePlatePreviewMeasureRevision() : 0;
+	const auto HudCoreToggles = [this, AppearanceMetrics, RenderOnly](CUIRect &Content, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER) {
+		return DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, Content,
+			{
+				{&g_Config.m_ClShowhudHealthAmmo, "appearance-show-health-shields-ammo", Localize("Show health, shields and ammo")},
+				{&g_Config.m_ClShowhudScore, "appearance-show-score", Localize("Show score")},
+				{&g_Config.m_ClShowLocalTimeAlways, "appearance-show-local-time-always", Localize("Show local time always")},
+				{&g_Config.m_ClSpecCursor, "appearance-show-spectator-cursor", Localize("Show spectator cursor")},
+				{&g_Config.m_ClShowVotesAfterVoting, "appearance-show-votes-after-voting", Localize("Show votes window after voting")},
+			},
+			AppearanceMetrics, !RenderOnly, Pass);
+	};
+	const auto HudStyleToggles = [this, AppearanceMetrics, RenderOnly](CUIRect &Content, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER) {
+		return DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, Content,
+			{
+				{&g_Config.m_ClHudRainbowColors, "appearance-hud-rainbow-colors", Localize("HUD rainbow colors")},
+				{&g_Config.m_ClShowhudJumpsIndicator, "appearance-show-jumps-indicator", Localize("Show jumps indicator")},
+			},
+			AppearanceMetrics, !RenderOnly, Pass);
+	};
+	const auto HudStatusToggles = [this, AppearanceMetrics, RenderOnly](CUIRect &Content, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER) {
+		return DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, Content,
+			{
+				{&g_Config.m_ClShowhudSpectatorCount, "appearance-show-spectator-count", Localize("Show number of spectators")},
+				{&g_Config.m_ClShowhudDummyActions, "appearance-show-dummy-actions", Localize("Show dummy actions")},
+			},
+			AppearanceMetrics, !RenderOnly, Pass);
+	};
+	const auto HudPositionToggles = [this, AppearanceMetrics, RenderOnly](CUIRect &Content, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER) {
+		return DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, APPEARANCE_TAB_HUD, Content,
+			{
+				{&g_Config.m_ClShowhudPlayerPosition, "appearance-show-player-position", Localize("Show player position")},
+				{&g_Config.m_ClShowhudPlayerSpeed, "appearance-show-player-speed", Localize("Show player speed")},
+				{&g_Config.m_ClShowhudPlayerAngle, "appearance-show-player-target-angle", Localize("Show player target angle")},
+			},
+			AppearanceMetrics, !RenderOnly, Pass);
+	};
+	const auto ChatDisplayToggles = [this, AppearanceMetrics, RenderOnly](CUIRect &Content, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER) {
+		return DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, APPEARANCE_TAB_CHAT, Content,
+			{
+				{&g_Config.m_ClChatTeamColors, "appearance-chat-team-colors", Localize("Show names in chat in team colors")},
+				{&g_Config.m_ClShowChatFriends, "appearance-chat-friends-only", Localize("Show only chat messages from friends")},
+				{&g_Config.m_ClShowChatTeamMembersOnly, "appearance-chat-team-members-only", Localize("Show only chat messages from team members")},
+			},
+			AppearanceMetrics, !RenderOnly, Pass);
+	};
+	const auto ChatStorageToggles = [this, AppearanceMetrics, RenderOnly](CUIRect &Content, ESettingsToggleGroupPass Pass = ESettingsToggleGroupPass::RENDER) {
+		return DoSettingsToggleGroup(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, APPEARANCE_TAB_CHAT, Content,
+			{
+				{&g_Config.m_QmChatSaveDraft, "appearance-chat-save-draft", Localize("Save unsent chat draft")},
+				{&g_Config.m_QmChatLogAutoSave, "appearance-chat-log-auto-save", Localize("Auto save chat log")},
+			},
+			AppearanceMetrics, !RenderOnly, Pass);
+	};
+
 	const auto BuildDefinitions = [=, this](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(std::size(aAppearanceIds));
 		const auto AddCard = [&vCards, &CardSpec](size_t Index, float ContentHeight, FSettingsCardRender Render) {
@@ -203,25 +257,25 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			vCards.push_back(std::move(Definition));
 		};
 
+		const auto AddToggleCard = [this, &vCards, &CardSpec](size_t Index, const FSettingsCardRenderMeasured &Render) {
+			SSettingsCardDefinition Definition;
+			Definition.m_Spec = CardSpec(Index);
+			Definition.m_RenderMeasured = Render;
+			Definition.m_Render = [Render](CUIRect Content) { Render(Content); };
+			Definition.m_Measure = [this, Render](float Width) { return qm_card_catalog::QmCardRenderHook::MeasureContent(this, Render, Width); };
+			vCards.push_back(std::move(Definition));
+		};
+
 		if(AppearanceTab == APPEARANCE_TAB_HUD)
 		{
 			CPerfTimer HudShellTimer;
 			LogPerfStage(Client(), "appearance_hud_text_cache", HudShellTimer.ElapsedMs(), false, "page=appearance tab=hud section=text_cache");
 			LogPerfStage(Client(), "appearance_hud_tab_shell", HudShellTimer.ElapsedMs(), false, "page=appearance tab=hud");
-			const float HudLeftMinCardHeight = ResolveSettingsRowsHeight(6, LineSize, MarginSmall) + MarginSmall + MarginBetweenViews + HeadlineHeight + MarginSmall + ColorPickerRowHeight * 4.0f;
-			const auto ResolveHudRightMinCardHeight = [LineSize, MarginSmall]() {
-				const int HudRightCheckboxRowCount = 8 + (g_Config.m_ClShowhudDDRace ? 2 : 0);
-				return ResolveSettingsRowsHeight(HudRightCheckboxRowCount, LineSize, MarginSmall) + MarginSmall * 3.0f + (g_Config.m_ClShowFreezeBars ? LineSize : 0.0f);
-			};
-			AddCard(0, HudLeftMinCardHeight, [=, this](CUIRect ContentRect) mutable {
+			AddToggleCard(0, [=, this](CUIRect &ContentRect) mutable {
 				CUIRect LeftView = ContentRect;
 				CPerfTimer HudCoreTimer;
 				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhud, "appearance-show-ingame-hud", Localize("Show ingame HUD"), &g_Config.m_ClShowhud, &LeftView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudHealthAmmo, "appearance-show-health-shields-ammo", Localize("Show health, shields and ammo"), &g_Config.m_ClShowhudHealthAmmo, &LeftView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudScore, "appearance-show-score", Localize("Show score"), &g_Config.m_ClShowhudScore, &LeftView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowLocalTimeAlways, "appearance-show-local-time-always", Localize("Show local time always"), &g_Config.m_ClShowLocalTimeAlways, &LeftView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClSpecCursor, "appearance-show-spectator-cursor", Localize("Show spectator cursor"), &g_Config.m_ClSpecCursor, &LeftView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowVotesAfterVoting, "appearance-show-votes-after-voting", Localize("Show votes window after voting"), &g_Config.m_ClShowVotesAfterVoting, &LeftView, LineSize, MarginSmall, AppearanceBodySize);
+				HudCoreToggles(LeftView);
 				LeftView.HSplitTop(MarginBetweenViews, nullptr, &LeftView);
 				CUIRect ScoreboardTitle;
 				LeftView.HSplitTop(HeadlineHeight, &ScoreboardTitle, &LeftView);
@@ -234,25 +288,22 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				DoLine_ColorPicker(&s_SameClanColor, AppearanceMetrics, &LeftView, Localize("Same clan color in scoreboard"), &g_Config.m_ClSameClanColor, GreenDefault, false);
 				DoLine_ColorPicker(&s_FriendsListFriendColor, AppearanceMetrics, &LeftView, Localize("Friend color in friends list"), &g_Config.m_ClFriendsListFriendColor, ColorRGBA(0.949f, 0.806f, 0.368f), false);
 				DoLine_ColorPicker(&s_FriendsListClanColor, AppearanceMetrics, &LeftView, Localize("Clan color in friends list"), &g_Config.m_ClFriendsListClanColor, ColorRGBA(0.336f, 0.231f, 0.867f), false);
+				ContentRect = LeftView;
 				LogPerfStage(Client(), "appearance_hud_core_section", HudCoreTimer.ElapsedMs(), false, "page=appearance tab=hud section=core");
 			});
-			AddCard(1, ResolveHudRightMinCardHeight(), [=, this](CUIRect ContentRect) mutable {
+			AddToggleCard(1, [=, this](CUIRect &ContentRect) mutable {
 				CUIRect RightView = ContentRect;
 				CPerfTimer HudDdraceTimer;
 				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowIds, "appearance-show-client-ids", Localize("Show client IDs (scoreboard, chat, spectating)"), &g_Config.m_ClShowIds, &RightView, LineSize, MarginSmall, AppearanceBodySize);
 				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudDDRace, "appearance-show-ddrace-hud", Localize("Show DDRace HUD"), &g_Config.m_ClShowhudDDRace, &RightView, LineSize, MarginSmall, AppearanceBodySize);
 				if(g_Config.m_ClShowhudDDRace)
 				{
-					DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClHudRainbowColors, "appearance-hud-rainbow-colors", Localize("HUD rainbow colors"), &g_Config.m_ClHudRainbowColors, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-					DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudJumpsIndicator, "appearance-show-jumps-indicator", Localize("Show jumps indicator"), &g_Config.m_ClShowhudJumpsIndicator, &RightView, LineSize, MarginSmall, AppearanceBodySize);
+					HudStyleToggles(RightView);
 				}
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudSpectatorCount, "appearance-show-spectator-count", Localize("Show number of spectators"), &g_Config.m_ClShowhudSpectatorCount, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudDummyActions, "appearance-show-dummy-actions", Localize("Show dummy actions"), &g_Config.m_ClShowhudDummyActions, &RightView, LineSize, MarginSmall, AppearanceBodySize);
+				HudStatusToggles(RightView);
 				// 卡键/锤子/分身控制/分身同步四个状态开关与自定义 bind 状态列表已迁移到 QmClient → HUD → DDRace HUD Pro 卡片
 				RightView.HSplitTop(MarginSmall, nullptr, &RightView);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudPlayerPosition, "appearance-show-player-position", Localize("Show player position"), &g_Config.m_ClShowhudPlayerPosition, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudPlayerSpeed, "appearance-show-player-speed", Localize("Show player speed"), &g_Config.m_ClShowhudPlayerSpeed, &RightView, LineSize, MarginSmall, AppearanceBodySize);
-				DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_HUD, &g_Config.m_ClShowhudPlayerAngle, "appearance-show-player-target-angle", Localize("Show player target angle"), &g_Config.m_ClShowhudPlayerAngle, &RightView, LineSize, MarginSmall, AppearanceBodySize);
+				HudPositionToggles(RightView);
 				LogPerfStage(Client(), "appearance_hud_ddrace_section", HudDdraceTimer.ElapsedMs(), false, "page=appearance tab=hud section=ddrace");
 				CPerfTimer HudFreezeBarsTimer;
 				RightView.HSplitTop(MarginSmall, nullptr, &RightView);
@@ -262,11 +313,11 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 					RightView.HSplitTop(LineSize, &Button, &RightView);
 					DoAppearanceNumericField(APPEARANCE_TAB_HUD, "appearance-freeze-bars-alpha-inside-freeze", &g_Config.m_ClFreezeBarsAlphaInsideFreeze, &g_Config.m_ClFreezeBarsAlphaInsideFreeze, Button, Localize("Opacity of freeze bars inside freeze"), 0, 100, &CUi::ms_LinearScrollbarScale, 0, "%");
 				}
+				ContentRect = RightView;
 				LogPerfStage(Client(), "appearance_hud_freeze_bars_section", HudFreezeBarsTimer.ElapsedMs(), false, "page=appearance tab=hud section=freeze_bars");
 			});
-			vCards.back().m_Measure = [ResolveHudRightMinCardHeight](float) { return ResolveHudRightMinCardHeight(); };
 			vCards.back().m_MeasureRevision = static_cast<uint64_t>(g_Config.m_ClShowhudDDRace != 0) | (static_cast<uint64_t>(g_Config.m_ClShowFreezeBars != 0) << 1);
-			vCards.back().m_PreLayoutInput = [this, LineSize, MarginSmall](CUIRect Content) {
+			vCards.back().m_PreLayoutInput = [this, LineSize, MarginSmall, HudStyleToggles, HudStatusToggles, HudPositionToggles](CUIRect Content) {
 				if(m_MenuTextPlanCollecting)
 					return false;
 				CUIRect RightView = Content;
@@ -285,15 +336,10 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				NextRow();
 				bool Changed = ProcessToggle(NextRow(), &g_Config.m_ClShowhudDDRace);
 				if(g_Config.m_ClShowhudDDRace)
-				{
-					NextRow();
-					NextRow();
-				}
-				for(int RowIndex = 0; RowIndex < 2; ++RowIndex)
-					NextRow();
+					HudStyleToggles(RightView, ESettingsToggleGroupPass::LAYOUT);
+				HudStatusToggles(RightView, ESettingsToggleGroupPass::LAYOUT);
 				RightView.HSplitTop(MarginSmall, nullptr, &RightView);
-				for(int RowIndex = 0; RowIndex < 3; ++RowIndex)
-					NextRow();
+				HudPositionToggles(RightView, ESettingsToggleGroupPass::LAYOUT);
 				RightView.HSplitTop(MarginSmall, nullptr, &RightView);
 				Changed = ProcessToggle(NextRow(), &g_Config.m_ClShowFreezeBars) || Changed;
 				return Changed;
@@ -304,21 +350,12 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 			CChat *pChat = &GameClient()->m_Chat;
 			static int s_AppearanceAlwaysShowChat = 0;
 			// ***** Chat ***** //
-			const auto ResolveChatSettingsMinCardHeight = [LineSize, MarginSmall, ColorPickerRowHeight]() {
-				const int ChatSettingsRowCount = 9 + (g_Config.m_ClShowChat != 0 ? 1 : 0) + (g_Config.m_QmChatLogAutoSave != 0 ? 1 : 0);
-				return ResolveSettingsRowsHeight(ChatSettingsRowCount, LineSize, MarginSmall) + MarginSmall + ColorPickerRowHeight;
-			};
 			SSettingsCardDefinition ChatSettingsDefinition;
 			ChatSettingsDefinition.m_Spec = CardSpec(2);
-			ChatSettingsDefinition.m_Measure = [ResolveChatSettingsMinCardHeight](float) { return ResolveChatSettingsMinCardHeight(); };
-			ChatSettingsDefinition.m_Render = [=, this](CUIRect ContentRect) mutable {
+			ChatSettingsDefinition.m_RenderMeasured = [=, this](CUIRect &ContentRect) mutable {
 				CUIRect LeftView = ContentRect;
 				const auto NextChatRow = [&](CUIRect &Row) {
 					LeftView.HSplitTop(LineSize, &Row, &LeftView);
-					LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
-				};
-				const auto DoChatCheckBox = [&](const void *pId, const char *pTextId, const char *pText, int *pValue) {
-					DoSettingsButton_CheckBoxAutoVMarginAndSet(SETTINGS_APPEARANCE, APPEARANCE_TAB_CHAT, pId, pTextId, pText, pValue, &LeftView, LineSize, 0.0f, AppearanceBodySize);
 					LeftView.HSplitTop(MarginSmall, nullptr, &LeftView);
 				};
 				// General chat settings
@@ -334,11 +371,8 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 						g_Config.m_ClShowChat = g_Config.m_ClShowChat != 2 ? 2 : 1;
 				}
 
-				DoChatCheckBox(&g_Config.m_ClChatTeamColors, "appearance-chat-team-colors", Localize("Show names in chat in team colors"), &g_Config.m_ClChatTeamColors);
-				DoChatCheckBox(&g_Config.m_ClShowChatFriends, "appearance-chat-friends-only", Localize("Show only chat messages from friends"), &g_Config.m_ClShowChatFriends);
-				DoChatCheckBox(&g_Config.m_ClShowChatTeamMembersOnly, "appearance-chat-team-members-only", Localize("Show only chat messages from team members"), &g_Config.m_ClShowChatTeamMembersOnly);
-				DoChatCheckBox(&g_Config.m_QmChatSaveDraft, "appearance-chat-save-draft", Localize("Save unsent chat draft"), &g_Config.m_QmChatSaveDraft);
-				DoChatCheckBox(&g_Config.m_QmChatLogAutoSave, "appearance-chat-log-auto-save", Localize("Auto save chat log"), &g_Config.m_QmChatLogAutoSave);
+				ChatDisplayToggles(LeftView);
+				ChatStorageToggles(LeftView);
 				if(g_Config.m_QmChatLogAutoSave)
 				{
 					NextChatRow(Button);
@@ -367,11 +401,16 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 
 				static CButtonContainer s_BackgroundColor;
 				DoLine_ColorPicker(&s_BackgroundColor, AppearanceMetrics, &LeftView, Localize("Chat background color"), &g_Config.m_ClChatBackgroundColor, color_cast<ColorRGBA>(ColorHSLA(DefaultConfig::ClChatBackgroundColor, true)), false, nullptr, true);
+				ContentRect = LeftView;
 			};
+			const auto ChatRender = ChatSettingsDefinition.m_RenderMeasured;
+			ChatSettingsDefinition.m_Render = [ChatRender](CUIRect Content) { ChatRender(Content); };
+			ChatSettingsDefinition.m_Measure = [this, ChatRender](float Width) { return qm_card_catalog::QmCardRenderHook::MeasureContent(this, ChatRender, Width); };
+
 			ChatSettingsDefinition.m_MeasureRevision =
 				(static_cast<uint64_t>(g_Config.m_ClShowChat != 0) << 0) |
 				(static_cast<uint64_t>(g_Config.m_QmChatLogAutoSave != 0) << 1);
-			ChatSettingsDefinition.m_PreLayoutInput = [this, LineSize, MarginSmall](CUIRect ContentRect) {
+			ChatSettingsDefinition.m_PreLayoutInput = [this, LineSize, MarginSmall, ChatDisplayToggles, ChatStorageToggles](CUIRect ContentRect) {
 				if(m_MenuTextPlanCollecting)
 					return false;
 				auto NextRow = [LineSize, MarginSmall](CUIRect &Content, CUIRect &Row) {
@@ -387,13 +426,8 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				}
 				if(g_Config.m_ClShowChat)
 					NextRow(ContentRect, Row);
-				for(int i = 0; i < 4; ++i)
-					NextRow(ContentRect, Row);
-				NextRow(ContentRect, Row);
-				if(!Ui()->DoButtonLogic(&g_Config.m_QmChatLogAutoSave, 0, &Row, BUTTONFLAG_LEFT))
-					return false;
-				g_Config.m_QmChatLogAutoSave ^= 1;
-				return true;
+				ChatDisplayToggles(ContentRect, ESettingsToggleGroupPass::LAYOUT);
+				return ChatStorageToggles(ContentRect, ESettingsToggleGroupPass::INPUT);
 			};
 			vCards.push_back(std::move(ChatSettingsDefinition));
 			const float ChatMessagesMinCardHeight = ResolveAppearanceChatMessagesHeight(AppearanceMetrics);

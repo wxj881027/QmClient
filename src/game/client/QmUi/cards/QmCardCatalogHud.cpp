@@ -276,14 +276,6 @@ namespace qm_card_catalog
 					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_Qm3DParticlesTwinkle, &g_Config.m_Qm3DParticlesTwinkle) || Changed;
 					return Changed;
 				};
-			case EQmModuleId::BindStatusHud:
-				return [pMenus, LineHeight, LineSpacing](CUIRect Content) {
-					bool Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusReset, &g_Config.m_ClShowhudKeyStatusReset);
-					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusHammer, &g_Config.m_ClShowhudKeyStatusHammer) || Changed;
-					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusControl, &g_Config.m_ClShowhudKeyStatusControl) || Changed;
-					Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, LineHeight, LineSpacing, &g_Config.m_ClShowhudKeyStatusSync, &g_Config.m_ClShowhudKeyStatusSync) || Changed;
-					return Changed;
-				};
 			case EQmModuleId::GoresDrownBoard:
 				return [pMenus, Metrics](CUIRect Content) {
 					bool Changed = qm_card_catalog::QmCardRenderHook::HandleQmHudCheckboxInput(pMenus, Content, Metrics.m_LineHeight, Metrics.m_LineSpacing, &g_Config.m_QmGoresDrownBoard, &g_Config.m_QmGoresDrownBoard);
