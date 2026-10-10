@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+class CServerInfo;
 class IConsole;
 class IStorage;
 
@@ -24,6 +25,8 @@ public:
 	bool LoadSqlText(const char *pSql, size_t Length);
 
 	const SEntry *Find(const char *pMapName, const char *pCategoryHint = nullptr) const;
+	// 服务器列表与星级筛选共用此入口，先限定玩法再查询 DDNet 地图星级。
+	const SEntry *FindForServer(const CServerInfo &Server, const char *pCategoryHint = nullptr) const;
 	int Size() const { return (int)m_vEntries.size(); }
 	bool Empty() const { return m_vEntries.empty(); }
 
