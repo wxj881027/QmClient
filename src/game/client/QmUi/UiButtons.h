@@ -25,6 +25,7 @@ namespace ui_widget
 		bool m_TransparentInactive = false;
 		int m_Corners = IGraphics::CORNER_ALL;
 		float m_Radius = ui_token::radius::BASE;
+		float m_BorderWidth = ui_token::feedback::ICON_BORDER_WIDTH;
 		std::optional<ColorRGBA> m_Color;
 		const CUIRect *m_pHitRect = nullptr;
 	};

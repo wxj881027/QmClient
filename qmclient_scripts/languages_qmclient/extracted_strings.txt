@@ -1086,6 +1086,7 @@ Delete selected items
 Delete skin
 Delete this preset
 Demo
+Demo directory
 Demo display
 Demo effects
 Demo hook strength (0=Off 1=Icon 2=Icon and number)
@@ -1241,6 +1242,7 @@ Dummy jump
 Dummy key/hammer/control/copy status switches
 Dummy marking color
 Dummy mini view
+Dummy mini view rendering unavailable
 Dummy mini view size (percent)
 Dummy mini view zoom (percent)
 Dummy name
@@ -1537,6 +1539,9 @@ Failed to preview candidate file.
 Failed to preview import file.
 Failed to read saves file
 Failed to record video. See local console for details.
+Failed to save demo
+Failed to save screenshot
+Failed to save video
 Failed to write PNG export.
 Fake CTF flags
 Fallback simple noise reduction strength
@@ -1765,6 +1770,7 @@ Gradient settings
 Gradient type
 Gradient vertical position
 Graphics
+Graphics backend does not support dummy mini view
 Graphics card
 Graphics display
 Graphics library major version (0 = auto-detect)
@@ -2160,6 +2166,7 @@ Leave empty to disable
 Leave empty to join public room
 Leave empty to show everyone
 Leave empty to use default prompt
+Leave empty to use the default directory. Relative paths use the config directory.
 Leave solo split mode
 Left jump
 Left-click a Frankenstein part to tint it. Drag parts to replace them. Right-click resets.
@@ -3484,6 +3491,7 @@ Screen refresh rate (Hz, only fullscreen)
 Screen resolution height (only fullscreen)
 Screen resolution width (only fullscreen)
 Screenshot
+Screenshot directory
 Screenshot error
 Screenshot saved
 Screenshot watermark custom text
@@ -4744,6 +4752,7 @@ Vertical movement of each character. Zero keeps the title still.
 Vertical position
 Vertical sync (may cause lag)
 Video Background
+Video directory
 Video name
 Video name:
 Video rendering is unavailable during online replay.

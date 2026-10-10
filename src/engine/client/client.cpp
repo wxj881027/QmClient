@@ -66,6 +66,7 @@
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
+#include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/frame_scheduler.h>
 #include <game/localization.h>
@@ -4958,6 +4959,7 @@ void CClient::AutoScreenshot_Start()
 {
 	if(g_Config.m_ClAutoScreenshot)
 	{
+		m_AutoScreenshotCleanupPath = qmclient::media_paths::Resolve(Storage(), g_Config, "screenshots/auto");
 		Graphics()->TakeScreenshot("auto/autoscreen", nullptr, GameClient()->ScreenshotProcessor());
 		m_AutoScreenshotRecycle = true;
 	}
@@ -4967,6 +4969,7 @@ void CClient::AutoStatScreenshot_Start()
 {
 	if(g_Config.m_ClAutoStatboardScreenshot)
 	{
+		m_AutoStatScreenshotCleanupPath = qmclient::media_paths::Resolve(Storage(), g_Config, "screenshots/auto/stats");
 		Graphics()->TakeScreenshot("auto/stats/autoscreen", nullptr, GameClient()->ScreenshotProcessor());
 		m_AutoStatScreenshotRecycle = true;
 	}
@@ -4976,11 +4979,11 @@ void CClient::AutoScreenshot_Cleanup()
 {
 	if(m_AutoScreenshotRecycle)
 	{
-		if(g_Config.m_ClAutoScreenshotMax)
+		if(g_Config.m_ClAutoScreenshotMax && !m_AutoScreenshotCleanupPath.empty())
 		{
 			// clean up auto taken screens
 			CFileCollection AutoScreens;
-			AutoScreens.Init(Storage(), "screenshots/auto", "autoscreen", ".png", g_Config.m_ClAutoScreenshotMax);
+			AutoScreens.Init(Storage(), m_AutoScreenshotCleanupPath.c_str(), "autoscreen", ".png", g_Config.m_ClAutoScreenshotMax);
 		}
 		m_AutoScreenshotRecycle = false;
 	}
@@ -4990,11 +4993,11 @@ void CClient::AutoStatScreenshot_Cleanup()
 {
 	if(m_AutoStatScreenshotRecycle)
 	{
-		if(g_Config.m_ClAutoStatboardScreenshotMax)
+		if(g_Config.m_ClAutoStatboardScreenshotMax && !m_AutoStatScreenshotCleanupPath.empty())
 		{
 			// clean up auto taken screens
 			CFileCollection AutoScreens;
-			AutoScreens.Init(Storage(), "screenshots/auto/stats", "autoscreen", ".png", g_Config.m_ClAutoStatboardScreenshotMax);
+			AutoScreens.Init(Storage(), m_AutoStatScreenshotCleanupPath.c_str(), "autoscreen", ".png", g_Config.m_ClAutoStatboardScreenshotMax);
 		}
 		m_AutoStatScreenshotRecycle = false;
 	}
@@ -5067,6 +5070,14 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	{
 		str_format(aFilename, sizeof(aFilename), "videos/%s.mp4", pFilename);
 	}
+
+	const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
+	if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
+	{
+		m_DemoPlayer.Stop("Failed to save video");
+		return;
+	}
+	str_copy(aFilename, Path.c_str());
 
 	// wait for idle, so there is no data race
 	Graphics()->WaitForIdle();
@@ -5279,20 +5290,30 @@ void CClient::SaveReplay(const int Length, const char *pFilename)
 		{
 			char aTimestamp[20];
 			str_timestamp(aTimestamp, sizeof(aTimestamp));
-			m_pStorage->CreateFolder("demos/highlight", IStorage::TYPE_SAVE);
 			str_format(aFilename, sizeof(aFilename), "demos/highlight/高光-%s.demo", aTimestamp);
 		}
 		else
 		{
 			str_format(aFilename, sizeof(aFilename), "demos/replays/%s.demo", pFilename);
-			IOHANDLE Handle = m_pStorage->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		}
+		const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
+		if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
+		{
+			GameClient()->Echo(Localize("Failed to save demo"));
+			return;
+		}
+		str_copy(aFilename, Path.c_str());
+		if(pFilename[0] != '\0')
+		{
+			IOHANDLE Handle = m_pStorage->OpenFile(aFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 			if(!Handle)
 			{
 				m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "replay", "ERROR: invalid filename. Try a different one!");
+				GameClient()->Echo(Localize("Failed to save demo"));
 				return;
 			}
 			io_close(Handle);
-			m_pStorage->RemoveFile(aFilename, IStorage::TYPE_SAVE);
+			m_pStorage->RemoveFile(aFilename, qmclient::media_paths::StorageType(aFilename));
 		}
 
 		// Stop the recorder to correctly slice the demo after
@@ -5414,6 +5435,8 @@ const char *CClient::DemoPlayer_Render(const char *pFilename, int StorageType, c
 		return pError;
 
 	StartVideo(pVideoName, false);
+	if(!IVideo::Current())
+		return Localize("Failed to save video");
 	m_DemoPlayer.SetSpeedIndex(SpeedIndex);
 	if(StartPaused)
 	{
@@ -5482,7 +5505,14 @@ void CClient::DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int 
 		str_format(aFilename, sizeof(aFilename), "demos/%s.demo", pFilename);
 	}
 
-	DemoRecorders()[Recorder].Start(
+	const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
+	if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
+	{
+		GameClient()->Echo(Localize("Failed to save demo"));
+		return;
+	}
+	str_copy(aFilename, Path.c_str());
+	if(DemoRecorders()[Recorder].Start(
 		Storage(),
 		m_pConsole,
 		aFilename,
@@ -5495,7 +5525,8 @@ void CClient::DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int 
 		nullptr,
 		m_pMap->File(),
 		nullptr,
-		nullptr);
+		nullptr) == -1)
+		GameClient()->Echo(Localize("Failed to save demo"));
 }
 
 void CClient::DemoRecorder_HandleAutoStart()
@@ -5513,11 +5544,13 @@ void CClient::DemoRecorder_HandleAutoStart()
 		str_format(aFilename, sizeof(aFilename), "auto/%s", m_aCurrentMap);
 		DemoRecorder_Start(aFilename, true, RECORDER_AUTO);
 
-		if(g_Config.m_ClAutoDemoMax)
+		if(g_Config.m_ClAutoDemoMax && DemoRecorder(RECORDER_AUTO)->IsRecording())
 		{
 			// clean up auto recorded demos
 			CFileCollection AutoDemos;
-			AutoDemos.Init(Storage(), "demos/auto", "" /* empty for wild card */, ".demo", g_Config.m_ClAutoDemoMax);
+			const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, "demos/auto");
+			if(!Path.empty())
+				AutoDemos.Init(Storage(), Path.c_str(), "" /* empty for wild card */, ".demo", g_Config.m_ClAutoDemoMax);
 		}
 	}
 
@@ -6862,7 +6895,7 @@ int main(int argc, const char **argv)
 
 			SSaveUnknownCommandContext UnknownCommandContext{pConfigManager, ConfigDomain};
 			pConsole->SetUnknownCommandCallback(SaveUnknownDomainCommandCallback, &UnknownCommandContext);
-			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE))
+			if(!pConsole->ExecuteFile(pConfigPath, IConsole::CLIENT_ID_UNSPECIFIED, false, CLIENT_CONFIG_STORAGE_TYPE, true))
 			{
 				pConsole->SetUnknownCommandCallback(IConsole::EmptyUnknownCommandCallback, nullptr);
 				char aError[2048];
@@ -7117,7 +7150,7 @@ void CClient::RaceRecord_Start(const char *pFilename)
 	dbg_assert(State() == IClient::STATE_ONLINE, "Client must be online to record demo");
 	dbg_assert(m_pMap && m_pMap->IsLoaded(), "Map must be loaded to record demo");
 
-	DemoRecorders()[RECORDER_RACE].Start(
+	if(DemoRecorders()[RECORDER_RACE].Start(
 		Storage(),
 		m_pConsole,
 		pFilename,
@@ -7130,7 +7163,8 @@ void CClient::RaceRecord_Start(const char *pFilename)
 		nullptr,
 		m_pMap->File(),
 		nullptr,
-		nullptr);
+		nullptr) == -1)
+		GameClient()->Echo(Localize("Failed to save demo"));
 }
 
 void CClient::RaceRecord_Stop()

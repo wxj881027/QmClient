@@ -56,6 +56,32 @@ inline SQmChatInputLayout QmChatResolveInputLayout(float X, float Y, float LineW
 	return Layout;
 }
 
+struct SQmChatInputPixelClip
+{
+	int m_X = 0;
+	int m_Y = 0;
+	int m_W = 0;
+	int m_H = 0;
+};
+
+// HUD 移动、缩放后，裁切框必须和文字使用同一屏幕映射；向外取整保留边缘像素。
+inline SQmChatInputPixelClip QmChatInputPixelClip(const CUIRect &Rect, const CUIRect &MappedScreen, int ScreenWidth, int ScreenHeight)
+{
+	if(MappedScreen.w <= 0.0f || MappedScreen.h <= 0.0f || ScreenWidth <= 0 || ScreenHeight <= 0)
+		return {};
+
+	const float PixelWidth = ScreenWidth;
+	const float PixelHeight = ScreenHeight;
+	const float ScaleX = PixelWidth / MappedScreen.w;
+	const float ScaleY = PixelHeight / MappedScreen.h;
+	// 先限制到帧缓冲再转整数，避免完全移出屏幕的坐标超出整数范围。
+	const int Left = (int)std::clamp(std::floor((Rect.x - MappedScreen.x) * ScaleX), 0.0f, PixelWidth);
+	const int Top = (int)std::clamp(std::floor((Rect.y - MappedScreen.y) * ScaleY), 0.0f, PixelHeight);
+	const int Right = (int)std::clamp(std::ceil((Rect.x + Rect.w - MappedScreen.x) * ScaleX), (float)Left, PixelWidth);
+	const int Bottom = (int)std::clamp(std::ceil((Rect.y + Rect.h - MappedScreen.y) * ScaleY), (float)Top, PixelHeight);
+	return {Left, Top, Right - Left, Bottom - Top};
+}
+
 // 同一绘制映射同时用于裁剪、鼠标命中与 tooltip 锚点，避免 HUD 移动/缩放后坐标错位。
 struct SQmChatViewport
 {
@@ -75,12 +101,8 @@ struct SQmChatViewport
 
 	CUIRect ClipPixels(const CUIRect &Rect) const
 	{
-		const CUIRect Pixels = ToPixels(Rect);
-		const float Left = std::clamp(std::floor(Pixels.x), 0.0f, m_PixelSize.x);
-		const float Top = std::clamp(std::floor(Pixels.y), 0.0f, m_PixelSize.y);
-		const float Right = std::clamp(std::ceil(Pixels.x + Pixels.w), Left, m_PixelSize.x);
-		const float Bottom = std::clamp(std::ceil(Pixels.y + Pixels.h), Top, m_PixelSize.y);
-		return {Left, Top, Right - Left, Bottom - Top};
+		const auto Clip = QmChatInputPixelClip(Rect, m_MapRect, (int)m_PixelSize.x, (int)m_PixelSize.y);
+		return {(float)Clip.m_X, (float)Clip.m_Y, (float)Clip.m_W, (float)Clip.m_H};
 	}
 
 	CUIRect ToUi(const CUIRect &Rect, const CUIRect &UiScreen) const

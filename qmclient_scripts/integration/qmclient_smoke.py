@@ -27,6 +27,36 @@ except ModuleNotFoundError:
 __all__ = ["SMOKE_TESTS", "SmokeEnvironment", "_format_exit_code", "log_message"]
 
 
+def _smoke_media_directory_startup(env: SmokeEnvironment, directory: str) -> None:
+	settings_path = env.path("qmclient", "settings.cfg")
+	settings_path.parent.mkdir(parents=True, exist_ok=True)
+	settings_path.write_text(
+		'qm_steam_auto_launch 0\n'
+		f'qm_demo_directory "{directory}"\n'
+		f'qm_screenshot_directory "{directory}"\n',
+		encoding="utf-8",
+	)
+	env.start_client([], connect=False)
+	# 主循环响应命令，证明菜单等组件已经完成初始化。
+	marker = "media_directory_startup_ready"
+	env.client.command(f"echo {marker}")
+	env.client.wait_for(lambda line: marker in line, "startup command response", 15)
+	env.client.command("quit")
+	code = env.client.wait_for_exit(15)
+	if code != 0:
+		raise RuntimeError(f"client exited with {_format_exit_code(code)}")
+
+
+def smoke_default_media_directory_startup(env: SmokeEnvironment) -> None:
+	"""默认目录下启动、响应命令并正常退出，不需要连接服务端。"""
+	_smoke_media_directory_startup(env, "")
+
+
+def smoke_custom_media_directory_startup(env: SmokeEnvironment) -> None:
+	"""从隔离配置加载相对自定义目录后完成启动，避免初始化前访问存储。"""
+	_smoke_media_directory_startup(env, "自定义 媒体")
+
+
 def smoke_plain_connection(env: SmokeEnvironment) -> None:
 	env.start_server()
 	env.connect_client([])
@@ -79,6 +109,8 @@ def smoke_connection_shutdown(env: SmokeEnvironment) -> None:
 
 
 SMOKE_TESTS: dict[str, Callable[[SmokeEnvironment], None]] = {
+	"default_media_directory_startup": smoke_default_media_directory_startup,
+	"custom_media_directory_startup": smoke_custom_media_directory_startup,
 	"plain_connection": smoke_plain_connection,
 	"focus_configuration": smoke_focus_configuration,
 	"gores_configuration": smoke_gores_configuration,

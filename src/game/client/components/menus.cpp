@@ -55,6 +55,7 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
+#include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/sounds.h>
@@ -624,7 +625,8 @@ CMenus::CMenus()
 	m_ShowStart = true;
 
 	m_DemoBrowserSource = DEMO_BROWSER_SOURCE_DEMOS;
-	ResetDemoBrowserFolder();
+	str_copy(m_aCurrentDemoFolder, DemoBrowserBaseFolder());
+	m_DemolistStorageType = IStorage::TYPE_ALL;
 
 	m_DemoPlayerState = DEMOPLAYER_NONE;
 	m_Dummy = false;
@@ -3743,6 +3745,8 @@ void CMenus::OnInterfacesInit(CGameClient *pClient)
 
 void CMenus::OnInit()
 {
+	// 构造阶段还没有组件接口；配置目录必须等存储接口就绪后解析。
+	ResetDemoBrowserFolder();
 	GameClient()->FrameScheduler()->Reset();
 	m_MapDifficultyCatalog.Load(Storage(), Console());
 
@@ -4848,19 +4852,22 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			m_Popup = POPUP_NONE;
 			// render video
 			char aVideoPath[IO_MAX_PATH_LENGTH];
-			str_format(aVideoPath, sizeof(aVideoPath), "videos/%s", m_DemoRenderInput.GetString());
-			if(!str_endswith(aVideoPath, ".mp4"))
-				str_append(aVideoPath, ".mp4");
+			const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + m_DemoRenderInput.GetString() + ".mp4").c_str());
+			str_copy(aVideoPath, VideoPath.c_str());
 
 			if(!str_valid_filename(m_DemoRenderInput.GetString()))
 			{
 				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENDER_DEMO);
 			}
-			else if(Storage()->FolderExists(aVideoPath, IStorage::TYPE_SAVE))
+			else if(!qmclient::media_paths::PrepareWrite(Storage(), VideoPath))
+			{
+				PopupMessage(Localize("Error"), Localize("Failed to save video"), Localize("Ok"), POPUP_RENDER_DEMO);
+			}
+			else if(Storage()->FolderExists(aVideoPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
 				PopupMessage(Localize("Error"), Localize("A folder with this name already exists"), Localize("Ok"), POPUP_RENDER_DEMO);
 			}
-			else if(Storage()->FileExists(aVideoPath, IStorage::TYPE_SAVE))
+			else if(Storage()->FileExists(aVideoPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
 				char aMessage[128 + IO_MAX_PATH_LENGTH];
 				str_format(aMessage, sizeof(aMessage), Localize("File '%s' already exists, do you want to overwrite it?"), m_DemoRenderInput.GetString());
@@ -4966,8 +4973,9 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 
 		char aFilePath[IO_MAX_PATH_LENGTH];
 		char aSaveFolder[IO_MAX_PATH_LENGTH];
-		Storage()->GetCompletePath(IStorage::TYPE_SAVE, "videos", aSaveFolder, sizeof(aSaveFolder));
-		str_format(aFilePath, sizeof(aFilePath), "%s/%s.mp4", aSaveFolder, m_DemoRenderInput.GetString());
+		str_copy(aFilePath, m_aDemoRenderedVideoPath);
+		str_copy(aSaveFolder, aFilePath);
+		fs_parent_dir(aSaveFolder);
 
 		Box.HSplitBottom(20.f, &Box, &Part);
 		Box.HSplitBottom(24.f, &Box, &Part);
@@ -5568,6 +5576,9 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	str_format(aBuf, sizeof(aBuf), "%s/%s", pDemoFolder, aDemoFilename);
 	char aVideoName[IO_MAX_PATH_LENGTH];
 	str_copy(aVideoName, m_DemoRenderInput.GetString());
+	const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + aVideoName + ".mp4").c_str());
+	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(), VideoPath);
+	str_copy(m_aDemoRenderedVideoPath, WholePath.c_str());
 	const char *pError = Client()->DemoPlayer_Render(aBuf, DemoStorageType, aVideoName, m_Speed, m_StartPaused);
 	m_HasPendingDemoRenderSource = false;
 	m_vDemoCutSegments.clear();
@@ -6172,9 +6183,9 @@ void CMenus::OnShutdown()
 	if(m_pRankDemoRequest)
 		m_pRankDemoRequest->Abort();
 	if(m_aRankDemoManifestPath[0] != '\0')
-		Storage()->RemoveFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE);
+		Storage()->RemoveFile(m_aRankDemoManifestPath, qmclient::media_paths::StorageType(m_aRankDemoManifestPath));
 	if(m_aRankDemoTempPath[0] != '\0')
-		Storage()->RemoveFile(m_aRankDemoTempPath, IStorage::TYPE_SAVE);
+		Storage()->RemoveFile(m_aRankDemoTempPath, qmclient::media_paths::StorageType(m_aRankDemoTempPath));
 	m_pRankDemoManifestRequest = nullptr;
 	m_pRankDemoRequest = nullptr;
 	m_RankDemoDownloadStage = ERankDemoDownloadStage::IDLE;
@@ -7884,7 +7895,7 @@ void CMenus::OnRender()
 	if(!IsActive())
 	{
 		m_SettingsCardDeckDisplayState.LeaveSettings();
-		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+		if(!GameClient()->m_GameConsole.IsActive() && Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 		{
 			if(Client()->State() == IClient::STATE_ONLINE)
 			{
@@ -7896,7 +7907,8 @@ void CMenus::OnRender()
 		}
 		else if(Client()->State() != IClient::STATE_DEMOPLAYBACK && !GameClient()->m_RankGhost.IsViewModeActive())
 		{
-			Ui()->ClearHotkeys();
+			if(!GameClient()->m_GameConsole.IsActive())
+				Ui()->ClearHotkeys();
 			// QmClient: 菜单关闭时的空闲帧预热“最近缺失字形”（每帧少量，约 2ms），
 			// 把下次打开菜单时的字形光栅化成本提前摊掉，不影响渲染完整性。
 			constexpr int GLYPH_IDLE_PREWARM_PER_FRAME = 8;
@@ -7906,7 +7918,7 @@ void CMenus::OnRender()
 	}
 
 	// 在线控制层让出输入时结束拖动，恢复拖动前的播放状态。
-	if(GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_Spectator.PlaybackControlsActive() && Ui()->CheckActiveItem(&m_DemoSeekBarId))
+	if(!GameClient()->m_GameConsole.IsActive() && GameClient()->m_RankGhost.IsViewModeActive() && !GameClient()->m_Spectator.PlaybackControlsActive() && Ui()->CheckActiveItem(&m_DemoSeekBarId))
 	{
 		if(!m_PausedBeforeSeeking)
 			GameClient()->m_RankGhost.ViewPlayer()->Unpause();

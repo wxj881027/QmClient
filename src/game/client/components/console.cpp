@@ -2157,8 +2157,6 @@ void CGameConsole::OnRender()
 			pConsole->m_Selection.Clear();
 
 		y -= pConsole->m_BoundingBox.m_H - FontSize;
-		if(LocalConsole)
-			QmConsoleUi::DrawPanel(Ui(), {0.0f, y - 2.0f, Screen.w, 1.0f}, Palette.m_MutedText.WithAlpha(0.35f));
 
 		bool HandleLinkClick = false;
 		if(LinkClickPending)

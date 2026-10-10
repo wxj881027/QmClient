@@ -72,7 +72,7 @@ int CDemoRecorder::Start(class IStorage *pStorage, class IConsole *pConsole, con
 		return -1;
 	}
 
-	IOHANDLE DemoFile = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+	IOHANDLE DemoFile = pStorage->OpenFile(pFilename, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 	if(!DemoFile)
 	{
 		if(m_pConsole)
@@ -425,7 +425,7 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 
 	if(Mode == IDemoRecorder::EStopMode::REMOVE_FILE)
 	{
-		if(!m_pStorage->RemoveFile(m_aCurrentFilename, IStorage::TYPE_SAVE))
+		if(!m_pStorage->RemoveFile(m_aCurrentFilename, fs_is_relative_path(m_aCurrentFilename) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE))
 		{
 			if(m_pConsole)
 			{
@@ -438,7 +438,7 @@ int CDemoRecorder::Stop(IDemoRecorder::EStopMode Mode, const char *pTargetFilena
 	}
 	else if(pTargetFilename[0] != '\0')
 	{
-		if(!m_pStorage->RenameFile(m_aCurrentFilename, pTargetFilename, IStorage::TYPE_SAVE))
+		if(!m_pStorage->RenameFile(m_aCurrentFilename, pTargetFilename, fs_is_relative_path(m_aCurrentFilename) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE))
 		{
 			if(m_pConsole)
 			{

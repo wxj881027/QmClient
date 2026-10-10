@@ -35,6 +35,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <thread>
 
 // 性能日志文件的运行时开关包装（定义见 client.cpp）：CFutureLogger 只能 Set
@@ -139,6 +140,8 @@ class CClient : public IClient, public CDemoPlayer::IListener
 	int m_SnapCrcErrors = 0;
 	bool m_AutoScreenshotRecycle = false;
 	bool m_AutoStatScreenshotRecycle = false;
+	std::string m_AutoScreenshotCleanupPath;
+	std::string m_AutoStatScreenshotCleanupPath;
 	bool m_AutoCSVRecycle = false;
 	bool m_EditorActive = false;
 

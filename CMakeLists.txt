@@ -3069,6 +3069,7 @@ if(CLIENT)
     backend/vulkan/backend_vulkan_qm_ext.h
     backend/vulkan/backend_vulkan_qm_pipelines_impl.h
     backend/vulkan/backend_vulkan_qm_render_targets_impl.h
+    backend/vulkan/vulkan_rendering_lifecycle.h
     backend_egl.cpp
     backend_egl.h
     backend_sdl.cpp
@@ -3549,6 +3550,7 @@ if(CLIENT)
     components/qmclient/screenshot_image_job.h
     components/qmclient/skin_source_job.cpp
     components/qmclient/skin_source_job.h
+    components/qmclient/media_paths.h
     components/qmclient/screenshot_manager.cpp
     components/qmclient/config_package.cpp
     components/qmclient/config_package.h
@@ -4724,6 +4726,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_ui_lifetime_test.cpp
     src/test/unit/qmclient/client/qm_localization_policy_test.cpp
     src/test/unit/qmclient/client/qm_storage_path_test.cpp
+    src/test/unit/qmclient/client/qm_media_paths_test.cpp
+    src/test/integration/qmclient/client/qm_media_paths_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
     src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
@@ -4798,6 +4802,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_config_save_value_override_test.cpp
     src/test/integration/qmclient/client/qm_removed_ui_config_test.cpp
     src/test/integration/qmclient/client/qm_legacy_config_load_test.cpp
+    src/test/integration/engine/config_persistence_test.cpp
     src/test/contract/qmclient/client/qm_prediction_contract_test.cpp
     src/test/unit/qmclient/client/qm_predicted_event_queue_test.cpp
     src/test/unit/qmclient/client/qm_tee_hue_cycle_test.cpp
@@ -4926,7 +4931,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/client/skins/skins_preset_contract_test.cpp
     src/test/contract/client/skins/skins_official_index_contract_test.cpp
     src/test/contract/engine/graphics/render_target_contract_test.cpp
+    src/test/unit/engine/graphics/render_target_geometry_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
+    src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp
     src/test/unit/engine/netobj_secure_unpack_test.cpp
@@ -5116,6 +5123,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     )
   endif()
 
+  if(CLIENT AND VULKAN)
+    list(APPEND TESTS src/test/unit/engine/graphics/vulkan_rendering_lifecycle_test.cpp)
+  endif()
+
   if(METAL)
     list(APPEND TESTS_EXTRA
       src/engine/client/backend/backend_base.cpp
@@ -5173,6 +5184,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE
     ${GTEST_INCLUDE_DIRS}
     ${SDL2_INCLUDE_DIRS}
+    ${VULKAN_INCLUDE_DIRS}
   )
   if(FFMPEG_FOUND)
     target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FFMPEG_INCLUDE_DIRS})

@@ -713,7 +713,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		const CServerInfo *pServer = ServerBrowser()->SortedGet(SortedIndex);
 		if(pServer == nullptr)
 			continue;
-		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.Find(pServer->m_aMap, MapCategoryHintFromServer(pServer));
+		const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pServer, MapCategoryHintFromServer(pServer));
 		const int Stars = pDifficulty != nullptr ? pDifficulty->m_Stars : -1;
 		const bool IsFavorite = GameClient()->m_TClient.IsFavoriteMap(pServer->m_aMap);
 		if(QmMapVotes::MatchesFilter(Stars, pServer->m_NumFilteredPlayers, g_Config.m_QmMapBrowserEmptyOnly != 0, g_Config.m_QmMapBrowserStarMask, g_Config.m_QmMapBrowserFavoriteOnly != 0, IsFavorite))
@@ -943,7 +943,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				char aDisplayServerName[sizeof(pItem->m_aName)];
 				const char *pDisplayServerName = g_Config.m_QmShortServerNames ? CMenus::GetServerbrowserDisplayName(pItem, aDisplayServerName, sizeof(aDisplayServerName)) : pItem->m_aName;
 
-				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.Find(pItem->m_aMap, MapCategoryHintFromServer(pItem));
+				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
 				char aDifficulty[64];
 				FormatMapDifficultySuffix(pDisplayServerName, pDifficulty, aDifficulty, sizeof(aDifficulty));
 

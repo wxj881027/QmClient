@@ -274,7 +274,8 @@ int fs_remove(const char *filename);
  *
  * @remark The strings are treated as null-terminated strings.
  */
-int fs_rename(const char *oldname, const char *newname);
+// 配置等用户文件可禁用删除目标后重试，保证重命名失败时保留原文件。
+int fs_rename(const char *oldname, const char *newname, bool allow_destination_removal = true);
 
 /**
  * Gets the creation and the last modification date of a file or directory.

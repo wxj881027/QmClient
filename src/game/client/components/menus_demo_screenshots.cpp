@@ -240,6 +240,11 @@ bool CMenus::ApplyDemoScreenshotWatermark(const CDemoItem &Item)
 	char *pExtension = strrchr(aTargetPath, '.');
 	if(pExtension == nullptr)
 		pExtension = aTargetPath + str_length(aTargetPath);
+	if(static_cast<size_t>(pExtension - aTargetPath) + str_length("_watermarked.png") >= sizeof(aTargetPath))
+	{
+		PopupMessage(Localize("Screenshot error"), Localize("Unable to save the watermarked screenshot"), Localize("Ok"));
+		return false;
+	}
 	str_copy(pExtension, "_watermarked.png", sizeof(aTargetPath) - (pExtension - aTargetPath));
 
 	const CQmScreenshotManager::SWatermarkOptions Options = CQmScreenshotManager::CurrentWatermarkOptions();

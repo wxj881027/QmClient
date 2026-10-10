@@ -3263,6 +3263,9 @@ Delete this preset
 Demo
 == 데모
 
+Demo directory
+== 데모 저장 폴더
+
 Demo display
 == 데모 표시
 
@@ -3727,6 +3730,9 @@ Dummy marking color
 
 Dummy mini view
 == 더미 미니 뷰
+
+Dummy mini view rendering unavailable
+== 분신 미니 화면을 렌더링할 수 없습니다
 
 Dummy mini view size (percent)
 == 더미 미니 뷰 크기 (백분율)
@@ -4616,6 +4622,15 @@ Failed to read saves file
 Failed to record video. See local console for details.
 == 동영상 녹화에 실패했습니다. 자세한 내용은 로컬 콘솔을 확인하세요.
 
+Failed to save demo
+== 데모 저장에 실패했습니다
+
+Failed to save screenshot
+== 스크린샷 저장에 실패했습니다
+
+Failed to save video
+== 동영상 저장에 실패했습니다
+
 Failed to write PNG export.
 == PNG 내보내기 쓰기에 실패했습니다.
 
@@ -5299,6 +5314,9 @@ Gradient vertical position
 
 Graphics
 == 그래픽
+
+Graphics backend does not support dummy mini view
+== 현재 그래픽 백엔드는 분신 미니 화면을 지원하지 않습니다
 
 Graphics card
 == 그래픽 카드
@@ -6484,6 +6502,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == 기본 프롬프트를 사용하려면 비워 두세요
+
+Leave empty to use the default directory. Relative paths use the config directory.
+== 비워 두면 기본 폴더를 사용합니다. 상대 경로는 설정 폴더를 기준으로 합니다.
 
 Leave solo split mode
 == 솔로 스플릿 모드 종료
@@ -10457,6 +10478,9 @@ Screen resolution width (only fullscreen)
 Screenshot
 == 스크린샷
 
+Screenshot directory
+== 스크린샷 저장 폴더
+
 Screenshot error
 == 스크린샷 처리 실패
 
@@ -14236,6 +14260,9 @@ Vertical sync (may cause lag)
 
 Video Background
 == 비디오 배경
+
+Video directory
+== 동영상 저장 폴더
 
 Video name
 == 비디오 이름

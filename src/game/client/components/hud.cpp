@@ -26,6 +26,7 @@
 #include <game/client/animstate.h>
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
+#include <game/client/components/qmclient/dummy_miniview_render.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/rank_ghost.h>
@@ -1193,7 +1194,10 @@ void CHud::DestroyMediaIslandBlurTargets()
 
 void CHud::DestroyDummyMiniViewRenderTarget()
 {
-	Graphics()->DestroyRenderTarget(&m_DummyMiniViewRenderTarget);
+	if(m_DummyMiniViewGraphicsVersion == Graphics()->GraphicsResourcesResetVersion())
+		Graphics()->DestroyRenderTarget(&m_DummyMiniViewRenderTarget);
+	else
+		m_DummyMiniViewRenderTarget.Invalidate();
 	m_DummyMiniViewRenderTargetWidth = 0;
 	m_DummyMiniViewRenderTargetHeight = 0;
 }
@@ -1827,7 +1831,7 @@ namespace
 	{
 		bool m_HasSignal = false;
 		char m_aPlaceholderTitle[48] = {};
-		char m_aPlaceholderSubtitle[96] = {};
+		char m_aPlaceholderSubtitle[256] = {};
 		ColorRGBA m_TargetAccent = ColorRGBA(0.35f, 0.78f, 1.0f, 1.0f);
 	};
 
@@ -2032,20 +2036,24 @@ void CHud::RenderDummyMiniMap()
 	const auto Backend = Graphics()->GetDetectedContextVersion(BackendMajor, BackendMinor, BackendPatch, pBackendName) ?
 				     QmDummyMiniViewLayout::ResolveBackend(pBackendName) :
 				     QmDummyMiniViewLayout::EBackend::UNKNOWN;
+	if(m_DummyMiniViewGraphicsVersion != Graphics()->GraphicsResourcesResetVersion())
+	{
+		// 图形重建已经释放旧 GPU 资源，旧 ID 不能再提交销毁命令。
+		m_DummyMiniViewRenderTarget.Invalidate();
+		m_DummyMiniViewRenderTargetWidth = 0;
+		m_DummyMiniViewRenderTargetHeight = 0;
+		m_DummyMiniViewGraphicsVersion = Graphics()->GraphicsResourcesResetVersion();
+	}
 	float MiniX = 0.0f;
 	float MiniY = 0.0f;
 	float MiniW = 0.0f;
 	float MiniH = 0.0f;
 	if(!GetDummyMiniMapRect(MiniX, MiniY, MiniW, MiniH))
 	{
-		if(m_DummyMiniViewRenderTarget.IsValid() && (!g_Config.m_QmDummyMiniView || Backend == QmDummyMiniViewLayout::EBackend::OPENGL))
+		if(m_DummyMiniViewRenderTarget.IsValid() && !g_Config.m_QmDummyMiniView)
 			DestroyDummyMiniViewRenderTarget();
 		return;
 	}
-	// 未识别的后端只尝试能力接口提供的离屏目标，不套用 OpenGL 的视口裁剪语义。
-	const bool UseOffscreenTarget = Backend != QmDummyMiniViewLayout::EBackend::OPENGL;
-	if(!UseOffscreenTarget && m_DummyMiniViewRenderTarget.IsValid())
-		DestroyDummyMiniViewRenderTarget();
 	const auto HudEditorScope = GameClient()->m_HudEditor.BeginTransform(EHudEditorElement::DummyMiniMap, {MiniX, MiniY, MiniW, MiniH}, true, false);
 	if(HudEditorScope.m_TargetRect.w > 0.0f && HudEditorScope.m_TargetRect.h > 0.0f)
 	{
@@ -2061,7 +2069,13 @@ void CHud::RenderDummyMiniMap()
 	if(MiniViewClientId < 0 || MiniViewClientId >= MAX_CLIENTS)
 		MiniViewClientId = -1;
 
-	const SHudDummyMiniViewState ViewState = BuildHudDummyMiniViewState(*GameClient(), *Client(), GameClient()->m_HudEditor.IsActive(), DummyClientId, MiniViewClientId);
+	SHudDummyMiniViewState ViewState = BuildHudDummyMiniViewState(*GameClient(), *Client(), GameClient()->m_HudEditor.IsActive(), DummyClientId, MiniViewClientId);
+	if(!Graphics()->IsRenderTargetSupported())
+	{
+		DestroyDummyMiniViewRenderTarget();
+		ViewState.m_HasSignal = false;
+		str_copy(ViewState.m_aPlaceholderSubtitle, Localize("Graphics backend does not support dummy mini view"));
+	}
 
 	const float Radius = std::clamp(MiniH * 0.11f, 5.0f, 7.5f);
 	DrawSmoothRoundedRect(Graphics(), MiniX + 0.8f, MiniY + 1.2f, MiniW, MiniH, Radius, ColorRGBA(0.0f, 0.0f, 0.0f, 0.18f), HudEditorScope.m_Corners);
@@ -2103,54 +2117,33 @@ void CHud::RenderDummyMiniMap()
 
 		const int ScreenW = Graphics()->ScreenWidth();
 		const int ScreenH = Graphics()->ScreenHeight();
+		// 使用 HUD 编辑器变换后的投影计算尺寸；离屏目标保留完整内框，屏幕交集仅判断可见性。
 		const auto Viewport = QmDummyMiniViewLayout::ResolveViewport(
 			{InnerX, InnerY, InnerW, InnerH},
 			{SavedX0, SavedY0, SavedX1 - SavedX0, SavedY1 - SavedY0}, ScreenW, ScreenH);
-		const int ClampedX = Viewport.m_X;
-		const int ClampedY = Viewport.m_Y;
-		const int ClampedW = Viewport.m_W;
-		const int ClampedH = Viewport.m_H;
-		if(ClampedW > 0 && ClampedH > 0)
+		const int ViewW = Viewport.IsVisible() ? maximum(1, (int)std::round(InnerW * ScreenW / (SavedX1 - SavedX0))) : 0;
+		const int ViewH = Viewport.IsVisible() ? maximum(1, (int)std::round(InnerH * ScreenH / (SavedY1 - SavedY0))) : 0;
+		const auto TargetSize = ResolveQmDummyMiniViewTargetSize(ViewW, ViewH,
+			m_DummyMiniViewRenderTargetWidth, m_DummyMiniViewRenderTargetHeight, ScreenW, ScreenH);
+		if(TargetSize.m_W > 0 && TargetSize.m_H > 0)
 		{
 			const ColorRGBA MiniClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
-			bool RenderingMiniView = false;
-			const auto Clip = Viewport.ResolveClip(Backend, ScreenW, ScreenH);
-			Graphics()->FlushVertices();
-			Graphics()->ClipDisable();
-			if(UseOffscreenTarget)
+			const bool TargetSizeChanged = TargetSize.m_W != m_DummyMiniViewRenderTargetWidth || TargetSize.m_H != m_DummyMiniViewRenderTargetHeight;
+			if(TargetSizeChanged || !m_DummyMiniViewRenderTarget.IsValid())
 			{
-				const bool TargetSizeChanged = ClampedW != m_DummyMiniViewRenderTargetWidth || ClampedH != m_DummyMiniViewRenderTargetHeight;
-				if(Graphics()->IsRenderTargetSupported() && (TargetSizeChanged || !m_DummyMiniViewRenderTarget.IsValid()))
+				DestroyDummyMiniViewRenderTarget();
+				m_DummyMiniViewRenderTarget = Graphics()->CreateRenderTarget(TargetSize.m_W, TargetSize.m_H);
+				if(m_DummyMiniViewRenderTarget.IsValid())
 				{
-					DestroyDummyMiniViewRenderTarget();
-					m_DummyMiniViewRenderTarget = Graphics()->CreateRenderTarget(ClampedW, ClampedH);
-					if(m_DummyMiniViewRenderTarget.IsValid())
-					{
-						m_DummyMiniViewRenderTargetWidth = ClampedW;
-						m_DummyMiniViewRenderTargetHeight = ClampedH;
-					}
-				}
-				RenderingMiniView = m_DummyMiniViewRenderTarget.IsValid() && Graphics()->BeginRenderTarget(m_DummyMiniViewRenderTarget, MiniClearColor);
-				if(!RenderingMiniView)
-				{
-					static bool s_LoggedRenderTargetFailure = false;
-					if(!s_LoggedRenderTargetFailure)
-					{
-						dbg_msg("hud", "Dummy mini view render target unavailable: %s", Graphics()->RenderTargetSupportReason());
-						s_LoggedRenderTargetFailure = true;
-					}
+					m_DummyMiniViewRenderTargetWidth = TargetSize.m_W;
+					m_DummyMiniViewRenderTargetHeight = TargetSize.m_H;
 				}
 			}
-			else
+			const bool RenderingMiniView = m_DummyMiniViewRenderTarget.IsValid() && Graphics()->BeginRenderTarget(m_DummyMiniViewRenderTarget, MiniClearColor);
+			if(!RenderingMiniView)
 			{
-				Graphics()->UpdateViewport(ClampedX, ClampedY, ClampedW, ClampedH, false);
-				// UpdateViewport 只限制光栅化视口；地图层和 Tee 仍可能提交越界几何，
-				// 因此同步启用同一内框的屏幕裁剪。
-				if(Clip.has_value())
-					Graphics()->ClipEnable(Clip->m_X, Clip->m_Y, Clip->m_W, Clip->m_H);
-				else
-					Graphics()->ClipDisable();
-				RenderingMiniView = true;
+				ViewState.m_HasSignal = false;
+				str_copy(ViewState.m_aPlaceholderSubtitle, Localize("Dummy mini view rendering unavailable"));
 			}
 
 			if(RenderingMiniView)
@@ -2163,12 +2156,7 @@ void CHud::RenderDummyMiniMap()
 				bool HasSnapshotSignal = false;
 				if(!TryGetDummyMiniViewTargetPos(*GameClient(), *Client(), MiniViewClientId, MiniPos, &HasSnapshotSignal))
 				{
-					Graphics()->FlushVertices();
-					Graphics()->ClipDisable();
-					if(UseOffscreenTarget)
-						Graphics()->EndRenderTarget();
-					else
-						Graphics()->UpdateViewport(0, 0, ScreenW, ScreenH, false);
+					Graphics()->EndRenderTarget();
 					Graphics()->MapScreen(SavedX0, SavedY0, SavedX1, SavedY1);
 					GameClient()->m_HudEditor.EndTransform(HudEditorScope);
 					return;
@@ -2187,7 +2175,7 @@ void CHud::RenderDummyMiniMap()
 				Graphics()->MapScreenToWorld(MiniPos.x, MiniPos.y, 100.0f, 100.0f, 100.0f, 0, 0, Graphics()->GameScreenAspect(), MiniZoom, aPoints);
 				Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
 
-				// Render the monitor view without spawning new effects or sounds.
+				// 小窗只绘制已有状态，不新增特效或声音。
 				const bool PrevMiniRender = GameClient()->IsRenderingDummyMiniMap();
 				GameClient()->SetRenderingDummyMiniMap(true);
 
@@ -2211,27 +2199,23 @@ void CHud::RenderDummyMiniMap()
 
 				GameClient()->SetRenderingDummyMiniMap(PrevMiniRender);
 
-				Graphics()->FlushVertices();
-				Graphics()->ClipDisable();
-				if(UseOffscreenTarget)
-					Graphics()->EndRenderTarget();
-				else
-					Graphics()->UpdateViewport(0, 0, ScreenW, ScreenH, false);
+				Graphics()->EndRenderTarget();
 				Graphics()->MapScreen(SavedX0, SavedY0, SavedX1, SavedY1);
 
-				if(UseOffscreenTarget)
+				IGraphics::SRenderTargetDrawParams DrawParams;
+				DrawParams.m_X = InnerX;
+				DrawParams.m_Y = InnerY;
+				DrawParams.m_W = InnerW;
+				DrawParams.m_H = InnerH;
+				DrawParams.m_Corners = HudEditorScope.m_Corners;
+				DrawParams.m_Rounding = InnerRadius;
+				DrawParams.m_Opaque = true;
+				if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 				{
-					IGraphics::SRenderTargetDrawParams DrawParams;
-					DrawParams.m_X = InnerX;
-					DrawParams.m_Y = InnerY;
-					DrawParams.m_W = InnerW;
-					DrawParams.m_H = InnerH;
-					DrawParams.m_Corners = HudEditorScope.m_Corners;
-					DrawParams.m_Rounding = InnerRadius;
 					DrawParams.m_V0 = 0.0f;
 					DrawParams.m_V1 = 1.0f;
-					Graphics()->DrawRenderTarget(m_DummyMiniViewRenderTarget, DrawParams);
 				}
+				Graphics()->DrawRenderTarget(m_DummyMiniViewRenderTarget, DrawParams);
 			}
 		}
 	}

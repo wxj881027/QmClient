@@ -235,7 +235,7 @@ namespace qm_card_catalog
 					(g_Config.m_ClAutoScreenshot != 0) +
 					(g_Config.m_ClAutoStatboardScreenshot != 0) +
 					(g_Config.m_ClAutoCSV != 0);
-				return 9.0f * GeneralMetrics.m_RowStep + GeneralMetrics.m_SectionGap + EnabledRows * (GeneralMetrics.m_RowStep + GeneralMetrics.m_LineSpacing);
+				return 16.0f * GeneralMetrics.m_RowStep + 2.0f * GeneralMetrics.m_SectionGap + EnabledRows * (GeneralMetrics.m_RowStep + GeneralMetrics.m_LineSpacing);
 			};
 			Out.m_VisibilityController = true;
 			Out.m_PreLayoutInput = [pMenus, GeneralMetrics](CUIRect Content) {
@@ -280,6 +280,29 @@ namespace qm_card_catalog
 				DoAutoRecord(&g_Config.m_ClAutoScreenshot, &g_Config.m_ClAutoScreenshotMax, "general-auto-screenshot", Localize("Automatically take game over screenshot"), "general-auto-screenshot-max", Localize("Max Screenshots"));
 				DoAutoRecord(&g_Config.m_ClAutoStatboardScreenshot, &g_Config.m_ClAutoStatboardScreenshotMax, "general-auto-statboard-screenshot", Localize("Automatically take statboard screenshot"), "general-auto-statboard-screenshot-max", Localize("Max Screenshots"));
 				DoAutoRecord(&g_Config.m_ClAutoCSV, &g_Config.m_ClAutoCSVMax, "general-auto-csv", Localize("Automatically create statboard csv"), "general-auto-csv-max", Localize("Max CSVs"));
+				Content.HSplitTop(GeneralMetrics.m_SectionGap, nullptr, &Content);
+				static CLineInput s_DemoDirectoryInput(g_Config.m_QmDemoDirectory, sizeof(g_Config.m_QmDemoDirectory));
+				static CLineInput s_VideoDirectoryInput(g_Config.m_QmVideoDirectory, sizeof(g_Config.m_QmVideoDirectory));
+				static CLineInput s_ScreenshotDirectoryInput(g_Config.m_QmScreenshotDirectory, sizeof(g_Config.m_QmScreenshotDirectory));
+				const auto DoDirectory = [&](CLineInput &Input, const char *pLabel, const char *pDefault) {
+					Content.HSplitTop(GeneralMetrics.m_LineHeight, &Button, &Content);
+					pMenus->Ui()->DoLabel(&Button, pLabel, GeneralMetrics.m_BodySize, TEXTALIGN_ML);
+					Content.HSplitTop(GeneralMetrics.m_LineSpacing, nullptr, &Content);
+					Content.HSplitTop(GeneralMetrics.m_LineHeight, &Button, &Content);
+					ui_widget::SInputFieldOptions Options;
+					Options.m_pPlaceholder = pDefault;
+					Options.m_FontSize = GeneralMetrics.m_BodySize;
+					ui_widget::InputField(GeneralCardCtx, &Input, Button, Options);
+					Content.HSplitTop(GeneralMetrics.m_LineSpacing, nullptr, &Content);
+				};
+				DoDirectory(s_DemoDirectoryInput, Localize("Demo directory"), "demos");
+				DoDirectory(s_VideoDirectoryInput, Localize("Video directory"), "videos");
+				DoDirectory(s_ScreenshotDirectoryInput, Localize("Screenshot directory"), "screenshots");
+				Content.HSplitTop(GeneralMetrics.m_LineHeight, &Button, &Content);
+				SLabelProperties DirectoryHintProps;
+				DirectoryHintProps.m_StopAtEnd = true;
+				DirectoryHintProps.m_MinimumFontSize = 6.0f;
+				pMenus->Ui()->DoLabel(&Button, Localize("Leave empty to use the default directory. Relative paths use the config directory."), GeneralMetrics.m_BodySize, TEXTALIGN_ML, DirectoryHintProps);
 				Content.HSplitTop(GeneralMetrics.m_SectionGap, nullptr, &Content);
 				SQmCardBuildContext WatermarkCtx;
 				WatermarkCtx.m_pMenus = pMenus;

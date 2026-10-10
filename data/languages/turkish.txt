@@ -3263,6 +3263,9 @@ Delete this preset
 Demo
 == Demo
 
+Demo directory
+== Demo kayıt dizini
+
 Demo display
 == Demo görünümü
 
@@ -3727,6 +3730,9 @@ Dummy marking color
 
 Dummy mini view
 == Dummy mini görünüm
+
+Dummy mini view rendering unavailable
+== Kuklanın mini görünümü çizilemiyor
 
 Dummy mini view size (percent)
 == Kukla mini görünüm boyutu (yüzde).
@@ -4616,6 +4622,15 @@ Failed to read saves file
 Failed to record video. See local console for details.
 == Video kaydedilemedi. Ayrıntılar için yerel konsola bakın.
 
+Failed to save demo
+== Demo kaydedilemedi
+
+Failed to save screenshot
+== Ekran görüntüsü kaydedilemedi
+
+Failed to save video
+== Video kaydedilemedi
+
 Failed to write PNG export.
 == PNG dışa aktarımı yazılamadı.
 
@@ -5299,6 +5314,9 @@ Gradient vertical position
 
 Graphics
 == Grafikler
+
+Graphics backend does not support dummy mini view
+== Grafik arka ucu kuklanın mini görünümünü desteklemiyor
 
 Graphics card
 == Ekran kartı
@@ -6484,6 +6502,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Varsayılan istemi kullanmak için boş bırakın
+
+Leave empty to use the default directory. Relative paths use the config directory.
+== Varsayılan dizin için boş bırakın. Göreli yollar yapılandırma dizinini temel alır.
 
 Leave solo split mode
 == Solo bölme modundan çık
@@ -10457,6 +10478,9 @@ Screen resolution width (only fullscreen)
 Screenshot
 == Ekran görüntüsü
 
+Screenshot directory
+== Ekran görüntüsü dizini
+
 Screenshot error
 == Ekran görüntüsü hatası
 
@@ -14236,6 +14260,9 @@ Vertical sync (may cause lag)
 
 Video Background
 == Video Arkaplanı
+
+Video directory
+== Video kayıt dizini
 
 Video name
 == Video adı

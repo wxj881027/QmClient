@@ -2514,8 +2514,15 @@ bool CChat::OnPrepareLines(float y)
 		}
 		Line.m_ChatEmojiRect = {};
 		const bool MultipleAuthors = Line.m_vMergedAuthors.size() > 1;
-		// 多人合并的正文另起一行，使用完整行宽，不再按姓名宽度缩进。
-		const bool IndentMessage = !MultipleAuthors && !IsScoreBoardOpen && !g_Config.m_ClChatOld;
+		// 多人合并仍将正文另起一行，只保留第一个人的前缀占位。
+		const bool IndentMessage = MultipleAuthors || (!IsScoreBoardOpen && !g_Config.m_ClChatOld);
+		float FirstAuthorPrefixWidth = 0.0f;
+		if(MultipleAuthors)
+		{
+			const SMergedAuthor &FirstAuthor = Line.m_vMergedAuthors.front();
+			FirstAuthorPrefixWidth = TextRender()->TextWidth(FontSize, VisibleTitle(FirstAuthor.m_aQmTitle, FirstAuthor.m_ClientId)) +
+						 TextRender()->TextWidth(FontSize, FirstAuthor.m_aName) + TextRender()->TextWidth(FontSize, ": ");
+		}
 
 		char aClientId[16] = "";
 		if(!MultipleAuthors && g_Config.m_ClShowIds && Line.m_ClientId >= 0 && Line.m_aName[0] != '\0' && !GameClient()->ShouldHideStreamerIdentity(Line.m_ClientId))
@@ -2623,7 +2630,11 @@ bool CChat::OnPrepareLines(float y)
 
 			CTextCursor AppendCursor = MeasureCursor;
 			AppendCursor.m_LongestLineWidth = 0.0f;
-			if(IndentMessage)
+			if(MultipleAuthors)
+			{
+				QmChatApplyMergedMessageIndent(AppendCursor, FirstAuthorPrefixWidth);
+			}
+			else if(IndentMessage)
 			{
 				QmChatApplyMessageIndent(AppendCursor);
 			}
@@ -2831,7 +2842,11 @@ bool CChat::OnPrepareLines(float y)
 		CTextCursor AppendCursor = LineCursor;
 		AppendCursor.m_TrackLineRanges = Line.m_RenderSponsorChatStyle == EQmSponsorChatStyle::PLATINUM;
 		AppendCursor.m_LongestLineWidth = 0.0f;
-		if(IndentMessage)
+		if(MultipleAuthors)
+		{
+			QmChatApplyMergedMessageIndent(AppendCursor, FirstAuthorPrefixWidth);
+		}
+		else if(IndentMessage)
 		{
 			QmChatApplyMessageIndent(AppendCursor);
 		}
@@ -3072,9 +3087,9 @@ void CChat::OnRender()
 		InputBlockRect = {x, InputContentRect.y, InputLineWidth, InputContentRect.h};
 		InputBlockRectValid = true;
 		ExtendBounds(x, InputClippingRect.y, InputClippingRect.x + InputClippingRect.w - x, InputClippingRect.h);
-		const SQmChatViewport Viewport{m_ChatInputMapRect, vec2(Graphics()->ScreenWidth(), Graphics()->ScreenHeight())};
-		const CUIRect InputClipPixels = Viewport.ClipPixels(InputClippingRect);
-		Graphics()->ClipEnable((int)InputClipPixels.x, (int)InputClipPixels.y, (int)InputClipPixels.w, (int)InputClipPixels.h);
+		const SQmChatInputPixelClip InputPixelClip = QmChatInputPixelClip(InputClippingRect,
+			m_ChatInputMapRect, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
+		Graphics()->ClipEnable(InputPixelClip.m_X, InputPixelClip.m_Y, InputPixelClip.m_W, InputPixelClip.m_H);
 
 		float ScrollOffset = m_Input.GetScrollOffset();
 		float ScrollOffsetChange = m_Input.GetScrollOffsetChange();
@@ -3105,7 +3120,7 @@ void CChat::OnRender()
 		m_Input.SetScrollOffsetChange(ScrollOffsetChange);
 
 		// 补全提示也属于正文区域，不能跨过独立的翻译按钮操作区。
-		Graphics()->ClipEnable((int)InputClipPixels.x, (int)InputClipPixels.y, (int)InputClipPixels.w, (int)InputClipPixels.h);
+		Graphics()->ClipEnable(InputPixelClip.m_X, InputPixelClip.m_Y, InputPixelClip.m_W, InputPixelClip.m_H);
 		// 自动补全提示：以半透明文字显示当前补全命令的剩余部分（与官方 DDNet 一致）
 		if(m_Input.GetString()[0] == '/' && m_Input.GetString()[1] != '\0' && !m_vServerCommands.empty())
 		{

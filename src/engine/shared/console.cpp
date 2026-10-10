@@ -759,7 +759,7 @@ void CConsole::ExecuteLineFlag(const char *pStr, int FlagMask, int ClientId, boo
 	m_FlagMask = Temp;
 }
 
-bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure, int StorageType)
+bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure, int StorageType, bool RejectInvalidLines)
 {
 	int Count = 0;
 	// make sure that this isn't being executed already and that recursion limit isn't met
@@ -783,7 +783,7 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 	// exec the file
 	CLineReader LineReader;
 	bool Success = false;
-	if(LineReader.OpenFile(m_pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType)))
+	if(LineReader.OpenFile(m_pStorage->OpenFile(pFilename, IOFLAG_READ, StorageType), RejectInvalidLines))
 	{
 		log_info("console", "executing '%s'", pFilename);
 

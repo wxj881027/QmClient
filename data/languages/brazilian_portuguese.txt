@@ -3263,6 +3263,9 @@ Delete this preset
 Demo
 == Demo
 
+Demo directory
+== Pasta de demos
+
 Demo display
 == Exibição de demo
 
@@ -3727,6 +3730,9 @@ Dummy marking color
 
 Dummy mini view
 == Mini visualização do dummy
+
+Dummy mini view rendering unavailable
+== Não é possível renderizar a minivisualização do dummy
 
 Dummy mini view size (percent)
 == Tamanho da visualização miniatura do dummy (porcentagem)
@@ -4616,6 +4622,15 @@ Failed to read saves file
 Failed to record video. See local console for details.
 == Falha ao gravar o vídeo. Consulte o console local para mais detalhes.
 
+Failed to save demo
+== Não foi possível salvar a demo
+
+Failed to save screenshot
+== Não foi possível salvar a captura de tela
+
+Failed to save video
+== Não foi possível salvar o vídeo
+
 Failed to write PNG export.
 == Falha ao escrever exportação PNG.
 
@@ -5299,6 +5314,9 @@ Gradient vertical position
 
 Graphics
 == Gráficos
+
+Graphics backend does not support dummy mini view
+== O backend gráfico não suporta a minivisualização do dummy
 
 Graphics card
 == Placa de vídeo
@@ -6484,6 +6502,9 @@ Leave empty to show everyone
 
 Leave empty to use default prompt
 == Deixe em branco para usar o prompt padrão
+
+Leave empty to use the default directory. Relative paths use the config directory.
+== Deixe vazio para usar a pasta padrão. Os caminhos relativos partem da pasta de configuração.
 
 Leave solo split mode
 == Sair do modo de divisão solo
@@ -10457,6 +10478,9 @@ Screen resolution width (only fullscreen)
 Screenshot
 == Captura de tela
 
+Screenshot directory
+== Pasta de capturas de tela
+
 Screenshot error
 == Erro na captura de tela
 
@@ -14236,6 +14260,9 @@ Vertical sync (may cause lag)
 
 Video Background
 == Fundo de vídeo
+
+Video directory
+== Pasta de vídeos
 
 Video name
 == Nome do vídeo

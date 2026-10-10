@@ -19,7 +19,7 @@ void CFileCollection::Init(IStorage *pStorage, const char *pPath, const char *pF
 	str_copy(m_aPath, pPath);
 	m_pStorage = pStorage;
 
-	m_pStorage->ListDirectory(IStorage::TYPE_SAVE, m_aPath, FilelistCallback, this);
+	m_pStorage->ListDirectory(fs_is_relative_path(m_aPath) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE, m_aPath, FilelistCallback, this);
 	std::sort(m_vFileEntries.begin(), m_vFileEntries.end(), [](const CFileEntry &Lhs, const CFileEntry &Rhs) { return Lhs.m_Timestamp < Rhs.m_Timestamp; });
 
 	int FilesDeleted = 0;
@@ -29,6 +29,8 @@ void CFileCollection::Init(IStorage *pStorage, const char *pPath, const char *pF
 			break;
 
 		char aBuf[IO_MAX_PATH_LENGTH];
+		if(str_length(m_aPath) + 1 + str_length(FileEntry.m_aFilename) >= (int)sizeof(aBuf))
+			continue;
 		if(m_aFileDesc[0] == '\0')
 		{
 			str_format(aBuf, sizeof(aBuf), "%s/%s", m_aPath, FileEntry.m_aFilename);
@@ -40,7 +42,7 @@ void CFileCollection::Init(IStorage *pStorage, const char *pPath, const char *pF
 			str_format(aBuf, sizeof(aBuf), "%s/%s_%s%s", m_aPath, m_aFileDesc, aTimestring, m_aFileExt);
 		}
 
-		m_pStorage->RemoveFile(aBuf, IStorage::TYPE_SAVE);
+		m_pStorage->RemoveFile(aBuf, fs_is_relative_path(m_aPath) ? IStorage::TYPE_SAVE : IStorage::TYPE_ABSOLUTE);
 		FilesDeleted++;
 	}
 }

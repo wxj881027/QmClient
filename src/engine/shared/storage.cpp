@@ -529,7 +529,7 @@ namespace
 				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
 					fs_listdir_fileinfo(GetPath(i, pPath, aBuffer, sizeof(aBuffer)), ListDirectoryInfoUniqueCallback, i, &Data);
 			}
-			else if(Type >= TYPE_SAVE && Type < m_NumPaths)
+			else if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
 			{
 				// list wanted directory
 				fs_listdir_fileinfo(GetPath(Type, pPath, aBuffer, sizeof(aBuffer)), pfnCallback, Type, pUser);
@@ -568,7 +568,7 @@ namespace
 				for(int i = TYPE_SAVE; i < m_NumPaths; ++i)
 					fs_listdir(GetPath(i, pPath, aBuffer, sizeof(aBuffer)), ListDirectoryUniqueCallback, i, &Data);
 			}
-			else if(Type >= TYPE_SAVE && Type < m_NumPaths)
+			else if(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths))
 			{
 				// list wanted directory
 				fs_listdir(GetPath(Type, pPath, aBuffer, sizeof(aBuffer)), pfnCallback, Type, pUser);
@@ -926,16 +926,16 @@ namespace
 			return fs_remove(aBuffer) == 0;
 		}
 
-		bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type) override
+		bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type, bool AllowDestinationRemoval = true) override
 		{
-			dbg_assert(Type >= TYPE_SAVE && Type < m_NumPaths, "Type invalid");
+			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
 
 			char aOldBuffer[IO_MAX_PATH_LENGTH];
 			char aNewBuffer[IO_MAX_PATH_LENGTH];
 			GetPath(Type, pOldFilename, aOldBuffer, sizeof(aOldBuffer));
 			GetPath(Type, pNewFilename, aNewBuffer, sizeof(aNewBuffer));
 
-			return fs_rename(aOldBuffer, aNewBuffer) == 0;
+			return fs_rename(aOldBuffer, aNewBuffer, AllowDestinationRemoval) == 0;
 		}
 
 		bool RenameBinaryFile(const char *pOldFilename, const char *pNewFilename) override
@@ -956,7 +956,7 @@ namespace
 
 		bool CreateFolder(const char *pFoldername, int Type) override
 		{
-			dbg_assert(Type >= TYPE_SAVE && Type < m_NumPaths, "Type invalid");
+			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
 
 			char aBuffer[IO_MAX_PATH_LENGTH];
 			GetPath(Type, pFoldername, aBuffer, sizeof(aBuffer));
@@ -967,7 +967,7 @@ namespace
 		void GetCompletePath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) override
 		{
 			TranslateType(Type, pDir);
-			dbg_assert(Type >= TYPE_SAVE && Type < m_NumPaths, "Type invalid");
+			dbg_assert(Type == TYPE_ABSOLUTE || (Type >= TYPE_SAVE && Type < m_NumPaths), "Type invalid");
 			GetPath(Type, pDir, pBuffer, BufferSize);
 		}
 

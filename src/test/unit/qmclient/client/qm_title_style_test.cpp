@@ -3,10 +3,64 @@
 #include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/components/qmclient/qm_title_style.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
+#include <game/client/qm_title_effect.h>
 
 #include <gtest/gtest.h>
 
 #include <cmath>
+
+TEST(QmTitleEffect, ClassicBloomFollowsSpectatorFadeAtBothStrengths)
+{
+	for(const float Strength : {0.18f, 0.28f})
+	{
+		SCOPED_TRACE(Strength);
+		SQmTitleEffectStyle Style;
+		Style.m_BloomAlpha = Strength;
+		const ColorRGBA Opaque = QmTitleEffectBloomColor(Style);
+		EXPECT_FLOAT_EQ(Opaque.a, Strength);
+
+		Style.m_TextColor.a = 0.4f;
+		const ColorRGBA Spectator = QmTitleEffectBloomColor(Style);
+		EXPECT_FLOAT_EQ(Spectator.a, Opaque.a * 0.4f);
+		EXPECT_FLOAT_EQ(Spectator.r, Opaque.r);
+		EXPECT_FLOAT_EQ(Spectator.g, Opaque.g);
+		EXPECT_FLOAT_EQ(Spectator.b, Opaque.b);
+	}
+}
+
+TEST(QmTitleEffect, ClassicBloomRespectsTitleAndBloomOpacity)
+{
+	SQmTitleEffectStyle Style;
+	Style.m_TextColor.a = 0.4f * 0.5f;
+	Style.m_BloomColor = ColorRGBA(0.2f, 0.6f, 0.9f, 0.5f);
+	Style.m_BloomAlpha = 0.28f;
+	const ColorRGBA Bloom = QmTitleEffectBloomColor(Style);
+	EXPECT_FLOAT_EQ(Bloom.a, 0.028f);
+	EXPECT_FLOAT_EQ(Bloom.r, 0.2f);
+	EXPECT_FLOAT_EQ(Bloom.g, 0.6f);
+	EXPECT_FLOAT_EQ(Bloom.b, 0.9f);
+}
+
+TEST(QmTitleEffect, ClassicBloomDisappearsWithTextAndReturnsWhenVisible)
+{
+	SQmTitleEffectStyle Style;
+	Style.m_BloomAlpha = 0.18f;
+	Style.m_TextColor.a = 0.0f;
+	EXPECT_FLOAT_EQ(QmTitleEffectBloomColor(Style).a, 0.0f);
+
+	Style.m_TextColor.a = 1.0f;
+	EXPECT_FLOAT_EQ(QmTitleEffectBloomColor(Style).a, 0.18f);
+}
+
+TEST(QmTitleEffect, ClassicBloomStaysInvisibleWhenDisabled)
+{
+	SQmTitleEffectStyle Style;
+	EXPECT_FLOAT_EQ(QmTitleEffectBloomColor(Style).a, 0.0f);
+
+	Style.m_BloomAlpha = 0.28f;
+	Style.m_BloomColor.a = 0.0f;
+	EXPECT_FLOAT_EQ(QmTitleEffectBloomColor(Style).a, 0.0f);
+}
 
 TEST(QmTitleVisibility, LocalConnectionsCanBeHiddenIndependently)
 {

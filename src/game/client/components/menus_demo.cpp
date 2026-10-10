@@ -3,6 +3,8 @@
 
 #include "maplayers.h"
 #include "menus.h"
+
+#include <game/client/components/qmclient/media_paths.h>
 #include "qmclient/demo_display.h"
 #include "qmclient/demo_ui.h"
 #include "qmclient/perf_logging.h"
@@ -88,7 +90,7 @@ namespace
 		rust::Box<CSnapshotDelta> pDelta = CSnapshotDelta::New();
 		rust::Box<CSnapshotDelta> pDeltaSixup = CSnapshotDelta::New();
 		CDemoPlayer DemoPlayer(&*pDelta, &*pDeltaSixup, false);
-		const int Result = DemoPlayer.Load(pStorage, nullptr, pPath, IStorage::TYPE_SAVE);
+		const int Result = DemoPlayer.Load(pStorage, nullptr, pPath, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 		// CDemoPlayer 析构要求文件已关闭，否则 dbg_assert 在 Release 下也会 abort
 		DemoPlayer.Stop();
 		return Result == 0;
@@ -102,12 +104,12 @@ namespace
 		char aTempPath[IO_MAX_PATH_LENGTH];
 		if(str_format(aTempPath, sizeof(aTempPath), "%s.tmp", pDestinationPath) >= (int)sizeof(aTempPath))
 			return false;
-		pStorage->RemoveFile(aTempPath, IStorage::TYPE_SAVE);
-		const auto RemoveTemp = [&]() { pStorage->RemoveFile(aTempPath, IStorage::TYPE_SAVE); };
+		pStorage->RemoveFile(aTempPath, qmclient::media_paths::StorageType(aTempPath));
+		const auto RemoveTemp = [&]() { pStorage->RemoveFile(aTempPath, qmclient::media_paths::StorageType(aTempPath)); };
 
 		void *pData = nullptr;
 		unsigned DataSize = 0;
-		if(!pStorage->ReadFile(pSourcePath, IStorage::TYPE_SAVE, &pData, &DataSize) || pData == nullptr || DataSize == 0)
+		if(!pStorage->ReadFile(pSourcePath, IStorage::TYPE_SAVE_OR_ABSOLUTE, &pData, &DataSize) || pData == nullptr || DataSize == 0)
 		{
 			free(pData);
 			return false;
@@ -118,7 +120,7 @@ namespace
 			const bool Valid = HasDemoMagic(static_cast<const unsigned char *>(pData), DataSize);
 			if(Valid)
 			{
-				IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+				IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 				if(File == nullptr)
 				{
 					free(pData);
@@ -127,7 +129,7 @@ namespace
 				const bool Written = io_write(File, pData, DataSize) == DataSize;
 				io_close(File);
 				free(pData);
-				if(!Written || !pStorage->RenameFile(aTempPath, pDestinationPath, IStorage::TYPE_SAVE))
+				if(!Written || !pStorage->RenameFile(aTempPath, pDestinationPath, qmclient::media_paths::StorageType(aTempPath)))
 				{
 					RemoveTemp();
 					return false;
@@ -174,12 +176,12 @@ namespace
 		if(Result != Z_STREAM_END || OutputLength > RANK_DEMO_MAX_UNPACKED_BYTES || !HasDemoMagic(Output.data(), OutputLength))
 			return false;
 
-		IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE);
+		IOHANDLE File = pStorage->OpenFile(aTempPath, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE);
 		if(File == nullptr)
 			return false;
 		const bool Written = io_write(File, Output.data(), OutputLength) == OutputLength;
 		io_close(File);
-		if(!Written || !pStorage->RenameFile(aTempPath, pDestinationPath, IStorage::TYPE_SAVE))
+		if(!Written || !pStorage->RenameFile(aTempPath, pDestinationPath, qmclient::media_paths::StorageType(aTempPath)))
 		{
 			RemoveTemp();
 			return false;
@@ -402,7 +404,7 @@ void CMenus::DemoSeekTick(IDemoPlayer::ETickOffset TickOffset)
 
 const char *CMenus::DemoBrowserBaseFolder() const
 {
-	return DemoBrowserBrowsingScreenshots() ? "screenshots" : "demos";
+	return m_aDemoBrowserBaseFolder;
 }
 
 bool CMenus::DemoBrowserBrowsingScreenshots() const
@@ -433,12 +435,28 @@ void CMenus::SetDemoBrowserSource(EDemoBrowserSource Source)
 
 void CMenus::ResetDemoBrowserFolder()
 {
+	const auto Kind = DemoBrowserBrowsingScreenshots() ? qmclient::media_paths::EKind::SCREENSHOTS : qmclient::media_paths::EKind::DEMOS;
+	str_copy(m_aDemoBrowserDirectorySetting, qmclient::media_paths::DirectorySetting(g_Config, Kind));
+	const std::string Directory = qmclient::media_paths::Directory(Storage(), g_Config, Kind);
+	str_copy(m_aDemoBrowserBaseFolder, Directory.c_str());
 	str_copy(m_aCurrentDemoFolder, DemoBrowserBaseFolder());
-	m_DemolistStorageType = IStorage::TYPE_ALL;
+	m_DemolistStorageType = m_aDemoBrowserDirectorySetting[0] == '\0' ? IStorage::TYPE_ALL : IStorage::TYPE_ABSOLUTE;
+}
+
+void CMenus::SyncDemoBrowserDirectory()
+{
+	const auto Kind = DemoBrowserBrowsingScreenshots() ? qmclient::media_paths::EKind::SCREENSHOTS : qmclient::media_paths::EKind::DEMOS;
+	if(str_comp(m_aDemoBrowserDirectorySetting, qmclient::media_paths::DirectorySetting(g_Config, Kind)) == 0)
+		return;
+	ResetDemoBrowserFolder();
+	ResetDemoScreenshotPreview();
+	DemolistPopulate();
+	DemolistOnUpdate(true);
 }
 
 void CMenus::RenderDemoPlayer(CUIRect MainView)
 {
+	SyncDemoBrowserDirectory();
 	const bool OnlineReplay = GameClient()->m_RankGhost.IsViewModeActive();
 	const bool ControlsActive = OnlineReplay ? GameClient()->m_Spectator.PlaybackControlsActive() : m_MenuActive;
 	const uint64_t Generation = OnlineReplay ? GameClient()->m_RankGhost.ViewGeneration() : 0;
@@ -1601,8 +1619,16 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 		else
 		{
 			char aPath[IO_MAX_PATH_LENGTH];
-			str_format(aPath, sizeof(aPath), "%s/%s.demo", m_aCurrentDemoFolder, m_DemoSliceInput.GetString());
-			if(Storage()->FileExists(aPath, IStorage::TYPE_SAVE))
+			const std::string Path = qmclient::media_paths::Join(m_aCurrentDemoFolder, std::string(m_DemoSliceInput.GetString()) + ".demo");
+			if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
+			{
+				s_MessagePopupContext.ErrorColor();
+				str_copy(s_MessagePopupContext.m_aMessage, Localize("Failed to save demo"));
+				Ui()->ShowPopupMessage(Ui()->MouseX(), OkButton.y + OkButton.h + 5.0f, &s_MessagePopupContext);
+				return;
+			}
+			str_copy(aPath, Path.c_str());
+			if(Storage()->FileExists(aPath, IStorage::TYPE_SAVE_OR_ABSOLUTE))
 			{
 				s_ConfirmPopupContext.Reset();
 				s_ConfirmPopupContext.YesNoButtons();
@@ -1620,7 +1646,16 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 	{
 		s_ConfirmPopupContext.Reset();
 		char aPath[IO_MAX_PATH_LENGTH];
-		str_format(aPath, sizeof(aPath), "%s/%s.demo", m_aCurrentDemoFolder, m_DemoSliceInput.GetString());
+		const std::string Path = qmclient::media_paths::Join(m_aCurrentDemoFolder, std::string(m_DemoSliceInput.GetString()) + ".demo");
+		if(!qmclient::media_paths::PrepareWrite(Storage(), Path))
+		{
+			static CUi::SMessagePopupContext s_PathErrorContext;
+			s_PathErrorContext.ErrorColor();
+			str_copy(s_PathErrorContext.m_aMessage, Localize("Failed to save demo"));
+			Ui()->ShowPopupMessage(Ui()->MouseX(), ButtonBar.y - 5.0f, &s_PathErrorContext);
+			return;
+		}
+		str_copy(aPath, Path.c_str());
 		str_format(m_aCurrentDemoSelectionName, sizeof(m_aCurrentDemoSelectionName), "%s.demo", m_DemoSliceInput.GetString());
 
 		std::vector<SDemoSliceSegment> vDemoSliceSegments;
@@ -1649,13 +1684,13 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 			m_HasPendingDemoRenderSource = true;
 			str_copy(m_aPendingDemoRenderFolder, m_aCurrentDemoFolder, sizeof(m_aPendingDemoRenderFolder));
 			str_format(m_aPendingDemoRenderSelectionName, sizeof(m_aPendingDemoRenderSelectionName), "%s.demo", m_DemoSliceInput.GetString());
-			m_PendingDemoRenderStorageType = IStorage::TYPE_SAVE;
+			m_PendingDemoRenderStorageType = qmclient::media_paths::StorageType(aPath);
 			m_Popup = POPUP_RENDER_DEMO;
 			m_StartPaused = false;
 			m_DemoRenderInput.Set(m_DemoSliceInput.GetString());
 			Ui()->SetActiveItem(&m_DemoRenderInput);
-			if(m_DemolistStorageType != IStorage::TYPE_ALL && m_DemolistStorageType != IStorage::TYPE_SAVE)
-				m_DemolistStorageType = IStorage::TYPE_ALL; // Select a storage type containing the sliced demo
+			if(m_DemolistStorageType != IStorage::TYPE_ALL && m_DemolistStorageType != m_PendingDemoRenderStorageType)
+				m_DemolistStorageType = fs_is_relative_path(aPath) ? IStorage::TYPE_ALL : IStorage::TYPE_ABSOLUTE; // 选择包含剪辑文件的存储类型
 			DemolistOnUpdate(false);
 		}
 #endif
@@ -1677,6 +1712,8 @@ int CMenus::DemolistFetchCallback(const char *pName, int IsDir, int StorageType,
 		return 0;
 	}
 
+	if(pSelf->m_aCurrentDemoFolder[0] != '\0' && str_comp(pName, "..") != 0 && qmclient::media_paths::Join(pSelf->m_aCurrentDemoFolder, pName).empty())
+		return 0;
 	CDemoItem Item;
 	str_copy(Item.m_aFilename, pName);
 	if(IsDir)
@@ -1931,7 +1968,12 @@ void CMenus::DemolistPopulate()
 
 	int NumStoragesWithDemos = 0;
 	const char *pBaseFolder = DemoBrowserBaseFolder();
-	for(int StorageType = IStorage::TYPE_SAVE; StorageType < Storage()->NumPaths(); ++StorageType)
+	if(pBaseFolder[0] == '\0')
+	{
+		RefreshFilteredDemos();
+		return;
+	}
+	for(int StorageType = IStorage::TYPE_SAVE; fs_is_relative_path(pBaseFolder) && StorageType < Storage()->NumPaths(); ++StorageType)
 	{
 		if(Storage()->FolderExists(pBaseFolder, StorageType))
 		{
@@ -1959,7 +2001,7 @@ void CMenus::DemolistPopulate()
 			m_vDemos.push_back(Item);
 		}
 
-		for(int StorageType = IStorage::TYPE_SAVE; StorageType < Storage()->NumPaths(); ++StorageType)
+		for(int StorageType = IStorage::TYPE_SAVE; fs_is_relative_path(pBaseFolder) && StorageType < Storage()->NumPaths(); ++StorageType)
 		{
 			if(Storage()->FolderExists(pBaseFolder, StorageType))
 			{
@@ -2006,7 +2048,7 @@ void CMenus::DemolistPopulate()
 		}
 
 		// Make sure there is a demo item to navigate back to the parent folder, if the folder contents could not be enumerated.
-		if(m_vDemos.empty())
+		if(m_vDemos.empty() && (str_comp(m_aCurrentDemoFolder, pBaseFolder) != 0 || m_DemolistMultipleStorages))
 		{
 			CDemoItem Item;
 			str_copy(Item.m_aFilename, "..");
@@ -2071,7 +2113,7 @@ bool CMenus::IsDemoItemSelected(const CDemoItem &Item) const
 
 bool CMenus::IsDemoItemDeletable(const CDemoItem &Item) const
 {
-	return m_aCurrentDemoFolder[0] != '\0' && Item.m_StorageType == IStorage::TYPE_SAVE && str_comp(Item.m_aFilename, "..") != 0;
+	return m_aCurrentDemoFolder[0] != '\0' && (Item.m_StorageType == IStorage::TYPE_SAVE || Item.m_StorageType == IStorage::TYPE_ABSOLUTE) && !Item.m_IsLink && str_comp(Item.m_aFilename, "..") != 0;
 }
 
 void CMenus::SetDemoSelectionSingle(int Index)
@@ -2473,9 +2515,9 @@ void CMenus::FetchAllHeaders()
 void CMenus::FinishRankDemoDownload(bool Success, const char *pMessage)
 {
 	if(m_aRankDemoManifestPath[0] != '\0')
-		Storage()->RemoveFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE);
+		Storage()->RemoveFile(m_aRankDemoManifestPath, qmclient::media_paths::StorageType(m_aRankDemoManifestPath));
 	if(m_aRankDemoTempPath[0] != '\0')
-		Storage()->RemoveFile(m_aRankDemoTempPath, IStorage::TYPE_SAVE);
+		Storage()->RemoveFile(m_aRankDemoTempPath, qmclient::media_paths::StorageType(m_aRankDemoTempPath));
 	m_pRankDemoManifestRequest = nullptr;
 	m_pRankDemoRequest = nullptr;
 	m_RankDemoDownloadStage = ERankDemoDownloadStage::IDLE;
@@ -2508,13 +2550,19 @@ void CMenus::StartRankDemoDownload(const char *pMapName)
 		return;
 	}
 
-	Storage()->CreateFolder("demos", IStorage::TYPE_SAVE);
+	const std::string ManifestPath = qmclient::media_paths::Resolve(Storage(), g_Config, "demos/.qm_rank_watchable.jsonl");
+	const std::string TempPath = qmclient::media_paths::Resolve(Storage(), g_Config, "demos/.qm_rank1_download.demo.gz");
+	if(!qmclient::media_paths::PrepareWrite(Storage(), ManifestPath) || TempPath.empty())
+	{
+		FinishRankDemoDownload(false, Localize("Failed to save demo"));
+		return;
+	}
 	m_RankDemoMap = pMapName;
-	str_copy(m_aRankDemoManifestPath, "demos/.qm_rank_watchable.jsonl");
-	str_copy(m_aRankDemoTempPath, "demos/.qm_rank1_download.demo.gz");
+	str_copy(m_aRankDemoManifestPath, ManifestPath.c_str());
+	str_copy(m_aRankDemoTempPath, TempPath.c_str());
 	m_aRankDemoDestinationPath[0] = '\0';
 
-	m_pRankDemoManifestRequest = HttpGetFile(RANK_DEMO_MANIFEST_URL, Storage(), m_aRankDemoManifestPath, IStorage::TYPE_SAVE);
+	m_pRankDemoManifestRequest = HttpGetFile(RANK_DEMO_MANIFEST_URL, Storage(), m_aRankDemoManifestPath, qmclient::media_paths::StorageType(m_aRankDemoManifestPath));
 	m_pRankDemoManifestRequest->MaxResponseSize(RANK_DEMO_MAX_MANIFEST_BYTES);
 	m_pRankDemoManifestRequest->Timeout(CTimeout{5000, 120000, 200, 10});
 	m_pRankDemoManifestRequest->LogProgress(HTTPLOG::FAILURE);
@@ -2542,7 +2590,7 @@ void CMenus::UpdateRankDemoDownload()
 
 		void *pData = nullptr;
 		unsigned DataSize = 0;
-		const bool ReadOk = Storage()->ReadFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE, &pData, &DataSize);
+		const bool ReadOk = Storage()->ReadFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE_OR_ABSOLUTE, &pData, &DataSize);
 		m_pRankDemoManifestRequest = nullptr;
 		if(!ReadOk || pData == nullptr || DataSize == 0)
 		{
@@ -2555,7 +2603,7 @@ void CMenus::UpdateRankDemoDownload()
 		int64_t DemoTs = 0;
 		const bool Found = FindRankOneDemo(static_cast<const unsigned char *>(pData), DataSize, m_RankDemoMap.c_str(), DemoName, DemoTs);
 		free(pData);
-		Storage()->RemoveFile(m_aRankDemoManifestPath, IStorage::TYPE_SAVE);
+		Storage()->RemoveFile(m_aRankDemoManifestPath, qmclient::media_paths::StorageType(m_aRankDemoManifestPath));
 		if(!Found)
 		{
 			FinishRankDemoDownload(false, Localize("No rank 1 replay was found for this map"));
@@ -2572,20 +2620,31 @@ void CMenus::UpdateRankDemoDownload()
 		if(str_endswith_nocase(aSafeDemo, ".demo") != nullptr)
 			aSafeDemo[str_length(aSafeDemo) - 5] = '\0';
 		str_sanitize_filename(aSafeDemo);
-		str_format(m_aRankDemoDestinationPath, sizeof(m_aRankDemoDestinationPath), "demos/%s_rank1_%lld_%s.demo", aSafeMap, (long long)DemoTs, aSafeDemo);
-		if(Storage()->FileExists(m_aRankDemoDestinationPath, IStorage::TYPE_SAVE))
+		char aDirectory[IO_MAX_PATH_LENGTH];
+		str_copy(aDirectory, m_aRankDemoTempPath);
+		fs_parent_dir(aDirectory);
+		char aName[IO_MAX_PATH_LENGTH];
+		str_format(aName, sizeof(aName), "%s_rank1_%lld_%s.demo", aSafeMap, (long long)DemoTs, aSafeDemo);
+		const std::string Destination = qmclient::media_paths::Join(aDirectory, aName);
+		if(Destination.empty())
+		{
+			FinishRankDemoDownload(false, Localize("Failed to save demo"));
+			return;
+		}
+		str_copy(m_aRankDemoDestinationPath, Destination.c_str());
+		if(Storage()->FileExists(m_aRankDemoDestinationPath, qmclient::media_paths::StorageType(m_aRankDemoDestinationPath)))
 		{
 			if(IsStoredDemoValid(Storage(), m_aRankDemoDestinationPath))
 			{
 				FinishRankDemoDownload(true, Localize("The rank 1 demo is already downloaded"));
 				return;
 			}
-			Storage()->RemoveFile(m_aRankDemoDestinationPath, IStorage::TYPE_SAVE);
+			Storage()->RemoveFile(m_aRankDemoDestinationPath, qmclient::media_paths::StorageType(m_aRankDemoDestinationPath));
 		}
 
 		char aUrl[1024];
 		str_format(aUrl, sizeof(aUrl), "%s/%s", RANK_DEMO_URL_PREFIX, DemoName.c_str());
-		m_pRankDemoRequest = HttpGetFile(aUrl, Storage(), m_aRankDemoTempPath, IStorage::TYPE_SAVE);
+		m_pRankDemoRequest = HttpGetFile(aUrl, Storage(), m_aRankDemoTempPath, qmclient::media_paths::StorageType(m_aRankDemoTempPath));
 		m_pRankDemoRequest->MaxResponseSize(RANK_DEMO_MAX_DOWNLOAD_BYTES);
 		m_pRankDemoRequest->Timeout(CTimeout{5000, 120000, 200, 10});
 		m_pRankDemoRequest->LogProgress(HTTPLOG::FAILURE);
@@ -2606,7 +2665,7 @@ void CMenus::UpdateRankDemoDownload()
 	}
 	if(!UnpackRankDemo(Storage(), m_aRankDemoTempPath, m_aRankDemoDestinationPath) || !IsStoredDemoValid(Storage(), m_aRankDemoDestinationPath))
 	{
-		Storage()->RemoveFile(m_aRankDemoDestinationPath, IStorage::TYPE_SAVE);
+		Storage()->RemoveFile(m_aRankDemoDestinationPath, qmclient::media_paths::StorageType(m_aRankDemoDestinationPath));
 		FinishRankDemoDownload(false, Localize("The downloaded file is not a valid demo"));
 		return;
 	}
@@ -2618,6 +2677,7 @@ void CMenus::UpdateRankDemoDownload()
 
 void CMenus::RenderDemoBrowser(CUIRect MainView)
 {
+	SyncDemoBrowserDirectory();
 	UpdateRankDemoDownload();
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
 
@@ -3368,7 +3428,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 					if(InRankCacheFolder)
 					{
 						str_copy(m_aCurrentDemoFolder, pBaseFolder);
-						m_DemolistStorageType = IStorage::TYPE_ALL;
+						m_DemolistStorageType = fs_is_relative_path(pBaseFolder) ? IStorage::TYPE_ALL : IStorage::TYPE_ABSOLUTE;
 						str_copy(m_aCurrentDemoSelectionName, Localize("Rank 1 replays"));
 					}
 					else

@@ -128,7 +128,8 @@ public:
 	virtual void ExecuteLine(const char *pStr, int ClientId = CLIENT_ID_UNSPECIFIED, bool InterpretSemicolons = true) = 0;
 	virtual void ExecuteLineFlag(const char *pStr, int FlasgMask, int ClientId, bool InterpretSemicolons = true) = 0;
 	virtual void ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bool InterpretSemicolons = true) = 0;
-	virtual bool ExecuteFile(const char *pFilename, int ClientId, bool LogFailure = false, int StorageType = IStorage::TYPE_ALL) = 0;
+	// 严格读取在执行任何命令前拒绝错误编码或非法控制字符，普通脚本保留跳过坏行的行为。
+	virtual bool ExecuteFile(const char *pFilename, int ClientId, bool LogFailure = false, int StorageType = IStorage::TYPE_ALL, bool RejectInvalidLines = false) = 0;
 
 	/**
 	 * @deprecated Prefer using the `log_*` functions from base/log.h instead of this function for the following reasons:

@@ -238,9 +238,8 @@ void CTooltips::OnRender()
 		TextColor.a *= AlphaFactor;
 		ColorRGBA OutlineColor = TextRender()->DefaultTextOutlineColor();
 		OutlineColor.a *= AlphaFactor;
-		// 裁剪留出描边空间，动画只改变投影，不重新生成字形或断行。
-		CUIRect ClipRect;
-		Rect.Margin(Layout.m_Padding * Scale * 0.5f, &ClipRect);
+		// 字形下伸部与描边可使用完整气泡内边距；动画只改变投影，不重新断行。
+		const CUIRect ClipRect = Rect;
 		Ui()->ClipEnable(&ClipRect);
 		float X0, Y0, X1, Y1;
 		Graphics()->GetScreen(&X0, &Y0, &X1, &Y1);

@@ -199,3 +199,60 @@ TEST(QmChatTextLayout, ShortPrefixBackgroundIncludesIndentedBody)
 	Body.m_LongestLineWidth = 90.0f;
 	EXPECT_FLOAT_EQ(QmChatIndentedContentWidth(Prefix, Body), 120.0f);
 }
+
+TEST(QmChatTextLayout, MergedBodyStartsAndWrapsAfterFirstAuthorPrefix)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(20.0f, 50.0f));
+	Cursor.m_Y = 74.0f;
+	Cursor.m_LineWidth = 200.0f;
+	Cursor.m_LongestLineWidth = 190.0f;
+	Cursor.m_LineCount = 3;
+	Cursor.m_CharCount = 43;
+	Cursor.m_GlyphCount = 38;
+	QmChatApplyMergedMessageIndent(Cursor, 45.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_X, 65.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, 65.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 155.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX + Cursor.m_LineWidth, 220.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_Y, 74.0f);
+	EXPECT_EQ(Cursor.m_LineCount, 3);
+	EXPECT_EQ(Cursor.m_CharCount, 43);
+	EXPECT_EQ(Cursor.m_GlyphCount, 38);
+}
+
+TEST(QmChatTextLayout, MergedLongFirstAuthorRetainsHalfWidthForBody)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(20.0f, 50.0f));
+	Cursor.m_LineWidth = 200.0f;
+	QmChatApplyMergedMessageIndent(Cursor, 250.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_X, 120.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, 120.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 100.0f);
+}
+
+TEST(QmChatTextLayout, MergedTranslationKeepsFirstAuthorIndent)
+{
+	CTextCursor Original;
+	Original.SetPosition(vec2(20.0f, 50.0f));
+	Original.m_LineWidth = 200.0f;
+	QmChatApplyMergedMessageIndent(Original, 45.0f);
+	const CTextCursor Translation = QmChatSecondaryCursor(Original, 8.0f, 36.0f);
+	EXPECT_FLOAT_EQ(Translation.m_X, 65.0f);
+	EXPECT_FLOAT_EQ(Translation.m_StartX, 65.0f);
+	EXPECT_FLOAT_EQ(Translation.m_LineWidth, 155.0f);
+	EXPECT_FLOAT_EQ(Translation.m_StartY, 86.0f);
+}
+
+TEST(QmChatTextLayout, MergedBackgroundIncludesFirstAuthorIndentAndBodyWidth)
+{
+	CTextCursor Prefix;
+	Prefix.SetPosition(vec2(20.0f, 50.0f));
+	Prefix.m_LineWidth = 200.0f;
+	Prefix.m_LongestLineWidth = 130.0f;
+	CTextCursor Body = Prefix;
+	QmChatApplyMergedMessageIndent(Body, 45.0f);
+	Body.m_LongestLineWidth = 155.0f;
+	EXPECT_FLOAT_EQ(QmChatIndentedContentWidth(Prefix, Body), 200.0f);
+}

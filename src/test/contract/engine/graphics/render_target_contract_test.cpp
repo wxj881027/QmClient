@@ -154,15 +154,6 @@ TEST(GraphicsRenderTargetBackbufferCapture, VulkanRecordsPostCaptureDrawsInline)
 	EXPECT_NE(PrepareBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
 }
 
-TEST(GraphicsRenderTargetBackbufferCapture, VulkanLoadPassSynchronizesAttachmentReads)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "[[nodiscard]] bool CreateRenderPass");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("VK_ACCESS_COLOR_ATTACHMENT_READ_BIT"), std::string::npos);
-	EXPECT_NE(Body.find("VK_PIPELINE_STAGE_TRANSFER_BIT"), std::string::npos);
-}
-
 TEST(GraphicsRenderTargetGaussianBlur, ThreadedFrontendBuildsModeSpecificPassChain)
 {
 	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");

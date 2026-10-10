@@ -1,5 +1,7 @@
 #include "rank_ghost.h"
 
+#include "media_paths.h"
+
 #include "rank_demo_manifest.h"
 
 #include <base/log.h>
@@ -171,7 +173,7 @@ namespace
 	{
 		SCacheListContext Context;
 		Context.m_pSuffix = pSuffix;
-		pStorage->ListDirectoryInfo(IStorage::TYPE_SAVE, pDir, CacheListCallback, &Context);
+		pStorage->ListDirectoryInfo(qmclient::media_paths::StorageType(pDir), pDir, CacheListCallback, &Context);
 		return std::move(Context.m_vFiles);
 	}
 
@@ -204,7 +206,10 @@ namespace
 		str_sanitize_filename(aSafeMap);
 		char aPrefix[96];
 		str_format(aPrefix, sizeof(aPrefix), "%s_rank1_", aSafeMap);
-		const std::vector<SCacheNameTime> vFiles = ListCacheFiles(pStorage, "demos", ".demo");
+		const std::string Directory = qmclient::media_paths::Directory(pStorage, g_Config, qmclient::media_paths::EKind::DEMOS);
+		if(Directory.empty())
+			return false;
+		const std::vector<SCacheNameTime> vFiles = ListCacheFiles(pStorage, Directory.c_str(), ".demo");
 		const SCacheNameTime *pBest = nullptr;
 		for(const SCacheNameTime &File : vFiles)
 		{
@@ -215,7 +220,10 @@ namespace
 		}
 		if(pBest == nullptr)
 			return false;
-		str_format(pPath, PathSize, "demos/%s", pBest->m_Name.c_str());
+		const std::string Path = qmclient::media_paths::Join(Directory, pBest->m_Name);
+		if(Path.empty() || Path.size() >= PathSize)
+			return false;
+		str_copy(pPath, Path.c_str(), PathSize);
 		return true;
 	}
 
@@ -226,7 +234,7 @@ namespace
 			return true;
 		char aFromPath[IO_MAX_PATH_LENGTH];
 		char aToPath[IO_MAX_PATH_LENGTH];
-		pStorage->GetCompletePath(IStorage::TYPE_SAVE, pFrom, aFromPath, sizeof(aFromPath));
+		pStorage->GetCompletePath(IStorage::TYPE_SAVE_OR_ABSOLUTE, pFrom, aFromPath, sizeof(aFromPath));
 		pStorage->GetCompletePath(IStorage::TYPE_SAVE, pTo, aToPath, sizeof(aToPath));
 		if(aFromPath[0] == '\0' || aToPath[0] == '\0')
 			return false;

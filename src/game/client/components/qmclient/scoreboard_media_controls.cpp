@@ -45,6 +45,7 @@ void CQmScoreboardMediaControls::Render(CUi &Ui, ITextRender &TextRender, CToolt
 		CUIRect Button{Rail.x, Rail.y + Index * 32.0f, Rail.w, 28.0f};
 		ui_widget::SButtonSurfaceOptions Options;
 		Options.m_Role = EUiButtonRole::ICON;
+		Options.m_BorderWidth = 0.0f;
 		Options.m_Enabled = Interactive && aEnabled[Index];
 		Options.m_Color = ResolveConfiguredControlSurface().WithMultipliedAlpha(Alpha);
 		const ColorRGBA Fill = ui_widget::DrawButtonSurface(ui_widget::ControlContext(&Ui), &m_aButtons[Index], Button, Options);

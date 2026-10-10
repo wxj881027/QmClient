@@ -20,6 +20,7 @@
 
 #include <generated/data_types.h>
 
+#include <game/client/components/qmclient/media_paths.h>
 #include <game/localization.h>
 
 #include <cinttypes>
@@ -938,6 +939,8 @@ bool CGraphics_Threaded::BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA
 		return false;
 
 	FlushVertices();
+	m_RenderTargetSavedState = m_State;
+	m_State.m_ClipEnable = false;
 	CCommandBuffer::SCommand_RenderTarget_Begin Cmd;
 	Cmd.m_TargetId = TargetId;
 	Cmd.m_ClearColor.r = ClearColor.r;
@@ -956,6 +959,7 @@ void CGraphics_Threaded::EndRenderTarget()
 	if(!IsRenderTargetSupported() || !m_RenderTargetActive)
 		return;
 	FlushVertices();
+	m_State = m_RenderTargetSavedState;
 	CCommandBuffer::SCommand_RenderTarget_End Cmd;
 	Cmd.m_State = m_State;
 	AddCmd(Cmd);
@@ -980,6 +984,8 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	Cmd.m_Alpha = std::clamp(Params.m_Alpha, 0.0f, 1.0f);
 	Cmd.m_State = m_State;
 	Cmd.m_State.m_WrapMode = EWrapMode::CLAMP;
+	if(Params.m_Opaque)
+		Cmd.m_State.m_BlendMode = EBlendMode::NONE;
 
 	// 四角每角至多 NumSegments / 2 个四边形，另有中心和四条边。
 	static_assert(RECT_CORNER_SEGMENTS >= 2 && RECT_CORNER_SEGMENTS % 2 == 0);
@@ -1659,6 +1665,7 @@ namespace
 	class CScreenshotSaveJob : public IJob
 	{
 		IStorage *m_pStorage;
+		std::function<void()> m_pfnFailure;
 		char m_aName[IO_MAX_PATH_LENGTH];
 		CImageInfo m_Image;
 		IGraphics::FScreenshotProcessor m_pfnProcessor;
@@ -1671,22 +1678,25 @@ namespace
 			if(m_pfnProcessor && !m_pfnProcessor(m_Image, Comment))
 			{
 				log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to process screenshot '%s'", m_aName);
+				m_pfnFailure();
 				return;
 			}
 			char aWholePath[IO_MAX_PATH_LENGTH];
-			if(CImageLoader::SavePng(m_pStorage->OpenFile(m_aName, IOFLAG_WRITE, IStorage::TYPE_SAVE, aWholePath, sizeof(aWholePath)), m_aName, m_Image, Comment.c_str()))
+			if(CImageLoader::SavePng(m_pStorage->OpenFile(m_aName, IOFLAG_WRITE, IStorage::TYPE_SAVE_OR_ABSOLUTE, aWholePath, sizeof(aWholePath)), m_aName, m_Image, Comment.c_str()))
 			{
 				log_info_color(SCREENSHOT_LOG_COLOR, "client", "Saved screenshot to '%s'", aWholePath);
 			}
 			else
 			{
 				log_error_color(SCREENSHOT_LOG_COLOR, "client", "Failed to save screenshot to '%s'", aWholePath);
+				m_pfnFailure();
 			}
 		}
 
 	public:
-		CScreenshotSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor) :
+		CScreenshotSaveJob(IStorage *pStorage, const char *pName, CImageInfo &&Image, IGraphics::FScreenshotProcessor pfnProcessor, std::function<void()> pfnFailure) :
 			m_pStorage(pStorage),
+			m_pfnFailure(std::move(pfnFailure)),
 			m_Image(std::move(Image)),
 			m_pfnProcessor(std::move(pfnProcessor))
 		{
@@ -1726,7 +1736,10 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
 	{
 		if(m_pfnScreenshotCallback)
 			m_pfnScreenshotCallback(Image.DeepCopy());
-		m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image), std::move(m_pfnScreenshotProcessor)));
+		SWarning FailureWarning;
+		str_copy(FailureWarning.m_aWarningMsg, Localize("Failed to save screenshot"));
+		// AddWarning 自带互斥保护；本地化在主线程完成，后台任务只发布提示。
+		m_pEngine->AddJob(std::make_shared<CScreenshotSaveJob>(m_pStorage, m_aScreenshotName, std::move(Image), std::move(m_pfnScreenshotProcessor), [this, FailureWarning]() { AddWarning(FailureWarning); }));
 	}
 	else
 	{
@@ -4602,6 +4615,15 @@ void CGraphics_Threaded::TakeScreenshot(const char *pFilename, FScreenshotCallba
 	char aDate[20];
 	str_timestamp(aDate, sizeof(aDate));
 	str_format(m_aScreenshotName, sizeof(m_aScreenshotName), "screenshots/%s_%s.png", pFilename ? pFilename : "screenshot", aDate);
+	const std::string Path = qmclient::media_paths::Resolve(m_pStorage, g_Config, m_aScreenshotName);
+	if(!qmclient::media_paths::PrepareWrite(m_pStorage, Path))
+	{
+		SWarning Warning;
+		str_copy(Warning.m_aWarningMsg, Localize("Failed to save screenshot"));
+		AddWarning(Warning);
+		return;
+	}
+	str_copy(m_aScreenshotName, Path.c_str());
 	m_pfnScreenshotCallback = std::move(pfnCallback);
 	m_pfnScreenshotProcessor = std::move(pfnProcessor);
 	m_DoScreenshot = true;

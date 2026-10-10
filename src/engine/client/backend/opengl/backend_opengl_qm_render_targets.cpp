@@ -100,11 +100,13 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_Begin(const CCommandBuff
 	// render target 会临时改写绘制目标和视口，结束时必须恢复，否则后续 UI 坐标会错位。
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &m_RenderTargetPreviousFramebuffer);
 	glGetIntegerv(GL_VIEWPORT, m_aRenderTargetPreviousViewport);
+	glGetFloatv(GL_COLOR_CLEAR_VALUE, m_aRenderTargetPreviousClearColor);
 	m_RenderTargetActive = true;
 	m_ActiveRenderTargetId = pCommand->m_TargetId;
 	glBindFramebuffer(GL_FRAMEBUFFER, Target.m_Framebuffer);
 	glViewport(0, 0, Target.m_Width, Target.m_Height);
-	SetState(pCommand->m_State);
+	glDisable(GL_SCISSOR_TEST);
+	m_LastClipEnable = false;
 	glClearColor(pCommand->m_ClearColor.r, pCommand->m_ClearColor.g, pCommand->m_ClearColor.b, pCommand->m_ClearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -116,7 +118,15 @@ void CCommandProcessorFragment_OpenGL::Cmd_RenderTarget_End(const CCommandBuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, m_RenderTargetPreviousFramebuffer);
 	glViewport(m_aRenderTargetPreviousViewport[0], m_aRenderTargetPreviousViewport[1], m_aRenderTargetPreviousViewport[2], m_aRenderTargetPreviousViewport[3]);
 	m_RenderTargetActive = false;
-	SetState(pCommand->m_State);
+	glClearColor(m_aRenderTargetPreviousClearColor[0], m_aRenderTargetPreviousClearColor[1], m_aRenderTargetPreviousClearColor[2], m_aRenderTargetPreviousClearColor[3]);
+	if(pCommand->m_State.m_ClipEnable)
+	{
+		SetClipRect(pCommand->m_State);
+		glEnable(GL_SCISSOR_TEST);
+	}
+	else
+		glDisable(GL_SCISSOR_TEST);
+	m_LastClipEnable = pCommand->m_State.m_ClipEnable;
 	m_ActiveRenderTargetId = -1;
 }
 
