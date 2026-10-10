@@ -3102,9 +3102,11 @@ void CChat::OnRender()
 		InputBlockRect = {x, InputContentRect.y, InputLineWidth, InputContentRect.h};
 		InputBlockRectValid = true;
 		ExtendBounds(x, InputContentRect.y, ChatRect.w - x, InputContentRect.h);
-		const float XScale = Graphics()->ScreenWidth() / Width;
-		const float YScale = Graphics()->ScreenHeight() / Height;
-		Graphics()->ClipEnable((int)(InputClippingRect.x * XScale), (int)(InputClippingRect.y * YScale), (int)(InputClippingRect.w * XScale), (int)(InputClippingRect.h * YScale));
+		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
+		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
+		const SQmChatInputPixelClip InputPixelClip = QmChatInputPixelClip(InputClippingRect,
+			{ScreenX0, ScreenY0, ScreenX1 - ScreenX0, ScreenY1 - ScreenY0}, Graphics()->ScreenWidth(), Graphics()->ScreenHeight());
+		Graphics()->ClipEnable(InputPixelClip.m_X, InputPixelClip.m_Y, InputPixelClip.m_W, InputPixelClip.m_H);
 
 		float ScrollOffset = m_Input.GetScrollOffset();
 		float ScrollOffsetChange = m_Input.GetScrollOffsetChange();
@@ -3135,7 +3137,7 @@ void CChat::OnRender()
 		m_Input.SetScrollOffsetChange(ScrollOffsetChange);
 
 		// 补全提示也属于正文区域，不能跨过独立的翻译按钮操作区。
-		Graphics()->ClipEnable((int)(InputClippingRect.x * XScale), (int)(InputClippingRect.y * YScale), (int)(InputClippingRect.w * XScale), (int)(InputClippingRect.h * YScale));
+		Graphics()->ClipEnable(InputPixelClip.m_X, InputPixelClip.m_Y, InputPixelClip.m_W, InputPixelClip.m_H);
 		// 自动补全提示：以半透明文字显示当前补全命令的剩余部分（与官方 DDNet 一致）
 		if(m_Input.GetString()[0] == '/' && m_Input.GetString()[1] != '\0' && !m_vServerCommands.empty())
 		{

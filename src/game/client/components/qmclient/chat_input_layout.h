@@ -1,7 +1,10 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_CHAT_INPUT_LAYOUT_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_CHAT_INPUT_LAYOUT_H
 
+#include <game/client/ui_rect.h>
+
 #include <algorithm>
+#include <cmath>
 
 // 翻译按钮占据输入行最左侧，前缀（「全体」／「队伍」／「聊天」）与正文整体右移一个按钮区。
 // 正文宽度由行宽、按钮区和前缀宽度决定，光标与选区都从正文起点开始，不与按钮重叠。
@@ -51,6 +54,29 @@ inline SQmChatInputLayout QmChatResolveInputLayout(float X, float Y, float LineW
 	Layout.m_CursorLineWidth = std::max(1.0f, LineWidth - ButtonSize - QM_CHAT_TRANSLATE_BUTTON_GAP);
 	Layout.m_MessageMaxWidth = QmChatInputMessageWidth(LineWidth, FontSize, PrefixWidth);
 	return Layout;
+}
+
+struct SQmChatInputPixelClip
+{
+	int m_X = 0;
+	int m_Y = 0;
+	int m_W = 0;
+	int m_H = 0;
+};
+
+// HUD 移动、缩放后，裁切框必须和文字使用同一屏幕映射；向外取整保留边缘像素。
+inline SQmChatInputPixelClip QmChatInputPixelClip(const CUIRect &Rect, const CUIRect &MappedScreen, int ScreenWidth, int ScreenHeight)
+{
+	if(MappedScreen.w <= 0.0f || MappedScreen.h <= 0.0f || ScreenWidth <= 0 || ScreenHeight <= 0)
+		return {};
+
+	const float ScaleX = ScreenWidth / MappedScreen.w;
+	const float ScaleY = ScreenHeight / MappedScreen.h;
+	const int Left = std::clamp((int)std::floor((Rect.x - MappedScreen.x) * ScaleX), 0, ScreenWidth);
+	const int Top = std::clamp((int)std::floor((Rect.y - MappedScreen.y) * ScaleY), 0, ScreenHeight);
+	const int Right = std::clamp((int)std::ceil((Rect.x + Rect.w - MappedScreen.x) * ScaleX), Left, ScreenWidth);
+	const int Bottom = std::clamp((int)std::ceil((Rect.y + Rect.h - MappedScreen.y) * ScaleY), Top, ScreenHeight);
+	return {Left, Top, Right - Left, Bottom - Top};
 }
 
 #endif
