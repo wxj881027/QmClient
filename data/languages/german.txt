@@ -8774,6 +8774,9 @@ Points unavailable
 Polished
 == Poliert
 
+Pop wave
+== Vergrößerungswelle
+
 Popup & dropdown blur
 == Unschärfe für Popups und Auswahllisten
 
@@ -12440,6 +12443,9 @@ Streamer mode
 Strength icons assets
 == Stärkesymbole-Assets
 
+Strength of the vertical or pop wave. Zero keeps the title still.
+== Stärke der vertikalen oder vergrößernden Welle. Bei null bleibt der Titel still.
+
 Stress system (debug builds only).
 == Stresssystem (nur Debug-Builds).
 
@@ -13250,14 +13256,17 @@ Title display
 Title light sweep speed in 1/100 row per second (0 = off)
 == Tempo des Titellichtstreifens in 1/100 Zeile pro Sekunde (0 = aus)
 
+Title motion
+== Titelanimation
+
+Title motion: 0 = vertical wave, 1 = pop wave
+== Titelanimation: 0 = vertikale Welle, 1 = Vergrößerungswelle
+
 Title opacity
 == Titeldeckkraft
 
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
 == Phase pro Zeichen und Pixel in 1/1000 px (0 = Stilstandard, 20 = sichtbares Lichtband)
-
-Title per-character vertical bob amplitude in pixels (0 = off)
-== Vertikale Schwankungsamplitude pro Zeichen in Pixeln (0 = aus)
 
 Title preview
 == Titelvorschau
@@ -13279,6 +13288,9 @@ Title too long or contains unsupported characters
 
 Title visibility and appearance
 == Sichtbarkeit und Aussehen der Titel
+
+Title wave strength (0-3, 0 = off)
+== Wellenstärke des Titels (0-3, 0 = aus)
 
 to check a server setting say /settings and setting's name, setting names are:
 == Um eine Servereinstellung zu prüfen, gib /settings und den Namen ein. Die Namen sind:
@@ -14159,14 +14171,14 @@ Version
 Version performing the analysis
 == Version, die die Analyse durchführt
 
-Vertical movement of each character. Zero keeps the title still.
-== Vertikale Bewegung jedes Zeichens. Bei null bleibt der Titel still.
-
 Vertical position
 == Vertikale Position
 
 Vertical sync (may cause lag)
 == Vertikale Synchronisation (kann Verzögerung verursachen)
+
+Vertical wave
+== Vertikale Welle
 
 Video Background
 == Video-Hintergrund

@@ -183,20 +183,23 @@ double QmTitleUpdateServerTimeOffset(const double Current, const bool CurrentVal
 	return Current + (Measured - Current) * Alpha;
 }
 
-float QmTitleStyleBobPadding(const SQmTitleBobStyle &Bob, const float PixelSize)
+float QmTitleStyleBobPadding(const SQmTitleBobStyle &Bob, const float PixelSize, const float FontSize)
 {
 	if(Bob.m_Amplitude == 0.0f || Bob.m_WaveLength <= 0.0f)
 		return 0.0f;
 
 	float Padding = std::fabs(Bob.m_Amplitude);
-	if(Bob.m_QuantizeStep > 0.0f)
+	// 字形围绕中心缩放；按完整字号的增长量预留，给描边与字形外延留出余量。
+	if(Bob.m_Mode == EQmTitleMotionMode::POP)
+		Padding *= maximum(FontSize, 0.0f) * 0.1f;
+	else if(Bob.m_QuantizeStep > 0.0f)
 		Padding = (float)(std::nearbyint((double)Padding / (double)Bob.m_QuantizeStep) * (double)Bob.m_QuantizeStep);
 	return PixelSize > 0.0f ? std::ceil(Padding / PixelSize) * PixelSize : Padding;
 }
 
 float QmTitleStyleBobOffset(const SQmTitleBobStyle &Bob, const float TimeSec, const float PixelX)
 {
-	if(Bob.m_Amplitude == 0.0f || Bob.m_WaveLength <= 0.0f)
+	if(Bob.m_Mode == EQmTitleMotionMode::POP || Bob.m_Amplitude == 0.0f || Bob.m_WaveLength <= 0.0f)
 		return 0.0f;
 
 	// FNA 的 MathHelper.TwoPi 是 float 常量，与 Calamity 的取法保持一致。
@@ -210,6 +213,18 @@ float QmTitleStyleBobOffset(const SQmTitleBobStyle &Bob, const float TimeSec, co
 	// 吸附到整数像素：小幅度下波形会长时间停在同一像素再跳变，观感类似掉帧，
 	// 因此默认不量化，由调用方按字体清晰度与平滑度的取舍决定。
 	return (float)(std::nearbyint(Offset / (double)Bob.m_QuantizeStep) * (double)Bob.m_QuantizeStep);
+}
+
+float QmTitleStyleBobScale(const SQmTitleBobStyle &Bob, const float TimeSec, const float PixelX)
+{
+	if(Bob.m_Mode != EQmTitleMotionMode::POP || Bob.m_Amplitude <= 0.0f || Bob.m_WaveLength <= 0.0f)
+		return 1.0f;
+
+	const double TwoPi = (double)6.2831855f;
+	const double Phase = (double)TimeSec * (double)Bob.m_Speed - (double)PixelX * (TwoPi / (double)Bob.m_WaveLength);
+	// 正半波收窄成一道凸起，经过的字平滑放大再复原；每档最多增加 10%。
+	const double Crest = maximum(std::cos(Phase), 0.0);
+	return 1.0f + (float)((double)Bob.m_Amplitude * 0.1 * Crest * Crest * Crest * Crest);
 }
 
 ColorRGBA QmTitleStyleSample(const SQmTitleStyle &Style, const float TimeSec, const float PixelX)

@@ -3,11 +3,13 @@
 
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmCardLabelHints.h>
 #include <game/client/QmUi/UiConfigHintText.h>
 #include <game/client/component.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -96,33 +98,124 @@ inline float QmTooltipDelay(const CTooltip &Tooltip)
 	return Tooltip.m_SmallInstant || Tooltip.m_Immediate ? 0.0f : Tooltip.m_FadeTime;
 }
 
-// 首次悬浮等待后再显示；已显示的气泡换目标时直接沿用可见状态。
+// 首次悬浮等待后再显示；已显示的气泡允许短暂跨过控件间隙。
 class CQmTooltipHoverState
 {
-	const CTooltip *m_pTarget = nullptr;
+	const void *m_pTarget = nullptr;
 	double m_VisibleAt = 0.0;
+	double m_LastHoveredAt = 0.0;
 	bool m_Visible = false;
 
 public:
 	static constexpr float FADE_IN_SECONDS = 0.25f;
+	static constexpr double SWITCH_GRACE_SECONDS = 0.25;
 
 	float Update(const CTooltip &Tooltip, double Now)
 	{
-		if(m_pTarget != &Tooltip)
+		const void *pTarget = Tooltip.m_pId != nullptr ? Tooltip.m_pId : &Tooltip;
+		if(m_pTarget != pTarget)
 		{
-			m_pTarget = &Tooltip;
+			if(m_Visible && Now - m_LastHoveredAt > SWITCH_GRACE_SECONDS)
+				Clear();
+			m_pTarget = pTarget;
 			m_VisibleAt = Now + (m_Visible ? -FADE_IN_SECONDS : QmTooltipDelay(Tooltip));
 		}
-		const float VisibleSeconds = static_cast<float>(Now - m_VisibleAt);
-		m_Visible = VisibleSeconds >= 0.0f;
-		return VisibleSeconds;
+		m_LastHoveredAt = Now;
+		const float Seconds = VisibleSeconds(Now);
+		m_Visible = Seconds >= 0.0f;
+		return Seconds;
+	}
+
+	float VisibleSeconds(double Now) const { return static_cast<float>(Now - m_VisibleAt); }
+
+	bool Retain(double Now)
+	{
+		if(m_Visible && Now - m_LastHoveredAt <= SWITCH_GRACE_SECONDS)
+			return true;
+		Clear();
+		return false;
 	}
 
 	void Clear()
 	{
 		m_pTarget = nullptr;
 		m_VisibleAt = 0.0;
+		m_LastHoveredAt = 0.0;
 		m_Visible = false;
+	}
+};
+
+// 新目标从当前可见矩形接着移动，快速连续切换不会回跳到上一个起点。
+class CQmTooltipMotionState
+{
+	CUIRect m_From{};
+	CUIRect m_Target{};
+	double m_StartedAt = 0.0;
+	bool m_Initialized = false;
+
+	CUIRect Sample(double Now) const
+	{
+		const float T = std::clamp(static_cast<float>((Now - m_StartedAt) / MOVE_SECONDS), 0.0f, 1.0f);
+		const float Ease = T * T * (3.0f - 2.0f * T);
+		return {m_From.x + (m_Target.x - m_From.x) * Ease, m_From.y + (m_Target.y - m_From.y) * Ease,
+			m_From.w + (m_Target.w - m_From.w) * Ease, m_From.h + (m_Target.h - m_From.h) * Ease};
+	}
+
+public:
+	static constexpr double MOVE_SECONDS = 0.16;
+
+	CUIRect Update(const CUIRect &Target, double Now, bool Enabled)
+	{
+		if(!m_Initialized || !Enabled)
+		{
+			m_From = m_Target = Target;
+			m_StartedAt = Now;
+			m_Initialized = true;
+		}
+		else if(m_Target.x != Target.x || m_Target.y != Target.y || m_Target.w != Target.w || m_Target.h != Target.h)
+		{
+			m_From = Sample(Now);
+			m_Target = Target;
+			m_StartedAt = Now;
+		}
+		return Sample(Now);
+	}
+
+	void Clear() { m_Initialized = false; }
+};
+
+// 同一气泡持有一个文本容器；位移只改变绘制偏移，内容或排版改变时原地更新。
+class CQmTooltipTextCache
+{
+	STextContainerIndex m_Index;
+	std::string m_Text;
+	float m_FontSize = 0.0f;
+	float m_WrapWidth = 0.0f;
+	int m_MaxLines = 0;
+
+public:
+	const STextContainerIndex &Index() const { return m_Index; }
+
+	template<typename TTextRender>
+	void Update(TTextRender &TextRender, CTextCursor Cursor, const std::string &Text)
+	{
+		if(!m_Index.Valid() || m_Text != Text || m_FontSize != Cursor.m_FontSize || m_WrapWidth != Cursor.m_LineWidth || m_MaxLines != Cursor.m_MaxLines)
+		{
+			Cursor.SetPosition(vec2(0, 0));
+			TextRender.RecreateTextContainerSoft(m_Index, &Cursor, Text.c_str());
+			m_Text = Text;
+			m_FontSize = Cursor.m_FontSize;
+			m_WrapWidth = Cursor.m_LineWidth;
+			m_MaxLines = Cursor.m_MaxLines;
+		}
+	}
+
+	template<typename TTextRender>
+	void Clear(TTextRender &TextRender)
+	{
+		TextRender.DeleteTextContainer(m_Index);
+		m_Index.Reset();
+		m_Text.clear();
 	}
 };
 
@@ -144,7 +237,7 @@ public:
 	{
 		m_TextRender.SetFontPreset(EFontPreset::DEFAULT_FONT);
 		m_TextRender.TextColor(ColorRGBA(1, 1, 1, 1));
-		m_TextRender.SetRenderFlags(TEXT_RENDER_FLAG_ONE_TIME_USE | TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
+		m_TextRender.SetRenderFlags(TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 	}
 
 	~CQmTooltipTextScope()
@@ -216,6 +309,12 @@ class CTooltips : public CComponent
 	std::unordered_map<uintptr_t, CUiConfigHintText> m_ConfigHints;
 	std::optional<std::reference_wrapper<CTooltip>> m_ActiveTooltip;
 	CQmTooltipHoverState m_HoverState;
+	CQmTooltipMotionState m_MotionState;
+	CQmTooltipTextCache m_TextCache;
+	CTooltip m_DisplayTooltip;
+	CTooltip m_CardLabelHint;
+	CQmCardLabelHintCache m_CardLabelTexts;
+	std::optional<std::array<int, 9>> m_Context;
 	uint64_t m_Frame = 1;
 	bool m_ConfigHelpInitialized = false;
 	std::unordered_map<const void *, const SConfigVariable *> m_ConfigHelp;
@@ -226,7 +325,8 @@ class CTooltips : public CComponent
 	void SetActiveTooltip(CTooltip &Tooltip);
 	void DoToolTip(const void *pId, const CUIRect *pNearRect, const char *pText, float WidthHint, float FontSize, bool SmallInstant, bool HoverByRect, bool Immediate = false, bool Fallback = false, const CUIRect *pAnchor = nullptr);
 
-	inline void ClearActiveTooltip();
+	void ClearActiveTooltip();
+	void ResetPresentation();
 
 public:
 	CTooltips();
@@ -258,8 +358,12 @@ public:
 	// 从已有配置描述取得选项帮助；命中整行时仍可锚定到标题文本。
 	void DoSettingsToolTipForConfig(const void *pId, const CUIRect *pRect, const void *pConfigValue, const CUIRect *pAnchor = nullptr, const void *pSecondConfigValue = nullptr);
 
+	const char *PrepareCardLabel(const CUIRect *pRect, const char *pText, bool Render);
+
 	void OnReset() override;
 	void OnRender() override;
+	void OnShutdown() override { ClearActiveTooltip(); }
+	void OnWindowResize() override { ClearActiveTooltip(); }
 
 	// TClient
 	void SetFadeTime(const void *pId, float Time);

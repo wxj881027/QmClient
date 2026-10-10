@@ -13794,3 +13794,67 @@ brazilian_portuguese = "O backend gráfico não suporta a minivisualização do 
 portuguese = "O backend gráfico não suporta a minivista do dummy"
 turkish = "Grafik arka ucu kuklanın mini görünümünü desteklemiyor"
 polish = "Backend graficzny nie obsługuje miniwidoku dummy"
+
+[[message]]
+key = "Pop wave"
+[message.translations]
+simplified_chinese = "放大凸起"
+traditional_chinese = "放大凸起"
+japanese = "拡大の波"
+korean = "확대 물결"
+russian = "Волна увеличения"
+german = "Vergrößerungswelle"
+spanish = "Onda de ampliación"
+french = "Vague d’agrandissement"
+brazilian_portuguese = "Onda de ampliação"
+portuguese = "Onda de ampliação"
+turkish = "Büyütme dalgası"
+polish = "Fala powiększająca"
+
+[[message]]
+key = "Strength of the vertical or pop wave. Zero keeps the title still."
+[message.translations]
+simplified_chinese = "调整上下波动或放大凸起的强度，设为零时保持静止。"
+traditional_chinese = "調整上下波動或放大凸起的強度，設為零時保持靜止。"
+japanese = "上下または拡大の波の強さ。ゼロにすると称号が静止します。"
+korean = "상하 또는 확대 물결의 강도입니다. 영으로 설정하면 칭호가 움직이지 않습니다."
+russian = "Сила вертикальной волны или волны увеличения. Ноль отключает движение титула."
+german = "Stärke der vertikalen oder vergrößernden Welle. Bei null bleibt der Titel still."
+spanish = "Intensidad de la onda vertical o de ampliación. Cero deja el título quieto."
+french = "Intensité de la vague verticale ou d’agrandissement. Zéro laisse le titre immobile."
+brazilian_portuguese = "Intensidade da onda vertical ou de ampliação. Zero mantém o título parado."
+portuguese = "Intensidade da onda vertical ou de ampliação. Zero mantém o título parado."
+turkish = "Dikey veya büyütme dalgasının gücü. Sıfır, unvanı sabit tutar."
+polish = "Siła fali pionowej lub powiększającej. Zero pozostawia tytuł nieruchomy."
+
+[[message]]
+key = "Title motion"
+[message.translations]
+simplified_chinese = "头衔动画"
+traditional_chinese = "頭銜動畫"
+japanese = "称号アニメーション"
+korean = "칭호 애니메이션"
+russian = "Анимация титула"
+german = "Titelanimation"
+spanish = "Animación del título"
+french = "Animation du titre"
+brazilian_portuguese = "Animação do título"
+portuguese = "Animação do título"
+turkish = "Unvan animasyonu"
+polish = "Animacja tytułu"
+
+[[message]]
+key = "Vertical wave"
+[message.translations]
+simplified_chinese = "上下波动"
+traditional_chinese = "上下波動"
+japanese = "上下の波"
+korean = "상하 물결"
+russian = "Вертикальная волна"
+german = "Vertikale Welle"
+spanish = "Onda vertical"
+french = "Vague verticale"
+brazilian_portuguese = "Onda vertical"
+portuguese = "Onda vertical"
+turkish = "Dikey dalga"
+polish = "Fala pionowa"

@@ -345,7 +345,7 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 	// 高度只做常数次算术；直接读取展开状态，普通页和搜索页无需维护各自的布局版本。
 	Out.m_MeasureEachFrame = DisplayCard;
 	Out.m_Measure = [=](float) {
-		const int Rows = DisplayCard ? (g_Config.m_QmTitleAdvanced ? 19 : 9) : 8;
+		const int Rows = DisplayCard ? (g_Config.m_QmTitleAdvanced ? 20 : 10) : 8;
 		float Height = Rows * (LineHeight + LineSpacing) + PreviewHeight;
 		if(!DisplayCard)
 			Height += LineSpacing;
@@ -574,11 +574,25 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 					pMenus->Ui()->ActiveItem() == nullptr && !pMenus->Ui()->MouseInside(&s_TitleStyleFieldRect) && !pMenus->Ui()->MouseInside(&s_TitleStylePanelRect))
 					s_TitleStyleExpanded = false;
 
-				// 逐字符波浪浮动幅度
+				// 动画方式与强度共用普通页、搜索页和成品预览的配置。
 				Row = NextRow();
-				if(pMenus->DoSettingsScrollbarOption(CMenus::SETTINGS_CONTRIBUTORS, -1, "qm-title-bob-amplitude", &g_Config.m_QmTitleBobAmplitude, &g_Config.m_QmTitleBobAmplitude, &Row, Localize("Wave amount"), 0, 12, &CUi::ms_LinearScrollbarScale, 0, ""))
+				CUIRect MotionLabel, MotionControl;
+				Row.VSplitLeft(Row.w * 0.55f, &MotionLabel, &MotionControl);
+				pMenus->DoSettingsMenuLabel(CMenus::SETTINGS_CONTRIBUTORS, -1, -1, "qm-title-motion-mode", &MotionLabel, Localize("Title motion"), BodySize, TEXTALIGN_ML);
+				static CUi::SDropDownState s_TitleMotionState;
+				static CScrollRegion s_TitleMotionScroll;
+				const std::array<const char *, 2> apMotionNames = {Localize("Vertical wave"), Localize("Pop wave")};
+				s_TitleMotionState.m_SelectionPopupContext.m_pScrollRegion = &s_TitleMotionScroll;
+				const int MotionMode = pMenus->DoSettingsDropDown(&MotionControl, g_Config.m_QmTitleMotionMode, apMotionNames.data(), apMotionNames.size(), s_TitleMotionState, {}, &g_Config.m_QmTitleMotionMode, nullptr, &Row);
+				if(!ReadOnly && MotionMode != g_Config.m_QmTitleMotionMode)
+				{
+					g_Config.m_QmTitleMotionMode = MotionMode;
 					pMenus->GameClient()->m_Chat.RebuildChat();
-				Hint(&g_Config.m_QmTitleBobAmplitude, Row, Localize("Vertical movement of each character. Zero keeps the title still."));
+				}
+				Row = NextRow();
+				if(pMenus->DoSettingsScrollbarOption(CMenus::SETTINGS_CONTRIBUTORS, -1, "qm-title-bob-amplitude", &g_Config.m_QmTitleBobAmplitude, &g_Config.m_QmTitleBobAmplitude, &Row, Localize("Wave amount"), 0, 3, &CUi::ms_LinearScrollbarScale, 0, ""))
+					pMenus->GameClient()->m_Chat.RebuildChat();
+				Hint(&g_Config.m_QmTitleBobAmplitude, Row, Localize("Strength of the vertical or pop wave. Zero keeps the title still."));
 			}
 			Row = NextRow();
 			if(pMenus->DoSettingsButton_CheckBox(CMenus::SETTINGS_CONTRIBUTORS, -1, -1, &g_Config.m_QmTitleInstantHints, "qm-title-instant-hints", Localize("Instant compact hints"), g_Config.m_QmTitleInstantHints, &Row) && !ReadOnly)

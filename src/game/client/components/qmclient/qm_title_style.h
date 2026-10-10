@@ -55,24 +55,34 @@ struct SQmTitleStyle
 	float m_PhasePerPx; // 位置系数，0 表示整行同步（无空间相位）
 };
 
-// 逐字符波浪浮动参数。效果与 Calamity 的 Wavy 文本效果同构（见 UI/DialogueDisplay/TextEffects/Wavy.cs），
-// 但 QmClient 把它作为与稀有度配色正交的独立层，默认关闭后即可还原静止文字。
+enum class EQmTitleMotionMode : int
+{
+	BOB,
+	POP,
+};
+
+// 逐字符波浪浮动或放大凸起参数。上下波动与 Calamity 的 Wavy 效果同构（见 UI/DialogueDisplay/TextEffects/Wavy.cs）。
+// 动画独立于稀有度配色，幅度归零后还原静止文字。
 struct SQmTitleBobStyle
 {
-	float m_Amplitude; // 垂直幅度（像素），0 表示关闭
+	float m_Amplitude; // 上下波动为像素幅度，放大凸起为缩放强度，0 表示关闭
 	float m_WaveLength; // 波长（像素）
 	float m_Speed; // 相位角速度（弧度/秒），与 Wavy 的 freq 同单位
 	// 偏移量化步长（像素）。0 表示亚像素（默认）：位移随帧连续变化，观感平滑；
 	// 1 表示吸附整数像素：轮廓更锐利，但小幅度下会长时间停在同一像素再跳变。
 	float m_QuantizeStep;
+	EQmTitleMotionMode m_Mode = EQmTitleMotionMode::BOB;
 };
 
 // 波浪浮动偏移（像素）。相位按像素 X 递进，因此相邻字符的偏移不同，呈现从左向右扫过的波纹。
-// 结果量化到整数像素：亚像素位置会让像素字体发虚，与「保持清晰锐利轮廓」的目标冲突。
+// 放大凸起模式不改变基线；上下波动按 m_QuantizeStep 决定是否吸附像素。
 float QmTitleStyleBobOffset(const SQmTitleBobStyle &Bob, float TimeSec, float PixelX);
 
-// 聊天每行上下各需预留的浮动空间，按屏幕像素向上对齐，避免行距取整后压住波峰。
-float QmTitleStyleBobPadding(const SQmTitleBobStyle &Bob, float PixelSize);
+// 放大凸起的逐字符比例，波峰从左向右移动，字形只放大后复原，不缩小到原尺寸以下。
+float QmTitleStyleBobScale(const SQmTitleBobStyle &Bob, float TimeSec, float PixelX);
+
+// 每行上下各需预留的动画空间；放大凸起按字号预留，按屏幕像素向上对齐。
+float QmTitleStyleBobPadding(const SQmTitleBobStyle &Bob, float PixelSize, float FontSize = 0.0f);
 
 // 有效相位系数：Override > 0 时覆盖风格自带值。Calamity 只有 ExoticRainbow 系列自带非零系数，
 // 其余风格整行同步变色；要让短头衔也看出光带，需要调用方提高这个值。

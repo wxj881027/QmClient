@@ -2923,6 +2923,7 @@ Please wait…
 Points
 Points unavailable
 Polished
+Pop wave
 Popup & dropdown blur
 Popup animation
 Popup blur
@@ -4145,6 +4146,7 @@ Stop server
 Stop the current demo
 Streamer mode
 Strength icons assets
+Strength of the vertical or pop wave. Zero keeps the title still.
 Stress system (debug builds only).
 Strict game type filter
 Strict gametype filter
@@ -4415,9 +4417,10 @@ Title bob wavelength in pixels
 Title color
 Title display
 Title light sweep speed in 1/100 row per second (0 = off)
+Title motion
+Title motion: 0 = vertical wave, 1 = pop wave
 Title opacity
 Title per-character phase per pixel in 1/1000 px (0 = style default, 20 = visible light band)
-Title per-character vertical bob amplitude in pixels (0 = off)
 Title preview
 Title server does not support chat styles yet
 Title server unavailable; retry
@@ -4425,6 +4428,7 @@ Title spatial effect: 0 = polished, 1 = solid, 2 = classic Calamity, 3 = off
 Title style
 Title too long or contains unsupported characters
 Title visibility and appearance
+Title wave strength (0-3, 0 = off)
 to check a server setting say /settings and setting's name, setting names are:
 To save all players in your team have to be alive and not in '/spec'
 Toast uses UiTokens + QmMotion slide
@@ -4718,9 +4722,9 @@ Variable custom font weight for Latin text
 Velocity
 Version
 Version performing the analysis
-Vertical movement of each character. Zero keeps the title still.
 Vertical position
 Vertical sync (may cause lag)
+Vertical wave
 Video Background
 Video directory
 Video name

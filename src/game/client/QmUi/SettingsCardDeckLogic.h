@@ -180,6 +180,21 @@ private:
 	float m_CardGap;
 };
 
+// 双列按原列顺排，半宽卡可填入已放置全宽卡上方的空位；同列卡不互相越过。
+class CSettingsCardDeckPackingPlan
+{
+public:
+	void Reset(float CursorY, float CardGap);
+	SSettingsCardColumnFrame Append(int Column, float CardHeight, bool LeadingFullWidth = false);
+
+private:
+	std::array<float, 2> m_aCursorY{};
+	std::array<size_t, 2> m_aNextFullWidthFrame{};
+	float m_FullWidthCursorY = 0.0f;
+	float m_CardGap = 0.0f;
+	std::vector<SSettingsCardColumnFrame> m_vFullWidthFrames;
+};
+
 // 以下函数是公共 Deck 的无渲染决策层；仅处理 model/order/geometry，不能依赖 UI renderer。
 // 活动 state 集合由当前页面 definitions 决定，未注册的条件卡不得占用任何 layout slot。
 std::array<std::vector<int>, 3> BuildSettingsCardDeckColumnOrder(const qm_card_order::CModel &Model, const char *pTab, const std::vector<int> &vActiveStateIndices);

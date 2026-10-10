@@ -2477,7 +2477,7 @@ bool CChat::OnPrepareLines(float y)
 			if(Style.m_pStyle != nullptr)
 			{
 				LineHasDynamicTitle = true;
-				TitleBobPadding = maximum(TitleBobPadding, QmTitleStyleBobPadding(Style.m_Bob, PixelSize));
+				TitleBobPadding = maximum(TitleBobPadding, QmTitleStyleBobPadding(Style.m_Bob, PixelSize, FontSize));
 			}
 		};
 		if(MergedPlayerMessages)
