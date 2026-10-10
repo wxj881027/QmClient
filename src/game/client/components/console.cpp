@@ -1965,8 +1965,7 @@ void CGameConsole::OnRender()
 	const ColorRGBA aBackgroundColors[NUM_CONSOLETYPES] = {ColorRGBA(0.2f, 0.2f, 0.2f, 0.9f), ColorRGBA(0.4f, 0.2f, 0.2f, 0.9f)};
 	const ColorRGBA aBorderColors[NUM_CONSOLETYPES] = {ColorRGBA(0.1f, 0.1f, 0.1f, 0.9f), ColorRGBA(0.2f, 0.1f, 0.1f, 0.9f)};
 
-	const bool UpdateConsoleUi = !Ui()->Enabled();
-	if(UpdateConsoleUi)
+	const bool RestoreUiEnabled = Ui()->Enabled();
 	{
 		Ui()->SetEnabled(true);
 		Ui()->StartCheck();
@@ -2371,7 +2370,7 @@ void CGameConsole::OnRender()
 
 		// render console log (current entry, status, wrap lines)
 		CInstance::CBacklogEntry *pEntry = pConsole->m_Backlog.Last();
-		float OffsetY = 0.0f;
+		float OffsetY = pConsole->m_FilterContentMotion.Offset();
 
 		std::vector<QmConsoleText::SRange> vLinkRanges;
 		std::vector<STextColorSplit> vColorLayers;
@@ -2744,10 +2743,10 @@ void CGameConsole::OnRender()
 	}
 	RenderTools()->RenderCursor(Ui()->MousePos(), 24.0f);
 
-	if(UpdateConsoleUi)
 	{
 		Ui()->FinishCheck();
-		Ui()->SetEnabled(false);
+		Ui()->ClearHotkeys();
+		Ui()->SetEnabled(RestoreUiEnabled);
 	}
 
 	TextRender()->SetRenderFlags(PreviousRenderFlags);

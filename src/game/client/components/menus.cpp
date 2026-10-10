@@ -4363,7 +4363,7 @@ void CMenus::Render()
 
 	{
 		CPerfTimer StageTimer;
-		if(!GameClient()->m_GameConsole.ConsoleSettingsOpen())
+		if(!GameClient()->m_GameConsole.IsActive())
 			Ui()->RenderPopupMenus();
 		LogPerfStage(Client(), "popup_menus", StageTimer.ElapsedMs());
 	}
@@ -7912,12 +7912,17 @@ void CMenus::OnRender()
 			GameClient()->m_RankGhost.ViewPlayer()->Unpause();
 		Ui()->SetActiveItem(nullptr);
 	}
-	Ui()->StartCheck();
+	const bool ConsoleOwnsUi = GameClient()->m_GameConsole.IsActive();
+	if(ConsoleOwnsUi)
+		Ui()->BeginBackgroundRender();
+	else
+		Ui()->StartCheck();
 	UpdateColors();
 
 	{
 		CPerfTimer StageTimer;
-		Ui()->Update();
+		if(!ConsoleOwnsUi)
+			Ui()->Update();
 		LogPerfStage(Client(), "ui_update", StageTimer.ElapsedMs());
 	}
 
@@ -7988,11 +7993,15 @@ void CMenus::OnRender()
 	if(g_Config.m_Debug)
 		Ui()->DebugRender(2.0f, Ui()->Screen()->h - 12.0f);
 
-	if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
-		SetActive(false);
-
-	Ui()->FinishCheck();
-	Ui()->ClearHotkeys();
+	if(ConsoleOwnsUi)
+		Ui()->EndBackgroundRender();
+	else
+	{
+		if(Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
+			SetActive(false);
+		Ui()->FinishCheck();
+		Ui()->ClearHotkeys();
+	}
 
 	char aExtra[96];
 	str_format(aExtra, sizeof(aExtra), "state=%s active=%d", ClientStateName(Client()->State()), IsActive() ? 1 : 0);

@@ -271,3 +271,16 @@ TEST(QmConsoleUiLayout, FilterContentRepeatedFramesDoNotRestartTransition)
 	EXPECT_GT(Motion.Resolve(1, 1.1, true), Before);
 	EXPECT_FLOAT_EQ(Motion.Resolve(1, 1.5, true), 1.0f);
 }
+
+TEST(QmConsoleUiLayout, FilterContentMovementSettlesAndDisabledMotionHasNoOffset)
+{
+	QmConsoleUi::CFilterContentMotion Motion;
+	Motion.Resolve(15, 0.0, true);
+	EXPECT_FLOAT_EQ(Motion.Offset(), 0.0f);
+	Motion.Resolve(1, 1.0, true);
+	EXPECT_GT(Motion.Offset(), 5.0f);
+	Motion.Resolve(1, 1.4, true);
+	EXPECT_FLOAT_EQ(Motion.Offset(), 0.0f);
+	Motion.Resolve(3, 2.0, false);
+	EXPECT_FLOAT_EQ(Motion.Offset(), 0.0f);
+}

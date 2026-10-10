@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == 더미에도 적용
 
+Also send the original text when translating outgoing messages
+== 발신 메시지 번역 시 원문도 함께 전송
+
 Always show
 == 항상 표시
 
@@ -1975,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == 시네마틱 카메라
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== 시네마틱 카메라 부드러움 (0=즉시, 100=가장 부드러움)
+
+Cinematic smoothness
+== 시네마틱 카메라 부드러움
 
 CJK font
 == 한중일 글꼴
@@ -3599,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == 이모티콘 뒤에 그림자 그리기
 
+Draw the favorite star icon with the filled icon font style
+== 아이콘 폰트의 채움 스타일로 즐겨찾기 별 아이콘 그리기
+
+Draw the friend heart icon with the filled icon font style
+== 아이콘 폰트의 채움 스타일로 친구 하트 아이콘 그리기
+
 Draw tile layers when using custom background (solid)
 == 사용자 정의 배경 (단색) 사용 시 타일 레이어 그리기
 
@@ -4325,6 +4340,9 @@ Endless hook has been activated
 Endless hook has been deactivated
 == 무한 갈고리가 비활성화되었습니다
 
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== 무한 훅 링 흐름 스타일(0=단색, 1=무지개, 2=정지)
+
 Endpoint
 == 엔드포인트
 
@@ -4765,6 +4783,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == 뒤집기:
+
+Flow style
+== 흐름 스타일
 
 Folder
 == 폴더
@@ -5851,6 +5872,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == 설정 프리셋 저장/불러오기 시 스킨 포함
+
+Include Team 0
+== Team 0 포함
+
+Include Team 0 in the Gores team drown board
+== Gores 낙수 순위에 Team 0 포함
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 수신 메시지 자동 번역 모드 (0=대상 언어가 아닐 때만 번역, 1=항상 번역)
@@ -10604,6 +10631,9 @@ Send emote when entering freeze
 Send emoticon in water
 == 물 속에서 이모티콘 보내기
 
+Send original text with translation
+== 발신 메시지 번역 시 원문도 전송
+
 Send probability
 == 보낼 확률
 
@@ -12101,6 +12131,12 @@ Soft glow
 Solid
 == 단색
 
+Solid favorite icon
+== 채워진 즐겨찾기 아이콘
+
+Solid friend icon
+== 채워진 친구 아이콘
+
 Solid tile outline opacity
 == 단색 타일 윤곽선 불투명도
 
@@ -12325,6 +12361,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == 통계판
+
+Static
+== 정지
 
 Stats
 == 통계

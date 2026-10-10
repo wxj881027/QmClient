@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == 同時應用到分身
 
+Also send the original text when translating outgoing messages
+== 翻譯發出的訊息時同時發送原文
+
 Always show
 == 始終顯示
 
@@ -1975,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == 電影鏡頭
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== 電影鏡頭平滑度（0=瞬時，100=最平滑）
+
+Cinematic smoothness
+== 電影鏡頭平滑度
 
 CJK font
 == 中日韓文字字型
@@ -3599,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == 在表情後繪製陰影
 
+Draw the favorite star icon with the filled icon font style
+== 以圖示字體的實心樣式繪製收藏星標
+
+Draw the friend heart icon with the filled icon font style
+== 以圖示字體的實心樣式繪製好友愛心
+
 Draw tile layers when using custom background (solid)
 == 使用自定義背景（實體）時是否繪製圖塊圖層
 
@@ -4325,6 +4340,9 @@ Endless hook has been activated
 Endless hook has been deactivated
 == 無限鉤已關閉
 
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== 無限鉤圓環流動樣式（0=單色，1=彩虹，2=靜止）
+
 Endpoint
 == 端點
 
@@ -4765,6 +4783,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == 翻轉：
+
+Flow style
+== 流動樣式
 
 Folder
 == 文件夾
@@ -5851,6 +5872,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == 保存/加載配置方案時包含皮膚
+
+Include Team 0
+== 包含 Team 0
+
+Include Team 0 in the Gores team drown board
+== 在 Gores 落水榜中包含 Team 0 玩家
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 收到消息自動翻譯方式（0=僅在非目標語言時翻譯，1=始終翻譯）
@@ -10604,6 +10631,9 @@ Send emote when entering freeze
 Send emoticon in water
 == 水中發送表情
 
+Send original text with translation
+== 翻譯發送的消息時同時發送原文
+
 Send probability
 == 發送概率
 
@@ -12101,6 +12131,12 @@ Soft glow
 Solid
 == 純色
 
+Solid favorite icon
+== 實心收藏圖示
+
+Solid friend icon
+== 實心好友圖示
+
 Solid tile outline opacity
 == 牆體輪廓不透明度
 
@@ -12325,6 +12361,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == 統計板
+
+Static
+== 靜止
 
 Stats
 == 統計

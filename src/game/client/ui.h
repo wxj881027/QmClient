@@ -706,6 +706,7 @@ private:
 
 	bool m_Enabled;
 	int m_RenderOnlyDepth = 0;
+	int m_BackgroundRenderDepth = 0;
 	int m_PreLayoutInputDepth = 0;
 	float m_DropDownFontSize = -1.0f;
 	// 仅客户端绑定；地图编辑器保留自己的控件样式。
@@ -957,7 +958,13 @@ public:
 	bool Enabled() const { return m_Enabled; }
 	void BeginRenderOnly();
 	void EndRenderOnly();
-	bool RenderOnly() const { return m_RenderOnlyDepth > 0; }
+	void BeginBackgroundRender() { ++m_BackgroundRenderDepth; }
+	void EndBackgroundRender()
+	{
+		if(m_BackgroundRenderDepth > 0)
+			--m_BackgroundRenderDepth;
+	}
+	bool RenderOnly() const { return m_RenderOnlyDepth > 0 || m_BackgroundRenderDepth > 0; }
 	void BeginPreLayoutInput() { ++m_PreLayoutInputDepth; }
 	void EndPreLayoutInput()
 	{

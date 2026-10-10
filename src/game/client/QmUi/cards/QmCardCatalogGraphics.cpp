@@ -875,8 +875,14 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			SemanticColorMetrics.m_LineSpacing = 0.0f;
 			CUIRect FriendColorRow = Rows.NextButton();
 			DoLine_ColorPicker(&s_GraphicsFriendIconColorResetId, SemanticColorMetrics, &FriendColorRow, Localize("Friend icon color"), &g_Config.m_QmUiFriendIconColor, color_cast<ColorRGBA>(ColorHSLA(0x00D1AB)), false, nullptr, false, false);
+			CUIRect FriendFilledRow = Rows.NextLine();
+			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiFriendIconFilled, "graphics-solid-friend-icon", Localize("Solid friend icon"), g_Config.m_QmUiFriendIconFilled, &FriendFilledRow))
+				g_Config.m_QmUiFriendIconFilled ^= 1;
 			CUIRect FavoriteColorRow = Rows.NextButton();
 			DoLine_ColorPicker(&s_GraphicsFavoriteIconColorResetId, SemanticColorMetrics, &FavoriteColorRow, Localize("Favorite icon color"), &g_Config.m_QmUiFavoriteIconColor, color_cast<ColorRGBA>(ColorHSLA(0x21FFA6)), false, nullptr, false, false);
+			CUIRect FavoriteFilledRow = Rows.NextLine();
+			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiFavoriteIconFilled, "graphics-solid-favorite-icon", Localize("Solid favorite icon"), g_Config.m_QmUiFavoriteIconFilled, &FavoriteFilledRow))
+				g_Config.m_QmUiFavoriteIconFilled ^= 1;
 			DoIconChoiceRow(Rows.Next(ResolveSettingsRadioRowLayout(ContentRect, 4, GraphicsMetrics).m_Height), Localize("UI icon style"), apIconWeightLabels, std::size(apIconWeightLabels), IconWeightIndex, s_aGraphicsIconWeightButtons, [this](int NewValue) {
 				const int NewWeight = s_aIconWeightValues[NewValue];
 				if(NewWeight == NormalizeQmIconWeight(g_Config.m_QmUiIconWeight))
@@ -939,9 +945,21 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 			const unsigned OldFriendColor = g_Config.m_QmUiFriendIconColor;
 			CUIRect FriendColorRow = Rows.NextButton();
 			DoLine_ColorPicker(&s_GraphicsFriendIconColorResetId, SemanticColorMetrics, &FriendColorRow, Localize("Friend icon color"), &g_Config.m_QmUiFriendIconColor, color_cast<ColorRGBA>(ColorHSLA(0x00D1AB)), false, nullptr, false, false);
+			CUIRect FriendFilledRow = Rows.NextLine();
+			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiFriendIconFilled, "graphics-solid-friend-icon", Localize("Solid friend icon"), g_Config.m_QmUiFriendIconFilled, &FriendFilledRow))
+			{
+				g_Config.m_QmUiFriendIconFilled ^= 1;
+				Changed = true;
+			}
 			const unsigned OldFavoriteColor = g_Config.m_QmUiFavoriteIconColor;
 			CUIRect FavoriteColorRow = Rows.NextButton();
 			DoLine_ColorPicker(&s_GraphicsFavoriteIconColorResetId, SemanticColorMetrics, &FavoriteColorRow, Localize("Favorite icon color"), &g_Config.m_QmUiFavoriteIconColor, color_cast<ColorRGBA>(ColorHSLA(0x21FFA6)), false, nullptr, false, false);
+			CUIRect FavoriteFilledRow = Rows.NextLine();
+			if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiFavoriteIconFilled, "graphics-solid-favorite-icon", Localize("Solid favorite icon"), g_Config.m_QmUiFavoriteIconFilled, &FavoriteFilledRow))
+			{
+				g_Config.m_QmUiFavoriteIconFilled ^= 1;
+				Changed = true;
+			}
 			Changed = Changed || OldFriendColor != g_Config.m_QmUiFriendIconColor || OldFavoriteColor != g_Config.m_QmUiFavoriteIconColor;
 			const int IconWeightIndex = QmIconWeightSegmentIndex(g_Config.m_QmUiIconWeight);
 			Row = Rows.Next(ResolveSettingsRadioRowLayout(ContentRect, 4, GraphicsMetrics).m_Height);

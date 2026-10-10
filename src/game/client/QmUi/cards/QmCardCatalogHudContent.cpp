@@ -24,6 +24,7 @@
 #include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/binds.h>
 #include <game/client/components/menus.h>
+#include <game/client/components/qmclient/hook_countdown.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_music_hook_registry.h>
 #include <game/client/components/qmclient/qmclient_utils.h>
@@ -149,6 +150,20 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 
 	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);
+
+	// 无限钩流动光圈配色：单色流动 / 彩虹渐变 / 静止满环，点击循环切换。
+	static CButtonContainer s_HookCountdownFlowStyleButton;
+	{
+		CUIRect FlowRow, FlowLabel, FlowButton;
+		Content.HSplitTop(LineHeight, &FlowRow, &Content);
+		FlowRow.VSplitLeft(FlowRow.w * 0.55f, &FlowLabel, &FlowButton);
+		RenderQmHudLabel("qmclient-hook-countdown-flow-style", &FlowLabel, Localize("Flow style"), CurrentSettingsContentMetrics().m_BodySize);
+		const char *const apFlowStyles[] = {Localize("Single color"), Localize("Rainbow"), Localize("Static")};
+		const int Style = std::clamp(g_Config.m_QmHookCountdownFlowStyle, static_cast<int>(EQmHookCountdownFlowStyle::SINGLE_COLOR), static_cast<int>(EQmHookCountdownFlowStyle::STATIC));
+		if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_HookCountdownFlowStyleButton, "qmclient-hook-countdown-flow-style-button", apFlowStyles[Style], 0, &FlowButton))
+			g_Config.m_QmHookCountdownFlowStyle = (Style + 1) % 3;
+		Content.HSplitTop(LineSpacing, nullptr, &Content);
+	}
 
 	// 开关倒计时：总开关决定是否显示，两个位置开关决定显示在跟随 Tee 的圆环上还是灵动岛里，可同时勾选。
 	const bool CountdownChanged = RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSwitchCountdown, "Enable switch countdown", Localize("Enable switch countdown"), &g_Config.m_QmSwitchCountdown);
@@ -438,10 +453,12 @@ void CMenus::RenderQmHudCoordsContent(CUIRect &Content, const SSettingsContentMe
 
 void CMenus::RenderQmHudGoresDrownBoardContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
 {
-	// 行序与卡片目录的预布局输入一致：总开关、显示人数、不透明度、显示玩家 Tee。
+	// 行序与卡片目录的预布局输入一致：总开关、包含 Team0、显示人数、不透明度、显示玩家 Tee。
 	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoard, "Show Gores drown board", Localize("Show Gores drown board"), &g_Config.m_QmGoresDrownBoard);
 	if(!g_Config.m_QmGoresDrownBoard)
 		return;
+
+	RenderQmHudCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmGoresDrownBoardIncludeTeam0, "Include Team 0", Localize("Include Team 0"), &g_Config.m_QmGoresDrownBoardIncludeTeam0);
 
 	CUIRect Row, LabelColumn, ControlColumn;
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {

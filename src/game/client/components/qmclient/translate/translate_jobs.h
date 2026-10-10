@@ -15,6 +15,8 @@ struct STranslateJob
 	unsigned int m_TranslationId = 0;
 	bool m_Outgoing = false;
 	bool m_AutoTriggered = false;
+	// 原文已随翻译请求一起发送；失败回退时不再重复发送原文。
+	bool m_OriginalSent = false;
 	int m_Team = 0;
 	char m_aTarget[16] = "";
 	std::string m_OriginalText;

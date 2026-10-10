@@ -1,4 +1,6 @@
 // 验证真实 UI 模糊作用域的进入、继承、抑制与恢复。
+#include <engine/keys.h>
+
 #include <game/client/QmUi/SecondaryPanel.h>
 
 #include <test/support/qm_real_ui_fixture.h>
@@ -78,6 +80,7 @@ namespace
 		bool m_CaptureSucceeds = true, m_BlurSucceeds = true;
 		int m_Captures = 0, m_Blurs = 0, m_Created = 0;
 		int m_Surfaces = 0;
+		void DrawRect(float, float, float, float, ColorRGBA, int, float) override { ++m_Surfaces; }
 		bool HasRoundedRectSdf() override { return true; }
 		void RenderRoundedRectSdf(const SRoundedRectSdfParams &) override { ++m_Surfaces; }
 		std::vector<SRenderTargetDrawParams> m_vDraws;
@@ -297,4 +300,50 @@ TEST_F(QmUiBlurGraphics, SecondaryPanelDefaultAnimationCanRenderExitAfterLogical
 	const int CompletedDraws = m_Graphics.m_Surfaces;
 	m_Ui.RenderPopupMenus();
 	EXPECT_EQ(m_Graphics.m_Surfaces, CompletedDraws);
+}
+
+TEST_F(QmUiBlurGraphics, CenteredAnimatedPanelKeepsContentSizeAcrossEntranceFrames)
+{
+	struct SProbe
+	{
+		CUIRect m_Rect;
+		int m_Calls = 0;
+	} Probe;
+	SPopupMenuId Id;
+	auto Props = ui_widget::SecondaryPanelProperties();
+	m_Ui.DoPopupMenu(&Id, 20, 20, 300, 200, &Probe, [](void *pContext, CUIRect View, bool) {
+		auto *pProbe = static_cast<SProbe *>(pContext);
+		pProbe->m_Rect = View;
+		++pProbe->m_Calls;
+		return CUi::POPUP_KEEP_OPEN; }, Props);
+	m_Ui.RenderPopupMenus();
+	const CUIRect First = Probe.m_Rect;
+	EXPECT_FLOAT_EQ(First.w, 300.0f - CUi::PopupMenuContentInset());
+	EXPECT_FLOAT_EQ(First.h, 200.0f - CUi::PopupMenuContentInset());
+	for(int Frame = 0; Frame < 10; ++Frame)
+	{
+		m_Client.AdvanceFrame();
+		m_Ui.RenderPopupMenus();
+		EXPECT_FLOAT_EQ(Probe.m_Rect.w, First.w);
+		EXPECT_FLOAT_EQ(Probe.m_Rect.h, First.h);
+	}
+	EXPECT_EQ(Probe.m_Calls, 11);
+	EXPECT_LE(Probe.m_Rect.y, First.y);
+}
+
+TEST_F(QmPopupBlurScope, BackgroundRenderBlocksControlsAndHotkeysWithoutClipping)
+{
+	IInput::CEvent Event{};
+	Event.m_Key = KEY_RETURN;
+	Event.m_Flags = IInput::FLAG_PRESS;
+	m_Ui.OnInput(Event);
+	const bool WasClipped = m_Ui.IsClipped();
+	m_Ui.BeginBackgroundRender();
+	EXPECT_TRUE(m_Ui.RenderOnly());
+	EXPECT_EQ(m_Ui.IsClipped(), WasClipped);
+	EXPECT_FALSE(m_Ui.ConsumeHotkey(CUi::HOTKEY_ENTER));
+	m_Ui.EndBackgroundRender();
+	EXPECT_FALSE(m_Ui.RenderOnly());
+	EXPECT_TRUE(m_Ui.ConsumeHotkey(CUi::HOTKEY_ENTER));
+	EXPECT_FALSE(m_Ui.ConsumeHotkey(CUi::HOTKEY_ENTER));
 }

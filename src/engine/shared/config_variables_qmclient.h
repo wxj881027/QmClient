@@ -60,6 +60,8 @@ MACRO_CONFIG_INT(QmUiIconCustomColorEnabled, qm_ui_icon_custom_color_enabled, 0,
 MACRO_CONFIG_COL(QmUiIconCustomColor, qm_ui_icon_custom_color, 0xFFFFFF, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI custom icon color")
 MACRO_CONFIG_COL(QmUiFriendIconColor, qm_ui_friend_icon_color, 0x00D1AB, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Friend icon color")
 MACRO_CONFIG_COL(QmUiFavoriteIconColor, qm_ui_favorite_icon_color, 0x21FFA6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Favorite icon color")
+MACRO_CONFIG_INT(QmUiFriendIconFilled, qm_ui_friend_icon_filled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the friend heart icon with the filled icon font style")
+MACRO_CONFIG_INT(QmUiFavoriteIconFilled, qm_ui_favorite_icon_filled, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Draw the favorite star icon with the filled icon font style")
 MACRO_CONFIG_INT(QmUiIconWeight, qm_ui_icon_weight, 1, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)")
 MACRO_CONFIG_INT(QmUiColorInterpolation, qm_ui_color_interpolation, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "QmUi color animation interpolation: 0=sRGB linear, 1=OKLAB perceptually uniform")
 MACRO_CONFIG_INT(QmRectCornerSegments, qm_rect_corner_segments, 16, 8, 48, CFGFLAG_CLIENT | CFGFLAG_SAVE, "UI rounded corner segments (even numbers recommended)")
@@ -618,6 +620,7 @@ MACRO_CONFIG_INT(QmSwitchCountdownMode, qm_switch_countdown_mode, 1, 0, 2, CFGFL
 
 // Hook Countdown - 钩子倒计时（钩链中点圆环）
 MACRO_CONFIG_INT(QmHookCountdown, qm_hook_countdown, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable hook countdown")
+MACRO_CONFIG_INT(QmHookCountdownFlowStyle, qm_hook_countdown_flow_style, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Endless hook ring flow style: 0=single color, 1=rainbow, 2=static")
 
 // HUD Dynamic Island - 灵动岛/HUD 编辑器
 MACRO_CONFIG_INT(QmHudIslandUseOriginalStyle, qm_hud_island_use_original_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use original style for Dynamic Island")
@@ -629,6 +632,7 @@ MACRO_CONFIG_STR(QmHudEditorLayout, qm_hud_editor_layout, 2048, "", CFGFLAG_CLIE
 
 // Gores 组队落水榜
 MACRO_CONFIG_INT(QmGoresDrownBoard, qm_gores_drown_board, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show the Gores team drown board")
+MACRO_CONFIG_INT(QmGoresDrownBoardIncludeTeam0, qm_gores_drown_board_include_team0, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Include Team 0 in the Gores team drown board")
 MACRO_CONFIG_INT(QmGoresDrownBoardMaxPlayers, qm_gores_drown_board_max_players, 8, 1, 16, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Maximum players shown in the Gores team drown board")
 MACRO_CONFIG_INT(QmGoresDrownBoardOpacity, qm_gores_drown_board_opacity, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Gores team drown board opacity")
 MACRO_CONFIG_INT(QmGoresDrownBoardShowTee, qm_gores_drown_board_show_tee, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Tees in the Gores team drown board")
@@ -642,6 +646,7 @@ MACRO_CONFIG_INT(QmDynamicFov, qm_dynamic_fov, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG
 MACRO_CONFIG_INT(QmDynamicFovAmount, qm_dynamic_fov_amount, 50, 0, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic FOV intensity (0-200)")
 MACRO_CONFIG_INT(QmDynamicFovSmoothness, qm_dynamic_fov_smoothness, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dynamic FOV smoothness (0=instant, 100=smoothest)")
 MACRO_CONFIG_INT(QmCinematicCamera, qm_cinematic_camera, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable smooth cinematic camera while free spectating")
+MACRO_CONFIG_INT(QmCinematicCameraSmoothness, qm_cinematic_camera_smoothness, 80, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Cinematic camera smoothness (0=instant, 100=smoothest)")
 MACRO_CONFIG_INT(QmZoomInstantReverse, qm_zoom_instant_reverse, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reverse zoom direction instantly when the opposite zoom key is pressed (0=keep original smooth zoom)")
 MACRO_CONFIG_INT(QmCrashReportOnStartup, qm_crash_report_on_startup, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show pending crash reports in a window at startup (0 = keep them on disk and log a line instead)")
 MACRO_CONFIG_INT(QmAspectPreset, qm_aspect_preset, 0, 0, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)")
@@ -812,6 +817,7 @@ MACRO_CONFIG_STR(QmTranslateSource, qm_translate_source, 16, "auto", CFGFLAG_CLI
 
 // Translate - Auto Outgoing - 自动翻译发送消息
 MACRO_CONFIG_INT(QmTranslateAutoOutgoing, qm_translate_auto_outgoing, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-translate outgoing messages")
+MACRO_CONFIG_INT(QmTranslateOutgoingSendOriginal, qm_translate_outgoing_send_original, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Also send the original text when translating outgoing messages")
 MACRO_CONFIG_INT(QmTranslateAutoOutgoingMode, qm_translate_auto_outgoing_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-translation mode (0=Trigger on common source languages only, 1=Always translate)")
 MACRO_CONFIG_STR(QmTranslateOutgoingTarget, qm_translate_outgoing_target, 16, "en", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Outgoing translation target language code")
 

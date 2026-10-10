@@ -4,11 +4,12 @@
 
 namespace
 {
-	STranslateJob MakeJob(CTranslateTestHttp &Http, bool Outgoing, bool Automatic, const char *pText = "original")
+	STranslateJob MakeJob(CTranslateTestHttp &Http, bool Outgoing, bool Automatic, const char *pText = "original", bool OriginalSent = false)
 	{
 		STranslateJob Job;
 		Job.m_Outgoing = Outgoing;
 		Job.m_AutoTriggered = Automatic;
+		Job.m_OriginalSent = OriginalSent;
 		Job.m_OriginalText = pText;
 		Job.m_Team = 1;
 		Job.m_pBackend = CreateTranslateBackend(Http, pText, "zh", "auto", CreateTranslateTestRequest);
@@ -74,6 +75,42 @@ TEST_F(CTranslateQueueTest, AutomaticFailureRecoversOriginalExactlyOnce)
 	EXPECT_EQ(Done[0].m_Job.m_Team, 1);
 	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
 	EXPECT_EQ(Queue.Size(), 0u);
+}
+
+// 原文已随提交先行发送时，失败回退不再重复发送原文。
+TEST_F(CTranslateQueueTest, FailureWithAlreadySentOriginalDoesNotResend)
+{
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "original", true), 1));
+	m_Http.m_vSubmissions[0].m_pRequest->SetState(EHttpState::ERROR);
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+}
+
+TEST_F(CTranslateQueueTest, SuccessWithAlreadySentOriginalStillSendsTranslation)
+{
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "original", true), 1));
+	m_Http.m_vSubmissions[0].m_pRequest->Finish(R"({"choices":[{"message":{"content":"translated"}}]})");
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_TRUE(Done[0].m_Success);
+	EXPECT_EQ(Done[0].m_SendText, "translated");
+}
+
+TEST_F(CTranslateQueueTest, CancelledRequestWithAlreadySentOriginalDoesNotResend)
+{
+	CTranslateJobQueue Queue;
+	ASSERT_TRUE(Queue.Submit(MakeJob(m_Http, true, true, "original", true), 1));
+	m_Http.m_vSubmissions[0].m_pRequest->SetState(EHttpState::ABORTED);
+	const auto Done = Queue.Update([](const auto &) { return true; });
+	ASSERT_EQ(Done.size(), 1u);
+	EXPECT_FALSE(Done[0].m_Success);
+	EXPECT_TRUE(Done[0].m_SendText.empty());
+	EXPECT_TRUE(Queue.CanSubmit(1));
+	EXPECT_TRUE(Queue.Update([](const auto &) { return true; }).empty());
 }
 
 TEST_F(CTranslateQueueTest, ExplicitFailureDoesNotSendUntranslatedText)

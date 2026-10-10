@@ -769,6 +769,7 @@ namespace qm_card_catalog
 			{Localizable("Show team"), nullptr, "显示队伍"},
 			{Localizable("Use original style"), nullptr, "使用原始样式"},
 			{nullptr, "qm_hook_countdown", nullptr},
+			{nullptr, "qm_hook_countdown_flow_style", nullptr},
 			{nullptr, "qm_hud_island_bg_color", nullptr},
 			{nullptr, "qm_hud_island_bg_opacity", nullptr},
 			{nullptr, "qm_hud_island_show_team", nullptr},

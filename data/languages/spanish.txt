@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == Aplicar también al dummy
 
+Also send the original text when translating outgoing messages
+== También enviar el texto original al traducir mensajes salientes
+
 Always show
 == Mostrar siempre
 
@@ -1975,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == Cámara cinematográfica
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== Suavizado de la cámara cinematográfica (0=instantáneo, 100=más suave)
+
+Cinematic smoothness
+== Suavidad de la cámara cinematográfica
 
 CJK font
 == Fuente CJK
@@ -3599,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == Dibujar sombra detrás de las emociones
 
+Draw the favorite star icon with the filled icon font style
+== Dibujar el icono de favoritos con el estilo relleno de la fuente de iconos
+
+Draw the friend heart icon with the filled icon font style
+== Dibujar el icono de corazón de amigos con el estilo relleno de la fuente de iconos
+
 Draw tile layers when using custom background (solid)
 == Dibujar capas de mosaicos al usar fondo personalizado (sólido)
 
@@ -4325,6 +4340,9 @@ Endless hook has been activated
 Endless hook has been deactivated
 == El gancho infinito se ha desactivado
 
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== Estilo de flujo del anillo de gancho infinito (0=color único, 1=arcoíris, 2=estático)
+
 Endpoint
 == Punto final
 
@@ -4765,6 +4783,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == Voltear:
+
+Flow style
+== Estilo de flujo
 
 Folder
 == Carpeta
@@ -5851,6 +5872,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == Incluir skin al guardar/cargar preajuste de configuración
+
+Include Team 0
+== Incluir Team 0
+
+Include Team 0 in the Gores team drown board
+== Incluir Team 0 en la lista de ahogamientos de Gores
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Modo de traducción automática de mensajes recibidos (0=solo si no está en el idioma de destino, 1=traducir siempre)
@@ -10604,6 +10631,9 @@ Send emote when entering freeze
 Send emoticon in water
 == Enviar emoticono en el agua
 
+Send original text with translation
+== Enviar el texto original junto con la traducción
+
 Send probability
 == Probabilidad de envío
 
@@ -12101,6 +12131,12 @@ Soft glow
 Solid
 == Sólido
 
+Solid favorite icon
+== Icono de favoritos relleno
+
+Solid friend icon
+== Icono de amigos relleno
+
 Solid tile outline opacity
 == Opacidad del contorno de casilla sólida
 
@@ -12325,6 +12361,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == Tabla de estadísticas
+
+Static
+== Estático
 
 Stats
 == Estadísticas

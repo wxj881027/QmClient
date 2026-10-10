@@ -1133,6 +1133,10 @@ public:
 		case EFontPreset::ICON_FONT_BOLD:
 			m_SelectedFace = m_IconBoldFace;
 			break;
+		case EFontPreset::ICON_FONT_FILL:
+			// 实心字面缺失时退回当前字重面，保持与 SetIconFontWeight 一致的兜底。
+			m_SelectedFace = m_IconFillFace != nullptr ? m_IconFillFace : m_IconFace;
+			break;
 		}
 	}
 

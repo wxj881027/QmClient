@@ -29,6 +29,14 @@ TEST(QmUpdateHttp, RetryAfterHttpDateUsesRemainingTimeAndClampsPastDate)
 class CHttpRequestCurlTestPeer
 {
 public:
+	static bool Prepare(CHttpRequestCurl &Request, CURL *pHandle)
+	{
+		Request.m_aErr[0] = '\0';
+		if(!Request.ConfigureHandle(pHandle))
+			return false;
+		Request.m_State = EHttpState::RUNNING;
+		return true;
+	}
 	static size_t Header(CHttpRequestCurl &Request, std::string Text)
 	{
 		return Request.OnHeader(Text.data(), Text.size());
@@ -43,6 +51,83 @@ public:
 		Request.OnCompletionInternal(pHandle, Code);
 	}
 };
+
+TEST(QmUpdateHttp, CancellationWinsOverSuccessfulTransportCompletion)
+{
+	CHttpRequestCurl Request("https://cancel.test/result");
+	Request.Abort();
+	CHttpRequestCurlTestPeer::Complete(Request);
+	EXPECT_EQ(Request.State(), EHttpState::ABORTED);
+}
+
+TEST(QmUpdateHttp, CancellationWinsOverTransportFailure)
+{
+	CHttpRequestCurl Request("https://cancel.test/result");
+	Request.Abort();
+	CHttpRequestCurlTestPeer::Complete(Request, nullptr, CURLE_COULDNT_CONNECT);
+	EXPECT_EQ(Request.State(), EHttpState::ABORTED);
+}
+
+// 只安排 curl 句柄和额度，不执行网络；取消与完成均调用生产调度器。
+class CHttpCurlTestPeer
+{
+	CHttpCurl m_Http;
+
+public:
+	std::unordered_map<std::string, size_t> m_HostCounts;
+	CHttpCurlTestPeer() { m_Http.m_pMultiH = curl_multi_init(); }
+	~CHttpCurlTestPeer()
+	{
+		while(!m_Http.m_RunningRequests.empty())
+			m_Http.CompleteRunningRequest(m_Http.m_RunningRequests.begin()->first, CURLE_ABORTED_BY_CALLBACK, m_HostCounts);
+		curl_multi_cleanup(m_Http.m_pMultiH);
+		m_Http.m_pMultiH = nullptr;
+	}
+	bool Add(const std::shared_ptr<CHttpRequestCurl> &pRequest, const char *pHost)
+	{
+		if(!m_Http.m_pMultiH)
+			return false;
+		CURL *pHandle = curl_easy_init();
+		if(!pHandle)
+			return false;
+		if(!CHttpRequestCurlTestPeer::Prepare(*pRequest, pHandle) || curl_multi_add_handle(m_Http.m_pMultiH, pHandle) != CURLM_OK)
+		{
+			curl_easy_cleanup(pHandle);
+			return false;
+		}
+		m_Http.m_RunningRequests.emplace(pHandle, pRequest);
+		++m_HostCounts[pHost];
+		return true;
+	}
+	void Cancel() { m_Http.CancelAbortedRequests(m_HostCounts); }
+	size_t Size() const { return m_Http.m_RunningRequests.size(); }
+};
+
+TEST(QmUpdateHttp, CancellationWithoutProgressReleasesOnlyCancelledHostCapacity)
+{
+	CHttpCurlTestPeer Http;
+	auto pCancelled = std::make_shared<CHttpRequestCurl>("https://same.test/first");
+	auto pSibling = std::make_shared<CHttpRequestCurl>("https://same.test/second");
+	auto pOther = std::make_shared<CHttpRequestCurl>("https://other.test/first");
+	ASSERT_TRUE(Http.Add(pCancelled, "same.test"));
+	ASSERT_TRUE(Http.Add(pSibling, "same.test"));
+	ASSERT_TRUE(Http.Add(pOther, "other.test"));
+	pCancelled->Abort();
+	Http.Cancel();
+	EXPECT_EQ(pCancelled->State(), EHttpState::ABORTED);
+	EXPECT_FALSE(pSibling->Done());
+	EXPECT_FALSE(pOther->Done());
+	EXPECT_EQ(Http.Size(), 2u);
+	EXPECT_EQ(Http.m_HostCounts.at("same.test"), 1u);
+	EXPECT_EQ(Http.m_HostCounts.at("other.test"), 1u);
+	Http.Cancel();
+	EXPECT_EQ(Http.Size(), 2u);
+	pSibling->Abort();
+	Http.Cancel();
+	EXPECT_EQ(Http.m_HostCounts.count("same.test"), 0u);
+	EXPECT_EQ(Http.m_HostCounts.at("other.test"), 1u);
+	EXPECT_EQ(Http.Size(), 1u);
+}
 
 TEST(QmUpdateHttp, ProxyBypassMatchesDomainBoundaryCaseAndDots)
 {

@@ -277,9 +277,16 @@ bool CTranslate::TryTranslateOutgoingChat(int Team, const char *pText)
 		return true;
 	}
 
+	// 开启保留原文时先发送原文，译文随后追加，失败无需回退重发。
+	const bool SendOriginal = g_Config.m_QmTranslateOutgoingSendOriginal != 0;
+	if(SendOriginal)
+		GameClient()->m_Chat.SendChatQueued(Team, Text.c_str(), false);
+
 	STranslateJob Job;
 	Job.m_Outgoing = true;
+	Job.m_OriginalSent = SendOriginal;
 	Job.m_Team = Team;
+	Job.m_OriginalText = Text;
 	str_copy(Job.m_aTarget, Target.c_str(), sizeof(Job.m_aTarget));
 	const char *pSource = NormalizeTranslateSource(g_Config.m_QmTranslateSource);
 	if(!IsValidLanguageCode(pSource) && str_comp_nocase(pSource, "auto") != 0)
@@ -434,9 +441,15 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 		return;
 	}
 
+	// 开启保留原文时先发送原文，译文随后追加，失败无需回退重发。
+	const bool SendOriginal = g_Config.m_QmTranslateOutgoingSendOriginal != 0;
+	if(SendOriginal)
+		GameClient()->m_Chat.SendChatQueued(Team, pText, false);
+
 	STranslateJob Job;
 	Job.m_Outgoing = true;
 	Job.m_AutoTriggered = true;
+	Job.m_OriginalSent = SendOriginal;
 	Job.m_OriginalText = pText;
 	Job.m_Team = Team;
 	const char *pTarget = GetEffectiveTranslateTarget(g_Config.m_QmTranslateOutgoingTarget);
@@ -453,7 +466,8 @@ void CTranslate::StartAutoOutgoingTranslate(int Team, const char *pText)
 	if(!Job.m_pBackend)
 	{
 		GameClient()->m_Chat.Echo(Localize("Translation backend invalid, sending original"));
-		GameClient()->m_Chat.SendChatQueued(Team, pText, false);
+		if(!SendOriginal)
+			GameClient()->m_Chat.SendChatQueued(Team, pText, false);
 		return;
 	}
 

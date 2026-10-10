@@ -151,6 +151,7 @@ CUi::EPopupMenuFunctionResult CGameConsole::PopupSettings(void *pContext, CUIRec
 	Params.m_WheelOwnerPreRegistered = true;
 	pThis->Ui()->RegisterWheelOwner(Params.m_pWheelOwnerId, Params.m_WheelOwnerPriority, View,
 		Active && QmConsoleSettingsLayout::ContentHeight(Metrics, g_Config.m_QmConsoleColorScheme == 2, g_Config.m_QmConsoleFontSize) > View.h);
+	pThis->m_SettingsScrollRegion.SetContentHeightForNextFrame(QmConsoleSettingsLayout::ContentHeight(Metrics, g_Config.m_QmConsoleColorScheme == 2, g_Config.m_QmConsoleFontSize));
 	pThis->m_SettingsScrollRegion.Begin(&View, &Offset, &Params);
 	View.y += Offset.y;
 	const float StartY = View.y;

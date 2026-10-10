@@ -33,7 +33,8 @@ namespace qm_icon_settings
 		const CUIRect View{0.0f, 0.0f, Width, 0.0f};
 		const float ColorHeight = ResolveSettingsRadioRowLayout(View, 3, Metrics).m_Height;
 		const float StyleHeight = ResolveSettingsRadioRowLayout(View, 4, Metrics).m_Height;
-		return ResolveSettingsContentFlowHeight(Metrics, CustomEnabled ? std::initializer_list<float>{ColorHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_ButtonHeight, Metrics.m_ButtonHeight, StyleHeight} : std::initializer_list<float>{ColorHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_ButtonHeight, StyleHeight});
+		// 行序与 Icons 卡片渲染/预布局保持同步：好友取色器、好友实心开关、收藏取色器、收藏实心开关。
+		return ResolveSettingsContentFlowHeight(Metrics, CustomEnabled ? std::initializer_list<float>{ColorHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_ButtonHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_LineHeight, StyleHeight} : std::initializer_list<float>{ColorHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_LineHeight, Metrics.m_ButtonHeight, Metrics.m_LineHeight, StyleHeight});
 	}
 }
 

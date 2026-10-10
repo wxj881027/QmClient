@@ -25,27 +25,20 @@ class CQmGoresDrownTracker
 	std::array<SPlayer, MAX_CLIENTS> m_aPlayers{};
 
 public:
-	static bool ModeEnabled(bool ManualMode, bool DetectedMode) { return ManualMode || DetectedMode; }
-	// 只解释榜单的支持条件，不扩大队伍范围或推断服务器冻结协议。
-	static const char *UnavailableReason(bool GoresGameMode, bool HasLocalClient, int LocalTeam)
+	// 榜单只支持服务器声明的 Gores 模式，Team0 的统计与显示共用过滤策略。
+	static bool IsTrackedTeam(int Team, bool IncludeTeamZero)
 	{
-		if(!GoresGameMode)
-			return "Enable Gores mode or join a Gores server.";
-		if(!HasLocalClient)
-			return "Drown board requires an active local player.";
-		if(!IsTrackedTeam(LocalTeam))
-			return "Join a non-zero DDRace team to show drown counts.";
-		return nullptr;
+		return Team >= TEAM_FLOCK && Team < NUM_DDRACE_TEAMS && (IncludeTeamZero || Team != TEAM_FLOCK);
 	}
 
-	static bool IsTrackedTeam(int Team)
+	static bool IsSameTrackedTeam(int LocalTeam, int PlayerTeam, bool IncludeTeamZero)
 	{
-		return Team > TEAM_FLOCK && Team < NUM_DDRACE_TEAMS;
+		return IsTrackedTeam(LocalTeam, IncludeTeamZero) && LocalTeam == PlayerTeam;
 	}
 
-	static bool IsSameTrackedTeam(int LocalTeam, int PlayerTeam)
+	static bool IsBoardVisible(bool GoresGameMode, bool HasLocalClient, int LocalTeam, bool IncludeTeamZero)
 	{
-		return IsTrackedTeam(LocalTeam) && LocalTeam == PlayerTeam;
+		return GoresGameMode && HasLocalClient && IsTrackedTeam(LocalTeam, IncludeTeamZero);
 	}
 
 	void Reset()
@@ -58,12 +51,12 @@ public:
 		return ClientId >= 0 && ClientId < MAX_CLIENTS ? m_aPlayers[ClientId].m_Count : 0;
 	}
 
-	void Observe(int ClientId, bool Active, std::string_view Name, std::string_view Clan, int Team, bool HasCharacter, bool Frozen, bool Hooking)
+	void Observe(int ClientId, bool Active, std::string_view Name, std::string_view Clan, int Team, bool HasCharacter, bool Frozen, bool Hooking, bool IncludeTeamZero)
 	{
 		if(ClientId < 0 || ClientId >= MAX_CLIENTS)
 			return;
 		SPlayer &Player = m_aPlayers[ClientId];
-		if(!Active || !IsTrackedTeam(Team))
+		if(!Active || !IsTrackedTeam(Team, IncludeTeamZero))
 		{
 			Player = {};
 			return;

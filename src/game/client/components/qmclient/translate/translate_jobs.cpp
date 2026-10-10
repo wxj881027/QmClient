@@ -45,7 +45,7 @@ std::vector<STranslateCompletion> CTranslateJobQueue::Update(const std::function
 		{
 			if(Success)
 				SendText = It->m_pTranslateResponse->m_Text;
-			else if(It->m_AutoTriggered)
+			else if(It->m_AutoTriggered && !It->m_OriginalSent)
 				SendText = It->m_OriginalText;
 		}
 		vCompleted.push_back({std::move(*It), Success, std::move(SendText)});

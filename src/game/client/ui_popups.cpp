@@ -294,6 +294,11 @@ void CUi::RenderPopupMenus()
 						PopupRect.h *= ScaleY;
 					}
 				}
+				else if(PopupProps.m_CenterInViewport)
+				{
+					// 模态面板保持内容尺寸，避免动画重排触发临时滚动条与命中漂移。
+					PopupRect.y += 8.0f * (1.0f - Eased);
+				}
 				else
 				{
 					const float Scale = 0.92f + 0.08f * Eased;

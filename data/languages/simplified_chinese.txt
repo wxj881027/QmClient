@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == 同时应用到分身
 
+Also send the original text when translating outgoing messages
+== 翻译发出的消息时同时发送原文
+
 Always show
 == 始终显示
 
@@ -1975,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == 电影镜头
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== 电影镜头平滑度（0=瞬时，100=最平滑）
+
+Cinematic smoothness
+== 电影镜头平滑度
 
 CJK font
 == 中日韩文字字体
@@ -3599,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == 在表情后绘制阴影
 
+Draw the favorite star icon with the filled icon font style
+== 以图标字体的实心样式绘制收藏星标
+
+Draw the friend heart icon with the filled icon font style
+== 以图标字体的实心样式绘制好友爱心
+
 Draw tile layers when using custom background (solid)
 == 使用纯色自定义背景时绘制图块图层
 
@@ -4325,6 +4340,9 @@ Endless hook has been activated
 Endless hook has been deactivated
 == 无限钩已关闭
 
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== 无限钩圆环流动样式（0=单色，1=彩虹，2=静止）
+
 Endpoint
 == 端点
 
@@ -4765,6 +4783,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == 翻转：
+
+Flow style
+== 流动样式
 
 Folder
 == 文件夹
@@ -5851,6 +5872,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == 保存/加载配置方案时包含皮肤
+
+Include Team 0
+== 包括 Team 0
+
+Include Team 0 in the Gores team drown board
+== 在 Gores 落水榜中包括 Team 0 玩家
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 收到消息自动翻译方式（0=仅在非目标语言时翻译，1=始终翻译）
@@ -10604,6 +10631,9 @@ Send emote when entering freeze
 Send emoticon in water
 == 水中发送表情
 
+Send original text with translation
+== 翻译发送的消息时同时发送原文
+
 Send probability
 == 发送概率
 
@@ -12101,6 +12131,12 @@ Soft glow
 Solid
 == 纯色
 
+Solid favorite icon
+== 实心收藏图标
+
+Solid friend icon
+== 实心好友图标
+
 Solid tile outline opacity
 == 墙体轮廓不透明度
 
@@ -12325,6 +12361,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == 统计板
+
+Static
+== 静止
 
 Stats
 == 统计
@@ -16533,8 +16572,8 @@ Enter a room code to join a collaboration room.
 == 输入房间码以加入协作房间。
 
 [Editor]
-Enter a server setting. Press ctrl+space to show available settings.
-== 输入服务器设置。按 Ctrl+Space 显示可用设置。
+Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... .
+== 输入服务器设置。按 Ctrl+Space、Ctrl+Shift+Space，或点击 ... 显示可用设置。输入法占用快捷键时，请点击 ... 。
 
 [Editor]
 Enter the room code

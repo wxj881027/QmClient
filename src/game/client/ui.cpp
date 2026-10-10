@@ -803,6 +803,8 @@ void CUi::UpdateTouchState(CTouchState &State) const
 
 bool CUi::ConsumeHotkey(EHotkey Hotkey)
 {
+	if(RenderOnly())
+		return false;
 	const bool Pressed = m_HotkeysPressed & Hotkey;
 	m_HotkeysPressed &= ~Hotkey;
 	return Pressed;
@@ -1438,6 +1440,7 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps) const
 {
 	const SQmIconLabelGlyphs Icons = QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText);
+	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
 	if(Icons.m_Count > 0 && pRect->w >= Size * Icons.m_Count && pRect->h >= Size && LabelProps.m_vColorSplits.empty() && LabelProps.m_MaxWidth < 0 && DrawCachedQmIconLabel(*pRect, pText, Size, Align, Icons.m_Count))
 		return CLabelResult{};
 
@@ -1468,6 +1471,7 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 void CUi::DoLabel(CUIElement::SUIElementRect &RectEl, const CUIRect *pRect, const char *pText, float Size, int Align, const SLabelProperties &LabelProps, int StrLen, const CTextCursor *pReadCursor) const
 {
 	const auto Icons = pReadCursor == nullptr ? QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText, StrLen) : SQmIconLabelGlyphs{};
+	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
 	RectEl.m_aQmIcons = Icons.m_aIcons;
 	RectEl.m_NumQmIcons = Icons.m_Count;
 	RectEl.m_FontPreset = TextRender()->GetFontPreset();
@@ -1528,6 +1532,7 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 	bool NeedsRecreate = false;
 	bool ColorChanged = RectEl.m_TextColor != TextRender()->GetTextColor() || RectEl.m_TextOutlineColor != TextRender()->GetTextOutlineColor();
 	const auto Icons = pReadCursor == nullptr ? QmIconLabelGlyphs(TextRender()->GetFontPreset(), pText, StrLen) : SQmIconLabelGlyphs{};
+	const CQmIconLabelFontScope FontScope(*TextRender(), Icons);
 	bool StyleChanged = RectEl.m_FontPreset != TextRender()->GetFontPreset() || RectEl.m_NumQmIcons != Icons.m_Count || RectEl.m_aQmIcons != Icons.m_aIcons || RectEl.m_FontSize != Size || RectEl.m_TextAlign != Align || RectEl.m_LabelMaxWidth != LabelProps.m_MaxWidth || RectEl.m_LabelFlags != Flags;
 	if(ColorChanged)
 	{
@@ -1578,6 +1583,8 @@ void CUi::DoLabelStreamed(CUIElement::SUIElementRect &RectEl, const CUIRect *pRe
 		TmpRect.h = pRect->h;
 
 		DoLabel(RectEl, &TmpRect, pText, Size, TEXTALIGN_TL, LabelProps, StrLen, pReadCursor);
+		// 容器按左上角创建，缓存记录调用者的实际对齐，避免每帧重复重建。
+		RectEl.m_TextAlign = Align;
 	}
 
 	if(Render && RectEl.m_UITextContainer.Valid())
@@ -2057,7 +2064,8 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
 	pTextRender->TextColor(ConfiguredQmUiIconColor(Color, Icon));
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
-	pTextRender->SetFontPreset(EFontPreset::ICON_FONT);
+	// 实心态切换 Fill 字面渲染同一码位；字形文本与度量不变，缓存按预设自然隔离。
+	pTextRender->SetFontPreset(QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL : EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
 	DoLabel(&Rect, pFallbackIcon, QmIconFontSize(Rect), TEXTALIGN_MC);
 	pTextRender->SetRenderFlags(PreviousFlags);

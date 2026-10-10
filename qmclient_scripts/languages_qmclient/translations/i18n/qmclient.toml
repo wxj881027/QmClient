@@ -1978,9 +1978,41 @@ german = "Gesendete Nachrichten automatisch übersetzen"
 spanish = "Traducir automáticamente los mensajes enviados"
 french = "Traduire automatiquement les messages envoyés"
 brazilian_portuguese = "Traduzir automaticamente mensagens enviadas"
-portuguese = "Traduzir automaticamente mensagens enviadas"
+portuguese = "Traduzir automaticamente as mensagens enviadas"
 turkish = "Gönderilen mesajları otomatik çevir"
-polish = "Automatyczne tłumaczenie wysłanych wiadomości"
+polish = "Automatycznie tłumacz wysyłane wiadomości"
+
+[[message]]
+key = "Also send the original text when translating outgoing messages"
+[message.translations]
+simplified_chinese = "翻译发出的消息时同时发送原文"
+traditional_chinese = "翻譯發出的訊息時同時發送原文"
+japanese = "送信メッセージの翻訳時にも原文を送る"
+korean = "발신 메시지 번역 시 원문도 함께 전송"
+russian = "Также отправлять оригинальный текст при переводе исходящих сообщений"
+german = "Beim Übersetzen ausgehender Nachrichten auch den Originaltext senden"
+spanish = "También enviar el texto original al traducir mensajes salientes"
+french = "Envoyer aussi le texte original lors de la traduction des messages sortants"
+brazilian_portuguese = "Também enviar o texto original ao traduzir mensagens enviadas"
+portuguese = "Enviar também o texto original ao traduzir mensagens enviadas"
+turkish = "Giden mesajları çevirirken orijinal metni de gönder"
+polish = "Przy tłumaczeniu wiadomości wysyłanych też wysyłaj oryginalny tekst"
+
+[[message]]
+key = "Send original text with translation"
+[message.translations]
+simplified_chinese = "翻译发送的消息时同时发送原文"
+traditional_chinese = "翻譯發送的消息時同時發送原文"
+japanese = "送信メッセージの翻訳時に原文も送信"
+korean = "발신 메시지 번역 시 원문도 전송"
+russian = "Отправлять оригинальный текст вместе с переводом"
+german = "Originaltext zusammen mit der Übersetzung senden"
+spanish = "Enviar el texto original junto con la traducción"
+french = "Envoyer le texte original avec la traduction"
+brazilian_portuguese = "Enviar o texto original junto com a tradução"
+portuguese = "Enviar o texto original juntamente com a tradução"
+turkish = "Çeviriyle birlikte orijinal metni gönder"
+polish = "Wyślij oryginalny tekst wraz z tłumaczeniem"
 
 [[message]]
 key = "Auto unmute when speaking"
@@ -4189,6 +4221,38 @@ brazilian_portuguese = "Câmera cinematográfica"
 portuguese = "Câmara cinematográfica"
 turkish = "Sinematik kamera"
 polish = "Kamera filmowa"
+
+[[message]]
+key = "Cinematic camera smoothness (0=instant, 100=smoothest)"
+[message.translations]
+simplified_chinese = "电影镜头平滑度（0=瞬时，100=最平滑）"
+traditional_chinese = "電影鏡頭平滑度（0=瞬時，100=最平滑）"
+japanese = "シネマティックカメラのスムーズさ (0=瞬時, 100=最もスムーズ)"
+korean = "시네마틱 카메라 부드러움 (0=즉시, 100=가장 부드러움)"
+russian = "Плавность кинематографической камеры (0=мгновенно, 100=максимально плавно)"
+german = "Filmische Kamera-Glättung (0=sofort, 100=am glattesten)"
+spanish = "Suavizado de la cámara cinematográfica (0=instantáneo, 100=más suave)"
+french = "Lissage de la caméra cinématique (0=Instantané, 100=Le plus lisse)"
+brazilian_portuguese = "Suavidade da câmera cinematográfica (0=instantâneo, 100=mais suave)"
+portuguese = "Suavidade da câmara cinematográfica (0=instantâneo, 100=mais suave)"
+turkish = "Sinematik kamera yumuşaklığı (0=Anlık, 100=En yumuşak)"
+polish = "Płynność kamery filmowej (0=natychmiastowy, 100=najpłynniejszy)"
+
+[[message]]
+key = "Cinematic smoothness"
+[message.translations]
+simplified_chinese = "电影镜头平滑度"
+traditional_chinese = "電影鏡頭平滑度"
+japanese = "シネマティックカメラの滑らかさ"
+korean = "시네마틱 카메라 부드러움"
+russian = "Плавность кинематографической камеры"
+german = "Filmische Kamera-Glättung"
+spanish = "Suavidad de la cámara cinematográfica"
+french = "Fluidité de la caméra cinématique"
+brazilian_portuguese = "Suavidade da câmera cinematográfica"
+portuguese = "Suavidade da câmara cinematográfica"
+turkish = "Sinematik kamera yumuşaklığı"
+polish = "Płynność kamery filmowej"
 
 [[message]]
 key = "CJK font"
@@ -7455,6 +7519,38 @@ turkish = "İfadelerin arkasına gölge çiz"
 polish = "Rysuj cień za emotkami"
 
 [[message]]
+key = "Draw the favorite star icon with the filled icon font style"
+[message.translations]
+simplified_chinese = "以图标字体的实心样式绘制收藏星标"
+traditional_chinese = "以圖示字體的實心樣式繪製收藏星標"
+japanese = "アイコンフォントの塗りつぶしスタイルでお気に入り星アイコンを描画"
+korean = "아이콘 폰트의 채움 스타일로 즐겨찾기 별 아이콘 그리기"
+russian = "Рисовать значок избранного заливкой шрифта иконок"
+german = "Favoritensymbol im ausgefüllten Symbolschriftstil zeichnen"
+spanish = "Dibujar el icono de favoritos con el estilo relleno de la fuente de iconos"
+french = "Dessiner l’icône des favoris avec le style rempli de la police d’icônes"
+brazilian_portuguese = "Desenhar o ícone de favoritos com o estilo preenchido da fonte de ícones"
+portuguese = "Desenhar o ícone de favoritos com o estilo preenchido do tipo de ícones"
+turkish = "Favori yıldız simgesini dolu simge yazı tipi stiliyle çiz"
+polish = "Rysuj ikonę ulubionych wypełnionym stylem czcionki ikon"
+
+[[message]]
+key = "Draw the friend heart icon with the filled icon font style"
+[message.translations]
+simplified_chinese = "以图标字体的实心样式绘制好友爱心"
+traditional_chinese = "以圖示字體的實心樣式繪製好友愛心"
+japanese = "アイコンフォントの塗りつぶしスタイルでフレンドハートアイコンを描画"
+korean = "아이콘 폰트의 채움 스타일로 친구 하트 아이콘 그리기"
+russian = "Рисовать значок сердца друга заливкой шрифта иконок"
+german = "Freundessymbol im ausgefüllten Symbolschriftstil zeichnen"
+spanish = "Dibujar el icono de corazón de amigos con el estilo relleno de la fuente de iconos"
+french = "Dessiner l’icône de cœur des amis avec le style rempli de la police d’icônes"
+brazilian_portuguese = "Desenhar o ícone de coração de amigos com o estilo preenchido da fonte de ícones"
+portuguese = "Desenhar o ícone de coração de amigos com o estilo preenchido do tipo de ícones"
+turkish = "Arkadaş kalp simgesini dolu simge yazı tipi stiliyle çiz"
+polish = "Rysuj ikonę serca znajomych wypełnionym stylem czcionki ikon"
+
+[[message]]
 key = "Drawing a big pie in the sky"
 [message.translations]
 simplified_chinese = "画一张大饼"
@@ -9805,6 +9901,38 @@ brazilian_portuguese = "Cor do ícone de favoritos"
 portuguese = "Cor do ícone de favoritos"
 turkish = "Favori simgesi rengi"
 polish = "Kolor ikony ulubionych"
+
+[[message]]
+key = "Solid favorite icon"
+[message.translations]
+simplified_chinese = "实心收藏图标"
+traditional_chinese = "實心收藏圖示"
+japanese = "塗りつぶしお気に入りアイコン"
+korean = "채워진 즐겨찾기 아이콘"
+russian = "Значок избранного заливкой"
+german = "Ausgefülltes Favoritensymbol"
+spanish = "Icono de favoritos relleno"
+french = "Icône des favoris remplie"
+brazilian_portuguese = "Ícone de favoritos preenchido"
+portuguese = "Ícone de favoritos preenchido"
+turkish = "Dolu favori simgesi"
+polish = "Wypełniona ikona ulubionych"
+
+[[message]]
+key = "Solid friend icon"
+[message.translations]
+simplified_chinese = "实心好友图标"
+traditional_chinese = "實心好友圖示"
+japanese = "塗りつぶしフレンドアイコン"
+korean = "채워진 친구 아이콘"
+russian = "Значок друга заливкой"
+german = "Ausgefülltes Freundessymbol"
+spanish = "Icono de amigos relleno"
+french = "Icône des amis remplie"
+brazilian_portuguese = "Ícone de amigos preenchido"
+portuguese = "Ícone de amigos preenchido"
+turkish = "Dolu arkadaş simgesi"
+polish = "Wypełniona ikona znajomych"
 
 [[message]]
 key = "Favorite maps"
@@ -27124,6 +27252,70 @@ turkish = "Basit gürültü azaltma gücü"
 polish = "Siła prostej redukcji szumów"
 
 [[message]]
+key = "Endless hook ring flow style: 0=single color, 1=rainbow, 2=static"
+[message.translations]
+simplified_chinese = "无限钩圆环流动样式（0=单色，1=彩虹，2=静止）"
+traditional_chinese = "無限鉤圓環流動樣式（0=單色，1=彩虹，2=靜止）"
+japanese = "無限フックのリングの流れスタイル (0=単色, 1=虹色, 2=静止)"
+korean = "무한 훅 링 흐름 스타일(0=단색, 1=무지개, 2=정지)"
+russian = "Стиль переливания кольца бесконечного крюка (0=один цвет, 1=радуга, 2=статично)"
+german = "Flussstil des Endlos-Hakenrings (0=einfarbig, 1=Regenbogen, 2=statisch)"
+spanish = "Estilo de flujo del anillo de gancho infinito (0=color único, 1=arcoíris, 2=estático)"
+french = "Style de flux de l'anneau de grappin infini (0=couleur unique, 1=arc-en-ciel, 2=statique)"
+brazilian_portuguese = "Estilo de fluxo do anel de gancho infinito (0=cor única, 1=arco-íris, 2=estático)"
+portuguese = "Estilo de fluxo do anel de gancho infinito (0=cor única, 1=arco-íris, 2=estático)"
+turkish = "Sonsuz kanca halkası akış stili (0=tek renk, 1=gökuşağı, 2=sabit)"
+polish = "Styl przepływu pierścienia nieskończonego haka (0=jeden kolor, 1=tęcza, 2=statyczny)"
+
+[[message]]
+key = "Flow style"
+[message.translations]
+simplified_chinese = "流动样式"
+traditional_chinese = "流動樣式"
+japanese = "フロースタイル"
+korean = "흐름 스타일"
+russian = "Стиль переливания"
+german = "Flussstil"
+spanish = "Estilo de flujo"
+french = "Style de fluxo"
+brazilian_portuguese = "Estilo de fluxo"
+portuguese = "Estilo de fluxo"
+turkish = "Akış stili"
+polish = "Styl przepływu"
+
+[[message]]
+key = "Rainbow"
+[message.translations]
+simplified_chinese = "彩虹"
+traditional_chinese = "彩虹"
+japanese = "レインボー"
+korean = "무지개"
+russian = "Радуга"
+german = "Regenbogen"
+spanish = "Arcoíris"
+french = "Arc-en-ciel"
+brazilian_portuguese = "Arco-íris"
+portuguese = "Arco-íris"
+turkish = "Gökkuşağı"
+polish = "Tęcza"
+
+[[message]]
+key = "Static"
+[message.translations]
+simplified_chinese = "静止"
+traditional_chinese = "靜止"
+japanese = "静止"
+korean = "정지"
+russian = "Статично"
+german = "Statisch"
+spanish = "Estático"
+french = "Statique"
+brazilian_portuguese = "Estático"
+portuguese = "Estático"
+turkish = "Sabit"
+polish = "Statyczny"
+
+[[message]]
 key = "Single color"
 [message.translations]
 simplified_chinese = "单色"
@@ -36086,3 +36278,35 @@ brazilian_portuguese = "Tamanho do halo dos Tees da equipe (em porcentagem)"
 portuguese = "Tamanho do halo dos Tees da equipa (em percentagem)"
 turkish = "Takım Tee ışık halesi boyutu (yüzde olarak)"
 polish = "Rozmiar aureoli Tee drużyny (w procentach)"
+
+[[message]]
+key = "Include Team 0"
+[message.translations]
+simplified_chinese = "包括 Team 0"
+traditional_chinese = "包含 Team 0"
+japanese = "Team 0 を含める"
+korean = "Team 0 포함"
+russian = "Включить Team 0"
+german = "Team 0 einbeziehen"
+spanish = "Incluir Team 0"
+french = "Inclure Team 0"
+brazilian_portuguese = "Incluir Team 0"
+portuguese = "Incluir Team 0"
+turkish = "Team 0 dahil edilsin"
+polish = "Uwzględnij Team 0"
+
+[[message]]
+key = "Include Team 0 in the Gores team drown board"
+[message.translations]
+simplified_chinese = "在 Gores 落水榜中包括 Team 0 玩家"
+traditional_chinese = "在 Gores 落水榜中包含 Team 0 玩家"
+japanese = "Gores の落水ランキングに Team 0 を含める"
+korean = "Gores 낙수 순위에 Team 0 포함"
+russian = "Включить Team 0 в список утоплений Gores"
+german = "Team 0 in der Gores-Ertrinkensliste berücksichtigen"
+spanish = "Incluir Team 0 en la lista de ahogamientos de Gores"
+french = "Inclure Team 0 dans le classement des noyades Gores"
+brazilian_portuguese = "Incluir Team 0 na lista de afogamentos Gores"
+portuguese = "Incluir Team 0 na lista de afogamentos Gores"
+turkish = "Gores boğulma listesine Team 0 dahil edilsin"
+polish = "Uwzględnij Team 0 w rankingu utonięć Gores"

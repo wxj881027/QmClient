@@ -421,12 +421,26 @@ namespace
 		}
 	}
 
-	TEST_F(QmEditorTextInput, SettingsCompletionOnEmptyInputPreservesCursor)
+	TEST_F(QmEditorTextInput, SettingsCompletionSurvivesModifierReleaseBeforeDraw)
 	{
 		Focus(m_First);
-		m_Input.m_Modifier = true;
-		m_Input.m_RawPressedKey = KEY_SPACE;
-		EXPECT_TRUE(QmRequestEditorSettingsCompletion(m_First, m_Input, false));
+		CQmEditorSettingsCompletion Completion;
+		// 输入泵已处理整批事件，绘制前 Ctrl 和 Space 都已松开。
+		m_Input.m_Modifier = false;
+		m_Input.m_RawPressedKey = 0;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_LCTRL;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		Event.m_Key = KEY_SPACE;
+		EXPECT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		Event.m_Flags = IInput::FLAG_RELEASE;
+		Event.m_Key = KEY_LCTRL;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		Event.m_Key = KEY_SPACE;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_TRUE(Completion.Request(m_First, m_Input, false));
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
 		EXPECT_STREQ(m_First.GetString(), "");
 		EXPECT_EQ(m_First.GetCursorOffset(), 0u);
 	}
@@ -436,9 +450,13 @@ namespace
 		m_First.Set("sv_test");
 		Focus(m_First);
 		m_First.SetCursorOffset(3);
+		CQmEditorSettingsCompletion Completion;
 		m_Input.m_Modifier = true;
-		m_Input.m_RawPressedKey = KEY_SPACE;
-		EXPECT_TRUE(QmRequestEditorSettingsCompletion(m_First, m_Input, false));
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		ASSERT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_TRUE(Completion.Request(m_First, m_Input, false));
 		EXPECT_STREQ(m_First.GetString(), "sv_test");
 		EXPECT_EQ(m_First.GetCursorOffset(), 3u);
 	}
@@ -446,49 +464,206 @@ namespace
 	TEST_F(QmEditorTextInput, SettingsShortcutCannotStealOtherFieldFocus)
 	{
 		Focus(m_Second);
+		CQmEditorSettingsCompletion Completion;
 		m_Input.m_Modifier = true;
-		m_Input.m_RawPressedKey = KEY_SPACE;
-		EXPECT_FALSE(QmRequestEditorSettingsCompletion(m_First, m_Input, false));
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
 		EXPECT_TRUE(m_Second.IsActive());
-		EXPECT_TRUE(QmRequestEditorSettingsCompletion(m_First, m_Input, true));
+		EXPECT_TRUE(Completion.Request(m_First, m_Input, true));
 		EXPECT_TRUE(m_First.IsActive());
 	}
 
 	TEST_F(QmEditorTextInput, SettingsCompletionDefersDuringImeComposition)
 	{
 		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
 		m_Input.m_Composing = true;
 		m_Input.m_Modifier = true;
-		m_Input.m_RawPressedKey = KEY_SPACE;
-		EXPECT_FALSE(QmRequestEditorSettingsCompletion(m_First, m_Input, false));
-		EXPECT_FALSE(QmRequestEditorSettingsCompletion(m_First, m_Input, true));
-		m_Input.m_Composing = false;
-		m_Input.m_RawPressedKey = 0;
-		EXPECT_TRUE(QmRequestEditorSettingsCompletion(m_First, m_Input, true));
-	}
-
-	TEST_F(QmEditorTextInput, SettingsCompletionConsumesOnlyShortcutSpaceEvents)
-	{
-		Focus(m_First);
-		m_Input.m_Modifier = true;
-		m_Input.m_RawPressedKey = KEY_SPACE;
 		IInput::CEvent Event{};
 		Event.m_Flags = IInput::FLAG_PRESS;
 		Event.m_Key = KEY_SPACE;
-		EXPECT_TRUE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
-		Event.m_Flags = IInput::FLAG_TEXT;
-		str_copy(Event.m_aText, " ");
-		EXPECT_TRUE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
-		str_copy(Event.m_aText, "x");
-		EXPECT_FALSE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
-		str_copy(Event.m_aText, " ");
-		m_Input.m_RawPressedKey = 0;
-		EXPECT_FALSE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
-		m_Input.m_RawPressedKey = KEY_SPACE;
-		m_Input.m_Composing = true;
-		EXPECT_FALSE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, true));
 		m_Input.m_Composing = false;
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+		EXPECT_TRUE(Completion.Request(m_First, m_Input, true));
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionConsumesAssociatedSpaceAfterModifierRelease)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		m_Input.m_Modifier = true;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		Event.m_InputCount = 1;
+		ASSERT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		m_Input.m_Modifier = false;
+		Event.m_Flags = IInput::FLAG_TEXT;
+		Event.m_Key = KEY_UNKNOWN;
+		str_copy(Event.m_aText, " ");
+		EXPECT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_STREQ(m_First.GetString(), "");
+		// 同批第二个文本和之后批次的普通空格仍交由真实输入框处理。
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_TRUE(m_Ui.OnInput(Event));
+		EXPECT_STREQ(m_First.GetString(), " ");
+		Event.m_InputCount = 2;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_TRUE(m_Ui.OnInput(Event));
+		EXPECT_STREQ(m_First.GetString(), "  ");
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionDoesNotInferSwallowedSpaceAndAcceptsShiftShortcut)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		for(int KeyCode : {KEY_LCTRL, KEY_LSHIFT})
+		{
+			Event.m_Key = KeyCode;
+			EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		}
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+		// 新一批收到 Ctrl+Shift+Space 时补全；没有 Space 事件则不猜测。
+		m_Input.m_Modifier = true;
+		Event.m_Key = KEY_LCTRL;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		Event.m_Key = KEY_LSHIFT;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		Event.m_Key = KEY_SPACE;
+		EXPECT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_TRUE(Completion.Request(m_First, m_Input, false));
+		EXPECT_STREQ(m_First.GetString(), "");
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionPendingRequestCannotSurviveFocusLoss)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		m_Input.m_Modifier = true;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		ASSERT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
 		Focus(m_Second);
-		EXPECT_FALSE(QmConsumeEditorSettingsCompletionEvent(m_First, m_Input, Event));
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+		Focus(m_First);
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionOtherDrawnFieldCannotDiscardRequest)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		m_Input.m_Modifier = true;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		ASSERT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_FALSE(Completion.Request(m_Second, m_Input, false));
+		EXPECT_TRUE(Completion.Request(m_First, m_Input, false));
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionRepeatCannotReopenDismissedList)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		m_Input.m_Modifier = true;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		ASSERT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		ASSERT_TRUE(Completion.Request(m_First, m_Input, false));
+		Event.m_Flags |= IInput::FLAG_REPEAT;
+		EXPECT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionOrdinaryTextCannotRequestList)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		m_Input.m_Modifier = true;
+		m_Input.m_RawPressedKey = KEY_SPACE;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_TEXT;
+		str_copy(Event.m_aText, "x");
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_TRUE(m_Ui.OnInput(Event));
+		EXPECT_STREQ(m_First.GetString(), "x");
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionMouseRequestPreservesTextAndCursor)
+	{
+		m_First.Set("sv_test");
+		m_First.SetCursorOffset(3);
+		Focus(m_Second);
+		CQmEditorSettingsCompletion Completion;
+		EXPECT_TRUE(Completion.Request(m_First, m_Input, true));
+		EXPECT_TRUE(m_First.IsActive());
+		EXPECT_STREQ(m_First.GetString(), "sv_test");
+		EXPECT_EQ(m_First.GetCursorOffset(), 3u);
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionKeepsOtherHeldModifierAfterRelease)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		for(int KeyCode : {KEY_LCTRL, KEY_RCTRL})
+		{
+			Event.m_Key = KeyCode;
+			EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		}
+		Event.m_Flags = IInput::FLAG_RELEASE;
+		Event.m_Key = KEY_LCTRL;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		EXPECT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_TRUE(Completion.Request(m_First, m_Input, false));
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionCancelsWhenCompositionStartsBeforeDraw)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		m_Input.m_Modifier = true;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_SPACE;
+		ASSERT_TRUE(Completion.OnInput(&m_First, m_Input, Event));
+		m_Input.m_Composing = true;
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+		m_Input.m_Composing = false;
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
+	}
+
+	TEST_F(QmEditorTextInput, SettingsCompletionShiftOnlyLeavesOrdinarySpaceForInput)
+	{
+		Focus(m_First);
+		CQmEditorSettingsCompletion Completion;
+		IInput::CEvent Event{};
+		Event.m_Flags = IInput::FLAG_PRESS;
+		Event.m_Key = KEY_LSHIFT;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		Event.m_Key = KEY_SPACE;
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		Event.m_Flags = IInput::FLAG_TEXT;
+		Event.m_Key = KEY_UNKNOWN;
+		str_copy(Event.m_aText, " ");
+		EXPECT_FALSE(Completion.OnInput(&m_First, m_Input, Event));
+		EXPECT_TRUE(m_Ui.OnInput(Event));
+		EXPECT_STREQ(m_First.GetString(), " ");
+		EXPECT_FALSE(Completion.Request(m_First, m_Input, false));
 	}
 }

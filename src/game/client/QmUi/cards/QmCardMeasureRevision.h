@@ -65,7 +65,8 @@ namespace qm_card_catalog
 		case EQmModuleId::CameraView:
 			return (g_Config.m_QmCameraDrift ? 1u : 0u) |
 			       (g_Config.m_QmDynamicFov ? 2u : 0u) |
-			       (g_Config.m_QmAspectPreset == 6 ? 4u : 0u);
+			       (g_Config.m_QmAspectPreset == 6 ? 4u : 0u) |
+			       (g_Config.m_QmCinematicCamera ? 8u : 0u);
 		case EQmModuleId::WeaponAnimation:
 			return (g_Config.m_QmWeaponSwitchAnim ? 1u : 0u) |
 			       (g_Config.m_QmWeaponReloadAnim ? 2u : 0u);

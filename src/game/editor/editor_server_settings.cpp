@@ -1,7 +1,6 @@
 #include "editor_server_settings.h"
 
 #include "editor.h"
-#include "editor_server_settings_completion.h"
 
 #include <base/color.h>
 #include <base/system.h>
@@ -297,7 +296,8 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 
 	auto *pLineInput = pContext->LineInput();
 	auto &Context = *pContext;
-	m_MapSettingsBackend.m_pCompletionInput = pLineInput;
+	if(pLineInput->IsActive())
+		m_MapSettingsBackend.m_pCompletionInput = pLineInput;
 	Context.SetFontSize(FontSize);
 
 	// Small utility to render a floating part above the input rect.
@@ -336,13 +336,15 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 		Context.Update();
 	}
 
-	// 点击入口不依赖 IME 是否把 Ctrl+Space 传给客户端。
+	// Ctrl+Shift+Space 也走实际事件；系统保留热键时使用点击入口。
+	const char *pCompletionTooltip = Localize("Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... .", "Editor");
 	CUIRect CompletionButton;
 	ToolBar.VSplitRight(ToolBar.h, &ToolBar, &CompletionButton);
-	const bool CompletionClicked = DoButton_Editor(&Context.m_DropdownContext.m_ShortcutUsed, "...", 0, &CompletionButton, BUTTONFLAG_LEFT, Localize("Enter a server setting. Press ctrl+space to show available settings.", "Editor"));
-	if(QmRequestEditorSettingsCompletion(*pLineInput, *Input(), CompletionClicked))
+	const bool CompletionClicked = DoButton_Editor(&Context.m_DropdownContext.m_ShortcutUsed, "...", 0, &CompletionButton, BUTTONFLAG_LEFT, pCompletionTooltip);
+	if(m_MapSettingsBackend.m_SettingsCompletion.Request(*pLineInput, *Input(), CompletionClicked))
 	{
 		Ui()->SetActiveItem(pLineInput);
+		m_MapSettingsBackend.m_pCompletionInput = pLineInput;
 		Context.m_DropdownContext.m_ShortcutUsed = true;
 		Context.m_DropdownContext.m_ShouldHide = false;
 		Context.Update();
@@ -354,11 +356,15 @@ void CEditor::DoMapSettingsEditBox(CMapSettingsBackend::CContext *pContext, cons
 	Context.ColorArguments(vColorSplits);
 
 	// Do and render clearable edit box with the colors
-	if(DoClearableEditBox(pLineInput, &ToolBar, FontSize, IGraphics::CORNER_L, Localize("Enter a server setting. Press ctrl+space to show available settings.", "Editor"), vColorSplits))
+	if(DoClearableEditBox(pLineInput, &ToolBar, FontSize, IGraphics::CORNER_L, pCompletionTooltip, vColorSplits))
 	{
 		Context.Update(); // Update the context when contents change
 		Context.m_DropdownContext.m_ShouldHide = false;
 	}
+
+	// 输入框可能在本次绘制中刚获得焦点，下一批事件必须路由到它。
+	if(pLineInput->IsActive())
+		m_MapSettingsBackend.m_pCompletionInput = pLineInput;
 
 	// Update/track the cursor
 	if(Context.UpdateCursor())
@@ -2111,8 +2117,7 @@ void CMapSettingsBackend::CContext::FormatDisplayValue(const char *pValue, char 
 
 bool CMapSettingsBackend::OnInput(const IInput::CEvent &Event)
 {
-	if(m_pCompletionInput != nullptr && CLineInput::GetActiveInput() == m_pCompletionInput &&
-		QmConsumeEditorSettingsCompletionEvent(*m_pCompletionInput, *Input(), Event))
+	if(m_SettingsCompletion.OnInput(m_pCompletionInput, *Input(), Event))
 		return true;
 	return CEditorComponent::OnInput(Event);
 }

@@ -7,6 +7,9 @@
 // 因此好友爱心改用默认字体 DejaVu Sans 的实体心形（同样是 1 轮廓实心）。
 // 该码位在图标字体中缺失，渲染时由 ITextRender::GetCharGlyph 在选中字体之后回退到默认字体，
 // 所以调用点需要先把字体预设切回 EFontPreset::DEFAULT_FONT，不要继续用 ICON_FONT。
+// 修正考证：随包 Phosphor-Fill.ttf 的 U+E2A8/U+EBE8 实为 1 轮廓实心字形（仅上文字面为空心），
+// QmUi 图标绘制的实心态走 EFontPreset::ICON_FONT_FILL 字面（见 qm_icon.h QmUiIconFilledStyle）；
+// 但 U+2665 在四个字面均缺失，正文流（聊天/名牌/观战列表）仍需默认字体实心字形，本方案维持不变。
 constexpr const char *QM_FRIEND_HEART_ICON = "♥";
 constexpr const char *QM_FRIEND_HEART_ICON_WITH_SPACE = "♥ ";
 

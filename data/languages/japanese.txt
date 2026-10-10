@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == ダミーにも適用する
 
+Also send the original text when translating outgoing messages
+== 送信メッセージの翻訳時にも原文を送る
+
 Always show
 == 常に表示
 
@@ -1975,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == シネマティックカメラ
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== シネマティックカメラのスムーズさ (0=瞬時, 100=最もスムーズ)
+
+Cinematic smoothness
+== シネマティックカメラの滑らかさ
 
 CJK font
 == 中国語・日本語・韓国語フォント
@@ -3599,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == エモートの後ろに影を描画
 
+Draw the favorite star icon with the filled icon font style
+== アイコンフォントの塗りつぶしスタイルでお気に入り星アイコンを描画
+
+Draw the friend heart icon with the filled icon font style
+== アイコンフォントの塗りつぶしスタイルでフレンドハートアイコンを描画
+
 Draw tile layers when using custom background (solid)
 == カスタム背景（ソリッド）使用時にタイルレイヤーを描画
 
@@ -4325,6 +4340,9 @@ Endless hook has been activated
 Endless hook has been deactivated
 == エンドレスフックが無効化されました
 
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== 無限フックのリングの流れスタイル (0=単色, 1=虹色, 2=静止)
+
 Endpoint
 == エンドポイント
 
@@ -4765,6 +4783,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == 反転：
+
+Flow style
+== フロースタイル
 
 Folder
 == フォルダ
@@ -5851,6 +5872,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == 設定プリセットの保存/読み込み時にスキンを含める
+
+Include Team 0
+== Team 0 を含める
+
+Include Team 0 in the Gores team drown board
+== Gores の落水ランキングに Team 0 を含める
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == 受信メッセージの自動翻訳方式（0=対象言語でない場合のみ翻訳、1=常に翻訳）
@@ -10604,6 +10631,9 @@ Send emote when entering freeze
 Send emoticon in water
 == 水中で表情を送信
 
+Send original text with translation
+== 送信メッセージの翻訳時に原文も送信
+
 Send probability
 == 送信確率
 
@@ -12101,6 +12131,12 @@ Soft glow
 Solid
 == 単色
 
+Solid favorite icon
+== 塗りつぶしお気に入りアイコン
+
+Solid friend icon
+== 塗りつぶしフレンドアイコン
+
 Solid tile outline opacity
 == タイル輪郭の不透明度
 
@@ -12325,6 +12361,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == 統計ボード
+
+Static
+== 静止
 
 Stats
 == 統計

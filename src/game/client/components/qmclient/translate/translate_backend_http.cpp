@@ -22,6 +22,8 @@ void ITranslateBackendHttp::PrepareHttpRequest(const char *pUrl)
 	m_pHttpRequest = m_pCreateRequest(pUrl);
 	m_pHttpRequest->LogProgress(HTTPLOG::NONE);
 	m_pHttpRequest->FailOnErrorStatus(false);
+	// 吊销服务器不可达时允许继续握手，但不绕过已知吊销证书的校验。
+	m_pHttpRequest->RevocationBestEffort(true);
 	m_pHttpRequest->Timeout(CTimeout{10000, 30000, 500, 10});
 	m_pHttpRequest->MaxResponseSize(64 * 1024);
 }

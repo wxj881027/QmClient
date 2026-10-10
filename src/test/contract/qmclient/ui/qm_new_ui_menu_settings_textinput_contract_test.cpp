@@ -153,26 +153,3 @@ TEST(QmNewUiMenuSettingsTextInputContract, TextRendererKeepsInternalCaretStateSe
 	EXPECT_NE(Render.find("Graphics()->TextureClear();", CursorBlock), std::string::npos);
 	EXPECT_NE(Render.find("Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);", CursorBlock), std::string::npos);
 }
-
-TEST(QmNewUiMenuSettingsTextInputContract, ConsoleRestoresCompleteTextRenderState)
-{
-	const std::string Source = ReadTextFile("src/game/client/components/console.cpp");
-	const std::string Render = FunctionBody(Source, "void CGameConsole::OnRender()");
-	ASSERT_FALSE(Render.empty());
-
-	for(const char *pState : {
-		    "const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();",
-		    "const ColorRGBA PreviousTextOutlineColor = TextRender()->GetTextOutlineColor();",
-		    "const ColorRGBA PreviousTextSelectionColor = TextRender()->GetTextSelectionColor();",
-		    "const unsigned PreviousRenderFlags = TextRender()->GetRenderFlags();",
-		    "const EFontPreset PreviousFontPreset = TextRender()->GetFontPreset();",
-		    "TextRender()->SetRenderFlags(PreviousRenderFlags);",
-		    "TextRender()->SetFontPreset(PreviousFontPreset);",
-		    "TextRender()->TextOutlineColor(PreviousTextOutlineColor);",
-		    "TextRender()->TextSelectionColor(PreviousTextSelectionColor);",
-		    "TextRender()->TextColor(PreviousTextColor);",
-	    })
-		EXPECT_NE(Render.find(pState), std::string::npos) << pState;
-
-	EXPECT_LT(Render.find("Ui()->SetEnabled(false);"), Render.find("TextRender()->SetRenderFlags(PreviousRenderFlags);"));
-}

@@ -151,10 +151,11 @@ namespace QmConsoleUi
 				m_Mask = Mask;
 				m_Started = Now;
 			}
-			const float T = Animate ? std::clamp(static_cast<float>((Now - m_Started) / 0.18), 0.0f, 1.0f) : 1.0f;
+			const float T = Animate ? std::clamp(static_cast<float>((Now - m_Started) / 0.26), 0.0f, 1.0f) : 1.0f;
 			m_Alpha = m_StartAlpha + (1.0f - m_StartAlpha) * (T * T * (3.0f - 2.0f * T));
 			return m_Alpha;
 		}
+		float Offset() const { return 8.0f * (1.0f - m_Alpha); }
 	};
 
 	inline float LogBottomBeforeSeparator(float SeparatorY, float FontSize)

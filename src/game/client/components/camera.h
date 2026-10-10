@@ -20,13 +20,19 @@ namespace QmCameraEffects
 		return AppliedFactor > 0.0f ? EffectiveZoom / AppliedFactor : EffectiveZoom;
 	}
 
-	inline vec2 SmoothCinematicPosition(vec2 Current, vec2 Target, float FrameTime)
+	// 帧率无关指数阻尼：FrameTime 为本帧时长（秒），HalfLife 为逼近目标剩余一半所需的秒数。
+	inline vec2 SmoothPosition(vec2 Current, vec2 Target, float FrameTime, float HalfLife)
 	{
-		constexpr float HalfLife = 0.09f;
-		if(!std::isfinite(FrameTime) || FrameTime <= 0.0f)
+		if(!std::isfinite(FrameTime) || FrameTime <= 0.0f || !(HalfLife > 0.0f))
 			return Current;
 		const float Step = 1.0f - std::exp2(-FrameTime / HalfLife);
 		return Current + (Target - Current) * Step;
+	}
+
+	inline vec2 SmoothCinematicPosition(vec2 Current, vec2 Target, float FrameTime)
+	{
+		constexpr float HalfLife = 0.09f;
+		return SmoothPosition(Current, Target, FrameTime, HalfLife);
 	}
 
 	// 反向按键时的步进基准：与当前动画方向相反时改用画面当前值

@@ -93,6 +93,10 @@ void CMenus::RenderQmFunctionTranslateContent(CUIRect &Content, float LineHeight
 	Content.HSplitTop(LineSpacing, nullptr, &Content);
 
 	Content.HSplitTop(LineHeight, &Row, &Content);
+	RenderCheckbox(&g_Config.m_QmTranslateOutgoingSendOriginal, "Send original text with translation", Localize("Send original text with translation"), &g_Config.m_QmTranslateOutgoingSendOriginal, &Row, LineHeight);
+	Content.HSplitTop(LineSpacing, nullptr, &Content);
+
+	Content.HSplitTop(LineHeight, &Row, &Content);
 	Row.VSplitLeft(LabelWidth, &LabelCol, &ControlCol);
 	RenderLabel("qmclient-translation-text-size", &LabelCol, Localize("Translated text size"), BodySize);
 	RenderSliderWithValueInput(&g_Config.m_QmChatTranslationSize, ControlCol, &g_Config.m_QmChatTranslationSize, 50, 100, "%");

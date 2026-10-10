@@ -264,6 +264,7 @@ TEST_F(CTranslateBackendTest, AllConfiguredBackendsHaveFiniteDeadlineAndAbortOnD
 		auto pTranslation = Create();
 		auto pRequest = m_Http.m_vSubmissions.back().m_pRequest;
 		EXPECT_GT(pRequest->TimeoutSettings().m_TimeoutMs, 0);
+		EXPECT_EQ(pRequest->RevocationBestEffortEnabled(), str_comp(pBackend, "libretranslate") == 0 || str_comp(pBackend, "mymemory") == 0 || str_comp(pBackend, "ftapi") == 0);
 		EXPECT_FALSE(pRequest->IsAbortRequested());
 		pTranslation.reset();
 		EXPECT_TRUE(pRequest->IsAbortRequested());

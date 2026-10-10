@@ -5269,6 +5269,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_console_button_text_layout_test.cpp
+      src/test/integration/qmclient/ui/qm_icon_text_test.cpp
       src/engine/client/text.cpp
       src/game/client/ui.cpp
       src/game/client/ui_popups.cpp

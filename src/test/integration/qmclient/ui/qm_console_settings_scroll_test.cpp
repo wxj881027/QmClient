@@ -196,3 +196,43 @@ TEST_F(QmConsoleSettingsScrollIntegration, DisabledUiUpdatePreservesWheelAccepte
 	EXPECT_FALSE(m_ParentScroll.WheelConsumedThisFrame());
 	EXPECT_FLOAT_EQ(m_ParentOffset.y, -Scrolled);
 }
+
+TEST_F(QmConsoleSettingsScrollIntegration, BackgroundDrawPreservesPopupButtonPressUntilOwnerRelease)
+{
+	struct SButton
+	{
+		CUi *m_pUi;
+		int m_Id = 0;
+		int m_Clicks = 0;
+	} Button{&m_Ui};
+	SPopupMenuProperties Props;
+	Props.m_Animate = false;
+	Props.m_AutoReposition = false;
+	Props.m_BlockUnderlyingPointerInput = true;
+	m_Ui.DoPopupMenu(&m_ParentId, 40, 40, 200, 150, &Button, [](void *pContext, CUIRect View, bool Active) {
+		auto *pButton = static_cast<SButton *>(pContext);
+		if(Active && pButton->m_pUi->DoButtonLogic(&pButton->m_Id, 0, &View, BUTTONFLAG_LEFT))
+			++pButton->m_Clicks;
+		return CUi::POPUP_KEEP_OPEN; }, Props);
+	const auto OwnerFrame = [&]() {
+		m_Client.AdvanceFrame();
+		m_Ui.StartCheck();
+		m_Ui.Update();
+		m_Ui.RenderPopupMenus();
+		m_Ui.FinishCheck();
+	};
+	OwnerFrame();
+	m_Input.m_HeldKey = KEY_MOUSE_1;
+	OwnerFrame();
+	ASSERT_EQ(m_Ui.ActiveItem(), &Button.m_Id);
+	m_Ui.BeginBackgroundRender();
+	EXPECT_FALSE(m_Ui.DoButtonLogic(&Button.m_Id, 0, &m_ParentRect, BUTTONFLAG_LEFT));
+	m_Ui.EndBackgroundRender();
+	EXPECT_EQ(m_Ui.ActiveItem(), &Button.m_Id);
+	OwnerFrame();
+	EXPECT_EQ(m_Ui.ActiveItem(), &Button.m_Id);
+	m_Input.m_HeldKey = 0;
+	OwnerFrame();
+	EXPECT_EQ(Button.m_Clicks, 1);
+	EXPECT_EQ(m_Ui.ActiveItem(), nullptr);
+}

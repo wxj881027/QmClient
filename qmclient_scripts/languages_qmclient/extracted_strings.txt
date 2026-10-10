@@ -231,6 +231,7 @@ Allow voting to pause players (instead of moving to spectators)
 Allows maps to render with more detail
 Alpha
 Also apply to dummy
+Also send the original text when translating outgoing messages
 Always show
 Always show chat
 Always show local time
@@ -657,6 +658,8 @@ Choose the menu font and cursor appearance
 Choose the menu font and font weight
 Choose the menu map and background colors
 Cinematic camera
+Cinematic camera smoothness (0=instant, 100=smoothest)
+Cinematic smoothness
 CJK font
 CJK font weight
 CJK font weight:
@@ -1198,6 +1201,8 @@ Draw a glow around tees colored by their race team
 Draw lines showing screen/clickbox center
 Draw on the in game background
 Draw shadow behind emote
+Draw the favorite star icon with the filled icon font style
+Draw the friend heart icon with the filled icon font style
 Draw tile layers when using custom background (solid)
 Draw where mouse is
 Draw!
@@ -1440,6 +1445,7 @@ Enables/disables active moderator mode for the player
 End marker of replay slice
 Endless hook has been activated
 Endless hook has been deactivated
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
 Endpoint
 Endpoint (optional)
 English font:
@@ -1587,6 +1593,7 @@ Fire
 First page in console
 Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 Flip:
+Flow style
 Folder
 Folder Link
 Follow
@@ -1949,6 +1956,8 @@ Include emoticon when saving/loading config preset
 Include name when saving/loading config preset
 Include seconds in local time display
 Include skin when saving/loading config preset
+Include Team 0
+Include Team 0 in the Gores team drown board
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 Incoming language
 Indicate map finish
@@ -3533,6 +3542,7 @@ Send aim data with sub-tick precision
 Send client input to others before correct input (increases server bandwidth)
 Send emote when entering freeze
 Send emoticon in water
+Send original text with translation
 Send probability
 Send Rate
 Send sampling and token limit parameters
@@ -4032,6 +4042,8 @@ SodaMusic hook heartbeat timeout (milliseconds)
 SodaMusic hook helper path (empty=beside QmClient)
 Soft glow
 Solid
+Solid favorite icon
+Solid friend icon
 Solid tile outline opacity
 Solo
 Solo split
@@ -4107,6 +4119,7 @@ Start recording a demo
 Start recording a video
 Start skin queue from a random position when entering a map
 Statboard
+Static
 Stats
 Stats notes
 Status
@@ -5391,7 +5404,7 @@ Zoom to current mouse target
 [Editor]	ENDLESS HOOK OFF: Deactivates endless hook.
 [Editor]	ENDLESS HOOK: Activates endless hook.
 [Editor]	Enter a room code to join a collaboration room.
-[Editor]	Enter a server setting. Press ctrl+space to show available settings.
+[Editor]	Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... .
 [Editor]	Enter the room code
 [Editor]	ENTITIES OFF SIGN: Informs people playing with entities about important marks, tips, information or text on the map.
 [Editor]	Entities: %s

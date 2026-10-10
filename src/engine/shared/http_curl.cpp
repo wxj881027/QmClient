@@ -11,6 +11,7 @@
 #include <engine/shared/http_url.h>
 #include <engine/storage.h>
 
+#include <algorithm>
 #include <charconv>
 #include <cstdlib>
 #include <cstring>
@@ -125,6 +126,11 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 	if(m_FailOnErrorStatus)
 	{
 		curl_easy_setopt(pHandle, CURLOPT_FAILONERROR, 1L);
+	}
+	if(m_RevocationBestEffort)
+	{
+		// 吊销分发点缺失或离线时尽力校验，保留 Schannel 对已知吊销证书的拒绝。
+		curl_easy_setopt(pHandle, CURLOPT_SSL_OPTIONS, static_cast<long>(CURLSSLOPT_REVOKE_BEST_EFFORT));
 	}
 	curl_easy_setopt(pHandle, CURLOPT_URL, m_aUrl);
 	if(m_ProxyConfigured)
@@ -461,6 +467,12 @@ void CHttpRequestCurl::OnCompletionInternal(CURL *pHandle, CURLcode Code)
 		}
 	}
 
+	// 取消可能与成功或错误消息同时到达，用户取消优先于结果发布。
+	if(IsAbortRequested())
+	{
+		Code = CURLE_ABORTED_BY_CALLBACK;
+		m_AbortTriggeredByProgressCallback = true;
+	}
 	EHttpState State;
 	// 前缀采样主动中止正文回调是成功；用户取消、状态错误与普通下载仍按原错误处理。
 	const bool SampleComplete = Code == CURLE_WRITE_ERROR && m_ResponseSampleComplete && !IsAbortRequested() && m_StatusCode == 200;
@@ -607,6 +619,35 @@ void CHttpCurl::ThreadMain(void *pUser)
 	static_cast<CHttpCurl *>(pUser)->RunLoop();
 }
 
+void CHttpCurl::CompleteRunningRequest(CURL *pHandle, CURLcode Code, std::unordered_map<std::string, size_t> &RunningRequestsPerHost)
+{
+	auto RequestIt = m_RunningRequests.find(pHandle);
+	dbg_assert(RequestIt != m_RunningRequests.end(), "Running handle not added to map");
+	const std::string HostKey = HttpUrlHost(RequestIt->second->m_aUrl);
+	if(auto HostIt = RunningRequestsPerHost.find(HostKey); HostIt != RunningRequestsPerHost.end())
+	{
+		if(HostIt->second > 1)
+			--HostIt->second;
+		else
+			RunningRequestsPerHost.erase(HostIt);
+	}
+	auto pRequest = std::move(RequestIt->second);
+	m_RunningRequests.erase(RequestIt);
+	curl_multi_remove_handle(m_pMultiH, pHandle);
+	pRequest->OnCompletionInternal(pHandle, Code);
+	curl_easy_cleanup(pHandle);
+}
+
+void CHttpCurl::CancelAbortedRequests(std::unordered_map<std::string, size_t> &RunningRequestsPerHost)
+{
+	for(auto It = m_RunningRequests.begin(); It != m_RunningRequests.end();)
+	{
+		const auto Current = It++;
+		if(Current->second->IsAbortRequested())
+			CompleteRunningRequest(Current->first, CURLE_ABORTED_BY_CALLBACK, RunningRequestsPerHost);
+	}
+}
+
 void CHttpCurl::RunLoop()
 {
 	std::unique_lock Lock(m_Lock);
@@ -643,7 +684,7 @@ void CHttpCurl::RunLoop()
 	while(m_State == CHttpCurl::RUNNING)
 	{
 		int Events = 0;
-		const CURLMcode PollCode = curl_multi_poll(m_pMultiH, nullptr, 0, m_NextTimeout, &Events);
+		const CURLMcode PollCode = curl_multi_poll(m_pMultiH, nullptr, 0, m_RunningRequests.empty() ? m_NextTimeout : std::min(m_NextTimeout, 100), &Events);
 
 		// We may have been woken up for a shutdown
 		if(m_Shutdown)
@@ -685,27 +726,12 @@ void CHttpCurl::RunLoop()
 		{
 			if(pMsg->msg == CURLMSG_DONE)
 			{
-				auto RequestIt = m_RunningRequests.find(pMsg->easy_handle);
-				dbg_assert(RequestIt != m_RunningRequests.end(), "Running handle not added to map");
-				const std::string HostKey = HttpUrlHost(RequestIt->second->m_aUrl);
-				if(!HostKey.empty())
-				{
-					auto HostIt = RunningRequestsPerHost.find(HostKey);
-					if(HostIt != RunningRequestsPerHost.end())
-					{
-						if(HostIt->second > 1)
-							--HostIt->second;
-						else
-							RunningRequestsPerHost.erase(HostIt);
-					}
-				}
-				auto pRequest = std::move(RequestIt->second);
-				m_RunningRequests.erase(RequestIt);
-				pRequest->OnCompletionInternal(pMsg->easy_handle, pMsg->data.result);
-				curl_multi_remove_handle(m_pMultiH, pMsg->easy_handle);
-				curl_easy_cleanup(pMsg->easy_handle);
+				CompleteRunningRequest(pMsg->easy_handle, pMsg->data.result, RunningRequestsPerHost);
 			}
 		}
+
+		// 连接建立期间也主动释放取消请求，不依赖 curl 进度回调。
+		CancelAbortedRequests(RunningRequestsPerHost);
 
 		decltype(m_PendingRequests) NewRequests = {};
 		Lock.lock();

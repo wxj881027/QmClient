@@ -899,8 +899,8 @@ inline float ResolveQmHudDummyMiniViewHeight(const SSettingsContentMetrics &Metr
 
 inline float ResolveQmHudDynamicIslandHeight(const SSettingsContentMetrics &Metrics, const bool OriginalStyle, const bool SwitchCountdownEnabled, const float ContentWidth)
 {
-	// 常驻行：原始样式、显示队伍、钩子倒计时和开关倒计时。
-	float Height = 4.0f * Metrics.m_RowStep;
+	// 常驻行：原始样式、显示队伍、钩子倒计时、流动样式和开关倒计时。
+	float Height = 5.0f * Metrics.m_RowStep;
 	if(!OriginalStyle)
 	{
 		const CUIRect ColorRowView{0.0f, 0.0f, std::max(0.0f, ContentWidth), 0.0f};

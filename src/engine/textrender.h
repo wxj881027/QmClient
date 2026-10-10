@@ -67,6 +67,7 @@ enum class EFontPreset
 	DEFAULT_FONT,
 	ICON_FONT,
 	ICON_FONT_BOLD,
+	ICON_FONT_FILL,
 };
 
 namespace FontIcons

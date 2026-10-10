@@ -437,3 +437,14 @@ TEST(SettingsCardFocus, EmptyAndNullIdsCannotAcquireSelection)
 	EXPECT_FALSE(Focus.IsFocused(nullptr));
 	EXPECT_FALSE(Focus.IsFocused(""));
 }
+
+TEST_F(SettingsCardMeasureRevision, CinematicCameraToggleInvalidatesConditionalSmoothnessRow)
+{
+	using namespace qm_card_catalog;
+	g_Config.m_QmCinematicCamera = 0;
+	const uint64_t Disabled = MeasureModuleCardRevision(qm_module::EQmModuleId::CameraView);
+	g_Config.m_QmCinematicCamera = 1;
+	EXPECT_NE(Disabled, MeasureModuleCardRevision(qm_module::EQmModuleId::CameraView));
+	g_Config.m_QmCinematicCamera = 0;
+	EXPECT_EQ(Disabled, MeasureModuleCardRevision(qm_module::EQmModuleId::CameraView));
+}

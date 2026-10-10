@@ -6068,3 +6068,9 @@ brazilian_portuguese = "Conexão de colaboração perdida; tente novamente"
 portuguese = "Ligação de colaboração perdida; tente novamente"
 turkish = "Ortak düzenleme bağlantısı koptu; tekrar deneyin"
 polish = "Utracono połączenie współpracy; spróbuj ponownie"
+
+[[message]]
+key = "Enter a server setting. Press Ctrl+Space or Ctrl+Shift+Space, or click ... to show available settings. If the IME reserves the shortcut, use ... ."
+context = "Editor"
+[message.translations]
+simplified_chinese = "输入服务器设置。按 Ctrl+Space、Ctrl+Shift+Space，或点击 ... 显示可用设置。输入法占用快捷键时，请点击 ... 。"

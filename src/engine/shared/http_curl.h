@@ -67,6 +67,7 @@ public:
 	bool HasIpresolveBug() const override;
 
 private:
+	friend class CHttpCurlTestPeer;
 	enum EState
 	{
 		UNINITIALIZED,
@@ -91,6 +92,8 @@ private:
 
 	static void ThreadMain(void *pUser);
 	void RunLoop();
+	void CompleteRunningRequest(CURL *pHandle, CURLcode Code, std::unordered_map<std::string, size_t> &RunningRequestsPerHost);
+	void CancelAbortedRequests(std::unordered_map<std::string, size_t> &RunningRequestsPerHost);
 };
 
 #endif // !CONF_PLATFORM_EMSCRIPTEN

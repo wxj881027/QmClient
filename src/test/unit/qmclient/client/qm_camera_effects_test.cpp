@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <string>
 
 TEST(QmCameraEffects, DynamicFovRemovalKeepsBaseZoomStable)
@@ -82,4 +83,47 @@ TEST(QmCameraEffects, CinematicFreeviewSmoothingIsFrameRateIndependent)
 	EXPECT_NEAR(At30Fps.y, At60Fps.y, 0.0001f);
 	EXPECT_GT(At30Fps.x, Start.x);
 	EXPECT_LT(At30Fps.x, Target.x);
+}
+
+TEST(QmCameraEffects, SmoothPositionMatchesCinematicWrapperAtLegacyHalfLife)
+{
+	const vec2 Start(10.0f, 20.0f);
+	const vec2 Target(30.0f, 60.0f);
+	for(float FrameTime : {1.0f / 144.0f, 1.0f / 60.0f, 1.0f / 30.0f, 0.05f})
+	{
+		SCOPED_TRACE(::testing::Message() << "frameTime=" << FrameTime);
+		EXPECT_EQ(QmCameraEffects::SmoothPosition(Start, Target, FrameTime, 0.09f), QmCameraEffects::SmoothCinematicPosition(Start, Target, FrameTime));
+	}
+}
+
+TEST(QmCameraEffects, SmoothPositionIsFrameRateIndependentAndConverges)
+{
+	const vec2 Start(-40.0f, 15.0f);
+	const vec2 Target(20.0f, -25.0f);
+	vec2 At30Fps = Start;
+	vec2 At60Fps = Start;
+	vec2 At144Fps = Start;
+	for(int Frame = 0; Frame < 30; ++Frame)
+		At30Fps = QmCameraEffects::SmoothPosition(At30Fps, Target, 1.0f / 30.0f, 0.12f);
+	for(int Frame = 0; Frame < 60; ++Frame)
+		At60Fps = QmCameraEffects::SmoothPosition(At60Fps, Target, 1.0f / 60.0f, 0.12f);
+	for(int Frame = 0; Frame < 144; ++Frame)
+		At144Fps = QmCameraEffects::SmoothPosition(At144Fps, Target, 1.0f / 144.0f, 0.12f);
+
+	EXPECT_NEAR(At30Fps.x, At60Fps.x, 0.0001f);
+	EXPECT_NEAR(At30Fps.y, At60Fps.y, 0.0001f);
+	EXPECT_NEAR(At60Fps.x, At144Fps.x, 0.0001f);
+	EXPECT_GT(At30Fps.x, Start.x);
+	EXPECT_LT(At30Fps.x, Target.x);
+}
+
+TEST(QmCameraEffects, SmoothPositionRejectsInvalidTimeAndHalfLife)
+{
+	const vec2 Start(1.0f, 2.0f);
+	const vec2 Target(5.0f, 6.0f);
+	EXPECT_EQ(QmCameraEffects::SmoothPosition(Start, Target, 0.0f, 0.09f), Start);
+	EXPECT_EQ(QmCameraEffects::SmoothPosition(Start, Target, -0.016f, 0.09f), Start);
+	EXPECT_EQ(QmCameraEffects::SmoothPosition(Start, Target, std::numeric_limits<float>::infinity(), 0.09f), Start);
+	EXPECT_EQ(QmCameraEffects::SmoothPosition(Start, Target, 0.016f, 0.0f), Start);
+	EXPECT_EQ(QmCameraEffects::SmoothPosition(Start, Target, 0.016f, -0.09f), Start);
 }

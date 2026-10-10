@@ -469,14 +469,16 @@ void CCamera::OnRender()
 			m_CamType = CAMTYPE_SPEC;
 		}
 		const vec2 TargetCenter = GameClient()->m_Controls.m_aMousePos[g_Config.m_ClDummy];
-		if(g_Config.m_QmCinematicCamera)
+		if(g_Config.m_QmCinematicCamera && g_Config.m_QmCinematicCameraSmoothness > 0)
 		{
 			if(!m_CinematicCameraSmoothing)
 			{
 				m_CinematicCameraPosition = m_Center;
 				m_CinematicCameraSmoothing = true;
 			}
-			m_CinematicCameraPosition = QmCameraEffects::SmoothCinematicPosition(m_CinematicCameraPosition, TargetCenter, Client()->RenderFrameTime());
+			// 0-100 平滑度映射为指数阻尼半衰期：80 档≈原有 0.09s 手感，0 档为瞬移语义。
+			const float HalfLife = 0.0012f * g_Config.m_QmCinematicCameraSmoothness;
+			m_CinematicCameraPosition = QmCameraEffects::SmoothPosition(m_CinematicCameraPosition, TargetCenter, Client()->RenderFrameTime(), HalfLife);
 			m_Center = m_CinematicCameraPosition;
 		}
 		else

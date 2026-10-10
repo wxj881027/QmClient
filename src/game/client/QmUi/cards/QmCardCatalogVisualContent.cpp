@@ -384,6 +384,11 @@ void CMenus::RenderQmVisualCameraViewContent(CUIRect &Content, float LineHeight,
 		RenderValue("qmclient-camera-dynamic-fov-smoothness", "Dynamic FOV smoothness", &s_QmDynamicFovSmoothnessInputId, &g_Config.m_QmDynamicFovSmoothness, 0, 100, "%");
 	}
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmCinematicCamera, "Cinematic camera", Localize("Cinematic camera"), &g_Config.m_QmCinematicCamera);
+	if(g_Config.m_QmCinematicCamera)
+	{
+		static int s_QmCinematicCameraSmoothnessInputId;
+		RenderValue("qmclient-cinematic-camera-smoothness", "Cinematic smoothness", &s_QmCinematicCameraSmoothnessInputId, &g_Config.m_QmCinematicCameraSmoothness, 0, 100, "%");
+	}
 	RenderQmVisualCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmZoomInstantReverse, "Instant zoom reverse", Localize("Instant zoom reverse"), &g_Config.m_QmZoomInstantReverse);
 	static int s_QmUiScaleInputId;
 	RenderValue("qmclient-ui-scale", "UI scale", &s_QmUiScaleInputId, &g_Config.m_QmUiScale, 50, 200, "%", CUi::SCROLLBAR_OPTION_DELAYUPDATE);

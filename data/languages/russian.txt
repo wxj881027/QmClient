@@ -698,6 +698,9 @@ Alpha
 Also apply to dummy
 == Также применить к дамми
 
+Also send the original text when translating outgoing messages
+== Также отправлять оригинальный текст при переводе исходящих сообщений
+
 Always show
 == Всегда показывать
 
@@ -1975,6 +1978,12 @@ Choose the menu map and background colors
 
 Cinematic camera
 == Кинематографическая камера
+
+Cinematic camera smoothness (0=instant, 100=smoothest)
+== Плавность кинематографической камеры (0=мгновенно, 100=максимально плавно)
+
+Cinematic smoothness
+== Плавность кинематографической камеры
 
 CJK font
 == Шрифт CJK
@@ -3599,6 +3608,12 @@ Draw on the in game background
 Draw shadow behind emote
 == Рисовать тень за эмоциями
 
+Draw the favorite star icon with the filled icon font style
+== Рисовать значок избранного заливкой шрифта иконок
+
+Draw the friend heart icon with the filled icon font style
+== Рисовать значок сердца друга заливкой шрифта иконок
+
 Draw tile layers when using custom background (solid)
 == Рисовать тайловые слои при использовании пользовательского фона (сплошного).
 
@@ -4325,6 +4340,9 @@ Endless hook has been activated
 Endless hook has been deactivated
 == Бесконечный крюк деактивирован
 
+Endless hook ring flow style: 0=single color, 1=rainbow, 2=static
+== Стиль переливания кольца бесконечного крюка (0=один цвет, 1=радуга, 2=статично)
+
 Endpoint
 == Конечная точка
 
@@ -4765,6 +4783,9 @@ Fixed-size scoreboard rows with mouse wheel scrolling for crowded servers
 
 Flip:
 == Отразить:
+
+Flow style
+== Стиль переливания
 
 Folder
 == Папка
@@ -5851,6 +5872,12 @@ Include seconds in local time display
 
 Include skin when saving/loading config preset
 == Включать скин при сохранении/загрузке пресета конфигурации
+
+Include Team 0
+== Включить Team 0
+
+Include Team 0 in the Gores team drown board
+== Включить Team 0 в список утоплений Gores
 
 Incoming auto-translation mode (0=Only translate when not in target language, 1=Always translate)
 == Режим автоперевода входящих сообщений (0=только если сообщение не на целевом языке, 1=всегда переводить)
@@ -10604,6 +10631,9 @@ Send emote when entering freeze
 Send emoticon in water
 == Вероятность отправки
 
+Send original text with translation
+== Отправлять оригинальный текст вместе с переводом
+
 Send probability
 == Отправить исходный язык
 
@@ -12101,6 +12131,12 @@ Soft glow
 Solid
 == Сплошной
 
+Solid favorite icon
+== Значок избранного заливкой
+
+Solid friend icon
+== Значок друга заливкой
+
 Solid tile outline opacity
 == Непрозрачность контура сплошных плиток
 
@@ -12325,6 +12361,9 @@ Start skin queue from a random position when entering a map
 
 Statboard
 == Статистика
+
+Static
+== Статично
 
 Stats
 == Статистика

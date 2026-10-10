@@ -12,6 +12,7 @@ namespace qm_ui_test
 
 	public:
 		int m_RawPressedKey = 0;
+		int m_HeldKey = 0;
 		bool m_Modifier = false;
 		bool m_Composing = false;
 		std::string m_Clipboard;
@@ -22,7 +23,7 @@ namespace qm_ui_test
 		bool ModifierIsPressed() const override { return m_Modifier; }
 		bool ShiftIsPressed() const override { return false; }
 		bool AltIsPressed() const override { return false; }
-		bool KeyIsPressed(int) const override { return false; }
+		bool KeyIsPressed(int Key) const override { return m_HeldKey != 0 && Key == m_HeldKey; }
 		bool KeyPress(int Key) const override { return m_RawPressedKey != 0 && Key == m_RawPressedKey; }
 		const char *KeyName(int) const override { return ""; }
 		int FindKeyByName(const char *) const override { return 0; }

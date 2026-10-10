@@ -68,8 +68,11 @@ TEST(SettingsIconOptions, OptionalPickerHeightMatchesActualRowFlowAtEveryScale)
 				Rows.NextLine();
 				if(CustomEnabled)
 					Rows.NextButton();
+				// 行序与 Icons 卡片同步：好友取色器、好友实心开关、收藏取色器、收藏实心开关。
 				Rows.NextButton();
+				Rows.NextLine();
 				Rows.NextButton();
+				Rows.NextLine();
 				Rows.Next(ResolveSettingsRadioRowLayout(Content, 4, Metrics).m_Height);
 				EXPECT_FLOAT_EQ(qm_icon_settings::ContentHeight(Metrics, CustomEnabled, Width), 1000.0f - Content.h);
 			}

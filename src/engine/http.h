@@ -89,6 +89,9 @@ public:
 	void IpResolve(IPRESOLVE IpResolve) { m_IpResolve = IpResolve; }
 	void FailOnErrorStatus(bool FailOnErrorStatus) { m_FailOnErrorStatus = FailOnErrorStatus; }
 	bool FailOnErrorStatusEnabled() const { return m_FailOnErrorStatus; }
+	// 仅容忍吊销分发点缺失或离线，仍拒绝已知吊销证书；只影响 Windows Schannel 后端。
+	void RevocationBestEffort(bool RevocationBestEffort = true) { m_RevocationBestEffort = RevocationBestEffort; }
+	bool RevocationBestEffortEnabled() const { return m_RevocationBestEffort; }
 	// Download to memory only. Get the result via `Result*`.
 	void WriteToMemory();
 	// Download to filesystem and memory.
@@ -203,6 +206,7 @@ protected:
 	IPRESOLVE m_IpResolve = IPRESOLVE::WHATEVER;
 	bool m_FailOnErrorStatus = true;
 	bool m_AllowInsecureProtocol = false;
+	bool m_RevocationBestEffort = false;
 	bool m_ValidateBeforeOverwrite = false;
 	std::optional<SHA256_DIGEST> m_ExpectedSha256 = std::nullopt;
 	int64_t m_IfModifiedSince = -1;
