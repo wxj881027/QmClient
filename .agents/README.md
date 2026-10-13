@@ -23,6 +23,7 @@
 | Skill | 维护内容 |
 | --- | --- |
 | `qmclient-cpp-conventions` | DDNet C++ 风格、共享 UI 职责与专项实现风险 |
+| `qmclient-ui-motion` | 页面切换、导航反馈与弹层动效的设计、接续和输入归属 |
 | `qmclient-verification-gate` | 风险分层、构建测试、Google Benchmark、gate 和证据复用 |
 | `qmclient-git-commit` | commit/PR 文案、开发/正式版本和发布操作 |
 | `qmclient-code-review` | 缺陷证据、严重度、边界审查与按需深度质量审计 |

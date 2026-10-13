@@ -1,6 +1,7 @@
 // 公共导航与真实 UI、动画后端协作；fake 只替换输入设备、客户端时钟与 GPU。
 #include <engine/keys.h>
 
+#include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/UiNavigation.h>
 
 #include <test/support/qm_real_ui_fixture.h>
@@ -57,14 +58,26 @@ namespace
 			return *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
 		}
 
-		int Draw()
+		IUiContext Context(CUiV2AnimationRuntime *pAnimation = nullptr)
 		{
-			Graphics().m_vRoundedSubmissions.clear();
 			IUiContext Ctx;
 			Ctx.m_pUi = &m_Ui;
-			Ctx.m_pAnim = &m_Animation;
-			m_Selected = ui_widget::CapsuleTabBar(Ctx, 1234, m_aSlots.data(), static_cast<int>(m_aSlots.size()), m_Selected, m_Style);
+			Ctx.m_pAnim = pAnimation != nullptr ? pAnimation : &m_Animation;
+			return Ctx;
+		}
+
+		int Draw(CUiV2AnimationRuntime *pAnimation = nullptr)
+		{
+			Graphics().m_vRoundedSubmissions.clear();
+			m_Selected = ui_widget::CapsuleTabBar(Context(pAnimation), 1234, m_aSlots.data(), static_cast<int>(m_aSlots.size()), m_Selected, m_Style);
 			return m_Selected;
+		}
+
+		void DrawNested(const CUIRect &MainSlot, const CUIRect &SubSlot)
+		{
+			Graphics().m_vRoundedSubmissions.clear();
+			ui_widget::SNestedSegmentStyle Style;
+			ui_widget::NestedSegmentChrome(Context(), 5678, {20, 60, 300, 80}, &MainSlot, &SubSlot, Style);
 		}
 	};
 }
@@ -198,4 +211,143 @@ TEST_F(QmNavigationSelection, ReversePressRetargetsFromTheCurrentIndicatorPositi
 	}
 	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
 	EXPECT_LT(Graphics().m_vRoundedSubmissions.back().m_Rect.x, MovingX);
+}
+
+TEST_F(QmNavigationSelection, ReducedMotionBackgroundKeepsMovingIndicatorAndForegroundRestoresContinuously)
+{
+	g_Config.m_QmUiMotionLevel = 1;
+	Frame(SlotCenter(1), true);
+	ASSERT_EQ(Draw(), 1);
+	Frame(SlotCenter(1), false);
+	ASSERT_EQ(Draw(), 1);
+	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+	const float MovingX = Graphics().m_vRoundedSubmissions.back().m_Rect.x;
+	ASSERT_GT(MovingX, m_aSlots[0].x + m_Style.m_IndicatorInset);
+	ASSERT_LT(MovingX, m_aSlots[1].x + m_Style.m_IndicatorInset);
+	const int TrackCount = m_Animation.ActiveTrackCount();
+
+	{
+		CUiScopedBackgroundRender Background(&m_Ui);
+		EXPECT_EQ(Draw(), 1);
+		ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+		EXPECT_FLOAT_EQ(Graphics().m_vRoundedSubmissions.back().m_Rect.x, MovingX);
+		EXPECT_EQ(m_Animation.ActiveTrackCount(), TrackCount);
+	}
+	EXPECT_EQ(Draw(), 1);
+	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+	EXPECT_FLOAT_EQ(Graphics().m_vRoundedSubmissions.back().m_Rect.x, MovingX);
+	Frame(SlotCenter(1), false);
+	Draw();
+	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+	EXPECT_GT(Graphics().m_vRoundedSubmissions.back().m_Rect.x, MovingX);
+}
+
+TEST_F(QmNavigationSelection, BackgroundLayoutChangesDoNotRedirectTheInteractiveTrajectory)
+{
+	CUiV2AnimationRuntime Reference;
+	Draw(&Reference);
+	Frame(SlotCenter(1), true);
+	Reference.Advance(1.0f / 60.0f);
+	ASSERT_EQ(Draw(), 1);
+	Draw(&Reference);
+	Frame(SlotCenter(1), false);
+	Reference.Advance(1.0f / 60.0f);
+	Draw();
+	Draw(&Reference);
+	auto ShiftedSlots = m_aSlots;
+	for(CUIRect &Slot : ShiftedSlots)
+	{
+		Slot.x += 40.0f;
+		Slot.w += 10.0f;
+	}
+
+	{
+		CUiScopedBackgroundRender Background(&m_Ui);
+		ui_widget::CapsuleTabBar(Context(), 1234, ShiftedSlots.data(), static_cast<int>(ShiftedSlots.size()), m_Selected, m_Style);
+		// 时钟仍由后端推进，背景布局不能成为新的动画目标。
+		m_Animation.Advance(1.0f / 60.0f);
+		Reference.Advance(1.0f / 60.0f);
+	}
+	for(int FrameIndex = 0; FrameIndex < 4; ++FrameIndex)
+	{
+		SCOPED_TRACE(FrameIndex);
+		Draw();
+		ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+		const vec4 Actual = Graphics().m_vRoundedSubmissions.back().m_Rect;
+		Draw(&Reference);
+		ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+		const vec4 Expected = Graphics().m_vRoundedSubmissions.back().m_Rect;
+		EXPECT_FLOAT_EQ(Actual.x, Expected.x);
+		EXPECT_FLOAT_EQ(Actual.z, Expected.z);
+		m_Animation.Advance(1.0f / 60.0f);
+		Reference.Advance(1.0f / 60.0f);
+	}
+}
+
+TEST_F(QmNavigationSelection, FirstBackgroundAppearanceDrawsSelectionWithoutInitializingTracks)
+{
+	constexpr uint64_t GroupId = 4321;
+	const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
+	{
+		CUiScopedBackgroundRender Background(&m_Ui);
+		Graphics().m_vRoundedSubmissions.clear();
+		ui_widget::CapsuleTabBar(Context(), GroupId, m_aSlots.data(), static_cast<int>(m_aSlots.size()), 1, m_Style);
+		ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+		EXPECT_FLOAT_EQ(Graphics().m_vRoundedSubmissions.back().m_Rect.x, m_aSlots[1].x + m_Style.m_IndicatorInset);
+	}
+	EXPECT_FLOAT_EQ(m_Animation.GetValue(NodeKey, EUiAnimProperty::POS_X, -1000.0f), -1000.0f);
+	EXPECT_FLOAT_EQ(m_Animation.GetValue(NodeKey, EUiAnimProperty::WIDTH, -1000.0f), -1000.0f);
+	EXPECT_EQ(m_Animation.ActiveTrackCount(), 0);
+	EXPECT_EQ(m_Animation.QueuedTrackCount(), 0);
+}
+
+TEST_F(QmNavigationSelection, DisabledMotionDrawsTargetInBackgroundAndCancelsOnInteractiveRender)
+{
+	Frame(SlotCenter(1), true);
+	ASSERT_EQ(Draw(), 1);
+	Frame(SlotCenter(1), false);
+	Draw();
+	ASSERT_GT(m_Animation.ActiveTrackCount(), 0);
+	g_Config.m_QmUiMotionLevel = 0;
+	{
+		CUiScopedBackgroundRender Background(&m_Ui);
+		EXPECT_EQ(Draw(), 1);
+		ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
+		EXPECT_FLOAT_EQ(Graphics().m_vRoundedSubmissions.back().m_Rect.x, m_aSlots[1].x + m_Style.m_IndicatorInset);
+	}
+	EXPECT_EQ(Draw(), 1);
+	EXPECT_EQ(m_Animation.ActiveTrackCount(), 0);
+	EXPECT_EQ(m_Animation.QueuedTrackCount(), 0);
+}
+
+TEST_F(QmNavigationSelection, NestedIndicatorsKeepEveryMovingChannelInBackground)
+{
+	DrawNested({20, 60, 120, 36}, {24, 64, 48, 28});
+	const CUIRect MainTarget{180, 68, 140, 44};
+	const CUIRect SubTarget{240, 74, 72, 32};
+	DrawNested(MainTarget, SubTarget);
+	Frame({0, 0}, false);
+	DrawNested(MainTarget, SubTarget);
+	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 3u);
+	const auto Before = Graphics().m_vRoundedSubmissions;
+	ASSERT_LT(Before[1].m_Rect.x, MainTarget.x + 2.0f);
+	ASSERT_LT(Before[2].m_Rect.x, SubTarget.x + 3.0f);
+	const int TrackCount = m_Animation.ActiveTrackCount();
+
+	{
+		CUiScopedBackgroundRender Background(&m_Ui);
+		DrawNested(MainTarget, SubTarget);
+		ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), Before.size());
+		for(size_t Index = 1; Index < Before.size(); ++Index)
+		{
+			SCOPED_TRACE(Index);
+			const vec4 &Expected = Before[Index].m_Rect;
+			const vec4 &Actual = Graphics().m_vRoundedSubmissions[Index].m_Rect;
+			EXPECT_FLOAT_EQ(Actual.x, Expected.x);
+			EXPECT_FLOAT_EQ(Actual.y, Expected.y);
+			EXPECT_FLOAT_EQ(Actual.z, Expected.z);
+			EXPECT_FLOAT_EQ(Actual.w, Expected.w);
+		}
+		EXPECT_EQ(m_Animation.ActiveTrackCount(), TrackCount);
+	}
 }

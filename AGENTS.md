@@ -53,6 +53,7 @@ QmClient（Q1menG Client）基于 DDNet / TaterClient，主要使用 C++，辅�
 | 任务                                 | `.agents/skills/` 下的入口            |
 | ------------------------------------ | --------------------------------------- |
 | C++ 实现、调试、重构                 | `qmclient-cpp-conventions/SKILL.md`   |
+| UI/UX、导航反馈与动效                | `qmclient-ui-motion/SKILL.md`         |
 | 选择验证、交付代码                   | `qmclient-verification-gate/SKILL.md` |
 | 代码审查、深度质量审计、发布风险审查 | `qmclient-code-review/SKILL.md`       |
 | 翻译、生成链及污染/迁移/覆盖审计     | `qmclient-i18n-workflow/SKILL.md`     |

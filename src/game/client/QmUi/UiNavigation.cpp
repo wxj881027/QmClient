@@ -9,6 +9,7 @@
 #include "UiTokens.h"
 
 #include <engine/graphics.h>
+#include <engine/shared/config.h>
 
 #include <game/client/components/menus.h>
 #include <game/client/ui.h>
@@ -21,6 +22,20 @@
 
 namespace ui_widget
 {
+	namespace
+	{
+		float ResolveNavigationIndicatorValue(const IUiContext &Ctx, const uint64_t NodeKey, const EUiAnimProperty Property, const float Target)
+		{
+			if(Ctx.m_pAnim == nullptr)
+				return Target;
+			if(Ctx.m_pUi->RenderOnly())
+			{
+				// 覆盖面板下继续显示当前画面；背景绘制不初始化或重定向轨道。
+				return g_Config.m_QmUiMotionLevel == 0 ? Target : Ctx.m_pAnim->GetValue(NodeKey, Property, Target);
+			}
+			return ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, Property, Target, ui_token::motion::NAVIGATION_SPRING, 2);
+		}
+	}
 
 	int TabBar(const IUiContext &Ctx, const char *const *ppLabels, int Count, int *pActive, const CUIRect &Rect)
 	{
@@ -129,13 +144,10 @@ namespace ui_widget
 			return;
 
 		CUIRect Indicator = Target;
-		if(Ctx.m_pAnim != nullptr && !Ctx.m_pUi->RenderOnly())
-		{
-			// 胶囊与嵌套分段共用导航弹簧，切换时保留当前速度；选中块固定在同一条竖向轨道。
-			const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
-			Indicator.x = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, ui_token::motion::NAVIGATION_SPRING, 2);
-			Indicator.w = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, ui_token::motion::NAVIGATION_SPRING, 2);
-		}
+		// 胶囊与嵌套分段共用导航弹簧，切换时保留当前速度；选中块固定在同一条竖向轨道。
+		const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
+		Indicator.x = ResolveNavigationIndicatorValue(Ctx, NodeKey, EUiAnimProperty::POS_X, Target.x);
+		Indicator.w = ResolveNavigationIndicatorValue(Ctx, NodeKey, EUiAnimProperty::WIDTH, Target.w);
 		DrawRoundedSurface(Ctx, Indicator, Style.m_IndicatorColor, ColorRGBA(), ui_token::radius::PILL);
 	}
 
@@ -160,15 +172,12 @@ namespace ui_widget
 				return;
 
 			CUIRect Indicator = Target;
-			if(Ctx.m_pAnim != nullptr && !Ctx.m_pUi->RenderOnly())
-			{
-				// 主级与次级导航沿用同一节奏，各自保留当前速度。
-				const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, TrackIndex);
-				Indicator.x = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_X, Target.x, ui_token::motion::NAVIGATION_SPRING, 2);
-				Indicator.y = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::POS_Y, Target.y, ui_token::motion::NAVIGATION_SPRING, 2);
-				Indicator.w = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::WIDTH, Target.w, ui_token::motion::NAVIGATION_SPRING, 2);
-				Indicator.h = ResolveUiAnimSpringValue(*Ctx.m_pAnim, NodeKey, EUiAnimProperty::HEIGHT, Target.h, ui_token::motion::NAVIGATION_SPRING, 2);
-			}
+			// 主级与次级导航沿用同一节奏，各自保留当前速度。
+			const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, TrackIndex);
+			Indicator.x = ResolveNavigationIndicatorValue(Ctx, NodeKey, EUiAnimProperty::POS_X, Target.x);
+			Indicator.y = ResolveNavigationIndicatorValue(Ctx, NodeKey, EUiAnimProperty::POS_Y, Target.y);
+			Indicator.w = ResolveNavigationIndicatorValue(Ctx, NodeKey, EUiAnimProperty::WIDTH, Target.w);
+			Indicator.h = ResolveNavigationIndicatorValue(Ctx, NodeKey, EUiAnimProperty::HEIGHT, Target.h);
 			const bool HasBorder = Border.a > 0.0f;
 			DrawRoundedSurface(Ctx, Indicator, Fill, Border, ui_token::radius::PILL, HasBorder ? Ctx.m_pUi->PixelSize() : 0.0f);
 		};

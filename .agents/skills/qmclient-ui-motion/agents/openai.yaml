@@ -1,0 +1,4 @@
+interface:
+  display_name: "QmClient 交互与动效"
+  short_description: "围绕真实玩家路径，统一 QmUi 导航反馈、动画接续与弹层层级"
+  default_prompt: "使用 $qmclient-ui-motion 分析当前页面的交互与动画，沿真实生产链路完成本次授权的设计或实现。"
