@@ -5414,6 +5414,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/QmUi/SettingsCardCollapseState.cpp
       src/game/client/QmUi/QmCardOrderModel.cpp
       src/game/client/QmUi/QmCardRegistry.cpp
+      src/game/client/QmUi/SettingsSearchIndex.cpp
       src/game/client/QmUi/QmModuleLayoutAdapter.cpp
       src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
       src/game/client/QmUi/UiDiscreteSlider.cpp

@@ -36,6 +36,18 @@ const char *CMenus::TemporaryOverrideTooltip(const int *) const
 	return nullptr;
 }
 
+ITextRender *CComponentInterfaces::TextRender() const
+{
+	ADD_FAILURE() << "Menu-owned text rendering is outside the isolated UI target";
+	return nullptr;
+}
+
+CUi *CComponentInterfaces::Ui() const
+{
+	ADD_FAILURE() << "Menu-owned UI access is outside the isolated UI target";
+	return nullptr;
+}
+
 // 独立输入／下拉集成目标没有完整菜单与配置管理器；提示作为外部边界，
 // 不参与这些测试的断言。按钮和输入仍链接真实生产实现。
 void CTooltips::DoConfigToolTip(const void *, const CUIRect *, const void *, const void *)

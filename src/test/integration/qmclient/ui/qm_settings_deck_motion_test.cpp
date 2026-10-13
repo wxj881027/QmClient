@@ -231,9 +231,10 @@ TEST_F(QmSettingsDeckMotion, BackgroundAndReturnKeepTheVisibleEntryPosition)
 {
 	StartPair();
 	Frame(0.04f);
+	Draw(m_ReferenceDeck, m_ReferenceAnimation, m_ReferenceModel, false, m_ReferenceContentY);
 	{
 		CUiScopedBackgroundRender Background(&m_Ui);
-		DrawPair();
+		Draw(m_Deck, m_Animation, m_Model, false, m_ContentY);
 		EXPECT_NEAR(m_ContentY, m_ReferenceContentY, 0.0001f);
 	}
 	Frame(0.01f);
