@@ -1195,11 +1195,7 @@ void CMenus::TriggerUiSwitchAnimation(const uint64_t NodeKey, const float Durati
 
 float CMenus::ReadUiSwitchAnimation(const uint64_t NodeKey) const
 {
-	if(Ui()->RenderOnly())
-		return 0.0f;
-
-	const CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
-	return std::clamp(AnimRuntime.GetValue(NodeKey, EUiAnimProperty::POS_X, 0.0f), 0.0f, 1.0f);
+	return ReadUiSwitchAnimationProgress(TabBarUiContext(), NodeKey);
 }
 
 float CMenus::UiSwitchAnimationAlpha(const float Strength) const
@@ -1230,12 +1226,14 @@ float CMenus::ApplyUiSwitchOffset(CUIRect &View, const float Strength, const flo
 float CMenus::ResolveMenuTabAnimationValue(const void *pButtonId, const bool Active, const float DurationSec) const
 {
 	const float Target = Active ? 1.0f : 0.0f;
-	if(Ui()->RenderOnly())
+	if(Ui()->MeasurementOnly())
 		return Target;
 
 	static const uint64_t s_ScopeHash = static_cast<uint64_t>(str_quickhash("menu_tab_hover"));
 	const uint64_t NodeKey = BuildUiAnimNodeKey(s_ScopeHash, reinterpret_cast<uint64_t>(pButtonId));
 	CUiV2AnimationRuntime &AnimRuntime = GameClient()->UiRuntimeV2()->AnimRuntime();
+	if(Ui()->RenderOnly())
+		return g_Config.m_QmUiMotionLevel == 0 ? Target : std::clamp(AnimRuntime.GetValue(NodeKey, EUiAnimProperty::SCALE, Target), 0.0f, 1.0f);
 	return std::clamp(ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::SCALE, Target, DurationSec, EEasing::EASE_OUT), 0.0f, 1.0f);
 }
 
@@ -8048,18 +8046,15 @@ void CMenus::SetMenuPage(int NewPage)
 		m_BrowserTabTransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), UiAnimNodeKey("browser_page_switch"), m_BrowserTabTransitionDirection, BrowserPageVisualOrder(NewPage) > BrowserPageVisualOrder(OldPage) ? 1.0f : -1.0f);
 		TriggerUiSwitchAnimation(UiAnimNodeKey("browser_page_switch"), MENU_SWITCH_DURATION);
 	}
-	else
+	else if(OldPage != NewPage)
 	{
 		m_BrowserTabTransitionDirection = 0.0f;
 	}
+	// 浏览器子页切换保留外层页面尚未完成的入场方向。
 	if(OldPage != NewPage && !(OldIsBrowser && NewIsBrowser))
 	{
 		m_MenuPageTransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), UiAnimNodeKey("menu_page_switch"), m_MenuPageTransitionDirection, NewPage > OldPage ? 1.0f : -1.0f);
 		TriggerUiSwitchAnimation(UiAnimNodeKey("menu_page_switch"), MENU_SWITCH_DURATION);
-	}
-	else
-	{
-		m_MenuPageTransitionDirection = 0.0f;
 	}
 	if(IsBrowserPage(NewPage))
 	{
@@ -8121,10 +8116,6 @@ void CMenus::SetGamePage(int NewPage)
 	{
 		m_GamePageTransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), UiAnimNodeKey("game_page_switch"), m_GamePageTransitionDirection, NewPage > OldPage ? 1.0f : -1.0f);
 		TriggerUiSwitchAnimation(UiAnimNodeKey("game_page_switch"), MENU_SWITCH_DURATION);
-	}
-	else
-	{
-		m_GamePageTransitionDirection = 0.0f;
 	}
 	if(OldPage != NewPage && NewPage == PAGE_SETTINGS)
 	{

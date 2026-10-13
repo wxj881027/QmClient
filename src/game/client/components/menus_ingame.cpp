@@ -31,6 +31,7 @@
 #include <game/client/QmUi/QmTree.h>
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/animstate.h>
@@ -1010,7 +1011,7 @@ void CMenus::RenderGame(CUIRect MainView)
 		}
 		else if(m_MenusIngameTouchControls.m_CurrentMenu != s_PrevTouchMenu)
 		{
-			s_TouchMenuTransitionDirection = static_cast<int>(m_MenusIngameTouchControls.m_CurrentMenu) > static_cast<int>(s_PrevTouchMenu) ? 1.0f : -1.0f;
+			s_TouchMenuTransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), TouchMenuSwitchNode, s_TouchMenuTransitionDirection, static_cast<int>(m_MenusIngameTouchControls.m_CurrentMenu) > static_cast<int>(s_PrevTouchMenu) ? 1.0f : -1.0f);
 			TriggerUiSwitchAnimation(TouchMenuSwitchNode, 0.18f);
 			s_PrevTouchMenu = m_MenusIngameTouchControls.m_CurrentMenu;
 		}
@@ -2215,7 +2216,7 @@ void CMenus::RenderServerControlLegacy(CUIRect MainView)
 	}
 	else if(s_ControlPage != s_PrevControlPage)
 	{
-		s_ControlPageTransitionDirection = static_cast<int>(s_ControlPage) > static_cast<int>(s_PrevControlPage) ? 1.0f : -1.0f;
+		s_ControlPageTransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), ControlPageSwitchNode, s_ControlPageTransitionDirection, static_cast<int>(s_ControlPage) > static_cast<int>(s_PrevControlPage) ? 1.0f : -1.0f);
 		TriggerUiSwitchAnimation(ControlPageSwitchNode, 0.18f);
 		s_PrevControlPage = s_ControlPage;
 	}

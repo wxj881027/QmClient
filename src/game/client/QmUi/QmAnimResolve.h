@@ -57,6 +57,8 @@ ColorRGBA ResolveUiAnimValueColor(
 	const ColorRGBA &Target,
 	float DurationSec,
 	EEasing Easing);
+// 只采样已有颜色轨道；没有前台记录或关闭动效时直接使用当前目标。
+ColorRGBA ReadUiAnimValueColor(const CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const ColorRGBA &Target);
 ColorRGBA ResolveUiAnimInterpolatedColor(
 	const ColorRGBA &From,
 	const ColorRGBA &To,

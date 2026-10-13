@@ -519,8 +519,7 @@ struct SPopupMenuProperties
 	// 二级界面大弹窗：打开时在当前视口内居中显示，不锚定触发元素；
 	// 搭配 m_BlockUnderlyingScroll / m_BlockUnderlyingPointerInput 锁定下层页面的滚动与指针交互。
 	bool m_CenterInViewport = false;
-	// 开关缩放动画：入场从 92% 放大到 100%，出场收缩渐隐后移除；
-	// 仅二级界面大弹窗启用，经典下拉/消息弹窗默认关闭零影响。
+	// 弹层显隐共用可中断轨道；关闭时先释放输入，画面完成退场后移除。
 	bool m_Animate = false;
 	bool m_ClipToViewport = false;
 	bool m_BlockUnderlyingScroll = false;
@@ -864,16 +863,19 @@ private:
 		SPopupFocus m_ReturnFocus;
 		uint64_t m_OpenedFrame = 0;
 		CUIRect m_Rect;
+		CUIRect m_RenderRect;
 		void *m_pContext;
 		FPopupMenuFunction m_pfnFunc;
-		// 动画状态（仅 m_Props.m_Animate 弹窗使用）：
-		// m_OpenStart < 0 表示无入场动画；m_Closing 表示逻辑已关闭、
-		// 正在播放出场动画（期间不参与任何输入判定），结束后移除。
-		float m_OpenStart = -1.0f;
+		// 逻辑关闭后只保留外框退场，不再运行回调或参与输入。
 		bool m_Closing = false;
-		float m_CloseStart = 0.0f;
 	};
 	std::vector<SPopupMenu> m_vPopupMenus;
+	CUiV2AnimationRuntime m_PopupAnimationRuntime;
+	float m_PopupAnimationTime = -1.0f;
+	void AdvancePopupAnimations();
+	bool PopupMenuAnimationEnabled(const SPopupMenuProperties &Props) const;
+	void AnimatePopupMenu(SPopupMenu &PopupMenu, bool Open, bool Initialize = false);
+	float PopupMenuAnimationValue(const SPopupMenu &PopupMenu) const;
 	std::vector<std::weak_ptr<SQmUiSelectionCommit>> m_vPendingSelections;
 	void RegisterSelectionCommit(std::shared_ptr<SQmUiSelectionCommit> &pCommit);
 	CQmPopupSourceClock m_PopupSourceClock;

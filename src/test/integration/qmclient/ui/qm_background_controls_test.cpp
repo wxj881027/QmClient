@@ -1363,6 +1363,7 @@ TEST_F(QmBackgroundControlsIntegration, NestedParentTransitionsMultiplyEachLayer
 
 TEST_F(QmBackgroundControlsIntegration, AnimatedPopupAppliesTransitionToItsControlsAndRestoresOutside)
 {
+	g_Config.m_QmUiMotionLevel = 2;
 	SPopupMenuId Id;
 	struct SProbe
 	{

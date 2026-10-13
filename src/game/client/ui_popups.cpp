@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmUi/ColorPickerSlider.h"
+#include "QmUi/QmAnimResolve.h"
 #include "QmUi/QmDropdown.h"
 #include "QmUi/QmPopupPointer.h"
 #include "QmUi/QmPopupSource.h"
@@ -31,6 +32,94 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+	uint64_t PopupMotionKey(const CUi *pUi, const SPopupMenuId *pId)
+	{
+		return BuildUiAnimNodeKey(str_quickhash("ui_popup_visibility") ^ reinterpret_cast<uint64_t>(pUi), reinterpret_cast<uint64_t>(pId));
+	}
+
+	bool PopupAlignedToAnchor(const CUIRect &Rect, const SPopupMenuProperties &Props)
+	{
+		return Props.m_HasAnchorSurface && Props.m_AnchorSurface.w > 0.0f && Props.m_AnchorSurface.h > 0.0f &&
+		       std::fabs(Props.m_AnchorSurface.x - Rect.x) < 1.5f && std::fabs(Props.m_AnchorSurface.w - Rect.w) < 1.5f;
+	}
+
+	CUIRect PopupMotionRect(CUIRect Rect, const SPopupMenuProperties &Props, float Amount)
+	{
+		if(PopupAlignedToAnchor(Rect, Props))
+		{
+			const float ScaleY = 0.88f + 0.12f * Amount;
+			if(Rect.y < Props.m_AnchorSurface.y)
+				Rect.y += Rect.h * (1.0f - ScaleY);
+			Rect.h *= ScaleY;
+		}
+		else if(Props.m_CenterInViewport)
+		{
+			// 模态面板只移动，不缩放内容，避免临时滚动条和控件重排。
+			Rect.y += 8.0f * (1.0f - Amount);
+		}
+		else
+		{
+			const float Scale = 0.92f + 0.08f * Amount;
+			Rect.x += Rect.w * (1.0f - Scale) * 0.5f;
+			Rect.y += Rect.h * (1.0f - Scale) * 0.5f;
+			Rect.w *= Scale;
+			Rect.h *= Scale;
+		}
+		return Rect;
+	}
+}
+
+void CUi::AdvancePopupAnimations()
+{
+	// 客户端由统一 runtime 推进；独立 UI/编辑器沿原 LocalTime 入口驱动同一后端。
+	if(m_pQmAnimationRuntime != nullptr || Client() == nullptr)
+		return;
+	const float Now = Client()->LocalTime();
+	if(!RenderOnly() && m_PopupAnimationTime >= 0.0f)
+		m_PopupAnimationRuntime.Advance(std::max(0.0f, Now - m_PopupAnimationTime));
+	SUiAnimCompleteEvent Completed;
+	while(m_PopupAnimationRuntime.PollCompletedEvent(Completed))
+	{
+	}
+	// 覆盖阶段只更新时间基线，恢复时不补播整段后台时长。
+	m_PopupAnimationTime = Now;
+}
+
+bool CUi::PopupMenuAnimationEnabled(const SPopupMenuProperties &Props) const
+{
+	// 无共享 runtime 和客户端时钟时即时显示，避免透明弹层永久占用输入。
+	return Props.m_Animate && g_Config.m_QmUiMotionLevel > 0 && (m_pQmAnimationRuntime != nullptr || Client() != nullptr);
+}
+
+void CUi::AnimatePopupMenu(SPopupMenu &PopupMenu, bool Open, bool Initialize)
+{
+	auto &Animation = m_pQmAnimationRuntime != nullptr ? *m_pQmAnimationRuntime : m_PopupAnimationRuntime;
+	const uint64_t Key = PopupMotionKey(this, PopupMenu.m_pId);
+	const float Target = Open ? 1.0f : 0.0f;
+	if(!PopupMenuAnimationEnabled(PopupMenu.m_Props))
+		Animation.SetValue(Key, EUiAnimProperty::ALPHA, Target);
+	else
+	{
+		if(Initialize)
+			Animation.SetValue(Key, EUiAnimProperty::ALPHA, 0.0f);
+		// 反向目标复用当前值与速度，不重设入场起点。
+		ResolveUiAnimValue(Animation, Key, EUiAnimProperty::ALPHA, Target,
+			Open ? SPopupMenu::POPUP_OPEN_DURATION : SPopupMenu::POPUP_CLOSE_DURATION,
+			Open ? EEasing::EASE_OUT : EEasing::EASE_IN_OUT_CUBIC);
+	}
+	PopupMenu.m_RenderRect = PopupMotionRect(PopupMenu.m_Rect, PopupMenu.m_Props, PopupMenuAnimationValue(PopupMenu));
+}
+
+float CUi::PopupMenuAnimationValue(const SPopupMenu &PopupMenu) const
+{
+	if(!PopupMenuAnimationEnabled(PopupMenu.m_Props))
+		return PopupMenu.m_Closing ? 0.0f : 1.0f;
+	const auto &Animation = m_pQmAnimationRuntime != nullptr ? *m_pQmAnimationRuntime : m_PopupAnimationRuntime;
+	return std::clamp(Animation.GetValue(PopupMotionKey(this, PopupMenu.m_pId), EUiAnimProperty::ALPHA, PopupMenu.m_Closing ? 0.0f : 1.0f), 0.0f, 1.0f);
+}
+
 SPopupMenuProperties CUi::SecondaryPanelProperties()
 {
 	return ui_widget::SecondaryPanelProperties();
@@ -39,13 +128,14 @@ SPopupMenuProperties CUi::SecondaryPanelProperties()
 const CUIRect *CUi::GetPopupMenuRect(const SPopupMenuId *pId) const
 {
 	const auto PopupMenuIt = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing && PopupMenu.m_pId == pId; });
-	return PopupMenuIt == m_vPopupMenus.end() ? nullptr : &PopupMenuIt->m_Rect;
+	return PopupMenuIt == m_vPopupMenus.end() ? nullptr : &PopupMenuIt->m_RenderRect;
 }
 
 void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, float Height, void *pContext, FPopupMenuFunction pfnFunc, const SPopupMenuProperties &Props)
 {
 	if(RenderOnly())
 		return;
+	AdvancePopupAnimations();
 	const auto CaptureFocus = [this]() {
 		SPopupFocus Focus = m_KeyboardFocus;
 		if(CLineInput *pInput = CLineInput::GetActiveInput())
@@ -106,7 +196,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 		ExistingPopupMenu->m_Rect.h = Height;
 		ExistingPopupMenu->m_pContext = pContext;
 		ExistingPopupMenu->m_pfnFunc = pfnFunc;
-		// 出场动画期间被重新打开：取消关闭状态并重放入场动画。
+		// 出场动画期间被重新打开：恢复逻辑状态，沿当前显隐轨道反向。
 		if(ExistingPopupMenu->m_Closing)
 		{
 			SPopupFocus Focus = CaptureFocus();
@@ -116,10 +206,10 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 			ExistingPopupMenu->m_ReturnFocus = ResolvedProps.m_ReturnFocus ? Focus : SPopupFocus{};
 			ExistingPopupMenu->m_OpenedFrame = PopupSourceFrame();
 			ExistingPopupMenu->m_Closing = false;
-			ExistingPopupMenu->m_OpenStart = ResolvedProps.m_Animate ? Client()->LocalTime() : -1.0f;
 			if(ResolvedProps.m_BlockUnderlyingPointerInput)
 				SuspendFocus();
 		}
+		AnimatePopupMenu(*ExistingPopupMenu, true);
 		return;
 	}
 
@@ -136,7 +226,7 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 	pNewMenu->m_Rect.h = Height;
 	pNewMenu->m_pContext = pContext;
 	pNewMenu->m_pfnFunc = pfnFunc;
-	pNewMenu->m_OpenStart = ResolvedProps.m_Animate ? Client()->LocalTime() : -1.0f;
+	AnimatePopupMenu(*pNewMenu, true, true);
 	if(ResolvedProps.m_BlockUnderlyingPointerInput)
 	{
 		SuspendFocus();
@@ -146,6 +236,18 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 
 void CUi::RenderPopupMenus()
 {
+	AdvancePopupAnimations();
+	if(!RenderOnly())
+	{
+		for(auto &PopupMenu : m_vPopupMenus)
+			AnimatePopupMenu(PopupMenu, !PopupMenu.m_Closing);
+	}
+	else
+	{
+		// 背景与测量只读取已提交的轨道，不借此补开、重定向或推进动画。
+		for(auto &PopupMenu : m_vPopupMenus)
+			PopupMenu.m_RenderRect = PopupMotionRect(PopupMenu.m_Rect, PopupMenu.m_Props, PopupMenuAnimationValue(PopupMenu));
+	}
 	PruneInteractionSources(false);
 	// 公共入口自行接入模糊链，聊天和编辑器无需逐个补接线。
 	CUiScopedGaussianBlur PopupBlurScope(this);
@@ -155,41 +257,18 @@ void CUi::RenderPopupMenus()
 	if(!m_vPopupMenus.empty() && g_Config.m_QmGaussianBlur != 0 && GaussianBlurScopeActive())
 		m_GaussianBlurPrepared = false;
 	m_RenderingPopupMenus = true;
-	const float Now = Client()->LocalTime();
 	for(size_t i = 0; i < m_vPopupMenus.size(); ++i)
 	{
 		const SPopupMenu &PopupMenu = m_vPopupMenus[i];
 		const SPopupMenuId *pId = PopupMenu.m_pId;
 
-		// 出场动画中：逻辑已关闭，不参与任何输入判定与回调，只画收缩渐隐，
+		// 出场动画中：逻辑已关闭，不参与任何输入判定与回调，只画外框渐隐，
 		// 动画结束后由本循环移除（不触发关闭回调，逻辑关闭时已触发过）。
 		if(PopupMenu.m_Closing)
 		{
-			const float Progress = std::clamp((Now - PopupMenu.m_CloseStart) / SPopupMenu::POPUP_CLOSE_DURATION, 0.0f, 1.0f);
-			CUIRect ShrinkRect = PopupMenu.m_Rect;
-			// 平滑出场缓动：三阶 smoothstep 配合平滑透明度衰减，消除收起瞬间的生硬与突兀感
-			const float Eased = Progress * Progress * (3.0f - 2.0f * Progress);
-			const float Alpha = 1.0f - Progress * Progress;
-			const bool HasAlignedAnchorClosing = PopupMenu.m_Props.m_HasAnchorSurface &&
-							     PopupMenu.m_Props.m_AnchorSurface.w > 0.0f && PopupMenu.m_Props.m_AnchorSurface.h > 0.0f &&
-							     std::fabs(PopupMenu.m_Props.m_AnchorSurface.x - ShrinkRect.x) < 1.5f &&
-							     std::fabs(PopupMenu.m_Props.m_AnchorSurface.w - ShrinkRect.w) < 1.5f;
-			if(HasAlignedAnchorClosing)
-			{
-				const float ScaleY = 1.0f - 0.18f * Eased;
-				const bool Below = ShrinkRect.y >= PopupMenu.m_Props.m_AnchorSurface.y;
-				if(!Below)
-					ShrinkRect.y += ShrinkRect.h * (1.0f - ScaleY);
-				ShrinkRect.h *= ScaleY;
-			}
-			else
-			{
-				const float Scale = 1.0f - 0.10f * Eased;
-				ShrinkRect.x += ShrinkRect.w * (1.0f - Scale) * 0.5f;
-				ShrinkRect.y += ShrinkRect.h * (1.0f - Scale) * 0.5f;
-				ShrinkRect.w *= Scale;
-				ShrinkRect.h *= Scale;
-			}
+			const float Alpha = PopupMenuAnimationValue(PopupMenu);
+			CUIRect ShrinkRect = PopupMenu.m_RenderRect;
+			const bool HasAlignedAnchorClosing = PopupAlignedToAnchor(PopupMenu.m_Rect, PopupMenu.m_Props);
 			if(PopupMenu.m_Props.m_CenterInViewport && PopupMenu.m_Props.m_BlockUnderlyingPointerInput)
 			{
 				// 遮罩只叠色，避免模糊重画页面之前缓存的菜单背景。
@@ -243,7 +322,8 @@ void CUi::RenderPopupMenus()
 					BorderColor.WithAlpha(BorderColor.a * Alpha),
 					CornerRadius, SPopupMenu::POPUP_BORDER, PopupMenu.m_Props.m_Corners);
 			}
-			if(Progress >= 1.0f)
+			const auto &Animation = m_pQmAnimationRuntime != nullptr ? *m_pQmAnimationRuntime : m_PopupAnimationRuntime;
+			if(!RenderOnly() && Alpha <= 0.0f && !Animation.HasActiveAnimation(PopupMotionKey(this, pId), EUiAnimProperty::ALPHA))
 			{
 				m_vPopupMenus.erase(m_vPopupMenus.begin() + i);
 				--i;
@@ -254,16 +334,16 @@ void CUi::RenderPopupMenus()
 		// 来源弹窗通常在同一渲染循环中刷新下拉层，但嵌套弹窗的父层回调
 		// 可能在下一次 UI 更新才运行。允许一个 UI 帧差，避免下拉刚打开就
 		// 被来源新鲜度检查收掉；CUi::Update 的兜底清扫仍会关闭真正失联的弹窗。
-		if(PopupMenu.m_Props.m_RequireSourceRefresh && !QmDropdownSourceAlive(PopupSourceFrame(), PopupMenu.m_Props.m_SourceFrame, true))
+		if(!RenderOnly() && PopupMenu.m_Props.m_RequireSourceRefresh && !QmDropdownSourceAlive(PopupSourceFrame(), PopupMenu.m_Props.m_SourceFrame, true))
 		{
 			ClosePopupMenu(pId, false, false);
 			--i;
 			continue;
 		}
-		const bool Inside = MouseInside(&PopupMenu.m_Rect) && (!PopupMenu.m_Props.m_ClipToViewport || MouseInside(&PopupMenu.m_Props.m_Viewport));
+		const bool Inside = MouseInside(&PopupMenu.m_RenderRect) && (!PopupMenu.m_Props.m_ClipToViewport || MouseInside(&PopupMenu.m_Props.m_Viewport));
 		// 活跃弹窗 = 栈顶未处于出场动画的弹窗（closing 弹窗不接管输入，
 		// 下层的活跃弹窗/页面交互在短动画期间照常）。
-		bool Active = true;
+		bool Active = !RenderOnly();
 		for(size_t j = i + 1; j < m_vPopupMenus.size(); ++j)
 		{
 			if(!m_vPopupMenus[j].m_Closing)
@@ -286,7 +366,7 @@ void CUi::RenderPopupMenus()
 		// 先保存关闭意图，绘制完成后释放输入深度，再运行关闭回调。
 		// 作用域兜底保证提前退出也不会泄漏深度，防止底层页面抢占弹窗拖拽。
 		const bool InsideGroup = std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [this](const SPopupMenu &Menu) {
-			return !Menu.m_Closing && MouseInside(&Menu.m_Rect) && (!Menu.m_Props.m_ClipToViewport || MouseInside(&Menu.m_Props.m_Viewport));
+			return !Menu.m_Closing && MouseInside(&Menu.m_RenderRect) && (!Menu.m_Props.m_ClipToViewport || MouseInside(&Menu.m_Props.m_Viewport));
 		});
 		const bool OpeningFrame = PopupMenu.m_Props.m_IgnoreOpeningClick && PopupMenu.m_OpenedFrame == PopupSourceFrame();
 		const SQmPopupPointerInput PointerInput{Active, PopupMenu.m_Props.m_BlockUnderlyingPointerInput, Inside, !OpeningFrame && MouseButtonClicked(0) != 0, !OpeningFrame && MouseButton(0) != 0, CheckActiveItem(pId), HotItem() == pId, InsideGroup};
@@ -308,52 +388,12 @@ void CUi::RenderPopupMenus()
 			if(ClipToViewport)
 				ClipEnable(&PopupMenu.m_Props.m_Viewport);
 
-			CUIRect PopupRect = PopupMenu.m_Rect;
+			CUIRect PopupRect = PopupMenu.m_RenderRect;
 			const SPopupMenuProperties &PopupProps = PopupMenu.m_Props;
 			// 对齐判定留浮点余量：几何端 AlignToAnchor 已保证严格相等，
 			// 余量只吸收布局趟/渲染趟的舍入误差。
-			const bool HasAlignedAnchor = PopupProps.m_HasAnchorSurface &&
-						      PopupProps.m_AnchorSurface.w > 0.0f && PopupProps.m_AnchorSurface.h > 0.0f &&
-						      std::fabs(PopupProps.m_AnchorSurface.x - PopupRect.x) < 1.5f &&
-						      std::fabs(PopupProps.m_AnchorSurface.w - PopupRect.w) < 1.5f;
-
-			// 入场缩放动画：矩形平滑放大到 100%（内容随矩形重排），
-			// 背景/边框同步渐显；非动画弹窗乘子恒 1，路径零变化。
-			float AnimAlphaMul = 1.0f;
-			if(PopupProps.m_Animate && PopupMenu.m_OpenStart >= 0.0f)
-			{
-				const float Progress = std::clamp((Now - PopupMenu.m_OpenStart) / SPopupMenu::POPUP_OPEN_DURATION, 0.0f, 1.0f);
-				const float Eased = 1.0f - (1.0f - Progress) * (1.0f - Progress);
-				if(HasAlignedAnchor)
-				{
-					const float ScaleY = 0.88f + 0.12f * Eased;
-					const bool Below = PopupRect.y >= PopupProps.m_AnchorSurface.y;
-					if(!Below)
-					{
-						const float OrigH = PopupRect.h;
-						PopupRect.h *= ScaleY;
-						PopupRect.y += (OrigH - PopupRect.h);
-					}
-					else
-					{
-						PopupRect.h *= ScaleY;
-					}
-				}
-				else if(PopupProps.m_CenterInViewport)
-				{
-					// 模态面板保持内容尺寸，避免动画重排触发临时滚动条与命中漂移。
-					PopupRect.y += 8.0f * (1.0f - Eased);
-				}
-				else
-				{
-					const float Scale = 0.92f + 0.08f * Eased;
-					PopupRect.x += PopupRect.w * (1.0f - Scale) * 0.5f;
-					PopupRect.y += PopupRect.h * (1.0f - Scale) * 0.5f;
-					PopupRect.w *= Scale;
-					PopupRect.h *= Scale;
-				}
-				AnimAlphaMul = Eased;
-			}
+			const bool HasAlignedAnchor = PopupAlignedToAnchor(PopupMenu.m_Rect, PopupProps);
+			const float AnimAlphaMul = PopupMenuAnimationValue(PopupMenu);
 			if(PopupProps.m_CenterInViewport && PopupProps.m_BlockUnderlyingPointerInput)
 			{
 				// 遮罩只叠色，避免模糊重画页面之前缓存的菜单背景。
@@ -453,6 +493,9 @@ void CUi::RenderPopupMenus()
 
 void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool RestoreFocus)
 {
+	if(RenderOnly())
+		return;
+	AdvancePopupAnimations();
 	auto PopupMenuToClose = std::find_if(m_vPopupMenus.begin(), m_vPopupMenus.end(), [pId](const SPopupMenu &PopupMenu) { return PopupMenu.m_pId == pId; });
 	if(PopupMenuToClose != m_vPopupMenus.end())
 	{
@@ -472,14 +515,17 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 			   return Popup.m_pId == m_pTrackedTextPopupId;
 		   }))
 			ReleaseTrackedTextInput();
-		// 带出场动画的弹窗（仅二级界面大弹窗启用）：后代立即移除，自身标记
-		// closing 播放收缩渐隐后由渲染循环移除；逻辑关闭（输入解除、关闭回调）
+		// 带出场动画的弹窗：后代立即移除，自身标记
+		// closing 接续外框渐隐后由渲染循环移除；逻辑关闭（输入解除、关闭回调）
 		// 在标记瞬间完成，与立即关闭语义一致。
-		if(!IncludeDescendants && PopupMenuToClose->m_Props.m_Animate)
+		auto &Animation = m_pQmAnimationRuntime != nullptr ? *m_pQmAnimationRuntime : m_PopupAnimationRuntime;
+		if(!IncludeDescendants && PopupMenuAnimationEnabled(PopupMenuToClose->m_Props))
 		{
+			for(auto It = PopupMenuToClose + 1; It != m_vPopupMenus.end(); ++It)
+				Animation.SetValue(PopupMotionKey(this, It->m_pId), EUiAnimProperty::ALPHA, 0.0f);
 			m_vPopupMenus.erase(PopupMenuToClose + 1, m_vPopupMenus.end());
 			PopupMenuToClose->m_Closing = true;
-			PopupMenuToClose->m_CloseStart = Client()->LocalTime();
+			AnimatePopupMenu(*PopupMenuToClose, false);
 			SetActiveItem(nullptr);
 			if(RestoreFocus)
 				QueuePopupFocusRestore(ReturnFocus);
@@ -490,7 +536,11 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 			return;
 		}
 		if(IncludeDescendants)
+		{
+			for(auto It = PopupMenuToClose; It != m_vPopupMenus.end(); ++It)
+				Animation.SetValue(PopupMotionKey(this, It->m_pId), EUiAnimProperty::ALPHA, 0.0f);
 			m_vPopupMenus.erase(PopupMenuToClose, m_vPopupMenus.end());
+		}
 		else
 		{
 			// 关闭弹窗时，栈存其上方的子弹窗必须一并结束：子弹窗的来源渲染
@@ -498,11 +548,14 @@ void CUi::ClosePopupMenu(const SPopupMenuId *pId, bool IncludeDescendants, bool 
 			// 带出场动画的子弹窗转为收缩渐隐，由渲染循环自然移除。
 			for(auto It = PopupMenuToClose + 1; It != m_vPopupMenus.end(); ++It)
 			{
-				if(It->m_Closing || !It->m_Props.m_Animate)
+				if(It->m_Closing || !PopupMenuAnimationEnabled(It->m_Props))
 					continue;
 				It->m_Closing = true;
-				It->m_CloseStart = Client()->LocalTime();
+				AnimatePopupMenu(*It, false);
 			}
+			for(auto It = PopupMenuToClose; It != m_vPopupMenus.end(); ++It)
+				if(!It->m_Closing)
+					Animation.SetValue(PopupMotionKey(this, It->m_pId), EUiAnimProperty::ALPHA, 0.0f);
 			m_vPopupMenus.erase(
 				std::remove_if(PopupMenuToClose, m_vPopupMenus.end(), [](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing; }),
 				m_vPopupMenus.end());
@@ -614,7 +667,7 @@ bool CUi::CloseTopPopupMenu()
 
 void CUi::ClosePopupMenus(bool RestoreFocus)
 {
-	if(m_vPopupMenus.empty())
+	if(RenderOnly() || m_vPopupMenus.empty())
 		return;
 
 	if(m_pTrackedTextPopupId != nullptr)
@@ -623,6 +676,8 @@ void CUi::ClosePopupMenus(bool RestoreFocus)
 	std::vector<std::function<void()>> vClosedCallbacks;
 	for(const auto &Popup : m_vPopupMenus)
 	{
+		auto &Animation = m_pQmAnimationRuntime != nullptr ? *m_pQmAnimationRuntime : m_PopupAnimationRuntime;
+		Animation.SetValue(PopupMotionKey(this, Popup.m_pId), EUiAnimProperty::ALPHA, 0.0f);
 		if(!Popup.m_Closing && Popup.m_Props.m_OnClosed)
 			vClosedCallbacks.push_back(Popup.m_Props.m_OnClosed);
 	}
@@ -656,7 +711,7 @@ bool CUi::IsPopupVisible(const SPopupMenuId *pId) const
 
 bool CUi::IsPopupHovered() const
 {
-	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [this](const SPopupMenu PopupMenu) { return !PopupMenu.m_Closing && MouseHovered(&PopupMenu.m_Rect); });
+	return std::any_of(m_vPopupMenus.begin(), m_vPopupMenus.end(), [this](const SPopupMenu &PopupMenu) { return !PopupMenu.m_Closing && MouseHovered(&PopupMenu.m_RenderRect); });
 }
 
 void CUi::SetPopupMenuClosedCallback(FPopupMenuClosedCallback pfnCallback)
@@ -983,10 +1038,7 @@ void CUi::ShowPopupSelection(float X, float Y, SSelectionPopupContext *pContext)
 	// 阻断底层指针输入：点击弹窗（含触发按钮）以外区域时立即关闭弹窗。
 	// 几何判定不可见的路径会在下方直接 ClosePopupMenu，阻断标志无副作用。
 	pContext->m_Props.m_BlockUnderlyingPointerInput = true;
-	if(g_Config.m_QmUiMotionLevel > 0)
-	{
-		pContext->m_Props.m_Animate = true;
-	}
+	pContext->m_Props.m_Animate = g_Config.m_QmUiMotionLevel > 0;
 	float PopupWidth = pContext->m_Width;
 	float PopupHeightResolved = PopupHeight;
 	if(pContext->m_AlignmentHeight >= 0.0f)

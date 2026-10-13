@@ -381,8 +381,11 @@ void CScrollRegion::DoSlider()
 	const float ScrollMax = Metrics.MaxOffset();
 	if(m_Params.m_HideScrollbar)
 	{
-		m_ScrollState.Advance(0.0f, Metrics, Config);
-		m_ScrollState.EndThumbDrag();
+		if(!Ui()->RenderOnly())
+		{
+			m_ScrollState.Advance(0.0f, Metrics, Config);
+			m_ScrollState.EndThumbDrag();
+		}
 		return;
 	}
 

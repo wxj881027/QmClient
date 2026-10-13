@@ -136,6 +136,8 @@ public:
 	void UnregisterCustomEasing(uint32_t EasingId);
 	float ResolveTargetValue(uint64_t NodeKey, EUiAnimProperty Property, float Target, const SUiAnimTransition &Transition);
 	ColorRGBA ResolveColorFromValue(uint64_t NodeKey, const ColorRGBA &Current, const ColorRGBA &Target);
+	// 后台绘制读取已保存的颜色两端，不刷新缓存、不创建轨道。
+	bool ReadColorTransition(uint64_t NodeKey, ColorRGBA &From, ColorRGBA &Target) const;
 	float ResolveColorMixValue(uint64_t NodeKey, const ColorRGBA &Target, float DurationSec, EEasing Easing);
 
 	bool PollCompletedEvent(SUiAnimCompleteEvent &EventOut);

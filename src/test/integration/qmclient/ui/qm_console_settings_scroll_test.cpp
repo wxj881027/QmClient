@@ -60,11 +60,12 @@ namespace
 			Region.End();
 		}
 
-		vec2 DrawResizingRegion(float ContentExtent, CUIRect View, bool Horizontal = false, bool Premeasure = true)
+		vec2 DrawResizingRegion(float ContentExtent, CUIRect View, bool Horizontal = false, bool Premeasure = true, bool HideScrollbar = false)
 		{
 			m_Client.AdvanceFrame();
 			CScrollRegionParams Params;
 			Params.m_ScrollHorizontal = Horizontal;
+			Params.m_HideScrollbar = HideScrollbar;
 			if(Premeasure)
 				m_ParentScroll.SetContentHeightForNextFrame(ContentExtent);
 			vec2 Offset;
@@ -346,19 +347,34 @@ TEST_F(QmConsoleSettingsScrollIntegration, BackgroundContentMeasuredAtEndClampsA
 	}
 }
 
-TEST_F(QmConsoleSettingsScrollIntegration, BackgroundValidOffsetPreservesPendingRevealUntilForeground)
+TEST_F(QmConsoleSettingsScrollIntegration, ReadOnlyValidOffsetPreservesPendingRevealUntilForeground)
 {
 	const CUIRect View{40, 40, 240, 240};
-	DrawResizingRegion(900.0f, View);
-	m_ParentScroll.SetScrollOffsetY(-200.0f);
-	m_ParentScroll.ScrollRelativeDirect(50.0f);
-	m_Ui.BeginBackgroundRender();
-	const vec2 Offset = DrawResizingRegion(900.0f, View);
-	m_Ui.EndBackgroundRender();
-	EXPECT_FLOAT_EQ(Offset.y, -200.0f);
-	EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 200.0f);
-	DrawResizingRegion(900.0f, View);
-	EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 250.0f);
+	for(bool HideScrollbar : {false, true})
+	{
+		for(bool MeasurementOnly : {false, true})
+		{
+			SCOPED_TRACE(HideScrollbar);
+			SCOPED_TRACE(MeasurementOnly);
+			m_ParentScroll.Reset();
+			DrawResizingRegion(900.0f, View, false, true, HideScrollbar);
+			m_ParentScroll.SetScrollOffsetY(-200.0f);
+			m_ParentScroll.ScrollRelativeDirect(50.0f);
+			if(MeasurementOnly)
+				m_Ui.BeginRenderOnly();
+			else
+				m_Ui.BeginBackgroundRender();
+			const vec2 Offset = DrawResizingRegion(900.0f, View, false, true, HideScrollbar);
+			if(MeasurementOnly)
+				m_Ui.EndRenderOnly();
+			else
+				m_Ui.EndBackgroundRender();
+			EXPECT_FLOAT_EQ(Offset.y, -200.0f);
+			EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 200.0f);
+			DrawResizingRegion(900.0f, View, false, true, HideScrollbar);
+			EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 250.0f);
+		}
+	}
 }
 
 TEST_F(QmConsoleSettingsScrollIntegration, BackgroundValidOffsetPreservesPausedScrollAnimation)
@@ -398,4 +414,49 @@ TEST_F(QmConsoleSettingsScrollIntegration, NestedMeasurementDoesNotClampBackgrou
 	m_Ui.EndBackgroundRender();
 	EXPECT_FLOAT_EQ(Offset.y, -160.0f);
 	EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 160.0f);
+}
+
+TEST_F(QmConsoleSettingsScrollIntegration, BackgroundModeChangeSettlesOnlyAfterForegroundReturns)
+{
+	const CUIRect View{40, 40, 240, 240};
+	g_Config.m_UiSmoothScrollTime = 200;
+	SQmScrollMetrics Metrics;
+	Metrics.m_ViewportSize = View.h;
+	Metrics.m_ContentSize = 900.0f;
+	const SQmScrollConfig Config = QmNativeWheelScrollConfig(1.0f, 0.2f);
+	for(bool HideScrollbar : {false, true})
+	{
+		SCOPED_TRACE(HideScrollbar);
+		g_Config.m_QmUiScrollMode = 1;
+		m_ParentScroll.Reset();
+		DrawResizingRegion(900.0f, View, false, true, HideScrollbar);
+		m_ParentScroll.SetScrollOffsetY(-100.0f);
+		m_ParentScroll.State().ScrollTo(400.0f, Metrics, Config);
+		DrawResizingRegion(900.0f, View, false, true, HideScrollbar);
+		ASSERT_TRUE(m_ParentScroll.Animating());
+		const float OffsetBeforeCover = m_ParentScroll.State().Offset();
+		const float VelocityBeforeCover = m_ParentScroll.State().Velocity();
+		ASSERT_GT(OffsetBeforeCover, 100.0f);
+		ASSERT_GT(VelocityBeforeCover, 0.0f);
+		g_Config.m_QmUiScrollMode = 0;
+		{
+			CUiScopedBackgroundRender Background(&m_Ui);
+			const vec2 Offset = DrawResizingRegion(900.0f, View, false, true, HideScrollbar);
+			EXPECT_FLOAT_EQ(Offset.y, -OffsetBeforeCover);
+			EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), OffsetBeforeCover);
+			EXPECT_FLOAT_EQ(m_ParentScroll.State().Velocity(), VelocityBeforeCover);
+			EXPECT_TRUE(m_ParentScroll.Animating());
+		}
+		DrawResizingRegion(900.0f, View, false, true, HideScrollbar);
+		EXPECT_FLOAT_EQ(m_ParentScroll.State().Offset(), 400.0f);
+		EXPECT_FLOAT_EQ(m_ParentScroll.State().Velocity(), 0.0f);
+		EXPECT_FALSE(m_ParentScroll.Animating());
+
+		g_Config.m_QmUiScrollMode = 1;
+		m_ParentScroll.ScrollRelativeDirect(50.0f);
+		DrawResizingRegion(900.0f, View, false, true, HideScrollbar);
+		EXPECT_GT(m_ParentScroll.State().Offset(), 400.0f);
+		EXPECT_LT(m_ParentScroll.State().Offset(), 450.0f);
+		EXPECT_TRUE(m_ParentScroll.Animating());
+	}
 }

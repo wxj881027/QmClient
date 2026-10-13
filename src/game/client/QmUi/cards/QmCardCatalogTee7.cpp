@@ -20,6 +20,7 @@
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiMotion.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/animstate.h>
@@ -167,10 +168,8 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 		}
 		else if(m_Dummy != s_PrevTee7Dummy || m_CustomSkinMenu != s_PrevTee7Custom)
 		{
-			if(m_CustomSkinMenu != s_PrevTee7Custom)
-				s_Tee7TransitionDirection = m_CustomSkinMenu ? 1.0f : -1.0f;
-			else
-				s_Tee7TransitionDirection = m_Dummy ? 1.0f : -1.0f;
+			const float RequestedDirection = m_CustomSkinMenu != s_PrevTee7Custom ? (m_CustomSkinMenu ? 1.0f : -1.0f) : (m_Dummy ? 1.0f : -1.0f);
+			s_Tee7TransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), Tee7SwitchNode, s_Tee7TransitionDirection, RequestedDirection);
 			TriggerUiSwitchAnimation(Tee7SwitchNode, 0.18f);
 			s_PrevTee7Dummy = m_Dummy;
 			s_PrevTee7Custom = m_CustomSkinMenu;
@@ -414,7 +413,7 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView, const SSettingsContentMe
 		}
 		else if(m_TeePartSelected != s_PrevSkinPart)
 		{
-			s_SkinPartTransitionDirection = m_TeePartSelected > s_PrevSkinPart ? 1.0f : -1.0f;
+			s_SkinPartTransitionDirection = ResolveUiSwitchDirection(GameClient()->UiRuntimeV2()->AnimRuntime(), SkinPartSwitchNode, s_SkinPartTransitionDirection, m_TeePartSelected > s_PrevSkinPart ? 1.0f : -1.0f);
 			TriggerUiSwitchAnimation(SkinPartSwitchNode, 0.18f);
 			s_PrevSkinPart = m_TeePartSelected;
 		}

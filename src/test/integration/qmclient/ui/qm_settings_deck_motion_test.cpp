@@ -4,6 +4,7 @@
 #include <game/client/QmUi/QmAnim.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/UiNavigation.h>
+#include <game/client/ui_scrollregion.h>
 
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
@@ -28,6 +29,9 @@ namespace
 		float m_ReferenceContentY = 0.0f;
 		const char *m_pRenderedCardId = nullptr;
 		CUIRect m_ContentRect{};
+		CUIRect m_CardRect{};
+		bool m_CardRendered = false;
+		float m_ExtraContentHeight = 40.0f;
 		CLineInputBuffered<64> m_Text;
 		FSettingsCardRender m_ContentInput;
 		const std::array<CUIRect, 2> m_aTabs{{{20, 20, 100, 24}, {124, 20, 100, 24}}};
@@ -60,8 +64,9 @@ namespace
 			m_Ui.Update();
 		}
 
-		SSettingsCardDeckResult Draw(CSettingsCardDeck &Deck, CUiV2AnimationRuntime &Animation, qm_card_order::CModel &Model, const bool PageB, float &ContentY, const bool ExtraCard = false)
+		SSettingsCardDeckResult Draw(CSettingsCardDeck &Deck, CUiV2AnimationRuntime &Animation, qm_card_order::CModel &Model, const bool PageB, float &ContentY, const bool ExtraCard = false, CScrollRegion *pScrollRegion = nullptr)
 		{
+			m_CardRendered = false;
 			m_Ui.SetQmAnimationRuntime(&Animation);
 			IUiContext Ctx;
 			Ctx.m_pUi = &m_Ui;
@@ -78,6 +83,10 @@ namespace
 				SSettingsCardDefinition Card;
 				Card.m_Spec = {PageB ? "motion:b" : "motion:a", "Card", nullptr};
 				Card.m_Measure = [](float) { return 40.0f; };
+				Card.m_HeaderAction = [this](const SSettingsCardFrame &Frame, bool) {
+					m_CardRect = Frame.m_Rect;
+					m_CardRendered = true;
+				};
 				Card.m_Render = [this, PageB, pContentY](const CUIRect &Content) {
 					*pContentY = Content.y;
 					m_pRenderedCardId = PageB ? "motion:b" : "motion:a";
@@ -90,11 +99,11 @@ namespace
 				{
 					SSettingsCardDefinition Extra;
 					Extra.m_Spec = {"motion:extra", "Extra", nullptr};
-					Extra.m_Measure = [](float) { return 40.0f; };
+					Extra.m_Measure = [this](float) { return m_ExtraContentHeight; };
 					vCards.push_back(std::move(Extra));
 				}
 			};
-			return Deck.RenderCached(Ctx, m_Layout, PageB ? "page-b" : "page-a", ExtraCard ? 2 : 1, Build, Model, nullptr, Input,
+			return Deck.RenderCached(Ctx, m_Layout, PageB ? "page-b" : "page-a", ExtraCard ? 2 : 1, Build, Model, pScrollRegion, Input,
 				ResolveCardMotionSpec(g_Config.m_QmUiMotionLevel, true, true, true, true), {});
 		}
 
@@ -110,6 +119,10 @@ namespace
 			m_ReferenceDeck.BeginDisplayCycle(1, true);
 			DrawPair();
 		}
+	};
+
+	class QmSettingsDeckScrollMotion : public QmSettingsDeckMotion, public ::testing::WithParamInterface<int>
+	{
 	};
 }
 
@@ -312,3 +325,42 @@ TEST_F(QmSettingsDeckMotion, ControlHitAreaFollowsTheVisibleEntryOffset)
 	EXPECT_EQ(Clicks, 1);
 	m_ContentInput = {};
 }
+
+TEST_P(QmSettingsDeckScrollMotion, ReturningToScrolledPageDrawsEnteringCardWithoutChangingScrollRange)
+{
+	CScrollRegion Scroll;
+	m_ExtraContentHeight = 700.0f;
+	g_Config.m_QmUiMotionLevel = 0;
+	m_Deck.BeginDisplayCycle(1, true);
+	Draw(m_Deck, m_Animation, m_Model, false, m_ContentY, true, &Scroll);
+	ASSERT_TRUE(m_CardRendered);
+	ASSERT_TRUE(Scroll.ContentOverflows());
+	const CUIRect UnscrolledCard = m_CardRect;
+	const float MaxScroll = Scroll.MaxScroll();
+	const float ScrollDistance = UnscrolledCard.y + UnscrolledCard.h - Scroll.ClipRect()->y + 1.0f;
+	ASSERT_LT(ScrollDistance, MaxScroll);
+	Scroll.SetScrollOffsetY(-ScrollDistance);
+	Draw(m_Deck, m_Animation, m_Model, false, m_ContentY, true, &Scroll);
+	ASSERT_FALSE(m_CardRendered);
+
+	// 切到另一页，再回到各自保留滚动位置的原容器。
+	m_Deck.BeginDisplayCycle(2, true);
+	Draw(m_Deck, m_Animation, m_Model, true, m_ContentY);
+	g_Config.m_QmUiMotionLevel = GetParam();
+	m_Deck.BeginDisplayCycle(3, true);
+	Draw(m_Deck, m_Animation, m_Model, false, m_ContentY, true, &Scroll);
+	ASSERT_TRUE(m_CardRendered);
+	EXPECT_FALSE(Scroll.RectClipped(m_CardRect));
+	const float EntryDistance = ResolveCardMotionSpec(GetParam(), true, true, true, true).m_EntryDistance;
+	EXPECT_FLOAT_EQ(m_CardRect.y + m_CardRect.h, Scroll.ClipRect()->y - 1.0f + EntryDistance);
+	EXPECT_FLOAT_EQ(Scroll.State().Offset(), ScrollDistance);
+	EXPECT_FLOAT_EQ(Scroll.MaxScroll(), MaxScroll);
+
+	Frame(1.0f);
+	Draw(m_Deck, m_Animation, m_Model, false, m_ContentY, true, &Scroll);
+	EXPECT_FALSE(m_CardRendered);
+	EXPECT_FLOAT_EQ(Scroll.State().Offset(), ScrollDistance);
+	EXPECT_FLOAT_EQ(Scroll.MaxScroll(), MaxScroll);
+}
+
+INSTANTIATE_TEST_SUITE_P(MotionLevels, QmSettingsDeckScrollMotion, ::testing::Values(1, 2));

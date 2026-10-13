@@ -7,6 +7,26 @@
 #include "UiContext.h"
 #include "UiTokens.h"
 
+#include <engine/shared/config.h>
+#include <game/client/ui.h>
+
+#include <algorithm>
+
+// 页面背景绘制沿用当前进度；测量与关闭动效不提交入场位移。
+inline float ReadUiSwitchAnimationProgress(const IUiContext &Ctx, uint64_t NodeKey)
+{
+	if(Ctx.m_pAnim == nullptr || Ctx.m_pUi == nullptr || Ctx.m_pUi->MeasurementOnly())
+		return 0.0f;
+	if(g_Config.m_QmUiMotionLevel == 0)
+	{
+		// 前台结束旧轨道，重新启用动效时不重播已经归位的页面。
+		if(!Ctx.m_pUi->RenderOnly())
+			Ctx.m_pAnim->SetValue(NodeKey, EUiAnimProperty::POS_X, 0.0f);
+		return 0.0f;
+	}
+	return std::clamp(Ctx.m_pAnim->GetValue(NodeKey, EUiAnimProperty::POS_X, 0.0f), 0.0f, 1.0f);
+}
+
 // 进行中的页面继续沿原侧归位，避免反向点击把可见内容瞬间翻到另一侧。
 inline float ResolveUiSwitchDirection(const CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, float CurrentDirection, float RequestedDirection)
 {

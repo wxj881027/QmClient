@@ -153,14 +153,12 @@ ColorRGBA ResolveUiAnimValueColor(CUiV2AnimationRuntime &AnimRuntime, uint64_t N
 {
 	if(g_Config.m_QmUiColorInterpolation != 0)
 	{
-		const ColorRGBA Current(
-			AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_R, Target.r),
-			AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_G, Target.g),
-			AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_B, Target.b),
-			AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_A, Target.a));
+		// 后台不会回写 RGBA；换目标时从当前 mix 的可见颜色接续。
+		const ColorRGBA Current = ReadUiAnimValueColor(AnimRuntime, NodeKey, Target);
 		const ColorRGBA From = AnimRuntime.ResolveColorFromValue(NodeKey, Current, Target);
 		const float Mix = AnimRuntime.ResolveColorMixValue(NodeKey, Target, DurationSec, Easing);
-		const ColorRGBA Out = ResolveUiAnimInterpolatedColor(From, Target, Mix);
+		// 关闭动效直接保留配置色，避免前后台分别取目标值与 Oklab 往返值。
+		const ColorRGBA Out = g_Config.m_QmUiMotionLevel == 0 ? Target : ResolveUiAnimInterpolatedColor(From, Target, Mix);
 		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::COLOR_R, Out.r);
 		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::COLOR_G, Out.g);
 		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::COLOR_B, Out.b);
@@ -174,6 +172,24 @@ ColorRGBA ResolveUiAnimValueColor(CUiV2AnimationRuntime &AnimRuntime, uint64_t N
 	Out.b = ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::COLOR_B, Target.b, DurationSec, Easing);
 	Out.a = ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::COLOR_A, Target.a, DurationSec, Easing);
 	return Out;
+}
+
+ColorRGBA ReadUiAnimValueColor(const CUiV2AnimationRuntime &AnimRuntime, const uint64_t NodeKey, const ColorRGBA &Target)
+{
+	if(g_Config.m_QmUiMotionLevel == 0)
+		return Target;
+	if(g_Config.m_QmUiColorInterpolation != 0)
+	{
+		ColorRGBA From;
+		ColorRGBA StoredTarget;
+		if(AnimRuntime.ReadColorTransition(NodeKey, From, StoredTarget))
+			return ResolveUiAnimInterpolatedColor(From, StoredTarget, AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_MIX, 1.0f));
+	}
+	return ColorRGBA(
+		AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_R, Target.r),
+		AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_G, Target.g),
+		AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_B, Target.b),
+		AnimRuntime.GetValue(NodeKey, EUiAnimProperty::COLOR_A, Target.a));
 }
 
 ColorRGBA ResolveUiAnimInterpolatedColor(const ColorRGBA &From, const ColorRGBA &To, float Amount)

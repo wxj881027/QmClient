@@ -55,11 +55,16 @@ namespace ui_widget
 
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
 		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : pUi->QmAnimationRuntime();
-		if(pId != nullptr && pAnim != nullptr && Options.m_Enabled && !pUi->RenderOnly())
+		if(pId != nullptr && pAnim != nullptr && Options.m_Enabled)
 		{
 			const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pId));
-			const SUiAnimTransition &Transition = State.m_Pressed ? ui_token::motion::BTN_PRESS : ui_token::motion::BTN_HOVER;
-			Style.m_Fill = ResolveUiAnimValueColor(*pAnim, NodeKey, Style.m_Fill, Transition.m_DurationSec, Transition.m_Easing);
+			if(pUi->RenderOnly())
+				Style.m_Fill = ReadUiAnimValueColor(*pAnim, NodeKey, Style.m_Fill);
+			else
+			{
+				const SUiAnimTransition &Transition = State.m_Pressed ? ui_token::motion::BTN_PRESS : ui_token::motion::BTN_HOVER;
+				Style.m_Fill = ResolveUiAnimValueColor(*pAnim, NodeKey, Style.m_Fill, Transition.m_DurationSec, Transition.m_Easing);
+			}
 		}
 		const ColorRGBA Fill = pUi->ScaleControlAlpha(Style.m_Fill);
 		DrawRoundedSurface(Ctx, Rect, Fill, pUi->ScaleControlAlpha(Style.m_Border), Options.m_Radius, Options.m_BorderWidth, Options.m_Corners);

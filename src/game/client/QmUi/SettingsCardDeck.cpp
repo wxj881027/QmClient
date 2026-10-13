@@ -735,7 +735,10 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		State.m_ReflowCompleteFeedback = false;
 		Result.m_DropFeedbackConsumed = Result.m_DropFeedbackConsumed || State.m_DropFeedback;
 		const bool Reveal = !m_PendingRevealStableId.empty() && str_comp(pStableId, m_PendingRevealStableId.c_str()) == 0;
-		const bool Visible = pScrollRegion == nullptr || pScrollRegion->AddRect(Card.m_Frame.m_Rect, Reveal);
+		// 滚动范围保持布局尺寸，裁剪则跟随实际入场、重排和拖拽位置。
+		if(pScrollRegion != nullptr)
+			pScrollRegion->AddRect(Card.m_Frame.m_Rect, Reveal);
+		const bool Visible = pScrollRegion == nullptr || !pScrollRegion->RectClipped(ResolveSettingsCardDrawFrame(Card.m_Frame, State.m_DrawOffsetX, State.m_DrawOffsetY).m_Rect);
 		if(Reveal)
 		{
 			Result.m_pRevealedStableId = Model.Entry(Card.m_StateIndex).m_pStableId;

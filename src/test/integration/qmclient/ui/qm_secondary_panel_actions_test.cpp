@@ -417,6 +417,7 @@ TEST_F(QmSecondaryPanelActions, BecomingDisabledMovesFocusToUsableHalf)
 
 TEST_F(QmSecondaryPanelActions, ModalEscapeRestoresSourceButtonOnItsNextRender)
 {
+	g_Config.m_QmUiMotionLevel = 2;
 	Frame({10, 10}, false);
 	m_Ui.SetKeyboardFocus(&m_Right);
 	OpenPanel(true);
@@ -437,6 +438,7 @@ TEST_F(QmSecondaryPanelActions, ModalEscapeRestoresSourceButtonOnItsNextRender)
 
 TEST_F(QmSecondaryPanelActions, ClosingParentClearsChildAndNotifiesEachOwnerOnce)
 {
+	g_Config.m_QmUiMotionLevel = 2;
 	int ParentClosed = 0, ChildClosed = 0;
 	auto Props = ui_widget::SecondaryPanelProperties();
 	Props.m_Animate = true;
@@ -539,6 +541,7 @@ TEST_F(QmSecondaryPanelActions, BackgroundMultilineInputDoesNotDeactivateForegro
 
 TEST_F(QmSecondaryPanelActions, ImmediateReopenBeforeSourceRenderPreservesItsReturnFocus)
 {
+	g_Config.m_QmUiMotionLevel = 2;
 	Frame({10, 10}, false);
 	m_Ui.SetKeyboardFocus(&m_Right);
 	OpenPanel(true);

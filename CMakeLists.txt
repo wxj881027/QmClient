@@ -5432,6 +5432,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_scrollbar_color_submission_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
+      src/test/integration/qmclient/ui/qm_page_switch_motion_test.cpp
+      src/test/integration/qmclient/ui/qm_popup_motion_test.cpp
+      src/test/integration/qmclient/ui/qm_control_motion_test.cpp
+      src/test/unit/qmclient/ui/qm_motion_level_resolver_test.cpp
       src/test/integration/qmclient/ui/qm_settings_deck_motion_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp

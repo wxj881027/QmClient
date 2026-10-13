@@ -660,6 +660,13 @@ float CQmAnimationBackend::ResolveTargetValue(uint64_t NodeKey, EUiAnimProperty 
 	PruneResolveTargetCache(CurrentUseCounter);
 
 	auto [ItLastTarget, Inserted] = m_LastTargets.try_emplace(Key, SResolveTargetState{Target, Transition.m_Driver, CurrentUseCounter});
+	if(Transition.m_RespectMotionLevel && qm_animation::NormalizeMotionLevel(g_Config.m_QmUiMotionLevel) == 0)
+	{
+		// 同一目标也立即结算，避免缓存跳过请求后留下活动轨道或排队目标。
+		SetValue(NodeKey, Property, Target);
+		ItLastTarget->second = SResolveTargetState{Target, Transition.m_Driver, CurrentUseCounter};
+		return Target;
+	}
 	const bool HasLastTarget = !Inserted;
 	const bool TargetChanged = !HasLastTarget || std::abs(Target - ItLastTarget->second.m_Target) > ANIM_EPSILON;
 	const bool DriverChanged = !HasLastTarget || ItLastTarget->second.m_Driver != Transition.m_Driver;
@@ -713,6 +720,16 @@ ColorRGBA CQmAnimationBackend::ResolveColorFromValue(uint64_t NodeKey, const Col
 	}
 	ItTarget->second.m_LastUseCounter = CurrentUseCounter;
 	return ItTarget->second.m_From;
+}
+
+bool CQmAnimationBackend::ReadColorTransition(uint64_t NodeKey, ColorRGBA &From, ColorRGBA &Target) const
+{
+	const auto ItTarget = m_ColorTargets.find(NodeKey);
+	if(ItTarget == m_ColorTargets.end())
+		return false;
+	From = ItTarget->second.m_From;
+	Target = ItTarget->second.m_Target;
+	return true;
 }
 
 float CQmAnimationBackend::ResolveColorMixValue(uint64_t NodeKey, const ColorRGBA &Target, float DurationSec, EEasing Easing)

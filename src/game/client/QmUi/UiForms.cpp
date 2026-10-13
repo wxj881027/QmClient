@@ -197,6 +197,19 @@ namespace ui_widget
 			const bool FocusActive = InputFieldFocusActive(Ctx, pInput, Layout.m_ShellRect, Options.m_Mode == EInputFieldMode::MULTILINE);
 			FocusAlpha = AnimateStateValue(Ctx, pInput, EUiAnimProperty::ALPHA, FocusActive ? 1.0f : 0.0f, ui_curve::DECELERATE);
 		}
+		else if(Options.m_ProcessInput && Ctx.m_pUi->BackgroundRender() && !Ctx.m_pUi->MeasurementOnly())
+		{
+			// 覆盖层只读取原焦点外观，不重新处理下层鼠标、热键或激活输入。
+			const CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
+			if(pAnim != nullptr)
+			{
+				const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pInput));
+				if(g_Config.m_QmUiMotionLevel == 0)
+					FocusAlpha = pInput->IsActive() || Ctx.m_pUi->IsActiveItem(pInput) ? 1.0f : 0.0f;
+				else
+					FocusAlpha = pAnim->GetValue(NodeKey, EUiAnimProperty::ALPHA, 0.0f);
+			}
+		}
 		if(!Ctx.m_pUi->MeasurementOnly() && FocusAlpha > 0.01f)
 		{
 			const SUiTheme Theme = ThemeFor(Ctx);
@@ -662,12 +675,21 @@ namespace ui_widget
 		ColorRGBA Track = Style.m_Track;
 		float Progress = Value ? 1.0f : 0.0f;
 		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
-		if(Animate && Enabled && pAnim != nullptr && !Ctx.m_pUi->RenderOnly())
+		if(Animate && Enabled && pAnim != nullptr)
 		{
 			const uint64_t TrackKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xA5A5ull, reinterpret_cast<uint64_t>(pId));
-			Track = ResolveUiAnimValueColor(*pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
 			const uint64_t KnobKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0x5A5Aull, reinterpret_cast<uint64_t>(pId));
-			Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress, ui_token::motion::TOGGLE);
+			if(Ctx.m_pUi->RenderOnly())
+			{
+				Track = ReadUiAnimValueColor(*pAnim, TrackKey, Track);
+				if(g_Config.m_QmUiMotionLevel != 0)
+					Progress = pAnim->GetValue(KnobKey, EUiAnimProperty::COLOR_MIX, Progress);
+			}
+			else
+			{
+				Track = ResolveUiAnimValueColor(*pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
+				Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress, ui_token::motion::TOGGLE);
+			}
 		}
 		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress);
 		const bool Hovered = !Ctx.m_pUi->RenderOnly() && Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->MouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
