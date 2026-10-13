@@ -1,3 +1,4 @@
+#include <game/client/QmUi/UiContext.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/tooltips.h>
 
@@ -14,6 +15,25 @@ int CMenus::DoButton_MenuTab(CButtonContainer *, const char *, int, const CUIRec
 {
 	ADD_FAILURE() << "Full menu tab buttons are outside the isolated UI target";
 	return 0;
+}
+
+// 公共卡片连接真实 Deck 与绘制；完整菜单的文字池、表单编排属于外部边界。
+// 测试上下文不提供 m_pMenus，误入这些入口立即失败，不能替代被测行为。
+void CMenus::DoSettingsMenuLabel(int, int, int, const char *, const CUIRect *, const char *, float, int, const SLabelProperties &, int)
+{
+	ADD_FAILURE() << "The menu text pool is outside the isolated UI target";
+}
+
+IUiContext CMenus::SettingsUiContext(const char *, float)
+{
+	ADD_FAILURE() << "Menu-owned forms are outside the isolated UI target";
+	return {};
+}
+
+const char *CMenus::TemporaryOverrideTooltip(const int *) const
+{
+	ADD_FAILURE() << "Menu-owned config overrides are outside the isolated UI target";
+	return nullptr;
 }
 
 // 独立输入／下拉集成目标没有完整菜单与配置管理器；提示作为外部边界，
@@ -36,6 +56,10 @@ void CTooltips::DoToolTip(const void *, const CUIRect *, const char *, float)
 }
 
 void CTooltips::DoSmallToolTip(const void *, const CUIRect *, const char *, float, float)
+{
+}
+
+void CTooltips::DoInfoToolTipForRect(const void *, const CUIRect *, const char *, float, float)
 {
 }
 

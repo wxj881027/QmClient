@@ -79,7 +79,7 @@ void CSettingsCardDeck::ResetDefinitionViewState()
 	m_pPreparedDefinitionData = nullptr;
 	m_PreparedDefinitionCount = 0;
 	m_PreparedDefinitionTab.clear();
-	m_FrameRuntime.OnTabChanged();
+	// 定义与模型索引刷新只重建单卡状态；共享入场仍由显示周期和真实切页管理。
 	m_SuppressHoverFeedbackOnce = true;
 }
 
@@ -162,7 +162,7 @@ SSettingsCardDeckResult CSettingsCardDeck::Render(const IUiContext &Ctx, const S
 SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &InputCtx, const SSettingsPageLayoutFrame &Layout, const char *pTab, const std::vector<SSettingsCardDefinition> &vCards, qm_card_order::CModel &Model, CScrollRegion *pScrollRegion, const SSettingsCardDeckInput &RawInput, const SCardMotionSpec &Motion, const SSettingsCardDeckVisualOptions &VisualOptions, bool PersistentDefinitions)
 {
 	IUiContext Ctx = InputCtx;
-	// 后台仍是可见页面：Deck 的几何动画继续消费原轨道，输入仍由 RenderOnly 隔离。
+	// 后台仍是可见页面：保留原动画的读取入口，输入仍由 RenderOnly 隔离。
 	// 不依赖旧卡片是否清空上下文中的动画指针；真正的测量不会碰可见动画。
 	if(Ctx.m_pUi != nullptr && Ctx.m_pUi->BackgroundRender() && !Ctx.m_pUi->MeasurementOnly() && Ctx.m_pAnim == nullptr)
 		Ctx.m_pAnim = Ctx.m_pUi->QmAnimationRuntime();
@@ -545,9 +545,16 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	bool SnapReflow = SettingsCardDeckShouldSnapReflow(GeometryStateChanged, m_Drag.Active()) || ContentHeightTargetChanged || ContentHeightAnimationActive;
 	if(Ctx.m_pAnim != nullptr)
 	{
-		DeckEntryOffsetY = m_FrameRuntime.ResolveEntryOffset(*Ctx.m_pAnim, reinterpret_cast<uintptr_t>(this), pTab, Motion);
+		if(Ctx.m_pUi != nullptr && Ctx.m_pUi->RenderOnly())
+		{
+			DeckEntryOffsetY = m_FrameRuntime.ReadEntryOffset(*Ctx.m_pAnim, reinterpret_cast<uintptr_t>(this), pTab, Motion);
+		}
+		else
+		{
+			DeckEntryOffsetY = m_FrameRuntime.ResolveEntryOffset(*Ctx.m_pAnim, reinterpret_cast<uintptr_t>(this), pTab, Motion);
+			EntryPending = false;
+		}
 		EntryPositionActive = m_FrameRuntime.EntryWasActive();
-		EntryPending = false;
 		for(const SPreparedCard &Card : m_vPreparedCards)
 		{
 			const SRuntimeState &Runtime = m_vRuntimeStates[Card.m_StateIndex];

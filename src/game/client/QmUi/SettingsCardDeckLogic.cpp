@@ -10,6 +10,17 @@
 #include <algorithm>
 #include <cmath>
 
+namespace
+{
+	uint64_t SettingsCardDeckEntryNodeKey(const uint64_t OwnerId, const char *pTab, const bool ContinuousEntry)
+	{
+		// 共享入场属于可见 Deck；自定义旧动效仍按分类隔离。
+		if(ContinuousEntry)
+			return BuildUiAnimNodeKey(str_quickhash("settings-card-deck-continuous-entry"), OwnerId);
+		return BuildUiAnimNodeKey(str_quickhash("settings-card-deck-entry"), str_quickhash(pTab != nullptr ? pTab : ""));
+	}
+}
+
 void CSettingsCardDeckPackingPlan::Reset(const float CursorY, const float CardGap)
 {
 	m_aCursorY.fill(CursorY);
@@ -118,19 +129,25 @@ bool CSettingsCardDeckFrameRuntime::ConsumeEntryCycle()
 	return true;
 }
 
+float CSettingsCardDeckFrameRuntime::ReadEntryOffset(const CUiV2AnimationRuntime &AnimRuntime, const uint64_t OwnerId, const char *pTab, const SCardMotionSpec &Motion) const
+{
+	if(!m_AnimateEntry || Motion.m_EntryDuration <= 0.0f || (!EntryCyclePending() && !m_EntryWasActive))
+		return 0.0f;
+	// 背景只取已有画面，不消费首次入场，也不创建或取消轨道。
+	return AnimRuntime.GetValue(SettingsCardDeckEntryNodeKey(OwnerId, pTab, Motion.m_ContinuousEntry), EUiAnimProperty::POS_Y, 0.0f);
+}
+
 float CSettingsCardDeckFrameRuntime::ResolveEntryOffset(CUiV2AnimationRuntime &AnimRuntime, const uint64_t OwnerId, const char *pTab, const SCardMotionSpec &Motion)
 {
 	if(!EntryCyclePending() && !m_EntryWasActive)
 		return 0.0f;
 
+	const uint64_t NodeKey = SettingsCardDeckEntryNodeKey(OwnerId, pTab, Motion.m_ContinuousEntry);
 	if(Motion.m_ContinuousEntry)
 	{
-		// 轨道属于可见 Deck，不随分类字符串变化；预热 Deck 使用自己的实例。
-		const uint64_t NodeKey = BuildUiAnimNodeKey(str_quickhash("settings-card-deck-continuous-entry"), OwnerId);
 		return ResolveContinuousEntryOffset(AnimRuntime, NodeKey, Motion);
 	}
 
-	const uint64_t NodeKey = BuildUiAnimNodeKey(str_quickhash("settings-card-deck-entry"), str_quickhash(pTab != nullptr ? pTab : ""));
 	if(ConsumeEntryCycle())
 	{
 		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, m_AnimateEntry ? Motion.m_EntryDistance : 0.0f);

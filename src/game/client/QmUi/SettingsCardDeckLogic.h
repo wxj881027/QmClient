@@ -59,6 +59,7 @@ public:
 	void OnTabChanged(bool StartEntryCycle = false);
 	bool EntryCyclePending() const { return m_EntryDisplayCycle != m_DisplayCycle; }
 	bool ConsumeEntryCycle();
+	float ReadEntryOffset(const CUiV2AnimationRuntime &AnimRuntime, uint64_t OwnerId, const char *pTab, const SCardMotionSpec &Motion) const;
 	float ResolveEntryOffset(CUiV2AnimationRuntime &AnimRuntime, uint64_t OwnerId, const char *pTab, const SCardMotionSpec &Motion);
 	float ResolveContinuousEntryOffset(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const SCardMotionSpec &Motion);
 	bool AnimateEntry() const { return m_AnimateEntry; }

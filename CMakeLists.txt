@@ -5407,6 +5407,15 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   if(FREETYPE_FOUND)
     add_executable(qm-ui-popup-tests EXCLUDE_FROM_ALL
       src/game/client/QmUi/UiNavigation.cpp
+      src/game/client/QmUi/SettingsCard.cpp
+      src/game/client/QmUi/SettingsCardInfo.cpp
+      src/game/client/QmUi/SettingsCardDeck.cpp
+      src/game/client/QmUi/SettingsCardDeckLogic.cpp
+      src/game/client/QmUi/SettingsCardCollapseState.cpp
+      src/game/client/QmUi/QmCardOrderModel.cpp
+      src/game/client/QmUi/QmCardRegistry.cpp
+      src/game/client/QmUi/QmModuleLayoutAdapter.cpp
+      src/game/client/QmUi/cards/QmCardCatalogSearch.cpp
       src/game/client/QmUi/UiDiscreteSlider.cpp
       src/game/client/QmUi/UiDiscreteSliderLogic.cpp
       src/test/test.cpp
@@ -5422,6 +5431,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_scrollbar_color_submission_test.cpp
       src/test/integration/qmclient/ui/qm_background_controls_test.cpp
       src/test/integration/qmclient/ui/qm_navigation_selection_test.cpp
+      src/test/integration/qmclient/ui/qm_settings_deck_motion_test.cpp
       src/test/integration/qmclient/ui/qm_editor_text_input_test.cpp
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
