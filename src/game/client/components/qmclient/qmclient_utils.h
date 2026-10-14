@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <game/client/QmUi/UiTokens.h>
 
 typedef struct _json_value json_value;
 
@@ -120,7 +121,7 @@ struct SQmTitleColorStyle
 	// 最终是否按彩虹渲染：彩虹档恒为 true；跟随服务器档取决于服务器样式。
 	bool m_Rainbow = false;
 	// 单色档的填充色，透明度已并入；跟随服务器档不使用该字段。
-	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	ColorRGBA m_Color = ui_token::color::NEUTRAL_WHITE;
 	// 本地配置的透明度，仅单色/彩虹档生效。
 	float m_Alpha = 1.0f;
 

@@ -1,5 +1,6 @@
 #include "QmCardCatalogInternal.h"
 
+#include <game/client/QmUi/UiTokens.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
@@ -217,7 +218,7 @@ namespace qm_card_catalog
 				CUIRect s_GradientColorRow;
 				if(Flow.Control("s_GradientColor", Metrics.m_LineHeight, s_GradientColorRow))
 				{
-					pMenus->DoLine_ColorPicker(&s_GradientColor, Metrics, &s_GradientColorRow, Localize("Gradient color"), &g_Config.m_QmNameplateTextGradientColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, true);
+					pMenus->DoLine_ColorPicker(&s_GradientColor, Metrics, &s_GradientColorRow, Localize("Gradient color"), &g_Config.m_QmNameplateTextGradientColor, ui_token::color::NEUTRAL_WHITE, false, nullptr, true);
 				}
 				Flow.Space(Metrics.m_LineSpacing);
 				CUIRect s_GlowColorRow;

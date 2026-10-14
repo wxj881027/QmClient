@@ -31,6 +31,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/animstate.h>
@@ -185,7 +186,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 			if(Profile.m_CountryFlag == -2)
 				RenderCross(Flag, 20.0f);
 			else
-				GameClient()->m_CountryFlags.Render(Profile.m_CountryFlag, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), Flag.x, Flag.y, Flag.w, Flag.h);
+				GameClient()->m_CountryFlags.Render(Profile.m_CountryFlag, ui_token::color::NEUTRAL_WHITE, Flag.x, Flag.y, Flag.w, Flag.h);
 		}
 		Rect.VSplitRight(ProfileMetrics.m_LineSpacing, &Rect, nullptr);
 		{

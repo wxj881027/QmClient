@@ -12,6 +12,7 @@
 #include <engine/textrender.h>
 #include <engine/updater.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmCardRegistry.h>
@@ -106,7 +107,7 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 	MainView.y = HeaderBottom;
 	MainView.h = maximum(0.0f, HeaderSource.y + HeaderSource.h - HeaderBottom);
 
-	SkinPreview.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	SkinPreview.Draw(ui_token::color::PREVIEW_BACKDROP, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 	SkinPreview.VMargin(10.0f, &SkinPreview);
 	SkinPreview.VSplitRight(50.0f, &SkinPreview, &BlueTeamSkinPreview);
 	SkinPreview.VSplitRight(10.0f, &SkinPreview, nullptr);
@@ -439,7 +440,7 @@ void CMenus::RenderSettingsTeeCustom7(CUIRect MainView, const SSettingsContentMe
 		ApplyUiSwitchOffset(MainView, TransitionStrength, s_SkinPartTransitionDirection, false, 0.08f, 24.0f, 120.0f);
 	}
 
-	MainView.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), IGraphics::CORNER_ALL, ui_token::radius::BASE);
+	MainView.Draw(ui_token::color::PREVIEW_BACKDROP, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 	MainView.VSplitMid(&SkinPartSelection, &CustomColors, 10.0f);
 	CustomColors.Margin(5.0f, &CustomColors);
 	CUIRect CustomColorsButton, RandomSkinButton;

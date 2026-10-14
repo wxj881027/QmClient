@@ -31,7 +31,7 @@ inline float UiSurfaceLuminance(ColorRGBA Color)
 inline ColorRGBA ResolveUiSurfaceForeground(ColorRGBA Surface, ColorRGBA Backdrop = ui_token::color::SURFACE_BACKDROP)
 {
 	const float Luminance = UiSurfaceLuminance(CompositeUiSurface(Surface, Backdrop));
-	return Luminance > 0.179f ? ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f) : ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	return Luminance > 0.179f ? ui_token::color::NEUTRAL_BLACK : ui_token::color::NEUTRAL_WHITE;
 }
 
 // 手动文本模式保持用户选择；非法模式回退自动，图标策略独立。
@@ -39,8 +39,8 @@ inline ColorRGBA ResolveUiTextColor(ColorRGBA Surface, int Mode, unsigned Custom
 {
 	switch(Mode)
 	{
-	case 1: return ColorRGBA(1, 1, 1, 1);
-	case 2: return ColorRGBA(0, 0, 0, 1);
+	case 1: return ui_token::color::TEXT_FORCED_LIGHT;
+	case 2: return ui_token::color::TEXT_FORCED_DARK;
 	case 3: return color_cast<ColorRGBA>(ColorHSLA(CustomColor)).WithAlpha(1.0f);
 	default: return ResolveUiSurfaceForeground(Surface, Backdrop);
 	}
@@ -55,7 +55,7 @@ inline ColorRGBA ResolveConfiguredTextColor(ColorRGBA Surface)
 inline ColorRGBA ResolveUiIconButtonFeedback(ColorRGBA Surface, bool Enabled, bool Hovered, bool Pressed)
 {
 	if(!Enabled || (!Hovered && !Pressed))
-		return ColorRGBA(0, 0, 0, 0);
+		return ui_token::color::COLOR_TRANSPARENT;
 	return ResolveUiSurfaceForeground(Surface).WithAlpha(Pressed ? ui_token::feedback::ICON_PRESS_ALPHA : ui_token::feedback::ICON_HOVER_ALPHA);
 }
 
@@ -88,7 +88,7 @@ struct SUiTheme
 	ColorRGBA m_Accent;
 	ColorRGBA m_Selected;
 	// 旋钮是独立的前景角色，默认保持白色，不借用自动文本对比色。
-	ColorRGBA m_ToggleKnob = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	ColorRGBA m_ToggleKnob = ui_token::color::NEUTRAL_WHITE;
 	ColorRGBA m_TextTitle;
 	ColorRGBA m_TextBody;
 	ColorRGBA m_TextSmall;

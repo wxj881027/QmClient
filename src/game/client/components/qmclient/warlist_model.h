@@ -10,6 +10,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <game/client/QmUi/UiTokens.h>
 
 enum
 {
@@ -26,11 +27,11 @@ class CWarType
 public:
 	// Intentionally named redundantly because it was confusing otherwise
 	char m_aWarName[MAX_WARLIST_TYPE_LENGTH] = "";
-	ColorRGBA m_Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	ColorRGBA m_Color = ui_token::color::NEUTRAL_WHITE;
 	bool m_Removable = true;
 	bool m_Imported = false;
 	int m_Index = 0;
-	CWarType(const char *pName, ColorRGBA Color = ColorRGBA(1, 1, 1, 1), bool Removable = true, bool IsImport = false)
+	CWarType(const char *pName, ColorRGBA Color = ui_token::color::NEUTRAL_WHITE, bool Removable = true, bool IsImport = false)
 	{
 		str_copy(m_aWarName, pName);
 		m_Color = Color;
@@ -91,7 +92,7 @@ public:
 
 	// duplicate war types are NOT allowed
 	std::vector<CWarType *> m_WarTypes = {
-		new CWarType("none", ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false),
+		new CWarType("none", ui_token::color::NEUTRAL_WHITE, false),
 		new CWarType("enemy", ColorRGBA(1.0f, 0.2f, 0.2f, 1.0f), false),
 		new CWarType("team", ColorRGBA(0.0f, 0.9f, 0.2f, 1.0f), false),
 	};

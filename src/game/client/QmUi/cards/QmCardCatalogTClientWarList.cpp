@@ -32,6 +32,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/animstate.h>
@@ -102,7 +103,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientWarListCard(const qm_card_
 	static CWarEntry *s_pSelectedEntry = nullptr;
 	static CWarType *s_pSelectedType = nullptr;
 	static char s_aTypeName[MAX_WARLIST_TYPE_LENGTH];
-	static ColorRGBA s_GroupColor = ColorRGBA(1, 1, 1, 1);
+	static ColorRGBA s_GroupColor = ui_token::color::NEUTRAL_WHITE;
 	static CLineInputBuffered<128> s_EntriesFilterInput;
 	static CLineInputBuffered<128> s_PlayerSearchInput;
 	static CLineInput s_NameInput;

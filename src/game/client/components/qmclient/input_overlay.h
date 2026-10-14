@@ -9,6 +9,7 @@
 #include <engine/keys.h>
 #include <engine/shared/jobs.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/component.h>
 
 #include <algorithm>
@@ -165,7 +166,7 @@ private:
 		ColorRGBA m_FillColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.65f);
 		ColorRGBA m_FillColorActive = ColorRGBA(0.18f, 0.6f, 1.0f, 0.85f);
 		ColorRGBA m_BorderColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.35f);
-		ColorRGBA m_BorderColorActive = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		ColorRGBA m_BorderColorActive = ui_token::color::NEUTRAL_WHITE;
 		float m_BorderWidth = 2.0f;
 		bool m_BorderRainbow = false;
 		bool m_BorderRainbowActive = false;
@@ -173,7 +174,7 @@ private:
 		float m_BorderRainbowOffset = 0.0f;
 		float m_TextSize = 16.0f;
 		ColorRGBA m_TextColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.85f);
-		ColorRGBA m_TextColorActive = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		ColorRGBA m_TextColorActive = ui_token::color::NEUTRAL_WHITE;
 		float m_TextOffsetX = 0.0f;
 		float m_TextOffsetY = 0.0f;
 		bool m_TextEnabled = true;
@@ -274,7 +275,7 @@ private:
 	EConfigMode m_ConfigMode = EConfigMode::VECTOR;
 	std::vector<SElement> m_vElements;
 	std::vector<SObsLayout> m_vObsLayouts;
-	ColorRGBA m_ObsColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	ColorRGBA m_ObsColor = ui_token::color::NEUTRAL_WHITE;
 	ColorRGBA m_ObsActiveColor = ColorRGBA(1.0f, 0.9f, 0.2f, 1.0f);
 	float m_ObsInactiveAlpha = 0.65f;
 	float m_CanvasWidth = 320.0f;

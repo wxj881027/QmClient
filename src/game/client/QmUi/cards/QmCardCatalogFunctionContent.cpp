@@ -339,7 +339,7 @@ void CMenus::RenderQmFunctionJumpHintContent(CUIRect &Content, float LineHeight,
 
 	static CButtonContainer s_QmJumpHintColorId;
 	if(Flow.Control("color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
-		DoLine_ColorPicker(&s_QmJumpHintColorId, CurrentSettingsContentMetrics(), &Row, Localize("Text color"), &g_Config.m_QmJumpHintColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+		DoLine_ColorPicker(&s_QmJumpHintColorId, CurrentSettingsContentMetrics(), &Row, Localize("Text color"), &g_Config.m_QmJumpHintColor, ui_token::color::NEUTRAL_WHITE, false);
 
 	auto RenderValue = [&](const char *pTextId, const char *pText, const void *pInputId, int *pValue, int MinValue, int MaxValue, const char *pSuffix = "") {
 		if(Flow.Control(pTextId, LineHeight, Row))
