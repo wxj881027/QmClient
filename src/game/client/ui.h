@@ -1011,10 +1011,23 @@ public:
 	// 预布局允许输入和测量，但不能重复提交半透明控件。
 	bool DrawingSuppressed() const { return m_RenderOnlyDepth > 0 || PreLayoutInput(); }
 	bool RenderOnly() const { return m_RenderOnlyDepth > 0 || m_BackgroundRenderDepth > 0; }
+	// 动画推进门：只有真正的测量/文字计划趟（BeginRenderOnly）才冻结动画轨道——
+	// 否则预热帧会把弹簧直接推到目标，下一帧切换就看不到过渡。
+	// 动画推进门：只有「真实出图」状态推进轨道——测量趟（RenderOnlyDepth）
+	// 与纯背景趟（console 背景快照等，ContentDrawDepth < BackgroundRenderDepth）
+	// 冻结，否则预热帧把弹簧直接推到目标、背景帧凭空创建轨道；声明式卡片桥
+	// 的 DRAW 回放（内容出图，两 depth 相等）是最终出图趟，必须推进。
+	bool AnimationsBlocked() const { return m_RenderOnlyDepth > 0 || m_ContentDrawDepth != m_BackgroundRenderDepth; }
 	// 内容 DRAW 保留控件反馈；真正的下层菜单、测量和活动弹层仍屏蔽反馈。
 	bool VisualMouseHovered(const CUIRect *pRect) const
 	{
 		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
+	}
+	// 热控件判定与 VisualMouseHovered 同一可见性语义：测量趟与纯背景趟不可见，
+	// 内容 DRAW 回放有效（热控件由同一帧先行的 INPUT 回放趟设置）。
+	bool VisualHotItem(const void *pId) const
+	{
+		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && HotItem() == pId;
 	}
 	void BeginPreLayoutInput() { ++m_PreLayoutInputDepth; }
 	void EndPreLayoutInput()

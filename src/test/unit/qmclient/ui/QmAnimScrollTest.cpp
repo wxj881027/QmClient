@@ -406,10 +406,11 @@ TEST(UiV2ScrollPolicy, ListBoxEntryAnimationStartsAfterAnInactiveGap)
 	EXPECT_FALSE(QmListBoxShouldStartEntryAnimation(true, false, 600, 1000, 400));
 	EXPECT_FALSE(QmListBoxShouldStartEntryAnimation(false, false, 0, 1000, 400));
 	EXPECT_FALSE(QmListBoxShouldStartEntryAnimation(true, true, 0, 1000, 400));
-	EXPECT_NEAR(QmListBoxEntryOffset(0.0f, 0.16f, 12.0f), -12.0f, 0.001f);
-	EXPECT_LT(QmListBoxEntryOffset(0.08f, 0.16f, 12.0f), 0.0f);
-	EXPECT_NEAR(QmListBoxEntryOffset(0.16f, 0.16f, 12.0f), 0.0f, 0.001f);
-	EXPECT_FALSE(QmListBoxEntryAnimationFinished(true, false, 0.08f, 0.16f));
+	// 依次浮现位移：起步 +8，归位 0（正位移 = 从最终矩形下方弹入）。
+	EXPECT_NEAR(QmCriticallyDampedRise(0.0f, 0.24f, 8.0f), 8.0f, 0.001f);
+	EXPECT_LT(QmCriticallyDampedRise(0.08f, 0.24f, 8.0f), 8.0f);
+	EXPECT_NEAR(QmCriticallyDampedRise(0.24f, 0.24f, 8.0f), 0.0f, 0.001f);
+	EXPECT_FALSE(QmListBoxEntryAnimationFinished(true, false, 0.08f, 0.24f));
 	EXPECT_TRUE(QmListBoxEntryAnimationFinished(true, false, 0.16f, 0.16f));
 	EXPECT_TRUE(QmListBoxEntryAnimationFinished(true, false, 0.20f, 0.16f));
 	EXPECT_TRUE(QmListBoxEntryAnimationFinished(false, false, 0.0f, 0.16f));
@@ -421,6 +422,51 @@ TEST(UiV2ScrollPolicy, ListBoxEntryAnimationStartsAfterAnInactiveGap)
 	EXPECT_FLOAT_EQ(AnimatedRect.w, BaseRect.w);
 	EXPECT_FLOAT_EQ(AnimatedRect.h, BaseRect.h);
 }
+
+TEST(UiV2ScrollPolicy, ListEntryVisualFadesRowsInSequentiallyWithLinearStagger)
+{
+	// 未在动画中（-1）与动效关闭时不淡不浮。
+	EXPECT_NEAR(QmListEntryVisual(-1.0f, 0, 2).m_Fade, 1.0f, 0.001f);
+	EXPECT_NEAR(QmListEntryVisual(-1.0f, 0, 2).m_OffsetY, 0.0f, 0.001f);
+	EXPECT_NEAR(QmListEntryVisual(0.05f, 0, 0).m_Fade, 1.0f, 0.001f);
+	// Full 档行 0：淡入与上浮同长，从 0 起步、0.20s 同时完成。
+	EXPECT_NEAR(QmListEntryVisual(0.0f, 0, 2).m_Fade, 0.0f, 0.001f);
+	EXPECT_NEAR(QmListEntryVisual(0.20f, 0, 2).m_Fade, 1.0f, 0.001f);
+	EXPECT_NEAR(QmListEntryVisual(0.0f, 0, 2).m_OffsetY, 8.0f, 0.001f);
+	EXPECT_NEAR(QmListEntryVisual(0.20f, 0, 2).m_OffsetY, 0.0f, 0.001f);
+	// 中点对齐：0.10s 时淡入恰好过半，位移仍在途中。
+	EXPECT_NEAR(QmListEntryVisual(0.10f, 0, 2).m_Fade, 0.5f, 0.001f);
+	EXPECT_GT(QmListEntryVisual(0.10f, 0, 2).m_OffsetY, 0.0f);
+	// 线性错开：行 5 延迟 110ms，未启动时完全透明。
+	EXPECT_NEAR(QmListEntryVisual(0.05f, 5, 2).m_Fade, 0.0f, 0.001f);
+	EXPECT_NEAR(QmListEntryVisual(0.05f, 5, 2).m_OffsetY, 8.0f, 0.001f);
+	// 线性铺满可视范围：行 20 延迟 280ms，28 行封顶 392ms（深处整块出现的悬崖已消除）。
+	const float DelayRow5 = QmListEntryRowDelaySec(5, 2);
+	const float DelayRow20 = QmListEntryRowDelaySec(20, 2);
+	const float DelayRow28 = QmListEntryRowDelaySec(28, 2);
+	const float DelayRow200 = QmListEntryRowDelaySec(200, 2);
+	EXPECT_NEAR(DelayRow5, 0.07f, 0.001f);
+	EXPECT_NEAR(DelayRow20, 0.28f, 0.001f);
+	EXPECT_NEAR(DelayRow28, 0.392f, 0.001f);
+	EXPECT_NEAR(DelayRow200, 0.392f, 0.001f);
+	// Reduced 档无错开：快速淡入 + 4px。
+	EXPECT_NEAR(QmListEntryVisual(0.0f, 3, 1).m_Fade, 0.0f, 0.001f);
+	EXPECT_NEAR(QmListEntryVisual(0.10f, 3, 1).m_Fade, 1.0f, 0.001f);
+	EXPECT_NEAR(QmListEntryVisual(0.10f, 3, 1).m_OffsetY, 0.0f, 0.001f);
+	// 行 0 位移单调归位且无越冲（负值即过冲），fade 单调上升。
+	float Previous = 8.0f;
+	for(int Step = 0; Step <= 19; ++Step)
+	{
+		const SQmListEntryVisual Visual = QmListEntryVisual(Step * 0.01f, 0, 2);
+		EXPECT_LT(Visual.m_OffsetY, Previous + 0.0001f);
+		EXPECT_GT(Visual.m_OffsetY, 0.0f);
+		Previous = Visual.m_OffsetY;
+	}
+	// 整场生命周期覆盖延迟铺满 + 行内时长。
+	EXPECT_FLOAT_EQ(QmListEntryVisualTotalSeconds(2), 0.592f);
+	EXPECT_FLOAT_EQ(QmListEntryVisualTotalSeconds(1), 0.10f);
+}
+
 TEST(UiV2ScrollPolicy, ResolvesSharedVisualAndInteractionProfiles)
 {
 	SQmScrollRequest Settings;

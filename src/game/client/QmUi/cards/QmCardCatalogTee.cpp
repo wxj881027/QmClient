@@ -741,7 +741,7 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 		str_format(aHeading, sizeof(aHeading), "%s: %s", Dummy ? Localize("Dummy") : Localize("Player"), pName);
 		CompactLabel.m_MaxWidth = Heading.w;
 		Ui()->DoLabel(&Heading, aHeading, BodySize, TEXTALIGN_ML, CompactLabel);
-		GameClient()->m_CountryFlags.Render(Dummy ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), Flag.x, Flag.y, Flag.w, Flag.h, m_TeeEntranceStartTime);
+		GameClient()->m_CountryFlags.Render(Dummy ? g_Config.m_ClDummyCountry : g_Config.m_PlayerCountry, ui_token::color::NEUTRAL_WHITE, Flag.x, Flag.y, Flag.w, Flag.h, m_TeeEntranceStartTime);
 		Inner.HSplitBottom(TeeMetrics.m_LineHeight, &TeeRect, &SkinLabel);
 		CompactLabel.m_MaxWidth = SkinLabel.w;
 		Ui()->DoLabel(&SkinLabel, pPreviewSkin, TeeMetrics.m_SmallSize, TEXTALIGN_MC, CompactLabel);
@@ -912,14 +912,16 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	const int ActiveEmote = std::clamp(*pEmote, 0, NUM_EMOTES - 1);
 	auto *pUiRuntime = GameClient()->UiRuntimeV2();
 	const uint64_t ThumbNodeKey = BuildUiAnimNodeKey(MakeUiScopeHash("settings_tee_eyes_slider_thumb"), Target);
-	const CUIRect AnimatedThumb = ResolveSettingsTeeEmoteSliderThumb(SliderLayout, ActiveEmote, UiScale, pUiRuntime != nullptr ? &pUiRuntime->AnimRuntime() : nullptr, ThumbNodeKey);
+	// 测量/文字收集趟冻结滑块弹簧（AnimationsBlocked），防止预热帧把滑块推到目标位；
+	// DRAW 回放与直绘（两 depth 相等）正常推进。
+	const CUIRect AnimatedThumb = ResolveSettingsTeeEmoteSliderThumb(SliderLayout, ActiveEmote, UiScale, (pUiRuntime != nullptr && !Ui()->AnimationsBlocked()) ? &pUiRuntime->AnimRuntime() : nullptr, ThumbNodeKey);
 	DrawRoundedSurface(TabBarUiContext(), AnimatedThumb, ColorRGBA(1.0f, 1.0f, 1.0f, 0.20f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.18f), ui_token::radius::PILL);
 	static const char *s_apEmoteNames[] = {"Normal", "Pain", "Happy", "Surprise", "Angry", "Blink"};
 	for(int Emote = 0; Emote < NUM_EMOTES; ++Emote)
 	{
 		const CUIRect &Slot = SliderLayout.m_aSlotRects[Emote];
 		const bool IsActive = Emote == ActiveEmote;
-		const bool IsHovered = Ui()->MouseHovered(&Slot) && !Ui()->IsPopupOpen();
+		const bool IsHovered = Ui()->VisualMouseHovered(&Slot) && !Ui()->IsPopupOpen();
 		if(IsHovered && !IsActive)
 		{
 			CUIRect HoverRect;
@@ -2764,7 +2766,7 @@ void CMenus::RenderSettingsTeeGlow(CUIRect Content, const SSettingsContentMetric
 		if(Flow.Control("tee-team-glow-team0-color", TeeMetrics.m_ButtonHeight, TeeGlowRow, TeeMetrics.m_LineSpacing))
 		{
 			static CButtonContainer s_Team0GlowColorId;
-			DoLine_ColorPicker(&s_Team0GlowColorId, TeeMetrics, &TeeGlowRow, Localize("Team 0 glow color"), &g_Config.m_QmTeamTeeGlowColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, false, false);
+			DoLine_ColorPicker(&s_Team0GlowColorId, TeeMetrics, &TeeGlowRow, Localize("Team 0 glow color"), &g_Config.m_QmTeamTeeGlowColor, ui_token::color::NEUTRAL_WHITE, false, nullptr, false, false);
 		}
 	}
 }

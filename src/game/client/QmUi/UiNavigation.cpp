@@ -121,7 +121,7 @@ namespace ui_widget
 			return;
 
 		CUIRect Indicator = Target;
-		if(Ctx.m_pAnim != nullptr && !Ctx.m_pUi->RenderOnly())
+		if(Ctx.m_pAnim != nullptr && !Ctx.m_pUi->AnimationsBlocked())
 		{
 			// 胶囊与嵌套分段共用导航弹簧，切换时保留当前速度；选中块固定在同一条竖向轨道。
 			const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, 0);
@@ -152,7 +152,7 @@ namespace ui_widget
 				return;
 
 			CUIRect Indicator = Target;
-			if(Ctx.m_pAnim != nullptr && !Ctx.m_pUi->RenderOnly())
+			if(Ctx.m_pAnim != nullptr && !Ctx.m_pUi->AnimationsBlocked())
 			{
 				// 主级与次级导航沿用同一节奏，各自保留当前速度。
 				const uint64_t NodeKey = BuildUiAnimNodeKey(GroupId, TrackIndex);

@@ -329,6 +329,12 @@ static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocatio
 void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated)
 {
 	static CListBox s_ListBox;
+	static int s_LastRestartSeq = -1;
+	if(s_LastRestartSeq != m_BrowserListEntryRestartSeq)
+	{
+		s_ListBox.RestartEntryAnimation();
+		s_LastRestartSeq = m_BrowserListEntryRestartSeq;
+	}
 
 	CUIRect Headers;
 	View.HSplitTop(ms_ListheaderHeight, &Headers, &View);
@@ -940,7 +946,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 					{
 						CUIRect CommunityIcon;
 						Button.Margin(2.0f, &CommunityIcon);
-						m_CommunityIcons.Render(pIcon, CommunityIcon, true);
+						m_CommunityIcons.Render(pIcon, CommunityIcon, true, Ui()->ControlAlphaScale());
 						Ui()->DoButtonLogic(&pItem->m_aCommunityId, 0, &CommunityIcon, BUTTONFLAG_NONE);
 						GameClient()->m_Tooltips.DoToolTip(&pItem->m_aCommunityId, &CommunityIcon, pCommunity->Name());
 					}
@@ -1623,6 +1629,21 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 
 	CUIRect Row;
 	int ColumnIndex = 0;
+	// 依次淡入 + 上浮：与服务器列表同一套入场语言。三个过滤列表（社区/国家/
+	// 类型）共享本函数的静态生命周期，同帧顺序驱动等效于一条时间线；页面
+	// 切换时由重启序号统一重播。
+	static CQmListEntryAnimation s_EntryAnimation;
+	static int s_LastRestartSeq = -1;
+	if(s_LastRestartSeq != m_BrowserListEntryRestartSeq)
+	{
+		s_EntryAnimation.Reset();
+		s_LastRestartSeq = m_BrowserListEntryRestartSeq;
+	}
+	const int64_t EntryNow = time_get();
+	const int64_t EntryFreq = maximum<int64_t>(1, time_freq());
+	const bool EntryEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
+	const float EntryElapsed = s_EntryAnimation.Resolve(EntryNow, EntryFreq, EntryEnabled, g_Config.m_QmUiMotionLevel,
+		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
 	for(int ItemIndex = 0; ItemIndex < MaxItems; ++ItemIndex)
 	{
 		CUIRect Item;
@@ -1632,6 +1653,12 @@ void CMenus::RenderServerbrowserDDNetFilter(CUIRect View,
 		ColumnIndex = (ColumnIndex + 1) % ItemsPerRow;
 		if(!ScrollRegion.AddRect(Item))
 			continue;
+
+		const SQmListEntryVisual EntryVisual = QmListEntryVisual(EntryElapsed, ItemIndex / maximum(1, ItemsPerRow), g_Config.m_QmUiMotionLevel);
+		std::optional<CUiScopedControlAlphaScale> EntryFade;
+		if(EntryVisual.m_Fade < 0.999f)
+			EntryFade.emplace(Ui(), EntryVisual.m_Fade);
+		Item.y += EntryVisual.m_OffsetY;
 
 		const void *pItemId = &vItemIds[ItemIndex];
 		const char *pName = GetItemName(ItemIndex);
@@ -1756,7 +1783,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 	};
 	const auto &&RenderItem = [&](int ItemIndex, CUIRect Item, const void *pItemId, bool Active) {
 		const auto &Community = ServerBrowser()->Communities()[ItemIndex];
-		const float Alpha = (Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f);
+		const float Alpha = ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale();
 
 		CUIRect Icon, NameLabel, PlayerCountIcon, PlayerCountLabel, FavoriteButton;
 		Item.VSplitRight(Item.h, &Item, &FavoriteButton);
@@ -1772,7 +1799,7 @@ void CMenus::RenderServerbrowserCommunitiesFilter(CUIRect View)
 		const CCommunityIcon *pIcon = m_CommunityIcons.Find(pItemName);
 		if(pIcon != nullptr)
 		{
-			m_CommunityIcons.Render(pIcon, Icon, Active);
+			m_CommunityIcons.Render(pIcon, Icon, Active, Ui()->ControlAlphaScale());
 		}
 
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, Alpha);
@@ -1824,7 +1851,7 @@ void CMenus::RenderServerbrowserCountriesFilter(CUIRect View)
 		const float OldWidth = Item.w;
 		Item.w = Item.h * 2.0f;
 		Item.x += (OldWidth - Item.w) / 2.0f;
-		GameClient()->m_CountryFlags.Render(ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->FlagId(), ColorRGBA(1.0f, 1.0f, 1.0f, (Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)), Item.x, Item.y, Item.w, Item.h);
+		GameClient()->m_CountryFlags.Render(ServerBrowser()->CommunityCache().SelectableCountries()[ItemIndex]->FlagId(), ColorRGBA(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale()), Item.x, Item.y, Item.w, Item.h);
 	};
 
 	RenderServerbrowserDDNetFilter(View, ServerBrowser()->CountriesFilter(), ItemHeight + 2.0f * Spacing, MaxEntries, EntriesPerRow, s_ScrollRegion, s_vItemIds, false, GetItemName, RenderItem);
@@ -1846,7 +1873,7 @@ void CMenus::RenderServerbrowserTypesFilter(CUIRect View)
 	};
 	const auto &&RenderItem = [&](int ItemIndex, CUIRect Item, const void *pItemId, bool Active) {
 		Item.Margin(Spacing, &Item);
-		TextRender()->TextColor(1.0f, 1.0f, 1.0f, (Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f));
+		TextRender()->TextColor(1.0f, 1.0f, 1.0f, ((Active ? 0.9f : 0.2f) + (Ui()->HotItem() == pItemId ? 0.1f : 0.0f)) * Ui()->ControlAlphaScale());
 		Ui()->DoLabel(&Item, GetItemName(ItemIndex), Item.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	};
@@ -1954,7 +1981,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupCountrySelection(void *pContext, CUIR
 
 		if(IsSelected)
 		{
-			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
+			// 选中描边与资产卡/列表选中态同源（白 0.7），不用 BORDER_FOCUS 强调蓝。
+			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA), ui_token::radius::BASE, 1.0f);
 		}
 		else if(pUi->MouseInside(&Item.m_Rect))
 		{

@@ -809,6 +809,10 @@ bool CUi::UnderlyingPointerInputBlocked() const
 
 bool CUi::MouseHovered(const CUIRect *pRect) const
 {
+	// 输入判定语义：任何非交互趟（测量、背景/回放）一律不响应——
+	// click-outside、DoButtonLogic 等输入路径都依赖这一点。
+	// 视觉侧的悬浮反馈用 VisualMouseHovered / VisualHotItem（内容
+	// DRAW 回放放行），两者不可混用。
 	return !RenderOnly() && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
 }
 
@@ -1665,10 +1669,12 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 	const vec2 CursorPos = CalcAlignedCursorPos(pRect, vec2(RectEl.m_Cursor.m_LongestLineWidth, RectEl.m_Cursor.Height()), Align, pBiggestCharHeight);
 	FlushQuadBatch();
 	// 颜色在绘制时解析，彩虹和即时切换无需重建缓存文本容器。
+	// 父层显隐系数（ControlAlphaScale）在此一并生效：列表行淡入、弹窗内容
+	// 淡出等层级行为对 streamed 标签与裸 TextRender 文字一视同仁。
 	const EQmIcon Icon = RectEl.m_NumQmIcons == 1 ? RectEl.m_aQmIcons[0] : EQmIcon::COUNT;
-	const ColorRGBA Color = RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(RectEl.m_TextColor, Icon) : RectEl.m_TextColor;
+	const ColorRGBA Color = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(RectEl.m_TextColor, Icon) : RectEl.m_TextColor);
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
-	const ColorRGBA OutlineColor = RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor;
+	const ColorRGBA OutlineColor = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor);
 	TextRender()->RenderTextContainer(RectEl.m_UITextContainer, Color, OutlineColor, CursorPos.x, CursorPos.y);
 	CQmIconDrawDiagnostics::Record(RectEl.m_NumQmIcons);
 }
@@ -2296,9 +2302,9 @@ CLabelResult CUi::DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char 
 	return DoLabel(pRect, pFallbackIcon, Size, Align, LabelProps);
 }
 
-int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash)
+int CUi::DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor, bool ShowSlash, bool TransparentInactive)
 {
-	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash);
+	return ui_widget::DoIconButton(ui_widget::ControlContext(this), pButtonContainer, Icon, pFallbackIcon, Checked, *pRect, Flags, Corners, Enabled, ButtonColor, ShowSlash, TransparentInactive);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor, float MinimumFontSize)
