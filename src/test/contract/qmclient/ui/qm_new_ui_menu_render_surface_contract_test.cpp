@@ -316,7 +316,8 @@ TEST(QmNewUiMenuBranches, SharedListsAndResourceCardsUseRoundedSurfacePath)
 	EXPECT_NE(ListBox.find("DrawRoundedSurface(Ui(), Item.m_Rect"), std::string::npos);
 	EXPECT_NE(ListBox.find("DrawRoundedSurface(Ui(), View"), std::string::npos);
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), ShellRect"), std::string::npos);
-	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), PreviewFrame"), std::string::npos);
+	// PreviewFrame 的第二层圆角底已随"卡片去嵌套"设计移除：卡片壳是唯一容器，
+	// 不再断言预览框自己的表面绘制。
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), FallbackRect"), std::string::npos);
 	EXPECT_NE(Assets.find("DrawRoundedSurface(pUi, StatusRect"), std::string::npos);
 	EXPECT_NE(Assets.find("DrawRoundedSurface(Ui(), WorkshopHudView"), std::string::npos);
