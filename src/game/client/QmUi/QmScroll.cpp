@@ -2,6 +2,10 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmScroll.h"
 
+#include <engine/shared/config.h>
+
+#include <game/client/QmUi/QmAnimationBackend.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -139,7 +143,14 @@ SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeS
 	(void)UiScale;
 	Config.m_WheelScale = 10.0f;
 	Config.m_NativeWheelStep = true;
-	Config.m_NativeWheelAnimationTime = std::max(0.0f, SmoothScrollTimeSec);
+	Config.m_LegacyWheelFeel = g_Config.m_QmUiScrollLegacyWheel != 0;
+	// 滚动平滑时长统一走引擎动效等级（qm_animation::ApplyMotionLevel，与弹层/
+	// 列表/气泡同一缩放口径）：0 档即时定位、1 档 ×0.45、2 档全额。此前滚动
+	// 是全站唯一不理会 qm_ui_motion_level 的动画。
+	Config.m_NativeWheelAnimationTime = qm_animation::ApplyMotionLevel(
+		SUiAnimTransition{.m_DurationSec = std::max(0.0f, SmoothScrollTimeSec), .m_Easing = EEasing::LINEAR},
+		g_Config.m_QmUiMotionLevel)
+						    .m_DurationSec;
 	Config.m_MaxOverscroll = 0.0f;
 	return Config;
 }
@@ -310,7 +321,9 @@ void CQmScrollState::AddWheelImpulse(float WheelDelta, const SQmScrollMetrics &M
 		m_AnimTimeMax = AnimationTime;
 		m_AnimTime = AnimationTime;
 		// 首次滚动保持原三次 ease-out，后续滚轮事件继承当前速度，包括反向操作。
-		m_AnimStartVelocity = Continuing ? m_Velocity : (AnimationTime > 0.0f ? 3.0f * (TargetOffset - m_Offset) / AnimationTime : 0.0f);
+		// 原版手感（LegacyWheelFeel）：每档重置初速、不继承速度——连续滚动
+		// 每档重新起步（上游 DDNet 的可感知差异就在速度处理，距离两版相同）。
+		m_AnimStartVelocity = (Continuing && !Config.m_LegacyWheelFeel) ? m_Velocity : (AnimationTime > 0.0f ? 3.0f * (TargetOffset - m_Offset) / AnimationTime : 0.0f);
 		m_Velocity = m_AnimStartVelocity;
 		if(AnimationTime <= 0.0f || (!Continuing && std::abs(m_AnimStartOffset - m_AnimTargetOffset) < 0.5f))
 		{

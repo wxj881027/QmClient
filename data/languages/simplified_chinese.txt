@@ -1820,6 +1820,12 @@ Card height animation
 Card list entry animation
 == 设置卡片列表入场动画
 
+Original scroll feel
+== 原版滚动手感
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== 还原原版滚轮滚动：每档滚轮重新起步播放平滑滚动，不继承当前速度
+
 Card opacity
 == 卡片不透明度
 
