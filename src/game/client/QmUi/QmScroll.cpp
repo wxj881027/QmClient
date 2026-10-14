@@ -141,7 +141,10 @@ SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeS
 {
 	SQmScrollConfig Config;
 	(void)UiScale;
-	Config.m_WheelScale = 10.0f;
+	// 步长百分比防零回退：生产由 config loader 保证 ≥25，测试环境的
+	// g_Config 是零初始化（未跑 loader），0 直接乘会把 WheelScale 归零。
+	const float StepPercent = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 100.0f;
+	Config.m_WheelScale = 10.0f * StepPercent / 100.0f;
 	Config.m_NativeWheelStep = true;
 	Config.m_LegacyWheelFeel = g_Config.m_QmUiScrollLegacyWheel != 0;
 	// 滚动平滑时长统一走引擎动效等级（qm_animation::ApplyMotionLevel，与弹层/
@@ -158,7 +161,8 @@ SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeS
 SQmScrollConfig QmSettingsScrollConfig(float UiScale, float SmoothScrollTimeSec)
 {
 	SQmScrollConfig Config = QmNativeWheelScrollConfig(UiScale, SmoothScrollTimeSec);
-	Config.m_WheelScale = 120.0f;
+	const float StepPercent = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 100.0f;
+	Config.m_WheelScale = 120.0f * StepPercent / 100.0f;
 	return Config;
 }
 

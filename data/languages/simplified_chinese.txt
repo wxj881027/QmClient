@@ -1826,6 +1826,12 @@ Original scroll feel
 Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
 == 还原原版滚轮滚动：每档滚轮重新起步播放平滑滚动，不继承当前速度
 
+Scroll step
+== 滚动步长
+
+Customize the distance per wheel tick as a percentage. Hold Alt while scrolling to jump a full page
+== 自定义每档滚轮的滚动距离（百分比）；按住 Alt 滚动可整页翻动
+
 Card opacity
 == 卡片不透明度
 

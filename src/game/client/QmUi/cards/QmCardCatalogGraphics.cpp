@@ -1034,6 +1034,11 @@ static CButtonContainer s_CardBorderColorResetId;
 					g_Config.m_QmUiScrollLegacyWheel ^= 1;
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel, Localize("Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity"));
 			});
+
+			RowAction("graphics-ScrollStep", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollStepRow) {
+				DoSettingsScrollbarOption(SETTINGS_GRAPHICS, -1, -1, "graphics-scroll-step", &g_Config.m_QmUiScrollStep, &g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Scroll step"), 25, 400, &CUi::ms_LinearScrollbarScale, 0, "%");
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Customize the distance per wheel tick as a percentage. Hold Alt while scrolling to jump a full page"));
+			});
 		});
 	};
 	uint64_t GraphicsLayoutRevision = GraphicsModesMeasureRevision;

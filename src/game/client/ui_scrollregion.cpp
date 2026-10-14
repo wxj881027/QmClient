@@ -328,6 +328,14 @@ void CScrollRegion::DoScrollInput()
 	float WheelDelta = 0.0f;
 	if(!Ui()->TryConsumeWheel(pWheelOwnerId, &WheelDelta))
 		return;
+	// Alt+滚轮 = 整页滚动（上游 DDNet 语义回归）：一步跨整个视口高度。
+	// 实现上放大滚轮冲量，使 steps * WheelScale 恰好等于视口高度。
+	if(Input() != nullptr && Input()->AltIsPressed())
+	{
+		const SQmScrollConfig ScrollCfg = ScrollConfig();
+		if(ScrollCfg.m_WheelScale > 0.0f)
+			WheelDelta *= std::max(1.0f, ScrollMetrics().m_ViewportSize / ScrollCfg.m_WheelScale);
+	}
 	m_WheelConsumedThisFrame = true;
 	m_ScrollState.AddWheelImpulse(WheelDelta, ScrollMetrics(), ScrollConfig());
 }
