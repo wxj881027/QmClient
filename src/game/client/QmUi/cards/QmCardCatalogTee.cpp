@@ -708,13 +708,12 @@ void CMenus::RenderSettingsTeeEditor(CUIRect Content, const SSettingsContentMetr
 	float TeeAlphaScale = 1.0f;
 	if(g_Config.m_QmUiMotionLevel > 0 && m_TeeEntranceStartTime > 0)
 	{
-		const float Duration = g_Config.m_QmUiMotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
-		const float Overshoot = g_Config.m_QmUiMotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT;
+		const SCountryFlagEntryParams EntryParams = ResolveCountryFlagEntryParams(g_Config.m_QmUiMotionLevel);
 		const float Elapsed = (time_get() - m_TeeEntranceStartTime) / (float)time_freq();
-		if(Elapsed >= 0.0f && Elapsed < Duration)
+		if(Elapsed >= 0.0f && Elapsed < EntryParams.m_Duration)
 		{
-			const float Progress = Elapsed / Duration;
-			TeeScale = ComputeCountryFlagEntryScale(Progress, Overshoot);
+			const float Progress = Elapsed / EntryParams.m_Duration;
+			TeeScale = ComputeCountryFlagEntryScale(Progress, EntryParams.m_Overshoot);
 			TeeAlphaScale = ComputeCountryFlagEntryAlpha(Progress);
 		}
 	}

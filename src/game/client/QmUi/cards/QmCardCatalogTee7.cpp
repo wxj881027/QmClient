@@ -12,7 +12,6 @@
 #include <engine/textrender.h>
 #include <engine/updater.h>
 
-#include <game/client/QmUi/UiTokens.h>
 #include <generated/protocol.h>
 
 #include <game/client/QmUi/QmCardRegistry.h>
@@ -22,6 +21,7 @@
 #include <game/client/QmUi/UiContext.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/animstate.h>
 #include <game/client/components/chat.h>
@@ -238,13 +238,12 @@ void CMenus::RenderSettingsTee7Content(CUIRect MainView, const SSettingsContentM
 	float TeeScale = 1.0f;
 	if(MotionEnabled && m_TeeEntranceStartTime > 0)
 	{
-		const float Duration = g_Config.m_QmUiMotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
-		const float Overshoot = g_Config.m_QmUiMotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT;
+		const SCountryFlagEntryParams EntryParams = ResolveCountryFlagEntryParams(g_Config.m_QmUiMotionLevel);
 		const float Elapsed = (time_get() - m_TeeEntranceStartTime) / (float)time_freq();
-		if(Elapsed >= 0.0f && Elapsed < Duration)
+		if(Elapsed >= 0.0f && Elapsed < EntryParams.m_Duration)
 		{
-			const float Progress = Elapsed / Duration;
-			TeeScale = ComputeCountryFlagEntryScale(Progress, Overshoot);
+			const float Progress = Elapsed / EntryParams.m_Duration;
+			TeeScale = ComputeCountryFlagEntryScale(Progress, EntryParams.m_Overshoot);
 		}
 	}
 	OwnSkinInfo.m_Size *= TeeScale;

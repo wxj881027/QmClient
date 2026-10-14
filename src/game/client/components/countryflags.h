@@ -57,6 +57,22 @@ inline float ComputeCountryFlagEntryAlpha(float Progress)
 	return Progress / 0.25f;
 }
 
+struct SCountryFlagEntryParams
+{
+	float m_Duration;
+	float m_Overshoot;
+};
+
+// 按动效分级解析入场参数（唯一裁决点，勿在调用点重复分支）：
+// Full 0.28s / 过冲 2.6（Scale 峰值约 1.20）；Reduced 0.16s / 1.4（收敛更快更克制）；
+// 0 档由调用方直接禁用入场。
+inline SCountryFlagEntryParams ResolveCountryFlagEntryParams(int MotionLevel)
+{
+	if(MotionLevel <= 1)
+		return {0.16f, 1.4f};
+	return {COUNTRY_FLAG_ANIM_DURATION, COUNTRY_FLAG_ANIM_OVERSHOOT};
+}
+
 // 计算中心锚点对齐缩放后的包围矩形
 inline void ComputeCountryFlagEntryRect(float x, float y, float w, float h, float Scale, float &OutX, float &OutY, float &OutW, float &OutH)
 {
@@ -124,12 +140,13 @@ public:
 				return Visual;
 			}
 
-			const float Duration = MotionLevel == 1 ? 0.16f : COUNTRY_FLAG_ANIM_DURATION;
+			const SCountryFlagEntryParams EntryParams = ResolveCountryFlagEntryParams(MotionLevel);
+			const float Duration = EntryParams.m_Duration;
 			const float Elapsed = (Now - AnimationStartTime) / (float)Frequency;
 			if(Elapsed < Duration)
 			{
 				const float Progress = Elapsed / Duration;
-				Visual.m_Scale = ComputeCountryFlagEntryScale(Progress, MotionLevel == 1 ? 1.4f : COUNTRY_FLAG_ANIM_OVERSHOOT);
+				Visual.m_Scale = ComputeCountryFlagEntryScale(Progress, EntryParams.m_Overshoot);
 				Visual.m_Alpha = ComputeCountryFlagEntryAlpha(Progress);
 			}
 			return Visual;
