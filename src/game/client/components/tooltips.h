@@ -3,8 +3,11 @@
 
 #include <engine/textrender.h>
 
+#include <game/client/QmUi/QmAnimResolve.h>
+#include <game/client/QmUi/QmAnimationBackend.h>
 #include <game/client/QmUi/QmCardLabelHints.h>
 #include <game/client/QmUi/UiConfigHintText.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/component.h>
 #include <game/client/components/qm_tooltip_text_layout.h>
 #include <game/client/ui_rect.h>
@@ -25,8 +28,12 @@ inline float QmTooltipScale(float ElapsedSeconds, bool AnimationEnabled)
 {
 	if(!AnimationEnabled || ElapsedSeconds >= 0.18f)
 		return 1.0f;
-	const float T = std::clamp(ElapsedSeconds / 0.18f, 0.0f, 1.0f) - 1.0f;
-	const float Ease = 1.0f + 2.70158f * T * T * T + 1.70158f * T * T;
+	// EASE_OUT_QUART 单调收口（0.88 → 1.0，无过冲回弹）：气泡常锚在控件/弹层
+	// 边缘，ease-out-back 的过冲会被读作「弹层展开在弹」（用户明确要求下拉
+	// 弹出优雅无弹跳），故入场只保留缩放渐入、去掉回弹段。
+	const float T = std::clamp(ElapsedSeconds / 0.18f, 0.0f, 1.0f);
+	const float Inv = 1.0f - T;
+	const float Ease = 1.0f - Inv * Inv * Inv * Inv;
 	return 0.88f + 0.12f * Ease;
 }
 
@@ -140,6 +147,21 @@ public:
 
 	float VisibleSeconds(double Now) const { return static_cast<float>(Now - m_VisibleAt); }
 
+	float RetainAlpha(double Now, bool Animate) const
+	{
+		if(!m_Visible)
+			return 0.0f;
+		const double UnhoveredSeconds = Now - m_LastHoveredAt;
+		if(!Animate || UnhoveredSeconds <= 0.0)
+			return 1.0f;
+		// 前 50ms 保持满不透明度以支持跨控件无缝切换；随后平滑淡出，消除 250ms 到期瞬间的硬切闪退。
+		constexpr double GRACE_HOLD_SECONDS = 0.05;
+		if(UnhoveredSeconds <= GRACE_HOLD_SECONDS)
+			return 1.0f;
+		const float FadeProgress = std::clamp(static_cast<float>((UnhoveredSeconds - GRACE_HOLD_SECONDS) / (SWITCH_GRACE_SECONDS - GRACE_HOLD_SECONDS)), 0.0f, 1.0f);
+		return 1.0f - FadeProgress * FadeProgress;
+	}
+
 	bool Retain(double Now, const CTooltip *pSource = nullptr, uint64_t Frame = 0)
 	{
 		const bool SourceInvalidated = pSource != nullptr && QmTooltipSourceInvalidated(*pSource, Frame);
@@ -159,42 +181,75 @@ public:
 };
 
 // 新目标从当前可见矩形接着移动，快速连续切换不会回跳到上一个起点。
+// 2026-10-14 迁移到动画引擎：位置/尺寸四条 tween 轨道由 CQmAnimationBackend
+// 驱动（打断续接 MERGE_TARGET、时长/曲线收口 ui_token::motion::TOOLTIP_MOVE、
+// 动效等级自动响应 ApplyMotionLevel），不再手写插值公式。
 class CQmTooltipMotionState
 {
-	CUIRect m_From{};
+	CQmAnimationBackend m_Anim;
 	CUIRect m_Target{};
-	double m_StartedAt = 0.0;
+	double m_LastUpdateAt = 0.0;
 	bool m_Initialized = false;
 
-	CUIRect Sample(double Now) const
+	static uint64_t MotionNodeKey()
 	{
-		const float T = std::clamp(static_cast<float>((Now - m_StartedAt) / MOVE_SECONDS), 0.0f, 1.0f);
-		const float Ease = T * T * (3.0f - 2.0f * T);
-		return {m_From.x + (m_Target.x - m_From.x) * Ease, m_From.y + (m_Target.y - m_From.y) * Ease,
-			m_From.w + (m_Target.w - m_From.w) * Ease, m_From.h + (m_Target.h - m_From.h) * Ease};
+		return BuildUiAnimNodeKey(static_cast<uint64_t>(str_quickhash("tooltip_motion")), 0);
+	}
+
+	void SnapTo(const CUIRect &Target)
+	{
+		m_Anim.Reset();
+		m_Anim.SetValue(MotionNodeKey(), EUiAnimProperty::POS_X, Target.x);
+		m_Anim.SetValue(MotionNodeKey(), EUiAnimProperty::POS_Y, Target.y);
+		m_Anim.SetValue(MotionNodeKey(), EUiAnimProperty::WIDTH, Target.w);
+		m_Anim.SetValue(MotionNodeKey(), EUiAnimProperty::HEIGHT, Target.h);
+	}
+
+	CUIRect Sample() const
+	{
+		const uint64_t NodeKey = MotionNodeKey();
+		CUIRect Out = m_Target;
+		Out.x = m_Anim.GetValue(NodeKey, EUiAnimProperty::POS_X, m_Target.x);
+		Out.y = m_Anim.GetValue(NodeKey, EUiAnimProperty::POS_Y, m_Target.y);
+		Out.w = m_Anim.GetValue(NodeKey, EUiAnimProperty::WIDTH, m_Target.w);
+		Out.h = m_Anim.GetValue(NodeKey, EUiAnimProperty::HEIGHT, m_Target.h);
+		return Out;
 	}
 
 public:
+	// 兼容引用保留；实际时长/曲线唯一来源是 ui_token::motion::TOOLTIP_MOVE。
 	static constexpr double MOVE_SECONDS = 0.16;
 
 	CUIRect Update(const CUIRect &Target, double Now, bool Enabled)
 	{
 		if(!m_Initialized || !Enabled)
 		{
-			m_From = m_Target = Target;
-			m_StartedAt = Now;
-			m_Initialized = true;
-		}
-		else if(m_Target.x != Target.x || m_Target.y != Target.y || m_Target.w != Target.w || m_Target.h != Target.h)
-		{
-			m_From = Sample(Now);
 			m_Target = Target;
-			m_StartedAt = Now;
+			m_Initialized = true;
+			m_LastUpdateAt = Now;
+			SnapTo(Target);
+			return Target;
 		}
-		return Sample(Now);
+		// 目标变化的那一帧从当前位置启动新轨道（dt=0 不先积分），保证同帧
+		// 返回值连续；后续帧按真实时间推进引擎 tween。
+		const bool TargetChanged = m_Target.x != Target.x || m_Target.y != Target.y || m_Target.w != Target.w || m_Target.h != Target.h;
+		const float Dt = TargetChanged ? 0.0f : static_cast<float>(std::max(0.0, Now - m_LastUpdateAt));
+		m_LastUpdateAt = Now;
+		m_Anim.Advance(Dt);
+		m_Target = Target;
+		const uint64_t NodeKey = MotionNodeKey();
+		(void)ResolveUiAnimValue(m_Anim, NodeKey, EUiAnimProperty::POS_X, Target.x, ui_token::motion::TOOLTIP_MOVE.m_DurationSec, ui_token::motion::TOOLTIP_MOVE.m_Easing);
+		(void)ResolveUiAnimValue(m_Anim, NodeKey, EUiAnimProperty::POS_Y, Target.y, ui_token::motion::TOOLTIP_MOVE.m_DurationSec, ui_token::motion::TOOLTIP_MOVE.m_Easing);
+		(void)ResolveUiAnimValue(m_Anim, NodeKey, EUiAnimProperty::WIDTH, Target.w, ui_token::motion::TOOLTIP_MOVE.m_DurationSec, ui_token::motion::TOOLTIP_MOVE.m_Easing);
+		(void)ResolveUiAnimValue(m_Anim, NodeKey, EUiAnimProperty::HEIGHT, Target.h, ui_token::motion::TOOLTIP_MOVE.m_DurationSec, ui_token::motion::TOOLTIP_MOVE.m_Easing);
+		return Sample();
 	}
 
-	void Clear() { m_Initialized = false; }
+	void Clear()
+	{
+		m_Initialized = false;
+		m_Anim.Reset();
+	}
 };
 
 // 同一气泡持有一个文本容器；位移只改变绘制偏移，内容或排版改变时原地更新。
