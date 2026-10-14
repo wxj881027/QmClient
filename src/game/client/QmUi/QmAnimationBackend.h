@@ -65,6 +65,20 @@ struct SUiSpringConfig
 	float m_Damping = 26.0f;
 	float m_RestEpsilon = 0.01f;
 	float m_RestVelocity = 0.05f;
+
+	// 设计师直觉参数构造（Apple Fluid Interfaces 范式）：ResponseSec = 无阻尼
+	// 固有响应周期（秒），DampingRatio = 阻尼比（<1 欠阻尼回弹、=1 临界、>1 过阻尼）。
+	// 换算 k=(2π/Response)²、c=4π·DampingRatio/Response（m=1），与解析解积分器闭合。
+	// 调手感只动这两个直觉量，不再试错物理量。
+	static constexpr SUiSpringConfig FromResponse(float ResponseSec, float DampingRatio)
+	{
+		const float Response = ResponseSec > 0.0001f ? ResponseSec : 0.0001f;
+		const float Omega = 6.283185307179586f / Response;
+		SUiSpringConfig Config;
+		Config.m_Stiffness = Omega * Omega;
+		Config.m_Damping = 2.0f * DampingRatio * Omega;
+		return Config;
+	}
 };
 
 struct SUiBezier
@@ -188,7 +202,7 @@ private:
 	float ApplyEasing(float t, const SUiAnimTransition &Transition) const;
 	float ApplyTrackEasing(float t, const SActiveTrack &Track) const;
 	float TrackProgress(const SActiveTrack &Track) const;
-	void AdvanceSpring(SActiveTrack &Track, float Dt) const;
+	void AdvanceSpring(SActiveTrack &Track, float Dt, EUiAnimProperty Property) const;
 	// 统一打断语义：任何打断都以 (当前值, 当前速度) 为初值落到弹簧继续运动。
 	// （请求本身是弹簧用其参数，是 tween 按时长映射接管弹簧；0 时长 tween 仍瞬移）。
 	bool StartTrackInterrupt(const STrackKey &Key, const SUiAnimRequest &Request, const SActiveTrack &Active);

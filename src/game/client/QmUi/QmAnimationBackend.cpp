@@ -41,6 +41,58 @@ namespace qm_animation
 	}
 } // namespace qm_animation
 
+namespace
+{
+	// 按属性差异化的休眠阈值：空间属性像素级吸附（0.25px 且速度 <0.5px/s，
+	// DDNet 玩家对亚像素抖动与渐近尾迹的开销都敏感）；感知属性用感知无阶跃
+	// 的紧阈值（ALPHA 0.002、COLOR 0.001）。未列出属性沿用弹簧配置。
+	float RestEpsilonFor(EUiAnimProperty Property, const SUiSpringConfig &Spring)
+	{
+		switch(Property)
+		{
+		case EUiAnimProperty::POS_X:
+		case EUiAnimProperty::POS_Y:
+		case EUiAnimProperty::WIDTH:
+		case EUiAnimProperty::HEIGHT:
+			return 0.25f;
+		case EUiAnimProperty::ALPHA:
+			return 0.002f;
+		case EUiAnimProperty::COLOR_R:
+		case EUiAnimProperty::COLOR_G:
+		case EUiAnimProperty::COLOR_B:
+		case EUiAnimProperty::COLOR_A:
+		case EUiAnimProperty::COLOR_MIX:
+			return 0.001f;
+		default:
+			return Spring.m_RestEpsilon;
+		}
+	}
+
+	float RestVelocityFor(EUiAnimProperty Property, const SUiSpringConfig &Spring)
+	{
+		switch(Property)
+		{
+		case EUiAnimProperty::POS_X:
+		case EUiAnimProperty::POS_Y:
+		case EUiAnimProperty::WIDTH:
+		case EUiAnimProperty::HEIGHT:
+			return 0.5f;
+		default:
+			return Spring.m_RestVelocity;
+		}
+	}
+
+	// 感知属性（ALPHA/COLOR）禁用欠阻尼：过冲超过 1.0 被 Clamp 截断会产生
+	// 视觉曝光停滞；空间属性允许回弹体现液态张力。由 RequestAnimation 强制。
+	bool IsPerceptualProperty(EUiAnimProperty Property)
+	{
+		return Property == EUiAnimProperty::ALPHA || Property == EUiAnimProperty::COLOR_R ||
+		       Property == EUiAnimProperty::COLOR_G || Property == EUiAnimProperty::COLOR_B ||
+		       Property == EUiAnimProperty::COLOR_A || Property == EUiAnimProperty::COLOR_MIX;
+	}
+
+}
+
 static bool ColorChanged(const ColorRGBA &A, const ColorRGBA &B)
 {
 	constexpr float COLOR_EPSILON = 0.0001f;
@@ -194,7 +246,7 @@ bool CQmAnimationBackend::StartTrack(const STrackKey &Key, const SUiAnimRequest 
 		return false;
 	}
 
-	if(IsSpring && std::abs(Track.m_Current - Track.m_Target) < Track.m_Transition.m_Spring.m_RestEpsilon && std::abs(Track.m_Velocity) < Track.m_Transition.m_Spring.m_RestVelocity)
+	if(IsSpring && std::abs(Track.m_Current - Track.m_Target) < RestEpsilonFor(Key.m_Property, Track.m_Transition.m_Spring) && std::abs(Track.m_Velocity) < RestVelocityFor(Key.m_Property, Track.m_Transition.m_Spring))
 	{
 		m_Values[Key] = Track.m_Target;
 		m_CompletedEvents.push_back({Key.m_NodeKey, Key.m_Property, Track.m_TrackId});
@@ -443,6 +495,17 @@ bool CQmAnimationBackend::RequestAnimation(const SUiAnimRequest &Request)
 	if(Request.m_Transition.m_RespectMotionLevel)
 		EffectiveRequest.m_Transition = qm_animation::ApplyMotionLevel(Request.m_Transition, g_Config.m_QmUiMotionLevel);
 
+	// 感知属性双轨阻尼守卫：ALPHA/COLOR_* 强制临界阻尼（欠阻尼过冲被 Clamp
+	// 截断会产生曝光停滞）；空间属性保留配置的回弹张力。显式构造的临界/过阻
+	// 尼配置不受影响。
+	if(EffectiveRequest.m_Transition.m_Driver == EUiAnimDriver::SPRING && IsPerceptualProperty(EffectiveRequest.m_Property))
+	{
+		SUiSpringConfig &Spring = EffectiveRequest.m_Transition.m_Spring;
+		const float Mass = std::max(Spring.m_Mass, 1e-4f);
+		const float CriticalDamping = 2.0f * std::sqrt(Spring.m_Stiffness * Mass);
+		Spring.m_Damping = std::max(Spring.m_Damping, CriticalDamping);
+	}
+
 	const STrackKey Key{EffectiveRequest.m_NodeKey, EffectiveRequest.m_Property};
 	// 轨道首见时当前值 = 目标（与 ResolveTargetValue 的「无值即同步」判断层一致）：
 	// 否则首帧会把颜色/位置从 0 拉向目标，产生一次多余的进场闪变。需要从
@@ -490,7 +553,7 @@ bool CQmAnimationBackend::RequestAnimation(const SUiAnimRequest &Request)
 	return false;
 }
 
-void CQmAnimationBackend::AdvanceSpring(SActiveTrack &Track, float Dt) const
+void CQmAnimationBackend::AdvanceSpring(SActiveTrack &Track, float Dt, EUiAnimProperty Property) const
 {
 	const float Delay = std::max(0.0f, Track.m_Transition.m_DelaySec);
 	if(Track.m_ElapsedSec < Delay)
@@ -560,7 +623,7 @@ void CQmAnimationBackend::AdvanceSpring(SActiveTrack &Track, float Dt) const
 		}
 	}
 
-	const bool AtRest = std::abs(Track.m_Current - Track.m_Target) < Cfg.m_RestEpsilon && std::abs(Track.m_Velocity) < Cfg.m_RestVelocity;
+	const bool AtRest = std::abs(Track.m_Current - Track.m_Target) < RestEpsilonFor(Property, Cfg) && std::abs(Track.m_Velocity) < RestVelocityFor(Property, Cfg);
 	if(AtRest)
 		Track.m_RestTimerSec += Dt;
 	else
@@ -583,7 +646,7 @@ void CQmAnimationBackend::Advance(float Dt)
 			// 跨过延迟边界时只积分真正开始运动后的时间，长帧也不丢弃经过时间。
 			const float ActiveDt = std::min(Elapsed, std::max(0.0f, Track.m_ElapsedSec - Delay));
 			if(ActiveDt > 0.0f)
-				AdvanceSpring(Track, ActiveDt);
+				AdvanceSpring(Track, ActiveDt, Key.m_Property);
 			m_Values[Key] = Track.m_Current;
 			return Track.m_RestTimerSec >= KSpringRestHoldSec;
 		}
