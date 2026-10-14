@@ -539,6 +539,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	bool EntryPending = m_FrameRuntime.AnimateEntry() && m_FrameRuntime.EntryCyclePending();
 	bool EntryPositionActive = false;
 	float DeckEntryOffsetY = 0.0f;
+	float DeckEntryAlpha = 1.0f;
 	bool ReflowTargetChanged = false;
 	bool ReflowPositionActive = false;
 	// 入场由整个 Deck 共享一个偏移；高度变化按当前动画底边顺排后续卡片，始终保持无重叠几何。
@@ -573,6 +574,8 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 			if(m_FrameRuntime.ConsumeEntryCycle())
 			{
 				Ctx.m_pAnim->SetValue(ResolveEntryKey(), EUiAnimProperty::POS_Y, m_FrameRuntime.AnimateEntry() ? Motion.m_EntryDistance : 0.0f);
+				// 渐入与上浮同生命周期：进场瞬间 ALPHA 置 0，由独立 tween 领先位移显形。
+				Ctx.m_pAnim->SetValue(ResolveEntryKey(), EUiAnimProperty::ALPHA, m_FrameRuntime.AnimateEntry() && Motion.m_EntryDuration > 0.0f ? 0.0f : 1.0f);
 				m_FrameRuntime.SetEntryActive(m_FrameRuntime.AnimateEntry() && Motion.m_EntryDuration > 0.0f);
 			}
 			if(m_FrameRuntime.EntryWasActive() && Motion.m_EntryDuration > 0.0f)
@@ -581,12 +584,14 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 					m_FrameRuntime.CountEntryAnimationResolve();
 				const uint64_t ResolvedEntryKey = ResolveEntryKey();
 				DeckEntryOffsetY = Ctx.m_pAnim->ResolveTargetValue(ResolvedEntryKey, EUiAnimProperty::POS_Y, 0.0f, SettingsCardEntryTransition(Motion));
-				EntryPositionActive = Ctx.m_pAnim->HasActiveAnimation(ResolvedEntryKey, EUiAnimProperty::POS_Y);
+				DeckEntryAlpha = Ctx.m_pAnim->ResolveTargetValue(ResolvedEntryKey, EUiAnimProperty::ALPHA, 1.0f, SettingsCardEntryFadeTransition(Motion));
+				EntryPositionActive = Ctx.m_pAnim->HasActiveAnimation(ResolvedEntryKey, EUiAnimProperty::POS_Y) || Ctx.m_pAnim->HasActiveAnimation(ResolvedEntryKey, EUiAnimProperty::ALPHA);
 				m_FrameRuntime.SetEntryActive(EntryPositionActive);
 			}
 			else if(m_FrameRuntime.EntryWasActive())
 			{
 				Ctx.m_pAnim->SetValue(ResolveEntryKey(), EUiAnimProperty::POS_Y, 0.0f);
+				Ctx.m_pAnim->SetValue(ResolveEntryKey(), EUiAnimProperty::ALPHA, 1.0f);
 				m_FrameRuntime.SetEntryActive(false);
 			}
 		}
@@ -705,6 +710,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		}
 		SSettingsCardVisualState State;
 		State.m_DrawOffsetY = DeckEntryOffsetY;
+		State.m_DrawAlpha = DeckEntryAlpha;
 		State.m_ClipContent = Card.m_Frame.m_ContentRect.w > 0.0f && (static_cast<bool>(Card.m_pDefinition->m_RenderMeasured) || SettingsCardDeckShouldClipContent(Card.m_Frame.m_ContentRect.h > 0.0f, Card.m_ContentHeightAnimationActive));
 		if(Ctx.m_pAnim != nullptr)
 		{

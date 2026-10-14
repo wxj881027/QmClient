@@ -84,8 +84,9 @@ private:
 	SSettingsCardDeckFrameDiagnostics *m_pDiagnostics = nullptr;
 };
 
-// 入场上浮统一 ζ≈0.8 轻回弹弹簧（onetake：native 而非 animated）；连续与非连续
-// 入场共用同一曲线 family，时长都取 Motion.m_EntryDuration（已按动效等级缩放）。
+// 入场上浮统一 ζ=1.0 临界阻尼弹簧（无回弹：卡片是大 ground，过冲读作不稳；
+// 用户校准「缓动上浮、渐入、优雅」）。连续与非连续入场共用同一曲线 family，
+// 时长都取 Motion.m_EntryDuration（已按动效等级缩放）。
 inline SUiAnimTransition SettingsCardEntryTransition(const SCardMotionSpec &Motion)
 {
 	SUiAnimTransition Transition;
@@ -93,7 +94,20 @@ inline SUiAnimTransition SettingsCardEntryTransition(const SCardMotionSpec &Moti
 	Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
 	Transition.m_Priority = 1;
 	const float Frequency = 5.0f / Motion.m_EntryDuration;
-	Transition.m_Spring = {1.0f, Frequency * Frequency, 1.6f * Frequency, 0.05f, 0.5f};
+	Transition.m_Spring = {1.0f, Frequency * Frequency, 2.0f * Frequency, 0.05f, 0.5f};
+	Transition.m_RespectMotionLevel = false;
+	return Transition;
+}
+
+// 入场渐入（onetake：opacity 领先位移）：0.7×上浮时长的 EASE_OUT_QUART tween，
+// 卡片先显形后落位；与 POS_Y 同生命周期同打断策略。
+inline SUiAnimTransition SettingsCardEntryFadeTransition(const SCardMotionSpec &Motion)
+{
+	SUiAnimTransition Transition;
+	Transition.m_DurationSec = Motion.m_EntryDuration > 0.0f ? Motion.m_EntryDuration * 0.7f : 0.0f;
+	Transition.m_Easing = EEasing::EASE_OUT_QUART;
+	Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+	Transition.m_Priority = 1;
 	Transition.m_RespectMotionLevel = false;
 	return Transition;
 }
