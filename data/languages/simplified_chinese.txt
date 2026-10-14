@@ -1829,8 +1829,8 @@ Restore the original wheel scrolling: each tick restarts the smooth scroll inste
 Scroll step
 == 滚动步长
 
-Customize the distance per wheel tick as a percentage. Hold Alt while scrolling to jump a full page
-== 自定义每档滚轮的滚动距离（百分比）；按住 Alt 滚动可整页翻动
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== 自定义每档滚轮的滚动距离；按住 Alt 滚动 = 3 倍步长
 
 Card opacity
 == 卡片不透明度
