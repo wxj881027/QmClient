@@ -137,16 +137,8 @@ float CSettingsCardDeckFrameRuntime::ResolveContinuousEntryOffset(CUiV2Animation
 	}
 
 	CountEntryAnimationResolve();
-	SUiAnimTransition Transition;
-	Transition.m_Driver = EUiAnimDriver::SPRING;
-	Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-	Transition.m_Priority = 1;
 	// 阻尼比 0.8 只产生约 1.5% 的轻微回弹；减少动效模式沿用更短时长和更小位移。
-	const float Frequency = 5.0f / Motion.m_EntryDuration;
-	Transition.m_Spring = {1.0f, Frequency * Frequency, 1.6f * Frequency, 0.05f, 0.5f};
-	// Motion 已按用户动效等级缩放，避免再次缩放导致切换手感不一致。
-	Transition.m_RespectMotionLevel = false;
-	const float Offset = AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f, Transition);
+	const float Offset = AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f, SettingsCardEntryTransition(Motion));
 	m_EntryWasActive = AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::POS_Y);
 	return Offset;
 }

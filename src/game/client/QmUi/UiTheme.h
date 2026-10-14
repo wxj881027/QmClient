@@ -128,10 +128,12 @@ inline SUiSliderStyle ResolveUiSliderStyle(const SUiTheme &Theme, ColorRGBA Back
 {
 	const ColorRGBA Foreground = ResolveUiSurfaceForeground(Backdrop);
 	SUiSliderStyle Style;
-	Style.m_Track = Foreground.WithAlpha(0.25f);
+	// 轨道与边框保持可读的基础强度（0.25/0.30 在卡片表面几乎不可见，用户
+	// 反馈「颜色带透明度、没反馈」）；hover/press 由边框与滑块几何反馈承担。
+	Style.m_Track = Foreground.WithAlpha(0.32f);
 	Style.m_Fill = Theme.m_Accent.WithMultipliedAlpha(0.85f);
 	Style.m_Handle = ResolveUiSurfaceIconColor(Backdrop, Theme.m_Accent);
-	Style.m_Border = Foreground.WithAlpha(Enabled && (Hovered || Pressed) ? 0.70f : 0.30f);
+	Style.m_Border = Foreground.WithAlpha(Enabled && (Hovered || Pressed) ? 0.85f : 0.45f);
 	if(!Enabled)
 	{
 		Style.m_Track.a *= 0.65f;

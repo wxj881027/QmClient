@@ -5,6 +5,8 @@
 
 #include "SettingsCardGeometry.h"
 
+#include "UiTokens.h"
+
 #include <engine/textrender.h>
 
 #include <algorithm>
@@ -45,12 +47,16 @@ inline void ExecuteSettingsCardLabel(const CUIRect &Rect, TDraw &&Draw)
 
 void RenderSettingsCardHeaderIcon(const IUiContext &Ctx, const CUIRect &Rect, EQmIcon Icon, const char *pGlyph, float DrawAlpha = 1.0f, const void *pId = nullptr);
 
+// 设置卡片组的默认外观：描边与 ui_token::color::CONTAINER_BORDER 同值，
+// 视觉统一确认后可合并为同一 token；表面默认透明表示未自定义表面色。
+inline constexpr ColorRGBA SettingsCardDeckDefaultBorder{1.0f, 1.0f, 1.0f, 0.10f};
+
 struct SSettingsCardDeckVisualOptions
 {
 	bool m_RainbowTitles = false;
 	bool m_AlwaysShowBorders = true;
-	ColorRGBA m_BorderColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f);
-	ColorRGBA m_SurfaceColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f);
+	ColorRGBA m_BorderColor = SettingsCardDeckDefaultBorder;
+	ColorRGBA m_SurfaceColor = ui_token::color::COLOR_TRANSPARENT;
 	bool m_UseSurfaceColor = false;
 	int m_LeadingFullWidthCards = 0;
 };

@@ -33,12 +33,6 @@ namespace
 		Rect.y += OffsetY;
 	}
 
-	uint64_t SettingsCardEntryNodeKey(const char *pTab)
-	{
-		const uint64_t TabKey = str_quickhash(pTab != nullptr ? pTab : "");
-		return BuildUiAnimNodeKey(str_quickhash("settings-card-deck-entry"), TabKey);
-	}
-
 	uint64_t SettingsCardReflowNodeKey(const char *pTab, const char *pStableId)
 	{
 		const uint64_t TabKey = str_quickhash(pTab != nullptr ? pTab : "");
@@ -363,7 +357,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				if(Input.m_pDiagnostics != nullptr)
 					m_FrameRuntime.CountHeightAnimationResolve();
 				const uint64_t HeightKey = SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId);
-				Runtime.m_AnimatedContentHeight = ResolveUiAnimValue(*Ctx.m_pAnim, HeightKey, EUiAnimProperty::HEIGHT, TargetContentHeight, Motion.m_ContentHeightDuration, EEasing::EASE_OUT);
+				Runtime.m_AnimatedContentHeight = ResolveUiAnimValue(*Ctx.m_pAnim, HeightKey, EUiAnimProperty::HEIGHT, TargetContentHeight, Motion.m_ContentHeightDuration, EEasing::EASE_OUT_QUART);
 				Runtime.m_ContentHeightWasActive = Ctx.m_pAnim->HasActiveAnimation(HeightKey, EUiAnimProperty::HEIGHT);
 			}
 			else if(HeightWork.m_SetHeightTarget)
@@ -563,12 +557,15 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		}
 		else
 		{
+			// 整 Deck 共享一条入场轨道（onetake：整体弹簧上浮，禁止逐卡
+			// metronome 波浪）；轨道创建与生命周期推进必须都在 deck 级块内
+			// 完成——逐卡延迟创建会与 EntryWasActive 形成先有鸡先有蛋死锁。
 			uint64_t EntryKey = 0;
 			bool HasEntryKey = false;
 			const auto ResolveEntryKey = [&]() {
 				if(!HasEntryKey)
 				{
-					EntryKey = SettingsCardEntryNodeKey(pTab);
+					EntryKey = BuildUiAnimNodeKey(str_quickhash("settings-card-deck-entry"), reinterpret_cast<uintptr_t>(this));
 					HasEntryKey = true;
 				}
 				return EntryKey;
@@ -583,7 +580,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				if(Input.m_pDiagnostics != nullptr)
 					m_FrameRuntime.CountEntryAnimationResolve();
 				const uint64_t ResolvedEntryKey = ResolveEntryKey();
-				DeckEntryOffsetY = ResolveUiAnimValue(*Ctx.m_pAnim, ResolvedEntryKey, EUiAnimProperty::POS_Y, 0.0f, Motion.m_EntryDuration, EEasing::EASE_OUT);
+				DeckEntryOffsetY = Ctx.m_pAnim->ResolveTargetValue(ResolvedEntryKey, EUiAnimProperty::POS_Y, 0.0f, SettingsCardEntryTransition(Motion));
 				EntryPositionActive = Ctx.m_pAnim->HasActiveAnimation(ResolvedEntryKey, EUiAnimProperty::POS_Y);
 				m_FrameRuntime.SetEntryActive(EntryPositionActive);
 			}
@@ -751,7 +748,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				if(Input.m_pDiagnostics != nullptr)
 					m_FrameRuntime.CountReflowAnimationResolve();
 				const uint64_t ResolvedReflowKey = ResolveReflowKey();
-				const float ReflowY = ResolveUiAnimValue(*Ctx.m_pAnim, ResolvedReflowKey, EUiAnimProperty::POS_Y, ReflowTargetY, Motion.m_ReflowDuration, EEasing::EASE_OUT);
+				const float ReflowY = ResolveUiAnimValue(*Ctx.m_pAnim, ResolvedReflowKey, EUiAnimProperty::POS_Y, ReflowTargetY, Motion.m_ReflowDuration, EEasing::EASE_OUT_QUART);
 				State.m_DrawOffsetY += ReflowY - ReflowTargetY;
 				const bool ReflowActive = Ctx.m_pAnim->HasActiveAnimation(ResolvedReflowKey, EUiAnimProperty::POS_Y);
 				Runtime.m_ReflowWasActive = ReflowActive;

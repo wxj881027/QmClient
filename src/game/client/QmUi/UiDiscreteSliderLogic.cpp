@@ -1,5 +1,7 @@
 #include "UiDiscreteSlider.h"
 
+#include "UiTokens.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -70,11 +72,8 @@ namespace ui_widget
 	{
 		SDiscreteSliderStyle Style;
 		// 低档冷色逐步过渡到高档粉色，最高档采用独立紫色高光。
-		const ColorRGBA aColors[] = {
-			ColorRGBA(0.48f, 0.67f, 0.91f, 1.0f),
-			ColorRGBA(0.65f, 0.54f, 0.91f, 1.0f),
-			ColorRGBA(0.84f, 0.48f, 0.78f, 1.0f),
-			ColorRGBA(0.92f, 0.45f, 0.69f, 1.0f)};
+		// 色板唯一来源是 ui_token::discrete_slider::TIER_COLORS，勿复制。
+		const ColorRGBA *const aColors = ui_token::discrete_slider::TIER_COLORS;
 		const float Position = std::min(DiscreteSliderNormalizedValue(Value, Min, Max) * 3.6f, 3.0f);
 		const int Index = std::min(static_cast<int>(Position), 2);
 		const float Mix = Position - Index;
@@ -83,9 +82,9 @@ namespace ui_widget
 			aColors[Index].g * (1.0f - Mix) + aColors[Index + 1].g * Mix,
 			aColors[Index].b * (1.0f - Mix) + aColors[Index + 1].b * Mix, 1.0f);
 		Style.m_Gradient = Max > Min && Value == Max;
-		Style.m_GradientStart = ColorRGBA(0.51f, 0.16f, 0.52f, 1.0f);
-		Style.m_GradientMiddle = ColorRGBA(0.77f, 0.53f, 0.97f, 1.0f);
-		Style.m_GradientEnd = ColorRGBA(0.57f, 0.32f, 0.79f, 1.0f);
+		Style.m_GradientStart = ui_token::discrete_slider::GRADIENT_START;
+		Style.m_GradientMiddle = ui_token::discrete_slider::GRADIENT_MIDDLE;
+		Style.m_GradientEnd = ui_token::discrete_slider::GRADIENT_END;
 		if(Style.m_Gradient)
 			Style.m_Color = Style.m_GradientMiddle;
 		if(Max > Min && Value > Min && Value <= Max && DiscreteSliderNormalizedValue(Value, Min, Max) >= 0.8f)

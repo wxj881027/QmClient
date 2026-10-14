@@ -3,6 +3,7 @@
 
 #include <game/client/QmUi/QmAnimationBackend.h>
 #include <game/client/QmUi/QmCardOrderModel.h>
+#include <game/client/QmUi/SettingsCardGeometry.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -82,6 +83,20 @@ private:
 	bool m_EntryWasActive = false;
 	SSettingsCardDeckFrameDiagnostics *m_pDiagnostics = nullptr;
 };
+
+// 入场上浮统一 ζ≈0.8 轻回弹弹簧（onetake：native 而非 animated）；连续与非连续
+// 入场共用同一曲线 family，时长都取 Motion.m_EntryDuration（已按动效等级缩放）。
+inline SUiAnimTransition SettingsCardEntryTransition(const SCardMotionSpec &Motion)
+{
+	SUiAnimTransition Transition;
+	Transition.m_Driver = EUiAnimDriver::SPRING;
+	Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+	Transition.m_Priority = 1;
+	const float Frequency = 5.0f / Motion.m_EntryDuration;
+	Transition.m_Spring = {1.0f, Frequency * Frequency, 1.6f * Frequency, 0.05f, 0.5f};
+	Transition.m_RespectMotionLevel = false;
+	return Transition;
+}
 
 inline bool SettingsCardDeckHasActiveItemContinuation(const bool HasPointerInput, const bool HasActiveItem)
 {
