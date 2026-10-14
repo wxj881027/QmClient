@@ -954,8 +954,11 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 			else if(Id == COL_NAME)
 			{
+				// 短名仅对国服社区生效（用户校准：默认开、只对国服）；命中判定
+				// 按社区 id 含 "chn"（覆盖 chn/ddnet-cn 等命名），非国服回退全名。
+				const bool ShortNameAllowed = pCommunity != nullptr && str_find_nocase(pCommunity->Id(), "chn") != nullptr;
 				char aDisplayServerName[sizeof(pItem->m_aName)];
-				const char *pDisplayServerName = g_Config.m_QmShortServerNames ? CMenus::GetServerbrowserDisplayName(pItem, aDisplayServerName, sizeof(aDisplayServerName)) : pItem->m_aName;
+				const char *pDisplayServerName = g_Config.m_QmShortServerNames && ShortNameAllowed ? CMenus::GetServerbrowserDisplayName(pItem, aDisplayServerName, sizeof(aDisplayServerName)) : pItem->m_aName;
 
 				const CQmMapDifficultyCatalog::SEntry *pDifficulty = m_MapDifficultyCatalog.FindForServer(*pItem, MapCategoryHintFromServer(pItem));
 				char aDifficulty[64];
