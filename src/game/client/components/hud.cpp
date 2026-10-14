@@ -1399,7 +1399,8 @@ void CHud::RenderGameTimer()
 		Graphics()->DrawRect(DividerX, TimerCapsule.m_BoxY + QmHudMediaIslandScaled(4.0f), QmHudMediaIslandScaled(0.75f), TimerCapsule.m_BoxH - QmHudMediaIslandScaled(8.0f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f * StatusAlpha), IGraphics::CORNER_ALL, QmHudMediaIslandScaled(0.375f));
 
 		const vec2 DotCenter(StatusSectionX + StatusPaddingLeft + StatusDotSize * 0.5f, TimerCapsule.m_BoxY + TimerCapsule.m_BoxH * 0.5f);
-		DrawHudRecordingStatusDot(Graphics(), DotCenter, StatusDotSize, QmHudRecordingDotAlpha(time_get() / (double)time_freq()) * StatusAlpha, RecordingDotScreenPixelSize);
+		(void)DotCenter;
+		// 用户校准：录制状态不再显示红点；计分板（Tab）展开时保留文本状态显示。
 
 		if(QmHudRecordingPresentation(ShowRecordingStatus, ScoreboardExpanded, false, false).RecordingTextAlpha(StatusTextAlpha) > 0.001f && StatusWidth > RawCollapsedWidth + QmHudMediaIslandScaled(2.0f))
 		{
@@ -5002,8 +5003,9 @@ void CHud::RenderMediaIsland()
 		}
 		else
 		{
+			// 用户校准：灵动岛不再显示录制红点；计分板展开时的文本状态保留。
 			const vec2 DotCenter(StatusSectionX + StatusPaddingLeft + StatusDotSize * 0.5f, IslandY + BaseIslandHeight * 0.5f);
-			DrawHudRecordingStatusDot(Graphics(), DotCenter, StatusDotSize, QmHudRecordingDotAlpha(time_get() / (double)time_freq()) * StatusAlpha * EntranceContentAlpha, ScreenPixelSize);
+			(void)DotCenter;
 
 			if(RecordingPresentation.RecordingTextAlpha(StatusTextAlpha) > 0.001f && StatusWidth > RawCollapsedStatusWidth + QmHudMediaIslandScaled(2.0f))
 			{
