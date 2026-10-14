@@ -432,6 +432,11 @@ float CQmAnimationBackend::GetValue(uint64_t NodeKey, EUiAnimProperty Property, 
 	return CurrentValueFor(Key, DefaultValue);
 }
 
+bool CQmAnimationBackend::HasValue(uint64_t NodeKey, EUiAnimProperty Property) const
+{
+	return m_Values.find(STrackKey{NodeKey, Property}) != m_Values.end();
+}
+
 bool CQmAnimationBackend::RequestAnimation(const SUiAnimRequest &Request)
 {
 	SUiAnimRequest EffectiveRequest = Request;
@@ -439,7 +444,10 @@ bool CQmAnimationBackend::RequestAnimation(const SUiAnimRequest &Request)
 		EffectiveRequest.m_Transition = qm_animation::ApplyMotionLevel(Request.m_Transition, g_Config.m_QmUiMotionLevel);
 
 	const STrackKey Key{EffectiveRequest.m_NodeKey, EffectiveRequest.m_Property};
-	const float BaseValue = CurrentValueFor(Key, 0.0f);
+	// 轨道首见时当前值 = 目标（与 ResolveTargetValue 的「无值即同步」判断层一致）：
+	// 否则首帧会把颜色/位置从 0 拉向目标，产生一次多余的进场闪变。需要从
+	// 特定值起步的调用方先 SetValue 落值（如弹窗 ALPHA 预置 0）。
+	const float BaseValue = CurrentValueFor(Key, EffectiveRequest.m_Target);
 	auto ItActive = m_ActiveTracks.find(Key);
 	if(ItActive == m_ActiveTracks.end())
 	{

@@ -3,10 +3,12 @@
 
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiButtons.h>
+#include <game/client/QmUi/UiDiscreteSlider.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
 #include <game/client/ui_scrollregion.h>
 
+#include <test/support/qm_anim_test_helpers.h>
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
@@ -417,9 +419,16 @@ TEST_F(QmSecondaryPanelActions, BecomingDisabledMovesFocusToUsableHalf)
 
 TEST_F(QmSecondaryPanelActions, ModalEscapeRestoresSourceButtonOnItsNextRender)
 {
+	CScopedQmFullMotion FullMotion;
 	Frame({10, 10}, false);
 	m_Ui.SetKeyboardFocus(&m_Right);
 	OpenPanel(true);
+	// 入场动画推进到可见状态后再关闭（与真实操作节奏一致）。
+	for(int Frame = 0; Frame < 12; ++Frame)
+	{
+		m_Client.AdvanceFrame();
+		m_Ui.RenderPopupMenus();
+	}
 	EXPECT_EQ(m_Ui.KeyboardFocusItem(), nullptr);
 	Key(KEY_ESCAPE);
 	m_Ui.RenderPopupMenus();
@@ -539,9 +548,16 @@ TEST_F(QmSecondaryPanelActions, BackgroundMultilineInputDoesNotDeactivateForegro
 
 TEST_F(QmSecondaryPanelActions, ImmediateReopenBeforeSourceRenderPreservesItsReturnFocus)
 {
+	CScopedQmFullMotion FullMotion;
 	Frame({10, 10}, false);
 	m_Ui.SetKeyboardFocus(&m_Right);
 	OpenPanel(true);
+	// 入场动画推进到可见状态（真实操作节奏），再走关闭路径。
+	for(int Frame = 0; Frame < 12; ++Frame)
+	{
+		m_Client.AdvanceFrame();
+		m_Ui.RenderPopupMenus();
+	}
 	// 关闭按钮会留下 LastActiveItem，但它属于正在退场的面板。
 	m_Ui.SetActiveItem(&m_Left);
 	m_Ui.ClosePopupMenu(&m_Panel);
@@ -671,4 +687,39 @@ TEST_F(QmSecondaryPanelActions, LostRefreshSourceClosesWithoutRestoringFocus)
 	EXPECT_FALSE(m_Ui.IsPopupOpen(&m_Panel));
 	Draw();
 	EXPECT_EQ(m_Ui.KeyboardFocusItem(), nullptr);
+}
+
+TEST_F(QmSecondaryPanelActions, ServerFilterAnimatesKnobBetweenStopsWhenMotionIsEnabled)
+{
+	CScopedQmFullMotion FullMotion;
+	CUiV2AnimationRuntime Animation;
+	m_Ui.SetQmAnimationRuntime(&Animation);
+	const auto Ctx = ui_widget::ControlContext(&m_Ui);
+	const auto Geometry = ui_widget::ResolveDiscreteSliderGeometry(m_Button, Ctx.m_UiScale);
+	auto &Graphics = *static_cast<qm_ui_test::CRealUiTestGraphics *>(m_Ui.Graphics());
+	ui_widget::SDiscreteSliderState State;
+	int Selected = 0;
+	Graphics.m_vRoundedSubmissions.clear();
+	ui_widget::DiscreteSlider(Ctx, &m_Left, State, &Selected, 0, 6, m_Button);
+	ASSERT_FALSE(Graphics.m_vRoundedSubmissions.empty());
+	const float StartCenter = Graphics.m_vRoundedSubmissions.back().m_Rect.x + Graphics.m_vRoundedSubmissions.back().m_Rect.z * 0.5f;
+
+	Selected = 4;
+	Graphics.m_vRoundedSubmissions.clear();
+	ui_widget::DiscreteSlider(Ctx, &m_Left, State, &Selected, 0, 6, m_Button);
+	Animation.Advance(1.0f / 60.0f);
+	Graphics.m_vRoundedSubmissions.clear();
+	ui_widget::DiscreteSlider(Ctx, &m_Left, State, &Selected, 0, 6, m_Button);
+	ASSERT_FALSE(Graphics.m_vRoundedSubmissions.empty());
+	const float MidCenter = Graphics.m_vRoundedSubmissions.back().m_Rect.x + Graphics.m_vRoundedSubmissions.back().m_Rect.z * 0.5f;
+	EXPECT_GT(MidCenter, StartCenter + 1.0f);
+	EXPECT_LT(MidCenter, Geometry.Position(4.0f / 6.0f) - 1.0f);
+
+	AdvanceQmAnimFor(Animation, 1.0f);
+	Graphics.m_vRoundedSubmissions.clear();
+	ui_widget::DiscreteSlider(Ctx, &m_Left, State, &Selected, 0, 6, m_Button);
+	ASSERT_FALSE(Graphics.m_vRoundedSubmissions.empty());
+	const float PixelSize = m_Ui.Screen()->w / Graphics.ScreenWidth();
+	EXPECT_NEAR(Graphics.m_vRoundedSubmissions.back().m_Rect.x + Graphics.m_vRoundedSubmissions.back().m_Rect.z * 0.5f, Geometry.Position(4.0f / 6.0f), PixelSize);
+	m_Ui.SetQmAnimationRuntime(nullptr);
 }

@@ -665,6 +665,10 @@ inline SHudMediaIslandEntranceSpringResult QmHudMediaIslandResolveEntranceSpring
 	float DropSettledEpsilon = 0.001f)
 {
 	SHudMediaIslandEntranceSpringResult Result;
+	// 首次出现时显式从隐藏态起步：引擎语义「无值=已同步到目标」，
+	// 入场动画必须由调用方预置起点（与弹窗 ALPHA 预置同模式）。
+	if(!AnimRuntime.HasValue(DropNode, EUiAnimProperty::ALPHA))
+		AnimRuntime.SetValue(DropNode, EUiAnimProperty::ALPHA, 0.0f);
 	const float DropTarget = Visible ? 1.0f : 0.0f;
 	Result.m_DropProgress = ResolveUiPresentationStateValue(AnimRuntime, DropNode, EUiAnimProperty::ALPHA, DropTarget, QmHudMediaIslandEntranceDropSpring(), 3, DropSettledEpsilon);
 	const float ExpandTarget = Visible && Result.m_DropProgress >= 1.0f - DropSettledEpsilon ? 1.0f : 0.0f;

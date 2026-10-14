@@ -107,9 +107,10 @@ namespace qm_island
 	{
 		const SNoticeTargets Targets = ResolveTargets(State, Visible, SettledEpsilon);
 		// 首次显示时运行时尚无轨道；显式从隐藏态起步，避免默认值取目标 1 而直接完成入场。
-		if(Visible && std::isnan(AnimRuntime.GetValue(DropNode, EUiAnimProperty::ALPHA, std::numeric_limits<float>::quiet_NaN())))
+		// 判断必须用 HasValue：GetValue 的无值默认在 resolver 层是 Target，NaN 哨兵永不命中。
+		if(Visible && !AnimRuntime.HasValue(DropNode, EUiAnimProperty::ALPHA))
 			AnimRuntime.SetValue(DropNode, EUiAnimProperty::ALPHA, State.m_DropProgress);
-		if(Visible && std::isnan(AnimRuntime.GetValue(ExpandNode, EUiAnimProperty::ALPHA, std::numeric_limits<float>::quiet_NaN())))
+		if(Visible && !AnimRuntime.HasValue(ExpandNode, EUiAnimProperty::ALPHA))
 			AnimRuntime.SetValue(ExpandNode, EUiAnimProperty::ALPHA, State.m_ExpandProgress);
 		const float DropProgress = ResolveUiPresentationStateValue(AnimRuntime, DropNode, EUiAnimProperty::ALPHA, Targets.m_Drop, QmHudMediaIslandEntranceDropSpring(), 3, SettledEpsilon);
 		const float ExpandTarget = Targets.m_Expand && DropProgress >= 1.0f - SettledEpsilon ? 1.0f : 0.0f;

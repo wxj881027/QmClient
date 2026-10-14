@@ -4,6 +4,7 @@
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/UiSurface.h>
 
+#include <test/support/qm_anim_test_helpers.h>
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 
@@ -156,7 +157,12 @@ namespace
 		void SetColor(ColorRGBA) override {}
 		void QuadsDrawFreeform(const CFreeformItem *pItems, int Count) override { m_vBorderMesh.insert(m_vBorderMesh.end(), pItems, pItems + Count); }
 		void QuadsEnd() override {}
-		void RenderRoundedRectSdf(const SRoundedRectSdfParams &) override { ++m_Surfaces; }
+		std::vector<SRoundedRectSdfParams> m_vRoundedSubmissions;
+		void RenderRoundedRectSdf(const SRoundedRectSdfParams &Params) override
+		{
+			++m_Surfaces;
+			m_vRoundedSubmissions.push_back(Params);
+		}
 		std::vector<SRenderTargetDrawParams> m_vDraws;
 		bool IsBackbufferCaptureSupported() const override { return m_CaptureSupported; }
 		bool IsRenderTargetGaussianBlurSupported() const override { return m_BlurSupported; }
@@ -213,6 +219,7 @@ namespace
 		qm_ui_test::CTestUiClient m_Client;
 		qm_ui_test::CRealUiTestKernel m_Kernel{&m_Graphics, nullptr, nullptr, &m_Client};
 		CUi m_Ui;
+		CUiV2AnimationRuntime m_AnimRuntime;
 		CUIRect m_Rect{20, 30, 100, 60};
 		void SetUp() override
 		{
@@ -222,10 +229,15 @@ namespace
 			g_Config.m_QmGraphicsTrace = 0;
 			m_Client.AdvanceFrame();
 			m_Ui.Init(&m_Kernel);
+			// 真实 UI 环境默认挂动画运行时（生产 gameclient 恒挂）；动效等级
+			// 默认 0 时资格门仍禁动画，需要动画的测试显式开 FullMotion。
+			m_Ui.SetQmAnimationRuntime(&m_AnimRuntime);
+			m_Client.AttachAnimRuntime(&m_AnimRuntime);
 		}
 		void TearDown() override
 		{
 			m_Ui.ClosePopupMenus();
+			m_Ui.SetQmAnimationRuntime(nullptr);
 			g_Config.m_QmGaussianBlur = 0;
 			{
 				CUiScopedGaussianBlur ReleaseTargets(&m_Ui);
@@ -354,6 +366,7 @@ TEST_F(QmUiBlurGraphics, CenteredExplicitNoAnimationClosesTopImmediatelyWithoutE
 
 TEST_F(QmUiBlurGraphics, SecondaryPanelDefaultAnimationCanRenderExitAfterLogicalClose)
 {
+	CScopedQmFullMotion FullMotion;
 	SPopupMenuId Id;
 	auto Props = ui_widget::SecondaryPanelProperties();
 	// 关闭遮罩以只观察弹层背板，保留默认居中与动画策略。
@@ -361,12 +374,25 @@ TEST_F(QmUiBlurGraphics, SecondaryPanelDefaultAnimationCanRenderExitAfterLogical
 	g_Config.m_QmGaussianBlur = 0;
 	m_Ui.DoPopupMenu(&Id, 0, 0, 160, 100, nullptr, KeepCenteredPopupOpen, Props);
 	ASSERT_TRUE(m_Ui.IsPopupOpen(&Id));
+	m_Ui.RenderPopupMenus();
+	EXPECT_TRUE(m_Ui.IsPopupOpen(&Id));
+	for(int Frame = 0; Frame < 10; ++Frame)
+		m_Client.AdvanceFrame();
+	m_Ui.RenderPopupMenus();
 	// 输入阶段逻辑关闭立即生效，背板继续由公共栈绘制到退场结束。
 	EXPECT_TRUE(m_Ui.CloseTopPopupMenu());
 	EXPECT_TRUE(m_Ui.IsPopupVisible(&Id));
 	EXPECT_FALSE(m_Ui.IsPopupOpen());
+	m_Client.AdvanceFrame();
+	m_Graphics.m_vRoundedSubmissions.clear();
 	m_Ui.RenderPopupMenus();
 	EXPECT_GT(m_Graphics.m_Surfaces, 0);
+	ASSERT_FALSE(m_Graphics.m_vRoundedSubmissions.empty());
+	// 居中模态弹层退场保持原宽高并向下微沉，不向内缩窄宽高。
+	// 引擎轨道接管后，退场首帧从当前实际值续接（若入场尚在收尾则略小于 1），
+	// 宽高与全开值差在亚像素级——用 NEAR 断言几何形状而非精确数值。
+	EXPECT_NEAR(m_Graphics.m_vRoundedSubmissions.back().m_Rect.z, 160.0f, 0.01f);
+	EXPECT_NEAR(m_Graphics.m_vRoundedSubmissions.back().m_Rect.w, 100.0f, 0.01f);
 	for(int Frame = 0; Frame < 10; ++Frame)
 		m_Client.AdvanceFrame();
 	m_Ui.RenderPopupMenus();

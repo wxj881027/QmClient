@@ -126,6 +126,9 @@ public:
 
 	void SetValue(uint64_t NodeKey, EUiAnimProperty Property, float Value);
 	float GetValue(uint64_t NodeKey, EUiAnimProperty Property, float DefaultValue = 0.0f) const;
+	// 该轨道是否已有显式值：首见预置必须用它判断，不能用 GetValue 的
+	// 默认值哨兵（resolver 层无值默认取 Target，哨兵永不命中）。
+	bool HasValue(uint64_t NodeKey, EUiAnimProperty Property) const;
 
 	bool RequestAnimation(const SUiAnimRequest &Request);
 	bool HasActiveAnimation(uint64_t NodeKey, EUiAnimProperty Property) const;
