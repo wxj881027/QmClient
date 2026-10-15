@@ -24893,6 +24893,13 @@
       "line": 1111
     },
     {
+      "key": "Go to a specified coordinate point on the map.",
+      "category": "localize_or_localizable",
+      "source": "src/game/editor/quick_actions.h",
+      "context": "Editor",
+      "line": 26
+    },
+    {
       "key": "Go to images management.",
       "category": "localize_or_localizable",
       "source": "src/game/editor/editor.cpp",
@@ -25010,6 +25017,13 @@
       "source": "src/game/client/components/menus.cpp",
       "context": "",
       "line": 3773
+    },
+    {
+      "key": "Goto position",
+      "category": "localize_or_localizable",
+      "source": "src/game/editor/quick_actions.h",
+      "context": "Editor",
+      "line": 21
     },
     {
       "key": "GPU name, chosen by backend (if supported)",

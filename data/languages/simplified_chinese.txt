@@ -17659,6 +17659,10 @@ Go
 == 前往
 
 [Editor]
+Go to a specified coordinate point on the map.
+== 将视图移动到地图的特定坐标.
+
+[Editor]
 Go to images management.
 == 转到图像管理。
 
@@ -17673,6 +17677,10 @@ Go to sounds management.
 [Editor]
 GOLDEN SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server.
 == 金色尖刺: 杀死tee并给予杀手分数.给予的分数在服务器中设置.
+
+[Editor]
+Goto position
+== 转到位置
 
 [Editor]
 GREEN SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server.

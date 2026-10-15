@@ -1,7 +1,7 @@
 {
   "summary": {
-    "must_i18n": 9982,
-    "business_data": 13936,
+    "must_i18n": 9984,
+    "business_data": 13938,
     "test_only": 5704,
     "needs_review": 730,
     "violation": 0
@@ -67792,6 +67792,20 @@
       "file": "src/game/editor/quick_actions.cpp",
       "line": 223,
       "text": "The map isn't saved in the maps/ folder. It must be saved there to load on the server.",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/editor/quick_actions.h",
+      "line": 21,
+      "text": "Goto position",
+      "category": "must_i18n",
+      "reason": "active source key (localize_or_localizable)"
+    },
+    {
+      "file": "src/game/editor/quick_actions.h",
+      "line": 26,
+      "text": "Go to a specified coordinate point on the map.",
       "category": "must_i18n",
       "reason": "active source key (localize_or_localizable)"
     },
@@ -166766,6 +166780,20 @@
     {
       "file": "src/game/editor/quick_actions.cpp",
       "line": 223,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/quick_actions.h",
+      "line": 21,
+      "text": "Editor",
+      "category": "business_data",
+      "reason": "localization context metadata"
+    },
+    {
+      "file": "src/game/editor/quick_actions.h",
+      "line": 26,
       "text": "Editor",
       "category": "business_data",
       "reason": "localization context metadata"
