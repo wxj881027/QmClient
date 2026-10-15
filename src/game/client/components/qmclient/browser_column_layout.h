@@ -3,30 +3,38 @@
 
 #include <algorithm>
 
-struct SQmBrowserNameMapLayout
+struct SQmBrowserColumnLayout
 {
-	float m_RightScale;
-	float m_NameWidth;
-	float m_MapWidth;
+	float m_Scale; // 1 = 各列按配置宽度原样渲染；<1 = 溢出，等比收缩
+	float m_NameWidth; // 弹性列（名称）最终宽度
 };
 
-// 固定列先让出名称/地图的最低空间；空间不足时所有宽度保持非负。
-inline SQmBrowserNameMapLayout QmBrowserNameMapLayout(float Width, float RightWidth, float MinNameWidth, float MinMapWidth, float NameShare)
+// 列布局（2026-10-14 重构）：内容列一律按配置的绝对宽度渲染，名称列弹性
+// 吸收剩余空间；没有组缩放——拖某一条宽度柄只影响该列与名称列。仅当
+// 全部列宽（配置宽 + 名称最小宽）超出可用宽度时整体等比收缩（scale < 1）。
+// FixedSum：除名称外全部内容列的配置宽度之和（不含间隙与钉住列）；
+// FixedMinSum：同口径的最小宽度之和（供调用方逐列钳制下限）。
+inline SQmBrowserColumnLayout QmBrowserColumnLayout(float Available, float FixedSum, float NameMinWidth)
 {
-	Width = std::max(0.0f, Width);
-	RightWidth = std::max(0.0f, RightWidth);
-	MinNameWidth = std::max(0.0f, MinNameWidth);
-	MinMapWidth = std::max(0.0f, MinMapWidth);
-	const float Minimum = MinNameWidth + MinMapWidth;
-	const float Reserved = std::min(Width, Minimum);
-	const float RightScale = RightWidth > 0.0f ? std::clamp((Width - Reserved) / RightWidth, 0.0f, 1.0f) : 1.0f;
-	const float NameMapWidth = std::max(0.0f, Width - RightWidth * RightScale);
-	const float Split = std::clamp(NameShare, 0.35f, 0.75f);
-	const float NameWidth = NameMapWidth >= Minimum ?
-					MinNameWidth + (NameMapWidth - Minimum) * Split :
-				Minimum > 0.0f ? NameMapWidth * MinNameWidth / Minimum :
-						 NameMapWidth * Split;
-	return {RightScale, NameWidth, NameMapWidth - NameWidth};
+	Available = std::max(0.0f, Available);
+	FixedSum = std::max(0.0f, FixedSum);
+	NameMinWidth = std::max(0.0f, NameMinWidth);
+
+	// 宽裕：固定列原样，名称吸收剩余。
+	if(Available >= FixedSum + NameMinWidth)
+		return {1.0f, Available - FixedSum};
+
+	// 溢出：整体等比收缩；固定列由调用方逐列 max(min, 配置宽*scale) 钳制，
+	// 名称列收缩到 min*scale（极端窄窗下接受轻微截断）。
+	const float Budget = FixedSum + NameMinWidth;
+	const float Scale = Budget > 0.0f ? std::clamp(Available / Budget, 0.0f, 1.0f) : 1.0f;
+	return {Scale, NameMinWidth * Scale};
+}
+
+// 逐列的溢出收缩宽度：max(min, 配置宽 * Scale)。
+inline float QmBrowserColumnSqueezedWidth(float ConfiguredWidth, float MinWidth, float Scale)
+{
+	return std::max(MinWidth, ConfiguredWidth * Scale);
 }
 
 #endif

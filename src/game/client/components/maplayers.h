@@ -21,6 +21,9 @@ class CMapLayers : public CComponent
 	friend class CBackground;
 	friend class CMenuBackground;
 
+	// 图层来源与渲染模式。protected：派生类（如菜单背景、地图预览渲染器）
+	// 需要注入独立的 CLayers/CMapImages 来源。
+protected:
 	CLayers *m_pLayers;
 	CMapImages *m_pImages;
 	ERenderType m_Type;
@@ -42,6 +45,12 @@ public:
 	// QmClient: 供菜单背景等调用方判断图层是否已经可以渲染，避免加载期间误报渲染成功。
 	bool IsMapLoaded() const { return m_MapLoaded; }
 
+	// QmClient: 离线用途（地图预览等）覆盖实体叠加透明度；>=0 时生效，
+	// 100 = 只渲染实体层（贴图层与四边形全部跳过，引擎既有语义）。
+protected:
+	int m_EntityOverlayValOverride = -1;
+
+public:
 	CEnvelopeState &EnvEvaluator() { return m_EnvEvaluator; }
 
 private:

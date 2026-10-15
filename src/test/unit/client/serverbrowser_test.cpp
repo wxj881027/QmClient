@@ -28,23 +28,28 @@
 #include <utility>
 #include <vector>
 
-TEST(ServerBrowserColumnLayout, ReservesNameAndMapBeforeAllocatingFixedColumns)
+TEST(ServerBrowserColumnLayout, FixedColumnsStayAbsoluteAndNameAbsorbsLeftover)
 {
-	const SQmBrowserNameMapLayout Wide = QmBrowserNameMapLayout(680.0f, 210.0f, 120.0f, 90.0f, 0.6f);
-	EXPECT_FLOAT_EQ(Wide.m_RightScale, 1.0f);
-	EXPECT_FLOAT_EQ(Wide.m_NameWidth, 276.0f);
-	EXPECT_FLOAT_EQ(Wide.m_MapWidth, 194.0f);
+	// 2026-10-14 布局重构：内容列绝对宽度，名称列弹性吸收剩余；
+	// 没有组缩放——拖一条宽度柄只影响该列与名称列。
+	const SQmBrowserColumnLayout Wide = QmBrowserColumnLayout(680.0f, 380.0f, 120.0f);
+	EXPECT_FLOAT_EQ(Wide.m_Scale, 1.0f);
+	EXPECT_FLOAT_EQ(Wide.m_NameWidth, 300.0f);
 
-	const SQmBrowserNameMapLayout Narrow = QmBrowserNameMapLayout(300.0f, 210.0f, 120.0f, 90.0f, 0.6f);
-	EXPECT_NEAR(Narrow.m_RightScale, 90.0f / 210.0f, 0.0001f);
-	EXPECT_FLOAT_EQ(Narrow.m_NameWidth, 120.0f);
-	EXPECT_FLOAT_EQ(Narrow.m_MapWidth, 90.0f);
+	// 恰好放满：名称列等于其最小宽。
+	const SQmBrowserColumnLayout Exact = QmBrowserColumnLayout(500.0f, 380.0f, 120.0f);
+	EXPECT_FLOAT_EQ(Exact.m_Scale, 1.0f);
+	EXPECT_FLOAT_EQ(Exact.m_NameWidth, 120.0f);
 
-	const SQmBrowserNameMapLayout Tiny = QmBrowserNameMapLayout(100.0f, 210.0f, 120.0f, 90.0f, 0.6f);
-	EXPECT_FLOAT_EQ(Tiny.m_RightScale, 0.0f);
-	EXPECT_GE(Tiny.m_NameWidth, 0.0f);
-	EXPECT_GE(Tiny.m_MapWidth, 0.0f);
-	EXPECT_FLOAT_EQ(Tiny.m_NameWidth + Tiny.m_MapWidth, 100.0f);
+	// 溢出：整体等比收缩，名称列不 below min。
+	const SQmBrowserColumnLayout Overflow = QmBrowserColumnLayout(250.0f, 380.0f, 120.0f);
+	EXPECT_NEAR(Overflow.m_Scale, 250.0f / 500.0f, 0.0001f);
+	EXPECT_FLOAT_EQ(Overflow.m_NameWidth, 60.0f);
+
+	// 收缩后逐列钳制下限：min 生效，配置宽随比例收缩。
+	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 44.0f, 0.5f), 50.0f);
+	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 80.0f, 0.5f), 80.0f);
+	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 44.0f, 1.0f), 100.0f);
 }
 
 namespace
@@ -231,6 +236,10 @@ public:
 	{
 		Browser.SetLatency(Address, Latency);
 	}
+	static void SetDifficultyStarsFunction(CServerBrowser &Browser, std::function<int(const CServerInfo *)> Function)
+	{
+		Browser.m_MapDifficultyStarsFunction = std::move(Function);
+	}
 };
 
 namespace
@@ -306,6 +315,18 @@ namespace
 			Info.m_NumClients = NumClients;
 			Info.m_MaxPlayers = Info.m_MaxClients = 16;
 			Info.m_vClients = std::move(vClients);
+			CServerBrowserTestAccess::Add(m_Browser, Address, Info);
+		}
+
+		void AddServer(const char *pAddress, const char *pName, const char *pMap)
+		{
+			NETADDR Address;
+			ASSERT_FALSE(net_addr_from_str(&Address, pAddress));
+			CServerInfo Info{};
+			str_copy(Info.m_aName, pName);
+			str_copy(Info.m_aMap, pMap);
+			Info.m_NumPlayers = Info.m_NumClients = 1;
+			Info.m_MaxPlayers = Info.m_MaxClients = 16;
 			CServerBrowserTestAccess::Add(m_Browser, Address, Info);
 		}
 
@@ -396,6 +417,47 @@ TEST_F(CServerBrowserStateTest, QmClientCountSortFollowsPushedDistributionInBoth
 	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Beta");
 	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "Alpha");
 	EXPECT_EQ(m_Browser.SortedGet(2)->m_QmClientCount, 7);
+}
+
+TEST_F(CServerBrowserStateTest, DifficultySortRanksKnownMapsByStarsAndUnknownsLast)
+{
+	// 难度排序依赖客户端注入的星级回调；未收录地图（-1）升序排最后。
+	CServerBrowserTestAccess::SetDifficultyStarsFunction(m_Browser, [](const CServerInfo *pInfo) {
+		if(str_comp(pInfo->m_aMap, "One Star") == 0)
+			return 1;
+		if(str_comp(pInfo->m_aMap, "Three Stars") == 0)
+			return 3;
+		if(str_comp(pInfo->m_aMap, "Five Stars") == 0)
+			return 5;
+		return -1;
+	});
+	AddServer("127.0.0.1:8303", "Unknown", "Unknown Map");
+	AddServer("127.0.0.1:8304", "Hard", "Five Stars");
+	AddServer("127.0.0.1:8305", "Easy", "One Star");
+	AddServer("127.0.0.1:8306", "Mid", "Three Stars");
+	g_Config.m_BrSort = IServerBrowser::SORT_DIFFICULTY;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	ASSERT_EQ(m_Browser.NumSortedServers(), 4);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aMap, "One Star");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aMap, "Three Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aMap, "Five Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(3)->m_aMap, "Unknown Map");
+
+	g_Config.m_BrSortOrder = 1;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aMap, "Unknown Map");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aMap, "Five Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aMap, "Three Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(3)->m_aMap, "One Star");
+
+	// 未注入回调时全部视为未收录：排序退化为保持过滤顺序。
+	CServerBrowserTestAccess::SetDifficultyStarsFunction(m_Browser, nullptr);
+	g_Config.m_BrSortOrder = 0;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aMap, "Unknown Map");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aMap, "Five Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aMap, "One Star");
+	EXPECT_STREQ(m_Browser.SortedGet(3)->m_aMap, "Three Stars");
 }
 
 TEST_F(CServerBrowserStateTest, QmClientCountsStayCurrentWhileSortingByName)

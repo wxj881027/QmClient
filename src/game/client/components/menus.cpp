@@ -6372,6 +6372,16 @@ void CMenus::OnShutdown()
 	m_ScreenshotManager.ClearThumbnails(Graphics());
 	m_CommunityIcons.Shutdown();
 
+	// 服务器列表扩展的释放：图形接口此刻仍存活（CKernel 尚未销毁），
+	// 预览缓存的 GPU 资源必须在此窗口期释放，不能等到组件析构。
+	if(auto *pServerBrowserImpl = dynamic_cast<CServerBrowser *>(ServerBrowser()))
+		pServerBrowserImpl->m_MapDifficultyStarsFunction = nullptr;
+	if(m_pMapPreviewCache != nullptr)
+	{
+		delete m_pMapPreviewCache;
+		m_pMapPreviewCache = nullptr;
+	}
+
 	// QmClient: 保存“最近缺失字形”集合，供下次启动后立即预热（详见 text.cpp）。
 	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
 	TextRender()->QmSaveRecentGlyphs(Storage(), "qmclient/glyph_prewarm.txt");

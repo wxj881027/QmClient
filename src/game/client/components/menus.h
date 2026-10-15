@@ -2090,6 +2090,34 @@ protected:
 		CButtonContainer m_ConfirmButton;
 		CButtonContainer m_CancelButton;
 	} m_FriendNotePopupContext;
+	// 地图预览弹窗：锚定服务器列表地图列的富内容弹层，展示本地已缓存地图的
+	// 离屏渲染缩略图（未缓存不联网）并支持拖拽平移。
+	class CMapPreviewPopupContext : public SPopupMenuId
+	{
+	public:
+		CMenus *m_pMenus = nullptr;
+		// 服务器地址串（CServerInfo::m_aAddress 原样拷贝，含端口，作行身份比较）。
+		char m_aAddress[MAX_SERVER_ADDRESSES * NETADDR_MAXSTRSIZE] = {0};
+		char m_aMapName[MAX_MAP_LENGTH] = {0};
+		char m_aServerName[256] = {0};
+		char m_aGameType[16] = {0};
+		int m_NumPlayers = 0;
+		int m_MaxPlayers = 0;
+		// 拖拽平移：打开时整图适配，拖拽后保持偏移直到关闭（世界单位）。
+		vec2 m_PanOffset = vec2(0.0f, 0.0f);
+		bool m_Dragging = false;
+		vec2 m_DragStartMouse = vec2(0.0f, 0.0f);
+		vec2 m_DragStartPan = vec2(0.0f, 0.0f);
+		// 滚轮缩放系数（1 = 整图适配）。
+		float m_ZoomFactor = 1.0f;
+		// 只看实体层（关贴图）：切换渲染到实体专用一次性纹理（1 = 实体）。
+		int m_EntityOnly = 0;
+	} m_MapPreviewPopupContext;
+	// 预览地图加载缓存（LRU），实现位于 menus_browser.cpp。裸指针成员：
+	// unique_ptr<不完整类型> 会要求构造函数所在编译单元能实例化成员析构
+	//（异常清理），而 CMenus 构造在 menus.cpp，类型在那里不完整。
+	class CMapPreviewCache;
+	CMapPreviewCache *m_pMapPreviewCache = nullptr;
 	bool m_HasRemoveFriend = false;
 	char m_aRemoveFriendName[MAX_NAME_LENGTH] = {0};
 	char m_aRemoveFriendClan[MAX_CLAN_LENGTH] = {0};
@@ -2337,6 +2365,8 @@ protected:
 	void RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated);
 	void RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated);
 	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
+	// 地图预览弹窗：行内触发（悬停 200ms / 右键）与弹层内容。
+	void OpenMapPreviewPopup(const CServerInfo *pItem);
 	enum class EConnectIntent
 	{
 		Manual,
@@ -2385,6 +2415,7 @@ protected:
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
+	static CUi::EPopupMenuFunctionResult PopupMapPreview(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
 	void ApplyFriendsCategoryExpandedState();
 	void SaveFriendsCategoryExpandedState();
@@ -2498,6 +2529,8 @@ public:
 	void RenderBackground();
 
 	CMenus();
+	// 析构保持隐式：持有 GPU 资源的成员统一在 OnShutdown（图形接口存活期）释放，
+	// 关闭路径上组件析构晚于图形接口销毁，析构函数里不得触达图形/内核接口。
 	int Sizeof() const override { return sizeof(*this); }
 
 	void StartLoading(int Total);

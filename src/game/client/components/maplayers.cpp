@@ -122,7 +122,9 @@ void CMapLayers::RenderCustomWithCamera(const vec2 &Center, float Zoom)
 	if(!m_MapLoaded)
 		return;
 
-	m_Params.m_EntityOverlayVal = m_Type == RENDERTYPE_FULL_DESIGN ? 0 : g_Config.m_ClOverlayEntities;
+	m_Params.m_EntityOverlayVal = m_EntityOverlayValOverride >= 0 ?
+						      m_EntityOverlayValOverride :
+						      (m_Type == RENDERTYPE_FULL_DESIGN ? 0 : g_Config.m_ClOverlayEntities);
 	m_Params.m_Center = Center;
 	m_Params.m_Zoom = Zoom;
 	m_Params.m_RenderText = g_Config.m_ClTextEntities;

@@ -412,6 +412,8 @@ MACRO_CONFIG_INT(BrColWidthFriends, br_col_width_friends, 14, 12, 120, CFGFLAG_S
 MACRO_CONFIG_INT(BrColWidthPlayers, br_col_width_players, 40, 34, 240, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Width of players column in server browser")
 MACRO_CONFIG_INT(BrColWidthQmClients, br_col_width_qm_clients, 24, 20, 120, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Width of Qm clients column in server browser")
 MACRO_CONFIG_INT(BrColWidthPing, br_col_width_ping, 30, 26, 180, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Width of latency column in server browser")
+MACRO_CONFIG_INT(BrColWidthDifficulty, br_col_width_difficulty, 80, 44, 300, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Width of difficulty column in server browser")
+MACRO_CONFIG_STR(BrColOrder, br_col_order, 96, "", CFGFLAG_SAVE | CFGFLAG_CLIENT, "Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)")
 
 MACRO_CONFIG_INT(BrDemoSort, br_demo_sort, 0, 0, 3, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort column in replay browser")
 MACRO_CONFIG_INT(BrDemoSortOrder, br_demo_sort_order, 0, 0, 1, CFGFLAG_SAVE | CFGFLAG_CLIENT, "Sort order in replay browser")
