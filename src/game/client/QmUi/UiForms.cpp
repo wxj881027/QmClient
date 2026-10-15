@@ -249,16 +249,19 @@ namespace ui_widget
 			else
 				Changed = Ctx.m_pUi->DoEditBox(pInput, &TextRect, FontSize, Options.m_Corners, {}, TextAlign, RenderOptions);
 		}
-		// 单行输入：Enter = 确认并退出编辑态（多行保留换行语义）。此前没有任何
-		// 路径在回车时失焦，Result.m_Submitted（依赖 Deactivated+SubmitPressed）
-		// 永远不成立——数值框的提交分支随之失效，输入后一直停在编辑态。
-		// IME 组词中的回车是候选确认，不退出编辑态（见 QmEditorTextInput 合同）。
-		if(ProcessInput && Options.m_Mode != EInputFieldMode::MULTILINE && pInput->IsActive() && !Ctx.m_pUi->Input()->HasComposition() &&
-			(Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER)))
-		{
-			pInput->Deactivate();
-			Ctx.m_pUi->SetActiveItem(nullptr);
-		}
+	// 单行输入：Enter = 确认并退出编辑态（多行保留换行语义）。此前没有任何
+	// 路径在回车时失焦，Result.m_Submitted（依赖 Deactivated+SubmitPressed）
+	// 永远不成立——数值框的提交分支随之失效，输入后一直停在编辑态。
+	// IME 组词中的回车是候选确认，不退出编辑态（见 QmEditorTextInput 合同）。
+	// 必须走 ReleaseActiveTextInput 而非 Deactivate+SetActiveItem(nullptr)：
+	// SetActiveItem 对空指针不清 m_pLastActiveItem，下一帧 DoEditBox 会凭
+	// m_pLastActiveItem 重新 Activate，输入框复活（实测回归，见
+	// QmNumericFieldEnter.EnterDeactivatesInputAndSubmits）。
+	if(ProcessInput && Options.m_Mode != EInputFieldMode::MULTILINE && pInput->IsActive() && !Ctx.m_pUi->Input()->HasComposition() &&
+		(Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER)))
+	{
+		Ctx.m_pUi->ReleaseActiveTextInput(pInput);
+	}
 		if(RenderOnly)
 			pInput->SetEmptyText(pPreviousPlaceholder);
 
