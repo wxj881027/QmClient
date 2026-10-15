@@ -1,0 +1,46 @@
+name: 'Install Linux build dependencies'
+description: '单一来源：所有 Linux CI 作业共用的 apt 依赖清单与 curl 能力探针'
+inputs:
+  extra:
+    description: '按作业追加的包（空格分隔），如 libmariadb-dev libwebsockets-dev'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - shell: bash
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y \
+          cmake ninja-build pkg-config \
+          python3-fonttools python3-pil \
+          libcurl4-openssl-dev \
+          libfreetype6-dev libnotify-dev \
+          libasound2-dev libpulse-dev \
+          libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+          libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libdecor-0-dev \
+          libsqlite3-dev libgl1-mesa-dev \
+          libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev libx264-dev \
+          libpng-dev libssl-dev \
+          libogg-dev libopus-dev libopusfile-dev libwavpack-dev \
+          libvulkan-dev glslang-tools spirv-tools \
+          ${{ inputs.extra }}
+    # curl 能力冒烟：ddnet-libs/curl/linux 的 libcurl.so 是 8KB 假桩，缺少
+    # curl_share_* 等 API；系统 curl 开发包漏装时 CMake 会静默落桩并在链接期
+    # 才失败。此探针把失败提前到安装步骤当场暴露。
+    - name: Verify system curl dev probe
+      shell: bash
+      run: |
+        cat > /tmp/qm_curl_probe.c <<'EOF'
+        #include <curl/curl.h>
+        int main(void)
+        {
+        	CURLSH *share = curl_share_init();
+        	if(!share)
+        		return 1;
+        	curl_share_cleanup(share);
+        	return 0;
+        }
+        EOF
+        cc /tmp/qm_curl_probe.c -lcurl -o /tmp/qm_curl_probe
+        /tmp/qm_curl_probe

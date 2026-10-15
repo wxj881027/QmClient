@@ -13,6 +13,7 @@
 #include <game/client/components/qmclient/markdown_cache_writer.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/route_start_index.h>
+#include <game/client/components/qmclient/statistics_ring_geometry.h>
 #include <game/client/components/qmclient/translate/translate_ui_settings.h>
 
 #include <gtest/gtest.h>
@@ -1289,5 +1290,29 @@ TEST(QmMarkdownCache, FailedWriteAndCompletedWriteAcceptNewRequests)
 		EXPECT_EQ(json_int_get(json_object_get(pRoot, "version")), Version);
 		EXPECT_STREQ(json_string_get(json_object_get(pRoot, "markdown")), "");
 		json_value_free(pRoot);
+	}
+}
+
+TEST(QmStatisticsRingGeometry, TrianglesCoverSectorWithoutCrossingForEveryQuadrant)
+{
+	for(int Segment = 0; Segment < 128; ++Segment)
+	{
+		SCOPED_TRACE(Segment);
+		const float A0 = 2.0f * pi * Segment / 128;
+		const float A1 = 2.0f * pi * (Segment + 1) / 128;
+		const auto Quad = QmStatisticsRingSegment(vec2(3, 7), 82, 39, A0, A1);
+		const vec2 P0(Quad.m_X0, Quad.m_Y0), P1(Quad.m_X1, Quad.m_Y1);
+		const vec2 P2(Quad.m_X2, Quad.m_Y2), P3(Quad.m_X3, Quad.m_Y3);
+		const auto Area = [](vec2 A, vec2 B, vec2 C) {
+			return (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x);
+		};
+		// 与真实渲染器的两个三角形一致；旧交叉顶点会产生相反朝向并漏出半个扇区。
+		EXPECT_GT(Area(P0, P1, P3), 0.0f);
+		EXPECT_GT(Area(P0, P3, P2), 0.0f);
+		EXPECT_NEAR(length(P2 - vec2(3, 7)), 39, 0.001f);
+		EXPECT_NEAR(length(P3 - vec2(3, 7)), 39, 0.001f);
+		const auto Next = QmStatisticsRingSegment(vec2(3, 7), 82, 39, A1, A1 + (A1 - A0));
+		EXPECT_FLOAT_EQ(Quad.m_X1, Next.m_X0);
+		EXPECT_FLOAT_EQ(Quad.m_Y3, Next.m_Y2);
 	}
 }

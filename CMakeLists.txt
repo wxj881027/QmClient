@@ -3815,6 +3815,7 @@ if(CLIENT)
     auto_map.h
     collab_camera.cpp
     collab_camera.h
+    collab_camera_map_capture.cpp
     component.cpp
     component.h
     drawing_tools.cpp
@@ -4622,9 +4623,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/client/qm_chat_emoji_resource_test.cpp
     src/test/integration/qmclient/client/qm_skin_download_session_test.cpp
     src/test/integration/qmclient/client/qm_font_download_storage_test.cpp
+    src/test/integration/qmclient/client/qm_font_store_catalog_test.cpp
     src/test/integration/qmclient/client/qm_statistics_save_test.cpp
     src/test/integration/engine/config_migration_backup_test.cpp
     src/test/integration/qmclient/client/bounded_file_reader_test.cpp
+    src/test/integration/qmclient/client/custom_community_info_test.cpp
     src/test/integration/qmclient/client/qm_sponsors_draft_test.cpp
     src/test/integration/qmclient/client/rank_view_timeline_test.cpp
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
@@ -4818,6 +4821,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
+    src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
     src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_tooltip_ownership_test.cpp
@@ -4844,6 +4848,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_graphics_opengl_probe_contract_test.cpp
     src/test/unit/qmclient/client/qm_font_category_test.cpp
     src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
+    src/test/unit/qmclient/client/qm_font_scan_job_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
@@ -5018,6 +5023,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/skins/skin_transition_test.cpp
     src/test/unit/client/skins/skins_test.cpp
     src/test/integration/client/skins/skin_source_job_test.cpp
+    src/test/integration/client/skins/skin7_info_job_test.cpp
+    src/test/unit/client/skin7_resource_lifecycle_test.cpp
+    src/test/unit/client/connection_resource_preparation_test.cpp
     src/test/unit/client/skins/skins_preview_layers_test.cpp
     src/test/contract/client/skins/skins_resource_contract_test.cpp
     src/test/contract/client/skins/skins_render_contract_test.cpp
@@ -5416,6 +5424,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/game/client/ui.cpp
       src/game/client/ui_popups.cpp
       src/game/client/ui_rect.cpp
+      src/game/client/ui_listbox.cpp
       src/game/client/ui_scrollregion.cpp
       src/game/client/lineinput.cpp
       src/game/client/QmUi/SettingsCardGeometry.cpp
@@ -5494,6 +5503,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
   # 对象库集合与 testrunner 一致，基准可覆盖 base/engine/game 各层代码
   add_executable(qm-benchmarks EXCLUDE_FROM_ALL
     src/test/benchmark/qm_skin_download_benchmark.cpp
+    src/test/benchmark/qm_startup_info_benchmark.cpp
     src/test/benchmark/qm_benchmark_main.cpp
     src/test/benchmark/qm_online_replay_benchmark.cpp
     src/test/benchmark/qm_route_render_cache_benchmark.cpp

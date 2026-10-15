@@ -5,14 +5,17 @@
 #include <engine/shared/console.h>
 
 #include <game/client/component.h>
+#include <game/client/components/qmclient/custom_community_info.h>
 
 class CCustomCommunities : public CComponent
 {
 private:
 	std::shared_ptr<IHttpRequest> m_pCustomCommunitiesDDNetInfoTask = nullptr;
+	std::shared_ptr<CQmCustomCommunityCacheJob> m_pCustomCommunitiesCacheJob = nullptr;
+	std::shared_ptr<CQmCustomCommunityCacheJob> m_pCustomCommunitiesResponseJob = nullptr;
 	json_value *m_pCustomCommunitiesDDNetInfo = nullptr;
 	void DownloadCustomCommunitiesDDNetInfo();
-	void LoadCustomCommunitiesDDNetInfo();
+	void ApplyCustomCommunitiesInfo(TQmCommunityInfo pInfo);
 
 public:
 	void OnInit() override;

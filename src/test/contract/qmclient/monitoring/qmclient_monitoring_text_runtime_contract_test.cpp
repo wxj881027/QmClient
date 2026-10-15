@@ -21,22 +21,10 @@ TEST(QmMonitoringTextRuntimeContract, TextRenderExposesRuntimeBudgetSnapshotForS
 
 TEST(QmMonitoringTextRuntimeContract, IngameEscStableTextRegistryCoversMenubar)
 {
+	// 这里只约束文本计划的稳定注册 ID；运行时计划选择由 SettingsLoadingPrewarm 行为测试验证。
 	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
-	const std::string Header = ReadRepoFile("src/game/client/components/menus.h");
 	const std::string PlanBody = ExtractSourceFunctionBody(Menus, "void CMenus::BuildIngameMenuTextPlan(std::vector<SMenuTextPlanItem> &vItems, CUIRect MainView)");
-	const std::string PrebuildBody = ExtractSourceFunctionBody(Menus, "int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride)");
-	const std::string CollectionBody = ExtractSourceFunctionBody(Menus, "void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride)");
 	ASSERT_FALSE(PlanBody.empty());
-	ASSERT_FALSE(PrebuildBody.empty());
-	ASSERT_FALSE(CollectionBody.empty());
-
-	EXPECT_NE(Header.find("void PrebuildIngameEscTextPoolBeforeOpen(int Budget);"), std::string::npos);
-	EXPECT_NE(Menus.find("PrebuildIngameEscTextPoolBeforeOpen("), std::string::npos);
-	EXPECT_EQ(Menus.find("PrebuildIngameEscTextPoolBeforeOpen(96);"), std::string::npos);
-	EXPECT_NE(CollectionBody.find("const bool IngameEscOperation = str_comp(pOperation, \"ingame_esc_open\") == 0;"), std::string::npos);
-	EXPECT_NE(CollectionBody.find("if(IngameEscOperation)"), std::string::npos);
-	EXPECT_NE(Menus.find("BuildIngameMenuTextPlan(m_vSettingsMenuTextPrebuildPlan, Screen);"), std::string::npos);
-	EXPECT_NE(PrebuildBody.find("AdvanceSettingsMenuTextPlanCollection("), std::string::npos);
 	for(const char *pId : {
 		    "\"ingame-tab-game\"",
 		    "\"ingame-tab-players\"",
@@ -48,7 +36,6 @@ TEST(QmMonitoringTextRuntimeContract, IngameEscStableTextRegistryCoversMenubar)
 	{
 		EXPECT_NE(PlanBody.find(pId), std::string::npos) << pId;
 	}
-	EXPECT_EQ(Menus.find("plan_status\":\"missing_descriptor\""), std::string::npos);
 }
 
 TEST(QmMonitoringTextRuntimeContract, SettingsStableTextMissAndStaleBlockVisibleBuild)
@@ -89,37 +76,6 @@ TEST(QmMonitoringTextRuntimeContract, SettingsStableTextMissAndStaleBlockVisible
 	EXPECT_EQ(Source.find("s_FallbackButton"), std::string::npos);
 	EXPECT_NE(Source.find("return DoButton_MenuInternal(pBC, pText, Icon, pFallbackIcon ? pFallbackIcon : \"\", Checked, pRect, Flags, nullptr, Corners, Rounding, FontFactor, Color, &TextElement, ResolvedBodySize"), std::string::npos);
 	EXPECT_EQ(Source.find("reason=%s\", pReason != nullptr ? pReason : \"unknown\""), std::string::npos);
-}
-
-TEST(QmMonitoringTextRuntimeContract, IngameEscPrewarmsStableTextBeforeVisibleFrame)
-{
-	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
-	const std::string Header = ReadRepoFile("src/game/client/components/menus.h");
-	const std::string OnRenderBody = ExtractSourceFunctionBody(Menus, "void CMenus::OnRender()");
-	const std::string CollectionBody = ExtractSourceFunctionBody(Menus, "void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride)");
-	const std::string CollectBody = ExtractSourceFunctionBody(Menus, "void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView)");
-	ASSERT_FALSE(OnRenderBody.empty());
-	ASSERT_FALSE(CollectionBody.empty());
-	ASSERT_FALSE(CollectBody.empty());
-
-	const size_t StartWindowPos = OnRenderBody.find("StartSettingsPerfFixedWindow(\"ingame_esc_open\"");
-	const size_t SetActivePos = OnRenderBody.find("SetActive(true);", StartWindowPos);
-	const size_t RenderPos = OnRenderBody.find("Render();");
-	ASSERT_NE(StartWindowPos, std::string::npos);
-	ASSERT_NE(SetActivePos, std::string::npos);
-	ASSERT_NE(RenderPos, std::string::npos);
-	EXPECT_LT(StartWindowPos, SetActivePos);
-	EXPECT_LT(SetActivePos, RenderPos);
-
-	EXPECT_NE(Header.find("uint64_t m_IngameEscOpenFrame"), std::string::npos);
-	EXPECT_NE(Header.find("bool m_IngameServerInfoBackgroundPrepareRequested"), std::string::npos);
-	EXPECT_EQ(OnRenderBody.find("PrebuildIngameEscTextPoolBeforeOpen("), std::string::npos);
-	EXPECT_EQ(OnRenderBody.find("PrebuildSettingsMenuTextPool("), std::string::npos);
-	EXPECT_NE(OnRenderBody.find("Client()->PerfFrame() > m_IngameEscOpenFrame"), std::string::npos);
-	EXPECT_NE(OnRenderBody.find("PrepareIngameServerInfoTextRuntime();"), std::string::npos);
-	EXPECT_NE(CollectionBody.find("m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_INGAME_ESC, -1, -1});"), std::string::npos);
-	EXPECT_NE(CollectBody.find("case MENU_TEXT_PLAN_UNIT_INGAME_ESC:"), std::string::npos);
-	EXPECT_NE(CollectBody.find("BuildIngameMenuTextPlan(m_vSettingsMenuTextPrebuildPlan, Screen);"), std::string::npos);
 }
 
 TEST(QmMonitoringTextRuntimeContract, DefaultExtrasFailureClearsPublishedState)

@@ -148,6 +148,56 @@ TEST(QmAxiomAutoLogin, HardFailureRecordsReasonAndSuccessResetsIt)
 	EXPECT_EQ(SuccessState.m_LastFailureReason, EQmAxiomLoginFailureReason::NONE);
 }
 
+TEST(QmAxiomDummyAutoLogin, BoundConnectionLogsInWithoutEnablingReconnect)
+{
+	SQmAxiomDummyLoginState State;
+	EXPECT_EQ(State.Update(false, true, true), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_FALSE(State.m_ReconnectAllowed);
+}
+
+TEST(QmAxiomDummyAutoLogin, BoundReconnectLogsInAgainWithoutAutomaticConnection)
+{
+	SQmAxiomDummyLoginState State;
+	ASSERT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+	EXPECT_EQ(State.Update(false, true, true), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+}
+
+TEST(QmAxiomDummyAutoLogin, HudConnectionRetainsAutomaticReconnectPolicy)
+{
+	SQmAxiomDummyLoginState State;
+	State.m_ReconnectAllowed = true;
+	EXPECT_EQ(State.Update(false, true, false), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_EQ(State.Update(false, true, true), EQmAxiomDummyLoginAction::RECONNECT);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_EQ(State.Update(false, true, true), EQmAxiomDummyLoginAction::RECONNECT);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+}
+
+TEST(QmAxiomDummyAutoLogin, ManualDisconnectAndNewServerClearReconnectIntent)
+{
+	SQmAxiomDummyLoginState State;
+	State.m_ReconnectAllowed = true;
+	ASSERT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+	State = {};
+	EXPECT_EQ(State.Update(false, true, true), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+}
+
+TEST(QmAxiomDummyAutoLogin, MissingPasswordSkipsLoginAndReconnectUntilProvided)
+{
+	SQmAxiomDummyLoginState State;
+	State.m_ReconnectAllowed = true;
+	EXPECT_EQ(State.Update(false, false, true), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_EQ(State.Update(true, false, false), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+	EXPECT_EQ(State.Update(true, false, false), EQmAxiomDummyLoginAction::NONE);
+	EXPECT_EQ(State.Update(true, true, false), EQmAxiomDummyLoginAction::LOGIN);
+}
+
 TEST(QmAxiomAutoLogin, SlowRetryStopsAfterTotalAttemptCap)
 {
 	// 慢速重试不再无限进行：总尝试次数到达上限后按硬失败停止。

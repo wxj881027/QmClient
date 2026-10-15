@@ -1,3 +1,4 @@
+#include <game/client/QmUi/SettingsTextPlanUnits.h>
 #include <game/client/components/settings_resource_jobs.h>
 
 #include <gtest/gtest.h>
@@ -43,4 +44,31 @@ TEST(SettingsLoadingPrewarm, ProgressDetectionIsStrictlyIncreasing)
 	EXPECT_TRUE(SettingsLoadingPrewarmMadeProgress(4, 4, 2, 2, 3, 2));
 	EXPECT_TRUE(SettingsLoadingPrewarmMadeProgress(4, 4, 2, 2, -1, 2));
 	EXPECT_FALSE(SettingsLoadingPrewarmMadeProgress(4, 4, 2, 2, 2, 2));
+}
+
+TEST(SettingsLoadingPrewarm, IngameEscPlanCannotCollectHiddenSettingsPages)
+{
+	const int Pages[] = {1, 2, 3};
+	for(bool PreferQm : {false, true})
+	{
+		auto Units = QmSettingsTextPlanUnits(true, 3, 2, PreferQm, 10, 20, 1, 2, 5, 6, 3, Pages);
+		ASSERT_EQ(Units.size(), 1u);
+		EXPECT_EQ(Units[0].m_Kind, MENU_TEXT_PLAN_UNIT_INGAME_ESC);
+	}
+}
+TEST(SettingsLoadingPrewarm, SettingsPlanStillCollectsVisibleAndConfiguredTabs)
+{
+	const int Pages[] = {1, 2, 3};
+	auto Units = QmSettingsTextPlanUnits(false, 3, 2, true, 10, 20, 1, 2, 5, 6, 3, Pages);
+	ASSERT_EQ(Units.size(), 14u);
+	EXPECT_EQ(Units.front().m_Kind, MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS);
+	EXPECT_EQ(Units[1].m_Page, 20);
+	EXPECT_EQ(Units[1].m_Tab, 2);
+	EXPECT_EQ(Units.back().m_Page, 3);
+	for(const auto &Unit : Units)
+	{
+		EXPECT_NE(Unit.m_Kind, MENU_TEXT_PLAN_UNIT_INGAME_ESC);
+		if(Unit.m_Kind == MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB)
+			EXPECT_NE(Unit.m_Tab, 3);
+	}
 }

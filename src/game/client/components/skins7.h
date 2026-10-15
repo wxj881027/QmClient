@@ -10,17 +10,21 @@
 #include <engine/client/enums.h>
 #include <engine/graphics.h>
 #include <engine/shared/jobs.h>
+#include <engine/shared/json.h>
 
 #include <generated/protocol.h>
 #include <generated/protocol7.h>
 
 #include <game/client/component.h>
 #include <game/client/components/qmclient/qm_chat_avatar.h>
+#include <game/client/components/qmclient/skin7_resource_lifecycle.h>
 #include <game/client/render.h>
 
 #include <chrono>
 #include <deque>
 #include <vector>
+
+class CQmSkin7InfoJob;
 
 class CSkins7 : public CComponent
 {
@@ -172,22 +176,23 @@ private:
 	std::vector<CSkin> m_vSkins;
 
 	std::deque<std::shared_ptr<CSkinPartLoadJob>> m_PendingSkinPartJobs;
+	std::shared_ptr<CQmSkin7InfoJob> m_pSkinInfoJob;
+	size_t m_NextPart = 0;
+	size_t m_NextSkin = 0;
+	int m_NextAccessory = 0;
+	CQmSkin7ResourceLifecycle m_ResourceLifecycle;
 	TSkinLoadedCallback m_SkinLoadedCallback;
 
 	IGraphics::CTextureHandle m_XmasHatTexture;
 	IGraphics::CTextureHandle m_BotTexture;
 
-	static int SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser);
-	bool LoadSkinPart(int PartType, const char *pName, int DirType);
 	void StartSkinPartLoadJob(int PartType, const char *pName, int DirType);
 	void ProcessCompletedJobs();
-	void RebuildSkins();
-	static int SkinScan(const char *pName, int IsDir, int DirType, void *pUser);
-	bool LoadSkin(const char *pName, int DirType);
+	void CancelPendingLoads();
+	bool RebuildSkins();
+	bool LoadSkin(const char *pName, int DirType, const json_value &Info);
 
 	void InitPlaceholderSkinParts();
-	void LoadXmasHat();
-	void LoadBotDecoration();
 
 	void AddSkinFromConfigVariables(const char *pName, int Dummy);
 };

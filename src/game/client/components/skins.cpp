@@ -2738,7 +2738,7 @@ void CSkins::PrewarmByNames(const std::vector<std::string> &vNames, bool Immedia
 		if(Name.empty())
 			continue;
 
-		const CSkinContainer *pContainer = FindContainerOrNullptr(Name.c_str());
+		const CSkinContainer *pContainer = FindContainerOrNullptr(Name.c_str(), false);
 		if(pContainer == nullptr)
 			continue;
 
@@ -2833,8 +2833,9 @@ bool CSkins::PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool Progressi
 
 void CSkins::QueueSkinListPlanJob(int Dummy)
 {
+	// 列表重建只登记收藏，不代表这些皮肤当前可见；否则启动便会批量下载所有收藏。
 	for(const auto &FavoriteSkin : m_Favorites)
-		FindContainerOrNullptr(FavoriteSkin.c_str());
+		FindContainerOrNullptr(FavoriteSkin.c_str(), false);
 
 	const CSkinListEntry::SColorKey CurrentColorKey = MakeSkinListColorKey(Dummy);
 	const CSkinListEntry::SColorKey MainColorKey = MakeSkinListColorKey(0);
@@ -3180,7 +3181,7 @@ const CSkin *CSkins::Find(const char *pName)
 	return pSkin;
 }
 
-const CSkins::CSkinContainer *CSkins::FindContainerOrNullptr(const char *pName)
+const CSkins::CSkinContainer *CSkins::FindContainerOrNullptr(const char *pName, bool RequestLoad)
 {
 	const char *pSkinPrefix = SkinPrefix();
 	if(pSkinPrefix[0] != '\0')
@@ -3188,13 +3189,13 @@ const CSkins::CSkinContainer *CSkins::FindContainerOrNullptr(const char *pName)
 		char aNameWithPrefix[2 * MAX_SKIN_LENGTH + 2]; // Larger than skin name length to allow IsValidName to check if it's too long
 		str_format(aNameWithPrefix, sizeof(aNameWithPrefix), "%s_%s", pSkinPrefix, pName);
 		// If we find something, use it, otherwise fall back to normal skins.
-		const CSkinContainer *pSkinContainer = FindContainerImpl(aNameWithPrefix);
+		const CSkinContainer *pSkinContainer = FindContainerImpl(aNameWithPrefix, RequestLoad);
 		if(pSkinContainer != nullptr && pSkinContainer->Skin() != nullptr)
 		{
 			return pSkinContainer;
 		}
 	}
-	return FindContainerImpl(pName);
+	return FindContainerImpl(pName, RequestLoad);
 }
 
 const CSkins::CSkinContainer *CSkins::FindContainerImpl(const char *pName, bool RequestLoad)

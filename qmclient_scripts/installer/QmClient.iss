@@ -17,6 +17,8 @@
 AppId={#SetupAppId}
 AppName=QmClient
 AppVersion={#AppVersion}
+; 系统设置的应用列表只显示名称；版本由 DisplayVersion 承担，不再重复“版本 X.Y”。
+UninstallDisplayName=QmClient
 DefaultDirName={localappdata}\Programs\QmClient
 DefaultGroupName=QmClient
 PrivilegesRequired=lowest

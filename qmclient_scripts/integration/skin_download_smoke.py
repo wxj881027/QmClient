@@ -212,6 +212,57 @@ def smoke_refresh_cancels_loaded_cache_request(build_dir: Path) -> None:
 		print(f"artifacts: {env.temp_dir}")
 
 
+
+def smoke_favorites_are_metadata_until_visible(build_dir: Path) -> None:
+	env = StartupEnvironment(build_dir)
+	requested = threading.Event()
+	paths: list[str] = []
+	image = (build_dir / "data/skins/default.png").read_bytes()
+
+	class Handler(BaseHTTPRequestHandler):
+		def log_message(self, *_args: object) -> None:
+			pass
+
+		def do_GET(self) -> None:
+			paths.append(self.path)
+			requested.set()
+			self.send_response(200)
+			self.send_header("Content-Length", str(len(image)))
+			self.end_headers()
+			self.wfile.write(image)
+
+	server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+	thread = threading.Thread(target=server.serve_forever, daemon=True)
+	thread.start()
+	try:
+		base = f"http://127.0.0.1:{server.server_port}/"
+		client = env.start([
+			"http_allow_insecure 1", "cl_download_skins 1", "cl_download_community_skins 0",
+			f"cl_skin_download_url {base}", "player_skin default", "dummy_skin default",
+			"cl_skip_start_menu 1", "ui_page 21",
+			*[f"add_favorite_skin qm_unseen_favorite_{index}" for index in range(40)],
+		])
+		env.finish_startup()
+		# 异步列表重建完成后仍不可触发网络。这里观察有界时间内的实际 HTTP 请求，
+		# 随后显式选择其中一项，验证按需下载没有被关闭。
+		if requested.wait(3):
+			raise AssertionError(f"unseen favorites requested at startup: {paths}")
+		client.command("player_skin qm_unseen_favorite_39")
+		if not requested.wait(8):
+			raise AssertionError("explicitly selected favorite was not requested")
+		env.quit()
+		if any("Invalid m_MenuPage" in line or " E assert:" in line for line in client._lines):
+			raise AssertionError("statistics page configuration failed to open the actual page")
+		if paths != ["/qm_unseen_favorite_39.png"]:
+			raise AssertionError(f"selection requested unrelated favorites: {paths}")
+		print("favorites_are_metadata_until_visible: passed")
+	finally:
+		server.shutdown()
+		server.server_close()
+		thread.join(5)
+		env.close()
+		print(f"artifacts: {env.temp_dir}")
+
 def main() -> int:
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("build_dir", type=Path)
@@ -219,6 +270,7 @@ def main() -> int:
 	try:
 		smoke_cache_before_network_and_community_fallback(args.build_dir.resolve())
 		smoke_refresh_cancels_loaded_cache_request(args.build_dir.resolve())
+		smoke_favorites_are_metadata_until_visible(args.build_dir.resolve())
 	except Exception as exc:
 		print(f"skin_download: FAILED: {exc}", file=sys.stderr)
 		return 1

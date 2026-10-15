@@ -71,7 +71,7 @@ inline bool CCommandProcessorFragment_Vulkan::SupportsRenderTargetGaussianBlur()
 
 inline bool CCommandProcessorFragment_Vulkan::SupportsBackbufferCapture() const
 {
-	// 截图路径只验证过单采样交换链；多采样附件虽可恢复，但读取流程仍保持保守限制。
+	// 多采样绘制在交换链通道结束时 resolve，捕获读取的是单采样交换链图像。
 	// 背板仅作为 blit 源，sRGB 格式也可由下方的格式能力检查准入。
 	const bool CompatibleFormat = m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_UNORM || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_UNORM ||
 				      m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_SRGB || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_SRGB;
@@ -364,13 +364,12 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 	if(!SubmitCurrentCommandsAndRestartSwapPass())
 		return false;
 
+	if(!BeginReadbackCommandBuffer())
+		return false;
+	VkCommandBuffer &CommandBuffer = m_ReadbackCommandBuffer;
 	uint8_t *pResImageData;
-	if(!PreparePresentedImageDataImage(pResImageData, Target.m_Width, Target.m_Height))
+	if(!PreparePresentedImageDataImage(CommandBuffer, pResImageData, Target.m_Width, Target.m_Height))
 		return false;
-	VkCommandBuffer *pCommandBuffer;
-	if(!GetMemoryCommandBuffer(pCommandBuffer))
-		return false;
-	VkCommandBuffer &CommandBuffer = *pCommandBuffer;
 	if(!ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL))
 		return false;
 	Target.m_Layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -408,7 +407,6 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Readback(const CC
 	Target.m_Layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	if(!CheckVulkanResult(vkEndCommandBuffer(CommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (render target readback) failed."))
 		return false;
-	m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 	VkSubmitInfo SubmitInfo{};
 	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	SubmitInfo.commandBufferCount = 1;
@@ -541,7 +539,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_CaptureBackbuffer
 				      m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_SRGB || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_SRGB;
 		const bool Supported = SupportsBackbufferCapture();
 		const bool Multisampled = HasMultiSampling();
-		const bool CanCapture = !m_RenderingPaused && Supported && !Multisampled && !m_RenderTargetActive && m_SwapRenderPassActive &&
+		const bool CanCapture = !m_RenderingPaused && Supported && !m_RenderTargetActive && m_SwapRenderPassActive &&
 					pCommand->m_TargetId >= 0 && (size_t)pCommand->m_TargetId < m_vRenderTargets.size() && m_CurImageIndex < m_vSwapChainImages.size();
 		if(!CanCapture || g_Config.m_QmGraphicsTrace >= 1)
 			log_info("gfx/vulkan", "backbuffer capture probe: %s (paused=%d supported=%d format=%d format_ok=%d swap_blit=%d rgba_blit=%d multisample=%d target_active=%d swap_pass=%d)",
@@ -550,7 +548,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_CaptureBackbuffer
 				(int)m_OptimalSwapChainImageBlitting, (int)m_OptimalRGBAImageBlitting,
 				(int)Multisampled, (int)m_RenderTargetActive, (int)m_SwapRenderPassActive);
 	}
-	if(m_RenderingPaused || !SupportsBackbufferCapture() || HasMultiSampling() || m_RenderTargetActive || !m_SwapRenderPassActive || pCommand->m_TargetId < 0 ||
+	if(m_RenderingPaused || !SupportsBackbufferCapture() || m_RenderTargetActive || !m_SwapRenderPassActive || pCommand->m_TargetId < 0 ||
 		(size_t)pCommand->m_TargetId >= m_vRenderTargets.size() || m_CurImageIndex >= m_vSwapChainImages.size())
 	{
 		// 静默跳过会让模糊目标保留上一帧的旧内容，是画面闪烁的候选来源之一；
@@ -568,10 +566,14 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_CaptureBackbuffer
 
 	if(!EndSwapRenderPassForExternalWork())
 		return false;
+	// 结束通道完成 MSAA resolve；恢复 LOAD 通道时保留多采样附件，不能丢失捕获前的画面。
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
 	VkImage &SwapImage = m_vSwapChainImages[m_CurImageIndex];
-	if(!ImageBarrier(CommandBuffer, SwapImage, 0, 1, 0, 1, m_VKSurfFormat.format, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL))
-		return false;
+	// 捕获的是刚在本命令缓冲写入/resolve 的颜色附件，不是已经由呈现引擎读取的图像。
+	// 必须等待 COLOR_ATTACHMENT_OUTPUT 写入；通用 PRESENT barrier 的 MEMORY_READ 不覆盖 resolve 写入。
+	const VkImageMemoryBarrier CaptureBarrier = QmVulkanResolvedSwapCaptureBarrier(SwapImage);
+	vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		0, 0, nullptr, 0, nullptr, 1, &CaptureBarrier);
 	if(!ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL))
 		return false;
 	Target.m_Layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -606,7 +608,8 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_GaussianBlurPass(
 {
 	if(m_RenderingPaused)
 		return true;
-	if(!m_GaussianBlurPipelineValid || HasMultiSampling() || !m_RenderTargetActive || m_ActiveRenderTargetId < 0 || pCommand->m_SourceTargetId < 0 ||
+	// 模糊始终使用单采样离屏管线，交换链的 FSAA 不影响此通道。
+	if(!m_GaussianBlurPipelineValid || !m_RenderTargetActive || m_ActiveRenderTargetId < 0 || pCommand->m_SourceTargetId < 0 ||
 		(size_t)m_ActiveRenderTargetId >= m_vRenderTargets.size() || (size_t)pCommand->m_SourceTargetId >= m_vRenderTargets.size() ||
 		pCommand->m_SourceTargetId == m_ActiveRenderTargetId || pCommand->m_Radius < 1 || pCommand->m_Radius > IGraphics::GAUSSIAN_BLUR_MAX_RADIUS)
 		return true;

@@ -244,37 +244,6 @@ TEST(SkinsContract, ManagedTeeReadinessCoversAllSelectableTextureVariantsAndDumm
 	EXPECT_NE(Header.find("Sixup.RequiredPartTextureVariantsDrawable()"), std::string::npos);
 }
 
-TEST(SkinsContract, SixupCompletedJobsAreConsumedEveryUpdate)
-{
-	const std::string Header = ReadTestSourceFile("src/game/client/components/skins7.h");
-	const std::string Source = ReadTestSourceFile("src/game/client/components/skins7.cpp");
-	EXPECT_NE(Header.find("void OnUpdate() override;"), std::string::npos);
-	const size_t OnUpdatePos = Source.find("void CSkins7::OnUpdate()");
-	const size_t InitPlaceholderPos = Source.find("void CSkins7::InitPlaceholderSkinParts()", OnUpdatePos);
-	ASSERT_NE(OnUpdatePos, std::string::npos);
-	ASSERT_NE(InitPlaceholderPos, std::string::npos);
-	const std::string OnUpdateBody = Source.substr(OnUpdatePos, InitPlaceholderPos - OnUpdatePos);
-	EXPECT_NE(OnUpdateBody.find("ProcessCompletedJobs();"), std::string::npos);
-	const size_t ProcessPos = Source.find("void CSkins7::ProcessCompletedJobs()");
-	const size_t ScanDataPos = Source.find("class CSkinScanData", ProcessPos);
-	ASSERT_NE(ProcessPos, std::string::npos);
-	ASSERT_NE(ScanDataPos, std::string::npos);
-	const std::string ProcessBody = Source.substr(ProcessPos, ScanDataPos - ProcessPos);
-	EXPECT_NE(ProcessBody.find("GpuUploadLimiter()->CanUpload(2)"), std::string::npos);
-	EXPECT_NE(ProcessBody.find("Part.m_OriginalTexture = Graphics()->LoadTextureRaw"), std::string::npos);
-	EXPECT_NE(ProcessBody.find("Part.m_ColorableTexture = Graphics()->LoadTextureRawMove"), std::string::npos);
-	const size_t FirstUploadCount = ProcessBody.find("GpuUploadLimiter()->OnUploaded();");
-	ASSERT_NE(FirstUploadCount, std::string::npos);
-	EXPECT_NE(ProcessBody.find("GpuUploadLimiter()->OnUploaded();", FirstUploadCount + 1), std::string::npos);
-	EXPECT_LT(ProcessBody.find("Iter = m_PendingSkinPartJobs.erase(Iter);"), ProcessBody.find("m_SkinLoadedCallback();"));
-	EXPECT_NE(Source.find("void CSkins7::RebuildSkins()"), std::string::npos);
-	EXPECT_NE(Source.find("RebuildSkins();\n\t\tm_Loading = false;"), std::string::npos);
-	const std::string GameClientSource = ReadTestSourceFile("src/game/client/gameclient.cpp");
-	EXPECT_NE(GameClientSource.find("const auto ProgressCallback = [this, SkinStartLoadTime]()"), std::string::npos);
-	EXPECT_NE(GameClientSource.find("m_Skins7.Refresh([this, ProgressCallback]()"), std::string::npos);
-	EXPECT_NE(GameClientSource.find("RefreshSkin(pManagedTeeRenderInfo);"), std::string::npos);
-}
-
 TEST(SkinsContract, ManagedTeeRefreshClearsTextureBranchesMissingFromDescriptor)
 {
 	CTeeRenderInfo Info;

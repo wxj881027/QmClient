@@ -998,6 +998,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	std::vector<uint8_t> m_vScreenshotHelper;
 
 	SDeviceMemoryBlock m_GetPresentedImgDataHelperMem;
+	VkCommandBuffer m_ReadbackCommandBuffer = VK_NULL_HANDLE;
 	VkImage m_GetPresentedImgDataHelperImage = VK_NULL_HANDLE;
 	uint8_t *m_pGetPresentedImgDataHelperMappedMemory = nullptr;
 	VkDeviceSize m_GetPresentedImgDataHelperMappedLayoutOffset = 0;
@@ -1769,7 +1770,29 @@ protected:
 		return true;
 	}
 
-	[[nodiscard]] bool PreparePresentedImageDataImage(uint8_t *&pResImageData, uint32_t Width, uint32_t Height)
+	[[nodiscard]] bool BeginReadbackCommandBuffer()
+	{
+		// 截图与离屏读回使用独立命令缓冲；每次提交后同步等待读回 fence，
+		// 不重置仍在上一帧 GPU 提交中的上传缓冲，也不等待尚未提交的帧 fence。
+		if(m_ReadbackCommandBuffer == VK_NULL_HANDLE)
+		{
+			VkCommandBufferAllocateInfo Info{};
+			Info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			Info.commandPool = m_vCommandPools[0];
+			Info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			Info.commandBufferCount = 1;
+			if(!CheckVulkanResult(vkAllocateCommandBuffers(m_VKDevice, &Info, &m_ReadbackCommandBuffer), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Allocating readback command buffer failed."))
+				return false;
+		}
+		if(!CheckVulkanResult(vkResetCommandBuffer(m_ReadbackCommandBuffer, 0), GFX_ERROR_TYPE_RENDER_RECORDING, "Resetting readback command buffer failed."))
+			return false;
+		VkCommandBufferBeginInfo Info{};
+		Info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		Info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		return CheckVulkanResult(vkBeginCommandBuffer(m_ReadbackCommandBuffer, &Info), GFX_ERROR_TYPE_RENDER_RECORDING, "Beginning readback command buffer failed.");
+	}
+
+	[[nodiscard]] bool PreparePresentedImageDataImage(VkCommandBuffer CommandBuffer, uint8_t *&pResImageData, uint32_t Width, uint32_t Height)
 	{
 		bool NeedsNewImg = Width != m_GetPresentedImgDataHelperWidth || Height != m_GetPresentedImgDataHelperHeight;
 		if(m_GetPresentedImgDataHelperImage == VK_NULL_HANDLE || NeedsNewImg)
@@ -1814,7 +1837,7 @@ protected:
 				return false;
 			}
 
-			if(!ImageBarrier(m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL))
+			if(!ImageBarrier(CommandBuffer, m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL))
 				return false;
 
 			VkImageSubresource SubResource{VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
@@ -1893,18 +1916,16 @@ protected:
 
 			const size_t ImageTotalSize = (size_t)Width * Height * CImageInfo::PixelSize(Format);
 
+			if(!BeginReadbackCommandBuffer())
+				return false;
+			VkCommandBuffer &CommandBuffer = m_ReadbackCommandBuffer;
 			uint8_t *pResImageData;
-			if(!PreparePresentedImageDataImage(pResImageData, Width, Height))
+			if(!PreparePresentedImageDataImage(CommandBuffer, pResImageData, Width, Height))
 				return false;
-
-			VkCommandBuffer *pCommandBuffer;
-			if(!GetMemoryCommandBuffer(pCommandBuffer))
-				return false;
-			VkCommandBuffer &CommandBuffer = *pCommandBuffer;
 
 			const VkImage SnapshotImage = m_PresentedSnapshotImage;
 
-			if(!ImageBarrier(m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL))
+			if(!ImageBarrier(CommandBuffer, m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL))
 				return false;
 
 			// If source and destination support blit we'll blit as this also does automatic format conversion (e.g. from BGR to RGB)
@@ -1951,7 +1972,7 @@ protected:
 					1, &ImageCopyRegion);
 			}
 
-			if(!ImageBarrier(m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL))
+			if(!ImageBarrier(CommandBuffer, m_GetPresentedImgDataHelperImage, 0, 1, 0, 1, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL))
 				return false;
 
 			VkResult EndCommandBufferResult = vkEndCommandBuffer(CommandBuffer);
@@ -1964,7 +1985,6 @@ protected:
 					SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Ending presented image data command buffer failed.");
 				return false;
 			}
-			m_vUsedMemoryCommandBuffer[m_CurImageIndex] = false;
 
 			VkSubmitInfo SubmitInfo{};
 			SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -6510,6 +6530,7 @@ public:
 				vkDestroyCommandPool(m_VKDevice, CommandPool, nullptr);
 		}
 		m_vCommandPools.clear();
+		m_ReadbackCommandBuffer = VK_NULL_HANDLE;
 	}
 
 	[[nodiscard]] bool CreateCommandBuffers()
@@ -6786,6 +6807,21 @@ public:
 		for(size_t i = 0; i < m_vvFrameDelayedBufferCleanup.size(); ++i)
 		{
 			ClearFrameData(i);
+		}
+
+		// 延迟纹理销毁会再次把独立显存块放入当前槽位；首轮 ClearFrameData
+		// 已处理过该槽位的 buffer 队列，最终退出必须再排空，不能直接丢弃这些分配。
+		if(IsLastCleanup)
+		{
+			for(size_t i = 0; i < m_vvFrameDelayedBufferCleanup.size(); ++i)
+			{
+				for(auto &Buffer : m_vvFrameDelayedBufferCleanup[i])
+				{
+					if(Buffer.m_pMappedData != nullptr)
+						vkUnmapMemory(m_VKDevice, Buffer.m_Mem.m_Mem);
+					CleanBufferPair(i, Buffer.m_Buffer, Buffer.m_Mem);
+				}
+			}
 		}
 
 		m_vvFrameDelayedBufferCleanup.clear();
@@ -8415,7 +8451,8 @@ public:
 		pCommand->m_pCapabilities->m_ProceduralRing.store(false, std::memory_order_release);
 		pCommand->m_pCapabilities->m_RenderTargetGaussianBlur = false;
 		pCommand->m_pCapabilities->m_BackbufferCapture = false;
-		pCommand->m_pCapabilities->m_RenderTargetExternalPassRequiresSingleSample = true;
+		// 交换链通道结束时已 resolve，捕获读取单采样交换链；离屏管线也独立使用单采样。
+		pCommand->m_pCapabilities->m_RenderTargetExternalPassRequiresSingleSample = false;
 		pCommand->m_pCapabilities->m_TileBuffering = true;
 		pCommand->m_pCapabilities->m_QuadBuffering = true;
 		pCommand->m_pCapabilities->m_TextBuffering = true;

@@ -206,13 +206,39 @@ inline bool QmUpdateAxiomAutoLoginState(SQmAxiomAutoLoginState &State, int64_t N
 	return State.m_Attempts == 0 || (State.m_NextTryTick > 0 && Now >= State.m_NextTryTick);
 }
 
+enum class EQmAxiomDummyLoginAction
+{
+	NONE,
+	LOGIN,
+	RECONNECT,
+};
+
+// 登录只依赖已连接的分身；自动重连单独由玩家的连接/断开意图控制。
+struct SQmAxiomDummyLoginState
+{
+	bool m_LoginSent = false;
+	bool m_ReconnectAllowed = false;
+
+	EQmAxiomDummyLoginAction Update(bool Connected, bool HasPassword, bool CanReconnect)
+	{
+		if(!Connected || !HasPassword)
+			m_LoginSent = false;
+		if(!HasPassword)
+			return EQmAxiomDummyLoginAction::NONE;
+		if(!Connected)
+			return m_ReconnectAllowed && CanReconnect ? EQmAxiomDummyLoginAction::RECONNECT : EQmAxiomDummyLoginAction::NONE;
+		if(m_LoginSent)
+			return EQmAxiomDummyLoginAction::NONE;
+		m_LoginSent = true;
+		return EQmAxiomDummyLoginAction::LOGIN;
+	}
+};
+
 class CQmAxiomAutoLogin : public CComponent
 {
 	SQmAxiomAutoLoginState m_AutoLoginState;
 	char m_aAutoLoginServer[NETADDR_MAXSTRSIZE] = "";
-	bool m_DummyAutoLoginSent = false;
-	bool m_DummyWasConnected = false;
-	bool m_DummyLoginAllowedThisServer = false;
+	SQmAxiomDummyLoginState m_DummyLoginState;
 	bool m_AutoLoginEnabledLastFrame = false;
 	// 每服最多提示一次的门控：密码未填提示与重试耗尽提示。
 	bool m_PasswordHintAnnounced = false;

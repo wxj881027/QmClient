@@ -24,6 +24,7 @@ from checks import (  # noqa: E402
 	clang_format,
 	clang_tidy_warn,
 	ci_build,
+	ci_deps,
 	config_vars,
 	dilate,
 	env,
@@ -140,6 +141,7 @@ _CHECK_SPECS = (
 		enable_modes=_SOURCE_MODES,
 	),
 	CheckSpec("ci_build", ci_build, frozenset({"build"}), skip_attr="skip_ci_build"),
+	CheckSpec("ci_deps", ci_deps, _SOURCE_MODES),
 )
 
 

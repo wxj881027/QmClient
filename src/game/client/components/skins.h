@@ -601,7 +601,7 @@ public:
 	void PrewarmByNames(const std::vector<std::string> &vNames, bool Immediate = false);
 	bool PrewarmPlayerPreviewReady(int Dummy, int MaxEntries, bool ProgressiveListReady = false);
 
-	const CSkinContainer *FindContainerOrNullptr(const char *pName);
+	const CSkinContainer *FindContainerOrNullptr(const char *pName, bool RequestLoad = true);
 	const CSkin *FindOrNullptr(const char *pName);
 	const CSkin *Find(const char *pName);
 

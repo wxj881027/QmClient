@@ -108,3 +108,11 @@ python qmclient_scripts/integration/exit_lifecycle_smoke.py --build-dir tmp/sess
 ```
 
 覆盖正常最终清理、最终清理卡死后的看门狗强制退出并保留已保存配置，以及本地服务器在父进程正常退出、`_Exit`、外部强杀和 `CreateProcess` 尚未返回的创建窗口中被杀后的终止。Windows 本地服务器使用原子 Job-list 创建能力，需要 Windows 10 / Server 2016 或更新版本；能力不可用时拒绝启动。测试只运行工作区副本，服务器使用隔离的 `storage.cfg`，不会读取真实用户配置。
+
+## Vulkan FSAA 背景模糊回归
+
+```text
+python qmclient_scripts/integration/vulkan_fsaa_blur_smoke.py cmake-build-release --validation-layer <Vulkan-SDK-Bin>
+```
+
+入口使用隔离存储构建，需要可见桌面、Vulkan GPU 和验证层。默认串行检查 4×、8×、再次 4×，每次执行模糊开启、关闭和重新开启；要求 MSAA 下背板捕获激活、每一步生成新截图、正常退出，且没有命令缓冲复用、设备丢失或退出资源泄漏错误。不会把旧截图日志当作新事件，退出码为零也不能绕过验证层错误。上游 device layer 注册提示单独记录，不属于本场景 GPU 命令验证。截图仅作为视觉验收产物，自动检查不声称图片内容已证明模糊效果；日志与图片保留在 `tmp/startup_capture_font_fix/`。此设备场景单独运行，不加入无 GPU 的常规 gate。

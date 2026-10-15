@@ -27,6 +27,7 @@
 #include <game/client/QmUi/QmVoteMenu.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsChoice.h>
+#include <game/client/QmUi/SettingsTextPlanUnits.h>
 #include <game/client/QmUi/SettingsToggleGrid.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
@@ -2799,20 +2800,6 @@ public:
 		float m_FontSize = 0.0f;
 		int m_Align = TEXTALIGN_ML;
 		float m_MaxWidth = -1.0f;
-	};
-	enum ESettingsMenuTextPlanCollectionUnitKind
-	{
-		MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS = 0,
-		MENU_TEXT_PLAN_UNIT_TCLIENT_TAB,
-		MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB,
-		MENU_TEXT_PLAN_UNIT_BASE_PAGE,
-		MENU_TEXT_PLAN_UNIT_INGAME_ESC,
-	};
-	struct SSettingsMenuTextPlanCollectionUnit
-	{
-		ESettingsMenuTextPlanCollectionUnitKind m_Kind = MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS;
-		int m_Page = -1;
-		int m_Tab = -1;
 	};
 	CUIElement &MenuTextElement(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const SMenuTextStyleKey &StyleKey);
 	void CollectMenuTextPlanItem(EMenuTextScope Scope, int Page, int Tab, int Subtab, const char *pTextId, const char *pText, const CUIRect *pRect, float FontSize, int Align, const SLabelProperties &LabelProps, const SMenuTextStyleKey &StyleKey);

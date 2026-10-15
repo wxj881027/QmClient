@@ -60,6 +60,7 @@
 #include <game/client/components/qmclient/media_paths.h>
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
+#include <game/client/components/qmclient/statistics_ring_geometry.h>
 #include <game/client/components/sounds.h>
 #include <game/client/components/theme_scan.h>
 #include <game/client/gameclient.h>
@@ -3446,11 +3447,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 			{
 				const float A0 = -pi / 2.0f + 2.0f * pi * Segment / BaseRingSegments;
 				const float A1 = -pi / 2.0f + 2.0f * pi * (Segment + 1) / BaseRingSegments;
-				const vec2 P0 = ChartCenter + vec2(std::cos(A0), std::sin(A0)) * ChartRadius;
-				const vec2 P1 = ChartCenter + vec2(std::cos(A1), std::sin(A1)) * ChartRadius;
-				const vec2 Q0 = ChartCenter + vec2(std::cos(A0), std::sin(A0)) * ChartInnerRadius;
-				const vec2 Q1 = ChartCenter + vec2(std::cos(A1), std::sin(A1)) * ChartInnerRadius;
-				aBaseRing[Segment] = IGraphics::CFreeformItem(P0, P1, Q1, Q0);
+				aBaseRing[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
 			}
 			Graphics()->QuadsDrawFreeform(aBaseRing, BaseRingSegments);
 		}
@@ -3483,11 +3480,7 @@ void CMenus::RenderStatistics(CUIRect MainView)
 				{
 					const float A0 = StartAngle + Sweep * Segment / Segments;
 					const float A1 = StartAngle + Sweep * (Segment + 1) / Segments;
-					const vec2 P0 = ChartCenter + vec2(std::cos(A0), std::sin(A0)) * ChartRadius;
-					const vec2 P1 = ChartCenter + vec2(std::cos(A1), std::sin(A1)) * ChartRadius;
-					const vec2 Q0 = ChartCenter + vec2(std::cos(A0), std::sin(A0)) * ChartInnerRadius;
-					const vec2 Q1 = ChartCenter + vec2(std::cos(A1), std::sin(A1)) * ChartInnerRadius;
-					aSectors[Segment] = IGraphics::CFreeformItem(P0, P1, Q1, Q0);
+					aSectors[Segment] = QmStatisticsRingSegment(ChartCenter, ChartRadius, ChartInnerRadius, A0, A1);
 				}
 				Graphics()->SetColor(aModeColors[Index % std::size(aModeColors)]);
 				Graphics()->QuadsDrawFreeform(aSectors, Segments);
@@ -7278,16 +7271,12 @@ void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 	m_MenuTextGlyphPrewarmCursor = 0;
 	m_MenuTextGlyphPrewarmPlanCursor = static_cast<size_t>(-1);
 
-	if(IngameEscOperation)
-		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_INGAME_ESC, -1, -1});
-
 	const int CurrentPage = SettingsCanonicalPage(g_Config.m_UiSettingsPage);
 	int CurrentTab = -1;
 	if(CurrentPage == SETTINGS_TCLIENT)
 		CurrentTab = m_TClientSettingsTab;
 	else if(CurrentPage == SETTINGS_QMCLIENT)
 		CurrentTab = m_QmClientSettingsTab;
-	m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_VISIBLE_SETTINGS, CurrentPage, CurrentTab});
 
 	const bool PreferQmClient = SettingsCanonicalPage(m_SettingsRuntimeMetadata.m_LastPage) == SETTINGS_QMCLIENT;
 	const int LastTClientTab = CanonicalizeTClientCacheTab(m_SettingsRuntimeMetadata.m_LastTClientTab);
@@ -7295,31 +7284,6 @@ void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 	// 贡献者页签的枚举值只是持久化占位，回落到首个子页签。
 	if(LastQmClientTab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
 		LastQmClientTab = QMCLIENT_SETTINGS_TAB_VISUAL;
-	if(PreferQmClient)
-	{
-		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, LastQmClientTab});
-		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_TCLIENT_TAB, SETTINGS_TCLIENT, LastTClientTab});
-	}
-	else
-	{
-		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_TCLIENT_TAB, SETTINGS_TCLIENT, LastTClientTab});
-		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, LastQmClientTab});
-	}
-
-	constexpr int NumTClientTabs = 5; // 与 menus_tclient.cpp 的 NUMBER_OF_TCLIENT_TABS 保持一致
-	for(int Tab = 0; Tab < NumTClientTabs; ++Tab)
-	{
-		if(Tab != LastTClientTab)
-			m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_TCLIENT_TAB, SETTINGS_TCLIENT, Tab});
-	}
-	for(int Tab = 0; Tab < NUMBER_OF_QMCLIENT_SETTINGS_TABS; ++Tab)
-	{
-		if(Tab == QMCLIENT_SETTINGS_TAB_CONTRIBUTORS)
-			continue;
-		if(Tab != LastQmClientTab)
-			m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_QMCLIENT_TAB, SETTINGS_QMCLIENT, Tab});
-	}
-
 	static constexpr int s_aBaseSettingsPages[] = {
 		SETTINGS_GENERAL,
 		SETTINGS_TEE,
@@ -7330,8 +7294,9 @@ void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOv
 		SETTINGS_ASSETS,
 		SETTINGS_DDNET,
 	};
-	for(const int Page : s_aBaseSettingsPages)
-		m_vSettingsMenuTextPlanCollectionUnits.push_back({MENU_TEXT_PLAN_UNIT_BASE_PAGE, Page, -1});
+	m_vSettingsMenuTextPlanCollectionUnits = QmSettingsTextPlanUnits(IngameEscOperation, CurrentPage, CurrentTab,
+		PreferQmClient, SETTINGS_TCLIENT, SETTINGS_QMCLIENT, LastTClientTab, LastQmClientTab,
+		5, NUMBER_OF_QMCLIENT_SETTINGS_TABS, QMCLIENT_SETTINGS_TAB_CONTRIBUTORS, s_aBaseSettingsPages);
 }
 
 void CMenus::CollectSettingsMenuTextPlanUnit(const SSettingsMenuTextPlanCollectionUnit &Unit, CUIRect Screen, CUIRect SettingsMainView)

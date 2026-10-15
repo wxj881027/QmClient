@@ -1,31 +1,42 @@
 #include "custom_communities.h"
 
 #include <base/log.h>
+#include <base/perf_timer.h>
 
 #include <engine/client/serverbrowser.h>
+#include <engine/engine.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
 
-static constexpr char CUSTOM_COMMUNITIES_DDNET_INFO_FILE[] = "custom-communities-ddnet-info.json";
+#include <game/client/components/qmclient/custom_community_info.h>
+#include <game/client/components/qmclient/perf_logging.h>
 
 void CCustomCommunities::DownloadCustomCommunitiesDDNetInfo()
 {
+	if(m_pCustomCommunitiesDDNetInfoTask)
+		m_pCustomCommunitiesDDNetInfoTask->Abort();
+	m_pCustomCommunitiesDDNetInfoTask.reset();
+	if(m_pCustomCommunitiesCacheJob)
+		m_pCustomCommunitiesCacheJob->Abort();
+	m_pCustomCommunitiesCacheJob.reset();
+	if(m_pCustomCommunitiesResponseJob)
+		m_pCustomCommunitiesResponseJob->Abort();
+	m_pCustomCommunitiesResponseJob.reset();
+
 	if(g_Config.m_QmCustomCommunitiesUrl[0] == '\0')
 	{
-		LoadCustomCommunitiesDDNetInfo();
+		auto *pServerBrowser = dynamic_cast<CServerBrowser *>(ServerBrowser());
+		dbg_assert(pServerBrowser, "pServerBrowser is nullptr");
+		pServerBrowser->m_CustomCommunitiesFunction = nullptr;
+		pServerBrowser->LoadDDNetServers();
+		return;
 	}
 	else
 	{
-		// Load cached custom communities first so they are available immediately
-		// on startup, then refresh them in the background.
-		LoadCustomCommunitiesDDNetInfo();
-
-		if(m_pCustomCommunitiesDDNetInfoTask != nullptr)
-		{
-			m_pCustomCommunitiesDDNetInfoTask->Abort();
-			m_pCustomCommunitiesDDNetInfoTask = nullptr;
-		}
-		m_pCustomCommunitiesDDNetInfoTask = HttpGetFile(g_Config.m_QmCustomCommunitiesUrl, Storage(), CUSTOM_COMMUNITIES_DDNET_INFO_FILE, IStorage::TYPE_SAVE);
+		// 加载页同样需要持续响应输入；旧缓存的磁盘读取和解析只能在后台进行。
+		m_pCustomCommunitiesCacheJob = std::make_shared<CQmCustomCommunityCacheJob>(Storage());
+		Engine()->AddJob(m_pCustomCommunitiesCacheJob);
+		m_pCustomCommunitiesDDNetInfoTask = HttpGetBoth(g_Config.m_QmCustomCommunitiesUrl, Storage(), QMCLIENT_CUSTOM_COMMUNITIES_INFO_FILE, IStorage::TYPE_SAVE);
 		m_pCustomCommunitiesDDNetInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
 		m_pCustomCommunitiesDDNetInfoTask->SkipByFileTime(false); // Always re-download.
 		// Use ipv4 so we can know the ingame ip addresses of players before they join game servers
@@ -34,46 +45,16 @@ void CCustomCommunities::DownloadCustomCommunitiesDDNetInfo()
 	}
 }
 
-void CCustomCommunities::LoadCustomCommunitiesDDNetInfo()
+void CCustomCommunities::ApplyCustomCommunitiesInfo(TQmCommunityInfo pInfo)
 {
 	auto *pServerBrowser = dynamic_cast<CServerBrowser *>(ServerBrowser());
 	dbg_assert(pServerBrowser, "pServerBrowser is nullptr");
 
-	// Handle disabled case
-	if(g_Config.m_QmCustomCommunitiesUrl[0] == '\0')
-	{
-		pServerBrowser->m_CustomCommunitiesFunction = nullptr;
-		pServerBrowser->LoadDDNetServers();
-		return;
-	}
-
-	// Read and parse file
-	void *pBuf;
-	unsigned Length;
-	if(!Storage()->ReadFile(CUSTOM_COMMUNITIES_DDNET_INFO_FILE, IStorage::TYPE_SAVE, &pBuf, &Length))
-	{
-		return;
-	}
-	json_settings JsonSettings{};
-	char aError[256];
-	json_value *pCustomCommunitiesDDNetInfo = JsonParseEx(&JsonSettings, static_cast<json_char *>(pBuf), Length, aError);
-	free(pBuf);
-	if(pCustomCommunitiesDDNetInfo == nullptr)
-	{
-		log_error("customcommunities", "invalid info json: '%s'", aError);
-		return;
-	}
-	else if(pCustomCommunitiesDDNetInfo->type != json_object)
-	{
-		log_error("customcommunities", "invalid info root");
-		json_value_free(pCustomCommunitiesDDNetInfo);
-		return;
-	}
-
 	// Apply new data
+	CPerfTimer ApplyTimer(QmPerfEnabled());
 	if(m_pCustomCommunitiesDDNetInfo)
 		json_value_free(m_pCustomCommunitiesDDNetInfo);
-	m_pCustomCommunitiesDDNetInfo = pCustomCommunitiesDDNetInfo;
+	m_pCustomCommunitiesDDNetInfo = pInfo.release();
 	pServerBrowser->m_CustomCommunitiesFunction = [&](std::vector<json_value *> &vCommunities) {
 		const json_value &Communities = (*m_pCustomCommunitiesDDNetInfo)["communities"];
 		if(Communities.type == json_array)
@@ -85,6 +66,7 @@ void CCustomCommunities::LoadCustomCommunitiesDDNetInfo()
 		}
 	};
 	pServerBrowser->LoadDDNetServers();
+	QmPerfLogStage("perf/custom_communities", "apply", ApplyTimer.ElapsedMs(), false, Client());
 }
 
 void CCustomCommunities::OnInit()
@@ -105,24 +87,59 @@ void CCustomCommunities::OnConsoleInit()
 
 void CCustomCommunities::OnRender()
 {
+	if(m_pCustomCommunitiesCacheJob && m_pCustomCommunitiesCacheJob->State() == IJob::STATE_DONE)
+	{
+		if(auto pInfo = m_pCustomCommunitiesCacheJob->TakeInfo())
+		{
+			ApplyCustomCommunitiesInfo(std::move(pInfo));
+			if(QmPerfEnabled())
+				QmPerfLogPayloadForce("perf/custom_communities", "event=cache_applied", Client());
+		}
+		m_pCustomCommunitiesCacheJob = nullptr;
+	}
+	if(m_pCustomCommunitiesResponseJob && m_pCustomCommunitiesResponseJob->State() == IJob::STATE_DONE)
+	{
+		if(auto pInfo = m_pCustomCommunitiesResponseJob->TakeInfo())
+		{
+			ApplyCustomCommunitiesInfo(std::move(pInfo));
+			if(QmPerfEnabled())
+				QmPerfLogPayloadForce("perf/custom_communities", "event=response_applied", Client());
+			// 仅有效新响应才能替代旧缓存；损坏响应不能丢弃仍在读取的可用缓存。
+			if(m_pCustomCommunitiesCacheJob)
+				m_pCustomCommunitiesCacheJob->Abort();
+			m_pCustomCommunitiesCacheJob.reset();
+		}
+		m_pCustomCommunitiesResponseJob.reset();
+	}
 	if(m_pCustomCommunitiesDDNetInfoTask)
 	{
 		const auto State = m_pCustomCommunitiesDDNetInfoTask->State();
 		if(State != EHttpState::RUNNING && State != EHttpState::QUEUED)
 		{
-			// TODO if(m_ServerBrowser.DDNetInfoSha256() == m_pDDNetInfoTask->ResultSha256())
+			// 失败保留已经加载的社区；成功只消费内存响应，不在交互帧重读缓存。
+			if(State == EHttpState::DONE)
+			{
+				m_pCustomCommunitiesResponseJob = std::make_shared<CQmCustomCommunityCacheJob>(Storage(), m_pCustomCommunitiesDDNetInfoTask);
+				Engine()->AddJob(m_pCustomCommunitiesResponseJob);
+			}
 			m_pCustomCommunitiesDDNetInfoTask = nullptr;
-			LoadCustomCommunitiesDDNetInfo();
 		}
 	}
 }
 
 CCustomCommunities::~CCustomCommunities()
 {
+	if(m_pCustomCommunitiesResponseJob)
+		m_pCustomCommunitiesResponseJob->Abort();
 	if(m_pCustomCommunitiesDDNetInfoTask)
 	{
 		m_pCustomCommunitiesDDNetInfoTask->Abort();
 		m_pCustomCommunitiesDDNetInfoTask = nullptr;
+	}
+	if(m_pCustomCommunitiesCacheJob)
+	{
+		m_pCustomCommunitiesCacheJob->Abort();
+		m_pCustomCommunitiesCacheJob = nullptr;
 	}
 	if(m_pCustomCommunitiesDDNetInfo)
 		json_value_free(m_pCustomCommunitiesDDNetInfo);

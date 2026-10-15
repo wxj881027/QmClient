@@ -161,18 +161,10 @@ jobs:
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            cmake ninja-build pkg-config python3 python3-pip python3-pil \
-            libfreetype6-dev libnotify-dev libasound2-dev libpulse-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libdecor-0-dev libsqlite3-dev \
-            libdbus-1-dev \
-            libgl1-mesa-dev \
-            libvulkan-dev glslang-tools spirv-tools \
-            libavcodec-dev libavformat-dev libavutil-dev \
-            libswresample-dev libswscale-dev libx264-dev \
-            libpng-dev libcurl4-openssl-dev libssl-dev \
-            libogg-dev libopus-dev libopusfile-dev libwavpack-dev
+        uses: ./.github/actions/linux-deps
+        with:
+          # GLEW 走源码捆绑实现（不装系统包），dbus/libogg/opus 等发布作业专属包保留在此。
+          extra: libdbus-1-dev libogg-dev libopus-dev libopusfile-dev libwavpack-dev
 
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
@@ -503,11 +495,10 @@ jobs:
           restore-keys: rust-android-${{ runner.os }}-
 
       - name: Install host dependencies
+        uses: ./.github/actions/linux-deps
+
+      - name: Setup cargo-ndk and Rust Android targets
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            cmake ninja-build pkg-config curl python3 python3-pip python3-pil python3-fonttools \
-            glslang-tools spirv-tools ccache
           if [ ! -f ~/.cargo/bin/cargo-ndk ]; then
             cargo install cargo-ndk --version "${CARGO_NDK_VERSION}" --locked
           fi

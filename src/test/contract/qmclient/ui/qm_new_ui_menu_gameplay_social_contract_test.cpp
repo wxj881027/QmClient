@@ -95,61 +95,11 @@ TEST(QmNewUiMenuGameplaySocialContract, ShortServerNamesKeepDisplayNameHighlight
 	EXPECT_EQ(Source.find("!g_Config.m_QmShortServerNames && g_Config.m_BrFilterString"), std::string::npos);
 }
 
-TEST(QmNewUiMenuGameplaySocialContract, QmClientAxiomAutoLoginLivesInQmClientComponent)
+TEST(QmNewUiMenuGameplaySocialContract, AxiomMigrationRemovesTClientLoginApi)
 {
-	const std::string Source = ReadTextFile("src/game/client/components/qmclient/axiom_auto_login.cpp");
-	const std::string Header = ReadTextFile("src/game/client/components/qmclient/axiom_auto_login.h");
+	// 迁移终态约束：运行时行为无法证明旧模块的公开 API 已被删除。
 	const std::string TClientHeader = ReadTextFile("src/game/client/components/tclient/tclient.h");
 	const std::string TClientSource = ReadTextFile("src/game/client/components/tclient/tclient.cpp");
-	const std::string GameClientHeader = ReadTextFile("src/game/client/gameclient.h");
-	const std::string QmConfigHeader = ReadTextFile("src/engine/shared/config_variables_qmclient.h");
-	const std::string IngameMenusSource = ReadTextFile("src/game/client/components/menus_ingame.cpp");
-
-	EXPECT_NE(Header.find("class CQmAxiomAutoLogin : public CComponent"), std::string::npos);
-	EXPECT_NE(GameClientHeader.find("CQmAxiomAutoLogin m_QmAxiomAutoLogin;"), std::string::npos);
-	EXPECT_NE(Source.find("void CQmAxiomAutoLogin::TrySendLogin()"), std::string::npos);
-	EXPECT_NE(Source.find("void CQmAxiomAutoLogin::TrySendDummyLogin()"), std::string::npos);
-	EXPECT_NE(Source.find("SendChatOnConn(IClient::CONN_DUMMY"), std::string::npos);
-	EXPECT_NE(Header.find("TrySendDummyLogin"), std::string::npos);
-	EXPECT_NE(QmConfigHeader.find("QmAxiomDummyLoginPassword"), std::string::npos);
-	EXPECT_NE(QmConfigHeader.find("qm_axiom_dummy_login_password"), std::string::npos);
-	EXPECT_NE(Source.find("m_DummyLoginAllowedThisServer"), std::string::npos);
-	EXPECT_NE(Source.find("m_DummyWasConnected"), std::string::npos);
-	EXPECT_EQ(Source.find("if(DummyConnected && !m_DummyWasConnected)"), std::string::npos);
-	EXPECT_NE(Source.find("m_DummyLoginAllowedThisServer = true;"), std::string::npos);
-	EXPECT_NE(Source.find("if(!m_DummyLoginAllowedThisServer)"), std::string::npos);
-	EXPECT_NE(Header.find("EnableDummyReconnectForServer"), std::string::npos);
-	EXPECT_NE(Header.find("DisableDummyReconnectForServer"), std::string::npos);
-	EXPECT_NE(Source.find("Client()->DummyConnect();"), std::string::npos);
-	EXPECT_NE(IngameMenusSource.find("GameClient()->m_QmAxiomAutoLogin.EnableDummyReconnectForServer();"), std::string::npos);
-	EXPECT_NE(IngameMenusSource.find("GameClient()->OnDummyManualDisconnect();"), std::string::npos);
-	EXPECT_NE(GameClientHeader.find("void OnDummyManualDisconnect() override;"), std::string::npos);
-	const std::string GameClientSource = ReadTextFile("src/game/client/gameclient.cpp");
-	const std::string ManualDisconnectBody = FunctionBody(GameClientSource, "void CGameClient::OnDummyManualDisconnect()");
-	ASSERT_FALSE(ManualDisconnectBody.empty());
-	EXPECT_NE(ManualDisconnectBody.find("m_QmAxiomAutoLogin.DisableDummyReconnectForServer();"), std::string::npos);
-	const std::string ClientSource = ReadTextFile("src/engine/client/client.cpp");
-	const std::string DummyDisconnectBody = FunctionBody(ClientSource, "void CClient::Con_DummyDisconnect(");
-	ASSERT_FALSE(DummyDisconnectBody.empty());
-	EXPECT_NE(DummyDisconnectBody.find("GameClient()->OnDummyManualDisconnect();"), std::string::npos);
-	EXPECT_NE(DummyDisconnectBody.find("DummyDisconnect(nullptr);"), std::string::npos);
-	EXPECT_NE(Source.find("bool CQmAxiomAutoLogin::IsAxiomCommunity() const"), std::string::npos);
-	EXPECT_NE(Source.find("Client()->ServerInfo().m_aCommunityId"), std::string::npos);
-	EXPECT_NE(Header.find("QMCLIENT_AXIOM_AUTO_LOGIN_SLOW_RETRY_SECONDS"), std::string::npos);
-	EXPECT_NE(Header.find("SQmAxiomAutoLoginState m_AutoLoginState;"), std::string::npos);
-	EXPECT_NE(Header.find("m_SlowRetryMode"), std::string::npos);
-	EXPECT_NE(Header.find("m_HardFailed"), std::string::npos);
-	EXPECT_NE(Header.find("QmScheduleAxiomAutoLoginRetry"), std::string::npos);
-	EXPECT_NE(Source.find("QmClassifyAxiomLoginReply(pText)"), std::string::npos);
-	EXPECT_NE(Source.find("QmApplyAxiomLoginReply"), std::string::npos);
-	EXPECT_NE(Source.find("Localize(\"Trying Axiom auto login\")"), std::string::npos);
-	EXPECT_NE(Source.find("Localize(\"Trying Axiom dummy auto login\")"), std::string::npos);
-	EXPECT_NE(Source.find("Localize(\"Axiom auto login succeeded\")"), std::string::npos);
-	EXPECT_NE(Source.find("Localize(\"Axiom auto login failed, retrying\")"), std::string::npos);
-	// 硬失败提示按细分原因走 Localize；旧 key 由 QmAxiomAutoLoginFailureKey 的 NONE 分支兜底保留（行为由单元测试锁定）。
-	EXPECT_NE(Source.find("Localize(QmAxiomAutoLoginFailureKey(m_AutoLoginState.m_LastFailureReason))"), std::string::npos);
-	EXPECT_NE(Header.find("\"Axiom auto login failed\""), std::string::npos);
-
 	EXPECT_EQ(TClientHeader.find("IsAxiomCommunity() const"), std::string::npos);
 	EXPECT_EQ(TClientHeader.find("ResetAxiomAutoLoginState"), std::string::npos);
 	EXPECT_EQ(TClientHeader.find("UpdateAxiomAutoLogin"), std::string::npos);

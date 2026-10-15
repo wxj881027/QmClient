@@ -42,33 +42,10 @@ jobs:
         fetch-depth: 0
 
     - name: Prepare Linux
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install \
-          cmake \
-          libavcodec-dev \
-          libavformat-dev \
-          libavutil-dev \
-          libfreetype6-dev \
-          libgl1-mesa-dev \
-          libglew-dev \
-          libmariadb-dev \
-          libminiupnpc-dev \
-          libnotify-dev \
-          libasound2-dev libpulse-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libdecor-0-dev \
-          libsqlite3-dev \
-          libswresample-dev \
-          libswscale-dev \
-          libvulkan-dev \
-          libwebsockets-dev \
-          libx264-dev \
-          ninja-build \
-          pkg-config \
-          python3-fonttools \
-          python3-pil \
-          spirv-tools \
-          glslang-tools \
-          -y
+      uses: ./.github/actions/linux-deps
+      with:
+        # MYSQL/WEBSOCKETS/UPNP 三个可选特性构建需要，主清单不装。
+        extra: libmariadb-dev libwebsockets-dev libminiupnpc-dev
 
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8  # stable

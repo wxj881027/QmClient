@@ -31,6 +31,19 @@ TEST(VulkanRenderingPipelines, SwapPassDependencyCoversLoadAfterAttachmentAndTra
 	EXPECT_NE(Dependency.dstAccessMask & VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0u);
 }
 
+TEST(VulkanRenderingPipelines, CaptureWaitsForResolvedColorWritesBeforeTransferRead)
+{
+	const VkImage Image = Handle<VkImage>(9);
+	const auto Barrier = QmVulkanResolvedSwapCaptureBarrier(Image);
+	EXPECT_EQ(Barrier.image, Image);
+	EXPECT_EQ(Barrier.oldLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	EXPECT_EQ(Barrier.newLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+	EXPECT_EQ(Barrier.srcAccessMask, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+	EXPECT_EQ(Barrier.dstAccessMask, VK_ACCESS_TRANSFER_READ_BIT);
+	EXPECT_EQ(Barrier.srcQueueFamilyIndex, VK_QUEUE_FAMILY_IGNORED);
+	EXPECT_EQ(Barrier.dstQueueFamilyIndex, VK_QUEUE_FAMILY_IGNORED);
+}
+
 TEST(VulkanRenderingPipelines, TargetVariantUsesItsPassAndSingleSamplingWithoutChangingSwapInfo)
 {
 	VkPipelineMultisampleStateCreateInfo Multisampling{};
@@ -58,6 +71,34 @@ TEST(VulkanRenderingPipelines, TargetVariantUsesItsPassAndSingleSamplingWithoutC
 	EXPECT_EQ(Info.renderPass, Handle<VkRenderPass>(1));
 	EXPECT_EQ(Multisampling.rasterizationSamples, VK_SAMPLE_COUNT_4_BIT);
 	EXPECT_NE(Pipeline, Target);
+}
+
+TEST(VulkanRenderingPipelines, FsaaChangesKeepBlurTargetSingleSampleAndSwapSamplesIntact)
+{
+	// 生产管线创建接口必须在各种 FSAA 倍数下保留交换链采样，而模糊目标始终单采样。
+	for(const auto Samples : {VK_SAMPLE_COUNT_1_BIT, VK_SAMPLE_COUNT_2_BIT, VK_SAMPLE_COUNT_4_BIT, VK_SAMPLE_COUNT_8_BIT})
+	{
+		SCOPED_TRACE(static_cast<int>(Samples));
+		VkPipelineMultisampleStateCreateInfo Multisampling{};
+		Multisampling.rasterizationSamples = Samples;
+		VkGraphicsPipelineCreateInfo Info{};
+		Info.renderPass = Handle<VkRenderPass>(1);
+		Info.pMultisampleState = &Multisampling;
+		VkPipeline Swap = VK_NULL_HANDLE;
+		VkPipeline Target = VK_NULL_HANDLE;
+		int Calls = 0;
+		ASSERT_EQ(CreateQmVulkanGraphicsPipelines(Info, Handle<VkRenderPass>(2), Swap, Target,
+				  [&](const auto &Created, auto &Output) {
+					  EXPECT_EQ(Created.pMultisampleState->rasterizationSamples, Calls == 0 ? Samples : VK_SAMPLE_COUNT_1_BIT);
+					  Output = Handle<VkPipeline>(++Calls);
+					  return VK_SUCCESS;
+				  }),
+			VK_SUCCESS);
+		EXPECT_EQ(Calls, 2);
+		EXPECT_EQ(Multisampling.rasterizationSamples, Samples);
+		EXPECT_EQ(&SelectQmVulkanPipeline(true, false, Swap, Target), &Target);
+		EXPECT_EQ(&SelectQmVulkanPipeline(false, false, Swap, Target), &Swap);
+	}
 }
 
 TEST(VulkanRenderingPipelines, DefaultFailureStopsBeforeCreatingTargetVariant)

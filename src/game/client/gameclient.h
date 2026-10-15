@@ -25,6 +25,7 @@
 #include <generated/protocol7.h>
 #include <generated/protocolglue.h>
 
+#include <game/client/components/qmclient/connection_resource_preparation.h>
 #include <game/client/components/qmclient/snapshot_entities.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/client/race.h>
@@ -919,6 +920,7 @@ public:
 
 	// hooks
 	void OnConnected() override;
+	void OnConnectionResourceUpdate() override;
 	void OnRender() override;
 	void OnUpdate() override;
 	int RenderThrottleRefreshRate() const override;
@@ -1338,6 +1340,8 @@ public:
 
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
+	CConnectionResourcePreparation m_ConnectionResourcePreparation;
+	void FinishConnectionResourcePreparation();
 	// 扩展信息暂存区：保留容量跨帧复用，只在构建快照时原地清空。
 	std::vector<CSnapEntities> m_vSnapEntityExtensionsScratch;
 	void SnapCollectEntities();

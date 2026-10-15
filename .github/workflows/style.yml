@@ -24,9 +24,13 @@ jobs:
         fetch-depth: 0
 
     - name: Prepare Linux
+      uses: ./.github/actions/linux-deps
+      with:
+        # 风格检查专属工具；LLVM 源与 clang-format-22 仍走下方独立步骤。
+        extra: ddnet-tools shellcheck tidy graphviz python3-clang wget gnupg ca-certificates
+
+    - name: Install clang-format-22
       run: |
-        sudo apt-get update -y
-        sudo apt-get install ddnet-tools shellcheck tidy pkg-config cmake graphviz ninja-build python3-clang python3-fonttools python3-pil wget gnupg ca-certificates -y
         wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor | sudo tee /usr/share/keyrings/apt.llvm.org.gpg >/dev/null
         echo "deb [signed-by=/usr/share/keyrings/apt.llvm.org.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm-toolchain-noble-22.list >/dev/null
         sudo apt-get update -y

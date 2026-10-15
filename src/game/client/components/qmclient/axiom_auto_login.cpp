@@ -60,13 +60,12 @@ bool CQmAxiomAutoLogin::IsAxiomCommunity() const
 
 void CQmAxiomAutoLogin::EnableDummyReconnectForServer()
 {
-	m_DummyLoginAllowedThisServer = true;
+	m_DummyLoginState.m_ReconnectAllowed = true;
 }
 
 void CQmAxiomAutoLogin::DisableDummyReconnectForServer()
 {
-	m_DummyLoginAllowedThisServer = false;
-	m_DummyAutoLoginSent = false;
+	m_DummyLoginState = {};
 	m_aDummyAutoLoginServer[0] = '\0';
 }
 
@@ -74,9 +73,7 @@ void CQmAxiomAutoLogin::ResetState()
 {
 	m_AutoLoginState = {};
 	m_aAutoLoginServer[0] = '\0';
-	m_DummyAutoLoginSent = false;
-	m_DummyWasConnected = false;
-	m_DummyLoginAllowedThisServer = false;
+	m_DummyLoginState = {};
 	m_PasswordHintAnnounced = false;
 	m_ExhaustionAnnounced = false;
 	m_aDummyAutoLoginServer[0] = '\0';
@@ -117,10 +114,6 @@ void CQmAxiomAutoLogin::TrySendDummyLogin()
 		return;
 	if(Client()->State() != IClient::STATE_ONLINE || !Client()->DummyConnected() || !IsAxiomCommunity())
 		return;
-	if(!m_DummyLoginAllowedThisServer)
-		return;
-	if(m_DummyAutoLoginSent)
-		return;
 
 	char aServerAddress[NETADDR_MAXSTRSIZE] = "";
 	const NETADDR *pServerAddr = Client()->ServerAddress();
@@ -132,7 +125,6 @@ void CQmAxiomAutoLogin::TrySendDummyLogin()
 	char aLoginCommand[192];
 	str_format(aLoginCommand, sizeof(aLoginCommand), "/login %s", g_Config.m_QmAxiomDummyLoginPassword);
 	GameClient()->m_Chat.SendChatOnConn(IClient::CONN_DUMMY, 0, aLoginCommand);
-	m_DummyAutoLoginSent = true;
 	GameClient()->Echo(Localize("Trying Axiom dummy auto login"));
 }
 
@@ -202,26 +194,20 @@ void CQmAxiomAutoLogin::OnUpdate()
 		ResetState();
 
 	const bool DummyConnected = Client()->DummyConnected();
-	if(!DummyConnected || g_Config.m_QmAxiomDummyLoginPassword[0] == '\0')
+	if(m_aDummyAutoLoginServer[0] != '\0' && aServerAddress[0] != '\0' && str_comp(m_aDummyAutoLoginServer, aServerAddress) != 0)
 	{
-		m_DummyAutoLoginSent = false;
+		m_DummyLoginState = {};
 		m_aDummyAutoLoginServer[0] = '\0';
-		if(!DummyConnected && m_DummyLoginAllowedThisServer && g_Config.m_QmAxiomDummyLoginPassword[0] != '\0' && !Client()->DummyConnecting() && !Client()->DummyConnectingDelayed() && Client()->DummyAllowed())
-			Client()->DummyConnect();
 	}
-	else
-	{
-		if(m_aDummyAutoLoginServer[0] != '\0' && aServerAddress[0] != '\0' && str_comp(m_aDummyAutoLoginServer, aServerAddress) != 0)
-		{
-			m_DummyAutoLoginSent = false;
-			m_DummyLoginAllowedThisServer = false;
-			m_aDummyAutoLoginServer[0] = '\0';
-		}
-
-		if(!m_DummyAutoLoginSent)
-			TrySendDummyLogin();
-	}
-	m_DummyWasConnected = DummyConnected;
+	const bool HasDummyPassword = g_Config.m_QmAxiomDummyLoginPassword[0] != '\0';
+	const bool CanReconnect = !DummyConnected && m_DummyLoginState.m_ReconnectAllowed && HasDummyPassword && !Client()->DummyConnecting() && !Client()->DummyConnectingDelayed() && Client()->DummyAllowed();
+	const EQmAxiomDummyLoginAction DummyAction = m_DummyLoginState.Update(DummyConnected, HasDummyPassword, CanReconnect);
+	if(!DummyConnected || !HasDummyPassword)
+		m_aDummyAutoLoginServer[0] = '\0';
+	if(DummyAction == EQmAxiomDummyLoginAction::LOGIN)
+		TrySendDummyLogin();
+	else if(DummyAction == EQmAxiomDummyLoginAction::RECONNECT)
+		Client()->DummyConnect();
 
 	if(g_Config.m_QmAxiomLoginPassword[0] == '\0')
 	{

@@ -24,22 +24,6 @@
 #include <utility>
 #include <vector>
 
-TEST(QmMonitoringSettingsPlanContract, SettingsOpenSkipsIngamePlanWhileEscCollectsIncrementally)
-{
-	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");
-	const std::string PrebuildBody = ExtractSourceFunctionBody(Menus, "int CMenus::PrebuildSettingsTextPoolForLoading(int Budget, const char *pOperationOverride)");
-	const std::string CollectionBody = ExtractSourceFunctionBody(Menus, "void CMenus::PrepareSettingsMenuTextPlanCollectionUnits(const char *pOperationOverride)");
-	ASSERT_FALSE(PrebuildBody.empty());
-	ASSERT_FALSE(CollectionBody.empty());
-
-	EXPECT_NE(CollectionBody.find("const bool IngameEscOperation = str_comp(pOperation, \"ingame_esc_open\") == 0;"), std::string::npos);
-	EXPECT_NE(CollectionBody.find("if(IngameEscOperation)"), std::string::npos);
-	EXPECT_NE(CollectionBody.find("MENU_TEXT_PLAN_UNIT_INGAME_ESC"), std::string::npos);
-	EXPECT_NE(PrebuildBody.find("AdvanceSettingsMenuTextPlanCollection("), std::string::npos);
-	EXPECT_EQ(PrebuildBody.find("BuildSettingsMenuTextPlan(vItems, SettingsMainView);"), std::string::npos);
-	EXPECT_EQ(PrebuildBody.find("MENU_TEXT_PLAN_UNIT_INGAME_ESC"), std::string::npos);
-}
-
 TEST(QmMonitoringSettingsPlanContract, LoadingAndEscPrebuildDoNotSynchronouslyBuildFullSettingsPlan)
 {
 	const std::string Menus = ReadRepoFile("src/game/client/components/menus.cpp");

@@ -85,8 +85,7 @@ void FreeQmVulkanCommandBuffers(VkCommandPool Pool, std::vector<VkCommandBuffer>
 	Buffers.clear();
 }
 
-template<typename TBarrier, typename TCopy>
-void RecordQmVulkanSnapshotCopy(VkImage SwapImage, VkImage Snapshot, VkExtent2D Extent, bool SnapshotInitialized, TBarrier &&Barrier, TCopy &&Copy)
+inline VkImageMemoryBarrier QmVulkanResolvedSwapCaptureBarrier(VkImage SwapImage)
 {
 	VkImageMemoryBarrier Source{};
 	Source.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -98,6 +97,13 @@ void RecordQmVulkanSnapshotCopy(VkImage SwapImage, VkImage Snapshot, VkExtent2D 
 	Source.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 	Source.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	Source.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	return Source;
+}
+
+template<typename TBarrier, typename TCopy>
+void RecordQmVulkanSnapshotCopy(VkImage SwapImage, VkImage Snapshot, VkExtent2D Extent, bool SnapshotInitialized, TBarrier &&Barrier, TCopy &&Copy)
+{
+	VkImageMemoryBarrier Source = QmVulkanResolvedSwapCaptureBarrier(SwapImage);
 	Barrier(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, Source);
 
 	VkImageMemoryBarrier Destination = Source;

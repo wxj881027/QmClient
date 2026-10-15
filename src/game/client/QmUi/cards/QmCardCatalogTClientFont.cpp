@@ -40,6 +40,7 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/font_download_storage.h>
+#include <game/client/components/qmclient/font_store_catalog.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/section_loader.h>
 #include <game/client/components/skins.h>
@@ -82,32 +83,6 @@ using namespace qm_tclient_cards;
 // 共用“同一时刻最多一个下载”的串行通道，安装任务优先。
 namespace fontstore
 {
-	struct SEntry
-	{
-		std::string m_Family; // 字体族显示名
-		std::string m_Category; // serif / sans-serif / ...
-		std::string m_RepoPath; // google/fonts 仓库相对路径
-		std::string m_File; // 落盘文件名（仓库路径基名，目录内由生成器保证唯一）
-		std::string m_DirectUrl; // 国内直链（fonts.gstatic.cn，生成器只给静态单文件拉丁族），可空
-		// 覆盖的脚本子集（生成器白名单：japanese/korean/cyrillic/...），供商店
-		// 按界面语言排序与徽标标注；仅 latin 覆盖的族为空。
-		std::vector<std::string> m_vSubsets;
-		bool m_Variable = false;
-	};
-
-	// 字体族聚合：搜索、安装与预览都以族为单位。
-	struct SFamily
-	{
-		std::string m_Name;
-		std::string m_Category;
-		// 族内条目的脚本子集（同族条目一致，取首条）。
-		std::vector<std::string> m_vSubsets;
-		std::vector<size_t> m_vEntryIndices; // 首条为主文件（预览/默认下载）
-		bool m_Installed = false; // 目录加载与重扫后按文件存在性刷新
-		bool m_PreviewReady = false; // 预览面已可渲染
-		bool m_PreviewFailed = false; // 预览下载或解析失败：不再自动重试
-	};
-
 	// 安装任务：一个族一条，文件逐个串行下载，单文件失败自动换镜像。
 	struct SInstallJob
 	{
@@ -135,121 +110,29 @@ namespace fontstore
 	std::optional<SPreviewJob> s_ActivePreview;
 	bool s_ReloadPending = false;
 
-	bool IsValidFontFileName(const std::string &File)
-	{
-		return qm_font_download::ValidFilename(File);
-	}
+	static std::shared_ptr<CCatalogLoadJob> s_pCatalogJob;
 
-	// 仓库相对路径会拼进下载 URL 与落盘路径：锁死形态，禁止任何穿越写法。
-	bool IsValidRepoPath(const std::string &Path)
-	{
-		return Path.size() > 2 &&
-		       Path[0] != '/' &&
-		       Path.find("..") == std::string::npos &&
-		       Path.find('\\') == std::string::npos &&
-		       Path.find("//") == std::string::npos &&
-		       IsValidFontFileName(Path.substr(Path.rfind('/') + 1));
-	}
-
-	// 目录与族聚合共用一次解析（懒加载）：条目按族名（大小写不敏感）归并，
-	// 同名族合并文件列表，族内首条即生成器排序后的主文件（可变字体优先）。
-	void LoadCatalog(IStorage *pStorage, std::vector<SEntry> &vEntries, std::vector<SFamily> &vFamilies)
-	{
-		void *pCatalogData = nullptr;
-		unsigned CatalogSize = 0;
-		// TYPE_ALL 会先搜用户目录再搜数据目录：用户侧同名目录可整体覆盖随包目录。
-		if(!pStorage->ReadFile("fonts/fonts_store/font_catalog.json", IStorage::TYPE_ALL, &pCatalogData, &CatalogSize))
-			return;
-
-		json_value *pJson = json_parse((json_char *)pCatalogData, CatalogSize);
-		if(pJson != nullptr && pJson->type == json_object)
-		{
-			const json_value &Fonts = (*pJson)["fonts"];
-			if(Fonts.type == json_array)
-			{
-				std::map<std::string, size_t> FamilyIndex;
-				for(unsigned i = 0; i < Fonts.u.array.length; ++i)
-				{
-					const json_value &Entry = Fonts[i];
-					if(Entry.type != json_object)
-						continue;
-					const json_value &Name = Entry["n"];
-					const json_value &Path = Entry["f"];
-					if(Name.type != json_string || Path.type != json_string)
-						continue;
-					SEntry Parsed;
-					Parsed.m_Family = Name.u.string.ptr;
-					Parsed.m_RepoPath = Path.u.string.ptr;
-					const json_value &Category = Entry["c"];
-					if(Category.type == json_string)
-						Parsed.m_Category = Category.u.string.ptr;
-					const json_value &Variable = Entry["v"];
-					Parsed.m_Variable = Variable.type == json_integer && Variable.u.integer != 0;
-					// 国内直链锁死 gstatic.cn 域，避免目录被换入任意下载源。
-					const json_value &Direct = Entry["u"];
-					if(Direct.type == json_string && str_startswith(Direct.u.string.ptr, "https://fonts.gstatic.cn/") && str_endswith(Direct.u.string.ptr, ".ttf"))
-						Parsed.m_DirectUrl = Direct.u.string.ptr;
-					const json_value &Subsets = Entry["s"];
-					if(Subsets.type == json_array)
-					{
-						for(unsigned si = 0; si < Subsets.u.array.length; ++si)
-							if(Subsets[si].type == json_string)
-								Parsed.m_vSubsets.emplace_back(Subsets[si].u.string.ptr);
-					}
-					if(Parsed.m_Family.empty() || !IsValidRepoPath(Parsed.m_RepoPath))
-					{
-						log_warn("fontstore", "Font catalog entry for '%s' has an unsafe path, skipped", Parsed.m_Family.c_str());
-						continue;
-					}
-					Parsed.m_File = Parsed.m_RepoPath.substr(Parsed.m_RepoPath.rfind('/') + 1);
-
-					std::string LowerFamily = Parsed.m_Family;
-					std::transform(LowerFamily.begin(), LowerFamily.end(), LowerFamily.begin(), [](unsigned char c) { return (char)std::tolower(c); });
-					auto It = FamilyIndex.find(LowerFamily);
-					if(It == FamilyIndex.end())
-					{
-						SFamily Family;
-						Family.m_Name = Parsed.m_Family;
-						Family.m_Category = Parsed.m_Category;
-						Family.m_vSubsets = Parsed.m_vSubsets;
-						Family.m_vEntryIndices.push_back(vEntries.size());
-						vFamilies.push_back(std::move(Family));
-						It = FamilyIndex.emplace(LowerFamily, vFamilies.size() - 1).first;
-					}
-					else
-						vFamilies[It->second].m_vEntryIndices.push_back(vEntries.size());
-					vEntries.push_back(std::move(Parsed));
-				}
-			}
-		}
-		else
-		{
-			log_warn("fontstore", "Failed to parse font catalog data/fonts/fonts_store/font_catalog.json");
-		}
-		json_value_free(pJson);
-		free(pCatalogData);
-		log_info("fontstore", "Font catalog loaded with %" PRIzu " files in %" PRIzu " families", vEntries.size(), vFamilies.size());
-	}
-
-	struct SCatalog
-	{
-		std::vector<SEntry> m_vEntries;
-		std::vector<SFamily> m_vFamilies;
-		bool m_Loaded = false;
-	};
-
-	void RefreshInstalled(IStorage *pStorage);
-
-	SCatalog &Catalog(IStorage *pStorage)
+	SCatalog &Catalog(IStorage *)
 	{
 		static SCatalog s_Catalog;
-		if(!s_Catalog.m_Loaded)
-		{
-			s_Catalog.m_Loaded = true;
-			LoadCatalog(pStorage, s_Catalog.m_vEntries, s_Catalog.m_vFamilies);
-			RefreshInstalled(pStorage);
-		}
 		return s_Catalog;
+	}
+
+	void UpdateCatalog(IEngine *pEngine, IStorage *pStorage)
+	{
+		SCatalog &Result = Catalog(pStorage);
+		if(Result.m_Loaded)
+			return;
+		if(!s_pCatalogJob)
+		{
+			s_pCatalogJob = std::make_shared<CCatalogLoadJob>(pStorage);
+			pEngine->AddJob(s_pCatalogJob);
+		}
+		else if(s_pCatalogJob->TakeResult(Result))
+		{
+			s_pCatalogJob.reset();
+			++s_StateVersion;
+		}
 	}
 
 	std::vector<SEntry> &Entries(IStorage *pStorage)
@@ -260,19 +143,6 @@ namespace fontstore
 	std::vector<SFamily> &Families(IStorage *pStorage)
 	{
 		return Catalog(pStorage).m_vFamilies;
-	}
-
-	// 刷新各族安装状态：全部文件都存在于用户字体目录才算已安装。
-	// 仅在目录加载与重扫后调用（文件存在性检查量大，不能逐帧做）。
-	void RefreshInstalled(IStorage *pStorage)
-	{
-		std::vector<SEntry> &vEntries = Catalog(pStorage).m_vEntries;
-		for(SFamily &Family : Catalog(pStorage).m_vFamilies)
-		{
-			Family.m_Installed = std::all_of(Family.m_vEntryIndices.begin(), Family.m_vEntryIndices.end(), [&](size_t EntryIndex) {
-				return qm_font_download::Installed(*pStorage, vEntries[EntryIndex].m_File);
-			});
-		}
 	}
 
 	// 界面语言 → 脚本子集键：商店排序/徽标用（与目录 "s" 字段同键，见
@@ -542,7 +412,6 @@ namespace fontstore
 			pTextRender->ReloadCustomFonts();
 			s_ReloadPending = false;
 			s_StateVersion++;
-			RefreshInstalled(pStorage);
 		}
 		// 已完成的任务出队（失败任务保留，供状态位显示重试按钮）。
 		s_vInstallJobs.erase(std::remove_if(s_vInstallJobs.begin(), s_vInstallJobs.end(), [](const SInstallJob &Job) { return Job.m_Done; }), s_vInstallJobs.end());
@@ -570,7 +439,8 @@ namespace fontstore
 					{
 						Family.m_PreviewReady = true;
 						s_StateVersion++;
-						continue;
+						// 缓存命中也只加载一份，避免重开时所有可见预览集中解析。
+						break;
 					}
 					pStorage->RemoveFile(aCachePath, IStorage::TYPE_SAVE);
 				}
@@ -641,6 +511,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	CUi *pUi = pSelf->Ui();
 	ITextRender *pTextRender = pSelf->TextRender();
 	IStorage *pStorage = pSelf->Storage();
+	fontstore::UpdateCatalog(pSelf->Engine(), pStorage);
 	const std::vector<fontstore::SFamily> &vFamilies = fontstore::Families(pStorage);
 	const SSettingsCardDeckVisualOptions CardVisual = pSelf->SettingsCardDeckVisualOptions();
 	const SQmDropdownVisualStyle Style = QmSettingsDropdownVisualStyle(pSelf->m_SettingsUiTheme, CardVisual.m_BorderColor);
@@ -656,6 +527,11 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 	if(Panel.Header(s_Title, s_CloseButton, Localize("Font store")))
 		return CUi::POPUP_CLOSE_CURRENT;
 	View = Panel.ContentRect();
+	if(!fontstore::Catalog(pStorage).m_Loaded)
+	{
+		pUi->DoLabel(&View, Localize("Loading…"), FontSize, TEXTALIGN_MC);
+		return CUi::POPUP_KEEP_OPEN;
+	}
 
 	// 顶部栏：搜索框 + 分类下拉 + 结果数量。
 	CUIRect TopBar, List;
@@ -743,7 +619,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 		{
 			if(pCategoryKey[0] != '\0' && vFamilies[fi].m_Category != pCategoryKey)
 				continue;
-			// 安装状态：RefreshInstalled 在弹层每帧按文件存在性刷新，筛选即时准确。
+			// 安装完成后状态机更新对应族，无须重新检查整个目录。
 			if(pCtx->m_InstallFilter == 1 && vFamilies[fi].m_Installed)
 				continue;
 			if(pCtx->m_InstallFilter == 2 && !vFamilies[fi].m_Installed)
@@ -1480,9 +1356,11 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 	}
 	// QmClient: 字体商店 —— 点击打开可搜索的大弹层（workshop 风格卡片网格）。
 	{
-		// 目录加载（测量趟也需要，保证行数与渲染趟一致）。
+		// 仅输入趟推进任务；测量和绘制只读取已发布的目录快照。
 		if(Flow.Control("tclient-font-store", LineSize, Button, MarginSmall))
 		{
+			if(Flow.Input() && !Ui()->RenderOnly())
+				fontstore::UpdateCatalog(Engine(), Storage());
 			const std::vector<fontstore::SFamily> &vStoreFamilies = fontstore::Families(Storage());
 			SplitSettingsControlRow(Button, CurrentSettingsContentMetrics(), &Label, &Button, ESettingsControlWidth::LONG_CHOICE);
 			CUIElement &StoreElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-font-store-label");

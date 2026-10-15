@@ -100,6 +100,8 @@ public:
 	float ScrollOffsetY() const { return -m_ScrollRegion.ContentScrollOffsetY(); }
 	float ViewHeight() const { return m_ScrollRegion.ClipRect()->h; }
 	void ScrollToSelected() { m_ListBoxUpdateScroll = true; }
+	// 已保存的选中项不一定是本次浏览目标；调用方可取消初始自动定位，显式定位仍有效。
+	void SuppressInitialSelectionScroll() { m_InitialScrollPending = false; }
 	void SkipItems(int Count);
 	CListboxItem DoNextItem(const void *pId, bool Selected = false, float CornerRadius = 5.0f);
 	CListboxItem DoCustomRow(float Height, bool ScrollHere = false);

@@ -3740,6 +3740,7 @@ void CClient::Update()
 	else
 		PumpNetwork();
 
+	GameClient()->OnConnectionResourceUpdate();
 	// 官方 178da1ead：在采集/发送输入之前先更新 editor/gameclient，
 	// 低刷新率下输入能早一个循环发出。
 	if(m_EditorActive)

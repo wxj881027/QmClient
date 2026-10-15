@@ -23,7 +23,10 @@
 
 #include <generated/client_data7.h>
 
+#include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/qm_skin_outline.h>
+#include <game/client/components/qmclient/skin7_info_job.h>
+#include <game/client/components/qmclient/skin_load_budget.h>
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
@@ -81,6 +84,7 @@ CSkins7::CSkinPartLoadJob::CSkinPartLoadJob(const char *pPath, const char *pPart
 	str_copy(m_Result.m_aName, pPartName, sizeof(m_Result.m_aName));
 	m_Result.m_PartType = PartType;
 	m_Result.m_Flags = Flags;
+	Abortable(true);
 }
 
 CSkins7::CSkinPartLoadJob::~CSkinPartLoadJob()
@@ -91,6 +95,8 @@ CSkins7::CSkinPartLoadJob::~CSkinPartLoadJob()
 
 void CSkins7::CSkinPartLoadJob::Run()
 {
+	if(State() == STATE_ABORTED)
+		return;
 	void *pFileData = nullptr;
 	unsigned FileSize = 0;
 	if(!m_pStorage->ReadFile(m_Path.c_str(), m_StorageType, &pFileData, &FileSize))
@@ -98,6 +104,11 @@ void CSkins7::CSkinPartLoadJob::Run()
 		log_error("skins7", "Failed to read skin part file '%s'", m_Path.c_str());
 		CLockScope Lock(m_Mutex);
 		m_Completed = true;
+		return;
+	}
+	if(State() == STATE_ABORTED)
+	{
+		free(pFileData);
 		return;
 	}
 
@@ -111,6 +122,11 @@ void CSkins7::CSkinPartLoadJob::Run()
 		return;
 	}
 	free(pFileData);
+	if(State() == STATE_ABORTED)
+	{
+		OriginalImage.Free();
+		return;
+	}
 
 	if(OriginalImage.m_Format != CImageInfo::FORMAT_RGBA)
 	{
@@ -233,81 +249,6 @@ bool CSkins7::IsSpecialSkin(const char *pName)
 	return str_startswith(pName, "x_") != nullptr;
 }
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-class CSkinPartScanData
-{
-public:
-	CSkins7 *m_pThis;
-	CSkins7::TSkinLoadedCallback m_SkinLoadedCallback;
-	int m_Part;
-};
-
-int CSkins7::SkinPartScan(const char *pName, int IsDir, int DirType, void *pUser)
-{
-	if(IsDir || !str_endswith(pName, ".png"))
-		return 0;
-
-	CSkinPartScanData *pScanData = static_cast<CSkinPartScanData *>(pUser);
-	pScanData->m_pThis->StartSkinPartLoadJob(pScanData->m_Part, pName, DirType);
-	return 0;
-}
-
-bool CSkins7::LoadSkinPart(int PartType, const char *pName, int DirType)
-{
-	size_t PartNameSize, PartNameCount;
-	str_utf8_stats(pName, str_length(pName) - str_length(".png") + 1, IO_MAX_PATH_LENGTH, &PartNameSize, &PartNameCount);
-	if(PartNameSize >= protocol7::MAX_SKIN_ARRAY_SIZE || PartNameCount > protocol7::MAX_SKIN_LENGTH)
-	{
-		log_error("skins7", "Failed to load skin part '%s/%s': name too long", CSkins7::ms_apSkinPartNames[PartType], pName);
-		return false;
-	}
-
-	char aFilename[IO_MAX_PATH_LENGTH];
-	str_format(aFilename, sizeof(aFilename), SKINS_DIR "/%s/%s", CSkins7::ms_apSkinPartNames[PartType], pName);
-	CImageInfo Info;
-	if(!Graphics()->LoadPng(Info, aFilename, DirType))
-	{
-		log_error("skins7", "Failed to load skin part '%s/%s': failed to load PNG file", CSkins7::ms_apSkinPartNames[PartType], pName);
-		return false;
-	}
-	if(!Graphics()->IsImageFormatRgba(aFilename, Info))
-	{
-		log_error("skins7", "Failed to load skin part '%s/%s': must be RGBA format", CSkins7::ms_apSkinPartNames[PartType], pName);
-		Info.Free();
-		return false;
-	}
-
-	CSkinPart Part;
-	Part.m_Type = PartType;
-	Part.m_Flags = 0;
-	if(IsSpecialSkin(pName))
-	{
-		Part.m_Flags |= SKINFLAG_SPECIAL;
-	}
-	if(DirType != IStorage::TYPE_SAVE)
-	{
-		Part.m_Flags |= SKINFLAG_STANDARD;
-	}
-	str_copy(Part.m_aName, pName, minimum<int>(PartNameSize + 1, sizeof(Part.m_aName)));
-	Part.m_OriginalTexture = Graphics()->LoadTextureRaw(Info, 0, aFilename);
-	GameClient()->GpuUploadLimiter()->OnUploaded();
-	Part.m_BloodColor = DetermineBloodColorFromInfo(Info);
-	Part.m_QmSkinOutline = CreateSkinPartOutline(Info, PartType);
-	Part.m_pChatAvatarOriginal = CreateChatAvatarPartSource(Info, PartType);
-	ConvertToGrayscale(Info);
-	// 素材必须在 LoadTextureRawMove 取走图片数据之前取出（原顺序依赖调用后数据仍在，脆弱）。
-	Part.m_pChatAvatarColorable = CreateChatAvatarPartSource(Info, PartType);
-	Part.m_ColorableTexture = Graphics()->LoadTextureRawMove(Info, 0, aFilename);
-	GameClient()->GpuUploadLimiter()->OnUploaded();
-
-	if(Config()->m_Debug)
-	{
-		log_trace("skins7", "Loaded skin part '%s/%s'", CSkins7::ms_apSkinPartNames[PartType], Part.m_aName);
-	}
-	m_avSkinParts[PartType].emplace_back(Part);
-	return true;
-}
-
 void CSkins7::StartSkinPartLoadJob(int PartType, const char *pName, int DirType)
 {
 	size_t PartNameSize, PartNameCount;
@@ -341,8 +282,35 @@ void CSkins7::StartSkinPartLoadJob(int PartType, const char *pName, int DirType)
 
 void CSkins7::ProcessCompletedJobs()
 {
+	const auto Begin = time_get_nanoseconds();
+	if(!m_pSkinInfoJob || m_pSkinInfoJob->State() != IJob::STATE_DONE)
+		return;
+	// 后台扫描的结果分帧入队；文件多时不能一次创建全部任务阻塞输入。
+	const auto &Parts = m_pSkinInfoJob->Parts();
+	int Scheduled = 0;
+	while(m_NextPart < Parts.size() && QmSkinCanFinalize(Scheduled, time_get_nanoseconds() - Begin, std::chrono::milliseconds(1)))
+	{
+		const auto &Part = Parts[m_NextPart++];
+		StartSkinPartLoadJob(Part.m_Part, Part.m_Name.c_str(), Part.m_StorageType);
+		++Scheduled;
+	}
+	// GPU 句柄只能在主线程创建，读盘和解码已由描述任务完成。
+	// 1ms 是批处理软预算，单次驱动上传无法抢占，上传后不再开始超预算的下一项。
+	while(m_NextAccessory < 2 && GameClient()->GpuUploadLimiter()->CanUpload(1) && time_get_nanoseconds() - Begin < std::chrono::milliseconds(1))
+	{
+		const bool Hat = m_NextAccessory++ == 0;
+		auto Image = Hat ? m_pSkinInfoJob->TakeXmasHat() : m_pSkinInfoJob->TakeBot();
+		auto &Texture = Hat ? m_XmasHatTexture : m_BotTexture;
+		Graphics()->UnloadTexture(&Texture);
+		if(Image.m_pData)
+		{
+			Texture = Graphics()->LoadTextureRawMove(Image, 0, Hat ? "skins7/xmas_hat.png" : "skins7/bot.png");
+			GameClient()->GpuUploadLimiter()->OnUploaded();
+		}
+	}
+
 	auto Iter = m_PendingSkinPartJobs.begin();
-	while(Iter != m_PendingSkinPartJobs.end())
+	while(Iter != m_PendingSkinPartJobs.end() && time_get_nanoseconds() - Begin < std::chrono::milliseconds(1))
 	{
 		auto &pJob = *Iter;
 		if(!pJob->IsCompleted())
@@ -384,72 +352,48 @@ void CSkins7::ProcessCompletedJobs()
 		Iter = m_PendingSkinPartJobs.erase(Iter);
 	}
 
-	if(m_PendingSkinPartJobs.empty() && m_Loading)
+	if(m_NextPart == Parts.size() && m_NextAccessory == 2 && m_PendingSkinPartJobs.empty() && m_Loading && time_get_nanoseconds() - Begin < std::chrono::milliseconds(1))
 	{
-		RebuildSkins();
+		if(!RebuildSkins())
+			return;
 		m_Loading = false;
+		m_ResourceLifecycle.CompleteLoad();
+		if(QmPerfEnabled())
+		{
+			char aPayload[96];
+			str_format(aPayload, sizeof(aPayload), "event=resource_load_complete skins=%zu", m_vSkins.size());
+			QmPerfLogPayloadForce("perf/skins7", aPayload, Client());
+		}
 		m_LastRefreshTime = time_get_nanoseconds();
 		if(m_SkinLoadedCallback)
 			m_SkinLoadedCallback();
 	}
 }
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-class CSkinScanData
+bool CSkins7::RebuildSkins()
 {
-public:
-	CSkins7 *m_pThis;
-	CSkins7::TSkinLoadedCallback m_SkinLoadedCallback;
-};
-
-void CSkins7::RebuildSkins()
-{
-	m_vSkins.clear();
-	CSkinScanData SkinScanData;
-	SkinScanData.m_pThis = this;
-	SkinScanData.m_SkinLoadedCallback = []() {};
-	Storage()->ListDirectory(IStorage::TYPE_ALL, SKINS_DIR, SkinScan, &SkinScanData);
+	// 部件向量全部稳定之后才能绑定指针，描述绑定也按时间预算分帧推进。
+	const auto Begin = time_get_nanoseconds();
+	const auto &Entries = m_pSkinInfoJob->Entries();
+	int Processed = 0;
+	while(m_NextSkin < Entries.size() && QmSkinCanFinalize(Processed, time_get_nanoseconds() - Begin, std::chrono::milliseconds(1)))
+	{
+		const auto &Entry = Entries[m_NextSkin++];
+		LoadSkin(Entry.m_Name.c_str(), Entry.m_StorageType, *Entry.m_pInfo);
+		// 每项绑定后即释放 JSON，避免末帧集中销毁全部解析树。
+		m_pSkinInfoJob->ReleaseEntry(m_NextSkin - 1);
+		++Processed;
+	}
+	if(m_NextSkin != Entries.size())
+		return false;
+	m_pSkinInfoJob.reset();
+	return true;
 }
 
-int CSkins7::SkinScan(const char *pName, int IsDir, int DirType, void *pUser)
-{
-	if(IsDir)
-	{
-		return 0;
-	}
-
-	const char *pSuffix = str_endswith(pName, ".json");
-	if(pSuffix == nullptr)
-	{
-		return 0;
-	}
-
-	char aSkinName[IO_MAX_PATH_LENGTH];
-	str_truncate(aSkinName, sizeof(aSkinName), pName, pSuffix - pName);
-	if(str_length(aSkinName) >= (int)sizeof(CSkin().m_aName) || !str_valid_filename(aSkinName))
-	{
-		log_error("skins7", "Skin name is not valid: %s", aSkinName);
-		log_error("skins7", "Skin names must be valid filenames shorter than %d characters.", (int)sizeof(CSkin().m_aName));
-		return 0;
-	}
-
-	CSkinScanData *pScanData = static_cast<CSkinScanData *>(pUser);
-	pScanData->m_pThis->LoadSkin(aSkinName, DirType);
-	pScanData->m_SkinLoadedCallback();
-	return 0;
-}
-
-bool CSkins7::LoadSkin(const char *pName, int DirType)
+bool CSkins7::LoadSkin(const char *pName, int DirType, const json_value &Info)
 {
 	char aFilename[IO_MAX_PATH_LENGTH];
 	str_format(aFilename, sizeof(aFilename), SKINS_DIR "/%s.json", pName);
-	void *pFileData;
-	unsigned JsonFileSize;
-	if(!Storage()->ReadFile(aFilename, DirType, &pFileData, &JsonFileSize))
-	{
-		log_error("skins7", "Failed to read skin json file '%s'", aFilename);
-		return false;
-	}
 
 	CSkin Skin;
 	str_copy(Skin.m_aName, pName);
@@ -464,23 +408,7 @@ bool CSkins7::LoadSkin(const char *pName, int DirType)
 		Skin.m_Flags |= SKINFLAG_STANDARD;
 	}
 
-	json_settings JsonSettings{};
-	char aError[256];
-	json_value *pJsonData = JsonParseEx(&JsonSettings, static_cast<const json_char *>(pFileData), JsonFileSize, aError);
-	free(pFileData);
-	if(pJsonData == nullptr)
-	{
-		log_error("skins7", "Failed to parse skin json file '%s': %s", aFilename, aError);
-		return false;
-	}
-
-	const json_value &Start = (*pJsonData)["skin"];
-	if(Start.type != json_object)
-	{
-		log_error("skins7", "Failed to parse skin json file '%s': root must be an object", aFilename);
-		json_value_free(pJsonData);
-		return false;
-	}
+	const json_value &Start = Info["skin"];
 
 	for(int PartIndex = 0; PartIndex < protocol7::NUM_SKINPARTS; ++PartIndex)
 	{
@@ -496,7 +424,6 @@ bool CSkins7::LoadSkin(const char *pName, int DirType)
 		if(Part.type != json_object)
 		{
 			log_error("skins7", "Failed to parse skin json file '%s': attribute '%s' must specify an object", aFilename, ms_apSkinPartNames[PartIndex]);
-			json_value_free(pJsonData);
 			return false;
 		}
 
@@ -508,7 +435,6 @@ bool CSkins7::LoadSkin(const char *pName, int DirType)
 		else
 		{
 			log_error("skins7", "Failed to parse skin json file '%s': part '%s' attribute 'filename' must specify a string", aFilename, ms_apSkinPartNames[PartIndex]);
-			json_value_free(pJsonData);
 			return false;
 		}
 
@@ -541,8 +467,6 @@ bool CSkins7::LoadSkin(const char *pName, int DirType)
 			}
 		}
 	}
-
-	json_value_free(pJsonData);
 
 	if(Config()->m_Debug)
 	{
@@ -597,23 +521,46 @@ void CSkins7::OnInit()
 	ms_apColorVariables[Dummy][protocol7::SKINPART_EYES] = &Config()->m_ClDummy7ColorEyes;
 
 	InitPlaceholderSkinParts();
-
-	Refresh([]() {});
+	// 启动只准备安全占位，不能在普通服务器列表中扫描/加载 0.7 皮肤。
+	m_ResourceLifecycle.Reset();
 }
 
 void CSkins7::OnReset()
 {
-	ProcessCompletedJobs();
+	OnUpdate();
 }
 
 void CSkins7::OnShutdown()
 {
+	CancelPendingLoads();
+	m_ResourceLifecycle.Reset();
+}
+
+void CSkins7::CancelPendingLoads()
+{
+	for(auto &pJob : m_PendingSkinPartJobs)
+		pJob->Abort();
 	m_PendingSkinPartJobs.clear();
+	if(m_pSkinInfoJob)
+		m_pSkinInfoJob->Abort();
+	m_pSkinInfoJob.reset();
+	m_Loading = false;
+	m_SkinLoadedCallback = {};
 }
 
 void CSkins7::OnUpdate()
 {
-	ProcessCompletedJobs();
+	const auto Action = m_ResourceLifecycle.Update(Client()->State(), Client()->IsSixup());
+	if(Action == CQmSkin7ResourceLifecycle::EAction::LOAD)
+		GameClient()->RefreshSkins(CSkinDescriptor::FLAG_SEVEN);
+	else if(Action == CQmSkin7ResourceLifecycle::EAction::CANCEL)
+	{
+		if(QmPerfEnabled())
+			QmPerfLogPayloadForce("perf/skins7", "event=resource_load_cancel", Client());
+		CancelPendingLoads();
+	}
+	if(QmNeedsSkin7Resources(Client()->State(), Client()->IsSixup()))
+		ProcessCompletedJobs();
 }
 
 void CSkins7::InitPlaceholderSkinParts()
@@ -632,7 +579,19 @@ void CSkins7::InitPlaceholderSkinParts()
 
 void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 {
+	// 通用皮肤刷新、设置页预热等入口也受同一规则约束，不能绕过按需启用。
+	if(!m_ResourceLifecycle.BeginRefresh(Client()->State(), Client()->IsSixup()))
+		return;
+	if(QmPerfEnabled())
+		QmPerfLogPayloadForce("perf/skins7", "event=resource_load_begin", Client());
 	m_vSkins.clear();
+	m_NextPart = 0;
+	m_NextSkin = 0;
+	m_NextAccessory = 0;
+	if(m_pSkinInfoJob)
+		m_pSkinInfoJob->Abort();
+	m_pSkinInfoJob = std::make_shared<CQmSkin7InfoJob>(Storage());
+	Engine()->AddJob(m_pSkinInfoJob);
 
 	for(auto &pJob : m_PendingSkinPartJobs)
 	{
@@ -660,75 +619,12 @@ void CSkins7::Refresh(TSkinLoadedCallback &&SkinLoadedCallback)
 			NoneSkinPart.m_BloodColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 			m_avSkinParts[Part].emplace_back(NoneSkinPart);
 		}
-
-		CSkinPartScanData SkinPartScanData;
-		SkinPartScanData.m_pThis = this;
-		SkinPartScanData.m_SkinLoadedCallback = SkinLoadedCallback;
-		SkinPartScanData.m_Part = Part;
-		char aPartsDirectory[IO_MAX_PATH_LENGTH];
-		str_format(aPartsDirectory, sizeof(aPartsDirectory), SKINS_DIR "/%s", ms_apSkinPartNames[Part]);
-		Storage()->ListDirectory(IStorage::TYPE_ALL, aPartsDirectory, SkinPartScan, &SkinPartScanData);
 	}
 
 	m_SkinLoadedCallback = std::move(SkinLoadedCallback);
 	m_Loading = true;
 
-	LoadXmasHat();
-	LoadBotDecoration();
-	if(m_PendingSkinPartJobs.empty())
-	{
-		RebuildSkins();
-		m_Loading = false;
-		m_LastRefreshTime = time_get_nanoseconds();
-		if(m_SkinLoadedCallback)
-			m_SkinLoadedCallback();
-	}
-}
-
-void CSkins7::LoadXmasHat()
-{
-	Graphics()->UnloadTexture(&m_XmasHatTexture);
-
-	const char *pFilename = SKINS_DIR "/xmas_hat.png";
-	CImageInfo Info;
-	if(!Graphics()->LoadPng(Info, pFilename, IStorage::TYPE_ALL) ||
-		!Graphics()->IsImageFormatRgba(pFilename, Info) ||
-		!Graphics()->CheckImageDivisibility(pFilename, Info, 1, 4, false))
-	{
-		log_error("skins7", "Failed to load xmas hat '%s'", pFilename);
-		Info.Free();
-	}
-	else
-	{
-		if(Config()->m_Debug)
-		{
-			log_trace("skins7", "Loaded xmas hat '%s'", pFilename);
-		}
-		m_XmasHatTexture = Graphics()->LoadTextureRawMove(Info, 0, pFilename);
-	}
-}
-
-void CSkins7::LoadBotDecoration()
-{
-	Graphics()->UnloadTexture(&m_BotTexture);
-
-	const char *pFilename = SKINS_DIR "/bot.png";
-	CImageInfo Info;
-	if(!Graphics()->LoadPng(Info, pFilename, IStorage::TYPE_ALL) ||
-		!Graphics()->IsImageFormatRgba(pFilename, Info) ||
-		!Graphics()->CheckImageDivisibility(pFilename, Info, 12, 5, false))
-	{
-		log_error("skins7", "Failed to load bot decoration '%s'", pFilename);
-		Info.Free();
-	}
-	else
-	{
-		if(Config()->m_Debug)
-		{
-			log_trace("skins7", "Loaded bot decoration '%s'", pFilename);
-		}
-		m_BotTexture = Graphics()->LoadTextureRawMove(Info, 0, pFilename);
-	}
+	ProcessCompletedJobs();
 }
 
 void CSkins7::AddSkinFromConfigVariables(const char *pName, int Dummy)

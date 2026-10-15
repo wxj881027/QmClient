@@ -84,9 +84,10 @@ jobs:
 
     - name: Prepare Linux
       if: steps.classify.outputs.should_run_cpp == 'true'
-      run: |
-       sudo apt-get update -y
-       sudo apt-get install pkg-config cmake ninja-build python3-fonttools python3-pil libfreetype6-dev libnotify-dev libasound2-dev libpulse-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libdecor-0-dev libsqlite3-dev libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev libx264-dev libmariadb-dev libwebsockets-dev libvulkan-dev glslang-tools spirv-tools libglew-dev -y
+      uses: ./.github/actions/linux-deps
+      with:
+        # MYSQL/WEBSOCKETS 两个可选特性构建需要，主清单不装。
+        extra: libmariadb-dev libwebsockets-dev
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL

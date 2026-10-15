@@ -2,6 +2,7 @@
 #include <engine/keys.h>
 
 #include <game/client/QmUi/UiNavigation.h>
+#include <game/client/ui_listbox.h>
 
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
@@ -198,4 +199,33 @@ TEST_F(QmNavigationSelection, ReversePressRetargetsFromTheCurrentIndicatorPositi
 	}
 	ASSERT_EQ(Graphics().m_vRoundedSubmissions.size(), 2u);
 	EXPECT_LT(Graphics().m_vRoundedSubmissions.back().m_Rect.x, MovingX);
+}
+
+// 列表策略通过真实列表框与滚动区验证，不以函数名或源码分支证明初始位置。
+TEST_F(QmNavigationSelection, SavedListSelectionCanStayAtTopUntilExplicitlyRevealed)
+{
+	CListBox List;
+	std::array<int, 60> Ids{};
+	CUIElementBase::Init(&m_Ui);
+	g_Config.m_UiSmoothScrollTime = 0;
+	g_Config.m_QmUiListEntryAnimations = 0;
+	const auto DrawList = [&](int Selected) {
+		Frame({400, 400}, false);
+		CUIRect View{20, 20, 200, 100};
+		List.SetActive(false);
+		List.DoStart(20, static_cast<int>(Ids.size()), 1, 3, Selected, &View, false);
+		for(auto &Id : Ids)
+			List.DoNextItem(&Id);
+		List.DoEnd();
+	};
+	List.SuppressInitialSelectionScroll();
+	DrawList(-1);
+	// 异步列表稍后出现保存的地址，仍然不能自动跳到靠后的行。
+	DrawList(45);
+	DrawList(45);
+	EXPECT_FLOAT_EQ(List.ScrollOffsetY(), 0.0f);
+	List.ScrollToSelected();
+	DrawList(45);
+	DrawList(45);
+	EXPECT_GT(List.ScrollOffsetY(), 0.0f);
 }

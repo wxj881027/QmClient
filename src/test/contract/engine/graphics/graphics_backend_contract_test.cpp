@@ -1,11 +1,10 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
-TEST(GraphicsBackendContract, VulkanDeclaresSingleSampleExternalPassConstraint)
+TEST(GraphicsBackendContract, VulkanDeclaresResolvedExternalPassSupport)
 {
-	// Vulkan 的捕获/模糊通道按单采样 RT 实现，MSAA 下由后端命令层静默跳过；该上报
-	// 无法在无 Vulkan+MSAA 设备的测试环境中运行时观察，故以源码合同锁定 Cmd_Init 的
-	// 能力声明，防止线程层闸门 SingleSampleFeatureAllowedUnderMsaa 失去输入回到静默失效。
+	// 无设备测试只能检查后端能力注册；真实 FSAA 捕获与模糊由开发客户端 GPU 场景验证。
+	// Vulkan resolve 后读取单采样交换链，不能再上报为必须关闭全局 MSAA。
 	const std::string Source = ReadTestSourceFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	EXPECT_NE(Source.find("m_RenderTargetExternalPassRequiresSingleSample = true"), std::string::npos);
+	EXPECT_NE(Source.find("m_RenderTargetExternalPassRequiresSingleSample = false"), std::string::npos);
 }

@@ -32,7 +32,7 @@ public:
 	void OnInit() override;
 	void OnRender() override;
 	void OnMapLoad() override;
-	bool AdvanceMapLoad();
+	bool AdvanceMapLoad(int MaxLayers = 2);
 	void RenderCustom(const vec2 &Center, float Zoom);
 	void RenderCustomWithCamera(const vec2 &Center, float Zoom);
 	void SwapState(CMapLayers &Other);

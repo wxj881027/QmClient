@@ -60,6 +60,7 @@
 
 - `qmclient_scripts/check_config_variables.py`
 - `qmclient_scripts/check_header_guards.py`
+- `qmclient_scripts/check_ci_deps.py` — CI Linux 依赖单一来源守卫：所有 Linux 构建作业的 apt 依赖统一走 `.github/actions/linux-deps` 复合 action；残留 apt 步骤的包、各 workflow 的 `extra` 包、可选特性（MYSQL/WEBSOCKETS/UPNP）与对应系统包的对应关系都在其注册表核对，curl share API 编译探针也在守卫范围内。已在 gate `quick/default/full` 注册为「CI 依赖单一来源守卫」。
 - `qmclient_scripts/bump_version.py`
 - `qmclient_scripts/fix_style.py`
 - `qmclient_scripts/export_settings_commands_table.py`

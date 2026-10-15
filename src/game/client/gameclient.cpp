@@ -1190,6 +1190,27 @@ void CGameClient::PrewarmSettingsRuntimeCachesDuringLoading(const char *pLoading
 	// ESC 的字形与 plan 现在改由菜单关闭时的空闲帧预热（CMenus::OnUpdate / OnRender）。
 }
 
+void CGameClient::OnConnectionResourceUpdate()
+{
+	if(m_ConnectionResourcePreparation.Pending())
+	{
+		CPerfTimer ResourceTimer(QmPerfEnabled());
+		// 初始信息仍在资源就绪后发送；准备期间留在加载状态，每帧只推进一个图层。
+		if(Client()->State() != IClient::STATE_LOADING)
+			m_ConnectionResourcePreparation.Cancel();
+		else
+		{
+			if(!m_MapLayersBackground.IsMapLoaded())
+				m_MapLayersBackground.AdvanceMapLoad(1);
+			else if(!m_MapLayersForeground.IsMapLoaded())
+				m_MapLayersForeground.AdvanceMapLoad(1);
+			if(m_ConnectionResourcePreparation.CompleteWhenReady(m_MapLayersBackground.IsMapLoaded(), m_MapLayersForeground.IsMapLoaded()))
+				FinishConnectionResourcePreparation();
+		}
+		LogPerfStage(this, "connection_resource_prepare", ResourceTimer.ElapsedMs());
+	}
+}
+
 void CGameClient::OnUpdate()
 {
 	m_LocalServer.Update();
@@ -1648,6 +1669,7 @@ bool CGameClient::GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const C
 
 void CGameClient::OnConnected()
 {
+	m_ConnectionResourcePreparation.Cancel();
 	m_FastPractice.InvalidateBufferedInputState();
 	const char *pConnectCaption = DemoPlayer()->IsPlaying() ? Localize("Preparing demo playback") : Localize("Connected");
 	const char *pLoadMapContent = Localize("Initializing map logic");
@@ -1661,10 +1683,18 @@ void CGameClient::OnConnected()
 
 	// render loading before going through all components
 	m_Menus.RenderLoading(pConnectCaption, pLoadMapContent, 0);
-	for(auto &pComponent : m_vpAll)
+	for(size_t ComponentIndex = 0; ComponentIndex < m_vpAll.size(); ++ComponentIndex)
 	{
+		auto *pComponent = m_vpAll[ComponentIndex];
+		CPerfTimer MapLoadTimer(QmPerfEnabled());
 		pComponent->OnMapLoad();
 		pComponent->OnReset();
+		if(QmPerfEnabled())
+		{
+			char aPayload[128];
+			str_format(aPayload, sizeof(aPayload), "stage=component_map_load module=%s duration_ms=%.3f", m_vpAllPerfNames[ComponentIndex], MapLoadTimer.ElapsedMs());
+			QmPerfLogPayloadForce("perf/connect", aPayload, Client());
+		}
 	}
 
 	ConfigManager()->ResetGameSettings();
@@ -1672,22 +1702,22 @@ void CGameClient::OnConnected()
 
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 	{
-		Client()->SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_GETTING_READY);
-		m_Menus.RenderLoading(pConnectCaption, Localize("Sending initial client info"), 0);
-
-		// send the initial info
-		SendInfo(true);
-		// we should keep this in for now, because otherwise you can't spectate
-		// people at start as the other info 64 packet is only sent after the first
-		// snap
-		Client()->Rcon("crashmeplx");
-
-		m_LocalServer.RconAuthIfPossible();
+		m_ConnectionResourcePreparation.Begin();
 	}
+}
+
+void CGameClient::FinishConnectionResourcePreparation()
+{
+	Client()->SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_GETTING_READY);
+	// 所有图层已完成，此处才按原顺序发送初始信息和认证；不能重复放行或放行已断开的连接。
+	SendInfo(true);
+	Client()->Rcon("crashmeplx");
+	m_LocalServer.RconAuthIfPossible();
 }
 
 void CGameClient::OnReset()
 {
+	m_ConnectionResourcePreparation.Cancel();
 	InvalidateSnapshot();
 	ResetDemoPlaybackState();
 	m_LastDemoHudRecordTick = -1;
@@ -3782,6 +3812,13 @@ void CGameClient::InvalidateSnapshot()
 
 void CGameClient::OnNewSnapshot(bool DummySwapped)
 {
+	CPerfTimer SnapshotStageTimer(QmPerfEnabled());
+	// 仅诊断时拆分首次快照的资源与组件耗时，不改变快照处理顺序。
+	const auto LogSnapshotStage = [&](const char *pStage) {
+		if(QmPerfEnabled())
+			LogPerfStage(this, pStage, SnapshotStageTimer.ElapsedMs());
+		SnapshotStageTimer.Reset();
+	};
 	auto &&Evolve = [this](CNetObj_Character *pCharacter, int Tick) {
 		CWorldCore TempWorld;
 		CCharacterCore TempCore = CCharacterCore();
@@ -4205,10 +4242,12 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 	else if(m_GameInfo.m_NumDDRaceTeams > 0)
 		m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
 
+	LogSnapshotStage("snapshot_decode");
 	for(CClientData &Client : m_aClients)
 	{
 		Client.UpdateSkinInfo();
 	}
+	LogSnapshotStage("snapshot_skins");
 	// setup local pointers
 	if(m_Snap.m_LocalClientId >= 0)
 	{
@@ -4559,8 +4598,16 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 
 	FinalizeHammerHitEvents();
 
-	for(auto &pComponent : m_vpAll)
+	LogSnapshotStage("snapshot_metadata");
+	for(size_t ComponentIndex = 0; ComponentIndex < m_vpAll.size(); ++ComponentIndex)
+	{
+		auto *pComponent = m_vpAll[ComponentIndex];
+		CPerfTimer ComponentTimer(QmPerfEnabled());
 		pComponent->OnNewSnapshot();
+		if(QmPerfEnabled() && ComponentTimer.ElapsedMs() >= 2.0)
+			LogPerfStage(this, m_vpAllPerfNames[ComponentIndex], ComponentTimer.ElapsedMs(), true, "callback=on_new_snapshot");
+	}
+	LogSnapshotStage("snapshot_components");
 
 	// notify editor when local character moved
 	UpdateEditorIngameMoved();
@@ -4684,8 +4731,10 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 
 	UpdateLocalTuning();
 	m_IsDummySwapping = 0;
+	LogSnapshotStage("snapshot_effects");
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		UpdatePrediction();
+	LogSnapshotStage("snapshot_update_prediction");
 	UpdateAutoTeamLock();
 }
 
@@ -8460,8 +8509,8 @@ void CGameClient::RefreshSkins(int SkinDescriptorFlags)
 	}
 	if(SkinDescriptorFlags & CSkinDescriptor::FLAG_SEVEN)
 	{
-		m_Skins7.Refresh([this, ProgressCallback]() {
-			ProgressCallback();
+		// 0.7 异步加载期间正常主循环持续绘制；完成时不能再用耗时阈值补画阻塞式加载页。
+		m_Skins7.Refresh([this]() {
 			for(const std::shared_ptr<CManagedTeeRenderInfo> &pManagedTeeRenderInfo : m_vpManagedTeeRenderInfos)
 			{
 				if(pManagedTeeRenderInfo->SkinDescriptor().m_Flags & CSkinDescriptor::FLAG_SEVEN)

@@ -7,6 +7,7 @@
 #include "qm_font_name_match.h"
 #include "qm_font_names.h"
 #include "qm_font_resource_policy.h"
+#include "qm_font_scan_job.h"
 #include "qm_system_fonts.h"
 #include "text_gradient.h"
 #include "text_layout_string.h"
@@ -19,6 +20,7 @@
 #include <base/system.h>
 
 #include <engine/console.h>
+#include <engine/engine.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
@@ -1725,6 +1727,7 @@ class CTextRender : public IEngineTextRender
 	std::unordered_set<FT_Face> m_QmSystemFontFaces;
 	bool m_QmSystemFontsScanned = false;
 	bool m_QmShowSystemFonts = false;
+	std::shared_ptr<CQmFontScanJob> m_pQmSystemFontScan;
 	std::unordered_map<FT_Face, std::pair<const FT_Byte *, FT_Long>> m_QmFontFaceData;
 	// 随包图标资源与用户字体扫描隔离，face 与字节数据都保持整个文本渲染器生命周期。
 	FT_Face m_apQmBundledIconFaces[4]{};
@@ -1817,6 +1820,8 @@ class CTextRender : public IEngineTextRender
 	{
 		if(m_pGlyphMap == nullptr)
 			return;
+
+		UpdateSystemFontScan();
 
 		// QmClient: 帧末兜底提交——本帧只构建未渲染时（如菜单预构建）脏区
 		// 不残留到下一帧；先 flush 再消费统计，帧成本统计包含合批提交。
@@ -2142,6 +2147,8 @@ public:
 
 	void Shutdown() override
 	{
+		// 主循环已 ShutdownJobs，未接收的文件字节在此释放。
+		m_pQmSystemFontScan.reset();
 		ClearTextSweepBuffers();
 		for(auto *pTextCont : m_vpTextContainers)
 		{
@@ -2349,7 +2356,7 @@ public:
 		}
 		// 隐藏候选不撤销已保存的字体；启动时恢复缺失的系统字体配置。
 		const auto Missing = [this](const char *pName) { return pName[0] != '\0' && !m_pGlyphMap->QmHasFace(pName); };
-		if(!m_QmSystemFontsScanned && (m_QmShowSystemFonts || Missing(g_Config.m_QmCustomFont) || Missing(g_Config.m_QmCustomFontCjk) || Missing(g_Config.m_QmCustomFontIcons)))
+		if(!m_QmSystemFontsScanned && !m_pQmSystemFontScan && (Missing(g_Config.m_QmCustomFont) || Missing(g_Config.m_QmCustomFontCjk) || Missing(g_Config.m_QmCustomFontIcons)))
 		{
 			m_QmSystemFontsScanned = true;
 			for(const auto &Path : QmSystemFontPaths())
@@ -2382,6 +2389,16 @@ public:
 			}
 		}
 		UpdateCustomFontList();
+		RequestSystemFontScan();
+	}
+
+	void RequestSystemFontScan()
+	{
+		if(m_QmShowSystemFonts && !m_QmSystemFontsScanned && !m_pQmSystemFontScan)
+		{
+			m_pQmSystemFontScan = std::make_shared<CQmFontScanJob>(QmSystemFontPaths, CQmFontScanJob::ReadAbsolute);
+			Kernel()->RequestInterface<IEngine>()->AddJob(m_pQmSystemFontScan);
+		}
 	}
 	// 仅主动诊断读取字体，不切换配置、不改变 face 大小或现有 glyph slot。
 	static void ConQmFontDiagnostics(IConsole::IResult *pResult, void *pUser)
@@ -2434,8 +2451,55 @@ public:
 	std::vector<std::string> *GetCustomFaces() override
 	{
 		if(m_QmShowSystemFonts != (g_Config.m_QmShowSystemFonts != 0))
-			LoadCustomFonts();
+		{
+			m_QmShowSystemFonts = g_Config.m_QmShowSystemFonts != 0;
+			UpdateCustomFontList();
+			RequestSystemFontScan();
+		}
 		return &m_CustomFontFaces;
+	}
+
+	void UpdateSystemFontScan()
+	{
+		// 配置可由控制台或配置载入改变，不依赖字体卡片处于视口内。
+		if(m_QmShowSystemFonts != (g_Config.m_QmShowSystemFonts != 0))
+			GetCustomFaces();
+		if(!m_pQmSystemFontScan || !g_Config.m_QmShowSystemFonts)
+			return;
+		const auto Start = time_get_nanoseconds();
+		CQmFontScanJob::SFile File;
+		// 一帧至多接收一个 collection；隐藏时暂停发布，重开复用同一任务。
+		if(m_pQmSystemFontScan->TakeNext(File))
+		{
+			const std::string SourceKey = "system:" + File.m_Path;
+			if(!m_QmLoadedFontSources.count(SourceKey))
+			{
+				if(m_QmLoadedFontContents.count(File.m_Hash))
+					m_QmLoadedFontSources.insert(SourceKey);
+				else
+				{
+					std::vector<FT_Face> vFaces;
+					if(LoadFontCollection(File.m_Path.c_str(), static_cast<FT_Byte *>(File.m_pData.get()), File.m_Size, &vFaces, false))
+					{
+						m_QmLoadedFontSources.insert(SourceKey);
+						m_QmLoadedFontContents.insert(File.m_Hash);
+						m_vpFontData.push_back(File.m_pData.release());
+						m_QmSystemFontFaces.insert(vFaces.begin(), vFaces.end());
+						m_QmFontContentFaces.emplace(File.m_Hash, std::move(vFaces));
+						UpdateCustomFontList();
+					}
+				}
+			}
+			if(QmPerfEnabled())
+				log_info("perf/font", "event=system_font_publish duration_ms=%.3f", std::chrono::duration<double, std::milli>(time_get_nanoseconds() - Start).count());
+		}
+		if(m_pQmSystemFontScan->Exhausted())
+		{
+			m_QmSystemFontsScanned = true;
+			m_pQmSystemFontScan.reset();
+			if(QmPerfEnabled())
+				log_info("perf/font", "event=system_font_scan_complete families=%zu", m_CustomFontFaces.size());
+		}
 	}
 
 	std::vector<std::string> *GetCustomFontStyles(const char *pFamily) override
@@ -2480,7 +2544,6 @@ public:
 	// QmClient: 字体商店下载完成后重扫用户字体目录，并按当前配置重新解析各字体面。
 	void ReloadCustomFonts() override
 	{
-		m_QmSystemFontsScanned = false;
 		LoadCustomFonts();
 		ApplyConfiguredFonts();
 	}

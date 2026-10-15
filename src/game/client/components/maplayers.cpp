@@ -41,7 +41,8 @@ void CMapLayers::OnMapLoad()
 	m_MapLoadInProgress = false;
 	char aCaption[64 + MAX_MAP_LENGTH];
 	str_format(aCaption, sizeof(aCaption), "%s: %s", Localize("Loading map"), Client()->GetCurrentMap());
-	const bool RenderProgress = m_OnlineOnly;
+	const bool LiveConnection = m_OnlineOnly && Client()->State() == IClient::STATE_LOADING;
+	const bool RenderProgress = m_OnlineOnly && !LiveConnection;
 
 	FCallbackMapRendererInit ProgressBarCallback = [&](int Completed, int Total) {
 		if(RenderProgress)
@@ -59,14 +60,14 @@ void CMapLayers::OnMapLoad()
 	std::optional<FCallbackMapRendererInit> ProgressCallback;
 	if(RenderProgress)
 		ProgressCallback = ProgressBarCallback;
-	if(m_OnlineOnly)
+	if(m_OnlineOnly && !LiveConnection)
 	{
 		m_MapRenderer.Load(m_Type, m_pLayers, m_pImages, &m_EnvEvaluator, ProgressCallback);
 		m_MapLoaded = true;
 	}
 	else
 	{
-		// 菜单背景的图层和 GPU 资源初始化分帧推进，避免一次性初始化所有图层卡住渲染循环。
+		// 连接与菜单背景均分帧准备；不保存引用局部加载文案的回调，避免下一帧访问悬空引用。
 		m_MapRenderer.BeginLoad(m_Type, m_pLayers, m_pImages, &m_EnvEvaluator);
 		m_MapLoadInProgress = true;
 	}
@@ -92,11 +93,11 @@ void CMapLayers::OnRender()
 	m_MapRenderer.Render(m_Params);
 }
 
-bool CMapLayers::AdvanceMapLoad()
+bool CMapLayers::AdvanceMapLoad(int MaxLayers)
 {
 	if(!m_MapLoaded && m_MapLoadInProgress)
 	{
-		m_MapRenderer.LoadStep(2);
+		m_MapRenderer.LoadStep(MaxLayers);
 		if(m_MapRenderer.IsLoadFinished())
 		{
 			m_MapLoadInProgress = false;
