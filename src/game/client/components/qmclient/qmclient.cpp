@@ -788,6 +788,7 @@ void CQmClient::OnInit()
 	QmSponsorsReloadDraft();
 	if(!m_QmStatisticsFileExists)
 		SaveQmClientStatistics();
+	m_DeveloperBadge.Init(Graphics());
 	InitQmDeveloperAuthentication();
 	InitTitleAuthentication();
 }
@@ -1311,6 +1312,7 @@ void CQmClient::EndQmClientLocalModePlaytime()
 
 void CQmClient::OnShutdown()
 {
+	m_DeveloperBadge.Shutdown(Graphics());
 	if(!m_QmClientShutdownReported)
 	{
 		m_QmClientShutdownReported = true;
@@ -3155,11 +3157,16 @@ void CQmClient::ResetTitlePresences()
 	mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
 }
 
+bool CQmClient::PlayerHasDeveloperBadge(int ClientId) const
+{
+	return GameClient()->IsQmDeveloperAuthenticated(ClientId) && !GameClient()->ShouldHideStreamerIdentity(ClientId);
+}
+
 const char *CQmClient::PlayerTitle(int ClientId) const
 {
 	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))
 		return "";
-	if(GameClient()->IsQmDeveloperAuthenticated(ClientId))
+	if(PlayerHasDeveloperBadge(ClientId))
 		return "[开发者]";
 	if(m_aTitleExpires[ClientId] > time_get() && str_comp(m_aaTitleNames[ClientId], GameClient()->m_aClients[ClientId].m_aName) == 0)
 		return m_aaPlayerTitles[ClientId];

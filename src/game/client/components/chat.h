@@ -157,6 +157,7 @@ private:
 		char m_aName[MAX_NAME_LENGTH] = "";
 		char m_aPlayerName[MAX_NAME_LENGTH] = "";
 		char m_aQmTitle[64] = "";
+		bool m_DeveloperBadge = false;
 		ColorRGBA m_NameColor;
 	};
 
@@ -178,6 +179,7 @@ private:
 		int m_NameColor;
 		char m_aName[MAX_CLIENTS * (MAX_NAME_LENGTH + 1)];
 		char m_aQmTitle[64] = "";
+		bool m_DeveloperBadge = false;
 		char m_aText[MAX_LINE_LENGTH];
 		// 合并比较保留内置显示过滤前的文本，避免不同原文都变成星号后合并。
 		char m_aMergeText[MAX_LINE_LENGTH] = "";
@@ -201,6 +203,7 @@ private:
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
 		std::vector<CQmTitleTextMetrics> m_vTitleTextMetrics;
+		std::vector<CUIRect> m_vDeveloperBadgeRects;
 
 		std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;
 

@@ -4,6 +4,7 @@
 
 #include "ddnet_player_stats_state.h"
 #include "markdown_cache_writer.h"
+#include "qm_developer_badge.h"
 #include "qm_markdown_broadcast.h"
 #include "qm_realtime.h"
 #include "qm_realtime_users.h"
@@ -142,6 +143,7 @@ class CQmClient : public CComponent
 	char m_aQmClientPlaytimeClientId[65] = "";
 	char m_aQmDdnetPlayerName[MAX_NAME_LENGTH] = "";
 	char m_aQmDdnetFavoritePartner[MAX_NAME_LENGTH] = "";
+	CQmDeveloperBadge m_DeveloperBadge;
 	char m_aQmDeveloperToken[65] = "";
 	char m_aQmDeveloperSessionId[33] = "";
 	int64_t m_QmClientServerNow = 0;
@@ -273,6 +275,8 @@ public:
 	EQmSponsorChatStyle TitleProfileChatStyle() const { return m_TitleProfileChatStyle; }
 	int TitleRevision() const { return m_TitleRevision; }
 	const char *PlayerTitle(int ClientId) const;
+	bool PlayerHasDeveloperBadge(int ClientId) const;
+	const CQmDeveloperBadge &DeveloperBadge() const { return m_DeveloperBadge; }
 	bool ShouldShowPlayerTitle(int ClientId) const;
 	const char *PlayerTitleStyle(int ClientId) const;
 	EQmSponsorChatStyle PlayerChatStyle(int ClientId) const;

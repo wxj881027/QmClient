@@ -2234,6 +2234,7 @@ set(EXPECTED_DATA
   qmclient/chat_emojis/smell.webp
   qmclient/chat_emojis/support.webp
   qmclient/chat_emojis/surrender.webp
+  qmclient/developer_badge.png
   qmclient/gui_logo.png
   qmclient/map_difficulty.sql
   race_flag.png
@@ -3567,6 +3568,8 @@ if(CLIENT)
     components/qmclient/qmclient.h
     components/qmclient/qmclient_utils.cpp
     components/qmclient/qm_map_upload.cpp
+    components/qmclient/qm_developer_badge.cpp
+    components/qmclient/qm_developer_badge.h
     components/qmclient/qm_title_style.cpp
     components/qmclient/qm_title_render.cpp
     components/qmclient/sponsor_chat_render.cpp
@@ -4913,6 +4916,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
+    src/test/unit/qmclient/client/qm_developer_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
