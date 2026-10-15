@@ -722,6 +722,60 @@ namespace
 		return ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 
+	// 灵动岛连接质量分档（用户校准：只接连接状态，Phosphor cell-signal 按档位）。
+	// 非对局或延迟未知一律返回 NONE，调用方据此隐藏图标。
+	enum class EHudConnectionQuality
+	{
+		NONE = 0,
+		LOW,
+		MEDIUM,
+		HIGH,
+	};
+	EHudConnectionQuality HudConnectionQuality(const IClient *pClient)
+	{
+		if(pClient == nullptr || pClient->State() != IClient::STATE_ONLINE)
+			return EHudConnectionQuality::NONE;
+		const int Latency = pClient->ServerInfo().m_Latency;
+		if(Latency <= 0)
+			return EHudConnectionQuality::NONE;
+		if(Latency <= 60)
+			return EHudConnectionQuality::HIGH;
+		if(Latency <= 130)
+			return EHudConnectionQuality::MEDIUM;
+		return EHudConnectionQuality::LOW;
+	}
+	EQmIcon HudConnectionQualityIcon(EHudConnectionQuality Quality)
+	{
+		switch(Quality)
+		{
+		case EHudConnectionQuality::HIGH: return EQmIcon::CELL_SIGNAL_HIGH;
+		case EHudConnectionQuality::MEDIUM: return EQmIcon::CELL_SIGNAL_MEDIUM;
+		case EHudConnectionQuality::LOW: return EQmIcon::CELL_SIGNAL_LOW;
+		default: return EQmIcon::CELL_SIGNAL_NONE;
+		}
+	}
+	const char *HudConnectionQualityFontIcon(EHudConnectionQuality Quality)
+	{
+		switch(Quality)
+		{
+		case EHudConnectionQuality::HIGH: return FontIcons::FONT_ICON_CELL_SIGNAL_HIGH;
+		case EHudConnectionQuality::MEDIUM: return FontIcons::FONT_ICON_CELL_SIGNAL_MEDIUM;
+		case EHudConnectionQuality::LOW: return FontIcons::FONT_ICON_CELL_SIGNAL_LOW;
+		default: return FontIcons::FONT_ICON_CELL_SIGNAL_NONE;
+		}
+	}
+	// 档位强调色：优/中用中性白，弱档琥珀、断档红，一眼可读。
+	ColorRGBA HudConnectionQualityColor(EHudConnectionQuality Quality)
+	{
+		switch(Quality)
+		{
+		case EHudConnectionQuality::HIGH: return ColorRGBA(0.98f, 0.99f, 1.0f, 1.0f);
+		case EHudConnectionQuality::MEDIUM: return ColorRGBA(0.98f, 0.99f, 1.0f, 1.0f);
+		case EHudConnectionQuality::LOW: return ColorRGBA(1.0f, 0.72f, 0.30f, 1.0f);
+		default: return ColorRGBA(1.0f, 0.30f, 0.30f, 1.0f);
+		}
+	}
+
 	void DrawMediaIslandOuterShadowFallback(IGraphics *pGraphics, const SHudMediaIslandSdfRenderState &State)
 	{
 		if(pGraphics == nullptr || State.m_OuterShadowSize <= 0.0f || State.m_OuterShadowOpacity <= 0.0f)
@@ -3706,7 +3760,11 @@ float CHud::GetTopIslandAvoidanceRight() const
 	const float InfoStackFontSize = StackHasTwoRows ? StackedStatusFontSize : StatusFontSize;
 	const float LocalTimeTextWidth = ShowLocalTime ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aTimeBuf).m_W) : 0.0f;
 	const float FrozenSummaryTextWidth = ShowFrozenSummary ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aFrozenSummaryBuf).m_W) : 0.0f;
-	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
+	// 连接质量图标（cell-signal 按档位）驻信息栈左缘；与 RenderMediaIsland 同口径。
+	const EHudConnectionQuality ConnectionQuality = HudConnectionQuality(Client());
+	const bool ShowConnectionSignal = ConnectionQuality != EHudConnectionQuality::NONE;
+	const float ConnectionSignalWidth = ShowConnectionSignal ? InfoStackFontSize * 1.15f + QmHudMediaIslandScaled(1.6f) : 0.0f;
+	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + ConnectionSignalWidth + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
 	const bool ShowCover = HasMediaState;
 
 	const int MetaItemCount = (ShowTeam ? 1 : 0) + (ShowWaveform ? 1 : 0);
@@ -4142,7 +4200,11 @@ void CHud::RenderMediaIsland()
 	const float InfoStackFontSize = StackHasTwoRows ? StackedStatusFontSize : StatusFontSize;
 	const float LocalTimeTextWidth = ShowLocalTime ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aTimeBuf).m_W) : 0.0f;
 	const float FrozenSummaryTextWidth = ShowFrozenSummary ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aFrozenSummaryBuf).m_W) : 0.0f;
-	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
+	// 连接质量图标（cell-signal 按档位）驻信息栈左缘；与 GetTopIslandAvoidanceRight 同口径。
+	const EHudConnectionQuality ConnectionQuality = HudConnectionQuality(Client());
+	const bool ShowConnectionSignal = ConnectionQuality != EHudConnectionQuality::NONE;
+	const float ConnectionSignalWidth = ShowConnectionSignal ? InfoStackFontSize * 1.15f + QmHudMediaIslandScaled(1.6f) : 0.0f;
+	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + ConnectionSignalWidth + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
 	float PlannedStatusWidth = 0.0f;
 	if(ShowInfoStack)
 		PlannedStatusWidth = InfoStackWidth;
@@ -4980,11 +5042,21 @@ void CHud::RenderMediaIsland()
 
 		if(ShowInfoStack)
 		{
+			// 连接质量图标（对局中按延迟分档）：信息栈左缘，文本组整体右移让位。
+			const float ConnectionSignalIconSize = InfoStackFontSize * 1.15f;
+			if(ShowConnectionSignal)
+			{
+				const CUIRect SignalIconRect{StatusSectionX + StatusPaddingLeft,
+					IslandY + (BaseIslandHeight - ConnectionSignalIconSize) * 0.5f,
+					ConnectionSignalIconSize, ConnectionSignalIconSize};
+				Ui()->DrawQmIcon(SignalIconRect, HudConnectionQualityIcon(ConnectionQuality), HudConnectionQualityFontIcon(ConnectionQuality), HudConnectionQualityColor(ConnectionQuality).WithAlpha(0.92f * StatusAlpha * EntranceContentAlpha));
+			}
+			const float InfoTextInset = StatusPaddingLeft + ConnectionSignalWidth;
 			const auto RenderInfoLine = [&](const char *pText, float CenterY, const ColorRGBA &Color) {
 				if(pText == nullptr || pText[0] == '\0')
 					return;
 				const float TextWidth = std::round(TextRender()->TextBoundingBox(InfoStackFontSize, pText).m_W);
-				const float TextX = StatusSectionX + std::max(0.0f, (StatusWidth - TextWidth) * 0.5f);
+				const float TextX = StatusSectionX + InfoTextInset + std::max(0.0f, (StatusWidth - InfoTextInset - StatusPaddingRight - TextWidth) * 0.5f);
 				const float TextY = CenterY - InfoStackFontSize * 0.5f - QmHudMediaIslandScaled(0.4f);
 				TextRender()->TextColor(Color);
 				TextRender()->Text(TextX, TextY, InfoStackFontSize, pText, -1.0f);
