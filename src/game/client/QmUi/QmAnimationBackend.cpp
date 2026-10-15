@@ -46,6 +46,9 @@ namespace
 	// 按属性差异化的休眠阈值：空间属性像素级吸附（0.25px 且速度 <0.5px/s，
 	// DDNet 玩家对亚像素抖动与渐近尾迹的开销都敏感）；感知属性用感知无阶跃
 	// 的紧阈值（ALPHA 0.002、COLOR 0.001）。未列出属性沿用弹簧配置。
+	// 注意：POS_*/WIDTH/HEIGHT 的像素级阈值只对像素量纲轨道成立；调用方用
+	// 归一化量纲（如滑条 [0,1]）时弹簧配置会带更紧的显式阈值，故两者取更紧者，
+	// 否则相邻档位（间距 << 阈值）的滑动会在轨道起步时就判定休眠、被截断成 snap。
 	float RestEpsilonFor(EUiAnimProperty Property, const SUiSpringConfig &Spring)
 	{
 		switch(Property)
@@ -54,17 +57,18 @@ namespace
 		case EUiAnimProperty::POS_Y:
 		case EUiAnimProperty::WIDTH:
 		case EUiAnimProperty::HEIGHT:
-			return 0.25f;
+			return std::min(0.25f, Spring.m_RestEpsilon);
 		case EUiAnimProperty::ALPHA:
-			return 0.002f;
+			return std::min(0.002f, Spring.m_RestEpsilon);
 		case EUiAnimProperty::COLOR_R:
 		case EUiAnimProperty::COLOR_G:
 		case EUiAnimProperty::COLOR_B:
 		case EUiAnimProperty::COLOR_A:
-		case EUiAnimProperty::COLOR_MIX:
-			return 0.001f;
+			return std::min(0.001f, Spring.m_RestEpsilon);
 		default:
 			return Spring.m_RestEpsilon;
+		case EUiAnimProperty::COLOR_MIX:
+			return std::min(0.001f, Spring.m_RestEpsilon);
 		}
 	}
 
@@ -76,7 +80,7 @@ namespace
 		case EUiAnimProperty::POS_Y:
 		case EUiAnimProperty::WIDTH:
 		case EUiAnimProperty::HEIGHT:
-			return 0.5f;
+			return std::min(0.5f, Spring.m_RestVelocity);
 		default:
 			return Spring.m_RestVelocity;
 		}

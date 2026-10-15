@@ -174,6 +174,10 @@ SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, f
 	Policy.m_Config = QmNativeWheelScrollConfig(UiScale, SmoothScrollTimeSec);
 	const float RowExtent = std::max(0.0f, Request.m_RowExtent);
 	const int RowsPerStep = Request.m_RowsPerStep > 0 ? Request.m_RowsPerStep : 2;
+	// 用户自定义步长（qm_ui_scroll_step，默认 10）作为全站滚轮档位的缩放基准：
+	// 行数档位（列表/网格）此前完全无视该配置——设置页里调了没有任何可感知
+	// 变化。默认值下行为与历史版本逐比特一致，调整后所有滚动面等比缩放。
+	const float StepScale = (g_Config.m_QmUiScrollStep > 0.0f ? (float)g_Config.m_QmUiScrollStep : 10.0f) / 10.0f;
 
 	switch(Request.m_Profile)
 	{
@@ -188,28 +192,28 @@ SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, f
 	case EQmScrollProfile::MENU_LIST:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::MEDIUM, UiScale);
 		if(RowExtent > 0.0f)
-			Policy.m_Config.m_WheelScale = RowExtent * RowsPerStep;
+			Policy.m_Config.m_WheelScale = RowExtent * RowsPerStep * StepScale;
 		break;
 	case EQmScrollProfile::SETTINGS_INNER:
 		// 卡片内部列表拥有独立滚动状态，但沿用统一的紧凑轨道语义。
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
 		if(RowExtent > 0.0f)
-			Policy.m_Config.m_WheelScale = RowExtent * RowsPerStep;
+			Policy.m_Config.m_WheelScale = RowExtent * RowsPerStep * StepScale;
 		break;
 	case EQmScrollProfile::POPUP_LIST:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
-		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * 3.0f : Policy.m_Config.m_WheelScale;
+		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * 3.0f * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_MaxVisibleItems = QM_POPUP_LIST_MAX_VISIBLE_ITEMS;
 		break;
 	case EQmScrollProfile::SETTINGS_GRID:
 	case EQmScrollProfile::GRID:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
-		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep : Policy.m_Config.m_WheelScale;
+		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_ContentDragAllowed = false;
 		break;
 	case EQmScrollProfile::FILTER_GRID:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
-		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep : Policy.m_Config.m_WheelScale;
+		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_RailVisibility = EQmScrollRailVisibility::HIDDEN;
 		Policy.m_ContentDragAllowed = false;
 		break;
