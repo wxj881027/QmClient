@@ -86,6 +86,16 @@ void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, fl
 		m_ActiveButtonLogicButton = -1;
 	};
 	SPopupMenuProperties ResolvedProps = Props;
+	// 三组件规约之「popup（动作展开菜单）」：调用方未显式配色（仍是旧默认
+	// 黑底灰边）时，解析为统一下拉列表主题色——编辑器与客户端的裸
+	// DoPopupMenu 调用点一次性接入设计语言；显式配色（二级面板、好友主题、
+	// 下拉框等）不受影响。
+	if(ResolvedProps.m_BackgroundColor == SPopupMenuProperties{}.m_BackgroundColor && ResolvedProps.m_BorderColor == SPopupMenuProperties{}.m_BorderColor)
+	{
+		const SUiTheme Theme = ResolveConfiguredDropdownListTheme();
+		ResolvedProps.m_BackgroundColor = Theme.m_Surface;
+		ResolvedProps.m_BorderColor = Theme.m_Border;
+	}
 	// 转场连续性默认启用，但受两重资格门控：
 	// 1. 动效等级 qm_ui_motion_level == 0 时全局硬切（分级动效规约，
 	//    各封装弹窗的局部门控同义，统一收口到此裁决）；
