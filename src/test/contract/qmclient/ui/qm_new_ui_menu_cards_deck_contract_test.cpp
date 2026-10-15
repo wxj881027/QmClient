@@ -53,23 +53,3 @@ TEST(QmNewUiMenuCardsDeckContract, DeckPreLayoutPressClearsStaleActiveInput)
 	EXPECT_NE(ButtonLogic.find("m_pLastActiveItem = nullptr"), std::string::npos);
 	EXPECT_NE(ButtonLogic.find("SetActiveItem(nullptr)"), std::string::npos);
 }
-
-TEST(QmNewUiMenuCardsDeckContract, SettingsDisplayCycleUpdatesAfterTabInputBeforePageRender)
-{
-	const std::string SettingsSource = ReadTextFile("src/game/client/components/menus_settings.cpp");
-	const std::string DeckSource = ReadTextFile("src/game/client/QmUi/SettingsCardDeck.cpp");
-	const std::string RenderSettings = FunctionBody(SettingsSource, "void CMenus::RenderSettings(CUIRect MainView)");
-	ASSERT_FALSE(RenderSettings.empty());
-	const size_t TabInput = RenderSettings.find("DoButton_MenuTab(&m_aSettingsTabButtons[i]");
-	const size_t DisplayCycle = RenderSettings.find("m_SettingsCardDeck.BeginDisplayCycle(");
-	const size_t PageRender = RenderSettings.find("RenderSettingsGeneral(ContentView)");
-	ASSERT_NE(TabInput, std::string::npos);
-	ASSERT_NE(DisplayCycle, std::string::npos);
-	ASSERT_NE(PageRender, std::string::npos);
-	EXPECT_LT(TabInput, DisplayCycle);
-	EXPECT_LT(DisplayCycle, PageRender);
-	EXPECT_EQ(RenderSettings.find("Accent.VSplitLeft(3.0f"), std::string::npos);
-	EXPECT_NE(DeckSource.find("const bool TabChanged = m_LastRenderedTab != pTab;"), std::string::npos);
-	EXPECT_NE(DeckSource.find("if(TabChanged || StableIdsChanged || ModelCountChanged || StateIndexChanged)"), std::string::npos);
-	EXPECT_NE(DeckSource.find("m_SuppressHoverFeedbackOnce = true;"), std::string::npos);
-}

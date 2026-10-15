@@ -4818,7 +4818,6 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_demo_camera_file_test.cpp
     src/test/integration/qmclient/client/qm_demo_camera_storage_test.cpp
     src/test/unit/qmclient/client/qm_camera_effects_test.cpp
-    src/test/contract/qmclient/ui/qm_capsule_tab_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_capsule_tab_geometry_test.cpp
     src/test/contract/qmclient/ui/qm_ui_form_wiring_contract_test.cpp
     src/test/unit/qmclient/ui/qm_tooltip_ownership_test.cpp
@@ -4939,6 +4938,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_spectator_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
+    src/test/integration/qmclient/settings/qm_card_tab_recovery_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_graphics_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_metrics_contract_test.cpp
