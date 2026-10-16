@@ -2623,7 +2623,7 @@ bool CChat::OnPrepareLines(float y)
 		Line.m_ChatEmojiRect = {};
 		Line.m_vDeveloperBadgeRects.clear();
 		const bool MultipleAuthors = Line.m_vMergedAuthors.size() > 1;
-		// 多人合并仍将正文另起一行，只保留第一个人的前缀占位。
+		// 多人合并的续行只保留第一个人的前缀占位。
 		const bool IndentMessage = MultipleAuthors || (!IsScoreBoardOpen && !g_Config.m_ClChatOld);
 		float FirstAuthorPrefixWidth = 0.0f;
 		if(MultipleAuthors)
@@ -2777,9 +2777,19 @@ bool CChat::OnPrepareLines(float y)
 			if(Line.m_TimesRepeated > 0)
 				TextRender()->TextEx(&MeasureCursor, aCount);
 
+			// 与行高共用失效时机，绘制时复用同一换行决定。
+			Line.m_aMergedMessageInline[OffsetType] = MultipleAuthors && QmChatMergedMessageFitsInline(MeasureCursor, [&](CTextCursor &InlineCursor) {
+				TextRender()->TextEx(&InlineCursor, ": ");
+				QmChatApplyMergedMessageIndent(InlineCursor, FirstAuthorPrefixWidth);
+				if(RenderChatEmoji)
+					LayoutQmChatEmoji(InlineCursor, QmChatEmojiChatDisplaySize(FontSize));
+				else
+					TextRender()->TextEx(&InlineCursor, pText);
+			});
+
 			if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 			{
-				TextRender()->TextEx(&MeasureCursor, MultipleAuthors ? ":\n" : ": ");
+				TextRender()->TextEx(&MeasureCursor, MultipleAuthors && !Line.m_aMergedMessageInline[OffsetType] ? ":\n" : ": ");
 			}
 
 			CTextCursor AppendCursor = MeasureCursor;
@@ -2955,7 +2965,7 @@ bool CChat::OnPrepareLines(float y)
 		if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 		{
 			TextRender()->TextColor(NameColor);
-			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, MultipleAuthors ? ":\n" : ": ");
+			TextRender()->CreateOrAppendTextContainer(Line.m_TextContainerIndex, &LineCursor, MultipleAuthors && !Line.m_aMergedMessageInline[OffsetType] ? ":\n" : ": ");
 		}
 
 		ColorRGBA Color;

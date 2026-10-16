@@ -200,6 +200,78 @@ TEST(QmChatTextLayout, ShortPrefixBackgroundIncludesIndentedBody)
 	EXPECT_FLOAT_EQ(QmChatIndentedContentWidth(Prefix, Body), 120.0f);
 }
 
+TEST(QmChatTextLayout, MergedShortMessageFitsAfterNamesWithoutChangingPrefix)
+{
+	CTextCursor Prefix;
+	Prefix.SetPosition(vec2(20.0f, 50.0f));
+	Prefix.m_X = 150.0f;
+	Prefix.m_LineWidth = 200.0f;
+	Prefix.m_CharCount = 24;
+	EXPECT_TRUE(QmChatMergedMessageFitsInline(Prefix, [](CTextCursor &Cursor) {
+		EXPECT_FLOAT_EQ(Cursor.m_X, 150.0f);
+		EXPECT_EQ(Cursor.m_Flags & TEXTFLAG_RENDER, 0);
+		Cursor.m_X += 55.0f;
+		Cursor.m_CharCount += 8;
+	}));
+	EXPECT_FLOAT_EQ(Prefix.m_X, 150.0f);
+	EXPECT_EQ(Prefix.m_CharCount, 24);
+	EXPECT_EQ(Prefix.m_LineCount, 1);
+}
+
+TEST(QmChatTextLayout, MergedMessageAcceptsExactRightEdgeAndRejectsOverflow)
+{
+	CTextCursor Prefix;
+	Prefix.SetPosition(vec2(20.0f, 50.0f));
+	Prefix.m_X = 180.0f;
+	Prefix.m_LineWidth = 200.0f;
+	EXPECT_TRUE(QmChatMergedMessageFitsInline(Prefix, [](CTextCursor &Cursor) { Cursor.m_X += 40.0f; }));
+	EXPECT_FALSE(QmChatMergedMessageFitsInline(Prefix, [](CTextCursor &Cursor) { Cursor.m_X += 40.25f; }));
+}
+
+TEST(QmChatTextLayout, WrappedMergedNamesKeepMessageOnSeparateLine)
+{
+	CTextCursor Prefix;
+	Prefix.m_LineCount = 2;
+	bool Measured = false;
+	EXPECT_FALSE(QmChatMergedMessageFitsInline(Prefix, [&](CTextCursor &) { Measured = true; }));
+	EXPECT_FALSE(Measured);
+}
+
+TEST(QmChatTextLayout, MergedMessageThatWrapsKeepsSeparateLine)
+{
+	CTextCursor Prefix;
+	Prefix.SetPosition(vec2(20.0f, 50.0f));
+	Prefix.m_X = 180.0f;
+	Prefix.m_LineWidth = 200.0f;
+	EXPECT_FALSE(QmChatMergedMessageFitsInline(Prefix, [](CTextCursor &Cursor) {
+		Cursor.m_LineCount = 2;
+		Cursor.m_X = 65.0f;
+	}));
+}
+
+TEST(QmChatTextLayout, UnboundedMergedMessageCanStayInline)
+{
+	CTextCursor Prefix;
+	Prefix.m_X = 180.0f;
+	EXPECT_TRUE(QmChatMergedMessageFitsInline(Prefix, [](CTextCursor &Cursor) { Cursor.m_X += 400.0f; }));
+}
+
+TEST(QmChatTextLayout, MergedInlineBodyKeepsPositionAndFirstAuthorIndent)
+{
+	CTextCursor Cursor;
+	Cursor.SetPosition(vec2(20.0f, 50.0f));
+	Cursor.m_X = 150.0f;
+	Cursor.m_LineWidth = 200.0f;
+	Cursor.m_CharCount = 24;
+	QmChatApplyMergedMessageIndent(Cursor, 45.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_X, 150.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_Y, 50.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_StartX, 65.0f);
+	EXPECT_FLOAT_EQ(Cursor.m_LineWidth, 155.0f);
+	EXPECT_EQ(Cursor.m_LineCount, 1);
+	EXPECT_EQ(Cursor.m_CharCount, 24);
+}
+
 TEST(QmChatTextLayout, MergedBodyStartsAndWrapsAfterFirstAuthorPrefix)
 {
 	CTextCursor Cursor;
@@ -243,6 +315,20 @@ TEST(QmChatTextLayout, MergedTranslationKeepsFirstAuthorIndent)
 	EXPECT_FLOAT_EQ(Translation.m_StartX, 65.0f);
 	EXPECT_FLOAT_EQ(Translation.m_LineWidth, 155.0f);
 	EXPECT_FLOAT_EQ(Translation.m_StartY, 86.0f);
+}
+
+TEST(QmChatTextLayout, InlineMergedTranslationKeepsFirstAuthorIndent)
+{
+	CTextCursor Original;
+	Original.SetPosition(vec2(20.0f, 50.0f));
+	Original.m_X = 150.0f;
+	Original.m_LineWidth = 200.0f;
+	QmChatApplyMergedMessageIndent(Original, 45.0f);
+	const CTextCursor Translation = QmChatSecondaryCursor(Original, 8.0f, 12.0f);
+	EXPECT_FLOAT_EQ(Original.m_X, 150.0f);
+	EXPECT_FLOAT_EQ(Translation.m_X, 65.0f);
+	EXPECT_FLOAT_EQ(Translation.m_LineWidth, 155.0f);
+	EXPECT_FLOAT_EQ(Translation.m_StartY, 62.0f);
 }
 
 TEST(QmChatTextLayout, MergedBackgroundIncludesFirstAuthorIndentAndBodyWidth)

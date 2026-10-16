@@ -171,6 +171,7 @@ private:
 		bool m_Initialized;
 		int64_t m_Time;
 		float m_aYOffset[2];
+		bool m_aMergedMessageInline[2] = {};
 		SQmChatTextBlockLayout m_aTextBlockLayout[2];
 		int m_ClientId;
 		int m_TeamNumber;
