@@ -92,12 +92,15 @@ namespace
 		ComPtr<IDWriteFactory> m_pWrite;
 		ComPtr<ID2D1HwndRenderTarget> m_pTarget;
 		ComPtr<ID2D1DCRenderTarget> m_pControlTarget;
-		ComPtr<ID2D1Bitmap> m_pLogo;
+		ComPtr<ID2D1Bitmap> m_pArtwork;
 
-		UINT32 Background() const { return m_Dark ? 0x171D20 : 0xF7F9F8; }
-		UINT32 Foreground() const { return m_Dark ? 0xEDF4F1 : 0x1D302A; }
-		UINT32 Muted() const { return m_Dark ? 0xA6B6AF : 0x65786F; }
-		UINT32 Border() const { return m_Dark ? 0x3D4B45 : 0xDCE5DF; }
+		UINT32 Background() const { return m_Dark ? 0x221B22 : 0xFFF9FA; }
+		UINT32 Foreground() const { return m_Dark ? 0xF8E8EE : 0x4A2433; }
+		UINT32 Muted() const { return m_Dark ? 0xC4A9B5 : 0x866371; }
+		UINT32 Border() const { return m_Dark ? 0x513642 : 0xE9D2DC; }
+		UINT32 Accent(bool Pressed = false, bool Hover = false) const { return Pressed ? 0x94304F : Hover ? 0xC24D77 :
+														    0xB23C62; }
+		UINT32 FocusColor() const { return m_Dark ? 0xED9FB9 : 0xB23C62; }
 		int Pixels(float Value) const { return static_cast<int>(std::lround(Value * m_Dpi / 96.0f)); }
 
 		void Fill(ID2D1RenderTarget *pTarget, D2D1_RECT_F Rect, UINT32 Rgb, float Radius = 0)
@@ -138,6 +141,13 @@ namespace
 			m_BackBrush = CreateSolidBrush(RGB((Bg >> 16) & 255, (Bg >> 8) & 255, Bg & 255));
 			const BOOL Dark = m_Dark;
 			DwmSetWindowAttribute(m_Window, 20, &Dark, sizeof(Dark));
+			const UINT32 Caption = m_Dark ? 0x30212B : 0xFFE1EB;
+			const UINT32 CaptionText = Foreground();
+			const COLORREF CaptionColor = RGB((Caption >> 16) & 255, (Caption >> 8) & 255, Caption & 255);
+			const COLORREF CaptionTextColor = RGB((CaptionText >> 16) & 255, (CaptionText >> 8) & 255, CaptionText & 255);
+			// Windows 11 为原生标题栏配色；不支持的系统继续使用标准标题栏。
+			DwmSetWindowAttribute(m_Window, DWMWA_CAPTION_COLOR, &CaptionColor, sizeof(CaptionColor));
+			DwmSetWindowAttribute(m_Window, DWMWA_TEXT_COLOR, &CaptionTextColor, sizeof(CaptionTextColor));
 			RedrawWindow(m_Window, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
 		}
 
@@ -288,14 +298,24 @@ namespace
 			if(FAILED(m_pFactory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(m_Window, D2D1::SizeU(Rect.right, Rect.bottom)), &m_pTarget)))
 				return false;
 			m_pTarget->SetDpi(static_cast<float>(m_Dpi), static_cast<float>(m_Dpi));
+			const HMODULE Module = GetModuleHandleW(nullptr);
+			const HRSRC Resource = FindResourceW(Module, MAKEINTRESOURCEW(102), RT_RCDATA);
+			const HGLOBAL Loaded = Resource ? LoadResource(Module, Resource) : nullptr;
+			auto *pData = Loaded ? static_cast<BYTE *>(LockResource(Loaded)) : nullptr;
+			const DWORD DataSize = Resource ? SizeofResource(Module, Resource) : 0;
 			ComPtr<IWICImagingFactory> pWic;
-			ComPtr<IWICBitmap> pBitmap;
+			ComPtr<IWICStream> pStream;
+			ComPtr<IWICBitmapDecoder> pDecoder;
+			ComPtr<IWICBitmapFrameDecode> pFrame;
 			ComPtr<IWICFormatConverter> pConverter;
-			if(SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWic))) &&
-				SUCCEEDED(pWic->CreateBitmapFromHICON(LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(1)), &pBitmap)) &&
+			if(pData && DataSize > 0 && SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pWic))) &&
+				SUCCEEDED(pWic->CreateStream(&pStream)) &&
+				SUCCEEDED(pStream->InitializeFromMemory(pData, DataSize)) &&
+				SUCCEEDED(pWic->CreateDecoderFromStream(pStream.Get(), nullptr, WICDecodeMetadataCacheOnLoad, &pDecoder)) &&
+				SUCCEEDED(pDecoder->GetFrame(0, &pFrame)) &&
 				SUCCEEDED(pWic->CreateFormatConverter(&pConverter)) &&
-				SUCCEEDED(pConverter->Initialize(pBitmap.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, nullptr, 0, WICBitmapPaletteTypeCustom)))
-				m_pTarget->CreateBitmapFromWicBitmap(pConverter.Get(), nullptr, &m_pLogo);
+				SUCCEEDED(pConverter->Initialize(pFrame.Get(), GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone, nullptr, 0, WICBitmapPaletteTypeCustom)))
+				m_pTarget->CreateBitmapFromWicBitmap(pConverter.Get(), nullptr, &m_pArtwork);
 			return true;
 		}
 
@@ -308,22 +328,24 @@ namespace
 				auto *pTarget = m_pTarget.Get();
 				pTarget->BeginDraw();
 				pTarget->Clear(Color(Background()));
-				Fill(pTarget, {0, 0, 226, HEIGHT}, 0x16392F);
-				Fill(pTarget, {24, 34, 102, 112}, 0x275143, 20);
-				if(m_pLogo)
-					pTarget->DrawBitmap(m_pLogo.Get(), {35, 45, 91, 101});
-				Text(pTarget, L"QmClient", {26, 133, 212, 174}, 28, 0xFFFFFF, true);
-				Text(pTarget, QM_SETUP_VERSION, {28, 179, 210, 208}, 13, 0xADC9BB);
-				Text(pTarget, L"下一段旅程，\n从这里开始。", {28, 232, 206, 298}, 18, 0xD7E8E0);
+				Fill(pTarget, {0, 0, 226, HEIGHT}, 0xFFDFE8);
+				if(m_pArtwork)
+				{
+					const auto Size = m_pArtwork->GetSize();
+					pTarget->DrawBitmap(m_pArtwork.Get(), {0, 0, 226, 226 * Size.height / Size.width});
+				}
+				else
+					Text(pTarget, L"QmClient", {20, 38, 212, 80}, 28, 0x701332, true);
+				Text(pTarget, QM_SETUP_VERSION, {20, 90, 206, 114}, 12, 0x9E4A64);
 				const wchar_t *apSteps[] = {L"安装选项", L"正在安装", L"开始使用"};
 				const int Active = m_Page == EPage::OPTIONS ? 0 : m_Page == EPage::DONE ? 2 :
 													  1;
 				for(int Index = 0; Index < 3; ++Index)
 				{
 					const float Y = 348.0f + Index * 38.0f;
-					Fill(pTarget, {28, Y, 52, Y + 24}, Active == Index ? 0xC2E9A0 : 0x2A4B3E, 12);
-					Text(pTarget, std::to_wstring(Index + 1), {28, Y, 52, Y + 24}, 12, Active == Index ? 0x16392F : 0xB9CFC2, true, true);
-					Text(pTarget, apSteps[Index], {64, Y + 1, 208, Y + 24}, 13, Active == Index ? 0xFFFFFF : 0xADC9BB);
+					Fill(pTarget, {28, Y, 52, Y + 24}, Active == Index ? Accent() : 0xF4C6D7, 12);
+					Text(pTarget, std::to_wstring(Index + 1), {28, Y, 52, Y + 24}, 12, Active == Index ? 0xFFFFFF : 0x8E4760, true, true);
+					Text(pTarget, apSteps[Index], {64, Y + 1, 208, Y + 24}, 13, Active == Index ? 0x701332 : 0x9E4A64);
 				}
 				if(m_Page == EPage::OPTIONS)
 				{
@@ -340,19 +362,19 @@ namespace
 					Text(pTarget, m_Progress > 0 ? std::to_wstring(std::min(99, static_cast<int>(m_Progress * 100))) + L"%" : L"准备中", {258, 197, 754, 263}, 42, Foreground(), true);
 					Fill(pTarget, {258, 291, 754, 301}, Border(), 5);
 					if(m_ShownProgress > 0)
-						Fill(pTarget, {258, 291, 258 + 496 * m_ShownProgress, 301}, 0x409B69, 5);
+						Fill(pTarget, {258, 291, 258 + 496 * m_ShownProgress, 301}, Accent(), 5);
 					else
 					{
 						const float Offset = static_cast<float>(GetTickCount64() % 1600) / 1600.0f * 396;
-						Fill(pTarget, {258 + Offset, 291, 358 + Offset, 301}, 0x409B69, 5);
+						Fill(pTarget, {258 + Offset, 291, 358 + Offset, 301}, Accent(), 5);
 					}
 					Text(pTarget, m_EngineWindow ? L"正在处理程序文件、快捷方式和卸载信息。" : L"正在准备安装文件…", {258, 324, 754, 372}, 14, Muted());
 				}
 				else if(m_Page == EPage::DONE)
 				{
 					Text(pTarget, L"安装完成", {258, 47, 754, 94}, 28, Foreground(), true);
-					Fill(pTarget, {258, 184, 754, 284}, m_Dark ? 0x233C2D : 0xE7F2E2, 14);
-					Text(pTarget, L"准备就绪", {280, 204, 731, 237}, 21, m_Dark ? 0xBEE7A7 : 0x2C6345, true);
+					Fill(pTarget, {258, 184, 754, 284}, m_Dark ? 0x3C2634 : 0xFCE7EF, 14);
+					Text(pTarget, L"准备就绪", {280, 204, 731, 237}, 21, m_Dark ? 0xF3AEC6 : 0x923451, true);
 					Text(pTarget, L"可以立即启动，也可以稍后从开始菜单打开。", {280, 246, 731, 273}, 12, Muted());
 					Text(pTarget, L"安装位置：" + m_Directory, {258, 327, 754, 404}, 12, Muted());
 				}
@@ -362,7 +384,7 @@ namespace
 				}
 				if(pTarget->EndDraw() == D2DERR_RECREATE_TARGET)
 				{
-					m_pLogo.Reset();
+					m_pArtwork.Reset();
 					m_pTarget.Reset();
 				}
 			}
@@ -399,16 +421,22 @@ namespace
 			const bool Pressed = !Disabled && (State & BST_PUSHED) != 0;
 			const bool Hover = !Disabled && m_HoverButton == Control;
 			const bool Focus = (State & BST_FOCUS) != 0 && (SendMessageW(Control, WM_QUERYUISTATE, 0, 0) & UISF_HIDEFOCUS) == 0;
-			const UINT32 Accent = Pressed ? 0x21583C : Hover ? 0x3B8A5D : 0x307A50;
+			const UINT32 CheckColor = Accent(Pressed, Hover);
 			wchar_t aCaption[128]{};
 			GetWindowTextW(Control, aCaption, 128);
 			pTarget->BeginDraw();
 			pTarget->Clear(Color(Background()));
 			if(Hover || Pressed)
-				Fill(pTarget, {1, 1, Width - 1, Height - 1}, m_Dark ? 0x29362E : 0xEAF0EB, 7);
+				Fill(pTarget, {1, 1, Width - 1, Height - 1}, m_Dark ? 0x382530 : 0xFCEBF1, 7);
 			const D2D1_RECT_F Box{4, CenterY - 10, 24, CenterY + 10};
-			Fill(pTarget, Box, Disabled ? Border() : Checked ? Accent : m_Dark ? 0x1E2923 : 0xFFFFFF, 4);
-			Stroke(pTarget, Box, Disabled ? Border() : Checked || Hover ? Accent : m_Dark ? 0x71867A : 0x8DA397, 4);
+			Fill(pTarget, Box, Disabled ? Border() : Checked ? CheckColor :
+							 m_Dark          ? 0x2C2029 :
+									   0xFFFFFF,
+				4);
+			Stroke(pTarget, Box, Disabled ? Border() : Checked || Hover ? CheckColor :
+							   m_Dark                   ? 0xA17A8C :
+										      0xB18A9A,
+				4);
 			if(Checked)
 			{
 				ComPtr<ID2D1SolidColorBrush> pBrush;
@@ -420,7 +448,7 @@ namespace
 			}
 			Text(pTarget, aCaption, {34, 0, Width - 4, Height}, 14, Disabled ? Muted() : Foreground(), false, false, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 			if(Focus)
-				Stroke(pTarget, {1, 1, Width - 1, Height - 1}, m_Dark ? 0x8FCBA4 : 0x409B69, 7);
+				Stroke(pTarget, {1, 1, Width - 1, Height - 1}, FocusColor(), 7);
 			const HRESULT Result = pTarget->EndDraw();
 			if(Result == D2DERR_RECREATE_TARGET)
 				m_pControlTarget.Reset();
@@ -442,10 +470,9 @@ namespace
 			GetWindowTextW(Item.hwndItem, aCaption, 128);
 			pTarget->BeginDraw();
 			pTarget->Clear(Color(Background()));
-			const UINT32 ButtonColor = Primary ? (Pressed ? 0x21583C : Hover ? 0x3B8A5D :
-											   0x307A50) :
+			const UINT32 ButtonColor = Primary ? Accent(Pressed, Hover) :
 						   Pressed ? Border() :
-						   Hover   ? (m_Dark ? 0x29362E : 0xEAF0EB) :
+						   Hover   ? (m_Dark ? 0x382530 : 0xFCEBF1) :
 							     Background();
 			Fill(pTarget, {1, 1, Width - 1, Height - 1}, ButtonColor, 9);
 			if(!Primary)
@@ -454,7 +481,7 @@ namespace
 														  Foreground(),
 				Primary, true);
 			if(Item.itemState & ODS_FOCUS)
-				Stroke(pTarget, {4, 4, Width - 4, Height - 4}, Primary ? 0xD6EDBB : 0x409B69, 6);
+				Stroke(pTarget, {4, 4, Width - 4, Height - 4}, Primary ? 0xFFE0EB : FocusColor(), 6);
 			if(pTarget->EndDraw() == D2DERR_RECREATE_TARGET)
 				m_pControlTarget.Reset();
 		}

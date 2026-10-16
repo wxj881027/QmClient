@@ -119,9 +119,16 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 				old_resource.parent.mkdir(parents=True, exist_ok=True)
 				old_resource.write_bytes(b"obsolete bundled resource")
 			(install / "user-owned.txt").write_bytes(b"preserve this file")
+			(install / "DDNet.old").write_bytes(b"legacy client backup")
+			(install / "settings.old").write_bytes(b"preserve user backup")
 			old_asset = install / "data/qmclient/gui_logo.png"
 			old_asset.write_bytes(b"old asset to replace")
 		run_process([str(executable), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/NOICONS", f"/DIR={install}", f"/LOG={workspace / (name + '.log')}"])
+		if name == "current":
+			if (install / "DDNet.old").exists():
+				raise AssertionError("successful upgrade left the legacy client backup")
+			if (install / "settings.old").read_bytes() != b"preserve user backup":
+				raise AssertionError("upgrade changed an unrelated .old file")
 	assert_setup_completion_page(current, install)
 	print("PASS completion page has one Finish instruction", flush=True)
 	for relative, expected_digest in payload_hashes.items():

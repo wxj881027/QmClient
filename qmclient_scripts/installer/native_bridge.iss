@@ -32,3 +32,21 @@ begin
   if QmNativeWindow <> 0 then
     Confirm := False;
 end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  LegacyBackup: String;
+begin
+  { 仅在安装成功退出时清理旧更新器的客户端备份；取消和失败保留原文件。 }
+  if CurStep = ssDone then
+  begin
+    LegacyBackup := ExpandConstant('{app}\DDNet.old');
+    if FileExists(LegacyBackup) then
+    begin
+      if DeleteFile(LegacyBackup) then
+        Log('Removed legacy client backup: ' + LegacyBackup)
+      else
+        Log('Could not remove legacy client backup: ' + LegacyBackup);
+    end;
+  end;
+end;
