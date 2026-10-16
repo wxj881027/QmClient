@@ -4834,6 +4834,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/settings/settings_card_translation_contract_test.cpp
     src/test/unit/qmclient/settings/settings_font_selection_test.cpp
     src/test/unit/qmclient/settings/settings_icon_options_test.cpp
+    src/test/unit/qmclient/settings/settings_color_picker_test.cpp
     src/test/unit/qmclient/settings/settings_page_layout_test.cpp
     src/test/unit/qmclient/settings/settings_content_metrics_test.cpp
     src/test/unit/qmclient/settings/settings_label_metadata_test.cpp
