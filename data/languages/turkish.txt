@@ -2630,6 +2630,12 @@ Connection disconnected
 Connection elevated
 == Bağlantı biraz dengesiz
 
+Connection icon color
+== Bağlantı simge rengi
+
+Connection icon custom color
+== Özel bağlantı simge rengi
+
 Connection normal
 == Bağlantı normal
 
@@ -3046,6 +3052,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== Tekerlek kademesi başına kaydırma mesafesini ayarlayın. Alt basılıyken adım 3 katına çıkar
 
 Customize translate button and menu colors
 == Çevir düğmesi ve menü renklerini özelleştir
@@ -3716,6 +3725,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == Bu arkadaşı taşımak için başka bir kategoriye sürükleyin.
 
+Drag to pan, scroll to zoom
+== Kaydırmak için sürükleyin, yakınlaştırmak için tekerleği kullanın
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == Sıralamayı değiştirmek için sürükleyin; genişletmek veya daraltmak için tıklayın. Kategorileri yönetmek için sağ tıklayın veya dişli simgesini kullanın
 
@@ -3955,6 +3967,12 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == Dinamik Ada arka plan rengi
+
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== Dynamic Island bağlantı simge rengi: 1=Kalite kademesi, 2=Arayüz simge rengine göre, 3=Özel
+
+Dynamic island connection icon custom color
+== Dynamic Island özel bağlantı simge rengi
 
 Ease in out quad
 == Yavaş giriş yavaş çıkış ikinci derece
@@ -4987,6 +5005,9 @@ Follow server
 
 Follow Tee
 == Tee'yi takip et
+
+Follow UI icon color
+== Arayüz simge rengine göre
 
 Following
 == Takip Ediliyor
@@ -6200,6 +6221,9 @@ Initializing components
 Initializing layers
 == Katmanlar başlatılıyor
 
+Initializing map layers
+== Harita katmanları başlatılıyor
+
 Initializing map logic
 == Harita mantığı başlatılıyor
 
@@ -7193,8 +7217,14 @@ Map folders
 Map name
 == Harita adı
 
+Map not downloaded yet — join the server to preview it
+== Harita henüz indirilmedi. Önizlemek için sunucuya katılın
+
 Map play history
 == Harita oynama geçmişi
+
+Map preview rendering unavailable
+== Harita önizlemesi oluşturulamıyor
 
 Map Preview TODO
 == Harita önizlemesi yapılacak
@@ -8591,6 +8621,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == Orijinal mesajın dili
 
+Original scroll feel
+== Özgün kaydırma hissi
+
 Other
 == Diğer
 
@@ -9644,6 +9677,9 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Dörtgenler arka plan dekorasyonu için kullanılır
 
+Quality tier
+== Ağ kalitesine göre
+
 Query current map info
 == Geçerli harita bilgisini sorgula
 
@@ -10538,6 +10574,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == Eski tek parçalı kanca çarpışma çizgisi davranışını geri yükle
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır
+
 Restoring save %d: main '%s', dummy '%s'.
 == %d numaralı kayıt geri yükleniyor: ana oyuncu '%s', kukla '%s'.
 
@@ -10958,6 +11000,9 @@ Scroll mode: Off
 Scroll mode: On
 == Kaydırma modu: açık
 
+Scroll step
+== Kaydırma adımı
+
 Search
 == Ara
 
@@ -11173,6 +11218,9 @@ Server alert
 
 Server best:
 == Sunucu en iyisi:
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== Sunucu tarayıcısı sütun sırası (virgülle ayrılmış kimlikler: community,name,map,difficulty,gametype,friends,players,qm,ping; boş = varsayılan)
 
 Server browser exclude string
 == Sunucu tarayıcı hariç tutma dizesi
@@ -11638,6 +11686,9 @@ Show enemy reason
 
 Show entities
 == Varlıkları göster
+
+Show entities only (hide textures)
+== Yalnızca varlıkları göster (dokuları gizle)
 
 Show existing saves
 == Mevcut kayıtları göster
@@ -12152,8 +12203,8 @@ Show server settings
 Show settings card borders
 == Ayar kartı kenarlıklarını göster
 
-Show short server names in browser
-== Sunucu tarayıcısında kısa sunucu adını göster
+Show short server names in browser (applies to China community servers)
+== Sunucu tarayıcısında kısa sunucu adını göster (Çin topluluğu sunucuları için)
 
 Show skin date and author
 == Skin tarihini ve yazarını göster
@@ -13967,6 +14018,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == Yerel konsolu değiştir
 
+Toggle map preview
+== Harita önizlemesi
+
 Toggle microphone mute
 == Mikrofon sessizini aç/kapat
 
@@ -15194,6 +15248,9 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace bağlamasının hangi seviyeye ayarlandığı (otomatiktir, kullanmanız gerekmez).
 
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== Tekerlek kademesi başına arayüz pikseli; ayar kartı sayfaları her kademede bu değerin 12 katı kayar
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient gökkuşağı Tee açıkken bu özellik etkili olmaz.
 
@@ -15301,6 +15358,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == Genişlik ve yükseklik %d ile %d aralığında olmalıdır.
+
+Width of difficulty column in server browser
+== Sunucu tarayıcısında zorluk sütununun genişliği
 
 Width of friends column in server browser
 == Sunucu tarayıcısında arkadaşlar sütununun genişliği

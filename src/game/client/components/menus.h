@@ -40,6 +40,7 @@
 #include <game/client/components/menus_start.h>
 #include <game/client/components/qmclient/audio_pack_catalog.h>
 #include <game/client/components/qmclient/browser_friend_list.h>
+#include <game/client/components/qmclient/browser_map_preview.h>
 #include <game/client/components/qmclient/demo_cut.h>
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
@@ -2091,7 +2092,7 @@ protected:
 		CButtonContainer m_CancelButton;
 	} m_FriendNotePopupContext;
 	// 地图预览弹窗：锚定服务器列表地图列的富内容弹层，展示本地已缓存地图的
-	// 离屏渲染缩略图（未缓存不联网）并支持拖拽平移。
+	// 离屏渲染视图（未缓存不联网）并支持缩放、拖拽平移。
 	class CMapPreviewPopupContext : public SPopupMenuId
 	{
 	public:
@@ -2103,14 +2104,10 @@ protected:
 		char m_aGameType[16] = {0};
 		int m_NumPlayers = 0;
 		int m_MaxPlayers = 0;
-		// 拖拽平移：打开时整图适配，拖拽后保持偏移直到关闭（世界单位）。
-		vec2 m_PanOffset = vec2(0.0f, 0.0f);
-		bool m_Dragging = false;
-		vec2 m_DragStartMouse = vec2(0.0f, 0.0f);
-		vec2 m_DragStartPan = vec2(0.0f, 0.0f);
-		// 滚轮缩放系数（1 = 整图适配）。
-		float m_ZoomFactor = 1.0f;
-		// 只看实体层（关贴图）：切换渲染到实体专用一次性纹理（1 = 实体）。
+		// 打开时定位起点，后续保持用户拖拽与缩放，直到关闭。
+		CQmBrowserMapPreviewView m_View;
+		bool m_InitialViewSet = false;
+		// 只看实体层（关贴图）：模式变化时重新渲染（1 = 实体）。
 		int m_EntityOnly = 0;
 	} m_MapPreviewPopupContext;
 	// 预览地图加载缓存（LRU），实现位于 menus_browser.cpp。裸指针成员：
@@ -2367,6 +2364,7 @@ protected:
 	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
 	// 地图预览弹窗：行内触发（悬停 200ms / 右键）与弹层内容。
 	void OpenMapPreviewPopup(const CServerInfo *pItem);
+	void ClearMapPreviewCache();
 	enum class EConnectIntent
 	{
 		Manual,

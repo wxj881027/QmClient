@@ -7,6 +7,17 @@
 #include <cstddef>
 #include <vector>
 
+template<typename TEndSecondaryPass, typename TBeginInlinePass>
+bool EnsureQmVulkanInlinePass(bool Inline, TEndSecondaryPass &&EndSecondaryPass, TBeginInlinePass &&BeginInlinePass)
+{
+	if(Inline)
+		return true;
+	if(!EndSecondaryPass())
+		return false;
+	BeginInlinePass();
+	return true;
+}
+
 // CLEAR/LOAD 共用此依赖；依赖差异也会破坏 render pass 兼容性。
 inline VkSubpassDependency QmVulkanSwapPassDependency()
 {

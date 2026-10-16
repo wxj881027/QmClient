@@ -281,26 +281,7 @@ void CUi::RenderPopupMenus()
 					BorderColor.WithAlpha(BorderColor.a * Alpha),
 					CornerRadius, SPopupMenu::POPUP_BORDER, PopupMenu.m_Props.m_Corners);
 			}
-			// 出场期间内容随壳一起淡出：只读渲染（禁输入）+ alpha 缩放 + 收缩矩形
-			// 裁剪，容器与内容作为整体退场（onetake Carry），消除「内容瞬消、只剩
-			// 空壳收缩」的关闭观感。pfnFunc 可重入弹层栈，先拷贝本帧所需值，
-			// 调用后不再触碰 PopupMenu 引用。
-			if(PopupMenu.m_pfnFunc != nullptr && Alpha > 0.01f)
-			{
-				const SPopupMenuId *pClosingId = pId;
-				const auto ClosingFunc = PopupMenu.m_pfnFunc;
-				void *pClosingContext = PopupMenu.m_pContext;
-				const float ClosingInset = PopupMenu.m_Props.m_ContentInset >= 0.0f ? PopupMenu.m_Props.m_ContentInset : SPopupMenu::POPUP_BORDER + SPopupMenu::POPUP_MARGIN;
-				CUIRect ClosingContent = PopupMenu.m_Rect;
-				ClosingContent.Margin(ClosingInset, &ClosingContent);
-				CUiScopedBackgroundRender ClosingRender(this, true);
-				CUiScopedControlAlphaScale ClosingAlpha(this, Alpha);
-				ClipEnable(&ShrinkRect);
-				m_pRenderingPopupId = pClosingId;
-				ClosingFunc(pClosingContext, ClosingContent, false);
-				m_pRenderingPopupId = nullptr;
-				ClipDisable();
-			}
+			// 逻辑关闭后调用方可以立即重置或释放上下文；退场只绘制弹层外壳，不能再次调用内容回调。
 			if(Alpha <= 0.001f)
 			{
 				m_vPopupMenus.erase(m_vPopupMenus.begin() + i);

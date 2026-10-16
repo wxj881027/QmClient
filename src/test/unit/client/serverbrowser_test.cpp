@@ -41,15 +41,67 @@ TEST(ServerBrowserColumnLayout, FixedColumnsStayAbsoluteAndNameAbsorbsLeftover)
 	EXPECT_FLOAT_EQ(Exact.m_Scale, 1.0f);
 	EXPECT_FLOAT_EQ(Exact.m_NameWidth, 120.0f);
 
-	// 溢出：整体等比收缩，名称列不 below min。
+	// 溢出：名称和固定列共同收缩，显示宽允许小于配置下限。
 	const SQmBrowserColumnLayout Overflow = QmBrowserColumnLayout(250.0f, 380.0f, 120.0f);
 	EXPECT_NEAR(Overflow.m_Scale, 250.0f / 500.0f, 0.0001f);
 	EXPECT_FLOAT_EQ(Overflow.m_NameWidth, 60.0f);
 
-	// 收缩后逐列钳制下限：min 生效，配置宽随比例收缩。
-	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 44.0f, 0.5f), 50.0f);
-	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 80.0f, 0.5f), 80.0f);
-	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 44.0f, 1.0f), 100.0f);
+	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 0.5f), 50.0f);
+	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 1.0f), 100.0f);
+}
+
+TEST(ServerBrowserColumnLayout, NarrowViewportKeepsAllDefaultColumnsInsideBudget)
+{
+	const float aWidths[] = {14, 20, 28, 120, 80, 68, 14, 40, 24, 30};
+	for(float Available : {0.0f, 80.0f, 250.0f, 400.0f, 558.0f, 900.0f})
+	{
+		SCOPED_TRACE(Available);
+		const auto Layout = QmBrowserColumnLayout(Available, 438.0f, 120.0f);
+		float RightEdge = Layout.m_NameWidth;
+		for(float Width : aWidths)
+			RightEdge += QmBrowserColumnSqueezedWidth(Width, Layout.m_Scale);
+		EXPECT_NEAR(RightEdge, Available, 0.001f);
+	}
+}
+
+TEST(ServerBrowserColumnLayout, EnlargedMapColumnStillFitsNarrowViewport)
+{
+	const float aWidths[] = {14, 20, 28, 800, 80, 68, 14, 40, 24, 30};
+	const auto Layout = QmBrowserColumnLayout(400.0f, 1118.0f, 120.0f);
+	float RightEdge = Layout.m_NameWidth;
+	for(float Width : aWidths)
+		RightEdge += QmBrowserColumnSqueezedWidth(Width, Layout.m_Scale);
+	EXPECT_NEAR(RightEdge, 400.0f, 0.001f);
+}
+
+TEST(ServerBrowserHeaderGesture, ResizeEdgeWinsOverOverlappingHeaderUntilRelease)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, 3);
+	EXPECT_EQ(Gesture.ResizeColumn(), 3);
+	EXPECT_EQ(Gesture.ReorderColumn(), -1);
+	Gesture.Begin(5, -1);
+	EXPECT_EQ(Gesture.ResizeColumn(), 3);
+	EXPECT_EQ(Gesture.ReorderColumn(), -1);
+	Gesture.End();
+	Gesture.Begin(5, -1);
+	EXPECT_EQ(Gesture.ReorderColumn(), 5);
+	EXPECT_EQ(Gesture.ResizeColumn(), -1);
+}
+
+TEST(ServerBrowserHeaderGesture, HeaderDragCannotBecomeResizeWhenCrossingEdge)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, -1);
+	Gesture.Begin(5, 4);
+	EXPECT_EQ(Gesture.ReorderColumn(), 4);
+	EXPECT_EQ(Gesture.ResizeColumn(), -1);
+	Gesture.End();
+	EXPECT_EQ(Gesture.ReorderColumn(), -1);
+	EXPECT_EQ(Gesture.ResizeColumn(), -1);
+	Gesture.Begin(5, 4);
+	EXPECT_EQ(Gesture.ResizeColumn(), 4);
+	EXPECT_EQ(Gesture.ReorderColumn(), -1);
 }
 
 namespace

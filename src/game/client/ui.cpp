@@ -1559,7 +1559,10 @@ bool CUi::DrawCachedQmIconLabel(const CUIRect &Rect, const char *pText, float Si
 		return false;
 	const vec2 Pos = CalcAlignedCursorPos(&Rect, pLabel->m_Size, Align, &pLabel->m_BiggestCharacterHeight);
 	const EQmIcon Icon = Count == 1 ? CQmIconRegistry::IconFromGlyph(pText) : EQmIcon::COUNT;
-	const ColorRGBA Color = ConfiguredQmUiIconColor(TextRender()->GetTextColor(), Icon);
+	// 连接质量图标的颜色由调用方按"档位/全局/自定义"三模式算好，经
+	// TextRender 当前色传入；这里不能再套全局图标色，否则档位色与自定义色
+	// 被覆盖（用户实测自定义不生效、弱档恒白）。
+	const ColorRGBA Color = QmSignalIconFamily(Icon) ? TextRender()->GetTextColor() : ConfiguredQmUiIconColor(TextRender()->GetTextColor(), Icon);
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	FlushQuadBatch();
 	TextRender()->RenderTextContainer(pLabel->m_Container, Color, ConfiguredQmUiIconContrastColor(Color), Pos.x, Pos.y);
@@ -1608,7 +1611,8 @@ CLabelResult CUi::DoLabel(const CUIRect *pRect, const char *pText, float Size, i
 	if(Icons.m_Count > 0 && !MeasurementOnly())
 	{
 		const EQmIcon Icon = Icons.m_Count == 1 ? Icons.m_aIcons[0] : EQmIcon::COUNT;
-		const ColorRGBA IconColor = ConfiguredQmUiIconColor(TextRender()->GetTextColor(), Icon);
+		// 信号家族颜色由调用方决定（经 TextRender 当前色），不叠加全局图标色。
+		const ColorRGBA IconColor = QmSignalIconFamily(Icon) ? TextRender()->GetTextColor() : ConfiguredQmUiIconColor(TextRender()->GetTextColor(), Icon);
 		const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 		QmRenderImmediateFontIcon(*TextRender(), &Cursor, pText, -1, IconColor, ConfiguredQmUiIconContrastColor(IconColor));
 		CQmIconDrawDiagnostics::Record(Icons.m_Count);
@@ -1672,9 +1676,11 @@ void CUi::RenderLabelTextContainerAligned(const CUIElement::SUIElementRect &Rect
 	// 父层显隐系数（ControlAlphaScale）在此一并生效：列表行淡入、弹窗内容
 	// 淡出等层级行为对 streamed 标签与裸 TextRender 文字一视同仁。
 	const EQmIcon Icon = RectEl.m_NumQmIcons == 1 ? RectEl.m_aQmIcons[0] : EQmIcon::COUNT;
-	const ColorRGBA Color = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconColor(RectEl.m_TextColor, Icon) : RectEl.m_TextColor);
+	// 信号家族颜色由调用方决定（RectEl.m_TextColor 即调用方算好的最终色），
+	// 不叠加全局图标色；对比色也直接跟随，避免弱档琥珀被解析成黑描边。
+	const ColorRGBA Color = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 && !QmSignalIconFamily(Icon) ? ConfiguredQmUiIconColor(RectEl.m_TextColor, Icon) : RectEl.m_TextColor);
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
-	const ColorRGBA OutlineColor = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor);
+	const ColorRGBA OutlineColor = ScaleControlAlpha(RectEl.m_NumQmIcons > 0 && !QmSignalIconFamily(Icon) ? ConfiguredQmUiIconContrastColor(Color) : RectEl.m_TextOutlineColor);
 	TextRender()->RenderTextContainer(RectEl.m_UITextContainer, Color, OutlineColor, CursorPos.x, CursorPos.y);
 	CQmIconDrawDiagnostics::Record(RectEl.m_NumQmIcons);
 }
@@ -2280,12 +2286,17 @@ bool CUi::DrawQmIcon(const CUIRect &Rect, EQmIcon Icon, const char *pFallbackIco
 	const ColorRGBA PreviousColor = pTextRender->GetTextColor();
 	const unsigned PreviousFlags = pTextRender->GetRenderFlags();
 	const EFontPreset PreviousPreset = pTextRender->GetFontPreset();
-	pTextRender->TextColor(ConfiguredQmUiIconColor(Color, Icon));
+	// 连接质量图标的颜色由调用方按"档位/全局/自定义"三模式算好传入
+	//（ConfiguredQmSignalIconColor），这里不再叠加全局图标色，否则档位色
+	// 与自定义色会被内部策略覆盖回全局色（用户实测自定义不生效）。
+	pTextRender->TextColor(QmSignalIconFamily(Icon) ? Color : ConfiguredQmUiIconColor(Color, Icon));
 	const CQmIconSemanticColorScope SemanticColorScope(QmUiIconHasSemanticColor(Icon));
 	// 实心态切换 Fill 字面渲染同一码位；字形文本与度量不变，缓存按预设自然隔离。
 	pTextRender->SetFontPreset(QmUiIconFilledStyle(Icon) ? EFontPreset::ICON_FONT_FILL : EFontPreset::ICON_FONT);
 	pTextRender->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
-	DoLabel(&Rect, pFallbackIcon, QmIconFontSize(Rect), TEXTALIGN_MC);
+	// 信号柱家族按 bbox 占比补足字号，四档可视尺寸趋近常规图标；其余图标走通用字号。
+	const float FontSize = QmSignalIconFamily(Icon) ? QmSignalIconFontSize(Rect, Icon) : QmIconFontSize(Rect);
+	DoLabel(&Rect, pFallbackIcon, FontSize, TEXTALIGN_MC);
 	pTextRender->SetRenderFlags(PreviousFlags);
 	pTextRender->SetFontPreset(PreviousPreset);
 	pTextRender->TextColor(PreviousColor);

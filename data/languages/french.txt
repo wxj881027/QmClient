@@ -2630,6 +2630,12 @@ Connection disconnected
 Connection elevated
 == Connexion légèrement anormale
 
+Connection icon color
+== Couleur de l'icône de connexion
+
+Connection icon custom color
+== Couleur personnalisée de l'icône de connexion
+
 Connection normal
 == Connexion normale
 
@@ -3046,6 +3052,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== Personnaliser la distance par cran de molette. Maintenir Alt pour un pas 3 fois plus grand
 
 Customize translate button and menu colors
 == Personnaliser les couleurs du bouton de traduction et du menu
@@ -3716,6 +3725,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == Faites glisser cet ami vers une autre catégorie pour le déplacer.
 
+Drag to pan, scroll to zoom
+== Glisser pour déplacer, molette pour zoomer
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == Faites glisser pour réorganiser ; cliquez pour développer ou réduire. Faites un clic droit ou utilisez l'engrenage pour gérer les catégories
 
@@ -3955,6 +3967,12 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == Couleur de l'arrière-plan du Dynamic Island
+
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== Couleur de l'icône de connexion de l'îlot : 1=selon la qualité réseau, 2=comme la couleur des icônes de l'interface, 3=personnalisée
+
+Dynamic island connection icon custom color
+== Couleur personnalisée de l'icône de connexion de l'îlot
 
 Ease in out quad
 == Ease in-out quad
@@ -4987,6 +5005,9 @@ Follow server
 
 Follow Tee
 == Suivre le Tee
+
+Follow UI icon color
+== Comme la couleur des icônes de l'interface
 
 Following
 == Suivi
@@ -6200,6 +6221,9 @@ Initializing components
 Initializing layers
 == Initialisation des calques
 
+Initializing map layers
+== Initialisation des couches de la carte
+
 Initializing map logic
 == Initialisation de la logique de la carte
 
@@ -7193,8 +7217,14 @@ Map folders
 Map name
 == Nom de la carte
 
+Map not downloaded yet — join the server to preview it
+== Carte non téléchargée. Rejoignez le serveur pour la prévisualiser
+
 Map play history
 == Historique de jeu des cartes
+
+Map preview rendering unavailable
+== Rendu de l’aperçu de la carte indisponible
 
 Map Preview TODO
 == Aperçu de la carte à faire
@@ -8591,6 +8621,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == Langue du message original
 
+Original scroll feel
+== Défilement d’origine
+
 Other
 == Autre
 
@@ -9644,6 +9677,9 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Les quads sont utilisés pour la décoration de fond
 
+Quality tier
+== Selon la qualité du réseau
+
 Query current map info
 == Consulter les informations de la carte actuelle
 
@@ -10538,6 +10574,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == Restaurer l'ancien comportement de la ligne de collision de crochet à segment unique
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== Rétablir le défilement d’origine : chaque cran relance le défilement fluide sans conserver la vitesse
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== Rétablir le défilement d’origine : chaque cran relance le défilement fluide sans conserver la vitesse
+
 Restoring save %d: main '%s', dummy '%s'.
 == Restauration de la sauvegarde %d : principal '%s', dummy '%s'.
 
@@ -10958,6 +11000,9 @@ Scroll mode: Off
 Scroll mode: On
 == Mode défilement : activé
 
+Scroll step
+== Pas de défilement
+
 Search
 == Rechercher
 
@@ -11173,6 +11218,9 @@ Server alert
 
 Server best:
 == Meilleur du serveur :
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== Ordre des colonnes du navigateur de serveurs (identifiants séparés par des virgules : community,name,map,difficulty,gametype,friends,players,qm,ping ; vide = par défaut)
 
 Server browser exclude string
 == Chaîne d'exclusion du navigateur de serveurs
@@ -11638,6 +11686,9 @@ Show enemy reason
 
 Show entities
 == Afficher les entités
+
+Show entities only (hide textures)
+== Afficher uniquement les entités (masquer les textures)
 
 Show existing saves
 == Afficher les sauvegardes existantes
@@ -12152,8 +12203,8 @@ Show server settings
 Show settings card borders
 == Afficher les bordures des cartes de paramètres
 
-Show short server names in browser
-== Afficher le nom court du serveur dans le navigateur de serveurs
+Show short server names in browser (applies to China community servers)
+== Afficher le nom court du serveur dans le navigateur de serveurs (pour les serveurs de la communauté chinoise)
 
 Show skin date and author
 == Afficher la date et l'auteur du skin
@@ -13967,6 +14018,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == Basculer la console locale
 
+Toggle map preview
+== Aperçu de la carte
+
 Toggle microphone mute
 == Activer/désactiver le muet du microphone
 
@@ -15194,6 +15248,9 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == Niveau auquel la liaison DDRace est définie (automatique, vous n'avez pas besoin de l'utiliser).
 
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== Pas de molette en pixels d’interface ; les pages de réglages défilent de 12 fois cette valeur par cran
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Quand le Tee arc-en-ciel de TClient est activé, cette fonction n'a aucun effet.
 
@@ -15301,6 +15358,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == La largeur et la hauteur doivent être comprises entre %d et %d.
+
+Width of difficulty column in server browser
+== Largeur de la colonne de difficulté dans le navigateur de serveurs
 
 Width of friends column in server browser
 == Largeur de la colonne des amis dans le navigateur de serveurs

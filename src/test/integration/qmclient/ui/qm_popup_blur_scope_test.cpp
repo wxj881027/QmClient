@@ -402,6 +402,34 @@ TEST_F(QmUiBlurGraphics, SecondaryPanelDefaultAnimationCanRenderExitAfterLogical
 	EXPECT_EQ(m_Graphics.m_Surfaces, CompletedDraws);
 }
 
+TEST_F(QmUiBlurGraphics, LogicalCloseStopsContentCallbacksWhileExitRemainsVisible)
+{
+	CScopedQmFullMotion FullMotion;
+	g_Config.m_QmGaussianBlur = 0;
+	SPopupMenuId Id;
+	int Calls = 0;
+	auto Props = ui_widget::SecondaryPanelProperties();
+	m_Ui.DoPopupMenu(&Id, 0, 0, 160, 100, &Calls, [](void *pContext, CUIRect, bool) {
+		++*static_cast<int *>(pContext);
+		return CUi::POPUP_KEEP_OPEN; }, Props);
+	m_Ui.RenderPopupMenus();
+	for(int Frame = 0; Frame < 20; ++Frame)
+		m_Client.AdvanceFrame();
+	m_Ui.RenderPopupMenus();
+	ASSERT_GT(Calls, 0);
+	const int CallsBeforeClose = Calls;
+	m_Ui.ClosePopupMenu(&Id);
+	ASSERT_FALSE(m_Ui.IsPopupOpen(&Id));
+	ASSERT_TRUE(m_Ui.IsPopupVisible(&Id));
+	for(int Frame = 0; Frame < 20; ++Frame)
+	{
+		m_Client.AdvanceFrame();
+		m_Ui.RenderPopupMenus();
+	}
+	EXPECT_EQ(Calls, CallsBeforeClose);
+	EXPECT_FALSE(m_Ui.IsPopupVisible(&Id));
+}
+
 TEST_F(QmUiBlurGraphics, CenteredAnimatedPanelKeepsContentSizeAcrossEntranceFrames)
 {
 	struct SProbe

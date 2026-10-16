@@ -2630,6 +2630,12 @@ Connection disconnected
 Connection elevated
 == 연결 약간 비정상
 
+Connection icon color
+== 연결 아이콘 색상
+
+Connection icon custom color
+== 연결 아이콘 사용자 지정 색상
+
 Connection normal
 == 연결 정상
 
@@ -3046,6 +3052,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== 휠 한 눈금당 이동 거리를 설정합니다. Alt를 누르고 스크롤하면 간격이 3배가 됩니다
 
 Customize translate button and menu colors
 == 번역 버튼 및 메뉴 색상 사용자 정의
@@ -3716,6 +3725,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == 이 친구를 다른 카테고리로 드래그하여 이동합니다.
 
+Drag to pan, scroll to zoom
+== 드래그하여 이동, 휠로 확대/축소
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == 드래그하여 순서를 바꾸고 클릭하여 펼치거나 접습니다. 마우스 오른쪽 버튼을 클릭하거나 톱니바퀴를 사용하여 카테고리를 관리합니다
 
@@ -3955,6 +3967,12 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == 다이나믹 아일랜드 배경 색상
+
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== 다이내믹 아일랜드 연결 아이콘 색상: 1=품질 단계, 2=UI 아이콘 색상 따르기, 3=사용자 지정
+
+Dynamic island connection icon custom color
+== 다이내믹 아일랜드 연결 아이콘 사용자 지정 색상
 
 Ease in out quad
 == 이즈 인 아웃 쿼드
@@ -4987,6 +5005,9 @@ Follow server
 
 Follow Tee
 == Tee 따라가기
+
+Follow UI icon color
+== UI 아이콘 색상 따르기
 
 Following
 == 현재
@@ -6200,6 +6221,9 @@ Initializing components
 Initializing layers
 == 레이어 초기화 중
 
+Initializing map layers
+== 맵 레이어 초기화 중
+
 Initializing map logic
 == 맵 로직 초기화 중
 
@@ -7193,8 +7217,14 @@ Map folders
 Map name
 == 맵 이름
 
+Map not downloaded yet — join the server to preview it
+== 아직 다운로드하지 않은 맵입니다. 서버에 접속하면 미리 볼 수 있습니다
+
 Map play history
 == 맵 플레이 기록
+
+Map preview rendering unavailable
+== 맵 미리보기를 렌더링할 수 없습니다
 
 Map Preview TODO
 == 맵 미리보기 할 일
@@ -8591,6 +8621,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == 원문 언어
 
+Original scroll feel
+== 기존 스크롤 감각
+
 Other
 == 기타
 
@@ -9644,6 +9677,9 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 배경 장식에 사용되는 쿼드 표시
 
+Quality tier
+== 네트워크 품질 따르기
+
 Query current map info
 == 현재 맵 정보 조회
 
@@ -10538,6 +10574,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == 이전 단일 세그먼트 갈고리 충돌선 동작 복원
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== 기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작
+
 Restoring save %d: main '%s', dummy '%s'.
 == 저장 데이터 %d 복원 중: 본체 '%s', 더미 '%s'.
 
@@ -10958,6 +11000,9 @@ Scroll mode: Off
 Scroll mode: On
 == 스크롤 모드: 켜기
 
+Scroll step
+== 스크롤 간격
+
 Search
 == 검색
 
@@ -11173,6 +11218,9 @@ Server alert
 
 Server best:
 == 서버 최고 기록:
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== 서버 브라우저 열 순서 (쉼표로 구분한 ID: community,name,map,difficulty,gametype,friends,players,qm,ping; 비우면 기본값)
 
 Server browser exclude string
 == 서버 브라우저 제외 문자열
@@ -11638,6 +11686,9 @@ Show enemy reason
 
 Show entities
 == 엔티티 표시
+
+Show entities only (hide textures)
+== 엔티티만 표시 (텍스처 숨김)
 
 Show existing saves
 == 저장된 팀 목록 보기
@@ -12152,8 +12203,8 @@ Show server settings
 Show settings card borders
 == 설정 카드 테두리 표시
 
-Show short server names in browser
-== 서버 브라우저에 짧은 서버 이름 표시
+Show short server names in browser (applies to China community servers)
+== 서버 브라우저에 짧은 서버 이름 표시 (중국 커뮤니티 서버에 적용)
 
 Show skin date and author
 == 스킨 날짜와 제작자 표시
@@ -13967,6 +14018,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == 로컬 콘솔 전환
 
+Toggle map preview
+== 맵 미리보기
+
 Toggle microphone mute
 == 마이크 음소거 전환
 
@@ -15194,6 +15248,9 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 바인딩이 설정된 레벨 (자동이며 사용할 필요 없음)
 
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== 휠 한 눈금당 UI 픽셀 이동량. 설정 카드 페이지는 매 눈금마다 이 값의 12배만큼 이동
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.
 
@@ -15301,6 +15358,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == 너비와 높이는 %d에서 %d 사이여야 합니다.
+
+Width of difficulty column in server browser
+== 서버 브라우저의 난이도 열 너비
 
 Width of friends column in server browser
 == 서버 브라우저에서 친구 열 너비

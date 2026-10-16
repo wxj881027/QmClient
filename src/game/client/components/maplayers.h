@@ -28,6 +28,7 @@ protected:
 	CMapImages *m_pImages;
 	ERenderType m_Type;
 	bool m_OnlineOnly;
+	void RenderWithCamera(const vec2 &Center, float Zoom, std::optional<ERenderType> RenderType = std::nullopt);
 
 public:
 	CMapLayers(ERenderType Type, bool OnlineOnly = true);
@@ -35,9 +36,11 @@ public:
 	void OnInit() override;
 	void OnRender() override;
 	void OnMapLoad() override;
-	bool AdvanceMapLoad();
+	bool AdvanceMapLoad(int MaxLayers = 2);
+	// 离线地图缓存逐出时，必须在图形接口仍存活期间释放图层 GPU 资源。
+	void UnloadMap();
 	void RenderCustom(const vec2 &Center, float Zoom);
-	void RenderCustomWithCamera(const vec2 &Center, float Zoom);
+	void RenderCustomWithCamera(const vec2 &Center, float Zoom, std::optional<ERenderType> RenderType = std::nullopt);
 	void SwapState(CMapLayers &Other);
 
 	virtual CCamera *GetCurCamera();

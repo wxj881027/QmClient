@@ -2822,7 +2822,8 @@ protected:
 		}
 		if(ThreadedCommandsUsedCount > 0)
 			vkCmdExecuteCommands(CommandBuffer, ThreadedCommandsUsedCount, m_vHelperThreadDrawCommandBuffers.data());
-		if(m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex])
+		const bool MainThreadCommandsUsed = m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex];
+		if(MainThreadCommandsUsed)
 		{
 			auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[0][m_CurImageIndex];
 			if(!CheckVulkanResult(vkEndCommandBuffer(GraphicThreadCommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (secondary) failed."))
@@ -2830,6 +2831,10 @@ protected:
 			vkCmdExecuteCommands(CommandBuffer, 1, &GraphicThreadCommandBuffer);
 			m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex] = false;
 		}
+		// vkCmdExecuteCommands 后 primary 的绑定状态未定义；即使只有工作线程
+		// 提交了 secondary，也必须让后续离屏绘制重新绑定全部资源和动态状态。
+		if(ThreadedCommandsUsedCount > 0 || MainThreadCommandsUsed)
+			ResetDrawCommandState(0);
 		return true;
 	}
 

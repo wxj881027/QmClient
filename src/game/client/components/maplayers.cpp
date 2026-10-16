@@ -92,11 +92,11 @@ void CMapLayers::OnRender()
 	m_MapRenderer.Render(m_Params);
 }
 
-bool CMapLayers::AdvanceMapLoad()
+bool CMapLayers::AdvanceMapLoad(int MaxLayers)
 {
 	if(!m_MapLoaded && m_MapLoadInProgress)
 	{
-		m_MapRenderer.LoadStep(2);
+		m_MapRenderer.LoadStep(MaxLayers);
 		if(m_MapRenderer.IsLoadFinished())
 		{
 			m_MapLoadInProgress = false;
@@ -104,6 +104,13 @@ bool CMapLayers::AdvanceMapLoad()
 		}
 	}
 	return m_MapLoaded;
+}
+
+void CMapLayers::UnloadMap()
+{
+	m_MapRenderer.Clear();
+	m_MapLoaded = false;
+	m_MapLoadInProgress = false;
 }
 
 void CMapLayers::RenderCustom(const vec2 &Center, float Zoom)
@@ -115,16 +122,23 @@ void CMapLayers::RenderCustom(const vec2 &Center, float Zoom)
 	RenderCustomWithCamera(Center, Zoom);
 }
 
-void CMapLayers::RenderCustomWithCamera(const vec2 &Center, float Zoom)
+void CMapLayers::RenderCustomWithCamera(const vec2 &Center, float Zoom, std::optional<ERenderType> RenderType)
 {
 	if(m_OnlineOnly && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
+	RenderWithCamera(Center, Zoom, RenderType);
+}
+
+void CMapLayers::RenderWithCamera(const vec2 &Center, float Zoom, std::optional<ERenderType> RenderType)
+{
 	if(!m_MapLoaded)
 		return;
 
+	const int PreviousType = m_Params.m_RenderType;
+	m_Params.m_RenderType = RenderType.value_or(m_Type);
 	m_Params.m_EntityOverlayVal = m_EntityOverlayValOverride >= 0 ?
-						      m_EntityOverlayValOverride :
-						      (m_Type == RENDERTYPE_FULL_DESIGN ? 0 : g_Config.m_ClOverlayEntities);
+					      m_EntityOverlayValOverride :
+					      (m_Type == RENDERTYPE_FULL_DESIGN ? 0 : g_Config.m_ClOverlayEntities);
 	m_Params.m_Center = Center;
 	m_Params.m_Zoom = Zoom;
 	m_Params.m_RenderText = g_Config.m_ClTextEntities;
@@ -134,6 +148,7 @@ void CMapLayers::RenderCustomWithCamera(const vec2 &Center, float Zoom)
 	m_Params.m_DebugRenderTileClips = g_Config.m_DbgRenderTileClips;
 
 	m_MapRenderer.Render(m_Params);
+	m_Params.m_RenderType = PreviousType;
 }
 
 void CMapLayers::SwapState(CMapLayers &Other)

@@ -62,6 +62,10 @@ struct SHudSwitchCountdownTracker
 };
 constexpr float QmHudMediaIslandDesignScale = 0.7f;
 
+// 灵动岛基础胶囊高度（设计单位，未乘 DesignScale）。
+// hud.cpp 两处 BaseIslandHeight 与状态区图标垂直居中共用此值。
+constexpr float QmHudMediaIslandBaseHeight = 16.0f;
+
 constexpr float QmHudMediaIslandScaled(float Value)
 {
 	return Value * QmHudMediaIslandDesignScale;
@@ -156,6 +160,42 @@ inline SHudRecordingPresentation QmHudRecordingPresentation(bool Recording, bool
 {
 	const bool ShowRecordingText = Recording && ScoreboardExpanded;
 	return {(LocalTime || FrozenSummary) && !ShowRecordingText, ShowRecordingText};
+}
+
+// 连接质量图标（数据流量语义）在灵动岛状态区的常驻占位几何。
+// 图标语义对齐系统状态栏：只要状态区存在（信息栈或录制文本任一渲染路径），
+// 图标占位就存在；信息栈文本出现时排在图标右侧。三处布局
+// （RenderMediaIsland / GetTopIslandAvoidanceRight / 原版风格计时器状态区）
+// 与两处渲染必须共用本几何，避免占位宽度不同源。
+struct SHudConnectionSignalSlot
+{
+	float m_Size;
+	float m_Inset; // 图标左缘相对状态区内容起点的额外留白。
+	float m_Width; // 状态区布局中图标占位的总宽度（含右侧间隙）。
+};
+
+inline SHudConnectionSignalSlot QmHudConnectionSignalSlot()
+{
+	// 图标与信息栈文本字号解绑：文本在单行/双行间变化，信号图标按
+	// 胶囊高度取固定比例（0.7 倍胶囊高），保证放大后的最高档墨迹
+	// （1.5×0.5625=0.844 方框字号）完整落在占位方框内，与计时器数字
+	// 保持可读的大小关系。原 8.4（半高）经用户反馈偏小。
+	constexpr float Size = QmHudMediaIslandScaled(11.2f);
+	return {Size, 0.0f, Size + QmHudMediaIslandScaled(1.6f)};
+}
+
+// 信号图标的绘制 y：占位方框在胶囊内垂直居中（状态区文本同样按胶囊
+// 中心排版，图标与文本共用一条视觉中线）。文字引擎的 TEXTALIGN_MC
+// 按字形实高在方框内居中，方框中心即视觉中心，四档天然对称、
+// 不需要基线补偿。
+// Tier 参数保留（0=NONE 1=LOW 2=MEDIUM 3=HIGH），当前所有档位共用居中位置。
+inline float QmHudConnectionSignalIconY(float BoxY, float BoxSize, int Tier)
+{
+	(void)Tier;
+	// 调用方传入 BoxY=IslandY（胶囊顶），方框高 BoxSize < 胶囊高时
+	// 下移 (胶囊高-方框高)/2 使其居中；胶囊高与 hud.cpp BaseIslandHeight 同源。
+	const float IslandHeight = QmHudMediaIslandScaled(QmHudMediaIslandBaseHeight);
+	return BoxY + std::max(0.0f, (IslandHeight - BoxSize) * 0.5f);
 }
 
 // 两处录制红点共用 2.4 秒呼吸周期，透明度保持在 65%～95%，不影响布局和显隐条件。

@@ -490,12 +490,11 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Draw(const CComma
 	SRenderTarget &Target = m_vRenderTargets[pCommand->m_TargetId];
 	if(Target.m_Image == VK_NULL_HANDLE || Target.m_aVKStandardTexturedDescrSets[0].m_Descriptor == VK_NULL_HANDLE)
 		return true;
-	FinishRenderThreads();
-	if(m_HasError)
+	// 合成直接录入 primary，必须先结束 secondary 通道。仅执行已录制的
+	// secondary 会让后续菜单复用并重置它们，连带丢失此前的列表和弹层内容。
+	if(!EnsureQmVulkanInlinePass(m_ThreadCount < 2 || m_ForceSingleThreadedRender, [this]() { return EndSwapRenderPassForExternalWork(); }, [this]() { BeginSwapRenderPass(m_VKRenderPassLoad); }))
 		return false;
 	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	if(!ExecutePendingRenderThreadCommandBuffers(CommandBuffer))
-		return false;
 	if(Target.m_Layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 	{
 		if(!ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))

@@ -31,6 +31,7 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
+#include <game/client/components/qmclient/browser_map_preview_loader.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/dummy_mini_view_layout.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
@@ -343,19 +344,49 @@ static ColorRGBA GetServerListPingColor(const CServerInfo *pInfo, int OwnLocatio
 
 // ================= 地图预览（二级面板） =================
 // 地图列图标的富内容二级面板（字体商店同款：大面板 + 标题行 + 关闭 X）：
-// 本地已缓存 .map 的离屏渲染（未缓存绝不联网）。整图在图层初始化完成后
-// **一次性**渲染进纹理（贴图 / 实体各一张，按需），缩放与平移全部通过
-// DrawRenderTarget 的 UV 子区域完成——打开期间零重复渲染，性能不受地图
-// 复杂度影响。支持滚轮缩放与拖拽平移，可一键切换「只看实体层」。
+// 本地已缓存 .map 的离屏渲染（未缓存绝不联网）。相机或图层模式变化时
+// 重绘纹理，静止时复用；放大直接绘制地图细节，不采样整图缩略图。
 namespace
 {
-	constexpr int MAP_PREVIEW_TEXTURE_WIDTH = 1024;
 	constexpr size_t MAP_PREVIEW_CACHE_CAPACITY = 3;
 	// LRU 逐出前的最小驻留时长：刚用过的条目即使超出容量也先保留一拍。
 	constexpr float MAP_PREVIEW_LRU_MIN_AGE = 0.4f;
-	constexpr float MAP_PREVIEW_ZOOM_MAX = 8.0f;
 	// 失败条目的重查间隔：浏览器停留期间地图下载完成后，占位应自行换成预览。
 	constexpr float MAP_PREVIEW_FAILED_RETRY_DELAY = 2.0f;
+
+	// 地图贴图属于缓存项；实体和数字图集复用客户端资源，避免预览重复加载、
+	// 丢失玩家实体包配置，或逐出地图后遗留实体纹理。
+	class CMapPreviewImages : public CMapImages
+	{
+		std::vector<IGraphics::CTextureHandle> m_vTextures;
+		CMapImages &m_Shared;
+
+	public:
+		explicit CMapPreviewImages(CMapImages &Shared) : m_Shared(Shared) {}
+		IGraphics::CTextureHandle Get(int Index) const override { return m_vTextures[Index]; }
+		int Num() const override { return m_vTextures.size(); }
+		void Resize(int Count) { m_vTextures.resize(Count); }
+		void Upload(int Index, const CImageInfo &Image, int Usage)
+		{
+			if(Image.m_pData == nullptr)
+				return;
+			const int ArrayFlag = Graphics()->Uses2DTextureArrays() ? IGraphics::TEXLOAD_TO_2D_ARRAY_TEXTURE : IGraphics::TEXLOAD_TO_3D_TEXTURE;
+			const int Flags = ((Usage & 1) ? ArrayFlag : 0) | ((Usage & 2) ? 0 : (Graphics()->HasTextureArraysSupport() ? IGraphics::TEXLOAD_NO_2D_TEXTURE : 0));
+			m_vTextures[Index] = Graphics()->LoadTextureRaw(Image, Flags, "browser-map-preview");
+		}
+		void UnloadPreview()
+		{
+			for(auto &Texture : m_vTextures)
+				Graphics()->UnloadTexture(&Texture);
+			m_vTextures.clear();
+		}
+		IGraphics::CTextureHandle GetEntities(EMapImageEntityLayerType Type) override { return m_Shared.GetEntities(Type); }
+		IGraphics::CTextureHandle GetSpeedupArrow() override { return m_Shared.GetSpeedupArrow(); }
+		IGraphics::CTextureHandle GetTuneColors() override { return m_Shared.GetTuneColors(); }
+		IGraphics::CTextureHandle GetOverlayBottom() override { return m_Shared.GetOverlayBottom(); }
+		IGraphics::CTextureHandle GetOverlayTop() override { return m_Shared.GetOverlayTop(); }
+		IGraphics::CTextureHandle GetOverlayCenter() override { return m_Shared.GetOverlayCenter(); }
+	};
 
 	// 离线渲染器（OnlineOnly=false）：菜单内直接 RenderCustomWithCamera，
 	// 图层 GPU 资源由 OnMapLoad 开始分帧初始化，面板首帧渲染前推进完毕。
@@ -379,15 +410,22 @@ namespace
 	struct SQmMapPreviewEntry
 	{
 		char m_aMapName[MAX_MAP_LENGTH] = {0};
-		std::unique_ptr<CMenuMap> m_pMap;
+		std::unique_ptr<CMap> m_pMap;
 		std::unique_ptr<CLayers> m_pLayers;
-		std::unique_ptr<CMapImages> m_pImages;
+		std::unique_ptr<CMapPreviewImages> m_pImages;
+		std::shared_ptr<CQmBrowserMapPreviewLoadJob> m_pLoadJob;
+		int m_UploadIndex = 0;
 		std::unique_ptr<CMapPreviewLayers> m_pRenderer;
 		IGraphics::CRenderTargetHandle m_RenderTarget;
-		IGraphics::CRenderTargetHandle m_EntityRenderTarget;
-		// 一次性渲染门闩：图层初始化完成后的下一帧渲染整图，此后只采样纹理。
-		bool m_NeedsFullRender = true;
-		bool m_NeedsEntityRender = true;
+		bool m_NeedsRender = true;
+		vec2 m_RenderedCenter{};
+		float m_RenderedZoom = 0.0f;
+		bool m_RenderedEntities = false;
+		unsigned m_RenderedBackgroundColor = 0;
+		char m_aRenderedBackground[IO_MAX_PATH_LENGTH] = {};
+		int m_TargetHeight = 0;
+		int m_TargetWidth = 0;
+		std::optional<vec2> m_Start;
 		uint32_t m_GraphicsResetVersion = 0;
 		vec2 m_WorldSize = vec2(32.0f * 64, 32.0f * 64);
 		// 本地没有对应 .map 或解析失败；占位提示不区分这两种情况。
@@ -396,69 +434,6 @@ namespace
 		float m_RetryAfterTime = 0.0f;
 	};
 
-	// downloadedmaps 前缀枚举回调：挑出 <名>_<sha256|crc>.map 中修改时间最新的一个。
-	struct SMapDownloadProbeContext
-	{
-		const char *m_pPrefix;
-		char m_aBest[IO_MAX_PATH_LENGTH];
-		time_t m_BestTime;
-	};
-
-	static int ProbeDownloadedMap(const CFsFileInfo *pInfo, int IsDir, int DirType, void *pUser)
-	{
-		SMapDownloadProbeContext *pProbe = static_cast<SMapDownloadProbeContext *>(pUser);
-		if(IsDir || pInfo->m_TimeModified <= pProbe->m_BestTime)
-			return 0;
-		const int PrefixLen = str_length(pProbe->m_pPrefix);
-		const int NameLen = str_length(pInfo->m_pName);
-		// 严格 <前缀>_<哈希>.map：前缀后必须紧跟 '_'，防止 "Sunny" 误配 "SunnyLand_…"。
-		if(NameLen < PrefixLen + 2 || str_startswith(pInfo->m_pName, pProbe->m_pPrefix) == nullptr || pInfo->m_pName[PrefixLen] != '_')
-			return 0;
-		if(str_comp(pInfo->m_pName + NameLen - 4, ".map") != 0)
-			return 0;
-		pProbe->m_BestTime = pInfo->m_TimeModified;
-		str_format(pProbe->m_aBest, sizeof(pProbe->m_aBest), "downloadedmaps/%s", pInfo->m_pName);
-		return 0;
-	}
-
-	// 与 CClient::LoadMapSearch 的本地解析同序（绝不联网）：
-	// 1) 客户端刚加载过的地图直接用真实路径（哈希命名也能精确命中）；
-	// 2) maps/<名>.map 精确命中；3) maps/ 子目录搜索；
-	// 4) downloadedmaps/<名>_<sha256|crc>.map 前缀枚举，取修改时间最新。
-	static bool ResolveLocalPreviewMapPath(IStorage *pStorage, IClient *pClient, const char *pMapName, char *pOut, size_t OutSize)
-	{
-		if(pClient != nullptr && pClient->GetCurrentMapPath()[0] != '\0' && str_comp(pClient->GetCurrentMap(), pMapName) == 0)
-		{
-			str_copy(pOut, pClient->GetCurrentMapPath(), OutSize);
-			if(pStorage->FileExists(pOut, IStorage::TYPE_ALL))
-				return true;
-		}
-
-		char aMapPath[IO_MAX_PATH_LENGTH];
-		str_format(aMapPath, sizeof(aMapPath), "maps/%s.map", pMapName);
-		if(pStorage->FileExists(aMapPath, IStorage::TYPE_ALL))
-		{
-			str_copy(pOut, aMapPath, OutSize);
-			return true;
-		}
-
-		char aLeaf[IO_MAX_PATH_LENGTH];
-		str_format(aLeaf, sizeof(aLeaf), "%s.map", pMapName);
-		if(pStorage->FindFile(aLeaf, "maps", IStorage::TYPE_ALL, pOut, OutSize))
-			return true;
-
-		SMapDownloadProbeContext Probe;
-		Probe.m_pPrefix = pMapName;
-		Probe.m_aBest[0] = '\0';
-		Probe.m_BestTime = 0;
-		pStorage->ListDirectoryInfo(IStorage::TYPE_ALL, "downloadedmaps", ProbeDownloadedMap, &Probe);
-		if(Probe.m_aBest[0] != '\0')
-		{
-			str_copy(pOut, Probe.m_aBest, OutSize);
-			return true;
-		}
-		return false;
-	}
 }
 
 // 预览地图加载缓存（LRU）。作为 CMenus 成员析构，保证 GPU 资源在图形
@@ -487,6 +462,15 @@ public:
 			if(str_comp((*It)->m_aMapName, pMapName) == 0)
 			{
 				(*It)->m_LastUseTime = NowTime;
+				if((*It)->m_GraphicsResetVersion != m_pGraphics->GraphicsResourcesResetVersion())
+				{
+					ReleaseEntry(**It, m_pGraphics->GraphicsResourcesResetVersion());
+					**It = SQmMapPreviewEntry{};
+					str_copy((*It)->m_aMapName, pMapName);
+					(*It)->m_LastUseTime = NowTime;
+					(*It)->m_GraphicsResetVersion = m_pGraphics->GraphicsResourcesResetVersion();
+					LoadEntry(**It, pStorage, pGameClient);
+				}
 				// 失败条目间隔重查：下载完成前打开过弹窗的图，下载完成后应直接出预览。
 				if((*It)->m_LoadFailed && NowTime >= (*It)->m_RetryAfterTime)
 				{
@@ -540,17 +524,14 @@ private:
 			else
 				Entry.m_RenderTarget.Invalidate();
 		}
-		if(Entry.m_EntityRenderTarget.IsValid())
-		{
-			if(HandleAlive)
-				m_pGraphics->DestroyRenderTarget(&Entry.m_EntityRenderTarget);
-			else
-				Entry.m_EntityRenderTarget.Invalidate();
-		}
+		if(Entry.m_pLoadJob)
+			Entry.m_pLoadJob->m_Cancelled.store(true);
 		if(HandleAlive)
 		{
+			if(Entry.m_pRenderer != nullptr)
+				Entry.m_pRenderer->UnloadMap();
 			if(Entry.m_pImages != nullptr)
-				Entry.m_pImages->Unload();
+				Entry.m_pImages->UnloadPreview();
 			if(Entry.m_pMap != nullptr)
 				Entry.m_pMap->Unload();
 		}
@@ -558,28 +539,45 @@ private:
 
 	static void LoadEntry(SQmMapPreviewEntry &Entry, IStorage *pStorage, CGameClient *pGameClient)
 	{
-		char aMapPath[IO_MAX_PATH_LENGTH];
-		// 与 CClient::LoadMapSearch 同序的本地解析；下载的地图落盘在
-		// downloadedmaps/<名>_<哈希>.map，只查 maps/ 会永远显示未缓存。
-		if(!ResolveLocalPreviewMapPath(pStorage, pGameClient->Client(), Entry.m_aMapName, aMapPath, sizeof(aMapPath)))
+		Entry.m_pLoadJob = std::make_shared<CQmBrowserMapPreviewLoadJob>(pStorage, Entry.m_aMapName, str_comp(pGameClient->Client()->GetCurrentMap(), Entry.m_aMapName) == 0 ? pGameClient->Client()->GetCurrentMapPath() : "", pGameClient->Client()->IsSixup());
+		pGameClient->Engine()->AddJob(Entry.m_pLoadJob);
+		Entry.m_UploadIndex = 0;
+	}
+
+public:
+	static bool AdvanceEntry(SQmMapPreviewEntry &Entry, CGameClient *pGameClient, float Now)
+	{
+		if(!Entry.m_pLoadJob)
+			return Entry.m_pRenderer != nullptr;
+		auto &Job = *Entry.m_pLoadJob;
+		if(Job.State() != IJob::STATE_DONE)
+			return false;
+		if(!Job.m_Success)
 		{
 			Entry.m_LoadFailed = true;
-			return;
+			Entry.m_RetryAfterTime = Now + MAP_PREVIEW_FAILED_RETRY_DELAY;
+			Entry.m_pLoadJob.reset();
+			return false;
 		}
-
-		Entry.m_pMap = std::make_unique<CMenuMap>(pStorage);
-		if(!Entry.m_pMap->Load(aMapPath, IStorage::TYPE_ALL))
+		if(!Entry.m_pImages)
 		{
-			Entry.m_LoadFailed = true;
-			Entry.m_pMap.reset();
-			return;
+			Entry.m_pImages = std::make_unique<CMapPreviewImages>(pGameClient->m_MapImages);
+			Entry.m_pImages->OnInterfacesInit(pGameClient);
+			Entry.m_pImages->Resize(Job.m_vImages.size());
 		}
-
-		Entry.m_pLayers = std::make_unique<CLayers>();
-		Entry.m_pLayers->Init(Entry.m_pMap.get(), true);
-		Entry.m_pImages = std::make_unique<CMapImages>();
-		Entry.m_pImages->OnInterfacesInit(pGameClient);
-		Entry.m_pImages->LoadBackground(Entry.m_pLayers.get(), Entry.m_pMap.get());
+		// 一帧最多上传一张贴图，不让高分辨率纹理集中复制并挤满图形命令缓冲。
+		if(Entry.m_UploadIndex < static_cast<int>(Job.m_vImages.size()))
+		{
+			const CPerfTimer Timer(QmPerfEnabled());
+			const int Index = Entry.m_UploadIndex++;
+			Entry.m_pImages->Upload(Index, Job.m_vImages[Index], Job.m_vUsage[Index]);
+			Job.m_vImages[Index].Free();
+			QmPerfLogStage("perf/map_preview", "upload", Timer.ElapsedMs(), false, pGameClient->Client());
+			return false;
+		}
+		Entry.m_pMap = std::move(Job.m_pMap);
+		Entry.m_Start = Job.m_Start;
+		Entry.m_pLayers = std::move(Job.m_pLayers);
 		auto pRenderer = std::make_unique<CMapPreviewLayers>();
 		pRenderer->OnInterfacesInit(pGameClient);
 		pRenderer->SetSources(Entry.m_pLayers.get(), Entry.m_pImages.get());
@@ -589,11 +587,12 @@ private:
 		// 整图范围以游戏层瓦片数为准；缺游戏层的地图退回 64x64 默认值。
 		if(Entry.m_pLayers->GameLayer() != nullptr)
 			Entry.m_WorldSize = vec2(Entry.m_pLayers->GameLayer()->m_Width * 32.0f, Entry.m_pLayers->GameLayer()->m_Height * 32.0f);
-		// 新加载（或重试成功）：两张一次性纹理都待渲染。
-		Entry.m_NeedsFullRender = true;
-		Entry.m_NeedsEntityRender = true;
+		Entry.m_NeedsRender = true;
+		Entry.m_pLoadJob.reset();
+		return false;
 	}
 
+private:
 	IGraphics *m_pGraphics;
 	std::vector<std::unique_ptr<SQmMapPreviewEntry>> m_vEntries;
 };
@@ -601,6 +600,12 @@ private:
 // 预览缓存与注入回调的释放统一在 CMenus::OnShutdown（menus.cpp）：
 // 关闭路径上 CKernel 先销毁图形接口，组件析构函数晚于它执行——在析构里
 // 触达 m_pGraphics/ServerBrowser() 会访问违例（2026-10-14 关闭崩溃根因）。
+void CMenus::ClearMapPreviewCache()
+{
+	// 删除操作留在完整类型所在编译单元，确保实际调用缓存析构函数。
+	delete m_pMapPreviewCache;
+	m_pMapPreviewCache = nullptr;
+}
 
 CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect View, bool Active)
 {
@@ -629,12 +634,23 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 		str_format(aMeta, sizeof(aMeta), "%s · %d/%d", pPopupContext->m_aGameType, pPopupContext->m_NumPlayers, pPopupContext->m_MaxPlayers);
 	if(Panel.Header(s_Title, s_CloseButton, pPopupContext->m_aMapName, &s_Caption, aMeta))
 		return CUi::POPUP_CLOSE_CURRENT;
-	// 工具行：只看实体层（关贴图）开关。
+	// 工具行与提示在画布外，始终留在二级面板内部。
 	Panel.ToggleRow(s_EntitiesLabel, Localize("Show entities only (hide textures)"), pPopupContext->m_EntityOnly);
 	CUIRect Preview = Panel.ContentRect();
-	Preview.HSplitTop(4.0f, nullptr, &Preview);
+	const auto Metrics = ui_widget::ResolveSecondaryPanelMetrics(pUi->Screen()->w);
+	Preview.HSplitTop(Metrics.m_Spacing, nullptr, &Preview);
+	CUIRect Hint;
+	Preview.HSplitBottom(Metrics.m_RowHeight, &Preview, &Hint);
+	Preview.HSplitBottom(Metrics.m_Spacing, &Preview, nullptr);
+	SLabelProperties HintProps;
+	HintProps.m_MaxWidth = Hint.w;
+	HintProps.m_EllipsisAtEnd = true;
+	pUi->DoLabel(&Hint, Localize("Drag to pan, scroll to zoom"), Metrics.m_FontSize, TEXTALIGN_ML, HintProps);
+	if(Preview.w <= 2.0f || Preview.h <= 2.0f)
+		return CUi::POPUP_KEEP_OPEN;
 
 	// 预览框背板。
+	CUiScopedGaussianBlurSuppression PreviewBlurSuppression(pUi);
 	Preview.Draw(ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f), IGraphics::CORNER_ALL, 6.0f);
 	Preview.Margin(1.0f, &Preview);
 
@@ -657,124 +673,95 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 		return CUi::POPUP_KEEP_OPEN;
 	}
 
-	pEntry->m_pRenderer->AdvanceMapLoad();
-	if(!pEntry->m_pRenderer->IsMapLoaded())
+	const CPerfTimer PrepareTimer(QmPerfEnabled());
+	const bool Ready = CMapPreviewCache::AdvanceEntry(*pEntry, pMenus->GameClient(), Now) && pEntry->m_pRenderer->AdvanceMapLoad(1);
+	QmPerfLogStage("perf/map_preview", "prepare", PrepareTimer.ElapsedMs(), false, pMenus->Client());
+	if(!Ready)
 	{
 		// 图层 GPU 资源分帧初始化中；小图预计几十毫秒内完成。
 		pMenus->Ui()->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
 		return CUi::POPUP_KEEP_OPEN;
 	}
 
-	// 离屏纹理与窗口同宽高比（地图渲染器的投影使用 GameScreenAspect），
-	// 绘制时在预览框内居中 letterbox，避免拉伸。
-	const float WindowAspect = pMenus->Graphics()->ScreenAspect();
-	const int TargetWidth = MAP_PREVIEW_TEXTURE_WIDTH;
-	const int TargetHeight = maximum(32, (int)std::round(TargetWidth / WindowAspect));
+	// 使用引擎同一投影宽高比，画布内居中留边，避免拉伸。
+	const float Aspect = pMenus->Graphics()->GameScreenAspect();
+	// 使用画布对应的物理像素，避免高分屏把固定 1024 纹理再次放大。
+	const float CanvasWidth = std::min(Preview.w, Preview.h * Aspect);
+	const int TargetWidth = std::clamp((int)std::ceil(CanvasWidth * pMenus->Graphics()->ScreenWidth() / pUi->Screen()->w), 128, 4096);
+	const int TargetHeight = maximum(32, (int)std::round(TargetWidth / Aspect));
 	const uint32_t ResetVersion = pMenus->Graphics()->GraphicsResourcesResetVersion();
-	// 首次打开时条目版本戳与当前版本相等（未发生过重建），必须连同
-	// !IsValid() 一起判断，否则渲染目标永远不会创建（2026-10-15 回归）。
-	// 图形重建路径上旧句柄已失效（不可再提交销毁命令，仓库约定），直接覆写。
-	if(!pEntry->m_RenderTarget.IsValid() || pEntry->m_GraphicsResetVersion != ResetVersion)
+	const bool Reset = pEntry->m_GraphicsResetVersion != ResetVersion;
+	if(Reset)
+		pEntry->m_RenderTarget.Invalidate();
+	if(!pEntry->m_RenderTarget.IsValid() || pEntry->m_TargetWidth != TargetWidth || pEntry->m_TargetHeight != TargetHeight)
 	{
+		if(pEntry->m_RenderTarget.IsValid())
+			pMenus->Graphics()->DestroyRenderTarget(&pEntry->m_RenderTarget);
 		pEntry->m_RenderTarget = pMenus->Graphics()->CreateRenderTarget(TargetWidth, TargetHeight);
-		pEntry->m_EntityRenderTarget = pMenus->Graphics()->CreateRenderTarget(TargetWidth, TargetHeight);
-		pEntry->m_NeedsFullRender = true;
-		pEntry->m_NeedsEntityRender = true;
+		pEntry->m_TargetHeight = TargetHeight;
+		pEntry->m_TargetWidth = TargetWidth;
+		pEntry->m_NeedsRender = true;
 		pEntry->m_GraphicsResetVersion = ResetVersion;
 	}
 	if(!pEntry->m_RenderTarget.IsValid())
 	{
-		pMenus->Ui()->DoLabel(&Preview, Localize("Map preview rendering unavailable"), 10.0f, TEXTALIGN_MC);
+		pUi->DoLabel(&Preview, Localize("Map preview rendering unavailable"), 10.0f, TEXTALIGN_MC);
 		return CUi::POPUP_KEEP_OPEN;
 	}
 
-	// 一次性渲染：FitZoom 视口覆盖整图（含 letterbox 边缘），此后帧零重渲染，
-	// 缩放/平移只是采样 UV。实体纹理在首次切换到「只看实体」时才渲染。
-	float W1, H1;
-	pMenus->Graphics()->CalcScreenParams(pMenus->Graphics()->GameScreenAspect(), 1.0f, &W1, &H1);
-	const float FitZoom = minimum(W1 / pEntry->m_WorldSize.x, H1 / pEntry->m_WorldSize.y);
-	const ColorRGBA PreviewClearColor(0.055f, 0.065f, 0.085f, 1.0f);
-	auto RenderOnce = [&](IGraphics::CRenderTargetHandle &Target, bool EntityOnly) {
-		float aSavedScreen[4];
-		pMenus->Graphics()->GetScreen(&aSavedScreen[0], &aSavedScreen[1], &aSavedScreen[2], &aSavedScreen[3]);
-		pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
-		if(pMenus->Graphics()->BeginRenderTarget(Target, PreviewClearColor))
-		{
-			pEntry->m_pRenderer->RenderCustomWithCamera(pEntry->m_WorldSize * 0.5f, FitZoom);
-			pMenus->Graphics()->EndRenderTarget();
-		}
-		pMenus->Graphics()->MapScreen(aSavedScreen[0], aSavedScreen[1], aSavedScreen[2], aSavedScreen[3]);
-	};
-	if(pEntry->m_NeedsFullRender)
-	{
-		RenderOnce(pEntry->m_RenderTarget, false);
-		pEntry->m_NeedsFullRender = false;
-	}
-	if(pPopupContext->m_EntityOnly != 0 && pEntry->m_NeedsEntityRender && pEntry->m_EntityRenderTarget.IsValid())
-	{
-		RenderOnce(pEntry->m_EntityRenderTarget, true);
-		pEntry->m_NeedsEntityRender = false;
-	}
-
-	// 交互：滚轮缩放（>= 1），拖拽平移（视野小于整图时生效）。滚轮资格
-	// 限定指针悬停在预览框内（与 UiForms 滑条先例一致）。
-	pMenus->Ui()->RegisterWheelOwner(&pPopupContext->m_ZoomFactor, EUiWheelOwnerPriority::COMPOSITE_CONTROL, Preview, pMenus->Ui()->MouseHovered(&Preview));
-	float WheelDelta = 0.0f;
-	if(pMenus->Ui()->TryConsumeWheel(&pPopupContext->m_ZoomFactor, &WheelDelta))
-		pPopupContext->m_ZoomFactor = std::clamp(pPopupContext->m_ZoomFactor * (WheelDelta > 0.0f ? 1.25f : 1.0f / 1.25f), 1.0f, MAP_PREVIEW_ZOOM_MAX);
-
-	// 纹理（窗口宽高比）适配预览框并居中。
 	float DrawW = Preview.w;
-	float DrawH = DrawW / WindowAspect;
+	float DrawH = DrawW / Aspect;
 	if(DrawH > Preview.h)
 	{
 		DrawH = Preview.h;
-		DrawW = DrawH * WindowAspect;
+		DrawW = DrawH * Aspect;
 	}
 	const CUIRect DrawRect(Preview.x + (Preview.w - DrawW) * 0.5f, Preview.y + (Preview.h - DrawH) * 0.5f, DrawW, DrawH);
-
-	const bool Dragging = pMenus->Ui()->CheckActiveItem(&pPopupContext->m_PanOffset);
-	if(Dragging)
+	float BaseW, BaseH;
+	pMenus->Graphics()->CalcScreenParams(Aspect, 1.0f, &BaseW, &BaseH);
+	auto &Camera = pPopupContext->m_View;
+	Camera.Configure(pEntry->m_WorldSize, vec2(BaseW, BaseH));
+	if(!pPopupContext->m_InitialViewSet)
 	{
-		if(!pMenus->Ui()->MouseButton(0))
-		{
-			pPopupContext->m_Dragging = false;
-			pMenus->Ui()->SetActiveItem(nullptr);
-		}
-		else
-		{
-			const float WorldPerPixel = (W1 / (FitZoom * pPopupContext->m_ZoomFactor)) / maximum(DrawRect.w, 1.0f);
-			pPopupContext->m_PanOffset = pPopupContext->m_DragStartPan + vec2(pMenus->Ui()->MouseX() - pPopupContext->m_DragStartMouse.x, pMenus->Ui()->MouseY() - pPopupContext->m_DragStartMouse.y) * WorldPerPixel;
-		}
+		if(pEntry->m_Start)
+			Camera.FocusStart(*pEntry->m_Start);
+		pPopupContext->m_InitialViewSet = true;
 	}
-	else if(pMenus->Ui()->MouseHovered(&Preview) && pMenus->Ui()->MouseButtonClicked(0))
+	QmBrowserMapPreviewInput(*pUi, Camera, DrawRect, Active);
+	const bool EntityOnly = pPopupContext->m_EntityOnly != 0;
+	const bool DynamicBackground = EntityOnly && !IsDefaultBackgroundEntitiesValue(g_Config.m_ClBackgroundEntities) && !IsBackgroundImageExtension(g_Config.m_ClBackgroundEntities);
+	const bool ViewChanged = Camera.Center() != pEntry->m_RenderedCenter || Camera.Zoom() != pEntry->m_RenderedZoom || EntityOnly != pEntry->m_RenderedEntities ||
+				 (EntityOnly && (pEntry->m_RenderedBackgroundColor != g_Config.m_ClBackgroundEntitiesColor || str_comp(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities) != 0)) || DynamicBackground;
+	if(pEntry->m_NeedsRender || ViewChanged)
 	{
-		pPopupContext->m_Dragging = true;
-		pPopupContext->m_DragStartMouse = vec2(pMenus->Ui()->MouseX(), pMenus->Ui()->MouseY());
-		pPopupContext->m_DragStartPan = pPopupContext->m_PanOffset;
-		pMenus->Ui()->SetActiveItem(&pPopupContext->m_PanOffset);
+		// UI 批次必须先落到原目标；地图渲染的投影和裁剪不得泄漏到菜单。
+		pUi->FlushQuadBatch();
+		pUi->ClipEnable(pUi->Screen());
+		pEntry->m_pRenderer->SetEntityOnly(EntityOnly);
+		if(pMenus->Graphics()->BeginRenderTarget(pEntry->m_RenderTarget, ColorRGBA(0.055f, 0.065f, 0.085f, 1.0f)))
+		{
+			if(EntityOnly)
+				pMenus->GameClient()->m_Background.RenderPreview(Camera.Center(), Camera.Zoom(), *pEntry->m_pRenderer);
+			// FULL_DESIGN 明确跳过实体；实体模式使用包含完整实体层的前景策略。
+			pEntry->m_pRenderer->RenderCustomWithCamera(Camera.Center(), Camera.Zoom(), EntityOnly ? ERenderType::RENDERTYPE_FOREGROUND : ERenderType::RENDERTYPE_FULL_DESIGN);
+			pMenus->Graphics()->EndRenderTarget();
+			pEntry->m_RenderedCenter = Camera.Center();
+			pEntry->m_RenderedZoom = Camera.Zoom();
+			pEntry->m_RenderedEntities = EntityOnly;
+			pEntry->m_RenderedBackgroundColor = g_Config.m_ClBackgroundEntitiesColor;
+			str_copy(pEntry->m_aRenderedBackground, g_Config.m_ClBackgroundEntities);
+			pEntry->m_NeedsRender = false;
+		}
+		pUi->MapScreen();
+		pUi->ClipDisable();
+	}
+	if(pEntry->m_NeedsRender)
+	{
+		pUi->DoLabel(&Preview, Localize("Initializing map layers"), 10.0f, TEXTALIGN_MC);
+		return CUi::POPUP_KEEP_OPEN;
 	}
 
-	// 视野中心钳制在整图范围内；整图未放大时自动回中（无可平移空间）。
-	const float Zoom = FitZoom * pPopupContext->m_ZoomFactor;
-	const vec2 HalfView(W1 / Zoom * 0.5f, H1 / Zoom * 0.5f);
-	vec2 Center = pEntry->m_WorldSize * 0.5f + pPopupContext->m_PanOffset;
-	Center.x = pEntry->m_WorldSize.x > HalfView.x * 2.0f ? std::clamp(Center.x, HalfView.x, pEntry->m_WorldSize.x - HalfView.x) : pEntry->m_WorldSize.x * 0.5f;
-	Center.y = pEntry->m_WorldSize.y > HalfView.y * 2.0f ? std::clamp(Center.y, HalfView.y, pEntry->m_WorldSize.y - HalfView.y) : pEntry->m_WorldSize.y * 0.5f;
-
-	// RT 覆盖的世界范围与当前视野 → 采样 UV 子区域。
-	IGraphics::CRenderTargetHandle &DrawTarget = (pPopupContext->m_EntityOnly != 0 && pEntry->m_EntityRenderTarget.IsValid()) ? pEntry->m_EntityRenderTarget : pEntry->m_RenderTarget;
-	const float RTWorldW = W1 / FitZoom;
-	const float RTWorldH = H1 / FitZoom;
-	const vec2 RTWorldMin = pEntry->m_WorldSize * 0.5f - vec2(RTWorldW, RTWorldH) * 0.5f;
-	const float fx0 = (Center.x - HalfView.x - RTWorldMin.x) / RTWorldW;
-	const float fx1 = (Center.x + HalfView.x - RTWorldMin.x) / RTWorldW;
-	const float fy0 = (Center.y - HalfView.y - RTWorldMin.y) / RTWorldH;
-	const float fy1 = (Center.y + HalfView.y - RTWorldMin.y) / RTWorldH;
-
-	int BackendMajor = 0;
-	int BackendMinor = 0;
-	int BackendPatch = 0;
+	int BackendMajor = 0, BackendMinor = 0, BackendPatch = 0;
 	const char *pBackendName = "";
 	const auto Backend = pMenus->Graphics()->GetDetectedContextVersion(BackendMajor, BackendMinor, BackendPatch, pBackendName) ? QmDummyMiniViewLayout::ResolveBackend(pBackendName) : QmDummyMiniViewLayout::EBackend::UNKNOWN;
 	IGraphics::SRenderTargetDrawParams DrawParams;
@@ -782,36 +769,18 @@ CUi::EPopupMenuFunctionResult CMenus::PopupMapPreview(void *pContext, CUIRect Vi
 	DrawParams.m_Y = DrawRect.y;
 	DrawParams.m_W = DrawRect.w;
 	DrawParams.m_H = DrawRect.h;
-	DrawParams.m_Opaque = true;
+	DrawParams.m_Alpha = pUi->ControlAlphaScale();
 	DrawParams.m_Corners = IGraphics::CORNER_ALL;
-	DrawParams.m_Rounding = 5.0f;
-	DrawParams.m_U0 = fx0;
-	DrawParams.m_U1 = fx1;
-	// GL 帧缓冲行序自下而上（默认 V0=1 → 顶部）；Vulkan 直接用归一化行序。
+	DrawParams.m_Rounding = ui_token::radius::BASE;
 	if(Backend == QmDummyMiniViewLayout::EBackend::VULKAN)
 	{
-		DrawParams.m_V0 = fy0;
-		DrawParams.m_V1 = fy1;
+		DrawParams.m_V0 = 0.0f;
+		DrawParams.m_V1 = 1.0f;
 	}
-	else
-	{
-		DrawParams.m_V0 = 1.0f - fy0;
-		DrawParams.m_V1 = 1.0f - fy1;
-	}
-	pMenus->Graphics()->DrawRenderTarget(DrawTarget, DrawParams);
-
-	// 重置视图按钮（叠在预览框右上角）。
-	CUIRect ResetBtn{Preview.x + Preview.w - 72.0f, Preview.y + 6.0f, 66.0f, 20.0f};
-	static CButtonContainer s_PreviewResetButton;
-	if(pMenus->DoButton_Menu(&s_PreviewResetButton, Localize("Fit view"), 0, &ResetBtn))
-	{
-		pPopupContext->m_ZoomFactor = 1.0f;
-		pPopupContext->m_PanOffset = vec2(0.0f, 0.0f);
-	}
-
-	// 底部提示：随交互状态切换。
-	if(pPopupContext->m_ZoomFactor > 1.001f || pPopupContext->m_Dragging)
-		pMenus->Ui()->DoLabel(&Preview, Localize("Drag to pan, scroll to zoom"), 9.0f, TEXTALIGN_BC);
+	pUi->FlushQuadBatch();
+	pUi->ClipEnable(&Preview);
+	pMenus->Graphics()->DrawRenderTarget(pEntry->m_RenderTarget, DrawParams);
+	pUi->ClipDisable();
 	return CUi::POPUP_KEEP_OPEN;
 }
 
@@ -828,7 +797,8 @@ void CMenus::OpenMapPreviewPopup(const CServerInfo *pItem)
 
 	// 字体商店同款大面板：统一二级面板矩形（居中）+ 面板主题 + 入场动画；
 	// 外部点击关闭由 IgnoreOpeningClick 保证打开的那次图标点击不会立即关闭。
-	const SPopupMenuProperties Props = ui_widget::SecondaryPanelProperties();
+	SPopupMenuProperties Props = ui_widget::SecondaryPanelProperties();
+	Props.m_OnClosed = [this]() { m_MapPreviewPopupContext.m_View.EndDrag(); };
 	const CUIRect PanelRect = ResolveSettingsSecondaryPanelRect(*Ui()->Screen());
 	Ui()->DoPopupMenu(&m_MapPreviewPopupContext, PanelRect.x, PanelRect.y, PanelRect.w, PanelRect.h, &m_MapPreviewPopupContext, PopupMapPreview, Props);
 }
@@ -1109,7 +1079,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	// 布局（2026-10-14 重构）：钉住列 + 内容列按 br_col_order 从左到右排布，
 	// 全部绝对宽度；名称列为弹性列吸收剩余空间。没有组缩放——拖某列宽度柄
-	// 只影响该列与名称列；仅当全部最小宽之和超出可用宽度时整体等比收缩。
+	// 只影响该列与名称列；配置列宽与名称最小宽之和超出可用宽度时整体等比收缩。
 	constexpr float ColGap = 2.0f;
 	const float TotalGaps = ColGap * (NumCols - 1);
 	{
@@ -1123,8 +1093,8 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		{
 			SColumn &Col = s_aCols[i];
 			const float Width = Col.m_Id == COL_NAME ?
-								    ColLayout.m_NameWidth :
-								    QmBrowserColumnSqueezedWidth(Col.m_Width, GetColMinWidth(Col.m_Id), ColLayout.m_Scale);
+						    ColLayout.m_NameWidth :
+						    QmBrowserColumnSqueezedWidth(Col.m_Width, ColLayout.m_Scale);
 			Col.m_Rect = CUIRect{X, Headers.y, std::max(0.0f, Width), Headers.h};
 			X += Col.m_Rect.w + ColGap;
 		}
@@ -1139,6 +1109,36 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			continue;
 		CUIRect Gap{Col.m_Rect.x + Col.m_Rect.w - 2.0f, Col.m_Rect.y, 6.0f, Col.m_Rect.h};
 		s_vResizeHandles.push_back({Gap, i, pConfig, GetColMinWidth(Col.m_Id), GetColMaxWidth(Col.m_Id)});
+	}
+
+	static int s_ResizeDragColIndex = -1;
+	static float s_ResizeDragStartMouseX = 0.0f;
+	static float s_ResizeDragStartWidth = 0.0f;
+
+	int HoveredHandle = -1;
+	float HoverDistance = std::numeric_limits<float>::max();
+	for(int Index = 0; Index < (int)s_vResizeHandles.size(); ++Index)
+	{
+		const SResizeHandle &Handle = s_vResizeHandles[Index];
+		const SColumn &Col = s_aCols[Handle.m_ColIndex];
+		if(Col.m_Rect.w < 6.0f || !Ui()->MouseHovered(&Handle.m_Rect))
+			continue;
+		const float Distance = std::abs(Ui()->MouseX() - (Handle.m_Rect.x + Handle.m_Rect.w * 0.5f));
+		if(Distance < HoverDistance)
+		{
+			HoverDistance = Distance;
+			HoveredHandle = Index;
+		}
+	}
+
+	static CQmBrowserHeaderGesture s_HeaderGesture;
+	if(Ui()->MouseButtonClicked(0))
+	{
+		int HeaderColumn = -1;
+		for(int Index = NumPinnedCols; Index < NumCols; ++Index)
+			if(Ui()->MouseHovered(&s_aCols[Index].m_Rect))
+				HeaderColumn = Index;
+		s_HeaderGesture.Begin(HeaderColumn, HoveredHandle >= 0 ? s_vResizeHandles[HoveredHandle].m_ColIndex : -1);
 	}
 
 	const bool PlayersOrPing = (g_Config.m_BrSort == IServerBrowser::SORT_NUMPLAYERS || g_Config.m_BrSort == IServerBrowser::SORT_PING);
@@ -1200,7 +1200,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	{
 		// 拖拽换列的按压起点：内容列 + 无其他拖拽进行中。点击（未超阈值）
 		// 不受影响，DoButton_GridHeader 正常返回；真正拖过的按压在下面抑制排序。
-		if(s_ReorderColIndex < 0 && Col.m_Id >= COL_COMMUNITY && Ui()->MouseButtonClicked(0) && Ui()->MouseHovered(&Col.m_Rect))
+		if(s_ReorderColIndex < 0 && s_HeaderGesture.ReorderColumn() == HeaderIndex && Ui()->MouseButtonClicked(0))
 		{
 			s_ReorderColIndex = HeaderIndex;
 			s_ReorderPressX = Ui()->MouseX();
@@ -1285,26 +1285,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
 	}
 
-	static int s_ResizeDragColIndex = -1;
-	static float s_ResizeDragStartMouseX = 0.0f;
-	static float s_ResizeDragStartWidth = 0.0f;
-
-	int HoveredHandle = -1;
-	float HoverDistance = std::numeric_limits<float>::max();
-	for(int Index = 0; Index < (int)s_vResizeHandles.size(); ++Index)
-	{
-		const SResizeHandle &Handle = s_vResizeHandles[Index];
-		const SColumn &Col = s_aCols[Handle.m_ColIndex];
-		if(Col.m_Rect.w < 6.0f || !Ui()->MouseHovered(&Handle.m_Rect))
-			continue;
-		const float Distance = std::abs(Ui()->MouseX() - (Handle.m_Rect.x + Handle.m_Rect.w * 0.5f));
-		if(Distance < HoverDistance)
-		{
-			HoverDistance = Distance;
-			HoveredHandle = Index;
-		}
-	}
-
 	for(int HandleIndex = 0; HandleIndex < (int)s_vResizeHandles.size(); ++HandleIndex)
 	{
 		const SResizeHandle &Handle = s_vResizeHandles[HandleIndex];
@@ -1327,10 +1307,10 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 				SetColWidthConfig(Handle.m_pWidthConfig, NewWidth, Handle.m_MinWidth, Handle.m_MaxWidth);
 			}
 		}
-		else if(HandleIndex == HoveredHandle)
+		else if(HandleIndex == HoveredHandle && s_HeaderGesture.ReorderColumn() < 0)
 		{
 			Ui()->SetHotItem(pHandleId);
-			if(Ui()->MouseButtonClicked(0))
+			if(Ui()->MouseButtonClicked(0) && s_HeaderGesture.ResizeColumn() == ColIdx)
 			{
 				s_ResizeDragColIndex = ColIdx;
 				s_ResizeDragStartMouseX = Ui()->MouseX();
@@ -1339,6 +1319,9 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			}
 		}
 	}
+
+	if(!Ui()->MouseButton(0))
+		s_HeaderGesture.End();
 
 	for(const auto &Handle : s_vResizeHandles)
 	{
@@ -1574,6 +1557,19 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			CMenus::GetServerbrowserDisplayName(pItem, aParsedShortName, sizeof(aParsedShortName));
 			// 名称列只显示区段（「简单 - CHN5 上海」→「CHN5 上海」）；类别由难度列恒定承担。
 			pDisplayServerName = BrowserSegmentDisplayName(aParsedShortName, aDisplayServerName, sizeof(aDisplayServerName));
+			// 解析结果剥前缀后为空白（名称全空白或仅含空白段）时回退原始名称，
+			// 避免名称列渲染出空文本容器。
+			bool SegmentBlank = true;
+			for(const char *p = pDisplayServerName; *p != '\0'; ++p)
+			{
+				if(*p != ' ' && *p != '\t')
+				{
+					SegmentBlank = false;
+					break;
+				}
+			}
+			if(SegmentBlank)
+				pDisplayServerName = pItem->m_aName;
 		}
 		for(const auto &Col : s_aCols)
 		{

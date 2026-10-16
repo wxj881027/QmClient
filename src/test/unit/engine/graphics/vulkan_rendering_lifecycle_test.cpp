@@ -18,6 +18,34 @@ namespace
 	}
 }
 
+TEST(VulkanRenderingPass, CachedTargetCompositeSwitchesOnceBeforeRecordingInline)
+{
+	bool Inline = false;
+	bool SecondaryFinished = false;
+	int Restarts = 0;
+	auto Finish = [&]() {
+		SecondaryFinished = true;
+		Inline = true;
+		return true;
+	};
+	auto Resume = [&]() {
+		EXPECT_TRUE(SecondaryFinished);
+		++Restarts;
+	};
+	EXPECT_TRUE(EnsureQmVulkanInlinePass(Inline, Finish, Resume));
+	EXPECT_TRUE(Inline);
+	EXPECT_EQ(Restarts, 1);
+	EXPECT_TRUE(EnsureQmVulkanInlinePass(Inline, Finish, Resume));
+	EXPECT_EQ(Restarts, 1);
+}
+
+TEST(VulkanRenderingPass, FailedSecondaryCompletionDoesNotResumeOrAllowInlineDraw)
+{
+	bool Resumed = false;
+	EXPECT_FALSE(EnsureQmVulkanInlinePass(false, []() { return false; }, [&]() { Resumed = true; }));
+	EXPECT_FALSE(Resumed);
+}
+
 TEST(VulkanRenderingPipelines, SwapPassDependencyCoversLoadAfterAttachmentAndTransferReads)
 {
 	const auto Dependency = QmVulkanSwapPassDependency();

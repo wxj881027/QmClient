@@ -2630,6 +2630,12 @@ Connection disconnected
 Connection elevated
 == 連接略有異常
 
+Connection icon color
+== 連線圖示顏色
+
+Connection icon custom color
+== 連線圖示自訂顏色
+
 Connection normal
 == 連接正常
 
@@ -3046,6 +3052,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== 自訂滾輪每格的捲動距離。按住 Alt 捲動時使用 3 倍步長
 
 Customize translate button and menu colors
 == 自定義翻譯按鈕和菜單顏色
@@ -3716,6 +3725,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == 拖曳到其他分類以移動此好友。
 
+Drag to pan, scroll to zoom
+== 按住拖曳平移，滾輪縮放
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == 拖曳調整順序，點擊展開或收起。右鍵或使用齒輪管理分類
 
@@ -3955,6 +3967,12 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == 靈動島背景顏色
+
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== 靈動島連線圖示顏色：1=網路品質分檔，2=跟隨介面圖示顏色，3=自訂
+
+Dynamic island connection icon custom color
+== 靈動島連線圖示自訂顏色
 
 Ease in out quad
 == 緩入緩出二次
@@ -4987,6 +5005,9 @@ Follow server
 
 Follow Tee
 == 跟隨 Tee
+
+Follow UI icon color
+== 跟隨介面圖示顏色
 
 Following
 == 當前
@@ -6200,6 +6221,9 @@ Initializing components
 Initializing layers
 == 正在初始化地圖圖層
 
+Initializing map layers
+== 正在初始化地圖圖層
+
 Initializing map logic
 == 正在初始化地圖邏輯
 
@@ -7193,8 +7217,14 @@ Map folders
 Map name
 == 地圖名稱
 
+Map not downloaded yet — join the server to preview it
+== 地圖尚未下載，進入伺服器下載後即可預覽
+
 Map play history
 == 地圖遊玩歷史
+
+Map preview rendering unavailable
+== 目前無法繪製地圖預覽
 
 Map Preview TODO
 == 地圖預覽待做
@@ -8591,6 +8621,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == 原文語言
 
+Original scroll feel
+== 原版捲動手感
+
 Other
 == 其他
 
@@ -9644,6 +9677,9 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 顯示用作背景裝飾的貼圖
 
+Quality tier
+== 跟隨網路品質
+
 Query current map info
 == 查詢當前地圖信息
 
@@ -10538,6 +10574,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == 恢復舊版單段鉤子輔助線行為
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== 恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== 恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度
+
 Restoring save %d: main '%s', dummy '%s'.
 == 正在恢復存檔 %d：本體「%s」，分身「%s」。
 
@@ -10958,6 +11000,9 @@ Scroll mode: Off
 Scroll mode: On
 == 滾動模式：開
 
+Scroll step
+== 捲動步長
+
 Search
 == 搜索
 
@@ -11173,6 +11218,9 @@ Server alert
 
 Server best:
 == 伺服器最佳：
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== 伺服器瀏覽器內容列順序（逗號分隔的識別碼：community,name,map,difficulty,gametype,friends,players,qm,ping；留空使用預設順序）
 
 Server browser exclude string
 == 伺服器瀏覽器排除字符串
@@ -11638,6 +11686,9 @@ Show enemy reason
 
 Show entities
 == 實體層顯示開關
+
+Show entities only (hide textures)
+== 僅顯示實體層（隱藏貼圖）
 
 Show existing saves
 == 查看已有存檔
@@ -12152,8 +12203,8 @@ Show server settings
 Show settings card borders
 == 顯示設定卡片邊框
 
-Show short server names in browser
-== 在伺服器瀏覽器中顯示簡短伺服器名
+Show short server names in browser (applies to China community servers)
+== 在伺服器瀏覽器中顯示簡短伺服器名（適用於中國社群伺服器）
 
 Show skin date and author
 == 顯示皮膚日期和作者
@@ -13967,6 +14018,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == 切換本地控制台
 
+Toggle map preview
+== 地圖預覽
+
 Toggle microphone mute
 == 切換麥克風靜音
 
@@ -15194,6 +15248,9 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 綁定設置為什麼級別（這是自動的，你不需要使用它）
 
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== 滾輪每格的介面像素步長；設定卡片頁面每格捲動此值的 12 倍
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
 
@@ -15301,6 +15358,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == 按鍵的寬和高需要在 %d 到 %d 內。
+
+Width of difficulty column in server browser
+== 伺服器瀏覽器中難度列的寬度
 
 Width of friends column in server browser
 == 伺服器瀏覽器中好友列的寬度
