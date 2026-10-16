@@ -98,7 +98,7 @@ def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, comple
 			def collect_window(handle, _):
 				pid = wintypes.DWORD()
 				user.GetWindowThreadProcessId(handle, ctypes.byref(pid))
-				if pid.value in pids and text(handle, class_name=True) == "TWizardForm":
+				if pid.value in pids and text(handle, class_name=True) in {"TWizardForm", "QmClientSetupWindow"}:
 					windows.append(handle)
 				return True
 			user.EnumWindows(collect_window, 0)
@@ -112,20 +112,20 @@ def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, comple
 				user.EnumChildWindows(window, collect_control, 0)
 				observed = [(kind, value) for _, kind, value in controls]
 				for handle, kind, value in controls:
-					if not completion and kind.endswith("Edit") and value and Path(value) == expected:
+					if not completion and kind.casefold().endswith("edit") and value and Path(value) == expected:
 						if not user.IsWindowEnabled(handle):
 							raise AssertionError("installation directory cannot be edited")
 						return
-				buttons = [(handle, value) for handle, kind, value in controls if kind == "TNewButton" and user.IsWindowEnabled(handle)]
+				buttons = [(handle, value) for handle, kind, value in controls if kind.casefold() in {"tnewbutton", "button"} and user.IsWindowEnabled(handle)]
 				if completion and any(value.replace("&", "").strip() in {"完成", "Finish"} for _, value in buttons):
-					labels = [value for _, kind, value in controls if kind == "TNewStaticText"]
+					labels = [value for _, kind, value in controls if kind.casefold() in {"tnewstatictext", "static"}]
 					if sum(value.count("退出安装程序") for value in labels) != 1:
 						raise AssertionError(f"completion page must explain Finish exactly once: {labels}")
 					if not any("QmClient 已安装到您的计算机。" in value for value in labels):
 						raise AssertionError(f"completion page lost the installation result: {labels}")
 					return
 				for handle, value in buttons:
-					if value.replace("&", "").strip() in {"安装", "Install"}:
+					if value.replace("&", "").strip() in {"安装", "Install", "开始安装", "更新安装"}:
 						if not completion:
 							raise AssertionError(f"Setup skipped the editable directory page: {observed}")
 						if not install_clicked:

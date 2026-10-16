@@ -168,3 +168,5 @@ Name: "{autodesktop}\QmClient"; Filename: "{app}\DDNet.exe"; WorkingDir: "{app}"
 
 [Run]
 Filename: "{app}\DDNet.exe"; Description: "{cm:LaunchProgram,QmClient}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+
+#include "native_bridge.iss"

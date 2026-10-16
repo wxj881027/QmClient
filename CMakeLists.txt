@@ -4878,6 +4878,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/ui/qm_new_ui_menu_shell_settings_contract_test.cpp
     src/test/unit/client/ddnet_19_9_sync_test.cpp
     src/test/unit/qmclient/client/qm_update_arguments_test.cpp
+    src/test/unit/qmclient/client/qm_setup_options_test.cpp
     src/test/unit/qmclient/music/netease_lyric_parser_test.cpp
     src/test/unit/qmclient/music/netease_lyric_timeline_test.cpp
     src/test/unit/qmclient/music/netease_lyric_state_test.cpp

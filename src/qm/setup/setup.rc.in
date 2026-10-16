@@ -1,0 +1,27 @@
+#include <windows.h>
+#pragma code_page(65001)
+1 ICON "@QM_SETUP_ICON@"
+1 RT_MANIFEST "@CMAKE_CURRENT_SOURCE_DIR@/setup.manifest"
+101 RCDATA "@QM_SETUP_ENGINE_RC@"
+1 VERSIONINFO
+FILEVERSION @QM_SETUP_NUMERIC_VERSION@
+PRODUCTVERSION @QM_SETUP_NUMERIC_VERSION@
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080404B0"
+    BEGIN
+      VALUE "CompanyName", "QmClient"
+      VALUE "FileDescription", "QmClient 安装程序"
+      VALUE "FileVersion", "@QM_SETUP_VERSION@"
+      VALUE "ProductName", "QmClient"
+      VALUE "ProductVersion", "@QM_SETUP_VERSION@"
+      VALUE "OriginalFilename", "QmClient-Setup.exe"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0804, 1200
+  END
+END

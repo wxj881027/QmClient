@@ -293,7 +293,7 @@ jobs:
           $preview = [int][regex]::Match($versionHeader, '#define QMCLIENT_PREVIEW_NUMBER (\d+)').Groups[1].Value
           if ($preview -gt 0) { $version += "-preview.$preview" }
           $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
-          & $compiler "/DSourceDir=$setupSource" "/DAppVersion=$version" "/DOutputDir=$((Resolve-Path build).Path)" qmclient_scripts/installer/QmClient.iss
+          & "${{ steps.setup-python.outputs.python-path }}" qmclient_scripts/build_windows_setup.py --source $setupSource --version $version --output $source --build-dir (Join-Path $source 'setup-ui-build') --iscc $compiler
           if ($LASTEXITCODE -ne 0) { throw 'Setup compilation failed' }
 
       - name: Collect package
@@ -313,9 +313,9 @@ jobs:
               fi
             done
             if [ "${{ matrix.portable }}" != "true" ]; then
-              setup_pkg="$(find build -type f -name 'QmClient-Setup.exe' 2>/dev/null | head -n 1)"
-              if [ -z "$setup_pkg" ]; then
-                echo "No QmClient-Setup.exe found under build/"
+              setup_pkg="build/QmClient-Setup.exe"
+              if [ ! -s "$setup_pkg" ]; then
+                echo "No complete QmClient-Setup.exe found at build/QmClient-Setup.exe"
                 exit 1
               fi
               cp "$setup_pkg" "dist/QmClient-Setup.exe"
