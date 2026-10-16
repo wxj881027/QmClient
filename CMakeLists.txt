@@ -88,7 +88,9 @@ endif()
 
 if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "arm"
   OR "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "aarch64"
-  OR "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "ARM64")
+  OR "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "ARM64"
+  OR CMAKE_C_COMPILER_ARCHITECTURE_ID STREQUAL "ARM64"
+  OR CMAKE_CXX_COMPILER_ARCHITECTURE_ID STREQUAL "ARM64")
   if(TARGET_BITS STREQUAL "32")
     set(TARGET_CPU_ARCHITECTURE "arm")
   else()
@@ -198,7 +200,9 @@ if(QMCLIENT_TEST_STORAGE AND NOT DEV)
   message(FATAL_ERROR "QMCLIENT_TEST_STORAGE is only allowed with DEV=ON; test builds cannot be packaged")
 endif()
 
-if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64")
+# 网易云/汽水音乐 Hook 依赖 MinHook（仅支持 x86/x64）且注入目标是 x64 进程，
+# 仅在客户端本体为 x64 时构建；ARM64 客户端跳过这些组件。
+if(TARGET_OS STREQUAL "windows" AND TARGET_BITS STREQUAL "64" AND CMAKE_C_COMPILER_ARCHITECTURE_ID STREQUAL "x64")
   add_subdirectory(vendor/minhook EXCLUDE_FROM_ALL)
   add_library(qm-nmt-hook64 SHARED
     src/qm/hooks/netease/qm_netease_hook_dll.cpp
