@@ -139,21 +139,6 @@ TEST(GraphicsRenderTargetBackbufferCapture, RuntimeMultiSamplingChangesKeepCapab
 	EXPECT_NE(SwapBody.find("m_PendingMultiSamplingCount"), std::string::npos);
 }
 
-TEST(GraphicsRenderTargetBackbufferCapture, VulkanRecordsPostCaptureDrawsInline)
-{
-	const std::string Source = ReadFile("src/engine/client/backend/vulkan/backend_vulkan.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "[[nodiscard]] bool GetGraphicCommandBuffer");
-	const std::string StartBody = ExtractFunctionBody(Source, "void StartCommands");
-	const std::string PrepareBody = ExtractFunctionBody(Source, "[[nodiscard]] bool PrepareFrame");
-	ASSERT_FALSE(Body.empty());
-	ASSERT_FALSE(StartBody.empty());
-	ASSERT_FALSE(PrepareBody.empty());
-	EXPECT_NE(Body.find("m_ThreadCount < 2 || m_ForceSingleThreadedRender"), std::string::npos);
-	EXPECT_NE(Body.find("m_vMainDrawCommandBuffers[m_CurImageIndex]"), std::string::npos);
-	EXPECT_EQ(StartBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
-	EXPECT_NE(PrepareBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
-}
-
 TEST(GraphicsRenderTargetGaussianBlur, ThreadedFrontendBuildsModeSpecificPassChain)
 {
 	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");

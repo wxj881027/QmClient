@@ -7,6 +7,31 @@
 #include <cstddef>
 #include <vector>
 
+class CQmVulkanSwapPassPlan
+{
+	bool m_Pending = false;
+	bool m_Load = false;
+
+public:
+	void Begin(bool Load)
+	{
+		m_Pending = true;
+		m_Load = Load;
+	}
+
+	template<typename TRecord>
+	bool Flush(bool HasDraws, bool PreserveMultisampling, TRecord &&Record)
+	{
+		if(!m_Pending)
+			return true;
+		// 首段即使没有绘制也必须 CLEAR；后续空 LOAD 段不触碰交换链。
+		if((!m_Load || HasDraws) && !Record(m_Load, PreserveMultisampling))
+			return false;
+		m_Pending = false;
+		return true;
+	}
+};
+
 // CLEAR/LOAD 共用此依赖；依赖差异也会破坏 render pass 兼容性。
 inline VkSubpassDependency QmVulkanSwapPassDependency()
 {

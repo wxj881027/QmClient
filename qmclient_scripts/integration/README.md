@@ -115,4 +115,4 @@ python qmclient_scripts/integration/exit_lifecycle_smoke.py --build-dir tmp/sess
 python qmclient_scripts/integration/vulkan_fsaa_blur_smoke.py cmake-build-release --validation-layer <Vulkan-SDK-Bin>
 ```
 
-入口使用隔离存储构建，需要可见桌面、Vulkan GPU 和验证层。默认串行检查 4×、8×、再次 4×，每次执行模糊开启、关闭和重新开启；要求 MSAA 下背板捕获激活、每一步生成新截图、正常退出，且没有命令缓冲复用、设备丢失或退出资源泄漏错误。不会把旧截图日志当作新事件，退出码为零也不能绕过验证层错误。上游 device layer 注册提示单独记录，不属于本场景 GPU 命令验证。截图仅作为视觉验收产物，自动检查不声称图片内容已证明模糊效果；日志与图片保留在 `tmp/startup_capture_font_fix/`。此设备场景单独运行，不加入无 GPU 的常规 gate。
+入口使用隔离存储构建，需要可见桌面、Vulkan GPU 和验证层。默认在 1/3 个渲染线程下分别串行检查 0×、4×、8×、再次 4×（可用 `--samples`、`--render-threads` 缩小范围），每次执行模糊开启、关闭和重新开启；要求对应采样模式下背板捕获激活、每一步生成新截图、调整窗口高度并用截图尺寸确认交换链重建、正常退出，且没有命令缓冲复用、设备丢失或退出资源泄漏错误。不会把旧截图日志当作新事件，退出码为零也不能绕过验证层错误。上游 device layer 注册提示单独记录，不属于本场景 GPU 命令验证。聚焦只选择已显示的客户端窗口，避免显示 SDL 隐藏探测窗口。截图仅作为视觉验收产物，自动检查不声称图片内容已证明模糊效果；日志与图片保留在 `tmp/startup_capture_font_fix/`。此设备场景单独运行，不加入无 GPU 的常规 gate。
