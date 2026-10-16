@@ -330,6 +330,12 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 				GameClient()->m_SkinProfiles.AddProfile(ProfileToSave.m_BodyColor, ProfileToSave.m_FeetColor, ProfileToSave.m_CountryFlag, ProfileToSave.m_Emote, ProfileToSave.m_SkinName, ProfileToSave.m_Name, ProfileToSave.m_Clan);
 			}
 		}
+		static CButtonContainer s_WheelButton;
+		if(IsSelectedProfileValid() && Flow.Control("tclient-profile-wheel", ProfileMetrics.m_ButtonHeight, Row, MarginSmall))
+		{
+			if(DoTClientSettingsButton_Menu(&s_WheelButton, "tclient-profile-wheel", Localize("Add to bind wheel"), 0, &Row) && !ReadOnly && !Ui()->RenderOnly())
+				EditProfileInWheel(*pConstSelectedProfile(), m_Dummy != 0);
+		}
 		if(Flow.Control("tclient-profile-enable-deleting", LineSize, Row, MarginSmall))
 			DoTClientSettingsButton_CheckBoxAutoVMarginAndSet(&s_AllowDelete, "tclient-profile-enable-deleting", Localizable("Enable Deleting"), &s_AllowDelete, &Row, LineSize);
 		if(s_AllowDelete)
@@ -506,25 +512,38 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 	};
 
 	const bool HasSelectedProfile = pConstSelectedProfile() != nullptr;
-	const uint64_t CardRevision = (static_cast<uint64_t>(HasSelectedProfile) << 0) | (static_cast<uint64_t>(s_AllowDelete != 0) << 1) | (static_cast<uint64_t>(vProfiles.size()) << 2);
+	const uint64_t CardRevision = ((static_cast<uint64_t>(HasSelectedProfile) << 0) | (static_cast<uint64_t>(s_AllowDelete != 0) << 1) | (static_cast<uint64_t>(vProfiles.size()) << 2)) ^ ProfileWheelEditorRevision();
 	if(Pass == qm_card_catalog::ETClientCardPass::REVISION)
 		return {0.0f, CardRevision};
-	if(str_comp(pStableId, "deck:tclient-profiles-actions") == 0)
+	if(str_comp(pStableId, "deck:tclient-profiles") == 0)
 	{
 		const float SavedY = Content.y;
-		RenderActions(Content);
-		return {Content.y - SavedY, CardRevision};
-	}
-	if(str_comp(pStableId, "deck:tclient-profiles-options") == 0)
-	{
-		const float SavedY = Content.y;
-		RenderOptions(Content);
-		return {Content.y - SavedY, CardRevision};
-	}
-	if(str_comp(pStableId, "deck:tclient-profiles-list") == 0)
-	{
-		const float SavedY = Content.y;
-		RenderSavedProfiles(Content);
+		CSettingsContentLayoutFlow Flow(Content);
+		CUIRect Tabs;
+		if(Flow.Control("profile-tabs", ProfileMetrics.m_ButtonHeight, Tabs))
+		{
+			static CButtonContainer s_aTabs[2];
+			const char *apLabels[] = {Localize("Profiles"), Localize("Bind Wheel")};
+			for(int Index = 0; Index < 2; ++Index)
+			{
+				CUIRect Tab = Tabs;
+				Tab.w = (Tabs.w - MarginSmall) * 0.5f;
+				Tab.x += Index * (Tab.w + MarginSmall);
+				if(DoTClientSettingsButton_Menu(&s_aTabs[Index], Index ? "profile-tab-wheel" : "profile-tab-profiles", apLabels[Index], m_ProfilePresetsTab == Index, &Tab) && Flow.Input() && !ReadOnly && !Ui()->RenderOnly())
+					m_ProfilePresetsTab = Index;
+			}
+		}
+		Flow.Space(ProfileMetrics.m_SectionGap);
+		if(m_ProfilePresetsTab == 0)
+		{
+			RenderActions(Content);
+			Flow.Space(ProfileMetrics.m_SectionGap);
+			RenderOptions(Content);
+			Flow.Space(ProfileMetrics.m_SectionGap);
+			RenderSavedProfiles(Content);
+		}
+		else
+			RenderProfileWheelEditor(Ctx, Content, ReadOnly);
 		return {Content.y - SavedY, CardRevision};
 	}
 	return {0.0f, CardRevision};

@@ -286,6 +286,11 @@ namespace qm_bind_editor
 		return Result;
 	}
 
+	std::string WheelConfigLine(std::string_view Name, std::string_view Command)
+	{
+		return "add_bindwheel " + QuoteArgument(Name) + " " + QuoteArgument(Command);
+	}
+
 	bool FitsConfigLine(const std::string_view KeyName, const std::string_view Command)
 	{
 		if(KeyName.empty() || Command.find('\0') != std::string_view::npos)
