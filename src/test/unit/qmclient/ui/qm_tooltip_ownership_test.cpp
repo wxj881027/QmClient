@@ -387,15 +387,64 @@ TEST(QmTooltips, ClearingContentClipDoesNotReactivateAHiddenTarget)
 	Pointer.m_InputAvailable = false;
 	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, Pointer);
 	Pointer.m_InputAvailable = true;
-	EXPECT_FALSE(QmTooltipActive(Tooltip, 1, Pointer));
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 1, {}, Pointer));
 
 	Tooltip.m_RegisteredFrame = 2;
 	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, Pointer);
-	EXPECT_TRUE(QmTooltipActive(Tooltip, 2, Pointer));
+	EXPECT_TRUE(QmTooltipActive(Tooltip, 2, {}, Pointer));
 	Pointer.m_InputAvailable = false;
-	EXPECT_FALSE(QmTooltipActive(Tooltip, 2, Pointer));
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 2, {}, Pointer));
 	Pointer.m_InputAvailable = true;
-	EXPECT_FALSE(QmTooltipActive(Tooltip, 3, Pointer));
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 3, {}, Pointer));
+}
+
+TEST(QmTooltips, ClosingMenuRejectsSettingsHintRegisteredEarlierInTheSameFrame)
+{
+	std::array<int, 9> Context{1};
+	CTooltip Tooltip{nullptr, CUIRect{0, 0, 20, 20}, "qm_example", 100, true};
+	Tooltip.m_SmallInstant = true;
+	Tooltip.m_HoverByRect = true;
+	Tooltip.m_RegisteredFrame = 42;
+	Tooltip.m_RegisteredContext = Context;
+	STooltipPointer Pointer;
+	ASSERT_TRUE(QmTooltipActive(Tooltip, 42, Context, Pointer));
+
+	Context[0] = 0;
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 42, Context, Pointer));
+}
+
+TEST(QmTooltips, ReopeningMenuRequiresFreshTooltipRegistration)
+{
+	std::array<int, 9> Context{1};
+	CTooltip Tooltip{nullptr, CUIRect{0, 0, 20, 20}, "qm_example", 100, true};
+	Tooltip.m_HoverByRect = true;
+	Tooltip.m_RegisteredFrame = 42;
+	Tooltip.m_RegisteredContext = Context;
+	STooltipPointer Pointer;
+	Context[0] = 0;
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 42, Context, Pointer));
+
+	Context[0] = 1;
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 43, Context, Pointer));
+	Tooltip.m_RegisteredFrame = 43;
+	Tooltip.m_RegisteredContext = Context;
+	EXPECT_TRUE(QmTooltipActive(Tooltip, 43, Context, Pointer));
+}
+
+TEST(QmTooltips, NewPageHintCanActivateInTheTransitionFrame)
+{
+	std::array<int, 9> Context{1};
+	CTooltip Tooltip{nullptr, CUIRect{0, 0, 20, 20}, "info", 100, true};
+	Tooltip.m_HoverByRect = true;
+	Tooltip.m_RegisteredFrame = 42;
+	Tooltip.m_RegisteredContext = Context;
+	STooltipPointer Pointer;
+	ASSERT_TRUE(QmTooltipActive(Tooltip, 42, Context, Pointer));
+
+	Context[4] = 1;
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 42, Context, Pointer));
+	Tooltip.m_RegisteredContext = Context;
+	EXPECT_TRUE(QmTooltipActive(Tooltip, 42, Context, Pointer));
 }
 
 TEST(QmCardLabelHints, MovesAllGroupsIncludingAcronymsAndWarningsIntoHint)
@@ -711,7 +760,7 @@ TEST(QmTooltips, PointerOverClippedPartDoesNotRetainAPartiallyVisibleSource)
 	QmTooltipRecordSource(Tooltip, 42, Tooltip.m_Rect, &Clip, vec2(10, 30));
 	STooltipPointer Pointer;
 	Pointer.m_Position = vec2(10, 30);
-	EXPECT_FALSE(QmTooltipActive(Tooltip, 42, Pointer));
+	EXPECT_FALSE(QmTooltipActive(Tooltip, 42, {}, Pointer));
 	CQmTooltipHoverState Hover;
 	Hover.Update(Tooltip, 10.0);
 	Hover.Update(Tooltip, 11.0);

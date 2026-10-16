@@ -79,6 +79,7 @@ struct CTooltip
 	bool m_Immediate = false;
 	bool m_Fallback = false;
 	uint64_t m_RegisteredFrame = 0;
+	std::array<int, 9> m_RegisteredContext{};
 	CUIRect m_Anchor{};
 	bool m_HasTextAnchor = false;
 	uint64_t m_SourceFrame = 0;
@@ -298,11 +299,11 @@ inline bool QmTooltipHovered(const CTooltip &Tooltip, TUi &Ui)
 	return Ui.MouseHovered(&Tooltip.m_Rect) && (Tooltip.m_HoverByRect || Ui.HotItem() == Tooltip.m_pId);
 }
 
-// 最终绘制同时检查登记时和当前的悬浮资格，离开裁剪区后不能被恢复的全屏命中激活。
+// 最终绘制核对登记时的页面与悬浮资格；同帧关闭页面或离开裁剪区后不能重新激活。
 template<typename TUi>
-inline bool QmTooltipActive(const CTooltip &Tooltip, uint64_t Frame, TUi &Ui)
+inline bool QmTooltipActive(const CTooltip &Tooltip, uint64_t Frame, const std::array<int, 9> &Context, TUi &Ui)
 {
-	return Tooltip.m_OnScreen && QmTooltipRegistered(Tooltip, Frame) && !QmTooltipSourceInvalidated(Tooltip, Frame) && QmTooltipHovered(Tooltip, Ui);
+	return Tooltip.m_OnScreen && QmTooltipRegistered(Tooltip, Frame) && Tooltip.m_RegisteredContext == Context && !QmTooltipSourceInvalidated(Tooltip, Frame) && QmTooltipHovered(Tooltip, Ui);
 }
 
 /**
