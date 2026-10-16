@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
-#include <optional>
 #include <string>
 #include <utility>
 
@@ -73,26 +72,31 @@ public:
 		return EAdmission::QUEUED;
 	}
 
-	// SENT 不保存 Message，调用者负责发送仍由自己持有的消息。
-	EAdmission Admit(int64_t LastSend, int64_t Now, int64_t Frequency, SMessage Message)
+	// 立即发送失败也保留消息，不能把底层拒绝入队当作发送成功。
+	template<typename TSend>
+	EAdmission Admit(int64_t LastSend, int64_t Now, int64_t Frequency, SMessage Message, TSend &&Send)
 	{
 		if(!ObserveTime(LastSend, Now, Frequency))
 			return EAdmission::REJECTED;
 		int PendingCount = static_cast<int>(m_Messages.size());
-		const EAdmission Admission = Reserve(LastSend, Now, Frequency, PendingCount);
+		EAdmission Admission = Reserve(LastSend, Now, Frequency, PendingCount);
+		if(Admission == EAdmission::SENT && !Send(std::as_const(Message)))
+			Admission = EAdmission::QUEUED;
 		if(Admission == EAdmission::QUEUED)
 			m_Messages.push_back(std::move(Message));
 		return Admission;
 	}
 
-	// 弹出不更新发送时间，调用者在实际发送时维护 LastSend。
-	std::optional<SMessage> PopReady(int64_t LastSend, int64_t Now, int64_t Frequency)
+	// 回调确认已发送或应丢弃后才移除；失败保留队首，调用者仅在发送成功时更新 LastSend。
+	template<typename TProcess>
+	bool ProcessReady(int64_t LastSend, int64_t Now, int64_t Frequency, TProcess &&Process)
 	{
 		if(!ObserveTime(LastSend, Now, Frequency) || m_Messages.empty() || !Ready(LastSend, Now, Frequency))
-			return std::nullopt;
-		SMessage Message = std::move(m_Messages.front());
+			return false;
+		if(!Process(std::as_const(m_Messages.front())))
+			return false;
 		m_Messages.pop_front();
-		return Message;
+		return true;
 	}
 
 	void Clear()

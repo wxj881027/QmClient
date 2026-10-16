@@ -1213,8 +1213,8 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 			; // Do nothing as bindchat was executed
 		else if(GameClient()->m_TClient.ChatDoSpecId(m_Input.GetString()))
 			; // Do nothing as specid was executed
-		else
-			SendChatQueued(m_Input.GetString());
+		else if(SendChatQueued(m_Input.GetString()) == EChatSendResult::REJECTED && *str_utf8_skip_whitespaces(m_Input.GetString()) != '\0')
+			return true;
 		m_SavedInputPending = false;
 		m_aSavedInputText[0] = '\0';
 		m_pHistoryEntry = nullptr;
@@ -3191,13 +3191,13 @@ void CChat::OnRender()
 	else
 		UpdatePresentationStates(Now, DeltaSeconds, ShowLargeArea, ExtraAnimations);
 
-	// send pending chat messages
-	if(const auto Pending = m_PendingChatMessages.PopReady(m_LastChatSend, time(), time_freq()))
-	{
+	// 发送失败保留队首，恢复后按原顺序重试。
+	m_PendingChatMessages.ProcessReady(m_LastChatSend, time(), time_freq(), [&](const CPendingChatMessages::SMessage &Pending) {
 		// 固定连接的译文排队期间身份变化时丢弃，不能换玩家代发。
-		if(Pending->m_Connection < 0 || (Pending->m_ClientId >= 0 && Pending->m_ClientId == GameClient()->m_aLocalIds[Pending->m_Connection]))
-			SendChat(Pending->m_Team, Pending->m_Text.c_str(), Pending->m_Original.empty() ? nullptr : Pending->m_Original.c_str(), Pending->m_Connection);
-	}
+		if(Pending.m_Connection >= 0 && (Pending.m_ClientId < 0 || Pending.m_ClientId != GameClient()->m_aLocalIds[Pending.m_Connection]))
+			return true;
+		return SendChat(Pending.m_Team, Pending.m_Text.c_str(), Pending.m_Original.empty() ? nullptr : Pending.m_Original.c_str(), Pending.m_Connection);
+	});
 
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
@@ -3819,74 +3819,44 @@ static bool ShouldSyncDummyCommandToOther(const char *pLine)
 	return g_Config.m_ClDummyCopyMoves && CChat::ShouldSyncDummyCommand(pLine);
 }
 
-void CChat::SendChat(int Team, const char *pLine, const char *pLocalOriginal, int Connection)
+bool CChat::SendChat(int Team, const char *pLine, const char *pLocalOriginal, int Connection)
 {
 	if(pLine && GameClient()->TClientComponent().TryHandleLocalSaveReply(pLine))
-		return;
+		return true;
 
 	// don't send empty messages
 	if(pLine == nullptr || *str_utf8_skip_whitespaces(pLine) == '\0')
-		return;
+		return false;
 	if(GameClient()->m_FastPractice.ConsumePracticeChatCommand(Team, pLine))
-		return;
+		return true;
 
 	if(Connection >= 0)
-	{
-		SendChatOnConn(Connection, Team, pLine, false, true, pLocalOriginal);
-		return;
-	}
-	m_LastChatSend = time();
+		return SendChatOnConn(Connection, Team, pLine, false, true, pLocalOriginal);
 
-	if(GameClient()->Client()->IsSixup())
-	{
-		protocol7::CNetMsg_Cl_Say Msg7;
-		Msg7.m_Mode = Team == 1 ? protocol7::CHAT_TEAM : protocol7::CHAT_ALL;
-		Msg7.m_Target = -1;
-		Msg7.m_pMessage = pLine;
-		if(Client()->SendPackMsgActive(&Msg7, MSGFLAG_VITAL, true) == 0)
-		{
-			GameClient()->TClientComponent().TrackLocalSaveLoadCommand(g_Config.m_ClDummy, pLine);
-			if(pLine[0] != '/')
-				m_OutgoingAnnotations.Record(g_Config.m_ClDummy, GameClient()->m_aLocalIds[g_Config.m_ClDummy], Team, pLine, pLocalOriginal, time(), time_freq() * 30);
-		}
+	if(!SendChatOnConn(g_Config.m_ClDummy, Team, pLine, false, true, pLocalOriginal))
+		return false;
 
-		if(Client()->DummyConnected() && ShouldSyncDummyCommandToOther(pLine))
-			SendChatOnConn(!g_Config.m_ClDummy, Team, pLine);
-
-		return;
-	}
-
-	// send chat message
-	CNetMsg_Cl_Say Msg;
-	Msg.m_Team = Team;
-	Msg.m_pMessage = pLine;
-	if(Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL) == 0)
-	{
-		GameClient()->TClientComponent().TrackLocalSaveLoadCommand(g_Config.m_ClDummy, pLine);
-		if(pLine[0] != '/')
-			m_OutgoingAnnotations.Record(g_Config.m_ClDummy, GameClient()->m_aLocalIds[g_Config.m_ClDummy], Team, pLine, pLocalOriginal, time(), time_freq() * 30);
-	}
-
+	// 当前连接成功后再同步另一连接，避免重试时重复执行已同步的命令。
 	if(Client()->DummyConnected() && ShouldSyncDummyCommandToOther(pLine))
 		SendChatOnConn(!g_Config.m_ClDummy, Team, pLine);
+	return true;
 }
 
-void CChat::SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhitespaceOnly, bool HandleLocalSaveForLoadCommand, const char *pLocalOriginal)
+bool CChat::SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhitespaceOnly, bool HandleLocalSaveForLoadCommand, const char *pLocalOriginal)
 {
 	if(HandleLocalSaveForLoadCommand && pLine && GameClient()->TClientComponent().TryHandleLocalSaveReply(pLine))
-		return;
+		return true;
 
 	if(pLine == nullptr || pLine[0] == '\0')
-		return;
+		return false;
 
 	// don't send empty messages
 	if(!AllowWhitespaceOnly && *str_utf8_skip_whitespaces(pLine) == '\0')
-		return;
+		return false;
 
 	if(Conn < IClient::CONN_MAIN || Conn > IClient::CONN_DUMMY || (Conn == IClient::CONN_DUMMY && !Client()->DummyConnected()))
-		return;
+		return false;
 
-	m_LastChatSend = time();
 	int SendResult;
 
 	if(GameClient()->Client()->IsSixup())
@@ -3906,13 +3876,15 @@ void CChat::SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhit
 		SendResult = Client()->SendPackMsg(Conn, &Msg, MSGFLAG_VITAL);
 	}
 
-	if(SendResult == 0)
-	{
-		if(HandleLocalSaveForLoadCommand)
-			GameClient()->TClientComponent().TrackLocalSaveLoadCommand(Conn, pLine);
-		if(pLine[0] != '/')
-			m_OutgoingAnnotations.Record(Conn, GameClient()->m_aLocalIds[Conn], Team, pLine, pLocalOriginal, time(), time_freq() * 30);
-	}
+	if(SendResult != 0)
+		return false;
+
+	m_LastChatSend = time();
+	if(HandleLocalSaveForLoadCommand)
+		GameClient()->TClientComponent().TrackLocalSaveLoadCommand(Conn, pLine);
+	if(pLine[0] != '/')
+		m_OutgoingAnnotations.Record(Conn, GameClient()->m_aLocalIds[Conn], Team, pLine, pLocalOriginal, time(), time_freq() * 30);
+	return true;
 }
 
 CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal, int Connection)
@@ -3921,8 +3893,10 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 		return EChatSendResult::REJECTED;
 	if(pLine && GameClient()->TClientComponent().TryHandleLocalSaveReply(pLine))
 		return EChatSendResult::HANDLED;
+	if(pLine == nullptr || *str_utf8_skip_whitespaces(pLine) == '\0')
+		return EChatSendResult::REJECTED;
 
-	const auto SendSensitive = [&] { SendChat(Team, pLine, nullptr, Connection); };
+	const auto SendSensitive = [&] { return SendChat(Team, pLine, nullptr, Connection); };
 	const auto SendOrdinary = [&] {
 		// 显式语言后缀先于自动检测，已识别请求的失败也不能漏发原文。
 		if(AllowOutgoingTranslation && GameClient()->m_Translate.TryTranslateOutgoingChat(Team, pLine))
@@ -3935,9 +3909,9 @@ CChat::EChatSendResult CChat::SendChatQueued(int Team, const char *pLine, bool A
 		}
 
 		CPendingChatMessages::SMessage Message{Team, Connection, Connection >= 0 ? GameClient()->m_aLocalIds[Connection] : -1, pLine, pLocalOriginal != nullptr ? pLocalOriginal : ""};
-		const EChatSendResult Result = static_cast<EChatSendResult>(m_PendingChatMessages.Admit(m_LastChatSend, time(), time_freq(), std::move(Message)));
-		if(Result == EChatSendResult::SENT)
-			SendChat(Team, pLine, pLocalOriginal, Connection);
+		const EChatSendResult Result = static_cast<EChatSendResult>(m_PendingChatMessages.Admit(m_LastChatSend, time(), time_freq(), std::move(Message), [&](const CPendingChatMessages::SMessage &Pending) {
+			return SendChat(Pending.m_Team, Pending.m_Text.c_str(), Pending.m_Original.empty() ? nullptr : Pending.m_Original.c_str(), Pending.m_Connection);
+		}));
 
 		if(Result != EChatSendResult::REJECTED)
 		{
