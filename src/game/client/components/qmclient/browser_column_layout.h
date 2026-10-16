@@ -40,12 +40,14 @@ class CQmBrowserHeaderGesture
 {
 	int m_ReorderColumn = -1;
 	int m_ResizeColumn = -1;
+	bool m_ReorderDragged = false;
 
 public:
 	void Begin(int HeaderColumn, int ResizeColumn)
 	{
 		if(m_ReorderColumn >= 0 || m_ResizeColumn >= 0)
 			return;
+		m_ReorderDragged = false;
 		m_ResizeColumn = ResizeColumn;
 		m_ReorderColumn = ResizeColumn >= 0 ? -1 : HeaderColumn;
 	}
@@ -53,7 +55,11 @@ public:
 	{
 		m_ReorderColumn = -1;
 		m_ResizeColumn = -1;
+		m_ReorderDragged = false;
 	}
+	void MarkReorderDrag() { m_ReorderDragged |= m_ReorderColumn >= 0; }
+	bool ReorderDragged() const { return m_ReorderDragged; }
+	bool AllowsSort() const { return !m_ReorderDragged && m_ResizeColumn < 0; }
 	int ReorderColumn() const { return m_ReorderColumn; }
 	int ResizeColumn() const { return m_ResizeColumn; }
 };

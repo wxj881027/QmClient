@@ -104,6 +104,44 @@ TEST(ServerBrowserHeaderGesture, HeaderDragCannotBecomeResizeWhenCrossingEdge)
 	EXPECT_EQ(Gesture.ReorderColumn(), -1);
 }
 
+TEST(ServerBrowserHeaderGesture, ReorderReleaseSuppressesOnlyThatPressThenPinnedFavoriteCanSort)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, -1);
+	Gesture.MarkReorderDrag();
+	// 松开帧的表头仍需吞掉这次拖动产生的点击，然后统一结束手势。
+	EXPECT_FALSE(Gesture.AllowsSort());
+	Gesture.End();
+	// 固定收藏列不参与换列；即使没有内容列索引，新点击仍可排序。
+	Gesture.Begin(-1, -1);
+	EXPECT_TRUE(Gesture.AllowsSort());
+	EXPECT_FALSE(Gesture.ReorderDragged());
+}
+
+TEST(ServerBrowserHeaderGesture, NewHeaderPressDoesNotInheritCompletedReorder)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, -1);
+	Gesture.MarkReorderDrag();
+	Gesture.End();
+	Gesture.Begin(5, -1);
+	EXPECT_TRUE(Gesture.AllowsSort());
+	EXPECT_FALSE(Gesture.ReorderDragged());
+}
+
+TEST(ServerBrowserHeaderGesture, ResizeCannotMarkReorderOrPolluteNextSort)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, 3);
+	Gesture.MarkReorderDrag();
+	EXPECT_FALSE(Gesture.ReorderDragged());
+	EXPECT_FALSE(Gesture.AllowsSort());
+	Gesture.End();
+	Gesture.Begin(5, -1);
+	EXPECT_TRUE(Gesture.AllowsSort());
+	EXPECT_FALSE(Gesture.ReorderDragged());
+}
+
 namespace
 {
 	void ExpectBrowserRectWithin(const CUIRect &Rect, const CUIRect &Area)

@@ -1148,7 +1148,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	static int s_ReorderColIndex = -1; // 拖拽中的 s_aCols 索引
 	static int s_ReorderInsertSlot = -1; // 落点槽位（不含被拖列计数）
 	static float s_ReorderPressX = 0.0f;
-	static bool s_ReorderWasDrag = false;
 	constexpr float ReorderActivateDistance = 6.0f;
 
 	auto ContentSlotFromMouseX = [&](float MouseXPos) {
@@ -1168,11 +1167,11 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		{
 			s_ReorderInsertSlot = ContentSlotFromMouseX(Ui()->MouseX());
 			if(std::abs(Ui()->MouseX() - s_ReorderPressX) > ReorderActivateDistance)
-				s_ReorderWasDrag = true;
+				s_HeaderGesture.MarkReorderDrag();
 		}
 		else
 		{
-			if(s_ReorderWasDrag)
+			if(s_HeaderGesture.ReorderDragged())
 			{
 				// 从当前顺序中摘除被拖列，插入落点槽位并持久化。
 				const int Pos = s_ReorderColIndex - NumPinnedCols;
@@ -1205,7 +1204,6 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 			s_ReorderColIndex = HeaderIndex;
 			s_ReorderPressX = Ui()->MouseX();
 			s_ReorderInsertSlot = ContentSlotFromMouseX(Ui()->MouseX());
-			s_ReorderWasDrag = false;
 		}
 
 		int Checked = g_Config.m_BrSort == Col.m_Sort;
@@ -1216,7 +1214,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 		if(DoButton_GridHeader(&Col.m_Id, pCaption, Checked, &Col.m_Rect))
 		{
 			// 这次按压演变成了拖拽换列：吞掉点击，不触发排序。
-			if(Col.m_Sort != -1 && !s_ReorderWasDrag)
+			if(Col.m_Sort != -1 && s_HeaderGesture.AllowsSort())
 			{
 				if(g_Config.m_BrSort == Col.m_Sort)
 					g_Config.m_BrSortOrder = (g_Config.m_BrSortOrder + 1) % (PlayersOrPing ? 3 : 2);
@@ -1253,7 +1251,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 
 	// 换列落点指示：亮色竖线标出松开后的插入边界；虚影标题跟随鼠标，
 	// 明示正在拖的是哪一列。
-	if(s_ReorderColIndex >= 0 && s_ReorderWasDrag)
+	if(s_ReorderColIndex >= 0 && s_HeaderGesture.ReorderDragged())
 	{
 		float LineX = s_aCols[NumCols - 1].m_Rect.x + s_aCols[NumCols - 1].m_Rect.w + 1.0f;
 		int Seen = 0;
@@ -1321,6 +1319,7 @@ void CMenus::RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemAct
 	}
 
 	if(!Ui()->MouseButton(0))
+		// 所有表头已消费松开帧，拖动的排序抑制不能泄漏到下一次固定列表头点击。
 		s_HeaderGesture.End();
 
 	for(const auto &Handle : s_vResizeHandles)
