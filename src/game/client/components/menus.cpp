@@ -7949,6 +7949,8 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	m_QmVoteMenu.m_SelectedName.clear();
 	m_QmVoteMenu.m_Status.clear();
 	m_QmVoteMenu.m_Dirty = true;
+	m_QmVoteMenu.m_ServerList.Select(-1);
+	m_QmVoteMenu.m_ServerSearch.Clear();
 	m_QmPlayersMenu.m_Selection.Validate(nullptr);
 	if(NewState == IClient::STATE_DEMOPLAYBACK)
 	{

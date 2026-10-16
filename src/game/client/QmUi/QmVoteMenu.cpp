@@ -62,9 +62,9 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	CUIRect Navigation;
 	MainView.HSplitTop(28.0f, &Navigation, &MainView);
 	MainView.HSplitTop(8.0f, nullptr, &MainView);
-	Navigation.w = std::min(540.0f, Navigation.w);
-	static CButtonContainer s_aPages[3];
-	const char *apPages[] = {Localize("Map"), Localize("Kick player"), Localize("Move player to spectators")};
+	Navigation.w = std::min(720.0f, Navigation.w);
+	static CButtonContainer s_aPages[4];
+	const char *apPages[] = {Localize("Server votes"), Localize("Map"), Localize("Kick player"), Localize("Move player to spectators")};
 	const auto Style = CapsuleTabBarStyleFor(ms_ColorTabbarActive);
 	const auto PreviousPage = m_QmVoteMenu.m_Page;
 	m_QmVoteMenu.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(PreviousPage), Navigation, 8.0f, &Style));
@@ -80,7 +80,10 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	else
 	{
 		m_QmVoteMenu.m_Loader.Suspend();
-		RenderVotePlayerList(MainView, m_QmVoteMenu.m_Page == EQmVoteMenuPage::SPECTATE);
+		if(m_QmVoteMenu.m_Page == EQmVoteMenuPage::SERVER)
+			RenderServerVoteList(MainView);
+		else
+			RenderVotePlayerList(MainView, m_QmVoteMenu.m_Page == EQmVoteMenuPage::SPECTATE);
 	}
 }
 
@@ -201,7 +204,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	InputOptions.m_pPlaceholder = Localize("Exclude");
 	InputOptions.m_SearchHotkeyEnabled = false;
 	State.m_Dirty |= ui_widget::InputField(Ctx, &m_ExcludeInput, Exclude, InputOptions).m_Changed;
-	// 与原始投票页共用搜索字段，切换入口后仍保持同一组条件。
+	// 地图库独立保留搜索条件，不影响服务器投票页。
 	if(State.m_Filter.m_Search != m_FilterInput.GetString() || State.m_Filter.m_Exclude != m_ExcludeInput.GetString())
 		State.m_Dirty = true;
 	State.m_Filter.m_Search = m_FilterInput.GetString();

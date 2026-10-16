@@ -11219,6 +11219,9 @@ Server type (novice, moderate, etc.)
 Server URL
 == URL сервера
 
+Server votes
+== Голосования сервера
+
 Server-assigned style
 == Стиль, назначенный сервером
 

@@ -3739,6 +3739,7 @@ Server region. Used for region bans
 Server stress (debug builds only).
 Server type (novice, moderate, etc.)
 Server URL
+Server votes
 Server-assigned style
 Server-dependent
 Set all to Rifle

@@ -19,6 +19,7 @@ TEST(QmVotePlayerTargets, SpectateExcludesPlayersAlreadySpectating)
 
 TEST(QmVotePlayerTargets, MapPageAndInvalidIdsNeverAcceptPlayerActions)
 {
+	EXPECT_FALSE(QmVotePlayerEligible(EQmVoteMenuPage::SERVER, 2, 1, true, false));
 	EXPECT_FALSE(QmVotePlayerEligible(EQmVoteMenuPage::MAPS, 2, 1, true, false));
 	EXPECT_FALSE(QmVotePlayerEligible(EQmVoteMenuPage::KICK, -1, 1, true, false));
 	EXPECT_FALSE(QmVotePlayerEligible(EQmVoteMenuPage::KICK, MAX_CLIENTS, 1, true, false));

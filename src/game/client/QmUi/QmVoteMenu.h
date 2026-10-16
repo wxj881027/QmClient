@@ -5,6 +5,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/components/qmclient/server_vote_list.h>
 #include <game/client/components/qmclient/vote_map_loader.h>
 
 #include <array>
@@ -16,6 +17,7 @@
 
 enum class EQmVoteMenuPage
 {
+	SERVER,
 	MAPS,
 	KICK,
 	SPECTATE,
@@ -40,6 +42,8 @@ struct SQmVoteMenuState
 	uint64_t m_OptionsRevision = std::numeric_limits<uint64_t>::max();
 	uint64_t m_CatalogRevision = std::numeric_limits<uint64_t>::max();
 	EQmVoteMenuPage m_Page = EQmVoteMenuPage::MAPS;
+	CQmServerVoteList m_ServerList;
+	CLineInputBuffered<64> m_ServerSearch;
 	std::array<QmPlayersUi::CSelection, 2> m_PlayerSelections;
 	std::array<CLineInputBuffered<64>, 2> m_PlayerSearch;
 	std::array<CLineInputBuffered<64>, 2> m_PlayerExclude;

@@ -11219,6 +11219,9 @@ Server type (novice, moderate, etc.)
 Server URL
 == 서버 URL
 
+Server votes
+== 서버 투표
+
 Server-assigned style
 == 서버 지정 스타일
 

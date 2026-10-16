@@ -11222,6 +11222,9 @@ Server type (novice, moderate, etc.)
 Server URL
 == 服务器 URL
 
+Server votes
+== 服务器投票
+
 Server-assigned style
 == 服务器分配风格
 

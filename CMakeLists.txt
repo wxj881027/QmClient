@@ -3165,6 +3165,7 @@ if(CLIENT)
     QmUi/QmConsoleUi.h
     QmUi/QmVoteMenu.cpp
     QmUi/QmVoteMenu.h
+    QmUi/QmServerVoteMenu.cpp
     QmUi/QmPlayersMenu.cpp
     QmUi/QmPlayersMenu.h
     QmUi/QmCardLabelHints.h
@@ -3487,6 +3488,7 @@ if(CLIENT)
     components/qmclient/map_difficulty_catalog.h
     components/qmclient/vote_map_library.cpp
     components/qmclient/vote_map_library.h
+    components/qmclient/server_vote_list.h
     components/qmclient/vote_map_loader.cpp
     components/qmclient/vote_map_loader.h
     components/qmclient/map_vote_difficulty.h
@@ -4716,6 +4718,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
+    src/test/unit/qmclient/ui/server_vote_list_test.cpp
     src/test/unit/qmclient/ui/players_menu_test.cpp
     src/test/unit/qmclient/ui/vote_player_targets_test.cpp
     src/test/integration/qmclient/ui/vote_map_loader_test.cpp
