@@ -389,7 +389,6 @@ void CMenuBackground::ProcessThemeListJob()
 
 		CTheme Theme(Entry.m_Name.c_str(), Entry.m_HasDay, Entry.m_HasNight);
 		Theme.m_IconPath = Entry.m_IconPath;
-		Theme.m_aMapNames = Entry.m_aMapNames;
 		m_vThemes.push_back(std::move(Theme));
 	}
 
@@ -533,17 +532,22 @@ void CMenuBackground::LoadMenuBackground(bool HasDayHint, bool HasNightHint)
 
 		const int HourOfTheDay = time_houroftheday();
 		const bool IsDaytime = HourOfTheDay >= 6 && HourOfTheDay < 18;
-		// 扫描结果保留真实文件名，Linux 上不能重新拼写大小写不同的后缀。
+		// 旧配置可按时段匹配地图，显式选择的完整文件名始终优先。
+		EThemeSelectionMatch BestMatch = EThemeSelectionMatch::NONE;
+		const char *pResolvedMenuMap = nullptr;
 		for(const auto &Theme : m_vThemes)
 		{
-			if(Theme.m_Name == pMenuMap)
+			const EThemeSelectionMatch Match = ResolveThemeSelectionMatch(Theme.m_Name.c_str(), pMenuMap, IsDaytime);
+			if(Match > BestMatch)
 			{
-				const std::string &MapFile = ResolveThemeMapFileName(Theme.m_aMapNames, IsDaytime);
-				if(!MapFile.empty())
-					pMenuMap = MapFile.c_str();
-				break;
+				BestMatch = Match;
+				pResolvedMenuMap = Theme.m_Name.c_str();
+				if(Match == EThemeSelectionMatch::EXACT)
+					break;
 			}
 		}
+		if(pResolvedMenuMap != nullptr)
+			pMenuMap = pResolvedMenuMap;
 		const bool HasImageExtension = IsBackgroundImageExtension(pMenuMap);
 		const bool HasVideoExtension = IsBackgroundVideoExtension(pMenuMap);
 		const bool HasMapExtension = str_endswith_nocase(pMenuMap, ".map") != nullptr;

@@ -5800,12 +5800,18 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const std::vector<CTheme> &vThemes = MenuBackground.GetThemes();
 
 	int SelectedTheme = -1;
+	EThemeSelectionMatch BestMatch = EThemeSelectionMatch::NONE;
+	const int HourOfTheDay = time_houroftheday();
+	const bool IsDaytime = HourOfTheDay >= 6 && HourOfTheDay < 18;
 	for(int i = 0; i < (int)vThemes.size(); i++)
 	{
-		if(str_comp(vThemes[i].m_Name.c_str(), g_Config.m_ClMenuMap) == 0 || (IsThemeFileCandidate(g_Config.m_ClMenuMap) && vThemes[i].m_Name == ThemeBaseName(g_Config.m_ClMenuMap)))
+		const EThemeSelectionMatch Match = ResolveThemeSelectionMatch(vThemes[i].m_Name.c_str(), g_Config.m_ClMenuMap, IsDaytime);
+		if(Match > BestMatch)
 		{
+			BestMatch = Match;
 			SelectedTheme = i;
-			break;
+			if(Match == EThemeSelectionMatch::EXACT)
+				break;
 		}
 	}
 	const int OldSelected = SelectedTheme;
