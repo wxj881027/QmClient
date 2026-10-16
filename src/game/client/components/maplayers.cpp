@@ -107,6 +107,13 @@ bool CMapLayers::AdvanceMapLoad(int MaxLayers)
 	return m_MapLoaded;
 }
 
+void CMapLayers::UnloadMap()
+{
+	m_MapRenderer.Clear();
+	m_MapLoaded = false;
+	m_MapLoadInProgress = false;
+}
+
 void CMapLayers::RenderCustom(const vec2 &Center, float Zoom)
 {
 	if(m_OnlineOnly && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
@@ -116,14 +123,23 @@ void CMapLayers::RenderCustom(const vec2 &Center, float Zoom)
 	RenderCustomWithCamera(Center, Zoom);
 }
 
-void CMapLayers::RenderCustomWithCamera(const vec2 &Center, float Zoom)
+void CMapLayers::RenderCustomWithCamera(const vec2 &Center, float Zoom, std::optional<ERenderType> RenderType)
 {
 	if(m_OnlineOnly && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
 		return;
+	RenderWithCamera(Center, Zoom, RenderType);
+}
+
+void CMapLayers::RenderWithCamera(const vec2 &Center, float Zoom, std::optional<ERenderType> RenderType)
+{
 	if(!m_MapLoaded)
 		return;
 
-	m_Params.m_EntityOverlayVal = m_Type == RENDERTYPE_FULL_DESIGN ? 0 : g_Config.m_ClOverlayEntities;
+	const int PreviousType = m_Params.m_RenderType;
+	m_Params.m_RenderType = RenderType.value_or(m_Type);
+	m_Params.m_EntityOverlayVal = m_EntityOverlayValOverride >= 0 ?
+					      m_EntityOverlayValOverride :
+					      (m_Type == RENDERTYPE_FULL_DESIGN ? 0 : g_Config.m_ClOverlayEntities);
 	m_Params.m_Center = Center;
 	m_Params.m_Zoom = Zoom;
 	m_Params.m_RenderText = g_Config.m_ClTextEntities;
@@ -133,6 +149,7 @@ void CMapLayers::RenderCustomWithCamera(const vec2 &Center, float Zoom)
 	m_Params.m_DebugRenderTileClips = g_Config.m_DbgRenderTileClips;
 
 	m_MapRenderer.Render(m_Params);
+	m_Params.m_RenderType = PreviousType;
 }
 
 void CMapLayers::SwapState(CMapLayers &Other)

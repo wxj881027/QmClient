@@ -1225,7 +1225,7 @@ float CMenus::ApplyUiSwitchOffset(CUIRect &View, const float Strength, const flo
 float CMenus::ResolveMenuTabAnimationValue(const void *pButtonId, const bool Active, const float DurationSec) const
 {
 	const float Target = Active ? 1.0f : 0.0f;
-	if(Ui()->RenderOnly())
+	if(Ui()->AnimationsBlocked())
 		return Target;
 
 	static const uint64_t s_ScopeHash = static_cast<uint64_t>(str_quickhash("menu_tab_hover"));
@@ -5779,6 +5779,14 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 {
 	CPerfTimer RenderTimer;
 	static CListBox s_ListBox;
+	// 设置分类切换时显式重放入场动画（序号制，与服务器/语言列表同款）；
+	// 渲染间隙启发在设置页不可靠（后台趟持续渲染导致间隙永不打开）。
+	static int s_EntryRestartSeq = -1;
+	if(s_EntryRestartSeq != m_SettingsListEntryRestartSeq)
+	{
+		s_ListBox.RestartEntryAnimation();
+		s_EntryRestartSeq = m_SettingsListEntryRestartSeq;
+	}
 	auto &MenuBackground = GameClient()->m_MenuBackground;
 	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
@@ -5840,7 +5848,8 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 			Icon.HMargin(3.0f, &Icon);
 			Graphics()->TextureSet(Theme.m_IconTexture);
 			Graphics()->QuadsBegin();
-			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			// 裸 quad 不经过 CUi 显隐系数；手动并入列表入场淡入，与文本同步。
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, Ui()->ControlAlphaScale());
 			IGraphics::CQuadItem QuadItem(Icon.x, Icon.y, Icon.w, Icon.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
@@ -6376,6 +6385,12 @@ void CMenus::OnShutdown()
 	ResetDemoScreenshotPreview();
 	m_ScreenshotManager.ClearThumbnails(Graphics());
 	m_CommunityIcons.Shutdown();
+
+	// 服务器列表扩展的释放：图形接口此刻仍存活（CKernel 尚未销毁），
+	// 预览缓存的 GPU 资源必须在此窗口期释放，不能等到组件析构。
+	if(auto *pServerBrowserImpl = dynamic_cast<CServerBrowser *>(ServerBrowser()))
+		pServerBrowserImpl->m_MapDifficultyStarsFunction = nullptr;
+	ClearMapPreviewCache();
 
 	// QmClient: 保存“最近缺失字形”集合，供下次启动后立即预热（详见 text.cpp）。
 	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
@@ -8382,6 +8397,10 @@ void CMenus::SetMenuPage(int NewPage)
 	else
 	{
 		m_MenuPageTransitionDirection = 0.0f;
+	}
+	if(OldPage != NewPage && NewIsBrowser)
+	{
+		m_BrowserListEntryRestartSeq++;
 	}
 	if(IsBrowserPage(NewPage))
 	{

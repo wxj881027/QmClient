@@ -28,23 +28,118 @@
 #include <utility>
 #include <vector>
 
-TEST(ServerBrowserColumnLayout, ReservesNameAndMapBeforeAllocatingFixedColumns)
+TEST(ServerBrowserColumnLayout, FixedColumnsStayAbsoluteAndNameAbsorbsLeftover)
 {
-	const SQmBrowserNameMapLayout Wide = QmBrowserNameMapLayout(680.0f, 210.0f, 120.0f, 90.0f, 0.6f);
-	EXPECT_FLOAT_EQ(Wide.m_RightScale, 1.0f);
-	EXPECT_FLOAT_EQ(Wide.m_NameWidth, 276.0f);
-	EXPECT_FLOAT_EQ(Wide.m_MapWidth, 194.0f);
+	// 2026-10-14 布局重构：内容列绝对宽度，名称列弹性吸收剩余；
+	// 没有组缩放——拖一条宽度柄只影响该列与名称列。
+	const SQmBrowserColumnLayout Wide = QmBrowserColumnLayout(680.0f, 380.0f, 120.0f);
+	EXPECT_FLOAT_EQ(Wide.m_Scale, 1.0f);
+	EXPECT_FLOAT_EQ(Wide.m_NameWidth, 300.0f);
 
-	const SQmBrowserNameMapLayout Narrow = QmBrowserNameMapLayout(300.0f, 210.0f, 120.0f, 90.0f, 0.6f);
-	EXPECT_NEAR(Narrow.m_RightScale, 90.0f / 210.0f, 0.0001f);
-	EXPECT_FLOAT_EQ(Narrow.m_NameWidth, 120.0f);
-	EXPECT_FLOAT_EQ(Narrow.m_MapWidth, 90.0f);
+	// 恰好放满：名称列等于其最小宽。
+	const SQmBrowserColumnLayout Exact = QmBrowserColumnLayout(500.0f, 380.0f, 120.0f);
+	EXPECT_FLOAT_EQ(Exact.m_Scale, 1.0f);
+	EXPECT_FLOAT_EQ(Exact.m_NameWidth, 120.0f);
 
-	const SQmBrowserNameMapLayout Tiny = QmBrowserNameMapLayout(100.0f, 210.0f, 120.0f, 90.0f, 0.6f);
-	EXPECT_FLOAT_EQ(Tiny.m_RightScale, 0.0f);
-	EXPECT_GE(Tiny.m_NameWidth, 0.0f);
-	EXPECT_GE(Tiny.m_MapWidth, 0.0f);
-	EXPECT_FLOAT_EQ(Tiny.m_NameWidth + Tiny.m_MapWidth, 100.0f);
+	// 溢出：名称和固定列共同收缩，显示宽允许小于配置下限。
+	const SQmBrowserColumnLayout Overflow = QmBrowserColumnLayout(250.0f, 380.0f, 120.0f);
+	EXPECT_NEAR(Overflow.m_Scale, 250.0f / 500.0f, 0.0001f);
+	EXPECT_FLOAT_EQ(Overflow.m_NameWidth, 60.0f);
+
+	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 0.5f), 50.0f);
+	EXPECT_FLOAT_EQ(QmBrowserColumnSqueezedWidth(100.0f, 1.0f), 100.0f);
+}
+
+TEST(ServerBrowserColumnLayout, NarrowViewportKeepsAllDefaultColumnsInsideBudget)
+{
+	const float aWidths[] = {14, 20, 28, 120, 80, 68, 14, 40, 24, 30};
+	for(float Available : {0.0f, 80.0f, 250.0f, 400.0f, 558.0f, 900.0f})
+	{
+		SCOPED_TRACE(Available);
+		const auto Layout = QmBrowserColumnLayout(Available, 438.0f, 120.0f);
+		float RightEdge = Layout.m_NameWidth;
+		for(float Width : aWidths)
+			RightEdge += QmBrowserColumnSqueezedWidth(Width, Layout.m_Scale);
+		EXPECT_NEAR(RightEdge, Available, 0.001f);
+	}
+}
+
+TEST(ServerBrowserColumnLayout, EnlargedMapColumnStillFitsNarrowViewport)
+{
+	const float aWidths[] = {14, 20, 28, 800, 80, 68, 14, 40, 24, 30};
+	const auto Layout = QmBrowserColumnLayout(400.0f, 1118.0f, 120.0f);
+	float RightEdge = Layout.m_NameWidth;
+	for(float Width : aWidths)
+		RightEdge += QmBrowserColumnSqueezedWidth(Width, Layout.m_Scale);
+	EXPECT_NEAR(RightEdge, 400.0f, 0.001f);
+}
+
+TEST(ServerBrowserHeaderGesture, ResizeEdgeWinsOverOverlappingHeaderUntilRelease)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, 3);
+	EXPECT_EQ(Gesture.ResizeColumn(), 3);
+	EXPECT_EQ(Gesture.ReorderColumn(), -1);
+	Gesture.Begin(5, -1);
+	EXPECT_EQ(Gesture.ResizeColumn(), 3);
+	EXPECT_EQ(Gesture.ReorderColumn(), -1);
+	Gesture.End();
+	Gesture.Begin(5, -1);
+	EXPECT_EQ(Gesture.ReorderColumn(), 5);
+	EXPECT_EQ(Gesture.ResizeColumn(), -1);
+}
+
+TEST(ServerBrowserHeaderGesture, HeaderDragCannotBecomeResizeWhenCrossingEdge)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, -1);
+	Gesture.Begin(5, 4);
+	EXPECT_EQ(Gesture.ReorderColumn(), 4);
+	EXPECT_EQ(Gesture.ResizeColumn(), -1);
+	Gesture.End();
+	EXPECT_EQ(Gesture.ReorderColumn(), -1);
+	EXPECT_EQ(Gesture.ResizeColumn(), -1);
+	Gesture.Begin(5, 4);
+	EXPECT_EQ(Gesture.ResizeColumn(), 4);
+	EXPECT_EQ(Gesture.ReorderColumn(), -1);
+}
+
+TEST(ServerBrowserHeaderGesture, ReorderReleaseSuppressesOnlyThatPressThenPinnedFavoriteCanSort)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, -1);
+	Gesture.MarkReorderDrag();
+	// 松开帧的表头仍需吞掉这次拖动产生的点击，然后统一结束手势。
+	EXPECT_FALSE(Gesture.AllowsSort());
+	Gesture.End();
+	// 固定收藏列不参与换列；即使没有内容列索引，新点击仍可排序。
+	Gesture.Begin(-1, -1);
+	EXPECT_TRUE(Gesture.AllowsSort());
+	EXPECT_FALSE(Gesture.ReorderDragged());
+}
+
+TEST(ServerBrowserHeaderGesture, NewHeaderPressDoesNotInheritCompletedReorder)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, -1);
+	Gesture.MarkReorderDrag();
+	Gesture.End();
+	Gesture.Begin(5, -1);
+	EXPECT_TRUE(Gesture.AllowsSort());
+	EXPECT_FALSE(Gesture.ReorderDragged());
+}
+
+TEST(ServerBrowserHeaderGesture, ResizeCannotMarkReorderOrPolluteNextSort)
+{
+	CQmBrowserHeaderGesture Gesture;
+	Gesture.Begin(4, 3);
+	Gesture.MarkReorderDrag();
+	EXPECT_FALSE(Gesture.ReorderDragged());
+	EXPECT_FALSE(Gesture.AllowsSort());
+	Gesture.End();
+	Gesture.Begin(5, -1);
+	EXPECT_TRUE(Gesture.AllowsSort());
+	EXPECT_FALSE(Gesture.ReorderDragged());
 }
 
 namespace
@@ -231,6 +326,10 @@ public:
 	{
 		Browser.SetLatency(Address, Latency);
 	}
+	static void SetDifficultyStarsFunction(CServerBrowser &Browser, std::function<int(const CServerInfo *)> Function)
+	{
+		Browser.m_MapDifficultyStarsFunction = std::move(Function);
+	}
 };
 
 namespace
@@ -306,6 +405,18 @@ namespace
 			Info.m_NumClients = NumClients;
 			Info.m_MaxPlayers = Info.m_MaxClients = 16;
 			Info.m_vClients = std::move(vClients);
+			CServerBrowserTestAccess::Add(m_Browser, Address, Info);
+		}
+
+		void AddServer(const char *pAddress, const char *pName, const char *pMap)
+		{
+			NETADDR Address;
+			ASSERT_FALSE(net_addr_from_str(&Address, pAddress));
+			CServerInfo Info{};
+			str_copy(Info.m_aName, pName);
+			str_copy(Info.m_aMap, pMap);
+			Info.m_NumPlayers = Info.m_NumClients = 1;
+			Info.m_MaxPlayers = Info.m_MaxClients = 16;
 			CServerBrowserTestAccess::Add(m_Browser, Address, Info);
 		}
 
@@ -396,6 +507,47 @@ TEST_F(CServerBrowserStateTest, QmClientCountSortFollowsPushedDistributionInBoth
 	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aName, "Beta");
 	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aName, "Alpha");
 	EXPECT_EQ(m_Browser.SortedGet(2)->m_QmClientCount, 7);
+}
+
+TEST_F(CServerBrowserStateTest, DifficultySortRanksKnownMapsByStarsAndUnknownsLast)
+{
+	// 难度排序依赖客户端注入的星级回调；未收录地图（-1）升序排最后。
+	CServerBrowserTestAccess::SetDifficultyStarsFunction(m_Browser, [](const CServerInfo *pInfo) {
+		if(str_comp(pInfo->m_aMap, "One Star") == 0)
+			return 1;
+		if(str_comp(pInfo->m_aMap, "Three Stars") == 0)
+			return 3;
+		if(str_comp(pInfo->m_aMap, "Five Stars") == 0)
+			return 5;
+		return -1;
+	});
+	AddServer("127.0.0.1:8303", "Unknown", "Unknown Map");
+	AddServer("127.0.0.1:8304", "Hard", "Five Stars");
+	AddServer("127.0.0.1:8305", "Easy", "One Star");
+	AddServer("127.0.0.1:8306", "Mid", "Three Stars");
+	g_Config.m_BrSort = IServerBrowser::SORT_DIFFICULTY;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	ASSERT_EQ(m_Browser.NumSortedServers(), 4);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aMap, "One Star");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aMap, "Three Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aMap, "Five Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(3)->m_aMap, "Unknown Map");
+
+	g_Config.m_BrSortOrder = 1;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aMap, "Unknown Map");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aMap, "Five Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aMap, "Three Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(3)->m_aMap, "One Star");
+
+	// 未注入回调时全部视为未收录：排序退化为保持过滤顺序。
+	CServerBrowserTestAccess::SetDifficultyStarsFunction(m_Browser, nullptr);
+	g_Config.m_BrSortOrder = 0;
+	CServerBrowserTestAccess::Sort(m_Browser);
+	EXPECT_STREQ(m_Browser.SortedGet(0)->m_aMap, "Unknown Map");
+	EXPECT_STREQ(m_Browser.SortedGet(1)->m_aMap, "Five Stars");
+	EXPECT_STREQ(m_Browser.SortedGet(2)->m_aMap, "One Star");
+	EXPECT_STREQ(m_Browser.SortedGet(3)->m_aMap, "Three Stars");
 }
 
 TEST_F(CServerBrowserStateTest, QmClientCountsStayCurrentWhileSortingByName)

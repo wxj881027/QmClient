@@ -869,6 +869,8 @@ Connecting dummy
 Connecting to
 Connection disconnected
 Connection elevated
+Connection icon color
+Connection icon custom color
 Connection normal
 Connection Problems…
 Connection Quality
@@ -1008,6 +1010,7 @@ Customize interface appearance and previews
 Customize laser shape and effects
 Customize QmClient visuals and effects
 Customize the position jump hint
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
 Customize translate button and menu colors
 Customize vote display and interaction
 Custom…
@@ -1230,6 +1233,7 @@ Downscaled (0.78)
 Draft file is empty
 Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
+Drag to pan, scroll to zoom
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 Dragger Inner Color
 Dragger laser inner color
@@ -1310,6 +1314,8 @@ Dynamic FOV smoothness (0=instant, 100=smoothest)
 Dynamic island
 Dynamic Island background alpha
 Dynamic Island background color
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+Dynamic island connection icon custom color
 Ease in out quad
 Ease out cubic
 Echo follows the original chat color
@@ -1655,6 +1661,7 @@ Follow option color
 Follow remote placements in the collaborative editor
 Follow server
 Follow Tee
+Follow UI icon color
 Following
 Following %s across servers
 Following: %s
@@ -2058,6 +2065,7 @@ Ingame mouse sens.
 Initializing assets
 Initializing components
 Initializing layers
+Initializing map layers
 Initializing map logic
 Input
 Input background color
@@ -2388,7 +2396,9 @@ Map download send window
 Map exceeds the client limit of 64 MiB.
 Map folders
 Map name
+Map not downloaded yet — join the server to preview it
 Map play history
+Map preview rendering unavailable
 Map Preview TODO
 Map progress
 Map progress bar
@@ -2854,6 +2864,7 @@ Or visit DDNet.org
 Original
 Original language for both received and outgoing messages. Use Auto to detect each message.
 Original message language
+Original scroll feel
 Other
 Other game modes
 Other modes
@@ -3206,6 +3217,7 @@ QQ group: 1076765929 (click to copy)
 QQ Music hook heartbeat timeout (milliseconds)
 QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
+Quality tier
 Query current map info
 Query isolated serverlist consumer state
 Query map info for %s
@@ -3504,6 +3516,8 @@ Restore a two-player save? /qm Yes uses the newest; /qm Yes number selects anoth
 Restore configuration package
 Restore Kugou files
 Restore old single-segment hook collision line behavior
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
 Restoring save %d: main '%s', dummy '%s'.
 Retry
 Retry details
@@ -3642,6 +3656,7 @@ Screenshots directory
 Scroll mode
 Scroll mode: Off
 Scroll mode: On
+Scroll step
 Search
 Search and navigate settings
 Search country flag…
@@ -3714,6 +3729,7 @@ Server address to filter
 Server address:
 Server alert
 Server best:
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
 Server browser exclude string
 Server browser filter string
 Server browser sort column
@@ -3869,6 +3885,7 @@ Show enemy color in spectator menu
 Show enemy group players
 Show enemy reason
 Show entities
+Show entities only (hide textures)
 Show existing saves
 Show eye wheel and expressions
 Show feat-003 shared UI primitives dogfood page (takes over QmClient settings page, for visual verification of 11 primitives + spring/easing animations)
@@ -4040,7 +4057,7 @@ Show server help and usage messages
 Show server prompts and Echo messages as popups
 Show server settings
 Show settings card borders
-Show short server names in browser
+Show short server names in browser (applies to China community servers)
 Show skin date and author
 Show skin name on name plate to find missing skins
 Show skin names in nameplate
@@ -4645,6 +4662,7 @@ Toggle ghost key
 Toggle ghost view mode: play the ghost on an independent timeline (in-game demo player)
 Toggle keyboard shortcuts
 Toggle local console
+Toggle map preview
 Toggle microphone mute
 Toggle or set the switch on or off for the specified time (or indefinitely by default)
 Toggle receiving whispers
@@ -5051,6 +5069,7 @@ Weapons
 Website
 Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 When TClient rainbow Tee is enabled, this feature has no effect.
 When you cross the start line, show a ghost tee replicating the movements of your best time
 Whether a switch is deactivated by default (otherwise activated)
@@ -5087,6 +5106,7 @@ White
 Why are you slowmo replaying to read this?
 Width
 Width and height are required to be within the range from %d to %d.
+Width of difficulty column in server browser
 Width of friends column in server browser
 Width of latency column in server browser
 Width of map column in server browser

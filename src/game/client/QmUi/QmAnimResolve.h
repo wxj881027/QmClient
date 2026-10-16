@@ -28,6 +28,8 @@ float ResolveUiAnimValue(
 	float Target,
 	float DurationSec,
 	EEasing Easing);
+// 带 start-delay 的变体：同一帧批量启动多条轨道时按序错开（stagger 入场）。
+// 延迟期间值保持在起点，轨道仍视为活跃。
 float ResolveUiAnimSpringValue(
 	CUiV2AnimationRuntime &AnimRuntime,
 	uint64_t NodeKey,

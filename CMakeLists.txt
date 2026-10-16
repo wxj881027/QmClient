@@ -3438,6 +3438,8 @@ if(CLIENT)
     components/qmclient/bind_editor.h
     components/qmclient/bind_settings.cpp
     components/qmclient/browser_status_layout.h
+    components/qmclient/browser_map_preview.h
+    components/qmclient/browser_map_preview_loader.h
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_input_layout.h
     components/qmclient/pending_chat_messages.h
@@ -4590,6 +4592,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/QmAnimTreeTest.cpp
     src/test/unit/qmclient/ui/qm_icon_policy_test.cpp
     src/test/unit/qmclient/ui/qm_icon_diagnostics_test.cpp
+    src/test/unit/qmclient/ui/qm_signal_icon_font_size_test.cpp
+    src/test/unit/qmclient/ui/qm_signal_icon_color_test.cpp
     src/test/unit/qmclient/ui/qm_font_icon_cmap_test.cpp
     src/test/unit/qmclient/client/qm_render_pipeline_contract_test.cpp
     src/test/contract/qmclient/client/qm_phosphor_resource_contract_test.cpp
@@ -4780,6 +4784,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/client/online_replay_player_test.cpp
     src/test/unit/qmclient/client/qm_jump_hint_utils_test.cpp
     src/test/unit/qmclient/client/qm_dummy_mini_view_layout_test.cpp
+    src/test/unit/qmclient/client/qm_browser_map_preview_test.cpp
+    src/test/unit/qmclient/client/qm_map_render_pass_test.cpp
+    src/test/integration/qmclient/client/qm_browser_map_preview_loader_test.cpp
     src/test/unit/qmclient/client/qm_hud_editor_visible_bounds_test.cpp
     src/test/unit/qmclient/client/qm_hud_hook_countdown_test.cpp
     src/test/contract/qmclient/ui/qm_media_island_shader_contract_test.cpp
@@ -4795,6 +4802,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_hud_media_island_contract_test.cpp
     src/test/unit/qmclient/client/qm_hud_frozen_tee_state_test.cpp
     src/test/unit/qmclient/client/qm_hud_recording_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_hud_connection_signal_slot_test.cpp
     src/test/contract/qmclient/client/qm_vulkan_enhanced_contract_test.cpp
     src/test/unit/qmclient/client/qm_vulkan_enhanced_test.cpp
     src/test/unit/qmclient/client/qm_hud_notifications_catalog_test.cpp
@@ -5398,6 +5406,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/support/qm_popup_tooltip_boundary.cpp
       src/test/support/qm_exit_process_probe.cpp
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
+      src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp
+      src/test/integration/qmclient/ui/qm_numeric_field_enter_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
@@ -5410,6 +5420,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_tooltip_text_layout_test.cpp
       src/test/integration/qmclient/ui/qm_card_summary_layout_test.cpp
       src/test/integration/qmclient/ui/qm_secondary_panel_actions_test.cpp
+      src/test/integration/qmclient/ui/qm_browser_map_preview_input_test.cpp
       src/test/integration/qmclient/ui/qm_settings_action_group_test.cpp
       src/test/integration/qmclient/ui/qm_settings_text_columns_test.cpp
       src/test/integration/qmclient/ui/qm_adaptive_choice_test.cpp
@@ -5514,6 +5525,7 @@ if(TARGET benchmark::benchmark AND SERVER AND FREETYPE_FOUND)
     src/test/benchmark/qm_text_benchmark.cpp
     src/test/benchmark/qm_ime_layout_benchmark.cpp
     src/test/benchmark/qm_chat_layout_benchmark.cpp
+    src/test/benchmark/qm_browser_map_preview_benchmark.cpp
     src/test/benchmark/qm_scoreboard_layout_benchmark.cpp
     src/test/benchmark/qm_translate_benchmark.cpp
     src/game/client/components/qmclient/translate/translate_jobs.cpp

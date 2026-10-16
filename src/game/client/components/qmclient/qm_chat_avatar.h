@@ -3,6 +3,7 @@
 
 #include <engine/image.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/render.h>
 
 #include <algorithm>
@@ -111,7 +112,7 @@ namespace QmChatAvatar
 		if(!pSixupBody && !pSix)
 			return nullptr;
 		auto pSnapshot = std::make_shared<SSnapshot>();
-		pSnapshot->m_aColors.fill(ColorRGBA(1, 1, 1, 1));
+		pSnapshot->m_aColors.fill(ui_token::color::NEUTRAL_WHITE);
 		if(pSixupBody)
 		{
 			pSnapshot->m_Sixup = true;
@@ -235,8 +236,8 @@ namespace QmChatAvatar
 			DrawEllipse(Image, 29, 58, 12, 6, Accent);
 			DrawEllipse(Image, 52, 58, 15, 9, Outline);
 			DrawEllipse(Image, 52, 58, 12, 6, Accent);
-			DrawEllipse(Image, 40, 35, 6, 9, ColorRGBA(1, 1, 1, 1));
-			DrawEllipse(Image, 50, 35, 6, 9, ColorRGBA(1, 1, 1, 1));
+			DrawEllipse(Image, 40, 35, 6, 9, ui_token::color::NEUTRAL_WHITE);
+			DrawEllipse(Image, 50, 35, 6, 9, ui_token::color::NEUTRAL_WHITE);
 			DrawEllipse(Image, 42, 36, 2.5f, 4, Outline);
 			DrawEllipse(Image, 52, 36, 2.5f, 4, Outline);
 		}

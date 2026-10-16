@@ -3,6 +3,7 @@
 
 #include <game/client/QmUi/QmAnimationBackend.h>
 #include <game/client/QmUi/QmCardOrderModel.h>
+#include <game/client/QmUi/SettingsCardGeometry.h>
 #include <game/client/ui_rect.h>
 
 #include <algorithm>
@@ -63,6 +64,7 @@ public:
 	float ResolveContinuousEntryOffset(CUiV2AnimationRuntime &AnimRuntime, uint64_t NodeKey, const SCardMotionSpec &Motion);
 	bool AnimateEntry() const { return m_AnimateEntry; }
 	bool EntryWasActive() const { return m_EntryWasActive; }
+	float EntryAlpha() const { return m_EntryAlpha; }
 	void SetEntryActive(bool Active) { m_EntryWasActive = Active; }
 
 	void BeginFrame(SSettingsCardDeckFrameDiagnostics *pDiagnostics);
@@ -81,8 +83,37 @@ private:
 	uint64_t m_EntryDisplayCycle = UINT64_MAX;
 	bool m_AnimateEntry = false;
 	bool m_EntryWasActive = false;
+	float m_EntryAlpha = 1.0f;
 	SSettingsCardDeckFrameDiagnostics *m_pDiagnostics = nullptr;
 };
+
+// 入场上浮统一 ζ=1.0 临界阻尼弹簧（无回弹：卡片是大 ground，过冲读作不稳；
+// 用户校准「缓动上浮、渐入、优雅」）。连续与非连续入场共用同一曲线 family，
+// 时长都取 Motion.m_EntryDuration（已按动效等级缩放）。
+inline SUiAnimTransition SettingsCardEntryTransition(const SCardMotionSpec &Motion)
+{
+	SUiAnimTransition Transition;
+	Transition.m_Driver = EUiAnimDriver::SPRING;
+	Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+	Transition.m_Priority = 1;
+	const float Frequency = 5.0f / Motion.m_EntryDuration;
+	Transition.m_Spring = {1.0f, Frequency * Frequency, 2.0f * Frequency, 0.05f, 0.5f};
+	Transition.m_RespectMotionLevel = false;
+	return Transition;
+}
+
+// 入场渐入（onetake：opacity 领先位移）：0.7×上浮时长的 EASE_OUT_QUART tween，
+// 卡片先显形后落位；与 POS_Y 同生命周期同打断策略。
+inline SUiAnimTransition SettingsCardEntryFadeTransition(const SCardMotionSpec &Motion)
+{
+	SUiAnimTransition Transition;
+	Transition.m_DurationSec = Motion.m_EntryDuration > 0.0f ? Motion.m_EntryDuration * 0.7f : 0.0f;
+	Transition.m_Easing = EEasing::EASE_OUT_QUART;
+	Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
+	Transition.m_Priority = 1;
+	Transition.m_RespectMotionLevel = false;
+	return Transition;
+}
 
 inline bool SettingsCardDeckHasActiveItemContinuation(const bool HasPointerInput, const bool HasActiveItem)
 {

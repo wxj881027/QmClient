@@ -19,6 +19,16 @@ enum ERenderType
 	RENDERTYPE_FULL_DESIGN,
 };
 
+// 完整缓存也可用于背景/前景绘制；层的归属由游戏层位置决定，不能仅切换绘制参数。
+inline bool MapRenderLayerInPass(int RenderType, int Group, int Layer, int GameGroup, int GameLayer)
+{
+	// 组节点必须更新投影与裁剪，包括游戏层位于组中间的情况。
+	if(Layer < 0 || RenderType == RENDERTYPE_FULL_DESIGN)
+		return true;
+	const bool BeforeGame = GameGroup < 0 || Group < GameGroup || (Group == GameGroup && Layer < GameLayer);
+	return RenderType == RENDERTYPE_FOREGROUND ? !BeforeGame : BeforeGame;
+}
+
 class IEnvelopeEval
 {
 public:

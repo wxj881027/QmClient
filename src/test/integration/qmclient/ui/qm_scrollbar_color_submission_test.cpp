@@ -129,7 +129,7 @@ TEST_F(QmScrollbarColorSubmission, HorizontalSliderKeepsOwnOpacityAcrossPageBack
 		m_Ui.SetBackgroundAlphaScale(Alpha);
 		ui_widget::RenderHorizontalSlider(Context(), &m_HandleId, {0, 0, 120, 20}, 0.5f);
 		ASSERT_EQ(m_Graphics.m_vSurfaces.size(), 3u);
-		EXPECT_FLOAT_EQ(m_Graphics.m_vSurfaces[0].m_FillColor.a, 0.25f);
+		EXPECT_FLOAT_EQ(m_Graphics.m_vSurfaces[0].m_FillColor.a, 0.32f);
 		EXPECT_FLOAT_EQ(m_Graphics.m_vSurfaces[1].m_FillColor.a, 0.4f * 0.85f);
 		EXPECT_FLOAT_EQ(m_Graphics.m_vSurfaces[2].m_FillColor.a, 0.4f);
 	}

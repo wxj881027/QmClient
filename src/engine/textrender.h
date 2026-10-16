@@ -174,9 +174,19 @@ namespace FontIcons
 
 	[[maybe_unused]] static const char *FONT_ICON_MICROPHONE = "\xEE\x8C\xA6";
 
+	// 连接质量分档（灵动岛连接状态）：Phosphor cell-signal 家族官方码位。
+	[[maybe_unused]] static const char *FONT_ICON_CELL_SIGNAL_HIGH = "\xEE\x85\x84"; // U+E144
+	[[maybe_unused]] static const char *FONT_ICON_CELL_SIGNAL_MEDIUM = "\xEE\x85\x88"; // U+E148
+	[[maybe_unused]] static const char *FONT_ICON_CELL_SIGNAL_LOW = "\xEE\x85\x86"; // U+E146
+	[[maybe_unused]] static const char *FONT_ICON_CELL_SIGNAL_NONE = "\xEE\x85\x8A"; // U+E14A
+
 	// 全部图标字形，供图标字体自检与测试遍历使用；新增 FONT_ICON_* 常量时必须同步加入。
 	inline const char *const FONT_ICON_ALL[] = {
 		FONT_ICON_MICROPHONE,
+		FONT_ICON_CELL_SIGNAL_HIGH,
+		FONT_ICON_CELL_SIGNAL_MEDIUM,
+		FONT_ICON_CELL_SIGNAL_LOW,
+		FONT_ICON_CELL_SIGNAL_NONE,
 		FONT_ICON_PLUS,
 		FONT_ICON_MINUS,
 		FONT_ICON_LOCK,

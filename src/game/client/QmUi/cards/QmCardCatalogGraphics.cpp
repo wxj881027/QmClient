@@ -311,15 +311,18 @@ uint64_t CMenus::BuildGraphicsSettingsCards(const qm_card_catalog::SQmCardBuildC
 	static CButtonContainer s_aGraphicsIconColorButtons[3];
 	static CButtonContainer s_aGraphicsIconWeightButtons[4];
 	static CButtonContainer s_aGraphicsBlurModeButtons[3];
+	static CButtonContainer s_aGraphicsSignalColorModeButtons[3];
 	static CButtonContainer s_GraphicsIconCustomColorResetId;
 	static CButtonContainer s_GraphicsFriendIconColorResetId;
 	static CButtonContainer s_GraphicsFavoriteIconColorResetId;
+	static CButtonContainer s_GraphicsSignalIconColorResetId;
 
 	const bool RenderOnly = Ui()->RenderOnly();
 	const auto BuildDefinitions = [this, Ctx, pModesDefault, pDisplayDefault, pVisualDefault, pIconsDefault, pInteractionDefault, GraphicsPage, GraphicsModesTargetContentHeight, GraphicsVisualMeasureRevision, GraphicsModesMeasureRevision, GraphicsDisplayMeasureRevision, GraphicsDisplayRowCount, GraphicsBackendRowCount, FoundBackendCount, OldWindowMode, GraphicsMetrics, BodySize, DoGraphicsNumericField](std::vector<SSettingsCardDefinition> &vCards) {
 		vCards.reserve(5);
 		const SSettingsCardSpec ModesSpec{pModesDefault->m_pStableId, Localize(pModesDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pModesDefault)};
-		const SSettingsCardSpec DisplaySpec{pDisplayDefault->m_pStableId, Localize(pDisplayDefault->m_pTitle), nullptr};
+		// 副标题以注册表描述为唯一来源，与其他卡片一致；不再对本卡单独关闭副标题。
+		const SSettingsCardSpec DisplaySpec{pDisplayDefault->m_pStableId, Localize(pDisplayDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pDisplayDefault)};
 		const SSettingsCardSpec VisualSpec{pVisualDefault->m_pStableId, Localize(pVisualDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pVisualDefault)};
 		const SSettingsCardSpec IconsSpec{pIconsDefault->m_pStableId, Localize(pIconsDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pIconsDefault)};
 		const SSettingsCardSpec InteractionSpec{pInteractionDefault->m_pStableId, Localize(pInteractionDefault->m_pTitle), qm_card_registry::ResolveLocalizedDescription(*pInteractionDefault)};
@@ -935,7 +938,7 @@ static CButtonContainer s_CardBorderColorResetId;
 				SSettingsContentMetrics ColorMetrics = GraphicsMetrics;
 				ColorMetrics.m_LineSpacing = 0.0f;
 				RowAction("graphics-icon-custom-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect CustomColorRow) {
-					DoLine_ColorPicker(&s_GraphicsIconCustomColorResetId, ColorMetrics, &CustomColorRow, Localize("UI icon custom color"), &g_Config.m_QmUiIconCustomColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, false, false);
+					DoLine_ColorPicker(&s_GraphicsIconCustomColorResetId, ColorMetrics, &CustomColorRow, Localize("UI icon custom color"), &g_Config.m_QmUiIconCustomColor, ui_token::color::NEUTRAL_WHITE, false, nullptr, false, false);
 				});
 			}
 			SSettingsContentMetrics SemanticColorMetrics = GraphicsMetrics;
@@ -958,6 +961,20 @@ static CButtonContainer s_CardBorderColorResetId;
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiFavoriteIconFilled, "graphics-solid-favorite-icon", Localize("Solid favorite icon"), g_Config.m_QmUiFavoriteIconFilled, &FavoriteFilledRow))
 					g_Config.m_QmUiFavoriteIconFilled ^= 1;
 			});
+
+			// 灵动岛连接质量图标独立颜色：档位语义色 / 跟随全局图标色 / 自定义色。
+			RowAction("graphics-signal-icon-color-mode", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
+				const char *apSignalColorModeLabels[] = {Localize("Quality tier"), Localize("Follow UI icon color"), Localize("Custom")};
+				DoIconChoiceRow(Row, Localize("Connection icon color"), apSignalColorModeLabels, std::size(apSignalColorModeLabels), QmSignalIconColorMode() - 1, s_aGraphicsSignalColorModeButtons, [](int NewValue) {
+					g_Config.m_QmHudIslandSignalColorMode = NewValue + 1;
+				});
+			});
+			if(QmSignalIconColorMode() == QM_SIGNAL_COLOR_CUSTOM)
+			{
+				RowAction("graphics-signal-icon-color", GraphicsMetrics.m_ButtonHeight, [&](CUIRect SignalColorRow) {
+					DoLine_ColorPicker(&s_GraphicsSignalIconColorResetId, SemanticColorMetrics, &SignalColorRow, Localize("Connection icon custom color"), &g_Config.m_QmHudIslandSignalColor, color_cast<ColorRGBA>(ColorHSLA(0x00D1AB)), false, nullptr, false, false);
+				});
+			}
 			RowAction("graphics-icon-weight", GraphicsMetrics.m_LineHeight, [&](CUIRect Row) {
 				DoIconChoiceRow(Row, Localize("UI icon style"), apIconWeightLabels, std::size(apIconWeightLabels), IconWeightIndex, s_aGraphicsIconWeightButtons, [this](int NewValue) {
 					const int NewWeight = s_aIconWeightValues[NewValue];
@@ -968,7 +985,7 @@ static CButtonContainer s_CardBorderColorResetId;
 				});
 			});
 		});
-		AddCard(InteractionSpec, [this, GraphicsMetrics, BodySize](CUIRect ContentRect) {
+		AddCard(InteractionSpec, [this, GraphicsMetrics, BodySize, DoGraphicsNumericField](CUIRect ContentRect) {
 			CSettingsContentLayoutFlow Flow(ContentRect);
 			const auto RowAction = [&](const char *pId, float Height, auto &&Action) {
 				CUIRect Row;
@@ -1026,6 +1043,17 @@ static CButtonContainer s_CardBorderColorResetId;
 				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmExtraAnimations, "presentation-animations", Localize("Presentation animations"), g_Config.m_QmExtraAnimations, &PresentationAnimations))
 					g_Config.m_QmExtraAnimations ^= 1;
 				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmExtraAnimations, &PresentationAnimations, Localize("Animate chat box, emote selector, scoreboard, and spectate selection"));
+			});
+
+			RowAction("graphics-ScrollLegacyWheel", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollLegacyWheel) {
+				if(DoSettingsButton_CheckBox(SETTINGS_GRAPHICS, -1, &g_Config.m_QmUiScrollLegacyWheel, "graphics-scroll-legacy-wheel", Localize("Original scroll feel"), g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel))
+					g_Config.m_QmUiScrollLegacyWheel ^= 1;
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollLegacyWheel, &ScrollLegacyWheel, Localize("Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity"));
+			});
+
+			RowAction("graphics-ScrollStep", GraphicsMetrics.m_LineHeight, [&](CUIRect ScrollStepRow) {
+				DoGraphicsNumericField("graphics-scroll-step", &g_Config.m_QmUiScrollStep, &g_Config.m_QmUiScrollStep, ScrollStepRow, Localize("Scroll step"), 2, 100);
+				GameClient()->m_Tooltips.DoToolTip(&g_Config.m_QmUiScrollStep, &ScrollStepRow, Localize("Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step"));
 			});
 		});
 	};

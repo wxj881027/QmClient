@@ -124,7 +124,7 @@ namespace ui_widget
 
 	inline ColorRGBA CapsuleTabBarIndicatorColor(const ColorRGBA &SurfaceColor)
 	{
-		return CapsuleTabBarSurfaceIsLight(SurfaceColor) ? ColorRGBA(0.09f, 0.10f, 0.12f, 0.92f) : ColorRGBA(0.97f, 0.98f, 1.0f, 0.94f);
+		return CapsuleTabBarSurfaceIsLight(SurfaceColor) ? ui_token::color::ADAPTIVE_ON_LIGHT.WithAlpha(0.92f) : ui_token::color::ADAPTIVE_ON_DARK.WithAlpha(0.94f);
 	}
 
 	inline ColorRGBA CapsuleTabBarActiveLabelColor(const ColorRGBA &SurfaceColor)
@@ -134,12 +134,12 @@ namespace ui_widget
 
 	inline ColorRGBA CapsuleTabBarInactiveLabelColor(const ColorRGBA &SurfaceColor)
 	{
-		return CapsuleTabBarSurfaceIsLight(SurfaceColor) ? ColorRGBA(0.09f, 0.10f, 0.12f, 0.86f) : ui_token::color::TEXT_PRIMARY;
+		return CapsuleTabBarSurfaceIsLight(SurfaceColor) ? ui_token::color::ADAPTIVE_ON_LIGHT.WithAlpha(0.86f) : ui_token::color::TEXT_PRIMARY;
 	}
 
 	inline ColorRGBA CapsuleTabBarHoverColor(const ColorRGBA &SurfaceColor)
 	{
-		return CapsuleTabBarSurfaceIsLight(SurfaceColor) ? ColorRGBA(0.0f, 0.0f, 0.0f, 0.06f) : ui_token::color::SURFACE_HIGHLIGHT;
+		return CapsuleTabBarSurfaceIsLight(SurfaceColor) ? ui_token::color::SURFACE_HIGHLIGHT_DARK : ui_token::color::SURFACE_HIGHLIGHT;
 	}
 
 	// 两级分段选择器的外观：最外层容器胶囊 + 主滑块 + 次级滑块。
@@ -147,15 +147,25 @@ namespace ui_widget
 	// 滑动途中会盖住经过的文字。主滑块标记一级选项；一级项带子级时它整段盖住子级菜单，
 	// 次级滑块再压在主滑块之上标出当前子项，所以子级文字色要按「主滑块底色」推导，
 	// 不能按容器底色推导（容器上正常的字色压到主滑块上会看不见）。
+	// 次级滑块黑系分级：画在主滑块之上、以压暗方式叠加的反馈层，
+	// 全部为黑色不同透明度，与白色系 SURFACE_HIGHLIGHT/LIST_ITEM_* 成对存在。
+	namespace nested_segment
+	{
+		inline constexpr ColorRGBA SUB_INDICATOR{0.0f, 0.0f, 0.0f, 0.16f}; // 次级滑块底色
+		inline constexpr ColorRGBA SUB_INDICATOR_BORDER{0.0f, 0.0f, 0.0f, 0.38f}; // 次级滑块描边
+		inline constexpr ColorRGBA SUB_INACTIVE_LABEL{0.0f, 0.0f, 0.0f, 0.45f}; // 次级未选中文字
+		inline constexpr ColorRGBA SUB_HOVER{0.0f, 0.0f, 0.0f, 0.08f}; // 次级分段 hover 反馈
+	} // namespace nested_segment
+
 	struct SNestedSegmentStyle
 	{
 		ColorRGBA m_ContainerColor = ui_token::color::SURFACE_HIGHLIGHT; // 最外层容器底色
 		ColorRGBA m_MainIndicatorColor = ui_token::color::TEXT_PRIMARY; // 主滑块底色
-		ColorRGBA m_SubIndicatorColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.16f); // 次级滑块底色（画在主滑块之上）
-		ColorRGBA m_SubIndicatorBorderColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.38f); // 次级滑块描边
+		ColorRGBA m_SubIndicatorColor = nested_segment::SUB_INDICATOR; // 次级滑块底色（画在主滑块之上）
+		ColorRGBA m_SubIndicatorBorderColor = nested_segment::SUB_INDICATOR_BORDER; // 次级滑块描边
 		ColorRGBA m_SubActiveLabelColor = ui_token::color::TEXT_ON_ACCENT; // 次级选中文字（压在主滑块上）
-		ColorRGBA m_SubInactiveLabelColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.45f); // 次级未选中文字
-		ColorRGBA m_SubHoverColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.08f); // 次级分段 hover 反馈
+		ColorRGBA m_SubInactiveLabelColor = nested_segment::SUB_INACTIVE_LABEL; // 次级未选中文字
+		ColorRGBA m_SubHoverColor = nested_segment::SUB_HOVER; // 次级分段 hover 反馈
 		float m_IndicatorInset = 2.0f; // 主滑块相对一级槽位的内缩
 		float m_SubIndicatorInset = 3.0f; // 次级滑块相对二级槽位的内缩
 	};

@@ -36,8 +36,10 @@ void CListBox::Reset()
 	m_HideScrollbar = false;
 	m_ScrollbarAlwaysReserved = false;
 	m_InitialScrollPending = true;
-	m_EntryAnimationOffset = 0.0f;
+	m_EntryAnimationElapsedSec = -1.0f;
 	m_EntryAnimation.Reset();
+	m_EntryAlphaScope.reset();
+	m_EntryBaseIndexCaptured = false;
 	m_BackgroundCorners = IGraphics::CORNER_ALL;
 	m_SelectedItemActiveColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f);
 	m_SelectedItemInactiveColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f);
@@ -104,7 +106,10 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 	const EQmListEntryRenderPass AnimationPass = Ui()->MeasurementOnly()  ? EQmListEntryRenderPass::MEASUREMENT :
 						     Ui()->BackgroundRender() ? EQmListEntryRenderPass::BACKGROUND :
 										EQmListEntryRenderPass::INTERACTIVE;
-	m_EntryAnimationOffset = m_EntryAnimation.Resolve(Now, Frequency, EntryAnimationEnabled, g_Config.m_QmUiMotionLevel, AnimationPass);
+	const float EntryElapsed = m_EntryAnimation.Resolve(Now, Frequency, EntryAnimationEnabled, g_Config.m_QmUiMotionLevel, AnimationPass);
+	m_EntryAnimationElapsedSec = EntryElapsed;
+	m_EntryAlphaScope.reset();
+	m_EntryBaseIndexCaptured = false;
 	if(QmListBoxShouldScrollToInitialSelection(m_InitialScrollPending, SelectedIndex))
 	{
 		m_ListBoxUpdateScroll = true;
@@ -155,6 +160,7 @@ void CListBox::DoStart(float RowHeight, int NumItems, int ItemsPerRow, int RowsP
 
 CListboxItem CListBox::DoNextRow()
 {
+	QmRestoreEntryScope();
 	CListboxItem Item = {};
 
 	if(m_ListBoxItemIndex % m_ListBoxItemsPerRow == 0)
@@ -169,11 +175,29 @@ CListboxItem CListBox::DoNextRow()
 	m_RowView.VSplitLeft(m_RowView.w / (m_ListBoxItemsPerRow - m_ListBoxItemIndex % m_ListBoxItemsPerRow), &Item.m_Rect, &m_RowView);
 
 	Item.m_Selected = m_ListBoxSelectedIndex == m_ListBoxItemIndex;
-	Item.m_Rect = QmListBoxEntryAnimatedRect(Item.m_Rect, m_EntryAnimationOffset);
+	// 依次自裁剪框内浮现：行内容先画在最终矩形下方位移处，同时把裁剪
+	// 收紧到「最终矩形 ∩ 滚动裁剪」，被遮蔽的部分随弹入逐步露出（maskRise）。
+	if(!m_EntryBaseIndexCaptured)
+	{
+		m_EntryBaseItemIndex = m_ListBoxItemIndex;
+		m_EntryBaseIndexCaptured = true;
+	}
+	const SQmListEntryVisual EntryVisual = QmListEntryVisual(m_EntryAnimationElapsedSec, (m_ListBoxItemIndex - m_EntryBaseItemIndex) / maximum(1, m_ListBoxItemsPerRow), g_Config.m_QmUiMotionLevel);
+	if(EntryVisual.m_Fade < 0.999f)
+		m_EntryAlphaScope.emplace(Ui(), EntryVisual.m_Fade);
+	Item.m_Rect = QmListBoxEntryAnimatedRect(Item.m_Rect, m_EntryAnimationFadeOnly ? 0.0f : EntryVisual.m_OffsetY);
 	Item.m_Visible = !m_ScrollRegion.RectClipped(Item.m_Rect);
 
 	m_ListBoxItemIndex++;
 	return Item;
+}
+
+void CListBox::QmRestoreEntryScope()
+{
+	// 父层显隐系数（CUiScopedControlAlphaScale）随行结束一并恢复。
+	// 注意 CUi::ClipEnable 是裁剪栈（Enable=压入交集、Disable=出栈），
+	// 若未来行级需要裁剪，恢复必须用 ClipDisable 而非再 ClipEnable。
+	m_EntryAlphaScope.reset();
 }
 
 CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRadius)
@@ -216,11 +240,24 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 			}
 		}
 
-		DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(m_Active ? m_SelectedItemActiveColor : m_SelectedItemInactiveColor), ColorRGBA(), CornerRadius);
+		// 选中/悬浮反馈默认铺满条目矩形（行列表）。卡片网格设置了内容内缩，
+		// 反馈矩形贴合卡片本身。选中描边固定白色（用户指定）——不走亮度自动
+		// 前景：选中填充为白色低透明，与底合成后亮度会跨过阈值被解析成黑。
+		CUIRect SelectionRect = Item.m_Rect;
+		if(m_ItemSelectionInset > 0.0f)
+			SelectionRect.Margin(m_ItemSelectionInset, &SelectionRect);
+		const ColorRGBA SelectionFill = Ui()->ScaleBackgroundAlpha(m_Active ? m_SelectedItemActiveColor : m_SelectedItemInactiveColor);
+		ColorRGBA SelectionBorder = ColorRGBA();
+		if(m_ItemSelectionInset > 0.0f)
+			SelectionBorder = ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA);
+		DrawRoundedSurface(Ui(), SelectionRect, SelectionFill, SelectionBorder, CornerRadius, 1.0f);
 	}
 	if(Ui()->HotItem() == pId && !m_ScrollRegion.Animating())
 	{
-		DrawRoundedSurface(Ui(), Item.m_Rect, Ui()->ScaleBackgroundAlpha(m_HoveredItemColor), ColorRGBA(), CornerRadius);
+		CUIRect HoverRect = Item.m_Rect;
+		if(m_ItemSelectionInset > 0.0f)
+			HoverRect.Margin(m_ItemSelectionInset, &HoverRect);
+		DrawRoundedSurface(Ui(), HoverRect, Ui()->ScaleBackgroundAlpha(m_HoveredItemColor), ColorRGBA(), CornerRadius);
 	}
 
 	return Item;
@@ -260,10 +297,19 @@ void CListBox::SkipItems(int Count)
 
 CListboxItem CListBox::DoCustomRow(float Height, bool ScrollHere)
 {
+	QmRestoreEntryScope();
 	CListboxItem Item = {};
 	m_ListBoxView.HSplitTop(Height, &Item.m_Rect, &m_ListBoxView);
 	m_ScrollRegion.AddRect(Item.m_Rect, ScrollHere);
-	Item.m_Rect = QmListBoxEntryAnimatedRect(Item.m_Rect, m_EntryAnimationOffset);
+	if(!m_EntryBaseIndexCaptured)
+	{
+		m_EntryBaseItemIndex = m_ListBoxItemIndex;
+		m_EntryBaseIndexCaptured = true;
+	}
+	const SQmListEntryVisual EntryVisual = QmListEntryVisual(m_EntryAnimationElapsedSec, (m_ListBoxItemIndex - m_EntryBaseItemIndex) / maximum(1, m_ListBoxItemsPerRow), g_Config.m_QmUiMotionLevel);
+	if(EntryVisual.m_Fade < 0.999f)
+		m_EntryAlphaScope.emplace(Ui(), EntryVisual.m_Fade);
+	Item.m_Rect = QmListBoxEntryAnimatedRect(Item.m_Rect, m_EntryAnimationFadeOnly ? 0.0f : EntryVisual.m_OffsetY);
 	Item.m_Visible = !m_ScrollRegion.RectClipped(Item.m_Rect);
 	return Item;
 }
@@ -277,6 +323,7 @@ CListboxItem CListBox::DoSubheader()
 
 int CListBox::DoEnd()
 {
+	QmRestoreEntryScope();
 	m_ScrollRegion.End();
 	m_Active |= m_ScrollRegion.Active();
 

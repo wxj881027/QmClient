@@ -723,6 +723,73 @@ namespace
 		return ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 
+	// 灵动岛连接质量分档（用户校准：数据流量图标，Phosphor cell-signal 按档位）。
+	// 语义对齐系统状态栏：图标常驻信息栈左缘。对局中按延迟分三档，
+	// 未连接/延迟未知显示 NONE（空信号档、暗色），不隐藏——否则主菜单
+	// 与断线时用户根本看不到该图标。
+	enum class EHudConnectionQuality
+	{
+		NONE = 0,
+		LOW,
+		MEDIUM,
+		HIGH,
+	};
+	// 延迟源：对局中用快照本地玩家的服务器广播延迟（与计分板同源、实时）；
+	// m_CurrentServerInfo.m_Latency 是 client 主动探测的往返值，对局内每 10 分钟
+	// 才刷新一次，用它分档会长期停留在旧档位（用户实测 44ms 显示两格）。
+	// 快照不可用（未进图/断线瞬间）时回退 serverinfo 探测值。
+	EHudConnectionQuality HudConnectionQuality(const IClient *pClient, const CGameClient *pGameClient)
+	{
+		if(pClient == nullptr || pClient->State() != IClient::STATE_ONLINE)
+			return EHudConnectionQuality::NONE;
+		int Latency = -1;
+		if(pGameClient != nullptr && pGameClient->m_Snap.m_LocalClientId >= 0 &&
+			pGameClient->m_Snap.m_LocalClientId < MAX_CLIENTS &&
+			pGameClient->m_Snap.m_apPlayerInfos[pGameClient->m_Snap.m_LocalClientId] != nullptr)
+			Latency = pGameClient->m_Snap.m_apPlayerInfos[pGameClient->m_Snap.m_LocalClientId]->m_Latency;
+		if(Latency <= 0)
+			Latency = pClient->ServerInfo().m_Latency;
+		if(Latency <= 0)
+			return EHudConnectionQuality::NONE;
+		if(Latency <= 60)
+			return EHudConnectionQuality::HIGH;
+		if(Latency <= 130)
+			return EHudConnectionQuality::MEDIUM;
+		return EHudConnectionQuality::LOW;
+	}
+	EQmIcon HudConnectionQualityIcon(EHudConnectionQuality Quality)
+	{
+		switch(Quality)
+		{
+		case EHudConnectionQuality::HIGH: return EQmIcon::CELL_SIGNAL_HIGH;
+		case EHudConnectionQuality::MEDIUM: return EQmIcon::CELL_SIGNAL_MEDIUM;
+		case EHudConnectionQuality::LOW: return EQmIcon::CELL_SIGNAL_LOW;
+		default: return EQmIcon::CELL_SIGNAL_NONE;
+		}
+	}
+	const char *HudConnectionQualityFontIcon(EHudConnectionQuality Quality)
+	{
+		switch(Quality)
+		{
+		case EHudConnectionQuality::HIGH: return FontIcons::FONT_ICON_CELL_SIGNAL_HIGH;
+		case EHudConnectionQuality::MEDIUM: return FontIcons::FONT_ICON_CELL_SIGNAL_MEDIUM;
+		case EHudConnectionQuality::LOW: return FontIcons::FONT_ICON_CELL_SIGNAL_LOW;
+		default: return FontIcons::FONT_ICON_CELL_SIGNAL_NONE;
+		}
+	}
+	// 档位强调色：优/中用中性白，弱档琥珀；空档（未连接/延迟未知）用暗灰——
+	// 图标常驻，空档是常态显示而非报警，不能抢注意力。
+	ColorRGBA HudConnectionQualityColor(EHudConnectionQuality Quality)
+	{
+		switch(Quality)
+		{
+		case EHudConnectionQuality::HIGH: return ColorRGBA(0.98f, 0.99f, 1.0f, 1.0f);
+		case EHudConnectionQuality::MEDIUM: return ColorRGBA(0.98f, 0.99f, 1.0f, 1.0f);
+		case EHudConnectionQuality::LOW: return ColorRGBA(1.0f, 0.72f, 0.30f, 1.0f);
+		default: return ColorRGBA(0.60f, 0.64f, 0.70f, 1.0f);
+		}
+	}
+
 	void DrawMediaIslandOuterShadowFallback(IGraphics *pGraphics, const SHudMediaIslandSdfRenderState &State)
 	{
 		if(pGraphics == nullptr || State.m_OuterShadowSize <= 0.0f || State.m_OuterShadowOpacity <= 0.0f)
@@ -1400,7 +1467,8 @@ void CHud::RenderGameTimer()
 		Graphics()->DrawRect(DividerX, TimerCapsule.m_BoxY + QmHudMediaIslandScaled(4.0f), QmHudMediaIslandScaled(0.75f), TimerCapsule.m_BoxH - QmHudMediaIslandScaled(8.0f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f * StatusAlpha), IGraphics::CORNER_ALL, QmHudMediaIslandScaled(0.375f));
 
 		const vec2 DotCenter(StatusSectionX + StatusPaddingLeft + StatusDotSize * 0.5f, TimerCapsule.m_BoxY + TimerCapsule.m_BoxH * 0.5f);
-		DrawHudRecordingStatusDot(Graphics(), DotCenter, StatusDotSize, QmHudRecordingDotAlpha(time_get() / (double)time_freq()) * StatusAlpha, RecordingDotScreenPixelSize);
+		(void)DotCenter;
+		// 用户校准：录制状态不再显示红点；计分板（Tab）展开时保留文本状态显示。
 
 		if(QmHudRecordingPresentation(ShowRecordingStatus, ScoreboardExpanded, false, false).RecordingTextAlpha(StatusTextAlpha) > 0.001f && StatusWidth > RawCollapsedWidth + QmHudMediaIslandScaled(2.0f))
 		{
@@ -3663,7 +3731,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 		return 0.0f;
 	}
 
-	constexpr float BaseIslandHeight = QmHudMediaIslandScaled(16.0f);
+	constexpr float BaseIslandHeight = QmHudMediaIslandScaled(QmHudMediaIslandBaseHeight);
 	constexpr float CoverSize = QmHudMediaIslandScaled(12.0f);
 	constexpr float PaddingX = QmHudMediaIslandScaled(2.0f);
 	constexpr float Gap = QmHudMediaIslandScaled(2.0f);
@@ -3706,7 +3774,10 @@ float CHud::GetTopIslandAvoidanceRight() const
 	const float InfoStackFontSize = StackHasTwoRows ? StackedStatusFontSize : StatusFontSize;
 	const float LocalTimeTextWidth = ShowLocalTime ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aTimeBuf).m_W) : 0.0f;
 	const float FrozenSummaryTextWidth = ShowFrozenSummary ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aFrozenSummaryBuf).m_W) : 0.0f;
-	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
+	// 连接质量图标（数据流量语义，常驻）：对局中按延迟分档，其余情况空信号档；
+	// 与 RenderMediaIsland 同口径。占位跟随状态区存在，不依赖信息栈。
+	const SHudConnectionSignalSlot ConnectionSlot = QmHudConnectionSignalSlot();
+	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + ConnectionSlot.m_Width + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
 	const bool ShowCover = HasMediaState;
 
 	const int MetaItemCount = (ShowTeam ? 1 : 0) + (ShowWaveform ? 1 : 0);
@@ -3735,7 +3806,7 @@ float CHud::GetTopIslandAvoidanceRight() const
 	if(ShowInfoStack)
 		RightSlotWidth = InfoStackWidth;
 	else if(ShowRecordingStatus)
-		RightSlotWidth = ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth;
+		RightSlotWidth = StatusPaddingLeft + ConnectionSlot.m_Width + (ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth);
 	const float RightSlotGap = RightSlotWidth > 0.0f && (TimerCapsule.m_Visible || BaseWidth > 0.0f) ? TimerToStatusGap : 0.0f;
 	const float MaxUnifiedWidth = std::max(0.0f, m_Width - ScreenPadding * 2.0f);
 	const float MaxIslandWidth = TimerCapsule.m_Visible ?
@@ -4093,7 +4164,7 @@ void CHud::RenderMediaIsland()
 	if(Checkpoint > 0)
 		str_format(aCheckpointBuf, sizeof(aCheckpointBuf), "CP%d", Checkpoint);
 
-	constexpr float BaseIslandHeight = QmHudMediaIslandScaled(16.0f);
+	constexpr float BaseIslandHeight = QmHudMediaIslandScaled(QmHudMediaIslandBaseHeight);
 	const float IslandY = 0.0f;
 	constexpr float CoverSize = QmHudMediaIslandScaled(12.0f);
 	constexpr float PaddingX = QmHudMediaIslandScaled(2.0f);
@@ -4142,12 +4213,16 @@ void CHud::RenderMediaIsland()
 	const float InfoStackFontSize = StackHasTwoRows ? StackedStatusFontSize : StatusFontSize;
 	const float LocalTimeTextWidth = ShowLocalTime ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aTimeBuf).m_W) : 0.0f;
 	const float FrozenSummaryTextWidth = ShowFrozenSummary ? std::round(TextRender()->TextBoundingBox(InfoStackFontSize, aFrozenSummaryBuf).m_W) : 0.0f;
-	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
+	// 连接质量图标（数据流量语义，常驻）：对局中按延迟分档，其余情况空信号档；
+	// 与 GetTopIslandAvoidanceRight 同口径。占位跟随状态区存在，不依赖信息栈。
+	const EHudConnectionQuality ConnectionQuality = HudConnectionQuality(Client(), GameClient());
+	const SHudConnectionSignalSlot ConnectionSlot = QmHudConnectionSignalSlot();
+	const float InfoStackWidth = ShowInfoStack ? StatusPaddingLeft + ConnectionSlot.m_Width + std::max(LocalTimeTextWidth, FrozenSummaryTextWidth) + StatusPaddingRight : 0.0f;
 	float PlannedStatusWidth = 0.0f;
 	if(ShowInfoStack)
 		PlannedStatusWidth = InfoStackWidth;
 	else if(ShowRecordingStatus)
-		PlannedStatusWidth = ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth;
+		PlannedStatusWidth = StatusPaddingLeft + ConnectionSlot.m_Width + (ScoreboardExpanded ? RawExpandedStatusWidth : RawCollapsedStatusWidth);
 	const bool ShowBottomRow = SwapRows.m_BottomLineCount > 0;
 	const int BottomRowLineCount = SwapRows.m_BottomLineCount;
 	const float DesiredBottomUnifiedWidth = QmHudMediaIslandDesiredBottomWidth(
@@ -4980,11 +5055,19 @@ void CHud::RenderMediaIsland()
 
 		if(ShowInfoStack)
 		{
+			// 连接质量图标（数据流量语义，常驻）：对局中按延迟分档，其余空信号档；
+			// 驻信息栈左缘，文本组整体右移让位。
+			const CUIRect SignalIconRect{StatusSectionX + StatusPaddingLeft + ConnectionSlot.m_Inset,
+				QmHudConnectionSignalIconY(IslandY, ConnectionSlot.m_Size, (int)ConnectionQuality),
+				ConnectionSlot.m_Size, ConnectionSlot.m_Size};
+			const ColorRGBA SignalQualityColor = HudConnectionQualityColor(ConnectionQuality).WithAlpha(0.92f * StatusAlpha * EntranceContentAlpha);
+			Ui()->DrawQmIcon(SignalIconRect, HudConnectionQualityIcon(ConnectionQuality), HudConnectionQualityFontIcon(ConnectionQuality), ConfiguredQmSignalIconColor(SignalQualityColor, SignalQualityColor));
+			const float InfoTextInset = StatusPaddingLeft + ConnectionSlot.m_Width;
 			const auto RenderInfoLine = [&](const char *pText, float CenterY, const ColorRGBA &Color) {
 				if(pText == nullptr || pText[0] == '\0')
 					return;
 				const float TextWidth = std::round(TextRender()->TextBoundingBox(InfoStackFontSize, pText).m_W);
-				const float TextX = StatusSectionX + std::max(0.0f, (StatusWidth - TextWidth) * 0.5f);
+				const float TextX = StatusSectionX + InfoTextInset + std::max(0.0f, (StatusWidth - InfoTextInset - StatusPaddingRight - TextWidth) * 0.5f);
 				const float TextY = CenterY - InfoStackFontSize * 0.5f - QmHudMediaIslandScaled(0.4f);
 				TextRender()->TextColor(Color);
 				TextRender()->Text(TextX, TextY, InfoStackFontSize, pText, -1.0f);
@@ -5003,12 +5086,17 @@ void CHud::RenderMediaIsland()
 		}
 		else
 		{
-			const vec2 DotCenter(StatusSectionX + StatusPaddingLeft + StatusDotSize * 0.5f, IslandY + BaseIslandHeight * 0.5f);
-			DrawHudRecordingStatusDot(Graphics(), DotCenter, StatusDotSize, QmHudRecordingDotAlpha(time_get() / (double)time_freq()) * StatusAlpha * EntranceContentAlpha, ScreenPixelSize);
+			// 无信息栈时连接图标仍常驻状态区左缘（方案 A：占位跟随状态区，
+			// 不依赖信息栈）；录制红点已按用户校准移除，计分板展开的文本右移让位。
+			const CUIRect SignalIconRect{StatusSectionX + StatusPaddingLeft + ConnectionSlot.m_Inset,
+				QmHudConnectionSignalIconY(IslandY, ConnectionSlot.m_Size, (int)ConnectionQuality),
+				ConnectionSlot.m_Size, ConnectionSlot.m_Size};
+			const ColorRGBA SignalQualityColor = HudConnectionQualityColor(ConnectionQuality).WithAlpha(0.92f * StatusAlpha * EntranceContentAlpha);
+			Ui()->DrawQmIcon(SignalIconRect, HudConnectionQualityIcon(ConnectionQuality), HudConnectionQualityFontIcon(ConnectionQuality), ConfiguredQmSignalIconColor(SignalQualityColor, SignalQualityColor));
 
 			if(RecordingPresentation.RecordingTextAlpha(StatusTextAlpha) > 0.001f && StatusWidth > RawCollapsedStatusWidth + QmHudMediaIslandScaled(2.0f))
 			{
-				const float StatusTextX = StatusSectionX + StatusPaddingLeft + StatusDotSize + StatusDotGap;
+				const float StatusTextX = StatusSectionX + StatusPaddingLeft + ConnectionSlot.m_Width + StatusDotSize + StatusDotGap;
 				const float StatusTextY = IslandY + (BaseIslandHeight - StatusFontSize) * 0.5f - QmHudMediaIslandScaled(0.5f);
 				TextRender()->TextColor(0.97f, 0.98f, 1.0f, 0.90f * StatusTextAlpha * EntranceContentAlpha);
 				TextRender()->Text(StatusTextX, StatusTextY, StatusFontSize, aRecordingBuf, -1.0f);

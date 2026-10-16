@@ -202,6 +202,52 @@ TEST(SettingsCardDeck, DrawGeometryKeepsSubpixelOffsetsThroughMotionAndRest)
 	}
 }
 
+TEST(SettingsCardDeck, UnifiedEntryResolverFadesBothEntryModesAndDisablesImmediately)
+{
+	for(const bool Continuous : {false, true})
+	{
+		SCOPED_TRACE(Continuous);
+		CSettingsCardDeckFrameRuntime Runtime;
+		CUiV2AnimationRuntime Animation;
+		SCardMotionSpec Motion = ResolveCardMotionSpec(2, true, true, true, true);
+		Motion.m_ContinuousEntry = Continuous;
+		Runtime.BeginDisplayCycle(1, true);
+		EXPECT_FLOAT_EQ(Runtime.ResolveEntryOffset(Animation, 100, "graphics", Motion), Motion.m_EntryDistance);
+		EXPECT_FLOAT_EQ(Runtime.EntryAlpha(), 0.0f);
+		Animation.Advance(0.04f);
+		const float Offset = Runtime.ResolveEntryOffset(Animation, 100, "graphics", Motion);
+		EXPECT_GT(Offset, 0.0f);
+		EXPECT_LT(Offset, Motion.m_EntryDistance);
+		EXPECT_GT(Runtime.EntryAlpha(), 0.0f);
+		EXPECT_LT(Runtime.EntryAlpha(), 1.0f);
+		Motion.m_EntryDuration = 0.0f;
+		EXPECT_FLOAT_EQ(Runtime.ResolveEntryOffset(Animation, 100, "graphics", Motion), 0.0f);
+		EXPECT_FLOAT_EQ(Runtime.EntryAlpha(), 1.0f);
+		EXPECT_FALSE(Runtime.EntryWasActive());
+		EXPECT_EQ(Animation.ActiveTrackCount(), 0);
+	}
+}
+
+TEST(SettingsCardDeck, UnifiedContinuousEntryKeepsFadeAcrossSubTabAndParentCycle)
+{
+	CSettingsCardDeckFrameRuntime Runtime;
+	CUiV2AnimationRuntime Animation;
+	const SCardMotionSpec Motion = ResolveCardMotionSpec(2, true, true, true, true);
+	Runtime.BeginDisplayCycle(1, true);
+	Runtime.ResolveEntryOffset(Animation, 100, "graphics", Motion);
+	Animation.Advance(0.04f);
+	const float Offset = Runtime.ResolveEntryOffset(Animation, 100, "graphics", Motion);
+	const float Alpha = Runtime.EntryAlpha();
+	ASSERT_GT(Alpha, 0.0f);
+	ASSERT_LT(Alpha, 1.0f);
+	Runtime.OnTabChanged(true);
+	EXPECT_FLOAT_EQ(Runtime.ResolveEntryOffset(Animation, 100, "display", Motion), Offset);
+	EXPECT_FLOAT_EQ(Runtime.EntryAlpha(), Alpha);
+	Runtime.BeginDisplayCycle(2, true);
+	EXPECT_FLOAT_EQ(Runtime.ResolveEntryOffset(Animation, 100, "display", Motion), Offset);
+	EXPECT_FLOAT_EQ(Runtime.EntryAlpha(), Alpha);
+}
+
 TEST(SettingsCardDeck, ContinuousEntryKeepsPositionAndVelocityAcrossPageSwitches)
 {
 	CSettingsCardDeckFrameRuntime Runtime;
@@ -226,7 +272,7 @@ TEST(SettingsCardDeck, ContinuousEntryKeepsPositionAndVelocityAcrossPageSwitches
 	Runtime.BeginDisplayCycle(3, true);
 	Runtime.OnTabChanged();
 	EXPECT_NEAR(Runtime.ResolveContinuousEntryOffset(Animation, Node, Motion), Reference.GetValue(Node, EUiAnimProperty::POS_Y), 0.0001f);
-	EXPECT_EQ(Animation.ActiveTrackCount(), 1);
+	EXPECT_EQ(Animation.ActiveTrackCount(), 2);
 	EXPECT_EQ(Animation.QueuedTrackCount(), 0);
 }
 
@@ -252,10 +298,10 @@ TEST(SettingsCardDeck, SubTabStartsEntryInTheClickFrameAndParentCycleDoesNotRest
 	Runtime.BeginDisplayCycle(2, true);
 	EXPECT_FLOAT_EQ(Runtime.ResolveContinuousEntryOffset(Animation, 100, Motion), BeforeParentCycle);
 	EXPECT_LT(BeforeParentCycle, Motion.m_EntryDistance);
-	EXPECT_EQ(Animation.ActiveTrackCount(), 1);
+	EXPECT_EQ(Animation.ActiveTrackCount(), 2);
 }
 
-TEST(SettingsCardDeck, ContinuousEntrySettlesWithOnlyASmallReboundAtDifferentRefreshRates)
+TEST(SettingsCardDeck, ContinuousEntrySettlesWithoutOvershootAtDifferentRefreshRates)
 {
 	for(const int RefreshRate : {60, 120, 240})
 	{
@@ -265,16 +311,17 @@ TEST(SettingsCardDeck, ContinuousEntrySettlesWithOnlyASmallReboundAtDifferentRef
 		const SCardMotionSpec Motion = ResolveCardMotionSpec(2, true, true, true, true);
 		Runtime.BeginDisplayCycle(1, true);
 		Runtime.ResolveContinuousEntryOffset(Animation, 100, Motion);
-		float MinimumOffset = Motion.m_EntryDistance;
+		float MaximumOffset = 0.0f;
 		for(int Frame = 0; Frame < RefreshRate / 2; ++Frame)
 		{
 			Animation.Advance(1.0f / RefreshRate);
 			const float Offset = Runtime.ResolveContinuousEntryOffset(Animation, 100, Motion);
-			MinimumOffset = std::min(MinimumOffset, Offset);
+			MaximumOffset = std::max(MaximumOffset, Offset);
 			EXPECT_LE(Offset, Motion.m_EntryDistance);
 		}
-		EXPECT_LT(MinimumOffset, 0.0f);
-		EXPECT_GT(MinimumOffset, -Motion.m_EntryDistance * 0.03f);
+		// 临界阻尼（ζ=1.0）：优雅落位无回弹，全程不超过入场起点。
+		EXPECT_LE(MaximumOffset, Motion.m_EntryDistance);
+		EXPECT_GE(MaximumOffset, 0.0f);
 		EXPECT_FALSE(Runtime.EntryWasActive());
 		EXPECT_EQ(Animation.ActiveTrackCount(), 0);
 		EXPECT_FLOAT_EQ(Runtime.ResolveContinuousEntryOffset(Animation, 100, Motion), 0.0f);
@@ -298,7 +345,8 @@ TEST(SettingsCardDeck, ContinuousEntryCanBeDisabledImmediatelyAndReplayAfterSett
 	Motion = ResolveCardMotionSpec(1, true, true, true, true);
 	Runtime.BeginDisplayCycle(2, true);
 	EXPECT_FLOAT_EQ(Runtime.ResolveContinuousEntryOffset(Animation, 100, Motion), Motion.m_EntryDistance);
-	for(int Frame = 0; Frame < 30; ++Frame)
+	// 临界阻尼尾迹比 ζ0.8 长：按「是否收位」推进而非固定帧数（上限 120 帧 = 1s）。
+	for(int Frame = 0; Frame < 120 && Runtime.EntryWasActive(); ++Frame)
 	{
 		Animation.Advance(1.0f / 120.0f);
 		Runtime.ResolveContinuousEntryOffset(Animation, 100, Motion);

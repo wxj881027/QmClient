@@ -12,6 +12,7 @@
 #include <game/client/qm_icon.h>
 #include <game/client/ui_scrollregion.h>
 
+#include <test/support/qm_anim_test_helpers.h>
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
@@ -1363,6 +1364,10 @@ TEST_F(QmBackgroundControlsIntegration, NestedParentTransitionsMultiplyEachLayer
 
 TEST_F(QmBackgroundControlsIntegration, AnimatedPopupAppliesTransitionToItsControlsAndRestoresOutside)
 {
+	CScopedQmFullMotion FullMotion;
+	// 弹窗转场由引擎 ALPHA 轨道驱动：显式挂运行时并逐帧 Advance 驱动时钟。
+	CUiV2AnimationRuntime Animation;
+	m_Ui.SetQmAnimationRuntime(&Animation);
 	SPopupMenuId Id;
 	struct SProbe
 	{
@@ -1385,6 +1390,7 @@ TEST_F(QmBackgroundControlsIntegration, AnimatedPopupAppliesTransitionToItsContr
 	EXPECT_FLOAT_EQ(Probe.m_Alpha, 0.0f);
 	EXPECT_FLOAT_EQ(m_Ui.ControlAlphaScale(), 1.0f);
 	m_Client.AdvanceFrame();
+	Animation.Advance(1.0f / 60.0f);
 	m_Recording.m_vSurfaces.clear();
 	m_Ui.RenderPopupMenus();
 	EXPECT_GT(Probe.m_Alpha, 0.0f);
@@ -1393,10 +1399,14 @@ TEST_F(QmBackgroundControlsIntegration, AnimatedPopupAppliesTransitionToItsContr
 	EXPECT_NEAR(m_Recording.m_vSurfaces.back().m_FillColor.a, 0.4f * Probe.m_Alpha, 0.0001f);
 	EXPECT_FLOAT_EQ(m_Ui.ControlAlphaScale(), 1.0f);
 	for(int Frame = 0; Frame < 20; ++Frame)
+	{
 		m_Client.AdvanceFrame();
+		Animation.Advance(1.0f / 60.0f);
+	}
 	m_Ui.RenderPopupMenus();
 	EXPECT_FLOAT_EQ(Probe.m_Alpha, 1.0f);
 	m_Ui.ClosePopupMenus();
+	m_Ui.SetQmAnimationRuntime(nullptr);
 }
 
 TEST_F(QmBackgroundControlsIntegration, SliderAccentFillAndHandleKeepOwnOpacityAcrossPageBackgrounds)

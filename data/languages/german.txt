@@ -2612,6 +2612,12 @@ Connection disconnected
 Connection elevated
 == Verbindung leicht auffällig
 
+Connection icon color
+== Verbindungssymbolfarbe
+
+Connection icon custom color
+== Eigene Verbindungssymbolfarbe
+
 Connection normal
 == Verbindung normal
 
@@ -3028,6 +3034,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== Scrollstrecke pro Mausradraste anpassen. Mit gedrückter Alt-Taste ist der Schritt 3-mal so groß
 
 Customize translate button and menu colors
 == Übersetzungs-Button- und Menüfarben anpassen
@@ -3695,6 +3704,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == Ziehe diesen Freund in eine andere Kategorie, um ihn zu verschieben.
 
+Drag to pan, scroll to zoom
+== Ziehen zum Verschieben, Mausrad zum Zoomen
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == Zum Umsortieren ziehen; zum Auf- oder Zuklappen klicken. Rechtsklick oder Zahnrad zum Verwalten von Kategorien
 
@@ -3934,6 +3946,12 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == Dynamic Island Hintergrundfarbe
+
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== Verbindungssymbolfarbe der Dynamic Island: 1=Qualitätsstufe, 2=wie UI-Symbolfarbe, 3=benutzerdefiniert
+
+Dynamic island connection icon custom color
+== Eigene Verbindungssymbolfarbe der Dynamic Island
 
 Ease in out quad
 == Ease in-out quad
@@ -4966,6 +4984,9 @@ Follow server
 
 Follow Tee
 == Tee folgen
+
+Follow UI icon color
+== Wie UI-Symbolfarbe
 
 Following
 == Folgend
@@ -6176,6 +6197,9 @@ Initializing components
 Initializing layers
 == Ebenen werden initialisiert
 
+Initializing map layers
+== Kartenebenen werden initialisiert
+
 Initializing map logic
 == Initialisiere Kartenlogik
 
@@ -7166,8 +7190,14 @@ Map folders
 Map name
 == Kartenname
 
+Map not downloaded yet — join the server to preview it
+== Karte noch nicht heruntergeladen. Zum Vorschauen dem Server beitreten
+
 Map play history
 == Karten-Spielverlauf
+
+Map preview rendering unavailable
+== Kartenvorschau kann nicht gerendert werden
 
 Map Preview TODO
 == Kartenvorschau ausstehend
@@ -8564,6 +8594,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == Sprache der Originalnachricht
 
+Original scroll feel
+== Ursprüngliches Scrollgefühl
+
 Other
 == Andere
 
@@ -9620,6 +9653,9 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Quads werden für Hintergrunddekoration verwendet
 
+Quality tier
+== Nach Netzqualität
+
 Query current map info
 == Aktuelle Karteninfo abfragen
 
@@ -10514,6 +10550,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == Altes Ein-Segment-Haken-Kollisionslinienverhalten wiederherstellen
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== Ursprüngliches Mausradverhalten wiederherstellen: Jede Raste startet das sanfte Scrollen ohne Übernahme der Geschwindigkeit neu
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== Ursprüngliches Mausradverhalten wiederherstellen: Jede Raste startet das sanfte Scrollen ohne Übernahme der Geschwindigkeit neu
+
 Restoring save %d: main '%s', dummy '%s'.
 == Spielstand %d wird wiederhergestellt: Hauptspieler '%s', Dummy '%s'.
 
@@ -10928,6 +10970,9 @@ Scroll mode: Off
 Scroll mode: On
 == Scrollmodus: Ein
 
+Scroll step
+== Scrollschritt
+
 Search
 == Suchen
 
@@ -11143,6 +11188,9 @@ Server alert
 
 Server best:
 == Server-Bestzeit:
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== Spaltenreihenfolge im Server-Browser (kommagetrennte IDs: community,name,map,difficulty,gametype,friends,players,qm,ping; leer = Standard)
 
 Server browser exclude string
 == Server-Browser-Ausschlusszeichenfolge
@@ -11608,6 +11656,9 @@ Show enemy reason
 
 Show entities
 == Entitäten anzeigen
+
+Show entities only (hide textures)
+== Nur Entities anzeigen (Texturen ausblenden)
 
 Show existing saves
 == Vorhandene Saves anzeigen
@@ -12122,8 +12173,8 @@ Show server settings
 Show settings card borders
 == Einstellungs-Kartenränder anzeigen
 
-Show short server names in browser
-== Kurzen Servernamen im Server-Browser anzeigen
+Show short server names in browser (applies to China community servers)
+== Kurzen Servernamen im Server-Browser anzeigen (für Server der chinesischen Community)
 
 Show skin date and author
 == Skin-Datum und Autor anzeigen
@@ -13937,6 +13988,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == Lokale Konsole umschalten
 
+Toggle map preview
+== Kartenvorschau
+
 Toggle microphone mute
 == Mikrofon-Stummschaltung umschalten
 
@@ -15155,6 +15209,9 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == Auf welcher Stufe das DDRace-Binding gesetzt ist (automatisch, du musst es nicht verwenden)
 
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== Mausradschritt in UI-Pixeln; Einstellungsseiten scrollen pro Raste um das 12-Fache dieses Werts
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Wenn TClient-Regenbogen-Tee aktiviert ist, hat diese Funktion keine Wirkung.
 
@@ -15262,6 +15319,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == Breite und Höhe müssen im Bereich von %d bis %d liegen.
+
+Width of difficulty column in server browser
+== Breite der Schwierigkeitsspalte im Server-Browser
 
 Width of friends column in server browser
 == Breite der Freundesspalte im Server-Browser

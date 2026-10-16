@@ -1,5 +1,7 @@
 #include "sponsor_chat_render.h"
 
+#include <game/client/QmUi/UiTokens.h>
+
 void QmSponsorChatAddPlatinumSplits(CTextCursor &Cursor, const char *pText, float Alpha)
 {
 	int Count = 0;
@@ -116,13 +118,13 @@ bool CQmSponsorChatRenderer::RenderGlow(IGraphics *pGraphics, ITextRender *pText
 		m_Width = NewWidth;
 		m_Height = NewHeight;
 	}
-	if(!pGraphics->BeginRenderTarget(m_Source, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)))
+	if(!pGraphics->BeginRenderTarget(m_Source, ui_token::color::COLOR_TRANSPARENT))
 		return false;
 	float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 	pGraphics->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 	pGraphics->MapScreen(Left, Top, Left + m_Width * PixelSize.x, Top + m_Height * PixelSize.y);
 	// 轮廓也进入遮罩，使柔光能越过正文的深色描边。
-	pTextRender->RenderTextContainer(Index, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), ColorRGBA(1.0f, 1.0f, 1.0f, 0.45f));
+	pTextRender->RenderTextContainer(Index, ui_token::color::NEUTRAL_WHITE, ColorRGBA(1.0f, 1.0f, 1.0f, 0.45f));
 	pGraphics->EndRenderTarget();
 	pGraphics->MapScreen(ScreenX0, ScreenY0, ScreenX1, ScreenY1);
 	IGraphics::SGaussianBlurParams Params;

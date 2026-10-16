@@ -2612,6 +2612,12 @@ Connection disconnected
 Connection elevated
 == Ligação ligeiramente instável
 
+Connection icon color
+== Cor do ícone de conexão
+
+Connection icon custom color
+== Cor personalizada do ícone de conexão
+
 Connection normal
 == Conexão normal
 
@@ -3028,6 +3034,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== Personalize a distância por passo da roda. Mantenha Alt premido para um passo 3 vezes maior
 
 Customize translate button and menu colors
 == Personalizar cores do botão de tradução e menu
@@ -3695,6 +3704,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == Arraste este amigo para outra categoria para o mover.
 
+Drag to pan, scroll to zoom
+== Arraste para mover, use a roda para ampliar
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == Arraste para reordenar; clique para expandir ou recolher. Clique com o botão direito ou use a engrenagem para gerir categorias
 
@@ -3934,6 +3946,12 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == Cor do fundo da Ilha Dinâmica
+
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== Cor do ícone de ligação da ilha: 1=por qualidade de rede, 2=conforme a cor dos ícones da interface, 3=personalizada
+
+Dynamic island connection icon custom color
+== Cor personalizada do ícone de ligação da ilha
 
 Ease in out quad
 == Suavização de entrada e saída quadrática
@@ -4966,6 +4984,9 @@ Follow server
 
 Follow Tee
 == Seguir o Tee
+
+Follow UI icon color
+== Conforme a cor dos ícones da interface
 
 Following
 == A seguir
@@ -6176,6 +6197,9 @@ Initializing components
 Initializing layers
 == A inicializar camadas
 
+Initializing map layers
+== A inicializar camadas do mapa
+
 Initializing map logic
 == A inicializar lógica do mapa
 
@@ -7166,8 +7190,14 @@ Map folders
 Map name
 == Nome do mapa
 
+Map not downloaded yet — join the server to preview it
+== Mapa ainda não transferido. Entre no servidor para pré-visualizar
+
 Map play history
 == Histórico de reprodução de mapas
+
+Map preview rendering unavailable
+== Não é possível apresentar a pré-visualização do mapa
 
 Map Preview TODO
 == Pré-visualização do mapa pendente
@@ -8564,6 +8594,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == Idioma da mensagem original
 
+Original scroll feel
+== Sensação de deslocamento original
+
 Other
 == Outro
 
@@ -9620,6 +9653,9 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == Quads são usados para decoração de fundo
 
+Quality tier
+== Conforme a qualidade da rede
+
 Query current map info
 == Consultar informações do mapa atual
 
@@ -10514,6 +10550,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == Restaurar comportamento antigo da linha de colisão de gancho de segmento único
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== Restaurar o deslocamento original: cada passo da roda reinicia o deslocamento suave sem manter a velocidade
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== Restaurar o deslocamento original: cada passo da roda reinicia o deslocamento suave sem manter a velocidade
+
 Restoring save %d: main '%s', dummy '%s'.
 == A restaurar o jogo guardado %d: principal '%s', dummy '%s'.
 
@@ -10928,6 +10970,9 @@ Scroll mode: Off
 Scroll mode: On
 == Modo de deslocamento: ativado
 
+Scroll step
+== Passo de deslocamento
+
 Search
 == Pesquisar
 
@@ -11143,6 +11188,9 @@ Server alert
 
 Server best:
 == Melhor do servidor:
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== Ordem das colunas do navegador de servidores (IDs separados por vírgulas: community,name,map,difficulty,gametype,friends,players,qm,ping; vazio = predefinição)
 
 Server browser exclude string
 == String de exclusão do navegador de servidores
@@ -11608,6 +11656,9 @@ Show enemy reason
 
 Show entities
 == Mostrar entidades
+
+Show entities only (hide textures)
+== Mostrar apenas entidades (ocultar texturas)
 
 Show existing saves
 == Mostrar gravações existentes
@@ -12122,8 +12173,8 @@ Show server settings
 Show settings card borders
 == Mostrar contornos dos cartões de definições
 
-Show short server names in browser
-== Mostrar nome curto do servidor no navegador de servidores
+Show short server names in browser (applies to China community servers)
+== Mostrar nome curto do servidor no navegador de servidores (para servidores da comunidade chinesa)
 
 Show skin date and author
 == Mostrar data e autor da skin
@@ -13937,6 +13988,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == Alternar consola local
 
+Toggle map preview
+== Pré-visualização do mapa
+
 Toggle microphone mute
 == Alternar mute do microfone
 
@@ -15155,6 +15209,9 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == Nível para o qual a vinculação DDRace está definida (automático, não precisas de usar)
 
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== Passo da roda em píxeis da interface; as páginas de definições deslocam-se 12 vezes este valor por passo
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == Quando o Tee arco-íris do TClient está ativado, esta funcionalidade não tem efeito.
 
@@ -15262,6 +15319,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == A largura e a altura devem estar dentro do intervalo de %d a %d.
+
+Width of difficulty column in server browser
+== Largura da coluna de dificuldade no navegador de servidores
 
 Width of friends column in server browser
 == Largura da coluna de amigos no navegador de servidores

@@ -330,6 +330,8 @@ public:
 	// 返回是否已渲染背景，调用方需要区别于 CMapLayers::RenderCustom() 的 void 接口。
 	// NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
 	bool RenderCustom(const vec2 &Center, float Zoom);
+	// 菜单预览显式请求实体背景，不依赖在线状态或全局实体开关。
+	void RenderPreview(const vec2 &Center, float Zoom, CMapLayers &PreviewLayers);
 
 	void LoadBackground();
 	const char *MapName() const { return m_aMapName; }

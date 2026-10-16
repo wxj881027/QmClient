@@ -16,6 +16,7 @@
 #include <game/client/QmUi/UiButtons.h>
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardMeasureRevision.h>
 #include <game/client/components/menus.h>
 #include <game/client/gameclient.h>
@@ -338,7 +339,7 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 			Content.HSplitTop(LineHeight, &Row, &Content);
 			char aSearchHint[64];
 			str_format(aSearchHint, sizeof(aSearchHint), Localize("Found %d global cards"), SearchMatchedGlobalCardCount);
-			TextRender()->TextColor(ColorRGBA(0.9f, 0.9f, 0.9f, 0.82f));
+			TextRender()->TextColor(ui_token::color::TEXT_SECONDARY);
 			Ui()->DoLabel(&Row, aSearchHint, SmallSize, TEXTALIGN_ML);
 			TextRender()->TextColor(TextRender()->DefaultTextColor());
 		};

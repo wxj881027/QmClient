@@ -5,6 +5,7 @@
 
 #include <engine/shared/config.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/qmclient/qm_title_render.h>
 #include <game/client/qm_title_effect.h>
 
@@ -237,7 +238,7 @@ ColorRGBA QmTitleStyleSample(const SQmTitleStyle &Style, const float TimeSec, co
 ColorRGBA QmTitleStyleSampleWithInterpolation(const SQmTitleStyle &Style, const float TimeSec, const float PixelX, const EQmTitleInterpolation Interpolation)
 {
 	if(Style.m_pColors == nullptr || Style.m_ColorCount <= 0)
-		return ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		return ui_token::color::NEUTRAL_WHITE;
 	// 周期非正会让相位变成 inf/NaN，最终写进顶点色通道是未定义行为；表项填错时退回首色。
 	if(Style.m_Mode != EQmTitleStyleMode::Static && Style.m_PeriodSec <= 0.0f)
 		return SampleAt(Style, 0);

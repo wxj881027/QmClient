@@ -2612,6 +2612,12 @@ Connection disconnected
 Connection elevated
 == 连接略有异常
 
+Connection icon color
+== 连接图标颜色
+
+Connection icon custom color
+== 连接图标自定义颜色
+
 Connection normal
 == 连接正常
 
@@ -3028,6 +3034,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == 自定义位置跳跃提示
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== 自定义滚轮每格的滚动距离。按住 Alt 滚动时使用 3 倍步长
 
 Customize translate button and menu colors
 == 自定义翻译按钮和菜单颜色
@@ -3695,6 +3704,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == 拖动到其他分类以移动此好友。
 
+Drag to pan, scroll to zoom
+== 按住拖动平移，滚轮缩放
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == 拖动调整顺序，点击展开或收起。右键或使用齿轮管理分类
 
@@ -3934,6 +3946,12 @@ Dynamic Island background alpha
 
 Dynamic Island background color
 == 灵动岛背景颜色
+
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== 灵动岛连接图标颜色：1=网络质量分档，2=跟随界面图标颜色，3=自定义
+
+Dynamic island connection icon custom color
+== 灵动岛连接图标自定义颜色
 
 Ease in out quad
 == 缓入缓出二次
@@ -4969,6 +4987,9 @@ Follow server
 
 Follow Tee
 == 跟随 Tee
+
+Follow UI icon color
+== 跟随界面图标颜色
 
 Following
 == 当前
@@ -6179,6 +6200,9 @@ Initializing components
 Initializing layers
 == 正在初始化地图图层
 
+Initializing map layers
+== 正在初始化地图图层
+
 Initializing map logic
 == 正在初始化地图逻辑
 
@@ -7169,8 +7193,14 @@ Map folders
 Map name
 == 地图名称
 
+Map not downloaded yet — join the server to preview it
+== 地图尚未下载，进入服务器下载后即可预览
+
 Map play history
 == 地图游玩历史
+
+Map preview rendering unavailable
+== 当前无法渲染地图预览
 
 Map Preview TODO
 == 地图预览待做
@@ -8567,6 +8597,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == 原文语言
 
+Original scroll feel
+== 原版滚动手感
+
 Other
 == 其他
 
@@ -9623,6 +9656,9 @@ QQ Music hook helper path (empty=beside QmClient)
 Quads are used for background decoration
 == 显示用作背景装饰的贴图
 
+Quality tier
+== 跟随网络质量
+
 Query current map info
 == 查询当前地图信息
 
@@ -10517,6 +10553,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == 恢复旧版单段钩子辅助线行为
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== 恢复原版滚轮手感：每格重新开始平滑滚动，不继承速度
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== 恢复原版滚轮手感：每格重新开始平滑滚动，不继承速度
+
 Restoring save %d: main '%s', dummy '%s'.
 == 正在恢复存档 %d：本体“%s”，分身“%s”。
 
@@ -10931,6 +10973,9 @@ Scroll mode: Off
 Scroll mode: On
 == 滚动模式：开
 
+Scroll step
+== 滚动步长
+
 Search
 == 搜索
 
@@ -11146,6 +11191,9 @@ Server alert
 
 Server best:
 == 服务器最佳：
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== 服务器浏览器内容列顺序（逗号分隔的标识：community,name,map,difficulty,gametype,friends,players,qm,ping；留空使用默认顺序）
 
 Server browser exclude string
 == 服务器浏览器排除字符串
@@ -11611,6 +11659,9 @@ Show enemy reason
 
 Show entities
 == 实体层显示开关
+
+Show entities only (hide textures)
+== 仅显示实体层（隐藏贴图）
 
 Show existing saves
 == 查看已有存档
@@ -12125,8 +12176,8 @@ Show server settings
 Show settings card borders
 == 显示设置卡片边框
 
-Show short server names in browser
-== 在服务器浏览器中显示简短服务器名
+Show short server names in browser (applies to China community servers)
+== 在服务器浏览器中显示简短服务器名（适用于中国社区服务器）
 
 Show skin date and author
 == 显示皮肤日期和作者
@@ -13940,6 +13991,9 @@ Toggle keyboard shortcuts
 Toggle local console
 == 切换本地控制台
 
+Toggle map preview
+== 地图预览
+
 Toggle microphone mute
 == 切换麦克风静音
 
@@ -15158,6 +15212,9 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 绑定设置为什么级别（这是自动的，你不需要使用它）
 
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== 滚轮每格的界面像素步长；设置卡片页面每格滚动此值的 12 倍
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已启用 TClient 彩虹 Tee 时，本功能不会生效。
 
@@ -15265,6 +15322,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == 按键的宽和高需要在 %d 到 %d 内。
+
+Width of difficulty column in server browser
+== 服务器浏览器中难度列的宽度
 
 Width of friends column in server browser
 == 服务器浏览器中好友列的宽度

@@ -32,6 +32,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/animstate.h>
@@ -543,7 +544,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientConfigsCard(const qm_card_
 
 			const bool Modified = !IsEffectiveDefaultVar(pVar);
 			const ColorRGBA BgModified = ColorRGBA(1.0f, 0.8f, 0.0f, 0.15f);
-			const ColorRGBA BgNormal = ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f);
+			const ColorRGBA BgNormal = ui_token::color::PREVIEW_BACKDROP;
 			RowItem.Draw(Modified ? BgModified : BgNormal, IGraphics::CORNER_ALL, ui_token::radius::BASE);
 
 			CUIRect RowContent;
