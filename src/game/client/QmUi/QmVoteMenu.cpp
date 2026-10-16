@@ -187,7 +187,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 	Header.VSplitRight(28.0f, &Header, &Refresh);
 	Header.VSplitRight(8.0f, &Header, nullptr);
 	static CButtonContainer s_Refresh;
-	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROWS_ROTATE, FontIcons::FONT_ICON_ARROWS_ROTATE, Refresh, !UseCatalog || State.m_Loader.Loading()))
+	if(ui_widget::IconButton(ui_widget::ControlContext(Ui()), &s_Refresh, EQmIcon::ARROWS_ROTATE, FontIcons::FONT_ICON_ARROWS_ROTATE, Refresh, State.m_Loader.Loading()))
 		State.m_Loader.Refresh(Http());
 	GameClient()->m_Tooltips.DoToolTip(&s_Refresh, &Refresh, State.m_Loader.Loading() ? Localize("Loading…") : Localize("Refresh"));
 	Header.VSplitRight(Header.w * 0.34f, &Search, &Exclude);
@@ -485,7 +485,7 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		State.m_Status.clear();
 		State.m_SelectedName = pNewSelectedName;
 	}
-	State.m_Loader.Select(UseCatalog ? pSelected : nullptr, Client()->LocalTime());
+	State.m_Loader.Select(pSelected, Client()->LocalTime());
 	if(State.m_vVisible.empty())
 		Label(List, State.m_Loader.Loading() ? Localize("Loading…") : Localize("No maps match these filters"), 14.0f, TEXTALIGN_MC);
 	if(ShowDetails)
