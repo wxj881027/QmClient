@@ -2854,6 +2854,7 @@ Or visit DDNet.org
 Original
 Original language for both received and outgoing messages. Use Auto to detect each message.
 Original message language
+Original options
 Other
 Other game modes
 Other modes

@@ -59,31 +59,51 @@ namespace
 
 void CMenus::RenderServerControl(CUIRect MainView)
 {
+	auto &State = m_QmVoteMenu;
+	const NETADDR *pServerAddress = Client()->ServerAddress();
+	const auto *pServerEntry = pServerAddress != nullptr ? ServerBrowser()->Find(*pServerAddress) : nullptr;
+	// 社区名单晚于连接信息到达时，浏览器条目会先更新归属。
+	const char *pCommunityId = pServerEntry != nullptr ? pServerEntry->m_Info.m_aCommunityId : Client()->ServerInfo().m_aCommunityId;
+	bool ModeChanged = State.m_Mode.UpdateCommunity(pCommunityId);
+	const auto PreviousPage = State.m_Page;
 	CUIRect Navigation;
 	MainView.HSplitTop(28.0f, &Navigation, &MainView);
 	MainView.HSplitTop(8.0f, nullptr, &MainView);
-	Navigation.w = std::min(720.0f, Navigation.w);
-	static CButtonContainer s_aPages[4];
-	const char *apPages[] = {Localize("Server votes"), Localize("Map"), Localize("Kick player"), Localize("Move player to spectators")};
+	if(State.m_Mode.IsOfficialDdnet())
+	{
+		CUIRect SwitchView;
+		Navigation.VSplitRight(std::min(140.0f, Navigation.w * 0.25f), &Navigation, &SwitchView);
+		Navigation.VSplitRight(8.0f, &Navigation, nullptr);
+		static CButtonContainer s_SwitchView;
+		if(ui_widget::SecondaryButton(ui_widget::ControlContext(Ui()), &s_SwitchView, State.m_Mode.UseMapLibrary() ? Localize("Original options") : Localize("Map"), SwitchView))
+		{
+			ModeChanged = State.m_Mode.ToggleServerOptions();
+			State.m_Page = EQmVoteMenuPage::OPTIONS;
+		}
+	}
+	Navigation.w = std::min(540.0f, Navigation.w);
+	static CButtonContainer s_aPages[3];
+	const char *apPages[] = {State.m_Mode.UseMapLibrary() ? Localize("Map") : Localize("Server votes"), Localize("Kick player"), Localize("Move player to spectators")};
 	const auto Style = CapsuleTabBarStyleFor(MenuPanelColor());
-	const auto PreviousPage = m_QmVoteMenu.m_Page;
-	m_QmVoteMenu.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(PreviousPage), Navigation, 8.0f, &Style));
-	if(m_QmVoteMenu.m_Page != PreviousPage)
+	State.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(State.m_Page), Navigation, 8.0f, &Style));
+	if(ModeChanged || State.m_Page != PreviousPage)
 	{
 		Ui()->ClosePopupMenus();
 		if(CLineInput *pActiveInput = CLineInput::GetActiveInput())
 			Ui()->ReleaseActiveTextInput(pActiveInput);
 		m_ControlPageOpening = true;
 	}
-	if(m_QmVoteMenu.m_Page == EQmVoteMenuPage::MAPS)
+	if(ModeChanged && !State.m_Mode.UseMapLibrary())
+		GameClient()->m_Voting.ClearUnfinishedMapVoteChain();
+	if(State.m_Page == EQmVoteMenuPage::OPTIONS && State.m_Mode.UseMapLibrary())
 		RenderVoteMapLibrary(MainView);
 	else
 	{
-		m_QmVoteMenu.m_Loader.Suspend();
-		if(m_QmVoteMenu.m_Page == EQmVoteMenuPage::SERVER)
+		State.m_Loader.Suspend();
+		if(State.m_Page == EQmVoteMenuPage::OPTIONS)
 			RenderServerVoteList(MainView);
 		else
-			RenderVotePlayerList(MainView, m_QmVoteMenu.m_Page == EQmVoteMenuPage::SPECTATE);
+			RenderVotePlayerList(MainView, State.m_Page == EQmVoteMenuPage::SPECTATE);
 	}
 }
 
@@ -91,16 +111,9 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 {
 	auto &State = m_QmVoteMenu;
 	auto &Voting = GameClient()->m_Voting;
-	const CServerInfo &Server = Client()->ServerInfo();
-	const CCommunity *pCommunity = ServerBrowser()->Community(Server.m_aCommunityId);
-	// DDNet 元数据不能套在 Gores 等同名地图上；这些服仍保留原始投票入口。
-	const bool UseCatalog = (str_comp_nocase(Server.m_aGameType, "DDNet") == 0 || str_comp_nocase(Server.m_aGameType, "DDRaceNetwork") == 0 || str_comp_nocase(Server.m_aGameType, "DDRace") == 0) &&
-				str_comp_nocase(Server.m_aCommunityId, "kog") != 0 && str_find_nocase(Server.m_aCommunityType, "gores") == nullptr;
-	if(UseCatalog)
-		State.m_Loader.Update(Http(), Engine(), Client()->LocalTime());
-	else
-		State.m_Loader.Suspend();
-	if((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision() || State.m_UseCatalog != UseCatalog)
+	const CCommunity *pCommunity = ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET);
+	State.m_Loader.Update(Http(), Engine(), Client()->LocalTime());
+	if((State.m_OptionsRevision != Voting.OptionsRevision() && !Voting.IsReceivingOptions()) || State.m_CatalogRevision != State.m_Loader.Revision())
 	{
 		// 仅清理即将失效的行 ID，后台刷新不能打断搜索框输入。
 		for(const auto &Map : State.m_vMaps)
@@ -110,11 +123,9 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 			if(Ui()->ActiveItem() == &Map || Ui()->ActiveItem() == &Map.m_Points)
 				Ui()->SetActiveItem(nullptr);
 		}
-		const std::vector<QmVoteMaps::SMap> vEmpty;
-		State.m_vMaps = QmVoteMaps::MergeCatalog(UseCatalog ? State.m_Loader.Maps() : vEmpty, Voting.FirstOption());
+		State.m_vMaps = QmVoteMaps::MergeCatalog(State.m_Loader.Maps(), Voting.FirstOption());
 		State.m_OptionsRevision = Voting.OptionsRevision();
 		State.m_CatalogRevision = State.m_Loader.Revision();
-		State.m_UseCatalog = UseCatalog;
 		State.m_Dirty = true;
 	}
 	if(State.m_Favorites != GameClient()->m_TClient.GetFavoriteMaps())
@@ -123,11 +134,10 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		State.m_Dirty = true;
 	}
 	const int FinishedCount = pCommunity != nullptr && g_Config.m_BrIndicateFinished && pCommunity->HasRanks() ? pCommunity->NumFinishedMaps() : -1;
-	if(State.m_FinishedCount != FinishedCount || State.m_RankPlayer != Client()->PlayerName() || State.m_Community != Server.m_aCommunityId)
+	if(State.m_FinishedCount != FinishedCount || State.m_RankPlayer != Client()->PlayerName())
 	{
 		State.m_FinishedCount = FinishedCount;
 		State.m_RankPlayer = Client()->PlayerName();
-		State.m_Community = Server.m_aCommunityId;
 		State.m_Dirty = true;
 	}
 	if(FinishedCount < 0 && State.m_Filter.m_Completion != QmVoteMaps::ECompletion::UNKNOWN)

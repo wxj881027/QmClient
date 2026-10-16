@@ -7951,6 +7951,11 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	m_QmVoteMenu.m_Dirty = true;
 	m_QmVoteMenu.m_ServerList.Select(-1);
 	m_QmVoteMenu.m_ServerSearch.Clear();
+	if(NewState < IClient::STATE_LOADING || NewState == IClient::STATE_DEMOPLAYBACK)
+	{
+		m_QmVoteMenu.m_Mode.Reset();
+		m_QmVoteMenu.m_Page = EQmVoteMenuPage::OPTIONS;
+	}
 	m_QmPlayersMenu.m_Selection.Validate(nullptr);
 	if(NewState == IClient::STATE_DEMOPLAYBACK)
 	{

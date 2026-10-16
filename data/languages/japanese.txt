@@ -8564,6 +8564,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == 原文の言語
 
+Original options
+== 元の投票項目
+
 Other
 == その他
 

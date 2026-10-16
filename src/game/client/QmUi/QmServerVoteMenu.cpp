@@ -23,8 +23,9 @@ void CMenus::RenderServerVoteList(CUIRect MainView)
 	auto &SearchInput = m_QmVoteMenu.m_ServerSearch;
 	auto &Voting = GameClient()->m_Voting;
 
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_ALL, 10.0f);
-	CUiScopedSurfaceText SurfaceText(TextRender(), ms_ColorTabbarActive);
+	const ColorRGBA PanelColor = MenuPanelColor();
+	MainView.Draw(PanelColor, IGraphics::CORNER_ALL, 10.0f);
+	CUiScopedSurfaceText SurfaceText(TextRender(), PanelColor);
 	const ColorRGBA Ink = ResolveUiSurfaceForeground(SurfaceText.Surface());
 	MainView.Margin(12.0f, &MainView);
 	CUIRect Search, Bottom;
