@@ -114,17 +114,15 @@ namespace
 				pTarget->DrawRoundedRectangle(D2D1::RoundedRect(Rect, Radius, Radius), pBrush.Get());
 		}
 
-		void Text(ID2D1RenderTarget *pTarget, const std::wstring &Value, D2D1_RECT_F Rect, float Size, UINT32 Rgb, bool Bold = false, bool Center = false)
+		void Text(ID2D1RenderTarget *pTarget, const std::wstring &Value, D2D1_RECT_F Rect, float Size, UINT32 Rgb, bool Bold = false, bool Center = false, DWRITE_PARAGRAPH_ALIGNMENT ParagraphAlignment = DWRITE_PARAGRAPH_ALIGNMENT_NEAR)
 		{
 			ComPtr<IDWriteTextFormat> pFormat;
 			ComPtr<ID2D1SolidColorBrush> pBrush;
 			if(FAILED(m_pWrite->CreateTextFormat(L"Microsoft YaHei UI", nullptr, Bold ? DWRITE_FONT_WEIGHT_SEMI_BOLD : DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, Size, L"zh-CN", &pFormat)) || FAILED(pTarget->CreateSolidColorBrush(Color(Rgb), &pBrush)))
 				return;
 			if(Center)
-			{
 				pFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-				pFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-			}
+			pFormat->SetParagraphAlignment(Center ? DWRITE_PARAGRAPH_ALIGNMENT_CENTER : ParagraphAlignment);
 			pTarget->DrawText(Value.c_str(), static_cast<UINT32>(Value.size()), pFormat.Get(), Rect, pBrush.Get(), D2D1_DRAW_TEXT_OPTIONS_CLIP);
 		}
 
@@ -371,18 +369,69 @@ namespace
 			EndPaint(m_Window, &PaintInfo);
 		}
 
-		void DrawButton(const DRAWITEMSTRUCT &Item)
+		ID2D1DCRenderTarget *ControlTarget(HDC Dc, const RECT &Rect)
 		{
 			if(!m_pControlTarget)
 			{
 				auto Properties = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
 				if(FAILED(m_pFactory->CreateDCRenderTarget(&Properties, &m_pControlTarget)))
-					return;
+					return nullptr;
 			}
-			if(FAILED(m_pControlTarget->BindDC(Item.hDC, &Item.rcItem)))
-				return;
+			if(FAILED(m_pControlTarget->BindDC(Dc, &Rect)))
+				return nullptr;
 			auto *pTarget = m_pControlTarget.Get();
 			pTarget->SetDpi(static_cast<float>(m_Dpi), static_cast<float>(m_Dpi));
+			return pTarget;
+		}
+
+		bool DrawCheckbox(const NMCUSTOMDRAW &Item)
+		{
+			auto *pTarget = ControlTarget(Item.hdc, Item.rc);
+			if(!pTarget)
+				return false;
+			const HWND Control = Item.hdr.hwndFrom;
+			const float Width = (Item.rc.right - Item.rc.left) * 96.0f / m_Dpi;
+			const float Height = (Item.rc.bottom - Item.rc.top) * 96.0f / m_Dpi;
+			const float CenterY = Height * 0.5f;
+			const auto State = SendMessageW(Control, BM_GETSTATE, 0, 0);
+			const bool Checked = SendMessageW(Control, BM_GETCHECK, 0, 0) == BST_CHECKED;
+			const bool Disabled = !IsWindowEnabled(Control);
+			const bool Pressed = !Disabled && (State & BST_PUSHED) != 0;
+			const bool Hover = !Disabled && m_HoverButton == Control;
+			const bool Focus = (State & BST_FOCUS) != 0 && (SendMessageW(Control, WM_QUERYUISTATE, 0, 0) & UISF_HIDEFOCUS) == 0;
+			const UINT32 Accent = Pressed ? 0x21583C : Hover ? 0x3B8A5D : 0x307A50;
+			wchar_t aCaption[128]{};
+			GetWindowTextW(Control, aCaption, 128);
+			pTarget->BeginDraw();
+			pTarget->Clear(Color(Background()));
+			if(Hover || Pressed)
+				Fill(pTarget, {1, 1, Width - 1, Height - 1}, m_Dark ? 0x29362E : 0xEAF0EB, 7);
+			const D2D1_RECT_F Box{4, CenterY - 10, 24, CenterY + 10};
+			Fill(pTarget, Box, Disabled ? Border() : Checked ? Accent : m_Dark ? 0x1E2923 : 0xFFFFFF, 4);
+			Stroke(pTarget, Box, Disabled ? Border() : Checked || Hover ? Accent : m_Dark ? 0x71867A : 0x8DA397, 4);
+			if(Checked)
+			{
+				ComPtr<ID2D1SolidColorBrush> pBrush;
+				if(SUCCEEDED(pTarget->CreateSolidColorBrush(Color(Disabled ? Muted() : 0xFFFFFF), &pBrush)))
+				{
+					pTarget->DrawLine({8, CenterY}, {12, CenterY + 4}, pBrush.Get(), 2.0f);
+					pTarget->DrawLine({12, CenterY + 4}, {20, CenterY - 4}, pBrush.Get(), 2.0f);
+				}
+			}
+			Text(pTarget, aCaption, {34, 0, Width - 4, Height}, 14, Disabled ? Muted() : Foreground(), false, false, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+			if(Focus)
+				Stroke(pTarget, {1, 1, Width - 1, Height - 1}, m_Dark ? 0x8FCBA4 : 0x409B69, 7);
+			const HRESULT Result = pTarget->EndDraw();
+			if(Result == D2DERR_RECREATE_TARGET)
+				m_pControlTarget.Reset();
+			return SUCCEEDED(Result);
+		}
+
+		void DrawButton(const DRAWITEMSTRUCT &Item)
+		{
+			auto *pTarget = ControlTarget(Item.hDC, Item.rcItem);
+			if(!pTarget)
+				return;
 			const float Width = (Item.rcItem.right - Item.rcItem.left) * 96.0f / m_Dpi;
 			const float Height = (Item.rcItem.bottom - Item.rcItem.top) * 96.0f / m_Dpi;
 			const bool Primary = Item.CtlID == IDOK;
@@ -421,6 +470,18 @@ namespace
 					Activate(LOWORD(WParam));
 				return 0;
 			case WM_DRAWITEM: DrawButton(*reinterpret_cast<DRAWITEMSTRUCT *>(LParam)); return TRUE;
+			case WM_NOTIFY:
+			{
+				const auto *pHeader = reinterpret_cast<const NMHDR *>(LParam);
+				if(pHeader->hwndFrom == m_Desktop && pHeader->code == NM_CUSTOMDRAW)
+				{
+					const auto &Item = *reinterpret_cast<const NMCUSTOMDRAW *>(LParam);
+					if(Item.dwDrawStage == CDDS_PREPAINT && DrawCheckbox(Item))
+						return CDRF_SKIPDEFAULT;
+					return CDRF_DODEFAULT;
+				}
+				return DefWindowProcW(m_Window, Message, WParam, LParam);
+			}
 			case WM_CTLCOLOREDIT:
 			case WM_CTLCOLORSTATIC:
 			case WM_CTLCOLORBTN:
@@ -600,8 +661,8 @@ namespace
 			SendMessageW(m_Edit, EM_LIMITTEXT, 32760, 0);
 			m_Browse = Button(ID_BROWSE, L"浏览…", BS_OWNERDRAW);
 			m_Desktop = Button(ID_DESKTOP, L"创建桌面快捷方式", BS_AUTOCHECKBOX);
-			// 复选框保留原生语义，文字和底色由当前窗口主题提供。
-			SetWindowTheme(m_Desktop, L"", L"");
+			// 保留原生勾选、键盘与可访问性语义，通过自定义绘制统一外观。
+			SetWindowTheme(m_Desktop, L"Explorer", nullptr);
 			SendMessageW(m_Desktop, BM_SETCHECK, DesktopIcon ? BST_CHECKED : BST_UNCHECKED, 0);
 			m_Primary = Button(IDOK, L"开始安装", BS_OWNERDRAW);
 			m_Secondary = Button(IDCANCEL, L"取消", BS_OWNERDRAW);
@@ -612,7 +673,7 @@ namespace
 				DestroyWindow(m_Window);
 				return 1;
 			}
-			for(const HWND ButtonWindow : {m_Browse, m_Primary, m_Secondary, m_LogButton})
+			for(const HWND ButtonWindow : {m_Browse, m_Desktop, m_Primary, m_Secondary, m_LogButton})
 				SetWindowSubclass(ButtonWindow, ButtonProc, 1, reinterpret_cast<DWORD_PTR>(this));
 			Layout();
 			ShowPage(EPage::OPTIONS);
