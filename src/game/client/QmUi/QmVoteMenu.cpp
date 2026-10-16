@@ -65,7 +65,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	Navigation.w = std::min(720.0f, Navigation.w);
 	static CButtonContainer s_aPages[4];
 	const char *apPages[] = {Localize("Server votes"), Localize("Map"), Localize("Kick player"), Localize("Move player to spectators")};
-	const auto Style = CapsuleTabBarStyleFor(ms_ColorTabbarActive);
+	const auto Style = CapsuleTabBarStyleFor(MenuPanelColor());
 	const auto PreviousPage = m_QmVoteMenu.m_Page;
 	m_QmVoteMenu.m_Page = static_cast<EQmVoteMenuPage>(DoNavigationTabs(s_aPages, apPages, std::size(apPages), static_cast<int>(PreviousPage), Navigation, 8.0f, &Style));
 	if(m_QmVoteMenu.m_Page != PreviousPage)
@@ -136,8 +136,9 @@ void CMenus::RenderVoteMapLibrary(CUIRect MainView)
 		State.m_Dirty = true;
 	}
 
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_ALL, 10.0f);
-	CUiScopedSurfaceText SurfaceText(TextRender(), ms_ColorTabbarActive);
+	const ColorRGBA PanelColor = MenuPanelColor();
+	MainView.Draw(PanelColor, IGraphics::CORNER_ALL, 10.0f);
+	CUiScopedSurfaceText SurfaceText(TextRender(), PanelColor);
 	const ColorRGBA Ink = ResolveUiSurfaceForeground(SurfaceText.Surface());
 	MainView.Margin(12.0f, &MainView);
 	const bool CompactFilters = MainView.w < 600.0f;
@@ -612,8 +613,9 @@ void CMenus::RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators)
 	else
 		Selection.Validate(nullptr);
 
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_ALL, 10.0f);
-	CUiScopedSurfaceText SurfaceText(TextRender(), ms_ColorTabbarActive);
+	const ColorRGBA PanelColor = MenuPanelColor();
+	MainView.Draw(PanelColor, IGraphics::CORNER_ALL, 10.0f);
+	CUiScopedSurfaceText SurfaceText(TextRender(), PanelColor);
 	const ColorRGBA Ink = ResolveUiSurfaceForeground(SurfaceText.Surface());
 	MainView.Margin(12.0f, &MainView);
 	CUIRect Header, Bottom, Search, Exclude;
