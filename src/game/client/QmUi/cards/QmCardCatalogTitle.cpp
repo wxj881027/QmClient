@@ -731,7 +731,14 @@ bool qm_card_catalog::QmCardRenderHook::BuildTitleCard(const SQmCardBuildContext
 				if(pPreviewStyleId[0] == '\0')
 					pPreviewStyleId = Auth.TitleProfileStyle();
 				pMenus->Ui()->ClipEnable(&TitlePreviewArea);
-				RenderQmTitleFinishedPreview(pMenus->TextRender(), pMenus->GameClient()->RenderTools(), TitlePreviewArea, Draft.m_Title.GetString(), pPreviewStyleId, pMenus->GameClient()->IsQmDeveloperRainbow(pMenus->GameClient()->m_Snap.m_LocalClientId), BodySize * 1.4f, (float)Auth.TitleAnimationTime());
+				if(Auth.PlayerHasDeveloperBadge(pMenus->GameClient()->m_Snap.m_LocalClientId) && Auth.DeveloperBadge().Available())
+				{
+					const vec2 Size = QmDeveloperBadgeSize(BodySize * 1.4f);
+					Auth.DeveloperBadge().Render(pMenus->Graphics(),
+						{TitlePreviewArea.x + (TitlePreviewArea.w - Size.x) * 0.5f, TitlePreviewArea.y + (TitlePreviewArea.h - Size.y) * 0.5f, Size.x, Size.y}, 1.0f);
+				}
+				else
+					RenderQmTitleFinishedPreview(pMenus->TextRender(), pMenus->GameClient()->RenderTools(), TitlePreviewArea, Draft.m_Title.GetString(), pPreviewStyleId, pMenus->GameClient()->IsQmDeveloperRainbow(pMenus->GameClient()->m_Snap.m_LocalClientId), BodySize * 1.4f, (float)Auth.TitleAnimationTime());
 				pMenus->Ui()->ClipDisable();
 			}
 		}

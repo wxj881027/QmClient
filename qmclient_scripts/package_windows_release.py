@@ -9,6 +9,7 @@ import shutil
 import subprocess
 
 from prepare_setup_source import prepare
+from build_windows_setup import build_setup, find_iscc
 from verify_windows_package import verify
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -60,9 +61,7 @@ def main() -> int:
 		raise ValueError("release target requires a normal Release build")
 	if REPO_ROOT not in output.parents or output == build or output in build.parents or output == portable or portable in output.parents:
 		raise ValueError("release output must be a separate workspace-local directory")
-	compiler = shutil.which("iscc") or shutil.which("ISCC")
-	if not compiler:
-		raise ValueError("Inno Setup ISCC is required for package_windows_release")
+	compiler = find_iscc()
 	# 主目录的锁由外层 CMake 封装持有；这里仅构建独立便携子目录，避免递归申请主锁。
 	wrapper = str(REPO_ROOT / "qmclient_scripts/cmake-windows.cmd")
 	subprocess.run([wrapper, "-G", "Ninja", "-S", str(REPO_ROOT), "-B", str(portable), "-DCMAKE_BUILD_TYPE=Release", "-DQMCLIENT_PORTABLE=ON", "-DQMCLIENT_TEST_STORAGE=OFF", "-DMYSQL=OFF"], check=True, cwd=REPO_ROOT)
@@ -75,11 +74,7 @@ def main() -> int:
 	installer_output = build / "release/windows-installer"
 	installer_output.mkdir(parents=True, exist_ok=True)
 	prepare(build, REPO_ROOT / "data", payload, steam_appid_file=REPO_ROOT / "steam_appid.txt")
-	result = subprocess.run([compiler, f"/DSourceDir={payload}", f"/DOutputDir={installer_output}", f"/DAppVersion={args.version}", str(REPO_ROOT / "qmclient_scripts/installer/QmClient.iss")], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
-	log = build / "release/windows-installer.log"
-	log.write_bytes(result.stdout)
-	if result.returncode or b"Warning:" in result.stdout:
-		raise RuntimeError(f"Setup compilation failed or emitted warnings; see {log}")
+	build_setup(payload, installer_output, build / "release/setup-ui-build", args.version, compiler=compiler, jobs=args.jobs)
 	publish_artifacts([normal_package, installer_output / "QmClient-Setup.exe", portable_package], output)
 	print(f"Windows release artifacts and SHA256SUMS.txt: {output}", flush=True)
 	return 0

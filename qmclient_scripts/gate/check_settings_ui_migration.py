@@ -113,7 +113,7 @@ PAGE_STABLE_IDS = {
 	"tclient_chat_binds": ("deck:tclient-chat-binds-kaomoji", "deck:tclient-chat-binds-warlist", "deck:tclient-chat-binds-other"),
 	"tclient_warlist": ("deck:tclient-warlist",),
 	"tclient_status_bar": ("deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"),
-	"tclient_profiles": ("deck:tclient-profiles-actions", "deck:tclient-profiles-options", "deck:tclient-profiles-list"),
+	"tclient_profiles": ("deck:tclient-profiles",),
 	"tclient_configs": ("deck:tclient-configs-actions",),
 	"assets": (),
 }
@@ -220,11 +220,17 @@ PAGE_FORBIDDEN = {
 		"deck:tclient-warlist-groups",
 		"deck:tclient-warlist-players",
 	),
+	"tclient_profiles": (
+		"deck:tclient-profiles-actions",
+		"deck:tclient-profiles-options",
+		"deck:tclient-profiles-list",
+	),
 }
 
 
 REGISTRY_FORBIDDEN = {
 	"tclient_warlist": PAGE_FORBIDDEN["tclient_warlist"],
+	"tclient_profiles": PAGE_FORBIDDEN["tclient_profiles"],
 }
 
 _PAGE_SOURCE = {

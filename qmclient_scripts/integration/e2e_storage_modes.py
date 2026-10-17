@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import shutil
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 try:
@@ -21,7 +23,7 @@ def start_client(directory: Path, cwd: Path) -> Process:
 	return Process("client", args, cwd, fifo_command="cl_input_fifo", pipe_prefix=f"qmstorage_{uuid.uuid4().hex}_")
 
 
-def run_and_save(directory: Path, cwd: Path, set_name: bool) -> None:
+def run_and_save(directory: Path, cwd: Path, set_name: bool, scripts: tuple[tuple[str, str], ...] = ()) -> None:
 	client = start_client(directory, cwd)
 	try:
 		client.wait_for(lambda line: line.startswith("client: version"), "client startup", 30)
@@ -36,6 +38,9 @@ def run_and_save(directory: Path, cwd: Path, set_name: bool) -> None:
 		else:
 			client.command("player_name")
 			client.wait_for(lambda line: "QmPortableTest" in line, "restored profile name", 10)
+		for filename, marker in scripts:
+			client.command(f"exec {filename}")
+			client.wait_for(lambda line: marker in line, f"storage search: {filename}", 10)
 		client.command("quit")
 		if client.wait_for_exit(20) != 0:
 			raise AssertionError("client did not exit normally")
@@ -48,6 +53,8 @@ def scenario_portable_profile_moves_with_executable(directory: Path, cwd: Path, 
 	saved = directory / "profile/qmclient/settings.cfg"
 	if "QmPortableTest" not in saved.read_text(encoding="utf-8"):
 		raise AssertionError("client did not save settings beside its executable")
+	# 首次启动缺少 storage.cfg；搬家后使用随包的注释模板，两者均使用便携默认目录。
+	shutil.copy2(REPO_ROOT / "qmclient_scripts/portable/storage.cfg", directory / "storage.cfg")
 	moved = workspace / "搬家后的便携版"
 	if not directory.resolve().is_relative_to(workspace.resolve()) or not moved.resolve().is_relative_to(workspace.resolve()):
 		raise AssertionError("move must remain inside the isolated workspace")
@@ -56,6 +63,58 @@ def scenario_portable_profile_moves_with_executable(directory: Path, cwd: Path, 
 	if (cwd / "qmclient/settings.cfg").exists():
 		raise AssertionError("foreign working directory received client settings")
 	return moved
+
+
+@contextmanager
+def storage_config(directory: Path, content: str | None) -> Iterator[None]:
+	path = directory / "storage.cfg"
+	previous = path.read_bytes() if path.exists() else None
+	try:
+		if content is None:
+			path.unlink(missing_ok=True)
+		else:
+			path.write_text(content, encoding="utf-8")
+		yield
+	finally:
+		if previous is None:
+			path.unlink(missing_ok=True)
+		else:
+			path.write_bytes(previous)
+
+
+def scenario_executable_config_controls_save_and_search_order(directory: Path, workspace: Path) -> None:
+	root = workspace / "explicit-storage"
+	save = root / "自定义存档"
+	resources = root / "extra-resources"
+	foreign = root / "foreign-storage"
+	cwd = root / "working-directory"
+	for path in (save, resources, foreign, cwd):
+		path.mkdir(parents=True)
+	(save / "search-order.cfg").write_text("echo qm_first_storage_path\n", encoding="utf-8")
+	(resources / "search-order.cfg").write_text("echo qm_second_storage_path\n", encoding="utf-8")
+	(resources / "secondary-only.cfg").write_text("echo qm_secondary_resource_loaded\n", encoding="utf-8")
+	(cwd / "storage.cfg").write_text(f"add_path {foreign.as_posix()}\nadd_path $DATADIR\n", encoding="utf-8")
+	content = f"add_path {save.as_posix()}\nadd_path {resources.as_posix()}\nadd_path $DATADIR\n"
+	with storage_config(directory, content):
+		run_and_save(directory, cwd, True, (("search-order.cfg", "qm_first_storage_path"), ("secondary-only.cfg", "qm_secondary_resource_loaded")))
+		run_and_save(directory, cwd, False)
+	if "QmPortableTest" not in (save / "qmclient/settings.cfg").read_text(encoding="utf-8"):
+		raise AssertionError("explicit storage.cfg did not select the save directory")
+	if (resources / "qmclient/settings.cfg").exists() or (foreign / "qmclient/settings.cfg").exists():
+		raise AssertionError("client saved outside the first executable storage.cfg path")
+
+
+def scenario_working_directory_config_is_used_without_executable_config(directory: Path, workspace: Path) -> None:
+	root = workspace / "working-directory-storage"
+	cwd = root / "cwd"
+	save = root / "save"
+	cwd.mkdir(parents=True)
+	save.mkdir()
+	(cwd / "storage.cfg").write_text(f"add_path {save.as_posix()}\nadd_path $DATADIR\n", encoding="utf-8")
+	with storage_config(directory, None):
+		run_and_save(directory, cwd, True)
+	if "QmPortableTest" not in (save / "qmclient/settings.cfg").read_text(encoding="utf-8"):
+		raise AssertionError("client did not load storage.cfg from the working directory")
 
 
 def scenario_unavailable_profile_does_not_fallback(moved: Path, cwd: Path, workspace: Path) -> None:
@@ -117,14 +176,14 @@ def main() -> int:
 	(directory / "data/autoexec_client.cfg").write_text("echo qm_forbidden_config_data\n", encoding="utf-8")
 	(cwd / "autoexec_client.cfg").write_text("echo qm_forbidden_config_cwd\n", encoding="utf-8")
 	(directory / "autoexec_client.cfg").write_text("echo qm_forbidden_config_exe\n", encoding="utf-8")
-	(directory / "storage.cfg").write_text(f"add_path {cwd}\n", encoding="utf-8")
-	(cwd / "storage.cfg").write_text(f"add_path {cwd}\nadd_path {directory / 'data'}\n", encoding="utf-8")
 	print(f"artifacts: {workspace}", flush=True)
 	moved = scenario_portable_profile_moves_with_executable(directory, cwd, workspace)
+	scenario_executable_config_controls_save_and_search_order(moved, workspace)
+	scenario_working_directory_config_is_used_without_executable_config(moved, workspace)
 	scenario_unavailable_profile_does_not_fallback(moved, cwd, workspace)
 	if args.normal_build is not None:
 		scenario_normal_build_rejects_test_override(args.normal_build.resolve(strict=True), cwd, workspace)
-	print("portable profile relocation and failure isolation: passed")
+	print("portable defaults, explicit storage paths, relocation and failure isolation: passed")
 	return 0
 
 

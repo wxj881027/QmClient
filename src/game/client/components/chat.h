@@ -59,10 +59,7 @@ public:
 		if(pLine == nullptr || pLine[0] == '\0')
 			return EChatSendResult::REJECTED;
 		if(IsSensitiveChatCommand(pLine))
-		{
-			SendSensitive();
-			return EChatSendResult::SENT;
-		}
+			return SendSensitive() ? EChatSendResult::SENT : EChatSendResult::REJECTED;
 		return SendOrdinary();
 	}
 
@@ -157,6 +154,7 @@ private:
 		char m_aName[MAX_NAME_LENGTH] = "";
 		char m_aPlayerName[MAX_NAME_LENGTH] = "";
 		char m_aQmTitle[64] = "";
+		bool m_DeveloperBadge = false;
 		ColorRGBA m_NameColor;
 	};
 
@@ -170,6 +168,7 @@ private:
 		bool m_Initialized;
 		int64_t m_Time;
 		float m_aYOffset[2];
+		bool m_aMergedMessageInline[2] = {};
 		SQmChatTextBlockLayout m_aTextBlockLayout[2];
 		int m_ClientId;
 		int m_TeamNumber;
@@ -178,6 +177,7 @@ private:
 		int m_NameColor;
 		char m_aName[MAX_CLIENTS * (MAX_NAME_LENGTH + 1)];
 		char m_aQmTitle[64] = "";
+		bool m_DeveloperBadge = false;
 		char m_aText[MAX_LINE_LENGTH];
 		// 合并比较保留内置显示过滤前的文本，避免不同原文都变成星号后合并。
 		char m_aMergeText[MAX_LINE_LENGTH] = "";
@@ -201,6 +201,7 @@ private:
 		CUIRect m_BackgroundRect = {};
 		float m_BackgroundRounding = 0.0f;
 		std::vector<CQmTitleTextMetrics> m_vTitleTextMetrics;
+		std::vector<CUIRect> m_vDeveloperBadgeRects;
 
 		std::shared_ptr<CManagedTeeRenderInfo> m_pManagedTeeRenderInfo;
 
@@ -639,7 +640,8 @@ public:
 	//
 	// @param Team MODE_ALL=0 MODE_TEAM=1
 	// @param pLine the chat message
-	void SendChat(int Team, const char *pLine, const char *pLocalOriginal = nullptr, int Connection = -1);
+	// 返回是否已发送或由本地命令处理，失败时调用方可保留消息。
+	bool SendChat(int Team, const char *pLine, const char *pLocalOriginal = nullptr, int Connection = -1);
 	void InvalidateOutgoingConnection(int Connection)
 	{
 		m_PendingChatMessages.InvalidateConnection(Connection);
@@ -647,7 +649,7 @@ public:
 	}
 	EChatSendResult SendChatQueued(int Team, const char *pLine, bool AllowOutgoingTranslation, const char *pLocalOriginal = nullptr, int Connection = -1);
 	// Sends a chat message using the specified connection (main/dummy).
-	void SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhitespaceOnly = false, bool HandleLocalSaveForLoadCommand = true, const char *pLocalOriginal = nullptr);
+	bool SendChatOnConn(int Conn, int Team, const char *pLine, bool AllowWhitespaceOnly = false, bool HandleLocalSaveForLoadCommand = true, const char *pLocalOriginal = nullptr);
 
 	// Sends a chat message to the server.
 	//

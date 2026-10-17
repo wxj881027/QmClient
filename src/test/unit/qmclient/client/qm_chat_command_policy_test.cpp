@@ -288,18 +288,26 @@ TEST(QmChatSecurity, SensitiveLoginBypassesTheOrdinaryHistoryAndTranslationEntry
 {
 	int SensitiveSends = 0;
 	int OrdinaryEntries = 0;
+	const auto SendSensitive = [&] {
+		++SensitiveSends;
+		return true;
+	};
+	const auto SendOrdinary = [&] {
+		++OrdinaryEntries;
+		return CChat::EChatSendResult::QUEUED;
+	};
 	for(const char *pLine : {"/login secret", " \t/LOGIN secret", "/login\tsecret"})
 	{
 		SCOPED_TRACE(pLine);
-		EXPECT_EQ(CChat::DispatchChatMessage(pLine, [&] { ++SensitiveSends; }, [&] {
-			++OrdinaryEntries;
-			return CChat::EChatSendResult::QUEUED; }), CChat::EChatSendResult::SENT);
+		EXPECT_EQ(CChat::DispatchChatMessage(pLine, SendSensitive, SendOrdinary), CChat::EChatSendResult::SENT);
 	}
 	EXPECT_EQ(SensitiveSends, 3);
 	EXPECT_EQ(OrdinaryEntries, 0);
-	EXPECT_EQ(CChat::DispatchChatMessage("ordinary", [&] { ++SensitiveSends; }, [&] {
+	const auto RejectOrdinary = [&] {
 		++OrdinaryEntries;
-		return CChat::EChatSendResult::REJECTED; }), CChat::EChatSendResult::REJECTED);
+		return CChat::EChatSendResult::REJECTED;
+	};
+	EXPECT_EQ(CChat::DispatchChatMessage("ordinary", SendSensitive, RejectOrdinary), CChat::EChatSendResult::REJECTED);
 	EXPECT_EQ(OrdinaryEntries, 1);
 	EXPECT_EQ(SensitiveSends, 3);
 }
@@ -307,9 +315,38 @@ TEST(QmChatSecurity, SensitiveLoginBypassesTheOrdinaryHistoryAndTranslationEntry
 TEST(QmChatSecurity, EmptyInputDoesNotEnterEitherSendingPath)
 {
 	int Calls = 0;
+	const auto SendSensitive = [&] {
+		++Calls;
+		return true;
+	};
+	const auto SendOrdinary = [&] {
+		++Calls;
+		return CChat::EChatSendResult::QUEUED;
+	};
 	for(const char *pLine : {static_cast<const char *>(nullptr), ""})
-		EXPECT_EQ(CChat::DispatchChatMessage(pLine, [&] { ++Calls; }, [&] {
-			++Calls;
-			return CChat::EChatSendResult::QUEUED; }), CChat::EChatSendResult::REJECTED);
+		EXPECT_EQ(CChat::DispatchChatMessage(pLine, SendSensitive, SendOrdinary), CChat::EChatSendResult::REJECTED);
 	EXPECT_EQ(Calls, 0);
+}
+
+TEST(QmChatSecurity, FailedSensitiveSendIsRejectedWithoutEnteringQueueOrHistory)
+{
+	int Attempts = 0;
+	int OrdinaryEntries = 0;
+	bool Available = false;
+	const auto SendSensitive = [&] {
+		++Attempts;
+		return Available;
+	};
+	const auto SendOrdinary = [&] {
+		++OrdinaryEntries;
+		return CChat::EChatSendResult::QUEUED;
+	};
+	EXPECT_EQ(CChat::DispatchChatMessage("/login secret", SendSensitive, SendOrdinary), CChat::EChatSendResult::REJECTED);
+	EXPECT_EQ(Attempts, 1);
+	EXPECT_EQ(OrdinaryEntries, 0);
+
+	Available = true;
+	EXPECT_EQ(CChat::DispatchChatMessage("/login secret", SendSensitive, SendOrdinary), CChat::EChatSendResult::SENT);
+	EXPECT_EQ(Attempts, 2);
+	EXPECT_EQ(OrdinaryEntries, 0);
 }

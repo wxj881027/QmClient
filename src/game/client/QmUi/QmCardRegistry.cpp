@@ -236,9 +236,7 @@ namespace qm_card_registry
 			{"deck:tclient-chat-binds-warlist", "tclient-chat-binds", ECardColumn::Right, 0, "Warlist", "chat binds warlist tclient", "Manage hostile-list chat shortcuts"},
 			{"deck:tclient-chat-binds-other", "tclient-chat-binds", ECardColumn::Left, 1, "Other", "chat binds other tclient", "Manage additional custom chat shortcuts"},
 			{"deck:tclient-warlist", "tclient-warlist", ECardColumn::Full, 0, "War List", "enemy hostile war list entries groups players settings tclient", "Manage hostile players, groups, and display rules"},
-			{"deck:tclient-profiles-actions", "tclient-profiles", ECardColumn::Left, 0, "Profiles", "profiles save load delete", "Load, save, overwrite, or delete profiles"},
-			{"deck:tclient-profiles-options", "tclient-profiles", ECardColumn::Right, 0, "Profile Options", "profiles options dummy colors fields", "Select which player fields a profile stores"},
-			{"deck:tclient-profiles-list", "tclient-profiles", ECardColumn::Left, 1, "Saved Profiles", "profiles saved list", "Browse profiles saved on this device"},
+			{"deck:tclient-profiles", "tclient-profiles", ECardColumn::Full, 0, "Profiles", "profiles save load delete name identity chat assets bind wheel 配置 身份 昵称 语录 资源 轮盘", "Manage profiles and bind wheel presets"},
 			{"deck:tclient-configs-actions", "tclient-configs", ECardColumn::Full, 0, "Configuration", "configs changes filters variables values reset", "Review and reset changed configuration values"},
 			{"deck:appearance-hud-main", "appearance-hud", ECardColumn::Left, 0, "HUD", "appearance hud main", "Configure health, ammo, timer, and race HUD"},
 			{"deck:appearance-hud-ddrace", "appearance-hud", ECardColumn::Right, 0, "DDRace HUD", "appearance ddrace hud", "Adjust DDRace-specific HUD indicators"},
@@ -438,6 +436,41 @@ namespace qm_card_registry
 			vEntries.push_back({Default.m_pStableId, Default.m_pDefaultTab, Column, Default.m_DefaultOrder});
 		}
 		return vEntries;
+	}
+
+	bool RepairRemovedModernTabs(qm_card_order::CModel &Model)
+	{
+		struct SMove
+		{
+			const char *m_pStableId;
+			const char *m_pSourceTab;
+			const char *m_pTargetTab;
+			int m_Column;
+			int m_Order;
+		};
+		std::vector<SMove> vMoves;
+		for(int Index = 0; Index < Model.Count(); ++Index)
+		{
+			const auto &Entry = Model.Entry(Index);
+			if(Entry.m_pDefaultTab == nullptr || str_startswith(Entry.m_pDefaultTab, "modern-") == nullptr)
+				continue;
+			const auto *pDefault = FindByStableId(Entry.m_pStableId);
+			if(pDefault == nullptr || pDefault->m_pDefaultTab == nullptr || str_startswith(pDefault->m_pDefaultTab, "modern-") != nullptr)
+				continue;
+			vMoves.push_back({Entry.m_pStableId, Entry.m_pDefaultTab, pDefault->m_pDefaultTab, Entry.m_Column, Entry.m_OrderInColumn});
+		}
+		// 先保存源顺序；逐张搬动会重排源列，不能再用变化后的序号恢复布局。
+		std::stable_sort(vMoves.begin(), vMoves.end(), [](const SMove &Left, const SMove &Right) {
+			const int SourceCompare = str_comp(Left.m_pSourceTab, Right.m_pSourceTab);
+			return SourceCompare != 0 ? SourceCompare < 0 : Left.m_Order < Right.m_Order;
+		});
+		for(const auto &Move : vMoves)
+		{
+			// 有效旧页的卡片保持原顺序，恢复的卡片按各自源分类顺序追加。
+			const int Order = static_cast<int>(Model.ColumnIndices(Move.m_pTargetTab, Move.m_Column).size());
+			Model.MoveToTab(Move.m_pStableId, Move.m_pTargetTab, Move.m_Column, Order);
+		}
+		return !vMoves.empty();
 	}
 
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model)

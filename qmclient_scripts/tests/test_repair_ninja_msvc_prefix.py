@@ -13,6 +13,27 @@ from qmclient_scripts import repair_ninja_msvc_prefix
 
 
 class RepairNinjaMsvcPrefixTest(unittest.TestCase):
+    def test_cpp_only_project_repairs_dependency_prefix(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[2] / "tmp") as tmp:
+            build_dir = Path(tmp)
+            (build_dir / "CMakeCache.txt").write_text("CMAKE_CXX_COMPILER:FILEPATH=cl-cxx.exe\n", encoding="utf-8")
+            (build_dir / "CMakeFiles").mkdir()
+            rules = build_dir / "CMakeFiles" / "rules.ninja"
+            rules.write_bytes(b"msvc_deps_prefix = old prefix\n")
+            header = build_dir / "CMakeFiles" / "ShowIncludes" / "foo.h"
+            prefix = b"Note: including file: "
+            output = b"main.cpp\r\n" + prefix + str(header.resolve()).encode("utf-8") + b"\r\n"
+            with mock.patch.object(
+                repair_ninja_msvc_prefix.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess([], 0, output, b""),
+            ) as run:
+                self.assertTrue(repair_ninja_msvc_prefix.repair_build_dir(build_dir))
+                self.assertEqual(rules.read_bytes(), b"msvc_deps_prefix = " + prefix + b"\n")
+                self.assertEqual(run.call_args.args[0][0], "cl-cxx.exe")
+                self.assertEqual(run.call_args.args[0][-1], "main.cpp")
+                self.assertFalse(repair_ninja_msvc_prefix.repair_build_dir(build_dir))
+
     def test_probe_preserves_compiler_output_bytes(self):
         for encoding in ("utf-8", "gbk"):
             with self.subTest(encoding=encoding), tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[2] / "tmp") as tmp:

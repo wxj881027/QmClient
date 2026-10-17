@@ -12,6 +12,7 @@ from pathlib import Path
 import shutil
 import sys
 import time
+from unittest import SkipTest
 from collections.abc import Callable
 
 try:
@@ -348,6 +349,43 @@ def scenario_asset_loading_stall_reports_hang(env: ProcessEnvironment) -> None:
 	env.client.kill()
 
 
+def scenario_system_font_restore_no_false_hang(env: ProcessEnvironment) -> None:
+	"""关闭系统候选时，超过十秒的恢复查找不阻塞主循环，完成后应用保存的字体。"""
+	if sys.platform != "win32":
+		raise SkipTest("system font restoration requires the Windows isolated storage build")
+	try:
+		from qmclient_scripts.integration.font_resources_smoke import write_font
+	except ModuleNotFoundError:
+		from font_resources_smoke import write_font
+
+	family = "Qm System Restore Fixture"
+	font_path = env.path("system-font-fixture", "selected.ttf")
+	write_font(font_path, family)
+	env.start_client(
+		["qm_steam_auto_launch 0", "qm_show_system_fonts 0", 'qm_custom_font ""', f'qm_custom_font_cjk "{family}"', 'qm_custom_font_icons ""', "qm_graphics_trace 1"],
+		connect=False,
+		env={
+			"QMCLIENT_TEST_SYSTEM_FONT_FILE": str(font_path),
+			"QMCLIENT_TEST_FONT_LOOKUP_DELAY_MS": "12000",
+			"QMCLIENT_TEST_HIDE_DIALOG": "1",
+		},
+		startup_timeout=None,
+	)
+	env.client.wait_for(lambda line: line == "test/font: lookup_begin delay_ms=12000", "font restore lookup start", 30)
+	env.client.wait_for(lambda line: line.startswith("client: version"), "startup while font lookup is pending", 30)
+	env.client.command("echo font_restore_pending_responsive")
+	env.client.wait_for(lambda line: line.endswith(": font_restore_pending_responsive"), "input during font lookup", 5)
+	if any("test/font: lookup_complete" in line for line in env.client._lines):
+		raise AssertionError("client did not process input until font lookup completed")
+	env.client.wait_for(lambda line: line == "test/font: lookup_complete matches=1", "font lookup completion", 30)
+	env.client.wait_for(lambda line: f"event=system_font_restored role=1 name='{family}'" in line, "saved Chinese font restoration with candidates hidden", 15)
+	_quit_client(env)
+	dump_dir = env.path("dumps", "QmClient_Crash")
+	hang_artifacts = sorted(dump_dir.glob("*hang_report_*.txt")) + sorted(dump_dir.glob("*hang_dump_*.dmp"))
+	if hang_artifacts:
+		raise AssertionError(f"hang watchdog reported during background font restoration: {hang_artifacts}")
+
+
 E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"assert_dialog_no_false_hang": scenario_assert_dialog_no_false_hang,
 	"asset_loading_stall_reports_hang": scenario_asset_loading_stall_reports_hang,
@@ -364,6 +402,7 @@ E2E_TESTS: dict[str, Callable[[ProcessEnvironment], None]] = {
 	"recording_without_connection": scenario_recording_without_connection,
 	"slow_asset_loading_no_false_hang": scenario_slow_asset_loading_no_false_hang,
 	"startup_saved_favorites": scenario_startup_saved_favorites,
+	"system_font_restore_no_false_hang": scenario_system_font_restore_no_false_hang,
 	"vector_font_and_icon_resources": scenario_vector_font_and_icon_resources,
 	"legacy_icon_font_residual_ignored": scenario_legacy_icon_font_residual_ignored,
 }
@@ -382,6 +421,8 @@ def main() -> int:
 		keep_temp = False
 		try:
 			test(env)
+		except SkipTest as exc:
+			print(f"{name}: SKIPPED ({exc})")
 		except Exception as exc:  # pylint: disable=broad-exception-caught
 			failed += 1
 			keep_temp = True

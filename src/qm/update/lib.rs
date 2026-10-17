@@ -823,6 +823,18 @@ fn install_staged(
             ));
         }
     }
+    // 全部文件安装成功后，清理旧更新器遗留的客户端备份，不触碰本次回滚目录。
+    // 清理失败不能把已经完成的更新变成失败，也不能递归删除同名目录。
+    let legacy_backup = install.join("DDNet.old");
+    if legacy_backup.is_file() {
+        if let Err(error) = fs::remove_file(&legacy_backup) {
+            let _ = writeln!(
+                io::stderr(),
+                "failed removing legacy client backup {}: {error}",
+                legacy_backup.display()
+            );
+        }
+    }
     Ok(())
 }
 
@@ -1765,6 +1777,7 @@ mod tests {
         fs::write(install.join("data/qmclient/gui_logo.png"), b"logo").unwrap();
         fs::write(staging.join("DDNet.exe"), b"new client").unwrap();
         fs::write(install.join("DDNet.exe"), b"old client").unwrap();
+        fs::write(install.join("DDNet.old"), b"legacy backup").unwrap();
         fs::create_dir(install.join("blocked")).unwrap();
         let manifest = Manifest {
             schema: 1,
@@ -1789,7 +1802,44 @@ mod tests {
         };
         assert!(install_staged(&staging, &backup, &install, &manifest).is_err());
         assert_eq!(fs::read(install.join("DDNet.exe")).unwrap(), b"old client");
+        assert_eq!(fs::read(install.join("DDNet.old")).unwrap(), b"legacy backup");
         assert!(!backup.exists());
+    }
+
+    #[test]
+    fn successful_install_cleans_legacy_client_backup_and_keeps_other_files() {
+        let root = tempdir().unwrap();
+        let staging = root.path().join("staging");
+        let backup = root.path().join("backup");
+        let install = root.path().join("install");
+        for path in [&staging, &backup, &install] {
+            fs::create_dir(path).unwrap();
+        }
+        fs::write(staging.join("DDNet.exe"), b"new client").unwrap();
+        fs::write(install.join("DDNet.exe"), b"old client").unwrap();
+        fs::write(install.join("DDNet.old"), b"legacy backup").unwrap();
+        fs::write(install.join("settings.old"), b"user backup").unwrap();
+        let manifest = Manifest {
+            schema: 1,
+            version: "3.4".into(),
+            package: Package {
+                name: "QmClient-windows.zip".into(),
+                size: 1,
+                sha256: "00".repeat(32),
+            },
+            files: vec![ManifestFile {
+                path: "DDNet.exe".into(),
+                size: 10,
+                sha256: "00".repeat(32),
+            }],
+        };
+
+        install_staged(&staging, &backup, &install, &manifest).unwrap();
+
+        assert!(!install.join("DDNet.old").exists());
+        assert_eq!(fs::read(install.join("settings.old")).unwrap(), b"user backup");
+        assert_eq!(fs::read(install.join("DDNet.exe")).unwrap(), b"new client");
+        assert_eq!(fs::read(backup.join("DDNet.exe")).unwrap(), b"old client");
     }
 
     #[test]

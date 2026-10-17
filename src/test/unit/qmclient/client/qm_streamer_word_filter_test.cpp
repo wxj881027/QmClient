@@ -11,6 +11,46 @@ TEST(QmStreamerWordFilter, ReplacesOnlyMatchedChineseNames)
 	EXPECT_EQ(Text, "玩家***进入了服务器");
 }
 
+TEST(QmStreamerWordFilter, FiltersImportedBuiltInWords)
+{
+	const char *apWords[] = {"福音会", "电话窃听", "西布曲明", "形式主义", "集合", "咖啡因", "boycott", "198964", "姬胜德", "屄"};
+	for(const char *pWord : apWords)
+	{
+		SCOPED_TRACE(pWord);
+		std::string Text = std::string("前缀") + pWord + "后缀";
+		EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
+		EXPECT_EQ(Text, "前缀***后缀");
+	}
+}
+
+TEST(QmStreamerWordFilter, NormalizesDisguisedImportedWords)
+{
+	std::string Text = "电 . 话_窃\u200b听 / ＢＯＹＣＯＴＴ / 轮😀子功";
+	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
+	EXPECT_EQ(Text, "*** / *** / ***");
+}
+
+TEST(QmStreamerWordFilter, RequiresWholeTokensForImportedLatinAndNumericWords)
+{
+	std::string Text = "boycotting xboycott boycott 11989640 198964";
+	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
+	EXPECT_EQ(Text, "boycotting xboycott *** 11989640 ***");
+}
+
+TEST(QmStreamerWordFilter, PrefersExistingLongerWordsOverImportedPrefixes)
+{
+	std::string Text = "法轮、法轮功、法轮大法";
+	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
+	EXPECT_EQ(Text, "***、***、***");
+}
+
+TEST(QmStreamerWordFilter, DisablingPreservesImportedWords)
+{
+	std::string Text = "电话窃听 / boycott / 集合";
+	EXPECT_FALSE(QmStreamerWordFilter::Filter(Text, false));
+	EXPECT_EQ(Text, "电话窃听 / boycott / 集合");
+}
+
 TEST(QmStreamerWordFilter, NormalizesTraditionalChinese)
 {
 	std::string Text = "習近平、劉曉波、法輪功";
@@ -163,9 +203,9 @@ namespace
 TEST_F(QmStreamerExternalWords, AddsWordsWithoutRemovingBuiltInRules)
 {
 	QmStreamerWordFilter::SetAdditionalWords({"测试词"});
-	std::string Text = "测试词、习近平";
+	std::string Text = "测试词、习近平、电话窃听";
 	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
-	EXPECT_EQ(Text, "***、***");
+	EXPECT_EQ(Text, "***、***、***");
 }
 
 TEST_F(QmStreamerExternalWords, NormalizesDisguisedExternalWords)
@@ -198,6 +238,15 @@ TEST_F(QmStreamerExternalWords, ReplacingAndClearingTheFileRulesAdvancesRevision
 	QmStreamerWordFilter::SetAdditionalWords({});
 	Text = "其他词";
 	EXPECT_FALSE(QmStreamerWordFilter::Filter(Text, true));
+}
+
+TEST_F(QmStreamerExternalWords, ClearingExternalWordsKeepsImportedBuiltInWords)
+{
+	QmStreamerWordFilter::SetAdditionalWords({"测试词"});
+	QmStreamerWordFilter::SetAdditionalWords({});
+	std::string Text = "测试词、电话窃听、习近平";
+	EXPECT_TRUE(QmStreamerWordFilter::Filter(Text, true));
+	EXPECT_EQ(Text, "测试词、***、***");
 }
 
 TEST_F(QmStreamerExternalWords, DisablingAlsoPreservesExternalWords)

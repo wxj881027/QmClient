@@ -787,6 +787,7 @@ qm_card_order::CModel &CMenus::SettingsCardOrderModelForRenderPass()
 	if(!m_SettingsCardRenderOnlyOrderInitialized || m_SettingsCardRenderOnlyOrderSource != g_Config.m_QmGlobalCardOrder)
 	{
 		m_SettingsCardRenderOnlyOrderModel.LoadMerged(g_Config.m_QmGlobalCardOrder, qm_card_registry::BuildDefaultEntries());
+		qm_card_registry::RepairRemovedModernTabs(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardRenderOnlyOrderModel);
 		qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardRenderOnlyOrderModel);
@@ -848,10 +849,11 @@ void CMenus::LoadSettingsCardOrderModel()
 	};
 	// 归属修复不依赖布局版本，也不能被较早的可选布局迁移阻断。
 	// 写回失败时仍保留可显示的内存布局，下次加载会再次尝试修复。
+	const bool ModernTabsChanged = qm_card_registry::RepairRemovedModernTabs(m_SettingsCardOrderModel);
 	const bool CreditsLayoutChanged = qm_card_registry::RepairLegacyCreditsTabs(m_SettingsCardOrderModel);
 	const bool NameplateTitleLayoutChanged = qm_card_registry::RepairLegacyNameplateTitleLayout(m_SettingsCardOrderModel);
 	const bool TeeLayoutChanged = qm_card_registry::RepairLegacyTeeLayout(m_SettingsCardOrderModel);
-	if((CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged) && !PersistCurrentLayout())
+	if((ModernTabsChanged || CreditsLayoutChanged || NameplateTitleLayoutChanged || TeeLayoutChanged) && !PersistCurrentLayout())
 	{
 		m_SettingsCardOrderLoaded = true;
 		return;
@@ -915,46 +917,6 @@ void CMenus::LoadSettingsCardOrderModel()
 			return;
 		}
 		g_Config.m_QmCardLayoutVersion = 1;
-	}
-	if(g_Config.m_QmCardLayoutVersion < 2)
-	{
-		qm_card_order::CModel Candidate;
-		MakeCandidate(Candidate);
-		const std::vector<qm_card_order::SEntry> vLegacyProfileLayout = {
-			{"deck:tclient-profiles-actions", "tclient-profiles", 0, 0},
-			{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-			{"deck:tclient-profiles-list", "tclient-profiles", 1, 0},
-		};
-		const std::vector<qm_card_order::SEntry> vTargetProfileLayout = {
-			{"deck:tclient-profiles-actions", "tclient-profiles", 1, 0},
-			{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-			{"deck:tclient-profiles-list", "tclient-profiles", 1, 1},
-		};
-		const std::vector<const char *> vProfileIds = {
-			"deck:tclient-profiles-actions",
-			"deck:tclient-profiles-options",
-			"deck:tclient-profiles-list",
-		};
-		const std::vector<const char *> vRequiredProfileIds = {"deck:tclient-profiles-actions"};
-		const qm_card_order::EExplicitLayoutStatus ExplicitStatus = qm_card_order::ClassifyExplicitLayout(g_Config.m_QmGlobalCardOrder, vLegacyProfileLayout, vRequiredProfileIds);
-		if(ExplicitStatus == qm_card_order::EExplicitLayoutStatus::INVALID)
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		const bool ShouldMigrate = ExplicitStatus == qm_card_order::EExplicitLayoutStatus::MATCH;
-		const bool CandidateChanged = ShouldMigrate && qm_card_order::MigrateExactLayout(Candidate, "tclient-profiles", vLegacyProfileLayout, vTargetProfileLayout, vProfileIds);
-		if(ShouldMigrate && !CandidateChanged)
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		if(!PersistCandidate(Candidate, CandidateChanged))
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		g_Config.m_QmCardLayoutVersion = 2;
 	}
 	if(g_Config.m_QmCardLayoutVersion < 3)
 	{
@@ -2224,22 +2186,13 @@ bool CMenus::DoLine_AlphaColorPicker(CButtonContainer *pResetId, const SSettings
 {
 	CUIRect HintRect = *pMainRect;
 	SSettingsAlphaColorPickerState &State = m_SettingsAlphaColorPickerStates[pColorValue];
-	const unsigned int ConfigPackedColor = PackSettingsAlphaColor(*pColorValue, *pOpacity);
 	const bool Editing = Ui()->IsPopupOpen(&m_ColorPickerPopupContext) && m_ColorPickerPopupContext.m_pHslaColor == &State.m_PackedColor;
-	if(!State.m_Initialized || !Editing)
-	{
-		State.m_PackedColor = ConfigPackedColor;
-		State.m_Initialized = true;
-	}
+	State.RefreshFromConfig(*pColorValue, *pOpacity, Editing);
 
 	DoLine_ColorPicker(pResetId, Metrics, pMainRect, pText, &State.m_PackedColor, color_cast<ColorRGBA>(ColorHSLA(DefaultColor).WithAlpha(DefaultOpacity / 100.0f)), false, nullptr, true);
 	HintRect.h = pMainRect->y - HintRect.y;
 	Ui()->DoConfigTooltip(&State.m_PackedColor, &HintRect, pColorValue, pOpacity);
-	if(State.m_PackedColor == ConfigPackedColor)
-		return false;
-
-	UnpackSettingsAlphaColor(State.m_PackedColor, *pColorValue, *pOpacity);
-	return true;
+	return State.ApplyToConfig(*pColorValue, *pOpacity);
 }
 
 ColorHSLA CMenus::DoLine_ColorPicker(CButtonContainer *pResetId, const float LineSize, const float LabelSize, const float BottomMargin, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, const ColorRGBA DefaultColor, bool CheckBoxSpacing, int *pCheckBoxValue, bool Alpha)
@@ -3062,9 +3015,9 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	// 本地 DDrace 条目按服务器社区分条，DDStats 游戏类型又会追加同名条目；
 	// 而 DDrace 行的展示数据只有官方 DDNet 聚合一份。先把所有 DDrace 变体
 	// 折叠成单条，避免图例、饼图和顶部总时长出现多条相同的「DDraceNetwork · DDNet」。
-	QmCollapseModeEntries(vModeStats, [](const SQmClientLocalModeStats &Stats) {
-		return IsStatsDDraceMode(Stats.m_GameMode);
-	});
+	// 折叠必须区分权威来源：DDStats 追加的条目是远程模式时长，本地分社区累计
+	// 只是本机记录，两者混在一起累加会让权威值虚高（实测叠加本地 3 万秒）。
+	QmCollapseModeEntriesWithAuthority(vModeStats, [](const SQmClientLocalModeStats &Stats) { return IsStatsDDraceMode(Stats.m_GameMode); }, [](const SQmClientLocalModeStats &Stats) { return Stats.m_CommunityId == "ddstats"; });
 	// Gores 同理：本地按社区分条、DDStats 追加与 Axiom 占位可以并存，
 	// 超量截断时甚至可能选入两条 Gores。折叠成单条；任一来源带 Axiom
 	// 身份时保留该身份，保证官方 Axiom 数据仍能覆盖这一行。
@@ -3074,9 +3027,12 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		if(IsStatsGoresMode(Stats.m_GameMode) && Stats.m_IsAxiom)
 			HasAxiomGoresEntry = true;
 	}
-	if(QmCollapseModeEntries(vModeStats, [](const SQmClientLocalModeStats &Stats) {
-		   return IsStatsGoresMode(Stats.m_GameMode);
-	   }) && HasAxiomGoresEntry)
+	if(QmCollapseModeEntriesWithAuthority(vModeStats, [](const SQmClientLocalModeStats &Stats) { return IsStatsGoresMode(Stats.m_GameMode); }, [](const SQmClientLocalModeStats &Stats) {
+		   // 只认 DDStats：上面的 ShowAxiomGores 块会把本地 Gores 条目的
+		   // community_id 改写成 "axiom"，与远程权威同标识，不能用来判定权威。
+		   // Gores 的最终数值由后面的 ResolveQmStatisticsModeDisplay 用
+		   // Axiom 完整数据覆盖，这里只需保证 DDStats 值不被本地累加污染。
+		   return Stats.m_CommunityId == "ddstats"; }) && HasAxiomGoresEntry)
 	{
 		auto It = std::find_if(vModeStats.begin(), vModeStats.end(), [](const SQmClientLocalModeStats &Stats) {
 			return IsStatsGoresMode(Stats.m_GameMode);
@@ -6113,12 +6069,18 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 	const std::vector<CTheme> &vThemes = MenuBackground.GetThemes();
 
 	int SelectedTheme = -1;
+	EThemeSelectionMatch BestMatch = EThemeSelectionMatch::NONE;
+	const int HourOfTheDay = time_houroftheday();
+	const bool IsDaytime = HourOfTheDay >= 6 && HourOfTheDay < 18;
 	for(int i = 0; i < (int)vThemes.size(); i++)
 	{
-		if(str_comp(vThemes[i].m_Name.c_str(), g_Config.m_ClMenuMap) == 0 || (IsThemeFileCandidate(g_Config.m_ClMenuMap) && vThemes[i].m_Name == ThemeBaseName(g_Config.m_ClMenuMap)))
+		const EThemeSelectionMatch Match = ResolveThemeSelectionMatch(vThemes[i].m_Name.c_str(), g_Config.m_ClMenuMap, IsDaytime);
+		if(Match > BestMatch)
 		{
+			BestMatch = Match;
 			SelectedTheme = i;
-			break;
+			if(Match == EThemeSelectionMatch::EXACT)
+				break;
 		}
 	}
 	const int OldSelected = SelectedTheme;
@@ -8260,6 +8222,13 @@ void CMenus::OnStateChange(int NewState, int OldState)
 	m_QmVoteMenu.m_SelectedName.clear();
 	m_QmVoteMenu.m_Status.clear();
 	m_QmVoteMenu.m_Dirty = true;
+	m_QmVoteMenu.m_ServerList.Select(-1);
+	m_QmVoteMenu.m_ServerSearch.Clear();
+	if(NewState < IClient::STATE_LOADING || NewState == IClient::STATE_DEMOPLAYBACK)
+	{
+		m_QmVoteMenu.m_Mode.Reset();
+		m_QmVoteMenu.m_Page = EQmVoteMenuPage::OPTIONS;
+	}
 	m_QmPlayersMenu.m_Selection.Validate(nullptr);
 	if(NewState == IClient::STATE_DEMOPLAYBACK)
 	{

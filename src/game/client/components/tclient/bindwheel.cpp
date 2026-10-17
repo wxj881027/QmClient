@@ -4,6 +4,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/animstate.h>
+#include <game/client/components/qmclient/bind_editor.h>
 #include <game/client/gameclient.h>
 #include <game/client/render.h>
 #include <game/client/ui.h>
@@ -103,6 +104,23 @@ void CBindWheel::RemoveBind(const char *pName, const char *pCommand)
 		m_vBinds.erase(Iter);
 		m_State.InvalidateSelection();
 	}
+}
+
+bool CBindWheel::SetBind(int Index, const char *pName, const char *pCommand)
+{
+	if(Index < -1 || Index >= static_cast<int>(m_vBinds.size()) || pName[0] == '\0' || pCommand[0] == '\0' ||
+		str_length(pName) >= BINDWHEEL_MAX_NAME || str_length(pCommand) >= BINDWHEEL_MAX_CMD ||
+		(Index == -1 && m_vBinds.size() >= BINDWHEEL_MAX_BINDS))
+		return false;
+	CBind Bind;
+	str_copy(Bind.m_aName, pName);
+	str_copy(Bind.m_aCommand, pCommand);
+	if(Index == -1)
+		m_vBinds.push_back(Bind);
+	else
+		m_vBinds[Index] = Bind;
+	m_State.InvalidateSelection();
+	return true;
 }
 
 void CBindWheel::RemoveBind(int Index)
@@ -348,20 +366,9 @@ void CBindWheel::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserD
 {
 	CBindWheel *pThis = (CBindWheel *)pUserData;
 
-	for(CBind &Bind : pThis->m_vBinds)
+	for(const CBind &Bind : pThis->m_vBinds)
 	{
-		char aBuf[BINDWHEEL_MAX_CMD * 2] = "";
-		char *pEnd = aBuf + sizeof(aBuf);
-		char *pDst;
-		str_append(aBuf, "add_bindwheel \"");
-		// Escape name
-		pDst = aBuf + str_length(aBuf);
-		str_escape(&pDst, Bind.m_aName, pEnd);
-		str_append(aBuf, "\" \"");
-		// Escape command
-		pDst = aBuf + str_length(aBuf);
-		str_escape(&pDst, Bind.m_aCommand, pEnd);
-		str_append(aBuf, "\"");
-		pConfigManager->WriteLine(aBuf, ConfigDomain::QMCLIENT);
+		const std::string Line = qm_bind_editor::WheelConfigLine(Bind.m_aName, Bind.m_aCommand);
+		pConfigManager->WriteLine(Line.c_str(), ConfigDomain::QMCLIENT);
 	}
 }

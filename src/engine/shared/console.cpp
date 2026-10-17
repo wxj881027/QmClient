@@ -796,7 +796,14 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 	}
 	else if(LogFailure)
 	{
-		log_error("console", "failed to open '%s'", pFilename);
+		const CLineReader::EOpenResult OpenResult = LineReader.LastOpenResult();
+		// 文件能打开但读不成文本时直接说清原因，避免被误判成路径错误。
+		if(OpenResult == CLineReader::EOpenResult::UNSUPPORTED_ENCODING)
+			log_error("console", "'%s' has an unsupported text encoding, save the script as UTF-8", pFilename);
+		else if(OpenResult == CLineReader::EOpenResult::INVALID_CONTENT)
+			log_error("console", "'%s' contains invalid UTF-8 or control characters", pFilename);
+		else
+			log_error("console", "failed to open '%s'", pFilename);
 	}
 
 	m_pFirstExec = pPrev;

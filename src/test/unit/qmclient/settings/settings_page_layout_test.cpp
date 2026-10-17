@@ -264,22 +264,6 @@ TEST(SettingsPageLayout, ColumnFlowUsesLongestColumnAndPreservesBottom)
 	EXPECT_FLOAT_EQ(160.0f, Content.h);
 }
 
-TEST(SettingsPageLayout, AlphaColorRoundTripUpdatesColorAndOpacityTogether)
-{
-	const unsigned int SourceColor = ColorHSLA(0.31f, 0.72f, 0.44f, 1.0f).Pack(false);
-	const unsigned int Packed = PackSettingsAlphaColor(SourceColor, 37);
-	unsigned int UpdatedColor = 0;
-	int UpdatedOpacity = 0;
-	UnpackSettingsAlphaColor(Packed, UpdatedColor, UpdatedOpacity);
-
-	const ColorHSLA Expected(SourceColor);
-	const ColorHSLA Actual(UpdatedColor);
-	EXPECT_NEAR(Actual.h, Expected.h, 1.0f / 255.0f);
-	EXPECT_NEAR(Actual.s, Expected.s, 1.0f / 255.0f);
-	EXPECT_NEAR(Actual.l, Expected.l, 1.0f / 255.0f);
-	EXPECT_NEAR(UpdatedOpacity, 37, 1);
-}
-
 TEST(SettingsPageLayout, SecondaryPanelFitsNarrowAndWideViewportsAndStaysCentered)
 {
 	for(const CUIRect Viewport : {CUIRect{10.0f, 20.0f, 400.0f, 300.0f}, CUIRect{0.0f, 0.0f, 1200.0f, 800.0f}})

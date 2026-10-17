@@ -68,11 +68,24 @@ inline void QmChatApplyMessageIndent(CTextCursor &Cursor)
 	QmChatApplyMessageIndent(Cursor, Cursor.m_X - Cursor.m_StartX);
 }
 
-// 姓名列表后已经换行，正文首行和续行都保留第一个人的前缀占位。
+// 用实际排版结果判断姓名列表与正文能否同处一行；测量包含冒号和空格。
+template<typename TMeasureInlineMessage>
+bool QmChatMergedMessageFitsInline(const CTextCursor &Prefix, TMeasureInlineMessage MeasureInlineMessage)
+{
+	if(Prefix.m_LineCount != 1)
+		return false;
+	CTextCursor Inline = Prefix;
+	Inline.m_Flags &= ~TEXTFLAG_RENDER;
+	Inline.m_TrackLineRanges = false;
+	MeasureInlineMessage(Inline);
+	return Inline.m_LineCount == 1 && (Prefix.m_LineWidth <= 0.0f || Inline.m_X <= Prefix.m_StartX + Prefix.m_LineWidth);
+}
+
+// 同行正文接在姓名列表后；换行时保留第一个人的前缀占位。
 inline void QmChatApplyMergedMessageIndent(CTextCursor &Cursor, float FirstAuthorPrefixWidth)
 {
 	QmChatApplyMessageIndent(Cursor, FirstAuthorPrefixWidth);
-	Cursor.m_X = Cursor.m_StartX;
+	Cursor.m_X = std::max(Cursor.m_X, Cursor.m_StartX);
 }
 
 // 前缀和正文可能位于不同行，背景宽度取各自的最右边缘，不能直接相加最长行。

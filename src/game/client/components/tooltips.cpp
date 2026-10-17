@@ -77,6 +77,7 @@ const char *CTooltips::PrepareCardLabel(const CUIRect *pRect, const char *pText,
 		m_CardLabelHint.m_OnScreen = true;
 		m_CardLabelHint.m_FontSize = ResolveSettingsSmallFontSize(g_Config.m_QmUiScale / 100.0f);
 		m_CardLabelHint.m_RegisteredFrame = m_Frame;
+		m_CardLabelHint.m_RegisteredContext = GameClient()->m_Menus.TooltipContext();
 		QmTooltipRecordSource(m_CardLabelHint, m_Frame, *pRect, Ui()->IsClipped() ? Ui()->ClipArea() : nullptr, Ui()->MousePos());
 	}
 	return Text.m_Label.c_str();
@@ -239,6 +240,7 @@ void CTooltips::DoToolTip(const void *pId, const CUIRect *pNearRect, const char 
 	Tooltip.m_SmallInstant = SmallInstant;
 	Tooltip.m_Fallback = Fallback;
 	Tooltip.m_RegisteredFrame = m_Frame;
+	Tooltip.m_RegisteredContext = GameClient()->m_Menus.TooltipContext();
 	Tooltip.m_OnScreen = QmTooltipHovered(Tooltip, *Ui());
 
 	if(Tooltip.m_OnScreen)
@@ -261,8 +263,8 @@ void CTooltips::OnRender()
 		return;
 	}
 
-	const bool LabelHintActive = QmTooltipActive(m_CardLabelHint, Frame, *Ui());
-	const CTooltip *pTarget = m_ActiveTooltip && QmTooltipActive(m_ActiveTooltip->get(), Frame, *Ui()) ? &m_ActiveTooltip->get() : nullptr;
+	const bool LabelHintActive = QmTooltipActive(m_CardLabelHint, Frame, Context, *Ui());
+	const CTooltip *pTarget = m_ActiveTooltip && QmTooltipActive(m_ActiveTooltip->get(), Frame, Context, *Ui()) ? &m_ActiveTooltip->get() : nullptr;
 	if(pTarget == nullptr && LabelHintActive)
 		pTarget = &m_CardLabelHint;
 	if(pTarget != nullptr)

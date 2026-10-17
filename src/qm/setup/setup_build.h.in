@@ -1,0 +1,5 @@
+#ifndef QM_SETUP_SETUP_BUILD_H
+#define QM_SETUP_SETUP_BUILD_H
+#define QM_SETUP_VERSION L"@QM_SETUP_VERSION@"
+#define QM_SETUP_REGISTRY_KEY L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{@QM_SETUP_APP_ID@}_is1"
+#endif // QM_SETUP_SETUP_BUILD_H

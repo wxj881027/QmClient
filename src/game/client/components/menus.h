@@ -27,6 +27,7 @@
 #include <game/client/QmUi/QmVoteMenu.h>
 #include <game/client/QmUi/SettingsCardDeck.h>
 #include <game/client/QmUi/SettingsChoice.h>
+#include <game/client/QmUi/SettingsColorPicker.h>
 #include <game/client/QmUi/SettingsTextPlanUnits.h>
 #include <game/client/QmUi/SettingsToggleGrid.h>
 #include <game/client/QmUi/UiForms.h>
@@ -78,6 +79,8 @@ struct CDataSprite;
 
 class IHttpRequest;
 class CChat;
+class CProfile;
+struct SQmProfileWheelEditorState;
 namespace qm_card_registry
 {
 	struct SCardNavigationTarget;
@@ -229,11 +232,6 @@ private:
 	int DoSettingsButton_CheckBoxAutoVMarginAndSet(int Page, int Tab, const void *pId, const char *pTextId, const char *pText, int *pValue, CUIRect *pRect, float RowHeight, float RowSpacing, float BodySize);
 
 	CUi::SColorPickerPopupContext m_ColorPickerPopupContext;
-	struct SSettingsAlphaColorPickerState
-	{
-		unsigned int m_PackedColor = 0;
-		bool m_Initialized = false;
-	};
 	std::unordered_map<const unsigned int *, SSettingsAlphaColorPickerState> m_SettingsAlphaColorPickerStates;
 	ColorHSLA DoLine_ColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, ColorRGBA DefaultColor, bool CheckBoxSpacing = true, int *pCheckBoxValue = nullptr, bool Alpha = false, bool TrailingSpacing = true);
 	bool DoLine_AlphaColorPicker(CButtonContainer *pResetId, const SSettingsContentMetrics &Metrics, CUIRect *pMainRect, const char *pText, unsigned int *pColorValue, int *pOpacity, unsigned int DefaultColor, int DefaultOpacity);
@@ -2352,6 +2350,7 @@ protected:
 	void DrainIngameUiSnapshotTextRuntime();
 	void DrainIngameUiTextRuntime(bool AllowCurrentFrame = false);
 	void RenderServerControl(CUIRect MainView);
+	void RenderServerVoteList(CUIRect MainView);
 	void RenderVoteMapLibrary(CUIRect MainView);
 	void RenderUnfinishedMaps(CUIRect MainView);
 	void RenderVotePlayerList(CUIRect MainView, bool MoveToSpectators);
@@ -3217,6 +3216,11 @@ private:
 	qm_card_catalog::STClientCardResult RunTClientWarListCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientStatusBarCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientProfilesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	int m_ProfilePresetsTab = 0;
+	std::shared_ptr<SQmProfileWheelEditorState> m_pProfileWheelEditor;
+	uint64_t ProfileWheelEditorRevision() const;
+	void RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool ReadOnly);
+	void EditProfileInWheel(const CProfile &Profile, bool Dummy);
 	qm_card_catalog::STClientCardResult RunTClientConfigsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientMainCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	void RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool PrewarmOnly = false);

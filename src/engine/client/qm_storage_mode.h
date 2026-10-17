@@ -3,7 +3,7 @@
 
 #include <engine/storage.h>
 
-// 客户端存储模式由构建决定，发布二进制不提供运行时切换入口。
+// 构建类型决定默认存储目录和更新通道，storage.cfg 可以覆盖存储路径。
 constexpr IStorage::EInitializationType QmClientStorageModeForBuild(bool Portable, bool IsolatedTest = false)
 {
 	return Portable ? IStorage::EInitializationType::CLIENT_PORTABLE :

@@ -286,7 +286,7 @@ namespace
 			m_pRecordingEngineKernel->RegisterInterface<IGraphics>(&m_Recording, false);
 			m_pRecordingText.reset(CreateEngineTextRender());
 			m_pRecordingEngineKernel->RegisterInterface<IEngineTextRender>(m_pRecordingText.get(), false);
-			m_pRecordingText->Init();
+			ASSERT_TRUE(m_pRecordingText->Init());
 			m_RecordingTextInitialized = true;
 			ASSERT_TRUE(m_pRecordingText->LoadFonts());
 			m_pRecordingKernel = std::make_unique<qm_ui_test::CRealUiTestKernel>(&m_Recording, m_pRecordingText.get(), &m_Input, &m_Client);

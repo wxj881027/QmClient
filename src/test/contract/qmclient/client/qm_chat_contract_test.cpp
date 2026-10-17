@@ -135,7 +135,9 @@ TEST(QmRedPacketAutoClaim, ServerMessageIntegrationUsesMainConnectionBeforeNegat
 TEST(QmRedPacketAutoClaim, DedicatedSendPathAllowsWhitespaceOnlyPassword)
 {
 	const std::string Chat = ReadTestSourceFile("src/game/client/components/chat.cpp");
-	const std::string SendChatOnConn = SourceFunctionBody(Chat, "void CChat::SendChatOnConn(");
+	// 用限定名定位而不带返回类型：该函数在 master 上已由 void 改为 bool，
+	// 写死返回类型会让括号匹配落空，测试就会以「找不到实现」的方式假失败。
+	const std::string SendChatOnConn = SourceFunctionBody(Chat, "CChat::SendChatOnConn(");
 
 	EXPECT_NE(SendChatOnConn.find("pLine == nullptr || pLine[0] == '\\0'"), std::string::npos);
 	EXPECT_NE(SendChatOnConn.find("!AllowWhitespaceOnly && *str_utf8_skip_whitespaces(pLine) == '\\0'"), std::string::npos);

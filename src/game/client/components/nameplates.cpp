@@ -383,6 +383,7 @@ public:
 	char m_aQmTitle[64] = "";
 	char m_aQmTitleStyle[48] = "";
 	bool m_DeveloperRainbow;
+	bool m_DeveloperBadge = false;
 	bool m_ShowClientId;
 	int m_ClientId;
 	float m_FontSizeClientId;
@@ -418,6 +419,7 @@ static void SetNameplateTitle(CGameClient &This, CNamePlateData &Data, int Clien
 	str_copy(Data.m_aQmTitle, Data.m_ShowName && This.m_QmClient.ShouldShowPlayerTitle(ClientId) ? This.m_QmClient.PlayerTitle(ClientId) : "");
 	str_copy(Data.m_aQmTitleStyle, Data.m_aQmTitle[0] != '\0' ? This.m_QmClient.PlayerTitleStyle(ClientId) : "");
 	Data.m_DeveloperRainbow = Data.m_aQmTitle[0] != '\0' && This.IsQmDeveloperRainbow(ClientId);
+	Data.m_DeveloperBadge = Data.m_aQmTitle[0] != '\0' && This.m_QmClient.PlayerHasDeveloperBadge(ClientId) && This.m_QmClient.DeveloperBadge().Available();
 }
 
 static ColorRGBA NameplateTextColor(const CGameClient &This, int ClientId)
@@ -809,6 +811,30 @@ public:
 	}
 };
 
+class CNamePlatePartDeveloperBadge : public CNamePlatePart
+{
+	bool m_AboveName;
+	float m_Alpha = 1.0f;
+
+public:
+	CNamePlatePartDeveloperBadge(CGameClient &This, bool AboveName) :
+		CNamePlatePart(This), m_AboveName(AboveName) {}
+
+	void Update(CGameClient &This, const CNamePlateData &Data) override
+	{
+		m_Visible = Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
+			    m_AboveName == (g_Config.m_QmNameplateTitleAboveName != 0);
+		m_Size = QmDeveloperBadgeSize(Data.m_FontSize * 0.8f);
+		m_Alpha = Data.m_Color.a;
+	}
+
+	void Render(CGameClient &This, vec2 Pos) const override
+	{
+		This.m_QmClient.DeveloperBadge().Render(This.Graphics(),
+			{Pos.x - m_Size.x * 0.5f, Pos.y - m_Size.y * 0.5f, m_Size.x, m_Size.y}, m_Alpha);
+	}
+};
+
 class CNamePlatePartTitle : public CNamePlatePartText
 {
 private:
@@ -832,7 +858,7 @@ protected:
 	{
 		// 头衔全局开关；位置互斥：AboveName 实例仅在 above 模式下可见，内联实例反之。
 		const bool AboveMode = g_Config.m_QmNameplateTitleAboveName != 0;
-		m_Visible = g_Config.m_QmShowNameplateTitle != 0 &&
+		m_Visible = !Data.m_DeveloperBadge && g_Config.m_QmShowNameplateTitle != 0 &&
 			    Data.m_aQmTitle[0] != '\0' &&
 			    (m_AboveName == AboveMode);
 		m_Alpha = Data.m_Color.a;
@@ -1696,12 +1722,14 @@ private:
 		AddPart<CNamePlatePartPing>(This); // TClient
 		AddPart<CNamePlatePartIgnoreMark>(This); // TClient
 		AddPart<CNamePlatePartFriendMark>(This);
+		AddPart<CNamePlatePartDeveloperBadge>(This, false);
 		AddPart<CNamePlatePartTitle>(This, false); // 内联：名字左侧
 		AddPart<CNamePlatePartClientId>(This, false);
 		AddPart<CNamePlatePartName>(This);
 		AddPart<CNamePlatePartNewLine>(This);
 		// 上方独立行：仅在 QmNameplateTitleAboveName 开启时可见，
 		// 插在名字行之后（渲染时名字行先渲染，上方行在其上方）。
+		AddPart<CNamePlatePartDeveloperBadge>(This, true);
 		AddPart<CNamePlatePartTitle>(This, true); // 上方行
 		AddPart<CNamePlatePartNewLine>(This);
 	}

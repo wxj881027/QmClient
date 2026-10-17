@@ -990,6 +990,11 @@ bool CSkins::PrepareSkinData(const char *pName, CSkinLoadData &Data)
 	Data.m_Metrics.m_Feet.m_MaxHeight = Plan.m_Feet.m_MaxHeight;
 
 	Data.m_InfoGrayscale = Data.m_Info.DeepCopy();
+	if(Data.m_InfoGrayscale.m_pData == nullptr)
+	{
+		log_error("skins", "Failed to allocate grayscale skin: %s", pName);
+		return false;
+	}
 	ConvertToGrayscale(Data.m_InfoGrayscale);
 
 	int aFreq[256] = {0};
