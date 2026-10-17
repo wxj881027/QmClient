@@ -5519,7 +5519,25 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     add_test(NAME qm-ui-popup-tests COMMAND $<TARGET_FILE:qm-ui-popup-tests>)
   endif()
 
-  # Windows 的独立音乐目标也必须进入日常 C++ gate，避免只有注册却从未执行。
+  if(TARGET_OS STREQUAL "windows" OR TARGET_OS STREQUAL "linux" OR TARGET_OS STREQUAL "mac")
+    # 分配故障替换只进入独立进程，避免影响通用 testrunner 和客户端的堆。
+    add_executable(qm-script-allocation-tests EXCLUDE_FROM_ALL
+      src/test/support/script_allocation_main.cpp
+      src/test/unit/qmclient/client/qm_scripting_allocation_test.cpp
+    )
+    target_include_directories(qm-script-allocation-tests PRIVATE src)
+    target_include_directories(qm-script-allocation-tests SYSTEM PRIVATE
+      ${PROJECT_SOURCE_DIR}/src/engine/external/chaiscript
+      ${GTEST_INCLUDE_DIRS}
+    )
+    target_compile_definitions(qm-script-allocation-tests PRIVATE CHAISCRIPT_NO_THREADS CHAISCRIPT_NO_THREADS_WARNING)
+    target_link_libraries(qm-script-allocation-tests ${GTEST_LIBRARIES})
+    list(APPEND TARGETS_OWN qm-script-allocation-tests)
+    list(APPEND TARGETS_LINK qm-script-allocation-tests)
+    add_test(NAME qm-script-allocation-tests COMMAND $<TARGET_FILE:qm-script-allocation-tests>)
+  endif()
+
+  # 独立测试目标也进入日常 C++ gate，避免只有注册却从未执行。
   set(CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS})
   set(CXX_TEST_DEPENDS ${TARGET_TESTRUNNER})
   if(TARGET qm-nmt-tests)
@@ -5529,6 +5547,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   if(TARGET qm-ui-popup-tests)
     list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-ui-popup-tests> ${TESTRUNNER_ARGS})
     list(APPEND CXX_TEST_DEPENDS qm-ui-popup-tests)
+  endif()
+  if(TARGET qm-script-allocation-tests)
+    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-script-allocation-tests> ${TESTRUNNER_ARGS})
+    list(APPEND CXX_TEST_DEPENDS qm-script-allocation-tests)
   endif()
   add_custom_target(run_cxx_tests
     ${CXX_TEST_COMMANDS}
