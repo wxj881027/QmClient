@@ -3135,7 +3135,9 @@ if(CLIENT)
     steam_probe.h
     steam_client_path.h
     text.cpp
+    glyph_atlas.h
     glyph_atlas_growth.h
+    glyph_render_retry.h
     text_gradient.h
     qm_font_names.h
     qm_font_collection.h
@@ -4715,7 +4717,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/client/graphics_error_report_test.cpp
     src/test/unit/engine/graphics/graphics_command_batch_test.cpp
     src/test/unit/engine/graphics/graphics_command_buffer_allocation_test.cpp
+    src/test/unit/engine/graphics/glyph_atlas_test.cpp
     src/test/unit/engine/graphics/glyph_atlas_growth_test.cpp
+    src/test/unit/engine/graphics/glyph_render_retry_test.cpp
     src/test/unit/base/hash_test.cpp
     src/test/unit/engine/huffman_test.cpp
     src/test/contract/base/http_shutdown_lifecycle_contract_test.cpp

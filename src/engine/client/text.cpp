@@ -1,9 +1,11 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "font_size_cache.h"
+#include "glyph_atlas.h"
 #include "glyph_atlas_growth.h"
 #include "glyph_lookup_cache.h"
 #include "glyph_outline.h"
+#include "glyph_render_retry.h"
 #include "qm_font_category.h"
 #include "qm_font_collection.h"
 #include "qm_font_face_registry.h"
@@ -94,12 +96,7 @@ enum
 
 struct SGlyph
 {
-	enum class EState
-	{
-		UNINITIALIZED,
-		RENDERED,
-		ERROR,
-	};
+	using EState = EQmGlyphState;
 	EState m_State = EState::UNINITIALIZED;
 
 	int m_FontSize;
@@ -142,206 +139,6 @@ struct SGlyphKeyEquals
 	bool operator()(const std::tuple<FT_Face, int, int, bool> &Lhs, const std::tuple<FT_Face, int, int, bool> &Rhs) const
 	{
 		return std::get<0>(Lhs) == std::get<0>(Rhs) && std::get<1>(Lhs) == std::get<1>(Rhs) && std::get<2>(Lhs) == std::get<2>(Rhs) && std::get<3>(Lhs) == std::get<3>(Rhs);
-	}
-};
-
-class CAtlas
-{
-	struct SSectionKeyHash
-	{
-		size_t operator()(const std::tuple<size_t, size_t> &Key) const
-		{
-			// Width and height should never be above 2^16 so this hash should cause no collisions
-			return (std::get<0>(Key) << 16) ^ std::get<1>(Key);
-		}
-	};
-
-	struct SSectionKeyEquals
-	{
-		bool operator()(const std::tuple<size_t, size_t> &Lhs, const std::tuple<size_t, size_t> &Rhs) const
-		{
-			return std::get<0>(Lhs) == std::get<0>(Rhs) && std::get<1>(Lhs) == std::get<1>(Rhs);
-		}
-	};
-
-	struct SSection
-	{
-		size_t m_X;
-		size_t m_Y;
-		size_t m_W;
-		size_t m_H;
-
-		SSection() = default;
-
-		SSection(size_t X, size_t Y, size_t W, size_t H) :
-			m_X(X), m_Y(Y), m_W(W), m_H(H)
-		{
-		}
-	};
-
-	/**
-	 * Sections with a smaller width or height will not be created
-	 * when cutting larger sections, to prevent collecting many
-	 * small, mostly unusable sections.
-	 */
-	static constexpr size_t MIN_SECTION_DIMENSION = 6;
-
-	/**
-	 * Sections with larger width or height will be stored in m_vSections.
-	 * Sections with width and height equal or smaller will be stored in m_SectionsMap.
-	 * This achieves a good balance between the size of the vector storing all large
-	 * sections and the map storing vectors of all sections with specific small sizes.
-	 * Lowering this value will result in the size of m_vSections becoming the bottleneck.
-	 * Increasing this value will result in the map becoming the bottleneck.
-	 */
-	static constexpr size_t MAX_SECTION_DIMENSION_MAPPED = 8 * MIN_SECTION_DIMENSION;
-
-	size_t m_TextureDimension;
-	std::vector<SSection> m_vSections;
-	std::unordered_map<std::tuple<size_t, size_t>, std::vector<SSection>, SSectionKeyHash, SSectionKeyEquals> m_SectionsMap;
-
-	void AddSection(size_t X, size_t Y, size_t W, size_t H)
-	{
-		std::vector<SSection> &vSections = W <= MAX_SECTION_DIMENSION_MAPPED && H <= MAX_SECTION_DIMENSION_MAPPED ? m_SectionsMap[std::make_tuple(W, H)] : m_vSections;
-		vSections.emplace_back(X, Y, W, H);
-	}
-
-	void UseSection(const SSection &Section, size_t Width, size_t Height, int &PosX, int &PosY)
-	{
-		PosX = Section.m_X;
-		PosY = Section.m_Y;
-
-		// Create cut sections
-		const size_t CutW = Section.m_W - Width;
-		const size_t CutH = Section.m_H - Height;
-		if(CutW == 0)
-		{
-			if(CutH >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X, Section.m_Y + Height, Section.m_W, CutH);
-		}
-		else if(CutH == 0)
-		{
-			if(CutW >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X + Width, Section.m_Y, CutW, Section.m_H);
-		}
-		else if(CutW > CutH)
-		{
-			if(CutW >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X + Width, Section.m_Y, CutW, Section.m_H);
-			if(CutH >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X, Section.m_Y + Height, Width, CutH);
-		}
-		else
-		{
-			if(CutH >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X, Section.m_Y + Height, Section.m_W, CutH);
-			if(CutW >= MIN_SECTION_DIMENSION)
-				AddSection(Section.m_X + Width, Section.m_Y, CutW, Height);
-		}
-	}
-
-public:
-	void Clear(size_t TextureDimension)
-	{
-		m_TextureDimension = TextureDimension;
-		m_vSections.clear();
-		m_vSections.emplace_back(0, 0, m_TextureDimension, m_TextureDimension);
-		m_SectionsMap.clear();
-	}
-
-	void IncreaseDimension(size_t NewTextureDimension)
-	{
-		dbg_assert(NewTextureDimension == m_TextureDimension * 2, "New atlas dimension must be twice the old one");
-		// Create 3 square sections to cover the new area, add the sections
-		// to the beginning of the vector so they are considered last.
-		m_vSections.emplace_back(m_TextureDimension, m_TextureDimension, m_TextureDimension, m_TextureDimension);
-		m_vSections.emplace_back(m_TextureDimension, 0, m_TextureDimension, m_TextureDimension);
-		m_vSections.emplace_back(0, m_TextureDimension, m_TextureDimension, m_TextureDimension);
-		std::rotate(m_vSections.rbegin(), m_vSections.rbegin() + 3, m_vSections.rend());
-		m_TextureDimension = NewTextureDimension;
-	}
-
-	bool Add(size_t Width, size_t Height, int &PosX, int &PosY)
-	{
-		if(m_vSections.empty() || m_TextureDimension < Width || m_TextureDimension < Height)
-			return false;
-
-		// Find small section more efficiently by using maps
-		if(Width <= MAX_SECTION_DIMENSION_MAPPED && Height <= MAX_SECTION_DIMENSION_MAPPED)
-		{
-			const auto UseSectionFromMap = [&](size_t CheckWidth, size_t CheckHeight) {
-				// 查询不存在的尺寸不应创建空桶，只有实际切出空区时才插入。
-				const auto It = m_SectionsMap.find(std::make_tuple(CheckWidth, CheckHeight));
-				if(It == m_SectionsMap.end())
-					return false;
-				std::vector<SSection> &vSections = It->second;
-				if(!vSections.empty())
-				{
-					const SSection Section = vSections.back();
-					vSections.pop_back();
-					UseSection(Section, Width, Height, PosX, PosY);
-					return true;
-				}
-				return false;
-			};
-
-			if(UseSectionFromMap(Width, Height))
-				return true;
-
-			for(size_t CheckWidth = Width + 1; CheckWidth <= MAX_SECTION_DIMENSION_MAPPED; ++CheckWidth)
-			{
-				if(UseSectionFromMap(CheckWidth, Height))
-					return true;
-			}
-
-			for(size_t CheckHeight = Height + 1; CheckHeight <= MAX_SECTION_DIMENSION_MAPPED; ++CheckHeight)
-			{
-				if(UseSectionFromMap(Width, CheckHeight))
-					return true;
-			}
-
-			// We don't iterate sections in the map with increasing width and height at the same time,
-			// because it's slower and doesn't noticeable increase the atlas utilization.
-		}
-
-		// Check vector for larger section
-		size_t SmallestLossValue = std::numeric_limits<size_t>::max();
-		size_t SmallestLossIndex = m_vSections.size();
-		size_t SectionIndex = m_vSections.size();
-		do
-		{
-			--SectionIndex;
-			const SSection &Section = m_vSections[SectionIndex];
-			if(Section.m_W < Width || Section.m_H < Height)
-				continue;
-
-			const size_t LossW = Section.m_W - Width;
-			const size_t LossH = Section.m_H - Height;
-
-			size_t Loss;
-			if(LossW == 0)
-				Loss = LossH;
-			else if(LossH == 0)
-				Loss = LossW;
-			else
-				Loss = LossW * LossH;
-
-			if(Loss < SmallestLossValue)
-			{
-				SmallestLossValue = Loss;
-				SmallestLossIndex = SectionIndex;
-				if(SmallestLossValue == 0)
-					break;
-			}
-		} while(SectionIndex > 0);
-		if(SmallestLossIndex == m_vSections.size())
-			return false; // No usable section found in vector
-
-		// Use the section with the smallest loss
-		const SSection Section = m_vSections[SmallestLossIndex];
-		m_vSections.erase(m_vSections.begin() + SmallestLossIndex);
-		UseSection(Section, Width, Height, PosX, PosY);
-		return true;
 	}
 };
 
@@ -404,7 +201,8 @@ private:
 	size_t m_TextureDimension = INITIAL_ATLAS_DIMENSION;
 	// Keep the full texture data, because OpenGL doesn't provide texture copying
 	std::unique_ptr<uint8_t[]> m_apTextureData[NUM_FONT_TEXTURES];
-	CAtlas m_TextureAtlas;
+	CGlyphAtlas<> m_TextureAtlas;
+	CQmGlyphRenderRetry m_GlyphRenderRetry;
 	std::unordered_map<std::tuple<FT_Face, int, int, bool>, SGlyph, SGlyphKeyHash, SGlyphKeyEquals> m_Glyphs;
 	// QmClient: 近期字形命中的直接索引。字形表在热路径上被按 (face, chr, size) 反复查询，
 	// 这里用固定容量、零分配的缓存挡掉大部分哈希查找；冲突只导致回落到原查找路径。
@@ -519,7 +317,7 @@ private:
 		}
 
 		// 分区和上传缓冲也先准备完整，失败时不能留下新旧尺寸混用的图集。
-		CAtlas NewAtlas;
+		CGlyphAtlas<> NewAtlas;
 		try
 		{
 			NewAtlas = m_TextureAtlas;
@@ -662,11 +460,18 @@ private:
 		return GlyphIndex;
 	}
 
-	bool EnsureFacePixelSize(FT_Face Face, int FontSize) const
+	bool EnsureFacePixelSize(FT_Face Face, int FontSize, FT_Error *pError = nullptr) const
 	{
 		// 同一 face 连续用同一字号时跳过重复的 FT_Set_Pixel_Sizes；
 		// 任何绕过此入口直接设置字号的路径都必须先 InvalidateFacePixelSizeCache()。
-		return m_FacePixelSizeCache.Ensure(Face, FontSize, [&]() { return FT_Set_Pixel_Sizes(Face, 0, FontSize); });
+		FT_Error Error = Face == nullptr ? FT_Err_Invalid_Face_Handle : FT_Err_Ok;
+		const bool Success = m_FacePixelSizeCache.Ensure(Face, FontSize, [&]() {
+			Error = FT_Set_Pixel_Sizes(Face, 0, FontSize);
+			return Error;
+		});
+		if(pError != nullptr)
+			*pError = Error;
+		return Success;
 	}
 
 	int AdjustOutlineThicknessToFontSize(int OutlineThickness, int FontSize) const
@@ -808,16 +613,18 @@ private:
 		return m_TextureAtlas.Add(Width, Height, PosX, PosY);
 	}
 
-	bool RenderGlyph(SGlyph &Glyph)
+	EQmGlyphRenderResult RenderGlyph(SGlyph &Glyph)
 	{
 		const auto RasterizeStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
-		if(!EnsureFacePixelSize(Glyph.m_Face, Glyph.m_FontSize))
-			return false;
+		FT_Error Error;
+		if(!EnsureFacePixelSize(Glyph.m_Face, Glyph.m_FontSize, &Error))
+			return Error == FT_Err_Out_Of_Memory ? EQmGlyphRenderResult::RETRY : EQmGlyphRenderResult::UNSUPPORTED;
 
-		if(FT_Load_Glyph(Glyph.m_Face, Glyph.m_GlyphIndex, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP | (Glyph.m_Nameplate ? FT_LOAD_NO_HINTING : 0)))
+		Error = FT_Load_Glyph(Glyph.m_Face, Glyph.m_GlyphIndex, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP | (Glyph.m_Nameplate ? FT_LOAD_NO_HINTING : 0));
+		if(Error)
 		{
 			log_debug("textrender", "Error loading glyph. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
-			return false;
+			return Error == FT_Err_Out_Of_Memory ? EQmGlyphRenderResult::RETRY : EQmGlyphRenderResult::UNSUPPORTED;
 		}
 
 		// 中文首次实际光栅化时记录真实字体面和轴坐标，供启动回归与字体回退诊断使用。
@@ -841,7 +648,7 @@ private:
 		if(pBitmap->pixel_mode != FT_PIXEL_MODE_GRAY)
 		{
 			log_debug("textrender", "Error loading glyph, unsupported pixel mode. Chr=%d GlyphIndex=%u PixelMode=%d", Glyph.m_Chr, Glyph.m_GlyphIndex, pBitmap->pixel_mode);
-			return false;
+			return EQmGlyphRenderResult::UNSUPPORTED;
 		}
 
 		const unsigned RealWidth = pBitmap->width;
@@ -860,6 +667,8 @@ private:
 			y += (OutlineThickness + 1);
 		}
 
+		if(RealWidth > MAXIMUM_ATLAS_DIMENSION - x * 2 || RealHeight > MAXIMUM_ATLAS_DIMENSION - y * 2)
+			return EQmGlyphRenderResult::UNSUPPORTED;
 		const unsigned Width = RealWidth + x * 2;
 		const unsigned Height = RealHeight + y * 2;
 
@@ -868,16 +677,6 @@ private:
 
 		if(Width > 0 && Height > 0)
 		{
-			// find space in atlas, or increase size if necessary
-			while(!FitGlyph(Width, Height, X, Y))
-			{
-				if(!IncreaseGlyphMapSize())
-				{
-					log_debug("textrender", "Cannot fit glyph into atlas or grow it. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
-					return false;
-				}
-			}
-
 			// prepare glyph data
 			const size_t GlyphDataSize = (size_t)Width * Height * sizeof(uint8_t);
 			std::unique_ptr<uint8_t, decltype(&free)> pGlyphDataFill(static_cast<uint8_t *>(malloc(GlyphDataSize)), free);
@@ -885,7 +684,7 @@ private:
 			if(pGlyphDataFill == nullptr || pGlyphDataOutline == nullptr)
 			{
 				log_debug("textrender", "Failed to allocate glyph data. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
-				return false;
+				return EQmGlyphRenderResult::RETRY;
 			}
 			mem_zero(pGlyphDataFill.get(), GlyphDataSize);
 			for(unsigned py = 0; py < pBitmap->rows; ++py)
@@ -896,6 +695,18 @@ private:
 				QmGrowGlyphOutlineContinuous(pGlyphDataFill.get(), pGlyphDataOutline.get(), Width, Height, OutlineRadius);
 			else
 				QmGrowGlyphOutline(pGlyphDataFill.get(), pGlyphDataOutline.get(), Width, Height, OutlineThickness);
+
+			// 临时像素准备成功后才占用图集，失败重试不会吞掉空闲区。
+			while(!FitGlyph(Width, Height, X, Y))
+			{
+				if(m_TextureDimension >= MAXIMUM_ATLAS_DIMENSION)
+					return EQmGlyphRenderResult::UNSUPPORTED;
+				if(!IncreaseGlyphMapSize())
+				{
+					log_debug("textrender", "Cannot fit glyph into atlas or grow it. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
+					return EQmGlyphRenderResult::RETRY;
+				}
+			}
 
 			// upload the glyph
 			UploadGlyph(FONT_TEXTURE_FILL, X, Y, Width, Height, pGlyphDataFill.get());
@@ -924,7 +735,6 @@ private:
 			Glyph.m_aUVs[2] = Glyph.m_aUVs[0] + Width;
 			Glyph.m_aUVs[3] = Glyph.m_aUVs[1] + Height;
 
-			Glyph.m_State = SGlyph::EState::RENDERED;
 			if(Glyph.m_Nameplate)
 			{
 				m_QmNameplateGlyphSizes.set(Glyph.m_FontSize);
@@ -934,7 +744,7 @@ private:
 					m_QmNameplateFrameRasterizeMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - RasterizeStart).count();
 			}
 		}
-		return true;
+		return EQmGlyphRenderResult::SUCCESS;
 	}
 
 public:
@@ -1352,6 +1162,7 @@ public:
 
 	void Clear()
 	{
+		m_GlyphRenderRetry.Reset();
 		// 已有容器的 UV 随图集清空失效，即使其索引和文字内容仍然有效。
 		++*m_pGlyphAtlasRevision;
 		DiscardPendingGlyphUploads();
@@ -1415,11 +1226,19 @@ public:
 		return Prewarmed;
 	}
 
+	void RetryFailedGlyphs()
+	{
+		if(m_GlyphRenderRetry.BeginRetry(time_get_nanoseconds()))
+		{
+			// 替代字符的度量可能不同。通知旧容器和布局缓存重建，但保留有效图集。
+			m_GlyphLookupCache.Reset();
+			++*m_pGlyphAtlasRevision;
+		}
+	}
+
 	const SGlyph *GetGlyph(int Chr, int FontSize, bool Nameplate = false)
 	{
 		FontSize = std::clamp(FontSize, MIN_FONT_SIZE, MAX_FONT_SIZE);
-
-		// 命中近期索引时直接返回，省掉一次哈希查找；索引与字形表同生共死。
 		const FT_Face LookupFace = m_SelectedFace != nullptr ? m_SelectedFace : m_PreviewFace;
 		if(const SGlyph *pCached = m_GlyphLookupCache.Find(LookupFace, Chr, FontSize, Nameplate))
 			return pCached;
@@ -1427,50 +1246,42 @@ public:
 			m_GlyphLookupCache.Store(LookupFace, Chr, FontSize, pGlyph, Nameplate);
 			return pGlyph;
 		};
+		const auto Replacement = [&]() -> const SGlyph * {
+			return Chr == REPLACEMENT_CHARACTER ? nullptr : GetGlyph(REPLACEMENT_CHARACTER, FontSize, Nameplate);
+		};
 
-		// Find glyph index and most appropriate font face.
-		FT_Face Face;
-		FT_UInt GlyphIndex = GetCharGlyph(Chr, &Face, false);
-		if(GlyphIndex == 0)
+		try
 		{
-			// Use replacement character if glyph could not be found,
-			// also retrieve replacement character from the atlas.
-			return RememberGlyph(Chr == REPLACEMENT_CHARACTER ? nullptr : GetGlyph(REPLACEMENT_CHARACTER, FontSize, Nameplate));
+			FT_Face Face;
+			const FT_UInt GlyphIndex = GetCharGlyph(Chr, &Face, false);
+			if(GlyphIndex == 0)
+				return RememberGlyph(Replacement());
+
+			const auto Key = std::make_tuple(Face, Chr, FontSize, Nameplate);
+			const auto Existing = m_Glyphs.find(Key);
+			if(Existing == m_Glyphs.end() && m_GlyphRenderRetry.Blocked())
+				return Replacement();
+			SGlyph &Glyph = Existing != m_Glyphs.end() ? Existing->second : m_Glyphs[Key];
+			if(Glyph.m_State == SGlyph::EState::RENDERED)
+				return RememberGlyph(&Glyph);
+			Glyph.m_FontSize = FontSize;
+			Glyph.m_Nameplate = Nameplate;
+			Glyph.m_Face = Face;
+			Glyph.m_Chr = Chr;
+			Glyph.m_GlyphIndex = GlyphIndex;
+			const SGlyph *pGlyph = m_GlyphRenderRetry.Resolve(Glyph, time_get_nanoseconds(), [&]() {
+				if(m_QmRecordGlyphMisses && !Nameplate)
+					QmRecordRecentGlyphMiss(Chr, FontSize);
+				return RenderGlyph(Glyph); }, Replacement);
+			// 暂时失败的替代字符不能进入原字符的快速成功缓存。
+			return Glyph.m_State == SGlyph::EState::RETRY ? pGlyph : RememberGlyph(pGlyph);
 		}
-
-		// Check if glyph for this (font face, character, font size)-combination was already rendered.
-		SGlyph &Glyph = m_Glyphs[std::make_tuple(Face, Chr, FontSize, Nameplate)];
-		if(Glyph.m_State == SGlyph::EState::RENDERED)
-			return RememberGlyph(&Glyph);
-		else if(Glyph.m_State == SGlyph::EState::ERROR)
-			return nullptr;
-
-		// Else, render it.
-		if(m_QmRecordGlyphMisses && !Nameplate)
-			QmRecordRecentGlyphMiss(Chr, FontSize);
-		Glyph.m_FontSize = FontSize;
-		Glyph.m_Nameplate = Nameplate;
-		Glyph.m_Face = Face;
-		Glyph.m_Chr = Chr;
-		Glyph.m_GlyphIndex = GlyphIndex;
-
-		const bool Rendered = RenderGlyph(Glyph);
-		if(Rendered)
-			return RememberGlyph(&Glyph);
-
-		// Use replacement character if the glyph could not be rendered,
-		// also retrieve replacement character from the atlas.
-		const SGlyph *pReplacementCharacter = Chr == REPLACEMENT_CHARACTER ? nullptr : GetGlyph(REPLACEMENT_CHARACTER, FontSize, Nameplate);
-		if(pReplacementCharacter)
+		catch(const std::bad_alloc &)
 		{
-			Glyph = *pReplacementCharacter;
-			return RememberGlyph(&Glyph);
+			// 字形表或最近缺字记录也可能分配失败；帧末统一恢复重试。
+			m_GlyphRenderRetry.Failed(time_get_nanoseconds());
+			return Replacement();
 		}
-
-		// Keep failed glyph in the cache so we don't attempt to render it again,
-		// but set its state to ERROR so we don't return it to the text render.
-		Glyph.m_State = SGlyph::EState::ERROR;
-		return nullptr;
 	}
 
 	vec2 Kerning(const SGlyph *pLeft, const SGlyph *pRight) const
@@ -1919,6 +1730,7 @@ class CTextRender : public IEngineTextRender
 		if(!m_pGlyphMap->TexturesReady() && time_get_nanoseconds() >= m_NextGraphicsRestoreAttempt)
 			RestoreGraphicsResources();
 		UpdateSystemFontScan();
+		m_pGlyphMap->RetryFailedGlyphs();
 
 		// QmClient: 帧末兜底提交——本帧只构建未渲染时（如菜单预构建）脏区
 		// 失败区域每帧末重试一次；先提交再消费统计，包含合批提交成本。
