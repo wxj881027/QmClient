@@ -5084,7 +5084,10 @@ void CClient::Con_StartVideo(IConsole::IResult *pResult, void *pUserData)
 	CClient *pSelf = static_cast<CClient *>(pUserData);
 
 	// 分段渲染启用（段长 > 0）且 demo 时长超过单段时走分段任务；否则保持原整段导出
-	if(g_Config.m_QmVideoSegmentSeconds > 0 && pSelf->StartSegmentedVideoExport(pResult->NumArguments() ? pResult->GetString(0) : "video", !pResult->NumArguments()))
+	// 可选参数：<name> [start_sec] [end_sec]：起止秒相对 demo 起点，与渲染弹窗 Range 输入同语义（供脚本/测试驱动）
+	if(g_Config.m_QmVideoSegmentSeconds > 0 && pSelf->StartSegmentedVideoExport(pResult->NumArguments() ? pResult->GetString(0) : "video", !pResult->NumArguments(),
+		pResult->NumArguments() >= 3 ? pResult->GetFloat(1) : -1.0f,
+		pResult->NumArguments() >= 3 ? pResult->GetFloat(2) : -1.0f))
 		return;
 
 	if(pResult->NumArguments())
@@ -6542,7 +6545,7 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("net_reset", "", CFGFLAG_CLIENT, ConNetReset, this, "Rebinds the client's listening address and port");
 
 #if defined(CONF_VIDEORECORDER)
-	m_pConsole->Register("start_video", "?r[file]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
+	m_pConsole->Register("start_video", "?r[file] ?f[start_sec] ?f[end_sec]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
 	m_pConsole->Register("stop_video", "", CFGFLAG_CLIENT, Con_StopVideo, this, "Stop recording a video");
 #endif
 
