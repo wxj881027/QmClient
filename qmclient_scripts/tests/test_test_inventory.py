@@ -22,13 +22,18 @@ class TestInventoryTest(unittest.TestCase):
 		text = 'std::ifstream File(TestSourcePath(pRelativePath));'
 		self.assertEqual(count_source_reads(text), 0)
 
-	def test_binary_font_input_is_behavior_but_text_and_source_reads_remain_contracts(self):
-		binary = 'std::ifstream File(TestSourcePath("data/fonts/中文.ttf"), std::ios::binary);'
-		self.assertEqual(count_source_reads(binary), 0)
-		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/index.json"), std::ios::binary);'), 1)
-		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/font.ttf"));'), 1)
+	def test_font_resource_directory_is_behavior_but_other_reads_remain_contracts(self):
+		# data/fonts/ 是随包字体资源目录（字体二进制与 index.json），整目录豁免；
+		# 其余 data/ 清单、源码与合同 helper 仍然计入。
+		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/中文.ttf"), std::ios::binary);'), 0)
+		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/fonts/index.json"));'), 0)
+		self.assertEqual(count_source_reads('CQmFontScanJob::ReadAbsolute(TestSourcePath("data/fonts/font.ttf"), &pData, &Size);'), 0)
+		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("data/languages/english.txt"));'), 1)
 		self.assertEqual(count_source_reads('std::ifstream File(TestSourcePath("src/font.cpp"), std::ios::binary);'), 1)
-		self.assertEqual(count_source_reads(binary + '\nReadRepoFile("data/fonts/font.ttf");'), 1)
+		self.assertEqual(
+			count_source_reads('std::ifstream File(TestSourcePath("data/fonts/font.ttf"), std::ios::binary);\nReadRepoFile("data/fonts/font.ttf");'),
+			1,
+		)
 
 	def test_inventory_classifies_real_binary_font_fixture_as_behavior(self):
 		with tempfile.TemporaryDirectory() as directory:
