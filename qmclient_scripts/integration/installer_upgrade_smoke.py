@@ -79,14 +79,28 @@ def file_digest(path: Path) -> str:
 		return hashlib.file_digest(source, "sha256").hexdigest()
 
 
+def smoke_setup_fresh_storage_config(current: Path, payload: Path, workspace: Path) -> None:
+	# 使用与升级场景相同的独立 SetupAppId，先卸载再继续后续场景。
+	install = workspace / "fresh-installed"
+	run_process([str(current), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/NOICONS", f"/DIR={install}", f"/LOG={workspace / 'fresh-install.log'}"])
+	expected = (payload / "storage.cfg").read_bytes()
+	if (install / "storage.cfg").read_bytes() != expected:
+		raise AssertionError("fresh installation did not include the default storage.cfg")
+	run_process([str(install / "unins000.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", f"/LOG={workspace / 'fresh-uninstall.log'}"])
+	if (install / "storage.cfg").read_bytes() != expected:
+		raise AssertionError("uninstall removed the installed storage configuration")
+
+
 def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace: Path) -> None:
 	# 编译输入须使用独立 SetupAppId，不能修改正式安装的卸载登记。
 	install = workspace / "installed"
+	user_storage = b"# user-owned storage configuration\nadd_path user-profile\nadd_path $DATADIR\n"
 	# 在执行安装前固定完整载荷清单；同一清单用于覆盖升级与卸载验证。
 	payload_hashes = {path.relative_to(payload).as_posix(): file_digest(path) for path in sorted(payload.rglob("*")) if path.is_file()}
 	if not payload_hashes:
 		raise AssertionError("Setup payload contains no files")
 	for required in (
+		"storage.cfg",
 		"DDNet.exe",
 		"DDNet-Server.exe",
 		"qm-nmt-helper.exe",
@@ -112,12 +126,13 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 			# 损坏旧载荷中的同名文件，证明每项都由本次 Setup 实际覆盖。
 			for relative in payload_hashes:
 				old_path = install / relative
-				if old_path.is_file():
+				if relative != "storage.cfg" and old_path.is_file():
 					old_path.write_bytes(b"old payload file to replace")
 			for relative in OBSOLETE_BUNDLED_FILES:
 				old_resource = install / relative
 				old_resource.parent.mkdir(parents=True, exist_ok=True)
 				old_resource.write_bytes(b"obsolete bundled resource")
+			(install / "storage.cfg").write_bytes(user_storage)
 			(install / "user-owned.txt").write_bytes(b"preserve this file")
 			(install / "DDNet.old").write_bytes(b"legacy client backup")
 			(install / "settings.old").write_bytes(b"preserve user backup")
@@ -135,6 +150,10 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 		installed_path = install / relative
 		if not installed_path.is_file():
 			raise AssertionError(f"upgrade did not install {relative}")
+		if relative == "storage.cfg":
+			if installed_path.read_bytes() != user_storage:
+				raise AssertionError("upgrade replaced the user storage configuration")
+			continue
 		if file_digest(installed_path) != expected_digest:
 			raise AssertionError(f"upgrade did not replace {relative}")
 	for relative in OBSOLETE_BUNDLED_FILES:
@@ -143,8 +162,10 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 	if (install / "user-owned.txt").read_bytes() != b"preserve this file":
 		raise AssertionError("upgrade changed a user-owned file")
 	run_process([str(install / "unins000.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", f"/LOG={workspace / 'uninstall.log'}"])
+	if (install / "storage.cfg").read_bytes() != user_storage:
+		raise AssertionError("uninstall removed the user storage configuration")
 	for relative in payload_hashes:
-		if (install / relative).exists():
+		if relative != "storage.cfg" and (install / relative).exists():
 			raise AssertionError(f"uninstall left installed payload file: {relative}")
 	if (install / "QmClient-Setup.ini").exists():
 		raise AssertionError("uninstall left installed marker")
@@ -169,6 +190,7 @@ def main() -> int:
 		parser.error("--workspace must be inside the current repository")
 	workspace.mkdir(parents=True)
 	print(f"artifacts: {workspace}", flush=True)
+	smoke_setup_fresh_storage_config(args.current.resolve(strict=True), args.payload.resolve(strict=True), workspace)
 	smoke_setup_upgrade(args.previous.resolve(strict=True), args.current.resolve(strict=True), args.payload.resolve(strict=True), workspace)
 	print("Setup install, upgrade and uninstall: passed")
 	return 0

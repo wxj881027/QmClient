@@ -186,7 +186,7 @@ option(QM_MSVC_USE_EMBEDDED_DEBUG_INFO "Use embedded MSVC debug information inst
 option(QM_MSVC_OPTIMIZE_GLOBAL_DATA "Enable MSVC global data optimization in optimized builds" ON)
 option(QM_MSVC_ANALYZE "Enable MSVC /analyze static analysis (Windows only)" OFF)
 option(QM_STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
-option(QMCLIENT_PORTABLE "Build a dedicated Windows portable client using only executable-relative profile" OFF)
+option(QMCLIENT_PORTABLE "Build a dedicated Windows portable client defaulting to executable-relative profile" OFF)
 option(QMCLIENT_TEST_STORAGE "Enable isolated storage in a non-release test client" OFF)
 if((QMCLIENT_PORTABLE OR QMCLIENT_TEST_STORAGE) AND NOT TARGET_OS STREQUAL "windows")
   message(FATAL_ERROR "QmClient dedicated storage builds currently require Windows")
@@ -5871,7 +5871,6 @@ set(CPACK_DIRS
 )
 set(CPACK_FILES
   license.txt
-  storage.cfg
   steam_appid.txt
   ${COPY_FILES}
 )
@@ -5890,12 +5889,12 @@ endif()
 
 if(TARGET_OS STREQUAL "windows")
   if(QMCLIENT_PORTABLE)
-    list(APPEND CPACK_FILES qmclient_scripts/portable/config_directory.bat)
+    list(APPEND CPACK_FILES qmclient_scripts/portable/config_directory.bat qmclient_scripts/portable/storage.cfg)
   else()
-    list(APPEND CPACK_FILES other/config_directory.bat)
+    list(APPEND CPACK_FILES other/config_directory.bat storage.cfg)
   endif()
 else()
-  list(APPEND CPACK_FILES other/config_directory.sh)
+  list(APPEND CPACK_FILES other/config_directory.sh storage.cfg)
 endif()
 
 if(NOT DEV)

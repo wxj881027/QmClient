@@ -28,7 +28,7 @@ TEST(QmStoragePath, RejectsTruncatedExecutableRelativeProfile)
 	EXPECT_FALSE(StoragePathFromExecutable(nullptr, "profile", aPath, sizeof(aPath)));
 }
 
-TEST(QmStoragePath, BuildModeSelectsExclusivePortableOrUserStorage)
+TEST(QmStoragePath, BuildModeSelectsPortableUserOrIsolatedDefaults)
 {
 	EXPECT_EQ(QmClientStorageModeForBuild(true), IStorage::EInitializationType::CLIENT_PORTABLE);
 	EXPECT_EQ(QmClientStorageModeForBuild(false), IStorage::EInitializationType::CLIENT);

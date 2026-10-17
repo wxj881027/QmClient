@@ -152,7 +152,9 @@ Type: files; Name: "{app}\data\qmclient\fonts\霞鹜文楷\LXGWWenKai-Regular.tt
 Type: files; Name: "{app}\data\qmclient\fonts\霞鹜文楷\OFL.txt"
 
 [Files]
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "\storage.cfg"; Flags: ignoreversion recursesubdirs createallsubdirs
+; 存储路径由玩家管理，覆盖安装和卸载都保留已有配置。
+Source: "{#SourceDir}\storage.cfg"; DestDir: "{app}"; Flags: onlyifdoesntexist uninsneveruninstall
 
 [INI]
 Filename: "{app}\QmClient-Setup.ini"; Section: "Setup"; Key: "Version"; String: "{#AppVersion}"; Flags: uninsdeleteentry uninsdeletesectionifempty

@@ -20,7 +20,7 @@ python qmclient_scripts/integration/open_link_failure_smoke.py <build-dir>/testr
 
 默认配置与推荐外观的回归种子位于 `fixtures/default_profiles/`，固定尺寸和玩家路径见[默认配置发布回归](../../docs/规格/2026-10-08-默认配置发布回归.md)。这些种子不是执行结果；仅复制到独立测试目录使用。
 
-Windows 的普通版和便携版均忽略 `storage.cfg`。通用进程环境、启动呈现、皮肤加载和实时名单冒烟共用 `process_build.py`：传入普通构建目录时，启动前选择同一源码、配置和生成器的已有隔离缓存；没有匹配缓存时使用 `<build-dir>-process-tests`。独立缓存启用 `DEV=ON、QMCLIENT_TEST_STORAGE=ON、QMCLIENT_PORTABLE=OFF`，沿用功能与优化开关，并通过 Windows 封装入口增量构建当前源码。原始普通／便携缓存的存储模式保持不变，构建失败或来源不匹配时不启动旧程序。
+Windows 的普通版和便携版优先读取程序旁的 `storage.cfg`，未找到时再查工作目录；没有配置路径时分别使用用户目录和程序旁的 `profile/`。专用隔离测试构建继续忽略该文件。通用进程环境、启动呈现、皮肤加载和实时名单冒烟共用 `process_build.py`：传入普通构建目录时，启动前选择同一源码、配置和生成器的已有隔离缓存；没有匹配缓存时使用 `<build-dir>-process-tests`。独立缓存启用 `DEV=ON、QMCLIENT_TEST_STORAGE=ON、QMCLIENT_PORTABLE=OFF`，沿用功能与优化开关，并通过 Windows 封装入口增量构建当前源码。原始普通／便携缓存的存储模式保持不变，构建失败或来源不匹配时不启动旧程序。
 
 runner 通过 `QMCLIENT_TEST_STORAGE_ROOT` 指向场景临时目录。测试构建禁止打包，不用于发布；客户端仍拒绝用普通发布二进制运行隔离测试。已有专用测试目录也会先增量构建。Linux/macOS 沿用原隔离方式。
 
@@ -48,7 +48,7 @@ python qmclient_scripts/integration/e2e_config_persistence.py <test-build-dir>
 
 三个场景验证双客户端按正序和反序退出均能保存、最后退出实例的设置生效，以及错误编码导致加载失败后保留原文件。启动前检查构建开启 `DEV=ON` 和 `QMCLIENT_TEST_STORAGE=ON`，否则拒绝运行，避免访问真实用户存档。产物保留在 `tmp/config-persistence-*`；坏配置场景记录日志与原文件状态后仅结束本场景的实例。场景已更新，尚未在符合这些开关的客户端上运行；普通 Release 构建不作为此 runner 的运行证据。
 
-便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证 `profile/` 随目录搬家、忽略目录外配置及不可写时不回退：
+便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证缺省 `profile/` 随目录搬家、显式存储配置的保存位置与搜索顺序、工作目录配置回退，以及首条保存路径不可用时终止初始化。新增场景已补充，未执行：
 
 ```text
 python qmclient_scripts/integration/e2e_storage_modes.py cmake-build-portable
