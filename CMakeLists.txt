@@ -3110,6 +3110,7 @@ if(CLIENT)
     input.h
     input_sdl3.h
     audio_sdl3.h
+    sound_buffer.h
     keynames.cpp
     keynames.h
     notifications.cpp
@@ -3624,6 +3625,7 @@ if(CLIENT)
     components/qmclient/tee_trail_styles.h
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
+    components/qmclient/scripting/state.h
     components/qmclient/translate/translate.cpp
     components/qmclient/translate/translate_backend.cpp
     components/qmclient/translate/translate_backend_auto.cpp
@@ -4708,6 +4710,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/huffman_test.cpp
     src/test/contract/base/http_shutdown_lifecycle_contract_test.cpp
     src/test/unit/engine/image_test.cpp
+    src/test/unit/engine/sound_buffer_test.cpp
     src/test/unit/base/io_test.cpp
     src/test/unit/base/io_read_all_test.cpp
     src/test/contract/base/ios_runtime_contract_test.cpp
@@ -4862,6 +4865,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/unit/qmclient/client/qm_font_scan_job_test.cpp
     src/test/unit/qmclient/client/qm_font_restore_test.cpp
+    src/test/unit/qmclient/client/qm_scripting_state_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
