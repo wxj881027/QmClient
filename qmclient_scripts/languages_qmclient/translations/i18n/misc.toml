@@ -14116,6 +14116,38 @@ turkish = "Yönetmek için bir oyuncu seçin"
 polish = "Wybierz gracza do zarządzania"
 
 [[message]]
+key = "Server votes"
+[message.translations]
+simplified_chinese = "服务器投票"
+traditional_chinese = "伺服器投票"
+japanese = "サーバー投票"
+korean = "서버 투표"
+russian = "Голосования сервера"
+german = "Serverabstimmungen"
+spanish = "Votaciones del servidor"
+french = "Votes du serveur"
+brazilian_portuguese = "Votações do servidor"
+portuguese = "Votações do servidor"
+turkish = "Sunucu oylamaları"
+polish = "Głosowania serwera"
+
+[[message]]
+key = "Original options"
+[message.translations]
+simplified_chinese = "原始选项"
+traditional_chinese = "原始選項"
+japanese = "元の投票項目"
+korean = "원본 투표 항목"
+russian = "Исходные варианты"
+german = "Ursprüngliche Optionen"
+spanish = "Opciones originales"
+french = "Options d’origine"
+brazilian_portuguese = "Opções originais"
+portuguese = "Opções originais"
+turkish = "Özgün seçenekler"
+polish = "Oryginalne opcje"
+
+[[message]]
 key = "Server control"
 [message.translations]
 simplified_chinese = "服务器控制"

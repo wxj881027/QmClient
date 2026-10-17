@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "SecondaryPanel.h"
+#include "ServerBrowserFilterLayout.h"
 #include "SettingsPageLayout.h"
 #include "UiForms.h"
 
@@ -26,9 +27,6 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	Metrics.m_LineSpacing = 3.0f;
 	Metrics.m_InputHeight = Metrics.m_LineHeight;
 	Metrics.m_SectionGap = 6.0f;
-	const float PaddingX = std::max(Metrics.m_LineSpacing, Metrics.m_BodySize * 0.5f);
-	const float PaddingY = Metrics.m_LineSpacing * 0.5f;
-	const float IndicatorWidth = Metrics.m_BodySize + Metrics.m_LineSpacing;
 	const auto Entry = [](int *pValue, const char *pTextId) {
 		SSettingsToggleEntry Result{pValue, pTextId, Localize(pTextId)};
 		Result.m_ShowCheckmark = true;
@@ -65,7 +63,7 @@ void CMenus::RenderServerbrowserFilterForm(CUIRect &View)
 	View.HSplitTop(Metrics.m_SectionGap, nullptr, &View);
 	const char *pGameTypes = Localize("Game types:");
 	const SSettingsToggleEntry Strict = Entry(&g_Config.m_BrFilterGametypeStrict, Localizable("Strict gametype filter"));
-	const auto StrictSize = ResolveSettingsToggleButtonSize(TextRender()->TextWidth(Metrics.m_BodySize, Strict.m_pLabel), Metrics.m_BodySize, Metrics.m_LineHeight, PaddingX, PaddingY, IndicatorWidth);
+	const auto StrictSize = MeasureServerBrowserFilterStrictButton(*TextRender(), Strict.m_pLabel, Metrics);
 	// 标题与严格匹配只有在完整放得下时同行，长译文使用独立按钮行。
 	if(TextRender()->TextWidth(Metrics.m_BodySize, pGameTypes) + Metrics.m_LineSpacing + StrictSize.m_Width <= View.w)
 	{

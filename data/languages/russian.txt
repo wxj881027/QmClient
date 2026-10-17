@@ -8594,6 +8594,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == Язык исходного сообщения
 
+Original options
+== Исходные варианты
+
 Original scroll feel
 == Прежнее ощущение прокрутки
 
@@ -11266,6 +11269,9 @@ Server type (novice, moderate, etc.)
 
 Server URL
 == URL сервера
+
+Server votes
+== Голосования сервера
 
 Server-assigned style
 == Стиль, назначенный сервером

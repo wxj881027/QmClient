@@ -186,7 +186,11 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientProfilesCard(const qm_card
 			if(Profile.m_CountryFlag == -2)
 				RenderCross(Flag, 20.0f);
 			else
-				GameClient()->m_CountryFlags.Render(Profile.m_CountryFlag, ui_token::color::NEUTRAL_WHITE, Flag.x, Flag.y, Flag.w, Flag.h);
+			{
+				// 主播模式下按 -1 渲染，屏蔽配置页里的国旗（来自 master 的 #441）。
+				const int CountryCode = g_Config.m_QmStreamerScoreboardDefaultFlags ? -1 : Profile.m_CountryFlag;
+				GameClient()->m_CountryFlags.Render(CountryCode, ui_token::color::NEUTRAL_WHITE, Flag.x, Flag.y, Flag.w, Flag.h);
+			}
 		}
 		Rect.VSplitRight(ProfileMetrics.m_LineSpacing, &Rect, nullptr);
 		{

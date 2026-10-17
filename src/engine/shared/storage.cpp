@@ -85,30 +85,31 @@ namespace
 #if defined(CONF_FAMILY_WINDOWS)
 			if(IsClient)
 			{
-				// 生产客户端忽略 storage.cfg：普通版固定用户目录，便携版固定程序旁 profile。
+				// 显式存储配置优先；普通版和便携版只在未配置时使用各自默认目录。
 				const char *pTestRoot = std::getenv("QMCLIENT_TEST_STORAGE_ROOT");
 				if(InitializationType == EInitializationType::CLIENT_TEST)
 				{
 					if(!pTestRoot || !AddPath(pTestRoot))
 						return false;
-				}
-				else if(InitializationType == EInitializationType::CLIENT_PORTABLE)
-				{
-					if(!AddPath("$EXEDIR/profile"))
-						return false;
+					AddPath("$DATADIR");
 				}
 				else
 				{
 					// 防止回归 runner 误用生产构建而污染真实用户存档。
-					if(pTestRoot)
+					if(InitializationType == EInitializationType::CLIENT && pTestRoot)
 					{
 						log_error("storage", "isolated process tests require a QMCLIENT_TEST_STORAGE build");
 						return false;
 					}
-					if(!AddPath("$USERDIR"))
+					if(!LoadPathsFromFile(pExecutablePath))
 						return false;
+					if(!m_NumPaths)
+					{
+						if(!AddPath(InitializationType == EInitializationType::CLIENT_PORTABLE ? "$EXEDIR/profile" : "$USERDIR"))
+							return false;
+						AddPath("$DATADIR");
+					}
 				}
-				AddPath("$DATADIR");
 			}
 			else
 #endif
@@ -223,7 +224,7 @@ namespace
 
 			if(!m_NumPaths)
 			{
-				log_error("storage", "no usable paths found in storage.cfg");
+				log_info("storage", "no paths configured in storage.cfg, using defaults");
 			}
 			return true;
 		}
@@ -256,6 +257,9 @@ namespace
 
 			if(!str_comp(pPath, "$USERDIR"))
 			{
+				// 便携版默认不查找用户目录，但允许 storage.cfg 显式选择它。
+				if(!m_aUserdir[0])
+					FindUserDirectory();
 				if(m_aUserdir[0])
 				{
 					str_copy(m_aaStoragePaths[m_NumPaths++], m_aUserdir);

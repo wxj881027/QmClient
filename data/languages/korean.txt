@@ -8594,6 +8594,9 @@ Original language for both received and outgoing messages. Use Auto to detect ea
 Original message language
 == 원문 언어
 
+Original options
+== 원본 투표 항목
+
 Original scroll feel
 == 기존 스크롤 감각
 
@@ -11266,6 +11269,9 @@ Server type (novice, moderate, etc.)
 
 Server URL
 == 서버 URL
+
+Server votes
+== 서버 투표
 
 Server-assigned style
 == 서버 지정 스타일

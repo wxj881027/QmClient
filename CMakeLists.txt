@@ -188,7 +188,7 @@ option(QM_MSVC_USE_EMBEDDED_DEBUG_INFO "Use embedded MSVC debug information inst
 option(QM_MSVC_OPTIMIZE_GLOBAL_DATA "Enable MSVC global data optimization in optimized builds" ON)
 option(QM_MSVC_ANALYZE "Enable MSVC /analyze static analysis (Windows only)" OFF)
 option(QM_STRICT_WARNINGS "Treat compiler warnings as errors" OFF)
-option(QMCLIENT_PORTABLE "Build a dedicated Windows portable client using only executable-relative profile" OFF)
+option(QMCLIENT_PORTABLE "Build a dedicated Windows portable client defaulting to executable-relative profile" OFF)
 option(QMCLIENT_TEST_STORAGE "Enable isolated storage in a non-release test client" OFF)
 if((QMCLIENT_PORTABLE OR QMCLIENT_TEST_STORAGE) AND NOT TARGET_OS STREQUAL "windows")
   message(FATAL_ERROR "QmClient dedicated storage builds currently require Windows")
@@ -2238,6 +2238,7 @@ set(EXPECTED_DATA
   qmclient/chat_emojis/smell.webp
   qmclient/chat_emojis/support.webp
   qmclient/chat_emojis/surrender.webp
+  qmclient/developer_badge.png
   qmclient/gui_logo.png
   qmclient/map_difficulty.sql
   race_flag.png
@@ -3137,6 +3138,8 @@ if(CLIENT)
     text.cpp
     text_gradient.h
     qm_font_names.h
+    qm_font_file_probe.h
+    qm_font_restore.h
     qm_system_fonts.h
     qm_font_name_match.h
     text_sweep.h
@@ -3168,6 +3171,7 @@ if(CLIENT)
     QmUi/QmConsoleUi.h
     QmUi/QmVoteMenu.cpp
     QmUi/QmVoteMenu.h
+    QmUi/QmServerVoteMenu.cpp
     QmUi/QmPlayersMenu.cpp
     QmUi/QmPlayersMenu.h
     QmUi/QmCardLabelHints.h
@@ -3206,6 +3210,7 @@ if(CLIENT)
     QmUi/QmTree.h
     QmUi/SecondaryPanel.h
     QmUi/ServerBrowserFilterForm.cpp
+    QmUi/ServerBrowserFilterLayout.h
     QmUi/SettingsMenuWidgets.cpp
     QmUi/SettingsMenuPrewarm.cpp
     QmUi/SettingsRuntimeCache.cpp
@@ -3492,6 +3497,8 @@ if(CLIENT)
     components/qmclient/map_difficulty_catalog.h
     components/qmclient/vote_map_library.cpp
     components/qmclient/vote_map_library.h
+    components/qmclient/server_vote_list.h
+    components/qmclient/vote_menu_mode.h
     components/qmclient/vote_map_loader.cpp
     components/qmclient/vote_map_loader.h
     components/qmclient/map_vote_difficulty.h
@@ -3573,6 +3580,8 @@ if(CLIENT)
     components/qmclient/qmclient.h
     components/qmclient/qmclient_utils.cpp
     components/qmclient/qm_map_upload.cpp
+    components/qmclient/qm_developer_badge.cpp
+    components/qmclient/qm_developer_badge.h
     components/qmclient/qm_title_style.cpp
     components/qmclient/qm_title_render.cpp
     components/qmclient/sponsor_chat_render.cpp
@@ -4721,6 +4730,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/logger_test.cpp
     src/test/unit/client/map_difficulty_catalog_test.cpp
     src/test/unit/qmclient/ui/vote_map_library_test.cpp
+    src/test/unit/qmclient/ui/server_vote_list_test.cpp
+    src/test/unit/qmclient/ui/vote_menu_mode_test.cpp
     src/test/unit/qmclient/ui/players_menu_test.cpp
     src/test/unit/qmclient/ui/vote_player_targets_test.cpp
     src/test/integration/qmclient/ui/vote_map_loader_test.cpp
@@ -4843,6 +4854,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/settings/settings_card_translation_contract_test.cpp
     src/test/unit/qmclient/settings/settings_font_selection_test.cpp
     src/test/unit/qmclient/settings/settings_icon_options_test.cpp
+    src/test/unit/qmclient/settings/settings_color_picker_test.cpp
     src/test/unit/qmclient/settings/settings_page_layout_test.cpp
     src/test/unit/qmclient/settings/settings_content_metrics_test.cpp
     src/test/unit/qmclient/settings/settings_label_metadata_test.cpp
@@ -4861,6 +4873,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_font_category_test.cpp
     src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/unit/qmclient/client/qm_font_scan_job_test.cpp
+    src/test/unit/qmclient/client/qm_font_restore_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
@@ -4887,6 +4900,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/ui/qm_new_ui_menu_shell_settings_contract_test.cpp
     src/test/unit/client/ddnet_19_9_sync_test.cpp
     src/test/unit/qmclient/client/qm_update_arguments_test.cpp
+    src/test/unit/qmclient/client/qm_setup_options_test.cpp
+    src/test/unit/qmclient/client/qm_setup_motion_test.cpp
     src/test/unit/qmclient/music/netease_lyric_parser_test.cpp
     src/test/unit/qmclient/music/netease_lyric_timeline_test.cpp
     src/test/unit/qmclient/music/netease_lyric_state_test.cpp
@@ -4925,6 +4940,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
+    src/test/unit/qmclient/client/qm_developer_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
     src/test/unit/qmclient/client/qm_sponsor_chat_style_test.cpp
     src/test/unit/qmclient/client/qm_skin_outline_test.cpp
@@ -4955,6 +4971,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/settings/qm_title_cards_test.cpp
     src/test/integration/qmclient/settings/qm_spectator_cards_test.cpp
     src/test/integration/qmclient/settings/qm_tee_cards_test.cpp
+    src/test/integration/qmclient/settings/qm_card_tab_recovery_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_card_order_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_graphics_contract_test.cpp
     src/test/contract/qmclient/monitoring/qmclient_monitoring_metrics_contract_test.cpp
@@ -5258,6 +5275,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
 
   if(FREETYPE_FOUND)
+    list(APPEND TESTS src/test/integration/qmclient/client/qm_system_font_restore_test.cpp)
     list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/integration/qmclient/client/qm_screenshot_watermark_job_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
     list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
   endif()
@@ -5429,6 +5447,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_settings_text_columns_test.cpp
       src/test/integration/qmclient/ui/qm_adaptive_choice_test.cpp
       src/test/integration/qmclient/ui/qm_console_button_text_layout_test.cpp
+      src/test/integration/qmclient/ui/qm_server_browser_filter_layout_test.cpp
       src/test/integration/qmclient/ui/qm_spectator_hud_text_test.cpp
       src/test/integration/qmclient/ui/qm_icon_text_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
@@ -5872,7 +5891,6 @@ set(CPACK_DIRS
 )
 set(CPACK_FILES
   license.txt
-  storage.cfg
   steam_appid.txt
   ${COPY_FILES}
 )
@@ -5891,12 +5909,12 @@ endif()
 
 if(TARGET_OS STREQUAL "windows")
   if(QMCLIENT_PORTABLE)
-    list(APPEND CPACK_FILES qmclient_scripts/portable/config_directory.bat)
+    list(APPEND CPACK_FILES qmclient_scripts/portable/config_directory.bat qmclient_scripts/portable/storage.cfg)
   else()
-    list(APPEND CPACK_FILES other/config_directory.bat)
+    list(APPEND CPACK_FILES other/config_directory.bat storage.cfg)
   endif()
 else()
-  list(APPEND CPACK_FILES other/config_directory.sh)
+  list(APPEND CPACK_FILES other/config_directory.sh storage.cfg)
 endif()
 
 if(NOT DEV)

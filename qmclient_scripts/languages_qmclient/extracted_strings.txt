@@ -2864,6 +2864,7 @@ Or visit DDNet.org
 Original
 Original language for both received and outgoing messages. Use Auto to detect each message.
 Original message language
+Original options
 Original scroll feel
 Other
 Other game modes
@@ -3755,6 +3756,7 @@ Server region. Used for region bans
 Server stress (debug builds only).
 Server type (novice, moderate, etc.)
 Server URL
+Server votes
 Server-assigned style
 Server-dependent
 Set all to Rifle
@@ -5743,10 +5745,12 @@ Zoom to current mouse target
 [Editor]	GLOBAL HOOK OTHERS OFF: Nobody can hook others. Place only one tile somewhere on the map.
 [Editor]	GLOBAL OLD SHOTGUN: Shotgun drags others always towards the shooter, even after having bounced. Shooter can't hit themselves. Place only one tile somewhere on the map.
 [Editor]	Go
+[Editor]	Go to a specified coordinate point on the map.
 [Editor]	Go to images management.
 [Editor]	Go to layers management.
 [Editor]	Go to sounds management.
 [Editor]	GOLDEN SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server.
+[Editor]	Goto position
 [Editor]	GREEN SPIKE: Kills the tee and gives points to the killer. Amount of points given is set inside the server.
 [Editor]	Green value of the envelope.
 [Editor]	GRENADE LAUNCHER: Throws exploding bullets. Also known as rocket.

@@ -34,16 +34,21 @@ def _read_cache_value(cache_file: Path, name: str) -> str | None:
 def _extract_showincludes_prefix(build_dir: Path) -> bytes | None:
     # 前缀必须与编译器写入管道的字节完全一致，不能先用替换解码再写成 UTF-8。
     compiler = _read_cache_value(build_dir / "CMakeCache.txt", "CMAKE_C_COMPILER")
+    source_name = "main.c"
+    if not compiler:
+        # 原生安装器只启用 C++，使用对应编译器和探测源文件。
+        compiler = _read_cache_value(build_dir / "CMakeCache.txt", "CMAKE_CXX_COMPILER")
+        source_name = "main.cpp"
     if not compiler:
         return None
 
     show_dir = build_dir / "CMakeFiles" / "ShowIncludes"
     show_dir.mkdir(parents=True, exist_ok=True)
     (show_dir / "foo.h").write_text("\n", encoding="utf-8")
-    (show_dir / "main.c").write_text('#include "foo.h"\nint main(void) { return 0; }\n', encoding="utf-8")
+    (show_dir / source_name).write_text('#include "foo.h"\nint main(void) { return 0; }\n', encoding="utf-8")
     include_path = str((show_dir / "foo.h").resolve())
     result = subprocess.run(
-        [compiler, "/nologo", "/showIncludes", "/c", "main.c"],
+        [compiler, "/nologo", "/showIncludes", "/c", source_name],
         cwd=show_dir,
         capture_output=True,
         check=False,

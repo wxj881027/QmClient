@@ -14,10 +14,17 @@ if not __package__:
 from qmclient_scripts.package_stdio import configure_stdio
 
 
-def prepare(source: Path, data: Path, output: Path, steam_appid_file: Path | None = None) -> None:
+DEFAULT_STORAGE_CFG = Path(__file__).resolve().parents[1] / "storage.cfg"
+
+
+def prepare(source: Path, data: Path, output: Path, steam_appid_file: Path | None = None, storage_cfg_file: Path | None = None) -> None:
 	source = source.resolve(strict=True)
 	data = data.resolve(strict=True)
 	output = output.resolve()
+	# 默认取仓库模板，避免将构建目录里的个人存储配置装进发布包。
+	storage_cfg_file = storage_cfg_file if storage_cfg_file is not None else DEFAULT_STORAGE_CFG
+	if not storage_cfg_file.is_file():
+		raise ValueError(f"missing storage.cfg file: {storage_cfg_file}")
 	cache = source / "CMakeCache.txt"
 	if cache.is_file():
 		options = dict(line.split("=", 1) for line in cache.read_text(encoding="utf-8").splitlines() if "=" in line and not line.startswith(("#", "//")))
@@ -81,6 +88,7 @@ def prepare(source: Path, data: Path, output: Path, steam_appid_file: Path | Non
 			raise ValueError("no runtime DLLs found in build directory")
 		for path in dlls:
 			shutil.copy2(path, temporary / path.name)
+		shutil.copy2(storage_cfg_file, temporary / "storage.cfg")
 		shutil.copytree(data, temporary / "data")
 		for name in generated_files:
 			path = source / name

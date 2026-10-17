@@ -34,8 +34,9 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	}
 	else
 		State.m_Selection.Validate(nullptr);
-	MainView.Draw(ms_ColorTabbarActive, MenuShellCorners(), 10.0f);
-	CUiScopedSurfaceText SurfaceText(TextRender(), ms_ColorTabbarActive);
+	const ColorRGBA PanelColor = MenuPanelColor();
+	MainView.Draw(PanelColor, MenuShellCorners(), 10.0f);
+	CUiScopedSurfaceText SurfaceText(TextRender(), PanelColor);
 	const ColorRGBA Ink = ResolveUiSurfaceForeground(SurfaceText.Surface());
 	MainView.Margin(12.0f, &MainView);
 	CUIRect Header, Search, Filters, Summary;
@@ -73,7 +74,7 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	static CButtonContainer s_aFilters[3];
 	const char *apFilters[] = {Localize("All"), Localize("Friends"), Localize("Muted players")};
 	Filters.VSplitLeft(std::min(312.0f, Filters.w * 0.72f), &Filters, &Summary);
-	const auto FilterStyle = CapsuleTabBarStyleFor(ms_ColorTabbarActive);
+	const auto FilterStyle = CapsuleTabBarStyleFor(PanelColor);
 	State.m_Filter = DoSegmentedChoice(s_aFilters, apFilters, 3, State.m_Filter, Filters, 8.0f, &FilterStyle);
 	std::array<int, MAX_CLIENTS> aIds{};
 	int Count = 0;

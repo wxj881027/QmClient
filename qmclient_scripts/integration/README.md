@@ -20,7 +20,7 @@ python qmclient_scripts/integration/open_link_failure_smoke.py <build-dir>/testr
 
 默认配置与推荐外观的回归种子位于 `fixtures/default_profiles/`，固定尺寸和玩家路径见[默认配置发布回归](../../docs/规格/2026-10-08-默认配置发布回归.md)。这些种子不是执行结果；仅复制到独立测试目录使用。
 
-Windows 的普通版和便携版均忽略 `storage.cfg`。通用进程环境、启动呈现、皮肤加载和实时名单冒烟共用 `process_build.py`：传入普通构建目录时，启动前选择同一源码、配置和生成器的已有隔离缓存；没有匹配缓存时使用 `<build-dir>-process-tests`。独立缓存启用 `DEV=ON、QMCLIENT_TEST_STORAGE=ON、QMCLIENT_PORTABLE=OFF`，沿用功能与优化开关，并通过 Windows 封装入口增量构建当前源码。原始普通／便携缓存的存储模式保持不变，构建失败或来源不匹配时不启动旧程序。
+Windows 的普通版和便携版优先读取程序旁的 `storage.cfg`，未找到时再查工作目录；没有配置路径时分别使用用户目录和程序旁的 `profile/`。专用隔离测试构建继续忽略该文件。通用进程环境、启动呈现、皮肤加载和实时名单冒烟共用 `process_build.py`：传入普通构建目录时，启动前选择同一源码、配置和生成器的已有隔离缓存；没有匹配缓存时使用 `<build-dir>-process-tests`。独立缓存启用 `DEV=ON、QMCLIENT_TEST_STORAGE=ON、QMCLIENT_PORTABLE=OFF`，沿用功能与优化开关，并通过 Windows 封装入口增量构建当前源码。原始普通／便携缓存的存储模式保持不变，构建失败或来源不匹配时不启动旧程序。
 
 runner 通过 `QMCLIENT_TEST_STORAGE_ROOT` 指向场景临时目录。测试构建禁止打包，不用于发布；客户端仍拒绝用普通发布二进制运行隔离测试。已有专用测试目录也会先增量构建。Linux/macOS 沿用原隔离方式。
 
@@ -48,7 +48,7 @@ python qmclient_scripts/integration/e2e_config_persistence.py <test-build-dir>
 
 三个场景验证双客户端按正序和反序退出均能保存、最后退出实例的设置生效，以及错误编码导致加载失败后保留原文件。启动前检查构建开启 `DEV=ON` 和 `QMCLIENT_TEST_STORAGE=ON`，否则拒绝运行，避免访问真实用户存档。产物保留在 `tmp/config-persistence-*`；坏配置场景记录日志与原文件状态后仅结束本场景的实例。场景已更新，尚未在符合这些开关的客户端上运行；普通 Release 构建不作为此 runner 的运行证据。
 
-便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证 `profile/` 随目录搬家、忽略目录外配置及不可写时不回退：
+便携版专用端到端测试使用 `QMCLIENT_PORTABLE=ON` 的真实发布客户端，复制到 `tmp/` 后验证缺省 `profile/` 随目录搬家、显式存储配置的保存位置与搜索顺序、工作目录配置回退，以及首条保存路径不可用时终止初始化。新增场景已补充，未执行：
 
 ```text
 python qmclient_scripts/integration/e2e_storage_modes.py cmake-build-portable
@@ -73,13 +73,15 @@ python qmclient_scripts/integration/e2e_qmclient.py <build-dir>
 python qmclient_scripts/integration/e2e_qmclient.py <build-dir> demo_recording
 ```
 
-可用的 E2E 场景包括 `assert_dialog_no_false_hang`、`hang_watchdog_reports_stall`、`slow_asset_loading_no_false_hang`、`asset_loading_stall_reports_hang`、`demo_recording`、`qm_lifecycle_persistence`、`invalid_statistics_preserved`、`perf_log_persistence`、`connection_failure_recovery`、`recording_without_connection` 和 `startup_saved_favorites`。每个场景使用独立临时目录，并验证真实进程产生的日志、退出状态和文件产物。gate 中使用 `--run-qm-smoke` 时会先运行 smoke，再运行注册的 E2E 场景。
+可用的 E2E 场景包括 `assert_dialog_no_false_hang`、`hang_watchdog_reports_stall`、`slow_asset_loading_no_false_hang`、`asset_loading_stall_reports_hang`、`system_font_restore_no_false_hang`、`demo_recording`、`qm_lifecycle_persistence`、`invalid_statistics_preserved`、`perf_log_persistence`、`connection_failure_recovery`、`recording_without_connection` 和 `startup_saved_favorites`。每个场景使用独立临时目录，并验证真实进程产生的日志、退出状态和文件产物。gate 中使用 `--run-qm-smoke` 时会先运行 smoke，再运行注册的 E2E 场景。
 
 `assert_dialog_no_false_hang` 依赖客户端测试专用参数 `--qm-test-main-thread-assert`：它在主循环之前触发一次真实断言，等价于启动阶段的错误弹窗，用于验证进程内弹窗阻塞主线程期间 hang 看门狗不会误报、退出兜底看门狗不会强杀正在阅读的弹窗。场景同时通过环境变量 `QMCLIENT_TEST_HIDE_DIALOG` 隐藏弹窗窗口并抑制报告进程拉起，避免桌面点击提前关闭弹窗、测试遗留后台进程干扰断言；弹窗的创建和消息循环行为不变。
 
 `hang_watchdog_reports_stall` 使用 `--qm-test-main-thread-stall` 在主循环内阻塞 12 秒，验证 hang 看门狗使用单调时钟后能在主线程阻塞期间真实写出卡死报告（正向回归，防止时钟退回 tick 缓存）。Windows 卡死场景会继续等待报告追加转储结果，并检查 `.dmp` 文件的 `MDMP` 签名；不能在文本报告刚出现时就结束进程。
 
 资源加载场景通过测试专用环境变量 `QMCLIENT_TEST_ASSET_LOAD_DELAY_MS` 在每项启动素材加载后注入延迟，取值限制为 0 到 20000 毫秒。`slow_asset_loading_no_false_hang` 每项延迟 1 秒，验证累计加载超过 10 秒仍能启动并响应命令，且没有 hang 产物；`asset_loading_stall_reports_hang` 单次延迟 12 秒，验证启动期间真正停滞仍被看门狗发现。两者都使用有界日志等待，并通过 `QMCLIENT_TEST_HIDE_DIALOG` 抑制报告窗口。
+
+`system_font_restore_no_false_hang` 复用字体资源冒烟的生成器，在隔离目录创建测试字体。该场景仅运行于 Windows，其他平台明确报告跳过。仅测试存储构建启用 `QMCLIENT_TEST_SYSTEM_FONT_FILE` 和 `QMCLIENT_TEST_FONT_LOOKUP_DELAY_MS`：查找固定延迟 12 秒，不枚举真实系统字体。场景检查查找期间客户端已启动且能处理输入，关闭候选时仍恢复保存的中文字体，并且没有 hang 产物。已补充场景，未执行。
 
 注意：`crash_dialog_smoke.py` 是视觉测试，必须让窗口真实出现在屏幕上抓帧（烟花动画、正文、按钮渲染），运行时会在桌面弹出多个可见窗口约 20 秒，请在方便时运行。弹窗逻辑的静默回归由 E2E 场景 `assert_dialog_no_false_hang` 覆盖（窗口以 `QMCLIENT_TEST_HIDE_DIALOG` 隐藏，不会打扰桌面）。
 

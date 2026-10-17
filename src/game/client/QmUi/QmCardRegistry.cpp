@@ -440,6 +440,41 @@ namespace qm_card_registry
 		return vEntries;
 	}
 
+	bool RepairRemovedModernTabs(qm_card_order::CModel &Model)
+	{
+		struct SMove
+		{
+			const char *m_pStableId;
+			const char *m_pSourceTab;
+			const char *m_pTargetTab;
+			int m_Column;
+			int m_Order;
+		};
+		std::vector<SMove> vMoves;
+		for(int Index = 0; Index < Model.Count(); ++Index)
+		{
+			const auto &Entry = Model.Entry(Index);
+			if(Entry.m_pDefaultTab == nullptr || str_startswith(Entry.m_pDefaultTab, "modern-") == nullptr)
+				continue;
+			const auto *pDefault = FindByStableId(Entry.m_pStableId);
+			if(pDefault == nullptr || pDefault->m_pDefaultTab == nullptr || str_startswith(pDefault->m_pDefaultTab, "modern-") != nullptr)
+				continue;
+			vMoves.push_back({Entry.m_pStableId, Entry.m_pDefaultTab, pDefault->m_pDefaultTab, Entry.m_Column, Entry.m_OrderInColumn});
+		}
+		// 先保存源顺序；逐张搬动会重排源列，不能再用变化后的序号恢复布局。
+		std::stable_sort(vMoves.begin(), vMoves.end(), [](const SMove &Left, const SMove &Right) {
+			const int SourceCompare = str_comp(Left.m_pSourceTab, Right.m_pSourceTab);
+			return SourceCompare != 0 ? SourceCompare < 0 : Left.m_Order < Right.m_Order;
+		});
+		for(const auto &Move : vMoves)
+		{
+			// 有效旧页的卡片保持原顺序，恢复的卡片按各自源分类顺序追加。
+			const int Order = static_cast<int>(Model.ColumnIndices(Move.m_pTargetTab, Move.m_Column).size());
+			Model.MoveToTab(Move.m_pStableId, Move.m_pTargetTab, Move.m_Column, Order);
+		}
+		return !vMoves.empty();
+	}
+
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model)
 	{
 		bool Changed = false;

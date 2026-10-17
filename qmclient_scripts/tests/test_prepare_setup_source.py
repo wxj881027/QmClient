@@ -42,7 +42,7 @@ class PrepareSetupSourceTest(unittest.TestCase):
 		(self.output / "obsolete.txt").write_bytes(b"old")
 		MODULE.prepare(self.source, self.data, self.output, steam_appid_file=self.steam_appid)
 		files = {p.relative_to(self.output).as_posix() for p in self.output.rglob("*") if p.is_file()}
-		self.assertEqual(files, {"DDNet.exe", "DDNet-Server.exe", "runtime.dll", "data/asset.txt", "qm-nmt-helper.exe", "qm-soda-helper.exe", "qm-music-helper.exe", "steam_appid.txt"})
+		self.assertEqual(files, {"DDNet.exe", "DDNet-Server.exe", "runtime.dll", "data/asset.txt", "qm-nmt-helper.exe", "qm-soda-helper.exe", "qm-music-helper.exe", "steam_appid.txt", "storage.cfg"})
 		self.assertEqual((self.output / "steam_appid.txt").read_bytes(), b"412220\n")
 		self.assertEqual((self.output / "data/asset.txt").read_bytes(), b"asset")
 		for helper in ("qm-nmt-helper.exe", "qm-soda-helper.exe", "qm-music-helper.exe"):
@@ -50,6 +50,24 @@ class PrepareSetupSourceTest(unittest.TestCase):
 		self.assertEqual((self.source / "testrunner.exe").read_bytes(), b"test")
 		MODULE.prepare(self.source, self.data, self.output)
 		self.assertEqual((self.output / "DDNet.exe").read_bytes(), b"client")
+
+	def test_storage_config_uses_repository_template_instead_of_local_build_config(self) -> None:
+		(self.source / "storage.cfg").write_text("add_path private-player-profile\n", encoding="utf-8")
+		MODULE.prepare(self.source, self.data, self.output)
+		self.assertEqual((self.output / "storage.cfg").read_bytes(), MODULE.DEFAULT_STORAGE_CFG.read_bytes())
+
+	def test_explicit_storage_template_is_copied_verbatim(self) -> None:
+		template = self.root / "custom-storage.cfg"
+		template.write_bytes(b"# custom template\r\nadd_path $USERDIR\r\nadd_path $DATADIR\r\n")
+		MODULE.prepare(self.source, self.data, self.output, storage_cfg_file=template)
+		self.assertEqual((self.output / "storage.cfg").read_bytes(), template.read_bytes())
+
+	def test_missing_storage_template_preserves_previous_payload(self) -> None:
+		self.output.mkdir()
+		(self.output / "previous.txt").write_bytes(b"old")
+		with self.assertRaisesRegex(ValueError, "missing storage.cfg"):
+			MODULE.prepare(self.source, self.data, self.output, storage_cfg_file=self.root / "missing.cfg")
+		self.assertEqual((self.output / "previous.txt").read_bytes(), b"old")
 
 	def test_steam_appid_file_is_optional_and_defaults_to_absent(self) -> None:
 		MODULE.prepare(self.source, self.data, self.output)

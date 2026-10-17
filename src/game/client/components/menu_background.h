@@ -31,7 +31,6 @@ public:
 	bool m_HasNight;
 	IGraphics::CTextureHandle m_IconTexture;
 	std::string m_IconPath;
-	std::array<std::string, 3> m_aMapNames;
 	bool m_IconLoadRequested = false;
 	bool m_IconLoadFailed = false;
 	bool operator<(const CTheme &Other) const { return m_Name < Other.m_Name; }

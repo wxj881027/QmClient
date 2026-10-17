@@ -726,18 +726,6 @@ inline float ResolveSettingsGeneralGameContentHeight(const SSettingsContentMetri
 	return ResolveSettingsRowsHeight(3 + (DynamicCameraExpanded ? 1 : 0), Metrics.m_LineHeight, Metrics.m_LineSpacing);
 }
 
-inline unsigned int PackSettingsAlphaColor(const unsigned int ColorValue, const int Opacity)
-{
-	return ColorHSLA(ColorValue).WithAlpha(std::clamp(Opacity / 100.0f, 0.0f, 1.0f)).Pack(true);
-}
-
-inline void UnpackSettingsAlphaColor(const unsigned int PackedColor, unsigned int &ColorValue, int &Opacity)
-{
-	const ColorHSLA Color(PackedColor, true);
-	ColorValue = Color.Pack(false);
-	Opacity = std::clamp(round_to_int(Color.a * 100.0f), 0, 100);
-}
-
 inline uint64_t ResolveSettingsGeneralLayoutRevision(const bool RenderOnly, const uint64_t ToggleMask, const float ContentHeight, const int LanguageCount, const int ThemeCount)
 {
 	uint64_t Revision = 1469598103934665603ULL;

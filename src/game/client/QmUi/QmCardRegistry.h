@@ -142,6 +142,8 @@ namespace qm_card_registry
 
 	// 构建完整默认全局模型 entries（从注册表派生），供首次迁移和缺失卡补位复用。
 	std::vector<qm_card_order::SEntry> BuildDefaultEntries();
+	// 回退现代分类后恢复卡片归属，保留列位置和源分类内的相对顺序。
+	bool RepairRemovedModernTabs(qm_card_order::CModel &Model);
 	// 旧贡献者页已删除，加载时先修复归属，避免其它布局迁移提前返回后留下不可见卡片。
 	bool RepairLegacyCreditsTabs(qm_card_order::CModel &Model);
 	bool RepairLegacyTitleLayout(qm_card_order::CModel &Model);
