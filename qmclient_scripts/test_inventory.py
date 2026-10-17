@@ -40,10 +40,14 @@ SOURCE_DEFINITION = re.compile(
 )
 
 
-# 直接打开仓库源码/清单同样是静态读取；参数化字体等测试输入不凭路径 helper 判为合同。
+# 源码路径继续保守计数；资源路径只在读取内容或查询目录结构时计数。
 DIRECT_REPO_READ = re.compile(
-	r'TestSourcePath\s*\(\s*"(?:src/|qmclient_scripts/|data/|datasrc/|other/|scripts/|CMakeLists\.txt)'
+	r'TestSourcePath\s*\(\s*"(?:src/|qmclient_scripts/|datasrc/|other/|scripts/|CMakeLists\.txt)'
 	r'|std::ifstream\s+\w+\s*\([^;\n]*DDNET_TEST_SOURCE_DIR'
+)
+DIRECT_RESOURCE_READ = re.compile(
+	r'(?:std::ifstream\s+\w+|fs_is_dir|fs_exists|std::filesystem::(?:exists|is_directory))\s*\(\s*'
+	r'(TestSourcePath\s*\(\s*"data/[^"\n]+"\s*\))'
 )
 
 
@@ -58,7 +62,8 @@ def count_source_reads(text: str) -> int:
 			re.IGNORECASE,
 		)
 	}
-	direct_reads = sum(match.start() not in binary_font_reads for match in DIRECT_REPO_READ.finditer(text))
+	direct_reads = len(DIRECT_REPO_READ.findall(text))
+	direct_reads += sum(match.start(1) not in binary_font_reads for match in DIRECT_RESOURCE_READ.finditer(text))
 	return len(SOURCE_READ.findall(text)) - len(SOURCE_DEFINITION.findall(text)) + direct_reads
 
 
