@@ -117,7 +117,15 @@ void log_set_scope_logger(ILogger *logger)
 	int MessageSize = sizeof(Msg.m_aLine) - Msg.m_LineMessageOffset;
 	str_format_v(pMessage, MessageSize, fmt, args);
 	Msg.m_LineLength = str_length(Msg.m_aLine);
-	scope_logger->Log(&Msg);
+	try
+	{
+		scope_logger->Log(&Msg);
+	}
+	catch(...)
+	{
+		// 后端分配或写入异常不能打断业务；这里不能再递归记录失败。
+		// 仍恢复递归标记，让下一条日志可以再次访问后端。
+	}
 	in_logger = false;
 }
 

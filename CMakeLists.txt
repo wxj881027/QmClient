@@ -4696,6 +4696,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
     src/test/unit/base/aio_buffer_test.cpp
     src/test/unit/base/future_logger_test.cpp
+    src/test/unit/base/log_dispatch_test.cpp
     src/test/integration/base/aio_test.cpp
     src/test/integration/base/async_logger_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp

@@ -19,10 +19,10 @@
 #if defined(CONF_QMCLIENT_TEST_STORAGE)
 #include <cstdlib>
 #endif
-#include <deque>
 #include <exception>
 #include <mutex>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -185,10 +185,10 @@ namespace
 		std::function<std::shared_ptr<IHttpRequest>(const char *)> m_Factory;
 		std::function<int64_t()> m_Clock;
 		FServerListParser m_ParseList;
-		std::deque<std::pair<int, bool>> m_Queue;
+		std::vector<std::pair<int, bool>> m_vQueue;
 		std::vector<CAttempt> m_vActive;
 		CQmServerListCache<CServerInfo> m_Cache;
-		std::string m_BestUrl;
+		int m_BestUrlIndex = -1;
 		std::string m_SourceHash;
 		uint64_t m_Revision = 0;
 		int64_t m_RetryAt = 0;
@@ -213,7 +213,7 @@ namespace
 		{
 			for(size_t Index = 0; Index < m_vUrls.size(); ++Index)
 				if(Tier(m_vUrls[Index]) == m_Tier)
-					m_Queue.emplace_back(Index, false);
+					m_vQueue.emplace_back(Index, false);
 		}
 		void Cancel()
 		{
@@ -221,7 +221,7 @@ namespace
 				if(Attempt.m_pRequest)
 					Attempt.m_pRequest->Abort();
 			m_vActive.clear();
-			m_Queue.clear();
+			m_vQueue.clear();
 			m_Running = false;
 		}
 		void StartRequest(int Index, bool DnsFallback)
@@ -252,10 +252,10 @@ namespace
 		}
 		void Fill()
 		{
-			while(m_vActive.size() < 2 && !m_Queue.empty())
+			while(m_vActive.size() < 2 && !m_vQueue.empty())
 			{
-				const auto [Index, DnsFallback] = m_Queue.front();
-				m_Queue.pop_front();
+				const auto [Index, DnsFallback] = m_vQueue.front();
+				m_vQueue.erase(m_vQueue.begin());
 				if(m_vBlockedUntil[Index] > m_Clock())
 					continue;
 				try
@@ -289,7 +289,7 @@ namespace
 					return;
 			}
 			if(!Attempt.m_DnsFallback && Attempt.m_pRequest && Attempt.m_pRequest->ServerListDnsFallback())
-				m_Queue.emplace_back(Attempt.m_Index, true);
+				m_vQueue.emplace_back(Attempt.m_Index, true);
 		}
 		void Save(const std::string &Body, int Age)
 		{
@@ -402,6 +402,8 @@ namespace
 			m_pSaveState->m_Writer = SaveWriter ? std::move(SaveWriter) : WriteServerListCache;
 			if(m_vUrls.size() > MAX_URLS)
 				m_vUrls.resize(MAX_URLS);
+			// 每个来源最多有一个待发尝试；DNS 恢复复用已取出来源的容量。
+			m_vQueue.reserve(m_vUrls.size());
 			std::string SourceKey;
 			for(const auto &Url : m_vUrls)
 				SourceKey += Url + "\n";
@@ -429,8 +431,9 @@ namespace
 		const CServerInfo &Server(int Index) const override { return m_Cache.Servers()[Index]; }
 		bool GetBestUrl(const char **ppBestUrl) const override
 		{
-			*ppBestUrl = m_BestUrl.empty() ? nullptr : m_BestUrl.c_str();
-			return m_BestUrl.empty();
+			const bool HasBest = m_BestUrlIndex >= 0 && !m_vUrls[m_BestUrlIndex].empty();
+			*ppBestUrl = HasBest ? m_vUrls[m_BestUrlIndex].c_str() : nullptr;
+			return !HasBest;
 		}
 		void Refresh() override
 		{
@@ -502,13 +505,15 @@ namespace
 					m_HadSuccess = true;
 					m_Failures = 0;
 					// 比较当前缓存的真实驻留年龄；重开刷新不能把较旧响应覆盖较新数据。
-					if(m_Cache.Servers().empty() || Result->m_Age <= m_Cache.Age(m_Clock()))
+					const int64_t Now = m_Clock();
+					if(m_Cache.Servers().empty() || Result->m_Age <= m_Cache.Age(Now))
 					{
-						m_BestUrl = m_vUrls[Attempt.m_Index];
-						m_Cache.Publish(std::move(Result->m_vServers), Result->m_Age, m_Clock());
+						m_Cache.Publish(std::move(Result->m_vServers), Result->m_Age, Now);
+						// 来源列表构造后不再修改，发布时保留索引，无需再次分配 URL。
+						m_BestUrlIndex = Attempt.m_Index;
 						++m_Revision;
 						Save(Result->m_Body, Result->m_Age);
-						log_info("serverbrowser_http", "published serverlist, url='%s' age=%ds", m_BestUrl.c_str(), Result->m_Age);
+						log_info("serverbrowser_http", "published serverlist, url='%s' age=%ds", m_vUrls[m_BestUrlIndex].c_str(), Result->m_Age);
 					}
 					else
 						log_info("serverbrowser_http", "retained fresher cached serverlist, response age=%ds", Result->m_Age);
@@ -528,19 +533,19 @@ namespace
 					if(Attempt.m_pRequest)
 						Attempt.m_pRequest->Abort();
 				m_vActive.clear();
-				m_Queue.clear();
+				m_vQueue.clear();
 				log_info("serverbrowser_http", "serverlist source tier %d exceeded time budget", m_Tier);
 			}
 			Fill();
 			// 默认源按官方（含加密解析恢复）、试镜像、快照依次升级；自定义文件仍为同级源。
-			while(m_UseFallbackTiers && m_vActive.empty() && m_Queue.empty() && m_Tier < 2)
+			while(m_UseFallbackTiers && m_vActive.empty() && m_vQueue.empty() && m_Tier < 2)
 			{
 				++m_Tier;
 				m_TierStartedAt = m_Clock();
 				QueueTier();
 				Fill();
 			}
-			if(m_vActive.empty() && m_Queue.empty())
+			if(m_vActive.empty() && m_vQueue.empty())
 			{
 				m_Running = false;
 				if(!m_HadSuccess)

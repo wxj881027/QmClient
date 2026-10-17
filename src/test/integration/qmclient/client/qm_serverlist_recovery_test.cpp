@@ -1,6 +1,7 @@
 #include <base/detect.h>
 #if !defined(CONF_PLATFORM_EMSCRIPTEN)
 #include <base/hash.h>
+#include <base/logger.h>
 #include <base/time.h>
 
 #include <engine/client/serverbrowser_http.h>
@@ -25,6 +26,24 @@
 
 namespace
 {
+	class CThrowingServerListLogger : public ILogger
+	{
+		const char *m_pPrefix;
+
+	public:
+		int m_Failures = 0;
+		explicit CThrowingServerListLogger(const char *pPrefix) :
+			m_pPrefix(pPrefix) {}
+		void Log(const CLogMessage *pMessage) override
+		{
+			if(str_comp(pMessage->m_aSystem, "serverbrowser_http") == 0 && str_startswith(pMessage->Message(), m_pPrefix))
+			{
+				++m_Failures;
+				throw std::bad_alloc();
+			}
+		}
+	};
+
 	class CResponse : public CHttpRequestCurl
 	{
 	public:
@@ -973,6 +992,150 @@ TEST_F(QmServerListRecovery, CacheParserExceptionStillStartsLiveRefresh)
 	m_vRequests[1]->Reply(List("Live"));
 	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
 	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Live");
+}
+
+TEST_F(QmServerListRecovery, MaximumSourcesDrainInOrderAndManualRefreshResetsQueue)
+{
+	std::vector<std::string> vUrls;
+	for(int Index = 0; Index < 20; ++Index)
+		vUrls.emplace_back("https://source" + std::to_string(Index) + ".test/list");
+	Begin(vUrls);
+	for(size_t Index = 0; Index < 16; ++Index)
+	{
+		ASSERT_GT(m_vRequests.size(), Index);
+		EXPECT_STREQ(m_vRequests[Index]->Url(), vUrls[Index].c_str());
+		m_vRequests[Index]->Fail(500);
+		m_pBrowser->Update();
+	}
+	EXPECT_EQ(m_vRequests.size(), 16U);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	m_pBrowser->Refresh();
+	m_pBrowser->Refresh();
+	ASSERT_EQ(m_vRequests.size(), 18U);
+	EXPECT_STREQ(m_vRequests[16]->Url(), vUrls[0].c_str());
+	EXPECT_STREQ(m_vRequests[17]->Url(), vUrls[1].c_str());
+	m_pBrowser->Shutdown();
+	EXPECT_TRUE(m_vRequests[16]->IsAbortRequested());
+	EXPECT_TRUE(m_vRequests[17]->IsAbortRequested());
+}
+
+TEST_F(QmServerListRecovery, MaximumSourcesAllowOneDnsRetryEachThenRecoverNextRound)
+{
+	// 注入入口保留重复源，覆盖每个来源各有一次 DNS 恢复的最大队列。
+	Begin(std::vector<std::string>(16, OFFICIAL));
+	for(size_t Index = 0; Index < 32; ++Index)
+	{
+		ASSERT_GT(m_vRequests.size(), Index);
+		EXPECT_EQ(m_vRequests[Index]->ServerListDnsFallbackEnabled(), Index >= 16);
+		m_vRequests[Index]->Fail();
+		m_pBrowser->Update();
+	}
+	EXPECT_EQ(m_vRequests.size(), 32U);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	m_Now += 5;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 34U);
+	EXPECT_FALSE(m_vRequests[32]->ServerListDnsFallbackEnabled());
+	m_vRequests[32]->Reply(List("Recovered after full queue"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_TRUE(m_vRequests[33]->IsAbortRequested());
+}
+
+TEST_F(QmServerListRecovery, BestSourceTracksFreshWinnerAndSurvivesFailedRefresh)
+{
+	const char *pFirst = "https://first-source-with-long-address.test/list";
+	const char *pSecond = "https://second-source-with-long-address.test/list";
+	Begin({pFirst, pSecond});
+	const char *pBest = nullptr;
+	EXPECT_TRUE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_EQ(pBest, nullptr);
+	m_vRequests[0]->Reply(List("Stale"), 600);
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_STREQ(pBest, pFirst);
+	m_vRequests[1]->Reply(List("Fresh"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	EXPECT_FALSE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_STREQ(pBest, pSecond);
+	m_pBrowser->Refresh();
+	ASSERT_EQ(m_vRequests.size(), 4U);
+	m_vRequests[2]->Fail(500);
+	m_vRequests[3]->Fail(500);
+	m_pBrowser->Update();
+	EXPECT_TRUE(m_pBrowser->IsError());
+	EXPECT_FALSE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_STREQ(pBest, pSecond);
+	EXPECT_EQ(m_pBrowser->Revision(), 2U);
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Fresh");
+}
+
+TEST_F(QmServerListRecovery, PreviousSourceReorderKeepsPublishedSourceIdentity)
+{
+	const char *pPrevious = "https://previous.test/list";
+	Begin({"https://first.test/list", pPrevious}, pPrevious);
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	EXPECT_STREQ(m_vRequests[0]->Url(), pPrevious);
+	m_vRequests[0]->Reply(List("Previous source"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	const char *pBest = nullptr;
+	EXPECT_FALSE(m_pBrowser->GetBestUrl(&pBest));
+	EXPECT_STREQ(pBest, pPrevious);
+}
+
+TEST_F(QmServerListRecovery, LoggingFailureDoesNotDropRequestSubmission)
+{
+	CThrowingServerListLogger Logger("fetching serverlist");
+	{
+		CLogScope Scope(&Logger);
+		EXPECT_NO_THROW(Begin({"https://one.test/list", "https://two.test/list"}));
+	}
+	EXPECT_EQ(Logger.m_Failures, 2);
+	ASSERT_NE(m_pBrowser, nullptr);
+	ASSERT_EQ(m_Http.m_vStarted.size(), 2U);
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(List("Fetched despite log failure"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_TRUE(m_vRequests[0]->IsAbortRequested());
+}
+
+TEST_F(QmServerListRecovery, LoggingFailureAfterPublicationStillCancelsAndDoesNotRepublish)
+{
+	Begin();
+	m_vRequests[1]->Reply(List("Published"));
+	CThrowingServerListLogger Logger("published serverlist");
+	CLogScope Scope(&Logger);
+	bool Published = false;
+	EXPECT_NO_THROW(Published = Until([this] { return m_pBrowser->Revision() == 1; }));
+	ASSERT_TRUE(Published);
+	EXPECT_EQ(Logger.m_Failures, 1);
+	EXPECT_FALSE(m_pBrowser->IsRefreshing());
+	EXPECT_TRUE(m_vRequests[0]->IsAbortRequested());
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_EQ(m_pBrowser->Revision(), 1U);
+	EXPECT_EQ(m_pBrowser->NumServers(), 1);
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Published");
+}
+
+TEST_F(QmServerListRecovery, LoggingFailureDuringRetrySchedulePreservesBackoff)
+{
+	Begin({"https://one.test/list"});
+	m_vRequests[0]->Fail(500);
+	CThrowingServerListLogger Logger("serverlist refresh");
+	CLogScope Scope(&Logger);
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_EQ(Logger.m_Failures, 1);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	m_Now += 4;
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), 1U);
+	++m_Now;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(List("Recovered"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
 }
 
 #endif
