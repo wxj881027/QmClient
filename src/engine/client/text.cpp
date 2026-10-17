@@ -529,21 +529,25 @@ private:
 			log_error("textrender", "Failed to grow glyph atlas sections. Keeping the existing atlas.");
 			return false;
 		}
-		const size_t NewTextureSize = NewTextureDimension * NewTextureDimension;
-		std::unique_ptr<uint8_t, decltype(&free)> pFillUpload(static_cast<uint8_t *>(malloc(NewTextureSize)), free);
-		std::unique_ptr<uint8_t, decltype(&free)> pOutlineUpload(static_cast<uint8_t *>(malloc(NewTextureSize)), free);
-		if(pFillUpload == nullptr || pOutlineUpload == nullptr)
-		{
-			log_error("textrender", "Failed to allocate larger text texture upload buffers. Keeping the existing atlas.");
-			return false;
-		}
-		mem_copy(pFillUpload.get(), apNewData[FONT_TEXTURE_FILL].get(), NewTextureSize);
-		mem_copy(pOutlineUpload.get(), apNewData[FONT_TEXTURE_OUTLINE].get(), NewTextureSize);
 		IGraphics::CTextureHandle aNewTextures[NUM_FONT_TEXTURES];
-		if(!Graphics()->LoadTextTextures(NewTextureDimension, NewTextureDimension, aNewTextures[FONT_TEXTURE_FILL], aNewTextures[FONT_TEXTURE_OUTLINE], pFillUpload.release(), pOutlineUpload.release()))
-			return false;
+		// 恢复期间只扩容 CPU 图集，完整 GPU 上传仍由统一恢复入口限频重试。
+		if(TexturesReady())
+		{
+			const size_t NewTextureSize = NewTextureDimension * NewTextureDimension;
+			std::unique_ptr<uint8_t, decltype(&free)> pFillUpload(static_cast<uint8_t *>(malloc(NewTextureSize)), free);
+			std::unique_ptr<uint8_t, decltype(&free)> pOutlineUpload(static_cast<uint8_t *>(malloc(NewTextureSize)), free);
+			if(pFillUpload == nullptr || pOutlineUpload == nullptr)
+			{
+				log_error("textrender", "Failed to allocate larger text texture upload buffers. Keeping the existing atlas.");
+				return false;
+			}
+			mem_copy(pFillUpload.get(), apNewData[FONT_TEXTURE_FILL].get(), NewTextureSize);
+			mem_copy(pOutlineUpload.get(), apNewData[FONT_TEXTURE_OUTLINE].get(), NewTextureSize);
+			if(!Graphics()->LoadTextTextures(NewTextureDimension, NewTextureDimension, aNewTextures[FONT_TEXTURE_FILL], aNewTextures[FONT_TEXTURE_OUTLINE], pFillUpload.release(), pOutlineUpload.release()))
+				return false;
 
-		UnloadTextures();
+			UnloadTextures();
+		}
 		for(size_t Index = 0; Index < NUM_FONT_TEXTURES; ++Index)
 		{
 			m_apTextureData[Index] = std::move(apNewData[Index]);
@@ -552,7 +556,7 @@ private:
 		m_TextureAtlas = std::move(NewAtlas);
 		m_TextureDimension = NewTextureDimension;
 		log_debug("textrender", "Increased atlas dimension to %" PRIzu " (%" PRIzu " MB used for textures)", NewTextureDimension, (NewTextureDimension / 1024) * (NewTextureDimension / 1024) * NUM_FONT_TEXTURES);
-		// QmClient: 扩容已整张重建纹理，脏区数据随之失效。
+		// 扩容成功后已有纹理完成全量上传，或仍在等待全量恢复；旧脏区均不再需要。
 		DiscardPendingGlyphUploads();
 		return true;
 	}
@@ -683,8 +687,12 @@ private:
 		// QmClient: 延迟上传——只写 CPU 图集并记录脏区，渲染前由
 		// FlushPendingGlyphUploads 合并提交；调用方的临时缓冲至此消费完毕，
 		// 原实现通过 UpdateTextTexture(IsMovedPointer) 移交所有权，此处直接释放。
-		m_avQmPendingGlyphUploads[TextureIndex].push_back({PosX, PosY, Width, Height});
-		++m_QmPendingGlyphUploadCount;
+		// 恢复期间下一次上传会复制完整 CPU 图集，不积累无效纹理的增量命令。
+		if(TexturesReady())
+		{
+			m_avQmPendingGlyphUploads[TextureIndex].push_back({PosX, PosY, Width, Height});
+			++m_QmPendingGlyphUploadCount;
+		}
 		free(pData);
 		if(!QmPerfEnabled())
 			return;
@@ -699,7 +707,7 @@ public:
 	// 重传与 GPU 现状一致，无副作用。
 	void FlushPendingGlyphUploads()
 	{
-		if(m_QmPendingGlyphUploadCount == 0)
+		if(!TexturesReady() || m_QmPendingGlyphUploadCount == 0)
 			return;
 		const auto FlushStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
 		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
@@ -935,12 +943,28 @@ public:
 		return QmFontFamilySelectionConfig(GetFaceByFamily(pFamily), m_Faces.Names(), [this](const char *pName) { return GetFaceByName(pName); }, Config);
 	}
 
-	// 图形设备重建后调用：字形的 CPU 侧位图数据（m_apTextureData）与图集分配都还在，
-	// 因此只需要把字体纹理重新上传到新设备。旧句柄因为设备纪元自增已经失效，
-	// 这里不需要（也不能）对旧句柄发删除命令。
+	bool TexturesReady() const
+	{
+		return m_aTextures[FONT_TEXTURE_FILL].IsValid() && m_aTextures[FONT_TEXTURE_OUTLINE].IsValid();
+	}
+
+	// CPU 字形与布局仍在；旧设备已经销毁，不能再按旧编号发送删除命令。
 	void OnGraphicsResourcesReset()
 	{
-		UploadTextures();
+		for(auto &Texture : m_aTextures)
+			Texture.Invalidate();
+		DiscardPendingGlyphUploads();
+	}
+
+	bool RestoreTextures()
+	{
+		if(TexturesReady())
+			return true;
+		if(!UploadTextures())
+			return false;
+		// 全量复制包含恢复等待期间生成的字形，不能再补交此前的脏区。
+		DiscardPendingGlyphUploads();
+		return true;
 	}
 
 	FT_Face DefaultFace() const
@@ -1304,7 +1328,8 @@ public:
 		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
 		{
 			mem_zero(m_apTextureData[TextureIndex].get(), m_TextureDimension * m_TextureDimension * sizeof(uint8_t));
-			Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], 0, 0, m_TextureDimension, m_TextureDimension, m_apTextureData[TextureIndex].get(), false);
+			if(TexturesReady())
+				Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], 0, 0, m_TextureDimension, m_TextureDimension, m_apTextureData[TextureIndex].get(), false);
 		}
 
 		m_TextureAtlas.Clear(m_TextureDimension);
@@ -1316,7 +1341,7 @@ public:
 		m_QmNameplateFrameRasterizeMs = 0.0;
 		m_GlyphLookupCache.Reset();
 		InvalidateFacePixelSizeCache();
-		// QmClient: Clear 已整张重传纹理，积累的脏区随之失效。
+		// CPU 图集已清空；已有纹理立即更新，恢复中的纹理等待全量上传。
 		DiscardPendingGlyphUploads();
 	}
 
@@ -1709,6 +1734,7 @@ class CTextRender : public IEngineTextRender
 
 	SBufferContainerInfo m_DefaultTextContainerInfo;
 	std::vector<STextCharQuad> m_vTextSweepQuads;
+	std::chrono::nanoseconds m_NextGraphicsRestoreAttempt{0};
 	int m_TextSweepBufferObject = -1;
 	int m_TextSweepBufferContainer = -1;
 
@@ -1860,6 +1886,9 @@ class CTextRender : public IEngineTextRender
 		if(m_pGlyphMap == nullptr)
 			return;
 
+		// 失败时至多每秒重试一次，避免每个标签或高帧率循环反复复制整张图集。
+		if(!m_pGlyphMap->TexturesReady() && time_get_nanoseconds() >= m_NextGraphicsRestoreAttempt)
+			RestoreGraphicsResources();
 		UpdateSystemFontScan();
 
 		// QmClient: 帧末兜底提交——本帧只构建未渲染时（如菜单预构建）脏区
@@ -2039,6 +2068,20 @@ class CTextRender : public IEngineTextRender
 			m_vpTextContainers[Index.m_Index]->m_pContainerUseCount = Index.m_UseCount;
 		}
 		return *m_vpTextContainers[Index.m_Index];
+	}
+
+	// 设备重建或引擎关闭时清理 CPU 容器；GPU 生命周期由对应的重建或关闭流程处理。
+	void InvalidateTextContainers()
+	{
+		for(auto *pTextCont : m_vpTextContainers)
+		{
+			if(pTextCont->m_pContainerUseCount != nullptr)
+				pTextCont->m_pContainerUseCount->Invalidate();
+			delete pTextCont;
+		}
+		m_vpTextContainers.clear();
+		m_vTextContainerIndices.clear();
+		m_FirstFreeTextContainerIndex = -1;
 	}
 
 	int WordLength(const char *pText) const
@@ -2253,13 +2296,7 @@ public:
 		m_pQmSystemFontScan.reset();
 		m_QmFontRestore.Reset();
 		ClearTextSweepBuffers();
-		for(auto *pTextCont : m_vpTextContainers)
-		{
-			if(pTextCont->m_pContainerUseCount != nullptr)
-				pTextCont->m_pContainerUseCount->Invalidate();
-			delete pTextCont;
-		}
-		m_vpTextContainers.clear();
+		InvalidateTextContainers();
 
 		delete m_pGlyphMap;
 		m_pGlyphMap = nullptr;
@@ -4034,7 +4071,7 @@ public:
 
 	void UploadTextContainer(STextContainerIndex TextContainerIndex) override
 	{
-		if(!TextContainerIndex.Valid())
+		if(!TextContainerIndex.Valid() || !m_pGlyphMap->TexturesReady())
 			return;
 		if(Graphics()->IsTextBufferingEnabled())
 		{
@@ -4067,7 +4104,7 @@ public:
 
 	void RenderTextContainer(STextContainerIndex TextContainerIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
 	{
-		if(!TextContainerIndex.Valid())
+		if(!TextContainerIndex.Valid() || !m_pGlyphMap->TexturesReady())
 			return;
 		// QmClient: 渲染采样字形纹理前，把本帧积累的字形上传合并提交；
 		// 唯一渲染入口（特效多 pass 也经此函数），脏区为空时零成本。
@@ -4082,7 +4119,7 @@ public:
 					UploadTextContainer(TextContainerIndex);
 				Graphics()->TextureClear();
 				// render buffered text
-				Graphics()->RenderText(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, TextContainer.m_StringInfo.m_vCharacterQuads.size(), m_pGlyphMap->TextureDimension(), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL).Id(), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE).Id(), TextColor, TextOutlineColor);
+				Graphics()->RenderText(TextContainer.m_StringInfo.m_QuadBufferContainerIndex, TextContainer.m_StringInfo.m_vCharacterQuads.size(), m_pGlyphMap->TextureDimension(), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE), TextColor, TextOutlineColor);
 			}
 			else if(TextContainer.m_HasSpatialGradient)
 			{
@@ -4217,7 +4254,7 @@ public:
 
 	void RenderTextContainerSweep(STextContainerIndex TextContainerIndex, const STextSweepParams &Params, float X, float Y) override
 	{
-		if(!TextContainerIndex.Valid() || Params.m_Color.a <= 0.0f ||
+		if(!TextContainerIndex.Valid() || !m_pGlyphMap->TexturesReady() || Params.m_Color.a <= 0.0f ||
 			!std::isfinite(Params.m_Progress) || Params.m_Progress < 0.0f || Params.m_Progress > 1.0f ||
 			!std::isfinite(Params.m_HalfWidth) || Params.m_HalfWidth <= 0.0f || !std::isfinite(Params.m_Slant))
 			return;
@@ -4289,7 +4326,7 @@ public:
 			Graphics()->IndicesNumRequiredNotify(m_vTextSweepQuads.size() * 6);
 			Graphics()->TextureClear();
 			Graphics()->RenderText(m_TextSweepBufferContainer, m_vTextSweepQuads.size(), m_pGlyphMap->TextureDimension(),
-				m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL).Id(), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE).Id(),
+				m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_FILL), m_pGlyphMap->Texture(CGlyphMap::FONT_TEXTURE_OUTLINE),
 				Params.m_Color, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
 		}
 		else
@@ -4433,14 +4470,35 @@ public:
 		}
 	}
 
-	void OnGraphicsResourcesReset() override
+	bool OnGraphicsResourcesReset() override
 	{
-		// 设备已经释放旧缓冲，不能再用旧编号发送删除命令。
+		// 旧 GPU 缓冲和选区都已销毁，所有副本句柄须失效，由原 owner 重新排版。
+		InvalidateTextContainers();
+		m_DefaultTextContainerInfo.m_VertBufferBindingIndex = -1;
 		m_TextSweepBufferObject = m_TextSweepBufferContainer = -1;
 		m_vTextSweepQuads.clear();
 		if(m_pGlyphMap == nullptr)
-			return;
+			return false;
 		m_pGlyphMap->OnGraphicsResourcesReset();
+		return RestoreGraphicsResources();
+	}
+
+	bool RestoreGraphicsResources() override
+	{
+		if(m_pGlyphMap == nullptr)
+			return false;
+		if(m_pGlyphMap->TexturesReady())
+			return true;
+		m_NextGraphicsRestoreAttempt = time_get_nanoseconds() + 1s;
+		try
+		{
+			return m_pGlyphMap->RestoreTextures();
+		}
+		catch(const std::exception &Error)
+		{
+			log_error("textrender", "Failed to restore text textures: %s", Error.what());
+			return false;
+		}
 	}
 
 	void OnWindowResize() override

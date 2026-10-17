@@ -2612,7 +2612,7 @@ void CGraphics_Threaded::RenderQuadLayer(int BufferContainerIndex, SQuadRenderIn
 	}
 }
 
-void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, int TextureTextIndex, int TextureTextOutlineIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)
+void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)
 {
 #if defined(CONF_PLATFORM_MACOS)
 	if(m_MacosGraphicsDiagnosticsEnabled)
@@ -2627,7 +2627,7 @@ void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, i
 			m_BufferedTextZeroQuadCount++;
 	}
 #endif
-	if(BufferContainerIndex == -1)
+	if(BufferContainerIndex == -1 || !IsTextureHandleAllocated(TextTexture) || !IsTextureHandleAllocated(TextOutlineTexture))
 		return;
 
 	CCommandBuffer::SCommand_RenderText Cmd;
@@ -2635,8 +2635,8 @@ void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, i
 	Cmd.m_BufferContainerIndex = BufferContainerIndex;
 	Cmd.m_DrawNum = TextQuadNum * 6;
 	Cmd.m_TextureSize = TextureSize;
-	Cmd.m_TextTextureIndex = TextureTextIndex;
-	Cmd.m_TextOutlineTextureIndex = TextureTextOutlineIndex;
+	Cmd.m_TextTextureIndex = TextTexture.Id();
+	Cmd.m_TextOutlineTextureIndex = TextOutlineTexture.Id();
 	Cmd.m_TextColor = TextColor;
 	Cmd.m_TextOutlineColor = TextOutlineColor;
 
