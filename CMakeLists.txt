@@ -3129,6 +3129,7 @@ if(CLIENT)
     notifications.h
     serverbrowser.cpp
     serverbrowser.h
+    serverbrowser_addresses.h
     qm_serverlist_cache.h
     serverbrowser_http.cpp
     serverbrowser_http.h
@@ -3464,6 +3465,7 @@ if(CLIENT)
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
     components/qmclient/bind_settings.cpp
+    components/qmclient/browser_score.h
     components/qmclient/browser_status_layout.h
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_input_layout.h
@@ -4984,6 +4986,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qmclient_update_http_test.cpp
     src/test/unit/engine/http/http_url_test.cpp
     src/test/unit/qmclient/client/qmclient_update_proxy_test.cpp
+    src/test/integration/qmclient/client/qm_serverlist_follow_test.cpp
     src/test/integration/qmclient/client/qm_serverlist_recovery_test.cpp
     src/test/integration/qmclient/client/qmclient_update_request_test.cpp
     src/test/integration/qmclient/client/qmclient_update_survey_test.cpp
@@ -5023,6 +5026,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/secure_random_test.cpp
     src/test/unit/engine/server_test.cpp
     src/test/unit/engine/serverbrowser_country_filter_test.cpp
+    src/test/unit/client/serverbrowser_addresses_test.cpp
+    src/test/unit/client/serverbrowser_score_test.cpp
     src/test/unit/client/serverbrowser_test.cpp
     src/test/unit/client/qm_hang_snapshot_test.cpp
     src/test/integration/client/qm_hang_dump_report_test.cpp

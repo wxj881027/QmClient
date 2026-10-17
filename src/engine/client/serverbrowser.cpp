@@ -2,6 +2,7 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "serverbrowser.h"
 
+#include "serverbrowser_addresses.h"
 #include "serverbrowser_http.h"
 #include "serverbrowser_ping_cache.h"
 
@@ -835,25 +836,6 @@ void CServerBrowser::QueueRequest(CServerEntry *pEntry)
 	m_pLastReqServer = pEntry;
 	pEntry->m_pNextReq = nullptr;
 	m_NumRequests++;
-}
-
-static void ServerBrowserFormatAddresses(char *pBuffer, int BufferSize, NETADDR *pAddrs, int NumAddrs)
-{
-	pBuffer[0] = '\0';
-	for(int i = 0; i < NumAddrs; i++)
-	{
-		if(i != 0)
-		{
-			str_append(pBuffer, ",", BufferSize);
-		}
-		if(pAddrs[i].type & NETTYPE_TW7)
-		{
-			str_append(pBuffer, "tw-0.7+udp://", BufferSize);
-		}
-		char aIpAddr[NETADDR_MAXSTRSIZE];
-		net_addr_str(&pAddrs[i], aIpAddr, sizeof(aIpAddr), true);
-		str_append(pBuffer, aIpAddr, BufferSize);
-	}
 }
 
 void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info)
