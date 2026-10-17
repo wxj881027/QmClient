@@ -224,6 +224,32 @@ namespace
 			m_Queue.clear();
 			m_Running = false;
 		}
+		void StartRequest(int Index, bool DnsFallback)
+		{
+			auto pRequest = m_Factory(m_vUrls[Index].c_str());
+			if(DnsFallback && !pRequest->ServerListDnsFallback())
+				return;
+			const bool EncryptedDns = pRequest->ServerListDnsFallbackEnabled();
+			// Windows 吊销信息离线时尽力检查；保留目标和 DoH 的证书及主机名验证。
+			if(EncryptedDns)
+				pRequest->RevocationBestEffort();
+			pRequest->Timeout({EncryptedDns ? 15000 : 6000, m_UseFallbackTiers && m_Tier == 0 && !EncryptedDns ? 15000 : 30000, 1024, 10});
+			pRequest->MaxResponseSize(MAX_BODY);
+			pRequest->LogProgress(HTTPLOG::FAILURE);
+			log_info("serverbrowser_http", "fetching serverlist, url='%s' dns=%s", pRequest->Url(), EncryptedDns ? "encrypted" : "system");
+			// 先登记取消入口，再提交给 HTTP；提交失败只撤销本次尝试。
+			m_vActive.push_back({Index, DnsFallback, std::move(pRequest), nullptr});
+			try
+			{
+				m_pHttp->Run(m_vActive.back().m_pRequest);
+			}
+			catch(...)
+			{
+				m_vActive.back().m_pRequest->Abort();
+				m_vActive.pop_back();
+				throw;
+			}
+		}
 		void Fill()
 		{
 			while(m_vActive.size() < 2 && !m_Queue.empty())
@@ -232,19 +258,18 @@ namespace
 				m_Queue.pop_front();
 				if(m_vBlockedUntil[Index] > m_Clock())
 					continue;
-				auto pRequest = m_Factory(m_vUrls[Index].c_str());
-				if(DnsFallback && !pRequest->ServerListDnsFallback())
-					continue;
-				const bool EncryptedDns = pRequest->ServerListDnsFallbackEnabled();
-				// Windows 吊销信息离线时尽力检查；保留目标和 DoH 的证书及主机名验证。
-				if(EncryptedDns)
-					pRequest->RevocationBestEffort();
-				pRequest->Timeout({EncryptedDns ? 15000 : 6000, m_UseFallbackTiers && m_Tier == 0 && !EncryptedDns ? 15000 : 30000, 1024, 10});
-				pRequest->MaxResponseSize(MAX_BODY);
-				pRequest->LogProgress(HTTPLOG::FAILURE);
-				log_info("serverbrowser_http", "fetching serverlist, url='%s' dns=%s", pRequest->Url(), EncryptedDns ? "encrypted" : "system");
-				m_pHttp->Run(pRequest);
-				m_vActive.push_back({Index, DnsFallback, std::move(pRequest), nullptr});
+				try
+				{
+					StartRequest(Index, DnsFallback);
+				}
+				catch(const std::exception &Error)
+				{
+					ReportServerListFailure("serverlist request scheduling failed", Error.what());
+				}
+				catch(...)
+				{
+					ReportServerListFailure("serverlist request scheduling failed", "unknown exception");
+				}
 			}
 		}
 		void Failed(const CAttempt &Attempt)
@@ -255,7 +280,8 @@ namespace
 				const auto RetryAfter = Attempt.m_pRequest->ResultRetryAfterSeconds();
 				if(RetryAfter && *RetryAfter > 0)
 				{
-					m_vBlockedUntil[Attempt.m_Index] = m_Clock() + std::min<int64_t>(*RetryAfter, INT64_MAX - m_Clock());
+					const int64_t Now = m_Clock();
+					m_vBlockedUntil[Attempt.m_Index] = Now + std::min<int64_t>(*RetryAfter, INT64_MAX - Now);
 				}
 				if(Tier(m_vUrls[Attempt.m_Index]) == 1 && Attempt.m_pRequest->CompletedStatusCode() == 503)
 					m_vBlockedUntil[Attempt.m_Index] = std::max(m_vBlockedUntil[Attempt.m_Index], m_Clock() + 60);
