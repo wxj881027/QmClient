@@ -603,6 +603,9 @@ namespace VoiceUtils
 	{
 		if(State.m_BackendChanged || State.m_InputDeviceChanged || State.m_OutputDeviceChanged || State.m_StereoChanged)
 			return true;
+		// 初始化中的未就绪状态由 worker 继续处理，避免主线程反复 join。
+		if(State.m_WorkerRunning)
+			return false;
 		if(State.m_CurrentOutputChannels > 0 && State.m_DesiredOutputChannels > 0 && State.m_CurrentOutputChannels != State.m_DesiredOutputChannels)
 			return true;
 		if(!State.m_EncoderReady)

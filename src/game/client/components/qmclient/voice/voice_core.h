@@ -2,6 +2,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_VOICE_CORE_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_VOICE_CORE_H
 
+#include "voice_audio_retry.h"
 #include "voice_utils.h"
 #include "voice_worker.h"
 
@@ -180,7 +181,7 @@ class CRClientVoice
 	char m_aOutputDeviceName[128] = {0};
 	char m_aResolvedInputDeviceName[128] = {0};
 	char m_aResolvedOutputDeviceName[128] = {0};
-	int64_t m_LastAudioRetryAttempt = 0;
+	CVoiceAudioRetry m_AudioRetry;
 	bool m_OutputStereo = true;
 	bool m_AudioPausedForInactive = false;
 	bool m_LogDeviceChange = false;

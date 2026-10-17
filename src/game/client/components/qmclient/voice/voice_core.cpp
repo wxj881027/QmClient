@@ -442,7 +442,6 @@ bool CRClientVoice::EnsureAudio()
 		m_LogDeviceChange = true;
 		m_CaptureUnavailable = false;
 		m_OutputUnavailable = false;
-		m_LastAudioRetryAttempt = 0;
 	}
 
 	const char *pRequestedBackend = RequestedAudioConfig.m_aBackend[0] ? RequestedAudioConfig.m_aBackend : nullptr;
@@ -492,7 +491,6 @@ bool CRClientVoice::EnsureAudio()
 		}
 		m_LogDeviceChange = true;
 		m_CaptureUnavailable = false;
-		m_LastAudioRetryAttempt = 0;
 	}
 
 	if(str_comp(m_aOutputDeviceName, RequestedAudioConfig.m_aOutputDevice) != 0)
@@ -509,7 +507,6 @@ bool CRClientVoice::EnsureAudio()
 		}
 		m_LogDeviceChange = true;
 		m_OutputUnavailable = false;
-		m_LastAudioRetryAttempt = 0;
 	}
 
 	if(m_OutputStereo != WantStereo)
@@ -526,7 +523,6 @@ bool CRClientVoice::EnsureAudio()
 		}
 		m_LogDeviceChange = true;
 		m_OutputUnavailable = false;
-		m_LastAudioRetryAttempt = 0;
 	}
 
 	if(HadCapture && HadOutput && HadEncoder && m_pCaptureStream && m_pOutputStream && m_pEncoder)
@@ -744,15 +740,8 @@ bool CRClientVoice::EnsureAudio()
 		m_LogDeviceChange = false;
 	}
 
-	if(m_CaptureUnavailable.load() || m_OutputUnavailable.load())
-	{
-		m_LastAudioRetryAttempt = time_get();
-	}
-	else
-	{
-		m_LastAudioRetryAttempt = 0;
+	if(!m_CaptureUnavailable.load() && !m_OutputUnavailable.load())
 		ClearDiagnosticLogMessage(m_aAudioErrorLog);
-	}
 	ClearDiagnosticLogMessage(m_aEncoderErrorLog);
 	return true;
 }
@@ -1113,7 +1102,7 @@ void CRClientVoice::Shutdown()
 	m_AndroidRecordPermissionKnown = false;
 	m_AndroidRecordPermissionGranted = false;
 #endif
-	m_LastAudioRetryAttempt = 0;
+	m_AudioRetry.Reset();
 	m_AudioRefreshRequested.store(true);
 	if(m_pEncoder)
 	{
@@ -2195,21 +2184,12 @@ void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 	using namespace std::chrono_literals;
 	while(!m_Worker.StopRequested())
 	{
-		bool ShouldEnsureAudio = m_AudioRefreshRequested.exchange(false);
 		bool CaptureNeedsRetry = m_CaptureUnavailable.load();
 #if defined(CONF_PLATFORM_ANDROID)
 		if(m_AndroidRecordPermissionKnown && !m_AndroidRecordPermissionGranted)
 			CaptureNeedsRetry = false;
 #endif
-		if(!ShouldEnsureAudio && (CaptureNeedsRetry || m_OutputUnavailable.load()))
-		{
-			const int64_t RetryInterval = time_freq();
-			const int64_t Now = time_get();
-			if(m_LastAudioRetryAttempt == 0 || Now - m_LastAudioRetryAttempt >= RetryInterval)
-				ShouldEnsureAudio = true;
-		}
-		if(ShouldEnsureAudio)
-			EnsureAudio();
+		m_AudioRetry.Update(m_AudioRefreshRequested.exchange(false), CaptureNeedsRetry || m_OutputUnavailable.load(), time_get(), time_freq(), [this] { return EnsureAudio(); });
 
 		UpdateVoiceTransport();
 		ProcessIncoming();
@@ -2401,6 +2381,7 @@ void CRClientVoice::OnRender() NO_THREAD_SAFETY_ANALYSIS
 	GetRequestedAudioDeviceConfig(AppliedRequestedAudioConfig);
 	const int DesiredChannels = VoiceUtils::VoiceDesiredOutputChannels(RequestedAudioConfig);
 	VoiceUtils::SVoiceAudioRefreshState RefreshState;
+	RefreshState.m_WorkerRunning = m_Worker.HasThread();
 	RefreshState.m_BackendChanged = str_comp(AppliedRequestedAudioConfig.m_aBackend, RequestedAudioConfig.m_aBackend) != 0;
 	RefreshState.m_InputDeviceChanged = str_comp(AppliedRequestedAudioConfig.m_aInputDevice, RequestedAudioConfig.m_aInputDevice) != 0;
 	RefreshState.m_OutputDeviceChanged = str_comp(AppliedRequestedAudioConfig.m_aOutputDevice, RequestedAudioConfig.m_aOutputDevice) != 0;

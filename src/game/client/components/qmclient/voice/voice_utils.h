@@ -239,6 +239,7 @@ namespace VoiceUtils
 
 	struct SVoiceAudioRefreshState
 	{
+		bool m_WorkerRunning = false;
 		bool m_BackendChanged = false;
 		bool m_InputDeviceChanged = false;
 		bool m_OutputDeviceChanged = false;

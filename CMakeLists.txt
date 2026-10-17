@@ -3693,6 +3693,7 @@ if(CLIENT)
     components/qmclient/voice/voice_component.cpp
     components/qmclient/voice/voice_component.h
     components/qmclient/voice/voice_core.cpp
+    components/qmclient/voice/voice_audio_retry.h
     components/qmclient/voice/voice_core.h
     components/qmclient/voice/voice_utils.cpp
     components/qmclient/voice/voice_utils.h
@@ -5149,6 +5150,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/voice_core_test.cpp
     src/test/unit/client/voice_transport_test.cpp
     src/test/unit/client/voice_worker_test.cpp
+    src/test/unit/client/voice_audio_retry_test.cpp
     src/test/unit/client/voice_sequence_test.cpp
     src/test/unit/client/voice_qmclient_test.cpp
     src/test/unit/client/voice_packet_utils_test.cpp
