@@ -130,7 +130,7 @@ def smoke_setup_upgrade(previous: Path, current: Path, payload: Path, workspace:
 			if (install / "settings.old").read_bytes() != b"preserve user backup":
 				raise AssertionError("upgrade changed an unrelated .old file")
 	assert_setup_completion_page(current, install)
-	print("PASS completion page has one Finish instruction", flush=True)
+	print("PASS completion page shows the installation result and completion actions", flush=True)
 	for relative, expected_digest in payload_hashes.items():
 		installed_path = install / relative
 		if not installed_path.is_file():

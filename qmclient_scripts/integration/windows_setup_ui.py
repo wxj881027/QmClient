@@ -119,10 +119,16 @@ def _inspect_setup_wizard(setup: Path, expected: Path, *, override: bool, comple
 				buttons = [(handle, value) for handle, kind, value in controls if kind.casefold() in {"tnewbutton", "button"} and user.IsWindowEnabled(handle)]
 				if completion and any(value.replace("&", "").strip() in {"完成", "Finish"} for _, value in buttons):
 					labels = [value for _, kind, value in controls if kind.casefold() in {"tnewstatictext", "static"}]
-					if sum(value.count("退出安装程序") for value in labels) != 1:
-						raise AssertionError(f"completion page must explain Finish exactly once: {labels}")
-					if not any("QmClient 已安装到您的计算机。" in value for value in labels):
-						raise AssertionError(f"completion page lost the installation result: {labels}")
+					if text(window, class_name=True) == "QmClientSetupWindow":
+						if not any("QmClient 已安装完成" in value for value in labels):
+							raise AssertionError(f"completion page lost the installation result: {labels}")
+						if not any(value == "立即启动" for _, value in buttons):
+							raise AssertionError(f"completion page lost the launch action: {buttons}")
+					else:
+						if sum(value.count("退出安装程序") for value in labels) != 1:
+							raise AssertionError(f"completion page must explain Finish exactly once: {labels}")
+						if not any("QmClient 已安装到您的计算机。" in value for value in labels):
+							raise AssertionError(f"completion page lost the installation result: {labels}")
 					return
 				for handle, value in buttons:
 					if value.replace("&", "").strip() in {"安装", "Install", "开始安装", "更新安装"}:

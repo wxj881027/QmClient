@@ -1,5 +1,6 @@
 #include "setup_build.h"
 #include "setup_engine.h"
+#include "setup_motion.h"
 #include "setup_options.h"
 
 #include <commctrl.h>
@@ -13,6 +14,8 @@
 #include <wrl/client.h>
 
 #include <algorithm>
+#include <array>
+#include <chrono>
 #include <cmath>
 #include <exception>
 #include <memory>
@@ -23,8 +26,8 @@ using Microsoft::WRL::ComPtr;
 
 namespace
 {
-	constexpr float WIDTH = 788.0f;
-	constexpr float HEIGHT = 506.0f;
+	constexpr float WIDTH = 744.0f;
+	constexpr float HEIGHT = 434.0f;
 	constexpr int ID_BROWSE = 100;
 	constexpr int ID_DESKTOP = 101;
 	constexpr int ID_LOG = 102;
@@ -33,6 +36,19 @@ namespace
 	D2D1_COLOR_F Color(UINT32 Rgb)
 	{
 		return D2D1::ColorF(Rgb);
+	}
+
+	UINT32 Blend(UINT32 From, UINT32 To, float Amount)
+	{
+		Amount = std::clamp(Amount, 0.0f, 1.0f);
+		UINT32 Result = 0;
+		for(const int Shift : {0, 8, 16})
+		{
+			const float Start = static_cast<float>((From >> Shift) & 255);
+			const float End = static_cast<float>((To >> Shift) & 255);
+			Result |= static_cast<UINT32>(std::lround(Start + (End - Start) * Amount)) << Shift;
+		}
+		return Result;
 	}
 
 	std::wstring RegistryString(HKEY Root, REGSAM View, const wchar_t *pName)
@@ -83,7 +99,21 @@ namespace
 		bool m_Upgrade = false;
 		bool m_CancelRequested = false;
 		float m_Progress = 0;
-		float m_ShownProgress = 0;
+		bool m_Animations = true;
+		bool m_TimerRunning = false;
+		std::chrono::steady_clock::time_point m_LastFrame;
+		std::chrono::steady_clock::time_point m_InstallStart;
+		QmSetup::CTransition m_Intro;
+		QmSetup::CTransition m_Reveal{1.0f};
+		QmSetup::CTransition m_VisualProgress;
+		QmSetup::CTransition m_Check;
+		struct SControlFeedback
+		{
+			HWND m_Window = nullptr;
+			QmSetup::CTransition m_Hover;
+			QmSetup::CTransition m_Press;
+		};
+		std::array<SControlFeedback, 5> m_aFeedback;
 		DWORD m_ExitCode = 2;
 		std::wstring m_Directory;
 		std::wstring m_Error;
@@ -93,6 +123,17 @@ namespace
 		ComPtr<ID2D1HwndRenderTarget> m_pTarget;
 		ComPtr<ID2D1DCRenderTarget> m_pControlTarget;
 		ComPtr<ID2D1Bitmap> m_pArtwork;
+		ComPtr<ID2D1LinearGradientBrush> m_pHeroGradient;
+		ComPtr<ID2D1StrokeStyle> m_pRoundStroke;
+		struct STextFormat
+		{
+			float m_Size;
+			bool m_Bold;
+			bool m_Center;
+			DWRITE_PARAGRAPH_ALIGNMENT m_Paragraph;
+			ComPtr<IDWriteTextFormat> m_pFormat;
+		};
+		std::vector<STextFormat> m_vTextFormats;
 
 		UINT32 Background() const { return m_Dark ? 0x221B22 : 0xFFF9FA; }
 		UINT32 Foreground() const { return m_Dark ? 0xF8E8EE : 0x4A2433; }
@@ -102,6 +143,48 @@ namespace
 														    0xB23C62; }
 		UINT32 FocusColor() const { return m_Dark ? 0xED9FB9 : 0xB23C62; }
 		int Pixels(float Value) const { return static_cast<int>(std::lround(Value * m_Dpi / 96.0f)); }
+		float ContentOffset() const { return 8.0f * (1.0f - m_Reveal.Value()); }
+		UINT32 ContentColor(UINT32 Rgb) const { return Blend(Background(), Rgb, m_Reveal.Value()); }
+
+		void UpdateAnimationTimer()
+		{
+			bool Active = m_Intro.Active() || m_Reveal.Active() || m_VisualProgress.Active() || m_Check.Active();
+			for(const auto &Feedback : m_aFeedback)
+				Active |= Feedback.m_Hover.Active() || Feedback.m_Press.Active();
+			Active |= m_Animations && m_Page == EPage::INSTALLING && m_Progress == 0.0f;
+			Active &= !IsIconic(m_Window);
+			if(Active && !m_TimerRunning)
+			{
+				m_LastFrame = std::chrono::steady_clock::now();
+				m_TimerRunning = SetTimer(m_Window, 2, 16, nullptr) != 0;
+			}
+			else if(!Active && m_TimerRunning)
+			{
+				KillTimer(m_Window, 2);
+				m_TimerRunning = false;
+			}
+		}
+
+		void UpdateControlFeedback(HWND Window, bool Hover, bool Pressed)
+		{
+			for(auto &Feedback : m_aFeedback)
+			{
+				if(Feedback.m_Window != Window)
+					continue;
+				Feedback.m_Hover.SetTarget(Hover ? 1.0f : 0.0f, m_Animations, 0.18f);
+				Feedback.m_Press.SetTarget(Pressed ? 1.0f : 0.0f, m_Animations, 0.12f);
+				InvalidateRect(Window, nullptr, FALSE);
+			}
+			UpdateAnimationTimer();
+		}
+
+		float ControlFeedback(HWND Window, bool Press) const
+		{
+			for(const auto &Feedback : m_aFeedback)
+				if(Feedback.m_Window == Window)
+					return Press ? Feedback.m_Press.Value() : Feedback.m_Hover.Value();
+			return 0.0f;
+		}
 
 		void Fill(ID2D1RenderTarget *pTarget, D2D1_RECT_F Rect, UINT32 Rgb, float Radius = 0)
 		{
@@ -119,14 +202,46 @@ namespace
 
 		void Text(ID2D1RenderTarget *pTarget, const std::wstring &Value, D2D1_RECT_F Rect, float Size, UINT32 Rgb, bool Bold = false, bool Center = false, DWRITE_PARAGRAPH_ALIGNMENT ParagraphAlignment = DWRITE_PARAGRAPH_ALIGNMENT_NEAR)
 		{
-			ComPtr<IDWriteTextFormat> pFormat;
+			IDWriteTextFormat *pFormat = nullptr;
+			for(const auto &Format : m_vTextFormats)
+			{
+				if(Format.m_Size == Size && Format.m_Bold == Bold && Format.m_Center == Center && Format.m_Paragraph == ParagraphAlignment)
+				{
+					pFormat = Format.m_pFormat.Get();
+					break;
+				}
+			}
+			if(!pFormat)
+			{
+				STextFormat Format{Size, Bold, Center, ParagraphAlignment, {}};
+				if(FAILED(m_pWrite->CreateTextFormat(L"Microsoft YaHei UI", nullptr, Bold ? DWRITE_FONT_WEIGHT_SEMI_BOLD : DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, Size, L"zh-CN", &Format.m_pFormat)))
+					return;
+				pFormat = Format.m_pFormat.Get();
+				pFormat->SetTextAlignment(Center ? DWRITE_TEXT_ALIGNMENT_CENTER : DWRITE_TEXT_ALIGNMENT_LEADING);
+				pFormat->SetParagraphAlignment(Center ? DWRITE_PARAGRAPH_ALIGNMENT_CENTER : ParagraphAlignment);
+				m_vTextFormats.push_back(std::move(Format));
+			}
 			ComPtr<ID2D1SolidColorBrush> pBrush;
-			if(FAILED(m_pWrite->CreateTextFormat(L"Microsoft YaHei UI", nullptr, Bold ? DWRITE_FONT_WEIGHT_SEMI_BOLD : DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, Size, L"zh-CN", &pFormat)) || FAILED(pTarget->CreateSolidColorBrush(Color(Rgb), &pBrush)))
+			if(FAILED(pTarget->CreateSolidColorBrush(Color(Rgb), &pBrush)))
 				return;
-			if(Center)
-				pFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-			pFormat->SetParagraphAlignment(Center ? DWRITE_PARAGRAPH_ALIGNMENT_CENTER : ParagraphAlignment);
-			pTarget->DrawText(Value.c_str(), static_cast<UINT32>(Value.size()), pFormat.Get(), Rect, pBrush.Get(), D2D1_DRAW_TEXT_OPTIONS_CLIP);
+			pTarget->DrawText(Value.c_str(), static_cast<UINT32>(Value.size()), pFormat, Rect, pBrush.Get(), D2D1_DRAW_TEXT_OPTIONS_CLIP);
+		}
+
+		void Checkmark(ID2D1RenderTarget *pTarget, D2D1_POINT_2F Center, float Size, UINT32 Rgb, float Progress)
+		{
+			ComPtr<ID2D1SolidColorBrush> pBrush;
+			if(Progress <= 0.0f || FAILED(pTarget->CreateSolidColorBrush(Color(Rgb), &pBrush)))
+				return;
+			const D2D1_POINT_2F Start{Center.x - Size * 0.3f, Center.y};
+			const D2D1_POINT_2F Bend{Center.x - Size * 0.1f, Center.y + Size * 0.2f};
+			const D2D1_POINT_2F End{Center.x + Size * 0.3f, Center.y - Size * 0.2f};
+			const float First = std::min(1.0f, Progress * 3.0f);
+			pTarget->DrawLine(Start, {Start.x + (Bend.x - Start.x) * First, Start.y + (Bend.y - Start.y) * First}, pBrush.Get(), 2.0f, m_pRoundStroke.Get());
+			if(Progress > 1.0f / 3.0f)
+			{
+				const float Second = std::min(1.0f, (Progress - 1.0f / 3.0f) * 1.5f);
+				pTarget->DrawLine(Bend, {Bend.x + (End.x - Bend.x) * Second, Bend.y + (End.y - Bend.y) * Second}, pBrush.Get(), 2.0f, m_pRoundStroke.Get());
+			}
 		}
 
 		void ReadTheme()
@@ -135,6 +250,7 @@ namespace
 			DWORD Bytes = sizeof(Light);
 			RegGetValueW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", L"AppsUseLightTheme", RRF_RT_REG_DWORD, nullptr, &Light, &Bytes);
 			m_Dark = Light == 0;
+			m_pHeroGradient.Reset();
 			if(m_BackBrush)
 				DeleteObject(m_BackBrush);
 			const auto Bg = Background();
@@ -148,12 +264,54 @@ namespace
 			// Windows 11 为原生标题栏配色；不支持的系统继续使用标准标题栏。
 			DwmSetWindowAttribute(m_Window, DWMWA_CAPTION_COLOR, &CaptionColor, sizeof(CaptionColor));
 			DwmSetWindowAttribute(m_Window, DWMWA_TEXT_COLOR, &CaptionTextColor, sizeof(CaptionTextColor));
+			BOOL Animations = TRUE;
+			SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &Animations, 0);
+			m_Animations = Animations != FALSE;
+			if(!m_Animations)
+			{
+				m_Intro.Finish();
+				m_Reveal.Finish();
+				m_VisualProgress.Finish();
+				m_Check.Finish();
+				for(auto &Feedback : m_aFeedback)
+				{
+					Feedback.m_Hover.Finish();
+					Feedback.m_Press.Finish();
+				}
+				if(m_Edit)
+					PlaceContent();
+			}
+			UpdateAnimationTimer();
 			RedrawWindow(m_Window, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
 		}
 
-		void Place(HWND Control, float X, float Y, float Width, float Height)
+		void PlaceContent()
 		{
-			MoveWindow(Control, Pixels(X), Pixels(Y), Pixels(Width), Pixels(Height), TRUE);
+			const float Offset = ContentOffset();
+			// 原生控件与自绘内容共用同一位移，绘制位置始终对应实际点击区域。
+			struct SPlacement
+			{
+				HWND m_Control;
+				float m_X, m_Y, m_W, m_H;
+			};
+			const SPlacement aControls[] = {
+				{m_Edit, 310, 212, 278, 26},
+				{m_Browse, 616, 198, 96, 48},
+				{m_Desktop, 292, 266, 420, 36},
+				{m_Primary, 512, 354, 200, 48},
+				{m_Secondary, 296, 354, 200, 48},
+				{m_LogButton, 296, 298, 150, 38},
+				{m_Status, 296, 112, 416, m_Page == EPage::FAILED ? 168.0f : 48.0f}};
+			HDWP Batch = BeginDeferWindowPos(7);
+			for(const auto &Control : aControls)
+			{
+				if(!Batch)
+					break;
+				Batch = DeferWindowPos(Batch, Control.m_Control, nullptr, Pixels(Control.m_X), Pixels(Control.m_Y + Offset), Pixels(Control.m_W), Pixels(Control.m_H), SWP_NOZORDER | SWP_NOACTIVATE);
+			}
+			if(!Batch || !EndDeferWindowPos(Batch))
+				for(const auto &Control : aControls)
+					SetWindowPos(Control.m_Control, nullptr, Pixels(Control.m_X), Pixels(Control.m_Y + Offset), Pixels(Control.m_W), Pixels(Control.m_H), SWP_NOZORDER | SWP_NOACTIVATE);
 		}
 
 		void Layout()
@@ -164,18 +322,20 @@ namespace
 				SendMessageW(Control, WM_SETFONT, reinterpret_cast<WPARAM>(m_Font), TRUE);
 			if(OldFont)
 				DeleteObject(OldFont);
-			Place(m_Edit, 270, 208, 354, 24);
-			Place(m_Browse, 648, 196, 106, 46);
-			Place(m_Desktop, 258, 264, 360, 32);
-			Place(m_Primary, 558, 424, 196, 46);
-			Place(m_Secondary, 258, 424, 116, 46);
-			Place(m_LogButton, 258, 332, 138, 38);
-			Place(m_Status, 258, 106, 496, m_Page == EPage::FAILED ? 198 : 52);
+			PlaceContent();
 		}
 
 		void ShowPage(EPage Page)
 		{
 			m_Page = Page;
+			m_Reveal.Snap(0.0f);
+			m_Reveal.SetTarget(1.0f, m_Animations, 0.28f);
+			m_HoverButton = nullptr;
+			for(auto &Feedback : m_aFeedback)
+			{
+				Feedback.m_Hover.Snap(0.0f);
+				Feedback.m_Press.Snap(0.0f);
+			}
 			const bool Options = Page == EPage::OPTIONS;
 			for(const HWND Control : {m_Edit, m_Browse, m_Desktop})
 				ShowWindow(Control, Options ? SW_SHOW : SW_HIDE);
@@ -184,14 +344,16 @@ namespace
 			SetWindowTextW(m_Primary, Page == EPage::DONE ? L"立即启动" : Page == EPage::FAILED ? L"返回安装选项" :
 									      m_Upgrade                     ? L"更新安装" :
 													      L"开始安装");
-			SetWindowTextW(m_Secondary, Page == EPage::DONE || Page == EPage::FAILED ? L"完成" : L"取消");
-			const std::wstring Status = Page == EPage::OPTIONS ? (m_Upgrade ? L"已找到现有安装。确认位置后，即可覆盖更新。" : L"准备好后，即可将 QmClient 安装到你的电脑。") : Page == EPage::INSTALLING ? L"安装期间可以最小化此窗口。" :
-																						   Page == EPage::DONE               ? L"QmClient 已安装到您的计算机。\n点击“完成”退出安装程序。" :
-																										       m_Error;
+			SetWindowTextW(m_Secondary, Page == EPage::DONE ? L"完成" : Page == EPage::FAILED ? L"关闭" :
+													    L"取消");
+			const std::wstring Status = Page == EPage::OPTIONS ? (m_Upgrade ? L"已找到旧版本，确认位置即可更新。" : L"选择安装位置，然后开始安装。") : Page == EPage::INSTALLING ? L"请稍候，完成后即可开始。" :
+																			   Page == EPage::DONE               ? L"QmClient 已安装完成，可以立即启动。" :
+																							       m_Error;
 			SetWindowTextW(m_Status, Status.c_str());
-			Place(m_Status, 258, 106, 496, Page == EPage::FAILED ? 198 : 52);
+			PlaceContent();
 			EnableWindow(m_Secondary, TRUE);
 			SetFocus(Page == EPage::INSTALLING ? m_Secondary : m_Primary);
+			UpdateAnimationTimer();
 			RedrawWindow(m_Window, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
 		}
 
@@ -230,13 +392,14 @@ namespace
 			m_Directory = Directory;
 			m_EngineWindow = nullptr;
 			m_CancelRequested = false;
-			m_Progress = m_ShownProgress = 0;
+			m_Progress = 0;
+			m_VisualProgress.Snap(0.0f);
+			m_InstallStart = std::chrono::steady_clock::now();
 			m_pEngine = std::make_unique<QmSetup::CSetupEngine>();
 			ShowPage(EPage::INSTALLING);
 			try
 			{
 				m_pEngine->Start(QmSetup::NativeArguments(m_Options, Directory, SendMessageW(m_Desktop, BM_GETCHECK, 0, 0) == BST_CHECKED), m_Window);
-				SetTimer(m_Window, 1, 33, nullptr);
 			}
 			catch(const std::exception &)
 			{
@@ -256,9 +419,10 @@ namespace
 			if(!m_CancelRequested && MessageBoxW(m_Window, L"要取消本次安装吗？安装程序会完成必要的清理后退出安装。", L"取消安装", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES)
 			{
 				m_CancelRequested = true;
-				SetWindowTextW(m_Status, L"正在安全结束安装，请稍候。");
+				SetWindowTextW(m_Status, L"正在取消，请稍候。");
 				SetWindowTextW(m_Secondary, L"正在取消");
 				EnableWindow(m_Secondary, FALSE);
+				InvalidateRect(m_Window, nullptr, FALSE);
 				if(m_EngineWindow)
 					PostMessageW(m_EngineWindow, WM_CLOSE, 0, 0);
 			}
@@ -328,63 +492,81 @@ namespace
 				auto *pTarget = m_pTarget.Get();
 				pTarget->BeginDraw();
 				pTarget->Clear(Color(Background()));
-				Fill(pTarget, {0, 0, 226, HEIGHT}, 0xFFDFE8);
+				if(!m_pHeroGradient)
+				{
+					const D2D1_GRADIENT_STOP aStops[] = {{0.0f, Color(m_Dark ? 0x503140 : 0xFBE0E9)}, {1.0f, Color(m_Dark ? 0x30212B : 0xF8EDF1)}};
+					ComPtr<ID2D1GradientStopCollection> pStops;
+					if(SUCCEEDED(pTarget->CreateGradientStopCollection(aStops, 2, &pStops)))
+						pTarget->CreateLinearGradientBrush(D2D1::LinearGradientBrushProperties({16, 16}, {264, 418}), pStops.Get(), &m_pHeroGradient);
+				}
+				if(m_pHeroGradient)
+					pTarget->FillRoundedRectangle(D2D1::RoundedRect({16, 16, 264, 418}, 24, 24), m_pHeroGradient.Get());
+				else
+					Fill(pTarget, {16, 16, 264, 418}, m_Dark ? 0x382530 : 0xFBE0E9, 24);
+				Stroke(pTarget, {16.5f, 16.5f, 263.5f, 417.5f}, m_Dark ? 0x583848 : 0xF2D3DF, 24);
+				const float Intro = std::clamp(m_Intro.Value(), 0.0f, 1.0f);
+				const float IntroOffset = 10.0f * (1.0f - Intro);
 				if(m_pArtwork)
 				{
 					const auto Size = m_pArtwork->GetSize();
-					pTarget->DrawBitmap(m_pArtwork.Get(), {0, 0, 226, 226 * Size.height / Size.width});
+					const float Scale = std::min(216.0f / Size.width, 274.0f / Size.height);
+					const float ArtWidth = Size.width * Scale;
+					const float ArtHeight = Size.height * Scale;
+					const float Left = 140.0f - ArtWidth * 0.5f;
+					const float Top = 185.0f - ArtHeight * 0.5f + IntroOffset;
+					pTarget->DrawBitmap(m_pArtwork.Get(), {Left, Top, Left + ArtWidth, Top + ArtHeight}, Intro, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
 				}
-				else
-					Text(pTarget, L"QmClient", {20, 38, 212, 80}, 28, 0x701332, true);
-				Text(pTarget, QM_SETUP_VERSION, {20, 90, 206, 114}, 12, 0x9E4A64);
-				const wchar_t *apSteps[] = {L"安装选项", L"正在安装", L"开始使用"};
-				const int Active = m_Page == EPage::OPTIONS ? 0 : m_Page == EPage::DONE ? 2 :
-													  1;
-				for(int Index = 0; Index < 3; ++Index)
-				{
-					const float Y = 348.0f + Index * 38.0f;
-					Fill(pTarget, {28, Y, 52, Y + 24}, Active == Index ? Accent() : 0xF4C6D7, 12);
-					Text(pTarget, std::to_wstring(Index + 1), {28, Y, 52, Y + 24}, 12, Active == Index ? 0xFFFFFF : 0x8E4760, true, true);
-					Text(pTarget, apSteps[Index], {64, Y + 1, 208, Y + 24}, 13, Active == Index ? 0x701332 : 0x9E4A64);
-				}
+				Text(pTarget, L"QmClient", {36, 340, 244, 377}, 24, Foreground(), true);
+				Text(pTarget, L"VERSION " QM_SETUP_VERSION, {36, 380, 244, 402}, 11, Muted());
+				// 左侧品牌保持稳定；右侧内容与原生控件沿同一轨道进入。
+				pTarget->SetTransform(D2D1::Matrix3x2F::Translation(0, ContentOffset()));
+				const UINT32 Fg = ContentColor(Foreground());
+				const UINT32 Secondary = ContentColor(Muted());
+				const UINT32 Line = ContentColor(Border());
+				const UINT32 Rose = ContentColor(Accent());
 				if(m_Page == EPage::OPTIONS)
 				{
-					Text(pTarget, m_Upgrade ? L"更新你的 QmClient" : L"安装 QmClient", {258, 47, 754, 94}, 28, Foreground(), true);
-					Text(pTarget, L"安装位置", {258, 167, 754, 191}, 13, Foreground(), true);
-					Stroke(pTarget, {258, 196, 636, 242}, Border(), 9);
-					Text(pTarget, L"完整离线安装 · 无需额外下载", {258, 327, 754, 354}, 13, Muted());
-					Text(pTarget, L"玩家存档继续使用系统用户目录。", {258, 359, 754, 385}, 12, Muted());
-					Text(pTarget, L"开始前请退出正在运行的客户端。", {258, 386, 754, 410}, 12, Muted());
+					Text(pTarget, m_Upgrade ? L"更新 QmClient" : L"安装 QmClient", {296, 52, 712, 96}, 28, Fg, true);
+					Text(pTarget, L"安装位置", {296, 174, 712, 195}, 12, Secondary);
+					Stroke(pTarget, {296, 198, 604, 246}, GetFocus() == m_Edit ? ContentColor(FocusColor()) : Line, 12);
 				}
 				else if(m_Page == EPage::INSTALLING)
 				{
-					Text(pTarget, m_CancelRequested ? L"正在取消安装" : L"正在安装 QmClient", {258, 47, 754, 94}, 28, Foreground(), true);
-					Text(pTarget, m_Progress > 0 ? std::to_wstring(std::min(99, static_cast<int>(m_Progress * 100))) + L"%" : L"准备中", {258, 197, 754, 263}, 42, Foreground(), true);
-					Fill(pTarget, {258, 291, 754, 301}, Border(), 5);
-					if(m_ShownProgress > 0)
-						Fill(pTarget, {258, 291, 258 + 496 * m_ShownProgress, 301}, Accent(), 5);
+					Text(pTarget, m_CancelRequested ? L"正在取消" : L"正在安装", {296, 52, 712, 96}, 28, Fg, true);
+					Text(pTarget, m_Progress > 0 ? std::to_wstring(std::min(99, static_cast<int>(m_Progress * 100))) + L"%" : L"准备中", {296, 194, 712, 260}, m_Progress > 0 ? 44.0f : 32.0f, Fg, true);
+					Fill(pTarget, {296, 282, 712, 290}, Line, 4);
+					if(m_Progress > 0)
+					{
+						const float ProgressWidth = 416 * std::clamp(m_VisualProgress.Value(), 0.0f, 1.0f);
+						if(ProgressWidth > 0)
+							Fill(pTarget, {296, 282, 296 + ProgressWidth, 290}, Rose, std::min(4.0f, ProgressWidth * 0.5f));
+					}
 					else
 					{
-						const float Offset = static_cast<float>(GetTickCount64() % 1600) / 1600.0f * 396;
-						Fill(pTarget, {258 + Offset, 291, 358 + Offset, 301}, Accent(), 5);
+						// 往返速度在端点降为零，未知进度不会瞬移回起点。
+						const float Phase = std::fmod(std::chrono::duration<float>(std::chrono::steady_clock::now() - m_InstallStart).count(), 2.4f) / 2.4f;
+						const float Offset = m_Animations ? (1.0f - std::cos(Phase * 6.2831853f)) * 160.0f : 0.0f;
+						Fill(pTarget, {296 + Offset, 282, 392 + Offset, 290}, Rose, 4);
 					}
-					Text(pTarget, m_EngineWindow ? L"正在处理程序文件、快捷方式和卸载信息。" : L"正在准备安装文件…", {258, 324, 754, 372}, 14, Muted());
 				}
 				else if(m_Page == EPage::DONE)
 				{
-					Text(pTarget, L"安装完成", {258, 47, 754, 94}, 28, Foreground(), true);
-					Fill(pTarget, {258, 184, 754, 284}, m_Dark ? 0x3C2634 : 0xFCE7EF, 14);
-					Text(pTarget, L"准备就绪", {280, 204, 731, 237}, 21, m_Dark ? 0xF3AEC6 : 0x923451, true);
-					Text(pTarget, L"可以立即启动，也可以稍后从开始菜单打开。", {280, 246, 731, 273}, 12, Muted());
-					Text(pTarget, L"安装位置：" + m_Directory, {258, 327, 754, 404}, 12, Muted());
+					Text(pTarget, L"安装完成", {296, 52, 712, 96}, 28, Fg, true);
+					Fill(pTarget, {296, 188, 712, 302}, ContentColor(m_Dark ? 0x35232E : 0xFAEBF0), 16);
+					Fill(pTarget, {316, 208, 348, 240}, Rose, 16);
+					Checkmark(pTarget, {332, 224}, 24, ContentColor(0xFFFFFF), m_Reveal.Value());
+					Text(pTarget, L"安装位置", {362, 212, 692, 239}, 12, Secondary);
+					Text(pTarget, m_Directory, {316, 252, 692, 290}, 12, Fg);
 				}
 				else
 				{
-					Text(pTarget, QmSetup::IsCancelled(m_ExitCode, m_CancelRequested) ? L"安装已取消" : L"安装未完成", {258, 47, 754, 94}, 28, Foreground(), true);
+					Text(pTarget, QmSetup::IsCancelled(m_ExitCode, m_CancelRequested) ? L"安装已取消" : L"安装未完成", {296, 52, 712, 96}, 28, Fg, true);
 				}
+				pTarget->SetTransform(D2D1::Matrix3x2F::Identity());
 				if(pTarget->EndDraw() == D2DERR_RECREATE_TARGET)
 				{
 					m_pArtwork.Reset();
+					m_pHeroGradient.Reset();
 					m_pTarget.Reset();
 				}
 			}
@@ -416,39 +598,24 @@ namespace
 			const float Height = (Item.rc.bottom - Item.rc.top) * 96.0f / m_Dpi;
 			const float CenterY = Height * 0.5f;
 			const auto State = SendMessageW(Control, BM_GETSTATE, 0, 0);
-			const bool Checked = SendMessageW(Control, BM_GETCHECK, 0, 0) == BST_CHECKED;
 			const bool Disabled = !IsWindowEnabled(Control);
-			const bool Pressed = !Disabled && (State & BST_PUSHED) != 0;
-			const bool Hover = !Disabled && m_HoverButton == Control;
+			const float Press = Disabled ? 0.0f : std::clamp(ControlFeedback(Control, true), 0.0f, 1.0f);
+			const float Hover = Disabled ? 0.0f : std::clamp(ControlFeedback(Control, false), 0.0f, 1.0f);
+			const float Check = std::clamp(m_Check.Value(), 0.0f, 1.0f);
 			const bool Focus = (State & BST_FOCUS) != 0 && (SendMessageW(Control, WM_QUERYUISTATE, 0, 0) & UISF_HIDEFOCUS) == 0;
-			const UINT32 CheckColor = Accent(Pressed, Hover);
+			const UINT32 CheckColor = Blend(Blend(Accent(), Accent(false, true), Hover), Accent(true), Press);
 			wchar_t aCaption[128]{};
 			GetWindowTextW(Control, aCaption, 128);
 			pTarget->BeginDraw();
 			pTarget->Clear(Color(Background()));
-			if(Hover || Pressed)
-				Fill(pTarget, {1, 1, Width - 1, Height - 1}, m_Dark ? 0x382530 : 0xFCEBF1, 7);
-			const D2D1_RECT_F Box{4, CenterY - 10, 24, CenterY + 10};
-			Fill(pTarget, Box, Disabled ? Border() : Checked ? CheckColor :
-							 m_Dark          ? 0x2C2029 :
-									   0xFFFFFF,
-				4);
-			Stroke(pTarget, Box, Disabled ? Border() : Checked || Hover ? CheckColor :
-							   m_Dark                   ? 0xA17A8C :
-										      0xB18A9A,
-				4);
-			if(Checked)
-			{
-				ComPtr<ID2D1SolidColorBrush> pBrush;
-				if(SUCCEEDED(pTarget->CreateSolidColorBrush(Color(Disabled ? Muted() : 0xFFFFFF), &pBrush)))
-				{
-					pTarget->DrawLine({8, CenterY}, {12, CenterY + 4}, pBrush.Get(), 2.0f);
-					pTarget->DrawLine({12, CenterY + 4}, {20, CenterY - 4}, pBrush.Get(), 2.0f);
-				}
-			}
-			Text(pTarget, aCaption, {34, 0, Width - 4, Height}, 14, Disabled ? Muted() : Foreground(), false, false, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+			Fill(pTarget, {1, 1, Width - 1, Height - 1}, ContentColor(Blend(Background(), m_Dark ? 0x382530 : 0xFCEBF1, std::max(Hover, Press))), 8);
+			const D2D1_RECT_F Box{4 + Press, CenterY - 10 + Press, 24 - Press, CenterY + 10 - Press};
+			Fill(pTarget, Box, ContentColor(Disabled ? Border() : Blend(m_Dark ? 0x2C2029 : 0xFFFFFF, CheckColor, Check)), 5);
+			Stroke(pTarget, Box, ContentColor(Disabled ? Border() : Blend(m_Dark ? 0xA17A8C : 0xB18A9A, CheckColor, std::max(Check, Hover))), 5);
+			Checkmark(pTarget, {14, CenterY}, 20 - Press * 2, ContentColor(Disabled ? Muted() : 0xFFFFFF), Check);
+			Text(pTarget, aCaption, {36, 0, Width - 4, Height}, 14, ContentColor(Disabled ? Muted() : Foreground()), false, false, DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 			if(Focus)
-				Stroke(pTarget, {1, 1, Width - 1, Height - 1}, FocusColor(), 7);
+				Stroke(pTarget, {1, 1, Width - 1, Height - 1}, ContentColor(FocusColor()), 8);
 			const HRESULT Result = pTarget->EndDraw();
 			if(Result == D2DERR_RECREATE_TARGET)
 				m_pControlTarget.Reset();
@@ -463,25 +630,23 @@ namespace
 			const float Width = (Item.rcItem.right - Item.rcItem.left) * 96.0f / m_Dpi;
 			const float Height = (Item.rcItem.bottom - Item.rcItem.top) * 96.0f / m_Dpi;
 			const bool Primary = Item.CtlID == IDOK;
-			const bool Pressed = (Item.itemState & ODS_SELECTED) != 0;
 			const bool Disabled = (Item.itemState & ODS_DISABLED) != 0;
-			const bool Hover = !Disabled && m_HoverButton == Item.hwndItem;
+			const float Press = Disabled ? 0.0f : std::clamp(ControlFeedback(Item.hwndItem, true), 0.0f, 1.0f);
+			const float Hover = Disabled ? 0.0f : std::clamp(ControlFeedback(Item.hwndItem, false), 0.0f, 1.0f);
 			wchar_t aCaption[128]{};
 			GetWindowTextW(Item.hwndItem, aCaption, 128);
 			pTarget->BeginDraw();
 			pTarget->Clear(Color(Background()));
-			const UINT32 ButtonColor = Primary ? Accent(Pressed, Hover) :
-						   Pressed ? Border() :
-						   Hover   ? (m_Dark ? 0x382530 : 0xFCEBF1) :
-							     Background();
-			Fill(pTarget, {1, 1, Width - 1, Height - 1}, ButtonColor, 9);
+			const UINT32 ButtonColor = Primary ? Blend(Blend(Accent(), Accent(false, true), Hover), Accent(true), Press) : Blend(Blend(Background(), m_Dark ? 0x382530 : 0xFCEBF1, Hover), Border(), Press);
+			const D2D1_RECT_F Face{1 + Press, 1 + Press, Width - 1 - Press, Height - 1 - Press};
+			Fill(pTarget, Face, ContentColor(Disabled ? Border() : ButtonColor), 12);
 			if(!Primary)
-				Stroke(pTarget, {1, 1, Width - 1, Height - 1}, Border(), 9);
-			Text(pTarget, aCaption, {5, 1, Width - 5, Height - 1}, 14, Disabled ? Muted() : Primary ? 0xFFFFFF :
-														  Foreground(),
+				Stroke(pTarget, Face, ContentColor(Border()), 12);
+			Text(pTarget, aCaption, {5, 1 + Press, Width - 5, Height - 1 + Press}, 14, ContentColor(Disabled ? Muted() : Primary ? 0xFFFFFF :
+																	       Foreground()),
 				Primary, true);
-			if(Item.itemState & ODS_FOCUS)
-				Stroke(pTarget, {4, 4, Width - 4, Height - 4}, Primary ? 0xFFE0EB : FocusColor(), 6);
+			if((Item.itemState & ODS_FOCUS) && !(Item.itemState & ODS_NOFOCUSRECT))
+				Stroke(pTarget, {4 + Press, 4 + Press, Width - 4 - Press, Height - 4 - Press}, ContentColor(Primary ? 0xFFE0EB : FocusColor()), 9);
 			if(pTarget->EndDraw() == D2DERR_RECREATE_TARGET)
 				m_pControlTarget.Reset();
 		}
@@ -493,7 +658,15 @@ namespace
 			case WM_PAINT: Paint(); return 0;
 			case WM_ERASEBKGND: return 1;
 			case WM_COMMAND:
-				if(HIWORD(WParam) == BN_CLICKED)
+				if(LOWORD(WParam) == ID_DIRECTORY && (HIWORD(WParam) == EN_SETFOCUS || HIWORD(WParam) == EN_KILLFOCUS))
+					InvalidateRect(m_Window, nullptr, FALSE);
+				else if(LOWORD(WParam) == ID_DESKTOP && HIWORD(WParam) == BN_CLICKED)
+				{
+					m_Check.SetTarget(SendMessageW(m_Desktop, BM_GETCHECK, 0, 0) == BST_CHECKED ? 1.0f : 0.0f, m_Animations, 0.18f);
+					InvalidateRect(m_Desktop, nullptr, FALSE);
+					UpdateAnimationTimer();
+				}
+				else if(HIWORD(WParam) == BN_CLICKED)
 					Activate(LOWORD(WParam));
 				return 0;
 			case WM_DRAWITEM: DrawButton(*reinterpret_cast<DRAWITEMSTRUCT *>(LParam)); return TRUE;
@@ -513,7 +686,7 @@ namespace
 			case WM_CTLCOLORSTATIC:
 			case WM_CTLCOLORBTN:
 			{
-				const auto Fg = Foreground();
+				const auto Fg = ContentColor(reinterpret_cast<HWND>(LParam) == m_Status && m_Page != EPage::FAILED ? Muted() : Foreground());
 				const auto Bg = Background();
 				SetTextColor(reinterpret_cast<HDC>(WParam), RGB((Fg >> 16) & 255, (Fg >> 8) & 255, Fg & 255));
 				SetBkColor(reinterpret_cast<HDC>(WParam), RGB((Bg >> 16) & 255, (Bg >> 8) & 255, Bg & 255));
@@ -533,11 +706,42 @@ namespace
 			case WM_SIZE:
 				if(m_pTarget && WParam != SIZE_MINIMIZED)
 					m_pTarget->Resize(D2D1::SizeU(LOWORD(LParam), HIWORD(LParam)));
+				UpdateAnimationTimer();
 				return 0;
 			case WM_TIMER:
-				m_ShownProgress += (m_Progress - m_ShownProgress) * 0.2f;
-				InvalidateRect(m_Window, nullptr, FALSE);
+			{
+				if(WParam != 2)
+					return 0;
+				const auto Now = std::chrono::steady_clock::now();
+				const float Seconds = std::chrono::duration<float>(Now - m_LastFrame).count();
+				m_LastFrame = Now;
+				const bool Reveal = m_Reveal.Active();
+				const bool Check = m_Check.Active();
+				const bool Main = Reveal || m_Intro.Active() || m_VisualProgress.Active() || (m_Page == EPage::INSTALLING && m_Progress == 0.0f);
+				m_Intro.Advance(Seconds);
+				m_Reveal.Advance(Seconds);
+				m_VisualProgress.Advance(Seconds);
+				m_Check.Advance(Seconds);
+				for(auto &Feedback : m_aFeedback)
+				{
+					const bool Changed = Feedback.m_Hover.Active() || Feedback.m_Press.Active();
+					Feedback.m_Hover.Advance(Seconds);
+					Feedback.m_Press.Advance(Seconds);
+					if(Changed)
+						InvalidateRect(Feedback.m_Window, nullptr, FALSE);
+				}
+				if(Reveal)
+				{
+					PlaceContent();
+					RedrawWindow(m_Window, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
+				}
+				else if(Main)
+					InvalidateRect(m_Window, nullptr, FALSE);
+				if(Check)
+					InvalidateRect(m_Desktop, nullptr, FALSE);
+				UpdateAnimationTimer();
 				return 0;
+			}
 			case QmSetup::WM_ENGINE_READY:
 				if(m_Page == EPage::INSTALLING)
 				{
@@ -548,13 +752,17 @@ namespace
 				return 0;
 			case QmSetup::WM_ENGINE_PROGRESS:
 				if(m_Page == EPage::INSTALLING && LParam > 0)
+				{
 					m_Progress = std::clamp(static_cast<float>(WParam) / static_cast<float>(LParam), 0.0f, 0.99f);
+					m_VisualProgress.SetTarget(m_Progress, m_Animations, 0.24f);
+					UpdateAnimationTimer();
+					InvalidateRect(m_Window, nullptr, FALSE);
+				}
 				return 0;
 			case QmSetup::WM_ENGINE_DONE:
 				if(m_Page == EPage::INSTALLING && m_pEngine)
 				{
 					m_pEngine->Join();
-					KillTimer(m_Window, 1);
 					m_EngineWindow = nullptr;
 					m_ExitCode = static_cast<DWORD>(WParam);
 					m_Error = m_pEngine->Error();
@@ -565,7 +773,11 @@ namespace
 				return 0;
 			case WM_CLOSE: Close(); return 0;
 			case WM_QUERYENDSESSION: return m_Page != EPage::INSTALLING;
-			case WM_DESTROY: PostQuitMessage(static_cast<int>(m_ExitCode)); return 0;
+			case WM_DESTROY:
+				KillTimer(m_Window, 2);
+				m_TimerRunning = false;
+				PostQuitMessage(static_cast<int>(m_ExitCode));
+				return 0;
 			default: return DefWindowProcW(m_Window, Message, WParam, LParam);
 			}
 		}
@@ -585,24 +797,52 @@ namespace
 		static LRESULT CALLBACK ButtonProc(HWND Window, UINT Message, WPARAM WParam, LPARAM LParam, UINT_PTR, DWORD_PTR Data)
 		{
 			auto *pSelf = reinterpret_cast<CSetupWindow *>(Data);
-			if(Message == WM_MOUSEMOVE && pSelf->m_HoverButton != Window)
-			{
-				if(pSelf->m_HoverButton)
-					InvalidateRect(pSelf->m_HoverButton, nullptr, FALSE);
-				pSelf->m_HoverButton = Window;
-				TRACKMOUSEEVENT Track{sizeof(Track), TME_LEAVE, Window, 0};
-				TrackMouseEvent(&Track);
-				InvalidateRect(Window, nullptr, FALSE);
-			}
-			else if(Message == WM_MOUSELEAVE || Message == WM_NCDESTROY)
+			if(Message == WM_NCDESTROY)
 			{
 				if(pSelf->m_HoverButton == Window)
 					pSelf->m_HoverButton = nullptr;
-				InvalidateRect(Window, nullptr, FALSE);
-				if(Message == WM_NCDESTROY)
-					RemoveWindowSubclass(Window, ButtonProc, 1);
+				RemoveWindowSubclass(Window, ButtonProc, 1);
+				return DefSubclassProc(Window, Message, WParam, LParam);
 			}
-			return DefSubclassProc(Window, Message, WParam, LParam);
+			if(Message == WM_MOUSEMOVE && pSelf->m_HoverButton != Window)
+			{
+				if(pSelf->m_HoverButton)
+					pSelf->UpdateControlFeedback(pSelf->m_HoverButton, false, false);
+				pSelf->m_HoverButton = Window;
+				TRACKMOUSEEVENT Track{sizeof(Track), TME_LEAVE, Window, 0};
+				TrackMouseEvent(&Track);
+			}
+			else if(Message == WM_MOUSELEAVE)
+			{
+				if(pSelf->m_HoverButton == Window)
+					pSelf->m_HoverButton = nullptr;
+			}
+			const LRESULT Result = DefSubclassProc(Window, Message, WParam, LParam);
+			if(!IsWindow(Window))
+				return Result;
+			switch(Message)
+			{
+			case WM_MOUSEMOVE:
+			case WM_MOUSELEAVE:
+			case WM_LBUTTONDOWN:
+			case WM_LBUTTONUP:
+			case WM_KEYDOWN:
+			case WM_KEYUP:
+			case WM_CAPTURECHANGED:
+			case WM_ENABLE:
+			case BM_SETSTATE:
+				pSelf->UpdateControlFeedback(Window, IsWindowEnabled(Window) && pSelf->m_HoverButton == Window, IsWindowEnabled(Window) && (SendMessageW(Window, BM_GETSTATE, 0, 0) & BST_PUSHED) != 0);
+				break;
+			case BM_SETCHECK:
+				if(Window == pSelf->m_Desktop)
+				{
+					pSelf->m_Check.SetTarget(SendMessageW(Window, BM_GETCHECK, 0, 0) == BST_CHECKED ? 1.0f : 0.0f, pSelf->m_Animations, 0.18f);
+					pSelf->UpdateAnimationTimer();
+					InvalidateRect(Window, nullptr, FALSE);
+				}
+				break;
+			}
+			return Result;
 		}
 
 	public:
@@ -623,6 +863,7 @@ namespace
 				MessageBoxW(nullptr, L"无法初始化安装界面。", L"QmClient", MB_OK | MB_ICONERROR);
 				return 1;
 			}
+			m_pFactory->CreateStrokeStyle(D2D1::StrokeStyleProperties(D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_ROUND, D2D1_LINE_JOIN_ROUND), nullptr, 0, &m_pRoundStroke);
 			bool DesktopIcon = false;
 			// 当前内核使用 PrivilegesRequired=lowest，只读取当前用户的安装记录。
 			for(const REGSAM View : {KEY_WOW64_64KEY, KEY_WOW64_32KEY})
@@ -684,13 +925,14 @@ namespace
 			auto Button = [&](int Id, const wchar_t *pLabel, DWORD ButtonStyle) {
 				return CreateWindowExW(0, L"BUTTON", pLabel, ControlStyle | ButtonStyle, 0, 0, 0, 0, m_Window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(Id)), Instance, nullptr);
 			};
-			m_Edit = CreateWindowExW(0, L"EDIT", m_Directory.c_str(), ControlStyle | ES_AUTOHSCROLL, 0, 0, 0, 0, m_Window, reinterpret_cast<HMENU>(ID_DIRECTORY), Instance, nullptr);
+			m_Edit = CreateWindowExW(0, L"EDIT", m_Directory.c_str(), ControlStyle | ES_AUTOHSCROLL, 0, 0, 0, 0, m_Window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_DIRECTORY)), Instance, nullptr);
 			SendMessageW(m_Edit, EM_LIMITTEXT, 32760, 0);
 			m_Browse = Button(ID_BROWSE, L"浏览…", BS_OWNERDRAW);
 			m_Desktop = Button(ID_DESKTOP, L"创建桌面快捷方式", BS_AUTOCHECKBOX);
 			// 保留原生勾选、键盘与可访问性语义，通过自定义绘制统一外观。
 			SetWindowTheme(m_Desktop, L"Explorer", nullptr);
 			SendMessageW(m_Desktop, BM_SETCHECK, DesktopIcon ? BST_CHECKED : BST_UNCHECKED, 0);
+			m_Check.Snap(DesktopIcon ? 1.0f : 0.0f);
 			m_Primary = Button(IDOK, L"开始安装", BS_OWNERDRAW);
 			m_Secondary = Button(IDCANCEL, L"取消", BS_OWNERDRAW);
 			m_LogButton = Button(ID_LOG, L"查看安装日志", BS_OWNERDRAW);
@@ -700,9 +942,14 @@ namespace
 				DestroyWindow(m_Window);
 				return 1;
 			}
+			size_t FeedbackIndex = 0;
 			for(const HWND ButtonWindow : {m_Browse, m_Desktop, m_Primary, m_Secondary, m_LogButton})
+			{
+				m_aFeedback[FeedbackIndex++].m_Window = ButtonWindow;
 				SetWindowSubclass(ButtonWindow, ButtonProc, 1, reinterpret_cast<DWORD_PTR>(this));
+			}
 			Layout();
+			m_Intro.SetTarget(1.0f, m_Animations, 0.40f);
 			ShowPage(EPage::OPTIONS);
 			ShowWindow(m_Window, Show);
 			MSG Message{};

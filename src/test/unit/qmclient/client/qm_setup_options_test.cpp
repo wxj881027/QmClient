@@ -66,6 +66,9 @@ TEST(QmSetupArguments, QuotesWhitespaceAndTrailingDirectorySeparator)
 
 TEST(QmSetupArguments, EscapesEmbeddedQuotesWithoutChangingOrdinarySlashes)
 {
-	EXPECT_EQ(QmSetup::QuoteArgument(LR"(a\"b)"), LR"("a\\\"b")");
+	// 原始字符串先交给编译器解析，避免 MSVC 传统预处理器在断言宏内误读引号。
+	const std::wstring Argument = LR"(a\"b)";
+	const std::wstring Expected = LR"("a\\\"b")";
+	EXPECT_EQ(QmSetup::QuoteArgument(Argument), Expected);
 	EXPECT_EQ(QmSetup::CommandLine({L"/DIR=D:\\游戏 客户端", L"/NORESTART"}), L"\"/DIR=D:\\游戏 客户端\" \"/NORESTART\"");
 }
