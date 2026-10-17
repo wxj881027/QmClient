@@ -482,7 +482,8 @@ private:
 		size_t m_Height;
 	};
 	std::vector<SQmPendingGlyphUpload> m_avQmPendingGlyphUploads[NUM_FONT_TEXTURES];
-	int m_QmPendingGlyphUploadCount = 0;
+	bool m_aQmFullGlyphUploadPending[NUM_FONT_TEXTURES] = {};
+	bool m_QmGlyphUploadFailed = false;
 	int m_QmPerfGlyphUploadBatches = 0;
 	double m_QmPerfGlyphUploadBatchMs = 0.0;
 
@@ -677,44 +678,84 @@ private:
 		return OutlineThickness;
 	}
 
-	void UploadGlyph(int TextureIndex, int PosX, int PosY, size_t Width, size_t Height, uint8_t *pData)
+	void UploadGlyph(int TextureIndex, int PosX, int PosY, size_t Width, size_t Height, const uint8_t *pData)
 	{
 		const auto UploadStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
 		for(size_t y = 0; y < Height; ++y)
 		{
 			mem_copy(&m_apTextureData[TextureIndex][PosX + ((y + PosY) * m_TextureDimension)], &pData[y * Width], Width);
 		}
-		// QmClient: 延迟上传——只写 CPU 图集并记录脏区，渲染前由
-		// FlushPendingGlyphUploads 合并提交；调用方的临时缓冲至此消费完毕，
-		// 原实现通过 UpdateTextTexture(IsMovedPointer) 移交所有权，此处直接释放。
-		// 恢复期间下一次上传会复制完整 CPU 图集，不积累无效纹理的增量命令。
-		if(TexturesReady())
+		// 临时像素由调用方持有；恢复期间完整图集上传会包含这些新字形。
+		if(TexturesReady() && !m_aQmFullGlyphUploadPending[TextureIndex])
 		{
-			m_avQmPendingGlyphUploads[TextureIndex].push_back({PosX, PosY, Width, Height});
-			++m_QmPendingGlyphUploadCount;
+			try
+			{
+				m_avQmPendingGlyphUploads[TextureIndex].push_back({PosX, PosY, Width, Height});
+			}
+			catch(const std::bad_alloc &)
+			{
+				// 记录区域失败时保留 CPU 像素，改为整张重传；此退路不再分配内存。
+				m_aQmFullGlyphUploadPending[TextureIndex] = true;
+				m_avQmPendingGlyphUploads[TextureIndex].clear();
+			}
 		}
-		free(pData);
 		if(!QmPerfEnabled())
 			return;
 		++m_QmPerfGlyphUploads;
 		m_QmPerfGlyphUploadMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - UploadStart).count();
 	}
 
-public:
-	// QmClient: 把积累的字形脏区按行带（Y 区间重叠的相邻区域）合并为少量外接
-	// 矩形提交。必须在任何采样字形纹理的渲染（RenderTextContainer）之前调用；
-	// 脏区为空时零成本。合并后的矩形可能覆盖未使用的图集空隙（内容为 0），
-	// 重传与 GPU 现状一致，无副作用。
-	void FlushPendingGlyphUploads()
+	bool UploadGlyphRegion(size_t TextureIndex, int X, int Y, size_t Width, size_t Height)
 	{
-		if(!TexturesReady() || m_QmPendingGlyphUploadCount == 0)
-			return;
+		// 异步命令持有独立副本，避免后续字形覆写尚未消费的像素。
+		std::unique_ptr<uint8_t, decltype(&free)> pCopy(static_cast<uint8_t *>(malloc(Width * Height)), free);
+		if(pCopy == nullptr)
+		{
+			log_error("textrender", "Failed to allocate merged glyph upload buffer (%" PRIzu "x%" PRIzu ").", Width, Height);
+			return false;
+		}
+		for(size_t Row = 0; Row < Height; ++Row)
+			mem_copy(pCopy.get() + Row * Width, &m_apTextureData[TextureIndex][(Y + Row) * m_TextureDimension + X], Width);
+		try
+		{
+			// moved 模式在成功、失败和异常路径上都由图形接口接管。
+			return Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], X, Y, Width, Height, pCopy.release(), true);
+		}
+		catch(const std::exception &Error)
+		{
+			log_error("textrender", "Failed to queue glyph update: %s", Error.what());
+			return false;
+		}
+	}
+
+public:
+	// 合并重叠的行带；只移除前端已接收的区域，失败内容留到帧末重试。
+	// 同帧后续标签直接停绘，避免每个标签重复分配失败的上传缓冲。
+	bool FlushPendingGlyphUploads(bool Retry = false)
+	{
+		if(!TexturesReady() || (m_QmGlyphUploadFailed && !Retry))
+			return false;
+		bool HasPending = false;
+		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
+			HasPending |= m_aQmFullGlyphUploadPending[TextureIndex] || !m_avQmPendingGlyphUploads[TextureIndex].empty();
+		if(!HasPending)
+			return true;
+		m_QmGlyphUploadFailed = false;
 		const auto FlushStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
 		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
 		{
 			auto &vRegions = m_avQmPendingGlyphUploads[TextureIndex];
-			if(vRegions.empty())
+			if(m_aQmFullGlyphUploadPending[TextureIndex])
+			{
+				if(UploadGlyphRegion(TextureIndex, 0, 0, m_TextureDimension, m_TextureDimension))
+				{
+					m_aQmFullGlyphUploadPending[TextureIndex] = false;
+					vRegions.clear();
+				}
+				else
+					m_QmGlyphUploadFailed = true;
 				continue;
+			}
 			std::sort(vRegions.begin(), vRegions.end(), [](const SQmPendingGlyphUpload &a, const SQmPendingGlyphUpload &b) {
 				return a.m_Y < b.m_Y || (a.m_Y == b.m_Y && a.m_X < b.m_X);
 			});
@@ -733,42 +774,32 @@ public:
 					MaxX = std::max(MaxX, vRegions[MergeIndex].m_X + static_cast<int>(vRegions[MergeIndex].m_Width));
 					++MergeIndex;
 				}
-				const size_t Width = static_cast<size_t>(MaxX - MinX);
-				const size_t Height = static_cast<size_t>(BandY1 - BandY0);
-				// 数据必须从 CPU 图集拷出：图集内存随后会被新字形继续覆写，
-				// 而纹理更新命令是异步交给渲染线程执行的。
-				uint8_t *pCopy = static_cast<uint8_t *>(malloc(Width * Height));
-				if(pCopy != nullptr)
+				if(!UploadGlyphRegion(TextureIndex, MinX, BandY0, MaxX - MinX, BandY1 - BandY0))
 				{
-					for(size_t y = 0; y < Height; ++y)
-					{
-						mem_copy(&pCopy[y * Width], &m_apTextureData[TextureIndex][(BandY0 + static_cast<int>(y)) * m_TextureDimension + MinX], Width);
-					}
-					Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], MinX, BandY0, Width, Height, pCopy, true);
-				}
-				else
-				{
-					log_error("textrender", "Failed to allocate merged glyph upload buffer (%" PRIzu "x%" PRIzu ").", Width, Height);
+					m_QmGlyphUploadFailed = true;
+					break;
 				}
 				Index = MergeIndex;
 			}
-			vRegions.clear();
+			vRegions.erase(vRegions.begin(), vRegions.begin() + Index);
 		}
-		m_QmPendingGlyphUploadCount = 0;
 		if(QmPerfEnabled())
 		{
 			++m_QmPerfGlyphUploadBatches;
 			m_QmPerfGlyphUploadBatchMs += std::chrono::duration<double, std::milli>(time_get_nanoseconds() - FlushStart).count();
 		}
+		return !m_QmGlyphUploadFailed;
 	}
 
-	// QmClient: 图集重置（Clear/扩容）后 CPU 图集已全量重传，积累的脏区坐标
-	// 不再有意义，必须丢弃以免重传过期区域。
+	// 全量重建或设备撤销后，由当前 CPU 图集重新建立同步状态。
 	void DiscardPendingGlyphUploads()
 	{
-		for(auto &vRegions : m_avQmPendingGlyphUploads)
-			vRegions.clear();
-		m_QmPendingGlyphUploadCount = 0;
+		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
+		{
+			m_avQmPendingGlyphUploads[TextureIndex].clear();
+			m_aQmFullGlyphUploadPending[TextureIndex] = false;
+		}
+		m_QmGlyphUploadFailed = false;
 	}
 
 private:
@@ -849,28 +880,26 @@ private:
 
 			// prepare glyph data
 			const size_t GlyphDataSize = (size_t)Width * Height * sizeof(uint8_t);
-			uint8_t *pGlyphDataFill = static_cast<uint8_t *>(malloc(GlyphDataSize));
-			uint8_t *pGlyphDataOutline = static_cast<uint8_t *>(malloc(GlyphDataSize));
+			std::unique_ptr<uint8_t, decltype(&free)> pGlyphDataFill(static_cast<uint8_t *>(malloc(GlyphDataSize)), free);
+			std::unique_ptr<uint8_t, decltype(&free)> pGlyphDataOutline(static_cast<uint8_t *>(malloc(GlyphDataSize)), free);
 			if(pGlyphDataFill == nullptr || pGlyphDataOutline == nullptr)
 			{
-				free(pGlyphDataFill);
-				free(pGlyphDataOutline);
 				log_debug("textrender", "Failed to allocate glyph data. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
 				return false;
 			}
-			mem_zero(pGlyphDataFill, GlyphDataSize);
+			mem_zero(pGlyphDataFill.get(), GlyphDataSize);
 			for(unsigned py = 0; py < pBitmap->rows; ++py)
 			{
-				mem_copy(&pGlyphDataFill[(py + y) * Width + x], &pBitmap->buffer[py * pBitmap->width], pBitmap->width);
+				mem_copy(pGlyphDataFill.get() + (py + y) * Width + x, &pBitmap->buffer[py * pBitmap->width], pBitmap->width);
 			}
 			if(Glyph.m_Nameplate)
-				QmGrowGlyphOutlineContinuous(pGlyphDataFill, pGlyphDataOutline, Width, Height, OutlineRadius);
+				QmGrowGlyphOutlineContinuous(pGlyphDataFill.get(), pGlyphDataOutline.get(), Width, Height, OutlineRadius);
 			else
-				QmGrowGlyphOutline(pGlyphDataFill, pGlyphDataOutline, Width, Height, OutlineThickness);
+				QmGrowGlyphOutline(pGlyphDataFill.get(), pGlyphDataOutline.get(), Width, Height, OutlineThickness);
 
 			// upload the glyph
-			UploadGlyph(FONT_TEXTURE_FILL, X, Y, Width, Height, pGlyphDataFill);
-			UploadGlyph(FONT_TEXTURE_OUTLINE, X, Y, Width, Height, pGlyphDataOutline);
+			UploadGlyph(FONT_TEXTURE_FILL, X, Y, Width, Height, pGlyphDataFill.get());
+			UploadGlyph(FONT_TEXTURE_OUTLINE, X, Y, Width, Height, pGlyphDataOutline.get());
 		}
 		if(QmPerfEnabled())
 		{
@@ -1325,11 +1354,11 @@ public:
 	{
 		// 已有容器的 UV 随图集清空失效，即使其索引和文字内容仍然有效。
 		++*m_pGlyphAtlasRevision;
+		DiscardPendingGlyphUploads();
 		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
 		{
 			mem_zero(m_apTextureData[TextureIndex].get(), m_TextureDimension * m_TextureDimension * sizeof(uint8_t));
-			if(TexturesReady())
-				Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], 0, 0, m_TextureDimension, m_TextureDimension, m_apTextureData[TextureIndex].get(), false);
+			m_aQmFullGlyphUploadPending[TextureIndex] = TexturesReady();
 		}
 
 		m_TextureAtlas.Clear(m_TextureDimension);
@@ -1341,8 +1370,8 @@ public:
 		m_QmNameplateFrameRasterizeMs = 0.0;
 		m_GlyphLookupCache.Reset();
 		InvalidateFacePixelSizeCache();
-		// CPU 图集已清空；已有纹理立即更新，恢复中的纹理等待全量上传。
-		DiscardPendingGlyphUploads();
+		// 清空失败同样需要重试，避免新字形采样到旧图集像素。
+		FlushPendingGlyphUploads();
 	}
 
 	// QmClient: 记录/消费“最近缺失字形”。预热集合与缓存无关，字体图集重建（语言切换）
@@ -1892,8 +1921,8 @@ class CTextRender : public IEngineTextRender
 		UpdateSystemFontScan();
 
 		// QmClient: 帧末兜底提交——本帧只构建未渲染时（如菜单预构建）脏区
-		// 不残留到下一帧；先 flush 再消费统计，帧成本统计包含合批提交。
-		m_pGlyphMap->FlushPendingGlyphUploads();
+		// 失败区域每帧末重试一次；先提交再消费统计，包含合批提交成本。
+		m_pGlyphMap->FlushPendingGlyphUploads(true);
 
 		int FrameGlyphNew = 0;
 		int FrameGlyphUploads = 0;
@@ -4108,7 +4137,8 @@ public:
 			return;
 		// QmClient: 渲染采样字形纹理前，把本帧积累的字形上传合并提交；
 		// 唯一渲染入口（特效多 pass 也经此函数），脏区为空时零成本。
-		m_pGlyphMap->FlushPendingGlyphUploads();
+		if(!m_pGlyphMap->FlushPendingGlyphUploads())
+			return;
 		STextContainer &TextContainer = GetTextContainer(TextContainerIndex);
 
 		if(!TextContainer.m_StringInfo.m_vCharacterQuads.empty())
@@ -4305,7 +4335,8 @@ public:
 		if(m_vTextSweepQuads.empty())
 			return;
 
-		m_pGlyphMap->FlushPendingGlyphUploads();
+		if(!m_pGlyphMap->FlushPendingGlyphUploads())
+			return;
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 		const vec2 Offset = AlignTextContainerOffset(TextContainer, vec2(X, Y), ScreenX1 - ScreenX0, ScreenY1 - ScreenY0);
