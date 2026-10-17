@@ -561,7 +561,9 @@ bool CRClientVoice::EnsureAudio()
 		}
 		m_EncoderReady.store(true);
 		ClearDiagnosticLogMessage(m_aEncoderErrorLog);
-		VoiceUtils::ComputeVoiceEncoderTargetsWithComplexity(0, 0.0f, g_Config.m_QmVoiceBitrateProfile, &m_EncBitrate, &m_EncLossPerc, &m_EncFec, &m_EncComplexity);
+		SRClientVoiceConfigSnapshot Config;
+		GetConfigSnapshot(Config);
+		VoiceUtils::ComputeVoiceEncoderTargetsWithComplexity(0, 0.0f, Config.m_QmVoiceBitrateProfile, &m_EncBitrate, &m_EncLossPerc, &m_EncFec, &m_EncComplexity);
 		m_LastEncUpdate = 0;
 		opus_encoder_ctl(m_pEncoder, OPUS_SET_BITRATE(m_EncBitrate));
 		opus_encoder_ctl(m_pEncoder, OPUS_SET_PACKET_LOSS_PERC(m_EncLossPerc));
@@ -2232,6 +2234,9 @@ void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 				int QueuedFrames = 0;
 				if(m_pPeers)
 				{
+					// 播放回调也会更新帧计数，诊断读取沿用同一音频流锁。
+					if(m_pOutputStream)
+						SDL_LockAudioStream(m_pOutputStream);
 					for(const auto &Peer : *m_pPeers)
 					{
 						if(Peer.m_QueuedPackets > 0 || Peer.m_FrameCount > 0)
@@ -2239,6 +2244,8 @@ void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 						QueuedPackets += Peer.m_QueuedPackets;
 						QueuedFrames += Peer.m_FrameCount;
 					}
+					if(m_pOutputStream)
+						SDL_UnlockAudioStream(m_pOutputStream);
 				}
 
 				SRClientVoiceConfigSnapshot StateConfig;

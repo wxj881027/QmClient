@@ -216,8 +216,8 @@ class CRClientVoice
 	std::atomic<bool> m_TransportReady = false;
 	std::atomic<bool> m_TransportConnecting = false;
 	// Connection runtime state: last successful transport activity and keepalive.
-	int64_t m_LastPingSentTime = 0;
-	uint16_t m_LastPingSeq = 0;
+	std::atomic<int64_t> m_LastPingSentTime = 0;
+	std::atomic<uint16_t> m_LastPingSeq = 0;
 	std::unique_ptr<std::array<SVoicePeer, MAX_CLIENTS>> m_pPeers;
 	std::vector<int32_t> m_MixBuffer;
 	std::array<std::atomic<int64_t>, MAX_CLIENTS> m_aLastHeard = {};
@@ -236,7 +236,7 @@ class CRClientVoice
 	std::atomic<uint16_t> m_Sequence = 0;
 	std::atomic<uint32_t> m_ContextHash = 0;
 	int64_t m_LastKeepalive = 0;
-	uint32_t m_LastTokenHashSent = 0;
+	std::atomic<uint32_t> m_LastTokenHashSent = 0;
 
 	// Debug counters (worker thread only)
 	int64_t m_TxLastLog = 0;
