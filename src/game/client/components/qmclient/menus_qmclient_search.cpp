@@ -297,6 +297,11 @@ void CMenus::RenderSettingsGlobalSearchContent(CUIRect MainView, bool PrewarmOnl
 	// 两种状态间的过渡沿用卡组让位动画的时长与缓动。
 	static CButtonContainer s_GlobalSearchInputCollapseButton;
 	static bool s_GlobalSearchInputCollapsed = false;
+	// 进入「搜索」页时先展开输入卡片再聚焦：折叠态会让下面的一次性标志被静默丢弃，
+	// 而折叠状态既不持久化也没有复位点，点过一次折叠箭头后自动聚焦就永久失效。
+	// 回退 PR #425 时丢掉了这段展开逻辑，只留下带折叠判据的消费分支。
+	if(!ReadOnly && m_FocusSettingsSearchOnEntry)
+		s_GlobalSearchInputCollapsed = false;
 	const float InputContentHeight = s_GlobalSearchInputCollapsed ? 0.0f : 2.0f * LineHeight + LineSpacing;
 	const SSettingsCardSpec InputSpec{"deck:global-search-input", Localize("Feature Search"), qm_card_registry::ResolveLocalizedDescription("deck:global-search-input")};
 	const float InputChromeHeight = BuildSettingsCardFrame({0.0f, 0.0f, Page.m_ContentViewport.w, 0.0f}, InputSpec, InputContentHeight, UiScale).m_Rect.h;

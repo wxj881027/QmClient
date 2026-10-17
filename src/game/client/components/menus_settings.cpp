@@ -987,6 +987,10 @@ void CMenus::RenderSettings(CUIRect MainView)
 	if(!CollectingMenuTextPlan && !Ui()->MeasurementOnly() && g_Config.m_UiSettingsPage != SETTINGS_TEE && m_SettingsCardDeckDisplayState.EnterView(SettingsDisplayViewKey))
 	{
 		m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
+		// 视图进入即请求自动聚焦：页号比较依赖 s_PrevSettingsPage 这个跨帧静态，
+		// 菜单重新打开时它可能已经是「搜索」，那条分支就不会再置位，聚焦随之中断。
+		if(g_Config.m_UiSettingsPage == SETTINGS_SEARCH)
+			m_FocusSettingsSearchOnEntry = true;
 	}
 
 	if(!CollectingMenuTextPlan)
