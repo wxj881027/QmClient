@@ -570,7 +570,10 @@ TEST_F(QmTextDeviceRecovery, FailedAtlasClearRetriesZeroPixelsInsteadOfDroppingT
 	CaptureUpdates();
 	m_Graphics.m_RejectUpdates = true;
 	const auto Revision = m_pText->GlyphAtlasRevision();
-	m_pText->SetFontLanguageVariant("japanese");
+	// 语言变体切换会清空图集并把两张纹理标记为待全量上传；这里验证这张全尺寸
+	// 更新被设备拒绝后，帧末重试仍然提交完整尺寸，而不是把它当成空更新丢弃。
+	// 参数是生产里传到该接口的键（g_Config.m_ClLanguagefile），不是语言名本身。
+	m_pText->SetFontLanguageVariant("languages/japanese.txt");
 	ASSERT_GT(m_pText->GlyphAtlasRevision(), Revision);
 	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
 	m_Graphics.m_RejectUpdates = false;
@@ -589,7 +592,7 @@ TEST_F(QmTextDeviceRecovery, FailedAtlasClearRetryIncludesGlyphsCreatedBeforeRec
 {
 	CaptureUpdates();
 	m_Graphics.m_RejectUpdates = true;
-	m_pText->SetFontLanguageVariant("japanese");
+	m_pText->SetFontLanguageVariant("languages/japanese.txt");
 	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
 	ASSERT_TRUE(Create("Z"));
 	Draw();
