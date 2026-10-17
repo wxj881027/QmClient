@@ -3,30 +3,65 @@
 
 #include <algorithm>
 
-struct SQmBrowserNameMapLayout
+struct SQmBrowserColumnLayout
 {
-	float m_RightScale;
-	float m_NameWidth;
-	float m_MapWidth;
+	float m_Scale; // 1 = 各列按配置宽度原样渲染；<1 = 溢出，等比收缩
+	float m_NameWidth; // 弹性列（名称）最终宽度
 };
 
-// 固定列先让出名称/地图的最低空间；空间不足时所有宽度保持非负。
-inline SQmBrowserNameMapLayout QmBrowserNameMapLayout(float Width, float RightWidth, float MinNameWidth, float MinMapWidth, float NameShare)
+// 列布局（2026-10-14 重构）：内容列一律按配置的绝对宽度渲染，名称列弹性
+// 吸收剩余空间；没有组缩放——拖某一条宽度柄只影响该列与名称列。仅当
+// 全部列宽（配置宽 + 名称最小宽）超出可用宽度时整体等比收缩（scale < 1）。
+// FixedSum：除名称外全部内容列的配置宽度之和（不含间隙与钉住列）；
+inline SQmBrowserColumnLayout QmBrowserColumnLayout(float Available, float FixedSum, float NameMinWidth)
 {
-	Width = std::max(0.0f, Width);
-	RightWidth = std::max(0.0f, RightWidth);
-	MinNameWidth = std::max(0.0f, MinNameWidth);
-	MinMapWidth = std::max(0.0f, MinMapWidth);
-	const float Minimum = MinNameWidth + MinMapWidth;
-	const float Reserved = std::min(Width, Minimum);
-	const float RightScale = RightWidth > 0.0f ? std::clamp((Width - Reserved) / RightWidth, 0.0f, 1.0f) : 1.0f;
-	const float NameMapWidth = std::max(0.0f, Width - RightWidth * RightScale);
-	const float Split = std::clamp(NameShare, 0.35f, 0.75f);
-	const float NameWidth = NameMapWidth >= Minimum ?
-					MinNameWidth + (NameMapWidth - Minimum) * Split :
-				Minimum > 0.0f ? NameMapWidth * MinNameWidth / Minimum :
-						 NameMapWidth * Split;
-	return {RightScale, NameWidth, NameMapWidth - NameWidth};
+	Available = std::max(0.0f, Available);
+	FixedSum = std::max(0.0f, FixedSum);
+	NameMinWidth = std::max(0.0f, NameMinWidth);
+
+	// 宽裕：固定列原样，名称吸收剩余。
+	if(Available >= FixedSum + NameMinWidth)
+		return {1.0f, Available - FixedSum};
+
+	// 溢出：全部列使用同一比例，配置下限只约束保存值。
+	// 显示时再次逐列钳制下限会突破预算，让末尾列跑出列表。
+	const float Budget = FixedSum + NameMinWidth;
+	const float Scale = Budget > 0.0f ? std::clamp(Available / Budget, 0.0f, 1.0f) : 1.0f;
+	return {Scale, NameMinWidth * Scale};
 }
+
+inline float QmBrowserColumnSqueezedWidth(float ConfiguredWidth, float Scale)
+{
+	return std::max(0.0f, ConfiguredWidth) * Scale;
+}
+
+// 表头共享一次按压的所有权；列边缘命中时调宽优先，直到释放不能换成另一种手势。
+class CQmBrowserHeaderGesture
+{
+	int m_ReorderColumn = -1;
+	int m_ResizeColumn = -1;
+	bool m_ReorderDragged = false;
+
+public:
+	void Begin(int HeaderColumn, int ResizeColumn)
+	{
+		if(m_ReorderColumn >= 0 || m_ResizeColumn >= 0)
+			return;
+		m_ReorderDragged = false;
+		m_ResizeColumn = ResizeColumn;
+		m_ReorderColumn = ResizeColumn >= 0 ? -1 : HeaderColumn;
+	}
+	void End()
+	{
+		m_ReorderColumn = -1;
+		m_ResizeColumn = -1;
+		m_ReorderDragged = false;
+	}
+	void MarkReorderDrag() { m_ReorderDragged |= m_ReorderColumn >= 0; }
+	bool ReorderDragged() const { return m_ReorderDragged; }
+	bool AllowsSort() const { return !m_ReorderDragged && m_ResizeColumn < 0; }
+	int ReorderColumn() const { return m_ReorderColumn; }
+	int ResizeColumn() const { return m_ResizeColumn; }
+};
 
 #endif

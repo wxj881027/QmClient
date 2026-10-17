@@ -32,6 +32,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/animstate.h>
@@ -224,7 +225,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 		const float Theta = pi * 2.0f / std::max<float>(1.0f, SegmentCount);
 		for(int Index = 0; Index < SegmentCount; ++Index)
 		{
-			TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+			TextRender()->TextColor(ui_token::color::NEUTRAL_WHITE);
 			float SegmentFontSize = FontSize * 1.1f;
 			if(Index == s_SelectedBindIndex)
 			{
@@ -237,7 +238,7 @@ qm_card_catalog::STClientCardResult CMenus::RunTClientBindWheelCard(const qm_car
 			const CUIRect Rect{Pos.x - 50.0f, Pos.y - 50.0f, 100.0f, 100.0f};
 			Ui()->DoLabel(&Rect, GameClient()->m_BindWheel.m_vBinds[Index].m_aName, SegmentFontSize, TEXTALIGN_MC);
 		}
-		TextRender()->TextColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		TextRender()->TextColor(ui_token::color::NEUTRAL_WHITE);
 		char aExtra[96];
 		str_format(aExtra, sizeof(aExtra), "count=%d", SegmentCount);
 		LogTClientPerfStage("tclient_bindwheel_wheel", WheelTimer.ElapsedMs(), false, aExtra);

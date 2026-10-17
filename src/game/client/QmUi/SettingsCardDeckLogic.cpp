@@ -121,7 +121,10 @@ bool CSettingsCardDeckFrameRuntime::ConsumeEntryCycle()
 float CSettingsCardDeckFrameRuntime::ResolveEntryOffset(CUiV2AnimationRuntime &AnimRuntime, const uint64_t OwnerId, const char *pTab, const SCardMotionSpec &Motion)
 {
 	if(!EntryCyclePending() && !m_EntryWasActive)
+	{
+		m_EntryAlpha = 1.0f;
 		return 0.0f;
+	}
 
 	if(Motion.m_ContinuousEntry)
 	{
@@ -134,20 +137,24 @@ float CSettingsCardDeckFrameRuntime::ResolveEntryOffset(CUiV2AnimationRuntime &A
 	if(ConsumeEntryCycle())
 	{
 		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, m_AnimateEntry ? Motion.m_EntryDistance : 0.0f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, m_AnimateEntry && Motion.m_EntryDuration > 0.0f ? 0.0f : 1.0f);
 		m_EntryWasActive = m_AnimateEntry && Motion.m_EntryDuration > 0.0f;
 	}
 	if(m_EntryWasActive && Motion.m_EntryDuration > 0.0f)
 	{
 		CountEntryAnimationResolve();
-		const float Offset = ResolveUiAnimValue(AnimRuntime, NodeKey, EUiAnimProperty::POS_Y, 0.0f, Motion.m_EntryDuration, EEasing::EASE_OUT);
-		m_EntryWasActive = AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::POS_Y);
+		const float Offset = AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f, SettingsCardEntryTransition(Motion));
+		m_EntryAlpha = AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f, SettingsCardEntryFadeTransition(Motion));
+		m_EntryWasActive = AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::POS_Y) || AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA);
 		return Offset;
 	}
 	if(m_EntryWasActive)
 	{
 		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f);
 		m_EntryWasActive = false;
 	}
+	m_EntryAlpha = 1.0f;
 	return 0.0f;
 }
 
@@ -158,30 +165,31 @@ float CSettingsCardDeckFrameRuntime::ResolveContinuousEntryOffset(CUiV2Animation
 		const bool Animate = m_AnimateEntry && Motion.m_EntryDuration > 0.0f;
 		// 分类切换只替换内容，正在运动的共享轨道继续走完，不能重新跳到入场起点。
 		if(!Animate || !AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::POS_Y))
+		{
 			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, Animate ? Motion.m_EntryDistance : 0.0f);
+			AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, Animate ? 0.0f : 1.0f);
+		}
 		m_EntryWasActive = Animate;
 	}
 	if(!m_EntryWasActive)
+	{
+		m_EntryAlpha = 1.0f;
 		return 0.0f;
+	}
 	if(Motion.m_EntryDuration <= 0.0f)
 	{
 		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f);
+		AnimRuntime.SetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f);
+		m_EntryAlpha = 1.0f;
 		m_EntryWasActive = false;
 		return 0.0f;
 	}
 
 	CountEntryAnimationResolve();
-	SUiAnimTransition Transition;
-	Transition.m_Driver = EUiAnimDriver::SPRING;
-	Transition.m_Interrupt = EUiAnimInterruptPolicy::MERGE_TARGET;
-	Transition.m_Priority = 1;
-	// 阻尼比 0.8 只产生约 1.5% 的轻微回弹；减少动效模式沿用更短时长和更小位移。
-	const float Frequency = 5.0f / Motion.m_EntryDuration;
-	Transition.m_Spring = {1.0f, Frequency * Frequency, 1.6f * Frequency, 0.05f, 0.5f};
-	// Motion 已按用户动效等级缩放，避免再次缩放导致切换手感不一致。
-	Transition.m_RespectMotionLevel = false;
-	const float Offset = AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f, Transition);
-	m_EntryWasActive = AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::POS_Y);
+	// 临界阻尼上浮与更早完成的渐入共用生命周期，切页保留两条活动轨道。
+	const float Offset = AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::POS_Y, 0.0f, SettingsCardEntryTransition(Motion));
+	m_EntryAlpha = AnimRuntime.ResolveTargetValue(NodeKey, EUiAnimProperty::ALPHA, 1.0f, SettingsCardEntryFadeTransition(Motion));
+	m_EntryWasActive = AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::POS_Y) || AnimRuntime.HasActiveAnimation(NodeKey, EUiAnimProperty::ALPHA);
 	return Offset;
 }
 

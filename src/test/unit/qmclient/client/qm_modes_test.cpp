@@ -142,53 +142,139 @@ namespace
 	};
 } // namespace
 
-TEST(QmStatisticsModeCollapse, FoldsDuplicateDDraceVariantsIntoSingleEntry)
-{
-	// 回归：本地按服务器社区分条的 DDrace 记录加上 DDStats 追加的同名条目，
-	// 会让统计页渲染出多条完全相同的「DDraceNetwork · DDNet」图例与饼图切片。
-	std::vector<SQmTestModeStats> vStats;
-	vStats.push_back({"DDraceNetwork", "ddnet", false, 2000, 15000, 100 * 3600});
-	vStats.push_back({"DDraceNetwork", "ddstats", false, 100, 1000, 20 * 3600});
-	vStats.push_back({"DDNet", "", false, 56, 719, 5 * 3600});
-	vStats.push_back({"Gores", "axiom", true, 12, 600, 3 * 3600});
-
-	const auto IsDDrace = [](const SQmTestModeStats &Stats) {
-		return Stats.m_GameMode == "DDraceNetwork" || Stats.m_GameMode == "DDNet";
-	};
-
-	EXPECT_TRUE(QmCollapseModeEntries(vStats, IsDDrace));
-	ASSERT_EQ(vStats.size(), 2u);
-	EXPECT_EQ(vStats[0].m_GameMode, "DDraceNetwork");
-	EXPECT_EQ(vStats[0].m_CommunityId, "ddnet");
-	EXPECT_EQ(vStats[0].m_Maps, 2000 + 100 + 56);
-	EXPECT_EQ(vStats[0].m_Score, 15000 + 1000 + 719);
-	EXPECT_EQ(vStats[0].m_PlaytimeSeconds, (100 + 20 + 5) * 3600);
-	// 未命中的条目保持原样。
-	EXPECT_EQ(vStats[1].m_GameMode, "Gores");
-	EXPECT_EQ(vStats[1].m_CommunityId, "axiom");
-	EXPECT_EQ(vStats[1].m_Maps, 12);
-	EXPECT_EQ(vStats[1].m_PlaytimeSeconds, 3 * 3600);
-
-	// 只剩一条 DDrace 时再次折叠不应有变化。
-	EXPECT_FALSE(QmCollapseModeEntries(vStats, IsDDrace));
-	EXPECT_EQ(vStats.size(), 2u);
-}
-
-TEST(QmStatisticsModeCollapse, SaturatesFoldedValuesAtTypeLimits)
-{
-	std::vector<SQmTestModeStats> vStats;
-	vStats.push_back({"DDraceNetwork", "ddnet", false, std::numeric_limits<int>::max(), 0, 0});
-	vStats.push_back({"DDraceNetwork", "ddstats", false, 5, 0, 0});
-	EXPECT_TRUE(QmCollapseModeEntries(vStats, [](const SQmTestModeStats &Stats) { return Stats.m_GameMode == "DDraceNetwork"; }));
-	ASSERT_EQ(vStats.size(), 1u);
-	EXPECT_EQ(vStats[0].m_Maps, std::numeric_limits<int>::max());
-}
-
 TEST(QmStatisticsChart, FallsBackToPlaytimeWhenNoModeHasFinishedMaps)
 {
 	EXPECT_EQ(QmStatisticsChartWeight(0, 1054, false), 1054);
 	EXPECT_EQ(QmStatisticsChartWeight(0, 701, false), 701);
 	EXPECT_EQ(QmStatisticsChartWeight(347, 7200, true), 347);
+}
+
+TEST(QmStatisticsModeCollapseWithAuthority, KeepsDdStatsPlaytimeInsteadOfAddingLocalVariants)
+{
+	// 回归：DDStats 以 community_id="ddstats" 追加 DDraceNetwork，随后按模式折叠时
+	// 不能把本地分社区累计时长叠到权威值上（实测虚增 30197 秒 / 8.4 小时）。
+	// IsStatsDDraceMode 只匹配主模式，TestDDraceNetwork 不参与折叠，保持独立条目。
+	std::vector<SQmTestModeStats> vStats;
+	vStats.push_back({"DDraceNetwork", "ddnet", false, 2, 100, 28657});
+	vStats.push_back({"DDraceNetwork", "none", false, 0, 0, 1542});
+	vStats.push_back({"TestDDraceNetwork", "ntcn", false, 0, 0, 298});
+	vStats.push_back({"DDraceNetwork", "ddstats", false, 0, 0, 10509725});
+
+	const auto IsDDrace = [](const SQmTestModeStats &Stats) {
+		return Stats.m_GameMode == "DDraceNetwork" || Stats.m_GameMode == "DDNet";
+	};
+	const auto IsAuthority = [](const SQmTestModeStats &Stats) {
+		return Stats.m_CommunityId == "ddstats";
+	};
+
+	EXPECT_TRUE(QmCollapseModeEntriesWithAuthority(vStats, IsDDrace, IsAuthority));
+	ASSERT_EQ(vStats.size(), 2u);
+	// 主模式行只保留 DDStats 权威值，本地分社区累计全部丢弃。
+	EXPECT_EQ(vStats[0].m_GameMode, "DDraceNetwork");
+	EXPECT_EQ(vStats[0].m_PlaytimeSeconds, 10509725);
+	EXPECT_EQ(vStats[0].m_Maps, 0);
+	EXPECT_EQ(vStats[0].m_Score, 0);
+	EXPECT_EQ(vStats[0].m_CommunityId, "ddstats");
+	// Test 变体不匹配主模式谓词，原样保留。
+	EXPECT_EQ(vStats[1].m_GameMode, "TestDDraceNetwork");
+	EXPECT_EQ(vStats[1].m_PlaytimeSeconds, 298);
+}
+
+TEST(QmStatisticsModeCollapseWithAuthority, CarriesAuthorityCommunityIdSoRemoteTotalStillCounts)
+{
+	// 回归：折叠后来源社区必须跟随权威方。顶部「游玩时间」的
+	// IsRemoteDdStatsMode 只认 community_id=="ddstats"，若折叠结果保留首条
+	// 的本地社区，官方 DDNet 小时缺失时这一行会被漏算。
+	std::vector<SQmTestModeStats> vStats;
+	vStats.push_back({"DDraceNetwork", "ddnet", false, 2, 100, 28657});
+	vStats.push_back({"DDraceNetwork", "ddstats", false, 0, 0, 10509725});
+
+	EXPECT_TRUE(QmCollapseModeEntriesWithAuthority(vStats, [](const SQmTestModeStats &Stats) { return Stats.m_GameMode == "DDraceNetwork"; }, [](const SQmTestModeStats &Stats) { return Stats.m_CommunityId == "ddstats"; }));
+	ASSERT_EQ(vStats.size(), 1u);
+	EXPECT_EQ(vStats[0].m_CommunityId, "ddstats");
+	EXPECT_EQ(vStats[0].m_PlaytimeSeconds, 10509725);
+	EXPECT_EQ(vStats[0].m_Maps, 0);
+	EXPECT_EQ(vStats[0].m_Score, 0);
+}
+
+TEST(QmStatisticsModeCollapseWithAuthority, KeepsAxiomGoresWhenLocalAxiomIdentityEntryComesFirst)
+{
+	// 回归：本地 Gores 条目带 Axiom 身份且排在远程条目之前时，
+	// 权威值不能被本地累计值覆盖。
+	std::vector<SQmTestModeStats> vStats;
+	vStats.push_back({"Gores", "axiom", true, 0, 0, 4593});
+	vStats.push_back({"Gores", "none", false, 0, 0, 390});
+	vStats.push_back({"Gores", "ddstats", false, 0, 0, 1241935});
+
+	const auto IsGores = [](const SQmTestModeStats &Stats) {
+		return Stats.m_GameMode == "Gores";
+	};
+	const auto IsAuthority = [](const SQmTestModeStats &Stats) {
+		return Stats.m_CommunityId == "ddstats";
+	};
+
+	EXPECT_TRUE(QmCollapseModeEntriesWithAuthority(vStats, IsGores, IsAuthority));
+	ASSERT_EQ(vStats.size(), 1u);
+	EXPECT_EQ(vStats[0].m_PlaytimeSeconds, 1241935);
+	EXPECT_EQ(vStats[0].m_Maps, 0);
+	EXPECT_EQ(vStats[0].m_Score, 0);
+}
+
+TEST(QmStatisticsModeCollapseWithAuthority, AccumulatesLocalEntriesWhenNoAuthorityPresent)
+{
+	// 没有远程权威时必须沿用累加语义，否则本地统计会凭空变小。
+	std::vector<SQmTestModeStats> vStats;
+	vStats.push_back({"DDraceNetwork", "ddnet", false, 2000, 15000, 100 * 3600});
+	vStats.push_back({"DDraceNetwork", "none", false, 56, 719, 5 * 3600});
+
+	const auto IsDDrace = [](const SQmTestModeStats &Stats) {
+		return Stats.m_GameMode == "DDraceNetwork";
+	};
+
+	EXPECT_TRUE(QmCollapseModeEntriesWithAuthority(vStats, IsDDrace, [](const SQmTestModeStats &Stats) { return Stats.m_CommunityId == "ddstats"; }));
+	ASSERT_EQ(vStats.size(), 1u);
+	EXPECT_EQ(vStats[0].m_Maps, 2056);
+	EXPECT_EQ(vStats[0].m_Score, 15719);
+	EXPECT_EQ(vStats[0].m_PlaytimeSeconds, 105 * 3600);
+}
+
+TEST(QmStatisticsModeCollapseWithAuthority, SaturatesAccumulatedValuesAtTypeLimits)
+{
+	// 无权威来源时仍走饱和累加，溢出必须夹到类型上限而不是回绕成负数。
+	std::vector<SQmTestModeStats> vStats;
+	vStats.push_back({"DDraceNetwork", "ddnet", false, std::numeric_limits<int>::max(), 0, 0});
+	vStats.push_back({"DDraceNetwork", "none", false, 5, 0, 0});
+
+	EXPECT_TRUE(QmCollapseModeEntriesWithAuthority(vStats, [](const SQmTestModeStats &Stats) { return Stats.m_GameMode == "DDraceNetwork"; }, [](const SQmTestModeStats &Stats) { return Stats.m_CommunityId == "ddstats"; }));
+	ASSERT_EQ(vStats.size(), 1u);
+	EXPECT_EQ(vStats[0].m_Maps, std::numeric_limits<int>::max());
+}
+
+TEST(QmStatisticsModeCollapseWithAuthority, AuthorityEntryFirstKeepsLaterLocalEntriesOut)
+{
+	// 权威条目排在第一位时，后续本地条目同样不能污染它。
+	std::vector<SQmTestModeStats> vStats;
+	vStats.push_back({"DDraceNetwork", "ddstats", false, 0, 0, 10509725});
+	vStats.push_back({"DDraceNetwork", "ddnet", false, 2, 100, 28657});
+	vStats.push_back({"DDraceNetwork", "none", false, 0, 0, 1542});
+
+	EXPECT_TRUE(QmCollapseModeEntriesWithAuthority(vStats, [](const SQmTestModeStats &Stats) { return Stats.m_GameMode == "DDraceNetwork"; }, [](const SQmTestModeStats &Stats) { return Stats.m_CommunityId == "ddstats"; }));
+	ASSERT_EQ(vStats.size(), 1u);
+	EXPECT_EQ(vStats[0].m_PlaytimeSeconds, 10509725);
+	EXPECT_EQ(vStats[0].m_Maps, 0);
+}
+
+TEST(QmStatisticsModeCollapseWithAuthority, SingleEntryStaysUnchanged)
+{
+	// 只有一条时不应有任何变化，也不能误报发生折叠。
+	std::vector<SQmTestModeStats> vStats;
+	vStats.push_back({"DDraceNetwork", "ddstats", false, 3, 900, 10509725});
+
+	EXPECT_FALSE(QmCollapseModeEntriesWithAuthority(vStats, [](const SQmTestModeStats &Stats) { return Stats.m_GameMode == "DDraceNetwork"; }, [](const SQmTestModeStats &Stats) { return Stats.m_CommunityId == "ddstats"; }));
+	ASSERT_EQ(vStats.size(), 1u);
+	EXPECT_EQ(vStats[0].m_PlaytimeSeconds, 10509725);
+	EXPECT_EQ(vStats[0].m_Maps, 3);
+	EXPECT_EQ(vStats[0].m_Score, 900);
 }
 
 TEST(LocalSkinSource, DemoPlaybackUsesRecordedSnapshotForEitherLocalConnection)

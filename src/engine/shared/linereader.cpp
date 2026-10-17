@@ -2,7 +2,11 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "linereader.h"
 
+#include <base/mem.h>
+#include <base/str.h>
 #include <base/system.h>
+
+#include <cstdlib>
 
 static bool IsValidLine(const char *pLine)
 {
@@ -22,6 +26,82 @@ static bool IsValidLine(const char *pLine)
 	}
 
 	return true;
+}
+
+// UTF-16 按码点转成 UTF-8。无法配对的代理项写成替换字符，避免整份脚本被当成二进制拒绝。
+static char *DecodeUtf16(const unsigned char *pData, unsigned Length, bool BigEndian)
+{
+	// 每 2 字节最多产生 3 字节 UTF-8。
+	const unsigned Capacity = Length / 2 * 3 + 1;
+	auto *pBuffer = static_cast<char *>(malloc(Capacity));
+	if(pBuffer == nullptr)
+		return nullptr;
+
+	const auto ReadUnit = [pData, BigEndian](unsigned Index) {
+		return BigEndian ? (unsigned)(pData[Index] << 8 | pData[Index + 1]) : (unsigned)(pData[Index + 1] << 8 | pData[Index]);
+	};
+
+	unsigned Out = 0;
+	for(unsigned Index = 0; Index + 1 < Length; Index += 2)
+	{
+		const unsigned Unit = ReadUnit(Index);
+		unsigned CodePoint = Unit;
+		if(Unit >= 0xD800 && Unit <= 0xDBFF)
+		{
+			const bool HasNext = Index + 3 < Length;
+			const unsigned Next = HasNext ? ReadUnit(Index + 2) : 0;
+			if(HasNext && Next >= 0xDC00 && Next <= 0xDFFF)
+			{
+				CodePoint = 0x10000 + ((Unit - 0xD800) << 10) + (Next - 0xDC00);
+				Index += 2;
+			}
+			else
+			{
+				CodePoint = 0xFFFD;
+			}
+		}
+		else if(Unit >= 0xDC00 && Unit <= 0xDFFF)
+		{
+			CodePoint = 0xFFFD;
+		}
+		// 文本中的 NUL 会截断行缓冲，统一换成替换字符。
+		if(CodePoint == 0)
+			CodePoint = 0xFFFD;
+		Out += str_utf8_encode(&pBuffer[Out], (int)CodePoint);
+	}
+	pBuffer[Out] = '\0';
+	return pBuffer;
+}
+
+// 无 BOM 的 UTF-16 靠 NUL 分布识别：ASCII 字符在 UTF-16 中固定带一个 0 字节。
+// 要求所有 NUL 落在同一位序且占比够高，避免把含零星 NUL 的二进制文件误判成 UTF-16。
+static bool LooksLikeUtf16(const unsigned char *pData, unsigned Length, bool *pBigEndian)
+{
+	unsigned Nulls = 0;
+	unsigned EvenNulls = 0;
+	for(unsigned Index = 0; Index < Length; ++Index)
+	{
+		if(pData[Index] != 0)
+			continue;
+		++Nulls;
+		if(Index % 2 == 0)
+			++EvenNulls;
+	}
+	if(Length < 2 || Nulls < Length / 4)
+		return false;
+	if(EvenNulls == 0)
+	{
+		// NUL 全在奇数字节：小端 UTF-16。
+		*pBigEndian = false;
+		return true;
+	}
+	if(EvenNulls == Nulls)
+	{
+		// NUL 全在偶数字节：大端 UTF-16。
+		*pBigEndian = true;
+		return true;
+	}
+	return false;
 }
 
 CLineReader::CLineReader()
@@ -51,22 +131,70 @@ bool CLineReader::IsValidBuffer(const char *pBuffer)
 
 bool CLineReader::OpenFile(IOHANDLE File, bool RejectInvalidLines)
 {
+	const auto Fail = [this](EOpenResult Result) {
+		m_LastOpenResult = Result;
+		return false;
+	};
+
 	if(!File)
 	{
-		return false;
+		return Fail(EOpenResult::CANNOT_READ);
 	}
-	char *pBuffer = io_read_all_str(File);
+	void *pRaw = nullptr;
+	unsigned RawLength = 0;
+	const bool Read = io_read_all(File, &pRaw, &RawLength);
 	io_close(File);
+	if(!Read)
+	{
+		return Fail(EOpenResult::CANNOT_READ);
+	}
+
+	const auto *pData = static_cast<const unsigned char *>(pRaw);
+	char *pBuffer = nullptr;
+	if(RawLength >= 4 && ((pData[0] == 0xFF && pData[1] == 0xFE && pData[2] == 0x00 && pData[3] == 0x00) ||
+				     (pData[0] == 0x00 && pData[1] == 0x00 && pData[2] == 0xFE && pData[3] == 0xFF)))
+	{
+		// UTF-32 脚本不常见，明确拒绝，避免按 UTF-16 解出乱码命令。
+		free(pRaw);
+		return Fail(EOpenResult::UNSUPPORTED_ENCODING);
+	}
+	else if(RawLength >= 2 && pData[0] == 0xFF && pData[1] == 0xFE)
+	{
+		pBuffer = DecodeUtf16(pData + 2, RawLength - 2, false);
+	}
+	else if(RawLength >= 2 && pData[0] == 0xFE && pData[1] == 0xFF)
+	{
+		pBuffer = DecodeUtf16(pData + 2, RawLength - 2, true);
+	}
+	else
+	{
+		bool BigEndian = false;
+		if(LooksLikeUtf16(pData, RawLength, &BigEndian))
+			pBuffer = DecodeUtf16(pData, RawLength, BigEndian);
+		else if(mem_has_null(pData, RawLength))
+		{
+			free(pRaw);
+			return Fail(EOpenResult::UNSUPPORTED_ENCODING);
+		}
+		else
+		{
+			// 已经是文本：直接接管原始缓冲，保留原有的 UTF-8 BOM 处理。
+			pBuffer = static_cast<char *>(pRaw);
+			pRaw = nullptr;
+		}
+	}
+	free(pRaw);
 	if(pBuffer == nullptr)
 	{
-		return false;
+		return Fail(EOpenResult::CANNOT_READ);
 	}
 	if(RejectInvalidLines && !IsValidBuffer(pBuffer))
 	{
 		free(pBuffer);
-		return false;
+		return Fail(EOpenResult::INVALID_CONTENT);
 	}
 	OpenBuffer(pBuffer);
+	m_LastOpenResult = EOpenResult::OK;
 	return true;
 }
 

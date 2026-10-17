@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 
 constexpr float QmListBoxScrollbarMetric(float PolicyValue, float CurrentValue, bool Overridden)
 {
@@ -77,8 +78,18 @@ private:
 	bool m_HideScrollbar;
 	bool m_ScrollbarAlwaysReserved;
 	bool m_InitialScrollPending;
-	float m_EntryAnimationOffset;
+	float m_EntryAnimationElapsedSec;
 	CQmListEntryAnimation m_EntryAnimation;
+	// 依次淡入 + 上浮入场：当前行的父层显隐系数已推入，待下一行发射或
+	// DoEnd 时恢复。
+	std::optional<CUiScopedControlAlphaScale> m_EntryAlphaScope;
+	// 行延迟基准：本帧首个发射行的绝对索引（SkipItems 后），滚动到中段
+	// 重放时错开也从头算起。
+	int m_EntryBaseItemIndex = 0;
+	bool m_EntryBaseIndexCaptured = false;
+	bool m_EntryAnimationFadeOnly = false;
+	float m_ItemSelectionInset = 0.0f;
+	void QmRestoreEntryScope();
 	ColorRGBA m_SelectedItemActiveColor;
 	ColorRGBA m_SelectedItemInactiveColor;
 	ColorRGBA m_HoveredItemColor;
@@ -89,6 +100,16 @@ protected:
 public:
 	CListBox();
 	void Reset();
+	// 显式重放入场动画：页面切换回列表所在页时由调用方触发，
+	// 不依赖渲染间隙启发（列表被背景趟持续渲染时间隙永远不会出现）。
+	void RestartEntryAnimation() { m_EntryAnimation.Reset(); }
+	// 入场只淡入、不位移（默认关闭）。大面积卡片网格用：整卡位移读作"晃"
+	// （onetake：运动留给小元素，大 ground 保持稳定；opacity 领先位移），
+	// 行级小列表仍保留淡入+上浮的 wordRise。
+	void SetEntryAnimationFadeOnly(bool FadeOnly) { m_EntryAnimationFadeOnly = FadeOnly; }
+	// 选中/悬浮反馈内缩：网格卡片在格子内有半格间隙，反馈矩形须贴合卡片
+	// 而不是铺满格子；同时选中态附带按钮同款常驻描边。行列表保持 0。
+	void SetItemSelectionInset(float Inset) { m_ItemSelectionInset = Inset; }
 
 	void DoHeader(const CUIRect *pRect, const char *pTitle, float HeaderHeight = 20.0f, float Spacing = 2.0f, int BackgroundCorners = IGraphics::CORNER_ALL);
 	void DoAutoSpacing(float Spacing = 20.0f) { m_AutoSpacing = Spacing; }

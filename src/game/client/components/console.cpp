@@ -1926,6 +1926,7 @@ void CGameConsole::OnRender()
 		SAVE_EXPORT,
 		CLEAR_EXPORT,
 		SELECT_CHAT,
+		OPEN_CONFIG_DIR,
 		EXPAND,
 		SETTINGS,
 	};
@@ -1936,7 +1937,7 @@ void CGameConsole::OnRender()
 		float m_Width;
 		bool m_Selected;
 	};
-	std::array<SToolbarAction, 6> aActions;
+	std::array<SToolbarAction, 7> aActions;
 	int NumActions = 0;
 	const auto AddAction = [&](EToolbarAction Action, const char *pLabel, bool Selected = false) {
 		dbg_assert(NumActions < static_cast<int>(aActions.size()), "Too many console toolbar actions");
@@ -1959,6 +1960,9 @@ void CGameConsole::OnRender()
 			AddAction(EToolbarAction::SEARCH, pConsole->m_SearchInput.IsSearching() ? Localize("Cancel") : Localize("Search"), pConsole->m_SearchInput.IsSearching());
 			AddAction(EToolbarAction::FOLLOW, Localize("Following"), pConsole->m_BacklogCurLine == 0);
 			AddAction(EToolbarAction::EXPORT, Localize("Select export"));
+			// 控制台报「failed to open」时，下一步通常是去配置目录里放脚本或改 cfg，
+			// 所以把入口直接放在工具栏上，不必再翻到设置页的「通用」卡片。
+			AddAction(EToolbarAction::OPEN_CONFIG_DIR, Localize("Config directory"));
 		}
 		AddAction(EToolbarAction::SETTINGS, Localize("Console settings"), SettingsOpen);
 		AddAction(EToolbarAction::EXPAND, m_LocalConsoleFullscreen ? Localize("Collapse console") : Localize("Expand console"), m_LocalConsoleFullscreen);
@@ -2694,6 +2698,14 @@ void CGameConsole::OnRender()
 					case EToolbarAction::SAVE_EXPORT: pConsole->ExportSelectedChat(); break;
 					case EToolbarAction::CLEAR_EXPORT: pConsole->ClearChatExportSelection(); break;
 					case EToolbarAction::SELECT_CHAT: pConsole->SelectAllChatExportable(); break;
+					case EToolbarAction::OPEN_CONFIG_DIR:
+					{
+						// 空路径即保存目录根，与设置页「通用」卡片里的配置目录按钮一致。
+						char aConfigDir[IO_MAX_PATH_LENGTH];
+						Storage()->GetCompletePath(IStorage::TYPE_SAVE, "", aConfigDir, sizeof(aConfigDir));
+						Client()->ViewFile(aConfigDir);
+						break;
+					}
 					case EToolbarAction::SETTINGS: OpenSettings(); break;
 					case EToolbarAction::EXPAND: m_LocalConsoleFullscreen = !m_LocalConsoleFullscreen; break;
 					}

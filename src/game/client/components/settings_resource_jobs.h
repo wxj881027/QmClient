@@ -524,6 +524,7 @@ int SettingsScrollInteractionCooldown(bool ActiveThisFrame, int CurrentCooldownF
 int SettingsScrollInteractionRecovery(bool ScrollActiveThisFrame, int PreviousCooldownFrames, int CurrentCooldownFrames, int CurrentRecoveryFrames, int RecoveryFrames);
 int SettingsResourceSharedHeavyBudget(const SSettingsResourceFrameContext &Context, int NormalBudget, int RecoveryBudget);
 int SettingsResourceClampSharedHeavyBudget(int RemainingBudget, const SSettingsResourceFrameContext &Context, int NormalBudget, int RecoveryBudget);
+int SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(int RemainingBudget, const SSettingsResourceFrameContext &Context, int NormalBudget, int RecoveryBudget, int ScrollTrickleBatches);
 bool SettingsResourceConsumeSharedHeavyBudget(int &RemainingBudget);
 bool SettingsResourceUploadWithinByteBudget(int UploadedThisFrame, size_t UploadedBytesThisFrame, size_t ItemBytes, size_t MaxBytesPerFrame);
 bool SettingsResourceOversizedUploadAllowed(const SSettingsResourceFrameContext &Context, bool PageSwitchActive, ESettingsResourcePriority Priority, int OversizedUploadsThisFrame, size_t ItemBytes, size_t MaxBytesPerFrame);

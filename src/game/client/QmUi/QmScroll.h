@@ -25,6 +25,9 @@ struct SQmScrollConfig
 	float m_WheelScale = 10.0f;
 	bool m_NativeWheelStep = true;
 	float m_NativeWheelAnimationTime = 0.0f;
+	// 原版滚轮手感：每档滚轮重置平滑动画的初速（不继承当前速度），连续
+	// 滚动每档重新起步（上游 DDNet 语义）；关闭时维持速度继承的顺滑手感。
+	bool m_LegacyWheelFeel = false;
 	float m_Friction = 9.0f;
 	float m_OverscrollStiffness = 120.0f;
 	float m_OverscrollDamping = 22.0f;

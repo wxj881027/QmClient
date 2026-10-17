@@ -8,6 +8,7 @@
 
 #include <generated/protocol.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/component.h>
 #include <game/mapitems.h>
 
@@ -22,7 +23,7 @@ inline ColorRGBA QmWeaponTrajectoryBaseColor(
 	switch(Weapon)
 	{
 	case WEAPON_GUN:
-		return ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+		return ui_token::color::NEUTRAL_WHITE;
 	case WEAPON_SHOTGUN:
 		return ShotgunInnerColor;
 	case WEAPON_LASER:

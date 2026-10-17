@@ -51,6 +51,34 @@ TEST_F(CSettingsHeaderIconFeedbackTest, MotionOffKeepsIconAtItsOriginalSize)
 	EXPECT_FALSE(Anim.HasActiveAnimation(1, EUiAnimProperty::SCALE));
 }
 
+TEST_F(CSettingsHeaderIconFeedbackTest, LeavingHoverMidBounceSnapsBackSmoothlyAndReleaseSpringsBack)
+{
+	CQmAnimationBackend Anim;
+	EXPECT_GT(ResolveSettingsIconScale(Anim, 1, true, false, true), 1.0f);
+	Anim.Advance(1.0f / 60.0f);
+	// 悬停途中移开：触发快击收回轨道并最终回到 1.0f。
+	EXPECT_GT(ResolveSettingsIconScale(Anim, 1, false, false, true), 1.0f);
+	EXPECT_TRUE(Anim.HasActiveAnimation(1, EUiAnimProperty::SCALE));
+	for(int Frame = 0; Frame < 12; ++Frame)
+	{
+		Anim.Advance(1.0f / 60.0f);
+		ResolveSettingsIconScale(Anim, 1, false, false, true);
+	}
+	EXPECT_NEAR(ResolveSettingsIconScale(Anim, 1, false, false, true), 1.0f, 0.005f);
+
+	// 按下后在图标内松开（State: 2 -> 1）：保留弹簧回弹轨迹回到 1.0f。
+	EXPECT_LT(ResolveSettingsIconScale(Anim, 1, true, true, true), 1.0f);
+	Anim.Advance(1.0f / 60.0f);
+	ResolveSettingsIconScale(Anim, 1, true, false, true);
+	EXPECT_TRUE(Anim.HasActiveAnimation(1, EUiAnimProperty::SCALE));
+	for(int Frame = 0; Frame < 20; ++Frame)
+	{
+		Anim.Advance(1.0f / 60.0f);
+		ResolveSettingsIconScale(Anim, 1, true, false, true);
+	}
+	EXPECT_NEAR(ResolveSettingsIconScale(Anim, 1, true, false, true), 1.0f, 0.005f);
+}
+
 TEST(SettingsCardInfoLayout, LeadingActionStaysLeftOfInfoWidthAndCollapse)
 {
 	for(float Scale : {1.0f, 1.5f, 2.0f})

@@ -357,7 +357,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				if(Input.m_pDiagnostics != nullptr)
 					m_FrameRuntime.CountHeightAnimationResolve();
 				const uint64_t HeightKey = SettingsCardHeightNodeKey(pTab, pDefinition->m_Spec.m_pStableId);
-				Runtime.m_AnimatedContentHeight = ResolveUiAnimValue(*Ctx.m_pAnim, HeightKey, EUiAnimProperty::HEIGHT, TargetContentHeight, Motion.m_ContentHeightDuration, EEasing::EASE_OUT);
+				Runtime.m_AnimatedContentHeight = ResolveUiAnimValue(*Ctx.m_pAnim, HeightKey, EUiAnimProperty::HEIGHT, TargetContentHeight, Motion.m_ContentHeightDuration, EEasing::EASE_OUT_QUART);
 				Runtime.m_ContentHeightWasActive = Ctx.m_pAnim->HasActiveAnimation(HeightKey, EUiAnimProperty::HEIGHT);
 			}
 			else if(HeightWork.m_SetHeightTarget)
@@ -539,6 +539,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	bool EntryPending = m_FrameRuntime.AnimateEntry() && m_FrameRuntime.EntryCyclePending();
 	bool EntryPositionActive = false;
 	float DeckEntryOffsetY = 0.0f;
+	float DeckEntryAlpha = 1.0f;
 	bool ReflowTargetChanged = false;
 	bool ReflowPositionActive = false;
 	// 入场由整个 Deck 共享一个偏移；高度变化按当前动画底边顺排后续卡片，始终保持无重叠几何。
@@ -546,6 +547,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 	if(Ctx.m_pAnim != nullptr)
 	{
 		DeckEntryOffsetY = m_FrameRuntime.ResolveEntryOffset(*Ctx.m_pAnim, reinterpret_cast<uintptr_t>(this), pTab, Motion);
+		DeckEntryAlpha = m_FrameRuntime.EntryAlpha();
 		EntryPositionActive = m_FrameRuntime.EntryWasActive();
 		EntryPending = false;
 		for(const SPreparedCard &Card : m_vPreparedCards)
@@ -662,6 +664,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 		}
 		SSettingsCardVisualState State;
 		State.m_DrawOffsetY = DeckEntryOffsetY;
+		State.m_DrawAlpha = DeckEntryAlpha;
 		State.m_ClipContent = Card.m_Frame.m_ContentRect.w > 0.0f && (static_cast<bool>(Card.m_pDefinition->m_RenderMeasured) || SettingsCardDeckShouldClipContent(Card.m_Frame.m_ContentRect.h > 0.0f, Card.m_ContentHeightAnimationActive));
 		if(Ctx.m_pAnim != nullptr)
 		{
@@ -705,7 +708,7 @@ SSettingsCardDeckResult CSettingsCardDeck::RenderInternal(const IUiContext &Inpu
 				if(Input.m_pDiagnostics != nullptr)
 					m_FrameRuntime.CountReflowAnimationResolve();
 				const uint64_t ResolvedReflowKey = ResolveReflowKey();
-				const float ReflowY = ResolveUiAnimValue(*Ctx.m_pAnim, ResolvedReflowKey, EUiAnimProperty::POS_Y, ReflowTargetY, Motion.m_ReflowDuration, EEasing::EASE_OUT);
+				const float ReflowY = ResolveUiAnimValue(*Ctx.m_pAnim, ResolvedReflowKey, EUiAnimProperty::POS_Y, ReflowTargetY, Motion.m_ReflowDuration, EEasing::EASE_OUT_QUART);
 				State.m_DrawOffsetY += ReflowY - ReflowTargetY;
 				const bool ReflowActive = Ctx.m_pAnim->HasActiveAnimation(ResolvedReflowKey, EUiAnimProperty::POS_Y);
 				Runtime.m_ReflowWasActive = ReflowActive;

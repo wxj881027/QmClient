@@ -35,6 +35,8 @@ private:
 	std::optional<FCallbackMapRendererInit> m_LoadCallback;
 	std::unique_ptr<CRenderLayer> m_pLoadGroup;
 	int m_LoadGroupId = 0;
+	int m_GameGroupId = -1;
+	int m_GameLayerId = -1;
 	int m_LoadLayerId = 0;
 	int m_LoadTotalWork = 0;
 	int m_LoadCompletedWork = 0;

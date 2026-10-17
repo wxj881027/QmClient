@@ -180,6 +180,13 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 			if(Button(4, "config-package-manager", Localize("Configuration packages"), Rect, State.m_Open))
 			{
 				State.m_Open = !State.m_Open;
+				// 列表入场不依赖渲染间隙启发：反复展开的间隔常常短于 0.4 秒，
+				// 间隙判据永远不成立，逐行浮现会静默失效，这里显式重放。
+				if(State.m_Open)
+				{
+					State.m_CustomList.RestartEntryAnimation();
+					State.m_PackageList.RestartEntryAnimation();
+				}
 				if(State.m_Open && !State.m_Initialized)
 					RefreshFiles(*pMenus->Storage());
 				// 输入提交后公共 Deck 会重新声明展开内容。
@@ -190,7 +197,13 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 		RowAction("config-package-mode", 1, [&](CUIRect Rect) {
 			const char *apModes[] = {Localize("Export configuration package"), Localize("Import configuration package")};
 			static CButtonContainer s_aModeButtons[2];
-			State.m_Import = pMenus->DoSegmentedChoice(s_aModeButtons, apModes, 2, State.m_Import ? 1 : 0, Rect) == 1;
+			const bool Import = pMenus->DoSegmentedChoice(s_aModeButtons, apModes, 2, State.m_Import ? 1 : 0, Rect) == 1;
+			// 两张列表各自持有入场生命周期；切模式只重放即将显示的那一张。
+			if(Import != State.m_Import)
+			{
+				State.m_Import = Import;
+				(Import ? State.m_PackageList : State.m_CustomList).RestartEntryAnimation();
+			}
 		});
 		qm_config_package::CStorageFiles Files(*pMenus->Storage());
 		if(!State.m_Import)
@@ -239,27 +252,33 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 		}
 		else
 		{
+			// 空包列表不占位：没有包时只留一行说明，卡片高度交给公共 Deck 的高度
+			// 动画过渡，避免导入页在空状态下留下一大块空白区域。
+			const bool HasPackages = !State.m_vPackages.empty();
 			Text("config-import-help", Localize("Copy a .qmconfig file into the package folder, then refresh."));
-			RowAction("config-package-list", 5, [&](CUIRect ListRect) {
-				State.m_PackageList.SetActive(Interactive);
-				State.m_PackageList.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
-				State.m_PackageList.DoStart(RowHeight, State.m_vPackages.size(), 1, 4, State.m_SelectedPackage, &ListRect);
-				for(auto &Item : State.m_vPackages)
-				{
-					const auto ListItem = State.m_PackageList.DoNextItem(&Item.m_Id, false);
-					if(ListItem.m_Visible)
-						PathLabel(&Item.m_Id, ListItem.m_Rect, Item.m_Path.c_str() + str_length(qm_config_package::PACKAGE_DIRECTORY) + 1, Item.m_Path.c_str());
-				}
-				const int Selected = State.m_PackageList.DoEnd();
-				if(Interactive && Selected != State.m_SelectedPackage && Selected >= 0 && Selected < static_cast<int>(State.m_vPackages.size()))
-				{
-					State.m_SelectedPackage = Selected;
-					State.m_PreviewPath = State.m_vPackages[Selected].m_Path;
-					State.m_PreviewValid = qm_config_package::Load(Files, State.m_PreviewPath, State.m_Preview, State.m_Status);
-					State.m_vPreviewIds.resize(State.m_PreviewValid ? State.m_Preview.m_vFiles.size() : 0);
-					State.m_PreviewList.Reset();
-				}
-			});
+			if(HasPackages)
+			{
+				RowAction("config-package-list", 5, [&](CUIRect ListRect) {
+					State.m_PackageList.SetActive(Interactive);
+					State.m_PackageList.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
+					State.m_PackageList.DoStart(RowHeight, State.m_vPackages.size(), 1, 4, State.m_SelectedPackage, &ListRect);
+					for(auto &Item : State.m_vPackages)
+					{
+						const auto ListItem = State.m_PackageList.DoNextItem(&Item.m_Id, false);
+						if(ListItem.m_Visible)
+							PathLabel(&Item.m_Id, ListItem.m_Rect, Item.m_Path.c_str() + str_length(qm_config_package::PACKAGE_DIRECTORY) + 1, Item.m_Path.c_str());
+					}
+					const int Selected = State.m_PackageList.DoEnd();
+					if(Interactive && Selected != State.m_SelectedPackage && Selected >= 0 && Selected < static_cast<int>(State.m_vPackages.size()))
+					{
+						State.m_SelectedPackage = Selected;
+						State.m_PreviewPath = State.m_vPackages[Selected].m_Path;
+						State.m_PreviewValid = qm_config_package::Load(Files, State.m_PreviewPath, State.m_Preview, State.m_Status);
+						State.m_vPreviewIds.resize(State.m_PreviewValid ? State.m_Preview.m_vFiles.size() : 0);
+						State.m_PreviewList.Reset();
+					}
+				});
+			}
 			if(State.m_PreviewValid)
 			{
 				std::string Metadata = State.m_Preview.m_ClientVersion + " | " + State.m_Preview.m_ExportedAt;
@@ -288,8 +307,8 @@ bool qm_card_catalog::QmCardRenderHook::BuildConfigFilesCard(const SQmCardBuildC
 					}
 				});
 			}
-			else
-				Text("config-package-no-preview", Localize("Select a configuration package to preview its contents."), 12);
+			else if(HasPackages)
+				Text("config-package-no-preview", Localize("Select a configuration package to preview its contents."), 2);
 		}
 		RowAction("config-package-actions", 1, [&](CUIRect Rect) {
 			const char *apActions[] = {Localize("Refresh"), Localize("Open package folder")};

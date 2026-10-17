@@ -430,6 +430,7 @@ private:
 	bool SortCompareNumPlayersAndPing(int Index1, int Index2) const;
 	bool SortCompareFavoritesNumPlayersAndPing(int Index1, int Index2) const;
 	bool SortCompareQmClients(int Index1, int Index2) const;
+	bool SortCompareDifficulty(int Index1, int Index2) const;
 
 	//
 	void Filter();
@@ -473,6 +474,10 @@ private:
 	// TClient
 	std::function<void(std::vector<json_value *> &)> m_CustomCommunitiesFunction = nullptr;
 	friend class CCustomCommunities;
+
+	// QmClient: 难度星级由客户端注入（Qm 地图难度目录），未注入或未收录返回 -1。
+	std::function<int(const CServerInfo *)> m_MapDifficultyStarsFunction = nullptr;
+	friend class CMenus;
 };
 
 #endif

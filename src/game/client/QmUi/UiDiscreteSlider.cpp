@@ -89,8 +89,18 @@ namespace ui_widget
 
 		const bool HasSelection = *pValue >= Min && *pValue <= Max;
 		const SDiscreteSliderStyle Style = ResolveDiscreteSliderStyle(*pValue, Min, Max);
-		const float Normalized = DiscreteSliderNormalizedValue(*pValue, Min, Max);
-		if(HasSelection && *pValue > Min)
+		const float TargetNormalized = DiscreteSliderNormalizedValue(*pValue, Min, Max);
+		const float TargetEmphasis = Active ? 1.0f : (Hovered ? 0.5f : 0.0f);
+		float Normalized = TargetNormalized;
+		float Emphasis = TargetEmphasis;
+		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : pUi->QmAnimationRuntime();
+		if(HasSelection && pAnim != nullptr && !pUi->AnimationsBlocked())
+		{
+			const uint64_t SliderKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xD15C511Dull, reinterpret_cast<uint64_t>(pId));
+			Normalized = std::clamp(ResolveUiAnimSpringValue(*pAnim, SliderKey, EUiAnimProperty::POS_X, TargetNormalized, ui_token::motion::SLIDER_SPRING, 2), 0.0f, 1.0f);
+			Emphasis = std::clamp(ResolveUiAnimSpringValue(*pAnim, SliderKey, EUiAnimProperty::SCALE, TargetEmphasis, ui_token::motion::SLIDER_KNOB_SPRING, 2), 0.0f, 1.0f);
+		}
+		if(HasSelection && Normalized > 0.0001f)
 		{
 			const CUIRect Fill = Geometry.FillRect(Normalized);
 			DrawSliderFill(Ctx, Fill, Style, Alpha);
@@ -116,9 +126,8 @@ namespace ui_widget
 
 		if(HasSelection)
 		{
-			const float Emphasis = Active ? 1.0f : (Hovered ? 0.5f : 0.0f);
 			const CUIRect Knob = Geometry.KnobRect(Normalized, Emphasis);
-			DrawRoundedSurface(Ctx, Knob, ColorRGBA(1.0f, 1.0f, 1.0f, Alpha), ColorRGBA(), Knob.w * 0.5f);
+			DrawRoundedSurface(Ctx, Knob, ui_token::color::NEUTRAL_WHITE.WithAlpha(Alpha), ColorRGBA(), Knob.w * 0.5f);
 		}
 
 		return Changed;

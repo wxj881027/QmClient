@@ -46,9 +46,9 @@ namespace ui_widget
 		}
 		else
 		{
-			Props.m_FillColor = ColorRGBA(0.17f, 0.18f, 0.22f, 0.72f);
-			Props.m_HighlightColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.06f);
-			Props.m_BorderColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.10f);
+			Props.m_FillColor = ui_token::color::CONTAINER_FILL;
+			Props.m_HighlightColor = ui_token::color::CONTAINER_HIGHLIGHT;
+			Props.m_BorderColor = ui_token::color::CONTAINER_BORDER;
 		}
 		return Props;
 	}
@@ -57,8 +57,8 @@ namespace ui_widget
 	{
 		SQmScrollContainerStyle m_Style;
 		SQmScrollConfig m_Config;
-		ColorRGBA m_TrackColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.12f);
-		ColorRGBA m_ThumbColor = ColorRGBA(1.0f, 1.0f, 1.0f, 0.42f);
+		ColorRGBA m_TrackColor = ui_token::color::SCROLLBAR_TRACK;
+		ColorRGBA m_ThumbColor = ui_token::color::SCROLLBAR_THUMB;
 		float m_Radius = ui_token::radius::PILL; // 滚动条轨/滑块按胶囊绘制
 		bool m_ContentDragAllowed = false;
 	};

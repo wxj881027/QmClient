@@ -42,6 +42,7 @@
 #include <game/client/components/menus_start.h>
 #include <game/client/components/qmclient/audio_pack_catalog.h>
 #include <game/client/components/qmclient/browser_friend_list.h>
+#include <game/client/components/qmclient/browser_map_preview.h>
 #include <game/client/components/qmclient/demo_cut.h>
 #include <game/client/components/qmclient/local_save_display.h>
 #include <game/client/components/qmclient/map_difficulty_catalog.h>
@@ -78,6 +79,8 @@ struct CDataSprite;
 
 class IHttpRequest;
 class CChat;
+class CProfile;
+struct SQmProfileWheelEditorState;
 namespace qm_card_registry
 {
 	struct SCardNavigationTarget;
@@ -1558,6 +1561,12 @@ protected:
 	int m_MenuOpenFrame = 0;
 	bool m_BrowserRefreshPending = false;
 	bool m_BrowserRefreshPendingForce = false;
+	// 切到浏览器页时递增；各列表（服务器列表、社区/国家/类型过滤）比对
+	// 序号重启入场动画（渲染间隙启发在背景趟持续渲染下永不触发）。
+	int m_BrowserListEntryRestartSeq = 0;
+	// 设置分类切换时递增；主题列表/语言列表比对序号重启入场动画，
+	// 机制与浏览器列表同款（间隙启发在设置页同样不可靠）。
+	int m_SettingsListEntryRestartSeq = 0;
 
 	bool m_DummyNamePlatePreview = false;
 
@@ -2066,6 +2075,30 @@ protected:
 		CButtonContainer m_ConfirmButton;
 		CButtonContainer m_CancelButton;
 	} m_FriendNotePopupContext;
+	// 地图预览弹窗：锚定服务器列表地图列的富内容弹层，展示本地已缓存地图的
+	// 离屏渲染视图（未缓存不联网）并支持缩放、拖拽平移。
+	class CMapPreviewPopupContext : public SPopupMenuId
+	{
+	public:
+		CMenus *m_pMenus = nullptr;
+		// 服务器地址串（CServerInfo::m_aAddress 原样拷贝，含端口，作行身份比较）。
+		char m_aAddress[MAX_SERVER_ADDRESSES * NETADDR_MAXSTRSIZE] = {0};
+		char m_aMapName[MAX_MAP_LENGTH] = {0};
+		char m_aServerName[256] = {0};
+		char m_aGameType[16] = {0};
+		int m_NumPlayers = 0;
+		int m_MaxPlayers = 0;
+		// 打开时定位起点，后续保持用户拖拽与缩放，直到关闭。
+		CQmBrowserMapPreviewView m_View;
+		bool m_InitialViewSet = false;
+		// 只看实体层（关贴图）：模式变化时重新渲染（1 = 实体）。
+		int m_EntityOnly = 0;
+	} m_MapPreviewPopupContext;
+	// 预览地图加载缓存（LRU），实现位于 menus_browser.cpp。裸指针成员：
+	// unique_ptr<不完整类型> 会要求构造函数所在编译单元能实例化成员析构
+	//（异常清理），而 CMenus 构造在 menus.cpp，类型在那里不完整。
+	class CMapPreviewCache;
+	CMapPreviewCache *m_pMapPreviewCache = nullptr;
 	bool m_HasRemoveFriend = false;
 	char m_aRemoveFriendName[MAX_NAME_LENGTH] = {0};
 	char m_aRemoveFriendClan[MAX_CLAN_LENGTH] = {0};
@@ -2314,6 +2347,9 @@ protected:
 	void RenderServerbrowserServerList(CUIRect View, bool &WasListboxItemActivated);
 	void RenderServerbrowserStatusBox(CUIRect StatusBox, bool WasListboxItemActivated);
 	void RenderServerbrowserMapFilterSelector(CUIRect Selector);
+	// 地图预览弹窗：行内触发（悬停 200ms / 右键）与弹层内容。
+	void OpenMapPreviewPopup(const CServerInfo *pItem);
+	void ClearMapPreviewCache();
 	enum class EConnectIntent
 	{
 		Manual,
@@ -2362,6 +2398,7 @@ protected:
 	void RenderServerbrowserFavoriteMaps(CUIRect View);
 	static CUi::EPopupMenuFunctionResult PopupFriendsCategory(void *pContext, CUIRect View, bool Active);
 	static CUi::EPopupMenuFunctionResult PopupFriendNote(void *pContext, CUIRect View, bool Active);
+	static CUi::EPopupMenuFunctionResult PopupMapPreview(void *pContext, CUIRect View, bool Active);
 	void FriendlistOnUpdate();
 	void ApplyFriendsCategoryExpandedState();
 	void SaveFriendsCategoryExpandedState();
@@ -2475,6 +2512,8 @@ public:
 	void RenderBackground();
 
 	CMenus();
+	// 析构保持隐式：持有 GPU 资源的成员统一在 OnShutdown（图形接口存活期）释放，
+	// 关闭路径上组件析构晚于图形接口销毁，析构函数里不得触达图形/内核接口。
 	int Sizeof() const override { return sizeof(*this); }
 
 	void StartLoading(int Total);
@@ -3161,6 +3200,11 @@ private:
 	qm_card_catalog::STClientCardResult RunTClientWarListCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientStatusBarCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientProfilesCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
+	int m_ProfilePresetsTab = 0;
+	std::shared_ptr<SQmProfileWheelEditorState> m_pProfileWheelEditor;
+	uint64_t ProfileWheelEditorRevision() const;
+	void RenderProfileWheelEditor(const qm_card_catalog::SQmCardBuildContext &Ctx, CUIRect &Content, bool ReadOnly);
+	void EditProfileInWheel(const CProfile &Profile, bool Dummy);
 	qm_card_catalog::STClientCardResult RunTClientConfigsCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	qm_card_catalog::STClientCardResult RunTClientMainCard(const qm_card_catalog::SQmCardBuildContext &Ctx, const char *pStableId, CUIRect &Content, qm_card_catalog::ETClientCardPass Pass);
 	void RenderSettingsCatalogPage(CUIRect MainView, const char *pTab, bool PrewarmOnly = false);

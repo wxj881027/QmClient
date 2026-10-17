@@ -427,7 +427,7 @@ void CMenus::RenderQmHudNotificationsAdvancedContent(CUIRect &Content, const SSe
 		CUIRect ColorRow;
 		if(Flow.Control("hud-QmHudNotificationsTextColor", CurrentSettingsContentMetrics().m_ButtonHeight, ColorRow))
 		{
-			DoLine_ColorPicker(&s_QmHudNotificationTextColorId, Metrics, &ColorRow, Localize("System prompt text color"), &g_Config.m_QmHudNotificationsTextColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false, nullptr, true);
+			DoLine_ColorPicker(&s_QmHudNotificationTextColorId, Metrics, &ColorRow, Localize("System prompt text color"), &g_Config.m_QmHudNotificationsTextColor, ui_token::color::NEUTRAL_WHITE, false, nullptr, true);
 		}
 		Flow.Space(CurrentSettingsContentMetrics().m_LineSpacing);
 	}

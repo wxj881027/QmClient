@@ -455,7 +455,9 @@ bool CConsole::LineIsValid(const char *pStr)
 			}
 			else if(*pEnd == '\\') // escape sequences
 			{
-				if(pEnd[1] == '"')
+				// \\ 与 \" 都占两个字符，必须整体跳过；只跳过 \" 会让转义反斜杠的
+				// 后一个 \ 与后续引号误配，引号内出现的 ; 被当成命令分隔符。
+				if(pEnd[1] == '"' || pEnd[1] == '\\')
 					pEnd++;
 			}
 			else if(!InString)
@@ -510,7 +512,9 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bo
 			}
 			else if(*pEnd == '\\') // escape sequences
 			{
-				if(pEnd[1] == '"')
+				// \\ 与 \" 都占两个字符，必须整体跳过；只跳过 \" 会让转义反斜杠的
+				// 后一个 \ 与后续引号误配，引号内出现的 ; 被当成命令分隔符。
+				if(pEnd[1] == '"' || pEnd[1] == '\\')
 					pEnd++;
 			}
 			else if(!InString && InterpretSemicolons)
@@ -796,7 +800,14 @@ bool CConsole::ExecuteFile(const char *pFilename, int ClientId, bool LogFailure,
 	}
 	else if(LogFailure)
 	{
-		log_error("console", "failed to open '%s'", pFilename);
+		const CLineReader::EOpenResult OpenResult = LineReader.LastOpenResult();
+		// 文件能打开但读不成文本时直接说清原因，避免被误判成路径错误。
+		if(OpenResult == CLineReader::EOpenResult::UNSUPPORTED_ENCODING)
+			log_error("console", "'%s' has an unsupported text encoding, save the script as UTF-8", pFilename);
+		else if(OpenResult == CLineReader::EOpenResult::INVALID_CONTENT)
+			log_error("console", "'%s' contains invalid UTF-8 or control characters", pFilename);
+		else
+			log_error("console", "failed to open '%s'", pFilename);
 	}
 
 	m_pFirstExec = pPrev;

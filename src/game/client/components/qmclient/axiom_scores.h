@@ -91,6 +91,10 @@ class CQmAxiomScores : public CComponent
 		std::vector<SQmDdStatsGameType> m_vDdStatsGameTypes;
 		int64_t m_LastDdStatsSuccessTick = 0;
 		int64_t m_LastDdStatsFailureTick = 0;
+		// 连续失败次数，用于失败重试的指数退避；任一来源成功即清零。
+		int m_SearchFailureCount = 0;
+		std::array<int, 2> m_aModeFailureCount{};
+		int m_DdStatsFailureCount = 0;
 		int64_t m_LastAccessTick = 0;
 		// 同一帧内 Tick 相同，LRU 用单调访问序号打破平局。
 		uint64_t m_LastAccessOrder = 0;
@@ -125,6 +129,10 @@ class CQmAxiomScores : public CComponent
 	static int ModeIndex(EQmAxiomMode Mode);
 	static EQmAxiomMode ModeFromIndex(int Index);
 	static bool IsWithinWindow(int64_t Timestamp, int64_t Now, int64_t WindowMs);
+	// 连续失败按 2 的幂退避：Base、2×Base、4×Base……直到 MaxMs。
+	static int64_t FailureRetryWindowMs(int ConsecutiveFailures);
+	static void RecordFailure(int &ConsecutiveFailures);
+	static void ClearFailure(int &ConsecutiveFailures);
 
 	void AbortActiveRequests(bool ResetFetchingStates);
 	void BeginActiveQuery(const char *pPlayerName);
