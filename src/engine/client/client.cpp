@@ -516,12 +516,12 @@ int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
 	CNetChunk Packet;
 
 	if(State() == IClient::STATE_OFFLINE)
-		return 0;
+		return -1;
 
 	// repack message (inefficient)
 	CPacker Pack;
 	if(!RepackMsg(pMsg, Pack, IsSixup()))
-		return 0;
+		return -1;
 
 	mem_zero(&Packet, sizeof(CNetChunk));
 	Packet.m_ClientId = 0;
@@ -546,7 +546,7 @@ int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
 
 	if(!(Flags & MSGFLAG_NOSEND))
 	{
-		m_aNetClient[Conn].Send(&Packet);
+		return m_aNetClient[Conn].Send(&Packet);
 	}
 
 	return 0;

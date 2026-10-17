@@ -3204,6 +3204,7 @@ if(CLIENT)
     QmUi/QmTree.h
     QmUi/SecondaryPanel.h
     QmUi/ServerBrowserFilterForm.cpp
+    QmUi/ServerBrowserFilterLayout.h
     QmUi/SettingsMenuWidgets.cpp
     QmUi/SettingsMenuPrewarm.cpp
     QmUi/SettingsRuntimeCache.cpp
@@ -5427,6 +5428,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_settings_text_columns_test.cpp
       src/test/integration/qmclient/ui/qm_adaptive_choice_test.cpp
       src/test/integration/qmclient/ui/qm_console_button_text_layout_test.cpp
+      src/test/integration/qmclient/ui/qm_server_browser_filter_layout_test.cpp
       src/test/integration/qmclient/ui/qm_spectator_hud_text_test.cpp
       src/test/integration/qmclient/ui/qm_icon_text_test.cpp
       src/test/integration/qmclient/ui/qm_surface_text_test.cpp
