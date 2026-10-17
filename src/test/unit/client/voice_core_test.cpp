@@ -424,15 +424,6 @@ static bool ParseVoicePacketPayloadSize(const uint8_t *pData, int Bytes, uint16_
 	return true;
 }
 
-static bool ShouldProcessPayload(uint16_t PayloadSize, size_t Offset, int Bytes)
-{
-	if(PayloadSize == 0)
-		return false;
-	if(Offset + PayloadSize > (size_t)Bytes)
-		return false;
-	return true;
-}
-
 static EVoiceIncomingPacketDecision ClassifyTestPacket(uint8_t Version, uint8_t Type, uint16_t PayloadSize,
 	uint32_t ContextHash, uint32_t TokenHash, uint16_t SenderId, size_t PacketSize)
 {
@@ -476,7 +467,7 @@ TEST(VoiceCore, ProcessIncomingZeroPayload)
 	ASSERT_TRUE(ParseVoicePacketPayloadSize(aPacket, (int)PacketSize, PayloadSize));
 	EXPECT_EQ(PayloadSize, 0);
 
-	EXPECT_FALSE(ShouldProcessPayload(PayloadSize, VOICE_PACKET_HEADER_SIZE, (int)PacketSize));
+	EXPECT_EQ(ClassifyBuiltVoicePacket(aPacket, PacketSize, 0x12345678u, 0u), EVoiceIncomingPacketDecision::DROP_PAYLOAD);
 }
 
 TEST(VoiceCore, ProcessIncomingNormalPayload)
@@ -493,7 +484,7 @@ TEST(VoiceCore, ProcessIncomingNormalPayload)
 	ASSERT_TRUE(ParseVoicePacketPayloadSize(aPacket, (int)PacketSize, PayloadSize));
 	EXPECT_EQ(PayloadSize, 64);
 
-	EXPECT_TRUE(ShouldProcessPayload(PayloadSize, VOICE_PACKET_HEADER_SIZE, (int)PacketSize));
+	EXPECT_EQ(ClassifyBuiltVoicePacket(aPacket, PacketSize, 0x12345678u, 0u), EVoiceIncomingPacketDecision::HANDLE_AUDIO);
 }
 
 TEST(VoiceCore, ProcessIncomingTruncatedPayload)
