@@ -182,6 +182,11 @@ void SDLCALL CRClientVoice::SDLAudioCallback(void *pUserData, SDL_AudioStream *p
 		[pThis, Channels](int16_t *pBuffer, int Frames) { pThis->MixAudio(pBuffer, Frames, Channels); });
 }
 
+CRClientVoice::~CRClientVoice()
+{
+	Shutdown();
+}
+
 void CRClientVoice::Init(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole)
 {
 	SetInterfaces(pGameClient, pClient, pConsole);
@@ -201,8 +206,6 @@ bool CRClientVoice::Init()
 	if(!m_pGameClient || !m_pClient || !m_pConsole)
 		return false;
 
-	m_pPeers = std::make_unique<std::array<SVoicePeer, MAX_CLIENTS>>();
-	m_MixBuffer.resize(VOICE_FRAME_SAMPLES * 2);
 	m_ShutdownDone = false;
 	m_LastConfigSnapshotUpdate = 0;
 	m_LastClientSnapshotUpdate = 0;
@@ -571,9 +574,6 @@ bool CRClientVoice::EnsureAudio()
 		}
 		opus_encoder_ctl(m_pEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
 	}
-
-	if(!m_pPeers)
-		m_pPeers = std::make_unique<std::array<SVoicePeer, MAX_CLIENTS>>();
 
 	if(!m_pOutputStream)
 	{
@@ -2159,37 +2159,39 @@ void CRClientVoice::DecodeJitter()
 	}
 }
 
+bool CRClientVoice::HandleWorkerFailure()
+{
+	return m_Worker.HandleFailure(time_get(), time_freq(), [this](CVoiceWorker::EFailure Failure, const char *pMessage) {
+		Shutdown();
+		char aError[256];
+		str_format(aError, sizeof(aError), "Voice worker %s failed: %s", Failure == CVoiceWorker::EFailure::START ? "startup" : "execution", pMessage);
+		LogDiagnosticErrorOnce(m_aAudioErrorLog, sizeof(m_aAudioErrorLog), aError);
+	});
+}
+
 void CRClientVoice::StartWorker()
 {
-	if(m_Worker.joinable())
-		return;
-	m_WorkerStop.store(false);
-	m_WorkerEnabled.store(true);
-	m_Worker = std::thread(&CRClientVoice::WorkerLoop, this);
+	m_Worker.Start(time_get(), [this] { WorkerLoop(); });
+	HandleWorkerFailure();
 }
 
 void CRClientVoice::StopWorker()
 {
-	m_WorkerEnabled.store(false);
-	if(m_Worker.joinable())
-	{
-		m_WorkerStop.store(true);
-		m_Worker.join();
-	}
-	m_WorkerStop.store(false);
+	m_Worker.Stop();
 }
 
 void CRClientVoice::WorkerLoop() NO_THREAD_SAFETY_ANALYSIS
 {
-	using namespace std::chrono_literals;
-	while(!m_WorkerStop.load())
-	{
-		if(!m_WorkerEnabled.load())
-		{
-			std::this_thread::sleep_for(10ms);
-			continue;
-		}
+	// 在受保护的线程入口准备资源，分配失败不会离开客户端初始化入口。
+	// 首次打开输出流前完成混音缓冲分配；正常暂停后重开保留已有资源。
+	if(!m_pPeers)
+		m_pPeers = std::make_unique<std::array<SVoicePeer, MAX_CLIENTS>>();
+	if(m_MixBuffer.size() < VOICE_FRAME_SAMPLES * 2)
+		m_MixBuffer.resize(VOICE_FRAME_SAMPLES * 2);
 
+	using namespace std::chrono_literals;
+	while(!m_Worker.StopRequested())
+	{
 		bool ShouldEnsureAudio = m_AudioRefreshRequested.exchange(false);
 		bool CaptureNeedsRetry = m_CaptureUnavailable.load();
 #if defined(CONF_PLATFORM_ANDROID)
@@ -2298,6 +2300,8 @@ void CRClientVoice::OnRender() NO_THREAD_SAFETY_ANALYSIS
 		Shutdown();
 		return;
 	}
+	if(HandleWorkerFailure() || !m_Worker.CanStart(time_get()))
+		return;
 	m_ShutdownDone = false;
 
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
@@ -2426,7 +2430,7 @@ void CRClientVoice::OnRender() NO_THREAD_SAFETY_ANALYSIS
 			StopWorker();
 		m_AudioRefreshRequested.store(true);
 	}
-	if(!m_Worker.joinable())
+	if(!m_Worker.HasThread())
 		m_AudioRefreshRequested.store(true);
 
 	StartWorker();

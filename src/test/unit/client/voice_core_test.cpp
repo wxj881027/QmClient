@@ -254,7 +254,6 @@ TEST(VoiceCore, VoiceProcessTraceCallbackRecordsStagesInOrder)
 
 TEST(VoiceCore, CaptureProcessKeepsOnlyMicGain)
 {
-	CRClientVoice Voice;
 	SRClientVoiceConfigSnapshot Config;
 	Config.m_QmVoiceAgcEnable = 1;
 	Config.m_QmVoiceMicVolume = 100;

@@ -3,6 +3,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_VOICE_VOICE_CORE_H
 
 #include "voice_utils.h"
+#include "voice_worker.h"
 
 #include <base/lock.h>
 #include <base/system.h>
@@ -19,7 +20,6 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
-#include <thread>
 #include <vector>
 
 class CGameClient;
@@ -253,9 +253,7 @@ class CRClientVoice
 	int m_RxDropRadius = 0;
 	int64_t m_DebugStateLastLog = 0;
 
-	std::thread m_Worker;
-	std::atomic<bool> m_WorkerStop = false;
-	std::atomic<bool> m_WorkerEnabled = false;
+	CVoiceWorker m_Worker;
 	std::atomic<bool> m_AudioRefreshRequested = true;
 	std::atomic<bool> m_ShutdownDone = true;
 	int64_t m_LastConfigSnapshotUpdate = 0;
@@ -319,11 +317,13 @@ class CRClientVoice
 	bool FindMinLiveQueuedSeq(const SVoicePeer &Peer, uint16_t &OutSeq) const;
 	bool SeedPeerNextSeq(SVoicePeer &Peer);
 	static void SDLCALL SDLAudioCallback(void *pUserData, SDL_AudioStream *pStream, int AdditionalBytes, int TotalBytes);
+	bool HandleWorkerFailure();
 	void StartWorker();
 	void StopWorker();
 	void WorkerLoop() NO_THREAD_SAFETY_ANALYSIS;
 
 public:
+	~CRClientVoice();
 	void SetInterfaces(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole);
 	bool Init();
 	void Init(CGameClient *pGameClient, IClient *pClient, IConsole *pConsole);

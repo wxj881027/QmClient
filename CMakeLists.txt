@@ -3695,6 +3695,7 @@ if(CLIENT)
     components/qmclient/voice/voice_core.h
     components/qmclient/voice/voice_utils.cpp
     components/qmclient/voice/voice_utils.h
+    components/qmclient/voice/voice_worker.h
     components/qmclient/water_hammer_indicator.cpp
     components/qmclient/water_hammer_indicator.h
     components/qmclient/weapon_trajectory.cpp
@@ -5144,6 +5145,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/uuid_test.cpp
     src/test/unit/base/vmath_test.cpp
     src/test/unit/client/voice_core_test.cpp
+    src/test/unit/client/voice_worker_test.cpp
     src/test/unit/client/voice_sequence_test.cpp
     src/test/unit/client/voice_qmclient_test.cpp
     src/test/unit/client/voice_packet_utils_test.cpp
