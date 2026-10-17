@@ -1,25 +1,14 @@
 #include <engine/client/qm_font_restore.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 
-#include <chrono>
 #include <cstring>
 #include <new>
 #include <stdexcept>
-#include <thread>
 
 namespace
 {
-	::testing::AssertionResult WaitForDone(const IJob &Job)
-	{
-		const auto Deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-		while(!Job.Done() && std::chrono::steady_clock::now() < Deadline)
-			std::this_thread::yield();
-		if(Job.State() != IJob::STATE_DONE)
-			return ::testing::AssertionFailure() << "font scan did not finish within two seconds";
-		return ::testing::AssertionSuccess();
-	}
-
 	bool ReadBytes(const char *, void **ppData, unsigned *pSize)
 	{
 		*ppData = malloc(3);
@@ -35,21 +24,21 @@ namespace
 		CJobPool Pool;
 		Pool.Init(1);
 		Pool.Add(pJob);
-		EXPECT_TRUE(WaitForDone(*pJob));
+		EXPECT_TRUE(WaitForJobDone(*pJob));
 		Pool.Shutdown();
 	}
 }
 
 TEST(QmFontScanFailure, EnumerationExceptionDoesNotTerminateWorkerOrBlockNextJob)
 {
-	auto pFailed = std::make_shared<CQmFontScanJob>([]() -> std::vector<std::string> { throw std::runtime_error("enumeration failed"); }, ReadBytes);
-	auto pNext = std::make_shared<CQmFontScanJob>([] { return std::vector<std::string>{"valid"}; }, ReadBytes);
+	auto pFailed = std::make_shared<CQmFontScanJob>([](const auto &) -> std::vector<std::string> { throw std::runtime_error("enumeration failed"); }, ReadBytes);
+	auto pNext = std::make_shared<CQmFontScanJob>([](const auto &) { return std::vector<std::string>{"valid"}; }, ReadBytes);
 	CJobPool Pool;
 	Pool.Init(1);
 	Pool.Add(pFailed);
 	Pool.Add(pNext);
-	EXPECT_TRUE(WaitForDone(*pFailed));
-	EXPECT_TRUE(WaitForDone(*pNext));
+	EXPECT_TRUE(WaitForJobDone(*pFailed));
+	EXPECT_TRUE(WaitForJobDone(*pNext));
 	Pool.Shutdown();
 	EXPECT_EQ(pFailed->State(), IJob::STATE_DONE);
 	EXPECT_TRUE(pFailed->Failed());
@@ -64,7 +53,7 @@ TEST(QmFontScanFailure, EnumerationExceptionDoesNotTerminateWorkerOrBlockNextJob
 TEST(QmFontScanFailure, ReadExceptionPublishesOnlyPreviouslyCompletedFiles)
 {
 	int Reads = 0;
-	auto pJob = std::make_shared<CQmFontScanJob>([] { return std::vector<std::string>{"first", "broken", "unread"}; }, [&](const char *pPath, void **ppData, unsigned *pSize) {
+	auto pJob = std::make_shared<CQmFontScanJob>([](const auto &) { return std::vector<std::string>{"first", "broken", "unread"}; }, [&](const char *pPath, void **ppData, unsigned *pSize) {
 		++Reads;
 		ReadBytes(pPath, ppData, pSize);
 		if(std::strcmp(pPath, "broken") == 0)
@@ -83,7 +72,7 @@ TEST(QmFontScanFailure, ReadExceptionPublishesOnlyPreviouslyCompletedFiles)
 
 TEST(QmFontScanFailure, AllocationExceptionLeavesFinishedEmptyScan)
 {
-	auto pJob = std::make_shared<CQmFontScanJob>([] { return std::vector<std::string>{"font"}; }, [](const char *, void **, unsigned *) -> bool { throw std::bad_alloc(); });
+	auto pJob = std::make_shared<CQmFontScanJob>([](const auto &) { return std::vector<std::string>{"font"}; }, [](const char *, void **, unsigned *) -> bool { throw std::bad_alloc(); });
 	Run(pJob);
 	EXPECT_EQ(pJob->State(), IJob::STATE_DONE);
 	EXPECT_TRUE(pJob->Failed());
@@ -96,13 +85,13 @@ TEST(QmFontScanFailure, FailedRestoreAllowsChangedSelectionToStartNewRequest)
 {
 	CQmFontRestore Restore;
 	const auto Missing = [](const char *) { return false; };
-	auto pFailed = Restore.Request({"Old", "", ""}, Missing, [](const std::vector<std::string> &) -> std::vector<std::string> { throw std::runtime_error("lookup failed"); }, ReadBytes);
+	auto pFailed = Restore.Request({"Old", "", ""}, Missing, [](const auto &, const auto &) -> std::vector<std::string> { throw std::runtime_error("lookup failed"); }, ReadBytes);
 	ASSERT_NE(pFailed, nullptr);
 	Run(pFailed);
 	EXPECT_TRUE(pFailed->Failed());
 	EXPECT_TRUE(Restore.Finish({"Old", "", ""}, Missing, [](size_t, const char *) { ADD_FAILURE() << "missing font applied"; }));
 	EXPECT_FALSE(Restore.Active());
-	auto pNext = Restore.Request({"New", "", ""}, Missing, [](const std::vector<std::string> &) { return std::vector<std::string>{"new-font"}; }, ReadBytes);
+	auto pNext = Restore.Request({"New", "", ""}, Missing, [](const auto &, const auto &) { return std::vector<std::string>{"new-font"}; }, ReadBytes);
 	ASSERT_NE(pNext, nullptr);
 	Run(pNext);
 	CQmFontScanJob::SFile File;

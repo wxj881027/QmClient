@@ -2395,7 +2395,7 @@ public:
 
 	void RequestSystemFontRestore()
 	{
-		const auto FindFiles = [](const std::vector<std::string> &vNames) {
+		const auto FindFiles = [](const std::vector<std::string> &vNames, const CQmFontScanJob::FCancelled &Cancelled) {
 #if defined(CONF_QMCLIENT_TEST_STORAGE)
 			// 进程回归仅访问隔离 fixture，不枚举开发者安装的系统字体。
 			const char *pTestFont = std::getenv("QMCLIENT_TEST_SYSTEM_FONT_FILE");
@@ -2404,13 +2404,15 @@ public:
 				const char *pDelay = std::getenv("QMCLIENT_TEST_FONT_LOOKUP_DELAY_MS");
 				const int DelayMs = pDelay != nullptr ? std::clamp(str_toint(pDelay), 0, 20000) : 0;
 				log_info("test/font", "lookup_begin delay_ms=%d", DelayMs);
-				std::this_thread::sleep_for(std::chrono::milliseconds(DelayMs));
-				auto vFiles = QmFindSelectedFontFiles({pTestFont}, vNames);
+				const auto Deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(DelayMs);
+				while(!Cancelled() && std::chrono::steady_clock::now() < Deadline)
+					std::this_thread::sleep_until(std::min(Deadline, std::chrono::steady_clock::now() + std::chrono::milliseconds(10)));
+				auto vFiles = QmFindSelectedFontFiles({pTestFont}, vNames, Cancelled);
 				log_info("test/font", "lookup_complete matches=%zu", vFiles.size());
 				return vFiles;
 			}
 #endif
-			return QmFindSelectedFontFiles(QmSystemFontPaths(), vNames);
+			return QmFindSelectedFontFiles(QmSystemFontPaths(Cancelled), vNames, Cancelled);
 		};
 		auto pJob = m_QmFontRestore.Request(FontRestoreSelection(), [this](const char *pName) { return m_pGlyphMap->QmHasFace(pName); }, FindFiles, CQmFontScanJob::ReadAbsolute);
 		if(pJob != nullptr)
@@ -2419,12 +2421,21 @@ public:
 
 	void RequestSystemFontScan()
 	{
-		if(m_QmShowSystemFonts && !m_QmSystemFontsScanned && !m_pQmSystemFontScan && !m_QmFontRestore.Active())
+		if(!m_QmShowSystemFonts)
+		{
+			if(m_pQmSystemFontScan)
+			{
+				m_pQmSystemFontScan->Abort();
+				m_pQmSystemFontScan.reset();
+			}
+			return;
+		}
+		if(!m_QmSystemFontsScanned && !m_pQmSystemFontScan && !m_QmFontRestore.Active())
 		{
 			// 已恢复的文件不用为候选列表再次读取和计算摘要。
-			m_pQmSystemFontScan = std::make_shared<CQmFontScanJob>([LoadedSources = m_QmLoadedFontSources] {
+			m_pQmSystemFontScan = std::make_shared<CQmFontScanJob>([LoadedSources = m_QmLoadedFontSources](const auto &Cancelled) {
 				std::vector<std::string> vPaths;
-				for(const std::string &Path : QmSystemFontPaths())
+				for(const std::string &Path : QmSystemFontPaths(Cancelled))
 					if(!LoadedSources.count("system:" + Path))
 						vPaths.push_back(Path);
 				return vPaths;
@@ -2556,7 +2567,7 @@ public:
 		if(!m_pQmSystemFontScan || !g_Config.m_QmShowSystemFonts)
 			return;
 		CQmFontScanJob::SFile File;
-		// 隐藏候选只暂停列表发布；已保存的选择由上面的恢复任务独立处理。
+		// 关闭候选扫描不取消上面的选择恢复；已发布的 face 保持有效。
 		if(m_pQmSystemFontScan->TakeNext(File))
 			PublishSystemFont(File);
 		if(m_pQmSystemFontScan->Exhausted())

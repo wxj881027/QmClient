@@ -26,7 +26,8 @@ public:
 		unsigned m_Size = 0;
 		std::string m_Hash;
 	};
-	using FEnumerate = std::function<std::vector<std::string>()>;
+	using FCancelled = std::function<bool()>;
+	using FEnumerate = std::function<std::vector<std::string>(const FCancelled &)>;
 	using FRead = std::function<bool(const char *, void **, unsigned *)>;
 
 private:
@@ -36,36 +37,49 @@ private:
 	size_t m_Cursor = 0;
 	bool m_Failed = false;
 
+	void Scan()
+	{
+		if(State() == STATE_ABORTED)
+			return;
+		const FCancelled Cancelled = [this] { return State() == STATE_ABORTED; };
+		for(const std::string &Path : m_Enumerate(Cancelled))
+		{
+			if(Cancelled())
+				return;
+			void *pData = nullptr;
+			unsigned Size = 0;
+			bool Read;
+			try
+			{
+				Read = m_Read(Path.c_str(), &pData, &Size);
+			}
+			catch(...)
+			{
+				// 读取边界可能已交出缓冲，再报告异常。
+				free(pData);
+				throw;
+			}
+			SFile File;
+			File.m_pData.reset(pData);
+			// 已开始的文件读取完成后接管缓冲，再响应取消。
+			if(Cancelled())
+				return;
+			if(!Read || pData == nullptr || Size == 0)
+				continue;
+			File.m_Path = Path;
+			File.m_Size = Size;
+			char aHash[SHA256_MAXSTRSIZE];
+			sha256_str(sha256(pData, Size), aHash, sizeof(aHash));
+			File.m_Hash = aHash;
+			m_vFiles.push_back(std::move(File));
+		}
+	}
+
 	void Run() override
 	{
 		try
 		{
-			for(const std::string &Path : m_Enumerate())
-			{
-				void *pData = nullptr;
-				unsigned Size = 0;
-				bool Read;
-				try
-				{
-					Read = m_Read(Path.c_str(), &pData, &Size);
-				}
-				catch(...)
-				{
-					// 读取边界可能已交出缓冲，再报告异常。
-					free(pData);
-					throw;
-				}
-				SFile File;
-				File.m_pData.reset(pData);
-				if(!Read || pData == nullptr || Size == 0)
-					continue;
-				File.m_Path = Path;
-				File.m_Size = Size;
-				char aHash[SHA256_MAXSTRSIZE];
-				sha256_str(sha256(pData, Size), aHash, sizeof(aHash));
-				File.m_Hash = aHash;
-				m_vFiles.push_back(std::move(File));
-			}
+			Scan();
 		}
 		catch(const std::exception &Error)
 		{
@@ -78,11 +92,17 @@ private:
 			m_Failed = true;
 			log_error("textrender/font", "Font scan stopped after an unexpected exception.");
 		}
+		// 只有 worker 清理在途输出；STATE_ABORTED 不表示线程已经停止。
+		if(State() == STATE_ABORTED)
+			m_vFiles.clear();
 	}
 
 public:
 	CQmFontScanJob(FEnumerate Enumerate, FRead Read) :
-		m_Enumerate(std::move(Enumerate)), m_Read(std::move(Read)) {}
+		m_Enumerate(std::move(Enumerate)), m_Read(std::move(Read))
+	{
+		Abortable(true);
+	}
 
 	static bool ReadAbsolute(const char *pPath, void **ppData, unsigned *pSize)
 	{

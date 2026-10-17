@@ -4871,6 +4871,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/unit/qmclient/client/qm_font_scan_job_test.cpp
     src/test/integration/qmclient/client/qm_font_scan_failure_test.cpp
+    src/test/integration/qmclient/client/qm_font_scan_cancellation_test.cpp
     src/test/unit/qmclient/client/qm_font_restore_test.cpp
     src/test/unit/qmclient/client/qm_scripting_state_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp

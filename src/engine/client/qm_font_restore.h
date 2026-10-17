@@ -11,7 +11,7 @@ class CQmFontRestore
 {
 public:
 	using TSelection = std::array<const char *, 3>;
-	using FFindFiles = std::function<std::vector<std::string>(const std::vector<std::string> &)>;
+	using FFindFiles = std::function<std::vector<std::string>(const std::vector<std::string> &, const CQmFontScanJob::FCancelled &)>;
 
 private:
 	std::array<std::string, 3> m_aAttemptedNames;
@@ -40,7 +40,7 @@ public:
 		}
 		if(vNames.empty())
 			return nullptr;
-		m_pJob = std::make_shared<CQmFontScanJob>([FindFiles = std::move(FindFiles), vNames = std::move(vNames)] { return FindFiles(vNames); }, std::move(Read));
+		m_pJob = std::make_shared<CQmFontScanJob>([FindFiles = std::move(FindFiles), vNames = std::move(vNames)](const auto &Cancelled) { return FindFiles(vNames, Cancelled); }, std::move(Read));
 		return m_pJob;
 	}
 
@@ -67,6 +67,8 @@ public:
 
 	void Reset()
 	{
+		if(m_pJob != nullptr)
+			m_pJob->Abort();
 		m_pJob.reset();
 		m_aAttemptedNames = {};
 	}

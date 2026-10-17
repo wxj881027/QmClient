@@ -1,6 +1,7 @@
 #include <engine/client/qm_font_restore.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 
 #include <cstring>
 #include <unordered_set>
@@ -24,7 +25,7 @@ namespace
 			return true;
 		}
 
-		std::shared_ptr<CQmFontScanJob> Request(const CQmFontRestore::TSelection &apSelection, CQmFontRestore::FFindFiles Find = [](const auto &vNames) { return vNames; })
+		std::shared_ptr<CQmFontScanJob> Request(const CQmFontRestore::TSelection &apSelection, CQmFontRestore::FFindFiles Find = [](const auto &vNames, const auto &) { return vNames; })
 		{
 			return m_Restore.Request(apSelection, [this](const char *pName) { return m_Available.count(pName) != 0; }, std::move(Find), Read);
 		}
@@ -39,6 +40,7 @@ namespace
 			CJobPool Pool;
 			Pool.Init(1);
 			Pool.Add(pJob);
+			EXPECT_TRUE(WaitForJobDone(*pJob));
 			Pool.Shutdown();
 		}
 
@@ -55,7 +57,7 @@ TEST_F(CQmFontRestoreTest, StartingRestoreDoesNotEnumerateOrReadOnCaller)
 {
 	int Enumerations = 0;
 	int Reads = 0;
-	const auto pJob = m_Restore.Request({"saved", "", ""}, [](const char *) { return false; }, [&](const auto &vNames) { ++Enumerations; return vNames; }, [&](const char *pPath, void **ppData, unsigned *pSize) { ++Reads; return Read(pPath, ppData, pSize); });
+	const auto pJob = m_Restore.Request({"saved", "", ""}, [](const char *) { return false; }, [&](const auto &vNames, const auto &) { ++Enumerations; return vNames; }, [&](const char *pPath, void **ppData, unsigned *pSize) { ++Reads; return Read(pPath, ppData, pSize); });
 	ASSERT_NE(pJob, nullptr);
 	EXPECT_EQ(Enumerations, 0);
 	EXPECT_EQ(Reads, 0);
@@ -80,7 +82,7 @@ TEST_F(CQmFontRestoreTest, EmptyAndAlreadyLoadedSelectionsDoNotStartLookup)
 TEST_F(CQmFontRestoreTest, RepeatedRolesShareOneLookupAndRestoreTheirOwnSelections)
 {
 	std::vector<std::string> vRequested;
-	const auto pJob = Request({"shared", "shared", ""}, [&](const auto &vNames) { vRequested = vNames; return vNames; });
+	const auto pJob = Request({"shared", "shared", ""}, [&](const auto &vNames, const auto &) { vRequested = vNames; return vNames; });
 	ASSERT_NE(pJob, nullptr);
 	EXPECT_EQ(Request({"shared", "shared", ""}), nullptr);
 	Complete(pJob);
@@ -166,10 +168,15 @@ TEST_F(CQmFontRestoreTest, ResetDropsPendingResultsAndAllowsANewRequest)
 	const auto pJob = Request({"saved", "", ""});
 	ASSERT_NE(pJob, nullptr);
 	m_Restore.Reset();
-	Complete(pJob);
+	EXPECT_EQ(pJob->State(), IJob::STATE_ABORTED);
 	CQmFontScanJob::SFile File;
 	EXPECT_FALSE(m_Restore.TakeNext(File));
 	EXPECT_FALSE(Finish({"saved", "", ""}));
 	EXPECT_TRUE(m_vApplied.empty());
-	EXPECT_NE(Request({"saved", "", ""}), nullptr);
+	const auto pNext = Request({"saved", "", ""});
+	ASSERT_NE(pNext, nullptr);
+	Complete(pNext);
+	Receive();
+	EXPECT_TRUE(Finish({"saved", "", ""}));
+	EXPECT_EQ(m_vApplied, (std::vector<std::pair<size_t, std::string>>{{0, "saved"}}));
 }
