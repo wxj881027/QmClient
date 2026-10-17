@@ -3635,6 +3635,7 @@ if(CLIENT)
     components/qmclient/tee_trail_styles.h
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
+    components/qmclient/scripting/execution_scope.h
     components/qmclient/scripting/script_file.h
     components/qmclient/scripting/state.h
     components/qmclient/translate/translate.cpp
@@ -4884,6 +4885,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_font_restore_test.cpp
     src/test/unit/qmclient/client/qm_scripting_state_test.cpp
     src/test/unit/qmclient/client/qm_scripting_file_test.cpp
+    src/test/unit/qmclient/client/qm_scripting_execution_scope_test.cpp
     src/test/integration/qmclient/client/qm_scripting_execution_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp

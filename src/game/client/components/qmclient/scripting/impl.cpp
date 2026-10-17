@@ -9,6 +9,7 @@
 #include <engine/storage.h>
 
 #include <cstdlib>
+#include <stdexcept>
 #include <variant>
 
 #define CHAISCRIPT_NO_THREADS
@@ -83,6 +84,9 @@ CScriptingCtx::CScriptingCtx() :
 	m_pData->m_Chai.add(PrintStrBoxed, "print");
 	m_pData->m_Chai.add(PrintStrBoxed, "puts");
 	m_pData->m_Chai.add(chaiscript::fun([this](const std::string &Module) {
+		CQmScriptExecutionScope Scope;
+		if(!Scope.Entered())
+			throw std::runtime_error(CQmScriptExecutionScope::ERROR);
 		return m_pData->EvaluateFile(Module.c_str());
 	}),
 		"include");

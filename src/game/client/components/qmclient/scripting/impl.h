@@ -2,6 +2,11 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_SCRIPTING_IMPL_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SCRIPTING_IMPL_H
 
+#include "execution_scope.h"
+
+#include <base/log.h>
+
+#include <exception>
 #include <functional>
 #include <memory>
 #include <string>
@@ -20,14 +25,14 @@ private:
 	// If you are getting link errors, define more in the .cpp file
 	template<typename T, typename... Args>
 	void AddFunctionInternal(const char *pName, const std::function<T(Args...)> &Function);
+	CScriptingCtx();
+	~CScriptingCtx();
+	void Run(IStorage *pStorage, const char *pFilename, const char *pArgs);
 
 public:
 	using Any = std::variant<std::nullptr_t, std::string, bool, int, float>;
 
 	static const char *Implementation();
-
-	CScriptingCtx();
-	~CScriptingCtx();
 
 	template<typename T>
 	void AddGlobal(const char *pName, const T &Object);
@@ -36,7 +41,30 @@ public:
 	{
 		AddFunctionInternal(pName, std::function(Function));
 	}
-	void Run(IStorage *pStorage, const char *pFilename, const char *pArgs);
+	template<typename TConfigure>
+	static void Execute(IStorage *pStorage, const char *pFilename, const char *pArgs, TConfigure &&Configure)
+	{
+		CQmScriptExecutionScope Scope;
+		if(!Scope.Entered())
+		{
+			log_error(SCRIPTING_IMPL, "Failed to run '%s': %s", pFilename, CQmScriptExecutionScope::ERROR);
+			return;
+		}
+		try
+		{
+			CScriptingCtx Context;
+			Configure(Context);
+			Context.Run(pStorage, pFilename, pArgs);
+		}
+		catch(const std::exception &Error)
+		{
+			log_error(SCRIPTING_IMPL, "Failed to run '%s': %s", pFilename, Error.what());
+		}
+		catch(...)
+		{
+			log_error(SCRIPTING_IMPL, "Failed to run '%s': unknown exception", pFilename);
+		}
+	}
 };
 
 #endif
