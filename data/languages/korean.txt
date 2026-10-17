@@ -464,6 +464,9 @@ Add current cut to the export list
 Add debug dummy to server (Debug build only)
 == 서버에 디버그 더미 추가 (디버그 빌드 전용)
 
+Add default presets
+== 기본 프리셋 추가
+
 Add demo timeline marker
 == 데모 타임라인 마커 추가
 
@@ -502,6 +505,9 @@ Add team name:
 
 Add to %s
 == %s 에 추가
+
+Add to bind wheel
+== 바인드 휠에 추가
 
 Add to blocked words
 == 차단 단어에 추가
@@ -749,6 +755,9 @@ Angle
 Angle:
 == 각도:
 
+Angry
+== 화남
+
 Angular gradient
 == 각도 그라데이션
 
@@ -875,6 +884,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == 이 프리셋 적용
 
+Apply to
+== 적용 대상
+
 Apply to dummy
 == 더미에 적용
 
@@ -953,6 +965,9 @@ Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 정말로 스킨을 저장하시겠습니까? 동일한 이름의 스킨이 이미 존재하면 덮어쓰여집니다.
 
+Arrow
+== 방향키 이미지
+
 Arrow assets
 == 화살표 에셋
 
@@ -964,6 +979,9 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == 화면 종횡비 프리셋 (0=끄기, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=사용자 정의)
+
+Asset preset
+== 리소스 프리셋
 
 Asset with this name already exists.
 == 같은 이름의 에셋이 이미 존재합니다.
@@ -1571,6 +1589,9 @@ Blend mode
 Blend strength
 == 혼합 강도
 
+Blink
+== 눈 깜빡임
+
 Blink the active local tee
 == 활성 로컬 캐릭터를 깜박이게 합니다
 
@@ -1660,9 +1681,6 @@ Browse and activate custom audio packs
 
 Browse font store…
 == 글꼴 상점 둘러보기…
-
-Browse profiles saved on this device
-== Browse profiles saved on this device
 
 Browser
 == 찾아보기
@@ -1958,6 +1976,9 @@ Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == 프리즈 진입 시 전송할 채팅 메시지, 쉼표로 구분 (비우기=없음)
 
+Chat phrase
+== 채팅 문구
+
 Chat score increases per message and decreases by 1 per tick
 == 채팅 점수는 메시지당 증가하고 틱당 1씩 감소
 
@@ -1999,6 +2020,9 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == 먼저 출력 장치를 확인하고 헤드폰/스피커가 여전히 온라인 상태인지 확인
+
+Check the preset fields, label, and wheel capacity (64 entries).
+== 프리셋 내용, 표시 이름, 휠 용량(최대 64개)을 확인하세요.
 
 Checking for existing player with your name
 == 사용자 이름과 일치하는 기존 플레이어 확인 중
@@ -2864,6 +2888,9 @@ Count players only
 Countries
 == 국가
 
+Country code
+== 국가/지역 코드
+
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 이 커뮤니티를 그룹화하기 위한 국가 플래그 (ISO 3166-1 숫자)
 
@@ -2881,6 +2908,9 @@ Create a random skin
 
 Create category
 == 카테고리 생성
+
+Create wheel presets here. Existing wheel entries are kept.
+== 여기서 휠 프리셋을 편집하세요. 기존 항목은 유지됩니다.
 
 Created
 == 생성됨
@@ -3985,6 +4015,9 @@ Edit player and dummy identity information
 
 Edit skin texture
 == 스킨 텍스처 편집
+
+Edit this custom command on the Bind Wheel page.
+== 이 사용자 지정 명령은 바인드 휠 페이지에서 편집하세요.
 
 Edit touch controls
 == 터치 컨트롤 편집
@@ -5528,6 +5561,9 @@ Ground jump
 Group name
 == 그룹 이름
 
+GUI cursor
+== UI 커서
+
 GUI cursor assets
 == GUI 커서 에셋
 
@@ -5560,6 +5596,9 @@ Hammer: %s
 
 Handwriting
 == 손글씨
+
+Happy
+== 행복
 
 Has people playing
 == 플레이 중인 사람 있음
@@ -5974,6 +6013,9 @@ Icon symbols:
 
 Icons
 == 아이콘
+
+Identity preset
+== 프로필 프리셋
 
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 1이면 연결 시 한 번만 자동 녹화하고, 0이면 게임 종료 후 자동 녹화가 다시 시작됩니다.
@@ -6896,9 +6938,6 @@ Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
 == 코드 r로 불러오기; /load를 사용하여 기존 저장 데이터를 확인할 수 있습니다
 
-Load, save, overwrite, or delete profiles
-== Load, save, overwrite, or delete profiles
-
 Loaded %d items
 == %d개 항목 불러옴
 
@@ -7064,6 +7103,12 @@ Main Asset
 Main menu
 == 메인 메뉴
 
+Main Tee
+== 본체
+
+Main Tee and dummy
+== 본체와 더미
+
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 얼은 플레이어를 배구공처럼 보이게 만들기 (0=비활성화, 1=배구 맵만, 2=항상)
 
@@ -7111,6 +7156,9 @@ Manage hostile-list chat shortcuts
 
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
+
+Manage profiles and bind wheel presets
+== 프로필과 바인드 휠 프리셋 관리
 
 Manage the skin rotation queue
 == 스킨 순환 큐 관리
@@ -7970,6 +8018,9 @@ New name
 New name:
 == 새 이름:
 
+New preset
+== 새 프리셋
+
 New preset name
 == 새 프리셋 이름
 
@@ -8672,6 +8723,9 @@ p = Ping latency
 Pack name
 == 팩 이름
 
+Pain
+== 아픔
+
 Panel opacity
 == 패널 불투명도
 
@@ -9335,6 +9389,9 @@ Preset %d
 Preset bar
 == 프리셋 바
 
+Preset type
+== 프리셋 유형
+
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264로 비디오 인코딩 시 사전 설정, 기본값 5 (medium), 0은 ultrafast, 9는 placebo (가장 느림, 권장하지 않음)
 
@@ -9460,9 +9517,6 @@ Process UDP RX (est.)
 
 Process UDP TX (est.)
 == 프로세스 UDP 전송(추정)
-
-Profile Options
-== 프로필 옵션
 
 Profiles
 == 프로필
@@ -10793,8 +10847,8 @@ Save/Load Name
 Save/Load Skin
 == 스킨 저장/불러오기
 
-Saved Profiles
-== 저장된 프로필
+Saved to the bind wheel.
+== 바인드 휠에 저장했습니다.
 
 Saved with your title and shared with other QmClient players.
 == 칭호와 함께 저장되며 다른 QmClient 플레이어에게 공유됩니다.
@@ -11032,9 +11086,6 @@ Select map
 
 Select the country flag for each player
 == Select the country flag for each player
-
-Select which player fields a profile stores
-== Select which player fields a profile stores
 
 Selected %d
 == %d개 선택됨
@@ -13037,6 +13088,9 @@ Stroke fade time
 Stroke retention time (0=Never disappear)
 == 선 유지 시간 (0=절대 사라지지 않음)
 
+Strong / Weak
+== 강약 표시 이미지
+
 Strong hook
 == 강력 갈고리
 
@@ -13075,6 +13129,9 @@ Super
 
 Support ♥
 == 후원 ♥
+
+Surprise
+== 놀람
 
 Swap
 == 교체
@@ -13562,6 +13619,9 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == QmClient를 지원해 주셔서 감사합니다
 
+Thanks!
+== 고마워요!
+
 The audio device couldn't be initialised.
 == 오디오 장치를 초기화할 수 없습니다.
 
@@ -13618,6 +13678,9 @@ The server rejected the map upload.
 
 The watermarked screenshot was saved next to the original
 == 워터마크가 적용된 스크린샷을 원본 옆에 저장했습니다
+
+The wheel changed. Your draft can be added as a new preset.
+== 휠 항목이 변경되었습니다. 초안을 새 프리셋으로 추가할 수 있습니다.
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 텍스처 %s의 너비가 %d로 나누어 떨어지지 않거나 높이가 %d로 나누어 떨어지지 않아 시각적 버그가 발생할 수 있습니다.
@@ -14609,6 +14672,9 @@ Use current map as background
 Use current name
 == 현재 이름 사용
 
+Use current settings
+== 현재 설정 가져오기
+
 Use custom skins instead of the ninja tee
 == 닌자 티 대신 사용자 정의 스킨 사용
 
@@ -14644,6 +14710,9 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 높은 대역폭 모드 사용 (서버 대역폭 두 배, LAN 전용)
+
+Use installed asset names. Empty fields keep the current asset.
+== 설치된 리소스 이름을 입력하세요. 빈 항목은 현재 리소스를 유지합니다.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == K 키를 사용하여 죽기(재시작), Q 키를 사용하여 일시 중지 및 다른 플레이어 관전. 다른 키 바인딩은 설정에서 확인하세요.
@@ -15160,6 +15229,9 @@ Welcome to DDNet
 
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 바인딩이 설정된 레벨 (자동이며 사용할 필요 없음)
+
+Wheel label
+== 휠 표시 이름
 
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient 무지개 Tee가 켜져 있으면 이 기능은 적용되지 않습니다.

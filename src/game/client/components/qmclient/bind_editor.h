@@ -66,6 +66,7 @@ namespace qm_bind_editor
 	std::string JoinCommands(const std::vector<std::string> &vCommands);
 	std::string QuoteArgument(std::string_view Text);
 	std::string BindCommand(std::string_view KeyName, std::string_view Command);
+	std::string WheelConfigLine(std::string_view Name, std::string_view Command);
 	bool FitsConfigLine(std::string_view KeyName, std::string_view Command);
 	bool AppendCommand(std::string_view KeyName, std::string_view Existing, std::string_view Next, std::string &Result);
 }
