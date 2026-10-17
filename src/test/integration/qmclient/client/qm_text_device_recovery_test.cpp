@@ -206,7 +206,7 @@ namespace
 		bool Create(const char *pString = "Recovery", bool TrackLines = false)
 		{
 			CTextCursor Cursor;
-			m_pText->SetCursor(&Cursor, 0.0f, 0.0f, 16.0f, TEXTFLAG_RENDER);
+			Cursor.m_FontSize = 16.0f;
 			Cursor.m_TrackLineRanges = TrackLines;
 			return m_pText->CreateTextContainer(m_Text, &Cursor, pString);
 		}
@@ -283,7 +283,7 @@ TEST_F(QmTextDeviceRecovery, RecreatedTextUsesCurrentTexturesAndPreservesLayout)
 TEST_F(QmTextDeviceRecovery, OldCursorCannotDeleteAReusedQuadContainer)
 {
 	CTextCursor Cursor;
-	m_pText->SetCursor(&Cursor, 0, 0, 16, TEXTFLAG_RENDER);
+	Cursor.m_FontSize = 16.0f;
 	Cursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_SET;
 	Cursor.m_CursorCharacter = 1;
 	ASSERT_TRUE(m_pText->CreateTextContainer(m_Text, &Cursor, "AB"));
