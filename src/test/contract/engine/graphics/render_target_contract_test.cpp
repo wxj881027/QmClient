@@ -99,7 +99,7 @@ TEST(GraphicsRenderTargetGaussianBlur, ThreadedFrontendBuildsModeSpecificPassCha
 	ASSERT_FALSE(Body.empty());
 	EXPECT_NE(Body.find("CalculateGaussianBlurKernel"), std::string::npos);
 	EXPECT_NE(Body.find("aTemporary[Index].Id() == Source.Id()"), std::string::npos);
-	EXPECT_NE(Body.find("m_vRenderTargetSizes[Source.Id()]"), std::string::npos);
+	EXPECT_NE(Body.find("m_RenderTargets.Size(Source.Id())"), std::string::npos);
 	EXPECT_NE(Body.find("DualKawasePyramidDimension"), std::string::npos);
 	EXPECT_NE(Body.find("DUAL_KAWASE_PYRAMID_LEVELS"), std::string::npos);
 	EXPECT_NE(Body.find("AddBlurPass"), std::string::npos);
@@ -115,7 +115,8 @@ TEST(GraphicsRenderTargetBackbufferCapture, VulkanRecordsPostCaptureDrawsInline)
 	ASSERT_FALSE(Body.empty());
 	ASSERT_FALSE(StartBody.empty());
 	ASSERT_FALSE(PrepareBody.empty());
-	EXPECT_NE(Body.find("m_ThreadCount < 2 || m_ForceSingleThreadedRender"), std::string::npos);
+	EXPECT_NE(Body.find("if(m_RenderTargetActive)"), std::string::npos);
+	EXPECT_NE(Body.find("if(RenderThreadIndex == 0)"), std::string::npos);
 	EXPECT_NE(Body.find("m_vMainDrawCommandBuffers[m_CurImageIndex]"), std::string::npos);
 	EXPECT_EQ(StartBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
 	EXPECT_NE(PrepareBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);

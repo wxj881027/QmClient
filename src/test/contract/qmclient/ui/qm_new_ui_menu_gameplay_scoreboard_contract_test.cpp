@@ -31,16 +31,22 @@
 TEST(QmNewUiMenuGameplayScoreboardContract, SettingsCardMigrationsKeepVersionPendingWhenExactMigrationFails)
 {
 	const std::string Source = ReadTextFile("src/game/client/components/menus.cpp");
+	// < 2 的 profiles 迁移随「合并 Tee 配置卡片」删除：三张旧卡片已并成单张
+	// deck:tclient-profiles，旧 ID 不再存在，迁移对象消失。此处显式锁定该终态，
+	// 避免旧迁移被误恢复；版本号也不得回退复用。
 	const size_t ProfilesStart = Source.find("if(g_Config.m_QmCardLayoutVersion < 2)");
+	ASSERT_EQ(ProfilesStart, std::string::npos);
 	const size_t StatusBarStart = Source.find("if(g_Config.m_QmCardLayoutVersion < 3)");
 	const size_t TeeStart = Source.find("if(g_Config.m_QmCardLayoutVersion < 4)");
-	ASSERT_NE(ProfilesStart, std::string::npos);
+	const size_t NextStart = Source.find("if(g_Config.m_QmCardLayoutVersion < 5)");
 	ASSERT_NE(StatusBarStart, std::string::npos);
 	ASSERT_NE(TeeStart, std::string::npos);
-	const std::string Profiles = Source.substr(ProfilesStart, StatusBarStart - ProfilesStart);
+	ASSERT_NE(NextStart, std::string::npos);
+	ASSERT_LT(StatusBarStart, TeeStart);
+	ASSERT_LT(TeeStart, NextStart);
 	const std::string StatusBar = Source.substr(StatusBarStart, TeeStart - StatusBarStart);
-	const std::string Tee = Source.substr(TeeStart, Source.find("if(g_Config.m_QmCardLayoutVersion < 5)", TeeStart) - TeeStart);
-	for(const std::string *pMigration : {&Profiles, &StatusBar, &Tee})
+	const std::string Tee = Source.substr(TeeStart, NextStart - TeeStart);
+	for(const std::string *pMigration : {&StatusBar, &Tee})
 	{
 		const size_t ShouldMigrate = pMigration->find("const bool ShouldMigrate = ExplicitStatus == qm_card_order::EExplicitLayoutStatus::MATCH;");
 		const size_t CandidateChanged = pMigration->find("const bool CandidateChanged = ShouldMigrate && qm_card_order::MigrateExactLayout", ShouldMigrate);

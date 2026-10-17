@@ -455,7 +455,9 @@ bool CConsole::LineIsValid(const char *pStr)
 			}
 			else if(*pEnd == '\\') // escape sequences
 			{
-				if(pEnd[1] == '"')
+				// \\ 与 \" 都占两个字符，必须整体跳过；只跳过 \" 会让转义反斜杠的
+				// 后一个 \ 与后续引号误配，引号内出现的 ; 被当成命令分隔符。
+				if(pEnd[1] == '"' || pEnd[1] == '\\')
 					pEnd++;
 			}
 			else if(!InString)
@@ -510,7 +512,9 @@ void CConsole::ExecuteLineStroked(int Stroke, const char *pStr, int ClientId, bo
 			}
 			else if(*pEnd == '\\') // escape sequences
 			{
-				if(pEnd[1] == '"')
+				// \\ 与 \" 都占两个字符，必须整体跳过；只跳过 \" 会让转义反斜杠的
+				// 后一个 \ 与后续引号误配，引号内出现的 ; 被当成命令分隔符。
+				if(pEnd[1] == '"' || pEnd[1] == '\\')
 					pEnd++;
 			}
 			else if(!InString && InterpretSemicolons)
