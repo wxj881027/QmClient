@@ -2885,6 +2885,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   websocket_client.h
   websocket_client_parse.cpp
   websocket_client_rust.cpp
+  websocket_client_runtime.h
   websockets.cpp
   websockets.h
 )
@@ -4963,6 +4964,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/client/qm_realtime_users_test.cpp
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp
+    src/test/unit/engine/websocket_client_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
     src/test/unit/qmclient/client/qm_developer_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
@@ -5145,6 +5147,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/uuid_test.cpp
     src/test/unit/base/vmath_test.cpp
     src/test/unit/client/voice_core_test.cpp
+    src/test/unit/client/voice_transport_test.cpp
     src/test/unit/client/voice_worker_test.cpp
     src/test/unit/client/voice_sequence_test.cpp
     src/test/unit/client/voice_qmclient_test.cpp

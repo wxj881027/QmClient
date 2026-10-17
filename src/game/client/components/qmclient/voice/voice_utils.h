@@ -47,18 +47,21 @@ namespace VoiceUtils
 		bool m_UrlValid = false;
 		bool m_Connected = false;
 		int64_t m_LastConnectedTick = 0;
+		int64_t m_NextConnectAttempt = 0;
 
 	public:
 		CVoiceWebSocketTransport();
 		explicit CVoiceWebSocketTransport(std::unique_ptr<IQmWebSocketClient> pClient);
 		bool Update(const char *pUrl, bool Enabled, uint32_t ContextHash, uint32_t TokenHash, uint8_t ProtocolVersion);
+		// Now 使用 time_get/time_freq 的时钟单位，便于调用方提供可控时钟。
+		bool UpdateAt(const char *pUrl, bool Enabled, uint32_t ContextHash, uint32_t TokenHash, uint8_t ProtocolVersion, int64_t Now);
 		void Disconnect();
 		bool Connected() const;
 		bool Connecting() const;
 		bool UrlValid() const { return m_UrlValid; }
 		const char *LastError() const;
 		bool SendPacket(const uint8_t *pData, size_t Size);
-		bool PollPacket(SQmWebSocketMessage &Out);
+		bool PollPacket(SQmWebSocketMessage &Out, bool (*pCanceled)(const void *) = nullptr, const void *pCancelUser = nullptr);
 	};
 	struct SVoicePacketHeader
 	{

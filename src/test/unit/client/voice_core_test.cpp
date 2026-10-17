@@ -19,7 +19,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <deque>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -34,85 +33,6 @@ TEST(VoiceUtils, VoiceWebSocketUrlMigratesOnlyOfficialUdpDefault)
 	EXPECT_STREQ(VoiceUtils::EffectiveVoiceWebSocketUrl("42.194.185.210:9987"), "wss://qmclient.icu/ws/voice");
 	EXPECT_STREQ(VoiceUtils::EffectiveVoiceWebSocketUrl("custom.example:9987"), "custom.example:9987");
 	EXPECT_STREQ(VoiceUtils::EffectiveVoiceWebSocketUrl("wss://voice.example/ws"), "wss://voice.example/ws");
-}
-
-namespace
-{
-	class CVoiceTransportTestClient final : public IQmWebSocketClient
-	{
-	public:
-		STuning m_Tuning;
-		EQmWebSocketState m_State = EQmWebSocketState::IDLE;
-		bool m_Desired = false;
-		bool m_SendAccepted = true;
-		int64_t m_ConnectedTick = 0;
-		std::deque<SQmWebSocketMessage> m_Incoming;
-
-		bool Available() const override { return true; }
-		const char *UnavailableReason() const override { return ""; }
-		bool Connect(const SQmWebSocketConnectConfig &, std::string &) override
-		{
-			m_Desired = true;
-			m_State = EQmWebSocketState::CONNECTING;
-			return true;
-		}
-		void Disconnect() override
-		{
-			m_Desired = false;
-			m_State = EQmWebSocketState::IDLE;
-			m_Incoming.clear();
-		}
-		bool Desired() const override { return m_Desired; }
-		EQmWebSocketState State() const override { return m_State; }
-		const char *StateName() const override { return "test"; }
-		bool SendText(const char *, size_t) override { return false; }
-		bool SendBinary(const char *, size_t) override { return m_SendAccepted; }
-		void SetTuning(const STuning &Tuning) override { m_Tuning = Tuning; }
-		bool PollMessage(SQmWebSocketMessage &Out) override
-		{
-			if(m_Incoming.empty())
-				return false;
-			Out = std::move(m_Incoming.front());
-			m_Incoming.pop_front();
-			return true;
-		}
-		size_t PendingMessages() const override { return m_Incoming.size(); }
-		int64_t LastConnectedTick() const override { return m_ConnectedTick; }
-		int64_t LastMessageTick() const override { return 0; }
-		int64_t SendCount() const override { return 0; }
-		int64_t RecvCount() const override { return 0; }
-		int64_t DroppedIncomingCount() const override { return 0; }
-		int64_t DroppedOutgoingCount() const override { return 0; }
-		int64_t ReconnectCount() const override { return 0; }
-		int LastPingRttMs() const override { return -1; }
-		const char *LastError() const override { return ""; }
-	};
-}
-
-TEST(VoiceUtils, WebSocketVoiceBoundsOutgoingQueueAndResetsAfterReconnect)
-{
-	auto pClient = std::make_unique<CVoiceTransportTestClient>();
-	auto *pMock = pClient.get();
-	CVoiceWebSocketTransport Transport(std::move(pClient));
-	EXPECT_EQ(pMock->m_Tuning.m_OutgoingQueueCapacity, 8u);
-	EXPECT_TRUE(Transport.Update("wss://voice.example/ws", true, 10, 20, VOICE_VERSION));
-	EXPECT_TRUE(Transport.Connecting());
-	pMock->m_State = EQmWebSocketState::CONNECTED;
-	++pMock->m_ConnectedTick;
-	EXPECT_TRUE(Transport.Update("wss://voice.example/ws", true, 10, 20, VOICE_VERSION));
-	uint8_t aPacket[VOICE_PACKET_HEADER_SIZE] = {};
-	EXPECT_TRUE(Transport.SendPacket(aPacket, sizeof(aPacket)));
-	pMock->m_SendAccepted = false;
-	EXPECT_FALSE(Transport.SendPacket(aPacket, sizeof(aPacket)));
-	pMock->m_State = EQmWebSocketState::RECONNECTING;
-	EXPECT_TRUE(Transport.Update("wss://voice.example/ws", true, 10, 20, VOICE_VERSION));
-	EXPECT_FALSE(Transport.SendPacket(aPacket, sizeof(aPacket)));
-	pMock->m_State = EQmWebSocketState::CONNECTED;
-	++pMock->m_ConnectedTick;
-	EXPECT_FALSE(Transport.SendPacket(aPacket, sizeof(aPacket)));
-	EXPECT_TRUE(Transport.Update("wss://voice.example/ws", true, 10, 20, VOICE_VERSION));
-	pMock->m_SendAccepted = true;
-	EXPECT_TRUE(Transport.SendPacket(aPacket, sizeof(aPacket)));
 }
 
 TEST(VoiceCore, ClampJitterTargetLow)

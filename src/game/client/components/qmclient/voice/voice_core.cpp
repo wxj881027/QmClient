@@ -1639,10 +1639,11 @@ void CRClientVoice::ProcessIncoming() NO_THREAD_SAFETY_ANALYSIS
 	const bool TestServer = TestMode == 2;
 	const uint8_t ProtocolVersion = VoiceProtocolVersion(Config);
 
-	while(true)
+	// 持续来包时也检查停止请求，避免主线程 join 一直等待队列清空。
+	while(!m_Worker.StopRequested())
 	{
 		SQmWebSocketMessage WebSocketMessage;
-		if(!m_pVoiceTransport->PollPacket(WebSocketMessage))
+		if(!m_pVoiceTransport->PollPacket(WebSocketMessage, [](const void *pWorker) { return static_cast<const CVoiceWorker *>(pWorker)->StopRequested(); }, &m_Worker))
 			break;
 		auto *pData = reinterpret_cast<unsigned char *>(WebSocketMessage.m_Data.data());
 		const int Bytes = static_cast<int>(WebSocketMessage.m_Data.size());
