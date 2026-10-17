@@ -32,6 +32,7 @@
 #include <game/client/components/qmclient/data_version.h>
 #include <game/client/components/qmclient/keyword_reply_rules.h>
 #include <game/client/components/qmclient/modes.h>
+#include <game/client/components/qmclient/save_usage.h>
 #include <game/client/components/qmclient/weapon_animation.h>
 #include <game/client/gameclient.h>
 #include <game/client/prediction/entities/character.h>
@@ -616,6 +617,15 @@ void CTClient::OnInit()
 	LoadMapCategoryCache();
 	LoadMapNotes();
 	LoadMapHistory();
+
+	// 存档使用标记侧车库（不改 ddnet-saves.txt 上游格式）。
+	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
+	m_pSaveUsageDb = SqliteOpen(Console(), Storage(), QmSaveUsage::DATABASE_FILE);
+	if(!m_pSaveUsageDb || !QmSaveUsage::EnsureTable(Console(), m_pSaveUsageDb.get()))
+	{
+		log_warn("saves", "failed to open %s; save usage marks are disabled this session", QmSaveUsage::DATABASE_FILE);
+		m_pSaveUsageDb = nullptr;
+	}
 }
 
 void CTClient::OnShutdown()
@@ -5454,13 +5464,34 @@ void CTClient::CompleteLocalSaveLoad(bool Success)
 	m_LocalSaveRestore.Reset();
 	if(Success)
 	{
-		const bool Removed = RemoveLocalSaveByCode(Request.m_Map.c_str(), Request.m_Code.c_str());
-		GameClient()->Echo(Removed ? Localize("Save loaded; local record removed.") : Localize("Save loaded; the local record could not be removed."));
+		// 使用标记写侧车库（issue #199）；是否自动删除该条目由配置决定。
+		MarkLocalSaveUsed(Request.m_Map.c_str(), Request.m_Code.c_str());
+		if(g_Config.m_QmSavesAutoRemoveUsed)
+		{
+			const bool Removed = RemoveLocalSaveByCode(Request.m_Map.c_str(), Request.m_Code.c_str());
+			GameClient()->Echo(Removed ? Localize("Save loaded; local record removed.") : Localize("Save loaded; the local record could not be removed."));
+		}
+		else
+			GameClient()->Echo(Localize("Save loaded and marked as used."));
 		m_LocalSavePromptActive = false;
 		m_vLocalSaveCandidates.clear();
 	}
 	else if(Automatic)
 		GameClient()->Echo(Localize("Save restore stopped without confirming success. The local record was kept."));
+}
+
+void CTClient::MarkLocalSaveUsed(const char *pMap, const char *pCode)
+{
+	if(!m_pSaveUsageDb)
+		return;
+	QmSaveUsage::MarkUsed(Console(), m_pSaveUsageDb.get(), QmSaveUsage::SaveKey(pMap, pCode), pMap);
+}
+
+bool CTClient::IsLocalSaveUsed(const char *pMap, const char *pCode)
+{
+	if(!m_pSaveUsageDb)
+		return false;
+	return QmSaveUsage::IsUsed(Console(), m_pSaveUsageDb.get(), QmSaveUsage::SaveKey(pMap, pCode));
 }
 
 void CTClient::HandleLocalSaveMessage(const CNetMsg_Sv_Chat *pMsg, int Conn)

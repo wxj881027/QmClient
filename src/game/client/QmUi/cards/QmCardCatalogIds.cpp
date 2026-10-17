@@ -41,6 +41,7 @@ namespace qm_card_catalog
 			"qm:emoticons",
 			"qm:better_scoreboard",
 			"qm:mini_features",
+			"qm:self_kill_protection",
 			"qm:ime",
 			"qm:jump_hint",
 			"qm:weapon_trajectory",

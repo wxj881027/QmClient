@@ -114,6 +114,11 @@ public:
 	// echo 合并的窗口判定：上一次同文本 echo 发生在 LastTime，当前时间为 Now，
 	// 窗口为 WindowMs 毫秒（0 表示关闭合并）。时间倒流或超出窗口都返回 false。
 	static bool EchoRepeatWithinWindow(int64_t Now, int64_t LastTime, int WindowMs);
+	// 行堆叠公式：在当前 y 基础上消耗本行高度与额外行间隔，随 LayoutVisibility 同步缩放。
+	static float AdvanceChatLineStack(float Y, float LineHeight, float ExtraLineSpacing, float LayoutVisibility)
+	{
+		return Y - (LineHeight + ExtraLineSpacing) * LayoutVisibility;
+	}
 	static bool IsSensitiveChatCommand(const char *pLine)
 	{
 		if(pLine == nullptr)

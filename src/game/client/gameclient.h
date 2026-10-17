@@ -1007,6 +1007,10 @@ public:
 	void SendKill();
 	void SendKill() const;
 	void SendReadyChange7();
+	static void ConQmSelfKillOff(IConsole::IResult *pResult, void *pUserData);
+	static void ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData);
+	// 自杀保护提示限流时间戳（每秒最多一次），避免按住 K 键刷屏。
+	int64_t m_QmSelfKillHintLastTime = 0;
 
 	void ApplyPreInputs(int Tick, bool Direct, CGameWorld &GameWorld);
 	bool GetDummyFastInput(CNetObj_PlayerInput &DummyFastInput, const CNetObj_PlayerInput *pDummyInputData, const class CCharacter *pDummyChar, int LocalTee, int DummyTee) const;

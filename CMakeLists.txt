@@ -3278,6 +3278,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogSearch.cpp
     QmUi/cards/QmCardCatalogSearch.h
     QmUi/cards/QmCardCatalogBind.cpp
+    QmUi/cards/QmCardCatalogSelfKillProtection.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
     QmUi/cards/QmWordFilterFileCard.cpp
     QmUi/cards/QmCardCatalogGeneral.cpp
@@ -4794,6 +4795,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_hud_test.cpp
     src/test/unit/qmclient/client/qm_chat_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_chat_spacing_test.cpp
     src/test/unit/qmclient/client/qm_pending_chat_messages_test.cpp
     src/test/unit/qmclient/client/qm_outgoing_chat_annotations_test.cpp
     src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
@@ -4910,6 +4912,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
+    src/test/unit/qmclient/client/qm_save_usage_test.cpp
     src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_deck_contract_test.cpp

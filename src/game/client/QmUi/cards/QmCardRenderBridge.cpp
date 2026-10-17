@@ -310,3 +310,8 @@ void qm_card_catalog::QmCardRenderHook::RenderQmChatCompletionContent(CMenus *pM
 {
 	pMenus->RenderQmChatCompletionContent(Content, Metrics, PrewarmOnly);
 }
+
+void qm_card_catalog::QmCardRenderHook::RenderQmSelfKillProtectionContent(CMenus *pMenus, CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly)
+{
+	pMenus->RenderQmSelfKillProtectionContent(Content, LineHeight, BodySize, LineSpacing, LabelWidth, ResolvePrewarmOnly(pMenus->Ui(), PrewarmOnly));
+}

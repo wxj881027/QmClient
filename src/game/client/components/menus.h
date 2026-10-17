@@ -3311,6 +3311,8 @@ private:
 	void RenderQmFunctionMapUploadContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, bool PrewarmOnly);
 	// 表情卡的内容渲染（R3：自 MiniFeatures 列表迁出，独立成 qm:emoticons 卡）。
 	void RenderQmFunctionEmoticonsContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth);
+	// 自杀保护卡的内容渲染：自 MiniFeatures 杂烩卡迁出，独立成 qm:self_kill_protection 卡。
+	void RenderQmSelfKillProtectionContent(CUIRect &Content, float LineHeight, float BodySize, float LineSpacing, float LabelWidth, bool PrewarmOnly);
 	// 灵动岛倒计时位置开关（卡片目录的桥接入口按本地签名调用）。
 	bool ToggleQmHudCountdownLocation(CUIRect &Content, float LineHeight, float LineSpacing, const void *pId, int *pValue);
 	// 歌词卡的内容渲染（音乐 Hook 开关 + 歌词开关；Hook 开关改为遍历 QmMusicHookRegistry）。
