@@ -13,6 +13,8 @@
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
 
+#include <game/client/QmUi/UiTokens.h>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -30,8 +32,6 @@
 #include <utility>
 
 #if defined(CONF_FAMILY_WINDOWS)
-#include <game/client/QmUi/UiTokens.h>
-
 #include <windows.h>
 #endif
 
