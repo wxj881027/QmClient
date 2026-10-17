@@ -11,6 +11,7 @@
 #include <shlobj.h>
 #include <uxtheme.h>
 #include <wincodec.h>
+#include <windowsx.h>
 #include <wrl/client.h>
 
 #include <algorithm>
@@ -32,6 +33,8 @@ namespace
 	constexpr int ID_DESKTOP = 101;
 	constexpr int ID_LOG = 102;
 	constexpr int ID_DIRECTORY = 103;
+	constexpr int ID_MINIMIZE = 104;
+	constexpr int ID_CLOSE = 105;
 
 	D2D1_COLOR_F Color(UINT32 Rgb)
 	{
@@ -89,6 +92,8 @@ namespace
 		HWND m_Secondary = nullptr;
 		HWND m_LogButton = nullptr;
 		HWND m_Status = nullptr;
+		HWND m_Minimize = nullptr;
+		HWND m_CloseButton = nullptr;
 		HWND m_EngineWindow = nullptr;
 		HWND m_HoverButton = nullptr;
 		HFONT m_Font = nullptr;
@@ -113,7 +118,7 @@ namespace
 			QmSetup::CTransition m_Hover;
 			QmSetup::CTransition m_Press;
 		};
-		std::array<SControlFeedback, 5> m_aFeedback;
+		std::array<SControlFeedback, 7> m_aFeedback;
 		DWORD m_ExitCode = 2;
 		std::wstring m_Directory;
 		std::wstring m_Error;
@@ -257,13 +262,12 @@ namespace
 			m_BackBrush = CreateSolidBrush(RGB((Bg >> 16) & 255, (Bg >> 8) & 255, Bg & 255));
 			const BOOL Dark = m_Dark;
 			DwmSetWindowAttribute(m_Window, 20, &Dark, sizeof(Dark));
-			const UINT32 Caption = m_Dark ? 0x30212B : 0xFFE1EB;
-			const UINT32 CaptionText = Foreground();
-			const COLORREF CaptionColor = RGB((Caption >> 16) & 255, (Caption >> 8) & 255, Caption & 255);
-			const COLORREF CaptionTextColor = RGB((CaptionText >> 16) & 255, (CaptionText >> 8) & 255, CaptionText & 255);
-			// Windows 11 为原生标题栏配色；不支持的系统继续使用标准标题栏。
-			DwmSetWindowAttribute(m_Window, DWMWA_CAPTION_COLOR, &CaptionColor, sizeof(CaptionColor));
-			DwmSetWindowAttribute(m_Window, DWMWA_TEXT_COLOR, &CaptionTextColor, sizeof(CaptionTextColor));
+			const UINT32 Frame = Border();
+			const COLORREF FrameColor = RGB((Frame >> 16) & 255, (Frame >> 8) & 255, Frame & 255);
+			const DWM_WINDOW_CORNER_PREFERENCE Corners = DWMWCP_ROUND;
+			// 保留系统边缘与阴影，标题栏和窗口按钮由内容区统一绘制。
+			DwmSetWindowAttribute(m_Window, DWMWA_BORDER_COLOR, &FrameColor, sizeof(FrameColor));
+			DwmSetWindowAttribute(m_Window, DWMWA_WINDOW_CORNER_PREFERENCE, &Corners, sizeof(Corners));
 			BOOL Animations = TRUE;
 			SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION, 0, &Animations, 0);
 			m_Animations = Animations != FALSE;
@@ -318,11 +322,14 @@ namespace
 		{
 			const HFONT OldFont = m_Font;
 			m_Font = CreateFontW(-Pixels(14), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Microsoft YaHei UI");
-			for(const HWND Control : {m_Edit, m_Browse, m_Desktop, m_Primary, m_Secondary, m_LogButton, m_Status})
+			for(const HWND Control : {m_Edit, m_Browse, m_Desktop, m_Primary, m_Secondary, m_LogButton, m_Status, m_Minimize, m_CloseButton})
 				SendMessageW(Control, WM_SETFONT, reinterpret_cast<WPARAM>(m_Font), TRUE);
 			if(OldFont)
 				DeleteObject(OldFont);
 			PlaceContent();
+			// 窗口操作始终固定在顶部，不跟随安装页面的入场位移。
+			SetWindowPos(m_Minimize, nullptr, Pixels(WIDTH - 96), Pixels(12), Pixels(36), Pixels(32), SWP_NOZORDER | SWP_NOACTIVATE);
+			SetWindowPos(m_CloseButton, nullptr, Pixels(WIDTH - 52), Pixels(12), Pixels(36), Pixels(32), SWP_NOZORDER | SWP_NOACTIVATE);
 		}
 
 		void ShowPage(EPage Page)
@@ -330,9 +337,12 @@ namespace
 			m_Page = Page;
 			m_Reveal.Snap(0.0f);
 			m_Reveal.SetTarget(1.0f, m_Animations, 0.28f);
-			m_HoverButton = nullptr;
+			if(m_HoverButton != m_Minimize && m_HoverButton != m_CloseButton)
+				m_HoverButton = nullptr;
 			for(auto &Feedback : m_aFeedback)
 			{
+				if(Feedback.m_Window == m_Minimize || Feedback.m_Window == m_CloseButton)
+					continue;
 				Feedback.m_Hover.Snap(0.0f);
 				Feedback.m_Press.Snap(0.0f);
 			}
@@ -430,7 +440,9 @@ namespace
 
 		void Activate(int Id)
 		{
-			if(Id == IDCANCEL)
+			if(Id == ID_MINIMIZE)
+				ShowWindow(m_Window, SW_MINIMIZE);
+			else if(Id == IDCANCEL || Id == ID_CLOSE)
 				Close();
 			else if(Id == ID_BROWSE && m_Page == EPage::OPTIONS)
 				Browse();
@@ -637,6 +649,32 @@ namespace
 			GetWindowTextW(Item.hwndItem, aCaption, 128);
 			pTarget->BeginDraw();
 			pTarget->Clear(Color(Background()));
+			if(Item.CtlID == ID_MINIMIZE || Item.CtlID == ID_CLOSE)
+			{
+				const bool CloseButton = Item.CtlID == ID_CLOSE;
+				const UINT32 HoverColor = m_Dark ? 0x513342 : CloseButton ? 0xFADCE5 :
+											    0xFCEBF1;
+				const D2D1_RECT_F Face{1 + Press, 1 + Press, Width - 1 - Press, Height - 1 - Press};
+				Fill(pTarget, Face, Blend(Blend(Background(), HoverColor, Hover), Border(), Press), 9);
+				ComPtr<ID2D1SolidColorBrush> pBrush;
+				if(SUCCEEDED(pTarget->CreateSolidColorBrush(Color(Blend(Muted(), CloseButton ? FocusColor() : Foreground(), Hover)), &pBrush)))
+				{
+					const float CenterX = Width * 0.5f;
+					const float CenterY = Height * 0.5f + Press;
+					if(CloseButton)
+					{
+						pTarget->DrawLine({CenterX - 4, CenterY - 4}, {CenterX + 4, CenterY + 4}, pBrush.Get(), 1.5f, m_pRoundStroke.Get());
+						pTarget->DrawLine({CenterX + 4, CenterY - 4}, {CenterX - 4, CenterY + 4}, pBrush.Get(), 1.5f, m_pRoundStroke.Get());
+					}
+					else
+						pTarget->DrawLine({CenterX - 5, CenterY}, {CenterX + 5, CenterY}, pBrush.Get(), 1.5f, m_pRoundStroke.Get());
+				}
+				if((Item.itemState & ODS_FOCUS) && !(Item.itemState & ODS_NOFOCUSRECT))
+					Stroke(pTarget, {2, 2, Width - 2, Height - 2}, FocusColor(), 8);
+				if(pTarget->EndDraw() == D2DERR_RECREATE_TARGET)
+					m_pControlTarget.Reset();
+				return;
+			}
 			const UINT32 ButtonColor = Primary ? Blend(Blend(Accent(), Accent(false, true), Hover), Accent(true), Press) : Blend(Blend(Background(), m_Dark ? 0x382530 : 0xFCEBF1, Hover), Border(), Press);
 			const D2D1_RECT_F Face{1 + Press, 1 + Press, Width - 1 - Press, Height - 1 - Press};
 			Fill(pTarget, Face, ContentColor(Disabled ? Border() : ButtonColor), 12);
@@ -655,6 +693,22 @@ namespace
 		{
 			switch(Message)
 			{
+			case WM_NCHITTEST:
+			{
+				POINT Point{GET_X_LPARAM(LParam), GET_Y_LPARAM(LParam)};
+				ScreenToClient(m_Window, &Point);
+				if(Point.x >= 0 && Point.x < Pixels(WIDTH) && Point.y >= 0 && Point.y < Pixels(48))
+				{
+					// 只有顶部留白作为拖动区域，两个按钮继续接收正常点击。
+					const HWND Child = ChildWindowFromPointEx(m_Window, Point, CWP_SKIPINVISIBLE);
+					return Child && Child != m_Window ? HTCLIENT : HTCAPTION;
+				}
+				return DefWindowProcW(m_Window, Message, WParam, LParam);
+			}
+			case WM_NCLBUTTONDBLCLK:
+				if(WParam == HTCAPTION)
+					return 0;
+				return DefWindowProcW(m_Window, Message, WParam, LParam);
 			case WM_PAINT: Paint(); return 0;
 			case WM_ERASEBKGND: return 1;
 			case WM_COMMAND:
@@ -909,7 +963,7 @@ namespace
 			Class.hIcon = LoadIconW(Instance, MAKEINTRESOURCEW(1));
 			if(!RegisterClassExW(&Class))
 				return 1;
-			const DWORD Style = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN;
+			const DWORD Style = WS_POPUP | WS_BORDER | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPCHILDREN;
 			RECT Rect{0, 0, Pixels(WIDTH), Pixels(HEIGHT)};
 			using FAdjustRect = BOOL(WINAPI *)(LPRECT, DWORD, BOOL, DWORD, UINT);
 			const auto pAdjustRect = reinterpret_cast<FAdjustRect>(GetProcAddress(User32, "AdjustWindowRectExForDpi"));
@@ -918,7 +972,13 @@ namespace
 			else
 				AdjustWindowRectEx(&Rect, Style, FALSE, 0);
 			const std::wstring Title = L"QmClient " QM_SETUP_VERSION L" 安装程序";
-			if(!CreateWindowExW(0, Class.lpszClassName, Title.c_str(), Style, CW_USEDEFAULT, CW_USEDEFAULT, Rect.right - Rect.left, Rect.bottom - Rect.top, nullptr, nullptr, Instance, this))
+			RECT WorkArea{0, 0, Pixels(WIDTH), Pixels(HEIGHT)};
+			SystemParametersInfoW(SPI_GETWORKAREA, 0, &WorkArea, 0);
+			const int WindowWidth = Rect.right - Rect.left;
+			const int WindowHeight = Rect.bottom - Rect.top;
+			const int X = WorkArea.left + (WorkArea.right - WorkArea.left - WindowWidth) / 2;
+			const int Y = WorkArea.top + (WorkArea.bottom - WorkArea.top - WindowHeight) / 2;
+			if(!CreateWindowExW(WS_EX_APPWINDOW, Class.lpszClassName, Title.c_str(), Style, X, Y, WindowWidth, WindowHeight, nullptr, nullptr, Instance, this))
 				return 1;
 			ReadTheme();
 			const DWORD ControlStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP;
@@ -937,13 +997,15 @@ namespace
 			m_Secondary = Button(IDCANCEL, L"取消", BS_OWNERDRAW);
 			m_LogButton = Button(ID_LOG, L"查看安装日志", BS_OWNERDRAW);
 			m_Status = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX, 0, 0, 0, 0, m_Window, nullptr, Instance, nullptr);
-			if(!m_Edit || !m_Browse || !m_Desktop || !m_Primary || !m_Secondary || !m_LogButton || !m_Status)
+			m_Minimize = Button(ID_MINIMIZE, L"最小化", BS_OWNERDRAW);
+			m_CloseButton = Button(ID_CLOSE, L"关闭安装程序", BS_OWNERDRAW);
+			if(!m_Edit || !m_Browse || !m_Desktop || !m_Primary || !m_Secondary || !m_LogButton || !m_Status || !m_Minimize || !m_CloseButton)
 			{
 				DestroyWindow(m_Window);
 				return 1;
 			}
 			size_t FeedbackIndex = 0;
-			for(const HWND ButtonWindow : {m_Browse, m_Desktop, m_Primary, m_Secondary, m_LogButton})
+			for(const HWND ButtonWindow : {m_Browse, m_Desktop, m_Primary, m_Secondary, m_LogButton, m_Minimize, m_CloseButton})
 			{
 				m_aFeedback[FeedbackIndex++].m_Window = ButtonWindow;
 				SetWindowSubclass(ButtonWindow, ButtonProc, 1, reinterpret_cast<DWORD_PTR>(this));
