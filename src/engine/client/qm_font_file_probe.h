@@ -4,6 +4,7 @@
 #include "qm_font_names.h"
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 
 // 只读字体名称，不把无关字体整份装入内存；独立 FreeType 库只在 worker 内使用。
@@ -72,9 +73,9 @@ public:
 	CQmFontFileProbe(const CQmFontFileProbe &) = delete;
 	CQmFontFileProbe &operator=(const CQmFontFileProbe &) = delete;
 
-	bool Matches(const char *pPath, const std::vector<std::string> &vNames) const
+	bool Matches(const char *pPath, const std::vector<std::string> &vNames, const std::function<bool()> &Cancelled = {}) const
 	{
-		if(m_Library == nullptr || vNames.empty())
+		if(m_Library == nullptr || vNames.empty() || (Cancelled && Cancelled()))
 			return false;
 		FT_Long NumFaces;
 		{
@@ -85,6 +86,8 @@ public:
 		}
 		for(FT_Long Index = 0; Index < NumFaces; ++Index)
 		{
+			if(Cancelled && Cancelled())
+				return false;
 			const CFace Face(m_Library, pPath, Index);
 			if(Face.Get() == nullptr)
 				continue;
@@ -101,15 +104,17 @@ public:
 	}
 };
 
-inline std::vector<std::string> QmFindSelectedFontFiles(const std::vector<std::string> &vPaths, const std::vector<std::string> &vNames)
+inline std::vector<std::string> QmFindSelectedFontFiles(const std::vector<std::string> &vPaths, const std::vector<std::string> &vNames, const std::function<bool()> &Cancelled = {})
 {
 	std::vector<std::string> vSelected;
-	if(vNames.empty())
+	if(vNames.empty() || (Cancelled && Cancelled()))
 		return vSelected;
 	CQmFontFileProbe Probe;
 	for(const std::string &Path : vPaths)
 	{
-		if(Probe.Matches(Path.c_str(), vNames))
+		if(Cancelled && Cancelled())
+			return {};
+		if(Probe.Matches(Path.c_str(), vNames, Cancelled))
 			vSelected.push_back(Path);
 	}
 	return vSelected;

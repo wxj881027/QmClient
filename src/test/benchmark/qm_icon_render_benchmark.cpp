@@ -83,7 +83,8 @@ namespace
 			}
 			m_pText.reset(CreateEngineTextRender());
 			m_pKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
-			m_pText->Init();
+			if(!m_pText->Init())
+				return;
 			m_Ready = m_pText->LoadFonts();
 			m_pText->SetFontPreset(EFontPreset::ICON_FONT);
 		}

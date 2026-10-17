@@ -11,7 +11,7 @@ class CQmFontRestore
 {
 public:
 	using TSelection = std::array<const char *, 3>;
-	using FFindFiles = std::function<std::vector<std::string>(const std::vector<std::string> &)>;
+	using FFindFiles = std::function<std::vector<std::string>(const std::vector<std::string> &, const CQmFontScanJob::FCancelled &)>;
 
 private:
 	std::array<std::string, 3> m_aAttemptedNames;
@@ -25,6 +25,10 @@ public:
 	{
 		if(Active())
 			return nullptr;
+		if(std::equal(m_aAttemptedNames.begin(), m_aAttemptedNames.end(), apSelection.begin()))
+			return nullptr;
+		// 查找或任务分配失败时，原选择仍可重试；不留下尚未提交的尝试标记。
+		auto aAttemptedNames = m_aAttemptedNames;
 		std::vector<std::string> vNames;
 		for(size_t Index = 0; Index < apSelection.size(); ++Index)
 		{
@@ -32,15 +36,19 @@ public:
 			if(m_aAttemptedNames[Index] == pName)
 				continue;
 			// 缺失或损坏的选择只尝试一次；配置变化后允许再次查找。
-			m_aAttemptedNames[Index] = pName;
+			aAttemptedNames[Index] = pName;
 			if(pName[0] == '\0' || HasFace(pName))
 				continue;
 			if(std::find(vNames.begin(), vNames.end(), pName) == vNames.end())
 				vNames.emplace_back(pName);
 		}
 		if(vNames.empty())
+		{
+			m_aAttemptedNames.swap(aAttemptedNames);
 			return nullptr;
-		m_pJob = std::make_shared<CQmFontScanJob>([FindFiles = std::move(FindFiles), vNames = std::move(vNames)] { return FindFiles(vNames); }, std::move(Read));
+		}
+		m_pJob = std::make_shared<CQmFontScanJob>([FindFiles = std::move(FindFiles), vNames = std::move(vNames)](const auto &Cancelled) { return FindFiles(vNames, Cancelled); }, std::move(Read));
+		m_aAttemptedNames.swap(aAttemptedNames);
 		return m_pJob;
 	}
 
@@ -67,6 +75,8 @@ public:
 
 	void Reset()
 	{
+		if(m_pJob != nullptr)
+			m_pJob->Abort();
 		m_pJob.reset();
 		m_aAttemptedNames = {};
 	}

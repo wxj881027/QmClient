@@ -3110,10 +3110,13 @@ if(CLIENT)
     graphics_threaded.cpp
     graphics_threaded.h
     graphics_threaded_sprites.cpp
+    render_target_readback_queue.h
+    render_target_pool.h
     input.cpp
     input.h
     input_sdl3.h
     audio_sdl3.h
+    sound_buffer.h
     keynames.cpp
     keynames.h
     notifications.cpp
@@ -3136,13 +3139,19 @@ if(CLIENT)
     steam_probe.h
     steam_client_path.h
     text.cpp
+    glyph_atlas_growth.h
     text_gradient.h
     qm_font_names.h
+    qm_font_collection.h
+    qm_font_face_registry.h
     qm_font_file_probe.h
     qm_font_restore.h
+    qm_font_scan_job.h
     qm_system_fonts.h
     qm_font_name_match.h
     text_sweep.h
+    text_utf8_cursor.h
+    texture_slot_pool.h
     updater.cpp
     updater.h
     video.cpp
@@ -3631,6 +3640,7 @@ if(CLIENT)
     components/qmclient/tee_trail_styles.h
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
+    components/qmclient/scripting/state.h
     components/qmclient/translate/translate.cpp
     components/qmclient/translate/translate_backend.cpp
     components/qmclient/translate/translate_backend_auto.cpp
@@ -4715,10 +4725,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/client/graphics_fatal_error_test.cpp
     src/test/integration/client/graphics_error_report_test.cpp
     src/test/unit/engine/graphics/graphics_command_batch_test.cpp
+    src/test/unit/engine/graphics/graphics_command_buffer_allocation_test.cpp
+    src/test/unit/engine/graphics/glyph_atlas_growth_test.cpp
     src/test/unit/base/hash_test.cpp
     src/test/unit/engine/huffman_test.cpp
     src/test/contract/base/http_shutdown_lifecycle_contract_test.cpp
     src/test/unit/engine/image_test.cpp
+    src/test/unit/engine/sound_buffer_test.cpp
     src/test/unit/base/io_test.cpp
     src/test/unit/base/io_read_all_test.cpp
     src/test/contract/base/ios_runtime_contract_test.cpp
@@ -4879,7 +4892,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_font_category_test.cpp
     src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/unit/qmclient/client/qm_font_scan_job_test.cpp
+    src/test/integration/qmclient/client/qm_font_scan_failure_test.cpp
+    src/test/integration/qmclient/client/qm_font_scan_cancellation_test.cpp
     src/test/unit/qmclient/client/qm_font_restore_test.cpp
+    src/test/unit/qmclient/client/qm_scripting_state_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
@@ -5070,6 +5086,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/engine/graphics/render_target_contract_test.cpp
     src/test/unit/engine/graphics/render_target_geometry_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
+    src/test/unit/engine/graphics/render_target_readback_queue_test.cpp
+    src/test/unit/engine/graphics/render_target_pool_test.cpp
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp
@@ -5090,6 +5108,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/graphics/text_char_transform_test.cpp
     src/test/unit/engine/graphics/text_container_lifetime_test.cpp
     src/test/unit/engine/graphics/text_layout_string_test.cpp
+    src/test/unit/engine/graphics/text_utf8_cursor_test.cpp
+    src/test/unit/engine/graphics/texture_slot_pool_test.cpp
     src/test/unit/engine/graphics/text_sweep_test.cpp
     src/test/unit/engine/graphics/text_gradient_geometry_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_effect_lod_test.cpp
@@ -5282,6 +5302,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
 
   if(FREETYPE_FOUND)
+    list(APPEND TESTS
+      src/test/unit/qmclient/client/qm_font_face_registry_test.cpp
+      src/test/integration/qmclient/client/qm_font_collection_test.cpp
+    )
     list(APPEND TESTS src/test/integration/qmclient/client/qm_system_font_restore_test.cpp)
     list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/integration/qmclient/client/qm_screenshot_watermark_job_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
     list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
@@ -5438,6 +5462,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/ui/qm_discrete_slider_spring_test.cpp
       src/test/integration/qmclient/ui/qm_numeric_field_enter_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
+      src/test/integration/qmclient/client/qm_font_loading_test.cpp
+      src/test/integration/qmclient/client/qm_text_measurement_test.cpp
+      src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
+      src/test/integration/qmclient/client/qm_text_initialization_test.cpp
+      src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp

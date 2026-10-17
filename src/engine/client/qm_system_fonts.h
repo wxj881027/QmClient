@@ -5,7 +5,10 @@
 #include <base/windows.h>
 
 #include <algorithm>
+#include <functional>
+#include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -36,9 +39,11 @@ inline std::string QmResolveSystemFontPath(std::string Path, const std::string &
 }
 
 // 注册表提供实际文件位置，兼容仅当前用户安装和安装在其他目录的字体。
-inline std::vector<std::string> QmSystemFontPaths()
+inline std::vector<std::string> QmSystemFontPaths(const std::function<bool()> &Cancelled = {})
 {
 	std::vector<std::string> vPaths;
+	if(Cancelled && Cancelled())
+		return vPaths;
 #if defined(CONF_FAMILY_WINDOWS)
 	wchar_t aWindows[32768] = {};
 	const UINT WindowsLength = GetWindowsDirectoryW(aWindows, std::size(aWindows));
@@ -49,8 +54,11 @@ inline std::vector<std::string> QmSystemFontPaths()
 		HKEY Key;
 		if(RegOpenKeyExW(Root, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", 0, KEY_READ | KEY_WOW64_64KEY, &Key) != ERROR_SUCCESS)
 			continue;
+		const std::unique_ptr<std::remove_pointer_t<HKEY>, decltype(&RegCloseKey)> KeyOwner(Key, &RegCloseKey);
 		for(DWORD Index = 0;; ++Index)
 		{
+			if(Cancelled && Cancelled())
+				return {};
 			wchar_t aName[16384] = {}, aValue[32768] = {};
 			DWORD NameLength = std::size(aName), Size = sizeof(aValue) - sizeof(wchar_t), Type = 0;
 			const LONG Result = RegEnumValueW(Key, Index, aName, &NameLength, nullptr, &Type, reinterpret_cast<BYTE *>(aValue), &Size);
@@ -94,7 +102,6 @@ inline std::vector<std::string> QmSystemFontPaths()
 				continue;
 			vPaths.push_back(Resolved);
 		}
-		RegCloseKey(Key);
 	}
 	std::sort(vPaths.begin(), vPaths.end(), [](const auto &Left, const auto &Right) { return str_comp_nocase(Left.c_str(), Right.c_str()) < 0; });
 	vPaths.erase(std::unique(vPaths.begin(), vPaths.end(), [](const auto &Left, const auto &Right) { return str_comp_nocase(Left.c_str(), Right.c_str()) == 0; }), vPaths.end());
