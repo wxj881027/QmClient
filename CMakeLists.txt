@@ -3138,6 +3138,8 @@ if(CLIENT)
     glyph_atlas_growth.h
     text_gradient.h
     qm_font_names.h
+    qm_font_collection.h
+    qm_font_face_registry.h
     qm_font_file_probe.h
     qm_font_restore.h
     qm_font_scan_job.h
@@ -5277,6 +5279,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
 
   if(FREETYPE_FOUND)
+    list(APPEND TESTS
+      src/test/unit/qmclient/client/qm_font_face_registry_test.cpp
+      src/test/integration/qmclient/client/qm_font_collection_test.cpp
+    )
     list(APPEND TESTS src/test/integration/qmclient/client/qm_system_font_restore_test.cpp)
     list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/integration/qmclient/client/qm_screenshot_watermark_job_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
     list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
@@ -5431,6 +5437,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/support/qm_exit_process_probe.cpp
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
+      src/test/integration/qmclient/client/qm_font_loading_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp

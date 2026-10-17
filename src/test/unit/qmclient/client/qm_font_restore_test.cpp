@@ -4,6 +4,7 @@
 #include <test/support/job_wait.h>
 
 #include <cstring>
+#include <new>
 #include <unordered_set>
 
 namespace
@@ -77,6 +78,28 @@ TEST_F(CQmFontRestoreTest, EmptyAndAlreadyLoadedSelectionsDoNotStartLookup)
 	m_Available.insert("bundled");
 	EXPECT_EQ(Request({"bundled", "", ""}), nullptr);
 	EXPECT_FALSE(m_Restore.Active());
+}
+
+TEST_F(CQmFontRestoreTest, FailedNameLookupLeavesEveryChangedSelectionRetryable)
+{
+	const CQmFontRestore::TSelection Selection{"latin", "cjk", ""};
+	int Lookups = 0;
+	const auto FailedLookup = [&](const char *) {
+		if(++Lookups == 2)
+			throw std::bad_alloc();
+		return false;
+	};
+	const auto FindFiles = [](const auto &vNames, const auto &) { return vNames; };
+	EXPECT_THROW(m_Restore.Request(Selection, FailedLookup, FindFiles, Read), std::bad_alloc);
+	EXPECT_FALSE(m_Restore.Active());
+	std::vector<std::string> vRetried;
+	const auto RetryLookup = [&](const char *pName) {
+		vRetried.emplace_back(pName);
+		return false;
+	};
+	const auto pJob = m_Restore.Request(Selection, RetryLookup, FindFiles, Read);
+	EXPECT_NE(pJob, nullptr);
+	EXPECT_EQ(vRetried, (std::vector<std::string>{"latin", "cjk"}));
 }
 
 TEST_F(CQmFontRestoreTest, RepeatedRolesShareOneLookupAndRestoreTheirOwnSelections)
