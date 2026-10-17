@@ -4,6 +4,7 @@
 #include <base/time.h>
 
 #include <engine/client/serverbrowser_http.h>
+#include <engine/client/serverbrowser_http_parse.h>
 #include <engine/engine.h>
 #include <engine/http.h>
 #include <engine/shared/serverinfo.h>
@@ -11,11 +12,15 @@
 
 #include <gtest/gtest.h>
 #include <test/support/http_curl_test_peer.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <new>
+#include <stdexcept>
 #include <thread>
 
 namespace
@@ -54,6 +59,58 @@ namespace
 		void Run(std::shared_ptr<IHttpRequest> pRequest) override { m_vStarted.push_back(std::move(pRequest)); }
 		bool HasIpresolveBug() const override { return false; }
 	};
+	class CJobSubmissionBoundary : public IEngine
+	{
+	public:
+		IEngine *m_pTarget = nullptr;
+		int m_Submissions = 0;
+		int m_RejectSubmission = 0;
+		bool m_ThrowUnknown = false;
+		std::shared_ptr<IJob> m_pLastAccepted;
+		void Init() override { m_pTarget->Init(); }
+		void ShutdownJobs() override { m_pTarget->ShutdownJobs(); }
+		void SetAdditionalLogger(std::shared_ptr<ILogger> &&pLogger) override { m_pTarget->SetAdditionalLogger(std::move(pLogger)); }
+		void AddJob(std::shared_ptr<IJob> pJob) override
+		{
+			// 仅在入队前注入失败；已接受的任务仍交给真实线程池运行。
+			if(++m_Submissions == m_RejectSubmission)
+			{
+				if(m_ThrowUnknown)
+					throw 1;
+				throw std::bad_alloc();
+			}
+			m_pTarget->AddJob(pJob);
+			m_pLastAccepted = std::move(pJob);
+		}
+	};
+	class CFailureBarrier
+	{
+		std::mutex m_Lock;
+		std::condition_variable m_Changed;
+		bool m_Entered = false;
+		bool m_Released = false;
+
+	public:
+		void Pause()
+		{
+			std::unique_lock Lock(m_Lock);
+			m_Entered = true;
+			m_Changed.notify_all();
+			if(!m_Changed.wait_for(Lock, std::chrono::seconds(5), [this] { return m_Released; }))
+				throw std::runtime_error("failure barrier timed out");
+		}
+		bool WaitUntilEntered()
+		{
+			std::unique_lock Lock(m_Lock);
+			return m_Changed.wait_for(Lock, std::chrono::seconds(2), [this] { return m_Entered; });
+		}
+		void Release()
+		{
+			std::lock_guard Lock(m_Lock);
+			m_Released = true;
+			m_Changed.notify_all();
+		}
+	};
 	std::string List(const char *pName = "Valid")
 	{
 		return std::string(R"({"servers":[{"addresses":["tw-0.6+udp://127.0.0.1:8303"],"location":"eu","info":{"max_clients":16,"max_players":16,"passworded":false,"game_type":"DDRace","name":")") + pName + R"(","map":{"name":"Map"},"version":"0.6","clients":[]}}]})";
@@ -65,13 +122,15 @@ namespace
 		CTestInfo m_Info;
 		std::unique_ptr<IStorage> m_pStorage = m_Info.CreateTestStorage();
 		std::unique_ptr<IEngine> m_pEngine{CreateTestEngine("serverlist-test")};
+		CJobSubmissionBoundary m_Jobs;
 		CHttpBoundary m_Http;
 		std::vector<std::shared_ptr<CResponse>> m_vRequests;
 		std::unique_ptr<IServerBrowserHttp> m_pBrowser;
 		int64_t m_Now = 100;
-		void Begin(std::vector<std::string> vUrls = {"https://one.test/list", "https://two.test/list", "https://three.test/list"}, const char *pPrevious = "", bool Tiers = false, std::function<bool(const std::string &, const std::string &)> SaveWriter = {})
+		void Begin(std::vector<std::string> vUrls = {"https://one.test/list", "https://two.test/list", "https://three.test/list"}, const char *pPrevious = "", bool Tiers = false, std::function<bool(const std::string &, const std::string &)> SaveWriter = {}, FServerListParser ParseList = {})
 		{
-			m_pBrowser.reset(CreateServerBrowserHttpWithSources(m_pEngine.get(), m_pStorage.get(), &m_Http, std::move(vUrls), pPrevious, [this](const char *pUrl) { auto pResult = std::make_shared<CResponse>(pUrl); m_vRequests.push_back(pResult); return pResult; }, [this] { return m_Now; }, Tiers, {}, std::move(SaveWriter)));
+			m_Jobs.m_pTarget = m_pEngine.get();
+			m_pBrowser.reset(CreateServerBrowserHttpWithSources(&m_Jobs, m_pStorage.get(), &m_Http, std::move(vUrls), pPrevious, [this](const char *pUrl) { auto pResult = std::make_shared<CResponse>(pUrl); m_vRequests.push_back(pResult); return pResult; }, [this] { return m_Now; }, Tiers, {}, std::move(SaveWriter), std::move(ParseList)));
 		}
 		bool Until(const std::function<bool()> &Condition)
 		{
@@ -541,6 +600,226 @@ TEST_F(QmServerListRecovery, SavedCacheKeepsRealAgeForComparisonWhileAwaitingLiv
 	ASSERT_TRUE(Until([this] { return !m_pBrowser->IsRefreshing(); }));
 	EXPECT_EQ(m_pBrowser->Revision(), Revision);
 	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recent persisted");
+}
+
+TEST_F(QmServerListRecovery, ParserAllocationExceptionRetainsCacheAndRecoversAfterBackoff)
+{
+	auto pFail = std::make_shared<std::atomic<bool>>(false);
+	Begin({"https://one.test/list"}, "", false, {}, [pFail](json_value *pJson, std::vector<CServerInfo> *pvServers) {
+		const bool Failed = ServerBrowserParseHttpList(pJson, pvServers);
+		if(pFail->load())
+			throw std::bad_alloc();
+		return Failed;
+	});
+	m_vRequests[0]->Reply(List("Previous"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	pFail->store(true);
+	m_pBrowser->Refresh();
+	m_vRequests[1]->Reply(List("Unpublished"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->IsError(); }));
+	EXPECT_EQ(m_pBrowser->Revision(), 1U);
+	EXPECT_EQ(m_pBrowser->NumServers(), 1);
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Previous");
+	m_Now += 4;
+	m_pBrowser->Update();
+	EXPECT_EQ(m_vRequests.size(), 2U);
+	pFail->store(false);
+	++m_Now;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 3U);
+	m_vRequests[2]->Reply(List("Recovered"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recovered");
+}
+
+TEST_F(QmServerListRecovery, UnknownParserExceptionAllowsRemainingSourceToPublish)
+{
+	auto pCalls = std::make_shared<std::atomic<int>>(0);
+	Begin({"https://one.test/list", "https://two.test/list"}, "", false, {}, [pCalls](json_value *pJson, std::vector<CServerInfo> *pvServers) {
+		const bool Failed = ServerBrowserParseHttpList(pJson, pvServers);
+		if(pCalls->fetch_add(1) == 0)
+			throw 1;
+		return Failed;
+	});
+	m_vRequests[0]->Reply(List("Unpublished"));
+	m_pBrowser->Update();
+	ASSERT_NE(m_Jobs.m_pLastAccepted, nullptr);
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	m_pBrowser->Update();
+	EXPECT_EQ(m_pBrowser->Revision(), 0U);
+	EXPECT_TRUE(m_pBrowser->IsRefreshing());
+	m_vRequests[1]->Reply(List("Second source"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Second source");
+}
+
+TEST_F(QmServerListRecovery, ParserExceptionAfterBrowserDestructionDoesNotPoisonWorkerPool)
+{
+	auto pBarrier = std::make_shared<CFailureBarrier>();
+	Begin({"https://one.test/list"}, "", false, {}, [pBarrier](json_value *pJson, std::vector<CServerInfo> *pvServers) -> bool {
+		ServerBrowserParseHttpList(pJson, pvServers);
+		pBarrier->Pause();
+		throw std::bad_alloc();
+	});
+	m_vRequests[0]->Reply(List("Cancelled"));
+	m_pBrowser->Update();
+	ASSERT_TRUE(pBarrier->WaitUntilEntered());
+	const auto pCancelledJob = m_Jobs.m_pLastAccepted;
+	m_pBrowser->Shutdown();
+	m_pBrowser.reset();
+	pBarrier->Release();
+	ASSERT_TRUE(WaitForJobDone(*pCancelledJob));
+	Begin({"https://one.test/list"});
+	EXPECT_EQ(m_pBrowser->Revision(), 0U);
+	m_vRequests.back()->Reply(List("New browser"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "New browser");
+}
+
+TEST_F(QmServerListRecovery, ThrowingWriterPreservesPublishedListAndLaterSaveSucceeds)
+{
+	struct CWrites
+	{
+		int m_Calls = 0;
+		std::string m_Body;
+	};
+	auto pWrites = std::make_shared<CWrites>();
+	Begin({"https://one.test/list"}, "", false, [pWrites](const std::string &, const std::string &Body) {
+		if(++pWrites->m_Calls == 1)
+			throw std::bad_alloc();
+		pWrites->m_Body = Body;
+		return true;
+	});
+	m_vRequests[0]->Reply(List("First"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	EXPECT_EQ(pWrites->m_Calls, 1);
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "First");
+	m_pBrowser->Refresh();
+	m_vRequests[1]->Reply(List("Latest"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	EXPECT_EQ(pWrites->m_Calls, 2);
+	EXPECT_NE(pWrites->m_Body.find("Latest"), std::string::npos);
+}
+
+TEST_F(QmServerListRecovery, UnknownWriterExceptionStillDrainsNewestSaveAfterDestruction)
+{
+	struct CWrites
+	{
+		CFailureBarrier m_Barrier;
+		int m_Calls = 0;
+		std::string m_Body;
+		std::string m_Path;
+	};
+	auto pWrites = std::make_shared<CWrites>();
+	Begin({"https://one.test/list"}, "", false, [pWrites](const std::string &Path, const std::string &Body) {
+		if(++pWrites->m_Calls == 1)
+		{
+			pWrites->m_Barrier.Pause();
+			throw 1;
+		}
+		pWrites->m_Body = Body;
+		pWrites->m_Path = Path;
+		return true;
+	});
+	m_vRequests[0]->Reply(List("First"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	ASSERT_TRUE(pWrites->m_Barrier.WaitUntilEntered());
+	const auto pSaveJob = m_Jobs.m_pLastAccepted;
+	m_pBrowser->Refresh();
+	m_vRequests[1]->Reply(List("Intermediate"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	m_pBrowser->Refresh();
+	m_vRequests[2]->Reply(List("Latest"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 3; }));
+	m_pBrowser.reset();
+	pWrites->m_Barrier.Release();
+	ASSERT_TRUE(WaitForJobDone(*pSaveJob));
+	EXPECT_EQ(pWrites->m_Calls, 2);
+	EXPECT_FALSE(pWrites->m_Path.empty());
+	EXPECT_NE(pWrites->m_Body.find("Latest"), std::string::npos);
+	EXPECT_EQ(pWrites->m_Body.find("Intermediate"), std::string::npos);
+	EXPECT_EQ(pWrites->m_Body.find("First"), std::string::npos);
+}
+
+TEST_F(QmServerListRecovery, ParseSubmissionFailureIsRetriedWithoutLosingRefreshState)
+{
+	m_Jobs.m_RejectSubmission = 1;
+	Begin({"https://one.test/list"});
+	m_vRequests[0]->Reply(List("Unpublished"));
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_EQ(m_pBrowser->Revision(), 0U);
+	EXPECT_TRUE(m_pBrowser->IsError());
+	EXPECT_FALSE(m_pBrowser->IsRefreshing());
+	m_Now += 5;
+	m_pBrowser->Update();
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(List("Recovered"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Recovered");
+}
+
+TEST_F(QmServerListRecovery, UnknownParseSubmissionFailureAllowsOtherSourceToFinish)
+{
+	m_Jobs.m_RejectSubmission = 1;
+	m_Jobs.m_ThrowUnknown = true;
+	Begin({"https://one.test/list", "https://two.test/list"});
+	m_vRequests[0]->Reply(List("Unpublished"));
+	EXPECT_NO_THROW(m_pBrowser->Update());
+	EXPECT_TRUE(m_pBrowser->IsRefreshing());
+	m_vRequests[1]->Reply(List("Second source"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Second source");
+}
+
+TEST_F(QmServerListRecovery, SaveSubmissionFailureDoesNotLatchWorkerActive)
+{
+	auto pWrites = std::make_shared<std::atomic<int>>(0);
+	m_Jobs.m_RejectSubmission = 2;
+	Begin({"https://one.test/list"}, "", false, [pWrites](const std::string &, const std::string &) {
+		pWrites->fetch_add(1);
+		return true;
+	});
+	m_vRequests[0]->Reply(List("First"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_EQ(m_Jobs.m_Submissions, 2);
+	EXPECT_EQ(pWrites->load(), 0);
+	EXPECT_FALSE(m_pBrowser->IsError());
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "First");
+	m_pBrowser->Refresh();
+	m_vRequests[1]->Reply(List("Latest"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 2; }));
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	EXPECT_EQ(m_Jobs.m_Submissions, 4);
+	EXPECT_EQ(pWrites->load(), 1);
+}
+
+TEST_F(QmServerListRecovery, CacheParserExceptionStillStartsLiveRefresh)
+{
+	Begin({"https://one.test/list"});
+	m_vRequests[0]->Reply(List("Saved"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	ASSERT_TRUE(WaitForJobDone(*m_Jobs.m_pLastAccepted));
+	m_pBrowser.reset();
+	auto pCalls = std::make_shared<std::atomic<int>>(0);
+	Begin({"https://one.test/list"}, "", false, {}, [pCalls](json_value *pJson, std::vector<CServerInfo> *pvServers) {
+		const bool Failed = ServerBrowserParseHttpList(pJson, pvServers);
+		if(pCalls->fetch_add(1) == 0)
+			throw std::bad_alloc();
+		return Failed;
+	});
+	EXPECT_EQ(pCalls->load(), 1);
+	EXPECT_EQ(m_pBrowser->NumServers(), 0);
+	EXPECT_EQ(m_pBrowser->Revision(), 0U);
+	EXPECT_TRUE(m_pBrowser->IsRefreshing());
+	ASSERT_EQ(m_vRequests.size(), 2U);
+	m_vRequests[1]->Reply(List("Live"));
+	ASSERT_TRUE(Until([this] { return m_pBrowser->Revision() == 1; }));
+	EXPECT_STREQ(m_pBrowser->Server(0).m_aName, "Live");
 }
 
 #endif

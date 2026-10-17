@@ -20,6 +20,7 @@
 #include <cstdlib>
 #endif
 #include <deque>
+#include <exception>
 #include <mutex>
 #include <string>
 
@@ -31,44 +32,75 @@ namespace
 	constexpr const char *MIRROR_URL = "https://ddrace.cn/ddnet/15/servers.json";
 	constexpr const char *SNAPSHOT_URL = "https://raw.githubusercontent.com/wxj881027/QmClient/serverlist-snapshot/servers.json";
 
-	// 解析任务只持有响应，取消后的旧任务没有浏览器或存储的引用。
+	// 失败报告也可能分配内存，不能让日志异常再次逃出任务入口。
+	void ReportServerListFailure(const char *pOperation, const char *pReason) noexcept
+	{
+		try
+		{
+			log_error("serverbrowser_http", "%s: %s", pOperation, pReason);
+		}
+		catch(...)
+		{
+		}
+	}
+
+	// 解析任务只持有响应与解析函数，取消后的旧任务没有浏览器或存储的引用。
 	class CServerListParseJob : public IJob
 	{
 		std::shared_ptr<IHttpRequest> m_pResponse;
 		bool m_Snapshot;
+		FServerListParser m_ParseList;
 
-	protected:
-		void Run() override
+		bool Parse()
 		{
-			json_value *pJson = m_pResponse->ResultJson();
-			m_Success = !ServerBrowserParseHttpList(pJson, &m_vServers) && !m_vServers.empty();
+			std::unique_ptr<json_value, decltype(&json_value_free)> pJson(m_pResponse->ResultJson(), json_value_free);
+			std::vector<CServerInfo> vServers;
+			if(!pJson || m_ParseList(pJson.get(), &vServers) || vServers.empty())
+				return false;
 			int64_t Age = m_pResponse->ResultAgeSeconds().value_or(301);
-			if(m_Snapshot && m_Success)
+			if(m_Snapshot)
 			{
 				const json_value &Updated = (*pJson)["qm_snapshot_updated_at"];
 				const int64_t Now = time_timestamp();
 				if(Updated.type != json_integer || Updated.u.integer < Now - MAX_CACHE_AGE || Updated.u.integer > Now + 300)
-					m_Success = false;
-				else
-					Age = std::max<int64_t>(m_pResponse->ResultAgeSeconds().value_or(0), std::max<int64_t>(0, Now - Updated.u.integer));
+					return false;
+				Age = std::max<int64_t>(m_pResponse->ResultAgeSeconds().value_or(0), std::max<int64_t>(0, Now - Updated.u.integer));
 			}
 			if(Age < 0 || Age > MAX_CACHE_AGE)
-				m_Success = false;
-			else
-				m_Age = Age;
-			json_value_free(pJson);
-			if(m_Success)
+				return false;
+			pJson.reset();
+			unsigned char *pBody;
+			size_t Size;
+			m_pResponse->Result(&pBody, &Size);
+			std::string Body(reinterpret_cast<const char *>(pBody), Size);
+			// 正文和解析结果均准备完成后才发布，异常时局部资源自动释放。
+			m_vServers = std::move(vServers);
+			m_Body = std::move(Body);
+			m_Age = Age;
+			return true;
+		}
+
+	protected:
+		void Run() override
+		{
+			try
 			{
-				unsigned char *pBody;
-				size_t Size;
-				m_pResponse->Result(&pBody, &Size);
-				m_Body.assign(reinterpret_cast<const char *>(pBody), Size);
+				m_Success = Parse();
+			}
+			catch(const std::exception &Error)
+			{
+				ReportServerListFailure("serverlist parsing failed", Error.what());
+			}
+			catch(...)
+			{
+				ReportServerListFailure("serverlist parsing failed", "unknown exception");
 			}
 			m_pResponse.reset();
 		}
 
 	public:
-		explicit CServerListParseJob(std::shared_ptr<IHttpRequest> pResponse, bool Snapshot) : m_pResponse(std::move(pResponse)), m_Snapshot(Snapshot) {}
+		CServerListParseJob(std::shared_ptr<IHttpRequest> pResponse, bool Snapshot, FServerListParser ParseList) :
+			m_pResponse(std::move(pResponse)), m_Snapshot(Snapshot), m_ParseList(std::move(ParseList)) {}
 		bool m_Success = false;
 		int m_Age = 0;
 		std::string m_Body;
@@ -113,12 +145,23 @@ namespace
 						m_pState->m_WorkerActive = false;
 						return;
 					}
-					Path = m_pState->m_Path;
-					Body = std::move(m_pState->m_Pending);
-					m_pState->m_Pending.clear();
+					// 锁内只交换所有权，不因路径或正文复制分配内存。
+					Path.swap(m_pState->m_Path);
+					Body.swap(m_pState->m_Pending);
 				}
-				if(!m_pState->m_Writer(Path, Body))
-					log_error("serverbrowser_http", "failed to persist serverlist snapshot");
+				try
+				{
+					if(!m_pState->m_Writer(Path, Body))
+						ReportServerListFailure("serverlist save failed", "writer returned failure");
+				}
+				catch(const std::exception &Error)
+				{
+					ReportServerListFailure("serverlist save failed", Error.what());
+				}
+				catch(...)
+				{
+					ReportServerListFailure("serverlist save failed", "unknown exception");
+				}
 			}
 		}
 
@@ -141,6 +184,7 @@ namespace
 		std::vector<std::string> m_vUrls;
 		std::function<std::shared_ptr<IHttpRequest>(const char *)> m_Factory;
 		std::function<int64_t()> m_Clock;
+		FServerListParser m_ParseList;
 		std::deque<std::pair<int, bool>> m_Queue;
 		std::vector<CAttempt> m_vActive;
 		CQmServerListCache<CServerInfo> m_Cache;
@@ -225,42 +269,63 @@ namespace
 		{
 			if(!m_pStorage || Body.size() > MAX_BODY)
 				return;
-			m_pStorage->CreateFolder("cache", IStorage::TYPE_SAVE);
-			char aPath[IO_MAX_PATH_LENGTH];
-			m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "cache/qm-serverlist.json", aPath, sizeof(aPath));
-			char aHeader[160];
-			str_format(aHeader, sizeof(aHeader), "QMSL1 %lld %d %s\n", (long long)time_timestamp(), Age, m_SourceHash.c_str());
-			bool StartWorker = false;
+			try
 			{
-				std::lock_guard Lock(m_pSaveState->m_Lock);
-				m_pSaveState->m_Path = aPath;
-				m_pSaveState->m_Pending = std::string(aHeader) + Body;
-				if(!m_pSaveState->m_WorkerActive)
+				m_pStorage->CreateFolder("cache", IStorage::TYPE_SAVE);
+				char aPath[IO_MAX_PATH_LENGTH];
+				m_pStorage->GetCompletePath(IStorage::TYPE_SAVE, "cache/qm-serverlist.json", aPath, sizeof(aPath));
+				char aHeader[160];
+				str_format(aHeader, sizeof(aHeader), "QMSL1 %lld %d %s\n", (long long)time_timestamp(), Age, m_SourceHash.c_str());
+				std::string Path(aPath);
+				std::string Pending = std::string(aHeader) + Body;
+				std::shared_ptr<CServerListSaveJob> pJob;
 				{
-					m_pSaveState->m_WorkerActive = true;
-					StartWorker = true;
+					std::lock_guard Lock(m_pSaveState->m_Lock);
+					// 先分配任务，再接管待写内容并标记活跃，分配失败不锁死后续保存。
+					if(!m_pSaveState->m_WorkerActive)
+						pJob = std::make_shared<CServerListSaveJob>(m_pSaveState);
+					m_pSaveState->m_Path.swap(Path);
+					m_pSaveState->m_Pending.swap(Pending);
+					if(pJob)
+						m_pSaveState->m_WorkerActive = true;
+				}
+				if(pJob)
+				{
+					try
+					{
+						m_pEngine->AddJob(std::move(pJob));
+					}
+					catch(...)
+					{
+						std::lock_guard Lock(m_pSaveState->m_Lock);
+						m_pSaveState->m_WorkerActive = false;
+						throw;
+					}
 				}
 			}
-			if(StartWorker)
-				m_pEngine->AddJob(std::make_shared<CServerListSaveJob>(m_pSaveState));
+			catch(const std::exception &Error)
+			{
+				ReportServerListFailure("serverlist save scheduling failed", Error.what());
+			}
+			catch(...)
+			{
+				ReportServerListFailure("serverlist save scheduling failed", "unknown exception");
+			}
 		}
 
-		void Load()
+		void LoadCache()
 		{
 			if(!m_pStorage)
 				return;
-			IOHANDLE File = m_pStorage->OpenFile("cache/qm-serverlist.json", IOFLAG_READ, IStorage::TYPE_SAVE);
-			if(!File)
+			std::unique_ptr<void, decltype(&io_close)> pFile(m_pStorage->OpenFile("cache/qm-serverlist.json", IOFLAG_READ, IStorage::TYPE_SAVE), io_close);
+			if(!pFile)
 				return;
-			const int64_t Length = io_length(File);
+			const int64_t Length = io_length(pFile.get());
 			if(Length <= 0 || Length > (int64_t)MAX_BODY + 160)
-			{
-				io_close(File);
 				return;
-			}
 			std::string Body(Length, '\0');
-			const bool Read = io_read(File, Body.data(), Body.size()) == Body.size();
-			io_close(File);
+			const bool Read = io_read(pFile.get(), Body.data(), Body.size()) == Body.size();
+			pFile.reset();
 			const auto End = Body.find('\n');
 			if(!Read || End == std::string::npos)
 				return;
@@ -276,10 +341,9 @@ namespace
 			const int64_t Elapsed = Now - Received;
 			if(Elapsed + Age > MAX_CACHE_AGE)
 				return;
-			json_value *pJson = JsonParse(Body.data() + End + 1, Body.size() - End - 1);
+			std::unique_ptr<json_value, decltype(&json_value_free)> pJson(JsonParse(Body.data() + End + 1, Body.size() - End - 1), json_value_free);
 			std::vector<CServerInfo> vServers;
-			const bool Success = !ServerBrowserParseHttpList(pJson, &vServers);
-			json_value_free(pJson);
+			const bool Success = pJson && !m_ParseList(pJson.get(), &vServers);
 			if(Success && m_Cache.Publish(std::move(vServers), Age + Elapsed, m_Clock(), true))
 			{
 				++m_Revision;
@@ -287,10 +351,26 @@ namespace
 			}
 		}
 
+		void Load()
+		{
+			try
+			{
+				LoadCache();
+			}
+			catch(const std::exception &Error)
+			{
+				ReportServerListFailure("serverlist cache loading failed", Error.what());
+			}
+			catch(...)
+			{
+				ReportServerListFailure("serverlist cache loading failed", "unknown exception");
+			}
+		}
+
 	public:
 		CServerBrowserHttp(IEngine *pEngine, IStorage *pStorage, IHttp *pHttp, std::vector<std::string> vUrls, const char *pPreviousBestUrl,
-			std::function<std::shared_ptr<IHttpRequest>(const char *)> Factory, std::function<int64_t()> Clock, bool UseFallbackTiers, std::function<int(int)> RetryDelay, std::function<bool(const std::string &, const std::string &)> SaveWriter) :
-			m_pEngine(pEngine), m_pStorage(pStorage), m_pHttp(pHttp), m_vUrls(std::move(vUrls)), m_Factory(std::move(Factory)), m_Clock(std::move(Clock)), m_UseFallbackTiers(UseFallbackTiers), m_RetryDelay(std::move(RetryDelay))
+			std::function<std::shared_ptr<IHttpRequest>(const char *)> Factory, std::function<int64_t()> Clock, bool UseFallbackTiers, std::function<int(int)> RetryDelay, std::function<bool(const std::string &, const std::string &)> SaveWriter, FServerListParser ParseList) :
+			m_pEngine(pEngine), m_pStorage(pStorage), m_pHttp(pHttp), m_vUrls(std::move(vUrls)), m_Factory(std::move(Factory)), m_Clock(std::move(Clock)), m_ParseList(ParseList ? std::move(ParseList) : ServerBrowserParseHttpList), m_UseFallbackTiers(UseFallbackTiers), m_RetryDelay(std::move(RetryDelay))
 		{
 			m_pSaveState = std::make_shared<CServerListSaveState>();
 			m_pSaveState->m_Writer = SaveWriter ? std::move(SaveWriter) : WriteServerListCache;
@@ -365,8 +445,25 @@ namespace
 						m_vActive.erase(m_vActive.begin() + Index);
 						continue;
 					}
-					Attempt.m_pParse = std::make_shared<CServerListParseJob>(std::move(Attempt.m_pRequest), m_vUrls[Attempt.m_Index] == SNAPSHOT_URL);
-					m_pEngine->AddJob(Attempt.m_pParse);
+					try
+					{
+						auto pParse = std::make_shared<CServerListParseJob>(Attempt.m_pRequest, m_vUrls[Attempt.m_Index] == SNAPSHOT_URL, m_ParseList);
+						m_pEngine->AddJob(pParse);
+						Attempt.m_pParse = std::move(pParse);
+						Attempt.m_pRequest.reset();
+					}
+					catch(const std::exception &Error)
+					{
+						ReportServerListFailure("serverlist parse scheduling failed", Error.what());
+						m_vActive.erase(m_vActive.begin() + Index);
+						continue;
+					}
+					catch(...)
+					{
+						ReportServerListFailure("serverlist parse scheduling failed", "unknown exception");
+						m_vActive.erase(m_vActive.begin() + Index);
+						continue;
+					}
 				}
 				if(Attempt.m_pParse->State() != IJob::STATE_DONE)
 				{
@@ -447,9 +544,9 @@ namespace
 
 IServerBrowserHttp *CreateServerBrowserHttpWithSources(IEngine *pEngine, IStorage *pStorage, IHttp *pHttp,
 	std::vector<std::string> vUrls, const char *pPreviousBestUrl,
-	std::function<std::shared_ptr<IHttpRequest>(const char *)> Factory, std::function<int64_t()> Clock, bool UseFallbackTiers, std::function<int(int)> RetryDelay, std::function<bool(const std::string &, const std::string &)> SaveWriter)
+	std::function<std::shared_ptr<IHttpRequest>(const char *)> Factory, std::function<int64_t()> Clock, bool UseFallbackTiers, std::function<int(int)> RetryDelay, std::function<bool(const std::string &, const std::string &)> SaveWriter, FServerListParser ParseList)
 {
-	return new CServerBrowserHttp(pEngine, pStorage, pHttp, std::move(vUrls), pPreviousBestUrl, std::move(Factory), std::move(Clock), UseFallbackTiers, std::move(RetryDelay), std::move(SaveWriter));
+	return new CServerBrowserHttp(pEngine, pStorage, pHttp, std::move(vUrls), pPreviousBestUrl, std::move(Factory), std::move(Clock), UseFallbackTiers, std::move(RetryDelay), std::move(SaveWriter), std::move(ParseList));
 }
 
 IServerBrowserHttp *CreateServerBrowserHttp(IEngine *pEngine, IStorage *pStorage, IHttp *pHttp, const char *pPreviousBestUrl)
