@@ -17,6 +17,7 @@
 #include "text_gradient.h"
 #include "text_layout_string.h"
 #include "text_sweep.h"
+#include "text_utf8_cursor.h"
 #include "text_word_cursor.h"
 
 #include <base/hash.h>
@@ -652,11 +653,11 @@ private:
 		return GlyphIndex;
 	}
 
-	void EnsureFacePixelSize(FT_Face Face, int FontSize) const
+	bool EnsureFacePixelSize(FT_Face Face, int FontSize) const
 	{
 		// 同一 face 连续用同一字号时跳过重复的 FT_Set_Pixel_Sizes；
 		// 任何绕过此入口直接设置字号的路径都必须先 InvalidateFacePixelSizeCache()。
-		m_FacePixelSizeCache.Ensure(Face, FontSize, [&]() { return FT_Set_Pixel_Sizes(Face, 0, FontSize); });
+		return m_FacePixelSizeCache.Ensure(Face, FontSize, [&]() { return FT_Set_Pixel_Sizes(Face, 0, FontSize); });
 	}
 
 	int AdjustOutlineThicknessToFontSize(int OutlineThickness, int FontSize) const
@@ -767,7 +768,8 @@ private:
 	bool RenderGlyph(SGlyph &Glyph)
 	{
 		const auto RasterizeStart = QmPerfEnabled() ? time_get_nanoseconds() : std::chrono::nanoseconds(0);
-		EnsureFacePixelSize(Glyph.m_Face, Glyph.m_FontSize);
+		if(!EnsureFacePixelSize(Glyph.m_Face, Glyph.m_FontSize))
+			return false;
 
 		if(FT_Load_Glyph(Glyph.m_Face, Glyph.m_GlyphIndex, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP | (Glyph.m_Nameplate ? FT_LOAD_NO_HINTING : 0)))
 		{
@@ -1422,7 +1424,8 @@ public:
 		if(pLeft != nullptr && pRight != nullptr && pLeft->m_Face == pRight->m_Face && pLeft->m_FontSize == pRight->m_FontSize)
 		{
 			FT_Vector Kerning = {0, 0};
-			EnsureFacePixelSize(pLeft->m_Face, pLeft->m_FontSize);
+			if(!EnsureFacePixelSize(pLeft->m_Face, pLeft->m_FontSize))
+				return vec2(0.0f, 0.0f);
 			FT_Get_Kerning(pLeft->m_Face, pLeft->m_Chr, pRight->m_Chr, FT_KERNING_DEFAULT, &Kerning);
 			return vec2(Kerning.x >> 6, Kerning.y >> 6);
 		}
@@ -1431,34 +1434,42 @@ public:
 
 	void UploadEntityLayerText(const CImageInfo &TextImage, int TexSubWidth, int TexSubHeight, const char *pText, int Length, float x, float y, int FontSize)
 	{
-		if(FontSize < 1)
+		if(FontSize < 1 || pText == nullptr || Length <= 0 || TextImage.m_pData == nullptr ||
+			TexSubWidth <= 0 || TexSubHeight <= 0 || TextImage.m_Width == 0 || TextImage.m_Height == 0 ||
+			TextImage.m_Width > std::numeric_limits<int>::max() || TextImage.m_Height > std::numeric_limits<int>::max() ||
+			TextImage.m_Format < CImageInfo::FORMAT_RGB || TextImage.m_Format > CImageInfo::FORMAT_RA ||
+			!std::isfinite(x) || !std::isfinite(y) || x < 0.0f || y < 0.0f ||
+			static_cast<double>(x) >= TextImage.m_Width || static_cast<double>(y) >= TextImage.m_Height)
+			return;
+		size_t DataSize = 0;
+		if(!TextImage.DataSize(DataSize))
 			return;
 
 		const size_t PixelSize = TextImage.PixelSize();
-		const char *pCurrent = pText;
-		const char *pEnd = pCurrent + Length;
-		int WidthLastChars = 0;
+		const int StartX = static_cast<int>(x), StartY = static_cast<int>(y);
+		const size_t RegionWidth = std::min(TexSubWidth, static_cast<int>(TextImage.m_Width) - StartX);
+		const size_t RegionHeight = std::min(TexSubHeight, static_cast<int>(TextImage.m_Height) - StartY);
+		CQmTextUtf8Cursor Cursor(pText, Length);
+		size_t WidthLastChars = 0;
 
-		while(pCurrent < pEnd)
+		while(true)
 		{
-			const char *pTmp = pCurrent;
-			const int NextCharacter = str_utf8_decode(&pTmp);
+			const int NextCharacter = Cursor.Next();
+			if(NextCharacter == 0)
+				break;
 
-			if(NextCharacter)
+			if(NextCharacter > 0)
 			{
 				FT_Face Face;
 				FT_UInt GlyphIndex = GetCharGlyph(NextCharacter, &Face, true);
 				if(GlyphIndex == 0)
-				{
-					pCurrent = pTmp;
 					continue;
-				}
 
-				EnsureFacePixelSize(Face, FontSize);
+				if(!EnsureFacePixelSize(Face, FontSize))
+					continue;
 				if(FT_Load_Char(Face, NextCharacter, FT_LOAD_RENDER | FT_LOAD_NO_BITMAP))
 				{
 					log_debug("textrender", "Error loading glyph. Chr=%d GlyphIndex=%u", NextCharacter, GlyphIndex);
-					pCurrent = pTmp;
 					continue;
 				}
 
@@ -1466,28 +1477,35 @@ public:
 				if(pBitmap->pixel_mode != FT_PIXEL_MODE_GRAY)
 				{
 					log_debug("textrender", "Error loading glyph, unsupported pixel mode. Chr=%d GlyphIndex=%u PixelMode=%d", NextCharacter, GlyphIndex, pBitmap->pixel_mode);
-					pCurrent = pTmp;
 					continue;
 				}
+				// 行跨度可能含填充或为负，不能用可见宽度代替。
+				const size_t Pitch = pBitmap->pitch < 0 ? static_cast<size_t>(-static_cast<int64_t>(pBitmap->pitch)) : static_cast<size_t>(pBitmap->pitch);
+				if(pBitmap->width > 0 && pBitmap->rows > 0 &&
+					(pBitmap->buffer == nullptr || Pitch == 0 || pBitmap->width > Pitch ||
+						pBitmap->rows > std::numeric_limits<size_t>::max() / Pitch))
+					continue;
 
 				for(unsigned OffY = 0; OffY < pBitmap->rows; ++OffY)
 				{
+					const size_t Row = pBitmap->pitch < 0 ? pBitmap->rows - 1 - OffY : OffY;
 					for(unsigned OffX = 0; OffX < pBitmap->width; ++OffX)
 					{
-						const int ImgOffX = std::clamp(x + OffX + WidthLastChars, x, (x + TexSubWidth) - 1);
-						const int ImgOffY = std::clamp(y + OffY, y, (y + TexSubHeight) - 1);
-						const size_t ImageOffset = ImgOffY * (TextImage.m_Width * PixelSize) + ImgOffX * PixelSize;
+						// 保留有效子区域的边缘钳制，同时限制在真实图像内。
+						const size_t ImgOffX = StartX + std::min(WidthLastChars + std::min<size_t>(OffX, RegionWidth), RegionWidth - 1);
+						const size_t ImgOffY = StartY + std::min<size_t>(OffY, RegionHeight - 1);
+						const size_t ImageOffset = (ImgOffY * TextImage.m_Width + ImgOffX) * PixelSize;
 						for(size_t i = 0; i < PixelSize - 1; ++i)
 						{
 							TextImage.m_pData[ImageOffset + i] = 255;
 						}
-						TextImage.m_pData[ImageOffset + PixelSize - 1] = pBitmap->buffer[OffY * pBitmap->width + OffX];
+						TextImage.m_pData[ImageOffset + PixelSize - 1] = pBitmap->buffer[Row * Pitch + OffX];
 					}
 				}
 
-				WidthLastChars += (pBitmap->width + 1);
+				const size_t Advance = pBitmap->width >= RegionWidth ? RegionWidth : pBitmap->width + 1;
+				WidthLastChars = std::min(WidthLastChars + Advance, RegionWidth);
 			}
-			pCurrent = pTmp;
 		}
 	}
 
@@ -4301,59 +4319,64 @@ public:
 
 	int AdjustFontSize(const char *pText, int TextLength, int MaxSize, int MaxWidth) const override
 	{
+		if(MaxWidth <= 0)
+			return 0;
 		const int WidthOfText = CalculateTextWidth(pText, TextLength, 0, 100);
+		if(WidthOfText <= 0)
+			return 0;
 
-		int FontSize = 100.0f / ((float)WidthOfText / (float)MaxWidth);
-		if(MaxSize > 0 && FontSize > MaxSize)
-			FontSize = MaxSize;
-
-		return FontSize;
+		const double FontSize = 100.0 / (static_cast<double>(WidthOfText) / MaxWidth);
+		const int Limit = MaxSize > 0 ? MaxSize : std::numeric_limits<int>::max();
+		return static_cast<int>(std::min(FontSize, static_cast<double>(Limit)));
 	}
 
 	float GetGlyphOffsetX(int FontSize, char TextCharacter) const override
 	{
-		if(m_pGlyphMap->DefaultFace() == nullptr)
+		if(m_pGlyphMap->DefaultFace() == nullptr || FontSize <= 0)
 			return -1.0f;
 
-		FT_Set_Pixel_Sizes(m_pGlyphMap->DefaultFace(), 0, FontSize);
+		// char 只能承载单字节字符，不能把它的地址当作多字节 UTF-8 字符串。
+		const unsigned char NextCharacter = static_cast<unsigned char>(TextCharacter);
+		if(NextCharacter >= 0x80)
+			return -1.0f;
+		if(NextCharacter == 0)
+			return 0.0f;
+		const FT_Error SizeError = FT_Set_Pixel_Sizes(m_pGlyphMap->DefaultFace(), 0, FontSize);
 		m_pGlyphMap->InvalidateFacePixelSizeCache();
-		const char *pTmp = &TextCharacter;
-		const int NextCharacter = str_utf8_decode(&pTmp);
+		if(SizeError != 0)
+			return -1.0f;
 
-		if(NextCharacter)
-		{
 #if FREETYPE_MAJOR >= 2 && FREETYPE_MINOR >= 7 && (FREETYPE_MINOR > 7 || FREETYPE_PATCH >= 1)
-			const FT_Int32 FTFlags = FT_LOAD_BITMAP_METRICS_ONLY | FT_LOAD_NO_BITMAP;
+		const FT_Int32 FTFlags = FT_LOAD_BITMAP_METRICS_ONLY | FT_LOAD_NO_BITMAP;
 #else
-			const FT_Int32 FTFlags = FT_LOAD_RENDER | FT_LOAD_NO_BITMAP;
+		const FT_Int32 FTFlags = FT_LOAD_RENDER | FT_LOAD_NO_BITMAP;
 #endif
-			if(FT_Load_Char(m_pGlyphMap->DefaultFace(), NextCharacter, FTFlags))
-			{
-				log_debug("textrender", "Error loading glyph. Chr=%d", NextCharacter);
-				return -1.0f;
-			}
-
-			return (float)(m_pGlyphMap->DefaultFace()->glyph->metrics.horiBearingX >> 6);
+		if(FT_Load_Char(m_pGlyphMap->DefaultFace(), NextCharacter, FTFlags))
+		{
+			log_debug("textrender", "Error loading glyph. Chr=%d", NextCharacter);
+			return -1.0f;
 		}
-		return 0.0f;
+
+		return (float)(m_pGlyphMap->DefaultFace()->glyph->metrics.horiBearingX >> 6);
 	}
 
 	int CalculateTextWidth(const char *pText, int TextLength, int FontWidth, int FontHeight) const override
 	{
-		if(m_pGlyphMap->DefaultFace() == nullptr)
+		if(m_pGlyphMap->DefaultFace() == nullptr || pText == nullptr || TextLength <= 0 || FontWidth < 0 || FontHeight <= 0)
 			return 0;
 
-		const char *pCurrent = pText;
-		const char *pEnd = pCurrent + TextLength;
-
+		CQmTextUtf8Cursor Cursor(pText, TextLength);
 		int WidthOfText = 0;
-		FT_Set_Pixel_Sizes(m_pGlyphMap->DefaultFace(), FontWidth, FontHeight);
+		const FT_Error SizeError = FT_Set_Pixel_Sizes(m_pGlyphMap->DefaultFace(), FontWidth, FontHeight);
 		m_pGlyphMap->InvalidateFacePixelSizeCache();
-		while(pCurrent < pEnd)
+		if(SizeError != 0)
+			return 0;
+		while(true)
 		{
-			const char *pTmp = pCurrent;
-			const int NextCharacter = str_utf8_decode(&pTmp);
-			if(NextCharacter)
+			const int NextCharacter = Cursor.Next();
+			if(NextCharacter == 0)
+				break;
+			if(NextCharacter > 0)
 			{
 #if FREETYPE_MAJOR >= 2 && FREETYPE_MINOR >= 7 && (FREETYPE_MINOR > 7 || FREETYPE_PATCH >= 1)
 				const FT_Int32 FTFlags = FT_LOAD_BITMAP_METRICS_ONLY | FT_LOAD_NO_BITMAP;
@@ -4363,13 +4386,14 @@ public:
 				if(FT_Load_Char(m_pGlyphMap->DefaultFace(), NextCharacter, FTFlags))
 				{
 					log_debug("textrender", "Error loading glyph. Chr=%d", NextCharacter);
-					pCurrent = pTmp;
 					continue;
 				}
 
-				WidthOfText += (m_pGlyphMap->DefaultFace()->glyph->metrics.width >> 6) + 1;
+				const FT_Pos GlyphWidth = std::max<FT_Pos>(m_pGlyphMap->DefaultFace()->glyph->metrics.width >> 6, 0);
+				if(GlyphWidth >= std::numeric_limits<int>::max() - WidthOfText)
+					return std::numeric_limits<int>::max();
+				WidthOfText += static_cast<int>(GlyphWidth) + 1;
 			}
-			pCurrent = pTmp;
 		}
 
 		return WidthOfText;

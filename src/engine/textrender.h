@@ -591,9 +591,13 @@ public:
 
 	virtual STextBoundingBox GetBoundingBoxTextContainer(STextContainerIndex TextContainerIndex) = 0;
 
+	// 子区域裁到实际图像范围；无效目标、尺寸、坐标或文本不会写入。
 	virtual void UploadEntityLayerText(const CImageInfo &TextImage, int TexSubWidth, int TexSubHeight, const char *pText, int Length, float x, float y, int FontSize) = 0;
+	// 显式长度按字节计算；空文本、无效尺寸或测量失败时返回 0。
 	virtual int AdjustFontSize(const char *pText, int TextLength, int MaxSize, int MaxWidth) const = 0;
+	// 单字节 ASCII 偏移；无效字符或字号返回 -1，NUL 返回 0。
 	virtual float GetGlyphOffsetX(int FontSize, char TextCharacter) const = 0;
+	// 在字节上限或 NUL 处结束，无效/截断 UTF-8 跳过；宽度饱和到 int 上限。
 	virtual int CalculateTextWidth(const char *pText, int TextLength, int FontWidth, int FontSize) const = 0;
 
 	// old foolish interface
