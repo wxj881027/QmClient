@@ -3106,6 +3106,7 @@ if(CLIENT)
     graphics_threaded.cpp
     graphics_threaded.h
     graphics_threaded_sprites.cpp
+    render_target_readback_queue.h
     input.cpp
     input.h
     input_sdl3.h
@@ -3137,6 +3138,7 @@ if(CLIENT)
     qm_font_names.h
     qm_font_file_probe.h
     qm_font_restore.h
+    qm_font_scan_job.h
     qm_system_fonts.h
     qm_font_name_match.h
     text_sweep.h
@@ -4864,6 +4866,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_font_category_test.cpp
     src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/unit/qmclient/client/qm_font_scan_job_test.cpp
+    src/test/integration/qmclient/client/qm_font_scan_failure_test.cpp
     src/test/unit/qmclient/client/qm_font_restore_test.cpp
     src/test/unit/qmclient/client/qm_scripting_state_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
@@ -5056,6 +5059,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/engine/graphics/render_target_contract_test.cpp
     src/test/unit/engine/graphics/render_target_geometry_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
+    src/test/unit/engine/graphics/render_target_readback_queue_test.cpp
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp

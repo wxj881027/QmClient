@@ -6,6 +6,7 @@
 #include <base/system.h>
 
 #include <engine/client/quad_rotation_cache.h>
+#include <engine/client/render_target_readback_queue.h>
 #include <engine/client/rounded_rect_directions.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
@@ -1061,25 +1062,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	std::vector<ivec2> m_vRenderTargetSizes;
 	size_t m_FirstFreeRenderTarget;
 
-	enum class ERenderTargetReadbackRequestState
-	{
-		FREE,
-		PENDING,
-		READY,
-		FAILED,
-		CANCELED,
-	};
-
-	struct SRenderTargetReadbackRequest
-	{
-		uint32_t m_Generation = 0;
-		int m_NextFree = -1;
-		ERenderTargetReadbackRequestState m_State = ERenderTargetReadbackRequestState::FREE;
-		CImageInfo m_Image;
-		std::unique_ptr<CSemaphore> m_pCompletion;
-	};
-	std::vector<SRenderTargetReadbackRequest> m_vRenderTargetReadbackRequests;
-	int m_FirstFreeRenderTargetReadback = -1;
+	CRenderTargetReadbackQueue m_RenderTargetReadbacks;
 
 	std::atomic<bool> m_WarnPngliteIncompatibleImages = false;
 
@@ -1188,12 +1171,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	ColorRGBA *m_pReadPixelColor = nullptr;
 	void ReadPixelDirect(bool *pSwapped);
 	void ScreenshotDirect(bool *pSwapped);
-	SRenderTargetReadbackRequest *GetRenderTargetReadbackRequest(CRenderTargetReadbackHandle Handle);
-	const SRenderTargetReadbackRequest *GetRenderTargetReadbackRequest(CRenderTargetReadbackHandle Handle) const;
-	void UpdateRenderTargetReadbackRequestState(SRenderTargetReadbackRequest &Request);
-	CRenderTargetReadbackHandle AllocateRenderTargetReadbackHandle();
-	void FreeRenderTargetReadbackHandle(CRenderTargetReadbackHandle Handle, bool FreeImageData);
-	void CleanupCanceledRenderTargetReadbacks();
 
 	int IssueInit();
 	int InitWindow();

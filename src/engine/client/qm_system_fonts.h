@@ -5,7 +5,9 @@
 #include <base/windows.h>
 
 #include <algorithm>
+#include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #if defined(CONF_FAMILY_WINDOWS)
@@ -49,6 +51,7 @@ inline std::vector<std::string> QmSystemFontPaths()
 		HKEY Key;
 		if(RegOpenKeyExW(Root, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", 0, KEY_READ | KEY_WOW64_64KEY, &Key) != ERROR_SUCCESS)
 			continue;
+		const std::unique_ptr<std::remove_pointer_t<HKEY>, decltype(&RegCloseKey)> KeyOwner(Key, &RegCloseKey);
 		for(DWORD Index = 0;; ++Index)
 		{
 			wchar_t aName[16384] = {}, aValue[32768] = {};
@@ -94,7 +97,6 @@ inline std::vector<std::string> QmSystemFontPaths()
 				continue;
 			vPaths.push_back(Resolved);
 		}
-		RegCloseKey(Key);
 	}
 	std::sort(vPaths.begin(), vPaths.end(), [](const auto &Left, const auto &Right) { return str_comp_nocase(Left.c_str(), Right.c_str()) < 0; });
 	vPaths.erase(std::unique(vPaths.begin(), vPaths.end(), [](const auto &Left, const auto &Right) { return str_comp_nocase(Left.c_str(), Right.c_str()) == 0; }), vPaths.end());

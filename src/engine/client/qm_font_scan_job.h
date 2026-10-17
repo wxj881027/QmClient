@@ -2,11 +2,13 @@
 #define ENGINE_CLIENT_QM_FONT_SCAN_JOB_H
 
 #include <base/hash.h>
+#include <base/log.h>
 #include <base/system.h>
 
 #include <engine/shared/jobs.h>
 
 #include <cstdlib>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <string>
@@ -32,24 +34,49 @@ private:
 	FRead m_Read;
 	std::vector<SFile> m_vFiles;
 	size_t m_Cursor = 0;
+	bool m_Failed = false;
 
 	void Run() override
 	{
-		for(const std::string &Path : m_Enumerate())
+		try
 		{
-			void *pData = nullptr;
-			unsigned Size = 0;
-			const bool Read = m_Read(Path.c_str(), &pData, &Size);
-			SFile File;
-			File.m_pData.reset(pData);
-			if(!Read || pData == nullptr || Size == 0)
-				continue;
-			File.m_Path = Path;
-			File.m_Size = Size;
-			char aHash[SHA256_MAXSTRSIZE];
-			sha256_str(sha256(pData, Size), aHash, sizeof(aHash));
-			File.m_Hash = aHash;
-			m_vFiles.push_back(std::move(File));
+			for(const std::string &Path : m_Enumerate())
+			{
+				void *pData = nullptr;
+				unsigned Size = 0;
+				bool Read;
+				try
+				{
+					Read = m_Read(Path.c_str(), &pData, &Size);
+				}
+				catch(...)
+				{
+					// 读取边界可能已交出缓冲，再报告异常。
+					free(pData);
+					throw;
+				}
+				SFile File;
+				File.m_pData.reset(pData);
+				if(!Read || pData == nullptr || Size == 0)
+					continue;
+				File.m_Path = Path;
+				File.m_Size = Size;
+				char aHash[SHA256_MAXSTRSIZE];
+				sha256_str(sha256(pData, Size), aHash, sizeof(aHash));
+				File.m_Hash = aHash;
+				m_vFiles.push_back(std::move(File));
+			}
+		}
+		catch(const std::exception &Error)
+		{
+			// 作业池不捕获异常；保留已完成的文件，回到主线程继续使用字体回退。
+			m_Failed = true;
+			log_error("textrender/font", "Font scan stopped: %s", Error.what());
+		}
+		catch(...)
+		{
+			m_Failed = true;
+			log_error("textrender/font", "Font scan stopped after an unexpected exception.");
 		}
 	}
 
@@ -79,6 +106,11 @@ public:
 	bool Exhausted() const
 	{
 		return State() == STATE_DONE && m_Cursor == m_vFiles.size();
+	}
+
+	bool Failed() const
+	{
+		return State() == STATE_DONE && m_Failed;
 	}
 };
 
