@@ -19,7 +19,7 @@ namespace
 		return true;
 	}
 
-	void Run(const std::shared_ptr<CQmFontScanJob> &pJob)
+	void RunFontScanJob(const std::shared_ptr<CQmFontScanJob> &pJob)
 	{
 		CJobPool Pool;
 		Pool.Init(1);
@@ -59,7 +59,7 @@ TEST(QmFontScanFailure, ReadExceptionPublishesOnlyPreviouslyCompletedFiles)
 		if(std::strcmp(pPath, "broken") == 0)
 			throw std::runtime_error("read failed after allocation");
 		return true; });
-	Run(pJob);
+	RunFontScanJob(pJob);
 	EXPECT_TRUE(pJob->Failed());
 	EXPECT_EQ(Reads, 2);
 	CQmFontScanJob::SFile File;
@@ -73,7 +73,7 @@ TEST(QmFontScanFailure, ReadExceptionPublishesOnlyPreviouslyCompletedFiles)
 TEST(QmFontScanFailure, AllocationExceptionLeavesFinishedEmptyScan)
 {
 	auto pJob = std::make_shared<CQmFontScanJob>([](const auto &) { return std::vector<std::string>{"font"}; }, [](const char *, void **, unsigned *) -> bool { throw std::bad_alloc(); });
-	Run(pJob);
+	RunFontScanJob(pJob);
 	EXPECT_EQ(pJob->State(), IJob::STATE_DONE);
 	EXPECT_TRUE(pJob->Failed());
 	EXPECT_TRUE(pJob->Exhausted());
@@ -87,13 +87,13 @@ TEST(QmFontScanFailure, FailedRestoreAllowsChangedSelectionToStartNewRequest)
 	const auto Missing = [](const char *) { return false; };
 	auto pFailed = Restore.Request({"Old", "", ""}, Missing, [](const auto &, const auto &) -> std::vector<std::string> { throw std::runtime_error("lookup failed"); }, ReadBytes);
 	ASSERT_NE(pFailed, nullptr);
-	Run(pFailed);
+	RunFontScanJob(pFailed);
 	EXPECT_TRUE(pFailed->Failed());
 	EXPECT_TRUE(Restore.Finish({"Old", "", ""}, Missing, [](size_t, const char *) { ADD_FAILURE() << "missing font applied"; }));
 	EXPECT_FALSE(Restore.Active());
 	auto pNext = Restore.Request({"New", "", ""}, Missing, [](const auto &, const auto &) { return std::vector<std::string>{"new-font"}; }, ReadBytes);
 	ASSERT_NE(pNext, nullptr);
-	Run(pNext);
+	RunFontScanJob(pNext);
 	CQmFontScanJob::SFile File;
 	ASSERT_TRUE(Restore.TakeNext(File));
 	EXPECT_EQ(File.m_Path, "new-font");
