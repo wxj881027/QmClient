@@ -22,6 +22,7 @@
 #include <engine/external/tinyexpr.h>
 #include <engine/friends.h>
 #include <engine/graphics.h>
+#include <engine/http.h>
 #include <engine/keys.h>
 #include <engine/map.h>
 #include <engine/serverbrowser.h>
@@ -2675,11 +2676,17 @@ void CQmClient::FetchQmDdnetPlayerStats(const char *pPlayerName)
 	if(!m_pQmDdnetPlayerTask)
 	{
 		m_QmDdnetPlayerState.BeginHttp(pPlayerName);
-		m_QmDdnetPlayerState.CompleteHttp(false, time_get(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq());
+		// 失败退避上限与正常同步间隔一致：网络恢复后最多等一个同步周期。
+		m_QmDdnetPlayerState.CompleteHttp(false, time_get(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq(), (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq());
 		return;
 	}
 	m_QmDdnetPlayerState.BeginHttp(pPlayerName);
 	m_pQmDdnetPlayerTask->Timeout(CTimeout{10000, 30000, 100, 10});
+	// 固定走 IPv4：ddnet.org 同时有 A 和 AAAA 记录，只有 DNS 而无 IPv6 路由的网络
+	// 会让 curl 的 WHATEVER 模式优先尝试 IPv6 并在几十毫秒内失败
+	// （WinError 10051），在日志里表现为 schannel 握手失败或 TLS 连接超时。
+	// 引擎对 info.ddnet.org 已采用同样处理，见 client.cpp 的 DDNetInfo 任务。
+	m_pQmDdnetPlayerTask->IpResolve(IPRESOLVE::V4);
 	m_pQmDdnetPlayerTask->LogProgress(HTTPLOG::FAILURE);
 	Http()->Run(m_pQmDdnetPlayerTask);
 }
@@ -2696,7 +2703,7 @@ void CQmClient::FinishQmDdnetPlayerStats()
 		CQmDdnetPlayerStatsParseJob::SResult Result = pParseJob->TakeResult();
 		m_pQmDdnetPlayerParseJob = nullptr;
 		bool StartRefresh = false;
-		if(!m_QmDdnetPlayerState.CompleteParse(ParsePlayerName, Result.m_Parsed, time_get(), time_timestamp(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq(), StartRefresh))
+		if(!m_QmDdnetPlayerState.CompleteParse(ParsePlayerName, Result.m_Parsed, time_get(), time_timestamp(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq(), (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq(), StartRefresh))
 			return;
 
 		if(Result.m_Parsed)
@@ -2725,13 +2732,13 @@ void CQmClient::FinishQmDdnetPlayerStats()
 	{
 		log_warn("qmclient", "DDNet statistics request failed for '%s': state=%d status=%d",
 			m_QmDdnetPlayerState.RequestPlayerName().c_str(), (int)State, StatusCode);
-		m_QmDdnetPlayerState.CompleteHttp(false, time_get(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq());
+		m_QmDdnetPlayerState.CompleteHttp(false, time_get(), (int64_t)QMCLIENT_DDNET_PLAYER_RETRY_DELAY_SECONDS * time_freq(), (int64_t)QMCLIENT_DDNET_PLAYER_SYNC_INTERVAL_SECONDS * time_freq());
 		m_pQmDdnetPlayerTask = nullptr;
 		return;
 	}
 
 	m_pQmDdnetPlayerParseJob = std::make_shared<CQmDdnetPlayerStatsParseJob>(m_pQmDdnetPlayerTask);
-	m_QmDdnetPlayerState.CompleteHttp(true, time_get(), 0);
+	m_QmDdnetPlayerState.CompleteHttp(true, time_get(), 0, 0);
 	Engine()->AddJob(m_pQmDdnetPlayerParseJob);
 	m_pQmDdnetPlayerTask = nullptr;
 }
