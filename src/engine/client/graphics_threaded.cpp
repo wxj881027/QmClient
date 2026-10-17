@@ -777,20 +777,9 @@ IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width,
 	if(!IsRenderTargetSupported() || Width <= 0 || Height <= 0)
 		return CRenderTargetHandle();
 
-	const size_t CurSize = m_vRenderTargetIndices.size();
-	if(m_FirstFreeRenderTarget == CurSize)
-	{
-		const size_t NewSize = CurSize == 0 ? 16 : CurSize * 2;
-		m_vRenderTargetIndices.resize(NewSize);
-		m_vRenderTargetSizes.resize(NewSize);
-		for(size_t Index = CurSize; Index < NewSize; ++Index)
-			m_vRenderTargetIndices[Index] = Index + 1;
-	}
-
-	const size_t TargetId = m_FirstFreeRenderTarget;
-	m_FirstFreeRenderTarget = m_vRenderTargetIndices[TargetId];
-	m_vRenderTargetIndices[TargetId] = -1;
-	m_vRenderTargetSizes[TargetId] = ivec2(Width, Height);
+	const int TargetId = m_RenderTargets.Allocate(Width, Height);
+	if(TargetId < 0)
+		return CRenderTargetHandle();
 
 	CCommandBuffer::SCommand_RenderTarget_Create Cmd;
 	Cmd.m_TargetId = TargetId;
@@ -805,20 +794,19 @@ void CGraphics_Threaded::DestroyRenderTarget(CRenderTargetHandle *pTarget)
 {
 	if(!pTarget || !pTarget->IsValid())
 		return;
-	const size_t TargetId = pTarget->Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	const int TargetId = pTarget->Id();
+	if(!m_RenderTargets.IsLive(TargetId))
 	{
 		pTarget->Invalidate();
 		return;
 	}
 
-	CCommandBuffer::SCommand_RenderTarget_Destroy Cmd;
-	Cmd.m_TargetId = TargetId;
-	AddCmd(Cmd);
-
-	m_vRenderTargetIndices[TargetId] = m_FirstFreeRenderTarget;
-	m_vRenderTargetSizes[TargetId] = ivec2(0, 0);
-	m_FirstFreeRenderTarget = TargetId;
+	FlushVertices();
+	m_RenderTargets.Release(TargetId, m_RenderTargetActive, [this](int Id) {
+		CCommandBuffer::SCommand_RenderTarget_Destroy Cmd;
+		Cmd.m_TargetId = Id;
+		AddCmd(Cmd);
+	});
 	pTarget->Invalidate();
 }
 
@@ -827,7 +815,7 @@ bool CGraphics_Threaded::BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA
 	if(!IsRenderTargetSupported() || m_RenderTargetActive || !Target.IsValid())
 		return false;
 	const size_t TargetId = Target.Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	if(!m_RenderTargets.IsLive(TargetId))
 		return false;
 
 	FlushVertices();
@@ -856,6 +844,11 @@ void CGraphics_Threaded::EndRenderTarget()
 	Cmd.m_State = m_State;
 	AddCmd(Cmd);
 	m_RenderTargetActive = false;
+	m_RenderTargets.FlushDeferred([this](int Id) {
+		CCommandBuffer::SCommand_RenderTarget_Destroy DestroyCmd;
+		DestroyCmd.m_TargetId = Id;
+		AddCmd(DestroyCmd);
+	});
 }
 
 void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &Params)
@@ -863,7 +856,7 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	if(!IsRenderTargetSupported() || !Target.IsValid() || Params.m_W <= 0.0f || Params.m_H <= 0.0f)
 		return;
 	const size_t TargetId = Target.Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	if(!m_RenderTargets.IsLive(TargetId))
 		return;
 
 	FlushVertices();
@@ -1004,7 +997,7 @@ bool CGraphics_Threaded::CaptureBackbufferToRenderTarget(CRenderTargetHandle Tar
 	if(!IsBackbufferCaptureSupported() || m_RenderTargetActive || !Target.IsValid())
 		return false;
 	const size_t TargetId = Target.Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	if(!m_RenderTargets.IsLive(TargetId))
 		return false;
 
 	FlushVertices();
@@ -1020,7 +1013,6 @@ bool CGraphics_Threaded::GaussianBlurRenderTarget(CRenderTargetHandle Source, co
 	const int TemporaryCount = DualKawase ? DUAL_KAWASE_PYRAMID_LEVELS : 1;
 	if(!IsRenderTargetGaussianBlurSupported() || !Source.IsValid() || !Destination.IsValid())
 		return false;
-	int MaxTargetId = std::max(Source.Id(), Destination.Id());
 	for(int Index = 0; Index < TemporaryCount; ++Index)
 	{
 		if(!aTemporary[Index].IsValid() || aTemporary[Index].Id() == Source.Id() || aTemporary[Index].Id() == Destination.Id())
@@ -1028,23 +1020,20 @@ bool CGraphics_Threaded::GaussianBlurRenderTarget(CRenderTargetHandle Source, co
 		for(int Previous = 0; Previous < Index; ++Previous)
 			if(aTemporary[Index].Id() == aTemporary[Previous].Id())
 				return false;
-		MaxTargetId = std::max(MaxTargetId, aTemporary[Index].Id());
 	}
-	if((size_t)MaxTargetId >= m_vRenderTargetIndices.size() || (size_t)MaxTargetId >= m_vRenderTargetSizes.size())
+	if(!m_RenderTargets.IsLive(Source.Id()) || !m_RenderTargets.IsLive(Destination.Id()))
 		return false;
-	if(m_vRenderTargetIndices[Source.Id()] != -1 || m_vRenderTargetIndices[Destination.Id()] != -1)
-		return false;
-	const ivec2 Size = m_vRenderTargetSizes[Source.Id()];
-	const ivec2 DestinationSize = m_vRenderTargetSizes[Destination.Id()];
+	const ivec2 Size = m_RenderTargets.Size(Source.Id());
+	const ivec2 DestinationSize = m_RenderTargets.Size(Destination.Id());
 	if(Size.x <= 0 || Size.y <= 0 || DestinationSize != Size)
 		return false;
 	ivec2 PreviousExpectedSize = Size;
 	for(int Index = 0; Index < TemporaryCount; ++Index)
 	{
-		if(m_vRenderTargetIndices[aTemporary[Index].Id()] != -1)
+		if(!m_RenderTargets.IsLive(aTemporary[Index].Id()))
 			return false;
 		const ivec2 ExpectedSize = DualKawase ? ivec2(DualKawasePyramidDimension(Size.x, Index), DualKawasePyramidDimension(Size.y, Index)) : Size;
-		if(ExpectedSize.x <= 0 || ExpectedSize.y <= 0 || (DualKawase && (ExpectedSize.x >= PreviousExpectedSize.x || ExpectedSize.y >= PreviousExpectedSize.y)) || m_vRenderTargetSizes[aTemporary[Index].Id()] != ExpectedSize)
+		if(ExpectedSize.x <= 0 || ExpectedSize.y <= 0 || (DualKawase && (ExpectedSize.x >= PreviousExpectedSize.x || ExpectedSize.y >= PreviousExpectedSize.y)) || m_RenderTargets.Size(aTemporary[Index].Id()) != ExpectedSize)
 			return false;
 		PreviousExpectedSize = ExpectedSize;
 	}
@@ -1105,19 +1094,16 @@ bool CGraphics_Threaded::DualBlurRenderTarget(CRenderTargetHandle Source, CRende
 				return false;
 		}
 	}
-	const size_t MaxTargetId = (size_t)std::max({Source.Id(), Downsample.Id(), DownsampleTemporary.Id(), DownsampleBlurred.Id(), Destination.Id()});
-	if(MaxTargetId >= m_vRenderTargetIndices.size() || MaxTargetId >= m_vRenderTargetSizes.size())
-		return false;
 	for(const CRenderTargetHandle Target : aTargets)
 	{
-		if(m_vRenderTargetIndices[Target.Id()] != -1)
+		if(!m_RenderTargets.IsLive(Target.Id()))
 			return false;
 	}
-	const ivec2 SourceSize = m_vRenderTargetSizes[Source.Id()];
-	const ivec2 DownsampleSize = m_vRenderTargetSizes[Downsample.Id()];
+	const ivec2 SourceSize = m_RenderTargets.Size(Source.Id());
+	const ivec2 DownsampleSize = m_RenderTargets.Size(Downsample.Id());
 	if(SourceSize.x <= 0 || SourceSize.y <= 0 || DownsampleSize.x <= 0 || DownsampleSize.y <= 0 ||
-		m_vRenderTargetSizes[DownsampleTemporary.Id()] != DownsampleSize || m_vRenderTargetSizes[DownsampleBlurred.Id()] != DownsampleSize ||
-		m_vRenderTargetSizes[Destination.Id()] != SourceSize || DownsampleSize.x > SourceSize.x || DownsampleSize.y > SourceSize.y)
+		m_RenderTargets.Size(DownsampleTemporary.Id()) != DownsampleSize || m_RenderTargets.Size(DownsampleBlurred.Id()) != DownsampleSize ||
+		m_RenderTargets.Size(Destination.Id()) != SourceSize || DownsampleSize.x > SourceSize.x || DownsampleSize.y > SourceSize.y)
 		return false;
 
 	const CCommandBuffer::SPoint SavedScreenTL = m_State.m_ScreenTL;
@@ -1156,10 +1142,10 @@ bool CGraphics_Threaded::DualBlurRenderTarget(CRenderTargetHandle Source, CRende
 
 IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetReadback(CRenderTargetHandle Target)
 {
-	if(!IsRenderTargetSupported() || !Target.IsValid())
+	if(!IsRenderTargetSupported() || m_RenderTargetActive || !Target.IsValid())
 		return CRenderTargetReadbackHandle();
 	const size_t TargetId = Target.Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	if(!m_RenderTargets.IsLive(TargetId))
 		return CRenderTargetReadbackHandle();
 
 	FlushVertices();
@@ -2668,7 +2654,7 @@ void CGraphics_Threaded::RenderMediaIslandSdf(const IGraphics::SMediaIslandSdfPa
 	Cmd.m_State.m_WrapMode = EWrapMode::CLAMP;
 	Cmd.m_State.m_Texture = m_NullTexture.Id();
 	Cmd.m_Params = Params;
-	if(Backdrop.IsValid() && (size_t)Backdrop.Id() < m_vRenderTargetIndices.size() && m_vRenderTargetIndices[Backdrop.Id()] == -1)
+	if(Backdrop.IsValid() && m_RenderTargets.IsLive(Backdrop.Id()))
 		Cmd.m_BackdropTargetId = Backdrop.Id();
 	else
 		Cmd.m_Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_BACKDROP_UV] = vec4();
@@ -3965,9 +3951,7 @@ int CGraphics_Threaded::Init()
 	// 必须在重建 backend 之前做，保证此后创建的资源都是新纪元的。
 	BumpTextureHandleEpochAndResetSlots();
 
-	m_FirstFreeRenderTarget = 0;
-	m_vRenderTargetIndices.clear();
-	m_vRenderTargetSizes.clear();
+	m_RenderTargets.Clear();
 	m_RenderTargetActive = false;
 	m_RenderTargetReadbacks.Clear();
 

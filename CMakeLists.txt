@@ -3107,6 +3107,7 @@ if(CLIENT)
     graphics_threaded.h
     graphics_threaded_sprites.cpp
     render_target_readback_queue.h
+    render_target_pool.h
     input.cpp
     input.h
     input_sdl3.h
@@ -3134,6 +3135,7 @@ if(CLIENT)
     steam_probe.h
     steam_client_path.h
     text.cpp
+    glyph_atlas_growth.h
     text_gradient.h
     qm_font_names.h
     qm_font_file_probe.h
@@ -4708,6 +4710,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/client/graphics_fatal_error_test.cpp
     src/test/integration/client/graphics_error_report_test.cpp
     src/test/unit/engine/graphics/graphics_command_batch_test.cpp
+    src/test/unit/engine/graphics/graphics_command_buffer_allocation_test.cpp
+    src/test/unit/engine/graphics/glyph_atlas_growth_test.cpp
     src/test/unit/base/hash_test.cpp
     src/test/unit/engine/huffman_test.cpp
     src/test/contract/base/http_shutdown_lifecycle_contract_test.cpp
@@ -5060,6 +5064,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/graphics/render_target_geometry_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
     src/test/unit/engine/graphics/render_target_readback_queue_test.cpp
+    src/test/unit/engine/graphics/render_target_pool_test.cpp
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp

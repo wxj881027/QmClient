@@ -6,6 +6,7 @@
 #include <base/system.h>
 
 #include <engine/client/quad_rotation_cache.h>
+#include <engine/client/render_target_pool.h>
 #include <engine/client/render_target_readback_queue.h>
 #include <engine/client/rounded_rect_directions.h>
 #include <engine/graphics.h>
@@ -82,17 +83,20 @@ class CCommandBuffer
 			m_Used = 0;
 		}
 
-		void *Alloc(unsigned Requested, unsigned Alignment = alignof(std::max_align_t))
+		void *Alloc(size_t Requested, size_t Alignment = alignof(std::max_align_t))
 		{
+			if(Alignment == 0)
+				return nullptr;
 			size_t Offset = reinterpret_cast<uintptr_t>(m_pData + m_Used) % Alignment;
 			if(Offset)
 				Offset = Alignment - Offset;
 
-			if(Requested + Offset + m_Used > m_Size)
+			const size_t Remaining = m_Size - m_Used;
+			if(Offset > Remaining || Requested > Remaining - Offset)
 				return nullptr;
 
 			void *pPtr = &m_pData[m_Used + Offset];
-			m_Used += Requested + Offset;
+			m_Used += static_cast<unsigned>(Requested + Offset);
 			return pPtr;
 		}
 
@@ -743,7 +747,7 @@ public:
 	{
 	}
 
-	void *AllocData(unsigned WantedSize)
+	void *AllocData(size_t WantedSize)
 	{
 		return m_DataBuffer.Alloc(WantedSize);
 	}
@@ -1058,9 +1062,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	size_t m_FirstFreeTexture;
 	int m_TextureMemoryUsage;
 
-	std::vector<int> m_vRenderTargetIndices;
-	std::vector<ivec2> m_vRenderTargetSizes;
-	size_t m_FirstFreeRenderTarget;
+	CRenderTargetPool m_RenderTargets;
 
 	CRenderTargetReadbackQueue m_RenderTargetReadbacks;
 

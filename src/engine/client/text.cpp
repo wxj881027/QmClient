@@ -1,6 +1,7 @@
 /* (c) Magnus Auvinen. See licence.txt in the root of the distribution for more information. */
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "font_size_cache.h"
+#include "glyph_atlas_growth.h"
 #include "glyph_lookup_cache.h"
 #include "glyph_outline.h"
 #include "qm_font_category.h"
@@ -503,27 +504,49 @@ private:
 			return false;
 
 		const size_t NewTextureDimension = m_TextureDimension * 2;
-		log_debug("textrender", "Increasing atlas dimension to %" PRIzu " (%" PRIzu " MB used for textures)", NewTextureDimension, (NewTextureDimension / 1024) * (NewTextureDimension / 1024) * NUM_FONT_TEXTURES);
-		UnloadTextures();
-
-		for(auto &pTextureData : m_apTextureData)
+		auto apNewData = PrepareGlyphAtlasGrowth(m_apTextureData, m_TextureDimension, NewTextureDimension);
+		if(apNewData[FONT_TEXTURE_FILL] == nullptr)
 		{
-			uint8_t *pTmpTexBuffer = new uint8_t[NewTextureDimension * NewTextureDimension];
-			for(size_t y = 0; y < m_TextureDimension; ++y)
-			{
-				mem_copy(&pTmpTexBuffer[y * NewTextureDimension], &pTextureData[y * m_TextureDimension], m_TextureDimension);
-				mem_zero(&pTmpTexBuffer[y * NewTextureDimension + m_TextureDimension], NewTextureDimension - m_TextureDimension);
-			}
-			mem_zero(&pTmpTexBuffer[m_TextureDimension * NewTextureDimension], (NewTextureDimension - m_TextureDimension) * NewTextureDimension);
-			delete[] pTextureData;
-			pTextureData = pTmpTexBuffer;
+			log_error("textrender", "Failed to allocate larger glyph atlas. Keeping the existing atlas.");
+			return false;
 		}
 
-		m_TextureAtlas.IncreaseDimension(NewTextureDimension);
+		// 分区和上传缓冲也先准备完整，失败时不能留下新旧尺寸混用的图集。
+		CAtlas NewAtlas;
+		try
+		{
+			NewAtlas = m_TextureAtlas;
+			NewAtlas.IncreaseDimension(NewTextureDimension);
+		}
+		catch(const std::bad_alloc &)
+		{
+			log_error("textrender", "Failed to grow glyph atlas sections. Keeping the existing atlas.");
+			return false;
+		}
+		const size_t NewTextureSize = NewTextureDimension * NewTextureDimension;
+		std::unique_ptr<uint8_t, decltype(&free)> pFillUpload(static_cast<uint8_t *>(malloc(NewTextureSize)), free);
+		std::unique_ptr<uint8_t, decltype(&free)> pOutlineUpload(static_cast<uint8_t *>(malloc(NewTextureSize)), free);
+		if(pFillUpload == nullptr || pOutlineUpload == nullptr)
+		{
+			log_error("textrender", "Failed to allocate larger text texture upload buffers. Keeping the existing atlas.");
+			return false;
+		}
+		mem_copy(pFillUpload.get(), apNewData[FONT_TEXTURE_FILL].get(), NewTextureSize);
+		mem_copy(pOutlineUpload.get(), apNewData[FONT_TEXTURE_OUTLINE].get(), NewTextureSize);
+		IGraphics::CTextureHandle aNewTextures[NUM_FONT_TEXTURES];
+		if(!Graphics()->LoadTextTextures(NewTextureDimension, NewTextureDimension, aNewTextures[FONT_TEXTURE_FILL], aNewTextures[FONT_TEXTURE_OUTLINE], pFillUpload.release(), pOutlineUpload.release()))
+			return false;
 
+		UnloadTextures();
+		for(size_t Index = 0; Index < NUM_FONT_TEXTURES; ++Index)
+		{
+			delete[] m_apTextureData[Index];
+			m_apTextureData[Index] = apNewData[Index].release();
+			m_aTextures[Index] = aNewTextures[Index];
+		}
+		m_TextureAtlas = std::move(NewAtlas);
 		m_TextureDimension = NewTextureDimension;
-
-		UploadTextures();
+		log_debug("textrender", "Increased atlas dimension to %" PRIzu " (%" PRIzu " MB used for textures)", NewTextureDimension, (NewTextureDimension / 1024) * (NewTextureDimension / 1024) * NUM_FONT_TEXTURES);
 		// QmClient: 扩容已整张重建纹理，脏区数据随之失效。
 		DiscardPendingGlyphUploads();
 		return true;
@@ -803,7 +826,7 @@ private:
 			{
 				if(!IncreaseGlyphMapSize())
 				{
-					log_debug("textrender", "Cannot fit glyph into atlas, which is already at maximum size. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
+					log_debug("textrender", "Cannot fit glyph into atlas or grow it. Chr=%d GlyphIndex=%u", Glyph.m_Chr, Glyph.m_GlyphIndex);
 					return false;
 				}
 			}

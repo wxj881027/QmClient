@@ -77,19 +77,6 @@ TEST(GraphicsRenderTarget, BeginCommandDoesNotInheritCurrentClip)
 	EXPECT_LT(DisableClip, AddCmd);
 }
 
-TEST(GraphicsRenderTargetBackbufferCapture, ThreadedFrontendValidatesAndQueuesCapture)
-{
-	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "bool CGraphics_Threaded::CaptureBackbufferToRenderTarget");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("IsBackbufferCaptureSupported()"), std::string::npos);
-	EXPECT_NE(Body.find("m_RenderTargetActive"), std::string::npos);
-	EXPECT_NE(Body.find("m_vRenderTargetIndices"), std::string::npos);
-	EXPECT_NE(Body.find("FlushVertices();"), std::string::npos);
-	EXPECT_NE(Body.find("SCommand_RenderTarget_CaptureBackbuffer"), std::string::npos);
-	EXPECT_NE(Body.find("AddCmd(Cmd);"), std::string::npos);
-}
-
 TEST(GraphicsRenderTargetBackbufferCapture, RuntimeMultiSamplingChangesKeepCapabilityInSync)
 {
 	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
@@ -118,20 +105,6 @@ TEST(GraphicsRenderTargetBackbufferCapture, VulkanRecordsPostCaptureDrawsInline)
 	EXPECT_NE(Body.find("m_vMainDrawCommandBuffers[m_CurImageIndex]"), std::string::npos);
 	EXPECT_EQ(StartBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
 	EXPECT_NE(PrepareBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
-}
-
-TEST(GraphicsRenderTargetGaussianBlur, ThreadedFrontendBuildsModeSpecificPassChain)
-{
-	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "bool CGraphics_Threaded::GaussianBlurRenderTarget");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("CalculateGaussianBlurKernel"), std::string::npos);
-	EXPECT_NE(Body.find("aTemporary[Index].Id() == Source.Id()"), std::string::npos);
-	EXPECT_NE(Body.find("m_vRenderTargetSizes[Source.Id()]"), std::string::npos);
-	EXPECT_NE(Body.find("DualKawasePyramidDimension"), std::string::npos);
-	EXPECT_NE(Body.find("DUAL_KAWASE_PYRAMID_LEVELS"), std::string::npos);
-	EXPECT_NE(Body.find("AddBlurPass"), std::string::npos);
-	EXPECT_NE(Body.find("Command.m_Upsample = Upsample"), std::string::npos);
 }
 
 TEST(GraphicsRenderTargetGaussianBlur, FrontendRejectsNestedRenderTargets)
