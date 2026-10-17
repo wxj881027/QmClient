@@ -23,6 +23,7 @@ class QmClientE2ERunnerTest(unittest.TestCase):
 				"recording_without_connection",
 				"slow_asset_loading_no_false_hang",
 				"startup_saved_favorites",
+				"system_font_restore_no_false_hang",
 				"vector_font_and_icon_resources",
 				"legacy_icon_font_residual_ignored",
 				"menu_background_switch_shutdown",

@@ -3134,6 +3134,8 @@ if(CLIENT)
     text.cpp
     text_gradient.h
     qm_font_names.h
+    qm_font_file_probe.h
+    qm_font_restore.h
     qm_system_fonts.h
     qm_font_name_match.h
     text_sweep.h
@@ -4859,6 +4861,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_font_category_test.cpp
     src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/unit/qmclient/client/qm_font_scan_job_test.cpp
+    src/test/unit/qmclient/client/qm_font_restore_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
@@ -5260,6 +5263,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
 
   if(FREETYPE_FOUND)
+    list(APPEND TESTS src/test/integration/qmclient/client/qm_system_font_restore_test.cpp)
     list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/integration/qmclient/client/qm_screenshot_watermark_job_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
     list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
   endif()
