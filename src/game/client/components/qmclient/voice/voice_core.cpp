@@ -340,24 +340,28 @@ bool CRClientVoice::SendVoicePacket(const uint8_t *pData, size_t Size) NO_THREAD
 
 bool CRClientVoice::EnsureAudioSubsystem()
 {
-	if(m_AudioSubsystemInitializedByVoice)
+	if(m_AudioSubsystem.IsInitialized())
 		return true;
-	if(SDL_WasInit(SDL_INIT_AUDIO) == 0)
-		SDL_SetHint(SDL_HINT_AUDIO_DRIVER, g_Config.m_QmVoiceAudioBackend[0] != '\0' ? g_Config.m_QmVoiceAudioBackend : nullptr);
-	if(!SDL_InitSubSystem(SDL_INIT_AUDIO))
-	{
-		char aError[256];
-		str_format(aError, sizeof(aError), "Failed to initialize voice audio: %s", SDL_GetError());
-		LogDiagnosticErrorOnce(m_aAudioErrorLog, sizeof(m_aAudioErrorLog), aError);
-		return false;
-	}
-	if(!SDL_AddEventWatch(AudioDeviceEvent, this))
-	{
-		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-		return false;
-	}
-	m_AudioSubsystemInitializedByVoice = true;
 	m_ShutdownDone = false;
+	const bool Initialized = m_AudioSubsystem.Ensure(g_Config.m_QmVoiceAudioBackend, time_freq(), time_get, [this] {
+		if(SDL_WasInit(SDL_INIT_AUDIO) == 0)
+			SDL_SetHint(SDL_HINT_AUDIO_DRIVER, g_Config.m_QmVoiceAudioBackend[0] != '\0' ? g_Config.m_QmVoiceAudioBackend : nullptr);
+		if(!SDL_InitSubSystem(SDL_INIT_AUDIO))
+		{
+			char aError[256];
+			str_format(aError, sizeof(aError), "Failed to initialize voice audio: %s", SDL_GetError());
+			LogDiagnosticErrorOnce(m_aAudioErrorLog, sizeof(m_aAudioErrorLog), aError);
+			return false;
+		}
+		if(!SDL_AddEventWatch(AudioDeviceEvent, this))
+		{
+			SDL_QuitSubSystem(SDL_INIT_AUDIO);
+			return false;
+		}
+		return true;
+	});
+	if(!Initialized)
+		return false;
 	log_info("voice", "audio initialized using backend '%s'", SDL_GetCurrentAudioDriver());
 	return true;
 }
@@ -445,7 +449,7 @@ bool CRClientVoice::EnsureAudio()
 	}
 
 	const char *pRequestedBackend = RequestedAudioConfig.m_aBackend[0] ? RequestedAudioConfig.m_aBackend : nullptr;
-	if(!m_AudioSubsystemInitializedByVoice)
+	if(!m_AudioSubsystem.IsInitialized())
 		return false;
 	if(m_CaptureRemoved.exchange(false))
 		CloseCaptureStream();
@@ -1151,12 +1155,10 @@ void CRClientVoice::Shutdown()
 	ClearDiagnosticLogMessage(m_aEncoderErrorLog);
 	ClearDiagnosticLogMessage(m_aServerAddrErrorLog);
 	ClearDiagnosticLogMessage(m_aDecoderErrorLog);
-	if(m_AudioSubsystemInitializedByVoice)
-	{
+	m_AudioSubsystem.Shutdown([this] {
 		SDL_RemoveEventWatch(AudioDeviceEvent, this);
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
-		m_AudioSubsystemInitializedByVoice = false;
-	}
+	});
 	m_MicLevel.store(0.0f);
 	m_LastConfigSnapshotUpdate = 0;
 	m_LastClientSnapshotUpdate = 0;

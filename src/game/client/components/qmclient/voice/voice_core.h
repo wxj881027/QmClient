@@ -173,7 +173,7 @@ class CRClientVoice
 	char m_aEncoderErrorLog[256] = {0};
 	char m_aServerAddrErrorLog[256] = {0};
 	char m_aDecoderErrorLog[256] = {0};
-	bool m_AudioSubsystemInitializedByVoice = false;
+	CVoiceAudioSubsystem m_AudioSubsystem;
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 	bool m_UnsupportedPlatformLogged = false;
 #endif

@@ -5151,6 +5151,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/voice_transport_test.cpp
     src/test/unit/client/voice_worker_test.cpp
     src/test/unit/client/voice_audio_retry_test.cpp
+    src/test/unit/client/voice_audio_subsystem_test.cpp
     src/test/unit/client/voice_sequence_test.cpp
     src/test/unit/client/voice_qmclient_test.cpp
     src/test/unit/client/voice_packet_utils_test.cpp
