@@ -5316,6 +5316,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/unit/engine/input_sdl3_test.cpp
       src/test/integration/engine/audio_sdl3_test.cpp
     )
+    if(VIDEORECORDER)
+      list(APPEND TESTS src/test/integration/engine/audio_recording_routing_test.cpp)
+    endif()
   endif()
   set(TARGET_TESTRUNNER testrunner)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL

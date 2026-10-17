@@ -80,7 +80,8 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 	m_pGraphics(pGraphics),
 	m_pStorage(pStorage),
 	m_pSound(pSound),
-	m_FrameCapture(Width, Height)
+	m_FrameCapture(Width, Height),
+	m_HasAudio(pSound->IsSoundEnabled() && g_Config.m_ClVideoSndEnable)
 {
 	m_pFormatContext = nullptr;
 	m_pFormat = nullptr;
@@ -100,8 +101,6 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 	m_Stopped = false;
 	m_ProcessingVideoFrame = 0;
 	m_ProcessingAudioFrame = 0;
-
-	m_HasAudio = m_pSound->IsSoundEnabled() && g_Config.m_ClVideoSndEnable;
 
 	dbg_assert(ms_pCurrentVideo == nullptr, "ms_pCurrentVideo is NOT set to nullptr while creating a new Video.");
 
@@ -667,6 +666,7 @@ AVFrame *CVideo::AllocPicture(enum AVPixelFormat PixFmt, int Width, int Height)
 		char aError[AV_ERROR_MAX_STRING_SIZE];
 		av_strerror(FrameBufferAllocResult, aError, sizeof(aError));
 		log_error("videorecorder", "Could not allocate video frame buffer: %s", aError);
+		av_frame_free(&pPicture);
 		return nullptr;
 	}
 
@@ -699,6 +699,7 @@ AVFrame *CVideo::AllocAudioFrame(enum AVSampleFormat SampleFmt, uint64_t Channel
 			char aError[AV_ERROR_MAX_STRING_SIZE];
 			av_strerror(FrameBufferAllocResult, aError, sizeof(aError));
 			log_error("videorecorder", "Could not allocate audio frame buffer: %s", aError);
+			av_frame_free(&pFrame);
 			return nullptr;
 		}
 	}

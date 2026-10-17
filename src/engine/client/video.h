@@ -51,6 +51,7 @@ public:
 	void Pause(bool Pause) override;
 	bool IsRecording() const override { return m_Recording && !HasError(); }
 	bool HasError() const override { return m_FrameCapture.HasError(); }
+	bool HasAudio() const override { return m_HasAudio; }
 
 	void NextVideoFrame() override;
 	void NextVideoFrameThread() override;
@@ -142,7 +143,7 @@ private:
 	std::atomic<int32_t> m_ProcessingVideoFrame;
 	std::atomic<int32_t> m_ProcessingAudioFrame;
 
-	bool m_HasAudio;
+	const bool m_HasAudio;
 
 	class CVideoBuffer
 	{

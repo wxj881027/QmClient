@@ -184,17 +184,9 @@ void CSound::Mix(short *pFinalOut, unsigned Frames)
 
 void CSound::FillAudioStream(SDL_AudioStream *pStream, int AdditionalAmount)
 {
-#if defined(CONF_VIDEORECORDER)
-	const bool VideoRecorderTakesSound = IVideo::Current() != nullptr && g_Config.m_ClVideoSndEnable;
-#else
-	const bool VideoRecorderTakesSound = false;
-#endif
-	FillSdlAudioStream(pStream, AdditionalAmount, 2, m_pCallbackBuffer, m_MaxFrames,
-		[this, VideoRecorderTakesSound](int16_t *pBuffer, int Frames) {
-			if(VideoRecorderTakesSound)
-				mem_zero(pBuffer, Frames * 2 * sizeof(int16_t));
-			else
-				Mix(pBuffer, Frames);
+	FillSdlPlaybackAudioStream(pStream, AdditionalAmount, 2, m_pCallbackBuffer, m_MaxFrames,
+		[this](int16_t *pBuffer, int Frames) {
+			Mix(pBuffer, Frames);
 		});
 }
 
@@ -336,7 +328,7 @@ void CSound::UpdateDevice()
 bool CSound::HasAudioOutput() const
 {
 #if defined(CONF_VIDEORECORDER)
-	if(IVideo::Current() && g_Config.m_ClVideoSndEnable)
+	if(IVideo::Current() && IVideo::Current()->HasAudio())
 		return true;
 #endif
 	return m_pDevice != nullptr;

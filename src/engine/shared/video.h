@@ -17,6 +17,8 @@ public:
 	virtual void Pause(bool Pause) = 0;
 	virtual bool IsRecording() const = 0;
 	virtual bool HasError() const = 0;
+	// 当前录像是否接管音频；录制期间保持创建时的选择。
+	virtual bool HasAudio() const = 0;
 
 	virtual void NextVideoFrame() = 0;
 	virtual void NextVideoFrameThread() = 0;
