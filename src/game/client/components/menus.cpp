@@ -3059,9 +3059,9 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	// 本地 DDrace 条目按服务器社区分条，DDStats 游戏类型又会追加同名条目；
 	// 而 DDrace 行的展示数据只有官方 DDNet 聚合一份。先把所有 DDrace 变体
 	// 折叠成单条，避免图例、饼图和顶部总时长出现多条相同的「DDraceNetwork · DDNet」。
-	QmCollapseModeEntries(vModeStats, [](const SQmClientLocalModeStats &Stats) {
-		return IsStatsDDraceMode(Stats.m_GameMode);
-	});
+	// 折叠必须区分权威来源：DDStats 追加的条目是远程模式时长，本地分社区累计
+	// 只是本机记录，两者混在一起累加会让权威值虚高（实测叠加本地 3 万秒）。
+	QmCollapseModeEntriesWithAuthority(vModeStats, [](const SQmClientLocalModeStats &Stats) { return IsStatsDDraceMode(Stats.m_GameMode); }, [](const SQmClientLocalModeStats &Stats) { return Stats.m_CommunityId == "ddstats"; });
 	// Gores 同理：本地按社区分条、DDStats 追加与 Axiom 占位可以并存，
 	// 超量截断时甚至可能选入两条 Gores。折叠成单条；任一来源带 Axiom
 	// 身份时保留该身份，保证官方 Axiom 数据仍能覆盖这一行。
@@ -3071,9 +3071,12 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		if(IsStatsGoresMode(Stats.m_GameMode) && Stats.m_IsAxiom)
 			HasAxiomGoresEntry = true;
 	}
-	if(QmCollapseModeEntries(vModeStats, [](const SQmClientLocalModeStats &Stats) {
-		   return IsStatsGoresMode(Stats.m_GameMode);
-	   }) && HasAxiomGoresEntry)
+	if(QmCollapseModeEntriesWithAuthority(vModeStats, [](const SQmClientLocalModeStats &Stats) { return IsStatsGoresMode(Stats.m_GameMode); }, [](const SQmClientLocalModeStats &Stats) {
+		   // 只认 DDStats：上面的 ShowAxiomGores 块会把本地 Gores 条目的
+		   // community_id 改写成 "axiom"，与远程权威同标识，不能用来判定权威。
+		   // Gores 的最终数值由后面的 ResolveQmStatisticsModeDisplay 用
+		   // Axiom 完整数据覆盖，这里只需保证 DDStats 值不被本地累加污染。
+		   return Stats.m_CommunityId == "ddstats"; }) && HasAxiomGoresEntry)
 	{
 		auto It = std::find_if(vModeStats.begin(), vModeStats.end(), [](const SQmClientLocalModeStats &Stats) {
 			return IsStatsGoresMode(Stats.m_GameMode);

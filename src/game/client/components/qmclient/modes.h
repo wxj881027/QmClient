@@ -203,14 +203,19 @@ T QmSaturatingAddStats(T Left, T Right)
 	return Left + Right;
 }
 
-// 把列表中所有被 IsMode 命中的条目折叠进第一条：m_Maps / m_Score /
-// m_PlaytimeSeconds 饱和累加，其余字段保留第一条的值。返回是否发生折叠。
+// 把列表中所有被 IsMode 命中的条目折叠进第一条，返回是否发生折叠。
 // 统计页同一模式会因服务器社区不同、DDStats 追加同名条目等原因出现多条
 // 记录，展示前必须折叠成一条，否则图例和饼图会渲染出完全相同的重复项。
-template<typename TList, typename TPred>
-bool QmCollapseModeEntries(TList &vStats, TPred IsMode)
+// 折叠时允许调用方把某些条目标记为权威来源：权威条目的 m_Maps / m_Score /
+// m_PlaytimeSeconds 直接覆盖累加值，非权威条目只做饱和累加。远程聚合（DDStats、
+// 官方 DDNet、Axiom）与本地分社区累计混在一起时，若一律累加会把权威值叠上
+// 本地值，使统计页时长虚高。
+// IsAuthoritative 命中第一条时同样生效，后续本地条目不会污染它。
+template<typename TList, typename TPred, typename TAuth>
+bool QmCollapseModeEntriesWithAuthority(TList &vStats, TPred IsMode, TAuth IsAuthoritative)
 {
 	bool Collapsed = false;
+	bool FirstIsAuthoritative = false;
 	auto First = vStats.end();
 	auto It = vStats.begin();
 	while(It != vStats.end())
@@ -223,12 +228,30 @@ bool QmCollapseModeEntries(TList &vStats, TPred IsMode)
 		if(First == vStats.end())
 		{
 			First = It;
+			FirstIsAuthoritative = IsAuthoritative(*It);
 			++It;
 			continue;
 		}
-		First->m_Maps = QmSaturatingAddStats(First->m_Maps, It->m_Maps);
-		First->m_Score = QmSaturatingAddStats(First->m_Score, It->m_Score);
-		First->m_PlaytimeSeconds = QmSaturatingAddStats(First->m_PlaytimeSeconds, It->m_PlaytimeSeconds);
+		const bool EntryIsAuthoritative = IsAuthoritative(*It);
+		if(FirstIsAuthoritative || EntryIsAuthoritative)
+		{
+			// 权威值覆盖：保留权威方自己的地图数、分数、时长和来源社区，
+			// 另一方的字段全部丢弃。社区标识必须一起替换，否则顶部「游玩时间」
+			// 的 IsRemoteDdStatsMode 判定会在官方 DDNet 小时缺失时漏掉这一行。
+			const typename TList::value_type &Authoritative = FirstIsAuthoritative ? *First : *It;
+			First->m_Maps = Authoritative.m_Maps;
+			First->m_Score = Authoritative.m_Score;
+			First->m_PlaytimeSeconds = Authoritative.m_PlaytimeSeconds;
+			First->m_CommunityId = Authoritative.m_CommunityId;
+			// 折叠结果必须继续按权威口径展示，否则后续本地条目又会进入累加分支。
+			FirstIsAuthoritative = true;
+		}
+		else
+		{
+			First->m_Maps = QmSaturatingAddStats(First->m_Maps, It->m_Maps);
+			First->m_Score = QmSaturatingAddStats(First->m_Score, It->m_Score);
+			First->m_PlaytimeSeconds = QmSaturatingAddStats(First->m_PlaytimeSeconds, It->m_PlaytimeSeconds);
+		}
 		It = vStats.erase(It);
 		Collapsed = true;
 	}
