@@ -11,6 +11,7 @@
 #include <test/test.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <new>
@@ -33,6 +34,20 @@ namespace
 		}
 
 	public:
+		struct SUpdate
+		{
+			CTextureHandle m_Texture;
+			int m_X, m_Y;
+			size_t m_Width, m_Height;
+			std::vector<uint8_t> m_vPixels;
+		};
+		bool m_CaptureUpdates = false;
+		bool m_RejectUpdates = false;
+		bool m_ThrowUpdates = false;
+		int m_RejectUpdateId = -1;
+		CTextureHandle m_Fill, m_Outline;
+		size_t m_Dimension = 0;
+		std::vector<SUpdate> m_vUpdates;
 		bool m_RejectUpload = false;
 		bool m_ThrowUpload = false;
 		bool m_TextBuffering = true;
@@ -72,6 +87,9 @@ namespace
 			Outline = CreateTextureHandle(m_NextId++, m_Generation);
 			m_Textures.emplace(Fill.Id(), Fill.Generation());
 			m_Textures.emplace(Outline.Id(), Outline.Generation());
+			m_Fill = Fill;
+			m_Outline = Outline;
+			m_Dimension = Width;
 			return true;
 		}
 		bool UnloadTextTextures(CTextureHandle &Fill, CTextureHandle &Outline) override
@@ -89,13 +107,16 @@ namespace
 		}
 		bool UpdateTextTexture(CTextureHandle Handle, int X, int Y, size_t Width, size_t Height, uint8_t *pData, bool Moved) override
 		{
-			if(!IsTextureHandleAllocated(Handle))
-			{
-				if(Moved)
-					free(pData);
-				RequireCurrent(Handle);
-			}
+			std::unique_ptr<uint8_t, decltype(&free)> pOwner(Moved ? pData : nullptr, free);
+			RequireCurrent(Handle);
 			++m_TextureUpdates;
+			if(m_CaptureUpdates)
+				m_vUpdates.push_back({Handle, X, Y, Width, Height, std::vector<uint8_t>(pData, pData + Width * Height)});
+			if(m_ThrowUpdates)
+				throw std::bad_alloc();
+			if(m_RejectUpdates || Handle.Id() == m_RejectUpdateId)
+				return false;
+			pOwner.release();
 			return CIconBenchmarkGraphics::UpdateTextTexture(Handle, X, Y, Width, Height, pData, Moved);
 		}
 		void RenderText(int Container, int Quads, int Size, CTextureHandle Fill, CTextureHandle Outline, const ColorRGBA &Color, const ColorRGBA &OutlineColor) override
@@ -185,9 +206,25 @@ namespace
 		bool Create(const char *pString = "Recovery", bool TrackLines = false)
 		{
 			CTextCursor Cursor;
-			m_pText->SetCursor(&Cursor, 0.0f, 0.0f, 16.0f, TEXTFLAG_RENDER);
+			Cursor.m_FontSize = 16.0f;
 			Cursor.m_TrackLineRanges = TrackLines;
 			return m_pText->CreateTextContainer(m_Text, &Cursor, pString);
+		}
+		void CaptureUpdates()
+		{
+			m_pText->QmTextFrameEnd();
+			m_Graphics.m_CaptureUpdates = true;
+			m_Graphics.m_vUpdates.clear();
+		}
+		void ExpectSameUpdate(const CRecoveryGraphics::SUpdate &Before, const CRecoveryGraphics::SUpdate &After)
+		{
+			EXPECT_EQ(Before.m_Texture.Id(), After.m_Texture.Id());
+			EXPECT_EQ(Before.m_Texture.Generation(), After.m_Texture.Generation());
+			EXPECT_EQ(Before.m_X, After.m_X);
+			EXPECT_EQ(Before.m_Y, After.m_Y);
+			EXPECT_EQ(Before.m_Width, After.m_Width);
+			EXPECT_EQ(Before.m_Height, After.m_Height);
+			EXPECT_EQ(Before.m_vPixels, After.m_vPixels);
 		}
 		void Draw()
 		{
@@ -246,7 +283,7 @@ TEST_F(QmTextDeviceRecovery, RecreatedTextUsesCurrentTexturesAndPreservesLayout)
 TEST_F(QmTextDeviceRecovery, OldCursorCannotDeleteAReusedQuadContainer)
 {
 	CTextCursor Cursor;
-	m_pText->SetCursor(&Cursor, 0, 0, 16, TEXTFLAG_RENDER);
+	Cursor.m_FontSize = 16.0f;
 	Cursor.m_CursorMode = TEXT_CURSOR_CURSOR_MODE_SET;
 	Cursor.m_CursorCharacter = 1;
 	ASSERT_TRUE(m_pText->CreateTextContainer(m_Text, &Cursor, "AB"));
@@ -397,4 +434,220 @@ TEST_F(QmTextDeviceRecovery, ShutdownWhileRecoveryIsPendingDoesNotDeleteOldDevic
 	EXPECT_NO_THROW(m_pText->Shutdown());
 	EXPECT_EQ(m_Graphics.m_TextureDeletes, 0);
 	EXPECT_FALSE(m_pText->RestoreGraphicsResources());
+}
+
+TEST_F(QmTextDeviceRecovery, SuccessfulIncrementalUploadIsNotRepeatedForCachedGlyphs)
+{
+	CaptureUpdates();
+	ASSERT_TRUE(Create("A"));
+	Draw();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	EXPECT_EQ(m_Graphics.m_vUpdates[0].m_Texture.Id(), m_Graphics.m_Fill.Id());
+	EXPECT_EQ(m_Graphics.m_vUpdates[1].m_Texture.Id(), m_Graphics.m_Outline.Id());
+	m_pText->QmTextFrameEnd();
+	m_pText->DeleteTextContainer(m_Text);
+	ASSERT_TRUE(Create("A"));
+	Draw();
+	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	EXPECT_EQ(m_Graphics.m_Draws, 2u);
+}
+
+TEST_F(QmTextDeviceRecovery, RejectedIncrementalFillRetriesTheSamePixelsWithoutRebuildingText)
+{
+	CaptureUpdates();
+	ASSERT_TRUE(Create("A"));
+	m_Graphics.m_RejectUpdateId = m_Graphics.m_Fill.Id();
+	Draw();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	EXPECT_EQ(m_Graphics.m_Draws, 0u);
+	const auto Rejected = m_Graphics.m_vUpdates[0];
+	ASSERT_TRUE(std::any_of(Rejected.m_vPixels.begin(), Rejected.m_vPixels.end(), [](uint8_t Pixel) { return Pixel != 0; }));
+	m_Graphics.m_RejectUpdateId = -1;
+	m_pText->QmTextFrameEnd();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 3u);
+	ExpectSameUpdate(Rejected, m_Graphics.m_vUpdates[2]);
+	Draw();
+	EXPECT_EQ(m_Graphics.m_Draws, 1u);
+	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 3u);
+}
+
+TEST_F(QmTextDeviceRecovery, RejectedOutlineRetriesWithoutResubmittingAcceptedFill)
+{
+	CaptureUpdates();
+	ASSERT_TRUE(Create("A"));
+	m_Graphics.m_RejectUpdateId = m_Graphics.m_Outline.Id();
+	Draw();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	const auto Rejected = m_Graphics.m_vUpdates[1];
+	m_Graphics.m_RejectUpdateId = -1;
+	m_pText->QmTextFrameEnd();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 3u);
+	ExpectSameUpdate(Rejected, m_Graphics.m_vUpdates[2]);
+	Draw();
+	EXPECT_EQ(m_Graphics.m_Draws, 1u);
+}
+
+TEST_F(QmTextDeviceRecovery, IncrementalUploadExceptionRetainsBothTexturesForRetry)
+{
+	CaptureUpdates();
+	ASSERT_TRUE(Create("A"));
+	m_Graphics.m_ThrowUpdates = true;
+	EXPECT_NO_THROW(Draw());
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	const auto Rejected = m_Graphics.m_vUpdates;
+	EXPECT_EQ(m_Graphics.m_Draws, 0u);
+	m_Graphics.m_ThrowUpdates = false;
+	EXPECT_NO_THROW(m_pText->QmTextFrameEnd());
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 4u);
+	ExpectSameUpdate(Rejected[0], m_Graphics.m_vUpdates[2]);
+	ExpectSameUpdate(Rejected[1], m_Graphics.m_vUpdates[3]);
+	Draw();
+	EXPECT_EQ(m_Graphics.m_Draws, 1u);
+}
+
+TEST_F(QmTextDeviceRecovery, FailedIncrementalUploadWaitsForFrameEndBetweenAttempts)
+{
+	CaptureUpdates();
+	ASSERT_TRUE(Create("A"));
+	m_Graphics.m_RejectUpdates = true;
+	Draw();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	Draw();
+	Draw();
+	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	m_pText->QmTextFrameEnd();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 4u);
+	Draw();
+	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 4u);
+	m_Graphics.m_RejectUpdates = false;
+	m_pText->QmTextFrameEnd();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 6u);
+	Draw();
+	EXPECT_EQ(m_Graphics.m_Draws, 1u);
+}
+
+TEST_F(QmTextDeviceRecovery, RetryIncludesGlyphsAddedAfterAnIncrementalFailure)
+{
+	CaptureUpdates();
+	m_Graphics.m_RejectUpdates = true;
+	m_pText->QmPrewarmGlyph('A', 16);
+	m_pText->QmTextFrameEnd();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	const auto Rejected = m_Graphics.m_vUpdates[0];
+	m_pText->QmPrewarmGlyph('Z', 16);
+	m_Graphics.m_RejectUpdates = false;
+	m_pText->QmTextFrameEnd();
+	ASSERT_GT(m_Graphics.m_vUpdates.size(), 2u);
+	const auto CountInk = [](const auto &vPixels) { return std::count_if(vPixels.begin(), vPixels.end(), [](uint8_t Pixel) { return Pixel != 0; }); };
+	std::ptrdiff_t RetriedInk = 0;
+	const CRecoveryGraphics::SUpdate *pRetried = nullptr;
+	// 只约束像素保留，不依赖图集把两个字形分配在同一个行带。
+	for(size_t Index = 2; Index < m_Graphics.m_vUpdates.size(); ++Index)
+	{
+		const auto &Update = m_Graphics.m_vUpdates[Index];
+		if(Update.m_Texture.Id() != m_Graphics.m_Fill.Id())
+			continue;
+		RetriedInk += CountInk(Update.m_vPixels);
+		if(Update.m_X <= Rejected.m_X && Update.m_Y <= Rejected.m_Y &&
+			Update.m_X + Update.m_Width >= Rejected.m_X + Rejected.m_Width &&
+			Update.m_Y + Update.m_Height >= Rejected.m_Y + Rejected.m_Height)
+			pRetried = &Update;
+	}
+	EXPECT_GT(RetriedInk, CountInk(Rejected.m_vPixels));
+	ASSERT_NE(pRetried, nullptr);
+	const auto &Retried = *pRetried;
+	for(size_t Row = 0; Row < Rejected.m_Height; ++Row)
+	{
+		const auto *pBefore = Rejected.m_vPixels.data() + Row * Rejected.m_Width;
+		const auto *pAfter = Retried.m_vPixels.data() + (Rejected.m_Y - Retried.m_Y + Row) * Retried.m_Width + Rejected.m_X - Retried.m_X;
+		EXPECT_TRUE(std::equal(pBefore, pBefore + Rejected.m_Width, pAfter));
+	}
+}
+
+TEST_F(QmTextDeviceRecovery, FailedAtlasClearRetriesZeroPixelsInsteadOfDroppingTheUpdate)
+{
+	m_pText->QmPrewarmGlyph('A', 16);
+	CaptureUpdates();
+	m_Graphics.m_RejectUpdates = true;
+	const auto Revision = m_pText->GlyphAtlasRevision();
+	m_pText->SetFontLanguageVariant("japanese");
+	ASSERT_GT(m_pText->GlyphAtlasRevision(), Revision);
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	m_Graphics.m_RejectUpdates = false;
+	m_pText->QmTextFrameEnd();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 4u);
+	for(size_t Index = 2; Index < 4; ++Index)
+	{
+		const auto &Update = m_Graphics.m_vUpdates[Index];
+		EXPECT_EQ(Update.m_Width, m_Graphics.m_Dimension);
+		EXPECT_EQ(Update.m_Height, m_Graphics.m_Dimension);
+		EXPECT_TRUE(std::all_of(Update.m_vPixels.begin(), Update.m_vPixels.end(), [](uint8_t Pixel) { return Pixel == 0; }));
+	}
+}
+
+TEST_F(QmTextDeviceRecovery, FailedAtlasClearRetryIncludesGlyphsCreatedBeforeRecovery)
+{
+	CaptureUpdates();
+	m_Graphics.m_RejectUpdates = true;
+	m_pText->SetFontLanguageVariant("japanese");
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	ASSERT_TRUE(Create("Z"));
+	Draw();
+	EXPECT_EQ(m_Graphics.m_Draws, 0u);
+	m_Graphics.m_RejectUpdates = false;
+	m_pText->QmTextFrameEnd();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 4u);
+	for(size_t Index = 2; Index < 4; ++Index)
+	{
+		const auto &Update = m_Graphics.m_vUpdates[Index];
+		EXPECT_EQ(Update.m_Width, m_Graphics.m_Dimension);
+		EXPECT_EQ(Update.m_Height, m_Graphics.m_Dimension);
+		EXPECT_TRUE(std::any_of(Update.m_vPixels.begin(), Update.m_vPixels.end(), [](uint8_t Pixel) { return Pixel != 0; }));
+	}
+	Draw();
+	EXPECT_EQ(m_Graphics.m_Draws, 1u);
+}
+
+TEST_F(QmTextDeviceRecovery, DeviceResetReplacesFailedIncrementalRegionsWithAFullUpload)
+{
+	CaptureUpdates();
+	ASSERT_TRUE(Create("A"));
+	m_Graphics.m_RejectUpdates = true;
+	Draw();
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	m_Graphics.ResetDevice();
+	ASSERT_TRUE(m_pText->OnGraphicsResourcesReset());
+	EXPECT_TRUE(std::any_of(m_Graphics.m_vLastFill.begin(), m_Graphics.m_vLastFill.end(), [](uint8_t Pixel) { return Pixel != 0; }));
+	m_Graphics.m_RejectUpdates = false;
+	m_pText->QmTextFrameEnd();
+	ASSERT_TRUE(Create("A"));
+	EXPECT_NO_THROW(Draw());
+	EXPECT_EQ(m_Graphics.m_Draws, 1u);
+	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+}
+
+TEST_F(QmTextDeviceRecovery, FailedIncrementalUpdateSuppressesUnbufferedDrawing)
+{
+	CaptureUpdates();
+	m_Graphics.m_TextBuffering = false;
+	ASSERT_TRUE(Create("A"));
+	m_Graphics.m_RejectUpdates = true;
+	EXPECT_NO_THROW(Draw());
+	EXPECT_EQ(m_Graphics.m_QuadBegins, 0);
+	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+}
+
+TEST_F(QmTextDeviceRecovery, SweepWaitsForFailedIncrementalUpdatesToRecover)
+{
+	CaptureUpdates();
+	ASSERT_TRUE(Create("A", true));
+	m_Graphics.m_RejectUpdates = true;
+	DrawSweep();
+	EXPECT_EQ(m_Graphics.m_Draws, 0u);
+	ASSERT_EQ(m_Graphics.m_vUpdates.size(), 2u);
+	m_Graphics.m_RejectUpdates = false;
+	m_pText->QmTextFrameEnd();
+	DrawSweep();
+	EXPECT_GT(m_Graphics.m_Draws, 0u);
+	EXPECT_EQ(m_Graphics.m_vUpdates.size(), 4u);
 }

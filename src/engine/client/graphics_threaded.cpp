@@ -1251,19 +1251,16 @@ bool CGraphics_Threaded::UnloadTextTextures(CTextureHandle &TextTexture, CTextur
 
 bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer)
 {
+	std::unique_ptr<uint8_t, decltype(&free)> pUpload(IsMovedPointer ? pData : nullptr, free);
 	size_t MemSize = 0;
 	if(pData == nullptr || !TextureDataSizeGrayscale(Width, Height, MemSize))
 	{
-		if(IsMovedPointer)
-			free(pData);
 		log_error("graphics/texture", "Ignoring text texture update with invalid data or size.");
 		return false;
 	}
 
 	if(!IsTextureHandleAllocated(TextureId))
 	{
-		if(IsMovedPointer)
-			free(pData);
 		if(g_Config.m_Debug && TextureId.IsValid())
 			log_trace("graphics/texture", "Ignoring update of stale text texture handle %d.", TextureId.Id());
 		return false;
@@ -1276,22 +1273,27 @@ bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int 
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
 
-	if(IsMovedPointer)
+	if(!IsMovedPointer)
 	{
-		Cmd.m_pData = pData;
-	}
-	else
-	{
-		uint8_t *pTmpData = static_cast<uint8_t *>(malloc(MemSize));
-		if(pTmpData == nullptr)
+		pUpload.reset(static_cast<uint8_t *>(malloc(MemSize)));
+		if(pUpload == nullptr)
 		{
 			log_error("graphics/texture", "Failed to allocate text texture update buffer.");
 			return false;
 		}
-		mem_copy(pTmpData, pData, MemSize);
-		Cmd.m_pData = pTmpData;
+		mem_copy(pUpload.get(), pData, MemSize);
 	}
-	AddCmd(Cmd);
+	Cmd.m_pData = pUpload.get();
+	try
+	{
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue text texture update: %s", Error.what());
+		return false;
+	}
+	pUpload.release();
 
 	return true;
 }
