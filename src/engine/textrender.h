@@ -628,7 +628,8 @@ class IEngineTextRender : public ITextRender
 {
 	MACRO_INTERFACE("enginetextrender")
 public:
-	virtual void Init() = 0;
+	// 失败时清理本次初始化的资源；调用方不得继续使用文字引擎。
+	virtual bool Init() = 0;
 	void Shutdown() override = 0;
 };
 

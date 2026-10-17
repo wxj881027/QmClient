@@ -3147,6 +3147,7 @@ if(CLIENT)
     qm_font_name_match.h
     text_sweep.h
     text_utf8_cursor.h
+    texture_slot_pool.h
     updater.cpp
     updater.h
     video.cpp
@@ -5090,6 +5091,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/graphics/text_container_lifetime_test.cpp
     src/test/unit/engine/graphics/text_layout_string_test.cpp
     src/test/unit/engine/graphics/text_utf8_cursor_test.cpp
+    src/test/unit/engine/graphics/texture_slot_pool_test.cpp
     src/test/unit/engine/graphics/text_sweep_test.cpp
     src/test/unit/engine/graphics/text_gradient_geometry_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_effect_lod_test.cpp
@@ -5442,6 +5444,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/integration/qmclient/client/qm_font_loading_test.cpp
       src/test/integration/qmclient/client/qm_text_measurement_test.cpp
       src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
+      src/test/integration/qmclient/client/qm_text_initialization_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp

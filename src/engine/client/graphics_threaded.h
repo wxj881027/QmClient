@@ -9,6 +9,7 @@
 #include <engine/client/render_target_pool.h>
 #include <engine/client/render_target_readback_queue.h>
 #include <engine/client/rounded_rect_directions.h>
+#include <engine/client/texture_slot_pool.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
@@ -1052,14 +1053,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	// 全透明占位纹理：sprite 超出自定义图集范围时按「未提供 = 不可见」处理用。
 	CTextureHandle m_BlankTexture;
 
-	std::vector<int> m_vTextureIndices;
-	// Tracks slot generations so copied handles become stale once a slot is freed and reused.
-	std::vector<uint32_t> m_vTextureGenerations;
-	// 纹理句柄纪元：每次图形设备重建都自增。句柄里存的是
-	// (纪元 << 16) | 槽位代数，因此设备重建后所有旧句柄都会立刻失效，
-	// 不会因为「槽位与代数恰好相同」被误判为仍然有效。
-	uint32_t m_TextureHandleEpoch = 0;
-	size_t m_FirstFreeTexture;
+	CTextureSlotPool<> m_TextureSlots;
 	int m_TextureMemoryUsage;
 
 	CRenderTargetPool m_RenderTargets;
@@ -1208,8 +1202,7 @@ public:
 	void LinesBatchEnd(CLineItemBatch *pBatch) override;
 	void LinesBatchDraw(CLineItemBatch *pBatch, const CLineItem *pArray, size_t Num) override;
 
-	IGraphics::CTextureHandle FindFreeTextureIndex();
-	void BumpTextureHandleEpochAndResetSlots();
+	bool BumpTextureHandleEpochAndResetSlots();
 	bool IsTextureHandleAllocated(IGraphics::CTextureHandle TextureId) const override;
 	void FreeTextureIndex(CTextureHandle *pIndex);
 	// 显卡设备重建会清空 m_vQuadContainers，旧索引随之失效；

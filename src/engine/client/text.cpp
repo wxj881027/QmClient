@@ -403,7 +403,7 @@ private:
 	// Width and height are the same, all font textures have the same dimensions
 	size_t m_TextureDimension = INITIAL_ATLAS_DIMENSION;
 	// Keep the full texture data, because OpenGL doesn't provide texture copying
-	uint8_t *m_apTextureData[NUM_FONT_TEXTURES];
+	std::unique_ptr<uint8_t[]> m_apTextureData[NUM_FONT_TEXTURES];
 	CAtlas m_TextureAtlas;
 	std::unordered_map<std::tuple<FT_Face, int, int, bool>, SGlyph, SGlyphKeyHash, SGlyphKeyEquals> m_Glyphs;
 	// QmClient: 近期字形命中的直接索引。字形表在热路径上被按 (face, chr, size) 反复查询，
@@ -507,7 +507,10 @@ private:
 			return false;
 
 		const size_t NewTextureDimension = m_TextureDimension * 2;
-		auto apNewData = PrepareGlyphAtlasGrowth(m_apTextureData, m_TextureDimension, NewTextureDimension);
+		uint8_t *apOldData[NUM_FONT_TEXTURES];
+		for(size_t Index = 0; Index < NUM_FONT_TEXTURES; ++Index)
+			apOldData[Index] = m_apTextureData[Index].get();
+		auto apNewData = PrepareGlyphAtlasGrowth(apOldData, m_TextureDimension, NewTextureDimension);
 		if(apNewData[FONT_TEXTURE_FILL] == nullptr)
 		{
 			log_error("textrender", "Failed to allocate larger glyph atlas. Keeping the existing atlas.");
@@ -543,8 +546,7 @@ private:
 		UnloadTextures();
 		for(size_t Index = 0; Index < NUM_FONT_TEXTURES; ++Index)
 		{
-			delete[] m_apTextureData[Index];
-			m_apTextureData[Index] = apNewData[Index].release();
+			m_apTextureData[Index] = std::move(apNewData[Index]);
 			m_aTextures[Index] = aNewTextures[Index];
 		}
 		m_TextureAtlas = std::move(NewAtlas);
@@ -555,22 +557,24 @@ private:
 		return true;
 	}
 
-	void UploadTextures()
+	bool UploadTextures()
 	{
 		const size_t NewTextureSize = m_TextureDimension * m_TextureDimension;
-		uint8_t *pTmpTextFillData = static_cast<uint8_t *>(malloc(NewTextureSize));
-		uint8_t *pTmpTextOutlineData = static_cast<uint8_t *>(malloc(NewTextureSize));
-		if(pTmpTextFillData == nullptr || pTmpTextOutlineData == nullptr)
+		std::unique_ptr<uint8_t, decltype(&free)> pFill(static_cast<uint8_t *>(malloc(NewTextureSize)), free);
+		std::unique_ptr<uint8_t, decltype(&free)> pOutline(static_cast<uint8_t *>(malloc(NewTextureSize)), free);
+		if(pFill == nullptr || pOutline == nullptr)
 		{
-			free(pTmpTextFillData);
-			free(pTmpTextOutlineData);
 			log_error("textrender", "Failed to allocate text texture upload buffers.");
-			return;
+			return false;
 		}
-		mem_copy(pTmpTextFillData, m_apTextureData[FONT_TEXTURE_FILL], NewTextureSize);
-		mem_copy(pTmpTextOutlineData, m_apTextureData[FONT_TEXTURE_OUTLINE], NewTextureSize);
-		if(!Graphics()->LoadTextTextures(m_TextureDimension, m_TextureDimension, m_aTextures[FONT_TEXTURE_FILL], m_aTextures[FONT_TEXTURE_OUTLINE], pTmpTextFillData, pTmpTextOutlineData))
+		mem_copy(pFill.get(), m_apTextureData[FONT_TEXTURE_FILL].get(), NewTextureSize);
+		mem_copy(pOutline.get(), m_apTextureData[FONT_TEXTURE_OUTLINE].get(), NewTextureSize);
+		if(!Graphics()->LoadTextTextures(m_TextureDimension, m_TextureDimension, m_aTextures[FONT_TEXTURE_FILL], m_aTextures[FONT_TEXTURE_OUTLINE], pFill.release(), pOutline.release()))
+		{
 			log_error("textrender", "Failed to create text textures.");
+			return false;
+		}
+		return true;
 	}
 
 	void UnloadTextures()
@@ -903,21 +907,17 @@ public:
 		m_pGraphics = pGraphics;
 		for(auto &pTextureData : m_apTextureData)
 		{
-			pTextureData = new uint8_t[m_TextureDimension * m_TextureDimension];
-			mem_zero(pTextureData, m_TextureDimension * m_TextureDimension * sizeof(uint8_t));
+			pTextureData = std::make_unique<uint8_t[]>(m_TextureDimension * m_TextureDimension);
 		}
 
 		m_TextureAtlas.Clear(m_TextureDimension);
-		UploadTextures();
+		if(!UploadTextures())
+			throw std::runtime_error("Failed to create initial glyph atlas textures");
 	}
 
 	~CGlyphMap()
 	{
 		UnloadTextures();
-		for(auto &pTextureData : m_apTextureData)
-		{
-			delete[] pTextureData;
-		}
 	}
 	// TClient
 	const std::vector<FT_Face> *GetFaces() const { return &m_Faces.Faces(); }
@@ -1303,8 +1303,8 @@ public:
 		++*m_pGlyphAtlasRevision;
 		for(size_t TextureIndex = 0; TextureIndex < NUM_FONT_TEXTURES; ++TextureIndex)
 		{
-			mem_zero(m_apTextureData[TextureIndex], m_TextureDimension * m_TextureDimension * sizeof(uint8_t));
-			Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], 0, 0, m_TextureDimension, m_TextureDimension, m_apTextureData[TextureIndex], false);
+			mem_zero(m_apTextureData[TextureIndex].get(), m_TextureDimension * m_TextureDimension * sizeof(uint8_t));
+			Graphics()->UpdateTextTexture(m_aTextures[TextureIndex], 0, 0, m_TextureDimension, m_TextureDimension, m_apTextureData[TextureIndex].get(), false);
 		}
 
 		m_TextureAtlas.Clear(m_TextureDimension);
@@ -2180,50 +2180,71 @@ public:
 		m_CursorRenderTime = time_get_nanoseconds();
 	}
 
-	void Init() override
+	bool Init() override
 	{
-		m_pConsole = Kernel()->RequestInterface<IConsole>();
-		m_pGraphics = Kernel()->RequestInterface<IGraphics>();
-		m_pStorage = Kernel()->RequestInterface<IStorage>();
-		FT_Init_FreeType(&m_FTLibrary);
-		m_pGlyphMap = new CGlyphMap(m_pGraphics, m_FTLibrary);
-		Console()->Register("qm_font_diagnostics", "s[family/style] i[codepoint]", CFGFLAG_CLIENT, ConQmFontDiagnostics, this, "Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled");
-
-		// print freetype version
+		if(m_pGlyphMap != nullptr)
+			return true;
+		try
 		{
-			int LMajor, LMinor, LPatch;
-			FT_Library_Version(m_FTLibrary, &LMajor, &LMinor, &LPatch);
-			log_info("textrender", "Freetype version %d.%d.%d (compiled = %d.%d.%d)", LMajor, LMinor, LPatch, FREETYPE_MAJOR, FREETYPE_MINOR, FREETYPE_PATCH);
+			m_pConsole = Kernel()->RequestInterface<IConsole>();
+			m_pGraphics = Kernel()->RequestInterface<IGraphics>();
+			m_pStorage = Kernel()->RequestInterface<IStorage>();
+			FT_Library Library = nullptr;
+			const FT_Error Error = FT_Init_FreeType(&Library);
+			if(Error != 0)
+			{
+				log_error("textrender", "Failed to initialize FreeType: %d", Error);
+				Shutdown();
+				return false;
+			}
+			m_FTLibrary = Library;
+			m_pGlyphMap = new CGlyphMap(m_pGraphics, m_FTLibrary);
+			Console()->Register("qm_font_diagnostics", "s[family/style] i[codepoint]", CFGFLAG_CLIENT, ConQmFontDiagnostics, this, "Rescan fonts and query resolved Unicode face and glyph when qm_graphics_trace is enabled");
+
+			// print freetype version
+			{
+				int LMajor, LMinor, LPatch;
+				FT_Library_Version(m_FTLibrary, &LMajor, &LMinor, &LPatch);
+				log_info("textrender", "Freetype version %d.%d.%d (compiled = %d.%d.%d)", LMajor, LMinor, LPatch, FREETYPE_MAJOR, FREETYPE_MINOR, FREETYPE_PATCH);
+			}
+
+			m_FirstFreeTextContainerIndex = -1;
+
+			m_DefaultTextContainerInfo.m_Stride = sizeof(STextCharQuadVertex);
+			m_DefaultTextContainerInfo.m_VertBufferBindingIndex = -1;
+
+			m_DefaultTextContainerInfo.m_vAttributes.emplace_back();
+			SBufferContainerInfo::SAttribute *pAttr = &m_DefaultTextContainerInfo.m_vAttributes.back();
+			pAttr->m_DataTypeCount = 2;
+			pAttr->m_FuncType = 0;
+			pAttr->m_Normalized = false;
+			pAttr->m_pOffset = nullptr;
+			pAttr->m_Type = GRAPHICS_TYPE_FLOAT;
+
+			m_DefaultTextContainerInfo.m_vAttributes.emplace_back();
+			pAttr = &m_DefaultTextContainerInfo.m_vAttributes.back();
+			pAttr->m_DataTypeCount = 2;
+			pAttr->m_FuncType = 0;
+			pAttr->m_Normalized = false;
+			pAttr->m_pOffset = (void *)(sizeof(float) * 2);
+			pAttr->m_Type = GRAPHICS_TYPE_FLOAT;
+
+			m_DefaultTextContainerInfo.m_vAttributes.emplace_back();
+			pAttr = &m_DefaultTextContainerInfo.m_vAttributes.back();
+			pAttr->m_DataTypeCount = 4;
+			pAttr->m_FuncType = 0;
+			pAttr->m_Normalized = true;
+			pAttr->m_pOffset = (void *)(sizeof(float) * 2 + sizeof(float) * 2);
+			pAttr->m_Type = GRAPHICS_TYPE_UNSIGNED_BYTE;
+			return true;
 		}
-
-		m_FirstFreeTextContainerIndex = -1;
-
-		m_DefaultTextContainerInfo.m_Stride = sizeof(STextCharQuadVertex);
-		m_DefaultTextContainerInfo.m_VertBufferBindingIndex = -1;
-
-		m_DefaultTextContainerInfo.m_vAttributes.emplace_back();
-		SBufferContainerInfo::SAttribute *pAttr = &m_DefaultTextContainerInfo.m_vAttributes.back();
-		pAttr->m_DataTypeCount = 2;
-		pAttr->m_FuncType = 0;
-		pAttr->m_Normalized = false;
-		pAttr->m_pOffset = nullptr;
-		pAttr->m_Type = GRAPHICS_TYPE_FLOAT;
-
-		m_DefaultTextContainerInfo.m_vAttributes.emplace_back();
-		pAttr = &m_DefaultTextContainerInfo.m_vAttributes.back();
-		pAttr->m_DataTypeCount = 2;
-		pAttr->m_FuncType = 0;
-		pAttr->m_Normalized = false;
-		pAttr->m_pOffset = (void *)(sizeof(float) * 2);
-		pAttr->m_Type = GRAPHICS_TYPE_FLOAT;
-
-		m_DefaultTextContainerInfo.m_vAttributes.emplace_back();
-		pAttr = &m_DefaultTextContainerInfo.m_vAttributes.back();
-		pAttr->m_DataTypeCount = 4;
-		pAttr->m_FuncType = 0;
-		pAttr->m_Normalized = true;
-		pAttr->m_pOffset = (void *)(sizeof(float) * 2 + sizeof(float) * 2);
-		pAttr->m_Type = GRAPHICS_TYPE_UNSIGNED_BYTE;
+		catch(const std::exception &Error)
+		{
+			log_error("textrender", "Failed to initialize text rendering: %s", Error.what());
+			// 图形接口尚可用，在客户端早退和内核逆序关闭前释放已建立的资源。
+			Shutdown();
+			return false;
+		}
 	}
 
 	void Shutdown() override

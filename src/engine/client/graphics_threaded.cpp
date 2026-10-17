@@ -417,52 +417,20 @@ void CGraphics_Threaded::LinesBatchDraw(CLineItemBatch *pBatch, const CLineItem 
 	pBatch->m_NumItems += Num;
 }
 
-IGraphics::CTextureHandle CGraphics_Threaded::FindFreeTextureIndex()
-{
-	const size_t CurSize = m_vTextureIndices.size();
-	if(m_FirstFreeTexture == CurSize)
-	{
-		m_vTextureIndices.resize(CurSize * 2);
-		m_vTextureGenerations.resize(CurSize * 2);
-		for(size_t i = 0; i < CurSize; ++i)
-			m_vTextureIndices[CurSize + i] = CurSize + i + 1;
-	}
-	const size_t Tex = m_FirstFreeTexture;
-	m_FirstFreeTexture = m_vTextureIndices[Tex];
-	m_vTextureIndices[Tex] = -1;
-	return CreateTextureHandle(Tex, (m_TextureHandleEpoch << 16) | (m_vTextureGenerations[Tex] & 0xffffu));
-}
-
 // 使现存的所有纹理句柄失效，并把全部槽位重新交回空闲链表。
 // 图形设备重建时必须调用：此时旧的纹理对象已经随设备一起消失，
 // 旧句柄绝不能再被当成有效句柄使用（否则会画出垃圾或触发断言）。
-void CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
+bool CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
 {
-	++m_TextureHandleEpoch;
 	// 设备重建会丢失引擎自己持有的占位纹理，通知流程负责重新创建。
 	m_NullTexture.Invalidate();
 	m_BlankTexture.Invalidate();
-	m_vTextureIndices.resize(CCommandBuffer::MAX_TEXTURES);
-	m_vTextureGenerations.resize(CCommandBuffer::MAX_TEXTURES);
-	// 已经空闲过的槽位也必须再进一次代数，避免「槽位 + 代数」组合和旧句柄撞车。
-	for(uint32_t &Generation : m_vTextureGenerations)
-		++Generation;
-	for(size_t i = 0; i < m_vTextureIndices.size(); ++i)
-		m_vTextureIndices[i] = i + 1;
-	m_FirstFreeTexture = 0;
+	return m_TextureSlots.Reset(CCommandBuffer::MAX_TEXTURES);
 }
 
 bool CGraphics_Threaded::IsTextureHandleAllocated(IGraphics::CTextureHandle TextureId) const
 {
-	if(!TextureId.IsValid())
-		return false;
-
-	const size_t TextureIndex = TextureId.Id();
-	if(TextureIndex >= m_vTextureIndices.size() || TextureIndex >= m_vTextureGenerations.size())
-		return false;
-
-	const uint32_t ExpectedGeneration = (m_TextureHandleEpoch << 16) | (m_vTextureGenerations[TextureIndex] & 0xffffu);
-	return m_vTextureIndices[TextureIndex] == -1 && ExpectedGeneration == TextureId.Generation();
+	return m_TextureSlots.IsAllocated(TextureId.Id(), TextureId.Generation());
 }
 
 void CGraphics_Threaded::FreeTextureIndex(CTextureHandle *pIndex)
@@ -478,9 +446,7 @@ void CGraphics_Threaded::FreeTextureIndex(CTextureHandle *pIndex)
 		return;
 	}
 
-	m_vTextureIndices[pIndex->Id()] = m_FirstFreeTexture;
-	m_FirstFreeTexture = pIndex->Id();
-	++m_vTextureGenerations[pIndex->Id()];
+	m_TextureSlots.Release(pIndex->Id(), pIndex->Generation());
 	pIndex->Invalidate();
 }
 
@@ -661,6 +627,7 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &I
 	// Copy texture data and convert if necessary
 	uint8_t *pTmpData = nullptr;
 	const bool AlreadyRgba = ConvertToRgbaAlloc(pTmpData, Image);
+	std::unique_ptr<uint8_t, decltype(&free)> pData(pTmpData, free);
 	if(pTmpData == nullptr)
 	{
 		log_error("graphics", "Failed to allocate texture data for '%s'.", pTexName ? pTexName : "(no name)");
@@ -671,13 +638,23 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &I
 		log_warn("graphics", "Converted image '%s' to RGBA, consider making its file format RGBA.", pTexName ? pTexName : "(no name)");
 	}
 
-	IGraphics::CTextureHandle TextureHandle = FindFreeTextureIndex();
-	CCommandBuffer::SCommand_Texture_Create Cmd = LoadTextureCreateCommand(TextureHandle.Id(), Image.m_Width, Image.m_Height, Flags);
-	Cmd.m_pData = pTmpData;
-
-	AddCmd(Cmd);
-
-	return TextureHandle;
+	auto Slots = m_TextureSlots.Reserve<1>();
+	if(!Slots.IsValid())
+		return {};
+	try
+	{
+		CCommandBuffer::SCommand_Texture_Create Cmd = LoadTextureCreateCommand(Slots.Id(), Image.m_Width, Image.m_Height, Flags);
+		Cmd.m_pData = pData.get();
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue texture upload: %s", Error.what());
+		return {};
+	}
+	pData.release();
+	Slots.Commit();
+	return CreateTextureHandle(Slots.Id(), Slots.Generation());
 }
 
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName)
@@ -706,14 +683,27 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Ima
 		return IGraphics::CTextureHandle();
 	}
 
-	IGraphics::CTextureHandle TextureHandle = FindFreeTextureIndex();
-	CCommandBuffer::SCommand_Texture_Create Cmd = LoadTextureCreateCommand(TextureHandle.Id(), Image.m_Width, Image.m_Height, Flags);
-	Cmd.m_pData = Image.m_pData;
+	std::unique_ptr<uint8_t, decltype(&free)> pData(Image.m_pData, free);
+	const size_t Width = Image.m_Width, Height = Image.m_Height;
 	Image.m_pData = nullptr;
 	Image.Free();
-	AddCmd(Cmd);
-
-	return TextureHandle;
+	auto Slots = m_TextureSlots.Reserve<1>();
+	if(!Slots.IsValid())
+		return {};
+	try
+	{
+		CCommandBuffer::SCommand_Texture_Create Cmd = LoadTextureCreateCommand(Slots.Id(), Width, Height, Flags);
+		Cmd.m_pData = pData.get();
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue texture upload: %s", Error.what());
+		return {};
+	}
+	pData.release();
+	Slots.Commit();
+	return CreateTextureHandle(Slots.Id(), Slots.Generation());
 }
 
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename, int StorageType, int Flags)
@@ -1216,27 +1206,39 @@ bool CGraphics_Threaded::ReadRenderTarget(CRenderTargetHandle Target, CImageInfo
 
 bool CGraphics_Threaded::LoadTextTextures(size_t Width, size_t Height, CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture, uint8_t *pTextData, uint8_t *pTextOutlineData)
 {
+	std::unique_ptr<uint8_t, decltype(&free)> pFill(pTextData, free);
+	std::unique_ptr<uint8_t, decltype(&free)> pOutline(pTextOutlineData, free);
 	size_t MemSize = 0;
 	if(pTextData == nullptr || pTextOutlineData == nullptr || !TextureDataSizeGrayscale(Width, Height, MemSize))
 	{
-		free(pTextData);
-		free(pTextOutlineData);
 		log_error("graphics/texture", "Ignoring text texture create with invalid data or size.");
 		return false;
 	}
 
-	TextTexture = FindFreeTextureIndex();
-	TextOutlineTexture = FindFreeTextureIndex();
-
-	CCommandBuffer::SCommand_TextTextures_Create Cmd;
-	Cmd.m_Slot = TextTexture.Id();
-	Cmd.m_SlotOutline = TextOutlineTexture.Id();
-	Cmd.m_Width = Width;
-	Cmd.m_Height = Height;
-	Cmd.m_pTextData = pTextData;
-	Cmd.m_pTextOutlineData = pTextOutlineData;
-	AddCmd(Cmd);
-
+	auto Slots = m_TextureSlots.Reserve<2>();
+	if(!Slots.IsValid())
+		return false;
+	try
+	{
+		CCommandBuffer::SCommand_TextTextures_Create Cmd;
+		Cmd.m_Slot = Slots.Id(0);
+		Cmd.m_SlotOutline = Slots.Id(1);
+		Cmd.m_Width = Width;
+		Cmd.m_Height = Height;
+		Cmd.m_pTextData = pFill.get();
+		Cmd.m_pTextOutlineData = pOutline.get();
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue text texture upload: %s", Error.what());
+		return false;
+	}
+	pFill.release();
+	pOutline.release();
+	Slots.Commit();
+	TextTexture = CreateTextureHandle(Slots.Id(0), Slots.Generation(0));
+	TextOutlineTexture = CreateTextureHandle(Slots.Id(1), Slots.Generation(1));
 	return true;
 }
 
@@ -1473,21 +1475,27 @@ void CGraphics_Threaded::KickCommandBuffer()
 {
 	m_pBackend->RunBuffer(m_pCommandBuffer);
 
-	std::vector<std::string> WarningStrings;
-	if(m_pBackend->GetWarning(WarningStrings))
-	{
-		SWarning NewWarning;
-		std::string WarningStr;
-		for(const auto &WarnStr : WarningStrings)
-			WarningStr.append((WarnStr + "\n"));
-		str_copy(NewWarning.m_aWarningMsg, WarningStr.c_str());
-		AddWarning(NewWarning);
-	}
-
-	// swap buffer
+	// 提交后立即切走在途缓冲，诊断字符串分配失败不能让后续命令继续改写它。
 	m_CurrentCommandBuffer ^= 1;
 	m_pCommandBuffer = m_apCommandBuffers[m_CurrentCommandBuffer];
 	m_pCommandBuffer->Reset();
+	try
+	{
+		std::vector<std::string> WarningStrings;
+		if(m_pBackend->GetWarning(WarningStrings))
+		{
+			SWarning NewWarning;
+			std::string WarningStr;
+			for(const auto &WarnStr : WarningStrings)
+				WarningStr.append((WarnStr + "\n"));
+			str_copy(NewWarning.m_aWarningMsg, WarningStr.c_str());
+			AddWarning(NewWarning);
+		}
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics", "Failed to collect graphics warning: %s", Error.what());
+	}
 }
 
 namespace
@@ -3949,7 +3957,11 @@ int CGraphics_Threaded::Init()
 
 	// 设备可能已经换了一个：先让所有现存纹理句柄失效，再把槽位全部回收。
 	// 必须在重建 backend 之前做，保证此后创建的资源都是新纪元的。
-	BumpTextureHandleEpochAndResetSlots();
+	if(!BumpTextureHandleEpochAndResetSlots())
+	{
+		log_error("graphics", "Failed to allocate texture slots.");
+		return -1;
+	}
 
 	m_RenderTargets.Clear();
 	m_RenderTargetActive = false;

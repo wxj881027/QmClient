@@ -197,7 +197,7 @@ namespace qm_ui_test
 			m_pEngineKernel->RegisterInterface<IGraphics>(&m_Graphics, false);
 			m_pText.reset(CreateEngineTextRender());
 			m_pEngineKernel->RegisterInterface<IEngineTextRender>(m_pText.get(), false);
-			m_pText->Init();
+			ASSERT_TRUE(m_pText->Init());
 			m_TextInitialized = true;
 			ASSERT_TRUE(m_pText->LoadFonts());
 			m_pUiKernel = std::make_unique<CRealUiTestKernel>(&m_Graphics, m_pText.get(), UiInput(), UiClient());
