@@ -2,30 +2,48 @@
 #include <base/system.h>
 
 #include <gtest/gtest.h>
+#include <test/support/async_io_wait.h>
 #include <test/test.h>
+
+#include <limits>
+#include <memory>
+#include <string>
+#include <utility>
 
 static const int BUF_SIZE = 64 * 1024;
 
 class Async : public ::testing::Test
 {
 protected:
-	ASYNCIO *m_pAio;
+	ASYNCIO *m_pAio = nullptr;
 	CTestInfo m_Info;
-	bool Delete;
+	std::string m_Path;
+	bool Delete = false;
+	int m_ErrorAfterDrain = 0;
 
 	void SetUp() override
 	{
-		IOHANDLE File = io_open(m_Info.m_aFilename, IOFLAG_WRITE);
+		m_Path = std::string("tmp/tests/") + m_Info.m_aFilename;
+		ASSERT_EQ(fs_makedir_rec_for(m_Path.c_str()), 0);
+		IOHANDLE File = io_open(m_Path.c_str(), IOFLAG_WRITE);
 		ASSERT_TRUE(File);
 		m_pAio = aio_new(File);
-		Delete = false;
+		if(!m_pAio)
+			io_close(File);
+		ASSERT_NE(m_pAio, nullptr);
 	}
 
 	void TearDown() override
 	{
+		if(m_pAio)
+		{
+			// 断言提前退出时把收尾留给仍持有文件的工作线程。
+			aio_close(m_pAio);
+			aio_free(m_pAio);
+		}
 		if(Delete)
 		{
-			EXPECT_FALSE(fs_remove(m_Info.m_aFilename));
+			EXPECT_FALSE(fs_remove(m_Path.c_str()));
 		}
 	}
 
@@ -36,12 +54,18 @@ protected:
 
 	void Expect(const char *pOutput)
 	{
-		aio_close(m_pAio);
-		aio_wait(m_pAio);
-		aio_free(m_pAio);
+		ASYNCIO *pAio = std::exchange(m_pAio, nullptr);
+		auto pError = std::make_shared<int>(0);
+		ASSERT_TRUE(WaitForAsyncIo([pAio, pError] {
+			aio_close(pAio);
+			aio_wait(pAio);
+			*pError = aio_error(pAio);
+			aio_free(pAio);
+		}));
+		m_ErrorAfterDrain = *pError;
 
 		char aBuf[BUF_SIZE];
-		IOHANDLE File = io_open(m_Info.m_aFilename, IOFLAG_READ);
+		IOHANDLE File = io_open(m_Path.c_str(), IOFLAG_READ);
 		ASSERT_TRUE(File);
 		int Read = io_read(File, aBuf, sizeof(aBuf));
 		io_close(File);
@@ -144,4 +168,23 @@ TEST_F(Async, Transaction)
 		aio_unlock(m_pAio);
 	}
 	Expect(aText);
+}
+
+TEST_F(Async, OversizedWritePreservesQueueAndErrorAfterLaterFlush)
+{
+	Write("before");
+	aio_write(m_pAio, nullptr, std::numeric_limits<unsigned>::max());
+	EXPECT_NE(aio_error(m_pAio), 0);
+	Write("after");
+	ASSERT_NO_FATAL_FAILURE(Expect("beforeafter"));
+	EXPECT_NE(m_ErrorAfterDrain, 0);
+}
+
+TEST_F(Async, CloseDrainsAcceptedWritesAndIgnoresLaterWrites)
+{
+	Write("accepted");
+	aio_close(m_pAio);
+	Write("late");
+	ASSERT_NO_FATAL_FAILURE(Expect("accepted"));
+	EXPECT_EQ(m_ErrorAfterDrain, 0);
 }

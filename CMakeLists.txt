@@ -2696,6 +2696,7 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
 
 # Sources
 set_src(BASE GLOB_RECURSE src/base
+  aio_buffer.h
   bezier.cpp
   bezier.h
   color.cpp
@@ -2720,6 +2721,7 @@ set_src(BASE GLOB_RECURSE src/base
   log.h
   log_color.h
   logger.h
+  logger_async.h
   math.h
   mem.cpp
   mem.h
@@ -4692,7 +4694,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp
     src/test/unit/qmclient/client/qm_credits_layout_test.cpp
     src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
-    src/test/unit/base/aio_test.cpp
+    src/test/unit/base/aio_buffer_test.cpp
+    src/test/integration/base/aio_test.cpp
+    src/test/integration/base/async_logger_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
     src/test/unit/client/assets_preview_scale_test.cpp
     src/test/contract/qmclient/settings/assets_preview_scale_contract_test.cpp
