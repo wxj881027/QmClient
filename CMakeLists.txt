@@ -4736,6 +4736,9 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp
+    src/test/integration/client/graphics_thread_startup_test.cpp
+    src/test/support/threaded_graphics_backend.h
+    src/test/support/thread_creation_probe.h
     src/test/integration/client/graphics_error_report_test.cpp
     src/test/unit/engine/graphics/graphics_command_batch_test.cpp
     src/test/unit/engine/graphics/graphics_command_buffer_allocation_test.cpp
@@ -4755,6 +4758,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/support/qm_open_link_probe.cpp
     src/test/support/qm_open_link_probe.h
     src/test/unit/engine/jobs_test.cpp
+    src/test/integration/engine/job_pool_startup_test.cpp
+    src/test/integration/engine/http_startup_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp

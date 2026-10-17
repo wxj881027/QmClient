@@ -71,7 +71,7 @@ CGraphicsBackend_Threaded::CGraphicsBackend_Threaded(TTranslateFunc &&TranslateF
 #endif
 }
 
-void CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor)
+bool CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor, THREAD_CREATE pfnCreate)
 {
 	dbg_assert(m_Shutdown, "Processor was already not shut down.");
 	m_FatalError.clear();
@@ -80,10 +80,21 @@ void CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor)
 	m_pProcessor = pProcessor;
 #if !defined(CONF_PLATFORM_EMSCRIPTEN)
 	std::unique_lock<std::mutex> Lock(m_BufferSwapMutex);
-	m_pThread = thread_init(ThreadFunc, this, "Graphics thread");
+	m_Started = false;
+	m_pThread = pfnCreate(ThreadFunc, this, "Graphics thread");
+	if(!m_pThread)
+	{
+		m_pProcessor = nullptr;
+		m_Shutdown = true;
+		m_SubmissionStopped = true;
+		return false;
+	}
 	// wait for the thread to start
 	m_BufferSwapCond.wait(Lock, [this]() -> bool { return m_Started; });
+#else
+	(void)pfnCreate;
 #endif
+	return true;
 }
 
 void CGraphicsBackend_Threaded::StopProcessor()
@@ -99,7 +110,11 @@ void CGraphicsBackend_Threaded::StopProcessor()
 		m_BufferSwapCond.notify_all();
 	}
 	thread_wait(m_pThread);
+	m_pThread = nullptr;
+	m_Started = false;
 #endif
+	m_pProcessor = nullptr;
+	m_SubmissionStopped = true;
 }
 
 void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)

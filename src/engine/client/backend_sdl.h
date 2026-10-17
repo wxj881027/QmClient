@@ -2,6 +2,7 @@
 #define ENGINE_CLIENT_BACKEND_SDL_H
 
 #include <base/detect.h>
+#include <base/thread.h>
 
 #include <engine/client/backend/backend_base.h>
 #include <engine/client/graphics_threaded.h>
@@ -86,7 +87,7 @@ public:
 	void ProcessError(const SGfxErrorContainer &Error);
 
 protected:
-	void StartProcessor(ICommandProcessor *pProcessor);
+	bool StartProcessor(ICommandProcessor *pProcessor, THREAD_CREATE pfnCreate = thread_try_init);
 	void StopProcessor();
 	void ResetSubmissionStopForCleanup()
 	{
@@ -107,7 +108,7 @@ private:
 	CCommandBuffer *m_pBuffer;
 	bool m_Started = false;
 	std::atomic_bool m_BufferInProcess;
-	void *m_pThread;
+	void *m_pThread = nullptr;
 	static void ThreadFunc(void *pUser);
 #endif
 

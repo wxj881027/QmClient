@@ -73,7 +73,11 @@ namespace
 				net_init();
 				CNetBase::Init();
 			}
+			m_Logging = false;
+		}
 
+		bool StartJobs(THREAD_CREATE pfnCreate)
+		{
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 			// Make sure we don't use more threads than allowed in total (see PTHREAD_POOL_SIZE in Emscripten.toolchain)
 			// otherwise starting more threads may lead to deadlocks as the threads will simply not start.
@@ -81,9 +85,7 @@ namespace
 #else
 			const size_t ThreadCount = std::max(4, (int)std::thread::hardware_concurrency()) - 2;
 #endif
-			m_JobPool.Init(ThreadCount);
-
-			m_Logging = false;
+			return m_JobPool.TryInit(ThreadCount, pfnCreate);
 		}
 
 		~CEngine() override
@@ -120,5 +122,18 @@ namespace
 
 } // namespace
 
-IEngine *CreateEngine(const char *pAppname, std::shared_ptr<CFutureLogger> pFutureLogger) { return new CEngine(false, pAppname, std::move(pFutureLogger)); }
-IEngine *CreateTestEngine(const char *pAppname) { return new CEngine(true, pAppname, nullptr); }
+IEngine *CreateEngine(const char *pAppname, std::shared_ptr<CFutureLogger> pFutureLogger)
+{
+	auto pEngine = std::make_unique<CEngine>(false, pAppname, std::move(pFutureLogger));
+	if(!pEngine->StartJobs(thread_try_init))
+		return nullptr;
+	return pEngine.release();
+}
+
+IEngine *CreateTestEngine(const char *pAppname, THREAD_CREATE pfnCreate)
+{
+	auto pEngine = std::make_unique<CEngine>(true, pAppname, nullptr);
+	if(!pEngine->StartJobs(pfnCreate))
+		return nullptr;
+	return pEngine.release();
+}

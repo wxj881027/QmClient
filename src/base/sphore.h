@@ -31,6 +31,9 @@ typedef sem_t SEMAPHORE;
  */
 void sphore_init(SEMAPHORE *sem);
 
+// 创建失败返回 false，调用方不能等待、发送或销毁失败的信号量。
+bool sphore_try_init(SEMAPHORE *sem);
+
 /**
  * @ingroup Semaphore
  */

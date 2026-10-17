@@ -10,6 +10,7 @@
 #include <game/client/component.h>
 #include <game/client/ui_rect.h>
 
+#include <deque>
 #include <optional>
 
 class IHttpRequest;

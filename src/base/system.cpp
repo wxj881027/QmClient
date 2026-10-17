@@ -537,14 +537,18 @@ ASYNCIO *aio_new(IOHANDLE io)
 		return nullptr;
 	}
 	aio->io = io;
-	sphore_init(&aio->sphore);
+	if(!sphore_try_init(&aio->sphore))
+	{
+		delete aio;
+		return nullptr;
+	}
 	aio->thread = nullptr;
 
 	aio->error = 0;
 	aio->finish = ASYNCIO_RUNNING;
 	aio->refcount = 2;
 
-	aio->thread = thread_init(aio_thread, aio, "aio");
+	aio->thread = thread_try_init(aio_thread, aio, "aio");
 	if(!aio->thread)
 	{
 		sphore_destroy(&aio->sphore);

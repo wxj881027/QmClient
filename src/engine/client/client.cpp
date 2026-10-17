@@ -6802,6 +6802,13 @@ int main(int argc, const char **argv)
 
 	// create the components
 	IEngine *pEngine = CreateEngine(GAME_NAME, pFutureConsoleLogger);
+	if(!pEngine)
+	{
+		log_error("client", "Failed to initialize worker threads");
+		pClient->ShowMessageBox({.m_pTitle = "Initialization Error", .m_pMessage = "Failed to initialize worker threads. Close other applications and try again."});
+		PerformAllCleanup();
+		return -1;
+	}
 	pKernel->RegisterInterface(pEngine, false);
 	CleanerFunctions.emplace([pEngine]() {
 		// Engine has to be destroyed before the graphics so that skin download thread can finish

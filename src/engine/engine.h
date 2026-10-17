@@ -5,6 +5,8 @@
 
 #include "kernel.h"
 
+#include <base/thread.h>
+
 #include <memory>
 
 class CFutureLogger;
@@ -22,7 +24,8 @@ public:
 	virtual void SetAdditionalLogger(std::shared_ptr<ILogger> &&pLogger) = 0;
 };
 
+// 工作线程初始化失败返回空，不发布尚未就绪的引擎。
 extern IEngine *CreateEngine(const char *pAppname, std::shared_ptr<CFutureLogger> pFutureLogger);
-extern IEngine *CreateTestEngine(const char *pAppname);
+extern IEngine *CreateTestEngine(const char *pAppname, THREAD_CREATE pfnCreate = thread_try_init);
 
 #endif

@@ -111,6 +111,11 @@ int main(int argc, const char **argv)
 
 	// create the components
 	IEngine *pEngine = CreateEngine(GAME_NAME, pFutureConsoleLogger);
+	if(!pEngine)
+	{
+		log_error("server", "failed to initialize worker threads");
+		return -1;
+	}
 	pKernel->RegisterInterface(pEngine);
 
 	IStorage *pStorage = CreateStorage(IStorage::EInitializationType::SERVER, argc, argv);
