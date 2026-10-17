@@ -915,46 +915,6 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardLayoutVersion = 1;
 	}
-	if(g_Config.m_QmCardLayoutVersion < 2)
-	{
-		qm_card_order::CModel Candidate;
-		MakeCandidate(Candidate);
-		const std::vector<qm_card_order::SEntry> vLegacyProfileLayout = {
-			{"deck:tclient-profiles-actions", "tclient-profiles", 0, 0},
-			{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-			{"deck:tclient-profiles-list", "tclient-profiles", 1, 0},
-		};
-		const std::vector<qm_card_order::SEntry> vTargetProfileLayout = {
-			{"deck:tclient-profiles-actions", "tclient-profiles", 1, 0},
-			{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-			{"deck:tclient-profiles-list", "tclient-profiles", 1, 1},
-		};
-		const std::vector<const char *> vProfileIds = {
-			"deck:tclient-profiles-actions",
-			"deck:tclient-profiles-options",
-			"deck:tclient-profiles-list",
-		};
-		const std::vector<const char *> vRequiredProfileIds = {"deck:tclient-profiles-actions"};
-		const qm_card_order::EExplicitLayoutStatus ExplicitStatus = qm_card_order::ClassifyExplicitLayout(g_Config.m_QmGlobalCardOrder, vLegacyProfileLayout, vRequiredProfileIds);
-		if(ExplicitStatus == qm_card_order::EExplicitLayoutStatus::INVALID)
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		const bool ShouldMigrate = ExplicitStatus == qm_card_order::EExplicitLayoutStatus::MATCH;
-		const bool CandidateChanged = ShouldMigrate && qm_card_order::MigrateExactLayout(Candidate, "tclient-profiles", vLegacyProfileLayout, vTargetProfileLayout, vProfileIds);
-		if(ShouldMigrate && !CandidateChanged)
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		if(!PersistCandidate(Candidate, CandidateChanged))
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		g_Config.m_QmCardLayoutVersion = 2;
-	}
 	if(g_Config.m_QmCardLayoutVersion < 3)
 	{
 		qm_card_order::CModel Candidate;

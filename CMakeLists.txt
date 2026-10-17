@@ -3277,6 +3277,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogTClientWarList.cpp
     QmUi/cards/QmCardCatalogTClientStatusBar.cpp
     QmUi/cards/QmCardCatalogTClientProfiles.cpp
+    QmUi/cards/QmProfileWheelEditor.cpp
     QmUi/cards/QmCardCatalogTClientConfigs.cpp
     QmUi/cards/QmCardCatalogTClientMain.cpp
     QmUi/cards/QmCardCatalogTClientFont.cpp
@@ -3656,6 +3657,8 @@ if(CLIENT)
     components/qmclient/auto_vote.h
     components/qmclient/bg_draw_state.h
     components/qmclient/bindwheel_state.h
+    components/qmclient/wheel_presets.cpp
+    components/qmclient/wheel_presets.h
     components/qmclient/statusbar_items.h
     components/qmclient/warlist_model.cpp
     components/qmclient/warlist_model.h
@@ -4786,6 +4789,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_bg_draw_state_test.cpp
     src/test/unit/qmclient/client/qm_bg_draw_file_test.cpp
     src/test/unit/qmclient/client/qm_bindwheel_state_test.cpp
+    src/test/unit/qmclient/client/qm_wheel_presets_test.cpp
+    src/test/unit/qmclient/ui/qm_profile_card_test.cpp
+    src/test/integration/qmclient/client/qm_wheel_presets_console_test.cpp
     src/test/unit/qmclient/client/qm_statusbar_items_test.cpp
     src/test/unit/qmclient/client/qm_warlist_model_test.cpp
     src/test/unit/qmclient/settings/tclient_config_source_test.cpp
@@ -5214,6 +5220,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/qm/music/qm_qqmusic_protocol.h
     src/game/client/components/qmclient/modes.cpp
     src/game/client/components/qmclient/bind_editor.cpp
+    src/game/client/components/qmclient/wheel_presets.cpp
     src/game/client/components/qmclient/settings_resource_preview.cpp
     src/game/client/components/qmclient/tee_hue_cycle.cpp
     src/game/client/components/qmclient/qm_sponsor_authors.cpp
