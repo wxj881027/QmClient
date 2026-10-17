@@ -15,6 +15,8 @@
 #include <game/client/gameclient.h>
 #include <game/localization.h>
 
+#include <exception>
+
 class CScriptRunner : CComponentInterfaces
 {
 private:
@@ -250,8 +252,19 @@ void CScripting::ConExecScript(IConsole::IResult *pResult, void *pUserData)
 
 void CScripting::ExecScript(const char *pFilename, const char *pArgs)
 {
-	CScriptRunner Runner(GameClient());
-	Runner.Run(pFilename, pArgs);
+	try
+	{
+		CScriptRunner Runner(GameClient());
+		Runner.Run(pFilename, pArgs);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error(SCRIPTING_IMPL, "Failed to run '%s': %s", pFilename, Error.what());
+	}
+	catch(...)
+	{
+		log_error(SCRIPTING_IMPL, "Failed to run '%s': unknown exception", pFilename);
+	}
 }
 
 void CScripting::OnConsoleInit()

@@ -3,6 +3,7 @@
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_SCRIPTING_IMPL_H
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <variant>
 
@@ -14,7 +15,7 @@ class CScriptingCtx
 {
 private:
 	class CScriptingCtxData;
-	CScriptingCtxData *m_pData;
+	std::unique_ptr<CScriptingCtxData> m_pData;
 
 	// If you are getting link errors, define more in the .cpp file
 	template<typename T, typename... Args>
