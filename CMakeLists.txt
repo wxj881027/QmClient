@@ -793,7 +793,13 @@ if(NOT(TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "ios"))
   find_package(GLEW)
 endif()
 find_package(EGL QUIET)
-find_package(GTest)
+# 先读取包自身导出的 Google Mock 目标，兼容尚未支持它的旧 FindGTest 模块。
+find_package(GTest CONFIG QUIET)
+if(GTest_FOUND)
+  set(GTEST_FOUND TRUE)
+else()
+  find_package(GTest)
+endif()
 if(UPNP)
   find_package(Miniupnpc)
 endif()
@@ -1184,6 +1190,9 @@ if(NOT(GTEST_FOUND) AND DOWNLOAD_GTEST)
     endif()
   endif()
 endif()
+
+include(cmake/QmGTest.cmake)
+qm_resolve_gtest_targets(QM_GTEST_LIBRARIES QM_GTEST_MAIN_TARGET)
 
 ########################################################################
 # DOWNLOAD BENCHMARK（可选，供 qm-benchmarks 目标使用）
@@ -4593,7 +4602,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 # TESTS
 ########################################################################
 
-if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
+if(QM_GTEST_LIBRARIES AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
@@ -5324,7 +5333,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     ${DEPS}
   )
   add_dependencies(${TARGET_TESTRUNNER} generate_protocol)
-  target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+  target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${QM_GTEST_LIBRARIES} ${LIBS_SERVER})
   if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
     # 线程后端的 autorelease pool 与 macOS 主循环等待需要这些系统框架。
     target_link_libraries(${TARGET_TESTRUNNER} "-framework Foundation" "-framework CoreFoundation")
@@ -5363,13 +5372,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FFMPEG_INCLUDE_DIRS})
   endif()
 
-  set(QM_NMT_GTEST_MAIN_TARGET)
-  if(TARGET GTest::gtest_main)
-    set(QM_NMT_GTEST_MAIN_TARGET GTest::gtest_main)
-  elseif(TARGET gtest_main)
-    set(QM_NMT_GTEST_MAIN_TARGET gtest_main)
-  endif()
-  if(QM_NMT_GTEST_MAIN_TARGET AND TARGET_OS STREQUAL "windows")
+  if(QM_GTEST_MAIN_TARGET AND TARGET_OS STREQUAL "windows")
     add_executable(qm-nmt-tests EXCLUDE_FROM_ALL
       src/test/unit/qmclient/music/music_lyrics_krc_test.cpp
       src/test/unit/qmclient/music/music_lyrics_qrc_test.cpp
@@ -5417,7 +5420,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       target_compile_options(qm-nmt-tests PRIVATE /utf-8)
     endif()
     # 使用 plain 签名，与文件内 target_link_libraries 循环（无 keyword）保持一致
-    target_link_libraries(qm-nmt-tests ${QM_NMT_GTEST_MAIN_TARGET})
+    target_link_libraries(qm-nmt-tests ${QM_GTEST_MAIN_TARGET})
     if(TARGET_OS STREQUAL "windows")
       target_sources(qm-nmt-tests PRIVATE
         src/test/unit/qmclient/music/qm_netease_cdp_test.cpp
@@ -5505,7 +5508,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       ${DEPS}
     )
     add_dependencies(qm-ui-popup-tests generate_protocol)
-    target_link_libraries(qm-ui-popup-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER} ${FREETYPE_LIBRARIES})
+    target_link_libraries(qm-ui-popup-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${QM_GTEST_LIBRARIES} ${LIBS_SERVER} ${FREETYPE_LIBRARIES})
     target_include_directories(qm-ui-popup-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
     target_compile_definitions(qm-ui-popup-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     if(MSVC)
@@ -5531,7 +5534,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       ${GTEST_INCLUDE_DIRS}
     )
     target_compile_definitions(qm-script-allocation-tests PRIVATE CHAISCRIPT_NO_THREADS CHAISCRIPT_NO_THREADS_WARNING)
-    target_link_libraries(qm-script-allocation-tests ${GTEST_LIBRARIES})
+    target_link_libraries(qm-script-allocation-tests ${QM_GTEST_LIBRARIES})
     list(APPEND TARGETS_OWN qm-script-allocation-tests)
     list(APPEND TARGETS_LINK qm-script-allocation-tests)
     add_test(NAME qm-script-allocation-tests COMMAND $<TARGET_FILE:qm-script-allocation-tests>)
