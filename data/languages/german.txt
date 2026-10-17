@@ -464,6 +464,9 @@ Add current cut to the export list
 Add debug dummy to server (Debug build only)
 == Debug-Dummy zum Server hinzufügen (nur Debug-Build)
 
+Add default presets
+== Standardvorlagen hinzufügen
+
 Add demo timeline marker
 == Füge einen Demo-Zeitleistenmarker hinzu
 
@@ -502,6 +505,9 @@ Add team name:
 
 Add to %s
 == Zu %s hinzufügen
+
+Add to bind wheel
+== Zum Befehlsrad hinzufügen
 
 Add to blocked words
 == Zu blockierten Wörtern hinzufügen
@@ -749,6 +755,9 @@ Angle
 Angle:
 == Winkel:
 
+Angry
+== Wütend
+
 Angular gradient
 == Winkelverlauf
 
@@ -875,6 +884,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == Dieses Preset anwenden
 
+Apply to
+== Anwenden auf
+
 Apply to dummy
 == Auf Dummy anwenden
 
@@ -953,6 +965,9 @@ Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == Bist du sicher, dass du dein Skin speichern möchtest? Falls bereits ein Skin mit diesem Namen existiert, wird es ersetzt.
 
+Arrow
+== Pfeiltextur
+
 Arrow assets
 == Pfeil-Assets
 
@@ -964,6 +979,9 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == Bildseitenverhältnis-Voreinstellung (0=Aus, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=Benutzerdefiniert)
+
+Asset preset
+== Texturvorlage
 
 Asset with this name already exists.
 == Ein Asset mit diesem Namen existiert bereits.
@@ -1571,6 +1589,9 @@ Blend mode
 Blend strength
 == Mischstärke
 
+Blink
+== Blinzeln
+
 Blink the active local tee
 == Aktiven lokalen Charakter blinken lassen
 
@@ -1660,9 +1681,6 @@ Browse and activate custom audio packs
 
 Browse font store…
 == Schriftspeicher durchsuchen…
-
-Browse profiles saved on this device
-== Browse profiles saved on this device
 
 Browser
 == Durchsuchen
@@ -1958,6 +1976,9 @@ Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == Chatnachrichten beim Betreten von Freeze, kommagetrennt (leer=keine)
 
+Chat phrase
+== Chat-Spruch
+
 Chat score increases per message and decreases by 1 per tick
 == Chat-Punktzahl steigt pro Nachricht und sinkt um 1 pro Tick
 
@@ -1999,6 +2020,9 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == Überprüfe zuerst Ausgabegerät, bestätige, dass Kopfhörer/Lautsprecher noch online sind
+
+Check the preset fields, label, and wheel capacity (64 entries).
+== Prüfe die Vorlagenfelder, den Namen und die Radkapazität (64 Einträge).
 
 Checking for existing player with your name
 == Prüfe auf existierenden Spieler mit deinem Namen
@@ -2870,6 +2894,9 @@ Count players only
 Countries
 == Länder
 
+Country code
+== Länder-/Regionscode
+
 Country flag for grouping this community (ISO 3166-1 numeric)
 == Länderflagge zur Gruppierung dieser Community (ISO 3166-1 numerisch)
 
@@ -2887,6 +2914,9 @@ Create a random skin
 
 Create category
 == Kategorie erstellen
+
+Create wheel presets here. Existing wheel entries are kept.
+== Bearbeite hier Radvorlagen. Bestehende Einträge bleiben erhalten.
 
 Created
 == Erstellt
@@ -4003,6 +4033,9 @@ Edit player and dummy identity information
 
 Edit skin texture
 == Skin-Textur bearbeiten
+
+Edit this custom command on the Bind Wheel page.
+== Bearbeite diesen eigenen Befehl auf der Befehlsrad-Seite.
 
 Edit touch controls
 == Touch-Steuerung bearbeiten
@@ -5549,6 +5582,9 @@ Ground jump
 Group name
 == Gruppenname
 
+GUI cursor
+== UI-Mauszeiger
+
 GUI cursor assets
 == GUI-Cursor-Assets
 
@@ -5581,6 +5617,9 @@ Hammer: %s
 
 Handwriting
 == Handschrift
+
+Happy
+== Fröhlich
 
 Has people playing
 == Hat spielende Personen
@@ -5995,6 +6034,9 @@ Icon symbols:
 
 Icons
 == Symbole
+
+Identity preset
+== Profilvorlage
 
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == Wenn 1, nur einmal beim Verbinden automatisch aufnehmen; wenn 0, startet die automatische Aufnahme nach Spielende neu
@@ -6920,9 +6962,6 @@ Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
 == Mit Code r laden. /load, um deine vorhandenen Speicherungen zu überprüfen
 
-Load, save, overwrite, or delete profiles
-== Load, save, overwrite, or delete profiles
-
 Loaded %d items
 == %d Elemente geladen
 
@@ -7088,6 +7127,12 @@ Main Asset
 Main menu
 == Hauptmenü
 
+Main Tee
+== Haupt-Tee
+
+Main Tee and dummy
+== Haupt-Tee und Dummy
+
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == Eingefrorene Spieler mehr wie Volleybälle aussehen lassen (0=Deaktiviert, 1=Nur Volleyball-Karten, 2=Immer)
 
@@ -7135,6 +7180,9 @@ Manage hostile-list chat shortcuts
 
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
+
+Manage profiles and bind wheel presets
+== Profile und Befehlsradvorlagen verwalten
 
 Manage the skin rotation queue
 == Skin-Rotationswarteschlange verwalten
@@ -8000,6 +8048,9 @@ New name
 New name:
 == Neuer Name:
 
+New preset
+== Neue Vorlage
+
 New preset name
 == Neuer Preset-Name
 
@@ -8705,6 +8756,9 @@ p = Ping latency
 Pack name
 == Paketname
 
+Pain
+== Schmerz
+
 Panel opacity
 == Panel-Deckkraft
 
@@ -9368,6 +9422,9 @@ Preset %d
 Preset bar
 == Preset-Leiste
 
+Preset type
+== Vorlagentyp
+
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == Voreinstellung beim Kodieren von Videos mit libx264, Standard 5 (medium), 0 ist ultrafast, 9 ist placebo (langsamste, nicht empfohlen)
 
@@ -9493,9 +9550,6 @@ Process UDP RX (est.)
 
 Process UDP TX (est.)
 == UDP-Versand des Prozesses (geschätzt)
-
-Profile Options
-== Profiloptionen
 
 Profiles
 == Profile
@@ -10835,8 +10889,8 @@ Save/Load Name
 Save/Load Skin
 == Skin speichern/laden
 
-Saved Profiles
-== Gespeicherte Profile
+Saved to the bind wheel.
+== Im Befehlsrad gespeichert.
 
 Saved with your title and shared with other QmClient players.
 == Wird mit deinem Titel gespeichert und mit anderen QmClient-Spielern geteilt.
@@ -11077,9 +11131,6 @@ Select map
 
 Select the country flag for each player
 == Select the country flag for each player
-
-Select which player fields a profile stores
-== Select which player fields a profile stores
 
 Selected %d
 == %d ausgewählt
@@ -13088,6 +13139,9 @@ Stroke fade time
 Stroke retention time (0=Never disappear)
 == Strichverweildauer (0=Nie verschwinden)
 
+Strong / Weak
+== Stark-/Schwach-Texturen
+
 Strong hook
 == Starker Haken
 
@@ -13126,6 +13180,9 @@ Super
 
 Support ♥
 == Unterstützung ♥
+
+Surprise
+== Überraschung
 
 Swap
 == Tauschen
@@ -13613,6 +13670,9 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == Danke für deine Unterstützung von QmClient
 
+Thanks!
+== Danke!
+
 The audio device couldn't be initialised.
 == Das Audiogerät konnte nicht initialisiert werden.
 
@@ -13669,6 +13729,9 @@ The server rejected the map upload.
 
 The watermarked screenshot was saved next to the original
 == Der Screenshot mit Wasserzeichen wurde neben dem Original gespeichert
+
+The wheel changed. Your draft can be added as a new preset.
+== Das Rad wurde geändert. Dein Entwurf kann als neue Vorlage hinzugefügt werden.
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == Die Breite der Textur %s ist nicht durch %d teilbar, oder die Höhe ist nicht durch %d teilbar, was zu visuellen Fehlern führen kann.
@@ -14663,6 +14726,9 @@ Use current map as background
 Use current name
 == Aktuellen Namen verwenden
 
+Use current settings
+== Aktuelle Einstellungen übernehmen
+
 Use custom skins instead of the ninja tee
 == Benutzerdefinierte Skins anstelle des Ninja-Tees verwenden
 
@@ -14698,6 +14764,9 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == High-Bandwidth-Modus verwenden (verdoppelt Serverbandbreite, nur LAN)
+
+Use installed asset names. Empty fields keep the current asset.
+== Gib installierte Texturnamen ein. Leere Felder behalten die aktuelle Textur bei.
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == Drücke K zum Töten (Neustart), Q zum Pausieren und Zuschauen. Siehe Einstellungen für andere Tastenbelegungen.
@@ -15214,6 +15283,9 @@ Welcome to DDNet
 
 What level DDRace binding is set to (automatic, you don't need to use it).
 == Auf welcher Stufe das DDRace-Binding gesetzt ist (automatisch, du musst es nicht verwenden)
+
+Wheel label
+== Name im Rad
 
 Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
 == Mausradschritt in UI-Pixeln; Einstellungsseiten scrollen pro Raste um das 12-Fache dieses Werts
