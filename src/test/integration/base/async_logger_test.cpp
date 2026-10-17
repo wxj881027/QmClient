@@ -191,3 +191,31 @@ TEST_F(AsyncLogger, ColorOutputKeepsEscapesAndNewline)
 	ASSERT_TRUE(WaitForAsyncIo([pLogger = std::move(pLogger)]() mutable { pLogger.reset(); }));
 	Expect(std::string("\x1b[38;2;1;2;3mcolor\x1b[0m") + s_pNewline);
 }
+
+TEST_F(AsyncLogger, FutureBindingTransfersStartupAndLiveMessages)
+{
+	auto pFuture = std::make_unique<CFutureLogger>();
+	const auto Startup = Message("startup");
+	pFuture->Log(&Startup);
+	pFuture->Set(std::make_shared<CLoggerAsync>(TakeFile(), false, true));
+	const auto Live = Message("live");
+	pFuture->Log(&Live);
+	ASSERT_TRUE(WaitForAsyncIo([pFuture = std::move(pFuture)]() mutable { pFuture.reset(); }));
+	Expect(std::string("startup") + s_pNewline + "live" + s_pNewline);
+}
+
+TEST_F(AsyncLogger, FutureBindingSurvivesUnavailableBorrowedBackend)
+{
+	{
+		CFutureLogger Future;
+		const auto Startup = Message("startup");
+		Future.Log(&Startup);
+		Future.Set(std::make_shared<CLoggerAsync>(m_File, false, false, FailCreate));
+		const auto Live = Message("live");
+		Future.Log(&Live);
+		Future.GlobalFinish();
+	}
+	EXPECT_EQ(io_write(m_File, "owner", 5), 5u);
+	io_close(TakeFile());
+	Expect("owner");
+}

@@ -577,15 +577,14 @@ void CFutureLogger::Set(std::shared_ptr<ILogger> pLogger)
 {
 	const CLockScope LockScope(m_PendingLock);
 	std::shared_ptr<ILogger> pNullLogger;
-	if(!std::atomic_compare_exchange_strong_explicit(&m_pLogger, &pNullLogger, pLogger, std::memory_order_acq_rel, std::memory_order_acq_rel))
+	if(!std::atomic_compare_exchange_strong_explicit(&m_pLogger, &pNullLogger, pLogger, std::memory_order_acq_rel, std::memory_order_acquire))
 	{
 		dbg_assert_failed("future logger has already been set and can only be set once");
 	}
-	m_pLogger = std::move(pLogger);
-
+	// 发布后的共享指针只能原子访问；积压转交使用本次调用持有的引用。
 	for(const auto &Pending : m_vPending)
 	{
-		m_pLogger->Log(&Pending);
+		pLogger->Log(&Pending);
 	}
 	m_vPending.clear();
 	m_vPending.shrink_to_fit();
