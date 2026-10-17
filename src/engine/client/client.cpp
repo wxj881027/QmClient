@@ -5103,14 +5103,10 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 
 	// wait for idle, so there is no data race
 	Graphics()->WaitForIdle();
-	// pause the sound device while creating the video instance
-	Sound()->PauseAudioDevice();
-	new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename);
-	Sound()->UnpauseAudioDevice();
-	if(!IVideo::Current()->Start())
+	if(!StartVideoRecorder(*Sound(), [&] {
+		   return new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename);
+	   }))
 	{
-		// Release partially initialized recorder state (threads/ffmpeg resources).
-		IVideo::Current()->Stop();
 		log_error("videorecorder", "Failed to start recording to '%s'", aFilename);
 		m_DemoPlayer.Stop("Failed to start video recording. See local console for details.");
 		return;

@@ -299,29 +299,8 @@ void CVideo::Stop()
 
 	m_pGraphics->WaitForIdle();
 
-	for(auto &pVideoThread : m_vpVideoThreads)
-	{
-		{
-			std::unique_lock<std::mutex> Lock(pVideoThread->m_Mutex);
-			pVideoThread->m_Finished = true;
-			pVideoThread->m_Cond.notify_all();
-		}
-
-		pVideoThread->m_Thread.join();
-	}
-	m_vpVideoThreads.clear();
-
-	for(auto &pAudioThread : m_vpAudioThreads)
-	{
-		{
-			std::unique_lock<std::mutex> Lock(pAudioThread->m_Mutex);
-			pAudioThread->m_Finished = true;
-			pAudioThread->m_Cond.notify_all();
-		}
-
-		pAudioThread->m_Thread.join();
-	}
-	m_vpAudioThreads.clear();
+	StopVideoRecorderThreads(m_vpVideoThreads);
+	StopVideoRecorderThreads(m_vpAudioThreads);
 
 	while(m_ProcessingVideoFrame > 0 || m_ProcessingAudioFrame > 0)
 		std::this_thread::sleep_for(10us);

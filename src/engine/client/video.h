@@ -4,6 +4,7 @@
 #include <base/lock.h>
 
 #include <engine/client/video_frame_capture.h>
+#include <engine/client/video_recorder_lifecycle.h>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -103,15 +104,9 @@ private:
 	size_t m_AudioThreads = 2;
 	size_t m_CurAudioThreadIndex = 0;
 
-	class CVideoRecorderThread
+	class CVideoRecorderThread : public CVideoRecorderWorker
 	{
 	public:
-		std::thread m_Thread;
-		std::mutex m_Mutex;
-		std::condition_variable m_Cond;
-
-		bool m_Started = false;
-		bool m_Finished = false;
 		bool m_HasVideoFrame = false;
 
 		std::mutex m_VideoFillMutex;
@@ -121,15 +116,9 @@ private:
 
 	std::vector<std::unique_ptr<CVideoRecorderThread>> m_vpVideoThreads;
 
-	class CAudioRecorderThread
+	class CAudioRecorderThread : public CVideoRecorderWorker
 	{
 	public:
-		std::thread m_Thread;
-		std::mutex m_Mutex;
-		std::condition_variable m_Cond;
-
-		bool m_Started = false;
-		bool m_Finished = false;
 		bool m_HasAudioFrame = false;
 
 		std::mutex m_AudioFillMutex;

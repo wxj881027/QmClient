@@ -3164,6 +3164,7 @@ if(CLIENT)
     video.cpp
     video.h
     video_frame_capture.h
+    video_recorder_lifecycle.h
     warning.cpp
   )
 
@@ -5317,7 +5318,10 @@ if(QM_GTEST_LIBRARIES AND SERVER)
       src/test/integration/engine/audio_sdl3_test.cpp
     )
     if(VIDEORECORDER)
-      list(APPEND TESTS src/test/integration/engine/audio_recording_routing_test.cpp)
+      list(APPEND TESTS
+        src/test/integration/engine/audio_recording_routing_test.cpp
+        src/test/unit/engine/video_recorder_lifecycle_test.cpp
+      )
     endif()
   endif()
   set(TARGET_TESTRUNNER testrunner)
