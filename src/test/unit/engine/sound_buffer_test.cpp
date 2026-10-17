@@ -6,6 +6,31 @@
 #include <cstdint>
 #include <limits>
 
+TEST(SoundMixSample, ThreeLoudVoicesSaturateWithoutWrappingSign)
+{
+	EXPECT_EQ(QmSoundMixSample(3 * 32767 * 255, 100), 32767);
+	EXPECT_EQ(QmSoundMixSample(3 * -32768 * 255, 100), -32768);
+}
+
+TEST(SoundMixSample, AllActiveVoicesRemainWithinPcmRange)
+{
+	EXPECT_EQ(QmSoundMixSample(256 * 32767 * 255, 100), 32767);
+	EXPECT_EQ(QmSoundMixSample(256 * -32768 * 255, 100), -32768);
+}
+
+TEST(SoundMixSample, QuietSamplesKeepTheExistingVolumeScale)
+{
+	EXPECT_EQ(QmSoundMixSample(25856, 100), 100);
+	EXPECT_EQ(QmSoundMixSample(25856, 50), 50);
+	EXPECT_EQ(QmSoundMixSample(-25856, 50), -50);
+}
+
+TEST(SoundMixSample, MutingLoudSamplesProducesSilence)
+{
+	EXPECT_EQ(QmSoundMixSample(256 * 32767 * 255, 0), 0);
+	EXPECT_EQ(QmSoundMixSample(256 * -32768 * 255, 0), 0);
+}
+
 TEST(SoundBuffer, AllocationFailureNeverCallsDecoder)
 {
 	bool Called = false;
