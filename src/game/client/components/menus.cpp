@@ -58,6 +58,9 @@
 #include <game/client/components/qmclient/demo_display.h>
 #include <game/client/components/qmclient/demo_ui.h>
 #include <game/client/components/qmclient/media_paths.h>
+#if defined(CONF_VIDEORECORDER)
+#include <engine/client/video_encoder.h>
+#endif
 #include <game/client/components/qmclient/modes.h>
 #include <game/client/components/qmclient/perf_logging.h>
 #include <game/client/components/qmclient/statistics_ring_geometry.h>
@@ -5010,6 +5013,15 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		if(DoButton_Menu(&s_ButtonAbort, Localize("Abort"), 0, &Abort) || Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE))
 		{
 			m_DemoRenderInput.Clear();
+			m_DemoRenderRangeStart.Clear();
+			m_DemoRenderRangeEnd.Clear();
+			m_DemoRenderEncoder.Clear();
+			m_DemoRenderQuality.Clear();
+			m_DemoRenderContainer.Clear();
+			m_DemoRenderOutputWidth.Clear();
+			m_DemoRenderOutputHeight.Clear();
+			m_DemoRenderGop.Clear();
+			m_DemoRenderPresetSel = -1;
 			m_HasPendingDemoRenderSource = false;
 			m_Popup = POPUP_NONE;
 		}
@@ -5020,7 +5032,8 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			m_Popup = POPUP_NONE;
 			// render video
 			char aVideoPath[IO_MAX_PATH_LENGTH];
-			const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + m_DemoRenderInput.GetString() + ".mp4").c_str());
+			const char *pContainer = m_DemoRenderContainer.GetString()[0] != '\0' ? m_DemoRenderContainer.GetString() : "mp4";
+			const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + m_DemoRenderInput.GetString() + "." + pContainer).c_str());
 			str_copy(aVideoPath, VideoPath.c_str());
 
 			if(!str_valid_filename(m_DemoRenderInput.GetString()))
@@ -5124,6 +5137,232 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		RenderInputOptions.m_FontSize = 12.8f;
 		ui_widget::InputField(DemoRenderTextInputCtx, &m_DemoRenderInput, TextBox, RenderInputOptions);
 
+		// 渲染选区（秒）：留空使用 demo 全范围（分段渲染 M3）
+		CUIRect RangeLabel, RangeStartBox, RangeEndBox;
+		Box.HSplitBottom(24.0f, &Box, &Row);
+		Row.VSplitLeft(110.0f, &RangeLabel, &Row);
+		Row.VSplitLeft(10.0f, nullptr, &Row);
+		Row.VSplitMid(&RangeStartBox, &RangeEndBox, 10.0f);
+		Ui()->DoLabel(&RangeLabel, Localize("Range (seconds):"), 12.8f, TEXTALIGN_ML);
+		ui_widget::SInputFieldOptions RangeStartOptions;
+		RangeStartOptions.m_pPlaceholder = Localize("Start (s)");
+		RangeStartOptions.m_FontSize = 12.8f;
+		ui_widget::InputField(DemoRenderTextInputCtx, &m_DemoRenderRangeStart, RangeStartBox, RangeStartOptions);
+		ui_widget::SInputFieldOptions RangeEndOptions;
+		RangeEndOptions.m_pPlaceholder = Localize("End (s)");
+		RangeEndOptions.m_FontSize = 12.8f;
+		ui_widget::InputField(DemoRenderTextInputCtx, &m_DemoRenderRangeEnd, RangeEndBox, RangeEndOptions);
+
+		// 导出预设（M6）：选择即展开为编码器+容器+质量的组合；自定义时三项独立可选。
+		{
+			static CUi::SDropDownState s_PresetDropDownState;
+			static const char *const s_apPresets[] = {
+				Localize("Custom"),
+				Localize("Daily (H.264 / MP4)"),
+				Localize("High quality (HEVC / MP4)"),
+				Localize("Editing (ProRes 422 HQ / MOV)"),
+				Localize("Editing (DNxHR HQX / MOV)"),
+				Localize("Lossless archive (FFV1 / MKV)"),
+			};
+			if(m_DemoRenderContainer.IsEmpty())
+				m_DemoRenderContainer.Set(g_Config.m_QmVideoContainer[0] != '\0' ? g_Config.m_QmVideoContainer : "mp4");
+
+			CUIRect PresetLabel, PresetBox;
+			Box.HSplitBottom(24.0f, &Box, &Row);
+			Row.VSplitLeft(110.0f, &PresetLabel, &PresetBox);
+			PresetBox.VSplitLeft(10.0f, nullptr, &PresetBox);
+			Ui()->DoLabel(&PresetLabel, Localize("Preset:"), 12.8f, TEXTALIGN_ML);
+			// 预设选择为会话状态：只在确认导出时写入配置；Abort 不留副作用
+			const int CurPreset = m_DemoRenderPresetSel >= 0 ? m_DemoRenderPresetSel : g_Config.m_QmVideoPreset;
+			const int NewPreset = Ui()->DoDropDown(&PresetBox, CurPreset, s_apPresets, (int)std::size(s_apPresets), s_PresetDropDownState);
+			if(NewPreset != CurPreset)
+			{
+				m_DemoRenderPresetSel = NewPreset;
+				// 展开预设：把组合写入弹窗输入，用户可看到并可切回自定义微调
+				switch(NewPreset)
+				{
+				case 1:
+					m_DemoRenderEncoder.Set("");
+					m_DemoRenderContainer.Set("mp4");
+					break;
+				case 2:
+					m_DemoRenderEncoder.Set("hevc_nvenc");
+					m_DemoRenderContainer.Set("mp4");
+					break;
+				case 3:
+					m_DemoRenderEncoder.Set("prores_ks");
+					m_DemoRenderContainer.Set("mov");
+					break;
+				case 4:
+					m_DemoRenderEncoder.Set("dnxhd");
+					m_DemoRenderContainer.Set("mov");
+					break;
+				case 5:
+					m_DemoRenderEncoder.Set("ffv1");
+					m_DemoRenderContainer.Set("mkv");
+					break;
+				default: break;
+				}
+			}
+
+			if(m_DemoRenderEncoder.IsEmpty())
+				m_DemoRenderEncoder.Set(g_Config.m_QmVideoEncoder);
+			if(m_DemoRenderQuality.IsEmpty() && g_Config.m_QmVideoQuality >= 0)
+			{
+				char aQuality[8];
+				str_format(aQuality, sizeof(aQuality), "%d", g_Config.m_QmVideoQuality);
+				m_DemoRenderQuality.Set(aQuality);
+			}
+			// 输出分辨率（M7 超采样）：配置为 0（跟随窗口）时输入框留空
+			if(m_DemoRenderOutputWidth.IsEmpty() && g_Config.m_QmVideoWidth > 0)
+			{
+				char aRes[8];
+				str_format(aRes, sizeof(aRes), "%d", g_Config.m_QmVideoWidth);
+				m_DemoRenderOutputWidth.Set(aRes);
+			}
+			if(m_DemoRenderOutputHeight.IsEmpty() && g_Config.m_QmVideoHeight > 0)
+			{
+				char aRes[8];
+				str_format(aRes, sizeof(aRes), "%d", g_Config.m_QmVideoHeight);
+				m_DemoRenderOutputHeight.Set(aRes);
+			}
+			// 关键帧间隔（M9 UI）：qm_video_gop 为 0（编码器默认）时输入框显示 60 提示值
+			if(m_DemoRenderGop.IsEmpty())
+			{
+				char aGop[8];
+				str_format(aGop, sizeof(aGop), "%d", g_Config.m_QmVideoGop > 0 ? g_Config.m_QmVideoGop : 60);
+				m_DemoRenderGop.Set(aGop);
+			}
+
+			static const std::vector<video_encoder::SProbeResult> &s_vProbed = video_encoder::ProbeEncoders();
+			static CUi::SDropDownState s_EncoderDropDownState;
+			static std::vector<std::string> s_vNames;
+			static std::vector<const char *> s_vpStrs;
+			static std::vector<int> s_vProbeIndex; // UI 项 → 探测结果下标（-1 = Default）
+			static std::string s_DefaultLabel;
+			static bool s_ListBuilt = false;
+			if(!s_ListBuilt)
+			{
+				s_DefaultLabel = std::string(Localize("Default (software)"));
+				s_vNames.push_back(s_DefaultLabel);
+				s_vProbeIndex.push_back(-1);
+				for(size_t i = 0; i < s_vProbed.size(); ++i)
+				{
+					if(!s_vProbed[i].m_Available || str_comp(s_vProbed[i].m_aName, "libx264") == 0)
+						continue; // 不可用项不进列表（验收要求 UI 不出现不可用项）；libx264 即 Default
+					s_vNames.push_back(s_vProbed[i].m_aDescription);
+					s_vProbeIndex.push_back((int)i);
+				}
+				s_vpStrs.reserve(s_vNames.size());
+				for(const std::string &Name : s_vNames)
+					s_vpStrs.push_back(Name.c_str());
+				s_ListBuilt = true;
+			}
+
+			int CurSelection = 0;
+			for(size_t i = 0; i < s_vProbeIndex.size(); ++i)
+			{
+				const char *pEntryName = s_vProbeIndex[i] < 0 ? "" : s_vProbed[s_vProbeIndex[i]].m_aName;
+				if(str_comp(pEntryName, m_DemoRenderEncoder.GetString()) == 0)
+					CurSelection = (int)i;
+			}
+
+			CUIRect EncoderLabel, EncoderBox;
+			Box.HSplitBottom(24.0f, &Box, &Row);
+			Row.VSplitLeft(110.0f, &EncoderLabel, &EncoderBox);
+			EncoderBox.VSplitLeft(10.0f, nullptr, &EncoderBox);
+			Ui()->DoLabel(&EncoderLabel, Localize("Encoder:"), 12.8f, TEXTALIGN_ML);
+			const int NewSelection = Ui()->DoDropDown(&EncoderBox, CurSelection, s_vpStrs.data(), (int)s_vpStrs.size(), s_EncoderDropDownState);
+			if(NewSelection != CurSelection)
+			{
+				const int ProbeIndex = s_vProbeIndex[NewSelection];
+				m_DemoRenderEncoder.Set(ProbeIndex < 0 ? "" : s_vProbed[ProbeIndex].m_aName);
+				// 手动改编码器 → 预设回到自定义，Ok 时兜底不再覆盖用户选择
+				m_DemoRenderPresetSel = 0;
+			}
+
+			// 质量值：0-51（CRF/CQ/QP 同刻度）；留空沿用 cl_video_crf。标签随编码器家族变化；
+			// ProRes/DNxHR/FFV1 的质量由格式 profile 固定（kind NONE）。
+			const video_encoder::SProbeResult *pSelected = video_encoder::FindProbed(m_DemoRenderEncoder.GetString());
+			const char *pQualityLabel = "Quality (CRF):";
+			if(pSelected && pSelected->m_Available)
+			{
+				switch(pSelected->m_QualityKind)
+				{
+				case video_encoder::EQualityKind::CQ_NVENC: pQualityLabel = "Quality (CQ):"; break;
+				case video_encoder::EQualityKind::CQP_AMF: pQualityLabel = "Quality (QP):"; break;
+				case video_encoder::EQualityKind::ICQ_QSV: pQualityLabel = "Quality (ICQ):"; break;
+				case video_encoder::EQualityKind::Q_VT: pQualityLabel = "Quality:"; break;
+				case video_encoder::EQualityKind::NONE: pQualityLabel = "Quality (fixed):"; break;
+				default: break;
+				}
+			}
+			CUIRect QualityLabel, QualityBox;
+			Box.HSplitBottom(24.0f, &Box, &Row);
+			Row.VSplitLeft(110.0f, &QualityLabel, &QualityBox);
+			QualityBox.VSplitLeft(10.0f, nullptr, &QualityBox);
+			Ui()->DoLabel(&QualityLabel, Localize(pQualityLabel), 12.8f, TEXTALIGN_ML);
+			ui_widget::SInputFieldOptions QualityOptions;
+			QualityOptions.m_pPlaceholder = Localize("0-51, empty = default");
+			QualityOptions.m_FontSize = 12.8f;
+			ui_widget::InputField(DemoRenderTextInputCtx, &m_DemoRenderQuality, QualityBox, QualityOptions);
+
+			// 容器（M6）：自定义预设下可换 mp4/mov/mkv；导出文件后缀跟随此选择。
+			static CUi::SDropDownState s_ContainerDropDownState;
+			static const char *const s_apContainers[] = {"mp4", "mov", "mkv"};
+			int ContainerSelection = 0;
+			for(int i = 0; i < (int)std::size(s_apContainers); ++i)
+			{
+				if(str_comp(s_apContainers[i], m_DemoRenderContainer.GetString()) == 0)
+					ContainerSelection = i;
+			}
+			CUIRect ContainerLabel, ContainerBox;
+			Box.HSplitBottom(24.0f, &Box, &Row);
+			Row.VSplitLeft(110.0f, &ContainerLabel, &ContainerBox);
+			ContainerBox.VSplitLeft(10.0f, nullptr, &ContainerBox);
+			Ui()->DoLabel(&ContainerLabel, Localize("Container:"), 12.8f, TEXTALIGN_ML);
+			const int NewContainer = Ui()->DoDropDown(&ContainerBox, ContainerSelection, s_apContainers, (int)std::size(s_apContainers), s_ContainerDropDownState);
+			if(NewContainer != ContainerSelection)
+			{
+				m_DemoRenderContainer.Set(s_apContainers[NewContainer]);
+				// 手动改容器 → 预设回到自定义，Ok 时兜底不再覆盖用户选择
+				m_DemoRenderPresetSel = 0;
+			}
+
+			// 输出分辨率（M7 超采样）：空 = 跟随窗口渲染分辨率；小于窗口 = 高倍渲染后缩小
+			CUIRect ResLabel, ResWidthBox, ResHeightBox;
+			Box.HSplitBottom(24.0f, &Box, &Row);
+			Row.VSplitLeft(110.0f, &ResLabel, &ResWidthBox);
+			ResWidthBox.VSplitLeft(10.0f, nullptr, &ResWidthBox);
+			ResWidthBox.VSplitLeft(ResWidthBox.w * 0.45f, &ResWidthBox, &ResHeightBox);
+			ResHeightBox.VSplitLeft(8.0f, nullptr, &ResHeightBox);
+			ResHeightBox.VSplitLeft(ResHeightBox.w * 0.55f, &ResHeightBox, nullptr);
+			Ui()->DoLabel(&ResLabel, Localize("Output size (W/H):"), 12.8f, TEXTALIGN_ML);
+			ui_widget::SInputFieldOptions ResWidthOptions;
+			ResWidthOptions.m_pPlaceholder = Localize("e.g. 1280, empty = window");
+			ResWidthOptions.m_FontSize = 12.8f;
+			ui_widget::InputField(DemoRenderTextInputCtx, &m_DemoRenderOutputWidth, ResWidthBox, ResWidthOptions);
+			ui_widget::SInputFieldOptions ResHeightOptions;
+			ResHeightOptions.m_pPlaceholder = Localize("e.g. 720, empty = window");
+			ResHeightOptions.m_FontSize = 12.8f;
+			ui_widget::InputField(DemoRenderTextInputCtx, &m_DemoRenderOutputHeight, ResHeightBox, ResHeightOptions);
+
+			// 关键帧间隔（M9 UI）：剪辑切点只能落在关键帧（IDR）上；悬浮提示用直接中文，
+			// 不走 Localize——这是面向中文用户的功能说明而非交互文案，保证无需翻译即生效。
+			CUIRect GopLabel, GopBox;
+			Box.HSplitBottom(24.0f, &Box, &Row);
+			Row.VSplitLeft(110.0f, &GopLabel, &GopBox);
+			GopBox.VSplitLeft(10.0f, nullptr, &GopBox);
+			Ui()->DoLabel(&GopLabel, Localize("GOP (keyint):"), 12.8f, TEXTALIGN_ML);
+			ui_widget::SInputFieldOptions GopOptions;
+			GopOptions.m_pPlaceholder = Localize("e.g. 60 = 1 keyframe/sec @60fps");
+			GopOptions.m_FontSize = 12.8f;
+			ui_widget::InputField(DemoRenderTextInputCtx, &m_DemoRenderGop, GopBox, GopOptions);
+			// GOP 说明放悬浮 Tips：悬停输入框（或标签）时显示，不占弹窗正文空间。
+			static char s_GopTipId;
+			GameClient()->m_Tooltips.DoToolTipForRect(&s_GopTipId, &Row, "关键帧间隔：剪辑切点只能落在关键帧上；越小切点越密、文件越大；60 = 60fps 下每秒一个关键帧，0 = 编码器默认", 380.0f);
+		}
+
 		// Warn about disconnect if online
 		if(Client()->State() == IClient::STATE_ONLINE)
 		{
@@ -5165,6 +5404,15 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		{
 			m_Popup = POPUP_NONE;
 			m_DemoRenderInput.Clear();
+			m_DemoRenderRangeStart.Clear();
+			m_DemoRenderRangeEnd.Clear();
+			m_DemoRenderEncoder.Clear();
+			m_DemoRenderQuality.Clear();
+			m_DemoRenderContainer.Clear();
+			m_DemoRenderOutputWidth.Clear();
+			m_DemoRenderOutputHeight.Clear();
+			m_DemoRenderGop.Clear();
+			m_DemoRenderPresetSel = -1;
 		}
 
 		Box.HSplitBottom(160.f, &Box, &Part);
@@ -5753,11 +6001,61 @@ void CMenus::PopupConfirmDemoReplaceVideo()
 	str_format(aBuf, sizeof(aBuf), "%s/%s", pDemoFolder, aDemoFilename);
 	char aVideoName[IO_MAX_PATH_LENGTH];
 	str_copy(aVideoName, m_DemoRenderInput.GetString());
-	const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + aVideoName + ".mp4").c_str());
+
+	// 编码器与质量值（M4/M6）：弹窗选择写入配置，渲染管线按配置选择编码器并映射质量参数。
+	str_copy(g_Config.m_QmVideoEncoder, m_DemoRenderEncoder.GetString());
+	if(m_DemoRenderQuality.GetString()[0] != '\0')
+		g_Config.m_QmVideoQuality = std::clamp(str_toint(m_DemoRenderQuality.GetString()), 0, 51);
+	else
+		g_Config.m_QmVideoQuality = -1;
+	str_copy(g_Config.m_QmVideoContainer, m_DemoRenderContainer.GetString());
+	// 输出分辨率（M7 超采样）：空 = 0（跟随窗口渲染分辨率）；非空 clamp 到支持的边界。
+	// CVideo 构造时会把大于渲染分辨率的值回退到渲染分辨率，此处只做数值合法性。
+	g_Config.m_QmVideoWidth = m_DemoRenderOutputWidth.GetString()[0] != '\0' ? std::clamp(str_toint(m_DemoRenderOutputWidth.GetString()), 16, 7680) : 0;
+	g_Config.m_QmVideoHeight = m_DemoRenderOutputHeight.GetString()[0] != '\0' ? std::clamp(str_toint(m_DemoRenderOutputHeight.GetString()), 16, 4320) : 0;
+	// 关键帧间隔（M9 UI）：非空 clamp 到 0-600（0 = 编码器默认）；空 = 沿用现有配置
+	if(m_DemoRenderGop.GetString()[0] != '\0')
+		g_Config.m_QmVideoGop = std::clamp(str_toint(m_DemoRenderGop.GetString()), 0, 600);
+	// 提交本会话预设选择（仅确认时落盘；手动改过编码器/容器时已自动回到 Custom）
+	if(m_DemoRenderPresetSel >= 0)
+		g_Config.m_QmVideoPreset = m_DemoRenderPresetSel;
+	// 预设展开兜底：按预设配置覆盖编码器/容器，保证与选择一致。
+	switch(g_Config.m_QmVideoPreset)
+	{
+	case 1:
+		str_copy(g_Config.m_QmVideoEncoder, "");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		break;
+	case 2:
+		str_copy(g_Config.m_QmVideoEncoder, "hevc_nvenc");
+		str_copy(g_Config.m_QmVideoContainer, "mp4");
+		break;
+	case 3:
+		str_copy(g_Config.m_QmVideoEncoder, "prores_ks");
+		str_copy(g_Config.m_QmVideoContainer, "mov");
+		break;
+	case 4:
+		str_copy(g_Config.m_QmVideoEncoder, "dnxhd");
+		str_copy(g_Config.m_QmVideoContainer, "mov");
+		break;
+	case 5:
+		str_copy(g_Config.m_QmVideoEncoder, "ffv1");
+		str_copy(g_Config.m_QmVideoContainer, "mkv");
+		break;
+	default: break;
+	}
+
+	const std::string VideoPath = qmclient::media_paths::Resolve(Storage(), g_Config, (std::string("videos/") + aVideoName + "." + g_Config.m_QmVideoContainer).c_str());
 	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(), VideoPath);
 	str_copy(m_aDemoRenderedVideoPath, WholePath.c_str());
 	GameClient()->m_DemoCamera.PrepareSource(aBuf, DemoStorageType);
-	const char *pError = Client()->DemoPlayer_Render(aBuf, DemoStorageType, aVideoName, m_Speed, m_StartPaused);
+	float RangeStartSec = -1.0f;
+	float RangeEndSec = -1.0f;
+	if(m_DemoRenderRangeStart.GetString()[0] != '\0')
+		RangeStartSec = str_tofloat(m_DemoRenderRangeStart.GetString());
+	if(m_DemoRenderRangeEnd.GetString()[0] != '\0')
+		RangeEndSec = str_tofloat(m_DemoRenderRangeEnd.GetString());
+	const char *pError = Client()->DemoPlayer_Render(aBuf, DemoStorageType, aVideoName, m_Speed, m_StartPaused, RangeStartSec, RangeEndSec);
 	m_HasPendingDemoRenderSource = false;
 	m_vDemoCutSegments.clear();
 	m_DemoCutPreview.Reset();

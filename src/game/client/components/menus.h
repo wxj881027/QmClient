@@ -1836,6 +1836,22 @@ protected:
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoSearchInput;
 #if defined(CONF_VIDEORECORDER)
 	CLineInputBuffered<IO_MAX_PATH_LENGTH> m_DemoRenderInput;
+	// 渲染选区（秒）：空字符串 = 使用 demo 全范围
+	CLineInputBuffered<16> m_DemoRenderRangeStart;
+	CLineInputBuffered<16> m_DemoRenderRangeEnd;
+	// 编码器（M4）：留空 = 默认软件编码器；质量值留空 = 沿用 cl_video_crf
+	CLineInputBuffered<64> m_DemoRenderEncoder;
+	CLineInputBuffered<8> m_DemoRenderQuality;
+	// 容器（M6）：mp4/mov/mkv，自定义预设使用
+	CLineInputBuffered<8> m_DemoRenderContainer;
+	// 输出分辨率（M7 超采样）：空 = 跟随窗口渲染分辨率；小于窗口 = 高倍渲染缩小
+	CLineInputBuffered<8> m_DemoRenderOutputWidth;
+	CLineInputBuffered<8> m_DemoRenderOutputHeight;
+	// 关键帧间隔（M9 UI）：空 = 沿用 qm_video_gop；剪辑切点只能落在关键帧上
+	CLineInputBuffered<8> m_DemoRenderGop;
+	// 预设选择（M6）：本会话（弹窗开→关）内的下拉状态，-1 = 未动过（跟随 qm_video_preset）。
+	// 仅确认导出时落盘；手动改编码器/容器自动回到 0（Custom），避免 Ok 时被预设兜底覆盖用户选择。
+	int m_DemoRenderPresetSel = -1;
 	bool m_HasPendingDemoRenderSource = false;
 	char m_aPendingDemoRenderFolder[IO_MAX_PATH_LENGTH] = "";
 	char m_aDemoRenderedVideoPath[IO_MAX_PATH_LENGTH] = "";

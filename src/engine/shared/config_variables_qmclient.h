@@ -109,6 +109,27 @@ MACRO_CONFIG_INT(QmMapBrowserStarMask, qm_map_browser_star_mask, 0, 0, 62, CFGFL
 MACRO_CONFIG_STR(QmDemoDirectory, qm_demo_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo directory")
 MACRO_CONFIG_STR(QmVideoDirectory, qm_video_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video directory")
 MACRO_CONFIG_STR(QmScreenshotDirectory, qm_screenshot_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot directory")
+// Demo 导出转换管线：固定转换线程数 + 有界帧队列（反压不丢帧），替代按 CPU 核数分配线程与全尺寸缓冲。
+MACRO_CONFIG_INT(QmVideoConvertThreads, qm_video_convert_threads, 3, 1, 8, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Number of video pixel-format conversion threads for demo export (2-4 recommended)")
+MACRO_CONFIG_INT(QmVideoQueueFrames, qm_video_queue_frames, 8, 2, 32, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bounded capture frame queue depth for demo export (higher values use more memory)")
+// 分段渲染（M3）：0 = 整段导出；>0 时按该秒数切片，每段独立封装并记录进度，中断后可跳过已完成片段续渲。
+MACRO_CONFIG_INT(QmVideoSegmentSeconds, qm_video_segment_seconds, 300, 0, 3600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo export segment length in seconds (0 = single file, 300 = 5 minutes)")
+MACRO_CONFIG_INT(QmVideoSegmentWarmup, qm_video_segment_warmup, 100, 0, 500, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)")
+// 编码器选择（M4）：空 = 默认软件编码器（libx264）；否则为 FFmpeg 编码器名（如 h264_nvenc），必须经运行时探测可用。
+MACRO_CONFIG_STR(QmVideoEncoder, qm_video_encoder, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)")
+// 统一质量值（M4）：0-51（CRF/CQ/QP 同刻度，越大质量越低）；-1 = 沿用 cl_video_crf。按所选编码器家族映射到原生参数。
+MACRO_CONFIG_INT(QmVideoQuality, qm_video_quality, -1, -1, 51, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter")
+// 导出预设（M6）：0=自定义（跟随 qm_video_encoder/quality/container），1=日常分享(libx264/mp4)，2=高效高画质(hevc_nvenc/mp4)，3=专业剪辑(prores_ks/mov)，4=专业剪辑DNxHR(dnxhd/mov)，5=无损归档(ffv1/mkv)。预设展开为编码器+容器+像素格式+质量组合。
+MACRO_CONFIG_INT(QmVideoPreset, qm_video_preset, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)")
+// 输出容器（M6）：自定义预设使用，mp4/mov/mkv；后缀与 libavformat 容器按文件名匹配。
+MACRO_CONFIG_STR(QmVideoContainer, qm_video_container, 8, "mp4", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom export container: mp4, mov or mkv")
+// 关键帧间隔（M4）：编码器 GOP；0 = 用编码器默认。分段渲染每段独立编码器实例，段首帧恒为 IDR，不受此值影响。
+MACRO_CONFIG_INT(QmVideoGop, qm_video_gop, 60, 0, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)")
+// 输出分辨率（M7 超采样）：0 = 跟随窗口渲染分辨率。小于渲染分辨率时以渲染分辨率绘制再经
+// swscale LANCZOS 下采样（例如 2560x1440 窗口导出 1280x720 = 2x 超采样，改善 2D 边缘锯齿）；
+// 大于渲染分辨率会被忽略并回退到渲染分辨率。
+MACRO_CONFIG_INT(QmVideoWidth, qm_video_width, 0, 0, 7680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)")
+MACRO_CONFIG_INT(QmVideoHeight, qm_video_height, 0, 0, 4320, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)")
 
 MACRO_CONFIG_INT(QmScreenshotWatermark, qm_screenshot_watermark, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically add a watermark to screenshots")
 MACRO_CONFIG_INT(QmScreenshotWatermarkTimestamp, qm_screenshot_watermark_timestamp, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include timestamp")

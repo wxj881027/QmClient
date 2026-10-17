@@ -3142,11 +3142,22 @@ if(CLIENT)
     text_sweep.h
     updater.cpp
     updater.h
-    video.cpp
-    video.h
     video_frame_capture.h
     warning.cpp
   )
+
+  # 视频录制与导出模块依赖 FFmpeg：无 FFmpeg 目标（iOS/Android 及未来移动端）整体裁掉，
+  # 保证 CLIENT 在 FFMPEG_FOUND=OFF 时仍可编译（视频功能经 CONF_VIDEORECORDER 优雅降级）。
+  if(VIDEORECORDER AND FFMPEG_FOUND)
+    list(APPEND ENGINE_CLIENT
+      src/engine/client/video.cpp
+      src/engine/client/video.h
+      src/engine/client/video_encoder.cpp
+      src/engine/client/video_encoder.h
+      src/engine/client/video_export.cpp
+      src/engine/client/video_export.h
+    )
+  endif()
 
   if((TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios") AND METAL)
     list(APPEND ENGINE_CLIENT
@@ -5246,6 +5257,18 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     )
   endif()
 
+  # 视频导出测试依赖 FFmpeg（video_export.cpp/video_encoder.cpp 实现），无 FFmpeg 时随模块一起裁掉
+  if(VIDEORECORDER AND FFMPEG_FOUND)
+    list(APPEND TESTS
+      src/test/unit/engine/video_export_test.cpp
+      src/test/unit/engine/video_encoder_test.cpp
+    )
+    list(APPEND TESTS_EXTRA
+      src/engine/client/video_encoder.cpp
+      src/engine/client/video_export.cpp
+    )
+  endif()
+
   if(CLIENT AND VULKAN)
     list(APPEND TESTS src/test/unit/engine/graphics/vulkan_rendering_lifecycle_test.cpp)
   endif()
@@ -6440,7 +6463,8 @@ foreach(target ${TARGETS_OWN})
     target_compile_definitions(${target} PRIVATE CONF_UPNP)
     target_include_directories(${target} SYSTEM PRIVATE ${MINIUPNPC_INCLUDE_DIRS})
   endif()
-  if(VIDEORECORDER)
+  # 宏与真实能力一致：仅在 FFmpeg 实际找到时定义（否则 video.h 的 FFmpeg 头引用会编译失败）
+  if(VIDEORECORDER AND FFMPEG_FOUND)
     target_compile_definitions(${target} PRIVATE CONF_VIDEORECORDER)
   endif()
   if(ANTIBOT)

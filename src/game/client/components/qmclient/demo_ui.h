@@ -71,7 +71,8 @@ namespace qm_demo_ui
 
 	inline float RenderContentHeight(bool DisplayExpanded, bool Online)
 	{
-		return 120.0f + (DisplayExpanded ? DISPLAY_HEIGHT + 4.0f : 0.0f) + (Online ? 30.0f : 0.0f);
+		// +168：渲染设置七行（选区/预设/编码器/质量/容器/输出尺寸/GOP 各 24）；GOP 说明为悬浮 Tips 不占正文
+		return 120.0f + 168.0f + (DisplayExpanded ? DISPLAY_HEIGHT + 4.0f : 0.0f) + (Online ? 30.0f : 0.0f);
 	}
 
 	inline CUIRect PopupRect(const CUIRect &Screen, float ContentHeight, float Width = 560.0f)

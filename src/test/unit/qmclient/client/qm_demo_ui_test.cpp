@@ -99,8 +99,9 @@ TEST(QmDemoUi, SliceContentAccountsForFourVisibleSegmentsAndDisplayOptions)
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(4, false), 264.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, false), 280.0f);
 	EXPECT_FLOAT_EQ(qm_demo_ui::SliceContentHeight(5, true), 400.0f);
-	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(false, false), 120.0f);
-	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(true, true), 270.0f);
+	// +168：渲染设置七行（选区/预设/编码器/质量/容器/输出尺寸/GOP 各 24）；GOP 说明为悬浮 Tips 不占正文
+	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(false, false), 288.0f);
+	EXPECT_FLOAT_EQ(qm_demo_ui::RenderContentHeight(true, true), 438.0f);
 }
 
 TEST(QmDemoUi, PopupFitsTheViewportAndKeepsContentHeightWhenPossible)

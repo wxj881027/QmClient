@@ -48,6 +48,7 @@ class CMsgPacker;
 class CUnpacker;
 class IConfigManager;
 class IDiscord;
+class CVideoExportTask;
 class IEngine;
 class IEngineInput;
 class IEngineMap;
@@ -378,6 +379,9 @@ public:
 	IHttp *Http() { return m_pHttp; }
 
 	CClient();
+#if defined(CONF_VIDEORECORDER)
+	~CClient(); // 等待拼接线程完成（成员仅在 CONF_VIDEORECORDER 下存在）
+#endif
 
 	// 性能日志文件运行时开/关（供 client.cpp 启动与主循环调用）。
 	void SetQmPerfFileSwitch(std::shared_ptr<CQmPerfFileSwitchLogger> pSwitch);
@@ -550,7 +554,26 @@ public:
 	void StartVideo(const char *pFilename, bool WithTimestamp);
 	static void Con_StartVideo(IConsole::IResult *pResult, void *pUserData);
 	static void Con_StopVideo(IConsole::IResult *pResult, void *pUserData);
-	const char *DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused = false) override;
+	const char *DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused = false, float RangeStartSec = -1.0f, float RangeEndSec = -1.0f) override;
+
+	// 分段渲染与断点续渲（M3）。任务为空指针表示未激活；
+	// 进度持久化在 videos/<名>.progress，任务指纹不匹配或损坏时整单重渲。
+	// 返回 false 表示未走分段路径（状态不符或不超过一段），调用方回退整段导出。
+	// RangeSec < 0 表示使用 demo 全范围；否则为渲染选区（秒，相对 demo 起点）。
+	std::unique_ptr<CVideoExportTask> m_pVideoExportTask;
+	bool StartSegmentedVideoExport(const char *pName, bool AppendTimestamp, float RangeStartSec = -1.0f, float RangeEndSec = -1.0f);
+	void CancelSegmentedVideoExport();
+	void FinishSegmentedExport();
+	void DriveSegmentedExport(int CurrentTick);
+	// 把全部已渲染段流复制拼接为最终输出（后台线程）；段缺失时跳过并保留独立片段。
+	// 线程为可 join 成员：析构时等待完成（防止退出撕裂输出文件）；进行中拒绝新的拼接请求。
+	void StartSegmentConcat(const CVideoExportTask *pTask);
+	// 导出容器扩展名（M6）：qm_video_container 的合法值（mp4/mov/mkv），非法回退 mp4。
+	const char *ContainerName() const;
+	// 拼接 muxer 格式名：mkv 对应 libavformat 的 "matroska"，mp4/mov 同名。
+	const char *ConcatFormatName() const;
+	// 拼接后台线程；避免 detached 线程在退出时被撕裂（输出文件无 trailer）。
+	std::thread m_ConcatThread;
 #endif
 
 	static void Con_Rcon(IConsole::IResult *pResult, void *pUserData);

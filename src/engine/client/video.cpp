@@ -2,6 +2,8 @@
 
 #include "video.h"
 
+#include "video_encoder.h"
+
 #include <base/log.h>
 
 #include <engine/graphics.h>
@@ -16,6 +18,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 };
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <mutex>
@@ -76,7 +79,7 @@ void CVideo::Init()
 	av_log_set_callback(AvLogCallback);
 }
 
-CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName) :
+CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Width, int Height, const char *pName, int OutputWidth, int OutputHeight) :
 	m_pGraphics(pGraphics),
 	m_pStorage(pStorage),
 	m_pSound(pSound),
@@ -91,6 +94,10 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 
 	m_Width = Width;
 	m_Height = Height;
+	// 编码输出尺寸（M7 超采样）：未指定或非法（> 渲染尺寸）时跟随渲染尺寸。
+	// 奇数在 OpenVideo 里按编码器要求向下取偶（与旧行为一致）。
+	m_OutputWidth = OutputWidth > 0 && OutputWidth <= Width ? OutputWidth : Width;
+	m_OutputHeight = OutputHeight > 0 && OutputHeight <= Height ? OutputHeight : Height;
 	str_copy(m_aName, pName);
 
 	m_FPS = g_Config.m_ClVideoRecorderFPS;
@@ -98,7 +105,6 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 	m_Recording = false;
 	m_Started = false;
 	m_Stopped = false;
-	m_ProcessingVideoFrame = 0;
 	m_ProcessingAudioFrame = 0;
 
 	m_HasAudio = m_pSound->IsSoundEnabled() && g_Config.m_ClVideoSndEnable;
@@ -136,7 +142,9 @@ bool CVideo::Start()
 		return false;
 	}
 
-	const int FormatAllocResult = avformat_alloc_output_context2(&m_pFormatContext, nullptr, "mp4", aWholePath);
+	// 容器格式按输出文件名后缀推断（M6）：.mp4/.mov/.mkv 由 qm_video_container 决定，
+	// format_name 传 nullptr 让 libavformat 自行匹配，避免容器与后缀不一致。
+	const int FormatAllocResult = avformat_alloc_output_context2(&m_pFormatContext, nullptr, nullptr, aWholePath);
 	if(FormatAllocResult < 0 || !m_pFormatContext)
 	{
 		char aError[AV_ERROR_MAX_STRING_SIZE];
@@ -148,24 +156,36 @@ bool CVideo::Start()
 	m_pFormat = m_pFormatContext->oformat;
 
 #if defined(CONF_ARCH_IA32) || defined(CONF_ARCH_ARM) || defined(CONF_ARCH_WASM)
-	// use only the minimum of 2 threads on 32-bit to save memory
-	m_VideoThreads = 2;
+	// 32 位上固定最小资源占用，避免全尺寸缓冲与线程过多
+	m_ConvertThreads = 2;
 	m_AudioThreads = 2;
 #else
-	m_VideoThreads = std::thread::hardware_concurrency() + 2;
-	// audio gets a bit less
-	m_AudioThreads = (std::thread::hardware_concurrency() / 2) + 2;
+	// 转换线程固定上限（可配置，配置系统已 clamp），不随 CPU 核数线性增长
+	m_ConvertThreads = std::max<size_t>(1, (size_t)g_Config.m_QmVideoConvertThreads);
+	// 音频帧轻量，线程数同样固定上限
+	m_AudioThreads = std::min<size_t>((std::thread::hardware_concurrency() / 2) + 2, 4);
 #endif
 
-	m_CurVideoThreadIndex = 0;
 	m_CurAudioThreadIndex = 0;
 
+	// 有界捕获槽队列：内存占用 = 槽数 × 全尺寸 RGBA，与核数无关
+	const size_t QueueFrames = std::max<size_t>(2, (size_t)g_Config.m_QmVideoQueueFrames);
 	const size_t VideoBufferSize = (size_t)4 * m_Width * m_Height * sizeof(uint8_t);
-	m_vVideoBuffers.resize(m_VideoThreads);
-	for(size_t i = 0; i < m_VideoThreads; ++i)
+	m_vVideoSlots.resize(QueueFrames);
+	for(size_t i = 0; i < QueueFrames; ++i)
 	{
-		m_vVideoBuffers[i].m_vBuffer.resize(VideoBufferSize);
+		m_vVideoSlots[i].m_vRGBA.resize(VideoBufferSize);
 	}
+	m_vFreeSlots.resize(QueueFrames);
+	for(size_t i = 0; i < QueueFrames; ++i)
+	{
+		m_vFreeSlots[i] = QueueFrames - 1 - i; // 栈：先归还后复用，降低读写冲突
+	}
+	m_vPendingSlots.clear();
+	m_NextVideoFrameToCapture = 0;
+	m_NextVideoFrameToSubmit = 0;
+	m_VideoStop = false;
+	m_VideoPipelineError = false;
 
 	m_vAudioBuffers.resize(m_AudioThreads);
 
@@ -184,28 +204,10 @@ bool CVideo::Start()
 
 	if(m_HasAudio)
 	{
-		if(m_pFormat->audio_codec != AV_CODEC_ID_NONE)
-		{
-			if(!AddStream(&m_AudioStream, m_pFormatContext, &m_pAudioCodec, m_pFormat->audio_codec))
-				return false;
-		}
-		else
-		{
-			log_error("videorecorder", "Could not determine default audio stream codec");
+		// 音频统一 AAC：muxer 默认音频 codec 不可靠（matroska 默认 AC3，未编入），
+		// AAC 由内置编码器支持且 mp4/mov/mkv 全兼容。
+		if(!AddStream(&m_AudioStream, m_pFormatContext, &m_pAudioCodec, AV_CODEC_ID_AAC))
 			return false;
-		}
-	}
-
-	m_vpVideoThreads.resize(m_VideoThreads);
-	for(size_t i = 0; i < m_VideoThreads; ++i)
-	{
-		m_vpVideoThreads[i] = std::make_unique<CVideoRecorderThread>();
-	}
-	for(size_t i = 0; i < m_VideoThreads; ++i)
-	{
-		std::unique_lock<std::mutex> Lock(m_vpVideoThreads[i]->m_Mutex);
-		m_vpVideoThreads[i]->m_Thread = std::thread([this, i]() REQUIRES(!m_WriteLock) { RunVideoThread(i == 0 ? (m_VideoThreads - 1) : (i - 1), i); });
-		m_vpVideoThreads[i]->m_Cond.wait(Lock, [this, i]() -> bool { return m_vpVideoThreads[i]->m_Started; });
 	}
 
 	m_vpAudioThreads.resize(m_AudioThreads);
@@ -218,6 +220,13 @@ bool CVideo::Start()
 		std::unique_lock<std::mutex> Lock(m_vpAudioThreads[i]->m_Mutex);
 		m_vpAudioThreads[i]->m_Thread = std::thread([this, i]() REQUIRES(!m_WriteLock) { RunAudioThread(i == 0 ? (m_AudioThreads - 1) : (i - 1), i); });
 		m_vpAudioThreads[i]->m_Cond.wait(Lock, [this, i]() -> bool { return m_vpAudioThreads[i]->m_Started; });
+	}
+
+	// 转换线程：从就绪队列取帧，乱序转换，按帧号顺序提交编码
+	m_vpConvertThreads.resize(m_ConvertThreads);
+	for(size_t i = 0; i < m_ConvertThreads; ++i)
+	{
+		m_vpConvertThreads[i] = std::make_unique<std::thread>([this, i]() REQUIRES(!m_WriteLock) { RunVideoConvertThread(i); });
 	}
 
 	/* Now that all the parameters are set, we can open the audio and
@@ -241,20 +250,25 @@ bool CVideo::Start()
 		}
 	}
 
-	m_VideoStream.m_vpSwsContexts.reserve(m_VideoThreads);
+	m_VideoStream.m_vpSwsContexts.reserve(m_ConvertThreads);
 
-	for(size_t i = 0; i < m_VideoThreads; ++i)
+	for(size_t i = 0; i < m_ConvertThreads; ++i)
 	{
 		if(m_VideoStream.m_vpSwsContexts.size() <= i)
 			m_VideoStream.m_vpSwsContexts.emplace_back(nullptr);
 
 		if(!m_VideoStream.m_vpSwsContexts[i])
 		{
+			// 转换目标跟随协商出的编码像素格式（M6）：RGBA → YUV420P/NV12/YUV422P10LE/...
+			// 由 swscale 直接输出到编码帧，替代写死 YUV420P（非 420 格式会布局错配）。
+			// 输入是渲染（readback）尺寸；输出是编码尺寸（M7 超采样下二者不同，swscale 缩小）。
+			const bool Downscaling = m_Width != m_VideoStream.m_pCodecContext->width || m_Height != m_VideoStream.m_pCodecContext->height;
 			m_VideoStream.m_vpSwsContexts[i] = sws_getCachedContext(
 				m_VideoStream.m_vpSwsContexts[i],
-				m_VideoStream.m_pCodecContext->width, m_VideoStream.m_pCodecContext->height, AV_PIX_FMT_RGBA,
-				m_VideoStream.m_pCodecContext->width, m_VideoStream.m_pCodecContext->height, AV_PIX_FMT_YUV420P,
-				SWS_FULL_CHR_H_INT | SWS_FULL_CHR_H_INP | SWS_ACCURATE_RND | SWS_BITEXACT, nullptr, nullptr, nullptr);
+				m_Width, m_Height, AV_PIX_FMT_RGBA,
+				m_VideoStream.m_pCodecContext->width, m_VideoStream.m_pCodecContext->height, m_VideoStream.m_pCodecContext->pix_fmt,
+				Downscaling ? (SWS_LANCZOS | SWS_ACCURATE_RND | SWS_FULL_CHR_H_INT | SWS_FULL_CHR_H_INP) : (SWS_FULL_CHR_H_INT | SWS_FULL_CHR_H_INP | SWS_ACCURATE_RND | SWS_BITEXACT),
+				nullptr, nullptr, nullptr);
 			if(!m_VideoStream.m_vpSwsContexts[i])
 			{
 				log_error("videorecorder", "Could not allocate video color conversion context");
@@ -300,17 +314,19 @@ void CVideo::Stop()
 
 	m_pGraphics->WaitForIdle();
 
-	for(auto &pVideoThread : m_vpVideoThreads)
+	// 视频转换管线：置停止标志并唤醒全部等待者，join 即代表队列已排空且
+	// 所有在途帧按序提交完成（线程退出前完成各自帧的提交）。
 	{
-		{
-			std::unique_lock<std::mutex> Lock(pVideoThread->m_Mutex);
-			pVideoThread->m_Finished = true;
-			pVideoThread->m_Cond.notify_all();
-		}
-
-		pVideoThread->m_Thread.join();
+		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+		m_VideoStop = true;
 	}
-	m_vpVideoThreads.clear();
+	m_VideoSlotReadyCond.notify_all();
+	m_VideoSlotFreeCond.notify_all();
+	m_VideoSubmitCond.notify_all();
+
+	for(auto &pThread : m_vpConvertThreads)
+		pThread->join();
+	m_vpConvertThreads.clear();
 
 	for(auto &pAudioThread : m_vpAudioThreads)
 	{
@@ -324,7 +340,7 @@ void CVideo::Stop()
 	}
 	m_vpAudioThreads.clear();
 
-	while(m_ProcessingVideoFrame > 0 || m_ProcessingAudioFrame > 0)
+	while(m_ProcessingAudioFrame > 0)
 		std::this_thread::sleep_for(10us);
 
 	m_Recording = false;
@@ -361,53 +377,41 @@ void CVideo::Stop()
 
 void CVideo::NextVideoFrameThread()
 {
-	if(IsRecording())
+	if(!IsRecording())
+		return;
+
+	m_VideoFrameIndex += 1;
+	if(m_VideoFrameIndex < 2)
+		return;
+
+	size_t SlotIndex;
 	{
-		m_VideoFrameIndex += 1;
-		if(m_VideoFrameIndex >= 2)
-		{
-			size_t NextVideoThreadIndex = m_CurVideoThreadIndex + 1;
-			if(NextVideoThreadIndex == m_VideoThreads)
-				NextVideoThreadIndex = 0;
+		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+		// 反压：捕获槽耗尽时渲染端等待，离线导出不丢帧、不无界缓冲
+		m_VideoSlotFreeCond.wait(Lock, [this]() -> bool { return !m_vFreeSlots.empty() || m_VideoStop || m_VideoPipelineError; });
+		if(m_VideoStop || m_VideoPipelineError || m_vFreeSlots.empty())
+			return;
 
-			// always wait for the next video thread too, to prevent a dead lock
-			{
-				auto *pVideoThread = m_vpVideoThreads[NextVideoThreadIndex].get();
-				std::unique_lock<std::mutex> Lock(pVideoThread->m_Mutex);
-
-				if(pVideoThread->m_HasVideoFrame)
-				{
-					pVideoThread->m_Cond.wait(Lock, [&pVideoThread]() -> bool { return !pVideoThread->m_HasVideoFrame; });
-				}
-			}
-
-			// after reading the graphic libraries' frame buffer, go threaded
-			{
-				auto *pVideoThread = m_vpVideoThreads[m_CurVideoThreadIndex].get();
-				std::unique_lock<std::mutex> Lock(pVideoThread->m_Mutex);
-
-				if(pVideoThread->m_HasVideoFrame)
-				{
-					pVideoThread->m_Cond.wait(Lock, [&pVideoThread]() -> bool { return !pVideoThread->m_HasVideoFrame; });
-				}
-
-				if(!UpdateVideoBufferFromGraphics(m_CurVideoThreadIndex))
-					return;
-
-				m_ProcessingVideoFrame.fetch_add(1);
-				pVideoThread->m_HasVideoFrame = true;
-				{
-					std::unique_lock<std::mutex> LockParent(pVideoThread->m_VideoFillMutex);
-					pVideoThread->m_VideoFrameToFill = m_VideoFrameIndex;
-				}
-				pVideoThread->m_Cond.notify_all();
-			}
-
-			++m_CurVideoThreadIndex;
-			if(m_CurVideoThreadIndex == m_VideoThreads)
-				m_CurVideoThreadIndex = 0;
-		}
+		SlotIndex = m_vFreeSlots.back();
+		m_vFreeSlots.pop_back();
 	}
+
+	// GPU 读回的耗时操作在队列锁外执行；槽尚未发布给转换线程，无数据竞争
+	if(!UpdateVideoBufferFromGraphics(SlotIndex))
+	{
+		// 读回失败：归还槽；捕获错误已由 CVideoFrameCapture 置位，后续帧停止录制
+		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+		m_vFreeSlots.push_back(SlotIndex);
+		m_VideoSlotFreeCond.notify_one();
+		return;
+	}
+
+	{
+		std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+		m_vVideoSlots[SlotIndex].m_FrameNumber = m_NextVideoFrameToCapture++;
+		m_vPendingSlots.push_back(SlotIndex);
+	}
+	m_VideoSlotReadyCond.notify_one();
 }
 
 void CVideo::NextVideoFrame()
@@ -581,65 +585,80 @@ void CVideo::FillAudioFrame(size_t ThreadIndex)
 	}
 }
 
-void CVideo::RunVideoThread(size_t ParentThreadIndex, size_t ThreadIndex)
+void CVideo::RunVideoConvertThread(size_t ThreadIndex)
 {
-	auto *pThreadData = m_vpVideoThreads[ThreadIndex].get();
-	auto *pParentThreadData = m_vpVideoThreads[ParentThreadIndex].get();
-	std::unique_lock<std::mutex> Lock(pThreadData->m_Mutex);
-	pThreadData->m_Started = true;
-	pThreadData->m_Cond.notify_all();
-
-	while(!pThreadData->m_Finished)
+	for(;;)
 	{
-		pThreadData->m_Cond.wait(Lock, [&pThreadData]() -> bool { return pThreadData->m_HasVideoFrame || pThreadData->m_Finished; });
-		pThreadData->m_Cond.notify_all();
-
-		if(pThreadData->m_HasVideoFrame)
+		size_t SlotIndex;
+		uint64_t FrameNumber;
 		{
-			FillVideoFrame(ThreadIndex);
-			// check if we need to wait for the parent to finish
-			{
-				std::unique_lock<std::mutex> LockParent(pParentThreadData->m_VideoFillMutex);
-				if(pParentThreadData->m_VideoFrameToFill != 0 && pThreadData->m_VideoFrameToFill >= pParentThreadData->m_VideoFrameToFill)
-				{
-					// wait for the parent to finish its frame
-					pParentThreadData->m_VideoFillCond.wait(LockParent, [&pParentThreadData]() -> bool { return pParentThreadData->m_VideoFrameToFill == 0; });
-				}
-			}
-			{
-				std::unique_lock<std::mutex> LockVideo(pThreadData->m_VideoFillMutex);
-				{
-					const CLockScope LockScope(m_WriteLock);
-#if LIBAVCODEC_VERSION_MAJOR >= 60
-					m_VideoStream.m_vpFrames[ThreadIndex]->pts = m_VideoStream.m_pCodecContext->frame_num;
-#else
-					m_VideoStream.m_vpFrames[ThreadIndex]->pts = m_VideoStream.m_pCodecContext->frame_number;
-#endif
-					WriteFrame(&m_VideoStream, ThreadIndex);
-				}
+			std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+			m_VideoSlotReadyCond.wait(Lock, [this]() -> bool { return !m_vPendingSlots.empty() || m_VideoStop || m_VideoPipelineError; });
 
-				pThreadData->m_VideoFrameToFill = 0;
-				pThreadData->m_VideoFillCond.notify_all();
-				pThreadData->m_Cond.notify_all();
+			if(m_vPendingSlots.empty())
+			{
+				if(m_VideoStop || m_VideoPipelineError)
+					return;
+				continue; // 虚假唤醒
 			}
-			m_ProcessingVideoFrame.fetch_sub(1);
 
-			pThreadData->m_HasVideoFrame = false;
+			SlotIndex = m_vPendingSlots.front();
+			m_vPendingSlots.pop_front();
+			FrameNumber = m_vVideoSlots[SlotIndex].m_FrameNumber;
+		}
+
+		// 像素转换在队列锁外执行（sws 上下文与编码目标帧均为线程私有）
+		FillVideoFrame(ThreadIndex, SlotIndex);
+
+		{
+			std::unique_lock<std::mutex> Lock(m_VideoQueueMutex);
+
+			// 转换完成，槽内 RGBA 数据已消费，归还空闲栈供渲染端复用
+			m_vFreeSlots.push_back(SlotIndex);
+			m_VideoSlotFreeCond.notify_one();
+
+			// 按帧号严格按序提交；编码错误置位后全部等待者丢弃退出（Stop 亦兜底唤醒）
+			m_VideoSubmitCond.wait(Lock, [this, FrameNumber]() -> bool { return m_NextVideoFrameToSubmit == FrameNumber || m_VideoPipelineError; });
+			if(m_VideoPipelineError)
+				continue;
+
+			{
+				const CLockScope LockScope(m_WriteLock);
+				// PTS 由本类维护的提交计数器生成，替代读取编码器内部 frame_num，
+				// 保证 flush 阶段与取消路径的时间戳不受编码器状态影响。
+				m_VideoStream.m_vpFrames[ThreadIndex]->pts = m_VideoFramesEncoded++;
+				WriteFrame(&m_VideoStream, ThreadIndex);
+			}
+
+			m_NextVideoFrameToSubmit++;
+
+			if(m_EncodeError.load(std::memory_order_acquire))
+			{
+				// 编码/封装失败：扩散到管线错误态并唤醒全部等待者，不再产出后续帧
+				m_VideoPipelineError = true;
+				m_VideoSubmitCond.notify_all();
+				m_VideoSlotFreeCond.notify_all();
+				m_VideoSlotReadyCond.notify_all();
+				continue;
+			}
+
+			m_VideoSubmitCond.notify_all();
 		}
 	}
 }
 
-void CVideo::FillVideoFrame(size_t ThreadIndex)
+void CVideo::FillVideoFrame(size_t ThreadIndex, size_t SlotIndex)
 {
-	const int InLineSize = 4 * m_VideoStream.m_pCodecContext->width;
-	auto *pRGBAData = m_vVideoBuffers[ThreadIndex].m_vBuffer.data();
+	// 输入行长与行数来自渲染（readback）尺寸（M7 超采样下大于编码输出尺寸，由 swscale 缩小）。
+	const int InLineSize = 4 * m_Width;
+	auto *pRGBAData = m_vVideoSlots[SlotIndex].m_vRGBA.data();
 	sws_scale(m_VideoStream.m_vpSwsContexts[ThreadIndex], (const uint8_t *const *)&pRGBAData, &InLineSize, 0,
-		m_VideoStream.m_pCodecContext->height, m_VideoStream.m_vpFrames[ThreadIndex]->data, m_VideoStream.m_vpFrames[ThreadIndex]->linesize);
+		m_Height, m_VideoStream.m_vpFrames[ThreadIndex]->data, m_VideoStream.m_vpFrames[ThreadIndex]->linesize);
 }
 
-bool CVideo::UpdateVideoBufferFromGraphics(size_t ThreadIndex)
+bool CVideo::UpdateVideoBufferFromGraphics(size_t SlotIndex)
 {
-	if(!m_FrameCapture.Read(m_pGraphics->GetReadPresentedImageDataFuncUnsafe(), m_vVideoBuffers[ThreadIndex].m_vBuffer))
+	if(!m_FrameCapture.Read(m_pGraphics->GetReadPresentedImageDataFuncUnsafe(), m_vVideoSlots[SlotIndex].m_vRGBA))
 	{
 		log_error("videorecorder", "%s (expected %d x %d)", m_FrameCapture.ErrorDescription(), m_Width, m_Height);
 		return false;
@@ -724,10 +743,10 @@ bool CVideo::OpenVideo()
 	}
 
 	m_VideoStream.m_vpFrames.clear();
-	m_VideoStream.m_vpFrames.reserve(m_VideoThreads);
+	m_VideoStream.m_vpFrames.reserve(m_ConvertThreads);
 
 	/* allocate and init a re-usable frame */
-	for(size_t i = 0; i < m_VideoThreads; ++i)
+	for(size_t i = 0; i < m_ConvertThreads; ++i)
 	{
 		m_VideoStream.m_vpFrames.emplace_back(nullptr);
 		m_VideoStream.m_vpFrames[i] = AllocPicture(pContext->pix_fmt, pContext->width, pContext->height);
@@ -737,25 +756,10 @@ bool CVideo::OpenVideo()
 		}
 	}
 
-	/* If the output format is not YUV420P, then a temporary YUV420P
-	 * picture is needed too. It is then converted to the required
-	 * output format. */
+	/* The swscale context converts RGBA directly to the negotiated encoder pixel
+	 * format (M6); no intermediate YUV420P buffer is needed. */
 	m_VideoStream.m_vpTmpFrames.clear();
-	m_VideoStream.m_vpTmpFrames.reserve(m_VideoThreads);
-
-	if(pContext->pix_fmt != AV_PIX_FMT_YUV420P)
-	{
-		/* allocate and init a re-usable frame */
-		for(size_t i = 0; i < m_VideoThreads; ++i)
-		{
-			m_VideoStream.m_vpTmpFrames.emplace_back(nullptr);
-			m_VideoStream.m_vpTmpFrames[i] = AllocPicture(AV_PIX_FMT_YUV420P, pContext->width, pContext->height);
-			if(!m_VideoStream.m_vpTmpFrames[i])
-			{
-				return false;
-			}
-		}
-	}
+	m_VideoStream.m_vpTmpFrames.reserve(m_ConvertThreads);
 
 	/* copy the stream parameters to the muxer */
 	const int AudioStreamCopyResult = avcodec_parameters_from_context(m_VideoStream.m_pStream->codecpar, pContext);
@@ -882,7 +886,27 @@ bool CVideo::OpenAudio()
 bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, const AVCodec **ppCodec, enum AVCodecID CodecId) const
 {
 	/* find the encoder */
-	*ppCodec = avcodec_find_encoder(CodecId);
+	if(pStream == &m_VideoStream && g_Config.m_QmVideoEncoder[0] != '\0')
+	{
+		// 编码器按名称选择（M4）：视频流按流身份判断（不依赖 muxer 默认 codec 恰为 H264）；
+		// 探测不可用时明确失败，不静默回退软件编码器。
+		const video_encoder::SProbeResult *pProbed = video_encoder::FindProbed(g_Config.m_QmVideoEncoder);
+		if(!pProbed)
+		{
+			log_error("videorecorder", "Video encoder '%s' is unknown; clear qm_video_encoder or pick one from the export settings.", g_Config.m_QmVideoEncoder);
+			return false;
+		}
+		if(!pProbed->m_Available)
+		{
+			log_error("videorecorder", "Video encoder '%s' is not usable on this system (%s); clear qm_video_encoder or pick another encoder.", g_Config.m_QmVideoEncoder, pProbed->m_aFailReason);
+			return false;
+		}
+		*ppCodec = avcodec_find_encoder_by_name(g_Config.m_QmVideoEncoder);
+	}
+	else
+	{
+		*ppCodec = avcodec_find_encoder(CodecId);
+	}
 	if(!(*ppCodec))
 	{
 		log_error("videorecorder", "Could not find encoder for codec '%s'", avcodec_get_name(CodecId));
@@ -953,12 +977,12 @@ bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, 
 	}
 
 	case AVMEDIA_TYPE_VIDEO:
-		pContext->codec_id = CodecId;
+		pContext->codec_id = (*ppCodec)->id;
 
 		pContext->bit_rate = 400000;
-		/* Resolution must be a multiple of two. */
-		pContext->width = m_Width;
-		pContext->height = m_Height % 2 == 0 ? m_Height : m_Height - 1;
+		/* Resolution must be a multiple of two (chroma-subsampled formats require even dims). */
+		pContext->width = m_OutputWidth % 2 == 0 ? m_OutputWidth : m_OutputWidth - 1;
+		pContext->height = m_OutputHeight % 2 == 0 ? m_OutputHeight : m_OutputHeight - 1;
 		/* timebase: This is the fundamental unit of time (in seconds) in terms
 		 * of which frame timestamps are represented. For fixed-fps content,
 		 * timebase should be 1/framerate and timestamp increments should be
@@ -966,10 +990,33 @@ bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, 
 		pStream->m_pStream->time_base.num = 1;
 		pStream->m_pStream->time_base.den = m_FPS;
 		pContext->time_base = pStream->m_pStream->time_base;
+		// CFR 帧率元数据：matroska muxer 写 DefaultDuration 只看流级 avg_frame_rate
+		// （缺失时段文件读回 avg_frame_rate=0/0，拼接网格无从武装）；codec 侧一并设置。
+		pStream->m_pStream->avg_frame_rate = AVRational{m_FPS, 1};
+		pContext->framerate = AVRational{m_FPS, 1};
 
-		pContext->gop_size = 12; /* emit one intra frame every twelve frames at most */
-		pContext->pix_fmt = AV_PIX_FMT_YUV420P;
+		// GOP 可配置（M4）：默认 60（原 12 为 FFmpeg 示例遗留，偏小）。
+		pContext->gop_size = g_Config.m_QmVideoGop > 0 ? g_Config.m_QmVideoGop : video_encoder::DEFAULT_GOP;
+		// 分段拼接要求无 B 帧（仅限分段导出；整段导出保留 B 帧压缩收益）：
+		// matroska 段不存储 dts（只有 block timecode），demuxer 对段首 B 帧序列给出
+		// dts=AV_NOPTS_VALUE；拼接时 muxer 需经重排序窗口从 pts 推导 dts，而该窗口
+		// 在段边界携带上一段尾部状态，导致段 2 首包推导出倒退 dts（EINVAL）。
+		// 无 B 帧时 pts==dts==解码序，网格严格单调，拼接天然无重排序。
+		if(g_Config.m_QmVideoSegmentSeconds > 0)
+			pContext->max_b_frames = 0;
+		// 像素格式协商（M4/M6）：按编码器家族的期望列表协商（剪辑格式 422 10bit、FFV1 444 优先）。
+		pContext->pix_fmt = video_encoder::NegotiatePixelFormat(*ppCodec, pContext, video_encoder::WantedPixelFormatsFor((*ppCodec)->name));
+		if(pContext->pix_fmt == AV_PIX_FMT_NONE)
+		{
+			log_error("videorecorder", "Encoder '%s' does not support any usable pixel format", (*ppCodec)->name);
+			return false;
+		}
 		pContext->colorspace = COLOR_SPACE;
+		// 完整色彩元数据（M6）：剪辑软件（Premiere/Resolve）导入颜色一致所需，
+		// 容器写 colr/nclx 标记。导出管线 sRGB → BT.709 limited range。
+		pContext->color_primaries = AVCOL_PRI_BT709;
+		pContext->color_trc = AVCOL_TRC_BT709;
+		pContext->color_range = AVCOL_RANGE_MPEG;
 		if(pContext->codec_id == AV_CODEC_ID_MPEG2VIDEO)
 		{
 			/* just for testing, we also add B-frames */
@@ -982,12 +1029,17 @@ bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, 
 			 * the motion of the chroma plane does not match the luma plane. */
 			pContext->mb_decision = 2;
 		}
-		if(CodecId == AV_CODEC_ID_H264)
+		// 质量参数按编码器家族映射（M4）：x264 用 CRF/preset，NVENC 用 CQ，AMF/QSV/VideoToolbox 用各自参数。
+		// qm_video_quality >= 0 时为统一质量值，-1 沿用 cl_video_crf（既有行为）。
+		// 选项被编码器拒绝时明确失败（原 dbg_assert 会在非法组合下崩溃）。
 		{
-			static const char *s_apPresets[10] = {"ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"};
-			dbg_assert(g_Config.m_ClVideoX264Preset < (int)std::size(s_apPresets), "preset index invalid: %d", g_Config.m_ClVideoX264Preset);
-			dbg_assert(av_opt_set(pContext->priv_data, "preset", s_apPresets[g_Config.m_ClVideoX264Preset], 0) == 0, "invalid option");
-			dbg_assert(av_opt_set_int(pContext->priv_data, "crf", g_Config.m_ClVideoX264Crf, 0) == 0, "invalid option");
+			const int QualityValue = g_Config.m_QmVideoQuality >= 0 ? g_Config.m_QmVideoQuality : g_Config.m_ClVideoX264Crf;
+			int QualityKind = (int)video_encoder::EQualityKind::NONE;
+			if(!video_encoder::ApplyQualityOptions(pContext, (*ppCodec)->name, QualityValue, g_Config.m_ClVideoX264Preset, QualityKind))
+			{
+				log_error("videorecorder", "Encoder '%s' rejected the quality options (quality %d, preset %d)", (*ppCodec)->name, QualityValue, g_Config.m_ClVideoX264Preset);
+				return false;
+			}
 		}
 		break;
 
@@ -1002,48 +1054,79 @@ bool CVideo::AddStream(COutputStream *pStream, AVFormatContext *pFormatContext, 
 	return true;
 }
 
+int CVideo::SendFrameDraining(COutputStream *pStream, AVFrame *pFrame, AVPacket *pPacket, const char *pContext)
+{
+	int SendResult = avcodec_send_frame(pStream->m_pCodecContext, pFrame);
+	while(SendResult == AVERROR(EAGAIN))
+	{
+		// 编码器输出未排空：先收走已就绪的包再重试提交（FFmpeg 编码 API 背压约定）。
+		if(!ReceiveAndWritePackets(pStream, pPacket, pContext))
+			return SendResult;
+		SendResult = avcodec_send_frame(pStream->m_pCodecContext, pFrame);
+	}
+	// flush 语义：进入 drain 状态后再次提交空帧返回 EOF 表示已无输出，属正常终止。
+	if(pFrame == nullptr && SendResult == AVERROR_EOF)
+		return 0;
+	return SendResult;
+}
+
+bool CVideo::ReceiveAndWritePackets(COutputStream *pStream, AVPacket *pPacket, const char *pContext)
+{
+	while(true)
+	{
+		const int RecvResult = avcodec_receive_packet(pStream->m_pCodecContext, pPacket);
+		if(RecvResult == AVERROR(EAGAIN) || RecvResult == AVERROR_EOF)
+			return true;
+		if(RecvResult < 0)
+		{
+			char aError[AV_ERROR_MAX_STRING_SIZE];
+			av_strerror(RecvResult, aError, sizeof(aError));
+			log_error("videorecorder", "Could not receive %s packet from encoder: %s", pContext, aError);
+			m_EncodeError.store(true, std::memory_order_release);
+			return false;
+		}
+
+		/* rescale output packet timestamp values from codec to stream timebase */
+		av_packet_rescale_ts(pPacket, pStream->m_pCodecContext->time_base, pStream->m_pStream->time_base);
+		pPacket->stream_index = pStream->m_pStream->index;
+
+		const int WriteFrameResult = av_interleaved_write_frame(m_pFormatContext, pPacket);
+		if(WriteFrameResult < 0)
+		{
+			char aError[AV_ERROR_MAX_STRING_SIZE];
+			av_strerror(WriteFrameResult, aError, sizeof(aError));
+			log_error("videorecorder", "Could not write %s packet to container: %s", pContext, aError);
+			m_EncodeError.store(true, std::memory_order_release);
+			return false;
+		}
+	}
+}
+
 void CVideo::WriteFrame(COutputStream *pStream, size_t ThreadIndex)
 {
 	AVPacket *pPacket = av_packet_alloc();
 	if(pPacket == nullptr)
 	{
 		log_error("videorecorder", "Could not allocate packet");
+		m_EncodeError.store(true, std::memory_order_release);
 		return;
 	}
 
 	pPacket->data = nullptr;
 	pPacket->size = 0;
 
-	avcodec_send_frame(pStream->m_pCodecContext, pStream->m_vpFrames[ThreadIndex]);
-	int RecvResult = 0;
-	do
-	{
-		RecvResult = avcodec_receive_packet(pStream->m_pCodecContext, pPacket);
-		if(!RecvResult)
-		{
-			/* rescale output packet timestamp values from codec to stream timebase */
-			av_packet_rescale_ts(pPacket, pStream->m_pCodecContext->time_base, pStream->m_pStream->time_base);
-			pPacket->stream_index = pStream->m_pStream->index;
-
-			const int WriteFrameResult = av_interleaved_write_frame(m_pFormatContext, pPacket);
-			if(WriteFrameResult < 0)
-			{
-				char aError[AV_ERROR_MAX_STRING_SIZE];
-				av_strerror(WriteFrameResult, aError, sizeof(aError));
-				log_error("videorecorder", "Could not write video frame: %s", aError);
-			}
-		}
-		else
-		{
-			break;
-		}
-	} while(true);
-
-	if(RecvResult && RecvResult != AVERROR(EAGAIN))
+	const char *pContext = pStream == &m_VideoStream ? "video" : "audio";
+	const int SendResult = SendFrameDraining(pStream, pStream->m_vpFrames[ThreadIndex], pPacket, pContext);
+	if(SendResult < 0)
 	{
 		char aError[AV_ERROR_MAX_STRING_SIZE];
-		av_strerror(RecvResult, aError, sizeof(aError));
-		log_error("videorecorder", "Could not encode video frame: %s", aError);
+		av_strerror(SendResult, aError, sizeof(aError));
+		log_error("videorecorder", "Could not send %s frame to encoder: %s", pContext, aError);
+		m_EncodeError.store(true, std::memory_order_release);
+	}
+	else
+	{
+		ReceiveAndWritePackets(pStream, pPacket, pContext);
 	}
 
 	av_packet_free(&pPacket);
@@ -1060,42 +1143,24 @@ void CVideo::FinishFrames(COutputStream *pStream)
 	if(pPacket == nullptr)
 	{
 		log_error("videorecorder", "Could not allocate packet");
+		m_EncodeError.store(true, std::memory_order_release);
 		return;
 	}
 
 	pPacket->data = nullptr;
 	pPacket->size = 0;
 
-	avcodec_send_frame(pStream->m_pCodecContext, nullptr);
-	int RecvResult = 0;
-	do
-	{
-		RecvResult = avcodec_receive_packet(pStream->m_pCodecContext, pPacket);
-		if(!RecvResult)
-		{
-			/* rescale output packet timestamp values from codec to stream timebase */
-			av_packet_rescale_ts(pPacket, pStream->m_pCodecContext->time_base, pStream->m_pStream->time_base);
-			pPacket->stream_index = pStream->m_pStream->index;
-
-			const int WriteFrameResult = av_interleaved_write_frame(m_pFormatContext, pPacket);
-			if(WriteFrameResult < 0)
-			{
-				char aError[AV_ERROR_MAX_STRING_SIZE];
-				av_strerror(WriteFrameResult, aError, sizeof(aError));
-				log_error("videorecorder", "Could not write video frame: %s", aError);
-			}
-		}
-		else
-		{
-			break;
-		}
-	} while(true);
-
-	if(RecvResult && RecvResult != AVERROR_EOF)
+	const int SendResult = SendFrameDraining(pStream, nullptr, pPacket, "flushed");
+	if(SendResult < 0)
 	{
 		char aError[AV_ERROR_MAX_STRING_SIZE];
-		av_strerror(RecvResult, aError, sizeof(aError));
-		log_error("videorecorder", "Could not finish recording: %s", aError);
+		av_strerror(SendResult, aError, sizeof(aError));
+		log_error("videorecorder", "Could not flush encoder: %s", aError);
+		m_EncodeError.store(true, std::memory_order_release);
+	}
+	else
+	{
+		ReceiveAndWritePackets(pStream, pPacket, "flushed");
 	}
 
 	av_packet_free(&pPacket);
