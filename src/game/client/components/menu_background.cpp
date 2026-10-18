@@ -197,8 +197,9 @@ std::array<vec2, CMenuBackground::NUM_POS> GenerateMenuBackgroundPositions()
 		Positions[CMenuBackground::POS_BROWSER_CUSTOM0 + i] = vec2(500.0f + (75.0f * (float)i), 650.0f - (75.0f * (float)i));
 	for(int i = 0; i < CMenuBackground::POS_SETTINGS_RESERVED_NUM; ++i)
 		Positions[CMenuBackground::POS_SETTINGS_RESERVED0 + i] = vec2(0, 0);
-	for(int i = 0; i < CMenuBackground::POS_RESERVED_NUM; ++i)
-		Positions[CMenuBackground::POS_RESERVED0 + i] = vec2(0, 0);
+	Positions[CMenuBackground::POS_RESERVED0] = vec2(1500.0f, 1300.0f);
+	Positions[CMenuBackground::POS_RESERVED1] = vec2(1100.0f, 1000.0f);
+	Positions[CMenuBackground::POS_RESERVED2] = vec2(0, 0);
 
 	return Positions;
 }
