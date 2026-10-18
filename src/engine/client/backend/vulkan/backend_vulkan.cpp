@@ -14,6 +14,7 @@
 #include <engine/client/backend/vulkan/vulkan_recording_batch.h>
 #include <engine/client/backend/vulkan/vulkan_render_workers.h>
 #include <engine/client/backend/vulkan/vulkan_rendering_lifecycle.h>
+#include <engine/client/backend/vulkan/vulkan_result.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_threaded.h>
 #include <engine/gfx/image_manipulation.h>
@@ -1529,81 +1530,15 @@ protected:
 	}
 #endif
 
-	const char *CheckVulkanCriticalError(VkResult CallResult)
+	const char *CheckVulkanCriticalError(VkResult CallResult) noexcept
 	{
-		// 多个录制线程可能同时失败；返回的诊断字符串不能共用可变缓冲。
-		static thread_local std::string s_ErrorHelper;
-		const char *pCriticalError = nullptr;
-		switch(CallResult)
-		{
-		case VK_ERROR_OUT_OF_HOST_MEMORY:
-			pCriticalError = "host ran out of memory";
-			dbg_msg("vulkan", "%s", pCriticalError);
-			break;
-		case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-			pCriticalError = "device ran out of memory";
-			dbg_msg("vulkan", "%s", pCriticalError);
-			break;
-		case VK_ERROR_DEVICE_LOST:
-			pCriticalError = "device lost";
-			dbg_msg("vulkan", "%s", pCriticalError);
+		return vulkan_diagnostics::DescribeResult(CallResult, IsVerbose(), m_RecreateSwapChain, [this](const char *pWarning) { SetWarning(EGfxWarningType::GFX_WARNING_MISSING_EXTENSION, pWarning); }, [this] {
 #ifdef VK_EXT_device_fault
 			LogDeviceFaultInfo();
 #else
 			log_error("gfx/vulkan", "无法获取详细故障信息：编译时缺少 VK_EXT_device_fault 支持（Vulkan 头文件过旧）。");
 #endif
-			break;
-		case VK_ERROR_OUT_OF_DATE_KHR:
-		{
-			if(IsVerbose())
-			{
-				dbg_msg("vulkan", "queueing swap chain recreation because the current is out of date");
-			}
-			m_RecreateSwapChain = true;
-			break;
-		}
-		case VK_ERROR_SURFACE_LOST_KHR:
-			dbg_msg("vulkan", "surface lost");
-			break;
-		/*case VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT:
-			dbg_msg("vulkan", "fullscreen exclusive mode lost");
-			break;*/
-		case VK_ERROR_INCOMPATIBLE_DRIVER:
-			pCriticalError = "no compatible driver found. Vulkan 1.1 is required.";
-			dbg_msg("vulkan", "%s", pCriticalError);
-			break;
-		case VK_ERROR_INITIALIZATION_FAILED:
-			pCriticalError = "initialization failed for unknown reason.";
-			dbg_msg("vulkan", "%s", pCriticalError);
-			break;
-		case VK_ERROR_LAYER_NOT_PRESENT:
-			SetWarning(EGfxWarningType::GFX_WARNING_MISSING_EXTENSION, "One Vulkan layer was not present. (try to disable them)");
-			break;
-		case VK_ERROR_EXTENSION_NOT_PRESENT:
-			SetWarning(EGfxWarningType::GFX_WARNING_MISSING_EXTENSION, "One Vulkan extension was not present. (try to disable them)");
-			break;
-		case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
-			dbg_msg("vulkan", "native window in use");
-			break;
-		case VK_SUCCESS:
-			break;
-		case VK_SUBOPTIMAL_KHR:
-			if(IsVerbose())
-			{
-				dbg_msg("vulkan", "queueing swap chain recreation because the current is sub optimal");
-			}
-			m_RecreateSwapChain = true;
-			break;
-		default:
-			pCriticalError = "unknown error";
-			break;
-		}
-
-		if(pCriticalError == nullptr)
-			return nullptr;
-		s_ErrorHelper = pCriticalError;
-		s_ErrorHelper.append(" (VkResult ").append(std::to_string(CallResult)).append(")");
-		return s_ErrorHelper.c_str();
+		});
 	}
 
 	[[nodiscard]] bool CheckVulkanResult(VkResult Result, EGfxErrorType ErrorType, const char *pOperation)

@@ -3091,6 +3091,7 @@ if(CLIENT)
     backend/vulkan/vulkan_recording_batch.h
     backend/vulkan/vulkan_render_workers.h
     backend/vulkan/vulkan_rendering_lifecycle.h
+    backend/vulkan/vulkan_result.h
     backend_egl.cpp
     backend_egl.h
     backend_sdl.cpp
@@ -5337,6 +5338,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
 
   if(CLIENT AND VULKAN)
     list(APPEND TESTS src/test/unit/engine/graphics/vulkan_rendering_lifecycle_test.cpp)
+    list(APPEND TESTS src/test/unit/engine/graphics/vulkan_result_test.cpp)
   endif()
 
   if(METAL)
