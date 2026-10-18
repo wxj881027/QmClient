@@ -152,6 +152,7 @@ public:
 	bool Filtered(const char *pCommunityId) const override;
 	bool Empty() const override;
 	void Clean(const std::vector<CCommunity> &vAllowedCommunities);
+	void Swap(CFavoriteCommunityFilterList &Other) noexcept { m_vEntries.swap(Other.m_vEntries); }
 	void Save(IConfigManager *pConfigManager) const;
 	const std::vector<CCommunityId> &Entries() const;
 
@@ -168,6 +169,7 @@ public:
 	bool Filtered(const char *pCommunityId) const override;
 	bool Empty() const override;
 	void Clean(const std::vector<CCommunity> &vAllowedCommunities);
+	void Swap(CExcludedCommunityFilterList &Other) noexcept { m_Entries.swap(Other.m_Entries); }
 	void Save(IConfigManager *pConfigManager) const;
 
 private:
@@ -203,6 +205,11 @@ public:
 	void Clean(const std::vector<CCommunity> &vAllowedCommunities);
 	// Clean 的实现主体：以"当前存在的社区"为输入，便于单测覆盖。
 	void CleanCountries(const std::set<CCommunityId> &vExistingCommunityIds);
+	void Swap(CExcludedCommunityCountryFilterList &Other) noexcept
+	{
+		m_Entries.swap(Other.m_Entries);
+		m_AllowedCountries.swap(Other.m_AllowedCountries);
+	}
 	void Save(IConfigManager *pConfigManager) const;
 
 private:
@@ -232,6 +239,7 @@ public:
 	bool Filtered(const char *pTypeName) const override;
 	bool Empty() const override;
 	void Clean(const std::vector<CCommunity> &vAllowedCommunities);
+	void Swap(CExcludedCommunityTypeFilterList &Other) noexcept { m_Entries.swap(Other.m_Entries); }
 	void Save(IConfigManager *pConfigManager) const;
 
 private:
@@ -241,10 +249,12 @@ private:
 
 class CCommunityCache : public ICommunityCache
 {
+	friend class CServerBrowser;
 	IServerBrowser *m_pServerBrowser;
 	std::optional<SHA256_DIGEST> m_InfoSha256;
 	int m_LastType = IServerBrowser::NUM_TYPES; // initial value does not appear normally, marking uninitialized cache
 	unsigned m_SelectedCommunitiesHash = 0;
+	bool m_UpdateFailed = false;
 	std::vector<const CCommunity *> m_vpSelectedCommunities;
 	std::vector<const CCommunityCountry *> m_vpSelectableCountries;
 	std::vector<const CCommunityType *> m_vpSelectableTypes;
@@ -252,6 +262,8 @@ class CCommunityCache : public ICommunityCache
 	bool m_CountryTypesFilterAvailable = false;
 	// 社区按人数重排会交换 ID 所在的槽位，筛选键由缓存自己保存。
 	char m_aCountryTypeFilterKey[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
+	void Prepare(std::vector<const CCommunity *> vpSelected, std::optional<SHA256_DIGEST> InfoSha256, int Type, unsigned CommunitiesHash);
+	void Swap(CCommunityCache &Other) noexcept;
 
 public:
 	CCommunityCache(IServerBrowser *pServerBrowser) :
@@ -261,13 +273,16 @@ public:
 	}
 
 	void Update(bool Force) override;
-	// 社区数据（m_vCommunities 及其内部容器）被整体重建后必须调用：缓存持有的是指向这些容器的
-	// 裸指针，而 Update 只在 DDNet info 摘要/社区 ID 哈希/页面类型变化时才重建，重建后容器地址
-	// 变化时旧指针会指向已释放内存。复位标记以强制下一次 Update 重新构建。
+	// 作废时立即清除借用指针；下次重建即使失败，也不能再向 UI 返回旧容器中的元素。
 	void Invalidate() noexcept
 	{
 		m_InfoSha256.reset();
 		m_LastType = IServerBrowser::NUM_TYPES;
+		m_vpSelectedCommunities.clear();
+		m_vpSelectableCountries.clear();
+		m_vpSelectableTypes.clear();
+		m_AnyRanksAvailable = false;
+		m_CountryTypesFilterAvailable = false;
 	}
 	const std::vector<const CCommunity *> &SelectedCommunities() const override { return m_vpSelectedCommunities; }
 	const std::vector<const CCommunityCountry *> &SelectableCountries() const override { return m_vpSelectableCountries; }
@@ -309,9 +324,7 @@ public:
 	void SetQmClientServerCounts(const std::unordered_map<std::string, int> &Counts) override;
 
 	const json_value *LoadDDNetInfo();
-	void LoadDDNetInfoJson();
-	void LoadDDNetLocation();
-	void LoadDDNetServers();
+	bool LoadDDNetServers();
 	void UpdateServerFilteredPlayers(CServerInfo *pInfo) const;
 	void UpdateServerFriends(CServerInfo *pInfo) const;
 	void UpdateServerCommunity(CServerInfo *pInfo) const;
@@ -364,6 +377,7 @@ private:
 	class CServerListUpdate;
 	struct CSortBackup;
 	class CSortUpdate;
+	class CCommunityUpdate;
 
 	CNetClient *m_pNetClient = nullptr;
 	IConfigManager *m_pConfigManager = nullptr;
@@ -405,6 +419,8 @@ private:
 
 	json_value *m_pDDNetInfo = nullptr;
 	std::optional<SHA256_DIGEST> m_DDNetInfoSha256;
+	bool m_CommunityUpdateFailed = false;
+	int64_t m_CommunityUpdateRetryAt = 0;
 
 	CServerEntry *m_pFirstReqServer; // request list
 	CServerEntry *m_pLastReqServer;

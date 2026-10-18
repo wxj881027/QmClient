@@ -91,6 +91,107 @@ namespace
 		return AddressKey;
 	}
 
+	const CCommunity *FindCommunity(const std::vector<CCommunity> &vCommunities, const char *pId)
+	{
+		const auto Found = std::find_if(vCommunities.begin(), vCommunities.end(), [pId](const auto &Community) {
+			return str_comp(Community.Id(), pId) == 0;
+		});
+		return Found == vCommunities.end() ? nullptr : &*Found;
+	}
+
+	std::vector<const CCommunity *> CollectFavorites(const std::vector<CCommunity> &vCommunities, const CFavoriteCommunityFilterList &Favorites)
+	{
+		std::vector<const CCommunity *> vpResult;
+		for(const auto &Id : Favorites.Entries())
+		{
+			if(const auto *pCommunity = FindCommunity(vCommunities, Id.Id()))
+				vpResult.push_back(pCommunity);
+		}
+		return vpResult;
+	}
+
+	std::vector<const CCommunity *> CollectCurrentCommunities(const std::vector<CCommunity> &vCommunities, int Type, const CFavoriteCommunityFilterList &Favorites, const CExcludedCommunityFilterList &Excluded)
+	{
+		std::vector<const CCommunity *> vpResult;
+		if(Type == IServerBrowser::TYPE_INTERNET || Type == IServerBrowser::TYPE_FAVORITES)
+		{
+			for(const auto &Community : vCommunities)
+			{
+				if(!Excluded.Filtered(Community.Id()))
+					vpResult.push_back(&Community);
+			}
+		}
+		else if(Type >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && Type <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
+		{
+			const auto vpFavorites = CollectFavorites(vCommunities, Favorites);
+			const size_t Index = Type - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
+			if(Index < vpFavorites.size())
+				vpResult.push_back(vpFavorites[Index]);
+		}
+		return vpResult;
+	}
+
+	void SetCommunityInfo(CServerInfo *pInfo, const std::unordered_map<NETADDR, CCommunityServer> &ServersByAddr)
+	{
+		for(int Index = 0; Index < pInfo->m_NumAddresses; ++Index)
+		{
+			const auto Found = ServersByAddr.find(CommunityAddressKey(pInfo->m_aAddresses[Index]));
+			if(Found != ServersByAddr.end())
+			{
+				str_copy(pInfo->m_aCommunityId, Found->second.CommunityId());
+				str_copy(pInfo->m_aCommunityCountry, Found->second.CountryName());
+				str_copy(pInfo->m_aCommunityType, Found->second.TypeName());
+				return;
+			}
+		}
+		str_copy(pInfo->m_aCommunityId, IServerBrowser::COMMUNITY_NONE);
+		str_copy(pInfo->m_aCommunityCountry, IServerBrowser::COMMUNITY_COUNTRY_NONE);
+		str_copy(pInfo->m_aCommunityType, IServerBrowser::COMMUNITY_TYPE_NONE);
+	}
+
+	void SetRankInfo(CServerInfo *pInfo, const std::vector<CCommunity> &vCommunities)
+	{
+		const auto *pCommunity = FindCommunity(vCommunities, pInfo->m_aCommunityId);
+		pInfo->m_HasRank = pCommunity == nullptr ? CServerInfo::RANK_UNAVAILABLE : pCommunity->HasRank(pInfo->m_aMap);
+	}
+
+	bool PreserveUnloadedCustomFilters(bool HasCustomSource)
+	{
+		return g_Config.m_QmCustomCommunitiesUrl[0] != '\0' && !HasCustomSource;
+	}
+
+	unsigned HashCurrentCommunities(const std::vector<CCommunity> &vCommunities, int Type, const CFavoriteCommunityFilterList &Favorites, const CExcludedCommunityFilterList &Excluded)
+	{
+		unsigned Hash = 5381;
+		if(Type == IServerBrowser::TYPE_INTERNET || Type == IServerBrowser::TYPE_FAVORITES)
+		{
+			// 每帧检查缓存时直接遍历，避免为了计算哈希创建临时指针数组。
+			for(const auto &Community : vCommunities)
+			{
+				if(!Excluded.Filtered(Community.Id()))
+					Hash = (Hash << 5) + Hash + str_quickhash(Community.Id());
+			}
+		}
+		else if(Type >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && Type <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
+		{
+			const size_t CommunityIndex = Type - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
+			size_t CurrentIndex = 0;
+			for(const auto &CommunityId : Favorites.Entries())
+			{
+				const CCommunity *pCommunity = FindCommunity(vCommunities, CommunityId.Id());
+				if(pCommunity == nullptr)
+					continue;
+				if(CurrentIndex == CommunityIndex)
+				{
+					Hash = (Hash << 5) + Hash + str_quickhash(pCommunity->Id());
+					break;
+				}
+				++CurrentIndex;
+			}
+		}
+		return Hash;
+	}
+
 } // namespace
 
 // 只备份筛选与排序会改写的字段；容量跨次复用，不复制服务器文本和客户端数组。
@@ -1697,6 +1798,8 @@ void CServerBrowser::CleanUp()
 
 void CServerBrowser::Update()
 {
+	if(m_CommunityUpdateFailed && UpdateNow() >= m_CommunityUpdateRetryAt)
+		LoadDDNetServers();
 	int64_t Timeout = time_freq();
 	int64_t Now = time_get();
 
@@ -1786,68 +1889,134 @@ void CServerBrowser::Update()
 	}
 }
 
+// 新 JSON、社区、筛选与缓存均先在本对象中准备；发布阶段不调用外部接口，也不再分配。
+class CServerBrowser::CCommunityUpdate
+{
+	struct CEntry
+	{
+		CServerEntry *m_pEntry;
+		char m_aCommunityId[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
+		char m_aCountry[CServerInfo::MAX_COMMUNITY_COUNTRY_LENGTH];
+		char m_aType[CServerInfo::MAX_COMMUNITY_TYPE_LENGTH];
+		CServerInfo::ERankState m_Rank;
+		int m_Latency;
+		bool m_Estimated;
+		CEntry(CServerEntry *pEntry, const CServerInfo &Info) :
+			m_pEntry(pEntry), m_Rank(Info.m_HasRank), m_Latency(Info.m_Latency), m_Estimated(Info.m_LatencyIsEstimated)
+		{
+			str_copy(m_aCommunityId, Info.m_aCommunityId);
+			str_copy(m_aCountry, Info.m_aCommunityCountry);
+			str_copy(m_aType, Info.m_aCommunityType);
+		}
+		void Publish() const noexcept
+		{
+			auto &Info = m_pEntry->m_Info;
+			str_copy(Info.m_aCommunityId, m_aCommunityId);
+			str_copy(Info.m_aCommunityCountry, m_aCountry);
+			str_copy(Info.m_aCommunityType, m_aType);
+			Info.m_HasRank = m_Rank;
+			Info.m_Latency = m_Latency;
+			Info.m_LatencyIsEstimated = m_Estimated;
+		}
+	};
+	CServerBrowser &m_Browser;
+	const json_value *m_pInfo;
+	std::optional<SHA256_DIGEST> m_InfoSha256;
+	bool m_ReloadLocation;
+	int m_OwnLocation;
+	int m_ServerlistType;
+	std::vector<CCommunity> m_vCommunities;
+	std::unordered_map<NETADDR, CCommunityServer> m_CommunityServersByAddr;
+	CFavoriteCommunityFilterList m_Favorites;
+	CExcludedCommunityFilterList m_Excluded;
+	CExcludedCommunityCountryFilterList m_Countries;
+	CExcludedCommunityTypeFilterList m_Types;
+	CCommunityCache m_Cache;
+	std::vector<CEntry> m_vEntries;
+
+public:
+	CCommunityUpdate(CServerBrowser &Browser, const json_value *pInfo, std::optional<SHA256_DIGEST> InfoSha256, bool ReloadLocation) :
+		m_Browser(Browser), m_pInfo(pInfo), m_InfoSha256(InfoSha256), m_ReloadLocation(ReloadLocation), m_OwnLocation(Browser.m_OwnLocation), m_ServerlistType(Browser.m_ServerlistType), m_Favorites(Browser.m_FavoriteCommunitiesFilter), m_Excluded(Browser.m_CommunitiesFilter), m_Countries(Browser.m_CountriesFilter), m_Types(Browser.m_TypesFilter), m_Cache(&Browser)
+	{
+	}
+	void Prepare();
+	void Commit() noexcept
+	{
+		m_Browser.m_vCommunities.swap(m_vCommunities);
+		m_Browser.m_CommunityServersByAddr.swap(m_CommunityServersByAddr);
+		m_Browser.m_FavoriteCommunitiesFilter.Swap(m_Favorites);
+		m_Browser.m_CommunitiesFilter.Swap(m_Excluded);
+		m_Browser.m_CountriesFilter.Swap(m_Countries);
+		m_Browser.m_TypesFilter.Swap(m_Types);
+		m_Browser.m_CommunityCache.Swap(m_Cache);
+		m_Browser.m_OwnLocation = m_OwnLocation;
+		m_Browser.m_ServerlistType = m_ServerlistType;
+		for(const auto &Entry : m_vEntries)
+			Entry.Publish();
+		m_Browser.RequestResort();
+		m_Browser.m_CommunityUpdateFailed = false;
+		m_Browser.m_CommunityUpdateRetryAt = 0;
+	}
+};
+
 const json_value *CServerBrowser::LoadDDNetInfo()
 {
-	LoadDDNetInfoJson();
-	const int PreviousOwnLocation = DetermineOwnLocation();
-	LoadDDNetLocation();
-	const int OwnLocation = DetermineOwnLocation();
-	const bool UpdateLatency = PreviousOwnLocation != OwnLocation;
-	LoadDDNetServers();
-	for(CServerEntry *pEntry : m_vpServerlist)
+	try
 	{
-		UpdateServerCommunity(&pEntry->m_Info);
-		UpdateServerRank(&pEntry->m_Info);
-		if(UpdateLatency)
+		void *pRawBuffer = nullptr;
+		unsigned Length = 0;
+		if(!m_pStorage->ReadFile(DDNET_INFO_FILE, IStorage::TYPE_SAVE, &pRawBuffer, &Length))
+			return LoadDDNetServers() ? m_pDDNetInfo : nullptr;
+		std::unique_ptr<void, decltype(&free)> pBuffer(pRawBuffer, free);
+		json_settings Settings{};
+		char aError[json_error_max];
+		std::unique_ptr<json_value, decltype(&json_value_free)> pInfo(
+			JsonParseEx(&Settings, static_cast<const json_char *>(pBuffer.get()), Length, aError), json_value_free);
+		if(!pInfo)
 		{
-			UpdateServerLatency(&pEntry->m_Info, OwnLocation);
+			log_error("serverbrowser", "invalid info json: '%s'", aError);
+			return nullptr;
 		}
+		if(pInfo->type != json_object)
+		{
+			log_error("serverbrowser", "invalid info root");
+			return nullptr;
+		}
+		const SHA256_DIGEST Digest = sha256(pBuffer.get(), Length);
+		CCommunityUpdate Update(*this, pInfo.get(), Digest, true);
+		Update.Prepare();
+		Update.Commit();
+		// JSON 所有权和摘要与准备好的元数据一起发布，失败的摘要不会阻止以后重试。
+		json_value *pOldInfo = m_pDDNetInfo;
+		m_pDDNetInfo = pInfo.release();
+		m_DDNetInfoSha256 = Digest;
+		json_value_free(pOldInfo);
+		return m_pDDNetInfo;
 	}
-	ValidateServerlistType();
-	RequestResort();
-	return m_pDDNetInfo;
-}
-
-void CServerBrowser::LoadDDNetInfoJson()
-{
-	void *pBuf;
-	unsigned Length;
-	if(!m_pStorage->ReadFile(DDNET_INFO_FILE, IStorage::TYPE_SAVE, &pBuf, &Length))
+	catch(...)
 	{
-		// Keep old info if available
-		return;
-	}
-
-	m_DDNetInfoSha256 = sha256(pBuf, Length);
-
-	json_value_free(m_pDDNetInfo);
-	json_settings JsonSettings{};
-	char aError[256];
-	m_pDDNetInfo = JsonParseEx(&JsonSettings, static_cast<json_char *>(pBuf), Length, aError);
-	free(pBuf);
-
-	if(m_pDDNetInfo == nullptr)
-	{
-		log_error("serverbrowser", "invalid info json: '%s'", aError);
-	}
-	else if(m_pDDNetInfo->type != json_object)
-	{
-		log_error("serverbrowser", "invalid info root");
-		json_value_free(m_pDDNetInfo);
-		m_pDDNetInfo = nullptr;
+		log_error("serverbrowser", "failed to load DDNet info; retaining previous info and communities");
+		return nullptr;
 	}
 }
 
-void CServerBrowser::LoadDDNetLocation()
+bool CServerBrowser::LoadDDNetServers()
 {
-	m_OwnLocation = CServerInfo::LOC_UNKNOWN;
-	if(m_pDDNetInfo)
+	try
 	{
-		const json_value &Location = (*m_pDDNetInfo)["location"];
-		if(Location.type != json_string || CServerInfo::ParseLocation(&m_OwnLocation, Location))
-		{
-			log_error("serverbrowser", "invalid location");
-		}
+		CCommunityUpdate Update(*this, m_pDDNetInfo, m_DDNetInfoSha256, false);
+		Update.Prepare();
+		Update.Commit();
+		return true;
+	}
+	catch(...)
+	{
+		if(!m_CommunityUpdateFailed)
+			log_error("serverbrowser", "failed to reload communities; retaining previous state and retrying");
+		m_CommunityUpdateFailed = true;
+		const int64_t Now = UpdateNow();
+		m_CommunityUpdateRetryAt = Now + std::min<int64_t>(time_freq(), INT64_MAX - Now);
+		return false;
 	}
 }
 
@@ -1950,17 +2119,13 @@ bool CServerBrowser::ParseCommunityFinishes(CCommunity *pCommunity, const json_v
 	return true;
 }
 
-void CServerBrowser::LoadDDNetServers()
+void CServerBrowser::CCommunityUpdate::Prepare()
 {
-	// Parse communities
-	m_vCommunities.clear();
-	m_CommunityServersByAddr.clear();
-
 	// TClient
 	std::vector<json_value *> vCommunities;
-	if(m_pDDNetInfo)
+	if(m_pInfo)
 	{
-		const json_value &Communities = (*m_pDDNetInfo)["communities"];
+		const json_value &Communities = (*m_pInfo)["communities"];
 		if(Communities.type == json_array)
 		{
 			vCommunities.insert(
@@ -1969,8 +2134,8 @@ void CServerBrowser::LoadDDNetServers()
 				Communities.u.array.values + Communities.u.array.length);
 		}
 	}
-	if(m_CustomCommunitiesFunction)
-		m_CustomCommunitiesFunction(vCommunities);
+	if(m_Browser.m_CustomCommunitiesFunction)
+		m_Browser.m_CustomCommunitiesFunction(vCommunities);
 
 	for(unsigned CommunityIndex = 0; CommunityIndex < vCommunities.size(); ++CommunityIndex)
 	{
@@ -2008,20 +2173,20 @@ void CServerBrowser::LoadDDNetServers()
 		// Backward compatibility.
 		if(pFinishes->type == json_none)
 		{
-			if(str_comp(Id, COMMUNITY_DDNET) == 0 && m_pDDNetInfo != nullptr)
+			if(str_comp(Id, COMMUNITY_DDNET) == 0 && m_pInfo != nullptr)
 			{
-				pFinishes = &(*m_pDDNetInfo)["maps"];
+				pFinishes = &(*m_pInfo)["maps"];
 			}
 		}
 		if(pServers->type == json_none)
 		{
-			if(str_comp(Id, COMMUNITY_DDNET) == 0 && m_pDDNetInfo != nullptr)
+			if(str_comp(Id, COMMUNITY_DDNET) == 0 && m_pInfo != nullptr)
 			{
-				pServers = &(*m_pDDNetInfo)["servers"];
+				pServers = &(*m_pInfo)["servers"];
 			}
-			else if(str_comp(Id, "kog") == 0 && m_pDDNetInfo != nullptr)
+			else if(str_comp(Id, "kog") == 0 && m_pInfo != nullptr)
 			{
-				pServers = &(*m_pDDNetInfo)["servers-kog"];
+				pServers = &(*m_pInfo)["servers-kog"];
 			}
 		}
 		if(false ||
@@ -2073,21 +2238,48 @@ void CServerBrowser::LoadDDNetServers()
 		m_vCommunities.push_back(std::move(NoneCommunity));
 	}
 
-	// 社区数据（含 m_CommunityServersByAddr）被整体重建，服务器上缓存的社区/国家信息需要重新计算，
-	// 否则旧值（例如 none）会残留到下一次服务器信息刷新，让服务器不受当前国家筛选约束。
-	for(CServerEntry *pEntry : m_vpServerlist)
+	if(!PreserveUnloadedCustomFilters(static_cast<bool>(m_Browser.m_CustomCommunitiesFunction)))
 	{
-		UpdateServerCommunity(&pEntry->m_Info);
-		UpdateServerRank(&pEntry->m_Info);
+		m_Favorites.Clean(m_vCommunities);
+		m_Excluded.Clean(m_vCommunities);
+		m_Countries.Clean(m_vCommunities);
+		m_Types.Clean(m_vCommunities);
 	}
-	RequestResort();
+	if(m_ServerlistType >= TYPE_FAVORITE_COMMUNITY_1 && m_ServerlistType <= TYPE_FAVORITE_COMMUNITY_5 &&
+		static_cast<size_t>(m_ServerlistType - TYPE_FAVORITE_COMMUNITY_1) >= CollectFavorites(m_vCommunities, m_Favorites).size())
+		m_ServerlistType = TYPE_INTERNET;
+	m_Cache.Prepare(CollectCurrentCommunities(m_vCommunities, m_ServerlistType, m_Favorites, m_Excluded),
+		m_InfoSha256, m_ServerlistType, HashCurrentCommunities(m_vCommunities, m_ServerlistType, m_Favorites, m_Excluded));
 
-	// 社区缓存里的 m_vpSelectedCommunities/m_vpSelectableCountries 是指向 m_vCommunities 内部的裸指针，
-	// 重建后必须让缓存重新构建，否则会读到已释放内存。
-	m_CommunityCache.Invalidate();
-
-	// Remove unknown elements from exclude lists
-	CleanFilters();
+	if(m_ReloadLocation)
+	{
+		m_OwnLocation = CServerInfo::LOC_UNKNOWN;
+		if(m_pInfo)
+		{
+			const auto &Location = (*m_pInfo)["location"];
+			if(Location.type != json_string || CServerInfo::ParseLocation(&m_OwnLocation, Location))
+				log_error("serverbrowser", "invalid location");
+		}
+	}
+	const int PreviousLocation = m_Browser.DetermineOwnLocation();
+	const int OwnLocation = str_comp(g_Config.m_BrLocation, "auto") == 0 ? m_OwnLocation : PreviousLocation;
+	m_vEntries.reserve(m_Browser.m_vpServerlist.size());
+	for(CServerEntry *pEntry : m_Browser.m_vpServerlist)
+	{
+		// 只复制归属和延迟计算所需的输入，不复制客户端数组和服务器文本。
+		CServerInfo Info{};
+		Info.m_NumAddresses = pEntry->m_Info.m_NumAddresses;
+		mem_copy(Info.m_aAddresses, pEntry->m_Info.m_aAddresses, sizeof(Info.m_aAddresses));
+		str_copy(Info.m_aMap, pEntry->m_Info.m_aMap);
+		Info.m_Location = pEntry->m_Info.m_Location;
+		Info.m_Latency = pEntry->m_Info.m_Latency;
+		Info.m_LatencyIsEstimated = pEntry->m_Info.m_LatencyIsEstimated;
+		SetCommunityInfo(&Info, m_CommunityServersByAddr);
+		SetRankInfo(&Info, m_vCommunities);
+		if(PreviousLocation != OwnLocation)
+			m_Browser.UpdateServerLatency(&Info, OwnLocation);
+		m_vEntries.emplace_back(pEntry, Info);
+	}
 }
 
 void CServerBrowser::UpdateServerFilteredPlayers(CServerInfo *pInfo) const
@@ -2118,26 +2310,12 @@ void CServerBrowser::UpdateServerFriends(CServerInfo *pInfo) const
 
 void CServerBrowser::UpdateServerCommunity(CServerInfo *pInfo) const
 {
-	for(int AddressIndex = 0; AddressIndex < pInfo->m_NumAddresses; AddressIndex++)
-	{
-		const auto Community = m_CommunityServersByAddr.find(CommunityAddressKey(pInfo->m_aAddresses[AddressIndex]));
-		if(Community != m_CommunityServersByAddr.end())
-		{
-			str_copy(pInfo->m_aCommunityId, Community->second.CommunityId());
-			str_copy(pInfo->m_aCommunityCountry, Community->second.CountryName());
-			str_copy(pInfo->m_aCommunityType, Community->second.TypeName());
-			return;
-		}
-	}
-	str_copy(pInfo->m_aCommunityId, COMMUNITY_NONE);
-	str_copy(pInfo->m_aCommunityCountry, COMMUNITY_COUNTRY_NONE);
-	str_copy(pInfo->m_aCommunityType, COMMUNITY_TYPE_NONE);
+	SetCommunityInfo(pInfo, m_CommunityServersByAddr);
 }
 
 void CServerBrowser::UpdateServerRank(CServerInfo *pInfo) const
 {
-	const CCommunity *pCommunity = Community(pInfo->m_aCommunityId);
-	pInfo->m_HasRank = pCommunity == nullptr ? CServerInfo::RANK_UNAVAILABLE : pCommunity->HasRank(pInfo->m_aMap);
+	SetRankInfo(pInfo, m_vCommunities);
 }
 
 void CServerBrowser::UpdateServerLatency(CServerInfo *pInfo, int OwnLocation) const
@@ -2226,7 +2404,7 @@ bool CServerBrowser::IsGettingServerlist() const
 
 bool CServerBrowser::IsServerlistError() const
 {
-	return m_HttpUpdateFailed || m_SortUpdateFailed || m_pHttp->IsError();
+	return m_HttpUpdateFailed || m_SortUpdateFailed || m_CommunityUpdateFailed || m_CommunityCache.m_UpdateFailed || m_pHttp->IsError();
 }
 
 bool CServerBrowser::IsServerlistStale() const
@@ -2286,117 +2464,49 @@ const std::vector<CCommunity> &CServerBrowser::Communities() const
 
 const CCommunity *CServerBrowser::Community(const char *pCommunityId) const
 {
-	const auto Community = std::find_if(Communities().begin(), Communities().end(), [pCommunityId](const auto &Elem) {
-		return str_comp(Elem.Id(), pCommunityId) == 0;
-	});
-	return Community == Communities().end() ? nullptr : &(*Community);
+	return FindCommunity(m_vCommunities, pCommunityId);
 }
 
 std::vector<const CCommunity *> CServerBrowser::SelectedCommunities() const
 {
-	std::vector<const CCommunity *> vpSelected;
-	for(const auto &Community : Communities())
-	{
-		if(!CommunitiesFilter().Filtered(Community.Id()))
-		{
-			vpSelected.push_back(&Community);
-		}
-	}
-	return vpSelected;
+	return CollectCurrentCommunities(m_vCommunities, TYPE_INTERNET, m_FavoriteCommunitiesFilter, m_CommunitiesFilter);
 }
 
 std::vector<const CCommunity *> CServerBrowser::FavoriteCommunities() const
 {
-	// This is done differently than SelectedCommunities because the favorite
-	// communities should be returned in the order specified by the user.
-	std::vector<const CCommunity *> vpFavorites;
-	for(const auto &CommunityId : FavoriteCommunitiesFilter().Entries())
-	{
-		const CCommunity *pCommunity = Community(CommunityId.Id());
-		if(pCommunity)
-		{
-			vpFavorites.push_back(pCommunity);
-		}
-	}
-	return vpFavorites;
+	return CollectFavorites(m_vCommunities, m_FavoriteCommunitiesFilter);
 }
 
 std::vector<const CCommunity *> CServerBrowser::CurrentCommunities() const
 {
-	if(m_ServerlistType == IServerBrowser::TYPE_INTERNET || m_ServerlistType == IServerBrowser::TYPE_FAVORITES)
-	{
-		return SelectedCommunities();
-	}
-	else if(m_ServerlistType >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && m_ServerlistType <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
-	{
-		const size_t CommunityIndex = m_ServerlistType - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
-		std::vector<const CCommunity *> vpFavoriteCommunities = FavoriteCommunities();
-		dbg_assert(CommunityIndex < vpFavoriteCommunities.size(), "Invalid favorite community serverbrowser type");
-		return {vpFavoriteCommunities[CommunityIndex]};
-	}
-	else
-	{
-		return {};
-	}
+	return CollectCurrentCommunities(m_vCommunities, m_ServerlistType, m_FavoriteCommunitiesFilter, m_CommunitiesFilter);
 }
 
 unsigned CServerBrowser::CurrentCommunitiesHash() const
 {
-	unsigned Hash = 5381;
-	if(m_ServerlistType == IServerBrowser::TYPE_INTERNET || m_ServerlistType == IServerBrowser::TYPE_FAVORITES)
-	{
-		// Keep this hot-path hash allocation-free. CurrentCommunities() returns
-		// a temporary vector, but this function runs once per browser frame even
-		// when the cache is unchanged.
-		for(const auto &Community : Communities())
-		{
-			if(!CommunitiesFilter().Filtered(Community.Id()))
-				Hash = (Hash << 5) + Hash + str_quickhash(Community.Id());
-		}
-	}
-	else if(m_ServerlistType >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && m_ServerlistType <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
-	{
-		const size_t CommunityIndex = m_ServerlistType - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
-		size_t CurrentIndex = 0;
-		for(const auto &CommunityId : FavoriteCommunitiesFilter().Entries())
-		{
-			const CCommunity *pCommunity = Community(CommunityId.Id());
-			if(pCommunity == nullptr)
-				continue;
-			if(CurrentIndex == CommunityIndex)
-			{
-				Hash = (Hash << 5) + Hash + str_quickhash(pCommunity->Id());
-				break;
-			}
-			++CurrentIndex;
-		}
-	}
-	return Hash;
+	return HashCurrentCommunities(m_vCommunities, m_ServerlistType, m_FavoriteCommunitiesFilter, m_CommunitiesFilter);
 }
 
-void CCommunityCache::Update(bool Force)
+void CCommunityCache::Swap(CCommunityCache &Other) noexcept
 {
-	const unsigned CommunitiesHash = m_pServerBrowser->CurrentCommunitiesHash();
-	const bool TypeChanged = m_LastType != m_pServerBrowser->GetCurrentType();
-	const bool CurrentCommunitiesChanged = m_LastType == m_pServerBrowser->GetCurrentType() && m_SelectedCommunitiesHash != CommunitiesHash;
-	if(CurrentCommunitiesChanged && m_pServerBrowser->GetCurrentType() >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && m_pServerBrowser->GetCurrentType() <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
-	{
-		// Favorite community was changed while its type is active,
-		// refresh to get correct serverlist for updated community.
-		m_pServerBrowser->Refresh(m_pServerBrowser->GetCurrentType(), true);
-	}
+	std::swap(m_InfoSha256, Other.m_InfoSha256);
+	std::swap(m_LastType, Other.m_LastType);
+	std::swap(m_SelectedCommunitiesHash, Other.m_SelectedCommunitiesHash);
+	std::swap(m_UpdateFailed, Other.m_UpdateFailed);
+	m_vpSelectedCommunities.swap(Other.m_vpSelectedCommunities);
+	m_vpSelectableCountries.swap(Other.m_vpSelectableCountries);
+	m_vpSelectableTypes.swap(Other.m_vpSelectableTypes);
+	std::swap(m_AnyRanksAvailable, Other.m_AnyRanksAvailable);
+	std::swap(m_CountryTypesFilterAvailable, Other.m_CountryTypesFilterAvailable);
+	std::swap(m_aCountryTypeFilterKey, Other.m_aCountryTypeFilterKey);
+}
 
-	if(!Force && m_InfoSha256 == m_pServerBrowser->DDNetInfoSha256() &&
-		!CurrentCommunitiesChanged && !TypeChanged)
-	{
-		return;
-	}
-
-	m_InfoSha256 = m_pServerBrowser->DDNetInfoSha256();
-	m_LastType = m_pServerBrowser->GetCurrentType();
+void CCommunityCache::Prepare(std::vector<const CCommunity *> vpSelected, std::optional<SHA256_DIGEST> InfoSha256, int Type, unsigned CommunitiesHash)
+{
+	m_vpSelectedCommunities = std::move(vpSelected);
+	m_InfoSha256 = InfoSha256;
+	m_LastType = Type;
 	m_SelectedCommunitiesHash = CommunitiesHash;
-	m_vpSelectedCommunities = m_pServerBrowser->CurrentCommunities();
-
 	m_vpSelectableCountries.clear();
 	m_vpSelectableTypes.clear();
 	for(const CCommunity *pCommunity : m_vpSelectedCommunities)
@@ -2431,19 +2541,40 @@ void CCommunityCache::Update(bool Force)
 	m_CountryTypesFilterAvailable = (!m_vpSelectableCountries.empty() || !m_vpSelectableTypes.empty()) &&
 					(m_vpSelectedCommunities.size() != 1 || str_comp(m_vpSelectedCommunities[0]->Id(), IServerBrowser::COMMUNITY_NONE) != 0);
 
-	if(m_pServerBrowser->GetCurrentType() >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && m_pServerBrowser->GetCurrentType() <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
-	{
-		const size_t CommunityIndex = m_pServerBrowser->GetCurrentType() - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
-		std::vector<const CCommunity *> vpFavoriteCommunities = m_pServerBrowser->FavoriteCommunities();
-		dbg_assert(CommunityIndex < vpFavoriteCommunities.size(), "Invalid favorite community serverbrowser type");
-		str_copy(m_aCountryTypeFilterKey, vpFavoriteCommunities[CommunityIndex]->Id());
-	}
+	if(Type >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && Type <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5 && !m_vpSelectedCommunities.empty())
+		str_copy(m_aCountryTypeFilterKey, m_vpSelectedCommunities.front()->Id());
 	else
-	{
 		str_copy(m_aCountryTypeFilterKey, IServerBrowser::COMMUNITY_ALL);
-	}
+}
 
-	m_pServerBrowser->CleanFilters();
+void CCommunityCache::Update(bool Force)
+{
+	try
+	{
+		unsigned CommunitiesHash = m_pServerBrowser->CurrentCommunitiesHash();
+		int Type = m_pServerBrowser->GetCurrentType();
+		const bool SelectionChanged = m_LastType == Type && m_SelectedCommunitiesHash != CommunitiesHash;
+		if(SelectionChanged && Type >= IServerBrowser::TYPE_FAVORITE_COMMUNITY_1 && Type <= IServerBrowser::TYPE_FAVORITE_COMMUNITY_5)
+		{
+			m_pServerBrowser->Refresh(Type, true);
+			// Refresh 中的排序可以作废本缓存，准备时重新读取最终社区顺序与页面。
+			CommunitiesHash = m_pServerBrowser->CurrentCommunitiesHash();
+			Type = m_pServerBrowser->GetCurrentType();
+		}
+		if(!Force && !m_UpdateFailed && m_InfoSha256 == m_pServerBrowser->DDNetInfoSha256() &&
+			m_LastType == Type && m_SelectedCommunitiesHash == CommunitiesHash)
+			return;
+		CCommunityCache Prepared(m_pServerBrowser);
+		Prepared.Prepare(m_pServerBrowser->CurrentCommunities(), m_pServerBrowser->DDNetInfoSha256(), Type, CommunitiesHash);
+		m_pServerBrowser->CleanFilters();
+		Swap(Prepared);
+	}
+	catch(...)
+	{
+		if(!m_UpdateFailed)
+			log_error("serverbrowser", "failed to rebuild community cache; retaining previous state and retrying");
+		m_UpdateFailed = true;
+	}
 }
 
 void CFavoriteCommunityFilterList::Add(const char *pCommunityId)
@@ -2983,23 +3114,21 @@ void CExcludedCommunityTypeFilterList::Save(IConfigManager *pConfigManager) cons
 
 void CServerBrowser::CleanFilters()
 {
-	// Keep filters if we failed to load any communities
-	if(Communities().empty())
+	if(m_vCommunities.empty() || PreserveUnloadedCustomFilters(static_cast<bool>(m_CustomCommunitiesFunction)))
 		return;
-
-	// In TClient custom communities are initialized after the first DDNet info
-	// load. Preserve unknown community filters until that additional community
-	// list is available, otherwise valid custom entries from the config are
-	// cleaned too early and get lost on next save.
-	const bool CustomCommunitiesCanStillBeLoaded =
-		g_Config.m_QmCustomCommunitiesUrl[0] != '\0' && m_CustomCommunitiesFunction == nullptr;
-	if(CustomCommunitiesCanStillBeLoaded)
-		return;
-
-	FavoriteCommunitiesFilter().Clean(Communities());
-	CommunitiesFilter().Clean(Communities());
-	CountriesFilter().Clean(Communities());
-	TypesFilter().Clean(Communities());
+	// 清理可能分配集合；所有列表准备成功后才同时替换，避免只删除一部分用户筛选。
+	auto Favorites = m_FavoriteCommunitiesFilter;
+	auto Excluded = m_CommunitiesFilter;
+	auto Countries = m_CountriesFilter;
+	auto Types = m_TypesFilter;
+	Favorites.Clean(m_vCommunities);
+	Excluded.Clean(m_vCommunities);
+	Countries.Clean(m_vCommunities);
+	Types.Clean(m_vCommunities);
+	m_FavoriteCommunitiesFilter.Swap(Favorites);
+	m_CommunitiesFilter.Swap(Excluded);
+	m_CountriesFilter.Swap(Countries);
+	m_TypesFilter.Swap(Types);
 }
 
 bool CServerBrowser::IsRegistered(const NETADDR &Addr)

@@ -4,9 +4,17 @@
 #include <engine/client/serverbrowser.h>
 #include <engine/shared/json.h>
 
+#include <utility>
+
 class CServerBrowserTestAccess
 {
 public:
+	static void SetStorage(CServerBrowser &Browser, IStorage *pStorage) { Browser.m_pStorage = pStorage; }
+	static const json_value *Info(const CServerBrowser &Browser) { return Browser.m_pDDNetInfo; }
+	static void SetCustomSource(CServerBrowser &Browser, std::function<void(std::vector<json_value *> &)> Source)
+	{
+		Browser.m_CustomCommunitiesFunction = std::move(Source);
+	}
 	static void Initialize(CServerBrowser &Browser, IFriends *pFriends, IFavorites *pFavorites)
 	{
 		Browser.m_pFriends = pFriends;
