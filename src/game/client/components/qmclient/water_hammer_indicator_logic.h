@@ -1,7 +1,16 @@
 #ifndef GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H
 #define GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H
 
+#include <generated/protocol.h>
+
 #include <game/mapitems.h>
+
+struct SQmWaterHammerInputState
+{
+	bool m_Received = false;
+	int m_WantedWeapon = 0;
+	int m_Fire = 0;
+};
 
 // 水域卡锤标记的纯判定逻辑，独立于客户端组件，便于单元测试。
 inline bool QmIsWaterHammerPenaltyTile(const int Tile)
@@ -14,6 +23,18 @@ inline bool QmShouldMarkWaterHammer(const int FreezeEnd, const bool LiveFrozen, 
 {
 	const bool Frozen = FreezeEnd != 0 || LiveFrozen;
 	return Frozen && HammerRequested && FireHeld;
+}
+
+inline bool QmShouldMarkWaterHammer(const int FreezeEnd, const bool LiveFrozen, const int CurrentWeapon, const SQmWaterHammerInputState &PreInput, const CNetObj_PlayerInput *pLocalInput)
+{
+	if(!pLocalInput && !PreInput.m_Received)
+		return false;
+
+	// 本地保留的分身输入优先，避免依赖切换角色后未重新广播的预输入。
+	const int WantedWeapon = pLocalInput ? pLocalInput->m_WantedWeapon : PreInput.m_WantedWeapon;
+	const int Fire = pLocalInput ? pLocalInput->m_Fire : PreInput.m_Fire;
+	const bool HammerRequested = WantedWeapon == WEAPON_HAMMER + 1 || CurrentWeapon == WEAPON_HAMMER;
+	return QmShouldMarkWaterHammer(FreezeEnd, LiveFrozen, HammerRequested, (Fire & 1) != 0);
 }
 
 #endif // GAME_CLIENT_COMPONENTS_QMCLIENT_WATER_HAMMER_INDICATOR_LOGIC_H
