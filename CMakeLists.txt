@@ -5042,6 +5042,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/client/serverbrowser_test.cpp
     src/test/integration/client/serverbrowser_ping_cache_test.cpp
     src/test/integration/client/serverbrowser_publication_test.cpp
+    src/test/integration/client/serverbrowser_sort_recovery_test.cpp
     src/test/integration/client/serverbrowser_community_load_test.cpp
     src/test/unit/client/qm_hang_snapshot_test.cpp
     src/test/integration/client/qm_hang_dump_report_test.cpp

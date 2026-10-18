@@ -93,8 +93,40 @@ namespace
 
 } // namespace
 
-CServerBrowser::CServerBrowser(std::function<int64_t()> HttpUpdateClock) :
-	m_HttpUpdateClock(std::move(HttpUpdateClock)),
+// 只备份筛选与排序会改写的字段；容量跨次复用，不复制服务器文本和客户端数组。
+struct CServerBrowser::CSortBackup
+{
+	struct CEntry
+	{
+		CServerEntry *m_pEntry;
+		TRISTATE m_Favorite;
+		TRISTATE m_FavoriteAllowPing;
+		int m_NumFilteredPlayers;
+		int m_QuickSearchHit;
+		int m_FriendState;
+		int m_FriendNum;
+		uint64_t m_FriendRevision;
+		bool m_FriendStateValid;
+		bool m_FriendStateIgnoreClan;
+		bool m_RestoreClientFriends;
+	};
+	std::vector<CEntry> m_vEntries;
+	std::vector<int> m_vClientFriends;
+	std::vector<int> m_vSorted;
+	std::vector<int> m_vCommunityPlayers;
+
+	void Clear() noexcept
+	{
+		// 事务结束后不保留借用条目，HTTP 重建和 CleanUp 可以正常释放旧列表。
+		m_vEntries.clear();
+		m_vClientFriends.clear();
+		m_vSorted.clear();
+		m_vCommunityPlayers.clear();
+	}
+};
+
+CServerBrowser::CServerBrowser(std::function<int64_t()> UpdateClock) :
+	m_UpdateClock(std::move(UpdateClock)),
 	m_CommunityCache(this),
 	m_CountriesFilter(&m_CommunityCache),
 	m_TypesFilter(&m_CommunityCache)
@@ -757,6 +789,126 @@ int CServerBrowser::SortHash() const
 	return i;
 }
 
+class CServerBrowser::CSortUpdate
+{
+	CServerBrowser &m_Browser;
+	uint64_t m_FriendRevision;
+	int m_NumSortedPlayers;
+	int m_Sorthash;
+	bool m_NeedResort;
+	bool m_Prepared = false;
+	bool m_Committed = false;
+
+public:
+	explicit CSortUpdate(CServerBrowser &Browser) :
+		m_Browser(Browser),
+		m_FriendRevision(Browser.m_FriendListRevision),
+		m_NumSortedPlayers(Browser.m_NumSortedPlayers),
+		m_Sorthash(Browser.m_Sorthash),
+		m_NeedResort(Browser.m_NeedResort)
+	{
+	}
+	CSortUpdate(const CSortUpdate &) = delete;
+	CSortUpdate &operator=(const CSortUpdate &) = delete;
+	void Prepare()
+	{
+		if(!m_Browser.m_pSortBackup)
+			m_Browser.m_pSortBackup = std::make_unique<CSortBackup>();
+		auto &Backup = *m_Browser.m_pSortBackup;
+		Backup.Clear();
+		Backup.m_vEntries.reserve(m_Browser.m_vpServerlist.size());
+		Backup.m_vSorted = m_Browser.m_vSortedServerlist;
+		Backup.m_vCommunityPlayers.reserve(m_Browser.m_vCommunities.size());
+		const uint64_t FriendsRevision = m_Browser.m_pFriends->Revision();
+		const bool IgnoreClan = g_Config.m_ClFriendsIgnoreClan != 0;
+		for(CServerEntry *pEntry : m_Browser.m_vpServerlist)
+		{
+			const CServerInfo &Info = pEntry->m_Info;
+			const bool UpdateFriends = !pEntry->m_FriendStateValid || pEntry->m_FriendStateRevision != FriendsRevision || pEntry->m_FriendStateIgnoreClan != IgnoreClan;
+			Backup.m_vEntries.push_back({pEntry, Info.m_Favorite, Info.m_FavoriteAllowPing,
+				Info.m_NumFilteredPlayers, Info.m_QuickSearchHit, Info.m_FriendState, Info.m_FriendNum,
+				pEntry->m_FriendStateRevision, pEntry->m_FriendStateValid, pEntry->m_FriendStateIgnoreClan, UpdateFriends});
+			// 好友缓存有效的服务器不会改写逐玩家状态，无需额外扫描或备份这些玩家。
+			if(UpdateFriends)
+			{
+				for(const auto &Client : Info.m_vClients)
+					Backup.m_vClientFriends.push_back(Client.m_FriendState);
+			}
+		}
+		for(const auto &Community : m_Browser.m_vCommunities)
+			Backup.m_vCommunityPlayers.push_back(Community.NumPlayers());
+		// 此前只准备备份；任一分配失败都未改动可见状态。
+		m_Prepared = true;
+	}
+	~CSortUpdate() noexcept
+	{
+		if(!m_Browser.m_pSortBackup)
+			return;
+		auto &Backup = *m_Browser.m_pSortBackup;
+		if(m_Prepared && !m_Committed)
+		{
+			size_t ClientIndex = 0;
+			for(const auto &Entry : Backup.m_vEntries)
+			{
+				auto &Info = Entry.m_pEntry->m_Info;
+				Info.m_Favorite = Entry.m_Favorite;
+				Info.m_FavoriteAllowPing = Entry.m_FavoriteAllowPing;
+				Info.m_NumFilteredPlayers = Entry.m_NumFilteredPlayers;
+				Info.m_QuickSearchHit = Entry.m_QuickSearchHit;
+				Info.m_FriendState = Entry.m_FriendState;
+				Info.m_FriendNum = Entry.m_FriendNum;
+				Entry.m_pEntry->m_FriendStateRevision = Entry.m_FriendRevision;
+				Entry.m_pEntry->m_FriendStateValid = Entry.m_FriendStateValid;
+				Entry.m_pEntry->m_FriendStateIgnoreClan = Entry.m_FriendStateIgnoreClan;
+				// Sort 不修改客户端数组的数量和顺序，备份可按原顺序无分配写回。
+				if(Entry.m_RestoreClientFriends)
+				{
+					for(auto &Client : Info.m_vClients)
+						Client.m_FriendState = Backup.m_vClientFriends[ClientIndex++];
+				}
+			}
+			Backup.m_vSorted.swap(m_Browser.m_vSortedServerlist);
+			for(size_t Index = 0; Index < Backup.m_vCommunityPlayers.size(); ++Index)
+				m_Browser.m_vCommunities[Index].m_NumPlayers = Backup.m_vCommunityPlayers[Index];
+			m_Browser.m_FriendListRevision = m_FriendRevision;
+			m_Browser.m_NumSortedPlayers = m_NumSortedPlayers;
+			m_Browser.m_Sorthash = m_Sorthash;
+			m_Browser.m_NeedResort = m_NeedResort;
+		}
+		Backup.Clear();
+	}
+	void Commit() noexcept { m_Committed = true; }
+};
+
+bool CServerBrowser::TrySort()
+{
+	try
+	{
+		CSortUpdate Update(*this);
+		Update.Prepare();
+		for(CServerEntry *pEntry : m_vpServerlist)
+		{
+			CServerInfo *pInfo = &pEntry->m_Info;
+			pInfo->m_Favorite = m_pFavorites->IsFavorite(pInfo->m_aAddresses, pInfo->m_NumAddresses);
+			pInfo->m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(pInfo->m_aAddresses, pInfo->m_NumAddresses);
+		}
+		Sort();
+		Update.Commit();
+		m_SortUpdateFailed = false;
+		m_SortUpdateRetryAt = 0;
+		return true;
+	}
+	catch(...)
+	{
+		if(!m_SortUpdateFailed)
+			log_error("serverbrowser", "failed to sort visible server list; retaining previous state and retrying");
+		m_SortUpdateFailed = true;
+		const int64_t Now = UpdateNow();
+		m_SortUpdateRetryAt = Now + std::min<int64_t>(time_freq(), INT64_MAX - Now);
+		return false;
+	}
+}
+
 void CServerBrowser::Sort()
 {
 	++m_FriendListRevision;
@@ -1194,6 +1346,8 @@ void CServerBrowser::Refresh(int Type, bool Force)
 	{
 		m_HttpUpdateFailed = false;
 		m_HttpUpdateRetryAt = 0;
+		m_SortUpdateFailed = false;
+		m_SortUpdateRetryAt = 0;
 		unsigned char aBuffer[sizeof(SERVERBROWSE_GETINFO) + 1];
 		CNetChunk Packet;
 
@@ -1243,7 +1397,7 @@ void CServerBrowser::Refresh(int Type, bool Force)
 		m_pPingCache->Load();
 		m_RefreshingHttp = true;
 
-		if(m_HttpUpdateFailed || (ServerListTypeChanged && m_pHttp->NumServers() > 0))
+		if(m_HttpUpdateFailed || m_SortUpdateFailed || (ServerListTypeChanged && m_pHttp->NumServers() > 0))
 		{
 			TryUpdateFromHttp();
 		}
@@ -1408,9 +1562,9 @@ public:
 	void Commit() noexcept { m_Committed = true; }
 };
 
-int64_t CServerBrowser::HttpUpdateNow() const
+int64_t CServerBrowser::UpdateNow() const
 {
-	return m_HttpUpdateClock ? m_HttpUpdateClock() : time_get();
+	return m_UpdateClock ? m_UpdateClock() : time_get();
 }
 
 bool CServerBrowser::TryUpdateFromHttp()
@@ -1423,6 +1577,8 @@ bool CServerBrowser::TryUpdateFromHttp()
 		Update.Commit();
 		m_HttpUpdateFailed = false;
 		m_HttpUpdateRetryAt = 0;
+		m_SortUpdateFailed = false;
+		m_SortUpdateRetryAt = 0;
 		return true;
 	}
 	catch(...)
@@ -1431,7 +1587,7 @@ bool CServerBrowser::TryUpdateFromHttp()
 		if(!m_HttpUpdateFailed)
 			log_error("serverbrowser", "failed to rebuild visible server list; retaining previous list and retrying");
 		m_HttpUpdateFailed = true;
-		const int64_t Now = HttpUpdateNow();
+		const int64_t Now = UpdateNow();
 		m_HttpUpdateRetryAt = Now + std::min<int64_t>(time_freq(), INT64_MAX - Now);
 		return false;
 	}
@@ -1555,7 +1711,7 @@ void CServerBrowser::Update()
 	const uint64_t HttpRevision = m_pHttp->Revision();
 	if(m_ServerlistType != TYPE_LAN && (m_HttpUpdateFailed || (m_RefreshingHttp && !m_pHttp->IsRefreshing()) || m_HttpRevision != HttpRevision))
 	{
-		if(m_HttpUpdateFailed && HttpUpdateNow() < m_HttpUpdateRetryAt)
+		if(m_HttpUpdateFailed && UpdateNow() < m_HttpUpdateRetryAt)
 			return;
 		if(TryUpdateFromHttp())
 		{
@@ -1622,15 +1778,11 @@ void CServerBrowser::Update()
 	}
 
 	// check if we need to resort
-	if(m_Sorthash != SortHash() || m_NeedResort)
+	if(m_Sorthash != SortHash() || m_NeedResort || m_SortUpdateFailed)
 	{
-		for(CServerEntry *pEntry : m_vpServerlist)
-		{
-			CServerInfo *pInfo = &pEntry->m_Info;
-			pInfo->m_Favorite = m_pFavorites->IsFavorite(pInfo->m_aAddresses, pInfo->m_NumAddresses);
-			pInfo->m_FavoriteAllowPing = m_pFavorites->IsPingAllowed(pInfo->m_aAddresses, pInfo->m_NumAddresses);
-		}
-		Sort();
+		if(m_SortUpdateFailed && UpdateNow() < m_SortUpdateRetryAt)
+			return;
+		TrySort();
 	}
 }
 
@@ -2074,7 +2226,7 @@ bool CServerBrowser::IsGettingServerlist() const
 
 bool CServerBrowser::IsServerlistError() const
 {
-	return m_HttpUpdateFailed || m_pHttp->IsError();
+	return m_HttpUpdateFailed || m_SortUpdateFailed || m_pHttp->IsError();
 }
 
 bool CServerBrowser::IsServerlistStale() const

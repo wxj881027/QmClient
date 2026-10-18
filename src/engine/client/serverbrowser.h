@@ -12,6 +12,7 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 
@@ -280,7 +281,7 @@ class CServerBrowser : public IServerBrowser
 {
 public:
 	// 注入时钟使用 time_get 的单调刻度；空回调使用生产时钟。
-	explicit CServerBrowser(std::function<int64_t()> HttpUpdateClock = {});
+	explicit CServerBrowser(std::function<int64_t()> UpdateClock = {});
 	~CServerBrowser() override;
 
 	// interface functions
@@ -361,6 +362,8 @@ public:
 private:
 	friend class CServerBrowserTestAccess;
 	class CServerListUpdate;
+	struct CSortBackup;
+	class CSortUpdate;
 
 	CNetClient *m_pNetClient = nullptr;
 	IConfigManager *m_pConfigManager = nullptr;
@@ -375,7 +378,7 @@ private:
 	bool m_RefreshingHttp = false;
 	bool m_HttpUpdateFailed = false;
 	int64_t m_HttpUpdateRetryAt = 0;
-	std::function<int64_t()> m_HttpUpdateClock;
+	std::function<int64_t()> m_UpdateClock;
 	uint64_t m_HttpRevision = 0;
 	IServerBrowserHttp *m_pHttp = nullptr;
 	IServerBrowserPingCache *m_pPingCache = nullptr;
@@ -408,6 +411,9 @@ private:
 	int m_NumRequests;
 
 	bool m_NeedResort;
+	bool m_SortUpdateFailed = false;
+	int64_t m_SortUpdateRetryAt = 0;
+	std::unique_ptr<CSortBackup> m_pSortBackup;
 	uint64_t m_FriendListRevision = 0;
 	int m_Sorthash;
 
@@ -441,6 +447,7 @@ private:
 	//
 	void Filter();
 	void Sort();
+	bool TrySort();
 	void SortCommunities();
 	int SortHash() const;
 
@@ -448,7 +455,7 @@ private:
 
 	void UpdateFromHttp();
 	bool TryUpdateFromHttp();
-	int64_t HttpUpdateNow() const;
+	int64_t UpdateNow() const;
 	CServerEntry *Add(const NETADDR *pAddrs, int NumAddrs);
 	CServerEntry *ReplaceEntry(CServerEntry *pEntry, const NETADDR *pAddrs, int NumAddrs);
 
