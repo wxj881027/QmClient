@@ -111,9 +111,9 @@ void CJobPool::RunLoop()
 				if(m_Shutdown)
 					pJob->Abort();
 			}
-			// 作业异常不得逃逸到线程入口：线程入口没有 catch，异常会让进程
-			// terminate（libc++ 下表现为 Abort trap）。单次作业失败只让该作业
-			// 进入 FAILED 语义，池与后续作业继续运行。
+			// 作业异常不得逃逸到线程入口：线程入口没有调用者可以接收异常，逃出
+			// 即 std::terminate。单次作业失败只让该作业进入失败语义，池与后续
+			// 作业继续运行；各作业仍应自行处理预期内的失败。
 			try
 			{
 				pJob->Run();
