@@ -3164,16 +3164,16 @@ void CQmClient::ResetTitlePresences()
 	mem_zero(m_aTitleExpires, sizeof(m_aTitleExpires));
 }
 
-bool CQmClient::PlayerHasDeveloperBadge(int ClientId) const
+bool CQmClient::PlayerHasDeveloperBadge(int ClientId, bool ForNameplateLayout) const
 {
-	return GameClient()->IsQmDeveloperAuthenticated(ClientId) && !GameClient()->ShouldHideStreamerIdentity(ClientId);
+	return GameClient()->IsQmDeveloperAuthenticated(ClientId) && (ForNameplateLayout || !GameClient()->ShouldHideStreamerIdentity(ClientId));
 }
 
-const char *CQmClient::PlayerTitle(int ClientId) const
+const char *CQmClient::PlayerTitle(int ClientId, bool ForNameplateLayout) const
 {
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || (!ForNameplateLayout && GameClient()->ShouldHideStreamerIdentity(ClientId)))
 		return "";
-	if(PlayerHasDeveloperBadge(ClientId))
+	if(PlayerHasDeveloperBadge(ClientId, ForNameplateLayout))
 		return "[开发者]";
 	if(m_aTitleExpires[ClientId] > time_get() && str_comp(m_aaTitleNames[ClientId], GameClient()->m_aClients[ClientId].m_aName) == 0)
 		return m_aaPlayerTitles[ClientId];
@@ -3187,9 +3187,9 @@ bool CQmClient::ShouldShowPlayerTitle(int ClientId) const
 		g_Config.m_QmShowMainTitle != 0, g_Config.m_QmShowDummyTitle != 0);
 }
 
-const char *CQmClient::PlayerTitleStyle(int ClientId) const
+const char *CQmClient::PlayerTitleStyle(int ClientId, bool ForNameplateLayout) const
 {
-	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || GameClient()->ShouldHideStreamerIdentity(ClientId))
+	if(ClientId < 0 || ClientId >= MAX_CLIENTS || !GameClient()->m_aClients[ClientId].m_Active || (!ForNameplateLayout && GameClient()->ShouldHideStreamerIdentity(ClientId)))
 		return "";
 	return m_aaPlayerTitleStyles[ClientId];
 }

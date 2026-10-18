@@ -4665,6 +4665,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/integration/qmclient/music/netease_shared_memory_readonly_test.cpp
     src/test/integration/qmclient/client/qm_screenshot_image_job_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_cache_test.cpp
+    src/test/unit/qmclient/client/qm_nameplate_layout_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_text_effects_test.cpp
     src/test/unit/qmclient/client/qm_route_visited_test.cpp
     src/test/unit/qmclient/client/qm_route_render_cache_test.cpp

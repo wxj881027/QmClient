@@ -274,11 +274,12 @@ public:
 	const char *TitleProfileStyle() const { return m_aTitleProfileStyle; }
 	EQmSponsorChatStyle TitleProfileChatStyle() const { return m_TitleProfileChatStyle; }
 	int TitleRevision() const { return m_TitleRevision; }
-	const char *PlayerTitle(int ClientId) const;
-	bool PlayerHasDeveloperBadge(int ClientId) const;
+	// 名牌测量可读取被屏蔽内容，但绘制时仍须遵循隐私状态。
+	const char *PlayerTitle(int ClientId, bool ForNameplateLayout = false) const;
+	bool PlayerHasDeveloperBadge(int ClientId, bool ForNameplateLayout = false) const;
 	const CQmDeveloperBadge &DeveloperBadge() const { return m_DeveloperBadge; }
 	bool ShouldShowPlayerTitle(int ClientId) const;
-	const char *PlayerTitleStyle(int ClientId) const;
+	const char *PlayerTitleStyle(int ClientId, bool ForNameplateLayout = false) const;
 	EQmSponsorChatStyle PlayerChatStyle(int ClientId) const;
 	double TitleAnimationTime() const;
 	bool HasQmMarkdownBroadcast() const { return m_QmMarkdownBroadcast.HasMarkdown(); }
