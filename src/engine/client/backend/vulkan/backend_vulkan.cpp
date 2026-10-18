@@ -10,6 +10,8 @@
 #include <engine/client/backend/screenshot_image.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/backend/vulkan/backend_vulkan_qm_ext.h>
+#include <engine/client/backend/vulkan/vulkan_diagnostics.h>
+#include <engine/client/backend/vulkan/vulkan_recording_batch.h>
 #include <engine/client/backend/vulkan/vulkan_rendering_lifecycle.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_threaded.h>
@@ -1410,56 +1412,64 @@ protected:
 	 * After an error occurred, the rendering stop as soon as possible
 	 * Always stop the current code execution after a call to this function (e.g. return false)
 	 */
-	void SetError(EGfxErrorType ErrType, const char *pErr, const char *pErrStrExtra = nullptr)
+	void SetError(EGfxErrorType ErrType, const char *pErr, const char *pErrStrExtra = nullptr) noexcept
 	{
 		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
-		SGfxErrorContainer::SError Err = {false, pErr};
-		if(std::find(m_Error.m_vErrors.begin(), m_Error.m_vErrors.end(), Err) == m_Error.m_vErrors.end())
-			m_Error.m_vErrors.emplace_back(Err);
-		if(pErrStrExtra != nullptr)
-		{
-			SGfxErrorContainer::SError ErrExtra = {false, pErrStrExtra};
-			if(std::find(m_Error.m_vErrors.begin(), m_Error.m_vErrors.end(), ErrExtra) == m_Error.m_vErrors.end())
-				m_Error.m_vErrors.emplace_back(ErrExtra);
-		}
-		if(m_CanAssert)
-		{
+		vulkan_diagnostics::PublishError(m_Error, m_Warning, m_HasError, m_CanAssert, ErrType, [&](bool FirstError) {
+			SGfxErrorContainer::SError Err = {false, pErr};
+			if(std::find(m_Error.m_vErrors.begin(), m_Error.m_vErrors.end(), Err) == m_Error.m_vErrors.end())
+				m_Error.m_vErrors.emplace_back(Err);
 			if(pErrStrExtra != nullptr)
-				dbg_msg("vulkan", "vulkan error: %s: %s", pErr, pErrStrExtra);
-			else
-				dbg_msg("vulkan", "vulkan error: %s", pErr);
-			if(!m_HasError)
 			{
-				m_Error.m_ErrorType = ErrType;
-				char aContext[192];
-				str_format(aContext, sizeof(aContext), "Vulkan frame context: image=%u/%u recording_threads=%zu", m_CurImageIndex, m_SwapChainImageCount, m_ThreadCount);
-				m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{false, aContext});
+				SGfxErrorContainer::SError ErrExtra = {false, pErrStrExtra};
+				if(std::find(m_Error.m_vErrors.begin(), m_Error.m_vErrors.end(), ErrExtra) == m_Error.m_vErrors.end())
+					m_Error.m_vErrors.emplace_back(ErrExtra);
 			}
-			m_HasError = true;
-		}
-		else
+			if(m_CanAssert)
+			{
+				if(pErrStrExtra != nullptr)
+					dbg_msg("vulkan", "vulkan error: %s: %s", pErr, pErrStrExtra);
+				else
+					dbg_msg("vulkan", "vulkan error: %s", pErr);
+				if(FirstError)
+				{
+					char aContext[192];
+					str_format(aContext, sizeof(aContext), "Vulkan frame context: image=%u/%u recording_threads=%zu", m_CurImageIndex, m_SwapChainImageCount, m_ThreadCount);
+					m_Error.m_vErrors.emplace_back(SGfxErrorContainer::SError{false, aContext});
+				}
+			}
+			else
+			{
+				// 初始化失败仍作为警告交给后端回退，当前诊断锁下直接收集文本。
+				dbg_msg("vulkan", "vulkan warning: %s", pErr);
+				if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pErr) == m_Warning.m_vWarnings.end())
+					m_Warning.m_vWarnings.emplace_back(pErr);
+			}
+		});
+	}
+
+	void SetWarningPreMsg(const char *pWarningPre) noexcept
+	{
+		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
+		try
 		{
-			Lock.unlock();
-			// during initialization vulkan should not throw any errors but warnings instead
-			// since most code in the swapchain is shared with runtime code, add this extra code path
-			SetWarning(EGfxWarningType::GFX_WARNING_TYPE_INIT_FAILED, pErr);
+			if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarningPre) == m_Warning.m_vWarnings.end())
+				m_Warning.m_vWarnings.emplace(m_Warning.m_vWarnings.begin(), pWarningPre);
+		}
+		catch(...)
+		{
+			// 前缀分配失败不影响已经发布的初始化警告。
 		}
 	}
 
-	void SetWarningPreMsg(const char *pWarningPre)
+	void SetWarning(EGfxWarningType WarningType, const char *pWarning) noexcept
 	{
 		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
-		if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarningPre) == m_Warning.m_vWarnings.end())
-			m_Warning.m_vWarnings.emplace(m_Warning.m_vWarnings.begin(), pWarningPre);
-	}
-
-	void SetWarning(EGfxWarningType WarningType, const char *pWarning)
-	{
-		std::unique_lock<std::mutex> Lock(m_ErrWarnMutex);
-		dbg_msg("vulkan", "vulkan warning: %s", pWarning);
-		if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarning) == m_Warning.m_vWarnings.end())
-			m_Warning.m_vWarnings.emplace_back(pWarning);
-		m_Warning.m_WarningType = WarningType;
+		vulkan_diagnostics::PublishWarning(m_Warning, WarningType, [&] {
+			dbg_msg("vulkan", "vulkan warning: %s", pWarning);
+			if(std::find(m_Warning.m_vWarnings.begin(), m_Warning.m_vWarnings.end(), pWarning) == m_Warning.m_vWarnings.end())
+				m_Warning.m_vWarnings.emplace_back(pWarning);
+		});
 	}
 
 	void ResetInitializationDiagnostics()
@@ -7922,7 +7932,7 @@ public:
 		return m_FrameProfileStats;
 	}
 
-	void ResetDrawCommandState(size_t RenderThreadIndex)
+	void ResetDrawCommandState(size_t RenderThreadIndex) noexcept
 	{
 		if(RenderThreadIndex < m_vDrawCommandStates.size())
 			m_vDrawCommandStates[RenderThreadIndex] = {};
@@ -9688,18 +9698,10 @@ public:
 
 			if(!pThread->m_Finished)
 			{
-				bool HasErrorFromCmd = false;
-				for(auto &NextCmd : m_vvThreadCommandLists[ThreadIndex])
-				{
-					if(m_HasError)
-					{
-						HasErrorFromCmd = true;
-						break;
-					}
-					const auto RecordStartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
-					if(!m_aCommandCallbacks[CommandBufferCMDOff(NextCmd.m_Command)].m_CommandCB(NextCmd.m_pRawCommand, NextCmd))
-					{
-						if(!m_HasError)
+				RunVulkanRecordingBatch(m_vvThreadCommandLists[ThreadIndex], m_HasError, pThread->m_IsRendering, pThread->m_Cond, [&](SRenderCommandExecuteBuffer &NextCmd) {
+						const auto RecordStartTime = m_FrameProfilingActive ? time_get_nanoseconds() : 0ns;
+						const bool Success = m_aCommandCallbacks[CommandBufferCMDOff(NextCmd.m_Command)].m_CommandCB(NextCmd.m_pRawCommand, NextCmd);
+						if(!Success && !m_HasError)
 						{
 							char aError[128];
 							str_format(aError, sizeof(aError), "Vulkan command %d failed without API details (recording thread %zu).", (int)NextCmd.m_Command, ThreadIndex + 1);
@@ -9708,31 +9710,25 @@ public:
 						if(m_FrameProfilingActive)
 							m_vThreadFrameProfileStats[ThreadIndex + 1].m_CPUThreadCommandRecordTime += time_get_nanoseconds() - RecordStartTime;
 						m_vThreadFrameProfileStats[ThreadIndex + 1].m_ThreadCommandRecords++;
-						// an error occurred, the thread will not continue execution
-						HasErrorFromCmd = true;
-						break;
-					}
-					if(m_FrameProfilingActive)
-						m_vThreadFrameProfileStats[ThreadIndex + 1].m_CPUThreadCommandRecordTime += time_get_nanoseconds() - RecordStartTime;
-					m_vThreadFrameProfileStats[ThreadIndex + 1].m_ThreadCommandRecords++;
-				}
-				m_vvThreadCommandLists[ThreadIndex].clear();
-
-				if(!HasErrorFromCmd && m_vvUsedThreadDrawCommandBuffer[ThreadIndex + 1][m_CurImageIndex])
-				{
-					auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[ThreadIndex + 1][m_CurImageIndex];
-					VkResult EndThreadCommandBufferResult = vkEndCommandBuffer(GraphicThreadCommandBuffer);
-					if(EndThreadCommandBufferResult != VK_SUCCESS)
-					{
-						const char *pCritErrorMsg = CheckVulkanCriticalError(EndThreadCommandBufferResult);
-						if(pCritErrorMsg != nullptr)
-							SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Thread draw command buffer cannot be ended anymore.", pCritErrorMsg);
-						else
-							SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Thread draw command buffer cannot be ended anymore.");
+						return Success; }, [&] {
+						if(m_vvUsedThreadDrawCommandBuffer[ThreadIndex + 1][m_CurImageIndex])
+						{
+							auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[ThreadIndex + 1][m_CurImageIndex];
+							VkResult EndThreadCommandBufferResult = vkEndCommandBuffer(GraphicThreadCommandBuffer);
+							if(EndThreadCommandBufferResult != VK_SUCCESS)
+							{
+								const char *pCritErrorMsg = CheckVulkanCriticalError(EndThreadCommandBufferResult);
+								SetError(GFX_ERROR_TYPE_RENDER_RECORDING, "Thread draw command buffer cannot be ended anymore.", pCritErrorMsg);
+								return false;
+							}
+							ResetDrawCommandState(ThreadIndex + 1);
+						}
+						return true; }, [&](bool Exception) noexcept {
+						if(Exception)
+							SetError(GFX_ERROR_TYPE_RENDER_RECORDING, "Unexpected exception while recording Vulkan worker commands.");
+						// 不提交未完成的 secondary buffer，也不重放借用的绘制命令。
 						m_vvUsedThreadDrawCommandBuffer[ThreadIndex + 1][m_CurImageIndex] = false;
-					}
-					ResetDrawCommandState(ThreadIndex + 1);
-				}
+						ResetDrawCommandState(ThreadIndex + 1); });
 			}
 
 			if(IsVerbose() && s_BenchmarkRenderThreads)
@@ -9740,7 +9736,11 @@ public:
 				dbg_msg("vulkan", "render thread %" PRIzu " took %d ns to finish", ThreadIndex, (int)(time_get_nanoseconds() - ThreadRenderTime).count());
 			}
 
-			pThread->m_IsRendering = false;
+			if(pThread->m_Finished)
+			{
+				pThread->m_IsRendering = false;
+				pThread->m_Cond.notify_all();
+			}
 		}
 	}
 };

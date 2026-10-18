@@ -3087,6 +3087,8 @@ if(CLIENT)
     backend/vulkan/backend_vulkan_qm_ext.h
     backend/vulkan/backend_vulkan_qm_pipelines_impl.h
     backend/vulkan/backend_vulkan_qm_render_targets_impl.h
+    backend/vulkan/vulkan_diagnostics.h
+    backend/vulkan/vulkan_recording_batch.h
     backend/vulkan/vulkan_rendering_lifecycle.h
     backend_egl.cpp
     backend_egl.h
@@ -4738,6 +4740,8 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/engine/graphics/graphics_backend_contract_test.cpp
     src/test/unit/engine/graphics/graphics_backend_policy_test.cpp
     src/test/unit/engine/graphics/graphics_diagnostic_transfer_test.cpp
+    src/test/unit/engine/graphics/vulkan_diagnostics_test.cpp
+    src/test/unit/engine/graphics/vulkan_recording_batch_test.cpp
     src/test/unit/engine/graphics/readback_image_test.cpp
     src/test/unit/engine/graphics/screenshot_image_test.cpp
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
