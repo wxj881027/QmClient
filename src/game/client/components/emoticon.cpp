@@ -597,6 +597,9 @@ void CEmoticon::RenderProjectiles()
 		Projectile.Update(FrameTime, Mask, Solid, aPlayerBoxes, NumPlayerBoxes, &GameClient()->m_Teams);
 		if(!Projectile.m_Active)
 			continue;
+		const float TeeAlpha = ProjectileOwnerAlpha(Projectile.m_OwnerClientId);
+		if(TeeAlpha <= 0.0f)
+			continue;
 		const float Fraction = std::clamp((float)(Projectile.m_Accumulator / CEmoticonProjectile::STEP), 0.0f, 1.0f);
 		vec2 Position = mix(Projectile.m_PreviousPos, Projectile.m_Pos, Fraction);
 		float Angle = mix(Projectile.m_PreviousAngle, Projectile.m_Angle, Fraction);
@@ -623,7 +626,6 @@ void CEmoticon::RenderProjectiles()
 			BatchEmoticon = Projectile.m_Emoticon;
 		}
 		Graphics()->QuadsSetRotation(Angle);
-		const float TeeAlpha = Projectile.m_OwnerClientId >= 0 && Projectile.m_OwnerClientId < MAX_CLIENTS ? GameClient()->m_Players.PlayerRenderAlpha(Projectile.m_OwnerClientId) : 1.0f;
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Projectile.FadeAlpha() * TeeAlpha);
 		IGraphics::CQuadItem Quad(Position.x, Position.y, Size, Size);
 		Graphics()->QuadsDraw(&Quad, 1);
@@ -635,9 +637,19 @@ void CEmoticon::RenderProjectiles()
 	Graphics()->MapScreen(OldX0, OldY0, OldX1, OldY1);
 }
 
+float CEmoticon::ProjectileOwnerAlpha(int OwnerClientId) const
+{
+	if(OwnerClientId < 0 || OwnerClientId >= MAX_CLIENTS)
+		return 0.0f;
+	return QmEmoticon::ProjectileOwnerAlpha(
+		GameClient()->m_aClients[OwnerClientId].m_Active,
+		GameClient()->m_Players.IsPlayerInfoAvailable(OwnerClientId),
+		GameClient()->m_Players.PlayerRenderAlpha(OwnerClientId));
+}
+
 void CEmoticon::SpawnProjectile(vec2 Position, vec2 Direction, int Emoticon, bool Super, int OwnerClientId)
 {
-	if(Emoticon < 0 || Emoticon >= NUM_EMOTICONS)
+	if(Emoticon < 0 || Emoticon >= NUM_EMOTICONS || ProjectileOwnerAlpha(OwnerClientId) <= 0.0f)
 		return;
 	Direction = length(Direction) > 0.0001f ? normalize(Direction) : vec2(1.0f, 0.0f);
 	CEmoticonProjectile *pProjectile = &m_aProjectiles[0];

@@ -738,3 +738,56 @@ TEST(QmEmoticonProjectile, LaunchSpeedBouncesWithoutCrossingSingleTileWallAtLong
 		EXPECT_LT(Projectile.m_Vel.x, 0);
 	}
 }
+
+TEST(QmEmoticonProjectile, OnlineOwnerWithoutCharacterRenderInfoIsInvisible)
+{
+	EXPECT_FLOAT_EQ(QmEmoticon::ProjectileOwnerAlpha(true, false, 0.4f), 0.0f);
+	EXPECT_FLOAT_EQ(QmEmoticon::ProjectileOwnerAlpha(true, false, 1.0f), 0.0f);
+}
+
+TEST(QmEmoticonProjectile, DisconnectedOwnerCannotUseStaleCharacterRenderInfo)
+{
+	EXPECT_FLOAT_EQ(QmEmoticon::ProjectileOwnerAlpha(false, true, 1.0f), 0.0f);
+}
+
+TEST(QmEmoticonProjectile, VisibleOwnerPreservesTeeTransparencyAndProjectileFade)
+{
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(0, 0), vec2(0, 0), 0);
+	const float OwnerAlpha = QmEmoticon::ProjectileOwnerAlpha(true, true, 0.4f);
+	EXPECT_FLOAT_EQ(Projectile.FadeAlpha() * OwnerAlpha, 0.4f);
+	Projectile.m_LifeTime = 0.25f;
+	EXPECT_FLOAT_EQ(Projectile.FadeAlpha() * OwnerAlpha, 0.2f);
+	EXPECT_FLOAT_EQ(QmEmoticon::ProjectileOwnerAlpha(true, true, 0.0f), 0.0f);
+}
+
+TEST(QmEmoticonProjectile, HidingAndRestoringOwnerKeepsInFlightLifetime)
+{
+	for(float Scale : {1.0f, 2.35f})
+	{
+		SCOPED_TRACE(Scale);
+		QmEmoticon::CAlphaMask Mask;
+		CEmoticonProjectile Projectile;
+		Projectile.Init(vec2(0, 0), vec2(100, 0), 0, Scale);
+		const float Before = Projectile.m_LifeTime;
+		EXPECT_GT(QmEmoticon::ProjectileOwnerAlpha(true, true, 0.4f), 0.0f);
+		EXPECT_FLOAT_EQ(QmEmoticon::ProjectileOwnerAlpha(true, false, 0.4f), 0.0f);
+		Projectile.Update(static_cast<float>(CEmoticonProjectile::STEP), Mask, [](int, int) { return false; });
+		ASSERT_TRUE(Projectile.m_Active);
+		EXPECT_LT(Projectile.m_LifeTime, Before);
+		EXPECT_GT(Projectile.m_Pos.x, 0.0f);
+		EXPECT_FLOAT_EQ(QmEmoticon::ProjectileOwnerAlpha(true, true, 0.4f), 0.4f);
+		EXPECT_LT(Projectile.m_LifeTime, Before);
+	}
+}
+
+TEST(QmEmoticonProjectile, HiddenOwnerDoesNotPreventProjectileExpiration)
+{
+	QmEmoticon::CAlphaMask Mask;
+	CEmoticonProjectile Projectile;
+	Projectile.Init(vec2(0, 0), vec2(0, 0), 0, 1.0f, 7, 1);
+	EXPECT_FLOAT_EQ(QmEmoticon::ProjectileOwnerAlpha(true, false, 1.0f), 0.0f);
+	Projectile.Update(1.0f, Mask, [](int, int) { return false; });
+	EXPECT_FALSE(Projectile.m_Active);
+	EXPECT_FLOAT_EQ(Projectile.FadeAlpha(), 0.0f);
+}

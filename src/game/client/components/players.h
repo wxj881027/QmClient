@@ -76,7 +76,6 @@ class CPlayers : public CComponent
 		const CNetObj_Character *pPrevChar,
 		const CNetObj_Character *pPlayerChar,
 		int ClientId);
-	bool IsPlayerInfoAvailable(int ClientId) const;
 	bool ShouldRenderWeaponAnimation(int ClientId) const;
 
 	SQmHookCollLineScratch m_HookCollLineScratch;
@@ -97,6 +96,7 @@ class CPlayers : public CComponent
 	// 避免每名玩家每帧重新分配线段与四边形。
 
 public:
+	bool IsPlayerInfoAvailable(int ClientId) const;
 	float PlayerRenderAlpha(int ClientId) const;
 	float GetPlayerTargetAngle(
 		const CNetObj_Character *pPrevChar,
