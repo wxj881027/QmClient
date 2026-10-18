@@ -6611,7 +6611,9 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("net_reset", "", CFGFLAG_CLIENT, ConNetReset, this, "Rebinds the client's listening address and port");
 
 #if defined(CONF_VIDEORECORDER)
-	m_pConsole->Register("start_video", "?r[file] ?f[start_sec] ?f[end_sec]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
+	// 第一个参数必须是 s 而不是 r：r 会吞掉整行剩余内容，后面的 start/end 永远收不到。
+	// 文件名含空格时用引号包裹（"my demo"）。
+	m_pConsole->Register("start_video", "?s[file] ?f[start_sec] ?f[end_sec]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
 	m_pConsole->Register("stop_video", "", CFGFLAG_CLIENT, Con_StopVideo, this, "Stop recording a video");
 #endif
 
