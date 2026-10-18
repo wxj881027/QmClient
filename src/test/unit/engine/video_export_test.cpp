@@ -114,6 +114,19 @@ TEST(VideoExportTask, FingerprintMismatchIgnoresProgress)
 	std::filesystem::remove(Path);
 }
 
+TEST(VideoExportTask, RecordingFailureFlagResetsPerSegment)
+{
+	// 录制失败标记必须按段重置：否则前一段的错误会让后续所有段都被判为失败而反复重渲。
+	auto pTask = MakeTask("recfail", 0, 13000, 50);
+	pTask->BeginSegment(0);
+	EXPECT_FALSE(pTask->SegmentRecordingFailed());
+	pTask->MarkSegmentRecordingFailed();
+	EXPECT_TRUE(pTask->SegmentRecordingFailed());
+
+	pTask->BeginSegment(1);
+	EXPECT_FALSE(pTask->SegmentRecordingFailed());
+}
+
 TEST(VideoExportTask, RangeChangeInvalidatesProgress)
 {
 	std::filesystem::path TempDir = std::filesystem::temp_directory_path() / "qm_video_export_test";

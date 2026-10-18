@@ -2739,12 +2739,18 @@ void CMenus::RenderDemoBrowserList(CUIRect ListView, bool &WasListboxItemActivat
 #if defined(CONF_VIDEORECORDER)
 	if(!BrowsingScreenshots && !m_DemoRenderInput.IsEmpty())
 	{
-		if(DemoPlayer()->ErrorMessage()[0] == '\0')
+		if(DemoPlayer()->ErrorMessage()[0] != '\0')
 		{
-			m_Popup = POPUP_RENDER_DONE;
+			m_DemoRenderInput.Clear();
 		}
-		else
+		else if(!Client()->VideoExportConcatPending())
 		{
+			// 分段导出的拼接在后台线程完成：成片写出前不弹"渲染完成"，
+			// 否则用户点开目录只能看到尚未写完的文件。失败时给出可读提示而不谎报成功。
+			if(Client()->VideoExportConcatFailed())
+				GameClient()->Echo(Localize("Failed to save video. See local console for details."));
+			else
+				m_Popup = POPUP_RENDER_DONE;
 			m_DemoRenderInput.Clear();
 		}
 	}

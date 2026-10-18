@@ -274,6 +274,26 @@ class CClient : public IClient, public CDemoPlayer::IListener
 public:
 	bool ServerCapAnyPlayerFlag() const override { return m_ServerCapabilities.m_AnyPlayerFlag; }
 
+	// 分段导出的后台拼接是否仍未结束。UI 用它推迟"渲染完成"弹窗，
+	// 否则用户在成片写出前点"Videos directory"会看到文件不存在或不可播放。
+	bool VideoExportConcatPending() const override
+	{
+#if defined(CONF_VIDEORECORDER)
+		return m_ConcatThread.joinable() && !m_ConcatThreadFinished.load();
+#else
+		return false;
+#endif
+	}
+	// 最近一次拼接是否失败（有尝试且未成功）。失败时 UI 不应宣称渲染完成。
+	bool VideoExportConcatFailed() const override
+	{
+#if defined(CONF_VIDEORECORDER)
+		return m_ConcatAttempted.load() && !m_ConcatLastSucceeded.load();
+#else
+		return false;
+#endif
+	}
+
 private:
 	CServerInfo m_CurrentServerInfo;
 	int64_t m_CurrentServerInfoRequestTime = -1; // >= 0 should request, == -1 got info
@@ -577,6 +597,9 @@ public:
 	// 拼接线程是否已执行完。std::thread 只有在 join/detach 后才不再 joinable，
 	// 需要该标志区分"仍在跑"与"跑完但未 join"，否则同一进程内第二次导出永远无法拼接。
 	std::atomic<bool> m_ConcatThreadFinished{true};
+	// 是否已尝试过拼接，以及最近一次拼接的结果（供 UI 区分"完成"与"失败"）。
+	std::atomic<bool> m_ConcatAttempted{false};
+	std::atomic<bool> m_ConcatLastSucceeded{false};
 #endif
 
 	static void Con_Rcon(IConsole::IResult *pResult, void *pUserData);

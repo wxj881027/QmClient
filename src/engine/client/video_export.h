@@ -92,7 +92,13 @@ public:
 	{
 		m_CurrentSegment = SegmentIndex;
 		m_State = EState::WARMING_UP;
+		m_SegmentRecordingFailed = false;
 	}
+
+	// 当前段录制是否以错误终止（编码失败、磁盘满等）。错误的段不得标记完成：
+	// 容器可能仍是合法文件（mkv 无 trailer 也能打开），仅靠 VerifySegmentFile 会误判为成功。
+	void MarkSegmentRecordingFailed() { m_SegmentRecordingFailed = true; }
+	bool SegmentRecordingFailed() const { return m_SegmentRecordingFailed; }
 
 	// 段文件完整性验证：容器可打开且含视频流即视为该段写入成功。
 	static bool VerifySegmentFile(const char *pPath);
@@ -112,6 +118,7 @@ private:
 	int m_Crf;
 	int m_Preset;
 	int m_SegmentSeconds;
+	bool m_SegmentRecordingFailed = false; // 当前段录制是否以错误终止
 	char m_aFingerprint[MD5_MAXSTRSIZE]; // demo 属性 + 导出参数的十六进制指纹
 };
 

@@ -3805,7 +3805,13 @@ void CClient::Update()
 #if defined(CONF_VIDEORECORDER)
 		// 图形线程仅发布录制失败，主线程在推进回放前完成停止与清理。
 		if(IVideo::Current() && IVideo::Current()->HasError())
+		{
+			// 先给任务打标记：错误段的容器可能仍是可打开的文件（mkv 无 trailer 亦然），
+			// 只有录制侧知道本次是以错误终止，不能让收尾阶段把它记成"已完成"。
+			if(m_pVideoExportTask)
+				m_pVideoExportTask->MarkSegmentRecordingFailed();
 			m_DemoPlayer.Stop(Localize("Failed to record video. See local console for details."));
+		}
 #endif
 		if(m_DemoPlayer.IsPlaying())
 		{
@@ -5123,6 +5129,10 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 		return true; // 已有任务时按已处理处理，避免再次整段导出
 	}
 
+	// 新一轮导出：重置上一次的拼接结果，避免 UI 沿用旧的"完成/失败"状态。
+	m_ConcatAttempted.store(false);
+	m_ConcatLastSucceeded.store(false);
+
 	char aName[IO_MAX_PATH_LENGTH];
 	str_copy(aName, pName);
 	if(AppendTimestamp)
@@ -5260,6 +5270,19 @@ void CClient::FinishSegmentedExport()
 	if(SegmentIndex < 0)
 		return;
 
+	// 录制以错误终止：不标记完成、不写进度，保留该段为待渲状态，下次续渲重做。
+	// 容器是否"能打开"不足以判断内容完整（mkv 截断文件同样可打开）。
+	if(pTask->SegmentRecordingFailed())
+	{
+		log_error("video_export", "Segment %d recording failed; keeping it pending for the next run.", SegmentIndex + 1);
+		// 本次导出失败：让 UI 不弹"渲染完成"。
+		m_ConcatAttempted.store(true);
+		m_ConcatLastSucceeded.store(false);
+		pTask->ResetToIdle();
+		m_pVideoExportTask.reset();
+		return;
+	}
+
 	char aSegmentName[IO_MAX_PATH_LENGTH];
 	pTask->SegmentFilename(SegmentIndex, aSegmentName, sizeof(aSegmentName));
 	char aLogical[IO_MAX_PATH_LENGTH];
@@ -5271,6 +5294,8 @@ void CClient::FinishSegmentedExport()
 	{
 		// 段文件不完整：终止任务（进度文件保留，续渲时将重渲该段），避免状态滞留被误判为外部停录
 		log_error("video_export", "Segment file '%s' is incomplete; segmented export cancelled (will re-render on resume).", aSegmentName);
+		m_ConcatAttempted.store(true);
+		m_ConcatLastSucceeded.store(false);
 		pTask->ResetToIdle();
 		m_pVideoExportTask.reset();
 		return;
@@ -5327,6 +5352,9 @@ void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
 		if(WholePath.empty() || !CVideoExportTask::VerifySegmentFile(WholePath.c_str()))
 		{
 			log_error("video_export", "Segment '%s' missing or unreadable; skipping concat.", aSegLogical);
+			// 记下"已尝试但失败"，让 UI 不把本次导出当成已完成。
+			m_ConcatAttempted.store(true);
+			m_ConcatLastSucceeded.store(false);
 			return;
 		}
 		vFiles.push_back(std::move(WholePath));
@@ -5341,9 +5369,11 @@ void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
 
 	// muxer 格式名跟随容器（mkv → "matroska"），避免容器与后缀不一致
 	const std::string FormatName = ConcatFormatName();
+	m_ConcatAttempted.store(true);
+	m_ConcatLastSucceeded.store(false);
 	m_ConcatThreadFinished.store(false);
 	m_ConcatThread = std::thread([this, vFiles = std::move(vFiles), OutputPath, FormatName]() {
-		ConcatVideoFiles(vFiles, OutputPath.c_str(), FormatName.c_str());
+		m_ConcatLastSucceeded.store(ConcatVideoFiles(vFiles, OutputPath.c_str(), FormatName.c_str()));
 		// 无论成功失败都要复位，保证下一次导出的拼接请求不会被永久拒绝。
 		m_ConcatThreadFinished.store(true);
 	});
