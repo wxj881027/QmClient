@@ -428,6 +428,18 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 		// pts 保留真实值（B 帧显示顺序不破坏）并以段首 pts 为原点平移。
 		const bool VideoGrid = pOutVideo && pInVideo && VideoFrameStep.num > 0;
 		const bool AudioGrid = pOutAudio && pInAudio && AudioSamplesPerPacket > 0 && AudioSampleRate > 0;
+		// 每段音频包预算：段视频时长换算为样本后向上取整到整包，保证音频覆盖到段末
+		// （向下取整会在每个段边界留下约 19ms 静音空洞）。段间起点由视频基准对齐，
+		// 因此多出的不足一个包只会在段边界产生极短内容重叠，不会让时间轴漂移。
+		// 分段独立编码时每段音频都带 AAC priming 与包对齐余数（实测约 24ms/段），
+		// 不限制会让音频时间轴逐段超前视频，长 demo 可累积到数秒不同步。
+		// 段时长不可知（无 duration 的容器）时保持 -1，退回原有行为。
+		int64_t AudioPacketBudget = -1;
+		if(AudioGrid && pInVideo && pInVideo->duration > 0)
+		{
+			const int64_t SegmentSamples = av_rescale_q(pInVideo->duration, pInVideo->time_base, AVRational{1, AudioSampleRate});
+			AudioPacketBudget = (SegmentSamples + AudioSamplesPerPacket - 1) / AudioSamplesPerPacket;
+		}
 		int64_t VideoIndex = 0;
 		int64_t AudioIndex = 0;
 		int64_t BaseVideoDts = AV_NOPTS_VALUE; // 回退路径用
@@ -470,6 +482,14 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 				pIndex = &AudioIndex;
 			}
 			else
+			{
+				av_packet_unref(pPacket);
+				continue;
+			}
+
+			// 音频超出段视频时长的部分直接丢弃：这些是 AAC priming 与包对齐余数，
+			// 保留会让该段音频比视频长，段间偏移按实际样本累加后逐段超前。
+			if(!IsVideo && AudioPacketBudget >= 0 && AudioIndex >= AudioPacketBudget)
 			{
 				av_packet_unref(pPacket);
 				continue;
@@ -568,7 +588,13 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 			}
 			if(pOutAudio)
 			{
-				if(AudioGrid && AudioIndex > 0)
+				if(pOutVideo && VideoGrid)
+				{
+					// 音频时间轴跟随视频基准：段内音频已被预算裁剪到不超过段视频时长，
+					// 这里再对齐下一段起点，避免逐段累积 AAC priming 造成的偏移。
+					AudioOffset = av_rescale_q(VideoOffset, pOutVideo->time_base, pOutAudio->time_base);
+				}
+				else if(AudioGrid && AudioIndex > 0)
 					AudioOffset += av_rescale_q(AudioIndex * AudioSamplesPerPacket,
 						AVRational{1, AudioSampleRate}, pOutAudio->time_base);
 				else if(LastAudioDts != AV_NOPTS_VALUE)
