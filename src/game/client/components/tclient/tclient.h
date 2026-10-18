@@ -405,6 +405,10 @@ class CTClient : public CComponent
 	void CompleteLocalSaveLoad(bool Success);
 	// 存档使用标记侧车库（qmclient/save_usage.sqlite3，issue #199）。
 	CSqlite m_pSaveUsageDb;
+	// 已使用键的内存镜像：行只在 MarkUsed 中 upsert、从不删除，镜像与库一致。
+	// UI 列表每帧的查询只查内存，不再每行走一次 SQLite。
+	std::unordered_set<std::string> m_LocalSaveUsedKeys;
+	void LoadLocalSaveUsedKeys();
 	static void ConSaveList(IConsole::IResult *pResult, void *pUserData);
 
 	// 复读功能

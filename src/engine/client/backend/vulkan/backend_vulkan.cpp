@@ -2897,7 +2897,10 @@ protected:
 
 		bool CaptureSnapshot = m_PresentedSnapshotRequested;
 #if defined(CONF_VIDEORECORDER)
-		CaptureSnapshot = CaptureSnapshot || (IVideo::Current() && IVideo::Current()->IsRecording());
+		// 指针只读一次；此处处于 RunBuffer 处理中（m_pBuffer 非空），主线程的
+		// CVideo::Stop() 被 WaitForIdle 阻塞，录像对象在本帧内不会销毁。
+		const IVideo *pVideo = IVideo::Current();
+		CaptureSnapshot = CaptureSnapshot || (pVideo && pVideo->IsRecording());
 #endif
 		CaptureSnapshot = CaptureSnapshot && (m_VKSurfFormat.format == VK_FORMAT_B8G8R8A8_UNORM || m_VKSurfFormat.format == VK_FORMAT_R8G8B8A8_UNORM);
 		m_PresentedSnapshotRequested = false;

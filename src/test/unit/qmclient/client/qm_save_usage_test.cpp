@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_set>
 
 TEST(QmSaveUsage, SaveKeyCombinesMapAndCode)
 {
@@ -47,6 +48,39 @@ TEST(QmSaveUsage, MarkAndQueryRoundTrip)
 	// 其他存档不受影响。
 	EXPECT_FALSE(QmSaveUsage::IsUsed(pConsole.get(), pDb.get(), QmSaveUsage::SaveKey("Kobra 4", "other")));
 	EXPECT_FALSE(QmSaveUsage::IsUsed(pConsole.get(), pDb.get(), QmSaveUsage::SaveKey("Yo-star", "abc123")));
+}
+
+TEST(QmSaveUsage, LoadUsedKeysMirrorsAllRows)
+{
+	CTestInfo Info;
+	Info.m_DeleteTestStorageFilesOnSuccess = true;
+
+	auto pConsole = CreateConsole(CFGFLAG_CLIENT);
+	std::unique_ptr<IStorage> pStorage = Info.CreateTestStorage();
+	ASSERT_NE(pStorage, nullptr) << "Error creating test storage";
+
+	CSqlite pDb = SqliteOpen(pConsole.get(), pStorage.get(), "qmclient_save_usage_test.sqlite3");
+	ASSERT_TRUE(pDb) << "Error opening save usage test database";
+	ASSERT_TRUE(QmSaveUsage::EnsureTable(pConsole.get(), pDb.get()));
+
+	const std::string KeyA = QmSaveUsage::SaveKey("Map A", "code-a");
+	const std::string KeyB = QmSaveUsage::SaveKey("Map B", "code-b");
+	ASSERT_TRUE(QmSaveUsage::MarkUsed(pConsole.get(), pDb.get(), KeyA, "Map A"));
+	ASSERT_TRUE(QmSaveUsage::MarkUsed(pConsole.get(), pDb.get(), KeyB, "Map B"));
+
+	// 内存镜像应包含全部已标记行；空库/未标记键不出现。
+	std::unordered_set<std::string> vKeys;
+	EXPECT_TRUE(QmSaveUsage::LoadUsedKeys(pConsole.get(), pDb.get(), vKeys));
+	EXPECT_EQ(vKeys.size(), 2u);
+	EXPECT_NE(vKeys.find(KeyA), vKeys.end());
+	EXPECT_NE(vKeys.find(KeyB), vKeys.end());
+
+	std::unordered_set<std::string> vEmpty;
+	CSqlite pEmptyDb = SqliteOpen(pConsole.get(), pStorage.get(), "qmclient_save_usage_test_empty.sqlite3");
+	ASSERT_TRUE(pEmptyDb) << "Error opening empty save usage test database";
+	ASSERT_TRUE(QmSaveUsage::EnsureTable(pConsole.get(), pEmptyDb.get()));
+	EXPECT_TRUE(QmSaveUsage::LoadUsedKeys(pConsole.get(), pEmptyDb.get(), vEmpty));
+	EXPECT_TRUE(vEmpty.empty());
 }
 
 TEST(QmSaveUsage, RepeatedMarkUpsertsSingleRow)

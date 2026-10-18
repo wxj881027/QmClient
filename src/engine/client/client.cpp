@@ -5128,6 +5128,14 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 		log_error("video_export", "A segmented export is already running ('%s').", m_pVideoExportTask->Name());
 		return true; // 已有任务时按已处理处理，避免再次整段导出
 	}
+	// 上一次导出的拼接线程仍在读段文件：此时开始新导出会重写同名段文件
+	// （<name>_p%03d）并可能与 <output>.part 替换目标并发，撕裂成片。
+	// 按已处理返回，避免调用方回退整段导出与拼接并发写同名输出。
+	if(VideoExportConcatPending())
+	{
+		log_error("video_export", "The previous export is still concatenating; wait for it to finish before starting a new export.");
+		return true;
+	}
 
 	// 新一轮导出：重置上一次的拼接结果，避免 UI 沿用旧的"完成/失败"状态。
 	m_ConcatAttempted.store(false);
@@ -5306,7 +5314,9 @@ void CClient::FinishSegmentedExport()
 	str_format(aProgress, sizeof(aProgress), "videos/%s.progress", pTask->Name());
 	const std::string ProgressPath = qmclient::media_paths::CompletePath(Storage(),
 		qmclient::media_paths::Resolve(Storage(), g_Config, aProgress));
-	pTask->SaveProgress(ProgressPath.c_str());
+	// 写失败时续渲会重渲本段（安全但耗时），必须让用户知道原因。
+	if(!pTask->SaveProgress(ProgressPath.c_str()))
+		log_warn("video_export", "Could not write progress file '%s'; the next resume will re-render this segment.", ProgressPath.c_str());
 
 	// 推进到下一段或收尾
 	const bool WasLast = pTask->NextPendingSegment() < 0;

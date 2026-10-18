@@ -6,6 +6,7 @@
 #include <sqlite3.h>
 
 #include <string>
+#include <unordered_set>
 
 // 本地存档的使用标记（issue #199）。
 // 不修改 ddnet-saves.txt 上游格式：使用状态存放在侧车 SQLite 库
@@ -55,6 +56,24 @@ namespace QmSaveUsage
 		if(SqliteHandleError(pConsole, sqlite3_bind_text(pStmt.get(), 1, Key.c_str(), -1, SQLITE_TRANSIENT), pSqlite, "bind key") != SQLITE_OK)
 			return false;
 		return sqlite3_step(pStmt.get()) == SQLITE_ROW;
+	}
+
+	// 全量加载已使用键到内存镜像：行只在 MarkUsed 中 upsert、从不删除，
+	// 镜像与库始终一致，UI 每帧的查询不再走 SQLite。
+	inline bool LoadUsedKeys(IConsole *pConsole, sqlite3 *pSqlite, std::unordered_set<std::string> &vKeys)
+	{
+		CSqliteStmt pStmt = SqlitePrepare(pConsole, pSqlite, "SELECT save_key FROM save_usage");
+		if(!pStmt)
+			return false;
+		while(true)
+		{
+			const int StepResult = SqliteHandleError(pConsole, sqlite3_step(pStmt.get()), pSqlite, "step load used keys");
+			if(StepResult != SQLITE_ROW)
+				return StepResult == SQLITE_DONE;
+			const unsigned char *pKey = sqlite3_column_text(pStmt.get(), 0);
+			if(pKey)
+				vKeys.insert(reinterpret_cast<const char *>(pKey));
+		}
 	}
 }
 

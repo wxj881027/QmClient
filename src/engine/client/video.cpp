@@ -312,6 +312,11 @@ void CVideo::Stop()
 	dbg_assert(!m_Stopped, "Already stopped");
 	m_Stopped = true;
 
+	// 生命周期不变量（与 backend_threaded.cpp 的图形线程回调对应）：
+	// WaitForIdle 与图形线程共用 m_BufferSwapMutex，返回时图形线程已退出
+	// NextVideoFrameThread 并回到 wait()；且本函数执行期间主线程不会提交新
+	// RunBuffer，图形线程不会再次进入录制回调。因此此后的转换线程 join 与
+	// delete 不会与图形线程的录制读回并发。
 	m_pGraphics->WaitForIdle();
 
 	// 视频转换管线：置停止标志并唤醒全部等待者，join 即代表队列已排空且
@@ -686,6 +691,7 @@ AVFrame *CVideo::AllocPicture(enum AVPixelFormat PixFmt, int Width, int Height)
 		char aError[AV_ERROR_MAX_STRING_SIZE];
 		av_strerror(FrameBufferAllocResult, aError, sizeof(aError));
 		log_error("videorecorder", "Could not allocate video frame buffer: %s", aError);
+		av_frame_free(&pPicture);
 		return nullptr;
 	}
 
@@ -718,6 +724,7 @@ AVFrame *CVideo::AllocAudioFrame(enum AVSampleFormat SampleFmt, uint64_t Channel
 			char aError[AV_ERROR_MAX_STRING_SIZE];
 			av_strerror(FrameBufferAllocResult, aError, sizeof(aError));
 			log_error("videorecorder", "Could not allocate audio frame buffer: %s", aError);
+			av_frame_free(&pFrame);
 			return nullptr;
 		}
 	}

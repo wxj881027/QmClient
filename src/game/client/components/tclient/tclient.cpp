@@ -626,6 +626,7 @@ void CTClient::OnInit()
 		log_warn("saves", "failed to open %s; save usage marks are disabled this session", QmSaveUsage::DATABASE_FILE);
 		m_pSaveUsageDb = nullptr;
 	}
+	LoadLocalSaveUsedKeys();
 }
 
 void CTClient::OnShutdown()
@@ -5480,18 +5481,27 @@ void CTClient::CompleteLocalSaveLoad(bool Success)
 		GameClient()->Echo(Localize("Save restore stopped without confirming success. The local record was kept."));
 }
 
+void CTClient::LoadLocalSaveUsedKeys()
+{
+	m_LocalSaveUsedKeys.clear();
+	if(m_pSaveUsageDb && !QmSaveUsage::LoadUsedKeys(Console(), m_pSaveUsageDb.get(), m_LocalSaveUsedKeys))
+		log_warn("saves", "failed to load save usage marks; the used badge may be incomplete this session");
+}
+
 void CTClient::MarkLocalSaveUsed(const char *pMap, const char *pCode)
 {
 	if(!m_pSaveUsageDb)
 		return;
-	QmSaveUsage::MarkUsed(Console(), m_pSaveUsageDb.get(), QmSaveUsage::SaveKey(pMap, pCode), pMap);
+	const std::string Key = QmSaveUsage::SaveKey(pMap, pCode);
+	if(QmSaveUsage::MarkUsed(Console(), m_pSaveUsageDb.get(), Key, pMap))
+		m_LocalSaveUsedKeys.insert(Key);
 }
 
 bool CTClient::IsLocalSaveUsed(const char *pMap, const char *pCode)
 {
-	if(!m_pSaveUsageDb)
-		return false;
-	return QmSaveUsage::IsUsed(Console(), m_pSaveUsageDb.get(), QmSaveUsage::SaveKey(pMap, pCode));
+	// 内存镜像查询：行只增不删，镜像与侧车库始终一致，UI 每帧调用无需走 SQLite。
+	return !m_LocalSaveUsedKeys.empty() &&
+	       m_LocalSaveUsedKeys.count(QmSaveUsage::SaveKey(pMap, pCode)) != 0;
 }
 
 void CTClient::HandleLocalSaveMessage(const CNetMsg_Sv_Chat *pMsg, int Conn)
