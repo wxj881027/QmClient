@@ -4738,6 +4738,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp
     src/test/integration/client/graphics_thread_startup_test.cpp
+    src/test/integration/client/graphics_thread_shutdown_test.cpp
     src/test/support/threaded_graphics_backend.h
     src/test/support/thread_creation_probe.h
     src/test/integration/client/graphics_error_report_test.cpp

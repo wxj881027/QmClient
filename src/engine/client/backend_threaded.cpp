@@ -100,21 +100,33 @@ bool CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor, TH
 void CGraphicsBackend_Threaded::StopProcessor()
 {
 	dbg_assert(!m_Shutdown, "Processor was already shut down.");
-	m_Shutdown = true;
-#if defined(CONF_PLATFORM_EMSCRIPTEN)
-	m_Warning = m_pProcessor->GetWarning();
-#else
+	m_SubmissionStopped = true;
+#if !defined(CONF_PLATFORM_EMSCRIPTEN)
 	{
 		std::unique_lock<std::mutex> Lock(m_BufferSwapMutex);
-		m_Warning = m_pProcessor->GetWarning();
+		m_Shutdown = true;
 		m_BufferSwapCond.notify_all();
 	}
 	thread_wait(m_pThread);
 	m_pThread = nullptr;
 	m_Started = false;
+#else
+	m_Shutdown = true;
 #endif
+	ICommandProcessor *pProcessor = m_pProcessor;
 	m_pProcessor = nullptr;
-	m_SubmissionStopped = true;
+	try
+	{
+		// 先完成线程回收；诊断复制失败不能阻止调用方释放处理器和窗口。
+		// 候选警告完整复制后再替换，避免枚举已更新但字符串仍是旧内容。
+		SGfxWarningContainer Warning = pProcessor->GetWarning();
+		m_Warning.m_vWarnings.swap(Warning.m_vWarnings);
+		m_Warning.m_WarningType = Warning.m_WarningType;
+	}
+	catch(...)
+	{
+		log_error("gfx", "Failed to preserve graphics warnings during shutdown.");
+	}
 }
 
 void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
@@ -240,8 +252,10 @@ bool CGraphicsBackend_Threaded::GetWarning(std::vector<std::string> &WarningStri
 {
 	if(m_Warning.m_WarningType != GFX_WARNING_TYPE_NONE)
 	{
+		// 转交已有字符串，不在消费警告时再次分配。
+		WarningStrings.swap(m_Warning.m_vWarnings);
+		m_Warning.m_vWarnings.clear();
 		m_Warning.m_WarningType = GFX_WARNING_TYPE_NONE;
-		WarningStrings = m_Warning.m_vWarnings;
 		return true;
 	}
 	return false;
