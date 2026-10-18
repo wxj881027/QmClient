@@ -31,6 +31,7 @@
 #include <game/client/QmUi/UiForms.h>
 #include <game/client/QmUi/UiNavigation.h>
 #include <game/client/QmUi/UiSurface.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/QmUi/cards/QmCardCatalog.h>
 #include <game/client/QmUi/cards/QmCardCatalogTClientInternal.h>
 #include <game/client/animstate.h>
@@ -695,7 +696,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 			// 卡片底：与设置卡片同源的面色 + 卡片边框色；悬浮叠加高亮。
 			DrawRoundedSurface(pUi, Card, CardVisual.m_SurfaceColor, CardVisual.m_BorderColor, ui_token::radius::BASE, 1.0f);
 			if(Hot)
-				DrawRoundedSurface(pUi, Card, Style.m_ActiveEntryColor, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), ui_token::radius::BASE);
+				DrawRoundedSurface(pUi, Card, Style.m_ActiveEntryColor, ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 
 			// 可见字体的预览按需入队（大文件同样自动下载）。
 			if(Active)
@@ -752,7 +753,7 @@ CUi::EPopupMenuFunctionResult CMenus::PopupFontStore(void *pContext, CUIRect Vie
 				else if(pAnyJob == nullptr)
 					pHint = Localize("Preview loading…");
 			}
-			DrawRoundedSurface(pUi, Inner, ColorRGBA(0.0f, 0.0f, 0.0f, 0.30f), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), ui_token::radius::BASE);
+			DrawRoundedSurface(pUi, Inner, ColorRGBA(0.0f, 0.0f, 0.0f, 0.30f), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 			CUIRect Preview;
 			Inner.Margin(5.0f, &Preview);
 			const float ContentH = pHint != nullptr ? 55.0f : 41.0f;
@@ -1341,7 +1342,7 @@ float CMenus::LayoutTClientThemeCacheSection(CUIRect &CurrentColumn, bool Render
 			CUIElement &PreviewElement = SettingsTextElement(SETTINGS_TCLIENT, m_TClientSettingsTab, "tclient-font-preview-label");
 			DoSettingsLabelStreamed(PreviewElement, &Label, Localize("Preview"), FontSize, TEXTALIGN_ML, TClientFixedLabelProperties(FontSize, Label.w));
 			// 预览框与激光/头衔等 QmClient 预览行同款：暗色半透明底、无高亮边框。
-			DrawRoundedSurface(Ui(), Button, ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f), ui_token::radius::BASE);
+			DrawRoundedSurface(Ui(), Button, ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f), ui_token::color::COLOR_TRANSPARENT, ui_token::radius::BASE);
 			CUIRect Inner;
 			Button.Margin(MarginSmall + 2.0f, &Inner);
 			const ColorRGBA PreviousTextColor = TextRender()->GetTextColor();

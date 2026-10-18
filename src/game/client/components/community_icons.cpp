@@ -136,14 +136,15 @@ void CCommunityIcons::LoadFinish(const char *pCommunityId, CImageInfo &Info, CIm
 	log_trace("menus/browser", "Loaded community icon '%s'", pCommunityId);
 }
 
-void CCommunityIcons::Render(const CCommunityIcon *pIcon, CUIRect Rect, bool Active)
+void CCommunityIcons::Render(const CCommunityIcon *pIcon, CUIRect Rect, bool Active, float AlphaMul)
 {
 	Rect.VMargin(Rect.w / 2.0f - Rect.h, &Rect);
 
 	Graphics()->WrapClamp();
 	Graphics()->TextureSet(Active ? pIcon->m_OrgTexture : pIcon->m_GreyTexture);
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(1.0f, 1.0f, 1.0f, Active ? 1.0f : 0.5f);
+	// AlphaMul 供列表行淡入使用（裸纹理 quad 不经过 CUi 的显隐系数）。
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, (Active ? 1.0f : 0.5f) * std::clamp(AlphaMul, 0.0f, 1.0f));
 	IGraphics::CQuadItem QuadItem(Rect.x, Rect.y, Rect.w, Rect.h);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
 	Graphics()->QuadsEnd();

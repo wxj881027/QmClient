@@ -206,8 +206,9 @@ void CParticles::RenderGroup(int Group)
 		return CurPos.x + SizeHalf >= ScreenX0 && CurPos.x - SizeHalf <= ScreenX1 && CurPos.y + SizeHalf >= ScreenY0 && CurPos.y - SizeHalf <= ScreenY1;
 	};
 
-	// don't use the buffer methods here, else the old renderer gets many draw calls
-	if(Graphics()->IsQuadContainerBufferingEnabled())
+	// 闪光拖尾逐颗淡出，共享颜色的实例批次会随透明度变化拆开。
+	// 使用下方的顶点颜色批处理，保留粒子顺序并合并相邻同贴图的绘制。
+	if(Graphics()->IsQuadContainerBufferingEnabled() && Group != GROUP_TRAIL_EXTRA)
 	{
 		int i = m_aFirstPart[Group];
 

@@ -3,6 +3,7 @@
 #include "sound.h"
 
 #include "audio_sdl3.h"
+#include "sound_buffer.h"
 
 #include <base/dbg.h>
 #include <base/log.h>
@@ -445,7 +446,7 @@ bool CSound::RateConvert(CSample &Sample) const
 		return true;
 
 	// allocate new data
-	const int NumFrames = (int)((Sample.m_NumFrames / (float)Sample.m_Rate) * m_MixingRate);
+	const int NumFrames = QmSoundResampledFrames(Sample.m_NumFrames, Sample.m_Channels, Sample.m_Rate, m_MixingRate);
 	if(NumFrames <= 0)
 		return false;
 	short *pNewData = (short *)calloc((size_t)NumFrames * Sample.m_Channels, sizeof(short));
@@ -471,8 +472,7 @@ bool CSound::RateConvert(CSample &Sample) const
 	}
 
 	// adjust looping position, note that this is not precise
-	const double Factor = (double)m_MixingRate / (double)Sample.m_Rate;
-	Sample.m_LoopStart = std::round(Sample.m_LoopStart * Factor);
+	Sample.m_LoopStart = QmSoundResampledLoopStart(Sample.m_LoopStart, Sample.m_Rate, m_MixingRate, NumFrames);
 
 	// free old data and apply new
 	free(Sample.m_pData);
@@ -488,41 +488,45 @@ bool CSound::DecodeOpus(CSample &Sample, const void *pData, unsigned DataSize, c
 	OggOpusFile *pOpusFile = op_open_memory((const unsigned char *)pData, DataSize, &OpusError);
 	if(pOpusFile)
 	{
+		const std::unique_ptr<OggOpusFile, decltype(&op_free)> OpusFile(pOpusFile, &op_free);
 		const int NumChannels = op_channel_count(pOpusFile, -1);
-		if(NumChannels > 2)
+		if(NumChannels < 1 || NumChannels > 2)
 		{
-			op_free(pOpusFile);
 			log_error("sound/opus", "File is not mono or stereo. Filename='%s'", pContextName);
 			return false;
 		}
 
-		const int NumSamples = op_pcm_total(pOpusFile, -1); // per channel!
-		if(NumSamples < 0)
+		const int64_t NumSamples = op_pcm_total(pOpusFile, -1); // per channel!
+		size_t SampleCount = 0;
+		if(!QmSoundSampleCount(NumSamples, NumChannels, SampleCount))
 		{
-			op_free(pOpusFile);
-			log_error("sound/opus", "Failed to get number of samples, error %d. Filename='%s'", NumSamples, pContextName);
+			log_error("sound/opus", "Number of samples is %" PRId64 ", not supported. Filename='%s'", NumSamples, pContextName);
 			return false;
 		}
 
-		short *pSampleData = (short *)calloc((size_t)NumSamples * NumChannels, sizeof(short));
-
 		int Pos = 0;
-		while(Pos < NumSamples)
-		{
-			const int Read = op_read(pOpusFile, pSampleData + Pos * NumChannels, (NumSamples - Pos) * NumChannels, nullptr);
-			if(Read < 0)
+		auto pSampleData = QmCreateSoundBuffer<short>(NumSamples, NumChannels, [&](short *pBuffer, int Count) {
+			while(Pos < NumSamples)
 			{
-				free(pSampleData);
-				op_free(pOpusFile);
-				log_error("sound/opus", "op_read error %d at %d. Filename='%s'", Read, Pos, pContextName);
-				return false;
+				const int Read = op_read(pOpusFile, pBuffer + Pos * NumChannels, Count - Pos * NumChannels, nullptr);
+				if(Read < 0)
+				{
+					log_error("sound/opus", "op_read error %d at %d. Filename='%s'", Read, Pos, pContextName);
+					return false;
+				}
+				else if(Read == 0)
+					break;
+				Pos += Read;
 			}
-			else if(Read == 0) // EOF
-				break;
-			Pos += Read;
+			return Pos > 0;
+		});
+		if(!pSampleData)
+		{
+			log_error("sound/opus", "Failed to allocate or decode sample data. Filename='%s'", pContextName);
+			return false;
 		}
 
-		Sample.m_pData = pSampleData;
+		Sample.m_pData = pSampleData.release();
 		Sample.m_NumFrames = Pos;
 		Sample.m_Rate = 48000;
 		Sample.m_Channels = NumChannels;
@@ -554,8 +558,6 @@ bool CSound::DecodeOpus(CSample &Sample, const void *pData, unsigned DataSize, c
 				break;
 			}
 		}
-
-		op_free(pOpusFile);
 	}
 	else
 	{
@@ -635,6 +637,9 @@ bool CSound::DecodeWV(CSample &Sample, const void *pData, unsigned DataSize, con
 	// no need to load sound when we are running with no sound
 	if(!m_SoundEnabled)
 		return false;
+	// Wavpack 的内存 reader 使用有符号偏移，不能把超大文件截成负长度。
+	if(pData == nullptr || DataSize == 0 || DataSize > static_cast<unsigned>(std::numeric_limits<int>::max()))
+		return false;
 
 	char aError[100];
 
@@ -650,11 +655,12 @@ bool CSound::DecodeWV(CSample &Sample, const void *pData, unsigned DataSize, con
 	WavpackContext *pContext = WavpackOpenFileInputEx(&Callback, &Reader, nullptr, aError, 0, 0);
 	if(pContext)
 	{
+		const std::unique_ptr<WavpackContext, decltype(&WavpackCloseFile)> Context(pContext, &WavpackCloseFile);
 		const int BitsPerSample = WavpackGetBitsPerSample(pContext);
 		const unsigned int SampleRate = WavpackGetSampleRate(pContext);
 		const int NumChannels = WavpackGetNumChannels(pContext);
 
-		if(NumChannels > 2)
+		if(NumChannels < 1 || NumChannels > 2)
 		{
 			log_error("sound/wv", "File is not mono or stereo. Filename='%s'", pContextName);
 			return false;
@@ -665,34 +671,36 @@ bool CSound::DecodeWV(CSample &Sample, const void *pData, unsigned DataSize, con
 			log_error("sound/wv", "Bits per sample is %d, not 16. Filename='%s'", BitsPerSample, pContextName);
 			return false;
 		}
+		if(SampleRate == 0 || SampleRate > static_cast<unsigned>(std::numeric_limits<int>::max()))
+			return false;
 
 		// wavpack reports -1 when the length of the stream is unknown
 		const int64_t NumSamples = WavpackGetNumSamples64(pContext);
-		if(NumSamples <= 0 || NumSamples > std::numeric_limits<int>::max())
+		size_t SampleCount = 0;
+		if(!QmSoundSampleCount(NumSamples, NumChannels, SampleCount))
 		{
 			log_error("sound/wv", "Number of samples is %" PRId64 ", not supported. Filename='%s'", NumSamples, pContextName);
-			WavpackCloseFile(pContext);
 			return false;
 		}
 
-		int *pBuffer = (int *)calloc((size_t)NumSamples * NumChannels, sizeof(int));
-		if(!WavpackUnpackSamples(pContext, pBuffer, NumSamples))
+		auto pBuffer = QmCreateSoundBuffer<int>(NumSamples, NumChannels, [&](int *pDecoded, int) {
+			return WavpackUnpackSamples(pContext, pDecoded, static_cast<uint32_t>(NumSamples)) != 0;
+		});
+		if(!pBuffer)
 		{
-			free(pBuffer);
-			log_error("sound/wv", "WavpackUnpackSamples failed. NumSamples=%" PRId64 " NumChannels=%d Filename='%s'", NumSamples, NumChannels, pContextName);
+			log_error("sound/wv", "Failed to allocate or decode sample data. NumSamples=%" PRId64 " NumChannels=%d Filename='%s'", NumSamples, NumChannels, pContextName);
 			return false;
 		}
 
-		Sample.m_pData = (short *)calloc((size_t)NumSamples * NumChannels, sizeof(short));
+		auto pSampleData = QmCreateSoundBuffer<short>(NumSamples, NumChannels, [&](short *pDecoded, int Count) {
+			for(int i = 0; i < Count; ++i)
+				pDecoded[i] = static_cast<short>(pBuffer.get()[i]);
+			return true;
+		});
+		if(!pSampleData)
+			return false;
 
-		int *pSrc = pBuffer;
-		short *pDst = Sample.m_pData;
-		for(int64_t i = 0; i < NumSamples * NumChannels; i++)
-			*pDst++ = (short)*pSrc++;
-
-		free(pBuffer);
-		WavpackCloseFile(pContext);
-
+		Sample.m_pData = pSampleData.release();
 		Sample.m_NumFrames = NumSamples;
 		Sample.m_Rate = SampleRate;
 		Sample.m_Channels = NumChannels;
@@ -741,7 +749,11 @@ int CSound::LoadOpus(const char *pFilename, int StorageType)
 	if(g_Config.m_Debug)
 		log_trace("sound/opus", "Loaded '%s' (index %d)", pFilename, pSample->m_Index);
 
-	RateConvert(*pSample);
+	if(!RateConvert(*pSample))
+	{
+		UnloadSample(pSample->m_Index);
+		return -1;
+	}
 	return pSample->m_Index;
 }
 
@@ -778,7 +790,11 @@ int CSound::LoadWV(const char *pFilename, int StorageType)
 	if(g_Config.m_Debug)
 		log_trace("sound/wv", "Loaded '%s' (index %d)", pFilename, pSample->m_Index);
 
-	RateConvert(*pSample);
+	if(!RateConvert(*pSample))
+	{
+		UnloadSample(pSample->m_Index);
+		return -1;
+	}
 	return pSample->m_Index;
 }
 
@@ -798,7 +814,11 @@ int CSound::LoadOpusFromMem(const void *pData, unsigned DataSize, bool ForceLoad
 		return -1;
 	}
 
-	RateConvert(*pSample);
+	if(!RateConvert(*pSample))
+	{
+		UnloadSample(pSample->m_Index);
+		return -1;
+	}
 	return pSample->m_Index;
 }
 
@@ -818,7 +838,11 @@ int CSound::LoadWVFromMem(const void *pData, unsigned DataSize, bool ForceLoad, 
 		return -1;
 	}
 
-	RateConvert(*pSample);
+	if(!RateConvert(*pSample))
+	{
+		UnloadSample(pSample->m_Index);
+		return -1;
+	}
 	return pSample->m_Index;
 }
 

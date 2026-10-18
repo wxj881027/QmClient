@@ -13,6 +13,14 @@
 
 namespace ui_widget
 {
+	namespace
+	{
+		// 禁用/警示斜线的双色：暗遮罩衬底 + 纯警示红。语义是「不可用」标记，
+		// 与通知语义的 ui_token::color::DANGER（柔和珊瑚红）刻意区分。
+		constexpr ColorRGBA SlashMaskColor{0.0f, 0.0f, 0.0f, 0.65f};
+		constexpr ColorRGBA SlashWarnColor{1.0f, 0.0f, 0.0f, 1.0f};
+	}
+
 	SSettingsActionGroupLayout PrepareSettingsActionGroup(CUi &Ui, SSettingsActionGroupState &State, const CUIRect &Row, const char *const *ppLabels, int Count, const SSettingsContentMetrics &Metrics, ESettingsActionGroupWidth WidthPolicy)
 	{
 		if(ppLabels == nullptr || Count <= 0 || Count > SSettingsChoiceLayout::MAX_SEGMENTS)
@@ -55,14 +63,24 @@ namespace ui_widget
 
 		CUiScopedGaussianBlurSuppression GaussianBlurSuppression(pUi);
 		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : pUi->QmAnimationRuntime();
-		if(pId != nullptr && pAnim != nullptr && Options.m_Enabled && !pUi->RenderOnly())
+		CUIRect DrawRect = Rect;
+		if(pId != nullptr && pAnim != nullptr && Options.m_Enabled && !pUi->AnimationsBlocked())
 		{
 			const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash, reinterpret_cast<uint64_t>(pId));
 			const SUiAnimTransition &Transition = State.m_Pressed ? ui_token::motion::BTN_PRESS : ui_token::motion::BTN_HOVER;
 			Style.m_Fill = ResolveUiAnimValueColor(*pAnim, NodeKey, Style.m_Fill, Transition.m_DurationSec, Transition.m_Easing);
+			const float TargetScale = State.m_Pressed ? 0.97f : 1.0f;
+			const float Scale = std::clamp(ResolveUiAnimSpringValue(*pAnim, NodeKey, EUiAnimProperty::SCALE, TargetScale, ui_token::motion::TWITCH_SPRING, 2), 0.90f, 1.05f);
+			if(std::abs(Scale - 1.0f) > 0.001f)
+			{
+				DrawRect.x += DrawRect.w * (1.0f - Scale) * 0.5f;
+				DrawRect.y += DrawRect.h * (1.0f - Scale) * 0.5f;
+				DrawRect.w *= Scale;
+				DrawRect.h *= Scale;
+			}
 		}
 		const ColorRGBA Fill = pUi->ScaleControlAlpha(Style.m_Fill);
-		DrawRoundedSurface(Ctx, Rect, Fill, pUi->ScaleControlAlpha(Style.m_Border), Options.m_Radius, Options.m_BorderWidth, Options.m_Corners);
+		DrawRoundedSurface(Ctx, DrawRect, Fill, pUi->ScaleControlAlpha(Style.m_Border), Options.m_Radius, Options.m_BorderWidth, Options.m_Corners);
 		return Fill;
 	}
 
@@ -110,8 +128,8 @@ namespace ui_widget
 				pGraphics->SetColor(SlashColor);
 				pGraphics->QuadsDrawFreeform(&Quad, 1);
 			};
-			DrawSlash(Label.w * 0.18f, pUi->ScaleControlAlpha(ColorRGBA(0.0f, 0.0f, 0.0f, 0.65f)));
-			DrawSlash(Label.w * 0.10f, pUi->ScaleControlAlpha(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f)));
+			DrawSlash(Label.w * 0.18f, pUi->ScaleControlAlpha(SlashMaskColor));
+			DrawSlash(Label.w * 0.10f, pUi->ScaleControlAlpha(SlashWarnColor));
 			pGraphics->QuadsEnd();
 		}
 		return Options.m_Enabled && !pUi->RenderOnly() ? pUi->DoButtonLogic(pId, Checked, &HitRect, Flags) : 0;

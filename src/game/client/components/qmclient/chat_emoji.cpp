@@ -7,6 +7,7 @@
 #include <engine/gfx/image_manipulation.h>
 #include <engine/storage.h>
 
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/gameclient.h>
 
 void CQmChatEmoji::EnsureTextureLoaded(EQmChatEmoji Emoji) const
@@ -108,5 +109,5 @@ void CQmChatEmoji::Render(EQmChatEmoji Emoji, float X, float Y, float Width, flo
 	Graphics()->QuadsDraw(&Quad, 1);
 	Graphics()->QuadsEnd();
 	Graphics()->TextureClear();
-	Graphics()->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+	Graphics()->SetColor(ui_token::color::NEUTRAL_WHITE);
 }

@@ -123,7 +123,7 @@ namespace ui_widget
 				return;
 			const float IconSide = minimum(Rect.w, Rect.h) * 0.58f;
 			const bool IsEyeMorphIcon = QmIcon == static_cast<int>(EQmIcon::EYE) || QmIcon == static_cast<int>(EQmIcon::EYE_OFF);
-			if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pAnim != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0)
+			if(IsEyeMorphIcon && pAnimationId != nullptr && Ctx.m_pAnim != nullptr && Ctx.m_pUi != nullptr && g_Config.m_QmUiMotionLevel > 0 && !Ctx.m_pUi->AnimationsBlocked())
 			{
 				const uint64_t NodeKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xE1E0A11ull, reinterpret_cast<uint64_t>(pAnimationId));
 				const float Target = QmIcon == static_cast<int>(EQmIcon::EYE_OFF) ? 1.0f : 0.0f;
@@ -248,6 +248,19 @@ namespace ui_widget
 				Changed = Ctx.m_pUi->DoEditBoxMultiLine(pInput, &TextRect, FontSize, Options.m_LineSpacing, TextAlign, RenderOptions);
 			else
 				Changed = Ctx.m_pUi->DoEditBox(pInput, &TextRect, FontSize, Options.m_Corners, {}, TextAlign, RenderOptions);
+		}
+		// 单行输入：Enter = 确认并退出编辑态（多行保留换行语义）。此前没有任何
+		// 路径在回车时失焦，Result.m_Submitted（依赖 Deactivated+SubmitPressed）
+		// 永远不成立——数值框的提交分支随之失效，输入后一直停在编辑态。
+		// IME 组词中的回车是候选确认，不退出编辑态（见 QmEditorTextInput 合同）。
+		// 必须走 ReleaseActiveTextInput 而非 Deactivate+SetActiveItem(nullptr)：
+		// SetActiveItem 对空指针不清 m_pLastActiveItem，下一帧 DoEditBox 会凭
+		// m_pLastActiveItem 重新 Activate，输入框复活（实测回归，见
+		// QmNumericFieldEnter.EnterDeactivatesInputAndSubmits）。
+		if(ProcessInput && Options.m_Mode != EInputFieldMode::MULTILINE && pInput->IsActive() && !Ctx.m_pUi->Input()->HasComposition() &&
+			(Ctx.m_pUi->Input()->KeyPress(KEY_RETURN) || Ctx.m_pUi->Input()->KeyPress(KEY_KP_ENTER)))
+		{
+			Ctx.m_pUi->ReleaseActiveTextInput(pInput);
 		}
 		if(RenderOnly)
 			pInput->SetEmptyText(pPreviousPlaceholder);
@@ -662,7 +675,7 @@ namespace ui_widget
 		ColorRGBA Track = Style.m_Track;
 		float Progress = Value ? 1.0f : 0.0f;
 		CUiV2AnimationRuntime *pAnim = Ctx.m_pAnim != nullptr ? Ctx.m_pAnim : Ctx.m_pUi->QmAnimationRuntime();
-		if(Animate && Enabled && pAnim != nullptr && !Ctx.m_pUi->RenderOnly())
+		if(Animate && Enabled && pAnim != nullptr && !Ctx.m_pUi->AnimationsBlocked())
 		{
 			const uint64_t TrackKey = BuildUiAnimNodeKey(Ctx.m_ScopeHash ^ 0xA5A5ull, reinterpret_cast<uint64_t>(pId));
 			Track = ResolveUiAnimValueColor(*pAnim, TrackKey, Track, ui_token::motion::BTN_HOVER.m_DurationSec, ui_token::motion::BTN_HOVER.m_Easing);
@@ -670,7 +683,7 @@ namespace ui_widget
 			Progress = ResolveUiAnimSpringValue(*pAnim, KnobKey, EUiAnimProperty::COLOR_MIX, Progress, ui_token::motion::TOGGLE);
 		}
 		const SToggleLayout Layout = ResolveToggleLayout(Rect, Progress);
-		const bool Hovered = !Ctx.m_pUi->RenderOnly() && Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->MouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
+		const bool Hovered = Enabled && Ctx.m_pUi->Enabled() && Ctx.m_pUi->VisualMouseHovered(pHitRect != nullptr ? pHitRect : &Rect);
 		const bool Pressed = Hovered && Ctx.m_pUi->CheckActiveItem(pId) && Ctx.m_pUi->MouseButton(0);
 		const auto Feedback = ResolveUiToggleFeedbackStyle(Style, Track, Backdrop, Enabled, Hovered, Pressed);
 		DrawControlSurface(Ctx, Layout.m_Track, Feedback.m_Track, Feedback.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
@@ -706,16 +719,25 @@ namespace ui_widget
 	{
 		if(Ctx.m_pUi == nullptr || Ctx.m_pUi->MeasurementOnly())
 			return;
-		SUiSliderStyle Style = ResolveUiSliderStyle(ThemeFor(Ctx), CUiScopedSurfaceText::CurrentSurface(), !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->HotItem() == pId, !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->CheckActiveItem(pId), Enabled);
+		// 按压态只看活动项（拖动中热项可能被滚动区域接管）；悬浮态用视觉
+		// 语义（内容 DRAW 回放放行），输入语义的 MouseHovered 不用于反馈。
+		const bool Pressed = Enabled && Ctx.m_pUi->CheckActiveItem(pId);
+		const bool Hot = Pressed || (Enabled && Ctx.m_pUi->VisualHotItem(pId));
+		SUiSliderStyle Style = ResolveUiSliderStyle(ThemeFor(Ctx), CUiScopedSurfaceText::CurrentSurface(), Hot, Pressed, Enabled);
 		// 宿主显式指定的滑块色优先于对比度兜底，供弹窗与设置页保持同一强调色。
 		if(pHandleColorOverride != nullptr)
 			Style.m_Handle = *pHandleColorOverride;
+		// 悬浮/拖动的几何反馈：滑块向外扩 1~2px，在暗/亮表面上都可直接感知
+		//（颜色推导反馈在高透明度卡片上不可靠，几何反馈不依赖底色）。
+		CUIRect HandleRect = Rect;
+		if(Hot)
+			HandleRect.Margin(Pressed ? -2.0f : -1.0f, &HandleRect);
 		// 滑块是前景反馈，背景透明度仅作用于轨道；保留强调色自身 alpha 和禁用态。
-		DrawControlSurface(Ctx, Rect, Style.m_Handle, Style.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
+		DrawControlSurface(Ctx, HandleRect, Style.m_Handle, Style.m_Border, ui_token::radius::PILL, ui_token::feedback::ICON_BORDER_WIDTH);
 		if(pColorInner != nullptr)
 		{
 			CUIRect Inner;
-			Rect.Margin(std::min(2.0f, std::min(Rect.w, Rect.h) * 0.25f), &Inner);
+			HandleRect.Margin(std::min(2.0f, std::min(HandleRect.w, HandleRect.h) * 0.25f), &Inner);
 			DrawControlSurface(Ctx, Inner, *pColorInner, ColorRGBA(), ui_token::radius::PILL);
 		}
 	}
@@ -725,7 +747,7 @@ namespace ui_widget
 		if(Ctx.m_pUi == nullptr || Ctx.m_pUi->MeasurementOnly())
 			return;
 		const auto Layout = ResolveHorizontalSliderLayout(Rect, Current);
-		const auto Style = ResolveUiSliderStyle(ThemeFor(Ctx), CUiScopedSurfaceText::CurrentSurface(), !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->HotItem() == pId, !Ctx.m_pUi->RenderOnly() && Ctx.m_pUi->CheckActiveItem(pId));
+		const auto Style = ResolveUiSliderStyle(ThemeFor(Ctx), CUiScopedSurfaceText::CurrentSurface(), Ctx.m_pUi->VisualHotItem(pId), Ctx.m_pUi->CheckActiveItem(pId));
 		DrawControlSurface(Ctx, Layout.m_Track, Ctx.m_pUi->ScaleControlAlpha(Style.m_Track), ColorRGBA(), ui_token::radius::PILL);
 		DrawControlSurface(Ctx, Layout.m_Fill, Style.m_Fill, ColorRGBA(), ui_token::radius::PILL);
 		DrawScrollbarHandle(Ctx, pId, Layout.m_Handle, true, pColorInner);

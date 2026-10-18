@@ -44,8 +44,8 @@ SCardMotionSpec ResolveCardMotionSpec(const int MotionLevel, const bool ListEntr
 	{
 		if(ListEntryAnimations)
 		{
-			Spec.m_EntryDistance = 6.0f;
-			Spec.m_EntryDuration = 0.10f;
+			Spec.m_EntryDistance = 8.0f;
+			Spec.m_EntryDuration = 0.14f;
 		}
 		if(CardHeightAnimations)
 			Spec.m_ContentHeightDuration = 0.12f;
@@ -56,8 +56,8 @@ SCardMotionSpec ResolveCardMotionSpec(const int MotionLevel, const bool ListEntr
 
 	if(ListEntryAnimations)
 	{
-		Spec.m_EntryDistance = 12.0f;
-		Spec.m_EntryDuration = 0.16f;
+		Spec.m_EntryDistance = 16.0f;
+		Spec.m_EntryDuration = 0.22f;
 	}
 	if(CardHeightAnimations)
 		Spec.m_ContentHeightDuration = 0.18f;

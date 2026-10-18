@@ -2,11 +2,13 @@
 #define ENGINE_CLIENT_QM_FONT_SCAN_JOB_H
 
 #include <base/hash.h>
+#include <base/log.h>
 #include <base/system.h>
 
 #include <engine/shared/jobs.h>
 
 #include <cstdlib>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <string>
@@ -24,7 +26,8 @@ public:
 		unsigned m_Size = 0;
 		std::string m_Hash;
 	};
-	using FEnumerate = std::function<std::vector<std::string>()>;
+	using FCancelled = std::function<bool()>;
+	using FEnumerate = std::function<std::vector<std::string>(const FCancelled &)>;
 	using FRead = std::function<bool(const char *, void **, unsigned *)>;
 
 private:
@@ -32,16 +35,35 @@ private:
 	FRead m_Read;
 	std::vector<SFile> m_vFiles;
 	size_t m_Cursor = 0;
+	bool m_Failed = false;
 
-	void Run() override
+	void Scan()
 	{
-		for(const std::string &Path : m_Enumerate())
+		if(State() == STATE_ABORTED)
+			return;
+		const FCancelled Cancelled = [this] { return State() == STATE_ABORTED; };
+		for(const std::string &Path : m_Enumerate(Cancelled))
 		{
+			if(Cancelled())
+				return;
 			void *pData = nullptr;
 			unsigned Size = 0;
-			const bool Read = m_Read(Path.c_str(), &pData, &Size);
+			bool Read;
+			try
+			{
+				Read = m_Read(Path.c_str(), &pData, &Size);
+			}
+			catch(...)
+			{
+				// 读取边界可能已交出缓冲，再报告异常。
+				free(pData);
+				throw;
+			}
 			SFile File;
 			File.m_pData.reset(pData);
+			// 已开始的文件读取完成后接管缓冲，再响应取消。
+			if(Cancelled())
+				return;
 			if(!Read || pData == nullptr || Size == 0)
 				continue;
 			File.m_Path = Path;
@@ -53,9 +75,34 @@ private:
 		}
 	}
 
+	void Run() override
+	{
+		try
+		{
+			Scan();
+		}
+		catch(const std::exception &Error)
+		{
+			// 作业池不捕获异常；保留已完成的文件，回到主线程继续使用字体回退。
+			m_Failed = true;
+			log_error("textrender/font", "Font scan stopped: %s", Error.what());
+		}
+		catch(...)
+		{
+			m_Failed = true;
+			log_error("textrender/font", "Font scan stopped after an unexpected exception.");
+		}
+		// 只有 worker 清理在途输出；STATE_ABORTED 不表示线程已经停止。
+		if(State() == STATE_ABORTED)
+			m_vFiles.clear();
+	}
+
 public:
 	CQmFontScanJob(FEnumerate Enumerate, FRead Read) :
-		m_Enumerate(std::move(Enumerate)), m_Read(std::move(Read)) {}
+		m_Enumerate(std::move(Enumerate)), m_Read(std::move(Read))
+	{
+		Abortable(true);
+	}
 
 	static bool ReadAbsolute(const char *pPath, void **ppData, unsigned *pSize)
 	{
@@ -79,6 +126,11 @@ public:
 	bool Exhausted() const
 	{
 		return State() == STATE_DONE && m_Cursor == m_vFiles.size();
+	}
+
+	bool Failed() const
+	{
+		return State() == STATE_DONE && m_Failed;
 	}
 };
 

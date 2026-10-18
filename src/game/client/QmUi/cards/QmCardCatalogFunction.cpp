@@ -5,6 +5,7 @@
 
 #include <game/client/QmUi/SettingsPageLayout.h>
 #include <game/client/QmUi/UiForms.h>
+#include <game/client/QmUi/UiTokens.h>
 #include <game/client/components/menus.h>
 #include <game/client/components/qmclient/word_filter_list.h>
 #include <game/client/gameclient.h>
@@ -30,7 +31,7 @@ void CMenus::RenderQmFunctionBlockWordsContent(CUIRect &Content, float UiScale, 
 	RenderCheckbox(&g_Config.m_QmBlockWordsShowConsole, Localizable("Show blocked words in console"), &g_Config.m_QmBlockWordsShowConsole);
 	static CButtonContainer s_BlockWordsConsoleColorId;
 	if(Flow.Control("console-color", ResolveSettingsColorRowLayout(Content, CurrentSettingsContentMetrics(), false).m_ConsumedHeight, Row))
-		DoLine_ColorPicker(&s_BlockWordsConsoleColorId, CurrentSettingsContentMetrics(), &Row, Localize("Console color"), &g_Config.m_QmBlockWordsConsoleColor, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false);
+		DoLine_ColorPicker(&s_BlockWordsConsoleColorId, CurrentSettingsContentMetrics(), &Row, Localize("Console color"), &g_Config.m_QmBlockWordsConsoleColor, ui_token::color::NEUTRAL_WHITE, false);
 	RenderCheckbox(&g_Config.m_QmBlockWordsEnabled, Localizable("Enable word filter list"), &g_Config.m_QmBlockWordsEnabled);
 
 	const int BlockWordsAction = g_Config.m_QmBlockWordsAction;

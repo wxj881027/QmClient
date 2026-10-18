@@ -50,7 +50,7 @@ BENCHMARK(FontSearchCached)->Arg(32)->Arg(512)->Arg(2048);
 static void FontScanPendingPoll(benchmark::State &State)
 {
 	int Reads = 0;
-	CQmFontScanJob Job([] { return std::vector<std::string>{"font.ttf"}; }, [&](const char *, void **, unsigned *) {
+	CQmFontScanJob Job([](const auto &) { return std::vector<std::string>{"font.ttf"}; }, [&](const char *, void **, unsigned *) {
 		++Reads;
 		return false; });
 	CQmFontScanJob::SFile File;

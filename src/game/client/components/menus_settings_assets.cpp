@@ -247,6 +247,10 @@ namespace
 	struct SSettingsAssetsCardPreviewState
 	{
 		IGraphics::CTextureHandle m_Texture;
+		// 指向持久预览缓存条目（SResourcePreviewState::m_AppearStart）的出场
+		// 时间戳：贴图首次真正绘制时盖章并计 0.25s 淡入。本结构每帧重建，
+		// 时间戳必须放在持久侧；nullptr = 不做淡入（alpha 恒 1）。
+		int64_t *m_pAppearStart = nullptr;
 		bool m_DrawEntityTileArtifact = false;
 		bool m_DrawFolderIcon = false;
 		bool m_FolderIsParent = false;
@@ -447,10 +451,13 @@ namespace
 		return Hydrated;
 	}
 
-	static void RenderAssetsCardMetadataCached(const SSettingsAssetsCardShell &Shell, SSettingsAssetsCardMetadataCacheEntry *pMetadata, const std::function<void(const SSettingsAssetsCardShell &, SSettingsAssetsCardMetadataCacheEntry &, bool)> &RenderMetadata)
+	// Render=false 为预热通道：只创建元素并排队异步文本容器构建，不绘制任何
+	// 内容。滚动/壳帧期主绘制走 Fallback 直绘，预热让切换回 streamed 渲染时
+	// 容器已就绪，消除"加载完成/滚动结束瞬间文本区域空帧闪烁"。
+	static void RenderAssetsCardMetadataCached(const SSettingsAssetsCardShell &Shell, SSettingsAssetsCardMetadataCacheEntry *pMetadata, const std::function<void(const SSettingsAssetsCardShell &, SSettingsAssetsCardMetadataCacheEntry &, bool)> &RenderMetadata, bool Render)
 	{
 		if(pMetadata != nullptr)
-			RenderMetadata(Shell, *pMetadata, true);
+			RenderMetadata(Shell, *pMetadata, Render);
 	}
 
 	constexpr float AssetsCardTitleFontSize = 9.0f;
@@ -4197,6 +4204,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	static int s_AssetsTabSwitchFirstFrame = 0;
 	static int s_AssetsTabSwitchCooldownFrames = 0;
 	static bool s_AssetsResetListScrollOnTabSwitch = false;
+	// 子 tab 切换序号：本地/商店两个卡片网格比对重启入场动画。
+	// 网格静态存活、帧帧连续渲染，间隙启发永不触发，须显式序号制（同浏览器/设置页列表）。
+	static int s_AssetsListEntryRestartSeq = 0;
 	static float s_AssetsTransitionDirection = 0.0f;
 	const uint64_t AssetsTabSwitchNode = UiAnimNodeKey("settings_assets_tab_switch");
 	const bool MenuUiPerfEnabled = QmPerfEnabled();
@@ -4258,6 +4268,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		s_AssetsTabSwitchFirstFrame = 1;
 		s_AssetsTabSwitchCooldownFrames = AssetsTabSwitchCooldownFrames;
 		s_AssetsResetListScrollOnTabSwitch = true;
+		++s_AssetsListEntryRestartSeq;
 		char aAssetsPerfTab[16];
 		str_format(aAssetsPerfTab, sizeof(aAssetsPerfTab), "%d", s_CurCustomTab);
 		StartSettingsPerfFixedWindow("settings_assets_tab_switch", SettingsPerfContextName(), CurrentQmUiPerfPage(), aAssetsPerfTab, 30);
@@ -4812,15 +4823,20 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	const int AssetsInitialMetadataLayoutTokens = maximum(1, minimum(AdaptiveBudget.m_VisibleTokens, 4));
 	const int AssetsMetadataLayoutTokensThisFrame = AssetsShellOnlyFrame ? AssetsInitialMetadataLayoutTokens : (AssetsScrollPressure ? AssetsInitialMetadataLayoutTokens : AdaptiveMetadataLayoutTokens);
 	const int AssetsPreviewArtifactTokensThisFrame = AssetsContentWarmupBlocked ? 0 : AdaptivePreviewArtifactTokens;
-	const int AssetsTextureUploadTokensThisFrame = AssetsContentWarmupBlocked ? 0 : AdaptiveTextureUploadTokens;
-	const int MaxPreviewDecodeStartsPerFrame = AssetsContentWarmupBlocked ? 0 : maximum(1, AdaptiveBudget.m_VisibleTokens + AdaptivePrefetchTokens + AdaptiveBackgroundTokens);
-	const int MaxPreviewHighPriorityDecodeStartsPerFrame = AssetsContentWarmupBlocked ? 0 : maximum(MaxPreviewDecodeStartsPerFrame, AdaptiveBudget.m_VisibleTokens + AdaptivePrefetchTokens);
-	const int MaxWorkshopThumbStartsPerFrameAdaptive = AssetsContentWarmupBlocked ? 0 : maximum(1, AdaptiveBudget.m_VisibleTokens + AdaptivePrefetchTokens + AdaptiveBackgroundTokens);
-	const int MaxWorkshopThumbHighPriorityStartsPerFrame = AssetsContentWarmupBlocked ? 0 : maximum(MaxWorkshopThumbStartsPerFrameAdaptive, AdaptiveBudget.m_VisibleTokens);
-	const int MaxWorkshopThumbJumpStartsPerFrame = maximum(1, minimum(MaxWorkshopThumbStartsPerFrameAdaptive, AdaptiveBudget.m_VisibleTokens));
+	// 滚动期间后台/预取仍全停（原设计），但**可见卡片**的缩略图保留涓流推进：
+	// 之前滚动期启动/上传全部清零，用户滚到哪都是空占位、停下后才慢慢补，
+	// 体感就是"每页只加载那么多材质"。涓流上限 2/帧，GPU 上传限流器与逐帧
+	// 字节预算仍然生效，不会造成滚动掉帧。壳帧（tab 切换首帧/翻页）保持全停。
+	const int AssetsVisibleTrickleTokens = AssetsShellOnlyFrame ? 0 : maximum(1, minimum(2, AdaptiveBudget.m_VisibleTokens));
+	const int AssetsTextureUploadTokensThisFrame = AssetsShellOnlyFrame ? 0 : (AssetsScrollPressure ? AssetsVisibleTrickleTokens : AdaptiveTextureUploadTokens);
+	const int MaxPreviewDecodeStartsPerFrame = AssetsShellOnlyFrame ? 0 : (AssetsScrollPressure ? AssetsVisibleTrickleTokens : maximum(1, AdaptiveBudget.m_VisibleTokens + AdaptivePrefetchTokens + AdaptiveBackgroundTokens));
+	const int MaxPreviewHighPriorityDecodeStartsPerFrame = AssetsShellOnlyFrame ? 0 : maximum(MaxPreviewDecodeStartsPerFrame, AssetsScrollPressure ? AssetsVisibleTrickleTokens : AdaptiveBudget.m_VisibleTokens + AdaptivePrefetchTokens);
+	const int MaxWorkshopThumbStartsPerFrameAdaptive = AssetsShellOnlyFrame ? 0 : (AssetsScrollPressure ? AssetsVisibleTrickleTokens : maximum(1, AdaptiveBudget.m_VisibleTokens + AdaptivePrefetchTokens + AdaptiveBackgroundTokens));
+	const int MaxWorkshopThumbHighPriorityStartsPerFrame = AssetsShellOnlyFrame ? 0 : maximum(MaxWorkshopThumbStartsPerFrameAdaptive, AssetsScrollPressure ? AssetsVisibleTrickleTokens : AdaptiveBudget.m_VisibleTokens);
+	const int MaxWorkshopThumbJumpStartsPerFrame = maximum(1, minimum(MaxWorkshopThumbStartsPerFrameAdaptive, AssetsScrollPressure ? AssetsVisibleTrickleTokens : AdaptiveBudget.m_VisibleTokens));
 	constexpr int MaxAssetsTabSwitchVisibleThumbStartsFirstFrame = 2;
 	constexpr int MaxAssetsTabSwitchVisibleThumbStartsPerFrame = 2;
-	const int VisibleThumbStartLimitThisFrame = AssetsContentWarmupBlocked ? 0 : (AssetsTabSwitchFirstFrame ? MaxAssetsTabSwitchVisibleThumbStartsFirstFrame : (AssetsTabSwitchCooldownActive ? MaxAssetsTabSwitchVisibleThumbStartsPerFrame : MaxWorkshopThumbStartsPerFrameAdaptive));
+	const int VisibleThumbStartLimitThisFrame = AssetsShellOnlyFrame ? 0 : (AssetsTabSwitchFirstFrame ? MaxAssetsTabSwitchVisibleThumbStartsFirstFrame : (AssetsTabSwitchCooldownActive ? MaxAssetsTabSwitchVisibleThumbStartsPerFrame : MaxWorkshopThumbStartsPerFrameAdaptive));
 	auto DecayAssetsScrollUploadCooldown = [&]() {
 		if(s_AssetsScrollUploadCooldownFrames > 0)
 			--s_AssetsScrollUploadCooldownFrames;
@@ -4838,12 +4854,15 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	bool AssetsDirectScrollUploadBlocked = s_AssetsScrollUploadCooldownFrames > 0;
 	bool AssetsUploadBlocked = AssetsContentWarmupBlocked || AssetsDirectScrollUploadBlocked;
 	const char *pAssetsUploadBlockFrameContext = AssetsDirectScrollUploadBlocked ? "scroll_cooldown" : (AssetsShellOnlyFrame ? "shell_only" : (AssetsScrollPressure ? "scroll_pressure" : "active"));
-	int MaxPreviewUploadsPerFrame = AssetsUploadBlocked ? 0 : AdaptiveBudget.m_GpuUploadTokens;
+	// 本地预览上传与商店缩略图同规：滚动期保留涓流。共享上传调度器的排空预算
+	// 也源自这里——若滚动期清零，积压的调度器队列会反过来把商店上传的
+	// "调度器空时才放行"闸门永久关死，涓流彻底失效。
+	int MaxPreviewUploadsPerFrame = AssetsShellOnlyFrame ? 0 : (AssetsUploadBlocked ? AssetsVisibleTrickleTokens : AdaptiveBudget.m_GpuUploadTokens);
 	auto RefreshAssetsUploadBudget = [&]() {
 		AssetsDirectScrollUploadBlocked = s_AssetsScrollUploadCooldownFrames > 0;
 		AssetsUploadBlocked = AssetsContentWarmupBlocked || AssetsDirectScrollUploadBlocked;
 		pAssetsUploadBlockFrameContext = AssetsDirectScrollUploadBlocked ? "scroll_cooldown" : (AssetsShellOnlyFrame ? "shell_only" : (AssetsScrollPressure ? "scroll_pressure" : "active"));
-		MaxPreviewUploadsPerFrame = AssetsUploadBlocked ? 0 : AdaptiveBudget.m_GpuUploadTokens;
+		MaxPreviewUploadsPerFrame = AssetsShellOnlyFrame ? 0 : (AssetsUploadBlocked ? AssetsVisibleTrickleTokens : AdaptiveBudget.m_GpuUploadTokens);
 	};
 	auto RefreshAssetsScrollUploadCooldownForOffset = [&](bool ScrollActive, float CurrentScrollOffsetY, float &PreviousScrollOffsetY, float RowHeight, bool JumpScrollActive) {
 		const bool ScrollOffsetChanged = absolute(CurrentScrollOffsetY - PreviousScrollOffsetY) > 0.01f;
@@ -5212,7 +5231,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	auto DrawPreviewFrame = [&](const CUIRect &TextureRect) -> CUIRect {
 		CUIRect PreviewFrame = TextureRect;
 		PreviewFrame.Margin(3.0f, &PreviewFrame);
-		DrawRoundedSurface(Ui(), PreviewFrame, ColorRGBA(0.03f, 0.05f, 0.08f, 0.18f), ColorRGBA(), 10.0f);
+		// 不再给预览区叠第二层圆角底：卡片壳已是唯一容器，贴图直接落在壳面
+		// 上。此前壳(0.16)与框(0.18)两层填充色差极小，却因半径不同多出一整圈
+		// 圆角线，加上实体图块本身的环形内容，读作"一圈圈的嵌套"。几何不变。
 		if(s_CurCustomTab != ASSETS_TAB_GAME && s_CurCustomTab != ASSETS_TAB_STRONG_WEAK)
 			PreviewFrame.Margin(8.0f, &PreviewFrame);
 		return PreviewFrame;
@@ -5324,7 +5345,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		return std::pair<float, float>(ContentWidth, ContentHeight);
 	};
 
-	auto RenderAssetsEntityTilePreviewArtifact = [&](const CUIRect &PreviewFrameRect, IGraphics::CTextureHandle Texture) {
+	auto RenderAssetsEntityTilePreviewArtifact = [&](const CUIRect &PreviewFrameRect, IGraphics::CTextureHandle Texture, float AppearAlpha) {
 		static constexpr int ASSETS_ENTITY_TILE_PREVIEW_COLS = 7;
 		static constexpr int ASSETS_ENTITY_TILE_PREVIEW_ROWS = 7;
 		static constexpr int COLS = ASSETS_ENTITY_TILE_PREVIEW_COLS;
@@ -5351,7 +5372,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		Graphics()->WrapClamp();
 		Graphics()->TextureSet(Texture);
 		Graphics()->QuadsBegin();
-		Graphics()->SetColor(1, 1, 1, 1);
+		Graphics()->SetColor(1, 1, 1, AppearAlpha);
 		for(int Row = 0; Row < ROWS; Row++)
 		{
 			for(int Column = 0; Column < COLS; Column++)
@@ -5375,19 +5396,37 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	};
 
 	auto EnsureAssetsCardPreviewArtifact = [&](const SSettingsAssetsCardPreviewState &PreviewState, const CUIRect &PreviewFrameRect, bool WorkshopCard) {
-		if(PreviewState.m_DrawEntityTileArtifact && PreviewState.m_Texture.IsValid())
+		if(!PreviewState.m_Texture.IsValid())
+			return;
+		// 贴图首次真正绘制的时刻起计 0.25s 淡入（加载完成即出场，不再硬生生
+		// 地出现）。时间戳存在持久预览缓存里并通过指针访问：PreviewState 是
+		// 每帧局部变量，直接盖时间戳会每帧清零、alpha 永远停在 0（已实测）。
+		float AppearAlpha = 1.0f;
+		if(PreviewState.m_pAppearStart != nullptr)
 		{
-			RenderAssetsEntityTilePreviewArtifact(PreviewFrameRect, PreviewState.m_Texture);
+			int64_t &AppearStart = *PreviewState.m_pAppearStart;
+			const int64_t Now = time_get();
+			if(AppearStart == 0)
+				AppearStart = Now;
+			const float AppearElapsed = static_cast<float>(Now - AppearStart) / static_cast<float>(maximum<int64_t>(1, time_freq()));
+			const float AppearT = std::clamp(AppearElapsed / 0.25f, 0.0f, 1.0f);
+			AppearAlpha = AppearT * AppearT * (3.0f - 2.0f * AppearT);
+		}
+		// 贴图是裸 quad，不经过 CUi 显隐系数；列表入场淡入（子 tab 切换/首进
+		// 重放）靠这里手动并入，否则文本逐行淡入而贴图满 alpha 直跳。
+		AppearAlpha *= Ui()->ControlAlphaScale();
+		if(PreviewState.m_DrawEntityTileArtifact)
+		{
+			RenderAssetsEntityTilePreviewArtifact(PreviewFrameRect, PreviewState.m_Texture, AppearAlpha);
 			return;
 		}
-		if(PreviewState.m_Texture.IsValid())
 		{
 			const auto [PreviewContentWidth, PreviewContentHeight] = ComputeAssetPreviewContentSize(WorkshopCard);
 			const CUIRect PreviewRect = ComputePreviewDrawRect(PreviewFrameRect, PreviewContentWidth, PreviewContentHeight);
 			Graphics()->WrapClamp();
 			Graphics()->TextureSet(PreviewState.m_Texture);
 			Graphics()->QuadsBegin();
-			Graphics()->SetColor(1, 1, 1, 1);
+			Graphics()->SetColor(1, 1, 1, AppearAlpha);
 			IGraphics::CQuadItem QuadItem(PreviewRect.x, PreviewRect.y, PreviewRect.w, PreviewRect.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
@@ -5459,8 +5498,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	};
 
 	auto RenderAssetsCardMetadata = [&](const SSettingsAssetsCardShell &Shell, SSettingsAssetsCardMetadataCacheEntry &Metadata, bool Render) {
-		if(!Render)
-			return;
+		// 元素创建/容器预热在预热通道也要执行；状态标签与徽章只随可见通道绘制。
 		if(Metadata.m_pTitleElement == nullptr)
 			Metadata.m_pTitleElement = std::make_unique<CUIElement>();
 		if(!Metadata.m_pTitleElement->IsRegistered())
@@ -5469,7 +5507,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		TitleProps.m_MaxWidth = static_cast<int>(Shell.m_TitleRect.w);
 		TitleProps.m_StopAtEnd = true;
 		TitleProps.m_EllipsisAtEnd = true;
-		DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pTitleElement, &Shell.m_TitleRect, Metadata.m_Title.c_str(), AssetsCardTitleFontSize, TEXTALIGN_ML, TitleProps);
+		DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pTitleElement, &Shell.m_TitleRect, Metadata.m_Title.c_str(), AssetsCardTitleFontSize, TEXTALIGN_ML, TitleProps, -1, nullptr, Render);
 
 		if(Shell.m_HasAuthorRow)
 		{
@@ -5481,8 +5519,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			AuthorProps.m_MaxWidth = static_cast<int>(Shell.m_AuthorRect.w);
 			AuthorProps.m_StopAtEnd = true;
 			AuthorProps.m_EllipsisAtEnd = true;
-			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pAuthorElement, &Shell.m_AuthorRect, Metadata.m_Author.c_str(), AssetsCardAuthorFontSize, TEXTALIGN_ML, AuthorProps);
+			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pAuthorElement, &Shell.m_AuthorRect, Metadata.m_Author.c_str(), AssetsCardAuthorFontSize, TEXTALIGN_ML, AuthorProps, -1, nullptr, Render);
 		}
+		if(!Render)
+			return;
 		if(Shell.m_HasStatusTag)
 			RenderAssetStatusTag(Shell.m_StatusTagRect, Metadata.m_StatusLabel.c_str(), Metadata.m_Installed || Metadata.m_LocalOnly);
 		if(Shell.m_HasLocalOnlyBadge)
@@ -5495,7 +5535,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				Metadata.m_pErrorElement->Init(Ui(), 1);
 			CUIRect ErrorRect = Shell.m_CardRect;
 			ErrorRect.HSplitBottom(14.0f, nullptr, &ErrorRect);
-			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pErrorElement, &ErrorRect, Localize("Download failed"), 9.0f, TEXTALIGN_MC);
+			DoMenuLabelStreamed(MENU_TEXT_SCOPE_SETTINGS, *Metadata.m_pErrorElement, &ErrorRect, Localize("Download failed"), 9.0f, TEXTALIGN_MC, SLabelProperties(), -1, nullptr, Render);
 		}
 	};
 
@@ -5574,9 +5614,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	auto FinalizeReadyPreviewDecodes = [&](const SSettingsResourceFrameContext &FinalizeFrameContext) {
 		if(!WindowActive)
 			return;
-		RemainingHeavyResourceBatches = std::min(
-			RemainingHeavyResourceBatches,
-			SettingsResourceSharedHeavyBudget(FinalizeFrameContext, 4, 1));
+		RemainingHeavyResourceBatches = SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(
+			RemainingHeavyResourceBatches, FinalizeFrameContext, 4, 1, AssetsVisibleTrickleTokens);
 		CPerfTimer ScanTimer;
 		CPerfTimer DecodeFinalizeTimer;
 		int ReadyCount = 0;
@@ -5624,7 +5663,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			}
 
 			const ESettingsResourcePriority FinalizePriority = pItem->m_PreviewHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
-			const int MaxFinalizesForFrame = SettingsResourceFrameStageBudget(FinalizeFrameContext, FinalizePriority, MaxPreviewDecodeFinalizesPerFrame, 0);
+			// 滚动期可见优先级保留涓流，否则滚动过程中解码完成的预览永远无法落盘。
+			const int MaxFinalizesForFrame = SettingsResourceFrameStageBudget(FinalizeFrameContext, FinalizePriority, MaxPreviewDecodeFinalizesPerFrame, minimum(MaxPreviewDecodeFinalizesPerFrame, AssetsVisibleTrickleTokens));
 			if(SettingsAssetPreviewShouldDeferFinalize(PreviewDecodeFinalizesThisFrame, DecodeFinalizeTimer.ElapsedMs(), MaxFinalizesForFrame, MaxPreviewDecodeFinalizeMsPerFrame))
 			{
 				vDecodeQueue.push_back(Handle);
@@ -5725,9 +5765,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	auto DrainReadyPreviewUploadsAfterList = [&](const SSettingsResourceFrameContext &UploadFrameContext) {
 		if(!WindowActive)
 			return;
-		RemainingHeavyResourceBatches = std::min(
-			RemainingHeavyResourceBatches,
-			SettingsResourceSharedHeavyBudget(UploadFrameContext, 4, 1));
+		RemainingHeavyResourceBatches = SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(
+			RemainingHeavyResourceBatches, UploadFrameContext, 4, 1, AssetsVisibleTrickleTokens);
 		size_t UploadedBytesThisFrame = 0;
 		int OversizedUploadsThisFrame = 0;
 		ESettingsWarmupMissReason UploadBlockReason = ESettingsWarmupMissReason::NONE;
@@ -5764,7 +5803,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				continue;
 			}
 			const ESettingsResourcePriority UploadPriority = pItem->m_PreviewHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
-			const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxPreviewUploadsPerFrame, 0);
+			// 与商店上传同规：滚动期可见优先级保留涓流（调度器积压也能继续排空）。
+			const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxPreviewUploadsPerFrame, minimum(MaxPreviewUploadsPerFrame, AssetsVisibleTrickleTokens));
 			if(UploadedPreviewsThisFrame >= MaxUploadsForFrame)
 			{
 				UploadBlocked = true;
@@ -5873,9 +5913,20 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 	{
 		static CListBox s_ListBox;
 		s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_OUTER);
+		// 大面积卡片网格：入场纯淡入 + 逐行 stagger，整卡不位移（onetake：
+		// 运动留给小元素，大 ground 稳定；整卡上下浮读作"晃"）。
+		s_ListBox.SetEntryAnimationFadeOnly(true);
+		// 选中/悬浮反馈贴合卡片（格子与卡片之间有半格间隙），选中态带描边。
+		s_ListBox.SetItemSelectionInset(Margin / 2.0f);
 		const CUIRect StableCustomList = AssetsCardListAreaWithStableScrollbar(CustomList, s_ListBox.ScrollbarWidthMax(), s_ListBox.ScrollbarMargin());
 		const int LocalColumns = maximum(1, (int)(StableCustomList.w / (Margin + TextureWidth)));
 		OldSelected = SelectedCustomAssetIndex(s_CurCustomTab, SearchListSize);
+		static int s_LastEntryRestartSeq = -1;
+		if(s_LastEntryRestartSeq != s_AssetsListEntryRestartSeq)
+		{
+			s_ListBox.RestartEntryAnimation();
+			s_LastEntryRestartSeq = s_AssetsListEntryRestartSeq;
+		}
 		if(s_AssetsResetListScrollOnTabSwitch)
 		{
 			s_ListBox.ResetScroll();
@@ -5942,7 +5993,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			if(pItem == nullptr)
 				continue;
 
-			const CListboxItem Item = s_ListBox.DoNextItem(pItem, OldSelected >= 0 && (size_t)OldSelected == i, AssetCardRadius + Margin / 2.0f);
+			const CListboxItem Item = s_ListBox.DoNextItem(pItem, OldSelected >= 0 && (size_t)OldSelected == i, AssetCardRadius);
 			CUIRect ItemRect = Item.m_Rect;
 			ItemRect.Margin(Margin / 2, &ItemRect);
 			if(!Item.m_Visible)
@@ -5964,15 +6015,24 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			SSettingsAssetsCardMetadataCacheEntry *pMetadata = FindAssetsCardMetadata(CardCacheKey);
 			(void)CombinedVisible;
 			pMetadata = FindAssetsCardMetadata(CardCacheKey);
-			if(pMetadata != nullptr && AssetsContentWarmupBlocked)
-				RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
-			else if(pMetadata != nullptr)
-				RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata);
+			if(pMetadata != nullptr)
+			{
+				// 滚动/壳帧期预热 streamed 文本容器（只排队构建、不绘制），
+				// 切回 streamed 渲染时容器已就绪，文本区域不再空帧闪烁。
+				if(AssetsContentWarmupBlocked)
+				{
+					RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
+					RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+				}
+				else
+					RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
+			}
 			else if(AssetsRenderCardMetadataFallback)
 				RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow);
 			SSettingsAssetsCardPreviewState PreviewState;
 			const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), CardRect.w);
 			SResourcePreviewState &ResourcePreviewState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+			PreviewState.m_pAppearStart = &ResourcePreviewState.m_AppearStart;
 			PreviewState.m_Texture = pItem->m_RenderTexture;
 			if(!PreviewState.m_Texture.IsValid())
 			{
@@ -6003,7 +6063,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 			if(HasDeleteButton)
 			{
-				if(Ui()->DoButton_QmIcon(&s_vLocalDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Shell.m_ActionButtonRect, IGraphics::CORNER_ALL))
+				if(Ui()->DoButton_QmIcon(&s_vLocalDeleteButtons[i], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Shell.m_ActionButtonRect, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, true))
 				{
 					DeleteLocalRequested = true;
 					str_copy(aDeleteLocalName, pItem->m_aName, sizeof(aDeleteLocalName));
@@ -6491,8 +6551,10 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		bool RefreshLocalList = false;
 
 		constexpr int MaxWorkshopThumbDecodeFinalizesPerFrame = 16;
-		int MaxWorkshopThumbDecodeFinalizesThisFrame = AssetsUploadBlocked ? 0 : MaxWorkshopThumbDecodeFinalizesPerFrame;
-		int MaxWorkshopThumbUploadsPerFrame = AssetsUploadBlocked ? 0 : AdaptiveBudget.m_GpuUploadTokens;
+		// 解码落盘是纯 CPU 操作，滚动期保留小流量让 ready 队列不断供，
+		// 否则涓流上传恢复时也无图可传。
+		int MaxWorkshopThumbDecodeFinalizesThisFrame = AssetsShellOnlyFrame ? 0 : (AssetsUploadBlocked ? 4 : MaxWorkshopThumbDecodeFinalizesPerFrame);
+		int MaxWorkshopThumbUploadsPerFrame = AssetsShellOnlyFrame ? 0 : (AssetsUploadBlocked ? AssetsVisibleTrickleTokens : AdaptiveBudget.m_GpuUploadTokens);
 		constexpr size_t MaxWorkshopThumbUploadBytesPerFrame = ASSET_PREVIEW_UPLOAD_MAX_BYTES_PER_FRAME;
 		constexpr double MaxWorkshopThumbDecodeFinalizeMsPerFrame = 1.0;
 		int WorkshopGpuUploadsThisFrame = 0;
@@ -6501,8 +6563,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		size_t WorkshopThumbUploadedBytesThisFrame = 0;
 		auto RefreshWorkshopAssetsUploadBudget = [&]() {
 			RefreshAssetsUploadBudget();
-			MaxWorkshopThumbDecodeFinalizesThisFrame = AssetsUploadBlocked ? 0 : MaxWorkshopThumbDecodeFinalizesPerFrame;
-			MaxWorkshopThumbUploadsPerFrame = AssetsUploadBlocked ? 0 : AdaptiveBudget.m_GpuUploadTokens;
+			MaxWorkshopThumbDecodeFinalizesThisFrame = AssetsShellOnlyFrame ? 0 : (AssetsUploadBlocked ? 4 : MaxWorkshopThumbDecodeFinalizesPerFrame);
+			MaxWorkshopThumbUploadsPerFrame = AssetsShellOnlyFrame ? 0 : (AssetsUploadBlocked ? AssetsVisibleTrickleTokens : AdaptiveBudget.m_GpuUploadTokens);
 		};
 
 		for(SWorkshopHudAsset &Asset : WorkshopState.m_vAssets)
@@ -6550,9 +6612,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		auto FinalizeWorkshopReadyThumbs = [&](const SSettingsResourceFrameContext &FinalizeFrameContext) {
 			if(!WindowActive)
 				return;
-			RemainingHeavyResourceBatches = std::min(
-				RemainingHeavyResourceBatches,
-				SettingsResourceSharedHeavyBudget(FinalizeFrameContext, 4, 1));
+			RemainingHeavyResourceBatches = SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(
+				RemainingHeavyResourceBatches, FinalizeFrameContext, 4, 1, AssetsVisibleTrickleTokens);
 			CPerfTimer WorkshopDecodeFinalizeTimer;
 			constexpr size_t MaxWorkshopThumbDecodePollsPerFrame = 24;
 			const size_t PendingWorkshopDecodes = WorkshopState.m_vDecodeThumbQueue.size();
@@ -6582,7 +6643,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				}
 
 				const ESettingsResourcePriority FinalizePriority = pAsset->m_ThumbHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
-				const int MaxFinalizesForFrame = SettingsResourceFrameStageBudget(FinalizeFrameContext, FinalizePriority, MaxWorkshopThumbDecodeFinalizesThisFrame, 0);
+				// 滚动期可见优先级保留涓流落盘：此前第 4 参传 0，把 6522 行
+				// "滚动期保留 4 次落盘"的预算整个清零，涓流上传恢复时也无图可传。
+				const int MaxFinalizesForFrame = SettingsResourceFrameStageBudget(FinalizeFrameContext, FinalizePriority, MaxWorkshopThumbDecodeFinalizesThisFrame, minimum(MaxWorkshopThumbDecodeFinalizesThisFrame, AssetsVisibleTrickleTokens));
 				if(SettingsAssetPreviewShouldDeferFinalize(WorkshopThumbFinalizesThisFrame, WorkshopDecodeFinalizeTimer.ElapsedMs(), MaxFinalizesForFrame, MaxWorkshopThumbDecodeFinalizeMsPerFrame))
 				{
 					QueueWorkshopDecodeThumb(WorkshopState, *pAsset, s_CurCustomTab, Client());
@@ -6636,9 +6699,8 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		auto DrainWorkshopReadyThumbUploads = [&](const SSettingsResourceFrameContext &UploadFrameContext) {
 			if(!WindowActive)
 				return;
-			RemainingHeavyResourceBatches = std::min(
-				RemainingHeavyResourceBatches,
-				SettingsResourceSharedHeavyBudget(UploadFrameContext, 4, 1));
+			RemainingHeavyResourceBatches = SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(
+				RemainingHeavyResourceBatches, UploadFrameContext, 4, 1, AssetsVisibleTrickleTokens);
 			SSettingsResourceMergeBudget UploadBudget;
 			UploadBudget.m_MaxGpuUploads = MaxWorkshopThumbUploadsPerFrame - WorkshopGpuUploadsThisFrame;
 			SResourcePreviewUploadBudget WorkshopPreviewUploadBudget;
@@ -6676,7 +6738,9 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 				CPerfTimer UploadBatchTimer;
 				const size_t AssetBytes = pAsset->m_ThumbBytes;
 				const ESettingsResourcePriority UploadPriority = pAsset->m_ThumbHighPriority ? ESettingsResourcePriority::VISIBLE : ESettingsResourcePriority::BACKGROUND;
-				const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxWorkshopThumbUploadsPerFrame, 0);
+				// 滚动上下文里可见优先级保留涓流预算（ScrollActiveVisibleBudget），
+				// 之前传 0 等于把框架自带的滚动期可见涓流关死了。
+				const int MaxUploadsForFrame = SettingsResourceFrameStageBudget(UploadFrameContext, UploadPriority, MaxWorkshopThumbUploadsPerFrame, minimum(MaxWorkshopThumbUploadsPerFrame, AssetsVisibleTrickleTokens));
 				if(WorkshopGpuUploadsThisFrame >= MaxUploadsForFrame)
 				{
 					WorkshopUploadBlocked = true;
@@ -6891,6 +6955,16 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 		{
 			static CListBox s_WorkshopAssetsListBox;
 			s_WorkshopAssetsListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_OUTER);
+			// 大面积卡片网格：入场纯淡入 + 逐行 stagger，整卡不位移。
+			s_WorkshopAssetsListBox.SetEntryAnimationFadeOnly(true);
+			// 选中/悬浮反馈贴合卡片，选中态带描边。
+			s_WorkshopAssetsListBox.SetItemSelectionInset(Margin / 2.0f);
+			static int s_WorkshopEntryRestartSeq = -1;
+			if(s_WorkshopEntryRestartSeq != s_AssetsListEntryRestartSeq)
+			{
+				s_WorkshopAssetsListBox.RestartEntryAnimation();
+				s_WorkshopEntryRestartSeq = s_AssetsListEntryRestartSeq;
+			}
 			const CUIRect StableWorkshopListArea = AssetsCardListAreaWithStableScrollbar(WorkshopListArea, s_WorkshopAssetsListBox.ScrollbarWidthMax(), s_WorkshopAssetsListBox.ScrollbarMargin());
 			const int Columns = std::max(1, static_cast<int>(StableWorkshopListArea.w / (Margin + TextureWidth)));
 			const int OldCombinedSelected = SelectedCombinedAssetIndex(s_CurCustomTab, vVisibleLocalAssetIndices);
@@ -7106,7 +7180,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 						else
 							++VisiblePreflight.m_NotReadyCount;
 					}
-					if(!AssetsContentWarmupBlocked && StartWorkshopThumb(Asset, Visible))
+					if(StartWorkshopThumb(Asset, Visible))
 					{
 						CombinedVisibleAdmission.Record(Visible, !Visible);
 						++VisiblePreflight.m_ThumbStartsBeforeVisible;
@@ -7137,13 +7211,13 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 			PrepareAssetsVisibleContentBudgeted();
 			const int AssetsMetadataHydratedThisFrame = DrainAssetsCardMetadataHydrationRequests(AssetsMetadataLayoutTokensThisFrame, ResourcePreviewTelemetry);
 			SSettingsResourceMergeBudget ResourcePreviewUploadMergeBudget;
-			ResourcePreviewUploadMergeBudget.m_MaxGpuUploads = AssetsUploadBlocked ? 0 : minimum(AssetsTextureUploadTokensThisFrame, GameClient()->GpuUploadLimiter()->RemainingUploads());
+			ResourcePreviewUploadMergeBudget.m_MaxGpuUploads = AssetsShellOnlyFrame ? 0 : minimum(AssetsTextureUploadTokensThisFrame, GameClient()->GpuUploadLimiter()->RemainingUploads());
 			SResourcePreviewUploadBudget ResourcePreviewUploadBudget;
 			ResourcePreviewUploadBudget.m_MaxUploads = ResourcePreviewUploadMergeBudget.m_MaxGpuUploads;
 			ResourcePreviewUploadBudget.m_pMergeBudget = &ResourcePreviewUploadMergeBudget;
 			ResourcePreviewUploadBudget.m_pFrameBudget = SettingsFrameBudget();
 			ResourcePreviewUploadBudget.m_pGpuUploadLimiter = GameClient()->GpuUploadLimiter();
-			if(!AssetsContentWarmupBlocked)
+			if(!AssetsShellOnlyFrame)
 				ProcessAssetsResourcePreviewJobs(Graphics(), ResourcePreviewTelemetry, ResourcePreviewUploadBudget);
 			auto CountResourcePreviewPlaceholder = [&]() {
 				++ResourcePreviewTelemetry.m_PlaceholderCount;
@@ -7161,7 +7235,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 					const bool Selected = IsLocalAssetSelected(pItem->m_aName);
 
-					const CListboxItem Item = s_WorkshopAssetsListBox.DoNextItem(pItem, Selected, AssetCardRadius + Margin / 2.0f);
+					const CListboxItem Item = s_WorkshopAssetsListBox.DoNextItem(pItem, Selected, AssetCardRadius);
 					CUIRect ItemRect = Item.m_Rect;
 					ItemRect.Margin(Margin / 2, &ItemRect);
 					if(!Item.m_Visible)
@@ -7184,10 +7258,18 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					const bool MetadataCached = pMetadata != nullptr;
 					(void)MetadataCached;
 					pMetadata = FindAssetsCardMetadata(CardCacheKey);
-					if(pMetadata != nullptr && AssetsContentWarmupBlocked)
-						RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
-					else if(pMetadata != nullptr)
-						RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata);
+					if(pMetadata != nullptr)
+					{
+						// 滚动/壳帧期预热 streamed 文本容器（只排队构建、不绘制），
+						// 切回 streamed 渲染时容器已就绪，文本区域不再空帧闪烁。
+						if(AssetsContentWarmupBlocked)
+						{
+							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
+							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+						}
+						else
+							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
+					}
 					else if(AssetsRenderCardMetadataFallback)
 						RenderAssetsCardMetadataFallback(Ui(), Shell, AssetCardDisplayName(pItem), pItem->m_aAuthor[0] != '\0' ? pItem->m_aAuthor : "--", pLocalStatusLabel, true, ShowAuthorRow);
 					WorkshopCardLayoutTextMs += CardLayoutTextTimer.ElapsedMs();
@@ -7196,6 +7278,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					SSettingsAssetsCardPreviewState PreviewState;
 					const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(pItem->m_aName, s_CurCustomTab, false, Graphics()->ScreenHiDPIScale(), CardRect.w);
 					SResourcePreviewState &ResourcePreviewState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+					PreviewState.m_pAppearStart = &ResourcePreviewState.m_AppearStart;
 					if(IsEntityBgDirectory)
 					{
 						const bool IsWorkshopRootFolder = IsEntityBgDirectory &&
@@ -7273,7 +7356,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 					if(HasDeleteButton)
 					{
-						if(Ui()->DoButton_QmIcon(&s_vWorkshopLocalDeleteButtons[LocalIndex], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Shell.m_ActionButtonRect, IGraphics::CORNER_ALL))
+						if(Ui()->DoButton_QmIcon(&s_vWorkshopLocalDeleteButtons[LocalIndex], EQmIcon::TRASH, FONT_ICON_TRASH, 0, &Shell.m_ActionButtonRect, IGraphics::CORNER_ALL, IGraphics::CORNER_ALL, true, std::nullopt, false, true))
 						{
 							DeleteLocalRequested = true;
 							str_copy(aDeleteLocalName, pItem->m_aName, sizeof(aDeleteLocalName));
@@ -7286,7 +7369,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					const size_t AssetIndex = vVisibleDownloadableAssetIndices[DownloadableIndex];
 					SWorkshopHudAsset &Asset = WorkshopState.m_vAssets[AssetIndex];
 
-					const CListboxItem Item = s_WorkshopAssetsListBox.DoNextItem(&Asset, false, AssetCardRadius + Margin / 2.0f);
+					const CListboxItem Item = s_WorkshopAssetsListBox.DoNextItem(&Asset, false, AssetCardRadius);
 					CUIRect ItemRect = Item.m_Rect;
 					ItemRect.Margin(Margin / 2, &ItemRect);
 					if(!Item.m_Visible)
@@ -7312,10 +7395,18 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					const bool MetadataCached = pMetadata != nullptr;
 					(void)MetadataCached;
 					pMetadata = FindAssetsCardMetadata(CardCacheKey);
-					if(pMetadata != nullptr && AssetsContentWarmupBlocked)
-						RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
-					else if(pMetadata != nullptr)
-						RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata);
+					if(pMetadata != nullptr)
+					{
+						// 滚动/壳帧期预热 streamed 文本容器（只排队构建、不绘制），
+						// 切回 streamed 渲染时容器已就绪，文本区域不再空帧闪烁。
+						if(AssetsContentWarmupBlocked)
+						{
+							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, false);
+							RenderAssetsCardMetadataFallback(Ui(), Shell, pMetadata->m_Title.c_str(), pMetadata->m_Author.c_str(), pMetadata->m_StatusLabel.c_str(), pMetadata->m_Installed || pMetadata->m_LocalOnly, ShowAuthorRow);
+						}
+						else
+							RenderAssetsCardMetadataCached(Shell, pMetadata, RenderAssetsCardMetadata, true);
+					}
 					else if(AssetsRenderCardMetadataFallback)
 						RenderAssetsCardMetadataFallback(Ui(), Shell, Asset.m_Name.c_str(), Asset.m_Author.empty() ? "--" : Asset.m_Author.c_str(), pWorkshopStatusLabel, Asset.m_Installed, ShowAuthorRow);
 					WorkshopCardLayoutTextMs += CardLayoutTextTimer.ElapsedMs();
@@ -7324,6 +7415,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 					SSettingsAssetsCardPreviewState PreviewState;
 					const SResourcePreviewKey PreviewKey = BuildAssetsResourcePreviewKey(Asset.m_Id.empty() ? Asset.m_Name.c_str() : Asset.m_Id.c_str(), s_CurCustomTab, true, Graphics()->ScreenHiDPIScale(), CardRect.w);
 					SResourcePreviewState &ResourcePreviewState = gs_SettingsAssetsResourcePreviewCache.GetOrCreate(PreviewKey);
+					PreviewState.m_pAppearStart = &ResourcePreviewState.m_AppearStart;
 					PreviewState.m_Texture = Asset.m_ThumbTexture;
 					if(!PreviewState.m_Texture.IsValid())
 					{
@@ -7349,7 +7441,7 @@ void CMenus::RenderSettingsCustom(CUIRect MainView)
 
 					const EQmIcon ActionIconEnum = Downloading ? EQmIcon::ARROW_ROTATE_RIGHT : EQmIcon::CIRCLE_CHEVRON_DOWN;
 					const char *pActionIcon = Downloading ? FONT_ICON_ARROW_ROTATE_RIGHT : FONT_ICON_CIRCLE_CHEVRON_DOWN;
-					if(Ui()->DoButton_QmIcon(&vWorkshopActionButtons[AssetIndex], ActionIconEnum, pActionIcon, 0, &Shell.m_ActionButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Downloading))
+					if(Ui()->DoButton_QmIcon(&vWorkshopActionButtons[AssetIndex], ActionIconEnum, pActionIcon, 0, &Shell.m_ActionButtonRect, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, !Downloading, std::nullopt, false, true))
 					{
 						DownloadRequested = true;
 						RequestedDownloadAssetIndex = AssetIndex;

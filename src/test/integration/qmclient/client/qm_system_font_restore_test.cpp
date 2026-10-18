@@ -3,6 +3,7 @@
 #include <engine/storage.h>
 
 #include <gtest/gtest.h>
+#include <test/support/job_wait.h>
 #include <test/test.h>
 
 #include <filesystem>
@@ -36,7 +37,7 @@ TEST(QmSystemFontRestore, UnrelatedAndInvalidFontsNeverReachFullReadOrHash)
 		Selected};
 	std::vector<std::string> vRead;
 	CQmFontRestore Restore;
-	const auto pJob = Restore.Request({"DejaVu Sans", "", ""}, [](const char *) { return false; }, [&](const auto &vNames) { return QmFindSelectedFontFiles(vPaths, vNames); }, [&](const char *pPath, void **ppData, unsigned *pSize) {
+	const auto pJob = Restore.Request({"DejaVu Sans", "", ""}, [](const char *) { return false; }, [&](const auto &vNames, const auto &Cancelled) { return QmFindSelectedFontFiles(vPaths, vNames, Cancelled); }, [&](const char *pPath, void **ppData, unsigned *pSize) {
 			vRead.emplace_back(pPath);
 			return CQmFontScanJob::ReadAbsolute(pPath, ppData, pSize); });
 	ASSERT_NE(pJob, nullptr);
@@ -44,6 +45,7 @@ TEST(QmSystemFontRestore, UnrelatedAndInvalidFontsNeverReachFullReadOrHash)
 	CJobPool Pool;
 	Pool.Init(1);
 	Pool.Add(pJob);
+	EXPECT_TRUE(WaitForJobDone(*pJob));
 	Pool.Shutdown();
 	EXPECT_EQ(vRead, (std::vector<std::string>{Selected}));
 	CQmFontScanJob::SFile File;
@@ -65,4 +67,19 @@ TEST(QmSystemFontRestore, ProbeSupportsUnicodeInstallationPaths)
 	const auto Utf8Path = Path.u8string();
 	const std::string PathString(Utf8Path.begin(), Utf8Path.end());
 	EXPECT_TRUE(Probe.Matches(PathString.c_str(), {"DejaVu Sans"}));
+}
+
+TEST(QmSystemFontRestore, CancelledProbeDoesNotMatchReadableFont)
+{
+	CQmFontFileProbe Probe;
+	const std::string Path = TestSourcePath("data/fonts/DejaVuSans.ttf");
+	EXPECT_FALSE(Probe.Matches(Path.c_str(), {"DejaVu Sans"}, [] { return true; }));
+	EXPECT_TRUE(Probe.Matches(Path.c_str(), {"DejaVu Sans"}));
+}
+
+TEST(QmSystemFontRestore, CancelledSelectionLookupReturnsNoMatchingFiles)
+{
+	const std::vector<std::string> vPaths{TestSourcePath("data/fonts/DejaVuSans.ttf")};
+	EXPECT_TRUE(QmFindSelectedFontFiles(vPaths, {"DejaVu Sans"}, [] { return true; }).empty());
+	EXPECT_EQ(QmFindSelectedFontFiles(vPaths, {"DejaVu Sans"}), vPaths);
 }

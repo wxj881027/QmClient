@@ -1,6 +1,9 @@
 // 真实组合框、输入和弹层协作；只替换输入设备、客户端时钟与 GPU。
 #include <engine/keys.h>
 
+#include <game/client/ui_scrollregion.h>
+
+#include <test/support/qm_anim_test_helpers.h>
 #include <test/support/qm_real_ui_fixture.h>
 #include <test/support/qm_ui_test_client.h>
 #include <test/support/qm_ui_test_input.h>
@@ -148,4 +151,56 @@ TEST_F(QmFontCombobox, ClosedSelectorDoesNotActivateTextInput)
 	EXPECT_FALSE(m_Ui.IsPopupOpen());
 	Open();
 	EXPECT_EQ(CLineInput::GetActiveInput(), &m_State.m_SelectionPopupContext.m_SearchInput);
+}
+
+TEST_F(QmFontCombobox, AnimatedCommitResetsContextBeforeExitAndCanReopen)
+{
+	CScopedQmFullMotion FullMotion;
+	CScrollRegion ExternalScrollRegion;
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	for(int Index = 0; Index < 20; ++Index)
+		Frame();
+	Key(KEY_DOWN);
+	Frame();
+	Key(KEY_RETURN);
+	Frame();
+	ASSERT_FALSE(m_Ui.IsPopupOpen());
+	ASSERT_TRUE(m_Ui.IsPopupVisible(&m_State.m_SelectionPopupContext));
+	Frame();
+	EXPECT_EQ(m_Selected, 1);
+	EXPECT_EQ(m_State.m_SelectionPopupContext.m_pUI, nullptr);
+	// 图形设置页每帧重绑外部滚动区；这会绕过旧回调仅检查滚动区的空指针兜底。
+	m_State.m_SelectionPopupContext.m_pScrollRegion = &ExternalScrollRegion;
+	Frame();
+	EXPECT_EQ(CLineInput::GetActiveInput(), nullptr);
+	for(int Index = 0; Index < 20; ++Index)
+		Frame();
+	EXPECT_FALSE(m_Ui.IsPopupVisible(&m_State.m_SelectionPopupContext));
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	EXPECT_TRUE(m_Ui.IsPopupOpen(&m_State.m_SelectionPopupContext));
+}
+
+TEST_F(QmFontCombobox, AnimatedEscapeKeepsSelectionAndClearsDraftOnReopen)
+{
+	CScopedQmFullMotion FullMotion;
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	for(int Index = 0; Index < 20; ++Index)
+		Frame();
+	Text("Arial");
+	Frame();
+	Key(KEY_ESCAPE);
+	Frame();
+	ASSERT_FALSE(m_Ui.IsPopupOpen());
+	ASSERT_TRUE(m_Ui.IsPopupVisible(&m_State.m_SelectionPopupContext));
+	Frame();
+	EXPECT_EQ(m_Selected, 0);
+	EXPECT_EQ(CLineInput::GetActiveInput(), nullptr);
+	for(int Index = 0; Index < 20; ++Index)
+		Frame();
+	Open();
+	ASSERT_FALSE(HasFatalFailure());
+	EXPECT_STREQ(m_State.m_SelectionPopupContext.m_SearchInput.GetString(), "");
 }

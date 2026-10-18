@@ -262,6 +262,9 @@ namespace qm_bind_editor
 		return Result;
 	}
 
+	// 引号参数里的 " 和 \ 都成对转义：控制台命令行切分（ExecuteLineStroked /
+	// LineIsValid）按 \\ 与 \" 整体跳过，ParseArguments 再还原成单个字符。
+	// 少了任何一侧，值里的反斜杠就会让切分误判引号闭合，把引号内的 ; 当命令分隔符。
 	std::string QuoteArgument(const std::string_view Text)
 	{
 		std::string Result;
@@ -284,6 +287,11 @@ namespace qm_bind_editor
 		Result.push_back(' ');
 		Result += QuoteArgument(Command);
 		return Result;
+	}
+
+	std::string WheelConfigLine(std::string_view Name, std::string_view Command)
+	{
+		return "add_bindwheel " + QuoteArgument(Name) + " " + QuoteArgument(Command);
 	}
 
 	bool FitsConfigLine(const std::string_view KeyName, const std::string_view Command)

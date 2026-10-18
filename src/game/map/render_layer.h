@@ -75,6 +75,7 @@ public:
 
 	bool IsVisibleInClipRegion(const std::optional<CClipRegion> &ClipRegion) const;
 	int GetGroup() const { return m_GroupId; }
+	int GetLayer() const { return m_LayerId; }
 
 protected:
 	int m_GroupId;

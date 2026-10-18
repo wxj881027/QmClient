@@ -174,9 +174,19 @@ namespace FontIcons
 
 	[[maybe_unused]] static const char *FONT_ICON_MICROPHONE = "\xEE\x8C\xA6";
 
+	// 连接质量分档（灵动岛连接状态）：Phosphor cell-signal 家族官方码位。
+	[[maybe_unused]] static const char *FONT_ICON_CELL_SIGNAL_HIGH = "\xEE\x85\x84"; // U+E144
+	[[maybe_unused]] static const char *FONT_ICON_CELL_SIGNAL_MEDIUM = "\xEE\x85\x88"; // U+E148
+	[[maybe_unused]] static const char *FONT_ICON_CELL_SIGNAL_LOW = "\xEE\x85\x86"; // U+E146
+	[[maybe_unused]] static const char *FONT_ICON_CELL_SIGNAL_NONE = "\xEE\x85\x8A"; // U+E14A
+
 	// 全部图标字形，供图标字体自检与测试遍历使用；新增 FONT_ICON_* 常量时必须同步加入。
 	inline const char *const FONT_ICON_ALL[] = {
 		FONT_ICON_MICROPHONE,
+		FONT_ICON_CELL_SIGNAL_HIGH,
+		FONT_ICON_CELL_SIGNAL_MEDIUM,
+		FONT_ICON_CELL_SIGNAL_LOW,
+		FONT_ICON_CELL_SIGNAL_NONE,
 		FONT_ICON_PLUS,
 		FONT_ICON_MINUS,
 		FONT_ICON_LOCK,
@@ -591,9 +601,13 @@ public:
 
 	virtual STextBoundingBox GetBoundingBoxTextContainer(STextContainerIndex TextContainerIndex) = 0;
 
+	// 子区域裁到实际图像范围；无效目标、尺寸、坐标或文本不会写入。
 	virtual void UploadEntityLayerText(const CImageInfo &TextImage, int TexSubWidth, int TexSubHeight, const char *pText, int Length, float x, float y, int FontSize) = 0;
+	// 显式长度按字节计算；空文本、无效尺寸或测量失败时返回 0。
 	virtual int AdjustFontSize(const char *pText, int TextLength, int MaxSize, int MaxWidth) const = 0;
+	// 单字节 ASCII 偏移；无效字符或字号返回 -1，NUL 返回 0。
 	virtual float GetGlyphOffsetX(int FontSize, char TextCharacter) const = 0;
+	// 在字节上限或 NUL 处结束，无效/截断 UTF-8 跳过；宽度饱和到 int 上限。
 	virtual int CalculateTextWidth(const char *pText, int TextLength, int FontWidth, int FontSize) const = 0;
 
 	// old foolish interface
@@ -614,17 +628,20 @@ public:
 	virtual void OnPreWindowResize() = 0;
 	virtual void OnWindowResize() = 0;
 	/**
-	 * 图形设备重建后调用：字体纹理已随设备消失，需要重新上传。
-	 * 由 IGraphics 的「图形资源重置」广播驱动。
+	 * 图形设备重建后调用：使旧文字容器失效并重传 CPU 图集，不删除旧 GPU 编号。
+	 * 返回前端是否已接收新纹理；失败时停止文字绘制，主循环随后限频重试。
 	 */
-	virtual void OnGraphicsResourcesReset() = 0;
+	virtual bool OnGraphicsResourcesReset() = 0;
+	// 重试尚未完成的纹理恢复；已经就绪时不重复上传，可由显式恢复操作调用。
+	virtual bool RestoreGraphicsResources() = 0;
 };
 
 class IEngineTextRender : public ITextRender
 {
 	MACRO_INTERFACE("enginetextrender")
 public:
-	virtual void Init() = 0;
+	// 失败时清理本次初始化的资源；调用方不得继续使用文字引擎。
+	virtual bool Init() = 0;
 	void Shutdown() override = 0;
 };
 

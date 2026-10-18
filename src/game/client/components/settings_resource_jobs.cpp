@@ -1313,6 +1313,17 @@ int SettingsResourceClampSharedHeavyBudget(int RemainingBudget, const SSettingsR
 	return std::min(std::max(0, RemainingBudget), SettingsResourceSharedHeavyBudget(Context, NormalBudget, RecoveryBudget));
 }
 
+int SettingsResourceClampSharedHeavyBudgetWithScrollTrickle(int RemainingBudget, const SSettingsResourceFrameContext &Context, int NormalBudget, int RecoveryBudget, int ScrollTrickleBatches)
+{
+	const int ClampedBudget = SettingsResourceClampSharedHeavyBudget(RemainingBudget, Context, NormalBudget, RecoveryBudget);
+	if(!Context.m_ScrollActive && !Context.m_JumpScrollActive)
+		return ClampedBudget;
+	// 滚动期共享 heavy 池原设计整池归零，但 finalize/upload 的涓流预算最终都要
+	// 经这池放行，池子为 0 时涓流名存实亡（商店缩略图滚动期不补图的直接原因）。
+	// 这里给每条排空链路一个独立的小额保底；各链路合计仍是每帧个位数的小流量。
+	return std::max(ClampedBudget, std::max(0, ScrollTrickleBatches));
+}
+
 bool SettingsResourceConsumeSharedHeavyBudget(int &RemainingBudget)
 {
 	if(RemainingBudget <= 0)

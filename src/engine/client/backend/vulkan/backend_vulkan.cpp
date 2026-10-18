@@ -1218,6 +1218,12 @@ private:
 	std::vector<SSwapChainMultiSampleImage> m_vSwapChainMultiSamplingImages;
 	std::vector<VkFramebuffer> m_vFramebufferList;
 	std::vector<VkCommandBuffer> m_vMainDrawCommandBuffers;
+	// 每段交换链绘制独占 secondary；同一主缓冲引用过的段不能提前 reset。
+	std::vector<std::vector<VkCommandBuffer>> m_vvSwapDrawCommandBuffers;
+	std::vector<size_t> m_vSwapDrawCommandBufferCursor;
+	VkCommandBuffer m_SwapDrawCommandBuffer = VK_NULL_HANDLE;
+	CQmVulkanSwapPassPlan m_SwapPassPlan;
+	VkClearValue m_SwapPassClearColor{};
 
 	std::vector<std::vector<VkCommandBuffer>> m_vvThreadDrawCommandBuffers;
 	std::vector<VkCommandBuffer> m_vHelperThreadDrawCommandBuffers;
@@ -1311,6 +1317,8 @@ private:
 
 	VkRenderPass m_VKRenderPass = VK_NULL_HANDLE;
 	VkRenderPass m_VKRenderPassLoad = VK_NULL_HANDLE;
+	VkRenderPass m_VKRenderPassDiscard = VK_NULL_HANDLE;
+	VkRenderPass m_VKRenderPassLoadDiscard = VK_NULL_HANDLE;
 	VkRenderPass m_VKRenderTargetRenderPass = VK_NULL_HANDLE;
 
 	VkSurfaceFormatKHR m_VKSurfFormat;
@@ -1637,6 +1645,9 @@ protected:
 			m_vHelperThreadDrawCommandBuffers.clear();
 			m_vvUsedThreadDrawCommandBuffer.clear();
 			m_vMainDrawCommandBuffers.clear();
+			m_vvSwapDrawCommandBuffers.clear();
+			m_vSwapDrawCommandBufferCursor.clear();
+			m_SwapDrawCommandBuffer = VK_NULL_HANDLE;
 			m_vMemoryCommandBuffers.clear();
 			m_vUsedMemoryCommandBuffer.clear();
 			DestroyUniformDescriptorSetLayouts();
@@ -2600,6 +2611,8 @@ protected:
 
 	void ClearFrameData(size_t FrameImageIndex)
 	{
+		if(FrameImageIndex < m_vSwapDrawCommandBufferCursor.size())
+			m_vSwapDrawCommandBufferCursor[FrameImageIndex] = 0;
 		if(FrameImageIndex >= m_vvFrameDelayedBufferCleanup.size() || FrameImageIndex >= m_vvFrameDelayedTextureCleanup.size() || FrameImageIndex >= m_vvFrameDelayedTextTexturesCleanup.size())
 			return;
 		UploadStagingBuffers();
@@ -2828,8 +2841,6 @@ protected:
 
 	[[nodiscard]] bool ExecutePendingRenderThreadCommandBuffers(VkCommandBuffer CommandBuffer)
 	{
-		if(m_ThreadCount <= 1)
-			return true;
 		size_t ThreadedCommandsUsedCount = 0;
 		const size_t RenderThreadCount = m_ThreadCount - 1;
 		for(size_t i = 0; i < RenderThreadCount; ++i)
@@ -2842,18 +2853,18 @@ protected:
 		}
 		if(ThreadedCommandsUsedCount > 0)
 			vkCmdExecuteCommands(CommandBuffer, ThreadedCommandsUsedCount, m_vHelperThreadDrawCommandBuffers.data());
-		if(m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex])
+		if(m_SwapDrawCommandBuffer != VK_NULL_HANDLE)
 		{
-			auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[0][m_CurImageIndex];
-			if(!CheckVulkanResult(vkEndCommandBuffer(GraphicThreadCommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (secondary) failed."))
+			if(!CheckVulkanResult(vkEndCommandBuffer(m_SwapDrawCommandBuffer), GFX_ERROR_TYPE_RENDER_RECORDING, "vkEndCommandBuffer (swap segment) failed."))
 				return false;
-			vkCmdExecuteCommands(CommandBuffer, 1, &GraphicThreadCommandBuffer);
-			m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex] = false;
+			vkCmdExecuteCommands(CommandBuffer, 1, &m_SwapDrawCommandBuffer);
+			m_SwapDrawCommandBuffer = VK_NULL_HANDLE;
 		}
 		return true;
 	}
 
 	void BeginSwapRenderPass(VkRenderPass RenderPass);
+	[[nodiscard]] bool FlushSwapRenderPass(bool PreserveMultisampling);
 
 	[[nodiscard]] bool EndSwapRenderPassForExternalWork();
 
@@ -2879,49 +2890,8 @@ protected:
 
 		auto &CommandBuffer = GetMainGraphicCommandBuffer();
 
-		// render threads
-		if(m_ThreadCount > 1)
-		{
-			size_t ThreadedCommandsUsedCount = 0;
-			size_t RenderThreadCount = m_ThreadCount - 1;
-			for(size_t i = 0; i < RenderThreadCount; ++i)
-			{
-				if(m_vvUsedThreadDrawCommandBuffer[i + 1][m_CurImageIndex])
-				{
-					const auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[i + 1][m_CurImageIndex];
-					m_vHelperThreadDrawCommandBuffers[ThreadedCommandsUsedCount++] = GraphicThreadCommandBuffer;
-
-					m_vvUsedThreadDrawCommandBuffer[i + 1][m_CurImageIndex] = false;
-				}
-			}
-			if(ThreadedCommandsUsedCount > 0)
-			{
-				vkCmdExecuteCommands(CommandBuffer, ThreadedCommandsUsedCount, m_vHelperThreadDrawCommandBuffers.data());
-			}
-
-			// special case if swap chain was not completed in one runbuffer call
-
-			if(m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex])
-			{
-				auto &GraphicThreadCommandBuffer = m_vvThreadDrawCommandBuffers[0][m_CurImageIndex];
-				VkResult EndThreadCommandBufferResult = vkEndCommandBuffer(GraphicThreadCommandBuffer);
-				if(EndThreadCommandBufferResult != VK_SUCCESS)
-				{
-					const char *pCritErrorMsg = CheckVulkanCriticalError(EndThreadCommandBufferResult);
-					if(pCritErrorMsg != nullptr)
-						SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Thread command buffer cannot be ended anymore.", pCritErrorMsg);
-					else
-						SetError(EGfxErrorType::GFX_ERROR_TYPE_RENDER_RECORDING, "Thread command buffer cannot be ended anymore.");
-					return false;
-				}
-
-				vkCmdExecuteCommands(CommandBuffer, 1, &GraphicThreadCommandBuffer);
-
-				m_vvUsedThreadDrawCommandBuffer[0][m_CurImageIndex] = false;
-			}
-		}
-
-		vkCmdEndRenderPass(CommandBuffer);
+		if(!FlushSwapRenderPass(false))
+			return false;
 		m_SwapRenderPassActive = false;
 		EndFrameTimestampQuery(CommandBuffer);
 
@@ -3168,20 +3138,7 @@ protected:
 			return false;
 		BeginFrameTimestampQuery(CommandBuffer);
 
-		VkRenderPassBeginInfo RenderPassInfo{};
-		RenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		RenderPassInfo.renderPass = m_VKRenderPass;
-		RenderPassInfo.framebuffer = m_vFramebufferList[m_CurImageIndex];
-		RenderPassInfo.renderArea.offset = {0, 0};
-		RenderPassInfo.renderArea.extent = m_VKSwapImgAndViewportExtent.m_SwapImageViewport;
-
-		VkClearValue ClearColorVal = {{{m_aClearColor[0], m_aClearColor[1], m_aClearColor[2], m_aClearColor[3]}}};
-		RenderPassInfo.clearValueCount = 1;
-		RenderPassInfo.pClearValues = &ClearColorVal;
-
-		vkCmdBeginRenderPass(CommandBuffer, &RenderPassInfo, m_ThreadCount > 1 ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE);
-		m_SwapRenderPassActive = true;
-
+		BeginSwapRenderPass(m_VKRenderPass);
 		for(size_t RenderThreadIndex = 0; RenderThreadIndex < m_vDrawCommandStates.size(); ++RenderThreadIndex)
 			ResetDrawCommandState(RenderThreadIndex);
 
@@ -5576,7 +5533,7 @@ public:
 		{
 			for(size_t i = 0; i < m_SwapChainImageCount; ++i)
 			{
-				if(!CreateImage(m_VKSwapImgAndViewportExtent.m_SwapImageViewport.width, m_VKSwapImgAndViewportExtent.m_SwapImageViewport.height, 1, 1, m_VKSurfFormat.format, VK_IMAGE_TILING_OPTIMAL, m_vSwapChainMultiSamplingImages[i].m_Image, m_vSwapChainMultiSamplingImages[i].m_ImgMem, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
+				if(!CreateImage(m_VKSwapImgAndViewportExtent.m_SwapImageViewport.width, m_VKSwapImgAndViewportExtent.m_SwapImageViewport.height, 1, 1, m_VKSurfFormat.format, VK_IMAGE_TILING_OPTIMAL, m_vSwapChainMultiSamplingImages[i].m_Image, m_vSwapChainMultiSamplingImages[i].m_ImgMem, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT))
 					return false;
 				m_vSwapChainMultiSamplingImages[i].m_ImgView = CreateImageView(m_vSwapChainMultiSamplingImages[i].m_Image, m_VKSurfFormat.format, VK_IMAGE_VIEW_TYPE_2D, 1, 1);
 			}
@@ -5610,7 +5567,7 @@ public:
 
 	[[nodiscard]] VkFormat RenderTargetReadbackFormat() const;
 
-	[[nodiscard]] bool CreateRenderPass(VkRenderPass &RenderPass, bool ClearAttachments, bool LoadAttachments = false, VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VkImageLayout InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED, bool ForceSingleSample = false, VkFormat AttachmentFormat = VK_FORMAT_UNDEFINED)
+	[[nodiscard]] bool CreateRenderPass(VkRenderPass &RenderPass, bool ClearAttachments, bool LoadAttachments = false, VkImageLayout FinalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VkImageLayout InitialLayout = VK_IMAGE_LAYOUT_UNDEFINED, bool ForceSingleSample = false, VkFormat AttachmentFormat = VK_FORMAT_UNDEFINED, bool PreserveMultisampling = true)
 	{
 		if(AttachmentFormat == VK_FORMAT_UNDEFINED)
 			AttachmentFormat = m_VKSurfFormat.format;
@@ -5620,7 +5577,7 @@ public:
 		MultiSamplingColorAttachment.format = AttachmentFormat;
 		MultiSamplingColorAttachment.samples = HasMultiSamplingTargets ? GetSampleCount() : VK_SAMPLE_COUNT_1_BIT;
 		MultiSamplingColorAttachment.loadOp = LoadAttachments ? VK_ATTACHMENT_LOAD_OP_LOAD : (ClearAttachments ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE);
-		MultiSamplingColorAttachment.storeOp = HasMultiSamplingTargets ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		MultiSamplingColorAttachment.storeOp = HasMultiSamplingTargets && PreserveMultisampling ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		MultiSamplingColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		MultiSamplingColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		MultiSamplingColorAttachment.initialLayout = HasMultiSamplingTargets && LoadAttachments ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : InitialLayout;
@@ -5629,7 +5586,7 @@ public:
 		VkAttachmentDescription ColorAttachment{};
 		ColorAttachment.format = AttachmentFormat;
 		ColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		ColorAttachment.loadOp = LoadAttachments ? VK_ATTACHMENT_LOAD_OP_LOAD : (ClearAttachments && !HasMultiSamplingTargets ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+		ColorAttachment.loadOp = LoadAttachments && !HasMultiSamplingTargets ? VK_ATTACHMENT_LOAD_OP_LOAD : (ClearAttachments && !HasMultiSamplingTargets ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE);
 		ColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		ColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		ColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -5687,6 +5644,12 @@ public:
 			vkDestroyRenderPass(m_VKDevice, m_VKRenderPass, nullptr);
 		if(m_VKRenderPassLoad != VK_NULL_HANDLE)
 			vkDestroyRenderPass(m_VKDevice, m_VKRenderPassLoad, nullptr);
+		if(m_VKRenderPassDiscard != VK_NULL_HANDLE)
+			vkDestroyRenderPass(m_VKDevice, m_VKRenderPassDiscard, nullptr);
+		if(m_VKRenderPassLoadDiscard != VK_NULL_HANDLE)
+			vkDestroyRenderPass(m_VKDevice, m_VKRenderPassLoadDiscard, nullptr);
+		m_VKRenderPassDiscard = VK_NULL_HANDLE;
+		m_VKRenderPassLoadDiscard = VK_NULL_HANDLE;
 		if(m_VKRenderTargetRenderPass != VK_NULL_HANDLE)
 			vkDestroyRenderPass(m_VKDevice, m_VKRenderTargetRenderPass, nullptr);
 		m_VKRenderPass = VK_NULL_HANDLE;
@@ -6536,6 +6499,8 @@ public:
 	[[nodiscard]] bool CreateCommandBuffers()
 	{
 		m_vMainDrawCommandBuffers.resize(m_SwapChainImageCount);
+		m_vvSwapDrawCommandBuffers.resize(m_SwapChainImageCount);
+		m_vSwapDrawCommandBufferCursor.resize(m_SwapChainImageCount, 0);
 		if(m_ThreadCount > 1)
 		{
 			m_vvThreadDrawCommandBuffers.resize(m_ThreadCount);
@@ -6604,6 +6569,11 @@ public:
 		};
 		for(size_t Index = 0; Index < m_vvThreadDrawCommandBuffers.size(); ++Index)
 			FreeBuffers(Index, m_vvThreadDrawCommandBuffers[Index]);
+		for(auto &Buffers : m_vvSwapDrawCommandBuffers)
+			FreeBuffers(0, Buffers);
+		m_vvSwapDrawCommandBuffers.clear();
+		m_vSwapDrawCommandBufferCursor.clear();
+		m_SwapDrawCommandBuffer = VK_NULL_HANDLE;
 		FreeBuffers(0, m_vMemoryCommandBuffers);
 		FreeBuffers(0, m_vMainDrawCommandBuffers);
 		m_vvThreadDrawCommandBuffers.clear();
@@ -7502,6 +7472,10 @@ public:
 			return -1;
 		if(!CreateRenderPass(m_VKRenderPassLoad, false, true, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR))
 			return -1;
+		if(!CreateRenderPass(m_VKRenderPassDiscard, true, false, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_UNDEFINED, false, VK_FORMAT_UNDEFINED, false))
+			return -1;
+		if(!CreateRenderPass(m_VKRenderPassLoadDiscard, false, true, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, false, VK_FORMAT_UNDEFINED, false))
+			return -1;
 		if(!CreateRenderPass(m_VKRenderTargetRenderPass, true, false, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, true, RenderTargetReadbackFormat()))
 			return -1;
 
@@ -7704,9 +7678,44 @@ public:
 
 	[[nodiscard]] bool GetGraphicCommandBuffer(VkCommandBuffer *&pDrawCommandBuffer, size_t RenderThreadIndex)
 	{
-		if(m_ThreadCount < 2 || m_ForceSingleThreadedRender)
+		if(m_RenderTargetActive)
 		{
 			pDrawCommandBuffer = &m_vMainDrawCommandBuffers[m_CurImageIndex];
+			return true;
+		}
+		if(RenderThreadIndex == 0)
+		{
+			if(m_SwapDrawCommandBuffer == VK_NULL_HANDLE)
+			{
+				auto &vBuffers = m_vvSwapDrawCommandBuffers[m_CurImageIndex];
+				auto &Cursor = m_vSwapDrawCommandBufferCursor[m_CurImageIndex];
+				if(Cursor == vBuffers.size())
+				{
+					VkCommandBuffer Buffer = VK_NULL_HANDLE;
+					VkCommandBufferAllocateInfo AllocInfo{};
+					AllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+					AllocInfo.commandPool = m_vCommandPools[0];
+					AllocInfo.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+					AllocInfo.commandBufferCount = 1;
+					if(!CheckVulkanResult(vkAllocateCommandBuffers(m_VKDevice, &AllocInfo, &Buffer), GFX_ERROR_TYPE_RENDER_RECORDING, "Allocating swap segment failed."))
+						return false;
+					vBuffers.push_back(Buffer);
+				}
+				m_SwapDrawCommandBuffer = vBuffers[Cursor++];
+				if(!CheckVulkanResult(vkResetCommandBuffer(m_SwapDrawCommandBuffer, 0), GFX_ERROR_TYPE_RENDER_RECORDING, "Resetting swap segment failed."))
+					return false;
+				VkCommandBufferInheritanceInfo Inheritance{};
+				Inheritance.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+				Inheritance.renderPass = m_VKRenderPass;
+				Inheritance.framebuffer = m_vFramebufferList[m_CurImageIndex];
+				VkCommandBufferBeginInfo BeginInfo{};
+				BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				BeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+				BeginInfo.pInheritanceInfo = &Inheritance;
+				if(!CheckVulkanResult(vkBeginCommandBuffer(m_SwapDrawCommandBuffer, &BeginInfo), GFX_ERROR_TYPE_RENDER_RECORDING, "Beginning swap segment failed."))
+					return false;
+			}
+			pDrawCommandBuffer = &m_SwapDrawCommandBuffer;
 			return true;
 		}
 		else
