@@ -16,6 +16,7 @@
 #include <engine/client/backend/opengl/buffer_data.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
+#include <engine/client/graphics_upload_data.h>
 
 #include <limits>
 
@@ -129,8 +130,8 @@ protected:
 		return true;
 	}
 
-	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, uint8_t *pTexData);
-	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, uint8_t *pTexData);
+	void TextureUpdate(int Slot, int X, int Y, int Width, int Height, int GLFormat, CGraphicsUploadData<uint8_t> pTexData);
+	void TextureCreate(int Slot, int Width, int Height, int GLFormat, int GLStoreFormat, int Flags, CGraphicsUploadData<uint8_t> pTexData);
 
 	virtual bool Cmd_Init(const SCommand_Init *pCommand);
 	virtual void Cmd_Shutdown(const SCommand_Shutdown *pCommand) {}

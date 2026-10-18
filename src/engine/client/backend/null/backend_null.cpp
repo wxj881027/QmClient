@@ -63,23 +63,23 @@ bool CCommandProcessorFragment_Null::Cmd_Init(const SCommand_Init *pCommand)
 
 void CCommandProcessorFragment_Null::Cmd_Texture_Create(const CCommandBuffer::SCommand_Texture_Create *pCommand)
 {
-	free(pCommand->m_pData);
+	auto pData = TakeGraphicsUpload(pCommand->m_pData);
 }
 
 void CCommandProcessorFragment_Null::Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
 {
-	free(pCommand->m_pData);
+	auto pData = TakeGraphicsUpload(pCommand->m_pData);
 }
 
 void CCommandProcessorFragment_Null::Cmd_TextTextures_Create(const CCommandBuffer::SCommand_TextTextures_Create *pCommand)
 {
-	free(pCommand->m_pTextData);
-	free(pCommand->m_pTextOutlineData);
+	auto pTextData = TakeGraphicsUpload(pCommand->m_pTextData);
+	auto pTextOutlineData = TakeGraphicsUpload(pCommand->m_pTextOutlineData);
 }
 
 void CCommandProcessorFragment_Null::Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand)
 {
-	free(pCommand->m_pData);
+	auto pData = TakeGraphicsUpload(pCommand->m_pData);
 }
 
 void CCommandProcessorFragment_Null::Cmd_Swap(const CCommandBuffer::SCommand_Swap *pCommand)

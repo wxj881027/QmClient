@@ -3209,7 +3209,7 @@ protected:
 		return true;
 	}
 
-	[[nodiscard]] bool UpdateTexture(size_t TextureSlot, VkFormat Format, uint8_t *&pData, int64_t XOff, int64_t YOff, size_t Width, size_t Height)
+	[[nodiscard]] bool UpdateTexture(size_t TextureSlot, VkFormat Format, CGraphicsUploadData<uint8_t> &pData, int64_t XOff, int64_t YOff, size_t Width, size_t Height)
 	{
 		size_t ImageSize = 0;
 		if(!TextureDataSize(Width, Height, 1, VulkanFormatToPixelSize(Format), ImageSize))
@@ -3232,15 +3232,13 @@ protected:
 				YOff /= 2;
 			}
 
-			uint8_t *pTmpData = ResizeImage(pData, OldWidth, OldHeight, Width, Height, VulkanFormatToPixelSize(Format));
-			free(pData);
-			pData = pTmpData;
+			pData.reset(ResizeImage(pData.get(), OldWidth, OldHeight, Width, Height, VulkanFormatToPixelSize(Format)));
 			if(pData == nullptr)
 				return false;
 		}
 
 		if(!TextureDataSize(Width, Height, 1, VulkanFormatToPixelSize(Format), ImageSize) ||
-			!GetStagingBufferImage(StagingBuffer, pData, ImageSize))
+			!GetStagingBufferImage(StagingBuffer, pData.get(), ImageSize))
 			return false;
 		StagingBufferInitialized = true;
 
@@ -3268,7 +3266,7 @@ protected:
 		VkFormat Format,
 		VkFormat StoreFormat,
 		int Flags,
-		uint8_t *&pData)
+		CGraphicsUploadData<uint8_t> &pData)
 	{
 		size_t ImageIndex = (size_t)Slot;
 		const size_t PixelSize = VulkanFormatToPixelSize(Format);
@@ -3291,9 +3289,7 @@ protected:
 				++RescaleCount;
 			} while((size_t)Width > m_MaxTextureSize || (size_t)Height > m_MaxTextureSize);
 
-			uint8_t *pTmpData = ResizeImage(pData, OldWidth, OldHeight, Width, Height, PixelSize);
-			free(pData);
-			pData = pTmpData;
+			pData.reset(ResizeImage(pData.get(), OldWidth, OldHeight, Width, Height, PixelSize));
 			if(pData == nullptr)
 				return false;
 		}
@@ -3319,7 +3315,7 @@ protected:
 
 		if(Requires2DTexture)
 		{
-			if(!CreateTextureImage(ImageIndex, Texture.m_Img, Texture.m_ImgMem, pData, Format, Width, Height, 1, PixelSize, MipMapLevelCount))
+			if(!CreateTextureImage(ImageIndex, Texture.m_Img, Texture.m_ImgMem, pData.get(), Format, Width, Height, 1, PixelSize, MipMapLevelCount))
 				return false;
 			VkFormat ImgFormat = Format;
 			VkImageView ImgView = CreateTextureImageView(Texture.m_Img, ImgFormat, VK_IMAGE_VIEW_TYPE_2D, 1, MipMapLevelCount);
@@ -3345,22 +3341,21 @@ protected:
 				dbg_msg("vulkan", "3D/2D array texture was resized");
 				int NewWidth = maximum<int>(HighestBit(ConvertWidth), 16);
 				int NewHeight = maximum<int>(HighestBit(ConvertHeight), 16);
-				uint8_t *pNewTexData = ResizeImage(pData, ConvertWidth, ConvertHeight, NewWidth, NewHeight, PixelSize);
+				CGraphicsUploadData<uint8_t> pNewTexData(ResizeImage(pData.get(), ConvertWidth, ConvertHeight, NewWidth, NewHeight, PixelSize));
 
 				ConvertWidth = NewWidth;
 				ConvertHeight = NewHeight;
 
-				free(pData);
-				pData = pNewTexData;
+				pData = std::move(pNewTexData);
 				if(pData == nullptr)
 					return false;
 			}
 
 			int Image3DWidth, Image3DHeight;
-			uint8_t *pTexData3D = static_cast<uint8_t *>(malloc((size_t)PixelSize * ConvertWidth * ConvertHeight));
+			CGraphicsUploadData<uint8_t> pTexData3D(static_cast<uint8_t *>(malloc((size_t)PixelSize * ConvertWidth * ConvertHeight)));
 			if(pTexData3D == nullptr)
 				return false;
-			Texture2DTo3D(pData, ConvertWidth, ConvertHeight, PixelSize, 16, 16, pTexData3D, Image3DWidth, Image3DHeight);
+			Texture2DTo3D(pData.get(), ConvertWidth, ConvertHeight, PixelSize, 16, 16, pTexData3D.get(), Image3DWidth, Image3DHeight);
 
 			const size_t ImageDepth2DArray = (size_t)16 * 16;
 			VkExtent3D ImgSize{(uint32_t)Image3DWidth, (uint32_t)Image3DHeight, 1};
@@ -3371,9 +3366,8 @@ protected:
 					MipMapLevelCount = 1;
 			}
 
-			if(!CreateTextureImage(ImageIndex, Texture.m_Img3D, Texture.m_Img3DMem, pTexData3D, Format, Image3DWidth, Image3DHeight, ImageDepth2DArray, PixelSize, MipMapLevelCount))
+			if(!CreateTextureImage(ImageIndex, Texture.m_Img3D, Texture.m_Img3DMem, pTexData3D.get(), Format, Image3DWidth, Image3DHeight, ImageDepth2DArray, PixelSize, MipMapLevelCount))
 			{
-				free(pTexData3D);
 				return false;
 			}
 			VkFormat ImgFormat = Format;
@@ -3384,11 +3378,8 @@ protected:
 
 			if(!CreateNew3DTexturedStandardDescriptorSets(ImageIndex))
 			{
-				free(pTexData3D);
 				return false;
 			}
-
-			free(pTexData3D);
 		}
 		return true;
 	}
@@ -8521,33 +8512,17 @@ public:
 		int Width = pCommand->m_Width;
 		int Height = pCommand->m_Height;
 		int Flags = pCommand->m_Flags;
-		uint8_t *pData = pCommand->m_pData;
+		auto pData = TakeGraphicsUpload(pCommand->m_pData);
 
-		if(!CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, Flags, pData))
-		{
-			free(pData);
-			return false;
-		}
-
-		free(pData);
-
-		return true;
+		return CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, Flags, pData);
 	}
 
 	[[nodiscard]] bool Cmd_Texture_Update(const CCommandBuffer::SCommand_Texture_Update *pCommand)
 	{
 		size_t IndexTex = pCommand->m_Slot;
-		uint8_t *pData = pCommand->m_pData;
+		auto pData = TakeGraphicsUpload(pCommand->m_pData);
 
-		if(!UpdateTexture(IndexTex, VK_FORMAT_R8G8B8A8_UNORM, pData, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height))
-		{
-			free(pData);
-			return false;
-		}
-
-		free(pData);
-
-		return true;
+		return UpdateTexture(IndexTex, VK_FORMAT_R8G8B8A8_UNORM, pData, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height);
 	}
 
 	[[nodiscard]] bool Cmd_RenderTarget_Create(const CCommandBuffer::SCommand_RenderTarget_Create *pCommand);
@@ -8573,31 +8548,22 @@ public:
 		int Width = pCommand->m_Width;
 		int Height = pCommand->m_Height;
 
-		uint8_t *pTmpData = pCommand->m_pTextData;
-		uint8_t *pTmpData2 = pCommand->m_pTextOutlineData;
+		auto pTmpData = TakeGraphicsUpload(pCommand->m_pTextData);
+		auto pTmpData2 = TakeGraphicsUpload(pCommand->m_pTextOutlineData);
 
 		if(!CreateTextureCMD(Slot, Width, Height, VK_FORMAT_R8_UNORM, VK_FORMAT_R8_UNORM, TextureFlag::NO_MIPMAPS, pTmpData))
 		{
-			free(pTmpData);
-			free(pTmpData2);
 			return false;
 		}
 		if(!CreateTextureCMD(SlotOutline, Width, Height, VK_FORMAT_R8_UNORM, VK_FORMAT_R8_UNORM, TextureFlag::NO_MIPMAPS, pTmpData2))
 		{
-			free(pTmpData);
-			free(pTmpData2);
 			return false;
 		}
 
 		if(!CreateNewTextDescriptorSets(Slot, SlotOutline))
 		{
-			free(pTmpData);
-			free(pTmpData2);
 			return false;
 		}
-
-		free(pTmpData);
-		free(pTmpData2);
 
 		return true;
 	}
@@ -8620,17 +8586,9 @@ public:
 	[[nodiscard]] bool Cmd_TextTexture_Update(const CCommandBuffer::SCommand_TextTexture_Update *pCommand)
 	{
 		size_t IndexTex = pCommand->m_Slot;
-		uint8_t *pData = pCommand->m_pData;
+		auto pData = TakeGraphicsUpload(pCommand->m_pData);
 
-		if(!UpdateTexture(IndexTex, VK_FORMAT_R8_UNORM, pData, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height))
-		{
-			free(pData);
-			return false;
-		}
-
-		free(pData);
-
-		return true;
+		return UpdateTexture(IndexTex, VK_FORMAT_R8_UNORM, pData, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height);
 	}
 
 	void Cmd_Clear_FillExecuteBuffer(SRenderCommandExecuteBuffer &ExecBuffer, const CCommandBuffer::SCommand_Clear *pCommand)
@@ -8856,21 +8814,20 @@ public:
 
 	[[nodiscard]] bool Cmd_CreateBufferObject(const CCommandBuffer::SCommand_CreateBufferObject *pCommand)
 	{
+		void *pUploadData = pCommand->m_pUploadData;
+		auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 		bool IsOneFrameBuffer = (pCommand->m_Flags & IGraphics::EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT) != 0;
-		if(!CreateBufferObject((size_t)pCommand->m_BufferIndex, pCommand->m_pUploadData, (VkDeviceSize)pCommand->m_DataSize, IsOneFrameBuffer))
+		if(!CreateBufferObject((size_t)pCommand->m_BufferIndex, pUploadData, (VkDeviceSize)pCommand->m_DataSize, IsOneFrameBuffer))
 			return false;
-		if(pCommand->m_DeletePointer)
-			free(pCommand->m_pUploadData);
-
 		return true;
 	}
 
 	[[nodiscard]] bool Cmd_UpdateBufferObject(const CCommandBuffer::SCommand_UpdateBufferObject *pCommand)
 	{
 		size_t BufferIndex = (size_t)pCommand->m_BufferIndex;
-		bool DeletePointer = pCommand->m_DeletePointer;
 		VkDeviceSize Offset = (VkDeviceSize)((intptr_t)pCommand->m_pOffset);
 		void *pUploadData = pCommand->m_pUploadData;
+		auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 		VkDeviceSize DataSize = (VkDeviceSize)pCommand->m_DataSize;
 
 		SMemoryBlock<STAGING_BUFFER_CACHE_ID> StagingBuffer;
@@ -8888,17 +8845,16 @@ public:
 
 		UploadAndFreeStagingMemBlock(StagingBuffer);
 
-		if(DeletePointer)
-			free(pUploadData);
-
 		return true;
 	}
 
 	[[nodiscard]] bool Cmd_RecreateBufferObject(const CCommandBuffer::SCommand_RecreateBufferObject *pCommand)
 	{
+		void *pUploadData = pCommand->m_pUploadData;
+		auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 		DeleteBufferObject((size_t)pCommand->m_BufferIndex);
 		bool IsOneFrameBuffer = (pCommand->m_Flags & IGraphics::EBufferObjectCreateFlags::BUFFER_OBJECT_CREATE_FLAGS_ONE_TIME_USE_BIT) != 0;
-		return CreateBufferObject((size_t)pCommand->m_BufferIndex, pCommand->m_pUploadData, (VkDeviceSize)pCommand->m_DataSize, IsOneFrameBuffer);
+		return CreateBufferObject((size_t)pCommand->m_BufferIndex, pUploadData, (VkDeviceSize)pCommand->m_DataSize, IsOneFrameBuffer);
 	}
 
 	[[nodiscard]] bool Cmd_CopyBufferObject(const CCommandBuffer::SCommand_CopyBufferObject *pCommand)

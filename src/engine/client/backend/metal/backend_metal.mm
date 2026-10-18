@@ -2014,11 +2014,11 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		if(Uploaded && pTextureArray != nil && pData != nullptr)
 		{
 			const uint8_t *pArraySourceData = pData;
-			uint8_t *pResizedArrayData = nullptr;
+			CGraphicsUploadData<uint8_t> pResizedArrayData;
 			if(ArraySourceWidth != Width || ArraySourceHeight != Height)
 			{
-				pResizedArrayData = ResizeImage(pData, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format)));
-				pArraySourceData = pResizedArrayData;
+				pResizedArrayData.reset(ResizeImage(pData, static_cast<int>(Width), static_cast<int>(Height), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format))));
+				pArraySourceData = pResizedArrayData.get();
 			}
 			size_t SourceBytes = 0;
 			if(pArraySourceData == nullptr || !MetalCheckedMul(ArraySourceWidth, ArraySourceHeight, SourceBytes) || !MetalCheckedMul(SourceBytes, MetalTextureBytesPerPixel(Format), SourceBytes))
@@ -2031,7 +2031,6 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 				Texture2DTo3D(const_cast<uint8_t *>(pArraySourceData), static_cast<int>(ArraySourceWidth), static_cast<int>(ArraySourceHeight), MetalTextureBytesPerPixel(Format), 16, 16, vArrayData.data(), ConvertedWidth, ConvertedHeight);
 				Uploaded = ConvertedWidth == static_cast<int>(ArrayWidth) && ConvertedHeight == static_cast<int>(ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), ArrayWidth, ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS);
 			}
-			free(pResizedArrayData);
 		}
 		if(!Uploaded)
 		{
@@ -2063,16 +2062,15 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		if(Uploaded && Texture.m_Is2DArray)
 		{
 			const uint8_t *pArraySourceData = pData;
-			uint8_t *pResizedArrayData = nullptr;
+			CGraphicsUploadData<uint8_t> pResizedArrayData;
 			if(Texture.m_ArraySourceWidth != Texture.m_Width || Texture.m_ArraySourceHeight != Texture.m_Height)
 			{
-				pResizedArrayData = ResizeImage(pData, static_cast<int>(Texture.m_Width), static_cast<int>(Texture.m_Height), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format)));
-				pArraySourceData = pResizedArrayData;
+				pResizedArrayData.reset(ResizeImage(pData, static_cast<int>(Texture.m_Width), static_cast<int>(Texture.m_Height), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), static_cast<int>(MetalTextureBytesPerPixel(Format))));
+				pArraySourceData = pResizedArrayData.get();
 			}
 			size_t SourceBytes = 0;
 			if(pArraySourceData == nullptr || !MetalCheckedMul(Texture.m_ArraySourceWidth, Texture.m_ArraySourceHeight, SourceBytes) || !MetalCheckedMul(SourceBytes, MetalTextureBytesPerPixel(Format), SourceBytes) || Texture.m_ArraySourceWidth > static_cast<size_t>(std::numeric_limits<int>::max()) || Texture.m_ArraySourceHeight > static_cast<size_t>(std::numeric_limits<int>::max()))
 			{
-				free(pResizedArrayData);
 				return false;
 			}
 			std::vector<uint8_t> vArrayData(SourceBytes);
@@ -2080,7 +2078,6 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 			int ConvertedHeight = 0;
 			Texture2DTo3D(const_cast<uint8_t *>(pArraySourceData), static_cast<int>(Texture.m_ArraySourceWidth), static_cast<int>(Texture.m_ArraySourceHeight), MetalTextureBytesPerPixel(Format), 16, 16, vArrayData.data(), ConvertedWidth, ConvertedHeight);
 			Uploaded = ConvertedWidth == static_cast<int>(Texture.m_ArrayWidth) && ConvertedHeight == static_cast<int>(Texture.m_ArrayHeight) && UploadTextureArray(Texture, vArrayData.data(), Texture.m_ArrayWidth, Texture.m_ArrayHeight, 0, METAL_TEXTURE_ARRAY_LAYERS);
-			free(pResizedArrayData);
 		}
 		if(Uploaded && m_CurrentBlitEncoder != nil)
 		{
@@ -4422,9 +4419,9 @@ public:
 			case CCommandBuffer::CMD_CREATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_CreateBufferObject *>(pBaseCommand);
-				const bool Success = CreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pCommand->m_pUploadData, pCommand->m_Flags);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
+				const bool Success = CreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pUploadData, pCommand->m_Flags);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4432,9 +4429,9 @@ public:
 			case CCommandBuffer::CMD_RECREATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_RecreateBufferObject *>(pBaseCommand);
-				const bool Success = RecreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pCommand->m_pUploadData, pCommand->m_Flags);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
+				const bool Success = RecreateBuffer(pCommand->m_BufferIndex, pCommand->m_DataSize, pUploadData, pCommand->m_Flags);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4442,10 +4439,10 @@ public:
 			case CCommandBuffer::CMD_UPDATE_BUFFER_OBJECT:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_UpdateBufferObject *>(pBaseCommand);
+				void *pUploadData = pCommand->m_pUploadData;
+				auto pOwnedUpload = TakeGraphicsUpload(pCommand->m_pUploadData, pCommand->m_DeletePointer);
 				const size_t Offset = reinterpret_cast<uintptr_t>(pCommand->m_pOffset);
-				const bool Success = UpdateBuffer(pCommand->m_BufferIndex, Offset, pCommand->m_DataSize, pCommand->m_pUploadData);
-				if(pCommand->m_DeletePointer && pCommand->m_pUploadData != nullptr)
-					free(pCommand->m_pUploadData);
+				const bool Success = UpdateBuffer(pCommand->m_BufferIndex, Offset, pCommand->m_DataSize, pUploadData);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4497,9 +4494,8 @@ public:
 			case CCommandBuffer::CMD_TEXTURE_CREATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_Texture_Create *>(pBaseCommand);
-				const bool Success = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_Flags, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_Flags, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4507,9 +4503,8 @@ public:
 			case CCommandBuffer::CMD_TEXTURE_UPDATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_Texture_Update *>(pBaseCommand);
-				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::RGBA8, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4520,8 +4515,10 @@ public:
 			case CCommandBuffer::CMD_TEXT_TEXTURES_CREATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_TextTextures_Create *>(pBaseCommand);
-				const bool TextSuccess = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pCommand->m_pTextData);
-				const bool OutlineSuccess = CreateTexture(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pCommand->m_pTextOutlineData);
+				auto pTextData = TakeGraphicsUpload(pCommand->m_pTextData);
+				auto pOutlineData = TakeGraphicsUpload(pCommand->m_pTextOutlineData);
+				const bool TextSuccess = CreateTexture(pCommand->m_Slot, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pTextData.get());
+				const bool OutlineSuccess = CreateTexture(pCommand->m_SlotOutline, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, TextureFlag::NO_MIPMAPS, pOutlineData.get());
 				const bool Success = TextSuccess && OutlineSuccess;
 				if(!Success)
 				{
@@ -4530,10 +4527,6 @@ public:
 					if(OutlineSuccess)
 						DestroyTexture(pCommand->m_SlotOutline);
 				}
-				if(pCommand->m_pTextData != nullptr)
-					free(pCommand->m_pTextData);
-				if(pCommand->m_pTextOutlineData != nullptr)
-					free(pCommand->m_pTextOutlineData);
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
@@ -4541,9 +4534,8 @@ public:
 			case CCommandBuffer::CMD_TEXT_TEXTURE_UPDATE:
 			{
 				const auto *pCommand = static_cast<const CCommandBuffer::SCommand_TextTexture_Update *>(pBaseCommand);
-				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, pCommand->m_pData);
-				if(pCommand->m_pData != nullptr)
-					free(pCommand->m_pData);
+				auto pData = TakeGraphicsUpload(pCommand->m_pData);
+				const bool Success = UpdateTexture(pCommand->m_Slot, pCommand->m_X, pCommand->m_Y, pCommand->m_Width, pCommand->m_Height, EMetalTextureFormat::R8, pData.get());
 				if(!Success)
 					SetResourceCommandError(pCommand);
 				return Success ? RUN_COMMAND_COMMAND_HANDLED : RUN_COMMAND_COMMAND_ERROR;
