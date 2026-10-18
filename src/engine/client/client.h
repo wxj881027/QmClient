@@ -574,6 +574,9 @@ public:
 	const char *ConcatFormatName() const;
 	// 拼接后台线程；避免 detached 线程在退出时被撕裂（输出文件无 trailer）。
 	std::thread m_ConcatThread;
+	// 拼接线程是否已执行完。std::thread 只有在 join/detach 后才不再 joinable，
+	// 需要该标志区分"仍在跑"与"跑完但未 join"，否则同一进程内第二次导出永远无法拼接。
+	std::atomic<bool> m_ConcatThreadFinished{true};
 #endif
 
 	static void Con_Rcon(IConsole::IResult *pResult, void *pUserData);

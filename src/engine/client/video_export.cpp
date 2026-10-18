@@ -1,6 +1,7 @@
 #include "video_export.h"
 
 #include <base/log.h>
+#include <base/system.h>
 
 #include <engine/shared/protocol.h>
 
@@ -57,11 +58,12 @@ CVideoExportTask::CVideoExportTask(const char *pName, const char *pDemoPath, int
 	m_aFingerprint[0] = '\0';
 }
 
-void CVideoExportTask::ComputeFingerprint(uint64_t DemoFileSize, int64_t DemoMtime)
+void CVideoExportTask::ComputeFingerprint(uint64_t DemoFileSize, int64_t DemoMtime, const char *pExtraParams)
 {
-	char aInput[1024];
-	str_format(aInput, sizeof(aInput), "%" PRIu64 "|%" PRIi64 "|%s|%d|%dx%d|%d|%d|%d",
-		DemoFileSize, DemoMtime, m_aDemoPath, m_Fps, m_Width, m_Height, m_Crf, m_Preset, m_SegmentSeconds);
+	char aInput[2048];
+	str_format(aInput, sizeof(aInput), "%" PRIu64 "|%" PRIi64 "|%s|%d|%dx%d|%d|%d|%d|%d|%d|%s",
+		DemoFileSize, DemoMtime, m_aDemoPath, m_Fps, m_Width, m_Height, m_Crf, m_Preset, m_SegmentSeconds,
+		m_FirstTick, m_LastTick, pExtraParams != nullptr ? pExtraParams : "");
 	MD5_DIGEST Digest = md5(aInput, str_length(aInput));
 	md5_str(Digest, m_aFingerprint, sizeof(m_aFingerprint));
 }
@@ -243,8 +245,23 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 	if(vInputs.empty())
 		return false;
 
+	// 写入先落到 <output>.part，成功写完 trailer 后再替换目标文件：
+	// 直接 avio_open 目标会把上一次的有效成片截断，任何中途失败都会留下不可播放的残文件。
+	const std::string TempOutput = std::string(pOutput) + ".part";
+	bool OutputCommitted = false;
+	struct SOutputGuard
+	{
+		const std::string &m_TempOutput;
+		bool &m_OutputCommitted;
+		~SOutputGuard()
+		{
+			if(!m_OutputCommitted)
+				fs_remove(m_TempOutput.c_str());
+		}
+	} OutputGuard{TempOutput, OutputCommitted};
+
 	AVFormatContext *pOutContext = nullptr;
-	const int AllocResult = avformat_alloc_output_context2(&pOutContext, nullptr, pFormatName, pOutput);
+	const int AllocResult = avformat_alloc_output_context2(&pOutContext, nullptr, pFormatName, TempOutput.c_str());
 	if(AllocResult < 0 || !pOutContext)
 	{
 		char aError[AV_ERROR_MAX_STRING_SIZE];
@@ -313,7 +330,7 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 	// 打开输出文件并写表头（全部流已就绪）
 	if(!(pOutContext->oformat->flags & AVFMT_NOFILE))
 	{
-		const int OpenFileResult = avio_open(&pOutContext->pb, pOutput, AVIO_FLAG_WRITE);
+		const int OpenFileResult = avio_open(&pOutContext->pb, TempOutput.c_str(), AVIO_FLAG_WRITE);
 		if(OpenFileResult < 0)
 		{
 			char aError[AV_ERROR_MAX_STRING_SIZE];
@@ -597,6 +614,14 @@ bool ConcatVideoFiles(const std::vector<std::string> &vInputs, const char *pOutp
 	if(!(pOutContext->oformat->flags & AVFMT_NOFILE))
 		avio_closep(&pOutContext->pb);
 	avformat_free_context(pOutContext);
+
+	// 关掉输出后才替换目标文件，保证目标要么是完整的旧成片、要么是完整的新成片。
+	if(fs_rename(TempOutput.c_str(), pOutput) != 0)
+	{
+		log_error("video_export", "Could not replace concat output '%s' with '%s'", pOutput, TempOutput.c_str());
+		return false;
+	}
+	OutputCommitted = true;
 	log_info("video_export", "Concatenated %d segment(s) into '%s'", (int)vInputs.size(), pOutput);
 	return true;
 }

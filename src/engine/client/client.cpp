@@ -5083,12 +5083,20 @@ void CClient::Con_StartVideo(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = static_cast<CClient *>(pUserData);
 
-	// 分段渲染启用（段长 > 0）且 demo 时长超过单段时走分段任务；否则保持原整段导出
+	// Range 与断点续渲统一由分段任务负责；只有段长配置为 0 时才退回整段导出。
 	// 可选参数：<name> [start_sec] [end_sec]：起止秒相对 demo 起点，与渲染弹窗 Range 输入同语义（供脚本/测试驱动）
-	if(g_Config.m_QmVideoSegmentSeconds > 0 && pSelf->StartSegmentedVideoExport(pResult->NumArguments() ? pResult->GetString(0) : "video", !pResult->NumArguments(),
-		pResult->NumArguments() >= 3 ? pResult->GetFloat(1) : -1.0f,
-		pResult->NumArguments() >= 3 ? pResult->GetFloat(2) : -1.0f))
+	// start/end 各自单独判断，只给 start 时表示"从该处到结尾"，不会被静默丢弃。
+	const int NumArgs = pResult->NumArguments();
+	const float RangeStartSec = NumArgs >= 2 ? pResult->GetFloat(1) : -1.0f;
+	const float RangeEndSec = NumArgs >= 3 ? pResult->GetFloat(2) : -1.0f;
+	// 指定了 Range 时即使段长为 0 也走任务状态机，让区间导出只有一条经过校验的实现路径。
+	if((g_Config.m_QmVideoSegmentSeconds > 0 || RangeStartSec >= 0.0f) && pSelf->StartSegmentedVideoExport(pResult->NumArguments() ? pResult->GetString(0) : "video", !pResult->NumArguments(),
+										      RangeStartSec, RangeEndSec))
 		return;
+
+	// 走到这里说明任务没接管：Range 无法生效，明确告警而不是让用户以为导出了区间。
+	if(RangeStartSec >= 0.0f)
+		log_warn("video", "start_video range could not be applied (not in demo playback, export already running, or empty range); exporting the whole demo instead.");
 
 	if(pResult->NumArguments())
 	{
@@ -5128,13 +5136,26 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 	int FirstTick = pInfo->m_Info.m_FirstTick;
 	int LastTick = pInfo->m_Info.m_LastTick;
 
-	// 渲染选区（秒，相对 demo 起点）换算为 tick；越界或倒置时回退全范围
-	if(RangeStartSec >= 0.0f && RangeEndSec > RangeStartSec)
+	// 渲染选区（秒，相对 demo 起点）换算为 tick：先把秒数钳到 [0, demo 时长] 再换算，
+	// 避免超大输入在浮点转整型、以及 std::clamp 出现 lo > hi 时触发未定义行为。
+	// 只给 start（end < 0）表示从起点到 demo 结尾。
+	if(RangeStartSec >= 0.0f)
 	{
-		const int RangeFirst = FirstTick + (int)(RangeStartSec * SERVER_TICK_SPEED);
-		const int RangeLast = FirstTick + (int)(RangeEndSec * SERVER_TICK_SPEED);
-		FirstTick = std::clamp(RangeFirst, FirstTick, LastTick);
-		LastTick = std::clamp(RangeLast, FirstTick + 1, LastTick);
+		const int OriginalFirst = FirstTick;
+		const int OriginalLast = LastTick;
+		const int DemoTicks = maximum(1, OriginalLast - OriginalFirst);
+		const float MaxSec = (float)DemoTicks / (float)SERVER_TICK_SPEED;
+		const float ClampedStart = std::clamp(RangeStartSec, 0.0f, MaxSec);
+		const float ClampedEnd = RangeEndSec >= 0.0f ? std::clamp(RangeEndSec, 0.0f, MaxSec) : MaxSec;
+		const int RangeFirst = std::clamp(OriginalFirst + (int)(ClampedStart * SERVER_TICK_SPEED), OriginalFirst, OriginalLast);
+		const int RangeLast = std::clamp(OriginalFirst + (int)(ClampedEnd * SERVER_TICK_SPEED), OriginalFirst, OriginalLast);
+		if(RangeLast > RangeFirst)
+		{
+			FirstTick = RangeFirst;
+			LastTick = RangeLast;
+		}
+		else
+			log_warn("video_export", "Range [%.1fs, %.1fs] is empty or inverted; exporting the whole demo.", RangeStartSec, RangeEndSec);
 	}
 
 	// demo 文件属性（任务指纹）。Resolve 的默认配置结果可能是相对路径（锚定 IStorage 语义），
@@ -5159,10 +5180,18 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 		g_Config.m_QmVideoSegmentSeconds, g_Config.m_ClVideoRecorderFPS,
 		Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
 		g_Config.m_ClVideoX264Crf, g_Config.m_ClVideoX264Preset, g_Config.m_QmVideoSegmentWarmup);
-	pTask->ComputeFingerprint(DemoSize, DemoMtime);
+	// 指纹附加参数：只影响产物、不影响段切分的导出设置。任一变化都必须让旧段失效，
+	// 否则续渲会把不同编码器/质量/容器/尺寸的旧段拼进同一个文件。
+	char aFingerprintParams[512];
+	str_format(aFingerprintParams, sizeof(aFingerprintParams), "%s|%d|%d|%s|%dx%d|%d",
+		g_Config.m_QmVideoEncoder, g_Config.m_QmVideoQuality, g_Config.m_QmVideoGop,
+		g_Config.m_QmVideoContainer, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight,
+		g_Config.m_ClVideoSndEnable);
+	pTask->ComputeFingerprint(DemoSize, DemoMtime, aFingerprintParams);
 
-	// 单段（demo 时长不超过段长）不值得分段开销，回退整段导出
-	if(pTask->Segments().size() <= 1)
+	// 未指定 Range 且只有一段：走原有整段导出，省去分段任务与流复制拼接的开销。
+	// 指定了 Range 时必须留在任务里，否则选区会被 StartVideo 的整段导出静默丢弃。
+	if(pTask->Segments().size() <= 1 && RangeStartSec < 0.0f)
 		return false;
 
 	// 复用已有进度：进度文件损坏或指纹不匹配时整单从头渲染（新任务段默认未完成）
@@ -5274,11 +5303,15 @@ void CClient::FinishSegmentedExport()
 // 收尾拼接：检查全部段文件在位后在后台线程流复制拼接（libavformat 裸 IO，用绝对路径）。
 void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
 {
-	// 上一次拼接仍在进行：拒绝新请求（同输出文件并发写会撕裂）；退出路径由析构 join 兜底
+	// 上一次拼接仍在进行：拒绝新请求（同输出文件并发写会撕裂）；已跑完则回收线程句柄后继续。
 	if(m_ConcatThread.joinable())
 	{
-		log_info("video_export", "A previous concat is still running; skipping the new concat request.");
-		return;
+		if(!m_ConcatThreadFinished.load())
+		{
+			log_info("video_export", "A previous concat is still running; skipping the new concat request.");
+			return;
+		}
+		m_ConcatThread.join();
 	}
 
 	std::vector<std::string> vFiles;
@@ -5308,8 +5341,11 @@ void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
 
 	// muxer 格式名跟随容器（mkv → "matroska"），避免容器与后缀不一致
 	const std::string FormatName = ConcatFormatName();
-	m_ConcatThread = std::thread([vFiles = std::move(vFiles), OutputPath, FormatName]() {
+	m_ConcatThreadFinished.store(false);
+	m_ConcatThread = std::thread([this, vFiles = std::move(vFiles), OutputPath, FormatName]() {
 		ConcatVideoFiles(vFiles, OutputPath.c_str(), FormatName.c_str());
+		// 无论成功失败都要复位，保证下一次导出的拼接请求不会被永久拒绝。
+		m_ConcatThreadFinished.store(true);
 	});
 }
 

@@ -39,8 +39,9 @@ public:
 	CVideoExportTask(const char *pName, const char *pDemoPath, int FirstTick, int LastTick, int SegmentSeconds,
 		int Fps, int Width, int Height, int Crf, int Preset, int WarmupTicks);
 
-	// 任务指纹：demo 文件属性 + 导出参数。用于断点续渲时判断进度文件是否仍适用。
-	void ComputeFingerprint(uint64_t DemoFileSize, int64_t DemoMtime);
+	// 任务指纹：demo 文件属性 + 导出参数（渲染尺寸/质量/段长/选区）与调用方传入的附加参数
+	// （编码器、容器、输出尺寸等）。断点续渲时据此判断进度文件是否仍适用，任一参数变化都必须重渲。
+	void ComputeFingerprint(uint64_t DemoFileSize, int64_t DemoMtime, const char *pExtraParams);
 
 	const char *Name() const { return m_aName; }
 	const char *DemoPath() const { return m_aDemoPath; }

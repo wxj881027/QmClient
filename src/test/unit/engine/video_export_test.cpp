@@ -9,10 +9,11 @@
 namespace
 {
 	// 构造带指纹的任务；段长 0 表示单段覆盖全范围。
-	std::unique_ptr<CVideoExportTask> MakeTask(const char *pName, int FirstTick, int LastTick, int SegmentSeconds)
+	// pExtraParams 对应生产调用方传入的编码器/容器/输出尺寸等附加参数。
+	std::unique_ptr<CVideoExportTask> MakeTask(const char *pName, int FirstTick, int LastTick, int SegmentSeconds, const char *pExtraParams = "")
 	{
 		auto pTask = std::make_unique<CVideoExportTask>(pName, "demos/test.demo", FirstTick, LastTick, SegmentSeconds, 60, 1280, 720, 18, 5, 100);
-		pTask->ComputeFingerprint(12345, 1700000000);
+		pTask->ComputeFingerprint(12345, 1700000000, pExtraParams);
 		return pTask;
 	}
 
@@ -106,9 +107,52 @@ TEST(VideoExportTask, FingerprintMismatchIgnoresProgress)
 
 	// 不同参数（段长变化 → 指纹不同且段数不同）：进度必须整体失效
 	auto pOther = std::make_unique<CVideoExportTask>("fingerprint", "demos/test.demo", 0, 13000, 60, 60, 1280, 720, 18, 5, 100);
-	pOther->ComputeFingerprint(12345, 1700000000);
+	pOther->ComputeFingerprint(12345, 1700000000, "");
 	EXPECT_FALSE(pOther->LoadProgress(Path.c_str()));
 	EXPECT_EQ(pOther->NextPendingSegment(), 0);
+
+	std::filesystem::remove(Path);
+}
+
+TEST(VideoExportTask, RangeChangeInvalidatesProgress)
+{
+	std::filesystem::path TempDir = std::filesystem::temp_directory_path() / "qm_video_export_test";
+	std::filesystem::create_directories(TempDir);
+	const std::string Path = ProgressFilePath(TempDir, "rangechange");
+
+	// 同一段长、同一 demo，仅选区的起止 tick 不同：旧段属于另一段内容，必须重渲。
+	auto pSaved = MakeTask("rangechange", 0, 13000, 50);
+	pSaved->MarkSegmentDone(0);
+	ASSERT_TRUE(pSaved->SaveProgress(Path.c_str()));
+
+	auto pOtherRange = MakeTask("rangechange", 3000, 13000, 50);
+	EXPECT_FALSE(pOtherRange->LoadProgress(Path.c_str()));
+	EXPECT_EQ(pOtherRange->NextPendingSegment(), 0);
+
+	std::filesystem::remove(Path);
+}
+
+TEST(VideoExportTask, ExportSettingsChangeInvalidatesProgress)
+{
+	std::filesystem::path TempDir = std::filesystem::temp_directory_path() / "qm_video_export_test";
+	std::filesystem::create_directories(TempDir);
+	const std::string Path = ProgressFilePath(TempDir, "settingchange");
+
+	// 相同 demo/段长/选区，仅编码器与输出尺寸不同：旧段参数不兼容，不能复用。
+	auto pSaved = MakeTask("settingchange", 0, 13000, 50, "|18|60|mp4|0x0|1");
+	ASSERT_TRUE(pSaved->SaveProgress(Path.c_str()));
+
+	auto pOtherEncoder = MakeTask("settingchange", 0, 13000, 50, "h264_nvenc|18|60|mp4|0x0|1");
+	EXPECT_FALSE(pOtherEncoder->LoadProgress(Path.c_str()));
+
+	auto pOtherSize = MakeTask("settingchange", 0, 13000, 50, "|18|60|mp4|1920x1080|1");
+	EXPECT_FALSE(pOtherSize->LoadProgress(Path.c_str()));
+
+	// 参数完全一致时进度仍可用，避免指纹收紧导致续渲失效。
+	auto pSame = MakeTask("settingchange", 0, 13000, 50, "|18|60|mp4|0x0|1");
+	pSaved->MarkSegmentDone(0);
+	ASSERT_TRUE(pSaved->SaveProgress(Path.c_str()));
+	EXPECT_TRUE(pSame->LoadProgress(Path.c_str()));
 
 	std::filesystem::remove(Path);
 }

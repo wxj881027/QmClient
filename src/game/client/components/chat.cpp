@@ -2839,7 +2839,8 @@ bool CChat::OnPrepareLines(float y)
 		// 超出 HUD 的聊天高度预算：停止准备更旧消息。
 		if(y < HeightLimit)
 			break;
-		const float TargetY = LayoutBottom - LineHeight;
+		// 渲染落点必须与上面的堆叠游标同口径减去额外行间隔，否则行距只减少可视行数、不改变行位置。
+		const float TargetY = LayoutBottom - (LineHeight + ExtraLineSpacing);
 
 		const float TextYOffset = TargetY + RealMsgPaddingY / 2.0f;
 		if(Line.m_TextYOffset != TextYOffset)
@@ -3580,7 +3581,7 @@ void CChat::OnRender()
 		y = AdvanceChatLineStack(y, LineHeight, ExtraLineSpacing, LayoutVisibility);
 		if(y < HeightLimit)
 			break;
-		Line.m_Presentation.m_TargetY = LayoutBottom - LineHeight;
+		Line.m_Presentation.m_TargetY = LayoutBottom - (LineHeight + ExtraLineSpacing);
 
 		// Don't abort the full render pass on a single malformed line.
 		if(!LineHeightValid)
