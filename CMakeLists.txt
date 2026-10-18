@@ -3061,6 +3061,7 @@ if(CLIENT)
     backend/null/backend_null.h
     backend/opengl/backend_opengl.cpp
     backend/opengl/backend_opengl.h
+    backend/opengl/buffer_data.h
     backend/opengl/backend_opengl3.cpp
     backend/opengl/backend_opengl3.h
     backend/opengl/backend_opengl3_qm_pipelines.cpp
@@ -5112,6 +5113,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/client/skins/skins_official_index_contract_test.cpp
     src/test/contract/engine/graphics/render_target_contract_test.cpp
     src/test/unit/engine/graphics/render_target_geometry_test.cpp
+    src/test/unit/engine/graphics/opengl_buffer_data_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
     src/test/unit/engine/graphics/render_target_readback_queue_test.cpp
     src/test/unit/engine/graphics/render_target_pool_test.cpp

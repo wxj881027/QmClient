@@ -1269,7 +1269,7 @@ ERunCommandReturnTypes CCommandProcessorFragment_OpenGL::RunCommand(const CComma
 	default: return ERunCommandReturnTypes::RUN_COMMAND_COMMAND_UNHANDLED;
 	}
 
-	return ERunCommandReturnTypes::RUN_COMMAND_COMMAND_HANDLED;
+	return m_Error.m_ErrorType == GFX_ERROR_TYPE_NONE ? ERunCommandReturnTypes::RUN_COMMAND_COMMAND_HANDLED : ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR;
 }
 
 // ------------ CCommandProcessorFragment_OpenGL2
@@ -1957,11 +1957,10 @@ void CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(const SCommand_Shutdown *pC
 		DestroyTexture(i);
 	}
 
-	for(auto &BufferObject : m_vBufferObjectIndices)
-	{
-		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
-		free(BufferObject.m_pData);
-	}
+	for(size_t Index = 0; Index < m_vBufferObjectIndices.size(); ++Index)
+		DeleteBufferObject(static_cast<int>(Index));
+	m_vBufferObjectIndices.clear();
+	m_vBufferContainers.clear();
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_RenderTex3D(const CCommandBuffer::SCommand_RenderTex3D *pCommand)
@@ -2019,93 +2018,140 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderTex3D(const CCommandBuffer::SC
 
 void CCommandProcessorFragment_OpenGL2::Cmd_CreateBufferObject(const CCommandBuffer::SCommand_CreateBufferObject *pCommand)
 {
-	void *pUploadData = pCommand->m_pUploadData;
+	std::unique_ptr<void, decltype(&free)> pOwnedUpload(pCommand->m_DeletePointer ? pCommand->m_pUploadData : nullptr, free);
 	const int Index = pCommand->m_BufferIndex;
-	// create necessary space
-	if((size_t)Index >= m_vBufferObjectIndices.size())
+	COpenGLBufferData Data;
+	if(Index < 0 || !Data.Assign(pCommand->m_DataSize, pCommand->m_pUploadData))
 	{
-		m_vBufferObjectIndices.resize(Index + 1, 0);
+		BufferObjectError("Failed to prepare CPU buffer storage.");
+		return;
+	}
+	try
+	{
+		if(static_cast<size_t>(Index) >= m_vBufferObjectIndices.size())
+			m_vBufferObjectIndices.resize(static_cast<size_t>(Index) + 1);
+	}
+	catch(...)
+	{
+		BufferObjectError("Failed to allocate buffer object slots.");
+		return;
 	}
 
+	// CPU 副本与槽位就绪后才创建 GPU 对象，失败不覆盖已发布的缓冲。
 	GLuint VertBufferId = 0;
-
 	glGenBuffers(1, &VertBufferId);
+	if(VertBufferId == 0)
+	{
+		BufferObjectError("Failed to create an OpenGL buffer object.");
+		return;
+	}
 	glBindBuffer(GL_ARRAY_BUFFER, VertBufferId);
-	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(pCommand->m_DataSize), pUploadData, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(pCommand->m_DataSize), pCommand->m_pUploadData, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	SBufferObject &BufferObject = m_vBufferObjectIndices[Index];
+	if(BufferObject.m_BufferObjectId != 0)
+		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
 	BufferObject.m_BufferObjectId = VertBufferId;
-	BufferObject.m_DataSize = pCommand->m_DataSize;
-	BufferObject.m_pData = static_cast<uint8_t *>(malloc(pCommand->m_DataSize));
-	if(pUploadData)
-		mem_copy(BufferObject.m_pData, pUploadData, pCommand->m_DataSize);
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
+	BufferObject.m_Data = std::move(Data);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_RecreateBufferObject(const CCommandBuffer::SCommand_RecreateBufferObject *pCommand)
 {
-	void *pUploadData = pCommand->m_pUploadData;
-	int Index = pCommand->m_BufferIndex;
+	std::unique_ptr<void, decltype(&free)> pOwnedUpload(pCommand->m_DeletePointer ? pCommand->m_pUploadData : nullptr, free);
+	const int Index = pCommand->m_BufferIndex;
+	if(static_cast<size_t>(Index) >= m_vBufferObjectIndices.size() || m_vBufferObjectIndices[Index].m_BufferObjectId == 0)
+	{
+		BufferObjectError("Cannot recreate an unavailable buffer object.");
+		return;
+	}
+	COpenGLBufferData Data;
+	if(!Data.Assign(pCommand->m_DataSize, pCommand->m_pUploadData))
+	{
+		BufferObjectError("Failed to prepare replacement CPU buffer storage.");
+		return;
+	}
 	SBufferObject &BufferObject = m_vBufferObjectIndices[Index];
 
 	glBindBuffer(GL_ARRAY_BUFFER, BufferObject.m_BufferObjectId);
-	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(pCommand->m_DataSize), pUploadData, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(pCommand->m_DataSize), pCommand->m_pUploadData, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	BufferObject.m_DataSize = pCommand->m_DataSize;
-	free(BufferObject.m_pData);
-	BufferObject.m_pData = static_cast<uint8_t *>(malloc(pCommand->m_DataSize));
-	if(pUploadData)
-		mem_copy(BufferObject.m_pData, pUploadData, pCommand->m_DataSize);
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
+	BufferObject.m_Data = std::move(Data);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_UpdateBufferObject(const CCommandBuffer::SCommand_UpdateBufferObject *pCommand)
 {
-	void *pUploadData = pCommand->m_pUploadData;
-	int Index = pCommand->m_BufferIndex;
+	std::unique_ptr<void, decltype(&free)> pOwnedUpload(pCommand->m_DeletePointer ? pCommand->m_pUploadData : nullptr, free);
+	const int Index = pCommand->m_BufferIndex;
+	const size_t Offset = reinterpret_cast<uintptr_t>(pCommand->m_pOffset);
+	if(static_cast<size_t>(Index) >= m_vBufferObjectIndices.size() || m_vBufferObjectIndices[Index].m_BufferObjectId == 0 ||
+		!m_vBufferObjectIndices[Index].m_Data.Write(Offset, pCommand->m_DataSize, pCommand->m_pUploadData))
+	{
+		BufferObjectError("Invalid buffer object update range or storage.");
+		return;
+	}
+	if(pCommand->m_DataSize == 0)
+		return;
 	SBufferObject &BufferObject = m_vBufferObjectIndices[Index];
 
 	glBindBuffer(GL_ARRAY_BUFFER, BufferObject.m_BufferObjectId);
-	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)(pCommand->m_pOffset), (GLsizeiptr)(pCommand->m_DataSize), pUploadData);
+	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)Offset, (GLsizeiptr)(pCommand->m_DataSize), BufferObject.m_Data.Data() + Offset);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	if(pUploadData)
-		mem_copy(BufferObject.m_pData + (ptrdiff_t)pCommand->m_pOffset, pUploadData, pCommand->m_DataSize);
-
-	if(pCommand->m_DeletePointer)
-		free(pUploadData);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_CopyBufferObject(const CCommandBuffer::SCommand_CopyBufferObject *pCommand)
 {
-	int WriteIndex = pCommand->m_WriteBufferIndex;
-	int ReadIndex = pCommand->m_ReadBufferIndex;
+	const int WriteIndex = pCommand->m_WriteBufferIndex;
+	const int ReadIndex = pCommand->m_ReadBufferIndex;
+	const size_t WriteOffset = pCommand->m_WriteOffset;
+	const size_t ReadOffset = pCommand->m_ReadOffset;
+	if(static_cast<size_t>(WriteIndex) >= m_vBufferObjectIndices.size() || static_cast<size_t>(ReadIndex) >= m_vBufferObjectIndices.size() ||
+		m_vBufferObjectIndices[WriteIndex].m_BufferObjectId == 0 || m_vBufferObjectIndices[ReadIndex].m_BufferObjectId == 0)
+	{
+		BufferObjectError("Cannot copy an unavailable buffer object.");
+		return;
+	}
 
 	SBufferObject &ReadBufferObject = m_vBufferObjectIndices[ReadIndex];
 	SBufferObject &WriteBufferObject = m_vBufferObjectIndices[WriteIndex];
 
-	mem_copy(WriteBufferObject.m_pData + (ptrdiff_t)pCommand->m_WriteOffset, ReadBufferObject.m_pData + (ptrdiff_t)pCommand->m_ReadOffset, pCommand->m_CopySize);
+	if(!WriteBufferObject.m_Data.CopyFrom(ReadBufferObject.m_Data, ReadOffset, WriteOffset, pCommand->m_CopySize))
+	{
+		BufferObjectError("Invalid buffer object copy range.");
+		return;
+	}
+	if(pCommand->m_CopySize == 0)
+		return;
 
 	glBindBuffer(GL_ARRAY_BUFFER, WriteBufferObject.m_BufferObjectId);
-	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)(pCommand->m_WriteOffset), (GLsizeiptr)(pCommand->m_CopySize), WriteBufferObject.m_pData + (ptrdiff_t)pCommand->m_WriteOffset);
+	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)WriteOffset, (GLsizeiptr)(pCommand->m_CopySize), WriteBufferObject.m_Data.Data() + WriteOffset);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_DeleteBufferObject(const CCommandBuffer::SCommand_DeleteBufferObject *pCommand)
 {
-	int Index = pCommand->m_BufferIndex;
+	DeleteBufferObject(pCommand->m_BufferIndex);
+}
+
+void CCommandProcessorFragment_OpenGL2::BufferObjectError(const char *pReason)
+{
+	if(m_Error.m_ErrorType == GFX_ERROR_TYPE_NONE)
+	{
+		// 此处可能已经无法分配内存，只记录错误类型并沿现有图形失败路径上报。
+		m_Error.m_ErrorType = GFX_ERROR_TYPE_UNKNOWN;
+		log_error("gfx/opengl", "%s", pReason);
+	}
+}
+
+void CCommandProcessorFragment_OpenGL2::DeleteBufferObject(int Index)
+{
+	if(static_cast<size_t>(Index) >= m_vBufferObjectIndices.size())
+		return;
 	SBufferObject &BufferObject = m_vBufferObjectIndices[Index];
-
-	glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
-
-	free(BufferObject.m_pData);
-	BufferObject.m_pData = NULL;
+	if(BufferObject.m_BufferObjectId != 0)
+		glDeleteBuffers(1, &BufferObject.m_BufferObjectId);
+	BufferObject.m_BufferObjectId = 0;
+	BufferObject.m_Data.Reset();
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_CreateBufferContainer(const CCommandBuffer::SCommand_CreateBufferContainer *pCommand)
@@ -2148,21 +2194,15 @@ void CCommandProcessorFragment_OpenGL2::Cmd_UpdateBufferContainer(const CCommand
 
 void CCommandProcessorFragment_OpenGL2::Cmd_DeleteBufferContainer(const CCommandBuffer::SCommand_DeleteBufferContainer *pCommand)
 {
+	if(static_cast<size_t>(pCommand->m_BufferContainerIndex) >= m_vBufferContainers.size())
+		return;
 	SBufferContainer &BufferContainer = m_vBufferContainers[pCommand->m_BufferContainerIndex];
 
 	if(pCommand->m_DestroyAllBO)
-	{
-		int VertBufferId = BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex;
-		if(VertBufferId != -1)
-		{
-			glDeleteBuffers(1, &m_vBufferObjectIndices[VertBufferId].m_BufferObjectId);
-
-			free(m_vBufferObjectIndices[VertBufferId].m_pData);
-			m_vBufferObjectIndices[VertBufferId].m_pData = NULL;
-		}
-	}
+		DeleteBufferObject(BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex);
 
 	BufferContainer.m_ContainerInfo.m_vAttributes.clear();
+	BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex = -1;
 }
 
 void CCommandProcessorFragment_OpenGL2::Cmd_IndicesRequiredNumNotify(const CCommandBuffer::SCommand_IndicesRequiredNumNotify *pCommand)
@@ -2177,6 +2217,11 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderBorderTile(const CCommandBuffe
 		return;
 
 	SBufferContainer &BufferContainer = m_vBufferContainers[Index];
+	const int BufferIndex = BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex;
+	if(static_cast<size_t>(BufferIndex) >= m_vBufferObjectIndices.size() ||
+		m_vBufferObjectIndices[BufferIndex].m_BufferObjectId == 0 || BufferContainer.m_ContainerInfo.m_vAttributes.empty())
+		return;
+	SBufferObject &BufferObject = m_vBufferObjectIndices[BufferIndex];
 
 	CGLSLTileProgram *pProgram = NULL;
 	if(IsTexturedState(pCommand->m_State))
@@ -2192,8 +2237,6 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderBorderTile(const CCommandBuffe
 	pProgram->SetUniformVec2(pProgram->m_LocScale, 1, (float *)&pCommand->m_Scale);
 
 	bool IsTextured = BufferContainer.m_ContainerInfo.m_vAttributes.size() == 2;
-
-	SBufferObject &BufferObject = m_vBufferObjectIndices[(size_t)BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex];
 
 	glBindBuffer(GL_ARRAY_BUFFER, BufferObject.m_BufferObjectId);
 
@@ -2224,6 +2267,11 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderTileLayer(const CCommandBuffer
 		return;
 
 	SBufferContainer &BufferContainer = m_vBufferContainers[Index];
+	const int BufferIndex = BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex;
+	if(static_cast<size_t>(BufferIndex) >= m_vBufferObjectIndices.size() ||
+		m_vBufferObjectIndices[BufferIndex].m_BufferObjectId == 0 || BufferContainer.m_ContainerInfo.m_vAttributes.empty())
+		return;
+	SBufferObject &BufferObject = m_vBufferObjectIndices[BufferIndex];
 
 	if(pCommand->m_IndicesDrawNum == 0)
 	{
@@ -2246,8 +2294,6 @@ void CCommandProcessorFragment_OpenGL2::Cmd_RenderTileLayer(const CCommandBuffer
 	pProgram->SetUniformVec4(pProgram->m_LocColor, 1, (float *)&pCommand->m_Color);
 
 	bool IsTextured = BufferContainer.m_ContainerInfo.m_vAttributes.size() == 2;
-
-	SBufferObject &BufferObject = m_vBufferObjectIndices[(size_t)BufferContainer.m_ContainerInfo.m_VertBufferBindingIndex];
 
 	glBindBuffer(GL_ARRAY_BUFFER, BufferObject.m_BufferObjectId);
 

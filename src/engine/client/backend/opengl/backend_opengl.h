@@ -13,6 +13,7 @@
 #include <base/system.h>
 
 #include <engine/client/backend/backend_base.h>
+#include <engine/client/backend/opengl/buffer_data.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_defines.h>
 
@@ -197,15 +198,8 @@ class CCommandProcessorFragment_OpenGL2 : public CCommandProcessorFragment_OpenG
 
 	struct SBufferObject
 	{
-		SBufferObject(TWGLuint BufferObjectId) :
-			m_BufferObjectId(BufferObjectId)
-		{
-			m_pData = NULL;
-			m_DataSize = 0;
-		}
-		TWGLuint m_BufferObjectId;
-		uint8_t *m_pData;
-		size_t m_DataSize;
+		TWGLuint m_BufferObjectId = 0;
+		COpenGLBufferData m_Data;
 	};
 
 	std::vector<SBufferObject> m_vBufferObjectIndices;
@@ -213,6 +207,8 @@ class CCommandProcessorFragment_OpenGL2 : public CCommandProcessorFragment_OpenG
 #ifndef BACKEND_GL_MODERN_API
 	bool DoAnalyzeStep(size_t CheckCount, size_t VerticesCount, uint8_t aFakeTexture[], size_t SingleImageSize);
 	bool IsTileMapAnalysisSucceeded();
+	void BufferObjectError(const char *pReason);
+	void DeleteBufferObject(int Index);
 #endif
 
 	void UseProgram(CGLSLTWProgram *pProgram);
