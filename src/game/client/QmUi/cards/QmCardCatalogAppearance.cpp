@@ -482,7 +482,7 @@ uint64_t CMenus::BuildAppearanceSettingsCards(const qm_card_catalog::SQmCardBuil
 				}
 				RenderQmChatGradientSettings(RightView, *pChat, AppearanceMetrics);
 			});
-			const auto MeasureChatPreview = [this, pChat, MarginSmall](float ContentWidth) {
+			const auto MeasureChatPreview = [this, pChat, MarginSmall, ShowChatPreview](float ContentWidth) {
 				const float RealFontSize = pChat->FontSize() * 2.0f;
 				const float RealMsgPaddingX = (!g_Config.m_ClChatOld ? pChat->MessagePaddingX() : 0.0f) * 2.0f;
 				const float RealMsgPaddingY = (!g_Config.m_ClChatOld ? pChat->MessagePaddingY() : 0.0f) * 2.0f;
