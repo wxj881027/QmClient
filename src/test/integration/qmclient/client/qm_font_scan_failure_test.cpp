@@ -31,7 +31,6 @@ namespace
 
 TEST(QmFontScanFailure, EnumerationExceptionDoesNotTerminateWorkerOrBlockNextJob)
 {
-	// 枚举抛异常只让该作业失败，同一池中的后续作业仍能正常完成。
 	auto pFailed = std::make_shared<CQmFontScanJob>([](const auto &) -> std::vector<std::string> { throw std::runtime_error("enumeration failed"); }, ReadBytes);
 	auto pNext = std::make_shared<CQmFontScanJob>([](const auto &) { return std::vector<std::string>{"valid"}; }, ReadBytes);
 	CJobPool Pool;
