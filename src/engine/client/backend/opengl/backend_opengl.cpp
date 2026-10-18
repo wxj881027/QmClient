@@ -8,6 +8,7 @@
 #include <engine/client/backend_sdl.h>
 #endif
 #include <engine/client/backend/render_target_geometry.h>
+#include <engine/client/backend/screenshot_image.h>
 #include <engine/client/qm_graphics_adapters.h>
 #include <engine/graphics.h>
 
@@ -1121,44 +1122,23 @@ void CCommandProcessorFragment_OpenGL::Cmd_ReadPixel(const CCommandBuffer::SComm
 
 void CCommandProcessorFragment_OpenGL::Cmd_Screenshot(const CCommandBuffer::SCommand_TrySwapAndScreenshot *pCommand)
 {
-	// fetch image data
+	pCommand->m_pImage->Free();
 	GLint aViewport[4] = {0, 0, 0, 0};
 	glGetIntegerv(GL_VIEWPORT, aViewport);
+	const int Width = aViewport[2];
+	const int Height = aViewport[3];
+	if(Width <= 0 || Height <= 0)
+		return;
 
-	const int ViewportX = aViewport[0];
-	const int ViewportY = aViewport[1];
-	int w = aViewport[2];
-	int h = aViewport[3];
-
-	// we allocate one more row to use when we are flipping the texture
-	unsigned char *pPixelData = (unsigned char *)malloc((size_t)w * (h + 1) * 4);
-	unsigned char *pTempRow = pPixelData + w * h * 4;
-
-	// fetch the pixels
-	GLint Alignment;
-	glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glReadPixels(ViewportX, ViewportY, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pPixelData);
-	glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
-
-	// flip the pixel because opengl works from bottom left corner
-	for(int y = 0; y < h / 2; y++)
-	{
-		mem_copy(pTempRow, pPixelData + y * w * 4, w * 4);
-		mem_copy(pPixelData + y * w * 4, pPixelData + (h - y - 1) * w * 4, w * 4);
-		mem_copy(pPixelData + (h - y - 1) * w * 4, pTempRow, w * 4);
-		for(int x = 0; x < w; x++)
-		{
-			pPixelData[y * w * 4 + x * 4 + 3] = 255;
-			pPixelData[(h - y - 1) * w * 4 + x * 4 + 3] = 255;
-		}
-	}
-
-	// fill in the information
-	pCommand->m_pImage->m_Width = w;
-	pCommand->m_pImage->m_Height = h;
-	pCommand->m_pImage->m_Format = CImageInfo::FORMAT_RGBA;
-	pCommand->m_pImage->m_pData = pPixelData;
+	screenshot_image::CaptureRgba(*pCommand->m_pImage, static_cast<size_t>(Width), static_cast<size_t>(Height),
+		screenshot_image::ERowOrder::BOTTOM_UP, [&](uint8_t *pData, size_t) {
+			GLint Alignment;
+			glGetIntegerv(GL_PACK_ALIGNMENT, &Alignment);
+			glPixelStorei(GL_PACK_ALIGNMENT, 1);
+			glReadPixels(aViewport[0], aViewport[1], Width, Height, GL_RGBA, GL_UNSIGNED_BYTE, pData);
+			glPixelStorei(GL_PACK_ALIGNMENT, Alignment);
+			return true;
+		});
 }
 
 CCommandProcessorFragment_OpenGL::CCommandProcessorFragment_OpenGL()

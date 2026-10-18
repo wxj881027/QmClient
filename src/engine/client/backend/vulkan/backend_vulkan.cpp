@@ -6,6 +6,7 @@
 
 #include <engine/client/backend/backend_base.h>
 #include <engine/client/backend/render_target_geometry.h>
+#include <engine/client/backend/screenshot_image.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
 #include <engine/client/backend/vulkan/backend_vulkan_qm_ext.h>
 #include <engine/client/backend/vulkan/vulkan_rendering_lifecycle.h>
@@ -8804,6 +8805,7 @@ public:
 
 	[[nodiscard]] bool Cmd_Screenshot(const CCommandBuffer::SCommand_TrySwapAndScreenshot *pCommand)
 	{
+		pCommand->m_pImage->Free();
 		if(!*pCommand->m_pSwapped)
 		{
 			m_PresentedSnapshotRequested = true;
@@ -8812,22 +8814,19 @@ public:
 		}
 		*pCommand->m_pSwapped = true;
 
-		uint32_t Width;
-		uint32_t Height;
-		CImageInfo::EImageFormat Format;
-		if(GetPresentedImageDataImpl(Width, Height, Format, m_vScreenshotHelper, true, {}))
+		uint32_t Width = 0;
+		uint32_t Height = 0;
+		CImageInfo::EImageFormat Format = CImageInfo::FORMAT_UNDEFINED;
+		if(GetPresentedImageDataImpl(Width, Height, Format, m_vScreenshotHelper, false, {}) && Format == CImageInfo::FORMAT_RGBA)
 		{
-			const size_t ImgSize = (size_t)Width * (size_t)Height * CImageInfo::PixelSize(Format);
-			pCommand->m_pImage->m_pData = static_cast<uint8_t *>(malloc(ImgSize));
-			mem_copy(pCommand->m_pImage->m_pData, m_vScreenshotHelper.data(), ImgSize);
+			screenshot_image::CaptureRgba(*pCommand->m_pImage, Width, Height, screenshot_image::ERowOrder::TOP_DOWN,
+				[&](uint8_t *pData, size_t DataBytes) {
+					if(m_vScreenshotHelper.size() < DataBytes)
+						return false;
+					mem_copy(pData, m_vScreenshotHelper.data(), DataBytes);
+					return true;
+				});
 		}
-		else
-		{
-			pCommand->m_pImage->m_pData = nullptr;
-		}
-		pCommand->m_pImage->m_Width = (int)Width;
-		pCommand->m_pImage->m_Height = (int)Height;
-		pCommand->m_pImage->m_Format = Format;
 
 		return true;
 	}
