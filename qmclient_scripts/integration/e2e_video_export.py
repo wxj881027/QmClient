@@ -56,7 +56,8 @@ def start_demo_client(env: ProcessEnvironment, extra_config: list[str]) -> objec
 		"cl_save_settings 0",
 		"qm_auto_update 0",
 		"qm_steam_auto_launch 0",
-		"minimize",
+		# 不能 minimize：Vulkan 交换链在窗口最小化时暂停（paused=1），帧捕获读不到呈现帧，
+		# 录制必然 READ_FAILED；导出需要可见窗口持续呈现帧（wt-1 实测同为前台窗口）。
 		*extra_config,
 	]
 	return env.start_client(config=config, connect=False)
@@ -98,7 +99,7 @@ def scenario_video_export_range(env: ProcessEnvironment) -> None:
 		[
 			"demo_speed 8",
 			"qm_video_segment_seconds 0",
-			"qm_video_encoder x264",
+			"qm_video_encoder libx264",
 			"qm_video_container mp4",
 			f"qm_video_width {OUTPUT_WIDTH}",
 			f"qm_video_height {OUTPUT_HEIGHT}",
@@ -106,9 +107,12 @@ def scenario_video_export_range(env: ProcessEnvironment) -> None:
 	)
 	try:
 		client.command(f'play "{demo}"')
-		client.wait_for(lambda line: "demo_player" in line and "playing" in line.lower(), "demo 开始播放", 60)
+		# 播放开始的唯一 STANDARD 级日志是 "Loading demo"；"playing" 行不存在。
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
 		client.command(f"start_video qme2e_range {RANGE_START_SECONDS} {RANGE_END_SECONDS}")
-		client.wait_for(lambda line: "Stopped recording." in line, "Range 导出自动停止", 180)
+		# 指定 Range 统一走分段任务状态机（段长 0 接管单段），完成日志是 Concatenated；
+		# 旧直录路径的 "Stopped recording." 在该路径不再出现。
+		client.wait_for(lambda line: "Concatenated" in line and "segment(s) into" in line, "Range 导出完成", 180)
 		client.command("quit")
 		if client.wait_for_exit(30) != 0:
 			raise AssertionError("客户端未正常退出")
@@ -132,7 +136,7 @@ def scenario_video_export_segmented_range(env: ProcessEnvironment) -> None:
 		[
 			"demo_speed 8",
 			f"qm_video_segment_seconds {segment_seconds}",
-			"qm_video_encoder x264",
+			"qm_video_encoder libx264",
 			"qm_video_container mkv",
 			f"qm_video_width {OUTPUT_WIDTH}",
 			f"qm_video_height {OUTPUT_HEIGHT}",
@@ -140,7 +144,8 @@ def scenario_video_export_segmented_range(env: ProcessEnvironment) -> None:
 	)
 	try:
 		client.command(f'play "{demo}"')
-		client.wait_for(lambda line: "demo_player" in line and "playing" in line.lower(), "demo 开始播放", 60)
+		# 播放开始的唯一 STANDARD 级日志是 "Loading demo"；"playing" 行不存在。
+		client.wait_for(lambda line: "demo_player" in line and "loading demo" in line.lower(), "demo 开始播放", 60)
 		client.command(f"start_video qme2e_segmented {RANGE_START_SECONDS} {end_seconds}")
 		client.wait_for(
 			lambda line: "Segmented export" in line and f"{segment_seconds} segment(s)" in line,
