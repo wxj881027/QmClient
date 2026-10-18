@@ -98,6 +98,7 @@ namespace
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
+#include <exception>
 #include <iterator>
 #include <limits>
 #include <stack>
@@ -4275,7 +4276,20 @@ void CClient::Run()
 
 	// init text render
 	m_pTextRender = Kernel()->RequestInterface<IEngineTextRender>();
-	m_pTextRender->Init();
+	if(!m_pTextRender->Init())
+	{
+		log_error("client", "Failed to initialize text rendering (see details above)");
+		try
+		{
+			ShowMessageBox({.m_pTitle = "Text Rendering Error", .m_pMessage = "Failed to initialize text rendering. See the log for details."});
+		}
+		catch(const std::exception &Error)
+		{
+			// 低内存故障下，提示窗口分配失败也不能中断后续退出清理。
+			log_error("client", "Failed to show text rendering initialization error: %s", Error.what());
+		}
+		return;
+	}
 
 	// init the input
 	Input()->Init();

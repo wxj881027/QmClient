@@ -915,46 +915,6 @@ void CMenus::LoadSettingsCardOrderModel()
 		}
 		g_Config.m_QmCardLayoutVersion = 1;
 	}
-	if(g_Config.m_QmCardLayoutVersion < 2)
-	{
-		qm_card_order::CModel Candidate;
-		MakeCandidate(Candidate);
-		const std::vector<qm_card_order::SEntry> vLegacyProfileLayout = {
-			{"deck:tclient-profiles-actions", "tclient-profiles", 0, 0},
-			{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-			{"deck:tclient-profiles-list", "tclient-profiles", 1, 0},
-		};
-		const std::vector<qm_card_order::SEntry> vTargetProfileLayout = {
-			{"deck:tclient-profiles-actions", "tclient-profiles", 1, 0},
-			{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-			{"deck:tclient-profiles-list", "tclient-profiles", 1, 1},
-		};
-		const std::vector<const char *> vProfileIds = {
-			"deck:tclient-profiles-actions",
-			"deck:tclient-profiles-options",
-			"deck:tclient-profiles-list",
-		};
-		const std::vector<const char *> vRequiredProfileIds = {"deck:tclient-profiles-actions"};
-		const qm_card_order::EExplicitLayoutStatus ExplicitStatus = qm_card_order::ClassifyExplicitLayout(g_Config.m_QmGlobalCardOrder, vLegacyProfileLayout, vRequiredProfileIds);
-		if(ExplicitStatus == qm_card_order::EExplicitLayoutStatus::INVALID)
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		const bool ShouldMigrate = ExplicitStatus == qm_card_order::EExplicitLayoutStatus::MATCH;
-		const bool CandidateChanged = ShouldMigrate && qm_card_order::MigrateExactLayout(Candidate, "tclient-profiles", vLegacyProfileLayout, vTargetProfileLayout, vProfileIds);
-		if(ShouldMigrate && !CandidateChanged)
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		if(!PersistCandidate(Candidate, CandidateChanged))
-		{
-			m_SettingsCardOrderLoaded = true;
-			return;
-		}
-		g_Config.m_QmCardLayoutVersion = 2;
-	}
 	if(g_Config.m_QmCardLayoutVersion < 3)
 	{
 		qm_card_order::CModel Candidate;
@@ -1227,7 +1187,7 @@ float CMenus::ApplyUiSwitchOffset(CUIRect &View, const float Strength, const flo
 float CMenus::ResolveMenuTabAnimationValue(const void *pButtonId, const bool Active, const float DurationSec) const
 {
 	const float Target = Active ? 1.0f : 0.0f;
-	if(Ui()->RenderOnly())
+	if(Ui()->AnimationsBlocked())
 		return Target;
 
 	static const uint64_t s_ScopeHash = static_cast<uint64_t>(str_quickhash("menu_tab_hover"));
@@ -3052,9 +3012,9 @@ void CMenus::RenderStatistics(CUIRect MainView)
 	// 本地 DDrace 条目按服务器社区分条，DDStats 游戏类型又会追加同名条目；
 	// 而 DDrace 行的展示数据只有官方 DDNet 聚合一份。先把所有 DDrace 变体
 	// 折叠成单条，避免图例、饼图和顶部总时长出现多条相同的「DDraceNetwork · DDNet」。
-	QmCollapseModeEntries(vModeStats, [](const SQmClientLocalModeStats &Stats) {
-		return IsStatsDDraceMode(Stats.m_GameMode);
-	});
+	// 折叠必须区分权威来源：DDStats 追加的条目是远程模式时长，本地分社区累计
+	// 只是本机记录，两者混在一起累加会让权威值虚高（实测叠加本地 3 万秒）。
+	QmCollapseModeEntriesWithAuthority(vModeStats, [](const SQmClientLocalModeStats &Stats) { return IsStatsDDraceMode(Stats.m_GameMode); }, [](const SQmClientLocalModeStats &Stats) { return Stats.m_CommunityId == "ddstats"; });
 	// Gores 同理：本地按社区分条、DDStats 追加与 Axiom 占位可以并存，
 	// 超量截断时甚至可能选入两条 Gores。折叠成单条；任一来源带 Axiom
 	// 身份时保留该身份，保证官方 Axiom 数据仍能覆盖这一行。
@@ -3064,9 +3024,12 @@ void CMenus::RenderStatistics(CUIRect MainView)
 		if(IsStatsGoresMode(Stats.m_GameMode) && Stats.m_IsAxiom)
 			HasAxiomGoresEntry = true;
 	}
-	if(QmCollapseModeEntries(vModeStats, [](const SQmClientLocalModeStats &Stats) {
-		   return IsStatsGoresMode(Stats.m_GameMode);
-	   }) && HasAxiomGoresEntry)
+	if(QmCollapseModeEntriesWithAuthority(vModeStats, [](const SQmClientLocalModeStats &Stats) { return IsStatsGoresMode(Stats.m_GameMode); }, [](const SQmClientLocalModeStats &Stats) {
+		   // 只认 DDStats：上面的 ShowAxiomGores 块会把本地 Gores 条目的
+		   // community_id 改写成 "axiom"，与远程权威同标识，不能用来判定权威。
+		   // Gores 的最终数值由后面的 ResolveQmStatisticsModeDisplay 用
+		   // Axiom 完整数据覆盖，这里只需保证 DDStats 值不被本地累加污染。
+		   return Stats.m_CommunityId == "ddstats"; }) && HasAxiomGoresEntry)
 	{
 		auto It = std::find_if(vModeStats.begin(), vModeStats.end(), [](const SQmClientLocalModeStats &Stats) {
 			return IsStatsGoresMode(Stats.m_GameMode);
@@ -5772,6 +5735,14 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 {
 	CPerfTimer RenderTimer;
 	static CListBox s_ListBox;
+	// 设置分类切换时显式重放入场动画（序号制，与服务器/语言列表同款）；
+	// 渲染间隙启发在设置页不可靠（后台趟持续渲染导致间隙永不打开）。
+	static int s_EntryRestartSeq = -1;
+	if(s_EntryRestartSeq != m_SettingsListEntryRestartSeq)
+	{
+		s_ListBox.RestartEntryAnimation();
+		s_EntryRestartSeq = m_SettingsListEntryRestartSeq;
+	}
 	auto &MenuBackground = GameClient()->m_MenuBackground;
 	const SSettingsContentMetrics Metrics = pMetrics != nullptr ? *pMetrics : ResolveSettingsContentMetrics(MainView.w);
 	s_ListBox.SetScrollProfile(EQmScrollProfile::SETTINGS_INNER);
@@ -5839,7 +5810,8 @@ void CMenus::RenderThemeSelection(CUIRect MainView, const SSettingsContentMetric
 			Icon.HMargin(3.0f, &Icon);
 			Graphics()->TextureSet(Theme.m_IconTexture);
 			Graphics()->QuadsBegin();
-			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			// 裸 quad 不经过 CUi 显隐系数；手动并入列表入场淡入，与文本同步。
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, Ui()->ControlAlphaScale());
 			IGraphics::CQuadItem QuadItem(Icon.x, Icon.y, Icon.w, Icon.h);
 			Graphics()->QuadsDrawTL(&QuadItem, 1);
 			Graphics()->QuadsEnd();
@@ -6375,6 +6347,12 @@ void CMenus::OnShutdown()
 	ResetDemoScreenshotPreview();
 	m_ScreenshotManager.ClearThumbnails(Graphics());
 	m_CommunityIcons.Shutdown();
+
+	// 服务器列表扩展的释放：图形接口此刻仍存活（CKernel 尚未销毁），
+	// 预览缓存的 GPU 资源必须在此窗口期释放，不能等到组件析构。
+	if(auto *pServerBrowserImpl = dynamic_cast<CServerBrowser *>(ServerBrowser()))
+		pServerBrowserImpl->m_MapDifficultyStarsFunction = nullptr;
+	ClearMapPreviewCache();
 
 	// QmClient: 保存“最近缺失字形”集合，供下次启动后立即预热（详见 text.cpp）。
 	Storage()->CreateFolder("qmclient", IStorage::TYPE_SAVE);
@@ -8388,6 +8366,10 @@ void CMenus::SetMenuPage(int NewPage)
 	else
 	{
 		m_MenuPageTransitionDirection = 0.0f;
+	}
+	if(OldPage != NewPage && NewIsBrowser)
+	{
+		m_BrowserListEntryRestartSeq++;
 	}
 	if(IsBrowserPage(NewPage))
 	{

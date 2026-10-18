@@ -4243,11 +4243,6 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 		m_Teams.m_NumDDRaceTeams = m_GameInfo.m_NumDDRaceTeams;
 
 	LogSnapshotStage("snapshot_decode");
-	for(CClientData &Client : m_aClients)
-	{
-		Client.UpdateSkinInfo();
-	}
-	LogSnapshotStage("snapshot_skins");
 	// setup local pointers
 	if(m_Snap.m_LocalClientId >= 0)
 	{
@@ -4279,6 +4274,7 @@ void CGameClient::OnNewSnapshot(bool DummySwapped)
 
 	for(CClientData &Client : m_aClients)
 		Client.UpdateSkinInfo();
+	LogSnapshotStage("snapshot_skins");
 
 	if(m_FastPractice.Enabled())
 		m_PredictedDummyId = m_FastPractice.CurrentPracticeDummyId();
@@ -6404,11 +6400,13 @@ CSkinDescriptor CGameClient::CClientData::ToSkinDescriptor() const
 		return SkinDescriptor;
 	}
 
+	const bool Sixup = m_pGameClient->m_pClient->IsSixup();
+	// 0.6 远端玩家始终使用快照皮肤，无需查询本地皮肤的服务器策略。
 	const bool UseServerControlledSkin =
-		m_pGameClient->m_pClient->State() == IClient::STATE_ONLINE && m_pGameClient->ShouldUseServerControlledLocalSkin();
+		Sixup && m_pGameClient->m_pClient->State() == IClient::STATE_ONLINE && m_pGameClient->ShouldUseServerControlledLocalSkin();
 	// 与 BuildLocalSkinDescriptor 同源：协议版本决定可用皮肤部件族，白名单只决定是否采用服务器皮肤。
 	const EServerSkinProtocol Protocol = ResolveServerSkinProtocol(
-		m_pGameClient->m_pClient->IsSixup(), UseServerControlledSkin, TranslatedClient.m_Active);
+		Sixup, UseServerControlledSkin, TranslatedClient.m_Active);
 	if(Protocol == EServerSkinProtocol::SEVEN)
 	{
 		SkinDescriptor.m_Flags |= CSkinDescriptor::FLAG_SEVEN;
@@ -7662,6 +7660,11 @@ void CGameClient::OnGraphicsResourcesReset()
 	// 这里负责把游戏侧的资源重新建起来。
 	log_info("gfx", "graphics resources were reset, reloading game assets (generation %u)", Graphics()->GraphicsResourcesResetVersion());
 
+	// 资产重载也可能触发文字绘制或容器清理，先撤销文字侧的旧 GPU 资源引用。
+	if(!TextRender()->OnGraphicsResourcesReset())
+		log_warn("gfx", "Text texture recovery is pending; retrying from the main loop.");
+	m_QmIconPrewarm.Invalidate();
+
 	// 先让所有旧句柄显式作废，避免任何一次误用旧句柄的绘制落到新设备上。
 	for(int i = 0; i < g_pData->m_NumImages; i++)
 		g_pData->m_aImages[i].m_Id.Invalidate();
@@ -7674,10 +7677,6 @@ void CGameClient::OnGraphicsResourcesReset()
 	m_ExtrasSkinLoaded = false;
 
 	LoadInitialGraphicsAssets();
-
-	// 文本渲染器缓存了字体纹理，必须同样重建。
-	TextRender()->OnGraphicsResourcesReset();
-	m_QmIconPrewarm.Invalidate();
 
 	log_info("gfx", "game assets reloaded after graphics resources reset");
 }

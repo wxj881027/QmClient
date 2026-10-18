@@ -62,6 +62,11 @@ struct SResourcePreviewState
 	bool m_TextureReady = false;
 	bool m_Failed = false;
 	IGraphics::CTextureHandle m_Texture;
+	// 预览贴图首次真正绘制的时刻（time_get() 刻度，0=未绘制过）：资产页贴图
+	// 加载完成后以此为起点播 0.25s 出场淡入。本结构在预览缓存里持久存在，
+	// 出场时间戳必须放这里——绘制侧的 PreviewState 是每帧局部变量，在那里
+	// 盖时间戳会每帧清零，alpha 永远停在 0（实测整页预览消失的回归）。
+	int64_t m_AppearStart = 0;
 };
 
 struct SResourcePreviewUploadBudget

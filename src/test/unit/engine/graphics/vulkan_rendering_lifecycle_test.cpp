@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace
@@ -286,4 +287,61 @@ TEST(VulkanRenderingReadback, RepeatedCaptureWaitsForPreviousSnapshotReads)
 	EXPECT_EQ(vBarriers[1].oldLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 	EXPECT_EQ(vBarriers[1].srcAccessMask, VK_ACCESS_TRANSFER_READ_BIT);
 	EXPECT_EQ(vBarriers[1].dstAccessMask, VK_ACCESS_TRANSFER_WRITE_BIT);
+}
+
+TEST(VulkanSwapPassPlan, UninterruptedFrameClearsAndDiscardsMultisampling)
+{
+	CQmVulkanSwapPassPlan Plan;
+	Plan.Begin(false);
+	int Calls = 0;
+	EXPECT_TRUE(Plan.Flush(true, false, [&](bool Load, bool Store) {
+		++Calls;
+		EXPECT_FALSE(Load);
+		EXPECT_FALSE(Store);
+		return true;
+	}));
+	EXPECT_TRUE(Plan.Flush(true, false, [&](bool, bool) { ++Calls; return true; }));
+	EXPECT_EQ(Calls, 1);
+}
+
+TEST(VulkanSwapPassPlan, CapturePreservesSamplesAndFinalOverlayDiscardsThem)
+{
+	CQmVulkanSwapPassPlan Plan;
+	std::vector<std::pair<bool, bool>> vPasses;
+	auto Record = [&](bool Load, bool Store) { vPasses.emplace_back(Load, Store); return true; };
+	Plan.Begin(false);
+	EXPECT_TRUE(Plan.Flush(true, true, Record));
+	Plan.Begin(true);
+	// 连续离屏模糊只调整目标，不产生交换链绘制或额外 resolve。
+	EXPECT_TRUE(Plan.Flush(false, true, Record));
+	Plan.Begin(true);
+	EXPECT_TRUE(Plan.Flush(false, true, Record));
+	Plan.Begin(true);
+	EXPECT_TRUE(Plan.Flush(true, false, Record));
+	EXPECT_EQ(vPasses, (std::vector<std::pair<bool, bool>>{{false, true}, {true, false}}));
+}
+
+TEST(VulkanSwapPassPlan, EmptyFirstFrameStillClearsButEmptyResumeDoesNotResolve)
+{
+	CQmVulkanSwapPassPlan Plan;
+	int Calls = 0;
+	auto Record = [&](bool Load, bool Store) { ++Calls; EXPECT_FALSE(Load); EXPECT_FALSE(Store); return true; };
+	Plan.Begin(false);
+	EXPECT_TRUE(Plan.Flush(false, false, Record));
+	Plan.Begin(true);
+	EXPECT_TRUE(Plan.Flush(false, false, Record));
+	EXPECT_EQ(Calls, 1);
+}
+
+TEST(VulkanSwapPassPlan, FailedRecordingPropagatesWithoutConsumingPendingPass)
+{
+	CQmVulkanSwapPassPlan Plan;
+	Plan.Begin(false);
+	EXPECT_FALSE(Plan.Flush(true, true, [](bool, bool) { return false; }));
+	int Calls = 0;
+	EXPECT_TRUE(Plan.Flush(true, true, [&](bool Load, bool Store) { ++Calls; EXPECT_FALSE(Load); EXPECT_TRUE(Store); return true; }));
+	EXPECT_EQ(Calls, 1);
+	// 新帧不能继承上一帧的 LOAD。
+	Plan.Begin(false);
+	EXPECT_TRUE(Plan.Flush(true, false, [](bool Load, bool Store) { EXPECT_FALSE(Load); EXPECT_FALSE(Store); return true; }));
 }

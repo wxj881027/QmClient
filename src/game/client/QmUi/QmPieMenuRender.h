@@ -2,6 +2,7 @@
 #define GAME_CLIENT_QMUI_QMPIEMENURENDER_H
 
 #include "QmPieMenuGeometry.h"
+#include "UiTokens.h"
 
 #include <engine/graphics.h>
 
@@ -22,7 +23,7 @@ namespace qm_pie_menu_ui
 		return Color;
 	}
 
-	inline ColorRGBA OptionColor(ColorRGBA Color, bool Highlighted, ColorRGBA Tint = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f))
+	inline ColorRGBA OptionColor(ColorRGBA Color, bool Highlighted, ColorRGBA Tint = ui_token::color::COLOR_TRANSPARENT)
 	{
 		if(Highlighted)
 		{
@@ -62,7 +63,7 @@ namespace qm_pie_menu_ui
 			const IGraphics::CFreeformItem Quad(Center + Point.m_Position, Center + Next.m_Position, Center + Point.m_Fringe, Center + Next.m_Fringe);
 			pGraphics->QuadsDrawFreeform(&Quad, 1);
 		}
-		pGraphics->SetColor(ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+		pGraphics->SetColor(ui_token::color::NEUTRAL_WHITE);
 		pGraphics->QuadsEnd();
 	}
 

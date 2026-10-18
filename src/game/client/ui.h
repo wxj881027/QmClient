@@ -515,9 +515,11 @@ struct SPopupMenuProperties
 	// 二级界面大弹窗：打开时在当前视口内居中显示，不锚定触发元素；
 	// 搭配 m_BlockUnderlyingScroll / m_BlockUnderlyingPointerInput 锁定下层页面的滚动与指针交互。
 	bool m_CenterInViewport = false;
-	// 开关缩放动画：入场从 92% 放大到 100%，出场收缩渐隐后移除；
-	// 仅二级界面大弹窗启用，经典下拉/消息弹窗默认关闭零影响。
-	bool m_Animate = false;
+	// 开关缩放动画：入场从锚点方向展开（锚点对齐弹窗）或中心缩放 92%→100%
+	//（无锚点弹窗），模态面板上滑 8px；出场对称收缩渐隐后移除。
+	// 默认启用——转场连续性是全局设计语言，特殊场景（如纯逻辑占位弹窗）
+	// 显式置 false 退出，不允许新增静默硬切弹窗。
+	bool m_Animate = true;
 	bool m_ClipToViewport = false;
 	bool m_BlockUnderlyingScroll = false;
 	bool m_BlockUnderlyingPointerInput = false;
@@ -843,9 +845,6 @@ private:
 	{
 		static constexpr float POPUP_BORDER = 1.0f;
 		static constexpr float POPUP_MARGIN = 4.0f;
-		// 开关缩放动画时长（秒）：入场放大 + 出场收缩。
-		static constexpr float POPUP_OPEN_DURATION = 0.12f;
-		static constexpr float POPUP_CLOSE_DURATION = 0.09f;
 
 		const SPopupMenuId *m_pId;
 		SPopupMenuProperties m_Props;
@@ -855,12 +854,11 @@ private:
 		CUIRect m_Rect;
 		void *m_pContext;
 		FPopupMenuFunction m_pfnFunc;
-		// 动画状态（仅 m_Props.m_Animate 弹窗使用）：
-		// m_OpenStart < 0 表示无入场动画；m_Closing 表示逻辑已关闭、
-		// 正在播放出场动画（期间不参与任何输入判定），结束后移除。
-		float m_OpenStart = -1.0f;
+		// 转场动画由引擎 ALPHA 轨道驱动（键 = PopupAnimKey(m_pId)，见
+		// ui_popups.cpp）：开场目标 1、出场目标 0，MERGE_TARGET 打断带速度
+		// 续接。m_Closing 表示逻辑已关闭、正在播放出场动画（期间不参与任何
+		// 输入判定），轨道值归零后由渲染循环移除。
 		bool m_Closing = false;
-		float m_CloseStart = 0.0f;
 	};
 	std::vector<SPopupMenu> m_vPopupMenus;
 	std::vector<std::weak_ptr<SQmUiSelectionCommit>> m_vPendingSelections;
@@ -1013,10 +1011,23 @@ public:
 	// 预布局允许输入和测量，但不能重复提交半透明控件。
 	bool DrawingSuppressed() const { return m_RenderOnlyDepth > 0 || PreLayoutInput(); }
 	bool RenderOnly() const { return m_RenderOnlyDepth > 0 || m_BackgroundRenderDepth > 0; }
+	// 动画推进门：只有真正的测量/文字计划趟（BeginRenderOnly）才冻结动画轨道——
+	// 否则预热帧会把弹簧直接推到目标，下一帧切换就看不到过渡。
+	// 动画推进门：只有「真实出图」状态推进轨道——测量趟（RenderOnlyDepth）
+	// 与纯背景趟（console 背景快照等，ContentDrawDepth < BackgroundRenderDepth）
+	// 冻结，否则预热帧把弹簧直接推到目标、背景帧凭空创建轨道；声明式卡片桥
+	// 的 DRAW 回放（内容出图，两 depth 相等）是最终出图趟，必须推进。
+	bool AnimationsBlocked() const { return m_RenderOnlyDepth > 0 || m_ContentDrawDepth != m_BackgroundRenderDepth; }
 	// 内容 DRAW 保留控件反馈；真正的下层菜单、测量和活动弹层仍屏蔽反馈。
 	bool VisualMouseHovered(const CUIRect *pRect) const
 	{
 		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && !UnderlyingPointerInputBlocked() && MouseInside(pRect) && MouseInsideClip();
+	}
+	// 热控件判定与 VisualMouseHovered 同一可见性语义：测量趟与纯背景趟不可见，
+	// 内容 DRAW 回放有效（热控件由同一帧先行的 INPUT 回放趟设置）。
+	bool VisualHotItem(const void *pId) const
+	{
+		return m_RenderOnlyDepth == 0 && m_ContentDrawDepth == m_BackgroundRenderDepth && HotItem() == pId;
 	}
 	void BeginPreLayoutInput() { ++m_PreLayoutInputDepth; }
 	void EndPreLayoutInput()
@@ -1294,7 +1305,7 @@ public:
 		return DrawQmIcon(Rect, Icon, pFallbackIcon, Color);
 	}
 	CLabelResult DoLabel_QmIcon(const CUIRect *pRect, EQmIcon Icon, const char *pFallbackIcon, float Size, int Align, const SLabelProperties &LabelProps = {}) const;
-	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, bool ShowSlash = false);
+	int DoButton_QmIcon(CButtonContainer *pButtonContainer, EQmIcon Icon, const char *pFallbackIcon, int Checked, const CUIRect *pRect, unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, bool ShowSlash = false, bool TransparentInactive = false);
 	// only used for popup menus
 	int DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding = 0.0f, bool TransparentInactive = false, bool Enabled = true, std::optional<ColorRGBA> ButtonColor = std::nullopt, float MinimumFontSize = -1.0f);
 

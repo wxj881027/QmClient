@@ -152,7 +152,7 @@ public:
 	void RenderTileLayer(int BufferContainerIndex, const ColorRGBA &Color, char **pOffsets, unsigned int *pIndicedVertexDrawNum, size_t NumIndicesOffset) override { throw std::logic_error("unexpected graphics boundary: RenderTileLayer"); }
 	void RenderBorderTiles(int BufferContainerIndex, const ColorRGBA &Color, char *pIndexBufferOffset, const vec2 &Offset, const vec2 &Scale, uint32_t DrawNum) override { throw std::logic_error("unexpected graphics boundary: RenderBorderTiles"); }
 	void RenderQuadLayer(int BufferContainerIndex, SQuadRenderInfo *pQuadInfo, size_t QuadNum, int QuadOffset, bool Grouped = false) override { throw std::logic_error("unexpected graphics boundary: RenderQuadLayer"); }
-	void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, int TextureTextIndex, int TextureTextOutlineIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
+	void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override
 	{
 		if(m_ValidateLifecycle && !m_Containers.contains(BufferContainerIndex))
 			throw std::logic_error("draw of deleted container");

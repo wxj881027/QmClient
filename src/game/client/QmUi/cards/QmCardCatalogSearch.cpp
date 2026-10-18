@@ -1040,7 +1040,7 @@ namespace qm_card_catalog
 			{nullptr, "qm_ui_compact_list", nullptr},
 		};
 
-		static constexpr SCardSettingSearch s_adeck_tclient_profiles_actions[] = {
+		static constexpr SCardSettingSearch s_adeck_tclient_profiles[] = {
 			{Localizable("After Load"), nullptr, "加载后"},
 			{Localizable("Clan: %s"), nullptr, "战队：%s"},
 			{Localizable("Delete"), nullptr, "删除"},
@@ -1058,9 +1058,6 @@ namespace qm_card_catalog
 			{nullptr, "qm_profile_name", nullptr},
 			{nullptr, "qm_profile_overwrite_clan_with_empty", nullptr},
 			{nullptr, "qm_profile_skin", nullptr},
-		};
-
-		static constexpr SCardSettingSearch s_adeck_tclient_profiles_options[] = {
 			{Localizable("Custom colors"), nullptr, "自定义颜色"},
 			{Localizable("Dummy"), nullptr, "分身"},
 			{Localizable("Overwrite clan even if empty"), nullptr, "即使战队为空也覆盖"},
@@ -1070,22 +1067,12 @@ namespace qm_card_catalog
 			{Localizable("Save/Load Flag"), nullptr, "保存/加载国旗"},
 			{Localizable("Save/Load Name"), nullptr, "保存/加载名称"},
 			{Localizable("Save/Load Skin"), nullptr, "保存/加载皮肤"},
-			{nullptr, "qm_profile_clan", nullptr},
-			{nullptr, "qm_profile_colors", nullptr},
-			{nullptr, "qm_profile_emote", nullptr},
-			{nullptr, "qm_profile_flag", nullptr},
-			{nullptr, "qm_profile_name", nullptr},
-			{nullptr, "qm_profile_overwrite_clan_with_empty", nullptr},
-			{nullptr, "qm_profile_skin", nullptr},
-		};
-
-		static constexpr SCardSettingSearch s_adeck_tclient_profiles_list[] = {
-			{Localizable("Clan: %s"), nullptr, "战队：%s"},
-			{Localizable("Name: %s"), nullptr, "名称：%s"},
 			{Localizable("Profiles file"), nullptr, "配置文件"},
-			{Localizable("Skin: %s"), nullptr, "皮肤：%s"},
-			{nullptr, "qm_profile_colors", nullptr},
-			{nullptr, "qm_profile_skin", nullptr},
+			{Localizable("Add to bind wheel"), nullptr, "加入轮盘"},
+			{Localizable("Identity preset"), nullptr, "身份 ID 名字 昵称"},
+			{Localizable("Chat phrase"), nullptr, "语录 快捷用语"},
+			{Localizable("Asset preset"), nullptr, "资源 贴图"},
+			{Localizable("Bind Wheel Key"), nullptr, "轮盘 按键"},
 		};
 
 		static constexpr SCardSettingSearch s_adeck_tclient_status_bar_settings[] = {
@@ -3169,9 +3156,7 @@ namespace qm_card_catalog
 			{"deck:appearance-name-plate-key-presses", s_adeck_appearance_name_plate_key_presses, std::size(s_adeck_appearance_name_plate_key_presses)},
 			{"deck:tclient-bind-wheel-editor", s_adeck_tclient_bind_wheel_editor, std::size(s_adeck_tclient_bind_wheel_editor)},
 			{"deck:tclient-configs-actions", s_adeck_tclient_configs_actions, std::size(s_adeck_tclient_configs_actions)},
-			{"deck:tclient-profiles-actions", s_adeck_tclient_profiles_actions, std::size(s_adeck_tclient_profiles_actions)},
-			{"deck:tclient-profiles-options", s_adeck_tclient_profiles_options, std::size(s_adeck_tclient_profiles_options)},
-			{"deck:tclient-profiles-list", s_adeck_tclient_profiles_list, std::size(s_adeck_tclient_profiles_list)},
+			{"deck:tclient-profiles", s_adeck_tclient_profiles, std::size(s_adeck_tclient_profiles)},
 			{"deck:tclient-status-bar-settings", s_adeck_tclient_status_bar_settings, std::size(s_adeck_tclient_status_bar_settings)},
 			{"deck:tclient-status-bar-preview", s_adeck_tclient_status_bar_preview, std::size(s_adeck_tclient_status_bar_preview)},
 			{"deck:tclient-warlist", s_adeck_tclient_warlist, std::size(s_adeck_tclient_warlist)},

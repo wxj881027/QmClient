@@ -49,6 +49,36 @@ namespace ui_token::color
 	inline constexpr ColorRGBA WARNING{0.98f, 0.78f, 0.30f, 1.0f};
 	inline constexpr ColorRGBA DANGER{0.95f, 0.41f, 0.38f, 1.0f};
 
+	// 中性极值：只表达颜色本身，不承载角色；角色语义（正文/强调/危险）一律
+	// 引用上面的 TEXT_*/ACCENT_*/DANGER token。顶点乘法直通（设白让纹理原色
+	// 通过）与纯色基准、透明复位都引用这里，禁止再写裸 ColorRGBA 字面量。
+	inline constexpr ColorRGBA NEUTRAL_WHITE{1.0f, 1.0f, 1.0f, 1.0f};
+	inline constexpr ColorRGBA NEUTRAL_BLACK{0.0f, 0.0f, 0.0f, 1.0f};
+	inline constexpr ColorRGBA COLOR_TRANSPARENT{0.0f, 0.0f, 0.0f, 0.0f};
+	// 手动文本模式的强制前景（ResolveUiTextColor 的模式 1/2），与自动对比推导无关。
+	inline constexpr ColorRGBA TEXT_FORCED_LIGHT = NEUTRAL_WHITE;
+	inline constexpr ColorRGBA TEXT_FORCED_DARK = NEUTRAL_BLACK;
+
+	// 自适应对比双色：浅表面用深前景、深表面用浅前景（胶囊导航等明暗推导）。
+	// 成对修改，保持两者的对比关系；透明度由调用点 WithAlpha 决定。
+	inline constexpr ColorRGBA ADAPTIVE_ON_LIGHT{0.09f, 0.10f, 0.12f, 1.0f};
+	inline constexpr ColorRGBA ADAPTIVE_ON_DARK{0.97f, 0.98f, 1.0f, 1.0f};
+
+	// SURFACE_HIGHLIGHT 的暗色对偶：亮表面上的悬停/按压反馈（压暗而非提亮）。
+	inline constexpr ColorRGBA SURFACE_HIGHLIGHT_DARK{0.0f, 0.0f, 0.0f, 0.06f};
+
+	// 卡片内预览区（皮肤/地图/激光演示等）的暗化背板；跨卡片共享同一档，
+	// 与文件内更深的演示背板（0.3/0.5 档）区分，视觉统一时在此收敛。
+	inline constexpr ColorRGBA PREVIEW_BACKDROP{0.0f, 0.0f, 0.0f, 0.25f};
+
+	// 容器与滚动条的默认外观。与既有 token 的近似值（BORDER_SUBTLE 0.08 等）
+	// 是当前视觉现状，统一视觉时改这里一处生效，不在调用点写死。
+	inline constexpr ColorRGBA CONTAINER_FILL{0.17f, 0.18f, 0.22f, 0.72f};
+	inline constexpr ColorRGBA CONTAINER_HIGHLIGHT{1.0f, 1.0f, 1.0f, 0.06f};
+	inline constexpr ColorRGBA CONTAINER_BORDER{1.0f, 1.0f, 1.0f, 0.10f};
+	inline constexpr ColorRGBA SCROLLBAR_TRACK{1.0f, 1.0f, 1.0f, 0.12f};
+	inline constexpr ColorRGBA SCROLLBAR_THUMB{1.0f, 1.0f, 1.0f, 0.42f};
+
 	inline ColorRGBA UiColorSurface(ColorRGBA UiColor, float AlphaScale, float ColorScale)
 	{
 		return ColorRGBA(
@@ -63,6 +93,23 @@ namespace ui_token::color
 		return UiColor.WithAlpha(std::clamp(UiColor.a * AlphaScale, 0.0f, 1.0f));
 	}
 } // namespace ui_token::color
+
+// 离散滑块档位色板与满档渐变：UiDiscreteSliderStyle.h 与 UiDiscreteSliderLogic.cpp
+// 共享的唯一来源，禁止在调用文件复制。
+namespace ui_token::discrete_slider
+{
+	// 低档冷蓝 → 蓝紫 → 粉紫 → 高档亮粉，索引随档位升高。
+	inline constexpr ColorRGBA TIER_COLORS[] = {
+		ColorRGBA{0.48f, 0.67f, 0.91f, 1.0f},
+		ColorRGBA{0.65f, 0.54f, 0.91f, 1.0f},
+		ColorRGBA{0.84f, 0.48f, 0.78f, 1.0f},
+		ColorRGBA{0.92f, 0.45f, 0.69f, 1.0f},
+	};
+	// 满档渐变：紫起点 → 亮紫中点 → 灰紫终点。
+	inline constexpr ColorRGBA GRADIENT_START{0.51f, 0.16f, 0.52f, 1.0f};
+	inline constexpr ColorRGBA GRADIENT_MIDDLE{0.77f, 0.53f, 0.97f, 1.0f};
+	inline constexpr ColorRGBA GRADIENT_END{0.57f, 0.32f, 0.79f, 1.0f};
+} // namespace ui_token::discrete_slider
 
 // 图标按钮反馈统一强度；透明背景也保留可见的边界提示。
 namespace ui_token::feedback
@@ -257,6 +304,12 @@ namespace ui_token::motion
 	inline constexpr SUiSpringConfig SLIDER_SPRING{1.0f, 340.0f, 26.0f, 0.01f, 0.05f};
 	inline constexpr SUiSpringConfig SLIDER_KNOB_SPRING{1.0f, 520.0f, 26.0f, 0.01f, 0.05f};
 
+	// 弹窗开关缩放动画时长：入场 0.18s 展开渐显、出场 0.16s 收缩渐隐。
+	// 曲线在弹窗绘制内实现（入场 ease-out 二次、出场 smoothstep），token 只承载时长。
+	// 0.12/0.09 在实测中短到不可感知（用户反馈「关闭动画像没有」），放大到可读区间。
+	inline constexpr float POPUP_OPEN_SEC = 0.18f;
+	inline constexpr float POPUP_CLOSE_SEC = 0.16f;
+
 	// 语义化动静节奏标尺（onetake 呼吸感与分级规约）：
 	// 1. 竞技快击（Combat/Twitch）：≤80ms，临界阻尼，0 过冲，无拖泥带水
 	inline constexpr SUiAnimTransition TWITCH_SNAP{.m_DurationSec = 0.06f, .m_Easing = EEasing::EASE_OUT_QUART};
@@ -268,6 +321,25 @@ namespace ui_token::motion
 	// 3. 通告/展示级（Presentation）：~0.20s 入场 → 2.5s 静止定格 → 0.10s 快速收折
 	inline constexpr float PRESENTATION_HOLD_TIME = 2.5f;
 	inline constexpr SUiAnimTransition PRESENTATION_COLLAPSE{.m_DurationSec = 0.10f, .m_Easing = EEasing::EASE_OUT_QUART};
+
+	// 4. Tooltip 气泡跨锚点移动：0.16s EASE_OUT_QUART（t80≈0.33）。
+	// 原 CQmTooltipMotionState 手写插值的时长与曲线语义，2026-10-14 迁入引擎
+	// tween 轨道（打断续接 + 动效等级自动响应），此处为唯一时长/曲线来源。
+	inline constexpr SUiAnimTransition TOOLTIP_MOVE{.m_DurationSec = 0.16f, .m_Easing = EEasing::EASE_OUT_QUART};
+
+	// 5. 列表逐行入场（wordRise 家族）：淡入与上浮同长、行间 cascading 铺满可视列。
+	// 曲线语义：淡入 = smoothstep（EASE_IN_OUT）；上浮 = 临界阻尼闭式解
+	// （QmCriticallyDampedRise），token 只承载时长与距离。求值器保持无状态
+	// 流逝时间模型——虚拟化交错行若用每行引擎轨道会随滚动无限增删键；
+	// 动效分级（Reduced：0.10s / 4px / 无错开）按分级规约在求值器内分支。
+	inline constexpr SUiAnimTransition LIST_ENTRY_FADE{.m_DurationSec = 0.20f, .m_Easing = EEasing::EASE_IN_OUT};
+	inline constexpr SUiAnimTransition LIST_ENTRY_FADE_REDUCED{.m_DurationSec = 0.10f, .m_Easing = EEasing::EASE_IN_OUT};
+	inline constexpr float LIST_ENTRY_RISE_SEC = 0.20f;
+	inline constexpr float LIST_ENTRY_RISE_SEC_REDUCED = 0.10f;
+	inline constexpr float LIST_ENTRY_RISE_DISTANCE = 8.0f;
+	inline constexpr float LIST_ENTRY_RISE_DISTANCE_REDUCED = 4.0f;
+	inline constexpr float LIST_ENTRY_STAGGER_STEP_SEC = 0.014f;
+	inline constexpr int LIST_ENTRY_STAGGER_MAX_ROWS = 28;
 
 	inline constexpr const SUiAnimTransition &BTN_HOVER = HOVER_FADE;
 	inline constexpr const SUiAnimTransition &BTN_PRESS = PRESS_SCALE;

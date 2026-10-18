@@ -18,6 +18,8 @@ void CMapRenderer::Clear()
 	m_pLoadLayers = nullptr;
 	m_pLoadImages = nullptr;
 	m_LoadCallback.reset();
+	m_GameGroupId = -1;
+	m_GameLayerId = -1;
 	m_LoadFinished = true;
 }
 
@@ -43,6 +45,11 @@ void CMapRenderer::BeginLoad(ERenderType Type, CLayers *pLayers, IMapImages *pMa
 		for(int LayerId = 0; LayerId < pGroup->m_NumLayers; ++LayerId)
 		{
 			const int LayerType = GetLayerType(pLayers->GetLayer(pGroup->m_StartLayer + LayerId));
+			if(LayerType == LAYER_GAME && m_GameGroupId < 0)
+			{
+				m_GameGroupId = GroupId;
+				m_GameLayerId = LayerId;
+			}
 			CountPassedGameLayer |= LayerType == LAYER_GAME;
 			if((Type == ERenderType::RENDERTYPE_BACKGROUND || Type == ERenderType::RENDERTYPE_BACKGROUND_FORCE) && CountPassedGameLayer)
 				break;
@@ -179,6 +186,8 @@ void CMapRenderer::Render(const CRenderLayerParams &Params)
 	bool DoRenderGroup = true;
 	for(auto &pRenderLayer : m_vpRenderLayers)
 	{
+		if(!MapRenderLayerInPass(Params.m_RenderType, pRenderLayer->GetGroup(), pRenderLayer->IsGroup() ? -1 : pRenderLayer->GetLayer(), m_GameGroupId, m_GameLayerId))
+			continue;
 		if(pRenderLayer->IsGroup())
 			DoRenderGroup = pRenderLayer->DoRender(Params);
 

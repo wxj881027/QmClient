@@ -13,6 +13,8 @@
 #include <engine/shared/json.h>
 #include <engine/shared/jsonwriter.h>
 
+#include <game/client/QmUi/UiTokens.h>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -613,9 +615,9 @@ bool CQmScreenshotManager::DrawWatermark(IStorage *pStorage, CImageInfo &Image, 
 				BlendPixel(Image, X, Y, ColorRGBA(0.0f, 0.0f, 0.0f, 0.62f));
 		const int TextX = Right ? (int)Image.m_Width - TextW - Margin : Margin;
 		if(UseFont)
-			Font.Draw(Image, Text, std::max(Margin, TextX), BandY + Margin + FontSize, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+			Font.Draw(Image, Text, std::max(Margin, TextX), BandY + Margin + FontSize, ui_token::color::NEUTRAL_WHITE);
 		else
-			DrawBitmapText(Image, Text, std::max(Margin, TextX), BandY + Margin, Scale, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+			DrawBitmapText(Image, Text, std::max(Margin, TextX), BandY + Margin, Scale, ui_token::color::NEUTRAL_WHITE);
 	}
 	return true;
 }

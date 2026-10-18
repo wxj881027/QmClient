@@ -464,6 +464,9 @@ Add current cut to the export list
 Add debug dummy to server (Debug build only)
 == サーバーにデバッグダミーを追加（Debug ビルドのみ）
 
+Add default presets
+== 標準プリセットを追加
+
 Add demo timeline marker
 == デモタイムラインマーカーを追加
 
@@ -502,6 +505,9 @@ Add team name:
 
 Add to %s
 == %s に追加
+
+Add to bind wheel
+== バインドホイールに追加
 
 Add to blocked words
 == ブロック単語に追加
@@ -749,6 +755,9 @@ Angle
 Angle:
 == 角度：
 
+Angry
+== 怒り
+
 Angular gradient
 == 角度グラデーション
 
@@ -875,6 +884,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == このプリセットを適用
 
+Apply to
+== 適用先
+
 Apply to dummy
 == ダミーに適用
 
@@ -953,6 +965,9 @@ Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == スキンを保存してもよろしいですか？この名前のスキンが既に存在する場合は上書きされます。
 
+Arrow
+== 矢印画像
+
 Arrow assets
 == 矢印アセット
 
@@ -964,6 +979,9 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == 画面アスペクト比プリセット (0=オフ, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=カスタム)
+
+Asset preset
+== 素材プリセット
 
 Asset with this name already exists.
 == 同名のアセットが既に存在します。
@@ -1571,6 +1589,9 @@ Blend mode
 Blend strength
 == ブレンド強度
 
+Blink
+== まばたき
+
 Blink the active local tee
 == 操作中のローカルキャラクターを点滅させる
 
@@ -1660,9 +1681,6 @@ Browse and activate custom audio packs
 
 Browse font store…
 == フォントストアを見る…
-
-Browse profiles saved on this device
-== Browse profiles saved on this device
 
 Browser
 == ブラウザ
@@ -1958,6 +1976,9 @@ Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == フリーズ進入時に送信するチャットメッセージ（カンマ区切り、空=なし）
 
+Chat phrase
+== 定型文
+
 Chat score increases per message and decreases by 1 per tick
 == チャットスコアはメッセージごとに増加し、1 ティックごとに 1 減少します
 
@@ -1999,6 +2020,9 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == まず出力デバイスを確認し、ヘッドホン/スピーカーがまだオンラインであることを確認する
+
+Check the preset fields, label, and wheel capacity (64 entries).
+== プリセット内容、表示名、ホイールの上限（64 項目）を確認してください。
 
 Checking for existing player with your name
 == 同じ名前のプレイヤーがいるか確認中
@@ -2612,6 +2636,12 @@ Connection disconnected
 Connection elevated
 == 接続に軽度の異常があります
 
+Connection icon color
+== 接続アイコンの色
+
+Connection icon custom color
+== 接続アイコンのカスタム色
+
 Connection normal
 == 接続は正常です
 
@@ -2864,6 +2894,9 @@ Count players only
 Countries
 == 国
 
+Country code
+== 国・地域コード
+
 Country flag for grouping this community (ISO 3166-1 numeric)
 == このコミュニティをグループ化するための国フラグ（ISO 3166-1 数値）
 
@@ -2881,6 +2914,9 @@ Create a random skin
 
 Create category
 == カテゴリを作成
+
+Create wheel presets here. Existing wheel entries are kept.
+== ここでホイールのプリセットを編集できます。既存の項目は保持されます。
 
 Created
 == 作成日
@@ -3028,6 +3064,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== ホイール1刻みの移動距離を設定。Alt を押しながらスクロールすると3倍の幅
 
 Customize translate button and menu colors
 == 翻訳ボタンとメニューの色をカスタマイズ
@@ -3695,6 +3734,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == 別のカテゴリにドラッグして、このフレンドを移動します。
 
+Drag to pan, scroll to zoom
+== ドラッグで移動、ホイールで拡大・縮小
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == ドラッグで並べ替え、クリックで展開・折りたたみ。右クリックまたは歯車アイコンでカテゴリを管理
 
@@ -3935,6 +3977,12 @@ Dynamic Island background alpha
 Dynamic Island background color
 == ダイナミックアイランドの背景色
 
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== ダイナミックアイランド接続アイコンの色: 1=品質段階、2=UIアイコン色に追従、3=カスタム
+
+Dynamic island connection icon custom color
+== ダイナミックアイランド接続アイコンのカスタム色
+
 Ease in out quad
 == イーズインアウトクワッド
 
@@ -3985,6 +4033,9 @@ Edit player and dummy identity information
 
 Edit skin texture
 == スキンテクスチャを編集
+
+Edit this custom command on the Bind Wheel page.
+== このカスタムコマンドはバインドホイールのページで編集してください。
 
 Edit touch controls
 == タッチコントロールを編集
@@ -4967,6 +5018,9 @@ Follow server
 Follow Tee
 == Tee を追従
 
+Follow UI icon color
+== UIアイコン色に追従
+
 Following
 == フォロー中
 
@@ -5528,6 +5582,9 @@ Ground jump
 Group name
 == グループ名
 
+GUI cursor
+== UIカーソル
+
 GUI cursor assets
 == GUI カーソルアセット
 
@@ -5560,6 +5617,9 @@ Hammer: %s
 
 Handwriting
 == 手書き
+
+Happy
+== 喜び
 
 Has people playing
 == プレイヤーがいる
@@ -5975,6 +6035,9 @@ Icon symbols:
 Icons
 == アイコン
 
+Identity preset
+== プロフィールプリセット
+
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 1 の場合、接続時に一度だけ自動録画を開始します。0 の場合、ゲーム終了後に自動録画が再開されます。
 
@@ -6175,6 +6238,9 @@ Initializing components
 
 Initializing layers
 == レイヤーを初期化中
+
+Initializing map layers
+== マップレイヤーを初期化中
 
 Initializing map logic
 == マップロジックを初期化中
@@ -6896,9 +6962,6 @@ Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
 == コード r でロード。/load で既存のセーブを確認できます
 
-Load, save, overwrite, or delete profiles
-== Load, save, overwrite, or delete profiles
-
 Loaded %d items
 == %d 個のアイテムを読み込みました
 
@@ -7064,6 +7127,12 @@ Main Asset
 Main menu
 == メインメニュー
 
+Main Tee
+== メインTee
+
+Main Tee and dummy
+== メインTeeとダミー
+
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 凍結プレイヤーをバレーボールのように見せる（0=無効、1=バレーボールマップのみ、2=常時）
 
@@ -7111,6 +7180,9 @@ Manage hostile-list chat shortcuts
 
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
+
+Manage profiles and bind wheel presets
+== プロフィールとバインドホイールのプリセットを管理
 
 Manage the skin rotation queue
 == スキンローテーションキューを管理
@@ -7166,8 +7238,14 @@ Map folders
 Map name
 == マップ名
 
+Map not downloaded yet — join the server to preview it
+== 未ダウンロードのマップです。サーバーに参加するとプレビューできます
+
 Map play history
 == マッププレイ履歴
+
+Map preview rendering unavailable
+== マッププレビューを描画できません
 
 Map Preview TODO
 == マッププレビュー TODO
@@ -7970,6 +8048,9 @@ New name
 New name:
 == 新しい名前：
 
+New preset
+== 新規プリセット
+
 New preset name
 == 新しいプリセット名
 
@@ -8573,6 +8654,9 @@ Original message language
 Original options
 == 元の投票項目
 
+Original scroll feel
+== 従来のスクロール感
+
 Other
 == その他
 
@@ -8677,6 +8761,9 @@ p = Ping latency
 
 Pack name
 == パック名
+
+Pain
+== 痛み
 
 Panel opacity
 == パネルの不透明度
@@ -9341,6 +9428,9 @@ Preset %d
 Preset bar
 == プリセットバー
 
+Preset type
+== プリセットの種類
+
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == libx264 でビデオをエンコードする際のプリセット、デフォルト 5 (medium)、0 は ultrafast、9 は placebo（最も遅い、非推奨）
 
@@ -9466,9 +9556,6 @@ Process UDP RX (est.)
 
 Process UDP TX (est.)
 == プロセス UDP 送信（推定）
-
-Profile Options
-== プロファイルオプション
 
 Profiles
 == プロファイル
@@ -9628,6 +9715,9 @@ QQ Music hook helper path (empty=beside QmClient)
 
 Quads are used for background decoration
 == 背景装飾に使用されるクアッド
+
+Quality tier
+== ネット品質に追従
 
 Query current map info
 == 現在のマップ情報を照会
@@ -10523,6 +10613,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == 旧式の単一セグメントフック衝突線動作を復元
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== 従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== 従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開
+
 Restoring save %d: main '%s', dummy '%s'.
 == セーブ %d を復元中：メイン「%s」、ダミー「%s」。
 
@@ -10799,8 +10895,8 @@ Save/Load Name
 Save/Load Skin
 == スキンを保存/読み込み
 
-Saved Profiles
-== 保存済みプロファイル
+Saved to the bind wheel.
+== バインドホイールに保存しました。
 
 Saved with your title and shared with other QmClient players.
 == 称号と一緒に保存され、他のQmClientプレイヤーに共有されます。
@@ -10937,6 +11033,9 @@ Scroll mode: Off
 Scroll mode: On
 == スクロールモード: オン
 
+Scroll step
+== スクロール幅
+
 Search
 == 検索
 
@@ -11038,9 +11137,6 @@ Select map
 
 Select the country flag for each player
 == Select the country flag for each player
-
-Select which player fields a profile stores
-== Select which player fields a profile stores
 
 Selected %d
 == %d 個選択済み
@@ -11152,6 +11248,9 @@ Server alert
 
 Server best:
 == サーバーベスト：
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== サーバーブラウザの列順（カンマ区切りのID：community,name,map,difficulty,gametype,friends,players,qm,ping。空欄で既定値）
 
 Server browser exclude string
 == サーバーブラウザ除外文字列
@@ -11620,6 +11719,9 @@ Show enemy reason
 
 Show entities
 == エンティティ表示
+
+Show entities only (hide textures)
+== エンティティのみ表示（テクスチャを非表示）
 
 Show existing saves
 == 既存のセーブを表示
@@ -12134,8 +12236,8 @@ Show server settings
 Show settings card borders
 == 設定カードの枠線を表示
 
-Show short server names in browser
-== サーバーブラウザに短いサーバー名を表示
+Show short server names in browser (applies to China community servers)
+== サーバーブラウザに短いサーバー名を表示（中国コミュニティのサーバーに適用）
 
 Show skin date and author
 == スキンの日付と作者を表示
@@ -13043,6 +13145,9 @@ Stroke fade time
 Stroke retention time (0=Never disappear)
 == ストローク保持時間（0=消えない）
 
+Strong / Weak
+== 強弱表示の画像
+
 Strong hook
 == ストロングフック
 
@@ -13081,6 +13186,9 @@ Super
 
 Support ♥
 == サポート ♥
+
+Surprise
+== 驚き
 
 Swap
 == スワップ
@@ -13568,6 +13676,9 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == QmClient へのご支援ありがとうございます
 
+Thanks!
+== ありがとう！
+
 The audio device couldn't be initialised.
 == オーディオデバイスを初期化できませんでした。
 
@@ -13624,6 +13735,9 @@ The server rejected the map upload.
 
 The watermarked screenshot was saved next to the original
 == ウォーターマーク付きのスクリーンショットを元画像の隣に保存しました
+
+The wheel changed. Your draft can be added as a new preset.
+== ホイールが変更されました。編集中の内容は新しいプリセットとして追加できます。
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == テクスチャ %s の幅が %d で割り切れないか、高さが %d で割り切れないため、表示に問題が発生する可能性があります。
@@ -13948,6 +14062,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == ローカルコンソールを切り替え
+
+Toggle map preview
+== マッププレビュー
 
 Toggle microphone mute
 == マイクミュートの切り替え
@@ -14615,6 +14732,9 @@ Use current map as background
 Use current name
 == 現在の名前を使用
 
+Use current settings
+== 現在の設定を使用
+
 Use custom skins instead of the ninja tee
 == ニンジャ Tee の代わりにカスタムスキンを使用
 
@@ -14650,6 +14770,9 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 高帯域モードを使用（サーバー帯域を 2 倍、LAN のみ）
+
+Use installed asset names. Empty fields keep the current asset.
+== インストール済みの素材名を入力してください。空欄は現在の素材を保持します。
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == K キーで自殺（再スタート）、Q キーで一時停止して他のプレイヤーを観戦します。他のキーバインドは設定で確認してください。
@@ -15167,6 +15290,12 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace バインディングが設定されているレベル（自動設定のため、使用する必要はありません）。
 
+Wheel label
+== ホイールの表示名
+
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== ホイール1刻みのUIピクセル移動量。設定カードのページは各刻みでこの値の12倍移動
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == TClient のレインボー Tee が有効な場合、この機能は効果がありません。
 
@@ -15274,6 +15403,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == 幅と高さは %d から %d の範囲内である必要があります。
+
+Width of difficulty column in server browser
+== サーバーブラウザの難易度列の幅
 
 Width of friends column in server browser
 == サーバーブラウザのフレンド列の幅

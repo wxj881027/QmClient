@@ -8,6 +8,7 @@
 #include <base/thread.h>
 
 #include <algorithm>
+#include <exception>
 
 IJob::IJob() :
 	m_pNext(nullptr),
@@ -110,7 +111,21 @@ void CJobPool::RunLoop()
 				if(m_Shutdown)
 					pJob->Abort();
 			}
-			pJob->Run();
+			// 作业异常不得逃逸到线程入口：线程入口没有调用者可以接收异常，逃出
+			// 即 std::terminate。单次作业失败只让该作业进入失败语义，池与后续
+			// 作业继续运行；各作业仍应自行处理预期内的失败。
+			try
+			{
+				pJob->Run();
+			}
+			catch(const std::exception &Error)
+			{
+				log_error("jobs", "Job raised an exception: %s", Error.what());
+			}
+			catch(...)
+			{
+				log_error("jobs", "Job raised an unknown exception.");
+			}
 			{
 				const CLockScope LockScope(m_LockRunning);
 				m_RunningJobs.erase(std::find(m_RunningJobs.begin(), m_RunningJobs.end(), pJob));

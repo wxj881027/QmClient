@@ -291,6 +291,7 @@ public:
 		SORT_NUMFRIENDS - Sort after how many friends there are on the server.
 		SORT_FAVORITES - Sort by favorite status, number of players and then ping.
 		SORT_QM_CLIENTS - Sort by the number of Qm clients online on the server.
+		SORT_DIFFICULTY - Sort by map difficulty stars (QmClient map difficulty catalog, unknown maps last).
 	*/
 	enum
 	{
@@ -302,6 +303,7 @@ public:
 		SORT_NUMFRIENDS,
 		SORT_FAVORITES,
 		SORT_QM_CLIENTS,
+		SORT_DIFFICULTY,
 	};
 
 	enum

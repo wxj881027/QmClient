@@ -21695,6 +21695,38 @@ turkish = "Qm arayüz simgesi rengi: 1=Beyaz, 2=Siyah, 3=Özel, 4=Gökkuşağı"
 polish = "Kolor ikon interfejsu Qm: 1=biały, 2=czarny, 3=niestandardowy, 4=tęczowy"
 
 [[message]]
+key = "Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom"
+[message.translations]
+simplified_chinese = "灵动岛连接图标颜色：1=网络质量分档，2=跟随界面图标颜色，3=自定义"
+traditional_chinese = "靈動島連線圖示顏色：1=網路品質分檔，2=跟隨介面圖示顏色，3=自訂"
+japanese = "ダイナミックアイランド接続アイコンの色: 1=品質段階、2=UIアイコン色に追従、3=カスタム"
+korean = "다이내믹 아일랜드 연결 아이콘 색상: 1=품질 단계, 2=UI 아이콘 색상 따르기, 3=사용자 지정"
+russian = "Цвет значка подключения на острове: 1=по качеству сети, 2=как цвет значков интерфейса, 3=свой"
+german = "Verbindungssymbolfarbe der Dynamic Island: 1=Qualitätsstufe, 2=wie UI-Symbolfarbe, 3=benutzerdefiniert"
+spanish = "Color del icono de conexión de la isla: 1=por calidad de red, 2=según color de iconos de la interfaz, 3=personalizado"
+french = "Couleur de l'icône de connexion de l'îlot : 1=selon la qualité réseau, 2=comme la couleur des icônes de l'interface, 3=personnalisée"
+brazilian_portuguese = "Cor do ícone de conexão da ilha: 1=por qualidade de rede, 2=conforme a cor dos ícones da interface, 3=personalizada"
+portuguese = "Cor do ícone de ligação da ilha: 1=por qualidade de rede, 2=conforme a cor dos ícones da interface, 3=personalizada"
+turkish = "Dynamic Island bağlantı simge rengi: 1=Kalite kademesi, 2=Arayüz simge rengine göre, 3=Özel"
+polish = "Kolor ikony połączenia wyspy: 1=według jakości sieci, 2=jak kolor ikon interfejsu, 3=niestandardowy"
+
+[[message]]
+key = "Dynamic island connection icon custom color"
+[message.translations]
+simplified_chinese = "灵动岛连接图标自定义颜色"
+traditional_chinese = "靈動島連線圖示自訂顏色"
+japanese = "ダイナミックアイランド接続アイコンのカスタム色"
+korean = "다이내믹 아일랜드 연결 아이콘 사용자 지정 색상"
+russian = "Свой цвет значка подключения на острове"
+german = "Eigene Verbindungssymbolfarbe der Dynamic Island"
+spanish = "Color personalizado del icono de conexión de la isla"
+french = "Couleur personnalisée de l'icône de connexion de l'îlot"
+brazilian_portuguese = "Cor personalizada do ícone de conexão da ilha"
+portuguese = "Cor personalizada do ícone de ligação da ilha"
+turkish = "Dynamic Island özel bağlantı simge rengi"
+polish = "Niestandardowy kolor ikony połączenia wyspy"
+
+[[message]]
 key = "Qm UI icon style: 0=Regular, 1=Bold, 2=Light (legacy), 3=Fill, 4=Light, 5=Bold (legacy)"
 [message.translations]
 simplified_chinese = "Qm 界面图标样式：0=常规，1=粗体，2=轻体（旧值），3=填充，4=轻体，5=粗体（旧值）"
@@ -38294,3 +38326,67 @@ brazilian_portuguese = "Mostrar apenas menções, mensagens privadas e próprias
 portuguese = "Mostrar apenas menções, mensagens privadas e próprias, independentemente dos filtros de amigos ou equipa; manter mensagens do sistema e respeitar jogadores silenciados"
 turkish = "Arkadaş ve takım filtrelerinden bağımsız olarak yalnızca bahsetmeleri, özel mesajları ve kendi mesajlarını göster; sistem mesajlarını ve susturma ayarlarını koru"
 polish = "Pokazuj tylko wzmianki, wiadomości prywatne i własne niezależnie od filtrów znajomych i drużyny; zachowaj wiadomości systemowe i wyciszenie graczy"
+
+[[message]]
+key = "Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity"
+[message.translations]
+simplified_chinese = "恢复原版滚轮手感：每格重新开始平滑滚动，不继承速度"
+traditional_chinese = "恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度"
+japanese = "従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開"
+korean = "기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작"
+russian = "Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости"
+german = "Ursprüngliches Mausradverhalten wiederherstellen: Jede Raste startet das sanfte Scrollen ohne Übernahme der Geschwindigkeit neu"
+spanish = "Restaurar el desplazamiento original: cada paso de la rueda reinicia el desplazamiento suave sin heredar la velocidad"
+french = "Rétablir le défilement d’origine : chaque cran relance le défilement fluide sans conserver la vitesse"
+brazilian_portuguese = "Restaurar a rolagem original: cada passo da roda reinicia a rolagem suave sem manter a velocidade"
+portuguese = "Restaurar o deslocamento original: cada passo da roda reinicia o deslocamento suave sem manter a velocidade"
+turkish = "Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır"
+polish = "Przywróć oryginalne przewijanie kółkiem: każdy skok uruchamia płynne przewijanie od nowa bez zachowania prędkości"
+
+[[message]]
+key = "Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity"
+[message.translations]
+simplified_chinese = "恢复原版滚轮手感：每格重新开始平滑滚动，不继承速度"
+traditional_chinese = "恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度"
+japanese = "従来のホイール操作に戻す：各刻みで速度を引き継がず、滑らかなスクロールを再開"
+korean = "기존 휠 스크롤 복원: 매 눈금마다 속도를 이어받지 않고 부드러운 스크롤을 다시 시작"
+russian = "Вернуть прежнюю прокрутку колёсиком: каждый шаг заново запускает плавную прокрутку без сохранения скорости"
+german = "Ursprüngliches Mausradverhalten wiederherstellen: Jede Raste startet das sanfte Scrollen ohne Übernahme der Geschwindigkeit neu"
+spanish = "Restaurar el desplazamiento original: cada paso de la rueda reinicia el desplazamiento suave sin heredar la velocidad"
+french = "Rétablir le défilement d’origine : chaque cran relance le défilement fluide sans conserver la vitesse"
+brazilian_portuguese = "Restaurar a rolagem original: cada passo da roda reinicia a rolagem suave sem manter a velocidade"
+portuguese = "Restaurar o deslocamento original: cada passo da roda reinicia o deslocamento suave sem manter a velocidade"
+turkish = "Özgün tekerlek kaydırmasını geri getir: her kademe hızı devralmadan yumuşak kaydırmayı yeniden başlatır"
+polish = "Przywróć oryginalne przewijanie kółkiem: każdy skok uruchamia płynne przewijanie od nowa bez zachowania prędkości"
+
+[[message]]
+key = "Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick"
+[message.translations]
+simplified_chinese = "滚轮每格的界面像素步长；设置卡片页面每格滚动此值的 12 倍"
+traditional_chinese = "滾輪每格的介面像素步長；設定卡片頁面每格捲動此值的 12 倍"
+japanese = "ホイール1刻みのUIピクセル移動量。設定カードのページは各刻みでこの値の12倍移動"
+korean = "휠 한 눈금당 UI 픽셀 이동량. 설정 카드 페이지는 매 눈금마다 이 값의 12배만큼 이동"
+russian = "Шаг колёсика в пикселях интерфейса; страницы карточек настроек прокручиваются на 12 таких шагов"
+german = "Mausradschritt in UI-Pixeln; Einstellungsseiten scrollen pro Raste um das 12-Fache dieses Werts"
+spanish = "Paso de la rueda en píxeles de interfaz; las páginas de ajustes desplazan 12 veces este valor por paso"
+french = "Pas de molette en pixels d’interface ; les pages de réglages défilent de 12 fois cette valeur par cran"
+brazilian_portuguese = "Passo da roda em pixels da interface; páginas de configurações rolam 12 vezes esse valor por passo"
+portuguese = "Passo da roda em píxeis da interface; as páginas de definições deslocam-se 12 vezes este valor por passo"
+turkish = "Tekerlek kademesi başına arayüz pikseli; ayar kartı sayfaları her kademede bu değerin 12 katı kayar"
+polish = "Krok kółka w pikselach interfejsu; strony ustawień przewijają się o 12 razy tę wartość na skok"
+
+[[message]]
+key = "Show short server names in browser (applies to China community servers)"
+[message.translations]
+simplified_chinese = "在服务器浏览器中显示简短服务器名（适用于中国社区服务器）"
+traditional_chinese = "在伺服器瀏覽器中顯示簡短伺服器名（適用於中國社群伺服器）"
+japanese = "サーバーブラウザに短いサーバー名を表示（中国コミュニティのサーバーに適用）"
+korean = "서버 브라우저에 짧은 서버 이름 표시 (중국 커뮤니티 서버에 적용)"
+russian = "Показывать короткие названия серверов в списке серверов (для серверов китайского сообщества)"
+german = "Kurzen Servernamen im Server-Browser anzeigen (für Server der chinesischen Community)"
+spanish = "Mostrar nombre corto del servidor en el navegador de servidores (para servidores de la comunidad china)"
+french = "Afficher le nom court du serveur dans le navigateur de serveurs (pour les serveurs de la communauté chinoise)"
+brazilian_portuguese = "Exibir nome curto do servidor no navegador de servidores (para servidores da comunidade chinesa)"
+portuguese = "Mostrar nome curto do servidor no navegador de servidores (para servidores da comunidade chinesa)"
+turkish = "Sunucu tarayıcısında kısa sunucu adını göster (Çin topluluğu sunucuları için)"
+polish = "Pokaż krótką nazwę serwera w przeglądarce serwerów (dla serwerów społeczności chińskiej)"

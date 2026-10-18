@@ -87,39 +87,43 @@ inline const char *CCommandProcessorFragment_Vulkan::RenderTargetReadbackSupport
 
 inline void CCommandProcessorFragment_Vulkan::BeginSwapRenderPass(VkRenderPass RenderPass)
 {
-	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	VkRenderPassBeginInfo RenderPassInfo{};
-	RenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	RenderPassInfo.renderPass = RenderPass;
-	RenderPassInfo.framebuffer = m_vFramebufferList[m_CurImageIndex];
-	RenderPassInfo.renderArea.offset = {0, 0};
-	RenderPassInfo.renderArea.extent = m_VKSwapImgAndViewportExtent.m_SwapImageViewport;
-	VkClearValue ClearColorVal = {{{m_aClearColor[0], m_aClearColor[1], m_aClearColor[2], m_aClearColor[3]}}};
-	RenderPassInfo.clearValueCount = 1;
-	RenderPassInfo.pClearValues = &ClearColorVal;
-	const VkSubpassContents SubpassContents = (m_ThreadCount > 1 && !m_ForceSingleThreadedRender) ? VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS : VK_SUBPASS_CONTENTS_INLINE;
-	vkCmdBeginRenderPass(CommandBuffer, &RenderPassInfo, SubpassContents);
+	// 延迟实际 begin，直到知道这段之后是捕获/离屏中断还是帧结束。
+	m_SwapPassPlan.Begin(RenderPass == m_VKRenderPassLoad);
+	m_SwapPassClearColor = {{{m_aClearColor[0], m_aClearColor[1], m_aClearColor[2], m_aClearColor[3]}}};
 	m_SwapRenderPassActive = true;
-	for(auto &LastPipe : m_vLastPipeline)
-		LastPipe = VK_NULL_HANDLE;
+	ResetDrawCommandState(0);
+}
+
+inline bool CCommandProcessorFragment_Vulkan::FlushSwapRenderPass(bool PreserveMultisampling)
+{
+	bool HasDraws = m_SwapDrawCommandBuffer != VK_NULL_HANDLE;
+	for(size_t ThreadIndex = 1; ThreadIndex < m_vvUsedThreadDrawCommandBuffer.size(); ++ThreadIndex)
+		HasDraws |= m_vvUsedThreadDrawCommandBuffer[ThreadIndex][m_CurImageIndex];
+	return m_SwapPassPlan.Flush(HasDraws, PreserveMultisampling, [&](bool Load, bool Store) {
+		auto &CommandBuffer = GetMainGraphicCommandBuffer();
+		VkRenderPassBeginInfo Info{};
+		Info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		Info.renderPass = Store ? (Load ? m_VKRenderPassLoad : m_VKRenderPass) : (Load ? m_VKRenderPassLoadDiscard : m_VKRenderPassDiscard);
+		Info.framebuffer = m_vFramebufferList[m_CurImageIndex];
+		Info.renderArea.extent = m_VKSwapImgAndViewportExtent.m_SwapImageViewport;
+		Info.clearValueCount = Load ? 0 : 1;
+		Info.pClearValues = &m_SwapPassClearColor;
+		vkCmdBeginRenderPass(CommandBuffer, &Info, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+		if(!ExecutePendingRenderThreadCommandBuffers(CommandBuffer))
+			return false;
+		vkCmdEndRenderPass(CommandBuffer);
+		return true;
+	});
 }
 
 inline bool CCommandProcessorFragment_Vulkan::EndSwapRenderPassForExternalWork()
 {
 	FinishRenderThreads();
-	if(m_HasError)
+	if(m_HasError || !FlushSwapRenderPass(true))
 		return false;
-	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	if(!ExecutePendingRenderThreadCommandBuffers(CommandBuffer))
-		return false;
-	if(m_SwapRenderPassActive)
-	{
-		vkCmdEndRenderPass(CommandBuffer);
-		m_SwapRenderPassActive = false;
-	}
+	m_SwapRenderPassActive = false;
 	m_ForceSingleThreadedRender = true;
-	for(auto &LastPipe : m_vLastPipeline)
-		LastPipe = VK_NULL_HANDLE;
+	ResetDrawCommandState(0);
 	return true;
 }
 
@@ -198,12 +202,8 @@ inline bool CCommandProcessorFragment_Vulkan::SubmitCurrentCommandsAndRestartSwa
 	BeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 	if(!CheckVulkanResult(vkBeginCommandBuffer(CommandBuffer, &BeginInfo), GFX_ERROR_TYPE_RENDER_RECORDING, "vkBeginCommandBuffer (intermediate frame) failed."))
 		return false;
+	// 新的交换链段统一清空绑定缓存，不能沿用已重置命令缓冲中的绑定。
 	BeginSwapRenderPass(m_VKRenderPassLoad);
-	// 命令缓冲已被重置，其中记录过的 index buffer、descriptor 与动态状态绑定
-	// 全部不存在了；必须同步清空 CPU 侧缓存，否则后续绘制会因缓存命中而
-	// 跳过重新绑定，产生无效绘制（Vulkan 校验层报未绑定资源，部分驱动
-	// 表现为 device lost）。BeginSwapRenderPass 只清了管线缓存。
-	ResetDrawCommandState(0);
 	return true;
 }
 
@@ -313,6 +313,7 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Begin(const CComm
 	m_DynamicViewportSize = {Target.m_Width, Target.m_Height};
 	m_RenderTargetActive = true;
 	m_ActiveRenderTargetId = pCommand->m_TargetId;
+	ResetDrawCommandState(0);
 	for(auto &LastPipe : m_vLastPipeline)
 		LastPipe = VK_NULL_HANDLE;
 	return true;
@@ -491,15 +492,21 @@ inline bool CCommandProcessorFragment_Vulkan::Cmd_RenderTarget_Draw(const CComma
 	FinishRenderThreads();
 	if(m_HasError)
 		return false;
-	auto &CommandBuffer = GetMainGraphicCommandBuffer();
-	if(!ExecutePendingRenderThreadCommandBuffers(CommandBuffer))
-		return false;
+	// 缓存目标可直接绘制而不先捕获；已结束的 worker secondary 不能再追加绘制。
+	m_ForceSingleThreadedRender = true;
 	if(Target.m_Layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 	{
-		if(!ImageBarrier(CommandBuffer, Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
+		if(!EndSwapRenderPassForExternalWork())
+			return false;
+		if(!ImageBarrier(GetMainGraphicCommandBuffer(), Target.m_Image, 0, 1, 0, 1, RenderTargetReadbackFormat(), Target.m_Layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL))
 			return false;
 		Target.m_Layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		BeginSwapRenderPass(m_VKRenderPassLoad);
 	}
+	VkCommandBuffer *pCommandBuffer;
+	if(!GetGraphicCommandBuffer(pCommandBuffer, 0))
+		return false;
+	auto &CommandBuffer = *pCommandBuffer;
 
 	SRenderCommandExecuteBuffer ExecBuffer;
 	ExecBuffer.m_ThreadIndex = 0;

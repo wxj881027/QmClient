@@ -23,6 +23,7 @@
 
 #include <game/client/QmUi/QmAnimResolve.h>
 #include <game/client/QmUi/QmCardRegistry.h>
+#include <game/client/QmUi/QmListEntryAnimation.h>
 #include <game/client/QmUi/QmUiPerf.h>
 #include <game/client/QmUi/SecondaryPanel.h>
 #include <game/client/QmUi/SettingsCard.h>
@@ -63,6 +64,7 @@
 #include <limits>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -364,7 +366,8 @@ CUi::EPopupMenuFunctionResult CMenus::PopupSettingsCountrySelection(void *pConte
 
 		if(IsSelected)
 		{
-			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::BORDER_FOCUS, ui_token::radius::BASE, 1.0f);
+			// 选中描边与资产卡/列表选中态同源（白 0.7），不用 BORDER_FOCUS 强调蓝。
+			DrawRoundedSurface(pUi, Item.m_Rect, ui_token::color::LIST_ITEM_SELECTED, ui_token::color::NEUTRAL_WHITE.WithAlpha(ui_token::feedback::ICON_BORDER_ALPHA), ui_token::radius::BASE, 1.0f);
 		}
 		else if(pUi->MouseInside(&Item.m_Rect))
 		{
@@ -742,6 +745,23 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 	int VisibleLanguages = 0;
 	int CacheHits = 0;
 	int CacheMisses = 0;
+	// 依次淡入 + 上浮：与服务器列表/浏览器过滤列表同一套入场语言（onetake
+	// wordRise：opacity 领先位移）。语言卡片离开渲染超过间隙后重放。
+	static CQmListEntryAnimation s_EntryAnimation;
+	// 设置分类切换时显式重放：间隙启发在该页同样不可靠（后台趟持续渲染），
+	// 与服务器列表同款序号制，保证每次切回设置页都重放。
+	static int s_EntryRestartSeq = -1;
+	if(s_EntryRestartSeq != m_SettingsListEntryRestartSeq)
+	{
+		s_EntryAnimation.Reset();
+		s_EntryRestartSeq = m_SettingsListEntryRestartSeq;
+	}
+	const int64_t EntryNow = time_get();
+	const int64_t EntryFreq = maximum<int64_t>(1, time_freq());
+	const bool EntryEnabled = g_Config.m_QmUiListEntryAnimations != 0 && g_Config.m_QmUiMotionLevel > 0;
+	const float EntryElapsed = s_EntryAnimation.Resolve(EntryNow, EntryFreq, EntryEnabled, g_Config.m_QmUiMotionLevel,
+		Ui()->MeasurementOnly() ? EQmListEntryRenderPass::MEASUREMENT : EQmListEntryRenderPass::INTERACTIVE);
+	int EntryVisibleRowIndex = 0;
 	for(size_t i = 0; i < g_Localization.Languages().size(); ++i)
 	{
 		const auto &Language = g_Localization.Languages()[i];
@@ -752,6 +772,13 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		if(!Visible)
 			continue;
 		++VisibleLanguages;
+
+		const SQmListEntryVisual EntryVisual = QmListEntryVisual(EntryElapsed, EntryVisibleRowIndex, g_Config.m_QmUiMotionLevel);
+		++EntryVisibleRowIndex;
+		std::optional<CUiScopedControlAlphaScale> EntryFade;
+		if(EntryVisual.m_Fade < 0.999f)
+			EntryFade.emplace(Ui(), EntryVisual.m_Fade);
+		ItemRect.y += EntryVisual.m_OffsetY;
 
 		void *pRowId = UseCache ? static_cast<void *>(&gs_aLanguageRowIds[i]) : const_cast<char *>(Language.m_Filename.c_str());
 		Ui()->DoConfigTooltip(pRowId, &ItemRect, g_Config.m_ClLanguagefile);
@@ -772,7 +799,8 @@ bool CMenus::RenderLanguageSelection(CUIRect MainView, const SSettingsContentMet
 		ItemRect.VSplitLeft(ItemRect.h * 2.0f, &FlagRect, &Label);
 		FlagRect.VMargin(6.0f, &FlagRect);
 		FlagRect.HMargin(3.0f, &FlagRect);
-		GameClient()->m_CountryFlags.Render(Language.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
+		// 国旗是裸纹理 quad（不经过 CUi 显隐系数），行淡入系数单独传入。
+		GameClient()->m_CountryFlags.Render(Language.m_CountryCode, ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->ControlAlphaScale()), FlagRect.x, FlagRect.y, FlagRect.w, FlagRect.h);
 		if(UseCache)
 		{
 			CUIElement &LabelElement = SettingsTextElement(SETTINGS_LANGUAGE, -1, Language.m_Filename.c_str());
@@ -959,6 +987,10 @@ void CMenus::RenderSettings(CUIRect MainView)
 	if(!CollectingMenuTextPlan && !Ui()->MeasurementOnly() && g_Config.m_UiSettingsPage != SETTINGS_TEE && m_SettingsCardDeckDisplayState.EnterView(SettingsDisplayViewKey))
 	{
 		m_SettingsCardDeck.BeginDisplayCycle(++m_SettingsCardDeckDisplayCycle, true);
+		// 视图进入即请求自动聚焦：页号比较依赖 s_PrevSettingsPage 这个跨帧静态，
+		// 菜单重新打开时它可能已经是「搜索」，那条分支就不会再置位，聚焦随之中断。
+		if(g_Config.m_UiSettingsPage == SETTINGS_SEARCH)
+			m_FocusSettingsSearchOnEntry = true;
 	}
 
 	if(!CollectingMenuTextPlan)
@@ -973,6 +1005,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 		else if(g_Config.m_UiSettingsPage != s_PrevSettingsPage)
 		{
 			CommitSettingsTeeSkinEdits();
+			// 分类切换序号：主题/语言列表据此重放入场动画。
+			m_SettingsListEntryRestartSeq++;
 			// 切入「搜索」页时请求自动聚焦搜索输入框（一次性标志，渲染侧消费）。
 			if(g_Config.m_UiSettingsPage == SETTINGS_SEARCH)
 				m_FocusSettingsSearchOnEntry = true;
@@ -1077,7 +1111,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		else if(g_Config.m_UiSettingsPage == SETTINGS_TCLIENT)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(13);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_RESERVED0);
 			RenderSettingsTClient(ContentView, CollectingMenuTextPlan);
 			if(!CollectingMenuTextPlan)
 				m_SettingsRuntimeMetadata.m_LastTClientTab = m_TClientSettingsTab;
@@ -1085,7 +1119,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		else if(g_Config.m_UiSettingsPage == SETTINGS_QMCLIENT)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(15);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_RESERVED0);
 			RenderSettingsQmClient(ContentView, CollectingMenuTextPlan);
 			if(!CollectingMenuTextPlan)
 				m_SettingsRuntimeMetadata.m_LastQmTab = m_QmClientSettingsTab;
@@ -1093,19 +1127,19 @@ void CMenus::RenderSettings(CUIRect MainView)
 		else if(g_Config.m_UiSettingsPage == SETTINGS_SEARCH)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(15);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_RESERVED0);
 			RenderSettingsGlobalSearch(ContentView, CollectingMenuTextPlan);
 		}
 		else if(g_Config.m_UiSettingsPage == SETTINGS_CONTRIBUTORS)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(15);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_RESERVED1);
 			RenderSettingsContributors(ContentView, CollectingMenuTextPlan);
 		}
 		else if(g_Config.m_UiSettingsPage == SETTINGS_PROFILES)
 		{
 			if(!CollectingMenuTextPlan)
-				GameClient()->m_MenuBackground.ChangePosition(14);
+				GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_RESERVED1);
 			RenderSettingsTClientProfiles(ContentView);
 		}
 		else

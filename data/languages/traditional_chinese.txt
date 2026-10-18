@@ -464,6 +464,9 @@ Add current cut to the export list
 Add debug dummy to server (Debug build only)
 == 向伺服器新增除錯用分身（僅 Debug 建置）
 
+Add default presets
+== 新增預設項目
+
 Add demo timeline marker
 == 添加回放時間線標記
 
@@ -502,6 +505,9 @@ Add team name:
 
 Add to %s
 == 添加到 %s
+
+Add to bind wheel
+== 加入 Bind 輪盤
 
 Add to blocked words
 == 添加到屏蔽詞
@@ -749,6 +755,9 @@ Angle
 Angle:
 == 角度：
 
+Angry
+== 生氣
+
 Angular gradient
 == 角度漸層
 
@@ -875,6 +884,9 @@ Apply squishy Tee deformation to other players
 Apply this preset
 == 應用此預設
 
+Apply to
+== 套用至
+
 Apply to dummy
 == 套用至分身
 
@@ -953,6 +965,9 @@ Are you sure you want to delete this asset?
 Are you sure you want to save your skin? If a skin with this name already exists, it will be replaced.
 == 確定儲存該皮膚？若已有同名皮膚，將被覆蓋。
 
+Arrow
+== 箭頭貼圖
+
 Arrow assets
 == 箭頭資源
 
@@ -964,6 +979,9 @@ Aspect ratio preset
 
 Aspect ratio preset (0=off, 1=5:4, 2=4:3, 3=3:2, 4=16:9, 5=21:9, 6=custom)
 == 畫面縱橫比預設（0=關閉，1=5:4，2=4:3，3=3:2，4=16:9，5=21:9，6=自定義）
+
+Asset preset
+== 資源貼圖預設
 
 Asset with this name already exists.
 == 同名材質已存在。
@@ -1571,6 +1589,9 @@ Blend mode
 Blend strength
 == 混合強度
 
+Blink
+== 眨眼
+
 Blink the active local tee
 == 讓目前本機角色閃爍
 
@@ -1660,9 +1681,6 @@ Browse and activate custom audio packs
 
 Browse font store…
 == 瀏覽字型商店…
-
-Browse profiles saved on this device
-== Browse profiles saved on this device
 
 Browser
 == 瀏覽
@@ -1958,6 +1976,9 @@ Chat message style
 Chat messages to send when entering freeze, comma-separated (empty=none)
 == 進入凍結狀態時發送的聊天消息，以逗號分隔（空=無消息）
 
+Chat phrase
+== 快捷語錄
+
 Chat score increases per message and decreases by 1 per tick
 == 每條消息的聊天分數都會增加，並且每次勾選都會減少 1。
 
@@ -1999,6 +2020,9 @@ Check input device, system default mic, and mic permission first
 
 Check output device, confirm headphones/speakers are still online
 == 建議先檢查輸出設備，確認耳機或揚聲器仍在線
+
+Check the preset fields, label, and wheel capacity (64 entries).
+== 請檢查預設內容、顯示名稱及輪盤容量（最多 64 項）。
 
 Checking for existing player with your name
 == 正在查找該暱稱的 DDNet 記錄
@@ -2612,6 +2636,12 @@ Connection disconnected
 Connection elevated
 == 連接略有異常
 
+Connection icon color
+== 連線圖示顏色
+
+Connection icon custom color
+== 連線圖示自訂顏色
+
 Connection normal
 == 連接正常
 
@@ -2864,6 +2894,9 @@ Count players only
 Countries
 == 國家
 
+Country code
+== 國家／地區代碼
+
 Country flag for grouping this community (ISO 3166-1 numeric)
 == 將此社區分組的國家/地區標誌（ISO 3166-1 數字）
 
@@ -2881,6 +2914,9 @@ Create a random skin
 
 Create category
 == 創建分類
+
+Create wheel presets here. Existing wheel entries are kept.
+== 在這裡編輯輪盤預設，保留既有輪盤項目。
 
 Created
 == 創建日期
@@ -3028,6 +3064,9 @@ Customize QmClient visuals and effects
 
 Customize the position jump hint
 == Customize the position jump hint
+
+Customize the wheel scrolling distance per tick. Hold Alt while scrolling for 3x step
+== 自訂滾輪每格的捲動距離。按住 Alt 捲動時使用 3 倍步長
 
 Customize translate button and menu colors
 == 自定義翻譯按鈕和菜單顏色
@@ -3695,6 +3734,9 @@ Drag HUD modules with the left mouse button
 Drag to another category to move this friend.
 == 拖曳到其他分類以移動此好友。
 
+Drag to pan, scroll to zoom
+== 按住拖曳平移，滾輪縮放
+
 Drag to reorder; click to expand or collapse. Right-click or use the gear to manage categories
 == 拖曳調整順序，點擊展開或收起。右鍵或使用齒輪管理分類
 
@@ -3935,6 +3977,12 @@ Dynamic Island background alpha
 Dynamic Island background color
 == 靈動島背景顏色
 
+Dynamic island connection icon color: 1=Quality tier, 2=Follow global icon color, 3=Custom
+== 靈動島連線圖示顏色：1=網路品質分檔，2=跟隨介面圖示顏色，3=自訂
+
+Dynamic island connection icon custom color
+== 靈動島連線圖示自訂顏色
+
 Ease in out quad
 == 緩入緩出二次
 
@@ -3985,6 +4033,9 @@ Edit player and dummy identity information
 
 Edit skin texture
 == 編輯皮膚貼圖
+
+Edit this custom command on the Bind Wheel page.
+== 請至 Bind 輪盤頁面編輯這條自訂命令。
 
 Edit touch controls
 == 編輯觸控設置
@@ -4967,6 +5018,9 @@ Follow server
 Follow Tee
 == 跟隨 Tee
 
+Follow UI icon color
+== 跟隨介面圖示顏色
+
 Following
 == 當前
 
@@ -5528,6 +5582,9 @@ Ground jump
 Group name
 == 分組名稱
 
+GUI cursor
+== 介面游標
+
 GUI cursor assets
 == GUI 光標資源
 
@@ -5560,6 +5617,9 @@ Hammer: %s
 
 Handwriting
 == 手寫體
+
+Happy
+== 開心
 
 Has people playing
 == 有玩家
@@ -5975,6 +6035,9 @@ Icon symbols:
 Icons
 == 圖示
 
+Identity preset
+== 身分預設
+
 If 1, auto record only once on connect; if 0, auto record restarts after game end
 == 若為 1，僅在連接時自動開始錄製一次 demo；若為 0，遊戲結束後也會重新自動開始錄製
 
@@ -6174,6 +6237,9 @@ Initializing components
 == 正在初始化遊戲引擎
 
 Initializing layers
+== 正在初始化地圖圖層
+
+Initializing map layers
 == 正在初始化地圖圖層
 
 Initializing map logic
@@ -6896,9 +6962,6 @@ Load the official rank replay of a map as a ghost (default: current map, rank 1)
 Load with code r. /load to check your existing saves
 == 使用代碼 r 載入；可用 /load 查看已有存檔
 
-Load, save, overwrite, or delete profiles
-== Load, save, overwrite, or delete profiles
-
 Loaded %d items
 == 已加載 %d 項
 
@@ -7064,6 +7127,12 @@ Main Asset
 Main menu
 == 主菜單
 
+Main Tee
+== 本體
+
+Main Tee and dummy
+== 本體與分身
+
 Make frozen players look more like volleyballs (0=Disabled, 1=Only volleyball maps, 2=Always)
 == 讓排球模式中的凍結玩家看起來更像排球（0=禁用，1=僅排球地圖，2=始終）
 
@@ -7111,6 +7180,9 @@ Manage hostile-list chat shortcuts
 
 Manage kaomoji chat shortcuts
 == Manage kaomoji chat shortcuts
+
+Manage profiles and bind wheel presets
+== 管理設定檔與 Bind 輪盤預設
 
 Manage the skin rotation queue
 == 管理皮膚輪換佇列
@@ -7166,8 +7238,14 @@ Map folders
 Map name
 == 地圖名稱
 
+Map not downloaded yet — join the server to preview it
+== 地圖尚未下載，進入伺服器下載後即可預覽
+
 Map play history
 == 地圖遊玩歷史
+
+Map preview rendering unavailable
+== 目前無法繪製地圖預覽
 
 Map Preview TODO
 == 地圖預覽待做
@@ -7970,6 +8048,9 @@ New name
 New name:
 == 新文件名：
 
+New preset
+== 新增預設
+
 New preset name
 == 新預設名稱
 
@@ -8573,6 +8654,9 @@ Original message language
 Original options
 == 原始選項
 
+Original scroll feel
+== 原版捲動手感
+
 Other
 == 其他
 
@@ -8677,6 +8761,9 @@ p = Ping latency
 
 Pack name
 == 包名
+
+Pain
+== 疼痛
 
 Panel opacity
 == 面板不透明度
@@ -9341,6 +9428,9 @@ Preset %d
 Preset bar
 == 預設欄
 
+Preset type
+== 預設類型
+
 Preset when encoding video with libx264, default 5 (medium), 0 is ultrafast, 9 is placebo (slowest, not recommended)
 == 使用 libx264 編碼視頻時的預設，默認 5（medium），0 為 ultrafast，9 為 placebo（最慢，不推薦）
 
@@ -9466,9 +9556,6 @@ Process UDP RX (est.)
 
 Process UDP TX (est.)
 == 程序 UDP 傳送（估算）
-
-Profile Options
-== 設定檔選項
 
 Profiles
 == 配置文件
@@ -9628,6 +9715,9 @@ QQ Music hook helper path (empty=beside QmClient)
 
 Quads are used for background decoration
 == 顯示用作背景裝飾的貼圖
+
+Quality tier
+== 跟隨網路品質
 
 Query current map info
 == 查詢當前地圖信息
@@ -10523,6 +10613,12 @@ Restore Kugou files
 Restore old single-segment hook collision line behavior
 == 恢復舊版單段鉤子輔助線行為
 
+Restore the original wheel scroll feel: each tick restarts the smooth scroll without inheriting velocity
+== 恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度
+
+Restore the original wheel scrolling: each tick restarts the smooth scroll instead of inheriting velocity
+== 恢復原版滾輪手感：每格重新開始平滑捲動，不繼承速度
+
 Restoring save %d: main '%s', dummy '%s'.
 == 正在恢復存檔 %d：本體「%s」，分身「%s」。
 
@@ -10799,8 +10895,8 @@ Save/Load Name
 Save/Load Skin
 == 保存/加載皮膚
 
-Saved Profiles
-== 已儲存的設定檔
+Saved to the bind wheel.
+== 已儲存至 Bind 輪盤。
 
 Saved with your title and shared with other QmClient players.
 == 隨頭銜一起儲存，並同步給其他 QmClient 玩家。
@@ -10937,6 +11033,9 @@ Scroll mode: Off
 Scroll mode: On
 == 滾動模式：開
 
+Scroll step
+== 捲動步長
+
 Search
 == 搜索
 
@@ -11038,9 +11137,6 @@ Select map
 
 Select the country flag for each player
 == Select the country flag for each player
-
-Select which player fields a profile stores
-== Select which player fields a profile stores
 
 Selected %d
 == 已選擇 %d 項
@@ -11152,6 +11248,9 @@ Server alert
 
 Server best:
 == 伺服器最佳：
+
+Server browser content column order (comma separated ids: community,name,map,difficulty,gametype,friends,players,qm,ping; empty = default)
+== 伺服器瀏覽器內容列順序（逗號分隔的識別碼：community,name,map,difficulty,gametype,friends,players,qm,ping；留空使用預設順序）
 
 Server browser exclude string
 == 伺服器瀏覽器排除字符串
@@ -11620,6 +11719,9 @@ Show enemy reason
 
 Show entities
 == 實體層顯示開關
+
+Show entities only (hide textures)
+== 僅顯示實體層（隱藏貼圖）
 
 Show existing saves
 == 查看已有存檔
@@ -12134,8 +12236,8 @@ Show server settings
 Show settings card borders
 == 顯示設定卡片邊框
 
-Show short server names in browser
-== 在伺服器瀏覽器中顯示簡短伺服器名
+Show short server names in browser (applies to China community servers)
+== 在伺服器瀏覽器中顯示簡短伺服器名（適用於中國社群伺服器）
 
 Show skin date and author
 == 顯示皮膚日期和作者
@@ -13043,6 +13145,9 @@ Stroke fade time
 Stroke retention time (0=Never disappear)
 == 描邊保留時間（0=永不消失）
 
+Strong / Weak
+== 強弱提示貼圖
+
 Strong hook
 == 強鉤
 
@@ -13081,6 +13186,9 @@ Super
 
 Support ♥
 == 支持 ♥
+
+Surprise
+== 驚訝
 
 Swap
 == 交換
@@ -13568,6 +13676,9 @@ Thank you for your company and trust. This is what gives me the courage to keep 
 Thanks for supporting QmClient
 == 感謝您為 QmClient 做出的貢獻
 
+Thanks!
+== 謝謝！
+
 The audio device couldn't be initialised.
 == 初始化音頻設備失敗。
 
@@ -13624,6 +13735,9 @@ The server rejected the map upload.
 
 The watermarked screenshot was saved next to the original
 == 含浮水印的螢幕截圖已儲存到原圖旁
+
+The wheel changed. Your draft can be added as a new preset.
+== 輪盤項目已變更，目前草稿可以作為新預設加入。
 
 The width of texture %s is not divisible by %d, or the height is not divisible by %d, which might cause visual bugs.
 == 紋理文件 %s 的寬度無法被 %d 整除，或者高度無法被 %d 整除，這可能會導致顯示錯誤。
@@ -13948,6 +14062,9 @@ Toggle keyboard shortcuts
 
 Toggle local console
 == 切換本地控制台
+
+Toggle map preview
+== 地圖預覽
 
 Toggle microphone mute
 == 切換麥克風靜音
@@ -14615,6 +14732,9 @@ Use current map as background
 Use current name
 == 使用目前名稱
 
+Use current settings
+== 讀取目前設定
+
 Use custom skins instead of the ninja tee
 == 使用自定義皮膚代替忍者 Tee
 
@@ -14650,6 +14770,9 @@ Use enemy list to drive player indicators
 
 Use high bandwidth mode (doubles server bandwidth, LAN only)
 == 使用高帶寬模式。伺服器所需的帶寬加倍。僅限局域網使用
+
+Use installed asset names. Empty fields keep the current asset.
+== 填寫已安裝的貼圖名稱；留空表示保留目前貼圖。
 
 Use k key to kill (restart), q to pause and watch other players. See settings for other key binds.
 == 使用 K 鍵自殺（重新開始），Q 鍵暫停並旁觀其他玩家。其他按鍵綁定可在設置中查看。
@@ -15167,6 +15290,12 @@ Welcome to DDNet
 What level DDRace binding is set to (automatic, you don't need to use it).
 == DDRace 綁定設置為什麼級別（這是自動的，你不需要使用它）
 
+Wheel label
+== 輪盤顯示名稱
+
+Wheel scroll step in UI pixels per tick; settings card pages scroll 12x this per tick
+== 滾輪每格的介面像素步長；設定卡片頁面每格捲動此值的 12 倍
+
 When TClient rainbow Tee is enabled, this feature has no effect.
 == 已啟用 TClient 彩虹 Tee 時，本功能不會生效。
 
@@ -15274,6 +15403,9 @@ Width
 
 Width and height are required to be within the range from %d to %d.
 == 按鍵的寬和高需要在 %d 到 %d 內。
+
+Width of difficulty column in server browser
+== 伺服器瀏覽器中難度列的寬度
 
 Width of friends column in server browser
 == 伺服器瀏覽器中好友列的寬度

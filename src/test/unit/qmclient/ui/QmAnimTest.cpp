@@ -196,7 +196,7 @@ TEST(SettingsCard, MotionPolicyKeepsRequiredFeedbackAtLevelZero)
 	const SCardMotionSpec Reduced = ResolveCardMotionSpec(1, true, true, true, true);
 	const SCardMotionSpec Off = ResolveCardMotionSpec(0, true, true, true, true);
 	EXPECT_GT(Full.m_EntryDistance, Reduced.m_EntryDistance);
-	EXPECT_FLOAT_EQ(Full.m_EntryDuration, 0.16f);
+	EXPECT_FLOAT_EQ(Full.m_EntryDuration, 0.22f);
 	EXPECT_FLOAT_EQ(Full.m_ContentHeightDuration, 0.18f);
 	EXPECT_FLOAT_EQ(Reduced.m_ReflowDuration, 0.12f);
 	EXPECT_TRUE(Full.m_DecorativeMotion);

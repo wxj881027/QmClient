@@ -2,6 +2,10 @@
 /* If you are missing that file, acquire a complete release at teeworlds.com.                */
 #include "QmScroll.h"
 
+#include <engine/shared/config.h>
+
+#include <game/client/QmUi/QmAnimationBackend.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -137,9 +141,19 @@ SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeS
 {
 	SQmScrollConfig Config;
 	(void)UiScale;
-	Config.m_WheelScale = 10.0f;
+	// 步长防零回退：生产由 config loader 保证 ≥2，测试环境的 g_Config 是
+	// 零初始化（未跑 loader），0 直接用会把 WheelScale 归零。
+	const float StepPixels = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 10.0f;
+	Config.m_WheelScale = StepPixels;
 	Config.m_NativeWheelStep = true;
-	Config.m_NativeWheelAnimationTime = std::max(0.0f, SmoothScrollTimeSec);
+	Config.m_LegacyWheelFeel = g_Config.m_QmUiScrollLegacyWheel != 0;
+	// 滚动平滑时长统一走引擎动效等级（qm_animation::ApplyMotionLevel，与弹层/
+	// 列表/气泡同一缩放口径）：0 档即时定位、1 档 ×0.45、2 档全额。此前滚动
+	// 是全站唯一不理会 qm_ui_motion_level 的动画。
+	Config.m_NativeWheelAnimationTime = qm_animation::ApplyMotionLevel(
+		SUiAnimTransition{.m_DurationSec = std::max(0.0f, SmoothScrollTimeSec), .m_Easing = EEasing::LINEAR},
+		g_Config.m_QmUiMotionLevel)
+						    .m_DurationSec;
 	Config.m_MaxOverscroll = 0.0f;
 	return Config;
 }
@@ -147,7 +161,9 @@ SQmScrollConfig QmNativeWheelScrollConfig(float UiScale, float SmoothScrollTimeS
 SQmScrollConfig QmSettingsScrollConfig(float UiScale, float SmoothScrollTimeSec)
 {
 	SQmScrollConfig Config = QmNativeWheelScrollConfig(UiScale, SmoothScrollTimeSec);
-	Config.m_WheelScale = 120.0f;
+	// 设置卡片行高远大于普通列表行，每档步距按 12 倍保持与原版相当的单屏节奏。
+	const float StepPixels = g_Config.m_QmUiScrollStep > 0.0f ? static_cast<float>(g_Config.m_QmUiScrollStep) : 10.0f;
+	Config.m_WheelScale = StepPixels * 12.0f;
 	return Config;
 }
 
@@ -158,6 +174,10 @@ SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, f
 	Policy.m_Config = QmNativeWheelScrollConfig(UiScale, SmoothScrollTimeSec);
 	const float RowExtent = std::max(0.0f, Request.m_RowExtent);
 	const int RowsPerStep = Request.m_RowsPerStep > 0 ? Request.m_RowsPerStep : 2;
+	// 用户自定义步长（qm_ui_scroll_step，默认 10）作为全站滚轮档位的缩放基准：
+	// 行数档位（列表/网格）此前完全无视该配置——设置页里调了没有任何可感知
+	// 变化。默认值下行为与历史版本逐比特一致，调整后所有滚动面等比缩放。
+	const float StepScale = (g_Config.m_QmUiScrollStep > 0.0f ? (float)g_Config.m_QmUiScrollStep : 10.0f) / 10.0f;
 
 	switch(Request.m_Profile)
 	{
@@ -172,28 +192,28 @@ SQmResolvedScrollPolicy QmResolveScrollPolicy(const SQmScrollRequest &Request, f
 	case EQmScrollProfile::MENU_LIST:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::MEDIUM, UiScale);
 		if(RowExtent > 0.0f)
-			Policy.m_Config.m_WheelScale = RowExtent * RowsPerStep;
+			Policy.m_Config.m_WheelScale = RowExtent * RowsPerStep * StepScale;
 		break;
 	case EQmScrollProfile::SETTINGS_INNER:
 		// 卡片内部列表拥有独立滚动状态，但沿用统一的紧凑轨道语义。
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
 		if(RowExtent > 0.0f)
-			Policy.m_Config.m_WheelScale = RowExtent * RowsPerStep;
+			Policy.m_Config.m_WheelScale = RowExtent * RowsPerStep * StepScale;
 		break;
 	case EQmScrollProfile::POPUP_LIST:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
-		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * 3.0f : Policy.m_Config.m_WheelScale;
+		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * 3.0f * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_MaxVisibleItems = QM_POPUP_LIST_MAX_VISIBLE_ITEMS;
 		break;
 	case EQmScrollProfile::SETTINGS_GRID:
 	case EQmScrollProfile::GRID:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
-		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep : Policy.m_Config.m_WheelScale;
+		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_ContentDragAllowed = false;
 		break;
 	case EQmScrollProfile::FILTER_GRID:
 		Policy.m_Style = QmScrollContainerStyleForSize(EQmScrollSize::SMALL, UiScale);
-		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep : Policy.m_Config.m_WheelScale;
+		Policy.m_Config.m_WheelScale = RowExtent > 0.0f ? RowExtent * RowsPerStep * StepScale : Policy.m_Config.m_WheelScale;
 		Policy.m_RailVisibility = EQmScrollRailVisibility::HIDDEN;
 		Policy.m_ContentDragAllowed = false;
 		break;
@@ -310,7 +330,9 @@ void CQmScrollState::AddWheelImpulse(float WheelDelta, const SQmScrollMetrics &M
 		m_AnimTimeMax = AnimationTime;
 		m_AnimTime = AnimationTime;
 		// 首次滚动保持原三次 ease-out，后续滚轮事件继承当前速度，包括反向操作。
-		m_AnimStartVelocity = Continuing ? m_Velocity : (AnimationTime > 0.0f ? 3.0f * (TargetOffset - m_Offset) / AnimationTime : 0.0f);
+		// 原版手感（LegacyWheelFeel）：每档重置初速、不继承速度——连续滚动
+		// 每档重新起步（上游 DDNet 的可感知差异就在速度处理，距离两版相同）。
+		m_AnimStartVelocity = (Continuing && !Config.m_LegacyWheelFeel) ? m_Velocity : (AnimationTime > 0.0f ? 3.0f * (TargetOffset - m_Offset) / AnimationTime : 0.0f);
 		m_Velocity = m_AnimStartVelocity;
 		if(AnimationTime <= 0.0f || (!Continuing && std::abs(m_AnimStartOffset - m_AnimTargetOffset) < 0.5f))
 		{

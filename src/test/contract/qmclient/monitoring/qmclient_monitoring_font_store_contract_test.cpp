@@ -14,11 +14,15 @@ TEST(QmMonitoringFontStoreContract, PreviewFacesAreExcludedFromFamilyList)
 	const std::string Text = ReadRepoFile("src/engine/client/text.cpp");
 	const std::string UpdateListBody = ExtractSourceFunctionBody(Text, "void UpdateCustomFontList()");
 	const std::string EnsurePreviewBody = ExtractSourceFunctionBody(Text, "bool QmEnsurePreviewFace(const char *pFamily, const char *pFilePath) override");
+	const std::string LoadCollectionBody = ExtractSourceFunctionBody(Text, "bool LoadFontCollection(");
 	ASSERT_FALSE(UpdateListBody.empty());
 	ASSERT_FALSE(EnsurePreviewBody.empty());
+	ASSERT_FALSE(LoadCollectionBody.empty());
 
 	// 构建族列表时必须先排除预览 face，再走常规收集链。
 	EXPECT_NE(UpdateListBody.find("if(m_pGlyphMap->QmIsPreviewFace(CurrentFace))"), std::string::npos);
-	// 预览加载路径必须把新 face 标记为预览 face。
-	EXPECT_NE(EnsurePreviewBody.find("m_pGlyphMap->QmMarkPreviewFace(Face);"), std::string::npos);
+	// 预览加载路径必须把新 face 标记为预览 face：加载时设置预览路径，登记时
+	// 随 collection 一起标记（覆盖多 face 字体文件与异常回滚），不再逐 face 标记。
+	EXPECT_NE(EnsurePreviewBody.find("Options.m_pPreviewPath = Path.c_str();"), std::string::npos);
+	EXPECT_NE(LoadCollectionBody.find("m_pGlyphMap->AddFontCollection(vFaces, Options.m_pPreviewPath != nullptr);"), std::string::npos);
 }

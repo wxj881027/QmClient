@@ -8,11 +8,13 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
-void TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::initializer_list<const char *> pExpectedLines, bool ExpectSuccess, bool WriteBom, bool RejectInvalidLines = false)
+CLineReader::EOpenResult TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::initializer_list<const char *> pExpectedLines, bool ExpectSuccess, bool WriteBom, bool RejectInvalidLines = false)
 {
 	CTestInfo Info;
 	IOHANDLE File = io_open(Info.m_aFilename, IOFLAG_WRITE);
-	ASSERT_TRUE(File);
+	EXPECT_TRUE(File);
+	if(!File)
+		return CLineReader::EOpenResult::CANNOT_READ;
 	if(WriteBom)
 	{
 		constexpr const unsigned char UTF8_BOM[] = {0xEF, 0xBB, 0xBF};
@@ -23,26 +25,38 @@ void TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::in
 
 	CLineReader LineReader;
 	const bool ActualSuccess = LineReader.OpenFile(io_open(Info.m_aFilename, IOFLAG_READ), RejectInvalidLines);
-	ASSERT_EQ(ActualSuccess, ExpectSuccess);
+	EXPECT_EQ(ActualSuccess, ExpectSuccess);
 	if(ActualSuccess)
 	{
+		bool AllExpectedLinesRead = true;
 		for(const char *pExpectedLine : pExpectedLines)
 		{
 			const char *pActualLine = LineReader.Get();
-			ASSERT_TRUE(pActualLine) << "Line reader returned less lines than expected. Expected next line: '" << pExpectedLine << "'";
+			if(pActualLine == nullptr)
+			{
+				ADD_FAILURE() << "Line reader returned less lines than expected. Expected next line: '" << pExpectedLine << "'";
+				AllExpectedLinesRead = false;
+				break;
+			}
 			EXPECT_STREQ(pActualLine, pExpectedLine) << "Line reader returned unexpected line";
 		}
-		const char *pActualLastLine = LineReader.Get();
-		EXPECT_FALSE(pActualLastLine) << "Line reader returned more lines than expected. Unexpected last line: '" << pActualLastLine << "'";
+		if(AllExpectedLinesRead)
+		{
+			const char *pActualLastLine = LineReader.Get();
+			EXPECT_FALSE(pActualLastLine) << "Line reader returned more lines than expected. Unexpected last line: '" << pActualLastLine << "'";
+		}
 	}
+	const CLineReader::EOpenResult Result = LineReader.LastOpenResult();
 
 	EXPECT_FALSE(fs_remove(Info.m_aFilename));
+	return Result;
 }
 
-void TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::initializer_list<const char *> pReads, bool ExpectSuccess)
+CLineReader::EOpenResult TestFileLineReaderRaw(const char *pWritten, unsigned WrittenLength, std::initializer_list<const char *> pReads, bool ExpectSuccess)
 {
-	TestFileLineReaderRaw(pWritten, WrittenLength, pReads, ExpectSuccess, false);
+	const CLineReader::EOpenResult Result = TestFileLineReaderRaw(pWritten, WrittenLength, pReads, ExpectSuccess, false);
 	TestFileLineReaderRaw(pWritten, WrittenLength, pReads, ExpectSuccess, true);
+	return Result;
 }
 
 void TestFileLineReader(const char *pWritten, std::initializer_list<const char *> pReads)
@@ -106,10 +120,73 @@ TEST(LineReader, ControlCharacters)
 
 TEST(LineReader, NullBytes)
 {
-	// Line reader does not read any lines if the file contains null bytes
-	TestFileLineReaderRaw("foo\0\nbar\nbaz", 12, {}, false);
-	TestFileLineReaderRaw("foo\nbar\0\nbaz", 12, {}, false);
-	TestFileLineReaderRaw("foo\nbar\nbaz\0", 12, {}, false);
+	// 含 NUL 又不是 UTF-16 布局的文件整份拒绝，并报“编码不支持”而不是“打不开”。
+	EXPECT_EQ(TestFileLineReaderRaw("foo\0\nbar\nbaz", 12, {}, false, false), CLineReader::EOpenResult::UNSUPPORTED_ENCODING);
+	EXPECT_EQ(TestFileLineReaderRaw("foo\nbar\0\nbaz", 12, {}, false, false), CLineReader::EOpenResult::UNSUPPORTED_ENCODING);
+	EXPECT_EQ(TestFileLineReaderRaw("foo\nbar\nbaz\0", 12, {}, false, false), CLineReader::EOpenResult::UNSUPPORTED_ENCODING);
+}
+
+TEST(LineReader, MissingFileIsReportedAsUnreadable)
+{
+	CLineReader LineReader;
+	EXPECT_FALSE(LineReader.OpenFile(nullptr));
+	EXPECT_EQ(LineReader.LastOpenResult(), CLineReader::EOpenResult::CANNOT_READ);
+}
+
+TEST(LineReader, Utf16LittleEndianWithBomIsDecoded)
+{
+	// 记事本“Unicode”默认产物：FF FE + 小端码元。
+	const char aScript[] = "\xFF\xFE"
+			       "f\0o\0o\0\n\0b\0a\0r\0";
+	TestFileLineReaderRaw(aScript, sizeof(aScript) - 1, {"foo", "bar"}, true, false);
+}
+
+TEST(LineReader, Utf16BigEndianWithBomIsDecoded)
+{
+	const char aScript[] = "\xFE\xFF"
+			       "\0f\0o\0o\0\n\0b\0a\0r";
+	TestFileLineReaderRaw(aScript, sizeof(aScript) - 1, {"foo", "bar"}, true, false);
+}
+
+TEST(LineReader, Utf16WithoutBomIsDetectedFromNullBytes)
+{
+	// 不写 BOM 的小端 UTF-16 靠 NUL 分布识别。
+	const char aScript[] = "f\0o\0o\0\n\0b\0a\0r\0";
+	TestFileLineReaderRaw(aScript, sizeof(aScript) - 1, {"foo", "bar"}, true, false);
+}
+
+TEST(LineReader, Utf16SurrogatePairIsDecoded)
+{
+	// U+1D11E（𝄞）在 UTF-16 中是一对代理项，必须合并成一个码点。
+	const char aScript[] = "\xFF\xFE"
+			       "\x34\xD8\x1E\xDD";
+	TestFileLineReaderRaw(aScript, sizeof(aScript) - 1, {"\xF0\x9D\x84\x9E"}, true, false);
+}
+
+TEST(LineReader, Utf16UnpairedSurrogateBecomesReplacementCharacter)
+{
+	// 坏代理项换成 U+FFFD，行仍是合法 UTF-8，不整份拒绝。
+	const char aScript[] = "\xFF\xFE"
+			       "\x00\xD8"
+			       "o\0k\0";
+	TestFileLineReaderRaw(aScript, sizeof(aScript) - 1, {"\xEF\xBF\xBDok"}, true, false);
+}
+
+TEST(LineReader, Utf32BomIsRejectedAsUnsupportedEncoding)
+{
+	const char aLittleEndian[] = "\xFF\xFE\0\0"
+				     "f\0\0\0";
+	EXPECT_EQ(TestFileLineReaderRaw(aLittleEndian, sizeof(aLittleEndian) - 1, {}, false, false), CLineReader::EOpenResult::UNSUPPORTED_ENCODING);
+	const char aBigEndian[] = "\0\0\xFE\xFF"
+				  "\0\0\0f";
+	EXPECT_EQ(TestFileLineReaderRaw(aBigEndian, sizeof(aBigEndian) - 1, {}, false, false), CLineReader::EOpenResult::UNSUPPORTED_ENCODING);
+}
+
+TEST(LineReader, StrictLoadAcceptsUtf16Script)
+{
+	const char aScript[] = "\xFF\xFE"
+			       "f\0o\0o\0\n\0b\0a\0r\0";
+	TestFileLineReaderRaw(aScript, sizeof(aScript) - 1, {"foo", "bar"}, true, false, true);
 }
 
 TEST(LineReader, StrictLoadRejectsInvalidUtf8BeforeReadingValidPrefix)

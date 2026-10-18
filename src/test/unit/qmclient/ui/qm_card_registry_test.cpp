@@ -503,46 +503,6 @@ TEST(QmCardRegistry, PlayerStandardPageCardsPersistInVisualOrder)
 		(std::vector<std::string>{"deck:player-country"}));
 }
 
-TEST(QmCardRegistry, LegacyMergedFunctionalCardMigratesOnlyOldDefaultGroup)
-{
-	const std::vector<qm_card_order::SEntry> vLegacyLayout = {
-		{"deck:tclient-profiles-actions", "tclient-profiles", 0, 0},
-		{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-		{"deck:tclient-profiles-list", "tclient-profiles", 1, 0},
-	};
-	const std::vector<qm_card_order::SEntry> vTargetLayout = {
-		{"deck:tclient-profiles-actions", "tclient-profiles", 1, 0},
-		{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-		{"deck:tclient-profiles-list", "tclient-profiles", 1, 1},
-	};
-	const std::vector<const char *> vAllowedIds = {
-		"deck:tclient-profiles-actions",
-		"deck:tclient-profiles-options",
-		"deck:tclient-profiles-list",
-	};
-	const auto vDefaults = qm_card_registry::BuildDefaultEntries();
-	qm_card_order::CModel Model;
-	const char *pLegacySerialized = "deck:tclient-profiles-actions|tclient-profiles|full|0;";
-	Model.LoadMerged(pLegacySerialized, vDefaults);
-
-	EXPECT_EQ(qm_card_order::ClassifyExplicitLayout(pLegacySerialized, vLegacyLayout, {"deck:tclient-profiles-actions"}), qm_card_order::EExplicitLayoutStatus::MATCH);
-	EXPECT_TRUE(qm_card_order::MigrateExactLayout(Model, "tclient-profiles", vLegacyLayout, vTargetLayout, vAllowedIds));
-	const auto &Entry = Model.Entry(Model.FindByStableId("deck:tclient-profiles-actions"));
-	EXPECT_EQ(Entry.m_Column, 1);
-	EXPECT_EQ(Entry.m_OrderInColumn, 0);
-	EXPECT_EQ(Model.StableIdOrder("deck:", "tclient-profiles", 1),
-		(std::vector<std::string>{"deck:tclient-profiles-actions", "deck:tclient-profiles-list"}));
-	EXPECT_EQ(Model.StableIdOrder("deck:", "tclient-profiles", 2),
-		(std::vector<std::string>{"deck:tclient-profiles-options"}));
-
-	qm_card_order::CModel CustomizedModel;
-	const char *pCustomizedSerialized = "deck:tclient-profiles-actions|tclient-profiles|right|0;";
-	CustomizedModel.LoadMerged(pCustomizedSerialized, vDefaults);
-	EXPECT_EQ(qm_card_order::ClassifyExplicitLayout(pCustomizedSerialized, vLegacyLayout, {"deck:tclient-profiles-actions"}), qm_card_order::EExplicitLayoutStatus::NOT_MATCH);
-	EXPECT_FALSE(qm_card_order::MigrateExactLayout(CustomizedModel, "tclient-profiles", vLegacyLayout, vTargetLayout, vAllowedIds));
-	EXPECT_EQ(CustomizedModel.Entry(CustomizedModel.FindByStableId("deck:tclient-profiles-actions")).m_Column, 2);
-}
-
 TEST(QmCardRegistry, LegacyGroupMigrationRejectsExtraCardInTargetTab)
 {
 	const std::vector<qm_card_order::SEntry> vLegacyDefaults = {
@@ -574,44 +534,6 @@ TEST(QmCardRegistry, LegacyGroupMigrationRejectsExtraCardInTargetTab)
 	EXPECT_EQ(Model.LayoutRevision(), Revision);
 	EXPECT_EQ(Model.StableIdOrder("deck:", "tclient-status-bar", 2),
 		(std::vector<std::string>{"deck:external"}));
-}
-
-TEST(QmCardRegistry, ExactProfileMigrationRejectsCustomizedCompanionCard)
-{
-	const std::vector<qm_card_order::SEntry> vLegacyLayout = {
-		{"deck:tclient-profiles-actions", "tclient-profiles", 0, 0},
-		{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-		{"deck:tclient-profiles-list", "tclient-profiles", 1, 0},
-	};
-	const std::vector<qm_card_order::SEntry> vTargetLayout = {
-		{"deck:tclient-profiles-actions", "tclient-profiles", 1, 0},
-		{"deck:tclient-profiles-options", "tclient-profiles", 2, 0},
-		{"deck:tclient-profiles-list", "tclient-profiles", 1, 1},
-	};
-	const std::vector<const char *> vAllowedIds = {
-		"deck:tclient-profiles-actions",
-		"deck:tclient-profiles-options",
-		"deck:tclient-profiles-list",
-	};
-	qm_card_order::CModel Customized;
-	Customized.SetEntries(vLegacyLayout);
-	Customized.MoveToTab("deck:tclient-profiles-options", "tclient-profiles", 1, 0);
-	const uint64_t Revision = Customized.LayoutRevision();
-	const auto BeforeLeft = Customized.StableIdOrder("deck:", "tclient-profiles", 1);
-	const auto BeforeRight = Customized.StableIdOrder("deck:", "tclient-profiles", 2);
-
-	EXPECT_FALSE(qm_card_order::MigrateExactLayout(Customized, "tclient-profiles", vLegacyLayout, vTargetLayout, vAllowedIds));
-	EXPECT_EQ(Customized.LayoutRevision(), Revision);
-	EXPECT_EQ(Customized.StableIdOrder("deck:", "tclient-profiles", 1), BeforeLeft);
-	EXPECT_EQ(Customized.StableIdOrder("deck:", "tclient-profiles", 2), BeforeRight);
-
-	qm_card_order::CModel Legacy;
-	Legacy.SetEntries(vLegacyLayout);
-	EXPECT_TRUE(qm_card_order::MigrateExactLayout(Legacy, "tclient-profiles", vLegacyLayout, vTargetLayout, vAllowedIds));
-	EXPECT_EQ(Legacy.StableIdOrder("deck:", "tclient-profiles", 1),
-		(std::vector<std::string>{"deck:tclient-profiles-actions", "deck:tclient-profiles-list"}));
-	EXPECT_EQ(Legacy.StableIdOrder("deck:", "tclient-profiles", 2),
-		(std::vector<std::string>{"deck:tclient-profiles-options"}));
 }
 
 TEST(QmCardRegistry, ExplicitLayoutClassificationRejectsMissingRequiredAndDuplicateIds)
@@ -847,9 +769,7 @@ TEST(QmCardRegistry, GlobalCardOrderSurvivesFreshConfigManagerReload)
 	CustomizedModel.Move("deck:tee-skin-list", 0, 0);
 	CustomizedModel.Move("deck:tclient-status-bar-settings", 2, 0);
 	CustomizedModel.Move("deck:tclient-status-bar-preview", 2, 1);
-	CustomizedModel.Move("deck:tclient-profiles-actions", 2, 0);
-	CustomizedModel.Move("deck:tclient-profiles-options", 1, 0);
-	CustomizedModel.Move("deck:tclient-profiles-list", 2, 1);
+	CustomizedModel.Move("deck:tclient-profiles", 2, 0);
 	char aCustomizedSerialized[sizeof(g_Config.m_QmGlobalCardOrder)];
 	ASSERT_TRUE(CustomizedModel.Serialize(aCustomizedSerialized, sizeof(aCustomizedSerialized)));
 	const char *pExpected = aCustomizedSerialized;
@@ -888,8 +808,8 @@ TEST(QmCardRegistry, GlobalCardOrderSurvivesFreshConfigManagerReload)
 		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tee", 2), (std::vector<std::string>{"deck:tee-skin-queue", "deck:tee-glow"}));
 		EXPECT_TRUE(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 1).empty());
 		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-status-bar", 2), (std::vector<std::string>{"deck:tclient-status-bar-settings", "deck:tclient-status-bar-preview"}));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-profiles", 1), (std::vector<std::string>{"deck:tclient-profiles-options"}));
-		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-profiles", 2), (std::vector<std::string>{"deck:tclient-profiles-actions", "deck:tclient-profiles-list"}));
+		EXPECT_TRUE(Reloaded.StableIdOrder("deck:", "tclient-profiles", 1).empty());
+		EXPECT_EQ(Reloaded.StableIdOrder("deck:", "tclient-profiles", 2), (std::vector<std::string>{"deck:tclient-profiles"}));
 	}
 }
 

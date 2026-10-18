@@ -6,7 +6,12 @@ namespace
 {
 	void Observe(CQmGoresDrownTracker &Tracker, int ClientId, bool Frozen, bool Hooking = false, int Team = 1, bool IncludeTeamZero = true)
 	{
-		Tracker.Observe(ClientId, true, "player", "clan", Team, true, Frozen, Hooking, IncludeTeamZero);
+		Tracker.Observe(ClientId, true, "player", "clan", Team, true, Frozen, Hooking, false, IncludeTeamZero);
+	}
+
+	void ObserveOnStart(CQmGoresDrownTracker &Tracker, int ClientId, int Team = 1)
+	{
+		Tracker.Observe(ClientId, true, "player", "clan", Team, true, false, false, true, true);
 	}
 }
 
@@ -159,12 +164,113 @@ TEST(QmGoresDrownTracker, ChangingDdraceTeamStartsNewCount)
 	EXPECT_EQ(Tracker.Count(1), 1);
 }
 
+TEST(QmGoresDrownTracker, EnteringAndStayingOnStartPreservesCount)
+{
+	CQmGoresDrownTracker Tracker;
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, true);
+	ASSERT_EQ(Tracker.Count(1), 1);
+	ObserveOnStart(Tracker, 1);
+	EXPECT_EQ(Tracker.Count(1), 1);
+	ObserveOnStart(Tracker, 1);
+	EXPECT_EQ(Tracker.Count(1), 1);
+}
+
+TEST(QmGoresDrownTracker, LeavingStartClearsOnlyThatPlayersCount)
+{
+	for(int Team : {static_cast<int>(TEAM_FLOCK), 1})
+	{
+		SCOPED_TRACE(Team);
+		CQmGoresDrownTracker Tracker;
+		Observe(Tracker, 1, false, false, Team);
+		Observe(Tracker, 2, false, false, Team);
+		Observe(Tracker, 1, true, false, Team);
+		Observe(Tracker, 2, true, false, Team);
+		ASSERT_EQ(Tracker.Count(1), 1);
+		ASSERT_EQ(Tracker.Count(2), 1);
+		ObserveOnStart(Tracker, 1, Team);
+		Observe(Tracker, 1, false, false, Team);
+		EXPECT_EQ(Tracker.Count(1), 0);
+		EXPECT_EQ(Tracker.Count(2), 1);
+	}
+}
+
+TEST(QmGoresDrownTracker, FirstFallAfterLeavingStartCountsWithoutNewHook)
+{
+	CQmGoresDrownTracker Tracker;
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, true);
+	ObserveOnStart(Tracker, 1);
+	Observe(Tracker, 1, false);
+	ASSERT_EQ(Tracker.Count(1), 0);
+	Observe(Tracker, 1, true);
+	EXPECT_EQ(Tracker.Count(1), 1);
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, true);
+	EXPECT_EQ(Tracker.Count(1), 1);
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, false, true);
+	Observe(Tracker, 1, true);
+	EXPECT_EQ(Tracker.Count(1), 2);
+}
+
+TEST(QmGoresDrownTracker, LeavingStartWhileFrozenEstablishesNewBaseline)
+{
+	CQmGoresDrownTracker Tracker;
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, true);
+	ASSERT_EQ(Tracker.Count(1), 1);
+	ObserveOnStart(Tracker, 1);
+	Observe(Tracker, 1, true);
+	EXPECT_EQ(Tracker.Count(1), 0);
+	Observe(Tracker, 1, true);
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, true);
+	EXPECT_EQ(Tracker.Count(1), 0);
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, false, true);
+	Observe(Tracker, 1, true);
+	EXPECT_EQ(Tracker.Count(1), 1);
+}
+
+TEST(QmGoresDrownTracker, ReturningToStartClearsCountOnlyOnNextDeparture)
+{
+	CQmGoresDrownTracker Tracker;
+	ObserveOnStart(Tracker, 1);
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, true);
+	ASSERT_EQ(Tracker.Count(1), 1);
+	Observe(Tracker, 1, true);
+	EXPECT_EQ(Tracker.Count(1), 1);
+	ObserveOnStart(Tracker, 1);
+	EXPECT_EQ(Tracker.Count(1), 1);
+	Observe(Tracker, 1, false);
+	EXPECT_EQ(Tracker.Count(1), 0);
+	Observe(Tracker, 1, true);
+	EXPECT_EQ(Tracker.Count(1), 1);
+}
+
+TEST(QmGoresDrownTracker, MissingCharacterDoesNotImplyLeavingStart)
+{
+	CQmGoresDrownTracker Tracker;
+	Observe(Tracker, 1, false);
+	Observe(Tracker, 1, true);
+	ObserveOnStart(Tracker, 1);
+	Tracker.Observe(1, true, "player", "clan", 1, false, false, false, false, true);
+	EXPECT_EQ(Tracker.Count(1), 1);
+	Observe(Tracker, 1, false);
+	EXPECT_EQ(Tracker.Count(1), 1);
+	ObserveOnStart(Tracker, 1);
+	Observe(Tracker, 1, false);
+	EXPECT_EQ(Tracker.Count(1), 0);
+}
+
 TEST(QmGoresDrownTracker, ReusedClientIdCannotInheritDepartedPlayersCount)
 {
 	CQmGoresDrownTracker Tracker;
 	Observe(Tracker, 1, false);
 	Observe(Tracker, 1, true);
-	Tracker.Observe(1, false, "player", "clan", 1, false, false, false, true);
+	Tracker.Observe(1, false, "player", "clan", 1, false, false, false, false, true);
 	Observe(Tracker, 1, true);
 	EXPECT_EQ(Tracker.Count(1), 0);
 }
@@ -174,7 +280,7 @@ TEST(QmGoresDrownTracker, IdentityChangeCannotInheritPreviousCount)
 	CQmGoresDrownTracker Tracker;
 	Observe(Tracker, 1, false);
 	Observe(Tracker, 1, true);
-	Tracker.Observe(1, true, "replacement", "clan", 1, true, true, false, true);
+	Tracker.Observe(1, true, "replacement", "clan", 1, true, true, false, false, true);
 	EXPECT_EQ(Tracker.Count(1), 0);
 }
 
@@ -183,7 +289,7 @@ TEST(QmGoresDrownTracker, MissingCharacterKeepsCountAndRebuildsFreezeBaseline)
 	CQmGoresDrownTracker Tracker;
 	Observe(Tracker, 1, false);
 	Observe(Tracker, 1, true);
-	Tracker.Observe(1, true, "player", "clan", 1, false, false, false, true);
+	Tracker.Observe(1, true, "player", "clan", 1, false, false, false, false, true);
 	EXPECT_EQ(Tracker.Count(1), 1);
 	Observe(Tracker, 1, true);
 	Observe(Tracker, 1, false);

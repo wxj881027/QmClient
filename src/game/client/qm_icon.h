@@ -58,6 +58,54 @@ inline float QmIconFontSize(const CUIRect &Rect)
 	return std::min(Rect.w, Rect.h) * 0.8f;
 }
 
+// Phosphor cell-signal 家族的字形 bbox 实测 em 占比（upm=1024，fontTools 度量）：
+// HIGH 0.56 / MEDIUM 0.41 / LOW 0.25 / NONE 0.09。信号柱家族本体远小于
+// USERS(约 0.8) 等常规图标，按同一字号绘制时视觉尺寸逐档塌缩（NONE 只剩
+// 一个小点）。
+// 用户校准（两档观感最好）：以 LOW 档的补偿倍数 2.0 为基准放大整组，
+// 四档字号一致 → 柱线粗细完全一致，视觉高度恢复字形本来的阶梯比例
+// （四格最高、逐档变矮，与系统状态栏信号一致）。放大后 HIGH 视觉高度
+// 2.0×0.56=1.12 方框占比，超出方框部分被 TEXTALIGN_MC 居中裁出——
+// 需要同时把方框加大，由调用方（灵动岛状态区占位）按 HIGH 档实际
+// 视觉高度给足空间。
+// 非信号家族图标不受补偿影响，返回与 QmIconFontSize 一致的字号。
+inline bool QmSignalIconFamily(EQmIcon Icon)
+{
+	switch(Icon)
+	{
+	case EQmIcon::CELL_SIGNAL_HIGH:
+	case EQmIcon::CELL_SIGNAL_MEDIUM:
+	case EQmIcon::CELL_SIGNAL_LOW:
+	case EQmIcon::CELL_SIGNAL_NONE: return true;
+	default: return false;
+	}
+}
+
+inline float QmSignalIconAmplification()
+{
+	// 用户校准：整组 1.5×。四档同字号 → 柱线粗细一致，最高档墨迹高度
+	// 1.5×0.5625=0.844 方框字号，四档墨迹全部留在占位方框内
+	// （占位方框取灵动岛胶囊 0.7 高，见 hud_media_island_logic.h），
+	// 垂直居中天然对称、切换不跳。1.15× 实测在胶囊里偏小（用户反馈）。
+	constexpr float Amplification = 1.5f;
+	return Amplification;
+}
+
+inline float QmSignalIconFontSize(const CUIRect &Rect, EQmIcon Icon)
+{
+	if(!QmSignalIconFamily(Icon))
+		return QmIconFontSize(Rect);
+	return QmIconFontSize(Rect) * QmSignalIconAmplification();
+}
+
+// HIGH 档在整组统一放大后的实际视觉高度（字号的 bbox 占比），
+// 调用方用它决定占位方框边长，避免放大后的字形超出方框被误解。
+inline float QmSignalIconMaxVisualSize(float IconSlotSize)
+{
+	// 最高档（HIGH）字形的墨迹视觉高度 = 统一字号 × bbox 高占比。
+	return QmSignalIconAmplification() * 0.5625f * QmIconFontSize(CUIRect{0, 0, IconSlotSize, IconSlotSize});
+}
+
 inline ColorRGBA QmUiIconColor(const ColorRGBA &Color, const int ConfiguredColor, const unsigned int CustomColor = 0xFFFFFFFF, const double RainbowTime = 0.0)
 {
 	ColorRGBA Result;
@@ -109,6 +157,34 @@ public:
 inline bool QmUiIconHasSemanticColor(EQmIcon Icon)
 {
 	return Icon == EQmIcon::HEART || Icon == EQmIcon::STAR;
+}
+
+// 连接质量图标颜色模式：档位语义色 / 跟随全局图标色 / 自定义色。
+inline constexpr int QM_SIGNAL_COLOR_QUALITY = 1;
+inline constexpr int QM_SIGNAL_COLOR_GLOBAL = 2;
+inline constexpr int QM_SIGNAL_COLOR_CUSTOM = 3;
+
+inline int QmSignalIconColorMode()
+{
+	const int Mode = g_Config.m_QmHudIslandSignalColorMode;
+	return Mode >= QM_SIGNAL_COLOR_QUALITY && Mode <= QM_SIGNAL_COLOR_CUSTOM ? Mode : QM_SIGNAL_COLOR_QUALITY;
+}
+
+// 连接质量图标的最终颜色由调用者按网络档位传入（hud.cpp 的
+// HudConnectionQualityColor），此处只决定"是否采用"：档位模式保留
+// 调用方颜色；全局/自定义模式替换 RGB、沿用调用方 alpha。
+// 采用 friend/favorite 同款"配置驱动语义色"模式，独立于全局图标色。
+inline ColorRGBA ConfiguredQmSignalIconColor(const ColorRGBA &QualityColor, const ColorRGBA &CallerColor)
+{
+	switch(QmSignalIconColorMode())
+	{
+	case QM_SIGNAL_COLOR_CUSTOM:
+		return color_cast<ColorRGBA>(ColorHSLA(g_Config.m_QmHudIslandSignalColor)).WithAlpha(QualityColor.a);
+	case QM_SIGNAL_COLOR_GLOBAL:
+		return QmUiIconColor(QualityColor, qm_icon_settings::CustomColorEnabled(g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColorEnabled) ? 3 : g_Config.m_QmUiIconColor, g_Config.m_QmUiIconCustomColor, CQmIconFrameColorClock::Time());
+	default:
+		return QualityColor;
+	}
 }
 
 // 语义图标实心态：两个开关彼此独立，互不影响；其余图标不受控。
