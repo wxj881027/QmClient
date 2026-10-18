@@ -3340,14 +3340,21 @@ void CTClient::UpdateGoresDrownCounts()
 	if(!IsGores)
 		return;
 
+	const CCollision *pCollision = Collision();
 	for(int ClientId = 0; ClientId < MAX_CLIENTS; ++ClientId)
 	{
 		const auto &Player = GameClient()->m_aClients[ClientId];
 		const auto &Character = GameClient()->m_Snap.m_aCharacters[ClientId];
 		const bool Active = Player.m_Active && GameClient()->m_Snap.m_apPlayerInfos[ClientId] != nullptr;
 		const bool Hooking = Character.m_Active && (Character.m_Cur.m_HookState == HOOK_FLYING || Character.m_Cur.m_HookState == HOOK_GRABBED);
+		bool OnStart = false;
+		if(Active && Character.m_Active)
+		{
+			const int Index = pCollision->GetPureMapIndex(vec2((float)Character.m_Cur.m_X, (float)Character.m_Cur.m_Y));
+			OnStart = pCollision->GetTileIndex(Index) == TILE_START || pCollision->GetFrontTileIndex(Index) == TILE_START;
+		}
 		m_GoresDrownTracker.Observe(ClientId, Active, Player.m_aName, Player.m_aClan, GameClient()->m_Teams.Team(ClientId),
-			Character.m_Active, Player.m_FreezeEnd != 0, Hooking, g_Config.m_QmGoresDrownBoardIncludeTeam0 != 0);
+			Character.m_Active, Player.m_FreezeEnd != 0, Hooking, OnStart, g_Config.m_QmGoresDrownBoardIncludeTeam0 != 0);
 	}
 }
 
