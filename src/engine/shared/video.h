@@ -24,6 +24,18 @@ public:
 	virtual void NextAudioFrame(ISoundMixFunc Mix) = 0;
 	virtual void NextAudioFrameTimeline(ISoundMixFunc Mix) = 0;
 
+	// 最近一次 Stop() 的最终结果（对象在 Stop 内自删除，调用方只能静态查询）：
+	// Stop 会排空编码器、写 trailer 并关闭文件，这些都可能失败；HasError() 在
+	// Stop() 之前只覆盖录制期错误，收尾失败由此闭锁在 Stop 完成后暴露。
+	// 读取语义：TakeStopResult 清零并返回上一值，保证一次收尾只消费一次。
+	static bool LastStopFailed() { return ms_LastStopFailed; }
+	static bool TakeStopResult()
+	{
+		const bool Failed = ms_LastStopFailed;
+		ms_LastStopFailed = false;
+		return Failed;
+	}
+
 	static IVideo *Current() { return ms_pCurrentVideo; }
 
 	static int64_t Time() { return ms_Time; }
@@ -33,6 +45,7 @@ public:
 
 protected:
 	static IVideo *ms_pCurrentVideo;
+	static bool ms_LastStopFailed;
 	static int64_t ms_Time;
 	static int64_t ms_LocalStartTime;
 	static float ms_LocalTime;

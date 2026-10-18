@@ -11,6 +11,7 @@
 #include <base/hash.h>
 #include <base/system.h>
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -66,6 +67,10 @@ public:
 	bool SaveProgress(const char *pProgressPath) const;
 
 	void MarkSegmentDone(int SegmentIndex) { m_vSegments[SegmentIndex].m_Done = true; }
+	// 续渲恢复：把已完成但段文件已缺失/无效的段重新置为待渲染。
+	// pResolvePath 按段逻辑路径（如 "videos/name_p001"，无扩展名）返回用于
+	// libavformat 打开的绝对路径（调用方拼容器扩展名），空值视为缺失。
+	void RestoreMissingDoneSegments(const std::function<const char *(const char *)> &pResolvePath);
 
 	// 状态机驱动（由 CClient 在 demo 播放推进时调用）。
 	// 返回请求的动作，录像生命周期调用由 CClient 执行：

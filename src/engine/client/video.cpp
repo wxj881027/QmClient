@@ -356,8 +356,13 @@ void CVideo::Stop()
 		FinishFrames(&m_VideoStream);
 		if(m_HasAudio)
 			FinishFrames(&m_AudioStream);
-		if(m_pFormatContext)
-			av_write_trailer(m_pFormatContext);
+		// 排空失败同样可能留下无 trailer 的截断文件；失败必须显式落锁，供停录方
+		// 区分"正常收尾"与"收尾期错误"（错误段不得被记成已完成）。
+		if(m_pFormatContext && av_write_trailer(m_pFormatContext) < 0)
+		{
+			log_error("videorecorder", "Could not write trailer; output may be truncated");
+			m_EncodeError.store(true, std::memory_order_release);
+		}
 	}
 
 	CloseStream(&m_VideoStream);
@@ -368,10 +373,21 @@ void CVideo::Stop()
 	if(m_pFormatContext)
 	{
 		if(!(m_pFormat->flags & AVFMT_NOFILE))
-			avio_closep(&m_pFormatContext->pb);
+		{
+			// 关闭输出失败同样意味着文件不完整（缓冲未落盘），按收尾失败处理。
+			if(avio_closep(&m_pFormatContext->pb) < 0)
+			{
+				log_error("videorecorder", "Could not close output file; output may be incomplete");
+				m_EncodeError.store(true, std::memory_order_release);
+			}
+		}
 
 		avformat_free_context(m_pFormatContext);
 	}
+
+	// HasError() 此时已含录制期 + 排空/trailer/关闭的全部失败；Stop 即将自删除，
+	// 结果闭锁给调用方（分段收尾据此决定是否把该段记为完成）。
+	IVideo::ms_LastStopFailed = HasError();
 
 	ISound *volatile pSound = m_pSound;
 

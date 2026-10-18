@@ -165,6 +165,32 @@ bool CVideoExportTask::LoadProgress(const char *pProgressPath)
 	return true;
 }
 
+// 续渲恢复：进度文件里的"已完成"只是记录，段文件可能已被删除或损坏。
+// 回调按段逻辑路径（"videos/<name>_pNNN"，无扩展名）返回用于 libavformat 打开的
+// 绝对路径（调用方负责拼容器扩展名并锚定为绝对路径），空值表示无法定位（视为缺失）。
+// 重置为待渲染后，续渲会重录该段并覆盖进度；不校验的话同名续渲永远跳过缺失段，拼接必失败。
+void CVideoExportTask::RestoreMissingDoneSegments(const std::function<const char *(const char *)> &pResolvePath)
+{
+	int Restored = 0;
+	for(size_t i = 0; i < m_vSegments.size(); ++i)
+	{
+		if(!m_vSegments[i].m_Done)
+			continue;
+		char aSegmentName[IO_MAX_PATH_LENGTH];
+		SegmentFilename(i, aSegmentName, sizeof(aSegmentName));
+		char aLogical[IO_MAX_PATH_LENGTH];
+		str_format(aLogical, sizeof(aLogical), "videos/%s", aSegmentName);
+		const char *pWholePath = pResolvePath ? pResolvePath(aLogical) : nullptr;
+		if(!pWholePath || !pWholePath[0] || !VerifySegmentFile(pWholePath))
+		{
+			m_vSegments[i].m_Done = false;
+			++Restored;
+		}
+	}
+	if(Restored > 0)
+		log_info("video_export", "%d previously finished segment(s) missing or unreadable; re-rendering them on resume.", Restored);
+}
+
 bool CVideoExportTask::SaveProgress(const char *pProgressPath) const
 {
 	IOHANDLE File = io_open(pProgressPath, IOFLAG_WRITE);

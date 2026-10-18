@@ -5161,34 +5161,8 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 				}
 			}
 
-			if(m_DemoRenderEncoder.IsEmpty())
-				m_DemoRenderEncoder.Set(g_Config.m_QmVideoEncoder);
-			if(m_DemoRenderQuality.IsEmpty() && g_Config.m_QmVideoQuality >= 0)
-			{
-				char aQuality[8];
-				str_format(aQuality, sizeof(aQuality), "%d", g_Config.m_QmVideoQuality);
-				m_DemoRenderQuality.Set(aQuality);
-			}
-			// 输出分辨率（M7 超采样）：配置为 0（跟随窗口）时输入框留空
-			if(m_DemoRenderOutputWidth.IsEmpty() && g_Config.m_QmVideoWidth > 0)
-			{
-				char aRes[8];
-				str_format(aRes, sizeof(aRes), "%d", g_Config.m_QmVideoWidth);
-				m_DemoRenderOutputWidth.Set(aRes);
-			}
-			if(m_DemoRenderOutputHeight.IsEmpty() && g_Config.m_QmVideoHeight > 0)
-			{
-				char aRes[8];
-				str_format(aRes, sizeof(aRes), "%d", g_Config.m_QmVideoHeight);
-				m_DemoRenderOutputHeight.Set(aRes);
-			}
-			// 关键帧间隔（M9 UI）：qm_video_gop 为 0（编码器默认）时输入框显示 60 提示值
-			if(m_DemoRenderGop.IsEmpty())
-			{
-				char aGop[8];
-				str_format(aGop, sizeof(aGop), "%d", g_Config.m_QmVideoGop > 0 ? g_Config.m_QmVideoGop : 60);
-				m_DemoRenderGop.Set(aGop);
-			}
+			// 编码器/质量/容器/分辨率/GOP 初值由 InitDemoRenderInputs 在弹窗打开时填一次；
+			// 此处不回填，保证用户清空输入能真正恢复默认（空 = Ok 时沿用默认配置）。
 
 			static const std::vector<video_encoder::SProbeResult> &s_vProbed = video_encoder::ProbeEncoders();
 			static CUi::SDropDownState s_EncoderDropDownState;
@@ -5756,6 +5730,42 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	if(m_Popup == POPUP_NONE)
 		Ui()->SetActiveItem(nullptr);
 }
+
+#if defined(CONF_VIDEORECORDER)
+void CMenus::InitDemoRenderInputs()
+{
+	// 只在弹窗打开时调用一次：把当前配置回填为输入初值。此后输入框完全由用户
+	// 控制（清空 = Ok 时沿用默认），不每帧回填，否则清空会被旧配置值弹回。
+	if(m_DemoRenderEncoder.IsEmpty())
+		m_DemoRenderEncoder.Set(g_Config.m_QmVideoEncoder);
+	if(m_DemoRenderContainer.IsEmpty())
+		m_DemoRenderContainer.Set("mp4");
+	if(m_DemoRenderQuality.IsEmpty() && g_Config.m_QmVideoQuality >= 0)
+	{
+		char aQuality[8];
+		str_format(aQuality, sizeof(aQuality), "%d", g_Config.m_QmVideoQuality);
+		m_DemoRenderQuality.Set(aQuality);
+	}
+	if(m_DemoRenderOutputWidth.IsEmpty() && g_Config.m_QmVideoWidth > 0)
+	{
+		char aRes[8];
+		str_format(aRes, sizeof(aRes), "%d", g_Config.m_QmVideoWidth);
+		m_DemoRenderOutputWidth.Set(aRes);
+	}
+	if(m_DemoRenderOutputHeight.IsEmpty() && g_Config.m_QmVideoHeight > 0)
+	{
+		char aRes[8];
+		str_format(aRes, sizeof(aRes), "%d", g_Config.m_QmVideoHeight);
+		m_DemoRenderOutputHeight.Set(aRes);
+	}
+	if(m_DemoRenderGop.IsEmpty())
+	{
+		char aGop[8];
+		str_format(aGop, sizeof(aGop), "%d", g_Config.m_QmVideoGop > 0 ? g_Config.m_QmVideoGop : 60);
+		m_DemoRenderGop.Set(aGop);
+	}
+}
+#endif
 
 void CMenus::RenderPopupConnecting(CUIRect Screen)
 {

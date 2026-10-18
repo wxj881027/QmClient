@@ -3842,9 +3842,14 @@ void CClient::Update()
 		else
 		{
 #if defined(CONF_VIDEORECORDER)
-			// demo 自然结束：最后一段已由 CDemoPlayer::Stop 自动停录收尾，验证并拼接后清理任务
+			// demo 自然结束路径的停录发生在 CDemoPlayer::Stop 内部（同样走 IVideo::Stop）：
+			// 闭锁同样被置位，这里消费掉并把结果传给任务，防止错误段被记成已完成。
 			if(m_pVideoExportTask && m_pVideoExportTask->Active())
+			{
+				if(IVideo::TakeStopResult())
+					m_pVideoExportTask->MarkSegmentRecordingFailed();
 				FinishSegmentedExport();
+			}
 			CancelSegmentedVideoExport();
 #endif
 			// Disconnect when demo playback stopped, either due to playback error
@@ -5219,6 +5224,19 @@ bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp,
 		qmclient::media_paths::Resolve(Storage(), g_Config, aProgress));
 	pTask->LoadProgress(ProgressPath.c_str()); // 失败/不匹配时保留默认（全部未完成）
 
+	// 已完成段逐一核对段文件：进度只是记录，文件可能被用户删除或损坏；
+	// 缺失/无效的段重置为待渲染，避免同名续渲永远跳过缺失段后在拼接时报错。
+	// 回调把无扩展名的段逻辑路径锚定为绝对路径并补上容器扩展名。
+	pTask->RestoreMissingDoneSegments([this](const char *pLogicalPath) -> const char * {
+		static char aWhole[IO_MAX_PATH_LENGTH];
+		char aWithExt[IO_MAX_PATH_LENGTH];
+		str_format(aWithExt, sizeof(aWithExt), "%s.%s", pLogicalPath, ContainerName());
+		const std::string Whole = qmclient::media_paths::CompletePath(Storage(),
+			qmclient::media_paths::Resolve(Storage(), g_Config, aWithExt));
+		str_copy(aWhole, Whole.c_str(), sizeof(aWhole));
+		return Whole.empty() ? nullptr : aWhole;
+	});
+
 	const int Pending = pTask->NextPendingSegment();
 	if(Pending < 0)
 	{
@@ -5422,9 +5440,13 @@ void CClient::DriveSegmentedExport(int CurrentTick)
 	}
 	case CVideoExportTask::ACT_STOP_RECORD:
 	{
-		// 停止录像收尾；若 demo 恰好自然结束，CDemoPlayer::Stop 已停录，此处跳过
+		// 停止录像收尾；若 demo 恰好自然结束，CDemoPlayer::Stop 已停录，此处跳过。
+		// Stop() 内部才排空编码器并写 trailer，且会自删除对象：最终结果只能经静态
+		// 闭锁读取（TakeStopResult 消费一次），否则错误段会被收尾记成已完成。
 		if(IVideo::Current())
 			IVideo::Current()->Stop();
+		if(IVideo::TakeStopResult())
+			pTask->MarkSegmentRecordingFailed();
 		FinishSegmentedExport();
 		break;
 	}
@@ -5824,8 +5846,10 @@ const char *CClient::DemoPlayer_Render(const char *pFilename, int StorageType, c
 	if(pError)
 		return pError;
 
-	// 分段渲染启用时交给任务状态机（首段在预热后自动开录）；单段/禁用时回退整段导出
-	if(g_Config.m_QmVideoSegmentSeconds > 0 && StartSegmentedVideoExport(pVideoName, false, RangeStartSec, RangeEndSec))
+	// 分段渲染启用时交给任务状态机（首段在预热后自动开录）；单段/禁用时回退整段导出。
+	// 指定了 Range 时即使段长为 0 也走任务状态机，与控制台 start_video 入口同策略：
+	// 否则弹窗里填起止秒 + 段长 0 会被静默整段导出，区间失效。
+	if((g_Config.m_QmVideoSegmentSeconds > 0 || RangeStartSec >= 0.0f) && StartSegmentedVideoExport(pVideoName, false, RangeStartSec, RangeEndSec))
 	{
 		m_DemoPlayer.SetSpeedIndex(SpeedIndex);
 		if(StartPaused)

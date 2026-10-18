@@ -1850,6 +1850,9 @@ protected:
 	// 预设选择（M6）：本会话（弹窗开→关）内的下拉状态，-1 = 未动过（跟随 qm_video_preset）。
 	// 仅确认导出时落盘；手动改编码器/容器自动回到 0（Custom），避免 Ok 时被预设兜底覆盖用户选择。
 	int m_DemoRenderPresetSel = -1;
+	// 弹窗打开时对编码器/质量/容器/分辨率/GOP 做一次性初始化（从当前配置回填）；
+	// 之后不再每帧回填——否则用户清空输入想恢复默认时，下一帧就被旧配置值弹回。
+	void InitDemoRenderInputs();
 	bool m_HasPendingDemoRenderSource = false;
 	char m_aPendingDemoRenderFolder[IO_MAX_PATH_LENGTH] = "";
 	char m_aDemoRenderedVideoPath[IO_MAX_PATH_LENGTH] = "";

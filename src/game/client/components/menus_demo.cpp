@@ -1728,6 +1728,7 @@ void CMenus::RenderDemoPlayerSliceSavePopup(CUIRect MainView)
 			m_Popup = POPUP_RENDER_DEMO;
 			m_StartPaused = false;
 			m_DemoRenderInput.Set(m_DemoSliceInput.GetString());
+			InitDemoRenderInputs();
 			Ui()->SetActiveItem(&m_DemoRenderInput);
 			if(m_DemolistStorageType != IStorage::TYPE_ALL && m_DemolistStorageType != m_PendingDemoRenderStorageType)
 				m_DemolistStorageType = fs_is_relative_path(aPath) ? IStorage::TYPE_ALL : IStorage::TYPE_ABSOLUTE; // 选择包含剪辑文件的存储类型
@@ -3655,6 +3656,7 @@ void CMenus::RenderDemoBrowserButtons(CUIRect ButtonsView, bool WasListboxItemAc
 				char aNameWithoutExt[IO_MAX_PATH_LENGTH];
 				fs_split_file_extension(pSelectedItem->m_aFilename, aNameWithoutExt, sizeof(aNameWithoutExt));
 				m_DemoRenderInput.Set(aNameWithoutExt);
+				InitDemoRenderInputs();
 				Ui()->SetActiveItem(&m_DemoRenderInput);
 				return;
 			}
