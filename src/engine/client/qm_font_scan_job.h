@@ -42,7 +42,27 @@ private:
 		if(State() == STATE_ABORTED)
 			return;
 		const FCancelled Cancelled = [this] { return State() == STATE_ABORTED; };
-		for(const std::string &Path : m_Enumerate(Cancelled))
+		// 枚举结果先落到独立变量：range-for 的初始化表达式在部分 libc++ 版本上
+		// 抛出时会绕过调用方的 catch 直接 terminate，而枚举回调来自文件系统，
+		// 抛异常是它的正常失败方式。这里显式接住并转成作业失败。
+		std::vector<std::string> vPaths;
+		try
+		{
+			vPaths = m_Enumerate(Cancelled);
+		}
+		catch(const std::exception &Error)
+		{
+			m_Failed = true;
+			log_error("textrender/font", "Font enumeration stopped: %s", Error.what());
+			return;
+		}
+		catch(...)
+		{
+			m_Failed = true;
+			log_error("textrender/font", "Font enumeration stopped after an unexpected exception.");
+			return;
+		}
+		for(const std::string &Path : vPaths)
 		{
 			if(Cancelled())
 				return;
