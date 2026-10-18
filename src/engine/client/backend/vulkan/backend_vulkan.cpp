@@ -12,6 +12,7 @@
 #include <engine/client/backend/vulkan/backend_vulkan_qm_ext.h>
 #include <engine/client/backend/vulkan/vulkan_diagnostics.h>
 #include <engine/client/backend/vulkan/vulkan_recording_batch.h>
+#include <engine/client/backend/vulkan/vulkan_render_workers.h>
 #include <engine/client/backend/vulkan/vulkan_rendering_lifecycle.h>
 #include <engine/client/backend_sdl.h>
 #include <engine/client/graphics_threaded.h>
@@ -1207,16 +1208,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	size_t m_RenderCallsInPipe = 0;
 	CQmVulkanRenderScheduler m_RenderScheduler;
 
-	struct SRenderThread
-	{
-		bool m_IsRendering = false;
-		std::thread m_Thread;
-		std::mutex m_Mutex;
-		std::condition_variable m_Cond;
-		bool m_Finished = false;
-		bool m_Started = false;
-	};
-	std::vector<std::unique_ptr<SRenderThread>> m_vpRenderThreads;
+	CVulkanRenderWorkers m_RenderWorkers;
 
 private:
 	std::vector<VkImageView> m_vSwapChainImageViewList;
@@ -2721,7 +2713,7 @@ protected:
 		if(!List.empty())
 		{
 			m_vThreadHelperHadCommands[ThreadIndex] = true;
-			auto *pThread = m_vpRenderThreads[ThreadIndex].get();
+			auto *pThread = &m_RenderWorkers[ThreadIndex];
 			std::unique_lock<std::mutex> Lock(pThread->m_Mutex);
 			pThread->m_IsRendering = true;
 			pThread->m_Cond.notify_one();
@@ -2749,7 +2741,7 @@ protected:
 			{
 				if(m_vThreadHelperHadCommands[ThreadIndex])
 				{
-					auto &pRenderThread = m_vpRenderThreads[ThreadIndex];
+					auto *pRenderThread = &m_RenderWorkers[ThreadIndex];
 					m_vThreadHelperHadCommands[ThreadIndex] = false;
 					std::unique_lock<std::mutex> Lock(pRenderThread->m_Mutex);
 					pRenderThread->m_Cond.wait(Lock, [&pRenderThread] { return !pRenderThread->m_IsRendering; });
@@ -4426,6 +4418,12 @@ public:
 	CCommandProcessorFragment_Vulkan()
 	{
 		m_vTextures.reserve(CCommandBuffer::MAX_TEXTURES);
+	}
+
+	~CCommandProcessorFragment_Vulkan() override
+	{
+		// 工作线程借用后端的队列与 GPU 状态，必须在这些成员析构前结束。
+		m_RenderWorkers.Stop();
 	}
 
 	/************************
@@ -9571,6 +9569,8 @@ public:
 
 	[[nodiscard]] bool Cmd_PreInit(const CCommandProcessorFragment_GLBase::SCommand_PreInit *pCommand)
 	{
+		// PRE_INIT 的警告本身不会阻止 SDL 外层继续 CMD_INIT，必须同步失败码。
+		*pCommand->m_pInitError = -2;
 		m_pGpuList = pCommand->m_pGpuList;
 		// 后端重建时丢弃旧的 OpenGL 信息列表，恢复 Vulkan 的实际可选设备清单。
 		*m_pGpuList = {};
@@ -9580,67 +9580,63 @@ public:
 			return false;
 		}
 
-		RegisterCommands();
+		try
+		{
+			RegisterCommands();
 
-		m_ThreadCount = g_Config.m_GfxRenderThreadCount;
-		if(m_ThreadCount <= 1)
-			m_ThreadCount = 1;
-		else
-		{
-			m_ThreadCount = std::clamp<decltype(m_ThreadCount)>(m_ThreadCount, 3, std::max<decltype(m_ThreadCount)>(3, std::thread::hardware_concurrency()));
-		}
-		if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "AMD") != nullptr && m_ThreadCount > 1)
-		{
-			dbg_msg("vulkan", "forcing single-threaded rendering on AMD to avoid driver crashes with dynamic viewport usage");
-			m_ThreadCount = 1;
-		}
-		if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "Apple") != nullptr && m_ThreadCount > 1)
-		{
-			// MoltenVK/Metal 对 secondary command buffer 的编码开销较高，
-			// 界面命令量大的场景下三线程录制反而更容易造成帧时间抖动。
-			dbg_msg("vulkan", "forcing single-threaded rendering on Apple/MoltenVK to avoid secondary command buffer overhead");
-			m_ThreadCount = 1;
-		}
-
-		// start threads
-		dbg_assert(m_ThreadCount != 2, "Either use 1 main thread or at least 2 extra rendering threads.");
-		if(m_ThreadCount > 1)
-		{
-			m_vvThreadCommandLists.resize(m_ThreadCount - 1);
-			m_vThreadHelperHadCommands.resize(m_ThreadCount - 1, false);
-			for(auto &ThreadCommandList : m_vvThreadCommandLists)
+			m_ThreadCount = g_Config.m_GfxRenderThreadCount;
+			if(m_ThreadCount <= 1)
+				m_ThreadCount = 1;
+			else
 			{
-				ThreadCommandList.reserve(256);
+				m_ThreadCount = std::clamp<decltype(m_ThreadCount)>(m_ThreadCount, 3, std::max<decltype(m_ThreadCount)>(3, std::thread::hardware_concurrency()));
+			}
+			if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "AMD") != nullptr && m_ThreadCount > 1)
+			{
+				dbg_msg("vulkan", "forcing single-threaded rendering on AMD to avoid driver crashes with dynamic viewport usage");
+				m_ThreadCount = 1;
+			}
+			if(pCommand->m_pVendorString != nullptr && str_find_nocase(pCommand->m_pVendorString, "Apple") != nullptr && m_ThreadCount > 1)
+			{
+				// MoltenVK/Metal 对 secondary command buffer 的编码开销较高，
+				// 界面命令量大的场景下三线程录制反而更容易造成帧时间抖动。
+				dbg_msg("vulkan", "forcing single-threaded rendering on Apple/MoltenVK to avoid secondary command buffer overhead");
+				m_ThreadCount = 1;
 			}
 
-			m_vpRenderThreads.reserve(m_ThreadCount - 1);
-			for(size_t i = 0; i < m_ThreadCount - 1; ++i)
+			// start threads
+			dbg_assert(m_ThreadCount != 2, "Either use 1 main thread or at least 2 extra rendering threads.");
+			if(m_ThreadCount > 1)
 			{
-				auto *pRenderThread = new SRenderThread();
-				std::unique_lock<std::mutex> Lock(pRenderThread->m_Mutex);
-				m_vpRenderThreads.emplace_back(pRenderThread);
-				pRenderThread->m_Thread = std::thread([this, i]() { RunThread(i); });
-				// wait until thread started
-				pRenderThread->m_Cond.wait(Lock, [pRenderThread]() -> bool { return pRenderThread->m_Started; });
+				m_vvThreadCommandLists.resize(m_ThreadCount - 1);
+				m_vThreadHelperHadCommands.resize(m_ThreadCount - 1, false);
+				for(auto &ThreadCommandList : m_vvThreadCommandLists)
+				{
+					ThreadCommandList.reserve(256);
+				}
+			}
+
+			if(m_ThreadCount == 1 || m_RenderWorkers.Start(m_ThreadCount - 1, [this](size_t Index) { RunThread(Index); }))
+			{
+				*pCommand->m_pInitError = 0;
+				return true;
 			}
 		}
-
-		return true;
+		catch(...)
+		{
+			// 命令回调、队列或工作线程状态分配失败，统一交给初始化回退。
+		}
+		m_RenderWorkers.Stop();
+		m_vvThreadCommandLists.clear();
+		m_vThreadHelperHadCommands.clear();
+		m_ThreadCount = 1;
+		SetWarning(GFX_WARNING_TYPE_INIT_FAILED, "Failed to initialize Vulkan render workers.");
+		return false;
 	}
 
 	[[nodiscard]] bool Cmd_PostShutdown(const CCommandProcessorFragment_GLBase::SCommand_PostShutdown *pCommand)
 	{
-		for(size_t i = 0; i < m_ThreadCount - 1; ++i)
-		{
-			auto *pThread = m_vpRenderThreads[i].get();
-			{
-				std::unique_lock<std::mutex> Lock(pThread->m_Mutex);
-				pThread->m_Finished = true;
-				pThread->m_Cond.notify_one();
-			}
-			pThread->m_Thread.join();
-		}
-		m_vpRenderThreads.clear();
+		m_RenderWorkers.Stop();
 		m_vvThreadCommandLists.clear();
 		m_vThreadHelperHadCommands.clear();
 
@@ -9678,15 +9674,12 @@ public:
 	void RunThread(size_t ThreadIndex)
 	{
 		s_ThreadIsRenderWorker = true;
-		auto *pThread = m_vpRenderThreads[ThreadIndex].get();
+		auto *pThread = &m_RenderWorkers[ThreadIndex];
 		std::unique_lock<std::mutex> Lock(pThread->m_Mutex);
-		pThread->m_Started = true;
-		pThread->m_Cond.notify_one();
 
 		while(!pThread->m_Finished)
 		{
 			pThread->m_Cond.wait(Lock, [pThread]() -> bool { return pThread->m_IsRendering || pThread->m_Finished; });
-			pThread->m_Cond.notify_one();
 
 			// set this to true, if you want to benchmark the render thread times
 			static constexpr bool s_BenchmarkRenderThreads = false;
