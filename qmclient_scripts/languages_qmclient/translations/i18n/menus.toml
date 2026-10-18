@@ -23019,3 +23019,19 @@ brazilian_portuguese = "Ordem das colunas do navegador de servidores (IDs separa
 portuguese = "Ordem das colunas do navegador de servidores (IDs separados por vírgulas: community,name,map,difficulty,gametype,friends,players,qm,ping; vazio = predefinição)"
 turkish = "Sunucu tarayıcısı sütun sırası (virgülle ayrılmış kimlikler: community,name,map,difficulty,gametype,friends,players,qm,ping; boş = varsayılan)"
 polish = "Kolejność kolumn przeglądarki serwerów (ID oddzielone przecinkami: community,name,map,difficulty,gametype,friends,players,qm,ping; puste = domyślna)"
+
+[[message]]
+key = "Fully block enemy players"
+[message.translations]
+simplified_chinese = "完全屏蔽敌对玩家"
+traditional_chinese = "完全封鎖敵對玩家"
+japanese = "敵対プレイヤーを完全にブロック"
+korean = "적대 플레이어 완전히 차단"
+russian = "Полностью блокировать враждебных игроков"
+german = "Feindliche Spieler vollständig blockieren"
+spanish = "Bloquear por completo a los jugadores enemigos"
+french = "Bloquer complètement les joueurs ennemis"
+brazilian_portuguese = "Bloquear completamente jogadores inimigos"
+portuguese = "Bloquear completamente jogadores inimigos"
+turkish = "Düşman oyuncuları tamamen engelle"
+polish = "Całkowicie blokuj wrogich graczy"

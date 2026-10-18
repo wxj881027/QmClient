@@ -209,7 +209,7 @@ void CQmWarListModel::RefreshWarTypeIndices()
 	m_WarTypeIndicesDirty = false;
 }
 
-void CQmWarListModel::RebuildWarEntryLookup()
+void CQmWarListModel::RebuildWarEntryLookup() const
 {
 	if(!m_WarEntryLookupDirty)
 		return;
@@ -228,4 +228,20 @@ void CQmWarListModel::RebuildWarEntryLookup()
 	}
 
 	m_WarEntryLookupDirty = false;
+}
+
+bool CQmWarListModel::MatchesEnemy(const char *pName, const char *pClan) const
+{
+	// 按当前身份查询，名单编辑和玩家改名不必等下一次快照才能生效。
+	RebuildWarEntryLookup();
+	const CWarType *pEnemyType = m_WarTypes[WARLIST_BUILTIN_GROUP_ENEMY];
+	const auto Matches = [pEnemyType](const TWarEntryLookup &Lookup, const char *pValue) {
+		if(pValue[0] == '\0')
+			return false;
+		const auto It = Lookup.find(std::string_view(pValue));
+		return It != Lookup.end() && std::any_of(It->second.begin(), It->second.end(), [pEnemyType](const CWarEntry *pEntry) {
+			return pEntry->m_pWarType == pEnemyType;
+		});
+	};
+	return Matches(m_WarEntriesByName, pName) || Matches(m_WarEntriesByClan, pClan);
 }

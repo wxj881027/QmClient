@@ -35,6 +35,7 @@
 #include "components/qmclient/jelly_tee.h"
 #include "components/qmclient/modes.h"
 #include "components/qmclient/perf_logging.h"
+#include "components/qmclient/player_display_privacy.h"
 #include "components/qmclient/predicted_event_queue.h"
 #include "components/qmclient/qmclient_utils.h"
 #include "components/qmclient/screenshot_manager.h"
@@ -1345,12 +1346,16 @@ void CGameClient::RefreshStreamerSkinPrivacyAfterStateChange()
 {
 	const uint64_t FriendsRevision = Friends() != nullptr ? Friends()->Revision() : 0;
 	if(m_LastStreamerHideSkins == g_Config.m_QmStreamerHideSkins &&
+		m_LastWarListBlockEnemies == g_Config.m_QmWarListBlockEnemies &&
+		(!g_Config.m_QmWarListBlockEnemies || m_LastWarListPrivacyRevision == m_WarList.Revision()) &&
 		m_LastStreamerFriendsIgnoreClan == g_Config.m_ClFriendsIgnoreClan &&
 		m_aLastStreamerLocalIds[0] == m_aLocalIds[0] &&
 		m_aLastStreamerLocalIds[1] == m_aLocalIds[1] &&
 		m_LastStreamerFriendsRevision == FriendsRevision)
 		return;
 	m_LastStreamerHideSkins = g_Config.m_QmStreamerHideSkins;
+	m_LastWarListBlockEnemies = g_Config.m_QmWarListBlockEnemies;
+	m_LastWarListPrivacyRevision = m_WarList.Revision();
 	m_LastStreamerFriendsIgnoreClan = g_Config.m_ClFriendsIgnoreClan;
 	std::copy(std::begin(m_aLocalIds), std::end(m_aLocalIds), std::begin(m_aLastStreamerLocalIds));
 	m_LastStreamerFriendsRevision = FriendsRevision;
@@ -2561,16 +2566,33 @@ bool CGameClient::ShouldRunSkinChangeTransition(int ClientId) const
 	}
 }
 
+static QmPlayerDisplayPrivacy::SDecisions ResolvePlayerDisplayPrivacy(const CGameClient &GameClient, int ClientId)
+{
+	const QmPlayerDisplayPrivacy::SSettings Settings{g_Config.m_QmStreamerHideNames != 0, g_Config.m_QmStreamerHideSkins != 0, g_Config.m_QmWarListBlockEnemies != 0};
+	QmPlayerDisplayPrivacy::SPlayer Player;
+	Player.m_ClientId = ClientId;
+	if(ClientId >= 0 && ClientId < MAX_CLIENTS)
+	{
+		Player.m_Local = GameClient.IsLocalClientId(ClientId);
+		Player.m_Friend = GameClient.m_aClients[ClientId].m_Friend;
+		Player.m_Enemy = Settings.m_BlockEnemies && !Player.m_Local && GameClient.m_WarList.IsEnemy(ClientId);
+	}
+	return QmPlayerDisplayPrivacy::Resolve(Settings, Player);
+}
+
+bool CGameClient::ShouldBlockWarListPlayer(int ClientId) const
+{
+	return ResolvePlayerDisplayPrivacy(*this, ClientId).m_BlockChat;
+}
+
 bool CGameClient::ShouldHideStreamerIdentity(int ClientId) const
 {
-	return g_Config.m_QmStreamerHideNames && ClientId >= 0 && ClientId < MAX_CLIENTS &&
-	       !IsLocalClientId(ClientId) && !m_aClients[ClientId].m_Friend;
+	return ResolvePlayerDisplayPrivacy(*this, ClientId).m_HideIdentity;
 }
 
 bool CGameClient::ShouldHideStreamerSkin(int ClientId) const
 {
-	return g_Config.m_QmStreamerHideSkins && ClientId >= 0 && ClientId < MAX_CLIENTS &&
-	       !IsLocalClientId(ClientId) && !m_aClients[ClientId].m_Friend;
+	return ResolvePlayerDisplayPrivacy(*this, ClientId).m_HideSkin;
 }
 
 void CGameClient::FormatStreamerName(int ClientId, char *pBuf, int BufSize) const
@@ -2735,7 +2757,7 @@ void CGameClient::FormatStreamerVoteText(const char *pText, char *pBuf, int BufS
 	if(!pText)
 		return;
 
-	if(!g_Config.m_QmStreamerHideNames)
+	if(!g_Config.m_QmStreamerHideNames && !g_Config.m_QmWarListBlockEnemies)
 	{
 		str_copy(pBuf, pText, BufSize);
 		return;
@@ -6093,8 +6115,8 @@ void CGameClient::CClientData::UpdateRenderInfo()
 
 		if(!ApplyDefaultSkin(m_pGameClient, NewRenderInfo, SkinDescriptor.m_Flags))
 		{
-			// 默认皮肤不可绘制时沿用原渲染信息，避免留下无贴图的白色方块。
-			if(OriginalInfo.Valid())
+			// 完全屏蔽时不能回退原皮肤；其他情况沿用已有的资源缺失回退。
+			if(OriginalInfo.Valid() && !m_pGameClient->ShouldBlockWarListPlayer(m_ClientId))
 			{
 				const CTeeRenderInfo SkinProperties = NewRenderInfo;
 				NewRenderInfo = OriginalInfo;

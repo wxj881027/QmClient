@@ -5255,6 +5255,9 @@ Full: each enabled animation category uses its complete transition
 Fullscreen
 == 獨佔全屏
 
+Fully block enemy players
+== 完全封鎖敵對玩家
+
 Fun
 == 娛樂
 
@@ -5674,6 +5677,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == 禪模式下隱藏 Echo 消息
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== 隱藏敵對玩家聊天，將其暱稱替換為數字 ID 並使用預設外觀；主角色和分身維持正常顯示
 
 Hide explosion effects
 == 隱藏炮擊特效

@@ -2082,7 +2082,8 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 		Message.m_CurrentLocal = ClientId == GameClient()->m_Snap.m_LocalClientId;
 		Message.m_Local = DemoPlayback ? Message.m_CurrentLocal : GameClient()->IsLocalClientId(ClientId);
 		Message.m_Blocked = Author.m_aName[0] == '\0' || Author.m_ChatIgnore ||
-			(!Message.m_CurrentLocal && (Author.m_Foe || (g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId))));
+				    GameClient()->ShouldBlockWarListPlayer(ClientId) ||
+				    (!Message.m_CurrentLocal && (Author.m_Foe || (g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId))));
 		Message.m_Friend = Author.m_Friend;
 		Message.m_OtherTeam = !Message.m_Blocked && !FilterSettings.m_RelatedOnly && !Message.m_CurrentLocal &&
 			(!FilterSettings.m_FriendsOnly || Message.m_Friend) && FilterSettings.m_TeamOnly &&

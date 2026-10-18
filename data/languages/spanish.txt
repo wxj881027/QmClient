@@ -5255,6 +5255,9 @@ Full: each enabled animation category uses its complete transition
 Fullscreen
 == Pantalla completa
 
+Fully block enemy players
+== Bloquear por completo a los jugadores enemigos
+
 Fun
 == Diversión
 
@@ -5674,6 +5677,9 @@ Hide Echo messages
 
 Hide Echo messages in Zen mode
 == Ocultar mensajes Echo en modo Zen
+
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
+== Ocultar el chat enemigo, sustituir sus nombres por ID de cliente y usar aspectos predeterminados; mostrar tu personaje y dummy con normalidad
 
 Hide explosion effects
 == Ocultar efectos de explosión

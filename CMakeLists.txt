@@ -3673,6 +3673,7 @@ if(CLIENT)
     components/qmclient/statusbar_items.h
     components/qmclient/warlist_model.cpp
     components/qmclient/warlist_model.h
+    components/qmclient/player_display_privacy.h
     components/qmclient/update_version.h
     components/qmclient/update_manifest.cpp
     components/qmclient/update_manifest.h

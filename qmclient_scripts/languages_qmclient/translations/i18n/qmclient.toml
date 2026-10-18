@@ -38390,3 +38390,19 @@ brazilian_portuguese = "Exibir nome curto do servidor no navegador de servidores
 portuguese = "Mostrar nome curto do servidor no navegador de servidores (para servidores da comunidade chinesa)"
 turkish = "Sunucu tarayıcısında kısa sunucu adını göster (Çin topluluğu sunucuları için)"
 polish = "Pokaż krótką nazwę serwera w przeglądarce serwerów (dla serwerów społeczności chińskiej)"
+
+[[message]]
+key = "Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible"
+[message.translations]
+simplified_chinese = "隐藏敌对玩家聊天，将其昵称替换为数字 ID 并使用默认皮肤；主角色和分身保持正常显示"
+traditional_chinese = "隱藏敵對玩家聊天，將其暱稱替換為數字 ID 並使用預設外觀；主角色和分身維持正常顯示"
+japanese = "敵対プレイヤーのチャットを非表示にし、名前をクライアントIDに置き換えて標準スキンを使用する。自分とダミーは通常どおり表示"
+korean = "적대 플레이어의 채팅을 숨기고 이름을 클라이언트 ID로 바꾸며 기본 스킨을 사용합니다. 내 캐릭터와 더미는 정상 표시합니다"
+russian = "Скрывать чат врагов, заменять их имена ID клиента и использовать стандартные скины; своего персонажа и дамми показывать как обычно"
+german = "Gegnerischen Chat ausblenden, Namen durch Client-IDs ersetzen und Standard-Skins verwenden; eigenen Spieler und Dummy normal anzeigen"
+spanish = "Ocultar el chat enemigo, sustituir sus nombres por ID de cliente y usar aspectos predeterminados; mostrar tu personaje y dummy con normalidad"
+french = "Masquer le chat des ennemis, remplacer leurs noms par leur ID client et utiliser les apparences par défaut ; afficher normalement votre personnage et le dummy"
+brazilian_portuguese = "Ocultar o chat de inimigos, substituir seus nomes por IDs de cliente e usar skins padrão; manter seu personagem e dummy visíveis normalmente"
+portuguese = "Ocultar o chat de inimigos, substituir os seus nomes por IDs de cliente e usar skins predefinidas; manter a personagem e o dummy visíveis normalmente"
+turkish = "Düşman sohbetini gizle, adlarını istemci kimlikleriyle değiştir ve varsayılan görünümleri kullan; kendi oyuncunu ve dummy karakterini normal göster"
+polish = "Ukryj czat wrogów, zastąp ich nazwy identyfikatorami klienta i używaj domyślnych skórek; własną postać i dummy wyświetlaj normalnie"

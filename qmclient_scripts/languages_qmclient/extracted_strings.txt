@@ -1751,6 +1751,7 @@ Full quality nameplate count
 Full width
 Full: each enabled animation category uses its complete transition
 Fullscreen
+Fully block enemy players
 Fun
 Functions
 Game
@@ -1891,6 +1892,7 @@ Hide direction in Zen mode
 Hide direction indicators
 Hide Echo messages
 Hide Echo messages in Zen mode
+Hide enemy chat, replace enemy names with client IDs and use default skins; keep local players visible
 Hide explosion effects
 Hide freeze effects
 Hide freeze effects in Zen Mode

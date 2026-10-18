@@ -92,10 +92,6 @@ public:
 	bool GetNameWar(int ClientId);
 	bool GetClanWar(int ClientId);
 	bool IsEnemy(int ClientId) const;
-	static bool MatchesEnemyGroup(const CWarDataCache &WarData)
-	{
-		return static_cast<int>(WarData.m_WarGroupMatches.size()) > WARLIST_BUILTIN_GROUP_ENEMY && WarData.m_WarGroupMatches[WARLIST_BUILTIN_GROUP_ENEMY];
-	}
 
 	void GetReason(char *pReason, int ClientId);
 	CWarDataCache &GetWarData(int ClientId);
