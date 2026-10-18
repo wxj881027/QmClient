@@ -48,7 +48,8 @@ void CGraphicsBackend_Threaded::ThreadFunc(void *pUser)
 			Lock.lock();
 
 			pSelf->m_pBuffer = nullptr;
-			pSelf->m_BufferInProcess.store(false, std::memory_order_relaxed);
+			// 发布本批命令及错误状态，主线程确认空闲后才可读取处理器。
+			pSelf->m_BufferInProcess.store(false, std::memory_order_release);
 			pSelf->m_BufferSwapCond.notify_all();
 
 #if defined(CONF_VIDEORECORDER) && !defined(BACKEND_NO_SDL)
@@ -182,7 +183,7 @@ bool CGraphicsBackend_Threaded::IsIdle() const
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 	return true;
 #else
-	return !m_BufferInProcess.load(std::memory_order_relaxed);
+	return !m_BufferInProcess.load(std::memory_order_acquire);
 #endif
 }
 
@@ -267,9 +268,10 @@ bool CGraphicsBackend_Threaded::HasFatalError() const
 
 bool CGraphicsBackend_Threaded::TakeFatalError()
 {
-	if(m_pProcessor == nullptr)
+	// 主线程是唯一提交者；空闲标记的 acquire 与命令完成时的 release 配对。
+	// 渲染仍在执行时延后消费，避免每帧轮询错误都等待上一批命令完成。
+	if(m_pProcessor == nullptr || !IsIdle())
 		return false;
-	WaitForIdle();
 	if(m_pProcessor->GetError().m_ErrorType == GFX_ERROR_TYPE_NONE)
 		return false;
 	// 主循环可能在下一次 RunBuffer 之前消费错误，必须先保存详情并停止提交。
