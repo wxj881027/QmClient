@@ -2,6 +2,7 @@
 #include "scripting.h"
 
 #include "scripting/impl.h"
+#include "scripting/state.h"
 
 #include <base/log.h>
 #include <base/str.h>
@@ -17,7 +18,6 @@
 class CScriptRunner : CComponentInterfaces
 {
 private:
-	CScriptingCtx m_ScriptingCtx;
 	const CServerInfo *GetServerInfo()
 	{
 		if(Client()->State() == IClient::STATE_ONLINE || Client()->State() == IClient::STATE_DEMOPLAYBACK)
@@ -68,11 +68,19 @@ private:
 		}
 		else if(Str == "team")
 		{
-			return GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_Team;
+			if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+				return nullptr;
+			return QmScriptLocalTeam(GameClient()->m_aLocalIds[g_Config.m_ClDummy], [this](int ClientId) {
+				return GameClient()->m_aClients[ClientId].m_Team;
+			});
 		}
 		if(Str == "ddnet_team")
 		{
-			return GameClient()->m_Teams.Team(GameClient()->m_aLocalIds[g_Config.m_ClDummy]);
+			if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+				return nullptr;
+			return QmScriptLocalTeam(GameClient()->m_aLocalIds[g_Config.m_ClDummy], [this](int ClientId) {
+				return GameClient()->m_Teams.Team(ClientId);
+			});
 		}
 		if(Str == "map")
 		{
@@ -123,25 +131,13 @@ private:
 		}
 		else if(Str == "location")
 		{
-			if(GameClient()->m_GameInfo.m_Race)
+			if((Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK) || GameClient()->m_GameInfo.m_Race)
 				return nullptr;
-			float w = 100.0f, h = 100.0;
-			float x = 50.0f, y = 50.0f;
 			const CLayers *pLayers = GameClient()->m_MapLayersForeground.m_pLayers;
-			const CMapItemLayerTilemap *pLayer = pLayers->GameLayer();
-			if(pLayer)
-			{
-				w = (float)pLayer->m_Width * 30.0f;
-				h = (float)pLayer->m_Height * 30.0f;
-			}
-			x = GameClient()->m_Camera.m_Center.x;
-			y = GameClient()->m_Camera.m_Center.y;
-			static const char *s_apLocations[] = {
-				"NW", "N", "NE",
-				"W", "C", "E",
-				"SW", "S", "SE"};
-			int i = std::clamp((int)(y / h * 3.0f), 0, 2) * 3 + std::clamp((int)(x / w * 3.0f), 0, 2);
-			return s_apLocations[i];
+			const CMapItemLayerTilemap *pLayer = pLayers ? pLayers->GameLayer() : nullptr;
+			if(!pLayer)
+				return nullptr;
+			return QmScriptLocation(pLayer->m_Width, pLayer->m_Height, GameClient()->m_Camera.m_Center.x, GameClient()->m_Camera.m_Center.y);
 		}
 		else if(Str == "state")
 		{
@@ -228,20 +224,21 @@ public:
 	CScriptRunner(CGameClient *pClient)
 	{
 		OnInterfacesInit(pClient);
-		m_ScriptingCtx.AddFunction("exec", [this](const std::string &Str) {
-			log_info(SCRIPTING_IMPL "/exec", "%s", Str.c_str());
-			Console()->ExecuteLine(Str.c_str());
-		});
-		m_ScriptingCtx.AddFunction("echo", [this](const std::string &Str) {
-			GameClient()->Echo(Str.c_str());
-		});
-		m_ScriptingCtx.AddFunction("state", [this](const std::string &Str, const CScriptingCtx::Any &Arg) {
-			return State(Str, Arg);
-		});
 	}
 	void Run(const char *pFilename, const char *pArgs)
 	{
-		m_ScriptingCtx.Run(Storage(), pFilename, pArgs);
+		CScriptingCtx::Execute(Storage(), pFilename, pArgs, [this](CScriptingCtx &Context) {
+			Context.AddFunction("exec", [this](const std::string &Str) {
+				log_info(SCRIPTING_IMPL "/exec", "%s", Str.c_str());
+				Console()->ExecuteLine(Str.c_str());
+			});
+			Context.AddFunction("echo", [this](const std::string &Str) {
+				GameClient()->Echo(Str.c_str());
+			});
+			Context.AddFunction("state", [this](const std::string &Str, const CScriptingCtx::Any &Arg) {
+				return State(Str, Arg);
+			});
+		});
 	}
 };
 

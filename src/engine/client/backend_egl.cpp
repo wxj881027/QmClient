@@ -431,7 +431,19 @@ int CGraphicsBackend_EGL::InitOpenGL(int Width, int Height, int Flags, IStorage 
 
 	// Create command processor
 	m_pProcessor = new CCommandProcessor_EGL_GL(BACKEND_TYPE_OPENGL, GlewMajor, GlewMinor, GlewPatch);
-	StartProcessor(m_pProcessor);
+	if(!StartProcessor(m_pProcessor))
+	{
+		delete m_pProcessor;
+		m_pProcessor = nullptr;
+		eglDestroyContext(m_Display, m_Context);
+		eglDestroySurface(m_Display, m_Surface);
+		eglTerminate(m_Display);
+		m_Display = nullptr;
+		m_Context = nullptr;
+		m_Surface = nullptr;
+		log_error("gfx", "Failed to create graphics thread");
+		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_THREAD_CREATE_FAILED;
+	}
 
 	// EGL Init (makes context current in render thread)
 	{

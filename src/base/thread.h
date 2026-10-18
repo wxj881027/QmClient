@@ -26,6 +26,11 @@
  */
 void *thread_init(void (*threadfunc)(void *), void *user, const char *name);
 
+// 分配或系统线程创建失败时返回空；失败时不会调用入口或接管 user。
+// 命名属于尽力完成的附加操作，不影响已成功创建线程的句柄归属。
+void *thread_try_init(void (*threadfunc)(void *), void *user, const char *name) noexcept;
+using THREAD_CREATE = decltype(&thread_try_init);
+
 /**
  * Waits for a thread to be done or destroyed.
  *

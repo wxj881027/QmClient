@@ -4,6 +4,9 @@
 #include <base/thread.h>
 
 #include <gtest/gtest.h>
+#include <test/support/async_io_wait.h>
+
+#include <memory>
 
 static void Nothing(void *pUser)
 {
@@ -27,6 +30,40 @@ TEST(Thread, Wait)
 	void *pThread = thread_init(SetToOne, &Integer, "wait");
 	thread_wait(pThread);
 	EXPECT_EQ(Integer, 1);
+}
+
+TEST(Thread, TryCreateReturnsAJoinableHandle)
+{
+	struct CResult
+	{
+		bool m_Created = false;
+		int m_Value = 0;
+	};
+	auto pResult = std::make_shared<CResult>();
+	ASSERT_TRUE(WaitForAsyncIo([pResult] {
+		void *pThread = thread_try_init(SetToOne, &pResult->m_Value, "try-wait");
+		pResult->m_Created = pThread != nullptr;
+		if(pThread)
+			thread_wait(pThread);
+	}));
+	EXPECT_TRUE(pResult->m_Created);
+	EXPECT_EQ(pResult->m_Value, 1);
+}
+
+TEST(Thread, TrySemaphoreSupportsSignalWaitAndDestroy)
+{
+	auto pCreated = std::make_shared<bool>(false);
+	ASSERT_TRUE(WaitForAsyncIo([pCreated] {
+		SEMAPHORE Semaphore;
+		*pCreated = sphore_try_init(&Semaphore);
+		if(*pCreated)
+		{
+			sphore_signal(&Semaphore);
+			sphore_wait(&Semaphore);
+			sphore_destroy(&Semaphore);
+		}
+	}));
+	EXPECT_TRUE(*pCreated);
 }
 
 TEST(Thread, Yield)

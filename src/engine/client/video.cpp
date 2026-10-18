@@ -80,7 +80,8 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 	m_pGraphics(pGraphics),
 	m_pStorage(pStorage),
 	m_pSound(pSound),
-	m_FrameCapture(Width, Height)
+	m_FrameCapture(Width, Height),
+	m_HasAudio(pSound->IsSoundEnabled() && g_Config.m_ClVideoSndEnable)
 {
 	m_pFormatContext = nullptr;
 	m_pFormat = nullptr;
@@ -100,8 +101,6 @@ CVideo::CVideo(IGraphics *pGraphics, ISound *pSound, IStorage *pStorage, int Wid
 	m_Stopped = false;
 	m_ProcessingVideoFrame = 0;
 	m_ProcessingAudioFrame = 0;
-
-	m_HasAudio = m_pSound->IsSoundEnabled() && g_Config.m_ClVideoSndEnable;
 
 	dbg_assert(ms_pCurrentVideo == nullptr, "ms_pCurrentVideo is NOT set to nullptr while creating a new Video.");
 
@@ -300,29 +299,8 @@ void CVideo::Stop()
 
 	m_pGraphics->WaitForIdle();
 
-	for(auto &pVideoThread : m_vpVideoThreads)
-	{
-		{
-			std::unique_lock<std::mutex> Lock(pVideoThread->m_Mutex);
-			pVideoThread->m_Finished = true;
-			pVideoThread->m_Cond.notify_all();
-		}
-
-		pVideoThread->m_Thread.join();
-	}
-	m_vpVideoThreads.clear();
-
-	for(auto &pAudioThread : m_vpAudioThreads)
-	{
-		{
-			std::unique_lock<std::mutex> Lock(pAudioThread->m_Mutex);
-			pAudioThread->m_Finished = true;
-			pAudioThread->m_Cond.notify_all();
-		}
-
-		pAudioThread->m_Thread.join();
-	}
-	m_vpAudioThreads.clear();
+	StopVideoRecorderThreads(m_vpVideoThreads);
+	StopVideoRecorderThreads(m_vpAudioThreads);
 
 	while(m_ProcessingVideoFrame > 0 || m_ProcessingAudioFrame > 0)
 		std::this_thread::sleep_for(10us);
@@ -667,6 +645,7 @@ AVFrame *CVideo::AllocPicture(enum AVPixelFormat PixFmt, int Width, int Height)
 		char aError[AV_ERROR_MAX_STRING_SIZE];
 		av_strerror(FrameBufferAllocResult, aError, sizeof(aError));
 		log_error("videorecorder", "Could not allocate video frame buffer: %s", aError);
+		av_frame_free(&pPicture);
 		return nullptr;
 	}
 
@@ -699,6 +678,7 @@ AVFrame *CVideo::AllocAudioFrame(enum AVSampleFormat SampleFmt, uint64_t Channel
 			char aError[AV_ERROR_MAX_STRING_SIZE];
 			av_strerror(FrameBufferAllocResult, aError, sizeof(aError));
 			log_error("videorecorder", "Could not allocate audio frame buffer: %s", aError);
+			av_frame_free(&pFrame);
 			return nullptr;
 		}
 	}

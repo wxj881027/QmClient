@@ -1393,7 +1393,18 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	// start the command processor
 	dbg_assert(m_pProcessor == nullptr, "Processor was not cleaned up properly.");
 	m_pProcessor = new CCommandProcessor_SDL_GL(m_BackendType, EffectiveGLMajor, EffectiveGLMinor, EffectiveGLPatch);
-	StartProcessor(m_pProcessor);
+	if(!StartProcessor(m_pProcessor))
+	{
+		delete m_pProcessor;
+		m_pProcessor = nullptr;
+		if(m_GLContext)
+			SDL_GL_DestroyContext(m_GLContext);
+		m_GLContext = nullptr;
+		SDL_DestroyWindow(m_pWindow);
+		m_pWindow = nullptr;
+		log_error("gfx", "Failed to create graphics thread");
+		return EGraphicsBackendErrorCodes::GRAPHICS_BACKEND_ERROR_CODE_THREAD_CREATE_FAILED;
+	}
 
 	// issue init commands for OpenGL and SDL
 	CCommandBuffer CmdBuffer(1024, 512);

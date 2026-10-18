@@ -35,7 +35,8 @@ namespace chaiscript {
 namespace chaiscript {
   struct Name_Validator {
     template<typename T>
-    static bool is_reserved_word(const T &s) noexcept {
+    // 首次构造保留字表可能分配失败，交由脚本执行入口处理异常。
+    static bool is_reserved_word(const T &s) {
       const static std::unordered_set<std::uint32_t>
           words{utility::hash("def"), utility::hash("fun"), utility::hash("while"), utility::hash("for"), utility::hash("if"), utility::hash("else"), utility::hash("&&"), utility::hash("||"), utility::hash(","), utility::hash("auto"), utility::hash("return"), utility::hash("break"), utility::hash("true"), utility::hash("false"), utility::hash("class"), utility::hash("attr"), utility::hash("var"), utility::hash("global"), utility::hash("GLOBAL"), utility::hash("_"), utility::hash("__LINE__"), utility::hash("__FILE__"), utility::hash("__FUNC__"), utility::hash("__CLASS__")};
 
@@ -43,7 +44,7 @@ namespace chaiscript {
     }
 
     template<typename T>
-    static bool valid_object_name(const T &name) noexcept {
+    static bool valid_object_name(const T &name) {
       return name.find("::") == std::string::npos && !is_reserved_word(name);
     }
 
@@ -311,7 +312,7 @@ namespace chaiscript {
                  const std::vector<Boxed_Value> &t_parameters,
                  const std::vector<chaiscript::Const_Proxy_Function> &t_functions,
                  bool t_dot_notation,
-                 const chaiscript::detail::Dispatch_Engine &t_ss) noexcept
+                 const chaiscript::detail::Dispatch_Engine &t_ss)
           : std::runtime_error(format(t_why, t_where, t_fname, t_parameters, t_dot_notation, t_ss))
           , reason(t_why)
           , start_position(t_where)
@@ -323,20 +324,20 @@ namespace chaiscript {
                  const std::vector<Boxed_Value> &t_parameters,
                  const std::vector<chaiscript::Const_Proxy_Function> &t_functions,
                  bool t_dot_notation,
-                 const chaiscript::detail::Dispatch_Engine &t_ss) noexcept
+                 const chaiscript::detail::Dispatch_Engine &t_ss)
           : std::runtime_error(format(t_why, t_parameters, t_dot_notation, t_ss))
           , reason(t_why)
           , detail(format_detail(t_functions, t_dot_notation, t_ss)) {
       }
 
-      eval_error(const std::string &t_why, const File_Position &t_where, const std::string &t_fname) noexcept
+      eval_error(const std::string &t_why, const File_Position &t_where, const std::string &t_fname)
           : std::runtime_error(format(t_why, t_where, t_fname))
           , reason(t_why)
           , start_position(t_where)
           , filename(t_fname) {
       }
 
-      explicit eval_error(const std::string &t_why) noexcept
+      explicit eval_error(const std::string &t_why)
           : std::runtime_error("Error: \"" + t_why + "\" ")
           , reason(t_why) {
       }

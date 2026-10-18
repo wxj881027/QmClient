@@ -2,6 +2,7 @@
 #define ENGINE_SHARED_HTTP_CURL_H
 
 #include <base/detect.h>
+#include <base/thread.h>
 #if !defined(CONF_PLATFORM_EMSCRIPTEN)
 
 #include <engine/http.h>
@@ -60,6 +61,8 @@ class CHttpCurl : public IEngineHttp
 {
 public:
 	// Lifecycle
+	explicit CHttpCurl(THREAD_CREATE pfnCreate = thread_try_init) :
+		m_pfnCreate(pfnCreate) {}
 	bool Init(std::chrono::milliseconds ShutdownDelay) override;
 	void Shutdown() override;
 	~CHttpCurl() override;
@@ -78,6 +81,7 @@ private:
 	};
 
 	void *m_pThread = nullptr;
+	THREAD_CREATE m_pfnCreate;
 
 	std::mutex m_Lock;
 	std::condition_variable m_ConditionVariableInit;

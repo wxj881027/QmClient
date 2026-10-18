@@ -16,17 +16,21 @@ public:
 	}
 
 	template<typename TSetSize>
-	void Ensure(const void *pFace, int Size, TSetSize &&SetSize)
+	bool Ensure(const void *pFace, int Size, TSetSize &&SetSize)
 	{
-		if(pFace == nullptr || (pFace == m_pFace && Size == m_Size))
-			return;
+		if(pFace == nullptr)
+			return false;
+		if(pFace == m_pFace && Size == m_Size)
+			return true;
 		// 失败可能改变底层状态，不能保留之前的成功记录。
 		Reset();
 		if(SetSize() == 0)
 		{
 			m_pFace = pFace;
 			m_Size = Size;
+			return true;
 		}
+		return false;
 	}
 };
 

@@ -259,11 +259,19 @@ std::unique_ptr<IHttpRequest> CreateHttpRequest(const char *pUrl)
 
 bool CHttpEmscripten::Init(std::chrono::milliseconds ShutdownDelay)
 {
-	m_ShutdownDelay = ShutdownDelay;
-
-	m_pThread = thread_init(CHttpEmscripten::ThreadMain, this, "http");
-
 	std::unique_lock Lock(m_Lock);
+	if(m_pThread)
+		return m_Initialized && !m_Shutdown;
+	m_ShutdownDelay = ShutdownDelay;
+	m_Shutdown = false;
+
+	m_pThread = thread_try_init(CHttpEmscripten::ThreadMain, this, "http");
+	if(!m_pThread)
+	{
+		m_Shutdown = true;
+		m_ConditionVariableInit.notify_all();
+		return false;
+	}
 	m_ConditionVariableInit.wait(Lock, [this]() { return m_Initialized.load(std::memory_order_seq_cst); });
 
 	return true;
@@ -297,7 +305,7 @@ void CHttpEmscripten::Run(std::shared_ptr<IHttpRequest> pRequest)
 {
 	{
 		std::unique_lock Lock(m_Lock);
-		dbg_assert(m_Initialized, "HTTP not initialized");
+		m_ConditionVariableInit.wait(Lock, [this]() { return m_Initialized || m_Shutdown; });
 		std::shared_ptr<CHttpRequestEmscripten> pRequestImpl = std::static_pointer_cast<CHttpRequestEmscripten>(pRequest);
 		pRequestImpl->m_pHttp = this;
 		if(m_Shutdown)

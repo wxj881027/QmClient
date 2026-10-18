@@ -98,6 +98,7 @@ namespace
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
+#include <exception>
 #include <iterator>
 #include <limits>
 #include <stack>
@@ -4275,7 +4276,20 @@ void CClient::Run()
 
 	// init text render
 	m_pTextRender = Kernel()->RequestInterface<IEngineTextRender>();
-	m_pTextRender->Init();
+	if(!m_pTextRender->Init())
+	{
+		log_error("client", "Failed to initialize text rendering (see details above)");
+		try
+		{
+			ShowMessageBox({.m_pTitle = "Text Rendering Error", .m_pMessage = "Failed to initialize text rendering. See the log for details."});
+		}
+		catch(const std::exception &Error)
+		{
+			// 低内存故障下，提示窗口分配失败也不能中断后续退出清理。
+			log_error("client", "Failed to show text rendering initialization error: %s", Error.what());
+		}
+		return;
+	}
 
 	// init the input
 	Input()->Init();
@@ -5089,14 +5103,10 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 
 	// wait for idle, so there is no data race
 	Graphics()->WaitForIdle();
-	// pause the sound device while creating the video instance
-	Sound()->PauseAudioDevice();
-	new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename);
-	Sound()->UnpauseAudioDevice();
-	if(!IVideo::Current()->Start())
+	if(!StartVideoRecorder(*Sound(), [&] {
+		   return new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename);
+	   }))
 	{
-		// Release partially initialized recorder state (threads/ffmpeg resources).
-		IVideo::Current()->Stop();
 		log_error("videorecorder", "Failed to start recording to '%s'", aFilename);
 		m_DemoPlayer.Stop("Failed to start video recording. See local console for details.");
 		return;
@@ -6792,6 +6802,13 @@ int main(int argc, const char **argv)
 
 	// create the components
 	IEngine *pEngine = CreateEngine(GAME_NAME, pFutureConsoleLogger);
+	if(!pEngine)
+	{
+		log_error("client", "Failed to initialize worker threads");
+		pClient->ShowMessageBox({.m_pTitle = "Initialization Error", .m_pMessage = "Failed to initialize worker threads. Close other applications and try again."});
+		PerformAllCleanup();
+		return -1;
+	}
 	pKernel->RegisterInterface(pEngine, false);
 	CleanerFunctions.emplace([pEngine]() {
 		// Engine has to be destroyed before the graphics so that skin download thread can finish

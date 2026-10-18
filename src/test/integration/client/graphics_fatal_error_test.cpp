@@ -1,9 +1,7 @@
 #include <engine/client/backend_sdl.h>
 
 #include <gtest/gtest.h>
-
-#include <cstdint>
-#include <optional>
+#include <test/support/threaded_graphics_backend.h>
 
 namespace
 {
@@ -31,63 +29,6 @@ namespace
 		}
 		void ErroneousCleanup() override {}
 		const SGfxWarningContainer &GetWarning() const override { return m_Warning; }
-	};
-
-	// 只替代窗口与 GPU 边界，提交、等待、错误消费均调用生产线程后端。
-	class CTestGraphicsBackend : public CGraphicsBackend_Threaded
-	{
-		TTwGraphicsGpuList m_Gpus;
-		TGLBackendReadPresentedImageData m_ReadImage;
-
-	public:
-		CTestGraphicsBackend(CFailingGraphicsProcessor &Processor) :
-			CGraphicsBackend_Threaded([](const char *, const char *) { return "translated driver advice"; })
-		{
-			StartProcessor(&Processor);
-		}
-		~CTestGraphicsBackend() override { StopProcessor(); }
-		void Restart(CFailingGraphicsProcessor &Processor)
-		{
-			StopProcessor();
-			StartProcessor(&Processor);
-		}
-
-		int Init(const char *, int *, int *, int *, int *, int *, int, int *, int *, int *, int *, IStorage *) override { return 0; }
-		int Shutdown() override { return 0; }
-		uint64_t TextureMemoryUsage() const override { return 0; }
-		uint64_t BufferMemoryUsage() const override { return 0; }
-		uint64_t StreamedMemoryUsage() const override { return 0; }
-		uint64_t StagingMemoryUsage() const override { return 0; }
-		const TTwGraphicsGpuList &GetGpus() const override { return m_Gpus; }
-		void GetVideoModes(CVideoMode *, int, int *, float, int, int, int) override {}
-		bool GetCurrentVideoMode(CVideoMode &, float, int, int, int) override { return false; }
-		int GetNumScreens() const override { return 0; }
-		const char *GetScreenName(int) const override { return ""; }
-		void Minimize() override {}
-		void HideWindow() override {}
-		void ShowWindow() override {}
-		void SetWindowParams(int, bool) override {}
-		bool SetWindowScreen(int, bool, ivec2 *) override { return false; }
-		bool UpdateDisplayMode(int, ivec2 *) override { return false; }
-		uint32_t GetWindowId() const override { return 0; }
-		int GetWindowScreen() override { return 0; }
-		int WindowActive() override { return 0; }
-		int WindowOpen() override { return 0; }
-		void SetWindowGrab(bool) override {}
-		bool ResizeWindow(int, int, int) override { return false; }
-		void GetViewportSize(int &, int &) override {}
-		void GetDisplayCutoutInsets(int &, int &) override {}
-		void NotifyWindow() override {}
-		bool IsScreenKeyboardShown() override { return false; }
-		void WindowDestroyNtf(uint32_t) override {}
-		void WindowCreateNtf(uint32_t) override {}
-		bool GetDriverVersion(EGraphicsDriverAgeType, int &, int &, int &, const char *&, EBackendType) override { return false; }
-		const char *GetVendorString() override { return ""; }
-		const char *GetVersionString() override { return ""; }
-		const char *GetRendererString() override { return ""; }
-		EBackendType GetBackendType() const override { return BACKEND_TYPE_VULKAN; }
-		TGLBackendReadPresentedImageData &GetReadPresentedImageDataFuncUnsafe() override { return m_ReadImage; }
-		std::optional<int> ShowMessageBox(const IGraphics::CMessageBox &) override { return std::nullopt; }
 	};
 } // namespace
 

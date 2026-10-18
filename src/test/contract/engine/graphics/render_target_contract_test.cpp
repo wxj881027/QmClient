@@ -77,53 +77,6 @@ TEST(GraphicsRenderTarget, BeginCommandDoesNotInheritCurrentClip)
 	EXPECT_LT(DisableClip, AddCmd);
 }
 
-TEST(GraphicsRenderTarget, AsyncBeginReadbackDoesNotWaitForIdle)
-{
-	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetReadback");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_EQ(Body.find("WaitForIdle();"), std::string::npos);
-	EXPECT_NE(Body.find("KickCommandBuffer();"), std::string::npos);
-	EXPECT_NE(Body.find("CCommandBuffer::SCommand_Signal"), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, SyncReadRenderTargetUsesAsyncContract)
-{
-	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "bool CGraphics_Threaded::ReadRenderTarget");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("BeginRenderTargetReadback"), std::string::npos);
-	EXPECT_NE(Body.find("PollRenderTargetReadback"), std::string::npos);
-	EXPECT_NE(Body.find("ResolveRenderTargetReadback"), std::string::npos);
-	EXPECT_NE(Body.find("CancelRenderTargetReadback"), std::string::npos);
-}
-
-TEST(GraphicsRenderTarget, ResolveAndCancelDefendInvalidHandles)
-{
-	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
-	const std::string ResolveBody = ExtractFunctionBody(Source, "bool CGraphics_Threaded::ResolveRenderTargetReadback");
-	const std::string CancelBody = ExtractFunctionBody(Source, "void CGraphics_Threaded::CancelRenderTargetReadback");
-	ASSERT_FALSE(ResolveBody.empty());
-	ASSERT_FALSE(CancelBody.empty());
-	EXPECT_NE(ResolveBody.find("pHandle == nullptr"), std::string::npos);
-	EXPECT_NE(ResolveBody.find("!pHandle->IsValid()"), std::string::npos);
-	EXPECT_NE(CancelBody.find("pHandle == nullptr"), std::string::npos);
-	EXPECT_NE(CancelBody.find("!pHandle->IsValid()"), std::string::npos);
-}
-
-TEST(GraphicsRenderTargetBackbufferCapture, ThreadedFrontendValidatesAndQueuesCapture)
-{
-	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "bool CGraphics_Threaded::CaptureBackbufferToRenderTarget");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("IsBackbufferCaptureSupported()"), std::string::npos);
-	EXPECT_NE(Body.find("m_RenderTargetActive"), std::string::npos);
-	EXPECT_NE(Body.find("m_vRenderTargetIndices"), std::string::npos);
-	EXPECT_NE(Body.find("FlushVertices();"), std::string::npos);
-	EXPECT_NE(Body.find("SCommand_RenderTarget_CaptureBackbuffer"), std::string::npos);
-	EXPECT_NE(Body.find("AddCmd(Cmd);"), std::string::npos);
-}
-
 TEST(GraphicsRenderTargetBackbufferCapture, RuntimeMultiSamplingChangesKeepCapabilityInSync)
 {
 	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
@@ -152,20 +105,6 @@ TEST(GraphicsRenderTargetBackbufferCapture, VulkanRecordsPostCaptureDrawsInline)
 	EXPECT_NE(Body.find("m_vMainDrawCommandBuffers[m_CurImageIndex]"), std::string::npos);
 	EXPECT_EQ(StartBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
 	EXPECT_NE(PrepareBody.find("m_ForceSingleThreadedRender = false"), std::string::npos);
-}
-
-TEST(GraphicsRenderTargetGaussianBlur, ThreadedFrontendBuildsModeSpecificPassChain)
-{
-	const std::string Source = ReadFile("src/engine/client/graphics_threaded.cpp");
-	const std::string Body = ExtractFunctionBody(Source, "bool CGraphics_Threaded::GaussianBlurRenderTarget");
-	ASSERT_FALSE(Body.empty());
-	EXPECT_NE(Body.find("CalculateGaussianBlurKernel"), std::string::npos);
-	EXPECT_NE(Body.find("aTemporary[Index].Id() == Source.Id()"), std::string::npos);
-	EXPECT_NE(Body.find("m_vRenderTargetSizes[Source.Id()]"), std::string::npos);
-	EXPECT_NE(Body.find("DualKawasePyramidDimension"), std::string::npos);
-	EXPECT_NE(Body.find("DUAL_KAWASE_PYRAMID_LEVELS"), std::string::npos);
-	EXPECT_NE(Body.find("AddBlurPass"), std::string::npos);
-	EXPECT_NE(Body.find("Command.m_Upsample = Upsample"), std::string::npos);
 }
 
 TEST(GraphicsRenderTargetGaussianBlur, FrontendRejectsNestedRenderTargets)

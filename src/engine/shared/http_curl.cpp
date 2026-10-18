@@ -592,6 +592,9 @@ void EscapeUrl(char *pBuf, size_t Size, const char *pStr)
 
 bool CHttpCurl::Init(std::chrono::milliseconds ShutdownDelay)
 {
+	std::unique_lock Lock(m_Lock);
+	if(m_pThread)
+		return m_State == RUNNING && !m_Shutdown;
 	m_ShutdownDelay = ShutdownDelay;
 
 #if !defined(CONF_FAMILY_WINDOWS)
@@ -599,9 +602,14 @@ bool CHttpCurl::Init(std::chrono::milliseconds ShutdownDelay)
 	// handlers and instead ignore SIGPIPE from OpenSSL ourselves.
 	signal(SIGPIPE, SIG_IGN);
 #endif
-	m_pThread = thread_init(CHttpCurl::ThreadMain, this, "http");
-
-	std::unique_lock Lock(m_Lock);
+	m_State = UNINITIALIZED;
+	m_pThread = m_pfnCreate(CHttpCurl::ThreadMain, this, "http");
+	if(!m_pThread)
+	{
+		m_State = ERROR;
+		m_ConditionVariableInit.notify_all();
+		return false;
+	}
 	m_ConditionVariableInit.wait(Lock, [this]() { return m_State != CHttpCurl::UNINITIALIZED; });
 	if(m_State != CHttpCurl::RUNNING)
 	{
@@ -634,13 +642,13 @@ void CHttpCurl::Run(std::shared_ptr<IHttpRequest> pRequest)
 {
 	std::shared_ptr<CHttpRequestCurl> pRequestImpl = std::static_pointer_cast<CHttpRequestCurl>(pRequest);
 	std::unique_lock Lock(m_Lock);
+	m_ConditionVariableInit.wait(Lock, [this]() { return m_Shutdown || m_State != CHttpCurl::UNINITIALIZED; });
 	if(m_Shutdown || m_State == CHttpCurl::ERROR)
 	{
 		str_copy(pRequestImpl->m_aErr, "Shutting down");
 		pRequestImpl->OnCompletionInternal(nullptr, CURLE_ABORTED_BY_CALLBACK);
 		return;
 	}
-	m_ConditionVariableInit.wait(Lock, [this]() { return m_State != CHttpCurl::UNINITIALIZED; });
 	m_PendingRequests.emplace_back(pRequestImpl);
 	curl_multi_wakeup(m_pMultiH);
 }

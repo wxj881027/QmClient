@@ -6,7 +6,10 @@
 #include <base/system.h>
 
 #include <engine/client/quad_rotation_cache.h>
+#include <engine/client/render_target_pool.h>
+#include <engine/client/render_target_readback_queue.h>
 #include <engine/client/rounded_rect_directions.h>
+#include <engine/client/texture_slot_pool.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
@@ -81,17 +84,20 @@ class CCommandBuffer
 			m_Used = 0;
 		}
 
-		void *Alloc(unsigned Requested, unsigned Alignment = alignof(std::max_align_t))
+		void *Alloc(size_t Requested, size_t Alignment = alignof(std::max_align_t))
 		{
+			if(Alignment == 0)
+				return nullptr;
 			size_t Offset = reinterpret_cast<uintptr_t>(m_pData + m_Used) % Alignment;
 			if(Offset)
 				Offset = Alignment - Offset;
 
-			if(Requested + Offset + m_Used > m_Size)
+			const size_t Remaining = m_Size - m_Used;
+			if(Offset > Remaining || Requested > Remaining - Offset)
 				return nullptr;
 
 			void *pPtr = &m_pData[m_Used + Offset];
-			m_Used += Requested + Offset;
+			m_Used += static_cast<unsigned>(Requested + Offset);
 			return pPtr;
 		}
 
@@ -742,7 +748,7 @@ public:
 	{
 	}
 
-	void *AllocData(unsigned WantedSize)
+	void *AllocData(size_t WantedSize)
 	{
 		return m_DataBuffer.Alloc(WantedSize);
 	}
@@ -845,6 +851,7 @@ enum EGraphicsBackendErrorCodes
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_SCREEN_RESOLUTION_REQUEST_FAILED,
 	GRAPHICS_BACKEND_ERROR_CODE_SDL_WINDOW_CREATE_FAILED,
 	GRAPHICS_BACKEND_ERROR_CODE_METAL_INIT_FAILED,
+	GRAPHICS_BACKEND_ERROR_CODE_THREAD_CREATE_FAILED,
 };
 
 constexpr bool IsGraphicsBackendOpenGLRetryableError(int ErrorCode)
@@ -1047,39 +1054,12 @@ class CGraphics_Threaded : public IEngineGraphics
 	// 全透明占位纹理：sprite 超出自定义图集范围时按「未提供 = 不可见」处理用。
 	CTextureHandle m_BlankTexture;
 
-	std::vector<int> m_vTextureIndices;
-	// Tracks slot generations so copied handles become stale once a slot is freed and reused.
-	std::vector<uint32_t> m_vTextureGenerations;
-	// 纹理句柄纪元：每次图形设备重建都自增。句柄里存的是
-	// (纪元 << 16) | 槽位代数，因此设备重建后所有旧句柄都会立刻失效，
-	// 不会因为「槽位与代数恰好相同」被误判为仍然有效。
-	uint32_t m_TextureHandleEpoch = 0;
-	size_t m_FirstFreeTexture;
+	CTextureSlotPool<> m_TextureSlots;
 	int m_TextureMemoryUsage;
 
-	std::vector<int> m_vRenderTargetIndices;
-	std::vector<ivec2> m_vRenderTargetSizes;
-	size_t m_FirstFreeRenderTarget;
+	CRenderTargetPool m_RenderTargets;
 
-	enum class ERenderTargetReadbackRequestState
-	{
-		FREE,
-		PENDING,
-		READY,
-		FAILED,
-		CANCELED,
-	};
-
-	struct SRenderTargetReadbackRequest
-	{
-		uint32_t m_Generation = 0;
-		int m_NextFree = -1;
-		ERenderTargetReadbackRequestState m_State = ERenderTargetReadbackRequestState::FREE;
-		CImageInfo m_Image;
-		std::unique_ptr<CSemaphore> m_pCompletion;
-	};
-	std::vector<SRenderTargetReadbackRequest> m_vRenderTargetReadbackRequests;
-	int m_FirstFreeRenderTargetReadback = -1;
+	CRenderTargetReadbackQueue m_RenderTargetReadbacks;
 
 	std::atomic<bool> m_WarnPngliteIncompatibleImages = false;
 
@@ -1188,12 +1168,6 @@ class CGraphics_Threaded : public IEngineGraphics
 	ColorRGBA *m_pReadPixelColor = nullptr;
 	void ReadPixelDirect(bool *pSwapped);
 	void ScreenshotDirect(bool *pSwapped);
-	SRenderTargetReadbackRequest *GetRenderTargetReadbackRequest(CRenderTargetReadbackHandle Handle);
-	const SRenderTargetReadbackRequest *GetRenderTargetReadbackRequest(CRenderTargetReadbackHandle Handle) const;
-	void UpdateRenderTargetReadbackRequestState(SRenderTargetReadbackRequest &Request);
-	CRenderTargetReadbackHandle AllocateRenderTargetReadbackHandle();
-	void FreeRenderTargetReadbackHandle(CRenderTargetReadbackHandle Handle, bool FreeImageData);
-	void CleanupCanceledRenderTargetReadbacks();
 
 	int IssueInit();
 	int InitWindow();
@@ -1229,8 +1203,7 @@ public:
 	void LinesBatchEnd(CLineItemBatch *pBatch) override;
 	void LinesBatchDraw(CLineItemBatch *pBatch, const CLineItem *pArray, size_t Num) override;
 
-	IGraphics::CTextureHandle FindFreeTextureIndex();
-	void BumpTextureHandleEpochAndResetSlots();
+	bool BumpTextureHandleEpochAndResetSlots();
 	bool IsTextureHandleAllocated(IGraphics::CTextureHandle TextureId) const override;
 	void FreeTextureIndex(CTextureHandle *pIndex);
 	// 显卡设备重建会清空 m_vQuadContainers，旧索引随之失效；
@@ -1521,7 +1494,7 @@ public:
 	void RenderTileLayer(int BufferContainerIndex, const ColorRGBA &Color, char **pOffsets, unsigned int *pIndicedVertexDrawNum, size_t NumIndicesOffset) override;
 	void RenderBorderTiles(int BufferContainerIndex, const ColorRGBA &Color, char *pIndexBufferOffset, const vec2 &Offset, const vec2 &Scale, uint32_t DrawNum) override;
 	void RenderQuadLayer(int BufferContainerIndex, SQuadRenderInfo *pQuadInfo, size_t QuadNum, int QuadOffset, bool Grouped = false) override;
-	void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, int TextureTextIndex, int TextureTextOutlineIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override;
+	void RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor) override;
 	void RenderMediaIslandSdf(const IGraphics::SMediaIslandSdfParams &Params, CRenderTargetHandle Backdrop = CRenderTargetHandle()) override;
 	void RenderRoundedRectSdf(const IGraphics::SRoundedRectSdfParams &Params) override;
 	void DrawRoundedRectAntialias(float x, float y, float w, float h, float Radius, int Corners, const ColorRGBA &Color) override;

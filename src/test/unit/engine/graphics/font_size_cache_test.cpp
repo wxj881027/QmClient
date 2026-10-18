@@ -45,13 +45,13 @@ TEST(QmFontSizeCache, FailedSetIsNotRemembered)
 	int Calls = 0;
 
 	// 失败可能已经改变底层状态，因此不能记为命中，下次必须重试。
-	Cache.Ensure(&Face, 12, [&]() { ++Calls; return 1; });
-	Cache.Ensure(&Face, 12, [&]() { ++Calls; return 1; });
+	EXPECT_FALSE(Cache.Ensure(&Face, 12, [&]() { ++Calls; return 1; }));
+	EXPECT_FALSE(Cache.Ensure(&Face, 12, [&]() { ++Calls; return 1; }));
 	EXPECT_EQ(Calls, 2);
 
 	// 失败后转为成功：成功那次开始才被记住。
-	Cache.Ensure(&Face, 12, [&]() { ++Calls; return 0; });
-	Cache.Ensure(&Face, 12, [&]() { ++Calls; return 0; });
+	EXPECT_TRUE(Cache.Ensure(&Face, 12, [&]() { ++Calls; return 0; }));
+	EXPECT_TRUE(Cache.Ensure(&Face, 12, [&]() { ++Calls; return 0; }));
 	EXPECT_EQ(Calls, 3);
 }
 
@@ -62,8 +62,8 @@ TEST(QmFontSizeCache, NullFaceIsSkippedAndResetForcesNextSet)
 	const auto SetSize = [&]() { ++Calls; return 0; };
 
 	// 空 face 没有可设置的对象：直接跳过，不调用设置函数，也不占用缓存键。
-	Cache.Ensure(nullptr, 12, SetSize);
-	Cache.Ensure(nullptr, 12, SetSize);
+	EXPECT_FALSE(Cache.Ensure(nullptr, 12, SetSize));
+	EXPECT_FALSE(Cache.Ensure(nullptr, 12, SetSize));
 	EXPECT_EQ(Calls, 0);
 
 	int Face = 0;

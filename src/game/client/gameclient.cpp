@@ -7662,6 +7662,11 @@ void CGameClient::OnGraphicsResourcesReset()
 	// 这里负责把游戏侧的资源重新建起来。
 	log_info("gfx", "graphics resources were reset, reloading game assets (generation %u)", Graphics()->GraphicsResourcesResetVersion());
 
+	// 资产重载也可能触发文字绘制或容器清理，先撤销文字侧的旧 GPU 资源引用。
+	if(!TextRender()->OnGraphicsResourcesReset())
+		log_warn("gfx", "Text texture recovery is pending; retrying from the main loop.");
+	m_QmIconPrewarm.Invalidate();
+
 	// 先让所有旧句柄显式作废，避免任何一次误用旧句柄的绘制落到新设备上。
 	for(int i = 0; i < g_pData->m_NumImages; i++)
 		g_pData->m_aImages[i].m_Id.Invalidate();
@@ -7674,10 +7679,6 @@ void CGameClient::OnGraphicsResourcesReset()
 	m_ExtrasSkinLoaded = false;
 
 	LoadInitialGraphicsAssets();
-
-	// 文本渲染器缓存了字体纹理，必须同样重建。
-	TextRender()->OnGraphicsResourcesReset();
-	m_QmIconPrewarm.Invalidate();
 
 	log_info("gfx", "game assets reloaded after graphics resources reset");
 }

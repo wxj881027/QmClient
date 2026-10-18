@@ -30,6 +30,7 @@
 #include <game/client/components/chat.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/qmclient/browser_column_layout.h>
+#include <game/client/components/qmclient/browser_score.h>
 #include <game/client/components/qmclient/browser_status_layout.h>
 #include <game/client/components/qmclient/friends_category_drag.h>
 #include <game/client/components/qmclient/local_save_display.h>
@@ -2145,40 +2146,7 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 
 		// score
 		char aTemp[16];
-		if(!CurrentClient.m_Player)
-		{
-			str_copy(aTemp, "SPEC");
-		}
-		else if(pSelectedServer->m_ClientScoreKind == CServerInfo::CLIENT_SCORE_KIND_POINTS)
-		{
-			str_format(aTemp, sizeof(aTemp), "%d", CurrentClient.m_Score);
-		}
-		else
-		{
-			std::optional<int> Time = {};
-
-			if(pSelectedServer->m_ClientScoreKind == CServerInfo::CLIENT_SCORE_KIND_TIME_BACKCOMPAT)
-			{
-				const int TempTime = absolute(CurrentClient.m_Score);
-				if(TempTime != 0 && TempTime != 9999)
-					Time = TempTime;
-			}
-			else
-			{
-				// CServerInfo::CLIENT_SCORE_KIND_POINTS
-				if(CurrentClient.m_Score >= 0)
-					Time = CurrentClient.m_Score;
-			}
-
-			if(Time.has_value())
-			{
-				str_time((int64_t)Time.value() * 100, TIME_HOURS, aTemp, sizeof(aTemp));
-			}
-			else
-			{
-				aTemp[0] = '\0';
-			}
-		}
+		QmFormatBrowserScore(aTemp, CurrentClient, pSelectedServer->m_ClientScoreKind);
 
 		Ui()->DoLabel(&Score, aTemp, FontSize, TEXTALIGN_ML);
 

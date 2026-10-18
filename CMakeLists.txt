@@ -793,7 +793,13 @@ if(NOT(TARGET_OS STREQUAL "android" OR TARGET_OS STREQUAL "ios"))
   find_package(GLEW)
 endif()
 find_package(EGL QUIET)
-find_package(GTest)
+# 先读取包自身导出的 Google Mock 目标，兼容尚未支持它的旧 FindGTest 模块。
+find_package(GTest CONFIG QUIET)
+if(GTest_FOUND)
+  set(GTEST_FOUND TRUE)
+else()
+  find_package(GTest)
+endif()
 if(UPNP)
   find_package(Miniupnpc)
 endif()
@@ -1184,6 +1190,9 @@ if(NOT(GTEST_FOUND) AND DOWNLOAD_GTEST)
     endif()
   endif()
 endif()
+
+include(cmake/QmGTest.cmake)
+qm_resolve_gtest_targets(QM_GTEST_LIBRARIES QM_GTEST_MAIN_TARGET)
 
 ########################################################################
 # DOWNLOAD BENCHMARK（可选，供 qm-benchmarks 目标使用）
@@ -2687,6 +2696,7 @@ add_custom_command(OUTPUT "src/generated/wordlist.h"
 
 # Sources
 set_src(BASE GLOB_RECURSE src/base
+  aio_buffer.h
   bezier.cpp
   bezier.h
   color.cpp
@@ -2711,6 +2721,7 @@ set_src(BASE GLOB_RECURSE src/base
   log.h
   log_color.h
   logger.h
+  logger_async.h
   math.h
   mem.cpp
   mem.h
@@ -2876,6 +2887,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   websocket_client.h
   websocket_client_parse.cpp
   websocket_client_rust.cpp
+  websocket_client_runtime.h
   websockets.cpp
   websockets.h
 )
@@ -3106,16 +3118,20 @@ if(CLIENT)
     graphics_threaded.cpp
     graphics_threaded.h
     graphics_threaded_sprites.cpp
+    render_target_readback_queue.h
+    render_target_pool.h
     input.cpp
     input.h
     input_sdl3.h
     audio_sdl3.h
+    sound_buffer.h
     keynames.cpp
     keynames.h
     notifications.cpp
     notifications.h
     serverbrowser.cpp
     serverbrowser.h
+    serverbrowser_addresses.h
     qm_serverlist_cache.h
     serverbrowser_http.cpp
     serverbrowser_http.h
@@ -3132,18 +3148,27 @@ if(CLIENT)
     steam_probe.h
     steam_client_path.h
     text.cpp
+    glyph_atlas.h
+    glyph_atlas_growth.h
+    glyph_render_retry.h
     text_gradient.h
     qm_font_names.h
+    qm_font_collection.h
+    qm_font_face_registry.h
     qm_font_file_probe.h
     qm_font_restore.h
+    qm_font_scan_job.h
     qm_system_fonts.h
     qm_font_name_match.h
     text_sweep.h
+    text_utf8_cursor.h
+    texture_slot_pool.h
     updater.cpp
     updater.h
     video.cpp
     video.h
     video_frame_capture.h
+    video_recorder_lifecycle.h
     warning.cpp
   )
 
@@ -3442,6 +3467,7 @@ if(CLIENT)
     components/qmclient/bind_editor.cpp
     components/qmclient/bind_editor.h
     components/qmclient/bind_settings.cpp
+    components/qmclient/browser_score.h
     components/qmclient/browser_status_layout.h
     components/qmclient/chat_command_preview.h
     components/qmclient/chat_input_layout.h
@@ -3624,6 +3650,9 @@ if(CLIENT)
     components/qmclient/tee_trail_styles.h
     components/qmclient/scripting/impl.cpp
     components/qmclient/scripting/impl.h
+    components/qmclient/scripting/execution_scope.h
+    components/qmclient/scripting/script_file.h
+    components/qmclient/scripting/state.h
     components/qmclient/translate/translate.cpp
     components/qmclient/translate/translate_backend.cpp
     components/qmclient/translate/translate_backend_auto.cpp
@@ -3668,9 +3697,11 @@ if(CLIENT)
     components/qmclient/voice/voice_component.cpp
     components/qmclient/voice/voice_component.h
     components/qmclient/voice/voice_core.cpp
+    components/qmclient/voice/voice_audio_retry.h
     components/qmclient/voice/voice_core.h
     components/qmclient/voice/voice_utils.cpp
     components/qmclient/voice/voice_utils.h
+    components/qmclient/voice/voice_worker.h
     components/qmclient/water_hammer_indicator.cpp
     components/qmclient/water_hammer_indicator.h
     components/qmclient/weapon_trajectory.cpp
@@ -4579,7 +4610,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 # TESTS
 ########################################################################
 
-if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
+if(QM_GTEST_LIBRARIES AND SERVER)
   # 测试显式注册；目录递归发现和遗漏清单由 test_inventory.py 核对。
   set(TESTS
     src/test/unit/qmclient/ui/settings_card_info_test.cpp
@@ -4663,7 +4694,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/ui/qm_console_settings_layout_test.cpp
     src/test/unit/qmclient/client/qm_credits_layout_test.cpp
     src/test/unit/qmclient/client/qm_module_layout_adapter_test.cpp
-    src/test/unit/base/aio_test.cpp
+    src/test/unit/base/aio_buffer_test.cpp
+    src/test/unit/base/future_logger_test.cpp
+    src/test/unit/base/log_dispatch_test.cpp
+    src/test/integration/base/aio_test.cpp
+    src/test/integration/base/async_logger_test.cpp
     src/test/unit/client/assets_editor_layout_test.cpp
     src/test/unit/client/assets_preview_scale_test.cpp
     src/test/contract/qmclient/settings/assets_preview_scale_contract_test.cpp
@@ -4702,12 +4737,20 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp
+    src/test/integration/client/graphics_thread_startup_test.cpp
+    src/test/support/threaded_graphics_backend.h
+    src/test/support/thread_creation_probe.h
     src/test/integration/client/graphics_error_report_test.cpp
     src/test/unit/engine/graphics/graphics_command_batch_test.cpp
+    src/test/unit/engine/graphics/graphics_command_buffer_allocation_test.cpp
+    src/test/unit/engine/graphics/glyph_atlas_test.cpp
+    src/test/unit/engine/graphics/glyph_atlas_growth_test.cpp
+    src/test/unit/engine/graphics/glyph_render_retry_test.cpp
     src/test/unit/base/hash_test.cpp
     src/test/unit/engine/huffman_test.cpp
     src/test/contract/base/http_shutdown_lifecycle_contract_test.cpp
     src/test/unit/engine/image_test.cpp
+    src/test/unit/engine/sound_buffer_test.cpp
     src/test/unit/base/io_test.cpp
     src/test/unit/base/io_read_all_test.cpp
     src/test/contract/base/ios_runtime_contract_test.cpp
@@ -4716,6 +4759,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/support/qm_open_link_probe.cpp
     src/test/support/qm_open_link_probe.h
     src/test/unit/engine/jobs_test.cpp
+    src/test/integration/engine/job_pool_startup_test.cpp
+    src/test/integration/engine/http_startup_test.cpp
     src/test/unit/engine/json_test.cpp
     src/test/unit/engine/jsonwriter_test.cpp
     src/test/unit/client/keyword_reply_rules_test.cpp
@@ -4861,7 +4906,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_font_category_test.cpp
     src/test/unit/qmclient/client/qm_font_resource_policy_test.cpp
     src/test/unit/qmclient/client/qm_font_scan_job_test.cpp
+    src/test/integration/qmclient/client/qm_font_scan_failure_test.cpp
+    src/test/integration/qmclient/client/qm_font_scan_cancellation_test.cpp
     src/test/unit/qmclient/client/qm_font_restore_test.cpp
+    src/test/unit/qmclient/client/qm_scripting_state_test.cpp
+    src/test/unit/qmclient/client/qm_scripting_file_test.cpp
+    src/test/unit/qmclient/client/qm_scripting_execution_scope_test.cpp
+    src/test/integration/qmclient/client/qm_scripting_execution_test.cpp
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
@@ -4927,6 +4978,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_realtime_users_test.cpp
     src/test/unit/qmclient/music/qm_prepared_media_art_test.cpp
     src/test/unit/engine/websocket_client_test.cpp
+    src/test/unit/engine/websocket_client_lifecycle_test.cpp
     src/test/unit/qmclient/client/qm_map_upload_test.cpp
     src/test/unit/qmclient/client/qm_developer_badge_test.cpp
     src/test/unit/qmclient/client/qm_title_style_test.cpp
@@ -4945,6 +4997,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qmclient_update_http_test.cpp
     src/test/unit/engine/http/http_url_test.cpp
     src/test/unit/qmclient/client/qmclient_update_proxy_test.cpp
+    src/test/integration/qmclient/client/qm_serverlist_follow_test.cpp
     src/test/integration/qmclient/client/qm_serverlist_recovery_test.cpp
     src/test/integration/qmclient/client/qmclient_update_request_test.cpp
     src/test/integration/qmclient/client/qmclient_update_survey_test.cpp
@@ -4984,7 +5037,14 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/base/secure_random_test.cpp
     src/test/unit/engine/server_test.cpp
     src/test/unit/engine/serverbrowser_country_filter_test.cpp
+    src/test/unit/client/serverbrowser_addresses_test.cpp
+    src/test/unit/client/serverbrowser_score_test.cpp
     src/test/unit/client/serverbrowser_test.cpp
+    src/test/integration/client/serverbrowser_ping_cache_test.cpp
+    src/test/integration/client/serverbrowser_publication_test.cpp
+    src/test/integration/client/serverbrowser_sort_recovery_test.cpp
+    src/test/integration/client/serverbrowser_community_load_test.cpp
+    src/test/integration/client/serverbrowser_metadata_recovery_test.cpp
     src/test/unit/client/qm_hang_snapshot_test.cpp
     src/test/integration/client/qm_hang_dump_report_test.cpp
     src/test/unit/engine/serverinfo_test.cpp
@@ -5052,6 +5112,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/engine/graphics/render_target_contract_test.cpp
     src/test/unit/engine/graphics/render_target_geometry_test.cpp
     src/test/unit/engine/graphics/render_target_policy_test.cpp
+    src/test/unit/engine/graphics/render_target_readback_queue_test.cpp
+    src/test/unit/engine/graphics/render_target_pool_test.cpp
     src/test/unit/qmclient/client/dummy_miniview_render_test.cpp
     src/test/unit/qmclient/client/qm_quad_rotation_cache_test.cpp
     src/test/unit/base/windows_test.cpp
@@ -5072,6 +5134,8 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/graphics/text_char_transform_test.cpp
     src/test/unit/engine/graphics/text_container_lifetime_test.cpp
     src/test/unit/engine/graphics/text_layout_string_test.cpp
+    src/test/unit/engine/graphics/text_utf8_cursor_test.cpp
+    src/test/unit/engine/graphics/texture_slot_pool_test.cpp
     src/test/unit/engine/graphics/text_sweep_test.cpp
     src/test/unit/engine/graphics/text_gradient_geometry_test.cpp
     src/test/unit/qmclient/client/qm_nameplate_effect_lod_test.cpp
@@ -5105,6 +5169,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/engine/uuid_test.cpp
     src/test/unit/base/vmath_test.cpp
     src/test/unit/client/voice_core_test.cpp
+    src/test/unit/client/voice_transport_test.cpp
+    src/test/unit/client/voice_worker_test.cpp
+    src/test/unit/client/voice_audio_retry_test.cpp
+    src/test/unit/client/voice_audio_subsystem_test.cpp
     src/test/unit/client/voice_sequence_test.cpp
     src/test/unit/client/voice_qmclient_test.cpp
     src/test/unit/client/voice_packet_utils_test.cpp
@@ -5136,6 +5204,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/game/client/components/qmclient/tee_trail_styles.cpp
     src/game/client/components/qmclient/screenshot_image_job.cpp
     src/game/client/components/qmclient/skin_source_job.cpp
+    src/game/client/components/qmclient/scripting/impl.cpp
     src/game/client/components/qmclient/config_package.cpp
     src/game/client/components/jump_hint_utils.cpp
     src/test/support/render_tee_offset_helpers.cpp
@@ -5263,6 +5332,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   endif()
 
   if(FREETYPE_FOUND)
+    list(APPEND TESTS
+      src/test/unit/qmclient/client/qm_font_face_registry_test.cpp
+      src/test/integration/qmclient/client/qm_font_collection_test.cpp
+    )
     list(APPEND TESTS src/test/integration/qmclient/client/qm_system_font_restore_test.cpp)
     list(APPEND TESTS src/test/integration/qmclient/client/qm_screenshot_watermark_render_test.cpp src/test/integration/qmclient/client/qm_screenshot_watermark_job_test.cpp src/test/unit/qmclient/client/qm_font_names_test.cpp)
     list(APPEND TESTS_EXTRA src/game/client/components/qmclient/screenshot_manager.cpp)
@@ -5273,6 +5346,12 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/unit/engine/input_sdl3_test.cpp
       src/test/integration/engine/audio_sdl3_test.cpp
     )
+    if(VIDEORECORDER)
+      list(APPEND TESTS
+        src/test/integration/engine/audio_recording_routing_test.cpp
+        src/test/unit/engine/video_recorder_lifecycle_test.cpp
+      )
+    endif()
   endif()
   set(TARGET_TESTRUNNER testrunner)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL
@@ -5290,7 +5369,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     ${DEPS}
   )
   add_dependencies(${TARGET_TESTRUNNER} generate_protocol)
-  target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+  target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${QM_GTEST_LIBRARIES} ${LIBS_SERVER})
   if(TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios")
     # 线程后端的 autorelease pool 与 macOS 主循环等待需要这些系统框架。
     target_link_libraries(${TARGET_TESTRUNNER} "-framework Foundation" "-framework CoreFoundation")
@@ -5320,6 +5399,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     target_compile_options(${TARGET_TESTRUNNER} PRIVATE /bigobj)
   endif()
   target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/engine/external/chaiscript
     ${GTEST_INCLUDE_DIRS}
     ${SDL3_INCLUDE_DIRS}
     ${VULKAN_INCLUDE_DIRS}
@@ -5328,13 +5408,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${FFMPEG_INCLUDE_DIRS})
   endif()
 
-  set(QM_NMT_GTEST_MAIN_TARGET)
-  if(TARGET GTest::gtest_main)
-    set(QM_NMT_GTEST_MAIN_TARGET GTest::gtest_main)
-  elseif(TARGET gtest_main)
-    set(QM_NMT_GTEST_MAIN_TARGET gtest_main)
-  endif()
-  if(QM_NMT_GTEST_MAIN_TARGET AND TARGET_OS STREQUAL "windows")
+  if(QM_GTEST_MAIN_TARGET AND TARGET_OS STREQUAL "windows")
     add_executable(qm-nmt-tests EXCLUDE_FROM_ALL
       src/test/unit/qmclient/music/music_lyrics_krc_test.cpp
       src/test/unit/qmclient/music/music_lyrics_qrc_test.cpp
@@ -5382,7 +5456,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       target_compile_options(qm-nmt-tests PRIVATE /utf-8)
     endif()
     # 使用 plain 签名，与文件内 target_link_libraries 循环（无 keyword）保持一致
-    target_link_libraries(qm-nmt-tests ${QM_NMT_GTEST_MAIN_TARGET})
+    target_link_libraries(qm-nmt-tests ${QM_GTEST_MAIN_TARGET})
     if(TARGET_OS STREQUAL "windows")
       target_sources(qm-nmt-tests PRIVATE
         src/test/unit/qmclient/music/qm_netease_cdp_test.cpp
@@ -5417,6 +5491,11 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/test/support/qm_exit_process_probe.cpp
       src/test/integration/qmclient/ui/qm_dropdown_popup_wheel_test.cpp
       src/test/integration/qmclient/ui/qm_font_combobox_test.cpp
+      src/test/integration/qmclient/client/qm_font_loading_test.cpp
+      src/test/integration/qmclient/client/qm_text_measurement_test.cpp
+      src/test/integration/qmclient/client/qm_text_bitmap_test.cpp
+      src/test/integration/qmclient/client/qm_text_initialization_test.cpp
+      src/test/integration/qmclient/client/qm_text_device_recovery_test.cpp
       src/test/integration/qmclient/ui/qm_popup_blur_scope_test.cpp
       src/test/integration/qmclient/ui/qm_settings_search_session_test.cpp
       src/test/integration/qmclient/ui/qm_settings_paragraph_test.cpp
@@ -5465,7 +5544,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       ${DEPS}
     )
     add_dependencies(qm-ui-popup-tests generate_protocol)
-    target_link_libraries(qm-ui-popup-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER} ${FREETYPE_LIBRARIES})
+    target_link_libraries(qm-ui-popup-tests ${PNG_LIBRARIES} ${WebP_LIBRARIES} ${QM_GTEST_LIBRARIES} ${LIBS_SERVER} ${FREETYPE_LIBRARIES})
     target_include_directories(qm-ui-popup-tests SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS})
     target_compile_definitions(qm-ui-popup-tests PRIVATE DDNET_TEST_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     if(MSVC)
@@ -5479,7 +5558,25 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     add_test(NAME qm-ui-popup-tests COMMAND $<TARGET_FILE:qm-ui-popup-tests>)
   endif()
 
-  # Windows 的独立音乐目标也必须进入日常 C++ gate，避免只有注册却从未执行。
+  if(TARGET_OS STREQUAL "windows" OR TARGET_OS STREQUAL "linux" OR TARGET_OS STREQUAL "mac")
+    # 分配故障替换只进入独立进程，避免影响通用 testrunner 和客户端的堆。
+    add_executable(qm-script-allocation-tests EXCLUDE_FROM_ALL
+      src/test/support/script_allocation_main.cpp
+      src/test/unit/qmclient/client/qm_scripting_allocation_test.cpp
+    )
+    target_include_directories(qm-script-allocation-tests PRIVATE src)
+    target_include_directories(qm-script-allocation-tests SYSTEM PRIVATE
+      ${PROJECT_SOURCE_DIR}/src/engine/external/chaiscript
+      ${GTEST_INCLUDE_DIRS}
+    )
+    target_compile_definitions(qm-script-allocation-tests PRIVATE CHAISCRIPT_NO_THREADS CHAISCRIPT_NO_THREADS_WARNING)
+    target_link_libraries(qm-script-allocation-tests ${QM_GTEST_LIBRARIES})
+    list(APPEND TARGETS_OWN qm-script-allocation-tests)
+    list(APPEND TARGETS_LINK qm-script-allocation-tests)
+    add_test(NAME qm-script-allocation-tests COMMAND $<TARGET_FILE:qm-script-allocation-tests>)
+  endif()
+
+  # 独立测试目标也进入日常 C++ gate，避免只有注册却从未执行。
   set(CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:${TARGET_TESTRUNNER}> ${TESTRUNNER_ARGS})
   set(CXX_TEST_DEPENDS ${TARGET_TESTRUNNER})
   if(TARGET qm-nmt-tests)
@@ -5489,6 +5586,10 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
   if(TARGET qm-ui-popup-tests)
     list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-ui-popup-tests> ${TESTRUNNER_ARGS})
     list(APPEND CXX_TEST_DEPENDS qm-ui-popup-tests)
+  endif()
+  if(TARGET qm-script-allocation-tests)
+    list(APPEND CXX_TEST_COMMANDS COMMAND $<TARGET_FILE:qm-script-allocation-tests> ${TESTRUNNER_ARGS})
+    list(APPEND CXX_TEST_DEPENDS qm-script-allocation-tests)
   endif()
   add_custom_target(run_cxx_tests
     ${CXX_TEST_COMMANDS}

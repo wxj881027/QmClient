@@ -6,11 +6,11 @@
 #include "dbg.h"
 #include "windows.h"
 
+#include <cstdlib>
+
 #if defined(CONF_FAMILY_UNIX)
 #include <pthread.h>
 #include <sched.h>
-
-#include <cstdlib>
 
 #if defined(CONF_PLATFORM_MACOS)
 #if defined(__MAC_10_10) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_10
@@ -61,20 +61,37 @@ static unsigned long __stdcall thread_run(void *user)
 	return 0;
 }
 
-void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
+void *thread_try_init(void (*threadfunc)(void *), void *u, const char *name) noexcept
 {
 	struct THREAD_RUN *data = (THREAD_RUN *)malloc(sizeof(*data));
+	if(!data)
+		return nullptr;
 	data->threadfunc = threadfunc;
 	data->u = u;
 #if defined(CONF_FAMILY_UNIX)
 	{
 		pthread_attr_t attr;
-		dbg_assert(pthread_attr_init(&attr) == 0, "pthread_attr_init failure");
+		if(pthread_attr_init(&attr) != 0)
+		{
+			free(data);
+			return nullptr;
+		}
 #if defined(CONF_PLATFORM_MACOS) && defined(__MAC_10_10) && __MAC_OS_X_VERSION_MIN_REQUIRED >= __MAC_10_10
-		dbg_assert(pthread_attr_set_qos_class_np(&attr, QOS_CLASS_USER_INTERACTIVE, 0) == 0, "pthread_attr_set_qos_class_np failure");
+		if(pthread_attr_set_qos_class_np(&attr, QOS_CLASS_USER_INTERACTIVE, 0) != 0)
+		{
+			pthread_attr_destroy(&attr);
+			free(data);
+			return nullptr;
+		}
 #endif
 		pthread_t id;
-		dbg_assert(pthread_create(&id, &attr, thread_run, data) == 0, "pthread_create failure");
+		const int result = pthread_create(&id, &attr, thread_run, data);
+		pthread_attr_destroy(&attr);
+		if(result != 0)
+		{
+			free(data);
+			return nullptr;
+		}
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
 		// Return control to the browser's main thread to allow the pthread to be started,
 		// otherwise we deadlock when waiting for a thread immediately after starting it.
@@ -84,7 +101,11 @@ void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
 	}
 #elif defined(CONF_FAMILY_WINDOWS)
 	HANDLE thread = CreateThread(nullptr, 0, thread_run, data, 0, nullptr);
-	dbg_assert(thread != nullptr, "CreateThread failure");
+	if(thread == nullptr)
+	{
+		free(data);
+		return nullptr;
+	}
 	HMODULE kernel_base_handle;
 	if(GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"KernelBase.dll", &kernel_base_handle))
 	{
@@ -98,12 +119,28 @@ void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
 #pragma GCC diagnostic pop
 #endif
 		if(set_thread_description_function)
-			set_thread_description_function(thread, windows_utf8_to_wide(name).c_str());
+		{
+			try
+			{
+				set_thread_description_function(thread, windows_utf8_to_wide(name).c_str());
+			}
+			catch(...)
+			{
+				// 线程已经运行，命名失败不能丢失调用方必须回收的句柄。
+			}
+		}
 	}
 	return thread;
 #else
 #error not implemented
 #endif
+}
+
+void *thread_init(void (*threadfunc)(void *), void *u, const char *name)
+{
+	void *thread = thread_try_init(threadfunc, u, name);
+	dbg_assert(thread != nullptr, "thread creation failure");
+	return thread;
 }
 
 void thread_wait(void *thread)

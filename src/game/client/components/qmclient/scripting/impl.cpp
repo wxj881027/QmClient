@@ -1,11 +1,15 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
 #include "impl.h"
 
+#include "script_file.h"
+
 #include <base/log.h>
 
 #include <engine/external/regex.h>
 #include <engine/storage.h>
 
+#include <cstdlib>
+#include <stdexcept>
 #include <variant>
 
 #define CHAISCRIPT_NO_THREADS
@@ -45,33 +49,33 @@ static const auto NAMESPACE_MATH = [](chaiscript::Namespace &Math) {
 	Math["abs"] = chaiscript::var(chaiscript::fun([](double x) { return fabs(x); }));
 };
 
-static const char *ReadScript(IStorage *pStorage, const char *pFilename)
-{
-	const char *pScript;
-	pScript = pStorage->ReadFileStr(pFilename, IStorage::TYPE_ALL);
-	if(!pScript || !*pScript)
-		throw std::string("Failed to open script '") + std::string(pFilename) + std::string("'");
-	return pScript;
-}
-
 class CScriptingCtx::CScriptingCtxData
 {
 public:
-	IStorage *m_pStorage;
-	chaiscript::ChaiScript m_Chai;
+	IStorage *m_pStorage = nullptr;
+	chaiscript::ChaiScript m_Chai{{}, {}, {chaiscript::Options::No_Load_Modules, chaiscript::Options::No_External_Scripts}};
+
+	chaiscript::Boxed_Value EvaluateFile(const char *pFilename)
+	{
+		const auto Read = [this](const char *pPath) {
+			return std::unique_ptr<char, decltype(&std::free)>(m_pStorage->ReadFileStr(pPath, IStorage::TYPE_ALL), &std::free);
+		};
+		const auto Evaluate = [this, pFilename](const char *pScript) {
+			return m_Chai.eval(pScript, chaiscript::Exception_Handler(), pFilename);
+		};
+		return QmEvaluateScriptFile(pFilename, Read, Evaluate);
+	}
 };
 
-CScriptingCtx::CScriptingCtx()
+CScriptingCtx::CScriptingCtx() :
+	m_pData(std::make_unique<CScriptingCtxData>())
 {
-	m_pData = new CScriptingCtxData{
-		nullptr,
-		chaiscript::ChaiScript({}, {}, {chaiscript::Options::No_Load_Modules, chaiscript::Options::No_External_Scripts})};
 	static const auto s_PrintStr = chaiscript::fun([](const std::string &Msg) {
 		log_info(SCRIPTING_IMPL "/print", "%s", Msg.c_str());
 	});
 	m_pData->m_Chai.add(s_PrintStr, "print_string");
 	m_pData->m_Chai.add(s_PrintStr, "println_string");
-	const auto PrintStrBoxed = chaiscript::fun([&](const chaiscript::Boxed_Value &Value) {
+	const auto PrintStrBoxed = chaiscript::fun([this](const chaiscript::Boxed_Value &Value) {
 		chaiscript::Boxed_Value ToStringRaw = m_pData->m_Chai.eval("to_string");
 		std::function<std::string(chaiscript::Boxed_Value)> ToString =
 			chaiscript::boxed_cast<std::function<std::string(chaiscript::Boxed_Value)>>(ToStringRaw);
@@ -79,14 +83,14 @@ CScriptingCtx::CScriptingCtx()
 	});
 	m_pData->m_Chai.add(PrintStrBoxed, "print");
 	m_pData->m_Chai.add(PrintStrBoxed, "puts");
-	m_pData->m_Chai.add(chaiscript::fun([&](const std::string &Module) {
-		const char *pScript = ReadScript(m_pData->m_pStorage, Module.c_str());
-		auto Out = m_pData->m_Chai.eval(pScript, chaiscript::Exception_Handler(), Module);
-		std::free((void *)pScript);
-		return Out;
+	m_pData->m_Chai.add(chaiscript::fun([this](const std::string &Module) {
+		CQmScriptExecutionScope Scope;
+		if(!Scope.Entered())
+			throw std::runtime_error(CQmScriptExecutionScope::ERROR);
+		return m_pData->EvaluateFile(Module.c_str());
 	}),
 		"include");
-	m_pData->m_Chai.add(chaiscript::fun([&](const std::string &Path) {
+	m_pData->m_Chai.add(chaiscript::fun([this](const std::string &Path) {
 		return m_pData->m_pStorage->FileExists(Path.c_str(), IStorage::TYPE_ALL);
 	}),
 		"file_exists");
@@ -94,10 +98,7 @@ CScriptingCtx::CScriptingCtx()
 	m_pData->m_Chai.register_namespace(NAMESPACE_MATH, "math");
 }
 
-CScriptingCtx::~CScriptingCtx()
-{
-	delete m_pData;
-}
+CScriptingCtx::~CScriptingCtx() = default;
 
 static chaiscript::Boxed_Value Any2Boxed(const CScriptingCtx::Any &Any)
 {
@@ -154,16 +155,22 @@ void CScriptingCtx::AddGlobal(const char *pName, const std::string &Object)
 void CScriptingCtx::Run(IStorage *pStorage, const char *pFilename, const char *pArgs)
 {
 	m_pData->m_pStorage = pStorage;
-	const char *pScript = nullptr;
 	try
 	{
 		m_pData->m_Chai.add_global_const(chaiscript::const_var(std::string(pArgs)), "args");
-		pScript = ReadScript(pStorage, pFilename);
-		m_pData->m_Chai.eval(pScript, chaiscript::Exception_Handler(), pFilename);
+		m_pData->EvaluateFile(pFilename);
 	}
 	catch(const chaiscript::exception::eval_error &e)
 	{
-		log_error(SCRIPTING_IMPL, "Eval error in '%s': %s", pFilename, e.pretty_print().c_str());
+		try
+		{
+			log_error(SCRIPTING_IMPL, "Eval error in '%s': %s", pFilename, e.pretty_print().c_str());
+		}
+		catch(...)
+		{
+			// 详细堆栈格式化失败时使用异常已有的消息。
+			log_error(SCRIPTING_IMPL, "Eval error in '%s': %s", pFilename, e.what());
+		}
 	}
 	catch(const std::exception &e)
 	{
@@ -191,5 +198,4 @@ void CScriptingCtx::Run(IStorage *pStorage, const char *pFilename, const char *p
 	{
 		log_error(SCRIPTING_IMPL, "Unknown exception in '%s'", pFilename);
 	}
-	std::free((void *)pScript);
 }

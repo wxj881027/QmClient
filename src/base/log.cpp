@@ -1,6 +1,7 @@
 #include "color.h"
 #include "dbg.h"
 #include "logger.h"
+#include "logger_async.h"
 #include "str.h"
 #include "system.h"
 #include "time.h"
@@ -116,7 +117,15 @@ void log_set_scope_logger(ILogger *logger)
 	int MessageSize = sizeof(Msg.m_aLine) - Msg.m_LineMessageOffset;
 	str_format_v(pMessage, MessageSize, fmt, args);
 	Msg.m_LineLength = str_length(Msg.m_aLine);
-	scope_logger->Log(&Msg);
+	try
+	{
+		scope_logger->Log(&Msg);
+	}
+	catch(...)
+	{
+		// 后端分配或写入异常不能打断业务；这里不能再递归记录失败。
+		// 仍恢复递归标记，让下一条日志可以再次访问后端。
+	}
 	in_logger = false;
 }
 
@@ -259,64 +268,60 @@ std::unique_ptr<ILogger> log_logger_prefix_router(std::shared_ptr<ILogger> pPref
 	return std::make_unique<CPrefixRouterLogger>(std::move(pPrefixLogger), std::move(pFallbackLogger), pSystemPrefix);
 }
 
-class CLoggerAsync : public ILogger
+CLoggerAsync::CLoggerAsync(IOHANDLE File, bool AnsiTruecolor, bool Close, ASYNCIO *(*Create)(IOHANDLE)) :
+	m_pAio((Create ? Create : aio_new)(File)),
+	m_AnsiTruecolor(AnsiTruecolor),
+	m_Close(Close)
 {
-	ASYNCIO *m_pAio;
-	bool m_AnsiTruecolor;
-	bool m_Close;
+	// AIO 创建失败时尚未接管文件；标准输出等借用句柄仍由调用方持有。
+	if(!m_pAio && m_Close)
+		io_close(File);
+}
 
-public:
-	CLoggerAsync(IOHANDLE File, bool AnsiTruecolor, bool Close) :
-		m_pAio(aio_new(File)),
-		m_AnsiTruecolor(AnsiTruecolor),
-		m_Close(Close)
+void CLoggerAsync::Log(const CLogMessage *pMessage)
+{
+	if(!m_pAio || m_Filter.Filters(pMessage))
+		return;
+	aio_lock(m_pAio);
+	if(m_AnsiTruecolor && pMessage->m_HaveColor)
 	{
+		// https://en.wikipedia.org/w/index.php?title=ANSI_escape_code&oldid=1077146479#24-bit
+		char aAnsi[32];
+		str_format(aAnsi, sizeof(aAnsi),
+			"\x1b[38;2;%d;%d;%dm",
+			pMessage->m_Color.r,
+			pMessage->m_Color.g,
+			pMessage->m_Color.b);
+		aio_write_unlocked(m_pAio, aAnsi, str_length(aAnsi));
 	}
-	void Log(const CLogMessage *pMessage) override
+	aio_write_unlocked(m_pAio, pMessage->m_aLine, pMessage->m_LineLength);
+	if(m_AnsiTruecolor && pMessage->m_HaveColor)
 	{
-		if(m_Filter.Filters(pMessage))
-		{
-			return;
-		}
-		aio_lock(m_pAio);
-		if(m_AnsiTruecolor && pMessage->m_HaveColor)
-		{
-			// https://en.wikipedia.org/w/index.php?title=ANSI_escape_code&oldid=1077146479#24-bit
-			char aAnsi[32];
-			str_format(aAnsi, sizeof(aAnsi),
-				"\x1b[38;2;%d;%d;%dm",
-				pMessage->m_Color.r,
-				pMessage->m_Color.g,
-				pMessage->m_Color.b);
-			aio_write_unlocked(m_pAio, aAnsi, str_length(aAnsi));
-		}
-		aio_write_unlocked(m_pAio, pMessage->m_aLine, pMessage->m_LineLength);
-		if(m_AnsiTruecolor && pMessage->m_HaveColor)
-		{
-			const char aResetColor[] = "\x1b[0m";
-			aio_write_unlocked(m_pAio, aResetColor, str_length(aResetColor)); // reset
-		}
-		aio_write_newline_unlocked(m_pAio);
-		aio_unlock(m_pAio);
+		const char aResetColor[] = "\x1b[0m";
+		aio_write_unlocked(m_pAio, aResetColor, str_length(aResetColor)); // reset
 	}
-	~CLoggerAsync() override
-	{
-		if(m_Close)
-		{
-			aio_close(m_pAio);
-		}
-		aio_wait(m_pAio);
+	aio_write_newline_unlocked(m_pAio);
+	aio_unlock(m_pAio);
+}
+
+CLoggerAsync::~CLoggerAsync()
+{
+	GlobalFinish();
+	if(m_pAio)
 		aio_free(m_pAio);
-	}
-	void GlobalFinish() override
-	{
+}
+
+void CLoggerAsync::GlobalFinish()
+{
+	if(!m_pAio)
+		return;
+	// 共享日志路由可能多次结束同一个后端；并发调用也等待同一次刷盘完成。
+	std::call_once(m_FinishOnce, [this] {
 		if(m_Close)
-		{
 			aio_close(m_pAio);
-		}
 		aio_wait(m_pAio);
-	}
-};
+	});
+}
 
 std::unique_ptr<ILogger> log_logger_file(IOHANDLE logfile)
 {
@@ -580,15 +585,14 @@ void CFutureLogger::Set(std::shared_ptr<ILogger> pLogger)
 {
 	const CLockScope LockScope(m_PendingLock);
 	std::shared_ptr<ILogger> pNullLogger;
-	if(!std::atomic_compare_exchange_strong_explicit(&m_pLogger, &pNullLogger, pLogger, std::memory_order_acq_rel, std::memory_order_acq_rel))
+	if(!std::atomic_compare_exchange_strong_explicit(&m_pLogger, &pNullLogger, pLogger, std::memory_order_acq_rel, std::memory_order_acquire))
 	{
 		dbg_assert_failed("future logger has already been set and can only be set once");
 	}
-	m_pLogger = std::move(pLogger);
-
+	// 发布后的共享指针只能原子访问；积压转交使用本次调用持有的引用。
 	for(const auto &Pending : m_vPending)
 	{
-		m_pLogger->Log(&Pending);
+		pLogger->Log(&Pending);
 	}
 	m_vPending.clear();
 	m_vPending.shrink_to_fit();

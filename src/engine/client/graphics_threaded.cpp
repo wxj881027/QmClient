@@ -417,52 +417,20 @@ void CGraphics_Threaded::LinesBatchDraw(CLineItemBatch *pBatch, const CLineItem 
 	pBatch->m_NumItems += Num;
 }
 
-IGraphics::CTextureHandle CGraphics_Threaded::FindFreeTextureIndex()
-{
-	const size_t CurSize = m_vTextureIndices.size();
-	if(m_FirstFreeTexture == CurSize)
-	{
-		m_vTextureIndices.resize(CurSize * 2);
-		m_vTextureGenerations.resize(CurSize * 2);
-		for(size_t i = 0; i < CurSize; ++i)
-			m_vTextureIndices[CurSize + i] = CurSize + i + 1;
-	}
-	const size_t Tex = m_FirstFreeTexture;
-	m_FirstFreeTexture = m_vTextureIndices[Tex];
-	m_vTextureIndices[Tex] = -1;
-	return CreateTextureHandle(Tex, (m_TextureHandleEpoch << 16) | (m_vTextureGenerations[Tex] & 0xffffu));
-}
-
 // 使现存的所有纹理句柄失效，并把全部槽位重新交回空闲链表。
 // 图形设备重建时必须调用：此时旧的纹理对象已经随设备一起消失，
 // 旧句柄绝不能再被当成有效句柄使用（否则会画出垃圾或触发断言）。
-void CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
+bool CGraphics_Threaded::BumpTextureHandleEpochAndResetSlots()
 {
-	++m_TextureHandleEpoch;
 	// 设备重建会丢失引擎自己持有的占位纹理，通知流程负责重新创建。
 	m_NullTexture.Invalidate();
 	m_BlankTexture.Invalidate();
-	m_vTextureIndices.resize(CCommandBuffer::MAX_TEXTURES);
-	m_vTextureGenerations.resize(CCommandBuffer::MAX_TEXTURES);
-	// 已经空闲过的槽位也必须再进一次代数，避免「槽位 + 代数」组合和旧句柄撞车。
-	for(uint32_t &Generation : m_vTextureGenerations)
-		++Generation;
-	for(size_t i = 0; i < m_vTextureIndices.size(); ++i)
-		m_vTextureIndices[i] = i + 1;
-	m_FirstFreeTexture = 0;
+	return m_TextureSlots.Reset(CCommandBuffer::MAX_TEXTURES);
 }
 
 bool CGraphics_Threaded::IsTextureHandleAllocated(IGraphics::CTextureHandle TextureId) const
 {
-	if(!TextureId.IsValid())
-		return false;
-
-	const size_t TextureIndex = TextureId.Id();
-	if(TextureIndex >= m_vTextureIndices.size() || TextureIndex >= m_vTextureGenerations.size())
-		return false;
-
-	const uint32_t ExpectedGeneration = (m_TextureHandleEpoch << 16) | (m_vTextureGenerations[TextureIndex] & 0xffffu);
-	return m_vTextureIndices[TextureIndex] == -1 && ExpectedGeneration == TextureId.Generation();
+	return m_TextureSlots.IsAllocated(TextureId.Id(), TextureId.Generation());
 }
 
 void CGraphics_Threaded::FreeTextureIndex(CTextureHandle *pIndex)
@@ -478,9 +446,7 @@ void CGraphics_Threaded::FreeTextureIndex(CTextureHandle *pIndex)
 		return;
 	}
 
-	m_vTextureIndices[pIndex->Id()] = m_FirstFreeTexture;
-	m_FirstFreeTexture = pIndex->Id();
-	++m_vTextureGenerations[pIndex->Id()];
+	m_TextureSlots.Release(pIndex->Id(), pIndex->Generation());
 	pIndex->Invalidate();
 }
 
@@ -661,6 +627,7 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &I
 	// Copy texture data and convert if necessary
 	uint8_t *pTmpData = nullptr;
 	const bool AlreadyRgba = ConvertToRgbaAlloc(pTmpData, Image);
+	std::unique_ptr<uint8_t, decltype(&free)> pData(pTmpData, free);
 	if(pTmpData == nullptr)
 	{
 		log_error("graphics", "Failed to allocate texture data for '%s'.", pTexName ? pTexName : "(no name)");
@@ -671,13 +638,23 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(const CImageInfo &I
 		log_warn("graphics", "Converted image '%s' to RGBA, consider making its file format RGBA.", pTexName ? pTexName : "(no name)");
 	}
 
-	IGraphics::CTextureHandle TextureHandle = FindFreeTextureIndex();
-	CCommandBuffer::SCommand_Texture_Create Cmd = LoadTextureCreateCommand(TextureHandle.Id(), Image.m_Width, Image.m_Height, Flags);
-	Cmd.m_pData = pTmpData;
-
-	AddCmd(Cmd);
-
-	return TextureHandle;
+	auto Slots = m_TextureSlots.Reserve<1>();
+	if(!Slots.IsValid())
+		return {};
+	try
+	{
+		CCommandBuffer::SCommand_Texture_Create Cmd = LoadTextureCreateCommand(Slots.Id(), Image.m_Width, Image.m_Height, Flags);
+		Cmd.m_pData = pData.get();
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue texture upload: %s", Error.what());
+		return {};
+	}
+	pData.release();
+	Slots.Commit();
+	return CreateTextureHandle(Slots.Id(), Slots.Generation());
 }
 
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Image, int Flags, const char *pTexName)
@@ -706,14 +683,27 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRawMove(CImageInfo &Ima
 		return IGraphics::CTextureHandle();
 	}
 
-	IGraphics::CTextureHandle TextureHandle = FindFreeTextureIndex();
-	CCommandBuffer::SCommand_Texture_Create Cmd = LoadTextureCreateCommand(TextureHandle.Id(), Image.m_Width, Image.m_Height, Flags);
-	Cmd.m_pData = Image.m_pData;
+	std::unique_ptr<uint8_t, decltype(&free)> pData(Image.m_pData, free);
+	const size_t Width = Image.m_Width, Height = Image.m_Height;
 	Image.m_pData = nullptr;
 	Image.Free();
-	AddCmd(Cmd);
-
-	return TextureHandle;
+	auto Slots = m_TextureSlots.Reserve<1>();
+	if(!Slots.IsValid())
+		return {};
+	try
+	{
+		CCommandBuffer::SCommand_Texture_Create Cmd = LoadTextureCreateCommand(Slots.Id(), Width, Height, Flags);
+		Cmd.m_pData = pData.get();
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue texture upload: %s", Error.what());
+		return {};
+	}
+	pData.release();
+	Slots.Commit();
+	return CreateTextureHandle(Slots.Id(), Slots.Generation());
 }
 
 IGraphics::CTextureHandle CGraphics_Threaded::LoadTexture(const char *pFilename, int StorageType, int Flags)
@@ -777,20 +767,9 @@ IGraphics::CRenderTargetHandle CGraphics_Threaded::CreateRenderTarget(int Width,
 	if(!IsRenderTargetSupported() || Width <= 0 || Height <= 0)
 		return CRenderTargetHandle();
 
-	const size_t CurSize = m_vRenderTargetIndices.size();
-	if(m_FirstFreeRenderTarget == CurSize)
-	{
-		const size_t NewSize = CurSize == 0 ? 16 : CurSize * 2;
-		m_vRenderTargetIndices.resize(NewSize);
-		m_vRenderTargetSizes.resize(NewSize);
-		for(size_t Index = CurSize; Index < NewSize; ++Index)
-			m_vRenderTargetIndices[Index] = Index + 1;
-	}
-
-	const size_t TargetId = m_FirstFreeRenderTarget;
-	m_FirstFreeRenderTarget = m_vRenderTargetIndices[TargetId];
-	m_vRenderTargetIndices[TargetId] = -1;
-	m_vRenderTargetSizes[TargetId] = ivec2(Width, Height);
+	const int TargetId = m_RenderTargets.Allocate(Width, Height);
+	if(TargetId < 0)
+		return CRenderTargetHandle();
 
 	CCommandBuffer::SCommand_RenderTarget_Create Cmd;
 	Cmd.m_TargetId = TargetId;
@@ -805,129 +784,20 @@ void CGraphics_Threaded::DestroyRenderTarget(CRenderTargetHandle *pTarget)
 {
 	if(!pTarget || !pTarget->IsValid())
 		return;
-	const size_t TargetId = pTarget->Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	const int TargetId = pTarget->Id();
+	if(!m_RenderTargets.IsLive(TargetId))
 	{
 		pTarget->Invalidate();
 		return;
 	}
 
-	CCommandBuffer::SCommand_RenderTarget_Destroy Cmd;
-	Cmd.m_TargetId = TargetId;
-	AddCmd(Cmd);
-
-	m_vRenderTargetIndices[TargetId] = m_FirstFreeRenderTarget;
-	m_vRenderTargetSizes[TargetId] = ivec2(0, 0);
-	m_FirstFreeRenderTarget = TargetId;
+	FlushVertices();
+	m_RenderTargets.Release(TargetId, m_RenderTargetActive, [this](int Id) {
+		CCommandBuffer::SCommand_RenderTarget_Destroy Cmd;
+		Cmd.m_TargetId = Id;
+		AddCmd(Cmd);
+	});
 	pTarget->Invalidate();
-}
-
-IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::AllocateRenderTargetReadbackHandle()
-{
-	size_t ReadbackId;
-	if(m_FirstFreeRenderTargetReadback >= 0)
-	{
-		ReadbackId = (size_t)m_FirstFreeRenderTargetReadback;
-		dbg_assert(ReadbackId < m_vRenderTargetReadbackRequests.size(), "readback free list out of range");
-		m_FirstFreeRenderTargetReadback = m_vRenderTargetReadbackRequests[ReadbackId].m_NextFree;
-	}
-	else
-	{
-		ReadbackId = m_vRenderTargetReadbackRequests.size();
-		m_vRenderTargetReadbackRequests.emplace_back();
-	}
-
-	SRenderTargetReadbackRequest &Request = m_vRenderTargetReadbackRequests[ReadbackId];
-	Request.m_Image.Free();
-	if(Request.m_pCompletion == nullptr)
-		Request.m_pCompletion = std::make_unique<CSemaphore>();
-	while(Request.m_pCompletion->GetApproximateValue() > 0)
-		Request.m_pCompletion->Wait();
-	++Request.m_Generation;
-	if(Request.m_Generation == 0)
-		++Request.m_Generation;
-	Request.m_NextFree = -1;
-	Request.m_State = ERenderTargetReadbackRequestState::PENDING;
-
-	return CreateRenderTargetReadbackHandle((int)ReadbackId, Request.m_Generation);
-}
-
-CGraphics_Threaded::SRenderTargetReadbackRequest *CGraphics_Threaded::GetRenderTargetReadbackRequest(CRenderTargetReadbackHandle Handle)
-{
-	if(!Handle.IsValid())
-		return nullptr;
-
-	const size_t ReadbackId = (size_t)Handle.Id();
-	if(ReadbackId >= m_vRenderTargetReadbackRequests.size())
-		return nullptr;
-
-	SRenderTargetReadbackRequest &Request = m_vRenderTargetReadbackRequests[ReadbackId];
-	if(Request.m_State == ERenderTargetReadbackRequestState::FREE || Request.m_State == ERenderTargetReadbackRequestState::CANCELED || Request.m_Generation != Handle.Generation())
-		return nullptr;
-
-	return &Request;
-}
-
-const CGraphics_Threaded::SRenderTargetReadbackRequest *CGraphics_Threaded::GetRenderTargetReadbackRequest(CRenderTargetReadbackHandle Handle) const
-{
-	if(!Handle.IsValid())
-		return nullptr;
-
-	const size_t ReadbackId = (size_t)Handle.Id();
-	if(ReadbackId >= m_vRenderTargetReadbackRequests.size())
-		return nullptr;
-
-	const SRenderTargetReadbackRequest &Request = m_vRenderTargetReadbackRequests[ReadbackId];
-	if(Request.m_State == ERenderTargetReadbackRequestState::FREE || Request.m_State == ERenderTargetReadbackRequestState::CANCELED || Request.m_Generation != Handle.Generation())
-		return nullptr;
-
-	return &Request;
-}
-
-void CGraphics_Threaded::UpdateRenderTargetReadbackRequestState(SRenderTargetReadbackRequest &Request)
-{
-	if(Request.m_State != ERenderTargetReadbackRequestState::PENDING || Request.m_pCompletion == nullptr || Request.m_pCompletion->GetApproximateValue() <= 0)
-		return;
-
-	Request.m_pCompletion->Wait();
-	Request.m_State = Request.m_Image.m_pData != nullptr ? ERenderTargetReadbackRequestState::READY : ERenderTargetReadbackRequestState::FAILED;
-}
-
-void CGraphics_Threaded::FreeRenderTargetReadbackHandle(CRenderTargetReadbackHandle Handle, bool FreeImageData)
-{
-	if(!Handle.IsValid())
-		return;
-
-	const size_t ReadbackId = (size_t)Handle.Id();
-	if(ReadbackId >= m_vRenderTargetReadbackRequests.size())
-		return;
-
-	SRenderTargetReadbackRequest &Request = m_vRenderTargetReadbackRequests[ReadbackId];
-	if(Request.m_State == ERenderTargetReadbackRequestState::FREE || Request.m_Generation != Handle.Generation())
-		return;
-
-	if(FreeImageData)
-		Request.m_Image.Free();
-	else
-		Request.m_Image = CImageInfo();
-	while(Request.m_pCompletion != nullptr && Request.m_pCompletion->GetApproximateValue() > 0)
-		Request.m_pCompletion->Wait();
-	Request.m_State = ERenderTargetReadbackRequestState::FREE;
-	Request.m_NextFree = m_FirstFreeRenderTargetReadback;
-	m_FirstFreeRenderTargetReadback = (int)ReadbackId;
-}
-
-void CGraphics_Threaded::CleanupCanceledRenderTargetReadbacks()
-{
-	for(size_t ReadbackId = 0; ReadbackId < m_vRenderTargetReadbackRequests.size(); ++ReadbackId)
-	{
-		SRenderTargetReadbackRequest &Request = m_vRenderTargetReadbackRequests[ReadbackId];
-		if(Request.m_State != ERenderTargetReadbackRequestState::CANCELED || Request.m_pCompletion == nullptr || Request.m_pCompletion->GetApproximateValue() <= 0)
-			continue;
-
-		Request.m_pCompletion->Wait();
-		FreeRenderTargetReadbackHandle(CreateRenderTargetReadbackHandle((int)ReadbackId, Request.m_Generation), true);
-	}
 }
 
 bool CGraphics_Threaded::BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA ClearColor)
@@ -935,7 +805,7 @@ bool CGraphics_Threaded::BeginRenderTarget(CRenderTargetHandle Target, ColorRGBA
 	if(!IsRenderTargetSupported() || m_RenderTargetActive || !Target.IsValid())
 		return false;
 	const size_t TargetId = Target.Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	if(!m_RenderTargets.IsLive(TargetId))
 		return false;
 
 	FlushVertices();
@@ -964,6 +834,11 @@ void CGraphics_Threaded::EndRenderTarget()
 	Cmd.m_State = m_State;
 	AddCmd(Cmd);
 	m_RenderTargetActive = false;
+	m_RenderTargets.FlushDeferred([this](int Id) {
+		CCommandBuffer::SCommand_RenderTarget_Destroy DestroyCmd;
+		DestroyCmd.m_TargetId = Id;
+		AddCmd(DestroyCmd);
+	});
 }
 
 void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRenderTargetDrawParams &Params)
@@ -971,7 +846,7 @@ void CGraphics_Threaded::DrawRenderTarget(CRenderTargetHandle Target, const SRen
 	if(!IsRenderTargetSupported() || !Target.IsValid() || Params.m_W <= 0.0f || Params.m_H <= 0.0f)
 		return;
 	const size_t TargetId = Target.Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	if(!m_RenderTargets.IsLive(TargetId))
 		return;
 
 	FlushVertices();
@@ -1112,7 +987,7 @@ bool CGraphics_Threaded::CaptureBackbufferToRenderTarget(CRenderTargetHandle Tar
 	if(!IsBackbufferCaptureSupported() || m_RenderTargetActive || !Target.IsValid())
 		return false;
 	const size_t TargetId = Target.Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	if(!m_RenderTargets.IsLive(TargetId))
 		return false;
 
 	FlushVertices();
@@ -1128,7 +1003,6 @@ bool CGraphics_Threaded::GaussianBlurRenderTarget(CRenderTargetHandle Source, co
 	const int TemporaryCount = DualKawase ? DUAL_KAWASE_PYRAMID_LEVELS : 1;
 	if(!IsRenderTargetGaussianBlurSupported() || !Source.IsValid() || !Destination.IsValid())
 		return false;
-	int MaxTargetId = std::max(Source.Id(), Destination.Id());
 	for(int Index = 0; Index < TemporaryCount; ++Index)
 	{
 		if(!aTemporary[Index].IsValid() || aTemporary[Index].Id() == Source.Id() || aTemporary[Index].Id() == Destination.Id())
@@ -1136,23 +1010,20 @@ bool CGraphics_Threaded::GaussianBlurRenderTarget(CRenderTargetHandle Source, co
 		for(int Previous = 0; Previous < Index; ++Previous)
 			if(aTemporary[Index].Id() == aTemporary[Previous].Id())
 				return false;
-		MaxTargetId = std::max(MaxTargetId, aTemporary[Index].Id());
 	}
-	if((size_t)MaxTargetId >= m_vRenderTargetIndices.size() || (size_t)MaxTargetId >= m_vRenderTargetSizes.size())
+	if(!m_RenderTargets.IsLive(Source.Id()) || !m_RenderTargets.IsLive(Destination.Id()))
 		return false;
-	if(m_vRenderTargetIndices[Source.Id()] != -1 || m_vRenderTargetIndices[Destination.Id()] != -1)
-		return false;
-	const ivec2 Size = m_vRenderTargetSizes[Source.Id()];
-	const ivec2 DestinationSize = m_vRenderTargetSizes[Destination.Id()];
+	const ivec2 Size = m_RenderTargets.Size(Source.Id());
+	const ivec2 DestinationSize = m_RenderTargets.Size(Destination.Id());
 	if(Size.x <= 0 || Size.y <= 0 || DestinationSize != Size)
 		return false;
 	ivec2 PreviousExpectedSize = Size;
 	for(int Index = 0; Index < TemporaryCount; ++Index)
 	{
-		if(m_vRenderTargetIndices[aTemporary[Index].Id()] != -1)
+		if(!m_RenderTargets.IsLive(aTemporary[Index].Id()))
 			return false;
 		const ivec2 ExpectedSize = DualKawase ? ivec2(DualKawasePyramidDimension(Size.x, Index), DualKawasePyramidDimension(Size.y, Index)) : Size;
-		if(ExpectedSize.x <= 0 || ExpectedSize.y <= 0 || (DualKawase && (ExpectedSize.x >= PreviousExpectedSize.x || ExpectedSize.y >= PreviousExpectedSize.y)) || m_vRenderTargetSizes[aTemporary[Index].Id()] != ExpectedSize)
+		if(ExpectedSize.x <= 0 || ExpectedSize.y <= 0 || (DualKawase && (ExpectedSize.x >= PreviousExpectedSize.x || ExpectedSize.y >= PreviousExpectedSize.y)) || m_RenderTargets.Size(aTemporary[Index].Id()) != ExpectedSize)
 			return false;
 		PreviousExpectedSize = ExpectedSize;
 	}
@@ -1213,19 +1084,16 @@ bool CGraphics_Threaded::DualBlurRenderTarget(CRenderTargetHandle Source, CRende
 				return false;
 		}
 	}
-	const size_t MaxTargetId = (size_t)std::max({Source.Id(), Downsample.Id(), DownsampleTemporary.Id(), DownsampleBlurred.Id(), Destination.Id()});
-	if(MaxTargetId >= m_vRenderTargetIndices.size() || MaxTargetId >= m_vRenderTargetSizes.size())
-		return false;
 	for(const CRenderTargetHandle Target : aTargets)
 	{
-		if(m_vRenderTargetIndices[Target.Id()] != -1)
+		if(!m_RenderTargets.IsLive(Target.Id()))
 			return false;
 	}
-	const ivec2 SourceSize = m_vRenderTargetSizes[Source.Id()];
-	const ivec2 DownsampleSize = m_vRenderTargetSizes[Downsample.Id()];
+	const ivec2 SourceSize = m_RenderTargets.Size(Source.Id());
+	const ivec2 DownsampleSize = m_RenderTargets.Size(Downsample.Id());
 	if(SourceSize.x <= 0 || SourceSize.y <= 0 || DownsampleSize.x <= 0 || DownsampleSize.y <= 0 ||
-		m_vRenderTargetSizes[DownsampleTemporary.Id()] != DownsampleSize || m_vRenderTargetSizes[DownsampleBlurred.Id()] != DownsampleSize ||
-		m_vRenderTargetSizes[Destination.Id()] != SourceSize || DownsampleSize.x > SourceSize.x || DownsampleSize.y > SourceSize.y)
+		m_RenderTargets.Size(DownsampleTemporary.Id()) != DownsampleSize || m_RenderTargets.Size(DownsampleBlurred.Id()) != DownsampleSize ||
+		m_RenderTargets.Size(Destination.Id()) != SourceSize || DownsampleSize.x > SourceSize.x || DownsampleSize.y > SourceSize.y)
 		return false;
 
 	const CCommandBuffer::SPoint SavedScreenTL = m_State.m_ScreenTL;
@@ -1264,30 +1132,28 @@ bool CGraphics_Threaded::DualBlurRenderTarget(CRenderTargetHandle Source, CRende
 
 IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetReadback(CRenderTargetHandle Target)
 {
-	if(!IsRenderTargetSupported() || !Target.IsValid())
+	if(!IsRenderTargetSupported() || m_RenderTargetActive || !Target.IsValid())
 		return CRenderTargetReadbackHandle();
 	const size_t TargetId = Target.Id();
-	if(TargetId >= m_vRenderTargetIndices.size() || m_vRenderTargetIndices[TargetId] != -1)
+	if(!m_RenderTargets.IsLive(TargetId))
 		return CRenderTargetReadbackHandle();
 
-	CleanupCanceledRenderTargetReadbacks();
 	FlushVertices();
 
 	// Keep the readback and completion signal in the same command buffer so readiness tracks the actual copy.
 	if(!CommandBufferCanFitCommands(*m_pCommandBuffer, sizeof(CCommandBuffer::SCommand_RenderTarget_Readback), sizeof(CCommandBuffer::SCommand_Signal)))
 		KickCommandBuffer();
 
-	CRenderTargetReadbackHandle Handle = AllocateRenderTargetReadbackHandle();
-	SRenderTargetReadbackRequest *pRequest = GetRenderTargetReadbackRequest(Handle);
-	dbg_assert(pRequest != nullptr, "render target readback request allocation failed");
+	const auto Allocation = m_RenderTargetReadbacks.Allocate();
+	const auto Handle = CreateRenderTargetReadbackHandle(Allocation.m_Index, Allocation.m_Generation);
 
 	CCommandBuffer::SCommand_RenderTarget_Readback Cmd;
 	Cmd.m_TargetId = (int)TargetId;
-	Cmd.m_pImage = &pRequest->m_Image;
+	Cmd.m_pImage = Allocation.m_pImage;
 	AddCmd(Cmd);
 
 	CCommandBuffer::SCommand_Signal SignalCmd;
-	SignalCmd.m_pSemaphore = pRequest->m_pCompletion.get();
+	SignalCmd.m_pSemaphore = Allocation.m_pCompletion;
 	AddCmd(SignalCmd);
 
 	KickCommandBuffer();
@@ -1296,72 +1162,26 @@ IGraphics::CRenderTargetReadbackHandle CGraphics_Threaded::BeginRenderTargetRead
 
 IGraphics::ERenderTargetReadbackState CGraphics_Threaded::PollRenderTargetReadback(CRenderTargetReadbackHandle Handle)
 {
-	CleanupCanceledRenderTargetReadbacks();
-	SRenderTargetReadbackRequest *pRequest = GetRenderTargetReadbackRequest(Handle);
-	if(pRequest == nullptr)
-		return ERenderTargetReadbackState::INVALID;
-
-	UpdateRenderTargetReadbackRequestState(*pRequest);
-	if(pRequest->m_State == ERenderTargetReadbackRequestState::READY)
-		return ERenderTargetReadbackState::READY;
-	if(pRequest->m_State == ERenderTargetReadbackRequestState::FAILED)
-		return ERenderTargetReadbackState::FAILED;
-	return ERenderTargetReadbackState::PENDING;
+	return m_RenderTargetReadbacks.Poll(Handle.Id(), Handle.Generation());
 }
 
 bool CGraphics_Threaded::ResolveRenderTargetReadback(CRenderTargetReadbackHandle *pHandle, CImageInfo &Image)
 {
 	if(pHandle == nullptr || !pHandle->IsValid())
 		return false;
-
-	CleanupCanceledRenderTargetReadbacks();
-	const CRenderTargetReadbackHandle Handle = *pHandle;
-	SRenderTargetReadbackRequest *pRequest = GetRenderTargetReadbackRequest(Handle);
-	if(pRequest == nullptr)
-	{
-		pHandle->Invalidate();
+	if(PollRenderTargetReadback(*pHandle) == ERenderTargetReadbackState::PENDING)
 		return false;
-	}
-
-	UpdateRenderTargetReadbackRequestState(*pRequest);
-	if(pRequest->m_State == ERenderTargetReadbackRequestState::FAILED)
-	{
-		FreeRenderTargetReadbackHandle(Handle, true);
-		pHandle->Invalidate();
-		return false;
-	}
-	if(pRequest->m_State != ERenderTargetReadbackRequestState::READY)
-		return false;
-
-	Image.Free();
-	Image = std::move(pRequest->m_Image);
-	FreeRenderTargetReadbackHandle(Handle, false);
+	const bool Resolved = m_RenderTargetReadbacks.Resolve(pHandle->Id(), pHandle->Generation(), Image);
 	pHandle->Invalidate();
-	return Image.m_pData != nullptr;
+	return Resolved;
 }
 
 void CGraphics_Threaded::CancelRenderTargetReadback(CRenderTargetReadbackHandle *pHandle)
 {
 	if(pHandle == nullptr || !pHandle->IsValid())
 		return;
-
-	CleanupCanceledRenderTargetReadbacks();
-	const CRenderTargetReadbackHandle Handle = *pHandle;
-	SRenderTargetReadbackRequest *pRequest = GetRenderTargetReadbackRequest(Handle);
-	if(pRequest == nullptr)
-	{
-		pHandle->Invalidate();
-		return;
-	}
-
-	UpdateRenderTargetReadbackRequestState(*pRequest);
-	if(pRequest->m_State == ERenderTargetReadbackRequestState::READY || pRequest->m_State == ERenderTargetReadbackRequestState::FAILED)
-		FreeRenderTargetReadbackHandle(Handle, true);
-	else
-		pRequest->m_State = ERenderTargetReadbackRequestState::CANCELED;
-
+	m_RenderTargetReadbacks.Cancel(pHandle->Id(), pHandle->Generation());
 	pHandle->Invalidate();
-	CleanupCanceledRenderTargetReadbacks();
 }
 
 bool CGraphics_Threaded::ReadRenderTarget(CRenderTargetHandle Target, CImageInfo &Image)
@@ -1386,27 +1206,39 @@ bool CGraphics_Threaded::ReadRenderTarget(CRenderTargetHandle Target, CImageInfo
 
 bool CGraphics_Threaded::LoadTextTextures(size_t Width, size_t Height, CTextureHandle &TextTexture, CTextureHandle &TextOutlineTexture, uint8_t *pTextData, uint8_t *pTextOutlineData)
 {
+	std::unique_ptr<uint8_t, decltype(&free)> pFill(pTextData, free);
+	std::unique_ptr<uint8_t, decltype(&free)> pOutline(pTextOutlineData, free);
 	size_t MemSize = 0;
 	if(pTextData == nullptr || pTextOutlineData == nullptr || !TextureDataSizeGrayscale(Width, Height, MemSize))
 	{
-		free(pTextData);
-		free(pTextOutlineData);
 		log_error("graphics/texture", "Ignoring text texture create with invalid data or size.");
 		return false;
 	}
 
-	TextTexture = FindFreeTextureIndex();
-	TextOutlineTexture = FindFreeTextureIndex();
-
-	CCommandBuffer::SCommand_TextTextures_Create Cmd;
-	Cmd.m_Slot = TextTexture.Id();
-	Cmd.m_SlotOutline = TextOutlineTexture.Id();
-	Cmd.m_Width = Width;
-	Cmd.m_Height = Height;
-	Cmd.m_pTextData = pTextData;
-	Cmd.m_pTextOutlineData = pTextOutlineData;
-	AddCmd(Cmd);
-
+	auto Slots = m_TextureSlots.Reserve<2>();
+	if(!Slots.IsValid())
+		return false;
+	try
+	{
+		CCommandBuffer::SCommand_TextTextures_Create Cmd;
+		Cmd.m_Slot = Slots.Id(0);
+		Cmd.m_SlotOutline = Slots.Id(1);
+		Cmd.m_Width = Width;
+		Cmd.m_Height = Height;
+		Cmd.m_pTextData = pFill.get();
+		Cmd.m_pTextOutlineData = pOutline.get();
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue text texture upload: %s", Error.what());
+		return false;
+	}
+	pFill.release();
+	pOutline.release();
+	Slots.Commit();
+	TextTexture = CreateTextureHandle(Slots.Id(0), Slots.Generation(0));
+	TextOutlineTexture = CreateTextureHandle(Slots.Id(1), Slots.Generation(1));
 	return true;
 }
 
@@ -1419,19 +1251,16 @@ bool CGraphics_Threaded::UnloadTextTextures(CTextureHandle &TextTexture, CTextur
 
 bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int y, size_t Width, size_t Height, uint8_t *pData, bool IsMovedPointer)
 {
+	std::unique_ptr<uint8_t, decltype(&free)> pUpload(IsMovedPointer ? pData : nullptr, free);
 	size_t MemSize = 0;
 	if(pData == nullptr || !TextureDataSizeGrayscale(Width, Height, MemSize))
 	{
-		if(IsMovedPointer)
-			free(pData);
 		log_error("graphics/texture", "Ignoring text texture update with invalid data or size.");
 		return false;
 	}
 
 	if(!IsTextureHandleAllocated(TextureId))
 	{
-		if(IsMovedPointer)
-			free(pData);
 		if(g_Config.m_Debug && TextureId.IsValid())
 			log_trace("graphics/texture", "Ignoring update of stale text texture handle %d.", TextureId.Id());
 		return false;
@@ -1444,22 +1273,27 @@ bool CGraphics_Threaded::UpdateTextTexture(CTextureHandle TextureId, int x, int 
 	Cmd.m_Width = Width;
 	Cmd.m_Height = Height;
 
-	if(IsMovedPointer)
+	if(!IsMovedPointer)
 	{
-		Cmd.m_pData = pData;
-	}
-	else
-	{
-		uint8_t *pTmpData = static_cast<uint8_t *>(malloc(MemSize));
-		if(pTmpData == nullptr)
+		pUpload.reset(static_cast<uint8_t *>(malloc(MemSize)));
+		if(pUpload == nullptr)
 		{
 			log_error("graphics/texture", "Failed to allocate text texture update buffer.");
 			return false;
 		}
-		mem_copy(pTmpData, pData, MemSize);
-		Cmd.m_pData = pTmpData;
+		mem_copy(pUpload.get(), pData, MemSize);
 	}
-	AddCmd(Cmd);
+	Cmd.m_pData = pUpload.get();
+	try
+	{
+		AddCmd(Cmd);
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics/texture", "Failed to queue text texture update: %s", Error.what());
+		return false;
+	}
+	pUpload.release();
 
 	return true;
 }
@@ -1643,21 +1477,27 @@ void CGraphics_Threaded::KickCommandBuffer()
 {
 	m_pBackend->RunBuffer(m_pCommandBuffer);
 
-	std::vector<std::string> WarningStrings;
-	if(m_pBackend->GetWarning(WarningStrings))
-	{
-		SWarning NewWarning;
-		std::string WarningStr;
-		for(const auto &WarnStr : WarningStrings)
-			WarningStr.append((WarnStr + "\n"));
-		str_copy(NewWarning.m_aWarningMsg, WarningStr.c_str());
-		AddWarning(NewWarning);
-	}
-
-	// swap buffer
+	// 提交后立即切走在途缓冲，诊断字符串分配失败不能让后续命令继续改写它。
 	m_CurrentCommandBuffer ^= 1;
 	m_pCommandBuffer = m_apCommandBuffers[m_CurrentCommandBuffer];
 	m_pCommandBuffer->Reset();
+	try
+	{
+		std::vector<std::string> WarningStrings;
+		if(m_pBackend->GetWarning(WarningStrings))
+		{
+			SWarning NewWarning;
+			std::string WarningStr;
+			for(const auto &WarnStr : WarningStrings)
+				WarningStr.append((WarnStr + "\n"));
+			str_copy(NewWarning.m_aWarningMsg, WarningStr.c_str());
+			AddWarning(NewWarning);
+		}
+	}
+	catch(const std::exception &Error)
+	{
+		log_error("graphics", "Failed to collect graphics warning: %s", Error.what());
+	}
 }
 
 namespace
@@ -2774,7 +2614,7 @@ void CGraphics_Threaded::RenderQuadLayer(int BufferContainerIndex, SQuadRenderIn
 	}
 }
 
-void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, int TextureTextIndex, int TextureTextOutlineIndex, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)
+void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, int TextureSize, CTextureHandle TextTexture, CTextureHandle TextOutlineTexture, const ColorRGBA &TextColor, const ColorRGBA &TextOutlineColor)
 {
 #if defined(CONF_PLATFORM_MACOS)
 	if(m_MacosGraphicsDiagnosticsEnabled)
@@ -2789,7 +2629,7 @@ void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, i
 			m_BufferedTextZeroQuadCount++;
 	}
 #endif
-	if(BufferContainerIndex == -1)
+	if(BufferContainerIndex == -1 || !IsTextureHandleAllocated(TextTexture) || !IsTextureHandleAllocated(TextOutlineTexture))
 		return;
 
 	CCommandBuffer::SCommand_RenderText Cmd;
@@ -2797,8 +2637,8 @@ void CGraphics_Threaded::RenderText(int BufferContainerIndex, int TextQuadNum, i
 	Cmd.m_BufferContainerIndex = BufferContainerIndex;
 	Cmd.m_DrawNum = TextQuadNum * 6;
 	Cmd.m_TextureSize = TextureSize;
-	Cmd.m_TextTextureIndex = TextureTextIndex;
-	Cmd.m_TextOutlineTextureIndex = TextureTextOutlineIndex;
+	Cmd.m_TextTextureIndex = TextTexture.Id();
+	Cmd.m_TextOutlineTextureIndex = TextOutlineTexture.Id();
 	Cmd.m_TextColor = TextColor;
 	Cmd.m_TextOutlineColor = TextOutlineColor;
 
@@ -2824,7 +2664,7 @@ void CGraphics_Threaded::RenderMediaIslandSdf(const IGraphics::SMediaIslandSdfPa
 	Cmd.m_State.m_WrapMode = EWrapMode::CLAMP;
 	Cmd.m_State.m_Texture = m_NullTexture.Id();
 	Cmd.m_Params = Params;
-	if(Backdrop.IsValid() && (size_t)Backdrop.Id() < m_vRenderTargetIndices.size() && m_vRenderTargetIndices[Backdrop.Id()] == -1)
+	if(Backdrop.IsValid() && m_RenderTargets.IsLive(Backdrop.Id()))
 		Cmd.m_BackdropTargetId = Backdrop.Id();
 	else
 		Cmd.m_Params.m_aData[IGraphics::SMediaIslandSdfParams::DATA_BACKDROP_UV] = vec4();
@@ -4119,14 +3959,15 @@ int CGraphics_Threaded::Init()
 
 	// 设备可能已经换了一个：先让所有现存纹理句柄失效，再把槽位全部回收。
 	// 必须在重建 backend 之前做，保证此后创建的资源都是新纪元的。
-	BumpTextureHandleEpochAndResetSlots();
+	if(!BumpTextureHandleEpochAndResetSlots())
+	{
+		log_error("graphics", "Failed to allocate texture slots.");
+		return -1;
+	}
 
-	m_FirstFreeRenderTarget = 0;
-	m_vRenderTargetIndices.clear();
-	m_vRenderTargetSizes.clear();
+	m_RenderTargets.Clear();
 	m_RenderTargetActive = false;
-	m_vRenderTargetReadbackRequests.clear();
-	m_FirstFreeRenderTargetReadback = -1;
+	m_RenderTargetReadbacks.Clear();
 
 	// 这三类资源由 vector 自身保存对象，没有独立的代数校验，因此必须连容器一起清空。
 	// 只把空闲链表头置 -1 会把旧条目留成「看起来仍然已分配」的孤儿：
@@ -4188,16 +4029,7 @@ void CGraphics_Threaded::Shutdown()
 	// shutdown the backend
 	m_pBackend->Shutdown();
 
-	for(SRenderTargetReadbackRequest &Request : m_vRenderTargetReadbackRequests)
-	{
-		if(Request.m_State != ERenderTargetReadbackRequestState::FREE)
-		{
-			Request.m_Image.Free();
-			Request.m_State = ERenderTargetReadbackRequestState::FREE;
-			while(Request.m_pCompletion != nullptr && Request.m_pCompletion->GetApproximateValue() > 0)
-				Request.m_pCompletion->Wait();
-		}
-	}
+	m_RenderTargetReadbacks.Clear();
 	delete m_pBackend;
 	m_pBackend = nullptr;
 	m_pCommandBuffer = nullptr;

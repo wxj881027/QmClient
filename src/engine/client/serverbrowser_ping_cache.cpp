@@ -13,6 +13,29 @@
 
 namespace
 {
+	class CStatementReset
+	{
+		sqlite3_stmt *m_pStatement;
+
+	public:
+		explicit CStatementReset(sqlite3_stmt *pStatement) :
+			m_pStatement(pStatement)
+		{
+			// reset 的返回码属于上次执行，不能因此跳过本次重试。
+			if(m_pStatement)
+				sqlite3_reset(m_pStatement);
+		}
+		CStatementReset(const CStatementReset &) = delete;
+		CStatementReset &operator=(const CStatementReset &) = delete;
+		~CStatementReset()
+		{
+			if(m_pStatement)
+			{
+				sqlite3_reset(m_pStatement);
+				sqlite3_clear_bindings(m_pStatement);
+			}
+		}
+	};
 
 	class CServerBrowserPingCache : public IServerBrowserPingCache
 	{
@@ -74,10 +97,9 @@ namespace
 
 			sqlite3 *pSqlite = m_pDisk.get();
 			IConsole *pConsole = m_pConsole;
-			bool Error = false;
+			CStatementReset Reset(m_pLoadStmt.get());
+			bool Error = !m_pLoadStmt;
 			bool WarnedForBadAddress = false;
-			Error = Error || !m_pLoadStmt;
-			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_reset(m_pLoadStmt.get())) != SQLITE_OK;
 			while(!Error)
 			{
 				const int StepResult = sqlite3_step(m_pLoadStmt.get());
@@ -88,17 +110,24 @@ namespace
 				else if(StepResult == SQLITE_ROW)
 				{
 					const char *pIpAddress = (const char *)sqlite3_column_text(m_pLoadStmt.get(), 0);
+					// 列转换分配失败时 SQLite 同样返回空指针，整次读取失败并保留旧缓存。
+					if(!pIpAddress && sqlite3_errcode(pSqlite) == SQLITE_NOMEM)
+					{
+						SqliteHandleError(pConsole, SQLITE_NOMEM, pSqlite, "sqlite3_column_text(m_pLoadStmt.get(), 0)");
+						Error = true;
+						break;
+					}
 					const int Ping = sqlite3_column_int(m_pLoadStmt.get(), 1);
 					// strftime 在时间戳格式异常时返回 NULL，这种记录按"时间未知"处理。
 					const bool HasUtcTimestamp = sqlite3_column_type(m_pLoadStmt.get(), 2) != SQLITE_NULL;
 					const int64_t UtcTimestamp = HasUtcTimestamp ? sqlite3_column_int64(m_pLoadStmt.get(), 2) : 0;
 					NETADDR Addr;
-					if(net_addr_from_str(&Addr, pIpAddress))
+					if(!pIpAddress || net_addr_from_str(&Addr, pIpAddress))
 					{
 						if(!WarnedForBadAddress)
 						{
 							char aBuf[64];
-							str_format(aBuf, sizeof(aBuf), "invalid address: %s", pIpAddress);
+							str_format(aBuf, sizeof(aBuf), "invalid address: %s", pIpAddress ? pIpAddress : "NULL");
 							pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "serverbrowse_ping_cache", aBuf);
 							WarnedForBadAddress = true;
 						}
@@ -142,10 +171,9 @@ namespace
 			char aAddr[NETADDR_MAXSTRSIZE];
 			net_addr_str(&StoredAddr, aAddr, sizeof(aAddr), false);
 
-			bool Error = false;
-			Error = Error || !m_pStoreStmt;
-			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_reset(m_pStoreStmt.get())) != SQLITE_OK;
-			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_bind_text(m_pStoreStmt.get(), 1, aAddr, -1, SQLITE_STATIC)) != SQLITE_OK;
+			CStatementReset Reset(m_pStoreStmt.get());
+			bool Error = !m_pStoreStmt;
+			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_bind_text(m_pStoreStmt.get(), 1, aAddr, -1, SQLITE_TRANSIENT)) != SQLITE_OK;
 			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_bind_int(m_pStoreStmt.get(), 2, Ping)) != SQLITE_OK;
 			Error = Error || SQLITE_HANDLE_ERROR(sqlite3_step(m_pStoreStmt.get())) != SQLITE_DONE;
 			if(Error)
