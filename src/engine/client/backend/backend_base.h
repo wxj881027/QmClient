@@ -90,6 +90,9 @@ protected:
 
 	static void Texture2DTo3D(uint8_t *pImageBuffer, int ImageWidth, int ImageHeight, size_t PixelSize, int SplitCountWidth, int SplitCountHeight, uint8_t *pTarget3DImageData, int &Target3DImageWidth, int &Target3DImageHeight);
 
+	// 异常后停止借用命令区的工作，丢弃未提交的录制；禁止继续提交残缺帧。
+	virtual void AbortCommands(bool Initialization) noexcept {}
+
 	virtual bool GetPresentedImageData(uint32_t &Width, uint32_t &Height, CImageInfo::EImageFormat &Format, std::vector<uint8_t> &vDstData) = 0;
 
 public:
@@ -167,9 +170,9 @@ public:
 		TGLBackendReadPresentedImageData *m_pReadPresentedImageDataFunc;
 
 		SBackendCapabilities *m_pCapabilities;
-		int *m_pInitError;
+		int *m_pInitError = nullptr;
 
-		const char **m_pErrStringPtr;
+		const char **m_pErrStringPtr = nullptr;
 
 		char *m_pVendorString;
 		char *m_pVersionString;
@@ -185,6 +188,38 @@ public:
 		int m_GlewMinor;
 		int m_GlewPatch;
 	};
+
+	ERunCommandReturnTypes HandleCommandException(const CCommandBuffer::SCommand *pCommand) noexcept
+	{
+		const bool PreInit = pCommand != nullptr && pCommand->m_Cmd == CMD_PRE_INIT;
+		const bool Init = pCommand != nullptr && pCommand->m_Cmd == CMD_INIT;
+		AbortCommands(PreInit || Init);
+		if(PreInit || Init)
+		{
+			int *pInitError = PreInit ? static_cast<const SCommand_PreInit *>(pCommand)->m_pInitError : static_cast<const SCommand_Init *>(pCommand)->m_pInitError;
+			const char **ppError = PreInit ? static_cast<const SCommand_PreInit *>(pCommand)->m_pErrStringPtr : static_cast<const SCommand_Init *>(pCommand)->m_pErrStringPtr;
+			if(pInitError != nullptr)
+				*pInitError = -1;
+			if(ppError != nullptr)
+				*ppError = "Unexpected exception while initializing graphics.";
+			// 初始化仍交给已有失败回退；失败码与固定文本不依赖再次分配。
+			m_Warning.m_WarningType = GFX_WARNING_TYPE_INIT_FAILED;
+			return m_Error.m_ErrorType == GFX_ERROR_TYPE_NONE ? RUN_COMMAND_COMMAND_WARNING : RUN_COMMAND_COMMAND_ERROR;
+		}
+		if(m_Error.m_ErrorType == GFX_ERROR_TYPE_NONE)
+		{
+			m_Error.m_ErrorType = GFX_ERROR_TYPE_RENDER_CMD_FAILED;
+			try
+			{
+				m_Error.m_vErrors.push_back({false, "Unexpected exception while executing graphics commands."});
+			}
+			catch(...)
+			{
+				// 错误类型已经发布，主线程可使用固定兜底报告。
+			}
+		}
+		return RUN_COMMAND_COMMAND_ERROR;
+	}
 
 	struct SCommand_Shutdown : public CCommandBuffer::SCommand
 	{

@@ -3,6 +3,8 @@
 #include <base/detect.h>
 #include <base/log.h>
 
+#include <utility>
+
 #if defined(BACKEND_AS_OPENGL_ES) || !defined(CONF_BACKEND_OPENGL_ES)
 
 #ifndef BACKEND_AS_OPENGL_ES
@@ -460,45 +462,25 @@ void CCommandProcessorFragment_OpenGL3_3::Cmd_Shutdown(const SCommand_Shutdown *
 	glUseProgram(0);
 	DestroyBackbufferCaptureResolveTarget();
 
-	m_pPrimitiveProgram->DeleteProgram();
-	m_pPrimitiveProgramTextured->DeleteProgram();
-	m_pBorderTileProgram->DeleteProgram();
-	m_pBorderTileProgramTextured->DeleteProgram();
-	m_pQuadProgram->DeleteProgram();
-	m_pQuadProgramTextured->DeleteProgram();
-	m_pQuadProgramGrouped->DeleteProgram();
-	m_pQuadProgramTexturedGrouped->DeleteProgram();
-	m_pTileProgram->DeleteProgram();
-	m_pTileProgramTextured->DeleteProgram();
-	m_pPrimitive3DProgram->DeleteProgram();
-	m_pPrimitive3DProgramTextured->DeleteProgram();
-	m_pTextProgram->DeleteProgram();
-	m_pPrimitiveExProgram->DeleteProgram();
-	m_pPrimitiveExProgramTextured->DeleteProgram();
-	m_pPrimitiveExProgramRotationless->DeleteProgram();
-	m_pPrimitiveExProgramTexturedRotationless->DeleteProgram();
-	m_pSpriteProgramMultiple->DeleteProgram();
-	UnloadQmPrograms();
-
-	// clean up everything
-	delete m_pPrimitiveProgram;
-	delete m_pPrimitiveProgramTextured;
-	delete m_pBorderTileProgram;
-	delete m_pBorderTileProgramTextured;
-	delete m_pQuadProgram;
-	delete m_pQuadProgramTextured;
-	delete m_pQuadProgramGrouped;
-	delete m_pQuadProgramTexturedGrouped;
-	delete m_pTileProgram;
-	delete m_pTileProgramTextured;
-	delete m_pPrimitive3DProgram;
-	delete m_pPrimitive3DProgramTextured;
-	delete m_pTextProgram;
-	delete m_pPrimitiveExProgram;
-	delete m_pPrimitiveExProgramTextured;
-	delete m_pPrimitiveExProgramRotationless;
-	delete m_pPrimitiveExProgramTexturedRotationless;
-	delete m_pSpriteProgramMultiple;
+	// 部分初始化仅释放已创建对象；program 析构负责其 GL 句柄。
+	delete std::exchange(m_pPrimitiveProgram, nullptr);
+	delete std::exchange(m_pPrimitiveProgramTextured, nullptr);
+	delete std::exchange(m_pBorderTileProgram, nullptr);
+	delete std::exchange(m_pBorderTileProgramTextured, nullptr);
+	delete std::exchange(m_pQuadProgram, nullptr);
+	delete std::exchange(m_pQuadProgramTextured, nullptr);
+	delete std::exchange(m_pQuadProgramGrouped, nullptr);
+	delete std::exchange(m_pQuadProgramTexturedGrouped, nullptr);
+	delete std::exchange(m_pTileProgram, nullptr);
+	delete std::exchange(m_pTileProgramTextured, nullptr);
+	delete std::exchange(m_pPrimitive3DProgram, nullptr);
+	delete std::exchange(m_pPrimitive3DProgramTextured, nullptr);
+	delete std::exchange(m_pTextProgram, nullptr);
+	delete std::exchange(m_pPrimitiveExProgram, nullptr);
+	delete std::exchange(m_pPrimitiveExProgramTextured, nullptr);
+	delete std::exchange(m_pPrimitiveExProgramRotationless, nullptr);
+	delete std::exchange(m_pPrimitiveExProgramTexturedRotationless, nullptr);
+	delete std::exchange(m_pSpriteProgramMultiple, nullptr);
 	FreeQmPrograms();
 
 	glBindVertexArray(0);

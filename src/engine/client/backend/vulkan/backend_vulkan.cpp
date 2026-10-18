@@ -9541,6 +9541,23 @@ public:
 		return true;
 	}
 
+	void AbortCommands(bool Initialization) noexcept override
+	{
+		// 在诊断锁下保留第一份故障，再阻止录制继续；未启动的队列不会被补执行。
+		if(!Initialization)
+			SetError(GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Unexpected exception while executing Vulkan commands.");
+		m_HasError.store(true, std::memory_order_release);
+		m_RenderWorkers.Stop();
+		m_vvThreadCommandLists.clear();
+		m_vThreadHelperHadCommands.clear();
+		m_ThreadCount = 1;
+		m_CommandsInPipe = 0;
+		m_RenderCallsInPipe = 0;
+		// CMD_INIT 的收尾异常也必须由 POST_SHUTDOWN 清理初始化资源。
+		if(Initialization)
+			m_CanAssert = false;
+	}
+
 	void StartCommands(size_t CommandCount, size_t EstimatedRenderCallCount) override
 	{
 		m_CommandsInPipe = CommandCount;

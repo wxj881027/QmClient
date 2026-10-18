@@ -154,14 +154,6 @@ void CCommandProcessorFragment_OpenGL3_3::LoadQmPrograms(const SCommand_Init *pC
 	pCommand->m_pCapabilities->m_BackbufferCapture = pCommand->m_pCapabilities->m_RenderTargets && (BackbufferSamples == 0 || m_BackbufferCaptureMultisampleResolveSupported);
 }
 
-void CCommandProcessorFragment_OpenGL3_3::UnloadQmPrograms()
-{
-	m_pMediaIslandSdfProgram->DeleteProgram();
-	m_pRoundedRectSdfProgram->DeleteProgram();
-	m_pProceduralRingProgram->DeleteProgram();
-	m_pGaussianBlurProgram->DeleteProgram();
-}
-
 void CCommandProcessorFragment_OpenGL3_3::FreeQmPrograms()
 {
 	delete m_pMediaIslandSdfProgram;

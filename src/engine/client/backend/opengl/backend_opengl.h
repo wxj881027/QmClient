@@ -55,7 +55,7 @@ protected:
 		float m_ResizeHeight;
 	};
 	std::vector<CTexture> m_vTextures;
-	std::atomic<uint64_t> *m_pTextureMemoryUsage;
+	std::atomic<uint64_t> *m_pTextureMemoryUsage = nullptr;
 	// OpenGL viewport 原点在 drawable 左下角，记录转换后的实际原点。
 	int m_ViewportX = 0;
 	int m_ViewportY = 0;
@@ -239,12 +239,12 @@ protected:
 	void Cmd_RenderBorderTile(const CCommandBuffer::SCommand_RenderBorderTile *pCommand) override;
 #endif
 
-	CGLSLTileProgram *m_pTileProgram;
-	CGLSLTileProgram *m_pTileProgramTextured;
-	CGLSLTileProgram *m_pBorderTileProgram;
-	CGLSLTileProgram *m_pBorderTileProgramTextured;
-	CGLSLPrimitiveProgram *m_pPrimitive3DProgram;
-	CGLSLPrimitiveProgram *m_pPrimitive3DProgramTextured;
+	CGLSLTileProgram *m_pTileProgram = nullptr;
+	CGLSLTileProgram *m_pTileProgramTextured = nullptr;
+	CGLSLTileProgram *m_pBorderTileProgram = nullptr;
+	CGLSLTileProgram *m_pBorderTileProgramTextured = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitive3DProgram = nullptr;
+	CGLSLPrimitiveProgram *m_pPrimitive3DProgramTextured = nullptr;
 };
 
 class CCommandProcessorFragment_OpenGL3 : public CCommandProcessorFragment_OpenGL2

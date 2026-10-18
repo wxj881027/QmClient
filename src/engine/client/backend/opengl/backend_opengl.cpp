@@ -4,6 +4,8 @@
 #include <base/log.h>
 #include <base/system.h>
 
+#include <utility>
+
 #ifndef BACKEND_NO_SDL
 #include <engine/client/backend_sdl.h>
 #endif
@@ -743,7 +745,10 @@ void CCommandProcessorFragment_OpenGL::TextureUpdate(int Slot, int X, int Y, int
 
 void CCommandProcessorFragment_OpenGL::DestroyTexture(int Slot)
 {
-	m_pTextureMemoryUsage->store(m_pTextureMemoryUsage->load(std::memory_order_relaxed) - m_vTextures[Slot].m_MemSize, std::memory_order_relaxed);
+	// 能力探测异常时还未绑定计数器；无纹理的部分初始化也允许关闭。
+	if(m_pTextureMemoryUsage != nullptr)
+		m_pTextureMemoryUsage->store(m_pTextureMemoryUsage->load(std::memory_order_relaxed) - m_vTextures[Slot].m_MemSize, std::memory_order_relaxed);
+	m_vTextures[Slot].m_MemSize = 0;
 
 	if(m_vTextures[Slot].m_Tex != 0)
 	{
@@ -1900,24 +1905,16 @@ bool CCommandProcessorFragment_OpenGL2::Cmd_Init(const SCommand_Init *pCommand)
 
 void CCommandProcessorFragment_OpenGL2::Cmd_Shutdown(const SCommand_Shutdown *pCommand)
 {
-	if(m_HasShaders)
-	{
+	// 初始化可能只创建了部分 program；析构负责删除其实际 GL 句柄。
+	if(m_pTileProgram != nullptr || m_pTileProgramTextured != nullptr || m_pBorderTileProgram != nullptr || m_pBorderTileProgramTextured != nullptr || m_pPrimitive3DProgram != nullptr || m_pPrimitive3DProgramTextured != nullptr)
 		glUseProgram(0);
 
-		m_pTileProgram->DeleteProgram();
-		m_pTileProgramTextured->DeleteProgram();
-		m_pBorderTileProgram->DeleteProgram();
-		m_pBorderTileProgramTextured->DeleteProgram();
-		m_pPrimitive3DProgram->DeleteProgram();
-		m_pPrimitive3DProgramTextured->DeleteProgram();
-	}
-
-	delete m_pTileProgram;
-	delete m_pTileProgramTextured;
-	delete m_pBorderTileProgram;
-	delete m_pBorderTileProgramTextured;
-	delete m_pPrimitive3DProgram;
-	delete m_pPrimitive3DProgramTextured;
+	delete std::exchange(m_pTileProgram, nullptr);
+	delete std::exchange(m_pTileProgramTextured, nullptr);
+	delete std::exchange(m_pBorderTileProgram, nullptr);
+	delete std::exchange(m_pBorderTileProgramTextured, nullptr);
+	delete std::exchange(m_pPrimitive3DProgram, nullptr);
+	delete std::exchange(m_pPrimitive3DProgramTextured, nullptr);
 
 	for(int i = 0; i < (int)m_vTextures.size(); ++i)
 	{

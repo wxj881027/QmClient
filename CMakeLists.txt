@@ -3052,6 +3052,7 @@ if(CLIENT)
     backend/screenshot_image.h
     backend/graphics_backend_contract.cpp
     backend/graphics_backend_contract.h
+    backend/graphics_command_execution.h
     backend/metal/metal_frame_state.cpp
     backend/metal/metal_frame_state.h
     backend/metal/metal_render_target_state.cpp
@@ -4751,6 +4752,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp
+    src/test/integration/client/graphics_command_exception_test.cpp
     src/test/integration/client/graphics_diagnostic_failure_test.cpp
     src/test/integration/client/graphics_thread_startup_test.cpp
     src/test/integration/client/graphics_thread_shutdown_test.cpp
@@ -4758,6 +4760,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/support/thread_creation_probe.h
     src/test/integration/client/graphics_error_report_test.cpp
     src/test/unit/engine/graphics/graphics_command_batch_test.cpp
+    src/test/unit/engine/graphics/graphics_command_execution_test.cpp
     src/test/unit/engine/graphics/graphics_command_buffer_allocation_test.cpp
     src/test/unit/engine/graphics/graphics_upload_data_test.cpp
     src/test/unit/engine/graphics/glyph_atlas_test.cpp

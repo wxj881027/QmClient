@@ -4303,6 +4303,28 @@ class CCommandProcessorFragment_Metal final : public CCommandProcessorFragment_G
 		}];
 	}
 
+	void AbortCommands(bool Initialization) noexcept override
+	{
+		(void)Initialization;
+		// 后续 POST_SHUTDOWN 不再通过 StartCommands 创建新帧。
+		m_State = EMetalBackendState::SHUTDOWN;
+		EndActiveEncoders();
+		if(!m_CommandBufferCommitted)
+		{
+			// 释放未提交的录制，避免 WaitForGpuIdle 再提交残缺帧或等待它完成。
+			m_FrameState.DiscardCurrentFrame();
+			SFrameSlot &Frame = m_aFrameSlots[m_CurrentFrameSlot];
+			ReleaseMetalObject(Frame.m_CommandBuffer);
+			Frame.m_CommandBuffer = nil;
+			Frame.m_BackbufferHasContents = false;
+			m_CurrentCommandBuffer = nil;
+		}
+		m_BackbufferContinuationPending = false;
+		ReleaseMetalObject(m_CurrentDrawable);
+		m_CurrentDrawable = nil;
+		m_SkipCurrentFrame = true;
+	}
+
 	void EndCommands() override
 	{
 		CompleteCurrentFrameIfNeeded();

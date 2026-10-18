@@ -257,7 +257,7 @@ class CCommandProcessor_SDL_GL : public CGraphicsBackend_Threaded::ICommandProce
 public:
 	CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch);
 	~CCommandProcessor_SDL_GL() override;
-	void RunBuffer(CCommandBuffer *pBuffer) override;
+	void RunBuffer(CCommandBuffer *pBuffer) noexcept override;
 
 	const SGfxErrorContainer &GetError() const override;
 	void ClearError() override { m_Error = {}; }

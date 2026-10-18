@@ -29,6 +29,7 @@
 #endif
 
 #include "backend/graphics_backend_contract.h"
+#include "backend/graphics_command_execution.h"
 #include "backend_sdl.h"
 
 #if defined(CONF_HEADLESS_CLIENT)
@@ -242,51 +243,15 @@ void CCommandProcessor_SDL_GL::HandleWarning() noexcept
 	}
 }
 
-void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer)
+void CCommandProcessor_SDL_GL::RunBuffer(CCommandBuffer *pBuffer) noexcept
 {
-	m_pGLBackend->StartCommands(pBuffer->m_CommandCount, pBuffer->m_RenderCallCount);
-
-	for(const CCommandBuffer::SCommand *pCommand = pBuffer->Head(); pCommand; pCommand = pCommand->m_pNext)
-	{
-		auto Res = m_pGLBackend->RunCommand(pCommand);
-		if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_HANDLED)
-		{
-			continue;
-		}
-		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR)
-		{
-			// 错误返回时也要收拢录制线程，再读取它们写入的诊断。
-			m_pGLBackend->EndCommands();
-			HandleError();
-			return;
-		}
-		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_WARNING)
-		{
-			m_pGLBackend->EndCommands();
-			if(m_pGLBackend->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
-			{
-				HandleError();
-				return;
-			}
-			HandleWarning();
-			return;
-		}
-
-		if(m_SDL.RunCommand(pCommand))
-			continue;
-
-		if(m_General.RunCommand(pCommand))
-			continue;
-
-		dbg_assert_failed("Unknown graphics command %d", pCommand->m_Cmd);
-	}
-
-	m_pGLBackend->EndCommands();
-	// 工作线程可能在最后一次 RunCommand 之后才失败。
-	if(m_pGLBackend->GetError().m_ErrorType != GFX_ERROR_TYPE_NONE)
-	{
+	const auto Result = RunGraphicsCommandBuffer(*m_pGLBackend, *pBuffer, [this](const CCommandBuffer::SCommand *pCommand) {
+		return m_SDL.RunCommand(pCommand) || m_General.RunCommand(pCommand);
+	});
+	if(Result == RUN_COMMAND_COMMAND_ERROR)
 		HandleError();
-	}
+	else if(Result == RUN_COMMAND_COMMAND_WARNING)
+		HandleWarning();
 }
 
 CCommandProcessor_SDL_GL::CCommandProcessor_SDL_GL(EBackendType BackendType, int GLMajor, int GLMinor, int GLPatch)
@@ -1446,6 +1411,12 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 	RunBuffer(&CmdBuffer);
 	WaitForIdle();
 	CmdBuffer.Reset();
+
+	if(HasFatalError())
+	{
+		InitError = -1;
+		pErrorStr = "Unexpected graphics failure during initialization.";
+	}
 
 	if(InitError == 0)
 	{
