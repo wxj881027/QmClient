@@ -119,6 +119,23 @@ class VerifyWindowsPackageTest(unittest.TestCase):
 				with self.assertRaisesRegex(ValueError, "removed bundled resources"):
 					MODULE.verify(self.package, self.runtime, self.tools, False)
 
+	def test_theme_thumbnails_are_bundled_and_not_treated_as_obsolete(self) -> None:
+		# 主题缩略图在精简时丢失、随后回填；校验清单若仍把它们列为废弃资源，
+		# 打包会在校验阶段拒绝刚回填的资产（Windows/Portable 发布步骤失败）。
+		themes = {
+			"data/themes/auto.png",
+			"data/themes/autumn.png",
+			"data/themes/heavens.png",
+			"data/themes/jungle.png",
+			"data/themes/newyear.png",
+			"data/themes/none.png",
+			"data/themes/rand.png",
+			"data/themes/winter.png",
+		}
+		self.assertFalse(themes & {name.casefold() for name in MODULE.REMOVED_BUNDLED_RESOURCES})
+		self.write_package(extra=tuple(f"QmClient/{name}" for name in sorted(themes)))
+		MODULE.verify(self.package, self.runtime, self.tools, False)
+
 	def test_lossy_resource_name_rejects_package(self) -> None:
 		self.write_package(extra=("QmClient/data/fonts/??.ttf",))
 		with self.assertRaisesRegex(ValueError, "lossy file names"):
