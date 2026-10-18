@@ -4716,6 +4716,17 @@ void CMenus::RenderServerbrowserFavoriteMaps(CUIRect View)
 		Row.HSplitTop(17.0f, &TopLine, &BottomLine);
 		BottomLine.VSplitRight(105.0f, &BottomLine, &TimeLabel);
 
+		// 已使用角标（issue #199）：该存档此前已成功载入过。
+		const bool SaveUsed = !Entry.m_Map.empty() && GameClient()->m_TClient.IsLocalSaveUsed(Entry.m_Map.c_str(), Entry.m_Code.c_str());
+		if(SaveUsed)
+		{
+			CUIRect UsedBadge;
+			TopLine.VSplitRight(42.0f, &TopLine, &UsedBadge);
+			TextRender()->TextColor(0.55f, 0.95f, 0.55f, 1.0f);
+			Ui()->DoLabel(&UsedBadge, Localize("Used"), 9.0f, TEXTALIGN_MR);
+			TextRender()->TextColor(TextRender()->DefaultTextColor());
+		}
+
 		const char *pMap = Entry.m_Map.empty() ? Entry.m_RawLine.c_str() : Entry.m_Map.c_str();
 		SLabelProperties Props;
 		Props.m_MaxWidth = TopLine.w;

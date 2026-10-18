@@ -3154,11 +3154,22 @@ if(CLIENT)
     texture_slot_pool.h
     updater.cpp
     updater.h
-    video.cpp
-    video.h
     video_frame_capture.h
     warning.cpp
   )
+
+  # 视频录制与导出模块依赖 FFmpeg：无 FFmpeg 目标（iOS/Android 及未来移动端）整体裁掉，
+  # 保证 CLIENT 在 FFMPEG_FOUND=OFF 时仍可编译（视频功能经 CONF_VIDEORECORDER 优雅降级）。
+  if(VIDEORECORDER AND FFMPEG_FOUND)
+    list(APPEND ENGINE_CLIENT
+      src/engine/client/video.cpp
+      src/engine/client/video.h
+      src/engine/client/video_encoder.cpp
+      src/engine/client/video_encoder.h
+      src/engine/client/video_export.cpp
+      src/engine/client/video_export.h
+    )
+  endif()
 
   if((TARGET_OS STREQUAL "mac" OR TARGET_OS STREQUAL "ios") AND METAL)
     list(APPEND ENGINE_CLIENT
@@ -3267,6 +3278,7 @@ if(CLIENT)
     QmUi/cards/QmCardCatalogSearch.cpp
     QmUi/cards/QmCardCatalogSearch.h
     QmUi/cards/QmCardCatalogBind.cpp
+    QmUi/cards/QmCardCatalogSelfKillProtection.cpp
     QmUi/cards/QmCardCatalogFunction.cpp
     QmUi/cards/QmWordFilterFileCard.cpp
     QmUi/cards/QmCardCatalogGeneral.cpp
@@ -4783,6 +4795,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/unit/qmclient/client/qm_chat_command_policy_test.cpp
     src/test/unit/qmclient/client/qm_chat_command_hud_test.cpp
     src/test/unit/qmclient/client/qm_chat_presentation_test.cpp
+    src/test/unit/qmclient/client/qm_chat_spacing_test.cpp
     src/test/unit/qmclient/client/qm_pending_chat_messages_test.cpp
     src/test/unit/qmclient/client/qm_outgoing_chat_annotations_test.cpp
     src/test/unit/qmclient/client/qm_chat_text_layout_test.cpp
@@ -4899,6 +4912,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     src/test/contract/qmclient/client/qm_demo_cut_contract_test.cpp
     src/test/unit/qmclient/client/qm_demo_cut_test.cpp
     src/test/unit/qmclient/client/qm_local_saves_test.cpp
+    src/test/unit/qmclient/client/qm_save_usage_test.cpp
     src/test/contract/qmclient/client/qm_storage_path_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_surface_contract_test.cpp
     src/test/contract/qmclient/ui/qm_new_ui_menu_cards_deck_contract_test.cpp
@@ -5287,6 +5301,18 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
       src/qm/hooks/netease/qm_netease_bootstrap.cpp
       src/qm/hooks/netease/qm_netease_cdp.cpp
       src/qm/hooks/netease/qm_netease_cdp_client.cpp
+    )
+  endif()
+
+  # 视频导出测试依赖 FFmpeg（video_export.cpp/video_encoder.cpp 实现），无 FFmpeg 时随模块一起裁掉
+  if(VIDEORECORDER AND FFMPEG_FOUND)
+    list(APPEND TESTS
+      src/test/unit/engine/video_export_test.cpp
+      src/test/unit/engine/video_encoder_test.cpp
+    )
+    list(APPEND TESTS_EXTRA
+      src/engine/client/video_encoder.cpp
+      src/engine/client/video_export.cpp
     )
   endif()
 
@@ -6494,7 +6520,8 @@ foreach(target ${TARGETS_OWN})
     target_compile_definitions(${target} PRIVATE CONF_UPNP)
     target_include_directories(${target} SYSTEM PRIVATE ${MINIUPNPC_INCLUDE_DIRS})
   endif()
-  if(VIDEORECORDER)
+  # 宏与真实能力一致：仅在 FFmpeg 实际找到时定义（否则 video.h 的 FFmpeg 头引用会编译失败）
+  if(VIDEORECORDER AND FFMPEG_FOUND)
     target_compile_definitions(${target} PRIVATE CONF_VIDEORECORDER)
   endif()
   if(ANTIBOT)

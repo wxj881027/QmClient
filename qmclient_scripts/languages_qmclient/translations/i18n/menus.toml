@@ -2207,6 +2207,12 @@ turkish = "Sohbet yazı tipi boyutu"
 polish = "Rozmiar czcionki czatu"
 
 [[message]]
+key = "Chat line spacing"
+[message.translations]
+simplified_chinese = "聊天行间隔"
+traditional_chinese = "聊天行間隔"
+
+[[message]]
 key = "Chat log retention days"
 [message.translations]
 simplified_chinese = "聊天记录保留天数"
@@ -7661,6 +7667,118 @@ brazilian_portuguese = "Ponta da linha de gancho"
 portuguese = "Ponta da linha de gancho"
 turkish = "Kanca çizgisi ucu"
 polish = "Wskazówka linii haka"
+
+[[message]]
+key = "Custom pressed hook line colors"
+[message.translations]
+simplified_chinese = "自定义按下后颜色"
+traditional_chinese = "自訂按下後顏色"
+japanese = "押下時のフックラインのカスタム色"
+korean = "누른 후 사용자 지정 갈고리선 색"
+russian = "Свои цвета линии при нажатии"
+german = "Eigene Farben der Hakenlinie beim Drücken"
+spanish = "Colores personalizados de la línea al pulsar"
+french = "Couleurs personnalisées de la ligne lors de l'appui"
+brazilian_portuguese = "Cores personalizadas da linha ao pressionar"
+portuguese = "Cores personalizadas da linha ao premir"
+turkish = "Basınca özel kanca çizgisi renkleri"
+polish = "Niestandardowe kolory linii haka po wciśnięciu"
+
+[[message]]
+key = "Pressed hook line color; always used when custom pressed colors are enabled"
+[message.translations]
+simplified_chinese = "按下后颜色；开启自定义按下后颜色时始终生效"
+traditional_chinese = "按下後顏色；開啟自訂按下後顏色時始終生效"
+japanese = "押下時のフックライン色。カスタム押下色が有効なとき常に使用"
+korean = "누른 후 갈고리선 색. 사용자 지정 누른 후 색이 켜져 있을 때 항상 사용"
+russian = "Цвет линии при нажатии; всегда применяется при включении своих цветов нажатия"
+german = "Farbe der Hakenlinie beim Drücken; wird immer verwendet, wenn eigene Druckfarben aktiviert sind"
+spanish = "Color de la línea al pulsar; se usa siempre cuando los colores personalizados al pulsar están activados"
+french = "Couleur de la ligne lors de l'appui ; toujours utilisée lorsque les couleurs personnalisées d'appui sont activées"
+brazilian_portuguese = "Cor da linha ao pressionar; sempre usada quando cores personalizadas ao pressionar estão ativadas"
+portuguese = "Cor da linha ao premir; sempre usada quando as cores personalizadas ao premir estão ativadas"
+turkish = "Basınca kanca çizgisi rengi; özel basma renkleri etkin olduğunda her zaman kullanılır"
+polish = "Kolor linii haka po wciśnięciu; zawsze używany, gdy włączone są niestandardowe kolory wciśnięcia"
+
+[[message]]
+key = "Pressed: A Tee"
+[message.translations]
+simplified_chinese = "按下后：其他玩家"
+traditional_chinese = "按下後：其他玩家"
+japanese = "押下時：他のプレイヤー"
+korean = "누른 후: 다른 플레이어"
+russian = "При нажатии: Другой игрок"
+german = "Gedrückt: Ein Tee"
+spanish = "Al pulsar: Un Tee"
+french = "Appuyé : Un Tee"
+brazilian_portuguese = "Ao pressionar: Um Tee"
+portuguese = "Ao premir: Um Tee"
+turkish = "Basınca: Bir Tee"
+polish = "Po wciśnięciu: Tee"
+
+[[message]]
+key = "Pressed: Hook line tip"
+[message.translations]
+simplified_chinese = "按下后：辅助线提示"
+traditional_chinese = "按下後：輔助線提示"
+japanese = "押下時：ラインの先端"
+korean = "누른 후: 갈고리선 끝"
+russian = "При нажатии: Кончик линии"
+german = "Gedrückt: Hakenlinien-Spitze"
+spanish = "Al pulsar: Punta de la línea"
+french = "Appuyé : Bout de la ligne"
+brazilian_portuguese = "Ao pressionar: Ponta da linha"
+portuguese = "Ao premir: Ponta da linha"
+turkish = "Basınca: Çizgi ucu"
+polish = "Po wciśnięciu: Koniec linii"
+
+[[message]]
+key = "Pressed: Nothing hookable"
+[message.translations]
+simplified_chinese = "按下后：未瞄准可钩物体"
+traditional_chinese = "按下後：未瞄準可鉤物體"
+japanese = "押下時：フック可能なものはありません"
+korean = "누른 후: 걸 수 있는 대상 없음"
+russian = "При нажатии: Ничего не зацепляется"
+german = "Gedrückt: Nichts einhakbar"
+spanish = "Al pulsar: Nada enganchable"
+french = "Appuyé : Rien d'accrochable"
+brazilian_portuguese = "Ao pressionar: Nada engatável"
+portuguese = "Ao premir: Nada que possa ser agarrado"
+turkish = "Basınca: Kancalanabilir hiçbir şey yok"
+polish = "Po wciśnięciu: Nic do zahaczenia"
+
+[[message]]
+key = "Pressed: Something hookable"
+[message.translations]
+simplified_chinese = "按下后：可钩物体"
+traditional_chinese = "按下後：可鉤物體"
+japanese = "押下時：フック可能なもの"
+korean = "누른 후: 걸 수 있는 대상"
+russian = "При нажатии: Зацепляемое"
+german = "Gedrückt: Einhakbar"
+spanish = "Al pulsar: Algo enganchable"
+french = "Appuyé : Quelque chose d'accrochable"
+brazilian_portuguese = "Ao pressionar: Algo engatável"
+portuguese = "Ao premir: Algo que possa ser agarrado"
+turkish = "Basınca: Kancalanabilir bir şey"
+polish = "Po wciśnięciu: Coś do zahaczenia"
+
+[[message]]
+key = "Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted"
+[message.translations]
+simplified_chinese = "按住显示钩索碰撞线时使用下方的自定义颜色；关闭=自动反色"
+traditional_chinese = "按住顯示鉤索碰撞線時使用下方的自訂顏色；關閉=自動反色"
+japanese = "フックキー押下中にフック衝突ラインを表示する際、下のカスタム色を使用します。無効の場合は非押下時の色を自動反転します"
+korean = "훅 키를 누르는 동안 훅 충돌선이 표시될 때 아래의 사용자 지정 색상을 사용합니다. 비활성화하면 누르지 않은 색이 자동으로 반전됩니다"
+russian = "Использовать указанные ниже цвета линии крюка при нажатой клавише крюка; если отключено, цвета автоматически инвертируются"
+german = "Verwendet die folgenden eigenen Farben, wenn die Kollisionslinie bei gedrückter Haken-Taste angezeigt wird; bei Deaktivierung werden die ungedrückten Farben automatisch invertiert"
+spanish = "Usa los colores personalizados de abajo cuando la línea de colisión se muestra al pulsar la tecla de gancho; si se desactiva, los colores sin pulsar se invierten automáticamente"
+french = "Utilise les couleurs personnalisées ci-dessous lorsque la ligne de collision est affichée pendant l'appui sur la touche de crochet ; si désactivé, les couleurs non pressées sont automatiquement inversées"
+brazilian_portuguese = "Usa as cores personalizadas abaixo quando a linha de colisão é exibida ao pressionar a tecla do gancho; se desativado, as cores não pressionadas são invertidas automaticamente"
+portuguese = "Usa as cores personalizadas abaixo quando a linha de colisão é apresentada ao premir a tecla de gancho; se desativado, as cores não premidas são invertidas automaticamente"
+turkish = "Kanca tuşuna basılırken kanca çarpışma çizgisi gösterildiğinde aşağıdaki özel renkleri kullanır; devre dışı bırakıldığında basılmamış renkler otomatik olarak ters çevrilir"
+polish = "Używa poniższych niestandardowych kolorów, gdy linia kolizji jest wyświetlana przy wciśniętym klawiszu haka; po wyłączeniu kolory niewciśnięte są automatycznie odwracane"
 
 [[message]]
 key = "Hook Strength"
@@ -23003,3 +23121,15 @@ brazilian_portuguese = "Ordem das colunas do navegador de servidores (IDs separa
 portuguese = "Ordem das colunas do navegador de servidores (IDs separados por vírgulas: community,name,map,difficulty,gametype,friends,players,qm,ping; vazio = predefinição)"
 turkish = "Sunucu tarayıcısı sütun sırası (virgülle ayrılmış kimlikler: community,name,map,difficulty,gametype,friends,players,qm,ping; boş = varsayılan)"
 polish = "Kolejność kolumn przeglądarki serwerów (ID oddzielone przecinkami: community,name,map,difficulty,gametype,friends,players,qm,ping; puste = domyślna)"
+
+[[message]]
+key = "Save loaded and marked as used."
+[message.translations]
+simplified_chinese = "存档已载入并标记为已使用。"
+traditional_chinese = "存檔已載入並標記為已使用。"
+
+[[message]]
+key = "Used"
+[message.translations]
+simplified_chinese = "已使用"
+traditional_chinese = "已使用"

@@ -8,6 +8,8 @@
 #include <gtest/gtest.h>
 #include <test/test.h>
 
+#include <algorithm>
+
 TEST(Color, HslToRgbToHslConv)
 {
 	for(unsigned PackedColor = 0; PackedColor <= 0xFFFFFF; PackedColor += 0xA)
@@ -119,6 +121,36 @@ TEST(Color, EntitiesBackgroundDefaultIsNeutralGray)
 	EXPECT_NEAR(Color.r, 0.5f, 0.01f);
 	EXPECT_NEAR(Color.g, 0.5f, 0.01f);
 	EXPECT_NEAR(Color.b, 0.5f, 0.01f);
+}
+
+// 钩索辅助线"按下后"默认色推导：基于原色（HSL 打包 0xAHHSSLL）做 HSL 提亮（L + 0.25，H/S 不变，
+// alpha 置 FF）得到高亮变体。配置中的硬编码默认值必须与本函数的推导结果一致（见下方 static_assert）。
+constexpr unsigned QmHookCollPressedDefault(unsigned BaseCol)
+{
+	// x/y/z/a 即 ColorHSLA 的 h/s/l/a（constexpr 下访问联合别名成员在 MSVC 会报非活动成员，故用 x/y/z）
+	const ColorHSLA Base = ColorHSLA(BaseCol, true);
+	const ColorHSLA Pressed(Base.x, Base.y, std::clamp(Base.z + 0.25f, 0.0f, 1.0f), 1.0f);
+	return Pressed.Pack(true);
+}
+
+static_assert(QmHookCollPressedDefault(DefaultConfig::ClHookCollColorNoColl) == 0xFF00FFBF);
+static_assert(QmHookCollPressedDefault(DefaultConfig::ClHookCollColorHookableColl) == 0xFF61AFF5);
+static_assert(QmHookCollPressedDefault(DefaultConfig::ClHookCollColorTeeColl) == 0xFF2AFFBF);
+static_assert(QmHookCollPressedDefault(DefaultConfig::ClHookCollTipColor) == 0xFF2BFFC0);
+
+// 钩索辅助线"按下后"自定义：开关默认关闭；四类默认色为原色的高亮变体（非 0），
+// 开关开启即使用户不选色也能与未按下/自动反色区分开
+TEST(Color, HookCollPressedCustomDefaults)
+{
+	EXPECT_EQ(DefaultConfig::QmHookCollPressedCustom, 0);
+	EXPECT_EQ(DefaultConfig::QmHookCollPressedNoColl, QmHookCollPressedDefault(DefaultConfig::ClHookCollColorNoColl));
+	EXPECT_EQ(DefaultConfig::QmHookCollPressedHookable, QmHookCollPressedDefault(DefaultConfig::ClHookCollColorHookableColl));
+	EXPECT_EQ(DefaultConfig::QmHookCollPressedTee, QmHookCollPressedDefault(DefaultConfig::ClHookCollColorTeeColl));
+	EXPECT_EQ(DefaultConfig::QmHookCollPressedTip, QmHookCollPressedDefault(DefaultConfig::ClHookCollTipColor));
+	EXPECT_NE(DefaultConfig::QmHookCollPressedNoColl, 0u);
+	EXPECT_NE(DefaultConfig::QmHookCollPressedHookable, 0u);
+	EXPECT_NE(DefaultConfig::QmHookCollPressedTee, 0u);
+	EXPECT_NE(DefaultConfig::QmHookCollPressedTip, 0u);
 }
 
 TEST(Color, QmTeeColorCodeAcceptsRgbAndShortRgb)

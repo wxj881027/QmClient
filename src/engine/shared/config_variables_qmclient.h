@@ -109,6 +109,27 @@ MACRO_CONFIG_INT(QmMapBrowserStarMask, qm_map_browser_star_mask, 0, 0, 62, CFGFL
 MACRO_CONFIG_STR(QmDemoDirectory, qm_demo_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo directory")
 MACRO_CONFIG_STR(QmVideoDirectory, qm_video_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video directory")
 MACRO_CONFIG_STR(QmScreenshotDirectory, qm_screenshot_directory, 512, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot directory")
+// Demo 导出转换管线：固定转换线程数 + 有界帧队列（反压不丢帧），替代按 CPU 核数分配线程与全尺寸缓冲。
+MACRO_CONFIG_INT(QmVideoConvertThreads, qm_video_convert_threads, 3, 1, 8, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Number of video pixel-format conversion threads for demo export (2-4 recommended)")
+MACRO_CONFIG_INT(QmVideoQueueFrames, qm_video_queue_frames, 8, 2, 32, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Bounded capture frame queue depth for demo export (higher values use more memory)")
+// 分段渲染（M3）：0 = 整段导出；>0 时按该秒数切片，每段独立封装并记录进度，中断后可跳过已完成片段续渲。
+MACRO_CONFIG_INT(QmVideoSegmentSeconds, qm_video_segment_seconds, 300, 0, 3600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo export segment length in seconds (0 = single file, 300 = 5 minutes)")
+MACRO_CONFIG_INT(QmVideoSegmentWarmup, qm_video_segment_warmup, 100, 0, 500, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Demo ticks played without recording before each segment to restore effects/chat state (50 ticks = 1 second)")
+// 编码器选择（M4）：空 = 默认软件编码器（libx264）；否则为 FFmpeg 编码器名（如 h264_nvenc），必须经运行时探测可用。
+MACRO_CONFIG_STR(QmVideoEncoder, qm_video_encoder, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Video encoder for demo export (empty = default software encoder, e.g. h264_nvenc)")
+// 统一质量值（M4）：0-51（CRF/CQ/QP 同刻度，越大质量越低）；-1 = 沿用 cl_video_crf。按所选编码器家族映射到原生参数。
+MACRO_CONFIG_INT(QmVideoQuality, qm_video_quality, -1, -1, 51, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Unified export quality (CRF/CQ/QP scale 0-51, -1 = use cl_video_crf); mapped to each encoder's native parameter")
+// 导出预设（M6）：0=自定义（跟随 qm_video_encoder/quality/container），1=日常分享(libx264/mp4)，2=高效高画质(hevc_nvenc/mp4)，3=专业剪辑(prores_ks/mov)，4=专业剪辑DNxHR(dnxhd/mov)，5=无损归档(ffv1/mkv)。预设展开为编码器+容器+像素格式+质量组合。
+MACRO_CONFIG_INT(QmVideoPreset, qm_video_preset, 0, 0, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export preset: 0=custom, 1=daily(libx264/mp4), 2=high quality(hevc_nvenc/mp4), 3=editing(ProRes/mov), 4=editing(DNxHR/mov), 5=lossless archive(FFV1/mkv)")
+// 输出容器（M6）：自定义预设使用，mp4/mov/mkv；后缀与 libavformat 容器按文件名匹配。
+MACRO_CONFIG_STR(QmVideoContainer, qm_video_container, 8, "mp4", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom export container: mp4, mov or mkv")
+// 关键帧间隔（M4）：编码器 GOP；0 = 用编码器默认。分段渲染每段独立编码器实例，段首帧恒为 IDR，不受此值影响。
+MACRO_CONFIG_INT(QmVideoGop, qm_video_gop, 60, 0, 600, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Keyframe interval (GOP) in frames for demo export (0 = encoder default, 60 = recommended)")
+// 输出分辨率（M7 超采样）：0 = 跟随窗口渲染分辨率。小于渲染分辨率时以渲染分辨率绘制再经
+// swscale LANCZOS 下采样（例如 2560x1440 窗口导出 1280x720 = 2x 超采样，改善 2D 边缘锯齿）；
+// 大于渲染分辨率会被忽略并回退到渲染分辨率。
+MACRO_CONFIG_INT(QmVideoWidth, qm_video_width, 0, 0, 7680, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export output width in pixels (0 = follow window render size; smaller than window = supersampled downscale)")
+MACRO_CONFIG_INT(QmVideoHeight, qm_video_height, 0, 0, 4320, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Export output height in pixels (0 = follow window render size; smaller than window = supersampled downscale)")
 
 MACRO_CONFIG_INT(QmScreenshotWatermark, qm_screenshot_watermark, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically add a watermark to screenshots")
 MACRO_CONFIG_INT(QmScreenshotWatermarkTimestamp, qm_screenshot_watermark_timestamp, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Screenshot watermark: include timestamp")
@@ -158,6 +179,7 @@ MACRO_CONFIG_INT(QmImeSelectedGradientReverse, qm_ime_selected_gradient_reverse,
 MACRO_CONFIG_INT(QmAutoSaveHistoryCount, qm_auto_save_history_count, 100, 0, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-save history count (0=disable)")
 MACRO_CONFIG_INT(QmShortServerNames, qm_short_server_names, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show short server names in browser (applies to China community servers)")
 MACRO_CONFIG_INT(QmPingCacheMaxAgeHours, qm_ping_cache_max_age_hours, 72, 0, 8760, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discard cached server pings older than this many hours (0 = never expire)")
+MACRO_CONFIG_INT(QmSavesAutoRemoveUsed, qm_saves_auto_remove_used, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Automatically remove a local save record after it has been loaded successfully (0 = keep and mark as used, 1 = remove)")
 MACRO_CONFIG_INT(QmSkinSortMode, qm_skin_sort_mode, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Skin list sort mode (0=Name, 1=Release date)")
 MACRO_CONFIG_INT(QmSkinShowMetadata, qm_skin_show_metadata, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show skin release date and author")
 MACRO_CONFIG_INT(QmSkinOutlineLocal, qm_skin_outline_local, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show generated skin outline for local tees")
@@ -638,6 +660,19 @@ MACRO_CONFIG_INT(QmSwitchCountdownMode, qm_switch_countdown_mode, 1, 0, 2, CFGFL
 // Hook Countdown - 钩链中点的普通钩倒计时与无限钩标记
 MACRO_CONFIG_INT(QmHookCountdown, qm_hook_countdown, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable hook countdown")
 
+// Hook Collision Pressed Colors - 钩索辅助线按下后颜色（开关 + 四类自定义；开=四色始终生效，无回退）
+// 默认按下色 = 对应原色配置默认值做 HSL 提亮（L + 0.25，H/S 不变，alpha 置 FF）得到的高亮变体。
+// 数值推导：
+//   qm_hook_coll_pressed_no_coll   : cl_hook_coll_color_no_coll      0x0000FF7F (H=00 S=FF L=7F 红) → L=BF → 0xFF00FFBF
+//   qm_hook_coll_pressed_hookable  : cl_hook_coll_color_hookable_coll 0x0061AFB5 (H=61 S=AF L=B5 绿) → L=F5 → 0xFF61AFF5
+//   qm_hook_coll_pressed_tee       : cl_hook_coll_color_tee_coll     0x002AFF7F (H=2A S=FF L=7F 黄) → L=BF → 0xFF2AFFBF
+//   qm_hook_coll_pressed_tip       : cl_hook_coll_tip_color          0x002BFF80 (H=2B S=FF L=80)    → L=C0 → 0xFF2BFFC0
+MACRO_CONFIG_INT(QmHookCollPressedCustom, qm_hook_coll_pressed_custom, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use custom colors for the pressed hook collision line (0 = always invert)")
+MACRO_CONFIG_COL(QmHookCollPressedNoColl, qm_hook_coll_pressed_no_coll, 0xFF00FFBF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook collision line color when not aiming at anything hookable")
+MACRO_CONFIG_COL(QmHookCollPressedHookable, qm_hook_coll_pressed_hookable, 0xFF61AFF5, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook collision line color when hitting something hookable")
+MACRO_CONFIG_COL(QmHookCollPressedTee, qm_hook_coll_pressed_tee, 0xFF2AFFBF, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook collision line color when hitting a tee")
+MACRO_CONFIG_COL(QmHookCollPressedTip, qm_hook_coll_pressed_tip, 0xFF2BFFC0, CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_COLALPHA, "Pressed hook line tip color")
+
 // HUD Dynamic Island - 灵动岛/HUD 编辑器
 MACRO_CONFIG_INT(QmHudIslandUseOriginalStyle, qm_hud_island_use_original_style, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use original style for Dynamic Island")
 MACRO_CONFIG_INT(QmHudIslandShowTeam, qm_hud_island_show_team, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show team on HUD Dynamic Island")
@@ -738,6 +773,7 @@ MACRO_CONFIG_INT(QmMessageMerge, qm_message_merge, 1, 0, 1, CFGFLAG_CLIENT | CFG
 // 该行为始终生效，不受 qm_message_merge 影响；设为 0 关闭合并。
 MACRO_CONFIG_INT(QmEchoMergeWindowMs, qm_echo_merge_window_ms, 2000, 0, 60000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Merge consecutive identical echo messages within this window in milliseconds (0 disables merging)")
 MACRO_CONFIG_INT(QmChatHideSystemPrefix, qm_chat_hide_system_prefix, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide the *** prefix before server chat messages")
+MACRO_CONFIG_INT(QmChatLineSpacing, qm_chat_line_spacing, 0, 0, 32, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Extra vertical spacing between chat lines in pixels (0 = default)")
 MACRO_CONFIG_INT(QmChatAnimSlideOut, qm_chat_anim_slide_out, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable left swipe offset on chat fade")
 MACRO_CONFIG_INT(QmChatAnimFadeDurationMs, qm_chat_anim_fade_duration_ms, 300, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Chat fade smooth time (milliseconds)")
 MACRO_CONFIG_INT(QmHideChatBubbles, qm_hide_chat_bubbles, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Hide own chat bubble (only when authenticated in remote console)")
@@ -880,3 +916,7 @@ MACRO_CONFIG_INT(QmJumpHintSize, qm_jump_hint_size, 10, 0, 50, CFGFLAG_CLIENT | 
 
 // Friends - 好友
 MACRO_CONFIG_INT(QmFriendAutoFollowDelay, qm_friend_auto_follow_delay, 3, 0, 30, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto-follow friend server switch delay (seconds)")
+
+// Self-kill protection / 自杀保护 - 仅拦截客户端主动自杀（K 键 / kill 命令），服务端命令不受影响。
+// 开/关通过可绑定命令 qm_self_kill_off / qm_self_kill_on 切换。
+MACRO_CONFIG_INT(QmSelfKillEnabled, qm_self_kill_enabled, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow the client to send kill requests (0 = ignore client-initiated kills)")

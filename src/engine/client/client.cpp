@@ -9,8 +9,10 @@
 #include "qm_graphics_diagnostics.h"
 #include "qm_storage_mode.h"
 #include "serverbrowser.h"
+#include "video_export.h"
 
 #include <base/crashdump.h>
+#include <base/fs.h>
 #include <base/hash.h>
 #include <base/hash_ctxt.h>
 #include <base/lock.h>
@@ -439,6 +441,15 @@ CClient::CClient() :
 
 	m_Sixup = false;
 }
+
+#if defined(CONF_VIDEORECORDER)
+// 等待拼接线程完成：防止静态对象销毁撕裂正在写的输出文件（缺 trailer）
+CClient::~CClient()
+{
+	if(m_ConcatThread.joinable())
+		m_ConcatThread.join();
+}
+#endif
 
 // ----- send functions -----
 static inline bool RepackMsg(const CMsgPacker *pMsg, CPacker &Packer, bool Sixup)
@@ -1288,6 +1299,10 @@ void CClient::DisconnectWithReason(const char *pReason)
 	// stop demo playback and recorder
 	// make sure to remove replay tmp demo
 	m_DemoPlayer.Stop();
+#if defined(CONF_VIDEORECORDER)
+	// 断开即中断分段导出：进度文件已保存，续渲时跳过已完成片段
+	CancelSegmentedVideoExport();
+#endif
 	for(int Recorder = 0; Recorder < RECORDER_MAX; Recorder++)
 	{
 		DemoRecorder(Recorder)->Stop(Recorder == RECORDER_REPLAYS ? IDemoRecorder::EStopMode::REMOVE_FILE : IDemoRecorder::EStopMode::KEEP_FILE);
@@ -3790,7 +3805,13 @@ void CClient::Update()
 #if defined(CONF_VIDEORECORDER)
 		// 图形线程仅发布录制失败，主线程在推进回放前完成停止与清理。
 		if(IVideo::Current() && IVideo::Current()->HasError())
+		{
+			// 先给任务打标记：错误段的容器可能仍是可打开的文件（mkv 无 trailer 亦然），
+			// 只有录制侧知道本次是以错误终止，不能让收尾阶段把它记成"已完成"。
+			if(m_pVideoExportTask)
+				m_pVideoExportTask->MarkSegmentRecordingFailed();
 			m_DemoPlayer.Stop(Localize("Failed to record video. See local console for details."));
+		}
 #endif
 		if(m_DemoPlayer.IsPlaying())
 		{
@@ -3812,9 +3833,20 @@ void CClient::Update()
 			m_aPrevGameTick[0] = pInfo->m_PreviousTick;
 			m_aGameIntraTick[0] = pInfo->m_IntraTick;
 			m_aGameTickTime[0] = pInfo->m_TickTime;
+
+#if defined(CONF_VIDEORECORDER)
+			// 分段导出状态机：预热到段起点开录、到段末停录收尾
+			DriveSegmentedExport(pInfo->m_Info.m_CurrentTick);
+#endif
 		}
 		else
 		{
+#if defined(CONF_VIDEORECORDER)
+			// demo 自然结束：最后一段已由 CDemoPlayer::Stop 自动停录收尾，验证并拼接后清理任务
+			if(m_pVideoExportTask && m_pVideoExportTask->Active())
+				FinishSegmentedExport();
+			CancelSegmentedVideoExport();
+#endif
 			// Disconnect when demo playback stopped, either due to playback error
 			// or because the end of the demo was reached when rendering it.
 			DisconnectWithReason(m_DemoPlayer.ErrorMessage());
@@ -5057,6 +5089,21 @@ void CClient::Con_StartVideo(IConsole::IResult *pResult, void *pUserData)
 {
 	CClient *pSelf = static_cast<CClient *>(pUserData);
 
+	// Range 与断点续渲统一由分段任务负责；只有段长配置为 0 时才退回整段导出。
+	// 可选参数：<name> [start_sec] [end_sec]：起止秒相对 demo 起点，与渲染弹窗 Range 输入同语义（供脚本/测试驱动）
+	// start/end 各自单独判断，只给 start 时表示"从该处到结尾"，不会被静默丢弃。
+	const int NumArgs = pResult->NumArguments();
+	const float RangeStartSec = NumArgs >= 2 ? pResult->GetFloat(1) : -1.0f;
+	const float RangeEndSec = NumArgs >= 3 ? pResult->GetFloat(2) : -1.0f;
+	// 指定了 Range 时即使段长为 0 也走任务状态机，让区间导出只有一条经过校验的实现路径。
+	if((g_Config.m_QmVideoSegmentSeconds > 0 || RangeStartSec >= 0.0f) && pSelf->StartSegmentedVideoExport(pResult->NumArguments() ? pResult->GetString(0) : "video", !pResult->NumArguments(),
+										      RangeStartSec, RangeEndSec))
+		return;
+
+	// 走到这里说明任务没接管：Range 无法生效，明确告警而不是让用户以为导出了区间。
+	if(RangeStartSec >= 0.0f)
+		log_warn("video", "start_video range could not be applied (not in demo playback, export already running, or empty range); exporting the whole demo instead.");
+
 	if(pResult->NumArguments())
 	{
 		pSelf->StartVideo(pResult->GetString(0), false);
@@ -5064,6 +5111,325 @@ void CClient::Con_StartVideo(IConsole::IResult *pResult, void *pUserData)
 	else
 	{
 		pSelf->StartVideo("video", true);
+	}
+}
+
+// —— 分段渲染与断点续渲（M3）——
+// 返回 false 表示未走分段路径（状态不符或段数不超过 1），调用方回退整段导出。
+bool CClient::StartSegmentedVideoExport(const char *pName, bool AppendTimestamp, float RangeStartSec, float RangeEndSec)
+{
+	if(State() != IClient::STATE_DEMOPLAYBACK || !m_DemoPlayer.IsPlaying())
+	{
+		log_error("video_export", "Segmented export can only be started in demo player.");
+		return false;
+	}
+	if(m_pVideoExportTask)
+	{
+		log_error("video_export", "A segmented export is already running ('%s').", m_pVideoExportTask->Name());
+		return true; // 已有任务时按已处理处理，避免再次整段导出
+	}
+	// 上一次导出的拼接线程仍在读段文件：此时开始新导出会重写同名段文件
+	// （<name>_p%03d）并可能与 <output>.part 替换目标并发，撕裂成片。
+	// 按已处理返回，避免调用方回退整段导出与拼接并发写同名输出。
+	if(VideoExportConcatPending())
+	{
+		log_error("video_export", "The previous export is still concatenating; wait for it to finish before starting a new export.");
+		return true;
+	}
+
+	// 新一轮导出：重置上一次的拼接结果，避免 UI 沿用旧的"完成/失败"状态。
+	m_ConcatAttempted.store(false);
+	m_ConcatLastSucceeded.store(false);
+
+	char aName[IO_MAX_PATH_LENGTH];
+	str_copy(aName, pName);
+	if(AppendTimestamp)
+	{
+		char aTimestamp[20];
+		str_timestamp(aTimestamp, sizeof(aTimestamp));
+		str_format(aName, sizeof(aName), "%s_%s", pName, aTimestamp);
+	}
+
+	const CDemoPlayer::CPlaybackInfo *pInfo = m_DemoPlayer.Info();
+	int FirstTick = pInfo->m_Info.m_FirstTick;
+	int LastTick = pInfo->m_Info.m_LastTick;
+
+	// 渲染选区（秒，相对 demo 起点）换算为 tick：先把秒数钳到 [0, demo 时长] 再换算，
+	// 避免超大输入在浮点转整型、以及 std::clamp 出现 lo > hi 时触发未定义行为。
+	// 只给 start（end < 0）表示从起点到 demo 结尾。
+	if(RangeStartSec >= 0.0f)
+	{
+		const int OriginalFirst = FirstTick;
+		const int OriginalLast = LastTick;
+		const int DemoTicks = maximum(1, OriginalLast - OriginalFirst);
+		const float MaxSec = (float)DemoTicks / (float)SERVER_TICK_SPEED;
+		const float ClampedStart = std::clamp(RangeStartSec, 0.0f, MaxSec);
+		const float ClampedEnd = RangeEndSec >= 0.0f ? std::clamp(RangeEndSec, 0.0f, MaxSec) : MaxSec;
+		const int RangeFirst = std::clamp(OriginalFirst + (int)(ClampedStart * SERVER_TICK_SPEED), OriginalFirst, OriginalLast);
+		const int RangeLast = std::clamp(OriginalFirst + (int)(ClampedEnd * SERVER_TICK_SPEED), OriginalFirst, OriginalLast);
+		if(RangeLast > RangeFirst)
+		{
+			FirstTick = RangeFirst;
+			LastTick = RangeLast;
+		}
+		else
+			log_warn("video_export", "Range [%.1fs, %.1fs] is empty or inverted; exporting the whole demo.", RangeStartSec, RangeEndSec);
+	}
+
+	// demo 文件属性（任务指纹）。Resolve 的默认配置结果可能是相对路径（锚定 IStorage 语义），
+	// 而此处用裸 io_open 读取，必须再经 CompletePath 锚定为绝对路径才能与写入方一致。
+	char aDemoWhole[IO_MAX_PATH_LENGTH];
+	const std::string DemoResolved = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, m_DemoPlayer.Filename()));
+	str_copy(aDemoWhole, !DemoResolved.empty() ? DemoResolved.c_str() : m_DemoPlayer.Filename());
+	uint64_t DemoSize = 0;
+	int64_t DemoMtime = 0;
+	if(IOHANDLE DemoFile = io_open(aDemoWhole, IOFLAG_READ))
+	{
+		DemoSize = (uint64_t)io_length(DemoFile);
+		io_close(DemoFile);
+	}
+	time_t Created = 0, Modified = 0;
+	if(fs_file_time(aDemoWhole, &Created, &Modified) == 0)
+		DemoMtime = (int64_t)Modified;
+
+	std::unique_ptr<CVideoExportTask> pTask = std::make_unique<CVideoExportTask>(
+		aName, m_DemoPlayer.Filename(), FirstTick, LastTick,
+		g_Config.m_QmVideoSegmentSeconds, g_Config.m_ClVideoRecorderFPS,
+		Graphics()->ScreenWidth(), Graphics()->ScreenHeight(),
+		g_Config.m_ClVideoX264Crf, g_Config.m_ClVideoX264Preset, g_Config.m_QmVideoSegmentWarmup);
+	// 指纹附加参数：只影响产物、不影响段切分的导出设置。任一变化都必须让旧段失效，
+	// 否则续渲会把不同编码器/质量/容器/尺寸的旧段拼进同一个文件。
+	char aFingerprintParams[512];
+	str_format(aFingerprintParams, sizeof(aFingerprintParams), "%s|%d|%d|%s|%dx%d|%d",
+		g_Config.m_QmVideoEncoder, g_Config.m_QmVideoQuality, g_Config.m_QmVideoGop,
+		g_Config.m_QmVideoContainer, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight,
+		g_Config.m_ClVideoSndEnable);
+	pTask->ComputeFingerprint(DemoSize, DemoMtime, aFingerprintParams);
+
+	// 未指定 Range 且只有一段：走原有整段导出，省去分段任务与流复制拼接的开销。
+	// 指定了 Range 时必须留在任务里，否则选区会被 StartVideo 的整段导出静默丢弃。
+	if(pTask->Segments().size() <= 1 && RangeStartSec < 0.0f)
+		return false;
+
+	// 复用已有进度：进度文件损坏或指纹不匹配时整单从头渲染（新任务段默认未完成）
+	char aProgress[IO_MAX_PATH_LENGTH];
+	str_format(aProgress, sizeof(aProgress), "videos/%s.progress", aName);
+	const std::string ProgressPath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, aProgress));
+	pTask->LoadProgress(ProgressPath.c_str()); // 失败/不匹配时保留默认（全部未完成）
+
+	const int Pending = pTask->NextPendingSegment();
+	if(Pending < 0)
+	{
+		// 全部段已渲染：不重渲，直接重建拼接输出（拼接文件可能缺失或损坏）
+		log_info("video_export", "All segments of '%s' are already done; rebuilding concat output.", aName);
+		m_pVideoExportTask = std::move(pTask);
+		StartSegmentConcat(m_pVideoExportTask.get());
+		m_pVideoExportTask.reset();
+		return true;
+	}
+
+	m_pVideoExportTask = std::move(pTask);
+	m_pVideoExportTask->BeginSegment(Pending);
+
+	// 定位到段起点前的预热区，由状态机在到达段起点时开始录制
+	const int StartTick = m_pVideoExportTask->Segments()[Pending].m_StartTick;
+	m_DemoPlayer.SetPos(StartTick - m_pVideoExportTask->WarmupTicks());
+	log_info("video_export", "Segmented export '%s': ticks [%d..%d] (%.1fs), %d segment(s) x %ds, warmup %d ticks.",
+		aName, FirstTick, LastTick, (LastTick - FirstTick) / (float)SERVER_TICK_SPEED,
+		(int)m_pVideoExportTask->Segments().size(), g_Config.m_QmVideoSegmentSeconds, m_pVideoExportTask->WarmupTicks());
+	log_info("video_export", "Segmented export '%s' starting at segment %d/%d.", aName, Pending + 1, (int)m_pVideoExportTask->Segments().size());
+	return true;
+}
+
+void CClient::CancelSegmentedVideoExport()
+{
+	if(!m_pVideoExportTask)
+		return;
+	log_info("video_export", "Segmented export '%s' cancelled; progress kept.", m_pVideoExportTask->Name());
+	m_pVideoExportTask.reset();
+}
+
+// 导出容器扩展名（M6）：仅允许 mp4/mov/mkv（libavformat 按文件名匹配的容器），
+// 其余值一律回退 mp4，避免拼出无法推断容器的文件名。
+const char *CClient::ContainerName() const
+{
+	if(str_comp(g_Config.m_QmVideoContainer, "mp4") == 0 ||
+		str_comp(g_Config.m_QmVideoContainer, "mov") == 0 ||
+		str_comp(g_Config.m_QmVideoContainer, "mkv") == 0)
+		return g_Config.m_QmVideoContainer;
+	return "mp4";
+}
+
+// 拼接 muxer 格式名：mkv 容器的 libavformat 名是 "matroska"（非 "mkv"），mp4/mov 同名。
+const char *CClient::ConcatFormatName() const
+{
+	return str_comp(ContainerName(), "mkv") == 0 ? "matroska" : ContainerName();
+}
+
+void CClient::FinishSegmentedExport()
+{
+	CVideoExportTask *pTask = m_pVideoExportTask.get();
+	if(!pTask)
+		return;
+
+	const int SegmentIndex = pTask->CurrentSegment();
+	if(SegmentIndex < 0)
+		return;
+
+	// 录制以错误终止：不标记完成、不写进度，保留该段为待渲状态，下次续渲重做。
+	// 容器是否"能打开"不足以判断内容完整（mkv 截断文件同样可打开）。
+	if(pTask->SegmentRecordingFailed())
+	{
+		log_error("video_export", "Segment %d recording failed; keeping it pending for the next run.", SegmentIndex + 1);
+		// 本次导出失败：让 UI 不弹"渲染完成"。
+		m_ConcatAttempted.store(true);
+		m_ConcatLastSucceeded.store(false);
+		pTask->ResetToIdle();
+		m_pVideoExportTask.reset();
+		return;
+	}
+
+	char aSegmentName[IO_MAX_PATH_LENGTH];
+	pTask->SegmentFilename(SegmentIndex, aSegmentName, sizeof(aSegmentName));
+	char aLogical[IO_MAX_PATH_LENGTH];
+	str_format(aLogical, sizeof(aLogical), "videos/%s.%s", aSegmentName, ContainerName());
+	// VerifySegmentFile 走 libavformat 的裸文件 IO（不经 IStorage），必须用绝对路径
+	const std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, aLogical));
+	if(WholePath.empty() || !CVideoExportTask::VerifySegmentFile(WholePath.c_str()))
+	{
+		// 段文件不完整：终止任务（进度文件保留，续渲时将重渲该段），避免状态滞留被误判为外部停录
+		log_error("video_export", "Segment file '%s' is incomplete; segmented export cancelled (will re-render on resume).", aSegmentName);
+		m_ConcatAttempted.store(true);
+		m_ConcatLastSucceeded.store(false);
+		pTask->ResetToIdle();
+		m_pVideoExportTask.reset();
+		return;
+	}
+
+	pTask->MarkSegmentDone(SegmentIndex);
+	char aProgress[IO_MAX_PATH_LENGTH];
+	str_format(aProgress, sizeof(aProgress), "videos/%s.progress", pTask->Name());
+	const std::string ProgressPath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, aProgress));
+	// 写失败时续渲会重渲本段（安全但耗时），必须让用户知道原因。
+	if(!pTask->SaveProgress(ProgressPath.c_str()))
+		log_warn("video_export", "Could not write progress file '%s'; the next resume will re-render this segment.", ProgressPath.c_str());
+
+	// 推进到下一段或收尾
+	const bool WasLast = pTask->NextPendingSegment() < 0;
+	pTask->OnRecordingStopped();
+
+	if(pTask->State() == CVideoExportTask::EState::WARMING_UP)
+	{
+		const int NextStart = pTask->Segments()[pTask->CurrentSegment()].m_StartTick;
+		m_DemoPlayer.SetPos(NextStart - pTask->WarmupTicks());
+		log_info("video_export", "Segment %d done; resuming at segment %d/%d.", SegmentIndex + 1, pTask->CurrentSegment() + 1, (int)pTask->Segments().size());
+	}
+	else if(WasLast)
+	{
+		// 全部完成：流复制拼接为最终文件（后台线程，避免阻塞主循环）
+		StartSegmentConcat(pTask);
+	}
+}
+
+// 收尾拼接：检查全部段文件在位后在后台线程流复制拼接（libavformat 裸 IO，用绝对路径）。
+void CClient::StartSegmentConcat(const CVideoExportTask *pTask)
+{
+	// 上一次拼接仍在进行：拒绝新请求（同输出文件并发写会撕裂）；已跑完则回收线程句柄后继续。
+	if(m_ConcatThread.joinable())
+	{
+		if(!m_ConcatThreadFinished.load())
+		{
+			log_info("video_export", "A previous concat is still running; skipping the new concat request.");
+			return;
+		}
+		m_ConcatThread.join();
+	}
+
+	std::vector<std::string> vFiles;
+	for(int i = 0; i < (int)pTask->Segments().size(); ++i)
+	{
+		char aName[IO_MAX_PATH_LENGTH];
+		pTask->SegmentFilename(i, aName, sizeof(aName));
+		char aSegLogical[IO_MAX_PATH_LENGTH];
+		str_format(aSegLogical, sizeof(aSegLogical), "videos/%s.%s", aName, ContainerName());
+		// 拼接线程用 libavformat 裸 IO 读写，需要绝对路径
+		std::string WholePath = qmclient::media_paths::CompletePath(Storage(),
+			qmclient::media_paths::Resolve(Storage(), g_Config, aSegLogical));
+		if(WholePath.empty() || !CVideoExportTask::VerifySegmentFile(WholePath.c_str()))
+		{
+			log_error("video_export", "Segment '%s' missing or unreadable; skipping concat.", aSegLogical);
+			// 记下"已尝试但失败"，让 UI 不把本次导出当成已完成。
+			m_ConcatAttempted.store(true);
+			m_ConcatLastSucceeded.store(false);
+			return;
+		}
+		vFiles.push_back(std::move(WholePath));
+	}
+
+	char aOutName[IO_MAX_PATH_LENGTH];
+	pTask->FinalOutputName(aOutName, sizeof(aOutName));
+	char aOutFull[IO_MAX_PATH_LENGTH];
+	str_format(aOutFull, sizeof(aOutFull), "videos/%s.%s", aOutName, ContainerName());
+	const std::string OutputPath = qmclient::media_paths::CompletePath(Storage(),
+		qmclient::media_paths::Resolve(Storage(), g_Config, aOutFull));
+
+	// muxer 格式名跟随容器（mkv → "matroska"），避免容器与后缀不一致
+	const std::string FormatName = ConcatFormatName();
+	m_ConcatAttempted.store(true);
+	m_ConcatLastSucceeded.store(false);
+	m_ConcatThreadFinished.store(false);
+	m_ConcatThread = std::thread([this, vFiles = std::move(vFiles), OutputPath, FormatName]() {
+		m_ConcatLastSucceeded.store(ConcatVideoFiles(vFiles, OutputPath.c_str(), FormatName.c_str()));
+		// 无论成功失败都要复位，保证下一次导出的拼接请求不会被永久拒绝。
+		m_ConcatThreadFinished.store(true);
+	});
+}
+
+void CClient::DriveSegmentedExport(int CurrentTick)
+{
+	CVideoExportTask *pTask = m_pVideoExportTask.get();
+	if(!pTask || pTask->State() == CVideoExportTask::EState::IDLE)
+		return;
+
+	// 录制态但录像器已不存在：段末自动停录（demo 播完经 CDemoPlayer::Stop）属正常路径，
+	// 继续走段末收尾；段末之前消失则是用户手动停录或错误 → 取消任务（进度保留）。
+	if(pTask->State() == CVideoExportTask::EState::RECORDING && !IVideo::Current())
+	{
+		const int SegmentEnd = pTask->Segments()[pTask->CurrentSegment()].m_EndTick;
+		if(CurrentTick < SegmentEnd)
+		{
+			log_info("video_export", "Recording stopped externally; segmented export '%s' cancelled.", pTask->Name());
+			pTask->ResetToIdle();
+			m_pVideoExportTask.reset();
+			return;
+		}
+	}
+
+	switch(pTask->UpdatePlayback(CurrentTick))
+	{
+	case CVideoExportTask::ACT_START_RECORD:
+	{
+		char aSegmentName[IO_MAX_PATH_LENGTH];
+		pTask->SegmentFilename(pTask->CurrentSegment(), aSegmentName, sizeof(aSegmentName));
+		StartVideo(aSegmentName, false);
+		if(IVideo::Current())
+			pTask->OnRecordingStarted();
+		break;
+	}
+	case CVideoExportTask::ACT_STOP_RECORD:
+	{
+		// 停止录像收尾；若 demo 恰好自然结束，CDemoPlayer::Stop 已停录，此处跳过
+		if(IVideo::Current())
+			IVideo::Current()->Stop();
+		FinishSegmentedExport();
+		break;
+	}
+	default:
+		break;
 	}
 }
 
@@ -5086,11 +5452,11 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	{
 		char aTimestamp[20];
 		str_timestamp(aTimestamp, sizeof(aTimestamp));
-		str_format(aFilename, sizeof(aFilename), "videos/%s_%s.mp4", pFilename, aTimestamp);
+		str_format(aFilename, sizeof(aFilename), "videos/%s_%s.%s", pFilename, aTimestamp, ContainerName());
 	}
 	else
 	{
-		str_format(aFilename, sizeof(aFilename), "videos/%s.mp4", pFilename);
+		str_format(aFilename, sizeof(aFilename), "videos/%s.%s", pFilename, ContainerName());
 	}
 
 	const std::string Path = qmclient::media_paths::Resolve(Storage(), g_Config, aFilename);
@@ -5105,7 +5471,9 @@ void CClient::StartVideo(const char *pFilename, bool WithTimestamp)
 	Graphics()->WaitForIdle();
 	// pause the sound device while creating the video instance
 	Sound()->PauseAudioDevice();
-	new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename);
+	// 输出分辨率（M7 超采样）：qm_video_width/height 为 0 时跟随渲染分辨率；
+	// 配置值大于渲染分辨率时 CVideo 构造函数自动回退到渲染分辨率（防上采样伪影）。
+	new CVideo(Graphics(), Sound(), Storage(), Graphics()->ScreenWidth(), Graphics()->ScreenHeight(), aFilename, g_Config.m_QmVideoWidth, g_Config.m_QmVideoHeight);
 	Sound()->UnpauseAudioDevice();
 	if(!IVideo::Current()->Start())
 	{
@@ -5450,11 +5818,20 @@ const char *CClient::DemoPlayer_Play(const char *pFilename, int StorageType)
 }
 
 #if defined(CONF_VIDEORECORDER)
-const char *CClient::DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused)
+const char *CClient::DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused, float RangeStartSec, float RangeEndSec)
 {
 	const char *pError = DemoPlayer_Play(pFilename, StorageType);
 	if(pError)
 		return pError;
+
+	// 分段渲染启用时交给任务状态机（首段在预热后自动开录）；单段/禁用时回退整段导出
+	if(g_Config.m_QmVideoSegmentSeconds > 0 && StartSegmentedVideoExport(pVideoName, false, RangeStartSec, RangeEndSec))
+	{
+		m_DemoPlayer.SetSpeedIndex(SpeedIndex);
+		if(StartPaused)
+			m_DemoPlayer.Pause();
+		return nullptr;
+	}
 
 	StartVideo(pVideoName, false);
 	if(!IVideo::Current())
@@ -6244,7 +6621,9 @@ void CClient::RegisterCommands()
 	m_pConsole->Register("net_reset", "", CFGFLAG_CLIENT, ConNetReset, this, "Rebinds the client's listening address and port");
 
 #if defined(CONF_VIDEORECORDER)
-	m_pConsole->Register("start_video", "?r[file]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
+	// 第一个参数必须是 s 而不是 r：r 会吞掉整行剩余内容，后面的 start/end 永远收不到。
+	// 文件名含空格时用引号包裹（"my demo"）。
+	m_pConsole->Register("start_video", "?s[file] ?f[start_sec] ?f[end_sec]", CFGFLAG_CLIENT, Con_StartVideo, this, "Start recording a video");
 	m_pConsole->Register("stop_video", "", CFGFLAG_CLIENT, Con_StopVideo, this, "Stop recording a video");
 #endif
 

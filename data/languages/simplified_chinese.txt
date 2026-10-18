@@ -1,4 +1,4 @@
- min
+﻿ min
 == 分钟
 
  seconds
@@ -1942,6 +1942,9 @@ Chat fade smooth time (milliseconds)
 
 Chat font size
 == 聊天字体大小
+
+Chat line spacing
+== 聊天行间隔
 
 Chat gradient angle in degrees
 == 渐变方向 (聊天，°)
@@ -5920,6 +5923,27 @@ Hook interaction
 
 Hook line tip
 == 辅助线提示
+
+Custom pressed hook line colors
+== 自定义按下后颜色
+
+Pressed hook line color; always used when custom pressed colors are enabled
+== 按下后颜色；开启自定义按下后颜色时始终生效
+
+Pressed: A Tee
+== 按下后：其他玩家
+
+Pressed: Hook line tip
+== 按下后：辅助线提示
+
+Pressed: Nothing hookable
+== 按下后：未瞄准可钩物体
+
+Pressed: Something hookable
+== 按下后：可钩物体
+
+Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted
+== 按住显示钩索碰撞线时使用下方的自定义颜色；关闭=自动反色
 
 Hook loop
 == 钩子循环音
@@ -20287,3 +20311,33 @@ Included
 [Translation credits: Add your own name here when you update translations]
 English translation by the DDNet Team
 == 简体中文翻译由 DDNet 团队和 QmClient 贡献者维护
+
+Save loaded and marked as used.
+== 存档已载入并标记为已使用。
+
+Used
+== 已使用
+
+Client self-kill is disabled (K key / kill command will be ignored)
+== 客户端自杀已关闭（K 键 /kill 命令将无效）
+
+Client self-kill is disabled (server commands are not affected)
+== 客户端自杀已被禁用（服务端命令不受影响）
+
+Client self-kill is enabled
+== 客户端自杀已开启
+
+Client-side self-kill protection
+== 客户端侧自杀保护
+
+Self-kill off
+== 关闭自杀
+
+Self-kill on
+== 开启自杀
+
+To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected
+== 跑图防误触：用上方两行绑定开关键，需要自杀时先按开启键再按 K；服务端命令不受影响
+
+Manually toggle client-initiated self-kill with the bindable commands qm_self_kill_off and qm_self_kill_on
+== 通过可绑定命令 qm_self_kill_off / qm_self_kill_on 手动开关客户端自杀能力

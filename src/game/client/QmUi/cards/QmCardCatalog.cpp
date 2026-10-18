@@ -85,6 +85,8 @@ namespace qm_card_catalog
 			return QmCardRenderHook::BuildGeneralCard(Ctx, pStableId, Out);
 		if(str_comp(pStableId, "qm:bind_editor") == 0)
 			return BuildBindCard(Ctx, Out);
+		if(str_comp(pStableId, "qm:self_kill_protection") == 0)
+			return BuildSelfKillProtectionCard(Ctx, Out);
 		if(ContainsStableId(TitleCardStableIds(), pStableId))
 			return QmCardRenderHook::BuildTitleCard(Ctx, pStableId, Out);
 		if(ContainsStableId(NameplateCardStableIds(), pStableId))

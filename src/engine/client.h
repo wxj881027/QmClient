@@ -225,7 +225,12 @@ public:
 	virtual void Quit() = 0;
 	virtual const char *DemoPlayer_Play(const char *pFilename, int StorageType) = 0;
 #if defined(CONF_VIDEORECORDER)
-	virtual const char *DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused = false) = 0;
+	virtual const char *DemoPlayer_Render(const char *pFilename, int StorageType, const char *pVideoName, int SpeedIndex, bool StartPaused = false, float RangeStartSec = -1.0f, float RangeEndSec = -1.0f) = 0;
+	// 分段导出的后台拼接是否仍未结束：UI 借此把"渲染完成"推迟到成片真正写出之后。
+	// 默认实现供不支持分段导出的实现（含测试替身）复用。
+	virtual bool VideoExportConcatPending() const { return false; }
+	// 最近一次拼接是否失败：失败时 UI 不得宣称渲染完成。
+	virtual bool VideoExportConcatFailed() const { return false; }
 #endif
 	virtual void DemoRecorder_Start(const char *pFilename, bool WithTimestamp, int Recorder) = 0;
 	virtual void DemoRecorder_HandleAutoStart() = 0;

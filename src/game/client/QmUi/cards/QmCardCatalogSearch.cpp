@@ -1939,6 +1939,12 @@ namespace qm_card_catalog
 			{Localizable("Hook collision line opacity"), nullptr, "钩子辅助线不透明度"},
 			{Localizable("Hook line tip"), nullptr, "辅助线提示"},
 			{Localizable("Nothing hookable"), nullptr, "未瞄准可钩物体"},
+			{Localizable("Pressed hook line color; always used when custom pressed colors are enabled"), nullptr, "按下后颜色；开启自定义按下后颜色时始终生效"},
+			{Localizable("Pressed: A Tee"), nullptr, "按下后：其他玩家"},
+			{Localizable("Pressed: Hook line tip"), nullptr, "按下后：辅助线提示"},
+			{Localizable("Pressed: Nothing hookable"), nullptr, "按下后：未瞄准可钩物体"},
+			{Localizable("Pressed: Something hookable"), nullptr, "按下后：可钩物体"},
+			{Localizable("Use the custom colors below when the hook collision line is shown while the hook key is pressed; when disabled the unpressed colors are automatically inverted"), nullptr, "按住显示钩索碰撞线时使用下方的自定义颜色；关闭=自动反色"},
 			{Localizable("Show other players' hook collision lines"), nullptr, "显示其他玩家的钩子辅助线"},
 			{Localizable("Show own player's hook collision line"), nullptr, "显示自己的钩子辅助线"},
 			{Localizable("Something hookable"), nullptr, "可钩物体"},
@@ -1954,6 +1960,11 @@ namespace qm_card_catalog
 			{nullptr, "cl_hook_coll_tip_color", nullptr},
 			{nullptr, "cl_show_hook_coll_other", nullptr},
 			{nullptr, "cl_show_hook_coll_own", nullptr},
+			{nullptr, "qm_hook_coll_pressed_custom", nullptr},
+			{nullptr, "qm_hook_coll_pressed_hookable", nullptr},
+			{nullptr, "qm_hook_coll_pressed_no_coll", nullptr},
+			{nullptr, "qm_hook_coll_pressed_tee", nullptr},
+			{nullptr, "qm_hook_coll_pressed_tip", nullptr},
 		};
 
 		static constexpr SCardSettingSearch s_adeck_appearance_hook_collision_preview[] = {
@@ -2048,6 +2059,7 @@ namespace qm_card_catalog
 			{Localizable("Auto save chat log"), nullptr, "自动保存聊天记录"},
 			{Localizable("Chat background color"), nullptr, "聊天背景色"},
 			{Localizable("Chat font size"), nullptr, "聊天字体大小"},
+			{Localizable("Chat line spacing"), nullptr, "聊天行间隔 聊天间隔"},
 			{Localizable("Chat log retention days"), nullptr, "聊天记录保留天数"},
 			{Localizable("Chat width"), nullptr, "聊天框宽度"},
 			{Localizable("Days"), nullptr, "天"},
@@ -2067,6 +2079,7 @@ namespace qm_card_catalog
 			{nullptr, "cl_show_chat_friends", nullptr},
 			{nullptr, "cl_show_chat_team_members_only", nullptr},
 			{nullptr, "cl_showchat", nullptr},
+			{nullptr, "qm_chat_line_spacing", nullptr},
 			{nullptr, "qm_chat_log_auto_save", nullptr},
 			{nullptr, "qm_chat_log_keep_days", nullptr},
 			{nullptr, "qm_chat_save_draft", nullptr},
@@ -2712,6 +2725,15 @@ namespace qm_card_catalog
 			{nullptr, "qm_sponsor_nudge", nullptr},
 		};
 
+		static constexpr SCardSettingSearch s_aqm_self_kill_protection[] = {
+			{Localizable("Client-side self-kill protection"), nullptr, "客户端侧自杀保护 自杀保护 自杀开关"},
+			{Localizable("Self-kill off"), nullptr, "关闭自杀 禁止自杀 防误触"},
+			{Localizable("Self-kill on"), nullptr, "开启自杀 允许自杀 解除"},
+			{Localizable("To prevent accidental kills while racing, use the two bind rows above to toggle. To self-kill, press the enable key first, then press K. Server commands are not affected"), nullptr, "跑图 防误触 绑定按键 bind 按键开关"},
+			{nullptr, "qm_self_kill_off", nullptr},
+			{nullptr, "qm_self_kill_on", nullptr},
+		};
+
 		static constexpr SCardSettingSearch s_aqm_jump_hint[] = {
 			{Localizable("Font size"), nullptr, "字体大小"},
 			{Localizable("Horizontal position"), nullptr, "水平位置"},
@@ -3229,6 +3251,7 @@ namespace qm_card_catalog
 			{"deck:controls-miscellaneous", s_adeck_controls_miscellaneous, std::size(s_adeck_controls_miscellaneous)},
 			{"qm:skin_appearance", s_aqm_skin_appearance, std::size(s_aqm_skin_appearance)},
 			{"qm:solo_split", s_aqm_solo_split, std::size(s_aqm_solo_split)},
+			{"qm:self_kill_protection", s_aqm_self_kill_protection, std::size(s_aqm_self_kill_protection)},
 			{"qm:mini_features", s_aqm_mini_features, std::size(s_aqm_mini_features)},
 			{"qm:jump_hint", s_aqm_jump_hint, std::size(s_aqm_jump_hint)},
 			{"qm:weapon_trajectory", s_aqm_weapon_trajectory, std::size(s_aqm_weapon_trajectory)},

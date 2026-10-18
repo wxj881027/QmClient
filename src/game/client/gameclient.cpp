@@ -743,6 +743,8 @@ void CGameClient::OnConsoleInit()
 	pConsole->Register("qm_hook_countdown_flow_style", "?i[value]", CFGFLAG_CLIENT, ConDiscardLegacyHookCountdownFlowStyle, nullptr, "");
 	pConsole->Register("team", "i[team-id]", CFGFLAG_CLIENT, ConTeam, this, "Switch team");
 	pConsole->Register("kill", "", CFGFLAG_CLIENT, ConKill, this, "Kill yourself to restart");
+	pConsole->Register("qm_self_kill_off", "", CFGFLAG_CLIENT, ConQmSelfKillOff, this, "Disable client-initiated self-kill (K key / kill command)");
+	pConsole->Register("qm_self_kill_on", "", CFGFLAG_CLIENT, ConQmSelfKillOn, this, "Enable client-initiated self-kill (K key / kill command)");
 	pConsole->Register("ready_change", "", CFGFLAG_CLIENT, ConReadyChange7, this, "Change ready state (0.7 only)");
 	// 调试用：不计数、不写盘，直接预览启动赞助提醒浮层。
 	pConsole->Register("qm_sponsor_nudge_preview", "", CFGFLAG_CLIENT, ConQmSponsorNudgePreview, this, "Preview the sponsor reminder without changing the launch count");
@@ -6645,6 +6647,26 @@ void CGameClient::SendKill()
 	if(m_FastPractice.ConsumeKillCommand())
 		return;
 
+	// 自杀保护：只拦截客户端主动发起的自杀（K 键 / kill 命令）。
+	// fast practice 直杀与服务端发起的击杀不受影响；demo 回放路径不拦截。
+	// 开关本体是 qm_self_kill_enabled，通过可绑定命令 qm_self_kill_off / qm_self_kill_on 手动切换。
+	if(g_Config.m_QmSelfKillEnabled == 0 && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+	{
+		// 提示每秒最多刷一次，避免按住 K 键刷屏。
+		const int64_t Now = time_get();
+		if(m_QmSelfKillHintLastTime == 0 || Now - m_QmSelfKillHintLastTime >= time_freq())
+		{
+			m_QmSelfKillHintLastTime = Now;
+			char aBuf[256];
+			str_copy(aBuf, Localize("Client self-kill is disabled (server commands are not affected)"), sizeof(aBuf));
+			// 优先走通知栏本地回显；回显开关关闭时退回控制台输出，保证提示不丢。
+			// 颜色与聊天客户端消息一致（cl_message_client_color），入队固化避免后续配置变化改写旧通知。
+			if(!m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+				dbg_msg("client", "%s", aBuf);
+		}
+		return;
+	}
+
 	CNetMsg_Cl_Kill Msg;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
 
@@ -6679,6 +6701,28 @@ void CGameClient::ConTeam(IConsole::IResult *pResult, void *pUserData)
 void CGameClient::ConKill(IConsole::IResult *pResult, void *pUserData)
 {
 	((CGameClient *)pUserData)->SendKill();
+}
+
+void CGameClient::ConQmSelfKillOff(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
+	g_Config.m_QmSelfKillEnabled = 0;
+	// 幂等回显：重复设置同值也提示，保证按键操作有确认反馈。
+	char aBuf[256];
+	str_copy(aBuf, Localize("Client self-kill is disabled (K key / kill command will be ignored)"));
+	if(!pSelf->m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+		dbg_msg("client", "%s", aBuf);
+}
+
+void CGameClient::ConQmSelfKillOn(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameClient *pSelf = static_cast<CGameClient *>(pUserData);
+	g_Config.m_QmSelfKillEnabled = 1;
+	// 幂等回显：重复设置同值也提示，保证按键操作有确认反馈。
+	char aBuf[256];
+	str_copy(aBuf, Localize("Client self-kill is enabled"));
+	if(!pSelf->m_QmHudNotifications.QueueEcho(aBuf, g_Config.m_ClMessageClientColor))
+		dbg_msg("client", "%s", aBuf);
 }
 
 void CGameClient::ConReadyChange7(IConsole::IResult *pResult, void *pUserData)
