@@ -3048,6 +3048,7 @@ if(CLIENT)
   set_src(ENGINE_CLIENT GLOB_RECURSE src/engine/client
     backend/backend_base.cpp
     backend/backend_base.h
+    backend/readback_image.h
     backend/screenshot_image.h
     backend/graphics_backend_contract.cpp
     backend/graphics_backend_contract.h
@@ -4737,6 +4738,7 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/contract/engine/graphics/graphics_backend_contract_test.cpp
     src/test/unit/engine/graphics/graphics_backend_policy_test.cpp
     src/test/unit/engine/graphics/graphics_diagnostic_transfer_test.cpp
+    src/test/unit/engine/graphics/readback_image_test.cpp
     src/test/unit/engine/graphics/screenshot_image_test.cpp
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp

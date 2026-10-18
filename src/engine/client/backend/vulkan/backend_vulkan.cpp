@@ -5,6 +5,7 @@
 #include <base/system.h>
 
 #include <engine/client/backend/backend_base.h>
+#include <engine/client/backend/readback_image.h>
 #include <engine/client/backend/render_target_geometry.h>
 #include <engine/client/backend/screenshot_image.h>
 #include <engine/client/backend/vulkan/backend_vulkan.h>
@@ -1004,6 +1005,7 @@ class CCommandProcessorFragment_Vulkan : public CCommandProcessorFragment_GLBase
 	uint8_t *m_pGetPresentedImgDataHelperMappedMemory = nullptr;
 	VkDeviceSize m_GetPresentedImgDataHelperMappedLayoutOffset = 0;
 	VkDeviceSize m_GetPresentedImgDataHelperMappedLayoutPitch = 0;
+	VkDeviceSize m_GetPresentedImgDataHelperMappedLayoutSize = 0;
 	uint32_t m_GetPresentedImgDataHelperWidth = 0;
 	uint32_t m_GetPresentedImgDataHelperHeight = 0;
 	VkFence m_GetPresentedImgDataHelperFence = VK_NULL_HANDLE;
@@ -1845,6 +1847,15 @@ protected:
 			VkSubresourceLayout SubResourceLayout;
 			vkGetImageSubresourceLayout(m_VKDevice, m_GetPresentedImgDataHelperImage, &SubResource, &SubResourceLayout);
 
+			readback_image::SRgbaLayout Layout;
+			if(SubResourceLayout.offset > MemRequirements.size || SubResourceLayout.size > MemRequirements.size - SubResourceLayout.offset ||
+				!readback_image::GetRgbaLayout(Width, Height, SubResourceLayout.rowPitch, SubResourceLayout.size, Layout) ||
+				SubResourceLayout.offset > static_cast<uint64_t>(std::numeric_limits<ptrdiff_t>::max()) - Layout.m_SourceBytes)
+			{
+				DeletePresentedImageDataImage();
+				return false;
+			}
+
 			if(!CheckVulkanResult(vkMapMemory(m_VKDevice, m_GetPresentedImgDataHelperMem.m_Mem, 0, VK_WHOLE_SIZE, 0, (void **)&m_pGetPresentedImgDataHelperMappedMemory), GFX_ERROR_TYPE_RENDER_CMD_FAILED, "Mapping readback memory failed."))
 			{
 				DeletePresentedImageDataImage();
@@ -1852,6 +1863,7 @@ protected:
 			}
 			m_GetPresentedImgDataHelperMappedLayoutOffset = SubResourceLayout.offset;
 			m_GetPresentedImgDataHelperMappedLayoutPitch = SubResourceLayout.rowPitch;
+			m_GetPresentedImgDataHelperMappedLayoutSize = SubResourceLayout.size;
 			m_pGetPresentedImgDataHelperMappedMemory += m_GetPresentedImgDataHelperMappedLayoutOffset;
 
 			VkFenceCreateInfo FenceInfo{};
@@ -1884,6 +1896,9 @@ protected:
 			m_GetPresentedImgDataHelperImage = VK_NULL_HANDLE;
 			m_GetPresentedImgDataHelperMem = {};
 			m_pGetPresentedImgDataHelperMappedMemory = nullptr;
+			m_GetPresentedImgDataHelperMappedLayoutOffset = 0;
+			m_GetPresentedImgDataHelperMappedLayoutPitch = 0;
+			m_GetPresentedImgDataHelperMappedLayoutSize = 0;
 
 			m_GetPresentedImgDataHelperWidth = 0;
 			m_GetPresentedImgDataHelperHeight = 0;
@@ -1915,7 +1930,9 @@ protected:
 			SrcOffset.z = 0;
 			Format = CImageInfo::FORMAT_RGBA;
 
-			const size_t ImageTotalSize = (size_t)Width * Height * CImageInfo::PixelSize(Format);
+			readback_image::SRgbaLayout PackedLayout;
+			if(!readback_image::GetRgbaLayout(Width, Height, static_cast<uint64_t>(Width) * 4, std::numeric_limits<uint64_t>::max(), PackedLayout))
+				return false;
 
 			if(!BeginReadbackCommandBuffer())
 				return false;
@@ -2041,45 +2058,10 @@ protected:
 				return false;
 			}
 
-			size_t RealFullImageSize = maximum(ImageTotalSize, (size_t)(Height * m_GetPresentedImgDataHelperMappedLayoutPitch));
 			m_FrameProfileStats.m_ReadbackRequests++;
-			m_FrameProfileStats.m_ReadbackBytes += RealFullImageSize;
-			size_t ExtraRowSize = Width * 4;
-			if(vDstData.size() < RealFullImageSize + ExtraRowSize)
-				vDstData.resize(RealFullImageSize + ExtraRowSize);
-
-			mem_copy(vDstData.data(), pResImageData, RealFullImageSize);
-
-			// pack image data together without any offset that the driver might require
-			if(Width * 4 < m_GetPresentedImgDataHelperMappedLayoutPitch)
-			{
-				for(uint32_t Y = 0; Y < Height; ++Y)
-				{
-					size_t OffsetImagePacked = (Y * Width * 4);
-					size_t OffsetImageUnpacked = (Y * m_GetPresentedImgDataHelperMappedLayoutPitch);
-					mem_copy(vDstData.data() + RealFullImageSize, vDstData.data() + OffsetImageUnpacked, Width * 4);
-					mem_copy(vDstData.data() + OffsetImagePacked, vDstData.data() + RealFullImageSize, Width * 4);
-				}
-			}
-
-			if(IsB8G8R8A8 || ResetAlpha)
-			{
-				// swizzle
-				for(uint32_t Y = 0; Y < Height; ++Y)
-				{
-					for(uint32_t X = 0; X < Width; ++X)
-					{
-						size_t ImgOff = (Y * Width * 4) + (X * 4);
-						if(IsB8G8R8A8)
-						{
-							std::swap(vDstData[ImgOff], vDstData[ImgOff + 2]);
-						}
-						vDstData[ImgOff + 3] = 255;
-					}
-				}
-			}
-
-			return true;
+			m_FrameProfileStats.m_ReadbackBytes += static_cast<uint64_t>(Height) * m_GetPresentedImgDataHelperMappedLayoutPitch;
+			return readback_image::PackRgba(vDstData, pResImageData, Width, Height,
+				m_GetPresentedImgDataHelperMappedLayoutPitch, m_GetPresentedImgDataHelperMappedLayoutSize, IsB8G8R8A8, ResetAlpha);
 		}
 		else
 		{
