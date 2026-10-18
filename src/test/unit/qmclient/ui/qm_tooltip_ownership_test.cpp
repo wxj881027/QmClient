@@ -193,6 +193,47 @@ TEST(QmConfigHintText, UsesCurrentCardOverviewUntilOptionDescriptionIsAvailable)
 	EXPECT_STREQ(Hint.Text(), "Automatically add a watermark\nqm_screenshot_watermark");
 }
 
+TEST(QmConfigHintText, HidingCommandsPreservesSpecificHelp)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_show_tune_zone_colors");
+	Hint.SetFallbackDescription("Toolbox");
+	Hint.SetDescription("Color map tune zones by their tune zone number");
+	EXPECT_STREQ(Hint.Text(false), "Color map tune zones by their tune zone number");
+}
+
+TEST(QmConfigHintText, HidingCommandsPreservesCurrentFallbackHelp)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_show_tune_zone_colors");
+	Hint.SetFallbackDescription("Toolbox");
+	EXPECT_STREQ(Hint.Text(false), "Toolbox");
+	Hint.SetFallbackDescription("百宝箱");
+	EXPECT_STREQ(Hint.Text(false), "百宝箱");
+}
+
+TEST(QmConfigHintText, CommandOnlyHintsAreEmptyWhenCommandsAreHidden)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_show_tune_zone_colors");
+	EXPECT_STREQ(Hint.Text(false), "");
+	EXPECT_STREQ(Hint.Text(true), "qm_show_tune_zone_colors");
+	EXPECT_STREQ(Hint.Text(false), "");
+}
+
+TEST(QmConfigHintText, SwitchingCommandVisibilityKeepsBothBindingsAndCurrentHelp)
+{
+	CUiConfigHintText Hint;
+	Hint.SetCommands("qm_ui_color", "qm_ui_opacity");
+	Hint.SetDescription("Button background");
+	EXPECT_STREQ(Hint.Text(false), "Button background");
+	EXPECT_STREQ(Hint.Text(true), "Button background\nqm_ui_color\nqm_ui_opacity");
+	EXPECT_STREQ(Hint.Text(false), "Button background");
+	Hint.SetDescription("按钮背景");
+	EXPECT_STREQ(Hint.Text(true), "按钮背景\nqm_ui_color\nqm_ui_opacity");
+	EXPECT_STREQ(Hint.Text(false), "按钮背景");
+}
+
 TEST(QmTooltips, SettingsHintsHaveNoHoverDelayOrBounce)
 {
 	CTooltip Tooltip;
