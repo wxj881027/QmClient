@@ -249,19 +249,21 @@ class CCommunityCache : public ICommunityCache
 	std::vector<const CCommunityType *> m_vpSelectableTypes;
 	bool m_AnyRanksAvailable = false;
 	bool m_CountryTypesFilterAvailable = false;
-	const char *m_pCountryTypeFilterKey = IServerBrowser::COMMUNITY_ALL;
+	// 社区按人数重排会交换 ID 所在的槽位，筛选键由缓存自己保存。
+	char m_aCountryTypeFilterKey[CServerInfo::MAX_COMMUNITY_ID_LENGTH];
 
 public:
 	CCommunityCache(IServerBrowser *pServerBrowser) :
 		m_pServerBrowser(pServerBrowser)
 	{
+		str_copy(m_aCountryTypeFilterKey, IServerBrowser::COMMUNITY_ALL);
 	}
 
 	void Update(bool Force) override;
 	// 社区数据（m_vCommunities 及其内部容器）被整体重建后必须调用：缓存持有的是指向这些容器的
 	// 裸指针，而 Update 只在 DDNet info 摘要/社区 ID 哈希/页面类型变化时才重建，重建后容器地址
 	// 变化时旧指针会指向已释放内存。复位标记以强制下一次 Update 重新构建。
-	void Invalidate()
+	void Invalidate() noexcept
 	{
 		m_InfoSha256.reset();
 		m_LastType = IServerBrowser::NUM_TYPES;
@@ -271,13 +273,14 @@ public:
 	const std::vector<const CCommunityType *> &SelectableTypes() const override { return m_vpSelectableTypes; }
 	bool AnyRanksAvailable() const override { return m_AnyRanksAvailable; }
 	bool CountriesTypesFilterAvailable() const override { return m_CountryTypesFilterAvailable; }
-	const char *CountryTypeFilterKey() const override { return m_pCountryTypeFilterKey; }
+	const char *CountryTypeFilterKey() const override { return m_aCountryTypeFilterKey; }
 };
 
 class CServerBrowser : public IServerBrowser
 {
 public:
-	CServerBrowser();
+	// 注入时钟使用 time_get 的单调刻度；空回调使用生产时钟。
+	explicit CServerBrowser(std::function<int64_t()> HttpUpdateClock = {});
 	~CServerBrowser() override;
 
 	// interface functions
@@ -357,6 +360,7 @@ public:
 
 private:
 	friend class CServerBrowserTestAccess;
+	class CServerListUpdate;
 
 	CNetClient *m_pNetClient = nullptr;
 	IConfigManager *m_pConfigManager = nullptr;
@@ -369,6 +373,9 @@ private:
 	char m_aNetVersion[128];
 
 	bool m_RefreshingHttp = false;
+	bool m_HttpUpdateFailed = false;
+	int64_t m_HttpUpdateRetryAt = 0;
+	std::function<int64_t()> m_HttpUpdateClock;
 	uint64_t m_HttpRevision = 0;
 	IServerBrowserHttp *m_pHttp = nullptr;
 	IServerBrowserPingCache *m_pPingCache = nullptr;
@@ -434,11 +441,14 @@ private:
 	//
 	void Filter();
 	void Sort();
+	void SortCommunities();
 	int SortHash() const;
 
 	void CleanUp();
 
 	void UpdateFromHttp();
+	bool TryUpdateFromHttp();
+	int64_t HttpUpdateNow() const;
 	CServerEntry *Add(const NETADDR *pAddrs, int NumAddrs);
 	CServerEntry *ReplaceEntry(CServerEntry *pEntry, const NETADDR *pAddrs, int NumAddrs);
 

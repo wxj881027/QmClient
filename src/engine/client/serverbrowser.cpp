@@ -28,6 +28,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -92,7 +93,8 @@ namespace
 
 } // namespace
 
-CServerBrowser::CServerBrowser() :
+CServerBrowser::CServerBrowser(std::function<int64_t()> HttpUpdateClock) :
+	m_HttpUpdateClock(std::move(HttpUpdateClock)),
 	m_CommunityCache(this),
 	m_CountriesFilter(&m_CommunityCache),
 	m_TypesFilter(&m_CommunityCache)
@@ -735,10 +737,6 @@ void CServerBrowser::Filter()
 			}
 		}
 	}
-
-	std::stable_sort(m_vCommunities.begin(), m_vCommunities.end(), [](const CCommunity &Lhs, const CCommunity &Rhs) {
-		return Lhs.NumPlayers() > Rhs.NumPlayers();
-	});
 }
 
 int CServerBrowser::SortHash() const
@@ -793,6 +791,37 @@ void CServerBrowser::Sort()
 		std::stable_sort(m_vSortedServerlist.begin(), m_vSortedServerlist.end(), CSortWrap(this, &CServerBrowser::SortCompareQmClients));
 
 	m_Sorthash = SortHash();
+	// 服务器筛选和排序完成后再整理社区，最后的资源交换不分配内存。
+	SortCommunities();
+}
+
+void CServerBrowser::SortCommunities()
+{
+	if(m_vCommunities.size() < 2)
+		return;
+	std::vector<size_t> vOrder(m_vCommunities.size());
+	std::vector<size_t> vDestination(m_vCommunities.size());
+	for(size_t Index = 0; Index < vOrder.size(); ++Index)
+		vOrder[Index] = Index;
+	std::stable_sort(vOrder.begin(), vOrder.end(), [this](size_t Left, size_t Right) {
+		return m_vCommunities[Left].NumPlayers() > m_vCommunities[Right].NumPlayers();
+	});
+	for(size_t Index = 0; Index < vOrder.size(); ++Index)
+		vDestination[vOrder[Index]] = Index;
+	// 这里只交换已有资源；分配失败不会留下移动了一半的社区和悬空的国家/类型指针。
+	bool Reordered = false;
+	for(size_t Index = 0; Index < vDestination.size(); ++Index)
+	{
+		while(vDestination[Index] != Index)
+		{
+			const size_t Other = vDestination[Index];
+			Reordered = true;
+			m_vCommunities[Index].Swap(m_vCommunities[Other]);
+			std::swap(vDestination[Index], vDestination[Other]);
+		}
+	}
+	if(Reordered)
+		m_CommunityCache.Invalidate();
 }
 
 void CServerBrowser::RemoveRequest(CServerEntry *pEntry)
@@ -1163,6 +1192,8 @@ void CServerBrowser::Refresh(int Type, bool Force)
 
 	if(Type == IServerBrowser::TYPE_LAN)
 	{
+		m_HttpUpdateFailed = false;
+		m_HttpUpdateRetryAt = 0;
 		unsigned char aBuffer[sizeof(SERVERBROWSE_GETINFO) + 1];
 		CNetChunk Packet;
 
@@ -1212,11 +1243,9 @@ void CServerBrowser::Refresh(int Type, bool Force)
 		m_pPingCache->Load();
 		m_RefreshingHttp = true;
 
-		if(ServerListTypeChanged && m_pHttp->NumServers() > 0)
+		if(m_HttpUpdateFailed || (ServerListTypeChanged && m_pHttp->NumServers() > 0))
 		{
-			CleanUp();
-			UpdateFromHttp();
-			Sort();
+			TryUpdateFromHttp();
 		}
 	}
 }
@@ -1310,6 +1339,102 @@ void CServerBrowser::RequestCurrentServerWithRandomToken(const NETADDR &Addr, in
 void CServerBrowser::SetCurrentServerPing(const NETADDR &Addr, int Ping)
 {
 	SetLatency(Addr, minimum(Ping, CServerInfo::LATENCY_UNKNOWN));
+}
+
+class CServerBrowser::CServerListUpdate
+{
+	CServerBrowser &m_Browser;
+	std::deque<CServerEntry> m_Storage;
+	std::vector<CServerEntry *> m_vpServers;
+	std::vector<int> m_vSorted;
+	std::unordered_map<NETADDR, int> m_ByAddr;
+	std::vector<int> m_vCommunityPlayers;
+	CServerEntry *m_pFirstRequest;
+	CServerEntry *m_pLastRequest;
+	int m_NumRequests;
+	int m_MaxRequests;
+	int m_NumSortedPlayers;
+	bool m_NeedResort;
+	int m_Sorthash;
+	uint64_t m_FriendRevision;
+	bool m_Committed = false;
+
+	void SwapLists() noexcept
+	{
+		m_Storage.swap(m_Browser.m_ServerlistStorage);
+		m_vpServers.swap(m_Browser.m_vpServerlist);
+		m_vSorted.swap(m_Browser.m_vSortedServerlist);
+		m_ByAddr.swap(m_Browser.m_ByAddr);
+	}
+
+public:
+	explicit CServerListUpdate(CServerBrowser &Browser) :
+		m_Browser(Browser),
+		m_vCommunityPlayers(Browser.m_vCommunities.size()),
+		m_pFirstRequest(Browser.m_pFirstReqServer),
+		m_pLastRequest(Browser.m_pLastReqServer),
+		m_NumRequests(Browser.m_NumRequests),
+		m_MaxRequests(Browser.m_CurrentMaxRequests),
+		m_NumSortedPlayers(Browser.m_NumSortedPlayers),
+		m_NeedResort(Browser.m_NeedResort),
+		m_Sorthash(Browser.m_Sorthash),
+		m_FriendRevision(Browser.m_FriendListRevision)
+	{
+		// 备份所需分配先完成；交换保留旧条目地址、索引和请求链的对应关系。
+		for(size_t Index = 0; Index < m_vCommunityPlayers.size(); ++Index)
+			m_vCommunityPlayers[Index] = Browser.m_vCommunities[Index].NumPlayers();
+		SwapLists();
+		Browser.CleanUp();
+	}
+	CServerListUpdate(const CServerListUpdate &) = delete;
+	CServerListUpdate &operator=(const CServerListUpdate &) = delete;
+	~CServerListUpdate()
+	{
+		if(m_Committed)
+			return;
+		SwapLists();
+		m_Browser.m_pFirstReqServer = m_pFirstRequest;
+		m_Browser.m_pLastReqServer = m_pLastRequest;
+		m_Browser.m_NumRequests = m_NumRequests;
+		m_Browser.m_CurrentMaxRequests = m_MaxRequests;
+		m_Browser.m_NumSortedPlayers = m_NumSortedPlayers;
+		m_Browser.m_NeedResort = m_NeedResort;
+		m_Browser.m_Sorthash = m_Sorthash;
+		m_Browser.m_FriendListRevision = m_FriendRevision;
+		// Sort 的最后一步才无异常地交换社区；此前失败时顺序仍与备份一致。
+		for(size_t Index = 0; Index < m_vCommunityPlayers.size(); ++Index)
+			m_Browser.m_vCommunities[Index].m_NumPlayers = m_vCommunityPlayers[Index];
+	}
+	void Commit() noexcept { m_Committed = true; }
+};
+
+int64_t CServerBrowser::HttpUpdateNow() const
+{
+	return m_HttpUpdateClock ? m_HttpUpdateClock() : time_get();
+}
+
+bool CServerBrowser::TryUpdateFromHttp()
+{
+	try
+	{
+		CServerListUpdate Update(*this);
+		UpdateFromHttp();
+		Sort();
+		Update.Commit();
+		m_HttpUpdateFailed = false;
+		m_HttpUpdateRetryAt = 0;
+		return true;
+	}
+	catch(...)
+	{
+		// 保留旧列表和未消费版本；持续低内存时不逐帧重建，也不重复记录日志。
+		if(!m_HttpUpdateFailed)
+			log_error("serverbrowser", "failed to rebuild visible server list; retaining previous list and retrying");
+		m_HttpUpdateFailed = true;
+		const int64_t Now = HttpUpdateNow();
+		m_HttpUpdateRetryAt = Now + std::min<int64_t>(time_freq(), INT64_MAX - Now);
+		return false;
+	}
 }
 
 void CServerBrowser::UpdateFromHttp()
@@ -1427,14 +1552,16 @@ void CServerBrowser::Update()
 
 	m_pHttp->Update();
 
-	if(m_ServerlistType != TYPE_LAN && ((m_RefreshingHttp && !m_pHttp->IsRefreshing()) || m_HttpRevision != m_pHttp->Revision()))
+	const uint64_t HttpRevision = m_pHttp->Revision();
+	if(m_ServerlistType != TYPE_LAN && (m_HttpUpdateFailed || (m_RefreshingHttp && !m_pHttp->IsRefreshing()) || m_HttpRevision != HttpRevision))
 	{
-		m_RefreshingHttp = false;
-		m_HttpRevision = m_pHttp->Revision();
-		CleanUp();
-		UpdateFromHttp();
-		// TODO: move this somewhere else
-		Sort();
+		if(m_HttpUpdateFailed && HttpUpdateNow() < m_HttpUpdateRetryAt)
+			return;
+		if(TryUpdateFromHttp())
+		{
+			m_RefreshingHttp = false;
+			m_HttpRevision = HttpRevision;
+		}
 		return;
 	}
 
@@ -1720,7 +1847,7 @@ void CServerBrowser::LoadDDNetServers()
 		// endpoint.
 		if(pFinishes->type == json_none)
 		{
-			pServers = &Icon["finishes"];
+			pFinishes = &Icon["finishes"];
 		}
 		if(pServers->type == json_none)
 		{
@@ -1947,7 +2074,7 @@ bool CServerBrowser::IsGettingServerlist() const
 
 bool CServerBrowser::IsServerlistError() const
 {
-	return m_pHttp->IsError();
+	return m_HttpUpdateFailed || m_pHttp->IsError();
 }
 
 bool CServerBrowser::IsServerlistStale() const
@@ -1963,6 +2090,19 @@ int CServerBrowser::LoadingProgression() const
 	int Servers = m_vpServerlist.size();
 	int Loaded = m_vpServerlist.size() - m_NumRequests;
 	return 100.0f * Loaded / Servers;
+}
+
+void CCommunity::Swap(CCommunity &Other) noexcept
+{
+	std::swap(m_aId, Other.m_aId);
+	std::swap(m_aName, Other.m_aName);
+	std::swap(m_IconSha256, Other.m_IconSha256);
+	std::swap(m_aIconUrl, Other.m_aIconUrl);
+	m_vCountries.swap(Other.m_vCountries);
+	m_vTypes.swap(Other.m_vTypes);
+	std::swap(m_NumPlayers, Other.m_NumPlayers);
+	std::swap(m_HasFinishes, Other.m_HasFinishes);
+	m_FinishedMaps.swap(Other.m_FinishedMaps);
 }
 
 bool CCommunity::HasCountry(const char *pCountryName) const
@@ -2144,11 +2284,11 @@ void CCommunityCache::Update(bool Force)
 		const size_t CommunityIndex = m_pServerBrowser->GetCurrentType() - IServerBrowser::TYPE_FAVORITE_COMMUNITY_1;
 		std::vector<const CCommunity *> vpFavoriteCommunities = m_pServerBrowser->FavoriteCommunities();
 		dbg_assert(CommunityIndex < vpFavoriteCommunities.size(), "Invalid favorite community serverbrowser type");
-		m_pCountryTypeFilterKey = vpFavoriteCommunities[CommunityIndex]->Id();
+		str_copy(m_aCountryTypeFilterKey, vpFavoriteCommunities[CommunityIndex]->Id());
 	}
 	else
 	{
-		m_pCountryTypeFilterKey = IServerBrowser::COMMUNITY_ALL;
+		str_copy(m_aCountryTypeFilterKey, IServerBrowser::COMMUNITY_ALL);
 	}
 
 	m_pServerBrowser->CleanFilters();

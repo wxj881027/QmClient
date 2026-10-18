@@ -230,6 +230,7 @@ class CCommunity // NOLINT(bugprone-exception-escape)
 	int m_NumPlayers = 0;
 	bool m_HasFinishes = false;
 	std::unordered_set<CCommunityMap, CCommunityMap::SHash> m_FinishedMaps;
+	void Swap(CCommunity &Other) noexcept;
 
 public:
 	CCommunity(const char *pId, const char *pName, std::optional<SHA256_DIGEST> IconSha256, const char *pIconUrl) :

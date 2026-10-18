@@ -16,6 +16,7 @@
 #include <game/client/components/qmclient/browser_status_layout.h>
 
 #include <gtest/gtest.h>
+#include <test/support/serverbrowser_test_access.h>
 
 #include <limits>
 #include <memory>
@@ -188,45 +189,6 @@ TEST(ServerBrowserPanelLayout, InvalidExtentsProduceBoundedEmptyPanels)
 		EXPECT_FLOAT_EQ(Layout.m_Status.h, 0.0f);
 	}
 }
-
-class CServerBrowserTestAccess
-{
-public:
-	static void Initialize(CServerBrowser &Browser, IFriends *pFriends, IFavorites *pFavorites)
-	{
-		Browser.m_pFriends = pFriends;
-		Browser.m_pFavorites = pFavorites;
-	}
-	static void Add(CServerBrowser &Browser, const NETADDR &Address, const CServerInfo &Info)
-	{
-		Browser.SetInfo(Browser.Add(&Address, 1), Info);
-	}
-	static void ReplaceFirstAddress(CServerBrowser &Browser, const NETADDR &Address)
-	{
-		Browser.ReplaceEntry(Browser.m_vpServerlist[0], &Address, 1);
-	}
-	static void SetFirstInfo(CServerBrowser &Browser, const CServerInfo &Info)
-	{
-		Browser.SetInfo(Browser.m_vpServerlist[0], Info);
-	}
-	static void SetHttp(CServerBrowser &Browser, IServerBrowserHttp *pHttp)
-	{
-		Browser.m_pHttp = pHttp;
-		Browser.m_ServerlistType = IServerBrowser::TYPE_INTERNET;
-		Browser.m_RefreshingHttp = false;
-	}
-	static void Sort(CServerBrowser &Browser) { Browser.Sort(); }
-	static void CleanUp(CServerBrowser &Browser) { Browser.CleanUp(); }
-	static bool NeedsResort(const CServerBrowser &Browser) { return Browser.m_NeedResort; }
-	static void SetPingCache(CServerBrowser &Browser, IServerBrowserPingCache *pCache)
-	{
-		Browser.m_pPingCache = pCache;
-	}
-	static void SetLatency(CServerBrowser &Browser, NETADDR Address, int Latency)
-	{
-		Browser.SetLatency(Address, Latency);
-	}
-};
 
 namespace
 {
