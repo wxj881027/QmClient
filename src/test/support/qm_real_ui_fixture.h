@@ -59,6 +59,12 @@ namespace qm_ui_test
 			++m_Draws;
 			m_vRectSubmissions.push_back({X, Y, W, H});
 		}
+		// 取色器渐变只记录 GPU 提交，颜色解析与输入回写仍执行生产实现。
+		void DrawRect4(float X, float Y, float W, float H, ColorRGBA, ColorRGBA, ColorRGBA, ColorRGBA, int, float) override
+		{
+			++m_Draws;
+			m_vRectSubmissions.push_back({X, Y, W, H});
+		}
 		bool HasRoundedRectSdf() override { return true; }
 		void DestroyRenderTarget(CRenderTargetHandle *pTarget) override
 		{
