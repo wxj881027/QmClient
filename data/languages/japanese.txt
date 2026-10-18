@@ -8423,6 +8423,12 @@ Only save improvements
 Only show after joining a team
 == チーム参加後にのみ表示
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== フレンドやチームのフィルターに関係なく、自分への呼びかけ、ささやき、自分の発言のみ表示。システムメッセージとミュート設定は維持
+
+Only show messages related to me
+== 自分に関係するメッセージのみ表示
+
 Only show outlines in the entities layer
 == エンティティレイヤーでのみ輪郭を表示
 

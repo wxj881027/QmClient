@@ -15592,6 +15592,22 @@ turkish = "Eski DDRace istemci kayıtlarını göster"
 polish = "Pokaż stare rekordy klienta DDRace"
 
 [[message]]
+key = "Only show messages related to me"
+[message.translations]
+simplified_chinese = "只显示与我相关的消息"
+traditional_chinese = "只顯示與我相關的訊息"
+japanese = "自分に関係するメッセージのみ表示"
+korean = "나와 관련된 메시지만 표시"
+russian = "Показывать только сообщения, связанные со мной"
+german = "Nur Nachrichten mit Bezug zu mir anzeigen"
+spanish = "Mostrar solo mensajes relacionados conmigo"
+french = "Afficher uniquement les messages qui me concernent"
+brazilian_portuguese = "Mostrar apenas mensagens relacionadas comigo"
+portuguese = "Mostrar apenas mensagens relacionadas comigo"
+turkish = "Yalnızca benimle ilgili mesajları göster"
+polish = "Pokazuj tylko wiadomości dotyczące mnie"
+
+[[message]]
 key = "Show only chat messages from friends"
 [message.translations]
 simplified_chinese = "只显示好友聊天消息"

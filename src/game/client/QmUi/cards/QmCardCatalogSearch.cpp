@@ -2069,6 +2069,7 @@ namespace qm_card_catalog
 			{Localizable("Show names in chat in team colors"), nullptr, "以队伍颜色显示玩家昵称"},
 			{Localizable("Show only chat messages from friends"), nullptr, "只显示好友聊天消息"},
 			{Localizable("Show only chat messages from team members"), nullptr, "只显示队伍聊天消息"},
+			{Localizable("Only show messages related to me"), "qm_chat_related_only", "只显示与我相关的消息 提及 @ 私聊"},
 			{Localizable("Show the chat scrollbar on the right"), nullptr, "聊天滚动条 左侧 右侧"},
 			{nullptr, "qm_chat_scrollbar_right", nullptr},
 			{Localizable("Use old chat style"), nullptr, "旧版聊天框"},

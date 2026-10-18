@@ -8423,6 +8423,12 @@ Only save improvements
 Only show after joining a team
 == Yalnızca bir takıma katıldıktan sonra göster
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== Arkadaş ve takım filtrelerinden bağımsız olarak yalnızca bahsetmeleri, özel mesajları ve kendi mesajlarını göster; sistem mesajlarını ve susturma ayarlarını koru
+
+Only show messages related to me
+== Yalnızca benimle ilgili mesajları göster
+
 Only show outlines in the entities layer
 == Yalnızca varlık katmanında ana hatları göster
 

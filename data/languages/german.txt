@@ -8423,6 +8423,12 @@ Only save improvements
 Only show after joining a team
 == Nur nach Beitritt zu einem Team anzeigen
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== Unabhängig von Freundes- und Teamfiltern nur Erwähnungen, Flüsternachrichten und eigene Nachrichten anzeigen; Systemnachrichten und Stummschaltungen beibehalten
+
+Only show messages related to me
+== Nur Nachrichten mit Bezug zu mir anzeigen
+
 Only show outlines in the entities layer
 == Nur Umrisse in der Entity-Ebene anzeigen
 

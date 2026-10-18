@@ -27,6 +27,7 @@
 #include <game/client/components/qmclient/chat_command_preview.h>
 #include <game/client/components/qmclient/chat_gradient.h>
 #include <game/client/components/qmclient/chat_input_layout.h>
+#include <game/client/components/qmclient/chat_message_filter.h>
 #include <game/client/components/qmclient/chat_scrollbar.h>
 #include <game/client/components/qmclient/colored_parts.h>
 #include <game/client/components/qmclient/demo_display.h>
@@ -1663,19 +1664,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg, int SourceConnection)
 
 bool CChat::LineShouldHighlight(const char *pLine, const char *pName)
 {
-	const char *pHit = str_utf8_find_nocase(pLine, pName);
-
-	while(pHit)
-	{
-		int Length = str_length(pName);
-
-		if(Length > 0 && (pLine == pHit || pHit[-1] == ' ') && (pHit[Length] == 0 || pHit[Length] == ' ' || pHit[Length] == '.' || pHit[Length] == '!' || pHit[Length] == ',' || pHit[Length] == '?' || pHit[Length] == ':'))
-			return true;
-
-		pHit = str_utf8_find_nocase(pHit + 1, pName);
-	}
-
-	return false;
+	return QmChatMessageFilter::MentionsName(pLine, pName, g_Config.m_QmChatRelatedOnly != 0);
 }
 
 static constexpr const char *SAVES_HEADER[] = {
@@ -2078,14 +2067,41 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine, bool ForceVisible
 	const int LocalConnection = ClientId >= 0 && ClientId == GameClient()->m_aLocalIds[0] ? 0 : ClientId >= 0 && ClientId == GameClient()->m_aLocalIds[1] ? 1 :
 																				-1;
 	const std::string LocalOriginal = LocalConnection >= 0 ? m_OutgoingAnnotations.Consume(LocalConnection, ClientId, Team, pLine, time()) : std::string();
-	if(*pLine == 0 ||
-		(ClientId == SERVER_MSG && !g_Config.m_ClShowChatSystem) ||
-		(ClientId >= 0 && (GameClient()->m_aClients[ClientId].m_aName[0] == '\0' || // unknown client
-					  GameClient()->m_aClients[ClientId].m_ChatIgnore ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId)) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_ClShowChatFriends && !GameClient()->m_aClients[ClientId].m_Friend) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && g_Config.m_ClShowChatTeamMembersOnly && GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK) ||
-					  (GameClient()->m_Snap.m_LocalClientId != ClientId && GameClient()->m_aClients[ClientId].m_Foe))))
+	if(*pLine == 0 || (ClientId == SERVER_MSG && !g_Config.m_ClShowChatSystem))
+		return;
+
+	const QmChatMessageFilter::SSettings FilterSettings{g_Config.m_QmChatRelatedOnly != 0, g_Config.m_ClShowChatFriends != 0, g_Config.m_ClShowChatTeamMembersOnly != 0};
+	QmChatMessageFilter::SMessage Message;
+	Message.m_ClientId = ClientId;
+	Message.m_Team = Team;
+	if(ClientId >= 0)
+	{
+		const auto &Author = GameClient()->m_aClients[ClientId];
+		const bool DemoPlayback = Client()->State() == IClient::STATE_DEMOPLAYBACK;
+		Message.m_CurrentLocal = ClientId == GameClient()->m_Snap.m_LocalClientId;
+		Message.m_Local = DemoPlayback ? Message.m_CurrentLocal : GameClient()->IsLocalClientId(ClientId);
+		Message.m_Blocked = Author.m_aName[0] == '\0' || Author.m_ChatIgnore ||
+			(!Message.m_CurrentLocal && (Author.m_Foe || (g_Config.m_QmWarListBlockEnemyChat && GameClient()->m_WarList.IsEnemy(ClientId))));
+		Message.m_Friend = Author.m_Friend;
+		Message.m_OtherTeam = !Message.m_Blocked && !FilterSettings.m_RelatedOnly && !Message.m_CurrentLocal &&
+			(!FilterSettings.m_FriendsOnly || Message.m_Friend) && FilterSettings.m_TeamOnly &&
+			GameClient()->IsOtherTeam(ClientId) && GameClient()->m_Teams.Team(GameClient()->m_Snap.m_LocalClientId) != TEAM_FLOCK;
+		if(FilterSettings.m_RelatedOnly && !Message.m_Blocked && !Message.m_Local && Team != TEAM_WHISPER_SEND && Team != TEAM_WHISPER_RECV)
+		{
+			// 先按原文判断提及，避免后续显示遮蔽把自己的名字替换掉。
+			if(DemoPlayback)
+			{
+				const int LocalId = GameClient()->m_Snap.m_LocalClientId;
+				Message.m_Mentioned = LocalId >= 0 && LineShouldHighlight(pLine, GameClient()->m_aClients[LocalId].m_aName);
+			}
+			else
+			{
+				for(int LocalId : GameClient()->m_aLocalIds)
+					Message.m_Mentioned |= LocalId >= 0 && LineShouldHighlight(pLine, GameClient()->m_aClients[LocalId].m_aName);
+			}
+		}
+	}
+	if(!QmChatMessageFilter::ShouldShow(FilterSettings, Message))
 		return;
 
 	// 其它消息出现时先给上一段 echo 重复计数收口，避免统计被后面的消息挤掉。

@@ -265,7 +265,8 @@ void CMenus::RenderPlayers(CUIRect MainView)
 	}
 	const auto aMute = Pair();
 	const bool ForcedMute = g_Config.m_ClShowChatFriends && !Player.m_Friend;
-	if(Toggle(s_Mute, Localize("Mute"), ForcedMute || Player.m_ChatIgnore, !ForcedMute, aMute[0]))
+	const bool ForcedChatMute = ForcedMute && !g_Config.m_QmChatRelatedOnly;
+	if(Toggle(s_Mute, Localize("Mute"), ForcedChatMute || Player.m_ChatIgnore, !ForcedChatMute, aMute[0]))
 		Player.m_ChatIgnore ^= 1;
 	if(Toggle(s_Emoticons, Localize("Mute emoticons"), ForcedMute || Player.m_EmoticonIgnore, !ForcedMute, aMute[1]))
 		Player.m_EmoticonIgnore ^= 1;

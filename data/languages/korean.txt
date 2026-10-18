@@ -8423,6 +8423,12 @@ Only save improvements
 Only show after joining a team
 == 팀에 가입한 후에만 표시
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== 친구 및 팀 필터와 관계없이 나를 언급한 메시지, 귓속말, 내가 보낸 메시지만 표시하며 시스템 메시지와 차단 설정은 유지
+
+Only show messages related to me
+== 나와 관련된 메시지만 표시
+
 Only show outlines in the entities layer
 == 엔티티 레이어에서만 외곽선 표시
 

@@ -8423,6 +8423,12 @@ Only save improvements
 Only show after joining a team
 == Afficher seulement après avoir rejoint une équipe
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== Afficher uniquement les mentions, messages privés et personnels sans tenir compte des filtres d'amis ou d'équipe ; conserver les messages système et respecter les joueurs masqués
+
+Only show messages related to me
+== Afficher uniquement les messages qui me concernent
+
 Only show outlines in the entities layer
 == Afficher seulement les contours dans la couche d'entités
 

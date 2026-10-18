@@ -8423,6 +8423,12 @@ Only save improvements
 Only show after joining a team
 == 僅在加入隊伍後顯示
 
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+== 僅顯示提及自己、私聊和自己傳送的聊天訊息，不受好友與隊伍篩選限制；系統訊息和封鎖設定保持生效
+
+Only show messages related to me
+== 只顯示與我相關的訊息
+
 Only show outlines in the entities layer
 == 僅在實體層中顯示輪廓
 

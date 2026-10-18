@@ -2807,6 +2807,8 @@ Only allow authorized clients to vote
 Only save ghost if better than previous record
 Only save improvements
 Only show after joining a team
+Only show mentions, whispers and your own chat messages regardless of friend or team filters; keep system messages and respect muted players
+Only show messages related to me
 Only show outlines in the entities layer
 Only show skins available in Vanilla Teeworlds
 Only show when the other Tee is not on screen
