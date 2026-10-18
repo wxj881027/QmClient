@@ -56,6 +56,7 @@ class CGraphicsBackend_Threaded : public IGraphicsBackend
 private:
 	TTranslateFunc m_TranslateFunc;
 	std::string m_FatalError;
+	bool m_FatalErrorTextUnavailable = false;
 	SGfxWarningContainer m_Warning;
 	std::atomic_bool m_SubmissionStopped = false;
 
@@ -84,7 +85,7 @@ public:
 	bool IsIdle() const override;
 	void WaitForIdle() override;
 
-	void ProcessError(const SGfxErrorContainer &Error);
+	void ProcessError(const SGfxErrorContainer &Error) noexcept;
 
 protected:
 	bool StartProcessor(ICommandProcessor *pProcessor, THREAD_CREATE pfnCreate = thread_try_init);
@@ -266,8 +267,8 @@ public:
 
 	const SGfxWarningContainer &GetWarning() const override;
 
-	void HandleError();
-	void HandleWarning();
+	void HandleError() noexcept;
+	void HandleWarning() noexcept;
 };
 
 static constexpr size_t gs_GpuInfoStringSize = 256;

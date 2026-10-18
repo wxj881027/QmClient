@@ -73,8 +73,8 @@ public:
 	void ErroneousCleanup() override;
 	const SGfxWarningContainer &GetWarning() const override;
 
-	void HandleError();
-	void HandleWarning();
+	void HandleError() noexcept;
+	void HandleWarning() noexcept;
 };
 
 class CGraphicsBackend_EGL : public CGraphicsBackend_Threaded

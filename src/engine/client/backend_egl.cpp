@@ -109,13 +109,11 @@ void CCommandProcessor_EGL_GL::RunBuffer(CCommandBuffer *pBuffer)
 			continue;
 		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_ERROR)
 		{
-			m_Error = m_pGLBackend->GetError();
 			HandleError();
 			return;
 		}
 		else if(Res == ERunCommandReturnTypes::RUN_COMMAND_COMMAND_WARNING)
 		{
-			m_Warning = m_pGLBackend->GetWarning();
 			HandleWarning();
 			return;
 		}
@@ -147,14 +145,14 @@ const SGfxWarningContainer &CCommandProcessor_EGL_GL::GetWarning() const
 	return m_Warning;
 }
 
-void CCommandProcessor_EGL_GL::HandleError()
+void CCommandProcessor_EGL_GL::HandleError() noexcept
 {
-	m_Error = m_pGLBackend->GetError();
+	m_Error = m_pGLBackend->TakeError();
 }
 
-void CCommandProcessor_EGL_GL::HandleWarning()
+void CCommandProcessor_EGL_GL::HandleWarning() noexcept
 {
-	m_Warning = m_pGLBackend->GetWarning();
+	m_Warning = m_pGLBackend->TakeWarning();
 }
 
 // ------------ CGraphicsBackend_EGL

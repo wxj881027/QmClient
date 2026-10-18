@@ -4,6 +4,7 @@
 #include <engine/client/backend_sdl.h>
 
 #include <stdexcept>
+#include <utility>
 
 // 只替代窗口与 GPU 边界，提交、等待、错误消费均调用生产线程后端。
 class CTestGraphicsBackend : public CGraphicsBackend_Threaded
@@ -15,6 +16,8 @@ class CTestGraphicsBackend : public CGraphicsBackend_Threaded
 public:
 	CTestGraphicsBackend() :
 		CGraphicsBackend_Threaded([](const char *, const char *) { return "translated driver advice"; }) {}
+	explicit CTestGraphicsBackend(TTranslateFunc Translate) :
+		CGraphicsBackend_Threaded(std::move(Translate)) {}
 	explicit CTestGraphicsBackend(ICommandProcessor &Processor) :
 		CTestGraphicsBackend()
 	{

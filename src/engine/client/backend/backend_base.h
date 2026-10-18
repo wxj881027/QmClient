@@ -100,9 +100,24 @@ public:
 	virtual void EndCommands() {}
 
 	const SGfxErrorContainer &GetError() { return m_Error; }
+	SGfxErrorContainer TakeError() noexcept
+	{
+		// 转移已有文本而不再分配；保留后端故障类型，后续命令仍能识别失败。
+		SGfxErrorContainer Error;
+		Error.m_ErrorType = m_Error.m_ErrorType;
+		Error.m_vErrors.swap(m_Error.m_vErrors);
+		return Error;
+	}
 	virtual void ErroneousCleanup() {}
 
 	const SGfxWarningContainer &GetWarning() { return m_Warning; }
+	SGfxWarningContainer TakeWarning() noexcept
+	{
+		SGfxWarningContainer Warning;
+		Warning.m_WarningType = m_Warning.m_WarningType;
+		Warning.m_vWarnings.swap(m_Warning.m_vWarnings);
+		return Warning;
+	}
 
 	enum
 	{

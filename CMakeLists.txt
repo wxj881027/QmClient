@@ -4735,9 +4735,11 @@ if(QM_GTEST_LIBRARIES AND SERVER)
     src/test/unit/base/git_revision_test.cpp
     src/test/contract/engine/graphics/graphics_backend_contract_test.cpp
     src/test/unit/engine/graphics/graphics_backend_policy_test.cpp
+    src/test/unit/engine/graphics/graphics_diagnostic_transfer_test.cpp
     src/test/unit/engine/graphics/qm_graphics_adapters_test.cpp
     src/test/unit/engine/graphics/graphics_vulkan_scheduler_test.cpp
     src/test/integration/client/graphics_fatal_error_test.cpp
+    src/test/integration/client/graphics_diagnostic_failure_test.cpp
     src/test/integration/client/graphics_thread_startup_test.cpp
     src/test/integration/client/graphics_thread_shutdown_test.cpp
     src/test/support/threaded_graphics_backend.h

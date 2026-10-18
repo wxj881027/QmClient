@@ -75,6 +75,7 @@ bool CGraphicsBackend_Threaded::StartProcessor(ICommandProcessor *pProcessor, TH
 {
 	dbg_assert(m_Shutdown, "Processor was already not shut down.");
 	m_FatalError.clear();
+	m_FatalErrorTextUnavailable = false;
 	ResetSubmissionStopForCleanup();
 	m_Shutdown = false;
 	m_pProcessor = pProcessor;
@@ -134,9 +135,9 @@ void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
 	if(m_SubmissionStopped.load(std::memory_order_acquire))
 		return;
 
-	SGfxErrorContainer Error;
+	const SGfxErrorContainer *pError = nullptr;
 #if defined(CONF_PLATFORM_EMSCRIPTEN)
-	Error = m_pProcessor->GetError();
+	const SGfxErrorContainer &Error = m_pProcessor->GetError();
 	if(Error.m_ErrorType == GFX_ERROR_TYPE_NONE)
 	{
 		RunBufferSingleThreadedUnsafe(pBuffer);
@@ -145,24 +146,29 @@ void CGraphicsBackend_Threaded::RunBuffer(CCommandBuffer *pBuffer)
 			IVideo::Current()->NextVideoFrameThread();
 #endif
 	}
+	else
+		pError = &Error;
 #else
 	WaitForIdle();
 	{
 		std::unique_lock<std::mutex> Lock(m_BufferSwapMutex);
-		Error = m_pProcessor->GetError();
+		const SGfxErrorContainer &Error = m_pProcessor->GetError();
 		if(Error.m_ErrorType == GFX_ERROR_TYPE_NONE)
 		{
 			m_pBuffer = pBuffer;
 			m_BufferInProcess.store(true, std::memory_order_relaxed);
 			m_BufferSwapCond.notify_all();
 		}
+		else
+			pError = &Error;
 	}
 #endif
 
 	// Process error after lock is released to prevent deadlock
-	if(Error.m_ErrorType != GFX_ERROR_TYPE_NONE)
+	if(pError)
 	{
-		ProcessError(Error);
+		// 失败时未提交新缓冲，处理器诊断在主线程消费期间保持稳定。
+		ProcessError(*pError);
 	}
 }
 
@@ -197,33 +203,57 @@ void CGraphicsBackend_Threaded::WaitForIdle()
 #endif
 }
 
-void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error)
+void CGraphicsBackend_Threaded::ProcessError(const SGfxErrorContainer &Error) noexcept
 {
+	if(Error.m_ErrorType == GFX_ERROR_TYPE_NONE)
+		return;
 	// 第一份故障已保存后，不让后续收尾错误覆盖报告。
 	if(m_SubmissionStopped.exchange(true, std::memory_order_acq_rel))
 		return;
-	m_FatalError = "";
-	for(const auto &ErrStr : Error.m_vErrors)
+	m_FatalErrorTextUnavailable = true;
+	try
 	{
-		if(!m_FatalError.empty())
+		std::string Report;
+		bool Complete = true;
+		for(const auto &ErrStr : Error.m_vErrors)
 		{
-			m_FatalError.append("\n");
+			if(!Report.empty())
+				Report.append("\n");
+			if(ErrStr.m_RequiresTranslation)
+			{
+				const char *pText = m_TranslateFunc(ErrStr.m_Err.c_str(), "");
+				if(!pText)
+				{
+					Complete = false;
+					break;
+				}
+				Report.append(pText);
+			}
+			else
+				Report.append(ErrStr.m_Err);
 		}
-		if(ErrStr.m_RequiresTranslation)
-			m_FatalError.append(m_TranslateFunc(ErrStr.m_Err.c_str(), ""));
-		else
-			m_FatalError.append(ErrStr.m_Err);
+		if(Complete && !Report.empty())
+		{
+			m_FatalError.swap(Report);
+			m_FatalErrorTextUnavailable = false;
+		}
 	}
-	std::string LogMessage = "Graphics Error:\n" + m_FatalError;
+	catch(...)
+	{
+		// 翻译或字符串分配失败仍保留停止标记，不发布半份诊断。
+	}
 	if(Error.m_ErrorType == GFX_ERROR_TYPE_INIT)
 	{
-		dbg_assert_failed("%s", LogMessage.c_str());
+		dbg_assert_failed("Graphics Error:\n%s", GetFatalError());
 	}
-	log_error("gfx", "%s", LogMessage.c_str());
+	log_error("gfx", "Graphics Error:\n%s", GetFatalError());
 }
 
 const char *CGraphicsBackend_Threaded::GetFatalError() const
 {
+	// 沿用已有未知错误建议；低内存路径不再分配或调用翻译器。
+	if(m_FatalErrorTextUnavailable)
+		return "Unknown error. Try to change gfx_backend to OpenGL or Vulkan in qmclient/settings.cfg in the config directory and try again.";
 	return m_FatalError.c_str();
 }
 
