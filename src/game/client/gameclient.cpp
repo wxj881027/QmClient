@@ -677,7 +677,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Emoticon.m_RenderProjectiles, "emoticon_projectiles");
 	AddComponent(&m_DemoCamera, "demo_camera");
 	AddComponent(&m_Hud, "hud");
-	AddComponent(&m_Spectator, "spectator");
 	AddComponent(&m_Emoticon, "emoticon");
 	AddComponent(&m_BindChat, "bind_chat");
 	AddComponent(&m_BindWheel, "bind_wheel");
@@ -685,6 +684,9 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_StatusBar, "status_bar");
 	AddComponent(&m_InfoMessages, "info_messages");
 	AddComponent(&m_Chat, "chat");
+	// 旁观选择器覆盖聊天和按键显示，菜单与计分板仍保留在上层。
+	AddComponent(&m_InputOverlay, "input_overlay");
+	AddComponent(&m_Spectator, "spectator");
 	AddComponent(&m_QmHudNotifications, "hud_notifications");
 	AddComponent(&m_Broadcast, "broadcast");
 	AddComponent(&m_ImportantAlert, "important_alert");
@@ -696,7 +698,6 @@ void CGameClient::OnConsoleInit()
 	AddComponent(&m_Motd, "motd");
 	AddComponent(&m_Menus, "menus");
 	AddComponent(&m_PieMenu, "pie_menu");
-	AddComponent(&m_InputOverlay, "input_overlay");
 	AddComponent(&m_HudEditor, "hud_editor");
 	AddComponent(&m_Tooltips, "tooltips");
 	AddComponent(&m_Scripting, "scripting");
