@@ -110,9 +110,39 @@ void main()
 		return;
 	}
 	float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);
-	float BorderAlpha = BorderColor.a * BorderCoverage;
-	float FillAlpha = FillColor.a * InnerCoverage;
+	// GradientParams2.z > 0 时按带宽做指数羽化：边框从内缘到外缘逐渐透明，
+	// 才有多层辉光叠加的"晕"感。等于 0 时保持原有的实心边框。
+	float BorderFalloff = gSdf.gRoundedRectSdfData[14].z;
+	if(BorderFalloff > 0.0 && BorderWidth > 0.0)
+	{
+		// 环带内缘 InnerDistance 约 0，向外缘增至 +BorderWidth；
+		// BandT 因此从内缘 0 到外缘 1，按幂次衰减成向外淡出的光晕。
+		float BandT = clamp(InnerDistance / max(BorderWidth, 0.0001), 0.0, 1.0);
+		BorderCoverage *= pow(max(1.0 - BandT, 0.0), BorderFalloff);
+	}
+	// GradientParams2.y 是"只描边"开关：渐变只服务于边框，填充整体丢弃。
+	// 彩虹光环这类描边效果必须走这条路，否则渐变会把整张卡片染成彩色。
+	bool BorderOnly = gSdf.gRoundedRectSdfData[14].y > 0.5;
+	if(BorderOnly)
+		InnerCoverage = 0.0;
+	float FillAlphaMask = BorderOnly ? 0.0 : 1.0;
+	// Params.w 作为"边框取渐变"开关（默认 0 保持既有单色边框行为）：
+	// 描边类效果（彩虹光环）需要边框本身沿角度取色，而单色 BorderColor 做不到。
+	vec4 BorderTint = BorderColor;
+	if(Params.w > 0.5)
+	{
+		// 渐变只提供色相，描边强弱仍由调用方给的 BorderColor.a 决定；
+		// 直接沿用渐变的 alpha 会让三层光晕强度全变成 1。
+		// 角度渐变直接用相对几何中心的 Point：它是等比例逻辑单位，atan 得到真实
+		// 角度。用 0..1 归一化 UV 会把长条卡片的角度压扁成横向色带（4:1 时压 4 倍）。
+		vec2 PolarUV = vec2(Point.x / max(Rect.z, 0.0001) + 0.5, Point.y / max(Rect.z, 0.0001) + 0.5);
+		vec4 GradientBorder = GradientColor(PolarUV, BorderColor);
+		GradientBorder.a = BorderColor.a;
+		BorderTint = GradientBorder;
+	}
+	float BorderAlpha = BorderTint.a * BorderCoverage;
+	float FillAlpha = FillColor.a * InnerCoverage * FillAlphaMask;
 	float OutputAlpha = FillAlpha + BorderAlpha;
-	vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;
+	vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;
 	FragClr = OutputAlpha > 0.0 ? vec4(Premultiplied / OutputAlpha, OutputAlpha) : vec4(0.0);
 }

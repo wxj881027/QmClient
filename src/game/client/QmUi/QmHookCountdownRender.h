@@ -3,6 +3,8 @@
 
 #include "QmPieMenuRender.h"
 
+#include <engine/shared/config.h>
+
 #include <game/client/components/qmclient/hook_countdown.h>
 
 namespace qm_hook_countdown_ui
@@ -10,6 +12,19 @@ namespace qm_hook_countdown_ui
 	constexpr float OUTER_RADIUS = 12.5f;
 	constexpr float INNER_RADIUS = 8.5f;
 	constexpr float INFINITY_OUTER_RADIUS = 18.0f;
+
+	// 可调尺寸：百分比换算成半径乘数，1.0 = 配置默认 100%。
+	inline float CountdownSizeScale()
+	{
+		const int Percent = g_Config.m_QmHookCountdownSize;
+		return (Percent > 0 ? (float)Percent : 100.0f) / 100.0f;
+	}
+
+	// 无限钩的样式：0 = 彩虹 ∞ 符号，1 = 彩虹圆环。
+	inline bool EndlessHookUsesRing()
+	{
+		return g_Config.m_QmHookCountdownEndlessStyle == 1;
+	}
 
 	// 任意弧段：StartAngle/EndAngle 为弧度，0 = 环顶部，向顺时针增，EndAngle > StartAngle。
 	// 新后端走 RenderProceduralRing（旋转+对称扇区参数化），老后端复用 DrawSector。
@@ -88,12 +103,19 @@ namespace qm_hook_countdown_ui
 				}
 			}
 		}
-		// 浅色细芯最后绘制，保证交叉处不会被后绘制的彩色光晕盖住。
-		pGraphics->SetColor(ColorRGBA(0.95f, 0.98f, 1.0f, Visual.m_Alpha * (0.72f + Breath * 0.14f)));
+		// 彩虹细芯最后绘制：核心也沿路径取色，不能让白色盖住流动的渐变。
+		// 交叉处最后绘制，保证连续颜色不会被后画的彩色光晕切断。
+		const float CoreAlpha = Visual.m_Alpha * (0.78f + Breath * 0.18f);
 		for(size_t i = 0; i + 1 < aPath.size(); ++i)
 		{
 			const auto &From = aPath[i];
 			const auto &To = aPath[i + 1];
+			const IGraphics::CColorVertex aVertices[] = {
+				{0, aColors[i].WithAlpha(CoreAlpha)},
+				{1, aColors[i + 1].WithAlpha(CoreAlpha)},
+				{2, aColors[i].WithAlpha(CoreAlpha)},
+				{3, aColors[i + 1].WithAlpha(CoreAlpha)}};
+			pGraphics->SetColorVertex(aVertices, std::size(aVertices));
 			const IGraphics::CFreeformItem Quad(
 				Visual.m_Position + From.m_Position * Scale - From.m_Normal * CoreHalfWidth,
 				Visual.m_Position + To.m_Position * Scale - To.m_Normal * CoreHalfWidth,
@@ -107,13 +129,45 @@ namespace qm_hook_countdown_ui
 
 	inline void Render(IGraphics *pGraphics, const SQmHookCountdownVisual &Visual, float PixelSize)
 	{
+		const float SizeScale = CountdownSizeScale();
 		if(Visual.m_EndlessHook)
 		{
-			DrawInfinity(pGraphics, Visual, PixelSize);
+			// 圆环样式：沿用无限钩的彩虹流动色，但用环而不是 ∞ 符号表达"无倒计时"。
+			if(EndlessHookUsesRing())
+			{
+				SQmHookCountdownVisual RingVisual = Visual;
+				RingVisual.m_Scale *= SizeScale;
+				const float RingInner = INNER_RADIUS * RingVisual.m_Scale;
+				const float RingOuter = OUTER_RADIUS * RingVisual.m_Scale;
+				const float RingOutline = std::min(PixelSize * 0.7f, RingInner * 0.25f);
+				const float Breath = QmHookCountdownBreath(RingVisual.m_BreathPhase);
+				DrawArc(pGraphics, RingVisual.m_Position, RingInner - RingOutline, RingOuter + RingOutline, 1.0f, ColorRGBA(0.04f, 0.07f, 0.11f, RingVisual.m_Alpha * 0.45f), PixelSize);
+				// 外发光：三圈递减 alpha 的整环叠出光晕。
+				const float aGlowAlphas[] = {0.10f, 0.20f, 0.38f};
+				const float aGlowSpreads[] = {RingOutline + 7.0f, RingOutline + 3.6f, RingOutline + 1.4f};
+				for(int Layer = 0; Layer < 3; ++Layer)
+				{
+					const float Alpha = aGlowAlphas[Layer] * (0.75f + Breath * 0.35f) * RingVisual.m_Alpha;
+					DrawArc(pGraphics, RingVisual.m_Position, RingInner - aGlowSpreads[Layer], RingOuter + aGlowSpreads[Layer], 1.0f, QmHookCountdownFlowColor(RingVisual.m_FlowPhase, 0.0f).WithAlpha(Alpha), PixelSize);
+				}
+				// 主环按路径位置分色，才看得出彩虹在流动。
+				constexpr int ARCS = 48;
+				for(int i = 0; i < ARCS; ++i)
+				{
+					const float From = (float)i / ARCS;
+					const float To = (float)(i + 1) / ARCS;
+					const ColorRGBA Color = QmHookCountdownFlowColor(RingVisual.m_FlowPhase, From).WithAlpha(RingVisual.m_Alpha * (0.90f + Breath * 0.10f));
+					DrawArcSegment(pGraphics, RingVisual.m_Position, RingInner, RingOuter, From * 2.0f * pi, To * 2.0f * pi, Color, PixelSize);
+				}
+				return;
+			}
+			SQmHookCountdownVisual ScaledVisual = Visual;
+			ScaledVisual.m_Scale *= SizeScale;
+			DrawInfinity(pGraphics, ScaledVisual, PixelSize);
 			return;
 		}
-		const float InnerRadius = INNER_RADIUS * Visual.m_Scale;
-		const float OuterRadius = OUTER_RADIUS * Visual.m_Scale;
+		const float InnerRadius = INNER_RADIUS * Visual.m_Scale * SizeScale;
+		const float OuterRadius = OUTER_RADIUS * Visual.m_Scale * SizeScale;
 		const float Outline = std::min(PixelSize * 0.7f, InnerRadius * 0.25f);
 		DrawArc(pGraphics, Visual.m_Position, InnerRadius - Outline, OuterRadius + Outline, 1.0f, ColorRGBA(0.04f, 0.07f, 0.11f, Visual.m_Alpha * 0.45f), PixelSize);
 		DrawArc(pGraphics, Visual.m_Position, InnerRadius, OuterRadius, 1.0f, Visual.m_Color.WithAlpha(Visual.m_Alpha * 0.20f), PixelSize);

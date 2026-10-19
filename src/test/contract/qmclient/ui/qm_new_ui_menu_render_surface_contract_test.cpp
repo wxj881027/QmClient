@@ -102,7 +102,16 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_EQ(Shader.find("* 0.9"), std::string::npos);
 		EXPECT_NE(Shader.find("Rect.zw + vec2(Params.z * 2.0)"), std::string::npos);
 		EXPECT_NE(Shader.find("float OutputAlpha = FillAlpha + BorderAlpha;"), std::string::npos);
-		EXPECT_NE(Shader.find("vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;"), std::string::npos);
+		// 边框颜色经 BorderTint 中转：默认为单色 BorderColor，Params.w 置位时改用渐变。
+		EXPECT_NE(Shader.find("vec4 BorderTint = BorderColor;"), std::string::npos);
+		EXPECT_NE(Shader.find("if(Params.w > 0.5)"), std::string::npos);
+		// 只描边与沿带宽羽化：辉光描边靠这两项才连成渐变，而不是硬边环。
+		// 两份后端的数据块前缀不同（gRoundedRectSdfData / gSdf.gRoundedRectSdfData），
+		// 这里只匹配与后端无关的语义片段。
+		EXPECT_NE(Shader.find("[14].y > 0.5;"), std::string::npos);
+		EXPECT_NE(Shader.find("[14].z;"), std::string::npos);
+		EXPECT_NE(Shader.find("float BandT = clamp(InnerDistance / max(BorderWidth, 0.0001), 0.0, 1.0);"), std::string::npos);
+		EXPECT_NE(Shader.find("vec3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;"), std::string::npos);
 		EXPECT_EQ(Shader.find("BorderAlpha * (1.0 - FillAlpha)"), std::string::npos);
 		EXPECT_EQ(Shader.find("mix(BorderColor, FillColor, InnerCoverage)"), std::string::npos);
 	}
@@ -125,12 +134,17 @@ TEST(QmNewUiMenuRenderSurfaceContract, ShaderBackendsKeepRoundedSurfaceCompositi
 		EXPECT_NE(MetalShader.find("const float Feather = max(PixelSize, length(float2(dfdx(DistanceValue), dfdy(DistanceValue))));"), std::string::npos);
 		EXPECT_NE(MetalShader.find("return 1.0 - smoothstep(-Feather * 0.5, Feather * 0.5, DistanceValue);"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float4 InnerCornerRadii = max(CornerRadii - float4(BorderWidth), float4(0.0));"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		// BorderCoverage 不再 const：只描边模式要在算完边框环带后清掉 InnerCoverage。
+		EXPECT_NE(MetalShader.find("float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);"), std::string::npos);
+		EXPECT_NE(MetalShader.find("const bool BorderOnly = Params[14].y > 0.5;"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float OuterCoverage = RoundedRectCoverage(OuterDistance, RenderParams.y);"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;"), std::string::npos);
 		EXPECT_NE(MetalShader.find("Rect.zw + float2(RenderParams.z * 2.0)"), std::string::npos);
 		EXPECT_NE(MetalShader.find("const float OutputAlpha = FillAlpha + BorderAlpha;"), std::string::npos);
-		EXPECT_NE(MetalShader.find("const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;"), std::string::npos);
+		// 与 GLSL 一致：边框颜色经 BorderTint 中转，RenderParams.w 控制是否沿用渐变色。
+		EXPECT_NE(MetalShader.find("float4 BorderTint = BorderColor;"), std::string::npos);
+		EXPECT_NE(MetalShader.find("if(RenderParams.w > 0.5)"), std::string::npos);
+		EXPECT_NE(MetalShader.find("const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;"), std::string::npos);
 		// 与 OpenGL/Vulkan 一致：圆角 SDF 不做 0.8/0.9 暗化，也不做非预乘的 border/fill 插值。
 		EXPECT_EQ(MetalSdfFragment.find("* 0.8"), std::string::npos);
 		EXPECT_EQ(MetalSdfFragment.find("* 0.9"), std::string::npos);

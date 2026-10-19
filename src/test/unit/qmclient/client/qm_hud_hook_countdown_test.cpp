@@ -1,4 +1,5 @@
 // 请抬头享受阳光｜日子很好 我很我---------致咩子
+#include <game/client/QmUi/QmHookCountdownRender.h>
 #include <game/client/components/hud_media_island_logic.h>
 #include <game/client/components/qmclient/hook_countdown.h>
 
@@ -361,6 +362,33 @@ TEST(QmHudHookCountdown, AnimationMatchesAcrossDifferentFrameSteps)
 	SlowFrames.Update(Input, 0.12f);
 	EXPECT_NEAR(FastFrames.Visual().m_Alpha, SlowFrames.Visual().m_Alpha, 0.00001f);
 	EXPECT_NEAR(FastFrames.Visual().m_Scale, SlowFrames.Visual().m_Scale, 0.00001f);
+}
+
+// 尺寸百分比按 100% 为基准换算；非法/零值回退到默认，避免半径塌成 0。
+TEST(QmHudHookCountdown, CountdownSizeScaleMapsPercentToMultiplier)
+{
+	g_Config.m_QmHookCountdownSize = 100;
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownSizeScale(), 1.0f);
+	g_Config.m_QmHookCountdownSize = 50;
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownSizeScale(), 0.5f);
+	g_Config.m_QmHookCountdownSize = 200;
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownSizeScale(), 2.0f);
+	// 0 在配置范围外，仍要给出可用的默认值而不是零半径。
+	g_Config.m_QmHookCountdownSize = 0;
+	EXPECT_FLOAT_EQ(qm_hook_countdown_ui::CountdownSizeScale(), 1.0f);
+	g_Config.m_QmHookCountdownSize = 100;
+}
+
+// 无限钩样式只有两档：0 为 ∞ 符号，1 为圆环；越界值不应落到圆环。
+TEST(QmHudHookCountdown, EndlessStyleSelectsRingOnlyForExplicitRingValue)
+{
+	g_Config.m_QmHookCountdownEndlessStyle = 0;
+	EXPECT_FALSE(qm_hook_countdown_ui::EndlessHookUsesRing());
+	g_Config.m_QmHookCountdownEndlessStyle = 1;
+	EXPECT_TRUE(qm_hook_countdown_ui::EndlessHookUsesRing());
+	g_Config.m_QmHookCountdownEndlessStyle = 2;
+	EXPECT_FALSE(qm_hook_countdown_ui::EndlessHookUsesRing());
+	g_Config.m_QmHookCountdownEndlessStyle = 0;
 }
 
 // SDF 羽化宽度用的像素比例：开关环与钩子环共用，取 x/y 里较大的方向。

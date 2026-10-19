@@ -181,11 +181,35 @@ fragment float4 qmclient_rounded_rect_sdf_fragment(SMetalVertexOut Input [[stage
 	const float InnerCoverage = BorderWidth > 0.0 && min(InnerHalfSize.x, InnerHalfSize.y) > 0.0 ? RoundedRectCoverage(InnerDistance, RenderParams.y) : 0.0;
 	if(BorderWidth <= 0.0)
 		return float4(FillColor.rgb, FillColor.a * OuterCoverage) * Input.m_Color;
-	const float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);
-	const float BorderAlpha = BorderColor.a * BorderCoverage;
-	const float FillAlpha = FillColor.a * InnerCoverage;
+	float BorderCoverage = max(OuterCoverage - InnerCoverage, 0.0);
+	// GradientParams2.z > 0 时按带宽指数羽化，边框从内缘向外缘淡出成光晕。
+	const float BorderFalloff = Params[14].z;
+	if(BorderFalloff > 0.0 && BorderWidth > 0.0)
+	{
+		const float BandT = clamp(InnerDistance / max(BorderWidth, 0.0001), 0.0, 1.0);
+		BorderCoverage *= pow(max(1.0 - BandT, 0.0), BorderFalloff);
+	}
+	// GradientParams2.y 是"只描边"开关：渐变只服务于边框，填充整体丢弃。
+	const bool BorderOnly = Params[14].y > 0.5;
+	if(BorderOnly)
+		InnerCoverage = 0.0;
+	const float FillAlphaMask = BorderOnly ? 0.0 : 1.0;
+	// RenderParams.w 是"边框取渐变"开关（默认 0 保持既有单色边框行为）。
+	float4 BorderTint = BorderColor;
+	if(RenderParams.w > 0.5)
+	{
+		// 渐变只提供色相，描边强弱仍由调用方给的 BorderColor.a 决定。
+		// 角度渐变用相对几何中心的 Point（等比例逻辑单位），避免归一化 UV
+		// 把长条卡片的角度压扁成横向色带。
+		const float2 PolarUV = float2(Point.x / max(Rect.z, 0.0001) + 0.5, Point.y / max(Rect.z, 0.0001) + 0.5);
+		float4 GradientBorder = RoundedRectGradientColor(PolarUV, BorderColor, Params);
+		GradientBorder.a = BorderColor.a;
+		BorderTint = GradientBorder;
+	}
+	const float BorderAlpha = BorderTint.a * BorderCoverage;
+	const float FillAlpha = FillColor.a * InnerCoverage * FillAlphaMask;
 	const float OutputAlpha = FillAlpha + BorderAlpha;
-	const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderColor.rgb * BorderAlpha;
+	const float3 Premultiplied = FillColor.rgb * FillAlpha + BorderTint.rgb * BorderAlpha;
 	return (OutputAlpha > 0.0 ? float4(Premultiplied / OutputAlpha, OutputAlpha) : float4(0.0)) * Input.m_Color;
 }
 

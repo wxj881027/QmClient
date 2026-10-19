@@ -112,7 +112,8 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 		const ColorRGBA ResolvedBorder = Plan.m_BorderWidth > 0.0f ? Border : First;
 		SdfParams.m_BorderColor = vec4(ResolvedBorder.r, ResolvedBorder.g, ResolvedBorder.b, ResolvedBorder.a);
 		SdfParams.m_CornerRadii = Plan.m_CornerRadii;
-		SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, 0.0f);
+		// 第四分量是"边框取渐变"开关；默认 0 保持其它调用点的单色边框。
+		SdfParams.m_Params = vec4(Plan.m_BorderWidth, Plan.m_PixelSize, Plan.m_PixelSize * 2.0f, Params.m_BorderUsesGradient ? 1.0f : 0.0f);
 		const int Count = std::clamp(Gradient.m_NumColors, 1, (int)IGraphics::ROUNDED_RECT_SDF_GRADIENT_MAX_COLORS);
 		for(int i = 0; i < Count; ++i)
 		{
@@ -122,6 +123,8 @@ bool DrawRoundedGradientSurface(IGraphics *pGraphics, const CUIRect &Rect, const
 		SdfParams.m_GradientParams0 = vec4((float)Gradient.m_Type, Gradient.m_Center.x, Gradient.m_Center.y, Gradient.m_Range);
 		SdfParams.m_GradientParams1 = vec4(Gradient.m_Direction.x, Gradient.m_Direction.y, Gradient.m_Reverse ? 1.0f : 0.0f, (float)Count);
 		SdfParams.m_GradientParams2.x = 1.0f;
+		SdfParams.m_GradientParams2.y = Params.m_BorderOnly ? 1.0f : 0.0f;
+		SdfParams.m_GradientParams2.z = std::max(0.0f, Params.m_BorderFalloff);
 		pGraphics->RenderRoundedRectSdf(SdfParams);
 		return true;
 	}

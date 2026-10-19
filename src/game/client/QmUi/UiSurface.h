@@ -27,6 +27,14 @@ struct SRoundedSurfaceParams
 	float m_BorderWidth = 0.0f;
 	float m_PixelSize = 0.0001f;
 	int m_Corners = IGraphics::CORNER_ALL;
+	// SDF 边框默认取单色 BorderColor；置位后边框改为沿用填充的渐变，
+	// 用于彩虹描边这类需要沿边框逐像素取色的效果。几何回退路径忽略此项。
+	bool m_BorderUsesGradient = false;
+	// 只画边框、丢弃填充：渐变描边（彩虹光环）需要它，否则渐变会把内部整片染色。
+	bool m_BorderOnly = false;
+	// 边框沿带宽的羽化指数：0 为实心边框，越大越向外淡出。
+	// 辉光类描边（彩虹光环）靠它把多层叠成渐变，而不是三道硬边。
+	float m_BorderFalloff = 0.0f;
 };
 
 struct SRoundedSurfacePlan

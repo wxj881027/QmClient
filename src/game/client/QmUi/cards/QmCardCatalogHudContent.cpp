@@ -192,6 +192,42 @@ void CMenus::RenderQmHudDynamicIslandContent(CUIRect &Content, float LineHeight,
 
 	// 钩子倒计时是独立开关：钩住玩家时在钩链中点显示倒计时环。
 	DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmHookCountdown, "Enable hook countdown", Localize("Enable hook countdown"), &g_Config.m_QmHookCountdown);
+	if(g_Config.m_QmHookCountdown)
+	{
+		// 尺寸：50%–200%，与 HUD 其它百分比配置同一口径。
+		CUIRect SizeRow;
+		if(Flow.Control("qmclient-hook-countdown-size", CurrentSettingsContentMetrics().m_LineHeight, SizeRow))
+		{
+			CUIRect SizeLabel, SizeControl;
+			SplitSettingsControlRow(SizeRow, CurrentSettingsContentMetrics(), &SizeLabel, &SizeControl);
+			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-size-label", &SizeLabel, Localize("Hook countdown size"), 10.0f, TEXTALIGN_ML, {}, (int)SizeLabel.w);
+			static int s_HookCountdownSizeId;
+			RenderQmSettingsSliderWithValueInput(&s_HookCountdownSizeId, SizeControl, &g_Config.m_QmHookCountdownSize, 50, 200, "%", Ui()->RenderOnly());
+		}
+		Flow.Space(LineSpacing);
+
+		// 无限钩的指示样式：∞ 符号或圆环，两者都用同一套彩虹流动色。
+		CUIRect StyleRow;
+		if(Flow.Control("qmclient-hook-countdown-endless-style", CurrentSettingsContentMetrics().m_LineHeight, StyleRow))
+		{
+			CUIRect StyleLabel, StyleControl;
+			SplitSettingsControlRow(StyleRow, CurrentSettingsContentMetrics(), &StyleLabel, &StyleControl);
+			DoSettingsMenuLabel(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, "qmclient-hook-countdown-endless-style-label", &StyleLabel, Localize("Endless hook indicator"), 10.0f, TEXTALIGN_ML, {}, (int)StyleLabel.w);
+			// 两个选项互斥：点哪个就把配置设成对应档位。
+			int InfinityStyle = g_Config.m_QmHookCountdownEndlessStyle == 0 ? 1 : 0;
+			int RingStyle = g_Config.m_QmHookCountdownEndlessStyle == 1 ? 1 : 0;
+			static CButtonContainer s_InfinityStyleId;
+			static CButtonContainer s_RingStyleId;
+			CUIRect InfinityButton, RingButton;
+			StyleControl.VSplitMid(&InfinityButton, &RingButton, 4.0f);
+			const bool RenderOnly = Ui()->RenderOnly();
+			if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_InfinityStyleId, "qmclient-hook-countdown-style-infinity", Localize("Infinity symbol"), InfinityStyle, &InfinityButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE) && !RenderOnly)
+				g_Config.m_QmHookCountdownEndlessStyle = 0;
+			if(DoSettingsButton_Menu(SETTINGS_QMCLIENT, QMCLIENT_SETTINGS_TAB_HUD, QMCLIENT_SETTINGS_TAB_HUD, &s_RingStyleId, "qmclient-hook-countdown-style-ring", Localize("Rainbow ring"), RingStyle, &RingButton, BUTTONFLAG_LEFT, IGraphics::CORNER_ALL, ui_token::radius::BASE) && !RenderOnly)
+				g_Config.m_QmHookCountdownEndlessStyle = 1;
+		}
+		Flow.Space(LineSpacing);
+	}
 
 	// 开关倒计时：总开关决定是否显示，两个位置开关决定显示在跟随 Tee 的圆环上还是灵动岛里，可同时勾选。
 	const bool CountdownChanged = DeclaredCheckbox(Content, LineHeight, LineSpacing, &g_Config.m_QmSwitchCountdown, "Enable switch countdown", Localize("Enable switch countdown"), &g_Config.m_QmSwitchCountdown);

@@ -97,6 +97,8 @@ namespace FontIcons
 
 	[[maybe_unused]] static const char *FONT_ICON_HOUSE = "\xEE\x8B\x82";
 	[[maybe_unused]] static const char *FONT_ICON_BOOKMARK = "\xEE\x83\xA8";
+	// 置顶：Phosphor arrow-line-up（箭头 + 上方一横），U+E066。
+	[[maybe_unused]] static const char *FONT_ICON_ARROW_LINE_UP = "\xEE\x81\xA6";
 	[[maybe_unused]] static const char *FONT_ICON_NEWSPAPER = "\xEE\x8D\x84";
 	[[maybe_unused]] static const char *FONT_ICON_POWER_OFF = "\xEE\x8F\x9A";
 	[[maybe_unused]] static const char *FONT_ICON_GEAR = "\xEE\x89\xB0";
@@ -210,6 +212,7 @@ namespace FontIcons
 		FONT_ICON_TRIANGLE_EXCLAMATION,
 		FONT_ICON_HOUSE,
 		FONT_ICON_BOOKMARK,
+		FONT_ICON_ARROW_LINE_UP,
 		FONT_ICON_NEWSPAPER,
 		FONT_ICON_POWER_OFF,
 		FONT_ICON_GEAR,
