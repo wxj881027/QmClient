@@ -236,7 +236,8 @@ class CTClient : public CComponent
 	bool m_aWasInFreezeForSwitch[NUM_DUMMIES] = {false, false};
 	void CheckAutoSwitchOnUnfreeze();
 	bool m_aWasInFreezeForGoresHammer[NUM_DUMMIES] = {false, false};
-	bool m_aGoresHammerWakeupFirePendingRelease[NUM_DUMMIES] = {false, false};
+	bool m_aGoresHammerWakeup[NUM_DUMMIES] = {false, false};
+	CQmGoresWeaponCycle m_aGoresWeaponCycle[NUM_DUMMIES];
 
 	// Auto Close Chat on Unfreeze (HJ大佬辅助)
 	bool m_aWasInFreezeForChatClose[NUM_DUMMIES] = {false, false};
@@ -461,6 +462,12 @@ public:
 	{
 		CancelSoloSplit();
 		m_VoteCallerId = -1;
+		for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		{
+			m_aWasInFreezeForGoresHammer[Dummy] = false;
+			m_aGoresHammerWakeup[Dummy] = false;
+			m_aGoresWeaponCycle[Dummy].Reset();
+		}
 	}
 	void SetVoteCallerId(int ClientId) { m_VoteCallerId = ClientId; }
 	void CancelSoloSplit() { m_SoloSplit.Reset(); }
@@ -473,6 +480,8 @@ public:
 	bool OnInput(const IInput::CEvent &Event) override;
 	// Gores 锤枪循环是否正在接管武器；拿到额外武器时按停用选项决定是否继续。
 	bool IsGoresWeaponCycleActive() const;
+	bool PrepareGoresWeaponCycleInput(CNetObj_PlayerInput &Input, bool Preview);
+	void ResetGoresWeaponCycleInput(int Dummy, int Fire);
 	// Gores 自动切锤引起的锤子切换是否要跳过切换动画（受 qm_gores_suppress_switch_anim 控制）。
 	bool ShouldSkipGoresHammerSwitchAnimation(int ClientId, int PreviousWeapon, int CurrentWeapon) const;
 	bool IsGoresGameMode() const;

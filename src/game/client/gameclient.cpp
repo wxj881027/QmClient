@@ -1565,7 +1565,10 @@ void CGameClient::OnDummySwap()
 	}
 	const int PrevDummyFire = m_DummyInput.m_Fire;
 	m_DummyInput = m_Controls.m_aInputData[!g_Config.m_ClDummy];
+	m_DummyInput.m_Fire = m_Controls.m_aLastGoresInput[!g_Config.m_ClDummy].m_Fire;
+	m_DummyInput.m_WantedWeapon = m_Controls.m_aLastGoresInput[!g_Config.m_ClDummy].m_WantedWeapon;
 	m_Controls.m_aInputData[g_Config.m_ClDummy].m_Fire = PrevDummyFire;
+	m_TClient.ResetGoresWeaponCycleInput(g_Config.m_ClDummy, PrevDummyFire);
 	m_IsDummySwapping = 1;
 }
 

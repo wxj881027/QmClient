@@ -5,7 +5,9 @@
 #include <cstdint>
 #include <limits>
 
+class CCharacterCore;
 struct CConfig;
+struct CNetObj_DDNetCharacter;
 struct CNetObj_PlayerInput;
 
 struct SQmStatisticsModeDisplay
@@ -154,12 +156,33 @@ int ApplyQmGoresLinkedConfig(SQmFocusConfigOverrideState &State, bool GoresActiv
 int ApplyQmGoresDummyHammerConfig(SQmFocusConfigOverrideState &State, bool ModeActivated, bool ModeDeactivated, bool DisableRequested, int CurrentValue, bool &Changed);
 bool ShouldKeepQmGoresHammerInFreeze(bool GoresCycleActive, bool InFreeze, bool HammerRequested);
 bool ShouldTriggerQmGoresHammerWakeup(bool GoresCycleActive, bool HammerRequested, bool ExternalHammerWakeup);
-int QmGoresHammerWakeupFireState(int CurrentFire);
-bool ShouldReleaseQmGoresHammerWakeupFire(bool PendingRelease, int CurrentFire);
-int QmGoresHammerWakeupReleaseFireState(int CurrentFire);
+bool QmHasExtraGoresWeapon(int CurrentWeapon, const CNetObj_DDNetCharacter *pExtended, const CCharacterCore *pCore);
 bool ShouldEnableQmGoresWeaponCycle(bool GoresEnabled, bool AutoWeaponSwitch, bool HasExtraWeapon, bool DisableIfWeapons);
 void ApplyQmGoresWeaponPickupInput(CNetObj_PlayerInput &Input, int Weapon, bool AutoSwitchOnPickup, bool KeepCurrentWeapon);
-void ApplyQmGoresWeaponCycleInput(CNetObj_PlayerInput &Input, int PreviousFire, bool CycleActive, int CurrentWeapon, bool InFreeze, bool ExternalHammerWakeup, bool &PendingRelease);
+
+class CQmGoresWeaponCycle
+{
+	bool m_Initialized = false;
+	int m_RawFire = 0;
+	int m_Fire = 0;
+	int m_WantedWeapon = 0;
+	bool m_AttackPending = false;
+	int m_SwitchInputTick = -1;
+	int m_AttackInputTick = -1;
+
+	void AdvanceFire(int Presses, bool Held);
+
+public:
+	void Reset() { *this = {}; }
+	void Reset(int Fire)
+	{
+		Reset();
+		m_Initialized = true;
+		m_RawFire = Fire;
+		m_Fire = Fire;
+	}
+	bool Apply(CNetObj_PlayerInput &Input, int PreviousRawFire, bool CycleActive, int CurrentWeapon, bool InFreeze, bool ExternalHammerWakeup, int SnapshotTick, int InputTick, bool Playing = true);
+};
 bool ShouldShowQmHookStrongWeakScope(int Scope, bool Self, bool Strong, bool Weak);
 bool ShouldShowQmNameplateName(int Scope, bool IsCurrentChar, bool IsLocalClient);
 // 旧 cl_nameplates / cl_nameplates_own 两开关 -> 六档显示范围。远程直接换档且不迁移，

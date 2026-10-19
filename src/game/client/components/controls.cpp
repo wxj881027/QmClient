@@ -34,6 +34,8 @@ void CControls::OnReset()
 {
 	ResetInput(0);
 	ResetInput(1);
+	for(int Dummy = 0; Dummy < NUM_DUMMIES; ++Dummy)
+		m_aLastGoresInput[Dummy] = m_aLastData[Dummy];
 	m_FastInputHookAction = false;
 	m_FastInputFireAction = false;
 
@@ -195,6 +197,8 @@ void CControls::OnMessage(int Msg, void *pRawMsg)
 
 int CControls::SnapInput(int *pData)
 {
+	CNetObj_PlayerInput PacketInput;
+	bool GoresInputPrepared = false;
 	// update player state
 	if(GameClient()->m_Chat.IsActive())
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_CHATTING;
@@ -296,6 +300,9 @@ int CControls::SnapInput(int *pData)
 			m_aInputData[g_Config.m_ClDummy].m_TargetX = 1;
 
 		m_aInputData[g_Config.m_ClDummy].m_Direction = m_aInputDirectionRight[g_Config.m_ClDummy] - m_aInputDirectionLeft[g_Config.m_ClDummy];
+		PacketInput = m_aInputData[g_Config.m_ClDummy];
+		Send = GameClient()->m_TClient.PrepareGoresWeaponCycleInput(PacketInput, false) || Send;
+		GoresInputPrepared = true;
 
 		CNetObj_PlayerInput *pDummyInput = &GameClient()->m_DummyInput;
 
@@ -311,10 +318,10 @@ int CControls::SnapInput(int *pData)
 				pDummyInput->m_PlayerFlags = m_aInputData[g_Config.m_ClDummy].m_PlayerFlags;
 				pDummyInput->m_TargetX = m_aInputData[g_Config.m_ClDummy].m_TargetX;
 				pDummyInput->m_TargetY = m_aInputData[g_Config.m_ClDummy].m_TargetY;
-				pDummyInput->m_WantedWeapon = m_aInputData[g_Config.m_ClDummy].m_WantedWeapon;
+				pDummyInput->m_WantedWeapon = PacketInput.m_WantedWeapon;
 
 				if(!g_Config.m_ClDummyControl)
-					pDummyInput->m_Fire += m_aInputData[g_Config.m_ClDummy].m_Fire - m_aLastData[g_Config.m_ClDummy].m_Fire;
+					pDummyInput->m_Fire += PacketInput.m_Fire - m_aLastGoresInput[g_Config.m_ClDummy].m_Fire;
 
 				pDummyInput->m_NextWeapon += m_aInputData[g_Config.m_ClDummy].m_NextWeapon - m_aLastData[g_Config.m_ClDummy].m_NextWeapon;
 				pDummyInput->m_PrevWeapon += m_aInputData[g_Config.m_ClDummy].m_PrevWeapon - m_aLastData[g_Config.m_ClDummy].m_PrevWeapon;
@@ -349,6 +356,7 @@ int CControls::SnapInput(int *pData)
 			m_aInputData[g_Config.m_ClDummy].m_WantedWeapon = ((int)t) % NUM_WEAPONS;
 			m_aInputData[g_Config.m_ClDummy].m_TargetX = (int)(std::sin(t * 3) * 100.0f);
 			m_aInputData[g_Config.m_ClDummy].m_TargetY = (int)(std::cos(t * 3) * 100.0f);
+			PacketInput = m_aInputData[g_Config.m_ClDummy];
 		}
 
 		// check if we need to send input
@@ -363,6 +371,12 @@ int CControls::SnapInput(int *pData)
 		Send = Send || (GameClient()->m_Snap.m_pLocalCharacter && GameClient()->m_Snap.m_pLocalCharacter->m_Weapon == WEAPON_NINJA && (m_aInputData[g_Config.m_ClDummy].m_Direction || m_aInputData[g_Config.m_ClDummy].m_Jump || m_aInputData[g_Config.m_ClDummy].m_Hook));
 	}
 
+	if(!GoresInputPrepared)
+	{
+		PacketInput = m_aInputData[g_Config.m_ClDummy];
+		Send = GameClient()->m_TClient.PrepareGoresWeaponCycleInput(PacketInput, false) || Send;
+	}
+	m_aLastGoresInput[g_Config.m_ClDummy] = PacketInput;
 	// copy and return size
 	m_aLastData[g_Config.m_ClDummy] = m_aInputData[g_Config.m_ClDummy];
 
@@ -370,7 +384,7 @@ int CControls::SnapInput(int *pData)
 		return 0;
 
 	m_LastSendTime = time_get();
-	mem_copy(pData, &m_aInputData[g_Config.m_ClDummy], sizeof(m_aInputData[0]));
+	mem_copy(pData, &PacketInput, sizeof(PacketInput));
 	return sizeof(m_aInputData[0]);
 }
 
@@ -531,6 +545,7 @@ bool CControls::CheckNewInput()
 				TestInput.m_Direction = -1;
 			if(!m_aInputDirectionLeft[Dummy] && m_aInputDirectionRight[Dummy])
 				TestInput.m_Direction = 1;
+			GameClient()->m_TClient.PrepareGoresWeaponCycleInput(TestInput, true);
 		}
 
 		if(m_aFastInput[Dummy].m_Direction != TestInput.m_Direction)
